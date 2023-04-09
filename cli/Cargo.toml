@@ -5,3 +5,16 @@ license = "Apache-2.0"
 edition = "2021"
 description = "Command line tool for Typst.ts."
 repository = "https://github.com/Myriad-Dreamin/typst.ts"
+
+[dependencies]
+typst-ts-core = { path = "../core" }
+typst-precompiler = { path = "../precompiler" }
+typst = { git = "https://github.com/typst/typst.git" }
+typst-library = { git = "https://github.com/typst/typst.git" }
+
+clap = { version = "4.2", features = ["derive", "env", "unicode", "wrap_help"] }
+clap_complete = "4.2"
+clap_complete_fig = "4.2"
+
+serde = "1.0.159"
+serde_json = "1.0.95"
