@@ -25,3 +25,12 @@ same-file = "1"
 codespan-reporting = "0.11"
 parking_lot = "0.12.1"
 
+wasm-bindgen = { version = "^0.2", optional = true }
+wasm-bindgen-futures =  { version = "^0.4", optional = true }
+js-sys = { version = "^0.3", optional = true }
+web-sys = { version = "^0.3", optional = true, features = ["console", "Window", "Blob", "ImageData"] }
+
+
+[features]
+default = []
+web = ["dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:js-sys", "dep:web-sys"]
