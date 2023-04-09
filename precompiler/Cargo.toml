@@ -6,3 +6,13 @@ edition = "2021"
 description = "Precompile Typst documents."
 repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
+[dependencies]
+
+typst = { git = "https://github.com/typst/typst.git" }
+typst-library = { git = "https://github.com/typst/typst.git" }
+comemo = "0.2"
+
+once_cell = "1.17.1"
+siphasher = "0.3.10"
+
+same-file = "1"
