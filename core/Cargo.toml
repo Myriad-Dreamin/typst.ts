@@ -5,3 +5,7 @@ license = "Apache-2.0"
 edition = "2021"
 description = "Serialize Typst document tree."
 repository = "https://github.com/Myriad-Dreamin/typst.ts"
+
+[dependencies]
+typst = { git = "https://github.com/typst/typst.git" }
+typst-library = { git = "https://github.com/typst/typst.git" }
