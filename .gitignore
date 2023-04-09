@@ -1,0 +1,10 @@
+.DS_STORE
+.idea
+.vscode
+
+*.artifact.json
+/out.json
+
+target/
+out/
+assets/
