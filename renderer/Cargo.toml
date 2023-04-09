@@ -1,0 +1,12 @@
+[package]
+name = "typst-renderer-ts"
+version = "0.1.0"
+license = "Apache-2.0"
+edition = "2021"
+readme = "README.md"
+description = "Render Typst documents in browser."
+repository = "https://github.com/Myriad-Dreamin/typst.ts"
+
+[lib]
+crate-type = ["cdylib"]
+

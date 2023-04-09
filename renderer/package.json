@@ -1,0 +1,26 @@
+{
+	"name": "typst.ts",
+	"version": "0.1.0",
+	"description": "Render Typst documents in browser.",
+	"keywords": [],
+	"author": "Myriad-Dreamin",
+	"license": "Apache-2.0",
+	"main": "dist/main.js",
+	"types": "dist/main.d.ts",
+	"scripts": {
+		"build:wasm": "wasm-pack build --target web",
+		"build:dev": "wasm-pack build --target web --dev && tsc --emitDeclarationOnly --outDir dist && node esbuild.config.mjs",
+		"build": "wasm-pack build --target web && tsc --emitDeclarationOnly --outDir dist && tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"prepublish": "npm run build"
+	},
+	"devDependencies": {
+		"@types/node": "^16.11.6",
+		"@typescript-eslint/eslint-plugin": "5.29.0",
+		"@typescript-eslint/parser": "5.29.0",
+		"builtin-modules": "3.3.0",
+		"esbuild": "0.17.3",
+		"esbuild-plugin-wasm": "^1.0.0",
+		"tslib": "2.4.0",
+		"typescript": "4.7.4"
+	}
+}

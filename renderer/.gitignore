@@ -1,0 +1,13 @@
+
+.DS_STORE
+.idea
+.vscode
+
+*.artifact.json
+/out.json
+
+dist/
+node_modules/
+pkg/
+target/
+out/
