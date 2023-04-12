@@ -1,4 +1,6 @@
-use clap::{Parser, Subcommand};
+use std::path::PathBuf;
+
+use clap::{ArgAction, Parser, Subcommand};
 
 #[derive(Debug, Parser)]
 #[clap(name = "forge", version = "0.1.0")]
@@ -17,6 +19,21 @@ pub struct Opts {
 pub enum Subcommands {
     #[clap(visible_alias = "c", about = "Run compiler.")]
     Compile(CompileArgs),
+
+    #[clap(subcommand)]
+    Font(FontSubCommands),
+}
+
+#[derive(Debug, Subcommand)]
+#[clap(
+    about = "Commands about font for typst.",
+    after_help = "",
+    next_display_order = None
+)]
+#[allow(clippy::large_enum_variant)]
+pub enum FontSubCommands {
+    /// List all discovered fonts in system and custom font paths
+    List(ListFontsArgs),
 }
 
 #[derive(Debug, Clone, Parser)]
@@ -37,4 +54,16 @@ pub struct CompileArgs {
     /// Output to directory, default in the same directory as the entry file.
     #[clap(long, short, default_value = "")]
     pub output: String,
+}
+
+/// List all discovered fonts in system and custom font paths
+#[derive(Debug, Clone, Parser)]
+pub struct ListFontsArgs {
+    /// Add additional directories to search for fonts
+    #[clap(long = "font-path", value_name = "DIR", action = ArgAction::Append)]
+    pub font_paths: Vec<PathBuf>,
+
+    /// Also list style variants of each font family
+    #[arg(long)]
+    pub variants: bool,
 }

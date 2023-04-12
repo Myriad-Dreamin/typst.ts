@@ -4,7 +4,8 @@ use std::{
 };
 
 use clap::Parser;
-use typst_ts_cli::{CompileArgs, Opts, Subcommands};
+use typst::{font::FontVariant, World};
+use typst_ts_cli::{CompileArgs, FontSubCommands, ListFontsArgs, Opts, Subcommands};
 use typst_ts_compiler::TypstSystemWorld;
 use typst_ts_core::{config::CompileOpts, Artifact};
 
@@ -13,6 +14,9 @@ fn main() {
 
     match opts.sub {
         Subcommands::Compile(args) => compile(args),
+        Subcommands::Font(font_sub) => match font_sub {
+            FontSubCommands::List(args) => list_fonts(args),
+        },
     };
 
     #[allow(unreachable_code)]
@@ -78,4 +82,33 @@ fn compile(args: CompileArgs) -> ! {
     }
 
     exit(if messages.is_empty() { 0 } else { 1 })
+}
+
+fn list_fonts(command: ListFontsArgs) -> ! {
+    let mut root_path = PathBuf::new();
+    // todo: should cover default workspace path
+    root_path.push("-");
+
+    let mut world = TypstSystemWorld::new(CompileOpts {
+        root_dir: root_path,
+        font_paths: command.font_paths,
+        ..CompileOpts::default()
+    });
+    world.reset();
+
+    for (name, infos) in world.book().families() {
+        println!("{name}");
+        if command.variants {
+            for info in infos {
+                let FontVariant {
+                    style,
+                    weight,
+                    stretch,
+                } = info.variant;
+                println!("- Style: {style:?}, Weight: {weight:?}, Stretch: {stretch:?}");
+            }
+        }
+    }
+
+    exit(0)
 }
