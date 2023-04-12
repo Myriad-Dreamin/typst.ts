@@ -5,7 +5,7 @@ Typst.ts allows you to independently run the Typst compiler and exporter (render
 You can:
 
 + locally run the compilation via `typst-ts-cli` to get a precompiled document,
-  + or use `typst-precompiler` to build your backend programmatically.
+  + or use `typst-ts-compiler` to build your backend programmatically.
 + build your frontend using the lightweight TypeScript library `typst.ts`.
 + send the precompiled document to your readers' browsers and render it as HTML elements.
 
@@ -53,7 +53,7 @@ Compile options:
 
 ### Precompiler
 
-The precompiler is capable of producing PDF and artifact outputs from a Typst project.
+The compiler is capable of producing artifact outputs from a Typst project. Thet artifact outputs can be easily distributed to remote endpoints.
 
 ### Renderer
 
