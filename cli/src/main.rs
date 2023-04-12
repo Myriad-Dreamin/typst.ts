@@ -27,6 +27,15 @@ fn main() {
     }
 }
 
+fn async_continue<F: std::future::Future<Output = ()>>(f: F) {
+    typst_ts_cli::utils::async_run(f);
+
+    #[allow(unreachable_code)]
+    {
+        unreachable!("The async command must exit the process.");
+    }
+}
+
 fn compile(args: CompileArgs) -> ! {
     let mut root_path = PathBuf::new();
     root_path.push(args.workspace);
@@ -36,6 +45,13 @@ fn compile(args: CompileArgs) -> ! {
         ..CompileOpts::default()
     });
     world.reset();
+
+    if args.watch {
+        async_continue(async {
+            println!("watching...");
+            exit(0);
+        });
+    }
 
     let entry_file = args.entry.as_str();
     let entry_file = Path::new(entry_file);

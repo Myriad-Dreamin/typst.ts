@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 pub mod diag;
+pub mod utils;
 
 use clap::{ArgAction, Parser, Subcommand};
 
@@ -56,6 +57,10 @@ pub struct CompileArgs {
     /// Output to directory, default in the same directory as the entry file.
     #[clap(long, short, default_value = "")]
     pub output: String,
+
+    /// watch mode.
+    #[clap(long)]
+    pub watch: bool,
 }
 
 /// List all discovered fonts in system and custom font paths
