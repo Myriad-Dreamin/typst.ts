@@ -17,6 +17,7 @@ use typst::font::{Font, FontBook, FontInfo};
 use typst::syntax::{Source, SourceId};
 use typst::util::{Buffer, PathExt};
 use typst::World;
+use typst_ts_core::config::CompileOpts;
 use walkdir::WalkDir;
 
 use crate::path::{PathHash, PathSlot};
@@ -45,13 +46,13 @@ pub struct TypstSystemWorld {
 }
 
 impl TypstSystemWorld {
-    pub fn new(root: PathBuf) -> Self {
+    pub fn new(opts: CompileOpts) -> Self {
         let mut searcher = SystemFontSearcher::new();
         searcher.search_system();
         searcher.add_embedded();
 
         Self {
-            root,
+            root: opts.root_dir,
             library: Prehashed::new(typst_library::build()),
             book: Prehashed::new(searcher.book),
             fonts: searcher.fonts,

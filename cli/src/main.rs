@@ -6,7 +6,7 @@ use std::{
 use clap::Parser;
 use typst_ts_cli::{CompileArgs, Opts, Subcommands};
 use typst_ts_compiler::TypstSystemWorld;
-use typst_ts_core::Artifact;
+use typst_ts_core::{config::CompileOpts, Artifact};
 
 fn main() {
     let opts = Opts::parse();
@@ -20,7 +20,10 @@ fn compile(args: CompileArgs) {
     let mut root_path = PathBuf::new();
     root_path.push(args.workspace);
 
-    let mut world = TypstSystemWorld::new(root_path);
+    let mut world = TypstSystemWorld::new(CompileOpts {
+        root_dir: root_path,
+        ..CompileOpts::default()
+    });
     world.reset();
 
     let entry_file = args.entry.as_str();

@@ -5,7 +5,7 @@ pub(crate) mod path;
 
 #[cfg(test)]
 mod tests {
-    use typst_ts_core::Artifact;
+    use typst_ts_core::{config::CompileOpts, Artifact};
 
     use super::*;
     use std::path::{Path, PathBuf};
@@ -15,7 +15,10 @@ mod tests {
         let mut root_path = PathBuf::new();
         root_path.push(".");
 
-        let world = TypstSystemWorld::new(root_path);
+        let world = TypstSystemWorld::new(CompileOpts {
+            root_dir: root_path,
+            ..CompileOpts::default()
+        });
         let path = Path::new("fuzzers/corpora/hw/main.artifact.json");
         let content = std::fs::read_to_string(path).unwrap();
         let artifact: Artifact = serde_json::from_str(content.as_str()).unwrap();
