@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Default, Serialize, Deserialize)]
-pub struct Config {
+pub struct WorkspaceConfig {
     pub version: String,
 
     /// Path to typst workspace.
