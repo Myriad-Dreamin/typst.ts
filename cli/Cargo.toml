@@ -8,7 +8,7 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 [dependencies]
 typst-ts-core = { path = "../core" }
-typst-precompiler = { path = "../precompiler" }
+typst-ts-compiler = { path = "../compiler" }
 typst = { git = "https://github.com/typst/typst.git" }
 typst-library = { git = "https://github.com/typst/typst.git" }
 

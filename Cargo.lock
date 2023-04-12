@@ -1470,32 +1470,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "typst-precompiler"
-version = "0.1.0"
-dependencies = [
- "append-only-vec",
- "codespan-reporting",
- "comemo",
- "dirs",
- "elsa",
- "js-sys",
- "memmap2",
- "once_cell",
- "parking_lot",
- "same-file",
- "serde",
- "serde_json",
- "siphasher",
- "typst",
- "typst-library",
- "typst-ts-core",
- "walkdir",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
 name = "typst-renderer-ts"
 version = "0.1.0"
 dependencies = [
@@ -1526,8 +1500,34 @@ dependencies = [
  "serde_json",
  "typst",
  "typst-library",
- "typst-precompiler",
+ "typst-ts-compiler",
  "typst-ts-core",
+]
+
+[[package]]
+name = "typst-ts-compiler"
+version = "0.1.0"
+dependencies = [
+ "append-only-vec",
+ "codespan-reporting",
+ "comemo",
+ "dirs",
+ "elsa",
+ "js-sys",
+ "memmap2",
+ "once_cell",
+ "parking_lot",
+ "same-file",
+ "serde",
+ "serde_json",
+ "siphasher",
+ "typst",
+ "typst-library",
+ "typst-ts-core",
+ "walkdir",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]

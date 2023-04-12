@@ -2,7 +2,7 @@
 members = [
     "cli",
     "core",
-    "precompiler",
+    "compiler",
     "renderer",
 ]
 

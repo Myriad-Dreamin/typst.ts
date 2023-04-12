@@ -4,8 +4,8 @@ use std::{
 };
 
 use clap::Parser;
-use typst_precompiler::TypstSystemWorld;
 use typst_ts_cli::{CompileArgs, Opts, Subcommands};
+use typst_ts_compiler::TypstSystemWorld;
 use typst_ts_core::Artifact;
 
 fn main() {
