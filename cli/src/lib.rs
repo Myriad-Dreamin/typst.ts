@@ -15,7 +15,7 @@ pub struct Opts {
 )]
 #[allow(clippy::large_enum_variant)]
 pub enum Subcommands {
-    #[clap(visible_alias = "c", about = "Run precompiler.")]
+    #[clap(visible_alias = "c", about = "Run compiler.")]
     Compile(CompileArgs),
 }
 
