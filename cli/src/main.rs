@@ -13,10 +13,15 @@ fn main() {
 
     match opts.sub {
         Subcommands::Compile(args) => compile(args),
+    };
+
+    #[allow(unreachable_code)]
+    {
+        unreachable!("The subcommand must exit the process.");
     }
 }
 
-fn compile(args: CompileArgs) {
+fn compile(args: CompileArgs) -> ! {
     let mut root_path = PathBuf::new();
     root_path.push(args.workspace);
 
