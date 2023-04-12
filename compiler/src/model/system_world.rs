@@ -268,42 +268,61 @@ impl SystemFontSearcher {
         ));
     }
 
-    /// Search for fonts in the linux system font directories.
-    #[cfg(all(unix, not(target_os = "macos")))]
     fn search_system(&mut self) {
-        self.search_dir("/usr/share/fonts");
-        self.search_dir("/usr/local/share/fonts");
+        let font_paths = {
+            // Search for fonts in the linux system font directories.
+            #[cfg(all(unix, not(target_os = "macos")))]
+            {
+                let font_paths = vec!["/usr/share/fonts", "/usr/local/share/fonts"]
+                    .iter()
+                    .map(|p| PathBuf::from(p))
+                    .collect::<Vec<_>>();
 
-        if let Some(dir) = dirs::font_dir() {
+                if let Some(dir) = dirs::font_dir() {
+                    font_paths.push(dir);
+                }
+
+                font_paths
+            }
+            // Search for fonts in the macOS system font directories.
+            #[cfg(all(unix, not(target_os = "macos")))]
+            {
+                let font_paths = vec![
+                    "/Library/Fonts",
+                    "/Network/Library/Fonts",
+                    "/System/Library/Fonts",
+                ]
+                .iter()
+                .map(|p| PathBuf::from(p))
+                .collect::<Vec<_>>();
+
+                if let Some(dir) = dirs::font_dir() {
+                    font_paths.push(dir);
+                }
+
+                font_paths
+            }
+            // Search for fonts in the Windows system font directories.
+            #[cfg(windows)]
+            {
+                let mut font_paths = vec![];
+                let windir = std::env::var("WINDIR").unwrap_or_else(|_| "C:\\Windows".to_string());
+
+                font_paths.push(PathBuf::from(windir).join("Fonts"));
+
+                if let Some(roaming) = dirs::config_dir() {
+                    font_paths.push(roaming.join("Microsoft\\Windows\\Fonts"));
+                }
+                if let Some(local) = dirs::cache_dir() {
+                    font_paths.push(local.join("Microsoft\\Windows\\Fonts"));
+                }
+
+                font_paths
+            }
+        };
+
+        for dir in font_paths {
             self.search_dir(dir);
-        }
-    }
-
-    /// Search for fonts in the macOS system font directories.
-    #[cfg(target_os = "macos")]
-    fn search_system(&mut self) {
-        self.search_dir("/Library/Fonts");
-        self.search_dir("/Network/Library/Fonts");
-        self.search_dir("/System/Library/Fonts");
-
-        if let Some(dir) = dirs::font_dir() {
-            self.search_dir(dir);
-        }
-    }
-
-    /// Search for fonts in the Windows system font directories.
-    #[cfg(windows)]
-    fn search_system(&mut self) {
-        let windir = std::env::var("WINDIR").unwrap_or_else(|_| "C:\\Windows".to_string());
-
-        self.search_dir(Path::new(&windir).join("Fonts"));
-
-        if let Some(roaming) = dirs::config_dir() {
-            self.search_dir(roaming.join("Microsoft\\Windows\\Fonts"));
-        }
-
-        if let Some(local) = dirs::cache_dir() {
-            self.search_dir(local.join("Microsoft\\Windows\\Fonts"));
         }
     }
 
