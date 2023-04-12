@@ -4,6 +4,8 @@ members = [
     "core",
     "compiler",
     "renderer",
+
+    "exporter/ws",
 ]
 
 

@@ -1,0 +1,7 @@
+[package]
+name = "typst-ts-ws-exporter"
+version = "0.1.0"
+license = "Apache-2.0"
+edition = "2021"
+description = "streaming typst documents to a websocket channel."
+repository = "https://github.com/Myriad-Dreamin/typst.ts"
