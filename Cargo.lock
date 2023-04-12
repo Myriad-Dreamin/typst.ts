@@ -1496,6 +1496,7 @@ dependencies = [
  "clap",
  "clap_complete",
  "clap_complete_fig",
+ "codespan-reporting",
  "serde",
  "serde_json",
  "typst",

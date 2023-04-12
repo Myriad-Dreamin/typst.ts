@@ -12,6 +12,8 @@ typst-ts-compiler = { path = "../compiler" }
 typst = { git = "https://github.com/typst/typst.git" }
 typst-library = { git = "https://github.com/typst/typst.git" }
 
+codespan-reporting = "0.11"
+
 clap = { version = "4.2", features = ["derive", "env", "unicode", "wrap_help"] }
 clap_complete = "4.2"
 clap_complete_fig = "4.2"

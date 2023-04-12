@@ -5,7 +5,9 @@ use std::{
 
 use clap::Parser;
 use typst::{font::FontVariant, World};
-use typst_ts_cli::{CompileArgs, FontSubCommands, ListFontsArgs, Opts, Subcommands};
+use typst_ts_cli::{
+    diag::print_diagnostics, CompileArgs, FontSubCommands, ListFontsArgs, Opts, Subcommands,
+};
 use typst_ts_compiler::TypstSystemWorld;
 use typst_ts_core::{config::CompileOpts, Artifact};
 
@@ -77,9 +79,7 @@ fn compile(args: CompileArgs) -> ! {
         Err(errors) => *errors,
     };
 
-    for err in messages.clone().into_iter() {
-        println!("compile error: {:?}", err);
-    }
+    print_diagnostics(&world, messages.clone()).unwrap();
 
     exit(if messages.is_empty() { 0 } else { 1 })
 }

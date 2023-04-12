@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+pub mod diag;
+
 use clap::{ArgAction, Parser, Subcommand};
 
 #[derive(Debug, Parser)]
