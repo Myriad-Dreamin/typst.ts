@@ -1,8 +1,8 @@
 use js_sys::Uint8Array;
 use std::str::FromStr;
 use typst::{
-    doc::Document,
     geom::{Color, RgbaColor},
+    util::Buffer,
 };
 use typst_ts_core::Artifact;
 use wasm_bindgen::{prelude::*, Clamped};
@@ -49,7 +49,7 @@ impl TypstRendererBuilder {
         //     format!("raw font loading: Buffer({:?})", font_buffer.byte_length()).into();
         // console::info_1(&v);
 
-        self.searcher.add_font_data(font_buffer.to_vec().into());
+        self.add_raw_font_internal(font_buffer.to_vec().into());
         Ok(())
     }
 
@@ -66,6 +66,12 @@ impl TypstRendererBuilder {
         Ok(TypstRenderer::new(
             TypstBrowserWorld::new(self.searcher).await?,
         ))
+    }
+}
+
+impl TypstRendererBuilder {
+    pub fn add_raw_font_internal(&mut self, font_buffer: Buffer) {
+        self.searcher.add_font_data(font_buffer);
     }
 }
 
