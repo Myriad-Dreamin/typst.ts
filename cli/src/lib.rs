@@ -6,7 +6,7 @@ pub mod utils;
 use clap::{ArgAction, Parser, Subcommand};
 
 #[derive(Debug, Parser)]
-#[clap(name = "forge", version = "0.1.0")]
+#[clap(name = "typst-ts-cli", version = "0.1.0")]
 pub struct Opts {
     #[clap(subcommand)]
     pub sub: Subcommands,
