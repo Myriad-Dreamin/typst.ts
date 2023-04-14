@@ -9,7 +9,7 @@ The font assets for Typst.ts are not included in this repository. You need to do
 
 There are several ways to download the font files:
 
-+ Download the font files from the [Typst repository](https://github.com/typst/typst/tree/master/assets/fonts).
++ Download the font files from the [Typst repository](https://github.com/typst/typst/tree/main/assets/fonts).
 
 + Download font files from our [Release Page](https://github.com/Myriad-Dreamin/typst.ts/releases/tag/v0.1.0).
 
