@@ -95,7 +95,7 @@ impl TypstRenderer {
         if document.pages.len() == 0 {
             return Err("no pages in artifact".into());
         }
-        self.render_internal(document, 1., "ffffff".to_string())
+        self.render_internal(document, 2., "ffffff".to_string())
     }
 }
 
