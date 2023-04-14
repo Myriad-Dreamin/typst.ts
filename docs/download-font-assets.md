@@ -1,7 +1,7 @@
 
 # Prerequisite - Download Font Assets
 
-The font assets for Typst.ts are not included in this repository. You need to download the font files for compiler and put them in following directories.
+The font assets for Typst.ts are not included in this repository. You need to download and put them in following directories.
 
 + To make Compiler happy, linking the font directory to `assets/fonts`.
 
