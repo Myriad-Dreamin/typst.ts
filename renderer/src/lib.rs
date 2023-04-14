@@ -11,6 +11,8 @@ use web_sys::{console, ImageData};
 pub mod web_font;
 use web_font::WebFont;
 
+pub(crate) mod render;
+
 pub mod browser_world;
 use browser_world::{BrowserFontSearcher, TypstBrowserWorld};
 
