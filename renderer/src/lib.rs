@@ -1,5 +1,6 @@
 use js_sys::Uint8Array;
 use std::str::FromStr;
+use tiny_skia as sk;
 use typst::{
     geom::{Color, RgbaColor},
     util::Buffer,
@@ -87,6 +88,28 @@ impl TypstRenderer {
     }
 
     pub fn render(&mut self, artifact_content: String) -> Result<ImageData, JsValue> {
+        let render_result = self.render_internal(artifact_content, 2., "ffffff".to_string())?;
+
+        Ok(ImageData::new_with_u8_clamped_array_and_sh(
+            Clamped(render_result.data()),
+            render_result.width(),
+            render_result.height(),
+        )?)
+        // match result.unwrap() {
+        //     Ok(document) => {
+        //     }
+        //     Err(errors) => Err(format!("{:?}", *errors).into()),
+        // }
+    }
+}
+
+impl TypstRenderer {
+    pub fn render_internal(
+        &self,
+        artifact_content: String,
+        pixel_per_pt: f32,
+        fill: String,
+    ) -> Result<sk::Pixmap, String> {
         // todo:
         // https://medium.com/@wl1508/avoiding-using-serde-and-deserde-in-rust-webassembly-c1e4640970ca
         let artifact: Artifact = serde_json::from_str(artifact_content.as_str()).unwrap();
@@ -106,21 +129,12 @@ impl TypstRenderer {
         if document.pages.len() == 0 {
             return Err("no pages in artifact".into());
         }
-        self.render_internal(document, 2., "ffffff".to_string())
-    }
-}
 
-impl TypstRenderer {
-    pub fn render_internal(
-        &self,
-        document: Document,
-        pixel_per_pt: f32,
-        fill: String,
-    ) -> Result<ImageData, JsValue> {
-        let render = typst::export::render(
+        Ok(crate::render::render(
             &document.pages[0],
             pixel_per_pt,
             Color::Rgba(RgbaColor::from_str(&fill)?),
+        ))
         );
         Ok(ImageData::new_with_u8_clamped_array_and_sh(
             Clamped(render.data()),
