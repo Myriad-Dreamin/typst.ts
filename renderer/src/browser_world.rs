@@ -1,21 +1,16 @@
 // use append_only_vec::AppendOnlyVec;
 use comemo::Prehashed;
-use once_cell::sync::OnceCell;
 use typst::{
     font::{Font, FontBook, FontInfo},
     syntax::SourceId,
     util::Buffer,
 };
-use typst_ts_core::FontResolver;
+use typst_ts_core::{font::BufferFontLoader, FontResolver, FontSlot};
 
 use wasm_bindgen::prelude::*;
+use wasm_bindgen_futures::JsFuture;
 
-/// Holds details about the location of a font and lazily the font itself.
-struct FontSlot {
-    pub buffer: Buffer,
-    pub index: u32,
-    pub font: OnceCell<Option<Font>>,
-}
+use crate::web_font::WebFont;
 
 /// A world that provides access to the browser.
 pub struct TypstBrowserWorld {
@@ -25,30 +20,8 @@ pub struct TypstBrowserWorld {
 }
 
 impl TypstBrowserWorld {
-    pub async fn new() -> Result<Self, JsValue> {
-        let mut searcher = BrowserFontSearcher::new();
-
-        // todo: receive font files from user
-        searcher.add_font_data(Buffer::from_static(include_bytes!(
-            "../../assets/fonts/LinLibertine_R.ttf"
-        )));
-        searcher.add_font_data(Buffer::from_static(include_bytes!(
-            "../../assets/fonts/LinLibertine_RB.ttf"
-        )));
-        searcher.add_font_data(Buffer::from_static(include_bytes!(
-            "../../assets/fonts/LinLibertine_RBI.ttf"
-        )));
-        searcher.add_font_data(Buffer::from_static(include_bytes!(
-            "../../assets/fonts/LinLibertine_RI.ttf"
-        )));
-        searcher.add_font_data(Buffer::from_static(include_bytes!(
-            "../../assets/fonts/NewCMMath-Book.otf"
-        )));
-        searcher.add_font_data(Buffer::from_static(include_bytes!(
-            "../../assets/fonts/NewCMMath-Regular.otf"
-        )));
-        searcher.search_browser().await?;
-
+    // todo: better parameter type
+    pub async fn new(searcher: BrowserFontSearcher) -> Result<Self, JsValue> {
         Ok(Self {
             // library: Prehashed::new(typst_library::build()),
             book: Prehashed::new(searcher.book),
@@ -58,13 +31,7 @@ impl TypstBrowserWorld {
     }
 
     fn font(&self, id: usize) -> Option<Font> {
-        let slot = &self.fonts[id];
-        slot.font
-            .get_or_init(|| {
-                let font = Font::new(slot.buffer.clone(), slot.index);
-                font
-            })
-            .clone()
+        self.fonts[id].get()
     }
 }
 
@@ -86,46 +53,42 @@ pub struct BrowserFontSearcher {
 
 impl BrowserFontSearcher {
     /// Create a new, empty system searcher.
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             book: FontBook::new(),
             fonts: vec![],
         }
     }
 
-    fn add_font_data(&mut self, buffer: Buffer) {
-        for (i, info) in FontInfo::iter(buffer.as_slice()).enumerate() {
-            self.book.push(info);
-            self.fonts.push(FontSlot {
-                buffer: buffer.clone(),
-                index: i as u32,
-                font: OnceCell::new(),
-            })
-        }
+    pub async fn add_web_font(&mut self, font: WebFont) {
+        let blob = font.load().await;
+        let blob = JsFuture::from(blob.array_buffer()).await.unwrap();
+        let buffer = Buffer::from(js_sys::Uint8Array::new(&blob).to_vec());
+
+        // self.fonts.push(FontSlot {
+        //     index: 0 as u32,
+        //     font: (
+        //         OnceCell::new(),
+        //         FontLoadProvider::new(Box::new(BufferFontLoader {
+        //             buffer: Some(buffer),
+        //             index: 0 as u32,
+        //         })),
+        //     ),
+        // });
+
+        // todo: load lazily
+        self.add_font_data(buffer);
     }
 
-    async fn search_browser(&mut self) -> Result<(), JsValue> {
-        // if let Some(window) = web_sys::window() {
-        //     for fontdata in JsFuture::from(window.query_local_fonts()?)
-        //         .await?
-        //         .dyn_into::<js_sys::Array>()?
-        //         .to_vec()
-        //     {
-        //         let buffer = Buffer::from(
-        //             js_sys::Uint8Array::new(
-        //                 &JsFuture::from(
-        //                     JsFuture::from(fontdata.dyn_into::<FontData>()?.blob())
-        //                         .await?
-        //                         .dyn_into::<Blob>()?
-        //                         .array_buffer(),
-        //                 )
-        //                 .await?,
-        //             )
-        //             .to_vec(),
-        //         );
-        //         self.add_font_data(buffer);
-        //     }
-        // }
-        Ok(())
+    pub fn add_font_data(&mut self, buffer: Buffer) {
+        for (i, info) in FontInfo::iter(buffer.as_slice()).enumerate() {
+            self.book.push(info);
+
+            let buffer = buffer.clone();
+            self.fonts.push(FontSlot::new(Box::new(BufferFontLoader {
+                buffer: Some(buffer),
+                index: i as u32,
+            })))
+        }
     }
 }

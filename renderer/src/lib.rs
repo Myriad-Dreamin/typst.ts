@@ -1,3 +1,4 @@
+use js_sys::Uint8Array;
 use std::str::FromStr;
 use typst::{
     doc::Document,
@@ -7,8 +8,11 @@ use typst_ts_core::Artifact;
 use wasm_bindgen::{prelude::*, Clamped};
 use web_sys::{console, ImageData};
 
+pub mod web_font;
+use web_font::WebFont;
+
 pub mod browser_world;
-use browser_world::TypstBrowserWorld;
+use browser_world::{BrowserFontSearcher, TypstBrowserWorld};
 
 #[wasm_bindgen]
 extern "C" {
@@ -22,17 +26,53 @@ extern "C" {
 }
 
 #[wasm_bindgen]
+pub struct TypstRendererBuilder {
+    searcher: BrowserFontSearcher,
+}
+
+#[wasm_bindgen]
+impl TypstRendererBuilder {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Result<TypstRendererBuilder, JsValue> {
+        Ok(Self {
+            searcher: BrowserFontSearcher::new(),
+        })
+    }
+
+    pub async fn add_raw_font(&mut self, font_buffer: Uint8Array) -> Result<(), JsValue> {
+        let v: JsValue =
+            format!("raw font loading: Buffer({:?})", font_buffer.byte_length()).into();
+        console::info_1(&v);
+
+        self.searcher.add_font_data(font_buffer.to_vec().into());
+        Ok(())
+    }
+
+    pub async fn add_web_font(&mut self, font: WebFont) -> Result<(), JsValue> {
+        let v: JsValue = format!("web font loading: {:?}", font).into();
+        console::info_1(&v);
+
+        self.searcher.add_web_font(font).await;
+
+        Ok(())
+    }
+
+    pub async fn build(self) -> Result<TypstRenderer, JsValue> {
+        Ok(TypstRenderer::new(
+            TypstBrowserWorld::new(self.searcher).await?,
+        ))
+    }
+}
+
+#[wasm_bindgen]
 pub struct TypstRenderer {
     world: TypstBrowserWorld,
 }
 
 #[wasm_bindgen]
 impl TypstRenderer {
-    #[wasm_bindgen(constructor)]
-    pub async fn new() -> Result<TypstRenderer, JsValue> {
-        Ok(Self {
-            world: TypstBrowserWorld::new().await?,
-        })
+    fn new(world: TypstBrowserWorld) -> TypstRenderer {
+        Self { world }
     }
 
     pub fn render(&mut self, artifact_content: String) -> Result<ImageData, JsValue> {
