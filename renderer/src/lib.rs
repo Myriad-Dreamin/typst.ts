@@ -135,16 +135,49 @@ impl TypstRenderer {
             pixel_per_pt,
             Color::Rgba(RgbaColor::from_str(&fill)?),
         ))
-        );
-        Ok(ImageData::new_with_u8_clamped_array_and_sh(
-            Clamped(render.data()),
-            render.width(),
-            render.height(),
-        )?)
-        // match result.unwrap() {
-        //     Ok(document) => {
-        //     }
-        //     Err(errors) => Err(format!("{:?}", *errors).into()),
-        // }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use typst::util::Buffer;
+
+    use super::*;
+    use std::path::{Path, PathBuf};
+
+    #[test]
+    fn test_render_document() {
+        let mut root_path = PathBuf::new();
+        root_path.push(".");
+
+        let mut builder = TypstRendererBuilder::new().unwrap();
+
+        // todo: prepare font files for test
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../assets/fonts/LinLibertine_R.ttf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../assets/fonts/LinLibertine_RB.ttf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../assets/fonts/LinLibertine_RBI.ttf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../assets/fonts/LinLibertine_RI.ttf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../assets/fonts/NewCMMath-Book.otf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../assets/fonts/NewCMMath-Regular.otf"
+        )));
+        let renderer = pollster::block_on(builder.build()).unwrap();
+
+        let path = Path::new("fuzzers/corpora/hw/main.artifact.json");
+        let artifact_content = std::fs::read_to_string(path).unwrap();
+
+        renderer
+            .render_internal(artifact_content, 2., "ffffff".to_string())
+            .unwrap();
     }
 }
