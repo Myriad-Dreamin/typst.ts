@@ -7,7 +7,7 @@ import typstInit, * as typst from '../../pkg/typst_renderer_ts'
 
 export interface TypstRenderer {
     init(): Promise<void>;
-    render(artifact_content: string): Promise<ImageData>;
+    render(artifact_content: string, canvas: HTMLCanvasElement): Promise<ImageData>;
 }
 
 
@@ -24,7 +24,6 @@ class TypstRendererImpl {
         await typstInit(typst_wasm_bin)
         let builder = new typst.TypstRendererBuilder();
 
-        const t = performance.now();
         await Promise.all([
             this.loadFont(builder, "dist/fonts/LinLibertine_R.ttf"),
             this.loadFont(builder, "dist/fonts/LinLibertine_RB.ttf"),
@@ -34,6 +33,7 @@ class TypstRendererImpl {
             this.loadFont(builder, "dist/fonts/NewCMMath-Regular.otf"),
         ])
 
+        const t = performance.now();
         if ('queryLocalFonts' in window) {
             const fonts = await (window as any).queryLocalFonts();
             for (const font of fonts) {
@@ -54,12 +54,33 @@ class TypstRendererImpl {
         console.log("loaded Typst");
     }
 
-    async render(artifact_content: string): Promise<ImageData> {
+    async renderImage(artifact_content: string): Promise<ImageData> {
         const t = performance.now();
         const renderResult = this.renderer.render(artifact_content);
         console.log(renderResult);
         const t2 = performance.now();
         console.log("time used", t2-t);
+        return renderResult;
+    }
+
+    async render(artifact_content: string, canvas: HTMLCanvasElement): Promise<ImageData> {
+        const renderResult = await this.renderImage(artifact_content);
+
+        console.log(renderResult);
+        canvas.width = renderResult.width;
+        canvas.height = renderResult.height;
+        let ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.putImageData(renderResult, 0, 0);
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            console.log({
+                x: e.offsetX,
+                y: e.offsetY,
+            })
+        });
+
         return renderResult;
     }
 }

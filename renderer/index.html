@@ -43,25 +43,39 @@
                 xhr.open("GET", "main.artifact.json", false);
                 xhr.send();
 
-                plugin.render(xhr.responseText).then((renderResult) => {
-                    let canvas = document.createElement('canvas');
-                    canvas.width = renderResult.width;
-                    canvas.height = renderResult.height;
-                    let ctx = canvas.getContext('2d');
-                    if (ctx) {
-                        ctx.putImageData(renderResult, 0, 0);
-                    }
+                const imageContainer = document.getElementById('imageContainer');
+                let currentScale = 1;  // variable for storing scaling factor
+                let imageContainerWidth = imageContainer.offsetWidth;
 
-                    let image = new Image();
-                    image.src = canvas.toDataURL();
-                    document.body.append(image);
+                let canvas = document.createElement('canvas');
+
+                plugin.render(xhr.responseText, canvas).then((renderResult) => {
+                    // compute scaling factor according to the paper size
+                    imageContainerWidth = imageContainer.offsetWidth;
+                    currentScale = imageContainerWidth / renderResult.width;
+                    imageContainer.style.transformOrigin = "0px 0px";
+                    imageContainer.style.transform = `scale(${currentScale})`;
+                    imageContainer.appendChild(canvas);
+
+                    console.log('render done');
                 });
             });
         });
     </script>
+
+    <style>
+        .imageContainer {
+            margin: 0;
+            transform-origin: 0 0;
+        }
+    </style>
 </head>
 
 <body>
+
+    <body style="padding: 0px 0px 0px 0px;">
+        <div id="imageContainer" style="height: 0px;"></div>
+    </body>
 </body>
 
 </html>
