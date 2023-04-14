@@ -13,6 +13,9 @@ use web_font::WebFont;
 
 pub(crate) mod render;
 
+#[macro_use]
+pub(crate) mod utils;
+
 pub mod browser_world;
 use browser_world::{BrowserFontSearcher, TypstBrowserWorld};
 
@@ -81,7 +84,8 @@ impl TypstRenderer {
         // todo:
         // https://medium.com/@wl1508/avoiding-using-serde-and-deserde-in-rust-webassembly-c1e4640970ca
         let artifact: Artifact = serde_json::from_str(artifact_content.as_str()).unwrap();
-        let v: JsValue = format!(
+
+        console_log!(
             "{} pages to render. font info: {:?}",
             artifact.pages.len(),
             artifact
@@ -90,9 +94,8 @@ impl TypstRenderer {
                 .map(|f| f.family.as_str()) // serde_json::to_string(f).unwrap())
                 .collect::<Vec<&str>>()
                 .join(", ")
-        )
-        .into();
-        console::info_1(&v);
+        );
+
         let document = artifact.to_document(&self.world);
         if document.pages.len() == 0 {
             return Err("no pages in artifact".into());
