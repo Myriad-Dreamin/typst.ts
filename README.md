@@ -15,6 +15,10 @@ The Typst.ts application is designed to be fast due to the following reasons:
 + The renderer has a small code size.
 + Typst itself has great performance.
 
+### Prerequisite
+
++ The font assets for Typst.ts are not included in this repository. See [Download Font Assets](./docs/download-font-assets.md) for more information.
+
 ### CLI
 
 Run Compiler Example:
