@@ -3,6 +3,7 @@
 .vscode
 
 *.artifact.json
+*.pdf
 /out.json
 
 target/
