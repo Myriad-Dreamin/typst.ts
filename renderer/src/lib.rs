@@ -40,9 +40,9 @@ impl TypstRendererBuilder {
     }
 
     pub async fn add_raw_font(&mut self, font_buffer: Uint8Array) -> Result<(), JsValue> {
-        let v: JsValue =
-            format!("raw font loading: Buffer({:?})", font_buffer.byte_length()).into();
-        console::info_1(&v);
+        // let v: JsValue =
+        //     format!("raw font loading: Buffer({:?})", font_buffer.byte_length()).into();
+        // console::info_1(&v);
 
         self.searcher.add_font_data(font_buffer.to_vec().into());
         Ok(())
@@ -85,8 +85,9 @@ impl TypstRenderer {
             artifact
                 .fonts
                 .iter()
-                .map(|f| serde_json::to_string(f).unwrap())
-                .collect::<Vec<String>>()
+                .map(|f| f.family.as_str()) // serde_json::to_string(f).unwrap())
+                .collect::<Vec<&str>>()
+                .join(", ")
         )
         .into();
         console::info_1(&v);
