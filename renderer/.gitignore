@@ -4,6 +4,7 @@
 .vscode
 
 *.artifact.json
+!math.artifact.json
 /out.json
 
 dist/

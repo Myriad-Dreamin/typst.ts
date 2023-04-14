@@ -38,3 +38,7 @@
 = Question 1: What is This?
 
 Anwser: This is Typst.
+
+$
+  mono(Y) = lambda f. (lambda x. f (x space x)) (lambda x . f (x space x))
+$

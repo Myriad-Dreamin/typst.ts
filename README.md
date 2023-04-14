@@ -55,6 +55,14 @@ Compile options:
   -o, --output <OUTPUT>        Output to directory, default in the same directory as the entry file [default: ]
 ```
 
+### Renderer Example
+
+```shell
+$ cd renderer && npm install && npm run build && python -m http.server 8075
+```
+
+And open your browser to `http://localhost:8075`.
+
 ### Precompiler
 
 The compiler is capable of producing artifact outputs from a Typst project. Thet artifact outputs can be easily distributed to remote endpoints.
