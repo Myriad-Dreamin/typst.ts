@@ -175,15 +175,7 @@ impl ArtifactBuilder {
             },
             items: frame
                 .items()
-                .map(|item| {
-                    (
-                        Point {
-                            x: item.0.x.into(),
-                            y: item.0.y.into(),
-                        },
-                        self.write_frame_item(&item.1),
-                    )
-                })
+                .map(|item| (item.0.into(), self.write_frame_item(&item.1)))
                 .collect(),
         }
     }
