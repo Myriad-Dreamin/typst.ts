@@ -42,7 +42,7 @@ pub struct Abs(Scalar);
 
 impl From<TypstAbs> for Abs {
     fn from(typst_abs: TypstAbs) -> Self {
-        Self(Scalar(typst_abs.abs().to_raw()))
+        Self(Scalar(typst_abs.to_raw()))
     }
 }
 
