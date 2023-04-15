@@ -20,6 +20,10 @@ pub struct FontSlot(
 );
 
 impl FontSlot {
+    pub fn with_value(f: Option<Font>) -> Self {
+        Self(OnceCell::with_value(f), Arc::new(Mutex::new(None)))
+    }
+
     pub fn new(f: Box<dyn FontLoader>) -> Self {
         Self(OnceCell::new(), Arc::new(Mutex::new(Some(f))))
     }
