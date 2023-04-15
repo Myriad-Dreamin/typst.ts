@@ -1,10 +1,13 @@
 {
   "compilerOptions": {
+    "types": [
+      "web"
+    ],
     "baseUrl": ".",
     "inlineSourceMap": true,
     "inlineSources": true,
     "module": "commonjs",
-    "target": "ES5",
+    "target": "ES2019",
     "allowJs": true,
     "noImplicitAny": true,
     "moduleResolution": "node",
@@ -13,7 +16,6 @@
     "strictNullChecks": true,
     "declaration": true,
     "lib": [
-      "DOM",
       "ES5",
       "ES6",
       "ES7"
