@@ -9,7 +9,6 @@ use std::path::{Path, PathBuf};
 use append_only_vec::AppendOnlyVec;
 use comemo::Prehashed;
 use memmap2::Mmap;
-use once_cell::sync::OnceCell;
 use parking_lot::{MappedRwLockWriteGuard, RwLock, RwLockWriteGuard};
 use typst::diag::{FileError, FileResult};
 use typst::eval::Library;
@@ -21,17 +20,10 @@ use typst_ts_core::config::CompileOpts;
 use walkdir::WalkDir;
 
 use crate::path::{PathHash, PathSlot};
-use typst_ts_core::FontResolver;
+use typst_ts_core::{FontLoader, FontResolver, FontSlot};
 
 type CodespanResult<T> = Result<T, CodespanError>;
 type CodespanError = codespan_reporting::files::Error;
-
-/// Holds details about the location of a font and lazily the font itself.
-struct FontSlot {
-    pub path: PathBuf,
-    pub index: u32,
-    pub font: OnceCell<Option<Font>>,
-}
 
 /// A world that provides access to the operating system.
 pub struct TypstSystemWorld {
@@ -97,13 +89,7 @@ impl World for TypstSystemWorld {
     }
 
     fn font(&self, id: usize) -> Option<Font> {
-        let slot = &self.fonts[id];
-        slot.font
-            .get_or_init(|| {
-                let data = self.file(&slot.path).ok()?;
-                Font::new(data, slot.index)
-            })
-            .clone()
+        self.fonts[id].get()
     }
 
     fn file(&self, path: &Path) -> FileResult<Buffer> {
@@ -224,6 +210,20 @@ impl<'a> codespan_reporting::files::Files<'a> for TypstSystemWorld {
     }
 }
 
+pub struct PathFontLoader {
+    // todo: file system abstraction
+    // pub world: Box<dyn World>,
+    pub path: PathBuf,
+    pub index: u32,
+}
+
+impl FontLoader for PathFontLoader {
+    fn load(&mut self) -> Option<Font> {
+        let data = read(&self.path).ok()?;
+        Font::new(data.into(), self.index)
+    }
+}
+
 /// Searches for fonts.
 pub struct SystemFontSearcher {
     pub book: FontBook,
@@ -243,13 +243,9 @@ impl SystemFontSearcher {
     fn add_embedded(&mut self) {
         let mut add = |bytes: &'static [u8]| {
             let buffer = Buffer::from_static(bytes);
-            for (i, font) in Font::iter(buffer).enumerate() {
+            for (_, font) in Font::iter(buffer).enumerate() {
                 self.book.push(font.info().clone());
-                self.fonts.push(FontSlot {
-                    path: PathBuf::new(),
-                    index: i as u32,
-                    font: OnceCell::from(Some(font)),
-                });
+                self.fonts.push(FontSlot::with_value(Some(font)));
             }
         };
 
@@ -351,11 +347,10 @@ impl SystemFontSearcher {
             if let Ok(mmap) = unsafe { Mmap::map(&file) } {
                 for (i, info) in FontInfo::iter(&mmap).enumerate() {
                     self.book.push(info);
-                    self.fonts.push(FontSlot {
+                    self.fonts.push(FontSlot::new(Box::new(PathFontLoader {
                         path: path.into(),
                         index: i as u32,
-                        font: OnceCell::new(),
-                    });
+                    })));
                 }
             }
         }
