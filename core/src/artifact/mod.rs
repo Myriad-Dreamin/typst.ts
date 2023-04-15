@@ -330,7 +330,7 @@ impl Artifact {
                 .font_book()
                 .select_fallback(Some(&font), font.variant, "0")
                 .unwrap();
-            builder.fonts.push(font_mgr.get_font(idx));
+            builder.fonts.push(font_mgr.font(idx).unwrap());
         }
 
         let pages = self

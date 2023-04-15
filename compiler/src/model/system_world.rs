@@ -17,10 +17,11 @@ use typst::syntax::{Source, SourceId};
 use typst::util::{Buffer, PathExt};
 use typst::World;
 use typst_ts_core::config::CompileOpts;
+use typst_ts_core::FontResolver;
 use walkdir::WalkDir;
 
 use crate::path::{PathHash, PathSlot};
-use typst_ts_core::{FontLoader, FontResolver, FontSlot};
+use typst_ts_core::{font::FontResolverImpl, FontLoader, FontSlot};
 
 type CodespanResult<T> = Result<T, CodespanError>;
 type CodespanError = codespan_reporting::files::Error;
@@ -29,8 +30,7 @@ type CodespanError = codespan_reporting::files::Error;
 pub struct TypstSystemWorld {
     root: PathBuf,
     library: Prehashed<Library>,
-    book: Prehashed<FontBook>,
-    fonts: Vec<FontSlot>,
+    pub font_resolver: FontResolverImpl,
     hashes: RwLock<HashMap<PathBuf, FileResult<PathHash>>>,
     paths: RwLock<HashMap<PathHash, PathSlot>>,
     pub sources: AppendOnlyVec<Source>,
@@ -46,8 +46,7 @@ impl TypstSystemWorld {
         Self {
             root: opts.root_dir,
             library: Prehashed::new(typst_library::build()),
-            book: Prehashed::new(searcher.book),
-            fonts: searcher.fonts,
+            font_resolver: FontResolverImpl::new(searcher.book, searcher.fonts),
             hashes: RwLock::default(),
             paths: RwLock::default(),
             sources: AppendOnlyVec::new(),
@@ -85,11 +84,11 @@ impl World for TypstSystemWorld {
     }
 
     fn book(&self) -> &Prehashed<FontBook> {
-        &self.book
+        &self.font_resolver.font_book()
     }
 
     fn font(&self, id: usize) -> Option<Font> {
-        self.fonts[id].get()
+        self.font_resolver.font(id)
     }
 
     fn file(&self, path: &Path) -> FileResult<Buffer> {
@@ -138,16 +137,6 @@ impl TypstSystemWorld {
         self.sources = AppendOnlyVec::new();
         self.hashes.get_mut().clear();
         self.paths.get_mut().clear();
-    }
-}
-
-impl FontResolver for TypstSystemWorld {
-    fn font_book(&self) -> &FontBook {
-        &self.book
-    }
-
-    fn get_font(&self, idx: usize) -> Font {
-        self.font(idx).unwrap()
     }
 }
 

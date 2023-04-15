@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 
+use comemo::Prehashed;
 use once_cell::sync::OnceCell;
 use typst::{
     font::{Font, FontBook},
@@ -7,8 +8,32 @@ use typst::{
 };
 
 pub trait FontResolver {
-    fn font_book(&self) -> &FontBook;
-    fn get_font(&self, idx: usize) -> Font;
+    fn font_book(&self) -> &Prehashed<FontBook>;
+    fn font(&self, idx: usize) -> Option<Font>;
+}
+
+pub struct FontResolverImpl {
+    book: Prehashed<FontBook>,
+    fonts: Vec<FontSlot>,
+}
+
+impl FontResolverImpl {
+    pub fn new(book: FontBook, fonts: Vec<FontSlot>) -> Self {
+        Self {
+            book: Prehashed::new(book),
+            fonts,
+        }
+    }
+}
+
+impl FontResolver for FontResolverImpl {
+    fn font_book(&self) -> &Prehashed<FontBook> {
+        &self.book
+    }
+
+    fn font(&self, idx: usize) -> Option<Font> {
+        self.fonts[idx].get()
+    }
 }
 
 /// Lazy Font Reference, load as needed.

@@ -22,7 +22,7 @@ mod tests {
         let path = Path::new("fuzzers/corpora/hw/main.artifact.json");
         let content = std::fs::read_to_string(path).unwrap();
         let artifact: Artifact = serde_json::from_str(content.as_str()).unwrap();
-        let document = artifact.to_document(&world);
+        let document = artifact.to_document(&world.font_resolver);
         let buffer = typst::export::pdf(&document);
         let output_path = Path::new("fuzzers/corpora/hw/main2.pdf");
         std::fs::write(&output_path, buffer).unwrap();

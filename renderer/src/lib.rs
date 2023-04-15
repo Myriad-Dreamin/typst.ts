@@ -152,7 +152,7 @@ impl TypstRenderer {
                 .join(", ")
         );
 
-        let document = artifact.to_document(&self.world);
+        let document = artifact.to_document(&self.world.font_resolver);
         if document.pages.len() == 0 {
             return Err("no pages in artifact".into());
         }
