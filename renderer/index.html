@@ -9,6 +9,11 @@
     <title>Typst.ts</title>
     <script type="module" src="dist/main.js">
     </script>
+    <!-- pdf.js v2.0.332 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf_viewer.min.css"
+        integrity="sha512-Jf9DLkegLgARLR151csVkPvcVt4cOUhslrSZwiTAe9mqFL/BbYRDmxCOioCtbHifEgjsBFbrVhOMQ3mYPDLrqQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script>
         /// https://segmentfault.com/a/1190000016574288
         (function () {
@@ -34,29 +39,18 @@
             };
         })();
 
-        document.ready(() => {
-            console.log('ready');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js";
 
-            let plugin = window.createTypstRenderer();
+        document.ready(() => {
+            let plugin = window.createTypstRenderer(pdfjsLib);
             plugin.init().then(() => {
                 var xhr = new XMLHttpRequest();
-                xhr.open("GET", "math.artifact.json", false);
+                xhr.open("GET", "main.artifact.json", false);
                 xhr.send();
 
                 const imageContainer = document.getElementById('imageContainer');
-                let currentScale = 1;  // variable for storing scaling factor
-                let imageContainerWidth = imageContainer.offsetWidth;
 
-                let canvas = document.createElement('canvas');
-
-                plugin.render(xhr.responseText, canvas).then((renderResult) => {
-                    // compute scaling factor according to the paper size
-                    imageContainerWidth = imageContainer.offsetWidth;
-                    currentScale = imageContainerWidth / renderResult.width;
-                    imageContainer.style.transformOrigin = "0px 0px";
-                    imageContainer.style.transform = `scale(${currentScale})`;
-                    imageContainer.appendChild(canvas);
-
+                plugin.render(xhr.responseText, imageContainer).then((renderResult) => {
                     console.log('render done');
                 });
             });
@@ -64,17 +58,45 @@
     </script>
 
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
         .imageContainer {
             margin: 0;
             transform-origin: 0 0;
+        }
+
+        #text-layer {
+            position: absolute;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            opacity: 0.2;
+            line-height: 1.0;
+        }
+
+        #text-layer>div {
+            color: transparent;
+            position: absolute;
+            white-space: pre;
+            cursor: text;
+            transform-origin: 0% 0%;
         }
     </style>
 </head>
 
 <body>
 
-    <body style="padding: 0px 0px 0px 0px;">
+    <body>
         <div id="imageContainer" style="height: 0px;"></div>
+        <div>
+            <div id="text-layer" class="textLayer"></div>
+        </div>
     </body>
 </body>
 
