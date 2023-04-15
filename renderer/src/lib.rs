@@ -88,7 +88,8 @@ impl TypstRenderer {
     }
 
     pub fn render(&mut self, artifact_content: String) -> Result<ImageData, JsValue> {
-        let render_result = self.render_internal(artifact_content, 2., "ffffff".to_string())?;
+        let render_result =
+            self.render_to_image_internal(artifact_content, 2., "ffffff".to_string())?;
 
         Ok(ImageData::new_with_u8_clamped_array_and_sh(
             Clamped(render_result.data()),
@@ -101,15 +102,41 @@ impl TypstRenderer {
         //     Err(errors) => Err(format!("{:?}", *errors).into()),
         // }
     }
+
+    pub fn render_to_pdf(&mut self, artifact_content: String) -> Result<Uint8Array, JsValue> {
+        Ok(Uint8Array::from(
+            self.render_to_pdf_internal(artifact_content)?.as_slice(),
+        ))
+    }
 }
 
 impl TypstRenderer {
-    pub fn render_internal(
+    pub fn render_to_pdf_internal(&self, artifact_content: String) -> Result<Vec<u8>, String> {
+        return self.render_artifact(artifact_content, |document| {
+            Ok(typst::export::pdf(&document))
+        });
+    }
+
+    pub fn render_to_image_internal(
         &self,
         artifact_content: String,
         pixel_per_pt: f32,
         fill: String,
     ) -> Result<sk::Pixmap, String> {
+        return self.render_artifact(artifact_content, |document| {
+            Ok(crate::render::render(
+                &document.pages[0],
+                pixel_per_pt,
+                Color::Rgba(RgbaColor::from_str(&fill)?),
+            ))
+        });
+    }
+
+    pub fn render_artifact<T>(
+        &self,
+        artifact_content: String,
+        render: impl FnOnce(typst::doc::Document) -> Result<T, String>,
+    ) -> Result<T, String> {
         // todo:
         // https://medium.com/@wl1508/avoiding-using-serde-and-deserde-in-rust-webassembly-c1e4640970ca
         let artifact: Artifact = serde_json::from_str(artifact_content.as_str()).unwrap();
@@ -130,11 +157,7 @@ impl TypstRenderer {
             return Err("no pages in artifact".into());
         }
 
-        Ok(crate::render::render(
-            &document.pages[0],
-            pixel_per_pt,
-            Color::Rgba(RgbaColor::from_str(&fill)?),
-        ))
+        render(document)
     }
 }
 
@@ -177,7 +200,7 @@ mod tests {
         let artifact_content = std::fs::read_to_string(path).unwrap();
 
         renderer
-            .render_internal(artifact_content, 2., "ffffff".to_string())
+            .render_to_image_internal(artifact_content, 2., "ffffff".to_string())
             .unwrap();
     }
 }
