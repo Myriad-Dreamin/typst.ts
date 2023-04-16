@@ -9,29 +9,18 @@ use typst_ts_core::Artifact;
 use wasm_bindgen::{prelude::*, Clamped};
 use web_sys::{console, ImageData};
 
-pub mod web_font;
-use web_font::WebFont;
+pub mod browser_world;
+use browser_world::{BrowserFontSearcher, TypstBrowserWorld};
+
+pub(crate) mod pixmap;
 
 pub(crate) mod render;
 
 #[macro_use]
 pub(crate) mod utils;
 
-pub(crate) mod pixmap;
-
-pub mod browser_world;
-use browser_world::{BrowserFontSearcher, TypstBrowserWorld};
-
-#[wasm_bindgen]
-extern "C" {
-    fn alert(s: &str);
-}
-
-#[wasm_bindgen(module = "utils")]
-extern "C" {
-    async fn get_fonts() -> JsValue;
-    async fn get_local_fonts() -> JsValue;
-}
+pub mod web_font;
+use web_font::WebFont;
 
 #[wasm_bindgen]
 pub struct TypstRendererBuilder {
