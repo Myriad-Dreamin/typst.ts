@@ -108,7 +108,7 @@ class TypstRendererImpl {
     return imageRenderResult;
   }
 
-  private async renderOnePage(
+  private async renderOnePageTextLayer(
     container: HTMLElement,
     page: pdfjsModule.PDFPageProxy,
     scale: number,
@@ -138,7 +138,7 @@ class TypstRendererImpl {
     const scale = Number.parseFloat(orignalScale.toFixed(4));
     layer.parentElement?.style.setProperty('--scale-factor', scale.toString());
 
-    this.renderOnePage(layer, page, scale);
+    this.renderOnePageTextLayer(layer, page, scale);
     const t4 = performance.now();
 
     console.log(
