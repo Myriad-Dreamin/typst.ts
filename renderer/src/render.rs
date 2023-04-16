@@ -17,23 +17,16 @@ use typst::image::{DecodedImage, Image};
 ///
 /// This renders the frame at the given number of pixels per point and returns
 /// the resulting `tiny-skia` pixel buffer.
-pub fn render(frame: &Frame, pixel_per_pt: f32, fill: Color) -> sk::Pixmap {
-    let size = frame.size();
-    let pxw = (pixel_per_pt * size.x.to_f32()).round().max(1.0) as u32;
-    let pxh = (pixel_per_pt * size.y.to_f32()).round().max(1.0) as u32;
-
-    let mut canvas = sk::Pixmap::new(pxw, pxh).unwrap();
+pub fn render(canvas: &mut sk::PixmapMut, frame: &Frame, pixel_per_pt: f32, fill: Color) {
     canvas.fill(fill.into());
 
     let ts = sk::Transform::from_scale(pixel_per_pt, pixel_per_pt);
-    render_frame(&mut canvas, ts, None, frame);
-
-    canvas
+    render_frame(canvas, ts, None, frame);
 }
 
 /// Render a frame into the canvas.
 fn render_frame(
-    canvas: &mut sk::Pixmap,
+    canvas: &mut sk::PixmapMut,
     ts: sk::Transform,
     mask: Option<&sk::ClipMask>,
     frame: &Frame,
@@ -68,7 +61,7 @@ fn render_frame(
 
 /// Render a group frame with optional transform and clipping into the canvas.
 fn render_group(
-    canvas: &mut sk::Pixmap,
+    canvas: &mut sk::PixmapMut,
     ts: sk::Transform,
     mask: Option<&sk::ClipMask>,
     group: &GroupItem,
@@ -110,7 +103,7 @@ fn render_group(
 
 /// Render a text run into the canvas.
 fn render_text(
-    canvas: &mut sk::Pixmap,
+    canvas: &mut sk::PixmapMut,
     ts: sk::Transform,
     mask: Option<&sk::ClipMask>,
     text: &TextItem,
@@ -131,7 +124,7 @@ fn render_text(
 
 /// Render an SVG glyph into the canvas.
 fn render_svg_glyph(
-    canvas: &mut sk::Pixmap,
+    canvas: &mut sk::PixmapMut,
     ts: sk::Transform,
     mask: Option<&sk::ClipMask>,
     text: &TextItem,
@@ -226,7 +219,7 @@ fn render_svg_glyph(
 
 /// Render a bitmap glyph into the canvas.
 fn render_bitmap_glyph(
-    canvas: &mut sk::Pixmap,
+    canvas: &mut sk::PixmapMut,
     ts: sk::Transform,
     mask: Option<&sk::ClipMask>,
     text: &TextItem,
@@ -250,7 +243,7 @@ fn render_bitmap_glyph(
 
 /// Render an outline glyph into the canvas. This is the "normal" case.
 fn render_outline_glyph(
-    canvas: &mut sk::Pixmap,
+    canvas: &mut sk::PixmapMut,
     ts: sk::Transform,
     mask: Option<&sk::ClipMask>,
     text: &TextItem,
@@ -362,7 +355,7 @@ fn render_outline_glyph(
 
 /// Render a geometrical shape into the canvas.
 fn render_shape(
-    canvas: &mut sk::Pixmap,
+    canvas: &mut sk::PixmapMut,
     ts: sk::Transform,
     mask: Option<&sk::ClipMask>,
     shape: &Shape,
@@ -435,7 +428,7 @@ fn convert_path(path: &geom::Path) -> Option<sk::Path> {
 
 /// Render a raster or SVG image into the canvas.
 fn render_image(
-    canvas: &mut sk::Pixmap,
+    canvas: &mut sk::PixmapMut,
     ts: sk::Transform,
     mask: Option<&sk::ClipMask>,
     image: &Image,

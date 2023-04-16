@@ -17,6 +17,8 @@ pub(crate) mod render;
 #[macro_use]
 pub(crate) mod utils;
 
+pub(crate) mod pixmap;
+
 pub mod browser_world;
 use browser_world::{BrowserFontSearcher, TypstBrowserWorld};
 
@@ -88,19 +90,18 @@ impl TypstRenderer {
     }
 
     pub fn render(&mut self, artifact_content: String) -> Result<ImageData, JsValue> {
-        let render_result =
-            self.render_to_image_internal(artifact_content, 2., "ffffff".to_string())?;
+        let pixel_per_pt = 2.;
+
+        let document = self.parse_artifact(artifact_content)?;
+
+        let (prealloc, size) =
+            self.render_to_image_internal(&document, pixel_per_pt, "ffffff".to_string())?;
 
         Ok(ImageData::new_with_u8_clamped_array_and_sh(
-            Clamped(render_result.data()),
-            render_result.width(),
-            render_result.height(),
+            Clamped(prealloc.as_slice()),
+            size.width,
+            size.height,
         )?)
-        // match result.unwrap() {
-        //     Ok(document) => {
-        //     }
-        //     Err(errors) => Err(format!("{:?}", *errors).into()),
-        // }
     }
 
     pub fn render_to_pdf(&mut self, artifact_content: String) -> Result<Uint8Array, JsValue> {
@@ -112,31 +113,64 @@ impl TypstRenderer {
 
 impl TypstRenderer {
     pub fn render_to_pdf_internal(&self, artifact_content: String) -> Result<Vec<u8>, String> {
-        return self.render_artifact(artifact_content, |document| {
-            Ok(typst::export::pdf(&document))
-        });
+        let document = self.parse_artifact(artifact_content)?;
+        Ok(typst::export::pdf(&document))
     }
 
     pub fn render_to_image_internal(
         &self,
-        artifact_content: String,
+        document: &typst::doc::Document,
         pixel_per_pt: f32,
         fill: String,
-    ) -> Result<sk::Pixmap, String> {
-        return self.render_artifact(artifact_content, |document| {
-            Ok(crate::render::render(
-                &document.pages[0],
-                pixel_per_pt,
-                Color::Rgba(RgbaColor::from_str(&fill)?),
-            ))
-        });
+    ) -> Result<(Vec<u8>, pixmap::IntSize), JsValue> {
+        let (data_len, size) = {
+            let size = document.pages[0].size();
+            let pxw = (pixel_per_pt * (size.x.to_pt() as f32)).round().max(1.0) as u32;
+            let pxh = (pixel_per_pt * (size.y.to_pt() as f32)).round().max(1.0) as u32;
+            let size = pixmap::IntSize {
+                width: pxw,
+                height: pxh,
+            };
+            let data_len =
+                pixmap::data_len_for_size(size).ok_or("cannot compute data_len_for_size")?;
+            (data_len, size)
+        };
+
+        let mut prealloc = vec![0; data_len];
+        self.render_to_image_prealloc(
+            &document,
+            pixel_per_pt,
+            fill,
+            &mut [prealloc.as_mut_slice()],
+        )?;
+
+        Ok((prealloc, size))
     }
 
-    pub fn render_artifact<T>(
+    pub fn render_to_image_prealloc(
         &self,
-        artifact_content: String,
-        render: impl FnOnce(typst::doc::Document) -> Result<T, String>,
-    ) -> Result<T, String> {
+        document: &typst::doc::Document,
+        pixel_per_pt: f32,
+        fill: String,
+        buffers: &mut [&mut [u8]],
+    ) -> Result<(), String> {
+        let size = document.pages[0].size();
+        let pxw = (pixel_per_pt * (size.x.to_pt() as f32)).round().max(1.0) as u32;
+        let pxh = (pixel_per_pt * (size.y.to_pt() as f32)).round().max(1.0) as u32;
+        let mut canvas = sk::PixmapMut::from_bytes(buffers[0], pxw, pxh).ok_or(format!(
+            "failed to create canvas reference: {}x{}",
+            pxw, pxh
+        ))?;
+
+        Ok(crate::render::render(
+            &mut canvas,
+            &document.pages[0],
+            pixel_per_pt,
+            Color::Rgba(RgbaColor::from_str(&fill)?),
+        ))
+    }
+
+    pub fn parse_artifact(&self, artifact_content: String) -> Result<typst::doc::Document, String> {
         // todo:
         // https://medium.com/@wl1508/avoiding-using-serde-and-deserde-in-rust-webassembly-c1e4640970ca
         let artifact: Artifact = serde_json::from_str(artifact_content.as_str()).unwrap();
@@ -157,7 +191,7 @@ impl TypstRenderer {
             return Err("no pages in artifact".into());
         }
 
-        render(document)
+        Ok(document)
     }
 }
 
@@ -199,8 +233,9 @@ mod tests {
         let path = Path::new("fuzzers/corpora/hw/main.artifact.json");
         let artifact_content = std::fs::read_to_string(path).unwrap();
 
+        let document = renderer.parse_artifact(artifact_content).unwrap();
         renderer
-            .render_to_image_internal(artifact_content, 2., "ffffff".to_string())
+            .render_to_image_internal(&document, 2., "ffffff".to_string())
             .unwrap();
     }
 }
