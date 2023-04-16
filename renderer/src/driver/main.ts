@@ -7,7 +7,7 @@ import * as pdfjsModule from 'pdfjs-dist';
 
 export interface TypstRenderer {
   init(): Promise<void>;
-  render(artifact_content: string, container: HTMLDivElement): Promise<RenderResult>;
+  render(artifactContent: string, container: HTMLDivElement): Promise<RenderResult>;
 }
 
 export interface RenderResult {
@@ -43,14 +43,17 @@ class TypstRendererImpl {
     if ('queryLocalFonts' in window) {
       const fonts = await (window as any).queryLocalFonts();
       console.log('local fonts count:', fonts.length);
+
       for (const font of fonts) {
         if (!font.family.includes('Segoe UI Symbol')) {
           continue;
         }
+
         const data: ArrayBuffer = await (await font.blob()).arrayBuffer();
         await builder.add_raw_font(new Uint8Array(data));
       }
     }
+
     const t2 = performance.now();
     console.log('font loading', t2 - t);
 
@@ -61,12 +64,12 @@ class TypstRendererImpl {
     console.log('loaded Typst');
   }
 
-  async renderImage(artifact_content: string): Promise<ImageData> {
-    return this.renderer.render(artifact_content);
+  async renderImage(artifactContent: string): Promise<ImageData> {
+    return this.renderer.render(artifactContent);
   }
 
-  async renderPdf(artifact_content: string): Promise<Uint8Array> {
-    return this.renderer.render_to_pdf(artifact_content);
+  async renderPdf(artifactContent: string): Promise<Uint8Array> {
+    return this.renderer.render_to_pdf(artifactContent);
   }
 
   private async renderDisplayLayer(
@@ -89,7 +92,10 @@ class TypstRendererImpl {
     }
 
     const t3 = performance.now();
-    console.log('time used', t2 - t, t3 - t2);
+
+    console.log(
+      `display layer used: retieve/render = ${(t2 - t).toFixed(1)}/${(t3 - t2).toFixed(1)}ms`,
+    );
 
     // compute scaling factor according to the paper size
     const currentScale = imageContainerWidth / imageRenderResult.width;
@@ -101,33 +107,41 @@ class TypstRendererImpl {
     return imageRenderResult;
   }
 
-  private async renderTextLayer(artifact_content: string, imageContainer: HTMLDivElement) {
-    const imageContainerWidth = imageContainer.offsetWidth;
+  private async renderOnePage(
+    container: HTMLElement,
+    page: pdfjsModule.PDFPageProxy,
+    scale: number,
+  ) {
+    const textContentSource = await page.getTextContent();
+    this.pdf.renderTextLayer({
+      textContentSource,
+      container,
+      viewport: page.getViewport({ scale }),
+    });
+  }
 
+  private async renderTextLayer(artifact_content: string, imageContainer: HTMLDivElement) {
+    const layer = document.getElementById('text-layer')!;
+    const imageContainerWidth = imageContainer.offsetWidth;
     const t2 = performance.now();
-    const layer = document.getElementById('text-layer');
-    const data = await this.renderPdf(artifact_content);
-    const pdfDoc = await this.pdf.getDocument(data).promise;
+
+    const buf = await this.renderPdf(artifact_content);
+    const doc = await this.pdf.getDocument(buf).promise;
     const t3 = performance.now();
 
-    const page = await pdfDoc.getPage(1);
-    const textLayerScale = Number.parseFloat(
+    const page = await doc.getPage(1);
+
+    const scale = Number.parseFloat(
       (imageContainerWidth / page.getViewport({ scale: 1 }).width).toFixed(4),
     );
-    layer?.parentElement?.style.setProperty('--scale-factor', textLayerScale.toString());
+    layer.parentElement?.style.setProperty('--scale-factor', scale.toString());
 
-    page.getTextContent().then(textContent => {
-      console.log(textContent);
+    this.renderOnePage(layer, page, scale);
+    const t4 = performance.now();
 
-      this.pdf.renderTextLayer({
-        textContentSource: textContent,
-        container: layer!,
-        viewport: page.getViewport({ scale: textLayerScale }),
-      });
-      const t4 = performance.now();
-
-      console.log('text layer used', t3 - t2, t4 - t3);
-    });
+    console.log(
+      `text layer used: retieve/render = ${(t3 - t2).toFixed(1)}/${(t4 - t3).toFixed(1)}ms`,
+    );
   }
 
   async render(artifact_content: string, imageContainer: HTMLDivElement): Promise<RenderResult> {
