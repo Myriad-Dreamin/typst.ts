@@ -84,6 +84,7 @@ class TypstRendererImpl {
     const imageRenderResult = await this.renderImage(artifact_content);
     const t2 = performance.now();
 
+    // put data to canvas
     canvas.width = imageRenderResult.width;
     canvas.height = imageRenderResult.height;
     let ctx = canvas.getContext('2d');
@@ -131,9 +132,10 @@ class TypstRendererImpl {
 
     const page = await doc.getPage(1);
 
-    const scale = Number.parseFloat(
-      (imageContainerWidth / page.getViewport({ scale: 1 }).width).toFixed(4),
-    );
+    // compute scale size
+    const orignalScale = imageContainerWidth / page.getViewport({ scale: 1 }).width;
+    // the --scale-factor will truncate our scale, we do it first
+    const scale = Number.parseFloat(orignalScale.toFixed(4));
     layer.parentElement?.style.setProperty('--scale-factor', scale.toString());
 
     this.renderOnePage(layer, page, scale);
