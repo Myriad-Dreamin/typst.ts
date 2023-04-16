@@ -20,10 +20,10 @@ class TypstRendererImpl {
 
   constructor(private pdf: typeof pdfjsModule) {}
 
-  async loadFont(builder: typst.TypstRendererBuilder, font_path: string): Promise<void> {
-    const response = await fetch(font_path);
-    const font_buffer = await response.arrayBuffer();
-    await builder.add_raw_font(new Uint8Array(font_buffer));
+  async loadFont(builder: typst.TypstRendererBuilder, fontPath: string): Promise<void> {
+    const response = await fetch(fontPath);
+    const fontBuffer = new Uint8Array(await response.arrayBuffer());
+    await builder.add_raw_font(fontBuffer);
   }
 
   async init(): Promise<void> {
@@ -73,23 +73,23 @@ class TypstRendererImpl {
   }
 
   private async renderDisplayLayer(
-    artifact_content: string,
-    imageContainer: HTMLDivElement,
+    artifactContent: string,
+    container: HTMLDivElement,
   ): Promise<ImageData> {
     let canvas = document.createElement('canvas');
 
-    const imageContainerWidth = imageContainer.offsetWidth;
+    const containerWidth = container.offsetWidth;
 
     const t = performance.now();
-    const imageRenderResult = await this.renderImage(artifact_content);
+    const renderResult = await this.renderImage(artifactContent);
     const t2 = performance.now();
 
     // put data to canvas
-    canvas.width = imageRenderResult.width;
-    canvas.height = imageRenderResult.height;
+    canvas.width = renderResult.width;
+    canvas.height = renderResult.height;
     let ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.putImageData(imageRenderResult, 0, 0);
+      ctx.putImageData(renderResult, 0, 0);
     }
 
     const t3 = performance.now();
@@ -99,13 +99,13 @@ class TypstRendererImpl {
     );
 
     // compute scaling factor according to the paper size
-    const currentScale = imageContainerWidth / imageRenderResult.width;
-    imageContainer.style.transformOrigin = '0px 0px';
-    imageContainer.style.transform = `scale(${currentScale})`;
+    const currentScale = containerWidth / renderResult.width;
+    container.style.transformOrigin = '0px 0px';
+    container.style.transform = `scale(${currentScale})`;
 
-    imageContainer.appendChild(canvas);
+    container.appendChild(canvas);
 
-    return imageRenderResult;
+    return renderResult;
   }
 
   private async renderOnePageTextLayer(
@@ -121,9 +121,9 @@ class TypstRendererImpl {
     });
   }
 
-  private async renderTextLayer(artifact_content: string, imageContainer: HTMLDivElement) {
+  private async renderTextLayer(artifact_content: string, container: HTMLDivElement) {
     const layer = document.getElementById('text-layer')!;
-    const imageContainerWidth = imageContainer.offsetWidth;
+    const containerWidth = container.offsetWidth;
     const t2 = performance.now();
 
     const buf = await this.renderPdf(artifact_content);
@@ -133,7 +133,7 @@ class TypstRendererImpl {
     const page = await doc.getPage(1);
 
     // compute scale size
-    const orignalScale = imageContainerWidth / page.getViewport({ scale: 1 }).width;
+    const orignalScale = containerWidth / page.getViewport({ scale: 1 }).width;
     // the --scale-factor will truncate our scale, we do it first
     const scale = Number.parseFloat(orignalScale.toFixed(4));
     layer.parentElement?.style.setProperty('--scale-factor', scale.toString());
@@ -146,17 +146,17 @@ class TypstRendererImpl {
     );
   }
 
-  async render(artifact_content: string, imageContainer: HTMLDivElement): Promise<RenderResult> {
+  async render(artifactContent: string, container: HTMLDivElement): Promise<RenderResult> {
     let renderResult: RenderResult;
 
     const doRenderDisplayLayer = async () => {
-      renderResult = await this.renderDisplayLayer(artifact_content, imageContainer);
+      renderResult = await this.renderDisplayLayer(artifactContent, container);
     };
 
     const doRenderTextLayer = new Promise(resolve => {
       setTimeout(() => {
         // setImmediate
-        this.renderTextLayer(artifact_content, imageContainer).then(resolve);
+        this.renderTextLayer(artifactContent, container).then(resolve);
       }, 0);
     });
 
