@@ -11,6 +11,7 @@
 		"build:wasm": "wasm-pack build --target web",
 		"build:dev": "wasm-pack build --target web --dev && tsc --emitDeclarationOnly --outDir dist && node esbuild.config.mjs",
 		"build": "wasm-pack build --target web && tsc --emitDeclarationOnly --outDir dist && tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"link:local": "npm link",
 		"prepublish": "npm run build"
 	},
 	"devDependencies": {
