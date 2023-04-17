@@ -3,7 +3,8 @@ members = [
     "cli",
     "core",
     "compiler",
-    "renderer",
+
+    "packages/renderer",
 
     "exporter/ws",
 

@@ -11,7 +11,7 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 crate-type = ["cdylib"]
 
 [dependencies]
-typst-ts-core = { path = "../core" }
+typst-ts-core = { path = "../../core" }
 
 typst = { git = "https://github.com/typst/typst.git" }
 typst-library = { git = "https://github.com/typst/typst.git" }

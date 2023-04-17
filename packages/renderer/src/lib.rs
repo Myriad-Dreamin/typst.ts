@@ -200,22 +200,22 @@ mod tests {
 
         // todo: prepare font files for test
         builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
-            "../../assets/fonts/LinLibertine_R.ttf"
+            "../../../assets/fonts/LinLibertine_R.ttf"
         )));
         builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
-            "../../assets/fonts/LinLibertine_RB.ttf"
+            "../../../assets/fonts/LinLibertine_RB.ttf"
         )));
         builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
-            "../../assets/fonts/LinLibertine_RBI.ttf"
+            "../../../assets/fonts/LinLibertine_RBI.ttf"
         )));
         builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
-            "../../assets/fonts/LinLibertine_RI.ttf"
+            "../../../assets/fonts/LinLibertine_RI.ttf"
         )));
         builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
-            "../../assets/fonts/NewCMMath-Book.otf"
+            "../../../assets/fonts/NewCMMath-Book.otf"
         )));
         builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
-            "../../assets/fonts/NewCMMath-Regular.otf"
+            "../../../assets/fonts/NewCMMath-Regular.otf"
         )));
         let renderer = pollster::block_on(builder.build()).unwrap();
 

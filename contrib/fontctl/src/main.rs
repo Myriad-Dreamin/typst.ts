@@ -147,7 +147,7 @@ fn download_fonts(opts: Opts) {
     for font in FONT_LISTS {
         std::fs::copy(
             format!("assets/fonts/{}", font.0),
-            format!("renderer/dist/fonts/{}", font.0),
+            format!("packages/renderer/dist/fonts/{}", font.0),
         )
         .unwrap();
     }
