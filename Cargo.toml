@@ -4,7 +4,7 @@ members = [
     "core",
     "compiler",
 
-    "packages/renderer",
+    "packages/typst.ts",
 
     "exporter/ws",
 
