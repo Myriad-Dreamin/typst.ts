@@ -76,18 +76,33 @@ class TypstRendererImpl {
     artifactContent: string,
     container: HTMLDivElement,
   ): Promise<ImageData> {
-    let canvas = document.createElement('canvas');
-
     const containerWidth = container.offsetWidth;
+    const imageScaleFactor = 2;
 
     const t = performance.now();
-    const renderResult = await this.renderImage(artifactContent);
+
+    const artifact = JSON.parse(artifactContent);
+
+    const canvasList = new Array(artifact.pages.length);
+    for (let i = 0; i < artifact.pages.length; i++) {
+      const canvas = (canvasList[i] = document.createElement('canvas'));
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const pageAst = artifact.pages[i];
+        const width = Math.ceil(pageAst.size.x) * imageScaleFactor;
+        const height = Math.ceil(pageAst.size.y) * imageScaleFactor;
+
+        canvas.width = width;
+        canvas.height = height;
+      }
+
+      container.appendChild(canvas);
+    }
+
     const t2 = performance.now();
 
-    // put data to canvas
-    canvas.width = renderResult.width;
-    canvas.height = renderResult.height;
-    let ctx = canvas.getContext('2d');
+    const renderResult = await this.renderImage(artifactContent);
+    let ctx = canvasList[0].getContext('2d');
     if (ctx) {
       ctx.putImageData(renderResult, 0, 0);
     }
@@ -102,8 +117,6 @@ class TypstRendererImpl {
     const currentScale = containerWidth / renderResult.width;
     container.style.transformOrigin = '0px 0px';
     container.style.transform = `scale(${currentScale})`;
-
-    container.appendChild(canvas);
 
     return renderResult;
   }
