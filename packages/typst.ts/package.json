@@ -1,6 +1,6 @@
 {
 	"name": "@myriaddreamin/typst.ts",
-	"version": "0.1.0",
+	"version": "0.0.1",
 	"description": "Render Typst documents in browser.",
 	"keywords": [],
 	"author": "Myriad-Dreamin",
@@ -11,8 +11,9 @@
 		"build:wasm": "wasm-pack build --target web",
 		"build:dev": "wasm-pack build --target web --dev && tsc --emitDeclarationOnly --outDir dist && node esbuild.config.mjs",
 		"build": "wasm-pack build --target web && tsc --emitDeclarationOnly --outDir dist && tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-		"link:local": "npm link",
-		"prepublish": "npm run build"
+		"link:local": "yarn link",
+		"prepublish": "npm run build",
+		"publish": "npm publish --access public"
 	},
 	"devDependencies": {
 		"@types/node": "^16.11.6",

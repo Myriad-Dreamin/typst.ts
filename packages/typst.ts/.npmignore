@@ -4,3 +4,10 @@ node_modules/
 pkg/
 target/
 out/
+dist/fonts
+
+index.html
+*.artifact.json
+Cargo.toml
+Cargo.lock
+esbuild.*
