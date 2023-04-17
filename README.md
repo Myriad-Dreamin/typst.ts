@@ -4,20 +4,21 @@ Typst.ts allows you to independently run the Typst compiler and exporter (render
 
 You can:
 
-+ locally run the compilation via `typst-ts-cli` to get a precompiled document,
-  + or use `typst-ts-compiler` to build your backend programmatically.
-+ build your frontend using the lightweight TypeScript library `typst.ts`.
-+ send the precompiled document to your readers' browsers and render it as HTML elements.
+- locally run the compilation via `typst-ts-cli` to get a precompiled document,
+  - or use `typst-ts-compiler` to build your backend programmatically.
+- build your frontend using the lightweight TypeScript library `typst.ts`.
+- send the precompiled document to your readers' browsers and render it as HTML elements.
 
 The Typst.ts application is designed to be fast due to the following reasons:
-+ Precompiled documents are much smaller than their PDF equivalents.
-  + For example, a compressed precompiled document is only 35KB while its corresponding PDF is 342KB.
-+ The renderer has a small code size.
-+ Typst itself has great performance.
+
+- Precompiled documents are much smaller than their PDF equivalents.
+  - For example, a compressed precompiled document is only 35KB while its corresponding PDF is 342KB.
+- The renderer has a small code size.
+- Typst itself has great performance.
 
 ### Prerequisite
 
-+ The font assets for Typst.ts are not included in this repository. See [Download Font Assets](./docs/download-font-assets.md) for more information.
+- The font assets for Typst.ts are not included in this repository. See [Download Font Assets](./docs/download-font-assets.md) for more information.
 
 ### CLI
 
@@ -70,3 +71,19 @@ The compiler is capable of producing artifact outputs from a Typst project. Thet
 ### Renderer
 
 The renderer accepts an input in artifact format and renders the document as HTML elements.
+
+Import Typst.ts in your project:
+
+- Using [@myriaddreamin/typst.ts][npm::typst.ts]
+
+  ```typescript
+  import { createTypstRenderer } from '@myriaddreamin/typst.ts';
+  const renderer = createTypstRenderer();
+  ```
+
+- Using [@myriaddreamin/typst.react][npm::typst.react]
+
+  Coming soon.
+
+[npm::typst.ts]: https://www.npmjs.com/package/@myriaddreamin/typst.ts
+[npm::typst.react]: ./packages/typst.react/README.md
