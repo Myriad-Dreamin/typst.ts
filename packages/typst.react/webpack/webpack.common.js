@@ -44,7 +44,7 @@ module.exports = (mod) => {
       ...(mod === 'dev'
         ? [
             new HtmlWebpackPlugin({
-              template: path.resolve(__dirname, '..', './src/index.html'),
+              template: path.resolve(__dirname, '..', './src/demo/index.html'),
             }),
           ]
         : []),
