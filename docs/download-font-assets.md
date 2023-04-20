@@ -1,11 +1,10 @@
-
 # Prerequisite - Download Font Assets
 
 The font assets for Typst.ts are not included in this repository. You need to download and put them in following directories.
 
 + To make Compiler happy, linking the font directory to `assets/fonts`.
 
-+ To make the [Renderer Sample](https://github.com/Myriad-Dreamin/typst.ts/blob/9f9295cf130092f9719d771f3969914967265f2a/renderer/src/driver/main.ts#L27-L34) happy, linking the font directory to `renderer/dist/fonts`.
++ To make the [Renderer Sample](https://github.com/Myriad-Dreamin/typst.ts/blob/9f9295cf130092f9719d771f3969914967265f2a/renderer/src/driver/main.ts#L27-L34) happy, linking the font directory to `/pacakges/typst.ts/dist/fonts`.
 
 There are several ways to downloading the font files:
 
