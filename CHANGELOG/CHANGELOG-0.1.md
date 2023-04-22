@@ -1,3 +1,27 @@
+# v0.1.1
+
+## Changelog since v0.1.1
+
+### Known Issues
+
+No new known issue.
+
+### Security Notes
+
+No new security note.
+
+### Changes
+
+#### Feature
+
+- add continuous integration with github actions.
+
+#### Bugfix
+
+- ensure that `typst-ts-fontctl` creates the directory for copying fonts on all platform.
+
+- fix `typst-ts-cli` not working on linux.
+
 # v0.1.0
 
 ## Changelog since v0.1.0
