@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst.react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Typst.ts for React",
   "main": "dist/main.js",
   "types": "dist/main.d.ts",
