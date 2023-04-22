@@ -9,6 +9,9 @@ import type { InitOptions, BeforeBuildMark } from './options.init';
 export interface RenderOptions {
   artifactContent: string;
   container: HTMLDivElement;
+
+  backgroundColor?: string;
+  pixelPerPt?: number;
 }
 
 export interface RenderResult {
@@ -65,8 +68,26 @@ class TypstRendererDriver {
     this.renderer = await builder.build();
   }
 
-  async renderImage(artifactContent: string): Promise<ImageData> {
-    return this.renderer.render(artifactContent);
+  async renderImage(artifactContent: string, options?: RenderOptions): Promise<ImageData> {
+    if (!options) {
+      return this.renderer.render(artifactContent);
+    }
+
+    const rustOptions = new typst.RenderImageOptions();
+    rustOptions.pixel_per_pt = options.pixelPerPt ?? 2;
+
+    if (options.backgroundColor !== undefined) {
+      if (!/^#[0-9]{6}$/.test(options.backgroundColor)) {
+        throw new Error(
+          'Invalid typst.RenderOptions.backgroundColor color for matching ^#[0-9]{6}$ ' +
+            options.backgroundColor,
+        );
+      }
+
+      rustOptions.background_color = options.backgroundColor.slice(1);
+    }
+
+    return this.renderer.render(artifactContent, /* moved */ rustOptions);
   }
 
   async renderPdf(artifactContent: string): Promise<Uint8Array> {
@@ -76,9 +97,10 @@ class TypstRendererDriver {
   private async renderDisplayLayer(
     artifactContent: string,
     container: HTMLDivElement,
+    options: RenderOptions,
   ): Promise<ImageData> {
     const containerWidth = container.offsetWidth;
-    const imageScaleFactor = 2;
+    const imageScaleFactor = options.pixelPerPt ?? 2;
 
     const t = performance.now();
 
@@ -102,7 +124,7 @@ class TypstRendererDriver {
 
     const t2 = performance.now();
 
-    const renderResult = await this.renderImage(artifactContent);
+    const renderResult = await this.renderImage(artifactContent, options);
     let ctx = canvasList[0].getContext('2d');
     if (ctx) {
       ctx.putImageData(renderResult, 0, 0);
@@ -160,11 +182,12 @@ class TypstRendererDriver {
     );
   }
 
-  async render({ artifactContent, container }: RenderOptions): Promise<RenderResult> {
+  async render(options: RenderOptions): Promise<RenderResult> {
+    const { artifactContent, container } = options;
     let renderResult: RenderResult;
 
     const doRenderDisplayLayer = async () => {
-      renderResult = await this.renderDisplayLayer(artifactContent, container);
+      renderResult = await this.renderDisplayLayer(artifactContent, container, options);
     };
 
     const doRenderTextLayer = new Promise(resolve => {

@@ -78,6 +78,8 @@
               .render({
                 artifactContent: xhr.responseText,
                 container: imageContainer,
+                backgroundColor: '#343541',
+                pixelPerPt: 3,
               })
               .then(renderResult => {
                 console.log('render done');

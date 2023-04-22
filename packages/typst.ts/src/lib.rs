@@ -68,6 +68,43 @@ impl TypstRendererBuilder {
 }
 
 #[wasm_bindgen]
+pub struct RenderImageOptions {
+    pixel_per_pt: Option<f32>,
+    background_color: Option<String>,
+}
+
+#[wasm_bindgen]
+impl RenderImageOptions {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> RenderImageOptions {
+        Self {
+            pixel_per_pt: None,
+            background_color: None,
+        }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn pixel_per_pt(&self) -> Option<f32> {
+        self.pixel_per_pt.clone()
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_pixel_per_pt(&mut self, pixel_per_pt: f32) {
+        self.pixel_per_pt = Some(pixel_per_pt);
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn background_color(&self) -> Option<String> {
+        self.background_color.clone()
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_background_color(&mut self, background_color: String) {
+        self.background_color = Some(background_color);
+    }
+}
+
+#[wasm_bindgen]
 pub struct TypstRenderer {
     world: TypstBrowserWorld,
 }
@@ -78,13 +115,25 @@ impl TypstRenderer {
         Self { world }
     }
 
-    pub fn render(&mut self, artifact_content: String) -> Result<ImageData, JsValue> {
-        let pixel_per_pt = 2.;
+    pub fn render(
+        &mut self,
+        artifact_content: String,
+        options: Option<RenderImageOptions>,
+    ) -> Result<ImageData, JsValue> {
+        let pixel_per_pt = options
+            .as_ref()
+            .and_then(|o| o.pixel_per_pt.clone())
+            .unwrap_or(2.);
+
+        let background_color = options
+            .as_ref()
+            .and_then(|o| o.background_color.clone())
+            .unwrap_or("ffffff".to_string());
 
         let document = self.parse_artifact(artifact_content)?;
 
         let (prealloc, size) =
-            self.render_to_image_internal(&document, pixel_per_pt, "ffffff".to_string())?;
+            self.render_to_image_internal(&document, pixel_per_pt, background_color)?;
 
         Ok(ImageData::new_with_u8_clamped_array_and_sh(
             Clamped(prealloc.as_slice()),
