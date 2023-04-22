@@ -1,7 +1,7 @@
-const path = require('path')
-const HtmlWebpackPlugin = require('html-webpack-plugin')
+const path = require('path');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
-module.exports = (mod) => {
+module.exports = mod => {
   return {
     entry:
       mod === 'dev'
@@ -50,5 +50,5 @@ module.exports = (mod) => {
         : []),
     ],
     stats: 'errors-only',
-  }
-}
+  };
+};
