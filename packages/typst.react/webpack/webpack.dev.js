@@ -8,6 +8,7 @@ module.exports = {
   devServer: {
     hot: true,
     open: true,
+    port: 8005,
     static: [path.join(__dirname, '../dist')],
   },
   plugins: [
