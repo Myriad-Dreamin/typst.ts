@@ -4,7 +4,7 @@ import typst_wasm_bin from '../../pkg/typst_renderer_ts_bg.wasm';
 import typstInit, * as typst from '../../pkg/typst_renderer_ts';
 
 import type * as pdfjsModule from 'pdfjs-dist';
-import type { TypstRendererInitOptions, BeforeBuildMark } from './options.init';
+import type { InitOptions, BeforeBuildMark } from './options.init';
 
 export interface RenderOptions {
   artifactContent: string;
@@ -12,7 +12,7 @@ export interface RenderOptions {
 }
 
 export interface TypstRenderer {
-  init(options?: Partial<TypstRendererInitOptions>): Promise<void>;
+  init(options?: Partial<InitOptions>): Promise<void>;
   render(options: RenderOptions): Promise<RenderResult>;
 }
 
@@ -51,7 +51,7 @@ class TypstRendererDriver {
     await builder.add_raw_font(fontBuffer);
   }
 
-  async init(options?: Partial<TypstRendererInitOptions>): Promise<void> {
+  async init(options?: Partial<InitOptions>): Promise<void> {
     /// init typst wasm module
     await initTypstWasmModule();
 

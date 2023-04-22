@@ -8,7 +8,7 @@ const BeforeBuildSymbol = Symbol('beforeBuild');
 export type BeforeBuildMark = typeof BeforeBuildSymbol;
 export type BeforeBuildFn = StagedOptFn<BeforeBuildMark, any>;
 
-export interface TypstRendererInitOptions {
+export interface InitOptions {
   /// before build stage, the registered functions will be executed in order
   /// possible options:
   /// - preload remote fonts: preloadRemoteFonts
