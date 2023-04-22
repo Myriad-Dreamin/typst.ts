@@ -258,7 +258,7 @@ impl SystemFontSearcher {
             // Search for fonts in the linux system font directories.
             #[cfg(all(unix, not(target_os = "macos")))]
             {
-                let font_paths = vec!["/usr/share/fonts", "/usr/local/share/fonts"]
+                let mut font_paths = vec!["/usr/share/fonts", "/usr/local/share/fonts"]
                     .iter()
                     .map(|p| PathBuf::from(p))
                     .collect::<Vec<_>>();
@@ -272,7 +272,7 @@ impl SystemFontSearcher {
             // Search for fonts in the macOS system font directories.
             #[cfg(target_os = "macos")]
             {
-                let font_paths = vec![
+                let mut font_paths = vec![
                     "/Library/Fonts",
                     "/Network/Library/Fonts",
                     "/System/Library/Fonts",
