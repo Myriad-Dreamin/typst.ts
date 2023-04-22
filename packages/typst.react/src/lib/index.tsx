@@ -1,1 +1,1 @@
-export { Counter } from './Counter';
+export { TypstDocument } from './TypstDocument';
