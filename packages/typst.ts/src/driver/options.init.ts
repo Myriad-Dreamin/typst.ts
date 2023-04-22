@@ -11,17 +11,23 @@ export type BeforeBuildFn = StagedOptFn<BeforeBuildMark, any>;
 export interface InitOptions {
   /// before build stage, the registered functions will be executed in order
   /// possible options:
-  /// - preload remote fonts: preloadRemoteFonts
-  /// - preload system fonts: preloadSystemFonts
+  /// - preloadRemoteFonts
+  /// - preloadSystemFonts
   beforeBuild: BeforeBuildFn[];
 }
 
+/// preload remote fonts
+///
+/// @param fonts - url path to font files
 export function preloadRemoteFonts(fonts: string[]): BeforeBuildFn {
   return async (_, { ref, builder }: InitContext) => {
     await Promise.all(fonts.map(font => ref.loadFont(builder, font)));
   };
 }
 
+/// preload system fonts
+///
+/// @param byFamily - filter system fonts to preload by family name
 export function preloadSystemFonts({ byFamily }: { byFamily?: string[] }): BeforeBuildFn {
   return async (_, { builder }: InitContext) => {
     const t = performance.now();
