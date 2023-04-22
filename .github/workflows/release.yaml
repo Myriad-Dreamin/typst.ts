@@ -1,5 +1,8 @@
 name: typst_ts::release
-on: [workflow_dispatch]
+on:
+  release:
+    types: [created]
+
 env:
   CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
   CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
