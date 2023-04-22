@@ -123,7 +123,7 @@ jobs:
       - run: |
           set -ex
           pack_release() {
-            target=$1
+            target=$2
             src=$1
             name=typst-ts-$tag-$target
             mkdir -p tmp/$name
@@ -141,14 +141,16 @@ jobs:
             chmod +x release/$name/typst-ts-*
             tar czvf gh-release/$name.tar.gz -C release $name
           }
-          pack_release x86_64-pc-windows-msvc
-          pack_release i686-pc-windows-msvc
-          pack_release aarch64-pc-windows-msvc
-          pack_release x86_64-unknown-linux-gnu
-          pack_release aarch64-unknown-linux-gnu
-          pack_release arm-unknown-linux-gnueabihf
-          pack_release x86_64-apple-darwin
-          pack_release aarch64-apple-darwin
+          pack_release x86_64-pc-windows-msvc      x86_64-pc-windows-msvc
+          pack_release i686-pc-windows-msvc        i686-pc-windows-msvc
+          pack_release aarch64-pc-windows-msvc     aarch64-pc-windows-msvc
+          pack_release x86_64-unknown-linux-gnu    x86_64-unknown-linux-gnu
+          pack_release aarch64-unknown-linux-gnu   aarch64-unknown-linux-gnu
+          pack_release arm-unknown-linux-gnueabihf arm-unknown-linux-gnueabihf
+          pack_release x86_64-apple-darwin         x86_64-apple-darwin
+          pack_release aarch64-apple-darwin        aarch64-apple-darwin
+          pack_release alpine-x64                  alpine-x64
+          pack_release alpine-x64                  x86_64-unknown-linux-musl
       - name: Display structure of releasing files
         run: find gh-release
       - uses: actions/upload-artifact@v3
