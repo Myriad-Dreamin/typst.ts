@@ -11,14 +11,14 @@ export interface RenderOptions {
   container: HTMLDivElement;
 }
 
-export interface TypstRenderer {
-  init(options?: Partial<InitOptions>): Promise<void>;
-  render(options: RenderOptions): Promise<RenderResult>;
-}
-
 export interface RenderResult {
   width: number;
   height: number;
+}
+
+export interface TypstRenderer {
+  init(options?: Partial<InitOptions>): Promise<void>;
+  render(options: RenderOptions): Promise<RenderResult>;
 }
 
 const once = <T>(fn: () => T) => {
