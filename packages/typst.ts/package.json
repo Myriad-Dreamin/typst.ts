@@ -2,7 +2,10 @@
 	"name": "@myriaddreamin/typst.ts",
 	"version": "0.1.0",
 	"description": "Render Typst documents in browser.",
-	"keywords": [],
+	"keywords": [
+	  "TypeScript",
+	  "Typst"
+	],
 	"author": "Myriad-Dreamin",
 	"license": "Apache-2.0",
 	"main": "dist/main.js",
