@@ -270,7 +270,7 @@ impl SystemFontSearcher {
                 font_paths
             }
             // Search for fonts in the macOS system font directories.
-            #[cfg(all(unix, not(target_os = "macos")))]
+            #[cfg(target_os = "macos")]
             {
                 let font_paths = vec![
                     "/Library/Fonts",
