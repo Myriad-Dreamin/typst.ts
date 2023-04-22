@@ -67,9 +67,9 @@ jobs:
         run: sudo apt-get install gcc-arm-linux-gnueabihf
       - shell: pwsh
         run: |
+          cargo run --release --bin typst-ts-fontctl
           cargo build --release -p typst-ts-fontctl --target ${{ matrix.rust-target }}
           cargo build --release -p typst-ts-cli --target ${{ matrix.rust-target }}
-          cargo run --release --bin typst-ts-fontctl
       - uses: actions/upload-artifact@v3
         with:
           name: typst-ts-${{ env.target }}
@@ -96,8 +96,8 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: build server binary
         run: |
-          cargo build --release -p typst-ts-fontctl --target $RUST_TARGET
           cargo run --release --bin typst-ts-fontctl
+          cargo build --release -p typst-ts-fontctl --target $RUST_TARGET
           cargo build --release -p typst-ts-cli --target $RUST_TARGET
       - uses: actions/upload-artifact@v3
         with:
