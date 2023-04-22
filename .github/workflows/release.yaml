@@ -1,0 +1,166 @@
+name: CI
+on:
+  push:
+  workflow_dispatch:
+
+env:
+  CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+  CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
+  SCCACHE_GHA_ENABLED: 'true'
+  RUSTC_WRAPPER: 'sccache'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            rust-target: x86_64-pc-windows-msvc
+            platform: win32
+            arch: x64
+          - os: windows-latest
+            rust-target: i686-pc-windows-msvc
+            platform: win32
+            arch: ia32
+          - os: windows-latest
+            rust-target: aarch64-pc-windows-msvc
+            platform: win32
+            arch: arm64
+          - os: ubuntu-20.04
+            rust-target: x86_64-unknown-linux-gnu
+            platform: linux
+            arch: x64
+          - os: ubuntu-20.04
+            rust-target: aarch64-unknown-linux-gnu
+            platform: linux
+            arch: arm64
+          - os: ubuntu-20.04
+            rust-target: arm-unknown-linux-gnueabihf
+            platform: linux
+            arch: armhf
+          - os: macos-11
+            rust-target: x86_64-apple-darwin
+            platform: darwin
+            arch: x64
+          - os: macos-11
+            rust-target: aarch64-apple-darwin
+            platform: darwin
+            arch: arm64
+
+    name: build (${{ matrix.platform }}-${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    env:
+      target: ${{ matrix.platform }}-${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
+      - name: rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-target }}
+      - name: Install AArch64 target toolchain
+        if: matrix.rust-target == 'aarch64-unknown-linux-gnu'
+        run: sudo apt-get install gcc-aarch64-linux-gnu
+      - name: Install ARM target toolchain
+        if: matrix.rust-target == 'arm-unknown-linux-gnueabihf'
+        run: sudo apt-get install gcc-arm-linux-gnueabihf
+      - shell: pwsh
+        run: |
+          cargo build --release -p typst-ts-fontctl --target ${{ matrix.rust-target }}
+          cargo build --release -p typst-ts-cli --target ${{ matrix.rust-target }}
+          cargo run --release --bin typst-ts-fontctl
+      - uses: actions/upload-artifact@v3
+        with:
+          name: typst-ts-${{ env.target }}
+          path: target/${{ matrix.rust-target }}/release/typst-ts-*
+          if-no-files-found: error
+
+  build_alpine:
+    name: build (x86_64-unknown-linux-musl)
+    runs-on: ubuntu-latest
+    container:
+      image: rust:alpine
+      volumes:
+        - /usr/local/cargo/registry:/usr/local/cargo/registry
+    env:
+      target: alpine-x64
+      RUST_TARGET: x86_64-unknown-linux-musl
+      RUSTFLAGS: '-C link-arg=-fuse-ld=lld -C target-feature=-crt-static'
+    steps:
+      - name: Install dependencies
+        run: apk add --no-cache git clang lld musl-dev nodejs npm yarn
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
+      - name: build server binary
+        run: |
+          cargo build --release -p typst-ts-fontctl --target $RUST_TARGET
+          cargo run --release --bin typst-ts-fontctl
+          cargo build --release -p typst-ts-cli --target $RUST_TARGET
+      - uses: actions/upload-artifact@v3
+        with:
+          name: typst-ts-${{ env.target }}
+          path: target/${{ matrix.rust-target }}/release/typst-ts-*
+          if-no-files-found: error
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build, build_alpine]
+    if: success() && startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+      - name: Display structure of downloaded files
+        run: find artifacts
+      - run: |
+          set -ex
+          pack_release() {
+            target=$1
+            src=$1
+            name=typst-ts-$tag-$target
+            mkdir -p tmp/$name
+            rm -f artifacts/$src/*.d
+            rm -f artifacts/$src/*.pdb
+            
+            mkdir release/bin
+            cp "artifacts/$src/typst-ts-*" "release/$name/bin/"
+            cp -r CHANGELOG release/$name/
+            cp -r docs release/$name/
+            cp README.md \
+              LICENSE \
+              CHANGELOG.md \
+              release/$name/
+            chmod +x release/$name/typst-ts-*
+            tar czvf gh-release/$name.tar.gz -C release $name
+          }
+          pack_release x86_64-pc-windows-msvc
+          pack_release i686-pc-windows-msvc
+          pack_release aarch64-pc-windows-msvc
+          pack_release x86_64-unknown-linux-gnu
+          pack_release aarch64-unknown-linux-gnu
+          pack_release arm-unknown-linux-gnueabihf
+          pack_release x86_64-apple-darwin
+          pack_release aarch64-apple-darwin
+      - name: Display structure of releasing files
+        run: find gh-release
+      - uses: actions/upload-artifact@v3
+        with:
+          name: gh-release
+          path: gh-release
+      - uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: 'gh-release/*'
+          allowUpdates: true
+          omitBodyDuringUpdate: true
+          omitDraftDuringUpdate: true
+          omitNameDuringUpdate: true
+          omitPrereleaseDuringUpdate: true
