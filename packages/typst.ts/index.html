@@ -50,8 +50,11 @@
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
 
       document.ready(() => {
-        let plugin = window.createTypstRenderer(pdfjsLib);
-        plugin.init().then(() => {
+        let plugin = window.TypstRenderModule.createTypstRenderer(pdfjsLib);
+        plugin
+          .init({
+          })
+          .then(() => {
           var xhr = new XMLHttpRequest();
           xhr.open('GET', 'main.artifact.json', false);
           xhr.send();
