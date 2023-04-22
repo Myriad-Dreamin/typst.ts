@@ -16,7 +16,16 @@ export const App = () => {
 
   return (
     <div>
-      <h1>Embed Your Typst Document React Demo</h1>
+      <h1
+        style={{
+          color: 'white',
+          fontSize: '20px',
+          fontFamily: `'Garamond', sans-serif`,
+          margin: '20px',
+        }}
+      >
+        Demo: Embed Your Typst Document in React
+      </h1>
       <TypstDocument fill="#343541" artifact={artifact} />
     </div>
   );
