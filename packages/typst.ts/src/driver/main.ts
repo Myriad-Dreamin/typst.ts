@@ -2,6 +2,7 @@ import * as initOptions from './options.init';
 export type { TypstRendererInitOptions, BeforeBuildFn } from './options.init';
 export { preloadRemoteFonts, preloadSystemFonts } from './options.init';
 import * as driver from './driver';
+export type { TypstRenderer } from './driver';
 export { createTypstRenderer } from './driver';
 
 // Export module on window.
