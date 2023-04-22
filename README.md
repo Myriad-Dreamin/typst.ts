@@ -2,6 +2,8 @@
 
 Typst.ts allows you to independently run the Typst compiler and exporter (renderer) in your browser.
 
+![react-demo](https://user-images.githubusercontent.com/35292584/233788011-bd3456e7-6ca2-4567-a5b8-42a65fcb88a5.png)
+
 You can:
 
 - locally run the compilation via `typst-ts-cli` to get a precompiled document,
