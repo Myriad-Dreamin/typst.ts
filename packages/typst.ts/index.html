@@ -74,9 +74,14 @@
 
             const imageContainer = document.getElementById('imageContainer');
 
-            plugin.render(xhr.responseText, imageContainer).then(renderResult => {
-              console.log('render done');
-            });
+            plugin
+              .render({
+                artifactContent: xhr.responseText,
+                container: imageContainer,
+              })
+              .then(renderResult => {
+                console.log('render done');
+              });
           });
       });
     </script>

@@ -6,9 +6,14 @@ import typstInit, * as typst from '../../pkg/typst_renderer_ts';
 import type * as pdfjsModule from 'pdfjs-dist';
 import type { TypstRendererInitOptions, BeforeBuildMark } from './options.init';
 
+export interface RenderOptions {
+  artifactContent: string;
+  container: HTMLDivElement;
+}
+
 export interface TypstRenderer {
   init(options?: Partial<TypstRendererInitOptions>): Promise<void>;
-  render(artifactContent: string, container: HTMLDivElement): Promise<RenderResult>;
+  render(options: RenderOptions): Promise<RenderResult>;
 }
 
 export interface RenderResult {
@@ -155,7 +160,7 @@ class TypstRendererDriver {
     );
   }
 
-  async render(artifactContent: string, container: HTMLDivElement): Promise<RenderResult> {
+  async render({ artifactContent, container }: RenderOptions): Promise<RenderResult> {
     let renderResult: RenderResult;
 
     const doRenderDisplayLayer = async () => {
