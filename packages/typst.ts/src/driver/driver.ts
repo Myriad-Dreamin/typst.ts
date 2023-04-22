@@ -16,6 +16,25 @@ export interface RenderResult {
   height: number;
 }
 
+const once = <T>(fn: () => T) => {
+  let called = false;
+  let res: T;
+  return () => {
+    if (called) {
+      return res;
+    }
+    called = true;
+    return (res = fn());
+  };
+};
+
+const initTypstWasmModule = once(async () => {
+  if (typeof typstInit !== 'function') {
+    throw new Error('typstInit is not a function');
+  }
+  await typstInit(typst_wasm_bin);
+});
+
 class TypstRendererDriver {
   renderer: typst.TypstRenderer;
 
@@ -29,8 +48,7 @@ class TypstRendererDriver {
 
   async init(options?: Partial<TypstRendererInitOptions>): Promise<void> {
     /// init typst wasm module
-    // todo: once
-    await typstInit(typst_wasm_bin);
+    await initTypstWasmModule();
 
     /// build typst renderer
     let builder = new typst.TypstRendererBuilder();
