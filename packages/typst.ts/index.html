@@ -79,7 +79,7 @@
                 artifactContent: xhr.responseText,
                 container: imageContainer,
                 backgroundColor: '#343541',
-                pixelPerPt: 3,
+                pixelPerPt: 8,
               })
               .then(renderResult => {
                 console.log('render done');
@@ -101,7 +101,7 @@
       }
 
       #text-layer {
-        position: absolute;
+        position: relative;
         left: 0;
         top: 0;
         right: 0;
@@ -118,11 +118,70 @@
         cursor: text;
         transform-origin: 0% 0%;
       }
+
+      .navigator {
+        height: auto;
+        width: 100%;
+        margin: 0px;
+        padding: 0px;
+        background: #343541; /* rgba(255, 255, 255, 0.9); */
+        top: 0;
+        box-shadow: 0px 0px 3px #777777;
+      }
+
+      .navigator ul {
+        margin: 0px;
+        padding: 0px;
+        list-style-type: none;
+        width: auto;
+        white-space: nowrap;
+        overflow: hidden;
+        padding: 0px;
+      }
+
+      .navigator li {
+        float: left;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .navigator li.right {
+        float: right;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .navigator li a {
+        display: block;
+        color: white;
+        /* color: #636b6f; */
+        font-size: 30px;
+        text-align: center;
+        margin: 0px -1px 0px;
+        padding: 10px 40px;
+        font-family: 'Garamond', sans-serif;
+        overflow: hidden;
+        text-decoration: none;
+      }
+
+      .navigator a:hover {
+        color: rgba(99, 107, 111, 0.7);
+        background: #fcfcfc;
+        transition: all 0.2s;
+      }
     </style>
   </head>
 
   <body>
     <body>
+      <div class="navigator">
+        <ul>
+          <li>
+            <a href="/">Embed Your Typst Document Demo</a>
+          </li>
+        </ul>
+        <div class="clear"></div>
+      </div>
       <div id="imageContainer" style="height: 0px"></div>
       <div>
         <div id="text-layer" class="textLayer"></div>
