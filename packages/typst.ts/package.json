@@ -1,6 +1,6 @@
 {
 	"name": "@myriaddreamin/typst.ts",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"description": "Render Typst documents in browser.",
 	"keywords": [],
 	"author": "Myriad-Dreamin",
