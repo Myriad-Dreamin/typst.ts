@@ -119,6 +119,7 @@ jobs:
         run: find artifacts
       - run: |
           set -ex
+          mkdir -p gh-release/
           pack_release() {
             target=$2
             src=typst-ts-$1
