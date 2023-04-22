@@ -43,6 +43,7 @@ const context = await esbuild.context({
   outdir: 'dist',
   entryPoints: ['src/driver/main.ts'],
   bundle: true,
+  format: 'esm',
   platform: 'browser',
   external: [...builtins],
   target: 'es2019',
