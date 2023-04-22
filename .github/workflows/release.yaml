@@ -1,8 +1,5 @@
-name: CI
-on:
-  push:
-  workflow_dispatch:
-
+name: typst_ts::release
+on: [workflow_dispatch]
 env:
   CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
   CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
@@ -89,7 +86,7 @@ jobs:
       RUSTFLAGS: '-C link-arg=-fuse-ld=lld -C target-feature=-crt-static'
     steps:
       - name: Install dependencies
-        run: apk add --no-cache git clang lld musl-dev nodejs npm yarn
+        run: apk add --no-cache git clang lld musl-dev npm
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Run sccache-cache
@@ -102,7 +99,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: typst-ts-${{ env.target }}
-          path: target/$RUST_TARGET/release/typst-ts-*
+          path: target/${{ env.RUST_TARGET }}/release/typst-ts-*
           if-no-files-found: error
 
   release:
@@ -124,33 +121,33 @@ jobs:
           set -ex
           pack_release() {
             target=$2
-            src=$1
-            name=typst-ts-$tag-$target
+            src=typst-ts-$1
+            name=typst-ts-$target
             mkdir -p tmp/$name
             rm -f artifacts/$src/*.d
             rm -f artifacts/$src/*.pdb
             
-            mkdir release/bin
-            cp "artifacts/$src/typst-ts-*" "release/$name/bin/"
+            mkdir -p release/$name/bin
+            cp artifacts/$src/typst-ts-* "release/$name/bin/"
             cp -r CHANGELOG release/$name/
             cp -r docs release/$name/
             cp README.md \
               LICENSE \
               CHANGELOG.md \
               release/$name/
-            chmod +x release/$name/typst-ts-*
+            chmod +x release/$name/bin/typst-ts-*
             tar czvf gh-release/$name.tar.gz -C release $name
           }
-          pack_release x86_64-pc-windows-msvc      x86_64-pc-windows-msvc
-          pack_release i686-pc-windows-msvc        i686-pc-windows-msvc
-          pack_release aarch64-pc-windows-msvc     aarch64-pc-windows-msvc
-          pack_release x86_64-unknown-linux-gnu    x86_64-unknown-linux-gnu
-          pack_release aarch64-unknown-linux-gnu   aarch64-unknown-linux-gnu
-          pack_release arm-unknown-linux-gnueabihf arm-unknown-linux-gnueabihf
-          pack_release x86_64-apple-darwin         x86_64-apple-darwin
-          pack_release aarch64-apple-darwin        aarch64-apple-darwin
-          pack_release alpine-x64                  alpine-x64
-          pack_release alpine-x64                  x86_64-unknown-linux-musl
+          pack_release win32-x64    x86_64-pc-windows-msvc
+          pack_release win32-ia32   i686-pc-windows-msvc
+          pack_release win32-arm64  aarch64-pc-windows-msvc
+          pack_release linux-x64    x86_64-unknown-linux-gnu
+          pack_release linux-arm64  aarch64-unknown-linux-gnu
+          pack_release linux-armhf  arm-unknown-linux-gnueabihf
+          pack_release darwin-x64   x86_64-apple-darwin
+          pack_release darwin-arm64 aarch64-apple-darwin
+          pack_release alpine-x64   alpine-x64
+          pack_release alpine-x64   x86_64-unknown-linux-musl
       - name: Display structure of releasing files
         run: find gh-release
       - uses: actions/upload-artifact@v3
