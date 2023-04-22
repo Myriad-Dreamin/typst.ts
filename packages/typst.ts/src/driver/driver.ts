@@ -4,10 +4,7 @@ import typst_wasm_bin from '../../pkg/typst_renderer_ts_bg.wasm';
 import typstInit, * as typst from '../../pkg/typst_renderer_ts';
 
 import type * as pdfjsModule from 'pdfjs-dist';
-
-export interface TypstRendererInitOptions {
-    
-}
+import type { TypstRendererInitOptions, BeforeBuildMark } from './options.init';
 
 export interface TypstRenderer {
   init(options?: Partial<TypstRendererInitOptions>): Promise<void>;
@@ -31,41 +28,18 @@ class TypstRendererDriver {
   }
 
   async init(options?: Partial<TypstRendererInitOptions>): Promise<void> {
+    /// init typst wasm module
+    // todo: once
     await typstInit(typst_wasm_bin);
+
+    /// build typst renderer
     let builder = new typst.TypstRendererBuilder();
+    const buildCtx = { ref: this, builder };
 
-    await Promise.all([
-      this.loadFont(builder, 'dist/fonts/LinLibertine_R.ttf'),
-      this.loadFont(builder, 'dist/fonts/LinLibertine_RB.ttf'),
-      this.loadFont(builder, 'dist/fonts/LinLibertine_RBI.ttf'),
-      this.loadFont(builder, 'dist/fonts/LinLibertine_RI.ttf'),
-      this.loadFont(builder, 'dist/fonts/NewCMMath-Book.otf'),
-      this.loadFont(builder, 'dist/fonts/NewCMMath-Regular.otf'),
-    ]);
-
-    const t = performance.now();
-    if ('queryLocalFonts' in window) {
-      const fonts = await (window as any).queryLocalFonts();
-      console.log('local fonts count:', fonts.length);
-
-      for (const font of fonts) {
-        if (!font.family.includes('Segoe UI Symbol')) {
-          continue;
-        }
-
-        const data: ArrayBuffer = await (await font.blob()).arrayBuffer();
-        await builder.add_raw_font(new Uint8Array(data));
+    for (const fn of options?.beforeBuild ?? []) {
+      await fn(undefined as unknown as BeforeBuildMark, buildCtx);
     }
-    }
-
-    const t2 = performance.now();
-    console.log('font loading', t2 - t);
-
-    // todo: search browser
-    // searcher.search_browser().await?;
-
     this.renderer = await builder.build();
-    console.log('loaded Typst');
   }
 
   async renderImage(artifactContent: string): Promise<ImageData> {

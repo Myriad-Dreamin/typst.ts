@@ -1,3 +1,6 @@
+import * as initOptions from './options.init';
+export type { TypstRendererInitOptions, BeforeBuildFn } from './options.init';
+export { preloadRemoteFonts, preloadSystemFonts } from './options.init';
 import * as driver from './driver';
 export { createTypstRenderer } from './driver';
 
@@ -6,5 +9,7 @@ export { createTypstRenderer } from './driver';
 if (window) {
   (window as any).TypstRenderModule = {
     createTypstRenderer: driver.createTypstRenderer,
+    preloadRemoteFonts: initOptions.preloadRemoteFonts,
+    preloadSystemFonts: initOptions.preloadSystemFonts,
   };
 }

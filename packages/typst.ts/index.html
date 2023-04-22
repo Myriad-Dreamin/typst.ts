@@ -53,18 +53,31 @@
         let plugin = window.TypstRenderModule.createTypstRenderer(pdfjsLib);
         plugin
           .init({
+            beforeBuild: [
+              window.TypstRenderModule.preloadRemoteFonts([
+                'dist/fonts/LinLibertine_R.ttf',
+                'dist/fonts/LinLibertine_RB.ttf',
+                'dist/fonts/LinLibertine_RBI.ttf',
+                'dist/fonts/LinLibertine_RI.ttf',
+                'dist/fonts/NewCMMath-Book.otf',
+                'dist/fonts/NewCMMath-Regular.otf',
+              ]),
+              window.TypstRenderModule.preloadSystemFonts({
+                byFamily: ['Segoe UI Symbol'],
+              }),
+            ],
           })
           .then(() => {
-          var xhr = new XMLHttpRequest();
-          xhr.open('GET', 'main.artifact.json', false);
-          xhr.send();
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', 'main.artifact.json', false);
+            xhr.send();
 
-          const imageContainer = document.getElementById('imageContainer');
+            const imageContainer = document.getElementById('imageContainer');
 
-          plugin.render(xhr.responseText, imageContainer).then(renderResult => {
-            console.log('render done');
+            plugin.render(xhr.responseText, imageContainer).then(renderResult => {
+              console.log('render done');
+            });
           });
-        });
       });
     </script>
 
