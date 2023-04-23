@@ -4,7 +4,7 @@ use tiny_skia as sk;
 use typst::geom::{Color, RgbaColor};
 use typst_ts_core::Artifact;
 use wasm_bindgen::{prelude::*, Clamped};
-use web_sys::ImageData;
+use web_sys::{console, ImageData};
 
 use crate::pixmap;
 
