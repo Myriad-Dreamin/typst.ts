@@ -20,6 +20,11 @@ pub struct TypstBrowserWorld {
 impl TypstBrowserWorld {
     // todo: better parameter type
     pub async fn new(searcher: BrowserFontSearcher) -> Result<Self, JsValue> {
+        // Hook up the lang items.
+        // todo: bad upstream changes
+        let library = typst_library::build();
+        typst::eval::set_lang_items(library.items.clone());
+
         Ok(Self {
             // library: Prehashed::new(typst_library::build()),
             font_resolver: FontResolverImpl::new(searcher.book, searcher.fonts),

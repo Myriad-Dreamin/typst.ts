@@ -43,9 +43,14 @@ impl TypstSystemWorld {
         searcher.search_system();
         searcher.add_embedded();
 
+        // Hook up the lang items.
+        // todo: bad upstream changes
+        let library = Prehashed::new(typst_library::build());
+        typst::eval::set_lang_items(library.items.clone());
+
         Self {
             root: opts.root_dir,
-            library: Prehashed::new(typst_library::build()),
+            library,
             font_resolver: FontResolverImpl::new(searcher.book, searcher.fonts),
             hashes: RwLock::default(),
             paths: RwLock::default(),

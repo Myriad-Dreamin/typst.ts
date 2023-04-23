@@ -190,22 +190,15 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "chinese-number"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "365a2e504d6cb41e85fba5d01a6baf7f13cad4424102859193c4674e7fdff933"
+checksum = "9f9a8cffacecd7f477f8395021158af07c8a3f74523e9b90e4e4bb0105deaa74"
 dependencies = [
- "chinese-numerals",
  "chinese-variant",
  "enum-ordinalize",
  "num-bigint",
  "num-traits",
 ]
-
-[[package]]
-name = "chinese-numerals"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76a5a40575256b55eebe3e39fa41e53bdaea5d67ac5a7092fa8756020c798d1e"
 
 [[package]]
 name = "chinese-variant"
@@ -330,9 +323,9 @@ checksum = "3d7b894f5411737b7867f4827955924d7c254fc9f4d91a6aad6b097804b1018b"
 
 [[package]]
 name = "comemo"
-version = "0.2.0"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22bf2c21093020535dd771993fedae8dd55393a4258cca501a9b55a962d350a5"
+checksum = "1ba423e212681b51c5452a458bb24e88165f4c09857a783c802719cc46313f3f"
 dependencies = [
  "comemo-macros",
  "siphasher",
@@ -340,9 +333,9 @@ dependencies = [
 
 [[package]]
 name = "comemo-macros"
-version = "0.2.0"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9faa23f4534253fa656b176ff524d5cd7306a6fed3048929f9cc01ab38ab5a5a"
+checksum = "fca5ceeb99665bad04a32fe297d1581a68685e36fb6da92a1c9b7d9693638c01"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -564,6 +557,17 @@ name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
+
+[[package]]
+name = "fontdb"
+version = "0.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d52186a39c335aa6f79fc0bf1c3cf854870b6ad4e50a7bb8a59b4ba1331f478a"
+dependencies = [
+ "log",
+ "memmap2",
+ "ttf-parser 0.17.1",
+]
 
 [[package]]
 name = "form_urlencoded"
@@ -1658,6 +1662,12 @@ checksum = "7b3e06c9b9d80ed6b745c7159c40b311ad2916abb34a49e9be2653b90db0d8dd"
 
 [[package]]
 name = "ttf-parser"
+version = "0.17.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "375812fa44dab6df41c195cd2f7fecb488f6c09fbaafb62807488cefab642bff"
+
+[[package]]
+name = "ttf-parser"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0609f771ad9c6155384897e1df4d948e692667cc0588548b68eb44d052b27633"
@@ -1676,16 +1686,18 @@ checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
 
 [[package]]
 name = "typst"
-version = "0.1.0"
-source = "git+https://github.com/typst/typst.git#94e052b8ccace3221aa960b9abe3b3f32b1d894f"
+version = "0.2.0"
+source = "git+https://github.com/typst/typst.git#2fbb14f712708188649181525813b3ac5a02e0fb"
 dependencies = [
  "bitflags",
  "bytemuck",
  "comemo",
  "ecow",
  "flate2",
+ "fontdb",
  "if_chain",
  "image",
+ "indexmap",
  "log",
  "miniz_oxide 0.5.4",
  "once_cell",
@@ -1713,8 +1725,8 @@ dependencies = [
 
 [[package]]
 name = "typst-library"
-version = "0.1.0"
-source = "git+https://github.com/typst/typst.git#94e052b8ccace3221aa960b9abe3b3f32b1d894f"
+version = "0.2.0"
+source = "git+https://github.com/typst/typst.git#2fbb14f712708188649181525813b3ac5a02e0fb"
 dependencies = [
  "chinese-number",
  "comemo",
@@ -1744,8 +1756,8 @@ dependencies = [
 
 [[package]]
 name = "typst-macros"
-version = "0.1.0"
-source = "git+https://github.com/typst/typst.git#94e052b8ccace3221aa960b9abe3b3f32b1d894f"
+version = "0.2.0"
+source = "git+https://github.com/typst/typst.git#2fbb14f712708188649181525813b3ac5a02e0fb"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -1943,6 +1955,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dd624098567895118886609431a7c3b8f516e41d30e0643f03d94592a147e36"
 
 [[package]]
+name = "unicode-vo"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1d386ff53b415b7fe27b50bb44679e2cc4660272694b7b6f3326d8480823a94"
+
+[[package]]
 name = "unicode-width"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1981,14 +1999,20 @@ dependencies = [
  "data-url",
  "flate2",
  "float-cmp",
+ "fontdb",
  "kurbo",
  "log",
  "pico-args",
  "rctree",
  "roxmltree",
+ "rustybuzz",
  "simplecss",
  "siphasher",
  "svgtypes",
+ "ttf-parser 0.15.2",
+ "unicode-bidi",
+ "unicode-script",
+ "unicode-vo",
 ]
 
 [[package]]

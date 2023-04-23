@@ -18,4 +18,6 @@ pub struct Image {
     pub width: u32,
     /// The height in pixels.
     pub height: u32,
+    /// A text describing the image.
+    pub alt: Option<String>,
 }

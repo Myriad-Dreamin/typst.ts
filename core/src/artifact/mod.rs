@@ -123,6 +123,7 @@ impl ArtifactBuilder {
             .to_string(),
             width: image.width(),
             height: image.height(),
+            alt: image.alt().map(|s| s.to_string()),
         };
     }
 
@@ -257,6 +258,7 @@ impl TypeDocumentParser {
                 "svg" => ImageFormat::Vector(VectorFormat::Svg),
                 _ => panic!("Unknown image format {}", image.format),
             },
+            image.alt.clone().map(|s| s.into()),
         )
         .unwrap()
     }

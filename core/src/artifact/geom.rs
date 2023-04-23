@@ -4,8 +4,13 @@ pub use typst::geom::Abs as TypstAbs;
 pub use typst::geom::Axes as TypstAxes;
 pub use typst::geom::CmykColor as TypstCmykColor;
 pub use typst::geom::Color as TypstColor;
+pub use typst::geom::DashLength as TypstDashLength;
+pub use typst::geom::DashPattern as TypstDashPattern;
 pub use typst::geom::Em as TypstEm;
 pub use typst::geom::Geometry as TypstGeometry;
+pub use typst::geom::Length as TypstLength;
+pub use typst::geom::LineCap as TypstLineCap;
+pub use typst::geom::LineJoin as TypstLineJoin;
 pub use typst::geom::LumaColor as TypstLumaColor;
 pub use typst::geom::Paint as TypstPaint;
 pub use typst::geom::Path as TypstPath;
@@ -329,6 +334,156 @@ impl Into<TypstPathItem> for PathItem {
     }
 }
 
+/// The line cap of a stroke
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum LineCap {
+    Butt,
+    Round,
+    Square,
+}
+
+impl From<TypstLineCap> for LineCap {
+    fn from(typst_line_cap: TypstLineCap) -> Self {
+        match typst_line_cap {
+            TypstLineCap::Butt => Self::Butt,
+            TypstLineCap::Round => Self::Round,
+            TypstLineCap::Square => Self::Square,
+        }
+    }
+}
+
+impl Into<TypstLineCap> for LineCap {
+    fn into(self) -> TypstLineCap {
+        match self {
+            Self::Butt => TypstLineCap::Butt,
+            Self::Round => TypstLineCap::Round,
+            Self::Square => TypstLineCap::Square,
+        }
+    }
+}
+
+/// The line join of a stroke
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum LineJoin {
+    Miter,
+    Round,
+    Bevel,
+}
+
+impl From<TypstLineJoin> for LineJoin {
+    fn from(typst_line_join: TypstLineJoin) -> Self {
+        match typst_line_join {
+            TypstLineJoin::Miter => Self::Miter,
+            TypstLineJoin::Round => Self::Round,
+            TypstLineJoin::Bevel => Self::Bevel,
+        }
+    }
+}
+
+impl Into<TypstLineJoin> for LineJoin {
+    fn into(self) -> TypstLineJoin {
+        match self {
+            Self::Miter => TypstLineJoin::Miter,
+            Self::Round => TypstLineJoin::Round,
+            Self::Bevel => TypstLineJoin::Bevel,
+        }
+    }
+}
+
+/// A length, possibly expressed with contextual units.
+///
+/// Currently supports absolute and font-relative units, but support could quite
+/// easily be extended to other units.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Length {
+    /// The absolute part.
+    pub abs: Abs,
+    /// The font-relative part.
+    pub em: Em,
+}
+
+impl From<TypstLength> for Length {
+    fn from(typst_length: TypstLength) -> Self {
+        Self {
+            abs: typst_length.abs.into(),
+            em: typst_length.em.into(),
+        }
+    }
+}
+
+impl Into<TypstLength> for Length {
+    fn into(self) -> TypstLength {
+        TypstLength {
+            abs: self.abs.into(),
+            em: self.em.into(),
+        }
+    }
+}
+
+/// The length of a dash in a line dash pattern
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum DashLength<T> {
+    LineWidth,
+    Length(T),
+}
+
+impl<T> From<TypstDashLength<T>> for DashLength<T> {
+    fn from(typst_dash_length: TypstDashLength<T>) -> Self {
+        match typst_dash_length {
+            TypstDashLength::LineWidth => Self::LineWidth,
+            TypstDashLength::Length(typst_length) => Self::Length(typst_length.into()),
+        }
+    }
+}
+
+impl<T> Into<TypstDashLength<T>> for DashLength<T> {
+    fn into(self) -> TypstDashLength<T> {
+        match self {
+            Self::LineWidth => TypstDashLength::LineWidth,
+            Self::Length(typst_length) => TypstDashLength::Length(typst_length.into()),
+        }
+    }
+}
+
+/// A line dash pattern
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DashPattern<T, DT> {
+    /// The dash array.
+    pub array: Vec<DT>,
+    /// The dash phase.
+    pub phase: T,
+}
+
+impl<T, DT, RT, RDT> From<TypstDashPattern<T, DT>> for DashPattern<RT, RDT>
+where
+    T: Into<RT>,
+    DT: Into<RDT>,
+{
+    fn from(typst_dash_pattern: TypstDashPattern<T, DT>) -> Self {
+        Self {
+            array: typst_dash_pattern
+                .array
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            phase: typst_dash_pattern.phase.into(),
+        }
+    }
+}
+
+impl<T, DT, RT, RDT> Into<TypstDashPattern<T, DT>> for DashPattern<RT, RDT>
+where
+    RT: Into<T>,
+    RDT: Into<DT>,
+{
+    fn into(self) -> TypstDashPattern<T, DT> {
+        TypstDashPattern {
+            array: self.array.into_iter().map(|x| x.into()).collect(),
+            phase: self.phase.into(),
+        }
+    }
+}
+
 /// A stroke of a geometric shape.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Stroke {
@@ -336,6 +491,14 @@ pub struct Stroke {
     pub paint: Paint,
     /// The stroke's thickness.
     pub thickness: Abs,
+    /// The stroke's line cap.
+    pub line_cap: LineCap,
+    /// The stroke's line join.
+    pub line_join: LineJoin,
+    /// The stroke's line dash pattern.
+    pub dash_pattern: Option<DashPattern<Abs, Abs>>,
+    /// The miter limit. Defaults to 4.0, same as `tiny-skia`.
+    pub miter_limit: Scalar,
 }
 
 impl From<TypstStroke> for Stroke {
@@ -343,6 +506,12 @@ impl From<TypstStroke> for Stroke {
         Self {
             paint: typst_stroke.paint.into(),
             thickness: typst_stroke.thickness.into(),
+            line_cap: typst_stroke.line_cap.into(),
+            line_join: typst_stroke.line_join.into(),
+            dash_pattern: typst_stroke
+                .dash_pattern
+                .map(|typst_dash_pattern| (typst_dash_pattern.into())),
+            miter_limit: typst_stroke.miter_limit.into(),
         }
     }
 }
@@ -352,6 +521,12 @@ impl Into<TypstStroke> for Stroke {
         TypstStroke {
             paint: self.paint.into(),
             thickness: self.thickness.into(),
+            line_cap: self.line_cap.into(),
+            line_join: self.line_join.into(),
+            dash_pattern: self
+                .dash_pattern
+                .map(|typst_dash_pattern| typst_dash_pattern.into()),
+            miter_limit: self.miter_limit.into(),
         }
     }
 }
