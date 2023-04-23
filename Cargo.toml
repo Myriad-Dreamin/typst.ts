@@ -18,4 +18,4 @@ typst-ts-compiler = { path = "compiler" }
 [profile.release]
 opt-level = 3
 debug = true
-lto = true
+lto = "thin"

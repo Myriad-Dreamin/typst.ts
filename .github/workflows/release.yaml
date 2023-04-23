@@ -15,10 +15,10 @@ jobs:
     strategy:
       matrix:
         include:
-          # - os: windows-latest
-          #   rust-target: x86_64-pc-windows-msvc
-          #   platform: win32
-          #   arch: x64
+          - os: windows-latest
+            rust-target: x86_64-pc-windows-msvc
+            platform: win32
+            arch: x64
           - os: windows-latest
             rust-target: i686-pc-windows-msvc
             platform: win32
@@ -121,7 +121,6 @@ jobs:
           path: artifacts
       - name: Display structure of downloaded files
         run: find artifacts
-      # pack_release win32-x64    x86_64-pc-windows-msvc
       - run: |
           set -ex
           mkdir -p gh-release/
@@ -144,6 +143,7 @@ jobs:
             chmod +x release/$name/bin/typst-ts-*
             tar czvf gh-release/$name.tar.gz -C release $name
           }
+          pack_release win32-x64    x86_64-pc-windows-msvc
           pack_release win32-ia32   i686-pc-windows-msvc
           pack_release win32-arm64  aarch64-pc-windows-msvc
           pack_release linux-x64    x86_64-unknown-linux-gnu
