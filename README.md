@@ -103,4 +103,4 @@ Import Typst.ts in your project:
 
 [npm::typst.ts]: https://www.npmjs.com/package/@myriaddreamin/typst.ts
 
-[npm::typst.react]: [https://www.npmjs.com/package/@myriaddreamin/typst.react]
+[npm::typst.react]: https://www.npmjs.com/package/@myriaddreamin/typst.react
