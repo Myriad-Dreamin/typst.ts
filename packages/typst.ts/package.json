@@ -16,6 +16,7 @@
 		"build": "wasm-pack build --target web && tsc --emitDeclarationOnly --outDir dist && tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"link:local": "yarn link",
 		"prepublish": "npm run build",
+		"publish:dry": "npm publish --dry-run --access public",
 		"publish": "npm publish --access public"
 	},
 	"devDependencies": {
