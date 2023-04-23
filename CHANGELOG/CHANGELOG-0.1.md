@@ -1,3 +1,35 @@
+# v0.1.2
+
+## Changelog since v0.1.2
+
+### Known Issues
+
+No new known issue.
+
+### Security Notes
+
+No new security note.
+
+### Changes
+
+- The upstream `typst@0.2.0` has been merged, which causes breaking changes of artifact format.
+
+#### Feature
+
+- upgrade es target of `@myriaddreamin/typst.ts` to es2020.
+
+- publish `@myriaddreamin/typst.react` to npm.
+
+- merge [hasher change](https://github.com/typst/typst/commit/d0afba959d18d1c2c646b99e6ddd864b1a91deb2) from upstream, which seems to significantly improves performance.
+
+- add method `runWithSession` to `@myriaddreamin/typst.ts/TypstRenderer`.
+
+- `@myriaddreamin/typst.ts/TypstRenderer` can now render document with multiple pages.
+
+#### Bugfix
+
+- fix bug that document cannot scroll.
+
 # v0.1.1
 
 ## Changelog since v0.1.1
