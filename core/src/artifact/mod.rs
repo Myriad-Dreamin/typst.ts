@@ -1,6 +1,12 @@
-use siphasher::sip128::Hasher128;
 use std::collections::HashMap;
 use std::str::FromStr;
+
+use serde::Deserialize;
+use serde::Serialize;
+use typst::model::StabilityProvider;
+
+use crate::typst_affinite_hash;
+use crate::FontResolver;
 
 pub mod doc;
 use doc::*;
@@ -17,12 +23,6 @@ use image::*;
 pub mod core;
 use self::core::*;
 
-use serde::Deserialize;
-use serde::Serialize;
-use typst::model::StabilityProvider;
-
-use crate::FontResolver;
-
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Artifact {
     /// The page frames.
@@ -38,12 +38,6 @@ pub struct Artifact {
 pub struct ArtifactBuilder {
     fonts: Vec<FontInfo>,
     font_map: HashMap<FontInfo, FontRef>,
-}
-
-fn calculate_hash<T: std::hash::Hash>(t: &T) -> u128 {
-    let mut s = siphasher::sip128::SipHasher::new();
-    t.hash(&mut s);
-    s.finish128().as_u128()
 }
 
 impl ArtifactBuilder {
@@ -150,7 +144,7 @@ impl ArtifactBuilder {
                         }),
                         TypstDestination::Location(loc) => {
                             // todo: we have no idea to preserve information about the location
-                            Destination::Location(format!("{:?}", calculate_hash(loc)))
+                            Destination::Location(format!("{:?}", typst_affinite_hash(loc)))
                         }
                     },
                     (*size).into(),
