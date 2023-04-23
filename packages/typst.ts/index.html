@@ -72,14 +72,14 @@
             xhr.open('GET', 'main.artifact.json', false);
             xhr.send();
 
-            const imageContainer = document.getElementById('imageContainer');
+            const appContainer = document.getElementById('typst-app');
 
             plugin
               .render({
                 artifactContent: xhr.responseText,
-                container: imageContainer,
+                container: appContainer,
                 backgroundColor: '#343541',
-                pixelPerPt: 8,
+                pixelPerPt: 4,
               })
               .then(renderResult => {
                 console.log('render done');
@@ -94,12 +94,11 @@
         padding: 0;
       }
 
-      .imageContainer {
+      .typst-app {
         margin: 0;
-        transform-origin: 0 0;
       }
 
-      #text-layer {
+      .text-layer {
         position: relative;
         left: 0;
         top: 0;
@@ -110,7 +109,7 @@
         line-height: 1;
       }
 
-      #text-layer > div {
+      .text-layer > div {
         color: transparent;
         position: absolute;
         white-space: pre;
@@ -181,10 +180,7 @@
         </ul>
         <div class="clear"></div>
       </div>
-      <div id="imageContainer" style="height: 0"></div>
-      <div>
-        <div id="text-layer" class="textLayer"></div>
-      </div>
+      <div id="typst-app"></div>
     </body>
   </body>
 </html>
