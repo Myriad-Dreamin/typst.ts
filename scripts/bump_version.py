@@ -1,15 +1,18 @@
 import sys
-import os
+import itertools
 
 
-def replace_json_version(package_file, old_version, new_version):
+def replace_version(package_file, old_version, new_version):
   with open(package_file) as f:
     content = f.read()
 
-  new_content = content.replace(f'"version": "{old_version}"', f'"version": "{new_version}"')
+  new_content = content.replace(old_version, new_version)
   if content == new_content:
-    if f'"{new_version}"' in content:
+    if new_version in content:
       print(f'Version in {package_file} already set to {new_version}')
+      return
+    if old_version not in content:
+      print(f'Version in {package_file} is not found, did not set to {new_version}')
       return
 
     raise ValueError(
@@ -24,7 +27,16 @@ def main(old_version, new_version):
     if len(v.split('.')) != 3:
       raise ValueError('Version must be in the form x.y.z')
 
-  for file_path in [
+  def toml_version_lit(v):
+    return f'version = "{v}"'
+
+  def toml_dep_core_lit(v):
+    return f'typst-ts-core = "{v}"'
+
+  def toml_dep_compiler_lit(v):
+    return f'typst-ts-compiler = "{v}"'
+
+  for file_path, version_form in itertools.product([
       "cli/Cargo.toml",
       "core/Cargo.toml",
       "compiler/Cargo.toml",
@@ -33,21 +45,12 @@ def main(old_version, new_version):
       "contrib/fontctl/Cargo.toml",
       "contrib/fontctl/src/main.rs",
       "cli/src/lib.rs",
-  ]:
-    with open(file_path) as f:
-      content = f.read()
-
-    new_content = content.replace(f'version = "{old_version}"', f'version = "{new_version}"')
-    if content == new_content:
-      if f'version = "{new_version}"' in content:
-        print(f'Version in {file_path} already set to {new_version}')
-        continue
-
-      raise ValueError(
-        f'Failed to replace version in {file_path} from {old_version} to {new_version}')
-
-    with open(file_path, 'w') as f:
-      f.write(new_content)
+  ], [
+      toml_version_lit,
+      toml_dep_core_lit,
+      toml_dep_compiler_lit,
+  ]):
+    replace_version(file_path, version_form(old_version), version_form(new_version))
 
   def version_lit(v):
     return f'"version": "{v}"'
@@ -59,9 +62,9 @@ def main(old_version, new_version):
       "packages/typst.ts/package.json",
       "packages/typst.react/package.json",
   ]:
-    replace_json_version(package_file, version_lit(old_version), version_lit(new_version))
+    replace_version(package_file, version_lit(old_version), version_lit(new_version))
     if 'typst.ts' not in package_file:
-      replace_json_version(package_file, dep_core_lit(old_version), dep_core_lit(new_version))
+      replace_version(package_file, dep_core_lit(old_version), dep_core_lit(new_version))
 
 
 if __name__ == '__main__':
