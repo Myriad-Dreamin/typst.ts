@@ -2,13 +2,8 @@ pub mod browser_world;
 
 pub(crate) mod pixmap;
 
-pub(crate) mod render;
-
 pub(crate) mod renderer;
-pub use renderer::TypstRenderer;
-
-pub(crate) mod renderer_builder;
-pub use renderer_builder::TypstRendererBuilder;
+pub use renderer::{TypstRenderer, TypstRendererBuilder};
 
 #[macro_use]
 pub(crate) mod utils;

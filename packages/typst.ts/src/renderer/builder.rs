@@ -1,6 +1,9 @@
-use crate::{browser_world::TypstBrowserWorld, renderer::TypstRenderer, web_font::WebFont};
+use crate::{
+    browser_world::{BrowserFontSearcher, TypstBrowserWorld},
+    renderer::TypstRenderer,
+    web_font::WebFont,
+};
 
-use super::browser_world::BrowserFontSearcher;
 use js_sys::Uint8Array;
 use typst::util::Buffer;
 use wasm_bindgen::prelude::*;

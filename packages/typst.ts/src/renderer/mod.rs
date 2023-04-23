@@ -10,6 +10,11 @@ use crate::pixmap;
 
 use super::browser_world::TypstBrowserWorld;
 
+pub(crate) mod builder;
+pub use builder::TypstRendererBuilder;
+
+pub(crate) mod render;
+
 #[wasm_bindgen]
 pub struct RenderImageOptions {
     pixel_per_pt: Option<f32>,
@@ -143,7 +148,7 @@ impl TypstRenderer {
             pxw, pxh
         ))?;
 
-        Ok(crate::render::render(
+        Ok(render::render(
             &mut canvas,
             &document.pages[0],
             pixel_per_pt,
