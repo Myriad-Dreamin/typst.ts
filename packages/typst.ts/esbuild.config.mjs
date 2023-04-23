@@ -46,7 +46,7 @@ const context = await esbuild.context({
   format: 'esm',
   platform: 'browser',
   external: [...builtins],
-  target: 'es2019',
+  target: 'es2020',
   logLevel: 'info',
   sourcemap: IS_PRODUCTION ? false : 'inline',
   treeShaking: true,
