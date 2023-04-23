@@ -101,6 +101,12 @@ Import Typst.ts in your project:
 
   ```
 
+- Using [@myriaddreamin/typst.angular][npm::typst.angular]
+
+  Coming soon.
+
 [npm::typst.ts]: https://www.npmjs.com/package/@myriaddreamin/typst.ts
 
 [npm::typst.react]: https://www.npmjs.com/package/@myriaddreamin/typst.react
+
+[npm::typst.angular]: ./packages/typst.angular/README.md
