@@ -11,3 +11,4 @@ index.html
 Cargo.toml
 Cargo.lock
 esbuild.*
+.eslint*
