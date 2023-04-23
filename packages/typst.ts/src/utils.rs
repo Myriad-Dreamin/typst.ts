@@ -1,4 +1,5 @@
 #[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
+#[allow(unused_macros)]
 macro_rules! console_log {
     ($($arg:tt)*) => {
         let v: JsValue = format!(
@@ -9,8 +10,8 @@ macro_rules! console_log {
     }
 }
 
-#[allow(unused_macros)]
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+#[allow(unused_macros)]
 macro_rules! console_log {
     ($($arg:tt)*) => {
         println!(
