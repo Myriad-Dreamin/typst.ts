@@ -7,8 +7,8 @@ description = "Command line tool for Typst.ts."
 repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 [dependencies]
-typst-ts-core = { path = "../core" }
-typst-ts-compiler = { path = "../compiler" }
+typst-ts-core = "0.1.1"
+typst-ts-compiler = "0.1.1"
 typst = { git = "https://github.com/typst/typst.git" }
 typst-library = { git = "https://github.com/typst/typst.git" }
 

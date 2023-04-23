@@ -7,7 +7,7 @@ description = "Compile Typst documents."
 repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 [dependencies]
-typst-ts-core = { path = "../core" }
+typst-ts-core = "0.1.1"
 
 typst = { git = "https://github.com/typst/typst.git" }
 typst-library = { git = "https://github.com/typst/typst.git" }

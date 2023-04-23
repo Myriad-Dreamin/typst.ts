@@ -11,6 +11,9 @@ members = [
     "contrib/fontctl",
 ]
 
+[patch.crates-io]
+typst-ts-core = { path = "core" }
+typst-ts-compiler = { path = "compiler" }
 
 [profile.release]
 opt-level = 3
