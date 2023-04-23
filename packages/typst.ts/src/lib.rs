@@ -48,9 +48,10 @@ mod tests {
         let path = Path::new("fuzzers/corpora/hw/main.artifact.json");
         let artifact_content = std::fs::read_to_string(path).unwrap();
 
-        let document = renderer.parse_artifact(artifact_content).unwrap();
-        renderer
-            .render_to_image_internal(&document, 2., "ffffff".to_string())
-            .unwrap();
+        let mut ses = renderer.parse_artifact(artifact_content).unwrap();
+        ses.pixel_per_pt = 2.;
+        ses.background_color = "ffffff".to_string();
+
+        renderer.render_to_image_internal(&ses).unwrap();
     }
 }
