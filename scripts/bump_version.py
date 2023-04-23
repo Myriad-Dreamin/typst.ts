@@ -2,6 +2,23 @@ import sys
 import os
 
 
+def replace_json_version(package_file, old_version, new_version):
+  with open(package_file) as f:
+    content = f.read()
+
+  new_content = content.replace(f'"version": "{old_version}"', f'"version": "{new_version}"')
+  if content == new_content:
+    if f'"{new_version}"' in content:
+      print(f'Version in {package_file} already set to {new_version}')
+      return
+
+    raise ValueError(
+      f'Failed to replace version in {package_file} from {old_version} to {new_version}')
+
+  with open(package_file, 'w') as f:
+    f.write(new_content)
+
+
 def main(old_version, new_version):
   for v in [old_version, new_version]:
     if len(v.split('.')) != 3:
@@ -32,24 +49,19 @@ def main(old_version, new_version):
     with open(file_path, 'w') as f:
       f.write(new_content)
 
+  def version_lit(v):
+    return f'"version": "{v}"'
+
+  def dep_core_lit(v):
+    return f'"@myriaddreamin/typst.ts": "^{v}"'
+
   for package_file in [
       "packages/typst.ts/package.json",
       "packages/typst.react/package.json",
   ]:
-    with open(package_file) as f:
-      content = f.read()
-
-    new_content = content.replace(f'"version": "{old_version}"', f'"version": "{new_version}"')
-    if content == new_content:
-      if f'"{new_version}"' in content:
-        print(f'Version in {package_file} already set to {new_version}')
-        continue
-
-      raise ValueError(
-        f'Failed to replace version in {package_file} from {old_version} to {new_version}')
-
-    with open(package_file, 'w') as f:
-      f.write(new_content)
+    replace_json_version(package_file, version_lit(old_version), version_lit(new_version))
+    if 'typst.ts' not in package_file:
+      replace_json_version(package_file, dep_core_lit(old_version), dep_core_lit(new_version))
 
 
 if __name__ == '__main__':
