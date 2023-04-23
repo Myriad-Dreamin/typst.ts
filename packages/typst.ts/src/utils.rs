@@ -9,6 +9,7 @@ macro_rules! console_log {
     }
 }
 
+#[allow(unused_macros)]
 #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 macro_rules! console_log {
     ($($arg:tt)*) => {
@@ -18,4 +19,5 @@ macro_rules! console_log {
     }
 }
 
+#[allow(unused_imports)]
 pub(crate) use console_log; // <-- the trick

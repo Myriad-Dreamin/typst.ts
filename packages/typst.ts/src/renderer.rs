@@ -4,13 +4,11 @@ use tiny_skia as sk;
 use typst::geom::{Color, RgbaColor};
 use typst_ts_core::Artifact;
 use wasm_bindgen::{prelude::*, Clamped};
-use web_sys::{console, ImageData};
+use web_sys::ImageData;
 
 use crate::pixmap;
 
 use super::browser_world::TypstBrowserWorld;
-
-use super::utils::console_log;
 
 #[wasm_bindgen]
 pub struct RenderImageOptions {
@@ -158,16 +156,22 @@ impl TypstRenderer {
         // https://medium.com/@wl1508/avoiding-using-serde-and-deserde-in-rust-webassembly-c1e4640970ca
         let artifact: Artifact = serde_json::from_str(artifact_content.as_str()).unwrap();
 
-        console_log!(
-            "{} pages to render. font info: {:?}",
-            artifact.pages.len(),
-            artifact
-                .fonts
-                .iter()
-                .map(|f| f.family.as_str()) // serde_json::to_string(f).unwrap())
-                .collect::<Vec<&str>>()
-                .join(", ")
-        );
+        #[cfg(debug)]
+        {
+            use super::utils::console_log;
+            use web_sys::console;
+            let _ = console::log_0;
+            console_log!(
+                "{} pages to render. font info: {:?}",
+                artifact.pages.len(),
+                artifact
+                    .fonts
+                    .iter()
+                    .map(|f| f.family.as_str()) // serde_json::to_string(f).unwrap())
+                    .collect::<Vec<&str>>()
+                    .join(", ")
+            );
+        }
 
         let document = artifact.to_document(&self.world.font_resolver);
         if document.pages.len() == 0 {
