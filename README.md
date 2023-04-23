@@ -39,7 +39,8 @@ The cli for typst.ts.
 Usage: typst-ts-cli <COMMAND>
 
 Commands:
-  compile  Run precompiler. [aliases: c]
+  compile  Run compiler. [aliases: c]
+  font     Commands about font for typst.
   help     Print this message or the help of the given subcommand(s)
 ```
 
@@ -47,7 +48,7 @@ Compile Help:
 
 ```shell
 $ typst-ts-cli compile --help
-Run precompiler.
+Run compiler.
 
 Usage: typst-ts-cli compile [OPTIONS] --entry <ENTRY>
 
@@ -56,12 +57,13 @@ Compile options:
   -e, --entry <ENTRY>          Entry file
       --format <FORMAT>        Output formats
   -o, --output <OUTPUT>        Output to directory, default in the same directory as the entry file [default: ]
+      --watch                  watch mode
 ```
 
 ### Renderer Example
 
 ```shell
-$ cd renderer && npm install && npm run build && python -m http.server 8075
+$ cd packages/typst.ts && yarn install && yarn run build && python -m http.server 8075
 ```
 
 And open your browser to `http://localhost:8075`.
