@@ -87,7 +87,20 @@ Import Typst.ts in your project:
 
 - Using [@myriaddreamin/typst.react][npm::typst.react]
 
-  Coming soon.
+  ```typescript
+  import { TypstDocument } from '@myriaddreamin/typst.react';
+
+  export const App = (artifact: string) => {
+    return (
+      <div>
+        <h1>Demo: Embed Your Typst Document in React</h1>
+        <TypstDocument fill="#343541" artifact={artifact} />
+      </div>
+    );
+  };
+
+  ```
 
 [npm::typst.ts]: https://www.npmjs.com/package/@myriaddreamin/typst.ts
-[npm::typst.react]: ./packages/typst.react/README.md
+
+[npm::typst.react]: [https://www.npmjs.com/package/@myriaddreamin/typst.react]
