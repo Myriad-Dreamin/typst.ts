@@ -4,7 +4,7 @@
 
 ### Known Issues
 
-No new known issue.
+- To export typst document as pdf format, enture `typst::eval::LANG_ITEMS` must be included in `typst@0.2.0`. This can cause the overall package size to increase by approximately 6MB.
 
 ### Security Notes
 
