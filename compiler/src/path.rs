@@ -1,10 +1,10 @@
 use once_cell::sync::OnceCell;
 use same_file::Handle;
-use siphasher::sip128::{Hasher128, SipHasher};
 use std::{hash::Hash, path::Path};
 use typst::diag::{FileError, FileResult};
 use typst::syntax::SourceId;
 use typst::util::Buffer;
+use typst_ts_core::typst_affinite_hash;
 
 /// Holds canonical data for all paths pointing to the same entity.
 #[derive(Default)]
@@ -21,8 +21,6 @@ impl PathHash {
     pub fn new(path: &Path) -> FileResult<Self> {
         let f = |e| FileError::from_io(e, path);
         let handle = Handle::from_path(path).map_err(f)?;
-        let mut state = SipHasher::new();
-        handle.hash(&mut state);
-        Ok(Self(state.finish128().as_u128()))
+        Ok(Self(typst_affinite_hash(&handle)))
     }
 }
