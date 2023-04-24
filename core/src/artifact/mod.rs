@@ -200,7 +200,7 @@ impl From<TypstDocument> for Artifact {
             build: Some(BuildInfo {
                 compiler: "typst-ts-cli".to_string(),
                 // todo: attach version
-                version: "0.0.0".to_string(),
+                version: crate::build_info::VERSION.to_string(),
             }),
             pages,
             fonts: builder.fonts,
