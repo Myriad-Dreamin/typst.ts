@@ -10,6 +10,9 @@ use crate::{pixmap, renderer::session::RenderSessionOptions};
 
 use crate::browser_world::TypstBrowserWorld;
 
+pub(crate) mod artifact;
+pub use artifact::ArtifactJsBuilder;
+
 pub(crate) mod builder;
 pub use builder::TypstRendererBuilder;
 
@@ -17,9 +20,6 @@ pub(crate) mod render;
 
 pub(crate) mod session;
 pub use session::RenderSession;
-
-pub(crate) mod artifact;
-pub use artifact::ArtifactJsBuilder;
 
 #[wasm_bindgen]
 pub struct RenderPageImageOptions {
