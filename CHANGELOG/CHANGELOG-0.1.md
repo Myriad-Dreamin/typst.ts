@@ -1,3 +1,28 @@
+# v0.1.3
+
+## Changelog since v0.1.3
+
+### Known Issues
+
+No new known issue.
+
+### Security Notes
+
+No new security note.
+
+### Changes
+
+#### Feature
+
+- introduce `@myriaddreamin/typst.angular` to provide angular component.
+
+- reduce the size of `@myriaddreamin/typst.ts` by removing serde and serde_json from dependencies.
+  - using `JSON.parse` instead of serde_json.
+
+- attach build info (compiler name and compiler version) to artifact.
+
+#### Bugfix
+
 # v0.1.2
 
 ## Changelog since v0.1.2
