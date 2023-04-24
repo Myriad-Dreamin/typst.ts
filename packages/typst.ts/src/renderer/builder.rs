@@ -23,6 +23,7 @@ impl TypstRendererBuilder {
         })
     }
 
+    // 400 KB
     pub async fn add_raw_font(&mut self, font_buffer: Uint8Array) -> Result<(), JsValue> {
         // let v: JsValue =
         //     format!("raw font loading: Buffer({:?})", font_buffer.byte_length()).into();
@@ -32,6 +33,7 @@ impl TypstRendererBuilder {
         Ok(())
     }
 
+    // 100 KB
     pub async fn add_web_font(&mut self, font: WebFont) -> Result<(), JsValue> {
         let v: JsValue = format!("web font loading: {:?}", font).into();
         console::info_1(&v);
@@ -41,6 +43,7 @@ impl TypstRendererBuilder {
         Ok(())
     }
 
+    // 24 MB
     pub async fn build(self) -> Result<TypstRenderer, JsValue> {
         Ok(TypstRenderer::new(
             TypstBrowserWorld::new(self.searcher).await?,

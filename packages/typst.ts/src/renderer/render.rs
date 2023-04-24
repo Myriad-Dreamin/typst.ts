@@ -38,15 +38,19 @@ fn render_frame(
 
         match item {
             FrameItem::Group(group) => {
+                // 300KB
                 render_group(canvas, ts, mask, group);
             }
             FrameItem::Text(text) => {
+                // 2300KB
                 render_text(canvas, ts, mask, text);
             }
             FrameItem::Shape(shape, _) => {
+                // 300KB
                 render_shape(canvas, ts, mask, shape);
             }
             FrameItem::Image(image, size, _) => {
+                // 1300KB
                 render_image(canvas, ts, mask, image, *size);
             }
             FrameItem::Meta(meta, _) => match meta {
