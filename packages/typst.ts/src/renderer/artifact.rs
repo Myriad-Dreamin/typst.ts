@@ -889,8 +889,38 @@ impl ArtifactJsBuilder {
         })
     }
 
+    pub fn parse_build_info(
+        &self,
+        val: &JsValue,
+    ) -> Result<typst_ts_core::artifact::BuildInfo, JsValue> {
+        let mut version = None;
+        let mut compiler = None;
+
+        for (k, v) in js_sys::Object::entries(val.dyn_ref().unwrap())
+            .iter()
+            .map(convert_pair)
+        {
+            let k = self.to_string("build_info", &k)?;
+            match k.as_str() {
+                "version" => {
+                    version = Some(self.to_string("build_info.version", &v)?);
+                }
+                "compiler" => {
+                    compiler = Some(self.to_string("build_info.compiler", &v)?);
+                }
+                _ => panic!("unknown key: {}", k),
+            }
+        }
+
+        Ok(typst_ts_core::artifact::BuildInfo {
+            version: version.unwrap(),
+            compiler: compiler.unwrap(),
+        })
+    }
+
     pub fn from_value(&self, val: JsValue) -> Result<Artifact, JsValue> {
         let mut artifact = Artifact {
+            build: None,
             pages: vec![],
             fonts: vec![],
             title: None,
@@ -903,6 +933,9 @@ impl ArtifactJsBuilder {
         {
             let k = k.as_string().ok_or("typst: not a js string")?;
             match k.as_str() {
+                "build" => {
+                    artifact.build = Some(self.parse_build_info(&v)?);
+                }
                 "pages" => {
                     for arr in v.dyn_into::<js_sys::Array>()?.iter() {
                         artifact.pages.push(self.parse_frame(arr)?);

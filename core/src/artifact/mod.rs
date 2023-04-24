@@ -24,7 +24,17 @@ pub mod core;
 use self::core::*;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct BuildInfo {
+    pub version: String,
+    pub compiler: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Artifact {
+    /// The compiler information.
+    /// This is used to check if the artifact is compatible with the current compiler.
+    /// If not, the artifact must be recompiled.
+    pub build: Option<BuildInfo>,
     /// The page frames.
     pub pages: Vec<Frame>,
     /// The document used fonts.
@@ -187,6 +197,11 @@ impl From<TypstDocument> for Artifact {
             .collect();
 
         Self {
+            build: Some(BuildInfo {
+                compiler: "typst-ts-cli".to_string(),
+                // todo: attach version
+                version: "0.0.0".to_string(),
+            }),
             pages,
             fonts: builder.fonts,
             title: typst_doc.title.map(|s| s.to_string()),
