@@ -1,4 +1,4 @@
-pub(crate) mod artifact;
+pub mod artifact;
 pub use artifact::Artifact;
 
 pub mod config;
