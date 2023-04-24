@@ -93,19 +93,7 @@ impl TypstRenderer {
         artifact_content: String,
         options: Option<RenderSessionOptions>,
     ) -> Result<RenderSession, JsValue> {
-        let mut ses = self.session_from_artifact(artifact_content)?;
-
-        ses.pixel_per_pt = options
-            .as_ref()
-            .and_then(|o| o.pixel_per_pt.clone())
-            .unwrap_or(2.);
-
-        ses.background_color = options
-            .as_ref()
-            .and_then(|o| o.background_color.clone())
-            .unwrap_or("ffffff".to_string());
-
-        Ok(ses)
+        self.session_mgr.create_session(artifact_content, options)
     }
 }
 
