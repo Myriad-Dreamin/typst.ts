@@ -1841,7 +1841,7 @@ dependencies = [
 
 [[package]]
 name = "typst-renderer-ts"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "bytemuck",
  "comemo",
@@ -1873,7 +1873,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-cli"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "clap",
  "clap_complete",
@@ -1890,7 +1890,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-compiler"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "append-only-vec",
  "codespan-reporting",
@@ -1916,7 +1916,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-core"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "comemo",
  "once_cell",
@@ -1929,7 +1929,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-fontctl"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "clap",
@@ -1943,7 +1943,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-ws-exporter"
-version = "0.1.2"
+version = "0.1.3"
 
 [[package]]
 name = "unic-langid"

@@ -1,6 +1,6 @@
 [package]
 name = "typst-renderer-ts"
-version = "0.1.2"
+version = "0.1.3"
 license = "Apache-2.0"
 edition = "2021"
 readme = "README.md"
@@ -11,7 +11,7 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 crate-type = ["cdylib"]
 
 [dependencies]
-typst-ts-core = "0.1.2"
+typst-ts-core = "0.1.3"
 
 typst = "0.2.0"
 typst-library = "0.2.0"
