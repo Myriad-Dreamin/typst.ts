@@ -96,8 +96,8 @@ class TypstRendererDriver {
     this.renderer = await builder.build();
   }
 
-  private imageOptionsToRust(options: RenderOptions): typst.RenderImageOptions {
-    const rustOptions = new typst.RenderImageOptions();
+  private imageOptionsToRust(options: RenderOptions): typst.RenderSessionOptions {
+    const rustOptions = new typst.RenderSessionOptions();
     rustOptions.pixel_per_pt = options.pixelPerPt ?? 2;
 
     if (options.backgroundColor !== undefined) {

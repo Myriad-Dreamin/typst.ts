@@ -1,8 +1,9 @@
-pub mod browser_world;
+pub(crate) mod browser_world;
 
 pub(crate) mod pixmap;
 
 pub(crate) mod renderer;
+pub use renderer::session::{RenderSessionManager, RenderSessionOptions};
 pub use renderer::{TypstRenderer, TypstRendererBuilder};
 
 #[macro_use]
@@ -14,7 +15,7 @@ pub mod web_font;
 mod tests {
     use typst::util::Buffer;
 
-    use super::*;
+    use super::renderer::TypstRendererBuilder;
     use std::path::{Path, PathBuf};
 
     #[test]

@@ -35,7 +35,7 @@ flate2 = "1"
 resvg = { version = "0.22", default-features = false }
 
 # todo: use javascript native JSON
-serde_json = "1.0.95"
+serde_json = { version = "1.0.95", optional = true }
 
 # Everything to do with wasm
 wasm-bindgen = { version = "^0.2" }
@@ -44,3 +44,12 @@ wasm-bindgen-futures = "^0.4"
 serde = { version = "^1.0", features = ["derive"] }
 serde-wasm-bindgen = "^0.5"
 web-sys = { version = "^0.3", features = ["console", "Window", "Blob", "ImageData"] }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.0"
+typst-renderer-ts = { path = ".", features = ["serde"] }
+web-sys = { version = "^0.3", features = ["console", "Performance", "PerformanceTiming", "Window", "Blob", "ImageData"] }
+
+[features]
+serde = ["dep:serde_json"]
+default = ["serde"]

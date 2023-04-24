@@ -318,15 +318,15 @@ impl TypeDocumentParser {
 }
 
 impl Artifact {
-    pub fn to_document(self, font_mgr: &impl FontResolver) -> TypstDocument {
+    pub fn to_document<T: FontResolver>(self, font_resolver: &T) -> TypstDocument {
         let mut builder = TypeDocumentParser::new();
         for font in self.fonts {
             // todo: font alternative
-            let idx = font_mgr
+            let idx = font_resolver
                 .font_book()
                 .select_fallback(Some(&font), font.variant, "0")
                 .unwrap();
-            builder.fonts.push(font_mgr.font(idx).unwrap());
+            builder.fonts.push(font_resolver.font(idx).unwrap());
         }
 
         let pages = self

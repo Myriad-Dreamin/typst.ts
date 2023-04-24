@@ -2,13 +2,13 @@ use js_sys::Uint8Array;
 use std::str::FromStr;
 use tiny_skia as sk;
 use typst::geom::{Color, RgbaColor};
-use typst_ts_core::Artifact;
 use wasm_bindgen::{prelude::*, Clamped};
 use web_sys::ImageData;
 
-use crate::pixmap;
+use crate::RenderSessionManager;
+use crate::{pixmap, renderer::session::RenderSessionOptions};
 
-use super::browser_world::TypstBrowserWorld;
+use crate::browser_world::TypstBrowserWorld;
 
 pub(crate) mod builder;
 pub use builder::TypstRendererBuilder;
@@ -18,42 +18,8 @@ pub(crate) mod render;
 pub(crate) mod session;
 pub use session::RenderSession;
 
-#[wasm_bindgen]
-pub struct RenderImageOptions {
-    pixel_per_pt: Option<f32>,
-    background_color: Option<String>,
-}
-
-#[wasm_bindgen]
-impl RenderImageOptions {
-    #[wasm_bindgen(constructor)]
-    pub fn new() -> RenderImageOptions {
-        Self {
-            pixel_per_pt: None,
-            background_color: None,
-        }
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn pixel_per_pt(&self) -> Option<f32> {
-        self.pixel_per_pt.clone()
-    }
-
-    #[wasm_bindgen(setter)]
-    pub fn set_pixel_per_pt(&mut self, pixel_per_pt: f32) {
-        self.pixel_per_pt = Some(pixel_per_pt);
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn background_color(&self) -> Option<String> {
-        self.background_color.clone()
-    }
-
-    #[wasm_bindgen(setter)]
-    pub fn set_background_color(&mut self, background_color: String) {
-        self.background_color = Some(background_color);
-    }
-}
+pub(crate) mod artifact;
+pub use artifact::ArtifactJsBuilder;
 
 #[wasm_bindgen]
 pub struct RenderPageImageOptions {
@@ -80,7 +46,7 @@ impl RenderPageImageOptions {
 
 #[wasm_bindgen]
 pub struct TypstRenderer {
-    world: TypstBrowserWorld,
+    session_mgr: RenderSessionManager,
 }
 
 #[wasm_bindgen]
@@ -88,7 +54,7 @@ impl TypstRenderer {
     pub fn render(
         &mut self,
         artifact_content: String,
-        options: Option<RenderImageOptions>,
+        options: Option<RenderSessionOptions>,
     ) -> Result<ImageData, JsValue> {
         let ses = self.create_session(artifact_content, options)?;
         self.render_page(&ses, None)
@@ -125,7 +91,7 @@ impl TypstRenderer {
     pub fn create_session(
         &self,
         artifact_content: String,
-        options: Option<RenderImageOptions>,
+        options: Option<RenderSessionOptions>,
     ) -> Result<RenderSession, JsValue> {
         let mut ses = self.session_from_artifact(artifact_content)?;
 
@@ -145,10 +111,13 @@ impl TypstRenderer {
 
 impl TypstRenderer {
     pub fn new(world: TypstBrowserWorld) -> TypstRenderer {
-        Self { world }
+        Self {
+            session_mgr: RenderSessionManager::new(world.font_resolver),
+        }
     }
 
     pub fn render_to_pdf_internal(&self, session: &RenderSession) -> Result<Vec<u8>, String> {
+        // contribution 510KB
         Ok(typst::export::pdf(&session.doc))
     }
 
@@ -227,6 +196,7 @@ impl TypstRenderer {
             );
         }
 
+        // contribution: 850KB
         Ok(render::render(
             &mut canvas,
             &ses.doc.pages[page_off],
@@ -235,33 +205,11 @@ impl TypstRenderer {
         ))
     }
 
-    pub fn session_from_artifact(&self, artifact_content: String) -> Result<RenderSession, String> {
-        // todo:
-        // https://medium.com/@wl1508/avoiding-using-serde-and-deserde-in-rust-webassembly-c1e4640970ca
-        let artifact: Artifact = serde_json::from_str(artifact_content.as_str()).unwrap();
-
-        #[cfg(debug)]
-        {
-            use super::utils::console_log;
-            use web_sys::console;
-            let _ = console::log_0;
-            console_log!(
-                "{} pages to render. font info: {:?}",
-                artifact.pages.len(),
-                artifact
-                    .fonts
-                    .iter()
-                    .map(|f| f.family.as_str()) // serde_json::to_string(f).unwrap())
-                    .collect::<Vec<&str>>()
-                    .join(", ")
-            );
-        }
-
-        let document = artifact.to_document(&self.world.font_resolver);
-        if document.pages.len() == 0 {
-            return Err("no pages in artifact".into());
-        }
-
-        Ok(RenderSession::from_doc(document))
+    pub fn session_from_artifact(
+        &self,
+        artifact_content: String,
+    ) -> Result<RenderSession, JsValue> {
+        self.session_mgr
+            .session_from_artifact(artifact_content, "js")
     }
 }
