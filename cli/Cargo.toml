@@ -9,8 +9,8 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 [dependencies]
 typst-ts-core = "0.1.2"
 typst-ts-compiler = "0.1.2"
-typst = { git = "https://github.com/typst/typst.git" }
-typst-library = { git = "https://github.com/typst/typst.git" }
+typst = "0.2.0"
+typst-library = "0.2.0"
 
 codespan-reporting = "0.11"
 

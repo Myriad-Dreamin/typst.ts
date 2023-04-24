@@ -7,8 +7,8 @@ description = "Serialize Typst document tree."
 repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 [dependencies]
-typst = { git = "https://github.com/typst/typst.git" }
-typst-library = { git = "https://github.com/typst/typst.git" }
+typst = "0.2.0"
+typst-library = "0.2.0"
 comemo = "0.2"
 siphasher = "0.3.10"
 

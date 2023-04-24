@@ -15,6 +15,12 @@ members = [
 typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }
 
+typst = { git = "https://github.com/typst/typst.git" }
+typst-library = { git = "https://github.com/typst/typst.git" }
+
+# typst = { path = "../typst" }
+# typst-library = { path = "../typst/library" }
+
 [profile.release]
 opt-level = 3
 debug = true
