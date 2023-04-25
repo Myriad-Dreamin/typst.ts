@@ -1879,12 +1879,29 @@ dependencies = [
  "typst",
  "typst-library",
  "typst-renderer-ts",
+ "typst-ts-canvas-exporter",
  "typst-ts-core",
- "typst-ts-raster-exporter",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
  "web-sys",
+]
+
+[[package]]
+name = "typst-ts-canvas-exporter"
+version = "0.1.3"
+dependencies = [
+ "bytemuck",
+ "comemo",
+ "flate2",
+ "image",
+ "pixglyph",
+ "resvg",
+ "roxmltree",
+ "tiny-skia",
+ "ttf-parser 0.18.1",
+ "typst",
+ "usvg",
 ]
 
 [[package]]

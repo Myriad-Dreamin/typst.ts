@@ -33,6 +33,7 @@ def main(old_version, new_version):
       "compiler/Cargo.toml",
       "packages/typst.ts/Cargo.toml",
       "exporter/raster/Cargo.toml",
+      "exporter/canvas/Cargo.toml",
       "exporter/ws/Cargo.toml",
       "contrib/fontctl/Cargo.toml",
       "contrib/fontctl/src/main.rs",
@@ -42,6 +43,7 @@ def main(old_version, new_version):
       lambda v: f'typst-ts-core = "{v}"',
       lambda v: f'typst-ts-compiler = "{v}"',
       lambda v: f'typst-ts-raster-exporter = "{v}"',
+      lambda v: f'typst-ts-canvas-exporter = "{v}"',
   ]):
     replace_version(file_path, version_form(old_version), version_form(new_version))
 

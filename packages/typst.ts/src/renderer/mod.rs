@@ -185,7 +185,7 @@ impl TypstRenderer {
         }
 
         // contribution: 850KB
-        Ok(typst_ts_raster_exporter::render(
+        Ok(typst_ts_canvas_exporter::render(
             &mut canvas,
             &ses.doc.pages[page_off],
             ses.pixel_per_pt,

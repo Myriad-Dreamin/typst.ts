@@ -8,6 +8,7 @@ members = [
 
     "exporter/ws",
     "exporter/raster",
+    "exporter/canvas",
 
     "contrib/fontctl",
 ]
@@ -16,6 +17,7 @@ members = [
 typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }
 typst-ts-raster-exporter = { path = "exporter/raster" }
+typst-ts-canvas-exporter = { path = "exporter/canvas" }
 
 typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts" }
 typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts" }
