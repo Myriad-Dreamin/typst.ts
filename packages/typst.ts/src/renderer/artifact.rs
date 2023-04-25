@@ -956,6 +956,7 @@ pub fn artifact_from_js_string(val: String) -> Result<Artifact, JsValue> {
 }
 
 #[cfg(test)]
+#[cfg(target_arch = "wasm32")]
 mod tests {
     use typst_ts_core::Artifact;
     use wasm_bindgen_test::*;
