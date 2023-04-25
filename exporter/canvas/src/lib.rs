@@ -1,5 +1,9 @@
 //! Rendering into raster images.
 
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+#![allow(dead_code)]
+
 use std::io::Read;
 use std::sync::Arc;
 

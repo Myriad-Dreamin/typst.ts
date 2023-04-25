@@ -6,7 +6,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     fn artifact_deserialization() {
-        let artifact = include_bytes!("../../main.x.artifact.json");
+        let artifact = include_bytes!("../../main.artifact.json");
         let artifact = String::from_utf8_lossy(artifact);
 
         let window = web_sys::window().expect("should have a window in this context");
