@@ -8,6 +8,7 @@ dist/fonts
 
 index.html
 *.artifact.json
+*.rmp
 Cargo.toml
 Cargo.lock
 esbuild.*
