@@ -1,13 +1,13 @@
 [package]
 name = "typst-ts-compiler"
-version = "0.1.3"
+version = "0.1.4"
 license = "Apache-2.0"
 edition = "2021"
 description = "Compile Typst documents."
 repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 [dependencies]
-typst-ts-core = "0.1.3"
+typst-ts-core = "0.1.4"
 
 typst = "0.2.0"
 typst-library = "0.2.0"
