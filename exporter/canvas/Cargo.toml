@@ -20,3 +20,6 @@ bytemuck = "1"
 pixglyph = "0.1"
 flate2 = "1"
 resvg = { version = "0.22", default-features = false }
+
+wasm-bindgen = { version = "^0.2" }
+web-sys = { version = "^0.3", features = ["CanvasRenderingContext2d", "Blob", "ImageData"] }

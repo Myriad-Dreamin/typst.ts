@@ -1,4 +1,6 @@
 use js_sys::Uint8Array;
+use std::str::FromStr;
+use typst::geom::{Color, RgbaColor};
 use wasm_bindgen::{prelude::*, Clamped};
 use web_sys::ImageData;
 
@@ -48,15 +50,6 @@ pub struct TypstRenderer {
 
 #[wasm_bindgen]
 impl TypstRenderer {
-    pub fn render(
-        &mut self,
-        artifact_content: String,
-        options: Option<RenderSessionOptions>,
-    ) -> Result<ImageData, JsValue> {
-        let ses = self.create_session(artifact_content, options)?;
-        self.render_page(&ses, None)
-    }
-
     pub fn render_page(
         &mut self,
         session: &RenderSession,
@@ -69,6 +62,25 @@ impl TypstRenderer {
             size.width,
             size.height,
         )?)
+    }
+
+    pub fn render_page_to_canvas(
+        &mut self,
+        ses: &RenderSession,
+        canvas: &web_sys::CanvasRenderingContext2d,
+        options: Option<RenderPageImageOptions>,
+    ) -> Result<(), JsValue> {
+        let page_off = self.retrieve_page_off(ses, options)?;
+
+        // contribution: 850KB
+        let worker = typst_ts_canvas_exporter::CanvasRenderTask::new(
+            &canvas,
+            &ses.doc,
+            page_off,
+            ses.pixel_per_pt,
+            Color::Rgba(RgbaColor::from_str(&ses.background_color)?),
+        );
+        Ok(worker.render(&ses.doc.pages[page_off]))
     }
 
     pub fn render_to_pdf(&mut self, artifact_content: String) -> Result<Uint8Array, JsValue> {
@@ -106,11 +118,7 @@ impl TypstRenderer {
 }
 
 #[cfg(feature = "render_raster")]
-use {
-    std::str::FromStr,
-    tiny_skia as sk,
-    typst::geom::{Color, RgbaColor},
-};
+use tiny_skia as sk;
 
 #[cfg(feature = "render_raster")]
 impl TypstRenderer {
@@ -119,21 +127,7 @@ impl TypstRenderer {
         ses: &RenderSession,
         options: Option<RenderPageImageOptions>,
     ) -> Result<(Vec<u8>, pixmap::IntSize), JsValue> {
-        if ses.doc.pages.is_empty() {
-            // todo: better error
-            return Err("no pages in session".into());
-        }
-
-        let page_off = options.as_ref().map(|o| o.page_off).unwrap_or(0);
-
-        if page_off >= ses.doc.pages.len() {
-            return Err(format!(
-                "page_off {} out of range, total pages {}",
-                page_off,
-                ses.doc.pages.len()
-            )
-            .into());
-        }
+        let page_off = self.retrieve_page_off(ses, options)?;
 
         let (data_len, size) = {
             let size = ses.doc.pages[page_off].size();
@@ -204,6 +198,30 @@ impl TypstRenderer {
         Self {
             session_mgr: RenderSessionManager::new(world.font_resolver),
         }
+    }
+
+    fn retrieve_page_off(
+        &self,
+        ses: &RenderSession,
+        options: Option<RenderPageImageOptions>,
+    ) -> Result<usize, JsValue> {
+        if ses.doc.pages.is_empty() {
+            // todo: better error
+            return Err("no pages in session".into());
+        }
+
+        let page_off = options.as_ref().map(|o| o.page_off).unwrap_or(0);
+
+        if page_off >= ses.doc.pages.len() {
+            return Err(format!(
+                "page_off {} out of range, total pages {}",
+                page_off,
+                ses.doc.pages.len()
+            )
+            .into());
+        }
+
+        Ok(page_off)
     }
 
     pub fn render_to_pdf_internal(&self, session: &RenderSession) -> Result<Vec<u8>, String> {

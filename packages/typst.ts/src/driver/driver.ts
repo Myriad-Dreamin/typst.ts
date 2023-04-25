@@ -37,6 +37,10 @@ export interface RenderSession {
   readonly pixel_per_pt: number;
 }
 
+interface RenderFeature {
+  render(artifactContext: string, options?: typst.RenderSessionOptions): Promise<ImageData>;
+}
+
 export interface TypstRenderer {
   init(options?: Partial<InitOptions>): Promise<void>;
   render(options: RenderOptions): Promise<RenderResult>;
@@ -114,26 +118,35 @@ class TypstRendererDriver {
     return rustOptions;
   }
 
-  async renderImage(artifactContent: string, options?: RenderOptions): Promise<ImageData> {
-    if (!options) {
-      return this.renderer.render(artifactContent);
-    }
+  static hasRenderFeature(r: typst.TypstRenderer): r is RenderFeature & typst.TypstRenderer {
+    return 'render' in r;
+  }
 
-    return this.renderer.render(artifactContent, /* moved */ this.imageOptionsToRust(options));
+  async renderImage(artifactContent: string, options?: RenderOptions): Promise<ImageData> {
+    if (!TypstRendererDriver.hasRenderFeature(this.renderer)) {
+      return Promise.reject(new Error('renderer is not initialized'));
+    } else {
+      if (!options) {
+        return this.renderer.render(artifactContent);
+      }
+
+      return this.renderer.render(artifactContent, /* moved */ this.imageOptionsToRust(options));
+    }
   }
 
   async renderImageInSession(
     session: RenderSession,
+    canvas: CanvasRenderingContext2D,
     options?: RenderPageOptions,
-  ): Promise<ImageData> {
+  ): Promise<void> {
     if (!options) {
-      return this.renderer.render_page(session as typst.RenderSession);
+      return this.renderer.render_page_to_canvas(session as typst.RenderSession, canvas);
     }
 
     const rustOptions = new typst.RenderPageImageOptions();
     rustOptions.page_off = options.page_off;
 
-    return this.renderer.render_page(session as typst.RenderSession, rustOptions);
+    return this.renderer.render_page_to_canvas(session as typst.RenderSession, canvas, rustOptions);
   }
 
   async renderPdf(artifactContent: string): Promise<Uint8Array> {
@@ -142,6 +155,18 @@ class TypstRendererDriver {
 
   async renderPdfInSession(session: RenderSession): Promise<Uint8Array> {
     return this.renderer.render_to_pdf_in_session(session as typst.RenderSession);
+  }
+
+  private async inAnimationFrame<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      requestAnimationFrame(async () => {
+        try {
+          resolve(fn());
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
   }
 
   private async renderDisplayLayer(
@@ -153,61 +178,64 @@ class TypstRendererDriver {
     const pages_info = session.pages_info;
     const page_count = pages_info.page_count;
 
-    const t = performance.now();
+    return this.inAnimationFrame(async () => {
+      const t = performance.now();
 
-    /// render each page
-    const renderResult = (
-      await Promise.all(
-        //   canvasList.map(async (canvas, i) => {
-        //     const renderResult = await this.renderImageInSession(session, {
-        //       page_off: i,
-        //     });
-        //     console.log(cyrb53(renderResult.data));
-        //     let ctx = canvas.getContext('2d');
-        //     if (ctx) {
-        //       ctx.putImageData(renderResult, 0, 0);
-        //     }
+      /// render each page
+      const renderResult = (
+        await Promise.all(
+          //   canvasList.map(async (canvas, i) => {
+          //     const renderResult = await this.renderImageInSession(session, {
+          //       page_off: i,
+          //     });
+          //     console.log(cyrb53(renderResult.data));
+          //     let ctx = canvas.getContext('2d');
+          //     if (ctx) {
+          //       ctx.putImageData(renderResult, 0, 0);
+          //     }
 
-        //     return {
-        //       width: renderResult.width,
-        //       height: renderResult.height,
-        //     };
-        //   }),
-        // )
+          //     return {
+          //       width: renderResult.width,
+          //       height: renderResult.height,
+          //     };
+          //   }),
+          // )
 
-        /// seq
-        [
-          (async () => {
-            let i0RenderResult: RenderResult = undefined as unknown as RenderResult;
-            for (let i = 0; i < page_count; i++) {
-              const canvas = canvasList[i];
-              const renderResult = await this.renderImageInSession(session, {
-                page_off: i,
-              });
-              let ctx = canvas.getContext('2d');
-              if (ctx) {
-                ctx.putImageData(renderResult, 0, 0);
+          /// seq
+          [
+            (async () => {
+              let i0RenderResult: RenderResult = undefined as unknown as RenderResult;
+              for (let i = 0; i < page_count; i++) {
+                const canvas = canvasList[i];
+                let ctx = canvas.getContext('2d');
+                if (ctx) {
+                  await this.renderImageInSession(session, ctx, {
+                    page_off: i,
+                  });
+                  if (i === 0) {
+                    i0RenderResult = {
+                      width: canvas.width,
+                      height: canvas.height,
+                    };
+                  }
+                }
               }
 
-              if (i === 0) {
-                i0RenderResult = renderResult;
-              }
-            }
+              return {
+                width: i0RenderResult.width,
+                height: i0RenderResult.height,
+              };
+            })(),
+          ],
+        )
+      )[0]!;
 
-            return {
-              width: i0RenderResult.width,
-              height: i0RenderResult.height,
-            };
-          })(),
-        ],
-      )
-    )[0]!;
+      const t3 = performance.now();
 
-    const t3 = performance.now();
+      console.log(`display layer used: render = ${(t3 - t).toFixed(1)}ms`);
 
-    console.log(`display layer used: render = ${(t3 - t).toFixed(1)}ms`);
-
-    return renderResult;
+      return renderResult;
+    });
   }
 
   private async renderOnePageTextLayer(
@@ -416,10 +444,14 @@ class TypstRendererDriver {
     );
     try {
       console.log(`session`, JSON.stringify(session), `activated`);
-      return await fn(session);
-    } finally {
+      const res = await fn(session);
       console.log(`session`, JSON.stringify(session), `deactivated`);
       session.free();
+      return res;
+    } catch (e) {
+      console.log(`session`, JSON.stringify(session), `deactivated by error`, e);
+      session.free();
+      throw e;
     }
   }
 }
