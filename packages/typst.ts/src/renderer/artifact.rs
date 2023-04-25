@@ -962,7 +962,7 @@ mod tests {
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
-    fn pass() {
+    fn artifact_deserialization() {
         let artifact = include_bytes!("../../main.artifact.json");
         let artifact = String::from_utf8_lossy(artifact);
 
