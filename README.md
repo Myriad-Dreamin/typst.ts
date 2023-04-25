@@ -1,5 +1,14 @@
 # Typst.ts
 
+<p align="center">
+  <a href="">
+    <img alt="typst_ts::ci" src="https://github.com/Myriad-Dreamin/typst.ts/actions/workflows/ci.yaml/badge.svg"/>
+  </a>
+  <a href="https://github.com/Myriad-Dreamin/typst.ts/blob/main/LICENSE">
+    <img alt="Apache-2 License" src="https://img.shields.io/badge/license-Apache%202-brightgreen"/>
+  </a>
+</p>
+
 Typst.ts allows you to independently run the Typst compiler and exporter (renderer) in your browser.
 
 ![react-demo](https://user-images.githubusercontent.com/35292584/233788011-bd3456e7-6ca2-4567-a5b8-42a65fcb88a5.png)
@@ -98,7 +107,6 @@ Import Typst.ts in your project:
       </div>
     );
   };
-
   ```
 
 - Using [@myriaddreamin/typst.angular][npm::typst.angular]
@@ -106,7 +114,5 @@ Import Typst.ts in your project:
   Coming soon.
 
 [npm::typst.ts]: https://www.npmjs.com/package/@myriaddreamin/typst.ts
-
 [npm::typst.react]: https://www.npmjs.com/package/@myriaddreamin/typst.react
-
 [npm::typst.angular]: ./packages/typst.angular/README.md
