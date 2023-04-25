@@ -7,11 +7,20 @@ use typst::{
     util::Buffer,
 };
 
+/// A FontLoader would help load a font from somewhere.
+pub trait FontLoader {
+    fn load(&mut self) -> Option<Font>;
+}
+
+/// A FontResolver can resolve a font by index.
+/// It also reuse FontBook for font-related query.
+/// The index is the index of the font in the `FontBook.infos`.
 pub trait FontResolver {
     fn font_book(&self) -> &Prehashed<FontBook>;
     fn font(&self, idx: usize) -> Option<Font>;
 }
 
+/// The default FontResolver implementation.
 pub struct FontResolverImpl {
     book: Prehashed<FontBook>,
     fonts: Vec<FontSlot>,
@@ -66,10 +75,7 @@ impl FontSlot {
     }
 }
 
-pub trait FontLoader {
-    fn load(&mut self) -> Option<Font>;
-}
-
+/// Load font from a buffer.
 pub struct BufferFontLoader {
     pub buffer: Option<Buffer>,
     pub index: u32,
