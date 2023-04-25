@@ -4,6 +4,7 @@
 
 *.artifact.json
 *.pdf
+*.rmp
 /out.json
 
 target/
