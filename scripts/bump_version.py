@@ -27,28 +27,21 @@ def main(old_version, new_version):
     if len(v.split('.')) != 3:
       raise ValueError('Version must be in the form x.y.z')
 
-  def toml_version_lit(v):
-    return f'version = "{v}"'
-
-  def toml_dep_core_lit(v):
-    return f'typst-ts-core = "{v}"'
-
-  def toml_dep_compiler_lit(v):
-    return f'typst-ts-compiler = "{v}"'
-
   for file_path, version_form in itertools.product([
       "cli/Cargo.toml",
       "core/Cargo.toml",
       "compiler/Cargo.toml",
       "packages/typst.ts/Cargo.toml",
+      "exporter/raster/Cargo.toml",
       "exporter/ws/Cargo.toml",
       "contrib/fontctl/Cargo.toml",
       "contrib/fontctl/src/main.rs",
       "cli/src/lib.rs",
   ], [
-      toml_version_lit,
-      toml_dep_core_lit,
-      toml_dep_compiler_lit,
+      lambda v: f'version = "{v}"',
+      lambda v: f'typst-ts-core = "{v}"',
+      lambda v: f'typst-ts-compiler = "{v}"',
+      lambda v: f'typst-ts-raster-exporter = "{v}"',
   ]):
     replace_version(file_path, version_form(old_version), version_form(new_version))
 

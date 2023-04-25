@@ -1,5 +1,7 @@
 use std::num::NonZeroUsize;
-use tiny_skia as sk;
+
+/// Number of bytes per pixel.
+pub const BYTES_PER_PIXEL: usize = 4;
 
 /// An integer size.
 ///
@@ -17,7 +19,7 @@ pub struct IntSize {
 /// Pixmap's maximum value for row bytes must fit in 31 bits.
 pub fn min_row_bytes(size: IntSize) -> Option<NonZeroUsize> {
     let w = i32::try_from(size.width).ok()?;
-    let w = w.checked_mul(sk::BYTES_PER_PIXEL as i32)?;
+    let w = w.checked_mul(BYTES_PER_PIXEL as i32)?;
     NonZeroUsize::new(w as usize)
 }
 
@@ -26,7 +28,7 @@ pub fn compute_data_len(size: IntSize, row_bytes: usize) -> Option<usize> {
     let h = size.height.checked_sub(1)?;
     let h = (h as usize).checked_mul(row_bytes)?;
 
-    let w = (size.width as usize).checked_mul(sk::BYTES_PER_PIXEL)?;
+    let w = (size.width as usize).checked_mul(BYTES_PER_PIXEL)?;
 
     h.checked_add(w)
 }
