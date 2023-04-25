@@ -14,6 +14,32 @@ No new security note.
 
 #### Feature
 
+- add docker image `myriaddreamin/typst.ts` to [ghcr.io](https://github.com/Myriad-Dreamin/typst.ts/pkgs/container/typst.ts).
+
+- set visibility during rendering
+
+- compiler add a format `rmp` ([rust message pack](https://docs.rs/rmp/latest/rmp/))
+
+- introduce [canvas exporter](https://github.com/Myriad-Dreamin/typst.ts/blob/main/exporter/canvas/Cargo.toml)
+
+#### Bugfix
+
+# v0.1.3
+
+## Changelog since v0.1.3
+
+### Known Issues
+
+No new known issue.
+
+### Security Notes
+
+No new security note.
+
+### Changes
+
+#### Feature
+
 - introduce `@myriaddreamin/typst.angular` to provide angular component.
 
 - reduce the size of `@myriaddreamin/typst.ts` by removing serde and serde_json from dependencies.
