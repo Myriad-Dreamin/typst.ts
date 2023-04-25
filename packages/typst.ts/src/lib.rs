@@ -16,7 +16,13 @@ mod tests {
     use typst::util::Buffer;
 
     use super::renderer::TypstRendererBuilder;
-    use std::path::{Path, PathBuf};
+    use std::path::PathBuf;
+
+    fn artifact_path() -> PathBuf {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../fuzzers/corpora/math/math.artifact.json");
+        path
+    }
 
     #[test]
     fn test_render_document() {
@@ -46,10 +52,11 @@ mod tests {
         )));
         let renderer = pollster::block_on(builder.build()).unwrap();
 
-        let path = Path::new("fuzzers/corpora/hw/main.artifact.json");
-        let artifact_content = std::fs::read_to_string(path).unwrap();
+        let artifact_content = std::fs::read_to_string(artifact_path()).unwrap();
 
-        let mut ses = renderer.session_from_artifact(artifact_content).unwrap();
+        let mut ses = renderer
+            .session_from_artifact_internal(artifact_content)
+            .unwrap();
         ses.pixel_per_pt = 2.;
         ses.background_color = "ffffff".to_string();
 

@@ -8,7 +8,19 @@ mod tests {
     use typst_ts_core::{config::CompileOpts, Artifact};
 
     use super::*;
-    use std::path::{Path, PathBuf};
+    use std::path::PathBuf;
+
+    fn artifact_path() -> PathBuf {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../fuzzers/corpora/math/math.artifact.json");
+        path
+    }
+
+    fn artifact_output_path() -> PathBuf {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../fuzzers/corpora/math/math.artifact.pdf");
+        path
+    }
 
     #[test]
     fn test_parse_document() {
@@ -19,12 +31,11 @@ mod tests {
             root_dir: root_path,
             ..CompileOpts::default()
         });
-        let path = Path::new("fuzzers/corpora/hw/main.artifact.json");
-        let content = std::fs::read_to_string(path).unwrap();
+        let artifact_path = artifact_path();
+        let content = std::fs::read_to_string(artifact_path).unwrap();
         let artifact: Artifact = serde_json::from_str(content.as_str()).unwrap();
         let document = artifact.to_document(&world.font_resolver);
         let buffer = typst::export::pdf(&document);
-        let output_path = Path::new("fuzzers/corpora/hw/main2.pdf");
-        std::fs::write(&output_path, buffer).unwrap();
+        std::fs::write(artifact_output_path(), buffer).unwrap();
     }
 }

@@ -217,4 +217,31 @@ impl RenderSessionManager {
 
         Ok(RenderSession::from_doc(document))
     }
+
+    // todo: set return error to typst_ts_core::Error
+    pub fn session_from_artifact_internal(
+        &self,
+        artifact_content: String,
+        decoder: &str,
+    ) -> Result<RenderSession, String> {
+        let artifact: Artifact = match decoder {
+            #[cfg(feature = "serde")]
+            "serde" => {
+                let artifact: Artifact = serde_json::from_str(artifact_content.as_str()).unwrap();
+
+                artifact
+            }
+            _ => {
+                panic!("unknown decoder: {}", decoder);
+            }
+        };
+
+        let font_resolver = self.font_resolver.read().unwrap();
+        let document = artifact.to_document(&*font_resolver);
+        if document.pages.len() == 0 {
+            return Err("no pages in artifact".into());
+        }
+
+        Ok(RenderSession::from_doc(document))
+    }
 }
