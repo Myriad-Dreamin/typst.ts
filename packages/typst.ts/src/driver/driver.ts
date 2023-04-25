@@ -118,22 +118,6 @@ class TypstRendererDriver {
     return rustOptions;
   }
 
-  static hasRenderFeature(r: typst.TypstRenderer): r is RenderFeature & typst.TypstRenderer {
-    return 'render' in r;
-  }
-
-  async renderImage(artifactContent: string, options?: RenderOptions): Promise<ImageData> {
-    if (!TypstRendererDriver.hasRenderFeature(this.renderer)) {
-      return Promise.reject(new Error('renderer is not initialized'));
-    } else {
-      if (!options) {
-        return this.renderer.render(artifactContent);
-      }
-
-      return this.renderer.render(artifactContent, /* moved */ this.imageOptionsToRust(options));
-    }
-  }
-
   async renderImageInSession(
     session: RenderSession,
     canvas: CanvasRenderingContext2D,
