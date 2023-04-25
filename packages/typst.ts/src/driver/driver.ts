@@ -263,23 +263,25 @@ class TypstRendererDriver {
   async render(options: RenderOptions): Promise<RenderResult> {
     let session: typst.RenderSession;
     let renderResult: RenderResult;
+    const mountContainer = options.container;
+    mountContainer.style.visibility = 'hidden';
 
     const doRenderDisplayLayer = async (canvasList: HTMLCanvasElement[]) => {
-      renderResult = await this.renderDisplayLayer(session, options.container, canvasList, options);
+      renderResult = await this.renderDisplayLayer(session, mountContainer, canvasList, options);
     };
 
     const doRenderTextLayer = (layerList: HTMLDivElement[]) =>
       new Promise(resolve => {
         setTimeout(() => {
           // setImmediate
-          this.renderTextLayer(session, options.container, layerList).then(resolve);
+          this.renderTextLayer(session, mountContainer, layerList).then(resolve);
         }, 0);
       });
 
     return this.withinOptionSession(options, async sessionRef => {
       session = sessionRef;
 
-      const container = options.container;
+      const container = mountContainer;
 
       const imageScaleFactor = options.pixelPerPt ?? 2;
 
@@ -381,6 +383,8 @@ class TypstRendererDriver {
         canvasDiv.style.transformOrigin = '0px 0px';
         canvasDiv.style.transform = `scale(${currentScale})`;
       }
+
+      mountContainer.style.visibility = 'visible';
       return renderResult;
     });
   }
