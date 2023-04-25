@@ -1,7 +1,7 @@
 # Typst.ts
 
 <p align="center">
-  <a href="">
+  <a href="https://github.com/Myriad-Dreamin/typst.ts/actions/workflows/ci.yaml">
     <img alt="typst_ts::ci" src="https://github.com/Myriad-Dreamin/typst.ts/actions/workflows/ci.yaml/badge.svg"/>
   </a>
   <a href="https://github.com/Myriad-Dreamin/typst.ts/blob/main/LICENSE">
