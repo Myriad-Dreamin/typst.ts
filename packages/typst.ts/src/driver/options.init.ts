@@ -49,10 +49,6 @@ export interface InitOptions {
   beforeBuild: BeforeBuildFn[];
 }
 
-/// preload remote fonts
-///
-/// @param fonts - url path to font files
-
 /**
  * preload remote fonts
  *
@@ -75,10 +71,6 @@ export function preloadRemoteFonts(fonts: string[]): BeforeBuildFn {
     await Promise.all(fonts.map(font => ref.loadFont(builder, font)));
   };
 }
-
-/// preload system fonts
-///
-/// @param byFamily - filter system fonts to preload by family name
 
 /**
  * preload system fonts
