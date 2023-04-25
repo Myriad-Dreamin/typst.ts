@@ -15,7 +15,7 @@ pub mod web_font;
 mod tests {
     use typst::util::Buffer;
 
-    use super::renderer::TypstRendererBuilder;
+    use super::renderer::{TypstRenderer, TypstRendererBuilder};
     use std::path::PathBuf;
 
     fn artifact_path() -> PathBuf {
@@ -24,8 +24,7 @@ mod tests {
         path
     }
 
-    #[test]
-    fn test_render_document() {
+    pub fn get_renderer() -> TypstRenderer {
         let mut root_path = PathBuf::new();
         root_path.push(".");
 
@@ -51,6 +50,13 @@ mod tests {
             "../../../assets/fonts/NewCMMath-Regular.otf"
         )));
         let renderer = pollster::block_on(builder.build()).unwrap();
+
+        renderer
+    }
+
+    #[test]
+    fn test_render_document() {
+        let renderer = get_renderer();
 
         let artifact_content = std::fs::read(artifact_path()).unwrap();
 
