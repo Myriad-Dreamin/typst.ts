@@ -42,8 +42,6 @@ def main(old_version, new_version):
       lambda v: f'version = "{v}"',
       lambda v: f'typst-ts-core = "{v}"',
       lambda v: f'typst-ts-compiler = "{v}"',
-      lambda v: f'typst-ts-raster-exporter = "{v}"',
-      lambda v: f'typst-ts-canvas-exporter = "{v}"',
   ]):
     replace_version(file_path, version_form(old_version), version_form(new_version))
 

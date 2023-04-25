@@ -1881,6 +1881,7 @@ dependencies = [
  "typst-renderer-ts",
  "typst-ts-canvas-exporter",
  "typst-ts-core",
+ "typst-ts-raster-exporter",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",

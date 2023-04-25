@@ -219,21 +219,22 @@ impl RenderSessionManager {
     }
 
     // todo: set return error to typst_ts_core::Error
+    #[allow(unreachable_code)]
     pub fn session_from_artifact_internal(
         &self,
-        artifact_content: &[u8],
+        _artifact_content: &[u8],
         decoder: &str,
     ) -> Result<RenderSession, String> {
-        let artifact: Artifact = match decoder {
+        let _artifact: Artifact = match decoder {
             #[cfg(feature = "serde_json")]
             "serde_json" => {
-                let artifact: Artifact = serde_json::from_slice(artifact_content).unwrap();
+                let artifact: Artifact = serde_json::from_slice(_artifact_content).unwrap();
 
                 artifact
             }
             #[cfg(feature = "serde_rmp")]
             "serde_rmp" => {
-                let artifact: Artifact = rmp_serde::from_slice(artifact_content).unwrap();
+                let artifact: Artifact = rmp_serde::from_slice(_artifact_content).unwrap();
 
                 artifact
             }
@@ -243,7 +244,7 @@ impl RenderSessionManager {
         };
 
         let font_resolver = self.font_resolver.read().unwrap();
-        let document = artifact.to_document(&*font_resolver);
+        let document = _artifact.to_document(&*font_resolver);
         if document.pages.len() == 0 {
             return Err("no pages in artifact".into());
         }

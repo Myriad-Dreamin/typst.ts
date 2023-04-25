@@ -1,7 +1,4 @@
 use js_sys::Uint8Array;
-use std::str::FromStr;
-use tiny_skia as sk;
-use typst::geom::{Color, RgbaColor};
 use wasm_bindgen::{prelude::*, Clamped};
 use web_sys::ImageData;
 
@@ -97,18 +94,26 @@ impl TypstRenderer {
     }
 }
 
+#[cfg(not(feature = "render_raster"))]
 impl TypstRenderer {
-    pub fn new(world: TypstBrowserWorld) -> TypstRenderer {
-        Self {
-            session_mgr: RenderSessionManager::new(world.font_resolver),
-        }
+    pub fn render_to_image_internal(
+        &self,
+        _ses: &RenderSession,
+        _options: Option<RenderPageImageOptions>,
+    ) -> Result<(Vec<u8>, pixmap::IntSize), JsValue> {
+        Err("render_raster feature is not enabled".into())
     }
+}
 
-    pub fn render_to_pdf_internal(&self, session: &RenderSession) -> Result<Vec<u8>, String> {
-        // contribution 510KB
-        Ok(typst::export::pdf(&session.doc))
-    }
+#[cfg(feature = "render_raster")]
+use {
+    std::str::FromStr,
+    tiny_skia as sk,
+    typst::geom::{Color, RgbaColor},
+};
 
+#[cfg(feature = "render_raster")]
+impl TypstRenderer {
     pub fn render_to_image_internal(
         &self,
         ses: &RenderSession,
@@ -185,12 +190,25 @@ impl TypstRenderer {
         }
 
         // contribution: 850KB
-        Ok(typst_ts_canvas_exporter::render(
+        Ok(typst_ts_raster_exporter::render(
             &mut canvas,
             &ses.doc.pages[page_off],
             ses.pixel_per_pt,
             Color::Rgba(RgbaColor::from_str(&ses.background_color)?),
         ))
+    }
+}
+
+impl TypstRenderer {
+    pub fn new(world: TypstBrowserWorld) -> TypstRenderer {
+        Self {
+            session_mgr: RenderSessionManager::new(world.font_resolver),
+        }
+    }
+
+    pub fn render_to_pdf_internal(&self, session: &RenderSession) -> Result<Vec<u8>, String> {
+        // contribution 510KB
+        Ok(typst::export::pdf(&session.doc))
     }
 
     pub fn session_from_artifact(
