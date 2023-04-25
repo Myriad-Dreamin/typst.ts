@@ -50,7 +50,7 @@ pub struct CompileArgs {
     #[clap(long, short, required = true)]
     pub entry: String,
 
-    /// Output formats.
+    /// Output formats, possible values: `json`, `pdf`, and `rmp`.
     #[clap(long)]
     pub format: Vec<String>,
 
