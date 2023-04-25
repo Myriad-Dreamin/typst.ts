@@ -52,10 +52,10 @@ mod tests {
         )));
         let renderer = pollster::block_on(builder.build()).unwrap();
 
-        let artifact_content = std::fs::read_to_string(artifact_path()).unwrap();
+        let artifact_content = std::fs::read(artifact_path()).unwrap();
 
         let mut ses = renderer
-            .session_from_artifact_internal(artifact_content)
+            .session_from_artifact_internal(artifact_content.as_slice())
             .unwrap();
         ses.pixel_per_pt = 2.;
         ses.background_color = "ffffff".to_string();

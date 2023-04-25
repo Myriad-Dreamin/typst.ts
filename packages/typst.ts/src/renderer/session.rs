@@ -181,8 +181,8 @@ impl RenderSessionManager {
                 artifact
             }
 
-            #[cfg(feature = "serde")]
-            "serde" => {
+            #[cfg(feature = "serde_json")]
+            "serde_json" => {
                 let artifact: Artifact = serde_json::from_str(artifact_content.as_str()).unwrap();
 
                 artifact
@@ -221,13 +221,19 @@ impl RenderSessionManager {
     // todo: set return error to typst_ts_core::Error
     pub fn session_from_artifact_internal(
         &self,
-        artifact_content: String,
+        artifact_content: &[u8],
         decoder: &str,
     ) -> Result<RenderSession, String> {
         let artifact: Artifact = match decoder {
-            #[cfg(feature = "serde")]
-            "serde" => {
-                let artifact: Artifact = serde_json::from_str(artifact_content.as_str()).unwrap();
+            #[cfg(feature = "serde_json")]
+            "serde_json" => {
+                let artifact: Artifact = serde_json::from_slice(artifact_content).unwrap();
+
+                artifact
+            }
+            #[cfg(feature = "serde_rmp")]
+            "serde_rmp" => {
+                let artifact: Artifact = rmp_serde::from_slice(artifact_content).unwrap();
 
                 artifact
             }

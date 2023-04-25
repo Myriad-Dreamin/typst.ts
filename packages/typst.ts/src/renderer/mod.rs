@@ -201,12 +201,11 @@ impl TypstRenderer {
             .session_from_artifact(artifact_content, "js")
     }
 
-    #[cfg(feature = "serde")]
     pub fn session_from_artifact_internal(
         &self,
-        artifact_content: String,
+        artifact_content: &[u8],
     ) -> Result<RenderSession, String> {
         self.session_mgr
-            .session_from_artifact_internal(artifact_content, "serde")
+            .session_from_artifact_internal(artifact_content, "serde_json")
     }
 }

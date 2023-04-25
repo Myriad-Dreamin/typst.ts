@@ -990,5 +990,16 @@ mod tests {
         };
 
         console_log!("{}ms", js_task.0);
+
+        let rmp_task = {
+            let artifact = include_bytes!("../../main.artifact.rmp");
+            let start = performance.now();
+            let artifact: Artifact = rmp_serde::from_slice(artifact.as_slice()).unwrap();
+            let end = performance.now();
+
+            (end - start, artifact)
+        };
+
+        console_log!("{}ms", rmp_task.0);
     }
 }
