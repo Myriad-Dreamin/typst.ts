@@ -11,8 +11,9 @@ def replace_version(package_file, old_version, new_version):
     if new_version in content:
       print(f'Version in {package_file} already set to {new_version}')
       return
-    if old_version not in content and 'version' not in new_version:
-      print(f'Version in {package_file} is not found, did not set to {new_version}')
+    if old_version not in content:
+      if 'version' in new_version:
+        print(f'Version in {package_file} is not found, did not set to {new_version}')
       return
 
     raise ValueError(
