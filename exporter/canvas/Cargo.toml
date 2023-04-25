@@ -11,15 +11,9 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 typst = "0.2.0"
 comemo = "0.2"
 
-image = { version = "0.24", default-features = false, features = ["png", "jpeg", "gif"] }
-usvg = { version = "0.22", default-features = false }
 tiny-skia = "0.6.6"
 ttf-parser = "0.18.1"
-roxmltree = "0.14"
-bytemuck = "1"
-pixglyph = "0.1"
 flate2 = "1"
-resvg = { version = "0.22", default-features = false }
 
 wasm-bindgen = { version = "^0.2" }
-web-sys = { version = "^0.3", features = ["CanvasRenderingContext2d", "Blob", "ImageData"] }
+web-sys = { version = "^0.3", features = ["console", "CanvasRenderingContext2d", "Path2d", "Blob", "ImageData"] }

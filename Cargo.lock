@@ -1892,17 +1892,11 @@ dependencies = [
 name = "typst-ts-canvas-exporter"
 version = "0.1.4"
 dependencies = [
- "bytemuck",
  "comemo",
  "flate2",
- "image",
- "pixglyph",
- "resvg",
- "roxmltree",
  "tiny-skia",
  "ttf-parser 0.18.1",
  "typst",
- "usvg",
  "wasm-bindgen",
  "web-sys",
 ]
