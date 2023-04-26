@@ -3,6 +3,9 @@ pub use artifact::Artifact;
 
 pub mod config;
 
+pub(crate) mod content;
+pub use content::TextContent;
+
 pub(crate) mod exporter;
 pub use exporter::DocExporter;
 
