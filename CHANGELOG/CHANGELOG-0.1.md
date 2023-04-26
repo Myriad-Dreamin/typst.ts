@@ -1,3 +1,31 @@
+# v0.1.5
+
+## Changelog since v0.1.5
+
+### Known Issues
+
+No new known issue.
+
+### Security Notes
+
+No new security note.
+
+### Changes
+
+- rename `typst_renderer_ts` to `typst_ts_renderer`
+
+#### Feature
+
+- add `typst_ts_core::ArtifactExporter`
+
+- canvas exporter supports rendering outline glyph, shape, and images.
+
+- canvas exporter does not relies on rust graphics library, which eliminates the bundle size of `typst_ts_renderer` about 600KB.
+
+#### Bugfix
+
+- fix several unhandled cases in `typst_ts_renderer::ArtifactJsBuilder`
+
 # v0.1.4
 
 ## Changelog since v0.1.4
