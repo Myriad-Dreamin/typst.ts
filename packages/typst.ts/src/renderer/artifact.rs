@@ -719,6 +719,58 @@ impl ArtifactJsBuilder {
         })
     }
 
+    pub fn parse_image(
+        &self,
+        val: JsValue,
+    ) -> Result<typst_ts_core::artifact::image::Image, JsValue> {
+        let mut data: Option<Vec<u8>> = None;
+        let mut format = None;
+        let mut width = None;
+        let mut height = None;
+        let mut alt = None;
+
+        for (k, v) in js_sys::Object::entries(val.dyn_ref().unwrap())
+            .iter()
+            .map(convert_pair)
+        {
+            let k = self.to_string("image", &k)?;
+            match k.as_str() {
+                "data" => {
+                    let data_raw = typst_ts_core::artifact::image::Image::decode_data(
+                        &self.to_string("image.data.base64", &v)?,
+                    )
+                    .unwrap();
+                    data = Some(data_raw);
+                }
+                "format" => {
+                    format = Some(self.to_string("image.format", &v)?);
+                }
+                "width" => {
+                    width = Some(self.to_f64("image.width", &v)? as u32);
+                }
+                "height" => {
+                    height = Some(self.to_f64("image.height", &v)? as u32);
+                }
+                "alt" => {
+                    alt = if !v.is_null() {
+                        Some(self.to_string("image.alt", &v)?)
+                    } else {
+                        None
+                    };
+                }
+                _ => panic!("unknown image key: {}", k),
+            }
+        }
+
+        Ok(typst_ts_core::artifact::image::Image {
+            data: data.unwrap(),
+            format: format.unwrap(),
+            width: width.unwrap(),
+            height: height.unwrap(),
+            alt,
+        })
+    }
+
     pub fn parse_position(
         &self,
         val: JsValue,
@@ -811,7 +863,15 @@ impl ArtifactJsBuilder {
                 ));
             }
             "Image" => {
-                panic!("unimplemented");
+                return {
+                    let arr = sub
+                        .ok_or_else(|| JsValue::from_str("frame_item: missing sub for MetaLink"))?
+                        .dyn_into::<js_sys::Array>()?;
+                    Ok(typst_ts_core::artifact::doc::FrameItem::Image(
+                        self.parse_image(arr.get(0))?,
+                        self.parse_size(arr.get(1))?,
+                    ))
+                }
             }
             "MetaLink" => {
                 return {
