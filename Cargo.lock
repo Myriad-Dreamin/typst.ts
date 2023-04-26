@@ -2066,33 +2066,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "typst-renderer-ts"
-version = "0.1.4"
-dependencies = [
- "comemo",
- "elsa",
- "js-sys",
- "once_cell",
- "pollster",
- "rmp-serde",
- "serde",
- "serde-wasm-bindgen",
- "serde_json",
- "siphasher",
- "tiny-skia",
- "typst",
- "typst-library",
- "typst-renderer-ts",
- "typst-ts-canvas-exporter",
- "typst-ts-core",
- "typst-ts-raster-exporter",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "wasm-bindgen-test",
- "web-sys",
-]
-
-[[package]]
 name = "typst-ts-canvas-exporter"
 version = "0.1.4"
 dependencies = [
@@ -2195,6 +2168,33 @@ dependencies = [
  "ttf-parser 0.18.1",
  "typst",
  "usvg",
+]
+
+[[package]]
+name = "typst-ts-renderer"
+version = "0.1.4"
+dependencies = [
+ "comemo",
+ "elsa",
+ "js-sys",
+ "once_cell",
+ "pollster",
+ "rmp-serde",
+ "serde",
+ "serde-wasm-bindgen",
+ "serde_json",
+ "siphasher",
+ "tiny-skia",
+ "typst",
+ "typst-library",
+ "typst-ts-canvas-exporter",
+ "typst-ts-core",
+ "typst-ts-raster-exporter",
+ "typst-ts-renderer",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wasm-bindgen-test",
+ "web-sys",
 ]
 
 [[package]]

@@ -1,7 +1,7 @@
 // @ts-ignore
-import typst_wasm_bin from '../../pkg/typst_renderer_ts_bg.wasm';
+import typst_wasm_bin from '../../pkg/typst_ts_renderer_bg.wasm';
 // @ts-ignore
-import typstInit, * as typst from '../../pkg/typst_renderer_ts';
+import typstInit, * as typst from '../../pkg/typst_ts_renderer';
 
 import type * as pdfjsModule from 'pdfjs-dist';
 import type { InitOptions, BeforeBuildMark } from './options.init';

@@ -12,7 +12,7 @@ module.exports = mod => {
     },
     externals: {
       /// good related issue: https://github.com/wasmerio/wasmer-js/issues/290
-      'typst_renderer_ts_bg.wasm': true,
+      'typst_ts_renderer_bg.wasm': true,
     },
     module: {
       rules: [

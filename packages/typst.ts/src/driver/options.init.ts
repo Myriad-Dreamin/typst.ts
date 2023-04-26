@@ -1,5 +1,5 @@
 // @ts-ignore
-import type * as typst from '../../pkg/typst_renderer_ts';
+import type * as typst from '../../pkg/typst_ts_renderer';
 
 /**
  * staged options function
