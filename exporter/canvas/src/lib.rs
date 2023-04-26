@@ -115,19 +115,15 @@ impl<'a> CanvasRenderTask<'a> {
 
             match item {
                 FrameItem::Group(group) => {
-                    // 300KB
                     self.render_group(ts, mask, group);
                 }
                 FrameItem::Text(text) => {
-                    // 2300KB
                     self.render_text(ts, mask, text);
                 }
                 FrameItem::Shape(shape, _) => {
-                    // 300KB
                     self.render_shape(ts, mask, shape);
                 }
                 FrameItem::Image(image, size, _) => {
-                    // 1300KB
                     self.render_image(ts, mask, image, *size);
                 }
                 FrameItem::Meta(meta, _) => match meta {
@@ -664,23 +660,6 @@ impl AbsExt for Abs {
     fn to_f32(self) -> f32 {
         self.to_pt() as f32
     }
-}
-
-// Alpha multiplication and blending are ported from:
-// https://skia.googlesource.com/skia/+/refs/heads/main/include/core/SkColorPriv.h
-
-/// Blends two premulitplied, packed 32-bit RGBA colors. Alpha channel must be
-/// in the 8 high bits.
-fn blend_src_over(src: u32, dst: u32) -> u32 {
-    src + alpha_mul(dst, 256 - (src >> 24))
-}
-
-/// Alpha multiply a color.
-fn alpha_mul(color: u32, scale: u32) -> u32 {
-    let mask = 0xff00ff;
-    let rb = ((color & mask) * scale) >> 8;
-    let ag = ((color >> 8) & mask) * scale;
-    (rb & mask) | (ag & !mask)
 }
 
 struct SvgPath2DBuilder(String);
