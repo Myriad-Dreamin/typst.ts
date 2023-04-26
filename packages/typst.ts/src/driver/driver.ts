@@ -295,7 +295,6 @@ class TypstRendererDriver {
     scale: number,
   ) {
     const textContentSource = await page.getTextContent();
-    console.log({ scale });
     this.pdf.renderTextLayer({
       textContentSource,
       container,
