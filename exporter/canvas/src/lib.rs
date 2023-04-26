@@ -140,37 +140,38 @@ impl<'a> CanvasRenderTask<'a> {
     fn render_group(&self, ts: sk::Transform, mask: Option<&sk::ClipMask>, group: &GroupItem) {
         let ts = ts.pre_concat(group.transform.into());
 
-        // let mut mask = mask;
+        let mut mask = mask;
 
-        // todo: clip
-        // let mut storage;
-        // if group.clips {
-        //     let size = group.frame.size();
-        //     let w = size.x.to_f32();
-        //     let h = size.y.to_f32();
-        //     if let Some(path) = sk::Rect::from_xywh(0.0, 0.0, w, h)
-        //         .map(sk::PathBuilder::from_rect)
-        //         .and_then(|path| path.transform(ts))
-        //     {
-        //         let result = if let Some(mask) = mask {
-        //             storage = mask.clone();
-        //             storage.intersect_path(&path, sk::FillRule::default(), false)
-        //         } else {
-        //             let pxw = self.width;
-        //             let pxh = self.height;
-        //             storage = sk::ClipMask::new();
-        //             storage.set_path(pxw, pxh, &path, sk::FillRule::default(), false)
-        //         };
+        let mut storage;
+        if group.clips {
+            let size = group.frame.size();
+            let w = size.x.to_f32();
+            let h = size.y.to_f32();
+            if let Some(path) = sk::Rect::from_xywh(0.0, 0.0, w, h)
+                .map(sk::PathBuilder::from_rect)
+                .and_then(|path| path.transform(ts))
+            {
+                let result = if let Some(mask) = mask {
+                    storage = mask.clone();
+                    storage.intersect_path(&path, sk::FillRule::default(), false)
+                } else {
+                    let pxw = self.width;
+                    let pxh = self.height;
+                    storage = sk::ClipMask::new();
+                    storage.set_path(pxw, pxh, &path, sk::FillRule::default(), false)
+                };
 
-        //         // Clipping fails if clipping rect is empty. In that case we just
-        //         // clip everything by returning.
-        //         if result.is_none() {
-        //             return;
-        //         }
+                // Clipping fails if clipping rect is empty. In that case we just
+                // clip everything by returning.
+                if result.is_none() {
+                    return;
+                }
 
-        //         mask = Some(&storage);
-        //     }
-        // }
+                console_log!("mask updation {:?}", storage);
+
+                mask = Some(&storage);
+            }
+        }
 
         self.render_frame(ts, mask, &group.frame);
     }
