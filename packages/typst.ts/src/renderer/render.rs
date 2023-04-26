@@ -5,9 +5,8 @@ mod tests {
     use wasm_bindgen_test::*;
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-    #[wasm_bindgen_test]
-    fn render_test() {
-        let artifact = include_bytes!("../../main.artifact.json");
+    fn render_test_template(point: &str, artifact: &[u8]) {
+        let artifact = artifact.into();
         let artifact = String::from_utf8_lossy(artifact);
 
         let window = web_sys::window().expect("should have a window in this context");
@@ -57,6 +56,18 @@ mod tests {
             .append_child(&canvas)
             .unwrap();
 
-        console_log!("canvas {}ms", serde_task.0);
+        console_log!("canvas {point} {}ms", serde_task.0);
+    }
+
+    #[wasm_bindgen_test]
+    fn render_test() {
+        render_test_template(
+            "main_artifact",
+            include_bytes!("../../main.artifact.json").as_slice(),
+        );
+        render_test_template(
+            "cv_artifact",
+            include_bytes!("../../cv.artifact.json").as_slice(),
+        );
     }
 }
