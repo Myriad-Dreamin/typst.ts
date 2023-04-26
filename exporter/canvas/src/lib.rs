@@ -424,9 +424,9 @@ impl<'a> CanvasRenderTask<'a> {
             Geometry::Rect(size) => {
                 let w = size.x.to_f32();
                 let h = size.y.to_f32();
-                builder.line_to(0., w);
-                builder.line_to(h, w);
-                builder.line_to(h, 0.);
+                builder.line_to(0., h);
+                builder.line_to(w, h);
+                builder.line_to(w, 0.);
                 builder.close();
             }
             Geometry::Path(ref path) => {
