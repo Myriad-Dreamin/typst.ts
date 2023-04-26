@@ -458,12 +458,28 @@ impl<'a> CanvasRenderTask<'a> {
 
         // todo: anti_alias
         if let Some(fill) = &shape.fill {
+            let state_guard = CanvasStateGuard(self.canvas);
+
             let Paint::Solid(color) = fill;
             let c = color.to_rgba();
             let fill_style = format!("rgba({},{},{},{})", c.r, c.g, c.b, c.a);
+
+            #[cfg(feature = "debug_shape_fill")]
+            console_log!(
+                "fill pure background {} -> {} [{:?}]",
+                builder.0,
+                fill_style,
+                ts
+            );
+
             self.canvas.set_fill_style(&fill_style.into());
+            self.canvas.reset_transform().unwrap();
+            self.sync_transform(ts);
+
             self.canvas
                 .fill_with_path_2d(&Path2d::new_with_path_string(&builder.0).unwrap());
+
+            drop(state_guard)
         } else if let Some(Stroke {
             paint,
             thickness,
