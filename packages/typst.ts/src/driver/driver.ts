@@ -345,8 +345,16 @@ class TypstRendererDriver {
     const mountContainer = options.container;
     mountContainer.style.visibility = 'hidden';
 
-    const doRenderDisplayLayer = async (canvasList: HTMLCanvasElement[]) => {
-      renderResult = await this.renderDisplayLayer(session, mountContainer, canvasList, options);
+    const doRenderDisplayLayer = async (
+      canvasList: HTMLCanvasElement[],
+      resetLayout: () => void,
+    ) => {
+      try {
+        renderResult = await this.renderDisplayLayer(session, mountContainer, canvasList, options);
+        resetLayout();
+      } finally {
+        mountContainer.style.visibility = 'visible';
+      }
     };
 
     const doRenderTextLayer = (layerList: HTMLDivElement[]) =>
@@ -412,7 +420,6 @@ class TypstRendererDriver {
           textLayerParent.className = 'text-layer textLayer';
 
           /// on width change
-          console.log('resize', i, container.offsetWidth);
           const containerWidth = container.offsetWidth;
           const orignalScale = containerWidth / width;
           textLayerParent.style.width = `${containerWidth}px`;
@@ -436,34 +443,37 @@ class TypstRendererDriver {
 
       console.log(`layer used: retieve = ${(t2 - t).toFixed(1)}ms`);
 
-      await Promise.all([doRenderDisplayLayer(canvasList), doRenderTextLayer(layerList)]);
+      const resetLayout = () => {
+        /// resize again to avoid bad width change after render
+        for (let i = 0; i < page_count; i++) {
+          const pageAst = pages_info.page(i);
+          const width = Math.ceil(pageAst.width_pt) * imageScaleFactor;
+          const height = Math.ceil(pageAst.height_pt) * imageScaleFactor;
 
-      /// resize again to avoid bad width change after render
-      for (let i = 0; i < page_count; i++) {
-        const pageAst = pages_info.page(i);
-        const width = Math.ceil(pageAst.width_pt) * imageScaleFactor;
-        const height = Math.ceil(pageAst.height_pt) * imageScaleFactor;
+          const canvasDiv = canvasList[i].parentElement!;
+          const commonDiv = commonList[i];
+          const textLayerParent = textLayerParentList[i];
 
-        const canvasDiv = canvasList[i].parentElement!;
-        const commonDiv = commonList[i];
-        const textLayerParent = textLayerParentList[i];
+          /// on width change
+          const containerWidth = container.offsetWidth;
+          const orignalScale = containerWidth / width;
+          textLayerParent.style.width = `${containerWidth}px`;
+          textLayerParent.style.height = `${height * orignalScale}px`;
+          commonDiv.style.width = `${containerWidth}px`;
+          commonDiv.style.height = `${height * orignalScale}px`;
 
-        /// on width change
-        console.log('resize', i, container.offsetWidth);
-        const containerWidth = container.offsetWidth;
-        const orignalScale = containerWidth / width;
-        textLayerParent.style.width = `${containerWidth}px`;
-        textLayerParent.style.height = `${height * orignalScale}px`;
-        commonDiv.style.width = `${containerWidth}px`;
-        commonDiv.style.height = `${height * orignalScale}px`;
+          // compute scaling factor according to the paper size
+          const currentScale = container.offsetWidth / width;
+          canvasDiv.style.transformOrigin = '0px 0px';
+          canvasDiv.style.transform = `scale(${currentScale})`;
+        }
+      };
 
-        // compute scaling factor according to the paper size
-        const currentScale = container.offsetWidth / width;
-        canvasDiv.style.transformOrigin = '0px 0px';
-        canvasDiv.style.transform = `scale(${currentScale})`;
-      }
+      await Promise.all([
+        doRenderDisplayLayer(canvasList, resetLayout),
+        doRenderTextLayer(layerList),
+      ]);
 
-      mountContainer.style.visibility = 'visible';
       return renderResult;
     });
   }
@@ -489,10 +499,14 @@ class TypstRendererDriver {
     options: RenderByStringOptions,
     fn: (session: typst.RenderSession) => Promise<T>,
   ): Promise<T> {
+    const t = performance.now();
     const session = this.renderer.create_session(
       options.artifactContent,
       /* moved */ this.imageOptionsToRust(options),
     );
+    const t3 = performance.now();
+
+    console.log(`create session used: render = ${(t3 - t).toFixed(1)}ms`);
     try {
       console.log(`session`, JSON.stringify(session), `activated`);
       const res = await fn(session);
