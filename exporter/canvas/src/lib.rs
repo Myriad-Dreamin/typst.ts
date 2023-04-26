@@ -3,19 +3,22 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 #![allow(dead_code)]
-use std::fmt::Write;
+use std::any::Any;
+use std::fmt::{format, Write};
 
 use std::io::Read;
 use std::sync::{Arc, Mutex};
 
+use js_sys::Reflect;
 use tiny_skia as sk;
 use ttf_parser::{GlyphId, OutlineBuilder};
 
 use typst::doc::{Frame, FrameItem, GroupItem, Meta, TextItem};
 use typst::geom::{self, Abs, Color, Geometry, Paint, PathItem, Shape, Size, Stroke};
-use typst::image::{DecodedImage, Image};
-use wasm_bindgen::{Clamped, JsValue};
-use web_sys::{CanvasRenderingContext2d, ImageData, Path2d};
+use typst::image::{DecodedImage, Image, ImageFormat, RasterFormat, VectorFormat};
+use wasm_bindgen::prelude::Closure;
+use wasm_bindgen::{Clamped, JsCast, JsValue};
+use web_sys::{window, CanvasRenderingContext2d, ImageData, Path2d};
 
 use web_sys::console;
 
@@ -32,6 +35,7 @@ pub struct CanvasRenderTask<'a> {
     height: u32,
 
     rendered: Arc<Mutex<bool>>,
+    session_id: String,
 }
 
 impl<'a> CanvasRenderTask<'a> {
@@ -42,6 +46,15 @@ impl<'a> CanvasRenderTask<'a> {
         pixel_per_pt: f32,
         fill: Color,
     ) -> Self {
+        let x = (js_sys::Math::random() * (0x7fffffff as f64)).ceil() as u64;
+        let y = (js_sys::Math::random() * (0x7fffffff as f64)).ceil() as u64;
+        let session_id = format!("{:x}", (x << 32) | y);
+        canvas
+            .canvas()
+            .unwrap()
+            .set_attribute("data-typst-session", &session_id)
+            .unwrap();
+
         let size = doc.pages[page_off].size();
         let pxw = (pixel_per_pt * (size.x.to_pt() as f32)).round().max(1.0) as u32;
         let pxh = (pixel_per_pt * (size.y.to_pt() as f32)).round().max(1.0) as u32;
@@ -52,6 +65,7 @@ impl<'a> CanvasRenderTask<'a> {
             width: pxw,
             height: pxh,
             rendered: Arc::new(Mutex::new(false)),
+            session_id,
         }
     }
 
@@ -352,7 +366,8 @@ impl<'a> CanvasRenderTask<'a> {
         let ppem = text.size.to_f32() * ts.sy;
 
         if ts.kx != 0.0 || ts.ky != 0.0 || ts.sx != ts.sy {
-            panic!("skia does not support non-uniform scaling or skewing");
+            // panic!("skia does not support non-uniform scaling or skewing");
+            return Some(()); // todo: don't submit
         }
 
         let state_guard = CanvasStateGuard::new(&self.canvas);
@@ -524,34 +539,118 @@ impl<'a> CanvasRenderTask<'a> {
         image: &Image,
         size: Size,
     ) -> Option<()> {
-        panic!("render_image");
-        //     let view_width = size.x.to_f32();
-        //     let view_height = size.y.to_f32();
+        let view_width = size.x.to_f32();
+        let view_height = size.y.to_f32();
 
-        //     let aspect = (image.width() as f32) / (image.height() as f32);
-        //     let scale = ts.sx.max(ts.sy);
-        //     let w = (scale * view_width.max(aspect * view_height)).ceil() as u32;
-        //     let h = ((w as f32) / aspect).ceil() as u32;
+        let aspect = (image.width() as f32) / (image.height() as f32);
+        let scale = ts.sx.max(ts.sy);
+        let w = (scale * view_width.max(aspect * view_height)).ceil() as u32;
+        let h = ((w as f32) / aspect).ceil() as u32;
 
-        //     let pixmap = scaled_texture(image, w, h)?;
-        //     let scale_x = view_width / pixmap.width() as f32;
-        //     let scale_y = view_height / pixmap.height() as f32;
+        let window = web_sys::window().unwrap();
 
-        //     let paint = sk::Paint {
-        //         shader: sk::Pattern::new(
-        //             (*pixmap).as_ref(),
-        //             sk::SpreadMode::Pad,
-        //             sk::FilterQuality::Nearest,
-        //             1.0,
-        //             sk::Transform::from_scale(scale_x, scale_y),
-        //         ),
-        //         ..Default::default()
-        //     };
+        let img = window
+            .document()
+            .unwrap()
+            .create_element("img")
+            .unwrap()
+            .dyn_into::<web_sys::HtmlImageElement>()
+            .unwrap();
 
-        //     let rect = sk::Rect::from_xywh(0.0, 0.0, view_width, view_height)?;
-        //     self.canvas.fill_rect(rect, &paint, ts, mask);
+        let u = js_sys::Uint8Array::new_with_length(image.data().len() as u32);
+        u.copy_from(image.data());
 
-        //     Some(())
+        let parts = js_sys::Array::new();
+        parts.push(&u);
+        let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(
+            &parts,
+            web_sys::BlobPropertyBag::new().type_(match image.format() {
+                ImageFormat::Raster(e) => match e {
+                    RasterFormat::Jpg => "image/jpeg",
+                    RasterFormat::Png => "image/png",
+                    RasterFormat::Gif => "image/gif",
+                },
+                ImageFormat::Vector(e) => match e {
+                    VectorFormat::Svg => "image/svg+xml",
+                },
+            }),
+        )
+        .unwrap();
+
+        let data_url = web_sys::Url::create_object_url_with_blob(&blob).unwrap();
+        let remote_data_url = data_url.clone();
+
+        let session_id = self.session_id.clone();
+
+        let session_id2 = session_id.clone();
+        let data_url2 = data_url.clone();
+
+        let x = ts.tx;
+        let y = ts.ty;
+
+        let img_ref = img.clone();
+
+        let a = Closure::<dyn Fn()>::new(move || {
+            let canvas = web_sys::window()
+                .unwrap()
+                .document()
+                .unwrap()
+                .query_selector(format!("canvas[data-typst-session='{}']", session_id).as_str())
+                .unwrap();
+
+            console_log!("loaded {} {}", session_id, remote_data_url);
+
+            let canvas = if let Some(canvas) = canvas {
+                canvas
+            } else {
+                web_sys::Url::revoke_object_url(&remote_data_url).unwrap();
+                return;
+            };
+
+            let canvas = canvas.dyn_into::<web_sys::HtmlCanvasElement>().unwrap();
+
+            let ctx = canvas
+                .get_context("2d")
+                .unwrap()
+                .unwrap()
+                .dyn_into::<web_sys::CanvasRenderingContext2d>()
+                .unwrap();
+
+            console_log!(
+                "ready {} {} {:?}",
+                session_id,
+                remote_data_url,
+                (x, y, w, h)
+            );
+
+            let state = CanvasStateGuard(&ctx);
+            ctx.reset_transform().unwrap();
+            ctx.draw_image_with_html_image_element_and_dw_and_dh(
+                &img_ref, x as f64, y as f64, w as f64, h as f64,
+            )
+            .unwrap();
+            drop(state);
+        });
+
+        img.set_onload(Some(a.as_ref().unchecked_ref()));
+        a.forget();
+
+        let a = Closure::<dyn Fn(JsValue)>::new(move |e: JsValue| {
+            console_log!(
+                "err image loading {} {:?} {:?} {}",
+                session_id2,
+                Reflect::get(&e, &"type".into()).unwrap(),
+                js_sys::JSON::stringify(&e).unwrap(),
+                data_url2,
+            );
+        });
+
+        img.set_onerror(Some(a.as_ref().unchecked_ref()));
+        a.forget();
+
+        img.set_src(&data_url);
+
+        Some(())
     }
 }
 
