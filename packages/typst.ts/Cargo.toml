@@ -1,6 +1,6 @@
 [package]
 name = "typst-ts-renderer"
-version = "0.1.4"
+version = "0.1.5"
 license = "Apache-2.0"
 edition = "2021"
 readme = "README.md"
@@ -11,7 +11,7 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 crate-type = ["cdylib"]
 
 [dependencies]
-typst-ts-core = "0.1.4"
+typst-ts-core = "0.1.5"
 typst-ts-canvas-exporter = { version = "0.1", optional = true }
 typst-ts-raster-exporter = { version = "0.1", optional = true }
 

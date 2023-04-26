@@ -2067,7 +2067,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-canvas-exporter"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "comemo",
  "data-url 0.2.0",
@@ -2082,7 +2082,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-cli"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "clap",
  "clap_complete",
@@ -2100,7 +2100,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-compiler"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "append-only-vec",
  "codespan-reporting",
@@ -2126,7 +2126,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-core"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "base64",
  "comemo",
@@ -2141,7 +2141,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-fontctl"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "anyhow",
  "clap",
@@ -2155,7 +2155,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-raster-exporter"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "bytemuck",
  "comemo",
@@ -2172,7 +2172,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-renderer"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "comemo",
  "elsa",
@@ -2199,7 +2199,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-ws-exporter"
-version = "0.1.4"
+version = "0.1.5"
 
 [[package]]
 name = "unic-langid"
