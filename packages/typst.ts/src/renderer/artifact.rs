@@ -917,7 +917,7 @@ impl ArtifactJsBuilder {
             .iter()
             .map(convert_pair)
         {
-            let k = k.as_string().ok_or("typst: not a js string")?;
+            let k = k.as_string().ok_or("typst: artifact not a js string")?;
             match k.as_str() {
                 "build" => {
                     artifact.build = Some(self.parse_build_info(&v)?);
@@ -933,13 +933,23 @@ impl ArtifactJsBuilder {
                     }
                 }
                 "title" => {
-                    artifact.title = Some(v.as_string().ok_or("typst: not a js string")?);
+                    artifact.title = if v.is_null() {
+                        None
+                    } else {
+                        Some(v.as_string().ok_or_else(|| {
+                            JsValue::from_str(&format!("typst: title not a js string: {:?}", v))
+                        })?)
+                    }
                 }
                 "author" => {
-                    for arr in v.dyn_into::<js_sys::Array>()?.iter() {
-                        artifact
-                            .author
-                            .push(arr.as_string().ok_or("typst: not a js string")?);
+                    for arr in v
+                        .dyn_ref::<js_sys::Array>()
+                        .ok_or("typst: author not a array")?
+                        .iter()
+                    {
+                        artifact.author.push(arr.as_string().ok_or_else(|| {
+                            JsValue::from_str(&format!("typst: author not a js string: {:?}", v))
+                        })?);
                     }
                 }
                 _ => panic!("unknown key: {}", k),
@@ -991,15 +1001,18 @@ mod tests {
 
         console_log!("{}ms", js_task.0);
 
-        let rmp_task = {
-            let artifact = include_bytes!("../../main.artifact.rmp");
-            let start = performance.now();
-            let artifact: Artifact = rmp_serde::from_slice(artifact.as_slice()).unwrap();
-            let end = performance.now();
+        #[cfg(feature = "serde_rmp_debug")]
+        {
+            let rmp_task = {
+                let artifact = include_bytes!("../../main.artifact.rmp");
+                let start = performance.now();
+                let artifact: Artifact = rmp_serde::from_slice(artifact.as_slice()).unwrap();
+                let end = performance.now();
 
-            (end - start, artifact)
-        };
+                (end - start, artifact)
+            };
 
-        console_log!("{}ms", rmp_task.0);
+            console_log!("{}ms", rmp_task.0);
+        }
     }
 }
