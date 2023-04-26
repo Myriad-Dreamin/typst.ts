@@ -72,8 +72,7 @@ impl TypstRenderer {
     ) -> Result<(), JsValue> {
         let page_off = self.retrieve_page_off(ses, options)?;
 
-        // contribution: 850KB
-        let worker = typst_ts_canvas_exporter::CanvasRenderTask::new(
+        let mut worker = typst_ts_canvas_exporter::CanvasRenderTask::new(
             &canvas,
             &ses.doc,
             page_off,

@@ -70,7 +70,7 @@ impl<'a> CanvasRenderTask<'a> {
     }
 
     #[inline]
-    fn sync_transform(&self, transform: sk::Transform) {
+    fn sync_transform(&mut self, transform: sk::Transform) {
         // [ a c e ]
         // [ b d f ]
         // [ 0 0 1 ]
@@ -95,7 +95,7 @@ impl<'a> CanvasRenderTask<'a> {
     ///
     /// This renders the frame at the given number of pixels per point and returns
     /// the resulting `tiny-skia` pixel buffer.
-    pub fn render(&self, frame: &Frame) {
+    pub fn render(&mut self, frame: &Frame) {
         let fill = self.fill.to_rgba();
         let fill = format!("rgba({}, {}, {}, {})", fill.r, fill.g, fill.b, fill.a);
         self.canvas.set_fill_style(&fill.into());
@@ -107,7 +107,7 @@ impl<'a> CanvasRenderTask<'a> {
     }
 
     /// Render a frame into the canvas.
-    fn render_frame(&self, ts: sk::Transform, mask: Option<&sk::ClipMask>, frame: &Frame) {
+    fn render_frame(&mut self, ts: sk::Transform, mask: Option<&sk::ClipMask>, frame: &Frame) {
         for (pos, item) in frame.items() {
             let x = pos.x.to_f32();
             let y = pos.y.to_f32();
@@ -137,7 +137,7 @@ impl<'a> CanvasRenderTask<'a> {
     }
 
     /// Render a group frame with optional transform and clipping into the canvas.
-    fn render_group(&self, ts: sk::Transform, mask: Option<&sk::ClipMask>, group: &GroupItem) {
+    fn render_group(&mut self, ts: sk::Transform, mask: Option<&sk::ClipMask>, group: &GroupItem) {
         let ts = ts.pre_concat(group.transform.into());
 
         let mut mask = mask;
@@ -177,7 +177,11 @@ impl<'a> CanvasRenderTask<'a> {
     }
 
     /// Render a text run into the self.canvas.
-    fn render_text(&self, ts: sk::Transform, mask: Option<&sk::ClipMask>, text: &TextItem) {
+    fn render_text(&mut self, ts: sk::Transform, mask: Option<&sk::ClipMask>, text: &TextItem) {
+        let glyph_chars: String = text.glyphs.iter().map(|g| g.c).collect();
+
+        console_log!("render text {:?}", glyph_chars);
+
         let mut x = 0.0;
         for glyph in &text.glyphs {
             let id = GlyphId(glyph.id);
@@ -194,7 +198,7 @@ impl<'a> CanvasRenderTask<'a> {
 
     /// Render an SVG glyph into the self.canvas.
     fn render_svg_glyph(
-        &self,
+        &mut self,
         ts: sk::Transform,
         mask: Option<&sk::ClipMask>,
         text: &TextItem,
@@ -326,7 +330,7 @@ impl<'a> CanvasRenderTask<'a> {
 
     /// Render a bitmap glyph into the self.canvas.
     fn render_bitmap_glyph(
-        &self,
+        &mut self,
         ts: sk::Transform,
         mask: Option<&sk::ClipMask>,
         text: &TextItem,
@@ -352,7 +356,7 @@ impl<'a> CanvasRenderTask<'a> {
 
     /// Render an outline glyph into the canvas. This is the "normal" case.
     fn render_outline_glyph(
-        &self,
+        &mut self,
         ts: sk::Transform,
         mask: Option<&sk::ClipMask>,
         text: &TextItem,
@@ -367,7 +371,7 @@ impl<'a> CanvasRenderTask<'a> {
             return Some(()); // todo: don't submit
         }
 
-        let state_guard = CanvasStateGuard::new(&self.canvas);
+        let state_guard = CanvasStateGuard::new(&mut self.canvas);
 
         let face = text.font.ttf();
 
@@ -409,7 +413,7 @@ impl<'a> CanvasRenderTask<'a> {
 
     /// Render a geometrical shape into the canvas.
     fn render_shape(
-        &self,
+        &mut self,
         ts: sk::Transform,
         mask: Option<&sk::ClipMask>,
         shape: &Shape,
@@ -546,7 +550,7 @@ impl<'a> CanvasRenderTask<'a> {
 
     /// Render a raster or SVG image into the canvas.
     fn render_image(
-        &self,
+        &mut self,
         ts: sk::Transform,
         mask: Option<&sk::ClipMask>,
         image: &Image,
