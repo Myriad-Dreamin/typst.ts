@@ -1,4 +1,4 @@
-//! Rendering into raster images.
+//! Rendering into web_sys::CanvasRenderingContext2d.
 
 #![allow(unused_imports)]
 #![allow(unused_variables)]
@@ -402,69 +402,116 @@ impl<'a> CanvasRenderTask<'a> {
         mask: Option<&sk::ClipMask>,
         shape: &Shape,
     ) -> Option<()> {
-        // todo: shape
-        // let path = match shape.geometry {
-        //     Geometry::Line(target) => {
-        //         let mut builder = sk::PathBuilder::new();
-        //         builder.line_to(target.x.to_f32(), target.y.to_f32());
-        //         builder.finish()?
-        //     }
-        //     Geometry::Rect(size) => {
-        //         let w = size.x.to_f32();
-        //         let h = size.y.to_f32();
-        //         let rect = sk::Rect::from_xywh(0.0, 0.0, w, h)?;
-        //         sk::PathBuilder::from_rect(rect)
-        //     }
-        //     Geometry::Path(ref path) => self.convert_path(path)?,
-        // };
+        let mut builder = SvgPath2DBuilder(String::new());
 
-        // if let Some(fill) = &shape.fill {
-        //     let mut paint: sk::Paint = fill.into();
-        //     if matches!(shape.geometry, Geometry::Rect(_)) {
-        //         paint.anti_alias = false;
-        //     }
+        // to ensure that our shape focus on the original point
+        builder.move_to(0., 0.);
+        match shape.geometry {
+            Geometry::Line(target) => {
+                builder.line_to(target.x.to_f32(), target.y.to_f32());
+            }
+            Geometry::Rect(size) => {
+                let w = size.x.to_f32();
+                let h = size.y.to_f32();
+                builder.line_to(0., w);
+                builder.line_to(h, w);
+                builder.line_to(h, 0.);
+                builder.close();
+            }
+            Geometry::Path(ref path) => {
+                for elem in &path.0 {
+                    match elem {
+                        PathItem::MoveTo(p) => {
+                            builder.move_to(p.x.to_f32(), p.y.to_f32());
+                        }
+                        PathItem::LineTo(p) => {
+                            builder.line_to(p.x.to_f32(), p.y.to_f32());
+                        }
+                        PathItem::CubicTo(p1, p2, p3) => {
+                            builder.curve_to(
+                                p1.x.to_f32(),
+                                p1.y.to_f32(),
+                                p2.x.to_f32(),
+                                p2.y.to_f32(),
+                                p3.x.to_f32(),
+                                p3.y.to_f32(),
+                            );
+                        }
+                        PathItem::ClosePath => {
+                            builder.close();
+                        }
+                    };
+                }
+            }
+        };
 
-        //     let rule = sk::FillRule::default();
-        //     canvas.fill_path(&path, &paint, rule, ts, mask);
-        // }
+        // todo: anti_alias
+        if let Some(fill) = &shape.fill {
+            let Paint::Solid(color) = fill;
+            let c = color.to_rgba();
+            let fill_style = format!("rgba({},{},{},{})", c.r, c.g, c.b, c.a);
+            self.canvas.set_fill_style(&fill_style.into());
+            self.canvas
+                .fill_with_path_2d(&Path2d::new_with_path_string(&builder.0).unwrap());
+        } else if let Some(Stroke {
+            paint,
+            thickness,
+            line_cap,
+            line_join,
+            dash_pattern,
+            miter_limit,
+        }) = &shape.stroke
+        {
+            // todo: dash pattern
+            // dash_pattern.as_ref().and_then(|pattern| {
+            // tiny-skia only allows dash patterns with an even number of elements,
+            // while pdf allows any number.
+            // let len = if pattern.array.len() % 2 == 1 {
+            //     pattern.array.len() * 2
+            // } else {
+            //     pattern.array.len()
+            // };
+            // let dash_array = pattern
+            //     .array
+            //     .iter()
+            //     .map(|l| l.to_f32())
+            //     .cycle()
+            //     .take(len)
+            //     .collect();
 
-        // if let Some(Stroke {
-        //     paint,
-        //     thickness,
-        //     line_cap,
-        //     line_join,
-        //     dash_pattern,
-        //     miter_limit,
-        // }) = &shape.stroke
-        // {
-        //     let dash = dash_pattern.as_ref().and_then(|pattern| {
-        //         // tiny-skia only allows dash patterns with an even number of elements,
-        //         // while pdf allows any number.
-        //         let len = if pattern.array.len() % 2 == 1 {
-        //             pattern.array.len() * 2
-        //         } else {
-        //             pattern.array.len()
-        //         };
-        //         let dash_array = pattern
-        //             .array
-        //             .iter()
-        //             .map(|l| l.to_f32())
-        //             .cycle()
-        //             .take(len)
-        //             .collect();
+            // sk::StrokeDash::new(dash_array, pattern.phase.to_f32())
+            //     panic!("dash_pattern");
 
-        //         sk::StrokeDash::new(dash_array, pattern.phase.to_f32())
-        //     });
-        //     let paint = paint.into();
-        //     let stroke = sk::Stroke {
-        //         width: thickness.to_f32(),
-        //         line_cap: line_cap.into(),
-        //         line_join: line_join.into(),
-        //         dash,
-        //         miter_limit: miter_limit.0 as f32,
-        //     };
-        //     self.canvas.stroke_path(&path, &paint, &stroke, ts, mask);
-        // }
+            // });
+
+            let state_guard = CanvasStateGuard(self.canvas);
+            self.canvas.set_line_width(thickness.to_pt());
+            self.canvas.set_line_cap(match line_cap {
+                geom::LineCap::Butt => "butt",
+                geom::LineCap::Round => "round",
+                geom::LineCap::Square => "square",
+            });
+            self.canvas.set_line_join(match line_join {
+                geom::LineJoin::Miter => "miter",
+                geom::LineJoin::Bevel => "bevel",
+                geom::LineJoin::Round => "round",
+            });
+            self.canvas.set_miter_limit(miter_limit.0);
+
+            let Paint::Solid(color) = paint;
+            let c = color.to_rgba();
+            let fill_style = format!("rgba({},{},{},{})", c.r, c.g, c.b, c.a);
+            self.canvas.set_stroke_style(&fill_style.into());
+
+            // todo: ts, mask
+            self.canvas.reset_transform().unwrap();
+            self.sync_transform(ts);
+
+            self.canvas
+                .stroke_with_path(&Path2d::new_with_path_string(&builder.0).unwrap());
+
+            drop(state_guard)
+        }
 
         Some(())
     }
