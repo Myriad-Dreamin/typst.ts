@@ -1,6 +1,5 @@
 use std::{num::NonZeroUsize, vec};
 
-use typst::font::FontInfo;
 use typst_ts_core::{artifact::doc::Frame, Artifact};
 use wasm_bindgen::prelude::*;
 
@@ -109,11 +108,15 @@ impl ArtifactJsBuilder {
         Ok(variant)
     }
 
-    fn parse_font_info(&self, val: JsValue) -> Result<FontInfo, JsValue> {
+    fn parse_font_info(
+        &self,
+        val: JsValue,
+    ) -> Result<typst_ts_core::artifact::font::FontInfo, JsValue> {
         let mut family = String::default();
         let mut variant = typst::font::FontVariant::default();
         let mut flags = typst::font::FontFlags::from_bits(0 as u32).unwrap();
         let mut coverage = None;
+        let mut ligatures = None;
 
         for (k, v) in js_sys::Object::entries(val.dyn_ref().unwrap())
             .iter()

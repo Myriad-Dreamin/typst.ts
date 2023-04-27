@@ -1,5 +1,5 @@
 #[cfg(test)]
-#[cfg(target_arch = "wasm32")]
+// #[cfg(target_arch = "wasm32")]
 mod tests {
     use wasm_bindgen::JsCast;
     use wasm_bindgen_test::*;
@@ -40,9 +40,10 @@ mod tests {
 
         let serde_task = {
             let start = performance.now();
-            renderer
+            let res = renderer
                 .render_page_to_canvas(&session, &context, None)
                 .unwrap();
+            web_sys::console::log_2(&"textContent".into(), &res);
             let end = performance.now();
 
             (end - start, artifact)
@@ -60,11 +61,15 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-    fn render_test() {
+    fn render_main_test() {
         render_test_template(
             "main_artifact",
             include_bytes!("../../main.artifact.json").as_slice(),
         );
+    }
+
+    #[wasm_bindgen_test]
+    fn render_cv_test() {
         render_test_template(
             "cv_artifact",
             include_bytes!("../../cv.artifact.json").as_slice(),

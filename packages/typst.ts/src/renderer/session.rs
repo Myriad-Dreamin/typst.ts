@@ -1,7 +1,8 @@
 use std::sync::{Arc, RwLock};
 
+use typst::font::{FontFlags, FontInfo as TypstFontInfo, FontVariant};
 use typst::geom::Abs;
-use typst_ts_core::{font::FontResolverImpl, Artifact};
+use typst_ts_core::{font::FontResolverImpl, Artifact, FontResolver};
 use wasm_bindgen::prelude::*;
 
 use crate::renderer::artifact::artifact_from_js_string;
@@ -81,12 +82,18 @@ impl PagesInfo {
     }
 }
 
+pub type LigatureMap = std::collections::HashMap<
+    (String, FontVariant, FontFlags),
+    std::collections::HashMap<u16, std::string::String>,
+>;
+
 #[wasm_bindgen]
 pub struct RenderSession {
     pub(crate) pixel_per_pt: f32,
     pub(crate) background_color: String,
     pub(crate) doc: typst::doc::Document,
     pub(crate) pages_info: PagesInfo,
+    pub(crate) ligature_map: LigatureMap,
 }
 
 #[wasm_bindgen]
@@ -108,7 +115,36 @@ impl RenderSession {
 }
 
 impl RenderSession {
-    pub(crate) fn from_doc(doc: typst::doc::Document) -> Self {
+    pub(crate) fn from_artifact<T: FontResolver>(
+        artifact: typst_ts_core::Artifact,
+        font_resolver: &T,
+    ) -> Self {
+        let mut ligature_map = std::collections::HashMap::<
+            (String, FontVariant, FontFlags),
+            std::collections::HashMap<u16, std::string::String>,
+        >::new();
+        for font in &(artifact).fonts {
+            let font_info = TypstFontInfo {
+                family: font.family.clone(),
+                variant: font.variant,
+                flags: font.flags,
+                coverage: font.coverage.clone(),
+            };
+            // todo: font alternative
+            let idx = font_resolver
+                .font_book()
+                .select_fallback(Some(&font_info), font.variant, "0")
+                .unwrap();
+            let local_font = font_resolver.font(idx).unwrap();
+            let font_info = local_font.info();
+
+            ligature_map.insert(
+                (font_info.family.clone(), font_info.variant, font_info.flags),
+                std::collections::HashMap::from_iter(font.ligatures.iter().map(|s| s.clone())),
+            );
+        }
+        let doc = artifact.to_document(font_resolver);
+
         let pages_info = PagesInfo {
             pages: {
                 let mut pages = Vec::new();
@@ -128,6 +164,7 @@ impl RenderSession {
             background_color: "".to_string(),
             doc,
             pages_info,
+            ligature_map,
         }
     }
 }
@@ -210,12 +247,11 @@ impl RenderSessionManager {
         }
 
         let font_resolver = self.font_resolver.read().unwrap();
-        let document = artifact.to_document(&*font_resolver);
-        if document.pages.len() == 0 {
+        let session: RenderSession = RenderSession::from_artifact(artifact, &*font_resolver);
+        if session.doc.pages.len() == 0 {
             return Err("no pages in artifact".into());
         }
-
-        Ok(RenderSession::from_doc(document))
+        Ok(session)
     }
 
     // todo: set return error to typst_ts_core::Error
@@ -244,11 +280,10 @@ impl RenderSessionManager {
         };
 
         let font_resolver = self.font_resolver.read().unwrap();
-        let document = _artifact.to_document(&*font_resolver);
-        if document.pages.len() == 0 {
+        let session: RenderSession = RenderSession::from_artifact(_artifact, &*font_resolver);
+        if session.doc.pages.len() == 0 {
             return Err("no pages in artifact".into());
         }
-
-        Ok(RenderSession::from_doc(document))
+        Ok(session)
     }
 }

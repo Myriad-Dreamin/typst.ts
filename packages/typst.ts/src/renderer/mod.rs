@@ -75,6 +75,7 @@ impl TypstRenderer {
         let mut worker = typst_ts_canvas_exporter::CanvasRenderTask::new(
             &canvas,
             &ses.doc,
+            &ses.ligature_map,
             page_off,
             ses.pixel_per_pt,
             Color::Rgba(RgbaColor::from_str(&ses.background_color)?),

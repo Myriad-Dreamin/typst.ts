@@ -1,35 +1,30 @@
 //! Rendering into web_sys::CanvasRenderingContext2d.
 
-#![allow(unused_imports)]
 #![allow(unused_variables)]
 #![allow(dead_code)]
-use std::any::Any;
-use std::collections::HashMap;
-use std::fmt::{format, Write};
 
-use std::io::Read;
-use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use std::fmt::Write;
 
 use js_sys::Reflect;
 use tiny_skia as sk;
 use ttf_parser::{GlyphId, OutlineBuilder};
 
 use typst::doc::{Frame, FrameItem, GroupItem, Meta, TextItem};
-use typst::font::FontInfo;
+use typst::font::{FontFlags, FontInfo, FontVariant};
 use typst::geom::{self, Abs, Axis, Color, Dir, Geometry, Paint, PathItem, Shape, Size, Stroke};
-use typst::image::{DecodedImage, Image, ImageFormat, RasterFormat, VectorFormat};
+use typst::image::{Image, ImageFormat, RasterFormat, VectorFormat};
 use typst_ts_core::{content, TextContent};
 use wasm_bindgen::prelude::Closure;
-use wasm_bindgen::{Clamped, JsCast, JsValue};
-use web_sys::{window, CanvasRenderingContext2d, ImageData, Path2d};
-
-use web_sys::console;
+use wasm_bindgen::{JsCast, JsValue};
+use web_sys::{console, CanvasRenderingContext2d, Path2d};
 
 mod utils;
 use utils::console_log;
 
 pub struct CanvasRenderTask<'a> {
     canvas: &'a CanvasRenderingContext2d,
+    ligature_map: &'a LigatureMap,
 
     pixel_per_pt: f32,
     fill: Color,
@@ -38,7 +33,6 @@ pub struct CanvasRenderTask<'a> {
     height: u32,
     raw_height: f32,
 
-    rendered: Arc<Mutex<bool>>,
     session_id: String,
 
     pub content: TextContent,
@@ -46,10 +40,16 @@ pub struct CanvasRenderTask<'a> {
     font_map: HashMap<FontInfo, u32>,
 }
 
+pub type LigatureMap = std::collections::HashMap<
+    (String, FontVariant, FontFlags),
+    std::collections::HashMap<u16, std::string::String>,
+>;
+
 impl<'a> CanvasRenderTask<'a> {
     pub fn new(
         canvas: &'a CanvasRenderingContext2d,
         doc: &'a typst::doc::Document,
+        ligature_map: &'a LigatureMap,
         page_off: usize,
         pixel_per_pt: f32,
         fill: Color,
@@ -71,12 +71,12 @@ impl<'a> CanvasRenderTask<'a> {
         let pxh = (pixel_per_pt * (size.y.to_pt() as f32)).round().max(1.0) as u32;
         Self {
             canvas,
+            ligature_map,
             pixel_per_pt,
             fill,
             width: pxw,
             height: pxh,
             raw_height: pxh as f32 / pixel_per_pt,
-            rendered: Arc::new(Mutex::new(false)),
             session_id,
 
             content: TextContent::default(),
@@ -286,7 +286,26 @@ impl<'a> CanvasRenderTask<'a> {
 
     /// Render a text run into the self.canvas.
     fn render_text(&mut self, ts: sk::Transform, mask: Option<&sk::ClipMask>, text: &TextItem) {
-        let glyph_chars: String = text.glyphs.iter().map(|g| g.c).collect();
+        let info = text.font.info();
+        let ligature_map = &self
+            .ligature_map
+            .get(&(info.family.clone(), info.variant, info.flags));
+
+        let glyph_chars: String = if let Some(ligature_map) = ligature_map {
+            text.glyphs
+                .iter()
+                .map(|g| {
+                    let id = GlyphId(g.id);
+                    if let Some(c) = ligature_map.get(&g.id) {
+                        c.clone()
+                    } else {
+                        g.c.to_string()
+                    }
+                })
+                .collect()
+        } else {
+            text.glyphs.iter().map(|g| g.c).collect()
+        };
         let ppem = text.size.to_f32() * ts.sy;
 
         // console_log!("render text {:?}", glyph_chars);
