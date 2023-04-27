@@ -69,7 +69,7 @@ impl TypstRenderer {
         ses: &RenderSession,
         canvas: &web_sys::CanvasRenderingContext2d,
         options: Option<RenderPageImageOptions>,
-    ) -> Result<(), JsValue> {
+    ) -> Result<JsValue, JsValue> {
         let page_off = self.retrieve_page_off(ses, options)?;
 
         let mut worker = typst_ts_canvas_exporter::CanvasRenderTask::new(
@@ -79,7 +79,9 @@ impl TypstRenderer {
             ses.pixel_per_pt,
             Color::Rgba(RgbaColor::from_str(&ses.background_color)?),
         );
-        Ok(worker.render(&ses.doc.pages[page_off]))
+
+        worker.render(&ses.doc.pages[page_off]);
+        Ok(serde_wasm_bindgen::to_value(&worker.content).unwrap())
     }
 
     pub fn render_to_pdf(&mut self, artifact_content: String) -> Result<Uint8Array, JsValue> {
@@ -223,9 +225,10 @@ impl TypstRenderer {
         Ok(page_off)
     }
 
-    pub fn render_to_pdf_internal(&self, session: &RenderSession) -> Result<Vec<u8>, String> {
+    pub fn render_to_pdf_internal(&self, _session: &RenderSession) -> Result<Vec<u8>, String> {
         // contribution 510KB
-        Ok(typst::export::pdf(&session.doc))
+        // Ok(typst::export::pdf(&session.doc))
+        Err("pdf disabled".into())
     }
 
     pub fn session_from_artifact(

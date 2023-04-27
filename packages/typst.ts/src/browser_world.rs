@@ -23,8 +23,8 @@ impl TypstBrowserWorld {
         // Hook up the lang items.
         // todo: bad upstream changes
         // 24MB
-        let library = typst_library::build();
-        typst::eval::set_lang_items(library.items.clone());
+        // let library = typst_library::build();
+        // typst::eval::set_lang_items(library.items.clone());
 
         // 13MB
         // let dummy_library = typst::eval::LangItems {
