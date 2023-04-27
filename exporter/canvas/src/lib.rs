@@ -4,6 +4,7 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
 use std::any::Any;
+use std::collections::HashMap;
 use std::fmt::{format, Write};
 
 use std::io::Read;
@@ -14,8 +15,10 @@ use tiny_skia as sk;
 use ttf_parser::{GlyphId, OutlineBuilder};
 
 use typst::doc::{Frame, FrameItem, GroupItem, Meta, TextItem};
-use typst::geom::{self, Abs, Color, Geometry, Paint, PathItem, Shape, Size, Stroke};
+use typst::font::FontInfo;
+use typst::geom::{self, Abs, Axis, Color, Dir, Geometry, Paint, PathItem, Shape, Size, Stroke};
 use typst::image::{DecodedImage, Image, ImageFormat, RasterFormat, VectorFormat};
+use typst_ts_core::{content, TextContent};
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{Clamped, JsCast, JsValue};
 use web_sys::{window, CanvasRenderingContext2d, ImageData, Path2d};
@@ -33,9 +36,14 @@ pub struct CanvasRenderTask<'a> {
 
     width: u32,
     height: u32,
+    raw_height: f32,
 
     rendered: Arc<Mutex<bool>>,
     session_id: String,
+
+    pub content: TextContent,
+
+    font_map: HashMap<FontInfo, u32>,
 }
 
 impl<'a> CanvasRenderTask<'a> {
@@ -46,6 +54,9 @@ impl<'a> CanvasRenderTask<'a> {
         pixel_per_pt: f32,
         fill: Color,
     ) -> Self {
+        if pixel_per_pt <= 0. {
+            panic!("pixel_per_pt must be greater than 0");
+        }
         let x = (js_sys::Math::random() * (0x7fffffff as f64)).ceil() as u64;
         let y = (js_sys::Math::random() * (0x7fffffff as f64)).ceil() as u64;
         let session_id = format!("{:x}", (x << 32) | y);
@@ -64,8 +75,12 @@ impl<'a> CanvasRenderTask<'a> {
             fill,
             width: pxw,
             height: pxh,
+            raw_height: pxh as f32 / pixel_per_pt,
             rendered: Arc::new(Mutex::new(false)),
             session_id,
+
+            content: TextContent::default(),
+            font_map: HashMap::default(),
         }
     }
 
@@ -108,6 +123,9 @@ impl<'a> CanvasRenderTask<'a> {
 
     /// Render a frame into the canvas.
     fn render_frame(&mut self, ts: sk::Transform, mask: Option<&sk::ClipMask>, frame: &Frame) {
+        // let mut contains_text = false;
+        let mut text_state = None;
+
         for (pos, item) in frame.items() {
             let x = pos.x.to_f32();
             let y = pos.y.to_f32();
@@ -118,7 +136,75 @@ impl<'a> CanvasRenderTask<'a> {
                     self.render_group(ts, mask, group);
                 }
                 FrameItem::Text(text) => {
+                    let dir = text.lang.dir();
+
+                    let mut has_eol = false;
+                    if let Some((prev_dir, tx, ty, last_diff)) = text_state {
+                        if prev_dir != dir {
+                            text_state = Some((dir, ts.tx, ts.ty, None));
+                            has_eol = true;
+                        } else {
+                            match dir.axis() {
+                                Axis::X => {
+                                    if ts.ty != ty {
+                                        let diff = ts.ty - ty;
+                                        text_state = Some((dir, ts.tx, ts.ty, Some(diff)));
+                                        has_eol = if let Some(last_diff) = last_diff {
+                                            last_diff != diff || ts.tx != tx
+                                        } else {
+                                            false
+                                        };
+                                    }
+                                }
+                                Axis::Y => {
+                                    if ts.tx != tx {
+                                        let diff = ts.tx - tx;
+                                        text_state = Some((dir, ts.tx, ts.ty, Some(diff)));
+                                        has_eol = if let Some(last_diff) = last_diff {
+                                            last_diff != diff || ts.ty != ty
+                                        } else {
+                                            false
+                                        };
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        text_state = Some((dir, ts.tx, ts.ty, None));
+                    }
+
+                    if has_eol {
+                        let font_name = self.write_font(&text.font);
+
+                        let tts = ts.post_scale(1. / self.pixel_per_pt, 1. / self.pixel_per_pt);
+                        self.content.items.push(content::TextItem {
+                            str: "".to_string(),
+                            // todo: real direction of the text
+                            dir: match dir {
+                                Dir::LTR => "ltr".to_string(),
+                                Dir::RTL => "rtl".to_string(),
+                                Dir::TTB => "ttb".to_string(),
+                                Dir::BTT => "btt".to_string(),
+                            },
+                            width: 0.,
+                            // todo: real height
+                            height: 0.,
+                            // todo: dirty pdf
+                            transform: [
+                                text.size.to_f32(),
+                                tts.ky,
+                                tts.kx,
+                                text.size.to_f32(),
+                                tts.tx,
+                                self.raw_height - tts.ty,
+                            ],
+                            font_name,
+                            has_eol,
+                        });
+                    }
+
                     self.render_text(ts, mask, text);
+                    // contains_text = true;
                 }
                 FrameItem::Shape(shape, _) => {
                     self.render_shape(ts, mask, shape);
@@ -134,6 +220,8 @@ impl<'a> CanvasRenderTask<'a> {
                 },
             }
         }
+        // if contains_text {
+        // }
     }
 
     /// Render a group frame with optional transform and clipping into the canvas.
@@ -176,11 +264,32 @@ impl<'a> CanvasRenderTask<'a> {
         self.render_frame(ts, mask, &group.frame);
     }
 
+    fn write_font(&mut self, font: &typst::font::Font) -> u32 {
+        if let Some(&font) = self.font_map.get(font.info()) {
+            return font;
+        }
+
+        if self.content.styles.len() >= u32::MAX as usize {
+            panic!("too many fonts");
+        }
+
+        let font_ref = self.content.styles.len() as u32;
+        self.font_map.insert(font.info().clone(), font_ref);
+        self.content.styles.push(content::TextStyle {
+            font_family: font.info().family.clone(),
+            ascent: font.metrics().ascender.get() as f32,
+            descent: font.metrics().descender.get() as f32,
+            vertical: false, // todo: check vertical
+        });
+        font_ref
+    }
+
     /// Render a text run into the self.canvas.
     fn render_text(&mut self, ts: sk::Transform, mask: Option<&sk::ClipMask>, text: &TextItem) {
         let glyph_chars: String = text.glyphs.iter().map(|g| g.c).collect();
+        let ppem = text.size.to_f32() * ts.sy;
 
-        console_log!("render text {:?}", glyph_chars);
+        // console_log!("render text {:?}", glyph_chars);
 
         let mut x = 0.0;
         for glyph in &text.glyphs {
@@ -194,6 +303,33 @@ impl<'a> CanvasRenderTask<'a> {
 
             x += glyph.x_advance.at(text.size).to_f32();
         }
+
+        let font_name = self.write_font(&text.font);
+
+        let tts = ts.post_scale(1. / self.pixel_per_pt, 1. / self.pixel_per_pt);
+        self.content.items.push(content::TextItem {
+            str: glyph_chars,
+            // todo: real direction of the text
+            dir: match text.lang.dir() {
+                Dir::LTR => "ltr".to_string(),
+                Dir::RTL => "rtl".to_string(),
+                Dir::TTB => "ttb".to_string(),
+                Dir::BTT => "btt".to_string(),
+            },
+            width: x,
+            // todo: real height
+            height: text.size.to_f32(),
+            transform: [
+                text.size.to_f32(),
+                tts.ky,
+                tts.kx,
+                text.size.to_f32(),
+                tts.tx,
+                self.raw_height - tts.ty,
+            ],
+            font_name,
+            has_eol: false,
+        });
     }
 
     /// Render an SVG glyph into the self.canvas.
