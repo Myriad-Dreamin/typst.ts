@@ -141,14 +141,29 @@ impl ArtifactJsBuilder {
                             .collect(),
                     ));
                 }
+                "ligatures" => {
+                    ligatures = Some(
+                        v.dyn_into::<js_sys::Array>()?
+                            .iter()
+                            .map(convert_pair)
+                            .map(|(g, s)| {
+                                (
+                                    self.to_f64("font_info.ligature_glyph", &g).unwrap() as u16,
+                                    self.to_string("font_info.ligature_str", &s).unwrap(),
+                                )
+                            })
+                            .collect(),
+                    );
+                }
                 _ => panic!("unknown key: {}", k),
             }
         }
-        Ok(FontInfo {
+        Ok(typst_ts_core::artifact::font::FontInfo {
             family,
             variant,
             flags,
             coverage: coverage.unwrap_or_else(|| typst::font::Coverage::from_vec(vec![])),
+            ligatures: ligatures.unwrap_or_else(|| vec![]),
         })
     }
 

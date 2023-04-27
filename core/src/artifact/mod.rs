@@ -22,6 +22,9 @@ use image::*;
 
 pub mod core;
 use self::core::*;
+use self::ligature::LigatureResolver;
+
+pub(crate) mod ligature;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct BuildInfo {
@@ -46,8 +49,8 @@ pub struct Artifact {
 }
 
 pub struct ArtifactBuilder {
-    fonts: Vec<FontInfo>,
-    font_map: HashMap<FontInfo, FontRef>,
+    fonts: Vec<(TypstFontInfo, LigatureResolver)>,
+    font_map: HashMap<TypstFontInfo, FontRef>,
 }
 
 impl ArtifactBuilder {
@@ -59,8 +62,8 @@ impl ArtifactBuilder {
     }
 
     pub fn write_font(&mut self, font: &TypstFont) -> FontRef {
-        if let Some(&font) = self.font_map.get(font.info()) {
-            return font;
+        if let Some(&ref font) = self.font_map.get(font.info()) {
+            return font.clone();
         }
 
         if self.fonts.len() >= u32::MAX as usize {
@@ -68,13 +71,16 @@ impl ArtifactBuilder {
         }
 
         let font_ref = self.fonts.len() as u32;
-        self.font_map.insert(font.info().clone(), font_ref);
-        self.fonts.push(FontInfo {
-            family: font.info().family.clone(),
-            variant: font.info().variant.clone(),
-            flags: font.info().flags,
-            coverage: FontCoverage::from_vec(vec![]),
-        });
+        self.font_map.insert(font.info().clone(), font_ref.clone());
+        self.fonts.push((
+            TypstFontInfo {
+                family: font.info().family.clone(),
+                variant: font.info().variant.clone(),
+                flags: font.info().flags,
+                coverage: FontCoverage::from_vec(vec![]),
+            },
+            LigatureResolver::new(font.ttf()),
+        ));
         font_ref
     }
 
@@ -94,9 +100,23 @@ impl ArtifactBuilder {
         }
     }
 
+    pub fn write_ligature_covered(
+        &mut self,
+        face: &ttf_parser::Face<'_>,
+        font: FontRef,
+        text: &TypstTextItem,
+    ) {
+        let font = &mut self.fonts[font as usize];
+        for glyph in &text.glyphs {
+            font.1.resolve(face, glyph);
+        }
+    }
+
     pub fn write_text_item(&mut self, text: &TypstTextItem) -> TextItem {
+        let idx = self.write_font(&text.font);
+        self.write_ligature_covered(text.font.ttf(), idx, text);
         TextItem {
-            font: self.write_font(&text.font),
+            font: idx,
             size: text.size.into(),
             fill: text.fill.clone().into(),
             lang: text.lang.as_str().to_string(),
@@ -203,7 +223,21 @@ impl From<TypstDocument> for Artifact {
                 version: crate::build_info::VERSION.to_string(),
             }),
             pages,
-            fonts: builder.fonts,
+            fonts: builder
+                .fonts
+                .into_iter()
+                .map(|f| {
+                    let (info, res) = f;
+
+                    FontInfo {
+                        family: info.family,
+                        variant: info.variant,
+                        flags: info.flags,
+                        coverage: info.coverage,
+                        ligatures: res.to_covered(),
+                    }
+                })
+                .collect(),
             title: typst_doc.title.map(|s| s.to_string()),
             author: typst_doc
                 .author
@@ -336,10 +370,17 @@ impl Artifact {
     pub fn to_document<T: FontResolver>(self, font_resolver: &T) -> TypstDocument {
         let mut builder = TypeDocumentParser::new();
         for font in self.fonts {
+            let font_info = TypstFontInfo {
+                family: font.family,
+                variant: font.variant,
+                flags: font.flags,
+                coverage: font.coverage,
+            };
+
             // todo: font alternative
             let idx = font_resolver
                 .font_book()
-                .select_fallback(Some(&font), font.variant, "0")
+                .select_fallback(Some(&font_info), font.variant, "0")
                 .unwrap();
             builder.fonts.push(font_resolver.font(idx).unwrap());
         }

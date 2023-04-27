@@ -2136,6 +2136,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "siphasher",
+ "ttf-parser 0.18.1",
  "typst",
  "typst-library",
 ]
