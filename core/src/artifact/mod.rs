@@ -232,7 +232,7 @@ impl From<TypstDocument> for Artifact {
                     FontInfo {
                         family: info.family,
                         variant: info.variant,
-                        flags: info.flags,
+                        flags: info.flags.bits(),
                         coverage: info.coverage,
                         ligatures: res.to_covered(),
                     }
@@ -298,7 +298,7 @@ impl TypeDocumentParser {
     }
 
     pub fn parse_image(&mut self, image: &Image) -> TypstImage {
-        TypstImage::new(
+        TypstImage::new_raw(
             image.data.clone().into(),
             match image.format.as_str() {
                 "png" => ImageFormat::Raster(RasterFormat::Png),
@@ -373,7 +373,7 @@ impl Artifact {
             let font_info = TypstFontInfo {
                 family: font.family,
                 variant: font.variant,
-                flags: font.flags,
+                flags: TypstFontFlags::from_bits(font.flags).unwrap(),
                 coverage: font.coverage,
             };
 

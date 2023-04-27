@@ -127,7 +127,7 @@ impl RenderSession {
             let font_info = TypstFontInfo {
                 family: font.family.clone(),
                 variant: font.variant,
-                flags: font.flags,
+                flags: FontFlags::from_bits(font.flags).unwrap(),
                 coverage: font.coverage.clone(),
             };
             // todo: font alternative

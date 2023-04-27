@@ -164,7 +164,7 @@ impl ArtifactJsBuilder {
         Ok(typst_ts_core::artifact::font::FontInfo {
             family,
             variant,
-            flags,
+            flags: flags.bits(),
             coverage: coverage.unwrap_or_else(|| typst::font::Coverage::from_vec(vec![])),
             ligatures: ligatures.unwrap_or_else(|| vec![]),
         })

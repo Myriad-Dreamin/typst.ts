@@ -3,7 +3,7 @@ use serde::Serialize;
 pub use typst::font::Coverage as FontCoverage;
 use typst::font::Coverage;
 pub use typst::font::Font as TypstFont;
-use typst::font::FontFlags;
+pub use typst::font::FontFlags as TypstFontFlags;
 pub use typst::font::FontInfo as TypstFontInfo;
 use typst::font::FontVariant;
 
@@ -16,7 +16,7 @@ pub struct FontInfo {
     /// family.
     pub variant: FontVariant,
     /// Properties of the font.
-    pub flags: FontFlags,
+    pub flags: u32,
     /// The unicode coverage of the font.
     pub coverage: Coverage,
     /// ligature coverage
