@@ -2076,6 +2076,7 @@ dependencies = [
  "tiny-skia",
  "ttf-parser 0.18.1",
  "typst",
+ "typst-ts-core",
  "wasm-bindgen",
  "web-sys",
 ]
