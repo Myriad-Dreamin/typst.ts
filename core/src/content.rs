@@ -1,44 +1,44 @@
 use serde::{Deserialize, Serialize};
 
 /// pdf.js compatible text content definition
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct TextContent {
-    items: Vec<TextItem>,
-    styles: Vec<TextStyle>,
+    pub items: Vec<TextItem>,
+    pub styles: Vec<TextStyle>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct TextItem {
     /// The text content of the item.
-    str: String,
+    pub str: String,
     /// direction of the text
-    /// possible values: ltr, rtl
-    dir: String,
+    /// possible values: ltr, rtl, ttb, btt
+    pub dir: String,
     /// item width in pt
-    width: f64,
+    pub width: f32,
     /// item height in pt
-    height: f64,
+    pub height: f32,
     /// item transform matrix
-    transform: [f64; 6],
+    pub transform: [f32; 6],
 
     /// reference to the style
     #[serde(rename = "fontName")]
-    font_name: String,
+    pub font_name: u32,
 
     /// Indicating if the text content is followed by a line-break.
     #[serde(rename = "hasEOL")]
-    has_eol: bool,
+    pub has_eol: bool,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct TextStyle {
     /// css font family
     #[serde(rename = "fontFamily")]
-    font_family: String,
+    pub font_family: String,
     /// ascender in pt
-    ascent: f64,
+    pub ascent: f32,
     /// descender in pt
-    descent: f64,
+    pub descent: f32,
     /// whether the font is vertical
-    vertical: bool,
+    pub vertical: bool,
 }

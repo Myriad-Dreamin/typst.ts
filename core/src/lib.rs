@@ -3,7 +3,7 @@ pub use artifact::Artifact;
 
 pub mod config;
 
-pub(crate) mod content;
+pub mod content;
 pub use content::TextContent;
 
 pub(crate) mod exporter;
