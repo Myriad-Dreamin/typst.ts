@@ -8,7 +8,7 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 [dependencies]
 
-typst = "0.2.0"
+typst = "0.3.0"
 comemo = "0.2"
 
 image = { version = "0.24", default-features = false, features = ["png", "jpeg", "gif"] }

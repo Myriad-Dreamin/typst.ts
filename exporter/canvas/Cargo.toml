@@ -10,7 +10,7 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 typst-ts-core = "0.1"
 
-typst = "0.2.0"
+typst = "0.3.0"
 comemo = "0.2"
 
 tiny-skia = "0.6.6"

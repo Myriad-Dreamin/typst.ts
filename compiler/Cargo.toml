@@ -9,8 +9,8 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 [dependencies]
 typst-ts-core = "0.1.6"
 
-typst = "0.2.0"
-typst-library = "0.2.0"
+typst = "0.3.0"
+typst-library = "0.3.0"
 comemo = "0.2"
 
 once_cell = "1.17.1"
