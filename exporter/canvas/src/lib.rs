@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 use std::fmt::Write;
 
-use js_sys::Reflect;
+// use js_sys::Reflect;
 use tiny_skia as sk;
 use ttf_parser::{GlyphId, OutlineBuilder};
 
@@ -17,10 +17,9 @@ use typst::image::{Image, ImageFormat, RasterFormat, VectorFormat};
 use typst_ts_core::{content, TextContent};
 use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{console, CanvasRenderingContext2d, Path2d};
+use web_sys::{CanvasRenderingContext2d, Path2d};
 
 mod utils;
-use utils::console_log;
 
 pub struct CanvasRenderTask<'a> {
     canvas: &'a CanvasRenderingContext2d,
@@ -255,7 +254,7 @@ impl<'a> CanvasRenderTask<'a> {
                     return;
                 }
 
-                console_log!("mask updation {:?}", storage);
+                // console_log!("mask updation {:?}", storage);
 
                 mask = Some(&storage);
             }
@@ -770,7 +769,7 @@ impl<'a> CanvasRenderTask<'a> {
                 .query_selector(format!("canvas[data-typst-session='{}']", session_id).as_str())
                 .unwrap();
 
-            console_log!("loaded {} {}", session_id, remote_data_url);
+            // console_log!("loaded {} {}", session_id, remote_data_url);
 
             let canvas = if let Some(canvas) = canvas {
                 canvas
@@ -788,12 +787,12 @@ impl<'a> CanvasRenderTask<'a> {
                 .dyn_into::<web_sys::CanvasRenderingContext2d>()
                 .unwrap();
 
-            console_log!(
-                "ready {} {} {:?}",
-                session_id,
-                remote_data_url,
-                (x, y, w, h)
-            );
+            // console_log!(
+            //     "ready {} {} {:?}",
+            //     session_id,
+            //     remote_data_url,
+            //     (x, y, w, h)
+            // );
 
             let state = CanvasStateGuard(&ctx);
             ctx.reset_transform().unwrap();
@@ -808,13 +807,13 @@ impl<'a> CanvasRenderTask<'a> {
         a.forget();
 
         let a = Closure::<dyn Fn(JsValue)>::new(move |e: JsValue| {
-            console_log!(
-                "err image loading {} {:?} {:?} {}",
-                session_id2,
-                Reflect::get(&e, &"type".into()).unwrap(),
-                js_sys::JSON::stringify(&e).unwrap(),
-                data_url2,
-            );
+            // console_log!(
+            //     "err image loading {} {:?} {:?} {}",
+            //     session_id2,
+            //     Reflect::get(&e, &"type".into()).unwrap(),
+            //     js_sys::JSON::stringify(&e).unwrap(),
+            //     data_url2,
+            // );
         });
 
         img.set_onerror(Some(a.as_ref().unchecked_ref()));
