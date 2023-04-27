@@ -1,7 +1,7 @@
 use clap::Parser;
 
 #[derive(Debug, Parser)]
-#[clap(name = "typst-ts-fontctl", version = "0.1.5")]
+#[clap(name = "typst-ts-fontctl", version = "0.1.6")]
 pub struct Opts {
     /// Use font assets in branch of typst
     #[clap(long, default_value = "")]
