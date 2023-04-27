@@ -1,3 +1,25 @@
+# v0.1.6
+
+## Changelog since v0.1.6
+
+### Known Issues
+
+No new known issue.
+
+### Security Notes
+
+No new security note.
+
+### Changes
+
+- temporarily removed pdf exporter, which eliminates the bundle size of `typst_ts_renderer` about 6MB.
+
+#### Feature
+
+- implemented [proposal: Retrieve Text from Document](https://github.com/Myriad-Dreamin/typst.ts/blob/main/docs/proposals/2-retrieve-text-from-document.md)
+
+- the used ligature glyph information are attached to the artifact.
+
 # v0.1.5
 
 ## Changelog since v0.1.5
