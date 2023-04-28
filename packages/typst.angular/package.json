@@ -8,7 +8,8 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "link:local": "yarn link @myriaddreamin/typst.angular"
   },
   "private": true,
   "dependencies": {
