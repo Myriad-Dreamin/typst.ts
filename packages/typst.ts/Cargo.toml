@@ -39,13 +39,13 @@ web-sys = { version = "^0.3", features = ["console", "Window", "Blob", "ImageDat
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.0"
-typst-ts-renderer = { path = ".", features = ["full"] }
 web-sys = { version = "^0.3", features = ["console", "Performance", "PerformanceTiming", "Window", "Blob", "ImageData", "Document", "HtmlCanvasElement"] }
 
 [features]
+full = ["serde_json", "serde_rmp", "render_raster", "render_canvas"]
 serde_json = ["dep:serde_json"]
 serde_rmp = ["dep:serde", "dep:rmp-serde"]
 render_raster = ["dep:typst-ts-raster-exporter"]
 render_canvas = ["dep:typst-ts-canvas-exporter", "web-sys/CanvasRenderingContext2d"]
-default = ["render_canvas"]
-full = ["serde_json", "serde_rmp", "render_raster", "render_canvas"]
+default = ["full"]
+web = ["render_canvas"]
