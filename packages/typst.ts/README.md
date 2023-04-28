@@ -1,3 +1,8 @@
+# Typst.ts
 
-# Typst.ts (Renderer)
+## Usage
 
+```typescript
+import { createTypstRenderer } from '@myriaddreamin/typst.ts';
+const renderer = createTypstRenderer();
+```
