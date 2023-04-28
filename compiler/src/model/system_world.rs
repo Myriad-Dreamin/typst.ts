@@ -138,6 +138,15 @@ impl TypstSystemWorld {
             .clone()
     }
 
+    pub fn dependant(&self, path: &Path) -> bool {
+        if self.hashes.read().contains_key(&path.normalize()) {
+            return true;
+        }
+
+        let paths = self.paths.read();
+        PathHash::new(path).map_or(false, |hash| paths.contains_key(&hash))
+    }
+
     pub fn reset(&mut self) {
         self.sources = AppendOnlyVec::new();
         self.hashes.get_mut().clear();
