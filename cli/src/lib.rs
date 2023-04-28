@@ -4,9 +4,10 @@ pub mod diag;
 pub mod utils;
 
 use clap::{ArgAction, Parser, Subcommand};
+use typst_ts_core::build_info::VERSION;
 
 #[derive(Debug, Parser)]
-#[clap(name = "typst-ts-cli", version = "0.1.6")]
+#[clap(name = "typst-ts-cli", version = VERSION)]
 pub struct Opts {
     #[clap(subcommand)]
     pub sub: Subcommands,
