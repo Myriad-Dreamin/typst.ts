@@ -4,14 +4,22 @@ use std::{
 };
 
 use clap::Parser;
-use typst::{diag::SourceResult, font::FontVariant, World};
+use log::{error, info};
+use notify::{RecommendedWatcher, RecursiveMode, Watcher};
+use typst::{font::FontVariant, World};
+
 use typst_ts_cli::{
-    diag::print_diagnostics, CompileArgs, FontSubCommands, ListFontsArgs, Opts, Subcommands,
+    compile::CompileAction, diag::Status, CompileArgs, FontSubCommands, ListFontsArgs, Opts,
+    Subcommands,
 };
 use typst_ts_compiler::TypstSystemWorld;
-use typst_ts_core::{config::CompileOpts, Artifact};
+use typst_ts_core::config::CompileOpts;
 
 fn main() {
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .try_init();
+
     let opts = Opts::parse();
 
     match opts.sub {
@@ -27,7 +35,7 @@ fn main() {
     }
 }
 
-fn async_continue<F: std::future::Future<Output = ()>>(f: F) {
+fn async_continue<F: std::future::Future<Output = ()>>(f: F) -> ! {
     typst_ts_cli::utils::async_run(f);
 
     #[allow(unreachable_code)]
@@ -37,68 +45,102 @@ fn async_continue<F: std::future::Future<Output = ()>>(f: F) {
 }
 
 fn compile(args: CompileArgs) -> ! {
-    let mut root_path = PathBuf::new();
-    root_path.push(args.workspace);
+    let workspace_dir = Path::new(args.workspace.as_str());
+    let entry_file_path = Path::new(args.entry.as_str());
 
-    let mut world = TypstSystemWorld::new(CompileOpts {
-        root_dir: root_path,
-        ..CompileOpts::default()
-    });
-    world.reset();
+    let compile_action = {
+        let world = TypstSystemWorld::new(CompileOpts {
+            root_dir: workspace_dir.to_owned(),
+            ..CompileOpts::default()
+        });
+
+        let (doc_exporters, artifact_exporters) = typst_ts_cli::export::prepare_exporters(
+            args.output.clone(),
+            args.format.clone(),
+            entry_file_path,
+        );
+
+        CompileAction {
+            world,
+            entry_file: entry_file_path.to_owned(),
+            doc_exporters,
+            artifact_exporters,
+        }
+    };
 
     if args.watch {
         async_continue(async {
-            println!("watching...");
-            exit(0);
-        });
+            compile_watch(entry_file_path, workspace_dir, compile_action).await;
+        })
+    } else {
+        compile_once(compile_action)
     }
 
-    let entry_file = args.entry.as_str();
-    let entry_file = Path::new(entry_file);
-    let content = { std::fs::read_to_string(entry_file).expect("Could not read file") };
+    fn compile_once(mut compile_action: CompileAction) -> ! {
+        let messages = compile_action.once();
+        let no_errors = messages.is_empty();
 
-    match world.resolve_with(entry_file, &content) {
-        Ok(id) => {
-            world.main = id;
-        }
-        Err(e) => {
-            panic!("handler compile error {e}")
-        }
+        compile_action.print_diagnostics(messages.clone()).unwrap();
+        exit(if no_errors { 0 } else { 1 });
     }
 
-    let (doc_exporters, artifact_exporters) = typst_ts_cli::export::prepare_exporters(
-        args.output.clone(),
-        args.format.clone(),
-        entry_file,
-    );
-
-    let messages: Vec<_> = match typst::compile(&world) {
-        Ok(document) => {
-            let mut errors = vec![];
-            let mut collect_err = |res: SourceResult<()>| {
-                if let Err(errs) = res {
-                    for e in *errs {
-                        errors.push(e);
-                    }
+    async fn compile_watch(
+        entry_file_path: &Path,
+        workspace_dir: &Path,
+        mut compile_action: CompileAction,
+    ) -> ! {
+        // Setup file watching.
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+        let mut watcher = RecommendedWatcher::new(
+            move |res: Result<notify::Event, _>| match res {
+                Ok(e) => {
+                    tx.send(e).unwrap();
                 }
-            };
+                Err(e) => error!("watch error: {:#}", e),
+            },
+            notify::Config::default(),
+        )
+        .map_err(|_| "failed to watch directory")
+        .unwrap();
 
-            for f in doc_exporters {
-                collect_err(f.export(&world, &document))
-            }
-            let artifact = Artifact::from(document);
-            for f in artifact_exporters {
-                collect_err(f.export(&world, &artifact))
-            }
+        // Add a path to be watched. All files and directories at that path and
+        // below will be monitored for changes.
+        watcher
+            .watch(&workspace_dir, RecursiveMode::Recursive)
+            .unwrap();
 
-            errors
+        // Handle events.
+        info!("start watching files...");
+        loop {
+            typst_ts_cli::diag::status(entry_file_path, Status::Compiling).unwrap();
+            let messages = compile_action.once();
+            if messages.is_empty() {
+                typst_ts_cli::diag::status(entry_file_path, Status::Success).unwrap();
+            } else {
+                typst_ts_cli::diag::status(entry_file_path, Status::Error).unwrap();
+            }
+            compile_action.print_diagnostics(messages.clone()).unwrap();
+            comemo::evict(30);
+
+            loop {
+                let mut events = vec![];
+                while let Ok(e) =
+                    tokio::time::timeout(tokio::time::Duration::from_millis(100), rx.recv()).await
+                {
+                    events.push(e);
+                }
+
+                let recompile = events
+                    .into_iter()
+                    .flatten()
+                    .any(|event| compile_action.relevant(&event));
+
+                if recompile {
+                    break;
+                }
+            }
         }
-        Err(errors) => *errors,
-    };
-
-    print_diagnostics(&world, messages.clone()).unwrap();
-
-    exit(if messages.is_empty() { 0 } else { 1 })
+    }
 }
 
 fn list_fonts(command: ListFontsArgs) -> ! {
