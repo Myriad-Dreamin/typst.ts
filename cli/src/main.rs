@@ -4,7 +4,7 @@ use std::{
 };
 
 use clap::Parser;
-use typst::{font::FontVariant, World};
+use typst::{diag::SourceResult, font::FontVariant, World};
 use typst_ts_cli::{
     diag::print_diagnostics, CompileArgs, FontSubCommands, ListFontsArgs, Opts, Subcommands,
 };
@@ -66,57 +66,32 @@ fn compile(args: CompileArgs) -> ! {
         }
     }
 
+    let (doc_exporters, artifact_exporters) = typst_ts_cli::export::prepare_exporters(
+        args.output.clone(),
+        args.format.clone(),
+        entry_file,
+    );
+
     let messages: Vec<_> = match typst::compile(&world) {
         Ok(document) => {
-            let output_dir = if !args.output.is_empty() {
-                Path::new(&args.output)
-            } else {
-                entry_file.parent().unwrap()
+            let mut errors = vec![];
+            let mut collect_err = |res: SourceResult<()>| {
+                if let Err(errs) = res {
+                    for e in *errs {
+                        errors.push(e);
+                    }
+                }
             };
-            let mut output_dir = output_dir.to_path_buf();
-            output_dir.push("output");
 
-            let mut formats = args.format.clone();
-            if formats.is_empty() {
-                formats.push("pdf".to_string());
-                formats.push("json".to_string());
+            for f in doc_exporters {
+                collect_err(f.export(&world, &document))
             }
-            formats.sort();
-            formats.dedup();
-
-            if formats.contains(&"pdf".to_string()) {
-                let buffer = typst::export::pdf(&document);
-                let output_path = output_dir
-                    .with_file_name(entry_file.file_name().unwrap())
-                    .with_extension("pdf");
-                std::fs::write(&output_path, buffer).unwrap();
-            }
-
             let artifact = Artifact::from(document);
-            for f in formats {
-                match f.as_str() {
-                    "pdf" => {}
-                    "json" => {
-                        let output_path = output_dir
-                            .with_file_name(entry_file.file_name().unwrap())
-                            .with_extension("artifact.json");
-                        std::fs::write(&output_path, serde_json::to_string(&artifact).unwrap())
-                            .unwrap();
-                    }
-                    "rmp" => {
-                        let output_path = output_dir
-                            .with_file_name(entry_file.file_name().unwrap())
-                            .with_extension("artifact.rmp");
-                        let s = rmp_serde::to_vec_named(&artifact).unwrap();
-                        std::fs::write(&output_path, s.as_slice()).unwrap();
-                        #[cfg(debug)]
-                        let _: Artifact = rmp_serde::from_slice(s.as_slice()).unwrap();
-                    }
-                    _ => panic!("unknown format: {}", f),
-                };
+            for f in artifact_exporters {
+                collect_err(f.export(&world, &artifact))
             }
 
-            vec![]
+            errors
         }
         Err(errors) => *errors,
     };

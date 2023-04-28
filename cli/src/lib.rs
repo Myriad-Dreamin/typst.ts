@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 pub mod diag;
+pub mod export;
 pub mod utils;
 
 use clap::{ArgAction, Parser, Subcommand};

@@ -19,7 +19,9 @@ members = [
 [patch.crates-io]
 typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }
+typst-ts-pdf-exporter = { path = "exporter/pdf" }
 typst-ts-raster-exporter = { path = "exporter/raster" }
+typst-ts-serde-exporter = { path = "exporter/serde" }
 typst-ts-canvas-exporter = { path = "exporter/canvas" }
 
 typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts" }

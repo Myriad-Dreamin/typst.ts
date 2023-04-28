@@ -2192,6 +2192,9 @@ dependencies = [
  "typst-library",
  "typst-ts-compiler",
  "typst-ts-core",
+ "typst-ts-pdf-exporter",
+ "typst-ts-raster-exporter",
+ "typst-ts-serde-exporter",
 ]
 
 [[package]]
