@@ -2,10 +2,15 @@ use std::sync::{Arc, RwLock};
 
 use typst::font::{FontFlags, FontInfo as TypstFontInfo, FontVariant};
 use typst::geom::Abs;
+use typst_ts_core::artifact::doc::Frame;
 use typst_ts_core::{font::FontResolverImpl, Artifact, FontResolver};
 use wasm_bindgen::prelude::*;
 
 use crate::renderer::artifact::artifact_from_js_string;
+use crate::utils::console_log;
+
+use super::artifact::page_from_js_string;
+use web_sys::console;
 
 #[wasm_bindgen]
 pub struct RenderSessionOptions {
@@ -47,12 +52,18 @@ impl RenderSessionOptions {
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct PageInfo {
+    pub(crate) page_off: usize,
     pub(crate) width: Abs,
     pub(crate) height: Abs,
 }
 
 #[wasm_bindgen]
 impl PageInfo {
+    #[wasm_bindgen(getter)]
+    pub fn page_off(&self) -> usize {
+        self.page_off
+    }
+
     #[wasm_bindgen(getter)]
     pub fn width_pt(&self) -> f64 {
         self.width.to_pt()
@@ -77,6 +88,15 @@ impl PagesInfo {
         self.pages.len()
     }
 
+    pub fn page_by_number(&self, num: usize) -> Option<PageInfo> {
+        for page in &self.pages {
+            if page.page_off == num {
+                return Some(page.clone());
+            }
+        }
+        None
+    }
+
     pub fn page(&self, i: usize) -> PageInfo {
         self.pages[i].clone()
     }
@@ -92,6 +112,7 @@ pub struct RenderSession {
     pub(crate) pixel_per_pt: f32,
     pub(crate) background_color: String,
     pub(crate) doc: typst::doc::Document,
+    pub(crate) artifact_meta: Artifact,
     pub(crate) pages_info: PagesInfo,
     pub(crate) ligature_map: LigatureMap,
 }
@@ -143,14 +164,22 @@ impl RenderSession {
                 std::collections::HashMap::from_iter(font.ligatures.iter().map(|s| s.clone())),
             );
         }
+        let artifact_meta = Artifact {
+            build: artifact.build.clone(),
+            pages: vec![],
+            fonts: artifact.fonts.clone(),
+            title: artifact.title.clone(),
+            author: artifact.author.clone(),
+        };
         let doc = artifact.to_document(font_resolver);
 
         let pages_info = PagesInfo {
             pages: {
                 let mut pages = Vec::new();
                 pages.reserve(doc.pages.len());
-                for page in doc.pages.iter() {
+                for (i, page) in doc.pages.iter().enumerate() {
                     pages.push(PageInfo {
+                        page_off: i,
                         width: page.size().x,
                         height: page.size().y,
                     });
@@ -163,9 +192,44 @@ impl RenderSession {
             pixel_per_pt: 0.,
             background_color: "".to_string(),
             doc,
+            artifact_meta,
             pages_info,
             ligature_map,
         }
+    }
+
+    pub(crate) fn load_page<T: FontResolver>(
+        &mut self,
+        page_off: usize,
+        frame: Frame,
+        font_resolver: &T,
+    ) {
+        let mut artifact = self.artifact_meta.clone();
+        artifact.pages.push(frame);
+        let doc = artifact.to_document(font_resolver);
+        let page = &doc.pages[0];
+        let page_info = PageInfo {
+            page_off,
+            width: page.size().x,
+            height: page.size().y,
+        };
+
+        let mut pages = self.pages_info.pages.clone();
+        let idx = pages.iter().position(|p| p.page_off == page_off);
+        if let Some(idx) = idx {
+            pages[idx] = page_info;
+            self.doc.pages[idx] = page.clone();
+        } else {
+            let idx = pages.iter().position(|p| p.page_off > page_off);
+            if let Some(idx) = idx {
+                pages.insert(idx, page_info);
+                self.doc.pages.insert(idx, page.clone());
+            } else {
+                pages.push(page_info);
+                self.doc.pages.push(page.clone());
+            }
+        }
+        self.pages_info = PagesInfo { pages };
     }
 }
 
@@ -194,6 +258,16 @@ impl RenderSessionManager {
             .unwrap_or("ffffff".to_string());
 
         Ok(ses)
+    }
+
+    pub fn load_page(
+        &self,
+        session: &mut RenderSession,
+        page_number: usize,
+        page_content: String,
+    ) -> Result<(), JsValue> {
+        self.session_load_page(session, page_number, page_content, "js")?;
+        Ok(())
     }
 }
 
@@ -248,10 +322,56 @@ impl RenderSessionManager {
 
         let font_resolver = self.font_resolver.read().unwrap();
         let session: RenderSession = RenderSession::from_artifact(artifact, &*font_resolver);
-        if session.doc.pages.len() == 0 {
-            return Err("no pages in artifact".into());
-        }
         Ok(session)
+    }
+
+    pub fn session_load_page(
+        &self,
+        session: &mut RenderSession,
+        page_number: usize,
+        page_content: String,
+        decoder: &str,
+    ) -> Result<(), JsValue> {
+        // 550KB -> 147KB
+        // https://medium.com/@wl1508/avoiding-using-serde-and-deserde-in-rust-webassembly-c1e4640970ca
+        let frame: Frame = match decoder {
+            "js" => {
+                let frame: Frame = page_from_js_string(page_content)?;
+
+                frame
+            }
+
+            #[cfg(feature = "serde_json")]
+            "serde_json" => {
+                let frame: Frame = serde_json::from_str(page_content.as_str()).unwrap();
+
+                frame
+            }
+            _ => {
+                panic!("unknown decoder: {}", decoder);
+            }
+        };
+
+        #[cfg(debug)]
+        {
+            use super::utils::console_log;
+            use web_sys::console;
+            let _ = console::log_0;
+            console_log!(
+                "{} pages to render. font info: {:?}",
+                artifact.pages.len(),
+                artifact
+                    .fonts
+                    .iter()
+                    .map(|f| f.family.as_str()) // serde_json::to_string(f).unwrap())
+                    .collect::<Vec<&str>>()
+                    .join(", ")
+            );
+        }
+
+        let font_resolver = self.font_resolver.read().unwrap();
+        session.load_page(page_number, frame, &*font_resolver);
+        Ok(())
     }
 
     // todo: set return error to typst_ts_core::Error
@@ -281,9 +401,6 @@ impl RenderSessionManager {
 
         let font_resolver = self.font_resolver.read().unwrap();
         let session: RenderSession = RenderSession::from_artifact(_artifact, &*font_resolver);
-        if session.doc.pages.len() == 0 {
-            return Err("no pages in artifact".into());
-        }
         Ok(session)
     }
 }

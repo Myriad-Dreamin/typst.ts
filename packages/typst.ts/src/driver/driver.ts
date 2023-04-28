@@ -24,6 +24,10 @@ export class RenderPageOptions {
  */
 export interface RenderOptionsBase {
   container: HTMLDivElement;
+  pages?: {
+    number: number;
+    content: string;
+  }[];
 
   backgroundColor?: string;
   pixelPerPt?: number;
@@ -337,9 +341,9 @@ class TypstRendererDriver {
     rustOptions.pixel_per_pt = options.pixelPerPt ?? 2;
 
     if (options.backgroundColor !== undefined) {
-      if (!/^#[0-9]{6}$/.test(options.backgroundColor)) {
+      if (!/^#[0-9a-f]{6}$/.test(options.backgroundColor)) {
         throw new Error(
-          'Invalid typst.RenderOptions.backgroundColor color for matching ^#[0-9]{6}$ ' +
+          'Invalid typst.RenderOptions.backgroundColor color for matching ^#[0-9a-f]{6}$ ' +
             options.backgroundColor,
         );
       }
@@ -394,11 +398,29 @@ class TypstRendererDriver {
     const pages_info = session.pages_info;
     const page_count = pages_info.page_count;
 
+    /// render each page
+    let renderResult = undefined as unknown as RenderResult;
+
+    const doRender = async (i: number, page_off: number) => {
+      const canvas = canvasList[i];
+      let ctx = canvas.getContext('2d');
+      if (ctx) {
+        const res = await this.renderImageInSession(session, ctx, {
+          page_off,
+        });
+        if (i === 0) {
+          renderResult = {
+            width: canvas.width,
+            height: canvas.height,
+          };
+        }
+        return res;
+      }
+    };
+
     return this.inAnimationFrame(async () => {
       const t = performance.now();
 
-      /// render each page
-      let renderResult = undefined as unknown as RenderResult;
       const textContentList = (
         await Promise.all(
           //   canvasList.map(async (canvas, i) => {
@@ -422,21 +444,13 @@ class TypstRendererDriver {
           [
             (async () => {
               let results = [];
-              for (let i = 0; i < page_count; i++) {
-                const canvas = canvasList[i];
-                let ctx = canvas.getContext('2d');
-                if (ctx) {
-                  results.push(
-                    await this.renderImageInSession(session, ctx, {
-                      page_off: i,
-                    }),
-                  );
-                  if (i === 0) {
-                    renderResult = {
-                      width: canvas.width,
-                      height: canvas.height,
-                    };
-                  }
+              if (options.pages) {
+                for (let i = 0; i < options.pages.length; i++) {
+                  results.push(await doRender(i, options.pages[i].number));
+                }
+              } else {
+                for (let i = 0; i < page_count; i++) {
+                  results.push(await doRender(i, i));
                 }
               }
 
@@ -478,6 +492,7 @@ class TypstRendererDriver {
     container: HTMLDivElement,
     layerList: HTMLDivElement[],
     textSourceList: any[],
+    pages?: { number: number }[],
   ) {
     const containerWidth = container.offsetWidth;
     const t2 = performance.now();
@@ -487,16 +502,22 @@ class TypstRendererDriver {
     const t3 = performance.now();
 
     const pages_info = session.pages_info;
-    const page_count = pages_info.page_count;
-
-    if (page_count === 0) {
-      throw new Error(`No page found in session ${session}`);
-    }
 
     const renderOne = async (layer: HTMLDivElement, i: number) => {
       // const page = await doc.getPage(i + 1);
-      const width_pt = pages_info.page(i).width_pt;
-      const height_pt = pages_info.page(i).height_pt;
+      let page_number;
+      if (pages) {
+        page_number = pages[i].number;
+      } else {
+        page_number = i;
+      }
+      const page_info = pages_info.page_by_number(page_number);
+      if (!page_info) {
+        console.error('page not found for', i, pages_info);
+        return;
+      }
+      const width_pt = page_info.width_pt;
+      const height_pt = page_info.height_pt;
       const orignalScale = containerWidth / width_pt;
       // the --scale-factor will truncate our scale, we do it first
       const scale = Number.parseFloat(orignalScale.toFixed(4));
@@ -570,21 +591,27 @@ class TypstRendererDriver {
 
       const t = performance.now();
 
-      container.innerHTML = '';
+      /// all children
+      const commonDivList = Array.from(container.getElementsByTagName('div')).filter(
+        (div: HTMLDivElement) => {
+          div.parentElement === container;
+        },
+      );
+      if (!options.pages) {
+        container.innerHTML = '';
+      }
       container.style.width = '100%';
 
-      /// create canvas for each page
-      const canvasList = new Array(page_count);
-      const layerList = new Array(page_count);
-      const commonList = new Array(page_count);
-      const textLayerParentList = new Array(page_count);
-      for (let i = 0; i < page_count; i++) {
-        const pageAst = pages_info.page(i);
-        const width = Math.ceil(pageAst.width_pt) * imageScaleFactor;
-        const height = Math.ceil(pageAst.height_pt) * imageScaleFactor;
+      // canvas[data-typst-session='{}']
 
-        // const commonDiv = document.createElement('div');
-        const commonDiv = (commonList[i] = document.createElement('div'));
+      /// create canvas for each page
+      const load_page_cnt = options.pages ? options.pages.length : page_count;
+      const canvasList = new Array(load_page_cnt);
+      const layerList = new Array(load_page_cnt);
+      const commonList = new Array(load_page_cnt);
+      const textLayerParentList = new Array(load_page_cnt);
+
+      function createOver(i: number, width: number, height: number, commonDiv: HTMLDivElement) {
         const canvas = (canvasList[i] = document.createElement('canvas'));
         const textLayer = (layerList[i] = document.createElement('div'));
         const textLayerParent = (textLayerParentList[i] = document.createElement('div'));
@@ -615,17 +642,52 @@ class TypstRendererDriver {
           textLayerParent.style.height = `${height * orignalScale}px`;
           commonDiv.style.width = `${containerWidth}px`;
           commonDiv.style.height = `${height * orignalScale}px`;
+          commonDiv.style.position = 'relative';
 
           // textLayerParent.style.zIndex = '1';
           commonDiv.appendChild(textLayerParent);
           textLayerParent.style.position = 'absolute';
         }
+      }
 
-        commonDiv.style.position = 'relative';
-        container.appendChild(commonDiv);
-        // const clearDiv = document.createElement('div');
-        // clearDiv.style.zIndex = '-1';
-        // container.appendChild(clearDiv);
+      if (options.pages) {
+        for (let i = 0; i < load_page_cnt; i++) {
+          const pageNum = options.pages[i].number;
+          const pageAst = pages_info.page_by_number(pageNum);
+          if (!pageAst) {
+            throw new Error(`page ${pageNum} is not loaded`);
+          }
+          const width = Math.ceil(pageAst.width_pt) * imageScaleFactor;
+          const height = Math.ceil(pageAst.height_pt) * imageScaleFactor;
+
+          // const commonDiv = document.createElement('div');
+          let commonDiv = undefined;
+
+          while (pageNum >= commonDivList.length) {
+            const elem = document.createElement('div');
+            commonDivList.push(elem);
+            container.appendChild(elem);
+          }
+          commonDiv = commonList[i] = commonDivList[pageNum];
+          if (commonDiv) {
+            commonDiv.innerHTML = '';
+          }
+
+          createOver(i, width, height, commonDiv);
+        }
+      } else {
+        for (let i = 0; i < load_page_cnt; i++) {
+          const pageAst = pages_info.page(i);
+          const width = Math.ceil(pageAst.width_pt) * imageScaleFactor;
+          const height = Math.ceil(pageAst.height_pt) * imageScaleFactor;
+
+          // const commonDiv = document.createElement('div');
+          let commonDiv = undefined;
+
+          commonDiv = commonList[i] = document.createElement('div');
+          container.appendChild(commonDiv);
+          createOver(i, width, height, commonDiv);
+        }
       }
 
       const t2 = performance.now();
@@ -634,32 +696,63 @@ class TypstRendererDriver {
 
       const resetLayout = () => {
         /// resize again to avoid bad width change after render
-        for (let i = 0; i < page_count; i++) {
-          const pageAst = pages_info.page(i);
-          const width = Math.ceil(pageAst.width_pt) * imageScaleFactor;
-          const height = Math.ceil(pageAst.height_pt) * imageScaleFactor;
+        if (options.pages) {
+          for (let i = 0; i < load_page_cnt; i++) {
+            const pageNum = options.pages[i].number;
+            const pageAst = pages_info.page_by_number(pageNum);
+            if (!pageAst) {
+              throw new Error(`page ${pageNum} is not loaded`);
+            }
+            const width = Math.ceil(pageAst.width_pt) * imageScaleFactor;
+            const height = Math.ceil(pageAst.height_pt) * imageScaleFactor;
 
-          const canvasDiv = canvasList[i].parentElement!;
-          const commonDiv = commonList[i];
-          const textLayerParent = textLayerParentList[i];
+            const canvasDiv = canvasList[i].parentElement!;
+            const commonDiv = commonList[i];
+            const textLayerParent = textLayerParentList[i];
 
-          /// on width change
-          const containerWidth = container.offsetWidth;
-          const orignalScale = containerWidth / width;
-          textLayerParent.style.width = `${containerWidth}px`;
-          textLayerParent.style.height = `${height * orignalScale}px`;
-          commonDiv.style.width = `${containerWidth}px`;
-          commonDiv.style.height = `${height * orignalScale}px`;
+            /// on width change
+            const containerWidth = container.offsetWidth;
+            const orignalScale = containerWidth / width;
+            textLayerParent.style.width = `${containerWidth}px`;
+            textLayerParent.style.height = `${height * orignalScale}px`;
+            commonDiv.style.width = `${containerWidth}px`;
+            commonDiv.style.height = `${height * orignalScale}px`;
 
-          // compute scaling factor according to the paper size
-          const currentScale = container.offsetWidth / width;
-          canvasDiv.style.transformOrigin = '0px 0px';
-          canvasDiv.style.transform = `scale(${currentScale})`;
+            // compute scaling factor according to the paper size
+            const currentScale = container.offsetWidth / width;
+            canvasDiv.style.transformOrigin = '0px 0px';
+            canvasDiv.style.transform = `scale(${currentScale})`;
+          }
+        } else {
+          for (let i = 0; i < load_page_cnt; i++) {
+            const pageAst = pages_info.page(i);
+            const width = Math.ceil(pageAst.width_pt) * imageScaleFactor;
+            const height = Math.ceil(pageAst.height_pt) * imageScaleFactor;
+
+            const canvasDiv = canvasList[i].parentElement!;
+            const commonDiv = commonList[i];
+            const textLayerParent = textLayerParentList[i];
+
+            /// on width change
+            const containerWidth = container.offsetWidth;
+            const orignalScale = containerWidth / width;
+            textLayerParent.style.width = `${containerWidth}px`;
+            textLayerParent.style.height = `${height * orignalScale}px`;
+            commonDiv.style.width = `${containerWidth}px`;
+            commonDiv.style.height = `${height * orignalScale}px`;
+
+            // compute scaling factor according to the paper size
+            const currentScale = container.offsetWidth / width;
+            canvasDiv.style.transformOrigin = '0px 0px';
+            canvasDiv.style.transform = `scale(${currentScale})`;
+          }
         }
       };
 
       await doRenderDisplayLayer(canvasList, resetLayout);
-      await doRenderTextLayer(layerList);
+      // doRenderTextLayer(layerList).catch(e => {
+      //   console.error('render text layer', e);
+      // });
 
       return renderResult;
     });
@@ -691,17 +784,22 @@ class TypstRendererDriver {
       options.artifactContent,
       /* moved */ this.imageOptionsToRust(options),
     );
+    if (options.pages) {
+      for (const pageInfo of options.pages) {
+        this.renderer.load_page(session, pageInfo.number, pageInfo.content);
+      }
+    }
     const t3 = performance.now();
 
     console.log(`create session used: render = ${(t3 - t).toFixed(1)}ms`);
     try {
-      console.log(`session`, JSON.stringify(session), `activated`);
+      // console.log(`session`, JSON.stringify(session), `activated`);
       const res = await fn(session);
-      console.log(`session`, JSON.stringify(session), `deactivated`);
+      // console.log(`session`, JSON.stringify(session), `deactivated`);
       session.free();
       return res;
     } catch (e) {
-      console.log(`session`, JSON.stringify(session), `deactivated by error`, e);
+      // console.log(`session`, JSON.stringify(session), `deactivated by error`, e);
       session.free();
       throw e;
     }

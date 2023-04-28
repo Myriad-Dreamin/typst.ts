@@ -1043,6 +1043,11 @@ pub fn artifact_from_js_string(val: String) -> Result<Artifact, JsValue> {
     ArtifactJsBuilder {}.from_value(val)
 }
 
+pub fn page_from_js_string(val: String) -> Result<Frame, JsValue> {
+    let val = js_sys::JSON::parse(&val).unwrap();
+    ArtifactJsBuilder {}.parse_frame(val)
+}
+
 #[cfg(test)]
 #[cfg(target_arch = "wasm32")]
 mod tests {

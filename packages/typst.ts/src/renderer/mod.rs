@@ -106,6 +106,16 @@ impl TypstRenderer {
     ) -> Result<RenderSession, JsValue> {
         self.session_mgr.create_session(artifact_content, options)
     }
+
+    pub fn load_page(
+        &self,
+        session: &mut RenderSession,
+        page_number: usize,
+        page_content: String,
+    ) -> Result<(), JsValue> {
+        self.session_mgr
+            .load_page(session, page_number, page_content)
+    }
 }
 
 #[cfg(not(feature = "render_raster"))]
@@ -214,16 +224,19 @@ impl TypstRenderer {
 
         let page_off = options.as_ref().map(|o| o.page_off).unwrap_or(0);
 
-        if page_off >= ses.doc.pages.len() {
-            return Err(format!(
-                "page_off {} out of range, total pages {}",
-                page_off,
-                ses.doc.pages.len()
-            )
-            .into());
+        if page_off < ses.doc.pages.len() {
+            if page_off == ses.pages_info.pages[page_off].page_off {
+                return Ok(page_off);
+            }
         }
 
-        Ok(page_off)
+        for (i, page_info) in ses.pages_info.pages.iter().enumerate() {
+            if page_info.page_off == page_off {
+                return Ok(i);
+            }
+        }
+
+        return Err(format!("page_off {} not found in pages_info", page_off).into());
     }
 
     pub fn render_to_pdf_internal(&self, _session: &RenderSession) -> Result<Vec<u8>, String> {
