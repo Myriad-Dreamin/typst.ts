@@ -6,11 +6,7 @@ use typst_ts_core::artifact::doc::Frame;
 use typst_ts_core::{font::FontResolverImpl, Artifact, FontResolver};
 use wasm_bindgen::prelude::*;
 
-use crate::renderer::artifact::artifact_from_js_string;
-use crate::utils::console_log;
-
-use super::artifact::page_from_js_string;
-use web_sys::console;
+use super::artifact::{artifact_from_js_string, page_from_js_string};
 
 #[wasm_bindgen]
 pub struct RenderSessionOptions {
