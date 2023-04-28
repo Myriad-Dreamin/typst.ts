@@ -105,7 +105,9 @@ impl World for TypstSystemWorld {
 }
 
 impl TypstSystemWorld {
-    fn slot(&self, path: &Path) -> FileResult<MappedRwLockWriteGuard<PathSlot>> {
+    fn slot<P: AsRef<Path>>(&self, path: P) -> FileResult<MappedRwLockWriteGuard<PathSlot>> {
+        let path = path.as_ref();
+
         let mut hashes = self.hashes.write();
         let hash = match hashes.get(path).cloned() {
             Some(hash) => hash,
@@ -124,21 +126,26 @@ impl TypstSystemWorld {
         }))
     }
 
-    fn insert(&self, path: &Path, text: String) -> SourceId {
+    fn insert<P: AsRef<Path>>(&self, path: P, text: String) -> SourceId {
+        let path = path.as_ref();
+
         let id = SourceId::from_u16(self.sources.len() as u16);
         let source = Source::new(id, path, text);
         self.sources.push(source);
         id
     }
 
-    pub fn resolve_with(&self, path: &Path, contents: &String) -> FileResult<SourceId> {
+    pub fn resolve_with<P: AsRef<Path>>(&self, path: P, content: &String) -> FileResult<SourceId> {
+        let path = path.as_ref();
         self.slot(path)?
             .source
-            .get_or_init(|| Ok(self.insert(path, contents.to_string())))
+            .get_or_init(|| Ok(self.insert(path, content.to_string())))
             .clone()
     }
 
-    pub fn dependant(&self, path: &Path) -> bool {
+    pub fn dependant<P: AsRef<Path>>(&self, path: P) -> bool {
+        let path = path.as_ref();
+
         if self.hashes.read().contains_key(&path.normalize()) {
             return true;
         }
