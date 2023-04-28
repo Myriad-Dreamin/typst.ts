@@ -3,10 +3,6 @@
 .idea
 .vscode
 
-*.artifact.json
-!math.artifact.json
-/out.json
-
 dist/
 node_modules/
 pkg/
