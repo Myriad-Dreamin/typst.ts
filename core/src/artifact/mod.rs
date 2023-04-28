@@ -51,6 +51,7 @@ pub struct Artifact {
 pub struct ArtifactBuilder {
     fonts: Vec<(TypstFontInfo, LigatureResolver)>,
     font_map: HashMap<TypstFontInfo, FontRef>,
+    with_ligature: bool,
 }
 
 impl ArtifactBuilder {
@@ -58,6 +59,7 @@ impl ArtifactBuilder {
         Self {
             fonts: vec![],
             font_map: HashMap::default(),
+            with_ligature: false,
         }
     }
 
@@ -114,7 +116,9 @@ impl ArtifactBuilder {
 
     pub fn write_text_item(&mut self, text: &TypstTextItem) -> TextItem {
         let idx = self.write_font(&text.font);
-        self.write_ligature_covered(text.font.ttf(), idx, text);
+        if self.with_ligature {
+            self.write_ligature_covered(text.font.ttf(), idx, text);
+        }
         TextItem {
             font: idx,
             size: text.size.into(),
