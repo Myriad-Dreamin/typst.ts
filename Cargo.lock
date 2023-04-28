@@ -2268,6 +2268,7 @@ name = "typst-ts-pdf-exporter"
 version = "0.1.6"
 dependencies = [
  "typst",
+ "typst-ts-core",
 ]
 
 [[package]]
