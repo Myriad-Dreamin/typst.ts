@@ -2317,6 +2317,13 @@ dependencies = [
 [[package]]
 name = "typst-ts-serde-exporter"
 version = "0.1.6"
+dependencies = [
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "typst",
+ "typst-ts-core",
+]
 
 [[package]]
 name = "typst-ts-ws-exporter"

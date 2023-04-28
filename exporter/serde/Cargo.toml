@@ -7,3 +7,15 @@ description = "Export a frame of Typst Artifact into serde formats."
 repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 [dependencies]
+
+typst = "0.3.0"
+typst-ts-core = "0.1.6"
+
+serde = "1.0.159"
+serde_json = { version = "1.0.95", optional = true }
+rmp-serde = { version = "1.1.1", optional = true }
+
+[features]
+json = ["serde_json"]
+rmp = ["rmp-serde"]
+default = []
