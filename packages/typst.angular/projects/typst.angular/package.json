@@ -1,6 +1,13 @@
 {
   "name": "@myriaddreamin/typst.angular",
   "version": "0.0.1",
+  "author": "Myriad-Dreamin",
+  "license": "Apache-2.0",
+  "keywords": [
+    "Angular",
+    "TypeScript",
+    "Typst"
+  ],
   "peerDependencies": {
     "@angular/common": "^15.2.0",
     "@angular/core": "^15.2.0"

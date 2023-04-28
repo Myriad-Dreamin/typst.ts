@@ -1,6 +1,8 @@
 {
   "name": "typst.angular",
   "version": "0.0.0",
+  "author": "Myriad-Dreamin",
+  "license": "Apache-2.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
