@@ -2264,6 +2264,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "typst-ts-pdf-exporter"
+version = "0.1.6"
+dependencies = [
+ "typst",
+]
+
+[[package]]
 name = "typst-ts-raster-exporter"
 version = "0.1.6"
 dependencies = [
@@ -2300,7 +2307,6 @@ dependencies = [
  "typst-ts-canvas-exporter",
  "typst-ts-core",
  "typst-ts-raster-exporter",
- "typst-ts-renderer",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",

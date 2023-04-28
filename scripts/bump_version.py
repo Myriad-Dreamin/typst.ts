@@ -35,6 +35,7 @@ def main(old_version, new_version):
       "contrib/fontctl/Cargo.toml",
       "contrib/dev-server/Cargo.toml",
       "exporter/canvas/Cargo.toml",
+      "exporter/pdf/Cargo.toml",
       "exporter/raster/Cargo.toml",
       "exporter/ws/Cargo.toml",
       "packages/typst.ts/Cargo.toml",

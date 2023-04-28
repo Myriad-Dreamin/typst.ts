@@ -7,6 +7,7 @@ members = [
     "packages/typst.ts",
 
     "exporter/ws",
+    "exporter/pdf",
     "exporter/raster",
     "exporter/canvas",
 
