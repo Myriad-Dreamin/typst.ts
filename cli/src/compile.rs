@@ -9,7 +9,7 @@ use crate::diag::print_diagnostics;
 pub struct CompileAction {
     pub world: TypstSystemWorld,
     pub entry_file: PathBuf,
-    pub doc_exporters: Vec<Box<dyn typst_ts_core::DocExporter>>,
+    pub doc_exporters: Vec<Box<dyn typst_ts_core::DocumentExporter>>,
     pub artifact_exporters: Vec<Box<dyn typst_ts_core::ArtifactExporter>>,
 }
 

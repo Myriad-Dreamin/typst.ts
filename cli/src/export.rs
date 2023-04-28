@@ -6,7 +6,7 @@ pub fn prepare_exporters(
     args: CompileArgs,
     entry_file: &Path,
 ) -> (
-    Vec<Box<dyn typst_ts_core::DocExporter>>,
+    Vec<Box<dyn typst_ts_core::DocumentExporter>>,
     Vec<Box<dyn typst_ts_core::ArtifactExporter>>,
 ) {
     let output_dir = {
@@ -36,7 +36,7 @@ pub fn prepare_exporters(
         formats
     };
 
-    let mut doc_exporters: Vec<Box<dyn typst_ts_core::DocExporter>> = vec![];
+    let mut document_exporters: Vec<Box<dyn typst_ts_core::DocumentExporter>> = vec![];
     let mut artifact_exporters: Vec<Box<dyn typst_ts_core::ArtifactExporter>> = vec![];
 
     for f in formats {
@@ -46,7 +46,7 @@ pub fn prepare_exporters(
                 let output_path = output_dir
                     .with_file_name(entry_file.file_name().unwrap())
                     .with_extension("pdf");
-                doc_exporters.push(Box::new(typst_ts_pdf_exporter::PdfDocExporter::new_path(
+                document_exporters.push(Box::new(typst_ts_pdf_exporter::PdfDocExporter::new_path(
                     output_path,
                 )));
             }
@@ -82,5 +82,5 @@ pub fn prepare_exporters(
         };
     }
 
-    (doc_exporters, artifact_exporters)
+    (document_exporters, artifact_exporters)
 }

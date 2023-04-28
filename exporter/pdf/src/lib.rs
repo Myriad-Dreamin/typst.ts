@@ -1,5 +1,5 @@
 pub use typst::export::pdf;
-use typst_ts_core::DocExporter;
+use typst_ts_core::DocumentExporter;
 
 use std::error::Error;
 
@@ -33,7 +33,7 @@ impl PdfDocExporter {
     }
 }
 
-impl DocExporter for PdfDocExporter {
+impl DocumentExporter for PdfDocExporter {
     fn export(&self, world: &dyn World, output: &typst::doc::Document) -> SourceResult<()> {
         let buffer = typst::export::pdf(&output);
         write_to_path(world, self.path.clone(), buffer)

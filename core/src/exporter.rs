@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use typst::{diag::SourceResult, World};
 
-pub trait DocExporter {
+pub trait DocumentExporter {
     /// Export the given document with given world.
     /// the writable world is hiden by trait itself.
     fn export(&self, world: &dyn World, output: &typst::doc::Document) -> SourceResult<()>;

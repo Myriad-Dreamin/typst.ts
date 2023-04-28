@@ -54,13 +54,13 @@ fn compile(args: CompileArgs) -> ! {
             ..CompileOpts::default()
         });
 
-        let (doc_exporters, artifact_exporters) =
+        let (document_exporters, artifact_exporters) =
             typst_ts_cli::export::prepare_exporters(args.clone(), entry_file_path);
 
         CompileAction {
             world,
             entry_file: entry_file_path.to_owned(),
-            doc_exporters,
+            doc_exporters: document_exporters,
             artifact_exporters,
         }
     };
