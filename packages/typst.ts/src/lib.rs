@@ -20,7 +20,7 @@ mod tests {
 
     fn artifact_path() -> PathBuf {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../fuzzers/corpora/math/math.artifact.json");
+            .join("../../fuzzers/corpora/math/main.artifact.json");
         path
     }
 
