@@ -13,6 +13,7 @@ use typst::diag::SourceResult;
 use typst::geom::{Abs, Size};
 use typst::World;
 use typst_ts_core::artifact::core::EcoString;
+use typst_ts_core::artifact::doc::Frame;
 use typst_ts_core::artifact::font::FontInfo;
 use typst_ts_core::{Artifact, ArtifactExporter};
 
@@ -34,6 +35,7 @@ impl Client {
             fonts: Vec<FontInfo>,
             title: Option<EcoString>,
             author: Vec<EcoString>,
+            pages: Vec<Frame>,
         }
         let visible_range = self
             .visible_range
@@ -67,6 +69,11 @@ impl Client {
             fonts: artifact.fonts.clone(),
             title: artifact.title.clone(),
             author: artifact.author.clone(),
+            pages: if new_meta {
+                artifact.pages.clone()
+            } else {
+                vec![]
+            },
         })
         .unwrap();
 
@@ -98,7 +105,12 @@ impl Client {
             match msg {
                 Ok(msg) => {
                     if let Message::Text(text) = msg {
-                        let range: VisibleRangeInfo = serde_json::from_str(&text).unwrap();
+                        let range: Result<VisibleRangeInfo, _> = serde_json::from_str(&text);
+                        if let Err(range) = range {
+                            error!("failed to parse visible range: {:?}", range);
+                            continue;
+                        }
+                        let range: VisibleRangeInfo = range.unwrap();
                         *self.visible_range.lock().await = Some(range.page_start..range.page_end);
                         if let Some(artifact) = artifact.lock().await.clone() {
                             self.send(artifact, false).await;
@@ -148,9 +160,12 @@ impl WebSocketArtifactExporter {
                     remote_this.conns.lock().await.push(client.clone());
                     {
                         let current_artifact = remote_this.current_artifact.clone();
-                        tokio::spawn(
-                            async move { client.poll_visible_range(current_artifact).await },
-                        );
+                        tokio::spawn(async move {
+                            if let Some(artifact) = current_artifact.lock().await.clone() {
+                                client.send(artifact, true).await;
+                            }
+                            client.poll_visible_range(current_artifact).await
+                        });
                     }
                 }
             }
