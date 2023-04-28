@@ -11,6 +11,7 @@ members = [
     "exporter/canvas",
 
     "contrib/fontctl",
+    "contrib/dev-server",
 ]
 
 [patch.crates-io]
