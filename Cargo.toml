@@ -9,6 +9,7 @@ members = [
     "exporter/ws",
     "exporter/pdf",
     "exporter/raster",
+    "exporter/serde",
     "exporter/canvas",
 
     "contrib/fontctl",
