@@ -45,6 +45,7 @@ impl CompileAction {
     /// Compile once.
     pub fn once(&mut self) -> Vec<SourceError> {
         self.world.reset();
+
         let entry_file = self.entry_file.clone();
         let content = { std::fs::read_to_string(&entry_file).expect("Could not read file") };
         match self.world.resolve_with(&entry_file, &content) {

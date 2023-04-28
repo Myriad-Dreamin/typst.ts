@@ -8,25 +8,30 @@ pub fn prepare_exporters(
     Vec<Box<dyn typst_ts_core::DocExporter>>,
     Vec<Box<dyn typst_ts_core::ArtifactExporter>>,
 ) {
-    let output_dir = if !output.is_empty() {
-        Path::new(&output)
-    } else {
-        entry_file.parent().unwrap()
+    let output_dir = {
+        let output_dir = if !output.is_empty() {
+            Path::new(&output)
+        } else {
+            entry_file.parent().unwrap()
+        };
+        let mut output_dir = output_dir.to_path_buf();
+        output_dir.push("output");
+
+        output_dir
     };
-    let mut output_dir = output_dir.to_path_buf();
-    output_dir.push("output");
+
+    let formats = {
+        if formats.is_empty() {
+            formats.push("pdf".to_string());
+            formats.push("json".to_string());
+        }
+        formats.sort();
+        formats.dedup();
+        formats
+    };
 
     let mut doc_exporters: Vec<Box<dyn typst_ts_core::DocExporter>> = vec![];
     let mut artifact_exporters: Vec<Box<dyn typst_ts_core::ArtifactExporter>> = vec![];
-
-    if formats.is_empty() {
-        formats.push("pdf".to_string());
-        formats.push("json".to_string());
-    }
-    formats.sort();
-    formats.dedup();
-
-    // if formats.contains(&"pdf".to_string()) {}
 
     for f in formats {
         match f.as_str() {
