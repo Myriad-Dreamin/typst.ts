@@ -9,9 +9,8 @@ pub fn prepare_exporters(
     Vec<Box<dyn typst_ts_core::DocExporter>>,
     Vec<Box<dyn typst_ts_core::ArtifactExporter>>,
 ) {
-    let output = args.output.clone();
-    let mut formats = args.format.clone();
     let output_dir = {
+        let output = args.output.clone();
         let output_dir = if !output.is_empty() {
             Path::new(&output)
         } else {
@@ -24,6 +23,7 @@ pub fn prepare_exporters(
     };
 
     let formats = {
+        let mut formats = args.format.clone();
         if !args.web_socket.is_empty() {
             formats.push("web_socket".to_string());
         }
