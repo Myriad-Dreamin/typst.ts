@@ -22,7 +22,7 @@ jobs:
       # - name: Clippy check
       #   run: cargo clippy --workspace --all-targets
       - name: Prepare artifacts
-        run: cargo run --bin typst-ts-cli -- compile --workspace fuzzers/corpora/math/ --entry fuzzers/corpora/math/math.typ
+        run: cargo run --bin typst-ts-cli -- compile --workspace fuzzers/corpora/math/ --entry fuzzers/corpora/math/main.typ
       - name: Build
         run: cargo build --workspace
       - name: Test
