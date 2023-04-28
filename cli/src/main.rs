@@ -48,7 +48,7 @@ fn compile(args: CompileArgs) -> ! {
     let workspace_dir = Path::new(args.workspace.as_str());
     let entry_file_path = Path::new(args.entry.as_str());
 
-    let compile_action = {
+    let compile_action = || {
         let world = TypstSystemWorld::new(CompileOpts {
             root_dir: workspace_dir.to_owned(),
             ..CompileOpts::default()
@@ -67,10 +67,10 @@ fn compile(args: CompileArgs) -> ! {
 
     if args.watch {
         async_continue(async {
-            compile_watch(entry_file_path, workspace_dir, compile_action).await;
+            compile_watch(entry_file_path, workspace_dir, compile_action()).await;
         })
     } else {
-        compile_once(compile_action)
+        compile_once(compile_action())
     }
 
     fn compile_once(mut compile_action: CompileAction) -> ! {
