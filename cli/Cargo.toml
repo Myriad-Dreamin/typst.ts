@@ -16,7 +16,7 @@ typst-ts-compiler = "0.1.6"
 typst-ts-pdf-exporter = { version = "0.1", optional = true }
 typst-ts-raster-exporter = { version = "0.1", optional = true }
 typst-ts-serde-exporter = { version = "0.1", optional = true }
-# typst-ts-ws-exporter = { version = "0.1", optional = true }
+typst-ts-ws-exporter = { version = "0.1", optional = true }
 
 codespan-reporting = "0.11"
 
@@ -40,4 +40,5 @@ pdf = ["typst-ts-pdf-exporter"]
 raster = ["typst-ts-raster-exporter"]
 serde-json = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/json"]
 serde-rmp = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/rmp"]
-default = ["pdf", "raster", "serde-json", "serde-rmp"]
+web-socket = ["typst-ts-ws-exporter"]
+default = ["pdf", "raster", "serde-json", "serde-rmp", "web-socket"]

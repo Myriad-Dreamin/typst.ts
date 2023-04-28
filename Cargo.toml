@@ -23,6 +23,7 @@ typst-ts-pdf-exporter = { path = "exporter/pdf" }
 typst-ts-raster-exporter = { path = "exporter/raster" }
 typst-ts-serde-exporter = { path = "exporter/serde" }
 typst-ts-canvas-exporter = { path = "exporter/canvas" }
+typst-ts-ws-exporter = { path = "exporter/ws" }
 
 typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts" }
 typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts" }
