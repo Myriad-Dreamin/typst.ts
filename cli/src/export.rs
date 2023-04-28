@@ -2,6 +2,13 @@ use std::path::Path;
 
 use crate::CompileArgs;
 
+pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature name */ &str)] = &[
+    ("pdf", "pdf"),
+    ("json", "serde-json"),
+    ("rmp", "serde-rmp"),
+    ("web_socket", "web-socket"),
+];
+
 pub fn prepare_exporters(
     args: CompileArgs,
     entry_file: &Path,
@@ -78,7 +85,14 @@ pub fn prepare_exporters(
                     typst_ts_ws_exporter::WebSocketArtifactExporter::new_url(ws_url),
                 ));
             }
-            _ => panic!("unknown format: {}", f),
+            _ => {
+                let found = AVAILABLE_FORMATS.iter().find(|(k, _)| **k == *f);
+                if let Some((_, feat)) = found {
+                    panic!("feature not enabled for format {:?}: {}", f, *feat)
+                } else {
+                    panic!("unknown format: {}", f)
+                }
+            }
         };
     }
 
