@@ -69,7 +69,7 @@
           })
           .then(() => {
             var xhr = new XMLHttpRequest();
-            xhr.open('GET', 'main.artifact.json', false);
+            xhr.open('GET', 'http://localhost:20810/hw/main.artifact.json', false);
             xhr.send();
 
             const appContainer = document.getElementById('typst-app');
