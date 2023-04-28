@@ -37,6 +37,7 @@ def main(old_version, new_version):
       "exporter/canvas/Cargo.toml",
       "exporter/pdf/Cargo.toml",
       "exporter/raster/Cargo.toml",
+      "exporter/serde/Cargo.toml",
       "exporter/ws/Cargo.toml",
       "packages/typst.ts/Cargo.toml",
   ], [
