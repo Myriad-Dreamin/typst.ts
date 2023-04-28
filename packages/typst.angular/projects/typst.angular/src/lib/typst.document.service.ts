@@ -3,6 +3,6 @@ import { Injectable } from '@angular/core';
 @Injectable({
   providedIn: 'root',
 })
-export class TypstAngularService {
+export class TypstDocumentService {
   constructor() {}
 }

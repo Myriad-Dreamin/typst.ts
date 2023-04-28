@@ -1,17 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { TypstAngularComponent } from './typst.angular.component';
+import { TypstDocumentComponent } from './typst.document.component';
 
-describe('TypstAngularComponent', () => {
-  let component: TypstAngularComponent;
-  let fixture: ComponentFixture<TypstAngularComponent>;
+describe('TypstDocumentComponent', () => {
+  let component: TypstDocumentComponent;
+  let fixture: ComponentFixture<TypstDocumentComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [TypstAngularComponent],
+      declarations: [TypstDocumentComponent],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(TypstAngularComponent);
+    fixture = TestBed.createComponent(TypstDocumentComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

@@ -2,6 +2,6 @@
  * Public API Surface of typst.angular
  */
 
-export * from './lib/typst.angular.service';
-export * from './lib/typst.angular.component';
-export * from './lib/typst.angular.module';
+export * from './lib/typst.document.service';
+export * from './lib/typst.document.component';
+export * from './lib/typst.document.module';

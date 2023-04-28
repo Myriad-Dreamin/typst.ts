@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { TypstAngularService } from './typst.angular.service';
+import { TypstDocumentService } from './typst.document.service';
 
-describe('TypstAngularService', () => {
-  let service: TypstAngularService;
+describe('TypstDocumentService', () => {
+  let service: TypstDocumentService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(TypstAngularService);
+    service = TestBed.inject(TypstDocumentService);
   });
 
   it('should be created', () => {
