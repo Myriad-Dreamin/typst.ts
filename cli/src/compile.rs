@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use typst::diag::{SourceError, SourceResult};
 use typst_ts_compiler::TypstSystemWorld;
@@ -71,9 +71,9 @@ impl CompileAction {
                 for f in &self.doc_exporters {
                     collect_err(f.export(&self.world, &document))
                 }
-                let artifact = Artifact::from(document);
+                let artifact = Arc::new(Artifact::from(document));
                 for f in &self.artifact_exporters {
-                    collect_err(f.export(&self.world, &artifact))
+                    collect_err(f.export(&self.world, artifact.clone()))
                 }
 
                 errors

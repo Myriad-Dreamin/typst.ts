@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use typst::{diag::SourceResult, World};
 
 pub trait DocExporter {
@@ -8,5 +10,5 @@ pub trait DocExporter {
 
 pub trait ArtifactExporter {
     /// Export the given artifact with given world.
-    fn export(&self, world: &dyn World, output: &crate::Artifact) -> SourceResult<()>;
+    fn export(&self, world: &dyn World, output: Arc<crate::Artifact>) -> SourceResult<()>;
 }
