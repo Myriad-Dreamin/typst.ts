@@ -26,7 +26,7 @@
   "dependencies": {
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
-    "@myriaddreamin/typst.ts": "^0.1.6"
+    "@myriaddreamin/typst.ts": "^0.1"
   },
   "peerDependencies": {      
     "react": "^17.0.1",

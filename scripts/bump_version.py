@@ -50,16 +50,11 @@ def main(old_version, new_version):
   def version_lit(v):
     return f'"version": "{v}"'
 
-  def dep_core_lit(v):
-    return f'"@myriaddreamin/typst.ts": "^{v}"'
-
   for package_file in [
       "packages/typst.ts/package.json",
       "packages/typst.react/package.json",
   ]:
     replace_version(package_file, version_lit(old_version), version_lit(new_version))
-    if 'typst.ts' not in package_file:
-      replace_version(package_file, dep_core_lit(old_version), dep_core_lit(new_version))
 
 
 if __name__ == '__main__':
