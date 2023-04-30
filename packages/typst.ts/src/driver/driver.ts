@@ -8,6 +8,7 @@ import type { InitOptions, BeforeBuildMark } from './options.init';
 import { PageViewport } from './viewport';
 import { RenderSession } from './internal.types';
 import { RenderByStringOptions, RenderOptions, RenderPageOptions } from './options.render';
+import { RenderView } from './view';
 
 /**
  * The result of rendering a Typst document.
@@ -241,19 +242,13 @@ class TypstRendererDriver {
 
   private async renderOnePageTextLayer(
     container: HTMLElement,
-    // page: pdfjsModule.PDFPageProxy,
     viewport: PageViewport,
-    textContentSourceLT: any,
+    textContentSource: any,
   ) {
-    // const textContentSourceGT = await page.getTextContent();
-    // console.log(textContentSourceLT, textContentSourceGT, page.getViewport({ scale }));
     // console.log(viewport);
     this.pdf.renderTextLayer({
-      textContentSource: textContentSourceLT,
+      textContentSource,
       container,
-
-      // todo: implement functions
-      // constructor({ viewBox, scale, rotation, offsetX, offsetY, dontFlip, }: PageViewportParameters);
       viewport,
     });
   }
@@ -268,20 +263,11 @@ class TypstRendererDriver {
     const containerWidth = container.offsetWidth;
     const t2 = performance.now();
 
-    // const buf = await this.renderPdfInSession(session);
-    // const doc = await this.pdf.getDocument(buf).promise;
-    const t3 = performance.now();
-
     const pages_info = session.pages_info;
 
     const renderOne = async (layer: HTMLDivElement, i: number) => {
-      // const page = await doc.getPage(i + 1);
-      let page_number;
-      if (pages) {
-        page_number = pages[i].number;
-      } else {
-        page_number = i;
-      }
+      let page_number = pages ? pages[i].number : i;
+
       const page_info = pages_info.page_by_number(page_number);
       if (!page_info) {
         console.error('page not found for', i, pages_info);
@@ -306,11 +292,8 @@ class TypstRendererDriver {
     };
 
     await Promise.all(layerList.map(renderOne));
-    const t4 = performance.now();
-
-    console.log(
-      `text layer used: retieve/render = ${(t3 - t2).toFixed(1)}/${(t4 - t3).toFixed(1)}ms`,
-    );
+    const t3 = performance.now();
+    console.log(`text layer used: render = ${(t3 - t2).toFixed(1)}ms`);
   }
 
   async render(options: RenderOptions): Promise<RenderResult> {
@@ -338,190 +321,22 @@ class TypstRendererDriver {
     };
 
     const doRenderTextLayer = (layerList: HTMLDivElement[]) =>
-      new Promise(resolve => {
-        // setTimeout(() => {
-        // console.log(textContentList);
-        // setImmediate
-        this.renderTextLayer(session, mountContainer, layerList, textContentList).then(resolve);
-        // }, 0);
-      });
+      this.renderTextLayer(session, mountContainer, layerList, textContentList);
 
     return this.withinOptionSession(options, async sessionRef => {
       session = sessionRef;
-
-      const container = mountContainer;
-
-      const imageScaleFactor = options.pixelPerPt ?? 2;
-
-      const pages_info = session.pages_info;
-      const page_count = pages_info.page_count;
-
-      if (page_count === 0) {
+      if (session.pages_info.page_count === 0) {
         throw new Error(`No page found in session ${session}`);
       }
 
       const t = performance.now();
-
-      /// all children
-      const commonDivList = Array.from(container.getElementsByTagName('div')).filter(
-        (div: HTMLDivElement) => {
-          div.parentElement === container;
-        },
-      );
-      if (!options.pages) {
-        container.innerHTML = '';
-      }
-      container.style.width = '100%';
-
-      // canvas[data-typst-session='{}']
-
-      /// create canvas for each page
-      const load_page_cnt = options.pages ? options.pages.length : page_count;
-      const canvasList = new Array(load_page_cnt);
-      const layerList = new Array(load_page_cnt);
-      const commonList = new Array(load_page_cnt);
-      const textLayerParentList = new Array(load_page_cnt);
-
-      function createOver(i: number, width: number, height: number, commonDiv: HTMLDivElement) {
-        const canvas = (canvasList[i] = document.createElement('canvas'));
-        const textLayer = (layerList[i] = document.createElement('div'));
-        const textLayerParent = (textLayerParentList[i] = document.createElement('div'));
-
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const canvasDiv = document.createElement('div');
-
-          canvas.width = width;
-          canvas.height = height;
-
-          canvasDiv.appendChild(canvas);
-          // canvasDiv.style.zIndex = '-1';
-          // canvas.style.zIndex = '-1';
-          commonDiv.appendChild(canvasDiv);
-          canvasDiv.style.position = 'absolute';
-        }
-
-        {
-          textLayerParent.appendChild(textLayer);
-
-          textLayerParent.className = 'text-layer textLayer';
-
-          /// on width change
-          const containerWidth = container.offsetWidth;
-          const orignalScale = containerWidth / width;
-          textLayerParent.style.width = `${containerWidth}px`;
-          textLayerParent.style.height = `${height * orignalScale}px`;
-          commonDiv.style.width = `${containerWidth}px`;
-          commonDiv.style.height = `${height * orignalScale}px`;
-          commonDiv.style.position = 'relative';
-
-          // textLayerParent.style.zIndex = '1';
-          commonDiv.appendChild(textLayerParent);
-          textLayerParent.style.position = 'absolute';
-        }
-      }
-
-      if (options.pages) {
-        for (let i = 0; i < load_page_cnt; i++) {
-          const pageNum = options.pages[i].number;
-          const pageAst = pages_info.page_by_number(pageNum);
-          if (!pageAst) {
-            throw new Error(`page ${pageNum} is not loaded`);
-          }
-          const width = Math.ceil(pageAst.width_pt) * imageScaleFactor;
-          const height = Math.ceil(pageAst.height_pt) * imageScaleFactor;
-
-          // const commonDiv = document.createElement('div');
-          let commonDiv = undefined;
-
-          while (pageNum >= commonDivList.length) {
-            const elem = document.createElement('div');
-            commonDivList.push(elem);
-            container.appendChild(elem);
-          }
-          commonDiv = commonList[i] = commonDivList[pageNum];
-          if (commonDiv) {
-            commonDiv.innerHTML = '';
-          }
-
-          createOver(i, width, height, commonDiv);
-        }
-      } else {
-        for (let i = 0; i < load_page_cnt; i++) {
-          const pageAst = pages_info.page(i);
-          const width = Math.ceil(pageAst.width_pt) * imageScaleFactor;
-          const height = Math.ceil(pageAst.height_pt) * imageScaleFactor;
-
-          // const commonDiv = document.createElement('div');
-          let commonDiv = undefined;
-
-          commonDiv = commonList[i] = document.createElement('div');
-          container.appendChild(commonDiv);
-          createOver(i, width, height, commonDiv);
-        }
-      }
-
+      const pageView = new RenderView(session, mountContainer, options);
       const t2 = performance.now();
 
       console.log(`layer used: retieve = ${(t2 - t).toFixed(1)}ms`);
 
-      const resetLayout = () => {
-        /// resize again to avoid bad width change after render
-        if (options.pages) {
-          for (let i = 0; i < load_page_cnt; i++) {
-            const pageNum = options.pages[i].number;
-            const pageAst = pages_info.page_by_number(pageNum);
-            if (!pageAst) {
-              throw new Error(`page ${pageNum} is not loaded`);
-            }
-            const width = Math.ceil(pageAst.width_pt) * imageScaleFactor;
-            const height = Math.ceil(pageAst.height_pt) * imageScaleFactor;
-
-            const canvasDiv = canvasList[i].parentElement!;
-            const commonDiv = commonList[i];
-            const textLayerParent = textLayerParentList[i];
-
-            /// on width change
-            const containerWidth = container.offsetWidth;
-            const orignalScale = containerWidth / width;
-            textLayerParent.style.width = `${containerWidth}px`;
-            textLayerParent.style.height = `${height * orignalScale}px`;
-            commonDiv.style.width = `${containerWidth}px`;
-            commonDiv.style.height = `${height * orignalScale}px`;
-
-            // compute scaling factor according to the paper size
-            const currentScale = container.offsetWidth / width;
-            canvasDiv.style.transformOrigin = '0px 0px';
-            canvasDiv.style.transform = `scale(${currentScale})`;
-          }
-        } else {
-          for (let i = 0; i < load_page_cnt; i++) {
-            const pageAst = pages_info.page(i);
-            const width = Math.ceil(pageAst.width_pt) * imageScaleFactor;
-            const height = Math.ceil(pageAst.height_pt) * imageScaleFactor;
-
-            const canvasDiv = canvasList[i].parentElement!;
-            const commonDiv = commonList[i];
-            const textLayerParent = textLayerParentList[i];
-
-            /// on width change
-            const containerWidth = container.offsetWidth;
-            const orignalScale = containerWidth / width;
-            textLayerParent.style.width = `${containerWidth}px`;
-            textLayerParent.style.height = `${height * orignalScale}px`;
-            commonDiv.style.width = `${containerWidth}px`;
-            commonDiv.style.height = `${height * orignalScale}px`;
-
-            // compute scaling factor according to the paper size
-            const currentScale = container.offsetWidth / width;
-            canvasDiv.style.transformOrigin = '0px 0px';
-            canvasDiv.style.transform = `scale(${currentScale})`;
-          }
-        }
-      };
-
-      await doRenderDisplayLayer(canvasList, resetLayout);
-      doRenderTextLayer(layerList).catch(e => {
+      await doRenderDisplayLayer(pageView.canvasList, () => pageView.resetLayout());
+      doRenderTextLayer(pageView.layerList).catch(e => {
         console.error('render text layer', e);
       });
 
