@@ -1,5 +1,11 @@
 import * as initOptions from './options.init';
 export type { InitOptions, BeforeBuildFn } from './options.init';
+export type {
+  RenderByStringOptions,
+  RenderInSessionOptions,
+  RenderPageOptions,
+  RenderOptions,
+} from './options.render';
 export { preloadRemoteFonts, preloadSystemFonts } from './options.init';
 import * as driver from './driver';
 export type { TypstRenderer } from './driver';
