@@ -13,7 +13,8 @@
   },
   "peerDependencies": {
     "@angular/common": "^15.2.0",
-    "@angular/core": "^15.2.0"
+    "@angular/core": "^15.2.0",
+    "@myriaddreamin/typst.ts": "^0.1"
   },
   "dependencies": {
     "tslib": "^2.3.0"
