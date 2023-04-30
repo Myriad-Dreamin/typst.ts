@@ -111,8 +111,24 @@ Import Typst.ts in your project:
 
 - Using [@myriaddreamin/typst.angular][npm::typst.angular]
 
+  In the module file of your awesome component.
+
+  ```typescript
+  /// component.module.ts
+  import { TypstDocumentModule } from '@myriaddreamin/typst.angular';
+  ```
+
+  Using directive `typst-document` in your template file.
+
+  ```html
+  <typst-document fill="#343541" artifact="{{ artifact }}"></typst-document>
+  ```
+
+- Using [@myriaddreamin/typst.vue3][npm::typst.vue3]
+
   Coming soon.
 
 [npm::typst.ts]: https://www.npmjs.com/package/@myriaddreamin/typst.ts
 [npm::typst.react]: https://www.npmjs.com/package/@myriaddreamin/typst.react
-[npm::typst.angular]: ./packages/typst.angular/README.md
+[npm::typst.angular]: https://www.npmjs.com/package/@myriaddreamin/typst.angular
+[npm::typst.vue3]: ./packages/typst.vue3/README.md
