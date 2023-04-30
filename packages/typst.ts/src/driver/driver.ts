@@ -476,7 +476,7 @@ class TypstRendererDriver {
   ) {
     // const textContentSourceGT = await page.getTextContent();
     // console.log(textContentSourceLT, textContentSourceGT, page.getViewport({ scale }));
-    console.log(viewport);
+    // console.log(viewport);
     this.pdf.renderTextLayer({
       textContentSource: textContentSourceLT,
       container,
@@ -522,7 +522,7 @@ class TypstRendererDriver {
       // the --scale-factor will truncate our scale, we do it first
       const scale = Number.parseFloat(orignalScale.toFixed(4));
       layer.parentElement?.style.setProperty('--scale-factor', scale.toString());
-      console.log('orignalScale', orignalScale, scale);
+      // console.log('orignalScale', orignalScale, scale);
       const viewport = new PageViewport({
         viewBox: [0, 0, width_pt, height_pt],
         scale: scale,
@@ -750,9 +750,9 @@ class TypstRendererDriver {
       };
 
       await doRenderDisplayLayer(canvasList, resetLayout);
-      // doRenderTextLayer(layerList).catch(e => {
-      //   console.error('render text layer', e);
-      // });
+      doRenderTextLayer(layerList).catch(e => {
+        console.error('render text layer', e);
+      });
 
       return renderResult;
     });
