@@ -12,9 +12,9 @@
     "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
     "test": "echo \"Error: no test specified\" && exit 1",
     "link:local": "yarn link @myriaddreamin/typst.ts",
-		"prepublish": "npm run build:lib",
-		"publish:dry": "npm publish --dry-run --access public ./dist/lib",
-		"publish": "npm publish --access public ./dist/lib"
+    "prepublish": "npm run build:lib",
+    "publish:dry": "npm publish --dry-run --access public ./dist/lib",
+    "publish": "npm publish --access public ./dist/lib"
   },
   "keywords": [
     "React",
@@ -28,7 +28,7 @@
     "react-dom": "^17.0.1",
     "@myriaddreamin/typst.ts": "^0.1"
   },
-  "peerDependencies": {      
+  "peerDependencies": {
     "react": "^17.0.1",
     "react-dom": "^17.0.1"
   },
