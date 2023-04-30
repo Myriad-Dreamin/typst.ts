@@ -49,6 +49,10 @@ pub struct CompileArgs {
     #[clap(long, short, default_value = ".")]
     pub workspace: String,
 
+    /// watch mode.
+    #[clap(long)]
+    pub watch: bool,
+
     /// Entry file.
     #[clap(long, short, required = true)]
     pub entry: String,
@@ -64,10 +68,6 @@ pub struct CompileArgs {
     /// Output to directory, default in the same directory as the entry file.
     #[clap(long, short, default_value = "")]
     pub output: String,
-
-    /// watch mode.
-    #[clap(long)]
-    pub watch: bool,
 }
 
 /// List all discovered fonts in system and custom font paths
