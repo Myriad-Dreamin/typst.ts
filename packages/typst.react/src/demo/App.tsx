@@ -5,7 +5,9 @@ export const App = () => {
   const [artifact, setArtifact] = useState<string>('');
 
   const getArtifactJson = async () => {
-    const response = await fetch('/main.artifact.json').then(response => response.text());
+    const response = await fetch('http://localhost:20810/hw/main.artifact.json').then(response =>
+      response.text(),
+    );
 
     setArtifact(response);
   };
