@@ -55,12 +55,12 @@
           .init({
             beforeBuild: [
               window.TypstRenderModule.preloadRemoteFonts([
-                'dist/fonts/LinLibertine_R.ttf',
-                'dist/fonts/LinLibertine_RB.ttf',
-                'dist/fonts/LinLibertine_RBI.ttf',
-                'dist/fonts/LinLibertine_RI.ttf',
-                'dist/fonts/NewCMMath-Book.otf',
-                'dist/fonts/NewCMMath-Regular.otf',
+                'http://localhost:20811/fonts/LinLibertine_R.ttf',
+                'http://localhost:20811/fonts/LinLibertine_RB.ttf',
+                'http://localhost:20811/fonts/LinLibertine_RBI.ttf',
+                'http://localhost:20811/fonts/LinLibertine_RI.ttf',
+                'http://localhost:20811/fonts/NewCMMath-Book.otf',
+                'http://localhost:20811/fonts/NewCMMath-Regular.otf',
               ]),
               window.TypstRenderModule.preloadSystemFonts({
                 byFamily: ['Segoe UI Symbol'],
