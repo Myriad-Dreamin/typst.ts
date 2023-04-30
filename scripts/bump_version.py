@@ -53,6 +53,7 @@ def main(old_version, new_version):
   for package_file in [
       "packages/typst.ts/package.json",
       "packages/typst.react/package.json",
+      "packages/typst.angular/projects/typst.angular/package.json",
   ]:
     replace_version(package_file, version_lit(old_version), version_lit(new_version))
 
