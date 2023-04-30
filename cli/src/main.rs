@@ -51,6 +51,7 @@ fn compile(args: CompileArgs) -> ! {
     let compile_action = || {
         let world = TypstSystemWorld::new(CompileOpts {
             root_dir: workspace_dir.to_owned(),
+            font_paths: args.font_paths.clone(),
             ..CompileOpts::default()
         });
 

@@ -68,6 +68,10 @@ pub struct CompileArgs {
     /// Output to directory, default in the same directory as the entry file.
     #[clap(long, short, default_value = "")]
     pub output: String,
+
+    /// Add additional directories to search for fonts
+    #[clap(long = "font-path", value_name = "DIR", action = ArgAction::Append)]
+    pub font_paths: Vec<PathBuf>,
 }
 
 /// List all discovered fonts in system and custom font paths
