@@ -120,10 +120,7 @@ export const TypstDocument = ({ fill, artifact }: TypstDocumentProps) => {
 
   return (
     <div>
-      <div id="display-layer" style={{ height: '0' }} ref={displayDivRef}></div>
-      <div>
-        <div id="text-layer" className="textLayer"></div>
-      </div>
+      <div className="typst-app" style={{ height: '0' }} ref={displayDivRef}></div>
     </div>
   );
 };
