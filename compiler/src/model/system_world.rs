@@ -42,6 +42,13 @@ impl TypstSystemWorld {
         let mut searcher = SystemFontSearcher::new();
         searcher.search_system();
         searcher.add_embedded();
+        for path in opts.font_paths {
+            if path.is_dir() {
+                searcher.search_dir(&path);
+            } else {
+                searcher.search_file(&path);
+            }
+        }
 
         // Hook up the lang items.
         // todo: bad upstream changes
