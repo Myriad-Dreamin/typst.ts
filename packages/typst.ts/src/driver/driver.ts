@@ -6,6 +6,7 @@ import typstInit, * as typst from '../../pkg/typst_ts_renderer';
 import type * as pdfjsModule from 'pdfjs-dist';
 import type { InitOptions, BeforeBuildMark } from './options.init';
 import { PageViewport } from './viewport';
+import { RenderSession } from './internal.types';
 
 /**
  * The options for rendering a page to an image.
@@ -70,21 +71,6 @@ export interface RenderResult {
   height: number;
 }
 
-/**
- * The session of a Typst document.
- * @typedef {Object} RenderSession
- * @property {string} background_color - The background color of the Typst document.
- * @property {number} pixel_per_pt - The pixel per point scale up the image.
- *
- * caution: the underlying object is created by the wasm module, which means that
- *   + any modification will raise an error.
- *   + Never clone the object and pass it back to typst renderer.
- *   + You must not hold a reference, since it will be freed after a while
- */
-export interface RenderSession {
-  readonly background_color: string;
-  readonly pixel_per_pt: number;
-}
 /**
  * The interface of Typst renderer.
  * @typedef {Object} TypstRenderer
