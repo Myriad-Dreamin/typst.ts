@@ -41,7 +41,7 @@ const context = await esbuild.context({
     js: banner,
   },
   outdir: 'dist',
-  entryPoints: ['src/driver/main.ts'],
+  entryPoints: ['src/driver/main.ts', 'src/driver/contrib/global-renderer.ts'],
   bundle: true,
   format: 'esm',
   platform: 'browser',
