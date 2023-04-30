@@ -1,40 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
+import { withGlobalRenderer } from '@myriaddreamin/typst.ts/dist/contrib/global-renderer';
 import * as typst from '@myriaddreamin/typst.ts';
 
 export interface TypstDocumentProps {
   fill?: string;
   artifact: string;
 }
-
-// todo: determine renderer thread-safety
-const renderer = typst.createTypstRenderer((window as unknown as any).pdfjsLib);
-
-let globalRendererInitReady: Promise<void>;
-let isReady = false;
-let rendererInitReady = () => {
-  if (globalRendererInitReady) {
-    return globalRendererInitReady;
-  }
-
-  return (globalRendererInitReady = (async () => {
-    isReady = true;
-    await renderer.init({
-      beforeBuild: [
-        typst.preloadRemoteFonts([
-          'fonts/LinLibertine_R.ttf',
-          'fonts/LinLibertine_RB.ttf',
-          'fonts/LinLibertine_RBI.ttf',
-          'fonts/LinLibertine_RI.ttf',
-          'fonts/NewCMMath-Book.otf',
-          'fonts/NewCMMath-Regular.otf',
-        ]),
-        typst.preloadSystemFonts({
-          byFamily: ['Segoe UI Symbol'],
-        }),
-      ],
-    });
-  })());
-};
 
 // This just queries the existing state of the permission, it does not change it.
 async function queryFontPermission() {
@@ -80,7 +51,7 @@ export const TypstDocument = ({ fill, artifact }: TypstDocumentProps) => {
     }
     return displayDivRef?.current;
   };
-  const doRender = () => {
+  const doRender = (renderer: typst.TypstRenderer) => {
     const divElem = getDisplayLayerDiv();
     if (!divElem) {
       return;
@@ -106,14 +77,26 @@ export const TypstDocument = ({ fill, artifact }: TypstDocumentProps) => {
       return;
     }
 
-    /// fast check renderer state
-    if (isReady) {
-      doRender();
-      return;
-    }
-
     /// render after init
-    rendererInitReady().then(doRender);
+    withGlobalRenderer(
+      (window as unknown as any).pdfjsLib,
+      {
+        beforeBuild: [
+          typst.preloadRemoteFonts([
+            'fonts/LinLibertine_R.ttf',
+            'fonts/LinLibertine_RB.ttf',
+            'fonts/LinLibertine_RBI.ttf',
+            'fonts/LinLibertine_RI.ttf',
+            'fonts/NewCMMath-Book.otf',
+            'fonts/NewCMMath-Regular.otf',
+          ]),
+          typst.preloadSystemFonts({
+            byFamily: ['Segoe UI Symbol'],
+          }),
+        ],
+      },
+      doRender,
+    );
   }, [permission, displayDivRef, fill, artifact]);
 
   /// --- end: update document --- ///
