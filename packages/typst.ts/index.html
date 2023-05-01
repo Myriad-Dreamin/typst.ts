@@ -68,21 +68,23 @@
             ],
           })
           .then(() => {
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', 'http://localhost:20810/hw/main.artifact.json', false);
-            xhr.send();
-
-            const appContainer = document.getElementById('typst-app');
-
-            plugin
-              .render({
-                artifactContent: xhr.responseText,
-                container: appContainer,
-                backgroundColor: '#343541',
-                pixelPerPt: 8,
-              })
-              .then(renderResult => {
-                console.log('render done');
+            fetch('http://localhost:20810/hw/main.artifact_ir.bin')
+              .then(response => response.arrayBuffer())
+              .then(buffer => new Uint8Array(buffer))
+              .then(buffer => {
+                const appContainer = document.getElementById('typst-app');
+    
+                plugin
+                  .render({
+                    artifactContent: buffer,
+                    container: appContainer,
+                    backgroundColor: '#343541',
+                    pixelPerPt: 8,
+                    format: 'ir',
+                  })
+                  .then(renderResult => {
+                    console.log('render done');
+                  });
               });
           });
       });

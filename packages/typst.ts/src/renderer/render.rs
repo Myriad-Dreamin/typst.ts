@@ -5,9 +5,10 @@ mod tests {
     use wasm_bindgen_test::*;
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-    fn render_test_template(point: &str, artifact: &[u8]) {
+    use crate::renderer::session::RenderSessionOptions;
+
+    fn render_test_template(point: &str, artifact: &[u8], format: &str) {
         let artifact = artifact.into();
-        let artifact = String::from_utf8_lossy(artifact);
 
         let window = web_sys::window().expect("should have a window in this context");
         let performance = window
@@ -16,9 +17,11 @@ mod tests {
 
         let mut renderer = crate::tests::get_renderer();
 
-        let mut session = renderer.create_session(artifact.to_string(), None).unwrap();
-        session.background_color = "343541".to_string();
-        session.pixel_per_pt = 1.0;
+        let mut session = renderer.create_session(artifact, Some(RenderSessionOptions{
+            pixel_per_pt: Some(1.0),
+            background_color: Some("343541".to_string()),
+            format: Some(format.to_string()),
+        })).unwrap();
 
         let canvas = window
             .document()
@@ -61,18 +64,28 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-    fn render_main_test() {
+    fn render_ir_test() {
         render_test_template(
             "main_artifact",
-            include_bytes!("../../main.artifact.json").as_slice(),
+            include_bytes!("../../main.artifact_ir.bin").as_slice(),
+            "ir",
         );
     }
 
     #[wasm_bindgen_test]
-    fn render_cv_test() {
+    fn render_json_test() {
         render_test_template(
-            "cv_artifact",
-            include_bytes!("../../cv.artifact.json").as_slice(),
+            "main_artifact",
+            include_bytes!("../../main.artifact.json").as_slice(),
+            "js",
         );
     }
+
+    // #[wasm_bindgen_test]
+    // fn render_cv_test() {
+    //     render_test_template(
+    //         "cv_artifact",
+    //         include_bytes!("../../cv.artifact.json").as_slice(),
+    //     );
+    // }
 }

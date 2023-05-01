@@ -29,6 +29,7 @@ tiny-skia = "0.6.6"
 serde_json = { version = "1.0.95", optional = true }
 serde = { version = "1.0.159", optional = true }
 rmp-serde = { version = "1.1.1", optional = true }
+byteorder = "1.4.3"
 
 # Everything to do with wasm
 wasm-bindgen = { version = "^0.2" }
@@ -48,4 +49,4 @@ serde_rmp = ["dep:serde", "dep:rmp-serde"]
 render_raster = ["dep:typst-ts-raster-exporter"]
 render_canvas = ["dep:typst-ts-canvas-exporter", "web-sys/CanvasRenderingContext2d"]
 default = ["full"]
-web = ["render_canvas"]
+web = ["render_canvas", "serde_json"]

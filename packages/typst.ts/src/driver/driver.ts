@@ -7,7 +7,7 @@ import type * as pdfjsModule from 'pdfjs-dist';
 import type { InitOptions, BeforeBuildMark } from './options.init';
 import { PageViewport } from './viewport';
 import { RenderSession } from './internal.types';
-import { RenderByStringOptions, RenderOptions, RenderPageOptions } from './options.render';
+import { RenderByContentOptions, RenderOptions, RenderPageOptions } from './options.render';
 import { RenderView } from './view';
 
 /**
@@ -39,7 +39,7 @@ export interface TypstRenderer {
   /// the lifetime of session is quite bug-prone, so we current does not make it
   /// longer live than the function call.
   runWithSession<T>(
-    options: RenderByStringOptions,
+    options: RenderByContentOptions,
     fn: (session: RenderSession) => Promise<T>,
   ): Promise<T>;
 }
@@ -123,6 +123,10 @@ class TypstRendererDriver {
       rustOptions.background_color = options.backgroundColor.slice(1);
     }
 
+    if (options.format !== undefined) {
+      rustOptions.format = options.format;
+    }
+
     return rustOptions;
   }
 
@@ -141,13 +145,13 @@ class TypstRendererDriver {
     return this.renderer.render_page_to_canvas(session as typst.RenderSession, canvas, rustOptions);
   }
 
-  async renderPdf(artifactContent: string): Promise<Uint8Array> {
-    return this.renderer.render_to_pdf(artifactContent);
-  }
-
-  async renderPdfInSession(session: RenderSession): Promise<Uint8Array> {
-    return this.renderer.render_to_pdf_in_session(session as typst.RenderSession);
-  }
+  // async renderPdf(artifactContent: string): Promise<Uint8Array> {
+    // return this.renderer.render_to_pdf(artifactContent);
+  // }
+// 
+  // async renderPdfInSession(session: RenderSession): Promise<Uint8Array> {
+    // return this.renderer.render_to_pdf_in_session(session as typst.RenderSession);
+  // }
 
   private async inAnimationFrame<T>(fn: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
@@ -357,12 +361,12 @@ class TypstRendererDriver {
     }
 
     throw new Error(
-      'Invalid render options, should be one of RenderByStringOptions|RenderBySessionOptions',
+      'Invalid render options, should be one of RenderByContentOptions|RenderBySessionOptions',
     );
   }
 
   async runWithSession<T>(
-    options: RenderByStringOptions,
+    options: RenderByContentOptions,
     fn: (session: typst.RenderSession) => Promise<T>,
   ): Promise<T> {
     const t = performance.now();

@@ -25,15 +25,17 @@ export interface RenderOptionsBase {
 
   backgroundColor?: string;
   pixelPerPt?: number;
+
+  format?: string;
 }
 
 /**
  * The options for rendering a Typst document to specified container.
- * @typedef {Object} RenderByStringOptions
- * @property {string} artifactContent - The Typst document content.
+ * @typedef {Object} RenderByContentOptions
+ * @property {Uint8Array} artifactContent - The Typst document content.
  */
-export interface RenderByStringOptions extends RenderOptionsBase {
-  artifactContent: string;
+export interface RenderByContentOptions extends RenderOptionsBase {
+  artifactContent: Uint8Array;
 }
 
 /**
@@ -47,7 +49,7 @@ export interface RenderInSessionOptions extends RenderOptionsBase {
 
 /**
  * The options for rendering a Typst document to specified container.
- * @typedef {Object} RenderByStringOptions
- * @description see {@link RenderByStringOptions} and {@link RenderInSessionOptions}
+ * @typedef {Object} RenderByContentOptions
+ * @description see {@link RenderByContentOptions} and {@link RenderInSessionOptions}
  */
-export type RenderOptions = RenderByStringOptions | RenderInSessionOptions;
+export type RenderOptions = RenderByContentOptions | RenderInSessionOptions;

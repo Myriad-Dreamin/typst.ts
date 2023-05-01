@@ -1,17 +1,25 @@
 use std::sync::{Arc, RwLock};
 
+use js_sys::Uint8Array;
 use typst::font::{FontFlags, FontInfo as TypstFontInfo, FontVariant};
 use typst::geom::Abs;
 use typst_ts_core::artifact::doc::Frame;
 use typst_ts_core::{font::FontResolverImpl, Artifact, FontResolver};
+use typst_ts_core::artifact_ir::Artifact as IRArtifact;
 use wasm_bindgen::prelude::*;
+
+use web_sys::console;
+
+use crate::utils::console_log;
 
 use super::artifact::{artifact_from_js_string, page_from_js_string};
 
 #[wasm_bindgen]
+#[derive(Default, Debug)]
 pub struct RenderSessionOptions {
     pub(crate) pixel_per_pt: Option<f32>,
     pub(crate) background_color: Option<String>,
+    pub(crate) format: Option<String>,
 }
 
 #[wasm_bindgen]
@@ -21,6 +29,7 @@ impl RenderSessionOptions {
         Self {
             pixel_per_pt: None,
             background_color: None,
+            format: None,
         }
     }
 
@@ -42,6 +51,16 @@ impl RenderSessionOptions {
     #[wasm_bindgen(setter)]
     pub fn set_background_color(&mut self, background_color: String) {
         self.background_color = Some(background_color);
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn format(&self) -> Option<String> {
+        self.format.clone()
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_format(&mut self, format: String) {
+        self.format = Some(format);
     }
 }
 
@@ -103,12 +122,14 @@ pub type LigatureMap = std::collections::HashMap<
     std::collections::HashMap<u16, std::string::String>,
 >;
 
+type ArtifactMeta = Artifact;
+
 #[wasm_bindgen]
 pub struct RenderSession {
     pub(crate) pixel_per_pt: f32,
     pub(crate) background_color: String,
     pub(crate) doc: typst::doc::Document,
-    pub(crate) artifact_meta: Artifact,
+    pub(crate) artifact_meta: ArtifactMeta,
     pub(crate) pages_info: PagesInfo,
     pub(crate) ligature_map: LigatureMap,
 }
@@ -133,7 +154,7 @@ impl RenderSession {
 
 impl RenderSession {
     pub(crate) fn from_artifact<T: FontResolver>(
-        artifact: typst_ts_core::Artifact,
+        artifact: Artifact,
         font_resolver: &T,
     ) -> Self {
         let mut ligature_map = std::collections::HashMap::<
@@ -166,6 +187,68 @@ impl RenderSession {
             fonts: artifact.fonts.clone(),
             title: artifact.title.clone(),
             author: artifact.author.clone(),
+        };
+        let doc = artifact.to_document(font_resolver);
+
+        let pages_info = PagesInfo {
+            pages: {
+                let mut pages = Vec::new();
+                pages.reserve(doc.pages.len());
+                for (i, page) in doc.pages.iter().enumerate() {
+                    pages.push(PageInfo {
+                        page_off: i,
+                        width: page.size().x,
+                        height: page.size().y,
+                    });
+                }
+                pages
+            },
+        };
+
+        Self {
+            pixel_per_pt: 0.,
+            background_color: "".to_string(),
+            doc,
+            artifact_meta,
+            pages_info,
+            ligature_map,
+        }
+    }
+
+    pub(crate) fn from_ir_artifact<T: FontResolver>(
+        artifact: IRArtifact,
+        font_resolver: &T,
+    ) -> Self {
+        let mut ligature_map = std::collections::HashMap::<
+            (String, FontVariant, FontFlags),
+            std::collections::HashMap<u16, std::string::String>,
+        >::new();
+        for font in &(artifact).metadata.fonts {
+            let font_info = TypstFontInfo {
+                family: font.family.clone(),
+                variant: font.variant,
+                flags: FontFlags::from_bits(font.flags).unwrap(),
+                coverage: font.coverage.clone(),
+            };
+            // todo: font alternative
+            let idx = font_resolver
+                .font_book()
+                .select_fallback(Some(&font_info), font.variant, "0")
+                .unwrap();
+            let local_font = font_resolver.font(idx).unwrap();
+            let font_info = local_font.info();
+
+            ligature_map.insert(
+                (font_info.family.clone(), font_info.variant, font_info.flags),
+                std::collections::HashMap::from_iter(font.ligatures.iter().map(|s| s.clone())),
+            );
+        }
+        let artifact_meta = Artifact {
+            build: artifact.metadata.build.clone(),
+            pages: vec![],
+            fonts: artifact.metadata.fonts.clone(),
+            title: artifact.metadata.title.clone(),
+            author: artifact.metadata.author.clone(),
         };
         let doc = artifact.to_document(font_resolver);
 
@@ -238,10 +321,24 @@ pub struct RenderSessionManager {
 impl RenderSessionManager {
     pub fn create_session(
         &self,
-        artifact_content: String,
+        artifact_content: Uint8Array,
         options: Option<RenderSessionOptions>,
     ) -> Result<RenderSession, JsValue> {
-        let mut ses = self.session_from_artifact(artifact_content, "js")?;
+        console_log!("this opt: {:?}", options);
+        self.create_session_internal(artifact_content.to_vec().as_slice(), options)
+    }
+
+    pub(crate) fn create_session_internal(
+        &self,
+        artifact_content: &[u8],
+        options: Option<RenderSessionOptions>,
+    ) -> Result<RenderSession, JsValue> {
+        let format = options
+            .as_ref()
+            .and_then(|o| o.format.as_ref())
+            .map(|f| f.as_str())
+            .unwrap_or("js");
+        let mut ses = self.session_from_artifact(artifact_content.to_vec().as_slice(), format)?;
 
         ses.pixel_per_pt = options
             .as_ref()
@@ -276,21 +373,36 @@ impl RenderSessionManager {
 
     pub fn session_from_artifact(
         &self,
-        artifact_content: String,
+        artifact_content: &[u8],
+        decoder: &str,
+    ) -> Result<RenderSession, JsValue> {
+        if decoder != "ir" {
+            self.session_from_json_artifact(artifact_content, decoder)
+        } else {
+            self.session_from_ir_artifact(artifact_content)
+        }
+    }
+
+    fn session_from_json_artifact(
+        &self,
+        artifact_content: &[u8],
         decoder: &str,
     ) -> Result<RenderSession, JsValue> {
         // 550KB -> 147KB
         // https://medium.com/@wl1508/avoiding-using-serde-and-deserde-in-rust-webassembly-c1e4640970ca
         let artifact: Artifact = match decoder {
             "js" => {
-                let artifact: Artifact = artifact_from_js_string(artifact_content)?;
+                let artifact: Artifact = artifact_from_js_string(
+                    std::str::from_utf8(artifact_content).unwrap().to_string(),
+                )?;
 
                 artifact
             }
 
             #[cfg(feature = "serde_json")]
             "serde_json" => {
-                let artifact: Artifact = serde_json::from_str(artifact_content.as_str()).unwrap();
+                let artifact: Artifact =
+                    serde_json::from_str(std::str::from_utf8(artifact_content).unwrap()).unwrap();
 
                 artifact
             }
@@ -318,6 +430,35 @@ impl RenderSessionManager {
 
         let font_resolver = self.font_resolver.read().unwrap();
         let session: RenderSession = RenderSession::from_artifact(artifact, &*font_resolver);
+        Ok(session)
+    }
+
+    fn session_from_ir_artifact(
+        &self,
+        artifact_content: &[u8],
+    ) -> Result<RenderSession, JsValue> {
+        use std::io::Read;
+        use byteorder::{LittleEndian, ReadBytesExt};
+        let mut reader = std::io::Cursor::new(artifact_content);
+        let mut magic = [0; 4];
+        reader.read(&mut magic).unwrap();
+        assert_eq!(magic, ['I' as u8, 'R' as u8, 'A' as u8, 'R' as u8]);
+        assert_eq!(reader.read_i32::<LittleEndian>().unwrap(), 1);
+        let meta_len = reader.read_u64::<LittleEndian>().unwrap();
+        let mut meta = vec![0; meta_len as usize];
+        reader.read_exact(&mut meta).unwrap();
+        let meta = String::from_utf8(meta).unwrap();
+        let meta = serde_json::from_str(&meta).unwrap();
+        let mut buffer = vec![];
+        reader.read_to_end(&mut buffer).unwrap();
+    
+        let artifact = IRArtifact {
+            metadata: meta,
+            buffer,
+        };
+
+        let font_resolver = self.font_resolver.read().unwrap();
+        let session = RenderSession::from_ir_artifact(artifact, &*font_resolver);
         Ok(session)
     }
 
