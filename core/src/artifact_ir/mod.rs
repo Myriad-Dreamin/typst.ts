@@ -12,9 +12,6 @@ use crate::FontResolver;
 pub mod doc;
 use doc::*;
 
-pub mod font;
-use font::*;
-
 pub mod geom;
 use geom::*;
 
@@ -45,12 +42,12 @@ pub struct ArtifactMetadata {
     pub title: Option<EcoString>,
     /// The document's author.
     pub author: Vec<EcoString>,
+    /// The page frames.
+    pub pages: ItemArray<Frame>,
 }
 
 #[derive(Clone, Debug)]
 pub struct Artifact {
-    /// The page frames.
-    pub pages: ItemArray<Frame>,
     /// memory buffer for ItemRef
     pub buffer: Vec<u8>,
     /// Other metadata as json.
@@ -307,7 +304,6 @@ impl From<TypstDocument> for Artifact {
         println!("stat: {:?}\n", builder.stat);
 
         Self {
-            pages,
             buffer: builder.build_buffer(),
             metadata: ArtifactMetadata {
                 build: Some(BuildInfo {
@@ -336,6 +332,7 @@ impl From<TypstDocument> for Artifact {
                     .into_iter()
                     .map(|s| s.to_string())
                     .collect(),
+                pages,
             },
         }
     }
@@ -490,7 +487,7 @@ impl Artifact {
         }
 
         let pages = self
-            .pages
+            .metadata.pages
             .iter(&self.buffer)
             .map(|f| builder.parse_frame(&f))
             .collect();
