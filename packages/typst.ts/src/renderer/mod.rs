@@ -12,6 +12,9 @@ use crate::browser_world::TypstBrowserWorld;
 pub(crate) mod artifact;
 pub use artifact::ArtifactJsBuilder;
 
+pub(crate) mod artifact_ir;
+pub use artifact_ir::IRArtifactMetadataJsBuilder;
+
 pub(crate) mod builder;
 pub use builder::TypstRendererBuilder;
 

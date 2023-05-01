@@ -6,7 +6,7 @@ use wasm_bindgen::prelude::*;
 pub struct ArtifactJsBuilder {}
 
 /// Destructures a JS `[key, value]` pair into a tuple of [`Deserializer`]s.
-fn convert_pair(pair: JsValue) -> (JsValue, JsValue) {
+pub(crate) fn convert_pair(pair: JsValue) -> (JsValue, JsValue) {
     let pair = pair.unchecked_into::<js_sys::Array>();
     (pair.get(0).into(), pair.get(1).into())
 }
@@ -108,7 +108,7 @@ impl ArtifactJsBuilder {
         Ok(variant)
     }
 
-    fn parse_font_info(
+    pub(crate) fn parse_font_info(
         &self,
         val: JsValue,
     ) -> Result<typst_ts_core::artifact::font::FontInfo, JsValue> {

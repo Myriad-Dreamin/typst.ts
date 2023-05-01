@@ -4,8 +4,8 @@ use js_sys::Uint8Array;
 use typst::font::{FontFlags, FontInfo as TypstFontInfo, FontVariant};
 use typst::geom::Abs;
 use typst_ts_core::artifact::doc::Frame;
-use typst_ts_core::{font::FontResolverImpl, Artifact, FontResolver};
 use typst_ts_core::artifact_ir::Artifact as IRArtifact;
+use typst_ts_core::{font::FontResolverImpl, Artifact, FontResolver};
 use wasm_bindgen::prelude::*;
 
 use web_sys::console;
@@ -13,6 +13,7 @@ use web_sys::console;
 use crate::utils::console_log;
 
 use super::artifact::{artifact_from_js_string, page_from_js_string};
+use super::artifact_ir::ir_artifact_metadata_from_js_string;
 
 #[wasm_bindgen]
 #[derive(Default, Debug)]
@@ -153,10 +154,7 @@ impl RenderSession {
 }
 
 impl RenderSession {
-    pub(crate) fn from_artifact<T: FontResolver>(
-        artifact: Artifact,
-        font_resolver: &T,
-    ) -> Self {
+    pub(crate) fn from_artifact<T: FontResolver>(artifact: Artifact, font_resolver: &T) -> Self {
         let mut ligature_map = std::collections::HashMap::<
             (String, FontVariant, FontFlags),
             std::collections::HashMap<u16, std::string::String>,
@@ -324,7 +322,6 @@ impl RenderSessionManager {
         artifact_content: Uint8Array,
         options: Option<RenderSessionOptions>,
     ) -> Result<RenderSession, JsValue> {
-        console_log!("this opt: {:?}", options);
         self.create_session_internal(artifact_content.to_vec().as_slice(), options)
     }
 
@@ -433,12 +430,9 @@ impl RenderSessionManager {
         Ok(session)
     }
 
-    fn session_from_ir_artifact(
-        &self,
-        artifact_content: &[u8],
-    ) -> Result<RenderSession, JsValue> {
-        use std::io::Read;
+    fn session_from_ir_artifact(&self, artifact_content: &[u8]) -> Result<RenderSession, JsValue> {
         use byteorder::{LittleEndian, ReadBytesExt};
+        use std::io::Read;
         let mut reader = std::io::Cursor::new(artifact_content);
         let mut magic = [0; 4];
         reader.read(&mut magic).unwrap();
@@ -448,10 +442,15 @@ impl RenderSessionManager {
         let mut meta = vec![0; meta_len as usize];
         reader.read_exact(&mut meta).unwrap();
         let meta = String::from_utf8(meta).unwrap();
+
+        #[cfg(feature = "serde_json")]
         let meta = serde_json::from_str(&meta).unwrap();
+        #[cfg(not(feature = "serde_json"))]
+        let meta = ir_artifact_metadata_from_js_string(meta).unwrap();
+
         let mut buffer = vec![];
         reader.read_to_end(&mut buffer).unwrap();
-    
+
         let artifact = IRArtifact {
             metadata: meta,
             buffer,
