@@ -2345,7 +2345,7 @@ checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
 [[package]]
 name = "typst"
 version = "0.3.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#89eb711759631c100457b0d62b23cf6fd0b8b809"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#787b21abdfa4efd6bb75d59ac9c5c53a60f361ee"
 dependencies = [
  "bitflags 2.2.1",
  "bytemuck",
@@ -2385,7 +2385,7 @@ dependencies = [
 [[package]]
 name = "typst-library"
 version = "0.3.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#89eb711759631c100457b0d62b23cf6fd0b8b809"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#787b21abdfa4efd6bb75d59ac9c5c53a60f361ee"
 dependencies = [
  "chinese-number",
  "comemo",
@@ -2418,7 +2418,7 @@ dependencies = [
 [[package]]
 name = "typst-macros"
 version = "0.3.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#89eb711759631c100457b0d62b23cf6fd0b8b809"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#787b21abdfa4efd6bb75d59ac9c5c53a60f361ee"
 dependencies = [
  "heck",
  "proc-macro2",

@@ -312,6 +312,7 @@ impl TypeDocumentParser {
                 _ => panic!("Unknown image format {}", image.format),
             },
             image.alt.clone().map(|s| s.into()),
+            (image.width, image.height).into(),
         )
         .unwrap()
     }
