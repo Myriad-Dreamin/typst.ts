@@ -1,7 +1,7 @@
 import * as initOptions from './options.init';
 export type { InitOptions, BeforeBuildFn } from './options.init';
 export type {
-  RenderByStringOptions,
+  RenderByContentOptions,
   RenderInSessionOptions,
   RenderPageOptions,
   RenderOptions,

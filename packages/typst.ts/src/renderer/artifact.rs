@@ -1052,8 +1052,31 @@ pub fn page_from_js_string(val: String) -> Result<Frame, JsValue> {
 #[cfg(target_arch = "wasm32")]
 mod tests {
     use typst_ts_core::Artifact;
+    use typst_ts_core::artifact_ir::{Artifact as IRArtifact, ArtifactMetadata as IRArtifactMetadata};
     use wasm_bindgen_test::*;
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
+    fn deserialize_from_ir_bin(input: &[u8]) -> IRArtifact {
+        use std::io::Read;
+        use byteorder::{LittleEndian, ReadBytesExt};
+        let mut reader = std::io::Cursor::new(input);
+        let mut magic = [0; 4];
+        reader.read(&mut magic).unwrap();
+        assert_eq!(magic, ['I' as u8, 'R' as u8, 'A' as u8, 'R' as u8]);
+        assert_eq!(reader.read_i32::<LittleEndian>().unwrap(), 1);
+        let meta_len = reader.read_u64::<LittleEndian>().unwrap();
+        let mut meta = vec![0; meta_len as usize];
+        reader.read_exact(&mut meta).unwrap();
+        let meta = String::from_utf8(meta).unwrap();
+        let meta = serde_json::from_str(&meta).unwrap();
+        let mut buffer = vec![];
+        reader.read_to_end(&mut buffer).unwrap();
+    
+        IRArtifact {
+            metadata: meta,
+            buffer,
+        }
+    }
 
     #[wasm_bindgen_test]
     fn artifact_deserialization() {
@@ -1072,7 +1095,7 @@ mod tests {
             (end - start, artifact)
         };
 
-        console_log!("{}ms", serde_task.0);
+        console_log!("serde.json {}ms", serde_task.0);
 
         let js_task = {
             let start = performance.now();
@@ -1082,7 +1105,7 @@ mod tests {
             (end - start, artifact)
         };
 
-        console_log!("{}ms", js_task.0);
+        console_log!("js.json: {}ms", js_task.0);
 
         #[cfg(feature = "serde_rmp_debug")]
         {
@@ -1095,7 +1118,20 @@ mod tests {
                 (end - start, artifact)
             };
 
-            console_log!("{}ms", rmp_task.0);
+            console_log!("rmp: {}ms", rmp_task.0);
+        }
+
+        {
+            let ir_task = {
+                let artifact = include_bytes!("../../main.artifact_ir.bin");
+                let start = performance.now();
+                let artifact: IRArtifact = deserialize_from_ir_bin(artifact);
+                let end = performance.now();
+
+                (end - start, artifact)
+            };
+
+            console_log!("ir: {}ms", ir_task.0);
         }
     }
 }

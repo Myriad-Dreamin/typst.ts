@@ -85,7 +85,7 @@ impl TypstRenderer {
         Ok(serde_wasm_bindgen::to_value(&worker.content).unwrap())
     }
 
-    pub fn render_to_pdf(&mut self, artifact_content: String) -> Result<Uint8Array, JsValue> {
+    pub fn render_to_pdf(&mut self, artifact_content: &[u8]) -> Result<Uint8Array, JsValue> {
         let session = self.session_from_artifact(artifact_content)?;
         self.render_to_pdf_in_session(&session)
     }
@@ -101,10 +101,10 @@ impl TypstRenderer {
 
     pub fn create_session(
         &self,
-        artifact_content: String,
+        artifact_content: &[u8],
         options: Option<RenderSessionOptions>,
     ) -> Result<RenderSession, JsValue> {
-        self.session_mgr.create_session(artifact_content, options)
+        self.session_mgr.create_session_internal(artifact_content, options)
     }
 
     pub fn load_page(
@@ -247,17 +247,10 @@ impl TypstRenderer {
 
     pub fn session_from_artifact(
         &self,
-        artifact_content: String,
+        artifact_content: &[u8],
     ) -> Result<RenderSession, JsValue> {
         self.session_mgr
             .session_from_artifact(artifact_content, "js")
     }
-
-    pub fn session_from_artifact_internal(
-        &self,
-        artifact_content: &[u8],
-    ) -> Result<RenderSession, String> {
-        self.session_mgr
-            .session_from_artifact_internal(artifact_content, "serde_json")
-    }
+    
 }
