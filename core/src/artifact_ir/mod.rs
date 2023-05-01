@@ -405,6 +405,7 @@ impl<'a> TypeDocumentParser<'a> {
                 _ => panic!("Unknown image format {}", image.format.as_str(&self.buffer)),
             },
             image.alt.clone().map(|s| s.as_str(&self.buffer).into()),
+            (image.width, image.height).into(),
         )
         .unwrap()
     }
