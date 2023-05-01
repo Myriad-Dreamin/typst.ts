@@ -17,11 +17,16 @@ mod tests {
 
         let mut renderer = crate::tests::get_renderer();
 
-        let mut session = renderer.create_session(artifact, Some(RenderSessionOptions{
-            pixel_per_pt: Some(1.0),
-            background_color: Some("343541".to_string()),
-            format: Some(format.to_string()),
-        })).unwrap();
+        let mut session = renderer
+            .create_session(
+                artifact,
+                Some(RenderSessionOptions {
+                    pixel_per_pt: Some(1.0),
+                    background_color: Some("343541".to_string()),
+                    format: Some(format.to_string()),
+                }),
+            )
+            .unwrap();
 
         let canvas = window
             .document()

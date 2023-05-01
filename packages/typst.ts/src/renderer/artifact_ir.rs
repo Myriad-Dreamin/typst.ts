@@ -1,10 +1,10 @@
 use super::artifact::{convert_pair, ArtifactJsBuilder};
+use crate::utils::console_log;
 use typst_ts_core::artifact_ir::{
     core::ItemArray, doc::Frame, ArtifactMetadata as IRArtifactMetadata,
 };
 use wasm_bindgen::prelude::*;
 use web_sys::console;
-use crate::utils::console_log;
 
 pub struct IRArtifactMetadataJsBuilder {
     builder: ArtifactJsBuilder,

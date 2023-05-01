@@ -489,7 +489,8 @@ impl Artifact {
         }
 
         let pages = self
-            .metadata.pages
+            .metadata
+            .pages
             .iter(&self.buffer)
             .map(|f| builder.parse_frame(&f))
             .collect();
@@ -592,7 +593,10 @@ mod tests {
         let mut builder = ArtifactBuilder::new();
 
         let raw_item = builder.push_item(&Frame {
-            size: Axes { x: TypstAbs::zero().into(), y: TypstAbs::zero().into() },
+            size: Axes {
+                x: TypstAbs::zero().into(),
+                y: TypstAbs::zero().into(),
+            },
             baseline: Some(TypstAbs::raw(1.2).into()),
             items: Default::default(),
         });
@@ -600,5 +604,4 @@ mod tests {
         let item = raw_item.deref(&builder.buffer);
         assert!(matches!(item.baseline, Some(_)));
     }
-
 }
