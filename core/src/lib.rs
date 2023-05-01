@@ -1,6 +1,8 @@
 pub mod artifact;
 pub use artifact::Artifact;
 
+pub mod artifact_ir;
+
 pub mod config;
 
 pub mod content;

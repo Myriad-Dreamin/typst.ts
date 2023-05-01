@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::slice;
 use std::str::FromStr;
 
 use serde::Deserialize;
@@ -32,14 +33,12 @@ pub struct BuildInfo {
     pub compiler: String,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Artifact {
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ArtifactMetadata {
     /// The compiler information.
     /// This is used to check if the artifact is compatible with the current compiler.
     /// If not, the artifact must be recompiled.
     pub build: Option<BuildInfo>,
-    /// The page frames.
-    pub pages: Vec<Frame>,
     /// The document used fonts.
     pub fonts: Vec<FontInfo>,
     /// The document's title.
@@ -48,10 +47,22 @@ pub struct Artifact {
     pub author: Vec<EcoString>,
 }
 
+#[derive(Clone, Debug)]
+pub struct Artifact {
+    /// The page frames.
+    pub pages: ItemArray<Frame>,
+    /// memory buffer for ItemRef
+    pub buffer: Vec<u8>,
+    /// Other metadata as json.
+    pub metadata: ArtifactMetadata,
+}
+
 pub struct ArtifactBuilder {
     fonts: Vec<(TypstFontInfo, LigatureResolver)>,
     font_map: HashMap<TypstFontInfo, FontRef>,
     with_ligature: bool,
+    buffer: Vec<u8>,
+    stat: std::collections::BTreeMap<ItemRefKind, u32>, // for debug
 }
 
 impl ArtifactBuilder {
@@ -60,6 +71,55 @@ impl ArtifactBuilder {
             fonts: vec![],
             font_map: HashMap::default(),
             with_ligature: true,
+            buffer: vec![],
+            stat: Default::default(),
+        }
+    }
+
+    pub fn push_item<T: Sized + HasItemRefKind>(&mut self, item: &T) -> ItemRef<T> {
+        let idx = self.buffer.len();
+        unsafe {
+            let raw_item =
+                slice::from_raw_parts(item as *const T as *const u8, std::mem::size_of::<T>());
+            self.buffer.extend_from_slice(raw_item);
+            self.stat
+                .entry(T::ITEM_REF_KIND)
+                .and_modify(|e| *e += raw_item.len() as u32);
+        }
+        ItemRef {
+            id: idx as u32,
+            kind: T::ITEM_REF_KIND,
+            phantom: std::marker::PhantomData,
+        }
+    }
+
+    pub fn push_string(&mut self, s: String) -> ItemRef<String> {
+        let idx = self.buffer.len();
+        self.buffer.extend_from_slice(s.as_bytes());
+        // null terminator
+        self.buffer.push(0);
+        self.stat
+            .entry(ItemRefKind::String)
+            .and_modify(|e| *e += s.as_bytes().len() as u32);
+        ItemRef {
+            id: idx as u32,
+            kind: ItemRefKind::String,
+            phantom: std::marker::PhantomData,
+        }
+    }
+
+    pub fn push_array<T: Sized + HasItemRefKind>(&mut self, arr: &Vec<T>) -> ItemArray<T> {
+        let start_idx = self.buffer.len();
+        for ele in arr {
+            self.push_item(ele);
+        }
+        self.stat
+            .entry(T::ITEM_REF_KIND)
+            .and_modify(|e| *e += (arr.len() * std::mem::size_of::<T>()) as u32);
+        ItemArray {
+            start: start_idx as u32,
+            size: arr.len() as u32,
+            phantom: std::marker::PhantomData,
         }
     }
 
@@ -86,18 +146,13 @@ impl ArtifactBuilder {
         font_ref
     }
 
-    pub fn write_span(&mut self, _span: TypstSpan) -> SpanRef {
-        // todo
-        ()
-    }
-
     pub fn write_glyph(&mut self, glyph: TypstGlyph) -> Glyph {
         Glyph {
             id: glyph.id,
             x_advance: glyph.x_advance.into(),
             x_offset: glyph.x_offset.into(),
             c: glyph.c,
-            span: self.write_span(glyph.span),
+            span: (), // todo
             offset: glyph.offset,
         }
     }
@@ -119,17 +174,20 @@ impl ArtifactBuilder {
         if self.with_ligature {
             self.write_ligature_covered(text.font.ttf(), idx, text);
         }
+
+        let glyphs: Vec<_> = text
+            .clone()
+            .glyphs
+            .into_iter()
+            .map(|g| self.write_glyph(g))
+            .collect();
+
         TextItem {
             font: idx,
             size: text.size.into(),
             fill: text.fill.clone().into(),
-            lang: text.lang.as_str().to_string(),
-            glyphs: text
-                .clone()
-                .glyphs
-                .into_iter()
-                .map(|g| self.write_glyph(g))
-                .collect(),
+            lang: self.push_string(text.lang.as_str().to_string()),
+            glyphs: self.push_array(&glyphs),
         }
     }
 
@@ -142,9 +200,9 @@ impl ArtifactBuilder {
     }
 
     pub fn write_image(&mut self, image: &TypstImage) -> Image {
-        return Image {
-            data: image.data().to_vec(),
-            format: match image.format() {
+        let data = self.push_array(&image.data().to_vec());
+        let format = self.push_string(
+            match image.format() {
                 ImageFormat::Raster(r) => match r {
                     RasterFormat::Png => "png",
                     RasterFormat::Jpg => "jpg",
@@ -155,16 +213,20 @@ impl ArtifactBuilder {
                 },
             }
             .to_string(),
+        );
+        return Image {
+            data,
+            format,
             width: image.width(),
             height: image.height(),
-            alt: image.alt().map(|s| s.to_string()),
+            alt: image.alt().map(|s| self.push_string(s.to_string())),
         };
     }
 
     pub fn write_frame_item(&mut self, item: &TypstFrameItem) -> FrameItem {
         match item {
-            TypstFrameItem::Group(group) => FrameItem::Group(self.write_group_item(group)),
             TypstFrameItem::Text(text) => FrameItem::Text(self.write_text_item(text)),
+            TypstFrameItem::Group(group) => FrameItem::Group(self.write_group_item(group)),
             TypstFrameItem::Shape(shape, _) => FrameItem::Shape(shape.clone().into()),
             TypstFrameItem::Image(image, size, _) => {
                 FrameItem::Image(self.write_image(image), (*size).into())
@@ -172,14 +234,18 @@ impl ArtifactBuilder {
             TypstFrameItem::Meta(meta, size) => match meta {
                 TypstMeta::Link(dest) => FrameItem::MetaLink(
                     match dest {
-                        TypstDestination::Url(url) => Destination::Url(url.as_str().to_string()),
+                        TypstDestination::Url(url) => {
+                            Destination::Url(self.push_string(url.as_str().to_string()))
+                        }
                         TypstDestination::Position(pos) => Destination::Position(Position {
                             page: pos.page,
                             point: pos.point.into(),
                         }),
                         TypstDestination::Location(loc) => {
                             // todo: we have no idea to preserve information about the location
-                            Destination::Location(format!("{:?}", typst_affinite_hash(loc)))
+                            Destination::Location(
+                                self.push_string(format!("{:?}", typst_affinite_hash(loc))),
+                            )
                         }
                     },
                     (*size).into(),
@@ -192,6 +258,16 @@ impl ArtifactBuilder {
     }
 
     pub fn write_frame(&mut self, frame: &TypstFrame) -> Frame {
+        let items: Vec<_> = frame
+            .items()
+            .map(|item| {
+                let fi = self.write_frame_item(&item.1);
+                ItemWithPos {
+                    item: self.push_item(&fi),
+                    pos: item.0.into(),
+                }
+            })
+            .collect();
         Frame {
             size: Axes {
                 x: frame.width().into(),
@@ -202,66 +278,81 @@ impl ArtifactBuilder {
             } else {
                 None
             },
-            items: frame
-                .items()
-                .map(|item| (item.0.into(), self.write_frame_item(&item.1)))
-                .collect(),
+            items: self.push_array(&items),
         }
+    }
+
+    pub fn build_buffer(&mut self) -> Vec<u8> {
+        let mut buffer = Vec::new();
+        std::mem::swap(&mut self.buffer, &mut buffer);
+        buffer
     }
 }
 
 impl From<TypstDocument> for Artifact {
     fn from(typst_doc: TypstDocument) -> Self {
         let mut builder = ArtifactBuilder::new();
+        builder.stat.insert(ItemRefKind::Frame, 0);
+        builder.stat.insert(ItemRefKind::FrameItem, 0);
+        builder.stat.insert(ItemRefKind::String, 0);
+        builder.stat.insert(ItemRefKind::ItemWithPos, 0);
 
-        let pages = typst_doc
+        let raw_pages = typst_doc
             .pages
             .into_iter()
             .map(|f| builder.write_frame(&f))
             .collect();
+        let pages = builder.push_array(&raw_pages);
+
+        println!("stat: {:?}\n", builder.stat);
 
         Self {
-            build: Some(BuildInfo {
-                compiler: "typst-ts-cli".to_string(),
-                // todo: attach version
-                version: crate::build_info::VERSION.to_string(),
-            }),
             pages,
-            fonts: builder
-                .fonts
-                .into_iter()
-                .map(|f| {
-                    let (info, res) = f;
+            buffer: builder.build_buffer(),
+            metadata: ArtifactMetadata {
+                build: Some(BuildInfo {
+                    compiler: "typst-ts-cli".to_string(),
+                    // todo: attach version
+                    version: crate::build_info::VERSION.to_string(),
+                }),
+                fonts: builder
+                    .fonts
+                    .into_iter()
+                    .map(|f| {
+                        let (info, res) = f;
 
-                    FontInfo {
-                        family: info.family,
-                        variant: info.variant,
-                        flags: info.flags.bits(),
-                        coverage: info.coverage,
-                        ligatures: res.to_covered(),
-                    }
-                })
-                .collect(),
-            title: typst_doc.title.map(|s| s.to_string()),
-            author: typst_doc
-                .author
-                .into_iter()
-                .map(|s| s.to_string())
-                .collect(),
+                        FontInfo {
+                            family: info.family,
+                            variant: info.variant,
+                            flags: info.flags.bits(),
+                            coverage: info.coverage,
+                            ligatures: res.to_covered(),
+                        }
+                    })
+                    .collect(),
+                title: typst_doc.title.map(|s| s.to_string()),
+                author: typst_doc
+                    .author
+                    .into_iter()
+                    .map(|s| s.to_string())
+                    .collect(),
+            },
         }
     }
 }
 
-pub struct TypeDocumentParser {
+pub struct TypeDocumentParser<'a> {
     sp: StabilityProvider,
     fonts: Vec<TypstFont>,
+    buffer: &'a [u8],
 }
 
-impl TypeDocumentParser {
-    pub fn new() -> Self {
+impl<'a> TypeDocumentParser<'a> {
+    pub fn new(buffer: &'a Vec<u8>) -> Self {
         Self {
             sp: StabilityProvider::new(),
             fonts: Vec::new(),
+            buffer: buffer.as_ref(),
         }
     }
 
@@ -296,23 +387,26 @@ impl TypeDocumentParser {
             font: self.get_font(text.font),
             size: text.size.into(),
             fill: text.fill.clone().into(),
-            lang: TypstLang::from_str(text.lang.as_str()).unwrap(),
-            glyphs: text.glyphs.iter().map(|g| self.parse_glyph(g)).collect(),
+            lang: TypstLang::from_str(text.lang.as_str(&self.buffer)).unwrap(),
+            glyphs: text
+                .glyphs
+                .iter(&self.buffer)
+                .map(|g| self.parse_glyph(g))
+                .collect(),
         }
     }
 
     pub fn parse_image(&mut self, image: &Image) -> TypstImage {
         TypstImage::new_raw(
-            image.data.clone().into(),
-            match image.format.as_str() {
+            image.data.to_vec(&self.buffer).into(),
+            match image.format.as_str(&self.buffer) {
                 "png" => ImageFormat::Raster(RasterFormat::Png),
                 "jpg" => ImageFormat::Raster(RasterFormat::Jpg),
                 "gif" => ImageFormat::Raster(RasterFormat::Gif),
                 "svg" => ImageFormat::Vector(VectorFormat::Svg),
-                _ => panic!("Unknown image format {}", image.format),
+                _ => panic!("Unknown image format {}", image.format.as_str(&self.buffer)),
             },
-            image.alt.clone().map(|s| s.into()),
-            (image.width, image.height).into(),
+            image.alt.clone().map(|s| s.as_str(&self.buffer).into()),
         )
         .unwrap()
     }
@@ -336,17 +430,19 @@ impl TypeDocumentParser {
             ),
             FrameItem::MetaLink(dest, size) => {
                 let dest = match dest {
-                    Destination::Url(url) => {
-                        TypstDestination::Url(TypstEcoString::from(url.clone()))
-                    }
+                    Destination::Url(url) => TypstDestination::Url(TypstEcoString::from(
+                        url.as_str(&self.buffer).clone(),
+                    )),
                     Destination::Position(pos) => TypstDestination::Position(TypstPosition {
                         page: pos.page,
                         point: pos.point.into(),
                     }),
-                    Destination::Location(loc) => match self.parse_location(loc) {
-                        Some(loc) => TypstDestination::Location(loc),
-                        None => panic!("Invalid location: {}", loc),
-                    },
+                    Destination::Location(loc) => {
+                        match self.parse_location(&loc.as_str(&self.buffer).to_string()) {
+                            Some(loc) => TypstDestination::Location(loc),
+                            None => panic!("Invalid location: {}", loc.as_str(&self.buffer)),
+                        }
+                    }
                 };
 
                 TypstFrameItem::Meta(TypstMeta::Link(dest), (*size).into())
@@ -358,8 +454,10 @@ impl TypeDocumentParser {
     pub fn parse_frame(&mut self, frame: &Frame) -> TypstFrame {
         let mut parsed_frame = TypstFrame::new(frame.size.into());
         frame.baseline.map(|b| parsed_frame.set_baseline(b.into()));
+        let items = frame.items.iter(&self.buffer);
 
-        for (pos, item) in frame.items.iter() {
+        for ItemWithPos { pos, item } in items {
+            let item = item.deref(&self.buffer);
             match item {
                 FrameItem::None => continue,
                 _ => {
@@ -374,8 +472,8 @@ impl TypeDocumentParser {
 
 impl Artifact {
     pub fn to_document<T: FontResolver>(self, font_resolver: &T) -> TypstDocument {
-        let mut builder = TypeDocumentParser::new();
-        for font in self.fonts {
+        let mut builder = TypeDocumentParser::new(&self.buffer);
+        for font in self.metadata.fonts {
             let font_info = TypstFontInfo {
                 family: font.family,
                 variant: font.variant,
@@ -393,18 +491,115 @@ impl Artifact {
 
         let pages = self
             .pages
-            .into_iter()
+            .iter(&self.buffer)
             .map(|f| builder.parse_frame(&f))
             .collect();
 
         TypstDocument {
             pages,
-            title: self.title.map(|s| TypstEcoString::from(s)),
+            title: self.metadata.title.map(|s| TypstEcoString::from(s)),
             author: self
+                .metadata
                 .author
                 .into_iter()
                 .map(|s| TypstEcoString::from(s))
                 .collect(),
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::artifact_ir::*;
+
+    fn build_simple_refs(builder: &mut ArtifactBuilder) -> ItemArray<FrameItem> {
+        let lang_str = builder.push_string("en".into());
+        let glyphs = builder.push_array(&vec![Glyph {
+            id: 45,
+            x_advance: TypstEm::one().into(),
+            x_offset: TypstEm::one().into(),
+            c: 'W',
+            span: (),
+            offset: 3,
+        }]);
+
+        let item1 = builder.push_item(&FrameItem::Text(TextItem {
+            font: 77,
+            size: TypstAbs::zero().into(),
+            fill: Paint::Solid(Color::Rgba(RgbaColor {
+                r: 3,
+                g: 4,
+                b: 5,
+                a: 6,
+            })),
+            lang: lang_str,
+            glyphs,
+        }));
+
+        let item2 = builder.push_item(&FrameItem::Shape(Shape {
+            fill: None,
+            stroke: None,
+            geometry: Geometry::Rect(Size {
+                x: TypstAbs::zero().into(),
+                y: TypstAbs::zero().into(),
+            }),
+        }));
+
+        let items = vec![item1, item2];
+
+        ItemArray {
+            start: items.first().map(|x| x.id).unwrap(),
+            size: items.len() as u32,
+            phantom: std::marker::PhantomData,
+        }
+    }
+
+    #[test]
+    fn test_item_ref_array() {
+        let mut builder = ArtifactBuilder::new();
+        let refs = build_simple_refs(&mut builder);
+        assert_eq!(refs.len(), 2);
+
+        let mut it = refs.iter(&builder.buffer);
+        assert_eq!(it.len(), 2);
+        if let Some(FrameItem::Text(x)) = it.next() {
+            assert_eq!(x.glyphs.len(), 1);
+            if let Some(x) = x.glyphs.iter(&builder.buffer).next() {
+                assert_eq!(x.c, 'W');
+            } else {
+                panic!("Expected glyph item");
+            }
+        } else {
+            panic!("Expected text item");
+        }
+
+        if let Some(FrameItem::Shape(x)) = it.next() {
+            assert_eq!(
+                x.geometry,
+                Geometry::Rect(Size {
+                    x: TypstAbs::zero().into(),
+                    y: TypstAbs::zero().into(),
+                })
+            );
+        } else {
+            panic!("Expected shape item");
+        }
+
+        assert_eq!(it.next(), None);
+    }
+
+    #[test]
+    fn test_item_ref_option() {
+        let mut builder = ArtifactBuilder::new();
+
+        let raw_item = builder.push_item(&Frame {
+            size: Axes { x: TypstAbs::zero().into(), y: TypstAbs::zero().into() },
+            baseline: Some(TypstAbs::raw(1.2).into()),
+            items: Default::default(),
+        });
+
+        let item = raw_item.deref(&builder.buffer);
+        assert!(matches!(item.baseline, Some(_)));
+    }
+
 }
