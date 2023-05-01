@@ -24,11 +24,12 @@ use self::ligature::LigatureResolver;
 
 pub(crate) mod ligature;
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct BuildInfo {
-    pub version: String,
-    pub compiler: String,
-}
+pub type BuildInfo = crate::artifact::BuildInfo;
+pub type FontInfo = crate::artifact::font::FontInfo;
+pub type TypstFontInfo = crate::artifact::font::TypstFontInfo;
+pub type TypstFont = crate::artifact::font::TypstFont;
+pub type FontCoverage = crate::artifact::font::FontCoverage;
+pub type TypstFontFlags = crate::artifact::font::TypstFontFlags;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ArtifactMetadata {
