@@ -15,6 +15,7 @@ pub fn prepare_exporters(
 ) -> (
     Vec<Box<dyn typst_ts_core::DocumentExporter>>,
     Vec<Box<dyn typst_ts_core::ArtifactExporter>>,
+    Option<typst_ts_serde_exporter::IRArtifactExporter>,
 ) {
     let output_dir = {
         let output = args.output.clone();
@@ -45,6 +46,7 @@ pub fn prepare_exporters(
 
     let mut document_exporters: Vec<Box<dyn typst_ts_core::DocumentExporter>> = vec![];
     let mut artifact_exporters: Vec<Box<dyn typst_ts_core::ArtifactExporter>> = vec![];
+    let mut ir_exporter = None;
 
     for f in formats {
         match f.as_str() {
@@ -85,6 +87,14 @@ pub fn prepare_exporters(
                     typst_ts_ws_exporter::WebSocketArtifactExporter::new_url(ws_url),
                 ));
             }
+            "ir" => {
+                let output_path = output_dir
+                    .with_file_name(entry_file.file_name().unwrap())
+                    .with_extension("artifact_ir.bin");
+                ir_exporter = Some(typst_ts_serde_exporter::IRArtifactExporter::new_path(
+                    output_path,
+                ));
+            }
             _ => {
                 let found = AVAILABLE_FORMATS.iter().find(|(k, _)| **k == *f);
                 if let Some((_, feat)) = found {
@@ -96,5 +106,5 @@ pub fn prepare_exporters(
         };
     }
 
-    (document_exporters, artifact_exporters)
+    (document_exporters, artifact_exporters, ir_exporter)
 }

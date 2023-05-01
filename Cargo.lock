@@ -2590,6 +2590,7 @@ dependencies = [
 name = "typst-ts-serde-exporter"
 version = "0.1.6"
 dependencies = [
+ "byteorder",
  "rmp-serde",
  "serde",
  "serde_json",

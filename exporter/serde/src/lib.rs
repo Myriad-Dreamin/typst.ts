@@ -32,3 +32,6 @@ pub use json::JsonArtifactExporter;
 pub(crate) mod rmp;
 #[cfg(feature = "rmp")]
 pub use rmp::RmpArtifactExporter;
+
+pub(crate) mod ir;
+pub use ir::IRArtifactExporter;
