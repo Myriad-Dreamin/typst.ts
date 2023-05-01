@@ -1,8 +1,9 @@
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use typst::diag::{SourceError, SourceResult};
 use typst_ts_compiler::TypstSystemWorld;
-use typst_ts_core::Artifact;
+use typst_ts_core::{artifact_ir::Artifact as IRArtifact, Artifact};
 
 use crate::diag::print_diagnostics;
 
@@ -11,6 +12,7 @@ pub struct CompileAction {
     pub entry_file: PathBuf,
     pub doc_exporters: Vec<Box<dyn typst_ts_core::DocumentExporter>>,
     pub artifact_exporters: Vec<Box<dyn typst_ts_core::ArtifactExporter>>,
+    pub ir_artifact_exporter: Option<typst_ts_serde_exporter::IRArtifactExporter>,
 }
 
 impl CompileAction {
@@ -71,9 +73,17 @@ impl CompileAction {
                 for f in &self.doc_exporters {
                     collect_err(f.export(&self.world, &document))
                 }
-                let artifact = Arc::new(Artifact::from(document));
-                for f in &self.artifact_exporters {
-                    collect_err(f.export(&self.world, artifact.clone()))
+
+                if !self.artifact_exporters.is_empty() {
+                    let artifact = Arc::new(Artifact::from(document.clone()));
+                    for f in &self.artifact_exporters {
+                        collect_err(f.export(&self.world, artifact.clone()))
+                    }
+                }
+
+                if let Some(ir_artifact_exporter) = &self.ir_artifact_exporter {
+                    let artifact = Arc::new(IRArtifact::from(document));
+                    collect_err(ir_artifact_exporter.export(&self.world, artifact.clone()));
                 }
 
                 errors
