@@ -10,12 +10,12 @@ pub use typst::doc::Meta as TypstMeta;
 
 use super::core::EcoString;
 use super::core::FontRef;
-use super::core::Lang;
+use super::core::HasItemRefKind;
 use super::core::ItemArray;
-use super::core::SpanRef;
 use super::core::ItemRef;
 use super::core::ItemRefKind;
-use super::core::HasItemRefKind;
+use super::core::Lang;
+use super::core::SpanRef;
 use super::geom::Em;
 use super::geom::Paint;
 use super::geom::Shape;

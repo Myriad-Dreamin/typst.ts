@@ -1,5 +1,5 @@
-use std::{io::Write, sync::Arc};
 use byteorder::{LittleEndian, WriteBytesExt};
+use std::{io::Write, sync::Arc};
 
 use typst::diag::SourceResult;
 use typst_ts_core::artifact_ir::Artifact;
@@ -7,15 +7,14 @@ use typst_ts_core::artifact_ir::Artifact;
 /// IR structure (in bytes)
 /// =======================
 /// [0 - 4] Magic number 'IRAR' (u32)
-/// 
+///
 /// [4 - 8] Version number (u32)
-/// 
+///
 /// [8 - 16] Length of metadata (u64)
-/// 
+///
 /// [16 - 16 + metadata_len] Metadata (JSON)
-/// 
+///
 /// [16 + metadata_len - end] global buffer (binary)
-
 
 /// IR artifact exporter
 const MAGIC_NUMBER: [u8; 4] = ['I' as u8, 'R' as u8, 'A' as u8, 'R' as u8];
@@ -31,7 +30,9 @@ impl IRArtifactExporter {
         writer.write(&MAGIC_NUMBER).unwrap();
 
         writer.write_u32::<LittleEndian>(1).unwrap();
-        writer.write_u64::<LittleEndian>(metadata.len() as u64).unwrap();
+        writer
+            .write_u64::<LittleEndian>(metadata.len() as u64)
+            .unwrap();
         writer.write_all(metadata.as_bytes()).unwrap();
         writer.write_all(output.buffer.as_slice()).unwrap();
 

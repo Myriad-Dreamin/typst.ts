@@ -113,7 +113,7 @@ impl<'a, T: HasItemRefKind> ItemArray<T> {
     }
 }
 
-impl<T: HasItemRefKind+Clone> ItemArray<T> {
+impl<T: HasItemRefKind + Clone> ItemArray<T> {
     pub fn len(&self) -> usize {
         self.size as usize
     }

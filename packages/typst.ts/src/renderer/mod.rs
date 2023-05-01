@@ -107,7 +107,8 @@ impl TypstRenderer {
         artifact_content: &[u8],
         options: Option<RenderSessionOptions>,
     ) -> Result<RenderSession, JsValue> {
-        self.session_mgr.create_session_internal(artifact_content, options)
+        self.session_mgr
+            .create_session_internal(artifact_content, options)
     }
 
     pub fn load_page(
@@ -248,12 +249,8 @@ impl TypstRenderer {
         Err("pdf disabled".into())
     }
 
-    pub fn session_from_artifact(
-        &self,
-        artifact_content: &[u8],
-    ) -> Result<RenderSession, JsValue> {
+    pub fn session_from_artifact(&self, artifact_content: &[u8]) -> Result<RenderSession, JsValue> {
         self.session_mgr
             .session_from_artifact(artifact_content, "js")
     }
-    
 }

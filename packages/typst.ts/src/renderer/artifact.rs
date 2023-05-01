@@ -1051,14 +1051,16 @@ pub fn page_from_js_string(val: String) -> Result<Frame, JsValue> {
 #[cfg(test)]
 #[cfg(target_arch = "wasm32")]
 mod tests {
+    use typst_ts_core::artifact_ir::{
+        Artifact as IRArtifact, ArtifactMetadata as IRArtifactMetadata,
+    };
     use typst_ts_core::Artifact;
-    use typst_ts_core::artifact_ir::{Artifact as IRArtifact, ArtifactMetadata as IRArtifactMetadata};
     use wasm_bindgen_test::*;
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
     fn deserialize_from_ir_bin(input: &[u8]) -> IRArtifact {
-        use std::io::Read;
         use byteorder::{LittleEndian, ReadBytesExt};
+        use std::io::Read;
         let mut reader = std::io::Cursor::new(input);
         let mut magic = [0; 4];
         reader.read(&mut magic).unwrap();
@@ -1071,7 +1073,7 @@ mod tests {
         let meta = serde_json::from_str(&meta).unwrap();
         let mut buffer = vec![];
         reader.read_to_end(&mut buffer).unwrap();
-    
+
         IRArtifact {
             metadata: meta,
             buffer,
