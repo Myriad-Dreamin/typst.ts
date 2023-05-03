@@ -148,68 +148,16 @@ impl RenderSession {
 }
 
 impl RenderSession {
-    pub(crate) fn from_artifact<T: FontResolver>(artifact: Artifact, font_resolver: &T) -> Self {
-        let mut ligature_map = std::collections::HashMap::<
-            (String, FontVariant, FontFlags),
-            std::collections::HashMap<u16, std::string::String>,
-        >::new();
-        for font in &(artifact.meta).fonts {
-            let font_info = TypstFontInfo {
-                family: font.family.clone(),
-                variant: font.variant,
-                flags: FontFlags::from_bits(font.flags).unwrap(),
-                coverage: font.coverage.clone(),
-            };
-            // todo: font alternative
-            let idx = font_resolver
-                .font_book()
-                .select_fallback(Some(&font_info), font.variant, "0")
-                .unwrap();
-            let local_font = font_resolver.font(idx).unwrap();
-            let font_info = local_font.info();
-
-            ligature_map.insert(
-                (font_info.family.clone(), font_info.variant, font_info.flags),
-                std::collections::HashMap::from_iter(font.ligatures.iter().map(|s| s.clone())),
-            );
-        }
-        let artifact_meta = artifact.meta.clone();
-        let doc = artifact.to_document(font_resolver);
-
-        let pages_info = PagesInfo {
-            pages: {
-                let mut pages = Vec::new();
-                pages.reserve(doc.pages.len());
-                for (i, page) in doc.pages.iter().enumerate() {
-                    pages.push(PageInfo {
-                        page_off: i,
-                        width: page.size().x,
-                        height: page.size().y,
-                    });
-                }
-                pages
-            },
-        };
-
-        Self {
-            pixel_per_pt: 0.,
-            background_color: "".to_string(),
-            doc,
-            artifact_meta,
-            pages_info,
-            ligature_map,
-        }
-    }
-
-    pub(crate) fn from_ir_artifact<T: FontResolver>(
-        artifact: IRArtifact,
+    pub(crate) fn from_artifact<T: FontResolver>(
+        artifact_meta: ArtifactMeta,
+        doc: typst::doc::Document,
         font_resolver: &T,
     ) -> Self {
         let mut ligature_map = std::collections::HashMap::<
             (String, FontVariant, FontFlags),
             std::collections::HashMap<u16, std::string::String>,
         >::new();
-        for font in &(artifact).metadata.fonts {
+        for font in &artifact_meta.fonts {
             let font_info = TypstFontInfo {
                 family: font.family.clone(),
                 variant: font.variant,
@@ -229,8 +177,6 @@ impl RenderSession {
                 std::collections::HashMap::from_iter(font.ligatures.iter().map(|s| s.clone())),
             );
         }
-        let artifact_meta = artifact.metadata.clone();
-        let doc = artifact.to_document(font_resolver);
 
         let pages_info = PagesInfo {
             pages: {
@@ -365,6 +311,7 @@ impl RenderSessionManager {
         }
     }
 
+    // todo: set return error to typst_ts_core::Error
     fn session_from_json_artifact(
         &self,
         artifact_content: &[u8],
@@ -409,7 +356,11 @@ impl RenderSessionManager {
         }
 
         let font_resolver = self.font_resolver.read().unwrap();
-        let session: RenderSession = RenderSession::from_artifact(artifact, &*font_resolver);
+        let session: RenderSession = RenderSession::from_artifact(
+            artifact.meta.clone(),
+            artifact.to_document(&*font_resolver),
+            &*font_resolver,
+        );
         Ok(session)
     }
 
@@ -448,7 +399,11 @@ impl RenderSessionManager {
         };
 
         let font_resolver = self.font_resolver.read().unwrap();
-        let session = RenderSession::from_ir_artifact(artifact, &*font_resolver);
+        let session = RenderSession::from_artifact(
+            artifact.metadata.clone(),
+            artifact.to_document(&*font_resolver),
+            &*font_resolver,
+        );
         Ok(session)
     }
 
@@ -482,35 +437,5 @@ impl RenderSessionManager {
         let font_resolver = self.font_resolver.read().unwrap();
         session.load_page(page_number, frame, &*font_resolver);
         Ok(())
-    }
-
-    // todo: set return error to typst_ts_core::Error
-    #[allow(unreachable_code)]
-    pub fn session_from_artifact_internal(
-        &self,
-        _artifact_content: &[u8],
-        decoder: &str,
-    ) -> Result<RenderSession, String> {
-        let _artifact: Artifact = match decoder {
-            #[cfg(feature = "serde_json")]
-            "serde_json" => {
-                let artifact: Artifact = serde_json::from_slice(_artifact_content).unwrap();
-
-                artifact
-            }
-            #[cfg(feature = "serde_rmp")]
-            "serde_rmp" => {
-                let artifact: Artifact = rmp_serde::from_slice(_artifact_content).unwrap();
-
-                artifact
-            }
-            _ => {
-                panic!("unknown decoder: {}", decoder);
-            }
-        };
-
-        let font_resolver = self.font_resolver.read().unwrap();
-        let session: RenderSession = RenderSession::from_artifact(_artifact, &*font_resolver);
-        Ok(session)
     }
 }
