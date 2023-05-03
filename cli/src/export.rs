@@ -90,7 +90,7 @@ pub fn prepare_exporters(
             "ir" => {
                 let output_path = output_dir
                     .with_file_name(entry_file.file_name().unwrap())
-                    .with_extension("artifact_ir.bin");
+                    .with_extension("artifact.tir.bin");
                 ir_exporter = Some(typst_ts_tir_exporter::IRArtifactExporter::new_path(
                     output_path,
                 ));
