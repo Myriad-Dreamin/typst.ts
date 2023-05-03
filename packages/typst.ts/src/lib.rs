@@ -61,7 +61,8 @@ mod tests {
         let artifact_content = std::fs::read(artifact_path()).unwrap();
 
         let mut ses = renderer
-            .session_from_artifact(artifact_content.as_slice())
+            .session_mgr
+            .session_from_artifact(artifact_content.as_slice(), "serde_json")
             .unwrap();
         ses.pixel_per_pt = 2.;
         ses.background_color = "ffffff".to_string();

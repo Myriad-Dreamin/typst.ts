@@ -48,7 +48,7 @@ impl RenderPageImageOptions {
 
 #[wasm_bindgen]
 pub struct TypstRenderer {
-    session_mgr: RenderSessionManager,
+    pub(crate) session_mgr: RenderSessionManager,
 }
 
 #[wasm_bindgen]
