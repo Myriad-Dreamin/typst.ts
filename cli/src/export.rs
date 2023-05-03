@@ -15,7 +15,7 @@ pub fn prepare_exporters(
 ) -> (
     Vec<Box<dyn typst_ts_core::DocumentExporter>>,
     Vec<Box<dyn typst_ts_core::ArtifactExporter>>,
-    Option<typst_ts_serde_exporter::IRArtifactExporter>,
+    Option<typst_ts_tir_exporter::IRArtifactExporter>,
 ) {
     let output_dir = {
         let output = args.output.clone();
@@ -91,7 +91,7 @@ pub fn prepare_exporters(
                 let output_path = output_dir
                     .with_file_name(entry_file.file_name().unwrap())
                     .with_extension("artifact_ir.bin");
-                ir_exporter = Some(typst_ts_serde_exporter::IRArtifactExporter::new_path(
+                ir_exporter = Some(typst_ts_tir_exporter::IRArtifactExporter::new_path(
                     output_path,
                 ));
             }

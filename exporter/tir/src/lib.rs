@@ -3,6 +3,7 @@ use std::{io::Write, sync::Arc};
 
 use typst::diag::SourceResult;
 use typst_ts_core::artifact_ir::Artifact;
+use typst_ts_core::exporter_utils::*;
 
 /// IR structure (in bytes)
 /// =======================
@@ -19,7 +20,15 @@ use typst_ts_core::artifact_ir::Artifact;
 /// IR artifact exporter
 const MAGIC_NUMBER: [u8; 4] = ['I' as u8, 'R' as u8, 'A' as u8, 'R' as u8];
 
-crate::serde_exporter!(IRArtifactExporter);
+pub struct IRArtifactExporter {
+    path: Option<std::path::PathBuf>,
+}
+
+impl IRArtifactExporter {
+    pub fn new_path(path: std::path::PathBuf) -> Self {
+        Self { path: Some(path) }
+    }
+}
 
 impl IRArtifactExporter {
     /// Export the given IR artifact with given world.
