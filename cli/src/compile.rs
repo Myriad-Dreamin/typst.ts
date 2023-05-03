@@ -12,7 +12,7 @@ pub struct CompileAction {
     pub entry_file: PathBuf,
     pub doc_exporters: Vec<Box<dyn typst_ts_core::DocumentExporter>>,
     pub artifact_exporters: Vec<Box<dyn typst_ts_core::ArtifactExporter>>,
-    pub ir_artifact_exporter: Option<typst_ts_serde_exporter::IRArtifactExporter>,
+    pub ir_artifact_exporter: Option<typst_ts_tir_exporter::IRArtifactExporter>,
 }
 
 impl CompileAction {

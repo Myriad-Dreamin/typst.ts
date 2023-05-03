@@ -2463,6 +2463,7 @@ dependencies = [
  "typst-ts-pdf-exporter",
  "typst-ts-raster-exporter",
  "typst-ts-serde-exporter",
+ "typst-ts-tir-exporter",
  "typst-ts-ws-exporter",
 ]
 
@@ -2591,8 +2592,18 @@ dependencies = [
 name = "typst-ts-serde-exporter"
 version = "0.1.6"
 dependencies = [
- "byteorder",
  "rmp-serde",
+ "serde",
+ "serde_json",
+ "typst",
+ "typst-ts-core",
+]
+
+[[package]]
+name = "typst-ts-tir-exporter"
+version = "0.1.6"
+dependencies = [
+ "byteorder",
  "serde",
  "serde_json",
  "typst",

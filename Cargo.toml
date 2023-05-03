@@ -6,11 +6,12 @@ members = [
 
     "packages/typst.ts",
 
-    "exporter/ws",
+    "exporter/canvas",
     "exporter/pdf",
     "exporter/raster",
     "exporter/serde",
-    "exporter/canvas",
+    "exporter/tir",
+    "exporter/ws",
 
     "contrib/fontctl",
     "contrib/dev-server",
@@ -19,10 +20,11 @@ members = [
 [patch.crates-io]
 typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }
+typst-ts-canvas-exporter = { path = "exporter/canvas" }
 typst-ts-pdf-exporter = { path = "exporter/pdf" }
 typst-ts-raster-exporter = { path = "exporter/raster" }
 typst-ts-serde-exporter = { path = "exporter/serde" }
-typst-ts-canvas-exporter = { path = "exporter/canvas" }
+typst-ts-tir-exporter = { path = "exporter/tir" }
 typst-ts-ws-exporter = { path = "exporter/ws" }
 
 typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts" }
