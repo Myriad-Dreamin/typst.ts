@@ -22,3 +22,15 @@ pub struct FontInfo {
     /// ligature coverage
     pub ligatures: Vec<(u16, String)>,
 }
+
+impl Default for FontInfo {
+    fn default() -> Self {
+        Self {
+            family: String::default(),
+            variant: FontVariant::default(),
+            coverage: Coverage::from_vec(vec![]),
+            flags: u32::default(),
+            ligatures: Vec::default(),
+        }
+    }
+}

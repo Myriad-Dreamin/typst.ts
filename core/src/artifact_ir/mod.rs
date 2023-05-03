@@ -6,6 +6,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use typst::model::StabilityProvider;
 
+use crate::artifact::core::BuildInfo;
 use crate::typst_affinite_hash;
 use crate::FontResolver;
 
@@ -24,25 +25,17 @@ use self::ligature::LigatureResolver;
 
 pub(crate) mod ligature;
 
-pub type BuildInfo = crate::artifact::BuildInfo;
+pub use crate::artifact::core::ArtifactMeta;
 pub type FontInfo = crate::artifact::font::FontInfo;
 pub type TypstFontInfo = crate::artifact::font::TypstFontInfo;
 pub type TypstFont = crate::artifact::font::TypstFont;
 pub type FontCoverage = crate::artifact::font::FontCoverage;
 pub type TypstFontFlags = crate::artifact::font::TypstFontFlags;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ArtifactMetadata {
-    /// The compiler information.
-    /// This is used to check if the artifact is compatible with the current compiler.
-    /// If not, the artifact must be recompiled.
-    pub build: Option<BuildInfo>,
-    /// The document used fonts.
-    pub fonts: Vec<FontInfo>,
-    /// The document's title.
-    pub title: Option<EcoString>,
-    /// The document's author.
-    pub author: Vec<EcoString>,
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct ArtifactHeader {
+    /// Other metadata as json.
+    pub metadata: ArtifactMeta,
     /// The page frames.
     pub pages: ItemArray<Frame>,
 }
@@ -52,7 +45,9 @@ pub struct Artifact {
     /// memory buffer for ItemRef
     pub buffer: Vec<u8>,
     /// Other metadata as json.
-    pub metadata: ArtifactMetadata,
+    pub metadata: ArtifactMeta,
+    /// The page frames.
+    pub pages: ItemArray<Frame>,
 }
 
 pub struct ArtifactBuilder {
@@ -304,37 +299,40 @@ impl From<TypstDocument> for Artifact {
 
         println!("stat: {:?}\n", builder.stat);
 
-        Self {
-            buffer: builder.build_buffer(),
-            metadata: ArtifactMetadata {
-                build: Some(BuildInfo {
-                    compiler: "typst-ts-cli".to_string(),
-                    // todo: attach version
-                    version: crate::build_info::VERSION.to_string(),
-                }),
-                fonts: builder
-                    .fonts
-                    .into_iter()
-                    .map(|f| {
-                        let (info, res) = f;
+        let buffer = builder.build_buffer();
+        let metadata = ArtifactMeta {
+            build: Some(BuildInfo {
+                compiler: "typst-ts-cli".to_string(),
+                // todo: attach version
+                version: crate::build_info::VERSION.to_string(),
+            }),
+            fonts: builder
+                .fonts
+                .into_iter()
+                .map(|f| {
+                    let (info, res) = f;
 
-                        FontInfo {
-                            family: info.family,
-                            variant: info.variant,
-                            flags: info.flags.bits(),
-                            coverage: info.coverage,
-                            ligatures: res.to_covered(),
-                        }
-                    })
-                    .collect(),
-                title: typst_doc.title.map(|s| s.to_string()),
-                author: typst_doc
-                    .author
-                    .into_iter()
-                    .map(|s| s.to_string())
-                    .collect(),
-                pages,
-            },
+                    FontInfo {
+                        family: info.family,
+                        variant: info.variant,
+                        flags: info.flags.bits(),
+                        coverage: info.coverage,
+                        ligatures: res.to_covered(),
+                    }
+                })
+                .collect(),
+            title: typst_doc.title.map(|s| s.to_string()),
+            author: typst_doc
+                .author
+                .into_iter()
+                .map(|s| s.to_string())
+                .collect(),
+        };
+
+        Self {
+            buffer,
+            metadata,
+            pages,
         }
     }
 }
@@ -489,7 +487,6 @@ impl Artifact {
         }
 
         let pages = self
-            .metadata
             .pages
             .iter(&self.buffer)
             .map(|f| builder.parse_frame(&f))

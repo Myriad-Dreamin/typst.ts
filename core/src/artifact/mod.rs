@@ -21,31 +21,19 @@ pub mod image;
 use image::*;
 
 pub mod core;
+pub use self::core::BuildInfo;
 use self::core::*;
 use self::ligature::LigatureResolver;
 
 pub(crate) mod ligature;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct BuildInfo {
-    pub version: String,
-    pub compiler: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Artifact {
-    /// The compiler information.
-    /// This is used to check if the artifact is compatible with the current compiler.
-    /// If not, the artifact must be recompiled.
-    pub build: Option<BuildInfo>,
+    /// metadata about this artifact
+    #[serde(flatten)]
+    pub meta: ArtifactMeta,
     /// The page frames.
     pub pages: Vec<Frame>,
-    /// The document used fonts.
-    pub fonts: Vec<FontInfo>,
-    /// The document's title.
-    pub title: Option<EcoString>,
-    /// The document's author.
-    pub author: Vec<EcoString>,
 }
 
 pub struct ArtifactBuilder {
@@ -220,13 +208,12 @@ impl From<TypstDocument> for Artifact {
             .map(|f| builder.write_frame(&f))
             .collect();
 
-        Self {
+        let meta = ArtifactMeta {
             build: Some(BuildInfo {
                 compiler: "typst-ts-cli".to_string(),
                 // todo: attach version
                 version: crate::build_info::VERSION.to_string(),
             }),
-            pages,
             fonts: builder
                 .fonts
                 .into_iter()
@@ -248,7 +235,9 @@ impl From<TypstDocument> for Artifact {
                 .into_iter()
                 .map(|s| s.to_string())
                 .collect(),
-        }
+        };
+
+        Self { meta, pages }
     }
 }
 
@@ -375,7 +364,7 @@ impl TypeDocumentParser {
 impl Artifact {
     pub fn to_document<T: FontResolver>(self, font_resolver: &T) -> TypstDocument {
         let mut builder = TypeDocumentParser::new();
-        for font in self.fonts {
+        for font in self.meta.fonts {
             let font_info = TypstFontInfo {
                 family: font.family,
                 variant: font.variant,
@@ -399,8 +388,9 @@ impl Artifact {
 
         TypstDocument {
             pages,
-            title: self.title.map(|s| TypstEcoString::from(s)),
+            title: self.meta.title.map(|s| TypstEcoString::from(s)),
             author: self
+                .meta
                 .author
                 .into_iter()
                 .map(|s| TypstEcoString::from(s))

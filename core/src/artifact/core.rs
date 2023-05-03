@@ -9,11 +9,12 @@ pub use typst_library::prelude::Location as TypstLocation;
 pub use typst_library::prelude::Position as TypstPosition;
 pub use typst_library::prelude::Shape as TypstShape;
 pub use typst_library::prelude::TextItem as TypstTextItem;
-
 pub type SpanRef = ();
 pub type FontRef = u32;
 pub type Lang = String;
 pub type EcoString = String;
+
+use super::font::FontInfo;
 
 /// Stably identifies an element in the document across multiple layout passes.
 ///
@@ -29,4 +30,24 @@ pub struct Location {
     /// in bibliography management to create individual linkable locations for
     /// reference entries from the bibliography's location.
     pub variant: usize,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct BuildInfo {
+    pub version: String,
+    pub compiler: String,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct ArtifactMeta {
+    /// The compiler information.
+    /// This is used to check if the artifact is compatible with the current compiler.
+    /// If not, the artifact must be recompiled.
+    pub build: Option<BuildInfo>,
+    /// The document used fonts.
+    pub fonts: Vec<FontInfo>,
+    /// The document's title.
+    pub title: Option<EcoString>,
+    /// The document's author.
+    pub author: Vec<EcoString>,
 }

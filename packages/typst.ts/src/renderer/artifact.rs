@@ -1,6 +1,6 @@
 use std::{num::NonZeroUsize, vec};
 
-use typst_ts_core::{artifact::doc::Frame, Artifact};
+use typst_ts_core::{artifact::doc::Frame, Artifact, ArtifactMeta};
 use wasm_bindgen::prelude::*;
 
 pub struct ArtifactJsBuilder {}
@@ -983,13 +983,8 @@ impl ArtifactJsBuilder {
     }
 
     pub fn from_value(&self, val: JsValue) -> Result<Artifact, JsValue> {
-        let mut artifact = Artifact {
-            build: None,
-            pages: vec![],
-            fonts: vec![],
-            title: None,
-            author: vec![],
-        };
+        let mut meta = ArtifactMeta::default();
+        let mut pages = vec![];
 
         for (k, v) in js_sys::Object::entries(val.dyn_ref().ok_or("typst: not a js object")?)
             .iter()
@@ -998,20 +993,20 @@ impl ArtifactJsBuilder {
             let k = k.as_string().ok_or("typst: artifact not a js string")?;
             match k.as_str() {
                 "build" => {
-                    artifact.build = Some(self.parse_build_info(&v)?);
+                    meta.build = Some(self.parse_build_info(&v)?);
                 }
                 "pages" => {
                     for arr in v.dyn_into::<js_sys::Array>()?.iter() {
-                        artifact.pages.push(self.parse_frame(arr)?);
+                        pages.push(self.parse_frame(arr)?);
                     }
                 }
                 "fonts" => {
                     for arr in v.dyn_into::<js_sys::Array>()?.iter() {
-                        artifact.fonts.push(self.parse_font_info(arr)?);
+                        meta.fonts.push(self.parse_font_info(arr)?);
                     }
                 }
                 "title" => {
-                    artifact.title = if v.is_null() {
+                    meta.title = if v.is_null() {
                         None
                     } else {
                         Some(v.as_string().ok_or_else(|| {
@@ -1025,7 +1020,7 @@ impl ArtifactJsBuilder {
                         .ok_or("typst: author not a array")?
                         .iter()
                     {
-                        artifact.author.push(arr.as_string().ok_or_else(|| {
+                        meta.author.push(arr.as_string().ok_or_else(|| {
                             JsValue::from_str(&format!("typst: author not a js string: {:?}", v))
                         })?);
                     }
@@ -1034,7 +1029,7 @@ impl ArtifactJsBuilder {
             }
         }
 
-        Ok(artifact)
+        Ok(Artifact { meta, pages })
     }
 }
 

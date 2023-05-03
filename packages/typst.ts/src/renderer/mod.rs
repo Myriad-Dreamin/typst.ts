@@ -13,7 +13,7 @@ pub(crate) mod artifact;
 pub use artifact::ArtifactJsBuilder;
 
 pub(crate) mod artifact_ir;
-pub use artifact_ir::IRArtifactMetadataJsBuilder;
+pub use artifact_ir::IRArtifactHeaderJsBuilder;
 
 pub(crate) mod builder;
 pub use builder::TypstRendererBuilder;

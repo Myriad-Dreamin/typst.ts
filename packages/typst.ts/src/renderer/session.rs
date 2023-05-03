@@ -4,8 +4,8 @@ use js_sys::Uint8Array;
 use typst::font::{FontFlags, FontInfo as TypstFontInfo, FontVariant};
 use typst::geom::Abs;
 use typst_ts_core::artifact::doc::Frame;
-use typst_ts_core::artifact_ir::Artifact as IRArtifact;
-use typst_ts_core::{font::FontResolverImpl, Artifact, FontResolver};
+use typst_ts_core::artifact_ir::{Artifact as IRArtifact, ArtifactHeader as IRArtifactHeader};
+use typst_ts_core::{font::FontResolverImpl, Artifact, ArtifactMeta, FontResolver};
 use wasm_bindgen::prelude::*;
 
 use web_sys::console;
@@ -13,7 +13,7 @@ use web_sys::console;
 use crate::utils::console_log;
 
 use super::artifact::{artifact_from_js_string, page_from_js_string};
-use super::artifact_ir::ir_artifact_metadata_from_js_string;
+use super::artifact_ir::ir_artifact_header_from_js_string;
 
 #[wasm_bindgen]
 #[derive(Default, Debug)]
@@ -123,8 +123,6 @@ pub type LigatureMap = std::collections::HashMap<
     std::collections::HashMap<u16, std::string::String>,
 >;
 
-type ArtifactMeta = Artifact;
-
 #[wasm_bindgen]
 pub struct RenderSession {
     pub(crate) pixel_per_pt: f32,
@@ -159,7 +157,7 @@ impl RenderSession {
             (String, FontVariant, FontFlags),
             std::collections::HashMap<u16, std::string::String>,
         >::new();
-        for font in &(artifact).fonts {
+        for font in &(artifact.meta).fonts {
             let font_info = TypstFontInfo {
                 family: font.family.clone(),
                 variant: font.variant,
@@ -179,13 +177,7 @@ impl RenderSession {
                 std::collections::HashMap::from_iter(font.ligatures.iter().map(|s| s.clone())),
             );
         }
-        let artifact_meta = Artifact {
-            build: artifact.build.clone(),
-            pages: vec![],
-            fonts: artifact.fonts.clone(),
-            title: artifact.title.clone(),
-            author: artifact.author.clone(),
-        };
+        let artifact_meta = artifact.meta.clone();
         let doc = artifact.to_document(font_resolver);
 
         let pages_info = PagesInfo {
@@ -241,13 +233,7 @@ impl RenderSession {
                 std::collections::HashMap::from_iter(font.ligatures.iter().map(|s| s.clone())),
             );
         }
-        let artifact_meta = Artifact {
-            build: artifact.metadata.build.clone(),
-            pages: vec![],
-            fonts: artifact.metadata.fonts.clone(),
-            title: artifact.metadata.title.clone(),
-            author: artifact.metadata.author.clone(),
-        };
+        let artifact_meta = artifact.metadata.clone();
         let doc = artifact.to_document(font_resolver);
 
         let pages_info = PagesInfo {
@@ -281,7 +267,10 @@ impl RenderSession {
         frame: Frame,
         font_resolver: &T,
     ) {
-        let mut artifact = self.artifact_meta.clone();
+        let mut artifact = Artifact {
+            meta: self.artifact_meta.clone(),
+            pages: Vec::new(),
+        };
         artifact.pages.push(frame);
         let doc = artifact.to_document(font_resolver);
         let page = &doc.pages[0];
@@ -438,21 +427,22 @@ impl RenderSessionManager {
         reader.read(&mut magic).unwrap();
         assert_eq!(magic, ['I' as u8, 'R' as u8, 'A' as u8, 'R' as u8]);
         assert_eq!(reader.read_i32::<LittleEndian>().unwrap(), 1);
-        let meta_len = reader.read_u64::<LittleEndian>().unwrap();
-        let mut meta = vec![0; meta_len as usize];
-        reader.read_exact(&mut meta).unwrap();
-        let meta = String::from_utf8(meta).unwrap();
+        let header_len = reader.read_u64::<LittleEndian>().unwrap();
+        let mut header = vec![0; header_len as usize];
+        reader.read_exact(&mut header).unwrap();
+        let header = String::from_utf8(header).unwrap();
 
         #[cfg(feature = "serde_json")]
-        let meta = serde_json::from_str(&meta).unwrap();
+        let header: IRArtifactHeader = serde_json::from_str(&header).unwrap();
         #[cfg(not(feature = "serde_json"))]
-        let meta = ir_artifact_metadata_from_js_string(meta).unwrap();
+        let header: IRArtifactHeader = ir_artifact_header_from_js_string(header).unwrap();
 
         let mut buffer = vec![];
         reader.read_to_end(&mut buffer).unwrap();
 
         let artifact = IRArtifact {
-            metadata: meta,
+            metadata: header.metadata,
+            pages: header.pages,
             buffer,
         };
 
