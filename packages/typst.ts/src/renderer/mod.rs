@@ -188,10 +188,7 @@ impl TypstRenderer {
 
         #[cfg(debug)]
         {
-            use super::utils::console_log;
-            use web_sys::console;
-            let _ = console::log_0;
-            console_log!(
+            crate::utils::console_log!(
                 "{} pages to render. page_off: {:?}, page_hash {:?}",
                 ses.doc.pages.len(),
                 page_off,
