@@ -56,6 +56,8 @@ impl HasItemRefKind for u8 {
 pub struct ItemRef<T> {
     pub id: u32,
     pub kind: ItemRefKind,
+
+    #[serde(skip)]
     pub phantom: std::marker::PhantomData<T>,
 }
 
@@ -97,6 +99,8 @@ impl ItemRef<String> {
 pub struct ItemArray<T> {
     pub start: u32,
     pub size: u32,
+
+    #[serde(skip)]
     pub phantom: std::marker::PhantomData<T>,
 }
 
