@@ -66,9 +66,9 @@ impl Client {
             page_numbers: pages_to_send.clone(),
             width: size.x.to_pt() as u32,
             height: size.y.to_pt() as u32,
-            fonts: artifact.fonts.clone(),
-            title: artifact.title.clone(),
-            author: artifact.author.clone(),
+            fonts: artifact.meta.fonts.clone(),
+            title: artifact.meta.title.clone(),
+            author: artifact.meta.author.clone(),
             pages: if new_meta {
                 artifact.pages.clone()
             } else {

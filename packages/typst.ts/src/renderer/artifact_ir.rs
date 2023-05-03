@@ -1,30 +1,22 @@
 use super::artifact::{convert_pair, ArtifactJsBuilder};
 use crate::utils::console_log;
-use typst_ts_core::artifact_ir::{
-    core::ItemArray, doc::Frame, ArtifactMetadata as IRArtifactMetadata,
-};
+use typst_ts_core::artifact_ir::ArtifactHeader;
+use typst_ts_core::artifact_ir::{core::ItemArray, doc::Frame};
 use wasm_bindgen::prelude::*;
-use web_sys::console;
 
-pub struct IRArtifactMetadataJsBuilder {
+pub struct IRArtifactHeaderJsBuilder {
     builder: ArtifactJsBuilder,
 }
 
-impl IRArtifactMetadataJsBuilder {
+impl IRArtifactHeaderJsBuilder {
     pub fn new() -> Self {
         Self {
             builder: ArtifactJsBuilder {},
         }
     }
 
-    pub fn from_value(&mut self, val: JsValue) -> Result<IRArtifactMetadata, JsValue> {
-        let mut metadata = IRArtifactMetadata {
-            build: None,
-            fonts: vec![],
-            title: None,
-            author: vec![],
-            pages: Default::default(),
-        };
+    pub fn from_value(&mut self, val: JsValue) -> Result<ArtifactHeader, JsValue> {
+        let mut metadata = ArtifactHeader::default();
 
         for (k, v) in js_sys::Object::entries(val.dyn_ref().ok_or("typst: not a js object")?)
             .iter()
@@ -32,39 +24,14 @@ impl IRArtifactMetadataJsBuilder {
         {
             let k = k.as_string().ok_or("typst: artifact not a js string")?;
             match k.as_str() {
-                "build" => {
-                    metadata.build = Some(self.builder.parse_build_info(&v)?);
+                "metadata" => {
+                    let artifact = self.builder.from_value(v)?;
+                    metadata.metadata = artifact.meta;
                 }
                 "pages" => {
                     metadata.pages = self.parse_pages(&v)?;
                 }
-                "fonts" => {
-                    for elem in v.dyn_into::<js_sys::Array>()?.iter() {
-                        metadata.fonts.push(self.builder.parse_font_info(elem)?);
-                    }
-                }
-                "title" => {
-                    metadata.title = if v.is_null() {
-                        None
-                    } else {
-                        Some(v.as_string().ok_or_else(|| {
-                            JsValue::from_str(&format!("typst: title not a js string: {:?}", v))
-                        })?)
-                    }
-                }
-                "author" => {
-                    for arr in v
-                        .dyn_ref::<js_sys::Array>()
-                        .ok_or("typst: author not a array")?
-                        .iter()
-                    {
-                        metadata.author.push(arr.as_string().ok_or_else(|| {
-                            JsValue::from_str(&format!("typst: author not a js string: {:?}", v))
-                        })?);
-                    }
-                }
                 _ => {
-                    console_log!("unknown key in meta: {}", k);
                     panic!("unknown key: {}", k);
                 }
             }
@@ -101,8 +68,8 @@ impl IRArtifactMetadataJsBuilder {
     }
 }
 
-pub fn ir_artifact_metadata_from_js_string(val: String) -> Result<IRArtifactMetadata, JsValue> {
+pub fn ir_artifact_header_from_js_string(val: String) -> Result<ArtifactHeader, JsValue> {
     let js_val = js_sys::JSON::parse(val.as_str()).unwrap();
-    let metadata = IRArtifactMetadataJsBuilder::new().from_value(js_val);
+    let metadata = IRArtifactHeaderJsBuilder::new().from_value(js_val);
     metadata
 }
