@@ -91,7 +91,6 @@ impl IRArtifactMetadataJsBuilder {
                         JsValue::from_str(&format!("typst: pages.size not a js number: {:?}", v))
                     })? as u32;
                 }
-                "phantom" => {}
                 _ => {
                     console_log!("unknown key pages: {}", k);
                     panic!("unknown key: {}", k);
