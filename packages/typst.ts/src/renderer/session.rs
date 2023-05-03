@@ -396,8 +396,6 @@ impl RenderSessionManager {
         #[cfg(debug)]
         {
             use super::utils::console_log;
-            use web_sys::console;
-            let _ = console::log_0;
             console_log!(
                 "{} pages to render. font info: {:?}",
                 artifact.pages.len(),
@@ -480,23 +478,6 @@ impl RenderSessionManager {
                 panic!("unknown decoder: {}", decoder);
             }
         };
-
-        #[cfg(debug)]
-        {
-            use super::utils::console_log;
-            use web_sys::console;
-            let _ = console::log_0;
-            console_log!(
-                "{} pages to render. font info: {:?}",
-                artifact.pages.len(),
-                artifact
-                    .fonts
-                    .iter()
-                    .map(|f| f.family.as_str()) // serde_json::to_string(f).unwrap())
-                    .collect::<Vec<&str>>()
-                    .join(", ")
-            );
-        }
 
         let font_resolver = self.font_resolver.read().unwrap();
         session.load_page(page_number, frame, &*font_resolver);

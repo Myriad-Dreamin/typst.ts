@@ -2,11 +2,9 @@
 #[allow(unused_macros)]
 macro_rules! console_log {
     ($($arg:tt)*) => {
-        let v: JsValue = format!(
+        web_sys::console::info_1(&format!(
             $($arg)*
-        )
-        .into();
-        console::info_1(&v);
+        ).into());
     }
 }
 
@@ -21,4 +19,4 @@ macro_rules! console_log {
 }
 
 #[allow(unused_imports)]
-pub(crate) use console_log; // <-- the trick
+pub(crate) use console_log;
