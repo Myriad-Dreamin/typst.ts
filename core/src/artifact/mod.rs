@@ -59,7 +59,7 @@ impl ArtifactBuilder {
         Self {
             fonts: vec![],
             font_map: HashMap::default(),
-            with_ligature: true,
+            with_ligature: false,
         }
     }
 
