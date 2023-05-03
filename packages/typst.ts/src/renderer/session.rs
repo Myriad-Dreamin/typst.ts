@@ -8,10 +8,6 @@ use typst_ts_core::artifact_ir::{Artifact as IRArtifact, ArtifactHeader as IRArt
 use typst_ts_core::{font::FontResolverImpl, Artifact, ArtifactMeta, FontResolver};
 use wasm_bindgen::prelude::*;
 
-use web_sys::console;
-
-use crate::utils::console_log;
-
 use super::artifact::{artifact_from_js_string, page_from_js_string};
 use super::artifact_ir::ir_artifact_header_from_js_string;
 
@@ -432,10 +428,17 @@ impl RenderSessionManager {
         reader.read_exact(&mut header).unwrap();
         let header = String::from_utf8(header).unwrap();
 
-        #[cfg(feature = "serde_json")]
-        let header: IRArtifactHeader = serde_json::from_str(&header).unwrap();
-        #[cfg(not(feature = "serde_json"))]
-        let header: IRArtifactHeader = ir_artifact_header_from_js_string(header).unwrap();
+        let header: IRArtifactHeader = if cfg!(feature = "serde_json") {
+            #[cfg(not(feature = "serde_json"))]
+            panic!("serde_json feature is not enabled");
+            #[cfg(feature = "serde_json")]
+            {
+                let result = serde_json::from_str(&header).unwrap();
+                result
+            }
+        } else {
+            ir_artifact_header_from_js_string(header).unwrap()
+        };
 
         let mut buffer = vec![];
         reader.read_to_end(&mut buffer).unwrap();
