@@ -16,7 +16,7 @@ impl PdfDocExporter {
 
 impl DocumentExporter for PdfDocExporter {
     fn export(&self, world: &dyn World, output: &typst::doc::Document) -> SourceResult<()> {
-        let buffer = typst::export::pdf(&output);
+        let buffer = typst::export::pdf(output);
         write_to_path(world, self.path.clone(), buffer)
     }
 }
