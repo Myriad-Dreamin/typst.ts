@@ -79,7 +79,7 @@ fn compile(args: CompileArgs) -> ! {
         let messages = compile_action.once();
         let no_errors = messages.is_empty();
 
-        compile_action.print_diagnostics(messages.clone()).unwrap();
+        compile_action.print_diagnostics(messages).unwrap();
         exit(if no_errors { 0 } else { 1 });
     }
 
@@ -105,7 +105,7 @@ fn compile(args: CompileArgs) -> ! {
         // Add a path to be watched. All files and directories at that path and
         // below will be monitored for changes.
         watcher
-            .watch(&workspace_dir, RecursiveMode::Recursive)
+            .watch(workspace_dir, RecursiveMode::Recursive)
             .unwrap();
 
         // Handle events.

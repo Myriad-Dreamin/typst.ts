@@ -83,7 +83,7 @@ impl CompileAction {
 
                 if let Some(ir_artifact_exporter) = &self.ir_artifact_exporter {
                     let artifact = Arc::new(IRArtifact::from(document));
-                    collect_err(ir_artifact_exporter.export(&self.world, artifact.clone()));
+                    collect_err(ir_artifact_exporter.export(&self.world, artifact));
                 }
 
                 errors
