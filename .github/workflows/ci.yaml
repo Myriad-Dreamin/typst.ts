@@ -18,9 +18,8 @@ jobs:
         run: cargo run --bin typst-ts-fontctl
       - name: Fmt check
         run: cargo fmt --check --all
-      # todo: clippy tests
-      # - name: Clippy check
-      #   run: cargo clippy --workspace --all-targets
+      - name: Clippy check
+        run: cargo clippy --workspace --all-targets
       - name: Prepare artifacts
         run: cargo run --bin typst-ts-cli -- compile --workspace fuzzers/corpora/math/ --entry fuzzers/corpora/math/main.typ
       - name: Build
