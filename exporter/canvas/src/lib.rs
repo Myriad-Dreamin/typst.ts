@@ -525,7 +525,7 @@ impl<'a> CanvasRenderTask<'a> {
             return Some(()); // todo: don't submit
         }
 
-        let state_guard = CanvasStateGuard::new(&mut self.canvas);
+        let state_guard = CanvasStateGuard::new(self.canvas);
 
         let face = text.font.ttf();
 
@@ -541,10 +541,8 @@ impl<'a> CanvasRenderTask<'a> {
         {
             let mut builder = SvgPath2DBuilder(String::new());
             self.canvas.begin_path();
-            if face.outline_glyph(id, &mut builder).is_none() {
-                // todo: handling no such glyph
-                return None;
-            }
+            // todo: handling no such glyph
+            face.outline_glyph(id, &mut builder)?;
 
             let Paint::Solid(color) = text.fill;
             let c = color.to_rgba();
