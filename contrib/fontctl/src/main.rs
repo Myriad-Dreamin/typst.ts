@@ -8,7 +8,7 @@ pub struct Opts {
     pub using_branch: String,
 }
 
-const FONT_LISTS: &[(&'static str, &'static str)] = &[
+const FONT_LISTS: &[(&str, &str)] = &[
     (
         "DejaVuSansMono-Bold.ttf",
         "bce60f1b4421acd9ea51ba6623d7024ecbe6817a953e3654df62a5e6bdf8f769",
