@@ -24,6 +24,7 @@ pub(crate) mod session;
 pub use session::RenderSession;
 
 #[wasm_bindgen]
+#[derive(Debug, Default)]
 pub struct RenderPageImageOptions {
     page_off: usize,
 }

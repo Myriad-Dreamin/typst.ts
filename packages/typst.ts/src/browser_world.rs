@@ -104,3 +104,9 @@ impl BrowserFontSearcher {
         }
     }
 }
+
+impl Default for BrowserFontSearcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
