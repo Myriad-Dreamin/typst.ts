@@ -19,7 +19,6 @@ mod tests {
     use std::path::PathBuf;
 
     fn artifact_path() -> PathBuf {
-        
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../fuzzers/corpora/math/main.artifact.json")
     }
@@ -49,7 +48,6 @@ mod tests {
         builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
             "../../../assets/fonts/NewCMMath-Regular.otf"
         )));
-        
 
         pollster::block_on(builder.build()).unwrap()
     }
