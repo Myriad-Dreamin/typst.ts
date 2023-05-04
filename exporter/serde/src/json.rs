@@ -42,7 +42,7 @@ impl JsonArtifactExporter {
         fn walk_json(val: &serde_json::Value) -> serde_json::Value {
             match val {
                 serde_json::Value::Array(arr) => {
-                    serde_json::json!(arr.iter().map(|x| walk_json(x)).collect::<Vec<_>>())
+                    serde_json::json!(arr.iter().map(walk_json).collect::<Vec<_>>())
                 }
                 serde_json::Value::Object(obj) => {
                     serde_json::json!(obj
