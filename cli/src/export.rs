@@ -9,14 +9,13 @@ pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature name */ &str
     ("web_socket", "web-socket"),
 ];
 
-pub fn prepare_exporters(
-    args: CompileArgs,
-    entry_file: &Path,
-) -> (
+type ExporterBundle = (
     Vec<Box<dyn typst_ts_core::DocumentExporter>>,
     Vec<Box<dyn typst_ts_core::ArtifactExporter>>,
     Option<typst_ts_tir_exporter::IRArtifactExporter>,
-) {
+);
+
+pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> ExporterBundle {
     let output_dir = {
         let output = args.output.clone();
         let output_dir = if !output.is_empty() {
