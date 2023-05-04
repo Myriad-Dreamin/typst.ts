@@ -95,8 +95,8 @@ impl Downloader {
                 .create(true)
                 .open(checkout_file)?;
 
-            file.write(from_path.display().to_string().as_bytes())?;
-            file.write("\n".as_bytes())?;
+            file.write_all(from_path.display().to_string().as_bytes())?;
+            file.write_all("\n".as_bytes())?;
         }
 
         let branch_name = &self.branch_name;
