@@ -11,15 +11,15 @@ mod tests {
     use std::path::PathBuf;
 
     fn artifact_path() -> PathBuf {
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../fuzzers/corpora/math/main.artifact.json");
-        path
+        
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../fuzzers/corpora/math/main.artifact.json")
     }
 
     fn artifact_output_path() -> PathBuf {
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../fuzzers/corpora/math/main.artifact.pdf");
-        path
+        
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../fuzzers/corpora/math/main.artifact.pdf")
     }
 
     #[test]

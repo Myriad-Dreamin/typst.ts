@@ -96,7 +96,7 @@ impl World for TypstSystemWorld {
     }
 
     fn book(&self) -> &Prehashed<FontBook> {
-        &self.font_resolver.font_book()
+        self.font_resolver.font_book()
     }
 
     fn font(&self, id: usize) -> Option<Font> {
