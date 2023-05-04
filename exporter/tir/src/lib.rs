@@ -18,7 +18,7 @@ use typst_ts_core::exporter_utils::*;
 /// [16 + metadata_len - end] global buffer (binary)
 
 /// IR artifact exporter
-const MAGIC_NUMBER: [u8; 4] = ['I' as u8, 'R' as u8, 'A' as u8, 'R' as u8];
+const MAGIC_NUMBER: [u8; 4] = [b'I', b'R', b'A', b'R'];
 
 pub struct IRArtifactExporter {
     path: Option<std::path::PathBuf>,
