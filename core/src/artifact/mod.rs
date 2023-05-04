@@ -398,3 +398,15 @@ impl Artifact {
         }
     }
 }
+
+impl Default for ArtifactBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Default for TypeDocumentParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}

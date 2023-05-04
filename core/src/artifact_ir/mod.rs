@@ -602,3 +602,9 @@ mod tests {
         assert!(matches!(item.baseline, Some(_)));
     }
 }
+
+impl Default for ArtifactBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
