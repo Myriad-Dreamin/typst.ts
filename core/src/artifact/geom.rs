@@ -26,6 +26,7 @@ pub use typst::geom::Transform as TypstTransform;
 /// A 64-bit float that implements `Eq`, `Ord` and `Hash`.
 ///
 /// Panics if it's `NaN` during any of those operations.
+#[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Scalar(pub f64);
 
@@ -35,13 +36,14 @@ impl From<TypstScalar> for Scalar {
     }
 }
 
-impl Into<TypstScalar> for Scalar {
-    fn into(self) -> TypstScalar {
-        TypstScalar(self.0)
+impl From<Scalar> for TypstScalar {
+    fn from(scalar: Scalar) -> Self {
+        Self(scalar.0)
     }
 }
 
 /// An absolute length.
+#[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Abs(Scalar);
 
@@ -51,9 +53,9 @@ impl From<TypstAbs> for Abs {
     }
 }
 
-impl Into<TypstAbs> for Abs {
-    fn into(self) -> TypstAbs {
-        TypstAbs::raw(self.0 .0)
+impl From<Abs> for TypstAbs {
+    fn from(abs: Abs) -> Self {
+        Self::raw(abs.0 .0)
     }
 }
 
@@ -61,6 +63,7 @@ impl Into<TypstAbs> for Abs {
 ///
 /// _Note_: `50%` is represented as `0.5` here, but stored as `50.0` in the
 /// corresponding [literal](crate::syntax::ast::Numeric).
+#[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Ratio(Scalar);
 
@@ -70,15 +73,16 @@ impl From<TypstRatio> for Ratio {
     }
 }
 
-impl Into<TypstRatio> for Ratio {
-    fn into(self) -> TypstRatio {
-        TypstRatio::new(self.0 .0)
+impl From<Ratio> for TypstRatio {
+    fn from(ratio: Ratio) -> Self {
+        Self::new(ratio.0 .0)
     }
 }
 
 /// A length that is relative to the font size.
 ///
 /// `1em` is the same as the font size.
+#[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Em(Scalar);
 
@@ -88,13 +92,14 @@ impl From<TypstEm> for Em {
     }
 }
 
-impl Into<TypstEm> for Em {
-    fn into(self) -> TypstEm {
-        TypstEm::new(self.0 .0)
+impl From<Em> for TypstEm {
+    fn from(em: Em) -> Self {
+        Self::new(em.0 .0)
     }
 }
 
 /// A container with a horizontal and vertical component.
+#[repr(C)]
 #[derive(Default, Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Axes<T> {
     /// The horizontal component.
@@ -115,19 +120,20 @@ where
     }
 }
 
-impl<U, T> Into<TypstAxes<U>> for Axes<T>
+impl<T, U> From<Axes<T>> for TypstAxes<U>
 where
     T: Into<U>,
 {
-    fn into(self) -> TypstAxes<U> {
-        TypstAxes {
-            x: self.x.into(),
-            y: self.y.into(),
+    fn from(axes: Axes<T>) -> Self {
+        Self {
+            x: axes.x.into(),
+            y: axes.y.into(),
         }
     }
 }
 
 /// A point in 2D.
+#[repr(C)]
 #[derive(Default, Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Point {
     /// The x coordinate.
@@ -145,17 +151,18 @@ impl From<TypstPoint> for Point {
     }
 }
 
-impl Into<TypstPoint> for Point {
-    fn into(self) -> TypstPoint {
-        TypstPoint {
-            x: self.x.into(),
-            y: self.y.into(),
+impl From<Point> for TypstPoint {
+    fn from(point: Point) -> Self {
+        Self {
+            x: point.x.into(),
+            y: point.y.into(),
         }
     }
 }
 
 // todo: in From/To conversion flavor
 /// A scale-skew-translate transformation.
+#[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Transform {
     pub sx: Ratio,
@@ -179,20 +186,21 @@ impl From<TypstTransform> for Transform {
     }
 }
 
-impl Into<TypstTransform> for Transform {
-    fn into(self) -> TypstTransform {
-        TypstTransform {
-            sx: self.sx.into(),
-            ky: self.ky.into(),
-            kx: self.kx.into(),
-            sy: self.sy.into(),
-            tx: self.tx.into(),
-            ty: self.ty.into(),
+impl From<Transform> for TypstTransform {
+    fn from(transform: Transform) -> Self {
+        Self {
+            sx: transform.sx.into(),
+            ky: transform.ky.into(),
+            kx: transform.kx.into(),
+            sy: transform.sy.into(),
+            tx: transform.tx.into(),
+            ty: transform.ty.into(),
         }
     }
 }
 
 /// A geometric shape with optional fill and stroke.
+#[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Shape {
     /// The shape's geometry.
@@ -213,17 +221,18 @@ impl From<TypstShape> for Shape {
     }
 }
 
-impl Into<TypstShape> for Shape {
-    fn into(self) -> TypstShape {
-        TypstShape {
-            geometry: self.geometry.into(),
-            fill: self.fill.map(|typst_paint| typst_paint.into()),
-            stroke: self.stroke.map(|typst_stroke| typst_stroke.into()),
+impl From<Shape> for TypstShape {
+    fn from(shape: Shape) -> Self {
+        Self {
+            geometry: shape.geometry.into(),
+            fill: shape.fill.map(|paint| paint.into()),
+            stroke: shape.stroke.map(|stroke| stroke.into()),
         }
     }
 }
 
 /// How a fill or stroke should be painted.
+#[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "t", content = "v")]
 pub enum Paint {
@@ -239,15 +248,16 @@ impl From<TypstPaint> for Paint {
     }
 }
 
-impl Into<TypstPaint> for Paint {
-    fn into(self) -> TypstPaint {
-        match self {
-            Self::Solid(typst_color) => TypstPaint::Solid(typst_color.into()),
+impl From<Paint> for TypstPaint {
+    fn from(paint: Paint) -> Self {
+        match paint {
+            Paint::Solid(color) => Self::Solid(color.into()),
         }
     }
 }
 
 /// A shape's geometry.
+#[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "t", content = "v")]
 pub enum Geometry {
@@ -269,17 +279,18 @@ impl From<TypstGeometry> for Geometry {
     }
 }
 
-impl Into<TypstGeometry> for Geometry {
-    fn into(self) -> TypstGeometry {
-        match self {
-            Self::Line(typst_point) => TypstGeometry::Line(typst_point.into()),
-            Self::Rect(typst_size) => TypstGeometry::Rect(typst_size.into()),
-            Self::Path(typst_path) => TypstGeometry::Path(typst_path.into()),
+impl From<Geometry> for TypstGeometry {
+    fn from(geometry: Geometry) -> Self {
+        match geometry {
+            Geometry::Line(point) => Self::Line(point.into()),
+            Geometry::Rect(size) => Self::Rect(size.into()),
+            Geometry::Path(path) => Self::Path(path.into()),
         }
     }
 }
 
 /// A bezier path.
+#[repr(C)]
 #[derive(Debug, Default, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Path(pub Vec<PathItem>);
 
@@ -289,13 +300,14 @@ impl From<TypstPath> for Path {
     }
 }
 
-impl Into<TypstPath> for Path {
-    fn into(self) -> TypstPath {
-        TypstPath(self.0.into_iter().map(Into::into).collect())
+impl From<Path> for TypstPath {
+    fn from(path: Path) -> Self {
+        Self(path.0.into_iter().map(Into::into).collect())
     }
 }
 
 /// An item in a bezier path.
+#[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum PathItem {
     MoveTo(Point),
@@ -319,22 +331,21 @@ impl From<TypstPathItem> for PathItem {
     }
 }
 
-impl Into<TypstPathItem> for PathItem {
-    fn into(self) -> TypstPathItem {
-        match self {
-            Self::MoveTo(typst_point) => TypstPathItem::MoveTo(typst_point.into()),
-            Self::LineTo(typst_point) => TypstPathItem::LineTo(typst_point.into()),
-            Self::CubicTo(typst_point_1, typst_point_2, typst_point_3) => TypstPathItem::CubicTo(
-                typst_point_1.into(),
-                typst_point_2.into(),
-                typst_point_3.into(),
-            ),
-            Self::ClosePath => TypstPathItem::ClosePath,
+impl From<PathItem> for TypstPathItem {
+    fn from(path_item: PathItem) -> Self {
+        match path_item {
+            PathItem::MoveTo(point) => Self::MoveTo(point.into()),
+            PathItem::LineTo(point) => Self::LineTo(point.into()),
+            PathItem::CubicTo(point_1, point_2, point_3) => {
+                Self::CubicTo(point_1.into(), point_2.into(), point_3.into())
+            }
+            PathItem::ClosePath => Self::ClosePath,
         }
     }
 }
 
 /// The line cap of a stroke
+#[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum LineCap {
     Butt,
@@ -352,17 +363,18 @@ impl From<TypstLineCap> for LineCap {
     }
 }
 
-impl Into<TypstLineCap> for LineCap {
-    fn into(self) -> TypstLineCap {
-        match self {
-            Self::Butt => TypstLineCap::Butt,
-            Self::Round => TypstLineCap::Round,
-            Self::Square => TypstLineCap::Square,
+impl From<LineCap> for TypstLineCap {
+    fn from(line_cap: LineCap) -> Self {
+        match line_cap {
+            LineCap::Butt => Self::Butt,
+            LineCap::Round => Self::Round,
+            LineCap::Square => Self::Square,
         }
     }
 }
 
 /// The line join of a stroke
+#[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum LineJoin {
     Miter,
@@ -380,12 +392,12 @@ impl From<TypstLineJoin> for LineJoin {
     }
 }
 
-impl Into<TypstLineJoin> for LineJoin {
-    fn into(self) -> TypstLineJoin {
-        match self {
-            Self::Miter => TypstLineJoin::Miter,
-            Self::Round => TypstLineJoin::Round,
-            Self::Bevel => TypstLineJoin::Bevel,
+impl From<LineJoin> for TypstLineJoin {
+    fn from(line_join: LineJoin) -> Self {
+        match line_join {
+            LineJoin::Miter => Self::Miter,
+            LineJoin::Round => Self::Round,
+            LineJoin::Bevel => Self::Bevel,
         }
     }
 }
@@ -394,6 +406,7 @@ impl Into<TypstLineJoin> for LineJoin {
 ///
 /// Currently supports absolute and font-relative units, but support could quite
 /// easily be extended to other units.
+#[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Length {
     /// The absolute part.
@@ -411,16 +424,17 @@ impl From<TypstLength> for Length {
     }
 }
 
-impl Into<TypstLength> for Length {
-    fn into(self) -> TypstLength {
-        TypstLength {
-            abs: self.abs.into(),
-            em: self.em.into(),
+impl From<Length> for TypstLength {
+    fn from(length: Length) -> Self {
+        Self {
+            abs: length.abs.into(),
+            em: length.em.into(),
         }
     }
 }
 
 /// The length of a dash in a line dash pattern
+#[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum DashLength<T> {
     LineWidth,
@@ -436,16 +450,17 @@ impl<T> From<TypstDashLength<T>> for DashLength<T> {
     }
 }
 
-impl<T> Into<TypstDashLength<T>> for DashLength<T> {
-    fn into(self) -> TypstDashLength<T> {
-        match self {
-            Self::LineWidth => TypstDashLength::LineWidth,
-            Self::Length(typst_length) => TypstDashLength::Length(typst_length.into()),
+impl<T> From<DashLength<T>> for TypstDashLength<T> {
+    fn from(dash_length: DashLength<T>) -> Self {
+        match dash_length {
+            DashLength::LineWidth => Self::LineWidth,
+            DashLength::Length(length) => Self::Length(length.into()),
         }
     }
 }
 
 /// A line dash pattern
+#[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DashPattern<T, DT> {
     /// The dash array.
@@ -471,20 +486,21 @@ where
     }
 }
 
-impl<T, DT, RT, RDT> Into<TypstDashPattern<T, DT>> for DashPattern<RT, RDT>
+impl<T, DT, RT, RDT> From<DashPattern<T, DT>> for TypstDashPattern<RT, RDT>
 where
-    RT: Into<T>,
-    RDT: Into<DT>,
+    T: Into<RT>,
+    DT: Into<RDT>,
 {
-    fn into(self) -> TypstDashPattern<T, DT> {
-        TypstDashPattern {
-            array: self.array.into_iter().map(|x| x.into()).collect(),
-            phase: self.phase.into(),
+    fn from(dash_pattern: DashPattern<T, DT>) -> Self {
+        Self {
+            array: dash_pattern.array.into_iter().map(|x| x.into()).collect(),
+            phase: dash_pattern.phase.into(),
         }
     }
 }
 
 /// A stroke of a geometric shape.
+#[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Stroke {
     /// The stroke's paint.
@@ -516,22 +532,21 @@ impl From<TypstStroke> for Stroke {
     }
 }
 
-impl Into<TypstStroke> for Stroke {
-    fn into(self) -> TypstStroke {
-        TypstStroke {
-            paint: self.paint.into(),
-            thickness: self.thickness.into(),
-            line_cap: self.line_cap.into(),
-            line_join: self.line_join.into(),
-            dash_pattern: self
-                .dash_pattern
-                .map(|typst_dash_pattern| typst_dash_pattern.into()),
-            miter_limit: self.miter_limit.into(),
+impl From<Stroke> for TypstStroke {
+    fn from(stroke: Stroke) -> Self {
+        Self {
+            paint: stroke.paint.into(),
+            thickness: stroke.thickness.into(),
+            line_cap: stroke.line_cap.into(),
+            line_join: stroke.line_join.into(),
+            dash_pattern: stroke.dash_pattern.map(|dash_pattern| dash_pattern.into()),
+            miter_limit: stroke.miter_limit.into(),
         }
     }
 }
 
 /// An 8-bit grayscale color.
+#[repr(C)]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct LumaColor(pub u8);
 
@@ -541,13 +556,14 @@ impl From<TypstLumaColor> for LumaColor {
     }
 }
 
-impl Into<TypstLumaColor> for LumaColor {
-    fn into(self) -> TypstLumaColor {
-        TypstLumaColor::new(self.0)
+impl From<LumaColor> for TypstLumaColor {
+    fn from(luma_color: LumaColor) -> Self {
+        Self::new(luma_color.0)
     }
 }
 
 /// An 8-bit RGBA color.
+#[repr(C)]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct RgbaColor {
     /// Red channel.
@@ -571,18 +587,14 @@ impl From<TypstRgbaColor> for RgbaColor {
     }
 }
 
-impl Into<TypstRgbaColor> for RgbaColor {
-    fn into(self) -> TypstRgbaColor {
-        TypstRgbaColor {
-            r: self.r,
-            g: self.g,
-            b: self.b,
-            a: self.a,
-        }
+impl From<RgbaColor> for TypstRgbaColor {
+    fn from(rgba_color: RgbaColor) -> Self {
+        Self::new(rgba_color.r, rgba_color.g, rgba_color.b, rgba_color.a)
     }
 }
 
 /// An 8-bit CMYK color.
+#[repr(C)]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct CmykColor {
     /// The cyan component.
@@ -606,18 +618,14 @@ impl From<TypstCmykColor> for CmykColor {
     }
 }
 
-impl Into<TypstCmykColor> for CmykColor {
-    fn into(self) -> TypstCmykColor {
-        TypstCmykColor {
-            c: self.c,
-            m: self.m,
-            y: self.y,
-            k: self.k,
-        }
+impl From<CmykColor> for TypstCmykColor {
+    fn from(cmyk_color: CmykColor) -> Self {
+        Self::new(cmyk_color.c, cmyk_color.m, cmyk_color.y, cmyk_color.k)
     }
 }
 
 /// A color in a dynamic format.
+#[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "t", content = "v")]
 pub enum Color {
@@ -639,12 +647,12 @@ impl From<TypstColor> for Color {
     }
 }
 
-impl Into<TypstColor> for Color {
-    fn into(self) -> TypstColor {
-        match self {
-            Self::Luma(luma_color) => TypstColor::Luma(luma_color.into()),
-            Self::Rgba(rgba_color) => TypstColor::Rgba(rgba_color.into()),
-            Self::Cmyk(cmyk_color) => TypstColor::Cmyk(cmyk_color.into()),
+impl From<Color> for TypstColor {
+    fn from(color: Color) -> Self {
+        match color {
+            Color::Luma(luma_color) => Self::Luma(luma_color.into()),
+            Color::Rgba(rgba_color) => Self::Rgba(rgba_color.into()),
+            Color::Cmyk(cmyk_color) => Self::Cmyk(cmyk_color.into()),
         }
     }
 }
