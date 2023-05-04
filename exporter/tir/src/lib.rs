@@ -36,7 +36,7 @@ impl IRArtifactExporter {
         let metadata = serde_json::to_string(&output.metadata).unwrap();
         let cap = metadata.len() + output.buffer.len() + 16;
         let mut writer = std::io::Cursor::new(Vec::with_capacity(cap));
-        writer.write(&MAGIC_NUMBER).unwrap();
+        writer.write_all(&MAGIC_NUMBER).unwrap();
 
         writer.write_u32::<LittleEndian>(1).unwrap();
         writer
