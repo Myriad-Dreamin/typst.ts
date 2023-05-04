@@ -36,7 +36,7 @@ fn find_program_path(dir: &str, program: &str) -> Option<String> {
     } else if program.with_extension("exe").exists() {
         return Some(program.with_extension("exe").to_str().unwrap().to_string());
     }
-    return None;
+    None
 }
 
 fn find_compiler_path() {
