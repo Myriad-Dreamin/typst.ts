@@ -117,8 +117,8 @@ impl ArtifactBuilder {
     }
 
     pub fn write_font(&mut self, font: &TypstFont) -> FontRef {
-        if let Some(&ref font) = self.font_map.get(font.info()) {
-            return font.clone();
+        if let Some(font) = self.font_map.get(font.info()) {
+            return *font;
         }
 
         if self.fonts.len() >= u32::MAX as usize {
@@ -126,11 +126,11 @@ impl ArtifactBuilder {
         }
 
         let font_ref = self.fonts.len() as u32;
-        self.font_map.insert(font.info().clone(), font_ref.clone());
+        self.font_map.insert(font.info().clone(), font_ref);
         self.fonts.push((
             TypstFontInfo {
                 family: font.info().family.clone(),
-                variant: font.info().variant.clone(),
+                variant: font.info().variant,
                 flags: font.info().flags,
                 coverage: FontCoverage::from_vec(vec![]),
             },
@@ -317,7 +317,7 @@ impl From<TypstDocument> for Artifact {
                         variant: info.variant,
                         flags: info.flags.bits(),
                         coverage: info.coverage,
-                        ligatures: res.to_covered(),
+                        ligatures: res.into_covered(),
                     }
                 })
                 .collect(),
@@ -383,10 +383,10 @@ impl<'a> TypeDocumentParser<'a> {
             font: self.get_font(text.font),
             size: text.size.into(),
             fill: text.fill.clone().into(),
-            lang: TypstLang::from_str(text.lang.as_str(&self.buffer)).unwrap(),
+            lang: TypstLang::from_str(text.lang.as_str(self.buffer)).unwrap(),
             glyphs: text
                 .glyphs
-                .iter(&self.buffer)
+                .iter(self.buffer)
                 .map(|g| self.parse_glyph(g))
                 .collect(),
         }
@@ -394,22 +394,22 @@ impl<'a> TypeDocumentParser<'a> {
 
     pub fn parse_image(&mut self, image: &Image) -> TypstImage {
         TypstImage::new_raw(
-            image.data.to_vec(&self.buffer).into(),
-            match image.format.as_str(&self.buffer) {
+            image.data.to_vec(self.buffer).into(),
+            match image.format.as_str(self.buffer) {
                 "png" => ImageFormat::Raster(RasterFormat::Png),
                 "jpg" => ImageFormat::Raster(RasterFormat::Jpg),
                 "gif" => ImageFormat::Raster(RasterFormat::Gif),
                 "svg" => ImageFormat::Vector(VectorFormat::Svg),
-                _ => panic!("Unknown image format {}", image.format.as_str(&self.buffer)),
+                _ => panic!("Unknown image format {}", image.format.as_str(self.buffer)),
             },
-            image.alt.clone().map(|s| s.as_str(&self.buffer).into()),
-            (image.width, image.height).into(),
+            image.alt.clone().map(|s| s.as_str(self.buffer).into()),
+            (image.width, image.height),
         )
         .unwrap()
     }
 
-    pub fn parse_location(&mut self, loc: &String) -> Option<TypstLocation> {
-        let loc_hash = u128::from_str_radix(loc, 10).ok()?;
+    pub fn parse_location(&mut self, loc: &str) -> Option<TypstLocation> {
+        let loc_hash = loc.parse().ok()?;
         Some(self.sp.locate(loc_hash))
     }
 
@@ -427,17 +427,17 @@ impl<'a> TypeDocumentParser<'a> {
             ),
             FrameItem::MetaLink(dest, size) => {
                 let dest = match dest {
-                    Destination::Url(url) => TypstDestination::Url(TypstEcoString::from(
-                        url.as_str(&self.buffer).clone(),
-                    )),
+                    Destination::Url(url) => {
+                        TypstDestination::Url(TypstEcoString::from(url.as_str(self.buffer)))
+                    }
                     Destination::Position(pos) => TypstDestination::Position(TypstPosition {
                         page: pos.page,
                         point: pos.point.into(),
                     }),
                     Destination::Location(loc) => {
-                        match self.parse_location(&loc.as_str(&self.buffer).to_string()) {
+                        match self.parse_location(loc.as_str(self.buffer)) {
                             Some(loc) => TypstDestination::Location(loc),
-                            None => panic!("Invalid location: {}", loc.as_str(&self.buffer)),
+                            None => panic!("Invalid location: {}", loc.as_str(self.buffer)),
                         }
                     }
                 };
@@ -450,15 +450,17 @@ impl<'a> TypeDocumentParser<'a> {
 
     pub fn parse_frame(&mut self, frame: &Frame) -> TypstFrame {
         let mut parsed_frame = TypstFrame::new(frame.size.into());
-        frame.baseline.map(|b| parsed_frame.set_baseline(b.into()));
-        let items = frame.items.iter(&self.buffer);
+        if let Some(bl) = frame.baseline {
+            parsed_frame.set_baseline(bl.into())
+        }
+        let items = frame.items.iter(self.buffer);
 
         for ItemWithPos { pos, item } in items {
-            let item = item.deref(&self.buffer);
+            let item = item.deref(self.buffer);
             match item {
                 FrameItem::None => continue,
                 _ => {
-                    parsed_frame.push(pos.clone().into(), self.parse_frame_item(item));
+                    parsed_frame.push((*pos).into(), self.parse_frame_item(item));
                 }
             };
         }
@@ -489,17 +491,17 @@ impl Artifact {
         let pages = self
             .pages
             .iter(&self.buffer)
-            .map(|f| builder.parse_frame(&f))
+            .map(|f| builder.parse_frame(f))
             .collect();
 
         TypstDocument {
             pages,
-            title: self.metadata.title.map(|s| TypstEcoString::from(s)),
+            title: self.metadata.title.map(TypstEcoString::from),
             author: self
                 .metadata
                 .author
                 .into_iter()
-                .map(|s| TypstEcoString::from(s))
+                .map(TypstEcoString::from)
                 .collect(),
         }
     }

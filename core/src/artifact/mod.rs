@@ -52,8 +52,8 @@ impl ArtifactBuilder {
     }
 
     pub fn write_font(&mut self, font: &TypstFont) -> FontRef {
-        if let Some(&ref font) = self.font_map.get(font.info()) {
-            return font.clone();
+        if let Some(font) = self.font_map.get(font.info()) {
+            return *font;
         }
 
         if self.fonts.len() >= u32::MAX as usize {
@@ -61,11 +61,11 @@ impl ArtifactBuilder {
         }
 
         let font_ref = self.fonts.len() as u32;
-        self.font_map.insert(font.info().clone(), font_ref.clone());
+        self.font_map.insert(font.info().clone(), font_ref);
         self.fonts.push((
             TypstFontInfo {
                 family: font.info().family.clone(),
-                variant: font.info().variant.clone(),
+                variant: font.info().variant,
                 flags: font.info().flags,
                 coverage: FontCoverage::from_vec(vec![]),
             },
@@ -76,7 +76,6 @@ impl ArtifactBuilder {
 
     pub fn write_span(&mut self, _span: TypstSpan) -> SpanRef {
         // todo
-        ()
     }
 
     pub fn write_glyph(&mut self, glyph: TypstGlyph) -> Glyph {
@@ -225,7 +224,7 @@ impl From<TypstDocument> for Artifact {
                         variant: info.variant,
                         flags: info.flags.bits(),
                         coverage: info.coverage,
-                        ligatures: res.to_covered(),
+                        ligatures: res.into_covered(),
                     }
                 })
                 .collect(),
@@ -301,13 +300,13 @@ impl TypeDocumentParser {
                 _ => panic!("Unknown image format {}", image.format),
             },
             image.alt.clone().map(|s| s.into()),
-            (image.width, image.height).into(),
+            (image.width, image.height),
         )
         .unwrap()
     }
 
-    pub fn parse_location(&mut self, loc: &String) -> Option<TypstLocation> {
-        let loc_hash = u128::from_str_radix(loc, 10).ok()?;
+    pub fn parse_location(&mut self, loc: &str) -> Option<TypstLocation> {
+        let loc_hash = loc.parse().ok()?;
         Some(self.sp.locate(loc_hash))
     }
 
@@ -346,13 +345,15 @@ impl TypeDocumentParser {
 
     pub fn parse_frame(&mut self, frame: &Frame) -> TypstFrame {
         let mut parsed_frame = TypstFrame::new(frame.size.into());
-        frame.baseline.map(|b| parsed_frame.set_baseline(b.into()));
+        if let Some(bl) = frame.baseline {
+            parsed_frame.set_baseline(bl.into())
+        }
 
         for (pos, item) in frame.items.iter() {
             match item {
                 FrameItem::None => continue,
                 _ => {
-                    parsed_frame.push(pos.clone().into(), self.parse_frame_item(item));
+                    parsed_frame.push((*pos).into(), self.parse_frame_item(item));
                 }
             };
         }
@@ -388,12 +389,12 @@ impl Artifact {
 
         TypstDocument {
             pages,
-            title: self.meta.title.map(|s| TypstEcoString::from(s)),
+            title: self.meta.title.map(TypstEcoString::from),
             author: self
                 .meta
                 .author
                 .into_iter()
-                .map(|s| TypstEcoString::from(s))
+                .map(TypstEcoString::from)
                 .collect(),
         }
     }

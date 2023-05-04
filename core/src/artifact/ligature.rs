@@ -9,10 +9,7 @@ fn is_ligature(face: &ttf_parser::Face<'_>, id: GlyphId) -> bool {
         None => return false,
     };
 
-    match table.glyph_class(id) {
-        Some(GlyphClass::Ligature) => true,
-        _ => false,
-    }
+    matches!(table.glyph_class(id), Some(GlyphClass::Ligature))
 }
 
 /// get reverse cmap
@@ -59,7 +56,7 @@ impl LigatureResolver {
     }
 
     /// return a list of covered ligatures
-    pub fn to_covered(self) -> Vec<(u16, String)> {
+    pub fn into_covered(self) -> Vec<(u16, String)> {
         let mut res = vec![];
         for (k, v) in self.ligature_cmap {
             if let Some(v) = v {
@@ -74,17 +71,14 @@ impl LigatureResolver {
         let gsub = face.tables().gsub.unwrap();
         for lookup in gsub.lookups {
             for subtable in lookup.subtables.into_iter() {
-                match subtable {
-                    SubstitutionSubtable::Ligature(ligatures) => {
-                        for ligature_set in ligatures.ligature_sets {
-                            for ligature in ligature_set {
-                                if ligature.glyph == id {
-                                    return Some(ligature);
-                                }
+                if let SubstitutionSubtable::Ligature(ligatures) = subtable {
+                    for ligature_set in ligatures.ligature_sets {
+                        for ligature in ligature_set {
+                            if ligature.glyph == id {
+                                return Some(ligature);
                             }
                         }
                     }
-                    _ => {}
                 }
             }
         }

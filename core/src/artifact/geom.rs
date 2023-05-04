@@ -445,7 +445,7 @@ impl<T> From<TypstDashLength<T>> for DashLength<T> {
     fn from(typst_dash_length: TypstDashLength<T>) -> Self {
         match typst_dash_length {
             TypstDashLength::LineWidth => Self::LineWidth,
-            TypstDashLength::Length(typst_length) => Self::Length(typst_length.into()),
+            TypstDashLength::Length(typst_length) => Self::Length(typst_length),
         }
     }
 }
@@ -454,7 +454,7 @@ impl<T> From<DashLength<T>> for TypstDashLength<T> {
     fn from(dash_length: DashLength<T>) -> Self {
         match dash_length {
             DashLength::LineWidth => Self::LineWidth,
-            DashLength::Length(length) => Self::Length(length.into()),
+            DashLength::Length(length) => Self::Length(length),
         }
     }
 }

@@ -118,6 +118,10 @@ impl<'a, T: HasItemRefKind> ItemArray<T> {
 }
 
 impl<T: HasItemRefKind + Clone> ItemArray<T> {
+    pub fn is_empty(&self) -> bool {
+        self.size == 0
+    }
+
     pub fn len(&self) -> usize {
         self.size as usize
     }
