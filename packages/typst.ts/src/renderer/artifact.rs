@@ -8,7 +8,7 @@ pub struct ArtifactJsBuilder {}
 /// Destructures a JS `[key, value]` pair into a tuple of [`Deserializer`]s.
 pub(crate) fn convert_pair(pair: JsValue) -> (JsValue, JsValue) {
     let pair = pair.unchecked_into::<js_sys::Array>();
-    (pair.get(0).into(), pair.get(1).into())
+    (pair.get(0), pair.get(1))
 }
 
 impl ArtifactJsBuilder {
@@ -65,7 +65,7 @@ impl ArtifactJsBuilder {
         field: &str,
         val: &JsValue,
     ) -> Result<(String, JsValue), JsValue> {
-        let (t, sub) = self.parse_tv(field, &val)?;
+        let (t, sub) = self.parse_tv(field, val)?;
 
         Ok((
             t,
@@ -114,7 +114,7 @@ impl ArtifactJsBuilder {
     ) -> Result<typst_ts_core::artifact::font::FontInfo, JsValue> {
         let mut family = String::default();
         let mut variant = typst::font::FontVariant::default();
-        let mut flags = typst::font::FontFlags::from_bits(0 as u32).unwrap();
+        let mut flags = typst::font::FontFlags::from_bits(0_u32).unwrap();
         let mut coverage = None;
         let mut ligatures = None;
 
@@ -166,7 +166,7 @@ impl ArtifactJsBuilder {
             variant,
             flags: flags.bits(),
             coverage: coverage.unwrap_or_else(|| typst::font::Coverage::from_vec(vec![])),
-            ligatures: ligatures.unwrap_or_else(|| vec![]),
+            ligatures: ligatures.unwrap_or_default(),
         })
     }
 
@@ -184,10 +184,10 @@ impl ArtifactJsBuilder {
             let k = self.to_string("point", &k)?;
             match k.as_str() {
                 "x" => {
-                    x = typst::geom::Abs::raw(self.to_f64("point.x", &v)?).into();
+                    x = typst::geom::Abs::raw(self.to_f64("point.x", &v)?);
                 }
                 "y" => {
-                    y = typst::geom::Abs::raw(self.to_f64("point.y", &v)?).into();
+                    y = typst::geom::Abs::raw(self.to_f64("point.y", &v)?);
                 }
                 _ => panic!("unknown key: {}", k),
             }
@@ -229,10 +229,10 @@ impl ArtifactJsBuilder {
                     sy = typst::geom::Ratio::new(self.to_f64("transform.sy", &v)?);
                 }
                 "tx" => {
-                    tx = typst::geom::Abs::raw(self.to_f64("transform.tx", &v)?).into();
+                    tx = typst::geom::Abs::raw(self.to_f64("transform.tx", &v)?);
                 }
                 "ty" => {
-                    ty = typst::geom::Abs::raw(self.to_f64("transform.ty", &v)?).into();
+                    ty = typst::geom::Abs::raw(self.to_f64("transform.ty", &v)?);
                 }
                 _ => panic!("unknown key: {}", k),
             }
@@ -391,10 +391,10 @@ impl ArtifactJsBuilder {
             let k = self.to_string("size", &k)?;
             match k.as_str() {
                 "x" => {
-                    x = typst::geom::Abs::raw(self.to_f64("size.x", &v)?).into();
+                    x = typst::geom::Abs::raw(self.to_f64("size.x", &v)?);
                 }
                 "y" => {
-                    y = typst::geom::Abs::raw(self.to_f64("size.y", &v)?).into();
+                    y = typst::geom::Abs::raw(self.to_f64("size.y", &v)?);
                 }
                 _ => panic!("unknown key: {}", k),
             }
@@ -834,21 +834,15 @@ impl ArtifactJsBuilder {
         let (t, sub) = self.parse_tv_expected("destination", &val)?;
 
         match t.as_str() {
-            "Url" => {
-                return Ok(typst_ts_core::artifact::doc::Destination::Url(
-                    self.to_string("destination.Url", &sub)?,
-                ));
-            }
-            "Position" => {
-                return Ok(typst_ts_core::artifact::doc::Destination::Position(
-                    self.parse_position(sub)?,
-                ));
-            }
-            "Location" => {
-                return Ok(typst_ts_core::artifact::doc::Destination::Location(
-                    self.to_string("destination.Location", &sub)?,
-                ));
-            }
+            "Url" => Ok(typst_ts_core::artifact::doc::Destination::Url(
+                self.to_string("destination.Url", &sub)?,
+            )),
+            "Position" => Ok(typst_ts_core::artifact::doc::Destination::Position(
+                self.parse_position(sub)?,
+            )),
+            "Location" => Ok(typst_ts_core::artifact::doc::Destination::Location(
+                self.to_string("destination.Location", &sub)?,
+            )),
             _ => panic!("unknown destination type: {}", t),
         }
     }
@@ -859,52 +853,40 @@ impl ArtifactJsBuilder {
     ) -> Result<typst_ts_core::artifact::doc::FrameItem, JsValue> {
         let (t, sub) = self.parse_tv("frame_item", &val)?;
         match t.as_str() {
-            "Group" => {
-                return Ok(typst_ts_core::artifact::doc::FrameItem::Group(
-                    self.parse_frame_group(
-                        sub.ok_or_else(|| JsValue::from_str("frame_item: missing sub for Group"))?,
-                    )?,
-                ));
-            }
-            "Text" => {
-                return Ok(typst_ts_core::artifact::doc::FrameItem::Text(
-                    self.parse_frame_text(
-                        sub.ok_or_else(|| JsValue::from_str("frame_item: missing sub for Text"))?,
-                    )?,
-                ));
-            }
-            "Shape" => {
-                return Ok(typst_ts_core::artifact::doc::FrameItem::Shape(
-                    self.parse_frame_shape(
-                        sub.ok_or_else(|| JsValue::from_str("frame_item: missing sub for Shape"))?,
-                    )?,
-                ));
-            }
+            "Group" => Ok(typst_ts_core::artifact::doc::FrameItem::Group(
+                self.parse_frame_group(
+                    sub.ok_or_else(|| JsValue::from_str("frame_item: missing sub for Group"))?,
+                )?,
+            )),
+            "Text" => Ok(typst_ts_core::artifact::doc::FrameItem::Text(
+                self.parse_frame_text(
+                    sub.ok_or_else(|| JsValue::from_str("frame_item: missing sub for Text"))?,
+                )?,
+            )),
+            "Shape" => Ok(typst_ts_core::artifact::doc::FrameItem::Shape(
+                self.parse_frame_shape(
+                    sub.ok_or_else(|| JsValue::from_str("frame_item: missing sub for Shape"))?,
+                )?,
+            )),
             "Image" => {
-                return {
-                    let arr = sub
-                        .ok_or_else(|| JsValue::from_str("frame_item: missing sub for MetaLink"))?
-                        .dyn_into::<js_sys::Array>()?;
-                    Ok(typst_ts_core::artifact::doc::FrameItem::Image(
-                        self.parse_image(arr.get(0))?,
-                        self.parse_size(arr.get(1))?,
-                    ))
-                }
+                let arr = sub
+                    .ok_or_else(|| JsValue::from_str("frame_item: missing sub for MetaLink"))?
+                    .dyn_into::<js_sys::Array>()?;
+                Ok(typst_ts_core::artifact::doc::FrameItem::Image(
+                    self.parse_image(arr.get(0))?,
+                    self.parse_size(arr.get(1))?,
+                ))
             }
             "MetaLink" => {
-                return {
-                    let arr = sub
-                        .ok_or_else(|| JsValue::from_str("frame_item: missing sub for MetaLink"))?
-                        .dyn_into::<js_sys::Array>()?;
-                    Ok(typst_ts_core::artifact::doc::FrameItem::MetaLink(
-                        self.parse_destination(arr.get(0))?,
-                        self.parse_size(arr.get(1))?,
-                    ))
-                };
+                let arr = sub
+                    .ok_or_else(|| JsValue::from_str("frame_item: missing sub for MetaLink"))?
+                    .dyn_into::<js_sys::Array>()?;
+                Ok(typst_ts_core::artifact::doc::FrameItem::MetaLink(
+                    self.parse_destination(arr.get(0))?,
+                    self.parse_size(arr.get(1))?,
+                ))
             }
-            "None" => {
-                return Ok(typst_ts_core::artifact::doc::FrameItem::None);
-            }
+            "None" => Ok(typst_ts_core::artifact::doc::FrameItem::None),
             _ => panic!("unknown type: {}", t),
         }
     }
@@ -937,8 +919,8 @@ impl ArtifactJsBuilder {
                     for item in v.dyn_into::<js_sys::Array>()?.iter() {
                         let item = item.dyn_into::<js_sys::Array>()?;
                         items.push((
-                            self.parse_point(item.get(0).into())?,
-                            self.parse_frame_item(item.get(1).into())?,
+                            self.parse_point(item.get(0))?,
+                            self.parse_frame_item(item.get(1))?,
                         ));
                     }
                 }
@@ -982,7 +964,7 @@ impl ArtifactJsBuilder {
         })
     }
 
-    pub fn from_value(&self, val: JsValue) -> Result<Artifact, JsValue> {
+    pub fn parse_artifact(&self, val: JsValue) -> Result<Artifact, JsValue> {
         let mut meta = ArtifactMeta::default();
         let mut pages = vec![];
 
@@ -1035,7 +1017,7 @@ impl ArtifactJsBuilder {
 
 pub fn artifact_from_js_string(val: String) -> Result<Artifact, JsValue> {
     let val = js_sys::JSON::parse(&val).unwrap();
-    ArtifactJsBuilder {}.from_value(val)
+    ArtifactJsBuilder {}.parse_artifact(val)
 }
 
 pub fn page_from_js_string(val: String) -> Result<Frame, JsValue> {

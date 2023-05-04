@@ -19,9 +19,9 @@ mod tests {
     use std::path::PathBuf;
 
     fn artifact_path() -> PathBuf {
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../fuzzers/corpora/math/main.artifact.json");
-        path
+        
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../fuzzers/corpora/math/main.artifact.json")
     }
 
     pub fn get_renderer() -> TypstRenderer {
@@ -49,9 +49,9 @@ mod tests {
         builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
             "../../../assets/fonts/NewCMMath-Regular.otf"
         )));
-        let renderer = pollster::block_on(builder.build()).unwrap();
+        
 
-        renderer
+        pollster::block_on(builder.build()).unwrap()
     }
 
     #[test]

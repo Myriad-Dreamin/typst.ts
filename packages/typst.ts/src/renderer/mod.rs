@@ -60,11 +60,11 @@ impl TypstRenderer {
     ) -> Result<ImageData, JsValue> {
         let (prealloc, size) = self.render_to_image_internal(session, options)?;
 
-        Ok(ImageData::new_with_u8_clamped_array_and_sh(
+        ImageData::new_with_u8_clamped_array_and_sh(
             Clamped(prealloc.as_slice()),
             size.width,
             size.height,
-        )?)
+        )
     }
 
     pub fn render_page_to_canvas(
@@ -76,7 +76,7 @@ impl TypstRenderer {
         let page_off = self.retrieve_page_off(ses, options)?;
 
         let mut worker = typst_ts_canvas_exporter::CanvasRenderTask::new(
-            &canvas,
+            canvas,
             &ses.doc,
             &ses.ligature_map,
             page_off,
@@ -98,7 +98,7 @@ impl TypstRenderer {
         session: &RenderSession,
     ) -> Result<Uint8Array, JsValue> {
         Ok(Uint8Array::from(
-            self.render_to_pdf_internal(&session)?.as_slice(),
+            self.render_to_pdf_internal(session)?.as_slice(),
         ))
     }
 
@@ -163,7 +163,7 @@ impl TypstRenderer {
         };
 
         let mut prealloc = vec![0; data_len];
-        self.render_to_image_prealloc(&ses, page_off, &mut prealloc.as_mut_slice())?;
+        self.render_to_image_prealloc(ses, page_off, prealloc.as_mut_slice())?;
 
         Ok((prealloc, size))
     }
@@ -197,12 +197,13 @@ impl TypstRenderer {
         }
 
         // contribution: 850KB
-        Ok(typst_ts_raster_exporter::render(
+        typst_ts_raster_exporter::render(
             &mut canvas,
             &ses.doc.pages[page_off],
             ses.pixel_per_pt,
             Color::Rgba(RgbaColor::from_str(&ses.background_color)?),
-        ))
+        );
+        Ok(())
     }
 }
 
@@ -225,10 +226,8 @@ impl TypstRenderer {
 
         let page_off = options.as_ref().map(|o| o.page_off).unwrap_or(0);
 
-        if page_off < ses.doc.pages.len() {
-            if page_off == ses.pages_info.pages[page_off].page_off {
-                return Ok(page_off);
-            }
+        if page_off < ses.doc.pages.len() && page_off == ses.pages_info.pages[page_off].page_off {
+            return Ok(page_off);
         }
 
         for (i, page_info) in ses.pages_info.pages.iter().enumerate() {
@@ -237,7 +236,7 @@ impl TypstRenderer {
             }
         }
 
-        return Err(format!("page_off {} not found in pages_info", page_off).into());
+        Err(format!("page_off {} not found in pages_info", page_off).into())
     }
 
     pub fn render_to_pdf_internal(&self, _session: &RenderSession) -> Result<Vec<u8>, String> {

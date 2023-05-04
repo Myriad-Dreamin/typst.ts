@@ -32,7 +32,7 @@ impl RenderSessionOptions {
 
     #[wasm_bindgen(getter)]
     pub fn pixel_per_pt(&self) -> Option<f32> {
-        self.pixel_per_pt.clone()
+        self.pixel_per_pt
     }
 
     #[wasm_bindgen(setter)]
@@ -133,7 +133,7 @@ pub struct RenderSession {
 impl RenderSession {
     #[wasm_bindgen(getter)]
     pub fn pixel_per_pt(&self) -> f32 {
-        self.pixel_per_pt.clone()
+        self.pixel_per_pt
     }
 
     #[wasm_bindgen(getter)]
@@ -174,7 +174,7 @@ impl RenderSession {
 
             ligature_map.insert(
                 (font_info.family.clone(), font_info.variant, font_info.flags),
-                std::collections::HashMap::from_iter(font.ligatures.iter().map(|s| s.clone())),
+                std::collections::HashMap::from_iter(font.ligatures.iter().cloned()),
             );
         }
 
@@ -268,10 +268,7 @@ impl RenderSessionManager {
             .unwrap_or("js");
         let mut ses = self.session_from_artifact(artifact_content.to_vec().as_slice(), format)?;
 
-        ses.pixel_per_pt = options
-            .as_ref()
-            .and_then(|o| o.pixel_per_pt.clone())
-            .unwrap_or(2.);
+        ses.pixel_per_pt = options.as_ref().and_then(|o| o.pixel_per_pt).unwrap_or(2.);
 
         ses.background_color = options
             .as_ref()
@@ -369,8 +366,8 @@ impl RenderSessionManager {
         use std::io::Read;
         let mut reader = std::io::Cursor::new(artifact_content);
         let mut magic = [0; 4];
-        reader.read(&mut magic).unwrap();
-        assert_eq!(magic, ['I' as u8, 'R' as u8, 'A' as u8, 'R' as u8]);
+        reader.read_exact(&mut magic).unwrap();
+        assert_eq!(magic, [b'I', b'R', b'A', b'R']);
         assert_eq!(reader.read_i32::<LittleEndian>().unwrap(), 1);
         let header_len = reader.read_u64::<LittleEndian>().unwrap();
         let mut header = vec![0; header_len as usize];
@@ -382,8 +379,7 @@ impl RenderSessionManager {
             panic!("serde_json feature is not enabled");
             #[cfg(feature = "serde_json")]
             {
-                let result = serde_json::from_str(&header).unwrap();
-                result
+                serde_json::from_str(&header).unwrap()
             }
         } else {
             ir_artifact_header_from_js_string(header).unwrap()

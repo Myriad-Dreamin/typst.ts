@@ -15,7 +15,7 @@ impl IRArtifactHeaderJsBuilder {
         }
     }
 
-    pub fn from_value(&mut self, val: JsValue) -> Result<ArtifactHeader, JsValue> {
+    pub fn parse_header(&self, val: JsValue) -> Result<ArtifactHeader, JsValue> {
         let mut metadata = ArtifactHeader::default();
 
         for (k, v) in js_sys::Object::entries(val.dyn_ref().ok_or("typst: not a js object")?)
@@ -25,7 +25,7 @@ impl IRArtifactHeaderJsBuilder {
             let k = k.as_string().ok_or("typst: artifact not a js string")?;
             match k.as_str() {
                 "metadata" => {
-                    let artifact = self.builder.from_value(v)?;
+                    let artifact = self.builder.parse_artifact(v)?;
                     metadata.metadata = artifact.meta;
                 }
                 "pages" => {
@@ -70,6 +70,6 @@ impl IRArtifactHeaderJsBuilder {
 
 pub fn ir_artifact_header_from_js_string(val: String) -> Result<ArtifactHeader, JsValue> {
     let js_val = js_sys::JSON::parse(val.as_str()).unwrap();
-    let metadata = IRArtifactHeaderJsBuilder::new().from_value(js_val);
-    metadata
+
+    IRArtifactHeaderJsBuilder::new().parse_header(js_val)
 }
