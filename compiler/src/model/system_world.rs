@@ -288,7 +288,7 @@ impl SystemFontSearcher {
             {
                 let mut font_paths = vec!["/usr/share/fonts", "/usr/local/share/fonts"]
                     .iter()
-                    .map(|p| PathBuf::from(p))
+                    .map(PathBuf::from)
                     .collect::<Vec<_>>();
 
                 if let Some(dir) = dirs::font_dir() {
@@ -306,7 +306,7 @@ impl SystemFontSearcher {
                     "/System/Library/Fonts",
                 ]
                 .iter()
-                .map(|p| PathBuf::from(p))
+                .map(PathBuf::from)
                 .collect::<Vec<_>>();
 
                 if let Some(dir) = dirs::font_dir() {
