@@ -20,6 +20,13 @@ pub mod utils {
         World,
     };
 
+    pub fn collect_err(errors: &mut Vec<SourceError>, res: SourceResult<()>) {
+        if let Err(errs) = res {
+            let mut errs = *errs;
+            errors.append(&mut errs);
+        }
+    }
+
     /// Convert the given error to a vector of source errors.
     pub fn map_err<E: Error>(world: &dyn World, e: E) -> Box<Vec<SourceError>> {
         Box::new(vec![SourceError::new(

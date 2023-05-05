@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use typst::diag::{SourceError, SourceResult};
+use typst::diag::SourceError;
 use typst_ts_compiler::TypstSystemWorld;
-use typst_ts_core::{artifact_ir::Artifact as IRArtifact, Artifact};
+use typst_ts_core::{artifact_ir::Artifact as IRArtifact, exporter_utils::collect_err, Artifact};
 
 use crate::diag::print_diagnostics;
 
@@ -62,28 +62,21 @@ impl CompileAction {
         match typst::compile(&self.world) {
             Ok(document) => {
                 let mut errors = vec![];
-                let mut collect_err = |res: SourceResult<()>| {
-                    if let Err(errs) = res {
-                        for e in *errs {
-                            errors.push(e);
-                        }
-                    }
-                };
 
                 for f in &self.document_exporters {
-                    collect_err(f.export(&self.world, &document))
+                    collect_err(&mut errors, f.export(&self.world, &document))
                 }
 
                 if !self.artifact_exporters.is_empty() {
                     let artifact = Arc::new(Artifact::from(&document));
                     for f in &self.artifact_exporters {
-                        collect_err(f.export(&self.world, artifact.clone()))
+                        collect_err(&mut errors, f.export(&self.world, artifact.clone()))
                     }
                 }
 
-                if let Some(ir_artifact_exporter) = &self.ir_artifact_exporter {
+                if let Some(exporter) = &self.ir_artifact_exporter {
                     let artifact = Arc::new(IRArtifact::from(document));
-                    collect_err(ir_artifact_exporter.export(&self.world, artifact));
+                    collect_err(&mut errors, exporter.export(&self.world, artifact));
                 }
 
                 errors
