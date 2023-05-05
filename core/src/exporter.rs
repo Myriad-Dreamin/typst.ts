@@ -2,22 +2,23 @@ use std::sync::Arc;
 
 use typst::{diag::SourceResult, World};
 
+pub(crate) type DocumentRef<'a> = &'a typst::doc::Document;
+pub(crate) type ArtifactRef = Arc<crate::Artifact>;
+
 pub trait DocumentExporter {
     /// Export the given document with given world.
     /// the writable world is hiden by trait itself.
-    fn export(&self, world: &dyn World, output: &typst::doc::Document) -> SourceResult<()>;
+    fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<()>;
 }
 
 pub trait ArtifactExporter {
     /// Export the given artifact with given world.
-    fn export(&self, world: &dyn World, output: Arc<crate::Artifact>) -> SourceResult<()>;
+    fn export(&self, world: &dyn World, output: ArtifactRef) -> SourceResult<()>;
 }
 
 pub mod builtins {
+    use super::{utils, ArtifactRef, DocumentRef};
     use crate::{ArtifactExporter, DocumentExporter};
-    use std::sync::Arc;
-
-    use super::utils;
     use typst::{diag::SourceResult, World};
 
     pub struct DocToArtifactExporter {
@@ -31,10 +32,10 @@ pub mod builtins {
     }
 
     impl DocumentExporter for DocToArtifactExporter {
-        fn export(&self, world: &dyn World, output: &typst::doc::Document) -> SourceResult<()> {
+        fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<()> {
             let mut errors = Vec::new();
 
-            let artifact = Arc::new(crate::Artifact::from(output));
+            let artifact = ArtifactRef::new(output.into());
             for f in &self.artifact_exporters {
                 utils::collect_err(&mut errors, f.export(world, artifact.clone()))
             }
