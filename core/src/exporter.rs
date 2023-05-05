@@ -13,29 +13,37 @@ pub trait ArtifactExporter {
     fn export(&self, world: &dyn World, output: Arc<crate::Artifact>) -> SourceResult<()>;
 }
 
-pub struct DocToArtifactExporter {
-    artifact_exporters: Vec<Box<dyn ArtifactExporter>>,
-}
+pub mod builtins {
+    use crate::{ArtifactExporter, DocumentExporter};
+    use std::sync::Arc;
 
-impl DocToArtifactExporter {
-    pub fn new(artifact_exporters: Vec<Box<dyn ArtifactExporter>>) -> Self {
-        Self { artifact_exporters }
+    use super::utils;
+    use typst::{diag::SourceResult, World};
+
+    pub struct DocToArtifactExporter {
+        artifact_exporters: Vec<Box<dyn ArtifactExporter>>,
     }
-}
 
-impl DocumentExporter for DocToArtifactExporter {
-    fn export(&self, world: &dyn World, output: &typst::doc::Document) -> SourceResult<()> {
-        let mut errors = Vec::new();
-
-        let artifact = Arc::new(crate::Artifact::from(output));
-        for f in &self.artifact_exporters {
-            utils::collect_err(&mut errors, f.export(world, artifact.clone()))
+    impl DocToArtifactExporter {
+        pub fn new(artifact_exporters: Vec<Box<dyn ArtifactExporter>>) -> Self {
+            Self { artifact_exporters }
         }
+    }
 
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(Box::new(errors))
+    impl DocumentExporter for DocToArtifactExporter {
+        fn export(&self, world: &dyn World, output: &typst::doc::Document) -> SourceResult<()> {
+            let mut errors = Vec::new();
+
+            let artifact = Arc::new(crate::Artifact::from(output));
+            for f in &self.artifact_exporters {
+                utils::collect_err(&mut errors, f.export(world, artifact.clone()))
+            }
+
+            if errors.is_empty() {
+                Ok(())
+            } else {
+                Err(Box::new(errors))
+            }
         }
     }
 }

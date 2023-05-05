@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use typst_ts_core::DocToArtifactExporter;
+use typst_ts_core::exporter_builtins::DocToArtifactExporter;
 
 use crate::CompileArgs;
 

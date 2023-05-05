@@ -10,7 +10,7 @@ pub use content::TextContent;
 
 pub(crate) mod exporter;
 pub use exporter::{
-    utils as exporter_utils, ArtifactExporter, DocToArtifactExporter, DocumentExporter,
+    builtins as exporter_builtins, utils as exporter_utils, ArtifactExporter, DocumentExporter,
 };
 
 pub mod font;
