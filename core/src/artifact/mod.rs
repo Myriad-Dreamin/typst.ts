@@ -78,7 +78,7 @@ impl ArtifactBuilder {
         // todo
     }
 
-    pub fn write_glyph(&mut self, glyph: TypstGlyph) -> Glyph {
+    pub fn write_glyph(&mut self, glyph: &TypstGlyph) -> Glyph {
         Glyph {
             id: glyph.id,
             x_advance: glyph.x_advance.into(),
@@ -111,12 +111,7 @@ impl ArtifactBuilder {
             size: text.size.into(),
             fill: text.fill.clone().into(),
             lang: text.lang.as_str().to_string(),
-            glyphs: text
-                .clone()
-                .glyphs
-                .into_iter()
-                .map(|g| self.write_glyph(g))
-                .collect(),
+            glyphs: text.glyphs.iter().map(|g| self.write_glyph(g)).collect(),
         }
     }
 
@@ -197,14 +192,14 @@ impl ArtifactBuilder {
     }
 }
 
-impl From<TypstDocument> for Artifact {
-    fn from(typst_doc: TypstDocument) -> Self {
+impl From<&TypstDocument> for Artifact {
+    fn from(typst_doc: &TypstDocument) -> Self {
         let mut builder = ArtifactBuilder::new();
 
         let pages = typst_doc
             .pages
-            .into_iter()
-            .map(|f| builder.write_frame(&f))
+            .iter()
+            .map(|f| builder.write_frame(f))
             .collect();
 
         let meta = ArtifactMeta {
@@ -228,12 +223,8 @@ impl From<TypstDocument> for Artifact {
                     }
                 })
                 .collect(),
-            title: typst_doc.title.map(|s| s.to_string()),
-            author: typst_doc
-                .author
-                .into_iter()
-                .map(|s| s.to_string())
-                .collect(),
+            title: typst_doc.title.as_ref().map(|s| s.to_string()),
+            author: typst_doc.author.iter().map(|s| s.to_string()).collect(),
         };
 
         Self { meta, pages }
@@ -325,7 +316,7 @@ impl TypeDocumentParser {
             FrameItem::MetaLink(dest, size) => {
                 let dest = match dest {
                     Destination::Url(url) => {
-                        TypstDestination::Url(TypstEcoString::from(url.clone()))
+                        TypstDestination::Url(TypstEcoString::from(url.as_str()))
                     }
                     Destination::Position(pos) => TypstDestination::Position(TypstPosition {
                         page: pos.page,

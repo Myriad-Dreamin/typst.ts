@@ -75,7 +75,7 @@ impl CompileAction {
                 }
 
                 if !self.artifact_exporters.is_empty() {
-                    let artifact = Arc::new(Artifact::from(document.clone()));
+                    let artifact = Arc::new(Artifact::from(&document));
                     for f in &self.artifact_exporters {
                         collect_err(f.export(&self.world, artifact.clone()))
                     }
