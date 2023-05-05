@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use typst::diag::SourceError;
 use typst_ts_compiler::TypstSystemWorld;
-use typst_ts_core::{artifact_ir::Artifact as IRArtifact, exporter_utils::collect_err, Artifact};
+use typst_ts_core::{artifact_ir::Artifact as IRArtifact, exporter_utils::collect_err};
 
 use crate::diag::print_diagnostics;
 
@@ -11,7 +11,6 @@ pub struct CompileAction {
     pub world: TypstSystemWorld,
     pub entry_file: PathBuf,
     pub document_exporters: Vec<Box<dyn typst_ts_core::DocumentExporter>>,
-    pub artifact_exporters: Vec<Box<dyn typst_ts_core::ArtifactExporter>>,
     pub ir_artifact_exporter: Option<typst_ts_tir_exporter::IRArtifactExporter>,
 }
 
@@ -65,13 +64,6 @@ impl CompileAction {
 
                 for f in &self.document_exporters {
                     collect_err(&mut errors, f.export(&self.world, &document))
-                }
-
-                if !self.artifact_exporters.is_empty() {
-                    let artifact = Arc::new(Artifact::from(&document));
-                    for f in &self.artifact_exporters {
-                        collect_err(&mut errors, f.export(&self.world, artifact.clone()))
-                    }
                 }
 
                 if let Some(exporter) = &self.ir_artifact_exporter {

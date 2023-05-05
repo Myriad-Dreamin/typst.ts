@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use typst_ts_core::DocToArtifactExporter;
+
 use crate::CompileArgs;
 
 pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature name */ &str)] = &[
@@ -11,7 +13,6 @@ pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature name */ &str
 
 type ExporterBundle = (
     Vec<Box<dyn typst_ts_core::DocumentExporter>>,
-    Vec<Box<dyn typst_ts_core::ArtifactExporter>>,
     Option<typst_ts_tir_exporter::IRArtifactExporter>,
 );
 
@@ -105,5 +106,9 @@ pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> ExporterBundle
         };
     }
 
-    (document_exporters, artifact_exporters, ir_exporter)
+    if !artifact_exporters.is_empty() {
+        document_exporters.push(Box::new(DocToArtifactExporter::new(artifact_exporters)));
+    }
+
+    (document_exporters, ir_exporter)
 }
