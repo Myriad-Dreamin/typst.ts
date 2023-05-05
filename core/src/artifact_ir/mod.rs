@@ -282,8 +282,8 @@ impl ArtifactBuilder {
     }
 }
 
-impl From<TypstDocument> for Artifact {
-    fn from(typst_doc: TypstDocument) -> Self {
+impl From<&TypstDocument> for Artifact {
+    fn from(typst_doc: &TypstDocument) -> Self {
         let mut builder = ArtifactBuilder::new();
         builder.stat.insert(ItemRefKind::Frame, 0);
         builder.stat.insert(ItemRefKind::FrameItem, 0);
@@ -292,8 +292,8 @@ impl From<TypstDocument> for Artifact {
 
         let raw_pages = typst_doc
             .pages
-            .into_iter()
-            .map(|f| builder.write_frame(&f))
+            .iter()
+            .map(|f| builder.write_frame(f))
             .collect();
         let pages = builder.push_array(&raw_pages);
 
@@ -321,12 +321,8 @@ impl From<TypstDocument> for Artifact {
                     }
                 })
                 .collect(),
-            title: typst_doc.title.map(|s| s.to_string()),
-            author: typst_doc
-                .author
-                .into_iter()
-                .map(|s| s.to_string())
-                .collect(),
+            title: typst_doc.title.as_ref().map(|s| s.to_string()),
+            author: typst_doc.author.iter().map(|s| s.to_string()).collect(),
         };
 
         Self {

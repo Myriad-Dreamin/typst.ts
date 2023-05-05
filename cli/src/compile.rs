@@ -67,7 +67,7 @@ impl CompileAction {
                 }
 
                 if let Some(exporter) = &self.ir_artifact_exporter {
-                    let artifact = Arc::new(IRArtifact::from(document));
+                    let artifact = Arc::new(IRArtifact::from(&document));
                     collect_err(&mut errors, exporter.export(&self.world, artifact));
                 }
 
