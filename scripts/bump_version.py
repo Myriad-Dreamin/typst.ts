@@ -2,7 +2,7 @@ import sys
 import itertools
 
 
-def replace_version(package_file, old_version, new_version):
+def replace_version(package_file: str, old_version: str, new_version: str):
   with open(package_file) as f:
     content = f.read()
 
@@ -23,12 +23,14 @@ def replace_version(package_file, old_version, new_version):
     f.write(new_content)
 
 
-def main(old_version, new_version):
+def main(old_version: str, new_version: str):
+  # validate version format
   for v in [old_version, new_version]:
     if len(v.split('.')) != 3:
-      raise ValueError('Version must be in the form x.y.z')
+      raise ValueError(f'Version String "{v}" must be in the form x.y.z')
 
-  for file_path, version_form in itertools.product([
+  bump_self_version = lambda: itertools.product(
+    [ # file paths
       "cli/Cargo.toml",
       "core/Cargo.toml",
       "compiler/Cargo.toml",
@@ -40,23 +42,20 @@ def main(old_version, new_version):
       "exporter/serde/Cargo.toml",
       "exporter/ws/Cargo.toml",
       "packages/typst.ts/Cargo.toml",
-  ], [
-      lambda v: f'version = "{v}"',
-      lambda v: f'typst-ts-core = "{v}"',
-      lambda v: f'typst-ts-compiler = "{v}"',
-  ]):
-    replace_version(file_path, version_form(old_version), version_form(new_version))
-
-  def version_lit(v):
-    return f'"version": "{v}"'
-
-  for package_file in [
       "packages/typst.ts/package.json",
       "packages/typst.react/package.json",
       "packages/typst.angular/projects/typst.angular/package.json",
-  ]:
-    replace_version(package_file, version_lit(old_version), version_lit(new_version))
+    ], [ # patterns
+      lambda v: f'version = "{v}"',
+    ])
+
+  for file_path, pattern in itertools.chain(bump_self_version()):
+    replace_version(file_path, pattern(old_version), pattern(new_version))
 
 
 if __name__ == '__main__':
-  main(sys.argv[1], sys.argv[2])
+  main(
+    # old version
+    sys.argv[1],
+    # new version
+    sys.argv[2])
