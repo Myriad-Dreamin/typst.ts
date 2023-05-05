@@ -55,13 +55,12 @@ fn compile(args: CompileArgs) -> ! {
             ..CompileOpts::default()
         });
 
-        let document_exporters =
-            typst_ts_cli::export::prepare_exporters(args.clone(), entry_file_path);
+        let exporter = typst_ts_cli::export::prepare_exporters(args.clone(), entry_file_path);
 
         CompileAction {
             world,
             entry_file: entry_file_path.to_owned(),
-            document_exporters,
+            exporter,
         }
     };
 
@@ -74,10 +73,12 @@ fn compile(args: CompileArgs) -> ! {
     }
 
     fn compile_once(mut compile_action: CompileAction) -> ! {
-        let messages = compile_action.once();
-        let no_errors = messages.is_empty();
+        let compile_result = compile_action.once();
+        let no_errors = compile_result.is_ok();
 
-        compile_action.print_diagnostics(messages).unwrap();
+        compile_result
+            .map_err(|errs| compile_action.print_diagnostics(*errs))
+            .unwrap();
         exit(if no_errors { 0 } else { 1 });
     }
 
@@ -110,13 +111,16 @@ fn compile(args: CompileArgs) -> ! {
         info!("start watching files...");
         loop {
             typst_ts_cli::diag::status(entry_file_path, Status::Compiling).unwrap();
-            let messages = compile_action.once();
-            if messages.is_empty() {
+            let compile_result = compile_action.once();
+            if compile_result.is_ok() {
                 typst_ts_cli::diag::status(entry_file_path, Status::Success).unwrap();
             } else {
                 typst_ts_cli::diag::status(entry_file_path, Status::Error).unwrap();
             }
-            compile_action.print_diagnostics(messages.clone()).unwrap();
+
+            compile_result
+                .map_err(|errs| compile_action.print_diagnostics(*errs))
+                .unwrap();
             comemo::evict(30);
 
             loop {

@@ -1,15 +1,15 @@
 use std::path::PathBuf;
 
-use typst::diag::SourceError;
+use typst::diag::{SourceError, SourceResult};
 use typst_ts_compiler::TypstSystemWorld;
-use typst_ts_core::exporter_utils::collect_err;
+use typst_ts_core::{exporter_builtins::GroupDocumentExporter, DocumentExporter};
 
 use crate::diag::print_diagnostics;
 
 pub struct CompileAction {
     pub world: TypstSystemWorld,
     pub entry_file: PathBuf,
-    pub document_exporters: Vec<Box<dyn typst_ts_core::DocumentExporter>>,
+    pub exporter: GroupDocumentExporter,
 }
 
 impl CompileAction {
@@ -41,10 +41,16 @@ impl CompileAction {
         event.paths.iter().any(|path| self.world.dependant(path))
     }
 
+    fn export(&self, output: typst::doc::Document) -> SourceResult<()> {
+        self.exporter.export(&self.world, &output)
+    }
+
     /// Compile once.
-    pub fn once(&mut self) -> Vec<SourceError> {
+    pub fn once(&mut self) -> SourceResult<()> {
+        // reset the world caches
         self.world.reset();
 
+        // checkout the entry file
         let entry_file = self.entry_file.clone();
         let content = { std::fs::read_to_string(&entry_file).expect("Could not read file") };
         match self.world.resolve_with(&entry_file, &content) {
@@ -56,17 +62,7 @@ impl CompileAction {
             }
         }
 
-        match typst::compile(&self.world) {
-            Ok(document) => {
-                let mut errors = vec![];
-
-                for f in &self.document_exporters {
-                    collect_err(&mut errors, f.export(&self.world, &document))
-                }
-
-                errors
-            }
-            Err(errors) => *errors,
-        }
+        // compile and export document
+        typst::compile(&self.world).and_then(|output| self.export(output))
     }
 }

@@ -2,7 +2,7 @@ use std::{path::Path, sync::Arc};
 
 use typst_ts_core::{
     artifact_ir,
-    exporter_builtins::{DocToArtifactExporter, LambdaDocumentExporter},
+    exporter_builtins::{DocToArtifactExporter, GroupDocumentExporter, LambdaDocumentExporter},
 };
 
 use crate::CompileArgs;
@@ -14,10 +14,7 @@ pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature name */ &str
     ("web_socket", "web-socket"),
 ];
 
-pub fn prepare_exporters(
-    args: CompileArgs,
-    entry_file: &Path,
-) -> Vec<Box<dyn typst_ts_core::DocumentExporter>> {
+pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> GroupDocumentExporter {
     let output_dir = {
         let output = args.output.clone();
         let output_dir = if !output.is_empty() {
@@ -115,5 +112,5 @@ pub fn prepare_exporters(
         document_exporters.push(Box::new(DocToArtifactExporter::new(artifact_exporters)));
     }
 
-    document_exporters
+    GroupDocumentExporter::new(document_exporters)
 }
