@@ -35,15 +35,6 @@ fn main() {
     }
 }
 
-fn async_continue<F: std::future::Future<Output = ()>>(f: F) -> ! {
-    typst_ts_cli::utils::async_run(f);
-
-    #[allow(unreachable_code)]
-    {
-        unreachable!("The async command must exit the process.");
-    }
-}
-
 fn compile(args: CompileArgs) -> ! {
     let workspace_dir = Path::new(args.workspace.as_str());
     let entry_file_path = Path::new(args.entry.as_str());
@@ -65,7 +56,7 @@ fn compile(args: CompileArgs) -> ! {
     };
 
     if args.watch {
-        async_continue(async {
+        typst_ts_cli::utils::async_continue(async {
             compile_watch(entry_file_path, workspace_dir, compile_action()).await;
         })
     } else {
