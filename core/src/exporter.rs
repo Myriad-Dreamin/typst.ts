@@ -47,6 +47,28 @@ pub mod builtins {
             }
         }
     }
+
+    pub struct LambdaDocumentExporter<F> {
+        f: F,
+    }
+
+    impl<F> LambdaDocumentExporter<F>
+    where
+        F: Fn(&dyn World, DocumentRef) -> SourceResult<()>,
+    {
+        pub fn new(f: F) -> Self {
+            Self { f }
+        }
+    }
+
+    impl<F> DocumentExporter for LambdaDocumentExporter<F>
+    where
+        F: Fn(&dyn World, DocumentRef) -> SourceResult<()>,
+    {
+        fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<()> {
+            (self.f)(world, output)
+        }
+    }
 }
 
 pub mod utils {
