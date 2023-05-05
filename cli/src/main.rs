@@ -61,7 +61,7 @@ fn compile(args: CompileArgs) -> ! {
         CompileAction {
             world,
             entry_file: entry_file_path.to_owned(),
-            doc_exporters: document_exporters,
+            document_exporters,
             artifact_exporters,
             ir_artifact_exporter: ir_exporter,
         }

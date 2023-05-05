@@ -10,7 +10,7 @@ use crate::diag::print_diagnostics;
 pub struct CompileAction {
     pub world: TypstSystemWorld,
     pub entry_file: PathBuf,
-    pub doc_exporters: Vec<Box<dyn typst_ts_core::DocumentExporter>>,
+    pub document_exporters: Vec<Box<dyn typst_ts_core::DocumentExporter>>,
     pub artifact_exporters: Vec<Box<dyn typst_ts_core::ArtifactExporter>>,
     pub ir_artifact_exporter: Option<typst_ts_tir_exporter::IRArtifactExporter>,
 }
@@ -70,7 +70,7 @@ impl CompileAction {
                     }
                 };
 
-                for f in &self.doc_exporters {
+                for f in &self.document_exporters {
                     collect_err(f.export(&self.world, &document))
                 }
 
