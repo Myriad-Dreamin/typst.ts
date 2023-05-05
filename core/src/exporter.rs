@@ -21,6 +21,32 @@ pub mod builtins {
     use crate::{ArtifactExporter, DocumentExporter};
     use typst::{diag::SourceResult, World};
 
+    pub struct GroupDocumentExporter {
+        document_exporters: Vec<Box<dyn DocumentExporter>>,
+    }
+
+    impl GroupDocumentExporter {
+        pub fn new(document_exporters: Vec<Box<dyn DocumentExporter>>) -> Self {
+            Self { document_exporters }
+        }
+    }
+
+    impl DocumentExporter for GroupDocumentExporter {
+        fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<()> {
+            let mut errors = Vec::new();
+
+            for f in &self.document_exporters {
+                utils::collect_err(&mut errors, f.export(world, output))
+            }
+
+            if errors.is_empty() {
+                Ok(())
+            } else {
+                Err(Box::new(errors))
+            }
+        }
+    }
+
     pub struct DocToArtifactExporter {
         artifact_exporters: Vec<Box<dyn ArtifactExporter>>,
     }
