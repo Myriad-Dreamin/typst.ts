@@ -1,6 +1,9 @@
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
-use typst_ts_core::exporter_builtins::DocToArtifactExporter;
+use typst_ts_core::{
+    artifact_ir,
+    exporter_builtins::{DocToArtifactExporter, LambdaDocumentExporter},
+};
 
 use crate::CompileArgs;
 
@@ -11,12 +14,10 @@ pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature name */ &str
     ("web_socket", "web-socket"),
 ];
 
-type ExporterBundle = (
-    Vec<Box<dyn typst_ts_core::DocumentExporter>>,
-    Option<typst_ts_tir_exporter::IRArtifactExporter>,
-);
-
-pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> ExporterBundle {
+pub fn prepare_exporters(
+    args: CompileArgs,
+    entry_file: &Path,
+) -> Vec<Box<dyn typst_ts_core::DocumentExporter>> {
     let output_dir = {
         let output = args.output.clone();
         let output_dir = if !output.is_empty() {
@@ -46,7 +47,6 @@ pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> ExporterBundle
 
     let mut document_exporters: Vec<Box<dyn typst_ts_core::DocumentExporter>> = vec![];
     let mut artifact_exporters: Vec<Box<dyn typst_ts_core::ArtifactExporter>> = vec![];
-    let mut ir_exporter = None;
 
     for f in formats {
         match f.as_str() {
@@ -91,9 +91,14 @@ pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> ExporterBundle
                 let output_path = output_dir
                     .with_file_name(entry_file.file_name().unwrap())
                     .with_extension("artifact.tir.bin");
-                ir_exporter = Some(typst_ts_tir_exporter::IRArtifactExporter::new_path(
-                    output_path,
-                ));
+
+                let exp = typst_ts_tir_exporter::IRArtifactExporter::new_path(output_path);
+                document_exporters.push(Box::new(LambdaDocumentExporter::new(
+                    move |world, output| {
+                        let artifact = Arc::new(artifact_ir::Artifact::from(output));
+                        exp.export(world, artifact)
+                    },
+                )));
             }
             _ => {
                 let found = AVAILABLE_FORMATS.iter().find(|(k, _)| **k == *f);
@@ -110,5 +115,5 @@ pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> ExporterBundle
         document_exporters.push(Box::new(DocToArtifactExporter::new(artifact_exporters)));
     }
 
-    (document_exporters, ir_exporter)
+    document_exporters
 }
