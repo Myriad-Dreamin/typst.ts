@@ -21,7 +21,7 @@ impl CompileAction {
         print_diagnostics(&self.world, errors)
     }
 
-    /// Check if the given event is relevant to the world.
+    /// Check whether a file system event is relevant to the world.
     pub fn relevant(&mut self, event: &notify::Event) -> bool {
         match &event.kind {
             notify::EventKind::Any => {}
@@ -41,12 +41,12 @@ impl CompileAction {
         event.paths.iter().any(|path| self.world.dependant(path))
     }
 
-    /// Export the given document with given world.
+    /// Export a typst document using `typst_ts_core::DocumentExporter`.
     fn export(&self, output: typst::doc::Document) -> SourceResult<()> {
         self.exporter.export(&self.world, &output)
     }
 
-    /// Compile once.
+    /// Compile once from scratch.
     pub fn once(&mut self) -> SourceResult<()> {
         // reset the world caches
         self.world.reset();
