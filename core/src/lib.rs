@@ -9,7 +9,9 @@ pub mod content;
 pub use content::TextContent;
 
 pub(crate) mod exporter;
-pub use exporter::{utils as exporter_utils, ArtifactExporter, DocumentExporter};
+pub use exporter::{
+    utils as exporter_utils, ArtifactExporter, DocToArtifactExporter, DocumentExporter,
+};
 
 pub mod font;
 pub use font::{FontLoader, FontResolver, FontSlot};
