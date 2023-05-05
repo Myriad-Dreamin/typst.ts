@@ -41,6 +41,7 @@ impl CompileAction {
         event.paths.iter().any(|path| self.world.dependant(path))
     }
 
+    /// Export the given document with given world.
     fn export(&self, output: typst::doc::Document) -> SourceResult<()> {
         self.exporter.export(&self.world, &output)
     }
