@@ -9,7 +9,7 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 [dependencies]
 
 typst = "0.3.0"
-typst-ts-core = "0.1.6"
+typst-ts-core = "0.1"
 
 serde = "1.0.159"
 serde_json = { version = "1.0.95", optional = true }

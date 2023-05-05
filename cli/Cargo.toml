@@ -10,8 +10,8 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 typst = "0.3.0"
 typst-library = "0.3.0"
 
-typst-ts-core = "0.1.6"
-typst-ts-compiler = "0.1.6"
+typst-ts-core = "0.1"
+typst-ts-compiler = "0.1"
 
 typst-ts-pdf-exporter = { version = "0.1", optional = true }
 typst-ts-raster-exporter = { version = "0.1", optional = true }

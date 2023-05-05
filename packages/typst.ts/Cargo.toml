@@ -11,7 +11,7 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 crate-type = ["cdylib"]
 
 [dependencies]
-typst-ts-core = "0.1.6"
+typst-ts-core = "0.1"
 typst-ts-canvas-exporter = { version = "0.1", optional = true }
 typst-ts-raster-exporter = { version = "0.1", optional = true }
 
