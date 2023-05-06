@@ -3,6 +3,7 @@ use std::path::PathBuf;
 pub mod compile;
 pub mod diag;
 pub mod export;
+pub mod tracing;
 pub mod utils;
 
 use clap::{ArgAction, Parser, Subcommand};
@@ -52,6 +53,17 @@ pub struct CompileArgs {
     /// watch mode.
     #[clap(long)]
     pub watch: bool,
+
+    /// enable tracing.
+    /// possible usage: --trace=verbosity={0..2}
+    /// verbosity:
+    /// + 0: warning
+    /// + 1: info
+    /// + 2: debug
+    /// + 3: trace
+    ///
+    #[clap(long)]
+    pub trace: Option<String>,
 
     /// Entry file.
     #[clap(long, short, required = true)]

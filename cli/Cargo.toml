@@ -35,6 +35,9 @@ tokio = {version = "1.27.0", features = ["full"]}
 
 env_logger = "0.10.0"
 log = "0.4.17"
+tracing = "0.1.37"
+tracing-error = "0.2"
+tracing-subscriber = { version = "0.3.17", features = ["std"] }
 
 [features]
 pdf = ["typst-ts-pdf-exporter"]

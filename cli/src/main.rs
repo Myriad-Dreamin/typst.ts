@@ -9,8 +9,8 @@ use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use typst::{font::FontVariant, World};
 
 use typst_ts_cli::{
-    compile::CompileAction, diag::Status, CompileArgs, FontSubCommands, ListFontsArgs, Opts,
-    Subcommands,
+    compile::CompileAction, diag::Status, tracing::TraceGuard, CompileArgs, FontSubCommands,
+    ListFontsArgs, Opts, Subcommands,
 };
 use typst_ts_compiler::TypstSystemWorld;
 use typst_ts_core::config::CompileOpts;
@@ -35,9 +35,31 @@ fn main() {
     }
 }
 
+fn compatible_to_tracing(args: &CompileArgs) -> bool {
+    if args.watch {
+        error!("cannot use --trace with --watch");
+        return false;
+    }
+
+    true
+}
+
 fn compile(args: CompileArgs) -> ! {
     let workspace_dir = Path::new(args.workspace.as_str());
     let entry_file_path = Path::new(args.entry.as_str());
+
+    let _guard = args.trace.clone().and_then(|t| {
+        if !compatible_to_tracing(&args) {
+            exit(1);
+        }
+
+        TraceGuard::new(t)
+            .map_err(|err| {
+                error!("init trace failed: {err}");
+                exit(1);
+            })
+            .ok()
+    });
 
     let compile_action = || {
         let world = TypstSystemWorld::new(CompileOpts {
