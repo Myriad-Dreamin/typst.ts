@@ -2550,6 +2550,7 @@ dependencies = [
  "tracing-subscriber",
  "typst",
  "typst-library",
+ "typst-ts-ast-exporter",
  "typst-ts-compiler",
  "typst-ts-core",
  "typst-ts-pdf-exporter",

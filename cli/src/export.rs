@@ -10,6 +10,7 @@ use crate::CompileArgs;
 pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature name */ &str)] = &[
     ("pdf", "pdf"),
     ("json", "serde-json"),
+    ("ast", ""),
     ("rmp", "serde-rmp"),
     ("web_socket", "web-socket"),
 ];
@@ -64,6 +65,14 @@ pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> GroupDocumentE
                 artifact_exporters.push(Box::new(
                     typst_ts_serde_exporter::JsonArtifactExporter::new_path(output_path),
                 ));
+            }
+            "ast" => {
+                let output_path = output_dir
+                    .with_file_name(entry_file.file_name().unwrap())
+                    .with_extension("ast.ansi.text");
+                document_exporters.push(Box::new(typst_ts_ast_exporter::AstExporter::new_path(
+                    output_path,
+                )));
             }
             #[cfg(feature = "serde-rmp")]
             "rmp" => {

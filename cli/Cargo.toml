@@ -13,6 +13,7 @@ typst-library = "0.3.0"
 typst-ts-core = "0.1"
 typst-ts-compiler = "0.1"
 
+typst-ts-ast-exporter = { version = "0.1" }
 typst-ts-pdf-exporter = { version = "0.1", optional = true }
 typst-ts-raster-exporter = { version = "0.1", optional = true }
 typst-ts-serde-exporter = { version = "0.1", optional = true }
