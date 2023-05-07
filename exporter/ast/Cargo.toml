@@ -1,0 +1,14 @@
+[package]
+name = "typst-ts-ast-exporter"
+version = "0.1.6"
+license = "Apache-2.0"
+edition = "2021"
+description = "Dump Typst ast to specific format."
+repository = "https://github.com/Myriad-Dreamin/typst.ts"
+
+[dependencies]
+
+typst = "0.3.0"
+typst-ts-core = "0.1"
+
+ansi_term = "0.12.1"

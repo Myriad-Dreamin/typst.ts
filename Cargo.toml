@@ -6,6 +6,7 @@ members = [
 
     "packages/typst.ts",
 
+    "exporter/ast",
     "exporter/canvas",
     "exporter/pdf",
     "exporter/raster",
@@ -20,6 +21,7 @@ members = [
 [patch.crates-io]
 typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }
+typst-ts-ast-exporter = { path = "exporter/ast" }
 typst-ts-canvas-exporter = { path = "exporter/canvas" }
 typst-ts-pdf-exporter = { path = "exporter/pdf" }
 typst-ts-raster-exporter = { path = "exporter/raster" }
