@@ -80,7 +80,7 @@ fn compile(args: CompileArgs) -> ! {
         typst_ts_cli::utils::async_continue(async {
             let mut compile_action = compile_action();
             typst_ts_cli::watch::watch_dir(workspace_dir, |events| {
-                compile_once_watch(entry_file_path, &mut compile_action, events)
+                compile_once_watch(&mut compile_action, events)
             })
             .await;
         })
@@ -98,11 +98,7 @@ fn compile(args: CompileArgs) -> ! {
         exit(if no_errors { 0 } else { 1 });
     }
 
-    fn compile_once_watch(
-        entry_file_path: &Path,
-        compile_action: &mut CompileAction,
-        events: Option<Vec<notify::Event>>,
-    ) {
+    fn compile_once_watch(compile_action: &mut CompileAction, events: Option<Vec<notify::Event>>) {
         // relevance checking
         if events.is_some()
             && !events
@@ -114,13 +110,13 @@ fn compile(args: CompileArgs) -> ! {
         }
 
         // compile
-        typst_ts_cli::diag::status(entry_file_path, Status::Compiling).unwrap();
+        typst_ts_cli::diag::status(&compile_action.entry_file, Status::Compiling).unwrap();
         match compile_action.once() {
             Ok(_) => {
-                typst_ts_cli::diag::status(entry_file_path, Status::Success).unwrap();
+                typst_ts_cli::diag::status(&compile_action.entry_file, Status::Success).unwrap();
             }
             Err(errs) => {
-                typst_ts_cli::diag::status(entry_file_path, Status::Error).unwrap();
+                typst_ts_cli::diag::status(&compile_action.entry_file, Status::Error).unwrap();
                 compile_action.print_diagnostics(*errs).unwrap();
             }
         }
