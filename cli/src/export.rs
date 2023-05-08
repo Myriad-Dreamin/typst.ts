@@ -48,6 +48,27 @@ pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> GroupDocumentE
 
     for f in formats {
         match f.as_str() {
+            "ast" => {
+                let output_path = output_dir
+                    .with_file_name(entry_file.file_name().unwrap())
+                    .with_extension("ast.ansi.text");
+                document_exporters.push(Box::new(typst_ts_ast_exporter::AstExporter::new_path(
+                    output_path,
+                )));
+            }
+            "ir" => {
+                let output_path = output_dir
+                    .with_file_name(entry_file.file_name().unwrap())
+                    .with_extension("artifact.tir.bin");
+
+                let exp = typst_ts_tir_exporter::IRArtifactExporter::new_path(output_path);
+                document_exporters.push(Box::new(LambdaDocumentExporter::new(
+                    move |world, output| {
+                        let artifact = Arc::new(artifact_ir::Artifact::from(output));
+                        exp.export(world, artifact)
+                    },
+                )));
+            }
             #[cfg(feature = "pdf")]
             "pdf" => {
                 let output_path = output_dir
@@ -65,14 +86,6 @@ pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> GroupDocumentE
                 artifact_exporters.push(Box::new(
                     typst_ts_serde_exporter::JsonArtifactExporter::new_path(output_path),
                 ));
-            }
-            "ast" => {
-                let output_path = output_dir
-                    .with_file_name(entry_file.file_name().unwrap())
-                    .with_extension("ast.ansi.text");
-                document_exporters.push(Box::new(typst_ts_ast_exporter::AstExporter::new_path(
-                    output_path,
-                )));
             }
             #[cfg(feature = "serde-rmp")]
             "rmp" => {
@@ -92,19 +105,6 @@ pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> GroupDocumentE
                 artifact_exporters.push(Box::new(
                     typst_ts_ws_exporter::WebSocketArtifactExporter::new_url(ws_url),
                 ));
-            }
-            "ir" => {
-                let output_path = output_dir
-                    .with_file_name(entry_file.file_name().unwrap())
-                    .with_extension("artifact.tir.bin");
-
-                let exp = typst_ts_tir_exporter::IRArtifactExporter::new_path(output_path);
-                document_exporters.push(Box::new(LambdaDocumentExporter::new(
-                    move |world, output| {
-                        let artifact = Arc::new(artifact_ir::Artifact::from(output));
-                        exp.export(world, artifact)
-                    },
-                )));
             }
             _ => {
                 let found = AVAILABLE_FORMATS.iter().find(|(k, _)| **k == *f);
