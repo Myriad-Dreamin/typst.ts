@@ -21,6 +21,32 @@ impl CompileAction {
         print_diagnostics(&self.world, errors)
     }
 
+    /// Export a typst document using `typst_ts_core::DocumentExporter`.
+    fn export(&self, output: typst::doc::Document) -> SourceResult<()> {
+        self.exporter.export(&self.world, &output)
+    }
+
+    /// Compile once from scratch.
+    pub fn once(&mut self) -> SourceResult<()> {
+        // reset the world caches
+        self.world.reset();
+
+        // checkout the entry file
+        let entry_file = self.entry_file.clone();
+        let content = { std::fs::read_to_string(&entry_file).expect("Could not read file") };
+        match self.world.resolve_with(&entry_file, &content) {
+            Ok(id) => {
+                self.world.main = id;
+            }
+            Err(e) => {
+                panic!("handler unresolved main error {e}")
+            }
+        }
+
+        // compile and export document
+        typst::compile(&self.world).and_then(|output| self.export(output))
+    }
+
     /// Check whether a file system event is relevant to the world.
     pub fn relevant(&mut self, event: &notify::Event) -> bool {
         use notify::event::ModifyKind;
@@ -56,31 +82,5 @@ impl CompileAction {
             fs_event_may_relevant!() => event.paths.iter().any(|path| self.world.dependant(path)),
             fs_event_never_relevant!() => false,
         }
-    }
-
-    /// Export a typst document using `typst_ts_core::DocumentExporter`.
-    fn export(&self, output: typst::doc::Document) -> SourceResult<()> {
-        self.exporter.export(&self.world, &output)
-    }
-
-    /// Compile once from scratch.
-    pub fn once(&mut self) -> SourceResult<()> {
-        // reset the world caches
-        self.world.reset();
-
-        // checkout the entry file
-        let entry_file = self.entry_file.clone();
-        let content = { std::fs::read_to_string(&entry_file).expect("Could not read file") };
-        match self.world.resolve_with(&entry_file, &content) {
-            Ok(id) => {
-                self.world.main = id;
-            }
-            Err(e) => {
-                panic!("handler unresolved main error {e}")
-            }
-        }
-
-        // compile and export document
-        typst::compile(&self.world).and_then(|output| self.export(output))
     }
 }
