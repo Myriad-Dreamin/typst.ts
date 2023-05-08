@@ -4,8 +4,7 @@ use std::{
 };
 
 use clap::Parser;
-use log::{error, info};
-use notify::{RecommendedWatcher, RecursiveMode, Watcher};
+use log::error;
 use typst::{font::FontVariant, World};
 
 use typst_ts_cli::{
@@ -79,14 +78,18 @@ fn compile(args: CompileArgs) -> ! {
 
     if args.watch {
         typst_ts_cli::utils::async_continue(async {
-            compile_watch(entry_file_path, workspace_dir, compile_action()).await;
+            let mut compile_action = compile_action();
+            typst_ts_cli::watch::watch_dir(workspace_dir, |events| {
+                compile_once_watch(entry_file_path, &mut compile_action, events)
+            })
+            .await;
         })
     } else {
         compile_once(compile_action())
     }
 
     fn compile_once(mut compile_action: CompileAction) -> ! {
-        let compile_result = compile_action.once();
+        let compile_result: Result<(), Box<Vec<typst::diag::SourceError>>> = compile_action.once();
         let no_errors = compile_result.is_ok();
 
         compile_result
@@ -95,65 +98,33 @@ fn compile(args: CompileArgs) -> ! {
         exit(if no_errors { 0 } else { 1 });
     }
 
-    async fn compile_watch(
+    fn compile_once_watch(
         entry_file_path: &Path,
-        workspace_dir: &Path,
-        mut compile_action: CompileAction,
-    ) -> ! {
-        // Setup file watching.
-        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-        let mut watcher = RecommendedWatcher::new(
-            move |res: Result<notify::Event, _>| match res {
-                Ok(e) => {
-                    tx.send(e).unwrap();
-                }
-                Err(e) => error!("watch error: {:#}", e),
-            },
-            notify::Config::default(),
-        )
-        .map_err(|_| "failed to watch directory")
-        .unwrap();
+        compile_action: &mut CompileAction,
+        events: Option<Vec<notify::Event>>,
+    ) {
+        // relevance checking
+        if events.is_some()
+            && !events
+                .unwrap()
+                .iter()
+                .any(|event| compile_action.relevant(&event))
+        {
+            return;
+        }
 
-        // Add a path to be watched. All files and directories at that path and
-        // below will be monitored for changes.
-        watcher
-            .watch(workspace_dir, RecursiveMode::Recursive)
-            .unwrap();
-
-        // Handle events.
-        info!("start watching files...");
-        loop {
-            typst_ts_cli::diag::status(entry_file_path, Status::Compiling).unwrap();
-            let compile_result = compile_action.once();
-            if compile_result.is_ok() {
+        // compile
+        typst_ts_cli::diag::status(entry_file_path, Status::Compiling).unwrap();
+        match compile_action.once() {
+            Ok(_) => {
                 typst_ts_cli::diag::status(entry_file_path, Status::Success).unwrap();
-            } else {
-                typst_ts_cli::diag::status(entry_file_path, Status::Error).unwrap();
             }
-
-            compile_result
-                .map_err(|errs| compile_action.print_diagnostics(*errs))
-                .unwrap();
-            comemo::evict(30);
-
-            loop {
-                let mut events = vec![];
-                while let Ok(e) =
-                    tokio::time::timeout(tokio::time::Duration::from_millis(100), rx.recv()).await
-                {
-                    events.push(e);
-                }
-
-                let recompile = events
-                    .into_iter()
-                    .flatten()
-                    .any(|event| compile_action.relevant(&event));
-
-                if recompile {
-                    break;
-                }
+            Err(errs) => {
+                typst_ts_cli::diag::status(entry_file_path, Status::Error).unwrap();
+                compile_action.print_diagnostics(*errs).unwrap();
             }
         }
+        comemo::evict(30);
     }
 }
 

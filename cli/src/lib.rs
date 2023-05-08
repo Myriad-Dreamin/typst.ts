@@ -5,6 +5,7 @@ pub mod diag;
 pub mod export;
 pub mod tracing;
 pub mod utils;
+pub mod watch;
 
 use clap::{ArgAction, Parser, Subcommand};
 use typst_ts_core::build_info::VERSION;
