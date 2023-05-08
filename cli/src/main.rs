@@ -43,17 +43,14 @@ fn compile(args: CompileArgs) -> ! {
     let workspace_dir = Path::new(args.workspace.as_str());
     let entry_file_path = Path::new(args.entry.as_str());
 
-    let _guard = args
-        .trace
-        .clone()
-        .map(TraceGuard::new)
-        .transpose()
-        .map_err(|err| {
+    let _trace_guard = {
+        let guard = args.trace.clone().map(TraceGuard::new);
+        let guard = guard.transpose().map_err(|err| {
             error!("init trace failed: {err}");
             exit(1);
-        })
-        .ok()
-        .flatten();
+        });
+        guard.unwrap()
+    };
 
     let compile_driver = || {
         let world = TypstSystemWorld::new(CompileOpts {
