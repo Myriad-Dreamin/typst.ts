@@ -24,3 +24,9 @@ pub mod build_info {
     // todo: hard code it instead of using env!("CARGO_PKG_VERSION").
     pub static VERSION: &str = env!("CARGO_PKG_VERSION");
 }
+
+pub mod program_meta {
+    /// inform the user that this is a bug.
+    pub const REPORT_BUG_MESSAGE: &str =
+        "This is a bug, please report to https://github.com/Myriad-Dreamin/typst.ts/issues/new";
+}
