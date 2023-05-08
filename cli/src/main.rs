@@ -68,7 +68,7 @@ fn compile(args: CompileArgs) -> ! {
             ..CompileOpts::default()
         });
 
-        let exporter = typst_ts_cli::export::prepare_exporters(args.clone(), entry_file_path);
+        let exporter = typst_ts_cli::export::prepare_exporters(&args, entry_file_path);
 
         CompileAction {
             world,

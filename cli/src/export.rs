@@ -1,4 +1,7 @@
-use std::{path::Path, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use typst_ts_core::{
     artifact_ir,
@@ -39,34 +42,12 @@ fn panic_not_available_formats(f: String) -> ! {
     )
 }
 
-pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> GroupDocumentExporter {
-    let output_dir = {
-        let output = args.output.clone();
-        let output_dir = if !output.is_empty() {
-            Path::new(&output)
-        } else {
-            entry_file.parent().unwrap()
-        };
-        let mut output_dir = output_dir.to_path_buf();
-        output_dir.push("output");
-
-        output_dir
-    };
-
-    let formats = {
-        let mut formats = args.format.clone();
-        if !args.web_socket.is_empty() {
-            formats.push("web_socket".to_string());
-        }
-        if formats.is_empty() {
-            formats.push("pdf".to_string());
-            formats.push("json".to_string());
-        }
-        formats.sort();
-        formats.dedup();
-        formats
-    };
-
+fn prepare_exporters_impl(
+    output_dir: PathBuf,
+    formats: Vec<String>,
+    ws_url: String,
+    entry_file: &Path,
+) -> GroupDocumentExporter {
     let mut document_exporters: Vec<Box<dyn typst_ts_core::DocumentExporter>> = vec![];
     let mut artifact_exporters: Vec<Box<dyn typst_ts_core::ArtifactExporter>> = vec![];
 
@@ -122,7 +103,7 @@ pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> GroupDocumentE
             }
             #[cfg(feature = "web-socket")]
             "web_socket" => {
-                let mut ws_url = args.web_socket.clone();
+                let mut ws_url = ws_url.clone();
                 if ws_url.is_empty() {
                     ws_url = "127.0.0.1:23625".to_string()
                 };
@@ -139,4 +120,35 @@ pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> GroupDocumentE
     }
 
     GroupDocumentExporter::new(document_exporters)
+}
+
+pub fn prepare_exporters(args: &CompileArgs, entry_file: &Path) -> GroupDocumentExporter {
+    let output_dir = {
+        let output = args.output.clone();
+        let output_dir = if !output.is_empty() {
+            Path::new(&output)
+        } else {
+            entry_file.parent().unwrap()
+        };
+        let mut output_dir = output_dir.to_path_buf();
+        output_dir.push("output");
+
+        output_dir
+    };
+
+    let formats = {
+        let mut formats = args.format.clone();
+        if !args.web_socket.is_empty() {
+            formats.push("web_socket".to_string());
+        }
+        if formats.is_empty() {
+            formats.push("pdf".to_string());
+            formats.push("json".to_string());
+        }
+        formats.sort();
+        formats.dedup();
+        formats
+    };
+
+    prepare_exporters_impl(output_dir, formats, args.web_socket.clone(), entry_file)
 }
