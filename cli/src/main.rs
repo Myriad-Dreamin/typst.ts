@@ -8,8 +8,8 @@ use log::error;
 use typst::{font::FontVariant, World};
 
 use typst_ts_cli::{
-    compile::CompileAction, diag::Status, tracing::TraceGuard, CompileArgs, FontSubCommands,
-    ListFontsArgs, Opts, Subcommands,
+    compile::CompileDriver, tracing::TraceGuard, CompileArgs, FontSubCommands, ListFontsArgs, Opts,
+    Subcommands,
 };
 use typst_ts_compiler::TypstSystemWorld;
 use typst_ts_core::config::CompileOpts;
@@ -60,7 +60,7 @@ fn compile(args: CompileArgs) -> ! {
             .ok()
     });
 
-    let compile_action = || {
+    let compile_driver = || {
         let world = TypstSystemWorld::new(CompileOpts {
             root_dir: workspace_dir.to_owned(),
             font_paths: args.font_paths.clone(),
@@ -69,7 +69,7 @@ fn compile(args: CompileArgs) -> ! {
 
         let exporter = typst_ts_cli::export::prepare_exporters(&args, entry_file_path);
 
-        CompileAction {
+        CompileDriver {
             world,
             entry_file: entry_file_path.to_owned(),
             exporter,
@@ -78,48 +78,25 @@ fn compile(args: CompileArgs) -> ! {
 
     if args.watch {
         typst_ts_cli::utils::async_continue(async {
-            let mut compile_action = compile_action();
+            let mut driver = compile_driver();
             typst_ts_cli::watch::watch_dir(workspace_dir, |events| {
-                compile_once_watch(&mut compile_action, events)
+                compile_once_watch(&mut driver, events)
             })
             .await;
         })
     } else {
-        compile_once(compile_action())
+        let compiled = compile_driver().once_diag::<false>();
+        exit(if compiled { 0 } else { 1 });
     }
 
-    fn compile_once(mut compile_action: CompileAction) -> ! {
-        let compile_result: Result<(), Box<Vec<typst::diag::SourceError>>> = compile_action.once();
-        let no_errors = compile_result.is_ok();
-
-        compile_result
-            .map_err(|errs| compile_action.print_diagnostics(*errs))
-            .unwrap();
-        exit(if no_errors { 0 } else { 1 });
-    }
-
-    fn compile_once_watch(compile_action: &mut CompileAction, events: Option<Vec<notify::Event>>) {
+    fn compile_once_watch(driver: &mut CompileDriver, events: Option<Vec<notify::Event>>) {
         // relevance checking
-        if events.is_some()
-            && !events
-                .unwrap()
-                .iter()
-                .any(|event| compile_action.relevant(&event))
-        {
+        if events.is_some() && !events.unwrap().iter().any(|event| driver.relevant(event)) {
             return;
         }
 
         // compile
-        typst_ts_cli::diag::status(&compile_action.entry_file, Status::Compiling).unwrap();
-        match compile_action.once() {
-            Ok(_) => {
-                typst_ts_cli::diag::status(&compile_action.entry_file, Status::Success).unwrap();
-            }
-            Err(errs) => {
-                typst_ts_cli::diag::status(&compile_action.entry_file, Status::Error).unwrap();
-                compile_action.print_diagnostics(*errs).unwrap();
-            }
-        }
+        driver.once_diag::<true>();
         comemo::evict(30);
     }
 }

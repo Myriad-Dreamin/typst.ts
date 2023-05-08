@@ -57,7 +57,7 @@ pub enum Status {
     Error,
 }
 
-/// Clear the terminal and render the status message.
+/// Render the status message.
 pub fn status(entry_file: &Path, status: Status) -> io::Result<()> {
     let input = entry_file.display();
     let message = match status {

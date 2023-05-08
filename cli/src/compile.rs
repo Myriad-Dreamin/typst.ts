@@ -4,21 +4,35 @@ use typst::diag::{SourceError, SourceResult};
 use typst_ts_compiler::TypstSystemWorld;
 use typst_ts_core::{exporter_builtins::GroupDocumentExporter, DocumentExporter};
 
-use crate::diag::print_diagnostics;
+use crate::diag;
 
-pub struct CompileAction {
+/// CompileDriver is a driver for typst compiler.
+/// It is responsible for operating the compiler without leaking implementation
+/// details of the compiler.
+pub struct CompileDriver {
+    /// World that has access to the file system.
     pub world: TypstSystemWorld,
+    /// Path to the entry file.
     pub entry_file: PathBuf,
+    /// Exporter to use, which will consume the output of the compiler.
     pub exporter: GroupDocumentExporter,
 }
 
-impl CompileAction {
+impl CompileDriver {
     /// Print diagnostic messages to the terminal.
-    pub fn print_diagnostics(
+    fn print_diagnostics(
         &self,
         errors: Vec<SourceError>,
     ) -> Result<(), codespan_reporting::files::Error> {
-        print_diagnostics(&self.world, errors)
+        diag::print_diagnostics(&self.world, errors)
+    }
+
+    /// Print status message to the terminal.
+    fn print_status<const WITH_STATUS: bool>(&self, status: diag::Status) {
+        if !WITH_STATUS {
+            return;
+        }
+        diag::status(&self.entry_file, status).unwrap();
     }
 
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
@@ -45,6 +59,22 @@ impl CompileAction {
 
         // compile and export document
         typst::compile(&self.world).and_then(|output| self.export(output))
+    }
+
+    /// Compile once from scratch and print (optional) status and diagnostics to the terminal.
+    pub fn once_diag<const WITH_STATUS: bool>(&mut self) -> bool {
+        self.print_status::<WITH_STATUS>(diag::Status::Compiling);
+        match self.once() {
+            Ok(_) => {
+                self.print_status::<WITH_STATUS>(diag::Status::Success);
+                true
+            }
+            Err(errs) => {
+                self.print_status::<WITH_STATUS>(diag::Status::Error);
+                self.print_diagnostics(*errs).unwrap();
+                false
+            }
+        }
     }
 
     /// Check whether a file system event is relevant to the world.
