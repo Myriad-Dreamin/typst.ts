@@ -23,22 +23,39 @@ impl CompileAction {
 
     /// Check whether a file system event is relevant to the world.
     pub fn relevant(&mut self, event: &notify::Event) -> bool {
-        match &event.kind {
-            notify::EventKind::Any => {}
-            notify::EventKind::Access(_) => return false,
-            notify::EventKind::Create(_) => return true,
-            notify::EventKind::Modify(kind) => match kind {
-                notify::event::ModifyKind::Any => {}
-                notify::event::ModifyKind::Data(_) => {}
-                notify::event::ModifyKind::Metadata(_) => return false,
-                notify::event::ModifyKind::Name(_) => return true,
-                notify::event::ModifyKind::Other => return false,
-            },
-            notify::EventKind::Remove(_) => {}
-            notify::EventKind::Other => return false,
+        use notify::event::ModifyKind;
+        use notify::EventKind;
+
+        macro_rules! fs_event_must_relevant {
+            () => {
+                // create a file in workspace
+                EventKind::Create(_) |
+                // rename a file in workspace
+                EventKind::Modify(ModifyKind::Name(_))
+            };
+        }
+        macro_rules! fs_event_may_relevant {
+            () => {
+                // remove/modify file in workspace
+                EventKind::Remove(_) | EventKind::Modify(ModifyKind::Data(_)) |
+                // unknown manipulation in workspace
+                EventKind::Any | EventKind::Modify(ModifyKind::Any)
+            };
+        }
+        macro_rules! fs_event_never_relevant {
+            () => {
+                // read/write meta event
+                EventKind::Access(_) | EventKind::Modify(ModifyKind::Metadata(_)) |
+                // `::notify` internal events other event that we cannot identify
+                EventKind::Other | EventKind::Modify(ModifyKind::Other)
+            };
         }
 
-        event.paths.iter().any(|path| self.world.dependant(path))
+        match &event.kind {
+            fs_event_must_relevant!() => true,
+            fs_event_may_relevant!() => event.paths.iter().any(|path| self.world.dependant(path)),
+            fs_event_never_relevant!() => false,
+        }
     }
 
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
