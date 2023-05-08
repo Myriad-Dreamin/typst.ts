@@ -34,24 +34,16 @@ fn main() {
     }
 }
 
-fn compatible_to_tracing(args: &CompileArgs) -> bool {
-    if args.watch {
+fn compile(args: CompileArgs) -> ! {
+    if args.trace.is_some() && args.watch {
         error!("cannot use --trace with --watch");
-        return false;
+        exit(1);
     }
 
-    true
-}
-
-fn compile(args: CompileArgs) -> ! {
     let workspace_dir = Path::new(args.workspace.as_str());
     let entry_file_path = Path::new(args.entry.as_str());
 
     let _guard = args.trace.clone().and_then(|t| {
-        if !compatible_to_tracing(&args) {
-            exit(1);
-        }
-
         TraceGuard::new(t)
             .map_err(|err| {
                 error!("init trace failed: {err}");
