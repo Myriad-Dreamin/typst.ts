@@ -23,23 +23,23 @@ pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature hint */ &str
 
 fn panic_not_available_formats(f: String) -> ! {
     // find the feature hint
-    let found = AVAILABLE_FORMATS.iter().find(|(k, _)| **k == *f);
-    let feat = if let Some((_, feat)) = found {
-        *feat
-    } else {
-        panic!("unknown format: {}", f)
-    };
-
-    // it is a bug
-    if feat == REPORT_BUG_MESSAGE {
-        panic!("feature not enabled for format {:?}: {}", f, feat)
+    match AVAILABLE_FORMATS.iter().find(|(k, _)| **k == *f) {
+        // feat is a bug
+        Some((_, feat @ REPORT_BUG_MESSAGE)) => {
+            panic!("feature not enabled for format {:?}: {}", f, feat)
+        }
+        // feat is a feature hint
+        Some((_, feat)) => {
+            panic!(
+                r#"feature not enabled for format {:?}: suggested feature "{}". To figure out enabled features, use "$program --features""#,
+                f, feat
+            )
+        }
+        // f is an unknown format
+        None => {
+            panic!("unknown format: {}", f)
+        }
     }
-
-    // it is a feature hint
-    panic!(
-        r#"feature not enabled for format {:?}: suggested feature "{}". To figure out enabled features, use "$program --features""#,
-        f, feat
-    )
 }
 
 fn prepare_exporters_impl(
