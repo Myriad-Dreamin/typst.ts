@@ -8,7 +8,8 @@ use typst_ts_core::{
 
 use crate::CompileArgs;
 
-pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature name */ &str)] = &[
+/// builtin formats should be enabled by default, and non-builtin formats should be
+pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature hint */ &str)] = &[
     ("ast", REPORT_BUG_MESSAGE),
     ("ir", REPORT_BUG_MESSAGE),
     ("pdf", "pdf"),
@@ -16,6 +17,27 @@ pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature name */ &str
     ("rmp", "serde-rmp"),
     ("web_socket", "web-socket"),
 ];
+
+fn panic_not_available_formats(f: String) -> ! {
+    // find the feature hint
+    let found = AVAILABLE_FORMATS.iter().find(|(k, _)| **k == *f);
+    let feat = if let Some((_, feat)) = found {
+        *feat
+    } else {
+        panic!("unknown format: {}", f)
+    };
+
+    // it is a bug
+    if feat == REPORT_BUG_MESSAGE {
+        panic!("feature not enabled for format {:?}: {}", f, feat)
+    }
+
+    // it is a feature hint
+    panic!(
+        r#"feature not enabled for format {:?}: suggested feature "{}". To figure out enabled features, use "$program --features""#,
+        f, feat
+    )
+}
 
 pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> GroupDocumentExporter {
     let output_dir = {
@@ -108,14 +130,7 @@ pub fn prepare_exporters(args: CompileArgs, entry_file: &Path) -> GroupDocumentE
                     typst_ts_ws_exporter::WebSocketArtifactExporter::new_url(ws_url),
                 ));
             }
-            _ => {
-                let found = AVAILABLE_FORMATS.iter().find(|(k, _)| **k == *f);
-                if let Some((_, feat)) = found {
-                    panic!("feature not enabled for format {:?}: {}", f, *feat)
-                } else {
-                    panic!("unknown format: {}", f)
-                }
-            }
+            _ => panic_not_available_formats(f),
         };
     }
 
