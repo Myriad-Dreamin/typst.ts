@@ -48,7 +48,7 @@ impl CompileAction {
     }
 
     /// Check whether a file system event is relevant to the world.
-    pub fn relevant(&mut self, event: &notify::Event) -> bool {
+    pub fn relevant(&self, event: &notify::Event) -> bool {
         use notify::event::ModifyKind;
         use notify::EventKind;
 
