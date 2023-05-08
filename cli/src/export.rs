@@ -3,14 +3,16 @@ use std::{path::Path, sync::Arc};
 use typst_ts_core::{
     artifact_ir,
     exporter_builtins::{DocToArtifactExporter, GroupDocumentExporter, LambdaDocumentExporter},
+    program_meta::REPORT_BUG_MESSAGE,
 };
 
 use crate::CompileArgs;
 
 pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature name */ &str)] = &[
+    ("ast", REPORT_BUG_MESSAGE),
+    ("ir", REPORT_BUG_MESSAGE),
     ("pdf", "pdf"),
     ("json", "serde-json"),
-    ("ast", ""),
     ("rmp", "serde-rmp"),
     ("web_socket", "web-socket"),
 ];
