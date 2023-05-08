@@ -46,7 +46,7 @@ fn compile(args: CompileArgs) -> ! {
     let _guard = args
         .trace
         .clone()
-        .map(|t| TraceGuard::new(t))
+        .map(TraceGuard::new)
         .transpose()
         .map_err(|err| {
             error!("init trace failed: {err}");
