@@ -352,10 +352,10 @@ impl SystemFontSearcher {
             if let Ok(mmap) = unsafe { Mmap::map(&file) } {
                 for (i, info) in FontInfo::iter(&mmap).enumerate() {
                     self.book.push(info);
-                    self.fonts.push(FontSlot::new(Box::new(ReadFontLoader {
+                    self.fonts.push(FontSlot::new_boxed(ReadFontLoader {
                         read: LazyFile::new(path.into()),
                         index: i as u32,
-                    })));
+                    }));
                 }
             }
         }
