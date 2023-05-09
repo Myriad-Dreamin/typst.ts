@@ -2568,7 +2568,6 @@ dependencies = [
  "codespan-reporting",
  "comemo",
  "dirs",
- "elsa",
  "js-sys",
  "memmap2",
  "once_cell",
