@@ -19,6 +19,9 @@ pub use font::{FontLoader, FontResolver, FontSlot};
 pub(crate) mod hash;
 pub use hash::typst_affinite_hash;
 
+pub(crate) mod concepts;
+pub use concepts::*;
+
 pub mod build_info {
     /// The version of the typst-ts-core crate.
     // todo: hard code it instead of using env!("CARGO_PKG_VERSION").
