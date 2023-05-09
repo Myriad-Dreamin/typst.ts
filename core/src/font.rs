@@ -62,6 +62,10 @@ impl FontSlot {
         Self(OnceCell::new(), Arc::new(Mutex::new(Some(f))))
     }
 
+    pub fn new_boxed<F: FontLoader + 'static>(f: F) -> Self {
+        Self::new(Box::new(f))
+    }
+
     fn load(&self) -> Option<Font> {
         let mut init_fn = self.1.lock().unwrap();
         init_fn
