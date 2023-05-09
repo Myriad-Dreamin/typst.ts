@@ -30,7 +30,7 @@ fn panic_not_available_formats(f: String) -> ! {
         }
         // feat is a feature hint
         Some((_, feat)) => {
-            clap::Error::raw(clap::error::ErrorKind::InvalidValue, 
+            clap::Error::raw(clap::error::ErrorKind::InvalidValue,
                 format!(
                     r#"feature not enabled for format {:?}: suggested feature "{}". To figure out enabled features, use "$program --features"
 "#,
@@ -39,7 +39,7 @@ fn panic_not_available_formats(f: String) -> ! {
         }
         // f is an unknown format
         None => {
-            clap::Error::raw(clap::error::ErrorKind::UnknownArgument, 
+            clap::Error::raw(clap::error::ErrorKind::UnknownArgument,
                 format!(
                     "unknown format: {}\n", f
                 )).exit()
