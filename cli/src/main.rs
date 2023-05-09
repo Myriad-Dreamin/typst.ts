@@ -4,7 +4,6 @@ use std::{
 };
 
 use clap::Parser;
-use log::error;
 use typst::{font::FontVariant, World};
 
 use typst_ts_cli::{
@@ -36,8 +35,11 @@ fn main() {
 
 fn compile(args: CompileArgs) -> ! {
     if args.trace.is_some() && args.watch {
-        error!("cannot use --trace with --watch");
-        exit(1);
+        clap::Error::raw(
+            clap::error::ErrorKind::ArgumentConflict,
+            "cannot use option \"--trace\" and \"--watch\" at the same time\n",
+        )
+        .exit()
     }
 
     let workspace_dir = Path::new(args.workspace.as_str());
@@ -46,8 +48,11 @@ fn compile(args: CompileArgs) -> ! {
     let _trace_guard = {
         let guard = args.trace.clone().map(TraceGuard::new);
         let guard = guard.transpose().map_err(|err| {
-            error!("init trace failed: {err}");
-            exit(1);
+            clap::Error::raw(
+                clap::error::ErrorKind::InvalidValue,
+                format!("init trace failed: {err}\n"),
+            )
+            .exit()
         });
         guard.unwrap()
     };
