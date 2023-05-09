@@ -353,7 +353,7 @@ impl SystemFontSearcher {
                 for (i, info) in FontInfo::iter(&mmap).enumerate() {
                     self.book.push(info);
                     self.fonts.push(FontSlot::new(Box::new(ReadFontLoader {
-                        read: Box::new(LazyFile::new(path.into())),
+                        read: LazyFile::new(path.into()),
                         index: i as u32,
                     })));
                 }
