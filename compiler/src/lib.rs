@@ -1,6 +1,9 @@
 pub(crate) mod model;
 pub use model::*;
 
+pub mod font;
+pub use font::*;
+
 pub(crate) mod path;
 
 #[cfg(test)]
