@@ -21,7 +21,9 @@ use typst_ts_core::FontResolver;
 use walkdir::WalkDir;
 
 use crate::path::{PathHash, PathSlot};
-use typst_ts_core::{font::FontResolverImpl, FontLoader, FontSlot};
+use crate::system::LazyFile;
+use crate::ReadFontLoader;
+use typst_ts_core::{font::FontResolverImpl, FontSlot};
 
 type CodespanResult<T> = Result<T, CodespanError>;
 type CodespanError = codespan_reporting::files::Error;
@@ -227,20 +229,6 @@ impl<'a> codespan_reporting::files::Files<'a> for TypstSystemWorld {
     }
 }
 
-pub struct PathFontLoader {
-    // todo: file system abstraction
-    // pub world: Box<dyn World>,
-    pub path: PathBuf,
-    pub index: u32,
-}
-
-impl FontLoader for PathFontLoader {
-    fn load(&mut self) -> Option<Font> {
-        let data = read(&self.path).ok()?;
-        Font::new(data.into(), self.index)
-    }
-}
-
 /// Searches for fonts.
 pub struct SystemFontSearcher {
     pub book: FontBook,
@@ -364,8 +352,8 @@ impl SystemFontSearcher {
             if let Ok(mmap) = unsafe { Mmap::map(&file) } {
                 for (i, info) in FontInfo::iter(&mmap).enumerate() {
                     self.book.push(info);
-                    self.fonts.push(FontSlot::new(Box::new(PathFontLoader {
-                        path: path.into(),
+                    self.fonts.push(FontSlot::new(Box::new(ReadFontLoader {
+                        read: Box::new(LazyFile::new(path.into())),
                         index: i as u32,
                     })));
                 }
