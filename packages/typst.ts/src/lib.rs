@@ -1,5 +1,3 @@
-pub(crate) mod browser_world;
-
 pub(crate) mod pixmap;
 
 pub(crate) mod renderer;
@@ -8,8 +6,6 @@ pub use renderer::{TypstRenderer, TypstRendererBuilder};
 
 #[macro_use]
 pub(crate) mod utils;
-
-pub mod web_font;
 
 #[cfg(test)]
 mod tests {

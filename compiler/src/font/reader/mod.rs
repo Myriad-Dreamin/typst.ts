@@ -4,6 +4,9 @@ use typst_ts_core::FontLoader;
 #[cfg(feature = "system")]
 pub mod system;
 
+#[cfg(feature = "web")]
+pub mod web;
+
 pub struct ReadFontLoader<R> {
     pub read: R,
     pub index: u32,

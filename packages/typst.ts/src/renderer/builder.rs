@@ -1,8 +1,6 @@
-use crate::{
-    browser_world::{BrowserFontSearcher, TypstBrowserWorld},
-    renderer::TypstRenderer,
-    web_font::WebFont,
-};
+use crate::renderer::TypstRenderer;
+
+use typst_ts_compiler::{font::web::WebFont, BrowserFontSearcher, TypstBrowserWorld};
 
 use js_sys::Uint8Array;
 use typst::util::Buffer;

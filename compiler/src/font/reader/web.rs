@@ -5,11 +5,6 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::Blob;
 
-#[wasm_bindgen(module = "fonts")]
-extern "C" {
-    fn load_font(font_ref: i32) -> Blob;
-}
-
 #[wasm_bindgen]
 #[derive(Clone, Debug)]
 pub struct WebFont {

@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 typst-ts-core = "0.1"
+typst-ts-compiler = { version = "0.1", default-features = false, features = ["web"] }
 typst-ts-canvas-exporter = { version = "0.1", optional = true }
 typst-ts-raster-exporter = { version = "0.1", optional = true }
 

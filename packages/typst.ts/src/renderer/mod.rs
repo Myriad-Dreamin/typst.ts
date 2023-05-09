@@ -7,7 +7,7 @@ use web_sys::ImageData;
 use crate::RenderSessionManager;
 use crate::{pixmap, renderer::session::RenderSessionOptions};
 
-use crate::browser_world::TypstBrowserWorld;
+use typst_ts_compiler::TypstBrowserWorld;
 
 pub(crate) mod artifact;
 pub use artifact::ArtifactJsBuilder;

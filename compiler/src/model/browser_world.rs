@@ -9,7 +9,7 @@ use typst_ts_core::{font::BufferFontLoader, font::FontResolverImpl, FontSlot};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 
-use crate::web_font::WebFont;
+use crate::font::web::WebFont;
 
 /// A world that provides access to the browser.
 pub struct TypstBrowserWorld {
