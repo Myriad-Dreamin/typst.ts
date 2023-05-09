@@ -17,11 +17,11 @@ use typst::syntax::{Source, SourceId};
 use typst::util::{Buffer, PathExt};
 use typst::World;
 use typst_ts_core::config::CompileOpts;
+use typst_ts_core::font::LazyBufferFontLoader;
 use typst_ts_core::FontResolver;
 use walkdir::WalkDir;
 
 use crate::font::system::LazyFile;
-use crate::font::ReadFontLoader;
 use crate::path::{PathHash, PathSlot};
 use typst_ts_core::{font::FontResolverImpl, FontSlot};
 
@@ -352,10 +352,11 @@ impl SystemFontSearcher {
             if let Ok(mmap) = unsafe { Mmap::map(&file) } {
                 for (i, info) in FontInfo::iter(&mmap).enumerate() {
                     self.book.push(info);
-                    self.fonts.push(FontSlot::new_boxed(ReadFontLoader {
-                        read: LazyFile::new(path.into()),
-                        index: i as u32,
-                    }));
+                    self.fonts
+                        .push(FontSlot::new_boxed(LazyBufferFontLoader::new(
+                            LazyFile::new(path.into()),
+                            i as u32,
+                        )));
                 }
             }
         }

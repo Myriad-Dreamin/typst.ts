@@ -1,6 +1,6 @@
 use js_sys::Promise;
 use typst::{font::Font, util::Buffer};
-use typst_ts_core::FontLoader;
+use typst_ts_core::{FontLoader, ReadAllOnce};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::Blob;
@@ -113,5 +113,26 @@ impl FontLoader for WebFontLoader {
         let blob = Buffer::from(js_sys::Uint8Array::new(&blob).to_vec());
 
         Font::new(blob, self.index)
+    }
+}
+
+pub struct WebFontBlob {
+    font: Option<WebFont>,
+}
+
+impl WebFontBlob {
+    pub fn new(font: WebFont) -> Self {
+        Self { font: Some(font) }
+    }
+}
+
+impl ReadAllOnce for WebFontBlob {
+    fn read_all(mut self, buf: &mut Vec<u8>) -> std::io::Result<usize> {
+        let blob = pollster::block_on(self.font.take().unwrap().load());
+        let blob = pollster::block_on(JsFuture::from(blob.array_buffer())).unwrap();
+        let mut blob = js_sys::Uint8Array::new(&blob).to_vec();
+        let blob_len = blob.len();
+        buf.append(&mut blob);
+        Ok(blob_len)
     }
 }
