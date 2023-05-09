@@ -20,9 +20,9 @@ use typst_ts_core::config::CompileOpts;
 use typst_ts_core::FontResolver;
 use walkdir::WalkDir;
 
+use crate::font::system::LazyFile;
+use crate::font::ReadFontLoader;
 use crate::path::{PathHash, PathSlot};
-use crate::system::LazyFile;
-use crate::ReadFontLoader;
 use typst_ts_core::{font::FontResolverImpl, FontSlot};
 
 type CodespanResult<T> = Result<T, CodespanError>;
