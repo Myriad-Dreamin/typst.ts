@@ -1,7 +1,7 @@
 use ttf_parser::gdef::GlyphClass;
 use ttf_parser::gsub::{Ligature, SubstitutionSubtable};
 use ttf_parser::GlyphId;
-use typst::doc::Glyph;
+use typst::doc::{Glyph, TextItem};
 
 fn is_ligature(face: &ttf_parser::Face<'_>, id: GlyphId) -> bool {
     let table = match face.tables().gdef {
@@ -41,14 +41,19 @@ impl LigatureResolver {
     }
 
     /// resolve the correct unicode string of a ligature glyph
-    pub fn resolve(&mut self, face: &ttf_parser::Face<'_>, glyph: &Glyph) -> Option<String> {
+    pub fn resolve(
+        &mut self,
+        face: &ttf_parser::Face<'_>,
+        text_context: &TextItem,
+        glyph: &Glyph,
+    ) -> Option<String> {
         let id = GlyphId(glyph.id);
         if let Some(s) = self.ligature_cmap.get(&id) {
             return s.clone();
         }
 
         if is_ligature(face, id) {
-            return Some(self.get(face, glyph));
+            return Some(self.get(face, text_context, glyph));
         }
 
         self.ligature_cmap.insert(id, None);
@@ -87,7 +92,12 @@ impl LigatureResolver {
     }
 
     /// return a combined unicode string from ligature components
-    fn get(&mut self, face: &ttf_parser::Face<'_>, glyph: &Glyph) -> String {
+    fn get(
+        &mut self,
+        face: &ttf_parser::Face<'_>,
+        text_context: &TextItem,
+        glyph: &Glyph,
+    ) -> String {
         let id = GlyphId(glyph.id);
 
         let ligature = LigatureResolver::lookup(face, id).unwrap();
@@ -98,7 +108,9 @@ impl LigatureResolver {
             .map(|g| self.rev_cmap.get(&g).unwrap())
             .collect::<String>();
 
-        let c = glyph.c.to_string() + c.as_str();
+        let c = text_context.text[glyph.range.start as usize..glyph.range.start as usize]
+            .to_string()
+            + c.as_str();
         self.ligature_cmap.insert(id, Some(c.clone()));
 
         c

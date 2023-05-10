@@ -13,7 +13,7 @@ typst-ts-core = "0.1"
 typst = "0.3.0"
 comemo = "0.2"
 
-tiny-skia = "0.6.6"
+tiny-skia = "0.9.0"
 ttf-parser = "0.18.1"
 flate2 = "1"
 data-url = "0.2.0"

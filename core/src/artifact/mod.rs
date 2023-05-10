@@ -76,6 +76,7 @@ impl ArtifactBuilder {
 
     pub fn write_span(&mut self, _span: TypstSpan) -> SpanRef {
         // todo
+        0
     }
 
     pub fn write_glyph(&mut self, glyph: &TypstGlyph) -> Glyph {
@@ -83,9 +84,8 @@ impl ArtifactBuilder {
             id: glyph.id,
             x_advance: glyph.x_advance.into(),
             x_offset: glyph.x_offset.into(),
-            c: glyph.c,
-            span: self.write_span(glyph.span),
-            offset: glyph.offset,
+            span: (self.write_span(glyph.span.0), glyph.span.1),
+            range: (glyph.range.start, glyph.range.end),
         }
     }
 
@@ -97,7 +97,7 @@ impl ArtifactBuilder {
     ) {
         let font = &mut self.fonts[font as usize];
         for glyph in &text.glyphs {
-            font.1.resolve(face, glyph);
+            font.1.resolve(face, text, glyph);
         }
     }
 
@@ -111,6 +111,7 @@ impl ArtifactBuilder {
             size: text.size.into(),
             fill: text.fill.clone().into(),
             lang: text.lang.as_str().to_string(),
+            text: text.text.as_str().to_string(),
             glyphs: text.glyphs.iter().map(|g| self.write_glyph(g)).collect(),
         }
     }
@@ -256,9 +257,8 @@ impl TypeDocumentParser {
             id: glyph.id,
             x_advance: glyph.x_advance.into(),
             x_offset: glyph.x_offset.into(),
-            c: glyph.c,
-            span: TypstSpan::detached(),
-            offset: glyph.offset,
+            span: (TypstSpan::detached(), glyph.span.1),
+            range: glyph.range.0..glyph.range.1,
         }
     }
 
@@ -276,6 +276,7 @@ impl TypeDocumentParser {
             size: text.size.into(),
             fill: text.fill.clone().into(),
             lang: TypstLang::from_str(text.lang.as_str()).unwrap(),
+            text: text.text.clone().into(),
             glyphs: text.glyphs.iter().map(|g| self.parse_glyph(g)).collect(),
         }
     }

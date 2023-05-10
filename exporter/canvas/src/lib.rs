@@ -23,7 +23,6 @@ mod utils;
 
 pub struct CanvasRenderTask<'a> {
     canvas: &'a CanvasRenderingContext2d,
-    ligature_map: &'a LigatureMap,
 
     pixel_per_pt: f32,
     fill: Color,
@@ -70,7 +69,6 @@ impl<'a> CanvasRenderTask<'a> {
         let pxh = (pixel_per_pt * (size.y.to_pt() as f32)).round().max(1.0) as u32;
         Self {
             canvas,
-            ligature_map,
             pixel_per_pt,
             fill,
             width: pxw,
@@ -121,7 +119,7 @@ impl<'a> CanvasRenderTask<'a> {
     }
 
     /// Render a frame into the canvas.
-    fn render_frame(&mut self, ts: sk::Transform, mask: Option<&sk::ClipMask>, frame: &Frame) {
+    fn render_frame(&mut self, ts: sk::Transform, mask: Option<&sk::Mask>, frame: &Frame) {
         // let mut contains_text = false;
         let mut text_state = None;
 
@@ -224,12 +222,12 @@ impl<'a> CanvasRenderTask<'a> {
     }
 
     /// Render a group frame with optional transform and clipping into the canvas.
-    fn render_group(&mut self, ts: sk::Transform, mask: Option<&sk::ClipMask>, group: &GroupItem) {
+    fn render_group(&mut self, ts: sk::Transform, mask: Option<&sk::Mask>, group: &GroupItem) {
         let ts = ts.pre_concat(group.transform.into());
 
         let mut mask = mask;
 
-        let mut storage;
+        let storage;
         if group.clips {
             let size = group.frame.size();
             let w = size.x.to_f32();
@@ -238,23 +236,32 @@ impl<'a> CanvasRenderTask<'a> {
                 .map(sk::PathBuilder::from_rect)
                 .and_then(|path| path.transform(ts))
             {
-                let result = if let Some(mask) = mask {
-                    storage = mask.clone();
-                    storage.intersect_path(&path, sk::FillRule::default(), false)
+                if let Some(mask) = mask {
+                    let mut mask = mask.clone();
+                    mask.intersect_path(
+                        &path,
+                        sk::FillRule::default(),
+                        false,
+                        sk::Transform::default(),
+                    );
+                    storage = mask;
                 } else {
                     let pxw = self.width;
                     let pxh = self.height;
-                    storage = sk::ClipMask::new();
-                    storage.set_path(pxw, pxh, &path, sk::FillRule::default(), false)
+                    let Some(mut mask) = sk::Mask::new(pxw, pxh) else {
+                        // Fails if clipping rect is empty. In that case we just
+                        // clip everything by returning.
+                        return;
+                    };
+
+                    mask.fill_path(
+                        &path,
+                        sk::FillRule::default(),
+                        false,
+                        sk::Transform::default(),
+                    );
+                    storage = mask;
                 };
-
-                // Clipping fails if clipping rect is empty. In that case we just
-                // clip everything by returning.
-                if result.is_none() {
-                    return;
-                }
-
-                // console_log!("mask updation {:?}", storage);
 
                 mask = Some(&storage);
             }
@@ -284,26 +291,14 @@ impl<'a> CanvasRenderTask<'a> {
     }
 
     /// Render a text run into the self.canvas.
-    fn render_text(&mut self, ts: sk::Transform, mask: Option<&sk::ClipMask>, text: &TextItem) {
+    fn render_text(&mut self, ts: sk::Transform, mask: Option<&sk::Mask>, text: &TextItem) {
         let info = text.font.info();
-        let ligature_map = &self
-            .ligature_map
-            .get(&(info.family.clone(), info.variant, info.flags));
 
-        let glyph_chars: String = if let Some(ligature_map) = ligature_map {
-            text.glyphs
-                .iter()
-                .map(|g| {
-                    let id = GlyphId(g.id);
-                    if let Some(c) = ligature_map.get(&g.id) {
-                        c.clone()
-                    } else {
-                        g.c.to_string()
-                    }
-                })
-                .collect()
+        let glyph_chars: String = if text.glyphs.is_empty() {
+            "".to_string()
         } else {
-            text.glyphs.iter().map(|g| g.c).collect()
+            text.text[text.glyphs[0].range().start..text.glyphs[text.glyphs.len() - 1].range().end]
+                .to_string()
         };
         let ppem = text.size.to_f32() * ts.sy;
 
@@ -354,7 +349,7 @@ impl<'a> CanvasRenderTask<'a> {
     fn render_svg_glyph(
         &mut self,
         ts: sk::Transform,
-        mask: Option<&sk::ClipMask>,
+        mask: Option<&sk::Mask>,
         text: &TextItem,
         id: GlyphId,
     ) -> Option<()> {
@@ -486,7 +481,7 @@ impl<'a> CanvasRenderTask<'a> {
     fn render_bitmap_glyph(
         &mut self,
         ts: sk::Transform,
-        mask: Option<&sk::ClipMask>,
+        mask: Option<&sk::Mask>,
         text: &TextItem,
         id: GlyphId,
     ) -> Option<()> {
@@ -512,7 +507,7 @@ impl<'a> CanvasRenderTask<'a> {
     fn render_outline_glyph(
         &mut self,
         ts: sk::Transform,
-        mask: Option<&sk::ClipMask>,
+        mask: Option<&sk::Mask>,
         text: &TextItem,
         id: GlyphId,
     ) -> Option<()> {
@@ -567,7 +562,7 @@ impl<'a> CanvasRenderTask<'a> {
     fn render_shape(
         &mut self,
         ts: sk::Transform,
-        mask: Option<&sk::ClipMask>,
+        mask: Option<&sk::Mask>,
         shape: &Shape,
     ) -> Option<()> {
         let mut builder = SvgPath2DBuilder(String::new());
@@ -704,7 +699,7 @@ impl<'a> CanvasRenderTask<'a> {
     fn render_image(
         &mut self,
         ts: sk::Transform,
-        mask: Option<&sk::ClipMask>,
+        mask: Option<&sk::Mask>,
         image: &Image,
         size: Size,
     ) -> Option<()> {

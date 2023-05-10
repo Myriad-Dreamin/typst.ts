@@ -60,12 +60,10 @@ pub struct Glyph {
     pub x_advance: Em,
     /// The horizontal offset of the glyph.
     pub x_offset: Em,
-    /// The first character of the glyph's cluster.
-    pub c: char,
     /// The source code location of the text.
-    pub span: SpanRef,
-    /// The offset within the spanned text.
-    pub offset: u16,
+    pub span: (SpanRef, u16),
+    /// The range of the glyph in its item's text.
+    pub range: (u16, u16),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -78,6 +76,8 @@ pub struct TextItem {
     pub fill: Paint,
     /// The natural language of the text.
     pub lang: Lang,
+    /// The item's plain text.
+    pub text: EcoString,
     /// The glyphs.
     pub glyphs: Vec<Glyph>,
 }

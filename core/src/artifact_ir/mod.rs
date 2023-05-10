@@ -144,9 +144,8 @@ impl ArtifactBuilder {
             id: glyph.id,
             x_advance: glyph.x_advance.into(),
             x_offset: glyph.x_offset.into(),
-            c: glyph.c,
-            span: (), // todo
-            offset: glyph.offset,
+            span: ((), glyph.span.1), // todo
+            range: glyph.range,
         }
     }
 
@@ -158,7 +157,7 @@ impl ArtifactBuilder {
     ) {
         let font = &mut self.fonts[font as usize];
         for glyph in &text.glyphs {
-            font.1.resolve(face, glyph);
+            font.1.resolve(face, text, glyph);
         }
     }
 
@@ -180,6 +179,7 @@ impl ArtifactBuilder {
             size: text.size.into(),
             fill: text.fill.clone().into(),
             lang: self.push_string(text.lang.as_str().to_string()),
+            text: self.push_string(text.text.as_str().to_string()),
             glyphs: self.push_array(&glyphs),
         }
     }
@@ -360,9 +360,8 @@ impl<'a> TypeDocumentParser<'a> {
             id: glyph.id,
             x_advance: glyph.x_advance.into(),
             x_offset: glyph.x_offset.into(),
-            c: glyph.c,
-            span: TypstSpan::detached(),
-            offset: glyph.offset,
+            span: (TypstSpan::detached(), glyph.span.1),
+            range: glyph.range.clone(),
         }
     }
 
@@ -380,6 +379,7 @@ impl<'a> TypeDocumentParser<'a> {
             size: text.size.into(),
             fill: text.fill.clone().into(),
             lang: TypstLang::from_str(text.lang.as_str(self.buffer)).unwrap(),
+            text: text.text.as_str(self.buffer).into(),
             glyphs: text
                 .glyphs
                 .iter(self.buffer)
@@ -509,13 +509,13 @@ mod tests {
 
     fn build_simple_refs(builder: &mut ArtifactBuilder) -> ItemArray<FrameItem> {
         let lang_str = builder.push_string("en".into());
+        let text_src = builder.push_string("W".to_string());
         let glyphs = builder.push_array(&vec![Glyph {
             id: 45,
             x_advance: TypstEm::one().into(),
             x_offset: TypstEm::one().into(),
-            c: 'W',
-            span: (),
-            offset: 3,
+            span: ((), 0),
+            range: 0..1,
         }]);
 
         let item1 = builder.push_item(&FrameItem::Text(TextItem {
@@ -527,6 +527,7 @@ mod tests {
                 b: 5,
                 a: 6,
             })),
+            text: text_src,
             lang: lang_str,
             glyphs,
         }));
@@ -560,7 +561,7 @@ mod tests {
         if let Some(FrameItem::Text(x)) = it.next() {
             assert_eq!(x.glyphs.len(), 1);
             if let Some(x) = x.glyphs.iter(&builder.buffer).next() {
-                assert_eq!(x.c, 'W');
+                assert_eq!(x.range, 0..1);
             } else {
                 panic!("Expected glyph item");
             }

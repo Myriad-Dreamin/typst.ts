@@ -289,9 +289,8 @@ impl ArtifactJsBuilder {
         let mut id = None;
         let mut x_advance = None;
         let mut x_offset = None;
-        let mut c = None;
         let mut span = None;
-        let mut offset = None;
+        let mut range = None;
 
         for (k, v) in js_sys::Object::entries(val.dyn_ref().unwrap())
             .iter()
@@ -310,15 +309,20 @@ impl ArtifactJsBuilder {
                     x_offset =
                         Some(typst::geom::Em::new(self.to_f64("glyph.x_offset", &v)?).into());
                 }
-                "c" => {
-                    c = Some(self.to_string("glyph.c", &v)?.chars().next().unwrap());
-                }
                 "span" => {
                     // todo: span self.to_f64(v)? as u16
-                    span = Some(());
+                    let (v0, v1) = convert_pair(v);
+                    span = Some((
+                        (self.to_f64("glyph.span0", &v0)).unwrap() as u16,
+                        (self.to_f64("glyph.span1", &v1)).unwrap() as u16,
+                    ));
                 }
-                "offset" => {
-                    offset = Some(self.to_f64("glyph.offset", &v)? as u16);
+                "range" => {
+                    let (st, ed) = convert_pair(v);
+                    range = Some((
+                        self.to_f64("glyph.range0", &st)? as u16,
+                        self.to_f64("glyph.range1", &ed)? as u16,
+                    ));
                 }
                 _ => panic!("unknown key: {}", k),
             }
@@ -328,9 +332,8 @@ impl ArtifactJsBuilder {
             id: id.unwrap(),
             x_advance: x_advance.unwrap(),
             x_offset: x_offset.unwrap(),
-            c: c.unwrap(),
             span: span.unwrap(),
-            offset: offset.unwrap(),
+            range: range.unwrap(),
         })
     }
 
@@ -342,6 +345,7 @@ impl ArtifactJsBuilder {
         let mut size = None;
         let mut fill = None;
         let mut lang = None;
+        let mut text = None;
         let mut glyphs = vec![];
 
         for (k, v) in js_sys::Object::entries(val.dyn_ref().unwrap())
@@ -362,6 +366,9 @@ impl ArtifactJsBuilder {
                 "lang" => {
                     lang = Some(self.to_string("frame_text.lang", &v)?);
                 }
+                "text" => {
+                    text = Some(self.to_string("frame_text.text", &v)?);
+                }
                 "glyphs" => {
                     for arr in v.dyn_into::<js_sys::Array>()?.iter() {
                         glyphs.push(self.parse_glyph(arr)?);
@@ -376,6 +383,7 @@ impl ArtifactJsBuilder {
             size: size.unwrap(),
             fill: fill.unwrap(),
             lang: lang.unwrap(),
+            text: text.unwrap(),
             glyphs,
         })
     }

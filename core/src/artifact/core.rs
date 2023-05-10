@@ -9,7 +9,7 @@ pub use typst_library::prelude::Location as TypstLocation;
 pub use typst_library::prelude::Position as TypstPosition;
 pub use typst_library::prelude::Shape as TypstShape;
 pub use typst_library::prelude::TextItem as TypstTextItem;
-pub type SpanRef = ();
+pub type SpanRef = u16;
 pub type FontRef = u32;
 pub type Lang = String;
 pub type EcoString = String;
