@@ -17,7 +17,7 @@ mod tests {
 
         let mut renderer = crate::tests::get_renderer();
 
-        let mut session = renderer
+        let session = renderer
             .create_session(
                 artifact,
                 Some(RenderSessionOptions {
@@ -72,7 +72,7 @@ mod tests {
     fn render_ir_test() {
         render_test_template(
             "main_artifact",
-            include_bytes!("../../main.artifact_ir.bin").as_slice(),
+            include_bytes!("../../main.artifact.tir.bin").as_slice(),
             "ir",
         );
     }

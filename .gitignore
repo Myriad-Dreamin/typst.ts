@@ -3,7 +3,7 @@
 .vscode
 
 *.artifact.json
-*.artifact_ir.bin
+*.tir.bin
 *.pdf
 *.rmp
 /out.json
