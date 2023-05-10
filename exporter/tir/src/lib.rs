@@ -2,7 +2,7 @@ use byteorder::{LittleEndian, WriteBytesExt};
 use std::{io::Write, sync::Arc};
 
 use typst::diag::SourceResult;
-use typst_ts_core::artifact_ir::Artifact;
+use typst_ts_core::artifact_ir::{Artifact, ArtifactHeader};
 use typst_ts_core::exporter_utils::*;
 
 /// IR structure (in bytes)
@@ -33,7 +33,11 @@ impl IRArtifactExporter {
 impl IRArtifactExporter {
     /// Export the given IR artifact with given world.
     pub fn export(&self, world: &dyn typst::World, output: Arc<Artifact>) -> SourceResult<()> {
-        let metadata = serde_json::to_string(&output.metadata).unwrap();
+        let metadata = serde_json::to_string(&ArtifactHeader {
+            metadata: output.metadata.clone(),
+            pages: output.pages.clone(),
+        })
+        .unwrap();
         let cap = metadata.len() + output.buffer.len() + 16;
         let mut writer = std::io::Cursor::new(Vec::with_capacity(cap));
         writer.write_all(&MAGIC_NUMBER).unwrap();
