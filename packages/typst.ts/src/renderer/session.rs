@@ -4,12 +4,11 @@ use js_sys::Uint8Array;
 use typst::font::{FontFlags, FontInfo as TypstFontInfo, FontVariant};
 use typst::geom::Abs;
 use typst_ts_core::artifact::doc::Frame;
-use typst_ts_core::artifact_ir::{Artifact as IRArtifact, ArtifactHeader as IRArtifactHeader};
 use typst_ts_core::{font::FontResolverImpl, Artifact, ArtifactMeta, FontResolver};
 use wasm_bindgen::prelude::*;
 
 use super::artifact::{artifact_from_js_string, page_from_js_string};
-use super::artifact_ir::ir_artifact_header_from_js_string;
+use super::artifact_ir::ir_artifact_from_bin;
 
 #[wasm_bindgen]
 #[derive(Default, Debug)]
@@ -362,37 +361,7 @@ impl RenderSessionManager {
     }
 
     fn session_from_ir_artifact(&self, artifact_content: &[u8]) -> Result<RenderSession, JsValue> {
-        use byteorder::{LittleEndian, ReadBytesExt};
-        use std::io::Read;
-        let mut reader = std::io::Cursor::new(artifact_content);
-        let mut magic = [0; 4];
-        reader.read_exact(&mut magic).unwrap();
-        assert_eq!(magic, [b'I', b'R', b'A', b'R']);
-        assert_eq!(reader.read_i32::<LittleEndian>().unwrap(), 1);
-        let header_len = reader.read_u64::<LittleEndian>().unwrap();
-        let mut header = vec![0; header_len as usize];
-        reader.read_exact(&mut header).unwrap();
-        let header = String::from_utf8(header).unwrap();
-
-        let header: IRArtifactHeader = if cfg!(feature = "serde_json") {
-            #[cfg(not(feature = "serde_json"))]
-            panic!("serde_json feature is not enabled");
-            #[cfg(feature = "serde_json")]
-            {
-                serde_json::from_str(&header).unwrap()
-            }
-        } else {
-            ir_artifact_header_from_js_string(header).unwrap()
-        };
-
-        let mut buffer = vec![];
-        reader.read_to_end(&mut buffer).unwrap();
-
-        let artifact = IRArtifact {
-            metadata: header.metadata,
-            pages: header.pages,
-            buffer,
-        };
+        let artifact = ir_artifact_from_bin(artifact_content);
 
         let font_resolver = self.font_resolver.read().unwrap();
         let session = RenderSession::from_artifact(

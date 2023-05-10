@@ -1,7 +1,7 @@
 use super::artifact::{convert_pair, ArtifactJsBuilder};
 use crate::utils::console_log;
-use typst_ts_core::artifact_ir::ArtifactHeader;
 use typst_ts_core::artifact_ir::{core::ItemArray, doc::Frame};
+use typst_ts_core::artifact_ir::{Artifact, ArtifactHeader};
 use wasm_bindgen::prelude::*;
 
 pub struct IRArtifactHeaderJsBuilder {
@@ -68,8 +68,42 @@ impl IRArtifactHeaderJsBuilder {
     }
 }
 
-pub fn ir_artifact_header_from_js_string(val: String) -> Result<ArtifactHeader, JsValue> {
+fn ir_artifact_header_from_js_string(val: String) -> Result<ArtifactHeader, JsValue> {
     let js_val = js_sys::JSON::parse(val.as_str()).unwrap();
 
     IRArtifactHeaderJsBuilder::new().parse_header(js_val)
+}
+
+pub fn ir_artifact_from_bin(artifact_content: &[u8]) -> Artifact {
+    use byteorder::{LittleEndian, ReadBytesExt};
+    use std::io::Read;
+    let mut reader = std::io::Cursor::new(artifact_content);
+    let mut magic = [0; 4];
+    reader.read_exact(&mut magic).unwrap();
+    assert_eq!(magic, [b'I', b'R', b'A', b'R']);
+    assert_eq!(reader.read_i32::<LittleEndian>().unwrap(), 1);
+    let header_len = reader.read_u64::<LittleEndian>().unwrap();
+    let mut header = vec![0; header_len as usize];
+    reader.read_exact(&mut header).unwrap();
+    let header = String::from_utf8(header).unwrap();
+
+    let header: ArtifactHeader = if cfg!(feature = "serde_json") {
+        #[cfg(not(feature = "serde_json"))]
+        panic!("serde_json feature is not enabled");
+        #[cfg(feature = "serde_json")]
+        {
+            serde_json::from_str(&header).unwrap()
+        }
+    } else {
+        ir_artifact_header_from_js_string(header).unwrap()
+    };
+
+    let mut buffer = vec![];
+    reader.read_to_end(&mut buffer).unwrap();
+
+    Artifact {
+        metadata: header.metadata,
+        pages: header.pages,
+        buffer,
+    }
 }
