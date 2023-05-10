@@ -36,7 +36,7 @@ The Typst.ts application is designed to be fast due to the following reasons:
 Run Compiler Example:
 
 ```shell
-typst-ts-cli compile --workspace "fuzzers/corpora/math" --entry "fuzzers/corpora/math/math.typ"
+typst-ts-cli compile --workspace "fuzzers/corpora/math" --entry "fuzzers/corpora/math/main.typ"
 ```
 
 Help:
@@ -61,18 +61,28 @@ Run compiler.
 
 Usage: typst-ts-cli compile [OPTIONS] --entry <ENTRY>
 
+Options:
+  -h, --help  Print help
+
 Compile options:
-  -w, --workspace <WORKSPACE>  Path to typst workspace [default: .]
-  -e, --entry <ENTRY>          Entry file
-      --format <FORMAT>        Output formats
-  -o, --output <OUTPUT>        Output to directory, default in the same directory as the entry file [default: ]
-      --watch                  watch mode
+  -w, --workspace <WORKSPACE>    Path to typst workspace [default: .]
+      --watch                    watch mode
+      --trace <TRACE>            enable tracing. possible usage: --trace=verbosity={0..2} verbosity: + 0: warning + 1: info + 2: debug + 3: trace
+  -e, --entry <ENTRY>            Entry file
+      --format <FORMAT>          Output formats, possible values: `json`, `pdf`, `web_socket`, `ast`, and `rmp`
+      --web-socket <WEB_SOCKET>  Output WebSocket subscriber url [default: ]
+  -o, --output <OUTPUT>          Output to directory, default in the same directory as the entry file [default: ]
+      --font-path <DIR>          Add additional directories to search for fonts
 ```
 
 ### Renderer Example
 
 ```shell
-$ cd packages/typst.ts && yarn install && yarn run build && python -m http.server 8075
+# install simple-http-server or other alternative solutions
+$ cargo install simple-http-server
+$ simple-http-server -p 20810 --cors .\fuzzers\corpora\
+$ simple-http-server -p 20811 --cors .\assets\ --compress=ttf,otf
+$ cd packages/typst.ts && yarn install && yarn run build && simple-http-server -p 8075 --index --compress=js,json,otf,css
 ```
 
 And open your browser to `http://localhost:8075`.
