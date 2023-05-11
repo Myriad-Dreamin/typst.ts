@@ -235,6 +235,16 @@ pub struct SystemFontSearcher {
     fonts: Vec<FontSlot>,
 }
 
+fn is_font_file_by_name(path: &Path) -> bool {
+    matches!(
+        path.extension().map(|s| {
+            let chk = |n| s.eq_ignore_ascii_case(n);
+            chk("ttf") || chk("otf") || chk("ttc") || chk("otc")
+        }),
+        Some(true),
+    )
+}
+
 impl SystemFontSearcher {
     /// Create a new, empty system searcher.
     fn new() -> Self {
@@ -329,17 +339,17 @@ impl SystemFontSearcher {
 
     /// Search for all fonts in a directory recursively.
     fn search_dir(&mut self, path: impl AsRef<Path>) {
-        for entry in WalkDir::new(path)
+        let entries = WalkDir::new(path)
             .follow_links(true)
             .sort_by(|a, b| a.file_name().cmp(b.file_name()))
             .into_iter()
-            .filter_map(|e| e.ok())
-        {
+            .filter_map(|e| 
+                // todo: error handling
+                e.ok());
+
+        for entry in entries {
             let path = entry.path();
-            if matches!(
-                path.extension().and_then(|s| s.to_str()),
-                Some("ttf" | "otf" | "TTF" | "OTF" | "ttc" | "otc" | "TTC" | "OTC"),
-            ) {
+            if is_font_file_by_name(path) {
                 self.search_file(path);
             }
         }
