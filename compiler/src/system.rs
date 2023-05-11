@@ -6,7 +6,7 @@ use crate::vfs::system::SystemAccessModel;
 use crate::world::CompilerFeat;
 use typst_ts_core::font::FontResolverImpl;
 
-pub type TypstSystemWorld = super::world::CompilerWorld<SystemCompilerFeat>;
+pub type TypstSystemWorld = crate::world::CompilerWorld<SystemCompilerFeat>;
 
 pub struct SystemCompilerFeat;
 
