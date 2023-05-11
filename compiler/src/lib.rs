@@ -3,10 +3,6 @@ pub use model::*;
 
 pub mod font;
 
-// todo: path hash for browser
-#[cfg(feature = "system")]
-pub(crate) mod path;
-
 #[cfg(test)]
 mod tests {
     use typst_ts_core::{config::CompileOpts, Artifact};
