@@ -206,7 +206,6 @@ impl From<&TypstDocument> for Artifact {
         let meta = ArtifactMeta {
             build: Some(BuildInfo {
                 compiler: "typst-ts-cli".to_string(),
-                // todo: attach version
                 version: crate::build_info::VERSION.to_string(),
             }),
             fonts: builder

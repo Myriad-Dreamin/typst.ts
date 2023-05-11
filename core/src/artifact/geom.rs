@@ -160,7 +160,6 @@ impl From<Point> for TypstPoint {
     }
 }
 
-// todo: in From/To conversion flavor
 /// A scale-skew-translate transformation.
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
