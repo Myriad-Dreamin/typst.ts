@@ -4,7 +4,7 @@ pub(crate) mod world;
 #[cfg(feature = "system")]
 pub(crate) mod system;
 #[cfg(feature = "system")]
-pub use system::{SystemFontSearcher, TypstSystemWorld};
+pub use system::TypstSystemWorld;
 
 // todo: make compiler work in browser
 #[cfg(feature = "web")]

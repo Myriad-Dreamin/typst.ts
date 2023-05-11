@@ -3,6 +3,8 @@ pub use model::*;
 
 pub mod font;
 
+pub mod vfs;
+
 #[cfg(test)]
 mod tests {
     use typst_ts_core::{config::CompileOpts, Artifact};

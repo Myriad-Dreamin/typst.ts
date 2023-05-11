@@ -87,7 +87,7 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
 }
 
 impl<F: CompilerFeat> CompilerWorld<F> {
-    pub fn resolve_with<P: AsRef<Path>>(&self, path: P, content: &String) -> FileResult<SourceId> {
+    pub fn resolve_with<P: AsRef<Path>>(&self, path: P, content: &str) -> FileResult<SourceId> {
         self.source_mgr.resolve_with(path, content)
     }
 

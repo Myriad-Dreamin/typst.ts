@@ -86,7 +86,7 @@ impl<M: AccessModel + Sized> SourceManager<M> {
         assert!(matches!(inserted, None), "slot already inserted");
 
         drop(path2slot);
-        return Ok(slot);
+        Ok(slot)
     }
 
     pub fn source(&self, id: SourceId) -> &Source {
@@ -111,7 +111,7 @@ impl<M: AccessModel + Sized> SourceManager<M> {
     }
 
     // todo: remove
-    pub fn resolve_with<P: AsRef<Path>>(&self, path: P, content: &String) -> FileResult<SourceId> {
+    pub fn resolve_with<P: AsRef<Path>>(&self, path: P, content: &str) -> FileResult<SourceId> {
         let slot = self.slot(path.as_ref())?;
         let slot = slot.upgradable_read();
 
@@ -121,7 +121,7 @@ impl<M: AccessModel + Sized> SourceManager<M> {
 
         let mut slot = RwLockUpgradableReadGuard::upgrade(slot);
 
-        let res = Ok(self.insert(path, content.clone()));
+        let res = Ok(self.insert(path, content.to_owned()));
         slot.source = Some(res.clone());
         res
     }
