@@ -3,7 +3,7 @@ use std::{
     process::exit,
 };
 
-use clap::Parser;
+use clap::{Args, Command, FromArgMatches};
 use typst::{font::FontVariant, World};
 
 use typst_ts_cli::{
@@ -13,18 +13,33 @@ use typst_ts_cli::{
 use typst_ts_compiler::TypstSystemWorld;
 use typst_ts_core::config::CompileOpts;
 
+fn get_cli(sub_command_required: bool) -> Command {
+    let cli = Command::new("$").disable_version_flag(true);
+    let cli = Opts::augment_args(cli).subcommand_required(sub_command_required);
+    cli
+}
+
+fn print_sub_command() {
+    Opts::from_arg_matches(&get_cli(true).get_matches()).unwrap();
+}
+
 fn main() {
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Info)
         .try_init();
 
-    let opts = Opts::parse();
+    let opts = Opts::from_arg_matches(&get_cli(false).get_matches())
+        .map_err(|err| err.exit())
+        .unwrap();
+
+    typst_ts_cli::version::intercept_version(opts.version);
 
     match opts.sub {
-        Subcommands::Compile(args) => compile(args),
-        Subcommands::Font(font_sub) => match font_sub {
+        Some(Subcommands::Compile(args)) => compile(args),
+        Some(Subcommands::Font(font_sub)) => match font_sub {
             FontSubCommands::List(args) => list_fonts(args),
         },
+        None => print_sub_command(),
     };
 
     #[allow(unreachable_code)]
