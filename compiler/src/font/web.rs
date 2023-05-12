@@ -1,6 +1,12 @@
 use js_sys::Promise;
-use typst::{font::Font, util::Buffer};
-use typst_ts_core::{FontLoader, ReadAllOnce};
+use typst::{
+    font::{Font, FontBook, FontInfo},
+    util::Buffer,
+};
+use typst_ts_core::{
+    font::{BufferFontLoader, FontResolverImpl},
+    FontLoader, FontSlot, ReadAllOnce,
+};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::Blob;
@@ -134,5 +140,54 @@ impl ReadAllOnce for WebFontBlob {
         let blob_len = blob.len();
         buf.append(&mut blob);
         Ok(blob_len)
+    }
+}
+
+/// Searches for fonts.
+pub struct BrowserFontSearcher {
+    pub book: FontBook,
+    pub fonts: Vec<FontSlot>,
+}
+
+impl BrowserFontSearcher {
+    /// Create a new, empty system searcher.
+    pub fn new() -> Self {
+        Self {
+            book: FontBook::new(),
+            fonts: vec![],
+        }
+    }
+
+    pub async fn add_web_font(&mut self, font: WebFont) {
+        let blob = font.load().await;
+        let blob = JsFuture::from(blob.array_buffer()).await.unwrap();
+        let buffer = Buffer::from(js_sys::Uint8Array::new(&blob).to_vec());
+
+        // todo: load lazily
+        self.add_font_data(buffer);
+    }
+
+    pub fn add_font_data(&mut self, buffer: Buffer) {
+        for (i, info) in FontInfo::iter(buffer.as_slice()).enumerate() {
+            self.book.push(info);
+
+            let buffer = buffer.clone();
+            self.fonts.push(FontSlot::new(Box::new(BufferFontLoader {
+                buffer: Some(buffer),
+                index: i as u32,
+            })))
+        }
+    }
+}
+
+impl Default for BrowserFontSearcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl From<BrowserFontSearcher> for FontResolverImpl {
+    fn from(value: BrowserFontSearcher) -> Self {
+        FontResolverImpl::new(value.book, value.fonts)
     }
 }

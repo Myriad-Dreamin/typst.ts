@@ -1,13 +1,12 @@
 use js_sys::Uint8Array;
 use std::str::FromStr;
 use typst::geom::{Color, RgbaColor};
+use typst_ts_core::font::FontResolverImpl;
 use wasm_bindgen::{prelude::*, Clamped};
 use web_sys::ImageData;
 
 use crate::RenderSessionManager;
 use crate::{pixmap, renderer::session::RenderSessionOptions};
-
-use typst_ts_compiler::TypstBrowserWorld;
 
 pub(crate) mod artifact;
 pub use artifact::ArtifactJsBuilder;
@@ -209,9 +208,9 @@ impl TypstRenderer {
 }
 
 impl TypstRenderer {
-    pub fn new(world: TypstBrowserWorld) -> TypstRenderer {
+    pub fn new(font_resolver: FontResolverImpl) -> TypstRenderer {
         Self {
-            session_mgr: RenderSessionManager::new(world.font_resolver),
+            session_mgr: RenderSessionManager::new(font_resolver),
         }
     }
 

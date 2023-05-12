@@ -13,7 +13,7 @@ pub use system::TypstSystemWorld;
 #[cfg(feature = "web")]
 pub(crate) mod browser_world;
 #[cfg(feature = "web")]
-pub use browser_world::{BrowserFontSearcher, TypstBrowserWorld};
+pub use browser_world::TypstBrowserWorld;
 
 #[cfg(test)]
 mod tests {

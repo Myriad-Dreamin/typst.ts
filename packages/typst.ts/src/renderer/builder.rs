@@ -1,6 +1,6 @@
 use crate::renderer::TypstRenderer;
 
-use typst_ts_compiler::{font::web::WebFont, BrowserFontSearcher, TypstBrowserWorld};
+use typst_ts_compiler::font::web::{BrowserFontSearcher, WebFont};
 
 use js_sys::Uint8Array;
 use typst::util::Buffer;
@@ -43,9 +43,7 @@ impl TypstRendererBuilder {
 
     // 24 MB
     pub async fn build(self) -> Result<TypstRenderer, JsValue> {
-        Ok(TypstRenderer::new(
-            TypstBrowserWorld::new(self.searcher).await?,
-        ))
+        Ok(TypstRenderer::new(self.searcher.into()))
     }
 }
 
