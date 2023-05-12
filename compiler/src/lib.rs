@@ -10,9 +10,9 @@ pub(crate) mod system;
 pub use system::TypstSystemWorld;
 
 // todo: make compiler work in browser
-#[cfg(feature = "web")]
+#[cfg(feature = "browser-compile")]
 pub(crate) mod browser;
-#[cfg(feature = "web")]
+#[cfg(feature = "browser-compile")]
 pub use browser::TypstBrowserWorld;
 
 #[cfg(test)]

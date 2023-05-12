@@ -38,6 +38,6 @@ serde_json = "1.0.95"
 system = ["dep:memmap2", "dep:dirs", "dep:walkdir", "dep:same-file"]
 __web = ["dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:js-sys", "dep:web-sys", "dep:pollster"]
 web-render = ["__web"]
-browser-compile = ["__web"]
+browser-compile = ["__web", "web-render"]
 web = ["__web", "web-render", "browser-compile"]
 default = ["system"]
