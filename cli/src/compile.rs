@@ -2,7 +2,9 @@ use std::path::PathBuf;
 
 use typst::diag::{SourceError, SourceResult};
 use typst_ts_compiler::TypstSystemWorld;
-use typst_ts_core::{exporter_builtins::GroupDocumentExporter, DocumentExporter};
+use typst_ts_core::{
+    exporter_builtins::GroupDocumentExporter, exporter_utils::map_err, DocumentExporter,
+};
 
 use crate::diag;
 
@@ -52,9 +54,7 @@ impl CompileDriver {
             Ok(id) => {
                 self.world.main = id;
             }
-            Err(e) => {
-                panic!("handler unresolved main error {e}")
-            }
+            Err(e) => return Err(map_err(&self.world, e)),
         }
 
         // compile and export document
