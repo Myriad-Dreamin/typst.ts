@@ -10,12 +10,18 @@ pub mod watch;
 
 use clap::{ArgAction, Parser, Subcommand};
 use typst_ts_core::build_info::VERSION;
+use version::VersionFormat;
 
 #[derive(Debug, Parser)]
 #[clap(name = "typst-ts-cli", version = VERSION)]
 pub struct Opts {
-    #[arg(short = 'V', long)]
+    /// Print Version
+    #[arg(short = 'V', long, group = "version-dump")]
     pub version: bool,
+
+    /// Print Version in format
+    #[arg(long = "VV", alias = "version-fmt", group = "version-dump", default_value_t = VersionFormat::None)]
+    pub vv: VersionFormat,
 
     #[clap(subcommand)]
     pub sub: Option<Subcommands>,

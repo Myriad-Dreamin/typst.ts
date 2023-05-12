@@ -7,19 +7,18 @@ use clap::{Args, Command, FromArgMatches};
 use typst::{font::FontVariant, World};
 
 use typst_ts_cli::{
-    compile::CompileDriver, tracing::TraceGuard, CompileArgs, FontSubCommands, ListFontsArgs, Opts,
-    Subcommands,
+    compile::CompileDriver, tracing::TraceGuard, version::intercept_version, CompileArgs,
+    FontSubCommands, ListFontsArgs, Opts, Subcommands,
 };
 use typst_ts_compiler::TypstSystemWorld;
 use typst_ts_core::config::CompileOpts;
 
 fn get_cli(sub_command_required: bool) -> Command {
     let cli = Command::new("$").disable_version_flag(true);
-    let cli = Opts::augment_args(cli).subcommand_required(sub_command_required);
-    cli
+    Opts::augment_args(cli).subcommand_required(sub_command_required)
 }
 
-fn print_sub_command() {
+fn help_sub_command() {
     Opts::from_arg_matches(&get_cli(true).get_matches()).unwrap();
 }
 
@@ -32,14 +31,14 @@ fn main() {
         .map_err(|err| err.exit())
         .unwrap();
 
-    typst_ts_cli::version::intercept_version(opts.version);
+    intercept_version(opts.version, opts.vv);
 
     match opts.sub {
         Some(Subcommands::Compile(args)) => compile(args),
         Some(Subcommands::Font(font_sub)) => match font_sub {
             FontSubCommands::List(args) => list_fonts(args),
         },
-        None => print_sub_command(),
+        None => help_sub_command(),
     };
 
     #[allow(unreachable_code)]
