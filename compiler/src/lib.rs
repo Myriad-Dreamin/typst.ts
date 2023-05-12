@@ -11,9 +11,9 @@ pub use system::TypstSystemWorld;
 
 // todo: make compiler work in browser
 #[cfg(feature = "web")]
-pub(crate) mod browser_world;
+pub(crate) mod browser;
 #[cfg(feature = "web")]
-pub use browser_world::TypstBrowserWorld;
+pub use browser::TypstBrowserWorld;
 
 #[cfg(test)]
 mod tests {
