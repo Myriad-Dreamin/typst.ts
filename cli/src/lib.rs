@@ -66,12 +66,8 @@ pub struct CompileArgs {
     pub watch: bool,
 
     /// enable tracing.
-    /// possible usage: --trace=verbosity={0..2}
-    /// verbosity:
-    /// + 0: warning
-    /// + 1: info
-    /// + 2: debug
-    /// + 3: trace
+    /// possible usage: --trace=verbosity={0..3}
+    ///   where verbosity: {0..3} -> {warning, info, debug, trace}
     ///
     #[clap(long)]
     pub trace: Option<String>,
