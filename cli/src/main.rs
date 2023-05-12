@@ -7,7 +7,7 @@ use clap::{Args, Command, FromArgMatches};
 use typst::{font::FontVariant, World};
 
 use typst_ts_cli::{
-    compile::CompileDriver, tracing::TraceGuard, version::intercept_version, CompileArgs,
+    compile::CompileDriver, tracing::TraceGuard, version::intercept_version, CompileArgs, EnvKey,
     FontSubCommands, ListFontsArgs, Opts, Subcommands,
 };
 use typst_ts_compiler::TypstSystemWorld;
@@ -35,6 +35,11 @@ fn main() {
 
     match opts.sub {
         Some(Subcommands::Compile(args)) => compile(args),
+        Some(Subcommands::Env(args)) => match args.key {
+            EnvKey::Features => {
+                intercept_version(false, typst_ts_cli::version::VersionFormat::Features)
+            }
+        },
         Some(Subcommands::Font(font_sub)) => match font_sub {
             FontSubCommands::List(args) => list_fonts(args),
         },

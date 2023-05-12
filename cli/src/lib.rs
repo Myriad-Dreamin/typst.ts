@@ -8,7 +8,7 @@ pub mod utils;
 pub mod version;
 pub mod watch;
 
-use clap::{ArgAction, Parser, Subcommand};
+use clap::{ArgAction, Parser, Subcommand, ValueEnum};
 use typst_ts_core::build_info::VERSION;
 use version::VersionFormat;
 
@@ -37,6 +37,9 @@ pub struct Opts {
 pub enum Subcommands {
     #[clap(visible_alias = "c", about = "Run compiler.")]
     Compile(CompileArgs),
+
+    #[clap(about = "Dump Client Environment.")]
+    Env(EnvArgs),
 
     #[clap(subcommand)]
     Font(FontSubCommands),
@@ -103,4 +106,17 @@ pub struct ListFontsArgs {
     /// Also list style variants of each font family
     #[arg(long)]
     pub variants: bool,
+}
+
+#[derive(ValueEnum, Debug, Clone)]
+pub enum EnvKey {
+    Features,
+}
+
+/// Dump Client Environment.
+#[derive(Debug, Clone, Parser)]
+pub struct EnvArgs {
+    /// the env key
+    #[clap(value_name = "KEY")]
+    pub key: EnvKey,
 }
