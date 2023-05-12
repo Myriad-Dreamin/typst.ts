@@ -18,7 +18,6 @@ impl ValueEnum for VersionFormat {
         &[
             VersionFormat::None,
             VersionFormat::Short,
-            VersionFormat::Features,
             VersionFormat::Full,
             VersionFormat::Json,
             VersionFormat::JsonPlain,

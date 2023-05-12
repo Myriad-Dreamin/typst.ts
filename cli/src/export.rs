@@ -32,7 +32,7 @@ fn panic_not_available_formats(f: String) -> ! {
         Some((_, feat)) => {
             clap::Error::raw(clap::error::ErrorKind::InvalidValue,
                 format!(
-                    r#"feature not enabled for format {:?}: suggested feature "{}". To figure out enabled features, use "$program --VV features"
+                    r#"feature not enabled for format {:?}: suggested feature "{}". To figure out enabled features, use command "$program env features"
 "#,
                     f, feat
                 )).exit()
