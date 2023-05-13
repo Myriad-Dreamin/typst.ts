@@ -8,7 +8,7 @@ import { AppService } from './app.service';
 })
 export class AppComponent implements OnInit {
   title = 'Typst.Angular';
-  artifact = '';
+  artifact = new Uint8Array(0);
 
   constructor(private service: AppService) {}
 

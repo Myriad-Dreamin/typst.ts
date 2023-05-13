@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { TypstDocument } from '../lib';
 
 export const App = () => {
-  const [artifact, setArtifact] = useState<string>('');
+  const [artifact, setArtifact] = useState<Uint8Array>(new Uint8Array(0));
 
   const getArtifactJson = async () => {
-    const response = await fetch('http://localhost:20810/hw/main.artifact.json').then(response =>
-      response.text(),
+    const response = await fetch('http://localhost:20810/skyzh-cv/main.artifact.json').then(response =>
+      response.arrayBuffer(),
     );
 
-    setArtifact(response);
+    setArtifact(new Uint8Array(response));
   };
 
   useEffect(() => {

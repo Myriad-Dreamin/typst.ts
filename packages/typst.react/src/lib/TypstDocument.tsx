@@ -4,7 +4,7 @@ import * as typst from '@myriaddreamin/typst.ts';
 
 export interface TypstDocumentProps {
   fill?: string;
-  artifact: string;
+  artifact: Uint8Array;
 }
 
 // This just queries the existing state of the permission, it does not change it.
@@ -72,7 +72,7 @@ export const TypstDocument = ({ fill, artifact }: TypstDocumentProps) => {
     }
 
     /// we allow empty artifact
-    if (!artifact) {
+    if (!artifact?.length) {
       divElem.innerHTML = '';
       return;
     }
@@ -94,7 +94,7 @@ export const TypstDocument = ({ fill, artifact }: TypstDocumentProps) => {
             byFamily: ['Segoe UI Symbol'],
           }),
         ],
-        getRendererModule: () =>
+        getModule: () =>
           'node_modules/@myriaddreamin/typst-ts-renderer/typst_ts_renderer_bg.wasm',
       },
       doRender,

@@ -8,18 +8,18 @@ import * as typst from '@myriaddreamin/typst.ts';
   styles: [],
 })
 export class TypstDocumentComponent {
-  _artifact: string = '';
+  _artifact: Uint8Array = new Uint8Array(0);
   @ViewChild('typst_app') typst_app?: ElementRef<HTMLDivElement>;
 
   @Input() fill: string = '#ffffff';
 
   @Input()
-  set artifact(artifact: string) {
+  set artifact(artifact: Uint8Array) {
     this._artifact = artifact;
     this.applyArtifact();
   }
 
-  get artifact(): string {
+  get artifact(): Uint8Array {
     return this._artifact;
   }
 
@@ -28,7 +28,7 @@ export class TypstDocumentComponent {
   applyArtifact() {
     if (this.typst_app?.nativeElement) {
       const displayDiv = this.typst_app?.nativeElement;
-      if (this.artifact) {
+      if (this.artifact?.length) {
         const doRender = (renderer: typst.TypstRenderer) => {
           console.log(renderer);
           return renderer.render({
@@ -56,7 +56,7 @@ export class TypstDocumentComponent {
                 byFamily: ['Segoe UI Symbol'],
               }),
             ],
-            getRendererModule: () =>
+            getModule: () =>
               'node_modules/@myriaddreamin/typst-ts-renderer/typst_ts_renderer_bg.wasm',
           },
           doRender,
