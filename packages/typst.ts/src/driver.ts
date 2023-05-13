@@ -58,8 +58,8 @@ export interface TypstRenderer {
  * });
  * ```
  */
-export function createTypstRenderer(pdf: typeof pdfjsModule): TypstRenderer {
-  return new TypstRendererDriver(pdf);
+export function createTypstRenderer(pdf: unknown): TypstRenderer {
+  return new TypstRendererDriver(pdf as typeof pdfjsModule);
 }
 
 const once = <T>(fn: () => T) => {
