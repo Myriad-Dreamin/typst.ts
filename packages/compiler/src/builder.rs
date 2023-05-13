@@ -43,7 +43,7 @@ impl TypstCompilerBuilder {
 
     // 24 MB
     pub async fn build(self) -> Result<TypstCompiler, JsValue> {
-        Ok(TypstCompiler::new(self.searcher).await?)
+        TypstCompiler::new(self.searcher).await
     }
 }
 
