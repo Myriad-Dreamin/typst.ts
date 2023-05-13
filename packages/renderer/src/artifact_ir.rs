@@ -68,6 +68,12 @@ impl IRArtifactHeaderJsBuilder {
     }
 }
 
+impl Default for IRArtifactHeaderJsBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn ir_artifact_header_from_js_string(val: String) -> Result<ArtifactHeader, JsValue> {
     let js_val = js_sys::JSON::parse(val.as_str()).unwrap();
 
