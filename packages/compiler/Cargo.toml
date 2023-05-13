@@ -1,0 +1,38 @@
+[package]
+name = "typst-ts-browser-compiler"
+version = "0.1.6"
+license = "Apache-2.0"
+edition = "2021"
+readme = "README.md"
+description = "Compile Typst documents in browser."
+repository = "https://github.com/Myriad-Dreamin/typst.ts"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+typst-ts-core = "0.1"
+typst-ts-compiler = { version = "0.1", default-features = false, features = ["web"] }
+
+typst = "0.3.0"
+typst-library = "0.3.0"
+comemo = "0.2"
+
+once_cell = "1.17.1"
+siphasher = "0.3.10"
+elsa = "1.8.0"
+
+# Everything to do with wasm
+wasm-bindgen = { version = "^0.2" }
+js-sys = "^0.3"
+wasm-bindgen-futures = "^0.4"
+web-sys = { version = "^0.3", features = ["console", "Window", "Blob"] }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.0"
+web-sys = { version = "^0.3", features = ["console"] }
+
+[features]
+full = ["web"]
+web = []
+default = ["full"]

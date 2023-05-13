@@ -4,6 +4,7 @@ members = [
     "core",
     "compiler",
 
+    "packages/compiler",
     "packages/renderer",
 
     "exporter/ast",

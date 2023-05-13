@@ -1,0 +1,21 @@
+{
+  "name": "@myriaddreamin/typst-ts-compiler",
+  "version": "0.1.6",
+  "description": "WASM module for compiling Typst documents in browser.",
+  "keywords": [
+    "TypeScript",
+    "Typst"
+  ],
+  "author": "Myriad-Dreamin",
+  "license": "Apache-2.0",
+  "main": "pkg/typst_ts_browser_compiler.js",
+  "types": "pkg/typst_ts_browser_compiler.d.ts",
+  "scripts": {
+    "build:dev": "wasm-pack build --target web --scope myriaddreamin --dev -- --no-default-features --features web",
+    "build": "wasm-pack build --target web --scope myriaddreamin -- --no-default-features --features web",
+    "link:local": "cd pkg && yarn link",
+    "prepublish": "npm run build",
+    "publish:dry": "cd pkg && npm publish --dry-run --access public",
+    "publish": "cd pkg && npm publish --access public"
+  }
+}
