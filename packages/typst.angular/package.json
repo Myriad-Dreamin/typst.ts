@@ -23,6 +23,7 @@
     "@angular/platform-browser-dynamic": "^15.2.0",
     "@angular/router": "^15.2.0",
     "@myriaddreamin/typst.ts": "^0.1",
+    "@myriaddreamin/typst-ts-renderer": "^0.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.12.0"
