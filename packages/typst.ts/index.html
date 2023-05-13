@@ -66,6 +66,8 @@
                 byFamily: ['Segoe UI Symbol'],
               }),
             ],
+            getRendererModule: () =>
+              'node_modules/@myriaddreamin/typst-ts-renderer/typst_ts_renderer_bg.wasm',
           })
           .then(() => {
             fetch('http://localhost:20810/math/main.artifact.json')

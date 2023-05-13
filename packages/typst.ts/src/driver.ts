@@ -1,10 +1,8 @@
 // @ts-ignore
-import typst_wasm_bin from '../../renderer/pkg/typst_ts_renderer_bg.wasm';
-// @ts-ignore
 import typstInit, * as typst from '../../renderer/pkg/typst_ts_renderer';
 
 import type * as pdfjsModule from 'pdfjs-dist';
-import type { InitOptions, BeforeBuildMark } from './options.init';
+import type { InitOptions, BeforeBuildMark, WebAssemblyModuleRef } from './options.init';
 import { PageViewport } from './viewport';
 import { RenderSession } from './internal.types';
 import { RenderByContentOptions, RenderOptions, RenderPageOptions } from './options.render';
@@ -76,12 +74,18 @@ const once = <T>(fn: () => T) => {
   };
 };
 
-const initTypstWasmModule = once(async () => {
+let typst_wasm_bin: WebAssemblyModuleRef | Promise<WebAssemblyModuleRef> | undefined;
+const initTypstWasmModule_ = once(async () => {
   if (typeof typstInit !== 'function') {
     throw new Error('typstInit is not a function');
   }
   await typstInit(typst_wasm_bin);
 });
+
+const initTypstWasmModule = (module?: WebAssemblyModuleRef | Promise<WebAssemblyModuleRef>) => {
+  typst_wasm_bin = module;
+  return initTypstWasmModule_();
+};
 
 class TypstRendererDriver {
   renderer: typst.TypstRenderer;
@@ -96,7 +100,7 @@ class TypstRendererDriver {
 
   async init(options?: Partial<InitOptions>): Promise<void> {
     /// init typst wasm module
-    await initTypstWasmModule();
+    await initTypstWasmModule(options?.getModule && options.getModule());
 
     /// build typst renderer
     let builder = new typst.TypstRendererBuilder();

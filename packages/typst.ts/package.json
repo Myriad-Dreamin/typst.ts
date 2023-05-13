@@ -15,7 +15,7 @@
     "build:wasm:dev": "cd ../renderer/ && yarn run build:dev",
     "build:dev": "yarn run build:wasm:dev && tsc --emitDeclarationOnly --outDir dist && node esbuild.config.mjs",
     "build": "yarn run build:wasm && tsc --emitDeclarationOnly --outDir dist && tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "link:local": "yarn link",
+    "link:local": "yarn link @myriaddreamin/typst-ts-renderer && yarn link",
     "prepublish": "npm run build",
     "publish:dry": "npm publish --dry-run --access public",
     "publish": "npm publish --access public"

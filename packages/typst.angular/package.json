@@ -9,7 +9,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "link:local": "npm link @myriaddreamin/typst.ts @myriaddreamin/typst.angular",
+    "link:local": "npm link @myriaddreamin/typst.ts @myriaddreamin/typst-ts-renderer @myriaddreamin/typst.angular",
     "lint": "ng lint"
   },
   "private": true,

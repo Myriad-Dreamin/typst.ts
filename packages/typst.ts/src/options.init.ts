@@ -32,6 +32,8 @@ export type BeforeBuildMark = typeof BeforeBuildSymbol;
  */
 export type BeforeBuildFn = StagedOptFn<BeforeBuildMark, any>;
 
+export type WebAssemblyModuleRef = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
+
 /**
  *
  * @typedef InitOptions
@@ -47,6 +49,8 @@ export interface InitOptions {
    * - preloadSystemFonts
    */
   beforeBuild: BeforeBuildFn[];
+
+  getModule(): WebAssemblyModuleRef | Promise<WebAssemblyModuleRef>;
 }
 
 /**

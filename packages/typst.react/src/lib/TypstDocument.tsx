@@ -94,6 +94,8 @@ export const TypstDocument = ({ fill, artifact }: TypstDocumentProps) => {
             byFamily: ['Segoe UI Symbol'],
           }),
         ],
+        getRendererModule: () =>
+          'node_modules/@myriaddreamin/typst-ts-renderer/typst_ts_renderer_bg.wasm',
       },
       doRender,
     );
