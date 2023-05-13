@@ -80,8 +80,8 @@ Compile options:
 ```shell
 # install simple-http-server or other alternative solutions
 $ cargo install simple-http-server
-$ simple-http-server -p 20810 --cors .\fuzzers\corpora\
-$ simple-http-server -p 20811 --cors .\assets\ --compress=ttf,otf
+$ simple-http-server -p 20810 --cors ./fuzzers/corpora/
+$ simple-http-server -p 20811 --cors ./assets/ --compress=ttf,otf
 $ cd packages/typst.ts && yarn install && yarn run build && simple-http-server -p 8075 --index --compress=js,json,otf,css
 ```
 
