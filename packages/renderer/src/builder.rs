@@ -1,4 +1,4 @@
-use crate::renderer::TypstRenderer;
+use crate::TypstRenderer;
 
 use typst_ts_compiler::font::web::{BrowserFontSearcher, WebFont};
 

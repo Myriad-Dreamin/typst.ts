@@ -1,7 +1,7 @@
 {
   "name": "@myriaddreamin/typst.ts",
   "version": "0.1.6",
-  "description": "Render Typst documents in browser.",
+  "description": "run Typst in JavaScriptWorld.",
   "keywords": [
     "TypeScript",
     "Typst"
@@ -11,9 +11,10 @@
   "main": "dist/main.js",
   "types": "dist/main.d.ts",
   "scripts": {
-    "build:wasm": "wasm-pack build --target web -- --no-default-features --features web",
-    "build:dev": "wasm-pack build --target web --dev -- --no-default-features --features web && tsc --emitDeclarationOnly --outDir dist && node esbuild.config.mjs",
-    "build": "wasm-pack build --target web -- --no-default-features --features web && tsc --emitDeclarationOnly --outDir dist && tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "build:wasm": "cd ../renderer/ && yarn run build",
+    "build:wasm:dev": "cd ../renderer/ && yarn run build:dev",
+    "build:dev": "yarn run build:wasm:dev && tsc --emitDeclarationOnly --outDir dist && node esbuild.config.mjs",
+    "build": "yarn run build:wasm && tsc --emitDeclarationOnly --outDir dist && tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "link:local": "yarn link",
     "prepublish": "npm run build",
     "publish:dry": "npm publish --dry-run --access public",

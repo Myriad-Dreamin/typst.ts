@@ -1,7 +1,7 @@
 // @ts-ignore
-import typst_wasm_bin from '../../pkg/typst_ts_renderer_bg.wasm';
+import typst_wasm_bin from '../../renderer/pkg/typst_ts_renderer_bg.wasm';
 // @ts-ignore
-import typstInit, * as typst from '../../pkg/typst_ts_renderer';
+import typstInit, * as typst from '../../renderer/pkg/typst_ts_renderer';
 
 import type * as pdfjsModule from 'pdfjs-dist';
 import type { InitOptions, BeforeBuildMark } from './options.init';
@@ -146,11 +146,11 @@ class TypstRendererDriver {
   }
 
   // async renderPdf(artifactContent: string): Promise<Uint8Array> {
-    // return this.renderer.render_to_pdf(artifactContent);
+  // return this.renderer.render_to_pdf(artifactContent);
   // }
-// 
+  //
   // async renderPdfInSession(session: RenderSession): Promise<Uint8Array> {
-    // return this.renderer.render_to_pdf_in_session(session as typst.RenderSession);
+  // return this.renderer.render_to_pdf_in_session(session as typst.RenderSession);
   // }
 
   private async inAnimationFrame<T>(fn: () => Promise<T>): Promise<T> {
