@@ -5,6 +5,3 @@
 
 dist/
 node_modules/
-pkg/
-target/
-out/

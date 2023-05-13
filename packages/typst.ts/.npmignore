@@ -1,15 +1,9 @@
 
 src/
 node_modules/
-pkg/
-target/
-out/
-dist/fonts
 
 index.html
 *.artifact.json
 *.rmp
-Cargo.toml
-Cargo.lock
 esbuild.*
 .eslint*
