@@ -14,4 +14,8 @@ pub struct CompileOpts {
     /// will remove later
     #[serde(rename = "fontPaths")]
     pub font_paths: Vec<PathBuf>,
+
+    /// Exclude system font paths
+    #[serde(rename = "noSystemFonts")]
+    pub no_system_fonts: bool,
 }

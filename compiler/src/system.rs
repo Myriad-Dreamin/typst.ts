@@ -15,7 +15,9 @@ impl CompilerFeat for SystemCompilerFeat {
 
     fn from_opts(opts: CompileOpts) -> (FontResolverImpl, SourceManager<Self::M>) {
         let mut searcher = SystemFontSearcher::new();
+        if opts.no_system_fonts {
         searcher.search_system();
+        }
         searcher.add_embedded();
         for path in opts.font_paths {
             if path.is_dir() {
