@@ -58,9 +58,9 @@ fn to_micro_lossy(t: SystemTime) -> u128 {
 }
 
 impl FontProfileItem {
-    pub fn new(kind: String, hash: String) -> Self {
+    pub fn new(kind: &str, hash: String) -> Self {
         let mut meta: FontMetaDict = Default::default();
-        meta.insert("kind".to_owned(), kind);
+        meta.insert("kind".to_owned(), kind.to_string());
 
         Self {
             hash,
