@@ -1,15 +1,18 @@
 use std::{
+    collections::HashMap,
     fs::File,
     path::{Path, PathBuf},
 };
 
 use memmap2::Mmap;
+use sha2::{Digest, Sha256};
 use typst::{
     font::{Font, FontBook, FontInfo},
     util::Buffer,
 };
 use typst_ts_core::{
-    font::{FontProfile, FontResolverImpl, LazyBufferFontLoader},
+    build_info,
+    font::{FontInfoItem, FontProfile, FontProfileItem, FontResolverImpl, LazyBufferFontLoader},
     FontSlot,
 };
 use walkdir::WalkDir;
@@ -26,24 +29,113 @@ fn is_font_file_by_name(path: &Path) -> bool {
     )
 }
 
+#[derive(Default)]
+struct FontProfileRebuilder {
+    path_items: HashMap<PathBuf, FontProfileItem>,
+    pub profile: FontProfile,
+    can_profile: bool,
+}
+
+impl FontProfileRebuilder {
+    /// Index the fonts in the file at the given path.
+    pub fn search_file(&mut self, path: impl AsRef<Path>) -> Option<&FontProfileItem> {
+        let path = path.as_ref().canonicalize().unwrap();
+        if let Some(item) = self.path_items.get(&path) {
+            return Some(item);
+        }
+
+        if let Ok(mut file) = File::open(&path) {
+            let hash = if self.can_profile {
+                let mut hasher = Sha256::new();
+                let _bytes_written = std::io::copy(&mut file, &mut hasher).unwrap();
+                let hash = hasher.finalize();
+
+                format!("sha256:{}", hex::encode(hash))
+            } else {
+                "".to_owned()
+            };
+
+            let mut profile_item = FontProfileItem::new("path", hash);
+            profile_item.set_path(path.clone().to_str().unwrap().to_owned());
+            profile_item.set_mtime(file.metadata().unwrap().modified().unwrap());
+
+            // println!("searched font: {:?}", path);
+
+            if let Ok(mmap) = unsafe { Mmap::map(&file) } {
+                for (i, info) in FontInfo::iter(&mmap).enumerate() {
+                    let mut ff = FontInfoItem::new(info);
+                    if i != 0 {
+                        ff.set_index(i as u32);
+                    }
+                    profile_item.add_info(ff);
+                }
+            }
+
+            self.profile.items.push(profile_item);
+            return self.profile.items.last();
+        }
+
+        None
+    }
+}
+
 /// Searches for fonts.
 pub struct SystemFontSearcher {
     pub book: FontBook,
     pub fonts: Vec<FontSlot>,
-    pub profile: FontProfile,
+    profile_rebuilder: FontProfileRebuilder,
 }
 
 impl SystemFontSearcher {
     /// Create a new, empty system searcher.
     pub fn new() -> Self {
-        let mut profile = FontProfile::default();
-        profile.version = "v1beta".to_owned();
+        let mut profile_rebuilder = FontProfileRebuilder::default();
+        profile_rebuilder.profile.version = "v1beta".to_owned();
+        profile_rebuilder.profile.build_info = build_info::VERSION.to_string();
 
         Self {
             book: FontBook::new(),
             fonts: vec![],
-            profile,
+            profile_rebuilder,
         }
+    }
+
+    pub fn set_can_profile(&mut self, can_profile: bool) {
+        self.profile_rebuilder.can_profile = can_profile;
+    }
+
+    pub fn add_profile_by_path(&mut self, profile_path: &Path) {
+        // let begin = std::time::Instant::now();
+        // profile_path is in format of json.gz
+        let profile_file = File::open(profile_path).unwrap();
+        let profile_gunzip = flate2::read::GzDecoder::new(profile_file);
+        let profile: FontProfile = serde_json::from_reader(profile_gunzip).unwrap();
+
+        if self.profile_rebuilder.profile.version != profile.version
+            || self.profile_rebuilder.profile.build_info != profile.build_info
+        {
+            return;
+        }
+
+        for item in profile.items {
+            let path = match item.path() {
+                Some(path) => path,
+                None => continue,
+            };
+            let path = PathBuf::from(path);
+
+            if let Ok(m) = std::fs::metadata(&path) {
+                let modified = m.modified().ok();
+                if !modified.map(|m| item.mtime_is_exact(m)).unwrap_or_default() {
+                    continue;
+                }
+            }
+
+            self.profile_rebuilder.path_items.insert(path, item.clone());
+            self.profile_rebuilder.profile.items.push(item);
+        }
+        // let end = std::time::Instant::now();
+        // println!("profile_rebuilder init took {:?}", end - begin);
     }
 
     /// Add fonts that are embedded in the binary.
@@ -148,18 +240,19 @@ impl SystemFontSearcher {
 
     /// Index the fonts in the file at the given path.
     pub fn search_file(&mut self, path: impl AsRef<Path>) {
-        let path = path.as_ref();
-        if let Ok(file) = File::open(path) {
-            if let Ok(mmap) = unsafe { Mmap::map(&file) } {
-                for (i, info) in FontInfo::iter(&mmap).enumerate() {
-                    self.book.push(info);
-                    self.fonts
-                        .push(FontSlot::new_boxed(LazyBufferFontLoader::new(
-                            LazyFile::new(path.into()),
-                            i as u32,
-                        )));
-                }
-            }
+        let profile_item = match self.profile_rebuilder.search_file(path.as_ref()) {
+            Some(profile_item) => profile_item,
+            None => return,
+        };
+
+        for info in profile_item.info.iter() {
+            self.book.push(info.info.clone());
+            let i = info.index().unwrap_or_default();
+            self.fonts
+                .push(FontSlot::new_boxed(LazyBufferFontLoader::new(
+                    LazyFile::new(path.as_ref().to_owned()),
+                    i as u32,
+                )));
         }
     }
 }
@@ -172,6 +265,10 @@ impl Default for SystemFontSearcher {
 
 impl From<SystemFontSearcher> for FontResolverImpl {
     fn from(searcher: SystemFontSearcher) -> Self {
-        FontResolverImpl::new(searcher.book, searcher.fonts, searcher.profile)
+        FontResolverImpl::new(
+            searcher.book,
+            searcher.fonts,
+            searcher.profile_rebuilder.profile,
+        )
     }
 }

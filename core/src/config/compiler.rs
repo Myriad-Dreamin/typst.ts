@@ -11,6 +11,14 @@ pub struct CompileOpts {
     /// Path to entry
     pub entry: PathBuf,
 
+    /// Path to font profiles
+    #[serde(rename = "fontProfilePaths")]
+    pub font_profile_paths: Vec<PathBuf>,
+
+    /// Path to font profile for cache
+    #[serde(rename = "fontProfileCachePath")]
+    pub font_profile_cache_path: PathBuf,
+
     /// will remove later
     #[serde(rename = "fontPaths")]
     pub font_paths: Vec<PathBuf>,
