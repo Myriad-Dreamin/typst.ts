@@ -127,6 +127,7 @@ impl FontProfileItem {
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct FontProfile {
     pub version: String,
+    pub build_info: String,
     pub items: Vec<FontProfileItem>,
 }
 
