@@ -1,13 +1,105 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use comemo::Prehashed;
 use once_cell::sync::OnceCell;
+use serde::{Deserialize, Serialize};
 use typst::{
-    font::{Font, FontBook},
+    font::{Font, FontBook, FontInfo},
     util::Buffer,
 };
 
 use crate::ReadAllOnce;
+
+type FontMetaDict = HashMap<String, String>;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FontInfoItem {
+    /// customized profile data
+    pub meta: FontMetaDict,
+    /// The informatioin of the font
+    pub info: FontInfo,
+}
+
+impl FontInfoItem {
+    pub fn new(info: FontInfo) -> Self {
+        Self {
+            meta: Default::default(),
+            info,
+        }
+    }
+
+    pub fn meta(&self) -> &FontMetaDict {
+        &self.meta
+    }
+
+    pub fn info(&self) -> &FontInfo {
+        &self.info
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FontProfileItem {
+    /// The hash of the file
+    pub hash: String,
+    /// customized profile data
+    pub meta: FontMetaDict,
+    /// The informatioin of the font
+    pub info: Vec<FontInfoItem>,
+}
+
+impl FontProfileItem {
+    pub fn new(kind: String, hash: String) -> Self {
+        let mut meta: FontMetaDict = Default::default();
+        meta.insert("kind".to_owned(), kind);
+
+        Self {
+            hash,
+            meta,
+            info: Default::default(),
+        }
+    }
+
+    pub fn path(&self) -> Option<&String> {
+        self.meta.get("path")
+    }
+
+    pub fn mtime(&self) -> Option<u64> {
+        self.meta.get("mtime").and_then(|v| v.parse::<u64>().ok())
+    }
+
+    pub fn set_path(&mut self, v: String) {
+        self.meta.insert("path".to_owned(), v);
+    }
+
+    pub fn set_mtime(&mut self, v: u64) {
+        self.meta.insert("mtime".to_owned(), v.to_string());
+    }
+
+    pub fn hash(&self) -> &str {
+        &self.hash
+    }
+
+    pub fn meta(&self) -> &FontMetaDict {
+        &self.meta
+    }
+
+    pub fn info(&self) -> &[FontInfoItem] {
+        &self.info
+    }
+
+    pub fn add_info(&mut self, info: FontInfoItem) {
+        self.info.push(info);
+    }
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub struct FontProfile {
+    pub version: String,
+    pub items: Vec<FontProfileItem>,
+}
 
 /// A FontLoader would help load a font from somewhere.
 pub trait FontLoader {
@@ -26,14 +118,20 @@ pub trait FontResolver {
 pub struct FontResolverImpl {
     book: Prehashed<FontBook>,
     fonts: Vec<FontSlot>,
+    profile: FontProfile,
 }
 
 impl FontResolverImpl {
-    pub fn new(book: FontBook, fonts: Vec<FontSlot>) -> Self {
+    pub fn new(book: FontBook, fonts: Vec<FontSlot>, profile: FontProfile) -> Self {
         Self {
             book: Prehashed::new(book),
             fonts,
+            profile,
         }
+    }
+
+    pub fn profile(&self) -> &FontProfile {
+        &self.profile
     }
 }
 
