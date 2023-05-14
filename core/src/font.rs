@@ -32,6 +32,14 @@ impl FontInfoItem {
         }
     }
 
+    pub fn index(&self) -> Option<u32> {
+        self.meta.get("index").and_then(|v| v.parse::<u32>().ok())
+    }
+
+    pub fn set_index(&mut self, v: u32) {
+        self.meta.insert("index".to_owned(), v.to_string());
+    }
+
     pub fn meta(&self) -> &FontMetaDict {
         &self.meta
     }
