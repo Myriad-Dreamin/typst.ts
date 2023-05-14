@@ -56,7 +56,7 @@ impl FontProfileRebuilder {
             };
 
             let mut profile_item = FontProfileItem::new("path", hash);
-            profile_item.set_path(path.clone().to_str().unwrap().to_owned());
+            profile_item.set_path(path.to_str().unwrap().to_owned());
             profile_item.set_mtime(file.metadata().unwrap().modified().unwrap());
 
             // println!("searched font: {:?}", path);
@@ -247,11 +247,10 @@ impl SystemFontSearcher {
 
         for info in profile_item.info.iter() {
             self.book.push(info.info.clone());
-            let i = info.index().unwrap_or_default();
             self.fonts
                 .push(FontSlot::new_boxed(LazyBufferFontLoader::new(
                     LazyFile::new(path.as_ref().to_owned()),
-                    i as u32,
+                    info.index().unwrap_or_default(),
                 )));
         }
     }

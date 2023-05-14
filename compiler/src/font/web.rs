@@ -153,8 +153,10 @@ pub struct BrowserFontSearcher {
 impl BrowserFontSearcher {
     /// Create a new, empty system searcher.
     pub fn new() -> Self {
-        let mut profile = FontProfile::default();
-        profile.version = "v1beta".to_owned();
+        let profile = FontProfile {
+            version: "v1beta".to_owned(),
+            ..Default::default()
+        };
         Self {
             book: FontBook::new(),
             fonts: vec![],
