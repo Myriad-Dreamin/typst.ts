@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
+    time::SystemTime,
 };
 
 use comemo::Prehashed;
@@ -50,6 +51,12 @@ pub struct FontProfileItem {
     pub info: Vec<FontInfoItem>,
 }
 
+fn to_micro_lossy(t: SystemTime) -> u128 {
+    t.duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_micros()
+}
+
 impl FontProfileItem {
     pub fn new(kind: String, hash: String) -> Self {
         let mut meta: FontMetaDict = Default::default();
@@ -66,16 +73,30 @@ impl FontProfileItem {
         self.meta.get("path")
     }
 
-    pub fn mtime(&self) -> Option<u64> {
-        self.meta.get("mtime").and_then(|v| v.parse::<u64>().ok())
+    pub fn mtime(&self) -> Option<SystemTime> {
+        self.meta.get("mtime").and_then(|v| {
+            let v = v.parse::<u64>().ok();
+            v.map(|v| SystemTime::UNIX_EPOCH + std::time::Duration::from_micros(v))
+        })
+    }
+
+    pub fn mtime_is_exact(&self, t: SystemTime) -> bool {
+        self.mtime()
+            .map(|s| {
+                let s = to_micro_lossy(s);
+                let t = to_micro_lossy(t);
+                s == t
+            })
+            .unwrap_or_default()
     }
 
     pub fn set_path(&mut self, v: String) {
         self.meta.insert("path".to_owned(), v);
     }
 
-    pub fn set_mtime(&mut self, v: u64) {
-        self.meta.insert("mtime".to_owned(), v.to_string());
+    pub fn set_mtime(&mut self, v: SystemTime) {
+        self.meta
+            .insert("mtime".to_owned(), to_micro_lossy(v).to_string());
     }
 
     pub fn hash(&self) -> &str {
