@@ -4,7 +4,7 @@ use typst::{
     util::Buffer,
 };
 use typst_ts_core::{
-    font::{BufferFontLoader, FontResolverImpl},
+    font::{BufferFontLoader, FontProfile, FontResolverImpl},
     FontLoader, FontSlot, ReadAllOnce,
 };
 use wasm_bindgen::prelude::*;
@@ -147,14 +147,18 @@ impl ReadAllOnce for WebFontBlob {
 pub struct BrowserFontSearcher {
     pub book: FontBook,
     pub fonts: Vec<FontSlot>,
+    pub profile: FontProfile,
 }
 
 impl BrowserFontSearcher {
     /// Create a new, empty system searcher.
     pub fn new() -> Self {
+        let mut profile = FontProfile::default();
+        profile.version = "v1beta".to_owned();
         Self {
             book: FontBook::new(),
             fonts: vec![],
+            profile,
         }
     }
 
@@ -188,6 +192,6 @@ impl Default for BrowserFontSearcher {
 
 impl From<BrowserFontSearcher> for FontResolverImpl {
     fn from(value: BrowserFontSearcher) -> Self {
-        FontResolverImpl::new(value.book, value.fonts)
+        FontResolverImpl::new(value.book, value.fonts, value.profile)
     }
 }

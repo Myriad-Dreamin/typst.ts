@@ -16,7 +16,7 @@ impl CompilerFeat for SystemCompilerFeat {
     fn from_opts(opts: CompileOpts) -> (FontResolverImpl, SourceManager<Self::M>) {
         let mut searcher = SystemFontSearcher::new();
         if opts.no_system_fonts {
-        searcher.search_system();
+            searcher.search_system();
         }
         searcher.add_embedded();
         for path in opts.font_paths {
@@ -26,9 +26,6 @@ impl CompilerFeat for SystemCompilerFeat {
                 searcher.search_file(&path);
             }
         }
-        (
-            FontResolverImpl::new(searcher.book, searcher.fonts),
-            SourceManager::new(SystemAccessModel {}),
-        )
+        (searcher.into(), SourceManager::new(SystemAccessModel {}))
     }
 }

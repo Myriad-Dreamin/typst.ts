@@ -8,7 +8,10 @@ use typst::{
     font::{Font, FontBook, FontInfo},
     util::Buffer,
 };
-use typst_ts_core::{font::LazyBufferFontLoader, FontSlot};
+use typst_ts_core::{
+    font::{FontProfile, FontResolverImpl, LazyBufferFontLoader},
+    FontSlot,
+};
 use walkdir::WalkDir;
 
 use crate::vfs::system::LazyFile;
@@ -27,14 +30,19 @@ fn is_font_file_by_name(path: &Path) -> bool {
 pub struct SystemFontSearcher {
     pub book: FontBook,
     pub fonts: Vec<FontSlot>,
+    pub profile: FontProfile,
 }
 
 impl SystemFontSearcher {
     /// Create a new, empty system searcher.
     pub fn new() -> Self {
+        let mut profile = FontProfile::default();
+        profile.version = "v1beta".to_owned();
+
         Self {
             book: FontBook::new(),
             fonts: vec![],
+            profile,
         }
     }
 
@@ -159,5 +167,11 @@ impl SystemFontSearcher {
 impl Default for SystemFontSearcher {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl From<SystemFontSearcher> for FontResolverImpl {
+    fn from(searcher: SystemFontSearcher) -> Self {
+        FontResolverImpl::new(searcher.book, searcher.fonts, searcher.profile)
     }
 }
