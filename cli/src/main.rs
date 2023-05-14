@@ -8,7 +8,7 @@ use typst::{font::FontVariant, World};
 
 use typst_ts_cli::{
     compile::CompileDriver, tracing::TraceGuard, version::intercept_version, CompileArgs, EnvKey,
-    FontSubCommands, ListFontsArgs, Opts, Subcommands,
+    FontSubCommands, ListFontsArgs, MeasureFontsArgs, Opts, Subcommands,
 };
 use typst_ts_compiler::TypstSystemWorld;
 use typst_ts_core::config::CompileOpts;
@@ -42,6 +42,7 @@ fn main() {
         },
         Some(Subcommands::Font(font_sub)) => match font_sub {
             FontSubCommands::List(args) => list_fonts(args),
+            FontSubCommands::Measure(args) => measure_fonts(args),
         },
         None => help_sub_command(),
     };
@@ -122,12 +123,11 @@ fn list_fonts(command: ListFontsArgs) -> ! {
     // todo: should cover default workspace path
     root_path.push("-");
 
-    let mut world = TypstSystemWorld::new(CompileOpts {
+    let world = TypstSystemWorld::new(CompileOpts {
         root_dir: root_path,
         font_paths: command.font_paths,
         ..CompileOpts::default()
     });
-    world.reset();
 
     for (name, infos) in world.book().families() {
         println!("{name}");
@@ -142,6 +142,44 @@ fn list_fonts(command: ListFontsArgs) -> ! {
             }
         }
     }
+
+    exit(0)
+}
+
+fn measure_fonts(args: MeasureFontsArgs) -> ! {
+    let mut root_path = PathBuf::new();
+    // todo: should cover default workspace path
+    root_path.push("-");
+
+    let mut font_profile_paths = vec![];
+    if args.output.exists() {
+        font_profile_paths.push(args.output.clone());
+    }
+
+    let world = TypstSystemWorld::new(CompileOpts {
+        root_dir: root_path,
+        font_profile_paths,
+        font_paths: args.font_paths,
+        font_profile_cache_path: args.output.clone(),
+        no_system_fonts: args.no_system_fonts,
+        ..CompileOpts::default()
+    });
+
+    // create directory for args.output
+    if let Some(output) = args.output.parent() {
+        std::fs::create_dir_all(output).unwrap();
+    }
+
+    let profile = serde_json::to_vec(world.font_resolver.profile()).unwrap();
+
+    // gzip
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
+    use std::io::Write;
+
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+    encoder.write_all(&profile).unwrap();
+    std::fs::write(args.output, encoder.finish().unwrap()).unwrap();
 
     exit(0)
 }

@@ -2666,6 +2666,7 @@ dependencies = [
  "codespan-reporting",
  "comemo",
  "env_logger",
+ "flate2",
  "log",
  "notify",
  "serde",

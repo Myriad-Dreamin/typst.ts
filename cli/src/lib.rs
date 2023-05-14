@@ -55,6 +55,8 @@ pub enum Subcommands {
 pub enum FontSubCommands {
     /// List all discovered fonts in system and custom font paths
     List(ListFontsArgs),
+    /// Measure fonts and generate a profile file for compiler
+    Measure(MeasureFontsArgs),
 }
 
 #[derive(Debug, Clone, Parser)]
@@ -106,6 +108,22 @@ pub struct ListFontsArgs {
     /// Also list style variants of each font family
     #[arg(long)]
     pub variants: bool,
+}
+
+/// Measure fonts and generate a profile file for compiler
+#[derive(Debug, Clone, Parser)]
+pub struct MeasureFontsArgs {
+    /// Add additional directories to search for fonts
+    #[clap(long = "font-path", value_name = "DIR", action = ArgAction::Append)]
+    pub font_paths: Vec<PathBuf>,
+
+    /// Path to output profile file
+    #[arg(long, required = true)]
+    pub output: PathBuf,
+
+    /// Exclude system font paths
+    #[arg(long)]
+    pub no_system_fonts: bool,
 }
 
 #[derive(ValueEnum, Debug, Clone)]
