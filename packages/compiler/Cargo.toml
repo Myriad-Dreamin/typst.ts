@@ -1,10 +1,10 @@
 [package]
-name = "typst-ts-browser-compiler"
+name = "typst-ts-web-compiler"
 version = "0.1.6"
 license = "Apache-2.0"
 edition = "2021"
 readme = "README.md"
-description = "Compile Typst documents in browser."
+description = "Compile Typst documents in JavaScript environment."
 repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 [lib]

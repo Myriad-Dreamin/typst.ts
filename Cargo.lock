@@ -2620,25 +2620,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "typst-ts-browser-compiler"
-version = "0.1.6"
-dependencies = [
- "comemo",
- "elsa",
- "js-sys",
- "once_cell",
- "siphasher",
- "typst",
- "typst-library",
- "typst-ts-compiler",
- "typst-ts-core",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "wasm-bindgen-test",
- "web-sys",
-]
-
-[[package]]
 name = "typst-ts-canvas-exporter"
 version = "0.1.6"
 dependencies = [
@@ -2833,6 +2814,25 @@ dependencies = [
  "serde_json",
  "typst",
  "typst-ts-core",
+]
+
+[[package]]
+name = "typst-ts-web-compiler"
+version = "0.1.6"
+dependencies = [
+ "comemo",
+ "elsa",
+ "js-sys",
+ "once_cell",
+ "siphasher",
+ "typst",
+ "typst-library",
+ "typst-ts-compiler",
+ "typst-ts-core",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wasm-bindgen-test",
+ "web-sys",
 ]
 
 [[package]]
