@@ -7,15 +7,23 @@ export type {
   RenderOptions,
 } from './options.render';
 export { preloadRemoteFonts, preloadSystemFonts } from './options.init';
-import * as driver from './renderer';
+import * as renderer from './renderer';
 export type { TypstRenderer } from './renderer';
 export { createTypstRenderer } from './renderer';
+import * as compiler from './compiler';
+export type { TypstCompiler } from './compiler';
+export { createTypstCompiler } from './compiler';
 
 // Export module on window.
 // todo: graceful way?
 if (window) {
   (window as any).TypstRenderModule = {
-    createTypstRenderer: driver.createTypstRenderer,
+    createTypstRenderer: renderer.createTypstRenderer,
+    preloadRemoteFonts: initOptions.preloadRemoteFonts,
+    preloadSystemFonts: initOptions.preloadSystemFonts,
+  };
+  (window as any).TypstCompileModule = {
+    createTypstCompiler: compiler.createTypstCompiler,
     preloadRemoteFonts: initOptions.preloadRemoteFonts,
     preloadSystemFonts: initOptions.preloadSystemFonts,
   };
