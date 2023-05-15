@@ -1,5 +1,6 @@
 // @ts-ignore
 import type * as typst from '../../pkg/typst_ts_renderer';
+import { WebAssemblyModuleRef } from './wasm';
 
 /**
  * staged options function
@@ -31,8 +32,6 @@ export type BeforeBuildMark = typeof BeforeBuildSymbol;
  *   - preloadSystemFonts
  */
 export type BeforeBuildFn = StagedOptFn<BeforeBuildMark, any>;
-
-export type WebAssemblyModuleRef = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 /**
  *

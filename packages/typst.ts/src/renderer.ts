@@ -2,11 +2,12 @@
 import typstInit, * as typst from '../../renderer/pkg/typst_ts_renderer';
 
 import type * as pdfjsModule from 'pdfjs-dist';
-import type { InitOptions, BeforeBuildMark, WebAssemblyModuleRef } from './options.init';
+import type { InitOptions, BeforeBuildMark } from './options.init';
 import { PageViewport } from './viewport';
 import { RenderSession } from './internal.types';
 import { RenderByContentOptions, RenderOptions, RenderPageOptions } from './options.render';
 import { RenderView } from './view';
+import { LazyWasmModule } from './wasm';
 
 /**
  * The result of rendering a Typst document.
@@ -42,6 +43,8 @@ export interface TypstRenderer {
   ): Promise<T>;
 }
 
+const gRendererModule = new LazyWasmModule(typstInit);
+
 /**
  * create a Typst renderer.
  * @param {typeof pdfjsModule} pdf - The pdfjs module.
@@ -62,31 +65,6 @@ export function createTypstRenderer(pdf: unknown): TypstRenderer {
   return new TypstRendererDriver(pdf as typeof pdfjsModule);
 }
 
-const once = <T>(fn: () => T) => {
-  let called = false;
-  let res: T;
-  return () => {
-    if (called) {
-      return res;
-    }
-    called = true;
-    return (res = fn());
-  };
-};
-
-let typst_wasm_bin: WebAssemblyModuleRef | Promise<WebAssemblyModuleRef> | undefined;
-const initTypstWasmModule_ = once(async () => {
-  if (typeof typstInit !== 'function') {
-    throw new Error('typstInit is not a function');
-  }
-  await typstInit(typst_wasm_bin);
-});
-
-const initTypstWasmModule = (module?: WebAssemblyModuleRef | Promise<WebAssemblyModuleRef>) => {
-  typst_wasm_bin = module;
-  return initTypstWasmModule_();
-};
-
 class TypstRendererDriver {
   renderer: typst.TypstRenderer;
 
@@ -100,7 +78,9 @@ class TypstRendererDriver {
 
   async init(options?: Partial<InitOptions>): Promise<void> {
     /// init typst wasm module
-    await initTypstWasmModule(options?.getModule && options.getModule());
+    if (options?.getModule) {
+      await gRendererModule.init(options.getModule());
+    }
 
     /// build typst renderer
     let builder = new typst.TypstRendererBuilder();
