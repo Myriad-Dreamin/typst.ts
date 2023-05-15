@@ -1,5 +1,5 @@
 import { InitOptions } from '../options.init';
-import { TypstRenderer, createTypstRenderer } from '../driver';
+import { TypstRenderer, createTypstRenderer } from '../renderer';
 import type * as pdfjsModule from 'pdfjs-dist';
 
 let globalRenderer: TypstRenderer | undefined = undefined;

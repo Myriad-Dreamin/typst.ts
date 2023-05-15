@@ -7,9 +7,9 @@ export type {
   RenderOptions,
 } from './options.render';
 export { preloadRemoteFonts, preloadSystemFonts } from './options.init';
-import * as driver from './driver';
-export type { TypstRenderer } from './driver';
-export { createTypstRenderer } from './driver';
+import * as driver from './renderer';
+export type { TypstRenderer } from './renderer';
+export { createTypstRenderer } from './renderer';
 
 // Export module on window.
 // todo: graceful way?
