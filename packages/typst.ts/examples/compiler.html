@@ -1,0 +1,100 @@
+<html lang="en">
+  <!-- This is the example for typst.ts -->
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Typst.ts</title>
+    <script type="module" src="/dist/main.js"></script>
+    <!-- pdf.js v3.5.141 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf_viewer.min.css"
+      integrity="sha512-Jf9DLkegLgARLR151csVkPvcVt4cOUhslrSZwiTAe9mqFL/BbYRDmxCOioCtbHifEgjsBFbrVhOMQ3mYPDLrqQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+
+    <script src="/examples/typst.js"></script>
+    <script>
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
+
+      document.ready(() => {
+        const terminalContent = document.getElementById('terminal-content');
+        terminalContent.innerHTML =
+          '<span style="color: #58B2DC">Ok(<span style="color: #FBE251">0</span>)</span>';
+      });
+    </script>
+
+    <link rel="stylesheet" href="/examples/typst.ts.css" />
+    <style>
+      .content {
+        display: flex;
+        margin: 82px auto 32px;
+        padding: 0 16px;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .terminal {
+        position: relative;
+        width: 90%;
+        max-width: 2000px;
+        border-radius: 6px;
+        padding-top: 45px;
+        margin-top: 8px;
+        overflow: hidden;
+        background-color: rgb(15, 15, 16);
+      }
+
+      .terminal::before {
+        content: '\2022 \2022 \2022';
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 4px;
+        background: rgb(58, 58, 58);
+        color: #c2c3c4;
+        width: 100%;
+        font-size: 2rem;
+        line-height: 0;
+        padding: 14px 0;
+        text-indent: 4px;
+      }
+
+      .terminal pre {
+        font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+        color: white;
+        padding: 0 1rem 1rem;
+        margin: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <body>
+      <div class="navigator">
+        <ul>
+          <li style="padding: 10px 40px">
+            <a href="/">Embed Your Typst Document</a>
+          </li>
+          <li style="padding: 10px 40px">
+            <a href="/">Renderer Demo</a>
+          </li>
+          <li style="padding: 10px 40px">
+            <a href="/examples/compiler.html">Compiler Demo</a>
+          </li>
+        </ul>
+        <div class="clear"></div>
+      </div>
+      <div class="content">
+        <div class="terminal">
+          <pre id="terminal-content">hello world</pre>
+        </div>
+      </div>
+    </body>
+  </body>
+</html>
