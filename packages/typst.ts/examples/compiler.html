@@ -26,6 +26,53 @@
         const terminalContent = document.getElementById('terminal-content');
         terminalContent.innerHTML =
           '<span style="color: #58B2DC">Ok(<span style="color: #FBE251">0</span>)</span>';
+
+        let compilerPlugin = window.TypstCompileModule.createTypstCompiler();
+        compilerPlugin
+          .init({
+            beforeBuild: [
+              window.TypstCompileModule.preloadRemoteFonts([
+                'http://localhost:20811/fonts/LinLibertine_R.ttf',
+                'http://localhost:20811/fonts/LinLibertine_RB.ttf',
+                'http://localhost:20811/fonts/LinLibertine_RBI.ttf',
+                'http://localhost:20811/fonts/LinLibertine_RI.ttf',
+                'http://localhost:20811/fonts/NewCMMath-Book.otf',
+                'http://localhost:20811/fonts/NewCMMath-Regular.otf',
+              ]),
+              window.TypstCompileModule.preloadSystemFonts({
+                byFamily: ['Segoe UI Symbol'],
+              }),
+            ],
+            getModule: () =>
+              '/node_modules/@myriaddreamin/typst-ts-web-compiler/typst_ts_web_compiler_bg.wasm',
+          })
+          .then(() => {
+            console.log('compiler init');
+            compilerPlugin.compile({});
+          });
+
+        let rendererPlugin = window.TypstRenderModule.createTypstRenderer(pdfjsLib);
+        rendererPlugin
+          .init({
+            beforeBuild: [
+              window.TypstRenderModule.preloadRemoteFonts([
+                'http://localhost:20811/fonts/LinLibertine_R.ttf',
+                'http://localhost:20811/fonts/LinLibertine_RB.ttf',
+                'http://localhost:20811/fonts/LinLibertine_RBI.ttf',
+                'http://localhost:20811/fonts/LinLibertine_RI.ttf',
+                'http://localhost:20811/fonts/NewCMMath-Book.otf',
+                'http://localhost:20811/fonts/NewCMMath-Regular.otf',
+              ]),
+              window.TypstRenderModule.preloadSystemFonts({
+                byFamily: ['Segoe UI Symbol'],
+              }),
+            ],
+            getModule: () =>
+              '/node_modules/@myriaddreamin/typst-ts-renderer/typst_ts_renderer_bg.wasm',
+          })
+          .then(() => {
+            console.log('renderer init');
+          });
       });
     </script>
 
