@@ -1,9 +1,9 @@
 use std::{path::Path, time::SystemTime};
 
-use crate::source_manager::AccessModel;
+use super::AccessModel;
 
 #[derive(Default, Debug)]
-pub struct MemoryAccessModel(super::model::Vfs);
+pub struct MemoryAccessModel(super::MemVfs);
 
 impl AccessModel for MemoryAccessModel {
     type RealPath = std::path::PathBuf;

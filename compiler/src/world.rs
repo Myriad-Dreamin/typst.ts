@@ -11,7 +11,7 @@ use typst::{
 };
 use typst_ts_core::{config::CompileOpts, font::FontResolverImpl, FontResolver};
 
-use crate::source_manager::{AccessModel, SourceManager};
+use crate::vfs::{AccessModel, Vfs};
 
 type CodespanResult<T> = Result<T, CodespanError>;
 type CodespanError = codespan_reporting::files::Error;
@@ -19,7 +19,7 @@ type CodespanError = codespan_reporting::files::Error;
 pub trait CompilerFeat {
     type M: AccessModel + Sized;
 
-    fn create_source_manager() -> SourceManager<Self::M>;
+    fn create_vfs() -> Vfs<Self::M>;
 
     fn from_opts(opts: CompileOpts) -> (FontResolverImpl,);
 }
@@ -31,12 +31,12 @@ pub struct CompilerWorld<F: CompilerFeat> {
 
     library: Prehashed<Library>,
     pub font_resolver: FontResolverImpl,
-    source_mgr: SourceManager<F::M>,
+    vfs: Vfs<F::M>,
 }
 
 impl<F: CompilerFeat> CompilerWorld<F> {
     pub fn new_raw(root_dir: PathBuf, font_resolver: FontResolverImpl) -> Self {
-        let source_mgr = F::create_source_manager();
+        let source_mgr = F::create_vfs();
 
         // Hook up the lang items.
         // todo: bad upstream changes
@@ -48,7 +48,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             library,
             font_resolver,
             main: SourceId::detached(),
-            source_mgr,
+            vfs: source_mgr,
         }
     }
 
@@ -75,11 +75,11 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
     }
 
     fn resolve(&self, path: &Path) -> FileResult<SourceId> {
-        self.source_mgr.resolve(path)
+        self.vfs.resolve(path)
     }
 
     fn source(&self, id: SourceId) -> &Source {
-        self.source_mgr.source(id)
+        self.vfs.source(id)
     }
 
     fn book(&self) -> &Prehashed<FontBook> {
@@ -91,21 +91,21 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
     }
 
     fn file(&self, path: &Path) -> FileResult<Buffer> {
-        self.source_mgr.file(path)
+        self.vfs.file(path)
     }
 }
 
 impl<F: CompilerFeat> CompilerWorld<F> {
     pub fn resolve_with<P: AsRef<Path>>(&self, path: P, content: &str) -> FileResult<SourceId> {
-        self.source_mgr.resolve_with(path, content)
+        self.vfs.resolve_with(path, content)
     }
 
     pub fn dependant<P: AsRef<Path>>(&self, path: P) -> bool {
-        self.source_mgr.dependant(path)
+        self.vfs.dependant(path)
     }
 
     pub fn reset(&mut self) {
-        self.source_mgr.reset();
+        self.vfs.reset();
     }
 }
 

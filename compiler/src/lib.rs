@@ -1,7 +1,5 @@
 pub mod font;
 pub mod vfs;
-
-pub mod source_manager;
 pub mod world;
 
 #[cfg(feature = "system")]

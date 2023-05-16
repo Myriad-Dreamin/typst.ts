@@ -2,7 +2,7 @@ use std::{fs::File, io::Read, path::Path};
 
 use typst_ts_core::ReadAllOnce;
 
-use crate::source_manager::AccessModel;
+use super::AccessModel;
 
 pub struct LazyFile {
     path: std::path::PathBuf,

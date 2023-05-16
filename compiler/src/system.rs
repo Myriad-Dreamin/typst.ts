@@ -1,8 +1,7 @@
 use typst_ts_core::config::CompileOpts;
 
 use crate::font::system::SystemFontSearcher;
-use crate::source_manager::SourceManager;
-use crate::vfs::system::SystemAccessModel;
+use crate::vfs::{system::SystemAccessModel, Vfs};
 use crate::world::CompilerFeat;
 use typst_ts_core::font::FontResolverImpl;
 
@@ -13,8 +12,8 @@ pub struct SystemCompilerFeat;
 impl CompilerFeat for SystemCompilerFeat {
     type M = SystemAccessModel;
 
-    fn create_source_manager() -> SourceManager<Self::M> {
-        SourceManager::new(SystemAccessModel {})
+    fn create_vfs() -> Vfs<Self::M> {
+        Vfs::new(SystemAccessModel {})
     }
 
     fn from_opts(opts: CompileOpts) -> (FontResolverImpl,) {
