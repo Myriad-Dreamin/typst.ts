@@ -32,7 +32,7 @@ impl nohash_hasher::IsEnabled for FileId {}
 /// For more information see the [crate-level](crate) documentation.
 #[derive(Default)]
 pub struct Vfs {
-    interner: PathInterner,
+    interner: PathInterner<VfsPath>,
     data: Vec<Option<Vec<u8>>>,
     changes: Vec<ChangedFile>,
 }
