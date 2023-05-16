@@ -13,6 +13,8 @@ crate-type = ["cdylib"]
 [dependencies]
 typst-ts-core = "0.1"
 typst-ts-compiler = { version = "0.1", default-features = false, features = ["web"] }
+typst-ts-ast-exporter = { version = "0.1" }
+ansi-to-html = "0.1.3"
 
 typst = "0.3.0"
 typst-library = "0.3.0"
@@ -27,6 +29,12 @@ wasm-bindgen = { version = "^0.2" }
 js-sys = "^0.3"
 wasm-bindgen-futures = "^0.4"
 web-sys = { version = "^0.3", features = ["console", "Window", "Blob"] }
+
+# The `console_error_panic_hook` crate provides better debugging of panics by
+# logging them with `console.error`. This is great for development, but requires
+# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
+# code size when deploying.
+console_error_panic_hook = { version = "0.1.1" } # , optional = true
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.0"
