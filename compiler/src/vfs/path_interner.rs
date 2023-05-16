@@ -23,6 +23,10 @@ impl<P> Default for PathInterner<P> {
 }
 
 impl<P: Hash + Eq> PathInterner<P> {
+    pub(crate) fn clear(&mut self) {
+        self.map.clear();
+    }
+
     /// Get the id corresponding to `path`.
     ///
     /// If `path` does not exists in `self`, returns [`None`].
