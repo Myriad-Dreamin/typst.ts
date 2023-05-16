@@ -40,6 +40,7 @@ rustc-hash = "1.1.0"
 fst = "0.4.7"
 indexmap = "1.9.1"
 nohash-hasher = "0.2.0"
+path-clean = "1.0.1"
 
 [dev-dependencies]
 serde = "1.0.159"
