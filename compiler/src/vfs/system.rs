@@ -60,7 +60,7 @@ impl AccessModel for SystemAccessModel {
         same_file::Handle::from_path(src)
     }
 
-    fn read_all_once(&self, src: &Path, buf: &mut Vec<u8>) -> std::io::Result<usize> {
+    fn read_all(&self, src: &Path, buf: &mut Vec<u8>) -> std::io::Result<usize> {
         std::fs::File::open(src)?.read_to_end(buf)
     }
 }

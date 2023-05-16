@@ -17,7 +17,7 @@ pub trait AccessModel {
 
     fn real_path(&self, src: &Path) -> std::io::Result<Self::RealPath>;
 
-    fn read_all_once(&self, src: &Path, buf: &mut Vec<u8>) -> std::io::Result<usize>;
+    fn read_all(&self, src: &Path, buf: &mut Vec<u8>) -> std::io::Result<usize>;
 }
 
 /// Holds canonical data for all paths pointing to the same entity.
@@ -52,9 +52,7 @@ impl<M: AccessModel + Sized> SourceManager<M> {
         let f = |e| FileError::from_io(e, path);
         if self.access_model.is_file(path).map_err(f)? {
             let mut data = vec![];
-            self.access_model
-                .read_all_once(path, &mut data)
-                .map_err(f)?;
+            self.access_model.read_all(path, &mut data).map_err(f)?;
             Ok(data)
         } else {
             Err(FileError::IsDirectory)

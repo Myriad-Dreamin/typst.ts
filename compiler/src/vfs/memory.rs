@@ -20,7 +20,7 @@ impl AccessModel for MemoryAccessModel {
         Ok(src.to_owned())
     }
 
-    fn read_all_once(&self, _src: &Path, _buf: &mut Vec<u8>) -> std::io::Result<usize> {
+    fn read_all(&self, _src: &Path, _buf: &mut Vec<u8>) -> std::io::Result<usize> {
         panic!("Not implemented")
     }
 }
