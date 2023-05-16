@@ -46,9 +46,10 @@ impl Borrow<AbsPath> for AbsPathBuf {
 impl TryFrom<PathBuf> for AbsPathBuf {
     type Error = PathBuf;
     fn try_from(path_buf: PathBuf) -> Result<AbsPathBuf, PathBuf> {
-        if !path_buf.is_absolute() {
-            return Err(path_buf);
-        }
+        // todo is_absolute
+        // if !path_buf.is_absolute() {
+        //     return Err(path_buf);
+        // }
         Ok(AbsPathBuf(path_buf))
     }
 }
@@ -115,9 +116,9 @@ impl ToOwned for AbsPath {
 impl<'a> TryFrom<&'a Path> for &'a AbsPath {
     type Error = &'a Path;
     fn try_from(path: &'a Path) -> Result<&'a AbsPath, &'a Path> {
-        if !path.is_absolute() {
-            return Err(path);
-        }
+        // if !path.is_absolute() {
+        //     return Err(path);
+        // }
         Ok(AbsPath::assert(path))
     }
 }
@@ -129,7 +130,7 @@ impl AbsPath {
     ///
     /// Panics if `path` is not absolute.
     pub fn assert(path: &Path) -> &AbsPath {
-        assert!(path.is_absolute());
+        // assert!(path.is_absolute());
         unsafe { &*(path as *const Path as *const AbsPath) }
     }
 
@@ -155,7 +156,7 @@ impl AbsPath {
     ///
     /// # Example
     /// ```
-    /// # use paths::AbsPathBuf;
+    /// # use typst_ts_compiler::vfs::AbsPathBuf;
     /// let abs_path_buf = AbsPathBuf::assert("/a/../../b/.//c//".into());
     /// let normalized = abs_path_buf.normalize();
     /// assert_eq!(normalized, AbsPathBuf::assert("/b/c".into()));

@@ -71,11 +71,11 @@ impl fmt::Debug for FileSet {
 ///
 /// # Example
 /// ```rust
-/// # use vfs::{file_set::FileSetConfigBuilder, VfsPath, Vfs};
+/// # use typst_ts_compiler::vfs::{FileSetConfigBuilder, VfsPath, MemVfs};
 /// let mut builder = FileSetConfigBuilder::default();
 /// builder.add_file_set(vec![VfsPath::new_virtual_path("/src".to_string())]);
 /// let config = builder.build();
-/// let mut file_system = Vfs::default();
+/// let mut file_system = MemVfs::default();
 /// file_system.set_file_contents(VfsPath::new_virtual_path("/src/main.rs".to_string()), Some(vec![]));
 /// file_system.set_file_contents(VfsPath::new_virtual_path("/src/lib.rs".to_string()), Some(vec![]));
 /// file_system.set_file_contents(VfsPath::new_virtual_path("/build.rs".to_string()), Some(vec![]));

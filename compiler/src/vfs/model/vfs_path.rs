@@ -1,6 +1,8 @@
 //! Abstract-ish representation of paths for VFS.
 use std::fmt;
 
+use typst::util::PathExt;
+
 use super::paths::{AbsPath, AbsPathBuf, RelPath};
 
 /// Path in [`Vfs`].
@@ -60,7 +62,7 @@ impl VfsPath {
     /// # Example
     ///
     /// ```
-    /// # use vfs::{AbsPathBuf, VfsPath};
+    /// # use typst_ts_compiler::vfs::{AbsPathBuf, VfsPath};
     /// let mut path = VfsPath::from(AbsPathBuf::assert("/foo/bar".into()));
     /// assert!(path.pop());
     /// assert_eq!(path, VfsPath::from(AbsPathBuf::assert("/foo".into())));
