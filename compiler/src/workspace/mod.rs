@@ -2,3 +2,5 @@
 
 pub mod file_set;
 pub mod loader;
+
+pub use file_set::*;
