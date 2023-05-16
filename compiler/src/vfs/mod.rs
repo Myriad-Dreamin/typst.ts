@@ -33,6 +33,7 @@ use typst::{
     syntax::{Source, SourceId},
     util::{Buffer, PathExt},
 };
+use typst_ts_core::QueryRef;
 
 /// Handle to a file in [`Vfs`]
 ///
@@ -56,37 +57,45 @@ pub trait AccessModel {
 }
 
 /// Holds canonical data for all paths pointing to the same entity.
-#[derive(Default)]
 pub struct PathSlot {
-    source: Option<FileResult<SourceId>>,
-    buffer: Option<FileResult<Buffer>>,
+    idx: FileId,
+    source: QueryRef<Source, FileError>,
+    buffer: QueryRef<Buffer, FileError>,
 }
 
-pub type PathSlotRef = Arc<RwLock<PathSlot>>;
+impl PathSlot {
+    pub fn new(idx: FileId) -> Self {
+        PathSlot {
+            idx,
+            source: QueryRef::default(),
+            buffer: QueryRef::default(),
+        }
+    }
+}
 
 pub struct Vfs<M: AccessModel + Sized> {
     access_model: M,
+    path_interner: Mutex<PathInterner<<M as AccessModel>::RealPath>>,
 
-    path2slot: RwLock<HashMap<Arc<OsStr>, PathSlotRef>>,
-    key2slot: Mutex<HashMap<<M as AccessModel>::RealPath, PathSlotRef>>,
-    pub sources: AppendOnlyVec<Source>,
+    path2slot: RwLock<HashMap<Arc<OsStr>, FileId>>,
+    pub slots: AppendOnlyVec<PathSlot>,
 }
 
 impl<M: AccessModel + Sized> Vfs<M> {
     pub fn new(access_model: M) -> Self {
         Self {
             access_model,
-            sources: AppendOnlyVec::new(),
+            path_interner: Mutex::new(PathInterner::default()),
+            slots: AppendOnlyVec::new(),
             path2slot: RwLock::new(HashMap::new()),
-            key2slot: Mutex::new(HashMap::new()),
         }
     }
 
     /// Reset the source manager.
     pub fn reset(&mut self) {
-        self.sources = AppendOnlyVec::new();
+        self.slots = AppendOnlyVec::new();
         self.path2slot.get_mut().clear();
-        self.key2slot.get_mut().clear();
+        self.path_interner.get_mut().clear();
     }
 
     /// Read a file.
@@ -102,20 +111,25 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// get or insert a slot for a path. All paths pointing to the same entity will share the same slot.
-    fn get_real_slot(&self, origin_path: &Path) -> FileResult<PathSlotRef> {
+    fn get_real_slot(&self, origin_path: &Path) -> FileResult<&PathSlot> {
         let f = |e| FileError::from_io(e, origin_path);
         let real_path = self.access_model.real_path(origin_path).map_err(f)?;
 
-        let mut key2slot = self.key2slot.lock();
-        Ok(key2slot.entry(real_path).or_default().clone())
+        let mut path_interner = self.path_interner.lock();
+        let file_id = path_interner.intern(real_path);
+        let idx = file_id.0 as usize;
+        for i in self.slots.len()..idx + 1 {
+            self.slots.push(PathSlot::new(FileId(i as u32)));
+        }
+        Ok(&self.slots[idx])
     }
 
     /// Insert a new source into the source manager.
-    fn slot(&self, origin_path: &Path) -> FileResult<PathSlotRef> {
+    fn slot(&self, origin_path: &Path) -> FileResult<&PathSlot> {
         // fast path for already inserted paths
         let path2slot = self.path2slot.upgradable_read();
         if let Some(slot) = path2slot.get(origin_path.as_os_str()) {
-            return Ok(slot.clone());
+            return Ok(&self.slots[slot.0 as usize]);
         }
 
         // get slot for the path
@@ -124,8 +138,14 @@ impl<M: AccessModel + Sized> Vfs<M> {
         // insert the slot into the path2slot map
         // note: path aliases will share the same slot
         let mut path2slot = RwLockUpgradableReadGuard::upgrade(path2slot);
-        let inserted = path2slot.insert(origin_path.as_os_str().into(), slot.clone());
+        let inserted = path2slot.insert(origin_path.as_os_str().into(), slot.idx);
         assert!(matches!(inserted, None), "slot already inserted");
+
+        let normalized = origin_path.normalize();
+        if path2slot.get(normalized.as_os_str()).is_none() {
+            let inserted = path2slot.insert(normalized.as_os_str().into(), slot.idx);
+            assert!(matches!(inserted, None), "slot already inserted");
+        }
 
         Ok(slot)
     }
@@ -138,17 +158,11 @@ impl<M: AccessModel + Sized> Vfs<M> {
 
     /// Get source by id.
     pub fn source(&self, id: SourceId) -> &Source {
-        assert!(id.into_u16() < self.sources.len() as u16);
-        &self.sources[id.into_u16() as usize]
-    }
-
-    fn insert_source<P: AsRef<Path>>(&self, path: P, text: String) -> SourceId {
-        let path = path.as_ref();
-
-        let id = SourceId::from_u16(self.sources.len() as u16);
-        let source = Source::new(id, path, text);
-        self.sources.push(source);
-        id
+        self.slots[id.into_u16() as usize]
+            .source
+            // the value should be computed
+            .compute_ref(|| Err(FileError::Other))
+            .unwrap()
     }
 
     /// Get source id by path.
@@ -159,20 +173,14 @@ impl<M: AccessModel + Sized> Vfs<M> {
         read: ReadContent,
     ) -> FileResult<SourceId> {
         let slot = self.slot(path)?;
+        let source_id = SourceId::from_u16(slot.idx.0 as u16);
 
-        // fast path
-        let slot = slot.upgradable_read();
-        if let Some(ref s) = slot.source {
-            return s.clone();
-        }
+        slot.source.compute(|| {
+            let text = read()?;
+            Ok(Source::new(source_id, path, text))
+        })?;
 
-        let text = read()?;
-
-        let mut slot = RwLockUpgradableReadGuard::upgrade(slot);
-        let res = Ok(self.insert_source(path, text));
-        slot.source = Some(res.clone());
-
-        res
+        Ok(source_id)
     }
 
     /// Get source id by path with filesystem content.
@@ -192,18 +200,12 @@ impl<M: AccessModel + Sized> Vfs<M> {
     pub fn file(&self, path: &Path) -> FileResult<Buffer> {
         let slot = self.slot(path)?;
 
-        let slot = slot.upgradable_read();
-        if let Some(ref s) = slot.buffer {
-            return s.clone();
-        }
+        let buffer = slot.buffer.compute(|| {
+            let buf = self.read(path)?;
+            let buf = Buffer::from(buf);
+            Ok(buf)
+        })?;
 
-        let buf = self.read(path)?;
-        let buf = Buffer::from(buf);
-
-        let mut slot = RwLockUpgradableReadGuard::upgrade(slot);
-        let res = Ok(buf);
-        slot.buffer = Some(res.clone());
-
-        res
+        Ok(buffer.clone())
     }
 }
