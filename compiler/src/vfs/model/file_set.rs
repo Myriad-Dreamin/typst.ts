@@ -153,6 +153,10 @@ impl FileSetConfigBuilder {
         self.roots.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.roots.is_empty()
+    }
+
     /// Add a new set of paths prefixes.
     pub fn add_file_set(&mut self, roots: Vec<VfsPath>) {
         self.roots.push(roots);

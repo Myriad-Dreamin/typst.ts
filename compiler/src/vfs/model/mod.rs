@@ -78,6 +78,10 @@ impl Vfs {
         self.data.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
     /// Id of the given path if it exists in the `Vfs` and is not deleted.
     pub fn file_id(&self, path: &VfsPath) -> Option<FileId> {
         self.interner.get(path).filter(|&it| self.get(it).is_some())
