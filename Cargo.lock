@@ -793,6 +793,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fst"
+version = "0.4.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ab85b9b05e3978cc9a9cf8fea7f01b494e1a09ed3037e16ba39edc7a29eb61a"
+
+[[package]]
 name = "futures"
 version = "0.3.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1352,6 +1358,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "nohash-hasher"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bf50223579dc7cdcfb3bfcacf7069ff68243f8c363f62ffa99cf000a6b9c451"
+
+[[package]]
 name = "notify"
 version = "5.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1794,6 +1806,12 @@ checksum = "d8f595a457b6b8c6cda66a48503e92ee8d19342f905948f29c383200ec9eb1d8"
 dependencies = [
  "xmlparser",
 ]
+
+[[package]]
+name = "rustc-hash"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
 name = "rustc_version"
@@ -2678,12 +2696,16 @@ dependencies = [
  "comemo",
  "dirs",
  "flate2",
+ "fst",
  "hex",
+ "indexmap",
  "js-sys",
  "memmap2",
+ "nohash-hasher",
  "once_cell",
  "parking_lot",
  "pollster",
+ "rustc-hash",
  "same-file",
  "serde",
  "serde_json",
