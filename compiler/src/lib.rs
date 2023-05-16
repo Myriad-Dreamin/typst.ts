@@ -1,5 +1,6 @@
 pub mod font;
 pub mod vfs;
+pub mod workspace;
 pub mod world;
 
 #[cfg(feature = "system")]

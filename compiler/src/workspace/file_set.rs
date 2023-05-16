@@ -8,7 +8,7 @@ use fst::{IntoStreamer, Streamer};
 use nohash_hasher::IntMap;
 use rustc_hash::FxHashMap;
 
-use super::{AnchoredPath, FileId, Vfs, VfsPath};
+use crate::vfs::{AnchoredPath, FileId, MemVfs, VfsPath};
 
 /// A set of [`VfsPath`]s identified by [`FileId`]s.
 #[derive(Default, Clone, Eq, PartialEq)]
@@ -21,6 +21,11 @@ impl FileSet {
     /// Returns the number of stored paths.
     pub fn len(&self) -> usize {
         self.files.len()
+    }
+
+    /// Returns `true` if the file set contains no paths.
+    pub fn is_empty(&self) -> bool {
+        self.files.is_empty()
     }
 
     /// Get the id of the file corresponding to `path`.
@@ -110,7 +115,7 @@ impl FileSetConfig {
     /// Partition `vfs` into `FileSet`s.
     ///
     /// Creates a new [`FileSet`] for every set of prefixes in `self`.
-    pub fn partition(&self, vfs: &Vfs) -> Vec<FileSet> {
+    pub fn partition(&self, vfs: &MemVfs) -> Vec<FileSet> {
         let mut scratch_space = Vec::new();
         let mut res = vec![FileSet::default(); self.len()];
         for (file_id, path) in vfs.iter() {
@@ -227,7 +232,7 @@ mod tests {
         file_set.add_file_set(vec![VfsPath::new_virtual_path("/foo/bar/baz".into())]);
         let file_set = file_set.build();
 
-        let mut vfs = Vfs::default();
+        let mut vfs = MemVfs::default();
         vfs.set_file_contents(
             VfsPath::new_virtual_path("/foo/src/lib.rs".into()),
             Some(Vec::new()),
@@ -260,7 +265,7 @@ mod tests {
         file_set.add_file_set(vec![VfsPath::new_virtual_path("/foo-things".into())]);
         let file_set = file_set.build();
 
-        let mut vfs = Vfs::default();
+        let mut vfs = MemVfs::default();
         vfs.set_file_contents(
             VfsPath::new_virtual_path("/foo/src/lib.rs".into()),
             Some(Vec::new()),

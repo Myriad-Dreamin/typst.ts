@@ -1,31 +1,10 @@
 #![allow(unused, dead_code)]
 //! upstream https://github.com/rust-lang/rust-analyzer/tree/master/crates/vfs
-
-mod anchored_path;
-pub mod file_set;
-pub mod loader;
-mod path_interner;
-mod paths;
-mod vfs_path;
+// todo: migrate to Vfs<M>
 
 use std::{fmt, mem};
 
-use path_interner::PathInterner;
-
-pub use {
-    anchored_path::{AnchoredPath, AnchoredPathBuf},
-    paths::{AbsPath, AbsPathBuf},
-    vfs_path::VfsPath,
-};
-
-/// Handle to a file in [`Vfs`]
-///
-/// Most functions in rust-analyzer use this when they need to refer to a file.
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
-pub struct FileId(pub u32);
-
-/// safe because `FileId` is a newtype of `u32`
-impl nohash_hasher::IsEnabled for FileId {}
+use super::{FileId, PathInterner, VfsPath};
 
 /// Storage for all files read by rust-analyzer.
 ///

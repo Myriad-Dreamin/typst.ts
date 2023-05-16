@@ -7,7 +7,7 @@ use std::hash::Hash;
 use indexmap::IndexSet;
 use rustc_hash::FxHasher;
 
-use super::{FileId, VfsPath};
+use super::FileId;
 
 /// Structure to map between [`VfsPath`] and [`FileId`].
 pub(crate) struct PathInterner<P> {

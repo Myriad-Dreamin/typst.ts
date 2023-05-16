@@ -1,7 +1,7 @@
 //! Object safe interface for file watching and reading.
 use std::fmt;
 
-use super::paths::{AbsPath, AbsPathBuf};
+use crate::vfs::{AbsPath, AbsPathBuf};
 
 /// A set of files on the file system.
 #[derive(Debug, Clone)]

@@ -1,9 +1,7 @@
 //! Abstract-ish representation of paths for VFS.
 use std::fmt;
 
-use typst::util::PathExt;
-
-use super::paths::{AbsPath, AbsPathBuf, RelPath};
+use super::path_abs::{AbsPath, AbsPathBuf, RelPath};
 
 /// Path in [`Vfs`].
 ///

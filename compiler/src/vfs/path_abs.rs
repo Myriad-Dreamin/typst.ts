@@ -5,7 +5,7 @@ use std::{
     borrow::Borrow,
     ffi::OsStr,
     ops,
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
 };
 
 use path_clean::clean;

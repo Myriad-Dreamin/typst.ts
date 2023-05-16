@@ -1,10 +1,28 @@
+//! upstream of following files https://github.com/rust-lang/rust-analyzer/tree/master/crates/vfs
+//!   ::path_interner.rs -> path_interner.rs
+//!   ::paths.rs -> abs_path.rs
+//!   ::anchored_path.rs -> path_anchored.rs
+//!   ::vfs_path.rs -> path_vfs.rs
+
 #[cfg(feature = "system")]
 pub mod system;
 
 pub mod dummy;
 
-pub(crate) mod model;
-pub use model::{file_set::FileSetConfigBuilder, AbsPath, AbsPathBuf, Vfs as MemVfs, VfsPath};
+mod path_abs;
+mod path_anchored;
+mod path_interner;
+mod path_vfs;
+
+pub(crate) use path_interner::PathInterner;
+pub use {
+    path_abs::{AbsPath, AbsPathBuf},
+    path_anchored::{AnchoredPath, AnchoredPathBuf},
+    path_vfs::VfsPath,
+};
+
+pub(crate) mod writable;
+pub use writable::Vfs as MemVfs;
 
 use std::{collections::HashMap, ffi::OsStr, hash::Hash, path::Path, sync::Arc};
 
@@ -15,6 +33,15 @@ use typst::{
     syntax::{Source, SourceId},
     util::{Buffer, PathExt},
 };
+
+/// Handle to a file in [`Vfs`]
+///
+/// Most functions in rust-analyzer use this when they need to refer to a file.
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub struct FileId(pub u32);
+
+/// safe because `FileId` is a newtype of `u32`
+impl nohash_hasher::IsEnabled for FileId {}
 
 pub trait AccessModel {
     type RealPath: Hash + Eq + PartialEq;
