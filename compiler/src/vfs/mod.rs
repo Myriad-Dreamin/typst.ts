@@ -1,7 +1,7 @@
 #[cfg(feature = "system")]
 pub mod system;
 
-pub mod memory;
+pub mod dummy;
 
 pub(crate) mod model;
 pub use model::{file_set::FileSetConfigBuilder, AbsPath, AbsPathBuf, Vfs as MemVfs, VfsPath};

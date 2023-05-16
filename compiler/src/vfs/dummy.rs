@@ -3,9 +3,9 @@ use std::{path::Path, time::SystemTime};
 use super::AccessModel;
 
 #[derive(Default, Debug)]
-pub struct MemoryAccessModel(super::MemVfs);
+pub struct DummyAccessModel(super::MemVfs);
 
-impl AccessModel for MemoryAccessModel {
+impl AccessModel for DummyAccessModel {
     type RealPath = std::path::PathBuf;
 
     fn mtime(&self, _src: &Path) -> std::io::Result<SystemTime> {

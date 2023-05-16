@@ -1,7 +1,7 @@
 use typst_ts_core::{config::CompileOpts, font::FontResolverImpl};
 
 use crate::{
-    vfs::{memory::MemoryAccessModel, Vfs},
+    vfs::{dummy::DummyAccessModel, Vfs},
     world::CompilerFeat,
 };
 
@@ -12,7 +12,7 @@ pub type TypstBrowserWorld = crate::world::CompilerWorld<BrowserCompilerFeat>;
 pub struct BrowserCompilerFeat;
 
 impl CompilerFeat for BrowserCompilerFeat {
-    type M = MemoryAccessModel;
+    type M = DummyAccessModel;
 
     // manual construction 13MB
     // let dummy_library = typst::eval::LangItems {
@@ -21,7 +21,7 @@ impl CompilerFeat for BrowserCompilerFeat {
     // typst::eval::set_lang_items(dummy_library);
 
     fn create_vfs() -> Vfs<Self::M> {
-        Vfs::new(MemoryAccessModel::default())
+        Vfs::new(DummyAccessModel::default())
     }
 
     fn from_opts(_opts: CompileOpts) -> (FontResolverImpl,) {
