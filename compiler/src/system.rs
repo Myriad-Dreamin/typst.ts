@@ -13,7 +13,11 @@ pub struct SystemCompilerFeat;
 impl CompilerFeat for SystemCompilerFeat {
     type M = SystemAccessModel;
 
-    fn from_opts(opts: CompileOpts) -> (FontResolverImpl, SourceManager<Self::M>) {
+    fn create_source_manager() -> SourceManager<Self::M> {
+        SourceManager::new(SystemAccessModel {})
+    }
+
+    fn from_opts(opts: CompileOpts) -> (FontResolverImpl,) {
         let mut searcher = SystemFontSearcher::new();
 
         if opts
@@ -39,6 +43,6 @@ impl CompilerFeat for SystemCompilerFeat {
                 searcher.search_file(&path);
             }
         }
-        (searcher.into(), SourceManager::new(SystemAccessModel {}))
+        (searcher.into(),)
     }
 }

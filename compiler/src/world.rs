@@ -19,7 +19,9 @@ type CodespanError = codespan_reporting::files::Error;
 pub trait CompilerFeat {
     type M: AccessModel + Sized;
 
-    fn from_opts(opts: CompileOpts) -> (FontResolverImpl, SourceManager<Self::M>);
+    fn create_source_manager() -> SourceManager<Self::M>;
+
+    fn from_opts(opts: CompileOpts) -> (FontResolverImpl,);
 }
 
 /// A world that provides access to the operating system.
@@ -33,9 +35,8 @@ pub struct CompilerWorld<F: CompilerFeat> {
 }
 
 impl<F: CompilerFeat> CompilerWorld<F> {
-    pub fn new(opts: CompileOpts) -> Self {
-        let root_dir = opts.root_dir.clone();
-        let (font_resolver, source_mgr) = F::from_opts(opts);
+    pub fn new_raw(root_dir: PathBuf, font_resolver: FontResolverImpl) -> Self {
+        let source_mgr = F::create_source_manager();
 
         // Hook up the lang items.
         // todo: bad upstream changes
@@ -49,6 +50,14 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             main: SourceId::detached(),
             source_mgr,
         }
+    }
+
+    // todo: opts is not good
+    pub fn new(opts: CompileOpts) -> Self {
+        let root_dir = opts.root_dir.clone();
+        let (font_resolver,) = F::from_opts(opts);
+
+        Self::new_raw(root_dir, font_resolver)
     }
 }
 
