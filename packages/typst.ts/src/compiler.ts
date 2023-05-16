@@ -12,6 +12,9 @@ import { LazyWasmModule } from './wasm';
  */
 export interface TypstCompiler {
   init(options?: Partial<InitOptions>): Promise<void>;
+  reset(): Promise<void>;
+  addSource(path: string, source: string, isMain: boolean): Promise<void>;
+  getAst(): Promise<string>;
   compile(options: any): Promise<void>;
 }
 
@@ -43,6 +46,18 @@ class TypstCompilerDriver {
     const response = await fetch(fontPath);
     const fontBuffer = new Uint8Array(await response.arrayBuffer());
     await builder.add_raw_font(fontBuffer);
+  }
+
+  async reset(): Promise<void> {
+    return this.compiler.reset();
+  }
+
+  async addSource(path: string, source: string, isMain: boolean): Promise<void> {
+    this.compiler.add_source(path, source, isMain);
+  }
+
+  async getAst(): Promise<string> {
+    return this.compiler.get_ast();
   }
 
   async init(options?: Partial<InitOptions>): Promise<void> {

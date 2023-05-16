@@ -24,8 +24,7 @@
 
       document.ready(() => {
         const terminalContent = document.getElementById('terminal-content');
-        terminalContent.innerHTML =
-          '<span style="color: #58B2DC">Ok(<span style="color: #FBE251">0</span>)</span>';
+        terminalContent.innerHTML = 'Compiling...';
 
         let compilerPlugin = window.TypstCompileModule.createTypstCompiler();
         compilerPlugin
@@ -46,9 +45,21 @@
             getModule: () =>
               '/node_modules/@myriaddreamin/typst-ts-web-compiler/typst_ts_web_compiler_bg.wasm',
           })
-          .then(() => {
-            console.log('compiler init');
-            compilerPlugin.compile({});
+          .then(async () => {
+            const data = await fetch('http://localhost:20810/skyzh-cv/main.typ').then(res =>
+              res.text(),
+            );
+
+            const begin = performance.now();
+            compilerPlugin.addSource('main.typ', data, true);
+            const ast = await compilerPlugin.getAst();
+            const end = performance.now();
+            const rounded = Math.round((end - begin) * 1000) / 1000;
+
+            const compileInfo = `---
+<span style="color:#c0caf5">Compiled in <span style="color:#7dcfff">${rounded}</span>ms</span>`;
+
+            terminalContent.innerHTML = [compileInfo, ast].join('\n');
           });
 
         let rendererPlugin = window.TypstRenderModule.createTypstRenderer(pdfjsLib);
