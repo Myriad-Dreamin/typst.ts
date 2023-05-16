@@ -2,7 +2,7 @@ use std::{fs::File, io::Read, path::Path};
 
 use typst_ts_core::ReadAllOnce;
 
-use crate::source_manager::{AccessModel, FileMetadata};
+use crate::source_manager::AccessModel;
 
 pub struct LazyFile {
     path: std::path::PathBuf,
@@ -31,37 +31,33 @@ impl ReadAllOnce for LazyFile {
 pub struct SystemFileMeta {
     mt: std::time::SystemTime,
     is_file: bool,
-    src: std::path::PathBuf,
-}
-
-impl FileMetadata for SystemFileMeta {
-    type RealPath = same_file::Handle;
-
-    fn mtime(&mut self) -> std::time::SystemTime {
-        self.mt
-    }
-
-    fn is_file(&mut self) -> bool {
-        self.is_file
-    }
-
-    fn real_path(&mut self) -> std::io::Result<Self::RealPath> {
-        same_file::Handle::from_path(&self.src)
-    }
 }
 
 pub struct SystemAccessModel;
 
-impl AccessModel for SystemAccessModel {
-    type FM = SystemFileMeta;
-
-    fn stat(&self, src: &Path) -> std::io::Result<Self::FM> {
+impl SystemAccessModel {
+    fn stat(&self, src: &Path) -> std::io::Result<SystemFileMeta> {
         let meta = std::fs::metadata(src)?;
         Ok(SystemFileMeta {
             mt: meta.modified()?,
             is_file: meta.is_file(),
-            src: src.to_owned(),
         })
+    }
+}
+
+impl AccessModel for SystemAccessModel {
+    type RealPath = same_file::Handle;
+
+    fn mtime(&self, src: &Path) -> std::io::Result<std::time::SystemTime> {
+        Ok(self.stat(src)?.mt)
+    }
+
+    fn is_file(&self, src: &Path) -> std::io::Result<bool> {
+        Ok(self.stat(src)?.is_file)
+    }
+
+    fn real_path(&self, src: &Path) -> std::io::Result<Self::RealPath> {
+        same_file::Handle::from_path(src)
     }
 
     fn read_all_once(&self, src: &Path, buf: &mut Vec<u8>) -> std::io::Result<usize> {

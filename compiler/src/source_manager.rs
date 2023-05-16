@@ -8,17 +8,14 @@ use typst::{
     util::{Buffer, PathExt},
 };
 
-pub trait FileMetadata {
-    type RealPath: Hash + Eq + PartialEq;
-    fn mtime(&mut self) -> std::time::SystemTime;
-    fn is_file(&mut self) -> bool;
-    fn real_path(&mut self) -> std::io::Result<Self::RealPath>;
-}
-
 pub trait AccessModel {
-    type FM: FileMetadata;
+    type RealPath: Hash + Eq + PartialEq;
 
-    fn stat(&self, src: &Path) -> std::io::Result<Self::FM>;
+    fn mtime(&self, src: &Path) -> std::io::Result<std::time::SystemTime>;
+
+    fn is_file(&self, src: &Path) -> std::io::Result<bool>;
+
+    fn real_path(&self, src: &Path) -> std::io::Result<Self::RealPath>;
 
     fn read_all_once(&self, src: &Path, buf: &mut Vec<u8>) -> std::io::Result<usize>;
 }
@@ -36,7 +33,7 @@ pub struct SourceManager<M: AccessModel + Sized> {
     access_model: M,
 
     path2slot: RwLock<HashMap<Arc<OsStr>, PathSlotRef>>,
-    key2slot: Mutex<HashMap<<<M as AccessModel>::FM as FileMetadata>::RealPath, PathSlotRef>>,
+    key2slot: Mutex<HashMap<<M as AccessModel>::RealPath, PathSlotRef>>,
     pub sources: AppendOnlyVec<Source>,
 }
 
@@ -53,7 +50,7 @@ impl<M: AccessModel + Sized> SourceManager<M> {
     /// Read a file.
     fn read(&self, path: &Path) -> FileResult<Vec<u8>> {
         let f = |e| FileError::from_io(e, path);
-        if self.access_model.stat(path).map_err(f)?.is_file() {
+        if self.access_model.is_file(path).map_err(f)? {
             let mut data = vec![];
             self.access_model
                 .read_all_once(path, &mut data)
@@ -65,19 +62,18 @@ impl<M: AccessModel + Sized> SourceManager<M> {
     }
 
     fn slot(&self, origin_path: &Path) -> FileResult<PathSlotRef> {
+        let f = |e| FileError::from_io(e, origin_path);
+
         let path2slot = self.path2slot.upgradable_read();
         if let Some(slot) = path2slot.get(origin_path.as_os_str()) {
             return Ok(slot.clone());
         }
 
-        let mut canon_meta = self.access_model.stat(origin_path).unwrap();
+        let real_path = self.access_model.real_path(origin_path).map_err(f)?;
 
         let slot = {
             let mut key2slot = self.key2slot.lock();
-            key2slot
-                .entry(canon_meta.real_path().unwrap())
-                .or_default()
-                .clone()
+            key2slot.entry(real_path).or_default().clone()
         };
 
         let mut path2slot = RwLockUpgradableReadGuard::upgrade(path2slot);
