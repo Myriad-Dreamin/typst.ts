@@ -98,6 +98,23 @@ impl<M: AccessModel + Sized> Vfs<M> {
         self.path_interner.get_mut().clear();
     }
 
+    /// Returns the overall memory usage for the stored files.
+    pub fn memory_usage(&self) -> usize {
+        self.slots.len() * core::mem::size_of::<PathSlot>()
+    }
+
+    /// Id of the given path if it exists in the `Vfs` and is not deleted.
+    pub fn file_id(&self, path: &Path) -> Option<FileId> {
+        let path = path.normalize();
+        self.path2slot.read().get(path.as_os_str()).map(|&it| it)
+    }
+
+    /// Check whether a path is related to a source.
+    pub fn dependant(&self, path: &Path) -> bool {
+        let path = path.normalize();
+        self.path2slot.read().contains_key(path.as_os_str())
+    }
+
     /// Read a file.
     fn read(&self, path: &Path) -> FileResult<Vec<u8>> {
         let f = |e| FileError::from_io(e, path);
@@ -148,12 +165,6 @@ impl<M: AccessModel + Sized> Vfs<M> {
         }
 
         Ok(slot)
-    }
-
-    /// Check whether a path is related to a source.
-    pub fn dependant<P: AsRef<Path>>(&self, path: P) -> bool {
-        let path = path.as_ref().normalize();
-        self.path2slot.read().contains_key(path.as_os_str())
     }
 
     /// Get source by id.

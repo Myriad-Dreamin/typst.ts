@@ -3,7 +3,7 @@ use std::{path::Path, time::SystemTime};
 use super::AccessModel;
 
 #[derive(Default, Debug)]
-pub struct DummyAccessModel(super::MemVfs);
+pub struct DummyAccessModel;
 
 impl AccessModel for DummyAccessModel {
     type RealPath = std::path::PathBuf;

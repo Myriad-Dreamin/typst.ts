@@ -109,7 +109,7 @@ impl CompileDriver {
 
         match &event.kind {
             fs_event_must_relevant!() => true,
-            fs_event_may_relevant!() => event.paths.iter().any(|path| self.world.dependant(path)),
+            fs_event_may_relevant!() => event.paths.iter().any(|path| self.world.dependant(&path)),
             fs_event_never_relevant!() => false,
         }
     }

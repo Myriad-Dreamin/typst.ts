@@ -50,46 +50,6 @@ pub enum ChangeKind {
 }
 
 impl Vfs {
-    /// Amount of files currently stored.
-    ///
-    /// Note that this includes deleted files.
-    pub fn len(&self) -> usize {
-        self.data.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.data.is_empty()
-    }
-
-    /// Id of the given path if it exists in the `Vfs` and is not deleted.
-    pub fn file_id(&self, path: &VfsPath) -> Option<FileId> {
-        self.interner.get(path).filter(|&it| self.get(it).is_some())
-    }
-
-    /// File path corresponding to the given `file_id`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the id is not present in the `Vfs`.
-    pub fn file_path(&self, file_id: FileId) -> VfsPath {
-        self.interner.lookup(file_id).clone()
-    }
-
-    /// File content corresponding to the given `file_id`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the id is not present in the `Vfs`, or if the corresponding file is
-    /// deleted.
-    pub fn file_contents(&self, file_id: FileId) -> &[u8] {
-        self.get(file_id).as_deref().unwrap()
-    }
-
-    /// Returns the overall memory usage for the stored files.
-    pub fn memory_usage(&self) -> usize {
-        self.data.iter().flatten().map(|d| d.capacity()).sum()
-    }
-
     /// Returns an iterator over the stored ids and their corresponding paths.
     ///
     /// This will skip deleted files.
@@ -170,13 +130,5 @@ impl Vfs {
     /// Panics if no file is associated to that id.
     fn get_mut(&mut self, file_id: FileId) -> &mut Option<Vec<u8>> {
         &mut self.data[file_id.0 as usize]
-    }
-}
-
-impl fmt::Debug for Vfs {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Vfs")
-            .field("n_files", &self.data.len())
-            .finish()
     }
 }

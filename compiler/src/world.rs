@@ -100,7 +100,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         self.vfs.resolve_with(path, content)
     }
 
-    pub fn dependant<P: AsRef<Path>>(&self, path: P) -> bool {
+    pub fn dependant(&self, path: &Path) -> bool {
         self.vfs.dependant(path)
     }
 

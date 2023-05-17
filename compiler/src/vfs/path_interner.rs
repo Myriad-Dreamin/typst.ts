@@ -27,13 +27,6 @@ impl<P: Hash + Eq> PathInterner<P> {
         self.map.clear();
     }
 
-    /// Get the id corresponding to `path`.
-    ///
-    /// If `path` does not exists in `self`, returns [`None`].
-    pub(crate) fn get(&self, path: &P) -> Option<FileId> {
-        self.map.get_index_of(path).map(|i| FileId(i as u32))
-    }
-
     /// Insert `path` in `self`.
     ///
     /// - If `path` already exists in `self`, returns its associated id;
