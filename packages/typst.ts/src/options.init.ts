@@ -97,7 +97,6 @@ export function preloadSystemFonts({ byFamily }: { byFamily?: string[] }): Befor
 
     if ('queryLocalFonts' in window) {
       const fonts = await (window as any).queryLocalFonts();
-      console.log('local fonts count:', fonts.length);
 
       byFamily = byFamily ?? [];
 
@@ -106,15 +105,13 @@ export function preloadSystemFonts({ byFamily }: { byFamily?: string[] }): Befor
           continue;
         }
 
-        console.log(font.family);
-
         const data: ArrayBuffer = await (await font.blob()).arrayBuffer();
         await builder.add_raw_font(new Uint8Array(data));
       }
     }
 
     const t2 = performance.now();
-    console.log('font loading', t2 - t);
+    console.log('preload system font time used:', t2 - t);
   };
 }
 
