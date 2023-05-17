@@ -1,10 +1,12 @@
+use std::sync::{Arc, RwLock};
+
 use js_sys::Promise;
 use typst::{
     font::{Font, FontBook, FontInfo},
     util::Buffer,
 };
 use typst_ts_core::{
-    font::{BufferFontLoader, FontProfile, FontResolverImpl},
+    font::{BufferFontLoader, FontProfile, FontResolverImpl, PartialFontBook},
     FontLoader, FontSlot, ReadAllOnce,
 };
 use wasm_bindgen::prelude::*;
@@ -148,6 +150,7 @@ pub struct BrowserFontSearcher {
     pub book: FontBook,
     pub fonts: Vec<FontSlot>,
     pub profile: FontProfile,
+    pub partial_book: Arc<RwLock<PartialFontBook>>,
 }
 
 impl BrowserFontSearcher {
@@ -161,6 +164,7 @@ impl BrowserFontSearcher {
             book: FontBook::new(),
             fonts: vec![],
             profile,
+            partial_book: Arc::new(RwLock::new(PartialFontBook::default())),
         }
     }
 
@@ -194,6 +198,6 @@ impl Default for BrowserFontSearcher {
 
 impl From<BrowserFontSearcher> for FontResolverImpl {
     fn from(value: BrowserFontSearcher) -> Self {
-        FontResolverImpl::new(value.book, value.fonts, value.profile)
+        FontResolverImpl::new(value.book, value.partial_book, value.fonts, value.profile)
     }
 }

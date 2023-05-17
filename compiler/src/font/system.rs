@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     fs::File,
     path::{Path, PathBuf},
+    sync::{Arc, RwLock},
 };
 
 use memmap2::Mmap;
@@ -12,7 +13,10 @@ use typst::{
 };
 use typst_ts_core::{
     build_info,
-    font::{FontInfoItem, FontProfile, FontProfileItem, FontResolverImpl, LazyBufferFontLoader},
+    font::{
+        FontInfoItem, FontProfile, FontProfileItem, FontResolverImpl, LazyBufferFontLoader,
+        PartialFontBook,
+    },
     FontSlot,
 };
 use walkdir::WalkDir;
@@ -266,6 +270,7 @@ impl From<SystemFontSearcher> for FontResolverImpl {
     fn from(searcher: SystemFontSearcher) -> Self {
         FontResolverImpl::new(
             searcher.book,
+            Arc::new(RwLock::new(PartialFontBook::default())),
             searcher.fonts,
             searcher.profile_rebuilder.profile,
         )

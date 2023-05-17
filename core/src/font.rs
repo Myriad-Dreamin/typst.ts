@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, RwLock},
     time::SystemTime,
 };
 
@@ -144,17 +144,29 @@ pub trait FontResolver {
     fn font(&self, idx: usize) -> Option<Font>;
 }
 
+#[derive(Default)]
+pub struct PartialFontBook {
+    pub partial_hit: bool,
+}
+
 /// The default FontResolver implementation.
 pub struct FontResolverImpl {
     book: Prehashed<FontBook>,
+    partial_book: Arc<RwLock<PartialFontBook>>,
     fonts: Vec<FontSlot>,
     profile: FontProfile,
 }
 
 impl FontResolverImpl {
-    pub fn new(book: FontBook, fonts: Vec<FontSlot>, profile: FontProfile) -> Self {
+    pub fn new(
+        book: FontBook,
+        partial_book: Arc<RwLock<PartialFontBook>>,
+        fonts: Vec<FontSlot>,
+        profile: FontProfile,
+    ) -> Self {
         Self {
             book: Prehashed::new(book),
+            partial_book,
             fonts,
             profile,
         }
@@ -162,6 +174,10 @@ impl FontResolverImpl {
 
     pub fn profile(&self) -> &FontProfile {
         &self.profile
+    }
+
+    pub fn partial_resolved(&self) -> bool {
+        self.partial_book.read().unwrap().partial_hit
     }
 }
 
