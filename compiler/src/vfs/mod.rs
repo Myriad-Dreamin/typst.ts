@@ -24,7 +24,13 @@ pub use {
 pub(crate) mod writable;
 pub use writable::Vfs as MemVfs;
 
-use std::{collections::HashMap, ffi::OsStr, hash::Hash, path::Path, sync::Arc};
+use std::{
+    collections::HashMap,
+    ffi::OsStr,
+    hash::Hash,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use append_only_vec::AppendOnlyVec;
 use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
@@ -59,6 +65,7 @@ pub trait AccessModel {
 /// Holds canonical data for all paths pointing to the same entity.
 pub struct PathSlot {
     idx: FileId,
+    sampled_path: once_cell::sync::OnceCell<PathBuf>,
     source: QueryRef<Source, FileError>,
     buffer: QueryRef<Buffer, FileError>,
 }
@@ -67,6 +74,7 @@ impl PathSlot {
     pub fn new(idx: FileId) -> Self {
         PathSlot {
             idx,
+            sampled_path: once_cell::sync::OnceCell::new(),
             source: QueryRef::default(),
             buffer: QueryRef::default(),
         }
@@ -115,6 +123,15 @@ impl<M: AccessModel + Sized> Vfs<M> {
         self.path2slot.read().contains_key(path.as_os_str())
     }
 
+    /// File path corresponding to the given `file_id`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the id is not present in the `Vfs`.
+    pub fn file_path(&self, file_id: FileId) -> &Path {
+        self.slots[file_id.0 as usize].sampled_path.get().unwrap()
+    }
+
     /// Read a file.
     fn read(&self, path: &Path) -> FileResult<Vec<u8>> {
         let f = |e| FileError::from_io(e, path);
@@ -127,7 +144,13 @@ impl<M: AccessModel + Sized> Vfs<M> {
         }
     }
 
-    /// get or insert a slot for a path. All paths pointing to the same entity will share the same slot.
+    /// Get or insert a slot for a path. All paths pointing to the same entity will share the same slot.
+    ///
+    /// - If `path` does not exists in the `Vfs`, allocate a new id for it, associated with a
+    /// deleted file;
+    /// - Else, returns `path`'s id.
+    ///
+    /// Does not record a change.
     fn get_real_slot(&self, origin_path: &Path) -> FileResult<&PathSlot> {
         let f = |e| FileError::from_io(e, origin_path);
         let real_path = self.access_model.real_path(origin_path).map_err(f)?;
@@ -138,6 +161,9 @@ impl<M: AccessModel + Sized> Vfs<M> {
         for i in self.slots.len()..idx + 1 {
             self.slots.push(PathSlot::new(FileId(i as u32)));
         }
+
+        let slot = &self.slots[idx];
+        slot.sampled_path.get_or_init(|| origin_path.to_path_buf());
         Ok(&self.slots[idx])
     }
 
