@@ -23,6 +23,19 @@ interface InitContext<T> {
   hooks: ComponentBuildHooks;
 }
 
+async function addPartialFonts<T>({ builder, hooks }: InitContext<T>): Promise<void> {
+  const t = performance.now();
+
+  if ('queryLocalFonts' in window) {
+    const fonts: any[] = await (window as any).queryLocalFonts();
+    console.log('local fonts count:', fonts.length);
+    await builder.add_web_fonts(fonts);
+  }
+
+  const t2 = performance.now();
+  console.log('addPartialFonts time used:', t2 - t);
+}
+
 /** @internal */
 async function buildComponentInternal<T>(
   options: Partial<InitOptions> | undefined,
@@ -41,6 +54,8 @@ async function buildComponentInternal<T>(
   for (const fn of options?.beforeBuild ?? []) {
     await fn(undefined as unknown as BeforeBuildMark, buildCtx);
   }
+  addPartialFonts(buildCtx);
+
   const component = await builder.build();
 
   return component;
