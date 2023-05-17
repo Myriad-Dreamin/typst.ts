@@ -1,8 +1,6 @@
 {
   "compilerOptions": {
-    "types": [
-      "web"
-    ],
+    "types": ["web"],
     "baseUrl": ".",
     "inlineSourceMap": true,
     "inlineSources": true,
@@ -15,13 +13,8 @@
     "isolatedModules": true,
     "strictNullChecks": true,
     "declaration": true,
-    "lib": [
-      "ES5",
-      "ES6",
-      "ES7"
-    ]
+    "stripInternal": true,
+    "lib": ["ES5", "ES6", "ES7"]
   },
-  "include": [
-    "src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }

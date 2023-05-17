@@ -14,6 +14,7 @@ const once = <T>(fn: () => T) => {
 
 type WasmModuleInitParam = WebAssemblyModuleRef | Promise<WebAssemblyModuleRef> | undefined;
 
+/** @internal */
 export class LazyWasmModule {
   private wasmBin: WasmModuleInitParam;
   private initOnce: () => Promise<void>;

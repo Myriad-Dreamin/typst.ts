@@ -1,3 +1,4 @@
+/** @internal */
 export type PageViewportParameters = {
   /**
    * - The xMin, yMin, xMax and
@@ -29,6 +30,7 @@ export type PageViewportParameters = {
   dontFlip?: boolean | undefined;
 };
 
+/** @internal */
 export class PageViewport {
   viewBox: number[];
   scale: number;

@@ -4,6 +4,7 @@ import * as typst from '../../pkg/typst_ts_renderer';
 import { PageInfo, RenderSession } from './internal.types';
 import { RenderOptionsBase } from './options.render';
 
+/** @internal */
 export class RenderView {
   loadPageCount: number;
   imageScaleFactor: number;
@@ -16,8 +17,7 @@ export class RenderView {
   commonList: HTMLDivElement[];
   textLayerParentList: HTMLDivElement[];
 
-  constructor(sessionRef: RenderSession, container: HTMLDivElement, options: RenderOptionsBase) {
-    const session = sessionRef as typst.RenderSession;
+  constructor(session: typst.RenderSession, container: HTMLDivElement, options: RenderOptionsBase) {
     this.partialPageRendering = options.pages !== undefined;
     this.pageInfos = [];
     this.loadPageCount = options.pages ? options.pages.length : session.pages_info.page_count;
