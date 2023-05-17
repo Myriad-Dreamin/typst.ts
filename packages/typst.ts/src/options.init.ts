@@ -31,7 +31,7 @@ export type BeforeBuildMark = typeof BeforeBuildSymbol;
  *   - preloadRemoteFonts
  *   - preloadSystemFonts
  */
-export type BeforeBuildFn = StagedOptFn<BeforeBuildMark, any>;
+export type BeforeBuildFn = StagedOptFn<BeforeBuildMark, unknown>;
 
 /**
  *
