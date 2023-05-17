@@ -1,6 +1,6 @@
 use crate::TypstRenderer;
 
-use typst_ts_compiler::font::web::{BrowserFontSearcher, WebFont};
+use typst_ts_compiler::font::web::BrowserFontSearcher;
 
 use js_sys::Uint8Array;
 use typst::util::Buffer;
@@ -32,11 +32,11 @@ impl TypstRendererBuilder {
     }
 
     // 100 KB
-    pub async fn add_web_font(&mut self, font: WebFont) -> Result<(), JsValue> {
+    pub async fn add_web_fonts(&mut self, font: js_sys::Array) -> Result<(), JsValue> {
         let v: JsValue = format!("web font loading: {:?}", font).into();
         console::info_1(&v);
 
-        self.searcher.add_web_font(font).await;
+        self.searcher.add_web_fonts(font).await;
 
         Ok(())
     }

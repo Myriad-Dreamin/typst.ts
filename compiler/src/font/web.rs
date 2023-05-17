@@ -13,79 +13,17 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::Blob;
 
-#[wasm_bindgen]
 #[derive(Clone, Debug)]
 pub struct WebFont {
-    family: String,
-    style: String,
-    full_name: String,
-    postscript_name: String,
-    context: JsValue,
-    blob: js_sys::Function,
+    pub family: String,
+    pub style: String,
+    pub full_name: String,
+    pub postscript_name: String,
+    pub context: JsValue,
+    pub blob: js_sys::Function,
 }
 
-#[wasm_bindgen]
 impl WebFont {
-    #[wasm_bindgen(getter)]
-    pub fn family(&self) -> String {
-        self.family.clone()
-    }
-
-    #[wasm_bindgen(setter)]
-    pub fn set_family(&mut self, family: String) {
-        self.family = family;
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn style(&self) -> String {
-        self.style.clone()
-    }
-
-    #[wasm_bindgen(setter)]
-    pub fn set_style(&mut self, style: String) {
-        self.style = style;
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn full_name(&self) -> String {
-        self.full_name.clone()
-    }
-
-    #[wasm_bindgen(setter)]
-    pub fn set_full_name(&mut self, full_name: String) {
-        self.full_name = full_name;
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn postscript_name(&self) -> String {
-        self.postscript_name.clone()
-    }
-
-    #[wasm_bindgen(setter)]
-    pub fn set_postscrip_name(&mut self, postscript_name: String) {
-        self.postscript_name = postscript_name;
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn context(&self) -> JsValue {
-        self.context.clone()
-    }
-
-    #[wasm_bindgen(setter)]
-    pub fn set_context(&mut self, context: JsValue) {
-        self.context = context;
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn blob(&self) -> js_sys::Function {
-        self.blob.clone()
-    }
-
-    #[wasm_bindgen(setter)]
-    pub fn set_blob(&mut self, blob: js_sys::Function) {
-        self.blob = blob;
-    }
-
     pub async fn load(&self) -> Blob {
         JsFuture::from(
             self.blob
@@ -168,13 +106,24 @@ impl BrowserFontSearcher {
         }
     }
 
-    pub async fn add_web_font(&mut self, font: WebFont) {
-        let blob = font.load().await;
-        let blob = JsFuture::from(blob.array_buffer()).await.unwrap();
-        let buffer = Buffer::from(js_sys::Uint8Array::new(&blob).to_vec());
+    pub async fn add_web_fonts(&mut self, _fonts: js_sys::Array) {
+        // family: String,
+        // style: String,
+        // full_name: String,
+        // postscript_name: String,
+        // context: JsValue,
+        // blob: js_sys::Function,
+        // let blob = font.load().await;
+        // let blob = JsFuture::from(blob.array_buffer()).await.unwrap();
+        // let buffer = Buffer::from(js_sys::Uint8Array::new(&blob).to_vec());
 
-        // todo: load lazily
-        self.add_font_data(buffer);
+        // for f in fonts.iter() {
+        //     // todo: load lazily
+        //     self.fonts.push(FontSlot::new(Box::new(WebFontLoader {
+        //         font: Some(f.dyn_into::<WebFont>().unwrap()),
+        //         index: 0 as u32,
+        //     })))
+        // }
     }
 
     pub fn add_font_data(&mut self, buffer: Buffer) {
