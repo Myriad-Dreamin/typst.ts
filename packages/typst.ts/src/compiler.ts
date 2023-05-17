@@ -1,5 +1,6 @@
 // @ts-ignore
 import typstInit, * as typst from '../../compiler/pkg/typst_ts_web_compiler';
+import { buildComponent } from './init';
 
 import type { InitOptions, BeforeBuildMark } from './options.init';
 import { LazyWasmModule } from './wasm';
@@ -42,6 +43,10 @@ class TypstCompilerDriver {
 
   constructor() {}
 
+  async init(options?: Partial<InitOptions>): Promise<void> {
+    this.compiler = await buildComponent(options, gCompilerModule, typst.TypstCompilerBuilder, {});
+  }
+
   async loadFont(builder: typst.TypstCompilerBuilder, fontPath: string): Promise<void> {
     const response = await fetch(fontPath);
     const fontBuffer = new Uint8Array(await response.arrayBuffer());
@@ -60,21 +65,6 @@ class TypstCompilerDriver {
     return this.compiler.get_ast();
   }
 
-  async init(options?: Partial<InitOptions>): Promise<void> {
-    /// init typst wasm module
-    if (options?.getModule) {
-      await gCompilerModule.init(options.getModule());
-    }
-
-    /// build typst compiler
-    let builder = new typst.TypstCompilerBuilder();
-    const buildCtx = { ref: this, builder };
-
-    for (const fn of options?.beforeBuild ?? []) {
-      await fn(undefined as unknown as BeforeBuildMark, buildCtx);
-    }
-    this.compiler = await builder.build();
-  }
   async compile(options: any): Promise<void> {
     console.log('typst compile', options);
   }

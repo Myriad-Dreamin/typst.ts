@@ -8,6 +8,7 @@ import { RenderSession } from './internal.types';
 import { RenderByContentOptions, RenderOptions, RenderPageOptions } from './options.render';
 import { RenderView } from './view';
 import { LazyWasmModule } from './wasm';
+import { buildComponent } from './init';
 
 /**
  * The result of rendering a Typst document.
@@ -77,19 +78,7 @@ class TypstRendererDriver {
   }
 
   async init(options?: Partial<InitOptions>): Promise<void> {
-    /// init typst wasm module
-    if (options?.getModule) {
-      await gRendererModule.init(options.getModule());
-    }
-
-    /// build typst renderer
-    let builder = new typst.TypstRendererBuilder();
-    const buildCtx = { ref: this, builder };
-
-    for (const fn of options?.beforeBuild ?? []) {
-      await fn(undefined as unknown as BeforeBuildMark, buildCtx);
-    }
-    this.renderer = await builder.build();
+    this.renderer = await buildComponent(options, gRendererModule, typst.TypstRendererBuilder, {});
   }
 
   private imageOptionsToRust(options: RenderOptions): typst.RenderSessionOptions {
