@@ -34,7 +34,16 @@ impl FontSlot {
             .load()
     }
 
-    pub fn get(&self) -> Option<Font> {
+    /// Gets the reference to the font load result.
+    ///
+    /// Returns `None` if the cell is empty, or being initialized. This
+    /// method never blocks.
+    pub fn get_uninitialized(&self) -> Option<&Option<Font>> {
+        self.0.get()
+    }
+
+    /// Gets or make the font load result.
+    pub fn get_or_init(&self) -> Option<Font> {
         self.0.get_or_init(|| self.load()).clone()
     }
 }

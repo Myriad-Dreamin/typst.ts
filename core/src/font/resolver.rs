@@ -53,6 +53,6 @@ impl FontResolver for FontResolverImpl {
     }
 
     fn font(&self, idx: usize) -> Option<Font> {
-        self.fonts[idx].get()
+        self.fonts[idx].get_or_init()
     }
 }
