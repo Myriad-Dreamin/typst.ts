@@ -1,8 +1,9 @@
 use std::sync::{Arc, Mutex};
 
+use js_sys::{JsString, Uint8Array};
 use typst_ts_compiler::font::web::BrowserFontSearcher;
 pub use typst_ts_compiler::*;
-use typst_ts_core::DocumentExporter;
+use typst_ts_core::{cache::FontInfoCache, DocumentExporter};
 use wasm_bindgen::prelude::*;
 
 use crate::utils::console_log;
@@ -25,6 +26,11 @@ impl TypstCompiler {
             ),
         })
     }
+}
+
+#[wasm_bindgen]
+pub fn get_font_info(buffer: Uint8Array) -> JsValue {
+    serde_wasm_bindgen::to_value(&FontInfoCache::from_data(buffer.to_vec().as_slice())).unwrap()
 }
 
 #[wasm_bindgen]
@@ -54,6 +60,26 @@ impl TypstCompiler {
         }
     }
 
+    pub fn modify_font_data(&mut self, idx: usize, buffer: Uint8Array) {
+        self.world
+            .font_resolver
+            .modify_font_data(idx, buffer.to_vec().into());
+    }
+
+    pub fn rebuild(&mut self) {
+        if self.world.font_resolver.partial_resolved() {
+            self.world.font_resolver.rebuild();
+        }
+    }
+
+    pub fn get_loaded_fonts(&mut self) -> Vec<JsString> {
+        self.world
+            .font_resolver
+            .loaded_fonts()
+            .map(|s| format!("<{}, {:?}>", s.0, s.1).into())
+            .collect()
+    }
+
     pub fn get_ast(&mut self) -> Result<String, JsValue> {
         let data = Arc::new(Mutex::new(vec![]));
 
@@ -64,9 +90,17 @@ impl TypstCompiler {
             Ok(())
         }));
 
+        // let artifact = Arc::new(Mutex::new(None));
+
         // compile and export document
         typst::compile(&self.world)
-            .and_then(|output| ast_exporter.export(&self.world, &output))
+            .and_then(|output| {
+                // let mut artifact = artifact.lock().unwrap();
+                // artifact = Some(Artifact::from(&output));
+                // drop(artifact);
+
+                ast_exporter.export(&self.world, &output)
+            })
             .unwrap();
         let converted = ansi_to_html::convert_escaped(
             String::from_utf8(data.lock().unwrap().clone())

@@ -1,6 +1,6 @@
 // @ts-ignore
 import typstInit, * as typst from '../../compiler/pkg/typst_ts_web_compiler';
-import { buildComponent } from './init';
+import { buildComponent, globalFontPromises } from './init';
 
 import type { InitOptions, BeforeBuildMark } from './options.init';
 import { LazyWasmModule } from './wasm';
@@ -47,10 +47,22 @@ class TypstCompilerDriver {
     this.compiler = await buildComponent(options, gCompilerModule, typst.TypstCompilerBuilder, {});
   }
 
-  async loadFont(builder: typst.TypstCompilerBuilder, fontPath: string): Promise<void> {
-    const response = await fetch(fontPath);
-    const fontBuffer = new Uint8Array(await response.arrayBuffer());
-    await builder.add_raw_font(fontBuffer);
+  async runSyncCodeUntilStable<T>(execute: () => T): Promise<T> {
+    do {
+      console.log(this.compiler.get_loaded_fonts());
+      const result = await execute();
+      console.log(this.compiler.get_loaded_fonts());
+      if (globalFontPromises.length > 0) {
+        const promises = globalFontPromises.splice(0, globalFontPromises.length);
+        const callbacks = await Promise.all(promises);
+        for (const callback of callbacks) {
+          this.compiler.modify_font_data(callback.idx, new Uint8Array(callback.buffer));
+        }
+        this.compiler.rebuild();
+        continue;
+      }
+      return result;
+    } while (true);
   }
 
   async reset(): Promise<void> {
@@ -62,7 +74,7 @@ class TypstCompilerDriver {
   }
 
   async getAst(): Promise<string> {
-    return this.compiler.get_ast();
+    return this.runSyncCodeUntilStable(() => this.compiler.get_ast());
   }
 
   async compile(options: any): Promise<void> {

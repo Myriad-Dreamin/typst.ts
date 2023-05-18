@@ -71,12 +71,6 @@ class TypstRendererDriver {
 
   constructor(private pdf: typeof pdfjsModule) {}
 
-  async loadFont(builder: typst.TypstRendererBuilder, fontPath: string): Promise<void> {
-    const response = await fetch(fontPath);
-    const fontBuffer = new Uint8Array(await response.arrayBuffer());
-    await builder.add_raw_font(fontBuffer);
-  }
-
   async init(options?: Partial<InitOptions>): Promise<void> {
     this.renderer = await buildComponent(options, gRendererModule, typst.TypstRendererBuilder, {});
   }

@@ -3,7 +3,7 @@
 
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta http-equiv="origin-trial" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Typst.ts</title>
     <script type="module" src="/dist/main.js"></script>
@@ -26,6 +26,23 @@
         const terminalContent = document.getElementById('terminal-content');
         terminalContent.innerHTML = 'Compiling...';
 
+        const runCompile = async () => {
+          const data = await fetch('http://localhost:20810/skyzh-cv/main.typ').then(res =>
+            res.text(),
+          );
+
+          const begin = performance.now();
+          compilerPlugin.addSource('main.typ', data, true);
+          const ast = await compilerPlugin.getAst();
+          const end = performance.now();
+          const rounded = Math.round((end - begin) * 1000) / 1000;
+
+          const compileInfo = `---
+      <span style="color:#c0caf5">Compiled in <span style="color:#7dcfff">${rounded}</span>ms</span>`;
+
+          terminalContent.innerHTML = [compileInfo, ast].join('\n');
+        };
+
         let compilerPlugin = window.TypstCompileModule.createTypstCompiler();
         compilerPlugin
           .init({
@@ -45,44 +62,11 @@
             getModule: () =>
               '/node_modules/@myriaddreamin/typst-ts-web-compiler/typst_ts_web_compiler_bg.wasm',
           })
-          .then(async () => {
-            const data = await fetch('http://localhost:20810/skyzh-cv/main.typ').then(res =>
-              res.text(),
-            );
-
-            const begin = performance.now();
-            compilerPlugin.addSource('main.typ', data, true);
-            const ast = await compilerPlugin.getAst();
-            const end = performance.now();
-            const rounded = Math.round((end - begin) * 1000) / 1000;
-
-            const compileInfo = `---
-<span style="color:#c0caf5">Compiled in <span style="color:#7dcfff">${rounded}</span>ms</span>`;
-
-            terminalContent.innerHTML = [compileInfo, ast].join('\n');
-          });
-
-        let rendererPlugin = window.TypstRenderModule.createTypstRenderer(pdfjsLib);
-        rendererPlugin
-          .init({
-            beforeBuild: [
-              window.TypstRenderModule.preloadRemoteFonts([
-                'http://localhost:20811/fonts/LinLibertine_R.ttf',
-                'http://localhost:20811/fonts/LinLibertine_RB.ttf',
-                'http://localhost:20811/fonts/LinLibertine_RBI.ttf',
-                'http://localhost:20811/fonts/LinLibertine_RI.ttf',
-                'http://localhost:20811/fonts/NewCMMath-Book.otf',
-                'http://localhost:20811/fonts/NewCMMath-Regular.otf',
-              ]),
-              window.TypstRenderModule.preloadSystemFonts({
-                byFamily: ['Segoe UI Symbol'],
-              }),
-            ],
-            getModule: () =>
-              '/node_modules/@myriaddreamin/typst-ts-renderer/typst_ts_renderer_bg.wasm',
-          })
           .then(() => {
-            console.log('renderer init');
+            document.getElementById('compile-button').addEventListener('click', () => {
+              runCompile();
+            });
+            return runCompile();
           });
       });
     </script>
@@ -149,6 +133,9 @@
         <div class="clear"></div>
       </div>
       <div class="content">
+        <div>
+          <button id="compile-button">Compile</button>
+        </div>
         <div class="terminal">
           <pre id="terminal-content">hello world</pre>
         </div>

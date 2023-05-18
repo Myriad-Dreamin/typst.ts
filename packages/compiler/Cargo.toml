@@ -23,6 +23,7 @@ comemo = "0.2"
 once_cell = "1.17.1"
 siphasher = "0.3.10"
 elsa = "1.8.0"
+serde-wasm-bindgen = "^0.5"
 
 # Everything to do with wasm
 wasm-bindgen = { version = "^0.2" }
