@@ -62,9 +62,11 @@ impl FontResolverImpl {
     }
 
     pub fn loaded_fonts(&self) -> impl Iterator<Item = (usize, Font)> + '_ {
-        self.fonts.iter().enumerate().flat_map(|(f, ff)| {
-            ff.get_uninitialized()
-                .and_then(|ff| ff.map(|ff| (f, ff.clone())))
+        let slots_with_index = self.fonts.iter().enumerate();
+
+        slots_with_index.flat_map(|(idx, slot)| {
+            let maybe_font = slot.get_uninitialized().flatten();
+            maybe_font.map(|font| (idx, font))
         })
     }
 
@@ -110,7 +112,7 @@ impl FontResolverImpl {
         font_slots.append(&mut self.fonts);
         self.fonts.clear();
 
-        for i in 0..font_slots.len() {
+        for (i, slot_ref) in font_slots.iter_mut().enumerate() {
             let (info, slot) = if let Some((_, v)) = font_changes.remove_entry(&i) {
                 v
             } else {
@@ -119,7 +121,7 @@ impl FontResolverImpl {
             };
 
             book.push(info);
-            font_slots[i] = slot;
+            *slot_ref = slot;
         }
 
         for (info, slot) in new_fonts.drain(..) {
