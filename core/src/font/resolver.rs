@@ -1,3 +1,4 @@
+use core::fmt;
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
@@ -52,14 +53,6 @@ impl FontResolverImpl {
         self.fonts.is_empty()
     }
 
-    pub fn to_string(&self) -> String {
-        let mut s = String::new();
-        for (idx, slot) in self.fonts.iter().enumerate() {
-            s.push_str(&format!("{:?} -> {:?}\n", idx, slot.get_uninitialized()));
-        }
-        s
-    }
-
     pub fn profile(&self) -> &FontProfile {
         &self.profile
     }
@@ -71,7 +64,7 @@ impl FontResolverImpl {
     pub fn loaded_fonts(&self) -> impl Iterator<Item = (usize, Font)> + '_ {
         self.fonts.iter().enumerate().flat_map(|(f, ff)| {
             ff.get_uninitialized()
-                .and_then(|ff| ff.clone().map(|ff| (f, ff.clone())))
+                .and_then(|ff| ff.map(|ff| (f, ff.clone())))
         })
     }
 
@@ -146,5 +139,15 @@ impl FontResolver for FontResolverImpl {
 
     fn font(&self, idx: usize) -> Option<Font> {
         self.fonts[idx].get_or_init()
+    }
+}
+
+impl fmt::Display for FontResolverImpl {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for (idx, slot) in self.fonts.iter().enumerate() {
+            writeln!(f, "{:?} -> {:?}", idx, slot.get_uninitialized())?;
+        }
+
+        Ok(())
     }
 }
