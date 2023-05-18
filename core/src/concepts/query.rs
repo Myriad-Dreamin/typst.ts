@@ -35,7 +35,7 @@ pub struct QueryRef<Res, Err, QueryContext = ()> {
 impl<T, E: Clone, QC> QueryRef<T, E, QC> {
     /// Clone the error so that it can escape the borrowed reference to the ref cell.
     #[inline]
-    fn clone_err<'a>(r: RefMut<'a, QueryCell<T, E, QC>>) -> E {
+    fn clone_err(r: RefMut<'_, QueryCell<T, E, QC>>) -> E {
         let initialized_res = r.1.as_ref().unwrap();
         let checked_res = initialized_res.as_ref().map(|_| ());
         checked_res.unwrap_err().clone()
@@ -43,7 +43,7 @@ impl<T, E: Clone, QC> QueryRef<T, E, QC> {
 
     /// Get the reference to the query result, which asserts that the query result is initialized.
     #[inline]
-    fn get_ref<'a>(&self) -> Result<&T, E> {
+    fn get_ref(&self) -> Result<&T, E> {
         let holding = unsafe { (*self.cell.as_ptr()).1.as_ref().unwrap_unchecked() };
         holding.as_ref().map_err(Clone::clone)
     }
