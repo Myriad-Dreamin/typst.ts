@@ -5,7 +5,6 @@ use typst_ts_compiler::font::web::BrowserFontSearcher;
 use js_sys::Uint8Array;
 use typst::util::Buffer;
 use wasm_bindgen::prelude::*;
-use web_sys::console;
 
 #[wasm_bindgen]
 pub struct TypstRendererBuilder {
@@ -33,12 +32,7 @@ impl TypstRendererBuilder {
 
     // 100 KB
     pub async fn add_web_fonts(&mut self, font: js_sys::Array) -> Result<(), JsValue> {
-        let v: JsValue = format!("web font loading: {:?}", font).into();
-        console::info_1(&v);
-
-        self.searcher.add_web_fonts(font).await;
-
-        Ok(())
+        self.searcher.add_web_fonts(font).await
     }
 
     // 24 MB
