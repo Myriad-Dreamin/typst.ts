@@ -1,3 +1,5 @@
+use core::fmt;
+
 use typst::font::FontInfo;
 
 use crate::FontSlot;
@@ -13,17 +15,20 @@ impl PartialFontBook {
         self.partial_hit = true;
         self.changes.push(change);
     }
+}
 
-    pub fn to_string(&self) -> String {
-        let mut s = String::new();
+impl fmt::Display for PartialFontBook {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for (idx, info, slot) in &self.changes {
-            s.push_str(&format!(
+            writeln!(
+                f,
                 "{:?}: {} -> {:?}\n",
                 idx,
                 info.family,
                 slot.get_uninitialized()
-            ));
+            )?;
         }
-        s
+
+        Ok(())
     }
 }
