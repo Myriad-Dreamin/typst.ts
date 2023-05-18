@@ -10,12 +10,15 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 typst = "0.3.0"
 typst-library = "0.3.0"
 comemo = "0.2"
-siphasher = "0.3.10"
 ttf-parser = "0.18.1"
+
+base64 = "0.13.1"
+hex = "0.4.3"
+siphasher = "0.3.10"
+sha2 = "0.10.6"
 
 once_cell = "1.17.1"
 
 serde = "1.0.159"
 serde_json = "1.0.95"
-base64 = "0.13.1"
 serde_with = { version = "2.3.2", features = ["base64"] }

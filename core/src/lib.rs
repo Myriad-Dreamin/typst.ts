@@ -3,6 +3,8 @@ pub use artifact::{core::ArtifactMeta, Artifact};
 
 pub mod artifact_ir;
 
+pub mod cache;
+
 pub mod config;
 
 pub mod content;
