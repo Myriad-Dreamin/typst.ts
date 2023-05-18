@@ -114,7 +114,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     /// Id of the given path if it exists in the `Vfs` and is not deleted.
     pub fn file_id(&self, path: &Path) -> Option<FileId> {
         let path = path.normalize();
-        self.path2slot.read().get(path.as_os_str()).map(|&it| it)
+        self.path2slot.read().get(path.as_os_str()).copied()
     }
 
     /// Check whether a path is related to a source.
