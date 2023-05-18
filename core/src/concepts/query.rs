@@ -7,7 +7,7 @@ type QueryCell<Res, Err, QueryContext> = (Option<QueryContext>, Option<Result<Re
 pub struct QueryResult<'a, T>(RefMut<'a, T>);
 
 impl<'a, T> std::ops::Deref for QueryResult<'a, T> {
-    type Target = RefMut<'a, T>;
+    type Target = T;
 
     fn deref(&self) -> &Self::Target {
         &self.0
