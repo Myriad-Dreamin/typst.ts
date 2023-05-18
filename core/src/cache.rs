@@ -10,21 +10,17 @@ pub enum CacheCondition {
 
 #[derive(Serialize, Deserialize)]
 pub struct FontInfoCache {
-    pub info: FontInfo,
+    pub info: Vec<FontInfo>,
     pub conditions: Vec<CacheCondition>,
 }
 
 impl FontInfoCache {
-    pub fn from_data(buffer: &[u8]) -> impl Iterator<Item = Self> + '_ {
+    pub fn from_data(buffer: &[u8]) -> Self {
         let hash = hex::encode(Sha256::digest(buffer));
 
-        let make_cache = move |fi: FontInfo| -> FontInfoCache {
-            FontInfoCache {
-                info: fi,
-                conditions: vec![CacheCondition::Sha256(hash.clone())],
-            }
-        };
-
-        FontInfo::iter(buffer).map(make_cache)
+        FontInfoCache {
+            info: FontInfo::iter(buffer).collect(),
+            conditions: vec![CacheCondition::Sha256(hash)],
+        }
     }
 }
