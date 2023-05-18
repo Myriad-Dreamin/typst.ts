@@ -86,10 +86,12 @@ impl<T, E: Clone, QC> QueryRef<T, E, QC> {
         result.map(QueryResult).map_err(Self::clone_err)
     }
 
-    /// Gets the reference to the font load result.
+    /// Gets the reference to the (maybe uninitialized) result.
     ///
     /// Returns `None` if the cell is empty, or being initialized. This
     /// method never blocks.
+    ///
+    /// It is possible not hot, so that it is non-inlined
     pub fn get_uninitialized(&self) -> QueryResult<'_, Option<Result<T, E>>> {
         let borrowed = self.cell.borrow_mut();
         let result = RefMut::map(borrowed, |(_, ref mut res)| res);
