@@ -14,14 +14,6 @@ impl<'a, T> std::ops::Deref for QueryResult<'a, T> {
     }
 }
 
-impl<T, E> Default for QueryRef<T, E> {
-    fn default() -> Self {
-        QueryRef {
-            cell: RefCell::new((Some(()), None)),
-        }
-    }
-}
-
 /// Represent the result of an immutable query reference.
 /// The compute function should be pure enough.
 ///
@@ -113,5 +105,13 @@ impl<T, E: Clone, QC> QueryRef<T, E, QC> {
     pub fn compute_with_context_ref<F: FnOnce(QC) -> Result<T, E>>(&self, f: F) -> Result<&T, E> {
         self.compute_with_context(f)?;
         self.get_ref()
+    }
+}
+
+impl<T, E> Default for QueryRef<T, E> {
+    fn default() -> Self {
+        QueryRef {
+            cell: RefCell::new((Some(()), None)),
+        }
     }
 }
