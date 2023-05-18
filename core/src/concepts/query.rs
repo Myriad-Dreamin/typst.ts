@@ -32,6 +32,20 @@ pub struct QueryRef<Res, Err, QueryContext = ()> {
     cell: RefCell<QueryCell<Res, Err, QueryContext>>,
 }
 
+impl<T, E, QC> QueryRef<T, E, QC> {
+    pub fn with_value(value: T) -> Self {
+        Self {
+            cell: RefCell::new((None, Some(Ok(value)))),
+        }
+    }
+
+    pub fn with_context(ctx: QC) -> Self {
+        Self {
+            cell: RefCell::new((Some(ctx), None)),
+        }
+    }
+}
+
 impl<T, E: Clone, QC> QueryRef<T, E, QC> {
     /// Clone the error so that it can escape the borrowed reference to the ref cell.
     #[inline]
@@ -70,6 +84,17 @@ impl<T, E: Clone, QC> QueryRef<T, E, QC> {
         );
 
         result.map(QueryResult).map_err(Self::clone_err)
+    }
+
+    /// Gets the reference to the font load result.
+    ///
+    /// Returns `None` if the cell is empty, or being initialized. This
+    /// method never blocks.
+    pub fn get_uninitialized(&self) -> QueryResult<'_, Option<Result<T, E>>> {
+        let borrowed = self.cell.borrow_mut();
+        let result = RefMut::map(borrowed, |(_, ref mut res)| res);
+
+        QueryResult(result)
     }
 
     /// Compute and return a unchecked reference guard.
