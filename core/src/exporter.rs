@@ -5,15 +5,15 @@ use typst::{diag::SourceResult, World};
 pub(crate) type DocumentRef<'a> = &'a typst::doc::Document;
 pub(crate) type ArtifactRef = Arc<crate::Artifact>;
 
-pub trait DocumentExporter {
+pub trait DocumentExporter<T = ()> {
     /// Export the given document with given world.
     /// the writable world is hiden by trait itself.
-    fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<()>;
+    fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<T>;
 }
 
-pub trait ArtifactExporter {
+pub trait ArtifactExporter<T = ()> {
     /// Export the given artifact with given world.
-    fn export(&self, world: &dyn World, output: ArtifactRef) -> SourceResult<()>;
+    fn export(&self, world: &dyn World, output: ArtifactRef) -> SourceResult<T>;
 }
 
 pub mod builtins {
