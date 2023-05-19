@@ -1,9 +1,8 @@
-use typst_ts_core::{config::CompileOpts, font::FontResolverImpl};
+use std::path::PathBuf;
 
-use crate::{
-    vfs::{dummy::DummyAccessModel, Vfs},
-    world::CompilerFeat,
-};
+use typst_ts_core::font::FontResolverImpl;
+
+use crate::{vfs::dummy::DummyAccessModel, world::CompilerFeat};
 
 /// A world that provides access to the browser.
 
@@ -19,12 +18,12 @@ impl CompilerFeat for BrowserCompilerFeat {
     //   ...
     // };
     // typst::eval::set_lang_items(dummy_library);
+}
 
-    fn create_vfs() -> Vfs<Self::M> {
-        Vfs::new(DummyAccessModel::default())
-    }
+impl TypstBrowserWorld {
+    pub fn new(root_dir: PathBuf, font_resolver: FontResolverImpl) -> Self {
+        let vfs = crate::vfs::Vfs::new(DummyAccessModel {});
 
-    fn from_opts(_opts: CompileOpts) -> (FontResolverImpl,) {
-        panic!("unimplemented")
+        Self::new_raw(root_dir, vfs, font_resolver)
     }
 }

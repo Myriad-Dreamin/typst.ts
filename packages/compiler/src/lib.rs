@@ -20,10 +20,7 @@ pub struct TypstCompiler {
 impl TypstCompiler {
     pub async fn new(searcher: BrowserFontSearcher) -> Result<Self, JsValue> {
         Ok(Self {
-            world: TypstBrowserWorld::new_raw(
-                std::path::Path::new("/").to_owned(),
-                searcher.into(),
-            ),
+            world: TypstBrowserWorld::new(std::path::Path::new("/").to_owned(), searcher.into()),
         })
     }
 }
