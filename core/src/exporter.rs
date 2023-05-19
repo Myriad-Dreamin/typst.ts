@@ -14,6 +14,25 @@ pub trait Exporter<Input, Output = ()> {
     fn export(&self, world: &dyn World, output: Arc<Input>) -> SourceResult<Output>;
 }
 
+/// Lambda can automatically implement the Exporter trait.
+impl<I, O, F> Exporter<I, O> for F
+where
+    F: (for<'a, 'b> Fn(&'a (dyn World + 'b), Arc<I>) -> SourceResult<O>) + Sized,
+{
+    fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<O> {
+        self(world, output)
+    }
+}
+
+/// This function is used to work around the lifetime issue of a closure lambda.
+/// See https://github.com/rust-lang/rust/issues/70263
+pub fn mark_exporter_lambda<I, O, F>(f: F) -> F
+where
+    F: (for<'a, 'b> Fn(&'a (dyn World + 'b), Arc<I>) -> SourceResult<O>) + Sized,
+{
+    f
+}
+
 pub mod builtins {
     use super::{utils, ArtifactExporter, ArtifactRef, DocumentExporter, DocumentRef, Exporter};
     use typst::{diag::SourceResult, World};
@@ -68,28 +87,6 @@ pub mod builtins {
             } else {
                 Err(Box::new(errors))
             }
-        }
-    }
-
-    pub struct LambdaDocumentExporter<F> {
-        f: F,
-    }
-
-    impl<F> LambdaDocumentExporter<F>
-    where
-        F: Fn(&dyn World, DocumentRef) -> SourceResult<()>,
-    {
-        pub fn new(f: F) -> Self {
-            Self { f }
-        }
-    }
-
-    impl<F> Exporter<typst::doc::Document> for LambdaDocumentExporter<F>
-    where
-        F: Fn(&dyn World, DocumentRef) -> SourceResult<()>,
-    {
-        fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<()> {
-            (self.f)(world, output)
         }
     }
 }

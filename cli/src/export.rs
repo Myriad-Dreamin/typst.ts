@@ -3,9 +3,11 @@ use std::{
     sync::Arc,
 };
 
+use typst::doc::Document;
 use typst_ts_core::{
     artifact_ir,
-    exporter_builtins::{DocToArtifactExporter, GroupDocumentExporter, LambdaDocumentExporter},
+    exporter_builtins::{DocToArtifactExporter, GroupDocumentExporter},
+    mark_exporter_lambda,
     program_meta::REPORT_BUG_MESSAGE,
 };
 
@@ -75,8 +77,8 @@ fn prepare_exporters_impl(
                     .with_extension("artifact.tir.bin");
 
                 let exp = typst_ts_tir_exporter::IRArtifactExporter::new_path(output_path);
-                document_exporters.push(Box::new(LambdaDocumentExporter::new(
-                    move |world, output| {
+                document_exporters.push(Box::new(mark_exporter_lambda(
+                    move |world, output: Arc<Document>| {
                         let artifact = Arc::new(artifact_ir::Artifact::from(output.as_ref()));
                         exp.export(world, artifact)
                     },
