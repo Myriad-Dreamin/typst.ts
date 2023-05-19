@@ -4,6 +4,9 @@
 //!   ::anchored_path.rs -> path_anchored.rs
 //!   ::vfs_path.rs -> path_vfs.rs
 
+#[cfg(feature = "browser-compile")]
+pub mod browser;
+
 #[cfg(feature = "system")]
 pub mod system;
 
