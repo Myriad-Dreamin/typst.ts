@@ -212,6 +212,10 @@ impl<M: AccessModel + Sized> Vfs<M> {
         let source_id = SourceId::from_u16(origin_source_id as u16);
 
         slot.source.compute(|| {
+            if origin_source_id > u16::MAX as u32 {
+                panic!("source id overflow");
+            }
+
             let text = read()?;
             Ok(Source::new(source_id, path, text))
         })?;
