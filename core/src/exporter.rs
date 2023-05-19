@@ -4,6 +4,22 @@ use typst::{diag::SourceResult, World};
 
 pub(crate) type DynExporter<Input, Output = ()> = Box<dyn Exporter<Input, Output>>;
 
+pub trait Transformer<Input, Output = ()> {
+    /// Export the given input with given world.
+    /// the writable world is hiden by trait itself.
+    fn export(&self, world: &dyn World, output: Input) -> SourceResult<Output>;
+}
+
+/// Lambda can automatically implement the Transformer trait.
+impl<I, O, F> Transformer<I, O> for F
+where
+    F: (for<'a, 'b> Fn(&'a (dyn World + 'b), I) -> SourceResult<O>) + Sized,
+{
+    fn export(&self, world: &dyn World, output: I) -> SourceResult<O> {
+        self(world, output)
+    }
+}
+
 pub trait Exporter<Input, Output = ()> {
     /// Export the given input with given world.
     /// the writable world is hiden by trait itself.
@@ -22,17 +38,17 @@ where
 
 /// This function is used to work around the lifetime issue of a closure lambda.
 /// See https://github.com/rust-lang/rust/issues/70263
-pub fn mark_exporter_lambda<I, O, F>(f: F) -> F
+pub fn mark_transformer_lambda<I, O, F>(f: F) -> F
 where
-    F: (for<'a, 'b> Fn(&'a (dyn World + 'b), Arc<I>) -> SourceResult<O>) + Sized,
+    F: (for<'a, 'b> Fn(&'a (dyn World + 'b), I) -> SourceResult<O>) + Sized,
 {
     f
 }
 
 pub mod builtins {
-    use std::sync::Arc;
+    use std::{fs::File, sync::Arc};
 
-    use crate::exporter_utils::map_err;
+    use crate::{exporter_utils::map_err, AsWritable, Transformer};
 
     use super::{utils, DynExporter, Exporter};
     use typst::{diag::SourceResult, World};
@@ -89,14 +105,14 @@ pub mod builtins {
         }
     }
 
-    pub struct FsPathExporter<E, Writable> {
+    pub struct FsPathExporter<Writable, E> {
         path: std::path::PathBuf,
         exporter: E,
 
         as_bytes: std::marker::PhantomData<Writable>,
     }
 
-    impl<E, Writable> FsPathExporter<E, Writable> {
+    impl<Writable, E> FsPathExporter<Writable, E> {
         pub fn new(path: std::path::PathBuf, exporter: E) -> Self {
             Self {
                 path,
@@ -106,7 +122,7 @@ pub mod builtins {
         }
     }
 
-    impl<I, Bytes, E> Exporter<I> for FsPathExporter<E, Bytes>
+    impl<I, Bytes, E> Exporter<I> for FsPathExporter<Bytes, E>
     where
         E: Exporter<I, Bytes>,
         Bytes: AsRef<[u8]>,
@@ -114,6 +130,18 @@ pub mod builtins {
         fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<()> {
             let vec = self.exporter.export(world, output)?;
             std::fs::write(&self.path, vec.as_ref()).map_err(|e| map_err(world, e))?;
+            Ok(())
+        }
+    }
+
+    impl<I, E> Exporter<I> for FsPathExporter<AsWritable, E>
+    where
+        E: Transformer<(Arc<I>, File)>,
+    {
+        fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<()> {
+            let file = std::fs::File::create(&self.path).map_err(|e| map_err(world, e))?;
+
+            self.exporter.export(world, (output, file))?;
             Ok(())
         }
     }

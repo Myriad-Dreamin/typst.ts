@@ -12,7 +12,7 @@ pub use content::TextContent;
 
 pub(crate) mod exporter;
 pub use exporter::{builtins as exporter_builtins, utils as exporter_utils};
-pub use exporter::{mark_exporter_lambda, Exporter};
+pub use exporter::{mark_transformer_lambda, Exporter, Transformer};
 
 pub mod font;
 pub use font::{FontLoader, FontResolver, FontSlot};

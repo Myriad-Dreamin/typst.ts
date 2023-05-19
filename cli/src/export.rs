@@ -1,15 +1,8 @@
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::path::{Path, PathBuf};
 
-use typst::doc::Document;
 use typst_ts_core::{
-    artifact_ir,
     exporter_builtins::{FromExporter, FsPathExporter, GroupExporter},
-    mark_exporter_lambda,
     program_meta::REPORT_BUG_MESSAGE,
-    Exporter,
 };
 
 use crate::CompileArgs;
@@ -60,9 +53,11 @@ fn prepare_exporters_impl(
 ) -> GroupDocExporter {
     type DocExporter = Box<dyn typst_ts_core::Exporter<typst::doc::Document>>;
     type ArtExporter = Box<dyn typst_ts_core::Exporter<typst_ts_core::Artifact>>;
+    type IRExporter = Box<dyn typst_ts_core::Exporter<typst_ts_core::artifact_ir::Artifact>>;
 
     let mut document_exporters: Vec<DocExporter> = vec![];
     let mut artifact_exporters: Vec<ArtExporter> = vec![];
+    let mut ir_exporters: Vec<IRExporter> = vec![];
 
     for f in formats {
         match f.as_str() {
@@ -81,13 +76,8 @@ fn prepare_exporters_impl(
                     .with_extension("artifact.tir.bin");
 
                 let exp = typst_ts_tir_exporter::IRArtifactExporter::default();
-                document_exporters.push(Box::new(FsPathExporter::new(
-                    output_path,
-                    mark_exporter_lambda(move |world, output: Arc<Document>| {
-                        let artifact = Arc::new(artifact_ir::Artifact::from(output.as_ref()));
-                        exp.export(world, artifact)
-                    }),
-                )));
+                let exp = FsPathExporter::new(output_path, exp);
+                ir_exporters.push(Box::new(exp));
             }
             #[cfg(feature = "pdf")]
             "pdf" => {
@@ -135,6 +125,10 @@ fn prepare_exporters_impl(
 
     if !artifact_exporters.is_empty() {
         document_exporters.push(Box::new(FromExporter::new(artifact_exporters)));
+    }
+
+    if !ir_exporters.is_empty() {
+        document_exporters.push(Box::new(FromExporter::new(ir_exporters)));
     }
 
     GroupExporter::new(document_exporters)

@@ -3,7 +3,7 @@ use std::{io::Write, sync::Arc};
 
 use typst::diag::SourceResult;
 use typst_ts_core::artifact_ir::{Artifact, ArtifactHeader};
-use typst_ts_core::Exporter;
+use typst_ts_core::Transformer;
 
 /// IR structure (in bytes)
 /// =======================
@@ -23,20 +23,22 @@ const MAGIC_NUMBER: [u8; 4] = [b'I', b'R', b'A', b'R'];
 #[derive(Debug, Clone, Default)]
 pub struct IRArtifactExporter;
 
-impl Exporter<Artifact, Vec<u8>> for IRArtifactExporter {
+impl<W> Transformer<(Arc<Artifact>, W)> for IRArtifactExporter
+where
+    W: Write,
+{
     /// Export the given IR artifact with given world.
     fn export<'a>(
         &'a self,
         _world: &'a dyn typst::World,
-        output: Arc<Artifact>,
-    ) -> SourceResult<Vec<u8>> {
+        (output, writer): (Arc<Artifact>, W),
+    ) -> SourceResult<()> {
         let metadata = serde_json::to_string(&ArtifactHeader {
             metadata: output.metadata.clone(),
             pages: output.pages.clone(),
         })
         .unwrap();
-        let cap = metadata.len() + output.buffer.len() + 16;
-        let mut writer = std::io::Cursor::new(Vec::with_capacity(cap));
+        let mut writer = std::io::BufWriter::new(writer);
         writer.write_all(&MAGIC_NUMBER).unwrap();
 
         writer.write_u32::<LittleEndian>(1).unwrap();
@@ -46,6 +48,6 @@ impl Exporter<Artifact, Vec<u8>> for IRArtifactExporter {
         writer.write_all(metadata.as_bytes()).unwrap();
         writer.write_all(output.buffer.as_slice()).unwrap();
 
-        Ok(writer.into_inner())
+        Ok(())
     }
 }
