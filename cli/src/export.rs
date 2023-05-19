@@ -6,9 +6,10 @@ use std::{
 use typst::doc::Document;
 use typst_ts_core::{
     artifact_ir,
-    exporter_builtins::{FromExporter, GroupExporter},
+    exporter_builtins::{FromExporter, FsPathExporter, GroupExporter},
     mark_exporter_lambda,
     program_meta::REPORT_BUG_MESSAGE,
+    Exporter,
 };
 
 use crate::CompileArgs;
@@ -69,8 +70,9 @@ fn prepare_exporters_impl(
                 let output_path = output_dir
                     .with_file_name(entry_file.file_name().unwrap())
                     .with_extension("ast.ansi.text");
-                document_exporters.push(Box::new(typst_ts_ast_exporter::AstExporter::new_path(
+                document_exporters.push(Box::new(FsPathExporter::new(
                     output_path,
+                    typst_ts_ast_exporter::AstExporter::default(),
                 )));
             }
             "ir" => {
@@ -78,12 +80,13 @@ fn prepare_exporters_impl(
                     .with_file_name(entry_file.file_name().unwrap())
                     .with_extension("artifact.tir.bin");
 
-                let exp = typst_ts_tir_exporter::IRArtifactExporter::new_path(output_path);
-                document_exporters.push(Box::new(mark_exporter_lambda(
-                    move |world, output: Arc<Document>| {
+                let exp = typst_ts_tir_exporter::IRArtifactExporter::default();
+                document_exporters.push(Box::new(FsPathExporter::new(
+                    output_path,
+                    mark_exporter_lambda(move |world, output: Arc<Document>| {
                         let artifact = Arc::new(artifact_ir::Artifact::from(output.as_ref()));
                         exp.export(world, artifact)
-                    },
+                    }),
                 )));
             }
             #[cfg(feature = "pdf")]
@@ -91,8 +94,9 @@ fn prepare_exporters_impl(
                 let output_path = output_dir
                     .with_file_name(entry_file.file_name().unwrap())
                     .with_extension("pdf");
-                document_exporters.push(Box::new(typst_ts_pdf_exporter::PdfDocExporter::new_path(
+                document_exporters.push(Box::new(FsPathExporter::new(
                     output_path,
+                    typst_ts_pdf_exporter::PdfDocExporter::default(),
                 )));
             }
             #[cfg(feature = "serde-json")]
@@ -100,18 +104,20 @@ fn prepare_exporters_impl(
                 let output_path = output_dir
                     .with_file_name(entry_file.file_name().unwrap())
                     .with_extension("artifact.json");
-                artifact_exporters.push(Box::new(
-                    typst_ts_serde_exporter::JsonArtifactExporter::new_path(output_path),
-                ));
+                artifact_exporters.push(Box::new(FsPathExporter::new(
+                    output_path,
+                    typst_ts_serde_exporter::JsonArtifactExporter::default(),
+                )));
             }
             #[cfg(feature = "serde-rmp")]
             "rmp" => {
                 let output_path = output_dir
                     .with_file_name(entry_file.file_name().unwrap())
                     .with_extension("artifact.rmp");
-                artifact_exporters.push(Box::new(
-                    typst_ts_serde_exporter::RmpArtifactExporter::new_path(output_path),
-                ));
+                artifact_exporters.push(Box::new(FsPathExporter::new(
+                    output_path,
+                    typst_ts_serde_exporter::RmpArtifactExporter::default(),
+                )));
             }
             #[cfg(feature = "web-socket")]
             "web_socket" => {

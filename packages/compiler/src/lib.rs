@@ -84,11 +84,7 @@ impl TypstCompiler {
         let data = Arc::new(Mutex::new(vec![]));
 
         let inner_data = data.clone();
-        let ast_exporter = typst_ts_ast_exporter::AstExporter::new_vec(Box::new(move |v| {
-            let mut data = inner_data.lock().unwrap();
-            *data = v;
-            Ok(())
-        }));
+        let ast_exporter = typst_ts_ast_exporter::AstExporter::default();
 
         // let artifact = Arc::new(Mutex::new(None));
 
@@ -99,7 +95,10 @@ impl TypstCompiler {
                 // artifact = Some(Artifact::from(&output));
                 // drop(artifact);
 
-                ast_exporter.export(&self.world, Arc::new(output))
+                let mut data = inner_data.lock().unwrap();
+                let v = ast_exporter.export(&self.world, Arc::new(output))?;
+                *data = v;
+                Ok(())
             })
             .unwrap();
         let converted = ansi_to_html::convert_escaped(

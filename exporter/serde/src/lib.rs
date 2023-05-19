@@ -1,7 +1,5 @@
 pub(crate) use typst_ts_core::exporter_utils::*;
 
-pub(crate) mod macros;
-
 #[cfg(feature = "json")]
 pub(crate) mod json;
 #[cfg(feature = "json")]

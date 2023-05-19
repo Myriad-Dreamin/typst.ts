@@ -3,7 +3,7 @@ use std::{io::Write, sync::Arc};
 
 use typst::diag::SourceResult;
 use typst_ts_core::artifact_ir::{Artifact, ArtifactHeader};
-use typst_ts_core::exporter_utils::*;
+use typst_ts_core::Exporter;
 
 /// IR structure (in bytes)
 /// =======================
@@ -20,19 +20,16 @@ use typst_ts_core::exporter_utils::*;
 /// IR artifact exporter
 const MAGIC_NUMBER: [u8; 4] = [b'I', b'R', b'A', b'R'];
 
-pub struct IRArtifactExporter {
-    path: Option<std::path::PathBuf>,
-}
+#[derive(Debug, Clone, Default)]
+pub struct IRArtifactExporter;
 
-impl IRArtifactExporter {
-    pub fn new_path(path: std::path::PathBuf) -> Self {
-        Self { path: Some(path) }
-    }
-}
-
-impl IRArtifactExporter {
+impl Exporter<Artifact, Vec<u8>> for IRArtifactExporter {
     /// Export the given IR artifact with given world.
-    pub fn export(&self, world: &dyn typst::World, output: Arc<Artifact>) -> SourceResult<()> {
+    fn export<'a>(
+        &'a self,
+        _world: &'a dyn typst::World,
+        output: Arc<Artifact>,
+    ) -> SourceResult<Vec<u8>> {
         let metadata = serde_json::to_string(&ArtifactHeader {
             metadata: output.metadata.clone(),
             pages: output.pages.clone(),
@@ -49,6 +46,6 @@ impl IRArtifactExporter {
         writer.write_all(metadata.as_bytes()).unwrap();
         writer.write_all(output.buffer.as_slice()).unwrap();
 
-        crate::write_to_path(world, self.path.clone(), writer.get_ref())
+        Ok(writer.into_inner())
     }
 }

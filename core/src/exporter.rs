@@ -32,6 +32,8 @@ where
 pub mod builtins {
     use std::sync::Arc;
 
+    use crate::exporter_utils::map_err;
+
     use super::{utils, DynExporter, Exporter};
     use typst::{diag::SourceResult, World};
 
@@ -86,6 +88,35 @@ pub mod builtins {
             self.exporter.export(world, Arc::new(as_output))
         }
     }
+
+    pub struct FsPathExporter<E, Writable> {
+        path: std::path::PathBuf,
+        exporter: E,
+
+        as_bytes: std::marker::PhantomData<Writable>,
+    }
+
+    impl<E, Writable> FsPathExporter<E, Writable> {
+        pub fn new(path: std::path::PathBuf, exporter: E) -> Self {
+            Self {
+                path,
+                exporter,
+                as_bytes: std::marker::PhantomData,
+            }
+        }
+    }
+
+    impl<I, Bytes, E> Exporter<I> for FsPathExporter<E, Bytes>
+    where
+        E: Exporter<I, Bytes>,
+        Bytes: AsRef<[u8]>,
+    {
+        fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<()> {
+            let vec = self.exporter.export(world, output)?;
+            std::fs::write(&self.path, vec.as_ref()).map_err(|e| map_err(world, e))?;
+            Ok(())
+        }
+    }
 }
 
 pub mod utils {
@@ -108,16 +139,5 @@ pub mod utils {
             typst::syntax::Span::new(world.main().id(), 0),
             e.to_string(),
         )])
-    }
-
-    /// Export document to file system
-    pub fn write_to_path<C: AsRef<[u8]>>(
-        world: &dyn World,
-        path: Option<std::path::PathBuf>,
-        content: C,
-    ) -> SourceResult<()> {
-        path.map_or(Ok(()), |path| {
-            std::fs::write(path, content).map_err(|e| map_err(world, e))
-        })
     }
 }

@@ -4,21 +4,16 @@ pub use typst::export::pdf;
 use typst_ts_core::Exporter;
 
 use typst::{diag::SourceResult, World};
-pub(crate) use typst_ts_core::exporter_utils::*;
 
-pub struct PdfDocExporter {
-    path: Option<std::path::PathBuf>,
-}
+#[derive(Debug, Clone, Default)]
+pub struct PdfDocExporter {}
 
-impl PdfDocExporter {
-    pub fn new_path(path: std::path::PathBuf) -> Self {
-        Self { path: Some(path) }
-    }
-}
-
-impl Exporter<typst::doc::Document> for PdfDocExporter {
-    fn export(&self, world: &dyn World, output: Arc<typst::doc::Document>) -> SourceResult<()> {
-        let buffer = typst::export::pdf(output.as_ref());
-        write_to_path(world, self.path.clone(), buffer)
+impl Exporter<typst::doc::Document, Vec<u8>> for PdfDocExporter {
+    fn export(
+        &self,
+        _world: &dyn World,
+        output: Arc<typst::doc::Document>,
+    ) -> SourceResult<Vec<u8>> {
+        Ok(typst::export::pdf(output.as_ref()))
     }
 }

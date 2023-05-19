@@ -3,33 +3,31 @@ use std::sync::Arc;
 use typst::{diag::SourceResult, World};
 use typst_ts_core::{Artifact, Exporter};
 
-use crate::{map_err, write_to_path};
+use crate::map_err;
 
+#[derive(Debug, Clone, Default)]
 pub struct JsonArtifactExporter {
-    path: Option<std::path::PathBuf>,
     should_truncate_precision: bool,
 }
 
 impl JsonArtifactExporter {
-    pub fn new_path(path: std::path::PathBuf) -> Self {
+    pub fn new(should_truncate_precision: bool) -> Self {
         Self {
-            path: Some(path),
-            should_truncate_precision: false,
+            should_truncate_precision,
         }
     }
 }
 
-impl Exporter<Artifact> for JsonArtifactExporter {
-    fn export(&self, world: &dyn World, output: Arc<Artifact>) -> SourceResult<()> {
+impl Exporter<Artifact, String> for JsonArtifactExporter {
+    fn export(&self, world: &dyn World, output: Arc<Artifact>) -> SourceResult<String> {
         let json_doc = {
             if self.should_truncate_precision {
                 serde_json::to_string(&self.truncate_precision(world, output)?)
             } else {
                 serde_json::to_string(output.as_ref())
             }
-        }
-        .map_err(|e| map_err(world, e))?;
-        write_to_path(world, self.path.clone(), json_doc)
+        };
+        json_doc.map_err(|e| map_err(world, e))
     }
 }
 
