@@ -1,11 +1,11 @@
 use std::fmt::Display;
-use std::io::{self, Cursor, Write};
+use std::io::{self, Write};
 use std::sync::Arc;
 
 use typst::ide::Tag;
 use typst::syntax::{LinkedNode, Source, SyntaxKind};
 use typst_ts_core::exporter_utils::map_err;
-use typst_ts_core::Exporter;
+use typst_ts_core::Transformer;
 
 #[derive(Debug, Clone, Default)]
 pub struct AstExporter {}
@@ -161,12 +161,15 @@ impl<'a, W: io::Write> AstWriter<'a, W> {
     }
 }
 
-impl Exporter<typst::doc::Document, Vec<u8>> for AstExporter {
+impl<W> Transformer<(Arc<typst::doc::Document>, W)> for AstExporter
+where
+    W: std::io::Write,
+{
     fn export(
         &self,
         world: &dyn typst::World,
-        _output: Arc<typst::doc::Document>,
-    ) -> typst::diag::SourceResult<Vec<u8>> {
+        (_output, writer): (Arc<typst::doc::Document>, W),
+    ) -> typst::diag::SourceResult<()> {
         let mut result = Vec::<TranslationUnit>::new();
 
         fn collect_translation_unit<'a>(result: &mut Vec<TranslationUnit<'a>>, src: &'a Source) {
@@ -177,8 +180,7 @@ impl Exporter<typst::doc::Document, Vec<u8>> for AstExporter {
         }
         collect_translation_unit(&mut result, world.main());
 
-        let t = Vec::<u8>::new();
-        let mut writer = Cursor::new(t);
+        let mut writer = std::io::BufWriter::new(writer);
 
         for tu in result {
             writer
@@ -196,6 +198,6 @@ impl Exporter<typst::doc::Document, Vec<u8>> for AstExporter {
 
         writer.flush().unwrap();
 
-        Ok(writer.into_inner())
+        Ok(())
     }
 }

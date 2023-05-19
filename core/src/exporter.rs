@@ -48,7 +48,7 @@ where
 pub mod builtins {
     use std::{fs::File, sync::Arc};
 
-    use crate::{exporter_utils::map_err, AsWritable, Transformer};
+    use crate::{exporter_utils::map_err, AsOwnedBytes, AsOwnedString, AsWritable, Transformer};
 
     use super::{utils, DynExporter, Exporter};
     use typst::{diag::SourceResult, World};
@@ -143,6 +143,52 @@ pub mod builtins {
 
             self.exporter.export(world, (output, file))?;
             Ok(())
+        }
+    }
+
+    pub struct VecExporter<Writable, E> {
+        exporter: E,
+
+        as_bytes: std::marker::PhantomData<Writable>,
+    }
+
+    impl<Writable, E> VecExporter<Writable, E> {
+        pub fn new(exporter: E) -> Self {
+            Self {
+                exporter,
+                as_bytes: std::marker::PhantomData,
+            }
+        }
+    }
+
+    impl<I, E> Exporter<I, Vec<u8>> for VecExporter<AsOwnedBytes, E>
+    where
+        E: Exporter<I, Vec<u8>>,
+    {
+        fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<Vec<u8>> {
+            let vec = self.exporter.export(world, output)?;
+            Ok(vec)
+        }
+    }
+
+    impl<I, E> Exporter<I, Vec<u8>> for VecExporter<AsOwnedString, E>
+    where
+        E: Exporter<I, String>,
+    {
+        fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<Vec<u8>> {
+            let vec = self.exporter.export(world, output)?;
+            Ok(vec.into_bytes())
+        }
+    }
+
+    impl<I, E> Exporter<I, Vec<u8>> for VecExporter<AsWritable, E>
+    where
+        E: for<'a> Transformer<(Arc<I>, &'a mut std::io::Cursor<Vec<u8>>)>,
+    {
+        fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<Vec<u8>> {
+            let mut cursor = std::io::Cursor::new(Vec::new());
+            self.exporter.export(world, (output, &mut cursor))?;
+            Ok(cursor.into_inner())
         }
     }
 }

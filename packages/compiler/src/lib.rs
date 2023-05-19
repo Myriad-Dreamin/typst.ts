@@ -84,7 +84,9 @@ impl TypstCompiler {
         let data = Arc::new(Mutex::new(vec![]));
 
         let inner_data = data.clone();
-        let ast_exporter = typst_ts_ast_exporter::AstExporter::default();
+        let ast_exporter = typst_ts_core::exporter_builtins::VecExporter::new(
+            typst_ts_ast_exporter::AstExporter::default(),
+        );
 
         // let artifact = Arc::new(Mutex::new(None));
 
