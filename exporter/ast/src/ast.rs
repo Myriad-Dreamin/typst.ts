@@ -4,10 +4,8 @@ use std::sync::{Arc, Mutex};
 
 use typst::ide::Tag;
 use typst::syntax::{LinkedNode, Source, SyntaxKind};
-use typst_ts_core::{
-    exporter_utils::{map_err, write_to_path},
-    DocumentExporter,
-};
+use typst_ts_core::exporter_utils::{map_err, write_to_path};
+use typst_ts_core::Exporter;
 
 pub struct AstPathExporter {
     path: Option<std::path::PathBuf>,
@@ -184,7 +182,7 @@ impl<'a, W: io::Write> AstWriter<'a, W> {
     }
 }
 
-impl DocumentExporter for AstPathExporter {
+impl Exporter<typst::doc::Document> for AstPathExporter {
     fn export(
         &self,
         world: &dyn typst::World,
@@ -221,7 +219,7 @@ impl DocumentExporter for AstPathExporter {
     }
 }
 
-impl DocumentExporter for AstVecExporter {
+impl Exporter<typst::doc::Document> for AstVecExporter {
     fn export(
         &self,
         world: &dyn typst::World,

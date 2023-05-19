@@ -2,9 +2,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use typst::diag::{SourceError, SourceResult};
 use typst_ts_compiler::TypstSystemWorld;
-use typst_ts_core::{
-    exporter_builtins::GroupDocumentExporter, exporter_utils::map_err, DocumentExporter,
-};
+use typst_ts_core::{exporter_builtins::GroupDocumentExporter, exporter_utils::map_err, Exporter};
 
 use crate::diag;
 

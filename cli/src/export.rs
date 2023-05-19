@@ -53,8 +53,11 @@ fn prepare_exporters_impl(
     ws_url: String,
     entry_file: &Path,
 ) -> GroupDocumentExporter {
-    let mut document_exporters: Vec<Box<dyn typst_ts_core::DocumentExporter>> = vec![];
-    let mut artifact_exporters: Vec<Box<dyn typst_ts_core::ArtifactExporter>> = vec![];
+    type DocExporter = Box<dyn typst_ts_core::Exporter<typst::doc::Document>>;
+    type ArtExporter = Box<dyn typst_ts_core::Exporter<typst_ts_core::Artifact>>;
+
+    let mut document_exporters: Vec<DocExporter> = vec![];
+    let mut artifact_exporters: Vec<ArtExporter> = vec![];
 
     for f in formats {
         match f.as_str() {

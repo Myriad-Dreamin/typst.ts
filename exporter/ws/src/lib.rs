@@ -15,7 +15,7 @@ use typst::World;
 use typst_ts_core::artifact::core::EcoString;
 use typst_ts_core::artifact::doc::Frame;
 use typst_ts_core::artifact::font::FontInfo;
-use typst_ts_core::{Artifact, ArtifactExporter};
+use typst_ts_core::{Artifact, Exporter};
 
 #[derive(Debug)]
 struct Client {
@@ -175,7 +175,7 @@ impl WebSocketArtifactExporter {
     }
 }
 
-impl ArtifactExporter for WebSocketArtifactExporter {
+impl Exporter<Artifact> for WebSocketArtifactExporter {
     /// Export the given artifact with given world.
     fn export(&self, _world: &dyn World, output: Arc<Artifact>) -> SourceResult<()> {
         let remote_this = self.clone();

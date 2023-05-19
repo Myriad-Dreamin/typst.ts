@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use js_sys::{JsString, Uint8Array};
 use typst_ts_compiler::font::web::BrowserFontSearcher;
 pub use typst_ts_compiler::*;
-use typst_ts_core::{cache::FontInfoCache, DocumentExporter};
+use typst_ts_core::{cache::FontInfoCache, Exporter};
 use wasm_bindgen::prelude::*;
 
 use crate::utils::console_log;

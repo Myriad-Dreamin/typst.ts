@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 pub use typst::export::pdf;
-use typst_ts_core::DocumentExporter;
+use typst_ts_core::Exporter;
 
 use typst::{diag::SourceResult, World};
 pub(crate) use typst_ts_core::exporter_utils::*;
@@ -16,7 +16,7 @@ impl PdfDocExporter {
     }
 }
 
-impl DocumentExporter for PdfDocExporter {
+impl Exporter<typst::doc::Document> for PdfDocExporter {
     fn export(&self, world: &dyn World, output: Arc<typst::doc::Document>) -> SourceResult<()> {
         let buffer = typst::export::pdf(output.as_ref());
         write_to_path(world, self.path.clone(), buffer)

@@ -5,33 +5,30 @@ use typst::{diag::SourceResult, World};
 pub(crate) type DocumentRef = Arc<typst::doc::Document>;
 pub(crate) type ArtifactRef = Arc<crate::Artifact>;
 
-pub trait DocumentExporter<T = ()> {
-    /// Export the given document with given world.
-    /// the writable world is hiden by trait itself.
-    fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<T>;
-}
+pub(crate) type DocumentExporter = Box<dyn Exporter<typst::doc::Document>>;
+pub(crate) type ArtifactExporter = Box<dyn Exporter<crate::Artifact>>;
 
-pub trait ArtifactExporter<T = ()> {
-    /// Export the given artifact with given world.
-    fn export(&self, world: &dyn World, output: ArtifactRef) -> SourceResult<T>;
+pub trait Exporter<Input, Output = ()> {
+    /// Export the given input with given world.
+    /// the writable world is hiden by trait itself.
+    fn export(&self, world: &dyn World, output: Arc<Input>) -> SourceResult<Output>;
 }
 
 pub mod builtins {
-    use super::{utils, ArtifactRef, DocumentRef};
-    use crate::{ArtifactExporter, DocumentExporter};
+    use super::{utils, ArtifactExporter, ArtifactRef, DocumentExporter, DocumentRef, Exporter};
     use typst::{diag::SourceResult, World};
 
     pub struct GroupDocumentExporter {
-        document_exporters: Vec<Box<dyn DocumentExporter>>,
+        document_exporters: Vec<Box<dyn Exporter<typst::doc::Document>>>,
     }
 
     impl GroupDocumentExporter {
-        pub fn new(document_exporters: Vec<Box<dyn DocumentExporter>>) -> Self {
+        pub fn new(document_exporters: Vec<DocumentExporter>) -> Self {
             Self { document_exporters }
         }
     }
 
-    impl DocumentExporter for GroupDocumentExporter {
+    impl Exporter<typst::doc::Document> for GroupDocumentExporter {
         fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<()> {
             let mut errors = Vec::new();
 
@@ -48,16 +45,16 @@ pub mod builtins {
     }
 
     pub struct DocToArtifactExporter {
-        artifact_exporters: Vec<Box<dyn ArtifactExporter>>,
+        artifact_exporters: Vec<ArtifactExporter>,
     }
 
     impl DocToArtifactExporter {
-        pub fn new(artifact_exporters: Vec<Box<dyn ArtifactExporter>>) -> Self {
+        pub fn new(artifact_exporters: Vec<ArtifactExporter>) -> Self {
             Self { artifact_exporters }
         }
     }
 
-    impl DocumentExporter for DocToArtifactExporter {
+    impl Exporter<typst::doc::Document> for DocToArtifactExporter {
         fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<()> {
             let mut errors = Vec::new();
 
@@ -87,7 +84,7 @@ pub mod builtins {
         }
     }
 
-    impl<F> DocumentExporter for LambdaDocumentExporter<F>
+    impl<F> Exporter<typst::doc::Document> for LambdaDocumentExporter<F>
     where
         F: Fn(&dyn World, DocumentRef) -> SourceResult<()>,
     {

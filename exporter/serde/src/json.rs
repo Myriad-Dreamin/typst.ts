@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use typst::{diag::SourceResult, World};
-use typst_ts_core::ArtifactExporter;
+use typst_ts_core::{Artifact, Exporter};
 
 use crate::{map_err, write_to_path};
 
@@ -19,8 +19,8 @@ impl JsonArtifactExporter {
     }
 }
 
-impl ArtifactExporter for JsonArtifactExporter {
-    fn export(&self, world: &dyn World, output: Arc<typst_ts_core::Artifact>) -> SourceResult<()> {
+impl Exporter<Artifact> for JsonArtifactExporter {
+    fn export(&self, world: &dyn World, output: Arc<Artifact>) -> SourceResult<()> {
         let json_doc = {
             if self.should_truncate_precision {
                 serde_json::to_string(&self.truncate_precision(world, output)?)
