@@ -1,15 +1,14 @@
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::path::{Path, PathBuf};
 
 use typst_ts_core::{
-    artifact_ir,
-    exporter_builtins::{DocToArtifactExporter, GroupDocumentExporter, LambdaDocumentExporter},
+    exporter_builtins::{FromExporter, FsPathExporter, GroupExporter},
     program_meta::REPORT_BUG_MESSAGE,
+    AsWritable,
 };
 
 use crate::CompileArgs;
+
+type GroupDocExporter = GroupExporter<typst::doc::Document>;
 
 /// builtin formats should be enabled by default, and non-builtin formats should be
 pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature hint */ &str)] = &[
@@ -52,9 +51,14 @@ fn prepare_exporters_impl(
     formats: Vec<String>,
     ws_url: String,
     entry_file: &Path,
-) -> GroupDocumentExporter {
-    let mut document_exporters: Vec<Box<dyn typst_ts_core::DocumentExporter>> = vec![];
-    let mut artifact_exporters: Vec<Box<dyn typst_ts_core::ArtifactExporter>> = vec![];
+) -> GroupDocExporter {
+    type DocExporter = Box<dyn typst_ts_core::Exporter<typst::doc::Document>>;
+    type ArtExporter = Box<dyn typst_ts_core::Exporter<typst_ts_core::Artifact>>;
+    type IRExporter = Box<dyn typst_ts_core::Exporter<typst_ts_core::artifact_ir::Artifact>>;
+
+    let mut document_exporters: Vec<DocExporter> = vec![];
+    let mut artifact_exporters: Vec<ArtExporter> = vec![];
+    let mut ir_exporters: Vec<IRExporter> = vec![];
 
     for f in formats {
         match f.as_str() {
@@ -62,8 +66,9 @@ fn prepare_exporters_impl(
                 let output_path = output_dir
                     .with_file_name(entry_file.file_name().unwrap())
                     .with_extension("ast.ansi.text");
-                document_exporters.push(Box::new(typst_ts_ast_exporter::AstExporter::new_path(
+                document_exporters.push(Box::new(FsPathExporter::new(
                     output_path,
+                    typst_ts_ast_exporter::AstExporter::default(),
                 )));
             }
             "ir" => {
@@ -71,21 +76,18 @@ fn prepare_exporters_impl(
                     .with_file_name(entry_file.file_name().unwrap())
                     .with_extension("artifact.tir.bin");
 
-                let exp = typst_ts_tir_exporter::IRArtifactExporter::new_path(output_path);
-                document_exporters.push(Box::new(LambdaDocumentExporter::new(
-                    move |world, output| {
-                        let artifact = Arc::new(artifact_ir::Artifact::from(output));
-                        exp.export(world, artifact)
-                    },
-                )));
+                let exp = typst_ts_tir_exporter::IRArtifactExporter::default();
+                let exp = FsPathExporter::new(output_path, exp);
+                ir_exporters.push(Box::new(exp));
             }
             #[cfg(feature = "pdf")]
             "pdf" => {
                 let output_path = output_dir
                     .with_file_name(entry_file.file_name().unwrap())
                     .with_extension("pdf");
-                document_exporters.push(Box::new(typst_ts_pdf_exporter::PdfDocExporter::new_path(
+                document_exporters.push(Box::new(FsPathExporter::new(
                     output_path,
+                    typst_ts_pdf_exporter::PdfDocExporter::default(),
                 )));
             }
             #[cfg(feature = "serde-json")]
@@ -93,18 +95,20 @@ fn prepare_exporters_impl(
                 let output_path = output_dir
                     .with_file_name(entry_file.file_name().unwrap())
                     .with_extension("artifact.json");
-                artifact_exporters.push(Box::new(
-                    typst_ts_serde_exporter::JsonArtifactExporter::new_path(output_path),
-                ));
+                artifact_exporters.push(Box::new(FsPathExporter::<AsWritable, _>::new(
+                    output_path,
+                    typst_ts_serde_exporter::JsonArtifactExporter::default(),
+                )));
             }
             #[cfg(feature = "serde-rmp")]
             "rmp" => {
                 let output_path = output_dir
                     .with_file_name(entry_file.file_name().unwrap())
                     .with_extension("artifact.rmp");
-                artifact_exporters.push(Box::new(
-                    typst_ts_serde_exporter::RmpArtifactExporter::new_path(output_path),
-                ));
+                artifact_exporters.push(Box::new(FsPathExporter::new(
+                    output_path,
+                    typst_ts_serde_exporter::RmpArtifactExporter::default(),
+                )));
             }
             #[cfg(feature = "web-socket")]
             "web_socket" => {
@@ -121,13 +125,17 @@ fn prepare_exporters_impl(
     }
 
     if !artifact_exporters.is_empty() {
-        document_exporters.push(Box::new(DocToArtifactExporter::new(artifact_exporters)));
+        document_exporters.push(Box::new(FromExporter::new(artifact_exporters)));
     }
 
-    GroupDocumentExporter::new(document_exporters)
+    if !ir_exporters.is_empty() {
+        document_exporters.push(Box::new(FromExporter::new(ir_exporters)));
+    }
+
+    GroupExporter::new(document_exporters)
 }
 
-pub fn prepare_exporters(args: &CompileArgs, entry_file: &Path) -> GroupDocumentExporter {
+pub fn prepare_exporters(args: &CompileArgs, entry_file: &Path) -> GroupDocExporter {
     let output_dir = {
         let output = args.output.clone();
         let output_dir = if !output.is_empty() {

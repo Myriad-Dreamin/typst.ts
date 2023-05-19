@@ -1,10 +1,8 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use typst::diag::{SourceError, SourceResult};
 use typst_ts_compiler::TypstSystemWorld;
-use typst_ts_core::{
-    exporter_builtins::GroupDocumentExporter, exporter_utils::map_err, DocumentExporter,
-};
+use typst_ts_core::{exporter_builtins::GroupExporter, exporter_utils::map_err, Exporter};
 
 use crate::diag;
 
@@ -17,7 +15,7 @@ pub struct CompileDriver {
     /// Path to the entry file.
     pub entry_file: PathBuf,
     /// Exporter to use, which will consume the output of the compiler.
-    pub exporter: GroupDocumentExporter,
+    pub exporter: GroupExporter<typst::doc::Document>,
 }
 
 impl CompileDriver {
@@ -39,7 +37,7 @@ impl CompileDriver {
 
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
     fn export(&self, output: typst::doc::Document) -> SourceResult<()> {
-        self.exporter.export(&self.world, &output)
+        self.exporter.export(&self.world, Arc::new(output))
     }
 
     /// Compile once from scratch.

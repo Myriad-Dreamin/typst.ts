@@ -11,9 +11,8 @@ pub mod content;
 pub use content::TextContent;
 
 pub(crate) mod exporter;
-pub use exporter::{
-    builtins as exporter_builtins, utils as exporter_utils, ArtifactExporter, DocumentExporter,
-};
+pub use exporter::{builtins as exporter_builtins, utils as exporter_utils};
+pub use exporter::{mark_transformer_lambda, Exporter, Transformer};
 
 pub mod font;
 pub use font::{FontLoader, FontResolver, FontSlot};

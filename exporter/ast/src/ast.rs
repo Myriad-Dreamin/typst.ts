@@ -1,37 +1,14 @@
 use std::fmt::Display;
-use std::io::{self, Cursor, Write};
-use std::sync::Mutex;
+use std::io::{self, Write};
+use std::sync::Arc;
 
 use typst::ide::Tag;
 use typst::syntax::{LinkedNode, Source, SyntaxKind};
-use typst_ts_core::{
-    exporter_utils::{map_err, write_to_path},
-    DocumentExporter,
-};
+use typst_ts_core::exporter_utils::map_err;
+use typst_ts_core::Transformer;
 
-pub struct AstPathExporter {
-    path: Option<std::path::PathBuf>,
-}
-
-type VecCallback = Box<dyn FnMut(Vec<u8>) -> typst::diag::SourceResult<()>>;
-
-pub struct AstVecExporter {
-    pub vec_cb: Mutex<VecCallback>,
-}
-
+#[derive(Debug, Clone, Default)]
 pub struct AstExporter {}
-
-impl AstExporter {
-    pub fn new_path(path: std::path::PathBuf) -> AstPathExporter {
-        AstPathExporter { path: Some(path) }
-    }
-
-    pub fn new_vec(vec_cb: VecCallback) -> AstVecExporter {
-        AstVecExporter {
-            vec_cb: Mutex::new(vec_cb),
-        }
-    }
-}
 
 struct TranslationUnit<'a> {
     path: String,
@@ -184,11 +161,14 @@ impl<'a, W: io::Write> AstWriter<'a, W> {
     }
 }
 
-impl DocumentExporter for AstPathExporter {
+impl<W> Transformer<(Arc<typst::doc::Document>, W)> for AstExporter
+where
+    W: std::io::Write,
+{
     fn export(
         &self,
         world: &dyn typst::World,
-        _output: &typst::doc::Document,
+        (_output, writer): (Arc<typst::doc::Document>, W),
     ) -> typst::diag::SourceResult<()> {
         let mut result = Vec::<TranslationUnit>::new();
 
@@ -200,45 +180,7 @@ impl DocumentExporter for AstPathExporter {
         }
         collect_translation_unit(&mut result, world.main());
 
-        let t = Vec::<u8>::new();
-        let mut writer = Cursor::new(t);
-
-        for tu in result {
-            writer
-                .write_all("---\n".as_bytes())
-                .map_err(|e| map_err(world, e))?;
-            writer
-                .write_fmt(format_args!("path: {}\nast:\n  ", tu.path))
-                .map_err(|e| map_err(world, e))?;
-            let mut w = AstWriter {
-                w: &mut writer,
-                ident: 0,
-            };
-            w.write_ast_root(tu.source);
-        }
-
-        write_to_path(world, self.path.clone(), writer.get_ref())
-    }
-}
-
-impl DocumentExporter for AstVecExporter {
-    fn export(
-        &self,
-        world: &dyn typst::World,
-        _output: &typst::doc::Document,
-    ) -> typst::diag::SourceResult<()> {
-        let mut result = Vec::<TranslationUnit>::new();
-
-        fn collect_translation_unit<'a>(result: &mut Vec<TranslationUnit<'a>>, src: &'a Source) {
-            result.push(TranslationUnit {
-                path: src.path().display().to_string(),
-                source: src,
-            });
-        }
-        collect_translation_unit(&mut result, world.main());
-
-        let t = Vec::<u8>::new();
-        let mut writer = Cursor::new(t);
+        let mut writer = std::io::BufWriter::new(writer);
 
         for tu in result {
             writer
@@ -256,7 +198,6 @@ impl DocumentExporter for AstVecExporter {
 
         writer.flush().unwrap();
 
-        let mut vec_cb = self.vec_cb.lock().unwrap();
-        (vec_cb.as_mut())(writer.into_inner())
+        Ok(())
     }
 }

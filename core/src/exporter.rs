@@ -2,41 +2,73 @@ use std::sync::Arc;
 
 use typst::{diag::SourceResult, World};
 
-pub(crate) type DocumentRef<'a> = &'a typst::doc::Document;
-pub(crate) type ArtifactRef = Arc<crate::Artifact>;
+pub(crate) type DynExporter<Input, Output = ()> = Box<dyn Exporter<Input, Output>>;
 
-pub trait DocumentExporter {
-    /// Export the given document with given world.
+pub trait Transformer<Input, Output = ()> {
+    /// Export the given input with given world.
     /// the writable world is hiden by trait itself.
-    fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<()>;
+    fn export(&self, world: &dyn World, output: Input) -> SourceResult<Output>;
 }
 
-pub trait ArtifactExporter {
-    /// Export the given artifact with given world.
-    fn export(&self, world: &dyn World, output: ArtifactRef) -> SourceResult<()>;
+/// Lambda can automatically implement the Transformer trait.
+impl<I, O, F> Transformer<I, O> for F
+where
+    F: (for<'a, 'b> Fn(&'a (dyn World + 'b), I) -> SourceResult<O>) + Sized,
+{
+    fn export(&self, world: &dyn World, output: I) -> SourceResult<O> {
+        self(world, output)
+    }
+}
+
+pub trait Exporter<Input, Output = ()> {
+    /// Export the given input with given world.
+    /// the writable world is hiden by trait itself.
+    fn export(&self, world: &dyn World, output: Arc<Input>) -> SourceResult<Output>;
+}
+
+/// Lambda can automatically implement the Exporter trait.
+impl<I, O, F> Exporter<I, O> for F
+where
+    F: (for<'a, 'b> Fn(&'a (dyn World + 'b), Arc<I>) -> SourceResult<O>) + Sized,
+{
+    fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<O> {
+        self(world, output)
+    }
+}
+
+/// This function is used to work around the lifetime issue of a closure lambda.
+/// See https://github.com/rust-lang/rust/issues/70263
+pub fn mark_transformer_lambda<I, O, F>(f: F) -> F
+where
+    F: (for<'a, 'b> Fn(&'a (dyn World + 'b), I) -> SourceResult<O>) + Sized,
+{
+    f
 }
 
 pub mod builtins {
-    use super::{utils, ArtifactRef, DocumentRef};
-    use crate::{ArtifactExporter, DocumentExporter};
+    use std::{fs::File, sync::Arc};
+
+    use crate::{exporter_utils::map_err, AsOwnedBytes, AsOwnedString, AsWritable, Transformer};
+
+    use super::{utils, DynExporter, Exporter};
     use typst::{diag::SourceResult, World};
 
-    pub struct GroupDocumentExporter {
-        document_exporters: Vec<Box<dyn DocumentExporter>>,
+    pub struct GroupExporter<Input> {
+        exporters: Vec<DynExporter<Input>>,
     }
 
-    impl GroupDocumentExporter {
-        pub fn new(document_exporters: Vec<Box<dyn DocumentExporter>>) -> Self {
-            Self { document_exporters }
+    impl<I> GroupExporter<I> {
+        pub fn new(exporters: Vec<DynExporter<I>>) -> Self {
+            Self { exporters }
         }
     }
 
-    impl DocumentExporter for GroupDocumentExporter {
-        fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<()> {
+    impl<I> Exporter<I> for GroupExporter<I> {
+        fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<()> {
             let mut errors = Vec::new();
 
-            for f in &self.document_exporters {
-                utils::collect_err(&mut errors, f.export(world, output))
+            for f in &self.exporters {
+                utils::collect_err(&mut errors, f.export(world, output.clone()))
             }
 
             if errors.is_empty() {
@@ -47,52 +79,116 @@ pub mod builtins {
         }
     }
 
-    pub struct DocToArtifactExporter {
-        artifact_exporters: Vec<Box<dyn ArtifactExporter>>,
+    /// The Exporter<From<&Input>> must be explicitly constructed.
+    pub struct FromExporter<Input, AsInput> {
+        exporter: GroupExporter<AsInput>,
+
+        from_input: std::marker::PhantomData<Input>,
     }
 
-    impl DocToArtifactExporter {
-        pub fn new(artifact_exporters: Vec<Box<dyn ArtifactExporter>>) -> Self {
-            Self { artifact_exporters }
-        }
-    }
-
-    impl DocumentExporter for DocToArtifactExporter {
-        fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<()> {
-            let mut errors = Vec::new();
-
-            let artifact = ArtifactRef::new(output.into());
-            for f in &self.artifact_exporters {
-                utils::collect_err(&mut errors, f.export(world, artifact.clone()))
-            }
-
-            if errors.is_empty() {
-                Ok(())
-            } else {
-                Err(Box::new(errors))
+    impl<I, A> FromExporter<I, A> {
+        pub fn new(exporters: Vec<DynExporter<A>>) -> Self {
+            Self {
+                exporter: GroupExporter { exporters },
+                from_input: std::marker::PhantomData,
             }
         }
     }
 
-    pub struct LambdaDocumentExporter<F> {
-        f: F,
-    }
-
-    impl<F> LambdaDocumentExporter<F>
+    impl<I, A> Exporter<I> for FromExporter<I, A>
     where
-        F: Fn(&dyn World, DocumentRef) -> SourceResult<()>,
+        A: for<'a> From<&'a I>,
     {
-        pub fn new(f: F) -> Self {
-            Self { f }
+        fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<()> {
+            let as_output = output.as_ref().into();
+            self.exporter.export(world, Arc::new(as_output))
         }
     }
 
-    impl<F> DocumentExporter for LambdaDocumentExporter<F>
+    pub struct FsPathExporter<Writable, E> {
+        path: std::path::PathBuf,
+        exporter: E,
+
+        as_bytes: std::marker::PhantomData<Writable>,
+    }
+
+    impl<Writable, E> FsPathExporter<Writable, E> {
+        pub fn new(path: std::path::PathBuf, exporter: E) -> Self {
+            Self {
+                path,
+                exporter,
+                as_bytes: std::marker::PhantomData,
+            }
+        }
+    }
+
+    impl<I, Bytes, E> Exporter<I> for FsPathExporter<Bytes, E>
     where
-        F: Fn(&dyn World, DocumentRef) -> SourceResult<()>,
+        E: Exporter<I, Bytes>,
+        Bytes: AsRef<[u8]>,
     {
-        fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<()> {
-            (self.f)(world, output)
+        fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<()> {
+            let vec = self.exporter.export(world, output)?;
+            std::fs::write(&self.path, vec.as_ref()).map_err(|e| map_err(world, e))?;
+            Ok(())
+        }
+    }
+
+    impl<I, E> Exporter<I> for FsPathExporter<AsWritable, E>
+    where
+        E: Transformer<(Arc<I>, File)>,
+    {
+        fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<()> {
+            let file = std::fs::File::create(&self.path).map_err(|e| map_err(world, e))?;
+
+            self.exporter.export(world, (output, file))?;
+            Ok(())
+        }
+    }
+
+    pub struct VecExporter<Writable, E> {
+        exporter: E,
+
+        as_bytes: std::marker::PhantomData<Writable>,
+    }
+
+    impl<Writable, E> VecExporter<Writable, E> {
+        pub fn new(exporter: E) -> Self {
+            Self {
+                exporter,
+                as_bytes: std::marker::PhantomData,
+            }
+        }
+    }
+
+    impl<I, E> Exporter<I, Vec<u8>> for VecExporter<AsOwnedBytes, E>
+    where
+        E: Exporter<I, Vec<u8>>,
+    {
+        fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<Vec<u8>> {
+            let vec = self.exporter.export(world, output)?;
+            Ok(vec)
+        }
+    }
+
+    impl<I, E> Exporter<I, Vec<u8>> for VecExporter<AsOwnedString, E>
+    where
+        E: Exporter<I, String>,
+    {
+        fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<Vec<u8>> {
+            let vec = self.exporter.export(world, output)?;
+            Ok(vec.into_bytes())
+        }
+    }
+
+    impl<I, E> Exporter<I, Vec<u8>> for VecExporter<AsWritable, E>
+    where
+        E: for<'a> Transformer<(Arc<I>, &'a mut std::io::Cursor<Vec<u8>>)>,
+    {
+        fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<Vec<u8>> {
+            let mut cursor = std::io::Cursor::new(Vec::new());
+            self.exporter.export(world, (output, &mut cursor))?;
+            Ok(cursor.into_inner())
         }
     }
 }
@@ -117,16 +213,5 @@ pub mod utils {
             typst::syntax::Span::new(world.main().id(), 0),
             e.to_string(),
         )])
-    }
-
-    /// Export document to file system
-    pub fn write_to_path<C: AsRef<[u8]>>(
-        world: &dyn World,
-        path: Option<std::path::PathBuf>,
-        content: C,
-    ) -> SourceResult<()> {
-        path.map_or(Ok(()), |path| {
-            std::fs::write(path, content).map_err(|e| map_err(world, e))
-        })
     }
 }
