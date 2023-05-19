@@ -1,6 +1,6 @@
 use std::fmt::Display;
 use std::io::{self, Cursor, Write};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use typst::ide::Tag;
 use typst::syntax::{LinkedNode, Source, SyntaxKind};
@@ -188,7 +188,7 @@ impl DocumentExporter for AstPathExporter {
     fn export(
         &self,
         world: &dyn typst::World,
-        _output: &typst::doc::Document,
+        _output: Arc<typst::doc::Document>,
     ) -> typst::diag::SourceResult<()> {
         let mut result = Vec::<TranslationUnit>::new();
 
@@ -225,7 +225,7 @@ impl DocumentExporter for AstVecExporter {
     fn export(
         &self,
         world: &dyn typst::World,
-        _output: &typst::doc::Document,
+        _output: Arc<typst::doc::Document>,
     ) -> typst::diag::SourceResult<()> {
         let mut result = Vec::<TranslationUnit>::new();
 

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use typst::diag::{SourceError, SourceResult};
 use typst_ts_compiler::TypstSystemWorld;
@@ -39,7 +39,7 @@ impl CompileDriver {
 
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
     fn export(&self, output: typst::doc::Document) -> SourceResult<()> {
-        self.exporter.export(&self.world, &output)
+        self.exporter.export(&self.world, Arc::new(output))
     }
 
     /// Compile once from scratch.

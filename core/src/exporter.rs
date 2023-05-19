@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use typst::{diag::SourceResult, World};
 
-pub(crate) type DocumentRef<'a> = &'a typst::doc::Document;
+pub(crate) type DocumentRef = Arc<typst::doc::Document>;
 pub(crate) type ArtifactRef = Arc<crate::Artifact>;
 
 pub trait DocumentExporter<T = ()> {
@@ -36,7 +36,7 @@ pub mod builtins {
             let mut errors = Vec::new();
 
             for f in &self.document_exporters {
-                utils::collect_err(&mut errors, f.export(world, output))
+                utils::collect_err(&mut errors, f.export(world, output.clone()))
             }
 
             if errors.is_empty() {
@@ -61,7 +61,7 @@ pub mod builtins {
         fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<()> {
             let mut errors = Vec::new();
 
-            let artifact = ArtifactRef::new(output.into());
+            let artifact = ArtifactRef::new(output.as_ref().into());
             for f in &self.artifact_exporters {
                 utils::collect_err(&mut errors, f.export(world, artifact.clone()))
             }

@@ -99,7 +99,7 @@ impl TypstCompiler {
                 // artifact = Some(Artifact::from(&output));
                 // drop(artifact);
 
-                ast_exporter.export(&self.world, &output)
+                ast_exporter.export(&self.world, Arc::new(output))
             })
             .unwrap();
         let converted = ansi_to_html::convert_escaped(

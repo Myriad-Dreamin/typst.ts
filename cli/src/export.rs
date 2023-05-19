@@ -74,7 +74,7 @@ fn prepare_exporters_impl(
                 let exp = typst_ts_tir_exporter::IRArtifactExporter::new_path(output_path);
                 document_exporters.push(Box::new(LambdaDocumentExporter::new(
                     move |world, output| {
-                        let artifact = Arc::new(artifact_ir::Artifact::from(output));
+                        let artifact = Arc::new(artifact_ir::Artifact::from(output.as_ref()));
                         exp.export(world, artifact)
                     },
                 )));
