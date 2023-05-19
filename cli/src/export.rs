@@ -6,12 +6,14 @@ use std::{
 use typst::doc::Document;
 use typst_ts_core::{
     artifact_ir,
-    exporter_builtins::{DocToArtifactExporter, GroupDocumentExporter},
+    exporter_builtins::{FromExporter, GroupExporter},
     mark_exporter_lambda,
     program_meta::REPORT_BUG_MESSAGE,
 };
 
 use crate::CompileArgs;
+
+type GroupDocExporter = GroupExporter<typst::doc::Document>;
 
 /// builtin formats should be enabled by default, and non-builtin formats should be
 pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature hint */ &str)] = &[
@@ -54,7 +56,7 @@ fn prepare_exporters_impl(
     formats: Vec<String>,
     ws_url: String,
     entry_file: &Path,
-) -> GroupDocumentExporter {
+) -> GroupDocExporter {
     type DocExporter = Box<dyn typst_ts_core::Exporter<typst::doc::Document>>;
     type ArtExporter = Box<dyn typst_ts_core::Exporter<typst_ts_core::Artifact>>;
 
@@ -126,13 +128,13 @@ fn prepare_exporters_impl(
     }
 
     if !artifact_exporters.is_empty() {
-        document_exporters.push(Box::new(DocToArtifactExporter::new(artifact_exporters)));
+        document_exporters.push(Box::new(FromExporter::new(artifact_exporters)));
     }
 
-    GroupDocumentExporter::new(document_exporters)
+    GroupExporter::new(document_exporters)
 }
 
-pub fn prepare_exporters(args: &CompileArgs, entry_file: &Path) -> GroupDocumentExporter {
+pub fn prepare_exporters(args: &CompileArgs, entry_file: &Path) -> GroupDocExporter {
     let output_dir = {
         let output = args.output.clone();
         let output_dir = if !output.is_empty() {

@@ -2,11 +2,7 @@ use std::sync::Arc;
 
 use typst::{diag::SourceResult, World};
 
-pub(crate) type DocumentRef = Arc<typst::doc::Document>;
-pub(crate) type ArtifactRef = Arc<crate::Artifact>;
-
-pub(crate) type DocumentExporter = Box<dyn Exporter<typst::doc::Document>>;
-pub(crate) type ArtifactExporter = Box<dyn Exporter<crate::Artifact>>;
+pub(crate) type DynExporter<Input, Output = ()> = Box<dyn Exporter<Input, Output>>;
 
 pub trait Exporter<Input, Output = ()> {
     /// Export the given input with given world.
@@ -34,24 +30,26 @@ where
 }
 
 pub mod builtins {
-    use super::{utils, ArtifactExporter, ArtifactRef, DocumentExporter, DocumentRef, Exporter};
+    use std::sync::Arc;
+
+    use super::{utils, DynExporter, Exporter};
     use typst::{diag::SourceResult, World};
 
-    pub struct GroupDocumentExporter {
-        document_exporters: Vec<Box<dyn Exporter<typst::doc::Document>>>,
+    pub struct GroupExporter<Input> {
+        exporters: Vec<DynExporter<Input>>,
     }
 
-    impl GroupDocumentExporter {
-        pub fn new(document_exporters: Vec<DocumentExporter>) -> Self {
-            Self { document_exporters }
+    impl<I> GroupExporter<I> {
+        pub fn new(exporters: Vec<DynExporter<I>>) -> Self {
+            Self { exporters }
         }
     }
 
-    impl Exporter<typst::doc::Document> for GroupDocumentExporter {
-        fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<()> {
+    impl<I> Exporter<I> for GroupExporter<I> {
+        fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<()> {
             let mut errors = Vec::new();
 
-            for f in &self.document_exporters {
+            for f in &self.exporters {
                 utils::collect_err(&mut errors, f.export(world, output.clone()))
             }
 
@@ -63,30 +61,29 @@ pub mod builtins {
         }
     }
 
-    pub struct DocToArtifactExporter {
-        artifact_exporters: Vec<ArtifactExporter>,
+    /// The Exporter<From<&Input>> must be explicitly constructed.
+    pub struct FromExporter<Input, AsInput> {
+        exporter: GroupExporter<AsInput>,
+
+        from_input: std::marker::PhantomData<Input>,
     }
 
-    impl DocToArtifactExporter {
-        pub fn new(artifact_exporters: Vec<ArtifactExporter>) -> Self {
-            Self { artifact_exporters }
+    impl<I, A> FromExporter<I, A> {
+        pub fn new(exporters: Vec<DynExporter<A>>) -> Self {
+            Self {
+                exporter: GroupExporter { exporters },
+                from_input: std::marker::PhantomData,
+            }
         }
     }
 
-    impl Exporter<typst::doc::Document> for DocToArtifactExporter {
-        fn export(&self, world: &dyn World, output: DocumentRef) -> SourceResult<()> {
-            let mut errors = Vec::new();
-
-            let artifact = ArtifactRef::new(output.as_ref().into());
-            for f in &self.artifact_exporters {
-                utils::collect_err(&mut errors, f.export(world, artifact.clone()))
-            }
-
-            if errors.is_empty() {
-                Ok(())
-            } else {
-                Err(Box::new(errors))
-            }
+    impl<I, A> Exporter<I> for FromExporter<I, A>
+    where
+        A: for<'a> From<&'a I>,
+    {
+        fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<()> {
+            let as_output = output.as_ref().into();
+            self.exporter.export(world, Arc::new(as_output))
         }
     }
 }
