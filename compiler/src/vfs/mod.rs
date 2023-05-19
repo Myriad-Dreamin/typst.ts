@@ -7,6 +7,7 @@
 #[cfg(feature = "system")]
 pub mod system;
 
+pub mod cached;
 pub mod dummy;
 
 mod path_abs;
@@ -40,6 +41,8 @@ use typst::{
     util::{Buffer, PathExt},
 };
 use typst_ts_core::QueryRef;
+
+use self::cached::CachedAccessModel;
 
 /// Handle to a file in [`Vfs`]
 ///
@@ -84,7 +87,7 @@ impl PathSlot {
 }
 
 pub struct Vfs<M: AccessModel + Sized> {
-    access_model: M,
+    access_model: CachedAccessModel<M>,
     path_interner: Mutex<PathInterner<<M as AccessModel>::RealPath>>,
 
     path2slot: RwLock<HashMap<Arc<OsStr>, FileId>>,
@@ -94,7 +97,7 @@ pub struct Vfs<M: AccessModel + Sized> {
 impl<M: AccessModel + Sized> Vfs<M> {
     pub fn new(access_model: M) -> Self {
         Self {
-            access_model,
+            access_model: CachedAccessModel::new(access_model),
             path_interner: Mutex::new(PathInterner::default()),
             slots: AppendOnlyVec::new(),
             path2slot: RwLock::new(HashMap::new()),
