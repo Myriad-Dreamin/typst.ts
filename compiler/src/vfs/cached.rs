@@ -94,7 +94,7 @@ impl<Inner: AccessModel> AccessModel for CachedAccessModel<Inner> {
             entry
                 .is_file
                 .compute(|| self.inner.is_file(src))
-                .map(|q| q.clone())
+                .map(|q| *q)
         })
     }
 
