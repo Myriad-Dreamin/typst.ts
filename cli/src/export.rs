@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use typst_ts_core::{
     exporter_builtins::{FromExporter, FsPathExporter, GroupExporter},
     program_meta::REPORT_BUG_MESSAGE,
+    AsWritable,
 };
 
 use crate::CompileArgs;
@@ -94,7 +95,7 @@ fn prepare_exporters_impl(
                 let output_path = output_dir
                     .with_file_name(entry_file.file_name().unwrap())
                     .with_extension("artifact.json");
-                artifact_exporters.push(Box::new(FsPathExporter::new(
+                artifact_exporters.push(Box::new(FsPathExporter::<AsWritable, _>::new(
                     output_path,
                     typst_ts_serde_exporter::JsonArtifactExporter::default(),
                 )));

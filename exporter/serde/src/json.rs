@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use typst::{diag::SourceResult, World};
-use typst_ts_core::{Artifact, Exporter};
+use typst_ts_core::{Artifact, Exporter, Transformer};
 
 use crate::map_err;
 
@@ -25,6 +25,22 @@ impl Exporter<Artifact, String> for JsonArtifactExporter {
                 serde_json::to_string(&self.truncate_precision(world, output)?)
             } else {
                 serde_json::to_string(output.as_ref())
+            }
+        };
+        json_doc.map_err(|e| map_err(world, e))
+    }
+}
+
+impl<W> Transformer<(Arc<Artifact>, W)> for JsonArtifactExporter
+where
+    W: std::io::Write,
+{
+    fn export(&self, world: &dyn World, (output, writer): (Arc<Artifact>, W)) -> SourceResult<()> {
+        let json_doc = {
+            if self.should_truncate_precision {
+                serde_json::to_writer(writer, &self.truncate_precision(world, output)?)
+            } else {
+                serde_json::to_writer(writer, output.as_ref())
             }
         };
         json_doc.map_err(|e| map_err(world, e))
