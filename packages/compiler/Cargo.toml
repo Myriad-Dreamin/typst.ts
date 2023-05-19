@@ -14,6 +14,7 @@ crate-type = ["cdylib"]
 typst-ts-core = "0.1"
 typst-ts-compiler = { version = "0.1", default-features = false, features = ["web"] }
 typst-ts-ast-exporter = { version = "0.1" }
+typst-ts-tir-exporter = { version = "0.1" }
 ansi-to-html = "0.1.3"
 
 typst = "0.3.0"

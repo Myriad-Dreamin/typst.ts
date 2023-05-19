@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use js_sys::{JsString, Uint8Array};
 use typst_ts_compiler::font::web::BrowserFontSearcher;
@@ -81,34 +81,28 @@ impl TypstCompiler {
     }
 
     pub fn get_ast(&mut self) -> Result<String, JsValue> {
-        let data = Arc::new(Mutex::new(vec![]));
-
-        let inner_data = data.clone();
         let ast_exporter = typst_ts_core::exporter_builtins::VecExporter::new(
             typst_ts_ast_exporter::AstExporter::default(),
         );
 
-        // let artifact = Arc::new(Mutex::new(None));
-
         // compile and export document
-        typst::compile(&self.world)
-            .and_then(|output| {
-                // let mut artifact = artifact.lock().unwrap();
-                // artifact = Some(Artifact::from(&output));
-                // drop(artifact);
+        let doc = typst::compile(&self.world).unwrap();
+        let data = ast_exporter.export(&self.world, Arc::new(doc)).unwrap();
 
-                let mut data = inner_data.lock().unwrap();
-                let v = ast_exporter.export(&self.world, Arc::new(output))?;
-                *data = v;
-                Ok(())
-            })
-            .unwrap();
-        let converted = ansi_to_html::convert_escaped(
-            String::from_utf8(data.lock().unwrap().clone())
-                .unwrap()
-                .as_str(),
-        )
-        .unwrap();
+        let converted =
+            ansi_to_html::convert_escaped(String::from_utf8(data).unwrap().as_str()).unwrap();
         Ok(converted)
+    }
+
+    pub fn get_artifact(&mut self, _format: String) -> Result<Vec<u8>, JsValue> {
+        let ir_exporter = typst_ts_core::exporter_builtins::VecExporter::new(
+            typst_ts_tir_exporter::IRArtifactExporter::default(),
+        );
+
+        let doc = typst::compile(&self.world).unwrap();
+        let artifact_bytes = ir_exporter
+            .export(&self.world, Arc::new((&doc).into()))
+            .unwrap();
+        Ok(artifact_bytes)
     }
 }

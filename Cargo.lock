@@ -2875,6 +2875,7 @@ dependencies = [
  "typst-ts-ast-exporter",
  "typst-ts-compiler",
  "typst-ts-core",
+ "typst-ts-tir-exporter",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
