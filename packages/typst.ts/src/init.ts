@@ -15,7 +15,9 @@ export interface TypstCommonBuilder<T> {
 }
 
 /** @internal */
-export interface ComponentBuildHooks {}
+export interface ComponentBuildHooks {
+  latelyBuild?: (ctx: unknown) => void;
+}
 
 interface InitContext<T> {
   ref: {
@@ -123,7 +125,11 @@ class ComponentBuilder<T> {
     for (const fn of options?.beforeBuild ?? []) {
       await fn(undefined as unknown as BeforeBuildMark, buildCtx);
     }
-    await addPartialFonts(buildCtx);
+    // await addPartialFonts(buildCtx);
+
+    if (hooks.latelyBuild) {
+      hooks.latelyBuild(buildCtx);
+    }
 
     const component = await builder.build();
 

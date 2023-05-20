@@ -44,7 +44,61 @@ class TypstCompilerDriver {
   constructor() {}
 
   async init(options?: Partial<InitOptions>): Promise<void> {
-    this.compiler = await buildComponent(options, gCompilerModule, typst.TypstCompilerBuilder, {});
+    this.compiler = await buildComponent(options, gCompilerModule, typst.TypstCompilerBuilder, {
+      latelyBuild({ builder }: { builder: typst.TypstCompilerBuilder }) {
+        builder.set_access_model(
+          this,
+          // todo: named parameters
+          (path: string) => {
+            console.log('mtime', path);
+
+            const request = new XMLHttpRequest();
+            request.open('HEAD', 'http://localhost:20810/' + path, false);
+            request.send(null);
+
+            let lastModified = undefined;
+            if (request.status === 200) {
+              lastModified = request.getResponseHeader('Last-Modified');
+            }
+            if (lastModified) {
+              lastModified = new Date(lastModified).getTime();
+            } else {
+              lastModified = 0;
+            }
+            return lastModified;
+          },
+          (path: string) => {
+            console.log('is file', path);
+
+            const request = new XMLHttpRequest();
+            request.open('HEAD', 'http://localhost:20810/' + path, false);
+            request.send(null);
+
+            if (request.status === 200) {
+              console.log(request, request.getAllResponseHeaders());
+            }
+            return true;
+          },
+          (path: string) => {
+            console.log('real path', path);
+            return path;
+          },
+          (path: string) => {
+            console.log('read all', path);
+
+            const request = new XMLHttpRequest();
+            request.overrideMimeType('text/plain; charset=x-user-defined');
+            request.open('GET', 'http://localhost:20810/' + path, false);
+            request.send(null);
+
+            if (request.status === 200) {
+              return Uint8Array.from(request.response, (c: string) => c.charCodeAt(0));
+            }
+            return undefined;
+          },
+        );
+      },
+    });
   }
 
   async runSyncCodeUntilStable<T>(execute: () => T): Promise<T> {
