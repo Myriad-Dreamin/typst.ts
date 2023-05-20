@@ -14,6 +14,7 @@ type GroupDocExporter = GroupExporter<typst::doc::Document>;
 pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature hint */ &str)] = &[
     ("ast", REPORT_BUG_MESSAGE),
     ("ir", REPORT_BUG_MESSAGE),
+    ("nothing", REPORT_BUG_MESSAGE),
     ("pdf", "pdf"),
     ("json", "serde-json"),
     ("rmp", "serde-rmp"),
@@ -120,6 +121,7 @@ fn prepare_exporters_impl(
                     typst_ts_ws_exporter::WebSocketArtifactExporter::new_url(ws_url),
                 ));
             }
+            "nothing" => (),
             _ => panic_not_available_formats(f),
         };
     }
