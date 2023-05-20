@@ -27,13 +27,9 @@
         terminalContent.innerHTML = 'Compiling...';
 
         const runCompile = async () => {
-          const data = await fetch('http://localhost:20810/skyzh-cv/main.typ').then(res =>
-            res.text(),
-          );
-
           const begin = performance.now();
-          compilerPlugin.addSource('main.typ', data, true);
-          const ast = await compilerPlugin.getAst();
+          compilerPlugin.reset();
+          const ast = await compilerPlugin.getAst('skyzh-cv/main.typ');
           const end = performance.now();
           const rounded = Math.round((end - begin) * 1000) / 1000;
 
