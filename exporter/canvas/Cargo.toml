@@ -10,14 +10,14 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 typst-ts-core = "0.1"
 
-typst = "0.3.0"
-comemo = "0.2"
+typst.workspace = true
+comemo.workspace = true
 
-tiny-skia = "0.9.0"
-ttf-parser = "0.18.1"
-flate2 = "1"
+tiny-skia.workspace = true
+ttf-parser.workspace = true
+flate2.workspace = true
 data-url = "0.2.0"
 
-wasm-bindgen = { version = "^0.2" }
-js-sys = "^0.3"
-web-sys = { version = "^0.3", features = ["console", "CanvasRenderingContext2d", "Path2d", "Blob", "ImageData", "HtmlImageElement", "HtmlElement", "Url", "BlobPropertyBag"] }
+wasm-bindgen.workspace = true
+js-sys.workspace = true
+web-sys = { workspace = true, features = ["console", "CanvasRenderingContext2d", "Path2d", "Blob", "ImageData", "HtmlImageElement", "HtmlElement", "Url", "BlobPropertyBag"] }

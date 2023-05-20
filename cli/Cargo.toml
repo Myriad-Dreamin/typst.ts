@@ -7,8 +7,30 @@ description = "Command line tool for Typst.ts."
 repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 [dependencies]
-typst = "0.3.0"
-typst-library = "0.3.0"
+typst.workspace = true
+typst-library.workspace = true
+
+codespan-reporting.workspace = true
+
+clap.workspace = true
+clap_complete.workspace = true
+clap_complete_fig.workspace = true
+
+comemo.workspace = true
+chrono.workspace = true
+notify.workspace = true
+tokio.workspace = true
+
+serde.workspace = true
+serde_json.workspace = true
+
+env_logger.workspace = true
+log.workspace = true
+
+tracing.workspace = true
+tracing-error.workspace = true
+flate2.workspace = true
+tracing-subscriber.workspace = true
 
 typst-ts-core = "0.1"
 typst-ts-compiler = "0.1"
@@ -20,32 +42,8 @@ typst-ts-serde-exporter = { version = "0.1", optional = true }
 typst-ts-tir-exporter = { version = "0.1", optional = true }
 typst-ts-ws-exporter = { version = "0.1", optional = true }
 
-codespan-reporting = "0.11"
-
-clap = { version = "4.2", features = ["derive", "env", "unicode", "wrap_help"] }
-clap_complete = "4.2"
-clap_complete_fig = "4.2"
-
-comemo = "0.2.2"
-chrono = { version = "0.4", default-features = false, features = [
-  "clock",
-  "std",
-] }
-notify = "5"
-tokio = {version = "1.27.0", features = ["full"]}
-
-serde = "1.0.159"
-serde_json = "1.0.96"
-
-env_logger = "0.10.0"
-log = "0.4.17"
-tracing = "0.1.37"
-tracing-error = "0.2"
-flate2 = "1"
-tracing-subscriber = { version = "0.3.17", features = ["std"] }
-
 [build-dependencies]
-anyhow = "1"
+anyhow.workspace = true
 vergen = { version = "7.5.1", features = ["build", "cargo", "git", "rustc"] }
 
 [features]

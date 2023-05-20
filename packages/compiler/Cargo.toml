@@ -11,26 +11,28 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 crate-type = ["cdylib"]
 
 [dependencies]
+
+ansi-to-html = "0.1.3"
+
+typst.workspace = true
+typst-library.workspace = true
+comemo.workspace = true
+
+once_cell.workspace = true
+siphasher.workspace = true
+elsa.workspace = true
+serde-wasm-bindgen.workspace = true
+
+# Everything to do with wasm
+wasm-bindgen.workspace = true
+js-sys.workspace = true
+wasm-bindgen-futures.workspace = true
+web-sys = { workspace = true, features = ["console", "Window", "Blob"] }
+
 typst-ts-core = "0.1"
 typst-ts-compiler = { version = "0.1", default-features = false, features = ["web"] }
 typst-ts-ast-exporter = { version = "0.1" }
 typst-ts-tir-exporter = { version = "0.1" }
-ansi-to-html = "0.1.3"
-
-typst = "0.3.0"
-typst-library = "0.3.0"
-comemo = "0.2"
-
-once_cell = "1.17.1"
-siphasher = "0.3.10"
-elsa = "1.8.0"
-serde-wasm-bindgen = "^0.5"
-
-# Everything to do with wasm
-wasm-bindgen = { version = "^0.2" }
-js-sys = "^0.3"
-wasm-bindgen-futures = "^0.4"
-web-sys = { version = "^0.3", features = ["console", "Window", "Blob"] }
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
@@ -40,7 +42,7 @@ console_error_panic_hook = { version = "0.1.1" } # , optional = true
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.0"
-web-sys = { version = "^0.3", features = ["console"] }
+web-sys = { workspace = true, features = ["console"] }
 
 [features]
 full = ["web"]

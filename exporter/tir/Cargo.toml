@@ -8,10 +8,11 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 [dependencies]
 
-typst = "0.3.0"
+typst.workspace = true
+
+serde.workspace = true
+serde_json.workspace = true
+
+byteorder.workspace = true
+
 typst-ts-core = "0.1"
-
-serde = "1.0.159"
-serde_json = "1.0.95"
-
-byteorder = "1.4.3"
