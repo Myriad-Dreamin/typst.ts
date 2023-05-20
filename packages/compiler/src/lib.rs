@@ -88,7 +88,7 @@ impl TypstCompiler {
     pub fn get_ast(&mut self, main_file_path: String) -> Result<String, JsValue> {
         self.world.main = self
             .world
-            .resolve(&std::path::Path::new(&main_file_path))
+            .resolve(std::path::Path::new(&main_file_path))
             .unwrap();
 
         let ast_exporter = typst_ts_core::exporter_builtins::VecExporter::new(
