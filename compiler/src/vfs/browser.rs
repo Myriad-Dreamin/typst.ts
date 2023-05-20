@@ -76,8 +76,13 @@ impl AccessModel for ProxyAccessModel {
                 );
                 FileError::AccessDenied
             })?;
-        let data = data.dyn_ref::<js_sys::Uint8Array>().unwrap();
 
-        Ok(Buffer::from(data.to_vec()))
+        let data = if let Some(data) = data.dyn_ref::<js_sys::Uint8Array>() {
+            Buffer::from(data.to_vec())
+        } else {
+            return Err(FileError::AccessDenied);
+        };
+
+        Ok(data)
     }
 }
