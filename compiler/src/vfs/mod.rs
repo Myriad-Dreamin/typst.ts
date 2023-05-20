@@ -112,6 +112,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
         self.slots = AppendOnlyVec::new();
         self.path2slot.get_mut().clear();
         self.path_interner.get_mut().clear();
+        self.access_model.clear();
     }
 
     /// Returns the overall memory usage for the stored files.
