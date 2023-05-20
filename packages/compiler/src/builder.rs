@@ -1,6 +1,6 @@
 use crate::TypstCompiler;
 
-use typst_ts_compiler::font::web::BrowserFontSearcher;
+use typst_ts_compiler::{font::web::BrowserFontSearcher, vfs::browser::ProxyAccessModel};
 
 use js_sys::Uint8Array;
 use typst::util::Buffer;
@@ -8,6 +8,7 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct TypstCompilerBuilder {
+    access_model: Option<ProxyAccessModel>,
     searcher: BrowserFontSearcher,
 }
 
@@ -17,8 +18,28 @@ impl TypstCompilerBuilder {
     pub fn new() -> Result<TypstCompilerBuilder, JsValue> {
         console_error_panic_hook::set_once();
         Ok(Self {
+            access_model: None,
             searcher: BrowserFontSearcher::new(),
         })
+    }
+
+    pub async fn set_access_model(
+        &mut self,
+        context: JsValue,
+        mtime_fn: js_sys::Function,
+        is_file_fn: js_sys::Function,
+        real_path_fn: js_sys::Function,
+        read_all_fn: js_sys::Function,
+    ) -> Result<(), JsValue> {
+        self.access_model = Some(ProxyAccessModel {
+            context,
+            mtime_fn,
+            is_file_fn,
+            real_path_fn,
+            read_all_fn,
+        });
+
+        Ok(())
     }
 
     // 400 KB
@@ -36,9 +57,11 @@ impl TypstCompilerBuilder {
         self.searcher.add_web_fonts(fonts).await
     }
 
-    // 24 MB
     pub async fn build(self) -> Result<TypstCompiler, JsValue> {
-        TypstCompiler::new(self.searcher).await
+        let access_model = self
+            .access_model
+            .ok_or_else(|| "TypstCompilerBuilder::build: access_model is not set".to_string())?;
+        TypstCompiler::new(access_model, self.searcher).await
     }
 }
 
