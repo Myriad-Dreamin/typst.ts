@@ -238,7 +238,6 @@ impl<M: AccessModel + Sized> Vfs<M> {
         })
     }
 
-    // todo: remove
     /// Get source id by path with memory content.
     pub fn resolve_with<P: AsRef<Path>>(&self, path: P, content: &str) -> FileResult<SourceId> {
         self.resolve_with_f(path.as_ref(), || Ok(content.to_owned()))
