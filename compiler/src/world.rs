@@ -9,7 +9,7 @@ use typst::{
     util::Buffer,
     World,
 };
-use typst_ts_core::{config::CompileOpts, font::FontResolverImpl, FontResolver};
+use typst_ts_core::{font::FontResolverImpl, FontResolver};
 
 use crate::vfs::{AccessModel, Vfs};
 
@@ -18,10 +18,6 @@ type CodespanError = codespan_reporting::files::Error;
 
 pub trait CompilerFeat {
     type M: AccessModel + Sized;
-
-    fn create_vfs() -> Vfs<Self::M>;
-
-    fn from_opts(opts: CompileOpts) -> (FontResolverImpl,);
 }
 
 /// A world that provides access to the operating system.
@@ -35,9 +31,7 @@ pub struct CompilerWorld<F: CompilerFeat> {
 }
 
 impl<F: CompilerFeat> CompilerWorld<F> {
-    pub fn new_raw(root_dir: PathBuf, font_resolver: FontResolverImpl) -> Self {
-        let source_mgr = F::create_vfs();
-
+    pub fn new_raw(root_dir: PathBuf, vfs: Vfs<F::M>, font_resolver: FontResolverImpl) -> Self {
         // Hook up the lang items.
         // todo: bad upstream changes
         let library = Prehashed::new(typst_library::build());
@@ -48,16 +42,8 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             library,
             font_resolver,
             main: SourceId::detached(),
-            vfs: source_mgr,
+            vfs,
         }
-    }
-
-    // todo: opts is not good
-    pub fn new(opts: CompileOpts) -> Self {
-        let root_dir = opts.root_dir.clone();
-        let (font_resolver,) = F::from_opts(opts);
-
-        Self::new_raw(root_dir, font_resolver)
     }
 }
 

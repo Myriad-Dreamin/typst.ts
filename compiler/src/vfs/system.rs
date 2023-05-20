@@ -1,5 +1,9 @@
 use std::{fs::File, io::Read, path::Path};
 
+use typst::{
+    diag::{FileError, FileResult},
+    util::Buffer,
+};
 use typst_ts_core::ReadAllOnce;
 
 use super::AccessModel;
@@ -48,19 +52,28 @@ impl SystemAccessModel {
 impl AccessModel for SystemAccessModel {
     type RealPath = same_file::Handle;
 
-    fn mtime(&self, src: &Path) -> std::io::Result<std::time::SystemTime> {
-        Ok(self.stat(src)?.mt)
+    fn mtime(&self, src: &Path) -> FileResult<std::time::SystemTime> {
+        let f = |e| FileError::from_io(e, src);
+        Ok(self.stat(src).map_err(f)?.mt)
     }
 
-    fn is_file(&self, src: &Path) -> std::io::Result<bool> {
-        Ok(self.stat(src)?.is_file)
+    fn is_file(&self, src: &Path) -> FileResult<bool> {
+        let f = |e| FileError::from_io(e, src);
+        Ok(self.stat(src).map_err(f)?.is_file)
     }
 
-    fn real_path(&self, src: &Path) -> std::io::Result<Self::RealPath> {
-        same_file::Handle::from_path(src)
+    fn real_path(&self, src: &Path) -> FileResult<Self::RealPath> {
+        let f = |e| FileError::from_io(e, src);
+        same_file::Handle::from_path(src).map_err(f)
     }
 
-    fn read_all(&self, src: &Path, buf: &mut Vec<u8>) -> std::io::Result<usize> {
-        std::fs::File::open(src)?.read_to_end(buf)
+    fn read_all(&self, src: &Path) -> FileResult<Buffer> {
+        let f = |e| FileError::from_io(e, src);
+        let mut buf = Vec::<u8>::new();
+        std::fs::File::open(src)
+            .map_err(f)?
+            .read_to_end(&mut buf)
+            .map_err(f)?;
+        Ok(buf.into())
     }
 }

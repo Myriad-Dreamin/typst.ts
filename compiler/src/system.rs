@@ -3,7 +3,6 @@ use typst_ts_core::config::CompileOpts;
 use crate::font::system::SystemFontSearcher;
 use crate::vfs::{system::SystemAccessModel, Vfs};
 use crate::world::CompilerFeat;
-use typst_ts_core::font::FontResolverImpl;
 
 pub type TypstSystemWorld = crate::world::CompilerWorld<SystemCompilerFeat>;
 
@@ -11,12 +10,11 @@ pub struct SystemCompilerFeat;
 
 impl CompilerFeat for SystemCompilerFeat {
     type M = SystemAccessModel;
+}
 
-    fn create_vfs() -> Vfs<Self::M> {
-        Vfs::new(SystemAccessModel {})
-    }
-
-    fn from_opts(opts: CompileOpts) -> (FontResolverImpl,) {
+impl TypstSystemWorld {
+    pub fn new(opts: CompileOpts) -> Self {
+        let root_dir = opts.root_dir.clone();
         let mut searcher = SystemFontSearcher::new();
 
         if opts
@@ -42,6 +40,10 @@ impl CompilerFeat for SystemCompilerFeat {
                 searcher.search_file(&path);
             }
         }
-        (searcher.into(),)
+        let font_resolver = searcher.into();
+
+        let vfs = Vfs::new(SystemAccessModel {});
+
+        Self::new_raw(root_dir, vfs, font_resolver)
     }
 }

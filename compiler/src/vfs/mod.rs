@@ -4,9 +4,13 @@
 //!   ::anchored_path.rs -> path_anchored.rs
 //!   ::vfs_path.rs -> path_vfs.rs
 
+#[cfg(feature = "browser-compile")]
+pub mod browser;
+
 #[cfg(feature = "system")]
 pub mod system;
 
+pub mod cached;
 pub mod dummy;
 
 mod path_abs;
@@ -41,6 +45,8 @@ use typst::{
 };
 use typst_ts_core::QueryRef;
 
+use self::cached::CachedAccessModel;
+
 /// Handle to a file in [`Vfs`]
 ///
 /// Most functions in rust-analyzer use this when they need to refer to a file.
@@ -53,13 +59,15 @@ impl nohash_hasher::IsEnabled for FileId {}
 pub trait AccessModel {
     type RealPath: Hash + Eq + PartialEq;
 
-    fn mtime(&self, src: &Path) -> std::io::Result<std::time::SystemTime>;
+    fn clear(&mut self) {}
 
-    fn is_file(&self, src: &Path) -> std::io::Result<bool>;
+    fn mtime(&self, src: &Path) -> FileResult<std::time::SystemTime>;
 
-    fn real_path(&self, src: &Path) -> std::io::Result<Self::RealPath>;
+    fn is_file(&self, src: &Path) -> FileResult<bool>;
 
-    fn read_all(&self, src: &Path, buf: &mut Vec<u8>) -> std::io::Result<usize>;
+    fn real_path(&self, src: &Path) -> FileResult<Self::RealPath>;
+
+    fn read_all(&self, src: &Path) -> FileResult<Buffer>;
 }
 
 /// Holds canonical data for all paths pointing to the same entity.
@@ -82,7 +90,7 @@ impl PathSlot {
 }
 
 pub struct Vfs<M: AccessModel + Sized> {
-    access_model: M,
+    access_model: CachedAccessModel<M>,
     path_interner: Mutex<PathInterner<<M as AccessModel>::RealPath>>,
 
     path2slot: RwLock<HashMap<Arc<OsStr>, FileId>>,
@@ -92,7 +100,7 @@ pub struct Vfs<M: AccessModel + Sized> {
 impl<M: AccessModel + Sized> Vfs<M> {
     pub fn new(access_model: M) -> Self {
         Self {
-            access_model,
+            access_model: CachedAccessModel::new(access_model),
             path_interner: Mutex::new(PathInterner::default()),
             slots: AppendOnlyVec::new(),
             path2slot: RwLock::new(HashMap::new()),
@@ -104,6 +112,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
         self.slots = AppendOnlyVec::new();
         self.path2slot.get_mut().clear();
         self.path_interner.get_mut().clear();
+        self.access_model.clear();
     }
 
     /// Returns the overall memory usage for the stored files.
@@ -133,12 +142,9 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// Read a file.
-    fn read(&self, path: &Path) -> FileResult<Vec<u8>> {
-        let f = |e| FileError::from_io(e, path);
-        if self.access_model.is_file(path).map_err(f)? {
-            let mut data = vec![];
-            self.access_model.read_all(path, &mut data).map_err(f)?;
-            Ok(data)
+    fn read(&self, path: &Path) -> FileResult<Buffer> {
+        if self.access_model.is_file(path)? {
+            self.access_model.read_all(path)
         } else {
             Err(FileError::IsDirectory)
         }
@@ -152,8 +158,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     ///
     /// Does not record a change.
     fn get_real_slot(&self, origin_path: &Path) -> FileResult<&PathSlot> {
-        let f = |e| FileError::from_io(e, origin_path);
-        let real_path = self.access_model.real_path(origin_path).map_err(f)?;
+        let real_path = self.access_model.real_path(origin_path)?;
 
         let mut path_interner = self.path_interner.lock();
         let file_id = path_interner.intern(real_path);
@@ -210,9 +215,14 @@ impl<M: AccessModel + Sized> Vfs<M> {
         read: ReadContent,
     ) -> FileResult<SourceId> {
         let slot = self.slot(path)?;
-        let source_id = SourceId::from_u16(slot.idx.0 as u16);
+        let origin_source_id = slot.idx.0;
+        let source_id = SourceId::from_u16(origin_source_id as u16);
 
         slot.source.compute(|| {
+            if origin_source_id > u16::MAX as u32 {
+                panic!("source id overflow");
+            }
+
             let text = read()?;
             Ok(Source::new(source_id, path, text))
         })?;
@@ -224,11 +234,10 @@ impl<M: AccessModel + Sized> Vfs<M> {
     pub fn resolve(&self, path: &Path) -> FileResult<SourceId> {
         self.resolve_with_f(path, || {
             let buf = self.read(path)?;
-            Ok(String::from_utf8(buf)?)
+            Ok(String::from_utf8(buf.to_vec())?)
         })
     }
 
-    // todo: remove
     /// Get source id by path with memory content.
     pub fn resolve_with<P: AsRef<Path>>(&self, path: P, content: &str) -> FileResult<SourceId> {
         self.resolve_with_f(path.as_ref(), || Ok(content.to_owned()))
@@ -237,12 +246,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     pub fn file(&self, path: &Path) -> FileResult<Buffer> {
         let slot = self.slot(path)?;
 
-        let buffer = slot.buffer.compute(|| {
-            let buf = self.read(path)?;
-            let buf = Buffer::from(buf);
-            Ok(buf)
-        })?;
-
+        let buffer = slot.buffer.compute(|| self.read(path))?;
         Ok(buffer.clone())
     }
 }

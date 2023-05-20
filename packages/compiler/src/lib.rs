@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use js_sys::{JsString, Uint8Array};
-use typst_ts_compiler::font::web::BrowserFontSearcher;
+use typst::World;
 pub use typst_ts_compiler::*;
+use typst_ts_compiler::{font::web::BrowserFontSearcher, vfs::browser::ProxyAccessModel};
 use typst_ts_core::{cache::FontInfoCache, Exporter};
 use wasm_bindgen::prelude::*;
 
@@ -18,10 +19,14 @@ pub struct TypstCompiler {
 }
 
 impl TypstCompiler {
-    pub async fn new(searcher: BrowserFontSearcher) -> Result<Self, JsValue> {
+    pub async fn new(
+        access_model: ProxyAccessModel,
+        searcher: BrowserFontSearcher,
+    ) -> Result<Self, JsValue> {
         Ok(Self {
-            world: TypstBrowserWorld::new_raw(
+            world: TypstBrowserWorld::new(
                 std::path::Path::new("/").to_owned(),
+                access_model,
                 searcher.into(),
             ),
         })
@@ -80,7 +85,12 @@ impl TypstCompiler {
             .collect()
     }
 
-    pub fn get_ast(&mut self) -> Result<String, JsValue> {
+    pub fn get_ast(&mut self, main_file_path: String) -> Result<String, JsValue> {
+        self.world.main = self
+            .world
+            .resolve(std::path::Path::new(&main_file_path))
+            .unwrap();
+
         let ast_exporter = typst_ts_core::exporter_builtins::VecExporter::new(
             typst_ts_ast_exporter::AstExporter::default(),
         );
