@@ -12,8 +12,8 @@
     "link:local": "cd ../../dist/typst.angular && yarn link"
   },
   "peerDependencies": {
-    "@angular/common": "^15.2.0",
-    "@angular/core": "^15.2.0",
+    "@angular/common": "^16.0.2",
+    "@angular/core": "^16.0.2",
     "@myriaddreamin/typst.ts": "^0.1",
     "@myriaddreamin/typst-ts-renderer": "^0.1"
   },
