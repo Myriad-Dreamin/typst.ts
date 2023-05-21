@@ -9,7 +9,7 @@ module.exports = {
     hot: true,
     open: true,
     port: 8005,
-    static: [path.join(__dirname, '../dist')],
+    static: [path.join(__dirname, '../dist'), path.join(__dirname, '../')],
   },
   plugins: [
     new ReactRefreshWebpackPlugin(),
