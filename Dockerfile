@@ -1,5 +1,5 @@
 FROM rust:1.69.0-bullseye AS build
-COPY . /app
+ADD . /app
 WORKDIR /app
 ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 RUN apt-get install -y git \
