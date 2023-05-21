@@ -38,6 +38,9 @@ pub enum Subcommands {
     #[clap(visible_alias = "c", about = "Run compiler.")]
     Compile(CompileArgs),
 
+    #[clap(about = "Generate shell completion script.")]
+    Completion(CompletionArgs),
+
     #[clap(about = "Dump Client Environment.")]
     Env(EnvArgs),
 
@@ -129,6 +132,14 @@ pub struct MeasureFontsArgs {
 #[derive(ValueEnum, Debug, Clone)]
 pub enum EnvKey {
     Features,
+}
+
+/// Generate shell completion script.
+#[derive(Debug, Clone, Parser)]
+pub struct CompletionArgs {
+    /// Completion script kind.
+    #[clap(value_enum)]
+    pub shell: clap_complete::Shell,
 }
 
 /// Dump Client Environment.
