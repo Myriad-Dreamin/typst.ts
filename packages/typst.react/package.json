@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst.react",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "Typst.ts for React",
   "main": "src/lib/index.js",
   "types": "src/lib/index.d.ts",
@@ -26,8 +26,8 @@
   "dependencies": {
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
-    "@myriaddreamin/typst.ts": "^0.1",
-    "@myriaddreamin/typst-ts-renderer": "^0.1"
+    "@myriaddreamin/typst.ts": "^0.2",
+    "@myriaddreamin/typst-ts-renderer": "^0.2"
   },
   "peerDependencies": {
     "react": "^17.0.1",

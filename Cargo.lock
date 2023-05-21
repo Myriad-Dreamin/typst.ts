@@ -2584,7 +2584,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-ast-exporter"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "ansi_term",
  "typst",
@@ -2593,7 +2593,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-canvas-exporter"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "comemo",
  "data-url",
@@ -2609,7 +2609,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-cli"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2643,7 +2643,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-compiler"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "append-only-vec",
  "codespan-reporting",
@@ -2678,7 +2678,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-core"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "base64 0.21.0",
  "comemo",
@@ -2696,7 +2696,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-dev-server"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "clap",
  "clap_complete",
@@ -2709,7 +2709,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-fontctl"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2723,7 +2723,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-pdf-exporter"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "typst",
  "typst-ts-core",
@@ -2731,7 +2731,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-raster-exporter"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "bytemuck",
  "comemo",
@@ -2748,7 +2748,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-renderer"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "byteorder",
  "comemo",
@@ -2776,7 +2776,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-serde-exporter"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "rmp-serde",
  "serde",
@@ -2787,7 +2787,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-tir-exporter"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "byteorder",
  "serde",
@@ -2798,7 +2798,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-web-compiler"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "ansi-to-html",
  "comemo",
@@ -2822,7 +2822,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-ws-exporter"
-version = "0.1.6"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "env_logger",

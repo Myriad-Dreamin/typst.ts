@@ -1,6 +1,6 @@
 [package]
 name = "typst-ts-renderer"
-version = "0.1.6"
+version = "0.2.0"
 license = "Apache-2.0"
 edition = "2021"
 readme = "README.md"
@@ -35,7 +35,7 @@ serde-wasm-bindgen.workspace = true
 web-sys = { workspace = true, features = ["console", "Window", "Blob", "ImageData"] }
 
 typst-ts-core.workspace = true
-typst-ts-compiler = { version = "0.1", default-features = false, features = ["web-render"] }
+typst-ts-compiler = { version = "0.2", default-features = false, features = ["web-render"] }
 typst-ts-canvas-exporter = { workspace = true, optional = true }
 typst-ts-raster-exporter = { workspace = true, optional = true }
 

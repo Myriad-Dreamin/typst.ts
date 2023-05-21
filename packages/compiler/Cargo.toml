@@ -1,6 +1,6 @@
 [package]
 name = "typst-ts-web-compiler"
-version = "0.1.6"
+version = "0.2.0"
 license = "Apache-2.0"
 edition = "2021"
 readme = "README.md"
@@ -30,7 +30,7 @@ wasm-bindgen-futures.workspace = true
 web-sys = { workspace = true, features = ["console", "Window", "Blob"] }
 
 typst-ts-core.workspace = true
-typst-ts-compiler = { version = "0.1", default-features = false, features = ["web"] }
+typst-ts-compiler = { version = "0.2", default-features = false, features = ["web"] }
 typst-ts-ast-exporter = { workspace = true }
 typst-ts-tir-exporter = { workspace = true }
 

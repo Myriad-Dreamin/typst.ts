@@ -1,6 +1,6 @@
 [package]
 name = "typst-ts-tir-exporter"
-version = "0.1.6"
+version = "0.2.0"
 license = "Apache-2.0"
 edition = "2021"
 description = "Export a frame of Typst Artifact into tir formats."
