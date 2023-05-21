@@ -38,11 +38,13 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
+      # https://stackoverflow.com/questions/71157844/how-can-i-copy-git-directory-to-the-container-with-github-actions
       - name: Build and push Docker image
         id: build-and-push
         uses: docker/build-push-action@v4.0.0
         with:
           push: true
+          context: .
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ env.PLATFORMS }}
