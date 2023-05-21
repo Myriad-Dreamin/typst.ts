@@ -1,6 +1,6 @@
 // @ts-ignore
 import type * as typst from '../../pkg/typst_ts_renderer';
-import { WebAssemblyModuleRef } from './wasm';
+import type { WebAssemblyModuleRef } from './wasm';
 
 /**
  * staged options function
@@ -96,7 +96,10 @@ export function preloadSystemFonts({ byFamily }: { byFamily?: string[] }): Befor
     const t = performance.now();
 
     if ('queryLocalFonts' in window) {
-      const fonts = await (window as any).queryLocalFonts();
+      const fonts: {
+        family: string;
+        blob(): Promise<Blob>;
+      }[] = await (window as any).queryLocalFonts();
 
       byFamily = byFamily ?? [];
 
