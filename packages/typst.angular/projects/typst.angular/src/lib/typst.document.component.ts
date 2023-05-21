@@ -57,8 +57,7 @@ export class TypstDocumentComponent {
                 byFamily: ['Segoe UI Symbol'],
               }),
             ],
-            getModule: () =>
-              'node_modules/@myriaddreamin/typst-ts-renderer/typst_ts_renderer_bg.wasm',
+            getModule: () => '/assets/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
           },
           doRender,
         );

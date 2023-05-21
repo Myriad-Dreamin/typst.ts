@@ -9,7 +9,7 @@
     "Typst"
   ],
   "scripts": {
-    "link:local": "cd ../../dist/typst.angular && yarn link"
+    "link:local": "cd ../../dist/typst.angular && yarn link && npm link"
   },
   "peerDependencies": {
     "@angular/common": "^16.0.2",
