@@ -97,6 +97,7 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: build binaries
         run: |
+          git config --global --add safe.directory $PWD
           cargo run --release --bin typst-ts-fontctl
           cargo build --release -p typst-ts-fontctl --target $RUST_TARGET
           cargo build --release -p typst-ts-cli --target $RUST_TARGET
