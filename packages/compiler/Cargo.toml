@@ -29,10 +29,10 @@ js-sys.workspace = true
 wasm-bindgen-futures.workspace = true
 web-sys = { workspace = true, features = ["console", "Window", "Blob"] }
 
-typst-ts-core = "0.1"
+typst-ts-core.workspace = true
 typst-ts-compiler = { version = "0.1", default-features = false, features = ["web"] }
-typst-ts-ast-exporter = { version = "0.1" }
-typst-ts-tir-exporter = { version = "0.1" }
+typst-ts-ast-exporter = { workspace = true }
+typst-ts-tir-exporter = { workspace = true }
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires

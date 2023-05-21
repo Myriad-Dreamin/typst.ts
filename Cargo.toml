@@ -77,6 +77,17 @@ wasm-bindgen-futures = "^0.4"
 js-sys = "^0.3"
 web-sys = "^0.3"
 
+typst-ts-core = "0.1"
+typst-ts-compiler = "0.1"
+
+typst-ts-ast-exporter = "0.1"
+typst-ts-pdf-exporter = "0.1"
+typst-ts-canvas-exporter = "0.1"
+typst-ts-raster-exporter = "0.1"
+typst-ts-serde-exporter = "0.1"
+typst-ts-tir-exporter = "0.1"
+typst-ts-ws-exporter = "0.1"
+
 [patch.crates-io]
 typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }

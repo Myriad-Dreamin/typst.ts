@@ -9,6 +9,6 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 [dependencies]
 
 typst.workspace = true
-typst-ts-core = "0.1"
+typst-ts-core.workspace = true
 
 ansi_term = "0.12.1"

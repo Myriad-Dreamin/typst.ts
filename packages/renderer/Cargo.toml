@@ -34,10 +34,10 @@ wasm-bindgen-futures.workspace = true
 serde-wasm-bindgen.workspace = true
 web-sys = { workspace = true, features = ["console", "Window", "Blob", "ImageData"] }
 
-typst-ts-core = "0.1"
+typst-ts-core.workspace = true
 typst-ts-compiler = { version = "0.1", default-features = false, features = ["web-render"] }
-typst-ts-canvas-exporter = { version = "0.1", optional = true }
-typst-ts-raster-exporter = { version = "0.1", optional = true }
+typst-ts-canvas-exporter = { workspace = true, optional = true }
+typst-ts-raster-exporter = { workspace = true, optional = true }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.0"

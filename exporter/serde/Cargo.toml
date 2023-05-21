@@ -14,7 +14,7 @@ serde.workspace = true
 serde_json = { workspace = true, optional = true }
 rmp-serde = { workspace = true, optional = true }
 
-typst-ts-core = "0.1"
+typst-ts-core.workspace = true
 
 [features]
 json = ["serde_json"]

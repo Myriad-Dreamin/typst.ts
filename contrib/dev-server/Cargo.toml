@@ -7,7 +7,7 @@ description = "Dev Server for Typst.ts."
 repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 [dependencies]
-typst-ts-core = "0.1"
+typst-ts-core.workspace = true
 
 once_cell.workspace = true
 env_logger.workspace = true

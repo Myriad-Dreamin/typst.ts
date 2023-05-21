@@ -22,4 +22,4 @@ log.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 
-typst-ts-core = "0.1"
+typst-ts-core.workspace = true

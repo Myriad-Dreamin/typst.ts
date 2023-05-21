@@ -8,8 +8,6 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 [dependencies]
 
-typst-ts-core = "0.1"
-
 typst.workspace = true
 comemo.workspace = true
 
@@ -21,3 +19,5 @@ data-url = "0.2.0"
 wasm-bindgen.workspace = true
 js-sys.workspace = true
 web-sys = { workspace = true, features = ["console", "CanvasRenderingContext2d", "Path2d", "Blob", "ImageData", "HtmlImageElement", "HtmlElement", "Url", "BlobPropertyBag"] }
+
+typst-ts-core.workspace = true
