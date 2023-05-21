@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use serde::Deserialize;
 use serde::Serialize;
-use typst::model::StabilityProvider;
+use typst::model::Locator;
 
 use crate::artifact::core::BuildInfo;
 use crate::typst_affinite_hash;
@@ -333,7 +333,7 @@ impl From<&TypstDocument> for Artifact {
 }
 
 pub struct TypeDocumentParser<'a> {
-    sp: StabilityProvider,
+    sp: Locator<'static>,
     fonts: Vec<TypstFont>,
     buffer: &'a [u8],
 }
@@ -341,7 +341,7 @@ pub struct TypeDocumentParser<'a> {
 impl<'a> TypeDocumentParser<'a> {
     pub fn new(buffer: &'a Vec<u8>) -> Self {
         Self {
-            sp: StabilityProvider::new(),
+            sp: Locator::new(),
             fonts: Vec::new(),
             buffer: buffer.as_ref(),
         }
@@ -397,8 +397,11 @@ impl<'a> TypeDocumentParser<'a> {
                 "svg" => ImageFormat::Vector(VectorFormat::Svg),
                 _ => panic!("Unknown image format {}", image.format.as_str(self.buffer)),
             },
+            TypstAxes {
+                x: image.width,
+                y: image.height,
+            },
             image.alt.clone().map(|s| s.as_str(self.buffer).into()),
-            (image.width, image.height),
         )
         .unwrap()
     }

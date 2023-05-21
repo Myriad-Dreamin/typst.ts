@@ -1,6 +1,6 @@
 [package]
 name = "typst-ts-ws-exporter"
-version = "0.1.6"
+version = "0.2.0"
 license = "Apache-2.0"
 edition = "2021"
 description = "streaming typst documents to a websocket channel."
@@ -8,17 +8,18 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 [dependencies]
 
-typst = "0.3.0"
-typst-ts-core = "0.1"
+typst.workspace = true
 
-anyhow = "1"
+anyhow.workspace = true
 
 futures = "0.3.28"
-tokio = {version = "1.27.0", features = ["full"]}
+tokio.workspace = true
 tokio-tungstenite = "0.18.0"
 
-env_logger = "0.10.0"
-log = "0.4.17"
+env_logger.workspace = true
+log.workspace = true
 
-serde = "1.0.159"
-serde_json = "1.0.95"
+serde.workspace = true
+serde_json.workspace = true
+
+typst-ts-core.workspace = true

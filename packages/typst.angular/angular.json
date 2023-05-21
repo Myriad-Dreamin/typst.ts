@@ -62,7 +62,15 @@
             "polyfills": ["zone.js"],
             "tsConfig": "projects/demo/tsconfig.app.json",
             "inlineStyleLanguage": "sass",
-            "assets": ["projects/demo/src/favicon.ico", "projects/demo/src/assets"],
+            "assets": [
+              "projects/demo/src/favicon.ico",
+              "projects/demo/src/assets",
+              {
+                "glob": "**/*",
+                "input": "./node_modules/@myriaddreamin/typst-ts-renderer",
+                "output": "./assets/typst-ts-renderer"
+              }
+            ],
             "styles": ["projects/demo/src/styles.sass"],
             "scripts": []
           },
@@ -117,12 +125,23 @@
             "polyfills": ["zone.js", "zone.js/testing"],
             "tsConfig": "projects/demo/tsconfig.spec.json",
             "inlineStyleLanguage": "sass",
-            "assets": ["projects/demo/src/favicon.ico", "projects/demo/src/assets"],
+            "assets": [
+              "projects/demo/src/favicon.ico",
+              "projects/demo/src/assets",
+              {
+                "glob": "**/*",
+                "input": "./node_modules/@myriaddreamin/typst-ts-renderer",
+                "output": "./assets/typst-ts-renderer"
+              }
+            ],
             "styles": ["projects/demo/src/styles.sass"],
             "scripts": []
           }
         }
       }
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }

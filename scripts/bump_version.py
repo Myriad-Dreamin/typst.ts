@@ -29,26 +29,41 @@ def main(old_version: str, new_version: str):
     if len(v.split('.')) != 3:
       raise ValueError(f'Version String "{v}" must be in the form x.y.z')
 
-  bump_self_version = lambda: itertools.product(
+  bump_rust_self_version = lambda: itertools.product(
     [ # file paths
       "cli/Cargo.toml",
       "core/Cargo.toml",
       "compiler/Cargo.toml",
       "contrib/fontctl/Cargo.toml",
       "contrib/dev-server/Cargo.toml",
+      "exporter/ast/Cargo.toml",
       "exporter/canvas/Cargo.toml",
       "exporter/pdf/Cargo.toml",
       "exporter/raster/Cargo.toml",
       "exporter/serde/Cargo.toml",
       "exporter/ws/Cargo.toml",
       "exporter/tir/Cargo.toml",
+      "packages/compiler/Cargo.toml",
       "packages/renderer/Cargo.toml",
+    ], [ # patterns
+      lambda v: f'version = "{v}"',
+    ])
+
+  bump_javascript_self_version = lambda: itertools.product(
+    [ # file paths
+      "packages/compiler/package.json",
+      "packages/renderer/package.json",
       "packages/typst.ts/package.json",
       "packages/typst.react/package.json",
       "packages/typst.angular/projects/typst.angular/package.json",
     ], [ # patterns
-      lambda v: f'version = "{v}"',
+      lambda v: f'"version": "{v}"',
     ])
+  
+  bump_self_version = lambda: itertools.chain(
+    bump_rust_self_version(),
+    bump_javascript_self_version(),
+  )
 
   for file_path, pattern in itertools.chain(bump_self_version()):
     replace_version(file_path, pattern(old_version), pattern(new_version))

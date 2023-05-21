@@ -1,9 +1,7 @@
 /* To learn more about this file see: https://angular.io/config/tsconfig. */
 {
   "compileOnSave": false,
-  "types": [
-    "web"
-  ],
+  "types": ["web"],
   "compilerOptions": {
     "baseUrl": "./",
     "outDir": "./dist/out-tsc",
@@ -23,13 +21,10 @@
     "module": "ES2022",
     "useDefineForClassFields": false,
     "paths": {
-      "typst.angular": [
-        "dist/typst.angular"
-      ]
+      "@angular/*": ["./node_modules/@angular/*"],
+      "typst.angular": ["dist/typst.angular"]
     },
-    "lib": [
-      "ES2022",
-    ]
+    "lib": ["ES2022"]
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

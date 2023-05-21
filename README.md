@@ -45,12 +45,18 @@ Help:
 $ typst-ts-cli --help
 The cli for typst.ts.
 
-Usage: typst-ts-cli <COMMAND>
+Usage: typst-ts-cli [OPTIONS] [COMMAND]
 
 Commands:
   compile  Run compiler. [aliases: c]
+  env      Dump Client Environment.
   font     Commands about font for typst.
   help     Print this message or the help of the given subcommand(s)
+
+Options:
+  -V, --version  Print Version
+      --VV <VV>  Print Version in format [default: none] [possible values: none, short, full, json, json-plain]
+  -h, --help     Print help
 ```
 
 Compile Help:
@@ -67,7 +73,7 @@ Options:
 Compile options:
   -w, --workspace <WORKSPACE>    Path to typst workspace [default: .]
       --watch                    watch mode
-      --trace <TRACE>            enable tracing. possible usage: --trace=verbosity={0..2} verbosity: + 0: warning + 1: info + 2: debug + 3: trace
+      --trace <TRACE>            enable tracing. possible usage: --trace=verbosity={0..3} where verbosity: {0..3} -> {warning, info, debug, trace}
   -e, --entry <ENTRY>            Entry file
       --format <FORMAT>          Output formats, possible values: `json`, `pdf`, `web_socket`, `ast`, and `rmp`
       --web-socket <WEB_SOCKET>  Output WebSocket subscriber url [default: ]
@@ -82,7 +88,7 @@ Compile options:
 $ cargo install simple-http-server
 $ simple-http-server -p 20810 --cors ./fuzzers/corpora/
 $ simple-http-server -p 20811 --cors ./assets/ --compress=ttf,otf
-$ cd packages/typst.ts && yarn install && yarn run build && simple-http-server -p 8075 --index --compress=js,json,otf,css
+$ cd packages/typst.ts && yarn install && yarn run build && simple-http-server -p 8075 --index --compress=js,json,otf,css,wasm --coep --coop
 ```
 
 And open your browser to `http://localhost:8075`.

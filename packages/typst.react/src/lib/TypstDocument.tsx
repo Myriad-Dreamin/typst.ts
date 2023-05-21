@@ -79,6 +79,7 @@ export const TypstDocument = ({ fill, artifact }: TypstDocumentProps) => {
 
     /// render after init
     withGlobalRenderer(
+      typst.createTypstRenderer,
       (window as unknown as any).pdfjsLib,
       {
         beforeBuild: [

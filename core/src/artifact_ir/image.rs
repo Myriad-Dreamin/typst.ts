@@ -1,3 +1,5 @@
+use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+use base64::Engine;
 use serde::Deserialize;
 use serde::Serialize;
 pub use typst::image::Image as TypstImage;
@@ -28,6 +30,6 @@ pub struct Image {
 
 impl Image {
     pub fn decode_data(b: &String) -> Result<Vec<u8>, String> {
-        base64::decode(b).map_err(|e| e.to_string())
+        BASE64_STANDARD.decode(b).map_err(|e| e.to_string())
     }
 }
