@@ -41,6 +41,7 @@ export class TypstDocumentComponent {
 
         /// render after init
         withGlobalRenderer(
+          typst.createTypstRenderer,
           (window as unknown as any).pdfjsLib,
           {
             beforeBuild: [

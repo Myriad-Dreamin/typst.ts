@@ -1,5 +1,5 @@
-import { InitOptions } from '../options.init';
-import { TypstRenderer, createTypstRenderer } from '../renderer';
+import type { InitOptions } from '../options.init';
+import type { TypstRenderer } from '../renderer';
 import type * as pdfjsModule from 'pdfjs-dist';
 
 let globalRenderer: TypstRenderer | undefined = undefined;
@@ -11,25 +11,27 @@ export function getGlobalRenderer(): TypstRenderer | undefined {
 }
 
 export function createGlobalRenderer(
+  creator: (pdf: /* typeof pdfjsModule */ unknown) => TypstRenderer,
   pdf: /* typeof pdfjsModule */ unknown,
   initOptions: InitOptions,
 ): Promise<TypstRenderer> {
   // todo: determine renderer thread-safety
   // todo: check inconsistent initOptions
-  const renderer = globalRenderer || createTypstRenderer(pdf as typeof pdfjsModule);
+  const renderer = globalRenderer || creator(pdf as typeof pdfjsModule);
 
-  if (globalRendererInitReady) {
+  if (globalRendererInitReady !== undefined) {
     return globalRendererInitReady;
   }
 
   return (globalRendererInitReady = (async () => {
     isReady = true;
     await renderer.init(initOptions);
-    return renderer;
+    return (globalRenderer = renderer);
   })());
 }
 
 export function withGlobalRenderer(
+  creator: (pdf: /* typeof pdfjsModule */ unknown) => TypstRenderer,
   pdf: /* typeof pdfjsModule */ unknown,
   initOptions: InitOptions,
   resolve: (renderer: TypstRenderer) => void,
@@ -41,5 +43,5 @@ export function withGlobalRenderer(
     return;
   }
 
-  createGlobalRenderer(pdf, initOptions).then(resolve).catch(reject);
+  createGlobalRenderer(creator, pdf, initOptions).then(resolve).catch(reject);
 }
