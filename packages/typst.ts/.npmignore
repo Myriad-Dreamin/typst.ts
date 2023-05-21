@@ -1,9 +1,11 @@
 
 src/
 node_modules/
+examples/
 
 index.html
 *.artifact.json
 *.rmp
+*.bin
 esbuild.*
 .eslint*
