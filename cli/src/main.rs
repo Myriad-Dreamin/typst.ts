@@ -7,8 +7,8 @@ use clap::{Args, Command, FromArgMatches};
 use typst::{font::FontVariant, World};
 
 use typst_ts_cli::{
-    compile::CompileDriver, tracing::TraceGuard, version::intercept_version, CompileArgs, EnvKey,
-    FontSubCommands, ListFontsArgs, MeasureFontsArgs, Opts, Subcommands,
+    compile::CompileDriver, tracing::TraceGuard, version::intercept_version, CompileArgs,
+    CompletionArgs, EnvKey, FontSubCommands, ListFontsArgs, MeasureFontsArgs, Opts, Subcommands,
 };
 use typst_ts_compiler::TypstSystemWorld;
 use typst_ts_core::config::CompileOpts;
@@ -35,6 +35,7 @@ fn main() {
 
     match opts.sub {
         Some(Subcommands::Compile(args)) => compile(args),
+        Some(Subcommands::Completion(args)) => generate_completion(args),
         Some(Subcommands::Env(args)) => match args.key {
             EnvKey::Features => {
                 intercept_version(false, typst_ts_cli::version::VersionFormat::Features)
@@ -116,6 +117,16 @@ fn compile(args: CompileArgs) -> ! {
         driver.once_diag::<true>();
         comemo::evict(30);
     }
+}
+
+fn generate_completion(CompletionArgs { shell }: CompletionArgs) -> ! {
+    clap_complete::generate(
+        shell,
+        &mut get_cli(true),
+        "typst-ts-cli",
+        &mut std::io::stdout(),
+    );
+    exit(0);
 }
 
 fn list_fonts(command: ListFontsArgs) -> ! {
