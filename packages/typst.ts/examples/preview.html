@@ -1,0 +1,244 @@
+<html lang="en">
+  <!-- https://blog.trailofbits.com/2023/02/21/vscode-extension-escape-vulnerability/ -->
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Typst.ts</title>
+    <script
+      type="module"
+      src="${resource-root}/node_modules/@myriaddreamin/typst.ts/dist/main.js"
+    ></script>
+    <!-- pdf.js v3.5.141 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf_viewer.min.css"
+      integrity="sha512-Jf9DLkegLgARLR151csVkPvcVt4cOUhslrSZwiTAe9mqFL/BbYRDmxCOioCtbHifEgjsBFbrVhOMQ3mYPDLrqQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+
+    <script>
+      /// https://segmentfault.com/a/1190000016574288
+      (function () {
+        var ie = !!(window.attachEvent && !window.opera);
+        var wk = /webkit\/(\d+)/i.test(navigator.userAgent) && RegExp.$1 < 525;
+        var fn = [];
+        var run = function () {
+          for (var i = 0; i < fn.length; i++) fn[i]();
+        };
+        var d = document;
+        d.ready = function (f) {
+          if (!ie && !wk && d.addEventListener)
+            return d.addEventListener('DOMContentLoaded', f, false);
+          if (fn.push(f) > 1) return;
+          if (ie)
+            (function () {
+              try {
+                d.documentElement.doScroll('left');
+                run();
+              } catch (err) {
+                setTimeout(arguments.callee, 0);
+              }
+            })();
+          else if (wk)
+            var t = setInterval(function () {
+              if (/^(loaded|complete)$/.test(d.readyState)) clearInterval(t), run();
+            }, 0);
+        };
+      })();
+
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
+      document.ready(() => {
+        const imageContainer = document.getElementById('imageContainer');
+        let currentScale = 1; // variable for storing scaling factor
+        let imageContainerWidth = imageContainer.offsetWidth;
+        let isFirstScale = true;
+
+        // drag (panal resizing) -> rescaling
+        window.onresize = () => {
+          const newImageContainerWidth = imageContainer.offsetWidth;
+          currentScale = currentScale * (newImageContainerWidth / imageContainerWidth);
+          imageContainerWidth = newImageContainerWidth;
+          imageContainer.style.transformOrigin = '0px 0px';
+          imageContainer.style.transform = `scale(${currentScale})`;
+        };
+
+        // Ctrl+scroll rescaling
+        // will disable auto resizing
+        // fixed factors, same as pdf.js
+        const factors = [
+          0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.3, 1.5, 1.7, 1.9, 2.1, 2.4, 2.7, 3,
+          3.3, 3.7, 4.1, 4.6, 5.1, 5.7, 6.3, 7, 7.7, 8.5, 9.4, 10,
+        ];
+        imageContainer.addEventListener('wheel', function (event) {
+          if (event.ctrlKey) {
+            event.preventDefault();
+
+            if (window.onresize !== null) {
+              // is auto resizing
+              window.onresize = null;
+            }
+
+            // Get wheel scroll direction and calculate new scale
+            if (event.deltaY < 0) {
+              // enlarge
+              if (currentScale >= factors.at(-1)) {
+                // already large than max factor
+                return;
+              } else {
+                currentScale = factors.filter(x => x > currentScale).at(0);
+              }
+            } else if (event.deltaY > 0) {
+              // reduce
+              if (currentScale <= factors.at(0)) {
+                return;
+              } else {
+                currentScale = factors.filter(x => x < currentScale).at(-1);
+              }
+            } else {
+              // no y-axis scroll
+              return;
+            }
+
+            // Apply new scale
+            imageContainer.style.transformOrigin = '0 0';
+            imageContainer.style.transform = `scale(${currentScale})`;
+          }
+        });
+
+        let canvas_handles = [];
+
+        const runCompile = async () => {
+          const processStart = performance.now();
+          compilerPlugin.reset();
+          const doc = await compilerPlugin.compile({
+            mainFilePath: '${compile-entry-file}',
+          });
+          console.log(`compile delay: ${performance.now() - processStart}ms`);
+
+          try {
+            const page_total = doc.page_total();
+            let page_width = doc.page_width();
+            let page_height = doc.page_height();
+
+            if (page_width < 1 || page_height < 1) {
+              return;
+            }
+
+            const deviceWidth = window.innerWidth > 0 ? window.innerWidth : screen.width;
+            const scale = (deviceWidth / page_width) * 3.5;
+            console.log('scale', scale);
+
+            // round up to integer
+            page_width = Math.ceil(page_width * scale);
+            page_height = Math.ceil(page_height * scale);
+
+            imageContainerWidth = deviceWidth;
+            currentScale = imageContainerWidth / page_width;
+            imageContainer.style.transformOrigin = '0px 0px';
+            imageContainer.style.transform = `scale(${currentScale})`;
+            isFirstScale = false;
+
+            while (canvas_handles.length > page_total) {
+              const removed = canvas_handles.pop();
+              imageContainer.removeChild(removed);
+            }
+            while (canvas_handles.length < page_total) {
+              const canvas = document.createElement('canvas');
+              imageContainer.appendChild(canvas);
+              canvas_handles.push(canvas);
+            }
+
+            const animatedTasks = [];
+            for (let i = 0; i < page_total; i++) {
+              const canvas = canvas_handles[i];
+              canvas.width = page_width;
+              canvas.height = page_height;
+              animatedTasks.push(
+                new Promise((resolve, reject) => {
+                  requestAnimationFrame(() => {
+                    const pageProcessStart = performance.now();
+                    const ctx = canvas.getContext('2d');
+                    compilerPlugin
+                      .renderPageToCanvas(ctx, doc, i, scale, '#ffffff')
+                      .then(resolve)
+                      .catch(reject);
+                    console.log(
+                      `page ${i} process time: ${performance.now() - pageProcessStart}ms delay: ${
+                        performance.now() - processStart
+                      }ms`,
+                    );
+                  });
+                }),
+              );
+            }
+
+            await Promise.all(animatedTasks);
+            console.log(`total process time: ${performance.now() - processStart}ms ${page_total}`);
+          } finally {
+            doc.free();
+          }
+        };
+
+        let compilerPlugin = window.TypstCompileModule.createTypstCompiler();
+        compilerPlugin
+          .init({
+            beforeBuild: [
+              window.TypstCompileModule.preloadRemoteFonts([
+                'http://localhost:20811/fonts/LinLibertine_R.ttf',
+                'http://localhost:20811/fonts/LinLibertine_RB.ttf',
+                'http://localhost:20811/fonts/LinLibertine_RBI.ttf',
+                'http://localhost:20811/fonts/LinLibertine_RI.ttf',
+                'http://localhost:20811/fonts/NewCMMath-Book.otf',
+                'http://localhost:20811/fonts/NewCMMath-Regular.otf',
+              ]),
+              // window.TypstCompileModule.preloadSystemFonts({
+              //   byFamily: ['Segoe UI Symbol'],
+              // }),
+              window.TypstCompileModule.withAccessModel(
+                new window.TypstCompileModule.FetchAccessModel('${workspace-root}', {
+                  fullyCached: true,
+                }),
+              ),
+            ],
+            getModule: () =>
+              '${resource-root}/node_modules/@myriaddreamin/typst-ts-web-compiler/typst_ts_web_compiler_bg.wasm',
+          })
+          .then(() => {
+            document.getElementById('compile-button').addEventListener('click', () => {
+              runCompile();
+            });
+            return runCompile();
+          });
+      });
+    </script>
+
+    <style>
+      body {
+        background-color: #cccccc;
+      }
+
+      #imageContainer {
+        margin: 0;
+        transform-origin: 0 0;
+      }
+
+      canvas:not(:last-child) {
+        padding-bottom: 32px;
+      }
+
+      canvas {
+        box-shadow: 0px 4px 12px rgba(89, 85, 101, 0.2);
+      }
+    </style>
+  </head>
+
+  <body style="padding: 0px 0px 0px 0px">
+    <div style="position: absolute; z-index: 1"><button id="compile-button">compile</button></div>
+    <div id="imageContainer" style="height: 0px"></div>
+  </body>
+</html>

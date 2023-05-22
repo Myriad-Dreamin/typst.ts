@@ -2811,6 +2811,7 @@ dependencies = [
  "typst",
  "typst-library",
  "typst-ts-ast-exporter",
+ "typst-ts-canvas-exporter",
  "typst-ts-compiler",
  "typst-ts-core",
  "typst-ts-tir-exporter",

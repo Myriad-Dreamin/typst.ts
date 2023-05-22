@@ -1,7 +1,11 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use js_sys::{JsString, Uint8Array};
-use typst::World;
+use typst::{
+    geom::{Color, RgbaColor},
+    World,
+};
+use typst_ts_canvas_exporter::LigatureMap;
 pub use typst_ts_compiler::*;
 use typst_ts_compiler::{font::web::BrowserFontSearcher, vfs::browser::ProxyAccessModel};
 use typst_ts_core::{cache::FontInfoCache, Exporter};
@@ -36,6 +40,35 @@ impl TypstCompiler {
 #[wasm_bindgen]
 pub fn get_font_info(buffer: Uint8Array) -> JsValue {
     serde_wasm_bindgen::to_value(&FontInfoCache::from_data(buffer.to_vec().as_slice())).unwrap()
+}
+
+#[wasm_bindgen]
+pub struct DocumentReference {
+    doc: Arc<typst::doc::Document>,
+}
+
+#[wasm_bindgen]
+impl DocumentReference {
+    pub fn page_total(&self) -> usize {
+        self.doc.pages.len()
+    }
+
+    // width, height
+    pub fn page_width(&self) -> f64 {
+        if let Some(page) = self.doc.pages.first() {
+            page.size().x.to_pt()
+        } else {
+            0.0
+        }
+    }
+
+    pub fn page_height(&self) -> f64 {
+        if let Some(page) = self.doc.pages.first() {
+            page.size().y.to_pt()
+        } else {
+            0.0
+        }
+    }
 }
 
 #[wasm_bindgen]
@@ -114,5 +147,38 @@ impl TypstCompiler {
             .export(&self.world, Arc::new((&doc).into()))
             .unwrap();
         Ok(artifact_bytes)
+    }
+
+    pub fn compile(&mut self, main_file_path: String) -> Result<DocumentReference, JsValue> {
+        self.world.main = self
+            .world
+            .resolve(std::path::Path::new(&main_file_path))
+            .unwrap();
+
+        let doc = typst::compile(&self.world).unwrap();
+        Ok(DocumentReference { doc: Arc::new(doc) })
+    }
+
+    // todo: move to renderer
+    pub fn render_page_to_canvas(
+        &mut self,
+        canvas: &web_sys::CanvasRenderingContext2d,
+        doc: &DocumentReference,
+        page_off: usize,
+        pixel_per_pt: f32,
+        background_color: String,
+    ) -> Result<JsValue, JsValue> {
+        let d = LigatureMap::default();
+        let mut worker = typst_ts_canvas_exporter::CanvasRenderTask::new(
+            canvas,
+            &doc.doc,
+            &d,
+            page_off,
+            pixel_per_pt,
+            Color::Rgba(RgbaColor::from_str(&background_color)?),
+        );
+
+        worker.render(&doc.doc.pages[page_off]);
+        Ok(serde_wasm_bindgen::to_value(&worker.content).unwrap())
     }
 }
