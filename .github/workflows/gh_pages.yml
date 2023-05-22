@@ -5,14 +5,13 @@ on:
   push:
     branches: ['main']
 
-  # We should ensure pages at PR level.
-  pull_request:
-
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
+  pages: write
+  id-token: write
   contents: read
 
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
@@ -24,29 +23,12 @@ concurrency:
 jobs:
   build-gh-pages:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-  verify-gh-pages:
-    needs: [build-gh-pages]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Verify GitHub Pages
-        run: |
-          echo "Verified GitHub Pages"
-
-  deploy-gh-pages:
-    needs: [verify-gh-pages]
-    if: github.ref == 'refs/heads/main'
-    permissions:
-      pages: write
-      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Upload artifact
