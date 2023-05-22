@@ -31,11 +31,7 @@ def main(old_version: str, new_version: str):
 
   bump_rust_self_version = lambda: itertools.product(
     [ # file paths
-      "cli/Cargo.toml",
-      "core/Cargo.toml",
-      "compiler/Cargo.toml",
-      "tools/fontctl/Cargo.toml",
-      "contrib/dev-server/Cargo.toml",
+      "Cargo.toml",
       "exporter/ast/Cargo.toml",
       "exporter/canvas/Cargo.toml",
       "exporter/pdf/Cargo.toml",
@@ -43,8 +39,6 @@ def main(old_version: str, new_version: str):
       "exporter/serde/Cargo.toml",
       "exporter/ws/Cargo.toml",
       "exporter/tir/Cargo.toml",
-      "packages/compiler/Cargo.toml",
-      "packages/renderer/Cargo.toml",
     ], [ # patterns
       lambda v: f'version = "{v}"',
     ])
