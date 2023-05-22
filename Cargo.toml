@@ -15,8 +15,9 @@ members = [
     "exporter/tir",
     "exporter/ws",
 
+    "server/dev",
+
     "tools/fontctl",
-    "contrib/dev-server",
 ]
 
 [profile.release]
