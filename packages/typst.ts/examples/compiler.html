@@ -54,6 +54,9 @@
               window.TypstCompileModule.preloadSystemFonts({
                 byFamily: ['Segoe UI Symbol'],
               }),
+              window.TypstCompileModule.withAccessModel(
+                new window.TypstCompileModule.FetchAccessModel('http://localhost:20810/'),
+              ),
             ],
             getModule: () =>
               '/node_modules/@myriaddreamin/typst-ts-web-compiler/typst_ts_web_compiler_bg.wasm',
