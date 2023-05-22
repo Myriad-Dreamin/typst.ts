@@ -1,3 +1,13 @@
+[workspace.package]
+description = "Run Typst in JavaScriptWorld."
+authors = ["Typst.ts Developers", "The Typst Project Developers"]
+version = "0.2.0"
+edition = "2021"
+readme = "README.md"
+license = "Apache-2.0"
+homepage = "https://myriad-dreamin.github.io/typst.ts/"
+repository = "https://github.com/Myriad-Dreamin/typst.ts"
+
 [workspace]
 members = [
     "cli",
