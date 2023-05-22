@@ -3,6 +3,7 @@
   "compileOnSave": false,
   "types": ["web"],
   "compilerOptions": {
+    "composite": true,
     "baseUrl": "./",
     "outDir": "./dist/out-tsc",
     "forceConsistentCasingInFileNames": true,
