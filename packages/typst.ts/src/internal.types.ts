@@ -26,3 +26,10 @@ export class PageInfo {
   width: number;
   height: number;
 }
+
+export interface FsAccessModel {
+  getMTime(path: string): Date | undefined;
+  isFile(path: string): boolean | undefined;
+  getRealPath(path: string): string | undefined;
+  readAll(path: string): Uint8Array | undefined;
+}

@@ -11,6 +11,9 @@ import * as renderer from './renderer';
 export type { TypstRenderer } from './renderer';
 export { createTypstRenderer } from './renderer';
 import * as compiler from './compiler';
+import { FetchAccessModel } from './fs';
+export { FetchAccessModel } from './fs';
+export type { FetchAccessOptions } from './fs';
 export type { TypstCompiler } from './compiler';
 export { createTypstCompiler } from './compiler';
 
@@ -26,5 +29,9 @@ if (window) {
     createTypstCompiler: compiler.createTypstCompiler,
     preloadRemoteFonts: initOptions.preloadRemoteFonts,
     preloadSystemFonts: initOptions.preloadSystemFonts,
+
+    FetchAccessModel,
+
+    withAccessModel: initOptions.withAccessModel,
   };
 }

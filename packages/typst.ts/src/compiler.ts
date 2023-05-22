@@ -2,7 +2,7 @@
 import typstInit, * as typst from '../../compiler/pkg/typst_ts_web_compiler';
 import { buildComponent, globalFontPromises } from './init';
 
-import type { InitOptions, BeforeBuildMark } from './options.init';
+import type { InitOptions } from './options.init';
 import { LazyWasmModule } from './wasm';
 
 /**
@@ -44,71 +44,20 @@ class TypstCompilerDriver {
   constructor() {}
 
   async init(options?: Partial<InitOptions>): Promise<void> {
-    this.compiler = await buildComponent(options, gCompilerModule, typst.TypstCompilerBuilder, {
-      latelyBuild({ builder }: { builder: typst.TypstCompilerBuilder }) {
-        builder.set_access_model(
-          this,
-          // todo: named parameters
-          (path: string) => {
-            console.log('mtime', path);
-
-            const request = new XMLHttpRequest();
-            request.open('HEAD', 'http://localhost:20810/' + path, false);
-            request.send(null);
-
-            let lastModified = undefined;
-            if (request.status === 200) {
-              lastModified = request.getResponseHeader('Last-Modified');
-            }
-            if (lastModified) {
-              lastModified = new Date(lastModified).getTime();
-            } else {
-              lastModified = 0;
-            }
-            return lastModified;
-          },
-          (path: string) => {
-            console.log('is file', path);
-
-            const request = new XMLHttpRequest();
-            request.open('HEAD', 'http://localhost:20810/' + path, false);
-            request.send(null);
-
-            if (request.status === 200) {
-              console.log(request, request.getAllResponseHeaders());
-            }
-            return true;
-          },
-          (path: string) => {
-            console.log('real path', path);
-            return path;
-          },
-          (path: string) => {
-            console.log('read all', path);
-
-            const request = new XMLHttpRequest();
-            request.overrideMimeType('text/plain; charset=x-user-defined');
-            request.open('GET', 'http://localhost:20810/' + path, false);
-            request.send(null);
-
-            if (request.status === 200) {
-              return Uint8Array.from(request.response, (c: string) => c.charCodeAt(0));
-            }
-            return undefined;
-          },
-        );
-      },
-    });
+    this.compiler = await buildComponent(options, gCompilerModule, typst.TypstCompilerBuilder, {});
   }
 
   async runSyncCodeUntilStable<T>(execute: () => T): Promise<T> {
-    do {
+    for (;;) {
       console.log(this.compiler.get_loaded_fonts());
-      const result = await execute();
+      const result = execute();
       console.log(this.compiler.get_loaded_fonts());
       if (globalFontPromises.length > 0) {
-        const promises = globalFontPromises.splice(0, globalFontPromises.length);
-        const callbacks = await Promise.all(promises);
+        const promises = Promise.all(globalFontPromises.splice(0, globalFontPromises.length));
+        const callbacks: {
+          buffer: ArrayBuffer;
+          idx: number;
+        }[] = await promises;
         for (const callback of callbacks) {
           this.compiler.modify_font_data(callback.idx, new Uint8Array(callback.buffer));
         }
@@ -116,22 +65,31 @@ class TypstCompilerDriver {
         continue;
       }
       return result;
-    } while (true);
+    }
   }
 
   async reset(): Promise<void> {
-    return this.compiler.reset();
+    await new Promise<void>(resolve => {
+      this.compiler.reset();
+      resolve(undefined);
+    });
   }
 
   async addSource(path: string, source: string, isMain: boolean): Promise<void> {
-    this.compiler.add_source(path, source, isMain);
+    await new Promise<void>(resolve => {
+      this.compiler.add_source(path, source, isMain);
+      resolve(undefined);
+    });
   }
 
   async getAst(main_file: string): Promise<string> {
     return this.runSyncCodeUntilStable(() => this.compiler.get_ast(main_file));
   }
 
-  async compile(options: any): Promise<void> {
-    console.log('typst compile', options);
+  async compile(): Promise<void> {
+    await new Promise<void>(resolve => {
+      this.compiler.get_artifact('ir');
+      resolve(undefined);
+    });
   }
 }
