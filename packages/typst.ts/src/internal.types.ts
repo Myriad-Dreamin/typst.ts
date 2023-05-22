@@ -33,3 +33,7 @@ export interface FsAccessModel {
   getRealPath(path: string): string | undefined;
   readAll(path: string): Uint8Array | undefined;
 }
+
+export interface DocumentReference {
+  free(): void;
+}

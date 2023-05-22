@@ -1,9 +1,14 @@
 // @ts-ignore
 import typstInit, * as typst from '../../compiler/pkg/typst_ts_web_compiler';
 import { buildComponent, globalFontPromises } from './init';
+import { DocumentReference } from './internal.types';
 
 import type { InitOptions } from './options.init';
 import { LazyWasmModule } from './wasm';
+
+export interface CompileOptions {
+  mainFilePath: string;
+}
 
 /**
  * The interface of Typst compiler.
@@ -16,7 +21,14 @@ export interface TypstCompiler {
   reset(): Promise<void>;
   addSource(path: string, source: string, isMain: boolean): Promise<void>;
   getAst(mainFilePath: string): Promise<string>;
-  compile(options: any): Promise<void>;
+  compile(options: CompileOptions): Promise<DocumentReference>;
+  renderPageToCanvas(
+    canvas: CanvasRenderingContext2D,
+    doc: DocumentReference,
+    page_off: number,
+    pixel_per_pt: number,
+    background_color: string,
+  ): Promise<void>;
 }
 
 const gCompilerModule = new LazyWasmModule(typstInit);
@@ -86,9 +98,28 @@ class TypstCompilerDriver {
     return this.runSyncCodeUntilStable(() => this.compiler.get_ast(mainFilePath));
   }
 
-  async compile(): Promise<void> {
-    await new Promise<void>(resolve => {
-      this.compiler.get_artifact('ir');
+  compile(options: CompileOptions): Promise<DocumentReference> {
+    return new Promise<DocumentReference>(resolve => {
+      const data: DocumentReference = this.compiler.compile(options.mainFilePath);
+      resolve(data);
+    });
+  }
+
+  renderPageToCanvas(
+    canvas: CanvasRenderingContext2D,
+    doc: DocumentReference,
+    page_off: number,
+    pixel_per_pt: number,
+    background_color: string,
+  ): Promise<void> {
+    return new Promise<void>(resolve => {
+      this.compiler.render_page_to_canvas(
+        canvas,
+        doc as typst.DocumentReference,
+        page_off,
+        pixel_per_pt,
+        background_color,
+      );
       resolve(undefined);
     });
   }
