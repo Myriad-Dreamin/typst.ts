@@ -26,6 +26,7 @@ members = [
     "packages/renderer",
 
     "server/dev",
+    "server/remote",
 
     "tools/fontctl",
 ]
