@@ -15,7 +15,7 @@ export interface TypstCompiler {
   init(options?: Partial<InitOptions>): Promise<void>;
   reset(): Promise<void>;
   addSource(path: string, source: string, isMain: boolean): Promise<void>;
-  getAst(main_file_path: string): Promise<string>;
+  getAst(mainFilePath: string): Promise<string>;
   compile(options: any): Promise<void>;
 }
 
@@ -82,8 +82,8 @@ class TypstCompilerDriver {
     });
   }
 
-  async getAst(main_file: string): Promise<string> {
-    return this.runSyncCodeUntilStable(() => this.compiler.get_ast(main_file));
+  async getAst(mainFilePath: string): Promise<string> {
+    return this.runSyncCodeUntilStable(() => this.compiler.get_ast(mainFilePath));
   }
 
   async compile(): Promise<void> {
