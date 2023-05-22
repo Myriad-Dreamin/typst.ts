@@ -1,5 +1,6 @@
 // @ts-ignore
 import type * as typst from '../../pkg/typst_ts_renderer';
+import type { FsAccessModel } from './internal.types';
 import type { WebAssemblyModuleRef } from './wasm';
 
 /**
@@ -115,6 +116,33 @@ export function preloadSystemFonts({ byFamily }: { byFamily?: string[] }): Befor
 
     const t2 = performance.now();
     console.log('preload system font time used:', t2 - t);
+  };
+}
+
+export function withAccessModel(accessModel: FsAccessModel): BeforeBuildFn {
+  return async (_, { builder }: InitContext) => {
+    return new Promise(resolve => {
+      builder.set_access_model(
+        accessModel,
+        (path: string) => {
+          const lastModified = accessModel.getMTime(path);
+          if (lastModified) {
+            return lastModified.getTime();
+          }
+          return 0;
+        },
+        (path: string) => {
+          return accessModel.isFile(path) || false;
+        },
+        (path: string) => {
+          return accessModel.getRealPath(path) || path;
+        },
+        (path: string) => {
+          return accessModel.readAll(path);
+        },
+      );
+      resolve();
+    });
   };
 }
 

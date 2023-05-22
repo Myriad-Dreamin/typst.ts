@@ -26,5 +26,6 @@ if (window) {
     createTypstCompiler: compiler.createTypstCompiler,
     preloadRemoteFonts: initOptions.preloadRemoteFonts,
     preloadSystemFonts: initOptions.preloadSystemFonts,
+    withAccessModel: initOptions.withAccessModel,
   };
 }
