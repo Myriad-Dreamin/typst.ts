@@ -34,7 +34,7 @@ def main(old_version: str, new_version: str):
       "cli/Cargo.toml",
       "core/Cargo.toml",
       "compiler/Cargo.toml",
-      "contrib/fontctl/Cargo.toml",
+      "tools/fontctl/Cargo.toml",
       "contrib/dev-server/Cargo.toml",
       "exporter/ast/Cargo.toml",
       "exporter/canvas/Cargo.toml",
