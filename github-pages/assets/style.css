@@ -1,0 +1,84 @@
+body {
+  margin: 0;
+  padding: 0;
+  background: #343541; /* rgba(255, 255, 255, 0.9); */
+}
+
+.typst-app {
+  margin: 0;
+}
+
+.text-layer {
+  position: relative;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 0.2;
+  line-height: 1;
+}
+
+.text-layer > div {
+  color: transparent;
+  /* position: absolute; */
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+
+.navigator {
+  height: auto;
+  width: 100%;
+  margin: 0px;
+  padding: 0px;
+  background: #343541; /* rgba(255, 255, 255, 0.9); */
+  top: 0;
+}
+
+.navigator ul {
+  margin: 0px;
+  padding: 0px;
+  list-style-type: none;
+  width: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  padding: 0px;
+}
+
+.navigator li {
+  float: left;
+  position: relative;
+  overflow: hidden;
+}
+
+.navigator li.right {
+  float: right;
+  position: relative;
+  overflow: hidden;
+}
+
+.navigator li a {
+  display: block;
+  color: white;
+  /* color: #636b6f; */
+  font-size: 30px;
+  text-align: center;
+  margin: 0px -1px 0px;
+  font-family: 'Garamond', sans-serif;
+  overflow: hidden;
+  text-decoration: none;
+}
+
+.navigator a:after {
+  display: flex;
+  align-items: baseline;
+  content: '';
+  border-bottom: solid 2px white;
+  transform: translateY(-6.5px) scaleX(0);
+  transition: transform 0.15s ease-in-out;
+}
+
+.navigator a:hover:after {
+  transform: translateY(-6.5px) scaleX(1);
+}
