@@ -149,6 +149,16 @@ impl TypstCompiler {
         Ok(artifact_bytes)
     }
 
+    pub fn compile(&mut self, main_file_path: String) -> Result<DocumentReference, JsValue> {
+        self.world.main = self
+            .world
+            .resolve(std::path::Path::new(&main_file_path))
+            .unwrap();
+
+        let doc = typst::compile(&self.world).unwrap();
+        Ok(DocumentReference { doc: Arc::new(doc) })
+    }
+
     // todo: move to renderer
     pub fn render_page_to_canvas(
         &mut self,
