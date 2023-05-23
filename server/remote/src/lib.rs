@@ -1,6 +1,8 @@
 use clap::{Parser, Subcommand};
 use typst_ts_core::build_info::VERSION;
 
+pub mod utils;
+
 #[derive(Debug, Parser)]
 #[clap(name = "typst-ts-dev-server", version = VERSION)]
 pub struct Opts {
@@ -21,4 +23,12 @@ pub enum Subcommands {
 
 #[derive(Debug, Clone, Parser)]
 #[clap(next_help_heading = "Run options")]
-pub struct RunArgs {}
+pub struct RunArgs {
+    /// The workspace directory.
+    #[clap(long)]
+    pub root: String,
+
+    /// The web-socket address.
+    #[clap(long, default_value = "")]
+    pub web_socket: String,
+}
