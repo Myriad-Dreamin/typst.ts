@@ -2761,7 +2761,14 @@ dependencies = [
  "clap_complete",
  "clap_complete_fig",
  "env_logger",
+ "futures",
  "log",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-tungstenite",
+ "typst",
+ "typst-ts-compiler",
  "typst-ts-core",
 ]
 
