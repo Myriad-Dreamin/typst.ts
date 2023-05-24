@@ -1,6 +1,9 @@
-use std::cell::{RefCell, RefMut};
+use std::{
+    cell::{RefCell, RefMut},
+    sync::Mutex,
+};
 
-type QueryCell<Res, Err, QueryContext> = (Option<QueryContext>, Option<Result<Res, Err>>);
+type QueryCell<Res, Err, QueryContext> = (Mutex<Option<QueryContext>>, Option<Result<Res, Err>>);
 
 /// std::ops::DerefMut is disabled, since we can call compute_ref safely.
 /// It means that multiple immutable references can be long lived.
@@ -27,13 +30,13 @@ pub struct QueryRef<Res, Err, QueryContext = ()> {
 impl<T, E, QC> QueryRef<T, E, QC> {
     pub fn with_value(value: T) -> Self {
         Self {
-            cell: RefCell::new((None, Some(Ok(value)))),
+            cell: RefCell::new((Mutex::new(None), Some(Ok(value)))),
         }
     }
 
     pub fn with_context(ctx: QC) -> Self {
         Self {
-            cell: RefCell::new((Some(ctx), None)),
+            cell: RefCell::new((Mutex::new(Some(ctx)), None)),
         }
     }
 }
@@ -70,7 +73,7 @@ impl<T, E: Clone, QC> QueryRef<T, E, QC> {
         let result = RefMut::filter_map(
             borrowed,
             |(ref mut ctx, ref mut res): &mut QueryCell<T, E, QC>| -> Option<&mut T> {
-                let get_or_init = || f(ctx.take().unwrap());
+                let get_or_init = || f(ctx.get_mut().unwrap().take().unwrap());
                 res.get_or_insert_with(get_or_init).as_mut().ok()
             },
         );
@@ -111,7 +114,7 @@ impl<T, E: Clone, QC> QueryRef<T, E, QC> {
 impl<T, E> Default for QueryRef<T, E> {
     fn default() -> Self {
         QueryRef {
-            cell: RefCell::new((Some(()), None)),
+            cell: RefCell::new((Mutex::new(Some(())), None)),
         }
     }
 }
