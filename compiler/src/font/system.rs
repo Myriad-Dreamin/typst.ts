@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     fs::File,
     path::{Path, PathBuf},
-    sync::{Arc, RwLock},
+    sync::{Arc, Mutex},
 };
 
 use memmap2::Mmap;
@@ -270,7 +270,7 @@ impl From<SystemFontSearcher> for FontResolverImpl {
     fn from(searcher: SystemFontSearcher) -> Self {
         FontResolverImpl::new(
             searcher.book,
-            Arc::new(RwLock::new(PartialFontBook::default())),
+            Arc::new(Mutex::new(PartialFontBook::default())),
             searcher.fonts,
             searcher.profile_rebuilder.profile,
         )
