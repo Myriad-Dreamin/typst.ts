@@ -2,7 +2,7 @@ use typst::font::Font;
 
 use crate::{FontLoader, QueryRef};
 
-type FontSlotInner = QueryRef<Option<Font>, (), Box<dyn FontLoader>>;
+type FontSlotInner = QueryRef<Option<Font>, (), Box<dyn FontLoader + Send>>;
 
 /// Lazy Font Reference, load as needed.
 pub struct FontSlot(FontSlotInner);
@@ -12,11 +12,11 @@ impl FontSlot {
         Self(FontSlotInner::with_value(f))
     }
 
-    pub fn new(f: Box<dyn FontLoader>) -> Self {
+    pub fn new(f: Box<dyn FontLoader + Send>) -> Self {
         Self(FontSlotInner::with_context(f))
     }
 
-    pub fn new_boxed<F: FontLoader + 'static>(f: F) -> Self {
+    pub fn new_boxed<F: FontLoader + Send + 'static>(f: F) -> Self {
         Self::new(Box::new(f))
     }
 
