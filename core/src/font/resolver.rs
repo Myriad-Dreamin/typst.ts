@@ -1,7 +1,7 @@
 use core::fmt;
 use std::{
     collections::HashMap,
-    sync::{Arc, RwLock},
+    sync::{Arc, Mutex},
 };
 
 use comemo::Prehashed;
@@ -25,7 +25,7 @@ pub trait FontResolver {
 /// The default FontResolver implementation.
 pub struct FontResolverImpl {
     book: Prehashed<FontBook>,
-    partial_book: Arc<RwLock<PartialFontBook>>,
+    partial_book: Arc<Mutex<PartialFontBook>>,
     fonts: Vec<FontSlot>,
     profile: FontProfile,
 }
@@ -33,7 +33,7 @@ pub struct FontResolverImpl {
 impl FontResolverImpl {
     pub fn new(
         book: FontBook,
-        partial_book: Arc<RwLock<PartialFontBook>>,
+        partial_book: Arc<Mutex<PartialFontBook>>,
         fonts: Vec<FontSlot>,
         profile: FontProfile,
     ) -> Self {
@@ -58,7 +58,7 @@ impl FontResolverImpl {
     }
 
     pub fn partial_resolved(&self) -> bool {
-        self.partial_book.read().unwrap().partial_hit
+        self.partial_book.lock().unwrap().partial_hit
     }
 
     pub fn loaded_fonts(&self) -> impl Iterator<Item = (usize, Font)> + '_ {
@@ -71,8 +71,7 @@ impl FontResolverImpl {
     }
 
     pub fn modify_font_data(&mut self, idx: usize, buffer: Buffer) {
-        let mut font_book: std::sync::RwLockWriteGuard<PartialFontBook> =
-            self.partial_book.write().unwrap();
+        let mut font_book = self.partial_book.lock().unwrap();
         for (i, info) in FontInfo::iter(buffer.as_slice()).enumerate() {
             let buffer = buffer.clone();
             let modify_idx = if i > 0 { None } else { Some(idx) };
@@ -89,7 +88,7 @@ impl FontResolverImpl {
     }
 
     pub fn rebuild(&mut self) {
-        let mut partial_book = self.partial_book.write().unwrap();
+        let mut partial_book = self.partial_book.lock().unwrap();
         if !partial_book.partial_hit {
             return;
         }

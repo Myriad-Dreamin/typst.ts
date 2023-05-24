@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex};
 
 use js_sys::ArrayBuffer;
 use typst::{
@@ -379,7 +379,7 @@ pub struct BrowserFontSearcher {
     pub book: FontBook,
     pub fonts: Vec<FontSlot>,
     pub profile: FontProfile,
-    pub partial_book: Arc<RwLock<PartialFontBook>>,
+    pub partial_book: Arc<Mutex<PartialFontBook>>,
 }
 
 impl BrowserFontSearcher {
@@ -393,7 +393,7 @@ impl BrowserFontSearcher {
             book: FontBook::new(),
             fonts: vec![],
             profile,
-            partial_book: Arc::new(RwLock::new(PartialFontBook::default())),
+            partial_book: Arc::new(Mutex::new(PartialFontBook::default())),
         }
     }
 
