@@ -54,38 +54,40 @@ mod test {
 
     #[test]
     fn test_unix_slash() {
-        // windows group
-        assert_eq!(
-            unix_slash(std::path::Path::new("C:\\Users\\a\\b\\c")),
-            "C:/Users/a/b/c"
-        );
-        assert_eq!(
-            unix_slash(std::path::Path::new("C:\\Users\\a\\b\\c\\")),
-            "C:/Users/a/b/c"
-        );
-        assert_eq!(unix_slash(std::path::Path::new("a\\b\\c")), "a/b/c");
-        assert_eq!(unix_slash(std::path::Path::new("C:\\")), "C:/");
-        assert_eq!(unix_slash(std::path::Path::new("C:\\\\")), "C:/");
-        assert_eq!(unix_slash(std::path::Path::new("C:")), "C:");
-        assert_eq!(unix_slash(std::path::Path::new("C:\\a")), "C:/a");
-        assert_eq!(unix_slash(std::path::Path::new("C:\\a\\")), "C:/a");
-        assert_eq!(unix_slash(std::path::Path::new("C:\\a\\b")), "C:/a/b");
-        assert_eq!(
-            unix_slash(std::path::Path::new("C:\\Users\\a\\..\\b\\c")),
-            "C:/Users/a/../b/c"
-        );
-        assert_eq!(
-            unix_slash(std::path::Path::new("C:\\Users\\a\\..\\b\\c\\")),
-            "C:/Users/a/../b/c"
-        );
-        assert_eq!(
-            unix_slash(std::path::Path::new("C:\\Users\\a\\..\\..")),
-            "C:/Users/a/../.."
-        );
-        assert_eq!(
-            unix_slash(std::path::Path::new("C:\\Users\\a\\..\\..\\")),
-            "C:/Users/a/../.."
-        );
+        if cfg!(target_os = "windows") {
+            // windows group
+            assert_eq!(
+                unix_slash(std::path::Path::new("C:\\Users\\a\\b\\c")),
+                "C:/Users/a/b/c"
+            );
+            assert_eq!(
+                unix_slash(std::path::Path::new("C:\\Users\\a\\b\\c\\")),
+                "C:/Users/a/b/c"
+            );
+            assert_eq!(unix_slash(std::path::Path::new("a\\b\\c")), "a/b/c");
+            assert_eq!(unix_slash(std::path::Path::new("C:\\")), "C:/");
+            assert_eq!(unix_slash(std::path::Path::new("C:\\\\")), "C:/");
+            assert_eq!(unix_slash(std::path::Path::new("C:")), "C:");
+            assert_eq!(unix_slash(std::path::Path::new("C:\\a")), "C:/a");
+            assert_eq!(unix_slash(std::path::Path::new("C:\\a\\")), "C:/a");
+            assert_eq!(unix_slash(std::path::Path::new("C:\\a\\b")), "C:/a/b");
+            assert_eq!(
+                unix_slash(std::path::Path::new("C:\\Users\\a\\..\\b\\c")),
+                "C:/Users/a/../b/c"
+            );
+            assert_eq!(
+                unix_slash(std::path::Path::new("C:\\Users\\a\\..\\b\\c\\")),
+                "C:/Users/a/../b/c"
+            );
+            assert_eq!(
+                unix_slash(std::path::Path::new("C:\\Users\\a\\..\\..")),
+                "C:/Users/a/../.."
+            );
+            assert_eq!(
+                unix_slash(std::path::Path::new("C:\\Users\\a\\..\\..\\")),
+                "C:/Users/a/../.."
+            );
+        }
         // unix group
         assert_eq!(unix_slash(std::path::Path::new("/a/b/c")), "/a/b/c");
         assert_eq!(unix_slash(std::path::Path::new("/a/b/c/")), "/a/b/c");
