@@ -23,6 +23,7 @@ hex.workspace = true
 sha2.workspace = true
 flate2.workspace = true
 
+serde.workspace = true
 serde_json.workspace = true
 serde-wasm-bindgen = { workspace = true, optional = true }
 
@@ -42,6 +43,7 @@ fst = "0.4.7"
 indexmap.workspace = true
 nohash-hasher = "0.2.0"
 path-clean = "1.0.1"
+pathdiff = "0.2.1"
 
 typst-ts-core.workspace = true
 
