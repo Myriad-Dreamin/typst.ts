@@ -57,5 +57,6 @@ system = ["dep:memmap2", "dep:dirs", "dep:walkdir", "dep:same-file", "dep:notify
 __web = ["dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:js-sys", "dep:web-sys", "dep:serde-wasm-bindgen", "dep:pollster"]
 web-render = ["__web"]
 browser-compile = ["__web", "web-render"]
-web = ["__web", "web-render", "browser-compile"]
+browser-embedded-fonts = ["__web"]
+web = ["__web", "web-render", "browser-compile", "browser-embedded-fonts"]
 default = ["system"]
