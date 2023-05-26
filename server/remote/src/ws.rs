@@ -115,6 +115,8 @@ impl Session {
 
         drop(session);
 
+        comemo::evict(30);
+
         self.send_world_snapshot(world_info).await;
     }
 
@@ -124,6 +126,10 @@ impl Session {
         let world_info = session.take_snapshot();
 
         drop(session);
+
+        // Garbage collect incremental cache. This evicts all memoized results that haven't been
+        // used in the last 30 compilations.
+        comemo::evict(30);
 
         self.send_world_snapshot(world_info).await;
     }

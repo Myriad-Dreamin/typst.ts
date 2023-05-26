@@ -11,6 +11,7 @@ repository.workspace = true
 [dependencies]
 
 typst.workspace = true
+comemo.workspace = true
 
 futures.workspace = true
 tokio.workspace = true
