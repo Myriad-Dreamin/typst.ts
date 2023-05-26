@@ -27,9 +27,12 @@ fn main() {
 
 fn run(args: RunArgs) -> ! {
     let root = args.root.clone();
-    let addr = args.web_socket;
-
     let root = Path::new(&root).canonicalize().unwrap();
+
+    let mut addr = args.web_socket;
+    if addr.is_empty() {
+        addr = "127.0.0.1:23625".to_owned()
+    }
 
     let compile_opts = CompileOpts {
         font_paths: args.font_paths.clone(),
