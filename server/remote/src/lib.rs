@@ -1,7 +1,9 @@
 use clap::{Parser, Subcommand};
 use typst_ts_core::build_info::VERSION;
 
+pub(crate) mod compile;
 pub mod utils;
+pub mod ws;
 
 #[derive(Debug, Parser)]
 #[clap(name = "typst-ts-dev-server", version = VERSION)]
