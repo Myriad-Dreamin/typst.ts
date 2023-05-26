@@ -52,6 +52,34 @@
 
       pdfjsLib.GlobalWorkerOptions.workerSrc =
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
+
+      const socket = new WebSocket('ws://127.0.0.1:23625');
+      // socket.binaryType = "arraybuffer";
+      socket.addEventListener('open', () => {
+        console.log('WebSocket connection opened');
+        socket.send(
+          JSON.stringify({
+            t: 'Initialize',
+            v: {
+              workspace: '${workspace-root}',
+              entry: '${compile-entry-file}',
+            },
+          }),
+        );
+      });
+
+      socket.addEventListener('message', event => {
+        console.log('WebSocket message', event);
+      });
+
+      socket.addEventListener('close', () => {
+        console.log('WebSocket connection closed');
+      });
+
+      socket.addEventListener('error', error => {
+        console.error('WebSocket Error: ', error);
+      });
+
       document.ready(() => {
         const imageContainer = document.getElementById('imageContainer');
         let currentScale = 1; // variable for storing scaling factor
@@ -200,7 +228,7 @@
               //   byFamily: ['Segoe UI Symbol'],
               // }),
               window.TypstCompileModule.withAccessModel(
-                new window.TypstCompileModule.FetchAccessModel('${workspace-root}', {
+                new window.TypstCompileModule.FetchAccessModel('${workspace-content-root}', {
                   fullyCached: true,
                 }),
               ),

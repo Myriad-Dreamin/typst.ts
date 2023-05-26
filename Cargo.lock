@@ -2754,6 +2754,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "typst-ts-remote-server"
+version = "0.2.0"
+dependencies = [
+ "clap",
+ "clap_complete",
+ "clap_complete_fig",
+ "comemo",
+ "env_logger",
+ "futures",
+ "log",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-tungstenite",
+ "typst",
+ "typst-ts-compiler",
+ "typst-ts-core",
+]
+
+[[package]]
 name = "typst-ts-renderer"
 version = "0.2.0"
 dependencies = [
