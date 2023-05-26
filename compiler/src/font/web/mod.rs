@@ -394,12 +394,59 @@ impl BrowserFontSearcher {
             version: "v1beta".to_owned(),
             ..Default::default()
         };
-        Self {
+        let searcher = Self {
             book: FontBook::new(),
             fonts: vec![],
             profile,
             partial_book: Arc::new(Mutex::new(PartialFontBook::default())),
-        }
+        };
+
+        #[cfg(feature = "browser-embedded-fonts")]
+        let searcher = {
+            let mut searcher = searcher;
+            searcher.add_embedded();
+            searcher
+        };
+
+        searcher
+    }
+
+    /// Add fonts that are embedded in the binary.
+    #[cfg(feature = "browser-embedded-fonts")]
+    pub fn add_embedded(&mut self) {
+        let mut add = |bytes: &'static [u8]| {
+            let buffer = Buffer::from_static(bytes);
+            for (_, font) in Font::iter(buffer).enumerate() {
+                self.book.push(font.info().clone());
+                self.fonts.push(FontSlot::with_value(Some(font)));
+            }
+        };
+
+        // Embed default fonts.
+        add(include_bytes!(
+            "../../../../assets/fonts/LinLibertine_R.ttf"
+        ));
+        add(include_bytes!(
+            "../../../../assets/fonts/LinLibertine_RB.ttf"
+        ));
+        add(include_bytes!(
+            "../../../../assets/fonts/LinLibertine_RBI.ttf"
+        ));
+        add(include_bytes!(
+            "../../../../assets/fonts/LinLibertine_RI.ttf"
+        ));
+        add(include_bytes!(
+            "../../../../assets/fonts/NewCMMath-Book.otf"
+        ));
+        add(include_bytes!(
+            "../../../../assets/fonts/NewCMMath-Regular.otf"
+        ));
+        add(include_bytes!(
+            "../../../../assets/fonts/DejaVuSansMono.ttf"
+        ));
+        add(include_bytes!(
+            "../../../../assets/fonts/DejaVuSansMono-Bold.ttf"
+        ));
     }
 
     pub async fn add_web_fonts(&mut self, fonts: js_sys::Array) -> Result<(), JsValue> {
