@@ -6,6 +6,9 @@ pub mod workspace;
 pub mod world;
 
 #[cfg(feature = "system")]
+pub mod service;
+
+#[cfg(feature = "system")]
 pub(crate) mod system;
 #[cfg(feature = "system")]
 pub use system::TypstSystemWorld;

@@ -1,7 +1,5 @@
 use std::path::PathBuf;
 
-pub mod compile;
-pub mod diag;
 pub mod export;
 pub mod tracing;
 pub mod utils;
