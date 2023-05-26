@@ -2,11 +2,16 @@
 import typstInit, * as typst from '../../renderer/pkg/typst_ts_renderer';
 
 import type * as pdfjsModule from 'pdfjs-dist';
-import type { InitOptions, BeforeBuildMark } from './options.init';
+import type { InitOptions } from './options.init';
 import { PageViewport } from './viewport';
-import { RenderSession } from './internal.types';
-import { RenderByContentOptions, RenderOptions, RenderPageOptions } from './options.render';
-import { RenderView } from './view';
+import { PageInfo, RenderSession } from './internal.types';
+import {
+  RenderByContentOptions,
+  RenderOptions,
+  RenderOptionsBase,
+  RenderPageOptions,
+} from './options.render';
+import { RenderView, renderTextLayer } from './view';
 import { LazyWasmModule } from './wasm';
 import { buildComponent } from './init';
 
@@ -97,7 +102,38 @@ class TypstRendererDriver {
     return rustOptions;
   }
 
-  async renderImageInSession(
+  loadPagesInfo(session: typst.RenderSession, options: RenderOptionsBase): PageInfo[] {
+    const pages_info = session.pages_info;
+    const pageInfos: PageInfo[] = [];
+    if (options.pages) {
+      for (let i = 0; i < options.pages.length; i++) {
+        const pageNum: number = options.pages[i].number;
+        const pageAst = pages_info.page_by_number(pageNum);
+        if (!pageAst) {
+          throw new Error(`page ${pageNum} is not loaded`);
+        }
+        pageInfos.push({
+          pageOffset: pageAst.page_off,
+          width: pageAst.width_pt,
+          height: pageAst.height_pt,
+        });
+      }
+    } else {
+      const pageCount = pages_info.page_count;
+      for (let i = 0; i < pageCount; i++) {
+        const pageAst = pages_info.page(i);
+        pageInfos.push({
+          pageOffset: pageAst.page_off,
+          width: pageAst.width_pt,
+          height: pageAst.height_pt,
+        });
+      }
+    }
+
+    return pageInfos;
+  }
+
+  renderImageInSession(
     session: RenderSession,
     canvas: CanvasRenderingContext2D,
     options?: RenderPageOptions,
@@ -122,7 +158,7 @@ class TypstRendererDriver {
 
   private async inAnimationFrame<T>(fn: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
-      requestAnimationFrame(async () => {
+      requestAnimationFrame(() => {
         try {
           resolve(fn());
         } catch (e) {
@@ -146,7 +182,7 @@ class TypstRendererDriver {
 
     const doRender = async (i: number, page_off: number) => {
       const canvas = canvasList[i];
-      let ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d');
       if (ctx) {
         const res = await this.renderImageInSession(session, ctx, {
           page_off,
@@ -186,7 +222,7 @@ class TypstRendererDriver {
           /// seq
           [
             (async () => {
-              let results = [];
+              const results = [];
               if (options.pages) {
                 for (let i = 0; i < options.pages.length; i++) {
                   results.push(await doRender(i, options.pages[i].number));
@@ -211,7 +247,7 @@ class TypstRendererDriver {
     });
   }
 
-  private async renderOnePageTextLayer(
+  private renderOnePageTextLayer(
     container: HTMLElement,
     viewport: PageViewport,
     textContentSource: any,
@@ -224,47 +260,14 @@ class TypstRendererDriver {
     });
   }
 
-  private async renderTextLayer(
+  private renderTextLayer(
     session: typst.RenderSession,
+    view: RenderView,
     container: HTMLDivElement,
     layerList: HTMLDivElement[],
     textSourceList: any[],
-    pages?: { number: number }[],
   ) {
-    const containerWidth = container.offsetWidth;
-    const t2 = performance.now();
-
-    const pages_info = session.pages_info;
-
-    const renderOne = async (layer: HTMLDivElement, i: number) => {
-      let page_number = pages ? pages[i].number : i;
-
-      const page_info = pages_info.page_by_number(page_number);
-      if (!page_info) {
-        console.error('page not found for', i, pages_info);
-        return;
-      }
-      const width_pt = page_info.width_pt;
-      const height_pt = page_info.height_pt;
-      const orignalScale = containerWidth / width_pt;
-      // the --scale-factor will truncate our scale, we do it first
-      const scale = Number.parseFloat(orignalScale.toFixed(4));
-      layer.parentElement?.style.setProperty('--scale-factor', scale.toString());
-      // console.log('orignalScale', orignalScale, scale);
-      const viewport = new PageViewport({
-        viewBox: [0, 0, width_pt, height_pt],
-        scale: scale,
-        offsetX: 0,
-        offsetY: 0,
-        rotation: 0,
-        dontFlip: false,
-      });
-      this.renderOnePageTextLayer(layer, viewport, textSourceList[i]);
-    };
-
-    await Promise.all(layerList.map(renderOne));
-    const t3 = performance.now();
-    console.log(`text layer used: render = ${(t3 - t2).toFixed(1)}ms`);
+    renderTextLayer(this.pdf, container, view.pageInfos, layerList, textSourceList);
   }
 
   async render(options: RenderOptions): Promise<RenderResult> {
@@ -291,25 +294,25 @@ class TypstRendererDriver {
       }
     };
 
-    const doRenderTextLayer = (layerList: HTMLDivElement[]) =>
-      this.renderTextLayer(session, mountContainer, layerList, textContentList);
-
     return this.withinOptionSession(options, async sessionRef => {
       session = sessionRef;
       if (session.pages_info.page_count === 0) {
-        throw new Error(`No page found in session ${session}`);
+        throw new Error(`No page found in session`);
       }
 
       const t = performance.now();
-      const pageView = new RenderView(session, mountContainer, options);
+
+      const pageView = new RenderView(
+        this.loadPagesInfo(session, options),
+        mountContainer,
+        options,
+      );
       const t2 = performance.now();
 
       console.log(`layer used: retieve = ${(t2 - t).toFixed(1)}ms`);
 
       await doRenderDisplayLayer(pageView.canvasList, () => pageView.resetLayout());
-      doRenderTextLayer(pageView.layerList).catch(e => {
-        console.error('render text layer', e);
-      });
+      this.renderTextLayer(session, pageView, mountContainer, pageView.layerList, textContentList);
 
       return renderResult;
     });

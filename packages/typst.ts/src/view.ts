@@ -1,15 +1,13 @@
-// @ts-ignore
-import * as typst from '../../pkg/typst_ts_renderer';
-
-import { PageInfo, RenderSession } from './internal.types';
+import { PageInfo } from './internal.types';
 import { RenderOptionsBase } from './options.render';
+import { PageViewport } from './viewport';
+import type * as pdfjsModule from 'pdfjs-dist';
 
 /** @internal */
 export class RenderView {
   loadPageCount: number;
   imageScaleFactor: number;
   partialPageRendering: boolean;
-  pageInfos: PageInfo[];
 
   container: HTMLDivElement;
   canvasList: HTMLCanvasElement[];
@@ -17,12 +15,9 @@ export class RenderView {
   commonList: HTMLDivElement[];
   textLayerParentList: HTMLDivElement[];
 
-  constructor(session: typst.RenderSession, container: HTMLDivElement, options: RenderOptionsBase) {
+  constructor(public pageInfos: PageInfo[], container: HTMLDivElement, options: RenderOptionsBase) {
     this.partialPageRendering = options.pages !== undefined;
-    this.pageInfos = [];
-    this.loadPageCount = options.pages ? options.pages.length : session.pages_info.page_count;
     this.imageScaleFactor = options.pixelPerPt ?? 2;
-    this.loadPagesInfo(session, options);
 
     /// all children
     const commonDivList = Array.from(container.getElementsByTagName('div')).filter(
@@ -120,33 +115,6 @@ export class RenderView {
     }
   }
 
-  loadPagesInfo(session: typst.RenderSession, options: RenderOptionsBase): void {
-    const pages_info = session.pages_info;
-    if (options.pages) {
-      for (let i = 0; i < this.loadPageCount; i++) {
-        const pageNum = options.pages[i].number;
-        const pageAst = pages_info.page_by_number(pageNum);
-        if (!pageAst) {
-          throw new Error(`page ${pageNum} is not loaded`);
-        }
-        this.pageInfos.push({
-          pageOffset: pageAst.page_off,
-          width: pageAst.width_pt,
-          height: pageAst.height_pt,
-        });
-      }
-    } else {
-      for (let i = 0; i < this.loadPageCount; i++) {
-        const pageAst = pages_info.page(i);
-        this.pageInfos.push({
-          pageOffset: pageAst.page_off,
-          width: pageAst.width_pt,
-          height: pageAst.height_pt,
-        });
-      }
-    }
-  }
-
   resetLayout() {
     /// resize again to avoid bad width change after render
     if (this.partialPageRendering) {
@@ -155,7 +123,12 @@ export class RenderView {
         const width = Math.ceil(pageAst.width) * this.imageScaleFactor;
         const height = Math.ceil(pageAst.height) * this.imageScaleFactor;
 
-        const canvasDiv = this.canvasList[i].parentElement!;
+        const canvasDiv = this.canvasList[i].parentElement;
+        if (!canvasDiv) {
+          throw new Error(
+            `canvasDiv is null for page ${i}, canvas list length ${this.canvasList.length}`,
+          );
+        }
         const commonDiv = this.commonList[i];
         const textLayerParent = this.textLayerParentList[i];
 
@@ -178,7 +151,12 @@ export class RenderView {
         const width = Math.ceil(pageAst.width) * this.imageScaleFactor;
         const height = Math.ceil(pageAst.height) * this.imageScaleFactor;
 
-        const canvasDiv = this.canvasList[i].parentElement!;
+        const canvasDiv = this.canvasList[i].parentElement;
+        if (!canvasDiv) {
+          throw new Error(
+            `canvasDiv is null for page ${i}, canvas list length ${this.canvasList.length}`,
+          );
+        }
         const commonDiv = this.commonList[i];
         const textLayerParent = this.textLayerParentList[i];
 
@@ -197,4 +175,48 @@ export class RenderView {
       }
     }
   }
+}
+
+export function renderTextLayer(
+  pdfjsLib: unknown,
+  container: HTMLDivElement,
+  pageInfos: PageInfo[],
+  layerList: HTMLDivElement[],
+  textSourceList: any[],
+) {
+  const containerWidth = container.offsetWidth;
+  const t2 = performance.now();
+
+  const renderOne = (layer: HTMLDivElement, i: number) => {
+    const page_info = pageInfos[i];
+    if (!page_info) {
+      console.error('page not found for', i);
+      return;
+    }
+    const width_pt = page_info.width;
+    const height_pt = page_info.height;
+    const orignalScale = containerWidth / width_pt;
+    // the --scale-factor will truncate our scale, we do it first
+    const scale = Number.parseFloat(orignalScale.toFixed(4));
+    layer.parentElement?.style.setProperty('--scale-factor', scale.toString());
+    // console.log('orignalScale', orignalScale, scale);
+    const viewport = new PageViewport({
+      viewBox: [0, 0, width_pt, height_pt],
+      scale: scale,
+      offsetX: 0,
+      offsetY: 0,
+      rotation: 0,
+      dontFlip: false,
+    });
+
+    (pdfjsLib as typeof pdfjsModule).renderTextLayer({
+      textContentSource: textSourceList[i],
+      container: layer,
+      viewport,
+    });
+  };
+
+  layerList.forEach(renderOne);
+  const t3 = performance.now();
+  console.log(`text layer used: render = ${(t3 - t2).toFixed(1)}ms`);
 }

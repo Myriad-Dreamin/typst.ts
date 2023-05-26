@@ -63,7 +63,7 @@
           JSON.stringify({
             t: 'Initialize',
             v: {
-              id: "1",
+              id: '1',
               workspace: '${workspace-root}',
               entry: '${compile-entry-file}',
             },
@@ -77,7 +77,7 @@
       let runCompile = undefined;
 
       socket.addEventListener('message', event => {
-          console.log(`script delay1: ${performance.now() - scriptStart}ms`);
+        console.log(`script delay1: ${performance.now() - scriptStart}ms`);
         console.log('WebSocket message', event);
         const message = JSON.parse(event.data);
         if (message.t === 'WorldSnapshot') {
@@ -103,14 +103,44 @@
         let currentScale = 1; // variable for storing scaling factor
         let imageContainerWidth = imageContainer.offsetWidth;
         let isFirstScale = true;
+        let pages = [];
+
+        const renderTextLayer = () => {
+          window.TypstRenderModule.renderTextLayer(
+            pdfjsLib,
+            imageContainer,
+            pages.map(page => page.info),
+            pages.map(page => page.textLayerDiv),
+            pages.map(page => page.textSource),
+          );
+        };
+
+        const rescale = () => {
+          pages.forEach(({ canvasDiv, info, root, textLayerContainer, textLayerDiv }) => {
+            const scale = Number.parseFloat(currentScale.toFixed(4));
+
+            canvasDiv.style.transformOrigin = '0px 0px';
+            canvasDiv.style.transform = `scale(${scale})`;
+
+            const div_width = Math.ceil(info.canvas_width * scale);
+            const div_height = Math.ceil(info.canvas_height * scale);
+
+            root.style.width = `${div_width}px`;
+            root.style.height = `${div_height}px`;
+            textLayerContainer.style.width = `${div_width}px`;
+            textLayerContainer.style.height = `${div_height}px`;
+            textLayerDiv.style.width = `${div_width}px`;
+            textLayerDiv.style.height = `${div_height}px`;
+          });
+          renderTextLayer();
+        };
 
         // drag (panal resizing) -> rescaling
         window.onresize = () => {
           const newImageContainerWidth = imageContainer.offsetWidth;
           currentScale = currentScale * (newImageContainerWidth / imageContainerWidth);
           imageContainerWidth = newImageContainerWidth;
-          imageContainer.style.transformOrigin = '0px 0px';
-          imageContainer.style.transform = `scale(${currentScale})`;
+          rescale();
         };
 
         // Ctrl+scroll rescaling
@@ -151,12 +181,9 @@
             }
 
             // Apply new scale
-            imageContainer.style.transformOrigin = '0 0';
-            imageContainer.style.transform = `scale(${currentScale})`;
+            rescale();
           }
         });
-
-        let canvas_handles = [];
 
         runCompile = async () => {
           if (!worldSnapshot || !pluginLoaded) {
@@ -165,9 +192,9 @@
           if (worldSnapshot && !worldSnapshotLoaded) {
             worldSnapshotLoaded = true;
             console.log('should load snapshot', worldSnapshot);
-  // loadSnapshot(snapshot: unknown, resolvePath: (p: string) => string): Promise<void>;
-            await compilerPlugin.loadSnapshot(worldSnapshot, (path) => {
-              return '${font-server}'+path;
+            // loadSnapshot(snapshot: unknown, resolvePath: (p: string) => string): Promise<void>;
+            await compilerPlugin.loadSnapshot(worldSnapshot, path => {
+              return '${font-server}' + path;
             });
           }
 
@@ -176,7 +203,11 @@
           const doc = await compilerPlugin.compile({
             mainFilePath: '${compile-entry-file}',
           });
-          console.log(`compile delay: ${performance.now() - processStart}ms script delay: ${performance.now() - scriptStart}ms`);
+          console.log(
+            `compile delay: ${performance.now() - processStart}ms script delay: ${
+              performance.now() - scriptStart
+            }ms`,
+          );
 
           try {
             const page_total = doc.page_total();
@@ -192,38 +223,76 @@
             console.log('scale', scale);
 
             // round up to integer
-            page_width = Math.ceil(page_width * scale);
-            page_height = Math.ceil(page_height * scale);
+            const canvas_width = Math.ceil(page_width * scale);
+            const canvas_height = Math.ceil(page_height * scale);
 
             imageContainerWidth = deviceWidth;
-            currentScale = imageContainerWidth / page_width;
-            imageContainer.style.transformOrigin = '0px 0px';
-            imageContainer.style.transform = `scale(${currentScale})`;
+            currentScale = imageContainerWidth / canvas_width;
+
+            const div_width = Math.ceil(canvas_width * currentScale);
+            const div_height = Math.ceil(canvas_height * currentScale);
+            // imageContainer.style.transformOrigin = '0px 0px';
+            // imageContainer.style.transform = `scale(${currentScale})`;
             isFirstScale = false;
 
-            while (canvas_handles.length > page_total) {
-              const removed = canvas_handles.pop();
-              imageContainer.removeChild(removed);
+            while (pages.length > page_total) {
+              const removed = pages.pop();
+              imageContainer.removeChild(removed.root);
             }
-            while (canvas_handles.length < page_total) {
-              const canvas = document.createElement('canvas');
-              imageContainer.appendChild(canvas);
-              canvas_handles.push(canvas);
+            while (pages.length < page_total) {
+              const root = document.createElement('div');
+              root.style.position = 'relative';
+
+              const canvasDiv = document.createElement('div');
+              canvasDiv.style.position = 'absolute';
+              canvasDiv.style.transformOrigin = '0px 0px';
+              canvasDiv.style.transform = `scale(${currentScale})`;
+
+              const displayLayerCanvas = document.createElement('canvas');
+              canvasDiv.appendChild(displayLayerCanvas);
+              root.appendChild(canvasDiv);
+
+              const textLayerContainer = document.createElement('div');
+              textLayerContainer.style.position = 'absolute';
+              textLayerContainer.className = 'text-layer textLayer';
+              const textLayerDiv = document.createElement('div');
+              textLayerContainer.appendChild(textLayerDiv);
+              root.appendChild(textLayerContainer);
+
+              root.style.width = `${div_width}px`;
+              root.style.height = `${div_height}px`;
+              textLayerContainer.style.width = `${div_width}px`;
+              textLayerContainer.style.height = `${div_height}px`;
+              textLayerDiv.style.width = `${div_width}px`;
+              textLayerDiv.style.height = `${div_height}px`;
+
+              imageContainer.appendChild(root);
+              pages.push({ root, displayLayerCanvas, textLayerContainer, textLayerDiv, canvasDiv });
             }
 
             const animatedTasks = [];
             for (let i = 0; i < page_total; i++) {
-              const canvas = canvas_handles[i];
-              canvas.width = page_width;
-              canvas.height = page_height;
+              const { displayLayerCanvas } = pages[i];
+              displayLayerCanvas.width = canvas_width;
+              displayLayerCanvas.height = canvas_height;
+              pages[i].info = {
+                pageOffset: i,
+                width: page_width,
+                height: page_height,
+                canvas_width,
+                canvas_height,
+              };
               animatedTasks.push(
                 new Promise((resolve, reject) => {
                   requestAnimationFrame(() => {
                     const pageProcessStart = performance.now();
-                    const ctx = canvas.getContext('2d');
+                    const ctx = displayLayerCanvas.getContext('2d');
                     compilerPlugin
                       .renderPageToCanvas(ctx, doc, i, scale, '#ffffff')
-                      .then(resolve)
+                      .then(textSource => {
+                        pages[i].textSource = textSource;
+                        resolve(undefined);
+                      })
                       .catch(reject);
                     console.log(
                       `page ${i} process time: ${performance.now() - pageProcessStart}ms delay: ${
@@ -236,6 +305,7 @@
             }
 
             await Promise.all(animatedTasks);
+            renderTextLayer();
             console.log(`total process time: ${performance.now() - processStart}ms ${page_total}`);
           } finally {
             doc.free();
@@ -275,6 +345,30 @@
         transform-origin: 0 0;
       }
 
+      .typst-app {
+        margin: 0;
+        transform-origin: 0 0;
+      }
+
+      .text-layer {
+        position: relative;
+        left: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        overflow: hidden;
+        opacity: 0.2;
+        line-height: 1;
+      }
+
+      .text-layer > div {
+        color: transparent;
+        /* position: absolute; */
+        white-space: pre;
+        cursor: text;
+        transform-origin: 0% 0%;
+      }
+
       canvas:not(:last-child) {
         padding-bottom: 32px;
       }
@@ -286,7 +380,7 @@
   </head>
 
   <body style="padding: 0px 0px 0px 0px">
-    <div style="position: absolute; z-index: 1"><button id="compile-button">compile</button></div>
+    <div style="position: absolute; z-index: 10"><button id="compile-button">compile</button></div>
     <div id="imageContainer" style="height: 0px"></div>
   </body>
 </html>
