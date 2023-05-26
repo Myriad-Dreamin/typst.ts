@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use typst::model::Locator;
 
+use crate::font::get_font_coverage_hash;
 use crate::typst_affinite_hash;
 use crate::FontResolver;
 
@@ -62,15 +63,8 @@ impl ArtifactBuilder {
 
         let font_ref = self.fonts.len() as u32;
         self.font_map.insert(font.info().clone(), font_ref);
-        self.fonts.push((
-            TypstFontInfo {
-                family: font.info().family.clone(),
-                variant: font.info().variant,
-                flags: font.info().flags,
-                coverage: FontCoverage::from_vec(vec![]),
-            },
-            LigatureResolver::new(font.ttf()),
-        ));
+        self.fonts
+            .push((font.info().clone(), LigatureResolver::new(font.ttf())));
         font_ref
     }
 
@@ -218,7 +212,8 @@ impl From<&TypstDocument> for Artifact {
                         family: info.family,
                         variant: info.variant,
                         flags: info.flags.bits(),
-                        coverage: info.coverage,
+                        coverage: FontCoverage::from_vec(vec![]),
+                        coverage_hash: get_font_coverage_hash(&info.coverage),
                         ligatures: res.into_covered(),
                     }
                 })

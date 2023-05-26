@@ -117,6 +117,7 @@ impl ArtifactJsBuilder {
         let mut flags = typst::font::FontFlags::from_bits(0_u32).unwrap();
         let mut coverage = None;
         let mut ligatures = None;
+        let mut coverage_hash = String::default();
 
         for (k, v) in js_sys::Object::entries(val.dyn_ref().unwrap())
             .iter()
@@ -144,6 +145,9 @@ impl ArtifactJsBuilder {
                             .collect(),
                     ));
                 }
+                "coverage_hash" => {
+                    coverage_hash = self.to_string("font_info.coverage_hash", &v)?;
+                }
                 "ligatures" => {
                     ligatures = Some(
                         v.dyn_into::<js_sys::Array>()?
@@ -166,6 +170,7 @@ impl ArtifactJsBuilder {
             variant,
             flags: flags.bits(),
             coverage: coverage.unwrap_or_else(|| typst::font::Coverage::from_vec(vec![])),
+            coverage_hash,
             ligatures: ligatures.unwrap_or_default(),
         })
     }

@@ -19,6 +19,8 @@ pub struct FontInfo {
     pub flags: u32,
     /// The unicode coverage of the font.
     pub coverage: Coverage,
+    /// The hash of the unicode coverage.
+    pub coverage_hash: String,
     /// ligature coverage
     pub ligatures: Vec<(u16, String)>,
 }
@@ -30,6 +32,7 @@ impl Default for FontInfo {
             variant: FontVariant::default(),
             coverage: Coverage::from_vec(vec![]),
             flags: u32::default(),
+            coverage_hash: String::default(),
             ligatures: Vec::default(),
         }
     }

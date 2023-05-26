@@ -1,26 +1,10 @@
 use std::path::PathBuf;
 
-use crate::workspace::dependency::DependencyTree;
 use log::error;
-use serde::{Deserialize, Serialize};
 use typst::World;
-use typst_ts_core::{config::CompileOpts, font::FontProfile, ArtifactMeta};
+use typst_ts_core::config::CompileOpts;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SourceUnit {
-    name: String,
-    hash: String,
-    content: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct WorldSnapshot {
-    pub font_profile: Option<FontProfile>,
-    pub dependencies: DependencyTree,
-
-    /// document specific data
-    pub artifact_metadata: ArtifactMeta,
-}
+use crate::world::WorldSnapshot;
 
 #[derive(Default)]
 pub struct CompileSession {

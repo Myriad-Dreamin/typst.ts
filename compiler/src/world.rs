@@ -4,6 +4,7 @@ use std::{
 };
 
 use comemo::Prehashed;
+use serde::{Deserialize, Serialize};
 use typst::{
     diag::FileResult,
     eval::Library,
@@ -12,7 +13,10 @@ use typst::{
     util::Buffer,
     World,
 };
-use typst_ts_core::{font::FontResolverImpl, FontResolver};
+use typst_ts_core::{
+    font::{FontProfile, FontResolverImpl},
+    ArtifactMeta, FontResolver,
+};
 
 use crate::{
     vfs::{AccessModel, Vfs},
@@ -160,4 +164,13 @@ impl<'a, F: CompilerFeat> codespan_reporting::files::Files<'a> for CompilerWorld
             }
         })
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WorldSnapshot {
+    pub font_profile: Option<FontProfile>,
+    pub dependencies: DependencyTree,
+
+    /// document specific data
+    pub artifact_metadata: ArtifactMeta,
 }

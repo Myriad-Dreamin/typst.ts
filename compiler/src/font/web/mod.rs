@@ -2,7 +2,10 @@ use std::sync::{Arc, Mutex};
 
 use js_sys::ArrayBuffer;
 use typst::{
-    font::{Font, FontBook, FontFlags, FontInfo, FontStretch, FontStyle, FontVariant, FontWeight},
+    font::{
+        Coverage, Font, FontBook, FontFlags, FontInfo, FontStretch, FontStyle, FontVariant,
+        FontWeight,
+    },
     util::Buffer,
 };
 use typst_ts_core::{
@@ -221,7 +224,7 @@ fn infer_info_from_web_font(
 
         flags
     };
-    let coverage = serde_json::from_str("[0, 4294967295]").unwrap();
+    let coverage = Coverage::from_vec(vec![0, 4294967295]);
 
     Ok(FontInfo {
         family,

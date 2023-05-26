@@ -14,8 +14,8 @@ use typst::{
 use typst_ts_core::{
     build_info,
     font::{
-        FontInfoItem, FontProfile, FontProfileItem, FontResolverImpl, LazyBufferFontLoader,
-        PartialFontBook,
+        get_font_coverage_hash, FontInfoItem, FontProfile, FontProfileItem, FontResolverImpl,
+        LazyBufferFontLoader, PartialFontBook,
     },
     FontSlot,
 };
@@ -67,7 +67,9 @@ impl FontProfileRebuilder {
 
             if let Ok(mmap) = unsafe { Mmap::map(&file) } {
                 for (i, info) in FontInfo::iter(&mmap).enumerate() {
+                    let coverage_hash = get_font_coverage_hash(&info.coverage);
                     let mut ff = FontInfoItem::new(info);
+                    ff.set_coverage_hash(coverage_hash);
                     if i != 0 {
                         ff.set_index(i as u32);
                     }

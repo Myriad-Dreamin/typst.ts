@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
+use sha2::Digest;
 use std::{collections::HashMap, time::SystemTime};
-use typst::font::FontInfo;
+use typst::font::{Coverage, FontInfo};
 
 type FontMetaDict = HashMap<String, String>;
 
@@ -26,6 +27,14 @@ impl FontInfoItem {
 
     pub fn set_index(&mut self, v: u32) {
         self.meta.insert("index".to_owned(), v.to_string());
+    }
+
+    pub fn coverage_hash(&self) -> Option<&String> {
+        self.meta.get("coverage_hash")
+    }
+
+    pub fn set_coverage_hash(&mut self, v: String) {
+        self.meta.insert("coverage_hash".to_owned(), v);
     }
 
     pub fn meta(&self) -> &FontMetaDict {
@@ -117,4 +126,13 @@ pub struct FontProfile {
     pub version: String,
     pub build_info: String,
     pub items: Vec<FontProfileItem>,
+}
+
+pub fn get_font_coverage_hash(coverage: &Coverage) -> String {
+    let mut coverage_hash = sha2::Sha256::new();
+    coverage
+        .iter()
+        .for_each(|c| coverage_hash.update(c.to_le_bytes()));
+    let coverage_hash = coverage_hash.finalize();
+    format!("sha256:{:x}", coverage_hash)
 }

@@ -2,13 +2,16 @@ use std::{str::FromStr, sync::Arc};
 
 use js_sys::{JsString, Uint8Array};
 use typst::{
+    font::Font,
     geom::{Color, RgbaColor},
     World,
 };
 use typst_ts_canvas_exporter::LigatureMap;
 pub use typst_ts_compiler::*;
-use typst_ts_compiler::{font::web::BrowserFontSearcher, vfs::browser::ProxyAccessModel};
-use typst_ts_core::{cache::FontInfoCache, Exporter};
+use typst_ts_compiler::{
+    font::web::BrowserFontSearcher, vfs::browser::ProxyAccessModel, world::WorldSnapshot,
+};
+use typst_ts_core::{cache::FontInfoCache, Exporter, FontLoader, FontSlot};
 use wasm_bindgen::prelude::*;
 
 use crate::utils::console_log;
@@ -71,6 +74,27 @@ impl DocumentReference {
     }
 }
 
+struct SnapshotFontLoader {
+    font_cb: js_sys::Function,
+    index: u32,
+    path: String,
+}
+
+impl FontLoader for SnapshotFontLoader {
+    fn load(&mut self) -> Option<Font> {
+        let buf = self
+            .font_cb
+            .call1(&self.font_cb, &self.path.clone().into())
+            .unwrap();
+        let buf = buf.dyn_ref::<Uint8Array>();
+        let buf = buf.unwrap().to_vec();
+        Font::new(buf.into(), self.index)
+    }
+}
+
+// todo: remove this
+unsafe impl Send for SnapshotFontLoader {}
+
 #[wasm_bindgen]
 impl TypstCompiler {
     pub fn reset(&mut self) {
@@ -96,6 +120,36 @@ impl TypstCompiler {
                 false
             }
         }
+    }
+
+    pub fn load_snapshot(
+        &mut self,
+        snapshot: JsValue,
+        font_cb: js_sys::Function,
+    ) -> Result<(), JsValue> {
+        let mut snapshot: WorldSnapshot = serde_wasm_bindgen::from_value(snapshot).unwrap();
+        if let Some(font_profile) = snapshot.font_profile.take() {
+            for item in font_profile.items {
+                let path = if let Some(path) = item.path() {
+                    path.clone()
+                } else {
+                    continue;
+                };
+                // item.info
+                for (idx, info) in item.info.into_iter().enumerate() {
+                    self.world.font_resolver.append_font(
+                        info.info,
+                        FontSlot::new_boxed(SnapshotFontLoader {
+                            font_cb: font_cb.clone(),
+                            index: idx as u32,
+                            path: path.clone(),
+                        }),
+                    );
+                }
+            }
+        };
+        self.rebuild();
+        Ok(())
     }
 
     pub fn modify_font_data(&mut self, idx: usize, buffer: Uint8Array) {

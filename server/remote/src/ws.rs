@@ -10,7 +10,7 @@ use tokio::{net::TcpStream, sync::Mutex};
 use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 use typst_ts_core::config::CompileOpts;
 
-use typst_ts_compiler::service::{CompileSession, WorldSnapshot};
+use typst_ts_compiler::{service::CompileSession, world::WorldSnapshot};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "t", content = "v")]
@@ -23,10 +23,25 @@ pub enum Event {
 pub struct InitializeEvent {
     pub workspace: String,
     pub entry: String,
+    pub id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CompileEvent {}
+pub struct CompileEvent {
+    pub id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "t", content = "v")]
+pub enum EventResponse {
+    WorldSnapshot(WorldSnapshotResponse),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WorldSnapshotResponse {
+    snapshot: Option<WorldSnapshot>,
+    id: String,
+}
 
 pub struct Session {
     default_root: PathBuf,
@@ -111,19 +126,23 @@ impl Session {
             session.initialize(entry, compile_opts)
         };
 
-        let world_info = initialized.then(|| session.take_snapshot()).flatten();
+        let snapshot = initialized.then(|| session.take_snapshot()).flatten();
 
         drop(session);
 
         comemo::evict(30);
 
-        self.send_world_snapshot(world_info).await;
+        self.send_world_snapshot(WorldSnapshotResponse {
+            snapshot,
+            id: event.id,
+        })
+        .await;
     }
 
-    async fn recv_compile_event(&self, _event: CompileEvent) {
+    async fn recv_compile_event(&self, event: CompileEvent) {
         let mut session = self.compile_session.lock().await;
 
-        let world_info = session.take_snapshot();
+        let snapshot = session.take_snapshot();
 
         drop(session);
 
@@ -131,12 +150,16 @@ impl Session {
         // used in the last 30 compilations.
         comemo::evict(30);
 
-        self.send_world_snapshot(world_info).await;
+        self.send_world_snapshot(WorldSnapshotResponse {
+            snapshot,
+            id: event.id,
+        })
+        .await;
     }
 
-    async fn send_world_snapshot(&self, snapshot: Option<WorldSnapshot>) {
-        let msg = match serde_json::to_string(&snapshot) {
-            Ok(snapshot) => Message::Text(snapshot),
+    async fn send_world_snapshot(&self, response: WorldSnapshotResponse) {
+        let msg = match serde_json::to_string(&EventResponse::WorldSnapshot(response)) {
+            Ok(response) => Message::Text(response),
             Err(err) => {
                 error!("failed to serialize WorldSnapshot: {:?}", err);
                 return;
