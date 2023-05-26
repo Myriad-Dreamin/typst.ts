@@ -30,16 +30,22 @@ pub struct CompileEvent {}
 
 pub struct Session {
     default_root: PathBuf,
+    compile_opts: CompileOpts,
     pub tx: Mutex<SplitSink<WebSocketStream<TcpStream>, Message>>,
     pub rx: Mutex<SplitStream<WebSocketStream<TcpStream>>>,
     pub compile_session: Mutex<CompileSession>,
 }
 
 impl Session {
-    pub fn over_tcp(root: &Path, ws_stream: WebSocketStream<TcpStream>) -> Self {
+    pub fn over_tcp(
+        root: &Path,
+        compile_opts: CompileOpts,
+        ws_stream: WebSocketStream<TcpStream>,
+    ) -> Self {
         let (tx, rx) = ws_stream.split();
         Self {
             default_root: root.to_owned(),
+            compile_opts,
             tx: Mutex::new(tx),
             rx: Mutex::new(rx),
             compile_session: Default::default(),
@@ -96,9 +102,10 @@ impl Session {
                 break 'initialize_chk false;
             }
 
+            let base_compile_opts = self.compile_opts.clone();
             let compile_opts = CompileOpts {
                 root_dir: workspace,
-                ..CompileOpts::default()
+                ..base_compile_opts
             };
 
             session.initialize(entry, compile_opts)

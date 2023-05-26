@@ -1,4 +1,5 @@
-use clap::{Parser, Subcommand};
+use clap::{ArgAction, Parser, Subcommand};
+use std::path::PathBuf;
 use typst_ts_core::build_info::VERSION;
 
 pub(crate) mod compile;
@@ -33,4 +34,8 @@ pub struct RunArgs {
     /// The web-socket address.
     #[clap(long, default_value = "")]
     pub web_socket: String,
+
+    /// Add additional directories to search for fonts
+    #[clap(long = "font-path", value_name = "DIR", action = ArgAction::Append)]
+    pub font_paths: Vec<PathBuf>,
 }

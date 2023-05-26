@@ -3,6 +3,7 @@ use std::path::Path;
 use clap::Parser;
 use log::info;
 use tokio::net::TcpListener;
+use typst_ts_core::config::CompileOpts;
 use typst_ts_remote_server::{
     utils::async_continue, ws::Session as WsSession, Opts, RunArgs, Subcommands,
 };
@@ -30,6 +31,11 @@ fn run(args: RunArgs) -> ! {
 
     let root = Path::new(&root).canonicalize().unwrap();
 
+    let compile_opts = CompileOpts {
+        font_paths: args.font_paths.clone(),
+        ..Default::default()
+    };
+
     async_continue(async move {
         let listener = TcpListener::bind(&addr).await.expect("Failed to bind");
         info!("Listening on: {}", listener.local_addr().unwrap());
@@ -45,7 +51,7 @@ fn run(args: RunArgs) -> ! {
                 .expect("Error during the websocket handshake occurred");
             info!("New WebSocket connection: {}", addr);
 
-            let session = WsSession::over_tcp(&root, ws_stream);
+            let session = WsSession::over_tcp(&root, compile_opts.clone(), ws_stream);
             tokio::spawn(async move { session.serve().await });
         }
     });
