@@ -1,10 +1,10 @@
 use std::{path::PathBuf, sync::Arc};
 
+use crate::TypstSystemWorld;
 use typst::diag::{SourceError, SourceResult};
-use typst_ts_compiler::TypstSystemWorld;
 use typst_ts_core::{exporter_builtins::GroupExporter, exporter_utils::map_err, Exporter};
 
-use crate::diag;
+use super::diag;
 
 /// CompileDriver is a driver for typst compiler.
 /// It is responsible for operating the compiler without leaking implementation

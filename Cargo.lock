@@ -2662,6 +2662,7 @@ dependencies = [
  "js-sys",
  "memmap2",
  "nohash-hasher",
+ "notify",
  "once_cell",
  "parking_lot",
  "path-clean",

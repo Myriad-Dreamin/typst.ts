@@ -7,10 +7,10 @@ use clap::{Args, Command, FromArgMatches};
 use typst::{font::FontVariant, World};
 
 use typst_ts_cli::{
-    compile::CompileDriver, tracing::TraceGuard, version::intercept_version, CompileArgs,
-    CompletionArgs, EnvKey, FontSubCommands, ListFontsArgs, MeasureFontsArgs, Opts, Subcommands,
+    tracing::TraceGuard, version::intercept_version, CompileArgs, CompletionArgs, EnvKey,
+    FontSubCommands, ListFontsArgs, MeasureFontsArgs, Opts, Subcommands,
 };
-use typst_ts_compiler::TypstSystemWorld;
+use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
 use typst_ts_core::config::CompileOpts;
 
 fn get_cli(sub_command_required: bool) -> Command {

@@ -9,7 +9,7 @@ use codespan_reporting::{
         termcolor::{ColorChoice, StandardStream},
     },
 };
-use log::info;
+
 use typst::syntax::SourceId;
 use typst::{diag::SourceError, World};
 
@@ -65,6 +65,6 @@ pub fn status(entry_file: &Path, status: Status) -> io::Result<()> {
         Status::Success => "compiled successfully",
         Status::Error => "compiled with errors",
     };
-    info!("{}: {}", input, message);
+    println!("{}: {}", input, message);
     Ok(())
 }
