@@ -86,8 +86,8 @@ impl FontLoader for SnapshotFontLoader {
             .font_cb
             .call1(&self.font_cb, &self.path.clone().into())
             .unwrap();
-        let buf = buf.dyn_ref::<Uint8Array>();
-        let buf = buf.unwrap().to_vec();
+        let buf = buf.dyn_ref::<Uint8Array>()?;
+        let buf = buf.to_vec();
         Font::new(buf.into(), self.index)
     }
 }
@@ -137,11 +137,12 @@ impl TypstCompiler {
                 };
                 // item.info
                 for (idx, info) in item.info.into_iter().enumerate() {
+                    let font_idx = info.index().unwrap_or(idx as u32);
                     self.world.font_resolver.append_font(
                         info.info,
                         FontSlot::new_boxed(SnapshotFontLoader {
                             font_cb: font_cb.clone(),
-                            index: idx as u32,
+                            index: font_idx,
                             path: path.clone(),
                         }),
                     );
