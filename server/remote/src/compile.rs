@@ -4,7 +4,7 @@ use log::error;
 use serde::{Deserialize, Serialize};
 use typst::World;
 use typst_ts_compiler::workspace::dependency::DependencyTree;
-use typst_ts_core::{config::CompileOpts, font::FontProfile};
+use typst_ts_core::{config::CompileOpts, font::FontProfile, ArtifactMeta};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SourceUnit {
@@ -17,6 +17,9 @@ pub struct SourceUnit {
 pub struct WorldSnapshot {
     pub font_profile: Option<FontProfile>,
     pub dependencies: DependencyTree,
+
+    /// document specific data
+    pub artifact_metadata: ArtifactMeta,
 }
 
 #[derive(Default)]
@@ -54,16 +57,23 @@ impl CompileSession {
             })
             .ok()?;
 
-        if let Err(err) = typst::compile(world) {
-            error!("failed to compile: {:?}", err);
-            return None;
-        }
+        let doc = match typst::compile(world) {
+            Ok(doc) => doc,
+            Err(err) => {
+                error!("failed to compile: {:?}", err);
+                return None;
+            }
+        };
+
+        let ir = typst_ts_core::artifact_ir::Artifact::from(&doc);
 
         let font_profile = world.font_resolver.profile().clone();
 
         Some(WorldSnapshot {
             font_profile: Some(font_profile),
             dependencies: world.get_dependencies(),
+
+            artifact_metadata: ir.metadata,
         })
     }
 }
