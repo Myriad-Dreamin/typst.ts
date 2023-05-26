@@ -2,7 +2,6 @@ use clap::{ArgAction, Parser, Subcommand};
 use std::path::PathBuf;
 use typst_ts_core::build_info::VERSION;
 
-pub(crate) mod compile;
 pub mod utils;
 pub mod ws;
 

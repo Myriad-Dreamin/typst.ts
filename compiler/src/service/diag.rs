@@ -65,6 +65,6 @@ pub fn status(entry_file: &Path, status: Status) -> io::Result<()> {
         Status::Success => "compiled successfully",
         Status::Error => "compiled with errors",
     };
-    println!("{}: {}", input, message);
+    log::info!("{}: {}", input, message);
     Ok(())
 }

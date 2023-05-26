@@ -2660,6 +2660,7 @@ dependencies = [
  "hex",
  "indexmap",
  "js-sys",
+ "log",
  "memmap2",
  "nohash-hasher",
  "notify",

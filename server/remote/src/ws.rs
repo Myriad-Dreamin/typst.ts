@@ -10,7 +10,7 @@ use tokio::{net::TcpStream, sync::Mutex};
 use tokio_tungstenite::{tungstenite::Message, WebSocketStream};
 use typst_ts_core::config::CompileOpts;
 
-use crate::compile::{CompileSession, WorldSnapshot};
+use typst_ts_compiler::service::{CompileSession, WorldSnapshot};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "t", content = "v")]

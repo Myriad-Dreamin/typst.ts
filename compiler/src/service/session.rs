@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
+use crate::workspace::dependency::DependencyTree;
 use log::error;
 use serde::{Deserialize, Serialize};
 use typst::World;
-use typst_ts_compiler::workspace::dependency::DependencyTree;
 use typst_ts_core::{config::CompileOpts, font::FontProfile, ArtifactMeta};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -26,7 +26,7 @@ pub struct WorldSnapshot {
 pub struct CompileSession {
     workspace_dir: PathBuf,
     entry_file_path: PathBuf,
-    world: Option<typst_ts_compiler::TypstSystemWorld>,
+    world: Option<crate::TypstSystemWorld>,
 }
 
 impl CompileSession {
@@ -41,7 +41,7 @@ impl CompileSession {
         self.workspace_dir = workspace;
         self.entry_file_path = entry_file;
 
-        self.world = Some(typst_ts_compiler::TypstSystemWorld::new(compile_opts));
+        self.world = Some(crate::TypstSystemWorld::new(compile_opts));
         true
     }
 
