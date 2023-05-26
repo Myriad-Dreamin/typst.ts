@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    time::SystemTime,
+};
 
 use comemo::Prehashed;
 use typst::{
@@ -11,7 +14,10 @@ use typst::{
 };
 use typst_ts_core::{font::FontResolverImpl, FontResolver};
 
-use crate::vfs::{AccessModel, Vfs};
+use crate::{
+    vfs::{AccessModel, Vfs},
+    workspace::dependency::{DependencyTree, DependentFileInfo},
+};
 
 type CodespanResult<T> = Result<T, CodespanError>;
 type CodespanError = codespan_reporting::files::Error;
@@ -88,6 +94,21 @@ impl<F: CompilerFeat> CompilerWorld<F> {
 
     pub fn dependant(&self, path: &Path) -> bool {
         self.vfs.dependant(path)
+    }
+
+    pub fn get_dependencies(&self) -> DependencyTree {
+        let vfs_dependencies =
+            self.vfs
+                .iter_dependencies()
+                .map(|(path, mtime)| DependentFileInfo {
+                    path: path.to_owned(),
+                    mtime: mtime
+                        .duration_since(SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        .as_micros() as u64,
+                });
+
+        DependencyTree::from_iter(&self.root, vfs_dependencies)
     }
 
     pub fn reset(&mut self) {

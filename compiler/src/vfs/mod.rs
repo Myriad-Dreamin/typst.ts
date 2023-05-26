@@ -71,12 +71,15 @@ pub trait AccessModel {
     fn read_all(&self, src: &Path) -> FileResult<Buffer>;
 }
 
+type FileQuery<T> = QueryRef<T, FileError>;
+
 /// Holds canonical data for all paths pointing to the same entity.
 pub struct PathSlot {
     idx: FileId,
     sampled_path: once_cell::sync::OnceCell<PathBuf>,
-    source: QueryRef<Source, FileError>,
-    buffer: QueryRef<Buffer, FileError>,
+    mtime: FileQuery<std::time::SystemTime>,
+    source: FileQuery<Source>,
+    buffer: FileQuery<Buffer>,
 }
 
 impl PathSlot {
@@ -84,8 +87,9 @@ impl PathSlot {
         PathSlot {
             idx,
             sampled_path: once_cell::sync::OnceCell::new(),
-            source: QueryRef::default(),
-            buffer: QueryRef::default(),
+            mtime: FileQuery::default(),
+            source: FileQuery::default(),
+            buffer: FileQuery::default(),
         }
     }
 }
@@ -131,6 +135,16 @@ impl<M: AccessModel + Sized> Vfs<M> {
     pub fn dependant(&self, path: &Path) -> bool {
         let path = path.normalize();
         self.path2slot.read().contains_key(path.as_os_str())
+    }
+
+    /// Get all the files in the VFS.
+    pub fn iter_dependencies(&self) -> impl Iterator<Item = (&Path, std::time::SystemTime)> {
+        self.slots.iter().map(|slot| {
+            let dep_path = slot.sampled_path.get().unwrap();
+            let dep_mtime = slot.mtime.compute(|| Err(FileError::Other)).unwrap();
+
+            (dep_path.as_path(), *dep_mtime)
+        })
     }
 
     /// File path corresponding to the given `file_id`.
@@ -195,6 +209,10 @@ impl<M: AccessModel + Sized> Vfs<M> {
             let inserted = path2slot.insert(normalized.as_os_str().into(), slot.idx);
             assert!(matches!(inserted, None), "slot already inserted");
         }
+
+        // prefetch a early mtime
+        slot.mtime
+            .compute(|| self.access_model.mtime(origin_path))?;
 
         Ok(slot)
     }
