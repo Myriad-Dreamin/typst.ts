@@ -29,6 +29,7 @@ export interface TypstCompiler {
     pixel_per_pt: number,
     background_color: string,
   ): Promise<void>;
+  loadSnapshot(snapshot: unknown, resolvePath: (p: string) => string): Promise<void>;
 }
 
 const gCompilerModule = new LazyWasmModule(typstInit);
@@ -83,6 +84,28 @@ class TypstCompilerDriver {
   async reset(): Promise<void> {
     await new Promise<void>(resolve => {
       this.compiler.reset();
+      resolve(undefined);
+    });
+  }
+
+  loadSnapshot(snapshot: unknown, resolvePath: (p: string) => string): Promise<void> {
+    return new Promise<void>(resolve => {
+      this.compiler.load_snapshot(snapshot, (p: string) => {
+        console.log('load font', p);
+        const request = new XMLHttpRequest();
+        request.overrideMimeType('text/plain; charset=x-user-defined');
+        request.open('GET', resolvePath(p), false);
+        request.send(null);
+        console.log('load font response', p, request);
+
+        if (
+          request.status === 200 &&
+          (request.response instanceof String || typeof request.response === 'string')
+        ) {
+          return Uint8Array.from(request.response, (c: string) => c.charCodeAt(0));
+        }
+        return undefined;
+      });
       resolve(undefined);
     });
   }
