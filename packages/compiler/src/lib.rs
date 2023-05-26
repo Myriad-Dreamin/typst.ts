@@ -128,7 +128,7 @@ impl TypstCompiler {
         font_cb: js_sys::Function,
     ) -> Result<(), JsValue> {
         let mut snapshot: WorldSnapshot = serde_wasm_bindgen::from_value(snapshot).unwrap();
-        snapshot.font_profile.take().map(|font_profile| {
+        if let Some(font_profile) = snapshot.font_profile.take() {
             for item in font_profile.items {
                 let path = if let Some(path) = item.path() {
                     path.clone()
@@ -147,7 +147,7 @@ impl TypstCompiler {
                     );
                 }
             }
-        });
+        };
         self.rebuild();
         Ok(())
     }
