@@ -53,6 +53,8 @@
       pdfjsLib.GlobalWorkerOptions.workerSrc =
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
 
+      const scriptStart = performance.now();
+
       const socket = new WebSocket('ws://127.0.0.1:23625');
       // socket.binaryType = "arraybuffer";
       socket.addEventListener('open', () => {
@@ -61,6 +63,7 @@
           JSON.stringify({
             t: 'Initialize',
             v: {
+              id: "1",
               workspace: '${workspace-root}',
               entry: '${compile-entry-file}',
             },
@@ -68,8 +71,23 @@
         );
       });
 
+      let worldSnapshot = null;
+      let worldSnapshotLoaded = false;
+      let pluginLoaded = false;
+      let runCompile = undefined;
+
       socket.addEventListener('message', event => {
+          console.log(`script delay1: ${performance.now() - scriptStart}ms`);
         console.log('WebSocket message', event);
+        const message = JSON.parse(event.data);
+        if (message.t === 'WorldSnapshot') {
+          console.log('snapshot', message.v);
+          worldSnapshot = message.v.snapshot;
+        }
+        console.log(`script delay2: ${performance.now() - scriptStart}ms`);
+        if (runCompile) {
+          runCompile();
+        }
       });
 
       socket.addEventListener('close', () => {
@@ -140,13 +158,25 @@
 
         let canvas_handles = [];
 
-        const runCompile = async () => {
+        runCompile = async () => {
+          if (!worldSnapshot || !pluginLoaded) {
+            return;
+          }
+          if (worldSnapshot && !worldSnapshotLoaded) {
+            worldSnapshotLoaded = true;
+            console.log('should load snapshot', worldSnapshot);
+  // loadSnapshot(snapshot: unknown, resolvePath: (p: string) => string): Promise<void>;
+            await compilerPlugin.loadSnapshot(worldSnapshot, (path) => {
+              return '${font-server}'+path;
+            });
+          }
+
           const processStart = performance.now();
           compilerPlugin.reset();
           const doc = await compilerPlugin.compile({
             mainFilePath: '${compile-entry-file}',
           });
-          console.log(`compile delay: ${performance.now() - processStart}ms`);
+          console.log(`compile delay: ${performance.now() - processStart}ms script delay: ${performance.now() - scriptStart}ms`);
 
           try {
             const page_total = doc.page_total();
@@ -216,17 +246,6 @@
         compilerPlugin
           .init({
             beforeBuild: [
-              window.TypstCompileModule.preloadRemoteFonts([
-                'http://localhost:20811/fonts/LinLibertine_R.ttf',
-                'http://localhost:20811/fonts/LinLibertine_RB.ttf',
-                'http://localhost:20811/fonts/LinLibertine_RBI.ttf',
-                'http://localhost:20811/fonts/LinLibertine_RI.ttf',
-                'http://localhost:20811/fonts/NewCMMath-Book.otf',
-                'http://localhost:20811/fonts/NewCMMath-Regular.otf',
-              ]),
-              // window.TypstCompileModule.preloadSystemFonts({
-              //   byFamily: ['Segoe UI Symbol'],
-              // }),
               window.TypstCompileModule.withAccessModel(
                 new window.TypstCompileModule.FetchAccessModel('${workspace-content-root}', {
                   fullyCached: true,
@@ -237,6 +256,7 @@
               '${resource-root}/node_modules/@myriaddreamin/typst-ts-web-compiler/typst_ts_web_compiler_bg.wasm',
           })
           .then(() => {
+            pluginLoaded = true;
             document.getElementById('compile-button').addEventListener('click', () => {
               runCompile();
             });
