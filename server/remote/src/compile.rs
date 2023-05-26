@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 use log::error;
 use serde::{Deserialize, Serialize};
+use typst::World;
+use typst_ts_compiler::workspace::dependency::DependencyTree;
 use typst_ts_core::{config::CompileOpts, font::FontProfile};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -11,10 +13,10 @@ pub struct SourceUnit {
     content: String,
 }
 
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WorldSnapshot {
     pub font_profile: Option<FontProfile>,
-    pub sources: Vec<SourceUnit>,
+    pub dependencies: DependencyTree,
 }
 
 #[derive(Default)]
@@ -43,19 +45,25 @@ impl CompileSession {
     pub fn take_snapshot(&mut self) -> Option<WorldSnapshot> {
         let world = self.world.as_mut().unwrap();
 
+        world.reset();
+        world.main = world
+            .resolve(&self.entry_file_path)
+            .map_err(|err| {
+                error!("failed to resolve entry file: {:?}", err);
+                err
+            })
+            .ok()?;
+
         if let Err(err) = typst::compile(world) {
             error!("failed to compile: {:?}", err);
             return None;
         }
 
-        // todo: collect sources
-        let mut _sources = Vec::new();
-
         let font_profile = world.font_resolver.profile().clone();
 
         Some(WorldSnapshot {
             font_profile: Some(font_profile),
-            sources: _sources,
+            dependencies: world.get_dependencies(),
         })
     }
 }

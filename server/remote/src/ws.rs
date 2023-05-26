@@ -92,7 +92,7 @@ impl Session {
 
     async fn recv_initialize_event(&self, event: InitializeEvent) {
         let workspace = Path::new(&event.workspace).canonicalize().unwrap();
-        let entry = Path::new(&event.entry).canonicalize().unwrap();
+        let entry = workspace.join(event.entry).canonicalize().unwrap();
 
         let mut session = self.compile_session.lock().await;
 
