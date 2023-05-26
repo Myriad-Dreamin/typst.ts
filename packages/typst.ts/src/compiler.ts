@@ -28,7 +28,7 @@ export interface TypstCompiler {
     page_off: number,
     pixel_per_pt: number,
     background_color: string,
-  ): Promise<void>;
+  ): Promise<any>;
   loadSnapshot(snapshot: unknown, resolvePath: (p: string) => string): Promise<void>;
 }
 
@@ -134,16 +134,17 @@ class TypstCompilerDriver {
     page_off: number,
     pixel_per_pt: number,
     background_color: string,
-  ): Promise<void> {
-    return new Promise<void>(resolve => {
-      this.compiler.render_page_to_canvas(
-        canvas,
-        doc as typst.DocumentReference,
-        page_off,
-        pixel_per_pt,
-        background_color,
+  ): Promise<any> {
+    return new Promise<any>(resolve => {
+      resolve(
+        this.compiler.render_page_to_canvas(
+          canvas,
+          doc as typst.DocumentReference,
+          page_off,
+          pixel_per_pt,
+          background_color,
+        ),
       );
-      resolve(undefined);
     });
   }
 }

@@ -26,7 +26,7 @@ def server_main():
             content = f.read()
 
         self.send_response(HTTPStatus.OK)
-        self.send_header('Content-Type', 'text/plain')
+        self.send_header('Content-Type', 'application/octet-stream')
         self.send_header('Content-Length', len(content))
         self.end_headers()
         self.wfile.write(content)
