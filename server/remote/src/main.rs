@@ -35,7 +35,7 @@ fn run(args: RunArgs) -> ! {
     }
 
     let compile_opts = CompileOpts {
-        font_paths: args.font_paths.clone(),
+        font_paths: args.font_paths,
         ..Default::default()
     };
 
