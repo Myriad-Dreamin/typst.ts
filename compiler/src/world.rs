@@ -14,8 +14,9 @@ use typst::{
     World,
 };
 use typst_ts_core::{
+    artifact_ir::ArtifactHeader,
     font::{FontProfile, FontResolverImpl},
-    ArtifactMeta, FontResolver,
+    FontResolver,
 };
 
 use crate::{
@@ -172,5 +173,6 @@ pub struct WorldSnapshot {
     pub dependencies: DependencyTree,
 
     /// document specific data
-    pub artifact_metadata: ArtifactMeta,
+    pub artifact_header: ArtifactHeader,
+    pub artifact_data: String,
 }
