@@ -5,6 +5,13 @@ export interface FetchAccessOptions {
   fullyCached?: boolean;
 }
 
+interface FetchSnapshot {
+  root: string;
+  mTimes: Map<string, number | undefined>;
+  mRealPaths: Map<string, string | undefined>;
+  mData: [string, string][];
+}
+
 export class FetchAccessModel implements FsAccessModel {
   fullyCached: boolean;
   mTimes: Map<string, Date | undefined> = new Map();
@@ -28,6 +35,78 @@ export class FetchAccessModel implements FsAccessModel {
 
   resolvePath(path: string): string {
     return this.root + path;
+  }
+
+  async loadSnapshot(snapshot: FetchSnapshot): Promise<void> {
+    async function base64UrlToBuffer(base64Url: string) {
+      const res = await fetch(base64Url);
+      const buffer = await res.arrayBuffer();
+      return new Uint8Array(buffer);
+    }
+
+    this.root = snapshot.root;
+    snapshot.mTimes.forEach((v, k) => this.mTimes.set(k, v ? new Date(v) : undefined));
+    this.mRealPaths = new Map(snapshot.mRealPaths);
+    await Promise.all(
+      snapshot.mData.map(async ([k, v]) => {
+        if (v) {
+          this.mData.set(k, await base64UrlToBuffer(v));
+        } else {
+          this.mData.set(k, undefined);
+        }
+      }),
+    );
+  }
+
+  async exportSnapshot(): Promise<string> {
+    const snapshot: string[] = [];
+
+    snapshot.push('((() => {');
+    snapshot.push(
+      `const snapshot = {  root: '', mTimes: new Map(),  mRealPaths: new Map(),  mData: [],};`,
+    );
+    snapshot.push(`snapshot.root = ${JSON.stringify(this.root)};`);
+    snapshot.push(
+      `snapshot.mTimes = new Map([${[...this.mTimes.entries()]
+        .map(([k, v]) => `[${JSON.stringify(k)}, ${v?.getTime() || 'undefined'}]`)
+        .join(', ')}]);`,
+    );
+    snapshot.push(
+      `snapshot.mRealPaths = new Map([${[...this.mRealPaths.entries()]
+        .map(([k, v]) => `[${JSON.stringify(k)}, ${JSON.stringify(v)}]`)
+        .join(', ')}]);`,
+    );
+
+    /// https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
+    const bufferToBase64 = async (data: Uint8Array) => {
+      // Use a FileReader to generate a base64 data URI
+      const base64url = await new Promise<string | null>((r, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result;
+          if (typeof result === 'string' || result === null) {
+            r(result);
+          }
+          reject(new Error('Unexpected result type'));
+        };
+        reader.readAsDataURL(new Blob([data], { type: 'application/octet-binary' }));
+      });
+
+      return base64url || '';
+    };
+
+    const dataEntries = await Promise.all(
+      [...this.mData.entries()].map(async ([k, v]) =>
+        v
+          ? `[${JSON.stringify(k)}, "${await bufferToBase64(v)}"]`
+          : `[${JSON.stringify(k)}, undefined}]`,
+      ),
+    );
+    snapshot.push(`snapshot.mData = [${dataEntries.join(', ')}];`);
+
+    snapshot.push(`return snapshot;`);
+    snapshot.push('})())');
+    return snapshot.join('\n');
   }
 
   getLastModified(path: string) {
