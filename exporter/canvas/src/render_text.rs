@@ -1,11 +1,11 @@
 use tiny_skia as sk;
 use ttf_parser::GlyphId;
-use typst::{doc::TextItem, geom::Paint};
+use typst::{doc::TextItem, font::Font, geom::Paint};
 use web_sys::Path2d;
 
 use crate::{
     svg::SvgPath2DBuilder,
-    utils::{AbsExt, CanvasStateGuard},
+    utils::{AbsExt, CanvasStateGuard, ToCssExt},
     CanvasRenderTask,
 };
 
@@ -234,17 +234,12 @@ impl<'a> CanvasRenderTask<'a> {
         self.sync_transform(sk::Transform::from_scale(text_scale, -text_scale));
         // self.sync_transform(ts.pre_scale(text_scale, -text_scale));
         {
-            let mut builder = SvgPath2DBuilder(String::new());
             self.canvas.begin_path();
-            // todo: handling no such glyph
-            face.outline_glyph(id, &mut builder)?;
 
             let Paint::Solid(color) = text.fill;
-            let c = color.to_rgba();
-            let fill_style = format!("rgba({},{},{},{})", c.r, c.g, c.b, c.a);
-            self.canvas.set_fill_style(&fill_style.into());
+            self.canvas.set_fill_style(&color.to_css().into());
             self.canvas
-                .fill_with_path_2d(&Path2d::new_with_path_string(&builder.0).unwrap());
+                .fill_with_path_2d(&extract_outline_glyph(&text.font, id)?);
         }
         drop(state_guard);
 
@@ -257,4 +252,12 @@ impl<'a> CanvasRenderTask<'a> {
 
         Some(())
     }
+}
+
+#[comemo::memoize]
+fn extract_outline_glyph(font: &Font, id: GlyphId) -> Option<Path2d> {
+    // todo: handling no such glyph
+    let mut builder = SvgPath2DBuilder(String::new());
+    font.ttf().outline_glyph(id, &mut builder)?;
+    Some(Path2d::new_with_path_string(&builder.0).unwrap())
 }
