@@ -14,6 +14,8 @@ use typst::doc::{Frame, FrameItem, GroupItem, Meta, TextItem};
 use typst::geom::{self, Abs, Color, Geometry, Paint, PathItem, Shape, Size, Stroke};
 use typst::image::{DecodedImage, Image};
 
+pub mod pixmap;
+
 /// Export a frame into a raster image.
 ///
 /// This renders the frame at the given number of pixels per point and returns
