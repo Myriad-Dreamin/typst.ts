@@ -1,5 +1,6 @@
 use std::{str::FromStr, sync::Arc};
 
+use base64::Engine;
 use js_sys::{JsString, Uint8Array};
 use typst::{
     font::Font,
@@ -11,7 +12,7 @@ pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
     font::web::BrowserFontSearcher, vfs::browser::ProxyAccessModel, world::WorldSnapshot,
 };
-use typst_ts_core::{cache::FontInfoCache, Exporter, FontLoader, FontSlot};
+use typst_ts_core::{artifact_ir, cache::FontInfoCache, Exporter, FontLoader, FontSlot};
 use wasm_bindgen::prelude::*;
 
 use crate::utils::console_log;
@@ -47,18 +48,24 @@ pub fn get_font_info(buffer: Uint8Array) -> JsValue {
 
 #[wasm_bindgen]
 pub struct DocumentReference {
-    doc: Arc<typst::doc::Document>,
+    doc: Option<Arc<typst::doc::Document>>,
+}
+
+impl DocumentReference {
+    pub fn doc_ref(&self) -> &typst::doc::Document {
+        self.doc.as_ref().unwrap()
+    }
 }
 
 #[wasm_bindgen]
 impl DocumentReference {
     pub fn page_total(&self) -> usize {
-        self.doc.pages.len()
+        self.doc_ref().pages.len()
     }
 
     // width, height
     pub fn page_width(&self) -> f64 {
-        if let Some(page) = self.doc.pages.first() {
+        if let Some(page) = self.doc_ref().pages.first() {
             page.size().x.to_pt()
         } else {
             0.0
@@ -66,7 +73,7 @@ impl DocumentReference {
     }
 
     pub fn page_height(&self) -> f64 {
-        if let Some(page) = self.doc.pages.first() {
+        if let Some(page) = self.doc_ref().pages.first() {
             page.size().y.to_pt()
         } else {
             0.0
@@ -126,7 +133,7 @@ impl TypstCompiler {
         &mut self,
         snapshot: JsValue,
         font_cb: js_sys::Function,
-    ) -> Result<(), JsValue> {
+    ) -> Result<DocumentReference, JsValue> {
         let mut snapshot: WorldSnapshot = serde_wasm_bindgen::from_value(snapshot).unwrap();
         if let Some(font_profile) = snapshot.font_profile.take() {
             for item in font_profile.items {
@@ -150,7 +157,22 @@ impl TypstCompiler {
             }
         };
         self.rebuild();
-        Ok(())
+
+        let artifact_header = snapshot.artifact_header;
+        let artifact_data = base64::engine::general_purpose::STANDARD
+            .decode(snapshot.artifact_data)
+            .unwrap();
+
+        Ok(DocumentReference {
+            doc: Some(Arc::new(
+                artifact_ir::Artifact {
+                    metadata: artifact_header.metadata,
+                    pages: artifact_header.pages,
+                    buffer: artifact_data,
+                }
+                .to_document(&self.world.font_resolver),
+            )),
+        })
     }
 
     pub fn modify_font_data(&mut self, idx: usize, buffer: Uint8Array) {
@@ -211,7 +233,9 @@ impl TypstCompiler {
             .unwrap();
 
         let doc = typst::compile(&self.world).unwrap();
-        Ok(DocumentReference { doc: Arc::new(doc) })
+        Ok(DocumentReference {
+            doc: Some(Arc::new(doc)),
+        })
     }
 
     // todo: move to renderer
@@ -223,17 +247,18 @@ impl TypstCompiler {
         pixel_per_pt: f32,
         background_color: String,
     ) -> Result<JsValue, JsValue> {
+        let doc = doc.doc_ref();
         let d = LigatureMap::default();
         let mut worker = typst_ts_canvas_exporter::CanvasRenderTask::new(
             canvas,
-            &doc.doc,
+            doc,
             &d,
             page_off,
             pixel_per_pt,
             Color::Rgba(RgbaColor::from_str(&background_color)?),
         );
 
-        worker.render(&doc.doc.pages[page_off]);
+        worker.render(&doc.pages[page_off]);
         Ok(serde_wasm_bindgen::to_value(&worker.content).unwrap())
     }
 }

@@ -2652,6 +2652,7 @@ name = "typst-ts-compiler"
 version = "0.2.0"
 dependencies = [
  "append-only-vec",
+ "base64 0.21.0",
  "codespan-reporting",
  "comemo",
  "dirs",
@@ -2830,6 +2831,7 @@ name = "typst-ts-web-compiler"
 version = "0.2.0"
 dependencies = [
  "ansi-to-html",
+ "base64 0.21.0",
  "comemo",
  "console_error_panic_hook",
  "elsa",

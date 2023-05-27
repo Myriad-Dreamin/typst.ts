@@ -1,7 +1,7 @@
 // @ts-ignore
 import typstInit, * as typst from '../../compiler/pkg/typst_ts_web_compiler';
 import { buildComponent, globalFontPromises } from './init';
-import { DocumentReference } from './internal.types';
+import { DocumentReference, FsAccessModel } from './internal.types';
 
 import type { InitOptions } from './options.init';
 import { LazyWasmModule } from './wasm';
@@ -29,7 +29,7 @@ export interface TypstCompiler {
     pixel_per_pt: number,
     background_color: string,
   ): Promise<any>;
-  loadSnapshot(snapshot: unknown, resolvePath: (p: string) => string): Promise<void>;
+  loadSnapshot(snapshot: unknown, fontServer: FsAccessModel): Promise<any>;
 }
 
 const gCompilerModule = new LazyWasmModule(typstInit);
@@ -88,25 +88,9 @@ class TypstCompilerDriver {
     });
   }
 
-  loadSnapshot(snapshot: unknown, resolvePath: (p: string) => string): Promise<void> {
-    return new Promise<void>(resolve => {
-      this.compiler.load_snapshot(snapshot, (p: string) => {
-        console.log('load font', p);
-        const request = new XMLHttpRequest();
-        request.overrideMimeType('text/plain; charset=x-user-defined');
-        request.open('GET', resolvePath(p), false);
-        request.send(null);
-        console.log('load font response', p, request);
-
-        if (
-          request.status === 200 &&
-          (request.response instanceof String || typeof request.response === 'string')
-        ) {
-          return Uint8Array.from(request.response, (c: string) => c.charCodeAt(0));
-        }
-        return undefined;
-      });
-      resolve(undefined);
+  loadSnapshot(snapshot: unknown, fontServer: FsAccessModel): Promise<void> {
+    return new Promise<any>(resolve => {
+      resolve(this.compiler.load_snapshot(snapshot, (p: string) => fontServer.readAll(p)));
     });
   }
 

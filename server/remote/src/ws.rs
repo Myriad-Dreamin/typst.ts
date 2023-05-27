@@ -158,6 +158,7 @@ impl Session {
     }
 
     async fn send_world_snapshot(&self, response: WorldSnapshotResponse) {
+        let begin = std::time::Instant::now();
         let msg = match serde_json::to_string(&EventResponse::WorldSnapshot(response)) {
             Ok(response) => Message::Text(response),
             Err(err) => {
@@ -165,6 +166,7 @@ impl Session {
                 return;
             }
         };
+        info!("take_snapshot serialized in {:?}", begin.elapsed());
 
         let mut tx = self.tx.lock().await;
         tx.send(msg).await.unwrap();

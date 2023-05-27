@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 
-use log::error;
+use base64::Engine;
+use log::{error, info};
 use typst::World;
-use typst_ts_core::config::CompileOpts;
+use typst_ts_core::{artifact_ir::ArtifactHeader, config::CompileOpts};
 
 use crate::world::WorldSnapshot;
 
@@ -11,6 +12,10 @@ pub struct CompileSession {
     workspace_dir: PathBuf,
     entry_file_path: PathBuf,
     world: Option<crate::TypstSystemWorld>,
+}
+
+fn to_base64(data: &[u8]) -> String {
+    base64::engine::general_purpose::STANDARD.encode(data)
 }
 
 impl CompileSession {
@@ -30,6 +35,7 @@ impl CompileSession {
     }
 
     pub fn take_snapshot(&mut self) -> Option<WorldSnapshot> {
+        let begin = std::time::Instant::now();
         let world = self.world.as_mut().unwrap();
 
         world.reset();
@@ -40,6 +46,7 @@ impl CompileSession {
                 err
             })
             .ok()?;
+        info!("take_snapshot resolved in {:?}", begin.elapsed());
 
         let doc = match typst::compile(world) {
             Ok(doc) => doc,
@@ -48,16 +55,40 @@ impl CompileSession {
                 return None;
             }
         };
+        info!("take_snapshot compiled in {:?}", begin.elapsed());
 
-        let ir = typst_ts_core::artifact_ir::Artifact::from(&doc);
-
+        let font_profile_begin = std::time::Instant::now();
         let font_profile = world.font_resolver.profile().clone();
+        let font_profile_elapsed = font_profile_begin.elapsed();
 
-        Some(WorldSnapshot {
+        let dependencies_begin = std::time::Instant::now();
+        let dependencies = world.get_dependencies();
+        let dependencies_elapsed = dependencies_begin.elapsed();
+
+        let artifact_begin = std::time::Instant::now();
+        let ir = typst_ts_core::artifact_ir::Artifact::from(&doc);
+        let artifact_header = ArtifactHeader {
+            metadata: ir.metadata,
+            pages: ir.pages,
+        };
+        let artifact_data = to_base64(ir.buffer.as_slice());
+        let artifact_elapsed = artifact_begin.elapsed();
+
+        let snapshot = Some(WorldSnapshot {
             font_profile: Some(font_profile),
-            dependencies: world.get_dependencies(),
+            dependencies,
 
-            artifact_metadata: ir.metadata,
-        })
+            artifact_header,
+            artifact_data,
+        });
+
+        info!(
+            "take_snapshot packed in {:?}: font_profile/dependencies/artifact_elasped = {:?}/{:?}/{:?}",
+            begin.elapsed(),
+            font_profile_elapsed,
+            dependencies_elapsed,
+            artifact_elapsed
+        );
+        snapshot
     }
 }

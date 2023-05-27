@@ -40,6 +40,7 @@ wasm-bindgen-futures =  { workspace = true, optional = true }
 js-sys = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true, features = ["console", "Window", "Blob", "ImageData"] }
 
+base64.workspace = true
 rustc-hash = "1.1.0"
 fst = "0.4.7"
 indexmap.workspace = true
