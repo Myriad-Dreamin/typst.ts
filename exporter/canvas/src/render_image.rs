@@ -65,6 +65,8 @@ impl<'a> CanvasRenderTask<'a> {
         let img_ref = img.clone();
 
         let a = Closure::<dyn Fn()>::new(move || {
+            web_sys::Url::revoke_object_url(&remote_data_url).unwrap();
+
             // todo: mask
             let canvas = web_sys::window()
                 .unwrap()
@@ -78,7 +80,6 @@ impl<'a> CanvasRenderTask<'a> {
             let canvas = if let Some(canvas) = canvas {
                 canvas
             } else {
-                web_sys::Url::revoke_object_url(&remote_data_url).unwrap();
                 return;
             };
 
