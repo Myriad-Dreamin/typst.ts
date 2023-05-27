@@ -1,5 +1,3 @@
-pub(crate) mod pixmap;
-
 #[macro_use]
 pub(crate) mod utils;
 
@@ -7,7 +5,7 @@ use js_sys::Uint8Array;
 use std::str::FromStr;
 use typst::geom::{Color, RgbaColor};
 use typst_ts_core::font::FontResolverImpl;
-use wasm_bindgen::{prelude::*, Clamped};
+use wasm_bindgen::prelude::*;
 use web_sys::ImageData;
 
 pub(crate) mod artifact;
@@ -57,20 +55,6 @@ pub struct TypstRenderer {
 
 #[wasm_bindgen]
 impl TypstRenderer {
-    pub fn render_page(
-        &mut self,
-        session: &RenderSession,
-        options: Option<RenderPageImageOptions>,
-    ) -> Result<ImageData, JsValue> {
-        let (prealloc, size) = self.render_to_image_internal(session, options)?;
-
-        ImageData::new_with_u8_clamped_array_and_sh(
-            Clamped(prealloc.as_slice()),
-            size.width,
-            size.height,
-        )
-    }
-
     pub fn render_page_to_canvas(
         &mut self,
         ses: &RenderSession,
@@ -127,18 +111,35 @@ impl TypstRenderer {
 }
 
 #[cfg(not(feature = "render_raster"))]
+#[wasm_bindgen]
 impl TypstRenderer {
-    pub fn render_to_image_internal(
-        &self,
-        _ses: &RenderSession,
+    pub fn render_page(
+        &mut self,
+        _session: &RenderSession,
         _options: Option<RenderPageImageOptions>,
-    ) -> Result<(Vec<u8>, pixmap::IntSize), JsValue> {
+    ) -> Result<ImageData, JsValue> {
         Err("render_raster feature is not enabled".into())
     }
 }
 
 #[cfg(feature = "render_raster")]
-use tiny_skia as sk;
+#[wasm_bindgen]
+impl TypstRenderer {
+    pub fn render_page(
+        &mut self,
+        session: &RenderSession,
+        options: Option<RenderPageImageOptions>,
+    ) -> Result<ImageData, JsValue> {
+        let buf = self.render_to_image_internal(session, options)?;
+        let size = buf.size();
+
+        ImageData::new_with_u8_clamped_array_and_sh(
+            wasm_bindgen::Clamped(buf.as_slice()),
+            size.width,
+            size.height,
+        )
+    }
+}
 
 #[cfg(feature = "render_raster")]
 impl TypstRenderer {
@@ -146,50 +147,29 @@ impl TypstRenderer {
         &self,
         ses: &RenderSession,
         options: Option<RenderPageImageOptions>,
-    ) -> Result<(Vec<u8>, pixmap::IntSize), JsValue> {
+    ) -> Result<typst_ts_raster_exporter::pixmap::PixmapBuffer, JsValue> {
         let page_off = self.retrieve_page_off(ses, options)?;
 
-        let (data_len, size) = {
-            let size = ses.doc.pages[page_off].size();
-            let pxw = (ses.pixel_per_pt * (size.x.to_pt() as f32))
-                .round()
-                .max(1.0) as u32;
-            let pxh = (ses.pixel_per_pt * (size.y.to_pt() as f32))
-                .round()
-                .max(1.0) as u32;
-            let size = pixmap::IntSize {
-                width: pxw,
-                height: pxh,
-            };
-            let data_len =
-                pixmap::data_len_for_size(size).ok_or("cannot compute data_len_for_size")?;
-            (data_len, size)
-        };
+        let canvas_size = ses.doc.pages[page_off].size();
+        let mut canvas =
+            typst_ts_raster_exporter::pixmap::PixmapBuffer::for_size(canvas_size, ses.pixel_per_pt)
+                .ok_or(format!(
+                    "failed to create canvas reference: {}x{}",
+                    canvas_size.x.to_pt(),
+                    canvas_size.y.to_pt()
+                ))?;
 
-        let mut prealloc = vec![0; data_len];
-        self.render_to_image_prealloc(ses, page_off, prealloc.as_mut_slice())?;
+        self.render_to_image_prealloc(ses, page_off, &mut canvas.as_canvas_mut())?;
 
-        Ok((prealloc, size))
+        Ok(canvas)
     }
 
     pub fn render_to_image_prealloc(
         &self,
         ses: &RenderSession,
         page_off: usize,
-        buffer: &mut [u8],
+        canvas: &mut tiny_skia::PixmapMut,
     ) -> Result<(), String> {
-        let size = ses.doc.pages[page_off].size();
-        let pxw = (ses.pixel_per_pt * (size.x.to_pt() as f32))
-            .round()
-            .max(1.0) as u32;
-        let pxh = (ses.pixel_per_pt * (size.y.to_pt() as f32))
-            .round()
-            .max(1.0) as u32;
-        let mut canvas = sk::PixmapMut::from_bytes(buffer, pxw, pxh).ok_or(format!(
-            "failed to create canvas reference: {}x{}",
-            pxw, pxh
-        ))?;
-
         #[cfg(debug)]
         {
             crate::utils::console_log!(
@@ -202,7 +182,7 @@ impl TypstRenderer {
 
         // contribution: 850KB
         typst_ts_raster_exporter::render(
-            &mut canvas,
+            canvas,
             &ses.doc.pages[page_off],
             ses.pixel_per_pt,
             Color::Rgba(RgbaColor::from_str(&ses.background_color)?),
