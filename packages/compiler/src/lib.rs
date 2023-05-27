@@ -256,7 +256,7 @@ impl TypstCompiler {
             page_off,
             pixel_per_pt,
             Color::Rgba(RgbaColor::from_str(&background_color)?),
-        );
+        )?;
 
         worker.render(&doc.pages[page_off]);
         Ok(serde_wasm_bindgen::to_value(&worker.content).unwrap())
