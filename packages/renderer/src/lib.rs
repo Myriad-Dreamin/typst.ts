@@ -70,7 +70,7 @@ impl TypstRenderer {
             page_off,
             ses.pixel_per_pt,
             Color::Rgba(RgbaColor::from_str(&ses.background_color)?),
-        );
+        )?;
 
         worker.render(&ses.doc.pages[page_off]);
         Ok(serde_wasm_bindgen::to_value(&worker.content).unwrap())
