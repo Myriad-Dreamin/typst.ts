@@ -11,12 +11,7 @@ use crate::{
 
 impl<'a> CanvasRenderTask<'a> {
     /// Render a geometrical shape into the canvas.
-    pub(crate) fn render_shape(
-        &mut self,
-        ts: sk::Transform,
-        mask: Option<&sk::Mask>,
-        shape: &Shape,
-    ) -> Option<()> {
+    pub(crate) fn render_shape(&mut self, ts: sk::Transform, shape: &Shape) -> Option<()> {
         let mut builder = SvgPath2DBuilder(String::new());
 
         // to ensure that our shape focus on the original point
@@ -134,9 +129,8 @@ impl<'a> CanvasRenderTask<'a> {
             let fill_style = format!("rgba({},{},{},{})", c.r, c.g, c.b, c.a);
             self.canvas.set_stroke_style(&fill_style.into());
 
-            // todo: ts, mask
-            self.canvas.reset_transform().unwrap();
-            self.sync_transform(ts);
+            // todo: ts
+            self.set_transform(ts);
 
             self.canvas
                 .stroke_with_path(&Path2d::new_with_path_string(&builder.0).unwrap());

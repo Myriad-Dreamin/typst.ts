@@ -10,7 +10,6 @@ impl<'a> CanvasRenderTask<'a> {
     pub(crate) fn render_image(
         &mut self,
         ts: sk::Transform,
-        mask: Option<&sk::Mask>,
         image: &Image,
         size: Size,
     ) -> Option<()> {
@@ -66,6 +65,7 @@ impl<'a> CanvasRenderTask<'a> {
         let img_ref = img.clone();
 
         let a = Closure::<dyn Fn()>::new(move || {
+            // todo: mask
             let canvas = web_sys::window()
                 .unwrap()
                 .document()

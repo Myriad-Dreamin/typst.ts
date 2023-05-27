@@ -5,13 +5,14 @@
 
 use std::collections::HashMap;
 
+use svg::SvgPath2DBuilder;
 pub(crate) use tiny_skia as sk;
 
 use typst::doc::{Frame, FrameItem, GroupItem, Meta};
 use typst::font::{FontFlags, FontInfo, FontVariant};
 use typst::geom::Color;
 use typst_ts_core::TextContent;
-use utils::{js_random64, AbsExt, ToCssExt};
+use utils::{js_random64, AbsExt, CanvasStateGuard, ToCssExt};
 use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
 
@@ -113,6 +114,19 @@ impl<'a> CanvasRenderTask<'a> {
         self.canvas.transform(a, b, c, d, e, f).unwrap();
     }
 
+    #[inline]
+    fn set_transform(&mut self, transform: sk::Transform) {
+        // see sync_transform
+        let a = transform.sx as f64;
+        let b = transform.ky as f64;
+        let c = transform.kx as f64;
+        let d = transform.sy as f64;
+        let e = transform.tx as f64;
+        let f = transform.ty as f64;
+
+        self.canvas.set_transform(a, b, c, d, e, f).unwrap();
+    }
+
     /// Directly render a frame into the canvas.
     pub fn render(&mut self, frame: &Frame) {
         self.canvas.set_fill_style(&self.fill.to_css().into());
@@ -120,11 +134,11 @@ impl<'a> CanvasRenderTask<'a> {
             .fill_rect(0., 0., self.width_px as f64, self.height_px as f64);
 
         let ts = sk::Transform::from_scale(self.pixel_per_pt, self.pixel_per_pt);
-        self.render_frame(ts, None, frame);
+        self.render_frame(ts, frame);
     }
 
     /// Render a frame into the canvas.
-    fn render_frame(&mut self, ts: sk::Transform, mask: Option<&sk::Mask>, frame: &Frame) {
+    fn render_frame(&mut self, ts: sk::Transform, frame: &Frame) {
         let mut text_flow = TextFlow::new();
 
         for (pos, item) in frame.items() {
@@ -134,7 +148,7 @@ impl<'a> CanvasRenderTask<'a> {
 
             match item {
                 FrameItem::Group(group) => {
-                    self.render_group(ts, mask, group);
+                    self.render_group(ts, group);
                 }
                 FrameItem::Text(text) => {
                     let (next_text_flow, has_eol) = TextFlow::notify(text_flow, &ts, text);
@@ -145,13 +159,13 @@ impl<'a> CanvasRenderTask<'a> {
                         self.append_text_break(ts, text)
                     }
 
-                    self.render_text(ts, mask, text);
+                    self.render_text(ts, text);
                 }
                 FrameItem::Shape(shape, _) => {
-                    self.render_shape(ts, mask, shape);
+                    self.render_shape(ts, shape);
                 }
                 FrameItem::Image(image, size, _) => {
-                    self.render_image(ts, mask, image, *size);
+                    self.render_image(ts, image, *size);
                 }
                 FrameItem::Meta(meta, _) => match meta {
                     Meta::Link(_) => {}
@@ -164,51 +178,32 @@ impl<'a> CanvasRenderTask<'a> {
     }
 
     /// Render a group frame with optional transform and clipping into the canvas.
-    fn render_group(&mut self, ts: sk::Transform, mask: Option<&sk::Mask>, group: &GroupItem) {
+    fn render_group(&mut self, ts: sk::Transform, group: &GroupItem) {
         let ts = ts.pre_concat(group.transform.into());
 
-        let mut mask = mask;
+        let clip_guard = if group.clips {
+            let mask_box = {
+                let mut builder = SvgPath2DBuilder::default();
 
-        let storage;
-        if group.clips {
-            let size = group.frame.size();
-            let w = size.x.to_f32();
-            let h = size.y.to_f32();
-            if let Some(path) = sk::Rect::from_xywh(0.0, 0.0, w, h)
-                .map(sk::PathBuilder::from_rect)
-                .and_then(|path| path.transform(ts))
-            {
-                if let Some(mask) = mask {
-                    let mut mask = mask.clone();
-                    mask.intersect_path(
-                        &path,
-                        sk::FillRule::default(),
-                        false,
-                        sk::Transform::default(),
-                    );
-                    storage = mask;
-                } else {
-                    let pxw = self.width_px;
-                    let pxh = self.height_px;
-                    let Some(mut mask) = sk::Mask::new(pxw, pxh) else {
-                        // Fails if clipping rect is empty. In that case we just
-                        // clip everything by returning.
-                        return;
-                    };
+                // build a rectangle path
+                let size = group.frame.size();
+                let w = size.x.to_f32();
+                let h = size.y.to_f32();
+                builder.rect(0., 0., w, h);
 
-                    mask.fill_path(
-                        &path,
-                        sk::FillRule::default(),
-                        false,
-                        sk::Transform::default(),
-                    );
-                    storage = mask;
-                };
+                builder.build().unwrap()
+            };
 
-                mask = Some(&storage);
-            }
-        }
+            let guard = CanvasStateGuard::new(self.canvas);
 
-        self.render_frame(ts, mask, &group.frame);
+            self.set_transform(ts);
+            self.canvas.clip_with_path_2d(&mask_box);
+
+            Some(guard)
+        } else {
+            None
+        };
+
+        self.render_frame(ts, &group.frame);
     }
 }

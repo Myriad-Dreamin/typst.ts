@@ -11,12 +11,7 @@ use crate::{
 
 impl<'a> CanvasRenderTask<'a> {
     /// Render a text run into the self.canvas.
-    pub(crate) fn render_text(
-        &mut self,
-        ts: sk::Transform,
-        mask: Option<&sk::Mask>,
-        text: &TextItem,
-    ) {
+    pub(crate) fn render_text(&mut self, ts: sk::Transform, text: &TextItem) {
         let info = text.font.info();
 
         let glyph_chars: String = if text.glyphs.is_empty() {
@@ -27,17 +22,15 @@ impl<'a> CanvasRenderTask<'a> {
         };
         let ppem = text.size.to_f32() * ts.sy;
 
-        // console_log!("render text {:?}", glyph_chars);
-
         let mut x = 0.0;
         for glyph in &text.glyphs {
             let id = GlyphId(glyph.id);
             let offset = x + glyph.x_offset.at(text.size).to_f32();
             let ts = ts.pre_translate(offset, 0.0);
 
-            self.render_svg_glyph(ts, mask, text, id)
-                .or_else(|| self.render_bitmap_glyph(ts, mask, text, id))
-                .or_else(|| self.render_outline_glyph(ts, mask, text, id));
+            self.render_svg_glyph(ts, text, id)
+                .or_else(|| self.render_bitmap_glyph(ts, text, id))
+                .or_else(|| self.render_outline_glyph(ts, text, id));
 
             x += glyph.x_advance.at(text.size).to_f32();
         }
@@ -46,13 +39,7 @@ impl<'a> CanvasRenderTask<'a> {
     }
 
     /// Render an SVG glyph into the self.canvas.
-    fn render_svg_glyph(
-        &mut self,
-        ts: sk::Transform,
-        mask: Option<&sk::Mask>,
-        text: &TextItem,
-        id: GlyphId,
-    ) -> Option<()> {
+    fn render_svg_glyph(&mut self, ts: sk::Transform, text: &TextItem, id: GlyphId) -> Option<()> {
         let data = text.font.ttf().glyph_svg_image(id)?;
         panic!("rendering svg glyph {}", id.0);
 
@@ -181,7 +168,6 @@ impl<'a> CanvasRenderTask<'a> {
     fn render_bitmap_glyph(
         &mut self,
         ts: sk::Transform,
-        mask: Option<&sk::Mask>,
         text: &TextItem,
         id: GlyphId,
     ) -> Option<()> {
@@ -207,32 +193,22 @@ impl<'a> CanvasRenderTask<'a> {
     fn render_outline_glyph(
         &mut self,
         ts: sk::Transform,
-        mask: Option<&sk::Mask>,
         text: &TextItem,
         id: GlyphId,
     ) -> Option<()> {
-        // todo: big path, mask
-
-        let ppem = text.size.to_f32() * ts.sy;
-
-        if ts.kx != 0.0 || ts.ky != 0.0 || ts.sx != ts.sy {
-            // panic!("skia does not support non-uniform scaling or skewing");
-            return Some(()); // todo: don't submit
-        }
-
         let state_guard = CanvasStateGuard::new(self.canvas);
-
-        let face = text.font.ttf();
 
         // Scale is in pixel per em, but curve data is in font design units, so
         // we have to divide by units per em.
-        let text_scale = ppem / face.units_per_em() as f32;
+        let ppem = {
+            let pixel_per_unit = text.size.to_f32();
+            let units_per_em = text.font.ttf().units_per_em() as f32;
+            pixel_per_unit / units_per_em
+        };
 
-        // todo: error handling, reuse color, transform, reuse path2d objects
-        self.canvas.reset_transform().unwrap();
-        self.canvas.translate(ts.tx as f64, ts.ty as f64).unwrap();
-        self.sync_transform(sk::Transform::from_scale(text_scale, -text_scale));
-        // self.sync_transform(ts.pre_scale(text_scale, -text_scale));
+        // todo: error handling, reuse color
+        self.set_transform(ts.pre_scale(ppem, -ppem));
+
         {
             self.canvas.begin_path();
 
@@ -243,13 +219,6 @@ impl<'a> CanvasRenderTask<'a> {
         }
         drop(state_guard);
 
-        // todo: paint
-        // &sk::PixmapPaint::default(),
-        // todo: transform
-        // sk::Transform::identity(),
-        // todo: mask
-        // mask,
-
         Some(())
     }
 }
@@ -259,5 +228,5 @@ fn extract_outline_glyph(font: &Font, id: GlyphId) -> Option<Path2d> {
     // todo: handling no such glyph
     let mut builder = SvgPath2DBuilder(String::new());
     font.ttf().outline_glyph(id, &mut builder)?;
-    Some(Path2d::new_with_path_string(&builder.0).unwrap())
+    Some(builder.build().unwrap())
 }
