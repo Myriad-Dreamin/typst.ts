@@ -323,7 +323,7 @@ impl RenderSessionManager {
     }
 
     fn session_from_ir_artifact(&self, artifact_content: &[u8]) -> ZResult<RenderSession> {
-        let artifact = ir_artifact_from_bin(artifact_content);
+        let artifact = ir_artifact_from_bin(artifact_content)?;
 
         let font_resolver = self.font_resolver.read().unwrap();
         let session = RenderSession::from_artifact(
