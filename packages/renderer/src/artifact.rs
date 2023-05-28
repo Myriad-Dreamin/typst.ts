@@ -1,6 +1,6 @@
 use std::{num::NonZeroUsize, vec};
 
-use typst_ts_core::{artifact::doc::Frame, Artifact, ArtifactMeta};
+use typst_ts_core::{artifact::doc::Frame, error::prelude::*, Artifact, ArtifactMeta};
 use wasm_bindgen::prelude::*;
 
 pub struct ArtifactJsBuilder {}
@@ -1028,14 +1028,18 @@ impl ArtifactJsBuilder {
     }
 }
 
-pub fn artifact_from_js_string(val: String) -> Result<Artifact, JsValue> {
-    let val = js_sys::JSON::parse(&val).unwrap();
-    ArtifactJsBuilder {}.parse_artifact(val)
+pub fn artifact_from_js_string(val: String) -> ZResult<Artifact> {
+    let val = js_sys::JSON::parse(&val).map_err(map_err("ArtifactJsBuilder.ParseJson"))?;
+    ArtifactJsBuilder {}
+        .parse_artifact(val)
+        .map_err(map_err("ArtifactJsBuilder.ArtifactFmt"))
 }
 
-pub fn page_from_js_string(val: String) -> Result<Frame, JsValue> {
-    let val = js_sys::JSON::parse(&val).unwrap();
-    ArtifactJsBuilder {}.parse_frame(val)
+pub fn page_from_js_string(val: String) -> ZResult<Frame> {
+    let val = js_sys::JSON::parse(&val).map_err(map_err("ArtifactJsBuilder.ParseJson"))?;
+    ArtifactJsBuilder {}
+        .parse_frame(val)
+        .map_err(map_err("ArtifactJsBuilder.PageFmt"))
 }
 
 #[cfg(test)]

@@ -81,15 +81,12 @@ impl TypstRenderer {
             .map_err(map_into_err::<JsValue, _>("Renderer.EncodeContent"))
     }
 
-    pub fn render_to_pdf(&mut self, artifact_content: &[u8]) -> Result<Uint8Array, JsValue> {
+    pub fn render_to_pdf(&mut self, artifact_content: &[u8]) -> ZResult<Uint8Array> {
         let session = self.session_from_artifact(artifact_content)?;
         self.render_to_pdf_in_session(&session)
     }
 
-    pub fn render_to_pdf_in_session(
-        &mut self,
-        session: &RenderSession,
-    ) -> Result<Uint8Array, JsValue> {
+    pub fn render_to_pdf_in_session(&mut self, session: &RenderSession) -> ZResult<Uint8Array> {
         Ok(Uint8Array::from(
             self.render_to_pdf_internal(session)?.as_slice(),
         ))
@@ -99,7 +96,7 @@ impl TypstRenderer {
         &self,
         artifact_content: &[u8],
         options: Option<RenderSessionOptions>,
-    ) -> Result<RenderSession, JsValue> {
+    ) -> ZResult<RenderSession> {
         self.session_mgr
             .create_session_internal(artifact_content, options)
     }
@@ -109,7 +106,7 @@ impl TypstRenderer {
         session: &mut RenderSession,
         page_number: usize,
         page_content: String,
-    ) -> Result<(), JsValue> {
+    ) -> ZResult<()> {
         self.session_mgr
             .load_page(session, page_number, page_content)
     }
@@ -235,7 +232,7 @@ impl TypstRenderer {
         Err(error_once!("Renderer.PdfFeatureNotEnabled"))
     }
 
-    pub fn session_from_artifact(&self, artifact_content: &[u8]) -> Result<RenderSession, JsValue> {
+    pub fn session_from_artifact(&self, artifact_content: &[u8]) -> ZResult<RenderSession> {
         self.session_mgr
             .session_from_artifact(artifact_content, "js")
     }
