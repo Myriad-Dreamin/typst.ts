@@ -1049,7 +1049,7 @@ mod tests {
     use typst_ts_core::Artifact;
     use wasm_bindgen_test::*;
 
-    use crate::renderer::artifact_ir::ir_artifact_from_bin;
+    use crate::artifact_ir::ir_artifact_from_bin;
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
@@ -1069,7 +1069,7 @@ mod tests {
             (end - start, artifact)
         };
 
-        console_log!("serde.json {}ms", serde_task.0);
+        self::console_log!("serde.json {}ms", serde_task.0);
 
         let js_task = {
             let start = performance.now();
@@ -1079,7 +1079,7 @@ mod tests {
             (end - start, artifact)
         };
 
-        console_log!("js.json: {}ms", js_task.0);
+        self::console_log!("js.json: {}ms", js_task.0);
 
         #[cfg(feature = "serde_rmp_debug")]
         {
@@ -1092,7 +1092,7 @@ mod tests {
                 (end - start, artifact)
             };
 
-            console_log!("rmp: {}ms", rmp_task.0);
+            self::console_log!("rmp: {}ms", rmp_task.0);
         }
 
         {
@@ -1105,7 +1105,7 @@ mod tests {
                 (end - start, artifact)
             };
 
-            console_log!("ir: {}ms", ir_task.0);
+            self::console_log!("ir: {}ms", ir_task.0);
         }
     }
 }
