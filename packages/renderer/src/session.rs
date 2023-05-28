@@ -281,7 +281,8 @@ impl RenderSessionManager {
         let artifact: Artifact = match decoder {
             "js" => {
                 let artifact: Artifact = artifact_from_js_string(
-                    std::str::from_utf8(artifact_content).unwrap().to_string(),
+                    std::str::from_utf8(artifact_content)
+                        .map_err(map_string_err("artifact_content"))?,
                 )?;
 
                 artifact
@@ -289,8 +290,8 @@ impl RenderSessionManager {
 
             #[cfg(feature = "serde_json")]
             "serde_json" => {
-                let artifact: Artifact =
-                    serde_json::from_str(std::str::from_utf8(artifact_content).unwrap()).unwrap();
+                let artifact: Artifact = serde_json::from_slice(artifact_content)
+                    .map_err(map_string_err("parse_artifact"))?;
 
                 artifact
             }
@@ -344,14 +345,15 @@ impl RenderSessionManager {
         // https://medium.com/@wl1508/avoiding-using-serde-and-deserde-in-rust-webassembly-c1e4640970ca
         let frame: Frame = match decoder {
             "js" => {
-                let frame: Frame = page_from_js_string(page_content)?;
+                let frame: Frame = page_from_js_string(&page_content)?;
 
                 frame
             }
 
             #[cfg(feature = "serde_json")]
             "serde_json" => {
-                let frame: Frame = serde_json::from_str(page_content.as_str()).unwrap();
+                let frame: Frame = serde_json::from_str(page_content.as_str())
+                    .map_err(map_string_err("parse_page"))?;
 
                 frame
             }

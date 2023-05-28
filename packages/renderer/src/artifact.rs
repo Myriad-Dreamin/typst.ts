@@ -1131,15 +1131,15 @@ impl ArtifactJsBuilder {
     }
 }
 
-pub fn artifact_from_js_string(val: String) -> ZResult<Artifact> {
-    let val = js_sys::JSON::parse(&val).map_err(map_err("ArtifactJsBuilder.ParseJson"))?;
+pub fn artifact_from_js_string(val: &str) -> ZResult<Artifact> {
+    let val = js_sys::JSON::parse(val).map_err(map_err("ArtifactJsBuilder.ParseJson"))?;
     ArtifactJsBuilder {}
         .parse_artifact(val)
         .map_err(wrap_err("ArtifactJsBuilder.ArtifactFmt"))
 }
 
-pub fn page_from_js_string(val: String) -> ZResult<Frame> {
-    let val = js_sys::JSON::parse(&val).map_err(map_err("ArtifactJsBuilder.ParseJson"))?;
+pub fn page_from_js_string(val: &str) -> ZResult<Frame> {
+    let val = js_sys::JSON::parse(val).map_err(map_err("ArtifactJsBuilder.ParseJson"))?;
     ArtifactJsBuilder {}
         .parse_frame(val)
         .map_err(wrap_err("ArtifactJsBuilder.PageFmt"))
