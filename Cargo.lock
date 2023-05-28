@@ -2693,6 +2693,7 @@ dependencies = [
  "base64 0.21.0",
  "comemo",
  "hex",
+ "js-sys",
  "once_cell",
  "serde",
  "serde_json",
@@ -2702,6 +2703,8 @@ dependencies = [
  "ttf-parser",
  "typst",
  "typst-library",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
