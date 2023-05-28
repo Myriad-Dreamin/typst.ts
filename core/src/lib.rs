@@ -10,6 +10,9 @@ pub mod config;
 pub mod content;
 pub use content::TextContent;
 
+pub mod error;
+pub use error::{ErrKind, Error};
+
 pub(crate) mod exporter;
 pub use exporter::{builtins as exporter_builtins, utils as exporter_utils};
 pub use exporter::{mark_transformer_lambda, Exporter, Transformer};

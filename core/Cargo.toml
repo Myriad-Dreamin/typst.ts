@@ -24,3 +24,13 @@ once_cell.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with = { version = "2.3.2", features = ["base64"] }
+
+wasm-bindgen = { workspace = true, optional = true }
+web-sys = { workspace = true, optional = true }
+js-sys = { workspace = true, optional = true }
+
+[features]
+__web = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
+web = ["__web"]
+full = ["web"]
+default = ["full"]
