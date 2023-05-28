@@ -4,6 +4,7 @@ pub(crate) mod utils;
 use js_sys::Uint8Array;
 use std::str::FromStr;
 use typst::geom::{Color, RgbaColor};
+use typst_ts_core::error::prelude::*;
 use typst_ts_core::font::FontResolverImpl;
 use wasm_bindgen::prelude::*;
 use web_sys::ImageData;
@@ -60,20 +61,24 @@ impl TypstRenderer {
         ses: &RenderSession,
         canvas: &web_sys::CanvasRenderingContext2d,
         options: Option<RenderPageImageOptions>,
-    ) -> Result<JsValue, JsValue> {
+    ) -> ZResult<JsValue> {
         let page_off = self.retrieve_page_off(ses, options)?;
 
         let mut worker = typst_ts_canvas_exporter::CanvasRenderTask::new(
             canvas,
             &ses.doc,
-            &ses.ligature_map,
             page_off,
             ses.pixel_per_pt,
-            Color::Rgba(RgbaColor::from_str(&ses.background_color)?),
+            Color::Rgba(
+                RgbaColor::from_str(&ses.background_color)
+                    .map_err(map_err("Renderer.InvalidBackgroundColor"))?,
+            ),
         )?;
 
-        worker.render(&ses.doc.pages[page_off]);
-        Ok(serde_wasm_bindgen::to_value(&worker.content).unwrap())
+        worker.render(&ses.doc.pages[page_off])?;
+
+        serde_wasm_bindgen::to_value(&worker.content)
+            .map_err(map_into_err::<JsValue, _>("Renderer.EncodeContent"))
     }
 
     pub fn render_to_pdf(&mut self, artifact_content: &[u8]) -> Result<Uint8Array, JsValue> {
@@ -202,14 +207,12 @@ impl TypstRenderer {
         &self,
         ses: &RenderSession,
         options: Option<RenderPageImageOptions>,
-    ) -> Result<usize, JsValue> {
+    ) -> ZResult<usize> {
         if ses.doc.pages.is_empty() {
-            // todo: better error
-            return Err("no pages in session".into());
+            return Err(error_once!("Renderer.SessionDocNotPages"));
         }
 
         let page_off = options.as_ref().map(|o| o.page_off).unwrap_or(0);
-
         if page_off < ses.doc.pages.len() && page_off == ses.pages_info.pages[page_off].page_off {
             return Ok(page_off);
         }
@@ -220,13 +223,16 @@ impl TypstRenderer {
             }
         }
 
-        Err(format!("page_off {} not found in pages_info", page_off).into())
+        Err(error_once!(
+            "Renderer.SessionPageNotFound",
+            offset: page_off
+        ))
     }
 
-    pub fn render_to_pdf_internal(&self, _session: &RenderSession) -> Result<Vec<u8>, String> {
+    pub fn render_to_pdf_internal(&self, _session: &RenderSession) -> ZResult<Vec<u8>> {
         // contribution 510KB
         // Ok(typst::export::pdf(&session.doc))
-        Err("pdf disabled".into())
+        Err(error_once!("Renderer.PdfFeatureNotEnabled"))
     }
 
     pub fn session_from_artifact(&self, artifact_content: &[u8]) -> Result<RenderSession, JsValue> {

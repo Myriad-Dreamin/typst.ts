@@ -1,5 +1,6 @@
 use ttf_parser::OutlineBuilder;
 use typst::geom::{Geometry, LineCap, LineJoin, Paint, PathItem, Shape, Stroke};
+use typst_ts_core::error::prelude::*;
 use web_sys::Path2d;
 
 use crate::{
@@ -11,7 +12,7 @@ use crate::{
 
 impl<'a> CanvasRenderTask<'a> {
     /// Render a geometrical shape into the canvas.
-    pub(crate) fn render_shape(&mut self, ts: sk::Transform, shape: &Shape) -> Option<()> {
+    pub(crate) fn render_shape(&mut self, ts: sk::Transform, shape: &Shape) -> ZResult<()> {
         let mut builder = SvgPath2DBuilder(String::new());
 
         // to ensure that our shape focus on the original point
@@ -72,11 +73,13 @@ impl<'a> CanvasRenderTask<'a> {
             );
 
             self.canvas.set_fill_style(&fill_style.into());
-            self.canvas.reset_transform().unwrap();
+            self.reset_transform();
             self.sync_transform(ts);
 
-            self.canvas
-                .fill_with_path_2d(&Path2d::new_with_path_string(&builder.0).unwrap());
+            self.canvas.fill_with_path_2d(
+                &Path2d::new_with_path_string(&builder.0)
+                    .map_err(map_err("CanvasRenderTask.BuildPath2d"))?,
+            );
 
             drop(state_guard)
         } else if let Some(Stroke {
@@ -89,6 +92,7 @@ impl<'a> CanvasRenderTask<'a> {
         }) = &shape.stroke
         {
             // todo: dash pattern
+            let _ = dash_pattern;
             // dash_pattern.as_ref().and_then(|pattern| {
             // tiny-skia only allows dash patterns with an even number of elements,
             // while pdf allows any number.
@@ -132,12 +136,14 @@ impl<'a> CanvasRenderTask<'a> {
             // todo: ts
             self.set_transform(ts);
 
-            self.canvas
-                .stroke_with_path(&Path2d::new_with_path_string(&builder.0).unwrap());
+            self.canvas.stroke_with_path(
+                &Path2d::new_with_path_string(&builder.0)
+                    .map_err(map_err("CanvasRenderTask.BuildPath2d"))?,
+            );
 
             drop(state_guard)
         }
 
-        Some(())
+        Ok(())
     }
 }

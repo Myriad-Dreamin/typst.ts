@@ -7,6 +7,7 @@ use wasm_bindgen::{JsCast, JsValue};
 
 impl<'a> CanvasRenderTask<'a> {
     /// Render a raster or SVG image into the canvas.
+    // todo: error handling, refactor, and verify correctness
     pub(crate) fn render_image(
         &mut self,
         ts: sk::Transform,
