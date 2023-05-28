@@ -3,6 +3,7 @@ use std::sync::{Arc, RwLock};
 use js_sys::Uint8Array;
 use typst::geom::Abs;
 use typst_ts_core::artifact::doc::Frame;
+use typst_ts_core::error::prelude::*;
 use typst_ts_core::{font::FontResolverImpl, Artifact, ArtifactMeta, FontResolver};
 use wasm_bindgen::prelude::*;
 
@@ -214,7 +215,7 @@ impl RenderSessionManager {
         &self,
         artifact_content: Uint8Array,
         options: Option<RenderSessionOptions>,
-    ) -> Result<RenderSession, JsValue> {
+    ) -> ZResult<RenderSession> {
         self.create_session_internal(artifact_content.to_vec().as_slice(), options)
     }
 
@@ -222,7 +223,7 @@ impl RenderSessionManager {
         &self,
         artifact_content: &[u8],
         options: Option<RenderSessionOptions>,
-    ) -> Result<RenderSession, JsValue> {
+    ) -> ZResult<RenderSession> {
         let format = options
             .as_ref()
             .and_then(|o| o.format.as_ref())
@@ -245,9 +246,8 @@ impl RenderSessionManager {
         session: &mut RenderSession,
         page_number: usize,
         page_content: String,
-    ) -> Result<(), JsValue> {
-        self.session_load_page(session, page_number, page_content, "js")?;
-        Ok(())
+    ) -> ZResult<()> {
+        self.session_load_page(session, page_number, page_content, "js")
     }
 }
 
@@ -262,7 +262,7 @@ impl RenderSessionManager {
         &self,
         artifact_content: &[u8],
         decoder: &str,
-    ) -> Result<RenderSession, JsValue> {
+    ) -> ZResult<RenderSession> {
         if decoder != "ir" {
             self.session_from_json_artifact(artifact_content, decoder)
         } else {
@@ -275,13 +275,14 @@ impl RenderSessionManager {
         &self,
         artifact_content: &[u8],
         decoder: &str,
-    ) -> Result<RenderSession, JsValue> {
+    ) -> ZResult<RenderSession> {
         // 550KB -> 147KB
         // https://medium.com/@wl1508/avoiding-using-serde-and-deserde-in-rust-webassembly-c1e4640970ca
         let artifact: Artifact = match decoder {
             "js" => {
                 let artifact: Artifact = artifact_from_js_string(
-                    std::str::from_utf8(artifact_content).unwrap().to_string(),
+                    std::str::from_utf8(artifact_content)
+                        .map_err(map_string_err("artifact_content"))?,
                 )?;
 
                 artifact
@@ -289,8 +290,8 @@ impl RenderSessionManager {
 
             #[cfg(feature = "serde_json")]
             "serde_json" => {
-                let artifact: Artifact =
-                    serde_json::from_str(std::str::from_utf8(artifact_content).unwrap()).unwrap();
+                let artifact: Artifact = serde_json::from_slice(artifact_content)
+                    .map_err(map_string_err("parse_artifact"))?;
 
                 artifact
             }
@@ -322,8 +323,8 @@ impl RenderSessionManager {
         Ok(session)
     }
 
-    fn session_from_ir_artifact(&self, artifact_content: &[u8]) -> Result<RenderSession, JsValue> {
-        let artifact = ir_artifact_from_bin(artifact_content);
+    fn session_from_ir_artifact(&self, artifact_content: &[u8]) -> ZResult<RenderSession> {
+        let artifact = ir_artifact_from_bin(artifact_content)?;
 
         let font_resolver = self.font_resolver.read().unwrap();
         let session = RenderSession::from_artifact(
@@ -339,19 +340,20 @@ impl RenderSessionManager {
         page_number: usize,
         page_content: String,
         decoder: &str,
-    ) -> Result<(), JsValue> {
+    ) -> ZResult<()> {
         // 550KB -> 147KB
         // https://medium.com/@wl1508/avoiding-using-serde-and-deserde-in-rust-webassembly-c1e4640970ca
         let frame: Frame = match decoder {
             "js" => {
-                let frame: Frame = page_from_js_string(page_content)?;
+                let frame: Frame = page_from_js_string(&page_content)?;
 
                 frame
             }
 
             #[cfg(feature = "serde_json")]
             "serde_json" => {
-                let frame: Frame = serde_json::from_str(page_content.as_str()).unwrap();
+                let frame: Frame = serde_json::from_str(page_content.as_str())
+                    .map_err(map_string_err("parse_page"))?;
 
                 frame
             }
