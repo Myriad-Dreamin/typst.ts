@@ -10,6 +10,7 @@ use typst::{
 };
 use typst_ts_core::{
     cache::FontInfoCache,
+    error::prelude::*,
     font::{BufferFontLoader, FontProfile, FontResolverImpl, PartialFontBook},
     FontLoader, FontSlot,
 };
@@ -24,7 +25,7 @@ pub(crate) fn convert_pair(pair: JsValue) -> (JsValue, JsValue) {
 }
 struct FontBuilder {}
 
-fn font_family_web_to_typst(family: &str, full_name: &str) -> Result<String, JsValue> {
+fn font_family_web_to_typst(family: &str, full_name: &str) -> ZResult<String> {
     let mut family = family;
     if family.starts_with("Noto")
         || family.starts_with("NewCM")
@@ -34,9 +35,7 @@ fn font_family_web_to_typst(family: &str, full_name: &str) -> Result<String, JsV
     }
 
     if family.is_empty() {
-        return Err(JsValue::from_str(
-            "empty family (cannot infer from font.family and font.fullName)",
-        ));
+        return Err(error_once!("font_family_web_to_typst.empty_family"));
     }
 
     Ok(typst_typographic_family(family).to_string())
@@ -56,7 +55,7 @@ fn infer_info_from_web_font(
         postscript_name,
         style,
     }: WebFontInfo,
-) -> Result<FontInfo, JsValue> {
+) -> ZResult<FontInfo> {
     let family = font_family_web_to_typst(&family, &full_name)?;
 
     let mut full = full_name;
@@ -242,7 +241,7 @@ impl FontBuilder {
     //         .unwrap())
     // }
 
-    fn to_string(&self, field: &str, val: &JsValue) -> Result<String, JsValue> {
+    fn to_string(&self, field: &str, val: &JsValue) -> ZResult<String> {
         Ok(val
             .as_string()
             .ok_or_else(|| {
@@ -254,7 +253,7 @@ impl FontBuilder {
     fn font_web_to_typst(
         &self,
         val: &JsValue,
-    ) -> Result<(JsValue, js_sys::Function, Vec<typst::font::FontInfo>), JsValue> {
+    ) -> ZResult<(JsValue, js_sys::Function, Vec<typst::font::FontInfo>)> {
         let mut postscript_name = String::new();
         let mut family = String::new();
         let mut full_name = String::new();
@@ -263,14 +262,12 @@ impl FontBuilder {
         let mut font_blob_loader = None;
         let mut font_cache: Option<FontInfoCache> = None;
 
-        for (k, v) in js_sys::Object::entries(val.dyn_ref().ok_or_else(|| {
-            JsValue::from_str(&format!(
-                "expected object for iterating font, got {:?}",
-                val
-            ))
-        })?)
-        .iter()
-        .map(convert_pair)
+        for (k, v) in
+            js_sys::Object::entries(val.dyn_ref().ok_or_else(|| {
+                error_once!("WebFontToTypstFont.entries", val: format!("{:?}", val))
+            })?)
+            .iter()
+            .map(convert_pair)
         {
             let k = self.to_string("web_font.key", &k)?;
             match k.as_str() {
@@ -294,7 +291,10 @@ impl FontBuilder {
                     font_cache = serde_wasm_bindgen::from_value(v).ok();
                 }
                 "blob" => {
-                    font_blob_loader = Some(v.dyn_into()?);
+                    font_blob_loader = Some(v.clone().dyn_into().map_err(error_once_map!(
+                        "web_font.blob_builder",
+                        v: format!("{:?}", v)
+                    ))?);
                 }
                 _ => panic!("unknown key for {}: {}", "web_font", k),
             }
@@ -321,11 +321,9 @@ impl FontBuilder {
         };
 
         Ok((
-            font_ref.ok_or_else(|| {
-                JsValue::from_str(&format!("Could not find font reference for {}", family,))
-            })?,
+            font_ref.ok_or_else(|| error_once!("WebFontToTypstFont.NoFontRef", family: family))?,
             font_blob_loader.ok_or_else(|| {
-                JsValue::from_str(&format!("Could not find font blob loader for {}", family,))
+                error_once!("WebFontToTypstFont.NoFontBlobLoader", family: family)
             })?,
             font_info,
         ))
@@ -449,7 +447,7 @@ impl BrowserFontSearcher {
         ));
     }
 
-    pub async fn add_web_fonts(&mut self, fonts: js_sys::Array) -> Result<(), JsValue> {
+    pub async fn add_web_fonts(&mut self, fonts: js_sys::Array) -> ZResult<()> {
         let font_builder = FontBuilder {};
 
         for v in fonts.iter() {
