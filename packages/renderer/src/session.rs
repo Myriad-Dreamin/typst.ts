@@ -1,7 +1,6 @@
 use std::sync::{Arc, RwLock};
 
 use js_sys::Uint8Array;
-use typst::font::{FontFlags, FontInfo as TypstFontInfo, FontVariant};
 use typst::geom::Abs;
 use typst_ts_core::artifact::doc::Frame;
 use typst_ts_core::{font::FontResolverImpl, Artifact, ArtifactMeta, FontResolver};
@@ -113,11 +112,6 @@ impl PagesInfo {
     }
 }
 
-pub type LigatureMap = std::collections::HashMap<
-    (String, FontVariant, FontFlags),
-    std::collections::HashMap<u16, std::string::String>,
->;
-
 #[wasm_bindgen]
 pub struct RenderSession {
     pub(crate) pixel_per_pt: f32,
@@ -125,7 +119,6 @@ pub struct RenderSession {
     pub(crate) doc: typst::doc::Document,
     pub(crate) artifact_meta: ArtifactMeta,
     pub(crate) pages_info: PagesInfo,
-    pub(crate) ligature_map: LigatureMap,
 }
 
 #[wasm_bindgen]
@@ -147,36 +140,7 @@ impl RenderSession {
 }
 
 impl RenderSession {
-    pub(crate) fn from_artifact<T: FontResolver>(
-        artifact_meta: ArtifactMeta,
-        doc: typst::doc::Document,
-        font_resolver: &T,
-    ) -> Self {
-        let mut ligature_map = std::collections::HashMap::<
-            (String, FontVariant, FontFlags),
-            std::collections::HashMap<u16, std::string::String>,
-        >::new();
-        for font in &artifact_meta.fonts {
-            let font_info = TypstFontInfo {
-                family: font.family.clone(),
-                variant: font.variant,
-                flags: FontFlags::from_bits(font.flags).unwrap(),
-                coverage: font.coverage.clone(),
-            };
-            // todo: font alternative
-            let idx = font_resolver
-                .font_book()
-                .select_fallback(Some(&font_info), font.variant, "0")
-                .unwrap();
-            let local_font = font_resolver.font(idx).unwrap();
-            let font_info = local_font.info();
-
-            ligature_map.insert(
-                (font_info.family.clone(), font_info.variant, font_info.flags),
-                std::collections::HashMap::from_iter(font.ligatures.iter().cloned()),
-            );
-        }
-
+    pub(crate) fn from_artifact(artifact_meta: ArtifactMeta, doc: typst::doc::Document) -> Self {
         let pages_info = PagesInfo {
             pages: {
                 let mut pages = Vec::new();
@@ -198,7 +162,6 @@ impl RenderSession {
             doc,
             artifact_meta,
             pages_info,
-            ligature_map,
         }
     }
 
@@ -355,7 +318,6 @@ impl RenderSessionManager {
         let session: RenderSession = RenderSession::from_artifact(
             artifact.meta.clone(),
             artifact.to_document(&*font_resolver),
-            &*font_resolver,
         );
         Ok(session)
     }
@@ -367,7 +329,6 @@ impl RenderSessionManager {
         let session = RenderSession::from_artifact(
             artifact.metadata.clone(),
             artifact.to_document(&*font_resolver),
-            &*font_resolver,
         );
         Ok(session)
     }

@@ -7,12 +7,13 @@ use typst::{
     geom::{Color, RgbaColor},
     World,
 };
-use typst_ts_canvas_exporter::LigatureMap;
 pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
     font::web::BrowserFontSearcher, vfs::browser::ProxyAccessModel, world::WorldSnapshot,
 };
-use typst_ts_core::{artifact_ir, cache::FontInfoCache, Exporter, FontLoader, FontSlot};
+use typst_ts_core::{
+    artifact_ir, cache::FontInfoCache, error::prelude::*, Exporter, FontLoader, FontSlot,
+};
 use wasm_bindgen::prelude::*;
 
 use crate::utils::console_log;
@@ -246,19 +247,21 @@ impl TypstCompiler {
         page_off: usize,
         pixel_per_pt: f32,
         background_color: String,
-    ) -> Result<JsValue, JsValue> {
+    ) -> ZResult<JsValue> {
         let doc = doc.doc_ref();
-        let d = LigatureMap::default();
         let mut worker = typst_ts_canvas_exporter::CanvasRenderTask::new(
             canvas,
             doc,
-            &d,
             page_off,
             pixel_per_pt,
-            Color::Rgba(RgbaColor::from_str(&background_color)?),
+            Color::Rgba(
+                RgbaColor::from_str(&background_color)
+                    .map_err(map_err("Renderer.InvalidBackgroundColor"))?,
+            ),
         )?;
 
-        worker.render(&doc.pages[page_off]);
-        Ok(serde_wasm_bindgen::to_value(&worker.content).unwrap())
+        worker.render(&doc.pages[page_off])?;
+        serde_wasm_bindgen::to_value(&worker.content)
+            .map_err(map_into_err::<JsValue, _>("Compiler.EncodeContent"))
     }
 }

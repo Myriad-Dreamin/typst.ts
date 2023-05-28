@@ -21,7 +21,7 @@ macro_rules! console_log {
 #[allow(unused_imports)]
 pub(crate) use console_log;
 use typst::geom::{Abs, Color};
-use web_sys::CanvasRenderingContext2d; // <-- the trick
+use web_sys::CanvasRenderingContext2d;
 
 /// Additional methods for [`Length`].
 pub trait AbsExt {

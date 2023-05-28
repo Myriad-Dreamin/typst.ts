@@ -1,19 +1,16 @@
 //! Rendering into web_sys::CanvasRenderingContext2d.
 
-#![allow(unused_variables)]
-#![allow(dead_code)]
-
 use std::collections::HashMap;
 
 use svg::SvgPath2DBuilder;
 pub(crate) use tiny_skia as sk;
 
 use typst::doc::{Frame, FrameItem, GroupItem, Meta};
-use typst::font::{FontFlags, FontInfo, FontVariant};
+use typst::font::FontInfo;
 use typst::geom::Color;
-use typst_ts_core::TextContent;
+use typst_ts_core::error::prelude::*;
+use typst_ts_core::{Error, TextContent};
 use utils::{js_random64, AbsExt, CanvasStateGuard, ToCssExt};
-use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
 
 pub(crate) mod utils;
@@ -42,24 +39,22 @@ pub struct CanvasRenderTask<'a> {
     pub content: TextContent,
 
     font_map: HashMap<FontInfo, u32>,
+    errors: Vec<Error>,
 }
-
-pub type LigatureMap = std::collections::HashMap<
-    (String, FontVariant, FontFlags),
-    std::collections::HashMap<u16, std::string::String>,
->;
 
 impl<'a> CanvasRenderTask<'a> {
     pub fn new(
         canvas: &'a CanvasRenderingContext2d,
         doc: &'a typst::doc::Document,
-        ligature_map: &'a LigatureMap,
         page_off: usize,
         pixel_per_pt: f32,
         fill: Color,
-    ) -> Result<Self, JsValue> {
+    ) -> ZResult<Self> {
         if pixel_per_pt <= 0. {
-            panic!("pixel_per_pt must be greater than 0");
+            return Err(error_once!(
+                "CanvasRenderTask.InvalidPixelPerPt",
+                pixel_per_pt: pixel_per_pt
+            ));
         }
 
         let (width_px, height_px) = {
@@ -72,8 +67,12 @@ impl<'a> CanvasRenderTask<'a> {
 
         let session_id = format!("{:x}", js_random64());
 
-        let canvas_ref = canvas.canvas().unwrap();
-        canvas_ref.set_attribute("data-typst-session", &session_id)?;
+        let canvas_ref = canvas
+            .canvas()
+            .ok_or_else(|| error_once!("CanvasRenderTask.GetCanvasRef"))?;
+        canvas_ref
+            .set_attribute("data-typst-session", &session_id)
+            .map_err(map_err("CanvasRenderTask.SetDataTypstSessionId"))?;
 
         Ok(Self {
             canvas,
@@ -89,7 +88,17 @@ impl<'a> CanvasRenderTask<'a> {
 
             content: TextContent::default(),
             font_map: HashMap::default(),
+            errors: Vec::default(),
         })
+    }
+
+    #[inline]
+    fn reset_transform(&mut self) {
+        let maybe_err = self
+            .canvas
+            .reset_transform()
+            .map_err(map_err("CanvasRenderTask.ResetTransform"));
+        self.collect_err(maybe_err);
     }
 
     #[inline]
@@ -111,7 +120,11 @@ impl<'a> CanvasRenderTask<'a> {
         // vertical moving
         let f = transform.ty as f64;
 
-        self.canvas.transform(a, b, c, d, e, f).unwrap();
+        let maybe_err = self
+            .canvas
+            .transform(a, b, c, d, e, f)
+            .map_err(map_err("CanvasRenderTask.SyncTransform"));
+        self.collect_err(maybe_err);
     }
 
     #[inline]
@@ -124,21 +137,35 @@ impl<'a> CanvasRenderTask<'a> {
         let e = transform.tx as f64;
         let f = transform.ty as f64;
 
-        self.canvas.set_transform(a, b, c, d, e, f).unwrap();
+        let maybe_err = self
+            .canvas
+            .set_transform(a, b, c, d, e, f)
+            .map_err(map_err("CanvasRenderTask.SetTransform"));
+        self.collect_err(maybe_err);
+    }
+
+    fn collect_err<T>(&mut self, maybe_err: Result<T, typst_ts_core::Error>) -> Option<T> {
+        match maybe_err {
+            Ok(v) => Some(v),
+            Err(err) => {
+                self.errors.push(err);
+                None
+            }
+        }
     }
 
     /// Directly render a frame into the canvas.
-    pub fn render(&mut self, frame: &Frame) {
+    pub fn render(&mut self, frame: &Frame) -> ZResult<()> {
         self.canvas.set_fill_style(&self.fill.to_css().into());
         self.canvas
             .fill_rect(0., 0., self.width_px as f64, self.height_px as f64);
 
         let ts = sk::Transform::from_scale(self.pixel_per_pt, self.pixel_per_pt);
-        self.render_frame(ts, frame);
+        self.render_frame(ts, frame)
     }
 
     /// Render a frame into the canvas.
-    fn render_frame(&mut self, ts: sk::Transform, frame: &Frame) {
+    fn render_frame(&mut self, ts: sk::Transform, frame: &Frame) -> ZResult<()> {
         let mut text_flow = TextFlow::new();
 
         for (pos, item) in frame.items() {
@@ -148,7 +175,7 @@ impl<'a> CanvasRenderTask<'a> {
 
             match item {
                 FrameItem::Group(group) => {
-                    self.render_group(ts, group);
+                    self.render_group(ts, group)?;
                 }
                 FrameItem::Text(text) => {
                     let (next_text_flow, has_eol) = TextFlow::notify(text_flow, &ts, text);
@@ -162,7 +189,7 @@ impl<'a> CanvasRenderTask<'a> {
                     self.render_text(ts, text);
                 }
                 FrameItem::Shape(shape, _) => {
-                    self.render_shape(ts, shape);
+                    self.render_shape(ts, shape)?;
                 }
                 FrameItem::Image(image, size, _) => {
                     self.render_image(ts, image, *size);
@@ -175,13 +202,15 @@ impl<'a> CanvasRenderTask<'a> {
                 },
             }
         }
+
+        Ok(())
     }
 
     /// Render a group frame with optional transform and clipping into the canvas.
-    fn render_group(&mut self, ts: sk::Transform, group: &GroupItem) {
+    fn render_group(&mut self, ts: sk::Transform, group: &GroupItem) -> ZResult<()> {
         let ts = ts.pre_concat(group.transform.into());
 
-        let clip_guard = if group.clips {
+        let _clip_guard = if group.clips {
             let mask_box = {
                 let mut builder = SvgPath2DBuilder::default();
 
@@ -191,7 +220,9 @@ impl<'a> CanvasRenderTask<'a> {
                 let h = size.y.to_f32();
                 builder.rect(0., 0., w, h);
 
-                builder.build().unwrap()
+                builder
+                    .build()
+                    .map_err(map_err("CanvasRenderTask.BuildClip"))?
             };
 
             let guard = CanvasStateGuard::new(self.canvas);
@@ -204,6 +235,6 @@ impl<'a> CanvasRenderTask<'a> {
             None
         };
 
-        self.render_frame(ts, &group.frame);
+        self.render_frame(ts, &group.frame)
     }
 }
