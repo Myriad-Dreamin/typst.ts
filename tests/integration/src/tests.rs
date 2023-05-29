@@ -175,8 +175,6 @@ mod tests {
         }
 
         fn make_data_content_hash(data_url: &str) -> String {
-            use image_hasher::HasherConfig;
-
             let data_url = data_url.trim_start_matches("data:image/png;base64,");
             let data = base64::engine::general_purpose::STANDARD
                 .decode(data_url)
@@ -185,13 +183,9 @@ mod tests {
             let image = PngDecoder::new(&data[..]).unwrap();
             let image = image::DynamicImage::from_decoder(image).unwrap();
 
-            let hasher = HasherConfig::new().hash_size(16, 16);
-            let hasher = hasher.to_hasher();
-
-            format!(
-                "phash-gradient:{}",
-                hex::encode(hasher.hash_image(&image).as_bytes())
-            )
+            let mut hasher = sha2::Sha256::new();
+            hasher.update(image.into_rgba8().iter());
+            format!("sha256:{}", hex::encode(hasher.finalize()))
         }
 
         macro_rules! check_canvas_render_test_point_data_content {
@@ -233,7 +227,7 @@ mod tests {
             test_point,
             |data_content_hash: &str, debug_expr: &str| {
                 insta::assert_snapshot!(data_content_hash, debug_expr, @
-                "phash-gradient:80008006dc061806000000000000000000000000000000000000000000000001")
+                "sha256:8d93df1b4b0e1f034ee2eb1c0dbb4272f8126d220466eae06e3f36169b3d1052")
             },
         );
         check_canvas_render_test_point_text_content!(
@@ -249,7 +243,7 @@ mod tests {
             test_point,
             |data_content_hash: &str, debug_expr: &str| {
                 insta::assert_snapshot!(data_content_hash, debug_expr, @
-                "phash-gradient:80008006dc061806000000000000000000000000000000000000000000000001")
+                "sha256:8d93df1b4b0e1f034ee2eb1c0dbb4272f8126d220466eae06e3f36169b3d1052")
             },
         );
         check_canvas_render_test_point_text_content!(
