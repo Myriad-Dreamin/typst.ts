@@ -2,7 +2,7 @@
 
 #show heading: set text(font: "Linux Biolinum")
 
-#let style_color = rgb("#ffffff")
+#let style_color = rgb("#000000")
 
 #set text(fill: style_color)
 #show link: it => underline(stroke: style_color, it)
