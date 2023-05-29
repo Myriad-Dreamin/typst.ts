@@ -1,5 +1,6 @@
 const tsRule = {
   files: ['*.ts'],
+  ignorePatterns: ['esbuild.config.mjs'],
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/eslint-recommended',
@@ -9,7 +10,7 @@ const tsRule = {
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 10,
-    project: ['./tsconfig.json'],
+    project: ['./tsconfig.lib.json'],
     sourceType: 'module',
     ecmaFeatures: {
       modules: true,

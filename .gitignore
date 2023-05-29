@@ -6,6 +6,7 @@
 *.tir.bin
 *.pdf
 *.rmp
+*.tsbuildinfo
 /out.json
 
 target/
