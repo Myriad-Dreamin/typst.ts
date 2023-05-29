@@ -31,12 +31,13 @@ export class TypstDocumentComponent {
       if (this.artifact?.length) {
         const doRender = (renderer: typst.TypstRenderer) => {
           console.log(renderer);
-          return renderer.render({
+          renderer.render({
             artifactContent: this.artifact,
             backgroundColor: this.fill,
             container: displayDiv,
             pixelPerPt: 8,
           });
+          return;
         };
 
         /// render after init
