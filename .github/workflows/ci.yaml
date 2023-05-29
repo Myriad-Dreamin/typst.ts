@@ -12,6 +12,8 @@ jobs:
         uses: actions/checkout@v3
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+      - name: Install WASM-PACK
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
       - name: Install Artifact Cache
         uses: Swatinem/rust-cache@v2
       - name: Prepare fonts
@@ -21,8 +23,14 @@ jobs:
       - name: Clippy check
         run: cargo clippy --workspace --all-targets
       - name: Prepare artifacts
-        run: cargo run --bin typst-ts-cli -- compile --workspace fuzzers/corpora/math/ --entry fuzzers/corpora/math/main.typ
+        run: cargo run --bin typst-ts-cli -- compile --workspace fuzzers/corpora/math/ --entry fuzzers/corpora/math/main.typ --format=json --format=ir
       - name: Build
         run: cargo build --workspace
       - name: Test
         run: cargo test --workspace --no-fail-fast
+      - name: Archive Test Results (WebAssembly Renderer in Chrome)
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: wasm-renderer-chrome.test_points.json.gz
+          path: target/typst-artifacts/integrations/renderer/test_points.chrome.json.gz
