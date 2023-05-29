@@ -1,0 +1,29 @@
+[package]
+name = "typst-ts-integration-test"
+authors.workspace = true
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+typst.workspace = true
+
+insta.workspace = true
+
+hex.workspace = true
+sha2.workspace = true
+serde_json.workspace = true
+
+typst-ts-test-common.workspace = true
+typst-ts-core.workspace = true
+typst-ts-compiler.workspace = true
+
+typst-ts-pdf-exporter = { workspace = true }
+typst-ts-serde-exporter = { workspace = true, features = ["json"] }
+typst-ts-tir-exporter = { workspace = true }
+
+[[test]]
+name = "tests"
+path = "src/tests.rs"
