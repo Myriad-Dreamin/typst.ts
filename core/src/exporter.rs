@@ -208,9 +208,13 @@ pub mod utils {
     }
 
     /// Convert the given error to a vector of source errors.
+    // todo: report the component position
     pub fn map_err<E: Error>(world: &dyn World, e: E) -> Box<Vec<SourceError>> {
+        // the source location is the start of the file
+        const START_LOC: u64 = typst::syntax::Span::FULL.start;
+
         Box::new(vec![SourceError::new(
-            typst::syntax::Span::new(world.main().id(), 0),
+            typst::syntax::Span::new(world.main().id(), START_LOC),
             e.to_string(),
         )])
     }
