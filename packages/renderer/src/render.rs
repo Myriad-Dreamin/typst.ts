@@ -77,7 +77,7 @@ mod tests {
                 .unwrap();
             let end = performance.now();
 
-            let data_content = canvas.to_data_url_with_type("image/jpeg").unwrap();
+            let data_content = canvas.to_data_url_with_type("image/png").unwrap();
 
             let text_content = js_sys::JSON::stringify(&res).unwrap().as_string().unwrap();
 

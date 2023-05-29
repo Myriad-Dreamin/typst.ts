@@ -147,7 +147,7 @@ mod tests {
         };
 
         // store the test points
-        let test_points_json = serde_json::to_vec(&grouped_test_points)?;
+        let test_points_json = serde_json::to_vec_pretty(&grouped_test_points)?;
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
         encoder.write_all(&test_points_json).unwrap();
 
@@ -211,7 +211,7 @@ mod tests {
             test_point,
             |data_content_hash: &str, debug_expr: &str| {
                 insta::assert_snapshot!(data_content_hash, debug_expr, @
-                "sha256:7eb729df65cb745b80da51577f80f91af8e4314026bd6fae3902fa0221a901a5")
+                "sha256:47aff33edc27939072aa5ccccc1c4e18e86a705e38a8fd189c4baaa127f46939")
             },
         );
         check_canvas_render_test_point_text_content!(
@@ -227,7 +227,7 @@ mod tests {
             test_point,
             |data_content_hash: &str, debug_expr: &str| {
                 insta::assert_snapshot!(data_content_hash, debug_expr, @
-                "sha256:7eb729df65cb745b80da51577f80f91af8e4314026bd6fae3902fa0221a901a5")
+                "sha256:47aff33edc27939072aa5ccccc1c4e18e86a705e38a8fd189c4baaa127f46939")
             },
         );
         check_canvas_render_test_point_text_content!(
