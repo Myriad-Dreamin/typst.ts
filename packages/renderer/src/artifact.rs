@@ -1150,6 +1150,7 @@ pub fn page_from_js_string(val: &str) -> ZResult<Frame> {
 mod tests {
     use typst_ts_core::artifact_ir::Artifact as IRArtifact;
     use typst_ts_core::Artifact;
+    use typst_ts_test_common::{MAIN_ARTIFACT_IR, MAIN_ARTIFACT_JSON};
     use wasm_bindgen_test::*;
 
     use crate::artifact_ir::ir_artifact_from_bin;
@@ -1157,8 +1158,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     fn artifact_deserialization() {
-        let artifact = include_bytes!("../../main.artifact.json");
-        let artifact = String::from_utf8_lossy(artifact);
+        let artifact = String::from_utf8_lossy(MAIN_ARTIFACT_JSON);
 
         let window = web_sys::window().expect("should have a window in this context");
         let performance = window
@@ -1172,17 +1172,17 @@ mod tests {
             (end - start, artifact)
         };
 
-        self::console_log!("serde.json {}ms", serde_task.0);
+        self::console_log!("serde.json {:.3}ms", serde_task.0);
 
         let js_task = {
             let start = performance.now();
-            let artifact = super::artifact_from_js_string(artifact.to_string()).unwrap();
+            let artifact = super::artifact_from_js_string(&artifact).unwrap();
             let end = performance.now();
 
             (end - start, artifact)
         };
 
-        self::console_log!("js.json: {}ms", js_task.0);
+        self::console_log!("js.json: {:.3}ms", js_task.0);
 
         #[cfg(feature = "serde_rmp_debug")]
         {
@@ -1195,20 +1195,20 @@ mod tests {
                 (end - start, artifact)
             };
 
-            self::console_log!("rmp: {}ms", rmp_task.0);
+            self::console_log!("rmp: {:.3}ms", rmp_task.0);
         }
 
         {
             let ir_task = {
-                let artifact = include_bytes!("../../main.artifact.tir.bin");
+                let artifact = MAIN_ARTIFACT_IR;
                 let start = performance.now();
-                let artifact: IRArtifact = ir_artifact_from_bin(artifact);
+                let artifact: IRArtifact = ir_artifact_from_bin(artifact).unwrap();
                 let end = performance.now();
 
                 (end - start, artifact)
             };
 
-            self::console_log!("ir: {}ms", ir_task.0);
+            self::console_log!("ir: {:.3}ms", ir_task.0);
         }
     }
 }
