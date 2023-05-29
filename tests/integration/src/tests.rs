@@ -3,6 +3,8 @@ mod tests {
     use std::collections::HashMap;
 
     use anyhow::Ok;
+    use base64::Engine;
+    use image::codecs::png::PngDecoder;
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
     use typst_ts_integration_test::{wasm::wasm_pack_test, ArtifactBundle, ArtifactCompiler};
@@ -172,11 +174,31 @@ mod tests {
             }};
         }
 
+        fn make_data_content_hash(data_url: &str) -> String {
+            use image_hasher::HasherConfig;
+
+            let data_url = data_url.trim_start_matches("data:image/png;base64,");
+            let data = base64::engine::general_purpose::STANDARD
+                .decode(data_url)
+                .unwrap();
+
+            let image = PngDecoder::new(&data[..]).unwrap();
+            let image = image::DynamicImage::from_decoder(image).unwrap();
+
+            let hasher = HasherConfig::new().hash_size(16, 16);
+            let hasher = hasher.to_hasher();
+
+            format!(
+                "phash-gradient:{}",
+                hex::encode(hasher.hash_image(&image).as_bytes())
+            )
+        }
+
         macro_rules! check_canvas_render_test_point_data_content {
             ($test_point:expr, $data_content_hash:expr, ) => {{
                 let test_point = $test_point;
-                let data_content_hash = &test_point.meta["data_content_hash"];
                 let data_content = &test_point.verbose["data_content"];
+                let data_content_hash = make_data_content_hash(&data_content);
 
                 let debug_expr = &format!(
                     "data_content_hash does not match the older one\nTestPointName: {}\nDataContent: {}",
@@ -185,7 +207,7 @@ mod tests {
                 );
 
                 let data_content_hash_fn = $data_content_hash;
-                data_content_hash_fn(data_content_hash, debug_expr);
+                data_content_hash_fn(&data_content_hash, debug_expr);
             }};
         }
 
@@ -211,7 +233,7 @@ mod tests {
             test_point,
             |data_content_hash: &str, debug_expr: &str| {
                 insta::assert_snapshot!(data_content_hash, debug_expr, @
-                "sha256:47aff33edc27939072aa5ccccc1c4e18e86a705e38a8fd189c4baaa127f46939")
+                "phash-gradient:80008006dc061806000000000000000000000000000000000000000000000001")
             },
         );
         check_canvas_render_test_point_text_content!(
@@ -227,7 +249,7 @@ mod tests {
             test_point,
             |data_content_hash: &str, debug_expr: &str| {
                 insta::assert_snapshot!(data_content_hash, debug_expr, @
-                "sha256:47aff33edc27939072aa5ccccc1c4e18e86a705e38a8fd189c4baaa127f46939")
+                "phash-gradient:80008006dc061806000000000000000000000000000000000000000000000001")
             },
         );
         check_canvas_render_test_point_text_content!(
