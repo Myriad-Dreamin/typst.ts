@@ -11,6 +11,7 @@ const tsRule = {
     ecmaVersion: 10,
     project: ['./tsconfig.json'],
     sourceType: 'module',
+    tsconfigRootDir: __dirname,
     ecmaFeatures: {
       modules: true,
     },

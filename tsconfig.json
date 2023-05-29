@@ -1,6 +1,6 @@
 {
   "references": [
-    { "path": "packages/typst.angular" },
+    { "path": "packages/typst.angular/tsconfig.comp.json" },
     { "path": "packages/typst.react" },
     { "path": "packages/typst.ts" }
   ]

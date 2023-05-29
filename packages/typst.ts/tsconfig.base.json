@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "types": ["web"],
+    "baseUrl": ".",
+    "module": "commonjs",
+    "target": "ES2020",
+    "allowJs": true,
+    "noImplicitAny": true,
+    "moduleResolution": "node",
+    "importHelpers": true,
+    "isolatedModules": true,
+    "strictNullChecks": true,
+    "declaration": false,
+    "stripInternal": true,
+    "lib": ["ES5", "ES6", "ES7", "ES2018"]
+  }
+}
