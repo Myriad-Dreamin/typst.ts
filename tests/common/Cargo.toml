@@ -6,3 +6,7 @@ license.workspace = true
 edition.workspace = true
 homepage.workspace = true
 repository.workspace = true
+
+[features]
+web_artifacts = []
+default = []
