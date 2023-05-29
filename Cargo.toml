@@ -29,6 +29,9 @@ members = [
     "server/remote",
 
     "tools/fontctl",
+
+    "tests/common",
+    "tests/integration",
 ]
 
 [profile.release]
@@ -46,12 +49,15 @@ ttf-parser = "0.18.1"
 
 # general
 anyhow = "1"
-chrono = { version = "0.4", default-features = false, features = [ "clock", "std" ] }
+chrono = { version = "0.4", default-features = false, features = [
+    "clock",
+    "std",
+] }
 once_cell = "1.17.1"
 parking_lot = "0.12.1"
 futures = "0.3.28"
 pollster = "0.3.0"
-tokio = {version = "1.28.1", features = ["full"]}
+tokio = { version = "1.28.1", features = ["full"] }
 
 # data structures
 comemo = "0.3"
@@ -91,6 +97,9 @@ tracing = "0.1.37"
 tracing-error = "0.2"
 tracing-subscriber = { version = "0.3.17", features = ["std"] }
 
+# test
+insta = "1.29.0"
+
 # misc
 codespan-reporting = "0.11"
 dirs = "5"
@@ -99,6 +108,7 @@ notify = "5"
 # project core
 typst-ts-core = "0.2"
 typst-ts-compiler = "0.2"
+typst-ts-test-common = "0.2"
 
 # project exporters
 typst-ts-ast-exporter = "0.2"
@@ -112,6 +122,7 @@ typst-ts-ws-exporter = "0.2"
 [patch.crates-io]
 typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }
+typst-ts-test-common = { path = "tests/common" }
 typst-ts-ast-exporter = { path = "exporter/ast" }
 typst-ts-canvas-exporter = { path = "exporter/canvas" }
 typst-ts-pdf-exporter = { path = "exporter/pdf" }
