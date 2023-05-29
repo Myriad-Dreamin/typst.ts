@@ -33,22 +33,46 @@ wasm-bindgen.workspace = true
 js-sys.workspace = true
 wasm-bindgen-futures.workspace = true
 serde-wasm-bindgen.workspace = true
-web-sys = { workspace = true, features = ["console", "Window", "Blob", "ImageData"] }
+web-sys = { workspace = true, features = [
+    "console",
+    "Window",
+    "Blob",
+    "ImageData",
+] }
 
 typst-ts-core.workspace = true
-typst-ts-compiler = { version = "0.2", default-features = false, features = ["web-render"] }
+typst-ts-compiler = { version = "0.2", default-features = false, features = [
+    "web-render",
+] }
 typst-ts-canvas-exporter = { workspace = true, optional = true }
 typst-ts-raster-exporter = { workspace = true, optional = true }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.0"
-web-sys = { workspace = true, features = ["console", "Performance", "PerformanceTiming", "Window", "Blob", "ImageData", "Document", "HtmlCanvasElement"] }
+typst-ts-test-common.workspace = true
+web-sys = { workspace = true, features = [
+    "console",
+    "Performance",
+    "PerformanceTiming",
+    "Window",
+    "Blob",
+    "ImageData",
+    "Document",
+    "HtmlCanvasElement",
+] }
+hex.workspace = true
+sha2.workspace = true
 
 [features]
-full = ["serde_json", "serde_rmp", "render_raster", "render_canvas"]
+web_test = ["typst-ts-test-common/web_artifacts"]
+web_verbose = ["web_test"] # for test debug
+full = ["serde_json", "serde_rmp", "render_raster", "render_canvas", "web_test"]
 serde_json = ["dep:serde_json"]
 serde_rmp = ["dep:serde", "dep:rmp-serde"]
 render_raster = ["dep:typst-ts-raster-exporter"]
-render_canvas = ["dep:typst-ts-canvas-exporter", "web-sys/CanvasRenderingContext2d"]
+render_canvas = [
+    "dep:typst-ts-canvas-exporter",
+    "web-sys/CanvasRenderingContext2d",
+]
 default = ["full"]
 web = ["render_canvas"]
