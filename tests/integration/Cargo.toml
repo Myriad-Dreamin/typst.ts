@@ -7,7 +7,7 @@ edition.workspace = true
 homepage.workspace = true
 repository.workspace = true
 
-[dev-dependencies]
+[dependencies]
 typst.workspace = true
 
 insta.workspace = true
