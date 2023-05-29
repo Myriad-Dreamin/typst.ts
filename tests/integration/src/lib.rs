@@ -1,3 +1,5 @@
+pub mod wasm;
+
 use std::path::Path;
 
 use typst::{doc::Document, util::PathExt};

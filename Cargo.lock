@@ -2775,8 +2775,11 @@ dependencies = [
 name = "typst-ts-integration-test"
 version = "0.2.0"
 dependencies = [
+ "anyhow",
+ "flate2",
  "hex",
  "insta",
+ "serde",
  "serde_json",
  "sha2",
  "typst",
@@ -2840,6 +2843,7 @@ dependencies = [
  "byteorder",
  "comemo",
  "elsa",
+ "hex",
  "js-sys",
  "once_cell",
  "pollster",
@@ -2847,6 +2851,7 @@ dependencies = [
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
+ "sha2",
  "siphasher",
  "tiny-skia",
  "typst",
@@ -2855,6 +2860,7 @@ dependencies = [
  "typst-ts-compiler",
  "typst-ts-core",
  "typst-ts-raster-exporter",
+ "typst-ts-test-common",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
