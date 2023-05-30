@@ -5,7 +5,7 @@ mod tests {
 
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
-    use typst_ts_test_common::{MAIN_ARTIFACT_IR, MAIN_ARTIFACT_JSON};
+    use typst_ts_test_common::embedded_artifact::*;
     use wasm_bindgen::JsCast;
     use wasm_bindgen_test::*;
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
@@ -126,5 +126,45 @@ mod tests {
     #[wasm_bindgen_test]
     fn render_json_test() {
         render_test_template("main_artifact_json", MAIN_ARTIFACT_JSON, "js");
+    }
+
+    #[wasm_bindgen_test]
+    fn render_line_1_ir_test() {
+        render_test_template("line_1_artifact_ir", LINE_1_ARTIFACT_IR, "ir");
+    }
+
+    #[wasm_bindgen_test]
+    fn render_line_1_json_test() {
+        render_test_template("line_1_artifact_json", LINE_1_ARTIFACT_JSON, "js");
+    }
+
+    #[wasm_bindgen_test]
+    fn render_line_2_ir_test() {
+        render_test_template("line_2_artifact_ir", LINE_2_ARTIFACT_IR, "ir");
+    }
+
+    #[wasm_bindgen_test]
+    fn render_line_2_json_test() {
+        render_test_template("line_2_artifact_json", LINE_2_ARTIFACT_JSON, "js");
+    }
+
+    #[wasm_bindgen_test]
+    fn render_path_1_ir_test() {
+        render_test_template("path_1_artifact_ir", PATH_1_ARTIFACT_IR, "ir");
+    }
+
+    #[wasm_bindgen_test]
+    fn render_path_1_json_test() {
+        render_test_template("path_1_artifact_json", PATH_1_ARTIFACT_JSON, "js");
+    }
+
+    #[wasm_bindgen_test]
+    fn render_polygon_1_ir_test() {
+        render_test_template("polygon_1_artifact_ir", POLYGON_1_ARTIFACT_IR, "ir");
+    }
+
+    #[wasm_bindgen_test]
+    fn render_polygon_1_json_test() {
+        render_test_template("polygon_1_artifact_json", POLYGON_1_ARTIFACT_JSON, "js");
     }
 }

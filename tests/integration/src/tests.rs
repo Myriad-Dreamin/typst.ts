@@ -26,6 +26,26 @@ mod tests {
         format!("sha256:{}", hex::encode(sha2::Sha256::digest(bytes)))
     }
 
+    fn hash_image_data_url(data_url: &str) -> String {
+        use image_hasher::HasherConfig;
+
+        let data_url = data_url.trim_start_matches("data:image/png;base64,");
+        let data = base64::engine::general_purpose::STANDARD
+            .decode(data_url)
+            .unwrap();
+
+        let image = PngDecoder::new(&data[..]).unwrap();
+        let image = image::DynamicImage::from_decoder(image).unwrap();
+
+        let hasher = HasherConfig::new().hash_size(24, 24);
+        let hasher = hasher.to_hasher();
+
+        format!(
+            "phash-gradient:{}",
+            base64::engine::general_purpose::STANDARD.encode(hasher.hash_image(&image).as_bytes())
+        )
+    }
+
     #[test]
     fn test_local_consistency() {
         let corpus_root = typst_ts_test_common::corpus_root();
@@ -71,6 +91,20 @@ mod tests {
             // origin_pdf_hash
             |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
                 "sha256:77b4787c8cc10afcf7e23378c13c0ebd0e5829ad884b587695a3d83eb3111c07"),
+        );
+
+        check_bundle_facts!(
+            compiler.compile("visualize", "visualize/path_1.typ"),
+            // origin_pdf_hash
+            |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
+                "sha256:6eae467756cb46021f7d9e826013374e56366186ad14f742a9c8da70ca60d621"),
+        );
+
+        check_bundle_facts!(
+            compiler.compile("visualize", "visualize/polygon_1.typ"),
+            // origin_pdf_hash
+            |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
+                "sha256:f67821e7b1bf0d170e21e304267846937445070f4bab8a3dbbfec46f67efec73"),
         );
 
         // todo: does not preserve outline
@@ -133,7 +167,7 @@ mod tests {
             }
         }
 
-        let grouped_test_points = {
+        let mut grouped_test_points = {
             let mut grouped_test_points = HashMap::new();
             for test_point in test_points {
                 grouped_test_points
@@ -144,6 +178,17 @@ mod tests {
 
             for (_, test_points) in grouped_test_points.iter_mut() {
                 test_points.sort_by(|x, y| x.name.cmp(&y.name));
+            }
+
+            for canvas_render_test_point in grouped_test_points
+                .get_mut("canvas_render_test")
+                .ok_or_else(|| anyhow::anyhow!("no test points found"))?
+            {
+                let data_content = &canvas_render_test_point.verbose["data_content"];
+                let data_content_hash = hash_image_data_url(data_content);
+                canvas_render_test_point
+                    .meta
+                    .insert("data_content_phash".to_string(), data_content_hash);
             }
             grouped_test_points
         };
@@ -161,104 +206,120 @@ mod tests {
 
         // check canvas_render_test_points
 
-        let canvas_render_test_points = grouped_test_points
-            .get("canvas_render_test")
-            .ok_or_else(|| anyhow::anyhow!("no test points found"))?;
-        let mut test_point_iter = canvas_render_test_points.iter();
+        let canvas_render_test_points = grouped_test_points.remove("canvas_render_test").unwrap();
+        println!(
+            "canvas_render_test_points: {:?}",
+            canvas_render_test_points.len()
+        );
+        let mut test_point_iter = canvas_render_test_points.into_iter();
 
-        macro_rules! checked_canvas_render_test_point {
-            ($name:expr) => {{
-                let test_point = test_point_iter.next().unwrap();
-                assert_eq!(test_point.name, $name);
-                test_point
-            }};
+        #[derive(Default, Debug, Serialize, Deserialize)]
+        struct Facts {
+            name: String,
+            data_content_phash: String,
+            text_content_hash: String,
         }
 
-        fn make_data_content_hash(data_url: &str) -> String {
-            use image_hasher::HasherConfig;
+        macro_rules! check_canvas_render_test_point {
+            (@$snapshot:literal) => {{
+                let mut test_point = test_point_iter.next().unwrap();
+                let mut filtered_value = Facts::default();
 
-            let data_url = data_url.trim_start_matches("data:image/png;base64,");
-            let data = base64::engine::general_purpose::STANDARD
-                .decode(data_url)
-                .unwrap();
+                filtered_value.name = test_point.name.clone();
+                filtered_value.data_content_phash = test_point
+                    .meta
+                    .remove("data_content_phash")
+                    .expect("data_content_phash not found");
+                filtered_value.text_content_hash = test_point
+                    .meta
+                    .remove("text_content_hash")
+                    .expect("text_content_hash not found");
 
-            let image = PngDecoder::new(&data[..]).unwrap();
-            let image = image::DynamicImage::from_decoder(image).unwrap();
-
-            let hasher = HasherConfig::new().hash_size(16, 16);
-            let hasher = hasher.to_hasher();
-
-            format!(
-                "phash-gradient:{}",
-                hex::encode(hasher.hash_image(&image).as_bytes())
-            )
-        }
-
-        macro_rules! check_canvas_render_test_point_data_content {
-            ($test_point:expr, $data_content_hash:expr, ) => {{
-                let test_point = $test_point;
-                let data_content = &test_point.verbose["data_content"];
-                let data_content_hash = make_data_content_hash(&data_content);
-
-                let debug_expr = &format!(
-                    "data_content_hash does not match the older one\nTestPointName: {}\nDataContent: {}",
-                    test_point.name,
-                    data_content
+                let value = insta::_macro_support::serialize_value(
+                    &filtered_value,
+                    insta::_macro_support::SerializationFormat::Yaml,
+                    insta::_macro_support::SnapshotLocation::Inline,
                 );
-
-                let data_content_hash_fn = $data_content_hash;
-                data_content_hash_fn(&data_content_hash, debug_expr);
-            }};
-        }
-
-        macro_rules! check_canvas_render_test_point_text_content {
-            ($test_point:expr, $text_content_hash:expr, ) => {{
-                let test_point = $test_point;
-                let text_content_hash = &test_point.meta["text_content_hash"];
+                let data_content = &test_point.verbose["data_content"];
                 let text_content = &test_point.verbose["text_content"];
-
                 let debug_expr = &format!(
-                    "text_content_hash does not match the older one\nTestPointName: {}\nTextContent: {}",
+                    "snapshot does not match the older one\nTestPointName: {}\nDataContent: {}\nTextContent: {}",
                     test_point.name,
+                    data_content,
                     text_content
                 );
-
-                let text_content_hash_fn = $text_content_hash;
-                text_content_hash_fn(text_content_hash, debug_expr);
+                insta::assert_snapshot!(
+                    value,
+                    debug_expr,
+                    @$snapshot
+                );
             }};
         }
 
-        let test_point = checked_canvas_render_test_point!("main_artifact_ir");
-        check_canvas_render_test_point_data_content!(
-            test_point,
-            |data_content_hash: &str, debug_expr: &str| {
-                insta::assert_snapshot!(data_content_hash, debug_expr, @
-                "phash-gradient:80008006dc061806000000000000000000000000000000000000000000000001")
-            },
-        );
-        check_canvas_render_test_point_text_content!(
-            test_point,
-            |text_content_hash: &str, debug_expr: &str| {
-                insta::assert_snapshot!(text_content_hash, debug_expr, @
-                "sha256:98c5b7172c1fb068bd716678b1eb9dd73941d9ae5a44fecb2550a970c9407777")
-            },
-        );
-
-        let test_point = checked_canvas_render_test_point!("main_artifact_json");
-        check_canvas_render_test_point_data_content!(
-            test_point,
-            |data_content_hash: &str, debug_expr: &str| {
-                insta::assert_snapshot!(data_content_hash, debug_expr, @
-                "phash-gradient:80008006dc061806000000000000000000000000000000000000000000000001")
-            },
-        );
-        check_canvas_render_test_point_text_content!(
-            test_point,
-            |text_content_hash: &str, debug_expr: &str| {
-                insta::assert_snapshot!(text_content_hash, debug_expr, @
-                "sha256:98c5b7172c1fb068bd716678b1eb9dd73941d9ae5a44fecb2550a970c9407777")
-            },
-        );
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: line_1_artifact_ir
+        data_content_phash: "phash-gradient:AQAAAAAACwAACwAACgAALAAADAAAAAAABQAABAAAGQAAZgAAmAAAcQIAxAkAECcAQIwAgDEDAMIEAAgLACALAIAEAAACAAAA"
+        text_content_hash: "sha256:ab3d9568e6406923f98df52e373d11781efb1fc4d86eb55fba06d2e1467f8e44"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: line_1_artifact_json
+        data_content_phash: "phash-gradient:AQAAAAAACwAACwAACgAALAAADAAAAAAABQAABAAAGQAAZgAAmAAAcQIAxAkAECcAQIwAgDEDAMIEAAgLACALAIAEAAACAAAA"
+        text_content_hash: "sha256:ab3d9568e6406923f98df52e373d11781efb1fc4d86eb55fba06d2e1467f8e44"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: line_2_artifact_ir
+        data_content_phash: "phash-gradient:AAAAAAQAAJYAAJYAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: line_2_artifact_json
+        data_content_phash: "phash-gradient:AAAAAAQAAJYAAJYAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: main_artifact_ir
+        data_content_phash: "phash-gradient:AAAAgNwAAMQAmAYA2MYAAMgAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAABAA"
+        text_content_hash: "sha256:98c5b7172c1fb068bd716678b1eb9dd73941d9ae5a44fecb2550a970c9407777"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: main_artifact_json
+        data_content_phash: "phash-gradient:AAAAgNwAAMQAmAYA2MYAAMgAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAABAA"
+        text_content_hash: "sha256:98c5b7172c1fb068bd716678b1eb9dd73941d9ae5a44fecb2550a970c9407777"
+        "###);
+        // todo: canvas does not paint stroke
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: path_1_artifact_ir
+        data_content_phash: "phash-gradient:AAAgAAAACBBgKRBuDRBADTNPjTNGjVVKjTNGTTNNDRBACRNsiVBqDRBAzVBKzVdGSTdFjbNNzZRNDRBAqRBpCBBgAAAAAAAg"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        // todo: canvas does not paint stroke
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: path_1_artifact_json
+        data_content_phash: "phash-gradient:AAAgAAAACBBgKRBuDRBADTNPjTNGjVVKjTNGTTNNDRBACRNsiVBqDRBAzVBKzVdGSTdFjbNNzZRNDRBAqRBpCBBgAAAAAAAg"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        // todo: canvas does not paint stroke
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: polygon_1_artifact_ir
+        data_content_phash: "phash-gradient:IAAA4BcA4AMAwPE/GOA/wPABwPADAAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        // todo: canvas does not paint stroke
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: polygon_1_artifact_json
+        data_content_phash: "phash-gradient:IAAA4BcA4AMAwPE/GOA/wPABwPADAAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
 
         let done = test_point_iter.next();
         if done.is_some() {

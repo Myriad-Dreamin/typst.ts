@@ -10,7 +10,7 @@ repository.workspace = true
 [dependencies]
 typst.workspace = true
 
-insta.workspace = true
+insta = { workspace = true, features = ["yaml"] }
 
 hex.workspace = true
 base64.workspace = true

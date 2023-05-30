@@ -143,6 +143,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4a4ddaa51a5bc52a6948f74c06d20aaaddb71924eab79b8c97a8c556e942d6a"
 
 [[package]]
+name = "base64-serde"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba368df5de76a5bea49aaf0cf1b39ccfbbef176924d1ba5db3e4135216cbe3c7"
+dependencies = [
+ "base64 0.21.0",
+ "serde",
+]
+
+[[package]]
 name = "biblatex"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1215,6 +1225,7 @@ dependencies = [
  "console",
  "lazy_static",
  "linked-hash-map",
+ "serde",
  "similar",
  "yaml-rust",
 ]
@@ -2991,6 +3002,8 @@ name = "typst-ts-core"
 version = "0.2.0"
 dependencies = [
  "base64 0.21.0",
+ "base64-serde",
+ "byteorder",
  "comemo",
  "hex",
  "js-sys",
