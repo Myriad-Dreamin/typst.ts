@@ -9,8 +9,26 @@ interface FetchSnapshot {
   root: string;
   mTimes: Map<string, number | undefined>;
   mRealPaths: Map<string, string | undefined>;
-  mData: [string, string][];
+  mData: [string, string | Uint8Array][];
 }
+
+/// https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
+const bufferToBase64 = async (data: Uint8Array) => {
+  // Use a FileReader to generate a base64 data URI
+  const base64url = await new Promise<string | null>((r, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === 'string' || result === null) {
+        r(result);
+      }
+      reject(new Error('Unexpected result type'));
+    };
+    reader.readAsDataURL(new Blob([data], { type: 'application/octet-binary' }));
+  });
+
+  return base64url || '';
+};
 
 export class FetchAccessModel implements FsAccessModel {
   fullyCached: boolean;
@@ -49,8 +67,10 @@ export class FetchAccessModel implements FsAccessModel {
     this.mRealPaths = new Map(snapshot.mRealPaths);
     await Promise.all(
       snapshot.mData.map(async ([k, v]) => {
-        if (v) {
+        if (typeof v == 'string' && v.startsWith('data:')) {
           this.mData.set(k, await base64UrlToBuffer(v));
+        } else if (v instanceof Uint8Array) {
+          this.mData.set(k, v);
         } else {
           this.mData.set(k, undefined);
         }
@@ -77,24 +97,6 @@ export class FetchAccessModel implements FsAccessModel {
         .join(', ')}]);`,
     );
 
-    /// https://stackoverflow.com/questions/21797299/convert-base64-string-to-arraybuffer
-    const bufferToBase64 = async (data: Uint8Array) => {
-      // Use a FileReader to generate a base64 data URI
-      const base64url = await new Promise<string | null>((r, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result;
-          if (typeof result === 'string' || result === null) {
-            r(result);
-          }
-          reject(new Error('Unexpected result type'));
-        };
-        reader.readAsDataURL(new Blob([data], { type: 'application/octet-binary' }));
-      });
-
-      return base64url || '';
-    };
-
     const dataEntries = await Promise.all(
       [...this.mData.entries()].map(async ([k, v]) =>
         v
@@ -103,6 +105,44 @@ export class FetchAccessModel implements FsAccessModel {
       ),
     );
     snapshot.push(`snapshot.mData = [${dataEntries.join(', ')}];`);
+
+    snapshot.push(`return snapshot;`);
+    snapshot.push('})())');
+    return snapshot.join('\n');
+  }
+
+  async getPreloadScript(): Promise<string> {
+    const snapshot: string[] = [];
+
+    snapshot.push('((async () => {');
+    snapshot.push(
+      `const snapshot = {  root: '', mTimes: new Map(),  mRealPaths: new Map(),  mData: [],};`,
+    );
+    // runFetch
+    snapshot.push(`const runFetch = async (path) => {`);
+    snapshot.push(`  const res = await fetch(snapshot.root + path);`);
+    snapshot.push(`  const buffer = await res.arrayBuffer();`);
+    snapshot.push(`  return [path, new Uint8Array(buffer)];`);
+    snapshot.push(`};`);
+    snapshot.push(`snapshot.root = ${JSON.stringify(this.root)};`);
+    snapshot.push(
+      `snapshot.mTimes = new Map([${[...this.mTimes.entries()]
+        .map(([k, v]) => `[${JSON.stringify(k)}, ${v?.getTime() || 'undefined'}]`)
+        .join(', ')}]);`,
+    );
+    snapshot.push(
+      `snapshot.mRealPaths = new Map([${[...this.mRealPaths.entries()]
+        .map(([k, v]) => `[${JSON.stringify(k)}, ${JSON.stringify(v)}]`)
+        .join(', ')}]);`,
+    );
+
+    const dataEntries = await Promise.all(
+      [...this.mData.entries()].map(async ([k, v]) => {
+        k = JSON.stringify(k);
+        return v ? `runFetch(${k})` : `Promise.resolve([${k}, undefined])`;
+      }),
+    );
+    snapshot.push(`snapshot.mData = await Promise.all([${dataEntries.join(', ')}]);`);
 
     snapshot.push(`return snapshot;`);
     snapshot.push('})())');
