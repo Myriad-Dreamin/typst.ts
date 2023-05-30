@@ -36,6 +36,7 @@ where
         let metadata = serde_json::to_string(&ArtifactHeader {
             metadata: output.metadata.clone(),
             pages: output.pages.clone(),
+            paint_offset: output.paint_offset,
         })
         .unwrap();
         let mut writer = std::io::BufWriter::new(writer);

@@ -10,8 +10,11 @@ pub use typst_library::prelude::Position as TypstPosition;
 pub use typst_library::prelude::Shape as TypstShape;
 pub use typst_library::prelude::TextItem as TypstTextItem;
 
+use super::geom::Abs;
+
 pub type SpanRef = ();
 pub type FontRef = u32;
+pub type PaintRef = i32;
 pub type Lang = String;
 pub type EcoString = String;
 
@@ -39,7 +42,9 @@ pub enum ItemRefKind {
     FrameItem,
     Frame,
     Glyph,
-    Byte,
+    PathItem,
+    Bytes,
+    Abs,
     String, // null-terminated
 }
 
@@ -47,8 +52,8 @@ pub trait HasItemRefKind {
     const ITEM_REF_KIND: ItemRefKind;
 }
 
-impl HasItemRefKind for u8 {
-    const ITEM_REF_KIND: ItemRefKind = ItemRefKind::Byte;
+impl HasItemRefKind for Abs {
+    const ITEM_REF_KIND: ItemRefKind = ItemRefKind::Abs;
 }
 
 #[repr(C)]
@@ -63,7 +68,7 @@ pub struct ItemRef<T> {
 
 impl<T: HasItemRefKind> ItemRef<T> {
     pub fn deref(&self, buffer: &[u8]) -> &T {
-        if T::ITEM_REF_KIND == ItemRefKind::String {
+        if T::ITEM_REF_KIND == ItemRefKind::String || T::ITEM_REF_KIND == ItemRefKind::Bytes {
             panic!()
         }
         let off = self.id as usize;
@@ -89,6 +94,16 @@ impl ItemRef<String> {
                 end.offset_from(begin) as usize,
             ))
             .unwrap()
+        }
+    }
+}
+
+impl ItemRef<Vec<u8>> {
+    pub fn as_slice(&self, buffer: &[u8], len: usize) -> &[u8] {
+        let off = self.id as usize;
+        unsafe {
+            let begin = buffer.as_ptr().add(off) as *const u8;
+            std::slice::from_raw_parts(begin, len)
         }
     }
 }

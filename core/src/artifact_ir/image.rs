@@ -7,7 +7,6 @@ pub use typst::image::ImageFormat;
 pub use typst::image::RasterFormat;
 pub use typst::image::VectorFormat;
 
-use super::core::ItemArray;
 use super::core::ItemRef;
 
 /// A raster or vector image.
@@ -17,7 +16,8 @@ use super::core::ItemRef;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Image {
     /// The raw, undecoded image data, follow btoa (standard) encoding
-    pub data: ItemArray<u8>,
+    pub data: ItemRef<Vec<u8>>,
+    pub data_len: u64,
     /// The format of the encoded `buffer`.
     pub format: ItemRef<String>,
     /// The width in pixels.
