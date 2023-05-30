@@ -1151,7 +1151,7 @@ pub fn page_from_js_string(val: &str) -> ZResult<Frame> {
 mod tests {
     use typst_ts_core::artifact_ir::Artifact as IRArtifact;
     use typst_ts_core::Artifact;
-    use typst_ts_test_common::{MAIN_ARTIFACT_IR, MAIN_ARTIFACT_JSON};
+    use typst_ts_test_common::embedded_artifact::{MAIN_ARTIFACT_IR, MAIN_ARTIFACT_JSON};
     use wasm_bindgen_test::*;
 
     use crate::artifact_ir::ir_artifact_from_bin;
