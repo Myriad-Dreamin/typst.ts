@@ -70,7 +70,7 @@ impl CompileSession {
         let artifact_header = ArtifactHeader {
             metadata: ir.metadata,
             pages: ir.pages,
-            paint_offset: ir.paint_offset,
+            offsets: ir.offsets,
         };
         let artifact_data = to_base64(ir.buffer.as_slice());
         let artifact_elapsed = artifact_begin.elapsed();
