@@ -1,0 +1,19 @@
+harry:
+  type: Book
+  title: Harry Potter and the Order of the Phoenix
+  author: Rowling, J. K.
+  volume: 5
+  page-total: 768
+  date: 2003-06-21
+
+electronic:
+  type: Web
+  title: Ishkur's Guide to Electronic Music
+  serial-number: v2.5
+  author: Ishkur
+  url: http://www.techno.org/electronic-music-guide/
+
+某本参考书:
+  type: Book
+  title: 这是某本参考书的标题
+  author: 作者1
