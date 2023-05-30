@@ -60,7 +60,7 @@ impl ArtifactJsBuilder {
                 }
                 _ => {
                     return Err(error_once!(
-                        "unknown key for {}",
+                        "unknown kv for",
                         field: field,
                         key: k,
                         val: format!("{:?}", v)
@@ -492,15 +492,16 @@ impl ArtifactJsBuilder {
         &self,
         val: JsValue,
     ) -> ZResult<typst_ts_core::artifact::geom::PathItem> {
-        let (t, sub) = self.parse_tv_expected("path_item", val)?;
+        let (t, sub) = self.parse_tv("path_item", val)?;
         match t.as_str() {
             "MoveTo" => Ok(typst_ts_core::artifact::geom::PathItem::MoveTo(
-                self.parse_point(sub)?,
+                self.parse_point(sub.ok_or_else(|| error_once!("path_item.MoveTo.v"))?)?,
             )),
             "LineTo" => Ok(typst_ts_core::artifact::geom::PathItem::LineTo(
-                self.parse_point(sub)?,
+                self.parse_point(sub.ok_or_else(|| error_once!("path_item.LineTo.v"))?)?,
             )),
             "CubicTo" => Ok({
+                let sub = sub.ok_or_else(|| error_once!("path_item.CubicTo.v"))?;
                 let a_sub = self.into_array("path_item.CubicTo", sub)?;
                 typst_ts_core::artifact::geom::PathItem::CubicTo(
                     self.parse_point(a_sub.get(0))?,

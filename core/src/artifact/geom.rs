@@ -308,6 +308,7 @@ impl From<Path> for TypstPath {
 /// An item in a bezier path.
 #[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "t", content = "v")]
 pub enum PathItem {
     MoveTo(Point),
     LineTo(Point),
@@ -435,6 +436,7 @@ impl From<Length> for TypstLength {
 /// The length of a dash in a line dash pattern
 #[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(tag = "t", content = "v")]
 pub enum DashLength<T> {
     LineWidth,
     Length(T),
