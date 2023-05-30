@@ -16,9 +16,9 @@ use super::core::ItemArray;
 use super::core::ItemRef;
 use super::core::ItemRefKind;
 use super::core::Lang;
+use super::core::PaintRef;
 use super::core::SpanRef;
 use super::geom::Em;
-use super::geom::Paint;
 use super::geom::Shape;
 use super::geom::Transform;
 use super::geom::{Abs, Point, Size};
@@ -106,7 +106,7 @@ pub struct TextItem {
     /// The font size.
     pub size: Abs,
     /// Glyph color.
-    pub fill: Paint,
+    pub fill: PaintRef,
     /// The natural language of the text.
     pub lang: ItemRef<Lang>,
     /// The item's plain text.

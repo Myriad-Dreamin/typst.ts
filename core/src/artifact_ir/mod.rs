@@ -39,6 +39,8 @@ pub struct ArtifactHeader {
     pub metadata: ArtifactMeta,
     /// The page frames.
     pub pages: ItemArray<Frame>,
+    /// The paint offset in buffer
+    pub paint_offset: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -49,13 +51,18 @@ pub struct Artifact {
     pub metadata: ArtifactMeta,
     /// The page frames.
     pub pages: ItemArray<Frame>,
+    /// The paint offset in buffer
+    pub paint_offset: u64,
 }
 
 pub struct ArtifactBuilder {
     fonts: Vec<(TypstFontInfo, LigatureResolver)>,
     font_map: HashMap<TypstFontInfo, FontRef>,
+    paint_def_cnt: i32,
+    paint_def_id_map: HashMap<TypstPaint, PaintRef>,
     with_ligature: bool,
     buffer: Vec<u8>,
+    paint_buffer: Vec<u8>,
     stat: std::collections::BTreeMap<ItemRefKind, u32>, // for debug
 }
 
@@ -66,6 +73,9 @@ impl ArtifactBuilder {
             font_map: HashMap::default(),
             with_ligature: true,
             buffer: vec![],
+            paint_buffer: vec![],
+            paint_def_cnt: 0,
+            paint_def_id_map: HashMap::default(),
             stat: Default::default(),
         }
     }
@@ -87,6 +97,19 @@ impl ArtifactBuilder {
         }
     }
 
+    pub fn push_bytes(&mut self, s: &[u8]) -> ItemRef<Vec<u8>> {
+        let idx = self.buffer.len();
+        self.buffer.extend_from_slice(s);
+        self.stat
+            .entry(ItemRefKind::Bytes)
+            .and_modify(|e| *e += s.len() as u32);
+        ItemRef {
+            id: idx as u32,
+            kind: ItemRefKind::Bytes,
+            phantom: std::marker::PhantomData,
+        }
+    }
+
     pub fn push_string(&mut self, s: String) -> ItemRef<String> {
         let idx = self.buffer.len();
         self.buffer.extend_from_slice(s.as_bytes());
@@ -102,18 +125,67 @@ impl ArtifactBuilder {
         }
     }
 
-    pub fn push_array<T: Sized + HasItemRefKind>(&mut self, arr: &Vec<T>) -> ItemArray<T> {
+    pub fn push_array<T: Sized + HasItemRefKind>(
+        &mut self,
+        arr: impl ExactSizeIterator<Item = T>,
+    ) -> ItemArray<T> {
         let start_idx = self.buffer.len();
+        let arr_len = arr.len();
         for ele in arr {
-            self.push_item(ele);
+            self.push_item(&ele);
         }
         self.stat
             .entry(T::ITEM_REF_KIND)
-            .and_modify(|e| *e += (arr.len() * std::mem::size_of::<T>()) as u32);
+            .and_modify(|e| *e += (arr_len * std::mem::size_of::<T>()) as u32);
         ItemArray {
             start: start_idx as u32,
-            size: arr.len() as u32,
+            size: arr_len as u32,
             phantom: std::marker::PhantomData,
+        }
+    }
+
+    pub fn write_paint(&mut self, paint: &TypstPaint) -> PaintRef {
+        if let Some(paint_ref) = self.paint_def_id_map.get(paint) {
+            return *paint_ref;
+        }
+
+        let paint_ref = self.paint_def_cnt;
+        self.paint_def_cnt += 1;
+        self.paint_def_id_map.insert(paint.clone(), paint_ref);
+
+        match paint {
+            TypstPaint::Solid(color) => {
+                self.paint_buffer.push(b's');
+                match color {
+                    TypstColor::Luma(luma_color) => {
+                        self.paint_buffer.push(b'l');
+                        self.paint_buffer.push(luma_color.0);
+                    }
+                    TypstColor::Rgba(rgba_color) => {
+                        self.paint_buffer.push(b'r');
+                        self.paint_buffer.push(rgba_color.r);
+                        self.paint_buffer.push(rgba_color.g);
+                        self.paint_buffer.push(rgba_color.b);
+                        self.paint_buffer.push(rgba_color.a);
+                    }
+                    TypstColor::Cmyk(cmyk_color) => {
+                        self.paint_buffer.push(b'c');
+                        self.paint_buffer.push(cmyk_color.c);
+                        self.paint_buffer.push(cmyk_color.m);
+                        self.paint_buffer.push(cmyk_color.y);
+                        self.paint_buffer.push(cmyk_color.k);
+                    }
+                };
+            }
+        }
+
+        paint_ref
+    }
+
+    pub fn write_optional_paint(&mut self, paint: &Option<TypstPaint>) -> PaintRef {
+        match paint {
+            Some(paint) => self.write_paint(paint),
+            None => -1,
         }
     }
 
@@ -161,20 +233,21 @@ impl ArtifactBuilder {
             self.write_ligature_covered(text.font.ttf(), idx, text);
         }
 
-        let glyphs: Vec<_> = text
-            .clone()
+        let glyphs = text
             .glyphs
-            .into_iter()
-            .map(|g| self.write_glyph(g))
-            .collect();
+            .iter()
+            .map(|g| self.write_glyph(g.clone()))
+            .collect::<Vec<_>>()
+            .into_iter();
+        let glyphs = self.push_array(glyphs);
 
         TextItem {
             font: idx,
             size: text.size.into(),
-            fill: text.fill.clone().into(),
+            fill: self.write_paint(&text.fill),
             lang: self.push_string(text.lang.as_str().to_string()),
             text: self.push_string(text.text.as_str().to_string()),
-            glyphs: self.push_array(&glyphs),
+            glyphs,
         }
     }
 
@@ -187,7 +260,7 @@ impl ArtifactBuilder {
     }
 
     pub fn write_image(&mut self, image: &TypstImage) -> Image {
-        let data = self.push_array(&image.data().to_vec());
+        let data = self.push_bytes(image.data().as_slice());
         let format = self.push_string(
             match image.format() {
                 ImageFormat::Raster(r) => match r {
@@ -203,6 +276,7 @@ impl ArtifactBuilder {
         );
         return Image {
             data,
+            data_len: image.data().len() as u64,
             format,
             width: image.width(),
             height: image.height(),
@@ -210,11 +284,62 @@ impl ArtifactBuilder {
         };
     }
 
+    pub fn write_dash_pattern<
+        OutT,
+        OutDT: HasItemRefKind,
+        InT: Into<OutT>,
+        InDT: Into<OutDT> + Clone,
+    >(
+        &mut self,
+        dash_pattern: TypstDashPattern<InT, InDT>,
+    ) -> DashPattern<OutT, OutDT> {
+        DashPattern {
+            array: self.push_array::<OutDT>(dash_pattern.array.iter().map(|v| (*v).clone().into())),
+            phase: dash_pattern.phase.into(),
+        }
+    }
+
+    pub fn write_stroke(&mut self, stroke: &TypstStroke) -> Stroke {
+        Stroke {
+            paint: self.write_paint(&stroke.paint),
+            thickness: stroke.thickness.into(),
+            line_cap: stroke.line_cap.clone().into(),
+            line_join: stroke.line_join.clone().into(),
+            dash_pattern: stroke
+                .dash_pattern
+                .clone()
+                .map(|d| self.write_dash_pattern(d)),
+            miter_limit: stroke.miter_limit.into(),
+        }
+    }
+
+    pub fn write_path(&mut self, path: &TypstPath) -> Path {
+        let items = path.0.iter().map(|item| item.clone().into());
+
+        Path(self.push_array(items))
+    }
+
+    pub fn write_geometry(&mut self, geometry: &TypstGeometry) -> Geometry {
+        match geometry {
+            TypstGeometry::Line(p) => Geometry::Line((*p).into()),
+            TypstGeometry::Rect(s) => Geometry::Rect((*s).into()),
+            TypstGeometry::Path(p) => Geometry::Path(self.write_path(p)),
+        }
+    }
+
+    pub fn write_shape(&mut self, shape: &TypstShape) -> Shape {
+        Shape {
+            geometry: self.write_geometry(&shape.geometry),
+            fill: self.write_optional_paint(&shape.fill),
+            stroke: shape.stroke.as_ref().map(|s| self.write_stroke(s)),
+        }
+    }
+
     pub fn write_frame_item(&mut self, item: &TypstFrameItem) -> FrameItem {
         match item {
             TypstFrameItem::Text(text) => FrameItem::Text(self.write_text_item(text)),
             TypstFrameItem::Group(group) => FrameItem::Group(self.write_group_item(group)),
-            TypstFrameItem::Shape(shape, _) => FrameItem::Shape(shape.clone().into()),
+            TypstFrameItem::Shape(shape, _) => FrameItem::Shape(self.write_shape(shape)),
             TypstFrameItem::Image(image, size, _) => {
                 FrameItem::Image(self.write_image(image), (*size).into())
             }
@@ -245,7 +370,7 @@ impl ArtifactBuilder {
     }
 
     pub fn write_frame(&mut self, frame: &TypstFrame) -> Frame {
-        let items: Vec<_> = frame
+        let items = frame
             .items()
             .map(|item| {
                 let fi = self.write_frame_item(&item.1);
@@ -254,7 +379,8 @@ impl ArtifactBuilder {
                     pos: item.0.into(),
                 }
             })
-            .collect();
+            .collect::<Vec<_>>()
+            .into_iter();
         Frame {
             size: Axes {
                 x: frame.width().into(),
@@ -265,7 +391,7 @@ impl ArtifactBuilder {
             } else {
                 None
             },
-            items: self.push_array(&items),
+            items: self.push_array(items),
         }
     }
 
@@ -288,12 +414,15 @@ impl From<&TypstDocument> for Artifact {
             .pages
             .iter()
             .map(|f| builder.write_frame(f))
-            .collect();
-        let pages = builder.push_array(&raw_pages);
+            .collect::<Vec<_>>()
+            .into_iter();
+        let pages = builder.push_array(raw_pages);
 
         println!("stat: {:?}\n", builder.stat);
 
-        let buffer = builder.build_buffer();
+        let mut buffer = builder.build_buffer();
+        let paint_offset = buffer.len() as u64;
+        buffer.append(&mut builder.paint_buffer);
         let metadata = ArtifactMeta {
             build: Some(BuildInfo {
                 compiler: "typst-ts-cli".to_string(),
@@ -323,6 +452,7 @@ impl From<&TypstDocument> for Artifact {
             buffer,
             metadata,
             pages,
+            paint_offset,
         }
     }
 }
@@ -330,6 +460,7 @@ impl From<&TypstDocument> for Artifact {
 pub struct TypeDocumentParser<'a> {
     sp: Locator<'static>,
     fonts: Vec<TypstFont>,
+    paints: Vec<TypstPaint>,
     buffer: &'a [u8],
 }
 
@@ -338,6 +469,7 @@ impl<'a> TypeDocumentParser<'a> {
         Self {
             sp: Locator::new(),
             fonts: Vec::new(),
+            paints: Vec::new(),
             buffer: buffer.as_ref(),
         }
     }
@@ -371,7 +503,7 @@ impl<'a> TypeDocumentParser<'a> {
         TypstTextItem {
             font: self.get_font(text.font),
             size: text.size.into(),
-            fill: text.fill.clone().into(),
+            fill: self.paints[text.fill as usize].clone(),
             lang: TypstLang::from_str(text.lang.as_str(self.buffer)).unwrap(),
             text: text.text.as_str(self.buffer).into(),
             glyphs: text
@@ -384,7 +516,10 @@ impl<'a> TypeDocumentParser<'a> {
 
     pub fn parse_image(&mut self, image: &Image) -> TypstImage {
         TypstImage::new_raw(
-            image.data.to_vec(self.buffer).into(),
+            image
+                .data
+                .as_slice(self.buffer, image.data_len as usize)
+                .into(),
             match image.format.as_str(self.buffer) {
                 "png" => ImageFormat::Raster(RasterFormat::Png),
                 "jpg" => ImageFormat::Raster(RasterFormat::Jpg),
@@ -406,12 +541,80 @@ impl<'a> TypeDocumentParser<'a> {
         Some(self.sp.locate(loc_hash))
     }
 
+    pub fn parse_geometry(&mut self, geometry: &Geometry) -> TypstGeometry {
+        match geometry {
+            Geometry::Line(p) => TypstGeometry::Line((*p).into()),
+            Geometry::Rect(s) => TypstGeometry::Rect((*s).into()),
+            Geometry::Path(p) => TypstGeometry::Path({
+                let items: Vec<_> =
+                    p.0.iter(self.buffer)
+                        .map(|item| item.clone().into())
+                        .collect();
+                TypstPath(items)
+            }),
+        }
+    }
+
+    // pub fn write_dash_pattern<OutT, OutDT: HasItemRefKind, InT: Into<OutT>, InDT: Into<OutDT>>(
+    //     &mut self,
+    //     dash_pattern: TypstDashPattern<InT, InDT>,
+    // ) -> DashPattern<OutT, OutDT> {
+    //     DashPattern {
+    //         array: self.push_array::<OutDT>(dash_pattern.array.iter().map(|v| &(*v).into())),
+    //         phase: dash_pattern.phase.into(),
+    //     }
+    // }
+    pub fn parse_dash_pattern<
+        OutT,
+        OutDT,
+        InT: Into<OutT>,
+        InDT: Into<OutDT> + Clone + HasItemRefKind,
+    >(
+        &mut self,
+        dash_pattern: DashPattern<InT, InDT>,
+    ) -> TypstDashPattern<OutT, OutDT> {
+        TypstDashPattern {
+            array: dash_pattern
+                .array
+                .iter(self.buffer)
+                .map(|v| (*v).clone().into())
+                .collect(),
+            phase: dash_pattern.phase.into(),
+        }
+    }
+
+    pub fn parse_stroke(&mut self, stroke: &Stroke) -> TypstStroke {
+        TypstStroke {
+            paint: self.paints[stroke.paint as usize].clone(),
+            thickness: stroke.thickness.into(),
+            line_cap: stroke.line_cap.clone().into(),
+            line_join: stroke.line_join.clone().into(),
+            dash_pattern: stroke
+                .dash_pattern
+                .clone()
+                .map(|d| self.parse_dash_pattern(d)),
+            miter_limit: stroke.miter_limit.into(),
+        }
+    }
+
+    pub fn parse_shape(&mut self, shape: &Shape) -> TypstShape {
+        TypstShape {
+            geometry: self.parse_geometry(&shape.geometry),
+            fill: if shape.fill < 0 {
+                None
+            } else {
+                Some(self.paints[shape.fill as usize].clone())
+            },
+            stroke: shape.stroke.as_ref().map(|s| self.parse_stroke(s)),
+        }
+    }
+
     pub fn parse_frame_item(&mut self, item: &FrameItem) -> TypstFrameItem {
         match item {
             FrameItem::Group(group) => TypstFrameItem::Group(self.parse_group_item(group)),
             FrameItem::Text(text) => TypstFrameItem::Text(self.parse_text_item(text)),
             FrameItem::Shape(shape) => {
-                TypstFrameItem::Shape(shape.clone().into(), TypstSpan::detached())
+                TypstFrameItem::Shape(self.parse_shape(shape), TypstSpan::detached())
             }
             FrameItem::Image(image, size) => TypstFrameItem::Image(
                 self.parse_image(image),
@@ -481,6 +684,43 @@ impl Artifact {
             builder.fonts.push(font_resolver.font(idx).unwrap());
         }
 
+        let paint_buffer = &self.buffer[self.paint_offset as usize..];
+        let mut paints = vec![];
+        let mut t = 0;
+        while t < paint_buffer.len() {
+            match paint_buffer[t] {
+                b's' => {
+                    t += 1;
+                    let color = match paint_buffer[t] {
+                        b'l' => {
+                            t += 1;
+                            let color = paint_buffer[t];
+                            TypstColor::Luma(TypstLumaColor(color))
+                        }
+                        b'r' => {
+                            // this should remove extra bound checks
+                            let rgba = &paint_buffer[t + 1..t + 5];
+                            t += 5;
+                            TypstColor::Rgba(TypstRgbaColor::new(
+                                rgba[0], rgba[1], rgba[2], rgba[3],
+                            ))
+                        }
+                        b'c' => {
+                            let cmyk = &paint_buffer[t + 1..t + 5];
+                            t += 5;
+                            TypstColor::Cmyk(TypstCmykColor::new(
+                                cmyk[0], cmyk[1], cmyk[2], cmyk[3],
+                            ))
+                        }
+                        _ => panic!("Unknown color type in region0 {}", paint_buffer.len()),
+                    };
+                    paints.push(TypstPaint::Solid(color));
+                }
+                _ => panic!("Unknown paint type in region1 {}", paint_buffer.len()),
+            }
+        }
+        builder.paints = paints;
+
         let pages = self
             .pages
             .iter(&self.buffer)
@@ -507,30 +747,28 @@ mod tests {
     fn build_simple_refs(builder: &mut ArtifactBuilder) -> ItemArray<FrameItem> {
         let lang_str = builder.push_string("en".into());
         let text_src = builder.push_string("W".to_string());
-        let glyphs = builder.push_array(&vec![Glyph {
-            id: 45,
-            x_advance: TypstEm::one().into(),
-            x_offset: TypstEm::one().into(),
-            span: ((), 0),
-            range: 0..1,
-        }]);
+        let glyphs = builder.push_array(
+            vec![Glyph {
+                id: 45,
+                x_advance: TypstEm::one().into(),
+                x_offset: TypstEm::one().into(),
+                span: ((), 0),
+                range: 0..1,
+            }]
+            .into_iter(),
+        );
 
         let item1 = builder.push_item(&FrameItem::Text(TextItem {
             font: 77,
             size: TypstAbs::zero().into(),
-            fill: Paint::Solid(Color::Rgba(RgbaColor {
-                r: 3,
-                g: 4,
-                b: 5,
-                a: 6,
-            })),
+            fill: 1,
             text: text_src,
             lang: lang_str,
             glyphs,
         }));
 
         let item2 = builder.push_item(&FrameItem::Shape(Shape {
-            fill: None,
+            fill: -1,
             stroke: None,
             geometry: Geometry::Rect(Size {
                 x: TypstAbs::zero().into(),
