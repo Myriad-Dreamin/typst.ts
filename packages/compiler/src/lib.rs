@@ -170,7 +170,7 @@ impl TypstCompiler {
                     metadata: artifact_header.metadata,
                     pages: artifact_header.pages,
                     buffer: artifact_data,
-                    paint_offset: artifact_header.paint_offset,
+                    offsets: artifact_header.offsets,
                 }
                 .to_document(&self.world.font_resolver),
             )),

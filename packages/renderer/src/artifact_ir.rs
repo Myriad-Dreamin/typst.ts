@@ -139,7 +139,7 @@ pub fn ir_artifact_from_bin(artifact_content: &[u8]) -> ZResult<Artifact> {
     Ok(Artifact {
         metadata: header.metadata,
         pages: header.pages,
-        paint_offset: header.paint_offset,
+        offsets: header.offsets,
         buffer,
     })
 }

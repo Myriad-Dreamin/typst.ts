@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::mem::size_of;
 use std::slice;
 use std::str::FromStr;
 
@@ -40,7 +41,7 @@ pub struct ArtifactHeader {
     /// The page frames.
     pub pages: ItemArray<Frame>,
     /// The paint offset in buffer
-    pub paint_offset: u64,
+    pub offsets: (u64, u64),
 }
 
 #[derive(Clone, Debug)]
@@ -52,17 +53,22 @@ pub struct Artifact {
     /// The page frames.
     pub pages: ItemArray<Frame>,
     /// The paint offset in buffer
-    pub paint_offset: u64,
+    pub offsets: (u64, u64),
 }
+
+type GlyphShapeOpaque = [u8; size_of::<GlyphShape>()];
 
 pub struct ArtifactBuilder {
     fonts: Vec<(TypstFontInfo, LigatureResolver)>,
     font_map: HashMap<TypstFontInfo, FontRef>,
+    glyph_shape_cnt: u32,
+    glyph_def_id_map: HashMap<GlyphShapeOpaque, GlyphShapeRef>,
     paint_def_cnt: i32,
-    paint_def_id_map: HashMap<TypstPaint, PaintRef>,
+    paint_shape_id_map: HashMap<TypstPaint, PaintRef>,
     with_ligature: bool,
     buffer: Vec<u8>,
     paint_buffer: Vec<u8>,
+    glyph_buffer: Vec<u8>,
     stat: std::collections::BTreeMap<ItemRefKind, u32>, // for debug
 }
 
@@ -74,8 +80,11 @@ impl ArtifactBuilder {
             with_ligature: true,
             buffer: vec![],
             paint_buffer: vec![],
+            glyph_buffer: vec![],
             paint_def_cnt: 0,
-            paint_def_id_map: HashMap::default(),
+            paint_shape_id_map: HashMap::default(),
+            glyph_shape_cnt: 0,
+            glyph_def_id_map: HashMap::default(),
             stat: Default::default(),
         }
     }
@@ -145,13 +154,13 @@ impl ArtifactBuilder {
     }
 
     pub fn write_paint(&mut self, paint: &TypstPaint) -> PaintRef {
-        if let Some(paint_ref) = self.paint_def_id_map.get(paint) {
+        if let Some(paint_ref) = self.paint_shape_id_map.get(paint) {
             return *paint_ref;
         }
 
         let paint_ref = self.paint_def_cnt;
         self.paint_def_cnt += 1;
-        self.paint_def_id_map.insert(paint.clone(), paint_ref);
+        self.paint_shape_id_map.insert(paint.clone(), paint_ref);
 
         match paint {
             TypstPaint::Solid(color) => {
@@ -205,13 +214,34 @@ impl ArtifactBuilder {
         font_ref
     }
 
-    pub fn write_glyph(&mut self, glyph: TypstGlyph) -> Glyph {
-        Glyph {
+    pub fn write_glyph_shape(&mut self, glyph: GlyphShape) -> GlyphShapeRef {
+        let transmuted =
+            unsafe { std::mem::transmute::<GlyphShape, [u8; size_of::<GlyphShape>()]>(glyph) };
+
+        if let Some(glyph_ref) = self.glyph_def_id_map.get(&transmuted) {
+            return *glyph_ref;
+        }
+
+        let glyph_ref = self.glyph_shape_cnt;
+        self.glyph_shape_cnt += 1;
+        self.glyph_buffer.extend_from_slice(&transmuted);
+        self.glyph_def_id_map.insert(transmuted, glyph_ref);
+
+        glyph_ref
+    }
+
+    pub fn write_glyph(&mut self, glyph: TypstGlyph) -> GlyphItem {
+        let glyph_shape_ref = self.write_glyph_shape(GlyphShape {
             id: glyph.id,
+            range_width: glyph.range.len() as u16,
             x_advance: glyph.x_advance.into(),
             x_offset: glyph.x_offset.into(),
+        });
+
+        GlyphItem {
+            shape: glyph_shape_ref,
             span: ((), glyph.span.1), // todo
-            range: glyph.range,
+            range_start: glyph.range.start,
         }
     }
 
@@ -423,6 +453,12 @@ impl From<&TypstDocument> for Artifact {
         let mut buffer = builder.build_buffer();
         let paint_offset = buffer.len() as u64;
         buffer.append(&mut builder.paint_buffer);
+        let glyph_offset = buffer.len();
+        // round up to 8 bytes
+        let glyph_offset = (glyph_offset + 7) & !7;
+        buffer.resize(glyph_offset, 0);
+        let glyph_offset = glyph_offset as u64;
+        buffer.append(&mut builder.glyph_buffer);
         let metadata = ArtifactMeta {
             build: Some(BuildInfo {
                 compiler: "typst-ts-cli".to_string(),
@@ -452,7 +488,7 @@ impl From<&TypstDocument> for Artifact {
             buffer,
             metadata,
             pages,
-            paint_offset,
+            offsets: (paint_offset, glyph_offset),
         }
     }
 }
@@ -462,15 +498,17 @@ pub struct TypeDocumentParser<'a> {
     fonts: Vec<TypstFont>,
     paints: Vec<TypstPaint>,
     buffer: &'a [u8],
+    shapes: &'a [GlyphShape],
 }
 
 impl<'a> TypeDocumentParser<'a> {
-    pub fn new(buffer: &'a Vec<u8>) -> Self {
+    pub fn new(buffer: &'a Vec<u8>, shapes: &'a [GlyphShape]) -> Self {
         Self {
             sp: Locator::new(),
             fonts: Vec::new(),
             paints: Vec::new(),
             buffer: buffer.as_ref(),
+            shapes,
         }
     }
 
@@ -481,13 +519,14 @@ impl<'a> TypeDocumentParser<'a> {
         panic!("Out of bounds font index {}", font);
     }
 
-    pub fn parse_glyph(&mut self, glyph: &Glyph) -> TypstGlyph {
+    pub fn parse_glyph(&mut self, glyph: &GlyphItem) -> TypstGlyph {
+        let shape = &self.shapes[glyph.shape as usize];
         TypstGlyph {
-            id: glyph.id,
-            x_advance: glyph.x_advance.into(),
-            x_offset: glyph.x_offset.into(),
+            id: shape.id,
+            x_advance: shape.x_advance.into(),
+            x_offset: shape.x_offset.into(),
             span: (TypstSpan::detached(), glyph.span.1),
-            range: glyph.range.clone(),
+            range: glyph.range_start..(glyph.range_start + shape.range_width),
         }
     }
 
@@ -667,7 +706,17 @@ impl<'a> TypeDocumentParser<'a> {
 
 impl Artifact {
     pub fn to_document<T: FontResolver>(self, font_resolver: &T) -> TypstDocument {
-        let mut builder = TypeDocumentParser::new(&self.buffer);
+        let (paint_offset, glyph_offset) = self.offsets;
+
+        let glyph_shapes = &self.buffer[glyph_offset as usize..];
+        let glyph_shapes = unsafe {
+            std::slice::from_raw_parts(
+                glyph_shapes.as_ptr() as *const GlyphShape,
+                glyph_shapes.len() / std::mem::size_of::<GlyphShape>(),
+            )
+        };
+
+        let mut builder = TypeDocumentParser::new(&self.buffer, glyph_shapes);
         for font in self.metadata.fonts {
             let font_info = TypstFontInfo {
                 family: font.family,
@@ -684,7 +733,7 @@ impl Artifact {
             builder.fonts.push(font_resolver.font(idx).unwrap());
         }
 
-        let paint_buffer = &self.buffer[self.paint_offset as usize..];
+        let paint_buffer = &self.buffer[paint_offset as usize..glyph_offset as usize];
         let mut paints = vec![];
         let mut t = 0;
         while t < paint_buffer.len() {
@@ -716,6 +765,7 @@ impl Artifact {
                     };
                     paints.push(TypstPaint::Solid(color));
                 }
+                0 => break,
                 _ => panic!("Unknown paint type in region1 {}", paint_buffer.len()),
             }
         }
@@ -747,16 +797,14 @@ mod tests {
     fn build_simple_refs(builder: &mut ArtifactBuilder) -> ItemArray<FrameItem> {
         let lang_str = builder.push_string("en".into());
         let text_src = builder.push_string("W".to_string());
-        let glyphs = builder.push_array(
-            vec![Glyph {
-                id: 45,
-                x_advance: TypstEm::one().into(),
-                x_offset: TypstEm::one().into(),
-                span: ((), 0),
-                range: 0..1,
-            }]
-            .into_iter(),
-        );
+        let glyph = builder.write_glyph(TypstGlyph {
+            id: 45,
+            x_advance: TypstEm::one(),
+            x_offset: TypstEm::one(),
+            span: (TypstSpan::detached(), 0),
+            range: 0..1,
+        });
+        let glyphs = builder.push_array(vec![glyph].into_iter());
 
         let item1 = builder.push_item(&FrameItem::Text(TextItem {
             font: 77,
@@ -796,7 +844,7 @@ mod tests {
         if let Some(FrameItem::Text(x)) = it.next() {
             assert_eq!(x.glyphs.len(), 1);
             if let Some(x) = x.glyphs.iter(&builder.buffer).next() {
-                assert_eq!(x.range, 0..1);
+                assert_eq!(x.range_start, 0);
             } else {
                 panic!("Expected glyph item");
             }

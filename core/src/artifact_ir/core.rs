@@ -13,6 +13,7 @@ pub use typst_library::prelude::TextItem as TypstTextItem;
 use super::geom::Abs;
 
 pub type SpanRef = ();
+pub type GlyphShapeRef = u32;
 pub type FontRef = u32;
 pub type PaintRef = i32;
 pub type Lang = String;

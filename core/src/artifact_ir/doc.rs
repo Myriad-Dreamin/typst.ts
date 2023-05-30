@@ -1,5 +1,4 @@
 use std::num::NonZeroUsize;
-use std::ops::Range;
 
 use serde::Deserialize;
 use serde::Serialize;
@@ -11,6 +10,7 @@ pub use typst::doc::Meta as TypstMeta;
 
 use super::core::EcoString;
 use super::core::FontRef;
+use super::core::GlyphShapeRef;
 use super::core::HasItemRefKind;
 use super::core::ItemArray;
 use super::core::ItemRef;
@@ -81,20 +81,29 @@ pub struct GroupItem {
 
 #[repr(C)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Glyph {
+pub struct GlyphShape {
     /// The glyph's index in the font.
     pub id: u16,
+    /// The glyph's range width (utf-8).
+    pub range_width: u16,
     /// The advance width of the glyph.
     pub x_advance: Em,
     /// The horizontal offset of the glyph.
     pub x_offset: Em,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct GlyphItem {
+    /// shape reference
+    pub shape: GlyphShapeRef,
     /// The source code location of the text.
     pub span: (SpanRef, u16),
     /// The range of the glyph in its item's text.
-    pub range: Range<u16>,
+    pub range_start: u16,
 }
 
-impl HasItemRefKind for Glyph {
+impl HasItemRefKind for GlyphItem {
     const ITEM_REF_KIND: ItemRefKind = ItemRefKind::Glyph;
 }
 
@@ -112,7 +121,7 @@ pub struct TextItem {
     /// The item's plain text.
     pub text: ItemRef<String>,
     /// The glyphs.
-    pub glyphs: ItemArray<Glyph>,
+    pub glyphs: ItemArray<GlyphItem>,
 }
 
 /// A link destination.
