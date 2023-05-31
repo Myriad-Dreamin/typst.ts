@@ -445,6 +445,13 @@ impl BrowserFontSearcher {
         add(include_bytes!(
             "../../../../assets/fonts/DejaVuSansMono-Bold.ttf"
         ));
+        add(include_bytes!(
+            "../../../../assets/fonts/Roboto-Regular.ttf"
+        ));
+        #[cfg(feature = "cjk")]
+        add(include_bytes!(
+            "../../../../assets/fonts/NotoSerifCJKsc-Regular.otf"
+        ));
     }
 
     pub async fn add_web_fonts(&mut self, fonts: js_sys::Array) -> ZResult<()> {
