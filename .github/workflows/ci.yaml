@@ -26,6 +26,7 @@ jobs:
         run: |
           cargo build --release --bin typst-ts-cli
           cargo run --bin typst-ts-dev-server -- compile --compiler release corpus math
+          cargo run --bin typst-ts-dev-server -- compile --compiler release corpus text
           cargo run --bin typst-ts-dev-server -- compile --compiler release corpus visualize
       - name: Build
         run: cargo build --workspace
