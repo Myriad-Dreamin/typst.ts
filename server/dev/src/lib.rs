@@ -16,8 +16,23 @@ pub struct Opts {
 )]
 #[allow(clippy::large_enum_variant)]
 pub enum Subcommands {
+    Compile(CompileOpts),
+}
+
+#[derive(Debug, Parser)]
+#[clap(
+    about = "Commands about compile alias for typst.",
+    after_help = "",
+    next_display_order = None
+)]
+#[allow(clippy::large_enum_variant)]
+pub struct CompileOpts {
     #[clap(subcommand)]
-    Compile(CompileSubCommands),
+    pub sub: CompileSubCommands,
+
+    /// Using underlying compiler to compile corpus.
+    #[clap(long, default_value = "")]
+    pub compiler: String,
 }
 
 #[derive(Debug, Subcommand)]
@@ -38,4 +53,8 @@ pub struct CompileCorpusArgs {
     /// The name of Corpus.
     #[clap(value_name = "NAME", index = 1)]
     pub name: String,
+
+    /// Output formats.
+    #[clap(long)]
+    pub format: Vec<String>,
 }
