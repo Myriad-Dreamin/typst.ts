@@ -102,6 +102,7 @@ impl LigatureResolver {
 
         let ligature = LigatureResolver::lookup(face, id).unwrap();
 
+        // todo: this does not works on emoji
         let c = ligature
             .components
             .into_iter()
