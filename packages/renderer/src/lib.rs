@@ -56,7 +56,7 @@ pub struct TypstRenderer {
 
 #[wasm_bindgen]
 impl TypstRenderer {
-    pub fn render_page_to_canvas(
+    pub async fn render_page_to_canvas(
         &mut self,
         ses: &RenderSession,
         canvas: &web_sys::CanvasRenderingContext2d,
@@ -75,7 +75,7 @@ impl TypstRenderer {
             ),
         )?;
 
-        worker.render(&ses.doc.pages[page_off])?;
+        worker.render(&ses.doc.pages[page_off]).await?;
 
         serde_wasm_bindgen::to_value(&worker.content)
             .map_err(map_into_err::<JsValue, _>("Renderer.EncodeContent"))
