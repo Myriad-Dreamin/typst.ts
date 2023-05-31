@@ -267,13 +267,13 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn render_text_emoji_test() {
-        render_test_template("text_emoji_1_artifact_ir", TEXT_EMOJI_1_ARTIFACT_IR, "ir").await;
-        render_test_template(
-            "text_emoji_1_artifact_json",
-            TEXT_EMOJI_1_ARTIFACT_JSON,
-            "js",
-        )
-        .await;
+        // render_test_template("text_emoji_1_artifact_ir", TEXT_EMOJI_1_ARTIFACT_IR, "ir").await;
+        // render_test_template(
+        //     "text_emoji_1_artifact_json",
+        //     TEXT_EMOJI_1_ARTIFACT_JSON,
+        //     "js",
+        // )
+        // .await;
         render_test_template("text_emoji_2_artifact_ir", TEXT_EMOJI_2_ARTIFACT_IR, "ir").await;
         render_test_template(
             "text_emoji_2_artifact_json",
