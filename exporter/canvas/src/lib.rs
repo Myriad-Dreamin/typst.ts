@@ -34,8 +34,6 @@ pub struct CanvasRenderTask<'a> {
     height_px: u32,
     raw_height: f32,
 
-    session_id: String,
-
     pub content: TextContent,
 
     font_map: HashMap<FontInfo, u32>,
@@ -83,8 +81,6 @@ impl<'a> CanvasRenderTask<'a> {
             width_px,
             height_px,
             raw_height: height_px as f32 / pixel_per_pt,
-
-            session_id,
 
             content: TextContent::default(),
             font_map: HashMap::default(),
@@ -155,17 +151,18 @@ impl<'a> CanvasRenderTask<'a> {
     }
 
     /// Directly render a frame into the canvas.
-    pub fn render(&mut self, frame: &Frame) -> ZResult<()> {
+    pub async fn render(&mut self, frame: &Frame) -> ZResult<()> {
         self.canvas.set_fill_style(&self.fill.to_css().into());
         self.canvas
             .fill_rect(0., 0., self.width_px as f64, self.height_px as f64);
 
         let ts = sk::Transform::from_scale(self.pixel_per_pt, self.pixel_per_pt);
-        self.render_frame(ts, frame)
+        self.render_frame(ts, frame).await
     }
 
     /// Render a frame into the canvas.
-    fn render_frame(&mut self, ts: sk::Transform, frame: &Frame) -> ZResult<()> {
+    #[async_recursion::async_recursion(?Send)]
+    async fn render_frame(&mut self, ts: sk::Transform, frame: &Frame) -> ZResult<()> {
         let mut text_flow = TextFlow::new();
 
         for (pos, item) in frame.items() {
@@ -175,7 +172,7 @@ impl<'a> CanvasRenderTask<'a> {
 
             match item {
                 FrameItem::Group(group) => {
-                    self.render_group(ts, group)?;
+                    self.render_group(ts, group).await?;
                 }
                 FrameItem::Text(text) => {
                     let (next_text_flow, has_eol) = TextFlow::notify(text_flow, &ts, text);
@@ -186,13 +183,13 @@ impl<'a> CanvasRenderTask<'a> {
                         self.append_text_break(ts, text)
                     }
 
-                    self.render_text(ts, text);
+                    self.render_text(ts, text).await;
                 }
                 FrameItem::Shape(shape, _) => {
                     self.render_shape(ts, shape)?;
                 }
                 FrameItem::Image(image, size, _) => {
-                    self.render_image(ts, image, *size);
+                    self.render_image(ts, image, *size).await;
                 }
                 FrameItem::Meta(meta, _) => match meta {
                     Meta::Link(_) => {}
@@ -207,7 +204,8 @@ impl<'a> CanvasRenderTask<'a> {
     }
 
     /// Render a group frame with optional transform and clipping into the canvas.
-    fn render_group(&mut self, ts: sk::Transform, group: &GroupItem) -> ZResult<()> {
+    #[async_recursion::async_recursion(?Send)]
+    async fn render_group(&mut self, ts: sk::Transform, group: &GroupItem) -> ZResult<()> {
         let ts = ts.pre_concat(group.transform.into());
 
         let _clip_guard = if group.clips {
@@ -235,6 +233,6 @@ impl<'a> CanvasRenderTask<'a> {
             None
         };
 
-        self.render_frame(ts, &group.frame)
+        self.render_frame(ts, &group.frame).await
     }
 }

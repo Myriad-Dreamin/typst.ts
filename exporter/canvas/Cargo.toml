@@ -14,10 +14,26 @@ comemo.workspace = true
 tiny-skia.workspace = true
 ttf-parser.workspace = true
 flate2.workspace = true
+once_cell.workspace = true
 data-url = "0.2.0"
+async-recursion = "1.0.4"
+wasm-bindgen-futures.workspace = true
 
 wasm-bindgen.workspace = true
 js-sys.workspace = true
-web-sys = { workspace = true, features = ["console", "CanvasRenderingContext2d", "Path2d", "Blob", "ImageData", "HtmlImageElement", "HtmlElement", "Url", "BlobPropertyBag"] }
+web-sys = { workspace = true, features = [
+    "console",
+    "CanvasRenderingContext2d",
+    "Path2d",
+    "Blob",
+    "ImageData",
+    "HtmlImageElement",
+    "HtmlElement",
+    "Url",
+    "BlobPropertyBag",
+    "DomParser",
+    "SupportedType",
+    "HtmlCollection",
+] }
 
 typst-ts-core.workspace = true

@@ -241,7 +241,7 @@ impl TypstCompiler {
     }
 
     // todo: move to renderer
-    pub fn render_page_to_canvas(
+    pub async fn render_page_to_canvas(
         &mut self,
         canvas: &web_sys::CanvasRenderingContext2d,
         doc: &DocumentReference,
@@ -261,7 +261,7 @@ impl TypstCompiler {
             ),
         )?;
 
-        worker.render(&doc.pages[page_off])?;
+        worker.render(&doc.pages[page_off]).await?;
         serde_wasm_bindgen::to_value(&worker.content)
             .map_err(map_into_err::<JsValue, _>("Compiler.EncodeContent"))
     }
