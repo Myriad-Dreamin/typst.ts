@@ -36,9 +36,14 @@ pollster = { workspace = true, optional = true }
 log = { workspace = true, optional = true }
 
 wasm-bindgen = { workspace = true, optional = true }
-wasm-bindgen-futures =  { workspace = true, optional = true }
+wasm-bindgen-futures = { workspace = true, optional = true }
 js-sys = { workspace = true, optional = true }
-web-sys = { workspace = true, optional = true, features = ["console", "Window", "Blob", "ImageData"] }
+web-sys = { workspace = true, optional = true, features = [
+    "console",
+    "Window",
+    "Blob",
+    "ImageData",
+] }
 
 base64.workspace = true
 rustc-hash = "1.1.0"
@@ -54,8 +59,23 @@ typst-ts-core.workspace = true
 serde.workspace = true
 
 [features]
-system = ["dep:memmap2", "dep:dirs", "dep:walkdir", "dep:same-file", "dep:notify", "dep:log"]
-__web = ["dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:js-sys", "dep:web-sys", "dep:serde-wasm-bindgen", "dep:pollster"]
+cjk = []
+system = [
+    "dep:memmap2",
+    "dep:dirs",
+    "dep:walkdir",
+    "dep:same-file",
+    "dep:notify",
+    "dep:log",
+]
+__web = [
+    "dep:wasm-bindgen",
+    "dep:wasm-bindgen-futures",
+    "dep:js-sys",
+    "dep:web-sys",
+    "dep:serde-wasm-bindgen",
+    "dep:pollster",
+]
 web-render = ["__web"]
 browser-compile = ["__web", "web-render"]
 browser-embedded-fonts = ["__web"]

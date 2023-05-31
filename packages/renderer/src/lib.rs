@@ -269,6 +269,18 @@ mod tests {
         builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
             "../../../assets/fonts/NewCMMath-Regular.otf"
         )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../../assets/fonts/Roboto-Regular.ttf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../../assets/fonts/NotoSerifCJKsc-Regular.otf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../../assets/fonts/TwitterColorEmoji.ttf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../../assets/fonts/NotoColorEmoji.ttf"
+        )));
 
         pollster::block_on(builder.build()).unwrap()
     }

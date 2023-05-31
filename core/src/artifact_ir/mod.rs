@@ -23,9 +23,6 @@ use image::*;
 
 pub mod core;
 use self::core::*;
-use self::ligature::LigatureResolver;
-
-pub(crate) mod ligature;
 
 pub use crate::artifact::core::ArtifactMeta;
 pub type FontInfo = crate::artifact::font::FontInfo;
@@ -59,13 +56,12 @@ pub struct Artifact {
 type GlyphShapeOpaque = [u8; size_of::<GlyphShape>()];
 
 pub struct ArtifactBuilder {
-    fonts: Vec<(TypstFontInfo, LigatureResolver)>,
+    fonts: Vec<TypstFontInfo>,
     font_map: HashMap<TypstFontInfo, FontRef>,
     glyph_shape_cnt: u32,
     glyph_def_id_map: HashMap<GlyphShapeOpaque, GlyphShapeRef>,
     paint_def_cnt: i32,
     paint_shape_id_map: HashMap<TypstPaint, PaintRef>,
-    with_ligature: bool,
     buffer: Vec<u8>,
     paint_buffer: Vec<u8>,
     glyph_buffer: Vec<u8>,
@@ -77,7 +73,6 @@ impl ArtifactBuilder {
         Self {
             fonts: vec![],
             font_map: HashMap::default(),
-            with_ligature: true,
             buffer: vec![],
             paint_buffer: vec![],
             glyph_buffer: vec![],
@@ -209,8 +204,7 @@ impl ArtifactBuilder {
 
         let font_ref = self.fonts.len() as u32;
         self.font_map.insert(font.info().clone(), font_ref);
-        self.fonts
-            .push((font.info().clone(), LigatureResolver::new(font.ttf())));
+        self.fonts.push(font.info().clone());
         font_ref
     }
 
@@ -245,23 +239,8 @@ impl ArtifactBuilder {
         }
     }
 
-    pub fn write_ligature_covered(
-        &mut self,
-        face: &ttf_parser::Face<'_>,
-        font: FontRef,
-        text: &TypstTextItem,
-    ) {
-        let font = &mut self.fonts[font as usize];
-        for glyph in &text.glyphs {
-            font.1.resolve(face, text, glyph);
-        }
-    }
-
     pub fn write_text_item(&mut self, text: &TypstTextItem) -> TextItem {
         let idx = self.write_font(&text.font);
-        if self.with_ligature {
-            self.write_ligature_covered(text.font.ttf(), idx, text);
-        }
 
         let glyphs = text
             .glyphs
@@ -467,17 +446,13 @@ impl From<&TypstDocument> for Artifact {
             fonts: builder
                 .fonts
                 .into_iter()
-                .map(|f| {
-                    let (info, res) = f;
-
-                    FontInfo {
-                        family: info.family,
-                        variant: info.variant,
-                        flags: info.flags.bits(),
-                        coverage: FontCoverage::from_vec(vec![]),
-                        coverage_hash: get_font_coverage_hash(&info.coverage),
-                        ligatures: res.into_covered(),
-                    }
+                .map(|info| FontInfo {
+                    family: info.family,
+                    variant: info.variant,
+                    flags: info.flags.bits(),
+                    coverage: FontCoverage::from_vec(info.coverage.iter().take(1).collect()),
+                    coverage_hash: get_font_coverage_hash(&info.coverage),
+                    ligatures: vec![],
                 })
                 .collect(),
             title: typst_doc.title.as_ref().map(|s| s.to_string()),
@@ -726,11 +701,20 @@ impl Artifact {
             };
 
             // todo: font alternative
+            let mut alternative_text = 'c';
+            if let Some(codepoint) = font_info.coverage.iter().next() {
+                alternative_text = std::char::from_u32(codepoint).unwrap();
+            };
             let idx = font_resolver
                 .font_book()
-                .select_fallback(Some(&font_info), font.variant, "0")
+                .select_fallback(
+                    Some(&font_info),
+                    font.variant,
+                    &alternative_text.to_string(),
+                )
                 .unwrap();
-            builder.fonts.push(font_resolver.font(idx).unwrap());
+            let font = font_resolver.font(idx).unwrap();
+            builder.fonts.push(font);
         }
 
         let paint_buffer = &self.buffer[paint_offset as usize..glyph_offset as usize];

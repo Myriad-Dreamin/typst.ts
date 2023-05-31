@@ -7,10 +7,7 @@ use std::{
 
 use memmap2::Mmap;
 use sha2::{Digest, Sha256};
-use typst::{
-    font::{Font, FontBook, FontInfo},
-    util::Buffer,
-};
+use typst::font::{FontBook, FontInfo};
 use typst_ts_core::{
     build_info,
     font::{
@@ -146,27 +143,18 @@ impl SystemFontSearcher {
 
     /// Add fonts that are embedded in the binary.
     pub fn add_embedded(&mut self) {
-        let mut add = |bytes: &'static [u8]| {
-            let buffer = Buffer::from_static(bytes);
-            for (_, font) in Font::iter(buffer).enumerate() {
-                self.book.push(font.info().clone());
-                self.fonts.push(FontSlot::with_value(Some(font)));
+        let program_dir = std::env::current_exe().unwrap();
+        let mut program_dir = program_dir.parent().unwrap().to_path_buf();
+        while let Some(dir) = program_dir.parent() {
+            let path = dir.to_path_buf();
+            for vanilla_dir in &["fonts", "assets/fonts", "asset/fonts"] {
+                let fonts_dir = path.join(vanilla_dir);
+                if fonts_dir.exists() {
+                    self.search_dir(&fonts_dir);
+                }
             }
-        };
-
-        // Embed default fonts.
-        add(include_bytes!("../../../assets/fonts/LinLibertine_R.ttf"));
-        add(include_bytes!("../../../assets/fonts/LinLibertine_RB.ttf"));
-        add(include_bytes!("../../../assets/fonts/LinLibertine_RBI.ttf"));
-        add(include_bytes!("../../../assets/fonts/LinLibertine_RI.ttf"));
-        add(include_bytes!("../../../assets/fonts/NewCMMath-Book.otf"));
-        add(include_bytes!(
-            "../../../assets/fonts/NewCMMath-Regular.otf"
-        ));
-        add(include_bytes!("../../../assets/fonts/DejaVuSansMono.ttf"));
-        add(include_bytes!(
-            "../../../assets/fonts/DejaVuSansMono-Bold.ttf"
-        ));
+            program_dir = path;
+        }
     }
 
     pub fn search_system(&mut self) {
