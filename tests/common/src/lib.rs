@@ -36,4 +36,29 @@ pub mod embedded_artifact {
         include_bytes!("../../../fuzzers/corpora/visualize/polygon_1.artifact.json");
     pub const POLYGON_1_ARTIFACT_IR: &[u8] =
         include_bytes!("../../../fuzzers/corpora/visualize/polygon_1.artifact.tir.bin");
+
+    pub const SHAPE_ASPECT_1_ARTIFACT_JSON: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/visualize/shape_aspect_1.artifact.json");
+    pub const SHAPE_ASPECT_1_ARTIFACT_IR: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/visualize/shape_aspect_1.artifact.tir.bin");
+    pub const SHAPE_ASPECT_2_ARTIFACT_JSON: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/visualize/shape_aspect_2.artifact.json");
+    pub const SHAPE_ASPECT_2_ARTIFACT_IR: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/visualize/shape_aspect_2.artifact.tir.bin");
+    pub const SHAPE_ASPECT_3_ARTIFACT_JSON: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/visualize/shape_aspect_3.artifact.json");
+    pub const SHAPE_ASPECT_3_ARTIFACT_IR: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/visualize/shape_aspect_3.artifact.tir.bin");
+    pub const SHAPE_ASPECT_4_ARTIFACT_JSON: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/visualize/shape_aspect_4.artifact.json");
+    pub const SHAPE_ASPECT_4_ARTIFACT_IR: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/visualize/shape_aspect_4.artifact.tir.bin");
+    pub const SHAPE_ASPECT_5_ARTIFACT_JSON: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/visualize/shape_aspect_5.artifact.json");
+    pub const SHAPE_ASPECT_5_ARTIFACT_IR: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/visualize/shape_aspect_5.artifact.tir.bin");
+    pub const SHAPE_ASPECT_6_ARTIFACT_JSON: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/visualize/shape_aspect_6.artifact.json");
+    pub const SHAPE_ASPECT_6_ARTIFACT_IR: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/visualize/shape_aspect_6.artifact.tir.bin");
 }

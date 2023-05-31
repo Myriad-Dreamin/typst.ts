@@ -24,11 +24,9 @@ jobs:
         run: cargo clippy --workspace --all-targets
       - name: Prepare artifacts
         run: |
-          cargo run --bin typst-ts-cli -- compile --workspace fuzzers/corpora/math/ --entry fuzzers/corpora/math/main.typ --format=json --format=ir
-          cargo run --bin typst-ts-cli -- compile --workspace fuzzers/corpora/visualize/ --entry fuzzers/corpora/visualize/line_1.typ --format=json --format=ir
-          cargo run --bin typst-ts-cli -- compile --workspace fuzzers/corpora/visualize/ --entry fuzzers/corpora/visualize/line_2.typ --format=json --format=ir
-          cargo run --bin typst-ts-cli -- compile --workspace fuzzers/corpora/visualize/ --entry fuzzers/corpora/visualize/path_1.typ --format=json --format=ir
-          cargo run --bin typst-ts-cli -- compile --workspace fuzzers/corpora/visualize/ --entry fuzzers/corpora/visualize/polygon_1.typ --format=json --format=ir
+          cargo build --release --bin typst-ts-cli
+          cargo run --bin typst-ts-dev-server -- compile --compiler release corpus math
+          cargo run --bin typst-ts-dev-server -- compile --compiler release corpus visualize
       - name: Build
         run: cargo build --workspace
       - name: Test

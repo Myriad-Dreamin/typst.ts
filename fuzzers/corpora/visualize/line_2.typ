@@ -2,7 +2,7 @@
 
 // Test the angle argument and positioning.
 
-#set page(fill: rgb("0B1026"))
+#set page(fill: rgb("0B1026"), width: auto, height: auto)
 #set line(stroke: white)
 
 #let star(size, ..args) = box(width: size, height: size)[
