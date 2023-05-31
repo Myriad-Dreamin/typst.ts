@@ -13,16 +13,13 @@ use typst_ts_core::{Error, TextContent};
 use utils::{js_random64, AbsExt, CanvasStateGuard, ToCssExt};
 use web_sys::CanvasRenderingContext2d;
 
-pub(crate) mod utils;
-
 pub(crate) mod content;
+pub(crate) mod utils;
 pub(crate) use content::*;
-
+pub(crate) mod image;
+pub(crate) mod shape;
 pub(crate) mod svg;
-
-pub(crate) mod render_image;
-pub(crate) mod render_shape;
-pub(crate) mod render_text;
+pub(crate) mod text;
 
 pub struct CanvasRenderTask<'a> {
     canvas: &'a CanvasRenderingContext2d,
