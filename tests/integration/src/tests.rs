@@ -115,6 +115,48 @@ mod tests {
         //         "sha256:b6a2363f54b7cd2fb58660d16b74d1c2931f76c724e87d51edc441a08310a6f1"),
         // );
 
+        check_bundle_facts!(
+            compiler.compile("visualize", "visualize/shape_aspect_1.typ"),
+            // origin_pdf_hash
+            |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
+                "sha256:a0289f41ec2f4202d2493eae027b5cc98b991d56b69be995f38e3e517aa4480e"),
+        );
+
+        check_bundle_facts!(
+            compiler.compile("visualize", "visualize/shape_aspect_2.typ"),
+            // origin_pdf_hash
+            |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
+                "sha256:3bc8a7216a5b8ef851dcf8766a750c581e2fffee6eba5e58eab947f9e72adf9d"),
+        );
+
+        check_bundle_facts!(
+            compiler.compile("visualize", "visualize/shape_aspect_3.typ"),
+            // origin_pdf_hash
+            |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
+                "sha256:4bddcc9236aaff4cebf1f36ad16baa8abe4cbb36ba01d6cc4428105a6acaae51"),
+        );
+
+        check_bundle_facts!(
+            compiler.compile("visualize", "visualize/shape_aspect_4.typ"),
+            // origin_pdf_hash
+            |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
+                "sha256:65472e6c14c510305714e39912be43a23c936ac550ad750c36e9e223c77efc2f"),
+        );
+
+        check_bundle_facts!(
+            compiler.compile("visualize", "visualize/shape_aspect_5.typ"),
+            // origin_pdf_hash
+            |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
+                "sha256:6e914b8908e90a69d37a16ffcd27132efe986eeca6bf3c196e671bfe04ebbb3a"),
+        );
+
+        check_bundle_facts!(
+            compiler.compile("visualize", "visualize/shape_aspect_6.typ"),
+            // origin_pdf_hash
+            |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
+                "sha256:4abd19dbcb71a051d02bb929fdf71c5372960a2c64c4bf2ddb711618fca57658"),
+        );
+
         fn bundle_to_facts(bundle: &ArtifactBundle) -> Facts {
             let json_artifact = std::fs::read(&bundle.json).unwrap();
             let json_artifact = serde_json::from_slice::<typst_ts_core::Artifact>(&json_artifact)
@@ -319,6 +361,152 @@ mod tests {
         name: polygon_1_artifact_json
         data_content_phash: "phash-gradient:AAAAAAAAIAAAiAAAYAAA4gIAiAAAgAcAwAcAYAAA4AIAYAAA0AURmAEAAPg/DPA/MAAAGBAJsAQAALABcBAAgPwDwPEDODAA"
         text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: shape_aspect_1_artifact_ir
+        data_content_phash: "phash-gradient:AAAAAAAAAAgABFoABjAABhAABhAABhAABhAwBhBCBhCwlhKpljQtljXsBjTZhjSNBjStBjSlFjSlBjCMFjSNBEjSAQAAAAjC"
+        text_content_hash: "sha256:5da5da474534aac328d56672de9236f5246664aeb03244b3432fbefe9daf2878"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: shape_aspect_1_artifact_json
+        data_content_phash: "phash-gradient:AAAAAAAAAAgABFoABjAABhAABhAABhAABhAwBhBCBhCwlhKpljQtljXsBjTZhjSNBjStBjSlFjSlBjCMFjSNBEjSAQAAAAjC"
+        text_content_hash: "sha256:5da5da474534aac328d56672de9236f5246664aeb03244b3432fbefe9daf2878"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: shape_aspect_2_artifact_ir
+        data_content_phash: "phash-gradient:AABAADBAAkBACbRATTZJFKEgNC1MZKdRRIAgHEVpDGRJDGRADCRODCROjGVMDGZAjGNrjMMkRKAwrTRZSTQsAoBQAAAAAABA"
+        text_content_hash: "sha256:2ab9062c19279ff04df938b822b023cbef3f0d8c09d7b956781f58aff9ee86af"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: shape_aspect_2_artifact_json
+        data_content_phash: "phash-gradient:AABAADBAAkBACbRATTZJFKEgNC1MZKdRRIAgHEVpDGRJDGRADCRODCROjGVMDGZAjGNrjMMkRKAwrTRZSTQsAoBQAAAAAABA"
+        text_content_hash: "sha256:2ab9062c19279ff04df938b822b023cbef3f0d8c09d7b956781f58aff9ee86af"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: shape_aspect_3_artifact_ir
+        data_content_phash: "phash-gradient:AAAAAAAAAAAAYAMAgAQAaAsAJAcAhhQAxBQAxAwAxAwAxC0AxC0AxAwAxAwAxBQAhhQAJAcAaAsAgAQAYAMAAAAAAAAAAAAA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: shape_aspect_3_artifact_json
+        data_content_phash: "phash-gradient:AAAAAAAAAAAAYAMAgAQAaAsAJAcAhhQAxBQAxAwAxAwAxC0AxC0AxAwAxAwAxBQAhhQAJAcAaAsAgAQAYAMAAAAAAAAAAAAA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: shape_aspect_4_artifact_ir
+        data_content_phash: "phash-gradient:AFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: shape_aspect_4_artifact_json
+        data_content_phash: "phash-gradient:AFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoAAFoA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: shape_aspect_5_artifact_ir
+        data_content_phash: "phash-gradient:AAAAAAAAAAAAKAEAEgIAKQUAKQsA1AoA1AoA1AoA1AoAKQsAKQUAEgIAKAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: shape_aspect_5_artifact_json
+        data_content_phash: "phash-gradient:AAAAAAAAAAAAKAEAEgIAKQUAKQsA1AoA1AoA1AoA1AoAKQsAKQUAEgIAKAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        // todo: double page
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: shape_aspect_6_artifact_ir
+        data_content_phash: "phash-gradient:AAAAAAAAABAAAAAAAVoAKTIACTAAKTIAKTAAKTAAKTAAKTAAKTAAKTAAKTAAKTAAKTIACTAAKTIAAVoAAAAAABAAAAAAAAAA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: shape_aspect_6_artifact_json
+        data_content_phash: "phash-gradient:AAAAAAAAABAAAAAAAVoAKTIACTAAKTIAKTAAKTAAKTAAKTAAKTAAKTAAKTAAKTAAKTIACTAAKTIAAVoAAAAAABAAAAAAAAAA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        // todo: the size of cjk font file is quite big
+        // check_canvas_render_test_point!(@r###"
+        // ---
+        // name: text_chinese_artifact_ir
+        // data_content_phash: "phash-gradient:KKprrKlq6Kxm0KTmZKpaZIrbNGI0pNI0tZI1qBI1rDy1bIpqLJpjqFU2qFUlVFS1hIkalIkasGoasKpStWhmpGhmiCoGqZYE"
+        // text_content_hash: "sha256:08633df6b8b06027fee154dccd3d530fd53db36851c597621c8e8b65e52b028b"
+        // "###);
+        // check_canvas_render_test_point!(@r###"
+        // ---
+        // name: text_chinese_artifact_json
+        // data_content_phash: "phash-gradient:KKprrKlq6Kxm0KTmZKpaZIrbNGI0pNI0tZI1qBI1rDy1bIpqLJpjqFU2qFUlVFS1hIkalIkasGoasKpStWhmpGhmiCoGqZYE"
+        // text_content_hash: "sha256:08633df6b8b06027fee154dccd3d530fd53db36851c597621c8e8b65e52b028b"
+        // "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_deco_1_artifact_ir
+        data_content_phash: "phash-gradient:AQAAVMntXEvqqSACLGlFaHkAAgAAdFsAaBsChAAAUMoGUKMWKAoAmFwEQBsADBQESLQWQCQGJIEDxHYLmGYDdAAAxAICAAAA"
+        text_content_hash: "sha256:b6cd67635583e3986fe23c75e130a51494f1682b390d08186efcf949a4d34a23"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_deco_1_artifact_json
+        data_content_phash: "phash-gradient:AQAAVMntXEvqqSACLGlFaHkAAgAAdFsAaBsChAAAUMoGUKMWKAoAmFwEQBsADBQESLQWQCQGJIEDxHYLmGYDdAAAxAICAAAA"
+        text_content_hash: "sha256:b6cd67635583e3986fe23c75e130a51494f1682b390d08186efcf949a4d34a23"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_deco_2_artifact_ir
+        data_content_phash: "phash-gradient:AAAAAAAEAAAAEBIMRAAswIssNMsskJosAQAscFIRpEEJYNUWZPcWYOcGZGAoAZAS5AZtRBZtRBhzxBp5pBlgAQQRAAAAAAAA"
+        text_content_hash: "sha256:ad356092282c0389bf6aebee517125c4c1faf68edb4e0ef0a9b8b41333c11454"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_deco_2_artifact_json
+        data_content_phash: "phash-gradient:AAAAAAAEAAAAEBIMRAAswIssNMsskJosAQAscFIRpEEJYNUWZPcWYOcGZGAoAZAS5AZtRBZtRBhzxBp5pBlgAQQRAAAAAAAA"
+        text_content_hash: "sha256:ad356092282c0389bf6aebee517125c4c1faf68edb4e0ef0a9b8b41333c11454"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_deco_3_artifact_ir
+        data_content_phash: "phash-gradient:AAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAhAMAlAsAMAsAtAMAKAMAZAEAlAsAlAMAZAsAVAsAAAAAAAEAAAAAAAAAAAAAAAAA"
+        text_content_hash: "sha256:39d1a4c5927c6248493727c5b08ffc36f22665ec3dc7581e247232970ca4edad"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_deco_3_artifact_json
+        data_content_phash: "phash-gradient:AAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAhAMAlAsAMAsAtAMAKAMAZAEAlAsAlAMAZAsAVAsAAAAAAAEAAAAAAAAAAAAAAAAA"
+        text_content_hash: "sha256:39d1a4c5927c6248493727c5b08ffc36f22665ec3dc7581e247232970ca4edad"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_emoji_1_artifact_ir
+        data_content_phash: "phash-gradient:AABAwKdFQLZFyIdFwINFAABCAABAQIBBSKBFSKBFQKBBAABAgMFBAAZAAPZBANFFANJCAABBAIBBAABAQCJLCCdLCCZLANhD"
+        text_content_hash: "sha256:e96d18327a60513e2375c2dfa12d17872c97304df451630781965a6ae8031b45"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_emoji_1_artifact_json
+        data_content_phash: "phash-gradient:AABAwKdFQLZFyIdFwINFAABCAABAQIBBSKBFSKBFQKBBAABAgMFBAAZAAPZBANFFANJCAABBAIBBAABAQCJLCCdLCCZLANhD"
+        text_content_hash: "sha256:e96d18327a60513e2375c2dfa12d17872c97304df451630781965a6ae8031b45"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_emoji_2_artifact_ir
+        data_content_phash: "phash-gradient:AABAAABAAABAAABAAAhBAABAkJljAk4DYdp5cZhxlZhVkphRFJhTFJhTFMhTlItTkosykos2hKNGkKFWgKRWYABIAAAAAABA"
+        text_content_hash: "sha256:8e46fa236bdfb74c3259b7a186191a5febfafd5c3e38f5b2e110931114486ade"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_emoji_2_artifact_json
+        data_content_phash: "phash-gradient:AABAAABAAABAAABAAAhBAABAkJljAk4DYdp5cZhxlZhVkphRFJhTFJhTFMhTlItTkosykos2hKNGkKFWgKRWYABIAAAAAABA"
+        text_content_hash: "sha256:8e46fa236bdfb74c3259b7a186191a5febfafd5c3e38f5b2e110931114486ade"
         "###);
 
         let done = test_point_iter.next();

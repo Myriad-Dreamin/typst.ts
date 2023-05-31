@@ -167,4 +167,67 @@ mod tests {
     fn render_polygon_1_json_test() {
         render_test_template("polygon_1_artifact_json", POLYGON_1_ARTIFACT_JSON, "js");
     }
+    #[wasm_bindgen_test]
+    fn render_shape_aspect() {
+        render_test_template(
+            "shape_aspect_1_artifact_ir",
+            SHAPE_ASPECT_1_ARTIFACT_IR,
+            "ir",
+        );
+        render_test_template(
+            "shape_aspect_1_artifact_json",
+            SHAPE_ASPECT_1_ARTIFACT_JSON,
+            "js",
+        );
+        render_test_template(
+            "shape_aspect_2_artifact_ir",
+            SHAPE_ASPECT_2_ARTIFACT_IR,
+            "ir",
+        );
+        render_test_template(
+            "shape_aspect_2_artifact_json",
+            SHAPE_ASPECT_2_ARTIFACT_JSON,
+            "js",
+        );
+        render_test_template(
+            "shape_aspect_3_artifact_ir",
+            SHAPE_ASPECT_3_ARTIFACT_IR,
+            "ir",
+        );
+        render_test_template(
+            "shape_aspect_3_artifact_json",
+            SHAPE_ASPECT_3_ARTIFACT_JSON,
+            "js",
+        );
+        render_test_template(
+            "shape_aspect_4_artifact_ir",
+            SHAPE_ASPECT_4_ARTIFACT_IR,
+            "ir",
+        );
+        render_test_template(
+            "shape_aspect_4_artifact_json",
+            SHAPE_ASPECT_4_ARTIFACT_JSON,
+            "js",
+        );
+        render_test_template(
+            "shape_aspect_5_artifact_ir",
+            SHAPE_ASPECT_5_ARTIFACT_IR,
+            "ir",
+        );
+        render_test_template(
+            "shape_aspect_5_artifact_json",
+            SHAPE_ASPECT_5_ARTIFACT_JSON,
+            "js",
+        );
+        render_test_template(
+            "shape_aspect_6_artifact_ir",
+            SHAPE_ASPECT_6_ARTIFACT_IR,
+            "ir",
+        );
+        render_test_template(
+            "shape_aspect_6_artifact_json",
+            SHAPE_ASPECT_6_ARTIFACT_JSON,
+            "js",
+        );
+    }
 }
