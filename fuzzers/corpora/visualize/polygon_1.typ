@@ -1,4 +1,4 @@
-#set page(width: 50pt)
+#set page(width: 50pt, height: auto)
 #set polygon(stroke: 0.75pt, fill: blue)
 
 // These are not visible, but should also not give an error

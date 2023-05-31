@@ -1,6 +1,6 @@
 // Test lines.
 
-#set page(height: 60pt)
+#set page(height: 60pt, width: 100pt)
 #box({
   set line(stroke: 0.75pt)
   place(line(end: (0.4em, 0pt)))

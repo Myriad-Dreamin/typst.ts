@@ -83,14 +83,14 @@ mod tests {
             compiler.compile("visualize", "visualize/line_1.typ"),
             // origin_pdf_hash
             |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
-                r"sha256:f371c03a46ab2823d788525be63673b1a9ac25e526f8b4cdf00a04183da466ca"),
+                "sha256:11e85e7280f5f7e4ac0726a2b181e7806f934654aea732bc65538b8a167b0f3c"),
         );
 
         check_bundle_facts!(
             compiler.compile("visualize", "visualize/line_2.typ"),
             // origin_pdf_hash
             |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
-                "sha256:77b4787c8cc10afcf7e23378c13c0ebd0e5829ad884b587695a3d83eb3111c07"),
+                "sha256:2998b95ee4117f0277849eea9e72b2a535d31e16b98703814e3a539a586dedc3"),
         );
 
         check_bundle_facts!(
@@ -104,7 +104,7 @@ mod tests {
             compiler.compile("visualize", "visualize/polygon_1.typ"),
             // origin_pdf_hash
             |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
-                "sha256:f67821e7b1bf0d170e21e304267846937445070f4bab8a3dbbfec46f67efec73"),
+                "sha256:cf52d8b5714a727217ef159423acc1c6f8848c1ef9f95ffbd3135a242e420799"),
         );
 
         // todo: does not preserve outline
@@ -259,25 +259,25 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         ---
         name: line_1_artifact_ir
-        data_content_phash: "phash-gradient:AQAAAAAACwAACwAACgAALAAADAAAAAAABQAABAAAGQAAZgAAmAAAcQIAxAkAECcAQIwAgDEDAMIEAAgLACALAIAEAAACAAAA"
+        data_content_phash: "phash-gradient:JAEEAAIAJAEEJIMURAYEQRMXskAHBAAABAACCQAANgAATAAAMQEA4gYAiAkAICYAQMwAADEBAMQCAIgFACABAEAAAAABAAAA"
         text_content_hash: "sha256:ab3d9568e6406923f98df52e373d11781efb1fc4d86eb55fba06d2e1467f8e44"
         "###);
         check_canvas_render_test_point!(@r###"
         ---
         name: line_1_artifact_json
-        data_content_phash: "phash-gradient:AQAAAAAACwAACwAACgAALAAADAAAAAAABQAABAAAGQAAZgAAmAAAcQIAxAkAECcAQIwAgDEDAMIEAAgLACALAIAEAAACAAAA"
+        data_content_phash: "phash-gradient:JAEEAAIAJAEEJIMURAYEQRMXskAHBAAABAACCQAANgAATAAAMQEA4gYAiAkAICYAQMwAADEBAMQCAIgFACABAEAAAAABAAAA"
         text_content_hash: "sha256:ab3d9568e6406923f98df52e373d11781efb1fc4d86eb55fba06d2e1467f8e44"
         "###);
         check_canvas_render_test_point!(@r###"
         ---
         name: line_2_artifact_ir
-        data_content_phash: "phash-gradient:AAAAAAQAAJYAAJYAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACA"
+        data_content_phash: "phash-gradient:AAAAAAAAAAAAAAAAAAAAAAAAAAgAAJIBgE0CgE0CgE0CgE0CgE0CgE0CgE0CgE0CABIBAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
         "###);
         check_canvas_render_test_point!(@r###"
         ---
         name: line_2_artifact_json
-        data_content_phash: "phash-gradient:AAAAAAQAAJYAAJYAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACA"
+        data_content_phash: "phash-gradient:AAAAAAAAAAAAAAAAAAAAAAAAAAgAAJIBgE0CgE0CgE0CgE0CgE0CgE0CgE0CgE0CABIBAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
         "###);
         check_canvas_render_test_point!(@r###"
@@ -310,14 +310,14 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         ---
         name: polygon_1_artifact_ir
-        data_content_phash: "phash-gradient:IAAA4BcA4AMAwPE/GOA/wPABwPADAAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        data_content_phash: "phash-gradient:AAAAAAAAIAAAiAAAYAAA4gIAiAAAgAcAwAcAYAAA4AIAYAAA0AURmAEAAPg/DPA/MAAAGBAJsAQAALABcBAAgPwDwPEDODAA"
         text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
         "###);
         // todo: canvas does not paint stroke
         check_canvas_render_test_point!(@r###"
         ---
         name: polygon_1_artifact_json
-        data_content_phash: "phash-gradient:IAAA4BcA4AMAwPE/GOA/wPABwPADAAAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        data_content_phash: "phash-gradient:AAAAAAAAIAAAiAAAYAAA4gIAiAAAgAcAwAcAYAAA4AIAYAAA0AURmAEAAPg/DPA/MAAAGBAJsAQAALABcBAAgPwDwPEDODAA"
         text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
         "###);
 
