@@ -61,4 +61,29 @@ pub mod embedded_artifact {
         include_bytes!("../../../fuzzers/corpora/visualize/shape_aspect_6.artifact.json");
     pub const SHAPE_ASPECT_6_ARTIFACT_IR: &[u8] =
         include_bytes!("../../../fuzzers/corpora/visualize/shape_aspect_6.artifact.tir.bin");
+
+    pub const TEXT_CHINESE_ARTIFACT_JSON: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/text/chinese.artifact.json");
+    pub const TEXT_CHINESE_ARTIFACT_IR: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/text/chinese.artifact.tir.bin");
+    pub const TEXT_DECO_1_ARTIFACT_JSON: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/text/deco_1.artifact.json");
+    pub const TEXT_DECO_1_ARTIFACT_IR: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/text/deco_1.artifact.tir.bin");
+    pub const TEXT_DECO_2_ARTIFACT_JSON: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/text/deco_2.artifact.json");
+    pub const TEXT_DECO_2_ARTIFACT_IR: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/text/deco_2.artifact.tir.bin");
+    pub const TEXT_DECO_3_ARTIFACT_JSON: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/text/deco_3.artifact.json");
+    pub const TEXT_DECO_3_ARTIFACT_IR: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/text/deco_3.artifact.tir.bin");
+    pub const TEXT_EMOJI_1_ARTIFACT_JSON: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/text/emoji_1.artifact.json");
+    pub const TEXT_EMOJI_1_ARTIFACT_IR: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/text/emoji_1.artifact.tir.bin");
+    pub const TEXT_EMOJI_2_ARTIFACT_JSON: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/text/emoji_2.artifact.json");
+    pub const TEXT_EMOJI_2_ARTIFACT_IR: &[u8] =
+        include_bytes!("../../../fuzzers/corpora/text/emoji_2.artifact.tir.bin");
 }

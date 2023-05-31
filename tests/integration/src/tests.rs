@@ -157,6 +157,44 @@ mod tests {
                 "sha256:4abd19dbcb71a051d02bb929fdf71c5372960a2c64c4bf2ddb711618fca57658"),
         );
 
+        check_bundle_facts!(
+            compiler.compile("text", "text/chinese.typ"),
+            // origin_pdf_hash
+            |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
+                "sha256:2da42395330a6bd2114c9b70dc21447b32613fdbcb06f523e885603331bdf3ad"),
+        );
+        check_bundle_facts!(
+            compiler.compile("text", "text/deco_1.typ"),
+            // origin_pdf_hash
+            |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
+                "sha256:5759095c93bb58ecb31468cc3cfb32e0e02a65a82331415d7f93fe76ea40be1f"),
+        );
+        // todo: figure out why rgba does not work
+        check_bundle_facts!(
+            compiler.compile("text", "text/deco_2.typ"),
+            // origin_pdf_hash
+            |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
+                "sha256:75a06b1b425917b6486b27eaba2db1bb42efc1ae280dd80f8fc766d34db0209b"),
+        );
+        check_bundle_facts!(
+            compiler.compile("text", "text/deco_3.typ"),
+            // origin_pdf_hash
+            |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
+                "sha256:7c67e578dd76f0571558c127253ecb64586d93481198bf094fff900974e90a92"),
+        );
+        check_bundle_facts!(
+            compiler.compile("text", "text/emoji_1.typ"),
+            // origin_pdf_hash
+            |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
+                "sha256:a22cc8f238cc29b43c0b705fe65fd72ed0eb2a457f67e1f0cd279e562b29212f"),
+        );
+        check_bundle_facts!(
+            compiler.compile("text", "text/emoji_2.typ"),
+            // origin_pdf_hash
+            |origin_pdf_hash: &str, e: &str| insta::assert_snapshot!(origin_pdf_hash, e, @
+                "sha256:9c5e3b9668a1dfa72a5206be82074edb2ed89ebfb3c18bfdbc5d0a8360968925"),
+        );
+
         fn bundle_to_facts(bundle: &ArtifactBundle) -> Facts {
             let json_artifact = std::fs::read(&bundle.json).unwrap();
             let json_artifact = serde_json::from_slice::<typst_ts_core::Artifact>(&json_artifact)
@@ -434,6 +472,79 @@ mod tests {
         name: shape_aspect_6_artifact_json
         data_content_phash: "phash-gradient:AAAAAAAAABAAAAAAAVoAKTIACTAAKTIAKTAAKTAAKTAAKTAAKTAAKTAAKTAAKTAAKTIACTAAKTIAAVoAAAAAABAAAAAAAAAA"
         text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        // todo: the size of cjk font file is quite big
+        // check_canvas_render_test_point!(@r###"
+        // ---
+        // name: text_chinese_artifact_ir
+        // data_content_phash: "phash-gradient:KKprrKlq6Kxm0KTmZKpaZIrbNGI0pNI0tZI1qBI1rDy1bIpqLJpjqFU2qFUlVFS1hIkalIkasGoasKpStWhmpGhmiCoGqZYE"
+        // text_content_hash: "sha256:08633df6b8b06027fee154dccd3d530fd53db36851c597621c8e8b65e52b028b"
+        // "###);
+        // check_canvas_render_test_point!(@r###"
+        // ---
+        // name: text_chinese_artifact_json
+        // data_content_phash: "phash-gradient:KKprrKlq6Kxm0KTmZKpaZIrbNGI0pNI0tZI1qBI1rDy1bIpqLJpjqFU2qFUlVFS1hIkalIkasGoasKpStWhmpGhmiCoGqZYE"
+        // text_content_hash: "sha256:08633df6b8b06027fee154dccd3d530fd53db36851c597621c8e8b65e52b028b"
+        // "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_deco_1_artifact_ir
+        data_content_phash: "phash-gradient:AQAAVMntXEvqqSACLGlFaHkAAgAAdFsAaBsChAAAUMoGUKMWKAoAmFwEQBsADBQESLQWQCQGJIEDxHYLmGYDdAAAxAICAAAA"
+        text_content_hash: "sha256:b6cd67635583e3986fe23c75e130a51494f1682b390d08186efcf949a4d34a23"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_deco_1_artifact_json
+        data_content_phash: "phash-gradient:AQAAVMntXEvqqSACLGlFaHkAAgAAdFsAaBsChAAAUMoGUKMWKAoAmFwEQBsADBQESLQWQCQGJIEDxHYLmGYDdAAAxAICAAAA"
+        text_content_hash: "sha256:b6cd67635583e3986fe23c75e130a51494f1682b390d08186efcf949a4d34a23"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_deco_2_artifact_ir
+        data_content_phash: "phash-gradient:AAAAAAAEAAAAEBIMRAAswIssNMsskJosAQAscFIRpEEJYNUWZPcWYOcGZGAoAZAS5AZtRBZtRBhzxBp5pBlgAQQRAAAAAAAA"
+        text_content_hash: "sha256:ad356092282c0389bf6aebee517125c4c1faf68edb4e0ef0a9b8b41333c11454"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_deco_2_artifact_json
+        data_content_phash: "phash-gradient:AAAAAAAEAAAAEBIMRAAswIssNMsskJosAQAscFIRpEEJYNUWZPcWYOcGZGAoAZAS5AZtRBZtRBhzxBp5pBlgAQQRAAAAAAAA"
+        text_content_hash: "sha256:ad356092282c0389bf6aebee517125c4c1faf68edb4e0ef0a9b8b41333c11454"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_deco_3_artifact_ir
+        data_content_phash: "phash-gradient:AAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAhAMAlAsAMAsAtAMAKAMAZAEAlAsAlAMAZAsAVAsAAAAAAAEAAAAAAAAAAAAAAAAA"
+        text_content_hash: "sha256:39d1a4c5927c6248493727c5b08ffc36f22665ec3dc7581e247232970ca4edad"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_deco_3_artifact_json
+        data_content_phash: "phash-gradient:AAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAhAMAlAsAMAsAtAMAKAMAZAEAlAsAlAMAZAsAVAsAAAAAAAEAAAAAAAAAAAAAAAAA"
+        text_content_hash: "sha256:39d1a4c5927c6248493727c5b08ffc36f22665ec3dc7581e247232970ca4edad"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_emoji_1_artifact_ir
+        data_content_phash: "phash-gradient:AABAwKdFQLZFyIdFwINFAABCAABAQIBBSKBFSKBFQKBBAABAgMFBAAZAAPZBANFFANJCAABBAIBBAABAQCJLCCdLCCZLANhD"
+        text_content_hash: "sha256:e96d18327a60513e2375c2dfa12d17872c97304df451630781965a6ae8031b45"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_emoji_1_artifact_json
+        data_content_phash: "phash-gradient:AABAwKdFQLZFyIdFwINFAABCAABAQIBBSKBFSKBFQKBBAABAgMFBAAZAAPZBANFFANJCAABBAIBBAABAQCJLCCdLCCZLANhD"
+        text_content_hash: "sha256:e96d18327a60513e2375c2dfa12d17872c97304df451630781965a6ae8031b45"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_emoji_2_artifact_ir
+        data_content_phash: "phash-gradient:AABAAABAAABAAABAAAhBAABAkJljAk4DYdp5cZhxlZhVkphRFJhTFJhTFMhTlItTkosykos2hKNGkKFWgKRWYABIAAAAAABA"
+        text_content_hash: "sha256:8e46fa236bdfb74c3259b7a186191a5febfafd5c3e38f5b2e110931114486ade"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: text_emoji_2_artifact_json
+        data_content_phash: "phash-gradient:AABAAABAAABAAABAAAhBAABAkJljAk4DYdp5cZhxlZhVkphRFJhTFJhTFMhTlItTkosykos2hKNGkKFWgKRWYABIAAAAAABA"
+        text_content_hash: "sha256:8e46fa236bdfb74c3259b7a186191a5febfafd5c3e38f5b2e110931114486ade"
         "###);
 
         let done = test_point_iter.next();
