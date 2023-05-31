@@ -170,13 +170,9 @@ impl ArtifactJsBuilder {
                     })?;
                 }
                 "coverage" => {
-                    coverage = Some(typst::font::Coverage::from_vec(
-                        self.into_array("font_info.coverage", v.clone())?
-                            .iter()
-                            .map(|v| self.to_f64("font_info.coverage", &v))
-                            .map(|v| v.map(|v| v as u32))
-                            .collect::<ZResult<_>>()?,
-                    ));
+                    // todo: from codepoint
+                    coverage = serde_wasm_bindgen::from_value(v)
+                        .map_err(map_string_err("font_info.coverage"))?;
                 }
                 "coverage_hash" => {
                     coverage_hash = self.to_string("font_info.coverage_hash", &v)?;
