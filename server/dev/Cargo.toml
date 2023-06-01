@@ -15,6 +15,14 @@ once_cell.workspace = true
 env_logger.workspace = true
 log.workspace = true
 
-clap = { workspace = true, features = ["derive", "env", "unicode", "wrap_help"] }
+tokio.workspace = true
+warp = { version = "0.3", features = ["compression"] }
+
+clap = { workspace = true, features = [
+    "derive",
+    "env",
+    "unicode",
+    "wrap_help",
+] }
 clap_complete.workspace = true
 clap_complete_fig.workspace = true

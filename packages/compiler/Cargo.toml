@@ -30,10 +30,21 @@ wasm-bindgen.workspace = true
 js-sys.workspace = true
 wasm-bindgen-futures.workspace = true
 # web-sys = { workspace = true, features = ["console", "Window", "Blob"] }
-web-sys = { workspace = true, features = ["console", "Performance", "PerformanceTiming", "Window", "Blob", "ImageData", "Document", "HtmlCanvasElement"] }
+web-sys = { workspace = true, features = [
+    "console",
+    "Performance",
+    "PerformanceTiming",
+    "Window",
+    "Blob",
+    "ImageData",
+    "Document",
+    "HtmlCanvasElement",
+] }
 
 typst-ts-core.workspace = true
-typst-ts-compiler = { version = "0.2", default-features = false, features = ["web"] }
+typst-ts-compiler = { version = "0.2", default-features = false, features = [
+    "web",
+] }
 typst-ts-ast-exporter = { workspace = true }
 typst-ts-canvas-exporter = { workspace = true }
 typst-ts-tir-exporter = { workspace = true }
@@ -45,7 +56,7 @@ typst-ts-tir-exporter = { workspace = true }
 console_error_panic_hook = { version = "0.1.1" } # , optional = true
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.0"
+wasm-bindgen-test.workspace = true
 web-sys = { workspace = true, features = ["console"] }
 
 [features]

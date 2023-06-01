@@ -7,6 +7,28 @@ edition.workspace = true
 homepage.workspace = true
 repository.workspace = true
 
+[dependencies]
+
+wasm-bindgen = { workspace = true, optional = true }
+js-sys = { workspace = true, optional = true }
+wasm-bindgen-futures = { workspace = true, optional = true }
+wasm-bindgen-test = { workspace = true, optional = true }
+web-sys = { workspace = true, optional = true, features = [
+    'Headers',
+    'Request',
+    'RequestInit',
+    'RequestMode',
+    'Response',
+    'Window',
+] }
+
+
 [features]
-web_artifacts = []
+web_artifacts = [
+    "dep:wasm-bindgen",
+    "dep:js-sys",
+    "dep:wasm-bindgen-futures",
+    "dep:wasm-bindgen-test",
+    "dep:web-sys",
+]
 default = []

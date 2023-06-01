@@ -1,5 +1,10 @@
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
 use typst_ts_core::build_info::VERSION;
+
+pub mod http;
+pub mod utils;
 
 #[derive(Debug, Parser)]
 #[clap(name = "typst-ts-dev-server", version = VERSION)]
@@ -16,7 +21,11 @@ pub struct Opts {
 )]
 #[allow(clippy::large_enum_variant)]
 pub enum Subcommands {
+    /// Compile Commands
     Compile(CompileOpts),
+    /// Run server
+    #[clap(subcommand)]
+    Run(RunSubCommands),
 }
 
 #[derive(Debug, Parser)]
@@ -57,4 +66,28 @@ pub struct CompileCorpusArgs {
     /// Output formats.
     #[clap(long)]
     pub format: Vec<String>,
+}
+
+#[derive(Debug, Subcommand)]
+#[clap(
+    about = "Commands about run for typst.",
+    after_help = "",
+    next_display_order = None
+)]
+#[allow(clippy::large_enum_variant)]
+pub enum RunSubCommands {
+    /// Run HTTP server
+    Http(RunHttpArgs),
+}
+
+#[derive(Debug, Clone, Parser)]
+#[clap(next_help_heading = "Run options")]
+pub struct RunHttpArgs {
+    /// The corpus directory.
+    #[clap(long)]
+    pub corpus: PathBuf,
+
+    /// Listen address.
+    #[clap(long, default_value = "")]
+    pub http: String,
 }

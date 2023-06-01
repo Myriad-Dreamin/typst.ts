@@ -1,11 +1,11 @@
 #[cfg(test)]
-#[cfg(target_arch = "wasm32")]
+// #[cfg(target_arch = "wasm32")]
 mod tests {
     use std::collections::HashMap;
 
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
-    use typst_ts_test_common::embedded_artifact::*;
+    use typst_ts_test_common::web_artifact::get_corpus;
     use wasm_bindgen::JsCast;
     use wasm_bindgen_test::*;
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
@@ -119,167 +119,70 @@ mod tests {
         self::console_log!("canvas {point} {:.3}ms", serde_task.0);
     }
 
-    #[wasm_bindgen_test]
-    async fn render_ir_test() {
-        render_test_template("main_artifact_ir", MAIN_ARTIFACT_IR, "ir").await;
+    async fn get_ir_artifact(name: &str) -> Vec<u8> {
+        let array_buffer = get_corpus(format!("{}.artifact.tir.bin", name))
+            .await
+            .unwrap();
+        js_sys::Uint8Array::new(&array_buffer).to_vec()
     }
 
-    #[wasm_bindgen_test]
-    async fn render_json_test() {
-        render_test_template("main_artifact_json", MAIN_ARTIFACT_JSON, "js").await;
+    async fn get_json_artifact(name: &str) -> Vec<u8> {
+        let array_buffer = get_corpus(format!("{}.artifact.json", name)).await.unwrap();
+        js_sys::Uint8Array::new(&array_buffer).to_vec()
     }
 
-    #[wasm_bindgen_test]
-    async fn render_line_1_ir_test() {
-        render_test_template("line_1_artifact_ir", LINE_1_ARTIFACT_IR, "ir").await;
+    async fn render_test_from_corpus(path: &str) {
+        let point = path.replace('/', "_");
+        let ir_point = format!("{}_artifact_ir", point);
+        let json_point = format!("{}_artifact_json", point);
+
+        render_test_template(&ir_point, &get_ir_artifact(path).await, "ir").await;
+        render_test_template(&json_point, &get_json_artifact(path).await, "js").await;
     }
 
-    #[wasm_bindgen_test]
-    async fn render_line_1_json_test() {
-        render_test_template("line_1_artifact_json", LINE_1_ARTIFACT_JSON, "js").await;
+    macro_rules! make_test_point {
+        ($name:ident, $($path:literal),+ $(,)?) => {
+            #[wasm_bindgen_test]
+            async fn $name() {
+                $(
+                    render_test_from_corpus($path).await;
+                )*
+            }
+        };
     }
 
-    #[wasm_bindgen_test]
-    async fn render_line_2_ir_test() {
-        render_test_template("line_2_artifact_ir", LINE_2_ARTIFACT_IR, "ir").await;
-    }
+    make_test_point!(test_render_math_main, "math/main");
+    make_test_point!(
+        test_render_visual_line,
+        "visualize/line_1",
+        "visualize/line_2"
+    );
 
-    #[wasm_bindgen_test]
-    async fn render_line_2_json_test() {
-        render_test_template("line_2_artifact_json", LINE_2_ARTIFACT_JSON, "js").await;
-    }
-
-    #[wasm_bindgen_test]
-    async fn render_path_1_ir_test() {
-        render_test_template("path_1_artifact_ir", PATH_1_ARTIFACT_IR, "ir").await;
-    }
-
-    #[wasm_bindgen_test]
-    async fn render_path_1_json_test() {
-        render_test_template("path_1_artifact_json", PATH_1_ARTIFACT_JSON, "js").await;
-    }
-
-    #[wasm_bindgen_test]
-    async fn render_polygon_1_ir_test() {
-        render_test_template("polygon_1_artifact_ir", POLYGON_1_ARTIFACT_IR, "ir").await;
-    }
-
-    #[wasm_bindgen_test]
-    async fn render_polygon_1_json_test() {
-        render_test_template("polygon_1_artifact_json", POLYGON_1_ARTIFACT_JSON, "js").await;
-    }
-    #[wasm_bindgen_test]
-    async fn render_shape_aspect() {
-        render_test_template(
-            "shape_aspect_1_artifact_ir",
-            SHAPE_ASPECT_1_ARTIFACT_IR,
-            "ir",
-        )
-        .await;
-        render_test_template(
-            "shape_aspect_1_artifact_json",
-            SHAPE_ASPECT_1_ARTIFACT_JSON,
-            "js",
-        )
-        .await;
-        render_test_template(
-            "shape_aspect_2_artifact_ir",
-            SHAPE_ASPECT_2_ARTIFACT_IR,
-            "ir",
-        )
-        .await;
-        render_test_template(
-            "shape_aspect_2_artifact_json",
-            SHAPE_ASPECT_2_ARTIFACT_JSON,
-            "js",
-        )
-        .await;
-        render_test_template(
-            "shape_aspect_3_artifact_ir",
-            SHAPE_ASPECT_3_ARTIFACT_IR,
-            "ir",
-        )
-        .await;
-        render_test_template(
-            "shape_aspect_3_artifact_json",
-            SHAPE_ASPECT_3_ARTIFACT_JSON,
-            "js",
-        )
-        .await;
-        render_test_template(
-            "shape_aspect_4_artifact_ir",
-            SHAPE_ASPECT_4_ARTIFACT_IR,
-            "ir",
-        )
-        .await;
-        render_test_template(
-            "shape_aspect_4_artifact_json",
-            SHAPE_ASPECT_4_ARTIFACT_JSON,
-            "js",
-        )
-        .await;
-        render_test_template(
-            "shape_aspect_5_artifact_ir",
-            SHAPE_ASPECT_5_ARTIFACT_IR,
-            "ir",
-        )
-        .await;
-        render_test_template(
-            "shape_aspect_5_artifact_json",
-            SHAPE_ASPECT_5_ARTIFACT_JSON,
-            "js",
-        )
-        .await;
-        render_test_template(
-            "shape_aspect_6_artifact_ir",
-            SHAPE_ASPECT_6_ARTIFACT_IR,
-            "ir",
-        )
-        .await;
-        render_test_template(
-            "shape_aspect_6_artifact_json",
-            SHAPE_ASPECT_6_ARTIFACT_JSON,
-            "js",
-        )
-        .await;
-    }
+    make_test_point!(test_render_visualize_path, "visualize/path_1");
+    make_test_point!(test_render_visualize_polygon, "visualize/polygon_1");
+    make_test_point!(
+        test_render_visualize_shape_aspect,
+        "visualize/shape_aspect_1",
+        "visualize/shape_aspect_2",
+        "visualize/shape_aspect_3",
+        "visualize/shape_aspect_4",
+        "visualize/shape_aspect_5",
+        "visualize/shape_aspect_6",
+    );
 
     // todo: get cjk font from remote server
-    // #[wasm_bindgen_test]
-    // async fn render_text_chinese_test() {
-    //     render_test_template("text_chinese_artifact_ir", TEXT_CHINESE_ARTIFACT_IR, "ir").await;
-    //     render_test_template(
-    //         "text_chinese_artifact_json",
-    //         TEXT_CHINESE_ARTIFACT_JSON.await,
-    //         "js",
-    //     );
-    // }
+    // make_test_point!(test_render_text_chinese, "text/chinese");
 
-    #[wasm_bindgen_test]
-    async fn render_text_deco_test() {
-        render_test_template("text_deco_1_artifact_ir", TEXT_DECO_1_ARTIFACT_IR, "ir").await;
-        render_test_template("text_deco_1_artifact_json", TEXT_DECO_1_ARTIFACT_JSON, "js").await;
-        render_test_template("text_deco_2_artifact_ir", TEXT_DECO_2_ARTIFACT_IR, "ir").await;
-        render_test_template("text_deco_2_artifact_json", TEXT_DECO_2_ARTIFACT_JSON, "js").await;
-        render_test_template("text_deco_3_artifact_ir", TEXT_DECO_3_ARTIFACT_IR, "ir").await;
-        render_test_template("text_deco_3_artifact_json", TEXT_DECO_3_ARTIFACT_JSON, "js").await;
-    }
+    make_test_point!(
+        test_render_text_deco,
+        "text/deco_1",
+        "text/deco_2",
+        "text/deco_3"
+    );
 
-    #[wasm_bindgen_test]
-    async fn render_text_emoji_test() {
-        // render_test_template("text_emoji_1_artifact_ir", TEXT_EMOJI_1_ARTIFACT_IR, "ir").await;
-        // render_test_template(
-        //     "text_emoji_1_artifact_json",
-        //     TEXT_EMOJI_1_ARTIFACT_JSON,
-        //     "js",
-        // )
-        // .await;
-        render_test_template("text_emoji_2_artifact_ir", TEXT_EMOJI_2_ARTIFACT_IR, "ir").await;
-        render_test_template(
-            "text_emoji_2_artifact_json",
-            TEXT_EMOJI_2_ARTIFACT_JSON,
-            "js",
-        )
-        .await;
-    }
+    make_test_point!(
+        test_render_text_emoji,
+        // "text/emoji_1",
+        "text/emoji_2"
+    );
 }

@@ -1,5 +1,5 @@
 use log::info;
-use typst_ts_dev_server::CompileOpts;
+use typst_ts_dev_server::{http::run_http, utils::async_continue, CompileOpts, RunSubCommands};
 
 use std::{path::PathBuf, process::exit, sync::Mutex};
 
@@ -22,6 +22,12 @@ fn main() {
                 CompileSubCommands::Corpus(args) => compile_corpus(args),
             }
         }
+        Subcommands::Run(run_sub) => match run_sub {
+            RunSubCommands::Http(args) => async_continue(async move {
+                run_http(args).await;
+                exit(0);
+            }),
+        },
     };
 
     #[allow(unreachable_code)]

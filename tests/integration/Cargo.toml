@@ -21,7 +21,9 @@ anyhow.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 flate2.workspace = true
+tokio.workspace = true
 
+typst-ts-dev-server.workspace = true
 typst-ts-test-common.workspace = true
 typst-ts-core.workspace = true
 typst-ts-compiler.workspace = true

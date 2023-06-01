@@ -91,8 +91,8 @@ pub struct ArtifactCompiler {
 }
 
 impl ArtifactCompiler {
-    pub fn compile(&self, workspace_dir: &'static str, entry_file: &'static str) -> ArtifactBundle {
-        let entry_file_base = Path::new(entry_file);
+    pub fn compile(&self, workspace_dir: String, entry_file: String) -> ArtifactBundle {
+        let entry_file_base = Path::new(&entry_file);
 
         let real_entry_file_path = self.corpus_root.join(entry_file_base);
         let real_workspace_dir = self.corpus_root.join(workspace_dir);
