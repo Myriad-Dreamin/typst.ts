@@ -119,16 +119,12 @@ class TypstCompilerDriver {
     pixel_per_pt: number,
     background_color: string,
   ): Promise<any> {
-    return new Promise<any>(resolve => {
-      resolve(
-        this.compiler.render_page_to_canvas(
-          canvas,
-          doc as typst.DocumentReference,
-          page_off,
-          pixel_per_pt,
-          background_color,
-        ),
-      );
-    });
+    return this.compiler.render_page_to_canvas(
+      canvas,
+      doc as typst.DocumentReference,
+      page_off,
+      pixel_per_pt,
+      background_color,
+    );
   }
 }
