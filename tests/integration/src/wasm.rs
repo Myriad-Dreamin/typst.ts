@@ -44,6 +44,12 @@ pub async fn wasm_pack_test(
         cmd.arg("--release");
     }
 
+    // env: TYPST_CHROME_DRIVER
+    if let Ok(chrome_driver) = std::env::var("TYPST_CHROME_DRIVER") {
+        println!("wasm-pack test Using ChromeDriver: {}", chrome_driver);
+        cmd.arg("--chromedriver").arg(chrome_driver);
+    }
+
     cmd.args(extra_options);
 
     for feature in features {
