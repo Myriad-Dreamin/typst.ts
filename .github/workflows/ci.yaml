@@ -43,6 +43,7 @@ jobs:
           cargo build --workspace
       - name: Prepare artifacts
         run: |
+          cargo run --bin typst-ts-dev-server -- compile --compiler debug corpus layout
           cargo run --bin typst-ts-dev-server -- compile --compiler debug corpus math
           cargo run --bin typst-ts-dev-server -- compile --compiler debug corpus text
           cargo run --bin typst-ts-dev-server -- compile --compiler debug corpus visualize

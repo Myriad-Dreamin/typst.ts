@@ -152,6 +152,15 @@ mod tests {
     }
 
     make_test_point!(test_render_math_main, "math/main");
+
+    make_test_point!(
+        test_render_layout_clip,
+        "layout/clip_1",
+        "layout/clip_2",
+        "layout/clip_3",
+        "layout/clip_4",
+    );
+
     make_test_point!(
         test_render_visual_line,
         "visualize/line_1",
