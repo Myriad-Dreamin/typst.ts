@@ -48,7 +48,7 @@ typst-ts-canvas-exporter = { workspace = true, optional = true }
 typst-ts-raster-exporter = { workspace = true, optional = true }
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.0"
+wasm-bindgen-test.workspace = true
 typst-ts-test-common.workspace = true
 web-sys = { workspace = true, features = [
     "console",

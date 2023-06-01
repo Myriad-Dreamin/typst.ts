@@ -7,8 +7,9 @@ mod tests {
     use image::codecs::png::PngDecoder;
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
+    use typst_ts_dev_server::{http::run_http, RunHttpArgs};
     use typst_ts_integration_test::{wasm::wasm_pack_test, ArtifactBundle, ArtifactCompiler};
-    use typst_ts_test_common::package_renderer_dir;
+    use typst_ts_test_common::{corpus_root, package_renderer_dir};
 
     use flate2::write::GzEncoder;
     use flate2::Compression;
@@ -218,8 +219,18 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_wasm_renderer_functionality() -> anyhow::Result<()> {
+    #[tokio::test]
+    async fn test_wasm_renderer_functionality() -> anyhow::Result<()> {
+        tokio::spawn(run_http(RunHttpArgs {
+            corpus: corpus_root(),
+            http: "127.0.0.1:20810".to_owned(),
+        }));
+        tokio::spawn(test_wasm_renderer_functionality_main())
+            .await
+            .unwrap()
+    }
+
+    async fn test_wasm_renderer_functionality_main() -> anyhow::Result<()> {
         let artifact_dir = typst_ts_test_common::artifact_dir().join("integrations");
 
         let res = wasm_pack_test(
@@ -227,9 +238,11 @@ mod tests {
             true,
             &["web_verbose"],
             &["--chrome", "--headless"],
-        )?;
+        )
+        .await?;
 
         let mut contents = vec![];
+        let mut rest_contents = vec![];
         let mut test_points = vec![];
 
         let mut start_capture = false;
@@ -244,8 +257,11 @@ mod tests {
                 contents.clear();
             } else if start_capture {
                 contents.push(line);
+            } else {
+                rest_contents.push(line);
             }
         }
+        println!("{}", rest_contents.join("\n"));
 
         let mut grouped_test_points = {
             let mut grouped_test_points = HashMap::new();

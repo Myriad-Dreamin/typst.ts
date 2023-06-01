@@ -3314,9 +3314,11 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "tokio",
  "typst",
  "typst-ts-compiler",
  "typst-ts-core",
+ "typst-ts-dev-server",
  "typst-ts-pdf-exporter",
  "typst-ts-serde-exporter",
  "typst-ts-test-common",
@@ -3413,6 +3415,13 @@ dependencies = [
 [[package]]
 name = "typst-ts-test-common"
 version = "0.2.0"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wasm-bindgen-test",
+ "web-sys",
+]
 
 [[package]]
 name = "typst-ts-tir-exporter"

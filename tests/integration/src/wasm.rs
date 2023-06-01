@@ -1,21 +1,21 @@
 use anyhow::{bail, Context, Result};
-use std::{
-    path::Path,
-    process::{Command, Stdio},
-};
+use std::{path::Path, process::Stdio};
+use tokio::process::Command;
 
 /// Run the given command and return its stdout.
-pub fn run_capture_stdout(mut command: Command) -> Result<String> {
+pub async fn run_capture_stdout(mut command: Command) -> Result<String> {
     let output = command
         .stderr(Stdio::inherit())
         .stdin(Stdio::inherit())
-        .output()?;
+        .output()
+        .await?;
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).into_owned())
     } else {
+        let command = command.as_std();
         bail!(
-            "failed to execute `{} {}`: exited with {}\n  full command: {:?}",
+            "failed to execute `{} {}`: exited with {}\n  full command: {:?}\n {}\n {}",
             command.get_program().to_string_lossy(),
             command
                 .get_args()
@@ -24,11 +24,13 @@ pub fn run_capture_stdout(mut command: Command) -> Result<String> {
                 .to_string_lossy(),
             output.status,
             command,
+            String::from_utf8_lossy(&output.stdout).into_owned(),
+            String::from_utf8_lossy(&output.stderr).into_owned()
         )
     }
 }
 
-pub fn wasm_pack_test(
+pub async fn wasm_pack_test(
     path: &Path,
     release: bool,
     features: &[&str],
@@ -48,5 +50,7 @@ pub fn wasm_pack_test(
         cmd.arg("--features").arg(feature);
     }
 
-    run_capture_stdout(cmd).context("Running Wasm tests with wasm-pack failed")
+    run_capture_stdout(cmd)
+        .await
+        .context("Running Wasm tests with wasm-pack failed")
 }
