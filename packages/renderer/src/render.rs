@@ -162,6 +162,14 @@ mod tests {
     );
 
     make_test_point!(
+        test_render_layout_list_marker,
+        "layout/list_marker_1",
+        "layout/list_marker_2",
+        "layout/list_marker_3",
+        "layout/list_marker_4",
+    );
+
+    make_test_point!(
         test_render_visual_line,
         "visualize/line_1",
         "visualize/line_2"
