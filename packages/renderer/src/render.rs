@@ -169,6 +169,13 @@ mod tests {
         "visualize/shape_aspect_5",
         "visualize/shape_aspect_6",
     );
+    make_test_point!(
+        test_render_visualize_shape_circle,
+        "visualize/shape_circle_1",
+        "visualize/shape_circle_2",
+        "visualize/shape_circle_3",
+        "visualize/shape_circle_4",
+    );
 
     // todo: get cjk font from remote server
     // make_test_point!(test_render_text_chinese, "text/chinese");
