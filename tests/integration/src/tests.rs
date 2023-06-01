@@ -92,6 +92,31 @@ mod tests {
             };
         }
 
+        check_bundle_facts!("layout", "clip_1", @r###"
+        ---
+        name: layout/clip_1.typ
+        origin_pdf_hash: "sha256:b6437eb720e2dc8dfd60f71227fa8aedee251c5b7c145ae50aea39b6e9e45507"
+        artifact_pdf_hash: "sha256:b6437eb720e2dc8dfd60f71227fa8aedee251c5b7c145ae50aea39b6e9e45507"
+        "###);
+        check_bundle_facts!("layout", "clip_2", @r###"
+        ---
+        name: layout/clip_2.typ
+        origin_pdf_hash: "sha256:78e4aaa4640f27533f8df1eba3b96c657f569fd69f7d1cc5cad432bb2c70438d"
+        artifact_pdf_hash: "sha256:78e4aaa4640f27533f8df1eba3b96c657f569fd69f7d1cc5cad432bb2c70438d"
+        "###);
+        check_bundle_facts!("layout", "clip_3", @r###"
+        ---
+        name: layout/clip_3.typ
+        origin_pdf_hash: "sha256:81c13609847913bc0cf8961d7a60f64e46300e1eba2b70802cfbd3df6722d0f8"
+        artifact_pdf_hash: "sha256:81c13609847913bc0cf8961d7a60f64e46300e1eba2b70802cfbd3df6722d0f8"
+        "###);
+        check_bundle_facts!("layout", "clip_4", @r###"
+        ---
+        name: layout/clip_4.typ
+        origin_pdf_hash: "sha256:85d345941d82d57d7a9f86c7509ca6b3fffdd44bc1adf13da63c5545b9fc7908"
+        artifact_pdf_hash: "sha256:85d345941d82d57d7a9f86c7509ca6b3fffdd44bc1adf13da63c5545b9fc7908"
+        "###);
+
         check_bundle_facts!("visualize", "line_1", @r###"
         ---
         name: visualize/line_1.typ
@@ -381,6 +406,54 @@ mod tests {
             }};
         }
 
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: layout_clip_1_artifact_ir
+        data_content_phash: "phash-gradient:AAAAAAAACAACAGkELOkLaOkKKOkKAG0BKGkBIGkBBGkBPGkBIGkBKGkBCIAABGIASAACACcELIcKKMsKaKsKJEACAAgAAAAA"
+        text_content_hash: "sha256:320577a48dd36fcf697605bb46b64c44ed5e6a39eed6a6e06813f64e9d73e70f"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: layout_clip_1_artifact_json
+        data_content_phash: "phash-gradient:AAAAAAAACAACAGkELOkLaOkKKOkKAG0BKGkBIGkBBGkBPGkBIGkBKGkBCIAABGIASAACACcELIcKKMsKaKsKJEACAAgAAAAA"
+        text_content_hash: "sha256:320577a48dd36fcf697605bb46b64c44ed5e6a39eed6a6e06813f64e9d73e70f"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: layout_clip_2_artifact_ir
+        data_content_phash: "phash-gradient:BAAAyBEANLYAFGcAtG8AlmQANGwAZC0AUDIAbAMAWAsAmAMAAAAASBMAAAAAyDEANCYAlGcAJGYAlGwAdG0AZK0AABAAIAUA"
+        text_content_hash: "sha256:f5db2f803136c1ae0a3a83f4cf86a39e2c56efc0c33cd6ad85024c46080eed79"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: layout_clip_2_artifact_json
+        data_content_phash: "phash-gradient:BAAAyBEANLYAFGcAtG8AlmQANGwAZC0AUDIAbAMAWAsAmAMAAAAASBMAAAAAyDEANCYAlGcAJGYAlGwAdG0AZK0AABAAIAUA"
+        text_content_hash: "sha256:f5db2f803136c1ae0a3a83f4cf86a39e2c56efc0c33cd6ad85024c46080eed79"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: layout_clip_3_artifact_ir
+        data_content_phash: "phash-gradient:AAAAAAAABAAAAIACjAAATNoDUGIGUCYCWGYKQCQLoGQLAGQLAAAAACADsAAATNoDVHIGUCYGcCYCXNoDQAAANAACAAAAAAAA"
+        text_content_hash: "sha256:1d003760abd6ef9775b6e7ff2941272dcf5b5d4467097ab7ed6edc8cb5660d04"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: layout_clip_3_artifact_json
+        data_content_phash: "phash-gradient:AAAAAAAABAAAAIACjAAATNoDUGIGUCYCWGYKQCQLoGQLAGQLAAAAACADsAAATNoDVHIGUCYGcCYCXNoDQAAANAACAAAAAAAA"
+        text_content_hash: "sha256:1d003760abd6ef9775b6e7ff2941272dcf5b5d4467097ab7ed6edc8cb5660d04"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: layout_clip_4_artifact_ir
+        data_content_phash: "phash-gradient:AAAABAAAIAAAjAAAzAAAYAAAaAAAUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        text_content_hash: "sha256:ada49b7111c4303c8768eeb0ecb917e92486adc4e0cd27c39ffc735138a05eae"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: layout_clip_4_artifact_json
+        data_content_phash: "phash-gradient:AAAABAAAIAAAjAAAzAAAYAAAaAAAUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        text_content_hash: "sha256:ada49b7111c4303c8768eeb0ecb917e92486adc4e0cd27c39ffc735138a05eae"
+        "###);
         check_canvas_render_test_point!(@r###"
         ---
         name: math_main_artifact_ir
