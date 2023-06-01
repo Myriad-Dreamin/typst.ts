@@ -82,7 +82,9 @@ impl<'a> CanvasRenderTask<'a> {
             );
 
             drop(state_guard)
-        } else if let Some(Stroke {
+        }
+
+        if let Some(Stroke {
             paint,
             thickness,
             line_cap,
