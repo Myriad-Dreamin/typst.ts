@@ -467,32 +467,28 @@ mod tests {
         data_content_phash: "phash-gradient:AAAAAAAAAAAAAAAAAAAAAAAAAAgAAJIBgE0CgE0CgE0CgE0CgE0CgE0CgE0CgE0AABIBAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
         "###);
-        // todo: canvas does not paint stroke
         check_canvas_render_test_point!(@r###"
         ---
         name: visualize_path_1_artifact_ir
-        data_content_phash: "phash-gradient:AAAgAAAACBBgKRBuDRBADTNPjTNGjVVKjTNGTTNNDRBACRNsiVBqDRBAzVBKzVdGSTdFjbNNzZRNDRBAqRBpCBBgAAAAAAAg"
+        data_content_phash: "phash-gradient:AAAgAAAACBBgKRBuDRBADTNNjTNGjVVCjTNGTTNNDRBACTNtqVBqDRBAzVFKyVdGSTZFybNNzZVNTRBAKRFpSBBgAAAAAAAg"
         text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
         "###);
-        // todo: canvas does not paint stroke
         check_canvas_render_test_point!(@r###"
         ---
         name: visualize_path_1_artifact_json
-        data_content_phash: "phash-gradient:AAAgAAAACBBgKRBuDRBADTNPjTNGjVVKjTNGTTNNDRBACRNsiVBqDRBAzVBKzVdGSTdFjbNNzZRNDRBAqRBpCBBgAAAAAAAg"
+        data_content_phash: "phash-gradient:AAAgAAAACBBgKRBuDRBADTNNjTNGjVVCjTNGTTNNDRBACTNtqVBqDRBAzVFKyVdGSTZFybNNzZVNTRBAKRFpSBBgAAAAAAAg"
         text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
         "###);
-        // todo: canvas does not paint stroke
         check_canvas_render_test_point!(@r###"
         ---
         name: visualize_polygon_1_artifact_ir
-        data_content_phash: "phash-gradient:AAAAAAAAIAAAiAAAYAAA4gIAiAAAgAcAwAcAYAAA4AIAYAAA0AURmAEAAPg/DPA/MAAAGBAJsAQAALABcBAAgPwDwPEDODAA"
+        data_content_phash: "phash-gradient:AAAAAAAA4AAAmAEAYAAA4AQAiAEAkBcA4AcAYAAA4AIAYAAA0EEomAEAAPx/BPB/MAAAOTAiMEQAALADcDAAwPYHwLADOTAA"
         text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
         "###);
-        // todo: canvas does not paint stroke
         check_canvas_render_test_point!(@r###"
         ---
         name: visualize_polygon_1_artifact_json
-        data_content_phash: "phash-gradient:AAAAAAAAIAAAiAAAYAAA4gIAiAAAgAcAwAcAYAAA4AIAYAAA0AURmAEAAPg/DPA/MAAAGBAJsAQAALABcBAAgPwDwPEDODAA"
+        data_content_phash: "phash-gradient:AAAAAAAA4AAAmAEAYAAA4AQAiAEAkBcA4AcAYAAA4AIAYAAA0EEomAEAAPx/BPB/MAAAOTAiMEQAALADcDAAwPYHwLADOTAA"
         text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
         "###);
         check_canvas_render_test_point!(@r###"
