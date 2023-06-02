@@ -270,6 +270,18 @@ mod tests {
             "../../../assets/fonts/NewCMMath-Regular.otf"
         )));
         builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../../assets/fonts/InriaSerif-Bold.ttf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../../assets/fonts/InriaSerif-BoldItalic.ttf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../../assets/fonts/InriaSerif-Italic.ttf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../../assets/fonts/InriaSerif-Regular.ttf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
             "../../../assets/fonts/Roboto-Regular.ttf"
         )));
         builder.add_raw_font_internal(Buffer::from_static(include_bytes!(

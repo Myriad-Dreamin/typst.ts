@@ -234,8 +234,8 @@ mod tests {
         check_bundle_facts!("text", "chinese", @r###"
         ---
         name: text/chinese.typ
-        origin_pdf_hash: "sha256:2da42395330a6bd2114c9b70dc21447b32613fdbcb06f523e885603331bdf3ad"
-        artifact_pdf_hash: "sha256:2da42395330a6bd2114c9b70dc21447b32613fdbcb06f523e885603331bdf3ad"
+        origin_pdf_hash: "sha256:de94be2f518feaa75dc0647d340f38272b01151c9bc6223e82f6c2190f697b43"
+        artifact_pdf_hash: "sha256:de94be2f518feaa75dc0647d340f38272b01151c9bc6223e82f6c2190f697b43"
         "###);
 
         check_bundle_facts!("text", "deco_1", @r###"
