@@ -47,7 +47,7 @@ where
             .write_u64::<LittleEndian>(metadata.len() as u64)
             .unwrap();
         writer.write_all(metadata.as_bytes()).unwrap();
-        writer.write_all(output.buffer.as_slice()).unwrap();
+        writer.write_all(output.get_buffer()).unwrap();
 
         Ok(())
     }

@@ -67,12 +67,12 @@ impl CompileSession {
 
         let artifact_begin = std::time::Instant::now();
         let ir = typst_ts_core::artifact_ir::Artifact::from(&doc);
+        let artifact_data = to_base64(ir.get_buffer());
         let artifact_header = ArtifactHeader {
             metadata: ir.metadata,
             pages: ir.pages,
             offsets: ir.offsets,
         };
-        let artifact_data = to_base64(ir.buffer.as_slice());
         let artifact_elapsed = artifact_begin.elapsed();
 
         let snapshot = Some(WorldSnapshot {

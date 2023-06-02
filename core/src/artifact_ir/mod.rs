@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::mem::size_of;
 use std::slice;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use serde::Deserialize;
 use serde::Serialize;
@@ -24,6 +25,9 @@ use image::*;
 pub mod core;
 use self::core::*;
 
+pub(self) mod alloc;
+use self::alloc::*;
+
 pub use crate::artifact::core::ArtifactMeta;
 pub type FontInfo = crate::artifact::font::FontInfo;
 pub type TypstFontInfo = crate::artifact::font::TypstFontInfo;
@@ -37,109 +41,186 @@ pub struct ArtifactHeader {
     pub metadata: ArtifactMeta,
     /// The page frames.
     pub pages: ItemArray<Frame>,
-    /// The paint offset in buffer
-    pub offsets: (u64, u64),
+    /// The region offsets in buffer
+    pub offsets: [u64; RegionKind::Length as usize],
 }
 
 #[derive(Clone, Debug)]
 pub struct Artifact {
     /// memory buffer for ItemRef
-    pub buffer: Vec<u8>,
+    buffer: AlignedBuffer,
     /// Other metadata as json.
     pub metadata: ArtifactMeta,
     /// The page frames.
     pub pages: ItemArray<Frame>,
-    /// The paint offset in buffer
-    pub offsets: (u64, u64),
+    /// The region offsets in buffer
+    pub offsets: [u64; RegionKind::Length as usize],
+}
+
+impl Artifact {
+    pub fn new(input: &[u8], header: ArtifactHeader) -> Self {
+        let buffer = AlignedBuffer::with_size(input.len());
+        Self {
+            buffer,
+            metadata: header.metadata,
+            pages: header.pages,
+            offsets: header.offsets,
+        }
+    }
+
+    #[inline]
+    pub fn with_initializer(
+        cap: usize,
+        initializer: impl FnOnce(&mut [u8]),
+        header: ArtifactHeader,
+    ) -> Self {
+        let mut buffer = AlignedBuffer::with_size(cap);
+        let buf_mut = buffer.as_mut_slice();
+        initializer(buf_mut);
+
+        Self {
+            buffer,
+            metadata: header.metadata,
+            pages: header.pages,
+            offsets: header.offsets,
+        }
+    }
+
+    #[inline]
+    pub fn get_buffer(&self) -> &[u8] {
+        self.buffer.as_slice()
+    }
 }
 
 type GlyphShapeOpaque = [u8; size_of::<GlyphShape>()];
 
+#[repr(u8)]
+enum RegionKind {
+    General,
+    String,
+    Bytes,
+    ByteSizes,
+    StringSizes,
+    Paint,
+    Glyph,
+
+    Length,
+}
+
+#[derive(Default)]
 pub struct ArtifactBuilder {
     fonts: Vec<TypstFontInfo>,
     font_map: HashMap<TypstFontInfo, FontRef>,
-    glyph_shape_cnt: u32,
+
     glyph_def_id_map: HashMap<GlyphShapeOpaque, GlyphShapeRef>,
-    paint_def_cnt: i32,
     paint_shape_id_map: HashMap<TypstPaint, PaintRef>,
-    buffer: Vec<u8>,
-    paint_buffer: Vec<u8>,
-    glyph_buffer: Vec<u8>,
-    stat: std::collections::BTreeMap<ItemRefKind, u32>, // for debug
+    shared_strings: HashMap<Arc<str>, StringRef>,
+
+    counters: [u32; RegionKind::Length as usize],
+    buffers: [Vec<u8>; RegionKind::Length as usize],
+
+    _stat: std::collections::BTreeMap<u32, u32>, // for debug
 }
 
 impl ArtifactBuilder {
-    pub fn new() -> Self {
-        Self {
-            fonts: vec![],
-            font_map: HashMap::default(),
-            buffer: vec![],
-            paint_buffer: vec![],
-            glyph_buffer: vec![],
-            paint_def_cnt: 0,
-            paint_shape_id_map: HashMap::default(),
-            glyph_shape_cnt: 0,
-            glyph_def_id_map: HashMap::default(),
-            stat: Default::default(),
-        }
+    fn buffer(&mut self) -> &mut Vec<u8> {
+        &mut self.buffers[RegionKind::General as usize]
+    }
+
+    fn string_buffer(&mut self) -> &mut Vec<u8> {
+        &mut self.buffers[RegionKind::String as usize]
+    }
+
+    fn string_size_buffer(&mut self) -> &mut Vec<u8> {
+        &mut self.buffers[RegionKind::StringSizes as usize]
+    }
+
+    fn bytes_buffer(&mut self) -> &mut Vec<u8> {
+        &mut self.buffers[RegionKind::Bytes as usize]
+    }
+
+    fn byte_size_buffer(&mut self) -> &mut Vec<u8> {
+        &mut self.buffers[RegionKind::ByteSizes as usize]
+    }
+
+    fn paint_buffer(&mut self) -> &mut Vec<u8> {
+        &mut self.buffers[RegionKind::Paint as usize]
+    }
+
+    fn glyph_buffer(&mut self) -> &mut Vec<u8> {
+        &mut self.buffers[RegionKind::Glyph as usize]
     }
 
     pub fn push_item<T: Sized + HasItemRefKind>(&mut self, item: &T) -> ItemRef<T> {
-        let idx = self.buffer.len();
+        let idx = item_align_up(self.buffer().len());
+        self.buffer().resize(idx, 0);
         unsafe {
             let raw_item =
                 slice::from_raw_parts(item as *const T as *const u8, std::mem::size_of::<T>());
-            self.buffer.extend_from_slice(raw_item);
-            self.stat
-                .entry(T::ITEM_REF_KIND)
+            self.buffer().extend_from_slice(raw_item);
+            #[cfg(feature = "trace_ir_alloca")]
+            self._stat
+                .entry(T::ITEM_REF_KIND as u32)
                 .and_modify(|e| *e += raw_item.len() as u32);
         }
         ItemRef {
-            id: idx as u32,
-            kind: T::ITEM_REF_KIND,
+            offset: idx as u32,
             phantom: std::marker::PhantomData,
         }
     }
 
-    pub fn push_bytes(&mut self, s: &[u8]) -> ItemRef<Vec<u8>> {
-        let idx = self.buffer.len();
-        self.buffer.extend_from_slice(s);
-        self.stat
-            .entry(ItemRefKind::Bytes)
+    pub fn push_bytes(&mut self, s: &[u8]) -> BytesRef {
+        let cnt = &mut self.counters[RegionKind::Bytes as usize];
+        let id = *cnt;
+        *cnt += 1;
+        self.byte_size_buffer()
+            .extend_from_slice(&(s.len() as u64).to_le_bytes());
+        self.bytes_buffer().extend_from_slice(s);
+        #[cfg(feature = "trace_ir_alloca")]
+        self._stat
+            .entry(b'b' as u32)
             .and_modify(|e| *e += s.len() as u32);
-        ItemRef {
-            id: idx as u32,
-            kind: ItemRefKind::Bytes,
-            phantom: std::marker::PhantomData,
-        }
+        BytesRef { id }
     }
 
-    pub fn push_string(&mut self, s: String) -> ItemRef<String> {
-        let idx = self.buffer.len();
-        self.buffer.extend_from_slice(s.as_bytes());
-        // null terminator
-        self.buffer.push(0);
-        self.stat
-            .entry(ItemRefKind::String)
+    pub fn push_string(&mut self, s: String) -> StringRef {
+        let cnt = &mut self.counters[RegionKind::String as usize];
+        let id = *cnt;
+        *cnt += 1;
+        self.string_size_buffer()
+            .extend_from_slice(&(s.as_bytes().len() as u64).to_le_bytes());
+        self.string_buffer().extend_from_slice(s.as_bytes());
+        #[cfg(feature = "trace_ir_alloca")]
+        self._stat
+            .entry(b's' as u32)
             .and_modify(|e| *e += s.as_bytes().len() as u32);
-        ItemRef {
-            id: idx as u32,
-            kind: ItemRefKind::String,
-            phantom: std::marker::PhantomData,
+        StringRef { id }
+    }
+
+    pub fn push_shared_string(&mut self, s: String) -> StringRef {
+        if let Some(id) = self.shared_strings.get(s.as_str()) {
+            return *id;
         }
+
+        let string_repr = s.as_str().into();
+        let id = self.push_string(s);
+        self.shared_strings.insert(string_repr, id);
+        id
     }
 
     pub fn push_array<T: Sized + HasItemRefKind>(
         &mut self,
         arr: impl ExactSizeIterator<Item = T>,
     ) -> ItemArray<T> {
-        let start_idx = self.buffer.len();
+        let start_idx = self.buffer().len();
         let arr_len = arr.len();
         for ele in arr {
             self.push_item(&ele);
         }
-        self.stat
-            .entry(T::ITEM_REF_KIND)
+
+        #[cfg(feature = "trace_ir_alloca")]
+        self._stat
+            .entry(T::ITEM_REF_KIND as u32)
             .and_modify(|e| *e += (arr_len * std::mem::size_of::<T>()) as u32);
         ItemArray {
             start: start_idx as u32,
@@ -153,31 +234,34 @@ impl ArtifactBuilder {
             return *paint_ref;
         }
 
-        let paint_ref = self.paint_def_cnt;
-        self.paint_def_cnt += 1;
+        let cnt = &mut self.counters[RegionKind::Paint as usize];
+        let paint_ref = *cnt as i32;
+        *cnt += 1;
         self.paint_shape_id_map.insert(paint.clone(), paint_ref);
+
+        let paint_buffer = self.paint_buffer();
 
         match paint {
             TypstPaint::Solid(color) => {
-                self.paint_buffer.push(b's');
+                paint_buffer.push(b's');
                 match color {
                     TypstColor::Luma(luma_color) => {
-                        self.paint_buffer.push(b'l');
-                        self.paint_buffer.push(luma_color.0);
+                        paint_buffer.push(b'l');
+                        paint_buffer.push(luma_color.0);
                     }
                     TypstColor::Rgba(rgba_color) => {
-                        self.paint_buffer.push(b'r');
-                        self.paint_buffer.push(rgba_color.r);
-                        self.paint_buffer.push(rgba_color.g);
-                        self.paint_buffer.push(rgba_color.b);
-                        self.paint_buffer.push(rgba_color.a);
+                        paint_buffer.push(b'r');
+                        paint_buffer.push(rgba_color.r);
+                        paint_buffer.push(rgba_color.g);
+                        paint_buffer.push(rgba_color.b);
+                        paint_buffer.push(rgba_color.a);
                     }
                     TypstColor::Cmyk(cmyk_color) => {
-                        self.paint_buffer.push(b'c');
-                        self.paint_buffer.push(cmyk_color.c);
-                        self.paint_buffer.push(cmyk_color.m);
-                        self.paint_buffer.push(cmyk_color.y);
-                        self.paint_buffer.push(cmyk_color.k);
+                        paint_buffer.push(b'c');
+                        paint_buffer.push(cmyk_color.c);
+                        paint_buffer.push(cmyk_color.m);
+                        paint_buffer.push(cmyk_color.y);
+                        paint_buffer.push(cmyk_color.k);
                     }
                 };
             }
@@ -216,9 +300,10 @@ impl ArtifactBuilder {
             return *glyph_ref;
         }
 
-        let glyph_ref = self.glyph_shape_cnt;
-        self.glyph_shape_cnt += 1;
-        self.glyph_buffer.extend_from_slice(&transmuted);
+        let cnt = &mut self.counters[RegionKind::Glyph as usize];
+        let glyph_ref = *cnt;
+        *cnt += 1;
+        self.glyph_buffer().extend_from_slice(&transmuted);
         self.glyph_def_id_map.insert(transmuted, glyph_ref);
 
         glyph_ref
@@ -254,7 +339,7 @@ impl ArtifactBuilder {
             font: idx,
             size: text.size.into(),
             fill: self.write_paint(&text.fill),
-            lang: self.push_string(text.lang.as_str().to_string()),
+            lang: self.push_shared_string(text.lang.as_str().to_string()),
             text: self.push_string(text.text.as_str().to_string()),
             glyphs,
         }
@@ -270,7 +355,7 @@ impl ArtifactBuilder {
 
     pub fn write_image(&mut self, image: &TypstImage) -> Image {
         let data = self.push_bytes(image.data().as_slice());
-        let format = self.push_string(
+        let format = self.push_shared_string(
             match image.format() {
                 ImageFormat::Raster(r) => match r {
                     RasterFormat::Png => "png",
@@ -404,20 +489,46 @@ impl ArtifactBuilder {
         }
     }
 
-    pub fn build_buffer(&mut self) -> Vec<u8> {
-        let mut buffer = Vec::new();
-        std::mem::swap(&mut self.buffer, &mut buffer);
-        buffer
+    fn build_buffer(&mut self) -> (AlignedBuffer, [u64; RegionKind::Length as usize]) {
+        let mut offsets = [0u64; RegionKind::Length as usize];
+        let mut cap = 0;
+        for (i, buf) in self.buffers.iter().enumerate() {
+            let offset = item_align_up(cap);
+            offsets[i] = offset as u64;
+            cap = offset + buf.len();
+        }
+
+        let mut buffer = AlignedBuffer::with_size(cap);
+        let buf_mut = buffer.as_mut_slice();
+
+        for (i, buf) in self.buffers.iter().enumerate() {
+            buf_mut[offsets[i] as usize..offsets[i] as usize + buf.len()]
+                .copy_from_slice(buf.as_slice());
+            if i == self.buffers.len() - 1 {
+                buf_mut[offsets[i] as usize + buf.len()..].fill(0);
+            } else {
+                buf_mut[offsets[i] as usize + buf.len()..offsets[i + 1] as usize].fill(0);
+            }
+        }
+
+        (buffer, offsets)
     }
 }
 
 impl From<&TypstDocument> for Artifact {
     fn from(typst_doc: &TypstDocument) -> Self {
-        let mut builder = ArtifactBuilder::new();
-        builder.stat.insert(ItemRefKind::Frame, 0);
-        builder.stat.insert(ItemRefKind::FrameItem, 0);
-        builder.stat.insert(ItemRefKind::String, 0);
-        builder.stat.insert(ItemRefKind::ItemWithPos, 0);
+        let mut builder = ArtifactBuilder::default();
+
+        #[cfg(feature = "trace_ir_alloca")]
+        {
+            assert!(b'b' as u32 >= ItemRefKind::MAX as u32);
+            assert!(b's' as u32 >= ItemRefKind::MAX as u32);
+            for i in 0..ItemRefKind::MAX as u32 {
+                builder._stat.insert(i, 0);
+            }
+            builder._stat.insert(b'b' as u32, 0);
+            builder._stat.insert(b's' as u32, 0);
+        }
 
         let raw_pages = typst_doc
             .pages
@@ -427,17 +538,10 @@ impl From<&TypstDocument> for Artifact {
             .into_iter();
         let pages = builder.push_array(raw_pages);
 
-        println!("stat: {:?}\n", builder.stat);
+        #[cfg(feature = "trace_ir_alloca")]
+        println!("_stat: {:?}\n", builder._stat);
 
-        let mut buffer = builder.build_buffer();
-        let paint_offset = buffer.len() as u64;
-        buffer.append(&mut builder.paint_buffer);
-        let glyph_offset = buffer.len();
-        // round up to 8 bytes
-        let glyph_offset = (glyph_offset + 7) & !7;
-        buffer.resize(glyph_offset, 0);
-        let glyph_offset = glyph_offset as u64;
-        buffer.append(&mut builder.glyph_buffer);
+        let (buffer, offsets) = builder.build_buffer();
         let metadata = ArtifactMeta {
             build: Some(BuildInfo {
                 compiler: "typst-ts-cli".to_string(),
@@ -463,28 +567,110 @@ impl From<&TypstDocument> for Artifact {
             buffer,
             metadata,
             pages,
-            offsets: (paint_offset, glyph_offset),
+            offsets,
         }
     }
 }
 
-pub struct TypeDocumentParser<'a> {
+pub(crate) struct TypeDocumentParser<'a> {
     sp: Locator<'static>,
     fonts: Vec<TypstFont>,
     paints: Vec<TypstPaint>,
     buffer: &'a [u8],
-    shapes: &'a [GlyphShape],
+    glyph_shapes: &'a [GlyphShape],
+    strings: Vec<&'a str>,
+    bytes: Vec<&'a [u8]>,
 }
 
 impl<'a> TypeDocumentParser<'a> {
-    pub fn new(buffer: &'a Vec<u8>, shapes: &'a [GlyphShape]) -> Self {
+    pub fn new(buffers: &[&'a [u8]]) -> Self {
+        let paint_buffer = &buffers[RegionKind::Paint as usize];
+        let mut paints = vec![];
+        let mut t = 0;
+        while t < paint_buffer.len() {
+            match paint_buffer[t] {
+                b's' => {
+                    t += 1;
+                    let color = match paint_buffer[t] {
+                        b'l' => {
+                            t += 1;
+                            let color = paint_buffer[t];
+                            TypstColor::Luma(TypstLumaColor(color))
+                        }
+                        b'r' => {
+                            // this should remove extra bound checks
+                            let rgba = &paint_buffer[t + 1..t + 5];
+                            t += 5;
+                            TypstColor::Rgba(TypstRgbaColor::new(
+                                rgba[0], rgba[1], rgba[2], rgba[3],
+                            ))
+                        }
+                        b'c' => {
+                            let cmyk = &paint_buffer[t + 1..t + 5];
+                            t += 5;
+                            TypstColor::Cmyk(TypstCmykColor::new(
+                                cmyk[0], cmyk[1], cmyk[2], cmyk[3],
+                            ))
+                        }
+                        _ => panic!("Unknown color type in paint region {}", paint_buffer.len()),
+                    };
+                    paints.push(TypstPaint::Solid(color));
+                }
+                0 => break,
+                _ => panic!("Unknown paint type in paint region {}", paint_buffer.len()),
+            }
+        }
+
+        let glyph_shapes = buffers[RegionKind::Glyph as usize];
+        let glyph_shapes = unsafe {
+            std::slice::from_raw_parts(
+                glyph_shapes.as_ptr() as *const GlyphShape,
+                glyph_shapes.len() / std::mem::size_of::<GlyphShape>(),
+            )
+        };
+
+        let string_sizes = buffers[RegionKind::StringSizes as usize];
+        let (string_sizes, _string_sizes_raii) = get_sizes_array(string_sizes);
+
+        let mut strings = Vec::<&'a str>::new();
+        let mut string_offset = 0u64;
+        let s = buffers[RegionKind::String as usize];
+        for &sz in string_sizes {
+            strings.push(
+                std::str::from_utf8(&s[string_offset as usize..(string_offset + sz) as usize])
+                    .unwrap(),
+            );
+            string_offset += sz;
+        }
+
+        let byte_sizes = buffers[RegionKind::ByteSizes as usize];
+        let (byte_sizes, _byte_sizes_raii) = get_sizes_array(byte_sizes);
+
+        let mut bytes = Vec::<&'a [u8]>::new();
+        let mut bytes_offset = 0u64;
+        let s = buffers[RegionKind::Bytes as usize];
+        for &sz in byte_sizes {
+            bytes.push(&s[bytes_offset as usize..(bytes_offset + sz) as usize]);
+            bytes_offset += sz;
+        }
+
         Self {
             sp: Locator::new(),
             fonts: Vec::new(),
-            paints: Vec::new(),
-            buffer: buffer.as_ref(),
-            shapes,
+            paints,
+            buffer: buffers[RegionKind::General as usize],
+            glyph_shapes,
+            strings,
+            bytes,
         }
+    }
+
+    pub fn get_string(&self, string: StringRef) -> &'a str {
+        self.strings[string.id as usize]
+    }
+
+    pub fn get_bytes(&self, bytes: BytesRef) -> &'a [u8] {
+        self.bytes[bytes.id as usize]
     }
 
     pub fn get_font(&mut self, font: FontRef) -> TypstFont {
@@ -495,7 +681,7 @@ impl<'a> TypeDocumentParser<'a> {
     }
 
     pub fn parse_glyph(&mut self, glyph: &GlyphItem) -> TypstGlyph {
-        let shape = &self.shapes[glyph.shape as usize];
+        let shape = &self.glyph_shapes[glyph.shape as usize];
         TypstGlyph {
             id: shape.id,
             x_advance: shape.x_advance.into(),
@@ -518,8 +704,8 @@ impl<'a> TypeDocumentParser<'a> {
             font: self.get_font(text.font),
             size: text.size.into(),
             fill: self.paints[text.fill as usize].clone(),
-            lang: TypstLang::from_str(text.lang.as_str(self.buffer)).unwrap(),
-            text: text.text.as_str(self.buffer).into(),
+            lang: TypstLang::from_str(self.get_string(text.lang)).unwrap(),
+            text: self.get_string(text.text).into(),
             glyphs: text
                 .glyphs
                 .iter(self.buffer)
@@ -530,22 +716,19 @@ impl<'a> TypeDocumentParser<'a> {
 
     pub fn parse_image(&mut self, image: &Image) -> TypstImage {
         TypstImage::new_raw(
-            image
-                .data
-                .as_slice(self.buffer, image.data_len as usize)
-                .into(),
-            match image.format.as_str(self.buffer) {
+            self.get_bytes(image.data).into(),
+            match self.get_string(image.format) {
                 "png" => ImageFormat::Raster(RasterFormat::Png),
                 "jpg" => ImageFormat::Raster(RasterFormat::Jpg),
                 "gif" => ImageFormat::Raster(RasterFormat::Gif),
                 "svg" => ImageFormat::Vector(VectorFormat::Svg),
-                _ => panic!("Unknown image format {}", image.format.as_str(self.buffer)),
+                _ => panic!("Unknown image format {}", self.get_string(image.format)),
             },
             TypstAxes {
                 x: image.width,
                 y: image.height,
             },
-            image.alt.clone().map(|s| s.as_str(self.buffer).into()),
+            image.alt.map(|s| self.get_string(s).into()),
         )
         .unwrap()
     }
@@ -569,15 +752,6 @@ impl<'a> TypeDocumentParser<'a> {
         }
     }
 
-    // pub fn write_dash_pattern<OutT, OutDT: HasItemRefKind, InT: Into<OutT>, InDT: Into<OutDT>>(
-    //     &mut self,
-    //     dash_pattern: TypstDashPattern<InT, InDT>,
-    // ) -> DashPattern<OutT, OutDT> {
-    //     DashPattern {
-    //         array: self.push_array::<OutDT>(dash_pattern.array.iter().map(|v| &(*v).into())),
-    //         phase: dash_pattern.phase.into(),
-    //     }
-    // }
     pub fn parse_dash_pattern<
         OutT,
         OutDT,
@@ -638,16 +812,16 @@ impl<'a> TypeDocumentParser<'a> {
             FrameItem::MetaLink(dest, size) => {
                 let dest = match dest {
                     Destination::Url(url) => {
-                        TypstDestination::Url(TypstEcoString::from(url.as_str(self.buffer)))
+                        TypstDestination::Url(TypstEcoString::from(self.get_string(*url)))
                     }
                     Destination::Position(pos) => TypstDestination::Position(TypstPosition {
                         page: pos.page,
                         point: pos.point.into(),
                     }),
                     Destination::Location(loc) => {
-                        match self.parse_location(loc.as_str(self.buffer)) {
+                        match self.parse_location(self.get_string(*loc)) {
                             Some(loc) => TypstDestination::Location(loc),
-                            None => panic!("Invalid location: {}", loc.as_str(self.buffer)),
+                            None => panic!("Invalid location: {}", self.get_string(*loc)),
                         }
                     }
                 };
@@ -681,17 +855,21 @@ impl<'a> TypeDocumentParser<'a> {
 
 impl Artifact {
     pub fn to_document<T: FontResolver>(self, font_resolver: &T) -> TypstDocument {
-        let (paint_offset, glyph_offset) = self.offsets;
+        let buffers = self
+            .offsets
+            .iter()
+            .enumerate()
+            .map(|(i, &offset)| {
+                let buf = self.buffer.as_slice();
+                if i == self.offsets.len() - 1 {
+                    &buf[offset as usize..]
+                } else {
+                    &buf[offset as usize..self.offsets[i + 1] as usize]
+                }
+            })
+            .collect::<Arc<[_]>>();
 
-        let glyph_shapes = &self.buffer[glyph_offset as usize..];
-        let glyph_shapes = unsafe {
-            std::slice::from_raw_parts(
-                glyph_shapes.as_ptr() as *const GlyphShape,
-                glyph_shapes.len() / std::mem::size_of::<GlyphShape>(),
-            )
-        };
-
-        let mut builder = TypeDocumentParser::new(&self.buffer, glyph_shapes);
+        let mut builder = TypeDocumentParser::new(buffers.as_ref());
         for font in self.metadata.fonts {
             let font_info = TypstFontInfo {
                 family: font.family,
@@ -717,47 +895,9 @@ impl Artifact {
             builder.fonts.push(font);
         }
 
-        let paint_buffer = &self.buffer[paint_offset as usize..glyph_offset as usize];
-        let mut paints = vec![];
-        let mut t = 0;
-        while t < paint_buffer.len() {
-            match paint_buffer[t] {
-                b's' => {
-                    t += 1;
-                    let color = match paint_buffer[t] {
-                        b'l' => {
-                            t += 1;
-                            let color = paint_buffer[t];
-                            TypstColor::Luma(TypstLumaColor(color))
-                        }
-                        b'r' => {
-                            // this should remove extra bound checks
-                            let rgba = &paint_buffer[t + 1..t + 5];
-                            t += 5;
-                            TypstColor::Rgba(TypstRgbaColor::new(
-                                rgba[0], rgba[1], rgba[2], rgba[3],
-                            ))
-                        }
-                        b'c' => {
-                            let cmyk = &paint_buffer[t + 1..t + 5];
-                            t += 5;
-                            TypstColor::Cmyk(TypstCmykColor::new(
-                                cmyk[0], cmyk[1], cmyk[2], cmyk[3],
-                            ))
-                        }
-                        _ => panic!("Unknown color type in region0 {}", paint_buffer.len()),
-                    };
-                    paints.push(TypstPaint::Solid(color));
-                }
-                0 => break,
-                _ => panic!("Unknown paint type in region1 {}", paint_buffer.len()),
-            }
-        }
-        builder.paints = paints;
-
         let pages = self
             .pages
-            .iter(&self.buffer)
+            .iter(builder.buffer)
             .map(|f| builder.parse_frame(f))
             .collect();
 
@@ -776,11 +916,12 @@ impl Artifact {
 
 #[cfg(test)]
 mod tests {
+
     use crate::artifact_ir::*;
 
     fn build_simple_refs(builder: &mut ArtifactBuilder) -> ItemArray<FrameItem> {
-        let lang_str = builder.push_string("en".into());
-        let text_src = builder.push_string("W".to_string());
+        let lang_str = builder.push_shared_string("en".into());
+        let text_src = builder.push_shared_string("W".to_string());
         let glyph = builder.write_glyph(TypstGlyph {
             id: 45,
             x_advance: TypstEm::one(),
@@ -811,7 +952,7 @@ mod tests {
         let items = vec![item1, item2];
 
         ItemArray {
-            start: items.first().map(|x| x.id).unwrap(),
+            start: items.first().map(|x| x.offset).unwrap(),
             size: items.len() as u32,
             phantom: std::marker::PhantomData,
         }
@@ -819,15 +960,18 @@ mod tests {
 
     #[test]
     fn test_item_ref_array() {
-        let mut builder = ArtifactBuilder::new();
+        let mut builder = ArtifactBuilder::default();
         let refs = build_simple_refs(&mut builder);
         assert_eq!(refs.len(), 2);
 
-        let mut it = refs.iter(&builder.buffer);
+        let (view_buffer, _) = builder.build_buffer();
+        let align_view = &view_buffer.as_slice()[..builder.buffer().len()];
+
+        let mut it = refs.iter(align_view);
         assert_eq!(it.len(), 2);
         if let Some(FrameItem::Text(x)) = it.next() {
             assert_eq!(x.glyphs.len(), 1);
-            if let Some(x) = x.glyphs.iter(&builder.buffer).next() {
+            if let Some(x) = x.glyphs.iter(align_view).next() {
                 assert_eq!(x.range_start, 0);
             } else {
                 panic!("Expected glyph item");
@@ -836,7 +980,8 @@ mod tests {
             panic!("Expected text item");
         }
 
-        if let Some(FrameItem::Shape(x)) = it.next() {
+        let item = it.next();
+        if let Some(FrameItem::Shape(x)) = item {
             assert_eq!(
                 x.geometry,
                 Geometry::Rect(Size {
@@ -845,7 +990,7 @@ mod tests {
                 })
             );
         } else {
-            panic!("Expected shape item");
+            panic!("Expected shape item, got {item:?}");
         }
 
         assert_eq!(it.next(), None);
@@ -853,7 +998,7 @@ mod tests {
 
     #[test]
     fn test_item_ref_option() {
-        let mut builder = ArtifactBuilder::new();
+        let mut builder = ArtifactBuilder::default();
 
         let raw_item = builder.push_item(&Frame {
             size: Axes {
@@ -864,13 +1009,10 @@ mod tests {
             items: Default::default(),
         });
 
-        let item = raw_item.deref(&builder.buffer);
-        assert!(matches!(item.baseline, Some(_)));
-    }
-}
+        let (view_buffer, _) = builder.build_buffer();
+        let align_view = &view_buffer.as_slice()[..builder.buffer().len()];
 
-impl Default for ArtifactBuilder {
-    fn default() -> Self {
-        Self::new()
+        let item = raw_item.deref(align_view);
+        assert!(matches!(item.baseline, Some(_)));
     }
 }

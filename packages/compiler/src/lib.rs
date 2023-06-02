@@ -1,6 +1,6 @@
 use std::{str::FromStr, sync::Arc};
 
-use base64::Engine;
+use base64::{engine::DecodeEstimate, Engine};
 use js_sys::{JsString, Uint8Array};
 use typst::{
     font::Font,
@@ -160,18 +160,20 @@ impl TypstCompiler {
         self.rebuild();
 
         let artifact_header = snapshot.artifact_header;
-        let artifact_data = base64::engine::general_purpose::STANDARD
-            .decode(snapshot.artifact_data)
-            .unwrap();
-
+        let cap = base64::engine::general_purpose::STANDARD
+            .internal_decoded_len_estimate(snapshot.artifact_data.len())
+            .decoded_len_estimate();
         Ok(DocumentReference {
             doc: Some(Arc::new(
-                artifact_ir::Artifact {
-                    metadata: artifact_header.metadata,
-                    pages: artifact_header.pages,
-                    buffer: artifact_data,
-                    offsets: artifact_header.offsets,
-                }
+                artifact_ir::Artifact::with_initializer(
+                    cap,
+                    |buf_mut| {
+                        base64::engine::general_purpose::STANDARD
+                            .decode_slice(snapshot.artifact_data.as_bytes(), buf_mut)
+                            .unwrap();
+                    },
+                    artifact_header,
+                )
                 .to_document(&self.world.font_resolver),
             )),
         })
