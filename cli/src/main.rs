@@ -25,6 +25,8 @@ fn help_sub_command() {
 fn main() {
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Info)
+        .filter_module("typst", log::LevelFilter::Warn)
+        .filter_module("typst_library", log::LevelFilter::Warn)
         .try_init();
 
     let opts = Opts::from_arg_matches(&get_cli(false).get_matches())
