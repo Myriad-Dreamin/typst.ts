@@ -113,11 +113,7 @@ impl Downloader {
                 std::fs::create_dir_all(to_dir)?;
             }
 
-            print!(
-                "check file has_file({:?}): {}",
-                from.exists(),
-                from.display()
-            );
+            print!("check file exists({:?}): {}", from.exists(), from.display());
             std::fs::copy(from, to.clone())?;
             let content = std::fs::read(to.clone())?;
             let sha_hash = hex::encode(sha2::Sha256::digest(&content));
