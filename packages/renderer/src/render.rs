@@ -45,7 +45,7 @@ mod tests {
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .unwrap();
 
-        let serde_task = {
+        let (time_used, data_content_hash, ..) = {
             let start = performance.now();
 
             let mut renderer = crate::tests::get_renderer();
@@ -82,6 +82,8 @@ mod tests {
 
             let text_content = js_sys::JSON::stringify(&res).unwrap().as_string().unwrap();
 
+            let data_content_hash = hash_bytes(&data_content);
+
             web_sys::console::log_3(
                 &">>> typst_ts_test_capture".into(),
                 &serde_json::to_string(&CanvasRenderTestPoint {
@@ -89,7 +91,7 @@ mod tests {
                     name: point.to_string(),
                     meta: CanvasRenderTestPointMeta {
                         time_used: format!("{:.3}", end - start),
-                        data_content_hash: hash_bytes(&data_content),
+                        data_content_hash: data_content_hash.clone(),
                         text_content_hash: hash_bytes(&text_content),
                     },
                     verbose: {
@@ -105,7 +107,7 @@ mod tests {
                 .into(),
                 &"<<< typst_ts_test_capture".into(),
             );
-            (end - start, artifact)
+            (end - start, data_content_hash, artifact)
         };
 
         window
@@ -116,7 +118,7 @@ mod tests {
             .append_child(&canvas)
             .unwrap();
 
-        self::console_log!("canvas {point} {:.3}ms", serde_task.0);
+        self::console_log!("canvas {point} => {data_content_hash} {time_used:.3}ms");
     }
 
     async fn get_ir_artifact(name: &str) -> Vec<u8> {
