@@ -8,16 +8,15 @@ pub use typst::doc::Glyph as TypstGlyph;
 pub use typst::doc::Lang as TypstLang;
 pub use typst::doc::Meta as TypstMeta;
 
-use super::core::EcoString;
 use super::core::FontRef;
 use super::core::GlyphShapeRef;
 use super::core::HasItemRefKind;
 use super::core::ItemArray;
 use super::core::ItemRef;
 use super::core::ItemRefKind;
-use super::core::Lang;
 use super::core::PaintRef;
 use super::core::SpanRef;
+use super::core::StringRef;
 use super::geom::Em;
 use super::geom::Shape;
 use super::geom::Transform;
@@ -117,9 +116,9 @@ pub struct TextItem {
     /// Glyph color.
     pub fill: PaintRef,
     /// The natural language of the text.
-    pub lang: ItemRef<Lang>,
+    pub lang: StringRef,
     /// The item's plain text.
-    pub text: ItemRef<String>,
+    pub text: StringRef,
     /// The glyphs.
     pub glyphs: ItemArray<GlyphItem>,
 }
@@ -130,11 +129,11 @@ pub struct TextItem {
 #[serde(tag = "t", content = "v")]
 pub enum Destination {
     /// A link to a URL.
-    Url(ItemRef<EcoString>),
+    Url(StringRef),
     /// A link to a point on a page.
     Position(Position),
     /// An unresolved link to a location in the document.
-    Location(ItemRef<String>),
+    Location(StringRef),
 }
 
 /// A physical position in a document.

@@ -131,15 +131,13 @@ pub fn ir_artifact_from_bin(artifact_content: &[u8]) -> ZResult<Artifact> {
         ir_artifact_header_from_js_string(header)?
     };
 
-    let mut buffer = vec![];
-    reader
-        .read_to_end(&mut buffer)
-        .map_err(map_string_err("ArtifactIRBuilder.ReadBody"))?;
+    let rest_offset = artifact_content.len() - reader.position() as usize;
 
-    Ok(Artifact {
-        metadata: header.metadata,
-        pages: header.pages,
-        offsets: header.offsets,
-        buffer,
-    })
+    Ok(Artifact::with_initializer(
+        rest_offset,
+        |buf_mut| {
+            buf_mut.copy_from_slice(&artifact_content[reader.position() as usize..]);
+        },
+        header,
+    ))
 }

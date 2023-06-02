@@ -10,6 +10,7 @@ pub use typst_library::prelude::Position as TypstPosition;
 pub use typst_library::prelude::Shape as TypstShape;
 pub use typst_library::prelude::TextItem as TypstTextItem;
 
+use super::alloc::item_align_up;
 use super::geom::Abs;
 
 pub type SpanRef = ();
@@ -36,7 +37,7 @@ pub struct Location {
     pub variant: usize,
 }
 
-#[repr(C)]
+#[repr(u32)]
 #[derive(Clone, Debug, PartialOrd, Eq, Ord, Serialize, Deserialize, PartialEq)]
 pub enum ItemRefKind {
     ItemWithPos,
@@ -44,9 +45,10 @@ pub enum ItemRefKind {
     Frame,
     Glyph,
     PathItem,
-    Bytes,
+    // Bytes,
     Abs,
-    String, // null-terminated
+    // String, // null-terminated
+    MAX,
 }
 
 pub trait HasItemRefKind {
@@ -58,10 +60,9 @@ impl HasItemRefKind for Abs {
 }
 
 #[repr(C)]
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
 pub struct ItemRef<T> {
-    pub id: u32,
-    pub kind: ItemRefKind,
+    pub offset: u32,
 
     #[serde(skip)]
     pub phantom: std::marker::PhantomData<T>,
@@ -69,45 +70,67 @@ pub struct ItemRef<T> {
 
 impl<T: HasItemRefKind> ItemRef<T> {
     pub fn deref(&self, buffer: &[u8]) -> &T {
-        if T::ITEM_REF_KIND == ItemRefKind::String || T::ITEM_REF_KIND == ItemRefKind::Bytes {
-            panic!()
+        let off = self.offset as usize;
+        if off + std::mem::size_of::<T>() > buffer.len() {
+            panic!(
+                "buffer overflow in ItemRef::deref: off={}, size={}",
+                off,
+                std::mem::size_of::<T>()
+            );
         }
-        let off = self.id as usize;
         unsafe { &*(buffer.as_ptr().add(off) as *const T) }
     }
 }
 
-impl ItemRef<String> {
-    pub fn as_str(&self, buffer: &[u8]) -> &str {
-        let off = self.id as usize;
-        unsafe {
-            let begin = buffer.as_ptr().add(off) as *const u8;
-            let mut end = begin;
-            // strlen for begin
-            while end.read() != 0 {
-                if *end == 0 {
-                    break;
-                }
-                end = end.add(1);
-            }
-            std::str::from_utf8(std::slice::from_raw_parts(
-                begin,
-                end.offset_from(begin) as usize,
-            ))
-            .unwrap()
-        }
-    }
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
+pub struct StringRef {
+    pub id: u32,
 }
 
-impl ItemRef<Vec<u8>> {
-    pub fn as_slice(&self, buffer: &[u8], len: usize) -> &[u8] {
-        let off = self.id as usize;
-        unsafe {
-            let begin = buffer.as_ptr().add(off) as *const u8;
-            std::slice::from_raw_parts(begin, len)
-        }
-    }
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
+pub struct BytesRef {
+    pub id: u32,
 }
+
+// if T::ITEM_REF_KIND == ItemRefKind::String {
+//     panic!()
+// }
+// if T::ITEM_REF_KIND == ItemRefKind::String || T::ITEM_REF_KIND == ItemRefKind::Bytes {
+//     panic!()
+// }
+// impl StringRef {
+//     pub fn as_str(&self, buffer: &[u8]) -> &str {
+//         let off = self.offset as usize;
+//         unsafe {
+//             let begin = buffer.as_ptr().add(off) as *const u8;
+//             let mut end = begin;
+//             // strlen for begin
+//             while end.read() != 0 {
+//                 if *end == 0 {
+//                     break;
+//                 }
+//                 end = end.add(1);
+//             }
+//             std::str::from_utf8(std::slice::from_raw_parts(
+//                 begin,
+//                 end.offset_from(begin) as usize,
+//             ))
+//             .unwrap()
+//         }
+//     }
+// }
+
+// impl BytesRef {
+//     pub fn as_slice(&self, buffer: &[u8], len: usize) -> &[u8] {
+//         let off = self.offset as usize;
+//         unsafe {
+//             let begin = buffer.as_ptr().add(off) as *const u8;
+//             std::slice::from_raw_parts(begin, len)
+//         }
+//     }
+// }
 
 /// Represents a series of items with contiguous ids.
 #[repr(C)]
@@ -122,8 +145,14 @@ pub struct ItemArray<T> {
 
 impl<'a, T: HasItemRefKind> ItemArray<T> {
     pub fn iter(&'a self, buffer: &'a [u8]) -> ItemArrayIter<'a, T> {
-        if T::ITEM_REF_KIND == ItemRefKind::String {
-            panic!()
+        let max_visit =
+            self.start as usize + item_align_up(std::mem::size_of::<T>()) * self.size as usize;
+        if max_visit > buffer.len() {
+            panic!(
+                "buffer overflow in ItemRef::deref: off={}, size={}",
+                max_visit,
+                buffer.len(),
+            );
         }
         ItemArrayIter {
             array: self,
@@ -172,7 +201,8 @@ impl<'a, T> Iterator for ItemArrayIter<'a, T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.array.size {
-            let off = self.array.start as usize + self.index as usize * std::mem::size_of::<T>();
+            let off = self.array.start as usize
+                + self.index as usize * item_align_up(std::mem::size_of::<T>());
             let item = unsafe { &*(self.buffer.as_ptr().add(off) as *const T) };
             self.index += 1;
             Some(item)
