@@ -9,7 +9,7 @@ use web_sys::HtmlImageElement;
 
 impl<'a> CanvasRenderTask<'a> {
     /// Render a raster or SVG image into the canvas.
-    // todo: error handling, refactor, and verify correctness
+    // todo: error handling
     pub(crate) async fn render_image(
         &mut self,
         ts: sk::Transform,
@@ -19,24 +19,25 @@ impl<'a> CanvasRenderTask<'a> {
         let image_elem = rasterize_image(image).unwrap();
         self.load_image_cached(image, &image_elem).await;
 
+        // resize image to fit the view
+        let (w, h) = {
+            let view_width = size.x.to_f32();
+            let view_height = size.y.to_f32();
+
+            let aspect = (image.width() as f32) / (image.height() as f32);
+
+            let w = view_width.max(aspect * view_height);
+            let h = w / aspect;
+            (w, h)
+        };
+
         let state = CanvasStateGuard::new(self.canvas);
-        self.canvas.reset_transform().unwrap();
-
-        let view_width = size.x.to_f32();
-        let view_height = size.y.to_f32();
-
-        let aspect = (image.width() as f32) / (image.height() as f32);
-        let scale = ts.sx.max(ts.sy);
-
-        let x = ts.tx;
-        let y = ts.ty;
-        let w = (scale * view_width.max(aspect * view_height)).ceil() as u32;
-        let h = ((w as f32) / aspect).ceil() as u32;
+        self.set_transform(ts);
         self.canvas
             .draw_image_with_html_image_element_and_dw_and_dh(
                 &image_elem,
-                x as f64,
-                y as f64,
+                0.,
+                0.,
                 w as f64,
                 h as f64,
             )
