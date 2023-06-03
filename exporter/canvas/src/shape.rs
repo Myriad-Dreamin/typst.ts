@@ -1,6 +1,7 @@
 use ttf_parser::OutlineBuilder;
 use typst::geom::{Geometry, LineCap, LineJoin, Paint, PathItem, Shape, Stroke};
 use typst_ts_core::error::prelude::*;
+use wasm_bindgen::JsValue;
 use web_sys::Path2d;
 
 use crate::{
@@ -57,7 +58,6 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
             }
         };
 
-        // todo: anti_alias
         if let Some(fill) = &shape.fill {
             let state_guard = CanvasStateGuard::new(self.canvas);
 
@@ -94,30 +94,20 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
             miter_limit,
         }) = &shape.stroke
         {
-            // todo: dash pattern
-            let _ = dash_pattern;
-            // dash_pattern.as_ref().and_then(|pattern| {
-            // tiny-skia only allows dash patterns with an even number of elements,
-            // while pdf allows any number.
-            // let len = if pattern.array.len() % 2 == 1 {
-            //     pattern.array.len() * 2
-            // } else {
-            //     pattern.array.len()
-            // };
-            // let dash_array = pattern
-            //     .array
-            //     .iter()
-            //     .map(|l| l.to_f32())
-            //     .cycle()
-            //     .take(len)
-            //     .collect();
-
-            // sk::StrokeDash::new(dash_array, pattern.phase.to_f32())
-            //     panic!("dash_pattern");
-
-            // });
-
             let state_guard = CanvasStateGuard::new(self.canvas);
+
+            if let Some(pattern) = dash_pattern.as_ref() {
+                let dash_array = js_sys::Array::from_iter(
+                    pattern
+                        .array
+                        .iter()
+                        .map(|l| JsValue::from_f64(l.to_f32() as f64)),
+                );
+                self.canvas
+                    .set_line_dash_offset(pattern.phase.to_f32() as f64);
+                self.canvas.set_line_dash(&dash_array).unwrap();
+            }
+
             self.canvas.set_line_width(thickness.to_pt());
             self.canvas.set_line_cap(match line_cap {
                 LineCap::Butt => "butt",
@@ -136,7 +126,6 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
             let fill_style = format!("rgba({},{},{},{})", c.r, c.g, c.b, c.a);
             self.canvas.set_stroke_style(&fill_style.into());
 
-            // todo: ts
             self.set_transform(ts);
 
             self.canvas.stroke_with_path(
