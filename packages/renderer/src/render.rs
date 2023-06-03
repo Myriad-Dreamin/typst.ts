@@ -3,8 +3,9 @@
 #[cfg(test)]
 // #[cfg(target_arch = "wasm32")]
 mod tests {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, sync::Mutex};
 
+    use send_wrapper::SendWrapper;
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
     use typst_ts_canvas_exporter::RenderFeature;
@@ -13,7 +14,7 @@ mod tests {
     use wasm_bindgen_test::*;
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-    use crate::session::RenderSessionOptions;
+    use crate::{session::RenderSessionOptions, TypstRenderer};
 
     fn hash_bytes<T: AsRef<[u8]>>(bytes: T) -> String {
         format!("sha256:{}", hex::encode(sha2::Sha256::digest(bytes)))
@@ -40,6 +41,9 @@ mod tests {
         const ENABLE_TRACING: bool = true;
     }
 
+    static RENDERER: Mutex<once_cell::sync::OnceCell<SendWrapper<Mutex<TypstRenderer>>>> =
+        Mutex::new(once_cell::sync::OnceCell::new());
+
     async fn render_test_template(point: &str, artifact: &[u8], format: &str) {
         let window = web_sys::window().expect("should have a window in this context");
         let performance = window
@@ -57,9 +61,12 @@ mod tests {
         let (time_used, perf_events, data_content_hash, ..) = {
             let create = performance.now();
 
-            let mut renderer = crate::tests::get_renderer();
-            let start = performance.now();
+            let renderer = RENDERER.lock().unwrap();
+            let renderer =
+                renderer.get_or_init(|| SendWrapper::new(Mutex::new(crate::tests::get_renderer())));
+            let renderer = &mut renderer.lock().unwrap();
 
+            let start = performance.now();
             let session = renderer
                 .create_session(
                     artifact,
