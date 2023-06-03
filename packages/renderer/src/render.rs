@@ -193,6 +193,7 @@ mod tests {
     }
 
     make_test_point!(test_render_math_main, "math/main");
+    make_test_point!(test_render_math_undergradmath, "math/undergradmath");
 
     make_test_point!(
         test_render_layout_clip,

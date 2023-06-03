@@ -321,6 +321,18 @@ mod tests {
             "../../../assets/fonts/NotoSerifCJKsc-Regular.otf"
         )));
         builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../../assets/fonts/DejaVuSansMono.ttf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../../assets/fonts/DejaVuSansMono-Oblique.ttf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../../assets/fonts/DejaVuSansMono-BoldOblique.ttf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+            "../../../assets/fonts/DejaVuSansMono-Bold.ttf"
+        )));
+        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
             "../../../assets/fonts/TwitterColorEmoji.ttf"
         )));
         builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
