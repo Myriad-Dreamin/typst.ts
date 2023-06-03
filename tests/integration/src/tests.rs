@@ -255,6 +255,43 @@ mod tests {
         origin_pdf_hash: "sha256:d9f1073eb598a62f75f669bcdf08010efdba3980fa74c7f065668b0377a2354e"
         artifact_pdf_hash: "sha256:d9f1073eb598a62f75f669bcdf08010efdba3980fa74c7f065668b0377a2354e"
         "###);
+        // todo: typst cannot pass visualize/stroke_4 test.
+        check_bundle_facts!("visualize", "stroke_1", @r###"
+        ---
+        name: visualize/stroke_1.typ
+        origin_pdf_hash: "sha256:64734195769470c8fbe95f0d501a7b73e61f25d63513718691bad2ab4e3d5de8"
+        artifact_pdf_hash: "sha256:64734195769470c8fbe95f0d501a7b73e61f25d63513718691bad2ab4e3d5de8"
+        "###);
+        check_bundle_facts!("visualize", "stroke_2", @r###"
+        ---
+        name: visualize/stroke_2.typ
+        origin_pdf_hash: "sha256:32c7db206ace75f0b3cb7c58392e0477f3959a83f759fd60edc073e841f20abf"
+        artifact_pdf_hash: "sha256:32c7db206ace75f0b3cb7c58392e0477f3959a83f759fd60edc073e841f20abf"
+        "###);
+        check_bundle_facts!("visualize", "stroke_3", @r###"
+        ---
+        name: visualize/stroke_3.typ
+        origin_pdf_hash: "sha256:65103be4a373417258b964aadb7bc3ade60bebd73181b30e780954dd69cd0aff"
+        artifact_pdf_hash: "sha256:65103be4a373417258b964aadb7bc3ade60bebd73181b30e780954dd69cd0aff"
+        "###);
+        check_bundle_facts!("visualize", "stroke_4", @r###"
+        ---
+        name: visualize/stroke_4.typ
+        origin_pdf_hash: "sha256:a705e05dd32ff91407373e49e5f939c592a37f0c8b61903ad1ea0c7395a0aa63"
+        artifact_pdf_hash: "sha256:a705e05dd32ff91407373e49e5f939c592a37f0c8b61903ad1ea0c7395a0aa63"
+        "###);
+        check_bundle_facts!("visualize", "stroke_5", @r###"
+        ---
+        name: visualize/stroke_5.typ
+        origin_pdf_hash: "sha256:2df82172746635e220bb8ad7173070e479c3bce78968933d3df57865e81f0bca"
+        artifact_pdf_hash: "sha256:2df82172746635e220bb8ad7173070e479c3bce78968933d3df57865e81f0bca"
+        "###);
+        check_bundle_facts!("visualize", "stroke_6", @r###"
+        ---
+        name: visualize/stroke_6.typ
+        origin_pdf_hash: "sha256:56baa4dd6324590e28be5f0a9cd632f6cc3a3396e6de2fae01b3c7a8aa6cfd19"
+        artifact_pdf_hash: "sha256:56baa4dd6324590e28be5f0a9cd632f6cc3a3396e6de2fae01b3c7a8aa6cfd19"
+        "###);
 
         check_bundle_facts!("text", "chinese", @r###"
         ---
@@ -295,6 +332,7 @@ mod tests {
         origin_pdf_hash: "sha256:9c5e3b9668a1dfa72a5206be82074edb2ed89ebfb3c18bfdbc5d0a8360968925"
         artifact_pdf_hash: "sha256:9c5e3b9668a1dfa72a5206be82074edb2ed89ebfb3c18bfdbc5d0a8360968925"
         "###);
+        // todo: typst cannot pass visualize/stroke_6 test.
 
         fn bundle_to_facts(name: String, bundle: &ArtifactBundle) -> Facts {
             let json_artifact = std::fs::read(&bundle.json).unwrap();
@@ -860,6 +898,78 @@ mod tests {
         name: visualize_shape_circle_4_artifact_json
         data_content_phash: "phash-gradient:AAAAAABAAAAACADoCIDkCEPsiCz6SBz1MJrwMJXsKJNraBNhSBNpaJNrMJXkMJrySBz1iCz6CEPsCIDkCADoAAAAAABAAAAA"
         text_content_hash: "sha256:31d2cf7d42f57b7401ffcd55203058d910afbdd50029cb0d7ad4d4139e7f29a1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: visualize_stroke_1_artifact_ir
+        data_content_phash: "phash-gradient:AEAAAAAACGgBAGAAAAAAAAAACGAACGgBAAAAAGAAAIAACGgBCGABAIAAAGAAAAAABGgAACAAAEAAAQAABOgABOgAAAAAAEAA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: visualize_stroke_1_artifact_json
+        data_content_phash: "phash-gradient:AEAAAAAACGgBAGAAAAAAAAAACGAACGgBAAAAAGAAAIAACGgBCGABAIAAAGAAAAAABGgAACAAAEAAAQAABOgABOgAAAAAAEAA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: visualize_stroke_2_artifact_ir
+        data_content_phash: "phash-gradient:AAAAAAAAAAAAAAAApHQBpFQAAAAAAAAAAAAAAEAAAIAApHQBpHQBAIAAAEAAAAAAAAAAAAAAAGAACGgBAAAAAGAAAAAAAAAA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: visualize_stroke_2_artifact_json
+        data_content_phash: "phash-gradient:AAAAAAAAAAAAAAAApHQBpFQAAAAAAAAAAAAAAEAAAIAApHQBpHQBAIAAAEAAAAAAAAAAAAAAAGAACGgBAAAAAGAAAAAAAAAA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: visualize_stroke_3_artifact_ir
+        data_content_phash: "phash-gradient:AAAAaAAAZAEARAEARAEARAEAbAEAAAAAAAAAZAAARAEARAEARAEARAEAaAAAgAAAaAAAZAEARAEARAEARAEAZAMAaAAAgwAA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: visualize_stroke_3_artifact_json
+        data_content_phash: "phash-gradient:AAAAaAAAZAEARAEARAEARAEAbAEAAAAAAAAAZAAARAEARAEARAEARAEAaAAAgAAAaAAAZAEARAEARAEARAEAZAMAaAAAgwAA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: visualize_stroke_4_artifact_ir
+        data_content_phash: "phash-gradient:ACAAAAAACGAAAGAAAAAAAAAAAGAAlHoAAAAAAEAAAAAASGkASGkAAAAAACAAAAAACGABAGAAAAAAAAAAOE4AOE4AAAAAMEYA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: visualize_stroke_4_artifact_json
+        data_content_phash: "phash-gradient:ACAAAAAACGAAAGAAAAAAAAAAAGAAlHoAAAAAAEAAAAAASGkASGkAAAAAACAAAAAACGABAGAAAAAAAAAAOE4AOE4AAAAAMEYA"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: visualize_stroke_5_artifact_ir
+        data_content_phash: "phash-gradient:AABAAARJIEBqpKxltKylspS1MpayWMayGcY4GcdYnMNcHONcLGNZKWspKWtZGUNZGMJYlKa0tKe0MIaxMIRhpCBnEEKQAABB"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: visualize_stroke_5_artifact_json
+        data_content_phash: "phash-gradient:AABAAARJIEBqpKxltKylspS1MpayWMayGcY4GcdYnMNcHONcLGNZKWspKWtZGUNZGMJYlKa0tKe0MIaxMIRhpCBnEEKQAABB"
+        text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: visualize_stroke_6_artifact_ir
+        data_content_phash: "phash-gradient:AAAAHAAAXAAAWAAAGAAAmAEA4AEAmgEAkCUApAIAqGsAcXkBgp4ABEcABEcAwL4AMXkBCGcBYHgBAI8ACGMAAA8AYHgBGGcB"
+        text_content_hash: "sha256:700c95814d32032eb6d08d7bc7a5f0de92af53400b422a0c8d230d4917ad741f"
+        "###);
+        check_canvas_render_test_point!(@r###"
+        ---
+        name: visualize_stroke_6_artifact_json
+        data_content_phash: "phash-gradient:AAAAHAAAXAAAWAAAGAAAmAEA4AEAmgEAkCUApAIAqGsAcXkBgp4ABEcABEcAwL4AMXkBCGcBYHgBAI8ACGMAAA8AYHgBGGcB"
+        text_content_hash: "sha256:700c95814d32032eb6d08d7bc7a5f0de92af53400b422a0c8d230d4917ad741f"
         "###);
 
         let done = test_point_iter.next();
