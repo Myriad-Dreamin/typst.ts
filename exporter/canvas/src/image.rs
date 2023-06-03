@@ -83,6 +83,9 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
                     RasterFormat::Gif => "image/gif",
                 },
                 ImageFormat::Vector(e) => match e {
+                    // todo: security check
+                    // https://security.stackexchange.com/questions/148507/how-to-prevent-xss-in-svg-file-upload
+                    // todo: use our custom font
                     VectorFormat::Svg => "image/svg+xml",
                 },
             }),

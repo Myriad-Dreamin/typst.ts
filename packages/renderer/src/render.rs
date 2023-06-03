@@ -241,6 +241,9 @@ mod tests {
         "visualize/shape_circle_4",
     );
 
+    // todo: This will use font from local machine, which is unstable
+    // make_test_point!(test_render_visualize_svg_text, "visualize/svg_text");
+
     // todo: get cjk font from remote server
     // make_test_point!(test_render_text_chinese, "text/chinese");
 
