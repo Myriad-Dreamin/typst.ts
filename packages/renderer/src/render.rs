@@ -160,13 +160,19 @@ mod tests {
         "layout/clip_3",
         "layout/clip_4",
     );
-
     make_test_point!(
         test_render_layout_list_marker,
         "layout/list_marker_1",
         "layout/list_marker_2",
         "layout/list_marker_3",
         "layout/list_marker_4",
+    );
+    make_test_point!(
+        test_render_layout_transform,
+        "layout/transform_1",
+        "layout/transform_2",
+        "layout/transform_3",
+        "layout/transform_4",
     );
 
     make_test_point!(
