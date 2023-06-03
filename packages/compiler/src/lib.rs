@@ -7,6 +7,7 @@ use typst::{
     geom::{Color, RgbaColor},
     World,
 };
+use typst_ts_canvas_exporter::{CanvasRenderTask, DefaultRenderFeature};
 pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
     font::web::BrowserFontSearcher, vfs::browser::ProxyAccessModel, world::WorldSnapshot,
@@ -252,7 +253,7 @@ impl TypstCompiler {
         background_color: String,
     ) -> ZResult<JsValue> {
         let doc = doc.doc_ref();
-        let mut worker = typst_ts_canvas_exporter::CanvasRenderTask::new(
+        let mut worker = CanvasRenderTask::<DefaultRenderFeature>::new(
             canvas,
             doc,
             page_off,

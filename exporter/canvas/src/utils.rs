@@ -18,10 +18,12 @@ macro_rules! console_log {
     }
 }
 
+use std::sync::Arc;
+
 #[allow(unused_imports)]
 pub(crate) use console_log;
 use typst::geom::{Abs, Color};
-use web_sys::CanvasRenderingContext2d;
+use web_sys::{CanvasRenderingContext2d, Performance};
 
 /// Additional methods for [`Length`].
 pub trait AbsExt {
@@ -68,5 +70,36 @@ impl<'a> CanvasStateGuard<'a> {
 impl<'a> Drop for CanvasStateGuard<'a> {
     fn drop(&mut self) {
         self.0.restore();
+    }
+}
+
+pub struct PerfEvent<'e> {
+    name: &'static str,
+    perf: Arc<Performance>,
+    start: f64,
+    perf_events: &'e elsa::FrozenMap<&'static str, Box<f64>>,
+}
+
+impl<'e> PerfEvent<'e> {
+    pub fn new(
+        name: &'static str,
+        perf: Arc<Performance>,
+        perf_events: &'e elsa::FrozenMap<&'static str, Box<f64>>,
+    ) -> Self {
+        Self {
+            name,
+            start: perf.now(),
+            perf,
+            perf_events,
+        }
+    }
+}
+
+impl Drop for PerfEvent<'_> {
+    fn drop(&mut self) {
+        let end = self.perf_events.get(self.name).unwrap_or(&0.);
+        let duration = self.perf.now() - self.start;
+        self.perf_events
+            .insert(self.name, Box::new(*end + duration));
     }
 }

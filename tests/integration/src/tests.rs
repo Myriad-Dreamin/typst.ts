@@ -426,6 +426,10 @@ mod tests {
                 let mut filtered_value = Facts::default();
 
                 filtered_value.name = test_point.name.clone();
+                let data_content_hash = test_point
+                    .meta
+                    .remove("data_content_hash")
+                    .expect("data_content_hash not found");
                 filtered_value.data_content_phash = test_point
                     .meta
                     .remove("data_content_phash")
@@ -443,10 +447,11 @@ mod tests {
                 let data_content = &test_point.verbose["data_content"];
                 let text_content = &test_point.verbose["text_content"];
                 let debug_expr = &format!(
-                    "\n::group::Snapshot testing Failure (Browser Canvas Rendering)\nsnapshot does not match the older one\nTestPointName: {}\nDataContent: {}\nTextContent: {}\n::endgroup::",
+                    "\n::group::Snapshot testing Failure (Browser Canvas Rendering)\nsnapshot does not match the older one\nTestPointName: {}\nDataContent: {}\nTextContent: {}\nDataContentHash: {}\n::endgroup::",
                     test_point.name,
                     data_content,
-                    text_content
+                    text_content,
+                    data_content_hash,
                 );
                 insta::assert_snapshot!(
                     value,

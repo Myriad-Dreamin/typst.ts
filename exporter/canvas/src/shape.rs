@@ -7,12 +7,13 @@ use crate::{
     sk,
     svg::SvgPath2DBuilder,
     utils::{AbsExt, CanvasStateGuard},
-    CanvasRenderTask,
+    CanvasRenderTask, RenderFeature,
 };
 
-impl<'a> CanvasRenderTask<'a> {
+impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
     /// Render a geometrical shape into the canvas.
     pub(crate) fn render_shape(&mut self, ts: sk::Transform, shape: &Shape) -> ZResult<()> {
+        let _r = self.perf_event("render_shape");
         let mut builder = SvgPath2DBuilder(String::new());
 
         // to ensure that our shape focus on the original point

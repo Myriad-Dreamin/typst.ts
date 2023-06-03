@@ -3163,6 +3163,7 @@ dependencies = [
  "async-recursion",
  "comemo",
  "data-url",
+ "elsa",
  "flate2",
  "js-sys",
  "once_cell",

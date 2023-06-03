@@ -2,8 +2,10 @@
 pub(crate) mod utils;
 
 use js_sys::Uint8Array;
+use std::collections::HashMap;
 use std::str::FromStr;
 use typst::geom::{Color, RgbaColor};
+use typst_ts_canvas_exporter::{CanvasRenderTask, DefaultRenderFeature, RenderFeature};
 use typst_ts_core::error::prelude::*;
 use typst_ts_core::font::FontResolverImpl;
 use wasm_bindgen::prelude::*;
@@ -62,23 +64,10 @@ impl TypstRenderer {
         canvas: &web_sys::CanvasRenderingContext2d,
         options: Option<RenderPageImageOptions>,
     ) -> ZResult<JsValue> {
-        let page_off = self.retrieve_page_off(ses, options)?;
-
-        let mut worker = typst_ts_canvas_exporter::CanvasRenderTask::new(
-            canvas,
-            &ses.doc,
-            page_off,
-            ses.pixel_per_pt,
-            Color::Rgba(
-                RgbaColor::from_str(&ses.background_color)
-                    .map_err(map_err("Renderer.InvalidBackgroundColor"))?,
-            ),
-        )?;
-
-        worker.render(&ses.doc.pages[page_off]).await?;
-
-        serde_wasm_bindgen::to_value(&worker.content)
-            .map_err(map_into_err::<JsValue, _>("Renderer.EncodeContent"))
+        Ok(self
+            .render_page_to_canvas_internal::<DefaultRenderFeature>(ses, canvas, options)
+            .await?
+            .0)
     }
 
     pub fn render_to_pdf(&mut self, artifact_content: &[u8]) -> ZResult<Uint8Array> {
@@ -224,6 +213,50 @@ impl TypstRenderer {
         // contribution 510KB
         // Ok(typst::export::pdf(&session.doc))
         Err(error_once!("Renderer.PdfFeatureNotEnabled"))
+    }
+
+    pub async fn render_page_to_canvas_internal<Feat: RenderFeature>(
+        &mut self,
+        ses: &RenderSession,
+        canvas: &web_sys::CanvasRenderingContext2d,
+        options: Option<RenderPageImageOptions>,
+    ) -> ZResult<(JsValue, Option<HashMap<String, f64>>)> {
+        let page_off = self.retrieve_page_off(ses, options)?;
+
+        let perf_events = if Feat::ENABLE_TRACING {
+            Some(elsa::FrozenMap::<&'static str, Box<f64>>::default())
+        } else {
+            None
+        };
+
+        let mut worker = CanvasRenderTask::<Feat>::new(
+            canvas,
+            &ses.doc,
+            page_off,
+            ses.pixel_per_pt,
+            Color::Rgba(
+                RgbaColor::from_str(&ses.background_color)
+                    .map_err(map_err("Renderer.InvalidBackgroundColor"))?,
+            ),
+        )?;
+
+        if let Some(perf_events) = perf_events.as_ref() {
+            worker.set_perf_events(perf_events)
+        };
+
+        worker.render(&ses.doc.pages[page_off]).await?;
+
+        Ok((
+            serde_wasm_bindgen::to_value(&worker.content)
+                .map_err(map_into_err::<JsValue, _>("Renderer.EncodeContent"))?,
+            perf_events.map(|perf_events| {
+                perf_events
+                    .into_map()
+                    .into_iter()
+                    .map(|(k, v)| (k.to_string(), *v))
+                    .collect()
+            }),
+        ))
     }
 
     pub fn session_from_artifact(&self, artifact_content: &[u8]) -> ZResult<RenderSession> {

@@ -1,6 +1,7 @@
 //! Rendering into web_sys::CanvasRenderingContext2d.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use svg::SvgPath2DBuilder;
 pub(crate) use tiny_skia as sk;
@@ -10,8 +11,8 @@ use typst::font::FontInfo;
 use typst::geom::Color;
 use typst_ts_core::error::prelude::*;
 use typst_ts_core::{Error, TextContent};
-use utils::{js_random64, AbsExt, CanvasStateGuard, ToCssExt};
-use web_sys::CanvasRenderingContext2d;
+use utils::{js_random64, AbsExt, CanvasStateGuard, PerfEvent, ToCssExt};
+use web_sys::{window, CanvasRenderingContext2d, Performance};
 
 pub(crate) mod content;
 pub(crate) mod utils;
@@ -21,7 +22,17 @@ pub(crate) mod shape;
 pub(crate) mod svg;
 pub(crate) mod text;
 
-pub struct CanvasRenderTask<'a> {
+pub trait RenderFeature {
+    const ENABLE_TRACING: bool;
+}
+
+pub struct DefaultRenderFeature;
+
+impl RenderFeature for DefaultRenderFeature {
+    const ENABLE_TRACING: bool = false;
+}
+
+pub struct CanvasRenderTask<'a, Feat: RenderFeature = DefaultRenderFeature> {
     canvas: &'a CanvasRenderingContext2d,
 
     pixel_per_pt: f32,
@@ -35,9 +46,14 @@ pub struct CanvasRenderTask<'a> {
 
     font_map: HashMap<FontInfo, u32>,
     errors: Vec<Error>,
+
+    _feat_phantom: std::marker::PhantomData<Feat>,
+
+    perf: Option<Arc<Performance>>,
+    perf_events: Option<&'a elsa::FrozenMap<&'static str, Box<f64>>>,
 }
 
-impl<'a> CanvasRenderTask<'a> {
+impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
     pub fn new(
         canvas: &'a CanvasRenderingContext2d,
         doc: &'a typst::doc::Document,
@@ -69,6 +85,11 @@ impl<'a> CanvasRenderTask<'a> {
             .set_attribute("data-typst-session", &session_id)
             .map_err(map_err("CanvasRenderTask.SetDataTypstSessionId"))?;
 
+        let perf = Feat::ENABLE_TRACING
+            .then(|| window().and_then(|w| w.performance()))
+            .flatten()
+            .map(Arc::new);
+
         Ok(Self {
             canvas,
 
@@ -82,6 +103,10 @@ impl<'a> CanvasRenderTask<'a> {
             content: TextContent::default(),
             font_map: HashMap::default(),
             errors: Vec::default(),
+
+            _feat_phantom: Default::default(),
+            perf,
+            perf_events: None,
         })
     }
 
@@ -145,6 +170,22 @@ impl<'a> CanvasRenderTask<'a> {
                 None
             }
         }
+    }
+
+    pub fn set_perf_events(&mut self, perf_events: &'a elsa::FrozenMap<&'static str, Box<f64>>) {
+        self.perf_events = Some(perf_events);
+    }
+
+    #[inline]
+    fn perf_event(&self, name: &'static str) -> Option<PerfEvent<'a>> {
+        Feat::ENABLE_TRACING
+            .then(|| {
+                self.perf.as_ref().and_then(|perf| {
+                    self.perf_events
+                        .map(|pe| PerfEvent::new(name, perf.clone(), pe))
+                })
+            })
+            .flatten()
     }
 
     /// Directly render a frame into the canvas.
