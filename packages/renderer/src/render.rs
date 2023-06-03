@@ -1,3 +1,5 @@
+#![allow(clippy::await_holding_lock)]
+
 #[cfg(test)]
 // #[cfg(target_arch = "wasm32")]
 mod tests {
@@ -5,6 +7,7 @@ mod tests {
 
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
+    use typst_ts_canvas_exporter::RenderFeature;
     use typst_ts_test_common::web_artifact::get_corpus;
     use wasm_bindgen::JsCast;
     use wasm_bindgen_test::*;
@@ -31,6 +34,12 @@ mod tests {
         verbose: HashMap<String, String>,
     }
 
+    pub struct CIRenderFeature;
+
+    impl RenderFeature for CIRenderFeature {
+        const ENABLE_TRACING: bool = true;
+    }
+
     async fn render_test_template(point: &str, artifact: &[u8], format: &str) {
         let window = web_sys::window().expect("should have a window in this context");
         let performance = window
@@ -45,10 +54,11 @@ mod tests {
             .dyn_into::<web_sys::HtmlCanvasElement>()
             .unwrap();
 
-        let (time_used, data_content_hash, ..) = {
-            let start = performance.now();
+        let (time_used, perf_events, data_content_hash, ..) = {
+            let create = performance.now();
 
             let mut renderer = crate::tests::get_renderer();
+            let start = performance.now();
 
             let session = renderer
                 .create_session(
@@ -72,8 +82,10 @@ mod tests {
                 .dyn_into::<web_sys::CanvasRenderingContext2d>()
                 .unwrap();
 
-            let res = renderer
-                .render_page_to_canvas(&session, &context, None)
+            let prepare = performance.now();
+
+            let (res, perf_events) = renderer
+                .render_page_to_canvas_internal::<CIRenderFeature>(&session, &context, None)
                 .await
                 .unwrap();
             let end = performance.now();
@@ -83,6 +95,16 @@ mod tests {
             let text_content = js_sys::JSON::stringify(&res).unwrap().as_string().unwrap();
 
             let data_content_hash = hash_bytes(&data_content);
+
+            let settle = performance.now();
+
+            let perf_events = perf_events.map(|mut p| {
+                p.insert("create_renderer".to_string(), start - create);
+                p.insert("session_prepare".to_string(), prepare - start);
+                p.insert("rendering".to_string(), end - start);
+                p.insert("serialize_result".to_string(), settle - end);
+                p
+            });
 
             web_sys::console::log_3(
                 &">>> typst_ts_test_capture".into(),
@@ -99,6 +121,10 @@ mod tests {
                         if cfg!(feature = "web_verbose") {
                             verbose_data.insert("data_content".into(), data_content);
                             verbose_data.insert("text_content".into(), text_content);
+                            verbose_data.insert(
+                                "perf_events".into(),
+                                serde_json::to_string(&perf_events).unwrap(),
+                            );
                         }
                         verbose_data
                     },
@@ -107,7 +133,7 @@ mod tests {
                 .into(),
                 &"<<< typst_ts_test_capture".into(),
             );
-            (end - start, data_content_hash, artifact)
+            (end - start, perf_events, data_content_hash, artifact)
         };
 
         window
@@ -118,7 +144,13 @@ mod tests {
             .append_child(&canvas)
             .unwrap();
 
-        self::console_log!("canvas {point} => {data_content_hash} {time_used:.3}ms");
+        let perf_events = perf_events
+            .as_ref()
+            .map(|p| serde_wasm_bindgen::to_value(&p).unwrap());
+        web_sys::console::log_2(
+            &format!("canvas {point} => {data_content_hash} {time_used:.3}ms").into(),
+            &perf_events.into(),
+        );
     }
 
     async fn get_ir_artifact(name: &str) -> Vec<u8> {
