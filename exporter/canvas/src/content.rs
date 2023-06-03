@@ -3,7 +3,7 @@ use typst::{
     geom::{Axis, Dir},
 };
 
-use crate::{sk, utils::AbsExt, CanvasRenderTask};
+use crate::{sk, utils::AbsExt, CanvasRenderTask, RenderFeature};
 
 pub struct TextFlow {
     dir: Dir,
@@ -77,7 +77,7 @@ impl TextFlow {
     }
 }
 
-impl<'a> CanvasRenderTask<'a> {
+impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
     fn append_text_font(&mut self, font: &typst::font::Font) -> u32 {
         if let Some(&font) = self.font_map.get(font.info()) {
             return font;

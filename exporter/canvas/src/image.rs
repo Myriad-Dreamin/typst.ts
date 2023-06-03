@@ -1,5 +1,5 @@
 use crate::utils::{console_log, AbsExt, CanvasStateGuard};
-use crate::{sk, CanvasRenderTask};
+use crate::{sk, CanvasRenderTask, RenderFeature};
 use js_sys::Promise;
 use typst::geom::Size;
 use typst::image::{Image, ImageFormat, RasterFormat, VectorFormat};
@@ -7,7 +7,7 @@ use wasm_bindgen::prelude::Closure;
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::HtmlImageElement;
 
-impl<'a> CanvasRenderTask<'a> {
+impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
     /// Render a raster or SVG image into the canvas.
     // todo: error handling
     pub(crate) async fn render_image(
@@ -16,8 +16,12 @@ impl<'a> CanvasRenderTask<'a> {
         image: &Image,
         size: Size,
     ) -> Option<()> {
+        let _r = self.perf_event("render_image");
+
+        let _l = self.perf_event("load_image");
         let image_elem = rasterize_image(image).unwrap();
         self.load_image_cached(image, &image_elem).await;
+        drop(_l);
 
         // resize image to fit the view
         let (w, h) = {
@@ -31,6 +35,7 @@ impl<'a> CanvasRenderTask<'a> {
             (w, h)
         };
 
+        let _l = self.perf_event("draw_image");
         let state = CanvasStateGuard::new(self.canvas);
         self.set_transform(ts);
         self.canvas
@@ -43,6 +48,7 @@ impl<'a> CanvasRenderTask<'a> {
             )
             .unwrap();
         drop(state);
+        drop(_l);
 
         Some(())
     }

@@ -62,6 +62,7 @@ web-sys = { workspace = true, features = [
 ] }
 hex.workspace = true
 sha2.workspace = true
+elsa.workspace = true
 
 [features]
 web_test = ["typst-ts-test-common/web_artifacts"]

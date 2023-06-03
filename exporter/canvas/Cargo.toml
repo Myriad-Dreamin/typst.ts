@@ -17,8 +17,8 @@ flate2.workspace = true
 once_cell.workspace = true
 data-url = "0.2.0"
 async-recursion = "1.0.4"
-minitrace = "0.4.1"
 wasm-bindgen-futures.workspace = true
+elsa.workspace = true
 
 wasm-bindgen.workspace = true
 js-sys.workspace = true

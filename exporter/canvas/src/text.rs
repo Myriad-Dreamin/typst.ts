@@ -16,15 +16,16 @@ use web_sys::{Element, Path2d};
 use crate::{
     svg::SvgPath2DBuilder,
     utils::{console_log, AbsExt, CanvasStateGuard, ToCssExt},
-    CanvasRenderTask,
+    CanvasRenderTask, RenderFeature,
 };
 
 static WARN_HARMFUL_FONT: OnceCell<()> = OnceCell::new();
 static WARN_VIEW_BOX: OnceCell<()> = OnceCell::new();
 
-impl<'a> CanvasRenderTask<'a> {
+impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
     /// Render a text run into the self.canvas.
     pub(crate) async fn render_text(&mut self, ts: sk::Transform, text: &TextItem) {
+        let _r = self.perf_event("render_text");
         let glyph_chars: String = if text.glyphs.is_empty() {
             "".to_string()
         } else {
@@ -45,6 +46,7 @@ impl<'a> CanvasRenderTask<'a> {
             x += glyph.x_advance.at(text.size).to_f32();
         }
 
+        let _r = self.perf_event("append_text_content");
         self.append_text_content(ts, text, glyph_chars, x, text.size.to_f32(), false)
     }
 
@@ -56,6 +58,7 @@ impl<'a> CanvasRenderTask<'a> {
         text: &TextItem,
         id: GlyphId,
     ) -> Option<()> {
+        let _r = self.perf_event("render_svg_glyph");
         let font = &text.font;
         let glyph_image = extract_svg_glyph(font, id)?;
 
@@ -90,6 +93,7 @@ impl<'a> CanvasRenderTask<'a> {
         text: &TextItem,
         id: GlyphId,
     ) -> Option<()> {
+        let _r = self.perf_event("render_bitmap_glyph");
         let size = text.size.to_f32();
         let ppem = (size * ts.sy) as u16;
 
@@ -116,6 +120,7 @@ impl<'a> CanvasRenderTask<'a> {
         text: &TextItem,
         id: GlyphId,
     ) -> Option<()> {
+        let _r = self.perf_event("render_outline_glyph");
         let state_guard = CanvasStateGuard::new(self.canvas);
 
         // Scale is in pixel per em, but curve data is in font design units, so
