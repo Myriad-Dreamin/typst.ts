@@ -34,8 +34,16 @@ const FONT_LISTS: &[(&str, &str)] = &[
         "29f1b4fbda490747553b47780feb1b73832c48581894ebf1caa98959a024fdc9",
     ),
     (
+        "InriaSerif-Bold.ttf",
+        "ac09cfde8d529b2cd63bd7f417556aa2c42ca17f5df6a022faf91cff43570609",
+    ),
+    (
         "InriaSerif-BoldItalic.ttf",
         "d7c140cdb61a4c1edca17abed1d9d57fe5b345d0195d58129c98e61e8cc30f9b",
+    ),
+    (
+        "InriaSerif-Italic.ttf",
+        "98422fd7b83cdfe3f9d23dabd60defa56f37e34cd39d7fceaf129bb200d1fb53",
     ),
     (
         "InriaSerif-Regular.ttf",
@@ -95,7 +103,7 @@ const FONT_LISTS: &[(&str, &str)] = &[
     ),
     (
         "NotoSerifCJKsc-Regular.otf",
-        "efa5e49879a789c1ecad8f07e1813c7f9aa6c4b951fdbb5791d85d67345632d7",
+        "9ccb922287f4b4a941ace82321ee6e1ff6340eb53f1c13b0e6285a117d1b0057",
     ),
     (
         "NotoSerifHebrew-Bold.ttf",
@@ -129,15 +137,16 @@ fn download_fonts(opts: Opts) {
             if !opts.using_branch.is_empty() {
                 &opts.using_branch
             } else {
-                "623db8c0c4cd798d3dacaa5269f9e850fc180934"
+                "f692a5efc62bf95f57d123895b7dce55d2eb9741"
             }
         });
 
     for font in FONT_LISTS {
         println!("add font: {}", font.0);
-        repo = repo.add_file(
+        repo = repo.add_file_verified(
             format!("assets/fonts/{}", font.0),
             format!("assets/fonts/{}", font.0),
+            Some(font.1.to_owned()),
         );
     }
 
