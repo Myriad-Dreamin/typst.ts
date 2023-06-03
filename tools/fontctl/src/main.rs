@@ -154,10 +154,16 @@ fn download_fonts(opts: Opts) {
     repo.exec().unwrap();
 
     std::fs::create_dir_all("packages/typst.react/dist/fonts").unwrap();
+    std::fs::create_dir_all("github-pages/assets/fonts").unwrap();
     for font in FONT_LISTS {
         std::fs::copy(
             format!("assets/fonts/{}", font.0),
             format!("packages/typst.react/dist/fonts/{}", font.0),
+        )
+        .unwrap();
+        std::fs::copy(
+            format!("assets/fonts/{}", font.0),
+            format!("github-pages/assets/fonts/{}", font.0),
         )
         .unwrap();
     }

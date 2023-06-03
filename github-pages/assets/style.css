@@ -4,7 +4,7 @@ body {
   background: #343541; /* rgba(255, 255, 255, 0.9); */
 }
 
-.typst-app {
+#typst-app {
   margin: 0;
 }
 
