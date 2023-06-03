@@ -240,6 +240,15 @@ mod tests {
         "visualize/shape_circle_3",
         "visualize/shape_circle_4",
     );
+    make_test_point!(
+        test_render_visualize_stroke,
+        "visualize/stroke_1",
+        "visualize/stroke_2",
+        "visualize/stroke_3",
+        "visualize/stroke_4",
+        "visualize/stroke_5",
+        "visualize/stroke_6",
+    );
 
     // todo: This will use font from local machine, which is unstable
     // make_test_point!(test_render_visualize_svg_text, "visualize/svg_text");
