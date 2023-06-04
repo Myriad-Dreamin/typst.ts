@@ -15,11 +15,15 @@ pub async fn run_http(args: RunHttpArgs) {
 
     let corpora = warp::path("corpus").and(warp::fs::dir(args.corpus));
     let assets = warp::path("assets").and(warp::fs::dir("assets"));
+    let core = warp::path("core").and(warp::fs::dir("packages/typst.ts"));
+    let gh_pages = warp::path("typst.ts").and(warp::fs::dir("github-pages"));
 
     let cors = warp::cors().allow_methods(&[Method::GET, Method::POST, Method::DELETE]);
 
     let routes = corpora
         .or(assets)
+        .or(core)
+        .or(gh_pages)
         .with(cors)
         .with(warp::compression::gzip());
 
