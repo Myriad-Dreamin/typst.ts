@@ -85,7 +85,7 @@ Compile options:
 
 ```shell
 $ cd packages/typst.ts && yarn install && yarn run build; cd ../..
-$ cargo run --bin typst-ts-dev-server -- run http ./fuzzers/corpora/
+$ cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/
 ```
 
 And open your browser to `http://localhost:20810/core/`.
