@@ -13,12 +13,15 @@ pub async fn run_http(args: RunHttpArgs) {
     }
     let http_addr: SocketAddr = http_addr.parse().unwrap();
 
-    let corpora = warp::path("corpus")
-        .and(warp::fs::dir(args.corpus))
-        .with(warp::compression::gzip());
+    let corpora = warp::path("corpus").and(warp::fs::dir(args.corpus));
+    let assets = warp::path("assets").and(warp::fs::dir("assets"));
+
     let cors = warp::cors().allow_methods(&[Method::GET, Method::POST, Method::DELETE]);
 
-    let routes = corpora.with(cors);
+    let routes = corpora
+        .or(assets)
+        .with(cors)
+        .with(warp::compression::gzip());
 
     let server = warp::serve(routes);
 
