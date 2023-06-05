@@ -7,10 +7,10 @@ use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
 use typst_ts_core::{
     config::CompileOpts,
     exporter_builtins::{FromExporter, FsPathExporter, GroupExporter},
-    AsWritable,
+    Artifact, AsWritable,
 };
 use typst_ts_pdf_exporter::PdfDocExporter;
-use typst_ts_serde_exporter::JsonArtifactExporter;
+use typst_ts_serde_exporter::JsonExporter;
 use typst_ts_tir_exporter::IRArtifactExporter;
 
 fn get_driver(
@@ -66,8 +66,11 @@ macro_rules! ir_exporters {
 
 fn artifact_json_to_path<P: AsRef<Path>>(
     path: P,
-) -> FsPathExporter<AsWritable, JsonArtifactExporter> {
-    FsPathExporter::new(path.as_ref().to_owned(), JsonArtifactExporter::default())
+) -> FsPathExporter<AsWritable, JsonExporter<Artifact>> {
+    FsPathExporter::new(
+        path.as_ref().to_owned(),
+        JsonExporter::<Artifact>::default(),
+    )
 }
 
 fn artifact_ir_to_path<P: AsRef<Path>>(path: P) -> FsPathExporter<AsWritable, IRArtifactExporter> {

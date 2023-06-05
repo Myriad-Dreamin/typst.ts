@@ -1,28 +1,40 @@
 use std::sync::Arc;
 
+use serde::Serialize;
 use typst::{diag::SourceResult, World};
-use typst_ts_core::{Artifact, Exporter, Transformer};
+use typst_ts_core::{Exporter, Transformer};
 
 use crate::map_err;
 
-#[derive(Debug, Clone, Default)]
-pub struct JsonArtifactExporter {
+#[derive(Debug, Clone)]
+pub struct JsonExporter<T> {
     should_truncate_precision: bool,
+
+    _marker: std::marker::PhantomData<T>,
 }
 
-impl JsonArtifactExporter {
+impl<T> JsonExporter<T> {
     pub fn new(should_truncate_precision: bool) -> Self {
         Self {
             should_truncate_precision,
+            _marker: Default::default(),
         }
     }
 }
 
-impl Exporter<Artifact, String> for JsonArtifactExporter {
-    fn export(&self, world: &dyn World, output: Arc<Artifact>) -> SourceResult<String> {
+impl<T> Default for JsonExporter<T> {
+    fn default() -> Self {
+        Self::new(false)
+    }
+}
+
+impl<T: Serialize> Exporter<T, String> for JsonExporter<T> {
+    fn export(&self, world: &dyn World, output: Arc<T>) -> SourceResult<String> {
         let json_doc = {
             if self.should_truncate_precision {
-                serde_json::to_string(&self.truncate_precision(world, output)?)
+                let value =
+                    &serde_json::to_value(output.as_ref()).map_err(|e| map_err(world, e))?;
+                serde_json::to_string(&truncate_precision(value))
             } else {
                 serde_json::to_string(output.as_ref())
             }
@@ -31,14 +43,16 @@ impl Exporter<Artifact, String> for JsonArtifactExporter {
     }
 }
 
-impl<W> Transformer<(Arc<Artifact>, W)> for JsonArtifactExporter
+impl<W, T: Serialize> Transformer<(Arc<T>, W)> for JsonExporter<T>
 where
     W: std::io::Write,
 {
-    fn export(&self, world: &dyn World, (output, writer): (Arc<Artifact>, W)) -> SourceResult<()> {
+    fn export(&self, world: &dyn World, (output, writer): (Arc<T>, W)) -> SourceResult<()> {
         let json_doc = {
             if self.should_truncate_precision {
-                serde_json::to_writer(writer, &self.truncate_precision(world, output)?)
+                let value =
+                    &serde_json::to_value(output.as_ref()).map_err(|e| map_err(world, e))?;
+                serde_json::to_writer(writer, &truncate_precision(value))
             } else {
                 serde_json::to_writer(writer, output.as_ref())
             }
@@ -47,41 +61,33 @@ where
     }
 }
 
-impl JsonArtifactExporter {
-    fn truncate_precision(
-        &self,
-        world: &dyn World,
-        output: Arc<typst_ts_core::Artifact>,
-    ) -> SourceResult<serde_json::Value> {
-        fn walk_json(val: &serde_json::Value) -> serde_json::Value {
-            match val {
-                serde_json::Value::Array(arr) => {
-                    serde_json::json!(arr.iter().map(walk_json).collect::<Vec<_>>())
-                }
-                serde_json::Value::Object(obj) => {
-                    serde_json::json!(obj
-                        .iter()
-                        .map(|(k, v)| (k.clone(), walk_json(v)))
-                        .collect::<serde_json::Map<_, _>>())
-                }
-                serde_json::Value::Number(x) => {
-                    // round to 3 digits
-                    if x.is_f64() {
-                        if let Some(x) = x.as_f64() {
-                            serde_json::json!(((x * 1000.) as i64 as f64) / 1000.)
-                        } else {
-                            unreachable!()
-                        }
-                    } else {
-                        serde_json::json!(x)
-                    }
-                }
-                x => x.clone(),
+fn truncate_precision(output: &serde_json::Value) -> serde_json::Value {
+    fn walk_json(val: &serde_json::Value) -> serde_json::Value {
+        match val {
+            serde_json::Value::Array(arr) => {
+                serde_json::json!(arr.iter().map(walk_json).collect::<Vec<_>>())
             }
+            serde_json::Value::Object(obj) => {
+                serde_json::json!(obj
+                    .iter()
+                    .map(|(k, v)| (k.clone(), walk_json(v)))
+                    .collect::<serde_json::Map<_, _>>())
+            }
+            serde_json::Value::Number(x) => {
+                // round to 3 digits
+                if x.is_f64() {
+                    if let Some(x) = x.as_f64() {
+                        serde_json::json!(((x * 1000.) as i64 as f64) / 1000.)
+                    } else {
+                        unreachable!()
+                    }
+                } else {
+                    serde_json::json!(x)
+                }
+            }
+            x => x.clone(),
         }
-
-        Ok(walk_json(
-            &serde_json::to_value(output.as_ref()).map_err(|e| map_err(world, e))?,
-        ))
     }
+
+    walk_json(output)
 }
