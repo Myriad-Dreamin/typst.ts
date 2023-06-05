@@ -10,6 +10,7 @@ use typst::doc::{Frame, FrameItem, GroupItem, Meta};
 use typst::font::FontInfo;
 use typst::geom::Color;
 use typst_ts_core::error::prelude::*;
+use typst_ts_core::font::{FontGlyphProvider, GlyphProvider};
 use typst_ts_core::{Error, TextContent};
 use utils::{js_random64, AbsExt, CanvasStateGuard, PerfEvent, ToCssExt};
 use web_sys::{window, CanvasRenderingContext2d, Performance};
@@ -34,6 +35,7 @@ impl RenderFeature for DefaultRenderFeature {
 
 pub struct CanvasRenderTask<'a, Feat: RenderFeature = DefaultRenderFeature> {
     canvas: &'a CanvasRenderingContext2d,
+    glyph_provider: GlyphProvider,
 
     pixel_per_pt: f32,
     fill: Color,
@@ -45,12 +47,12 @@ pub struct CanvasRenderTask<'a, Feat: RenderFeature = DefaultRenderFeature> {
     pub content: TextContent,
 
     font_map: HashMap<FontInfo, u32>,
-    errors: Vec<Error>,
-
-    _feat_phantom: std::marker::PhantomData<Feat>,
 
     perf: Option<Arc<Performance>>,
     perf_events: Option<&'a elsa::FrozenMap<&'static str, Box<f64>>>,
+    errors: Vec<Error>,
+
+    _feat_phantom: std::marker::PhantomData<Feat>,
 }
 
 impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
@@ -90,8 +92,11 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
             .flatten()
             .map(Arc::new);
 
+        let default_glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
+
         Ok(Self {
             canvas,
+            glyph_provider: default_glyph_provider,
 
             pixel_per_pt,
             fill,
@@ -108,6 +113,14 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
             perf,
             perf_events: None,
         })
+    }
+
+    pub fn set_perf_events(&mut self, perf_events: &'a elsa::FrozenMap<&'static str, Box<f64>>) {
+        self.perf_events = Some(perf_events);
+    }
+
+    pub fn set_glyph_provider(&mut self, glyph_provider: GlyphProvider) {
+        self.glyph_provider = glyph_provider;
     }
 
     #[inline]
@@ -170,10 +183,6 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
                 None
             }
         }
-    }
-
-    pub fn set_perf_events(&mut self, perf_events: &'a elsa::FrozenMap<&'static str, Box<f64>>) {
-        self.perf_events = Some(perf_events);
     }
 
     #[inline]

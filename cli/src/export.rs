@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use typst_ts_core::{
     exporter_builtins::{FromExporter, FsPathExporter, GroupExporter},
+    font::FontGlyphInfo,
     program_meta::REPORT_BUG_MESSAGE,
     Artifact, AsWritable,
 };
@@ -56,10 +57,12 @@ fn prepare_exporters_impl(
     type DocExporter = Box<dyn typst_ts_core::Exporter<typst::doc::Document>>;
     type ArtExporter = Box<dyn typst_ts_core::Exporter<typst_ts_core::Artifact>>;
     type IRExporter = Box<dyn typst_ts_core::Exporter<typst_ts_core::artifact_ir::Artifact>>;
+    type GlyphInfoExporter = Box<dyn typst_ts_core::Exporter<typst_ts_core::font::FontGlyphInfo>>;
 
     let mut document_exporters: Vec<DocExporter> = vec![];
     let mut artifact_exporters: Vec<ArtExporter> = vec![];
     let mut ir_exporters: Vec<IRExporter> = vec![];
+    let mut glyph_info_exporters: Vec<GlyphInfoExporter> = vec![];
 
     for f in formats {
         match f.as_str() {
@@ -101,6 +104,16 @@ fn prepare_exporters_impl(
                     typst_ts_serde_exporter::JsonExporter::<Artifact>::default(),
                 )));
             }
+            #[cfg(feature = "serde-json")]
+            "json_glyphs" => {
+                let output_path = output_dir
+                    .with_file_name(entry_file.file_name().unwrap())
+                    .with_extension("glyphs.json");
+                glyph_info_exporters.push(Box::new(FsPathExporter::<AsWritable, _>::new(
+                    output_path,
+                    typst_ts_serde_exporter::JsonExporter::<FontGlyphInfo>::default(),
+                )));
+            }
             #[cfg(feature = "serde-rmp")]
             "rmp" => {
                 let output_path = output_dir
@@ -132,6 +145,10 @@ fn prepare_exporters_impl(
 
     if !ir_exporters.is_empty() {
         document_exporters.push(Box::new(FromExporter::new(ir_exporters)));
+    }
+
+    if !glyph_info_exporters.is_empty() {
+        document_exporters.push(Box::new(FromExporter::new(glyph_info_exporters)));
     }
 
     GroupExporter::new(document_exporters)

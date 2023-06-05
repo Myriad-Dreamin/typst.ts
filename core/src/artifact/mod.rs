@@ -98,23 +98,7 @@ impl ArtifactBuilder {
     }
 
     pub fn write_image(&mut self, image: &TypstImage) -> Image {
-        return Image {
-            data: image.data().to_vec(),
-            format: match image.format() {
-                ImageFormat::Raster(r) => match r {
-                    RasterFormat::Png => "png",
-                    RasterFormat::Jpg => "jpg",
-                    RasterFormat::Gif => "gif",
-                },
-                ImageFormat::Vector(v) => match v {
-                    VectorFormat::Svg => "svg",
-                },
-            }
-            .to_string(),
-            width: image.width(),
-            height: image.height(),
-            alt: image.alt().map(|s| s.to_string()),
-        };
+        image.clone().into()
     }
 
     pub fn write_frame_item(&mut self, item: &TypstFrameItem) -> FrameItem {
@@ -251,22 +235,7 @@ impl TypeDocumentParser {
     }
 
     pub fn parse_image(&mut self, image: &Image) -> TypstImage {
-        TypstImage::new_raw(
-            image.data.clone().into(),
-            match image.format.as_str() {
-                "png" => ImageFormat::Raster(RasterFormat::Png),
-                "jpg" => ImageFormat::Raster(RasterFormat::Jpg),
-                "gif" => ImageFormat::Raster(RasterFormat::Gif),
-                "svg" => ImageFormat::Vector(VectorFormat::Svg),
-                _ => panic!("Unknown image format {}", image.format),
-            },
-            TypstAxes {
-                x: image.width,
-                y: image.height,
-            },
-            image.alt.clone().map(|s| s.into()),
-        )
-        .unwrap()
+        image.clone().into()
     }
 
     pub fn parse_location(&mut self, loc: &str) -> Option<TypstLocation> {

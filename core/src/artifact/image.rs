@@ -1,3 +1,4 @@
+use crate::artifact_ir::geom::TypstAxes;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use base64::Engine;
 use serde::Deserialize;
@@ -26,6 +27,49 @@ pub struct Image {
     pub height: u32,
     /// A text describing the image.
     pub alt: Option<String>,
+}
+
+impl From<TypstImage> for Image {
+    fn from(image: TypstImage) -> Self {
+        Image {
+            data: image.data().to_vec(),
+            format: match image.format() {
+                ImageFormat::Raster(r) => match r {
+                    RasterFormat::Png => "png",
+                    RasterFormat::Jpg => "jpg",
+                    RasterFormat::Gif => "gif",
+                },
+                ImageFormat::Vector(v) => match v {
+                    VectorFormat::Svg => "svg",
+                },
+            }
+            .to_string(),
+            width: image.width(),
+            height: image.height(),
+            alt: image.alt().map(|s| s.to_string()),
+        }
+    }
+}
+
+impl From<Image> for TypstImage {
+    fn from(image: Image) -> Self {
+        TypstImage::new_raw(
+            image.data.clone().into(),
+            match image.format.as_str() {
+                "png" => ImageFormat::Raster(RasterFormat::Png),
+                "jpg" => ImageFormat::Raster(RasterFormat::Jpg),
+                "gif" => ImageFormat::Raster(RasterFormat::Gif),
+                "svg" => ImageFormat::Vector(VectorFormat::Svg),
+                _ => ImageFormat::Raster(RasterFormat::Png),
+            },
+            TypstAxes {
+                x: image.width,
+                y: image.height,
+            },
+            image.alt.clone().map(|s| s.into()),
+        )
+        .unwrap()
+    }
 }
 
 impl Image {

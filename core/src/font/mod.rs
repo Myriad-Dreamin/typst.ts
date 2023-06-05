@@ -1,6 +1,9 @@
 pub(crate) mod profile;
 pub use profile::*;
 
+pub(crate) mod glyph;
+pub use glyph::*;
+
 pub(crate) mod loader;
 pub use loader::*;
 
