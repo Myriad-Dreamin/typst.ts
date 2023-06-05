@@ -9,12 +9,11 @@ use typst::{
     geom::{Abs, Axes, Paint, Size},
     image::Image,
 };
-use typst_ts_core::error::prelude::*;
+use typst_ts_core::{error::prelude::*, font::GlyphProvider};
 use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{Element, Path2d};
 
 use crate::{
-    svg::SvgPath2DBuilder,
     utils::{console_log, AbsExt, CanvasStateGuard, ToCssExt},
     CanvasRenderTask, RenderFeature,
 };
@@ -60,7 +59,7 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
     ) -> Option<()> {
         let _r = self.perf_event("render_svg_glyph");
         let font = &text.font;
-        let glyph_image = extract_svg_glyph(font, id)?;
+        let glyph_image = extract_svg_glyph(self.glyph_provider.clone(), font, id)?;
 
         // position our image
         let ascender = font.metrics().ascender.at(text.size).to_f32();
@@ -97,7 +96,8 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
         let size = text.size.to_f32();
         let ppem = (size * ts.sy) as u16;
 
-        let (glyph_image, raster_x, raster_y) = extract_bitmap_glyph(&text.font, id, ppem)?;
+        let (glyph_image, raster_x, raster_y) =
+            extract_bitmap_glyph(self.glyph_provider.clone(), &text.font, id, ppem)?;
 
         // FIXME: Vertical alignment isn't quite right for Apple Color Emoji,
         // and maybe also for Noto Color Emoji. And: Is the size calculation
@@ -148,7 +148,7 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
             self.canvas.set_fill_style(&color.to_css().into());
 
             let path = self.collect_err(
-                extract_outline_glyph(&text.font, id)?
+                extract_outline_glyph(self.glyph_provider.clone(), &text.font, id)?
                     .map_err(map_err("CanvasRenderTask.BuildPath2d")),
             )?;
             self.canvas.fill_with_path_2d(&path);
@@ -160,8 +160,9 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
 }
 
 #[comemo::memoize]
-fn extract_svg_glyph(font: &Font, id: GlyphId) -> Option<Image> {
-    let mut data = font.ttf().glyph_svg_image(id)?;
+fn extract_svg_glyph(g: GlyphProvider, font: &Font, id: GlyphId) -> Option<Image> {
+    let data = g.svg_glyph(font, id)?;
+    let mut data = data.as_ref();
 
     let font_info = font.info();
     let font_family = &font_info.family;
@@ -264,35 +265,29 @@ fn extract_svg_glyph(font: &Font, id: GlyphId) -> Option<Image> {
 }
 
 #[comemo::memoize]
-fn extract_bitmap_glyph(font: &Font, id: GlyphId, ppem: u16) -> Option<(Image, i16, i16)> {
-    let raster = font.ttf().glyph_raster_image(id, ppem)?;
+fn extract_bitmap_glyph(
+    g: GlyphProvider,
+    font: &Font,
+    id: GlyphId,
+    ppem: u16,
+) -> Option<(Image, i16, i16)> {
+    // if cfg!(feature = "debug_glyph_render") {
+    //     console_log!(
+    //         "render_bitmap_glyph: {:?} {:?}x{:?}",
+    //         font.info().family,
+    //         raster.width,
+    //         raster.height
+    //     );
+    // }
 
-    if cfg!(feature = "debug_glyph_render") {
-        console_log!(
-            "render_bitmap_glyph: {:?} {:?}x{:?}",
-            font.info().family,
-            raster.width,
-            raster.height
-        );
-    }
-
-    Some((
-        Image::new_raw(
-            raster.data.into(),
-            raster.format.into(),
-            Axes::new(raster.width as u32, raster.height as u32),
-            None,
-        )
-        .ok()?,
-        raster.x,
-        raster.y,
-    ))
+    g.bitmap_glyph(font, id, ppem)
 }
 
 #[comemo::memoize]
-fn extract_outline_glyph(font: &Font, id: GlyphId) -> Option<Result<Path2d, JsValue>> {
-    // todo: handling no such glyph
-    let mut builder = SvgPath2DBuilder(String::new());
-    font.ttf().outline_glyph(id, &mut builder)?;
-    Some(builder.build())
+fn extract_outline_glyph(
+    g: GlyphProvider,
+    font: &Font,
+    id: GlyphId,
+) -> Option<Result<Path2d, JsValue>> {
+    Some(Path2d::new_with_path_string(&g.outline_glyph(font, id)?))
 }

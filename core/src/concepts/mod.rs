@@ -1,3 +1,6 @@
+mod hash;
+pub use hash::*;
+
 mod query;
 pub use query::*;
 
