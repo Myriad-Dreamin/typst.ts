@@ -157,3 +157,44 @@ impl fmt::Display for FontResolverImpl {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use typst::{
+        font::{Coverage, Font, FontFlags, FontInfo, FontMetrics, FontVariant, LineMetrics},
+        geom::Em,
+    };
+
+    #[test]
+    fn test_dummy_typst_font() {
+        let font_info = FontInfo {
+            family: "Crazy Font Roman".to_string(),
+            variant: FontVariant::default(),
+            flags: FontFlags::empty(),
+            coverage: Coverage::from_vec(vec![]),
+        };
+        let font_metric = FontMetrics {
+            units_per_em: 1.,
+            ascender: Em::new(1.),
+            cap_height: Em::new(1.),
+            x_height: Em::new(1.),
+            descender: Em::new(1.),
+            strikethrough: LineMetrics {
+                position: Em::new(1.),
+                thickness: Em::new(1.),
+            },
+            underline: LineMetrics {
+                position: Em::new(1.),
+                thickness: Em::new(1.),
+            },
+            overline: LineMetrics {
+                position: Em::new(1.),
+                thickness: Em::new(1.),
+            },
+        };
+        let font = Font::new_dummy(font_info.clone(), font_metric).unwrap();
+
+        assert!(font.is_dummy());
+        assert_eq!(font.info().family, font_info.family);
+    }
+}
