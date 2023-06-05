@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use typst_ts_core::{
     exporter_builtins::{FromExporter, FsPathExporter, GroupExporter},
     program_meta::REPORT_BUG_MESSAGE,
-    AsWritable,
+    Artifact, AsWritable,
 };
 
 use crate::CompileArgs;
@@ -98,7 +98,7 @@ fn prepare_exporters_impl(
                     .with_extension("artifact.json");
                 artifact_exporters.push(Box::new(FsPathExporter::<AsWritable, _>::new(
                     output_path,
-                    typst_ts_serde_exporter::JsonArtifactExporter::default(),
+                    typst_ts_serde_exporter::JsonExporter::<Artifact>::default(),
                 )));
             }
             #[cfg(feature = "serde-rmp")]
