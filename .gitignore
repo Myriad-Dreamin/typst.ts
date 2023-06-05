@@ -2,6 +2,7 @@
 .idea
 .vscode
 
+*.glyphs.json
 *.artifact.json
 *.tir.bin
 *.pdf
