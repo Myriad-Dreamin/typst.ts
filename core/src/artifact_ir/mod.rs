@@ -556,7 +556,6 @@ impl From<&TypstDocument> for Artifact {
                     flags: info.flags.bits(),
                     coverage: FontCoverage::from_vec(info.coverage.iter().take(1).collect()),
                     coverage_hash: get_font_coverage_hash(&info.coverage),
-                    ligatures: vec![],
                 })
                 .collect(),
             title: typst_doc.title.as_ref().map(|s| s.to_string()),

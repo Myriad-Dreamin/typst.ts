@@ -192,7 +192,6 @@ impl FontGlyphInfoBuilder {
             flags: info.flags.bits(),
             coverage: FontCoverage::from_vec(info.coverage.iter().take(1).collect()),
             coverage_hash: get_font_coverage_hash(&info.coverage),
-            ligatures: vec![],
         };
 
         let metrics = (*font.metrics()).into();
