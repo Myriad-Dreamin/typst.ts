@@ -166,7 +166,7 @@ jobs:
 
           # typst-ts-font-assets
           mkdir -p release/font-assets
-          cp artifacts/typst-ts-font-assets/* release/font-assets/
+          cp -r artifacts/typst-ts-font-assets/* release/font-assets/
           tar czvf gh-release/font-assets.tar.gz -C release font-assets
       - name: Display structure of releasing files
         run: find gh-release
