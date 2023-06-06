@@ -84,7 +84,7 @@ Compile options:
 ### Renderer Example
 
 ```shell
-$ cd packages/typst.ts && yarn install && yarn run build; cd ../..
+$ cd packages/typst.ts && yarn install && yarn run build && yarn run link:local; cd ../..
 $ cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/
 ```
 
