@@ -141,8 +141,8 @@ pub struct OutlineGlyphInfo {
 #[derive(Default, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct GlyphShapeInfo {
     id: u16,
-    svg: Option<SvgGlyphInfo>,
-    bitmap: Option<BitmapGlyphInfo>,
+    svg: Option<Box<SvgGlyphInfo>>,
+    bitmap: Option<Box<BitmapGlyphInfo>>,
     outline: Option<OutlineGlyphInfo>,
 }
 
@@ -248,21 +248,21 @@ impl FontGlyphInfoBuilder {
 
         let svg = self.glyph_provider.svg_glyph(font, id);
         if let Some(svg) = svg {
-            glyph_info.svg = Some(SvgGlyphInfo {
+            glyph_info.svg = Some(Box::new(SvgGlyphInfo {
                 image: svg.to_vec(),
-            });
+            }));
         }
 
         let ppem = std::u16::MAX;
 
         let bitmap = self.glyph_provider.bitmap_glyph(font, id, ppem);
         if let Some((image, x, y)) = bitmap {
-            glyph_info.bitmap = Some(BitmapGlyphInfo {
+            glyph_info.bitmap = Some(Box::new(BitmapGlyphInfo {
                 ppem,
                 x,
                 y,
                 image: image.into(),
-            });
+            }));
         }
 
         let outline = self.glyph_provider.outline_glyph(font, id);
