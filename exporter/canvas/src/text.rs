@@ -127,16 +127,12 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
         // we have to divide by units per em.
         let ppem = {
             let pixel_per_unit = text.size.to_f32();
-            let units_per_em = text.font.ttf().units_per_em() as f32;
+            let units_per_em = text.font.units_per_em() as f32;
             pixel_per_unit / units_per_em
         };
 
         if cfg!(feature = "debug_glyph_render") {
-            console_log!(
-                "render_outline_glyph: {:?} {:?}",
-                text.font.info().family,
-                ppem
-            );
+            console_log!("render_outline_glyph: {:?} {:?}", text.font.info(), ppem);
         }
 
         // todo: error handling, reuse color

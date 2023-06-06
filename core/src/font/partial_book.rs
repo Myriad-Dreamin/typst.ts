@@ -1,11 +1,39 @@
 use core::fmt;
+use std::collections::BTreeMap;
 
-use typst::font::FontInfo;
+use ttf_parser::GlyphId;
+use typst::font::{Font, FontFlags, FontInfo, FontVariant};
 
 use crate::FontSlot;
 
+use super::GlyphShapeInfo;
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+pub struct FontInfoKey {
+    pub family: String,
+    pub variant: FontVariant,
+    pub flags: FontFlags,
+}
+
+impl From<&FontInfo> for FontInfoKey {
+    fn from(info: &FontInfo) -> Self {
+        Self {
+            family: info.family.clone(),
+            variant: info.variant,
+            flags: info.flags,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PartialFont {
+    pub typst_repr: Font,
+    pub glyphs: BTreeMap<GlyphId, GlyphShapeInfo>,
+}
+
 #[derive(Default)]
 pub struct PartialFontBook {
+    pub revision: usize,
     pub partial_hit: bool,
     pub changes: Vec<(Option<usize>, FontInfo, FontSlot)>,
 }

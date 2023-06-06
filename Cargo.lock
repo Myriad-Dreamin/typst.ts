@@ -3070,7 +3070,7 @@ checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
 [[package]]
 name = "typst"
 version = "0.4.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#f8d00a8528a3035d6bb6e290f067c458f8bf5855"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#7cf1e2382a87603b69cd5a5da0a33c44e63b2a7c"
 dependencies = [
  "bitflags 2.3.1",
  "bytemuck",
@@ -3111,7 +3111,7 @@ dependencies = [
 [[package]]
 name = "typst-library"
 version = "0.4.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#f8d00a8528a3035d6bb6e290f067c458f8bf5855"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#7cf1e2382a87603b69cd5a5da0a33c44e63b2a7c"
 dependencies = [
  "az",
  "chinese-number",
@@ -3145,7 +3145,7 @@ dependencies = [
 [[package]]
 name = "typst-macros"
 version = "0.4.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#f8d00a8528a3035d6bb6e290f067c458f8bf5855"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#7cf1e2382a87603b69cd5a5da0a33c44e63b2a7c"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -3383,6 +3383,7 @@ version = "0.2.0"
 dependencies = [
  "byteorder",
  "comemo",
+ "console_error_panic_hook",
  "elsa",
  "hex",
  "js-sys",

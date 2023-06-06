@@ -141,7 +141,6 @@ impl ArtifactJsBuilder {
         let mut variant = typst::font::FontVariant::default();
         let mut flags = typst::font::FontFlags::empty();
         let mut coverage = None;
-        let mut ligatures = None;
         let mut coverage_hash = String::default();
 
         for (k, v) in self
@@ -177,20 +176,6 @@ impl ArtifactJsBuilder {
                 "coverage_hash" => {
                     coverage_hash = self.to_string("font_info.coverage_hash", &v)?;
                 }
-                "ligatures" => {
-                    ligatures = Some(
-                        self.into_array("font_info.ligatures", v.clone())?
-                            .iter()
-                            .map(convert_pair)
-                            .map(|(g, s)| {
-                                Ok((
-                                    self.to_f64("font_info.ligature_glyph", &g)? as u16,
-                                    self.to_string("font_info.ligature_str", &s)?,
-                                ))
-                            })
-                            .collect::<ZResult<_>>()?,
-                    );
-                }
                 _ => {
                     return Err(error_once!(
                         "font_info.unknown_key",
@@ -206,7 +191,6 @@ impl ArtifactJsBuilder {
             flags: flags.bits(),
             coverage: coverage.unwrap_or_else(|| typst::font::Coverage::from_vec(vec![])),
             coverage_hash,
-            ligatures: ligatures.unwrap_or_default(),
         })
     }
 

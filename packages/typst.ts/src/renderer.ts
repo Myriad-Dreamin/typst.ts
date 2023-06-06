@@ -36,6 +36,8 @@ export interface RenderResult {
  */
 export interface TypstRenderer {
   init(options?: Partial<InitOptions>): Promise<void>;
+  loadGlyphPack(pack: unknown): Promise<void>;
+
   render(options: RenderOptions): Promise<RenderResult>;
 
   /// run a function with a session, and the sesssion is only available during the
@@ -78,6 +80,11 @@ class TypstRendererDriver {
 
   async init(options?: Partial<InitOptions>): Promise<void> {
     this.renderer = await buildComponent(options, gRendererModule, typst.TypstRendererBuilder, {});
+  }
+
+  loadGlyphPack(pack: unknown): Promise<void> {
+    this.renderer.load_glyph_pack(pack);
+    return Promise.resolve();
   }
 
   private imageOptionsToRust(options: RenderOptions): typst.RenderSessionOptions {

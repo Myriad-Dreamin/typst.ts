@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use typst_ts_core::{
     exporter_builtins::{FromExporter, FsPathExporter, GroupExporter},
-    font::FontGlyphInfo,
+    font::FontGlyphPackBundle,
     program_meta::REPORT_BUG_MESSAGE,
     Artifact, AsWritable,
 };
@@ -57,12 +57,13 @@ fn prepare_exporters_impl(
     type DocExporter = Box<dyn typst_ts_core::Exporter<typst::doc::Document>>;
     type ArtExporter = Box<dyn typst_ts_core::Exporter<typst_ts_core::Artifact>>;
     type IRExporter = Box<dyn typst_ts_core::Exporter<typst_ts_core::artifact_ir::Artifact>>;
-    type GlyphInfoExporter = Box<dyn typst_ts_core::Exporter<typst_ts_core::font::FontGlyphInfo>>;
+    type GlyphPackBundleExporter =
+        Box<dyn typst_ts_core::Exporter<typst_ts_core::font::FontGlyphPackBundle>>;
 
     let mut document_exporters: Vec<DocExporter> = vec![];
     let mut artifact_exporters: Vec<ArtExporter> = vec![];
     let mut ir_exporters: Vec<IRExporter> = vec![];
-    let mut glyph_info_exporters: Vec<GlyphInfoExporter> = vec![];
+    let mut glyph_info_exporters: Vec<GlyphPackBundleExporter> = vec![];
 
     for f in formats {
         match f.as_str() {
@@ -111,7 +112,7 @@ fn prepare_exporters_impl(
                     .with_extension("glyphs.json");
                 glyph_info_exporters.push(Box::new(FsPathExporter::<AsWritable, _>::new(
                     output_path,
-                    typst_ts_serde_exporter::JsonExporter::<FontGlyphInfo>::default(),
+                    typst_ts_serde_exporter::JsonExporter::<FontGlyphPackBundle>::default(),
                 )));
             }
             #[cfg(feature = "serde-rmp")]

@@ -6,7 +6,7 @@ use std::{ops::Deref, sync::Arc};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
-use ttf_parser::GlyphId;
+pub use ttf_parser::GlyphId;
 use typst::doc::{Document, FrameItem};
 use typst::font::Font;
 use typst::geom::Axes;
@@ -14,7 +14,10 @@ use typst::image::Image as TypstImage;
 
 use crate::artifact::core::FontRef;
 use crate::artifact::BuildInfo;
-use crate::artifact::{font::FontInfo, image::Image};
+use crate::artifact::{
+    font::{FontInfo, FontMetrics},
+    image::Image,
+};
 use crate::artifact_ir::{FontCoverage, TypstFont, TypstFontInfo};
 use crate::{make_hash, HashedTrait, StaticHash128};
 
@@ -119,52 +122,54 @@ impl ttf_parser::OutlineBuilder for SvgOutlineBuilder {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct SvgGlyphInfo {
     #[serde_as(as = "Base64")]
-    image: Vec<u8>,
+    pub image: Arc<[u8]>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct BitmapGlyphInfo {
-    ppem: u16,
-    x: i16,
-    y: i16,
-    image: Image,
+    pub ppem: u16,
+    pub x: i16,
+    pub y: i16,
+    pub image: Image,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct OutlineGlyphInfo {
-    outline: String,
+    pub outline: String,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct GlyphInfoItem {
-    id: u16,
-    svg: Option<SvgGlyphInfo>,
-    bitmap: Option<BitmapGlyphInfo>,
-    outline: Option<OutlineGlyphInfo>,
+pub struct GlyphShapeInfo {
+    pub id: u16,
+    pub svg: Option<Box<SvgGlyphInfo>>,
+    pub bitmap: Option<Box<BitmapGlyphInfo>>,
+    pub outline: Option<OutlineGlyphInfo>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct FontGlyphInfoItem {
-    info: FontInfo,
-    glyphs: Vec<GlyphInfoItem>,
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FontGlyphPack {
+    pub info: FontInfo,
+    pub metrics: FontMetrics,
+    pub glyphs: Vec<GlyphShapeInfo>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct FontGlyphInfo {
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FontGlyphPackBundle {
     /// metadata about this artifact
     pub build: Option<BuildInfo>,
     /// The page frames.
-    pub fonts: Vec<FontGlyphInfoItem>,
+    pub fonts: Vec<FontGlyphPack>,
 }
 
-struct FontGlyphInfoItemBuilder {
-    info: FontInfo,
-    glyphs: HashMap<GlyphId, GlyphInfoItem>,
+struct FontGlyphPackBuilder {
+    pub info: FontInfo,
+    pub metrics: FontMetrics,
+    pub glyphs: HashMap<GlyphId, GlyphShapeInfo>,
 }
 
 #[derive(Default)]
 struct FontGlyphInfoBuilder {
-    fonts: Vec<FontGlyphInfoItemBuilder>,
+    fonts: Vec<FontGlyphPackBuilder>,
     font_map: HashMap<TypstFontInfo, FontRef>,
     glyph_provider: FontGlyphProvider,
 }
@@ -187,13 +192,15 @@ impl FontGlyphInfoBuilder {
             flags: info.flags.bits(),
             coverage: FontCoverage::from_vec(info.coverage.iter().take(1).collect()),
             coverage_hash: get_font_coverage_hash(&info.coverage),
-            ligatures: vec![],
         };
+
+        let metrics = (*font.metrics()).into();
 
         let font_ref = self.fonts.len() as u32;
         self.font_map.insert(font.info().clone(), font_ref);
-        self.fonts.push(FontGlyphInfoItemBuilder {
+        self.fonts.push(FontGlyphPackBuilder {
             info,
+            metrics,
             glyphs: HashMap::new(),
         });
         font_ref
@@ -232,29 +239,27 @@ impl FontGlyphInfoBuilder {
         }
     }
 
-    fn write_glyph(&self, font: &TypstFont, id: GlyphId) -> GlyphInfoItem {
-        let mut glyph_info = GlyphInfoItem {
+    fn write_glyph(&self, font: &TypstFont, id: GlyphId) -> GlyphShapeInfo {
+        let mut glyph_info = GlyphShapeInfo {
             id: id.0,
             ..Default::default()
         };
 
         let svg = self.glyph_provider.svg_glyph(font, id);
         if let Some(svg) = svg {
-            glyph_info.svg = Some(SvgGlyphInfo {
-                image: svg.to_vec(),
-            });
+            glyph_info.svg = Some(Box::new(SvgGlyphInfo { image: svg }));
         }
 
         let ppem = std::u16::MAX;
 
         let bitmap = self.glyph_provider.bitmap_glyph(font, id, ppem);
         if let Some((image, x, y)) = bitmap {
-            glyph_info.bitmap = Some(BitmapGlyphInfo {
+            glyph_info.bitmap = Some(Box::new(BitmapGlyphInfo {
                 ppem,
                 x,
                 y,
                 image: image.into(),
-            });
+            }));
         }
 
         let outline = self.glyph_provider.outline_glyph(font, id);
@@ -266,15 +271,16 @@ impl FontGlyphInfoBuilder {
     }
 }
 
-impl From<&Document> for FontGlyphInfo {
+impl From<&Document> for FontGlyphPackBundle {
     fn from(doc: &Document) -> Self {
         let mut builder = FontGlyphInfoBuilder::default();
         builder.build(doc);
         let fonts = builder
             .fonts
             .into_iter()
-            .map(|font| FontGlyphInfoItem {
+            .map(|font| FontGlyphPack {
                 info: font.info,
+                metrics: font.metrics,
                 glyphs: font.glyphs.into_values().collect(),
             })
             .collect();

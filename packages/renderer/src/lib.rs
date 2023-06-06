@@ -1,3 +1,6 @@
+// todo
+#![allow(clippy::await_holding_lock)]
+
 #[macro_use]
 pub(crate) mod utils;
 
@@ -7,7 +10,9 @@ use std::str::FromStr;
 use typst::geom::{Color, RgbaColor};
 use typst_ts_canvas_exporter::{CanvasRenderTask, DefaultRenderFeature, RenderFeature};
 use typst_ts_core::error::prelude::*;
-use typst_ts_core::font::FontResolverImpl;
+use typst_ts_core::font::{
+    FontGlyphProvider, FontResolverImpl, GlyphProvider, PartialFontGlyphProvider,
+};
 use wasm_bindgen::prelude::*;
 use web_sys::ImageData;
 
@@ -98,6 +103,14 @@ impl TypstRenderer {
     ) -> ZResult<()> {
         self.session_mgr
             .load_page(session, page_number, page_content)
+    }
+
+    pub fn load_glyph_pack(&self, v: JsValue) -> ZResult<()> {
+        let mut font_resolver = self.session_mgr.font_resolver.write().unwrap();
+        font_resolver.add_glyph_packs(
+            serde_wasm_bindgen::from_value(v).map_err(map_string_err("GlyphBundleFmt"))?,
+        );
+        Ok(())
     }
 }
 
@@ -239,6 +252,14 @@ impl TypstRenderer {
                     .map_err(map_err("Renderer.InvalidBackgroundColor"))?,
             ),
         )?;
+
+        let def_provider = GlyphProvider::new(FontGlyphProvider::default());
+        let partial_providier =
+            PartialFontGlyphProvider::new(def_provider, self.session_mgr.font_resolver.clone());
+
+        worker.set_glyph_provider(GlyphProvider::new(partial_providier));
+
+        crate::utils::console_log!("use partial font glyph provider");
 
         if let Some(perf_events) = perf_events.as_ref() {
             worker.set_perf_events(perf_events)

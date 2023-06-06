@@ -206,7 +206,7 @@ impl RenderSession {
 
 #[wasm_bindgen]
 pub struct RenderSessionManager {
-    font_resolver: Arc<RwLock<FontResolverImpl>>,
+    pub(crate) font_resolver: Arc<RwLock<FontResolverImpl>>,
 }
 
 #[wasm_bindgen]

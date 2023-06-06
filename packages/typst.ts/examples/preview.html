@@ -114,6 +114,35 @@
           },
         );
 
+        const preloadStart = performance.now();
+        const sourcePrefetchPromise = ((async () => {
+          const snapshot = {  root: '', mTimes: new Map(),  mRealPaths: new Map(),  mData: [],};
+          const runFetch = async (path) => {
+            const res = await fetch(snapshot.root + path);
+            const buffer = await res.arrayBuffer();
+            return [path, new Uint8Array(buffer)];
+          };
+          snapshot.root = "http://localhost:22778/";
+          snapshot.mTimes = new Map([["hust-typst-template/sample.typ", 13329911613000], ["hust-typst-template/avatar-min-min.jpeg", 13329911327000], ["hust-typst-template/ref.yml", 13329911588000]]);
+          snapshot.mRealPaths = new Map([]);
+          snapshot.mData = await Promise.all([runFetch("hust-typst-template/sample.typ"), runFetch("hust-typst-template/avatar-min-min.jpeg"), runFetch("hust-typst-template/ref.yml")]);
+          return snapshot;
+        })());
+
+        const fontPrefetchPromise = ((async () => {
+          const snapshot = {  root: '', mTimes: new Map(),  mRealPaths: new Map(),  mData: [],};
+          const runFetch = async (path) => {
+            const res = await fetch(snapshot.root + path);
+            const buffer = await res.arrayBuffer();
+            return [path, new Uint8Array(buffer)];
+          };
+          snapshot.root = "http://localhost:20812/fonts/";
+          snapshot.mTimes = new Map([]);
+          snapshot.mRealPaths = new Map([]);
+          snapshot.mData = await Promise.all([runFetch("\\\\?\\C:\\Windows\\Fonts\\simkai.ttf"), runFetch("\\\\?\\C:\\Windows\\Fonts\\timesbd.ttf"), runFetch("\\\\?\\C:\\Windows\\Fonts\\simhei.ttf"), runFetch("\\\\?\\C:\\Windows\\Fonts\\times.ttf"), runFetch("\\\\?\\C:\\Windows\\Fonts\\simsun.ttc"), runFetch("\\\\?\\C:\\Windows\\Fonts\\timesi.ttf"), runFetch("\\\\?\\C:\\Windows\\Fonts\\seguiemj.ttf")]);
+          return snapshot;
+        })());
+
         const imageContainer = document.getElementById('imageContainer');
         let currentScale = 1; // variable for storing scaling factor
         let imageContainerWidth = imageContainer.offsetWidth;
@@ -346,7 +375,13 @@
             getModule: () =>
               '${resource-root}/node_modules/@myriaddreamin/typst-ts-web-compiler/typst_ts_web_compiler_bg.wasm',
           })
-          .then(() => {
+          .then(async () => {
+            await Promise.all([
+              sourcePrefetchPromise.then(s => s && sourceFetchModel.loadSnapshot(s)),
+              fontPrefetchPromise.then(s => s && fontFetchModel.loadSnapshot(s)),
+            ]);
+            console.log('prefetch done time: ', performance.now() - preloadStart, 'ms');
+
             pluginLoaded = true;
             document.getElementById('compile-button').addEventListener('click', () => {
               runCompile();
@@ -356,6 +391,12 @@
                 .exportSnapshot()
                 .then(console.log)
                 .then(() => fontFetchModel.exportSnapshot().then(console.log));
+            });
+            document.getElementById('preload-button').addEventListener('click', () => {
+              sourceFetchModel
+                .getPreloadScript()
+                .then(console.log)
+                .then(() => fontFetchModel.getPreloadScript().then(console.log));
             });
             console.log(`plugin initialized script delay: ${performance.now() - scriptStart}ms`);
             return runCompile();
@@ -411,6 +452,7 @@
     <div style="position: absolute; z-index: 10">
       <button id="compile-button">compile</button>
       <button id="export-button">export</button>
+      <button id="preload-button">get preload script</button>
     </div>
     <div id="imageContainer" style="height: 0px"></div>
   </body>
