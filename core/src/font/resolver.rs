@@ -1,18 +1,24 @@
 use core::fmt;
 use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
+    collections::{hash_map::Entry, HashMap},
+    sync::{Arc, Mutex, RwLock},
 };
 
 use comemo::Prehashed;
+use ttf_parser::GlyphId;
 use typst::{
-    font::{Font, FontBook, FontInfo},
+    font::{Font, FontBook, FontFlags, FontInfo},
     util::Buffer,
 };
 
-use crate::FontSlot;
+use crate::{artifact::image::TypstImage, FontSlot};
 
-use super::{BufferFontLoader, FontProfile, PartialFontBook};
+use super::{
+    BufferFontLoader, FontGlyphPackBundle, FontInfoKey, FontProfile, GlyphProvider, IGlyphProvider,
+    PartialFont, PartialFontBook,
+};
+
+use std::hash::{Hash, Hasher};
 
 /// A FontResolver can resolve a font by index.
 /// It also reuse FontBook for font-related query.
@@ -20,6 +26,27 @@ use super::{BufferFontLoader, FontProfile, PartialFontBook};
 pub trait FontResolver {
     fn font_book(&self) -> &Prehashed<FontBook>;
     fn font(&self, idx: usize) -> Option<Font>;
+    // todo: reference or arc
+    fn partial_font(&self, _font: &Font) -> Option<&PartialFont> {
+        None
+    }
+
+    fn default_get_by_info(&self, info: &FontInfo) -> Option<Font> {
+        // todo: font alternative
+        let mut alternative_text = 'c';
+        if let Some(codepoint) = info.coverage.iter().next() {
+            alternative_text = std::char::from_u32(codepoint).unwrap();
+        };
+
+        let idx = self
+            .font_book()
+            .select_fallback(Some(info), info.variant, &alternative_text.to_string())
+            .unwrap();
+        self.font(idx)
+    }
+    fn get_by_info(&self, info: &FontInfo) -> Option<Font> {
+        self.default_get_by_info(info)
+    }
 }
 
 /// The default FontResolver implementation.
@@ -28,6 +55,7 @@ pub struct FontResolverImpl {
     partial_book: Arc<Mutex<PartialFontBook>>,
     fonts: Vec<FontSlot>,
     profile: FontProfile,
+    pub font_map: HashMap<FontInfoKey, PartialFont>,
 }
 
 impl FontResolverImpl {
@@ -36,12 +64,14 @@ impl FontResolverImpl {
         partial_book: Arc<Mutex<PartialFontBook>>,
         fonts: Vec<FontSlot>,
         profile: FontProfile,
+        font_map: HashMap<FontInfoKey, PartialFont>,
     ) -> Self {
         Self {
             book: Prehashed::new(book),
             partial_book,
             fonts,
             profile,
+            font_map,
         }
     }
 
@@ -97,6 +127,7 @@ impl FontResolverImpl {
         if !partial_book.partial_hit {
             return;
         }
+        partial_book.revision += 1;
 
         let mut book = FontBook::default();
 
@@ -136,6 +167,54 @@ impl FontResolverImpl {
         self.book = Prehashed::new(book);
         self.fonts = font_slots;
     }
+
+    pub fn add_glyph_packs(&mut self, font_glyph_bundle: FontGlyphPackBundle) {
+        let mut changes = Vec::new();
+
+        for font_glyphs in font_glyph_bundle.fonts {
+            let key = FontInfoKey {
+                family: font_glyphs.info.family.clone(),
+                variant: font_glyphs.info.variant,
+                flags: FontFlags::from_bits(font_glyphs.info.flags).unwrap(),
+            };
+
+            let glyphs = || font_glyphs.glyphs.into_iter().map(|g| (GlyphId(g.id), g));
+
+            match self.font_map.entry(key) {
+                Entry::Occupied(mut entry) => {
+                    let font = entry.get_mut();
+                    font.glyphs.extend(glyphs());
+                }
+                Entry::Vacant(entry) => {
+                    let font = Font::new_dummy(
+                        font_glyphs.info.clone().into(),
+                        font_glyphs.metrics.into(),
+                    )
+                    .unwrap();
+
+                    changes.push((
+                        None,
+                        font.info().clone(),
+                        FontSlot::with_value(Some(font.clone())),
+                    ));
+
+                    entry.insert(PartialFont {
+                        typst_repr: font,
+                        glyphs: glyphs().collect(),
+                    });
+                }
+            }
+        }
+
+        if !changes.is_empty() {
+            let mut partial_book = self.partial_book.lock().unwrap();
+            partial_book.partial_hit = true;
+            partial_book.changes.extend(changes);
+
+            drop(partial_book);
+            self.rebuild();
+        }
+    }
 }
 
 impl FontResolver for FontResolverImpl {
@@ -146,6 +225,18 @@ impl FontResolver for FontResolverImpl {
     fn font(&self, idx: usize) -> Option<Font> {
         self.fonts[idx].get_or_init()
     }
+
+    fn partial_font(&self, font: &Font) -> Option<&PartialFont> {
+        self.font_map.get(&font.info().into())
+    }
+
+    fn get_by_info(&self, info: &FontInfo) -> Option<Font> {
+        if let Some(font) = self.font_map.get(&info.into()) {
+            return Some(font.typst_repr.clone());
+        }
+
+        FontResolver::default_get_by_info(self, info)
+    }
 }
 
 impl fmt::Display for FontResolverImpl {
@@ -155,6 +246,73 @@ impl fmt::Display for FontResolverImpl {
         }
 
         Ok(())
+    }
+}
+
+pub struct PartialFontGlyphProvider {
+    base: GlyphProvider,
+    resolver: Arc<RwLock<FontResolverImpl>>,
+}
+
+// todo: appropriate hash
+impl Hash for PartialFontGlyphProvider {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write_i32(11123111);
+        let ptr = self.resolver.as_ref() as *const _;
+        state.write_usize(ptr as usize);
+    }
+}
+
+impl PartialFontGlyphProvider {
+    pub fn new(base: GlyphProvider, resolver: Arc<RwLock<FontResolverImpl>>) -> Self {
+        Self { base, resolver }
+    }
+}
+
+impl IGlyphProvider for PartialFontGlyphProvider {
+    fn svg_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<[u8]>> {
+        if !font.is_dummy() {
+            return self.base.svg_glyph(font, id);
+        }
+
+        let partial_book = self.resolver.read().unwrap();
+        let glyph = partial_book
+            .font_map
+            .get(&font.info().into())?
+            .glyphs
+            .get(&id)?;
+        Some(glyph.svg.as_ref()?.image.clone())
+    }
+
+    fn bitmap_glyph(&self, font: &Font, id: GlyphId, ppem: u16) -> Option<(TypstImage, i16, i16)> {
+        if !font.is_dummy() {
+            return self.base.bitmap_glyph(font, id, ppem);
+        }
+
+        let partial_book = self.resolver.read().unwrap();
+        let glyph = partial_book
+            .font_map
+            .get(&font.info().into())?
+            .glyphs
+            .get(&id)?;
+        glyph
+            .bitmap
+            .as_ref()
+            .map(|info| (info.image.clone().into(), info.x, info.y))
+    }
+
+    fn outline_glyph(&self, font: &Font, id: GlyphId) -> Option<String> {
+        if !font.is_dummy() {
+            return self.base.outline_glyph(font, id);
+        }
+
+        let partial_book = self.resolver.read().unwrap();
+        let glyph = partial_book
+            .font_map
+            .get(&font.info().into())?
+            .glyphs
+            .get(&id)?;
+        Some(glyph.outline.as_ref()?.outline.clone())
     }
 }
 

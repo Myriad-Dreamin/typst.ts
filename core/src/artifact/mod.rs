@@ -305,21 +305,9 @@ impl Artifact {
                 coverage: font.coverage,
             };
 
-            // todo: font alternative
-            let mut alternative_text = 'c';
-            if let Some(codepoint) = font_info.coverage.iter().next() {
-                alternative_text = std::char::from_u32(codepoint).unwrap();
-            };
-            let idx = font_resolver
-                .font_book()
-                .select_fallback(
-                    Some(&font_info),
-                    font.variant,
-                    &alternative_text.to_string(),
-                )
-                .unwrap();
-            let font = font_resolver.font(idx).unwrap();
-            builder.fonts.push(font);
+            builder
+                .fonts
+                .push(font_resolver.get_by_info(&font_info).unwrap());
         }
 
         let pages = self

@@ -263,6 +263,7 @@ impl From<SystemFontSearcher> for FontResolverImpl {
             Arc::new(Mutex::new(PartialFontBook::default())),
             searcher.fonts,
             searcher.profile_rebuilder.profile,
+            Default::default(),
         )
     }
 }

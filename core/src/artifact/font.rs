@@ -7,6 +7,7 @@ pub use typst::font::FontFlags as TypstFontFlags;
 pub use typst::font::FontInfo as TypstFontInfo;
 pub use typst::font::FontMetrics as TypstFontMetrics;
 use typst::font::FontVariant;
+pub use typst::font::LineMetrics as TypstLineMetrics;
 
 use super::geom::Em;
 
@@ -24,6 +25,17 @@ pub struct FontInfo {
     pub coverage: Coverage,
     /// The hash of the unicode coverage.
     pub coverage_hash: String,
+}
+
+impl From<FontInfo> for TypstFontInfo {
+    fn from(info: FontInfo) -> Self {
+        Self {
+            family: info.family,
+            variant: info.variant,
+            flags: TypstFontFlags::from_bits(info.flags).unwrap(),
+            coverage: info.coverage,
+        }
+    }
 }
 
 impl Default for FontInfo {
@@ -86,6 +98,30 @@ impl From<TypstFontMetrics> for FontMetrics {
                 thickness: metrics.underline.thickness.into(),
             },
             overline: LineMetrics {
+                position: metrics.overline.position.into(),
+                thickness: metrics.overline.thickness.into(),
+            },
+        }
+    }
+}
+
+impl From<FontMetrics> for TypstFontMetrics {
+    fn from(metrics: FontMetrics) -> Self {
+        Self {
+            units_per_em: metrics.units_per_em,
+            ascender: metrics.ascender.into(),
+            cap_height: metrics.cap_height.into(),
+            x_height: metrics.x_height.into(),
+            descender: metrics.descender.into(),
+            strikethrough: TypstLineMetrics {
+                position: metrics.strikethrough.position.into(),
+                thickness: metrics.strikethrough.thickness.into(),
+            },
+            underline: TypstLineMetrics {
+                position: metrics.underline.position.into(),
+                thickness: metrics.underline.thickness.into(),
+            },
+            overline: TypstLineMetrics {
                 position: metrics.overline.position.into(),
                 thickness: metrics.overline.thickness.into(),
             },

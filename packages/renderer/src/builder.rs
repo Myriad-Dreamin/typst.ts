@@ -16,6 +16,7 @@ pub struct TypstRendererBuilder {
 impl TypstRendererBuilder {
     #[wasm_bindgen(constructor)]
     pub fn new() -> ZResult<TypstRendererBuilder> {
+        console_error_panic_hook::set_once();
         Ok(Self {
             searcher: BrowserFontSearcher::new(),
         })
@@ -34,6 +35,11 @@ impl TypstRendererBuilder {
     // 100 KB
     pub async fn add_web_fonts(&mut self, font: js_sys::Array) -> ZResult<()> {
         self.searcher.add_web_fonts(font).await
+    }
+
+    pub async fn add_glyph_pack(&mut self, pack: JsValue) -> ZResult<()> {
+        let pack = serde_wasm_bindgen::from_value(pack).unwrap();
+        self.searcher.add_glyph_pack(pack).await
     }
 
     // 24 MB

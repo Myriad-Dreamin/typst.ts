@@ -26,42 +26,37 @@
         let plugin = window.TypstRenderModule.createTypstRenderer(pdfjsLib);
         plugin
           .init({
-            beforeBuild: [
-              window.TypstRenderModule.preloadRemoteFonts([
-                'http://localhost:20810/assets/fonts/LinLibertine_R.ttf',
-                'http://localhost:20810/assets/fonts/LinLibertine_RB.ttf',
-                'http://localhost:20810/assets/fonts/LinLibertine_RBI.ttf',
-                'http://localhost:20810/assets/fonts/LinLibertine_RI.ttf',
-                'http://localhost:20810/assets/fonts/NewCMMath-Book.otf',
-                'http://localhost:20810/assets/fonts/NewCMMath-Regular.otf',
-                'http://localhost:20810/assets/fonts/DejaVuSansMono.ttf',
-                'http://localhost:20810/assets/fonts/TwitterColorEmoji.ttf',
-              ]),
-              window.TypstRenderModule.preloadSystemFonts({
-                byFamily: ['Segoe UI Symbol'],
-              }),
-            ],
             getModule: () =>
               '/core/node_modules/@myriaddreamin/typst-ts-renderer/typst_ts_renderer_bg.wasm',
           })
-          .then(() => {
-            fetch('http://localhost:20810/corpus/math/main.artifact.json')
+          .then(async () => {
+            const artifactData = await fetch(
+              'http://localhost:20810/corpus/math/main.artifact.json',
+            )
               .then(response => response.arrayBuffer())
-              .then(buffer => new Uint8Array(buffer))
-              .then(buffer => {
-                const appContainer = document.getElementById('typst-app');
-
-                plugin
-                  .render({
-                    artifactContent: buffer,
-                    container: appContainer,
-                    backgroundColor: '#343541', // '#ffffff', //
-                    pixelPerPt: 4.5,
-                  })
-                  .then(renderResult => {
-                    console.log('render done');
-                  });
+              .then(buffer => new Uint8Array(buffer));
+            const glyphPack = await fetch('http://localhost:20810/corpus/math/main.glyphs.json')
+              .then(response => response.text())
+              .then(content => JSON.parse(content))
+              .catch(e => {
+                console.log(e);
+                return undefined;
               });
+            if (glyphPack) {
+              console.log('glyph_info', glyphPack);
+              plugin.loadGlyphPack(glyphPack);
+            }
+
+            const appContainer = document.getElementById('typst-app');
+
+            await plugin.render({
+              artifactContent: artifactData,
+              container: appContainer,
+              backgroundColor: '#343541', // '#ffffff', //
+              pixelPerPt: 4.5,
+            });
+
+            console.log('render done');
           });
       });
     </script>

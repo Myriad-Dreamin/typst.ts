@@ -1,4 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    sync::{Arc, Mutex},
+};
 
 use js_sys::ArrayBuffer;
 use typst::{
@@ -11,7 +14,10 @@ use typst::{
 use typst_ts_core::{
     cache::FontInfoCache,
     error::prelude::*,
-    font::{BufferFontLoader, FontProfile, FontResolverImpl, PartialFontBook},
+    font::{
+        BufferFontLoader, FontGlyphPack, FontInfoKey, FontProfile, FontResolverImpl, GlyphId,
+        PartialFont, PartialFontBook,
+    },
     FontLoader, FontSlot,
 };
 use wasm_bindgen::prelude::*;
@@ -383,6 +389,7 @@ pub struct BrowserFontSearcher {
     pub fonts: Vec<FontSlot>,
     pub profile: FontProfile,
     pub partial_book: Arc<Mutex<PartialFontBook>>,
+    pub font_map: HashMap<FontInfoKey, PartialFont>,
 }
 
 impl BrowserFontSearcher {
@@ -397,6 +404,7 @@ impl BrowserFontSearcher {
             fonts: vec![],
             profile,
             partial_book: Arc::new(Mutex::new(PartialFontBook::default())),
+            font_map: HashMap::new(),
         };
 
         #[cfg(feature = "browser-embedded-fonts")]
@@ -490,6 +498,38 @@ impl BrowserFontSearcher {
             })))
         }
     }
+
+    pub async fn add_glyph_pack(&mut self, font_glyphs: FontGlyphPack) -> ZResult<()> {
+        let key = FontInfoKey {
+            family: font_glyphs.info.family.clone(),
+            variant: font_glyphs.info.variant,
+            flags: FontFlags::from_bits(font_glyphs.info.flags).unwrap(),
+        };
+
+        let glyphs = || font_glyphs.glyphs.into_iter().map(|g| (GlyphId(g.id), g));
+
+        match self.font_map.entry(key) {
+            Entry::Occupied(mut entry) => {
+                let font = entry.get_mut();
+                font.glyphs.extend(glyphs());
+            }
+            Entry::Vacant(entry) => {
+                let font =
+                    Font::new_dummy(font_glyphs.info.clone().into(), font_glyphs.metrics.into())
+                        .unwrap();
+
+                self.book.push(font.info().clone());
+                self.fonts.push(FontSlot::with_value(Some(font.clone())));
+
+                entry.insert(PartialFont {
+                    typst_repr: font,
+                    glyphs: glyphs().collect(),
+                });
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl Default for BrowserFontSearcher {
@@ -500,6 +540,12 @@ impl Default for BrowserFontSearcher {
 
 impl From<BrowserFontSearcher> for FontResolverImpl {
     fn from(value: BrowserFontSearcher) -> Self {
-        FontResolverImpl::new(value.book, value.partial_book, value.fonts, value.profile)
+        FontResolverImpl::new(
+            value.book,
+            value.partial_book,
+            value.fonts,
+            value.profile,
+            value.font_map,
+        )
     }
 }

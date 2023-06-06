@@ -6,7 +6,7 @@ use std::{ops::Deref, sync::Arc};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
-use ttf_parser::GlyphId;
+pub use ttf_parser::GlyphId;
 use typst::doc::{Document, FrameItem};
 use typst::font::Font;
 use typst::geom::Axes;
@@ -122,35 +122,35 @@ impl ttf_parser::OutlineBuilder for SvgOutlineBuilder {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct SvgGlyphInfo {
     #[serde_as(as = "Base64")]
-    image: Vec<u8>,
+    pub image: Arc<[u8]>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct BitmapGlyphInfo {
-    ppem: u16,
-    x: i16,
-    y: i16,
-    image: Image,
+    pub ppem: u16,
+    pub x: i16,
+    pub y: i16,
+    pub image: Image,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct OutlineGlyphInfo {
-    outline: String,
+    pub outline: String,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct GlyphShapeInfo {
-    id: u16,
-    svg: Option<Box<SvgGlyphInfo>>,
-    bitmap: Option<Box<BitmapGlyphInfo>>,
-    outline: Option<OutlineGlyphInfo>,
+    pub id: u16,
+    pub svg: Option<Box<SvgGlyphInfo>>,
+    pub bitmap: Option<Box<BitmapGlyphInfo>>,
+    pub outline: Option<OutlineGlyphInfo>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FontGlyphPack {
-    info: FontInfo,
-    metrics: FontMetrics,
-    glyphs: Vec<GlyphShapeInfo>,
+    pub info: FontInfo,
+    pub metrics: FontMetrics,
+    pub glyphs: Vec<GlyphShapeInfo>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -162,9 +162,9 @@ pub struct FontGlyphPackBundle {
 }
 
 struct FontGlyphPackBuilder {
-    info: FontInfo,
-    metrics: FontMetrics,
-    glyphs: HashMap<GlyphId, GlyphShapeInfo>,
+    pub info: FontInfo,
+    pub metrics: FontMetrics,
+    pub glyphs: HashMap<GlyphId, GlyphShapeInfo>,
 }
 
 #[derive(Default)]
@@ -247,9 +247,7 @@ impl FontGlyphInfoBuilder {
 
         let svg = self.glyph_provider.svg_glyph(font, id);
         if let Some(svg) = svg {
-            glyph_info.svg = Some(Box::new(SvgGlyphInfo {
-                image: svg.to_vec(),
-            }));
+            glyph_info.svg = Some(Box::new(SvgGlyphInfo { image: svg }));
         }
 
         let ppem = std::u16::MAX;
