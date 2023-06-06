@@ -1,4 +1,4 @@
-import { FsAccessModel } from 'src/internal.types';
+import { FsAccessModel } from '../internal.types';
 
 export interface FetchAccessOptions {
   polyfillHeadRequest?: boolean;
