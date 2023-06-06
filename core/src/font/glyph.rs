@@ -14,7 +14,10 @@ use typst::image::Image as TypstImage;
 
 use crate::artifact::core::FontRef;
 use crate::artifact::BuildInfo;
-use crate::artifact::{font::FontInfo, image::Image};
+use crate::artifact::{
+    font::{FontInfo, FontMetrics},
+    image::Image,
+};
 use crate::artifact_ir::{FontCoverage, TypstFont, TypstFontInfo};
 use crate::{make_hash, HashedTrait, StaticHash128};
 
@@ -136,35 +139,37 @@ pub struct OutlineGlyphInfo {
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct GlyphInfoItem {
+pub struct GlyphShapeInfo {
     id: u16,
     svg: Option<SvgGlyphInfo>,
     bitmap: Option<BitmapGlyphInfo>,
     outline: Option<OutlineGlyphInfo>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct FontGlyphInfoItem {
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FontGlyphPack {
     info: FontInfo,
-    glyphs: Vec<GlyphInfoItem>,
+    metrics: FontMetrics,
+    glyphs: Vec<GlyphShapeInfo>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct FontGlyphInfo {
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FontGlyphPackBundle {
     /// metadata about this artifact
     pub build: Option<BuildInfo>,
     /// The page frames.
-    pub fonts: Vec<FontGlyphInfoItem>,
+    pub fonts: Vec<FontGlyphPack>,
 }
 
-struct FontGlyphInfoItemBuilder {
+struct FontGlyphPackBuilder {
     info: FontInfo,
-    glyphs: HashMap<GlyphId, GlyphInfoItem>,
+    metrics: FontMetrics,
+    glyphs: HashMap<GlyphId, GlyphShapeInfo>,
 }
 
 #[derive(Default)]
 struct FontGlyphInfoBuilder {
-    fonts: Vec<FontGlyphInfoItemBuilder>,
+    fonts: Vec<FontGlyphPackBuilder>,
     font_map: HashMap<TypstFontInfo, FontRef>,
     glyph_provider: FontGlyphProvider,
 }
@@ -190,10 +195,13 @@ impl FontGlyphInfoBuilder {
             ligatures: vec![],
         };
 
+        let metrics = (*font.metrics()).into();
+
         let font_ref = self.fonts.len() as u32;
         self.font_map.insert(font.info().clone(), font_ref);
-        self.fonts.push(FontGlyphInfoItemBuilder {
+        self.fonts.push(FontGlyphPackBuilder {
             info,
+            metrics,
             glyphs: HashMap::new(),
         });
         font_ref
@@ -232,8 +240,8 @@ impl FontGlyphInfoBuilder {
         }
     }
 
-    fn write_glyph(&self, font: &TypstFont, id: GlyphId) -> GlyphInfoItem {
-        let mut glyph_info = GlyphInfoItem {
+    fn write_glyph(&self, font: &TypstFont, id: GlyphId) -> GlyphShapeInfo {
+        let mut glyph_info = GlyphShapeInfo {
             id: id.0,
             ..Default::default()
         };
@@ -266,15 +274,16 @@ impl FontGlyphInfoBuilder {
     }
 }
 
-impl From<&Document> for FontGlyphInfo {
+impl From<&Document> for FontGlyphPackBundle {
     fn from(doc: &Document) -> Self {
         let mut builder = FontGlyphInfoBuilder::default();
         builder.build(doc);
         let fonts = builder
             .fonts
             .into_iter()
-            .map(|font| FontGlyphInfoItem {
+            .map(|font| FontGlyphPack {
                 info: font.info,
+                metrics: font.metrics,
                 glyphs: font.glyphs.into_values().collect(),
             })
             .collect();
