@@ -5,13 +5,15 @@
       .init({
         beforeBuild: [
           window.TypstRenderModule.preloadRemoteFonts([
-            '/typst.ts/assets/fonts/LinLibertine_R.ttf',
-            '/typst.ts/assets/fonts/LinLibertine_RB.ttf',
-            '/typst.ts/assets/fonts/LinLibertine_RBI.ttf',
-            '/typst.ts/assets/fonts/LinLibertine_RI.ttf',
+            // use glyphs.json
+            // '/typst.ts/assets/fonts/LinLibertine_R.ttf',
+            // '/typst.ts/assets/fonts/LinLibertine_RB.ttf',
+            // '/typst.ts/assets/fonts/LinLibertine_RBI.ttf',
+            // '/typst.ts/assets/fonts/LinLibertine_RI.ttf',
+            // '/typst.ts/assets/fonts/NewCMMath-Regular.otf',
+            // '/typst.ts/assets/fonts/DejaVuSansMono.ttf',
+            // not used
             // '/typst.ts/assets/fonts/NewCMMath-Book.otf',
-            '/typst.ts/assets/fonts/NewCMMath-Regular.otf',
-            '/typst.ts/assets/fonts/DejaVuSansMono.ttf',
             // '/typst.ts/assets/fonts/DejaVuSansMono-Bold.ttf',
             // '/typst.ts/assets/fonts/DejaVuSansMono-BoldOblique.ttf',
             // '/typst.ts/assets/fonts/DejaVuSansMono-Oblique.ttf',
@@ -20,10 +22,25 @@
         getModule: () => '/typst.ts/renderer/typst_ts_renderer_bg.wasm',
       })
       .then(() => {
+        let artifact_data = undefined;
+
+        const getGlyphs = fetch('/typst.ts/docs/readme.glyphs.json')
+          .then(response => response.text())
+          .then(content => JSON.parse(content))
+          .catch(e => {
+            console.log(e);
+            return undefined;
+          });
+
         fetch('/typst.ts/docs/readme.artifact.json')
           .then(response => response.arrayBuffer())
           .then(buffer => new Uint8Array(buffer))
           .then(buffer => {
+            artifact_data = buffer;
+          })
+          .then(getGlyphs)
+          .then(glyphPack => plugin.loadGlyphPack(glyphPack))
+          .then(() => {
             const appContainer = document.getElementById('typst-app');
 
             plugin

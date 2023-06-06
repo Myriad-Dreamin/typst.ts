@@ -62,7 +62,7 @@ jobs:
           dir: 'packages/typst.ts'
       - name: Prepare artifacts
         run: |
-          cargo run --bin typst-ts-cli -- compile --workspace ./github-pages/docs/ --entry ./github-pages/docs/readme.typ --format=ir --format=json --format=pdf
+          cargo run --bin typst-ts-cli -- compile --workspace ./github-pages/docs/ --entry ./github-pages/docs/readme.typ --format=ir --format=json --format=json_glyphs --format=pdf
       - name: Copy assets
         run: |
           mkdir -p github-pages/compiler/
