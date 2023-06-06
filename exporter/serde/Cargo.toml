@@ -1,10 +1,11 @@
 [package]
 name = "typst-ts-serde-exporter"
-version = "0.2.0"
-license = "Apache-2.0"
-edition = "2021"
 description = "Export a frame of Typst Artifact into serde formats."
-repository = "https://github.com/Myriad-Dreamin/typst.ts"
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
 

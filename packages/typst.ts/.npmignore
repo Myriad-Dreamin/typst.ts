@@ -7,5 +7,6 @@ index.html
 *.artifact.json
 *.rmp
 *.bin
+*.tsbuildinfo
 esbuild.*
 .eslint*

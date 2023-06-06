@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst.ts",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "run Typst in JavaScriptWorld.",
   "keywords": [
     "TypeScript",
@@ -23,7 +23,9 @@
     "build-renderer:dev": "yarn run build-renderer:wasm:dev",
     "build-compiler": "yarn run build-compiler:wasm && yarn run build-wrapper",
     "build-compiler:dev": "yarn run build-compiler:wasm:dev && yarn run build-wrapper:dev",
-    "link:local": "yarn link @myriaddreamin/typst-ts-renderer @myriaddreamin/typst-ts-web-compiler && yarn link && npm link",
+    "link:renderer": "cd ../renderer/ && yarn link",
+    "link:compiler": "cd ../compiler/ && yarn link",
+    "link:local": " yarn link:renderer && yarn link:compiler && yarn link @myriaddreamin/typst-ts-renderer @myriaddreamin/typst-ts-web-compiler && yarn link && npm link",
     "prepublish": "npm run build",
     "publish:dry": "npm publish --dry-run --access public",
     "publish": "npm publish --access public"

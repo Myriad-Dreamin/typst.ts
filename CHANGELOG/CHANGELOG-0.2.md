@@ -1,3 +1,57 @@
+# v0.2.1
+
+## Changelog since v0.2.1
+
+**Full Changelog**: https://github.com/Myriad-Dreamin/typst.ts/compare/v0.2.0...v0.2.1
+
+### Bug fix
+
+- fix(core): ir unaligned memory in https://github.com/Myriad-Dreamin/typst.ts/pull/99
+
+### Security Notes
+
+No new security note.
+
+### External Feature
+
+- compiler: eager snapshot rendering in https://github.com/Myriad-Dreamin/typst.ts/pull/63
+
+- core: collect and export glyph info in https://github.com/Myriad-Dreamin/typst.ts/pull/112
+- core: optional render text by partial fonts in https://github.com/Myriad-Dreamin/typst.ts/pull/113
+
+- exporter::canvas error handling in https://github.com/Myriad-Dreamin/typst.ts/pull/67
+- exporter::canvas is almost done (1): glyph cache and clip impl in https://github.com/Myriad-Dreamin/typst.ts/pull/65
+- exporter::canvas is almost done (2): render svg and bitmap glyphs in https://github.com/Myriad-Dreamin/typst.ts/pull/86
+
+- packages::core: customize access model in https://github.com/Myriad-Dreamin/typst.ts/pull/34
+- packages::compiler: add integrated canvas renderer in https://github.com/Myriad-Dreamin/typst.ts/pull/35
+- packages::renderer: font supports for cjk and emoji glyphs in https://github.com/Myriad-Dreamin/typst.ts/pull/84
+
+- server::remote: serve remote compilation in https://github.com/Myriad-Dreamin/typst.ts/pull/54
+- server::remote: load fonts in snapshot in https://github.com/Myriad-Dreamin/typst.ts/pull/60
+
+- github-pages: init github-pages in https://github.com/Myriad-Dreamin/typst.ts/pull/37
+- misc: set linguist language of typst source files in https://github.com/Myriad-Dreamin/typst.ts/pull/41
+
+### Internal Feature
+
+- docs: add troubleshooting docs about wasm in https://github.com/Myriad-Dreamin/typst.ts/pull/90
+
+- test: init snapshot testing in https://github.com/Myriad-Dreamin/typst.ts/pull/72
+- test: test wasm renderer with ci integration in https://github.com/Myriad-Dreamin/typst.ts/pull/76
+
+- test: corpus for CJK font testing: add hust template in https://github.com/Myriad-Dreamin/typst.ts/pull/82
+- test: corpus for math testing: add undergradmath in https://github.com/Myriad-Dreamin/typst.ts/pull/110
+
+- test from upstream: visualize path and polygon corpus in https://github.com/Myriad-Dreamin/typst.ts/pull/79
+- test from upstream: shape aspect corpora in https://github.com/Myriad-Dreamin/typst.ts/pull/85
+- test from upstream: outline rendering corpora in https://github.com/Myriad-Dreamin/typst.ts/pull/89
+- test from upstream: shape circle corpora in https://github.com/Myriad-Dreamin/typst.ts/pull/94
+- test from upstream: layout clip corpora in https://github.com/Myriad-Dreamin/typst.ts/pull/95
+- test from upstream: layout list marker corpora in https://github.com/Myriad-Dreamin/typst.ts/pull/96
+- test from upstream: layout transform corpora in https://github.com/Myriad-Dreamin/typst.ts/pull/100
+- test from upstream: visualize stroke corpora in https://github.com/Myriad-Dreamin/typst.ts/pull/104
+
 # v0.2.0
 
 ## Changelog since v0.2.0

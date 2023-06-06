@@ -31,6 +31,10 @@ The Typst.ts application is designed to be fast due to the following reasons:
 
 - The font assets for Typst.ts are not included in this repository. See [Download Font Assets](./docs/download-font-assets.md) for more information.
 
+### Installation
+
+Download the latest release from [GitHub Releases](https://github.com/Myriad-Dreamin/typst.ts/releases).
+
 ### CLI
 
 Run Compiler Example:
@@ -84,7 +88,7 @@ Compile options:
 ### Renderer Example
 
 ```shell
-$ cd packages/typst.ts && yarn install && yarn run build; cd ../..
+$ cd packages/typst.ts && yarn install && yarn run build && yarn run link:local; cd ../..
 $ cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/
 ```
 
@@ -93,6 +97,12 @@ And open your browser to `http://localhost:20810/core/`.
 ### Precompiler
 
 The compiler is capable of producing artifact outputs from a Typst project. Thet artifact outputs can be easily distributed to remote endpoints.
+
+Install `typst-ts-cli` by cargo:
+
+```shell
+cargo install --git https://github.com/Myriad-Dreamin/typst.ts typst-ts-cli
+```
 
 ### Renderer
 

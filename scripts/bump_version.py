@@ -32,13 +32,6 @@ def main(old_version: str, new_version: str):
   bump_rust_self_version = lambda: itertools.product(
     [ # file paths
       "Cargo.toml",
-      "exporter/ast/Cargo.toml",
-      "exporter/canvas/Cargo.toml",
-      "exporter/pdf/Cargo.toml",
-      "exporter/raster/Cargo.toml",
-      "exporter/serde/Cargo.toml",
-      "exporter/ws/Cargo.toml",
-      "exporter/tir/Cargo.toml",
     ], [ # patterns
       lambda v: f'version = "{v}"',
     ])
@@ -47,6 +40,7 @@ def main(old_version: str, new_version: str):
     [ # file paths
       "packages/compiler/package.json",
       "packages/renderer/package.json",
+      "packages/hexo-renderer-typst/package.json",
       "packages/typst.ts/package.json",
       "packages/typst.react/package.json",
       "packages/typst.angular/projects/typst.angular/package.json",
