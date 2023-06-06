@@ -62,10 +62,14 @@ jobs:
           targets: ${{ matrix.rust-target }}
       - name: Install AArch64 target toolchain
         if: matrix.rust-target == 'aarch64-unknown-linux-gnu'
-        run: sudo apt-get install gcc-aarch64-linux-gnu
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install gcc-aarch64-linux-gnu
       - name: Install ARM target toolchain
         if: matrix.rust-target == 'arm-unknown-linux-gnueabihf'
-        run: sudo apt-get install gcc-arm-linux-gnueabihf
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install gcc-arm-linux-gnueabihf
       - shell: pwsh
         run: |
           cargo run --release --bin typst-ts-fontctl
@@ -101,6 +105,11 @@ jobs:
           cargo run --release --bin typst-ts-fontctl
           cargo build --release -p typst-ts-fontctl --target $RUST_TARGET
           cargo build --release -p typst-ts-cli --target $RUST_TARGET
+      - uses: actions/upload-artifact@v3
+        with:
+          name: typst-ts-font-assets
+          path: assets
+          if-no-files-found: error
       - uses: actions/upload-artifact@v3
         with:
           name: typst-ts-${{ env.target }}
@@ -154,6 +163,11 @@ jobs:
           pack_release darwin-arm64 aarch64-apple-darwin
           pack_release alpine-x64   alpine-x64
           pack_release alpine-x64   x86_64-unknown-linux-musl
+
+          # typst-ts-font-assets
+          mkdir -p release/font-assets
+          cp artifacts/typst-ts-font-assets/* release/font-assets/
+          tar czvf gh-release/font-assets.tar.gz -C release font-assets
       - name: Display structure of releasing files
         run: find gh-release
       - uses: actions/upload-artifact@v3
