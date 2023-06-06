@@ -144,16 +144,16 @@ impl SystemFontSearcher {
     /// Add fonts that are embedded in the binary.
     pub fn add_embedded(&mut self) {
         let program_dir = std::env::current_exe().unwrap();
-        let mut program_dir = program_dir.parent().unwrap().to_path_buf();
-        while let Some(dir) = program_dir.parent() {
-            let path = dir.to_path_buf();
+        let mut program_dir = program_dir.parent();
+        while let Some(dir) = program_dir {
+            let path = dir;
             for vanilla_dir in &["fonts", "assets/fonts", "asset/fonts"] {
                 let fonts_dir = path.join(vanilla_dir);
                 if fonts_dir.exists() {
                     self.search_dir(&fonts_dir);
                 }
             }
-            program_dir = path;
+            program_dir = path.parent();
         }
     }
 
