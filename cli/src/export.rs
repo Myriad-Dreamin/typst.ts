@@ -19,7 +19,6 @@ pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature hint */ &str
     ("pdf", "pdf"),
     ("json", "serde-json"),
     ("rmp", "serde-rmp"),
-    ("web_socket", "web-socket"),
 ];
 
 fn panic_not_available_formats(f: String) -> ! {
@@ -52,7 +51,6 @@ fn panic_not_available_formats(f: String) -> ! {
 fn prepare_exporters_impl(
     output_dir: PathBuf,
     mut formats: Vec<String>,
-    ws_url: String,
     entry_file: &Path,
 ) -> GroupDocExporter {
     type DocExporter = Box<dyn typst_ts_core::Exporter<typst::doc::Document>>;
@@ -129,16 +127,6 @@ fn prepare_exporters_impl(
                     typst_ts_serde_exporter::RmpArtifactExporter::default(),
                 )));
             }
-            #[cfg(feature = "web-socket")]
-            "web_socket" => {
-                let mut ws_url = ws_url.clone();
-                if ws_url.is_empty() {
-                    ws_url = "127.0.0.1:23625".to_string()
-                };
-                artifact_exporters.push(Box::new(
-                    typst_ts_ws_exporter::WebSocketArtifactExporter::new_url(ws_url),
-                ));
-            }
             "nothing" => (),
             _ => panic_not_available_formats(f),
         };
@@ -172,10 +160,6 @@ pub fn prepare_exporters(args: &CompileArgs, entry_file: &Path) -> GroupDocExpor
     let formats = {
         // If formats are specified, use them.
         let mut formats = args.format.clone();
-        // If the url of web socket is specified, add web socket format.
-        if !args.web_socket.is_empty() {
-            formats.push("web_socket".to_owned());
-        }
         // Otherwise, use default formats.
         if formats.is_empty() {
             formats.extend(["pdf", "json"].map(str::to_owned));
@@ -183,5 +167,5 @@ pub fn prepare_exporters(args: &CompileArgs, entry_file: &Path) -> GroupDocExpor
         formats
     };
 
-    prepare_exporters_impl(output_dir, formats, args.web_socket.clone(), entry_file)
+    prepare_exporters_impl(output_dir, formats, entry_file)
 }
