@@ -12,8 +12,6 @@ repository.workspace = true
 typst.workspace = true
 typst-library.workspace = true
 
-codespan-reporting.workspace = true
-
 clap.workspace = true
 clap_complete.workspace = true
 clap_complete_fig.workspace = true
@@ -34,6 +32,9 @@ tracing-error.workspace = true
 flate2.workspace = true
 tracing-subscriber.workspace = true
 
+codespan-reporting.workspace = true
+human-panic.workspace = true
+
 typst-ts-core.workspace = true
 typst-ts-compiler.workspace = true
 
@@ -45,7 +46,7 @@ typst-ts-tir-exporter = { workspace = true, optional = true }
 
 [build-dependencies]
 anyhow.workspace = true
-vergen = { version = "7.5.1", features = ["build", "cargo", "git", "rustc"] }
+vergen.workspace = true
 
 [features]
 pdf = ["typst-ts-pdf-exporter"]
