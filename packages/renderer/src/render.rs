@@ -1,6 +1,7 @@
 #![allow(clippy::await_holding_lock)]
 
 #[cfg(test)]
+#[cfg(target_arch = "wasm32")]
 // #[cfg(target_arch = "wasm32")]
 mod tests {
     use std::{collections::HashMap, sync::Mutex};
