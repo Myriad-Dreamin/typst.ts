@@ -287,6 +287,7 @@ impl TypstRenderer {
 }
 
 #[cfg(test)]
+#[cfg(target_arch = "wasm32")]
 mod tests {
     use typst::util::Buffer;
 
