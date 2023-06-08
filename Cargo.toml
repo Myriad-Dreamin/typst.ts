@@ -64,6 +64,7 @@ tokio = { version = "1.28.1", features = ["full"] }
 comemo = "0.3"
 indexmap = "1.9.3"
 elsa = "1.8.1"
+ecow = "0.1.1"
 
 # cli
 clap = { version = "4.3", features = ["derive", "env", "unicode", "wrap_help"] }
