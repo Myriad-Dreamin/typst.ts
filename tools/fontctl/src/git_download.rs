@@ -1,4 +1,4 @@
-//!https://github.com/akiradeveloper/git-download/blob/8398f9091c1bb32642b7dfac3138ee593c3fee93/git-download/src/lib.rs
+//!<https://github.com/akiradeveloper/git-download/blob/8398f9091c1bb32642b7dfac3138ee593c3fee93/git-download/src/lib.rs>
 
 use cmd_lib::run_cmd;
 use sha2::Digest;
