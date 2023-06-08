@@ -48,9 +48,10 @@ fn panic_not_available_formats(f: String) -> ! {
     }
 }
 
+/// With the given arguments, prepare exporters for the compilation.
 fn prepare_exporters_impl(
     output_dir: PathBuf,
-    formats: Vec<String>,
+    mut formats: Vec<String>,
     ws_url: String,
     entry_file: &Path,
 ) -> GroupDocExporter {
@@ -65,6 +66,9 @@ fn prepare_exporters_impl(
     let mut ir_exporters: Vec<IRExporter> = vec![];
     let mut glyph_info_exporters: Vec<GlyphPackBundleExporter> = vec![];
 
+    // sort and dedup formats before processing
+    formats.sort();
+    formats.dedup();
     for f in formats {
         match f.as_str() {
             "ast" => {
@@ -155,31 +159,27 @@ fn prepare_exporters_impl(
     GroupExporter::new(document_exporters)
 }
 
+/// Prepare exporters from command line arguments.
 pub fn prepare_exporters(args: &CompileArgs, entry_file: &Path) -> GroupDocExporter {
     let output_dir = {
-        let output = args.output.clone();
-        let output_dir = if !output.is_empty() {
-            Path::new(&output)
-        } else {
-            entry_file.parent().unwrap()
-        };
-        let mut output_dir = output_dir.to_path_buf();
-        output_dir.push("output");
-
-        output_dir
+        // If output is specified, use it.
+        let output_dir = (!args.output.is_empty()).then(|| Path::new(&args.output));
+        // Otherwise, use the parent directory of the entry file.
+        let output_dir = output_dir.unwrap_or_else(|| entry_file.parent().unwrap());
+        output_dir.join("output")
     };
 
     let formats = {
+        // If formats are specified, use them.
         let mut formats = args.format.clone();
+        // If the url of web socket is specified, add web socket format.
         if !args.web_socket.is_empty() {
-            formats.push("web_socket".to_string());
+            formats.push("web_socket".to_owned());
         }
+        // Otherwise, use default formats.
         if formats.is_empty() {
-            formats.push("pdf".to_string());
-            formats.push("json".to_string());
+            formats.extend(["pdf", "json"].map(str::to_owned));
         }
-        formats.sort();
-        formats.dedup();
         formats
     };
 
