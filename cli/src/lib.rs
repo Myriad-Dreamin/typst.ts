@@ -82,13 +82,9 @@ pub struct CompileArgs {
     #[clap(long, short, required = true)]
     pub entry: String,
 
-    /// Output formats, possible values: `json`, `pdf`, `web_socket`, `ast`, and `rmp`.
+    /// Output formats, possible values: `json`, `pdf`, `json_glyphs`, `ast`, `ir`, and `rmp`.
     #[clap(long)]
     pub format: Vec<String>,
-
-    /// Output WebSocket subscriber url
-    #[clap(long, default_value = "")]
-    pub web_socket: String,
 
     /// Output to directory, default in the same directory as the entry file.
     #[clap(long, short, default_value = "")]

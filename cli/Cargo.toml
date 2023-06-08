@@ -42,7 +42,6 @@ typst-ts-pdf-exporter = { workspace = true, optional = true }
 typst-ts-raster-exporter = { workspace = true, optional = true }
 typst-ts-serde-exporter = { workspace = true, optional = true }
 typst-ts-tir-exporter = { workspace = true, optional = true }
-typst-ts-ws-exporter = { workspace = true, optional = true }
 
 [build-dependencies]
 anyhow.workspace = true
@@ -54,5 +53,4 @@ raster = ["typst-ts-raster-exporter"]
 serde-json = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/json"]
 serde-rmp = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/rmp"]
 tir = ["typst-ts-tir-exporter"]
-web-socket = ["typst-ts-ws-exporter"]
-default = ["pdf", "raster", "serde-json", "serde-rmp", "tir", "web-socket"]
+default = ["pdf", "raster", "serde-json", "serde-rmp", "tir"]

@@ -3212,7 +3212,6 @@ dependencies = [
  "typst-ts-raster-exporter",
  "typst-ts-serde-exporter",
  "typst-ts-tir-exporter",
- "typst-ts-ws-exporter",
  "vergen",
 ]
 
