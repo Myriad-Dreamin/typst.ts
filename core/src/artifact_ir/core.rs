@@ -1,14 +1,14 @@
+pub use ecow::EcoString as TypstEcoString;
 use serde::Deserialize;
 use serde::Serialize;
+pub use typst::doc::Destination as TypstDestination;
+pub use typst::doc::FrameItem as TypstFrameItem;
+pub use typst::doc::GroupItem as TypstGroupItem;
+pub use typst::doc::Position as TypstPosition;
+pub use typst::doc::TextItem as TypstTextItem;
+pub use typst::geom::Shape as TypstShape;
+pub use typst::model::Location as TypstLocation;
 pub use typst::syntax::Span as TypstSpan;
-pub use typst_library::prelude::Destination as TypstDestination;
-pub use typst_library::prelude::EcoString as TypstEcoString;
-pub use typst_library::prelude::FrameItem as TypstFrameItem;
-pub use typst_library::prelude::GroupItem as TypstGroupItem;
-pub use typst_library::prelude::Location as TypstLocation;
-pub use typst_library::prelude::Position as TypstPosition;
-pub use typst_library::prelude::Shape as TypstShape;
-pub use typst_library::prelude::TextItem as TypstTextItem;
 
 use super::alloc::item_align_up;
 use super::geom::Abs;
@@ -22,14 +22,14 @@ pub type EcoString = String;
 
 /// Stably identifies an element in the document across multiple layout passes.
 ///
-/// This struct is created by [`StabilityProvider::locate`].
+/// This struct is created by [`typst::model::Locator::locate`].
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
 pub struct Location {
     /// The hash of the element.
     pub hash: u128,
     /// An unique number among elements with the same hash. This is the reason
-    /// we need a mutable `StabilityProvider` everywhere.
+    /// we need a mutable `typst::model::Locator` everywhere.
     pub disambiguator: usize,
     /// A synthetic location created from another one. This is used for example
     /// in bibliography management to create individual linkable locations for

@@ -1,4 +1,4 @@
-//! upstream of following files https://github.com/rust-lang/rust-analyzer/tree/master/crates/vfs
+//! upstream of following files <https://github.com/rust-lang/rust-analyzer/tree/master/crates/vfs>
 //!   ::path_interner.rs -> path_interner.rs
 //!   ::paths.rs -> abs_path.rs
 //!   ::anchored_path.rs -> path_anchored.rs
@@ -28,6 +28,7 @@ pub use {
 
 pub(crate) mod writable;
 pub use writable::Vfs as MemVfs;
+pub use writable::{ChangeKind, ChangedFile};
 
 use std::{
     collections::HashMap,

@@ -1,7 +1,7 @@
 use core::fmt;
 
+use ecow::EcoString;
 use typst::diag::FileError;
-use typst_library::prelude::EcoString;
 
 #[derive(Debug, Clone)]
 #[non_exhaustive]

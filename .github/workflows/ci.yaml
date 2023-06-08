@@ -28,7 +28,7 @@ jobs:
           google-chrome --version
           chromedriver --version
           echo TYPST_CHROME_DRIVER=`which chromedriver` >> "$GITHUB_ENV"
-      - name: Install WASM-PACK
+      - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
       - name: Install Artifact Cache
         uses: Swatinem/rust-cache@v2
@@ -38,6 +38,8 @@ jobs:
         run: cargo fmt --check --all
       - name: Clippy check
         run: cargo clippy --workspace --all-targets
+      - name: Documentation check
+        run: cargo doc --workspace --no-deps
       - name: Build
         run: |
           cargo build --workspace

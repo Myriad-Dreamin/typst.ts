@@ -72,7 +72,7 @@ impl fmt::Debug for FileSet {
     }
 }
 
-/// This contains path prefixes to partition a [`Vfs`] into [`FileSet`]s.
+/// This contains path prefixes to partition a [`crate::vfs::Vfs`] into [`FileSet`]s.
 ///
 /// # Example
 /// ```rust

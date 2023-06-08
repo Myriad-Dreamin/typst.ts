@@ -3335,6 +3335,7 @@ dependencies = [
  "base64-serde",
  "byteorder",
  "comemo",
+ "ecow",
  "hex",
  "js-sys",
  "once_cell",
@@ -3345,7 +3346,6 @@ dependencies = [
  "siphasher",
  "ttf-parser",
  "typst",
- "typst-library",
  "wasm-bindgen",
  "web-sys",
 ]

@@ -37,7 +37,7 @@ where
 }
 
 /// This function is used to work around the lifetime issue of a closure lambda.
-/// See https://github.com/rust-lang/rust/issues/70263
+/// See <https://github.com/rust-lang/rust/issues/70263>
 pub fn mark_transformer_lambda<I, O, F>(f: F) -> F
 where
     F: (for<'a, 'b> Fn(&'a (dyn World + 'b), I) -> SourceResult<O>) + Sized,

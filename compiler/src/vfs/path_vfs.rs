@@ -8,7 +8,7 @@ use super::path_abs::{AbsPath, AbsPathBuf, RelPath};
 /// Long-term, we want to support files which do not reside in the file-system,
 /// so we treat `VfsPath`s as opaque identifiers.
 ///
-/// [`Vfs`]: crate::Vfs
+/// [`Vfs`]: crate::vfs::Vfs
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct VfsPath(VfsPathRepr);
 
