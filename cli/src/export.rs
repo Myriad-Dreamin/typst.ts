@@ -2,9 +2,8 @@ use std::path::{Path, PathBuf};
 
 use typst_ts_core::{
     exporter_builtins::{FromExporter, FsPathExporter, GroupExporter},
-    font::FontGlyphPackBundle,
     program_meta::REPORT_BUG_MESSAGE,
-    Artifact, AsWritable,
+    AsWritable,
 };
 
 use crate::CompileArgs;
@@ -15,13 +14,15 @@ type GroupDocExporter = GroupExporter<typst::doc::Document>;
 pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature hint */ &str)] = &[
     ("ast", REPORT_BUG_MESSAGE),
     ("ir", REPORT_BUG_MESSAGE),
+    ("json", "serde-json"),
     ("nothing", REPORT_BUG_MESSAGE),
     ("pdf", "pdf"),
-    ("json", "serde-json"),
     ("rmp", "serde-rmp"),
 ];
 
-fn panic_not_available_formats(f: String) -> ! {
+/// Hint the user that the given format is not enable or not available.
+/// Then exit the program.
+fn exit_by_unknown_format(f: &str) -> ! {
     // find the feature hint
     match AVAILABLE_FORMATS.iter().find(|(k, _)| **k == *f) {
         // feat is a bug
@@ -48,113 +49,81 @@ fn panic_not_available_formats(f: String) -> ! {
 }
 
 /// With the given arguments, prepare exporters for the compilation.
-fn prepare_exporters_impl(
-    output_dir: PathBuf,
-    mut formats: Vec<String>,
-    entry_file: &Path,
-) -> GroupDocExporter {
-    type DocExporter = Box<dyn typst_ts_core::Exporter<typst::doc::Document>>;
-    type ArtExporter = Box<dyn typst_ts_core::Exporter<typst_ts_core::Artifact>>;
-    type IRExporter = Box<dyn typst_ts_core::Exporter<typst_ts_core::artifact_ir::Artifact>>;
-    type GlyphPackBundleExporter =
-        Box<dyn typst_ts_core::Exporter<typst_ts_core::font::FontGlyphPackBundle>>;
+fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExporter {
+    let mut artifact: ExporterVec<Artifact> = vec![];
+    let mut doc: ExporterVec<Doc> = vec![];
+    let mut glyph_pack: ExporterVec<GlyphPack> = vec![];
+    let mut ir: ExporterVec<IR> = vec![];
 
-    let mut document_exporters: Vec<DocExporter> = vec![];
-    let mut artifact_exporters: Vec<ArtExporter> = vec![];
-    let mut ir_exporters: Vec<IRExporter> = vec![];
-    let mut glyph_info_exporters: Vec<GlyphPackBundleExporter> = vec![];
-
-    // sort and dedup formats before processing
-    formats.sort();
-    formats.dedup();
-    for f in formats {
-        match f.as_str() {
-            "ast" => {
-                let output_path = output_dir
-                    .with_file_name(entry_file.file_name().unwrap())
-                    .with_extension("ast.ansi.text");
-                document_exporters.push(Box::new(FsPathExporter::new(
-                    output_path,
-                    typst_ts_ast_exporter::AstExporter::default(),
-                )));
+    /// connect export flow from $x to $y
+    macro_rules! sink_flow {
+        ($x:ident -> $y:ident) => {
+            if !$y.is_empty() {
+                $x.push(Box::new(FromExporter::new($y)));
             }
-            "ir" => {
-                let output_path = output_dir
-                    .with_file_name(entry_file.file_name().unwrap())
-                    .with_extension("artifact.tir.bin");
-
-                let exp = typst_ts_tir_exporter::IRArtifactExporter::default();
-                let exp = FsPathExporter::new(output_path, exp);
-                ir_exporters.push(Box::new(exp));
-            }
-            #[cfg(feature = "pdf")]
-            "pdf" => {
-                let output_path = output_dir
-                    .with_file_name(entry_file.file_name().unwrap())
-                    .with_extension("pdf");
-                document_exporters.push(Box::new(FsPathExporter::new(
-                    output_path,
-                    typst_ts_pdf_exporter::PdfDocExporter::default(),
-                )));
-            }
-            #[cfg(feature = "serde-json")]
-            "json" => {
-                let output_path = output_dir
-                    .with_file_name(entry_file.file_name().unwrap())
-                    .with_extension("artifact.json");
-                artifact_exporters.push(Box::new(FsPathExporter::<AsWritable, _>::new(
-                    output_path,
-                    typst_ts_serde_exporter::JsonExporter::<Artifact>::default(),
-                )));
-            }
-            #[cfg(feature = "serde-json")]
-            "json_glyphs" => {
-                let output_path = output_dir
-                    .with_file_name(entry_file.file_name().unwrap())
-                    .with_extension("glyphs.json");
-                glyph_info_exporters.push(Box::new(FsPathExporter::<AsWritable, _>::new(
-                    output_path,
-                    typst_ts_serde_exporter::JsonExporter::<FontGlyphPackBundle>::default(),
-                )));
-            }
-            #[cfg(feature = "serde-rmp")]
-            "rmp" => {
-                let output_path = output_dir
-                    .with_file_name(entry_file.file_name().unwrap())
-                    .with_extension("artifact.rmp");
-                artifact_exporters.push(Box::new(FsPathExporter::new(
-                    output_path,
-                    typst_ts_serde_exporter::RmpArtifactExporter::default(),
-                )));
-            }
-            "nothing" => (),
-            _ => panic_not_available_formats(f),
         };
     }
 
-    if !artifact_exporters.is_empty() {
-        document_exporters.push(Box::new(FromExporter::new(artifact_exporters)));
+    /// write $exporters as $exporter to path `$output_dir @@ $extension`
+    macro_rules! sink_path {
+        ($exporter:ty as $ser:ty as $exporters:ident, $output_dir:ident @@ $extension:literal) => {{
+            let output_path = $output_dir.with_extension($extension);
+            $exporters.push(Box::new(FsPathExporter::<$ser, _>::new(
+                output_path,
+                <$exporter>::default(),
+            )));
+        }};
     }
 
-    if !ir_exporters.is_empty() {
-        document_exporters.push(Box::new(FromExporter::new(ir_exporters)));
+    // sink exporters according to the given formats
+    {
+        formats.sort();
+        formats.dedup();
+        #[rustfmt::skip]
+        formats.iter().map(String::as_str).for_each(|f| match f {
+            "nothing"     => (),
+            "ast"         => sink_path!(WithAst as _ as doc, out @@ "ast.ansi.text"),
+            "ir"          => sink_path!(WithIR as _ as ir, out @@ "artifact.tir.bin"),
+            #[cfg(feature = "pdf")]
+            "pdf"         => sink_path!(WithPdf as _ as doc, out @@ "pdf"),
+            #[cfg(feature = "serde-json")]
+            "json"        => sink_path!(WithJson<_> as AsWritable as artifact, out @@ "artifact.json"),
+            #[cfg(feature = "serde-json")]
+            "json_glyphs" => sink_path!(WithJson<_> as AsWritable as glyph_pack, out @@ "glyphs.json"),
+            #[cfg(feature = "serde-rmp")]
+            "rmp"         => sink_path!(WithRmp as _ as artifact, out @@ "artifact.rmp"),
+            _             => exit_by_unknown_format(f),
+        });
     }
-
-    if !glyph_info_exporters.is_empty() {
-        document_exporters.push(Box::new(FromExporter::new(glyph_info_exporters)));
+    {
+        sink_flow!(doc -> artifact);
+        sink_flow!(doc -> ir);
+        sink_flow!(doc -> glyph_pack);
     }
+    return GroupExporter::new(doc);
 
-    GroupExporter::new(document_exporters)
+    type Artifact = typst_ts_core::artifact::Artifact;
+    type Doc = typst::doc::Document;
+    type GlyphPack = typst_ts_core::font::FontGlyphPackBundle;
+    type IR = typst_ts_core::artifact_ir::Artifact;
+
+    type WithAst = typst_ts_ast_exporter::AstExporter;
+    type WithIR = typst_ts_tir_exporter::IRArtifactExporter;
+    type WithJson<T> = typst_ts_serde_exporter::JsonExporter<T>;
+    type WithPdf = typst_ts_pdf_exporter::PdfDocExporter;
+    type WithRmp = typst_ts_serde_exporter::RmpArtifactExporter;
+
+    type ExporterVec<T> = Vec<Box<dyn typst_ts_core::Exporter<T>>>;
 }
 
 /// Prepare exporters from command line arguments.
 pub fn prepare_exporters(args: &CompileArgs, entry_file: &Path) -> GroupDocExporter {
     let output_dir = {
         // If output is specified, use it.
-        let output_dir = (!args.output.is_empty()).then(|| Path::new(&args.output));
+        let dir = (!args.output.is_empty()).then(|| Path::new(&args.output));
         // Otherwise, use the parent directory of the entry file.
-        let output_dir = output_dir.unwrap_or_else(|| entry_file.parent().unwrap());
-        output_dir.join("output")
+        let dir = dir.unwrap_or_else(|| entry_file.parent().expect("entry_file has no parent"));
+        dir.join(entry_file.file_name().expect("entry_file has no file name"))
     };
 
     let formats = {
@@ -167,5 +136,5 @@ pub fn prepare_exporters(args: &CompileArgs, entry_file: &Path) -> GroupDocExpor
         formats
     };
 
-    prepare_exporters_impl(output_dir, formats, entry_file)
+    prepare_exporters_impl(output_dir, formats)
 }
