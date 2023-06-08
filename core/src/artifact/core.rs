@@ -18,13 +18,13 @@ use super::font::FontInfo;
 
 /// Stably identifies an element in the document across multiple layout passes.
 ///
-/// This struct is created by [`StabilityProvider::locate`].
+/// This struct is created by [`typst::model::Locator::locate`].
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Location {
     /// The hash of the element.
     pub hash: u128,
     /// An unique number among elements with the same hash. This is the reason
-    /// we need a mutable `StabilityProvider` everywhere.
+    /// we need a mutable `typst::model::Locator` everywhere.
     pub disambiguator: usize,
     /// A synthetic location created from another one. This is used for example
     /// in bibliography management to create individual linkable locations for

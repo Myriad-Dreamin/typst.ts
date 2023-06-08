@@ -62,7 +62,7 @@ impl From<Abs> for TypstAbs {
 /// A ratio of a whole.
 ///
 /// _Note_: `50%` is represented as `0.5` here, but stored as `50.0` in the
-/// corresponding [literal](crate::syntax::ast::Numeric).
+/// corresponding [literal](typst::syntax::ast::Numeric).
 #[repr(C)]
 #[derive(Default, Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Ratio(Scalar);
