@@ -1,5 +1,5 @@
 #![allow(unused, dead_code)]
-//! upstream https://github.com/rust-lang/rust-analyzer/tree/master/crates/vfs
+//! upstream <https://github.com/rust-lang/rust-analyzer/tree/master/crates/vfs>
 // todo: migrate to Vfs<M>
 
 use std::{fmt, mem};
