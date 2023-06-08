@@ -23,6 +23,8 @@ fn help_sub_command() {
 }
 
 fn main() {
+    human_panic::setup_panic!();
+
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Info)
         .filter_module("typst", log::LevelFilter::Warn)
