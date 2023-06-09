@@ -1,26 +1,11 @@
-// todo
-#![allow(clippy::await_holding_lock)]
-
 #[macro_use]
 pub(crate) mod utils;
 
-use js_sys::Uint8Array;
-use std::collections::HashMap;
-use std::str::FromStr;
-use typst::geom::{Color, RgbaColor};
-use typst_ts_canvas_exporter::{CanvasRenderTask, DefaultRenderFeature, RenderFeature};
 use typst_ts_core::error::prelude::*;
-use typst_ts_core::font::{
-    FontGlyphProvider, FontResolverImpl, GlyphProvider, PartialFontGlyphProvider,
-};
+use typst_ts_core::font::FontResolverImpl;
 use wasm_bindgen::prelude::*;
-use web_sys::ImageData;
 
-pub(crate) mod artifact;
-pub use artifact::ArtifactJsBuilder;
-
-pub(crate) mod artifact_ir;
-pub use artifact_ir::IRArtifactHeaderJsBuilder;
+pub(crate) mod parser;
 
 pub(crate) mod builder;
 pub use builder::TypstRendererBuilder;
@@ -35,7 +20,7 @@ pub use session::{RenderSessionManager, RenderSessionOptions};
 #[wasm_bindgen]
 #[derive(Debug, Default)]
 pub struct RenderPageImageOptions {
-    page_off: usize,
+    pub(crate) page_off: usize,
 }
 
 #[wasm_bindgen]
@@ -63,29 +48,6 @@ pub struct TypstRenderer {
 
 #[wasm_bindgen]
 impl TypstRenderer {
-    pub async fn render_page_to_canvas(
-        &mut self,
-        ses: &RenderSession,
-        canvas: &web_sys::CanvasRenderingContext2d,
-        options: Option<RenderPageImageOptions>,
-    ) -> ZResult<JsValue> {
-        Ok(self
-            .render_page_to_canvas_internal::<DefaultRenderFeature>(ses, canvas, options)
-            .await?
-            .0)
-    }
-
-    pub fn render_to_pdf(&mut self, artifact_content: &[u8]) -> ZResult<Uint8Array> {
-        let session = self.session_from_artifact(artifact_content)?;
-        self.render_to_pdf_in_session(&session)
-    }
-
-    pub fn render_to_pdf_in_session(&mut self, session: &RenderSession) -> ZResult<Uint8Array> {
-        Ok(Uint8Array::from(
-            self.render_to_pdf_internal(session)?.as_slice(),
-        ))
-    }
-
     pub fn create_session(
         &self,
         artifact_content: &[u8],
@@ -103,89 +65,6 @@ impl TypstRenderer {
     ) -> ZResult<()> {
         self.session_mgr
             .load_page(session, page_number, page_content)
-    }
-
-    pub fn load_glyph_pack(&self, v: JsValue) -> ZResult<()> {
-        let mut font_resolver = self.session_mgr.font_resolver.write().unwrap();
-        font_resolver.add_glyph_packs(
-            serde_wasm_bindgen::from_value(v).map_err(map_string_err("GlyphBundleFmt"))?,
-        );
-        Ok(())
-    }
-}
-
-#[cfg(not(feature = "render_raster"))]
-#[wasm_bindgen]
-impl TypstRenderer {
-    pub fn render_page(
-        &mut self,
-        _session: &RenderSession,
-        _options: Option<RenderPageImageOptions>,
-    ) -> ZResult<ImageData> {
-        Err(error_once!("Renderer.RasterFeatureNotEnabled"))
-    }
-}
-
-#[cfg(feature = "render_raster")]
-#[wasm_bindgen]
-impl TypstRenderer {
-    pub fn render_page(
-        &mut self,
-        session: &RenderSession,
-        options: Option<RenderPageImageOptions>,
-    ) -> ZResult<ImageData> {
-        let buf = self.render_to_image_internal(session, options)?;
-        let size = buf.size();
-
-        ImageData::new_with_u8_clamped_array_and_sh(
-            wasm_bindgen::Clamped(buf.as_slice()),
-            size.width,
-            size.height,
-        )
-        .map_err(error_once_map!("Renderer.CreateImageData"))
-    }
-}
-
-#[cfg(feature = "render_raster")]
-impl TypstRenderer {
-    pub fn render_to_image_internal(
-        &self,
-        ses: &RenderSession,
-        options: Option<RenderPageImageOptions>,
-    ) -> ZResult<typst_ts_raster_exporter::pixmap::PixmapBuffer> {
-        let page_off = self.retrieve_page_off(ses, options)?;
-
-        let canvas_size = ses.doc.pages[page_off].size();
-        let mut canvas =
-            typst_ts_raster_exporter::pixmap::PixmapBuffer::for_size(canvas_size, ses.pixel_per_pt)
-                .ok_or_else(|| {
-                    error_once!("Renderer.CannotCreatePixmap",
-                        width: canvas_size.x.to_pt(), height: canvas_size.y.to_pt(),
-                    )
-                })?;
-
-        self.render_to_image_prealloc(ses, page_off, &mut canvas.as_canvas_mut())?;
-
-        Ok(canvas)
-    }
-
-    pub fn render_to_image_prealloc(
-        &self,
-        ses: &RenderSession,
-        page_off: usize,
-        canvas: &mut tiny_skia::PixmapMut,
-    ) -> ZResult<()> {
-        // contribution: 850KB
-        typst_ts_raster_exporter::render(
-            canvas,
-            &ses.doc.pages[page_off],
-            ses.pixel_per_pt,
-            Color::Rgba(
-                RgbaColor::from_str(&ses.background_color)
-                    .map_err(map_err("Renderer.InvalidBackgroundColor"))?,
-            ),
-        );
-        Ok(())
     }
 }
 
@@ -219,64 +98,6 @@ impl TypstRenderer {
         Err(error_once!(
             "Renderer.SessionPageNotFound",
             offset: page_off
-        ))
-    }
-
-    pub fn render_to_pdf_internal(&self, _session: &RenderSession) -> ZResult<Vec<u8>> {
-        // contribution 510KB
-        // Ok(typst::export::pdf(&session.doc))
-        Err(error_once!("Renderer.PdfFeatureNotEnabled"))
-    }
-
-    pub async fn render_page_to_canvas_internal<Feat: RenderFeature>(
-        &mut self,
-        ses: &RenderSession,
-        canvas: &web_sys::CanvasRenderingContext2d,
-        options: Option<RenderPageImageOptions>,
-    ) -> ZResult<(JsValue, Option<HashMap<String, f64>>)> {
-        let page_off = self.retrieve_page_off(ses, options)?;
-
-        let perf_events = if Feat::ENABLE_TRACING {
-            Some(elsa::FrozenMap::<&'static str, Box<f64>>::default())
-        } else {
-            None
-        };
-
-        let mut worker = CanvasRenderTask::<Feat>::new(
-            canvas,
-            &ses.doc,
-            page_off,
-            ses.pixel_per_pt,
-            Color::Rgba(
-                RgbaColor::from_str(&ses.background_color)
-                    .map_err(map_err("Renderer.InvalidBackgroundColor"))?,
-            ),
-        )?;
-
-        let def_provider = GlyphProvider::new(FontGlyphProvider::default());
-        let partial_providier =
-            PartialFontGlyphProvider::new(def_provider, self.session_mgr.font_resolver.clone());
-
-        worker.set_glyph_provider(GlyphProvider::new(partial_providier));
-
-        crate::utils::console_log!("use partial font glyph provider");
-
-        if let Some(perf_events) = perf_events.as_ref() {
-            worker.set_perf_events(perf_events)
-        };
-
-        worker.render(&ses.doc.pages[page_off]).await?;
-
-        Ok((
-            serde_wasm_bindgen::to_value(&worker.content)
-                .map_err(map_into_err::<JsValue, _>("Renderer.EncodeContent"))?,
-            perf_events.map(|perf_events| {
-                perf_events
-                    .into_map()
-                    .into_iter()
-                    .map(|(k, v)| (k.to_string(), *v))
-                    .collect()
-            }),
         ))
     }
 

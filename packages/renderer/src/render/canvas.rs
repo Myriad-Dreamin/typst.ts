@@ -1,9 +1,91 @@
-#![allow(clippy::await_holding_lock)]
+use std::{collections::HashMap, str::FromStr};
+
+use typst::geom::{Color, RgbaColor};
+use typst_ts_canvas_exporter::{CanvasRenderTask, DefaultRenderFeature, RenderFeature};
+use typst_ts_core::{
+    error::prelude::*,
+    font::{FontGlyphProvider, GlyphProvider, PartialFontGlyphProvider},
+};
+use wasm_bindgen::prelude::*;
+
+use crate::{RenderPageImageOptions, RenderSession, TypstRenderer};
+
+#[wasm_bindgen]
+impl TypstRenderer {
+    pub async fn render_page_to_canvas(
+        &mut self,
+        ses: &RenderSession,
+        canvas: &web_sys::CanvasRenderingContext2d,
+        options: Option<RenderPageImageOptions>,
+    ) -> ZResult<JsValue> {
+        let (text_content, ..) = self
+            .render_page_to_canvas_internal::<DefaultRenderFeature>(ses, canvas, options)
+            .await?;
+
+        Ok(text_content)
+    }
+}
+
+impl TypstRenderer {
+    pub async fn render_page_to_canvas_internal<Feat: RenderFeature>(
+        &mut self,
+        ses: &RenderSession,
+        canvas: &web_sys::CanvasRenderingContext2d,
+        options: Option<RenderPageImageOptions>,
+    ) -> ZResult<(JsValue, Option<HashMap<String, f64>>)> {
+        let page_off = self.retrieve_page_off(ses, options)?;
+
+        let perf_events = if Feat::ENABLE_TRACING {
+            Some(elsa::FrozenMap::<&'static str, Box<f64>>::default())
+        } else {
+            None
+        };
+
+        let mut worker = CanvasRenderTask::<Feat>::new(
+            canvas,
+            &ses.doc,
+            page_off,
+            ses.pixel_per_pt,
+            Color::Rgba(
+                RgbaColor::from_str(&ses.background_color)
+                    .map_err(map_err("Renderer.InvalidBackgroundColor"))?,
+            ),
+        )?;
+
+        let def_provider = GlyphProvider::new(FontGlyphProvider::default());
+        let partial_providier =
+            PartialFontGlyphProvider::new(def_provider, self.session_mgr.font_resolver.clone());
+
+        worker.set_glyph_provider(GlyphProvider::new(partial_providier));
+
+        crate::utils::console_log!("use partial font glyph provider");
+
+        if let Some(perf_events) = perf_events.as_ref() {
+            worker.set_perf_events(perf_events)
+        };
+
+        worker.render(&ses.doc.pages[page_off]).await?;
+
+        Ok((
+            serde_wasm_bindgen::to_value(&worker.content)
+                .map_err(map_into_err::<JsValue, _>("Renderer.EncodeTextContent"))?,
+            perf_events.map(|perf_events| {
+                perf_events
+                    .into_map()
+                    .into_iter()
+                    .map(|(k, v)| (k.to_string(), *v))
+                    .collect()
+            }),
+        ))
+    }
+}
 
 #[cfg(test)]
 #[cfg(target_arch = "wasm32")]
 // #[cfg(target_arch = "wasm32")]
 mod tests {
+    #![allow(clippy::await_holding_lock)]
+
     use std::{collections::HashMap, sync::Mutex};
 
     use send_wrapper::SendWrapper;
