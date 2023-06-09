@@ -90,8 +90,6 @@ pub enum Destination {
     Url(EcoString),
     /// A link to a point on a page.
     Position(Position),
-    /// An unresolved link to a location in the document.
-    Location(String),
 }
 
 /// A physical position in a document.

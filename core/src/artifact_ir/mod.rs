@@ -8,9 +8,9 @@ use serde::Deserialize;
 use serde::Serialize;
 use typst::model::Locator;
 
+use crate::annotation::link::AnnotationProcessor;
 use crate::artifact::core::BuildInfo;
 use crate::font::get_font_coverage_hash;
-use crate::typst_affinite_hash;
 use crate::FontResolver;
 
 pub mod doc;
@@ -107,10 +107,10 @@ enum RegionKind {
     Length,
 }
 
-#[derive(Default)]
 pub struct ArtifactBuilder {
     fonts: Vec<TypstFontInfo>,
     font_map: HashMap<TypstFontInfo, FontRef>,
+    annoation_proc: AnnotationProcessor,
 
     glyph_def_id_map: HashMap<GlyphShapeOpaque, GlyphShapeRef>,
     paint_shape_id_map: HashMap<TypstPaint, PaintRef>,
@@ -123,6 +123,21 @@ pub struct ArtifactBuilder {
 }
 
 impl ArtifactBuilder {
+    pub fn new(typst_doc: &typst::doc::Document) -> Self {
+        Self {
+            fonts: vec![],
+            font_map: HashMap::default(),
+            annoation_proc: AnnotationProcessor::new(typst_doc),
+
+            glyph_def_id_map: HashMap::default(),
+            paint_shape_id_map: HashMap::default(),
+            shared_strings: HashMap::default(),
+            counters: Default::default(),
+            buffers: Default::default(),
+            _stat: Default::default(),
+        }
+    }
+
     fn buffer(&mut self) -> &mut Vec<u8> {
         &mut self.buffers[RegionKind::General as usize]
     }
@@ -448,10 +463,11 @@ impl ArtifactBuilder {
                             point: pos.point.into(),
                         }),
                         TypstDestination::Location(loc) => {
-                            // todo: we have no idea to preserve information about the location
-                            Destination::Location(
-                                self.push_string(format!("{:?}", typst_affinite_hash(loc))),
-                            )
+                            let pos = self.annoation_proc.process_location(*loc);
+                            Destination::Position(Position {
+                                page: pos.page,
+                                point: pos.point.into(),
+                            })
                         }
                     },
                     (*size).into(),
@@ -517,7 +533,7 @@ impl ArtifactBuilder {
 
 impl From<&TypstDocument> for Artifact {
     fn from(typst_doc: &TypstDocument) -> Self {
-        let mut builder = ArtifactBuilder::default();
+        let mut builder = ArtifactBuilder::new(typst_doc);
 
         #[cfg(feature = "trace_ir_alloca")]
         {
@@ -959,7 +975,7 @@ mod tests {
 
     #[test]
     fn test_item_ref_array() {
-        let mut builder = ArtifactBuilder::default();
+        let mut builder = ArtifactBuilder::new(&typst::doc::Document::default());
         let refs = build_simple_refs(&mut builder);
         assert_eq!(refs.len(), 2);
 
@@ -997,7 +1013,7 @@ mod tests {
 
     #[test]
     fn test_item_ref_option() {
-        let mut builder = ArtifactBuilder::default();
+        let mut builder = ArtifactBuilder::new(&typst::doc::Document::default());
 
         let raw_item = builder.push_item(&Frame {
             size: Axes {
