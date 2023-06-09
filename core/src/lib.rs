@@ -1,3 +1,5 @@
+pub mod annotation;
+
 pub mod artifact;
 pub use artifact::{core::ArtifactMeta, Artifact};
 

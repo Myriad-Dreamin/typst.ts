@@ -265,7 +265,7 @@ impl TypstCompiler {
         )?;
 
         worker.render(&doc.pages[page_off]).await?;
-        serde_wasm_bindgen::to_value(&worker.content)
+        serde_wasm_bindgen::to_value(&worker.text_content)
             .map_err(map_into_err::<JsValue, _>("Compiler.EncodeContent"))
     }
 }

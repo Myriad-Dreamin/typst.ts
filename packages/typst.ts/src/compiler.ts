@@ -4,6 +4,7 @@ import { buildComponent, globalFontPromises } from './init';
 import { DocumentReference, FsAccessModel } from './internal.types';
 
 import type { InitOptions } from './options.init';
+import { RenderPageResult } from './renderer';
 import { LazyWasmModule } from './wasm';
 
 export interface CompileOptions {
@@ -28,7 +29,7 @@ export interface TypstCompiler {
     page_off: number,
     pixel_per_pt: number,
     background_color: string,
-  ): Promise<any>;
+  ): Promise<RenderPageResult>;
   loadSnapshot(snapshot: unknown, fontServer: FsAccessModel): Promise<any>;
 }
 

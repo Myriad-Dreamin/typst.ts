@@ -83,18 +83,20 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
             return font;
         }
 
-        if self.content.styles.len() >= u32::MAX as usize {
+        if self.text_content.styles.len() >= u32::MAX as usize {
             panic!("too many fonts");
         }
 
-        let font_ref = self.content.styles.len() as u32;
+        let font_ref = self.text_content.styles.len() as u32;
         self.font_map.insert(font.info().clone(), font_ref);
-        self.content.styles.push(typst_ts_core::content::TextStyle {
-            font_family: font.info().family.clone(),
-            ascent: font.metrics().ascender.get() as f32,
-            descent: font.metrics().descender.get() as f32,
-            vertical: false, // todo: check vertical
-        });
+        self.text_content
+            .styles
+            .push(typst_ts_core::content::TextStyle {
+                font_family: font.info().family.clone(),
+                ascent: font.metrics().ascender.get() as f32,
+                descent: font.metrics().descender.get() as f32,
+                vertical: false, // todo: check vertical
+            });
         font_ref
     }
 
@@ -111,29 +113,31 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
         let ts = ts.post_scale(1. / self.pixel_per_pt, 1. / self.pixel_per_pt);
 
         let font_name = self.append_text_font(&text.font);
-        self.content.items.push(typst_ts_core::content::TextItem {
-            str: text_content,
-            // todo: real direction of the text
-            dir: match text.lang.dir() {
-                Dir::LTR => "ltr".to_string(),
-                Dir::RTL => "rtl".to_string(),
-                Dir::TTB => "ttb".to_string(),
-                Dir::BTT => "btt".to_string(),
-            },
-            // todo: we should set the original height, not specially for pdf.js
-            width,
-            height,
-            transform: [
-                text.size.to_f32(),
-                ts.ky,
-                ts.kx,
-                text.size.to_f32(),
-                ts.tx,
-                self.raw_height - ts.ty,
-            ],
-            font_name,
-            has_eol,
-        });
+        self.text_content
+            .items
+            .push(typst_ts_core::content::TextItem {
+                str: text_content,
+                // todo: real direction of the text
+                dir: match text.lang.dir() {
+                    Dir::LTR => "ltr".to_string(),
+                    Dir::RTL => "rtl".to_string(),
+                    Dir::TTB => "ttb".to_string(),
+                    Dir::BTT => "btt".to_string(),
+                },
+                // todo: we should set the original height, not specially for pdf.js
+                width,
+                height,
+                transform: [
+                    text.size.to_f32(),
+                    ts.ky,
+                    ts.kx,
+                    text.size.to_f32(),
+                    ts.tx,
+                    self.raw_height - ts.ty,
+                ],
+                font_name,
+                has_eol,
+            });
     }
 
     pub(crate) fn append_text_break(&mut self, ts: sk::Transform, text: &TextItem) {

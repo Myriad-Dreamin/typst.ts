@@ -26,6 +26,73 @@ export interface RenderResult {
   height: number;
 }
 
+// action
+// :
+// t
+// :
+// "Url"
+// v
+// :
+// {uri: 'https://github.com/johanvx/typst-undergradmath'}
+// [[Prototype]]
+// :
+// Object
+// annotation_box
+// :
+// height
+// :
+// 7.740234375
+// page_ref
+// :
+// 0
+// transform
+// :
+// (6) [4.5, 0, 0, 4.5, 395.22845458984375, 162]
+// width
+// :
+// 147.515625
+
+type TransformMatrix = [number, number, number, number, number, number];
+
+interface AnnotationBox {
+  height: number;
+  width: number;
+  page_ref: number;
+  transform: TransformMatrix;
+}
+
+interface UrlLinkAction {
+  t: 'Url';
+  v: {
+    url: string;
+  };
+}
+
+interface GoToLinkAction {
+  t: 'GoTo';
+  v: {
+    page_ref: number;
+    x: number;
+    y: number;
+  };
+}
+
+type LinkAction = UrlLinkAction | GoToLinkAction;
+
+interface LinkAnnotation {
+  annotation_box: AnnotationBox;
+  action: LinkAction;
+}
+
+interface AnnotationList {
+  links: LinkAnnotation[];
+}
+
+export interface RenderPageResult {
+  textContent: any;
+  annotationList: AnnotationList;
+}
+
 /**
  * The interface of Typst renderer.
  * @typedef {Object} TypstRenderer
@@ -71,6 +138,12 @@ const gRendererModule = new LazyWasmModule(typstInit);
  */
 export function createTypstRenderer(pdf: unknown): TypstRenderer {
   return new TypstRendererDriver(pdf as typeof pdfjsModule);
+}
+
+function randstr(prefix?: string): string {
+  return Math.random()
+    .toString(36)
+    .replace('0.', prefix || '');
 }
 
 class TypstRendererDriver {
@@ -144,7 +217,7 @@ class TypstRendererDriver {
     session: RenderSession,
     canvas: CanvasRenderingContext2D,
     options?: RenderPageOptions,
-  ): Promise<void> {
+  ): Promise<RenderPageResult> {
     if (!options) {
       return this.renderer.render_page_to_canvas(session as typst.RenderSession, canvas);
     }
@@ -180,7 +253,7 @@ class TypstRendererDriver {
     container: HTMLDivElement,
     canvasList: HTMLCanvasElement[],
     options: RenderOptions,
-  ): Promise<[RenderResult, any[]]> {
+  ): Promise<[RenderResult, RenderPageResult[]]> {
     const pages_info = session.pages_info;
     const page_count = pages_info.page_count;
 
@@ -190,18 +263,19 @@ class TypstRendererDriver {
     const doRender = async (i: number, page_off: number) => {
       const canvas = canvasList[i];
       const ctx = canvas.getContext('2d');
-      if (ctx) {
-        const res = await this.renderImageInSession(session, ctx, {
-          page_off,
-        });
-        if (i === 0) {
-          renderResult = {
-            width: canvas.width,
-            height: canvas.height,
-          };
-        }
-        return res;
+      if (!ctx) {
+        throw new Error('canvas context is null');
       }
+      const res = await this.renderImageInSession(session, ctx, {
+        page_off,
+      });
+      if (i === 0) {
+        renderResult = {
+          width: canvas.width,
+          height: canvas.height,
+        };
+      }
+      return res;
     };
 
     return this.inAnimationFrame(async () => {
@@ -277,10 +351,85 @@ class TypstRendererDriver {
     renderTextLayer(this.pdf, container, view.pageInfos, layerList, textSourceList);
   }
 
+  private renderAnnotationLayer(
+    _session: typst.RenderSession,
+    view: RenderView,
+    _container: HTMLDivElement,
+    layerList: HTMLDivElement[],
+    annotationSourceList: AnnotationList[],
+  ) {
+    const pageInfos = view.pageInfos;
+
+    const t2 = performance.now();
+
+    const renderOne = (layer: HTMLDivElement, i: number) => {
+      const page_info = pageInfos[i];
+      if (!page_info) {
+        console.error('page not found for', i);
+        return;
+      }
+      const width_pt = page_info.width;
+      const height_pt = page_info.height;
+
+      layer.innerHTML = '';
+      for (const lnk of annotationSourceList[i].links) {
+        const annotationBox = document.createElement('div');
+        const x = (lnk.annotation_box.transform[4] / width_pt) * 100;
+        const y = (lnk.annotation_box.transform[5] / height_pt) * 100;
+        const skewY = lnk.annotation_box.transform[1];
+        const skewX = lnk.annotation_box.transform[2];
+        annotationBox.className = 'typst-annotation';
+        annotationBox.style.width = `${(lnk.annotation_box.width / width_pt) * 100}%`;
+        annotationBox.style.height = `${(lnk.annotation_box.height / height_pt) * 100}%`;
+        annotationBox.style.left = `${x}%`;
+        annotationBox.style.top = `${y}%`;
+        annotationBox.style.transform = `matrix(1, ${skewY}, ${skewX}, 1, 0, 0)`;
+
+        switch (lnk.action.t) {
+          case 'Url': {
+            const a = document.createElement('a');
+            a.href = lnk.action.v.url;
+            a.target = '_blank';
+            a.appendChild(annotationBox);
+            layer.appendChild(a);
+            break;
+          }
+          case 'GoTo': {
+            const destPoint = document.createElement('div');
+            destPoint.className = 'typst-annotation';
+            const destX = (lnk.action.v.x / width_pt) * 100;
+            const destY = (lnk.action.v.y / height_pt) * 100;
+            destPoint.style.left = `${destX}%`;
+            destPoint.style.top = `${destY}%`;
+            const destId = randstr('lnk-');
+            destPoint.id = destId;
+
+            // todo: imcomplete rendering should load these pages before appendChild
+            const destLayer = layerList[lnk.action.v.page_ref - 1];
+            destLayer.appendChild(destPoint);
+
+            const a = document.createElement('a');
+            a.href = `#${destId}`;
+            a.appendChild(annotationBox);
+            layer.appendChild(a);
+            break;
+          }
+          default:
+            console.warn('unknown action', lnk);
+            break;
+        }
+      }
+    };
+
+    layerList.forEach(renderOne);
+    const t3 = performance.now();
+    console.log(`annotation layer used: render = ${(t3 - t2).toFixed(1)}ms`);
+  }
+
   async render(options: RenderOptions): Promise<RenderResult> {
     let session: typst.RenderSession;
     let renderResult: RenderResult;
-    let textContentList: any[];
+    let renderPageResults: RenderPageResult[];
     const mountContainer = options.container;
     mountContainer.style.visibility = 'hidden';
 
@@ -289,7 +438,7 @@ class TypstRendererDriver {
       resetLayout: () => void,
     ) => {
       try {
-        [renderResult, textContentList] = await this.renderDisplayLayer(
+        [renderResult, renderPageResults] = await this.renderDisplayLayer(
           session,
           mountContainer,
           canvasList,
@@ -319,7 +468,20 @@ class TypstRendererDriver {
       console.log(`layer used: retieve = ${(t2 - t).toFixed(1)}ms`);
 
       await doRenderDisplayLayer(pageView.canvasList, () => pageView.resetLayout());
-      this.renderTextLayer(session, pageView, mountContainer, pageView.layerList, textContentList);
+      this.renderTextLayer(
+        session,
+        pageView,
+        mountContainer,
+        pageView.textLayerList,
+        renderPageResults.map(r => r.textContent),
+      );
+      this.renderAnnotationLayer(
+        session,
+        pageView,
+        mountContainer,
+        pageView.annotationLayerList,
+        renderPageResults.map(r => r.annotationList),
+      );
 
       return renderResult;
     });

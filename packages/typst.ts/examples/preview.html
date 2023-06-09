@@ -115,33 +115,49 @@
         );
 
         const preloadStart = performance.now();
-        const sourcePrefetchPromise = ((async () => {
-          const snapshot = {  root: '', mTimes: new Map(),  mRealPaths: new Map(),  mData: [],};
-          const runFetch = async (path) => {
+        const sourcePrefetchPromise = (async () => {
+          const snapshot = { root: '', mTimes: new Map(), mRealPaths: new Map(), mData: [] };
+          const runFetch = async path => {
             const res = await fetch(snapshot.root + path);
             const buffer = await res.arrayBuffer();
             return [path, new Uint8Array(buffer)];
           };
-          snapshot.root = "http://localhost:22778/";
-          snapshot.mTimes = new Map([["hust-typst-template/sample.typ", 13329911613000], ["hust-typst-template/avatar-min-min.jpeg", 13329911327000], ["hust-typst-template/ref.yml", 13329911588000]]);
+          snapshot.root = 'http://localhost:22778/';
+          snapshot.mTimes = new Map([
+            ['hust-typst-template/sample.typ', 13329911613000],
+            ['hust-typst-template/avatar-min-min.jpeg', 13329911327000],
+            ['hust-typst-template/ref.yml', 13329911588000],
+          ]);
           snapshot.mRealPaths = new Map([]);
-          snapshot.mData = await Promise.all([runFetch("hust-typst-template/sample.typ"), runFetch("hust-typst-template/avatar-min-min.jpeg"), runFetch("hust-typst-template/ref.yml")]);
+          snapshot.mData = await Promise.all([
+            runFetch('hust-typst-template/sample.typ'),
+            runFetch('hust-typst-template/avatar-min-min.jpeg'),
+            runFetch('hust-typst-template/ref.yml'),
+          ]);
           return snapshot;
-        })());
+        })();
 
-        const fontPrefetchPromise = ((async () => {
-          const snapshot = {  root: '', mTimes: new Map(),  mRealPaths: new Map(),  mData: [],};
-          const runFetch = async (path) => {
+        const fontPrefetchPromise = (async () => {
+          const snapshot = { root: '', mTimes: new Map(), mRealPaths: new Map(), mData: [] };
+          const runFetch = async path => {
             const res = await fetch(snapshot.root + path);
             const buffer = await res.arrayBuffer();
             return [path, new Uint8Array(buffer)];
           };
-          snapshot.root = "http://localhost:20812/fonts/";
+          snapshot.root = 'http://localhost:20812/fonts/';
           snapshot.mTimes = new Map([]);
           snapshot.mRealPaths = new Map([]);
-          snapshot.mData = await Promise.all([runFetch("\\\\?\\C:\\Windows\\Fonts\\simkai.ttf"), runFetch("\\\\?\\C:\\Windows\\Fonts\\timesbd.ttf"), runFetch("\\\\?\\C:\\Windows\\Fonts\\simhei.ttf"), runFetch("\\\\?\\C:\\Windows\\Fonts\\times.ttf"), runFetch("\\\\?\\C:\\Windows\\Fonts\\simsun.ttc"), runFetch("\\\\?\\C:\\Windows\\Fonts\\timesi.ttf"), runFetch("\\\\?\\C:\\Windows\\Fonts\\seguiemj.ttf")]);
+          snapshot.mData = await Promise.all([
+            runFetch('\\\\?\\C:\\Windows\\Fonts\\simkai.ttf'),
+            runFetch('\\\\?\\C:\\Windows\\Fonts\\timesbd.ttf'),
+            runFetch('\\\\?\\C:\\Windows\\Fonts\\simhei.ttf'),
+            runFetch('\\\\?\\C:\\Windows\\Fonts\\times.ttf'),
+            runFetch('\\\\?\\C:\\Windows\\Fonts\\simsun.ttc'),
+            runFetch('\\\\?\\C:\\Windows\\Fonts\\timesi.ttf'),
+            runFetch('\\\\?\\C:\\Windows\\Fonts\\seguiemj.ttf'),
+          ]);
           return snapshot;
-        })());
+        })();
 
         const imageContainer = document.getElementById('imageContainer');
         let currentScale = 1; // variable for storing scaling factor
@@ -309,8 +325,8 @@
                 const ctx = displayLayerCanvas.getContext('2d');
                 compilerPlugin
                   .renderPageToCanvas(ctx, doc, i, scale, '#ffffff')
-                  .then(textSource => {
-                    pages[i].textSource = textSource;
+                  .then(({ textContent }) => {
+                    pages[i].textSource = textContent;
                     resolve(undefined);
                     console.log(
                       `page ${i} process time: ${performance.now() - pageProcessStart}ms delay: ${

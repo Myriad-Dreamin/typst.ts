@@ -5,8 +5,8 @@ use serde::Deserialize;
 use serde::Serialize;
 use typst::model::Locator;
 
+use crate::annotation::link::AnnotationProcessor;
 use crate::font::get_font_coverage_hash;
-use crate::typst_affinite_hash;
 use crate::FontResolver;
 
 pub mod doc;
@@ -37,13 +37,15 @@ pub struct Artifact {
 pub struct ArtifactBuilder {
     fonts: Vec<TypstFontInfo>,
     font_map: HashMap<TypstFontInfo, FontRef>,
+    annoation_proc: AnnotationProcessor,
 }
 
 impl ArtifactBuilder {
-    pub fn new() -> Self {
+    pub fn new(typst_doc: &typst::doc::Document) -> Self {
         Self {
             fonts: vec![],
             font_map: HashMap::default(),
+            annoation_proc: AnnotationProcessor::new(typst_doc),
         }
     }
 
@@ -118,8 +120,11 @@ impl ArtifactBuilder {
                             point: pos.point.into(),
                         }),
                         TypstDestination::Location(loc) => {
-                            // todo: we have no idea to preserve information about the location
-                            Destination::Location(format!("{:?}", typst_affinite_hash(loc)))
+                            let pos = self.annoation_proc.process_location(*loc);
+                            Destination::Position(Position {
+                                page: pos.page,
+                                point: pos.point.into(),
+                            })
                         }
                     },
                     (*size).into(),
@@ -152,7 +157,7 @@ impl ArtifactBuilder {
 
 impl From<&TypstDocument> for Artifact {
     fn from(typst_doc: &TypstDocument) -> Self {
-        let mut builder = ArtifactBuilder::new();
+        let mut builder = ArtifactBuilder::new(typst_doc);
 
         let pages = typst_doc
             .pages
@@ -263,10 +268,10 @@ impl TypeDocumentParser {
                         page: pos.page,
                         point: pos.point.into(),
                     }),
-                    Destination::Location(loc) => match self.parse_location(loc) {
-                        Some(loc) => TypstDestination::Location(loc),
-                        None => panic!("Invalid location: {}", loc),
-                    },
+                    // Destination::Location(loc) => match self.parse_location(loc) {
+                    //     Some(loc) => TypstDestination::Location(loc),
+                    //     None => panic!("Invalid location: {}", loc),
+                    // },
                 };
 
                 TypstFrameItem::Meta(TypstMeta::Link(dest), (*size).into())
@@ -326,12 +331,6 @@ impl Artifact {
                 .map(TypstEcoString::from)
                 .collect(),
         }
-    }
-}
-
-impl Default for ArtifactBuilder {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

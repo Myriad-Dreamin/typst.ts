@@ -879,9 +879,9 @@ impl JsValueParser {
             "Position" => Ok(typst_ts_core::artifact::doc::Destination::Position(
                 self.parse_position(sub)?,
             )),
-            "Location" => Ok(typst_ts_core::artifact::doc::Destination::Location(
-                self.parse_string("destination.Location", &sub)?,
-            )),
+            // "Location" => Ok(typst_ts_core::artifact::doc::Destination::Location(
+            //     self.parse_string("destination.Location", &sub)?,
+            // )),
             _ => Err(error_once!(
                 "destination.unknown_type",
                 t: t,

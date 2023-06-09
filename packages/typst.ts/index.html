@@ -31,11 +31,13 @@
           })
           .then(async () => {
             const artifactData = await fetch(
-              'http://localhost:20810/corpus/math/main.artifact.json',
+              'http://localhost:20810/corpus/math/undergradmath.artifact.json',
             )
               .then(response => response.arrayBuffer())
               .then(buffer => new Uint8Array(buffer));
-            const glyphPack = await fetch('http://localhost:20810/corpus/math/main.glyphs.json')
+            const glyphPack = await fetch(
+              'http://localhost:20810/corpus/math/undergradmath.glyphs.json',
+            )
               .then(response => response.text())
               .then(content => JSON.parse(content))
               .catch(e => {
