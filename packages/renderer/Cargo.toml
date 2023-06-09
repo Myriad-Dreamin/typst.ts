@@ -67,15 +67,26 @@ elsa.workspace = true
 send_wrapper = "0.5.0"
 
 [features]
+
 web_test = ["typst-ts-test-common/web_artifacts"]
-web_verbose = ["web_test"] # for test debug
-full = ["serde_json", "serde_rmp", "render_raster", "render_canvas", "web_test"]
+web_verbose = ["web_test"]                        # for test debug
 serde_json = ["dep:serde_json"]
 serde_rmp = ["dep:serde", "dep:rmp-serde"]
-render_raster = ["dep:typst-ts-raster-exporter"]
+
+build_glyph_pack = []
+build_raw_font = []
+build_web_font = []
+build_full = ["build_glyph_pack", "build_raw_font", "build_web_font"]
+
 render_canvas = [
     "dep:typst-ts-canvas-exporter",
     "web-sys/CanvasRenderingContext2d",
 ]
+render_pdf = []
+render_raster = ["dep:typst-ts-raster-exporter"]
+render_full = ["render_canvas", "render_pdf", "render_raster"]
+
+full = ["serde_json", "serde_rmp", "build_full", "render_full", "web_test"]
+
 default = ["full"]
-web = ["render_canvas"]
+web = ["build_full", "render_canvas", "render_pdf"]

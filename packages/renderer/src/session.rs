@@ -7,8 +7,8 @@ use typst_ts_core::error::prelude::*;
 use typst_ts_core::{font::FontResolverImpl, Artifact, ArtifactMeta, FontResolver};
 use wasm_bindgen::prelude::*;
 
-use super::artifact::{artifact_from_js_string, page_from_js_string};
-use super::artifact_ir::ir_artifact_from_bin;
+use crate::parser::ir_artifact_from_bin;
+use crate::parser::{artifact_from_js_string, page_from_js_string};
 
 #[wasm_bindgen]
 #[derive(Default, Debug)]

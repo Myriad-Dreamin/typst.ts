@@ -3,106 +3,25 @@ use std::{num::NonZeroUsize, vec};
 use typst_ts_core::{artifact::doc::Frame, error::prelude::*, Artifact, ArtifactMeta};
 use wasm_bindgen::prelude::*;
 
-pub struct ArtifactJsBuilder {}
+use super::{convert_pair, JsValueParser};
 
-/// Destructures a JS `[key, value]` pair into a tuple of [`Deserializer`]s.
-pub(crate) fn convert_pair(pair: JsValue) -> (JsValue, JsValue) {
-    let pair = pair.unchecked_into::<js_sys::Array>();
-    (pair.get(0), pair.get(1))
-}
-
-impl ArtifactJsBuilder {
-    pub fn to_bool(&self, field: &str, val: &JsValue) -> ZResult<bool> {
-        val.as_bool()
-            .ok_or_else(|| error_once!("expected bool", field: field, val: format!("{:?}", val)))
-    }
-
-    pub fn to_f64(&self, field: &str, val: &JsValue) -> ZResult<f64> {
-        val.as_f64()
-            .ok_or_else(|| error_once!("expected f64", field: field, val: format!("{:?}", val)))
-    }
-
-    pub fn to_string(&self, field: &str, val: &JsValue) -> ZResult<String> {
-        val.as_string()
-            .ok_or_else(|| error_once!("expected string", field: field, val: format!("{:?}", val)))
-    }
-
-    pub fn into_array(&self, field: &str, val: JsValue) -> ZResult<js_sys::Array> {
-        val.clone().dyn_into().map_err(error_once_map!(
-            "expected array",
-            field: field,
-            val: format!("{:?}", val)
-        ))
-    }
-
-    pub fn into_entries(&self, field: &str, val: JsValue) -> ZResult<js_sys::Array> {
-        Ok(js_sys::Object::entries(val.dyn_ref().ok_or_else(|| {
-            error_once!(
-                "expect entries for object",
-                field: field,
-                val: format!("{:?}", val)
-            )
-        })?))
-    }
-
-    pub fn parse_tv(&self, field: &str, val: JsValue) -> ZResult<(String, Option<JsValue>)> {
-        let mut t = String::default();
-        let mut sub: Option<JsValue> = None;
-
-        for (k, v) in self.into_entries(field, val)?.iter().map(convert_pair) {
-            let k = self.to_string(field, &k)?;
-            match k.as_str() {
-                "t" => {
-                    t = self.to_string(field, &v)?;
-                }
-                "v" => {
-                    sub = Some(v);
-                }
-                _ => {
-                    return Err(error_once!(
-                        "unknown kv for",
-                        field: field,
-                        key: k,
-                        val: format!("{:?}", v)
-                    ))
-                }
-            }
-        }
-
-        Ok((t, sub))
-    }
-
-    pub fn parse_tv_expected(&self, field: &str, val: JsValue) -> ZResult<(String, JsValue)> {
-        let (t, sub) = self.parse_tv(field, val.clone())?;
-
-        Ok((
-            t,
-            sub.ok_or_else(|| {
-                error_once!(
-                    "expected value for {}",
-                    field: field,
-                    val: format!("{:?}", val)
-                )
-            })?,
-        ))
-    }
-
+impl JsValueParser {
     fn parse_font_variant(&self, val: JsValue) -> ZResult<typst::font::FontVariant> {
         let mut variant = typst::font::FontVariant::default();
         for (k, v) in self
-            .into_entries("font_variant", val)?
+            .parse_as_entries("font_variant", val)?
             .iter()
             .map(convert_pair)
         {
-            let k = self.to_string("font_variant", &k)?;
+            let k = self.parse_string("font_variant", &k)?;
             match k.as_str() {
                 "weight" => {
                     variant.weight = typst::font::FontWeight::from_number(
-                        self.to_f64("font_variant.weight", &v)? as u16,
+                        self.parse_f64("font_variant.weight", &v)? as u16,
                     );
                 }
                 "style" => {
-                    let v = self.to_string("font_variant.style", &v)?;
+                    let v = self.parse_string("font_variant.style", &v)?;
                     match v.as_str() {
                         "normal" => variant.style = typst::font::FontStyle::Normal,
                         "italic" => variant.style = typst::font::FontStyle::Italic,
@@ -118,7 +37,7 @@ impl ArtifactJsBuilder {
                 }
                 "stretch" => {
                     variant.stretch = typst::font::FontStretch::from_ratio(
-                        typst::geom::Ratio::new(self.to_f64("font_variant.stretch", &v)?),
+                        typst::geom::Ratio::new(self.parse_f64("font_variant.stretch", &v)?),
                     );
                 }
                 _ => {
@@ -144,21 +63,21 @@ impl ArtifactJsBuilder {
         let mut coverage_hash = String::default();
 
         for (k, v) in self
-            .into_entries("font_info", val)?
+            .parse_as_entries("font_info", val)?
             .iter()
             .map(convert_pair)
         {
-            let k = self.to_string("font_info", &k)?;
+            let k = self.parse_string("font_info", &k)?;
             match k.as_str() {
                 "family" => {
-                    family = self.to_string("font_info.family", &v)?;
+                    family = self.parse_string("font_info.family", &v)?;
                 }
                 "variant" => {
                     variant = self.parse_font_variant(v)?;
                 }
                 "flags" => {
                     flags = typst::font::FontFlags::from_bits(
-                        self.to_f64("font_info.flags", &v)? as u32
+                        self.parse_f64("font_info.flags", &v)? as u32,
                     )
                     .ok_or_else(|| {
                         error_once!(
@@ -174,7 +93,7 @@ impl ArtifactJsBuilder {
                         .map_err(map_string_err("font_info.coverage"))?;
                 }
                 "coverage_hash" => {
-                    coverage_hash = self.to_string("font_info.coverage_hash", &v)?;
+                    coverage_hash = self.parse_string("font_info.coverage_hash", &v)?;
                 }
                 _ => {
                     return Err(error_once!(
@@ -198,14 +117,18 @@ impl ArtifactJsBuilder {
         let mut x = typst::geom::Abs::default();
         let mut y = typst::geom::Abs::default();
 
-        for (k, v) in self.into_entries("point", val)?.iter().map(convert_pair) {
-            let k = self.to_string("point", &k)?;
+        for (k, v) in self
+            .parse_as_entries("point", val)?
+            .iter()
+            .map(convert_pair)
+        {
+            let k = self.parse_string("point", &k)?;
             match k.as_str() {
                 "x" => {
-                    x = typst::geom::Abs::raw(self.to_f64("point.x", &v)?);
+                    x = typst::geom::Abs::raw(self.parse_f64("point.x", &v)?);
                 }
                 "y" => {
-                    y = typst::geom::Abs::raw(self.to_f64("point.y", &v)?);
+                    y = typst::geom::Abs::raw(self.parse_f64("point.y", &v)?);
                 }
 
                 _ => {
@@ -236,29 +159,29 @@ impl ArtifactJsBuilder {
         let mut ty = typst::geom::Abs::default();
 
         for (k, v) in self
-            .into_entries("transform", val)?
+            .parse_as_entries("transform", val)?
             .iter()
             .map(convert_pair)
         {
-            let k = self.to_string("transform", &k)?;
+            let k = self.parse_string("transform", &k)?;
             match k.as_str() {
                 "sx" => {
-                    sx = typst::geom::Ratio::new(self.to_f64("transform.sx", &v)?);
+                    sx = typst::geom::Ratio::new(self.parse_f64("transform.sx", &v)?);
                 }
                 "ky" => {
-                    ky = typst::geom::Ratio::new(self.to_f64("transform.ky", &v)?);
+                    ky = typst::geom::Ratio::new(self.parse_f64("transform.ky", &v)?);
                 }
                 "kx" => {
-                    kx = typst::geom::Ratio::new(self.to_f64("transform.kx", &v)?);
+                    kx = typst::geom::Ratio::new(self.parse_f64("transform.kx", &v)?);
                 }
                 "sy" => {
-                    sy = typst::geom::Ratio::new(self.to_f64("transform.sy", &v)?);
+                    sy = typst::geom::Ratio::new(self.parse_f64("transform.sy", &v)?);
                 }
                 "tx" => {
-                    tx = typst::geom::Abs::raw(self.to_f64("transform.tx", &v)?);
+                    tx = typst::geom::Abs::raw(self.parse_f64("transform.tx", &v)?);
                 }
                 "ty" => {
-                    ty = typst::geom::Abs::raw(self.to_f64("transform.ty", &v)?);
+                    ty = typst::geom::Abs::raw(self.parse_f64("transform.ty", &v)?);
                 }
 
                 _ => {
@@ -290,11 +213,11 @@ impl ArtifactJsBuilder {
         let mut clips = false;
 
         for (k, v) in self
-            .into_entries("frame_group", val)?
+            .parse_as_entries("frame_group", val)?
             .iter()
             .map(convert_pair)
         {
-            let k = self.to_string("frame_group", &k)?;
+            let k = self.parse_string("frame_group", &k)?;
             match k.as_str() {
                 "frame" => {
                     frame = Some(self.parse_frame(v)?);
@@ -303,7 +226,7 @@ impl ArtifactJsBuilder {
                     transform = Some(self.parse_transform(v)?);
                 }
                 "clips" => {
-                    clips = self.to_bool("frame_group.clips", &v)?;
+                    clips = self.parse_bool("frame_group.clips", &v)?;
                 }
 
                 _ => {
@@ -330,33 +253,37 @@ impl ArtifactJsBuilder {
         let mut span = None;
         let mut range = None;
 
-        for (k, v) in self.into_entries("glyph", val)?.iter().map(convert_pair) {
-            let k = self.to_string("glyph", &k)?;
+        for (k, v) in self
+            .parse_as_entries("glyph", val)?
+            .iter()
+            .map(convert_pair)
+        {
+            let k = self.parse_string("glyph", &k)?;
             match k.as_str() {
                 "id" => {
-                    id = Some(self.to_f64("glyph.id", &v)? as u16);
+                    id = Some(self.parse_f64("glyph.id", &v)? as u16);
                 }
                 "x_advance" => {
                     x_advance =
-                        Some(typst::geom::Em::new(self.to_f64("glyph.x_advance", &v)?).into());
+                        Some(typst::geom::Em::new(self.parse_f64("glyph.x_advance", &v)?).into());
                 }
                 "x_offset" => {
                     x_offset =
-                        Some(typst::geom::Em::new(self.to_f64("glyph.x_offset", &v)?).into());
+                        Some(typst::geom::Em::new(self.parse_f64("glyph.x_offset", &v)?).into());
                 }
                 "span" => {
                     // todo: span self.to_f64(v)? as u16
                     let (v0, v1) = convert_pair(v);
                     span = Some((
-                        (self.to_f64("glyph.span0", &v0))? as u16,
-                        (self.to_f64("glyph.span1", &v1))? as u16,
+                        (self.parse_f64("glyph.span0", &v0))? as u16,
+                        (self.parse_f64("glyph.span1", &v1))? as u16,
                     ));
                 }
                 "range" => {
                     let (st, ed) = convert_pair(v);
                     range = Some((
-                        self.to_f64("glyph.range0", &st)? as u16,
-                        self.to_f64("glyph.range1", &ed)? as u16,
+                        self.parse_f64("glyph.range0", &st)? as u16,
+                        self.parse_f64("glyph.range1", &ed)? as u16,
                     ));
                 }
 
@@ -391,29 +318,30 @@ impl ArtifactJsBuilder {
         let mut glyphs = vec![];
 
         for (k, v) in self
-            .into_entries("frame_text", val)?
+            .parse_as_entries("frame_text", val)?
             .iter()
             .map(convert_pair)
         {
-            let k = self.to_string("frame_text", &k)?;
+            let k = self.parse_string("frame_text", &k)?;
             match k.as_str() {
                 "font" => {
-                    font = Some(self.to_f64("frame_text.font", &v)? as u32);
+                    font = Some(self.parse_f64("frame_text.font", &v)? as u32);
                 }
                 "size" => {
-                    size = Some(typst::geom::Abs::raw(self.to_f64("frame_text.size", &v)?).into());
+                    size =
+                        Some(typst::geom::Abs::raw(self.parse_f64("frame_text.size", &v)?).into());
                 }
                 "fill" => {
                     fill = Some(self.parse_paint(v)?);
                 }
                 "lang" => {
-                    lang = Some(self.to_string("frame_text.lang", &v)?);
+                    lang = Some(self.parse_string("frame_text.lang", &v)?);
                 }
                 "text" => {
-                    text = Some(self.to_string("frame_text.text", &v)?);
+                    text = Some(self.parse_string("frame_text.text", &v)?);
                 }
                 "glyphs" => {
-                    for arr in self.into_array("frame.glyphs", v)?.iter() {
+                    for arr in self.parse_as_array("frame.glyphs", v)?.iter() {
                         glyphs.push(self.parse_glyph(arr)?);
                     }
                 }
@@ -442,14 +370,14 @@ impl ArtifactJsBuilder {
         let mut x = typst::geom::Abs::default();
         let mut y = typst::geom::Abs::default();
 
-        for (k, v) in self.into_entries("size", val)?.iter().map(convert_pair) {
-            let k = self.to_string("size", &k)?;
+        for (k, v) in self.parse_as_entries("size", val)?.iter().map(convert_pair) {
+            let k = self.parse_string("size", &k)?;
             match k.as_str() {
                 "x" => {
-                    x = typst::geom::Abs::raw(self.to_f64("size.x", &v)?);
+                    x = typst::geom::Abs::raw(self.parse_f64("size.x", &v)?);
                 }
                 "y" => {
-                    y = typst::geom::Abs::raw(self.to_f64("size.y", &v)?);
+                    y = typst::geom::Abs::raw(self.parse_f64("size.y", &v)?);
                 }
 
                 _ => {
@@ -482,7 +410,7 @@ impl ArtifactJsBuilder {
             )),
             "CubicTo" => Ok({
                 let sub = sub.ok_or_else(|| error_once!("path_item.CubicTo.v"))?;
-                let a_sub = self.into_array("path_item.CubicTo", sub)?;
+                let a_sub = self.parse_as_array("path_item.CubicTo", sub)?;
                 typst_ts_core::artifact::geom::PathItem::CubicTo(
                     self.parse_point(a_sub.get(0))?,
                     self.parse_point(a_sub.get(1))?,
@@ -510,7 +438,7 @@ impl ArtifactJsBuilder {
             "Path" => Ok(typst_ts_core::artifact::geom::Geometry::Path({
                 let mut res = vec![];
 
-                for arr in self.into_array("geometry.Path", sub)?.iter() {
+                for arr in self.parse_as_array("geometry.Path", sub)?.iter() {
                     res.push(self.parse_path_item(arr)?);
                 }
                 typst_ts_core::artifact::geom::Path(res)
@@ -533,23 +461,23 @@ impl ArtifactJsBuilder {
         let mut a = None;
 
         for (k, v) in self
-            .into_entries("rgba_color", val)?
+            .parse_as_entries("rgba_color", val)?
             .iter()
             .map(convert_pair)
         {
-            let k = self.to_string("rgba_color", &k)?;
+            let k = self.parse_string("rgba_color", &k)?;
             match k.as_str() {
                 "r" => {
-                    r = Some(self.to_f64("rgba_color.r", &v)? as u8);
+                    r = Some(self.parse_f64("rgba_color.r", &v)? as u8);
                 }
                 "g" => {
-                    g = Some(self.to_f64("rgba_color.g", &v)? as u8);
+                    g = Some(self.parse_f64("rgba_color.g", &v)? as u8);
                 }
                 "b" => {
-                    b = Some(self.to_f64("rgba_color.b", &v)? as u8);
+                    b = Some(self.parse_f64("rgba_color.b", &v)? as u8);
                 }
                 "a" => {
-                    a = Some(self.to_f64("rgba_color.a", &v)? as u8);
+                    a = Some(self.parse_f64("rgba_color.a", &v)? as u8);
                 }
 
                 _ => {
@@ -580,23 +508,23 @@ impl ArtifactJsBuilder {
         let mut kk = None;
 
         for (k, v) in self
-            .into_entries("cmyk_color", val)?
+            .parse_as_entries("cmyk_color", val)?
             .iter()
             .map(convert_pair)
         {
-            let k = self.to_string("cmyk_color", &k)?;
+            let k = self.parse_string("cmyk_color", &k)?;
             match k.as_str() {
                 "c" => {
-                    c = Some(self.to_f64("cmyk_color.c", &v)? as u8);
+                    c = Some(self.parse_f64("cmyk_color.c", &v)? as u8);
                 }
                 "m" => {
-                    m = Some(self.to_f64("cmyk_color.m", &v)? as u8);
+                    m = Some(self.parse_f64("cmyk_color.m", &v)? as u8);
                 }
                 "y" => {
-                    y = Some(self.to_f64("cmyk_color.y", &v)? as u8);
+                    y = Some(self.parse_f64("cmyk_color.y", &v)? as u8);
                 }
                 "k" => {
-                    kk = Some(self.to_f64("cmyk_color.k", &v)? as u8);
+                    kk = Some(self.parse_f64("cmyk_color.k", &v)? as u8);
                 }
 
                 _ => {
@@ -627,7 +555,7 @@ impl ArtifactJsBuilder {
         let (t, sub) = self.parse_tv_expected("color", val)?;
         match t.as_str() {
             "Luma" => Ok(typst_ts_core::artifact::geom::Color::Luma(
-                typst_ts_core::artifact::geom::LumaColor(self.to_f64("color.Luma", &sub)? as u8),
+                typst_ts_core::artifact::geom::LumaColor(self.parse_f64("color.Luma", &sub)? as u8),
             )),
             "Rgba" => Ok(typst_ts_core::artifact::geom::Color::Rgba(
                 self.parse_rgba_color(sub)?,
@@ -658,7 +586,7 @@ impl ArtifactJsBuilder {
     }
 
     pub fn parse_line_cap(&self, val: JsValue) -> ZResult<typst_ts_core::artifact::geom::LineCap> {
-        match self.to_string("line_cap", &val)?.as_str() {
+        match self.parse_string("line_cap", &val)?.as_str() {
             "Butt" => Ok(typst_ts_core::artifact::geom::LineCap::Butt),
             "Round" => Ok(typst_ts_core::artifact::geom::LineCap::Round),
             "Square" => Ok(typst_ts_core::artifact::geom::LineCap::Square),
@@ -673,7 +601,7 @@ impl ArtifactJsBuilder {
         &self,
         val: JsValue,
     ) -> ZResult<typst_ts_core::artifact::geom::LineJoin> {
-        match self.to_string("line_join", &val)?.as_str() {
+        match self.parse_string("line_join", &val)?.as_str() {
             "Miter" => Ok(typst_ts_core::artifact::geom::LineJoin::Miter),
             "Round" => Ok(typst_ts_core::artifact::geom::LineJoin::Round),
             "Bevel" => Ok(typst_ts_core::artifact::geom::LineJoin::Bevel),
@@ -697,22 +625,24 @@ impl ArtifactJsBuilder {
         let mut phase = None;
 
         for (k, v) in self
-            .into_entries("dash_pattern", val)?
+            .parse_as_entries("dash_pattern", val)?
             .iter()
             .map(convert_pair)
         {
-            let k = self.to_string("dash_pattern", &k)?;
+            let k = self.parse_string("dash_pattern", &k)?;
             match k.as_str() {
                 "array" => {
-                    for val in self.into_array("dash_pattern.array", v)?.iter() {
+                    for val in self.parse_as_array("dash_pattern.array", v)?.iter() {
                         array.push(
-                            typst::geom::Abs::raw(self.to_f64("dash_pattern.array", &val)?).into(),
+                            typst::geom::Abs::raw(self.parse_f64("dash_pattern.array", &val)?)
+                                .into(),
                         );
                     }
                 }
                 "phase" => {
-                    phase =
-                        Some(typst::geom::Abs::raw(self.to_f64("dash_pattern.phase", &v)?).into());
+                    phase = Some(
+                        typst::geom::Abs::raw(self.parse_f64("dash_pattern.phase", &v)?).into(),
+                    );
                 }
 
                 _ => {
@@ -739,15 +669,19 @@ impl ArtifactJsBuilder {
         let mut dash_pattern = None;
         let mut miter_limit = None;
 
-        for (k, v) in self.into_entries("stroke", val)?.iter().map(convert_pair) {
-            let k = self.to_string("stroke", &k)?;
+        for (k, v) in self
+            .parse_as_entries("stroke", val)?
+            .iter()
+            .map(convert_pair)
+        {
+            let k = self.parse_string("stroke", &k)?;
             match k.as_str() {
                 "paint" => {
                     paint = Some(self.parse_paint(v)?);
                 }
                 "thickness" => {
                     thickness =
-                        Some(typst::geom::Abs::raw(self.to_f64("stroke.thickness", &v)?).into());
+                        Some(typst::geom::Abs::raw(self.parse_f64("stroke.thickness", &v)?).into());
                 }
                 "line_cap" => {
                     line_cap = Some(self.parse_line_cap(v)?);
@@ -764,7 +698,7 @@ impl ArtifactJsBuilder {
                 }
                 "miter_limit" => {
                     miter_limit = Some(typst_ts_core::artifact::geom::Scalar(
-                        self.to_f64("stroke.miter_limit", &v)?,
+                        self.parse_f64("stroke.miter_limit", &v)?,
                     ));
                 }
                 _ => {
@@ -793,11 +727,11 @@ impl ArtifactJsBuilder {
         let mut stroke = None;
 
         for (k, v) in self
-            .into_entries("frame_shape", val)?
+            .parse_as_entries("frame_shape", val)?
             .iter()
             .map(convert_pair)
         {
-            let k = self.to_string("frame_shape", &k)?;
+            let k = self.parse_string("frame_shape", &k)?;
             match k.as_str() {
                 "geometry" => {
                     geometry = Some(self.parse_geometry(v)?);
@@ -840,28 +774,32 @@ impl ArtifactJsBuilder {
         let mut height = None;
         let mut alt = None;
 
-        for (k, v) in self.into_entries("image", val)?.iter().map(convert_pair) {
-            let k = self.to_string("image", &k)?;
+        for (k, v) in self
+            .parse_as_entries("image", val)?
+            .iter()
+            .map(convert_pair)
+        {
+            let k = self.parse_string("image", &k)?;
             match k.as_str() {
                 "data" => {
                     let data_raw = typst_ts_core::artifact::image::Image::decode_data(
-                        &self.to_string("image.data.base64", &v)?,
+                        &self.parse_string("image.data.base64", &v)?,
                     )
                     .map_err(error_once_map!("image.data.base64.decode_error"))?;
                     data = Some(data_raw);
                 }
                 "format" => {
-                    format = Some(self.to_string("image.format", &v)?);
+                    format = Some(self.parse_string("image.format", &v)?);
                 }
                 "width" => {
-                    width = Some(self.to_f64("image.width", &v)? as u32);
+                    width = Some(self.parse_f64("image.width", &v)? as u32);
                 }
                 "height" => {
-                    height = Some(self.to_f64("image.height", &v)? as u32);
+                    height = Some(self.parse_f64("image.height", &v)? as u32);
                 }
                 "alt" => {
                     alt = if !v.is_null() {
-                        Some(self.to_string("image.alt", &v)?)
+                        Some(self.parse_string("image.alt", &v)?)
                     } else {
                         None
                     };
@@ -894,14 +832,19 @@ impl ArtifactJsBuilder {
         let mut page = None;
         let mut point = None;
 
-        for (k, v) in self.into_entries("position", val)?.iter().map(convert_pair) {
-            let k = self.to_string("position", &k)?;
+        for (k, v) in self
+            .parse_as_entries("position", val)?
+            .iter()
+            .map(convert_pair)
+        {
+            let k = self.parse_string("position", &k)?;
             match k.as_str() {
                 "page" => {
                     page = Some(
-                        NonZeroUsize::new(self.to_f64("position.page", &v)? as usize).ok_or_else(
-                            || error_once!("position.page.invalid_value", val: format!("{:?}", v)),
-                        )?,
+                        NonZeroUsize::new(self.parse_f64("position.page", &v)? as usize)
+                            .ok_or_else(|| {
+                                error_once!("position.page.invalid_value", val: format!("{:?}", v))
+                            })?,
                     );
                 }
                 "point" => {
@@ -931,13 +874,13 @@ impl ArtifactJsBuilder {
 
         match t.as_str() {
             "Url" => Ok(typst_ts_core::artifact::doc::Destination::Url(
-                self.to_string("destination.Url", &sub)?,
+                self.parse_string("destination.Url", &sub)?,
             )),
             "Position" => Ok(typst_ts_core::artifact::doc::Destination::Position(
                 self.parse_position(sub)?,
             )),
             "Location" => Ok(typst_ts_core::artifact::doc::Destination::Location(
-                self.to_string("destination.Location", &sub)?,
+                self.parse_string("destination.Location", &sub)?,
             )),
             _ => Err(error_once!(
                 "destination.unknown_type",
@@ -964,7 +907,7 @@ impl ArtifactJsBuilder {
             )),
             "Image" => {
                 let sub = sub.ok_or_else(|| error_once!("frame_item.image"))?;
-                let arr = self.into_array("frame_item", sub)?;
+                let arr = self.parse_as_array("frame_item", sub)?;
                 Ok(typst_ts_core::artifact::doc::FrameItem::Image(
                     self.parse_image(arr.get(0))?,
                     self.parse_size(arr.get(1))?,
@@ -972,7 +915,7 @@ impl ArtifactJsBuilder {
             }
             "MetaLink" => {
                 let sub = sub.ok_or_else(|| error_once!("frame_item.meta_link"))?;
-                let arr = self.into_array("frame_item", sub)?;
+                let arr = self.parse_as_array("frame_item", sub)?;
                 Ok(typst_ts_core::artifact::doc::FrameItem::MetaLink(
                     self.parse_destination(arr.get(0))?,
                     self.parse_size(arr.get(1))?,
@@ -992,22 +935,26 @@ impl ArtifactJsBuilder {
         let mut baseline = None;
         let mut items = vec![];
 
-        for (k, v) in self.into_entries("frame", val)?.iter().map(convert_pair) {
-            let k = self.to_string("frame", &k)?;
+        for (k, v) in self
+            .parse_as_entries("frame", val)?
+            .iter()
+            .map(convert_pair)
+        {
+            let k = self.parse_string("frame", &k)?;
             match k.as_str() {
                 "size" => {
                     size = Some(self.parse_size(v)?);
                 }
                 "baseline" => {
                     baseline = if !v.is_null() {
-                        Some(typst::geom::Abs::raw(self.to_f64("frame.baseline", &v)?).into())
+                        Some(typst::geom::Abs::raw(self.parse_f64("frame.baseline", &v)?).into())
                     } else {
                         None
                     };
                 }
                 "items" => {
-                    for item in self.into_array("frame.items", v)?.iter() {
-                        let item = self.into_array("frame.items", item)?;
+                    for item in self.parse_as_array("frame.items", v)?.iter() {
+                        let item = self.parse_as_array("frame.items", item)?;
                         items.push((
                             self.parse_point(item.get(0))?,
                             self.parse_frame_item(item.get(1))?,
@@ -1037,17 +984,17 @@ impl ArtifactJsBuilder {
         let mut compiler = None;
 
         for (k, v) in self
-            .into_entries("build_info", val)?
+            .parse_as_entries("build_info", val)?
             .iter()
             .map(convert_pair)
         {
-            let k = self.to_string("build_info", &k)?;
+            let k = self.parse_string("build_info", &k)?;
             match k.as_str() {
                 "version" => {
-                    version = Some(self.to_string("build_info.version", &v)?);
+                    version = Some(self.parse_string("build_info.version", &v)?);
                 }
                 "compiler" => {
-                    compiler = Some(self.to_string("build_info.compiler", &v)?);
+                    compiler = Some(self.parse_string("build_info.compiler", &v)?);
                 }
 
                 _ => {
@@ -1070,19 +1017,23 @@ impl ArtifactJsBuilder {
         let mut meta = ArtifactMeta::default();
         let mut pages = vec![];
 
-        for (k, v) in self.into_entries("artifact", val)?.iter().map(convert_pair) {
-            let k = self.to_string("artifact", &k)?;
+        for (k, v) in self
+            .parse_as_entries("artifact", val)?
+            .iter()
+            .map(convert_pair)
+        {
+            let k = self.parse_string("artifact", &k)?;
             match k.as_str() {
                 "build" => {
                     meta.build = Some(self.parse_build_info(v)?);
                 }
                 "pages" => {
-                    for arr in self.into_array("artifact.pages", v)?.iter() {
+                    for arr in self.parse_as_array("artifact.pages", v)?.iter() {
                         pages.push(self.parse_frame(arr)?);
                     }
                 }
                 "fonts" => {
-                    for arr in self.into_array("artifact.fonts", v)?.iter() {
+                    for arr in self.parse_as_array("artifact.fonts", v)?.iter() {
                         meta.fonts.push(self.parse_font_info(arr)?);
                     }
                 }
@@ -1090,12 +1041,13 @@ impl ArtifactJsBuilder {
                     meta.title = if v.is_null() {
                         None
                     } else {
-                        Some(self.to_string("artifact.title", &v)?)
+                        Some(self.parse_string("artifact.title", &v)?)
                     }
                 }
                 "author" => {
-                    for arr in self.into_array("artifact.author", v)?.iter() {
-                        meta.author.push(self.to_string("artifact.author", &arr)?);
+                    for arr in self.parse_as_array("artifact.author", v)?.iter() {
+                        meta.author
+                            .push(self.parse_string("artifact.author", &arr)?);
                     }
                 }
                 _ => {
@@ -1114,14 +1066,14 @@ impl ArtifactJsBuilder {
 
 pub fn artifact_from_js_string(val: &str) -> ZResult<Artifact> {
     let val = js_sys::JSON::parse(val).map_err(map_err("ArtifactJsBuilder.ParseJson"))?;
-    ArtifactJsBuilder {}
+    JsValueParser {}
         .parse_artifact(val)
         .map_err(wrap_err("ArtifactJsBuilder.ArtifactFmt"))
 }
 
 pub fn page_from_js_string(val: &str) -> ZResult<Frame> {
     let val = js_sys::JSON::parse(val).map_err(map_err("ArtifactJsBuilder.ParseJson"))?;
-    ArtifactJsBuilder {}
+    JsValueParser {}
         .parse_frame(val)
         .map_err(wrap_err("ArtifactJsBuilder.PageFmt"))
 }
@@ -1134,7 +1086,7 @@ mod tests {
     use typst_ts_test_common::web_artifact::{MAIN_ARTIFACT_IR, MAIN_ARTIFACT_JSON};
     use wasm_bindgen_test::*;
 
-    use crate::artifact_ir::ir_artifact_from_bin;
+    use crate::parser::ir_artifact_from_bin;
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
