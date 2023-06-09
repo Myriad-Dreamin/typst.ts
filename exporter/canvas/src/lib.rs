@@ -9,12 +9,14 @@ pub(crate) use tiny_skia as sk;
 use typst::doc::{Frame, FrameItem, GroupItem, Meta};
 use typst::font::FontInfo;
 use typst::geom::Color;
+use typst_ts_core::annotation::AnnotationList;
 use typst_ts_core::error::prelude::*;
 use typst_ts_core::font::{FontGlyphProvider, GlyphProvider};
 use typst_ts_core::{Error, TextContent};
 use utils::{js_random64, AbsExt, CanvasStateGuard, PerfEvent, ToCssExt};
 use web_sys::{window, CanvasRenderingContext2d, Performance};
 
+pub(crate) mod annotation;
 pub(crate) mod content;
 pub(crate) mod utils;
 pub(crate) use content::*;
@@ -40,11 +42,13 @@ pub struct CanvasRenderTask<'a, Feat: RenderFeature = DefaultRenderFeature> {
     pixel_per_pt: f32,
     fill: Color,
 
+    page_off: usize,
     width_px: u32,
     height_px: u32,
     raw_height: f32,
 
-    pub content: TextContent,
+    pub text_content: TextContent,
+    pub annotations: AnnotationList,
 
     font_map: HashMap<FontInfo, u32>,
 
@@ -101,11 +105,13 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
             pixel_per_pt,
             fill,
 
+            page_off,
             width_px,
             height_px,
             raw_height: height_px as f32 / pixel_per_pt,
 
-            content: TextContent::default(),
+            text_content: TextContent::default(),
+            annotations: AnnotationList::default(),
             font_map: HashMap::default(),
             errors: Vec::default(),
 
@@ -238,8 +244,10 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
                 FrameItem::Image(image, size, _) => {
                     self.render_image(ts, image, *size).await;
                 }
-                FrameItem::Meta(meta, _) => match meta {
-                    Meta::Link(_) => {}
+                FrameItem::Meta(meta, sz) => match meta {
+                    Meta::Link(dest) => {
+                        self.render_link(ts, sz, dest)?;
+                    }
                     Meta::Elem(_) => {}
                     Meta::PageNumbering(_) => {}
                     Meta::Hide => {}

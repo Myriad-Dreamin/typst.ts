@@ -18,11 +18,16 @@ impl TypstRenderer {
         canvas: &web_sys::CanvasRenderingContext2d,
         options: Option<RenderPageImageOptions>,
     ) -> ZResult<JsValue> {
-        let (text_content, ..) = self
+        let (text_content, annotation_list, ..) = self
             .render_page_to_canvas_internal::<DefaultRenderFeature>(ses, canvas, options)
             .await?;
 
-        Ok(text_content)
+        let res = js_sys::Object::new();
+        let err = js_sys::Reflect::set(&res, &"textContent".into(), &text_content);
+        err.map_err(map_into_err::<JsValue, _>("Renderer.SetTextContent"))?;
+        let err = js_sys::Reflect::set(&res, &"annotationList".into(), &annotation_list);
+        err.map_err(map_into_err::<JsValue, _>("Renderer.SetAnnotationContent"))?;
+        Ok(res.into())
     }
 }
 
@@ -32,7 +37,7 @@ impl TypstRenderer {
         ses: &RenderSession,
         canvas: &web_sys::CanvasRenderingContext2d,
         options: Option<RenderPageImageOptions>,
-    ) -> ZResult<(JsValue, Option<HashMap<String, f64>>)> {
+    ) -> ZResult<(JsValue, JsValue, Option<HashMap<String, f64>>)> {
         let page_off = self.retrieve_page_off(ses, options)?;
 
         let perf_events = if Feat::ENABLE_TRACING {
@@ -67,8 +72,11 @@ impl TypstRenderer {
         worker.render(&ses.doc.pages[page_off]).await?;
 
         Ok((
-            serde_wasm_bindgen::to_value(&worker.content)
+            serde_wasm_bindgen::to_value(&worker.text_content)
                 .map_err(map_into_err::<JsValue, _>("Renderer.EncodeTextContent"))?,
+            serde_wasm_bindgen::to_value(&worker.annotations).map_err(
+                map_into_err::<JsValue, _>("Renderer.EncodeAnnotationContent"),
+            )?,
             perf_events.map(|perf_events| {
                 perf_events
                     .into_map()
@@ -174,7 +182,7 @@ mod tests {
 
             let prepare = performance.now();
 
-            let (res, perf_events) = renderer
+            let (res, _, perf_events) = renderer
                 .render_page_to_canvas_internal::<CIRenderFeature>(&session, &context, None)
                 .await
                 .unwrap();

@@ -11,9 +11,11 @@ export class RenderView {
 
   container: HTMLDivElement;
   canvasList: HTMLCanvasElement[];
-  layerList: HTMLDivElement[];
+  textLayerList: HTMLDivElement[];
+  annotationLayerList: HTMLDivElement[];
   commonList: HTMLDivElement[];
   textLayerParentList: HTMLDivElement[];
+  semanticLayerList: HTMLDivElement[];
 
   constructor(public pageInfos: PageInfo[], container: HTMLDivElement, options: RenderOptionsBase) {
     this.partialPageRendering = options.pages !== undefined;
@@ -35,14 +37,18 @@ export class RenderView {
     /// refer html elements
     this.container = container;
     this.canvasList = new Array(this.loadPageCount);
-    this.layerList = new Array(this.loadPageCount);
+    this.textLayerList = new Array(this.loadPageCount);
     this.commonList = new Array(this.loadPageCount);
     this.textLayerParentList = new Array(this.loadPageCount);
+    this.annotationLayerList = new Array(this.loadPageCount);
+    this.semanticLayerList = new Array(this.loadPageCount);
 
     const createOver = (i: number, width: number, height: number, commonDiv: HTMLDivElement) => {
       const canvas = (this.canvasList[i] = document.createElement('canvas'));
-      const textLayer = (this.layerList[i] = document.createElement('div'));
+      const semanticLayer = (this.semanticLayerList[i] = document.createElement('div'));
+      const textLayer = (this.textLayerList[i] = document.createElement('div'));
       const textLayerParent = (this.textLayerParentList[i] = document.createElement('div'));
+      const annotationLayer = (this.annotationLayerList[i] = document.createElement('div'));
 
       const ctx = canvas.getContext('2d');
       if (ctx) {
@@ -68,13 +74,18 @@ export class RenderView {
         const orignalScale = containerWidth / width;
         textLayerParent.style.width = `${containerWidth}px`;
         textLayerParent.style.height = `${height * orignalScale}px`;
+        textLayerParent.style.position = 'absolute';
+        annotationLayer.style.width = `${containerWidth}px`;
+        annotationLayer.style.height = `${height * orignalScale}px`;
+        annotationLayer.style.position = 'absolute';
         commonDiv.style.width = `${containerWidth}px`;
         commonDiv.style.height = `${height * orignalScale}px`;
         commonDiv.style.position = 'relative';
 
         // textLayerParent.style.zIndex = '1';
-        commonDiv.appendChild(textLayerParent);
-        textLayerParent.style.position = 'absolute';
+        semanticLayer.appendChild(textLayerParent);
+        semanticLayer.appendChild(annotationLayer);
+        commonDiv.appendChild(semanticLayer);
       }
     };
 
@@ -131,12 +142,15 @@ export class RenderView {
         }
         const commonDiv = this.commonList[i];
         const textLayerParent = this.textLayerParentList[i];
+        const annotationLayer = this.annotationLayerList[i];
 
         /// on width change
         const containerWidth = this.container.offsetWidth;
         const orignalScale = containerWidth / width;
         textLayerParent.style.width = `${containerWidth}px`;
         textLayerParent.style.height = `${height * orignalScale}px`;
+        annotationLayer.style.width = `${containerWidth}px`;
+        annotationLayer.style.height = `${height * orignalScale}px`;
         commonDiv.style.width = `${containerWidth}px`;
         commonDiv.style.height = `${height * orignalScale}px`;
 
@@ -159,12 +173,15 @@ export class RenderView {
         }
         const commonDiv = this.commonList[i];
         const textLayerParent = this.textLayerParentList[i];
+        const annotationLayer = this.annotationLayerList[i];
 
         /// on width change
         const containerWidth = this.container.offsetWidth;
         const orignalScale = containerWidth / width;
         textLayerParent.style.width = `${containerWidth}px`;
         textLayerParent.style.height = `${height * orignalScale}px`;
+        annotationLayer.style.width = `${containerWidth}px`;
+        annotationLayer.style.height = `${height * orignalScale}px`;
         commonDiv.style.width = `${containerWidth}px`;
         commonDiv.style.height = `${height * orignalScale}px`;
 

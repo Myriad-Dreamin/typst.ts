@@ -27,6 +27,12 @@ body {
   transform-origin: 0% 0%;
 }
 
+.typst-annotation {
+  margin: 0;
+  position: absolute;
+  z-index: 10;
+}
+
 .navigator {
   height: auto;
   width: 100%;
