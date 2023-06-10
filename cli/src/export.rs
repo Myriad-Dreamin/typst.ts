@@ -92,6 +92,10 @@ fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExp
             "json_glyphs" => sink_path!(WithJson<_> as AsWritable as glyph_pack, out @@ "glyphs.json"),
             #[cfg(feature = "serde-rmp")]
             "rmp"         => sink_path!(WithRmp as _ as artifact, out @@ "artifact.rmp"),
+            #[cfg(feature = "svg")]
+            "svg"         => sink_path!(WithSvg as _ as doc, out @@ "artifact.svg"),
+            #[cfg(feature = "svg")]
+            "sir"         => sink_path!(WithSIR as _ as doc, out @@ "artifact.sir.bin"),
             _             => exit_by_unknown_format(f),
         });
     }
@@ -112,6 +116,8 @@ fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExp
     type WithJson<T> = typst_ts_serde_exporter::JsonExporter<T>;
     type WithPdf = typst_ts_pdf_exporter::PdfDocExporter;
     type WithRmp = typst_ts_serde_exporter::RmpArtifactExporter;
+    type WithSvg = typst_ts_svg_exporter::SvgExporter;
+    type WithSIR = typst_ts_svg_exporter::SvgModuleExporter;
 
     type ExporterVec<T> = Vec<Box<dyn typst_ts_core::Exporter<T>>>;
 }

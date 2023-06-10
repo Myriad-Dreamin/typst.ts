@@ -3288,6 +3288,7 @@ dependencies = [
  "typst-ts-pdf-exporter",
  "typst-ts-raster-exporter",
  "typst-ts-serde-exporter",
+ "typst-ts-svg-exporter",
  "typst-ts-tir-exporter",
  "vergen",
 ]
@@ -3494,6 +3495,23 @@ dependencies = [
  "rmp-serde",
  "serde",
  "serde_json",
+ "typst",
+ "typst-ts-core",
+]
+
+[[package]]
+name = "typst-ts-svg-exporter"
+version = "0.2.2"
+dependencies = [
+ "async-recursion",
+ "base64 0.21.0",
+ "comemo",
+ "data-url",
+ "elsa",
+ "flate2",
+ "once_cell",
+ "tiny-skia",
+ "ttf-parser",
  "typst",
  "typst-ts-core",
 ]

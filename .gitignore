@@ -4,7 +4,9 @@
 
 *.glyphs.json
 *.artifact.json
+*.artifact.svg
 *.tir.bin
+*.sir.bin
 *.pdf
 *.rmp
 *.tsbuildinfo
