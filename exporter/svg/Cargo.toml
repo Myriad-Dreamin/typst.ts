@@ -1,0 +1,24 @@
+[package]
+name = "typst-ts-svg-exporter"
+description = "Export a frame of Typst document into svg element."
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+typst.workspace = true
+comemo.workspace = true
+
+tiny-skia.workspace = true
+ttf-parser.workspace = true
+flate2.workspace = true
+once_cell.workspace = true
+data-url = "0.2.0"
+async-recursion = "1.0.4"
+elsa.workspace = true
+base64.workspace = true
+
+typst-ts-core.workspace = true

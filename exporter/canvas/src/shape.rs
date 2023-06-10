@@ -7,7 +7,7 @@ use web_sys::Path2d;
 use crate::{
     sk,
     svg::SvgPath2DBuilder,
-    utils::{AbsExt, CanvasStateGuard},
+    utils::{AbsExt, CanvasStateGuard, ToCssExt},
     CanvasRenderTask, RenderFeature,
 };
 
@@ -62,8 +62,6 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
             let state_guard = CanvasStateGuard::new(self.canvas);
 
             let Paint::Solid(color) = fill;
-            let c = color.to_rgba();
-            let fill_style = format!("rgba({},{},{},{})", c.r, c.g, c.b, c.a);
 
             #[cfg(feature = "debug_shape_fill")]
             console_log!(
@@ -73,7 +71,7 @@ impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
                 ts
             );
 
-            self.canvas.set_fill_style(&fill_style.into());
+            self.canvas.set_fill_style(&color.to_css().into());
             self.reset_transform();
             self.sync_transform(ts);
 

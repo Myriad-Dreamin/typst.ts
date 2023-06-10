@@ -42,6 +42,7 @@ typst-ts-ast-exporter.workspace = true
 typst-ts-pdf-exporter = { workspace = true, optional = true }
 typst-ts-raster-exporter = { workspace = true, optional = true }
 typst-ts-serde-exporter = { workspace = true, optional = true }
+typst-ts-svg-exporter = { workspace = true, optional = true }
 typst-ts-tir-exporter = { workspace = true, optional = true }
 
 [build-dependencies]
@@ -53,5 +54,6 @@ pdf = ["typst-ts-pdf-exporter"]
 raster = ["typst-ts-raster-exporter"]
 serde-json = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/json"]
 serde-rmp = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/rmp"]
+svg = ["typst-ts-svg-exporter"]
 tir = ["typst-ts-tir-exporter"]
-default = ["pdf", "raster", "serde-json", "serde-rmp", "tir"]
+default = ["pdf", "raster", "serde-json", "serde-rmp", "svg", "tir"]
