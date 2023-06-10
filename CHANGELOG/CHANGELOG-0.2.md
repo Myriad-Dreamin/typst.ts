@@ -1,6 +1,6 @@
-# v0.2.1
+# v0.2.2
 
-## Changelog since v0.2.1
+## Changelog since v0.2.2
 
 **Full Changelog**: https://github.com/Myriad-Dreamin/typst.ts/compare/v0.2.1...v0.2.2
 
