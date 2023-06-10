@@ -2,6 +2,26 @@
 
 ## Changelog since v0.2.1
 
+**Full Changelog**: https://github.com/Myriad-Dreamin/typst.ts/compare/v0.2.1...v0.2.2
+
+### Security Notes
+
+No new security note.
+
+### Changes
+
+- cli: remove web_socket exporter in https://github.com/Myriad-Dreamin/typst.ts/pull/118
+
+### External Feature
+
+- cli: use human-panic in https://github.com/Myriad-Dreamin/typst.ts/pull/120
+- pkg::core: sema layer with link annotations in https://github.com/Myriad-Dreamin/typst.ts/pull/124
+- upstream: upgrade typst to v0.5.0 in https://github.com/Myriad-Dreamin/typst.ts/pull/125
+
+# v0.2.1
+
+## Changelog since v0.2.1
+
 **Full Changelog**: https://github.com/Myriad-Dreamin/typst.ts/compare/v0.2.0...v0.2.1
 
 ### Bug fix

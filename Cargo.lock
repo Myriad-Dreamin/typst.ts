@@ -3140,6 +3140,7 @@ checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
 [[package]]
 name = "typst"
 version = "0.5.0"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#029b6d7ab6b9b36ce842dae49afa8a3c8c9d5f1d"
 dependencies = [
  "bitflags 2.3.1",
  "bytemuck",
@@ -3181,6 +3182,7 @@ dependencies = [
 [[package]]
 name = "typst-library"
 version = "0.5.0"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#029b6d7ab6b9b36ce842dae49afa8a3c8c9d5f1d"
 dependencies = [
  "az",
  "chinese-number",
@@ -3219,6 +3221,7 @@ dependencies = [
 [[package]]
 name = "typst-macros"
 version = "0.5.0"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#029b6d7ab6b9b36ce842dae49afa8a3c8c9d5f1d"
 dependencies = [
  "heck",
  "proc-macro2",
