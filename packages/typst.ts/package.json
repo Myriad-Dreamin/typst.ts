@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst.ts",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "run Typst in JavaScriptWorld.",
   "keywords": [
     "TypeScript",
