@@ -8,5 +8,6 @@ index.html
 *.rmp
 *.bin
 *.tsbuildinfo
+*.ts.map
 esbuild.*
 .eslint*
