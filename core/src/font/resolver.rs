@@ -319,7 +319,9 @@ impl IGlyphProvider for PartialFontGlyphProvider {
 #[cfg(test)]
 mod tests {
     use typst::{
-        font::{Coverage, Font, FontFlags, FontInfo, FontMetrics, FontVariant, LineMetrics},
+        font::FontVariant,
+        font::{Coverage, FontFlags, FontInfo},
+        font::{Font, FontMetrics, LineMetrics},
         geom::Em,
     };
 

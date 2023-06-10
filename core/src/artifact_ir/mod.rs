@@ -412,8 +412,8 @@ impl ArtifactBuilder {
         Stroke {
             paint: self.write_paint(&stroke.paint),
             thickness: stroke.thickness.into(),
-            line_cap: stroke.line_cap.clone().into(),
-            line_join: stroke.line_join.clone().into(),
+            line_cap: stroke.line_cap.into(),
+            line_join: stroke.line_join.into(),
             dash_pattern: stroke
                 .dash_pattern
                 .clone()

@@ -220,7 +220,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
 
     /// Get source by id.
     pub fn source(&self, id: SourceId) -> &Source {
-        self.slots[id.into_u16() as usize]
+        self.slots[id.as_u16() as usize]
             .source
             // the value should be computed
             .compute_ref(|| Err(FileError::Other))
