@@ -1,13 +1,15 @@
 use std::{
+    cell::Cell,
     path::{Path, PathBuf},
     time::SystemTime,
 };
 
+use chrono::Datelike;
 use comemo::Prehashed;
 use serde::{Deserialize, Serialize};
 use typst::{
     diag::FileResult,
-    eval::Library,
+    eval::{Datetime, Library},
     font::{Font, FontBook},
     syntax::{Source, SourceId},
     util::Buffer,
@@ -39,6 +41,7 @@ pub struct CompilerWorld<F: CompilerFeat> {
     library: Prehashed<Library>,
     pub font_resolver: FontResolverImpl,
     vfs: Vfs<F::M>,
+    today: Cell<Option<Datetime>>,
 }
 
 impl<F: CompilerFeat> CompilerWorld<F> {
@@ -53,6 +56,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             library,
             font_resolver,
             main: SourceId::detached(),
+            today: Cell::new(None),
             vfs,
         }
     }
@@ -89,6 +93,23 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
 
     fn file(&self, path: &Path) -> FileResult<Buffer> {
         self.vfs.file(path)
+    }
+
+    fn today(&self, offset: Option<i64>) -> Option<Datetime> {
+        if self.today.get().is_none() {
+            let datetime = match offset {
+                None => chrono::Local::now().naive_local(),
+                Some(o) => (chrono::Utc::now() + chrono::Duration::hours(o)).naive_utc(),
+            };
+
+            self.today.set(Some(Datetime::from_ymd(
+                datetime.year(),
+                datetime.month().try_into().ok()?,
+                datetime.day().try_into().ok()?,
+            )?))
+        }
+
+        self.today.get()
     }
 }
 
