@@ -5,7 +5,8 @@ use typst::{
     geom::{Axis, Dir},
 };
 
-use crate::{sk, utils::AbsExt, RenderFeature, SvgRenderTask};
+use super::SvgRenderTask;
+use crate::{sk, utils::AbsExt, RenderFeature};
 
 pub struct TextFlow {
     dir: Dir,
@@ -74,7 +75,7 @@ impl TextFlow {
     }
 }
 
-impl<Feat: RenderFeature> SvgRenderTask<Feat> {
+impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
     fn append_text_font(&mut self, font: &typst::font::Font) -> u32 {
         if let Some(&font) = self.font_map.get(font.info()) {
             return font;

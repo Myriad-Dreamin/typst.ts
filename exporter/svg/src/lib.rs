@@ -3,27 +3,27 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use ir::{DefId, FlatSvgItem, GroupRef, Module, ModuleBuilder, TransformItem};
+use ir::{Module, ModuleBuilder, StyleNs, TransformItem};
+use render::SvgRenderTask;
 pub(crate) use tiny_skia as sk;
 
 use typst::diag::SourceResult;
 use typst::doc::{Document, Frame};
-use typst::font::FontInfo;
+use typst::geom::Axes;
 use typst::World;
+use typst_ts_core::annotation::link::AnnotationProcessor;
 use typst_ts_core::annotation::AnnotationList;
 use typst_ts_core::error::prelude::*;
 use typst_ts_core::font::{FontGlyphProvider, GlyphProvider};
 use typst_ts_core::{Exporter, TextContent};
-use utils::{AbsExt, PerfEvent};
+use utils::AbsExt;
 
 pub(crate) mod annotation;
 pub(crate) mod content;
-pub(crate) mod image;
 pub(crate) mod ir;
 pub(crate) mod lowering;
-pub(crate) mod shape;
+pub(crate) mod render;
 pub(crate) mod svg;
-pub(crate) mod text;
 pub(crate) mod utils;
 
 pub trait RenderFeature {
@@ -36,46 +36,34 @@ impl RenderFeature for DefaultRenderFeature {
     const ENABLE_TRACING: bool = false;
 }
 
-pub struct SvgRenderTask<Feat: RenderFeature = DefaultRenderFeature> {
+pub struct SvgTask<Feat: RenderFeature = DefaultRenderFeature> {
     glyph_provider: GlyphProvider,
+    annotation_proc: AnnotationProcessor,
 
+    style_defs: HashMap<(StyleNs, Arc<str>), (String, u32)>,
     glyph_defs: HashMap<String, (String, u32)>,
     clip_paths: HashMap<String, u32>,
 
-    module: Arc<Module>,
-
-    page_off: usize,
-    width_px: u32,
-    height_px: u32,
-    raw_height: f32,
-
     pub text_content: TextContent,
     pub annotations: AnnotationList,
-
-    font_map: HashMap<FontInfo, u32>,
 
     // errors: Vec<Error>,
     _feat_phantom: std::marker::PhantomData<Feat>,
 }
 
-impl<Feat: RenderFeature> SvgRenderTask<Feat> {
-    pub fn new() -> ZResult<Self> {
+impl<Feat: RenderFeature> SvgTask<Feat> {
+    pub fn new(doc: &Document) -> ZResult<Self> {
         let default_glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
 
         Ok(Self {
             glyph_provider: default_glyph_provider,
+            annotation_proc: AnnotationProcessor::new(doc),
+            style_defs: HashMap::default(),
             glyph_defs: HashMap::default(),
             clip_paths: HashMap::default(),
 
-            module: Arc::new(Module::default()),
-            page_off: 0,
-            width_px: 0,
-            height_px: 0,
-            raw_height: 0.,
-
             text_content: TextContent::default(),
             annotations: AnnotationList::default(),
-            font_map: HashMap::default(),
 
             _feat_phantom: Default::default(),
         })
@@ -85,96 +73,60 @@ impl<Feat: RenderFeature> SvgRenderTask<Feat> {
         self.glyph_provider = glyph_provider;
     }
 
-    #[inline]
-    fn perf_event(&self, _name: &'static str) -> Option<PerfEvent> {
-        None
+    /// Directly render a frame into the canvas.
+    pub fn render(&mut self, input: Arc<Document>, svg_body: &mut Vec<String>) -> ZResult<()> {
+        let mut acc_height = 0f32;
+        for (idx, page) in input.pages.iter().enumerate() {
+            let (item, size) = self.render_frame(idx, page).unwrap();
+            let item = format!(
+                r#"<g transform="translate(0, {})" >{}</g>"#,
+                acc_height, item
+            );
+
+            svg_body.push(item);
+            acc_height += size.y as f32;
+        }
+
+        Ok(())
     }
 
     /// Directly render a frame into the canvas.
-    pub fn render(&mut self, frame: &Frame) -> ZResult<String> {
-        let item = self.lower(frame)?;
+    pub fn render_frame(&mut self, idx: usize, frame: &Frame) -> ZResult<(String, Axes<u32>)> {
+        let item = self.lower(frame);
         let (entry, module) = item.flatten();
-        self.module = Arc::new(module);
 
-        let root = self.module.get_item(entry).cloned();
-        if let Some(FlatSvgItem::Group(root)) = root {
-            return self.render_frame(entry, &root);
-        }
+        let (width_px, height_px) = {
+            let size = frame.size();
+            let width_px = (size.x.to_pt() as f32).round().max(1.0) as u32;
+            let height_px = (size.y.to_pt() as f32).round().max(1.0) as u32;
 
-        Err(error_once!("SvgRenderTask.RootNotAGroup"))
-    }
+            (width_px, height_px)
+        };
 
-    /// Render a frame into the canvas.
-    fn render_frame(&mut self, frame_id: DefId, frame: &GroupRef) -> ZResult<String> {
-        let mut g = vec!["<g>".to_owned()];
+        let default_glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
 
-        for (pos, item) in frame.0.iter() {
-            g.push(format!(
-                r#"<g transform="translate({},{})" >"#,
-                pos.x.to_pt(),
-                pos.y.to_pt()
-            ));
-            g.push(self.render_item(frame_id.make_absolute(*item))?);
-            g.push("</g>".to_owned());
-        }
+        let mut t = SvgRenderTask::<DefaultRenderFeature> {
+            glyph_provider: default_glyph_provider,
 
-        g.push("</g>".to_owned());
+            module: &module,
 
-        Ok(g.join(""))
-    }
+            style_defs: &mut self.style_defs,
+            glyph_defs: &mut self.glyph_defs,
+            clip_paths: &mut self.clip_paths,
+            text_content: &mut self.text_content,
+            annotations: &mut self.annotations,
 
-    fn get_css(&mut self, transform: &TransformItem) -> String {
-        match transform {
-            TransformItem::Matrix(m) => {
-                format!(
-                    r#"transform="matrix({},{},{},{},{},{})""#,
-                    m.sx.get(),
-                    m.ky.get(),
-                    m.kx.get(),
-                    m.sy.get(),
-                    m.tx.to_pt(),
-                    m.ty.to_pt()
-                )
-            }
-            // TransformItem::Translate(tx, ty) => format!("translate({},{})", tx, ty),
-            // TransformItem::Scale(sx, sy) => format!("scale({},{})", sx, sy),
-            // TransformItem::Rotate(angle) => format!("rotate({})", angle),
-            // TransformItem::SkewX(angle) => format!("skewX({})", angle),
-            // TransformItem::SkewY(angle) => format!("skewY({})", angle),
-            TransformItem::Clip(c) => {
-                let clip_id;
-                if let Some(c) = self.clip_paths.get(&c.d) {
-                    clip_id = *c;
-                } else {
-                    let cid = self.clip_paths.len() as u32;
-                    self.clip_paths.insert(c.d.clone(), cid);
-                    clip_id = cid;
-                }
+            page_off: idx,
+            width_px,
+            height_px,
+            raw_height: height_px as f32,
 
-                format!(r##"clip-path="url(#c{:x})""##, clip_id)
-            }
-        }
-    }
+            font_map: HashMap::default(),
 
-    fn render_item(&mut self, def_id: DefId) -> ZResult<String> {
-        let item = self.module.get_item(def_id).unwrap().clone();
-        match item {
-            FlatSvgItem::Group(group) => self.render_frame(def_id, &group),
-            FlatSvgItem::Text(text) => self.render_text(&text),
-            FlatSvgItem::Path(path) => self.render_path(&path),
-            FlatSvgItem::Item(transformed) => {
-                let item = self.render_item(def_id.make_absolute(transformed.1))?;
-                Ok(format!(
-                    r#"<g {}>{}</g>"#,
-                    self.get_css(&transformed.0),
-                    item
-                ))
-            }
-            FlatSvgItem::Image(image) => self.render_image(&image.image, image.size),
-            FlatSvgItem::Glyph(_) | FlatSvgItem::None => {
-                panic!("SvgRenderTask.RenderFrame.UnknownItem {:?}", item)
-            }
-        }
+            _feat_phantom: Default::default(),
+        };
+
+        Ok((t.render_item(entry)?, Axes::new(width_px, height_px)))
     }
 }
 
@@ -183,39 +135,20 @@ pub struct SvgExporter {}
 
 impl Exporter<Document, String> for SvgExporter {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<String> {
+        // todo: without page
+        let w = output.pages[0].width().to_pt();
+        let h = output.pages[0].height().to_pt() * output.pages.len() as f64;
         let header = format!(
-            r#"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 {:.3} {:.3}" >"#,
-            // todo: without page
-            output.pages[0].width().to_pt(),
-            output.pages[0].height().to_pt() * output.pages.len() as f64,
+            r#"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 {:.3} {:.3}" width="{:.3}" height="{:.3}" >"#,
+            w, h, w, h,
         );
         let mut svg = vec![header];
         let mut svg_body = vec![];
 
-        let mut t = SvgRenderTask::<DefaultRenderFeature>::new().unwrap();
+        println!("SvgExporter.Export {:#?}", output);
 
-        let mut acc_height = 0f32;
-        for (idx, page) in output.pages.iter().enumerate() {
-            let (width_px, height_px) = {
-                let size = page.size();
-                let width_px = (size.x.to_pt() as f32).round().max(1.0) as u32;
-                let height_px = (size.y.to_pt() as f32).round().max(1.0) as u32;
-
-                (width_px, height_px)
-            };
-            t.page_off = idx;
-            t.width_px = width_px;
-            t.height_px = height_px;
-            t.raw_height = height_px as f32;
-            let item = t.render(page).unwrap();
-            let item = format!(
-                r#"<g transform="translate(0, {})" >{}</g>"#,
-                acc_height, item
-            );
-
-            svg_body.push(item);
-            acc_height += height_px as f32;
-        }
+        let mut t = SvgTask::<DefaultRenderFeature>::new(&output).unwrap();
+        t.render(output, &mut svg_body).unwrap();
 
         svg.push("<defs>".to_owned());
         svg.push("<g>".to_owned());
@@ -236,8 +169,142 @@ impl Exporter<Document, String> for SvgExporter {
         }
 
         svg.push("</defs>".to_owned());
+        // var elements = document.getElementsByClassName('childbox');
+        // for(var i=0; i<elements.length; i++) {
+        //   elements[i].onmouseleave = function(){
+        //     this.style.fill = "blue";
+        // };
+        // }
+
+        svg.push(r#"<style type="text/css">"#.to_owned());
+        svg.push(
+            r#"
+        g.t { pointer-events: bounding-box; }
+        svg { --glyph_fill: black; }
+        .pseudo-link { fill: transparent; cursor: pointer; pointer-events: all; }
+        .outline_glyph { fill: var(--glyph_fill); }
+        .outline_glyph { transition: 0.2s all; }
+        .hover .t { --glyph_fill: #66BAB7; }
+        .t:hover { --glyph_fill: #F75C2F; }"#
+                .replace("        ", ""),
+        );
+        let mut g = t.style_defs.into_iter().collect::<Vec<_>>();
+        g.sort_by(|a, b| a.1 .1.cmp(&b.1 .1));
+        svg.extend(g.into_iter().map(|v| v.1 .0));
+        svg.push("</style>".to_owned());
         svg.append(&mut svg_body);
 
+        svg.push(r#"<script type="text/javascript">"#.to_owned());
+        svg.push(r#"<![CDATA["#.to_owned());
+        svg.push(
+            r#"
+        // debounce https://stackoverflow.com/questions/23181243/throttling-a-mousemove-event-to-fire-no-more-than-5-times-a-second  
+        // ignore fast events, good for capturing double click
+        // @param (callback): function to be run when done
+        // @param (delay): integer in milliseconds
+        // @param (id): string value of a unique event id
+        // @doc (event.timeStamp): http://api.jquery.com/event.timeStamp/
+        // @bug (event.currentTime): https://bugzilla.mozilla.org/show_bug.cgi?id=238041
+        var ignoredEvent = (function () {
+            var last = {},
+                diff, time;
+        
+            return function (callback, delay, id) {
+                time = (new Date).getTime();
+                id = id || 'ignored event';
+                diff = last[id] ? time - last[id] : time;
+        
+                if (diff > delay) {
+                    last[id] = time;
+                    callback();
+                }
+            };
+        })();
+
+        var elements = document.getElementsByClassName('pseudo-link');
+
+        var overLapping = function(a, b){
+            var aRect = a.getBoundingClientRect();
+            var bRect = b.getBoundingClientRect();
+            return !(aRect.right < bRect.left || 
+                    aRect.left > bRect.right || 
+                    aRect.bottom < bRect.top || 
+                    aRect.top > bRect.bottom);
+        }
+        var searchIntersections = function(){
+            let parent = undefined, current = event.target;
+            while (current) {
+              if (current.classList.contains('group')) {
+                parent = current;
+                break;
+              }
+              current = current.parentElement;
+            }
+            if(!current) {
+              console.log("no group found");
+              return;
+            }
+            const group = parent;
+            const children = group.children;
+            const childCount = children.length;
+
+            const res = [];
+
+            for (let i = 0; i < childCount; i++) {
+              const child = children[i];
+              if (!overLapping(child, event.target)) {
+                continue;
+              }
+              res.push(child);
+            }
+
+            return res;
+        }
+        var getRelatedElements = function () {
+            let relatedElements = event.target.relatedElements;
+            if (relatedElements === undefined || relatedElements === null) {
+              relatedElements = event.target.relatedElements = searchIntersections(event.target);
+            }
+            return relatedElements;
+        }
+        var linkmove = function(event){
+          ignoredEvent(function(){
+            const elements = getRelatedElements();
+            if(elements === undefined || elements === null) {
+              return;
+            }
+            for(var i=0; i<elements.length; i++) {
+              var elem = elements[i];
+              if (elem.classList.contains("hover")) {
+                continue;
+              }
+              elem.classList.add("hover");
+            }
+          }, 200, 'mouse-move');
+        };
+        var linkleave = function(){
+        const elements = getRelatedElements();
+          if(elements === undefined || elements === null) {
+            return;
+          }
+            for(var i=0; i<elements.length; i++) {
+                var elem = elements[i];
+                if (!elem.classList.contains("hover")) {
+                continue;
+                }
+                elem.classList.remove("hover");
+            }
+        }
+
+        for(var i=0; i<elements.length; i++) {
+            var elem = elements[i];
+            elem.addEventListener("mousemove", linkmove);
+            elem.addEventListener("mouseleave", linkleave);
+        }"#
+            .replace("        ", ""),
+        );
+        svg.push(r#"]]>"#.to_owned());
+        svg.push("</script>".to_owned());
         svg.push("</svg>".to_owned());
         let svg = svg.join("");
         Ok(svg)
@@ -249,12 +316,12 @@ pub struct SvgModuleExporter {}
 
 impl Exporter<Document, Vec<u8>> for SvgModuleExporter {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<Vec<u8>> {
-        let mut t = SvgRenderTask::<DefaultRenderFeature>::new().unwrap();
+        let mut t = SvgTask::<DefaultRenderFeature>::new(&output).unwrap();
 
         let mut builder = ModuleBuilder::default();
 
         for page in output.pages.iter() {
-            let item = t.lower(page).unwrap();
+            let item = t.lower(page);
             let _entry_id = builder.build(item);
         }
 
@@ -295,6 +362,15 @@ fn serialize_module(res: &mut Vec<u8>, repr: Module) {
                 res.extend_from_slice(&id.size.y.to_f32().to_le_bytes());
                 // todo: image
                 res.extend_from_slice(id.image.data());
+            }
+            ir::FlatSvgItem::Link(id) => {
+                res.push(b'l');
+                res.extend_from_slice(id.href.as_bytes());
+                res.extend_from_slice(&id.size.x.to_f32().to_le_bytes());
+                res.extend_from_slice(&id.size.y.to_f32().to_le_bytes());
+                for a in &id.affects {
+                    res.extend_from_slice(&a.0.to_le_bytes());
+                }
             }
             ir::FlatSvgItem::Path(id) => {
                 res.push(b'p');
@@ -363,6 +439,28 @@ fn serialize_module(res: &mut Vec<u8>, repr: Module) {
                         res.extend_from_slice(&(p.sy.get() as f32).to_le_bytes());
                         res.extend_from_slice(&p.tx.to_f32().to_le_bytes());
                         res.extend_from_slice(&p.ty.to_f32().to_le_bytes());
+                    }
+                    TransformItem::Translate(t) => {
+                        res.push(b't');
+                        res.extend_from_slice(&t.x.to_f32().to_le_bytes());
+                        res.extend_from_slice(&t.y.to_f32().to_le_bytes());
+                    }
+                    TransformItem::Scale(t) => {
+                        let (sx, sy) = t.as_ref();
+                        res.push(b's');
+                        res.extend_from_slice(&(sx.get() as f32).to_le_bytes());
+                        res.extend_from_slice(&(sy.get() as f32).to_le_bytes());
+                    }
+                    TransformItem::Rotate(t) => {
+                        let r = t.as_ref();
+                        res.push(b'r');
+                        res.extend_from_slice(&(r.0 as f32).to_le_bytes());
+                    }
+                    TransformItem::Skew(t) => {
+                        let (kx, ky) = t.as_ref();
+                        res.push(b'k');
+                        res.extend_from_slice(&(kx.get() as f32).to_le_bytes());
+                        res.extend_from_slice(&(ky.get() as f32).to_le_bytes());
                     }
                 }
                 res.extend_from_slice(&id.1 .0.to_le_bytes());

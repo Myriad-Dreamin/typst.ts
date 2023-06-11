@@ -9,9 +9,10 @@ use typst_ts_core::{
     error::prelude::*,
 };
 
-use crate::{sk, utils::AbsExt, RenderFeature, SvgRenderTask};
+use super::SvgRenderTask;
+use crate::{sk, utils::AbsExt, RenderFeature};
 
-impl<Feat: RenderFeature> SvgRenderTask<Feat> {
+impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
     /// Render a semantic link
     pub(crate) fn render_link(
         &mut self,

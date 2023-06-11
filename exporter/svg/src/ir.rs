@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use ttf_parser::GlyphId;
 use typst::font::Font;
-use typst::geom::{Abs, Dir, Point, Scalar, Size, Transform};
+use typst::geom::{Abs, Axes, Dir, Point, Ratio, Scalar, Size, Transform};
 use typst::image::Image;
 
 pub type ImmutStr = Arc<str>;
@@ -12,6 +12,12 @@ pub type ImmutStr = Arc<str>;
 pub struct ImageItem {
     pub image: Image,
     pub size: Size,
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[repr(u32)]
+pub enum StyleNs {
+    Fill,
 }
 
 #[derive(Debug, Clone)]
@@ -25,6 +31,9 @@ pub enum PathStyle {
     StrokeDashArray(Arc<[Abs]>),
     StrokeWidth(Abs),
 }
+
+#[derive(Debug, Clone)]
+pub enum TextStyle {}
 
 #[derive(Debug, Clone)]
 pub struct PathItem {
@@ -56,6 +65,10 @@ pub struct TextItem {
 #[derive(Debug, Clone)]
 pub enum TransformItem {
     Matrix(Arc<Transform>),
+    Translate(Arc<Axes<Abs>>),
+    Scale(Arc<(Ratio, Ratio)>),
+    Rotate(Arc<Scalar>),
+    Skew(Arc<(Ratio, Ratio)>),
     Clip(Arc<PathItem>),
 }
 
@@ -82,8 +95,16 @@ impl DefId {
 pub struct RelativeDefId(pub i64);
 
 #[derive(Debug, Clone)]
+pub struct LinkItem {
+    pub href: ImmutStr,
+    pub size: Size,
+    pub affects: Vec<DefId>,
+}
+
+#[derive(Debug, Clone)]
 pub enum SvgItem {
     Image(Arc<ImageItem>),
+    Link(Arc<LinkItem>),
     Path(Arc<PathItem>),
     Text(Arc<TextItem>),
     Transformed(Arc<TransformedItem>),
@@ -109,6 +130,7 @@ pub enum FlatSvgItem {
     None,
     Glyph(Arc<GlyphItem>),
     Image(Arc<ImageItem>),
+    Link(Arc<LinkItem>),
     Path(Arc<PathItem>),
     Text(Arc<FlatTextItem>),
     Item(Arc<TransformedRef>),
@@ -157,6 +179,7 @@ impl ModuleBuilder {
         let resolved_item = match item {
             SvgItem::Image(image) => FlatSvgItem::Image(image),
             SvgItem::Path(path) => FlatSvgItem::Path(path),
+            SvgItem::Link(link) => FlatSvgItem::Link(link),
             SvgItem::Text(text) => {
                 let glyphs = text
                     .glyphs
