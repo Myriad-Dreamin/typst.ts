@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use typst::doc::{Destination, Frame, FrameItem, GroupItem, Meta, Position, TextItem};
-use typst::geom::{Geometry, LineCap, LineJoin, Paint, PathItem, Shape, Size, Stroke};
+use typst::geom::{Geometry, LineCap, LineJoin, Paint, PathItem, Scalar, Shape, Size, Stroke};
 use typst::image::Image;
 
 use ttf_parser::OutlineBuilder;
@@ -30,14 +30,15 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
         for (pos, item) in frame.items() {
             let item = match item {
                 FrameItem::Group(group) => self.lower_group(group),
-                FrameItem::Text(text) => self.lower_text(text),
-                FrameItem::Shape(shape, _) => self.lower_shape(shape),
-                FrameItem::Image(image, size, _) => self.lower_image(image, *size),
+                FrameItem::Text(text) => Self::lower_text(text),
+                FrameItem::Shape(shape, _) => Self::lower_shape(shape),
+                FrameItem::Image(image, size, _) => Self::lower_image(image, *size),
                 FrameItem::Meta(meta, size) => match meta {
                     Meta::Link(lnk) => match lnk {
                         Destination::Url(url) => self.lower_link(url, *size),
                         Destination::Position(dest) => self.lower_position(*dest, *size),
                         Destination::Location(loc) => {
+                            // todo: process location before lowering
                             let dest = self.annotation_proc.process_location(*loc);
                             self.lower_position(dest, *size)
                         }
@@ -85,7 +86,8 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
     }
 
     /// Lower a raster or SVG image into svg item.
-    pub(super) fn lower_image(&mut self, image: &Image, size: Size) -> SvgItem {
+    #[comemo::memoize]
+    pub(super) fn lower_image(image: &Image, size: Size) -> SvgItem {
         SvgItem::Image(Arc::new(ir::ImageItem {
             image: image.clone(),
             size,
@@ -121,7 +123,8 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
     }
 
     /// Lower a text into svg item.
-    pub(super) fn lower_text(&mut self, text: &TextItem) -> SvgItem {
+    #[comemo::memoize]
+    pub(super) fn lower_text(text: &TextItem) -> SvgItem {
         let mut glyphs = Vec::with_capacity(text.glyphs.len());
         let mut step = Vec::with_capacity(text.glyphs.len() * 2);
         for glyph in &text.glyphs {
@@ -149,14 +152,15 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
             glyphs,
             shape: Arc::new(ir::TextShape {
                 dir: text.lang.dir(),
-                ppem,
+                ppem: Scalar::from(ppem as f64),
                 fill,
             }),
         }))
     }
 
     /// Lower a geometrical shape into svg item.
-    pub(super) fn lower_shape(&mut self, shape: &Shape) -> SvgItem {
+    #[comemo::memoize]
+    pub(super) fn lower_shape(shape: &Shape) -> SvgItem {
         let mut builder = SvgPath2DBuilder(String::new());
 
         // to ensure that our shape focus on the original point
