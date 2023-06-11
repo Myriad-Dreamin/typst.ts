@@ -20,7 +20,7 @@ pub enum StyleNs {
     Fill,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum PathStyle {
     Fill(ImmutStr),
     Stroke(ImmutStr),
@@ -35,7 +35,7 @@ pub enum PathStyle {
 #[derive(Debug, Clone)]
 pub enum TextStyle {}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct PathItem {
     pub d: String,
     pub styles: Vec<PathStyle>,
@@ -47,10 +47,10 @@ pub enum GlyphItem {
     Raw(Font, GlyphId),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct TextShape {
     pub dir: Dir,
-    pub ppem: f32,
+    pub ppem: Scalar,
     pub fill: ImmutStr,
 }
 
@@ -78,7 +78,7 @@ pub struct TransformedItem(pub TransformItem, pub SvgItem);
 #[derive(Debug, Clone)]
 pub struct GroupItem(pub Arc<[(Point, SvgItem)]>);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub struct DefId(pub u64);
 
 impl DefId {
@@ -111,7 +111,7 @@ pub enum SvgItem {
     Group(Arc<GroupItem>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct FlatTextItem {
     pub content: ImmutStr,
     pub glyphs: Vec<DefId>,

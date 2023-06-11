@@ -155,46 +155,7 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
 
     /// Render a geometrical shape into the canvas.
     fn render_path(&mut self, path: &PathItem) -> ZResult<String> {
-        let mut p = vec!["<path ".to_owned()];
-        p.push(format!(r#"d="{}" "#, path.d));
-        for style in &path.styles {
-            match style {
-                PathStyle::Fill(color) => {
-                    p.push(format!(r#"fill="{}" "#, color));
-                }
-                PathStyle::Stroke(color) => {
-                    p.push(format!(r#"stroke="{}" "#, color));
-                }
-                PathStyle::StrokeWidth(width) => {
-                    p.push(format!(r#"stroke-width="{}" "#, width.to_f32()));
-                }
-                PathStyle::StrokeLineCap(cap) => {
-                    p.push(format!(r#"stroke-linecap="{}" "#, cap));
-                }
-                PathStyle::StrokeLineJoin(join) => {
-                    p.push(format!(r#"stroke-linejoin="{}" "#, join));
-                }
-                PathStyle::StrokeMitterLimit(limit) => {
-                    p.push(format!(r#"stroke-miterlimit="{}" "#, limit.0));
-                }
-                PathStyle::StrokeDashArray(array) => {
-                    p.push(r#"stroke-dasharray="#.to_owned());
-                    for (i, v) in array.iter().enumerate() {
-                        if i > 0 {
-                            p.push(" ".to_owned());
-                        }
-                        p.push(format!("{}", v.to_f32()));
-                    }
-                    p.push(r#"" "#.to_owned());
-                }
-                PathStyle::StrokeDashOffset(offset) => {
-                    p.push(format!(r#"stroke-dashoffset="{}" "#, offset.to_f32()));
-                }
-            }
-        }
-        p.push("/>".to_owned());
-        let p = p.join("");
-        Ok(p)
+        render_path(path)
     }
 
     /// Render a text run into the self.canvas.
@@ -203,6 +164,8 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
 
         let mut text_list = vec![];
         let shape = &text.shape;
+
+        let ppem = shape.ppem.0 as f32;
 
         let fill = if shape.fill.as_ref() == "rgba(0, 0, 0, 255)" {
             r#"tb"#.to_owned()
@@ -223,7 +186,7 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
         };
         text_list.push(format!(
             r#"<g class="t {}" transform="scale({},{})">"#,
-            fill, shape.ppem, -shape.ppem
+            fill, ppem, -ppem
         ));
 
         //  todo: fill
@@ -233,7 +196,7 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
             let t = text.step[idx];
 
             let offset = x + t.0.to_f32();
-            let ts = offset / shape.ppem;
+            let ts = offset / ppem;
 
             match glyph {
                 GlyphItem::Raw(font, id) => {
@@ -241,8 +204,8 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
                     let id = *id;
                     // todo: server side render
                     let e = self
-                        .render_svg_glyph(ts, shape.ppem, &font, id)
-                        .or_else(|| self.render_bitmap_glyph(shape.ppem, &font, id))
+                        .render_svg_glyph(ts, &font, id)
+                        .or_else(|| self.render_bitmap_glyph(&font, id))
                         .or_else(|| self.render_outline_glyph(ts, &font, id));
                     if let Some(e) = e {
                         text_list.push(e);
@@ -259,13 +222,7 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
 
     /// Render an SVG glyph into the self.canvas.
     /// More information: https://learn.microsoft.com/zh-cn/typography/opentype/spec/svg
-    fn render_svg_glyph(
-        &mut self,
-        _ts: f32,
-        _text_size: f32,
-        _font: &Font,
-        _id: GlyphId,
-    ) -> Option<String> {
+    fn render_svg_glyph(&mut self, _ts: f32, _font: &Font, _id: GlyphId) -> Option<String> {
         // let _r = self.perf_event("render_svg_glyph");
         // let glyph_image = extract_svg_glyph(self.glyph_provider.clone(), font, id)?;
 
@@ -295,12 +252,7 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
     }
 
     /// Render a bitmap glyph into the self.canvas.
-    fn render_bitmap_glyph(
-        &mut self,
-        _text_size: f32,
-        _font: &Font,
-        _id: GlyphId,
-    ) -> Option<String> {
+    fn render_bitmap_glyph(&mut self, _font: &Font, _id: GlyphId) -> Option<String> {
         // let _r = self.perf_event("render_bitmap_glyph");
         // let size = text_size.to_f32();
         // let ppem = (size * ts.sy) as u16;
@@ -334,8 +286,6 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
             console_log!("render_outline_glyph: {:?}", font.info());
         }
 
-        // todo: error handling, reuse color
-
         let glyph_data = extract_outline_glyph(self.glyph_provider.clone(), font, id)?;
         let glyph_id;
         if let Some(idx) = self.glyph_defs.get(&glyph_data) {
@@ -357,23 +307,7 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
     // todo: error handling
     pub(crate) fn render_image(&mut self, image: &Image, size: Size) -> ZResult<String> {
         let _r = self.perf_event("render_image");
-
-        let _l = self.perf_event("load_image");
-        let image_url = rasterize_embedded_image_url(image).unwrap();
-
-        // resize image to fit the view
-        let size = size;
-        let view_width = size.x.to_f32();
-        let view_height = size.y.to_f32();
-
-        let aspect = (image.width() as f32) / (image.height() as f32);
-
-        let w = view_width.max(aspect * view_height);
-        let h = w / aspect;
-        Ok(format!(
-            r#"<image x="0" y="0" width="{}" height="{}" xlink:href="{}" />"#,
-            w, h, image_url
-        ))
+        render_image(image, size)
     }
 }
 
@@ -440,4 +374,67 @@ fn rasterize_embedded_image_url(image: &Image) -> Option<String> {
     let mut data = base64::engine::general_purpose::STANDARD.encode(image.data());
     data.insert_str(0, url);
     Some(data)
+}
+
+#[comemo::memoize]
+fn render_path(path: &PathItem) -> ZResult<String> {
+    let mut p = vec!["<path ".to_owned()];
+    p.push(format!(r#"d="{}" "#, path.d));
+    for style in &path.styles {
+        match style {
+            PathStyle::Fill(color) => {
+                p.push(format!(r#"fill="{}" "#, color));
+            }
+            PathStyle::Stroke(color) => {
+                p.push(format!(r#"stroke="{}" "#, color));
+            }
+            PathStyle::StrokeWidth(width) => {
+                p.push(format!(r#"stroke-width="{}" "#, width.to_f32()));
+            }
+            PathStyle::StrokeLineCap(cap) => {
+                p.push(format!(r#"stroke-linecap="{}" "#, cap));
+            }
+            PathStyle::StrokeLineJoin(join) => {
+                p.push(format!(r#"stroke-linejoin="{}" "#, join));
+            }
+            PathStyle::StrokeMitterLimit(limit) => {
+                p.push(format!(r#"stroke-miterlimit="{}" "#, limit.0));
+            }
+            PathStyle::StrokeDashArray(array) => {
+                p.push(r#"stroke-dasharray="#.to_owned());
+                for (i, v) in array.iter().enumerate() {
+                    if i > 0 {
+                        p.push(" ".to_owned());
+                    }
+                    p.push(format!("{}", v.to_f32()));
+                }
+                p.push(r#"" "#.to_owned());
+            }
+            PathStyle::StrokeDashOffset(offset) => {
+                p.push(format!(r#"stroke-dashoffset="{}" "#, offset.to_f32()));
+            }
+        }
+    }
+    p.push("/>".to_owned());
+    let p = p.join("");
+    Ok(p)
+}
+
+#[comemo::memoize]
+fn render_image(image: &Image, size: Size) -> ZResult<String> {
+    let image_url = rasterize_embedded_image_url(image).unwrap();
+
+    // resize image to fit the view
+    let size = size;
+    let view_width = size.x.to_f32();
+    let view_height = size.y.to_f32();
+
+    let aspect = (image.width() as f32) / (image.height() as f32);
+
+    let w = view_width.max(aspect * view_height);
+    let h = w / aspect;
+    Ok(format!(
+        r#"<image x="0" y="0" width="{}" height="{}" xlink:href="{}" />"#,
+        w, h, image_url
+    ))
 }
