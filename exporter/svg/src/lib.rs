@@ -145,8 +145,6 @@ impl Exporter<Document, String> for SvgExporter {
         let mut svg = vec![header];
         let mut svg_body = vec![];
 
-        println!("SvgExporter.Export {:#?}", output);
-
         let mut t = SvgTask::<DefaultRenderFeature>::new(&output).unwrap();
         t.render(output, &mut svg_body).unwrap();
 

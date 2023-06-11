@@ -101,7 +101,6 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
             affects: vec![],
         };
 
-        println!("lower_link: {}", url);
         SvgItem::Link(Arc::new(lnk))
     }
 
@@ -118,7 +117,6 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
             affects: vec![],
         };
 
-        println!("lower_position: {:?}", pos);
         SvgItem::Link(Arc::new(lnk))
     }
 
