@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use typst::doc::{Frame, FrameItem, GroupItem, TextItem};
+use typst::doc::{Destination, Frame, FrameItem, GroupItem, Meta, Position, TextItem};
 use typst::geom::{Geometry, LineCap, LineJoin, Paint, PathItem, Shape, Size, Stroke};
 use typst::image::Image;
 
@@ -33,7 +33,17 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
                 FrameItem::Text(text) => self.lower_text(text),
                 FrameItem::Shape(shape, _) => self.lower_shape(shape),
                 FrameItem::Image(image, size, _) => self.lower_image(image, *size),
-                FrameItem::Meta(..) => continue,
+                FrameItem::Meta(meta, size) => match meta {
+                    Meta::Link(lnk) => match lnk {
+                        Destination::Url(url) => self.lower_link(url, *size),
+                        Destination::Position(dest) => self.lower_position(*dest, *size),
+                        Destination::Location(loc) => {
+                            let dest = self.annotation_proc.process_location(*loc);
+                            self.lower_position(dest, *size)
+                        }
+                    },
+                    Meta::Elem(..) | Meta::PageNumbering(..) | Meta::Hide => continue,
+                },
             };
 
             items.push((*pos, item));
@@ -46,12 +56,6 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
     fn lower_group(&mut self, group: &GroupItem) -> SvgItem {
         let mut inner = self.lower_frame(&group.frame);
 
-        println!(
-            "group.clips = {} {:#?} {:?}",
-            group.clips,
-            group.frame.size(),
-            group.transform
-        );
         if group.clips {
             let mask_box = {
                 let mut builder = SvgPath2DBuilder::default();
@@ -86,6 +90,34 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
             image: image.clone(),
             size,
         }))
+    }
+
+    pub(super) fn lower_link(&self, url: &str, size: Size) -> ir::SvgItem {
+        let lnk = ir::LinkItem {
+            href: url.into(),
+            size,
+            affects: vec![],
+        };
+
+        println!("lower_link: {}", url);
+        SvgItem::Link(Arc::new(lnk))
+    }
+
+    pub(super) fn lower_position(&self, pos: Position, size: Size) -> ir::SvgItem {
+        let lnk = ir::LinkItem {
+            href: format!(
+                "?locator=page{}&x={}&y={}",
+                pos.page,
+                pos.point.x.to_f32(),
+                pos.point.y.to_f32()
+            )
+            .into(),
+            size,
+            affects: vec![],
+        };
+
+        println!("lower_position: {:?}", pos);
+        SvgItem::Link(Arc::new(lnk))
     }
 
     /// Lower a text into svg item.

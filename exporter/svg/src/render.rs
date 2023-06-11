@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use base64::Engine;
 use typst::{
@@ -15,7 +15,7 @@ use typst::font::Font;
 
 use crate::{
     ir::{DefId, FlatSvgItem, GroupRef, Module, TransformItem},
-    ir::{FlatTextItem, GlyphItem, TextShape},
+    ir::{FlatTextItem, GlyphItem, StyleNs},
     ir::{PathItem, PathStyle},
     utils::{console_log, AbsExt, PerfEvent},
     DefaultRenderFeature, RenderFeature,
@@ -28,6 +28,7 @@ pub struct SvgRenderTask<'m, 't, Feat: RenderFeature = DefaultRenderFeature> {
     pub module: &'m Module,
     pub text_content: &'t mut TextContent,
 
+    pub style_defs: &'t mut HashMap<(StyleNs, Arc<str>), (String, u32)>,
     pub glyph_defs: &'t mut HashMap<String, (String, u32)>,
     pub clip_paths: &'t mut HashMap<String, u32>,
 
@@ -53,7 +54,10 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
             .module
             .get_item(def_id)
             .ok_or_else(|| error_once!("SvgRenderTask.ItemNotFound", def_id: def_id.0))?;
+        self.render_item_inner(def_id, item)
+    }
 
+    pub fn render_item_inner(&mut self, def_id: DefId, item: &FlatSvgItem) -> ZResult<String> {
         match item {
             FlatSvgItem::Group(group) => self.render_group(def_id, group),
             FlatSvgItem::Text(text) => self.render_text(text),
@@ -66,6 +70,12 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
                     item
                 ))
             }
+            FlatSvgItem::Link(link) => Ok(format!(
+                r#"<a xlink:href="{}" target="_blank"><rect class="pseudo-link" width="{}" height="{}"></rect></a>"#,
+                link.href.replace('&', "&amp;"),
+                link.size.x.to_pt(),
+                link.size.y.to_pt(),
+            )),
             FlatSvgItem::Image(image) => self.render_image(&image.image, image.size),
             FlatSvgItem::Glyph(_) | FlatSvgItem::None => {
                 panic!("SvgRenderTask.RenderFrame.UnknownItem {:?}", item)
@@ -75,17 +85,34 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
 
     /// Render a frame into the canvas.
     fn render_group(&mut self, group_id: DefId, group: &GroupRef) -> ZResult<String> {
-        let mut g = vec!["<g>".to_owned()];
+        let mut g = vec![format!(r#"<g class="group">"#)];
+        let mut normal_g = vec![];
+        let mut link_g = vec![];
 
         for (pos, item) in group.0.iter() {
+            let def_id = group_id.make_absolute(*item);
+            let item = self
+                .module
+                .get_item(def_id)
+                .ok_or_else(|| error_once!("SvgRenderTask.ItemNotFound", def_id: def_id.0))?;
+
+            let g = if let FlatSvgItem::Link(_) = item {
+                &mut link_g
+            } else {
+                &mut normal_g
+            };
+
             g.push(format!(
                 r#"<g transform="translate({},{})" >"#,
                 pos.x.to_pt(),
                 pos.y.to_pt()
             ));
-            g.push(self.render_item(group_id.make_absolute(*item))?);
+            g.push(self.render_item_inner(def_id, item)?);
             g.push("</g>".to_owned());
         }
+
+        g.append(&mut normal_g);
+        g.append(&mut link_g);
 
         g.push("</g>".to_owned());
 
@@ -176,9 +203,27 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
 
         let mut text_list = vec![];
         let shape = &text.shape;
+
+        let fill = if shape.fill.as_ref() == "rgba(0, 0, 0, 255)" {
+            r#"tb"#.to_owned()
+        } else {
+            // format!(r#" fill="{}" "#, shape.fill);
+            let fill_key = (StyleNs::Fill, shape.fill.clone());
+            let fill_id;
+            if let Some(idx) = self.style_defs.get(&fill_key) {
+                fill_id = idx.1;
+            } else {
+                let new_id = self.style_defs.len() as u32;
+                let fill_style = format!(r#"g.f{:x} {{ --glyph_fill: {}; }} "#, new_id, shape.fill);
+                self.style_defs.insert(fill_key, (fill_style, new_id));
+                fill_id = new_id;
+            };
+
+            format!(r#"f{:x}"#, fill_id)
+        };
         text_list.push(format!(
-            r#"<g transform="scale({},{})">"#,
-            shape.ppem, -shape.ppem
+            r#"<g class="t {}" transform="scale({},{})">"#,
+            fill, shape.ppem, -shape.ppem
         ));
 
         //  todo: fill
@@ -198,7 +243,7 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
                     let e = self
                         .render_svg_glyph(ts, shape.ppem, &font, id)
                         .or_else(|| self.render_bitmap_glyph(shape.ppem, &font, id))
-                        .or_else(|| self.render_outline_glyph(ts, shape, &font, id));
+                        .or_else(|| self.render_outline_glyph(ts, &font, id));
                     if let Some(e) = e {
                         text_list.push(e);
                     }
@@ -279,13 +324,7 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
     }
 
     /// Render an outline glyph into the canvas. This is the "normal" case.
-    fn render_outline_glyph(
-        &mut self,
-        x: f32,
-        shape: &TextShape,
-        font: &Font,
-        id: GlyphId,
-    ) -> Option<String> {
+    fn render_outline_glyph(&mut self, x: f32, font: &Font, id: GlyphId) -> Option<String> {
         let _r = self.perf_event("render_outline_glyph");
 
         // Scale is in pixel per em, but curve data is in font design units, so
@@ -304,23 +343,14 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
         } else {
             let new_id = self.glyph_defs.len() as u32;
             let symbol_def = format!(
-                r#"<symbol overflow="visible" id="g{:x}">{}</symbol>"#,
+                r#"<symbol overflow="visible" id="g{:x}" class="outline_glyph">{}</symbol>"#,
                 new_id, glyph_data
             );
             self.glyph_defs.insert(glyph_data, (symbol_def, new_id));
             glyph_id = new_id;
         }
 
-        let fill = if shape.fill.as_ref() == "rgba(0, 0, 0, 255)" {
-            r#" fill="black" "#.to_owned()
-        } else {
-            format!(r#" fill="{}" "#, shape.fill)
-        };
-
-        Some(format!(
-            r##"<use{}href="#g{:x}" x="{:.1}"/>"##,
-            fill, glyph_id, x
-        ))
+        Some(format!(r##"<use href="#g{:x}" x="{:.1}"/>"##, glyph_id, x))
     }
 
     /// Render a raster or SVG image into the canvas.

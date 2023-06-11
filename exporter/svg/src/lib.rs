@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use ir::{Module, ModuleBuilder, TransformItem};
+use ir::{Module, ModuleBuilder, StyleNs, TransformItem};
 use render::SvgRenderTask;
 pub(crate) use tiny_skia as sk;
 
@@ -11,6 +11,7 @@ use typst::diag::SourceResult;
 use typst::doc::{Document, Frame};
 use typst::geom::Axes;
 use typst::World;
+use typst_ts_core::annotation::link::AnnotationProcessor;
 use typst_ts_core::annotation::AnnotationList;
 use typst_ts_core::error::prelude::*;
 use typst_ts_core::font::{FontGlyphProvider, GlyphProvider};
@@ -37,7 +38,9 @@ impl RenderFeature for DefaultRenderFeature {
 
 pub struct SvgTask<Feat: RenderFeature = DefaultRenderFeature> {
     glyph_provider: GlyphProvider,
+    annotation_proc: AnnotationProcessor,
 
+    style_defs: HashMap<(StyleNs, Arc<str>), (String, u32)>,
     glyph_defs: HashMap<String, (String, u32)>,
     clip_paths: HashMap<String, u32>,
 
@@ -49,11 +52,13 @@ pub struct SvgTask<Feat: RenderFeature = DefaultRenderFeature> {
 }
 
 impl<Feat: RenderFeature> SvgTask<Feat> {
-    pub fn new() -> ZResult<Self> {
+    pub fn new(doc: &Document) -> ZResult<Self> {
         let default_glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
 
         Ok(Self {
             glyph_provider: default_glyph_provider,
+            annotation_proc: AnnotationProcessor::new(doc),
+            style_defs: HashMap::default(),
             glyph_defs: HashMap::default(),
             clip_paths: HashMap::default(),
 
@@ -105,6 +110,7 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
 
             module: &module,
 
+            style_defs: &mut self.style_defs,
             glyph_defs: &mut self.glyph_defs,
             clip_paths: &mut self.clip_paths,
             text_content: &mut self.text_content,
@@ -129,18 +135,19 @@ pub struct SvgExporter {}
 
 impl Exporter<Document, String> for SvgExporter {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<String> {
+        // todo: without page
+        let w = output.pages[0].width().to_pt();
+        let h = output.pages[0].height().to_pt() * output.pages.len() as f64;
         let header = format!(
-            r#"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 {:.3} {:.3}" >"#,
-            // todo: without page
-            output.pages[0].width().to_pt(),
-            output.pages[0].height().to_pt() * output.pages.len() as f64,
+            r#"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 {:.3} {:.3}" width="{:.3}" height="{:.3}" >"#,
+            w, h, w, h,
         );
         let mut svg = vec![header];
         let mut svg_body = vec![];
 
         println!("SvgExporter.Export {:#?}", output);
 
-        let mut t = SvgTask::<DefaultRenderFeature>::new().unwrap();
+        let mut t = SvgTask::<DefaultRenderFeature>::new(&output).unwrap();
         t.render(output, &mut svg_body).unwrap();
 
         svg.push("<defs>".to_owned());
@@ -162,8 +169,142 @@ impl Exporter<Document, String> for SvgExporter {
         }
 
         svg.push("</defs>".to_owned());
+        // var elements = document.getElementsByClassName('childbox');
+        // for(var i=0; i<elements.length; i++) {
+        //   elements[i].onmouseleave = function(){
+        //     this.style.fill = "blue";
+        // };
+        // }
+
+        svg.push(r#"<style type="text/css">"#.to_owned());
+        svg.push(
+            r#"
+        g.t { pointer-events: bounding-box; }
+        svg { --glyph_fill: black; }
+        .pseudo-link { fill: transparent; cursor: pointer; pointer-events: all; }
+        .outline_glyph { fill: var(--glyph_fill); }
+        .outline_glyph { transition: 0.2s all; }
+        .hover .t { --glyph_fill: #66BAB7; }
+        .t:hover { --glyph_fill: #F75C2F; }"#
+                .replace("        ", ""),
+        );
+        let mut g = t.style_defs.into_iter().collect::<Vec<_>>();
+        g.sort_by(|a, b| a.1 .1.cmp(&b.1 .1));
+        svg.extend(g.into_iter().map(|v| v.1 .0));
+        svg.push("</style>".to_owned());
         svg.append(&mut svg_body);
 
+        svg.push(r#"<script type="text/javascript">"#.to_owned());
+        svg.push(r#"<![CDATA["#.to_owned());
+        svg.push(
+            r#"
+        // debounce https://stackoverflow.com/questions/23181243/throttling-a-mousemove-event-to-fire-no-more-than-5-times-a-second  
+        // ignore fast events, good for capturing double click
+        // @param (callback): function to be run when done
+        // @param (delay): integer in milliseconds
+        // @param (id): string value of a unique event id
+        // @doc (event.timeStamp): http://api.jquery.com/event.timeStamp/
+        // @bug (event.currentTime): https://bugzilla.mozilla.org/show_bug.cgi?id=238041
+        var ignoredEvent = (function () {
+            var last = {},
+                diff, time;
+        
+            return function (callback, delay, id) {
+                time = (new Date).getTime();
+                id = id || 'ignored event';
+                diff = last[id] ? time - last[id] : time;
+        
+                if (diff > delay) {
+                    last[id] = time;
+                    callback();
+                }
+            };
+        })();
+
+        var elements = document.getElementsByClassName('pseudo-link');
+
+        var overLapping = function(a, b){
+            var aRect = a.getBoundingClientRect();
+            var bRect = b.getBoundingClientRect();
+            return !(aRect.right < bRect.left || 
+                    aRect.left > bRect.right || 
+                    aRect.bottom < bRect.top || 
+                    aRect.top > bRect.bottom);
+        }
+        var searchIntersections = function(){
+            let parent = undefined, current = event.target;
+            while (current) {
+              if (current.classList.contains('group')) {
+                parent = current;
+                break;
+              }
+              current = current.parentElement;
+            }
+            if(!current) {
+              console.log("no group found");
+              return;
+            }
+            const group = parent;
+            const children = group.children;
+            const childCount = children.length;
+
+            const res = [];
+
+            for (let i = 0; i < childCount; i++) {
+              const child = children[i];
+              if (!overLapping(child, event.target)) {
+                continue;
+              }
+              res.push(child);
+            }
+
+            return res;
+        }
+        var getRelatedElements = function () {
+            let relatedElements = event.target.relatedElements;
+            if (relatedElements === undefined || relatedElements === null) {
+              relatedElements = event.target.relatedElements = searchIntersections(event.target);
+            }
+            return relatedElements;
+        }
+        var linkmove = function(event){
+          ignoredEvent(function(){
+            const elements = getRelatedElements();
+            if(elements === undefined || elements === null) {
+              return;
+            }
+            for(var i=0; i<elements.length; i++) {
+              var elem = elements[i];
+              if (elem.classList.contains("hover")) {
+                continue;
+              }
+              elem.classList.add("hover");
+            }
+          }, 200, 'mouse-move');
+        };
+        var linkleave = function(){
+        const elements = getRelatedElements();
+          if(elements === undefined || elements === null) {
+            return;
+          }
+            for(var i=0; i<elements.length; i++) {
+                var elem = elements[i];
+                if (!elem.classList.contains("hover")) {
+                continue;
+                }
+                elem.classList.remove("hover");
+            }
+        }
+
+        for(var i=0; i<elements.length; i++) {
+            var elem = elements[i];
+            elem.addEventListener("mousemove", linkmove);
+            elem.addEventListener("mouseleave", linkleave);
+        }"#
+            .replace("        ", ""),
+        );
+        svg.push(r#"]]>"#.to_owned());
+        svg.push("</script>".to_owned());
         svg.push("</svg>".to_owned());
         let svg = svg.join("");
         Ok(svg)
@@ -175,7 +316,7 @@ pub struct SvgModuleExporter {}
 
 impl Exporter<Document, Vec<u8>> for SvgModuleExporter {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<Vec<u8>> {
-        let mut t = SvgTask::<DefaultRenderFeature>::new().unwrap();
+        let mut t = SvgTask::<DefaultRenderFeature>::new(&output).unwrap();
 
         let mut builder = ModuleBuilder::default();
 
@@ -221,6 +362,15 @@ fn serialize_module(res: &mut Vec<u8>, repr: Module) {
                 res.extend_from_slice(&id.size.y.to_f32().to_le_bytes());
                 // todo: image
                 res.extend_from_slice(id.image.data());
+            }
+            ir::FlatSvgItem::Link(id) => {
+                res.push(b'l');
+                res.extend_from_slice(id.href.as_bytes());
+                res.extend_from_slice(&id.size.x.to_f32().to_le_bytes());
+                res.extend_from_slice(&id.size.y.to_f32().to_le_bytes());
+                for a in &id.affects {
+                    res.extend_from_slice(&a.0.to_le_bytes());
+                }
             }
             ir::FlatSvgItem::Path(id) => {
                 res.push(b'p');
