@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use ttf_parser::GlyphId;
 use typst::font::Font;
-use typst::geom::{Abs, Dir, Point, Scalar, Size, Transform};
+use typst::geom::{Abs, Axes, Dir, Point, Ratio, Scalar, Size, Transform};
 use typst::image::Image;
 
 pub type ImmutStr = Arc<str>;
@@ -25,6 +25,9 @@ pub enum PathStyle {
     StrokeDashArray(Arc<[Abs]>),
     StrokeWidth(Abs),
 }
+
+#[derive(Debug, Clone)]
+pub enum TextStyle {}
 
 #[derive(Debug, Clone)]
 pub struct PathItem {
@@ -56,6 +59,10 @@ pub struct TextItem {
 #[derive(Debug, Clone)]
 pub enum TransformItem {
     Matrix(Arc<Transform>),
+    Translate(Arc<Axes<Abs>>),
+    Scale(Arc<(Ratio, Ratio)>),
+    Rotate(Arc<Scalar>),
+    Skew(Arc<(Ratio, Ratio)>),
     Clip(Arc<PathItem>),
 }
 

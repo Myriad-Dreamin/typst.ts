@@ -3,27 +3,26 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use ir::{DefId, FlatSvgItem, GroupRef, Module, ModuleBuilder, TransformItem};
+use ir::{Module, ModuleBuilder, TransformItem};
+use render::SvgRenderTask;
 pub(crate) use tiny_skia as sk;
 
 use typst::diag::SourceResult;
 use typst::doc::{Document, Frame};
-use typst::font::FontInfo;
+use typst::geom::Axes;
 use typst::World;
 use typst_ts_core::annotation::AnnotationList;
 use typst_ts_core::error::prelude::*;
 use typst_ts_core::font::{FontGlyphProvider, GlyphProvider};
 use typst_ts_core::{Exporter, TextContent};
-use utils::{AbsExt, PerfEvent};
+use utils::AbsExt;
 
 pub(crate) mod annotation;
 pub(crate) mod content;
-pub(crate) mod image;
 pub(crate) mod ir;
 pub(crate) mod lowering;
-pub(crate) mod shape;
+pub(crate) mod render;
 pub(crate) mod svg;
-pub(crate) mod text;
 pub(crate) mod utils;
 
 pub trait RenderFeature {
@@ -36,29 +35,20 @@ impl RenderFeature for DefaultRenderFeature {
     const ENABLE_TRACING: bool = false;
 }
 
-pub struct SvgRenderTask<Feat: RenderFeature = DefaultRenderFeature> {
+pub struct SvgTask<Feat: RenderFeature = DefaultRenderFeature> {
     glyph_provider: GlyphProvider,
 
     glyph_defs: HashMap<String, (String, u32)>,
     clip_paths: HashMap<String, u32>,
 
-    module: Arc<Module>,
-
-    page_off: usize,
-    width_px: u32,
-    height_px: u32,
-    raw_height: f32,
-
     pub text_content: TextContent,
     pub annotations: AnnotationList,
-
-    font_map: HashMap<FontInfo, u32>,
 
     // errors: Vec<Error>,
     _feat_phantom: std::marker::PhantomData<Feat>,
 }
 
-impl<Feat: RenderFeature> SvgRenderTask<Feat> {
+impl<Feat: RenderFeature> SvgTask<Feat> {
     pub fn new() -> ZResult<Self> {
         let default_glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
 
@@ -67,15 +57,8 @@ impl<Feat: RenderFeature> SvgRenderTask<Feat> {
             glyph_defs: HashMap::default(),
             clip_paths: HashMap::default(),
 
-            module: Arc::new(Module::default()),
-            page_off: 0,
-            width_px: 0,
-            height_px: 0,
-            raw_height: 0.,
-
             text_content: TextContent::default(),
             annotations: AnnotationList::default(),
-            font_map: HashMap::default(),
 
             _feat_phantom: Default::default(),
         })
@@ -85,96 +68,59 @@ impl<Feat: RenderFeature> SvgRenderTask<Feat> {
         self.glyph_provider = glyph_provider;
     }
 
-    #[inline]
-    fn perf_event(&self, _name: &'static str) -> Option<PerfEvent> {
-        None
+    /// Directly render a frame into the canvas.
+    pub fn render(&mut self, input: Arc<Document>, svg_body: &mut Vec<String>) -> ZResult<()> {
+        let mut acc_height = 0f32;
+        for (idx, page) in input.pages.iter().enumerate() {
+            let (item, size) = self.render_frame(idx, page).unwrap();
+            let item = format!(
+                r#"<g transform="translate(0, {})" >{}</g>"#,
+                acc_height, item
+            );
+
+            svg_body.push(item);
+            acc_height += size.y as f32;
+        }
+
+        Ok(())
     }
 
     /// Directly render a frame into the canvas.
-    pub fn render(&mut self, frame: &Frame) -> ZResult<String> {
-        let item = self.lower(frame)?;
+    pub fn render_frame(&mut self, idx: usize, frame: &Frame) -> ZResult<(String, Axes<u32>)> {
+        let item = self.lower(frame);
         let (entry, module) = item.flatten();
-        self.module = Arc::new(module);
 
-        let root = self.module.get_item(entry).cloned();
-        if let Some(FlatSvgItem::Group(root)) = root {
-            return self.render_frame(entry, &root);
-        }
+        let (width_px, height_px) = {
+            let size = frame.size();
+            let width_px = (size.x.to_pt() as f32).round().max(1.0) as u32;
+            let height_px = (size.y.to_pt() as f32).round().max(1.0) as u32;
 
-        Err(error_once!("SvgRenderTask.RootNotAGroup"))
-    }
+            (width_px, height_px)
+        };
 
-    /// Render a frame into the canvas.
-    fn render_frame(&mut self, frame_id: DefId, frame: &GroupRef) -> ZResult<String> {
-        let mut g = vec!["<g>".to_owned()];
+        let default_glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
 
-        for (pos, item) in frame.0.iter() {
-            g.push(format!(
-                r#"<g transform="translate({},{})" >"#,
-                pos.x.to_pt(),
-                pos.y.to_pt()
-            ));
-            g.push(self.render_item(frame_id.make_absolute(*item))?);
-            g.push("</g>".to_owned());
-        }
+        let mut t = SvgRenderTask::<DefaultRenderFeature> {
+            glyph_provider: default_glyph_provider,
 
-        g.push("</g>".to_owned());
+            module: &module,
 
-        Ok(g.join(""))
-    }
+            glyph_defs: &mut self.glyph_defs,
+            clip_paths: &mut self.clip_paths,
+            text_content: &mut self.text_content,
+            annotations: &mut self.annotations,
 
-    fn get_css(&mut self, transform: &TransformItem) -> String {
-        match transform {
-            TransformItem::Matrix(m) => {
-                format!(
-                    r#"transform="matrix({},{},{},{},{},{})""#,
-                    m.sx.get(),
-                    m.ky.get(),
-                    m.kx.get(),
-                    m.sy.get(),
-                    m.tx.to_pt(),
-                    m.ty.to_pt()
-                )
-            }
-            // TransformItem::Translate(tx, ty) => format!("translate({},{})", tx, ty),
-            // TransformItem::Scale(sx, sy) => format!("scale({},{})", sx, sy),
-            // TransformItem::Rotate(angle) => format!("rotate({})", angle),
-            // TransformItem::SkewX(angle) => format!("skewX({})", angle),
-            // TransformItem::SkewY(angle) => format!("skewY({})", angle),
-            TransformItem::Clip(c) => {
-                let clip_id;
-                if let Some(c) = self.clip_paths.get(&c.d) {
-                    clip_id = *c;
-                } else {
-                    let cid = self.clip_paths.len() as u32;
-                    self.clip_paths.insert(c.d.clone(), cid);
-                    clip_id = cid;
-                }
+            page_off: idx,
+            width_px,
+            height_px,
+            raw_height: height_px as f32,
 
-                format!(r##"clip-path="url(#c{:x})""##, clip_id)
-            }
-        }
-    }
+            font_map: HashMap::default(),
 
-    fn render_item(&mut self, def_id: DefId) -> ZResult<String> {
-        let item = self.module.get_item(def_id).unwrap().clone();
-        match item {
-            FlatSvgItem::Group(group) => self.render_frame(def_id, &group),
-            FlatSvgItem::Text(text) => self.render_text(&text),
-            FlatSvgItem::Path(path) => self.render_path(&path),
-            FlatSvgItem::Item(transformed) => {
-                let item = self.render_item(def_id.make_absolute(transformed.1))?;
-                Ok(format!(
-                    r#"<g {}>{}</g>"#,
-                    self.get_css(&transformed.0),
-                    item
-                ))
-            }
-            FlatSvgItem::Image(image) => self.render_image(&image.image, image.size),
-            FlatSvgItem::Glyph(_) | FlatSvgItem::None => {
-                panic!("SvgRenderTask.RenderFrame.UnknownItem {:?}", item)
-            }
-        }
+            _feat_phantom: Default::default(),
+        };
+
+        Ok((t.render_item(entry)?, Axes::new(width_px, height_px)))
     }
 }
 
@@ -192,30 +138,10 @@ impl Exporter<Document, String> for SvgExporter {
         let mut svg = vec![header];
         let mut svg_body = vec![];
 
-        let mut t = SvgRenderTask::<DefaultRenderFeature>::new().unwrap();
+        println!("SvgExporter.Export {:#?}", output);
 
-        let mut acc_height = 0f32;
-        for (idx, page) in output.pages.iter().enumerate() {
-            let (width_px, height_px) = {
-                let size = page.size();
-                let width_px = (size.x.to_pt() as f32).round().max(1.0) as u32;
-                let height_px = (size.y.to_pt() as f32).round().max(1.0) as u32;
-
-                (width_px, height_px)
-            };
-            t.page_off = idx;
-            t.width_px = width_px;
-            t.height_px = height_px;
-            t.raw_height = height_px as f32;
-            let item = t.render(page).unwrap();
-            let item = format!(
-                r#"<g transform="translate(0, {})" >{}</g>"#,
-                acc_height, item
-            );
-
-            svg_body.push(item);
-            acc_height += height_px as f32;
-        }
+        let mut t = SvgTask::<DefaultRenderFeature>::new().unwrap();
+        t.render(output, &mut svg_body).unwrap();
 
         svg.push("<defs>".to_owned());
         svg.push("<g>".to_owned());
@@ -249,12 +175,12 @@ pub struct SvgModuleExporter {}
 
 impl Exporter<Document, Vec<u8>> for SvgModuleExporter {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<Vec<u8>> {
-        let mut t = SvgRenderTask::<DefaultRenderFeature>::new().unwrap();
+        let mut t = SvgTask::<DefaultRenderFeature>::new().unwrap();
 
         let mut builder = ModuleBuilder::default();
 
         for page in output.pages.iter() {
-            let item = t.lower(page).unwrap();
+            let item = t.lower(page);
             let _entry_id = builder.build(item);
         }
 
@@ -363,6 +289,28 @@ fn serialize_module(res: &mut Vec<u8>, repr: Module) {
                         res.extend_from_slice(&(p.sy.get() as f32).to_le_bytes());
                         res.extend_from_slice(&p.tx.to_f32().to_le_bytes());
                         res.extend_from_slice(&p.ty.to_f32().to_le_bytes());
+                    }
+                    TransformItem::Translate(t) => {
+                        res.push(b't');
+                        res.extend_from_slice(&t.x.to_f32().to_le_bytes());
+                        res.extend_from_slice(&t.y.to_f32().to_le_bytes());
+                    }
+                    TransformItem::Scale(t) => {
+                        let (sx, sy) = t.as_ref();
+                        res.push(b's');
+                        res.extend_from_slice(&(sx.get() as f32).to_le_bytes());
+                        res.extend_from_slice(&(sy.get() as f32).to_le_bytes());
+                    }
+                    TransformItem::Rotate(t) => {
+                        let r = t.as_ref();
+                        res.push(b'r');
+                        res.extend_from_slice(&(r.0 as f32).to_le_bytes());
+                    }
+                    TransformItem::Skew(t) => {
+                        let (kx, ky) = t.as_ref();
+                        res.push(b'k');
+                        res.extend_from_slice(&(kx.get() as f32).to_le_bytes());
+                        res.extend_from_slice(&(ky.get() as f32).to_le_bytes());
                     }
                 }
                 res.extend_from_slice(&id.1 .0.to_le_bytes());
