@@ -5,20 +5,16 @@ use std::sync::Arc;
 
 use ir::{ModuleBuilder, StyleNs};
 use render::SvgRenderTask;
-pub(crate) use tiny_skia as sk;
 
 use typst::diag::SourceResult;
 use typst::doc::{Document, Frame};
 use typst::geom::Axes;
 use typst::World;
 use typst_ts_core::annotation::link::AnnotationProcessor;
-use typst_ts_core::annotation::AnnotationList;
 use typst_ts_core::error::prelude::*;
 use typst_ts_core::font::{FontGlyphProvider, GlyphProvider};
-use typst_ts_core::{Exporter, TextContent};
+use typst_ts_core::Exporter;
 
-pub(crate) mod annotation;
-pub(crate) mod content;
 pub(crate) mod ir;
 pub(crate) mod lowering;
 pub(crate) mod render;
@@ -43,9 +39,6 @@ pub struct SvgTask<Feat: RenderFeature = DefaultRenderFeature> {
     glyph_defs: HashMap<String, String>,
     clip_paths: HashMap<Arc<str>, u32>,
 
-    pub text_content: TextContent,
-    pub annotations: AnnotationList,
-
     // errors: Vec<Error>,
     _feat_phantom: std::marker::PhantomData<Feat>,
 }
@@ -60,9 +53,6 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
             style_defs: HashMap::default(),
             glyph_defs: HashMap::default(),
             clip_paths: HashMap::default(),
-
-            text_content: TextContent::default(),
-            annotations: AnnotationList::default(),
 
             _feat_phantom: Default::default(),
         })
@@ -112,8 +102,6 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
             style_defs: &mut self.style_defs,
             glyph_defs: &mut self.glyph_defs,
             clip_paths: &mut self.clip_paths,
-            text_content: &mut self.text_content,
-            annotations: &mut self.annotations,
             render_text_element: true,
 
             page_off: idx,
