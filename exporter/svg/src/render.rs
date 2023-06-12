@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use base64::Engine;
 use typst::{
@@ -30,7 +30,7 @@ pub struct SvgRenderTask<'m, 't, Feat: RenderFeature = DefaultRenderFeature> {
 
     pub style_defs: &'t mut HashMap<(StyleNs, Arc<str>), (String, u32)>,
     pub glyph_defs: &'t mut HashMap<String, (String, u32)>,
-    pub clip_paths: &'t mut HashMap<String, u32>,
+    pub clip_paths: &'t mut HashMap<Arc<str>, u32>,
 
     pub page_off: usize,
     pub width_px: u32,
@@ -58,7 +58,7 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
     }
 
     pub fn render_item_inner(&mut self, def_id: DefId, item: &FlatSvgItem) -> ZResult<String> {
-        match item {
+        match item.deref() {
             FlatSvgItem::Group(group) => self.render_group(def_id, group),
             FlatSvgItem::Text(text) => self.render_text(text),
             FlatSvgItem::Path(path) => self.render_path(path),
@@ -96,7 +96,7 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
                 .get_item(def_id)
                 .ok_or_else(|| error_once!("SvgRenderTask.ItemNotFound", def_id: def_id.0))?;
 
-            let g = if let FlatSvgItem::Link(_) = item {
+            let g = if let FlatSvgItem::Link(_) = item.deref() {
                 &mut link_g
             } else {
                 &mut normal_g
@@ -191,11 +191,10 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
 
         //  todo: fill
         let mut x = 0f32;
-        for (idx, glyph) in text.glyphs.iter().enumerate() {
+        for (offset, advance, glyph) in text.content.glyphs.iter() {
             let glyph = self.module.get_glyph(*glyph).unwrap();
-            let t = text.step[idx];
 
-            let offset = x + t.0.to_f32();
+            let offset = x + offset.to_f32();
             let ts = offset / ppem;
 
             match glyph {
@@ -213,7 +212,7 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
                 }
             }
 
-            x += t.1.to_f32();
+            x += advance.to_f32();
         }
         text_list.push("</g>".to_string());
 

@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use ir::{Module, ModuleBuilder, StyleNs, TransformItem};
+use ir::{ModuleBuilder, StyleNs};
 use render::SvgRenderTask;
 pub(crate) use tiny_skia as sk;
 
@@ -16,7 +16,6 @@ use typst_ts_core::annotation::AnnotationList;
 use typst_ts_core::error::prelude::*;
 use typst_ts_core::font::{FontGlyphProvider, GlyphProvider};
 use typst_ts_core::{Exporter, TextContent};
-use utils::AbsExt;
 
 pub(crate) mod annotation;
 pub(crate) mod content;
@@ -42,7 +41,7 @@ pub struct SvgTask<Feat: RenderFeature = DefaultRenderFeature> {
 
     style_defs: HashMap<(StyleNs, Arc<str>), (String, u32)>,
     glyph_defs: HashMap<String, (String, u32)>,
-    clip_paths: HashMap<String, u32>,
+    clip_paths: HashMap<Arc<str>, u32>,
 
     pub text_content: TextContent,
     pub annotations: AnnotationList,
@@ -198,8 +197,8 @@ impl Exporter<Document, String> for SvgExporter {
         svg.push(r#"]]>"#.to_owned());
         svg.push("</script>".to_owned());
         svg.push("</svg>".to_owned());
-        let svg = svg.join("");
-        Ok(svg)
+
+        Ok(svg.join(""))
     }
 }
 
@@ -217,154 +216,8 @@ impl Exporter<Document, Vec<u8>> for SvgModuleExporter {
             let _entry_id = builder.build(item);
         }
 
-        let mut res = vec![];
-        let repr = builder.finalize();
-        serialize_module(&mut res, repr);
+        let res = vec![];
+        let _repr = builder.finalize();
         Ok(res)
-    }
-}
-
-fn serialize_module(res: &mut Vec<u8>, repr: Module) {
-    fn serialize_glyph(res: &mut Vec<u8>, item: &ir::GlyphItem) {
-        match item {
-            ir::GlyphItem::Raw(_font, id) => {
-                res.push(b'r');
-                res.extend_from_slice(&0u32.to_le_bytes());
-                res.extend_from_slice(&id.0.to_le_bytes());
-            }
-        }
-    }
-
-    for k in repr.glyphs {
-        serialize_glyph(res, &k)
-    }
-
-    for i in repr.items {
-        match i {
-            ir::FlatSvgItem::None => {
-                res.push(b'0');
-            }
-            ir::FlatSvgItem::Glyph(id) => {
-                res.push(b'g');
-                serialize_glyph(res, id.as_ref())
-            }
-            ir::FlatSvgItem::Image(id) => {
-                res.push(b'i');
-                res.extend_from_slice(&id.size.x.to_f32().to_le_bytes());
-                res.extend_from_slice(&id.size.y.to_f32().to_le_bytes());
-                // todo: image
-                res.extend_from_slice(id.image.data());
-            }
-            ir::FlatSvgItem::Link(id) => {
-                res.push(b'l');
-                res.extend_from_slice(id.href.as_bytes());
-                res.extend_from_slice(&id.size.x.to_f32().to_le_bytes());
-                res.extend_from_slice(&id.size.y.to_f32().to_le_bytes());
-                for a in &id.affects {
-                    res.extend_from_slice(&a.0.to_le_bytes());
-                }
-            }
-            ir::FlatSvgItem::Path(id) => {
-                res.push(b'p');
-                res.extend_from_slice(id.d.as_bytes());
-                for s in &id.styles {
-                    match s {
-                        ir::PathStyle::Fill(id) => {
-                            res.push(b'f');
-                            res.extend_from_slice(id.as_bytes());
-                        }
-                        ir::PathStyle::Stroke(id) => {
-                            res.push(b's');
-                            res.extend_from_slice(id.as_bytes());
-                        }
-                        ir::PathStyle::StrokeLineCap(id) => {
-                            res.push(b'c');
-                            res.extend_from_slice(id.as_bytes());
-                        }
-                        ir::PathStyle::StrokeLineJoin(id) => {
-                            res.push(b'j');
-                            res.extend_from_slice(id.as_bytes());
-                        }
-                        ir::PathStyle::StrokeMitterLimit(id) => {
-                            res.push(b'm');
-                            res.extend_from_slice(&(id.0 as f32).to_le_bytes());
-                        }
-                        ir::PathStyle::StrokeDashOffset(id) => {
-                            res.push(b'o');
-                            res.extend_from_slice(&id.to_f32().to_le_bytes());
-                        }
-                        ir::PathStyle::StrokeDashArray(id) => {
-                            res.push(b'a');
-                            res.extend_from_slice(&id.len().to_le_bytes());
-                            for i in id.iter() {
-                                res.extend_from_slice(&i.to_f32().to_le_bytes());
-                            }
-                        }
-                        ir::PathStyle::StrokeWidth(id) => {
-                            res.push(b'w');
-                            res.extend_from_slice(&id.to_f32().to_le_bytes());
-                        }
-                    }
-                }
-            }
-            ir::FlatSvgItem::Text(id) => {
-                res.push(b't');
-                for g in &id.glyphs {
-                    res.push(b'g');
-                    res.extend_from_slice(&g.0.to_le_bytes());
-                }
-                res.extend_from_slice(id.content.as_bytes());
-                res.extend_from_slice(id.shape.fill.as_bytes());
-            }
-            ir::FlatSvgItem::Item(id) => {
-                res.push(b'i');
-                match &id.0 {
-                    TransformItem::Clip(p) => {
-                        res.push(b'c');
-                        res.extend_from_slice(p.d.as_bytes());
-                    }
-                    TransformItem::Matrix(p) => {
-                        res.push(b'm');
-                        res.extend_from_slice(&(p.sx.get() as f32).to_le_bytes());
-                        res.extend_from_slice(&(p.ky.get() as f32).to_le_bytes());
-                        res.extend_from_slice(&(p.kx.get() as f32).to_le_bytes());
-                        res.extend_from_slice(&(p.sy.get() as f32).to_le_bytes());
-                        res.extend_from_slice(&p.tx.to_f32().to_le_bytes());
-                        res.extend_from_slice(&p.ty.to_f32().to_le_bytes());
-                    }
-                    TransformItem::Translate(t) => {
-                        res.push(b't');
-                        res.extend_from_slice(&t.x.to_f32().to_le_bytes());
-                        res.extend_from_slice(&t.y.to_f32().to_le_bytes());
-                    }
-                    TransformItem::Scale(t) => {
-                        let (sx, sy) = t.as_ref();
-                        res.push(b's');
-                        res.extend_from_slice(&(sx.get() as f32).to_le_bytes());
-                        res.extend_from_slice(&(sy.get() as f32).to_le_bytes());
-                    }
-                    TransformItem::Rotate(t) => {
-                        let r = t.as_ref();
-                        res.push(b'r');
-                        res.extend_from_slice(&(r.0 as f32).to_le_bytes());
-                    }
-                    TransformItem::Skew(t) => {
-                        let (kx, ky) = t.as_ref();
-                        res.push(b'k');
-                        res.extend_from_slice(&(kx.get() as f32).to_le_bytes());
-                        res.extend_from_slice(&(ky.get() as f32).to_le_bytes());
-                    }
-                }
-                res.extend_from_slice(&id.1 .0.to_le_bytes());
-            }
-            ir::FlatSvgItem::Group(id) => {
-                res.push(b'g');
-                for item in id.0.iter() {
-                    res.extend_from_slice(&item.0.x.to_f32().to_le_bytes());
-                    res.extend_from_slice(&item.0.y.to_f32().to_le_bytes());
-                    res.extend_from_slice(&item.1 .0.to_le_bytes());
-                }
-            }
-        }
     }
 }

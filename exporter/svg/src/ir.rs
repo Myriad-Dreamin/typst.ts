@@ -37,7 +37,7 @@ pub enum TextStyle {}
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct PathItem {
-    pub d: String,
+    pub d: ImmutStr,
     pub styles: Vec<PathStyle>,
 }
 
@@ -54,11 +54,15 @@ pub struct TextShape {
     pub fill: ImmutStr,
 }
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct TextItemContent {
+    pub content: ImmutStr,
+    pub glyphs: Vec<(Abs, Abs, GlyphItem)>,
+}
+
 #[derive(Debug, Clone)]
 pub struct TextItem {
-    pub content: ImmutStr,
-    pub glyphs: Vec<GlyphItem>,
-    pub step: Arc<[(Abs, Abs)]>,
+    pub content: Arc<TextItemContent>,
     pub shape: Arc<TextShape>,
 }
 
@@ -73,10 +77,10 @@ pub enum TransformItem {
 }
 
 #[derive(Debug, Clone)]
-pub struct TransformedItem(pub TransformItem, pub SvgItem);
+pub struct TransformedItem(pub TransformItem, pub Box<SvgItem>);
 
 #[derive(Debug, Clone)]
-pub struct GroupItem(pub Arc<[(Point, SvgItem)]>);
+pub struct GroupItem(pub Vec<(Point, SvgItem)>);
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub struct DefId(pub u64);
@@ -98,24 +102,27 @@ pub struct RelativeDefId(pub i64);
 pub struct LinkItem {
     pub href: ImmutStr,
     pub size: Size,
-    pub affects: Vec<DefId>,
 }
 
 #[derive(Debug, Clone)]
 pub enum SvgItem {
-    Image(Arc<ImageItem>),
-    Link(Arc<LinkItem>),
-    Path(Arc<PathItem>),
-    Text(Arc<TextItem>),
-    Transformed(Arc<TransformedItem>),
-    Group(Arc<GroupItem>),
+    Image(ImageItem),
+    Link(LinkItem),
+    Path(PathItem),
+    Text(TextItem),
+    Transformed(TransformedItem),
+    Group(GroupItem),
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct FlatTextItemContent {
+    pub content: ImmutStr,
+    pub glyphs: Arc<[(Abs, Abs, DefId)]>,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct FlatTextItem {
-    pub content: ImmutStr,
-    pub glyphs: Vec<DefId>,
-    pub step: Arc<[(Abs, Abs)]>,
+    pub content: Arc<FlatTextItemContent>,
     pub shape: Arc<TextShape>,
 }
 
@@ -128,13 +135,13 @@ pub struct GroupRef(pub Arc<[(Point, RelativeDefId)]>);
 #[derive(Debug, Clone)]
 pub enum FlatSvgItem {
     None,
-    Glyph(Arc<GlyphItem>),
-    Image(Arc<ImageItem>),
-    Link(Arc<LinkItem>),
-    Path(Arc<PathItem>),
-    Text(Arc<FlatTextItem>),
-    Item(Arc<TransformedRef>),
-    Group(Arc<GroupRef>),
+    Glyph(GlyphItem),
+    Image(ImageItem),
+    Link(LinkItem),
+    Path(PathItem),
+    Text(FlatTextItem),
+    Item(TransformedRef),
+    Group(GroupRef),
 }
 
 #[derive(Debug, Default)]
@@ -182,30 +189,25 @@ impl ModuleBuilder {
             SvgItem::Link(link) => FlatSvgItem::Link(link),
             SvgItem::Text(text) => {
                 let glyphs = text
+                    .content
                     .glyphs
                     .iter()
                     .cloned()
-                    .map(|glyph| self.build_glyph(glyph))
-                    .collect::<Vec<_>>();
+                    .map(|(offset, advance, glyph)| (offset, advance, self.build_glyph(glyph)))
+                    .collect::<Arc<_>>();
                 let shape = text.shape.clone();
-                let content = text.content.clone();
-                let step = text.step.clone();
-                FlatSvgItem::Text(Arc::new(FlatTextItem {
-                    glyphs,
+                let content = text.content.content.clone();
+                FlatSvgItem::Text(FlatTextItem {
+                    content: Arc::new(FlatTextItemContent { content, glyphs }),
                     shape,
-                    content,
-                    step,
-                }))
+                })
             }
             SvgItem::Transformed(transformed) => {
                 let item = &transformed.1;
-                let item_id = self.build(item.clone());
+                let item_id = self.build(*item.clone());
                 let transform = transformed.0.clone();
 
-                FlatSvgItem::Item(Arc::new(TransformedRef(
-                    transform,
-                    id.make_relative(item_id),
-                )))
+                FlatSvgItem::Item(TransformedRef(transform, id.make_relative(item_id)))
             }
             SvgItem::Group(group) => {
                 let items = group
@@ -213,7 +215,7 @@ impl ModuleBuilder {
                     .iter()
                     .map(|(point, item)| (*point, id.make_relative(self.build(item.clone()))))
                     .collect::<Vec<_>>();
-                FlatSvgItem::Group(Arc::new(GroupRef(items.into())))
+                FlatSvgItem::Group(GroupRef(items.into()))
             }
         };
 
