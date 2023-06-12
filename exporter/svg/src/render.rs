@@ -36,6 +36,7 @@ pub struct SvgRenderTask<'m, 't, Feat: RenderFeature = DefaultRenderFeature> {
     pub width_px: u32,
     pub height_px: u32,
     pub raw_height: f32,
+    pub render_text_element: bool,
 
     pub font_map: HashMap<FontInfo, u32>,
 
@@ -175,7 +176,9 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
         let mut text_list = vec![];
         let shape = &text.shape;
 
+        let upem = shape.upem.0 as f32;
         let ppem = shape.ppem.0 as f32;
+        let ascender = shape.ascender.to_f32();
 
         let fill = if shape.fill.as_ref() == "#000" {
             r#"tb"#.to_owned()
@@ -188,10 +191,8 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
 
             fill_id
         };
-        text_list.push(format!(
-            r#"<g class="t {}" transform="scale({},{})">"#,
-            fill, ppem, -ppem
-        ));
+        text_list.push(format!(r#"<g class="t {}">"#, fill));
+        text_list.push(format!(r#"<g transform="scale({},{})">"#, ppem, -ppem));
 
         //  todo: fill
         let mut x = 0f32;
@@ -218,6 +219,32 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
             }
 
             x += advance.to_f32();
+        }
+
+        text_list.push("</g>".to_string());
+        if self.render_text_element {
+            // <foreignObject x="0" y="165" width="100%" height="38">
+            //   <xhtml:span class="copy-popover">Click to Copy</xhtml:span>
+            // </foreignObject>
+            // text_list.push(format!(
+            //     r#"<h5:span textLength="{}" font-size="{}" class="tsel">{}</h5:span>"#,
+            //     v,
+            //     upem * ppem,
+            //     xml::escape::escape_str_pcdata(&text.content.content),
+            // ));
+
+            text_list.push(format!(
+                r#"
+              <foreignObject x="0" y="-{}" width="{}" height="{}">
+                <h5:div class="tsel" style="font-size: {}px;">{}</h5:div>
+                </foreignObject>
+            "#,
+                ascender,
+                x,
+                upem * ppem,
+                upem * ppem,
+                xml::escape::escape_str_pcdata(&text.content.content)
+            ));
         }
         text_list.push("</g>".to_string());
 
@@ -290,7 +317,6 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
 
         // Scale is in pixel per em, but curve data is in font design units, so
         // we have to divide by units per em.
-
         if cfg!(feature = "debug_glyph_render") {
             console_log!("render_outline_glyph: {:?}", font.info());
         }
