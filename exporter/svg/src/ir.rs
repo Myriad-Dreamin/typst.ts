@@ -52,6 +52,8 @@ pub enum GlyphItem {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct TextShape {
     pub dir: Dir,
+    pub ascender: Abs,
+    pub upem: Scalar,
     pub ppem: Scalar,
     pub fill: ImmutStr,
 }

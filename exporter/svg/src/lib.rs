@@ -114,6 +114,7 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
             clip_paths: &mut self.clip_paths,
             text_content: &mut self.text_content,
             annotations: &mut self.annotations,
+            render_text_element: true,
 
             page_off: idx,
             width_px,
@@ -138,7 +139,7 @@ impl Exporter<Document, String> for SvgExporter {
         let w = output.pages[0].width().to_pt();
         let h = output.pages[0].height().to_pt() * output.pages.len() as f64;
         let header = format!(
-            r#"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 {:.3} {:.3}" width="{:.3}" height="{:.3}" >"#,
+            r#"<svg viewBox="0 0 {:.3} {:.3}" width="{:.3}" height="{:.3}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">"#,
             w, h, w, h,
         );
         let mut svg = vec![header];
@@ -177,6 +178,9 @@ impl Exporter<Document, String> for SvgExporter {
         svg.push(
             r#"
         g.t { pointer-events: bounding-box; }
+        div.tsel { position: fixed; text-align: justify; white-space: nowrap; width: 100%; height: 100%; text-align-last: justify; color: transparent;  }
+        div.tsel::-moz-selection { color: transpaent; background: #7DB9DEA0; }
+        div.tsel::selection { color: transpaent; background: #7DB9DEA0; }
         svg { --glyph_fill: black; }
         .pseudo-link { fill: transparent; cursor: pointer; pointer-events: all; }
         .outline_glyph { fill: var(--glyph_fill); }

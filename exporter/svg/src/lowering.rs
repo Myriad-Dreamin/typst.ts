@@ -152,6 +152,8 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
             }),
             shape: Arc::new(ir::TextShape {
                 dir: text.lang.dir(),
+                ascender: text.font.metrics().ascender.at(text.size),
+                upem: Scalar::from(text.font.units_per_em()),
                 ppem: Scalar::from(ppem as f64),
                 fill,
             }),
