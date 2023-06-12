@@ -25,7 +25,7 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
 
     /// Lower a frame into svg item.
     fn lower_frame(&mut self, frame: &Frame) -> SvgItem {
-        let mut items = vec![];
+        let mut items = Vec::with_capacity(frame.items().len());
 
         for (pos, item) in frame.items() {
             let item = match item {
@@ -36,11 +36,11 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
                 FrameItem::Meta(meta, size) => match meta {
                     Meta::Link(lnk) => match lnk {
                         Destination::Url(url) => self.lower_link(url, *size),
-                        Destination::Position(dest) => self.lower_position(*dest, *size),
+                        Destination::Position(dest) => Self::lower_position(*dest, *size),
                         Destination::Location(loc) => {
                             // todo: process location before lowering
                             let dest = self.annotation_proc.process_location(*loc);
-                            self.lower_position(dest, *size)
+                            Self::lower_position(dest, *size)
                         }
                     },
                     Meta::Elem(..) | Meta::PageNumbering(..) | Meta::Hide => continue,
@@ -50,7 +50,7 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
             items.push((*pos, item));
         }
 
-        SvgItem::Group(Arc::new(ir::GroupItem(items.into())))
+        SvgItem::Group(ir::GroupItem(items))
     }
 
     /// Lower a group frame with optional transform and clipping into svg item.
@@ -70,41 +70,41 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
                 builder.0
             };
 
-            inner = SvgItem::Transformed(Arc::new(ir::TransformedItem(
+            inner = SvgItem::Transformed(ir::TransformedItem(
                 TransformItem::Clip(Arc::new(ir::PathItem {
-                    d: mask_box,
+                    d: mask_box.into(),
                     styles: vec![],
                 })),
-                inner,
-            )));
+                Box::new(inner),
+            ));
         };
 
-        SvgItem::Transformed(Arc::new(ir::TransformedItem(
+        SvgItem::Transformed(ir::TransformedItem(
             TransformItem::Matrix(Arc::new(group.transform)),
-            inner,
-        )))
+            Box::new(inner),
+        ))
     }
 
     /// Lower a raster or SVG image into svg item.
     #[comemo::memoize]
     pub(super) fn lower_image(image: &Image, size: Size) -> SvgItem {
-        SvgItem::Image(Arc::new(ir::ImageItem {
+        SvgItem::Image(ir::ImageItem {
             image: image.clone(),
             size,
-        }))
+        })
     }
 
     pub(super) fn lower_link(&self, url: &str, size: Size) -> ir::SvgItem {
         let lnk = ir::LinkItem {
             href: url.into(),
             size,
-            affects: vec![],
         };
 
-        SvgItem::Link(Arc::new(lnk))
+        SvgItem::Link(lnk)
     }
 
-    pub(super) fn lower_position(&self, pos: Position, size: Size) -> ir::SvgItem {
+    #[comemo::memoize]
+    pub(super) fn lower_position(pos: Position, size: Size) -> ir::SvgItem {
         let lnk = ir::LinkItem {
             href: format!(
                 "?locator=page{}&x={}&y={}",
@@ -114,21 +114,22 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
             )
             .into(),
             size,
-            affects: vec![],
         };
 
-        SvgItem::Link(Arc::new(lnk))
+        SvgItem::Link(lnk)
     }
 
     /// Lower a text into svg item.
     #[comemo::memoize]
     pub(super) fn lower_text(text: &TextItem) -> SvgItem {
         let mut glyphs = Vec::with_capacity(text.glyphs.len());
-        let mut step = Vec::with_capacity(text.glyphs.len() * 2);
         for glyph in &text.glyphs {
             let id = GlyphId(glyph.id);
-            step.push((glyph.x_offset.at(text.size), glyph.x_advance.at(text.size)));
-            glyphs.push(crate::ir::GlyphItem::Raw(text.font.clone(), id));
+            glyphs.push((
+                glyph.x_offset.at(text.size),
+                glyph.x_advance.at(text.size),
+                crate::ir::GlyphItem::Raw(text.font.clone(), id),
+            ));
         }
 
         let glyph_chars: String = text.text
@@ -144,16 +145,17 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
             pixel_per_unit / units_per_em
         };
 
-        SvgItem::Text(Arc::new(ir::TextItem {
-            content: glyph_chars.into(),
-            step: step.into(),
-            glyphs,
+        SvgItem::Text(ir::TextItem {
+            content: Arc::new(ir::TextItemContent {
+                content: glyph_chars.into(),
+                glyphs,
+            }),
             shape: Arc::new(ir::TextShape {
                 dir: text.lang.dir(),
                 ppem: Scalar::from(ppem as f64),
                 fill,
             }),
-        }))
+        })
     }
 
     /// Lower a geometrical shape into svg item.
@@ -202,7 +204,7 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
             }
         };
 
-        let d = builder.0;
+        let d = builder.0.into();
 
         let mut styles = Vec::new();
 
@@ -246,6 +248,6 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
             styles.push(ir::PathStyle::Stroke(color.to_css().into()));
         }
 
-        SvgItem::Path(Arc::new(ir::PathItem { d, styles }))
+        SvgItem::Path(ir::PathItem { d, styles })
     }
 }
