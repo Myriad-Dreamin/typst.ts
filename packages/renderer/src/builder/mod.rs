@@ -22,9 +22,9 @@ pub struct TypstRendererBuilder {
 /// A builder for [`TypstRenderer`].
 /// The builder is used to configure the renderer before building it.
 /// - configure fonts for rendering
-///   - configure with [`glyph_pack`]
-///   - configure with [`raw_font`]
-///   - configure with [`web_font`]
+///   - configure with `glyph_pack`
+///   - configure with `raw_font`
+///   - configure with `web_font`
 /// Example usage:
 /// ```js
 /// const builder = new TypstRendererBuilder();

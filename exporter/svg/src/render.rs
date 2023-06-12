@@ -6,9 +6,7 @@ use typst::{
     geom::Size,
     image::{Image, ImageFormat, RasterFormat, VectorFormat},
 };
-use typst_ts_core::{
-    annotation::AnnotationList, error::prelude::*, font::GlyphProvider, TextContent,
-};
+use typst_ts_core::{error::prelude::*, font::GlyphProvider};
 
 use ttf_parser::GlyphId;
 use typst::font::Font;
@@ -24,9 +22,7 @@ use crate::{
 pub struct SvgRenderTask<'m, 't, Feat: RenderFeature = DefaultRenderFeature> {
     pub glyph_provider: GlyphProvider,
 
-    pub annotations: &'t mut AnnotationList,
     pub module: &'m Module,
-    pub text_content: &'t mut TextContent,
 
     pub style_defs: &'t mut HashMap<(StyleNs, Arc<str>), String>,
     pub glyph_defs: &'t mut HashMap<String, String>,

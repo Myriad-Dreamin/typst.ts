@@ -1,0 +1,40 @@
+g.t {
+  pointer-events: bounding-box;
+}
+div.tsel {
+  position: fixed;
+  text-align: justify;
+  white-space: nowrap;
+  width: 100%;
+  height: 100%;
+  text-align-last: justify;
+  color: transparent;
+}
+div.tsel::-moz-selection {
+  color: transpaent;
+  background: #7db9dea0;
+}
+div.tsel::selection {
+  color: transpaent;
+  background: #7db9dea0;
+}
+svg {
+  --glyph_fill: black;
+}
+.pseudo-link {
+  fill: transparent;
+  cursor: pointer;
+  pointer-events: all;
+}
+.outline_glyph {
+  fill: var(--glyph_fill);
+}
+.outline_glyph {
+  transition: 0.2s all;
+}
+.hover .t {
+  --glyph_fill: #66bab7;
+}
+.t:hover {
+  --glyph_fill: #f75c2f;
+}
