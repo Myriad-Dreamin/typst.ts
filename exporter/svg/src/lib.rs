@@ -62,7 +62,7 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
         self.glyph_provider = glyph_provider;
     }
 
-    /// Directly render a frame into the canvas.
+    /// Render a document into the svg_body.
     pub fn render(&mut self, input: Arc<Document>, svg_body: &mut Vec<String>) -> ZResult<()> {
         let mut acc_height = 0f32;
         for (idx, page) in input.pages.iter().enumerate() {
@@ -79,15 +79,15 @@ impl<Feat: RenderFeature> SvgTask<Feat> {
         Ok(())
     }
 
-    /// Directly render a frame into the canvas.
+    /// Render a frame into the a `<g/>` element.
     pub fn render_frame(&mut self, idx: usize, frame: &Frame) -> ZResult<(String, Axes<u32>)> {
         let item = self.lower(frame);
         let (entry, module) = item.flatten();
 
         let (width_px, height_px) = {
             let size = frame.size();
-            let width_px = (size.x.to_pt() as f32).round().max(1.0) as u32;
-            let height_px = (size.y.to_pt() as f32).round().max(1.0) as u32;
+            let width_px = (size.x.to_pt().ceil() as f32).round().max(1.0) as u32;
+            let height_px = (size.y.to_pt().ceil() as f32).round().max(1.0) as u32;
 
             (width_px, height_px)
         };
@@ -124,8 +124,10 @@ pub struct SvgExporter {}
 impl Exporter<Document, String> for SvgExporter {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<String> {
         // todo: without page
-        let w = output.pages[0].width().to_pt();
-        let h = output.pages[0].height().to_pt() * output.pages.len() as f64;
+        // calculate the width and height of the svg
+        let w = output.pages[0].width().to_pt().ceil();
+        let h = output.pages[0].height().to_pt().ceil() * output.pages.len() as f64;
+
         let header = format!(
             r#"<svg viewBox="0 0 {:.3} {:.3}" width="{:.3}" height="{:.3}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">"#,
             w, h, w, h,
@@ -133,10 +135,14 @@ impl Exporter<Document, String> for SvgExporter {
         let mut svg = vec![header];
         let mut svg_body = vec![];
 
+        // render the document
         let mut t = SvgTask::<DefaultRenderFeature>::new(&output).unwrap();
         t.render(output, &mut svg_body).unwrap();
 
+        // attach the glyph defs, clip paths, and style defs
         svg.push("<defs>".to_owned());
+
+        // glyph defs
         svg.push("<g>".to_owned());
         let mut g = t.glyph_defs.into_iter().collect::<Vec<_>>();
         g.sort_by(|a, b| a.0.cmp(&b.0));
@@ -145,6 +151,7 @@ impl Exporter<Document, String> for SvgExporter {
         }
         svg.push("</g>".to_owned());
 
+        // clip paths
         let mut g = t.clip_paths.into_iter().collect::<Vec<_>>();
         g.sort_by(|a, b| a.1.cmp(&b.1));
         for (clip_path, id) in g {
@@ -155,39 +162,24 @@ impl Exporter<Document, String> for SvgExporter {
         }
 
         svg.push("</defs>".to_owned());
-        // var elements = document.getElementsByClassName('childbox');
-        // for(var i=0; i<elements.length; i++) {
-        //   elements[i].onmouseleave = function(){
-        //     this.style.fill = "blue";
-        // };
-        // }
 
+        // style defs
         svg.push(r#"<style type="text/css">"#.to_owned());
-        svg.push(
-            r#"
-        g.t { pointer-events: bounding-box; }
-        div.tsel { position: fixed; text-align: justify; white-space: nowrap; width: 100%; height: 100%; text-align-last: justify; color: transparent;  }
-        div.tsel::-moz-selection { color: transpaent; background: #7DB9DEA0; }
-        div.tsel::selection { color: transpaent; background: #7DB9DEA0; }
-        svg { --glyph_fill: black; }
-        .pseudo-link { fill: transparent; cursor: pointer; pointer-events: all; }
-        .outline_glyph { fill: var(--glyph_fill); }
-        .outline_glyph { transition: 0.2s all; }
-        .hover .t { --glyph_fill: #66BAB7; }
-        .t:hover { --glyph_fill: #F75C2F; }"#
-                .replace("        ", ""),
-        );
+        svg.push(String::from_utf8(include_bytes!("./typst.svg.css").to_vec()).unwrap());
         let mut g = t.style_defs.into_iter().collect::<Vec<_>>();
         g.sort_by(|a, b| a.0.cmp(&b.0));
         svg.extend(g.into_iter().map(|v| v.1));
         svg.push("</style>".to_owned());
         svg.append(&mut svg_body);
 
+        // attach the javascript for animations
         svg.push(r#"<script type="text/javascript">"#.to_owned());
         svg.push(r#"<![CDATA["#.to_owned());
         svg.push(String::from_utf8(include_bytes!("./typst.svg.js").to_vec()).unwrap());
         svg.push(r#"]]>"#.to_owned());
         svg.push("</script>".to_owned());
+
+        // close the svg
         svg.push("</svg>".to_owned());
 
         Ok(svg.join(""))
