@@ -20,5 +20,6 @@ data-url = "0.2.0"
 async-recursion = "1.0.4"
 elsa.workspace = true
 base64.workspace = true
+siphasher.workspace = true
 
 typst-ts-core.workspace = true

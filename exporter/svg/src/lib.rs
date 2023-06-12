@@ -39,8 +39,8 @@ pub struct SvgTask<Feat: RenderFeature = DefaultRenderFeature> {
     glyph_provider: GlyphProvider,
     annotation_proc: AnnotationProcessor,
 
-    style_defs: HashMap<(StyleNs, Arc<str>), (String, u32)>,
-    glyph_defs: HashMap<String, (String, u32)>,
+    style_defs: HashMap<(StyleNs, Arc<str>), String>,
+    glyph_defs: HashMap<String, String>,
     clip_paths: HashMap<Arc<str>, u32>,
 
     pub text_content: TextContent,
@@ -150,8 +150,8 @@ impl Exporter<Document, String> for SvgExporter {
         svg.push("<defs>".to_owned());
         svg.push("<g>".to_owned());
         let mut g = t.glyph_defs.into_iter().collect::<Vec<_>>();
-        g.sort_by(|a, b| a.1 .1.cmp(&b.1 .1));
-        for (_, (glyph, ..)) in g {
+        g.sort_by(|a, b| a.0.cmp(&b.0));
+        for (_, glyph) in g {
             svg.push(glyph);
         }
         svg.push("</g>".to_owned());
@@ -186,8 +186,8 @@ impl Exporter<Document, String> for SvgExporter {
                 .replace("        ", ""),
         );
         let mut g = t.style_defs.into_iter().collect::<Vec<_>>();
-        g.sort_by(|a, b| a.1 .1.cmp(&b.1 .1));
-        svg.extend(g.into_iter().map(|v| v.1 .0));
+        g.sort_by(|a, b| a.0.cmp(&b.0));
+        svg.extend(g.into_iter().map(|v| v.1));
         svg.push("</style>".to_owned());
         svg.append(&mut svg_body);
 

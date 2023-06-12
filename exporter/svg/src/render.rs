@@ -14,8 +14,8 @@ use ttf_parser::GlyphId;
 use typst::font::Font;
 
 use crate::{
-    ir::{DefId, FlatSvgItem, GroupRef, Module, TransformItem},
-    ir::{FlatTextItem, GlyphItem, StyleNs},
+    ir::{AbsoulteRef, FlatTextItem, GlyphItem, StyleNs},
+    ir::{FlatSvgItem, GroupRef, Module, TransformItem},
     ir::{PathItem, PathStyle},
     utils::{console_log, AbsExt, PerfEvent},
     DefaultRenderFeature, RenderFeature,
@@ -28,8 +28,8 @@ pub struct SvgRenderTask<'m, 't, Feat: RenderFeature = DefaultRenderFeature> {
     pub module: &'m Module,
     pub text_content: &'t mut TextContent,
 
-    pub style_defs: &'t mut HashMap<(StyleNs, Arc<str>), (String, u32)>,
-    pub glyph_defs: &'t mut HashMap<String, (String, u32)>,
+    pub style_defs: &'t mut HashMap<(StyleNs, Arc<str>), String>,
+    pub glyph_defs: &'t mut HashMap<String, String>,
     pub clip_paths: &'t mut HashMap<Arc<str>, u32>,
 
     pub page_off: usize,
@@ -49,21 +49,27 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
         None
     }
 
-    pub fn render_item(&mut self, def_id: DefId) -> ZResult<String> {
-        let item = self
-            .module
-            .get_item(def_id)
-            .ok_or_else(|| error_once!("SvgRenderTask.ItemNotFound", def_id: def_id.0))?;
-        self.render_item_inner(def_id, item)
+    pub fn render_item(&mut self, abs_ref: AbsoulteRef) -> ZResult<String> {
+        let item = self.module.get_item(&abs_ref).ok_or_else(|| {
+            error_once!(
+                "SvgRenderTask.ItemNotFound",
+                abs_ref: format!("{:?}", abs_ref)
+            )
+        })?;
+        self.render_item_inner(abs_ref, item)
     }
 
-    pub fn render_item_inner(&mut self, def_id: DefId, item: &FlatSvgItem) -> ZResult<String> {
+    pub fn render_item_inner(
+        &mut self,
+        abs_ref: AbsoulteRef,
+        item: &FlatSvgItem,
+    ) -> ZResult<String> {
         match item.deref() {
-            FlatSvgItem::Group(group) => self.render_group(def_id, group),
+            FlatSvgItem::Group(group) => self.render_group(abs_ref, group),
             FlatSvgItem::Text(text) => self.render_text(text),
             FlatSvgItem::Path(path) => self.render_path(path),
             FlatSvgItem::Item(transformed) => {
-                let item = self.render_item(def_id.make_absolute(transformed.1))?;
+                let item = self.render_item(abs_ref.id.make_absolute_ref(transformed.1.clone()))?;
                 Ok(format!(
                     r#"<g {}>{}</g>"#,
                     self.get_css(&transformed.0),
@@ -84,17 +90,19 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
     }
 
     /// Render a frame into the canvas.
-    fn render_group(&mut self, group_id: DefId, group: &GroupRef) -> ZResult<String> {
+    fn render_group(&mut self, abs_ref: AbsoulteRef, group: &GroupRef) -> ZResult<String> {
         let mut g = vec![format!(r#"<g class="group">"#)];
         let mut normal_g = vec![];
         let mut link_g = vec![];
 
         for (pos, item) in group.0.iter() {
-            let def_id = group_id.make_absolute(*item);
-            let item = self
-                .module
-                .get_item(def_id)
-                .ok_or_else(|| error_once!("SvgRenderTask.ItemNotFound", def_id: def_id.0))?;
+            let def_id = abs_ref.id.make_absolute_ref(item.clone());
+            let item = self.module.get_item(&def_id).ok_or_else(|| {
+                error_once!(
+                    "SvgRenderTask.ItemNotFound",
+                    abs_ref: format!("{:?}", abs_ref)
+                )
+            })?;
 
             let g = if let FlatSvgItem::Link(_) = item.deref() {
                 &mut link_g
@@ -103,7 +111,7 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
             };
 
             g.push(format!(
-                r#"<g transform="translate({},{})" >"#,
+                r#"<g transform="translate({:.3},{:.3})" >"#,
                 pos.x.to_pt(),
                 pos.y.to_pt()
             ));
@@ -132,7 +140,9 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
                     m.ty.to_pt()
                 )
             }
-            TransformItem::Translate(t) => format!("translate({},{})", t.x.to_f32(), t.y.to_f32()),
+            TransformItem::Translate(t) => {
+                format!("translate({:.3},{:.3})", t.x.to_f32(), t.y.to_f32())
+            }
             TransformItem::Scale(s) => format!("scale({},{})", s.0.get(), s.1.get()),
             TransformItem::Rotate(angle) => format!("rotate({})", angle.0),
             TransformItem::Skew(angle) => {
@@ -167,22 +177,16 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
 
         let ppem = shape.ppem.0 as f32;
 
-        let fill = if shape.fill.as_ref() == "rgba(0, 0, 0, 255)" {
+        let fill = if shape.fill.as_ref() == "#000" {
             r#"tb"#.to_owned()
         } else {
-            // format!(r#" fill="{}" "#, shape.fill);
+            let fill_id = format!(r#"f{}"#, shape.fill.trim_start_matches('#'));
             let fill_key = (StyleNs::Fill, shape.fill.clone());
-            let fill_id;
-            if let Some(idx) = self.style_defs.get(&fill_key) {
-                fill_id = idx.1;
-            } else {
-                let new_id = self.style_defs.len() as u32;
-                let fill_style = format!(r#"g.f{:x} {{ --glyph_fill: {}; }} "#, new_id, shape.fill);
-                self.style_defs.insert(fill_key, (fill_style, new_id));
-                fill_id = new_id;
-            };
+            self.style_defs.entry(fill_key).or_insert_with(|| {
+                format!(r#"g.{} {{ --glyph_fill: {}; }} "#, fill_id, shape.fill)
+            });
 
-            format!(r#"f{:x}"#, fill_id)
+            fill_id
         };
         text_list.push(format!(
             r#"<g class="t {}" transform="scale({},{})">"#,
@@ -192,12 +196,12 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
         //  todo: fill
         let mut x = 0f32;
         for (offset, advance, glyph) in text.content.glyphs.iter() {
-            let glyph = self.module.get_glyph(*glyph).unwrap();
+            let glyph_item = self.module.get_glyph(glyph).unwrap();
 
             let offset = x + offset.to_f32();
             let ts = offset / ppem;
 
-            match glyph {
+            match glyph_item {
                 GlyphItem::Raw(font, id) => {
                     let font = font.clone();
                     let id = *id;
@@ -205,9 +209,10 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
                     let e = self
                         .render_svg_glyph(ts, &font, id)
                         .or_else(|| self.render_bitmap_glyph(&font, id))
-                        .or_else(|| self.render_outline_glyph(ts, &font, id));
+                        .or_else(|| self.render_outline_glyph(&font, glyph, id));
                     if let Some(e) = e {
-                        text_list.push(e);
+                        let x = (ts * 2.).round() / 2.;
+                        text_list.push(format!(r#"<g transform="translate({},0)">{}</g>"#, x, e));
                     }
                 }
             }
@@ -275,7 +280,12 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
     }
 
     /// Render an outline glyph into the canvas. This is the "normal" case.
-    fn render_outline_glyph(&mut self, x: f32, font: &Font, id: GlyphId) -> Option<String> {
+    fn render_outline_glyph(
+        &mut self,
+        font: &Font,
+        glyph: &AbsoulteRef,
+        id: GlyphId,
+    ) -> Option<String> {
         let _r = self.perf_event("render_outline_glyph");
 
         // Scale is in pixel per em, but curve data is in font design units, so
@@ -285,21 +295,17 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
             console_log!("render_outline_glyph: {:?}", font.info());
         }
 
-        let glyph_data = extract_outline_glyph(self.glyph_provider.clone(), font, id)?;
-        let glyph_id;
-        if let Some(idx) = self.glyph_defs.get(&glyph_data) {
-            glyph_id = idx.1;
-        } else {
-            let new_id = self.glyph_defs.len() as u32;
+        let glyph_id = glyph.as_svg_id("g");
+        if !self.glyph_defs.contains_key(&glyph_id) {
+            let glyph_data = extract_outline_glyph(self.glyph_provider.clone(), font, id)?;
             let symbol_def = format!(
-                r#"<symbol overflow="visible" id="g{:x}" class="outline_glyph">{}</symbol>"#,
-                new_id, glyph_data
+                r#"<symbol overflow="visible" id="{}" class="outline_glyph">{}</symbol>"#,
+                glyph_id, glyph_data
             );
-            self.glyph_defs.insert(glyph_data, (symbol_def, new_id));
-            glyph_id = new_id;
+            self.glyph_defs.insert(glyph_id.clone(), symbol_def);
         }
 
-        Some(format!(r##"<use href="#g{:x}" x="{:.1}"/>"##, glyph_id, x))
+        Some(format!(r##"<use href="#{}"/>"##, glyph_id))
     }
 
     /// Render a raster or SVG image into the canvas.

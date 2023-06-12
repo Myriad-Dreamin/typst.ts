@@ -3510,6 +3510,7 @@ dependencies = [
  "elsa",
  "flate2",
  "once_cell",
+ "siphasher",
  "tiny-skia",
  "ttf-parser",
  "typst",
