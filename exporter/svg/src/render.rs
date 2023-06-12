@@ -13,7 +13,7 @@ use typst::font::Font;
 
 use crate::{
     ir::{AbsoulteRef, FlatTextItem, GlyphItem, StyleNs},
-    ir::{FlatSvgItem, GroupRef, Module, TransformItem},
+    ir::{FlatSvgItem, GroupRef, Module, TransformItem, WeakAbsoulteRef},
     ir::{PathItem, PathStyle},
     utils::{console_log, AbsExt, PerfEvent},
     DefaultRenderFeature, RenderFeature,
@@ -63,23 +63,33 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
     ) -> ZResult<String> {
         match item.deref() {
             FlatSvgItem::Group(group) => self.render_group(abs_ref, group),
-            FlatSvgItem::Text(text) => self.render_text(text),
-            FlatSvgItem::Path(path) => self.render_path(path),
+            FlatSvgItem::Text(text) => self.render_text(abs_ref, text),
+            FlatSvgItem::Path(path) => Ok(format!(
+                r#"<g data-tid="{}">{}</g>"#,
+                abs_ref.as_svg_id("p"),
+                self.render_path(path)?,
+            )),
             FlatSvgItem::Item(transformed) => {
                 let item = self.render_item(abs_ref.id.make_absolute_ref(transformed.1.clone()))?;
                 Ok(format!(
-                    r#"<g {}>{}</g>"#,
+                    r#"<g data-tid="{}" {}>{}</g>"#,
+                    abs_ref.as_svg_id("p"),
                     self.get_css(&transformed.0),
                     item
                 ))
             }
             FlatSvgItem::Link(link) => Ok(format!(
-                r#"<a xlink:href="{}" target="_blank"><rect class="pseudo-link" width="{}" height="{}"></rect></a>"#,
+                r#"<g data-tid="{}"><a xlink:href="{}" target="_blank"><rect class="pseudo-link" width="{}" height="{}"></rect></a></g>"#,
+                abs_ref.as_svg_id("l"),
                 link.href.replace('&', "&amp;"),
                 link.size.x.to_pt(),
                 link.size.y.to_pt(),
             )),
-            FlatSvgItem::Image(image) => self.render_image(&image.image, image.size),
+            FlatSvgItem::Image(image) => Ok(format!(
+                r#"<g data-tid="{}">{}</g>"#,
+                abs_ref.as_svg_id("i"),
+                self.render_image(&image.image, image.size)?,
+            )),
             FlatSvgItem::Glyph(_) | FlatSvgItem::None => {
                 panic!("SvgRenderTask.RenderFrame.UnknownItem {:?}", item)
             }
@@ -88,7 +98,10 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
 
     /// Render a frame into the canvas.
     fn render_group(&mut self, abs_ref: AbsoulteRef, group: &GroupRef) -> ZResult<String> {
-        let mut g = vec![format!(r#"<g class="group">"#)];
+        let mut g = vec![format!(
+            r#"<g class="group" data-tid="{}">"#,
+            abs_ref.as_svg_id("p")
+        )];
         let mut normal_g = vec![];
         let mut link_g = vec![];
 
@@ -166,7 +179,11 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
     }
 
     /// Render a text run into the self.canvas.
-    pub(crate) fn render_text(&mut self, text: &FlatTextItem) -> ZResult<String> {
+    pub(crate) fn render_text(
+        &mut self,
+        abs_ref: AbsoulteRef,
+        text: &FlatTextItem,
+    ) -> ZResult<String> {
         let _r = self.perf_event("render_text");
 
         let mut text_list = vec![];
@@ -187,7 +204,11 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
 
             fill_id
         };
-        text_list.push(format!(r#"<g class="t {}">"#, fill));
+        text_list.push(format!(
+            r#"<g class="typst-txt {}" data-tid="{}">"#,
+            fill,
+            abs_ref.as_svg_id("p")
+        ));
         text_list.push(format!(r#"<g transform="scale({},{})">"#, ppem, -ppem));
 
         //  todo: fill
@@ -306,7 +327,7 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
     fn render_outline_glyph(
         &mut self,
         font: &Font,
-        glyph: &AbsoulteRef,
+        glyph: &WeakAbsoulteRef,
         id: GlyphId,
     ) -> Option<String> {
         let _r = self.perf_event("render_outline_glyph");

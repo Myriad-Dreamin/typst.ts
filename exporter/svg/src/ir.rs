@@ -1,12 +1,17 @@
+use std::any::Any;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::hash::{Hash, Hasher};
+use std::sync::{Arc, Mutex};
 
 use base64::Engine;
+use once_cell::sync::Lazy;
+use rustc_hash::FxHasher;
+use siphasher::sip128::SipHasher13;
 use ttf_parser::GlyphId;
 use typst::font::Font;
 use typst::geom::{Abs, Axes, Dir, Point, Ratio, Scalar, Size, Transform};
 use typst::image::Image;
-use typst_ts_core::typst_affinite_hash;
+use typst::util::Buffer;
 
 pub type ImmutStr = Arc<str>;
 
@@ -50,38 +55,74 @@ impl DefId {
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 pub struct RelativeDefId(pub i64);
 
-/// A stable absolute reference.
 /// See <https://github.com/rust-lang/rust/blob/master/compiler/rustc_hir/src/stable_hash_impls.rs#L22>
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub struct Fingerprint(u64, u64);
+
+pub trait FingerprintHasher: std::hash::Hasher {
+    fn finish_fingerprint(&self) -> (u64, Vec<u8>);
+}
+
+/// A stable absolute reference.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct AbsoulteRef {
-    pub fingerprint: u128,
+    pub fingerprint: Fingerprint,
     pub id: DefId,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WeakAbsoulteRef(pub AbsoulteRef);
+
+impl WeakAbsoulteRef {
+    pub fn as_svg_id(&self, prefix: &'static str) -> String {
+        self.0.as_svg_id(prefix)
+    }
+}
+
+impl Hash for WeakAbsoulteRef {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.fingerprint.hash(state);
+    }
 }
 
 /// A stable relative reference.
 /// These objects can only be constructed relative from a [`AbsoulteRef`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct RelativeRef {
-    pub fingerprint: u128,
+    pub fingerprint: Fingerprint,
     pub id: RelativeDefId,
+}
+
+impl RelativeRef {
+    pub(crate) fn as_svg_id(&self, prefix: &'static str) -> String {
+        AbsoulteRef::as_svg_id_inner(self.fingerprint, prefix)
+    }
 }
 
 impl AbsoulteRef {
     /// Create a xml id from the given prefix and the fingerprint of this reference.
     /// Note that the entire html document shares namespace for ids.
     #[comemo::memoize]
-    pub fn as_svg_id(&self, prefix: &'static str) -> String {
+    fn as_svg_id_inner(fingerprint: Fingerprint, prefix: &'static str) -> String {
         let fg =
-            base64::engine::general_purpose::STANDARD_NO_PAD.encode(self.fingerprint.to_le_bytes());
+            base64::engine::general_purpose::STANDARD_NO_PAD.encode(fingerprint.0.to_le_bytes());
+        if fingerprint.1 == 0 {
+            return [prefix, &fg].join("");
+        }
 
         let id = {
-            let id = self.id.0.to_le_bytes();
+            let id = fingerprint.1.to_le_bytes();
             // truncate zero
             let rev_zero = id.iter().rev().skip_while(|&&b| b == 0).count();
             let id = &id[..rev_zero];
             base64::engine::general_purpose::STANDARD_NO_PAD.encode(id)
         };
         [prefix, &fg, &id].join("")
+    }
+
+    #[inline]
+    pub fn as_svg_id(&self, prefix: &'static str) -> String {
+        Self::as_svg_id_inner(self.fingerprint, prefix)
     }
 }
 
@@ -96,8 +137,8 @@ pub struct Module {
 
 impl Module {
     /// Get a glyph item by its stable ref.
-    pub fn get_glyph(&self, id: &AbsoulteRef) -> Option<&GlyphItem> {
-        self.glyphs.get(id.id.0 as usize)
+    pub fn get_glyph(&self, id: &WeakAbsoulteRef) -> Option<&GlyphItem> {
+        self.glyphs.get(id.0.id.0 as usize)
     }
 
     /// Get a svg item by its stable ref.
@@ -239,7 +280,7 @@ pub struct FlatTextItem {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct FlatTextItemContent {
     pub content: ImmutStr,
-    pub glyphs: Arc<[(Abs, Abs, AbsoulteRef)]>,
+    pub glyphs: Arc<[(Abs, Abs, WeakAbsoulteRef)]>,
 }
 
 /// Flatten transform item.
@@ -257,37 +298,94 @@ pub enum StyleNs {
     Fill,
 }
 
+struct FingerprintSipHasher {
+    data: Vec<u8>,
+}
+
+impl FingerprintHasher for FingerprintSipHasher {
+    fn finish_fingerprint(&self) -> (u64, Vec<u8>) {
+        let buffer = self.data.clone();
+        let mut inner = FxHasher::default();
+        buffer.hash(&mut inner);
+        let hash = inner.finish();
+        (hash, buffer)
+    }
+}
+
+impl std::hash::Hasher for FingerprintSipHasher {
+    fn write(&mut self, bytes: &[u8]) {
+        self.data.extend_from_slice(bytes);
+    }
+
+    fn finish(&self) -> u64 {
+        let buffer = Buffer::from(self.data.clone());
+        let mut inner = SipHasher13::new();
+        buffer.hash(&mut inner);
+        inner.finish()
+    }
+}
+
+#[derive(Default)]
+pub struct GlobalFingerprintBuilder {
+    unique_map: HashMap<Vec<u8>, Fingerprint>,
+    disambiguators: HashMap<u64, u64>,
+}
+
+impl GlobalFingerprintBuilder {
+    fn get_disambiguator(&mut self, fingerprint_hash: u64) -> u64 {
+        let disambiguator = self.disambiguators.entry(fingerprint_hash).or_insert(0);
+        *disambiguator += 1;
+        *disambiguator
+    }
+
+    pub fn resolve<T: Hash + 'static>(&mut self, item: &T) -> Fingerprint {
+        let mut s = FingerprintSipHasher { data: Vec::new() };
+        item.type_id().hash(&mut s);
+        item.hash(&mut s);
+        let fingerprint_hash = s.finish_fingerprint();
+        if let Some(fingerprint) = self.unique_map.get(&fingerprint_hash.1) {
+            return *fingerprint;
+        }
+
+        let disambiguator = self.get_disambiguator(fingerprint_hash.0);
+        let fingerprint = Fingerprint(fingerprint_hash.0, disambiguator);
+        self.unique_map.insert(fingerprint_hash.1, fingerprint);
+        fingerprint
+    }
+}
+
+pub static GLOBAL_FINGERPRINT_BUILDER: Lazy<Arc<Mutex<GlobalFingerprintBuilder>>> =
+    Lazy::new(|| Arc::new(Mutex::new(GlobalFingerprintBuilder::default())));
+
 /// Intermediate representation of a incompleted svg item.
 #[derive(Default)]
 pub struct ModuleBuilder {
-    pub glyph_ids: u64,
-    pub glyph_uniquer: HashMap<GlyphItem, AbsoulteRef>,
+    pub glyph_uniquer: HashMap<GlyphItem, WeakAbsoulteRef>,
+    pub disambiguators: HashMap<u128, u64>,
     pub items: Vec<FlatSvgItem>,
 }
 
 impl ModuleBuilder {
     pub fn finalize(self) -> Module {
         let mut glyphs = self.glyph_uniquer.into_iter().collect::<Vec<_>>();
-        glyphs.sort_by(|(_, a), (_, b)| a.id.0.cmp(&b.id.0));
+        glyphs.sort_by(|(_, a), (_, b)| a.0.id.0.cmp(&b.0.id.0));
         Module {
             items: self.items,
             glyphs: glyphs.into_iter().map(|(a, _)| a).collect(),
         }
     }
 
-    pub fn build_glyph(&mut self, glyph: GlyphItem) -> AbsoulteRef {
+    pub fn build_glyph(&mut self, glyph: GlyphItem) -> WeakAbsoulteRef {
         if let Some(id) = self.glyph_uniquer.get(&glyph) {
             return id.clone();
         }
 
-        let id = DefId(self.glyph_ids);
-        let abs_ref = AbsoulteRef {
-            fingerprint: typst_affinite_hash(&glyph),
-            id,
-        };
-        self.glyph_ids += 1;
-        self.glyph_uniquer.insert(glyph, abs_ref.clone());
-        abs_ref
+        let id = DefId(self.glyph_uniquer.len() as u64);
+
+        let fingerprint = GLOBAL_FINGERPRINT_BUILDER.lock().unwrap().resolve(&glyph);
+        let rel_ref = WeakAbsoulteRef(AbsoulteRef { fingerprint, id });
+        self.glyph_uniquer.insert(glyph, rel_ref.clone());
+        rel_ref
     }
 
     pub fn build(&mut self, item: SvgItem) -> AbsoulteRef {
@@ -330,7 +428,11 @@ impl ModuleBuilder {
             }
         };
 
-        let fingerprint = typst_affinite_hash(&resolved_item);
+        let fingerprint = GLOBAL_FINGERPRINT_BUILDER
+            .lock()
+            .unwrap()
+            .resolve(&resolved_item);
+
         self.items[id.0 as usize] = resolved_item;
         AbsoulteRef { fingerprint, id }
     }

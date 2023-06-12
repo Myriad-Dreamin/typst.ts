@@ -1,7 +1,7 @@
-g.t {
+.typst-txt {
   pointer-events: bounding-box;
 }
-div.tsel {
+.tsel {
   position: fixed;
   text-align: justify;
   white-space: nowrap;
@@ -10,11 +10,11 @@ div.tsel {
   text-align-last: justify;
   color: transparent;
 }
-div.tsel::-moz-selection {
+.tsel::-moz-selection {
   color: transpaent;
   background: #7db9dea0;
 }
-div.tsel::selection {
+.tsel::selection {
   color: transpaent;
   background: #7db9dea0;
 }
@@ -32,9 +32,6 @@ svg {
 .outline_glyph {
   transition: 0.2s all;
 }
-.hover .t {
+.hover .typst-txt {
   --glyph_fill: #66bab7;
-}
-.t:hover {
-  --glyph_fill: #f75c2f;
 }

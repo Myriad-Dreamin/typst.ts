@@ -22,5 +22,6 @@ elsa.workspace = true
 base64.workspace = true
 siphasher.workspace = true
 xml-rs.workspace = true
+rustc-hash.workspace = true
 
 typst-ts-core.workspace = true

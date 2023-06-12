@@ -47,7 +47,7 @@ web-sys = { workspace = true, optional = true, features = [
 ] }
 
 base64.workspace = true
-rustc-hash = "1.1.0"
+rustc-hash.workspace = true
 fst = "0.4.7"
 indexmap.workspace = true
 nohash-hasher = "0.2.0"
