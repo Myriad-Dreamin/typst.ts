@@ -1,14 +1,84 @@
+use std::any::Any;
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::sync::Arc;
 
 use base64::Engine;
+use siphasher::sip128::{Hasher128, SipHasher13};
 use ttf_parser::GlyphId;
 use typst::font::Font;
 use typst::geom::{Abs, Axes, Dir, Point, Ratio, Scalar, Size, Transform};
 use typst::image::Image;
-use typst_ts_core::typst_affinite_hash;
 
 pub type ImmutStr = Arc<str>;
+
+/// See <https://github.com/rust-lang/rust/blob/master/compiler/rustc_hir/src/stable_hash_impls.rs#L22>
+/// The fingerprint conflicts should be very rare and should be handled by the compiler.
+///
+/// > That being said, given a high quality hash function, the collision
+/// > probabilities in question are very small. For example, for a big crate like
+/// > `rustc_middle` (with ~50000 `LocalDefId`s as of the time of writing) there
+/// > is a probability of roughly 1 in 14,750,000,000 of a crate-internal
+/// > collision occurring. For a big crate graph with 1000 crates in it, there is
+/// > a probability of 1 in 36,890,000,000,000 of a `StableCrateId` collision.
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Fingerprint(u64, u64);
+
+pub trait FingerprintHasher: std::hash::Hasher {
+    fn finish_fingerprint(&self) -> (Fingerprint, Vec<u8>);
+}
+
+struct FingerprintSipHasher {
+    data: Vec<u8>,
+}
+
+impl std::hash::Hasher for FingerprintSipHasher {
+    fn write(&mut self, bytes: &[u8]) {
+        self.data.extend_from_slice(bytes);
+    }
+
+    fn finish(&self) -> u64 {
+        let buffer = self.data.clone();
+        let mut inner = SipHasher13::new();
+        buffer.hash(&mut inner);
+        inner.finish()
+    }
+}
+
+impl FingerprintHasher for FingerprintSipHasher {
+    fn finish_fingerprint(&self) -> (Fingerprint, Vec<u8>) {
+        let buffer = self.data.clone();
+        let mut inner = SipHasher13::new();
+        buffer.hash(&mut inner);
+        let hash = inner.finish128();
+        (Fingerprint(hash.h1, hash.h2), buffer)
+    }
+}
+
+#[derive(Default)]
+pub struct FingerprintBuilder {
+    conflict_checker: HashMap<Fingerprint, Vec<u8>>,
+}
+
+impl FingerprintBuilder {
+    pub fn resolve<T: Hash + 'static>(&mut self, item: &T) -> Fingerprint {
+        let mut s = FingerprintSipHasher { data: Vec::new() };
+        item.type_id().hash(&mut s);
+        item.hash(&mut s);
+        let (fingerprint, featured_data) = s.finish_fingerprint();
+        if let Some(prev_featured_data) = self.conflict_checker.get(&fingerprint) {
+            if prev_featured_data != &featured_data {
+                // todo: soft error
+                panic!("Fingerprint conflict detected!");
+            }
+
+            return fingerprint;
+        }
+
+        self.conflict_checker.insert(fingerprint, featured_data);
+        fingerprint
+    }
+}
 
 /// The local id of a svg item.
 /// This id is only unique within the svg document.
@@ -51,37 +121,62 @@ impl DefId {
 pub struct RelativeDefId(pub i64);
 
 /// A stable absolute reference.
-/// See <https://github.com/rust-lang/rust/blob/master/compiler/rustc_hir/src/stable_hash_impls.rs#L22>
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AbsoulteRef {
-    pub fingerprint: u128,
+    pub fingerprint: Fingerprint,
     pub id: DefId,
 }
 
-/// A stable relative reference.
-/// These objects can only be constructed relative from a [`AbsoulteRef`].
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct RelativeRef {
-    pub fingerprint: u128,
-    pub id: RelativeDefId,
+impl Hash for AbsoulteRef {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.fingerprint.hash(state);
+    }
 }
 
 impl AbsoulteRef {
     /// Create a xml id from the given prefix and the fingerprint of this reference.
     /// Note that the entire html document shares namespace for ids.
     #[comemo::memoize]
-    pub fn as_svg_id(&self, prefix: &'static str) -> String {
+    fn as_svg_id_inner(fingerprint: Fingerprint, prefix: &'static str) -> String {
         let fg =
-            base64::engine::general_purpose::STANDARD_NO_PAD.encode(self.fingerprint.to_le_bytes());
+            base64::engine::general_purpose::STANDARD_NO_PAD.encode(fingerprint.0.to_le_bytes());
+        if fingerprint.1 == 0 {
+            return [prefix, &fg].join("");
+        }
 
         let id = {
-            let id = self.id.0.to_le_bytes();
+            let id = fingerprint.1.to_le_bytes();
             // truncate zero
             let rev_zero = id.iter().rev().skip_while(|&&b| b == 0).count();
             let id = &id[..rev_zero];
             base64::engine::general_purpose::STANDARD_NO_PAD.encode(id)
         };
         [prefix, &fg, &id].join("")
+    }
+
+    #[inline]
+    pub fn as_svg_id(&self, prefix: &'static str) -> String {
+        Self::as_svg_id_inner(self.fingerprint, prefix)
+    }
+}
+
+/// A stable relative reference.
+/// These objects can only be constructed relative from a [`AbsoulteRef`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RelativeRef {
+    pub fingerprint: Fingerprint,
+    pub id: RelativeDefId,
+}
+
+impl Hash for RelativeRef {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.fingerprint.hash(state);
+    }
+}
+
+impl RelativeRef {
+    pub(crate) fn as_svg_id(&self, prefix: &'static str) -> String {
+        AbsoulteRef::as_svg_id_inner(self.fingerprint, prefix)
     }
 }
 
@@ -106,6 +201,14 @@ impl Module {
     }
 }
 
+/// Module with page references of a [`typst::doc::Document`].
+pub struct SvgDocument {
+    pub module: Module,
+    /// References to the page frames.
+    /// Use [`Module::get_item`] to get the actual item.
+    pub pages: Vec<(AbsoulteRef, Size)>,
+}
+
 /// A Svg item that is specialized for representing [`typst::doc::Document`] or its subtypes.
 #[derive(Debug, Clone)]
 pub enum SvgItem {
@@ -122,7 +225,7 @@ impl SvgItem {
         let mut builder = ModuleBuilder::default();
 
         let entry_id = builder.build(self);
-        (entry_id, builder.finalize())
+        (entry_id, builder.finalize().0)
     }
 }
 
@@ -257,36 +360,40 @@ pub enum StyleNs {
     Fill,
 }
 
+pub type GlyphMapping = HashMap<GlyphItem, AbsoulteRef>;
+
 /// Intermediate representation of a incompleted svg item.
 #[derive(Default)]
 pub struct ModuleBuilder {
-    pub glyph_ids: u64,
-    pub glyph_uniquer: HashMap<GlyphItem, AbsoulteRef>,
+    pub glyphs: GlyphMapping,
     pub items: Vec<FlatSvgItem>,
+
+    fingerprint_builder: FingerprintBuilder,
 }
 
 impl ModuleBuilder {
-    pub fn finalize(self) -> Module {
-        let mut glyphs = self.glyph_uniquer.into_iter().collect::<Vec<_>>();
+    pub fn finalize(self) -> (Module, GlyphMapping) {
+        let mut glyphs = self.glyphs.clone().into_iter().collect::<Vec<_>>();
         glyphs.sort_by(|(_, a), (_, b)| a.id.0.cmp(&b.id.0));
-        Module {
-            items: self.items,
-            glyphs: glyphs.into_iter().map(|(a, _)| a).collect(),
-        }
+        (
+            Module {
+                glyphs: glyphs.into_iter().map(|(a, _)| a).collect(),
+                items: self.items,
+            },
+            self.glyphs,
+        )
     }
 
     pub fn build_glyph(&mut self, glyph: GlyphItem) -> AbsoulteRef {
-        if let Some(id) = self.glyph_uniquer.get(&glyph) {
+        if let Some(id) = self.glyphs.get(&glyph) {
             return id.clone();
         }
 
-        let id = DefId(self.glyph_ids);
-        let abs_ref = AbsoulteRef {
-            fingerprint: typst_affinite_hash(&glyph),
-            id,
-        };
-        self.glyph_ids += 1;
-        self.glyph_uniquer.insert(glyph, abs_ref.clone());
+        let id = DefId(self.glyphs.len() as u64);
+
+        let fingerprint = self.fingerprint_builder.resolve(&glyph);
+        let abs_ref = AbsoulteRef { fingerprint, id };
+        self.glyphs.insert(glyph, abs_ref.clone());
         abs_ref
     }
 
@@ -330,7 +437,7 @@ impl ModuleBuilder {
             }
         };
 
-        let fingerprint = typst_affinite_hash(&resolved_item);
+        let fingerprint = self.fingerprint_builder.resolve(&resolved_item);
         self.items[id.0 as usize] = resolved_item;
         AbsoulteRef { fingerprint, id }
     }

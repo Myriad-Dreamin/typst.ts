@@ -13,11 +13,11 @@ use crate::{
     ir::{SvgItem, TransformItem},
     svg::SvgPath2DBuilder,
     utils::{AbsExt, ToCssExt},
-    RenderFeature, SvgTask,
+    ExportFeature, SvgTask,
 };
 use ttf_parser::GlyphId;
 
-impl<Feat: RenderFeature> SvgTask<Feat> {
+impl<Feat: ExportFeature> SvgTask<Feat> {
     /// Lower a frame into svg item.
     pub fn lower(&mut self, frame: &Frame) -> SvgItem {
         self.lower_frame(frame)

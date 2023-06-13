@@ -1,9 +1,9 @@
-use std::{collections::HashMap, ops::Deref, sync::Arc};
+use std::{io::Read, ops::Deref};
 
 use base64::Engine;
+use once_cell::sync::OnceCell;
 use typst::{
-    font::FontInfo,
-    geom::Size,
+    geom::{Abs, Axes, Size},
     image::{Image, ImageFormat, RasterFormat, VectorFormat},
 };
 use typst_ts_core::{error::prelude::*, font::GlyphProvider};
@@ -15,37 +15,35 @@ use crate::{
     ir::{AbsoulteRef, FlatTextItem, GlyphItem, StyleNs},
     ir::{FlatSvgItem, GroupRef, Module, TransformItem},
     ir::{PathItem, PathStyle},
-    utils::{console_log, AbsExt, PerfEvent},
-    DefaultRenderFeature, RenderFeature,
+    sk,
+    utils::{console_log, AbsExt, PerfEvent, ToCssExt},
+    ClipPathMap, DefaultExportFeature, ExportFeature, StyleDefMap,
 };
 
-pub struct SvgRenderTask<'m, 't, Feat: RenderFeature = DefaultRenderFeature> {
+static WARN_VIEW_BOX: OnceCell<()> = OnceCell::new();
+
+pub struct SvgRenderTask<'m, 't, Feat: ExportFeature = DefaultExportFeature> {
     pub glyph_provider: GlyphProvider,
 
     pub module: &'m Module,
 
-    pub style_defs: &'t mut HashMap<(StyleNs, Arc<str>), String>,
-    pub glyph_defs: &'t mut HashMap<String, String>,
-    pub clip_paths: &'t mut HashMap<Arc<str>, u32>,
+    pub style_defs: &'t mut StyleDefMap,
+    pub clip_paths: &'t mut ClipPathMap,
 
     pub page_off: usize,
-    pub width_px: u32,
-    pub height_px: u32,
-    pub raw_height: f32,
     pub render_text_element: bool,
-
-    pub font_map: HashMap<FontInfo, u32>,
 
     // errors: Vec<Error>,
     pub _feat_phantom: std::marker::PhantomData<Feat>,
 }
 
-impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
+impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
     #[inline]
     fn perf_event(&self, _name: &'static str) -> Option<PerfEvent> {
         None
     }
 
+    /// Render an item into the a `<g/>` element.
     pub fn render_item(&mut self, abs_ref: AbsoulteRef) -> ZResult<String> {
         let item = self.module.get_item(&abs_ref).ok_or_else(|| {
             error_once!(
@@ -63,32 +61,45 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
     ) -> ZResult<String> {
         match item.deref() {
             FlatSvgItem::Group(group) => self.render_group(abs_ref, group),
-            FlatSvgItem::Text(text) => self.render_text(text),
-            FlatSvgItem::Path(path) => self.render_path(path),
+            FlatSvgItem::Text(text) => self.render_text(abs_ref, text),
+            FlatSvgItem::Path(path) => Ok(format!(
+                r#"<g data-tid="{}">{}</g>"#,
+                abs_ref.as_svg_id("p"),
+                self.render_path(path)?,
+            )),
             FlatSvgItem::Item(transformed) => {
                 let item = self.render_item(abs_ref.id.make_absolute_ref(transformed.1.clone()))?;
                 Ok(format!(
-                    r#"<g {}>{}</g>"#,
+                    r#"<g data-tid="{}" {}>{}</g>"#,
+                    abs_ref.as_svg_id("p"),
                     self.get_css(&transformed.0),
                     item
                 ))
             }
             FlatSvgItem::Link(link) => Ok(format!(
-                r#"<a xlink:href="{}" target="_blank"><rect class="pseudo-link" width="{}" height="{}"></rect></a>"#,
+                r#"<g data-tid="{}"><a xlink:href="{}" target="_blank"><rect class="pseudo-link" width="{}" height="{}"></rect></a></g>"#,
+                abs_ref.as_svg_id("l"),
                 link.href.replace('&', "&amp;"),
                 link.size.x.to_pt(),
                 link.size.y.to_pt(),
             )),
-            FlatSvgItem::Image(image) => self.render_image(&image.image, image.size),
+            FlatSvgItem::Image(image) => Ok(format!(
+                r#"<g data-tid="{}">{}</g>"#,
+                abs_ref.as_svg_id("i"),
+                Self::render_image(&image.image, image.size)?,
+            )),
             FlatSvgItem::Glyph(_) | FlatSvgItem::None => {
                 panic!("SvgRenderTask.RenderFrame.UnknownItem {:?}", item)
             }
         }
     }
 
-    /// Render a frame into the canvas.
+    /// Render a frame into svg text.
     fn render_group(&mut self, abs_ref: AbsoulteRef, group: &GroupRef) -> ZResult<String> {
-        let mut g = vec![format!(r#"<g class="group">"#)];
+        let mut g = vec![format!(
+            r#"<g class="group" data-tid="{}">"#,
+            abs_ref.as_svg_id("p")
+        )];
         let mut normal_g = vec![];
         let mut link_g = vec![];
 
@@ -160,18 +171,24 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
         }
     }
 
-    /// Render a geometrical shape into the canvas.
+    /// Render a geometrical shape into svg text.
     fn render_path(&mut self, path: &PathItem) -> ZResult<String> {
         render_path(path)
     }
 
-    /// Render a text run into the self.canvas.
-    pub(crate) fn render_text(&mut self, text: &FlatTextItem) -> ZResult<String> {
+    /// Render a text run into the svg text.
+    pub(crate) fn render_text(
+        &mut self,
+        abs_ref: AbsoulteRef,
+        text: &FlatTextItem,
+    ) -> ZResult<String> {
         let _r = self.perf_event("render_text");
 
         let mut text_list = vec![];
         let shape = &text.shape;
 
+        // Scale is in pixel per em, but curve data is in font design units, so
+        // we have to divide by units per em.
         let upem = shape.upem.0 as f32;
         let ppem = shape.ppem.0 as f32;
         let ascender = shape.ascender.to_f32();
@@ -187,41 +204,32 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
 
             fill_id
         };
-        text_list.push(format!(r#"<g class="t {}">"#, fill));
+        text_list.push(format!(
+            r#"<g class="typst-txt {}" data-tid="{}">"#,
+            fill,
+            abs_ref.as_svg_id("p")
+        ));
         text_list.push(format!(r#"<g transform="scale({},{})">"#, ppem, -ppem));
 
-        //  todo: fill
         let mut x = 0f32;
         for (offset, advance, glyph) in text.content.glyphs.iter() {
-            let glyph_item = self.module.get_glyph(glyph).unwrap();
-
             let offset = x + offset.to_f32();
             let ts = offset / ppem;
+            let adjusted = (ts * 2.).round() / 2.;
 
-            match glyph_item {
-                GlyphItem::Raw(font, id) => {
-                    let font = font.clone();
-                    let id = *id;
-                    // todo: server side render
-                    let e = self
-                        .render_svg_glyph(ts, &font, id)
-                        .or_else(|| self.render_bitmap_glyph(&font, id))
-                        .or_else(|| self.render_outline_glyph(&font, glyph, id));
-                    if let Some(e) = e {
-                        let x = (ts * 2.).round() / 2.;
-                        text_list.push(format!(r#"<g transform="translate({},0)">{}</g>"#, x, e));
-                    }
-                }
-            }
+            let glyph_id = glyph.as_svg_id("g");
+            let e = format!(r##"<use href="#{}"/>"##, glyph_id);
+
+            text_list.push(format!(
+                r#"<g transform="translate({},0)">{}</g>"#,
+                adjusted, e
+            ));
 
             x += advance.to_f32();
         }
 
         text_list.push("</g>".to_string());
         if self.render_text_element {
-            // <foreignObject x="0" y="165" width="100%" height="38">
-            //   <xhtml:span class="copy-popover">Click to Copy</xhtml:span>
-            // </foreignObject>
             // text_list.push(format!(
             //     r#"<h5:span textLength="{}" font-size="{}" class="tsel">{}</h5:span>"#,
             //     v,
@@ -229,12 +237,9 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
             //     xml::escape::escape_str_pcdata(&text.content.content),
             // ));
 
+            // todo: investigate &nbsp;
             text_list.push(format!(
-                r#"
-              <foreignObject x="0" y="-{}" width="{}" height="{}">
-                <h5:div class="tsel" style="font-size: {}px;">{}</h5:div>
-                </foreignObject>
-            "#,
+                r#"<foreignObject x="0" y="-{}" width="{}" height="{}"><h5:div class="tsel" style="font-size: {}px;">{}</h5:div></foreignObject>"#,
                 ascender,
                 x,
                 upem * ppem,
@@ -247,101 +252,259 @@ impl<'m, 't, Feat: RenderFeature> SvgRenderTask<'m, 't, Feat> {
         Ok(text_list.join(""))
     }
 
-    /// Render an SVG glyph into the self.canvas.
+    pub fn render_glyph(&mut self, glyph: &AbsoulteRef, glyph_item: &GlyphItem) -> Option<String> {
+        let gp = &self.glyph_provider;
+        Self::render_glyph_inner(gp, glyph, glyph_item)
+    }
+
+    #[comemo::memoize]
+    fn render_glyph_inner(
+        gp: &GlyphProvider,
+        glyph: &AbsoulteRef,
+        glyph_item: &GlyphItem,
+    ) -> Option<String> {
+        match glyph_item {
+            GlyphItem::Raw(font, id) => {
+                let id = *id;
+                // todo: server side render
+                Self::render_svg_glyph(gp, font, glyph, id)
+                    .or_else(|| Self::render_bitmap_glyph(gp, font, glyph, id))
+                    .or_else(|| Self::render_outline_glyph(gp, font, glyph, id))
+            }
+        }
+    }
+
+    /// Render an SVG glyph into the svg text.
     /// More information: https://learn.microsoft.com/zh-cn/typography/opentype/spec/svg
-    fn render_svg_glyph(&mut self, _ts: f32, _font: &Font, _id: GlyphId) -> Option<String> {
-        // let _r = self.perf_event("render_svg_glyph");
-        // let glyph_image = extract_svg_glyph(self.glyph_provider.clone(), font, id)?;
-
-        // // position our image
-        // let ascender = font.metrics().ascender.at(text_size).to_f32();
-
-        // let size = text_size.to_f32();
-        // // make ascender back
-        // let ts = ts.pre_translate(0., -ascender);
-        // // pre scale to correct size
-        // let ts = ts.pre_scale(
-        //     size / glyph_image.width() as f32,
-        //     size / glyph_image.height() as f32,
-        // );
-
-        // self.render_image(
-        //     ts,
-        //     &glyph_image,
-        //     Size::new(
-        //         Abs::pt(glyph_image.width() as f64),
-        //         Abs::pt(glyph_image.height() as f64),
-        //     ),
-        // )
-        // .ok()
-        // panic!("not support svg glyph")
-        None
-    }
-
-    /// Render a bitmap glyph into the self.canvas.
-    fn render_bitmap_glyph(&mut self, _font: &Font, _id: GlyphId) -> Option<String> {
-        // let _r = self.perf_event("render_bitmap_glyph");
-        // let size = text_size.to_f32();
-        // let ppem = (size * ts.sy) as u16;
-
-        // let (glyph_image, raster_x, raster_y) =
-        //     extract_bitmap_glyph(self.glyph_provider.clone(), font, id, ppem)?;
-
-        // // FIXME: Vertical alignment isn't quite right for Apple Color Emoji,
-        // // and maybe also for Noto Color Emoji. And: Is the size calculation
-        // // correct?
-        // let h = text_size;
-        // let w = (glyph_image.width() as f64 / glyph_image.height() as f64) * h;
-
-        // let dx = (raster_x as f32) / (glyph_image.width() as f32) * size;
-        // let dy = (raster_y as f32) / (glyph_image.height() as f32) * size;
-        // let ts = ts.pre_translate(dx, -size - dy);
-
-        // self.render_image(&glyph_image, Size::new(w, h)).ok()
-        // panic!("not support bitmap glyph")
-        None
-    }
-
-    /// Render an outline glyph into the canvas. This is the "normal" case.
-    fn render_outline_glyph(
-        &mut self,
+    fn render_svg_glyph(
+        glyph_provider: &GlyphProvider,
         font: &Font,
         glyph: &AbsoulteRef,
         id: GlyphId,
     ) -> Option<String> {
-        let _r = self.perf_event("render_outline_glyph");
+        let glyph_image = extract_svg_glyph(glyph_provider, font, id)?;
 
-        // Scale is in pixel per em, but curve data is in font design units, so
-        // we have to divide by units per em.
+        // position our image
+        let ascender = font
+            .metrics()
+            .ascender
+            .at(Abs::raw(font.metrics().units_per_em))
+            .to_f32();
+
+        let img = Self::render_image(
+            &glyph_image,
+            Size::new(
+                Abs::pt(glyph_image.width() as f64),
+                Abs::pt(glyph_image.height() as f64),
+            ),
+        )
+        .ok()?;
+
+        let glyph_id = glyph.as_svg_id("g");
+        let symbol_def = format!(
+            r#"<symbol overflow="visible" id="{}" class="svg_glyph"><g transform="scale(1, -1), translate(0,{})">{}</g></symbol>"#,
+            glyph_id, -ascender, img
+        );
+        Some(symbol_def)
+    }
+
+    /// Render a bitmap glyph into the svg text.
+    fn render_bitmap_glyph(
+        glyph_provider: &GlyphProvider,
+        font: &Font,
+        glyph: &AbsoulteRef,
+        id: GlyphId,
+    ) -> Option<String> {
+        let ppem = u16::MAX;
+        let upem = font.metrics().units_per_em as f32;
+
+        let (glyph_image, raster_x, raster_y) = glyph_provider.bitmap_glyph(font, id, ppem)?;
+
+        // FIXME: Vertical alignment isn't quite right for Apple Color Emoji,
+        // and maybe also for Noto Color Emoji. And: Is the size calculation
+        // correct?
+
+        // position our image
+        let ascender = font
+            .metrics()
+            .ascender
+            .at(Abs::raw(font.metrics().units_per_em))
+            .to_f32();
+
+        let sy = upem / glyph_image.height() as f32;
+
+        let ts = sk::Transform::from_scale(upem / glyph_image.width() as f32, -sy);
+
+        // size
+        let dx = raster_x as f32;
+        let dy = raster_y as f32;
+        let ts = ts.post_translate(dx, ascender + dy);
+
+        let img = Self::render_image(
+            &glyph_image,
+            Size::new(
+                Abs::pt(glyph_image.width() as f64),
+                Abs::pt(glyph_image.height() as f64),
+            ),
+        )
+        .ok()?;
+
+        let glyph_id = glyph.as_svg_id("g");
+        let symbol_def = format!(
+            r#"<symbol overflow="visible" id="{}" class="bitmap_glyph"><g transform="{}">{}</g></symbol>"#,
+            glyph_id,
+            ts.to_css(),
+            img
+        );
+        Some(symbol_def)
+    }
+
+    /// Render an outline glyph into svg text. This is the "normal" case.
+    fn render_outline_glyph(
+        glyph_provider: &GlyphProvider,
+        font: &Font,
+        glyph: &AbsoulteRef,
+        id: GlyphId,
+    ) -> Option<String> {
         if cfg!(feature = "debug_glyph_render") {
             console_log!("render_outline_glyph: {:?}", font.info());
         }
 
-        let glyph_id = glyph.as_svg_id("g");
-        if !self.glyph_defs.contains_key(&glyph_id) {
-            let glyph_data = extract_outline_glyph(self.glyph_provider.clone(), font, id)?;
-            let symbol_def = format!(
-                r#"<symbol overflow="visible" id="{}" class="outline_glyph">{}</symbol>"#,
-                glyph_id, glyph_data
-            );
-            self.glyph_defs.insert(glyph_id.clone(), symbol_def);
-        }
+        let d = glyph_provider.outline_glyph(font, id)?;
 
-        Some(format!(r##"<use href="#{}"/>"##, glyph_id))
+        let glyph_id = glyph.as_svg_id("g");
+        let symbol_def = format!(
+            r#"<symbol overflow="visible" id="{}" class="outline_glyph"><path d="{}"/></symbol>"#,
+            glyph_id, d
+        );
+        Some(symbol_def)
     }
 
-    /// Render a raster or SVG image into the canvas.
+    /// Render a raster or SVG image into svg text.
     // todo: error handling
-    pub(crate) fn render_image(&mut self, image: &Image, size: Size) -> ZResult<String> {
-        let _r = self.perf_event("render_image");
-        render_image(image, size)
+    #[comemo::memoize]
+    pub fn render_image(image: &Image, size: Size) -> ZResult<String> {
+        let image_url = rasterize_embedded_image_url(image).unwrap();
+
+        // resize image to fit the view
+        let size = size;
+        let view_width = size.x.to_f32();
+        let view_height = size.y.to_f32();
+
+        let aspect = (image.width() as f32) / (image.height() as f32);
+
+        let w = view_width.max(aspect * view_height);
+        let h = w / aspect;
+        Ok(format!(
+            r#"<image x="0" y="0" width="{}" height="{}" xlink:href="{}" />"#,
+            w, h, image_url
+        ))
     }
 }
 
-#[comemo::memoize]
-fn extract_outline_glyph(g: GlyphProvider, font: &Font, id: GlyphId) -> Option<String> {
-    let d = g.outline_glyph(font, id)?;
-    Some(format!(r#"<path d="{}"/>"#, d))
+fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<Image> {
+    let data = g.svg_glyph(font, id)?;
+    let mut data = data.as_ref();
+
+    let font_metrics = font.metrics();
+
+    if cfg!(feature = "debug_glyph_render") {
+        console_log!(
+            "render_svg_glyph: {:?} {:?}",
+            font.info().family,
+            font_metrics
+        );
+    }
+
+    // Decompress SVGZ.
+    let mut decoded = vec![];
+    // The first three bytes of the gzip-encoded document header must be 0x1F, 0x8B, 0x08.
+    if data.starts_with(&[0x1f, 0x8b]) {
+        let mut decoder = flate2::read::GzDecoder::new(data);
+        decoder.read_to_end(&mut decoded).ok()?;
+        data = &decoded;
+    }
+
+    // todo: When a font engine renders glyph 14, the result shall be the same as rendering the following SVG document
+    //   <svg> <defs> <use #glyph{id}> </svg>
+
+    let upem = Abs::raw(font.units_per_em());
+    let (width, height) = (upem.to_f32(), upem.to_f32());
+    let origin_ascender = font_metrics.ascender.at(upem).to_f32();
+
+    let doc_string = String::from_utf8(data.to_owned()).unwrap();
+
+    // todo: verify SVG capability requirements and restrictions
+
+    // Parse XML.
+    let mut svg_str = std::str::from_utf8(data).ok()?.to_owned();
+    let document = xmlparser::Tokenizer::from(svg_str.as_str());
+    let mut start_span = None;
+    let mut last_viewbox = None;
+    for n in document {
+        let tok = n.unwrap();
+        match tok {
+            xmlparser::Token::ElementStart { span, local, .. } => {
+                if local.as_str() == "svg" {
+                    start_span = Some(span);
+                    break;
+                }
+            }
+            xmlparser::Token::Attribute {
+                span, local, value, ..
+            } => {
+                if local.as_str() == "viewBox" {
+                    last_viewbox = Some((span, value));
+                }
+            }
+            xmlparser::Token::ElementEnd { .. } => break,
+            _ => {}
+        }
+    }
+
+    // update view box
+    let view_box = last_viewbox.as_ref()
+        .map(|s| {
+            WARN_VIEW_BOX.get_or_init(|| {
+                console_log!(
+                    "render_svg_glyph with viewBox, This should be helpful if you can help us verify the result: {:?} {:?}",
+                    font.info().family,
+                    doc_string
+                );
+            });
+            s.1.as_str().to_owned()
+        })
+        .unwrap_or_else(|| format!("0 {} {} {}", -origin_ascender, width, height));
+
+    match last_viewbox {
+        Some((span, ..)) => {
+            svg_str.replace_range(span.range(), format!(r#"viewBox="{}""#, view_box).as_str());
+        }
+        None => {
+            svg_str.insert_str(
+                start_span.unwrap().range().end,
+                format!(r#" viewBox="{}""#, view_box).as_str(),
+            );
+        }
+    }
+
+    if cfg!(feature = "debug_glyph_render") {
+        console_log!(
+            "render_svg_glyph prepared document: {:?} {:?}",
+            font.info().family,
+            svg_str
+        );
+    }
+
+    let image = Image::new_raw(
+        svg_str.as_bytes().to_vec().into(),
+        typst::image::ImageFormat::Vector(typst::image::VectorFormat::Svg),
+        Axes::new(width as u32, height as u32),
+        None,
+    )
+    .ok()?;
+
+    Some(image)
 }
 
 #[derive(Debug, Clone)]
@@ -445,23 +608,4 @@ fn render_path(path: &PathItem) -> ZResult<String> {
     p.push("/>".to_owned());
     let p = p.join("");
     Ok(p)
-}
-
-#[comemo::memoize]
-fn render_image(image: &Image, size: Size) -> ZResult<String> {
-    let image_url = rasterize_embedded_image_url(image).unwrap();
-
-    // resize image to fit the view
-    let size = size;
-    let view_width = size.x.to_f32();
-    let view_height = size.y.to_f32();
-
-    let aspect = (image.width() as f32) / (image.height() as f32);
-
-    let w = view_width.max(aspect * view_height);
-    let h = w / aspect;
-    Ok(format!(
-        r#"<image x="0" y="0" width="{}" height="{}" xlink:href="{}" />"#,
-        w, h, image_url
-    ))
 }

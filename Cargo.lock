@@ -3516,6 +3516,7 @@ dependencies = [
  "typst",
  "typst-ts-core",
  "xml-rs",
+ "xmlparser",
 ]
 
 [[package]]

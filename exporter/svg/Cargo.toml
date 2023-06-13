@@ -22,5 +22,6 @@ elsa.workspace = true
 base64.workspace = true
 siphasher.workspace = true
 xml-rs.workspace = true
+xmlparser = "0.13.5"
 
 typst-ts-core.workspace = true
