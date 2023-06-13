@@ -20,6 +20,7 @@ macro_rules! console_log {
 
 #[allow(unused_imports)]
 pub(crate) use console_log;
+use tiny_skia::Transform;
 use typst::geom::{Abs, Color};
 
 /// Additional methods for [`Length`].
@@ -60,6 +61,15 @@ impl ToCssExt for Color {
         format!(
             "#{:02x}{:02x}{:02x}{:02x}",
             color.r, color.g, color.b, color.a
+        )
+    }
+}
+
+impl ToCssExt for Transform {
+    fn to_css(self) -> String {
+        format!(
+            r#"matrix({},{},{},{},{},{})"#,
+            self.sx, self.ky, self.kx, self.sy, self.tx, self.ty
         )
     }
 }

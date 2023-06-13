@@ -3510,13 +3510,13 @@ dependencies = [
  "elsa",
  "flate2",
  "once_cell",
- "rustc-hash",
  "siphasher",
  "tiny-skia",
  "ttf-parser",
  "typst",
  "typst-ts-core",
  "xml-rs",
+ "xmlparser",
 ]
 
 [[package]]
