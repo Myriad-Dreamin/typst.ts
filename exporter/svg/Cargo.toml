@@ -23,5 +23,11 @@ base64.workspace = true
 siphasher.workspace = true
 xml-rs.workspace = true
 xmlparser = "0.13.5"
+rkyv = { version = "0.7.42", optional = true }
 
 typst-ts-core.workspace = true
+
+
+[features]
+rkyv = ["dep:rkyv"]
+default = ["rkyv"]

@@ -1,6 +1,8 @@
 //! Rendering into svg text or module.
 
+use geom::{Axes, Size};
 pub(crate) use tiny_skia as sk;
+use typst::model::Introspector;
 
 use std::collections::hash_map::RandomState;
 use std::collections::{HashMap, HashSet};
@@ -11,13 +13,11 @@ use render::SvgRenderTask;
 
 use typst::diag::SourceResult;
 use typst::doc::Document;
-use typst::geom::{Axes, Size};
 use typst::World;
-use typst_ts_core::annotation::link::AnnotationProcessor;
-use typst_ts_core::error::prelude::*;
 use typst_ts_core::font::{FontGlyphProvider, GlyphProvider};
 use typst_ts_core::Exporter;
 
+pub mod geom;
 pub(crate) mod ir;
 pub(crate) mod lowering;
 pub(crate) mod render;
@@ -49,7 +49,7 @@ type ClipPathMap = HashMap<ImmutStr, u32>;
 
 pub struct SvgTask<Feat: ExportFeature = DefaultExportFeature> {
     glyph_provider: GlyphProvider,
-    annotation_proc: AnnotationProcessor,
+    introspector: Introspector,
 
     style_defs: StyleDefMap,
     clip_paths: ClipPathMap,
@@ -59,19 +59,19 @@ pub struct SvgTask<Feat: ExportFeature = DefaultExportFeature> {
 }
 
 impl<Feat: ExportFeature> SvgTask<Feat> {
-    pub fn new(doc: &Document) -> ZResult<Self> {
+    pub fn new(doc: &Document) -> Self {
         let glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
-        let annotation_proc = AnnotationProcessor::new(doc);
+        let introspector = Introspector::new(&doc.pages);
 
-        Ok(Self {
+        Self {
             glyph_provider,
-            annotation_proc,
+            introspector,
 
             style_defs: HashMap::default(),
             clip_paths: HashMap::default(),
 
             _feat_phantom: Default::default(),
-        })
+        }
     }
 
     pub fn set_glyph_provider(&mut self, glyph_provider: GlyphProvider) {
@@ -80,8 +80,8 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 
     pub fn page_size(sz: Size) -> Axes<u32> {
         let (width_px, height_px) = {
-            let width_px = (sz.x.to_pt().ceil() as f32).round().max(1.0) as u32;
-            let height_px = (sz.y.to_pt().ceil() as f32).round().max(1.0) as u32;
+            let width_px = (sz.x.0.ceil()).round().max(1.0) as u32;
+            let height_px = (sz.y.0.ceil()).round().max(1.0) as u32;
 
             (width_px, height_px)
         };
@@ -114,7 +114,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         ctx: &RenderContext,
         used_glyphs: &GlyphMapping,
         svg_body: &mut Vec<String>,
-    ) -> ZResult<()> {
+    ) {
         let mut render_task = self.fork_render_task(&ctx.doc.module);
 
         let mut defs = used_glyphs.clone().into_iter().collect::<Vec<_>>();
@@ -122,12 +122,10 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         for (item, abs_ref) in defs.iter() {
             svg_body.push(render_task.render_glyph(abs_ref, item).unwrap_or_default())
         }
-
-        Ok(())
     }
 
     /// Render a document into the svg_body.
-    pub fn render(&mut self, input: &RenderContext, svg_body: &mut Vec<String>) -> ZResult<()> {
+    pub fn render(&mut self, input: &RenderContext, svg_body: &mut Vec<String>) {
         let mut render_task = self.fork_render_task(&input.doc.module);
 
         let mut acc_height = 0u32;
@@ -136,7 +134,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 
             let entry = &page.0;
             let size = Self::page_size(page.1);
-            let item = render_task.render_item(entry.clone()).unwrap();
+            let item = render_task.render_item(entry.clone());
             let item = format!(
                 r#"<g transform="translate(0, {})" data-tid="{}">{}</g>"#,
                 acc_height,
@@ -147,16 +145,10 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             svg_body.push(item);
             acc_height += size.y;
         }
-
-        Ok(())
     }
 
     /// Render a document difference into the svg_body.
-    pub fn render_diff(
-        &mut self,
-        ctx: &IncrementalRenderContext,
-        svg_body: &mut Vec<String>,
-    ) -> ZResult<()> {
+    pub fn render_diff(&mut self, ctx: &IncrementalRenderContext, svg_body: &mut Vec<String>) {
         let mut acc_height = 0u32;
         let mut render_task = self.fork_render_task(&ctx.next.module);
 
@@ -184,7 +176,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                 continue;
             }
 
-            let item = render_task.render_item(entry.clone()).unwrap();
+            let item = render_task.render_item(entry.clone());
 
             // todo: evaluate simlarity
             let reuse_info = match ctx.prev.pages.get(idx) {
@@ -209,8 +201,6 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             svg_body.push(item);
             acc_height += size.y;
         }
-
-        Ok(())
     }
 }
 
@@ -248,7 +238,7 @@ impl SvgExporter {
             .iter()
             .map(|p| {
                 let abs_ref = builder.build(task_context.lower(p));
-                (abs_ref, p.size())
+                (abs_ref, p.size().into())
             })
             .collect::<Vec<_>>();
         let (module, glyph_mapping) = builder.finalize();
@@ -283,10 +273,10 @@ impl SvgExporter {
         let mut svg_body = vec![];
 
         // render the document
-        let mut t = SvgTask::<DefaultExportFeature>::new(&output).unwrap();
+        let mut t = SvgTask::<DefaultExportFeature>::new(&output);
         let (doc, used_glyphs) = Self::svg_doc(&mut t, &output);
         let render_context = RenderContext { doc };
-        t.render(&render_context, &mut svg_body).unwrap();
+        t.render(&render_context, &mut svg_body);
 
         // base style
         svg.push(r#"<style type="text/css">"#.to_owned());
@@ -296,8 +286,7 @@ impl SvgExporter {
         // attach the glyph defs, clip paths, and style defs
         svg.push("<defs>".to_owned());
         svg.push("<g>".to_owned());
-        t.render_glyphs(&render_context, &used_glyphs, &mut svg)
-            .unwrap();
+        t.render_glyphs(&render_context, &used_glyphs, &mut svg);
         svg.push("</g>".to_owned());
         Self::clip_paths(t.clip_paths, &mut svg);
         svg.push("</defs>".to_owned());
@@ -328,11 +317,11 @@ impl SvgExporter {
         let mut svg_body = vec![];
 
         // render the document
-        let mut t = SvgTask::<DefaultExportFeature>::new(&output).unwrap();
+        let mut t = SvgTask::<DefaultExportFeature>::new(&output);
 
         let (next, used_glyphs) = Self::svg_doc(&mut t, &output);
         let render_context = IncrementalRenderContext { prev, next };
-        t.render_diff(&render_context, &mut svg_body).unwrap();
+        t.render_diff(&render_context, &mut svg_body);
         let svg_doc = render_context.next;
 
         // base style
@@ -397,7 +386,7 @@ pub struct SvgModuleExporter {}
 
 impl Exporter<Document, Vec<u8>> for SvgModuleExporter {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<Vec<u8>> {
-        let mut t = SvgTask::<DefaultExportFeature>::new(&output).unwrap();
+        let mut t = SvgTask::<DefaultExportFeature>::new(&output);
 
         let mut builder = ModuleBuilder::default();
 
@@ -406,8 +395,16 @@ impl Exporter<Document, Vec<u8>> for SvgModuleExporter {
             let _entry_id = builder.build(item);
         }
 
-        let res = vec![];
-        let _repr = builder.finalize();
-        Ok(res)
+        // Or you can customize your serialization for better performance
+        // and compatibility with #![no_std] environments
+        use rkyv::ser::{serializers::AllocSerializer, Serializer};
+
+        let (repr, ..) = builder.finalize();
+
+        let mut serializer = AllocSerializer::<0>::default();
+        serializer.serialize_value(&repr.item_pack).unwrap();
+        let item_pack = serializer.into_serializer().into_inner();
+
+        Ok(item_pack.into_vec())
     }
 }

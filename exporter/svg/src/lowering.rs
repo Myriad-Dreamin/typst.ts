@@ -3,14 +3,14 @@
 use std::sync::Arc;
 
 use typst::doc::{Destination, Frame, FrameItem, GroupItem, Meta, Position, TextItem};
-use typst::geom::{Geometry, LineCap, LineJoin, Paint, PathItem, Scalar, Shape, Size, Stroke};
+use typst::geom::{Geometry, LineCap, LineJoin, Paint, PathItem, Shape, Size, Stroke};
 use typst::image::Image;
 
 use ttf_parser::OutlineBuilder;
 
 use crate::{
     ir,
-    ir::{SvgItem, TransformItem},
+    ir::{Scalar, SvgItem, TransformItem},
     svg::SvgPath2DBuilder,
     utils::{AbsExt, ToCssExt},
     ExportFeature, SvgTask,
@@ -39,7 +39,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                         Destination::Position(dest) => Self::lower_position(*dest, *size),
                         Destination::Location(loc) => {
                             // todo: process location before lowering
-                            let dest = self.annotation_proc.process_location(*loc);
+                            let dest = self.introspector.position(*loc);
                             Self::lower_position(dest, *size)
                         }
                     },
@@ -47,7 +47,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                 },
             };
 
-            items.push((*pos, item));
+            items.push(((*pos).into(), item));
         }
 
         SvgItem::Group(ir::GroupItem(items))
@@ -80,7 +80,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         };
 
         SvgItem::Transformed(ir::TransformedItem(
-            TransformItem::Matrix(Arc::new(group.transform)),
+            TransformItem::Matrix(Arc::new(group.transform.into())),
             Box::new(inner),
         ))
     }
@@ -89,15 +89,15 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     #[comemo::memoize]
     pub(super) fn lower_image(image: &Image, size: Size) -> SvgItem {
         SvgItem::Image(ir::ImageItem {
-            image: image.clone(),
-            size,
+            image: Arc::new(image.clone().into()),
+            size: size.into(),
         })
     }
 
     pub(super) fn lower_link(&self, url: &str, size: Size) -> ir::SvgItem {
         let lnk = ir::LinkItem {
             href: url.into(),
-            size,
+            size: size.into(),
         };
 
         SvgItem::Link(lnk)
@@ -113,7 +113,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                 pos.point.y.to_f32()
             )
             .into(),
-            size,
+            size: size.into(),
         };
 
         SvgItem::Link(lnk)
@@ -126,8 +126,8 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         for glyph in &text.glyphs {
             let id = GlyphId(glyph.id);
             glyphs.push((
-                glyph.x_offset.at(text.size),
-                glyph.x_advance.at(text.size),
+                glyph.x_offset.at(text.size).into(),
+                glyph.x_advance.at(text.size).into(),
                 crate::ir::GlyphItem::Raw(text.font.clone(), id),
             ));
         }
@@ -151,10 +151,10 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                 glyphs,
             }),
             shape: Arc::new(ir::TextShape {
-                dir: text.lang.dir(),
-                ascender: text.font.metrics().ascender.at(text.size),
-                upem: Scalar::from(text.font.units_per_em()),
-                ppem: Scalar::from(ppem as f64),
+                // dir: text.lang.dir(),
+                ascender: text.font.metrics().ascender.at(text.size).into(),
+                upem: Scalar::from(text.font.units_per_em() as f32),
+                ppem: Scalar::from(ppem),
                 fill,
             }),
         })
@@ -228,12 +228,14 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         }) = &shape.stroke
         {
             if let Some(pattern) = dash_pattern.as_ref() {
-                styles.push(ir::PathStyle::StrokeDashOffset(pattern.phase));
-                styles.push(ir::PathStyle::StrokeDashArray(pattern.array.clone().into()));
+                styles.push(ir::PathStyle::StrokeDashOffset(pattern.phase.into()));
+                let d = pattern.array.clone();
+                let d = d.into_iter().map(Scalar::from).collect();
+                styles.push(ir::PathStyle::StrokeDashArray(d));
             }
 
-            styles.push(ir::PathStyle::StrokeWidth(*thickness));
-            styles.push(ir::PathStyle::StrokeMitterLimit(*miter_limit));
+            styles.push(ir::PathStyle::StrokeWidth((*thickness).into()));
+            styles.push(ir::PathStyle::StrokeMitterLimit((*miter_limit).into()));
             match line_cap {
                 LineCap::Butt => {}
                 LineCap::Round => styles.push(ir::PathStyle::StrokeLineCap("round".into())),
