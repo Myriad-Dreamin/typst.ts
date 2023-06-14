@@ -73,5 +73,3 @@ impl ToCssExt for Transform {
         )
     }
 }
-
-pub struct PerfEvent {}

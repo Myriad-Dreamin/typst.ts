@@ -39,7 +39,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                         Destination::Position(dest) => Self::lower_position(*dest, *size),
                         Destination::Location(loc) => {
                             // todo: process location before lowering
-                            let dest = self.annotation_proc.process_location(*loc);
+                            let dest = self.introspector.position(*loc);
                             Self::lower_position(dest, *size)
                         }
                     },

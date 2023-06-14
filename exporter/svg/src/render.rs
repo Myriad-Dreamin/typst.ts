@@ -6,7 +6,7 @@ use typst::{
     geom::{Abs, Axes, Size},
     image::{Image, ImageFormat, RasterFormat, VectorFormat},
 };
-use typst_ts_core::{error::prelude::*, font::GlyphProvider};
+use typst_ts_core::font::GlyphProvider;
 
 use ttf_parser::GlyphId;
 use typst::font::Font;
@@ -16,7 +16,7 @@ use crate::{
     ir::{FlatSvgItem, GroupRef, Module, TransformItem},
     ir::{PathItem, PathStyle},
     sk,
-    utils::{console_log, AbsExt, PerfEvent, ToCssExt},
+    utils::{console_log, AbsExt, ToCssExt},
     ClipPathMap, DefaultExportFeature, ExportFeature, StyleDefMap,
 };
 
@@ -38,56 +38,42 @@ pub struct SvgRenderTask<'m, 't, Feat: ExportFeature = DefaultExportFeature> {
 }
 
 impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
-    #[inline]
-    fn perf_event(&self, _name: &'static str) -> Option<PerfEvent> {
-        None
-    }
-
     /// Render an item into the a `<g/>` element.
-    pub fn render_item(&mut self, abs_ref: AbsoulteRef) -> ZResult<String> {
-        let item = self.module.get_item(&abs_ref).ok_or_else(|| {
-            error_once!(
-                "SvgRenderTask.ItemNotFound",
-                abs_ref: format!("{:?}", abs_ref)
-            )
-        })?;
+    pub fn render_item(&mut self, abs_ref: AbsoulteRef) -> String {
+        let item = self.module.get_item(&abs_ref).unwrap();
         self.render_item_inner(abs_ref, item)
     }
 
-    pub fn render_item_inner(
-        &mut self,
-        abs_ref: AbsoulteRef,
-        item: &FlatSvgItem,
-    ) -> ZResult<String> {
+    pub fn render_item_inner(&mut self, abs_ref: AbsoulteRef, item: &FlatSvgItem) -> String {
         match item.deref() {
             FlatSvgItem::Group(group) => self.render_group(abs_ref, group),
             FlatSvgItem::Text(text) => self.render_text(abs_ref, text),
-            FlatSvgItem::Path(path) => Ok(format!(
+            FlatSvgItem::Path(path) => format!(
                 r#"<g data-tid="{}">{}</g>"#,
                 abs_ref.as_svg_id("p"),
-                self.render_path(path)?,
-            )),
+                self.render_path(path),
+            ),
             FlatSvgItem::Item(transformed) => {
-                let item = self.render_item(abs_ref.id.make_absolute_ref(transformed.1.clone()))?;
-                Ok(format!(
+                let item = self.render_item(abs_ref.id.make_absolute_ref(transformed.1.clone()));
+                format!(
                     r#"<g data-tid="{}" {}>{}</g>"#,
                     abs_ref.as_svg_id("p"),
                     self.get_css(&transformed.0),
                     item
-                ))
+                )
             }
-            FlatSvgItem::Link(link) => Ok(format!(
+            FlatSvgItem::Link(link) => format!(
                 r#"<g data-tid="{}"><a xlink:href="{}" target="_blank"><rect class="pseudo-link" width="{}" height="{}"></rect></a></g>"#,
                 abs_ref.as_svg_id("l"),
                 link.href.replace('&', "&amp;"),
                 link.size.x.to_pt(),
                 link.size.y.to_pt(),
-            )),
-            FlatSvgItem::Image(image) => Ok(format!(
+            ),
+            FlatSvgItem::Image(image) => format!(
                 r#"<g data-tid="{}">{}</g>"#,
                 abs_ref.as_svg_id("i"),
-                Self::render_image(&image.image, image.size)?,
-            )),
+                Self::render_image(&image.image, image.size),
+            ),
             FlatSvgItem::Glyph(_) | FlatSvgItem::None => {
                 panic!("SvgRenderTask.RenderFrame.UnknownItem {:?}", item)
             }
@@ -95,7 +81,7 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
     }
 
     /// Render a frame into svg text.
-    fn render_group(&mut self, abs_ref: AbsoulteRef, group: &GroupRef) -> ZResult<String> {
+    fn render_group(&mut self, abs_ref: AbsoulteRef, group: &GroupRef) -> String {
         let mut g = vec![format!(
             r#"<g class="group" data-tid="{}">"#,
             abs_ref.as_svg_id("p")
@@ -105,12 +91,7 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
 
         for (pos, item) in group.0.iter() {
             let def_id = abs_ref.id.make_absolute_ref(item.clone());
-            let item = self.module.get_item(&def_id).ok_or_else(|| {
-                error_once!(
-                    "SvgRenderTask.ItemNotFound",
-                    abs_ref: format!("{:?}", abs_ref)
-                )
-            })?;
+            let item = self.module.get_item(&def_id).unwrap();
 
             let g = if let FlatSvgItem::Link(_) = item.deref() {
                 &mut link_g
@@ -123,7 +104,7 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
                 pos.x.to_pt(),
                 pos.y.to_pt()
             ));
-            g.push(self.render_item_inner(def_id, item)?);
+            g.push(self.render_item_inner(def_id, item));
             g.push("</g>".to_owned());
         }
 
@@ -132,7 +113,7 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
 
         g.push("</g>".to_owned());
 
-        Ok(g.join(""))
+        g.join("")
     }
 
     fn get_css(&mut self, transform: &TransformItem) -> String {
@@ -172,18 +153,12 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
     }
 
     /// Render a geometrical shape into svg text.
-    fn render_path(&mut self, path: &PathItem) -> ZResult<String> {
+    fn render_path(&mut self, path: &PathItem) -> String {
         render_path(path)
     }
 
     /// Render a text run into the svg text.
-    pub(crate) fn render_text(
-        &mut self,
-        abs_ref: AbsoulteRef,
-        text: &FlatTextItem,
-    ) -> ZResult<String> {
-        let _r = self.perf_event("render_text");
-
+    pub(crate) fn render_text(&mut self, abs_ref: AbsoulteRef, text: &FlatTextItem) -> String {
         let mut text_list = vec![];
         let shape = &text.shape;
 
@@ -249,7 +224,7 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
         }
         text_list.push("</g>".to_string());
 
-        Ok(text_list.join(""))
+        text_list.join("")
     }
 
     pub fn render_glyph(&mut self, glyph: &AbsoulteRef, glyph_item: &GlyphItem) -> Option<String> {
@@ -297,8 +272,7 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
                 Abs::pt(glyph_image.width() as f64),
                 Abs::pt(glyph_image.height() as f64),
             ),
-        )
-        .ok()?;
+        );
 
         let glyph_id = glyph.as_svg_id("g");
         let symbol_def = format!(
@@ -346,8 +320,7 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
                 Abs::pt(glyph_image.width() as f64),
                 Abs::pt(glyph_image.height() as f64),
             ),
-        )
-        .ok()?;
+        );
 
         let glyph_id = glyph.as_svg_id("g");
         let symbol_def = format!(
@@ -383,7 +356,7 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
     /// Render a raster or SVG image into svg text.
     // todo: error handling
     #[comemo::memoize]
-    pub fn render_image(image: &Image, size: Size) -> ZResult<String> {
+    pub fn render_image(image: &Image, size: Size) -> String {
         let image_url = rasterize_embedded_image_url(image).unwrap();
 
         // resize image to fit the view
@@ -395,10 +368,10 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
 
         let w = view_width.max(aspect * view_height);
         let h = w / aspect;
-        Ok(format!(
+        format!(
             r#"<image x="0" y="0" width="{}" height="{}" xlink:href="{}" />"#,
             w, h, image_url
-        ))
+        )
     }
 }
 
@@ -567,7 +540,7 @@ fn rasterize_embedded_image_url(image: &Image) -> Option<String> {
 }
 
 #[comemo::memoize]
-fn render_path(path: &PathItem) -> ZResult<String> {
+fn render_path(path: &PathItem) -> String {
     let mut p = vec!["<path ".to_owned()];
     p.push(format!(r#"d="{}" "#, path.d));
     for style in &path.styles {
@@ -606,6 +579,5 @@ fn render_path(path: &PathItem) -> ZResult<String> {
         }
     }
     p.push("/>".to_owned());
-    let p = p.join("");
-    Ok(p)
+    p.join("")
 }
