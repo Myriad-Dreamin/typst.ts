@@ -4,14 +4,16 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 use base64::Engine;
+use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 use siphasher::sip128::{Hasher128, SipHasher13};
 use ttf_parser::GlyphId;
 use typst::font::Font;
-use typst::geom::{Abs, Axes, Dir, Point, Ratio, Scalar, Size, Transform};
-use typst::image::Image;
+use typst::image::{ImageFormat, RasterFormat, VectorFormat};
+use typst_ts_core::typst_affinite_hash;
 
 pub type ImmutStr = Arc<str>;
 
+pub use super::geom::*;
 /// See <https://github.com/rust-lang/rust/blob/master/compiler/rustc_hir/src/stable_hash_impls.rs#L22>
 /// The fingerprint conflicts should be very rare and should be handled by the compiler.
 ///
@@ -22,6 +24,7 @@ pub type ImmutStr = Arc<str>;
 /// > collision occurring. For a big crate graph with 1000 crates in it, there is
 /// > a probability of 1 in 36,890,000,000,000 of a `StableCrateId` collision.
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub struct Fingerprint(u64, u64);
 
 pub trait FingerprintHasher: std::hash::Hasher {
@@ -83,6 +86,7 @@ impl FingerprintBuilder {
 /// The local id of a svg item.
 /// This id is only unique within the svg document.
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub struct DefId(pub u64);
 
 impl DefId {
@@ -118,10 +122,12 @@ impl DefId {
 /// + [`DefId::make_relative_ref`]
 /// + [`DefId::make_absolute_ref`]
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub struct RelativeDefId(pub i64);
 
 /// A stable absolute reference.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub struct AbsoulteRef {
     pub fingerprint: Fingerprint,
     pub id: DefId,
@@ -163,6 +169,7 @@ impl AbsoulteRef {
 /// A stable relative reference.
 /// These objects can only be constructed relative from a [`AbsoulteRef`].
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub struct RelativeRef {
     pub fingerprint: Fingerprint,
     pub id: RelativeDefId,
@@ -180,13 +187,17 @@ impl RelativeRef {
     }
 }
 
+#[derive(Debug, Default)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+pub struct ItemPack(pub Vec<FlatSvgItem>);
+
 /// A finished module that stores all the svg items.
 /// The svg items shares the underlying data.
 /// The svg items are flattened and ready to be serialized.
 #[derive(Debug, Default)]
 pub struct Module {
     pub glyphs: Vec<GlyphItem>,
-    pub items: Vec<FlatSvgItem>,
+    pub item_pack: ItemPack,
 }
 
 impl Module {
@@ -197,7 +208,7 @@ impl Module {
 
     /// Get a svg item by its stable ref.
     pub fn get_item(&self, id: &AbsoulteRef) -> Option<&FlatSvgItem> {
-        self.items.get(id.id.0 as usize)
+        self.item_pack.0.get(id.id.0 as usize)
     }
 }
 
@@ -229,15 +240,69 @@ impl SvgItem {
     }
 }
 
+/// Data of an `<image/>` element.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+pub struct Image {
+    pub data: Vec<u8>,
+    /// The format of the encoded `buffer`.
+    pub format: ImmutStr,
+    /// The size of the image.
+    pub size: Axes<u32>,
+    /// A text describing the image.
+    pub alt: Option<ImmutStr>,
+    /// prehashed image content.
+    pub hash: u128,
+}
+
+impl From<typst::image::Image> for Image {
+    fn from(image: typst::image::Image) -> Self {
+        Image {
+            data: image.data().to_vec(),
+            format: match image.format() {
+                ImageFormat::Raster(e) => match e {
+                    RasterFormat::Jpg => "jpeg",
+                    RasterFormat::Png => "png",
+                    RasterFormat::Gif => "gif",
+                },
+                ImageFormat::Vector(e) => match e {
+                    VectorFormat::Svg => "svg+xml",
+                },
+            }
+            .into(),
+            size: image.size().into(),
+            alt: image.alt().map(|s| s.into()),
+            hash: typst_affinite_hash(&image),
+        }
+    }
+}
+
+impl Image {
+    pub fn width(&self) -> u32 {
+        self.size.x
+    }
+    pub fn height(&self) -> u32 {
+        self.size.y
+    }
+}
+
+impl Hash for Image {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.hash.hash(state);
+    }
+}
+
 /// Item representing an `<image/>` element.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub struct ImageItem {
-    pub image: Image,
+    pub image: Arc<Image>,
     pub size: Size,
 }
 
 /// Item representing an `<a/>` element.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub struct LinkItem {
     pub href: ImmutStr,
     pub size: Size,
@@ -245,6 +310,7 @@ pub struct LinkItem {
 
 /// Item representing an `<path/>` element.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub struct PathItem {
     pub d: ImmutStr,
     pub styles: Vec<PathStyle>,
@@ -252,6 +318,7 @@ pub struct PathItem {
 
 /// Attributes that is applicable to the [`PathItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub enum PathStyle {
     Fill(ImmutStr),
     Stroke(ImmutStr),
@@ -288,8 +355,10 @@ pub enum GlyphItem {
 
 /// The shape metadata of a [`TextItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub struct TextShape {
-    pub dir: Dir,
+    // todo: save direction
+    // pub dir: Dir,
     pub ascender: Abs,
     pub upem: Scalar,
     pub ppem: Scalar,
@@ -309,6 +378,7 @@ pub struct GroupItem(pub Vec<(Point, SvgItem)>);
 
 /// Item representing all the transform that is applicable to a [`SvgItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub enum TransformItem {
     Matrix(Arc<Transform>),
     Translate(Arc<Axes<Abs>>),
@@ -320,9 +390,9 @@ pub enum TransformItem {
 
 /// Flatten svg item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub enum FlatSvgItem {
     None,
-    Glyph(GlyphItem),
     Image(ImageItem),
     Link(LinkItem),
     Path(PathItem),
@@ -333,6 +403,7 @@ pub enum FlatSvgItem {
 
 /// Flatten text item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub struct FlatTextItem {
     pub content: Arc<FlatTextItemContent>,
     pub shape: Arc<TextShape>,
@@ -340,6 +411,7 @@ pub struct FlatTextItem {
 
 /// The content metadata of a [`FlatTextItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub struct FlatTextItemContent {
     pub content: ImmutStr,
     pub glyphs: Arc<[(Abs, Abs, AbsoulteRef)]>,
@@ -347,10 +419,12 @@ pub struct FlatTextItemContent {
 
 /// Flatten transform item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub struct TransformedRef(pub TransformItem, pub RelativeRef);
 
 /// Flatten group item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub struct GroupRef(pub Arc<[(Point, RelativeRef)]>);
 
 /// Global style namespace.
@@ -378,7 +452,7 @@ impl ModuleBuilder {
         (
             Module {
                 glyphs: glyphs.into_iter().map(|(a, _)| a).collect(),
-                items: self.items,
+                item_pack: ItemPack(self.items),
             },
             self.glyphs,
         )

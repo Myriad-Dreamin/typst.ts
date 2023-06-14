@@ -2,17 +2,14 @@ use std::{io::Read, ops::Deref};
 
 use base64::Engine;
 use once_cell::sync::OnceCell;
-use typst::{
-    geom::{Abs, Axes, Size},
-    image::{Image, ImageFormat, RasterFormat, VectorFormat},
-};
+use typst::geom::{Abs, Axes};
 use typst_ts_core::font::GlyphProvider;
 
 use ttf_parser::GlyphId;
 use typst::font::Font;
 
 use crate::{
-    ir::{AbsoulteRef, FlatTextItem, GlyphItem, StyleNs},
+    ir::{AbsoulteRef, FlatTextItem, GlyphItem, Image, Scalar, Size, StyleNs},
     ir::{FlatSvgItem, GroupRef, Module, TransformItem},
     ir::{PathItem, PathStyle},
     sk,
@@ -66,15 +63,15 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
                 r#"<g data-tid="{}"><a xlink:href="{}" target="_blank"><rect class="pseudo-link" width="{}" height="{}"></rect></a></g>"#,
                 abs_ref.as_svg_id("l"),
                 link.href.replace('&', "&amp;"),
-                link.size.x.to_pt(),
-                link.size.y.to_pt(),
+                link.size.x.0,
+                link.size.y.0,
             ),
             FlatSvgItem::Image(image) => format!(
                 r#"<g data-tid="{}">{}</g>"#,
                 abs_ref.as_svg_id("i"),
                 Self::render_image(&image.image, image.size),
             ),
-            FlatSvgItem::Glyph(_) | FlatSvgItem::None => {
+            FlatSvgItem::None => {
                 panic!("SvgRenderTask.RenderFrame.UnknownItem {:?}", item)
             }
         }
@@ -101,8 +98,7 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
 
             g.push(format!(
                 r#"<g transform="translate({:.3},{:.3})" >"#,
-                pos.x.to_pt(),
-                pos.y.to_pt()
+                pos.x.0, pos.y.0
             ));
             g.push(self.render_item_inner(def_id, item));
             g.push("</g>".to_owned());
@@ -121,21 +117,16 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
             TransformItem::Matrix(m) => {
                 format!(
                     r#"transform="matrix({},{},{},{},{},{})""#,
-                    m.sx.get(),
-                    m.ky.get(),
-                    m.kx.get(),
-                    m.sy.get(),
-                    m.tx.to_pt(),
-                    m.ty.to_pt()
+                    m.sx.0, m.ky.0, m.kx.0, m.sy.0, m.tx.0, m.ty.0
                 )
             }
             TransformItem::Translate(t) => {
-                format!("translate({:.3},{:.3})", t.x.to_f32(), t.y.to_f32())
+                format!("translate({:.3},{:.3})", t.x.0, t.y.0)
             }
-            TransformItem::Scale(s) => format!("scale({},{})", s.0.get(), s.1.get()),
+            TransformItem::Scale(s) => format!("scale({},{})", s.0 .0, s.1 .0),
             TransformItem::Rotate(angle) => format!("rotate({})", angle.0),
             TransformItem::Skew(angle) => {
-                format!("skewX({}) skewY({})", angle.0.get(), angle.1.get())
+                format!("skewX({}) skewY({})", angle.0 .0, angle.1 .0)
             }
             TransformItem::Clip(c) => {
                 let clip_id;
@@ -164,9 +155,9 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
 
         // Scale is in pixel per em, but curve data is in font design units, so
         // we have to divide by units per em.
-        let upem = shape.upem.0 as f32;
-        let ppem = shape.ppem.0 as f32;
-        let ascender = shape.ascender.to_f32();
+        let upem = shape.upem.0;
+        let ppem = shape.ppem.0;
+        let ascender = shape.ascender.0;
 
         let fill = if shape.fill.as_ref() == "#000" {
             r#"tb"#.to_owned()
@@ -188,7 +179,7 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
 
         let mut x = 0f32;
         for (offset, advance, glyph) in text.content.glyphs.iter() {
-            let offset = x + offset.to_f32();
+            let offset = x + offset.0;
             let ts = offset / ppem;
             let adjusted = (ts * 2.).round() / 2.;
 
@@ -200,7 +191,7 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
                 adjusted, e
             ));
 
-            x += advance.to_f32();
+            x += advance.0;
         }
 
         text_list.push("</g>".to_string());
@@ -266,13 +257,11 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
             .at(Abs::raw(font.metrics().units_per_em))
             .to_f32();
 
-        let img = Self::render_image(
-            &glyph_image,
-            Size::new(
-                Abs::pt(glyph_image.width() as f64),
-                Abs::pt(glyph_image.height() as f64),
-            ),
+        let sz = Size::new(
+            Scalar(glyph_image.width() as f32),
+            Scalar(glyph_image.height() as f32),
         );
+        let img = Self::render_image(&glyph_image.into(), sz);
 
         let glyph_id = glyph.as_svg_id("g");
         let symbol_def = format!(
@@ -314,13 +303,11 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
         let dy = raster_y as f32;
         let ts = ts.post_translate(dx, ascender + dy);
 
-        let img = Self::render_image(
-            &glyph_image,
-            Size::new(
-                Abs::pt(glyph_image.width() as f64),
-                Abs::pt(glyph_image.height() as f64),
-            ),
+        let sz = Size::new(
+            Scalar(glyph_image.width() as f32),
+            Scalar(glyph_image.height() as f32),
         );
+        let img = Self::render_image(&glyph_image.into(), sz);
 
         let glyph_id = glyph.as_svg_id("g");
         let symbol_def = format!(
@@ -361,8 +348,8 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
 
         // resize image to fit the view
         let size = size;
-        let view_width = size.x.to_f32();
-        let view_height = size.y.to_f32();
+        let view_width = size.x.0;
+        let view_height = size.y.0;
 
         let aspect = (image.width() as f32) / (image.height() as f32);
 
@@ -375,7 +362,7 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
     }
 }
 
-fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<Image> {
+fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<typst::image::Image> {
     let data = g.svg_glyph(font, id)?;
     let mut data = data.as_ref();
 
@@ -469,7 +456,7 @@ fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<Imag
         );
     }
 
-    let image = Image::new_raw(
+    let image = typst::image::Image::new_raw(
         svg_str.as_bytes().to_vec().into(),
         typst::image::ImageFormat::Vector(typst::image::VectorFormat::Svg),
         Axes::new(width as u32, height as u32),
@@ -523,19 +510,10 @@ fn rasterize_image_url(image: &Image) -> Option<Arc<ImageUrl>> {
 }
 
 fn rasterize_embedded_image_url(image: &Image) -> Option<String> {
-    let url = match image.format() {
-        ImageFormat::Raster(e) => match e {
-            RasterFormat::Jpg => "data:image/jpeg;base64,",
-            RasterFormat::Png => "data:image/png;base64,",
-            RasterFormat::Gif => "data:image/gif;base64,",
-        },
-        ImageFormat::Vector(e) => match e {
-            VectorFormat::Svg => "data:image/svg+xml;base64,",
-        },
-    };
+    let url = format!("data:image/{};base64,", image.format);
 
-    let mut data = base64::engine::general_purpose::STANDARD.encode(image.data());
-    data.insert_str(0, url);
+    let mut data = base64::engine::general_purpose::STANDARD.encode(&image.data);
+    data.insert_str(0, &url);
     Some(data)
 }
 
@@ -552,7 +530,7 @@ fn render_path(path: &PathItem) -> String {
                 p.push(format!(r#"stroke="{}" "#, color));
             }
             PathStyle::StrokeWidth(width) => {
-                p.push(format!(r#"stroke-width="{}" "#, width.to_f32()));
+                p.push(format!(r#"stroke-width="{}" "#, width.0));
             }
             PathStyle::StrokeLineCap(cap) => {
                 p.push(format!(r#"stroke-linecap="{}" "#, cap));
@@ -569,12 +547,12 @@ fn render_path(path: &PathItem) -> String {
                     if i > 0 {
                         p.push(" ".to_owned());
                     }
-                    p.push(format!("{}", v.to_f32()));
+                    p.push(format!("{}", v.0));
                 }
                 p.push(r#"" "#.to_owned());
             }
             PathStyle::StrokeDashOffset(offset) => {
-                p.push(format!(r#"stroke-dashoffset="{}" "#, offset.to_f32()));
+                p.push(format!(r#"stroke-dashoffset="{}" "#, offset.0));
             }
         }
     }

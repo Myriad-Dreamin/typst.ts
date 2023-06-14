@@ -1,5 +1,6 @@
 //! Rendering into svg text or module.
 
+use geom::{Axes, Size};
 pub(crate) use tiny_skia as sk;
 use typst::model::Introspector;
 
@@ -12,11 +13,11 @@ use render::SvgRenderTask;
 
 use typst::diag::SourceResult;
 use typst::doc::Document;
-use typst::geom::{Axes, Size};
 use typst::World;
 use typst_ts_core::font::{FontGlyphProvider, GlyphProvider};
 use typst_ts_core::Exporter;
 
+pub mod geom;
 pub(crate) mod ir;
 pub(crate) mod lowering;
 pub(crate) mod render;
@@ -79,8 +80,8 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 
     pub fn page_size(sz: Size) -> Axes<u32> {
         let (width_px, height_px) = {
-            let width_px = (sz.x.to_pt().ceil() as f32).round().max(1.0) as u32;
-            let height_px = (sz.y.to_pt().ceil() as f32).round().max(1.0) as u32;
+            let width_px = (sz.x.0.ceil()).round().max(1.0) as u32;
+            let height_px = (sz.y.0.ceil()).round().max(1.0) as u32;
 
             (width_px, height_px)
         };
@@ -237,7 +238,7 @@ impl SvgExporter {
             .iter()
             .map(|p| {
                 let abs_ref = builder.build(task_context.lower(p));
-                (abs_ref, p.size())
+                (abs_ref, p.size().into())
             })
             .collect::<Vec<_>>();
         let (module, glyph_mapping) = builder.finalize();
@@ -394,8 +395,16 @@ impl Exporter<Document, Vec<u8>> for SvgModuleExporter {
             let _entry_id = builder.build(item);
         }
 
-        let res = vec![];
-        let _repr = builder.finalize();
-        Ok(res)
+        // Or you can customize your serialization for better performance
+        // and compatibility with #![no_std] environments
+        use rkyv::ser::{serializers::AllocSerializer, Serializer};
+
+        let (repr, ..) = builder.finalize();
+
+        let mut serializer = AllocSerializer::<0>::default();
+        serializer.serialize_value(&repr.item_pack).unwrap();
+        let item_pack = serializer.into_serializer().into_inner();
+
+        Ok(item_pack.into_vec())
     }
 }
