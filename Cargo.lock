@@ -3462,6 +3462,7 @@ dependencies = [
  "typst",
  "typst-library",
  "typst-ts-core",
+ "typst-ts-svg-exporter",
  "walkdir",
  "wasm-bindgen",
  "wasm-bindgen-futures",

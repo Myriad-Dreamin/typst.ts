@@ -53,6 +53,7 @@ indexmap.workspace = true
 nohash-hasher = "0.2.0"
 path-clean = "1.0.1"
 pathdiff = "0.2.1"
+typst-ts-svg-exporter = { workspace = true, optional = true }
 
 typst-ts-core.workspace = true
 
@@ -68,6 +69,7 @@ system = [
     "dep:same-file",
     "dep:notify",
     "dep:log",
+    "dep:typst-ts-svg-exporter",
 ]
 __web = [
     "dep:wasm-bindgen",
