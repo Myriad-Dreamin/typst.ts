@@ -140,10 +140,41 @@ export function createTypstRenderer(pdf: unknown): TypstRenderer {
   return new TypstRendererDriver(pdf as typeof pdfjsModule);
 }
 
+export interface TypstSvgRenderer {
+  init(options?: Partial<InitOptions>): Promise<void>;
+  createModule(b: Uint8Array): Promise<unknown>;
+}
+
+export function createTypstSvgRenderer(): TypstSvgRenderer {
+  return new TypstRendererSvgDriver();
+}
+
 function randstr(prefix?: string): string {
   return Math.random()
     .toString(36)
     .replace('0.', prefix || '');
+}
+
+class TypstRendererSvgDriver {
+  renderer: typst.TypstRenderer;
+
+  constructor() {}
+
+  async init(options?: Partial<InitOptions>): Promise<void> {
+    this.renderer = await buildComponent(options, gRendererModule, typst.TypstRendererBuilder, {});
+  }
+
+  createModule(b: Uint8Array): Promise<unknown> {
+    return new Promise(resolve => {
+      resolve(this.renderer.create_svg_session(b));
+    });
+  }
+
+  renderSvg(session: unknown, container: HTMLDivElement): Promise<unknown> {
+    return new Promise(resolve => {
+      resolve(this.renderer.render_svg(session as typst.SvgSession, container));
+    });
+  }
 }
 
 class TypstRendererDriver {

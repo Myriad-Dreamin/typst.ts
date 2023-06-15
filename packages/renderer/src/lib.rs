@@ -3,6 +3,7 @@ pub(crate) mod utils;
 
 use typst_ts_core::error::prelude::*;
 use typst_ts_core::font::FontResolverImpl;
+use typst_ts_svg_exporter::{LayoutElem, SvgExporter};
 use wasm_bindgen::prelude::*;
 
 pub(crate) mod parser;
@@ -47,6 +48,11 @@ pub struct TypstRenderer {
 }
 
 #[wasm_bindgen]
+pub struct SvgSession {
+    doc: typst_ts_svg_exporter::MultiSvgDocument,
+}
+
+#[wasm_bindgen]
 impl TypstRenderer {
     pub fn create_session(
         &self,
@@ -55,6 +61,76 @@ impl TypstRenderer {
     ) -> ZResult<RenderSession> {
         self.session_mgr
             .create_session_internal(artifact_content, options)
+    }
+
+    pub fn create_svg_session(&self, artifact_content: &[u8]) -> ZResult<SvgSession> {
+        Ok(SvgSession {
+            doc: typst_ts_svg_exporter::MultiSvgDocument::from_slice(artifact_content),
+        })
+    }
+
+    pub fn render_svg(
+        &self,
+        session: &mut SvgSession,
+        root: web_sys::HtmlDivElement,
+    ) -> ZResult<()> {
+        let layout = session.doc.layouts.first().unwrap();
+
+        let cw = root.client_width() as f32;
+        // base scale = 2
+        let base_cw = root.client_width() as f32 / 2.;
+
+        let render = |layout: &LayoutElem| {
+            let applying = format!("{}px", layout.0 .0);
+
+            // transform scale
+            let scale = cw / layout.0 .0;
+            root.set_attribute(
+                "style",
+                &format!("transform-origin: 0px 0px; transform: scale({})", scale),
+            )
+            .unwrap();
+
+            let applied = root.get_attribute("data-applyed-width");
+            if applied.is_some() && applied.unwrap() == applying {
+                console_log!("already applied {}", applying);
+                return Ok(());
+            }
+
+            let svg = SvgExporter::render(&session.doc.module, &layout.1);
+            root.set_inner_html(&svg);
+            let window = web_sys::window().unwrap();
+            if let Ok(proc) = js_sys::Reflect::get(&window, &JsValue::from_str("typstProcessSvg")) {
+                web_sys::console::log_1(&proc);
+                proc.dyn_ref::<js_sys::Function>()
+                    .unwrap()
+                    .call1(&JsValue::NULL, &root.first_element_child().unwrap())
+                    .unwrap();
+            }
+
+            root.set_attribute("data-applyed-width", &applying).unwrap();
+            console_log!("applied {}", applying);
+
+            Ok(())
+        };
+
+        if layout.0 .0 < base_cw {
+            return render(layout);
+        }
+
+        let layout = session.doc.layouts.last().unwrap();
+
+        if layout.0 .0 > base_cw {
+            return render(layout);
+        }
+
+        for layout in &session.doc.layouts {
+            if layout.0 .0 < base_cw {
+                return render(layout);
+            }
+        }
+
+        Ok(())
     }
 
     pub fn load_page(

@@ -1,0 +1,66 @@
+<html lang="en">
+  <!-- This is the example for typst.ts -->
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Typst.ts</title>
+    <script type="module" src="/core/dist/main.js"></script>
+    <link rel="stylesheet" href="/core/examples/typst.ts.css" />
+    <script src="/core/examples/typst.js"></script>
+    <script src="/core/examples/dynamic-layout.js"></script>
+    <script>
+      document.ready(() => {
+        let plugin = window.TypstRenderModule.createTypstSvgRenderer();
+        console.log(plugin);
+        plugin
+          .init({
+            getModule: () =>
+              '/core/node_modules/@myriaddreamin/typst-ts-renderer/typst_ts_renderer_bg.wasm',
+          })
+          .then(async () => {
+            const artifactData = await fetch(
+              'http://localhost:20810/corpus/math/undergradmath-relative.multi.sir.bin',
+            )
+              .then(response => response.arrayBuffer())
+              .then(buffer => new Uint8Array(buffer));
+
+            const t0 = performance.now();
+
+            const svgModule = await plugin.createModule(artifactData);
+            let t1 = performance.now();
+
+            console.log(`init took ${t1 - t0} milliseconds`);
+
+            const appContainer = document.getElementById('typst-app');
+
+            const runRender = async () => {
+              t1 = performance.now();
+              await plugin.renderSvg(svgModule, appContainer);
+
+              const t2 = performance.now();
+              console.log(
+                `render took ${t2 - t1} milliseconds. total took ${t2 - t0} milliseconds.`,
+              );
+            };
+
+            let base = runRender();
+
+            window.onresize = () => {
+              base = base.then(runRender());
+            };
+          });
+      });
+    </script>
+    <style>
+      body {
+        background-color: #fff;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="typst-app"></div>
+  </body>
+</html>

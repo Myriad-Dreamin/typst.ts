@@ -46,6 +46,7 @@ typst-ts-compiler = { version = "0.2", default-features = false, features = [
 ] }
 typst-ts-canvas-exporter = { workspace = true, optional = true }
 typst-ts-raster-exporter = { workspace = true, optional = true }
+typst-ts-svg-exporter = { workspace = true }
 console_error_panic_hook = { version = "0.1.1" } # , optional = true
 
 [dev-dependencies]
@@ -60,6 +61,7 @@ web-sys = { workspace = true, features = [
     "ImageData",
     "Document",
     "HtmlCanvasElement",
+    "HtmlDivElement",
 ] }
 hex.workspace = true
 sha2.workspace = true

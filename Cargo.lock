@@ -3617,6 +3617,7 @@ dependencies = [
  "typst-ts-compiler",
  "typst-ts-core",
  "typst-ts-raster-exporter",
+ "typst-ts-svg-exporter",
  "typst-ts-test-common",
  "wasm-bindgen",
  "wasm-bindgen-futures",
