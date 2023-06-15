@@ -348,9 +348,25 @@ pub struct TextItemContent {
 
 /// A glyph item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct ImageGlyphItem {
+    pub ts: Transform,
+    pub image: ImageItem,
+}
+
+/// A glyph item.
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct OutlineGlyphItem {
+    pub ts: Option<Transform>,
+    pub d: ImmutStr,
+}
+
+/// A glyph item.
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum GlyphItem {
     // Failed,
     Raw(Font, GlyphId),
+    Image(Arc<ImageGlyphItem>),
+    Outline(Arc<OutlineGlyphItem>),
 }
 
 /// The shape metadata of a [`TextItem`].

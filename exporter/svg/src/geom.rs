@@ -10,7 +10,7 @@ use typst::geom::{
     Scalar as TypstScalar, Transform as TypstTransform,
 };
 
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub struct Scalar(pub f32);
 
@@ -99,6 +99,14 @@ impl PartialOrd for Scalar {
     }
 }
 
+impl std::ops::Neg for Scalar {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self(-self.0)
+    }
+}
+
 impl Hash for Scalar {
     fn hash<H: Hasher>(&self, state: &mut H) {
         debug_assert!(!self.0.is_nan(), "float is NaN");
@@ -184,6 +192,19 @@ impl From<TypstTransform> for Transform {
             sy: typst_transform.sy.into(),
             tx: typst_transform.tx.into(),
             ty: typst_transform.ty.into(),
+        }
+    }
+}
+
+impl From<tiny_skia::Transform> for Transform {
+    fn from(skia_transform: tiny_skia::Transform) -> Self {
+        Self {
+            sx: skia_transform.sx.into(),
+            ky: skia_transform.ky.into(),
+            kx: skia_transform.kx.into(),
+            sy: skia_transform.sy.into(),
+            tx: skia_transform.tx.into(),
+            ty: skia_transform.ty.into(),
         }
     }
 }
