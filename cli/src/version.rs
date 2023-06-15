@@ -26,11 +26,11 @@ struct VersionInfo {
     version: &'static str,
     features: Vec<&'static str>,
 
-    cli_semver: &'static str,
-    cli_commit_hash: &'static str,
-    cli_target_triple: &'static str,
-    cli_profile: &'static str,
-    cli_build_timestamp: &'static str,
+    program_semver: &'static str,
+    program_commit_hash: &'static str,
+    program_target_triple: &'static str,
+    program_profile: &'static str,
+    program_build_timestamp: &'static str,
 
     rustc_semver: &'static str,
     rustc_commit_hash: &'static str,
@@ -47,11 +47,11 @@ impl VersionInfo {
             version: VERSION,
             features: env!("VERGEN_CARGO_FEATURES").split(',').collect::<Vec<_>>(),
 
-            cli_semver: env!("VERGEN_GIT_SEMVER"),
-            cli_commit_hash: env!("VERGEN_GIT_SHA"),
-            cli_target_triple: env!("VERGEN_CARGO_TARGET_TRIPLE"),
-            cli_profile: env!("VERGEN_CARGO_PROFILE"),
-            cli_build_timestamp: env!("VERGEN_BUILD_TIMESTAMP"),
+            program_semver: env!("VERGEN_GIT_SEMVER"),
+            program_commit_hash: env!("VERGEN_GIT_SHA"),
+            program_target_triple: env!("VERGEN_CARGO_TARGET_TRIPLE"),
+            program_profile: env!("VERGEN_CARGO_PROFILE"),
+            program_build_timestamp: env!("VERGEN_BUILD_TIMESTAMP"),
 
             rustc_semver: env!("VERGEN_RUSTC_SEMVER"),
             rustc_commit_hash: env!("VERGEN_RUSTC_COMMIT_HASH"),
@@ -61,10 +61,10 @@ impl VersionInfo {
         }
     }
 
-    fn cli_build(&self) -> String {
+    fn program_build(&self) -> String {
         format!(
             "{} with {} mode at {}",
-            self.cli_target_triple, self.cli_profile, self.cli_build_timestamp
+            self.program_target_triple, self.program_profile, self.program_build_timestamp
         )
     }
 
@@ -102,9 +102,9 @@ pub fn intercept_version(v: bool, f: VersionFormat) {
 }
 
 fn print_full_version(vi: VersionInfo) {
-    let cli_semver = vi.cli_semver;
-    let cli_commit_hash = vi.cli_commit_hash;
-    let cli_build = vi.cli_build();
+    let program_semver = vi.program_semver;
+    let program_commit_hash = vi.program_commit_hash;
+    let program_build = vi.program_build();
 
     let rustc_semver = vi.rustc_semver;
     let rustc_commit_hash = vi.rustc_commit_hash;
@@ -113,9 +113,9 @@ fn print_full_version(vi: VersionInfo) {
     print_short_version(vi);
     println!(
         r##"
-cli-ver: {cli_semver}
-cli-rev: {cli_commit_hash}
-cli-build: {cli_build}
+program-ver: {program_semver}
+program-rev: {program_commit_hash}
+program-build: {program_build}
 
 rustc-ver: {rustc_semver}
 rustc-rev: {rustc_commit_hash}
