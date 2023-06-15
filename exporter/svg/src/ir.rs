@@ -231,15 +231,6 @@ pub enum SvgItem {
     Group(GroupItem),
 }
 
-impl SvgItem {
-    pub fn flatten(self) -> (AbsoulteRef, Module) {
-        let mut builder = ModuleBuilder::default();
-
-        let entry_id = builder.build(self);
-        (entry_id, builder.finalize().0)
-    }
-}
-
 /// Data of an `<image/>` element.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]

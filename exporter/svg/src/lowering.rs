@@ -4,12 +4,13 @@ use std::io::Read;
 use std::sync::Arc;
 
 use once_cell::sync::OnceCell;
-use typst::doc::{Destination, Frame, FrameItem, GroupItem, Meta, Position, TextItem};
+use typst::doc::{Destination, Document, Frame, FrameItem, GroupItem, Meta, Position, TextItem};
 use typst::font::Font;
 use typst::geom::{Geometry, LineCap, LineJoin, Paint, PathItem, Shape, Size, Stroke};
 use typst::image::Image;
 
 use ttf_parser::OutlineBuilder;
+use typst::model::Introspector;
 use typst_ts_core::font::GlyphProvider;
 
 use crate::ir::{GlyphItem, ImageGlyphItem, OutlineGlyphItem};
@@ -19,13 +20,23 @@ use crate::{
     sk,
     svg::SvgPath2DBuilder,
     utils::{AbsExt, ToCssExt},
-    ExportFeature, SvgTask,
 };
 use ttf_parser::GlyphId;
 
 static WARN_VIEW_BOX: OnceCell<()> = OnceCell::new();
 
-impl<Feat: ExportFeature> SvgTask<Feat> {
+/// Lower a frame item into svg item.
+pub struct LowerBuilder {
+    introspector: Introspector,
+}
+
+impl LowerBuilder {
+    pub fn new(output: &Document) -> Self {
+        Self {
+            introspector: Introspector::new(&output.pages),
+        }
+    }
+
     /// Lower a frame into svg item.
     pub fn lower(&mut self, frame: &Frame) -> SvgItem {
         self.lower_frame(frame)

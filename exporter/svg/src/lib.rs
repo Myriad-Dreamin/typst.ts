@@ -8,14 +8,14 @@ use std::sync::Arc;
 
 use typst::diag::SourceResult;
 use typst::doc::Document;
-use typst::model::Introspector;
 use typst::World;
 
 use typst_ts_core::font::{FontGlyphProvider, GlyphProvider};
 use typst_ts_core::Exporter;
 
 use geom::{Axes, Size};
-use ir::{GlyphMapping, ImmutStr, ModuleBuilder, RelativeRef, StyleNs, SvgDocument};
+use ir::{GlyphMapping, ImmutStr, Module, ModuleBuilder, RelativeRef, StyleNs, SvgDocument};
+use lowering::LowerBuilder;
 use render::SvgRenderTask;
 use vm::RenderVm;
 
@@ -53,8 +53,6 @@ type ClipPathMap = HashMap<ImmutStr, u32>;
 
 pub struct SvgTask<Feat: ExportFeature = DefaultExportFeature> {
     glyph_provider: GlyphProvider,
-    introspector: Introspector,
-
     style_defs: StyleDefMap,
     clip_paths: ClipPathMap,
 
@@ -63,14 +61,11 @@ pub struct SvgTask<Feat: ExportFeature = DefaultExportFeature> {
 }
 
 impl<Feat: ExportFeature> SvgTask<Feat> {
-    pub fn new(doc: &Document) -> Self {
+    pub fn new() -> Self {
         let glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
-        let introspector = Introspector::new(&doc.pages);
 
         Self {
             glyph_provider,
-            introspector,
-
             style_defs: HashMap::default(),
             clip_paths: HashMap::default(),
 
@@ -214,6 +209,12 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     }
 }
 
+impl<Feat: ExportFeature> Default for SvgTask<Feat> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Default)]
 pub struct SvgExporter {}
 
@@ -238,16 +239,14 @@ impl SvgExporter {
         )
     }
 
-    fn svg_doc<Feat: ExportFeature>(
-        task_context: &mut SvgTask<Feat>,
-        output: &Document,
-    ) -> (SvgDocument, GlyphMapping) {
+    fn svg_doc(output: &Document) -> (SvgDocument, GlyphMapping) {
+        let mut lower_builder = LowerBuilder::new(output);
         let mut builder = ModuleBuilder::default();
         let pages = output
             .pages
             .iter()
             .map(|p| {
-                let abs_ref = builder.build(task_context.lower(p));
+                let abs_ref = builder.build(lower_builder.lower(p));
                 (abs_ref, p.size().into())
             })
             .collect::<Vec<_>>();
@@ -283,8 +282,8 @@ impl SvgExporter {
         let mut svg_body = vec![];
 
         // render the document
-        let mut t = SvgTask::<DefaultExportFeature>::new(&output);
-        let (doc, used_glyphs) = Self::svg_doc(&mut t, &output);
+        let mut t = SvgTask::<DefaultExportFeature>::new();
+        let (doc, used_glyphs) = Self::svg_doc(&output);
         let render_context = RenderContext { doc };
         t.render(&render_context, &mut svg_body);
 
@@ -323,13 +322,14 @@ impl SvgExporter {
     fn render_svg_incremental(prev: SvgDocument, output: Arc<Document>) -> (SvgDocument, String) {
         let instant = std::time::Instant::now();
 
+        // render the document
+        let mut t = SvgTask::<DefaultExportFeature>::new();
+
+        let (next, used_glyphs) = Self::svg_doc(&output);
+
         let mut svg = vec![Self::header(&output)];
         let mut svg_body = vec![];
 
-        // render the document
-        let mut t = SvgTask::<DefaultExportFeature>::new(&output);
-
-        let (next, used_glyphs) = Self::svg_doc(&mut t, &output);
         let render_context = IncrementalRenderContext { prev, next };
         t.render_diff(&render_context, &mut svg_body);
         let svg_doc = render_context.next;
@@ -405,7 +405,7 @@ pub struct SvgModuleExporter {}
 
 impl Exporter<Document, Vec<u8>> for SvgModuleExporter {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<Vec<u8>> {
-        let mut t = SvgTask::<DefaultExportFeature>::new(&output);
+        let mut t = LowerBuilder::new(&output);
 
         let mut builder = ModuleBuilder::default();
 
@@ -414,16 +414,20 @@ impl Exporter<Document, Vec<u8>> for SvgModuleExporter {
             let _entry_id = builder.build(item);
         }
 
-        // Or you can customize your serialization for better performance
-        // and compatibility with #![no_std] environments
-        use rkyv::ser::{serializers::AllocSerializer, Serializer};
-
         let (repr, ..) = builder.finalize();
 
-        let mut serializer = AllocSerializer::<0>::default();
-        serializer.serialize_value(&repr.item_pack).unwrap();
-        let item_pack = serializer.into_serializer().into_inner();
-
-        Ok(item_pack.into_vec())
+        Ok(serialize_module(repr))
     }
+}
+
+fn serialize_module(repr: Module) -> Vec<u8> {
+    // Or you can customize your serialization for better performance
+    // and compatibility with #![no_std] environments
+    use rkyv::ser::{serializers::AllocSerializer, Serializer};
+
+    let mut serializer = AllocSerializer::<0>::default();
+    serializer.serialize_value(&repr.item_pack).unwrap();
+    let item_pack = serializer.into_serializer().into_inner();
+
+    item_pack.into_vec()
 }
