@@ -1,23 +1,15 @@
-use std::{io::Read, ops::Deref};
-
 use base64::Engine;
-use once_cell::sync::OnceCell;
-use typst::geom::{Abs, Axes};
 use typst_ts_core::font::GlyphProvider;
 
-use ttf_parser::GlyphId;
-use typst::font::Font;
-
 use crate::{
-    ir::{AbsoulteRef, FlatTextItem, GlyphItem, Image, Scalar, Size, StyleNs},
-    ir::{FlatSvgItem, GroupRef, Module, TransformItem},
+    ir::{self, GlyphItem, Module},
+    ir::{AbsoulteRef, Image, ImageGlyphItem, OutlineGlyphItem, Scalar, Size, StyleNs},
     ir::{PathItem, PathStyle},
-    sk,
-    utils::{console_log, AbsExt, ToCssExt},
+    lowering::GlyphLowerBuilder,
+    utils::ToCssExt,
+    vm::{GroupContext, RenderVm},
     ClipPathMap, DefaultExportFeature, ExportFeature, StyleDefMap,
 };
-
-static WARN_VIEW_BOX: OnceCell<()> = OnceCell::new();
 
 pub struct SvgRenderTask<'m, 't, Feat: ExportFeature = DefaultExportFeature> {
     pub glyph_provider: GlyphProvider,
@@ -34,130 +26,220 @@ pub struct SvgRenderTask<'m, 't, Feat: ExportFeature = DefaultExportFeature> {
     pub _feat_phantom: std::marker::PhantomData<Feat>,
 }
 
+pub struct RenderGroup<'s, 'm, 't, Feat: ExportFeature> {
+    pub t: &'s mut SvgRenderTask<'m, 't, Feat>,
+    pub class: Option<String>,
+    pub tid: AbsoulteRef,
+    pub text_content: Option<String>,
+    pub transforms: Vec<String>,
+    pub content: Vec<String>,
+}
+
+impl<'s, 'm, 't, Feat: ExportFeature> GroupContext for RenderGroup<'s, 'm, 't, Feat> {
+    fn transform_matrix(mut self, m: &crate::ir::Transform) -> Self {
+        self.transforms.push(format!(
+            r#"transform="matrix({},{},{},{},{},{})""#,
+            m.sx.0, m.ky.0, m.kx.0, m.sy.0, m.tx.0, m.ty.0
+        ));
+        self
+    }
+
+    fn transform_translate(mut self, matrix: crate::ir::Axes<crate::ir::Abs>) -> Self {
+        self.transforms.push(format!(
+            r#"transform="translate({:.3},{:.3})""#,
+            matrix.x.0, matrix.y.0
+        ));
+        self
+    }
+
+    fn transform_scale(mut self, x: crate::ir::Ratio, y: crate::ir::Ratio) -> Self {
+        self.transforms
+            .push(format!(r#"transform="scale({},{})""#, x.0, y.0));
+        self
+    }
+
+    fn transform_rotate(mut self, matrix: Scalar) -> Self {
+        self.transforms
+            .push(format!(r#"transform="rotate({})""#, matrix.0));
+        self
+    }
+
+    fn transform_skew(mut self, matrix: (crate::ir::Ratio, crate::ir::Ratio)) -> Self {
+        self.transforms.push(format!(
+            r#"transform="skewX({}) skewY({})""#,
+            matrix.0 .0, matrix.1 .0
+        ));
+        self
+    }
+
+    fn transform_clip(mut self, matrix: &crate::ir::PathItem) -> Self {
+        let clip_id;
+        if let Some(c) = self.t.clip_paths.get(&matrix.d) {
+            clip_id = *c;
+        } else {
+            let cid = self.t.clip_paths.len() as u32;
+            self.t.clip_paths.insert(matrix.d.clone(), cid);
+            clip_id = cid;
+        }
+
+        self.transforms
+            .push(format!(r##"clip-path="url(#c{:x})""##, clip_id));
+        self
+    }
+
+    fn drop_item_at(&mut self, pos: crate::ir::Point, item: AbsoulteRef) {
+        self.content.push(format!(
+            r#"<g transform="translate({:.3},{:.3})" >"#,
+            pos.x.0, pos.y.0
+        ));
+        self.content.push(self.t.render_item(item));
+        self.content.push("</g>".to_owned());
+    }
+
+    fn drop_glyph(&mut self, pos: Scalar, glyph: &AbsoulteRef) {
+        let adjusted = (pos.0 * 2.).round() / 2.;
+
+        let glyph_id = glyph.as_svg_id("g");
+        let e = format!(r##"<use href="#{}"/>"##, glyph_id);
+
+        self.content.push(format!(
+            r#"<g transform="translate({},0)">{}</g>"#,
+            adjusted, e
+        ));
+    }
+}
+
+impl<'s, 'm, 't, Feat: ExportFeature> From<RenderGroup<'s, 'm, 't, Feat>> for String {
+    fn from(s: RenderGroup<'s, 'm, 't, Feat>) -> Self {
+        let (pre_text_content, post_text_content) = if let Some(post) = s.text_content {
+            (
+                format!("><g {}>", s.transforms.join(" ")),
+                format!("</g>{}", post),
+            )
+        } else {
+            (format!(" {}>", s.transforms.join(" ")), "".to_owned())
+        };
+
+        let pre_content = if let Some(class) = s.class {
+            format!(
+                r#"<g class="{}" data-tid="{}"{}"#,
+                class,
+                s.tid.as_svg_id("p"),
+                pre_text_content,
+            )
+        } else {
+            format!(
+                r#"<g data-tid="{}"{}"#,
+                s.tid.as_svg_id("p"),
+                pre_text_content
+            )
+        };
+
+        pre_content + &s.content.join("") + &post_text_content + "</g>"
+    }
+}
+
 impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
-    /// Render an item into the a `<g/>` element.
-    pub fn render_item(&mut self, abs_ref: AbsoulteRef) -> String {
-        let item = self.module.get_item(&abs_ref).unwrap();
-        self.render_item_inner(abs_ref, item)
+    pub fn render_glyph(&mut self, glyph: &AbsoulteRef, glyph_item: &GlyphItem) -> Option<String> {
+        let gp = &self.glyph_provider;
+        Self::render_glyph_inner(gp, glyph, glyph_item)
     }
 
-    pub fn render_item_inner(&mut self, abs_ref: AbsoulteRef, item: &FlatSvgItem) -> String {
-        match item.deref() {
-            FlatSvgItem::Group(group) => self.render_group(abs_ref, group),
-            FlatSvgItem::Text(text) => self.render_text(abs_ref, text),
-            FlatSvgItem::Path(path) => format!(
-                r#"<g data-tid="{}">{}</g>"#,
-                abs_ref.as_svg_id("p"),
-                self.render_path(path),
-            ),
-            FlatSvgItem::Item(transformed) => {
-                let item = self.render_item(abs_ref.id.make_absolute_ref(transformed.1.clone()));
-                format!(
-                    r#"<g data-tid="{}" {}>{}</g>"#,
-                    abs_ref.as_svg_id("p"),
-                    self.get_css(&transformed.0),
-                    item
-                )
-            }
-            FlatSvgItem::Link(link) => format!(
-                r#"<g data-tid="{}"><a xlink:href="{}" target="_blank"><rect class="pseudo-link" width="{}" height="{}"></rect></a></g>"#,
-                abs_ref.as_svg_id("l"),
-                link.href.replace('&', "&amp;"),
-                link.size.x.0,
-                link.size.y.0,
-            ),
-            FlatSvgItem::Image(image) => format!(
-                r#"<g data-tid="{}">{}</g>"#,
-                abs_ref.as_svg_id("i"),
-                Self::render_image(&image.image, image.size),
-            ),
-            FlatSvgItem::None => {
-                panic!("SvgRenderTask.RenderFrame.UnknownItem {:?}", item)
-            }
+    #[comemo::memoize]
+    pub fn render_glyph_pure(glyph: &AbsoulteRef, glyph_item: &GlyphItem) -> Option<String> {
+        Self::render_glyph_pure_inner(glyph, glyph_item)
+    }
+
+    #[comemo::memoize]
+    fn render_glyph_inner(
+        gp: &GlyphProvider,
+        glyph: &AbsoulteRef,
+        glyph_item: &GlyphItem,
+    ) -> Option<String> {
+        if matches!(glyph_item, GlyphItem::Raw(..)) {
+            return Self::render_glyph_pure_inner(
+                glyph,
+                &GlyphLowerBuilder::new(gp).lower_glyph(glyph_item)?,
+            );
+        }
+
+        Self::render_glyph_pure_inner(glyph, glyph_item)
+    }
+
+    fn render_glyph_pure_inner(glyph: &AbsoulteRef, glyph_item: &GlyphItem) -> Option<String> {
+        match glyph_item {
+            GlyphItem::Image(image_glyph) => Self::render_image_glyph(glyph, image_glyph),
+            GlyphItem::Outline(outline_glyph) => Self::render_outline_glyph(glyph, outline_glyph),
+            GlyphItem::Raw(..) => unreachable!(),
         }
     }
 
-    /// Render a frame into svg text.
-    fn render_group(&mut self, abs_ref: AbsoulteRef, group: &GroupRef) -> String {
-        let mut g = vec![format!(
-            r#"<g class="group" data-tid="{}">"#,
-            abs_ref.as_svg_id("p")
-        )];
-        let mut normal_g = vec![];
-        let mut link_g = vec![];
+    /// Render an image glyph into the svg text.
+    fn render_image_glyph(glyph: &AbsoulteRef, ig: &ImageGlyphItem) -> Option<String> {
+        let img = render_image(&ig.image.image, ig.image.size);
 
-        for (pos, item) in group.0.iter() {
-            let def_id = abs_ref.id.make_absolute_ref(item.clone());
-            let item = self.module.get_item(&def_id).unwrap();
-
-            let g = if let FlatSvgItem::Link(_) = item.deref() {
-                &mut link_g
-            } else {
-                &mut normal_g
-            };
-
-            g.push(format!(
-                r#"<g transform="translate({:.3},{:.3})" >"#,
-                pos.x.0, pos.y.0
-            ));
-            g.push(self.render_item_inner(def_id, item));
-            g.push("</g>".to_owned());
-        }
-
-        g.append(&mut normal_g);
-        g.append(&mut link_g);
-
-        g.push("</g>".to_owned());
-
-        g.join("")
+        let glyph_id = glyph.as_svg_id("g");
+        let ts = ig.ts.to_css();
+        let symbol_def = format!(
+            r#"<symbol overflow="visible" id="{}" class="image_glyph"><g transform="{}">{}</g></symbol>"#,
+            glyph_id, ts, img
+        );
+        Some(symbol_def)
     }
 
-    fn get_css(&mut self, transform: &TransformItem) -> String {
-        match transform {
-            TransformItem::Matrix(m) => {
-                format!(
-                    r#"transform="matrix({},{},{},{},{},{})""#,
-                    m.sx.0, m.ky.0, m.kx.0, m.sy.0, m.tx.0, m.ty.0
-                )
-            }
-            TransformItem::Translate(t) => {
-                format!("translate({:.3},{:.3})", t.x.0, t.y.0)
-            }
-            TransformItem::Scale(s) => format!("scale({},{})", s.0 .0, s.1 .0),
-            TransformItem::Rotate(angle) => format!("rotate({})", angle.0),
-            TransformItem::Skew(angle) => {
-                format!("skewX({}) skewY({})", angle.0 .0, angle.1 .0)
-            }
-            TransformItem::Clip(c) => {
-                let clip_id;
-                if let Some(c) = self.clip_paths.get(&c.d) {
-                    clip_id = *c;
-                } else {
-                    let cid = self.clip_paths.len() as u32;
-                    self.clip_paths.insert(c.d.clone(), cid);
-                    clip_id = cid;
-                }
+    /// Render an outline glyph into svg text. This is the "normal" case.
+    fn render_outline_glyph(
+        glyph: &AbsoulteRef,
+        outline_glyph: &OutlineGlyphItem,
+    ) -> Option<String> {
+        let glyph_id = glyph.as_svg_id("g");
+        let symbol_def = format!(
+            r#"<symbol overflow="visible" id="{}" class="outline_glyph"><path d="{}"/></symbol>"#,
+            glyph_id, outline_glyph.d
+        );
+        Some(symbol_def)
+    }
 
-                format!(r##"clip-path="url(#c{:x})""##, clip_id)
-            }
+    #[comemo::memoize]
+    fn render_image_inner(abs_ref: AbsoulteRef, image_item: &crate::ir::ImageItem) -> String {
+        format!(
+            r#"<g data-tid="{}">{}</g>"#,
+            abs_ref.as_svg_id("i"),
+            render_image(&image_item.image, image_item.size),
+        )
+    }
+}
+
+impl<'s, 'm: 's, 't: 's, Feat: ExportFeature + 's> RenderVm<'s, 'm>
+    for SvgRenderTask<'m, 't, Feat>
+{
+    type Resultant = String;
+    type Group = RenderGroup<'s, 'm, 't, Feat>;
+
+    fn get_item(&self, value: &AbsoulteRef) -> Option<&'m crate::ir::FlatSvgItem> {
+        self.module.get_item(value)
+    }
+
+    fn start_group(&'s mut self, v: &AbsoulteRef) -> Self::Group {
+        Self::Group {
+            t: self,
+            tid: v.clone(),
+            class: None,
+            text_content: None,
+            transforms: Vec::with_capacity(1),
+            content: Vec::with_capacity(3),
         }
     }
 
-    /// Render a geometrical shape into svg text.
-    fn render_path(&mut self, path: &PathItem) -> String {
-        render_path(path)
+    fn start_frame(&'s mut self, value: &AbsoulteRef, _group: &ir::GroupRef) -> Self::Group {
+        let mut g = self.start_group(value);
+        g.class = Some("group".to_owned());
+
+        g
     }
 
-    /// Render a text run into the svg text.
-    pub(crate) fn render_text(&mut self, abs_ref: AbsoulteRef, text: &FlatTextItem) -> String {
-        let mut text_list = vec![];
+    fn start_text(&'s mut self, value: &AbsoulteRef, text: &ir::FlatTextItem) -> Self::Group {
         let shape = &text.shape;
-
-        // Scale is in pixel per em, but curve data is in font design units, so
-        // we have to divide by units per em.
-        let upem = shape.upem.0;
-        let ppem = shape.ppem.0;
-        let ascender = shape.ascender.0;
 
         let fill = if shape.fill.as_ref() == "#000" {
             r#"tb"#.to_owned()
@@ -170,32 +252,14 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
 
             fill_id
         };
-        text_list.push(format!(
-            r#"<g class="typst-txt {}" data-tid="{}">"#,
-            fill,
-            abs_ref.as_svg_id("p")
-        ));
-        text_list.push(format!(r#"<g transform="scale({},{})">"#, ppem, -ppem));
 
-        let mut x = 0f32;
-        for (offset, advance, glyph) in text.content.glyphs.iter() {
-            let offset = x + offset.0;
-            let ts = offset / ppem;
-            let adjusted = (ts * 2.).round() / 2.;
+        let post_content = if self.render_text_element {
+            // Scale is in pixel per em, but curve data is in font design units, so
+            // we have to divide by units per em.
+            let upem = shape.upem.0;
+            let ppem = shape.ppem.0;
+            let ascender = shape.ascender.0;
 
-            let glyph_id = glyph.as_svg_id("g");
-            let e = format!(r##"<use href="#{}"/>"##, glyph_id);
-
-            text_list.push(format!(
-                r#"<g transform="translate({},0)">{}</g>"#,
-                adjusted, e
-            ));
-
-            x += advance.0;
-        }
-
-        text_list.push("</g>".to_string());
-        if self.render_text_element {
             // text_list.push(format!(
             //     r#"<h5:span textLength="{}" font-size="{}" class="tsel">{}</h5:span>"#,
             //     v,
@@ -203,268 +267,71 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
             //     xml::escape::escape_str_pcdata(&text.content.content),
             // ));
 
+            let mut x = 0f32;
+            for (offset, advance, _) in text.content.glyphs.iter() {
+                x = x + offset.0 + advance.0;
+            }
+
             // todo: investigate &nbsp;
-            text_list.push(format!(
+            Some(format!(
                 r#"<foreignObject x="0" y="-{}" width="{}" height="{}"><h5:div class="tsel" style="font-size: {}px;">{}</h5:div></foreignObject>"#,
                 ascender,
                 x,
                 upem * ppem,
                 upem * ppem,
                 xml::escape::escape_str_pcdata(&text.content.content)
-            ));
-        }
-        text_list.push("</g>".to_string());
+            ))
+        } else {
+            None
+        };
 
-        text_list.join("")
+        let mut g = self.start_group(value);
+
+        g.class = Some(format!("typst-txt {}", fill));
+        g.text_content = post_content;
+
+        g
     }
 
-    pub fn render_glyph(&mut self, glyph: &AbsoulteRef, glyph_item: &GlyphItem) -> Option<String> {
-        let gp = &self.glyph_provider;
-        Self::render_glyph_inner(gp, glyph, glyph_item)
-    }
+    fn render_link(
+        &'s mut self,
+        abs_ref: AbsoulteRef,
+        link: &crate::ir::LinkItem,
+    ) -> Self::Resultant {
+        let href_handler = if link.href.starts_with("@typst:") {
+            let href = link.href.trim_start_matches("@typst:");
+            format!(r##"xlink:href="#" onclick="{href}; return false""##)
+        } else {
+            format!(
+                r##"target="_blank" xlink:href="{}""##,
+                link.href.replace('&', "&amp;")
+            )
+        };
 
-    #[comemo::memoize]
-    fn render_glyph_inner(
-        gp: &GlyphProvider,
-        glyph: &AbsoulteRef,
-        glyph_item: &GlyphItem,
-    ) -> Option<String> {
-        match glyph_item {
-            GlyphItem::Raw(font, id) => {
-                let id = *id;
-                // todo: server side render
-                Self::render_svg_glyph(gp, font, glyph, id)
-                    .or_else(|| Self::render_bitmap_glyph(gp, font, glyph, id))
-                    .or_else(|| Self::render_outline_glyph(gp, font, glyph, id))
-            }
-        }
-    }
-
-    /// Render an SVG glyph into the svg text.
-    /// More information: https://learn.microsoft.com/zh-cn/typography/opentype/spec/svg
-    fn render_svg_glyph(
-        glyph_provider: &GlyphProvider,
-        font: &Font,
-        glyph: &AbsoulteRef,
-        id: GlyphId,
-    ) -> Option<String> {
-        let glyph_image = extract_svg_glyph(glyph_provider, font, id)?;
-
-        // position our image
-        let ascender = font
-            .metrics()
-            .ascender
-            .at(Abs::raw(font.metrics().units_per_em))
-            .to_f32();
-
-        let sz = Size::new(
-            Scalar(glyph_image.width() as f32),
-            Scalar(glyph_image.height() as f32),
-        );
-        let img = Self::render_image(&glyph_image.into(), sz);
-
-        let glyph_id = glyph.as_svg_id("g");
-        let symbol_def = format!(
-            r#"<symbol overflow="visible" id="{}" class="svg_glyph"><g transform="scale(1, -1), translate(0,{})">{}</g></symbol>"#,
-            glyph_id, -ascender, img
-        );
-        Some(symbol_def)
-    }
-
-    /// Render a bitmap glyph into the svg text.
-    fn render_bitmap_glyph(
-        glyph_provider: &GlyphProvider,
-        font: &Font,
-        glyph: &AbsoulteRef,
-        id: GlyphId,
-    ) -> Option<String> {
-        let ppem = u16::MAX;
-        let upem = font.metrics().units_per_em as f32;
-
-        let (glyph_image, raster_x, raster_y) = glyph_provider.bitmap_glyph(font, id, ppem)?;
-
-        // FIXME: Vertical alignment isn't quite right for Apple Color Emoji,
-        // and maybe also for Noto Color Emoji. And: Is the size calculation
-        // correct?
-
-        // position our image
-        let ascender = font
-            .metrics()
-            .ascender
-            .at(Abs::raw(font.metrics().units_per_em))
-            .to_f32();
-
-        let sy = upem / glyph_image.height() as f32;
-
-        let ts = sk::Transform::from_scale(upem / glyph_image.width() as f32, -sy);
-
-        // size
-        let dx = raster_x as f32;
-        let dy = raster_y as f32;
-        let ts = ts.post_translate(dx, ascender + dy);
-
-        let sz = Size::new(
-            Scalar(glyph_image.width() as f32),
-            Scalar(glyph_image.height() as f32),
-        );
-        let img = Self::render_image(&glyph_image.into(), sz);
-
-        let glyph_id = glyph.as_svg_id("g");
-        let symbol_def = format!(
-            r#"<symbol overflow="visible" id="{}" class="bitmap_glyph"><g transform="{}">{}</g></symbol>"#,
-            glyph_id,
-            ts.to_css(),
-            img
-        );
-        Some(symbol_def)
-    }
-
-    /// Render an outline glyph into svg text. This is the "normal" case.
-    fn render_outline_glyph(
-        glyph_provider: &GlyphProvider,
-        font: &Font,
-        glyph: &AbsoulteRef,
-        id: GlyphId,
-    ) -> Option<String> {
-        if cfg!(feature = "debug_glyph_render") {
-            console_log!("render_outline_glyph: {:?}", font.info());
-        }
-
-        let d = glyph_provider.outline_glyph(font, id)?;
-
-        let glyph_id = glyph.as_svg_id("g");
-        let symbol_def = format!(
-            r#"<symbol overflow="visible" id="{}" class="outline_glyph"><path d="{}"/></symbol>"#,
-            glyph_id, d
-        );
-        Some(symbol_def)
-    }
-
-    /// Render a raster or SVG image into svg text.
-    // todo: error handling
-    #[comemo::memoize]
-    pub fn render_image(image: &Image, size: Size) -> String {
-        let image_url = rasterize_embedded_image_url(image).unwrap();
-
-        // resize image to fit the view
-        let size = size;
-        let view_width = size.x.0;
-        let view_height = size.y.0;
-
-        let aspect = (image.width() as f32) / (image.height() as f32);
-
-        let w = view_width.max(aspect * view_height);
-        let h = w / aspect;
         format!(
-            r#"<image x="0" y="0" width="{}" height="{}" xlink:href="{}" />"#,
-            w, h, image_url
+            r#"<g data-tid="{}"><a {}><rect class="pseudo-link" width="{}" height="{}"></rect></a></g>"#,
+            abs_ref.as_svg_id("l"),
+            href_handler,
+            link.size.x.0,
+            link.size.y.0,
         )
     }
-}
 
-fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<typst::image::Image> {
-    let data = g.svg_glyph(font, id)?;
-    let mut data = data.as_ref();
-
-    let font_metrics = font.metrics();
-
-    if cfg!(feature = "debug_glyph_render") {
-        console_log!(
-            "render_svg_glyph: {:?} {:?}",
-            font.info().family,
-            font_metrics
-        );
+    fn render_path(&mut self, abs_ref: AbsoulteRef, path: &crate::ir::PathItem) -> Self::Resultant {
+        format!(
+            r#"<g data-tid="{}">{}</g>"#,
+            abs_ref.as_svg_id("p"),
+            render_path(path),
+        )
     }
 
-    // Decompress SVGZ.
-    let mut decoded = vec![];
-    // The first three bytes of the gzip-encoded document header must be 0x1F, 0x8B, 0x08.
-    if data.starts_with(&[0x1f, 0x8b]) {
-        let mut decoder = flate2::read::GzDecoder::new(data);
-        decoder.read_to_end(&mut decoded).ok()?;
-        data = &decoded;
+    fn render_image(
+        &mut self,
+        abs_ref: AbsoulteRef,
+        image_item: &crate::ir::ImageItem,
+    ) -> Self::Resultant {
+        Self::render_image_inner(abs_ref, image_item)
     }
-
-    // todo: When a font engine renders glyph 14, the result shall be the same as rendering the following SVG document
-    //   <svg> <defs> <use #glyph{id}> </svg>
-
-    let upem = Abs::raw(font.units_per_em());
-    let (width, height) = (upem.to_f32(), upem.to_f32());
-    let origin_ascender = font_metrics.ascender.at(upem).to_f32();
-
-    let doc_string = String::from_utf8(data.to_owned()).unwrap();
-
-    // todo: verify SVG capability requirements and restrictions
-
-    // Parse XML.
-    let mut svg_str = std::str::from_utf8(data).ok()?.to_owned();
-    let document = xmlparser::Tokenizer::from(svg_str.as_str());
-    let mut start_span = None;
-    let mut last_viewbox = None;
-    for n in document {
-        let tok = n.unwrap();
-        match tok {
-            xmlparser::Token::ElementStart { span, local, .. } => {
-                if local.as_str() == "svg" {
-                    start_span = Some(span);
-                    break;
-                }
-            }
-            xmlparser::Token::Attribute {
-                span, local, value, ..
-            } => {
-                if local.as_str() == "viewBox" {
-                    last_viewbox = Some((span, value));
-                }
-            }
-            xmlparser::Token::ElementEnd { .. } => break,
-            _ => {}
-        }
-    }
-
-    // update view box
-    let view_box = last_viewbox.as_ref()
-        .map(|s| {
-            WARN_VIEW_BOX.get_or_init(|| {
-                console_log!(
-                    "render_svg_glyph with viewBox, This should be helpful if you can help us verify the result: {:?} {:?}",
-                    font.info().family,
-                    doc_string
-                );
-            });
-            s.1.as_str().to_owned()
-        })
-        .unwrap_or_else(|| format!("0 {} {} {}", -origin_ascender, width, height));
-
-    match last_viewbox {
-        Some((span, ..)) => {
-            svg_str.replace_range(span.range(), format!(r#"viewBox="{}""#, view_box).as_str());
-        }
-        None => {
-            svg_str.insert_str(
-                start_span.unwrap().range().end,
-                format!(r#" viewBox="{}""#, view_box).as_str(),
-            );
-        }
-    }
-
-    if cfg!(feature = "debug_glyph_render") {
-        console_log!(
-            "render_svg_glyph prepared document: {:?} {:?}",
-            font.info().family,
-            svg_str
-        );
-    }
-
-    let image = typst::image::Image::new_raw(
-        svg_str.as_bytes().to_vec().into(),
-        typst::image::ImageFormat::Vector(typst::image::VectorFormat::Svg),
-        Axes::new(width as u32, height as u32),
-        None,
-    )
-    .ok()?;
-
-    Some(image)
 }
 
 #[derive(Debug, Clone)]
@@ -558,4 +425,24 @@ fn render_path(path: &PathItem) -> String {
     }
     p.push("/>".to_owned());
     p.join("")
+}
+
+/// Render a raster or SVG image into svg text.
+// todo: error handling
+pub fn render_image(image: &Image, size: Size) -> String {
+    let image_url = rasterize_embedded_image_url(image).unwrap();
+
+    // resize image to fit the view
+    let size = size;
+    let view_width = size.x.0;
+    let view_height = size.y.0;
+
+    let aspect = (image.width() as f32) / (image.height() as f32);
+
+    let w = view_width.max(aspect * view_height);
+    let h = w / aspect;
+    format!(
+        r#"<image x="0" y="0" width="{}" height="{}" xlink:href="{}" />"#,
+        w, h, image_url
+    )
 }

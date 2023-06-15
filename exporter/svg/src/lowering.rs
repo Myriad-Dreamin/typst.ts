@@ -1,21 +1,29 @@
 //! Lowering Typst Document into SvgItem.
 
+use std::io::Read;
 use std::sync::Arc;
 
+use once_cell::sync::OnceCell;
 use typst::doc::{Destination, Frame, FrameItem, GroupItem, Meta, Position, TextItem};
+use typst::font::Font;
 use typst::geom::{Geometry, LineCap, LineJoin, Paint, PathItem, Shape, Size, Stroke};
 use typst::image::Image;
 
 use ttf_parser::OutlineBuilder;
+use typst_ts_core::font::GlyphProvider;
 
+use crate::ir::{GlyphItem, ImageGlyphItem, OutlineGlyphItem};
 use crate::{
     ir,
     ir::{Scalar, SvgItem, TransformItem},
+    sk,
     svg::SvgPath2DBuilder,
     utils::{AbsExt, ToCssExt},
     ExportFeature, SvgTask,
 };
 use ttf_parser::GlyphId;
+
+static WARN_VIEW_BOX: OnceCell<()> = OnceCell::new();
 
 impl<Feat: ExportFeature> SvgTask<Feat> {
     /// Lower a frame into svg item.
@@ -32,7 +40,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                 FrameItem::Group(group) => self.lower_group(group),
                 FrameItem::Text(text) => Self::lower_text(text),
                 FrameItem::Shape(shape, _) => Self::lower_shape(shape),
-                FrameItem::Image(image, size, _) => Self::lower_image(image, *size),
+                FrameItem::Image(image, size, _) => lower_image(image, *size),
                 FrameItem::Meta(meta, size) => match meta {
                     Meta::Link(lnk) => match lnk {
                         Destination::Url(url) => self.lower_link(url, *size),
@@ -48,6 +56,15 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             };
 
             items.push(((*pos).into(), item));
+        }
+
+        // swap link items
+        let mut ls = items.len();
+        for i in (0..ls).rev() {
+            if matches!(&items[i], (_, SvgItem::Link(..))) {
+                ls -= 1;
+                items.swap(i, ls);
+            }
         }
 
         SvgItem::Group(ir::GroupItem(items))
@@ -85,15 +102,6 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         ))
     }
 
-    /// Lower a raster or SVG image into svg item.
-    #[comemo::memoize]
-    pub(super) fn lower_image(image: &Image, size: Size) -> SvgItem {
-        SvgItem::Image(ir::ImageItem {
-            image: Arc::new(image.clone().into()),
-            size: size.into(),
-        })
-    }
-
     pub(super) fn lower_link(&self, url: &str, size: Size) -> ir::SvgItem {
         let lnk = ir::LinkItem {
             href: url.into(),
@@ -107,7 +115,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     pub(super) fn lower_position(pos: Position, size: Size) -> ir::SvgItem {
         let lnk = ir::LinkItem {
             href: format!(
-                "?locator=page{}&x={}&y={}",
+                "@typst:handleTypstLocation(this, {}, {}, {})",
                 pos.page,
                 pos.point.x.to_f32(),
                 pos.point.y.to_f32()
@@ -254,4 +262,208 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 
         SvgItem::Path(ir::PathItem { d, styles })
     }
+}
+
+pub struct GlyphLowerBuilder<'a> {
+    gp: &'a GlyphProvider,
+}
+
+impl<'a> GlyphLowerBuilder<'a> {
+    pub fn new(gp: &'a GlyphProvider) -> Self {
+        Self { gp }
+    }
+
+    pub fn lower_glyph(&self, glyph_item: &GlyphItem) -> Option<GlyphItem> {
+        match glyph_item {
+            GlyphItem::Raw(font, id) => {
+                let id = *id;
+                // todo: server side render
+                self.render_svg_glyph(font, id)
+                    .map(GlyphItem::Image)
+                    .or_else(|| self.render_bitmap_glyph(font, id).map(GlyphItem::Image))
+                    .or_else(|| self.render_outline_glyph(font, id).map(GlyphItem::Outline))
+            }
+            GlyphItem::Image(..) | GlyphItem::Outline(..) => Some(glyph_item.clone()),
+        }
+    }
+
+    /// Render an SVG glyph into the svg text.
+    /// More information: https://learn.microsoft.com/zh-cn/typography/opentype/spec/svg
+    fn render_svg_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ImageGlyphItem>> {
+        let glyph_image = extract_svg_glyph(self.gp, font, id)?;
+
+        let sz = Size::new(
+            typst::geom::Abs::raw(glyph_image.width() as f64),
+            typst::geom::Abs::raw(glyph_image.height() as f64),
+        );
+
+        let image = ir::ImageItem {
+            image: Arc::new(glyph_image.into()),
+            size: sz.into(),
+        };
+
+        // position our image
+        let ascender = font
+            .metrics()
+            .ascender
+            .at(typst::geom::Abs::raw(font.metrics().units_per_em))
+            .to_f32();
+
+        Some(Arc::new(ImageGlyphItem {
+            ts: ir::Transform {
+                sx: Scalar(1.),
+                ky: Scalar(0.),
+                kx: Scalar(0.),
+                sy: Scalar(-1.),
+                tx: Scalar(0.),
+                ty: Scalar(ascender),
+            },
+            image,
+        }))
+    }
+
+    /// Render a bitmap glyph into the svg text.
+    fn render_bitmap_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ImageGlyphItem>> {
+        let ppem = u16::MAX;
+        let upem = font.metrics().units_per_em as f32;
+
+        let (glyph_image, raster_x, raster_y) = self.gp.bitmap_glyph(font, id, ppem)?;
+
+        // FIXME: Vertical alignment isn't quite right for Apple Color Emoji,
+        // and maybe also for Noto Color Emoji. And: Is the size calculation
+        // correct?
+
+        let w = glyph_image.width() as f64;
+        let h = glyph_image.height() as f64;
+        let sz = Size::new(typst::geom::Abs::raw(w), typst::geom::Abs::raw(h));
+
+        let image = ir::ImageItem {
+            image: Arc::new(glyph_image.into()),
+            size: sz.into(),
+        };
+
+        // position our image
+        let ascender = font
+            .metrics()
+            .ascender
+            .at(typst::geom::Abs::raw(font.metrics().units_per_em))
+            .to_f32();
+
+        let ts = sk::Transform::from_scale(upem / w as f32, -upem / h as f32);
+
+        // size
+        let dx = raster_x as f32;
+        let dy = raster_y as f32;
+        let ts = ts.post_translate(dx, ascender + dy);
+
+        Some(Arc::new(ImageGlyphItem {
+            ts: ts.into(),
+            image,
+        }))
+    }
+
+    /// Render an outline glyph into svg text. This is the "normal" case.
+    fn render_outline_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<OutlineGlyphItem>> {
+        let d = self.gp.outline_glyph(font, id)?.into();
+
+        Some(Arc::new(OutlineGlyphItem { ts: None, d }))
+    }
+}
+
+fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<typst::image::Image> {
+    let data = g.svg_glyph(font, id)?;
+    let mut data = data.as_ref();
+
+    let font_metrics = font.metrics();
+
+    // Decompress SVGZ.
+    let mut decoded = vec![];
+    // The first three bytes of the gzip-encoded document header must be 0x1F, 0x8B, 0x08.
+    if data.starts_with(&[0x1f, 0x8b]) {
+        let mut decoder = flate2::read::GzDecoder::new(data);
+        decoder.read_to_end(&mut decoded).ok()?;
+        data = &decoded;
+    }
+
+    // todo: When a font engine renders glyph 14, the result shall be the same as rendering the following SVG document
+    //   <svg> <defs> <use #glyph{id}> </svg>
+
+    let upem = typst::geom::Abs::raw(font.units_per_em());
+    let (width, height) = (upem.to_f32(), upem.to_f32());
+    let origin_ascender = font_metrics.ascender.at(upem).to_f32();
+
+    let doc_string = String::from_utf8(data.to_owned()).unwrap();
+
+    // todo: verify SVG capability requirements and restrictions
+
+    // Parse XML.
+    let mut svg_str = std::str::from_utf8(data).ok()?.to_owned();
+    let document = xmlparser::Tokenizer::from(svg_str.as_str());
+    let mut start_span = None;
+    let mut last_viewbox = None;
+    for n in document {
+        let tok = n.unwrap();
+        match tok {
+            xmlparser::Token::ElementStart { span, local, .. } => {
+                if local.as_str() == "svg" {
+                    start_span = Some(span);
+                    break;
+                }
+            }
+            xmlparser::Token::Attribute {
+                span, local, value, ..
+            } => {
+                if local.as_str() == "viewBox" {
+                    last_viewbox = Some((span, value));
+                }
+            }
+            xmlparser::Token::ElementEnd { .. } => break,
+            _ => {}
+        }
+    }
+
+    // update view box
+    let view_box = last_viewbox.as_ref()
+        .map(|s| {
+            WARN_VIEW_BOX.get_or_init(|| {
+                println!(
+                    "render_svg_glyph with viewBox, This should be helpful if you can help us verify the result: {:?} {:?}",
+                    font.info().family,
+                    doc_string
+                );
+            });
+            s.1.as_str().to_owned()
+        })
+        .unwrap_or_else(|| format!("0 {} {} {}", -origin_ascender, width, height));
+
+    match last_viewbox {
+        Some((span, ..)) => {
+            svg_str.replace_range(span.range(), format!(r#"viewBox="{}""#, view_box).as_str());
+        }
+        None => {
+            svg_str.insert_str(
+                start_span.unwrap().range().end,
+                format!(r#" viewBox="{}""#, view_box).as_str(),
+            );
+        }
+    }
+
+    let image = typst::image::Image::new_raw(
+        svg_str.as_bytes().to_vec().into(),
+        typst::image::ImageFormat::Vector(typst::image::VectorFormat::Svg),
+        typst::geom::Axes::new(width as u32, height as u32),
+        None,
+    )
+    .ok()?;
+
+    Some(image)
+}
+
+/// Lower a raster or SVG image into svg item.
+#[comemo::memoize]
+fn lower_image(image: &Image, size: Size) -> SvgItem {
+    SvgItem::Image(ir::ImageItem {
+        image: Arc::new(image.clone().into()),
+        size: size.into(),
+    })
 }

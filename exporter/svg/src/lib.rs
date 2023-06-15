@@ -23,6 +23,8 @@ pub(crate) mod lowering;
 pub(crate) mod render;
 pub(crate) mod svg;
 pub(crate) mod utils;
+pub(crate) mod vm;
+use vm::RenderVm;
 
 pub trait ExportFeature {
     const ENABLE_TRACING: bool;
