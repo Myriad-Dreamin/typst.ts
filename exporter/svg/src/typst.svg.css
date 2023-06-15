@@ -1,6 +1,8 @@
 .typst-txt {
   pointer-events: bounding-box;
 }
+
+.tsel span,
 .tsel {
   position: fixed;
   text-align: justify;
@@ -10,10 +12,12 @@
   text-align-last: justify;
   color: transparent;
 }
+.tsel span::-moz-selection,
 .tsel::-moz-selection {
   color: transpaent;
   background: #7db9dea0;
 }
+.tsel span::selection,
 .tsel::selection {
   color: transpaent;
   background: #7db9dea0;
