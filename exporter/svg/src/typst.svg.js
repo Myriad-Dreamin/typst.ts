@@ -34,9 +34,9 @@ var overLapping = function (a, b) {
     aRect.top > bRect.bottom
   );
 };
-var searchIntersections = function () {
+var searchIntersections = function (root) {
   let parent = undefined,
-    current = event.target;
+    current = root;
   while (current) {
     if (current.classList.contains('group')) {
       parent = current;
@@ -56,7 +56,7 @@ var searchIntersections = function () {
 
   for (let i = 0; i < childCount; i++) {
     const child = children[i];
-    if (!overLapping(child, event.target)) {
+    if (!overLapping(child, root)) {
       continue;
     }
     res.push(child);
@@ -64,7 +64,7 @@ var searchIntersections = function () {
 
   return res;
 };
-var getRelatedElements = function () {
+var getRelatedElements = function (event) {
   let relatedElements = event.target.relatedElements;
   if (relatedElements === undefined || relatedElements === null) {
     relatedElements = event.target.relatedElements = searchIntersections(event.target);
@@ -74,7 +74,7 @@ var getRelatedElements = function () {
 var linkmove = function (event) {
   ignoredEvent(
     function () {
-      const elements = getRelatedElements();
+      const elements = getRelatedElements(event);
       if (elements === undefined || elements === null) {
         return;
       }
@@ -90,8 +90,8 @@ var linkmove = function (event) {
     'mouse-move',
   );
 };
-var linkleave = function () {
-  const elements = getRelatedElements();
+var linkleave = function (event) {
+  const elements = getRelatedElements(event);
   if (elements === undefined || elements === null) {
     return;
   }
@@ -109,3 +109,53 @@ for (var i = 0; i < elements.length; i++) {
   elem.addEventListener('mousemove', linkmove);
   elem.addEventListener('mouseleave', linkleave);
 }
+
+function findAncestor(el, cls) {
+  while ((el = el.parentElement) && !el.classList.contains(cls));
+  return el;
+}
+
+window.handleTypstLocation = function (elem, page, x, y) {
+  const docRoot = findAncestor(elem, 'typst-doc');
+  const children = docRoot.children;
+  let nthPage = 0;
+  for (let i = 0; i < children.length; i++) {
+    if (children[i].tagName === 'g') {
+      nthPage++;
+    }
+    if (nthPage == page) {
+      const page = children[i];
+      const dataWidth = page.getAttribute('data-page-width');
+      const dataHeight = page.getAttribute('data-page-height');
+      const rect = page.getBoundingClientRect();
+      const xOffsetInner = Math.max(0, x / dataWidth - 0.05) * rect.width;
+      const yOffsetInner = Math.max(0, y / dataHeight - 0.05) * rect.height;
+      const xOffsetInnerFix = (x / dataWidth) * rect.width - xOffsetInner;
+      const yOffsetInnerFix = (y / dataHeight) * rect.height - yOffsetInner;
+
+      const docRoot = document.body || document.firstElementChild;
+      const basePos = docRoot.getBoundingClientRect();
+
+      const xOffset = rect.left - basePos.left + xOffsetInner;
+      const yOffset = rect.top - basePos.top + yOffsetInner;
+      const left = xOffset + xOffsetInnerFix;
+      const top = yOffset + yOffsetInnerFix;
+
+      console.log('scrolling to', xOffset, yOffset, left, top);
+
+      window.scrollTo(xOffset, yOffset);
+      const ripple = document.createElement('div');
+      ripple.className = 'typst-ripple';
+      docRoot.appendChild(ripple);
+
+      ripple.style.left = left.toString() + 'px';
+      ripple.style.top = top.toString() + 'px';
+
+      ripple.style.animation = 'typst-ripple-effect .4s linear';
+      ripple.onanimationend = () => {
+        docRoot.removeChild(ripple);
+      };
+      return;
+    }
+  }
+};

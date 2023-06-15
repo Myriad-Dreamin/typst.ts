@@ -35,3 +35,19 @@ svg {
 .hover .typst-txt {
   --glyph_fill: #66bab7;
 }
+.typst-ripple {
+  width: 0;
+  height: 0;
+  background-color: transparent;
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid #66bab7;
+}
+@keyframes typst-ripple-effect {
+  to {
+    width: 10vw;
+    height: 10vw;
+    opacity: 0.01;
+    margin: -5vw;
+  }
+}

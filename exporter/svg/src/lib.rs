@@ -1,21 +1,23 @@
 //! Rendering into svg text or module.
 
-use geom::{Axes, Size};
 pub(crate) use tiny_skia as sk;
-use typst::model::Introspector;
 
 use std::collections::hash_map::RandomState;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use ir::{GlyphMapping, ImmutStr, ModuleBuilder, RelativeRef, StyleNs, SvgDocument};
-use render::SvgRenderTask;
-
 use typst::diag::SourceResult;
 use typst::doc::Document;
+use typst::model::Introspector;
 use typst::World;
+
 use typst_ts_core::font::{FontGlyphProvider, GlyphProvider};
 use typst_ts_core::Exporter;
+
+use geom::{Axes, Size};
+use ir::{GlyphMapping, ImmutStr, ModuleBuilder, RelativeRef, StyleNs, SvgDocument};
+use render::SvgRenderTask;
+use vm::RenderVm;
 
 pub mod geom;
 pub(crate) mod ir;
@@ -24,7 +26,6 @@ pub(crate) mod render;
 pub(crate) mod svg;
 pub(crate) mod utils;
 pub(crate) mod vm;
-use vm::RenderVm;
 
 pub trait ExportFeature {
     const ENABLE_TRACING: bool;
@@ -231,7 +232,7 @@ impl SvgExporter {
             .sum::<f64>();
 
         format!(
-            r#"<svg viewBox="0 0 {:.3} {:.3}" width="{:.3}" height="{:.3}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">"#,
+            r#"<svg class="typst-doc" viewBox="0 0 {:.3} {:.3}" width="{:.3}" height="{:.3}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">"#,
             w, h, w, h,
         )
     }
@@ -362,7 +363,16 @@ impl SvgExporter {
 
 impl Exporter<Document, String> for SvgExporter {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<String> {
-        Ok(Self::render_svg(output).1)
+        let svg = Self::render_svg(output.clone()).1;
+        // html wrap
+        Ok(format!(
+            r#"<html><head><meta charset="utf-8" /><title>{}</title></head><body>{}</body></html>"#,
+            output
+                .title
+                .clone()
+                .unwrap_or_else(|| "Typst Document".into()),
+            svg
+        ))
     }
 }
 
