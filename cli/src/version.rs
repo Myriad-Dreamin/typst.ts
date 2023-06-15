@@ -3,6 +3,7 @@ use std::{fmt::Display, process::exit};
 use clap::ValueEnum;
 use typst_ts_core::build_info::VERSION;
 
+/// Available version formats for `$program -VV`
 #[derive(ValueEnum, Debug, Clone)]
 #[value(rename_all = "kebab-case")]
 pub enum VersionFormat {
@@ -20,6 +21,7 @@ impl Display for VersionFormat {
     }
 }
 
+/// Version information
 #[derive(serde::Serialize, serde::Deserialize)]
 struct VersionInfo {
     name: &'static str,
@@ -82,6 +84,7 @@ impl Default for VersionInfo {
     }
 }
 
+/// Print version information and exit if `-VV` is present
 pub fn intercept_version(v: bool, f: VersionFormat) {
     let f = match f {
         VersionFormat::None if v => VersionFormat::Short,
