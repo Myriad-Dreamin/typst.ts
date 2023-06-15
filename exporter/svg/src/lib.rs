@@ -138,9 +138,11 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             let size = Self::page_size(page.1);
             let item = render_task.render_item(entry.clone());
             let item = format!(
-                r#"<g transform="translate(0, {})" data-tid="{}">{}</g>"#,
+                r#"<g transform="translate(0, {})" data-tid="{}" data-page-width="{}" data-page-height="{}">{}</g>"#,
                 acc_height,
                 entry.as_svg_id("p"),
+                size.x,
+                size.y,
                 item
             );
 
@@ -167,10 +169,12 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             let size = Self::page_size(*size);
             if reusable.contains(&relative_entry) {
                 let item: String = format!(
-                    r#"<g transform="translate(0, {})" data-tid="{}" data-reuse-from="{}"></g>"#,
+                    r#"<g transform="translate(0, {})" data-tid="{}" data-reuse-from="{}" data-page-width="{}" data-page-height="{}"></g>"#,
                     acc_height,
                     relative_entry.as_svg_id("p"),
                     relative_entry.as_svg_id("p"),
+                    size.x,
+                    size.y,
                 );
 
                 svg_body.push(item);
@@ -193,10 +197,12 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             };
 
             let item: String = format!(
-                r#"<g transform="translate(0, {})" data-tid="{}"{}>{}</g>"#,
+                r#"<g transform="translate(0, {})" data-tid="{}"{} data-page-width="{}" data-page-height="{}">{}</g>"#,
                 acc_height,
                 relative_entry.as_svg_id("p"),
                 reuse_info,
+                size.x,
+                size.y,
                 item
             );
 
