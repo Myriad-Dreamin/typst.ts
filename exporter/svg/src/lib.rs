@@ -19,6 +19,7 @@ use ir::{GlyphMapping, ImmutStr, ModuleBuilder, RelativeRef, StyleNs, SvgDocumen
 use render::SvgRenderTask;
 use vm::RenderVm;
 
+pub(crate) mod escape;
 pub mod geom;
 pub(crate) mod ir;
 pub(crate) mod lowering;
@@ -105,7 +106,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             style_defs: &mut self.style_defs,
             clip_paths: &mut self.clip_paths,
 
-            render_text_element: true,
+            should_render_text_element: true,
 
             _feat_phantom: Default::default(),
         }

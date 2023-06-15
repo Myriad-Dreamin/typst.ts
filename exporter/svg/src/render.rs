@@ -2,6 +2,7 @@ use base64::Engine;
 use typst_ts_core::font::GlyphProvider;
 
 use crate::{
+    escape::{self, TextContentDataEscapes},
     ir::{self, GlyphItem, Module},
     ir::{AbsoulteRef, Image, ImageGlyphItem, OutlineGlyphItem, Scalar, Size, StyleNs},
     ir::{PathItem, PathStyle},
@@ -20,7 +21,7 @@ pub struct SvgRenderTask<'m, 't, Feat: ExportFeature = DefaultExportFeature> {
     pub clip_paths: &'t mut ClipPathMap,
 
     pub page_off: usize,
-    pub render_text_element: bool,
+    pub should_render_text_element: bool,
 
     // errors: Vec<Error>,
     pub _feat_phantom: std::marker::PhantomData<Feat>,
@@ -107,35 +108,80 @@ impl<'s, 'm, 't, Feat: ExportFeature> GroupContext for RenderGroup<'s, 'm, 't, F
             adjusted, e
         ));
     }
+
+    fn drop_text_semantics(
+        &mut self,
+        _value: &AbsoulteRef,
+        text: &ir::FlatTextItem,
+        width: Scalar,
+    ) {
+        if !self.t.should_render_text_element {
+            return;
+        }
+
+        let shape = &text.shape;
+
+        // Scale is in pixel per em, but curve data is in font design units, so
+        // we have to divide by units per em.
+        let upem = shape.upem.0;
+        let ppem = shape.ppem.0;
+        let ascender = shape.ascender.0;
+
+        let width = width.0 / ppem;
+        #[cfg(feature = "fg_text_layout")]
+        if false {
+            let mut text_content = String::new();
+            if !text.content.content.is_empty() {
+                let per_width = width / text.content.content.len() as f32;
+                for (i, c) in text.content.content.chars().enumerate() {
+                    text_content.push_str(&format!(
+                        r#"<span style="left: {}px">"#,
+                        i as f32 * per_width,
+                    ));
+                    match c {
+                        '<' => text_content.push_str("&lt;"),
+                        '&' => text_content.push_str("&amp;"),
+                        ' ' => text_content.push_str("&nbsp;"),
+                        _ => text_content.push(c),
+                    }
+                    text_content.push_str(r#"</span>"#);
+                }
+            }
+        }
+        let text_content = escape::escape_str::<TextContentDataEscapes>(&text.content.content);
+
+        // todo: investigate &nbsp;
+        let text_content = format!(
+            r#"<g transform="scale(1,-1)"><foreignObject x="0" y="-{}" width="{}" height="{}"><h5:div class="tsel" style="font-size: {}px">{}</h5:div></foreignObject></g>"#,
+            ascender / ppem,
+            width,
+            upem,
+            upem,
+            text_content
+        );
+
+        self.content.push(text_content)
+    }
 }
 
 impl<'s, 'm, 't, Feat: ExportFeature> From<RenderGroup<'s, 'm, 't, Feat>> for String {
     fn from(s: RenderGroup<'s, 'm, 't, Feat>) -> Self {
-        let (pre_text_content, post_text_content) = if let Some(post) = s.text_content {
-            (
-                format!("><g {}>", s.transforms.join(" ")),
-                format!("</g>{}", post),
-            )
-        } else {
-            (format!(" {}>", s.transforms.join(" ")), "".to_owned())
-        };
-
         let pre_content = if let Some(class) = s.class {
             format!(
-                r#"<g class="{}" data-tid="{}"{}"#,
+                r#"<g class="{}" data-tid="{}" {}>"#,
                 class,
                 s.tid.as_svg_id("p"),
-                pre_text_content,
+                s.transforms.join(" "),
             )
         } else {
             format!(
-                r#"<g data-tid="{}"{}"#,
+                r#"<g data-tid="{}" {}>"#,
                 s.tid.as_svg_id("p"),
-                pre_text_content
+                s.transforms.join(" ")
             )
         };
 
-        pre_content + &s.content.join("") + &post_text_content + "</g>"
+        pre_content + &s.content.join("") + "</g>"
     }
 }
 
@@ -253,42 +299,9 @@ impl<'s, 'm: 's, 't: 's, Feat: ExportFeature + 's> RenderVm<'s, 'm>
             fill_id
         };
 
-        let post_content = if self.render_text_element {
-            // Scale is in pixel per em, but curve data is in font design units, so
-            // we have to divide by units per em.
-            let upem = shape.upem.0;
-            let ppem = shape.ppem.0;
-            let ascender = shape.ascender.0;
-
-            // text_list.push(format!(
-            //     r#"<h5:span textLength="{}" font-size="{}" class="tsel">{}</h5:span>"#,
-            //     v,
-            //     upem * ppem,
-            //     xml::escape::escape_str_pcdata(&text.content.content),
-            // ));
-
-            let mut x = 0f32;
-            for (offset, advance, _) in text.content.glyphs.iter() {
-                x = x + offset.0 + advance.0;
-            }
-
-            // todo: investigate &nbsp;
-            Some(format!(
-                r#"<foreignObject x="0" y="-{}" width="{}" height="{}"><h5:div class="tsel" style="font-size: {}px;">{}</h5:div></foreignObject>"#,
-                ascender,
-                x,
-                upem * ppem,
-                upem * ppem,
-                xml::escape::escape_str_pcdata(&text.content.content)
-            ))
-        } else {
-            None
-        };
-
         let mut g = self.start_group(value);
 
         g.class = Some(format!("typst-txt {}", fill));
-        g.text_content = post_content;
 
         g
     }

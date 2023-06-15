@@ -24,11 +24,20 @@ pub trait GroupContext: Sized {
         }
     }
 
+    fn drop_item_at(&mut self, pos: Point, item: AbsoulteRef);
     fn drop_item(&mut self, item: AbsoulteRef) {
         self.drop_item_at(Point::default(), item);
     }
-    fn drop_item_at(&mut self, pos: Point, item: AbsoulteRef);
+
     fn drop_glyph(&mut self, pos: Scalar, item: &AbsoulteRef);
+
+    fn drop_text_semantics(
+        &mut self,
+        _abs_ref: &AbsoulteRef,
+        _text: &ir::FlatTextItem,
+        _width: Scalar,
+    ) {
+    }
 }
 
 /// A virtual machine for rendering a frame.
@@ -51,17 +60,21 @@ pub trait RenderVm<'s, 'm> {
         self.start_group(value)
     }
 
+    /// Render a geometrical shape into underlying context.
+    fn render_path(&'s mut self, abs_ref: AbsoulteRef, path: &ir::PathItem) -> Self::Resultant;
+
+    /// Render a semantic link into underlying context.
+    fn render_link(&'s mut self, abs_ref: AbsoulteRef, link: &ir::LinkItem) -> Self::Resultant;
+
+    fn render_image(
+        &'s mut self,
+        abs_ref: AbsoulteRef,
+        image_item: &ir::ImageItem,
+    ) -> Self::Resultant;
+
     /// Render an item into the a `<g/>` element.
     fn render_item(&'s mut self, abs_ref: AbsoulteRef) -> Self::Resultant {
         let item: &'m ir::FlatSvgItem = self.get_item(&abs_ref).unwrap();
-        self.render_item_inner(abs_ref, item)
-    }
-
-    fn render_item_inner(
-        &'s mut self,
-        abs_ref: AbsoulteRef,
-        item: &'m ir::FlatSvgItem,
-    ) -> Self::Resultant {
         match item.deref() {
             ir::FlatSvgItem::Group(group) => self.render_group(abs_ref, group),
             ir::FlatSvgItem::Item(transformed) => self.render_transformed(abs_ref, transformed),
@@ -75,7 +88,7 @@ pub trait RenderVm<'s, 'm> {
         }
     }
 
-    /// Render a frame into svg text.
+    /// Render a frame group into underlying context.
     fn render_group(&'s mut self, abs_ref: AbsoulteRef, group: &ir::GroupRef) -> Self::Resultant {
         let mut group_ctx = self.start_frame(&abs_ref, group);
 
@@ -89,7 +102,7 @@ pub trait RenderVm<'s, 'm> {
         group_ctx.into()
     }
 
-    /// Render a transformed frame into svg text.
+    /// Render a transformed frame into underlying context.
     fn render_transformed(
         &'s mut self,
         abs_ref: AbsoulteRef,
@@ -104,7 +117,7 @@ pub trait RenderVm<'s, 'm> {
         ts.into()
     }
 
-    /// Render a text run into the svg text.
+    /// Render a text into the underlying context.
     fn render_text(&'s mut self, abs_ref: AbsoulteRef, text: &ir::FlatTextItem) -> Self::Resultant {
         let group_ctx = self.start_text(&abs_ref, text);
 
@@ -122,18 +135,7 @@ pub trait RenderVm<'s, 'm> {
             x += advance.0;
         }
 
+        group_ctx.drop_text_semantics(&abs_ref, text, Scalar(x));
         group_ctx.into()
     }
-
-    /// Render a geometrical shape into svg text.
-    fn render_path(&'s mut self, abs_ref: AbsoulteRef, path: &ir::PathItem) -> Self::Resultant;
-
-    /// Render a semantic link into svg text.
-    fn render_link(&'s mut self, abs_ref: AbsoulteRef, link: &ir::LinkItem) -> Self::Resultant;
-
-    fn render_image(
-        &'s mut self,
-        abs_ref: AbsoulteRef,
-        image_item: &ir::ImageItem,
-    ) -> Self::Resultant;
 }
