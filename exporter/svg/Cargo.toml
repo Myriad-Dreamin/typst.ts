@@ -19,11 +19,15 @@ once_cell.workspace = true
 base64.workspace = true
 siphasher.workspace = true
 xmlparser = "0.13.5"
-rkyv = { version = "0.7.42", optional = true }
+rkyv = { version = "0.7.42", optional = true, features = [
+    "validation",
+    "alloc",
+] }
 
 typst-ts-core.workspace = true
 
 
 [features]
 rkyv = ["dep:rkyv"]
-default = ["rkyv"]
+rkyv-validation = ["dep:rkyv"]
+default = ["rkyv", "rkyv-validation"]

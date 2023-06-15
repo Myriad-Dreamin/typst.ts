@@ -12,6 +12,7 @@ use typst::geom::{
 
 #[derive(Default, Clone, Copy)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct Scalar(pub f32);
 
 impl From<f32> for Scalar {
@@ -124,6 +125,7 @@ pub type Ratio = Scalar;
 /// A container with a horizontal and vertical component.
 #[derive(Default, Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct Axes<T> {
     /// The horizontal component.
     pub x: T,
@@ -174,6 +176,7 @@ impl From<TypstPoint> for Point {
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct Transform {
     pub sx: Ratio,
     pub ky: Ratio,
