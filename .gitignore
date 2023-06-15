@@ -5,6 +5,7 @@
 *.glyphs.json
 *.artifact.json
 *.artifact.svg
+*.artifact.svg.html
 *.tir.bin
 *.sir.bin
 *.pdf

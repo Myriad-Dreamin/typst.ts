@@ -93,7 +93,7 @@ fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExp
             #[cfg(feature = "serde-rmp")]
             "rmp"         => sink_path!(WithRmp as _ as artifact, out @@ "artifact.rmp"),
             #[cfg(feature = "svg")]
-            "svg"         => sink_path!(WithSvg as _ as doc, out @@ "artifact.svg"),
+            "svg"         => sink_path!(WithSvg as _ as doc, out @@ "artifact.svg.html"),
             #[cfg(feature = "svg")]
             "sir"         => sink_path!(WithSIR as _ as doc, out @@ "artifact.sir.bin"),
             _             => exit_by_unknown_format(f),
