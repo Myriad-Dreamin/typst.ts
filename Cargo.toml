@@ -52,7 +52,6 @@ image = { version = "0.24", default-features = false, features = [
     "jpeg",
     "gif",
 ] }
-xml-rs = "0.8.14"
 
 # general
 anyhow = "1"
