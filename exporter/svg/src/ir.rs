@@ -25,6 +25,7 @@ pub use super::geom::*;
 /// > a probability of 1 in 36,890,000,000,000 of a `StableCrateId` collision.
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct Fingerprint(u64, u64);
 
 pub trait FingerprintHasher: std::hash::Hasher {
@@ -87,11 +88,13 @@ impl FingerprintBuilder {
 /// This id is only unique within the svg document.
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct DefId(pub u64);
 
 /// A stable absolute reference.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct AbsoulteRef {
     pub fingerprint: Fingerprint,
     pub id: DefId,
@@ -132,35 +135,89 @@ impl AbsoulteRef {
 
 #[derive(Debug, Default)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-pub struct ItemPack(pub Vec<FlatSvgItem>);
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub struct ItemPack(pub Vec<(Fingerprint, FlatSvgItem)>);
 
 /// A finished module that stores all the svg items.
 /// The svg items shares the underlying data.
 /// The svg items are flattened and ready to be serialized.
 #[derive(Debug, Default)]
 pub struct Module {
-    pub glyphs: Vec<GlyphItem>,
+    pub glyphs: Vec<(AbsoulteRef, GlyphItem)>,
     pub item_pack: ItemPack,
 }
 
 impl Module {
     /// Get a glyph item by its stable ref.
     pub fn get_glyph(&self, id: &AbsoulteRef) -> Option<&GlyphItem> {
-        self.glyphs.get(id.id.0 as usize)
+        self.glyphs.get(id.id.0 as usize).map(|(_, item)| item)
     }
 
     /// Get a svg item by its stable ref.
     pub fn get_item(&self, id: &AbsoulteRef) -> Option<&FlatSvgItem> {
-        self.item_pack.0.get(id.id.0 as usize)
+        self.item_pack.0.get(id.id.0 as usize).map(|(_, item)| item)
     }
 }
+
+pub type Pages = Vec<(AbsoulteRef, Size)>;
+pub type LayoutElem = (Abs, Pages);
 
 /// Module with page references of a [`typst::doc::Document`].
 pub struct SvgDocument {
     pub module: Module,
     /// References to the page frames.
     /// Use [`Module::get_item`] to get the actual item.
-    pub pages: Vec<(AbsoulteRef, Size)>,
+    pub pages: Pages,
+}
+
+/// Module with multiple documents in a module [`typst::doc::Document`].
+pub struct MultiSvgDocument {
+    pub module: Module,
+    /// References to the page frames.
+    /// Use [`Module::get_item`] to get the actual item.
+    pub layouts: Vec<(Abs, Pages)>,
+}
+
+impl MultiSvgDocument {
+    #[cfg(feature = "rkyv")]
+    pub fn from_slice(v: &[u8]) -> Self {
+        use rkyv::de::deserializers::SharedDeserializeMap;
+
+        let mut aligned = rkyv::AlignedVec::default();
+        let v = if (v.as_ptr() as usize) % rkyv::AlignedVec::ALIGNMENT != 0 {
+            aligned.extend_from_slice(v);
+            aligned.as_slice()
+        } else {
+            v
+        };
+
+        let archived = rkyv::check_archived_root::<SerializedModule>(v).unwrap();
+
+        let item_pack: ItemPack = {
+            let mut dmap = SharedDeserializeMap::default();
+            archived.item_pack.deserialize(&mut dmap).unwrap()
+        };
+
+        let layouts = {
+            let mut infallible = rkyv::Infallible::default();
+            archived.layouts.deserialize(&mut infallible).unwrap()
+        };
+
+        let glyphs = {
+            let mut dmap = SharedDeserializeMap::default();
+            let glyphs: Vec<(AbsoulteRef, FlatGlyphItem)> =
+                archived.glyphs.deserialize(&mut dmap).unwrap();
+            glyphs
+                .into_iter()
+                .map(|(abs_ref, glyph)| (abs_ref, glyph.into()))
+                .collect()
+        };
+
+        MultiSvgDocument {
+            module: Module { glyphs, item_pack },
+            layouts,
+        }
+    }
 }
 
 /// A Svg item that is specialized for representing [`typst::doc::Document`] or its subtypes.
@@ -177,6 +234,7 @@ pub enum SvgItem {
 /// Data of an `<image/>` element.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct Image {
     pub data: Vec<u8>,
     /// The format of the encoded `buffer`.
@@ -229,6 +287,7 @@ impl Hash for Image {
 /// Item representing an `<image/>` element.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct ImageItem {
     pub image: Arc<Image>,
     pub size: Size,
@@ -237,6 +296,7 @@ pub struct ImageItem {
 /// Item representing an `<a/>` element.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct LinkItem {
     pub href: ImmutStr,
     pub size: Size,
@@ -245,6 +305,7 @@ pub struct LinkItem {
 /// Item representing an `<path/>` element.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct PathItem {
     pub d: ImmutStr,
     pub styles: Vec<PathStyle>,
@@ -253,6 +314,7 @@ pub struct PathItem {
 /// Attributes that is applicable to the [`PathItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub enum PathStyle {
     Fill(ImmutStr),
     Stroke(ImmutStr),
@@ -282,6 +344,8 @@ pub struct TextItemContent {
 
 /// A glyph item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct ImageGlyphItem {
     pub ts: Transform,
     pub image: ImageItem,
@@ -289,6 +353,8 @@ pub struct ImageGlyphItem {
 
 /// A glyph item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct OutlineGlyphItem {
     pub ts: Option<Transform>,
     pub d: ImmutStr,
@@ -303,9 +369,27 @@ pub enum GlyphItem {
     Outline(Arc<OutlineGlyphItem>),
 }
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub enum FlatGlyphItem {
+    Image(Arc<ImageGlyphItem>),
+    Outline(Arc<OutlineGlyphItem>),
+}
+
+impl From<FlatGlyphItem> for GlyphItem {
+    fn from(item: FlatGlyphItem) -> Self {
+        match item {
+            FlatGlyphItem::Image(item) => GlyphItem::Image(item),
+            FlatGlyphItem::Outline(item) => GlyphItem::Outline(item),
+        }
+    }
+}
+
 /// The shape metadata of a [`TextItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct TextShape {
     // todo: save direction
     // pub dir: Dir,
@@ -329,6 +413,7 @@ pub struct GroupItem(pub Vec<(Point, SvgItem)>);
 /// Item representing all the transform that is applicable to a [`SvgItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub enum TransformItem {
     Matrix(Arc<Transform>),
     Translate(Arc<Axes<Abs>>),
@@ -341,6 +426,7 @@ pub enum TransformItem {
 /// Flatten svg item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub enum FlatSvgItem {
     None,
     Image(ImageItem),
@@ -354,6 +440,7 @@ pub enum FlatSvgItem {
 /// Flatten text item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct FlatTextItem {
     pub content: Arc<FlatTextItemContent>,
     pub shape: Arc<TextShape>,
@@ -362,6 +449,7 @@ pub struct FlatTextItem {
 /// The content metadata of a [`FlatTextItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct FlatTextItemContent {
     pub content: ImmutStr,
     pub glyphs: Arc<[(Abs, Abs, AbsoulteRef)]>,
@@ -370,11 +458,13 @@ pub struct FlatTextItemContent {
 /// Flatten transform item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct TransformedRef(pub TransformItem, pub AbsoulteRef);
 
 /// Flatten group item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct GroupRef(pub Arc<[(Point, AbsoulteRef)]>);
 
 /// Global style namespace.
@@ -390,7 +480,8 @@ pub type GlyphMapping = HashMap<GlyphItem, AbsoulteRef>;
 #[derive(Default)]
 pub struct ModuleBuilder {
     pub glyphs: GlyphMapping,
-    pub items: Vec<FlatSvgItem>,
+    pub items: Vec<(Fingerprint, FlatSvgItem)>,
+    pub item_pos: HashMap<Fingerprint, DefId>,
 
     fingerprint_builder: FingerprintBuilder,
 }
@@ -401,7 +492,7 @@ impl ModuleBuilder {
         glyphs.sort_by(|(_, a), (_, b)| a.id.0.cmp(&b.id.0));
         (
             Module {
-                glyphs: glyphs.into_iter().map(|(a, _)| a).collect(),
+                glyphs: glyphs.into_iter().map(|(a, b)| (b, a)).collect(),
                 item_pack: ItemPack(self.items),
             },
             self.glyphs,
@@ -422,9 +513,6 @@ impl ModuleBuilder {
     }
 
     pub fn build(&mut self, item: SvgItem) -> AbsoulteRef {
-        let id = DefId(self.items.len() as u64);
-        self.items.push(FlatSvgItem::None);
-
         let resolved_item = match item {
             SvgItem::Image(image) => FlatSvgItem::Image(image),
             SvgItem::Path(path) => FlatSvgItem::Path(path),
@@ -462,7 +550,27 @@ impl ModuleBuilder {
         };
 
         let fingerprint = self.fingerprint_builder.resolve(&resolved_item);
-        self.items[id.0 as usize] = resolved_item;
+
+        if let Some(pos) = self.item_pos.get(&fingerprint) {
+            return AbsoulteRef {
+                fingerprint,
+                id: *pos,
+            };
+        }
+
+        let id = DefId(self.items.len() as u64);
+        self.items.push((fingerprint, resolved_item));
+        self.item_pos.insert(fingerprint, id);
         AbsoulteRef { fingerprint, id }
     }
+}
+
+/// Flatten transform item.
+#[derive(Debug)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub struct SerializedModule {
+    pub item_pack: ItemPack,
+    pub glyphs: Vec<(AbsoulteRef, FlatGlyphItem)>,
+    pub layouts: Vec<(Abs, Vec<(AbsoulteRef, Size)>)>,
 }
