@@ -20,10 +20,6 @@ impl Display for VersionFormat {
     }
 }
 
-fn feature_list() -> Vec<&'static str> {
-    env!("VERGEN_CARGO_FEATURES").split(',').collect::<Vec<_>>()
-}
-
 #[derive(serde::Serialize, serde::Deserialize)]
 struct VersionInfo {
     name: &'static str,
@@ -49,7 +45,7 @@ impl VersionInfo {
             // todo: global app name
             name: "typst-ts-cli",
             version: VERSION,
-            features: feature_list(),
+            features: env!("VERGEN_CARGO_FEATURES").split(',').collect::<Vec<_>>(),
 
             cli_semver: env!("VERGEN_GIT_SEMVER"),
             cli_commit_hash: env!("VERGEN_GIT_SHA"),
@@ -84,6 +80,25 @@ impl Default for VersionInfo {
     fn default() -> Self {
         Self::new()
     }
+}
+
+pub fn intercept_version(v: bool, f: VersionFormat) {
+    let f = match f {
+        VersionFormat::None if v => VersionFormat::Short,
+        VersionFormat::None => return,
+        _ => f,
+    };
+    let version_info = VersionInfo::new();
+    match f {
+        VersionFormat::Full => print_full_version(version_info),
+        VersionFormat::Features => println!("{}", version_info.features.join(",")),
+        VersionFormat::Json => {
+            println!("{}", serde_json::to_string_pretty(&version_info).unwrap())
+        }
+        VersionFormat::JsonPlain => println!("{}", serde_json::to_string(&version_info).unwrap()),
+        _ => print_short_version(version_info),
+    }
+    exit(0);
 }
 
 fn print_full_version(vi: VersionInfo) {
@@ -123,23 +138,4 @@ fn print_short_version(vi: VersionInfo) {
         r##"{name} version {version}
 features: {features}"##
     );
-}
-
-pub fn intercept_version(v: bool, f: VersionFormat) {
-    let f = match f {
-        VersionFormat::None if v => VersionFormat::Short,
-        VersionFormat::None => return,
-        _ => f,
-    };
-    let version_info = VersionInfo::new();
-    match f {
-        VersionFormat::Full => print_full_version(version_info),
-        VersionFormat::Features => println!("{}", version_info.features.join(",")),
-        VersionFormat::Json => {
-            println!("{}", serde_json::to_string_pretty(&version_info).unwrap())
-        }
-        VersionFormat::JsonPlain => println!("{}", serde_json::to_string(&version_info).unwrap()),
-        _ => print_short_version(version_info),
-    }
-    exit(0);
 }
