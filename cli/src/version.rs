@@ -1,9 +1,10 @@
 use std::{fmt::Display, process::exit};
 
-use clap::{builder::PossibleValue, ValueEnum};
+use clap::ValueEnum;
 use typst_ts_core::build_info::VERSION;
 
-#[derive(Debug, Clone)]
+#[derive(ValueEnum, Debug, Clone)]
+#[value(rename_all = "kebab-case")]
 pub enum VersionFormat {
     None,
     Short,
@@ -13,39 +14,9 @@ pub enum VersionFormat {
     JsonPlain,
 }
 
-impl ValueEnum for VersionFormat {
-    fn value_variants<'a>() -> &'a [Self] {
-        &[
-            VersionFormat::None,
-            VersionFormat::Short,
-            VersionFormat::Full,
-            VersionFormat::Json,
-            VersionFormat::JsonPlain,
-        ]
-    }
-
-    fn to_possible_value<'a>(&self) -> Option<PossibleValue> {
-        Some(match self {
-            VersionFormat::None => PossibleValue::new("none"),
-            VersionFormat::Short => PossibleValue::new("short"),
-            VersionFormat::Features => PossibleValue::new("features"),
-            VersionFormat::Full => PossibleValue::new("full"),
-            VersionFormat::Json => PossibleValue::new("json"),
-            VersionFormat::JsonPlain => PossibleValue::new("json-plain"),
-        })
-    }
-}
-
 impl Display for VersionFormat {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            VersionFormat::None => write!(f, "none"),
-            VersionFormat::Short => write!(f, "short"),
-            VersionFormat::Features => write!(f, "features"),
-            VersionFormat::Full => write!(f, "full"),
-            VersionFormat::Json => write!(f, "json"),
-            VersionFormat::JsonPlain => write!(f, "json-plain"),
-        }
+        f.write_str(self.to_possible_value().unwrap().get_name())
     }
 }
 
