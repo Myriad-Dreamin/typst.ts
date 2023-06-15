@@ -26,6 +26,7 @@ if (window) {
     renderTextLayer,
 
     createTypstRenderer: renderer.createTypstRenderer,
+    createTypstSvgRenderer: renderer.createTypstSvgRenderer,
     preloadRemoteFonts: initOptions.preloadRemoteFonts,
     preloadSystemFonts: initOptions.preloadSystemFonts,
   };

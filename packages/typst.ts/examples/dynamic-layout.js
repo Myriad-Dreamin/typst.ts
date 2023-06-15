@@ -121,25 +121,21 @@ function findAncestor(el, cls) {
   return el;
 }
 
-var scriptTag = document.currentScript;
-if (scriptTag) {
-  const docRoot = findAncestor(scriptTag, 'typst-doc');
-  if (docRoot) {
-    var elements = docRoot.getElementsByClassName('pseudo-link');
+window.typstProcessSvg = function (docRoot) {
+  var elements = docRoot.getElementsByClassName('pseudo-link');
 
-    for (var i = 0; i < elements.length; i++) {
-      var elem = elements[i];
-      elem.addEventListener('mousemove', linkmove);
-      elem.addEventListener('mouseleave', linkleave);
-    }
-
-    setTimeout(() => {
-      window.layoutText(docRoot);
-    }, 0);
+  for (var i = 0; i < elements.length; i++) {
+    var elem = elements[i];
+    elem.addEventListener('mousemove', linkmove);
+    elem.addEventListener('mouseleave', linkleave);
   }
-}
 
-window.layoutText = function (svg) {
+  setTimeout(() => {
+    window.typstLayoutText(docRoot);
+  }, 0);
+};
+
+window.typstLayoutText = function (svg) {
   const divs = svg.querySelectorAll('.tsel');
   const ctx = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas').getContext('2d');
 
@@ -168,7 +164,7 @@ window.layoutText = function (svg) {
     }
   }
 
-  console.log(`layoutText used time ${performance.now() - layoutBegin} ms`);
+  console.log(`typstLayoutText used time ${performance.now() - layoutBegin} ms`);
 };
 
 window.handleTypstLocation = function (elem, page, x, y) {
