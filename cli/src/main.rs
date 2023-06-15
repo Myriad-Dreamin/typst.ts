@@ -106,6 +106,9 @@ fn compile(args: CompileArgs) -> ! {
             })
             .await;
         })
+    } else if args.dynamic_layout {
+        let compiled = compile_driver().once_dynamic().is_ok();
+        exit(if compiled { 0 } else { 1 });
     } else {
         let compiled = compile_driver().once_diag::<false>();
         exit(if compiled { 0 } else { 1 });

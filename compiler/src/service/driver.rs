@@ -3,6 +3,7 @@ use std::{path::PathBuf, sync::Arc};
 use crate::TypstSystemWorld;
 use typst::diag::{SourceError, SourceResult};
 use typst_ts_core::{exporter_builtins::GroupExporter, exporter_utils::map_err, Exporter};
+use typst_ts_svg_exporter::{serialize_multi_doc_standalone, DynamicLayoutSvgExporter};
 
 use super::diag;
 
@@ -57,6 +58,68 @@ impl CompileDriver {
 
         // compile and export document
         typst::compile(&self.world).and_then(|output| self.export(output))
+    }
+
+    /// Compile once from scratch.
+    pub fn once_dynamic(&mut self) -> SourceResult<()> {
+        // checkout the entry file
+        let entry_file = self.entry_file.clone();
+        let content = { std::fs::read_to_string(&entry_file).expect("Could not read file") };
+        // #let ts_page_width = 595.28pt
+
+        use typst::geom::Abs;
+
+        let mut svg_exporter = DynamicLayoutSvgExporter::default();
+        let base_layout = Abs::pt(592.28);
+
+        // for each 10pt we rerender once
+        let instant_begin = std::time::Instant::now();
+        for i in 0..40 {
+            let instant = std::time::Instant::now();
+            // replace layout
+            let current_width = base_layout - Abs::pt(i as f64 * 10.0);
+
+            let to_layout: String = format!("#let ts_page_width = {:2}pt", current_width.to_pt());
+            println!(
+                "rerendering {} at {:?}, {to_layout}",
+                i,
+                instant - instant_begin
+            );
+
+            // reset the world caches
+            self.world.reset();
+
+            let dyn_content = content
+                .clone()
+                .replace("#let ts_page_width = 595.28pt", &to_layout);
+
+            match self.world.resolve_with(&entry_file, &dyn_content) {
+                Ok(id) => {
+                    self.world.main = id;
+                }
+                Err(e) => return Err(map_err(&self.world, e)),
+            }
+
+            // compile and export document
+            let output = Arc::new(typst::compile(&self.world).unwrap());
+            svg_exporter.render(current_width, output);
+            println!(
+                "rerendered {} at {:?}, {}",
+                i,
+                instant - instant_begin,
+                svg_exporter.debug_stat()
+            );
+        }
+
+        let module_output = entry_file.with_extension("multi.sir.bin");
+
+        let (doc, glyphs) = svg_exporter.finalize();
+
+        std::fs::write(module_output, serialize_multi_doc_standalone(doc, glyphs)).unwrap();
+
+        let instant = std::time::Instant::now();
+        println!("rerendering finished at {:?}", instant - instant_begin);
+        Ok(())
     }
 
     /// Compile once from scratch and print (optional) status and diagnostics to the terminal.

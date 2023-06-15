@@ -71,6 +71,12 @@ pub struct CompileArgs {
     #[clap(long)]
     pub watch: bool,
 
+    /// generate dynamic layout representation.
+    /// Note: this is an experimental feature and will be merged as
+    ///   format `dyn-svg` in the future.
+    #[clap(long)]
+    pub dynamic_layout: bool,
+
     /// enable tracing.
     /// possible usage: --trace=verbosity={0..3}
     ///   where verbosity: {0..3} -> {warning, info, debug, trace}
@@ -82,7 +88,8 @@ pub struct CompileArgs {
     #[clap(long, short, required = true)]
     pub entry: String,
 
-    /// Output formats, possible values: `json`, `pdf`, `json_glyphs`, `ast`, `ir`, and `rmp`.
+    /// Output formats, possible values: `json`, `pdf`, `svg`,
+    ///   `json_glyphs`, `ast`, `ir`, and `rmp`.
     #[clap(long)]
     pub format: Vec<String>,
 
