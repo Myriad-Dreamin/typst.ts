@@ -73,3 +73,12 @@ impl ToCssExt for Transform {
         )
     }
 }
+
+impl ToCssExt for crate::ir::Transform {
+    fn to_css(self) -> String {
+        format!(
+            r#"matrix({},{},{},{},{},{})"#,
+            self.sx.0, self.ky.0, self.kx.0, self.sy.0, self.tx.0, self.ty.0
+        )
+    }
+}
