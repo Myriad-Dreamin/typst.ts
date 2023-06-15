@@ -89,42 +89,6 @@ impl FingerprintBuilder {
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 pub struct DefId(pub u64);
 
-impl DefId {
-    /// Make a [`RelativeDefId`] relative to the given id.
-    pub fn make_relative(&self, id: DefId) -> RelativeDefId {
-        RelativeDefId(id.0 as i64 - self.0 as i64)
-    }
-
-    /// Make a [`DefId`] from the given relative id.
-    pub fn make_absolute(&self, id: RelativeDefId) -> DefId {
-        DefId((id.0 + self.0 as i64) as u64)
-    }
-
-    /// Make a [`RelativeRef`] relative to the given id.
-    pub fn make_relative_ref(&self, abs_ref: AbsoulteRef) -> RelativeRef {
-        RelativeRef {
-            fingerprint: abs_ref.fingerprint,
-            id: self.make_relative(abs_ref.id),
-        }
-    }
-
-    /// Make a [`AbsoulteRef`] from the given relative id.
-    pub fn make_absolute_ref(&self, rel_ref: RelativeRef) -> AbsoulteRef {
-        AbsoulteRef {
-            fingerprint: rel_ref.fingerprint,
-            id: self.make_absolute(rel_ref.id),
-        }
-    }
-}
-
-/// The relative id of a svg item.
-/// See:
-/// + [`DefId::make_relative_ref`]
-/// + [`DefId::make_absolute_ref`]
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-pub struct RelativeDefId(pub i64);
-
 /// A stable absolute reference.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
@@ -163,27 +127,6 @@ impl AbsoulteRef {
     #[inline]
     pub fn as_svg_id(&self, prefix: &'static str) -> String {
         Self::as_svg_id_inner(self.fingerprint, prefix)
-    }
-}
-
-/// A stable relative reference.
-/// These objects can only be constructed relative from a [`AbsoulteRef`].
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-pub struct RelativeRef {
-    pub fingerprint: Fingerprint,
-    pub id: RelativeDefId,
-}
-
-impl Hash for RelativeRef {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.fingerprint.hash(state);
-    }
-}
-
-impl RelativeRef {
-    pub(crate) fn as_svg_id(&self, prefix: &'static str) -> String {
-        AbsoulteRef::as_svg_id_inner(self.fingerprint, prefix)
     }
 }
 
@@ -427,12 +370,12 @@ pub struct FlatTextItemContent {
 /// Flatten transform item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-pub struct TransformedRef(pub TransformItem, pub RelativeRef);
+pub struct TransformedRef(pub TransformItem, pub AbsoulteRef);
 
 /// Flatten group item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-pub struct GroupRef(pub Arc<[(Point, RelativeRef)]>);
+pub struct GroupRef(pub Arc<[(Point, AbsoulteRef)]>);
 
 /// Global style namespace.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -506,13 +449,13 @@ impl ModuleBuilder {
                 let item_id = self.build(*item.clone());
                 let transform = transformed.0.clone();
 
-                FlatSvgItem::Item(TransformedRef(transform, id.make_relative_ref(item_id)))
+                FlatSvgItem::Item(TransformedRef(transform, item_id))
             }
             SvgItem::Group(group) => {
                 let items = group
                     .0
                     .iter()
-                    .map(|(point, item)| (*point, id.make_relative_ref(self.build(item.clone()))))
+                    .map(|(point, item)| (*point, self.build(item.clone())))
                     .collect::<Vec<_>>();
                 FlatSvgItem::Group(GroupRef(items.into()))
             }

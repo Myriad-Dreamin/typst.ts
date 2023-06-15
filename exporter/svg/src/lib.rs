@@ -14,7 +14,7 @@ use typst_ts_core::font::{FontGlyphProvider, GlyphProvider};
 use typst_ts_core::Exporter;
 
 use geom::{Axes, Size};
-use ir::{GlyphMapping, ImmutStr, Module, ModuleBuilder, RelativeRef, StyleNs, SvgDocument};
+use ir::{AbsoulteRef, GlyphMapping, ImmutStr, Module, ModuleBuilder, StyleNs, SvgDocument};
 use lowering::LowerBuilder;
 use render::SvgRenderTask;
 use vm::RenderVm;
@@ -133,7 +133,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 
             let entry = &page.0;
             let size = Self::page_size(page.1);
-            let item = render_task.render_item(entry.clone());
+            let item = render_task.render_item(entry);
             let item = format!(
                 r#"<g transform="translate(0, {})" data-tid="{}" data-page-width="{}" data-page-height="{}">{}</g>"#,
                 acc_height,
@@ -153,23 +153,19 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         let mut acc_height = 0u32;
         let mut render_task = self.fork_render_task(&ctx.next.module);
 
-        let reusable: HashSet<RelativeRef, RandomState> =
-            HashSet::from_iter(ctx.prev.pages.iter().map(|e| {
-                let id = e.0.id;
-                id.make_relative_ref(e.0.clone())
-            }));
+        let reusable: HashSet<AbsoulteRef, RandomState> =
+            HashSet::from_iter(ctx.prev.pages.iter().map(|e| e.0.clone()));
 
         for (idx, (entry, size)) in ctx.next.pages.iter().enumerate() {
             render_task.page_off = idx;
 
-            let relative_entry = entry.id.make_relative_ref(entry.clone());
             let size = Self::page_size(*size);
-            if reusable.contains(&relative_entry) {
+            if reusable.contains(entry) {
                 let item: String = format!(
                     r#"<g transform="translate(0, {})" data-tid="{}" data-reuse-from="{}" data-page-width="{}" data-page-height="{}"></g>"#,
                     acc_height,
-                    relative_entry.as_svg_id("p"),
-                    relative_entry.as_svg_id("p"),
+                    entry.as_svg_id("p"),
+                    entry.as_svg_id("p"),
                     size.x,
                     size.y,
                 );
@@ -179,16 +175,12 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                 continue;
             }
 
-            let item = render_task.render_item(entry.clone());
+            let item = render_task.render_item(entry);
 
             // todo: evaluate simlarity
             let reuse_info = match ctx.prev.pages.get(idx) {
                 Some((abs_ref, ..)) => {
-                    let prev_relative_entry = abs_ref.id.make_relative_ref(abs_ref.clone());
-                    format!(
-                        r#" data-reuse-from="{}""#,
-                        prev_relative_entry.as_svg_id("p")
-                    )
+                    format!(r#" data-reuse-from="{}""#, abs_ref.as_svg_id("p"))
                 }
                 None => String::new(),
             };
@@ -196,7 +188,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             let item: String = format!(
                 r#"<g transform="translate(0, {})" data-tid="{}"{} data-page-width="{}" data-page-height="{}">{}</g>"#,
                 acc_height,
-                relative_entry.as_svg_id("p"),
+                entry.as_svg_id("p"),
                 reuse_info,
                 size.x,
                 size.y,

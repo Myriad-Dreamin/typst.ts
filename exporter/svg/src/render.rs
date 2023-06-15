@@ -88,7 +88,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> GroupContext for RenderGroup<'s, 'm, 't, F
         self
     }
 
-    fn drop_item_at(&mut self, pos: crate::ir::Point, item: AbsoulteRef) {
+    fn drop_item_at(&mut self, pos: crate::ir::Point, item: &AbsoulteRef) {
         self.content.push(format!(
             r#"<g transform="translate({:.3},{:.3})" >"#,
             pos.x.0, pos.y.0
@@ -247,7 +247,7 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
     }
 
     #[comemo::memoize]
-    fn render_image_inner(abs_ref: AbsoulteRef, image_item: &crate::ir::ImageItem) -> String {
+    fn render_image_inner(abs_ref: &AbsoulteRef, image_item: &crate::ir::ImageItem) -> String {
         format!(
             r#"<g data-tid="{}">{}</g>"#,
             abs_ref.as_svg_id("i"),
@@ -308,7 +308,7 @@ impl<'s, 'm: 's, 't: 's, Feat: ExportFeature + 's> RenderVm<'s, 'm>
 
     fn render_link(
         &'s mut self,
-        abs_ref: AbsoulteRef,
+        abs_ref: &AbsoulteRef,
         link: &crate::ir::LinkItem,
     ) -> Self::Resultant {
         let href_handler = if link.href.starts_with("@typst:") {
@@ -330,7 +330,11 @@ impl<'s, 'm: 's, 't: 's, Feat: ExportFeature + 's> RenderVm<'s, 'm>
         )
     }
 
-    fn render_path(&mut self, abs_ref: AbsoulteRef, path: &crate::ir::PathItem) -> Self::Resultant {
+    fn render_path(
+        &mut self,
+        abs_ref: &AbsoulteRef,
+        path: &crate::ir::PathItem,
+    ) -> Self::Resultant {
         format!(
             r#"<g data-tid="{}">{}</g>"#,
             abs_ref.as_svg_id("p"),
@@ -340,7 +344,7 @@ impl<'s, 'm: 's, 't: 's, Feat: ExportFeature + 's> RenderVm<'s, 'm>
 
     fn render_image(
         &mut self,
-        abs_ref: AbsoulteRef,
+        abs_ref: &AbsoulteRef,
         image_item: &crate::ir::ImageItem,
     ) -> Self::Resultant {
         Self::render_image_inner(abs_ref, image_item)
