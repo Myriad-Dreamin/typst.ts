@@ -14,7 +14,9 @@ use typst_ts_core::font::{FontGlyphProvider, GlyphProvider};
 use typst_ts_core::Exporter;
 
 use geom::{Axes, Size};
-use ir::{AbsoulteRef, GlyphMapping, ImmutStr, Module, ModuleBuilder, StyleNs, SvgDocument};
+use ir::{
+    Abs, AbsoulteRef, GlyphMapping, ImmutStr, Module, ModuleBuilder, Pages, StyleNs, SvgDocument,
+};
 use lowering::{GlyphLowerBuilder, LowerBuilder};
 use render::SvgRenderTask;
 use vm::RenderVm;
@@ -40,10 +42,6 @@ pub type DefaultSvgTask = SvgTask<DefaultExportFeature>;
 
 impl ExportFeature for DefaultExportFeature {
     const ENABLE_TRACING: bool = false;
-}
-
-pub struct RenderContext {
-    doc: SvgDocument,
 }
 
 pub struct IncrementalRenderContext {
@@ -111,27 +109,20 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     }
 
     /// Render a document into the svg_body.
-    fn render_glyphs(
-        &mut self,
-        ctx: &RenderContext,
-        used_glyphs: &GlyphMapping,
-        svg_body: &mut Vec<String>,
-    ) {
-        let mut render_task = self.fork_render_task(&ctx.doc.module);
+    fn render_glyphs(&mut self, module: &Module, svg_body: &mut Vec<String>) {
+        let mut render_task = self.fork_render_task(module);
 
-        let mut defs = used_glyphs.clone().into_iter().collect::<Vec<_>>();
-        defs.sort_by(|(_, a), (_, b)| a.fingerprint.cmp(&b.fingerprint));
-        for (item, abs_ref) in defs.iter() {
+        for (abs_ref, item) in module.glyphs.iter() {
             svg_body.push(render_task.render_glyph(abs_ref, item).unwrap_or_default())
         }
     }
 
     /// Render a document into the svg_body.
-    pub fn render(&mut self, input: &RenderContext, svg_body: &mut Vec<String>) {
-        let mut render_task = self.fork_render_task(&input.doc.module);
+    pub fn render(&mut self, module: &Module, pages: &Pages, svg_body: &mut Vec<String>) {
+        let mut render_task = self.fork_render_task(module);
 
         let mut acc_height = 0u32;
-        for (idx, page) in input.doc.pages.iter().enumerate() {
+        for (idx, page) in pages.iter().enumerate() {
             render_task.page_off = idx;
 
             let entry = &page.0;
@@ -214,19 +205,14 @@ impl<Feat: ExportFeature> Default for SvgTask<Feat> {
 pub struct SvgExporter {}
 
 impl SvgExporter {
-    fn header(output: &Document) -> String {
+    fn header(output: &Pages) -> String {
         // calculate the width and height of the svg
         let w = output
-            .pages
             .iter()
-            .map(|p| p.width().to_pt().ceil())
+            .map(|p| p.1.x.0.ceil())
             .max_by(|a, b| a.total_cmp(b))
             .unwrap();
-        let h = output
-            .pages
-            .iter()
-            .map(|p| p.height().to_pt().ceil())
-            .sum::<f64>();
+        let h = output.iter().map(|p| p.1.y.0.ceil()).sum::<f32>();
 
         format!(
             r#"<svg class="typst-doc" viewBox="0 0 {:.3} {:.3}" width="{:.3}" height="{:.3}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">"#,
@@ -270,17 +256,12 @@ impl SvgExporter {
         }
     }
 
-    fn render_svg(output: Arc<Document>) -> (SvgDocument, String) {
-        let instant = std::time::Instant::now();
-
-        let mut svg = vec![Self::header(&output)];
+    pub fn render(module: &Module, pages: &Pages) -> String {
+        let mut svg = vec![Self::header(pages)];
         let mut svg_body = vec![];
 
-        // render the document
         let mut t = SvgTask::<DefaultExportFeature>::new();
-        let (doc, used_glyphs) = Self::svg_doc(&output);
-        let render_context = RenderContext { doc };
-        t.render(&render_context, &mut svg_body);
+        t.render(module, pages, &mut svg_body);
 
         // base style
         svg.push(r#"<style type="text/css">"#.to_owned());
@@ -290,7 +271,7 @@ impl SvgExporter {
         // attach the glyph defs, clip paths, and style defs
         svg.push("<defs>".to_owned());
         svg.push("<g>".to_owned());
-        t.render_glyphs(&render_context, &used_glyphs, &mut svg);
+        t.render_glyphs(module, &mut svg);
         svg.push("</g>".to_owned());
         Self::clip_paths(t.clip_paths, &mut svg);
         svg.push("</defs>".to_owned());
@@ -301,17 +282,25 @@ impl SvgExporter {
 
         // attach the javascript for animations
         svg.push(r#"<script type="text/javascript">"#.to_owned());
-        svg.push(r#"<![CDATA["#.to_owned());
+        // svg.push(r#"<![CDATA["#.to_owned());
         svg.push(include_str!("./typst.svg.js").to_owned());
-        svg.push(r#"]]>"#.to_owned());
+        // svg.push(r#"]]>"#.to_owned());
         svg.push("</script>".to_owned());
 
         // close the svg
         svg.push("</svg>".to_owned());
 
+        svg.join("")
+    }
+
+    fn render_svg(output: Arc<Document>) -> (SvgDocument, String) {
+        let instant = std::time::Instant::now();
+        // render the document
+        let (doc, _used_glyphs) = Self::svg_doc(&output);
+
+        let svg = Self::render(&doc.module, &doc.pages);
         println!("svg render time: {:?}", instant.elapsed());
-        let svg_doc = render_context.doc;
-        (svg_doc, svg.join(""))
+        (doc, svg)
     }
 
     fn render_svg_incremental(prev: SvgDocument, output: Arc<Document>) -> (SvgDocument, String) {
@@ -322,7 +311,7 @@ impl SvgExporter {
 
         let (next, used_glyphs) = Self::svg_doc(&output);
 
-        let mut svg = vec![Self::header(&output)];
+        let mut svg = vec![Self::header(&next.pages)];
         let mut svg_body = vec![];
 
         let render_context = IncrementalRenderContext { prev, next };
@@ -392,6 +381,56 @@ impl IncrementalSvgExporter {
 
         self.prev = Some(next);
         packet
+    }
+}
+
+#[derive(Default)]
+pub struct DynamicLayoutSvgExporter {
+    builder: ModuleBuilder,
+    layouts: Vec<(Abs, Vec<(AbsoulteRef, Size)>)>,
+}
+
+impl DynamicLayoutSvgExporter {
+    pub fn render(&mut self, layout_width: typst::geom::Abs, output: Arc<Document>) {
+        let instant = std::time::Instant::now();
+        // check the document
+        let mut t = LowerBuilder::new(&output);
+
+        let pages = output
+            .pages
+            .iter()
+            .map(|p| {
+                let abs_ref = self.builder.build(t.lower(p));
+                (abs_ref, p.size().into())
+            })
+            .collect::<Vec<_>>();
+
+        self.layouts.push((layout_width.into(), pages));
+        println!("svg dynamic layout render time: {:?}", instant.elapsed());
+    }
+
+    pub fn finalize(self) -> (MultiSvgDocument, GlyphMapping) {
+        let (module, glyph_mapping) = self.builder.finalize();
+        (
+            MultiSvgDocument {
+                module,
+                layouts: self.layouts,
+            },
+            glyph_mapping,
+        )
+    }
+
+    pub fn debug_stat(&self) -> String {
+        let v = self.builder.finalize_ref();
+        let item_cnt = v.0.item_pack.0.len();
+        let glyph_cnt = v.1.len();
+        let module_data = serialize_module(v.0);
+        format!(
+            "module size: {} bytes, items count: {}, glyph count: {}",
+            module_data.len(),
+            item_cnt,
+            glyph_cnt
+        )
     }
 }
 

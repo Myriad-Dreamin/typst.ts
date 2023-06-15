@@ -487,6 +487,18 @@ pub struct ModuleBuilder {
 }
 
 impl ModuleBuilder {
+    pub fn finalize_ref(&self) -> (Module, GlyphMapping) {
+        let mut glyphs = self.glyphs.clone().into_iter().collect::<Vec<_>>();
+        glyphs.sort_by(|(_, a), (_, b)| a.id.0.cmp(&b.id.0));
+        (
+            Module {
+                glyphs: glyphs.into_iter().map(|(a, b)| (b, a)).collect(),
+                item_pack: ItemPack(self.items.clone()),
+            },
+            self.glyphs.clone(),
+        )
+    }
+
     pub fn finalize(self) -> (Module, GlyphMapping) {
         let mut glyphs = self.glyphs.clone().into_iter().collect::<Vec<_>>();
         glyphs.sort_by(|(_, a), (_, b)| a.id.0.cmp(&b.id.0));
