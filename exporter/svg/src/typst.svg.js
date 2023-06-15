@@ -22,16 +22,24 @@ var ignoredEvent = (function () {
   };
 })();
 
-var elements = document.getElementsByClassName('pseudo-link');
-
 var overLapping = function (a, b) {
   var aRect = a.getBoundingClientRect();
   var bRect = b.getBoundingClientRect();
-  return !(
-    aRect.right < bRect.left ||
-    aRect.left > bRect.right ||
-    aRect.bottom < bRect.top ||
-    aRect.top > bRect.bottom
+
+  return (
+    !(
+      aRect.right < bRect.left ||
+      aRect.left > bRect.right ||
+      aRect.bottom < bRect.top ||
+      aRect.top > bRect.bottom
+    ) &&
+    /// determine overlapping by area
+    (Math.abs(aRect.left - bRect.left) + Math.abs(aRect.right - bRect.right)) /
+      Math.max(aRect.width, bRect.width) <
+      0.5 &&
+    (Math.abs(aRect.bottom - bRect.bottom) + Math.abs(aRect.top - bRect.top)) /
+      Math.max(aRect.height, bRect.height) <
+      0.5
   );
 };
 var searchIntersections = function (root) {
@@ -104,15 +112,57 @@ var linkleave = function (event) {
   }
 };
 
-for (var i = 0; i < elements.length; i++) {
-  var elem = elements[i];
-  elem.addEventListener('mousemove', linkmove);
-  elem.addEventListener('mouseleave', linkleave);
-}
-
 function findAncestor(el, cls) {
   while ((el = el.parentElement) && !el.classList.contains(cls));
   return el;
+}
+
+window.layoutText = function (svg) {
+  const divs = svg.querySelectorAll('.tsel');
+  const ctx = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas').getContext('2d');
+
+  const layoutBegin = performance.now();
+
+  for (let d of divs) {
+    if (d.getAttribute('data-typst-layout-checked')) {
+      continue;
+    }
+
+    if (d.style.fontSize) {
+      const foreignObj = d.parentElement;
+      const innerText = d.innerText;
+      const targetWidth = Number.parseFloat(foreignObj.getAttribute('width'));
+      const currentX = Number.parseFloat(foreignObj.getAttribute('x')) || 0;
+      ctx.font = `${d.style.fontSize} sans-serif`;
+      const selfWidth = ctx.measureText(innerText).width;
+
+      const scale = targetWidth / selfWidth;
+
+      d.style.transform = `scaleX(${scale})`;
+      foreignObj.setAttribute('width', selfWidth);
+      foreignObj.setAttribute('x', currentX - (selfWidth - targetWidth) * 0.5);
+
+      d.setAttribute('data-typst-layout-checked', '1');
+    }
+  }
+
+  console.log(`layoutText used time ${performance.now() - layoutBegin} ms`);
+};
+
+var scriptTag = document.currentScript;
+if (scriptTag) {
+  const docRoot = findAncestor(scriptTag, 'typst-doc');
+  if (docRoot) {
+    window.layoutText(docRoot);
+
+    var elements = docRoot.getElementsByClassName('pseudo-link');
+
+    for (var i = 0; i < elements.length; i++) {
+      var elem = elements[i];
+      elem.addEventListener('mousemove', linkmove);
+      elem.addEventListener('mouseleave', linkleave);
+    }
+  }
 }
 
 window.handleTypstLocation = function (elem, page, x, y) {
