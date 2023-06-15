@@ -15,8 +15,11 @@ pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature hint */ &str
     ("ast", REPORT_BUG_MESSAGE),
     ("ir", REPORT_BUG_MESSAGE),
     ("json", "serde-json"),
+    ("json_glyphs", "serde-json"),
     ("nothing", REPORT_BUG_MESSAGE),
     ("pdf", "pdf"),
+    ("svg", "svg"),
+    ("sir", "svg"),
     ("rmp", "serde-rmp"),
 ];
 
