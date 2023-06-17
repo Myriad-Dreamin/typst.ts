@@ -54,6 +54,12 @@ impl Hash for GlyphProvider {
     }
 }
 
+impl Default for GlyphProvider {
+    fn default() -> Self {
+        Self::new(FontGlyphProvider::default())
+    }
+}
+
 pub trait IGlyphProvider {
     fn svg_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<[u8]>>;
     fn bitmap_glyph(&self, font: &Font, id: GlyphId, ppem: u16) -> Option<(TypstImage, i16, i16)>;

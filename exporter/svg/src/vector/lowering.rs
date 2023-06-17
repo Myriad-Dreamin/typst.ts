@@ -13,12 +13,10 @@ use ttf_parser::OutlineBuilder;
 use typst::model::Introspector;
 use typst_ts_core::font::GlyphProvider;
 
-use crate::ir::{GlyphItem, ImageGlyphItem, OutlineGlyphItem};
+use super::{ir, GlyphItem, ImageGlyphItem, OutlineGlyphItem, Scalar, SvgItem, TransformItem};
 use crate::{
-    ir,
-    ir::{Scalar, SvgItem, TransformItem},
+    path2d::SvgPath2DBuilder,
     sk,
-    svg::SvgPath2DBuilder,
     utils::{AbsExt, ToCssExt},
 };
 use ttf_parser::GlyphId;
@@ -113,15 +111,15 @@ impl LowerBuilder {
         ))
     }
 
+    /// Lower a link into svg item.
     pub(super) fn lower_link(&self, url: &str, size: Size) -> ir::SvgItem {
-        let lnk = ir::LinkItem {
+        SvgItem::Link(ir::LinkItem {
             href: url.into(),
             size: size.into(),
-        };
-
-        SvgItem::Link(lnk)
+        })
     }
 
+    /// Lower a document position into svg item.
     #[comemo::memoize]
     pub(super) fn lower_position(pos: Position, size: Size) -> ir::SvgItem {
         let lnk = ir::LinkItem {
@@ -275,6 +273,7 @@ impl LowerBuilder {
     }
 }
 
+/// Lower a glyph into svg item.
 pub struct GlyphLowerBuilder<'a> {
     gp: &'a GlyphProvider,
 }
@@ -289,18 +288,18 @@ impl<'a> GlyphLowerBuilder<'a> {
             GlyphItem::Raw(font, id) => {
                 let id = *id;
                 // todo: server side render
-                self.render_svg_glyph(font, id)
+                self.lower_svg_glyph(font, id)
                     .map(GlyphItem::Image)
-                    .or_else(|| self.render_bitmap_glyph(font, id).map(GlyphItem::Image))
-                    .or_else(|| self.render_outline_glyph(font, id).map(GlyphItem::Outline))
+                    .or_else(|| self.lower_bitmap_glyph(font, id).map(GlyphItem::Image))
+                    .or_else(|| self.lower_outline_glyph(font, id).map(GlyphItem::Outline))
             }
             GlyphItem::Image(..) | GlyphItem::Outline(..) => Some(glyph_item.clone()),
         }
     }
 
-    /// Render an SVG glyph into the svg text.
+    /// Lower an SVG glyph into svg item.
     /// More information: https://learn.microsoft.com/zh-cn/typography/opentype/spec/svg
-    fn render_svg_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ImageGlyphItem>> {
+    fn lower_svg_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ImageGlyphItem>> {
         let glyph_image = extract_svg_glyph(self.gp, font, id)?;
 
         let sz = Size::new(
@@ -333,8 +332,8 @@ impl<'a> GlyphLowerBuilder<'a> {
         }))
     }
 
-    /// Render a bitmap glyph into the svg text.
-    fn render_bitmap_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ImageGlyphItem>> {
+    /// Lower a bitmap glyph into the svg text.
+    fn lower_bitmap_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ImageGlyphItem>> {
         let ppem = u16::MAX;
         let upem = font.metrics().units_per_em as f32;
 
@@ -373,8 +372,8 @@ impl<'a> GlyphLowerBuilder<'a> {
         }))
     }
 
-    /// Render an outline glyph into svg text. This is the "normal" case.
-    fn render_outline_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<OutlineGlyphItem>> {
+    /// Lower an outline glyph into svg text. This is the "normal" case.
+    fn lower_outline_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<OutlineGlyphItem>> {
         let d = self.gp.outline_glyph(font, id)?.into();
 
         Some(Arc::new(OutlineGlyphItem { ts: None, d }))
