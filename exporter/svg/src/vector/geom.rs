@@ -4,12 +4,16 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 use typst::geom::{
     Abs as TypstAbs, Axes as TypstAxes, Point as TypstPoint, Ratio as TypstRatio,
     Scalar as TypstScalar, Transform as TypstTransform,
 };
 
+#[cfg(feature = "rkyv")]
+use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
+
+/// Scalar value of Vector representation.
+/// Note: Unlike Typst's Scalar, all lengths with Scalar type are in pt.
 #[derive(Default, Clone, Copy)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]

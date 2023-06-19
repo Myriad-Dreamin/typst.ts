@@ -30,4 +30,5 @@ typst-ts-core.workspace = true
 [features]
 rkyv = ["dep:rkyv"]
 rkyv-validation = ["dep:rkyv"]
-default = ["rkyv", "rkyv-validation"]
+flat-vector = ["rkyv", "rkyv-validation"]
+default = ["flat-vector"]

@@ -97,7 +97,7 @@ impl TypstRenderer {
                 return Ok(());
             }
 
-            let svg = SvgExporter::render(&session.doc.module, &layout.1);
+            let svg = SvgExporter::render_flat_svg(&session.doc.module, &layout.1);
             root.set_inner_html(&svg);
             let window = web_sys::window().unwrap();
             if let Ok(proc) = js_sys::Reflect::get(&window, &JsValue::from_str("typstProcessSvg")) {

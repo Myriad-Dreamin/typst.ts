@@ -1,84 +1,132 @@
 //! Rendering into svg text or module.
 
 pub(crate) use tiny_skia as sk;
-
-use std::collections::hash_map::RandomState;
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-
-use typst::diag::SourceResult;
-use typst::doc::Document;
-use typst::World;
-
-use typst_ts_core::font::{FontGlyphProvider, GlyphProvider};
+use typst::{diag::SourceResult, World};
 use typst_ts_core::Exporter;
 
-use geom::{Axes, Size};
-use ir::{
-    Abs, AbsoulteRef, GlyphMapping, ImmutStr, Module, ModuleBuilder, Pages, StyleNs, SvgDocument,
-};
-use lowering::{GlyphLowerBuilder, LowerBuilder};
-use render::SvgRenderTask;
-use vm::RenderVm;
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use typst::doc::Document;
 
 pub(crate) mod escape;
-pub mod geom;
-pub(crate) mod ir;
-pub(crate) mod lowering;
+#[cfg(feature = "flat-vector")]
+pub(crate) mod flat_vector;
+pub(crate) mod font;
+pub(crate) mod hash;
+pub(crate) mod path2d;
 pub(crate) mod render;
-pub(crate) mod svg;
 pub(crate) mod utils;
-pub(crate) mod vm;
-pub use ir::LayoutElem;
-pub use ir::MultiSvgDocument;
-pub use ir::SerializedModule;
+pub(crate) mod vector;
 
+use ir::{GlyphPackBuilder, ImmutStr, StyleNs, SvgItem};
+use render::{flat::serialize_module, GlyphRenderTask};
+use utils::AbsExt;
+use vector::codegen::generate_text;
+use vector::*;
+
+pub use font::{FontGlyphProvider, GlyphProvider, IGlyphProvider};
+pub use vector::{geom, ir};
+
+#[cfg(feature = "flat-vector")]
+pub use render::{
+    dynamic_layout::DynamicLayoutSvgExporter, flat::serialize_multi_doc_standalone,
+    incremental::IncrementalSvgExporter,
+};
+
+#[cfg(feature = "flat-vector")]
+pub use flat_ir::{
+    LayoutElem, Module, ModuleBuilder, MultiSvgDocument, Pages, SerializedModule, SvgDocument,
+};
+#[cfg(feature = "flat-vector")]
+pub use flat_vector::ir as flat_ir;
+
+/// All the features that can be enabled or disabled.
 pub trait ExportFeature {
+    /// Whether to enable tracing.
     const ENABLE_TRACING: bool;
+
+    /// Whether to render text element.
+    /// The text elements is selectable and searchable.
+    const SHOULD_RENDER_TEXT_ELEMENT: bool;
+
+    /// Whether to use stable glyph id.
+    /// If enabled, the glyph id will be stable across different svg files.
+    const USE_STABLE_GLYPH_ID: bool;
+
+    /// Whether to include js for interactive and responsive actions.
+    /// If enabled, users can interact with the svg file.
+    const WITH_RESPONSIVE_JS: bool;
 }
 
+/// The default feature set which is used for exporting full-fledged svg.
 pub struct DefaultExportFeature;
 pub type DefaultSvgTask = SvgTask<DefaultExportFeature>;
 
 impl ExportFeature for DefaultExportFeature {
     const ENABLE_TRACING: bool = false;
+    const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
+    const USE_STABLE_GLYPH_ID: bool = true;
+    const WITH_RESPONSIVE_JS: bool = true;
 }
 
-pub struct IncrementalRenderContext {
-    prev: SvgDocument,
-    next: SvgDocument,
+/// The feature set which is used for exporting plain svg.
+pub struct SvgExportFeature;
+pub type PlainSvgTask = SvgTask<SvgExportFeature>;
+
+impl ExportFeature for SvgExportFeature {
+    const ENABLE_TRACING: bool = false;
+    const SHOULD_RENDER_TEXT_ELEMENT: bool = false;
+    const USE_STABLE_GLYPH_ID: bool = true;
+    const WITH_RESPONSIVE_JS: bool = false;
 }
 
+/// Maps the style name to the style definition.
+/// See [`StyleNs`].
 type StyleDefMap = HashMap<(StyleNs, ImmutStr), String>;
+/// Maps the clip path's data to the clip path id.
 type ClipPathMap = HashMap<ImmutStr, u32>;
 
-pub struct SvgTask<Feat: ExportFeature = DefaultExportFeature> {
+/// The task context for exporting svg.
+/// It is also as a namespace for all the functions used in the task.
+pub struct SvgTask<Feat: ExportFeature> {
+    /// Provides glyphs.
+    /// See [`GlyphProvider`].
     glyph_provider: GlyphProvider,
+
+    /// Stores the glyphs used in the document.
+    glyph_pack: GlyphPackBuilder,
+    /// Stores the style definitions used in the document.
     style_defs: StyleDefMap,
+    /// Stores the clip paths used in the document.
     clip_paths: ClipPathMap,
 
-    // errors: Vec<Error>,
     _feat_phantom: std::marker::PhantomData<Feat>,
 }
 
-impl<Feat: ExportFeature> SvgTask<Feat> {
-    pub fn new() -> Self {
-        let glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
-
+/// Unfortunately, `Default` derive does not work for generic structs.
+impl<Feat: ExportFeature> Default for SvgTask<Feat> {
+    fn default() -> Self {
         Self {
-            glyph_provider,
-            style_defs: HashMap::default(),
-            clip_paths: HashMap::default(),
+            glyph_provider: GlyphProvider::default(),
 
-            _feat_phantom: Default::default(),
+            glyph_pack: GlyphPackBuilder::default(),
+            style_defs: StyleDefMap::default(),
+            clip_paths: ClipPathMap::default(),
+
+            _feat_phantom: std::marker::PhantomData,
         }
     }
+}
 
+impl<Feat: ExportFeature> SvgTask<Feat> {
+    /// Sets the glyph provider for task.
     pub fn set_glyph_provider(&mut self, glyph_provider: GlyphProvider) {
         self.glyph_provider = glyph_provider;
     }
 
-    pub fn page_size(sz: Size) -> Axes<u32> {
+    /// Return integral page size for showing document.
+    pub(self) fn page_size(sz: Size) -> Axes<u32> {
         let (width_px, height_px) = {
             let width_px = (sz.x.0.ceil()).round().max(1.0) as u32;
             let height_px = (sz.y.0.ceil()).round().max(1.0) as u32;
@@ -89,348 +137,320 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         Axes::new(width_px, height_px)
     }
 
-    pub fn fork_render_task<'m, 't>(
+    /// fork a render task with module.
+    #[cfg(feature = "flat-vector")]
+    pub fn fork_page_render_task<'m, 't>(
         &'t mut self,
-        module: &'m ir::Module,
-    ) -> SvgRenderTask<'m, 't, DefaultExportFeature> {
-        SvgRenderTask::<DefaultExportFeature> {
+        module: &'m flat_ir::Module,
+    ) -> SvgRenderTask<'m, 't, Feat> {
+        SvgRenderTask::<Feat> {
             glyph_provider: self.glyph_provider.clone(),
 
             module,
-            page_off: 0,
 
+            glyph_pack: &mut self.glyph_pack,
             style_defs: &mut self.style_defs,
             clip_paths: &mut self.clip_paths,
 
             should_render_text_element: true,
+            use_stable_glyph_id: true,
 
             _feat_phantom: Default::default(),
         }
     }
 
-    /// Render a document into the svg_body.
-    fn render_glyphs(&mut self, module: &Module, svg_body: &mut Vec<String>) {
-        let mut render_task = self.fork_render_task(module);
+    /// fork a render task.
+    #[cfg(not(feature = "flat-vector"))]
+    pub fn fork_page_render_task<'m>(&mut self) -> SvgRenderTask<'m, '_, Feat> {
+        SvgRenderTask::<Feat> {
+            glyph_provider: self.glyph_provider.clone(),
 
-        for (abs_ref, item) in module.glyphs.iter() {
-            svg_body.push(render_task.render_glyph(abs_ref, item).unwrap_or_default())
+            glyph_pack: &mut self.glyph_pack,
+            style_defs: &mut self.style_defs,
+            clip_paths: &mut self.clip_paths,
+
+            should_render_text_element: true,
+            use_stable_glyph_id: true,
+
+            _feat_phantom: Default::default(),
+            _m_phantom: Default::default(),
         }
     }
 
-    /// Render a document into the svg_body.
-    pub fn render(&mut self, module: &Module, pages: &Pages, svg_body: &mut Vec<String>) {
-        let mut render_task = self.fork_render_task(module);
+    pub fn fork_glyph_render_task(&self) -> GlyphRenderTask {
+        GlyphRenderTask {
+            glyph_provider: self.glyph_provider.clone(),
+        }
+    }
 
+    /// Render glyphs into the svg_body.
+    fn render_glyphs(&mut self, glyphs: &GlyphPack, use_stable_glyph_id: bool) -> Vec<SvgText> {
+        let mut render_task = self.fork_glyph_render_task();
+
+        let mut svg_body = Vec::new();
+
+        for (abs_ref, item) in glyphs.iter() {
+            let glyph_id = if Feat::USE_STABLE_GLYPH_ID && use_stable_glyph_id {
+                abs_ref.as_svg_id("g")
+            } else {
+                abs_ref.as_unstable_svg_id("g")
+            };
+            svg_body.push(SvgText::Plain(
+                render_task
+                    .render_glyph(&glyph_id, item)
+                    .unwrap_or_default(),
+            ))
+        }
+
+        svg_body
+    }
+
+    /// Render pages into the svg_body.
+    pub fn render_pages_transient(
+        &mut self,
+        output: &Document,
+        pages: Vec<SvgItem>,
+        svg_body: &mut Vec<SvgText>,
+    ) {
+        #[cfg(feature = "flat-vector")]
+        let module = Module::default();
+        let mut render_task = {
+            #[cfg(feature = "flat-vector")]
+            let render_task = self.fork_page_render_task(&module);
+
+            #[cfg(not(feature = "flat-vector"))]
+            let render_task = self.fork_page_render_task();
+
+            render_task
+        };
+
+        render_task.use_stable_glyph_id = false;
+
+        // accumulate the height of pages
         let mut acc_height = 0u32;
         for (idx, page) in pages.iter().enumerate() {
-            render_task.page_off = idx;
+            let size = Self::page_size(output.pages[idx].size().into());
 
-            let entry = &page.0;
-            let size = Self::page_size(page.1);
-            let item = render_task.render_item(entry);
-            let item = format!(
-                r#"<g transform="translate(0, {})" data-tid="{}" data-page-width="{}" data-page-height="{}">{}</g>"#,
-                acc_height,
-                entry.as_svg_id("p"),
-                size.x,
-                size.y,
-                item
-            );
+            let attributes = vec![
+                ("transform", format!("translate(0, {})", acc_height)),
+                ("data-page-width", size.x.to_string()),
+                ("data-page-height", size.y.to_string()),
+            ];
 
-            svg_body.push(item);
-            acc_height += size.y;
-        }
-    }
+            let page_svg = render_task.render_item(page);
 
-    /// Render a document difference into the svg_body.
-    pub fn render_diff(&mut self, ctx: &IncrementalRenderContext, svg_body: &mut Vec<String>) {
-        let mut acc_height = 0u32;
-        let mut render_task = self.fork_render_task(&ctx.next.module);
-
-        let reusable: HashSet<AbsoulteRef, RandomState> =
-            HashSet::from_iter(ctx.prev.pages.iter().map(|e| e.0.clone()));
-
-        for (idx, (entry, size)) in ctx.next.pages.iter().enumerate() {
-            render_task.page_off = idx;
-
-            let size = Self::page_size(*size);
-            if reusable.contains(entry) {
-                let item: String = format!(
-                    r#"<g transform="translate(0, {})" data-tid="{}" data-reuse-from="{}" data-page-width="{}" data-page-height="{}"></g>"#,
-                    acc_height,
-                    entry.as_svg_id("p"),
-                    entry.as_svg_id("p"),
-                    size.x,
-                    size.y,
-                );
-
-                svg_body.push(item);
-                acc_height += size.y;
-                continue;
-            }
-
-            let item = render_task.render_item(entry);
-
-            // todo: evaluate simlarity
-            let reuse_info = match ctx.prev.pages.get(idx) {
-                Some((abs_ref, ..)) => {
-                    format!(r#" data-reuse-from="{}""#, abs_ref.as_svg_id("p"))
-                }
-                None => String::new(),
-            };
-
-            let item: String = format!(
-                r#"<g transform="translate(0, {})" data-tid="{}"{} data-page-width="{}" data-page-height="{}">{}</g>"#,
-                acc_height,
-                entry.as_svg_id("p"),
-                reuse_info,
-                size.x,
-                size.y,
-                item
-            );
-
-            svg_body.push(item);
+            svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
+                attributes,
+                content: vec![SvgText::Content(page_svg)],
+            })));
             acc_height += size.y;
         }
     }
 }
 
-impl<Feat: ExportFeature> Default for SvgTask<Feat> {
-    fn default() -> Self {
-        Self::new()
-    }
+/// The task context for rendering svg items
+/// The 'm lifetime is the lifetime of the module which stores the frame data.
+/// The 't lifetime is the lifetime of SVG task.
+pub struct SvgRenderTask<'m, 't, Feat: ExportFeature> {
+    /// Provides glyphs.
+    /// See [`GlyphProvider`].
+    pub glyph_provider: GlyphProvider,
+
+    #[cfg(feature = "flat-vector")]
+    pub module: &'m Module,
+
+    /// Stores the glyphs used in the document.
+    glyph_pack: &'t mut GlyphPackBuilder,
+    /// Stores the style definitions used in the document.
+    style_defs: &'t mut StyleDefMap,
+    /// Stores the clip paths used in the document.
+    clip_paths: &'t mut ClipPathMap,
+
+    /// See [`ExportFeature`].
+    pub should_render_text_element: bool,
+    /// See [`ExportFeature`].
+    pub use_stable_glyph_id: bool,
+
+    pub _feat_phantom: std::marker::PhantomData<Feat>,
+    #[cfg(not(feature = "flat-vector"))]
+    pub _m_phantom: std::marker::PhantomData<&'m ()>,
 }
 
 #[derive(Default)]
 pub struct SvgExporter {}
 
 impl SvgExporter {
-    fn header(output: &Pages) -> String {
-        // calculate the width and height of the svg
-        let w = output
-            .iter()
-            .map(|p| p.1.x.0.ceil())
-            .max_by(|a, b| a.total_cmp(b))
-            .unwrap();
-        let h = output.iter().map(|p| p.1.y.0.ceil()).sum::<f32>();
-
+    /// Render the header of SVG.
+    /// <svg> .. </svg>
+    /// ^^^^^
+    fn header_inner(w: f32, h: f32) -> String {
         format!(
             r#"<svg class="typst-doc" viewBox="0 0 {:.3} {:.3}" width="{:.3}" height="{:.3}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">"#,
             w, h, w, h,
         )
     }
 
-    fn svg_doc(output: &Document) -> (SvgDocument, GlyphMapping) {
-        let mut lower_builder = LowerBuilder::new(output);
-        let mut builder = ModuleBuilder::default();
-        let pages = output
+    /// Render the header of SVG for [`Document`].
+    /// <svg> .. </svg>
+    /// ^^^^^
+    fn header_doc(output: &Document) -> String {
+        // calculate the width and height of SVG
+        let w = output
             .pages
             .iter()
-            .map(|p| {
-                let abs_ref = builder.build(lower_builder.lower(p));
-                (abs_ref, p.size().into())
-            })
-            .collect::<Vec<_>>();
-        let (module, glyph_mapping) = builder.finalize();
+            .map(|p| p.size().x.to_f32().ceil())
+            .max_by(|a, b| a.total_cmp(b))
+            .unwrap();
+        let h = output
+            .pages
+            .iter()
+            .map(|p| p.size().y.to_f32().ceil())
+            .sum::<f32>();
 
-        (SvgDocument { pages, module }, glyph_mapping)
+        Self::header_inner(w, h)
     }
 
-    fn style_defs(style_defs: StyleDefMap, svg: &mut Vec<String>) {
+    /// Render the style for SVG
+    /// <svg> <style/> .. </svg>
+    ///       ^^^^^^^^
+    /// See [`StyleDefMap`].
+    fn style_defs(style_defs: StyleDefMap, svg: &mut Vec<SvgText>) {
         // style defs
-        svg.push(r#"<style type="text/css">"#.to_owned());
-        let mut g = style_defs.into_iter().collect::<Vec<_>>();
-        g.sort_by(|a, b| a.0.cmp(&b.0));
-        svg.extend(g.into_iter().map(|v| v.1));
-        svg.push("</style>".to_owned());
+        svg.push(r#"<style type="text/css">"#.into());
+
+        // sort and push the style defs
+        let mut style_defs = style_defs.into_iter().collect::<Vec<_>>();
+        style_defs.sort_by(|a, b| a.0.cmp(&b.0));
+        svg.extend(style_defs.into_iter().map(|v| SvgText::Plain(v.1)));
+
+        svg.push("</style>".into());
     }
 
-    fn clip_paths(clip_paths: ClipPathMap, svg: &mut Vec<String>) {
-        let mut g = clip_paths.into_iter().collect::<Vec<_>>();
-        g.sort_by(|a, b| a.1.cmp(&b.1));
-        for (clip_path, id) in g {
-            svg.push(format!(
+    /// Render the clip paths for SVG
+    /// <svg> <defs> <clipPath/> </defs> .. </svg>
+    ///              ^^^^^^^^^^^
+    /// See [`ClipPathMap`].
+    fn clip_paths(clip_paths: ClipPathMap, svg: &mut Vec<SvgText>) {
+        let mut clip_paths = clip_paths.into_iter().collect::<Vec<_>>();
+        clip_paths.sort_by(|a, b| a.1.cmp(&b.1));
+        for (clip_path, id) in clip_paths {
+            svg.push(SvgText::Plain(format!(
                 r##"<clipPath id="c{:x}"><path d="{}"/></clipPath>"##,
                 id, clip_path
-            ));
+            )));
         }
     }
 
-    pub fn render(module: &Module, pages: &Pages) -> String {
-        let mut svg = vec![Self::header(pages)];
-        let mut svg_body = vec![];
-
-        let mut t = SvgTask::<DefaultExportFeature>::new();
-        t.render(module, pages, &mut svg_body);
-
-        // base style
-        svg.push(r#"<style type="text/css">"#.to_owned());
-        svg.push(include_str!("./typst.svg.css").to_owned());
-        svg.push("</style>".to_owned());
-
-        // attach the glyph defs, clip paths, and style defs
-        svg.push("<defs>".to_owned());
-        svg.push("<g>".to_owned());
-        t.render_glyphs(module, &mut svg);
-        svg.push("</g>".to_owned());
+    /// Template SVG.
+    fn render_svg_template<Feat: ExportFeature>(
+        t: SvgTask<Feat>,
+        header: String,
+        mut body: Vec<SvgText>,
+        glyphs: impl IntoIterator<Item = SvgText>,
+    ) -> Vec<SvgText> {
+        let mut svg = vec![
+            SvgText::Plain(header),
+            // base style
+            r#"<style type="text/css">"#.into(),
+            include_str!("./typst.svg.css").into(),
+            "</style>".into(),
+            // attach the glyph defs, clip paths, and style defs
+            "<defs>".into(),
+            "<g>".into(),
+        ];
+        svg.extend(glyphs);
+        svg.push("</g>".into());
         Self::clip_paths(t.clip_paths, &mut svg);
-        svg.push("</defs>".to_owned());
+        svg.push("</defs>".into());
         Self::style_defs(t.style_defs, &mut svg);
 
         // body
-        svg.append(&mut svg_body);
+        svg.append(&mut body);
 
-        // attach the javascript for animations
-        svg.push(r#"<script type="text/javascript">"#.to_owned());
-        // svg.push(r#"<![CDATA["#.to_owned());
-        svg.push(include_str!("./typst.svg.js").to_owned());
-        // svg.push(r#"]]>"#.to_owned());
-        svg.push("</script>".to_owned());
+        if Feat::WITH_RESPONSIVE_JS {
+            // attach the javascript for animations
+            svg.push(r#"<script type="text/javascript">"#.into());
+            svg.push(include_str!("./typst.svg.js").into());
+            svg.push("</script>".into());
+        }
 
-        // close the svg
-        svg.push("</svg>".to_owned());
+        // close SVG
+        svg.push("</svg>".into());
 
-        svg.join("")
+        svg
     }
 
-    fn render_svg(output: Arc<Document>) -> (SvgDocument, String) {
-        let instant = std::time::Instant::now();
-        // render the document
-        let (doc, _used_glyphs) = Self::svg_doc(&output);
+    /// Render SVG for [`Document`].
+    /// It does not flatten the vector items before rendering so called "transient".
+    fn render_transient_svg<Feat: ExportFeature>(output: &Document) -> Vec<SvgText> {
+        let mut t = SvgTask::<Feat>::default();
 
-        let svg = Self::render(&doc.module, &doc.pages);
-        println!("svg render time: {:?}", instant.elapsed());
-        (doc, svg)
-    }
+        // render SVG header
+        let header = Self::header_doc(output);
 
-    fn render_svg_incremental(prev: SvgDocument, output: Arc<Document>) -> (SvgDocument, String) {
-        let instant = std::time::Instant::now();
-
-        // render the document
-        let mut t = SvgTask::<DefaultExportFeature>::new();
-
-        let (next, used_glyphs) = Self::svg_doc(&output);
-
-        let mut svg = vec![Self::header(&next.pages)];
-        let mut svg_body = vec![];
-
-        let render_context = IncrementalRenderContext { prev, next };
-        t.render_diff(&render_context, &mut svg_body);
-        let svg_doc = render_context.next;
-
-        // base style
-        svg.push(r#"<style type="text/css" data-reuse="1">"#.to_owned());
-        svg.push("</style>".to_owned());
-
-        // attach the glyph defs, clip paths, and style defs
-        svg.push("<defs>".to_owned());
-        let _ = used_glyphs;
-
-        svg.push("</defs>".to_owned());
-
-        // incremental style
-        svg.push(r#"<style type="text/css" data-reuse="1">"#.to_owned());
-        svg.push("</style>".to_owned());
-
-        // body
-        svg.append(&mut svg_body);
-
-        // attach the javascript for animations
-        svg.push(r#"<script type="text/javascript" data-reuse="1">"#.to_owned());
-        svg.push("</script>".to_owned());
-
-        svg.push("</svg>".to_owned());
-
-        println!("svg render time (incremental): {:?}", instant.elapsed());
-        (svg_doc, svg.join(""))
-    }
-}
-
-impl Exporter<Document, String> for SvgExporter {
-    fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<String> {
-        let svg = Self::render_svg(output.clone()).1;
-        // html wrap
-        Ok(format!(
-            r#"<html><head><meta charset="utf-8" /><title>{}</title></head><body>{}</body></html>"#,
-            output
-                .title
-                .clone()
-                .unwrap_or_else(|| "Typst Document".into()),
-            svg
-        ))
-    }
-}
-
-#[derive(Default)]
-pub struct IncrementalSvgExporter {
-    prev: Option<SvgDocument>,
-}
-
-impl IncrementalSvgExporter {
-    pub fn render(&mut self, output: Arc<Document>) -> String {
-        let (next, packet) = match self.prev.take() {
-            Some(prev) => {
-                let (next, svg) = SvgExporter::render_svg_incremental(prev, output);
-                (next, ["diff-v0,", &svg].concat())
-            }
-            None => {
-                let (next, svg) = SvgExporter::render_svg(output);
-                (next, ["new,", &svg].concat())
-            }
-        };
-
-        self.prev = Some(next);
-        packet
-    }
-}
-
-#[derive(Default)]
-pub struct DynamicLayoutSvgExporter {
-    builder: ModuleBuilder,
-    layouts: Vec<(Abs, Vec<(AbsoulteRef, Size)>)>,
-}
-
-impl DynamicLayoutSvgExporter {
-    pub fn render(&mut self, layout_width: typst::geom::Abs, output: Arc<Document>) {
-        let instant = std::time::Instant::now();
-        // check the document
-        let mut t = LowerBuilder::new(&output);
-
+        // lowering the document into svg items
+        let mut lower_builder = LowerBuilder::new(output);
         let pages = output
             .pages
             .iter()
-            .map(|p| {
-                let abs_ref = self.builder.build(t.lower(p));
-                (abs_ref, p.size().into())
-            })
+            .map(|p| lower_builder.lower(p))
             .collect::<Vec<_>>();
 
-        self.layouts.push((layout_width.into(), pages));
-        println!("svg dynamic layout render time: {:?}", instant.elapsed());
+        // render SVG body
+        let mut svg_body = vec![];
+        t.render_pages_transient(output, pages, &mut svg_body);
+
+        // render the glyphs collected from the pages
+        let (glyphs, ..) = std::mem::take(&mut t.glyph_pack).finalize();
+        let glyphs = t.render_glyphs(&glyphs, false);
+
+        // template SVG
+        Self::render_svg_template(t, header, svg_body, glyphs.into_iter())
     }
 
-    pub fn finalize(self) -> (MultiSvgDocument, GlyphMapping) {
-        let (module, glyph_mapping) = self.builder.finalize();
-        (
-            MultiSvgDocument {
-                module,
-                layouts: self.layouts,
-            },
-            glyph_mapping,
-        )
-    }
+    /// Render SVG wrapped with HTML for [`Document`].
+    /// It does not flatten the vector items before rendering so called "transient".
+    fn render_transient_html(output: &Document) -> Vec<SvgText> {
+        // render SVG
+        let mut svg = Self::render_transient_svg::<DefaultExportFeature>(output);
 
-    pub fn debug_stat(&self) -> String {
-        let v = self.builder.finalize_ref();
-        let item_cnt = v.0.item_pack.0.len();
-        let glyph_cnt = v.1.len();
-        let module_data = serialize_module(v.0);
-        format!(
-            "module size: {} bytes, items count: {}, glyph count: {}",
-            module_data.len(),
-            item_cnt,
-            glyph_cnt
-        )
+        // wrap SVG with html
+        let mut html: Vec<SvgText> = Vec::with_capacity(svg.len() + 3);
+        html.push(r#"<html><head><meta charset="utf-8" /><title>"#.into());
+        html.push(SvgText::Plain(
+            output
+                .title
+                .clone()
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "Typst Document".into()),
+        ));
+        html.push(r#"</title></head><body>"#.into());
+        html.append(&mut svg);
+        html.push(r#"</body></html>"#.into());
+
+        html
+    }
+}
+
+/// Render SVG wrapped with html for [`Document`].
+pub fn render_svg_html(output: &Document) -> String {
+    generate_text(SvgExporter::render_transient_html(output))
+}
+
+/// Render SVG for [`Document`].
+pub fn render_svg(output: &Document) -> String {
+    generate_text(SvgExporter::render_transient_svg::<SvgExportFeature>(
+        output,
+    ))
+}
+
+#[cfg(feature = "flat-vector")]
+pub use render::flat::export_module;
+
+impl Exporter<Document, String> for SvgExporter {
+    fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<String> {
+        // html wrap
+        Ok(generate_text(Self::render_transient_html(&output)))
     }
 }
 
@@ -452,56 +472,4 @@ impl Exporter<Document, Vec<u8>> for SvgModuleExporter {
 
         Ok(serialize_module(repr))
     }
-}
-
-fn serialize_module(repr: Module) -> Vec<u8> {
-    // Or you can customize your serialization for better performance
-    // and compatibility with #![no_std] environments
-    use rkyv::ser::{serializers::AllocSerializer, Serializer};
-
-    let mut serializer = AllocSerializer::<0>::default();
-    serializer.serialize_value(&repr.item_pack).unwrap();
-    let item_pack = serializer.into_serializer().into_inner();
-
-    item_pack.into_vec()
-}
-
-pub fn serialize_multi_doc_standalone(
-    doc: MultiSvgDocument,
-    glyph_mapping: GlyphMapping,
-) -> Vec<u8> {
-    let glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
-    let glyph_lower_builder = GlyphLowerBuilder::new(&glyph_provider);
-
-    let glyphs = glyph_mapping
-        .into_iter()
-        .filter_map(|(glyph, glyph_id)| {
-            let glyph = glyph_lower_builder.lower_glyph(&glyph);
-            glyph.map(|t| {
-                let t = match t {
-                    ir::GlyphItem::Image(i) => ir::FlatGlyphItem::Image(i),
-                    ir::GlyphItem::Outline(p) => ir::FlatGlyphItem::Outline(p),
-                    _ => unreachable!(),
-                };
-
-                (glyph_id, t)
-            })
-        })
-        .collect::<Vec<_>>();
-
-    // Or you can customize your serialization for better performance
-    // and compatibility with #![no_std] environments
-    use rkyv::ser::{serializers::AllocSerializer, Serializer};
-
-    let mut serializer = AllocSerializer::<0>::default();
-    serializer
-        .serialize_value(&SerializedModule {
-            item_pack: doc.module.item_pack,
-            glyphs,
-            layouts: doc.layouts,
-        })
-        .unwrap();
-    let item_pack = serializer.into_serializer().into_inner();
-
-    item_pack.into_vec()
 }

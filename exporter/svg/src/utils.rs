@@ -1,27 +1,7 @@
-#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
-#[allow(unused_macros)]
-macro_rules! console_log {
-    ($($arg:tt)*) => {
-        web_sys::console::info_1(&format!(
-            $($arg)*
-        ).into());
-    }
-}
-
-#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
-#[allow(unused_macros)]
-macro_rules! console_log {
-    ($($arg:tt)*) => {
-        println!(
-            $($arg)*
-        );
-    }
-}
-
-#[allow(unused_imports)]
-pub(crate) use console_log;
 use tiny_skia::Transform;
 use typst::geom::{Abs, Color};
+
+use super::ir;
 
 /// Additional methods for [`Length`].
 pub trait AbsExt {
@@ -35,6 +15,7 @@ impl AbsExt for Abs {
     }
 }
 
+/// Additional methods for types that can be converted to CSS.
 pub trait ToCssExt {
     fn to_css(self) -> String;
 }
@@ -74,7 +55,7 @@ impl ToCssExt for Transform {
     }
 }
 
-impl ToCssExt for crate::ir::Transform {
+impl ToCssExt for ir::Transform {
     fn to_css(self) -> String {
         format!(
             r#"matrix({},{},{},{},{},{})"#,
