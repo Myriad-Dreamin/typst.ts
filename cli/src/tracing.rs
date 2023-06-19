@@ -7,8 +7,10 @@ use tracing_subscriber::{fmt, prelude::*, Layer};
 
 pub struct TraceGuard(dispatcher::DefaultGuard);
 
+/// A guard for the tracing subscriber.
+/// When dropped, dumps the trace to somewhere.
 impl TraceGuard {
-    /// --trace=verbosity={0..2}
+    /// New with option format: verbosity={0..3}
     pub fn new(options: String) -> Result<Self, String> {
         let level = level_filter(options)?;
 

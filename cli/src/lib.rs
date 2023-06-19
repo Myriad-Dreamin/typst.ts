@@ -67,18 +67,18 @@ pub struct CompileArgs {
     #[clap(long, short, default_value = ".")]
     pub workspace: String,
 
-    /// watch mode.
+    /// Watch mode.
     #[clap(long)]
     pub watch: bool,
 
-    /// generate dynamic layout representation.
+    /// Generate dynamic layout representation.
     /// Note: this is an experimental feature and will be merged as
     ///   format `dyn-svg` in the future.
     #[clap(long)]
     pub dynamic_layout: bool,
 
-    /// enable tracing.
-    /// possible usage: --trace=verbosity={0..3}
+    /// Enable tracing.
+    /// Possible usage: --trace=verbosity={0..3}
     ///   where verbosity: {0..3} -> {warning, info, debug, trace}
     ///
     #[clap(long)]
@@ -146,7 +146,7 @@ pub struct CompletionArgs {
 /// Dump Client Environment.
 #[derive(Debug, Clone, Parser)]
 pub struct EnvArgs {
-    /// the env key
+    /// The key of environment kind.
     #[clap(value_name = "KEY")]
     pub key: EnvKey,
 }
