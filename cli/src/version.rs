@@ -1,9 +1,10 @@
 use std::{fmt::Display, process::exit};
 
-use clap::{builder::PossibleValue, ValueEnum};
+use clap::ValueEnum;
 use typst_ts_core::build_info::VERSION;
 
-#[derive(Debug, Clone)]
+#[derive(ValueEnum, Debug, Clone)]
+#[value(rename_all = "kebab-case")]
 pub enum VersionFormat {
     None,
     Short,
@@ -13,44 +14,10 @@ pub enum VersionFormat {
     JsonPlain,
 }
 
-impl ValueEnum for VersionFormat {
-    fn value_variants<'a>() -> &'a [Self] {
-        &[
-            VersionFormat::None,
-            VersionFormat::Short,
-            VersionFormat::Full,
-            VersionFormat::Json,
-            VersionFormat::JsonPlain,
-        ]
-    }
-
-    fn to_possible_value<'a>(&self) -> Option<PossibleValue> {
-        Some(match self {
-            VersionFormat::None => PossibleValue::new("none"),
-            VersionFormat::Short => PossibleValue::new("short"),
-            VersionFormat::Features => PossibleValue::new("features"),
-            VersionFormat::Full => PossibleValue::new("full"),
-            VersionFormat::Json => PossibleValue::new("json"),
-            VersionFormat::JsonPlain => PossibleValue::new("json-plain"),
-        })
-    }
-}
-
 impl Display for VersionFormat {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            VersionFormat::None => write!(f, "none"),
-            VersionFormat::Short => write!(f, "short"),
-            VersionFormat::Features => write!(f, "features"),
-            VersionFormat::Full => write!(f, "full"),
-            VersionFormat::Json => write!(f, "json"),
-            VersionFormat::JsonPlain => write!(f, "json-plain"),
-        }
+        f.write_str(self.to_possible_value().unwrap().get_name())
     }
-}
-
-fn feature_list() -> Vec<&'static str> {
-    env!("VERGEN_CARGO_FEATURES").split(',').collect::<Vec<_>>()
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -59,11 +26,11 @@ struct VersionInfo {
     version: &'static str,
     features: Vec<&'static str>,
 
-    cli_semver: &'static str,
-    cli_commit_hash: &'static str,
-    cli_target_triple: &'static str,
-    cli_profile: &'static str,
-    cli_build_timestamp: &'static str,
+    program_semver: &'static str,
+    program_commit_hash: &'static str,
+    program_target_triple: &'static str,
+    program_profile: &'static str,
+    program_build_timestamp: &'static str,
 
     rustc_semver: &'static str,
     rustc_commit_hash: &'static str,
@@ -78,13 +45,13 @@ impl VersionInfo {
             // todo: global app name
             name: "typst-ts-cli",
             version: VERSION,
-            features: feature_list(),
+            features: env!("VERGEN_CARGO_FEATURES").split(',').collect::<Vec<_>>(),
 
-            cli_semver: env!("VERGEN_GIT_SEMVER"),
-            cli_commit_hash: env!("VERGEN_GIT_SHA"),
-            cli_target_triple: env!("VERGEN_CARGO_TARGET_TRIPLE"),
-            cli_profile: env!("VERGEN_CARGO_PROFILE"),
-            cli_build_timestamp: env!("VERGEN_BUILD_TIMESTAMP"),
+            program_semver: env!("VERGEN_GIT_SEMVER"),
+            program_commit_hash: env!("VERGEN_GIT_SHA"),
+            program_target_triple: env!("VERGEN_CARGO_TARGET_TRIPLE"),
+            program_profile: env!("VERGEN_CARGO_PROFILE"),
+            program_build_timestamp: env!("VERGEN_BUILD_TIMESTAMP"),
 
             rustc_semver: env!("VERGEN_RUSTC_SEMVER"),
             rustc_commit_hash: env!("VERGEN_RUSTC_COMMIT_HASH"),
@@ -94,10 +61,10 @@ impl VersionInfo {
         }
     }
 
-    fn cli_build(&self) -> String {
+    fn program_build(&self) -> String {
         format!(
             "{} with {} mode at {}",
-            self.cli_target_triple, self.cli_profile, self.cli_build_timestamp
+            self.program_target_triple, self.program_profile, self.program_build_timestamp
         )
     }
 
@@ -115,10 +82,29 @@ impl Default for VersionInfo {
     }
 }
 
+pub fn intercept_version(v: bool, f: VersionFormat) {
+    let f = match f {
+        VersionFormat::None if v => VersionFormat::Short,
+        VersionFormat::None => return,
+        _ => f,
+    };
+    let version_info = VersionInfo::new();
+    match f {
+        VersionFormat::Full => print_full_version(version_info),
+        VersionFormat::Features => println!("{}", version_info.features.join(",")),
+        VersionFormat::Json => {
+            println!("{}", serde_json::to_string_pretty(&version_info).unwrap())
+        }
+        VersionFormat::JsonPlain => println!("{}", serde_json::to_string(&version_info).unwrap()),
+        _ => print_short_version(version_info),
+    }
+    exit(0);
+}
+
 fn print_full_version(vi: VersionInfo) {
-    let cli_semver = vi.cli_semver;
-    let cli_commit_hash = vi.cli_commit_hash;
-    let cli_build = vi.cli_build();
+    let program_semver = vi.program_semver;
+    let program_commit_hash = vi.program_commit_hash;
+    let program_build = vi.program_build();
 
     let rustc_semver = vi.rustc_semver;
     let rustc_commit_hash = vi.rustc_commit_hash;
@@ -127,9 +113,9 @@ fn print_full_version(vi: VersionInfo) {
     print_short_version(vi);
     println!(
         r##"
-cli-ver: {cli_semver}
-cli-rev: {cli_commit_hash}
-cli-build: {cli_build}
+program-ver: {program_semver}
+program-rev: {program_commit_hash}
+program-build: {program_build}
 
 rustc-ver: {rustc_semver}
 rustc-rev: {rustc_commit_hash}
@@ -152,23 +138,4 @@ fn print_short_version(vi: VersionInfo) {
         r##"{name} version {version}
 features: {features}"##
     );
-}
-
-pub fn intercept_version(v: bool, f: VersionFormat) {
-    let f = match f {
-        VersionFormat::None if v => VersionFormat::Short,
-        VersionFormat::None => return,
-        _ => f,
-    };
-    let version_info = VersionInfo::new();
-    match f {
-        VersionFormat::Full => print_full_version(version_info),
-        VersionFormat::Features => println!("{}", version_info.features.join(",")),
-        VersionFormat::Json => {
-            println!("{}", serde_json::to_string_pretty(&version_info).unwrap())
-        }
-        VersionFormat::JsonPlain => println!("{}", serde_json::to_string(&version_info).unwrap()),
-        _ => print_short_version(version_info),
-    }
-    exit(0);
 }
