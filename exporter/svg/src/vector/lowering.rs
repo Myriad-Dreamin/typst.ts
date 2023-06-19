@@ -11,10 +11,10 @@ use typst::image::Image;
 
 use ttf_parser::OutlineBuilder;
 use typst::model::Introspector;
-use typst_ts_core::font::GlyphProvider;
 
 use super::{ir, GlyphItem, ImageGlyphItem, OutlineGlyphItem, Scalar, SvgItem, TransformItem};
 use crate::{
+    font::GlyphProvider,
     path2d::SvgPath2DBuilder,
     sk,
     utils::{AbsExt, ToCssExt},
@@ -145,13 +145,11 @@ impl LowerBuilder {
             glyphs.push((
                 glyph.x_offset.at(text.size).into(),
                 glyph.x_advance.at(text.size).into(),
-                crate::ir::GlyphItem::Raw(text.font.clone(), id),
+                ir::GlyphItem::Raw(text.font.clone(), id),
             ));
         }
 
-        let glyph_chars: String = text.text
-            [text.glyphs[0].range().start..text.glyphs[text.glyphs.len() - 1].range().end]
-            .to_string();
+        let glyph_chars: String = text.text.to_string();
 
         let Paint::Solid(fill) = text.fill;
         let fill = fill.to_css().into();

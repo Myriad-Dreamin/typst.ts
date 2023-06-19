@@ -3,7 +3,7 @@ use std::sync::Arc;
 use base64::Engine;
 
 use super::{
-    ir::{self, AbsoulteRef, Image, PathItem, PathStyle, Scalar, Size, StyleNs},
+    ir::{self, Abs, AbsoulteRef, Axes, Image, PathItem, PathStyle, Ratio, Scalar, Size, StyleNs},
     GroupContext, RenderVm, TransformContext,
 };
 use crate::{
@@ -184,7 +184,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> SvgTextBuilder<'s, 'm, 't, Feat> {
 
 /// See [`TransformContext`].
 impl<'s, 'm, 't, Feat: ExportFeature> TransformContext for SvgTextBuilder<'s, 'm, 't, Feat> {
-    fn transform_matrix(mut self, m: &crate::ir::Transform) -> Self {
+    fn transform_matrix(mut self, m: &ir::Transform) -> Self {
         self.attributes.push((
             "transform",
             format!(
@@ -195,7 +195,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> TransformContext for SvgTextBuilder<'s, 'm
         self
     }
 
-    fn transform_translate(mut self, matrix: crate::ir::Axes<crate::ir::Abs>) -> Self {
+    fn transform_translate(mut self, matrix: Axes<Abs>) -> Self {
         self.attributes.push((
             "transform",
             format!(r#"translate({:.3},{:.3})"#, matrix.x.0, matrix.y.0),
@@ -203,7 +203,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> TransformContext for SvgTextBuilder<'s, 'm
         self
     }
 
-    fn transform_scale(mut self, x: crate::ir::Ratio, y: crate::ir::Ratio) -> Self {
+    fn transform_scale(mut self, x: Ratio, y: Ratio) -> Self {
         self.attributes
             .push(("transform", format!(r#"scale({},{})"#, x.0, y.0)));
         self
@@ -215,7 +215,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> TransformContext for SvgTextBuilder<'s, 'm
         self
     }
 
-    fn transform_skew(mut self, matrix: (crate::ir::Ratio, crate::ir::Ratio)) -> Self {
+    fn transform_skew(mut self, matrix: (Ratio, Ratio)) -> Self {
         self.attributes.push((
             "transform",
             format!(r#"skewX({}) skewY({})"#, matrix.0 .0, matrix.1 .0),
@@ -223,7 +223,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> TransformContext for SvgTextBuilder<'s, 'm
         self
     }
 
-    fn transform_clip(mut self, matrix: &crate::ir::PathItem) -> Self {
+    fn transform_clip(mut self, matrix: &ir::PathItem) -> Self {
         let clip_id;
         if let Some(c) = self.t.clip_paths.get(&matrix.d) {
             clip_id = *c;
@@ -252,11 +252,11 @@ impl<'s, 'm, 't, Feat: ExportFeature> GroupContext for SvgTextBuilder<'s, 'm, 't
     }
 
     fn render_glyph(&mut self, pos: Scalar, glyph: &ir::GlyphItem) {
-        let glyph_ref = self.t.incr.build_glyph(glyph);
+        let glyph_ref = self.t.glyph_pack.build_glyph(glyph);
         self.render_glyph_ref_inner(pos, &glyph_ref)
     }
 
-    fn render_link(&mut self, link: &crate::ir::LinkItem) {
+    fn render_link(&mut self, link: &ir::LinkItem) {
         let href_handler = if link.href.starts_with("@typst:") {
             let href = link.href.trim_start_matches("@typst:");
             format!(r##"xlink:href="#" onclick="{href}; return false""##)
@@ -273,11 +273,11 @@ impl<'s, 'm, 't, Feat: ExportFeature> GroupContext for SvgTextBuilder<'s, 'm, 't
         )))
     }
 
-    fn render_path(&mut self, path: &crate::ir::PathItem) {
+    fn render_path(&mut self, path: &ir::PathItem) {
         self.content.push(SvgText::Plain(render_path(path)))
     }
 
-    fn render_image(&mut self, image_item: &crate::ir::ImageItem) {
+    fn render_image(&mut self, image_item: &ir::ImageItem) {
         self.content.push(SvgText::Plain(render_image(
             &image_item.image,
             image_item.size,
@@ -297,10 +297,11 @@ impl<'s, 'm, 't, Feat: ExportFeature> GroupContext for SvgTextBuilder<'s, 'm, 't
 fn render_path(path: &PathItem) -> String {
     let mut p = vec!["<path ".to_owned()];
     p.push(format!(r#"d="{}" "#, path.d));
+    let mut fill_color = "none";
     for style in &path.styles {
         match style {
             PathStyle::Fill(color) => {
-                p.push(format!(r#"fill="{}" "#, color));
+                fill_color = color;
             }
             PathStyle::Stroke(color) => {
                 p.push(format!(r#"stroke="{}" "#, color));
@@ -332,6 +333,7 @@ fn render_path(path: &PathItem) -> String {
             }
         }
     }
+    p.push(format!(r#"fill="{}" "#, fill_color));
     p.push("/>".to_owned());
     p.join("")
 }
@@ -341,17 +343,10 @@ fn render_path(path: &PathItem) -> String {
 pub fn render_image(image: &Image, size: Size) -> String {
     let image_url = rasterize_embedded_image_url(image).unwrap();
 
-    // resize image to fit the view
-    let size = size;
-    let view_width = size.x.0;
-    let view_height = size.y.0;
-
-    let aspect = (image.width() as f32) / (image.height() as f32);
-
-    let w = view_width.max(aspect * view_height);
-    let h = w / aspect;
+    let w = size.x.0;
+    let h = size.y.0;
     format!(
-        r#"<image x="0" y="0" width="{}" height="{}" xlink:href="{}" />"#,
+        r#"<image x="0" y="0" width="{}" height="{}" style="fill" xlink:href="{}" preserveAspectRatio="none" />"#,
         w, h, image_url
     )
 }

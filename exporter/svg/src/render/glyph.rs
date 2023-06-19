@@ -1,6 +1,5 @@
-use typst_ts_core::font::GlyphProvider;
-
 use crate::{
+    font::GlyphProvider,
     ir::{GlyphItem, ImageGlyphItem, OutlineGlyphItem},
     utils::ToCssExt,
     vector::{codegen::render_image, lowering::GlyphLowerBuilder},

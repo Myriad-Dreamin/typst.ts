@@ -1,14 +1,11 @@
 use std::sync::Arc;
 
-use typst::{diag::SourceResult, doc::Document, World};
-use typst_ts_core::{
-    font::{FontGlyphProvider, GlyphProvider},
-    Exporter,
-};
+use typst::{diag::SourceResult, doc::Document};
 
 use crate::{
     flat_ir,
     flat_vector::FlatRenderVm,
+    font::{FontGlyphProvider, GlyphProvider},
     ir::{self, GlyphMapping},
     vector::{
         codegen::{generate_text, SvgText, SvgTextNode},
@@ -21,12 +18,10 @@ use crate::{
 impl<Feat: ExportFeature> SvgTask<Feat> {
     /// Render a document into the svg_body.
     pub fn render(&mut self, module: &Module, pages: &Pages, svg_body: &mut Vec<SvgText>) {
-        let mut render_task = self.fork_render_task(module);
+        let mut render_task = self.fork_page_render_task(module);
 
         let mut acc_height = 0u32;
-        for (idx, page) in pages.iter().enumerate() {
-            render_task.page_off = idx;
-
+        for page in pages.iter() {
             let entry = &page.0;
             let size = Self::page_size(page.1);
 
@@ -82,7 +77,7 @@ impl SvgExporter {
 
         let glyphs = t.render_glyphs(&module.glyphs, true);
 
-        generate_text(Self::render_template(
+        generate_text(Self::render_svg_template(
             t,
             header,
             svg_body,
@@ -91,33 +86,11 @@ impl SvgExporter {
     }
 
     pub(crate) fn render_flat_doc_and_svg(output: Arc<Document>) -> (SvgDocument, String) {
-        let instant = std::time::Instant::now();
         // render the document
         let (doc, _used_glyphs) = Self::svg_doc(&output);
 
         let svg = Self::render_flat_svg(&doc.module, &doc.pages);
-        println!("svg render time: {:?}", instant.elapsed());
         (doc, svg)
-    }
-}
-
-#[derive(Default)]
-pub struct SvgModuleExporter {}
-
-impl Exporter<Document, Vec<u8>> for SvgModuleExporter {
-    fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<Vec<u8>> {
-        let mut t = LowerBuilder::new(&output);
-
-        let mut builder = ModuleBuilder::default();
-
-        for page in output.pages.iter() {
-            let item = t.lower(page);
-            let _entry_id = builder.build(item);
-        }
-
-        let (repr, ..) = builder.finalize();
-
-        Ok(serialize_module(repr))
     }
 }
 
@@ -171,4 +144,19 @@ pub fn serialize_multi_doc_standalone(
     let item_pack = serializer.into_serializer().into_inner();
 
     item_pack.into_vec()
+}
+
+pub fn export_module(output: &Document) -> SourceResult<Vec<u8>> {
+    let mut t = LowerBuilder::new(output);
+
+    let mut builder = ModuleBuilder::default();
+
+    for page in output.pages.iter() {
+        let item = t.lower(page);
+        let _entry_id = builder.build(item);
+    }
+
+    let (repr, ..) = builder.finalize();
+
+    Ok(serialize_module(repr))
 }

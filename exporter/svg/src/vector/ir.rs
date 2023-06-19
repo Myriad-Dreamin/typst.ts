@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::Arc;
 
+use crate::{hash::typst_affinite_hash, hash::StaticHash128};
 use base64::Engine;
 use siphasher::sip128::{Hasher128, SipHasher13};
 use ttf_parser::GlyphId;
@@ -10,7 +11,6 @@ use typst::{
     font::Font,
     image::{ImageFormat, RasterFormat, VectorFormat},
 };
-use typst_ts_core::typst_affinite_hash;
 
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
@@ -129,20 +129,21 @@ impl AbsoulteRef {
     /// Note that the entire html document shares namespace for ids.
     #[comemo::memoize]
     fn as_svg_id_inner(fingerprint: Fingerprint, prefix: &'static str) -> String {
-        let fg =
+        let fingerprint_hi =
             base64::engine::general_purpose::STANDARD_NO_PAD.encode(fingerprint.0.to_le_bytes());
         if fingerprint.1 == 0 {
-            return [prefix, &fg].join("");
+            return [prefix, &fingerprint_hi].join("");
         }
 
-        let id = {
+        // possible the id in the lower 64 bits.
+        let fingerprint_lo = {
             let id = fingerprint.1.to_le_bytes();
             // truncate zero
             let rev_zero = id.iter().rev().skip_while(|&&b| b == 0).count();
             let id = &id[..rev_zero];
             base64::engine::general_purpose::STANDARD_NO_PAD.encode(id)
         };
-        [prefix, &fg, &id].join("")
+        [prefix, &fingerprint_hi, &fingerprint_lo].join("")
     }
 
     /// Create a xml id from the given prefix and the def id of this reference.
@@ -199,40 +200,55 @@ pub struct Image {
     pub hash: u128,
 }
 
+/// Collect image data from [`typst::image::Image`].
 impl From<typst::image::Image> for Image {
     fn from(image: typst::image::Image) -> Self {
+        let format = match image.format() {
+            ImageFormat::Raster(e) => match e {
+                RasterFormat::Jpg => "jpeg",
+                RasterFormat::Png => "png",
+                RasterFormat::Gif => "gif",
+            },
+            ImageFormat::Vector(e) => match e {
+                VectorFormat::Svg => "svg+xml",
+            },
+        };
+
+        // steal prehash from [`typst::image::Image`]
+        let hash = typst_affinite_hash(&image);
+
         Image {
             data: image.data().to_vec(),
-            format: match image.format() {
-                ImageFormat::Raster(e) => match e {
-                    RasterFormat::Jpg => "jpeg",
-                    RasterFormat::Png => "png",
-                    RasterFormat::Gif => "gif",
-                },
-                ImageFormat::Vector(e) => match e {
-                    VectorFormat::Svg => "svg+xml",
-                },
-            }
-            .into(),
+            format: format.into(),
             size: image.size().into(),
             alt: image.alt().map(|s| s.into()),
-            hash: typst_affinite_hash(&image),
+            hash,
         }
     }
 }
 
 impl Image {
+    /// Returns the width of the image.
     pub fn width(&self) -> u32 {
         self.size.x
     }
+    /// Returns the height of the image.
     pub fn height(&self) -> u32 {
         self.size.y
     }
 }
 
+/// Prehashed image data.
 impl Hash for Image {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.hash.hash(state);
+    }
+}
+
+impl StaticHash128 for Image {
+    /// Returns the hash of the image data.
+    fn get_hash(&self) -> u128 {
+        self.hash
     }
 }
 
@@ -382,15 +398,23 @@ pub struct TransformedItem(pub TransformItem, pub Box<SvgItem>);
 pub struct GroupItem(pub Vec<(Point, SvgItem)>);
 
 /// Item representing all the transform that is applicable to a [`SvgItem`].
+/// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/transform>
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub enum TransformItem {
+    /// `matrix` transform.
     Matrix(Arc<Transform>),
+    /// `translate` transform.
     Translate(Arc<Axes<Abs>>),
+    /// `scale` transform.
     Scale(Arc<(Ratio, Ratio)>),
+    /// `rotate` transform.
     Rotate(Arc<Scalar>),
+    /// `skewX skewY` transform.
     Skew(Arc<(Ratio, Ratio)>),
+
+    /// clip path.
     Clip(Arc<PathItem>),
 }
 
@@ -398,6 +422,7 @@ pub enum TransformItem {
 #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum StyleNs {
+    /// style that contains a single css rule: `fill: #color`.
     Fill,
 }
 
@@ -406,7 +431,7 @@ pub type GlyphMapping = HashMap<GlyphItem, AbsoulteRef>;
 /// A finished pack that stores all the glyph items.
 pub type GlyphPack = Vec<(AbsoulteRef, GlyphItem)>;
 
-/// Intermediate representation of a incompleted svg item.
+/// Intermediate representation of an incompleted glyph pack.
 #[derive(Default)]
 pub struct GlyphPackBuilder {
     pub glyphs: GlyphMapping,

@@ -1,6 +1,8 @@
 use tiny_skia::Transform;
 use typst::geom::{Abs, Color};
 
+use super::ir;
+
 /// Additional methods for [`Length`].
 pub trait AbsExt {
     /// Convert to a number of points as f32.
@@ -53,7 +55,7 @@ impl ToCssExt for Transform {
     }
 }
 
-impl ToCssExt for crate::ir::Transform {
+impl ToCssExt for ir::Transform {
     fn to_css(self) -> String {
         format!(
             r#"matrix({},{},{},{},{},{})"#,

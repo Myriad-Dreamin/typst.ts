@@ -21,14 +21,12 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     /// Render a document difference into the svg_body.
     pub fn render_diff(&mut self, ctx: &IncrementalRenderContext, svg_body: &mut Vec<SvgText>) {
         let mut acc_height = 0u32;
-        let mut render_task = self.fork_render_task(&ctx.next.module);
+        let mut render_task = self.fork_page_render_task(&ctx.next.module);
 
         let reusable: HashSet<AbsoulteRef, RandomState> =
             HashSet::from_iter(ctx.prev.pages.iter().map(|e| e.0.clone()));
 
         for (idx, (entry, size)) in ctx.next.pages.iter().enumerate() {
-            render_task.page_off = idx;
-
             let size = Self::page_size(*size);
             if reusable.contains(entry) {
                 svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
