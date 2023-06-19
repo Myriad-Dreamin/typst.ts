@@ -27,7 +27,8 @@ jobs:
         run: |
           google-chrome --version
           chromedriver --version
-          echo TYPST_CHROME_DRIVER=`which chromedriver` >> "$GITHUB_ENV"
+          # problematic in wasm-pack 0.12.0
+          # echo TYPST_CHROME_DRIVER=`which chromedriver` >> "$GITHUB_ENV"
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
       - name: Install Artifact Cache
