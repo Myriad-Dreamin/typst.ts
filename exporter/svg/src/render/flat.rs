@@ -75,7 +75,7 @@ impl SvgExporter {
         let mut svg_body = vec![];
         t.render(module, pages, &mut svg_body);
 
-        let glyphs = t.render_glyphs(&module.glyphs, true);
+        let glyphs = t.render_glyphs(module.glyphs.iter(), true);
 
         generate_text(Self::render_svg_template(
             t,

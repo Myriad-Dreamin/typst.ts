@@ -184,12 +184,16 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     }
 
     /// Render glyphs into the svg_body.
-    fn render_glyphs(&mut self, glyphs: &GlyphPack, use_stable_glyph_id: bool) -> Vec<SvgText> {
+    fn render_glyphs<'a, I: Iterator<Item = &'a (AbsoulteRef, GlyphItem)>>(
+        &mut self,
+        glyphs: I,
+        use_stable_glyph_id: bool,
+    ) -> Vec<SvgText> {
         let mut render_task = self.fork_glyph_render_task();
 
         let mut svg_body = Vec::new();
 
-        for (abs_ref, item) in glyphs.iter() {
+        for (abs_ref, item) in glyphs {
             let glyph_id = if Feat::USE_STABLE_GLYPH_ID && use_stable_glyph_id {
                 abs_ref.as_svg_id("g")
             } else {
@@ -402,7 +406,7 @@ impl SvgExporter {
 
         // render the glyphs collected from the pages
         let (glyphs, ..) = std::mem::take(&mut t.glyph_pack).finalize();
-        let glyphs = t.render_glyphs(&glyphs, false);
+        let glyphs = t.render_glyphs(glyphs.iter(), false);
 
         // template SVG
         Self::render_svg_template(t, header, svg_body, glyphs.into_iter())
