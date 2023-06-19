@@ -79,6 +79,12 @@ impl SvgExporter {
         let mut svg = Vec::<SvgText>::new();
         svg.push(SvgText::Plain(Self::header(&next.pages)));
         let mut svg_body = vec![];
+        let new_glyphs = prev
+            .module
+            .glyphs
+            .iter()
+            .filter(|(_, g)| !used_glyphs.contains_key(g));
+        let new_glyphs = t.render_glyphs(new_glyphs, true);
 
         let render_context = IncrementalRenderContext { prev, next };
         t.render_diff(&render_context, &mut svg_body);
@@ -90,8 +96,7 @@ impl SvgExporter {
 
         // attach the glyph defs, clip paths, and style defs
         svg.push("<defs>".into());
-        let _ = used_glyphs;
-
+        svg.extend(new_glyphs);
         svg.push("</defs>".into());
 
         // incremental style
