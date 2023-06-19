@@ -41,6 +41,9 @@ pub use flat_ir::{
 #[cfg(feature = "flat-vector")]
 pub use flat_vector::ir as flat_ir;
 
+#[cfg(feature = "canvas")]
+pub use render::canvas::IncrementalCanvasExporter;
+
 /// All the features that can be enabled or disabled.
 pub trait ExportFeature {
     /// Whether to enable tracing.

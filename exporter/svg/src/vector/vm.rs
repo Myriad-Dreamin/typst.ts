@@ -48,7 +48,7 @@ pub trait GroupContext: Sized {
     fn render_path(&mut self, path: &ir::PathItem);
 
     /// Render a semantic link into underlying context.
-    fn render_link(&mut self, link: &ir::LinkItem);
+    fn render_link(&mut self, _link: &ir::LinkItem) {}
 
     /// Render an image into underlying context.
     fn render_image(&mut self, image_item: &ir::ImageItem);
