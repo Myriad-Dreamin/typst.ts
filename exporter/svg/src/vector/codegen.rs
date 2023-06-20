@@ -223,18 +223,11 @@ impl<'s, 'm, 't, Feat: ExportFeature> TransformContext for SvgTextBuilder<'s, 'm
         self
     }
 
-    fn transform_clip(mut self, matrix: &ir::PathItem) -> Self {
-        let clip_id;
-        if let Some(c) = self.t.clip_paths.get(&matrix.d) {
-            clip_id = *c;
-        } else {
-            let cid = self.t.clip_paths.len() as u32;
-            self.t.clip_paths.insert(matrix.d.clone(), cid);
-            clip_id = cid;
-        }
+    fn transform_clip(mut self, path: &ir::PathItem) -> Self {
+        let clip_id = self.t.build_clip_path(path);
 
         self.attributes
-            .push(("clip-path", format!(r##"url(#c{:x})"##, clip_id)));
+            .push(("clip-path", format!(r"url(#{})", clip_id.as_svg_id("c"))));
         self
     }
 }
@@ -252,7 +245,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> GroupContext for SvgTextBuilder<'s, 'm, 't
     }
 
     fn render_glyph(&mut self, pos: Scalar, glyph: &ir::GlyphItem) {
-        let glyph_ref = self.t.glyph_pack.build_glyph(glyph);
+        let glyph_ref = self.t.build_glyph(glyph);
         self.render_glyph_ref_inner(pos, &glyph_ref)
     }
 

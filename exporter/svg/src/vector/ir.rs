@@ -33,6 +33,29 @@ pub use super::geom::*;
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct Fingerprint(u64, u64);
 
+impl Fingerprint {
+    /// Create a xml id from the given prefix and the fingerprint of this reference.
+    /// Note that the entire html document shares namespace for ids.
+    #[comemo::memoize]
+    pub fn as_svg_id(self, prefix: &'static str) -> String {
+        let fingerprint_hi =
+            base64::engine::general_purpose::STANDARD_NO_PAD.encode(self.0.to_le_bytes());
+        if self.1 == 0 {
+            return [prefix, &fingerprint_hi].join("");
+        }
+
+        // possible the id in the lower 64 bits.
+        let fingerprint_lo = {
+            let id = self.1.to_le_bytes();
+            // truncate zero
+            let rev_zero = id.iter().rev().skip_while(|&&b| b == 0).count();
+            let id = &id[..rev_zero];
+            base64::engine::general_purpose::STANDARD_NO_PAD.encode(id)
+        };
+        [prefix, &fingerprint_hi, &fingerprint_lo].join("")
+    }
+}
+
 /// A fingerprint hasher that extends the [`std::hash::Hasher`] trait.
 pub trait FingerprintHasher: std::hash::Hasher {
     /// Finish the fingerprint and return the fingerprint and the data.
@@ -125,27 +148,6 @@ impl Hash for AbsoulteRef {
 }
 
 impl AbsoulteRef {
-    /// Create a xml id from the given prefix and the fingerprint of this reference.
-    /// Note that the entire html document shares namespace for ids.
-    #[comemo::memoize]
-    fn as_svg_id_inner(fingerprint: Fingerprint, prefix: &'static str) -> String {
-        let fingerprint_hi =
-            base64::engine::general_purpose::STANDARD_NO_PAD.encode(fingerprint.0.to_le_bytes());
-        if fingerprint.1 == 0 {
-            return [prefix, &fingerprint_hi].join("");
-        }
-
-        // possible the id in the lower 64 bits.
-        let fingerprint_lo = {
-            let id = fingerprint.1.to_le_bytes();
-            // truncate zero
-            let rev_zero = id.iter().rev().skip_while(|&&b| b == 0).count();
-            let id = &id[..rev_zero];
-            base64::engine::general_purpose::STANDARD_NO_PAD.encode(id)
-        };
-        [prefix, &fingerprint_hi, &fingerprint_lo].join("")
-    }
-
     /// Create a xml id from the given prefix and the def id of this reference.
     /// Note that the def id may not be stable across compilation.
     /// Note that the entire html document shares namespace for ids.
@@ -163,7 +165,7 @@ impl AbsoulteRef {
 
     #[inline]
     pub fn as_svg_id(&self, prefix: &'static str) -> String {
-        Self::as_svg_id_inner(self.fingerprint, prefix)
+        self.fingerprint.as_svg_id(prefix)
     }
 
     #[inline]
@@ -433,41 +435,12 @@ pub type GlyphPack = Vec<(AbsoulteRef, GlyphItem)>;
 
 /// Intermediate representation of an incompleted glyph pack.
 #[derive(Default)]
-pub struct GlyphPackBuilder {
-    pub glyphs: GlyphMapping,
-
-    fingerprint_builder: FingerprintBuilder,
-}
+pub struct GlyphPackBuilder;
 
 impl GlyphPackBuilder {
-    pub fn finalize_ref(&self) -> (GlyphPack, GlyphMapping) {
-        let mut glyphs = self.glyphs.clone().into_iter().collect::<Vec<_>>();
+    pub fn finalize(glyphs: GlyphMapping) -> GlyphPack {
+        let mut glyphs = glyphs.into_iter().collect::<Vec<_>>();
         glyphs.sort_by(|(_, a), (_, b)| a.id.0.cmp(&b.id.0));
-        (
-            glyphs.into_iter().map(|(a, b)| (b, a)).collect(),
-            self.glyphs.clone(),
-        )
-    }
-
-    pub fn finalize(self) -> (GlyphPack, GlyphMapping) {
-        let mut glyphs = self.glyphs.clone().into_iter().collect::<Vec<_>>();
-        glyphs.sort_by(|(_, a), (_, b)| a.id.0.cmp(&b.id.0));
-        (
-            glyphs.into_iter().map(|(a, b)| (b, a)).collect(),
-            self.glyphs,
-        )
-    }
-
-    pub fn build_glyph(&mut self, glyph: &GlyphItem) -> AbsoulteRef {
-        if let Some(id) = self.glyphs.get(glyph) {
-            return id.clone();
-        }
-
-        let id = DefId(self.glyphs.len() as u64);
-
-        let fingerprint = self.fingerprint_builder.resolve(glyph);
-        let abs_ref = AbsoulteRef { fingerprint, id };
-        self.glyphs.insert(glyph.clone(), abs_ref.clone());
-        abs_ref
+        glyphs.into_iter().map(|(a, b)| (b, a)).collect()
     }
 }

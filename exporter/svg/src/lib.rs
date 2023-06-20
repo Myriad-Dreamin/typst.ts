@@ -85,7 +85,7 @@ impl ExportFeature for SvgExportFeature {
 /// See [`StyleNs`].
 type StyleDefMap = HashMap<(StyleNs, ImmutStr), String>;
 /// Maps the clip path's data to the clip path id.
-type ClipPathMap = HashMap<ImmutStr, u32>;
+type ClipPathMap = HashMap<ImmutStr, Fingerprint>;
 
 /// The task context for exporting svg.
 /// It is also as a namespace for all the functions used in the task.
@@ -94,8 +94,11 @@ pub struct SvgTask<Feat: ExportFeature> {
     /// See [`GlyphProvider`].
     glyph_provider: GlyphProvider,
 
+    /// A fingerprint builder for generating unique id.
+    fingerprint_builder: FingerprintBuilder,
+
     /// Stores the glyphs used in the document.
-    glyph_pack: GlyphPackBuilder,
+    glyph_defs: GlyphMapping,
     /// Stores the style definitions used in the document.
     style_defs: StyleDefMap,
     /// Stores the clip paths used in the document.
@@ -110,7 +113,9 @@ impl<Feat: ExportFeature> Default for SvgTask<Feat> {
         Self {
             glyph_provider: GlyphProvider::default(),
 
-            glyph_pack: GlyphPackBuilder::default(),
+            fingerprint_builder: FingerprintBuilder::default(),
+
+            glyph_defs: GlyphMapping::default(),
             style_defs: StyleDefMap::default(),
             clip_paths: ClipPathMap::default(),
 
@@ -148,7 +153,9 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 
             module,
 
-            glyph_pack: &mut self.glyph_pack,
+            fingerprint_builder: &mut self.fingerprint_builder,
+
+            glyph_defs: &mut self.glyph_defs,
             style_defs: &mut self.style_defs,
             clip_paths: &mut self.clip_paths,
 
@@ -165,7 +172,9 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         SvgRenderTask::<Feat> {
             glyph_provider: self.glyph_provider.clone(),
 
-            glyph_pack: &mut self.glyph_pack,
+            fingerprint_builder: &mut self.fingerprint_builder,
+
+            glyph_defs: &mut self.glyph_defs,
             style_defs: &mut self.style_defs,
             clip_paths: &mut self.clip_paths,
 
@@ -263,8 +272,13 @@ pub struct SvgRenderTask<'m, 't, Feat: ExportFeature> {
     #[cfg(feature = "flat-vector")]
     pub module: &'m Module,
 
+    /// A fingerprint builder for generating unique id.
+    fingerprint_builder: &'t mut FingerprintBuilder,
+
     /// Stores the glyphs used in the document.
-    glyph_pack: &'t mut GlyphPackBuilder,
+    // todo: used in SvgItem rendering, but
+    // unused in FlatSvgItem rendering, which is confusing.
+    glyph_defs: &'t mut GlyphMapping,
     /// Stores the style definitions used in the document.
     style_defs: &'t mut StyleDefMap,
     /// Stores the clip paths used in the document.
@@ -278,6 +292,31 @@ pub struct SvgRenderTask<'m, 't, Feat: ExportFeature> {
     pub _feat_phantom: std::marker::PhantomData<Feat>,
     #[cfg(not(feature = "flat-vector"))]
     pub _m_phantom: std::marker::PhantomData<&'m ()>,
+}
+
+impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
+    pub fn build_glyph(&mut self, glyph: &GlyphItem) -> AbsoulteRef {
+        if let Some(id) = self.glyph_defs.get(glyph) {
+            return id.clone();
+        }
+
+        let id = DefId(self.glyph_defs.len() as u64);
+
+        let fingerprint = self.fingerprint_builder.resolve(glyph);
+        let abs_ref = AbsoulteRef { fingerprint, id };
+        self.glyph_defs.insert(glyph.clone(), abs_ref.clone());
+        abs_ref
+    }
+
+    pub fn build_clip_path(&mut self, path: &PathItem) -> Fingerprint {
+        if let Some(id) = self.clip_paths.get(&path.d) {
+            return *id;
+        }
+
+        let fingerprint = self.fingerprint_builder.resolve(path);
+        self.clip_paths.insert(path.d.clone(), fingerprint);
+        fingerprint
+    }
 }
 
 #[derive(Default)]
@@ -339,8 +378,9 @@ impl SvgExporter {
         clip_paths.sort_by(|a, b| a.1.cmp(&b.1));
         for (clip_path, id) in clip_paths {
             svg.push(SvgText::Plain(format!(
-                r##"<clipPath id="c{:x}"><path d="{}"/></clipPath>"##,
-                id, clip_path
+                r##"<clipPath id="{}"><path d="{}"/></clipPath>"##,
+                id.as_svg_id("c"),
+                clip_path
             )));
         }
     }
@@ -405,7 +445,7 @@ impl SvgExporter {
         t.render_pages_transient(output, pages, &mut svg_body);
 
         // render the glyphs collected from the pages
-        let (glyphs, ..) = std::mem::take(&mut t.glyph_pack).finalize();
+        let glyphs = GlyphPackBuilder::finalize(std::mem::take(&mut t.glyph_defs));
         let glyphs = t.render_glyphs(glyphs.iter(), false);
 
         // template SVG
