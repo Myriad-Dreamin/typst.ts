@@ -11,8 +11,8 @@ use crate::{
         codegen::{generate_text, SvgText, SvgTextNode},
         lowering::{GlyphLowerBuilder, LowerBuilder},
     },
-    DefaultExportFeature, ExportFeature, Module, ModuleBuilder, MultiSvgDocument, Pages,
-    SerializedModule, SvgDocument, SvgExporter, SvgTask,
+    ExportFeature, Module, ModuleBuilder, MultiSvgDocument, Pages, SerializedModule, SvgDocument,
+    SvgExporter, SvgTask,
 };
 
 impl<Feat: ExportFeature> SvgTask<Feat> {
@@ -39,7 +39,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     }
 }
 
-impl SvgExporter {
+impl<Feat: ExportFeature> SvgExporter<Feat> {
     pub(crate) fn header(output: &Pages) -> String {
         // calculate the width and height of the svg
         let w = output
@@ -71,7 +71,7 @@ impl SvgExporter {
     pub fn render_flat_svg(module: &Module, pages: &Pages) -> String {
         let header = Self::header(pages);
 
-        let mut t = SvgTask::<DefaultExportFeature>::default();
+        let mut t = SvgTask::<Feat>::default();
         let mut svg_body = vec![];
         t.render(module, pages, &mut svg_body);
 

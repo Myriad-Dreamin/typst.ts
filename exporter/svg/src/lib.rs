@@ -60,6 +60,8 @@ pub trait ExportFeature {
     /// However, it is also permitted unstable if you will not use IFT.
     const USE_STABLE_GLYPH_ID: bool;
 
+    const WITH_BUILTIN_CSS: bool;
+
     /// Whether to include js for interactive and responsive actions.
     /// If enabled, users can interact with the svg file.
     const WITH_RESPONSIVE_JS: bool;
@@ -74,6 +76,7 @@ impl ExportFeature for DefaultExportFeature {
     const SHOULD_ATTACH_DEBUG_INFO: bool = false;
     const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
     const USE_STABLE_GLYPH_ID: bool = true;
+    const WITH_BUILTIN_CSS: bool = true;
     const WITH_RESPONSIVE_JS: bool = true;
 }
 
@@ -86,6 +89,7 @@ impl ExportFeature for SvgExportFeature {
     const SHOULD_ATTACH_DEBUG_INFO: bool = false;
     const SHOULD_RENDER_TEXT_ELEMENT: bool = false;
     const USE_STABLE_GLYPH_ID: bool = true;
+    const WITH_BUILTIN_CSS: bool = true;
     const WITH_RESPONSIVE_JS: bool = false;
 }
 
@@ -167,7 +171,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             style_defs: &mut self.style_defs,
             clip_paths: &mut self.clip_paths,
 
-            should_attach_debug_info: true,
+            should_attach_debug_info: Feat::SHOULD_ATTACH_DEBUG_INFO,
             should_render_text_element: true,
             use_stable_glyph_id: true,
 
@@ -187,7 +191,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             style_defs: &mut self.style_defs,
             clip_paths: &mut self.clip_paths,
 
-            should_attach_debug_info: true,
+            should_attach_debug_info: Feat::SHOULD_ATTACH_DEBUG_INFO,
             should_render_text_element: true,
             use_stable_glyph_id: true,
 
@@ -331,10 +335,19 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
     }
 }
 
-#[derive(Default)]
-pub struct SvgExporter {}
+pub struct SvgExporter<Feat: ExportFeature> {
+    pub _feat_phantom: std::marker::PhantomData<Feat>,
+}
 
-impl SvgExporter {
+impl<Feat: ExportFeature> Default for SvgExporter<Feat> {
+    fn default() -> Self {
+        Self {
+            _feat_phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<Feat: ExportFeature> SvgExporter<Feat> {
     /// Render the header of SVG.
     /// <svg> .. </svg>
     /// ^^^^^
@@ -398,7 +411,7 @@ impl SvgExporter {
     }
 
     /// Template SVG.
-    fn render_svg_template<Feat: ExportFeature>(
+    fn render_svg_template(
         t: SvgTask<Feat>,
         header: String,
         mut body: Vec<SvgText>,
@@ -407,13 +420,17 @@ impl SvgExporter {
         let mut svg = vec![
             SvgText::Plain(header),
             // base style
-            r#"<style type="text/css">"#.into(),
-            include_str!("./typst.svg.css").into(),
-            "</style>".into(),
-            // attach the glyph defs, clip paths, and style defs
-            "<defs>".into(),
-            r#"<g id="glyph">"#.into(),
         ];
+
+        if Feat::WITH_BUILTIN_CSS {
+            svg.push(r#"<style type="text/css">"#.into());
+            svg.push(include_str!("./typst.svg.css").into());
+            svg.push("</style>".into());
+        }
+
+        // attach the glyph defs, clip paths, and style defs
+        svg.push("<defs>".into());
+        svg.push(r#"<g id="glyph">"#.into());
         svg.extend(glyphs);
         svg.push("</g>".into());
         Self::clip_paths(t.clip_paths, &mut svg);
@@ -438,7 +455,7 @@ impl SvgExporter {
 
     /// Render SVG for [`Document`].
     /// It does not flatten the vector items before rendering so called "transient".
-    fn render_transient_svg<Feat: ExportFeature>(output: &Document) -> Vec<SvgText> {
+    fn render_transient_svg(output: &Document) -> Vec<SvgText> {
         let mut t = SvgTask::<Feat>::default();
 
         // render SVG header
@@ -468,7 +485,7 @@ impl SvgExporter {
     /// It does not flatten the vector items before rendering so called "transient".
     fn render_transient_html(output: &Document) -> Vec<SvgText> {
         // render SVG
-        let mut svg = Self::render_transient_svg::<DefaultExportFeature>(output);
+        let mut svg = Self::render_transient_svg(output);
 
         // wrap SVG with html
         let mut html: Vec<SvgText> = Vec::with_capacity(svg.len() + 3);
@@ -490,20 +507,20 @@ impl SvgExporter {
 
 /// Render SVG wrapped with html for [`Document`].
 pub fn render_svg_html(output: &Document) -> String {
-    generate_text(SvgExporter::render_transient_html(output))
+    type UsingExporter = SvgExporter<DefaultExportFeature>;
+    generate_text(UsingExporter::render_transient_html(output))
 }
 
 /// Render SVG for [`Document`].
 pub fn render_svg(output: &Document) -> String {
-    generate_text(SvgExporter::render_transient_svg::<SvgExportFeature>(
-        output,
-    ))
+    type UsingExporter = SvgExporter<SvgExportFeature>;
+    generate_text(UsingExporter::render_transient_svg(output))
 }
 
 #[cfg(feature = "flat-vector")]
 pub use render::flat::export_module;
 
-impl Exporter<Document, String> for SvgExporter {
+impl<Feat: ExportFeature> Exporter<Document, String> for SvgExporter<Feat> {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<String> {
         // html wrap
         Ok(generate_text(Self::render_transient_html(&output)))

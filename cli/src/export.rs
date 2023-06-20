@@ -5,6 +5,7 @@ use typst_ts_core::{
     program_meta::REPORT_BUG_MESSAGE,
     AsWritable,
 };
+use typst_ts_svg_exporter::DefaultExportFeature;
 
 use crate::CompileArgs;
 
@@ -119,7 +120,7 @@ fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExp
     type WithJson<T> = typst_ts_serde_exporter::JsonExporter<T>;
     type WithPdf = typst_ts_pdf_exporter::PdfDocExporter;
     type WithRmp = typst_ts_serde_exporter::RmpArtifactExporter;
-    type WithSvg = typst_ts_svg_exporter::SvgExporter;
+    type WithSvg = typst_ts_svg_exporter::SvgExporter<DefaultExportFeature>;
     type WithSIR = typst_ts_svg_exporter::SvgModuleExporter;
 
     type ExporterVec<T> = Vec<Box<dyn typst_ts_core::Exporter<T>>>;

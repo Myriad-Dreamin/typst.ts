@@ -9,8 +9,20 @@ use crate::{
     flat_vector::{FlatRenderVm, SvgDocument},
     ir::AbsoulteRef,
     vector::codegen::{SvgText, SvgTextNode},
-    DefaultExportFeature, ExportFeature, SvgExporter, SvgTask,
+    ExportFeature, SvgExporter, SvgTask,
 };
+
+/// The feature set which is used for exporting incremental rendered svg.
+struct IncrementalExportFeature;
+
+impl ExportFeature for IncrementalExportFeature {
+    const ENABLE_TRACING: bool = false;
+    const SHOULD_ATTACH_DEBUG_INFO: bool = false;
+    const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
+    const USE_STABLE_GLYPH_ID: bool = true;
+    const WITH_BUILTIN_CSS: bool = false;
+    const WITH_RESPONSIVE_JS: bool = false;
+}
 
 pub struct IncrementalRenderContext {
     prev: SvgDocument,
@@ -67,12 +79,12 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     }
 }
 
-impl SvgExporter {
+impl<Feat: ExportFeature> SvgExporter<Feat> {
     fn render_svg_incremental(prev: SvgDocument, output: Arc<Document>) -> (SvgDocument, String) {
         let instant = std::time::Instant::now();
 
         // render the document
-        let mut t = SvgTask::<DefaultExportFeature>::default();
+        let mut t = SvgTask::<IncrementalExportFeature>::default();
 
         let (next, used_glyphs) = Self::svg_doc(&output);
 
@@ -98,10 +110,6 @@ impl SvgExporter {
         let render_context = IncrementalRenderContext { prev, next };
         t.render_diff(&render_context, &mut svg_body);
         let svg_doc = render_context.next;
-
-        // base style
-        svg.push(r#"<style type="text/css" data-reuse="1">"#.into());
-        svg.push("</style>".into());
 
         // attach the glyph defs, clip paths, and style defs
         svg.push("<defs>".into());
@@ -142,13 +150,15 @@ pub struct IncrementalSvgExporter {
 
 impl IncrementalSvgExporter {
     pub fn render(&mut self, output: Arc<Document>) -> String {
+        type IncrExporter = SvgExporter<IncrementalExportFeature>;
+
         let (next, packet) = match self.prev.take() {
             Some(prev) => {
-                let (next, svg) = SvgExporter::render_svg_incremental(prev, output);
+                let (next, svg) = IncrExporter::render_svg_incremental(prev, output);
                 (next, ["diff-v0,", &svg].concat())
             }
             None => {
-                let (next, svg) = SvgExporter::render_flat_doc_and_svg(output);
+                let (next, svg) = IncrExporter::render_flat_doc_and_svg(output);
                 (next, ["new,", &svg].concat())
             }
         };
