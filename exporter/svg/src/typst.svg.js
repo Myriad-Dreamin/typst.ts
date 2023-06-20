@@ -133,9 +133,38 @@ if (scriptTag) {
       elem.addEventListener('mouseleave', linkleave);
     }
 
-    setTimeout(() => {
-      window.layoutText(docRoot);
-    }, 0);
+    if (false) {
+      setTimeout(() => {
+        window.layoutText(docRoot);
+      }, 0);
+    }
+
+    docRoot.addEventListener('click', event => {
+      let elem = event.target;
+      while (elem) {
+        const span = elem.getAttribute('data-span');
+        if (span) {
+          console.log('source-span of this svg element', span);
+
+          const docRoot = document.body || document.firstElementChild;
+          const basePos = docRoot.getBoundingClientRect();
+
+          const vw = window.innerWidth || 0;
+          const left = event.clientX - basePos.left + 0.015 * vw;
+          const top = event.clientY - basePos.top + 0.015 * vw;
+
+          triggerRipple(
+            docRoot,
+            left,
+            top,
+            'typst-debug-react-ripple',
+            'typst-debug-react-ripple-effect .4s linear',
+          );
+          return;
+        }
+        elem = elem.parentElement;
+      }
+    });
   }
 }
 
@@ -197,21 +226,25 @@ window.handleTypstLocation = function (elem, page, x, y) {
       const left = xOffset + xOffsetInnerFix;
       const top = yOffset + yOffsetInnerFix;
 
-      console.log('scrolling to', xOffset, yOffset, left, top);
-
       window.scrollTo(xOffset, yOffset);
-      const ripple = document.createElement('div');
-      ripple.className = 'typst-ripple';
-      docRoot.appendChild(ripple);
 
-      ripple.style.left = left.toString() + 'px';
-      ripple.style.top = top.toString() + 'px';
-
-      ripple.style.animation = 'typst-ripple-effect .4s linear';
-      ripple.onanimationend = () => {
-        docRoot.removeChild(ripple);
-      };
+      triggerRipple(docRoot, left, top, 'typst-jump-ripple', 'typst-jump-ripple-effect .4s linear');
       return;
     }
   }
 };
+
+function triggerRipple(docRoot, left, top, className, animation) {
+  const ripple = document.createElement('div');
+
+  ripple.className = className;
+  ripple.style.left = left.toString() + 'px';
+  ripple.style.top = top.toString() + 'px';
+
+  docRoot.appendChild(ripple);
+
+  ripple.style.animation = animation;
+  ripple.onanimationend = () => {
+    docRoot.removeChild(ripple);
+  };
+}

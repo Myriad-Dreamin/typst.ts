@@ -152,6 +152,7 @@ impl<'s, 'm: 's, 't: 's, Feat: ExportFeature + 's> FlatRenderVm<'s, 'm>
     fn start_flat_text(&'s mut self, value: &AbsoulteRef, text: &ir::FlatTextItem) -> Self::Group {
         let mut g = self.start_flat_group(value);
         g.with_text_shape(&text.shape);
+        g.attach_debug_info(text.content.span_id);
         g
     }
 }

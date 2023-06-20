@@ -46,6 +46,9 @@ pub trait ExportFeature {
     /// Whether to enable tracing.
     const ENABLE_TRACING: bool;
 
+    /// Whether to attach debug info to svg elements.
+    const SHOULD_ATTACH_DEBUG_INFO: bool;
+
     /// Whether to render text element.
     /// The text elements is selectable and searchable.
     const SHOULD_RENDER_TEXT_ELEMENT: bool;
@@ -68,6 +71,7 @@ pub type DefaultSvgTask = SvgTask<DefaultExportFeature>;
 
 impl ExportFeature for DefaultExportFeature {
     const ENABLE_TRACING: bool = false;
+    const SHOULD_ATTACH_DEBUG_INFO: bool = false;
     const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
     const USE_STABLE_GLYPH_ID: bool = true;
     const WITH_RESPONSIVE_JS: bool = true;
@@ -79,6 +83,7 @@ pub type PlainSvgTask = SvgTask<SvgExportFeature>;
 
 impl ExportFeature for SvgExportFeature {
     const ENABLE_TRACING: bool = false;
+    const SHOULD_ATTACH_DEBUG_INFO: bool = false;
     const SHOULD_RENDER_TEXT_ELEMENT: bool = false;
     const USE_STABLE_GLYPH_ID: bool = true;
     const WITH_RESPONSIVE_JS: bool = false;
@@ -162,6 +167,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             style_defs: &mut self.style_defs,
             clip_paths: &mut self.clip_paths,
 
+            should_attach_debug_info: true,
             should_render_text_element: true,
             use_stable_glyph_id: true,
 
@@ -181,6 +187,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             style_defs: &mut self.style_defs,
             clip_paths: &mut self.clip_paths,
 
+            should_attach_debug_info: true,
             should_render_text_element: true,
             use_stable_glyph_id: true,
 
@@ -289,6 +296,8 @@ pub struct SvgRenderTask<'m, 't, Feat: ExportFeature> {
 
     /// See [`ExportFeature`].
     pub should_render_text_element: bool,
+    /// See [`ExportFeature`].
+    pub should_attach_debug_info: bool,
     /// See [`ExportFeature`].
     pub use_stable_glyph_id: bool,
 
