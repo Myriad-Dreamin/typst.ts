@@ -112,12 +112,11 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         let svg_doc = render_context.next;
 
         // attach the glyph defs, clip paths, and style defs
-        svg.push("<defs>".into());
-
-        svg.push(r#"<g id="glyph">"#.into());
+        svg.push(r#"<defs id="glyph">"#.into());
         svg.extend(new_glyphs);
-        svg.push("</g>".into());
+        svg.push("</defs>".into());
 
+        svg.push(r#"<defs id="clip-path">"#.into());
         Self::clip_paths(t.clip_paths, &mut svg);
         svg.push("</defs>".into());
 
