@@ -43,19 +43,33 @@ svg {
 .hover .typst-txt {
   --glyph_fill: #66bab7;
 }
-.typst-ripple {
+.typst-jump-ripple,
+.typst-debug-react-ripple {
   width: 0;
   height: 0;
   background-color: transparent;
   position: absolute;
   border-radius: 50%;
+}
+.typst-jump-ripple {
   border: 1px solid #66bab7;
 }
-@keyframes typst-ripple-effect {
+.typst-debug-react-ripple {
+  border: 1px solid #cb1b45;
+}
+@keyframes typst-jump-ripple-effect {
   to {
     width: 10vw;
     height: 10vw;
     opacity: 0.01;
     margin: -5vw;
+  }
+}
+@keyframes typst-debug-react-ripple-effect {
+  to {
+    width: 3vw;
+    height: 3vw;
+    opacity: 0.01;
+    margin: -1.5vw;
   }
 }

@@ -345,6 +345,8 @@ pub struct TextItemContent {
     /// The glyphs in the text.
     /// (offset, advance, glyph): ([`Abs`], [`Abs`], [`GlyphItem`])
     pub glyphs: Vec<(Abs, Abs, GlyphItem)>,
+    /// Source span for this text item.
+    pub span_id: u64,
 }
 
 /// A glyph item.

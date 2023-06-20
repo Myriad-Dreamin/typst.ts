@@ -162,6 +162,8 @@ impl<'s, 'm: 's, 't: 's, Feat: ExportFeature + 's> RenderVm<'s> for SvgRenderTas
     fn start_text(&'s mut self, text: &ir::TextItem) -> Self::Group {
         let mut g = self.start_group();
         g.with_text_shape(&text.shape);
+        g.attach_debug_info(text.content.span_id);
+
         g
     }
 }

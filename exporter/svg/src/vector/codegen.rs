@@ -106,6 +106,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> From<SvgTextBuilder<'s, 'm, 't, Feat>> for
 /// Internal methods for [`SvgTextBuilder`].
 impl<'s, 'm, 't, Feat: ExportFeature> SvgTextBuilder<'s, 'm, 't, Feat> {
     /// attach shape of the text to the node using css rules.
+    #[inline]
     pub fn with_text_shape(&mut self, shape: &ir::TextShape) {
         // shorten black fill
         let fill = if shape.fill.as_ref() == "#000" {
@@ -125,7 +126,16 @@ impl<'s, 'm, 't, Feat: ExportFeature> SvgTextBuilder<'s, 'm, 't, Feat> {
             .push(("class", format!("typst-txt {}", fill)));
     }
 
+    #[inline]
+    pub fn attach_debug_info(&mut self, span_id: u64) {
+        if self.t.should_attach_debug_info {
+            self.attributes
+                .push(("data-span", format!("{:x}", span_id)));
+        }
+    }
+
     /// Assuming the glyphs has already been in the defs, render it by reference.
+    #[inline]
     pub fn render_glyph_ref_inner(&mut self, pos: Scalar, glyph: &AbsoulteRef) {
         let adjusted_offset = (pos.0 * 2.).round() / 2.;
 
@@ -143,6 +153,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> SvgTextBuilder<'s, 'm, 't, Feat> {
         )));
     }
 
+    #[inline]
     pub fn render_text_semantics_inner(
         &mut self,
         shape: &ir::TextShape,

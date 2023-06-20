@@ -42,6 +42,7 @@ pub struct FlatTextItem {
 pub struct FlatTextItemContent {
     pub content: ImmutStr,
     pub glyphs: Arc<[(Abs, Abs, AbsoulteRef)]>,
+    pub span_id: u64,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -221,8 +222,13 @@ impl ModuleBuilder {
                     .collect::<Arc<_>>();
                 let shape = text.shape.clone();
                 let content = text.content.content.clone();
+                let span_id = text.content.span_id;
                 FlatSvgItem::Text(FlatTextItem {
-                    content: Arc::new(FlatTextItemContent { content, glyphs }),
+                    content: Arc::new(FlatTextItemContent {
+                        content,
+                        glyphs,
+                        span_id,
+                    }),
                     shape,
                 })
             }

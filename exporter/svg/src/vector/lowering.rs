@@ -11,6 +11,7 @@ use typst::image::Image;
 
 use ttf_parser::OutlineBuilder;
 use typst::model::Introspector;
+use typst::syntax::Span;
 
 use super::{ir, GlyphItem, ImageGlyphItem, OutlineGlyphItem, Scalar, SvgItem, TransformItem};
 use crate::{
@@ -160,10 +161,20 @@ impl LowerBuilder {
             pixel_per_unit / units_per_em
         };
 
+        let span_id = text
+            .glyphs
+            .iter()
+            .find(|g| g.span.0 != Span::detached())
+            .map(|g| g.span.0)
+            .unwrap_or(Span::detached());
+
+        let span_id = hack_span_id_to_u64(span_id);
+
         SvgItem::Text(ir::TextItem {
             content: Arc::new(ir::TextItemContent {
                 content: glyph_chars.into(),
                 glyphs,
+                span_id,
             }),
             shape: Arc::new(ir::TextShape {
                 // dir: text.lang.dir(),
@@ -474,4 +485,9 @@ fn lower_image(image: &Image, size: Size) -> SvgItem {
         image: Arc::new(image.clone().into()),
         size: size.into(),
     })
+}
+
+fn hack_span_id_to_u64(span_id: Span) -> u64 {
+    const SPAN_BITS: u64 = 48;
+    ((span_id.source().as_u16() as u64) << SPAN_BITS) | span_id.number()
 }
