@@ -3,7 +3,7 @@ pub(crate) mod utils;
 
 use typst_ts_core::error::prelude::*;
 use typst_ts_core::font::FontResolverImpl;
-use typst_ts_svg_exporter::{LayoutElem, SvgExporter};
+use typst_ts_svg_exporter::{DefaultExportFeature, LayoutElem, SvgExporter};
 use wasm_bindgen::prelude::*;
 
 pub(crate) mod parser;
@@ -74,6 +74,7 @@ impl TypstRenderer {
         session: &mut SvgSession,
         root: web_sys::HtmlDivElement,
     ) -> ZResult<()> {
+        type UsingExporter = SvgExporter<DefaultExportFeature>;
         let layout = session.doc.layouts.first().unwrap();
 
         let cw = root.client_width() as f32;
@@ -97,7 +98,7 @@ impl TypstRenderer {
                 return Ok(());
             }
 
-            let svg = SvgExporter::render_flat_svg(&session.doc.module, &layout.1);
+            let svg = UsingExporter::render_flat_svg(&session.doc.module, &layout.1);
             root.set_inner_html(&svg);
             let window = web_sys::window().unwrap();
             if let Ok(proc) = js_sys::Reflect::get(&window, &JsValue::from_str("typstProcessSvg")) {
