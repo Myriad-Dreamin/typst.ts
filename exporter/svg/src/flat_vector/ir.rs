@@ -7,8 +7,8 @@ use crate::{
     geom::{Abs, Point, Size},
     ir::{
         AbsoulteRef, DefId, Fingerprint, FingerprintBuilder, GlyphItem, GlyphMapping,
-        ImageGlyphItem, ImageItem, ImmutStr, LinkItem, OutlineGlyphItem, PathItem, SvgItem,
-        TextShape, TransformItem,
+        GlyphPackBuilder, ImageGlyphItem, ImageItem, ImmutStr, LinkItem, OutlineGlyphItem,
+        PathItem, SvgItem, TextShape, TransformItem,
     },
 };
 
@@ -172,27 +172,25 @@ pub struct ModuleBuilder {
 
 impl ModuleBuilder {
     pub fn finalize_ref(&self) -> (Module, GlyphMapping) {
-        let mut glyphs = self.glyphs.clone().into_iter().collect::<Vec<_>>();
-        glyphs.sort_by(|(_, a), (_, b)| a.id.0.cmp(&b.id.0));
-        (
-            Module {
-                glyphs: glyphs.into_iter().map(|(a, b)| (b, a)).collect(),
-                item_pack: ItemPack(self.items.clone()),
-            },
-            self.glyphs.clone(),
-        )
+        let glyphs = GlyphPackBuilder::finalize(self.glyphs.clone());
+
+        let module = Module {
+            glyphs,
+            item_pack: ItemPack(self.items.clone()),
+        };
+
+        (module, self.glyphs.clone())
     }
 
     pub fn finalize(self) -> (Module, GlyphMapping) {
-        let mut glyphs = self.glyphs.clone().into_iter().collect::<Vec<_>>();
-        glyphs.sort_by(|(_, a), (_, b)| a.id.0.cmp(&b.id.0));
-        (
-            Module {
-                glyphs: glyphs.into_iter().map(|(a, b)| (b, a)).collect(),
-                item_pack: ItemPack(self.items),
-            },
-            self.glyphs,
-        )
+        let glyphs = GlyphPackBuilder::finalize(self.glyphs.clone());
+
+        let module = Module {
+            glyphs,
+            item_pack: ItemPack(self.items),
+        };
+
+        (module, self.glyphs)
     }
 
     pub fn build_glyph(&mut self, glyph: &GlyphItem) -> AbsoulteRef {
