@@ -1,5 +1,5 @@
 use std::{
-    collections::{hash_map::RandomState, HashSet},
+    collections::{hash_map::RandomState, HashMap, HashSet},
     sync::Arc,
 };
 
@@ -79,12 +79,21 @@ impl SvgExporter {
         let mut svg = Vec::<SvgText>::new();
         svg.push(SvgText::Plain(Self::header(&next.pages)));
         let mut svg_body = vec![];
-        let new_glyphs = prev
-            .module
-            .glyphs
-            .iter()
-            .filter(|(_, g)| !used_glyphs.contains_key(g));
-        let new_glyphs = t.render_glyphs(new_glyphs, true);
+
+        let new_glyphs = {
+            let prev_glyphs = prev
+                .module
+                .glyphs
+                .iter()
+                .cloned()
+                .map(|(x, y)| (y, x))
+                .collect::<HashMap<_, _>>();
+            let new_glyphs = used_glyphs
+                .iter()
+                .filter(|(g, _)| !prev_glyphs.contains_key(g))
+                .map(|(x, y)| (y, x));
+            t.render_glyphs(new_glyphs, true)
+        };
 
         let render_context = IncrementalRenderContext { prev, next };
         t.render_diff(&render_context, &mut svg_body);
@@ -96,7 +105,8 @@ impl SvgExporter {
 
         // attach the glyph defs, clip paths, and style defs
         svg.push("<defs>".into());
-        svg.push("<g>".into());
+
+        svg.push(r#"<g id="glyph">"#.into());
         svg.extend(new_glyphs);
         svg.push("</g>".into());
 

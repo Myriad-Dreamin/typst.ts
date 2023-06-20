@@ -196,7 +196,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     }
 
     /// Render glyphs into the svg_body.
-    fn render_glyphs<'a, I: Iterator<Item = &'a (AbsoulteRef, GlyphItem)>>(
+    fn render_glyphs<'a, I: Iterator<Item = (&'a AbsoulteRef, &'a GlyphItem)>>(
         &mut self,
         glyphs: I,
         use_stable_glyph_id: bool,
@@ -403,7 +403,7 @@ impl SvgExporter {
             "</style>".into(),
             // attach the glyph defs, clip paths, and style defs
             "<defs>".into(),
-            "<g>".into(),
+            r#"<g id="glyph">"#.into(),
         ];
         svg.extend(glyphs);
         svg.push("</g>".into());
@@ -449,7 +449,7 @@ impl SvgExporter {
 
         // render the glyphs collected from the pages
         let glyphs = GlyphPackBuilder::finalize(std::mem::take(&mut t.glyph_defs));
-        let glyphs = t.render_glyphs(glyphs.iter(), false);
+        let glyphs = t.render_glyphs(glyphs.iter().map(|(x, y)| (x, y)), false);
 
         // template SVG
         Self::render_svg_template(t, header, svg_body, glyphs.into_iter())
