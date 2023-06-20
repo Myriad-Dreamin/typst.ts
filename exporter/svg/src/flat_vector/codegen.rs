@@ -13,12 +13,13 @@ use crate::{
 /// See [`FlatGroupContext`].
 impl<'s, 'm, 't, Feat: ExportFeature> FlatGroupContext for SvgTextBuilder<'s, 'm, 't, Feat> {
     fn render_item_ref_at(&mut self, pos: crate::ir::Point, item: &AbsoulteRef) {
+        let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
+
+        let sub_content = self.t.render_flat_item(item);
+
         self.content.push(SvgText::Content(Arc::new(SvgTextNode {
-            attributes: vec![(
-                "transform",
-                format!("translate({:.3},{:.3})", pos.x.0, pos.y.0),
-            )],
-            content: vec![SvgText::Content(self.t.render_flat_item(item))],
+            attributes: vec![("transform", translate_attr)],
+            content: vec![SvgText::Content(sub_content)],
         })));
     }
 

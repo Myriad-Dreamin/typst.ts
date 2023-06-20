@@ -368,9 +368,15 @@ pub struct OutlineGlyphItem {
 /// A glyph item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum GlyphItem {
-    // Failed,
+    /// Raw glyph representation.
+    /// The raw glyphs is generated in lowering stage.
     Raw(Font, GlyphId),
+
+    /// Glyphs in SVG or Bitmap format.
     Image(Arc<ImageGlyphItem>),
+
+    /// Glyphs in path instructions, known as the "d" attribute of a
+    /// `<path/>` element.
     Outline(Arc<OutlineGlyphItem>),
 }
 
@@ -428,12 +434,12 @@ pub enum StyleNs {
     Fill,
 }
 
+/// Intermediate representation of an incompleted glyph pack.
 pub type GlyphMapping = HashMap<GlyphItem, AbsoulteRef>;
 
 /// A finished pack that stores all the glyph items.
 pub type GlyphPack = Vec<(AbsoulteRef, GlyphItem)>;
 
-/// Intermediate representation of an incompleted glyph pack.
 #[derive(Default)]
 pub struct GlyphPackBuilder;
 

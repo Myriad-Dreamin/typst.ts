@@ -52,6 +52,9 @@ pub trait ExportFeature {
 
     /// Whether to use stable glyph id.
     /// If enabled, the glyph id will be stable across different svg files.
+    ///
+    /// A stable glyph id can help incremental font transfer (IFT).
+    /// However, it is also permitted unstable if you will not use IFT.
     const USE_STABLE_GLYPH_ID: bool;
 
     /// Whether to include js for interactive and responsive actions.
