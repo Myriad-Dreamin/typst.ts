@@ -44,6 +44,8 @@ impl From<&str> for SvgText {
 }
 
 /// A generated text node in SVG/XML format.
+/// The node is exactly the same as `<g>` tag.
+/// It is formatted as `<g attr.keys()..="attr.values()..">content..</g>`.
 pub struct SvgTextNode {
     pub attributes: Vec<(&'static str, String)>,
     pub content: Vec<SvgText>,
@@ -103,10 +105,13 @@ impl<'s, 'm, 't, Feat: ExportFeature> From<SvgTextBuilder<'s, 'm, 't, Feat>> for
 
 /// Internal methods for [`SvgTextBuilder`].
 impl<'s, 'm, 't, Feat: ExportFeature> SvgTextBuilder<'s, 'm, 't, Feat> {
+    /// attach shape of the text to the node using css rules.
     pub fn with_text_shape(&mut self, shape: &ir::TextShape) {
+        // shorten black fill
         let fill = if shape.fill.as_ref() == "#000" {
             r#"tb"#.to_owned()
         } else {
+            // insert fill definition
             let fill_id = format!(r#"f{}"#, shape.fill.trim_start_matches('#'));
             let fill_key = (StyleNs::Fill, shape.fill.clone());
             self.t.style_defs.entry(fill_key).or_insert_with(|| {
@@ -120,17 +125,22 @@ impl<'s, 'm, 't, Feat: ExportFeature> SvgTextBuilder<'s, 'm, 't, Feat> {
             .push(("class", format!("typst-txt {}", fill)));
     }
 
+    /// Assuming the glyphs has already been in the defs, render it by reference.
     pub fn render_glyph_ref_inner(&mut self, pos: Scalar, glyph: &AbsoulteRef) {
-        let adjusted = (pos.0 * 2.).round() / 2.;
+        let adjusted_offset = (pos.0 * 2.).round() / 2.;
 
+        // A stable glyph id can help incremental font transfer (IFT).
+        // However, it is permitted unstable if you will not use IFT.
         let glyph_id = if Feat::USE_STABLE_GLYPH_ID && self.t.use_stable_glyph_id {
             glyph.as_svg_id("g")
         } else {
             glyph.as_unstable_svg_id("g")
         };
-        let e = format!(r##"<use style="--o: {}" href="#{}"/>"##, adjusted, glyph_id);
 
-        self.content.push(SvgText::Plain(e));
+        self.content.push(SvgText::Plain(format!(
+            r##"<use style="--o: {}" href="#{}"/>"##,
+            adjusted_offset, glyph_id
+        )));
     }
 
     pub fn render_text_semantics_inner(
@@ -139,46 +149,32 @@ impl<'s, 'm, 't, Feat: ExportFeature> SvgTextBuilder<'s, 'm, 't, Feat> {
         content: &str,
         width: Scalar,
     ) {
-        // Scale is in pixel per em, but curve data is in font design units, so
-        // we have to divide by units per em.
+        // upem is the unit per em defined in the font.
+        // ppem is calcuated by the font size.
+        // > ppem = text_size / upem
         let upem = shape.upem.0;
         let ppem = shape.ppem.0;
-        let ascender = shape.ascender.0;
 
+        // because the text is already scaled by the font size,
+        // we need to scale it back to the original size.
+        let ascender = shape.ascender.0 / ppem;
         let width = width.0 / ppem;
-        #[cfg(feature = "fg_text_layout")]
-        if false {
-            let mut text_content = String::new();
-            if !text.content.content.is_empty() {
-                let per_width = width / text.content.content.len() as f32;
-                for (i, c) in text.content.content.chars().enumerate() {
-                    text_content.push_str(&format!(
-                        r#"<span style="left: {}px">"#,
-                        i as f32 * per_width,
-                    ));
-                    match c {
-                        '<' => text_content.push_str("&lt;"),
-                        '&' => text_content.push_str("&amp;"),
-                        ' ' => text_content.push_str("&nbsp;"),
-                        _ => text_content.push(c),
-                    }
-                    text_content.push_str(r#"</span>"#);
-                }
-            }
-        }
+
         let text_content = escape::escape_str::<TextContentDataEscapes>(content);
 
         // todo: investigate &nbsp;
-        let text_content = format!(
-            r#"<g transform="scale(1,-1)"><foreignObject x="0" y="-{}" width="{}" height="{}"><h5:div class="tsel" style="font-size: {}px">{}</h5:div></foreignObject></g>"#,
-            ascender / ppem,
-            width,
-            upem,
-            upem,
-            text_content
-        );
-
-        self.content.push(SvgText::Plain(text_content))
+        self.content.push(SvgText::Plain(format!(
+            concat!(
+                // apply a negative scaleY to flip the text, since a glyph in font is
+                // rendered upside down.
+                r#"<g transform="scale(1,-1)">"#,
+                r#"<foreignObject x="0" y="-{}" width="{}" height="{}">"#,
+                r#"<h5:div class="tsel" style="font-size: {}px">"#,
+                "{}",
+                r#"</h5:div></foreignObject></g>"#,
+            ),
+            ascender, width, upem, upem, text_content
+        )))
     }
 }
 
@@ -235,12 +231,13 @@ impl<'s, 'm, 't, Feat: ExportFeature> TransformContext for SvgTextBuilder<'s, 'm
 /// See [`GroupContext`].
 impl<'s, 'm, 't, Feat: ExportFeature> GroupContext for SvgTextBuilder<'s, 'm, 't, Feat> {
     fn render_item_at(&mut self, pos: ir::Point, item: &ir::SvgItem) {
+        let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
+
+        let sub_content = self.t.render_item(item);
+
         self.content.push(SvgText::Content(Arc::new(SvgTextNode {
-            attributes: vec![(
-                "transform",
-                format!("translate({:.3},{:.3})", pos.x.0, pos.y.0),
-            )],
-            content: vec![SvgText::Content(self.t.render_item(item))],
+            attributes: vec![("transform", translate_attr)],
+            content: vec![SvgText::Content(sub_content)],
         })));
     }
 

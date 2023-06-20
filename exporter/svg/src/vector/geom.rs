@@ -120,10 +120,13 @@ impl Hash for Scalar {
     }
 }
 
-pub type Size = Axes<Scalar>;
-// scalar in pt.
+/// length in pt.
 pub type Abs = Scalar;
+/// Size in (width pt, height pt)
+pub type Size = Axes<Abs>;
+/// Point in (x pt, y pt)
 pub type Point = Axes<Scalar>;
+/// Ratio within range [0, 1]
 pub type Ratio = Scalar;
 
 /// A container with a horizontal and vertical component.
