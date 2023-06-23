@@ -84,7 +84,6 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             glyphs.into_iter(),
         ))
     }
-
 }
 
 pub fn serialize_module(repr: Module) -> Vec<u8> {
