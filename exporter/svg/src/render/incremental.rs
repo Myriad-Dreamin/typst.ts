@@ -165,4 +165,12 @@ impl IncrementalSvgExporter {
         self.prev = Some(next);
         packet
     }
+
+    pub fn render_current(&mut self) -> Option<String> {
+        type IncrExporter = SvgExporter<IncrementalExportFeature>;
+        let doc = self.prev.as_ref()?;
+
+        let svg = IncrExporter::render_flat_svg(&doc.module, &doc.pages);
+        Some(["new,", &svg].concat())
+    }
 }
