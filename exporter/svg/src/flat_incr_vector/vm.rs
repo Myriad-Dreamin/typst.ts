@@ -110,12 +110,10 @@ pub trait FlatIncrRenderVm<'s, 'm> {
             for (pos, item_ref) in next.0.iter() {
                 if reusable.contains(item_ref) {
                     group_ctx.render_diff_reuse_item(item_ref);
+                } else if let Some((_, prev_item_re_)) = &unused_prev.pop_first() {
+                    group_ctx.render_diff_item_ref_at(*pos, item_ref, prev_item_re_)
                 } else {
-                    if let Some((_, prev_item_re_)) = &unused_prev.pop_first() {
-                        group_ctx.render_diff_item_ref_at(*pos, item_ref, prev_item_re_)
-                    } else {
-                        group_ctx.render_item_ref_at(*pos, item_ref)
-                    }
+                    group_ctx.render_item_ref_at(*pos, item_ref)
                 }
             }
         } else {

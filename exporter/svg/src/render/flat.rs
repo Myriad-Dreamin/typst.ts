@@ -85,13 +85,6 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         ))
     }
 
-    pub(crate) fn render_flat_doc_and_svg(output: Arc<Document>) -> (SvgDocument, String) {
-        // render the document
-        let (doc, _used_glyphs) = Self::svg_doc(&output);
-
-        let svg = Self::render_flat_svg(&doc.module, &doc.pages);
-        (doc, svg)
-    }
 }
 
 pub fn serialize_module(repr: Module) -> Vec<u8> {
