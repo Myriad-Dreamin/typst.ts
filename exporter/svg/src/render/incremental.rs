@@ -6,10 +6,14 @@ use std::{
 use typst::doc::Document;
 
 use crate::{
-    flat_vector::{FlatRenderVm, SvgDocument},
+    flat_incr_vector::FlatIncrRenderVm,
+    flat_vector::{FlatRenderVm, ItemPack, SvgDocument},
     ir::AbsoulteRef,
-    vector::codegen::{SvgText, SvgTextNode},
-    ExportFeature, SvgExporter, SvgTask,
+    vector::{
+        codegen::{SvgText, SvgTextNode},
+        lowering::LowerBuilder,
+    },
+    ExportFeature, Module, ModuleBuilder, SvgExporter, SvgTask,
 };
 
 /// The feature set which is used for exporting incremental rendered svg.
@@ -37,10 +41,28 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 
         let reusable: HashSet<AbsoulteRef, RandomState> =
             HashSet::from_iter(ctx.prev.pages.iter().map(|e| e.0.clone()));
+        let mut unused_prev: std::collections::BTreeMap<usize, AbsoulteRef> = ctx
+            .prev
+            .pages
+            .iter()
+            .map(|e| e.0.clone())
+            .enumerate()
+            .collect::<_>();
+
+        for (entry, _) in ctx.next.pages.iter() {
+            if reusable.contains(entry) {
+                let remove_key = unused_prev.iter().find(|(_, v)| *v == entry).unwrap().0;
+                unused_prev.remove(&remove_key.clone());
+            }
+        }
+
+        println!("reusable: {:?}", reusable);
+        println!("unused_prev: {:?}", unused_prev);
 
         for (idx, (entry, size)) in ctx.next.pages.iter().enumerate() {
             let size = Self::page_size(*size);
             if reusable.contains(entry) {
+                println!("reuse page: {} {:?}", idx, entry);
                 svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
                     attributes: vec![
                         ("transform", format!("translate(0, {})", acc_height)),
@@ -56,7 +78,13 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                 continue;
             }
 
-            let item = render_task.render_flat_item(entry);
+            let item = if let Some(prev_entry) = unused_prev.pop_first().map(|(_, v)| v) {
+                println!("diff page: {} {:?} {:?}", idx, entry, prev_entry);
+                render_task.render_diff_item(entry, &prev_entry)
+            } else {
+                println!("rebuild page: {} {:?}", idx, entry);
+                render_task.render_flat_item(entry)
+            };
 
             let mut attributes = vec![
                 ("transform", format!("translate(0, {})", acc_height)),
@@ -79,17 +107,43 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     }
 }
 
-impl<Feat: ExportFeature> SvgExporter<Feat> {
-    fn render_svg_incremental(prev: SvgDocument, output: Arc<Document>) -> (SvgDocument, String) {
-        let instant = std::time::Instant::now();
+#[derive(Default)]
+pub struct IncrementalSvgExporter {
+    prev: Option<SvgDocument>,
+    module_builder: ModuleBuilder,
+}
+
+impl IncrementalSvgExporter {
+    fn render_svg_incremental(
+        &mut self,
+        prev: SvgDocument,
+        output: Arc<Document>,
+    ) -> (SvgDocument, String) {
+        type IncrExporter = SvgExporter<IncrementalExportFeature>;
+
+        let instant: std::time::Instant = std::time::Instant::now();
 
         // render the document
         let mut t = SvgTask::<IncrementalExportFeature>::default();
 
-        let (next, used_glyphs) = Self::svg_doc(&output);
+        let (next, used_glyphs) = {
+            let mut lower_builder = LowerBuilder::new(&output);
+            let builder = &mut self.module_builder;
+            let pages = output
+                .pages
+                .iter()
+                .map(|p| {
+                    let abs_ref = builder.build(lower_builder.lower(p));
+                    (abs_ref, p.size().into())
+                })
+                .collect::<Vec<_>>();
+            let (module, glyph_mapping) = builder.finalize_ref();
+
+            (SvgDocument { pages, module }, glyph_mapping)
+        };
 
         let mut svg = Vec::<SvgText>::new();
-        svg.push(SvgText::Plain(Self::header(&next.pages)));
+        svg.push(SvgText::Plain(IncrExporter::header(&next.pages)));
         let mut svg_body = vec![];
 
         let new_glyphs = {
@@ -117,10 +171,10 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         svg.push("</defs>".into());
 
         svg.push(r#"<defs id="clip-path">"#.into());
-        Self::clip_paths(t.clip_paths, &mut svg);
+        IncrExporter::clip_paths(t.clip_paths, &mut svg);
         svg.push("</defs>".into());
 
-        Self::style_defs(t.style_defs, &mut svg);
+        IncrExporter::style_defs(t.style_defs, &mut svg);
 
         // body
         svg.append(&mut svg_body);
@@ -140,24 +194,24 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         }
         (svg_doc, string_io)
     }
-}
 
-#[derive(Default)]
-pub struct IncrementalSvgExporter {
-    prev: Option<SvgDocument>,
-}
-
-impl IncrementalSvgExporter {
     pub fn render(&mut self, output: Arc<Document>) -> String {
-        type IncrExporter = SvgExporter<IncrementalExportFeature>;
-
         let (next, packet) = match self.prev.take() {
             Some(prev) => {
-                let (next, svg) = IncrExporter::render_svg_incremental(prev, output);
+                let (next, svg) = self.render_svg_incremental(prev, output);
                 (next, ["diff-v0,", &svg].concat())
             }
             None => {
-                let (next, svg) = IncrExporter::render_flat_doc_and_svg(output);
+                let (next, svg) = self.render_svg_incremental(
+                    SvgDocument {
+                        module: Module {
+                            glyphs: vec![],
+                            item_pack: ItemPack::default(),
+                        },
+                        pages: vec![],
+                    },
+                    output,
+                );
                 (next, ["new,", &svg].concat())
             }
         };

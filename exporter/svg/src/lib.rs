@@ -12,6 +12,8 @@ use typst::doc::Document;
 pub(crate) mod escape;
 #[cfg(feature = "flat-vector")]
 pub(crate) mod flat_vector;
+#[cfg(feature = "flat-vector")]
+pub(crate) mod flat_incr_vector;
 pub(crate) mod font;
 pub(crate) mod hash;
 pub(crate) mod path2d;

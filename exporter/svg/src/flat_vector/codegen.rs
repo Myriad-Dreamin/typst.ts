@@ -18,7 +18,10 @@ impl<'s, 'm, 't, Feat: ExportFeature> FlatGroupContext for SvgTextBuilder<'s, 'm
         let sub_content = self.t.render_flat_item(item);
 
         self.content.push(SvgText::Content(Arc::new(SvgTextNode {
-            attributes: vec![("transform", translate_attr)],
+            attributes: vec![
+                ("transform", translate_attr),
+                ("data-tid", item.as_svg_id("p")),
+            ],
             content: vec![SvgText::Content(sub_content)],
         })));
     }
