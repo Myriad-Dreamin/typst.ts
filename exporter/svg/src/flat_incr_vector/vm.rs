@@ -49,19 +49,15 @@ pub trait FlatIncrRenderVm<'s, 'm> {
         let prev_item = self.get_item(prev_abs_ref);
 
         let mut group_ctx = self.start_flat_group(next_abs_ref);
-        
+
         match next_item.deref() {
             ir::FlatSvgItem::Group(group) => {
-                let mut group_ctx = group_ctx
-                    .with_reuse(prev_abs_ref)
-                    .with_frame(group);
+                let mut group_ctx = group_ctx.with_reuse(prev_abs_ref).with_frame(group);
                 Self::render_group_ref(&mut group_ctx, prev_item, group);
                 group_ctx
             }
             ir::FlatSvgItem::Item(transformed) => {
-                let mut group_ctx = group_ctx
-                    .with_reuse(prev_abs_ref)
-                    .transform(&transformed.0);
+                let mut group_ctx = group_ctx.with_reuse(prev_abs_ref).transform(&transformed.0);
                 Self::render_diff_transformed_ref(&mut group_ctx, prev_item, transformed);
                 group_ctx
             }
@@ -84,7 +80,8 @@ pub trait FlatIncrRenderVm<'s, 'm> {
             ir::FlatSvgItem::None => {
                 panic!("FlatRenderVm.RenderFrame.UnknownItem {:?}", next_item)
             }
-        }.into()
+        }
+        .into()
     }
 
     /// Render a frame group into underlying context.
@@ -93,7 +90,6 @@ pub trait FlatIncrRenderVm<'s, 'm> {
         prev_item_: Option<&ir::FlatSvgItem>,
         next: &ir::GroupRef,
     ) {
-
         if let Some(ir::FlatSvgItem::Group(prev_group)) = prev_item_ {
             let mut unused_prev: BTreeMap<usize, AbsoulteRef> = prev_group
                 .0
@@ -135,7 +131,6 @@ pub trait FlatIncrRenderVm<'s, 'm> {
         prev_item_: Option<&ir::FlatSvgItem>,
         transformed: &ir::TransformedRef,
     ) {
-
         let child_ref = &transformed.1;
         if matches!(prev_item_, Some(ir::FlatSvgItem::Item(ir::TransformedRef(_item, prev_ref)))
             if prev_ref == child_ref)
@@ -149,10 +144,7 @@ pub trait FlatIncrRenderVm<'s, 'm> {
     }
 
     /// Render a text into the underlying context.
-    fn render_flat_text(
-        group_ctx: Self::Group,
-        text: &ir::FlatTextItem,
-    ) -> Self::Group {
+    fn render_flat_text(group_ctx: Self::Group, text: &ir::FlatTextItem) -> Self::Group {
         let ppem = Scalar(text.shape.ppem.0);
 
         let mut group_ctx = group_ctx.transform_scale(ppem, -ppem);

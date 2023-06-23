@@ -144,7 +144,12 @@ pub struct AbsoulteRef {
 
 impl fmt::Debug for AbsoulteRef {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "<AbsRef: {}{}>", self.fingerprint.as_svg_id(""), self.id.0)
+        write!(
+            f,
+            "<AbsRef: {}{}>",
+            self.fingerprint.as_svg_id(""),
+            self.id.0
+        )
     }
 }
 

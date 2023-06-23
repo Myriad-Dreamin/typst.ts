@@ -2,15 +2,20 @@ use std::sync::Arc;
 
 use super::vm::{FlatIncrGroupContext, FlatIncrRenderVm};
 use crate::{
+    flat_vector::ir,
     ir::AbsoulteRef,
     vector::{SvgText, SvgTextBuilder, SvgTextNode},
-    flat_vector::ir,
     ExportFeature,
 };
 
 /// See [`FlatGroupContext`].
 impl<'s, 'm, 't, Feat: ExportFeature> FlatIncrGroupContext for SvgTextBuilder<'s, 'm, 't, Feat> {
-    fn render_diff_item_ref_at(&mut self, pos: crate::ir::Point, item: &AbsoulteRef, prev_item: &AbsoulteRef) {
+    fn render_diff_item_ref_at(
+        &mut self,
+        pos: crate::ir::Point,
+        item: &AbsoulteRef,
+        prev_item: &AbsoulteRef,
+    ) {
         let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
 
         let sub_content = self.t.render_diff_item(item, prev_item);
@@ -28,9 +33,9 @@ impl<'s, 'm, 't, Feat: ExportFeature> FlatIncrGroupContext for SvgTextBuilder<'s
     fn render_diff_reuse_item(&mut self, item_ref: &AbsoulteRef) {
         self.content.push(SvgText::Content(Arc::new(SvgTextNode {
             attributes: vec![
-              ("data-tid", item_ref.as_svg_id("p")),
-              ("data-reuse-from", item_ref.as_svg_id("p")),
-          ],
+                ("data-tid", item_ref.as_svg_id("p")),
+                ("data-reuse-from", item_ref.as_svg_id("p")),
+            ],
             content: vec![],
         })));
     }
@@ -50,5 +55,4 @@ impl<'s, 'm, 't, Feat: ExportFeature> FlatIncrGroupContext for SvgTextBuilder<'s
         self.attributes.push(("data-reuse-from", v.as_svg_id("g")));
         self
     }
-
 }
