@@ -18,7 +18,12 @@ impl<'s, 'm, 't, Feat: ExportFeature> FlatIncrGroupContext for SvgTextBuilder<'s
     ) {
         let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
 
-        let sub_content = self.t.render_diff_item(item, prev_item);
+        let mut content = vec![];
+
+        if item != prev_item {
+            let sub_content = self.t.render_diff_item(item, prev_item);
+            content.push(SvgText::Content(sub_content));
+        }
 
         self.content.push(SvgText::Content(Arc::new(SvgTextNode {
             attributes: vec![
@@ -26,7 +31,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> FlatIncrGroupContext for SvgTextBuilder<'s
                 ("data-tid", item.as_svg_id("p")),
                 ("data-reuse-from", prev_item.as_svg_id("p")),
             ],
-            content: vec![SvgText::Content(sub_content)],
+            content,
         })));
     }
 
