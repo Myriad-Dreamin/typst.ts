@@ -1,3 +1,4 @@
+use core::fmt;
 use std::any::Any;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -131,7 +132,7 @@ pub struct DefId(pub u64);
 /// A stable absolute reference.
 /// The fingerprint is used to identify the item and likely unique between different svg documents.
 /// The (local) def id is only unique within the svg document.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct AbsoulteRef {
@@ -139,6 +140,17 @@ pub struct AbsoulteRef {
     pub fingerprint: Fingerprint,
     /// The local def id of the item.
     pub id: DefId,
+}
+
+impl fmt::Debug for AbsoulteRef {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "<AbsRef: {}{}>",
+            self.fingerprint.as_svg_id(""),
+            self.id.0
+        )
+    }
 }
 
 impl Hash for AbsoulteRef {
