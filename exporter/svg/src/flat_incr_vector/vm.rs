@@ -102,8 +102,11 @@ pub trait FlatIncrRenderVm<'s, 'm> {
 
             for (_, item_ref) in next.0.iter() {
                 if reusable.contains(item_ref) {
-                    let remove_key = unused_prev.iter().find(|(_, v)| *v == item_ref).unwrap().0;
-                    unused_prev.remove(&remove_key.clone());
+                    let remove_key = unused_prev.iter().find(|(_, v)| *v == item_ref);
+                    if remove_key.is_none() {
+                        continue;
+                    }
+                    unused_prev.remove(&remove_key.unwrap().0.clone());
                 }
             }
 
