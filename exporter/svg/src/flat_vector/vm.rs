@@ -145,7 +145,7 @@ impl<'s, 'm: 's, 't: 's, Feat: ExportFeature + 's> FlatRenderVm<'s, 'm>
 
     fn start_flat_frame(&'s mut self, value: &AbsoulteRef, _group: &ir::GroupRef) -> Self::Group {
         let mut g = self.start_flat_group(value);
-        g.attributes.push(("class", "group".to_owned()));
+        g.attributes.push(("class", "typst-group".to_owned()));
         g
     }
 

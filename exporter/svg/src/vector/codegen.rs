@@ -123,7 +123,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> SvgTextBuilder<'s, 'm, 't, Feat> {
         };
 
         self.attributes
-            .push(("class", format!("typst-txt {}", fill)));
+            .push(("class", format!("typst-text {}", fill)));
     }
 
     #[inline]
