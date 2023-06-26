@@ -282,6 +282,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> GroupContext for SvgTextBuilder<'s, 'm, 't
         self.content.push(SvgText::Plain(render_image(
             &image_item.image,
             image_item.size,
+            true,
         )))
     }
     fn render_semantic_text(&mut self, text: &ir::TextItem, width: Scalar) {
@@ -296,7 +297,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> GroupContext for SvgTextBuilder<'s, 'm, 't
 /// Render a [`PathItem`] into svg text.
 #[comemo::memoize]
 fn render_path(path: &PathItem) -> String {
-    let mut p = vec!["<path ".to_owned()];
+    let mut p = vec![r#"<path class="typst-shape" "#.to_owned()];
     p.push(format!(r#"d="{}" "#, path.d));
     let mut fill_color = "none";
     for style in &path.styles {
@@ -340,15 +341,22 @@ fn render_path(path: &PathItem) -> String {
 }
 
 /// Render a raster or SVG image into svg text.
+/// is_image_elem: whether the image is an `<image>` element (instead of an image glyph).
 // todo: error handling
-pub fn render_image(image: &Image, size: Size) -> String {
+pub fn render_image(image: &Image, size: Size, is_image_elem: bool) -> String {
     let image_url = rasterize_embedded_image_url(image).unwrap();
 
     let w = size.x.0;
     let h = size.y.0;
+
+    let cls = if is_image_elem {
+        r#" class="typst-image""#
+    } else {
+        ""
+    };
     format!(
-        r#"<image x="0" y="0" width="{}" height="{}" style="fill" xlink:href="{}" preserveAspectRatio="none" />"#,
-        w, h, image_url
+        r#"<image{} x="0" y="0" width="{}" height="{}" style="fill" xlink:href="{}" preserveAspectRatio="none" />"#,
+        cls, w, h, image_url
     )
 }
 

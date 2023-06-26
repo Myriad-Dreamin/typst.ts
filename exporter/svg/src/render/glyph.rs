@@ -48,7 +48,7 @@ impl GlyphRenderTask {
 
     /// Render an image glyph into the svg text.
     fn render_image_glyph(glyph_id: &str, ig: &ImageGlyphItem) -> Option<String> {
-        let img = render_image(&ig.image.image, ig.image.size);
+        let img = render_image(&ig.image.image, ig.image.size, false);
 
         let ts = ig.ts.to_css();
         let symbol_def = format!(

@@ -49,8 +49,12 @@ impl LowerBuilder {
             let item = match item {
                 FrameItem::Group(group) => self.lower_group(group),
                 FrameItem::Text(text) => Self::lower_text(text),
-                FrameItem::Shape(shape, _) => Self::lower_shape(shape),
-                FrameItem::Image(image, size, _) => lower_image(image, *size),
+                FrameItem::Shape(shape, span_id) => {
+                    SvgItem::Path((Self::lower_shape(shape), hack_span_id_to_u64(span_id)))
+                }
+                FrameItem::Image(image, size, span_id) => {
+                    SvgItem::Image((lower_image(image, *size), hack_span_id_to_u64(span_id)))
+                }
                 FrameItem::Meta(meta, size) => match meta {
                     Meta::Link(lnk) => match lnk {
                         Destination::Url(url) => self.lower_link(url, *size),
@@ -168,7 +172,7 @@ impl LowerBuilder {
             .map(|g| g.span.0)
             .unwrap_or(Span::detached());
 
-        let span_id = hack_span_id_to_u64(span_id);
+        let span_id = hack_span_id_to_u64(&span_id);
 
         SvgItem::Text(ir::TextItem {
             content: Arc::new(ir::TextItemContent {
@@ -188,7 +192,7 @@ impl LowerBuilder {
 
     /// Lower a geometrical shape into svg item.
     #[comemo::memoize]
-    pub(super) fn lower_shape(shape: &Shape) -> SvgItem {
+    pub(super) fn lower_shape(shape: &Shape) -> ir::PathItem {
         let mut builder = SvgPath2DBuilder(String::new());
 
         // to ensure that our shape focus on the original point
@@ -278,7 +282,7 @@ impl LowerBuilder {
             styles.push(ir::PathStyle::Stroke(color.to_css().into()));
         }
 
-        SvgItem::Path(ir::PathItem { d, styles })
+        ir::PathItem { d, styles }
     }
 }
 
@@ -480,14 +484,14 @@ fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<typs
 
 /// Lower a raster or SVG image into svg item.
 #[comemo::memoize]
-fn lower_image(image: &Image, size: Size) -> SvgItem {
-    SvgItem::Image(ir::ImageItem {
+fn lower_image(image: &Image, size: Size) -> ir::ImageItem {
+    ir::ImageItem {
         image: Arc::new(image.clone().into()),
         size: size.into(),
-    })
+    }
 }
 
-fn hack_span_id_to_u64(span_id: Span) -> u64 {
+fn hack_span_id_to_u64(span_id: &Span) -> u64 {
     const SPAN_BITS: u64 = 48;
     ((span_id.source().as_u16() as u64) << SPAN_BITS) | span_id.number()
 }

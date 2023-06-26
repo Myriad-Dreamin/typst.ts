@@ -186,12 +186,14 @@ impl AbsoulteRef {
     }
 }
 
+pub type SpanId = u64;
+
 /// A Svg item that is specialized for representing [`typst::doc::Document`] or its subtypes.
 #[derive(Debug, Clone)]
 pub enum SvgItem {
-    Image(ImageItem),
+    Image((ImageItem, SpanId)),
     Link(LinkItem),
-    Path(PathItem),
+    Path((PathItem, SpanId)),
     Text(TextItem),
     Transformed(TransformedItem),
     Group(GroupItem),

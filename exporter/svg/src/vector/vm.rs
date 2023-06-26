@@ -79,7 +79,7 @@ pub trait RenderVm<'s> {
             ir::SvgItem::Group(group) => self.render_group(group),
             ir::SvgItem::Transformed(transformed) => self.render_transformed(transformed),
             ir::SvgItem::Text(text) => self.render_text(text),
-            ir::SvgItem::Path(path) => {
+            ir::SvgItem::Path((path, ..)) => {
                 let mut g = self.start_group();
                 g.render_path(path);
                 g.into()
@@ -89,7 +89,7 @@ pub trait RenderVm<'s> {
                 g.render_link(link);
                 g.into()
             }
-            ir::SvgItem::Image(image) => {
+            ir::SvgItem::Image((image, ..)) => {
                 let mut g = self.start_group();
                 g.render_image(image);
                 g.into()

@@ -135,6 +135,8 @@ impl fmt::Display for SrcMappingRepr<'_> {
             match e {
                 SourceMappingNode::Page(p) => write!(f, "p,{:x}", p)?,
                 SourceMappingNode::Text(t) => write!(f, "t,{:x}", t)?,
+                SourceMappingNode::Image(i) => write!(f, "i,{:x}", i)?,
+                SourceMappingNode::Shape(s) => write!(f, "s,{:x}", s)?,
                 SourceMappingNode::Group(refs) => {
                     f.write_str("g")?;
                     for r in refs.iter() {

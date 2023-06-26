@@ -8,7 +8,7 @@ use crate::{
     ir::{
         AbsoulteRef, DefId, Fingerprint, FingerprintBuilder, GlyphItem, GlyphMapping,
         GlyphPackBuilder, ImageGlyphItem, ImageItem, ImmutStr, LinkItem, OutlineGlyphItem,
-        PathItem, SvgItem, TextShape, TransformItem,
+        PathItem, SpanId, SvgItem, TextShape, TransformItem,
     },
 };
 
@@ -18,7 +18,9 @@ use crate::{
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub enum SourceMappingNode {
     Group(Arc<[u64]>),
-    Text(u64),
+    Text(SpanId),
+    Image(SpanId),
+    Shape(SpanId),
     Page(u64),
 }
 
@@ -235,8 +237,24 @@ impl ModuleBuilder {
 
     pub fn build(&mut self, item: SvgItem) -> AbsoulteRef {
         let resolved_item = match item {
-            SvgItem::Image(image) => FlatSvgItem::Image(image),
-            SvgItem::Path(path) => FlatSvgItem::Path(path),
+            SvgItem::Image((image, span_id)) => {
+                if self.should_attach_debug_info {
+                    let sm_id = self.source_mapping.len() as u64;
+                    self.source_mapping.push(SourceMappingNode::Image(span_id));
+                    self.source_mapping_buffer.push(sm_id);
+                }
+
+                FlatSvgItem::Image(image)
+            }
+            SvgItem::Path((path, span_id)) => {
+                if self.should_attach_debug_info {
+                    let sm_id = self.source_mapping.len() as u64;
+                    self.source_mapping.push(SourceMappingNode::Shape(span_id));
+                    self.source_mapping_buffer.push(sm_id);
+                }
+
+                FlatSvgItem::Path(path)
+            }
             SvgItem::Link(link) => FlatSvgItem::Link(link),
             SvgItem::Text(text) => {
                 let glyphs = text
