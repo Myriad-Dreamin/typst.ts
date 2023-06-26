@@ -17,6 +17,7 @@ pub struct DynamicLayoutSvgExporter {
 
 impl DynamicLayoutSvgExporter {
     pub fn render(&mut self, layout_width: typst::geom::Abs, output: Arc<Document>) {
+        self.builder.reset();
         let instant = std::time::Instant::now();
         // check the document
         let mut t = LowerBuilder::new(&output);

@@ -52,7 +52,6 @@ impl<'s, 'm, 't, Feat: ExportFeature> FlatIncrGroupContext for SvgTextBuilder<'s
 
     fn with_text(mut self, text: &ir::FlatTextItem) -> Self {
         self.with_text_shape(&text.shape);
-        self.attach_debug_info(text.content.span_id);
         self
     }
 

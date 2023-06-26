@@ -1,3 +1,4 @@
+use core::fmt;
 use std::{
     collections::{hash_map::RandomState, HashMap, HashSet},
     sync::Arc,
@@ -7,7 +8,7 @@ use typst::doc::Document;
 
 use crate::{
     flat_incr_vector::FlatIncrRenderVm,
-    flat_vector::{FlatRenderVm, ItemPack, SvgDocument},
+    flat_vector::{FlatRenderVm, ItemPack, SourceMappingNode, SvgDocument},
     ir::AbsoulteRef,
     vector::{
         codegen::{SvgText, SvgTextNode},
@@ -113,15 +114,70 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 pub struct IncrementalSvgExporter {
     prev: Option<SvgDocument>,
     module_builder: ModuleBuilder,
+    page_source_mapping: Vec<SourceMappingNode>,
+
+    should_attach_debug_info: bool,
+}
+
+struct SrcMappingRepr<'a> {
+    mapping: &'a [SourceMappingNode],
+}
+
+impl fmt::Display for SrcMappingRepr<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut st = false;
+        for e in self.mapping {
+            if st {
+                write!(f, "|")?;
+            } else {
+                st = true;
+            }
+            match e {
+                SourceMappingNode::Page(p) => write!(f, "p,{:x}", p)?,
+                SourceMappingNode::Text(t) => write!(f, "t,{:x}", t)?,
+                SourceMappingNode::Group(refs) => {
+                    f.write_str("g")?;
+                    for r in refs.iter() {
+                        write!(f, ",{:x}", r)?;
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+fn repr_src_mapping(mapping: &[SourceMappingNode]) -> SrcMappingRepr<'_> {
+    SrcMappingRepr { mapping }
 }
 
 impl IncrementalSvgExporter {
+    pub fn set_should_attach_debug_info(&mut self, should_attach_debug_info: bool) {
+        self.module_builder.should_attach_debug_info = should_attach_debug_info;
+        self.should_attach_debug_info = should_attach_debug_info;
+    }
+
+    fn render_source_mapping(&self) -> String {
+        if !self.should_attach_debug_info {
+            return String::new();
+        }
+        let entire = &self.module_builder.source_mapping;
+        let t = &self.page_source_mapping;
+        format!(
+            r#"<div class="typst-source-mapping" data-pages="{}" data-source-mapping="{}">"#,
+            repr_src_mapping(t),
+            repr_src_mapping(entire)
+        )
+    }
+
     fn render_svg_incremental(
         &mut self,
         prev: SvgDocument,
         output: Arc<Document>,
     ) -> (SvgDocument, String) {
         type IncrExporter = SvgExporter<IncrementalExportFeature>;
+        self.page_source_mapping.clear();
 
         let instant: std::time::Instant = std::time::Instant::now();
 
@@ -136,6 +192,11 @@ impl IncrementalSvgExporter {
                 .iter()
                 .map(|p| {
                     let abs_ref = builder.build(lower_builder.lower(p));
+                    if self.should_attach_debug_info {
+                        self.page_source_mapping.push(SourceMappingNode::Page(
+                            (builder.source_mapping.len() - 1) as u64,
+                        ));
+                    }
                     (abs_ref, p.size().into())
                 })
                 .collect::<Vec<_>>();
@@ -181,10 +242,6 @@ impl IncrementalSvgExporter {
         // body
         svg.append(&mut svg_body);
 
-        // attach the javascript for animations
-        svg.push(r#"<script type="text/javascript" data-reuse="1">"#.into());
-        svg.push("</script>".into());
-
         svg.push("</svg>".into());
 
         println!("svg render time (incremental): {:?}", instant.elapsed());
@@ -198,10 +255,14 @@ impl IncrementalSvgExporter {
     }
 
     pub fn render(&mut self, output: Arc<Document>) -> String {
+        self.module_builder.reset();
         let (next, packet) = match self.prev.take() {
             Some(prev) => {
                 let (next, svg) = self.render_svg_incremental(prev, output);
-                (next, ["diff-v0,", &svg].concat())
+                (
+                    next,
+                    ["diff-v0,", &svg, &self.render_source_mapping()].concat(),
+                )
             }
             None => {
                 let (next, svg) = self.render_svg_incremental(
@@ -209,12 +270,14 @@ impl IncrementalSvgExporter {
                         module: Module {
                             glyphs: vec![],
                             item_pack: ItemPack::default(),
+                            source_mapping: Default::default(),
                         },
                         pages: vec![],
                     },
                     output,
                 );
-                (next, ["new,", &svg].concat())
+
+                (next, ["new,", &svg, &self.render_source_mapping()].concat())
             }
         };
 
@@ -227,6 +290,6 @@ impl IncrementalSvgExporter {
         let doc = self.prev.as_ref()?;
 
         let svg = IncrExporter::render_flat_svg(&doc.module, &doc.pages);
-        Some(["new,", &svg].concat())
+        Some(["new,", &svg, &self.render_source_mapping()].concat())
     }
 }

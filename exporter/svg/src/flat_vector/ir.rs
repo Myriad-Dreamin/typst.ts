@@ -12,6 +12,16 @@ use crate::{
     },
 };
 
+/// Source mapping
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub enum SourceMappingNode {
+    Group(Arc<[u64]>),
+    Text(u64),
+    Page(u64),
+}
+
 /// Flatten svg item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
@@ -42,7 +52,6 @@ pub struct FlatTextItem {
 pub struct FlatTextItemContent {
     pub content: ImmutStr,
     pub glyphs: Arc<[(Abs, Abs, AbsoulteRef)]>,
-    pub span_id: u64,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -86,6 +95,7 @@ pub struct ItemPack(pub Vec<(Fingerprint, FlatSvgItem)>);
 pub struct Module {
     pub glyphs: Vec<(AbsoulteRef, GlyphItem)>,
     pub item_pack: ItemPack,
+    pub source_mapping: Vec<SourceMappingNode>,
 }
 
 impl Module {
@@ -155,7 +165,11 @@ impl MultiSvgDocument {
         };
 
         MultiSvgDocument {
-            module: Module { glyphs, item_pack },
+            module: Module {
+                glyphs,
+                item_pack,
+                source_mapping: Default::default(),
+            },
             layouts,
         }
     }
@@ -167,8 +181,13 @@ pub struct ModuleBuilder {
     pub glyphs: GlyphMapping,
     pub items: Vec<(Fingerprint, FlatSvgItem)>,
     pub item_pos: HashMap<Fingerprint, DefId>,
+    pub source_mapping: Vec<SourceMappingNode>,
+    pub source_mapping_buffer: Vec<u64>,
 
     fingerprint_builder: FingerprintBuilder,
+
+    /// See [`ExportFeature`].
+    pub should_attach_debug_info: bool,
 }
 
 impl ModuleBuilder {
@@ -178,6 +197,7 @@ impl ModuleBuilder {
         let module = Module {
             glyphs,
             item_pack: ItemPack(self.items.clone()),
+            source_mapping: self.source_mapping.clone(),
         };
 
         (module, self.glyphs.clone())
@@ -189,9 +209,15 @@ impl ModuleBuilder {
         let module = Module {
             glyphs,
             item_pack: ItemPack(self.items),
+            source_mapping: self.source_mapping,
         };
 
         (module, self.glyphs)
+    }
+
+    pub fn reset(&mut self) {
+        self.source_mapping.clear();
+        self.source_mapping_buffer.clear();
     }
 
     pub fn build_glyph(&mut self, glyph: &GlyphItem) -> AbsoulteRef {
@@ -222,13 +248,16 @@ impl ModuleBuilder {
                     .collect::<Arc<_>>();
                 let shape = text.shape.clone();
                 let content = text.content.content.clone();
-                let span_id = text.content.span_id;
+
+                if self.should_attach_debug_info {
+                    let sm_id = self.source_mapping.len() as u64;
+                    self.source_mapping
+                        .push(SourceMappingNode::Text(text.content.span_id));
+                    self.source_mapping_buffer.push(sm_id);
+                }
+
                 FlatSvgItem::Text(FlatTextItem {
-                    content: Arc::new(FlatTextItemContent {
-                        content,
-                        glyphs,
-                        span_id,
-                    }),
+                    content: Arc::new(FlatTextItemContent { content, glyphs }),
                     shape,
                 })
             }
@@ -240,11 +269,28 @@ impl ModuleBuilder {
                 FlatSvgItem::Item(TransformedRef(transform, item_id))
             }
             SvgItem::Group(group) => {
+                let t = if self.should_attach_debug_info {
+                    Some(self.source_mapping_buffer.len())
+                } else {
+                    None
+                };
                 let items = group
                     .0
                     .iter()
                     .map(|(point, item)| (*point, self.build(item.clone())))
                     .collect::<Vec<_>>();
+
+                if self.should_attach_debug_info {
+                    let sm_start = unsafe { t.unwrap_unchecked() };
+                    let sm_range = self
+                        .source_mapping_buffer
+                        .splice(sm_start..self.source_mapping_buffer.len(), []);
+
+                    let sm_id = self.source_mapping.len() as u64;
+                    self.source_mapping
+                        .push(SourceMappingNode::Group(sm_range.collect()));
+                    self.source_mapping_buffer.push(sm_id);
+                }
                 FlatSvgItem::Group(GroupRef(items.into()))
             }
         };
