@@ -168,11 +168,11 @@ impl LowerBuilder {
         let span_id = text
             .glyphs
             .iter()
-            .find(|g| g.span.0 != Span::detached())
-            .map(|g| g.span.0)
-            .unwrap_or(Span::detached());
-
-        let span_id = hack_span_id_to_u64(&span_id);
+            .filter(|g| g.span.0 != Span::detached())
+            .map(|g| &g.span.0)
+            .map(hack_span_id_to_u64)
+            .max()
+            .unwrap_or_else(|| hack_span_id_to_u64(&Span::detached()));
 
         SvgItem::Text(ir::TextItem {
             content: Arc::new(ir::TextItemContent {
