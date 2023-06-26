@@ -1,4 +1,4 @@
-.typst-txt {
+.typst-text {
   pointer-events: bounding-box;
 }
 
@@ -40,7 +40,7 @@ svg {
 .outline_glyph path {
   transition: 0.2s all;
 }
-.hover .typst-txt {
+.hover .typst-text {
   --glyph_fill: #66bab7;
 }
 .typst-jump-ripple,

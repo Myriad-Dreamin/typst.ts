@@ -46,7 +46,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> FlatIncrGroupContext for SvgTextBuilder<'s
     }
 
     fn with_frame(mut self, _group: &ir::GroupRef) -> Self {
-        self.attributes.push(("class", "group".to_owned()));
+        self.attributes.push(("class", "typst-group".to_owned()));
         self
     }
 

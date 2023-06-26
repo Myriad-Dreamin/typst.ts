@@ -155,7 +155,7 @@ impl<'s, 'm: 's, 't: 's, Feat: ExportFeature + 's> RenderVm<'s> for SvgRenderTas
 
     fn start_frame(&'s mut self, _group: &ir::GroupItem) -> Self::Group {
         let mut g = self.start_group();
-        g.attributes.push(("class", "group".to_owned()));
+        g.attributes.push(("class", "typst-group".to_owned()));
         g
     }
 

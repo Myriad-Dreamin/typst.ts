@@ -65,6 +65,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                 println!("reuse page: {} {:?}", idx, entry);
                 svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
                     attributes: vec![
+                        ("class", "typst-page".into()),
                         ("transform", format!("translate(0, {})", acc_height)),
                         ("data-tid", entry.as_svg_id("p")),
                         ("data-reuse-from", entry.as_svg_id("p")),
@@ -87,6 +88,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             };
 
             let mut attributes = vec![
+                ("class", "typst-page".into()),
                 ("transform", format!("translate(0, {})", acc_height)),
                 ("data-tid", entry.as_svg_id("p")),
                 ("data-page-width", size.x.to_string()),
