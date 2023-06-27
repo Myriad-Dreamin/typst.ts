@@ -254,7 +254,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     pub fn resolve(&self, path: &Path) -> FileResult<SourceId> {
         self.resolve_with_f(path, || {
             let buf = self.read(path)?;
-            Ok(String::from_utf8(buf.to_vec())?)
+            Ok(from_utf8_or_bom(&buf)?.to_owned())
         })
     }
 
@@ -269,4 +269,14 @@ impl<M: AccessModel + Sized> Vfs<M> {
         let buffer = slot.buffer.compute(|| self.read(path))?;
         Ok(buffer.clone())
     }
+}
+
+fn from_utf8_or_bom(buf: &[u8]) -> FileResult<&str> {
+    Ok(std::str::from_utf8(if buf.starts_with(b"\xef\xbb\xbf") {
+        // remove UTF-8 BOM
+        &buf[3..]
+    } else {
+        // Assume UTF-8
+        buf
+    })?)
 }
