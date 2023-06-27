@@ -35,7 +35,7 @@ pub struct CompileOpts {
     #[serde(rename = "noVanillaFonts")]
     pub no_vanilla_fonts: bool,
 
-    /// Exclude embedded font paths
+    /// Include embedded fonts
     #[serde(rename = "withEmbeddedFonts")]
     #[serde_as(as = "Vec<AsCowBytes>")]
     pub with_embedded_fonts: Vec<Cow<'static, [u8]>>,
