@@ -188,7 +188,7 @@ pub struct ModuleBuilder {
 
     fingerprint_builder: FingerprintBuilder,
 
-    /// See [`ExportFeature`].
+    /// See [`crate::ExportFeature`].
     pub should_attach_debug_info: bool,
 }
 
