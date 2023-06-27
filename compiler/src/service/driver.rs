@@ -95,8 +95,8 @@ impl CompileDriver {
         self.exporter.export(&self.world, output)
     }
 
-    /// Compile once from scratch.
-    pub fn compile(&mut self) -> SourceResult<Document> {
+    /// reset the compilation state
+    pub fn reset(&mut self) -> SourceResult<()> {
         // reset the world caches
         self.world.reset();
 
@@ -105,7 +105,14 @@ impl CompileDriver {
         self.world.main = self
             .world
             .resolve(&entry_file)
-            .map_err(|e| map_err(&self.world, e))?;
+            .map_err(|e: typst::diag::FileError| map_err(&self.world, e))?;
+
+        Ok(())
+    }
+
+    /// Compile once from scratch.
+    pub fn compile(&mut self) -> SourceResult<Document> {
+        self.reset()?;
 
         // compile and export document
         typst::compile(&self.world)
