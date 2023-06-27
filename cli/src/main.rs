@@ -7,7 +7,7 @@ use clap::{Args, Command, FromArgMatches};
 use typst::{font::FontVariant, World};
 
 use typst_ts_cli::{
-    tracing::TraceGuard, version::intercept_version, CompileArgs, CompletionArgs, EnvKey,
+    tracing::TraceGuard, utils, version::intercept_version, CompileArgs, CompletionArgs, EnvKey,
     FontSubCommands, ListFontsArgs, MeasureFontsArgs, Opts, Subcommands,
 };
 use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
@@ -99,7 +99,7 @@ fn compile(args: CompileArgs) -> ! {
     };
 
     if args.watch {
-        typst_ts_cli::utils::async_continue(async {
+        utils::async_continue(async {
             let mut driver = compile_driver();
             typst_ts_cli::watch::watch_dir(workspace_dir, |events| {
                 compile_once_watch(&mut driver, events)
@@ -108,10 +108,10 @@ fn compile(args: CompileArgs) -> ! {
         })
     } else if args.dynamic_layout {
         let compiled = compile_driver().once_dynamic().is_ok();
-        exit(if compiled { 0 } else { 1 });
+        utils::logical_exit(compiled);
     } else {
         let compiled = compile_driver().once_diag::<false>();
-        exit(if compiled { 0 } else { 1 });
+        utils::logical_exit(compiled);
     }
 
     fn compile_once_watch(driver: &mut CompileDriver, events: Option<Vec<notify::Event>>) {
