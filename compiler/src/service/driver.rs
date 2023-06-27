@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{borrow::Cow, path::PathBuf, sync::Arc};
 
 use crate::TypstSystemWorld;
 use typst::{
@@ -23,6 +23,37 @@ pub struct CompileDriver {
 }
 
 impl CompileDriver {
+    /// Create a new driver.
+    pub fn new(world: TypstSystemWorld) -> Self {
+        Self {
+            world,
+            entry_file: PathBuf::default(),
+            exporter: GroupExporter::new(vec![]),
+        }
+    }
+
+    /// Wrap driver with a given entry file.
+    pub fn with_entry_file(mut self, entry_file: PathBuf) -> Self {
+        self.entry_file = entry_file;
+        self
+    }
+
+    /// Wrap driver with a given exporter.
+    pub fn with_exporter(mut self, exporter: GroupExporter<typst::doc::Document>) -> Self {
+        self.exporter = exporter;
+        self
+    }
+
+    /// set an entry file.
+    pub fn set_entry_file<'a>(&mut self, entry_file: impl Into<Cow<'a, PathBuf>>) {
+        self.entry_file = entry_file.into().into_owned();
+    }
+
+    /// set an exporter.
+    pub fn set_exporter(&mut self, exporter: GroupExporter<typst::doc::Document>) {
+        self.exporter = exporter;
+    }
+
     /// Print diagnostic messages to the terminal.
     fn print_diagnostics(
         &self,
