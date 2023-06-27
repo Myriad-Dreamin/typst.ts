@@ -5,7 +5,6 @@ use js_sys::{JsString, Uint8Array};
 use typst::{
     font::Font,
     geom::{Color, RgbaColor},
-    World,
 };
 use typst_ts_canvas_exporter::{CanvasRenderTask, DefaultRenderFeature};
 pub use typst_ts_compiler::*;

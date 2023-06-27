@@ -2,7 +2,6 @@ use std::path::PathBuf;
 
 use base64::Engine;
 use log::{error, info};
-use typst::World;
 use typst_ts_core::{artifact_ir::ArtifactHeader, config::CompileOpts};
 
 use crate::world::WorldSnapshot;

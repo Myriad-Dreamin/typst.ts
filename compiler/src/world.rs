@@ -114,6 +114,11 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
 }
 
 impl<F: CompilerFeat> CompilerWorld<F> {
+    /// Get source id by path with filesystem content.
+    pub fn resolve(&self, path: &Path) -> FileResult<SourceId> {
+        self.vfs.resolve(path)
+    }
+
     pub fn resolve_with<P: AsRef<Path>>(&self, path: P, content: &str) -> FileResult<SourceId> {
         self.vfs.resolve_with(path, content)
     }
