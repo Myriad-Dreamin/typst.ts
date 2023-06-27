@@ -71,21 +71,21 @@ impl CompileDriver {
     }
 
     /// Run inner function with print (optional) status and diagnostics to the terminal.
-    pub fn with_compile_diag<const WITH_STATUS: bool>(
+    pub fn with_compile_diag<const WITH_STATUS: bool, T>(
         &mut self,
-        f: impl FnOnce(&mut Self) -> SourceResult<()>,
-    ) -> bool {
+        f: impl FnOnce(&mut Self) -> SourceResult<T>,
+    ) -> Option<T> {
         self.print_status::<WITH_STATUS>(diag::Status::Compiling);
         let start = std::time::Instant::now();
         match f(self) {
-            Ok(_) => {
+            Ok(val) => {
                 self.print_status::<WITH_STATUS>(diag::Status::Success(start.elapsed()));
-                true
+                Some(val)
             }
             Err(errs) => {
                 self.print_status::<WITH_STATUS>(diag::Status::Error(start.elapsed()));
                 self.print_diagnostics(*errs).unwrap();
-                false
+                None
             }
         }
     }

@@ -116,7 +116,7 @@ fn compile(args: CompileArgs) -> ! {
         }
 
         // compile
-        driver.with_compile_diag::<true>(compile_once);
+        driver.with_compile_diag::<true, _>(compile_once);
         comemo::evict(30);
     };
 
@@ -129,8 +129,8 @@ fn compile(args: CompileArgs) -> ! {
             .await;
         })
     } else {
-        let compiled = compile_driver().with_compile_diag::<false>(compile_once);
-        utils::logical_exit(compiled);
+        let compiled = compile_driver().with_compile_diag::<false, _>(compile_once);
+        utils::logical_exit(compiled.is_some());
     }
 }
 
