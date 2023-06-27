@@ -7,12 +7,15 @@ use std::{
 
 use memmap2::Mmap;
 use sha2::{Digest, Sha256};
-use typst::font::{FontBook, FontInfo};
+use typst::{
+    font::{FontBook, FontInfo},
+    util::Buffer,
+};
 use typst_ts_core::{
     build_info,
     font::{
-        get_font_coverage_hash, FontInfoItem, FontProfile, FontProfileItem, FontResolverImpl,
-        LazyBufferFontLoader, PartialFontBook,
+        get_font_coverage_hash, BufferFontLoader, FontInfoItem, FontProfile, FontProfileItem,
+        FontResolverImpl, LazyBufferFontLoader, PartialFontBook,
     },
     FontSlot,
 };
@@ -141,14 +144,25 @@ impl SystemFontSearcher {
         // println!("profile_rebuilder init took {:?}", end - begin);
     }
 
-    /// Add fonts that are embedded in the binary.
-    pub fn add_embedded(&mut self) {
-        let program_dir = std::env::current_exe().unwrap();
-        self.add_embedded_one(&program_dir);
-        self.add_embedded_one(std::env::current_dir().unwrap().as_path());
+    /// Add an in-memory font.
+    pub fn add_memory_font(&mut self, data: Buffer) {
+        for (index, info) in FontInfo::iter(&data).enumerate() {
+            self.book.push(info.clone());
+            self.fonts.push(FontSlot::new_boxed(BufferFontLoader {
+                buffer: Some(data.clone()),
+                index: index as u32,
+            }));
+        }
     }
 
-    fn add_embedded_one(&mut self, program_dir: &Path) {
+    /// Add fonts that in vanilla style.
+    pub fn search_vanilla(&mut self) {
+        let program_dir = std::env::current_exe().unwrap();
+        self.search_vanilla_one(&program_dir);
+        self.search_vanilla_one(std::env::current_dir().unwrap().as_path());
+    }
+
+    fn search_vanilla_one(&mut self, program_dir: &Path) {
         let mut program_dir = program_dir.parent();
         while let Some(dir) = program_dir {
             let path = dir;

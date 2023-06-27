@@ -1,3 +1,6 @@
+use std::borrow::Cow;
+
+use typst::util::Buffer;
 use typst_ts_core::config::CompileOpts;
 
 use crate::font::system::SystemFontSearcher;
@@ -32,13 +35,21 @@ impl TypstSystemWorld {
         if !opts.no_system_fonts {
             searcher.search_system();
         }
-        searcher.add_embedded();
         for path in opts.font_paths {
             if path.is_dir() {
                 searcher.search_dir(&path);
             } else {
                 searcher.search_file(&path);
             }
+        }
+        if !opts.no_vanilla_fonts {
+            searcher.search_vanilla();
+        }
+        for font_data in opts.with_embedded_fonts {
+            searcher.add_memory_font(match font_data {
+                Cow::Borrowed(data) => Buffer::from_static(data),
+                Cow::Owned(data) => Buffer::from(data),
+            });
         }
         let font_resolver = searcher.into();
 
