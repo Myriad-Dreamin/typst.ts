@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 pub mod export;
+pub mod font;
 pub mod tracing;
 pub mod utils;
 pub mod version;

@@ -50,10 +50,21 @@ anyhow.workspace = true
 vergen.workspace = true
 
 [features]
+embedded-fonts = []
+embedded-cjk-fonts = []
+embedded-emoji-fonts = []
 pdf = ["typst-ts-pdf-exporter"]
 raster = ["typst-ts-raster-exporter"]
 serde-json = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/json"]
 serde-rmp = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/rmp"]
 svg = ["typst-ts-svg-exporter"]
 tir = ["typst-ts-tir-exporter"]
-default = ["pdf", "raster", "serde-json", "serde-rmp", "svg", "tir"]
+default = [
+    "pdf",
+    "raster",
+    "serde-json",
+    "serde-rmp",
+    "svg",
+    "tir",
+    "embedded-fonts",
+]
