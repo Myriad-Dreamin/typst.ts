@@ -29,12 +29,9 @@ impl TypstSystemWorld {
             searcher.set_can_profile(true);
         }
 
-        for profile_path in opts.font_profile_paths {
-            searcher.add_profile_by_path(&profile_path);
-        }
-        if !opts.no_system_fonts {
-            searcher.search_system();
-        }
+        // Note: the order of adding fonts is important.
+        // See: https://github.com/typst/typst/blob/9c7f31870b4e1bf37df79ebbe1df9a56df83d878/src/font/book.rs#L151-L154
+        // Source1: add the fonts specified by the user.
         for path in opts.font_paths {
             if path.is_dir() {
                 searcher.search_dir(&path);
@@ -42,15 +39,26 @@ impl TypstSystemWorld {
                 searcher.search_file(&path);
             }
         }
-        if !opts.no_vanilla_fonts {
-            searcher.search_vanilla();
-        }
+        // Source2: add the fonts in memory.
         for font_data in opts.with_embedded_fonts {
             searcher.add_memory_font(match font_data {
                 Cow::Borrowed(data) => Buffer::from_static(data),
                 Cow::Owned(data) => Buffer::from(data),
             });
         }
+        // Source3: add the fonts from vanilla paths.
+        if !opts.no_vanilla_fonts {
+            searcher.search_vanilla();
+        }
+        // Source4: add the fonts from system paths.
+        if !opts.no_system_fonts {
+            searcher.search_system();
+        }
+        // Source5: add the fonts from the profile cache.
+        for profile_path in opts.font_profile_paths {
+            searcher.add_profile_by_path(&profile_path);
+        }
+
         let font_resolver = searcher.into();
 
         let vfs = Vfs::new(SystemAccessModel {});
