@@ -1,10 +1,11 @@
 use std::{
     path::{Path, PathBuf},
     process::exit,
+    sync::Arc,
 };
 
 use clap::{Args, Command, FromArgMatches};
-use typst::{font::FontVariant, World};
+use typst::{diag::SourceResult, font::FontVariant, World};
 
 use typst_ts_cli::{
     font::EMBEDDED_FONT, tracing::TraceGuard, utils, version::intercept_version, CompileArgs,
@@ -111,8 +112,14 @@ fn compile(args: CompileArgs) -> ! {
         let compiled = compile_driver().once_dynamic().is_ok();
         utils::logical_exit(compiled);
     } else {
-        let compiled = compile_driver().once_diag::<false>();
+        let compiled = compile_driver().with_compile_diag::<false>(compile_once);
         utils::logical_exit(compiled);
+    }
+
+    fn compile_once(driver: &mut CompileDriver) -> SourceResult<()> {
+        driver
+            .compile()
+            .and_then(|doc| driver.export(Arc::new(doc)))
     }
 
     fn compile_once_watch(driver: &mut CompileDriver, events: Option<Vec<notify::Event>>) {
@@ -122,7 +129,7 @@ fn compile(args: CompileArgs) -> ! {
         }
 
         // compile
-        driver.once_diag::<true>();
+        driver.with_compile_diag::<true>(compile_once);
         comemo::evict(30);
     }
 }
