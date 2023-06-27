@@ -144,6 +144,8 @@ impl<F: CompilerFeat> CompilerWorld<F> {
 
     pub fn reset(&mut self) {
         self.vfs.reset();
+
+        self.today.set(None);
     }
 }
 
