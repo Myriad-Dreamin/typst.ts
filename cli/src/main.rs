@@ -7,8 +7,8 @@ use clap::{Args, Command, FromArgMatches};
 use typst::{font::FontVariant, World};
 
 use typst_ts_cli::{
-    tracing::TraceGuard, utils, version::intercept_version, CompileArgs, CompletionArgs, EnvKey,
-    FontSubCommands, ListFontsArgs, MeasureFontsArgs, Opts, Subcommands,
+    font::EMBEDDED_FONT, tracing::TraceGuard, utils, version::intercept_version, CompileArgs,
+    CompletionArgs, EnvKey, FontSubCommands, ListFontsArgs, MeasureFontsArgs, Opts, Subcommands,
 };
 use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
 use typst_ts_core::config::CompileOpts;
@@ -86,6 +86,7 @@ fn compile(args: CompileArgs) -> ! {
         let world = TypstSystemWorld::new(CompileOpts {
             root_dir: workspace_dir.to_owned(),
             font_paths: args.font_paths.clone(),
+            with_embedded_fonts: EMBEDDED_FONT.to_owned(),
             ..CompileOpts::default()
         });
 
@@ -144,6 +145,7 @@ fn list_fonts(command: ListFontsArgs) -> ! {
     let world = TypstSystemWorld::new(CompileOpts {
         root_dir: root_path,
         font_paths: command.font_paths,
+        with_embedded_fonts: EMBEDDED_FONT.to_owned(),
         ..CompileOpts::default()
     });
 
