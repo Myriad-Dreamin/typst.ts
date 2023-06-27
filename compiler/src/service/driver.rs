@@ -48,13 +48,10 @@ impl CompileDriver {
 
         // checkout the entry file
         let entry_file = self.entry_file.clone();
-        let content = { std::fs::read_to_string(&entry_file).expect("Could not read file") };
-        match self.world.resolve_with(&entry_file, &content) {
-            Ok(id) => {
-                self.world.main = id;
-            }
-            Err(e) => return Err(map_err(&self.world, e)),
-        }
+        self.world.main = self
+            .world
+            .resolve(&entry_file)
+            .map_err(|e| map_err(&self.world, e))?;
 
         // compile and export document
         typst::compile(&self.world).and_then(|output| self.export(output))
@@ -64,6 +61,7 @@ impl CompileDriver {
     pub fn once_dynamic(&mut self) -> SourceResult<()> {
         // checkout the entry file
         let entry_file = self.entry_file.clone();
+        // todo: hexo svg
         let content = { std::fs::read_to_string(&entry_file).expect("Could not read file") };
         // #let ts_page_width = 595.28pt
 
