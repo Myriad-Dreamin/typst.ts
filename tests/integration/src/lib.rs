@@ -1,6 +1,6 @@
 pub mod wasm;
 
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 use typst::{doc::Document, util::PathExt};
 use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
@@ -120,7 +120,10 @@ impl ArtifactCompiler {
             ],
         );
 
-        driver.once().unwrap();
+        driver
+            .compile()
+            .and_then(|doc| driver.export(Arc::new(doc)))
+            .unwrap();
 
         ArtifactBundle {
             driver,

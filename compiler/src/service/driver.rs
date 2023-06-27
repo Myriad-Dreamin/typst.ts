@@ -39,9 +39,29 @@ impl CompileDriver {
         diag::status(&self.entry_file, status).unwrap();
     }
 
+    /// Run inner function with print (optional) status and diagnostics to the terminal.
+    pub fn with_compile_diag<const WITH_STATUS: bool>(
+        &mut self,
+        f: impl FnOnce(&mut Self) -> SourceResult<()>,
+    ) -> bool {
+        self.print_status::<WITH_STATUS>(diag::Status::Compiling);
+        let start = std::time::Instant::now();
+        match f(self) {
+            Ok(_) => {
+                self.print_status::<WITH_STATUS>(diag::Status::Success(start.elapsed()));
+                true
+            }
+            Err(errs) => {
+                self.print_status::<WITH_STATUS>(diag::Status::Error(start.elapsed()));
+                self.print_diagnostics(*errs).unwrap();
+                false
+            }
+        }
+    }
+
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
-    fn export(&self, output: typst::doc::Document) -> SourceResult<()> {
-        self.exporter.export(&self.world, Arc::new(output))
+    pub fn export(&self, output: Arc<typst::doc::Document>) -> SourceResult<()> {
+        self.exporter.export(&self.world, output)
     }
 
     /// Compile once from scratch.
@@ -58,36 +78,6 @@ impl CompileDriver {
 
         // compile and export document
         typst::compile(&self.world)
-    }
-
-    /// Compile once from scratch and print (optional) status and diagnostics to the terminal.
-    pub fn compile_diag<const WITH_STATUS: bool, F>(&mut self, f: F) -> bool
-    where
-        F: FnOnce(Document, &mut Self) -> SourceResult<()>,
-    {
-        self.print_status::<WITH_STATUS>(diag::Status::Compiling);
-        let start = std::time::Instant::now();
-        match self.compile().map(|output| f(output, self)) {
-            Ok(_) => {
-                self.print_status::<WITH_STATUS>(diag::Status::Success(start.elapsed()));
-                true
-            }
-            Err(errs) => {
-                self.print_status::<WITH_STATUS>(diag::Status::Error(start.elapsed()));
-                self.print_diagnostics(*errs).unwrap();
-                false
-            }
-        }
-    }
-
-    /// Compile once from scratch and consome result with [`CompileDriver::export`].
-    pub fn once(&mut self) -> SourceResult<()> {
-        self.compile().and_then(|output| self.export(output))
-    }
-
-    /// Compile once from scratch and print (optional) status and diagnostics to the terminal.
-    pub fn once_diag<const WITH_STATUS: bool>(&mut self) -> bool {
-        self.compile_diag::<WITH_STATUS, _>(|output, this| this.export(output))
     }
 
     /// Compile once from scratch.
