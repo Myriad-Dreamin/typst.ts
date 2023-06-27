@@ -5,7 +5,7 @@ use std::{
 };
 
 use clap::{Args, Command, FromArgMatches};
-use typst::{diag::SourceResult, font::FontVariant, World};
+use typst::{font::FontVariant, World};
 
 use typst_ts_cli::{
     font::EMBEDDED_FONT, tracing::TraceGuard, utils, version::intercept_version, CompileArgs,
@@ -100,29 +100,16 @@ fn compile(args: CompileArgs) -> ! {
         }
     };
 
-    if args.watch {
-        utils::async_continue(async {
-            let mut driver = compile_driver();
-            typst_ts_cli::watch::watch_dir(workspace_dir, |events| {
-                compile_once_watch(&mut driver, events)
-            })
-            .await;
-        })
-    } else if args.dynamic_layout {
-        let compiled = compile_driver().once_dynamic().is_ok();
-        utils::logical_exit(compiled);
+    let compile_once = if args.dynamic_layout {
+        CompileDriver::once_dynamic
     } else {
-        let compiled = compile_driver().with_compile_diag::<false>(compile_once);
-        utils::logical_exit(compiled);
-    }
+        |driver: &mut CompileDriver| {
+            let doc = Arc::new(driver.compile()?);
+            driver.export(doc)
+        }
+    };
 
-    fn compile_once(driver: &mut CompileDriver) -> SourceResult<()> {
-        driver
-            .compile()
-            .and_then(|doc| driver.export(Arc::new(doc)))
-    }
-
-    fn compile_once_watch(driver: &mut CompileDriver, events: Option<Vec<notify::Event>>) {
+    let compile_watch = |driver: &mut CompileDriver, events: Option<Vec<notify::Event>>| {
         // relevance checking
         if events.is_some() && !events.unwrap().iter().any(|event| driver.relevant(event)) {
             return;
@@ -131,6 +118,19 @@ fn compile(args: CompileArgs) -> ! {
         // compile
         driver.with_compile_diag::<true>(compile_once);
         comemo::evict(30);
+    };
+
+    if args.watch {
+        utils::async_continue(async {
+            let mut driver = compile_driver();
+            typst_ts_cli::watch::watch_dir(workspace_dir, |events| {
+                compile_watch(&mut driver, events)
+            })
+            .await;
+        })
+    } else {
+        let compiled = compile_driver().with_compile_diag::<false>(compile_once);
+        utils::logical_exit(compiled);
     }
 }
 
