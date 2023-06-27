@@ -123,13 +123,14 @@ impl CompileDriver {
     /// Compile once from scratch and print (optional) status and diagnostics to the terminal.
     pub fn once_diag<const WITH_STATUS: bool>(&mut self) -> bool {
         self.print_status::<WITH_STATUS>(diag::Status::Compiling);
+        let start = std::time::Instant::now();
         match self.once() {
             Ok(_) => {
-                self.print_status::<WITH_STATUS>(diag::Status::Success);
+                self.print_status::<WITH_STATUS>(diag::Status::Success(start.elapsed()));
                 true
             }
             Err(errs) => {
-                self.print_status::<WITH_STATUS>(diag::Status::Error);
+                self.print_status::<WITH_STATUS>(diag::Status::Error(start.elapsed()));
                 self.print_diagnostics(*errs).unwrap();
                 false
             }

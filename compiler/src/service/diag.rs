@@ -62,18 +62,19 @@ pub fn print_diagnostics<'files, W: World + Files<'files, FileId = SourceId>>(
 /// The status in which the watcher can be.
 pub enum Status {
     Compiling,
-    Success,
-    Error,
+    Success(std::time::Duration),
+    Error(std::time::Duration),
 }
 
 /// Render the status message.
 pub fn status(entry_file: &Path, status: Status) -> io::Result<()> {
     let input = entry_file.display();
-    let message = match status {
-        Status::Compiling => "compiling ...",
-        Status::Success => "compiled successfully",
-        Status::Error => "compiled with errors",
+    match status {
+        Status::Compiling => log::info!("{}: compiling ...", input),
+        Status::Success(duration) => {
+            log::info!("{}: Compilation succeeded in {:?}", input, duration)
+        }
+        Status::Error(duration) => log::info!("{}: Compilation failed after {:?}", input, duration),
     };
-    log::info!("{}: {}", input, message);
     Ok(())
 }
