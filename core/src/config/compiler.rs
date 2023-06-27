@@ -1,7 +1,11 @@
+use std::borrow::Cow;
 use std::path::PathBuf;
 
+use crate::AsCowBytes;
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 
+#[serde_as]
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct CompileOpts {
     /// The root directory for compilation routine.
@@ -26,4 +30,13 @@ pub struct CompileOpts {
     /// Exclude system font paths
     #[serde(rename = "noSystemFonts")]
     pub no_system_fonts: bool,
+
+    /// Exclude vanilla font paths
+    #[serde(rename = "noVanillaFonts")]
+    pub no_vanilla_fonts: bool,
+
+    /// Exclude embedded font paths
+    #[serde(rename = "withEmbeddedFonts")]
+    #[serde_as(as = "Vec<AsCowBytes>")]
+    pub with_embedded_fonts: Vec<Cow<'static, [u8]>>,
 }
