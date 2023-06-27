@@ -1,7 +1,10 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::TypstSystemWorld;
-use typst::diag::{SourceError, SourceResult};
+use typst::{
+    diag::{SourceError, SourceResult},
+    doc::Document,
+};
 use typst_ts_core::{exporter_builtins::GroupExporter, exporter_utils::map_err, Exporter};
 use typst_ts_svg_exporter::{serialize_multi_doc_standalone, DynamicLayoutSvgExporter};
 
@@ -42,7 +45,7 @@ impl CompileDriver {
     }
 
     /// Compile once from scratch.
-    pub fn once(&mut self) -> SourceResult<()> {
+    pub fn once_to_doc(&mut self) -> SourceResult<Document> {
         // reset the world caches
         self.world.reset();
 
@@ -54,7 +57,12 @@ impl CompileDriver {
             .map_err(|e| map_err(&self.world, e))?;
 
         // compile and export document
-        typst::compile(&self.world).and_then(|output| self.export(output))
+        typst::compile(&self.world)
+    }
+
+    /// Compile once from scratch.
+    pub fn once(&mut self) -> SourceResult<()> {
+        self.once_to_doc().and_then(|output| self.export(output))
     }
 
     /// Compile once from scratch.
@@ -121,10 +129,13 @@ impl CompileDriver {
     }
 
     /// Compile once from scratch and print (optional) status and diagnostics to the terminal.
-    pub fn once_diag<const WITH_STATUS: bool>(&mut self) -> bool {
+    pub fn once_to_doc_diag<const WITH_STATUS: bool, F>(&mut self, f: F) -> bool
+    where
+        F: FnOnce(Document, &mut Self) -> SourceResult<()>,
+    {
         self.print_status::<WITH_STATUS>(diag::Status::Compiling);
         let start = std::time::Instant::now();
-        match self.once() {
+        match self.once_to_doc().map(|output| f(output, self)) {
             Ok(_) => {
                 self.print_status::<WITH_STATUS>(diag::Status::Success(start.elapsed()));
                 true
@@ -135,6 +146,11 @@ impl CompileDriver {
                 false
             }
         }
+    }
+
+    /// Compile once from scratch and print (optional) status and diagnostics to the terminal.
+    pub fn once_diag<const WITH_STATUS: bool>(&mut self) -> bool {
+        self.once_to_doc_diag::<WITH_STATUS, _>(|output, this| this.export(output))
     }
 
     /// Check whether a file system event is relevant to the world.
