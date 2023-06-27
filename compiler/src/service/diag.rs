@@ -1,4 +1,4 @@
-use std::io;
+use std::io::{self, IsTerminal};
 use std::path::Path;
 
 use codespan_reporting::files::Files;
@@ -13,12 +13,21 @@ use codespan_reporting::{
 use typst::syntax::SourceId;
 use typst::{diag::SourceError, World};
 
+/// Get stderr with color support if desirable.
+fn color_stream() -> StandardStream {
+    StandardStream::stderr(if std::io::stderr().is_terminal() {
+        ColorChoice::Auto
+    } else {
+        ColorChoice::Never
+    })
+}
+
 /// Print diagnostic messages to the terminal.
 pub fn print_diagnostics<'files, W: World + Files<'files, FileId = SourceId>>(
     world: &'files W,
     errors: Vec<SourceError>,
 ) -> Result<(), codespan_reporting::files::Error> {
-    let mut w = StandardStream::stderr(ColorChoice::Auto);
+    let mut w = color_stream();
     let config = term::Config {
         tab_width: 2,
         ..Default::default()
