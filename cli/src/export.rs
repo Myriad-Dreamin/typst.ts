@@ -123,7 +123,7 @@ fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExp
     type WithSvg = typst_ts_svg_exporter::SvgExporter<DefaultExportFeature>;
     type WithSIR = typst_ts_svg_exporter::SvgModuleExporter;
 
-    type ExporterVec<T> = Vec<Box<dyn typst_ts_core::Exporter<T>>>;
+    type ExporterVec<T> = Vec<Box<dyn typst_ts_core::Exporter<T> + Send>>;
 }
 
 /// Prepare exporters from command line arguments.
