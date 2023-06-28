@@ -23,7 +23,8 @@ fn get_driver(
         root_dir: workspace_dir.to_owned(),
         no_system_fonts: true,
         ..CompileOpts::default()
-    });
+    })
+    .unwrap();
 
     CompileDriver {
         world,

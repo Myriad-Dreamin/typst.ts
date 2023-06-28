@@ -8,8 +8,12 @@ use clap::{Args, Command, FromArgMatches};
 use typst::{font::FontVariant, World};
 
 use typst_ts_cli::{
-    font::EMBEDDED_FONT, tracing::TraceGuard, utils, version::intercept_version, CompileArgs,
-    CompletionArgs, EnvKey, FontSubCommands, ListFontsArgs, MeasureFontsArgs, Opts, Subcommands,
+    font::EMBEDDED_FONT,
+    tracing::TraceGuard,
+    utils::{self, UnwrapOrExit},
+    version::intercept_version,
+    CompileArgs, CompletionArgs, EnvKey, FontSubCommands, ListFontsArgs, MeasureFontsArgs, Opts,
+    Subcommands,
 };
 use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
 use typst_ts_core::config::CompileOpts;
@@ -89,7 +93,8 @@ fn compile(args: CompileArgs) -> ! {
             font_paths: args.font_paths.clone(),
             with_embedded_fonts: EMBEDDED_FONT.to_owned(),
             ..CompileOpts::default()
-        });
+        })
+        .unwrap_or_exit();
 
         let exporter = typst_ts_cli::export::prepare_exporters(&args, entry_file_path);
 
@@ -154,7 +159,8 @@ fn list_fonts(command: ListFontsArgs) -> ! {
         font_paths: command.font_paths,
         with_embedded_fonts: EMBEDDED_FONT.to_owned(),
         ..CompileOpts::default()
-    });
+    })
+    .unwrap_or_exit();
 
     for (name, infos) in world.book().families() {
         println!("{name}");
@@ -190,7 +196,8 @@ fn measure_fonts(args: MeasureFontsArgs) -> ! {
         font_profile_cache_path: args.output.clone(),
         no_system_fonts: args.no_system_fonts,
         ..CompileOpts::default()
-    });
+    })
+    .unwrap_or_exit();
 
     // create directory for args.output
     if let Some(output) = args.output.parent() {

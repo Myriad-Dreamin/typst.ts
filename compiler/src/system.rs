@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use typst_ts_core::{config::CompileOpts, Bytes};
+use typst_ts_core::{config::CompileOpts, error::prelude::*, Bytes};
 
 use crate::font::system::SystemFontSearcher;
 use crate::vfs::{system::SystemAccessModel, Vfs};
@@ -15,7 +15,7 @@ impl CompilerFeat for SystemCompilerFeat {
 }
 
 impl TypstSystemWorld {
-    pub fn new(opts: CompileOpts) -> Self {
+    pub fn new(opts: CompileOpts) -> ZResult<Self> {
         let root_dir = opts.root_dir.clone();
         let mut searcher = SystemFontSearcher::new();
 
@@ -62,6 +62,6 @@ impl TypstSystemWorld {
 
         let vfs = Vfs::new(SystemAccessModel {});
 
-        Self::new_raw(root_dir, vfs, font_resolver)
+        Ok(Self::new_raw(root_dir, vfs, font_resolver))
     }
 }
