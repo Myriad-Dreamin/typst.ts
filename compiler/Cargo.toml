@@ -53,6 +53,8 @@ indexmap.workspace = true
 nohash-hasher = "0.2.0"
 path-clean = "1.0.1"
 pathdiff = "0.2.1"
+dissimilar = "1.0"
+
 typst-ts-svg-exporter = { workspace = true, optional = true, features = [
     "flat-vector",
 ] }

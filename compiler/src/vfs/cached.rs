@@ -3,26 +3,32 @@ use std::{collections::HashMap, ffi::OsStr, path::Path, sync::Arc, time::SystemT
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 use typst::{
     diag::{FileError, FileResult},
-    util::Buffer,
+    util::{ArcExt, Buffer},
 };
 use typst_ts_core::QueryRef;
 
+use crate::vfs::from_utf8_or_bom;
+
 use super::AccessModel;
 
-struct FileCache {
+/// incrementally query a value from a self holding state
+type IncrQueryRef<S, E> = QueryRef<Arc<S>, E, Option<Arc<S>>>;
+
+pub struct FileCache<S> {
     lifetime_cnt: usize,
     mtime: SystemTime,
     is_file: QueryRef<bool, FileError>,
     read_all: QueryRef<Buffer, FileError>,
+    source_state: IncrQueryRef<S, FileError>,
 }
 
-pub struct CachedAccessModel<Inner: AccessModel> {
+pub struct CachedAccessModel<Inner: AccessModel, C> {
     inner: Inner,
     lifetime_cnt: usize,
-    path_results: RwLock<HashMap<Arc<OsStr>, FileCache>>,
+    path_results: RwLock<HashMap<Arc<OsStr>, FileCache<C>>>,
 }
 
-impl<Inner: AccessModel> CachedAccessModel<Inner> {
+impl<Inner: AccessModel, C> CachedAccessModel<Inner, C> {
     pub fn new(inner: Inner) -> Self {
         CachedAccessModel {
             inner,
@@ -32,7 +38,7 @@ impl<Inner: AccessModel> CachedAccessModel<Inner> {
     }
 }
 
-impl<Inner: AccessModel> CachedAccessModel<Inner> {
+impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {
     fn mtime_inner(&self, src: &Path) -> FileResult<SystemTime> {
         self.inner.mtime(src)
     }
@@ -40,12 +46,12 @@ impl<Inner: AccessModel> CachedAccessModel<Inner> {
     fn cache_entry<T>(
         &self,
         src: &Path,
-        cb: impl FnOnce(&FileCache) -> FileResult<T>,
+        cb: impl FnOnce(&FileCache<C>) -> FileResult<T>,
     ) -> FileResult<T> {
         let path_key = src.as_os_str();
         let path_results = self.path_results.upgradable_read();
         let entry = path_results.get(path_key);
-        let new_mtime = if let Some(entry) = entry {
+        let (new_mtime, prev_to_diff) = if let Some(entry) = entry {
             if entry.lifetime_cnt == self.lifetime_cnt {
                 return cb(entry);
             }
@@ -55,9 +61,16 @@ impl<Inner: AccessModel> CachedAccessModel<Inner> {
                 return cb(entry);
             }
 
-            mtime
+            (
+                mtime,
+                entry
+                    .source_state
+                    .get_uninitialized()
+                    .as_ref()
+                    .and_then(|e| e.clone().ok()),
+            )
         } else {
-            self.mtime_inner(src)?
+            (self.mtime_inner(src)?, None)
         };
 
         let mut path_results = RwLockUpgradableReadGuard::upgrade(path_results);
@@ -69,6 +82,7 @@ impl<Inner: AccessModel> CachedAccessModel<Inner> {
                 mtime: new_mtime,
                 is_file: QueryRef::default(),
                 read_all: QueryRef::default(),
+                source_state: QueryRef::with_context(prev_to_diff),
             },
         );
 
@@ -78,14 +92,58 @@ impl<Inner: AccessModel> CachedAccessModel<Inner> {
     }
 }
 
-impl<Inner: AccessModel> AccessModel for CachedAccessModel<Inner> {
+impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {
+    #[inline]
+    pub fn replace_diff(
+        &self,
+        src: &Path,
+        read: impl FnOnce(&FileCache<C>) -> FileResult<Buffer>,
+        compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
+    ) -> FileResult<Arc<C>> {
+        let instant = std::time::Instant::now();
+        self.cache_entry(src, |entry| {
+            println!("cache_entry: {:?}", instant.elapsed());
+            let instant = std::time::Instant::now();
+            let data = entry
+                .source_state
+                .compute_with_context_ref(|prev_to_diff| {
+                    let text = from_utf8_or_bom(&read(entry)?)?.to_owned();
+                    let prev_to_diff = prev_to_diff.map(ArcExt::take);
+                    println!("read: {:?}", instant.elapsed());
+                    Ok(Arc::new(compute(prev_to_diff, text)?))
+                })?;
+
+            println!("compute: {:?}", instant.elapsed());
+            let t = data.clone();
+            Ok(t)
+        })
+    }
+
+    pub fn read_all_diff(
+        &self,
+        src: &Path,
+        compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
+    ) -> FileResult<Arc<C>> {
+        self.replace_diff(
+            src,
+            |entry| {
+                let data = entry.read_all.compute(|| self.inner.read_all(src))?;
+                Ok(data.clone())
+            },
+            compute,
+        )
+    }
+}
+
+impl<Inner: AccessModel, C: Clone> AccessModel for CachedAccessModel<Inner, C> {
     type RealPath = Inner::RealPath;
 
     fn clear(&mut self) {
         self.lifetime_cnt += 1;
 
         let mut path_results = self.path_results.write();
-        path_results.retain(|_, v| self.lifetime_cnt - v.lifetime_cnt <= 30);
+        let new_lifetime = self.lifetime_cnt;
+        path_results.retain(|_, v| new_lifetime - v.lifetime_cnt <= 30);
     }
 
     fn mtime(&self, src: &Path) -> FileResult<SystemTime> {

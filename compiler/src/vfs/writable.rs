@@ -107,7 +107,7 @@ impl Vfs {
     ///
     /// Does not record a change.
     fn alloc_file_id(&mut self, path: VfsPath) -> FileId {
-        let file_id = self.interner.intern(path);
+        let (file_id, ..) = self.interner.intern(path, ());
         let idx = file_id.0 as usize;
         let len = self.data.len().max(idx + 1);
         self.data.resize_with(len, || None);
