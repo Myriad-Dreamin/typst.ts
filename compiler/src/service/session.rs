@@ -29,7 +29,12 @@ impl CompileSession {
         self.workspace_dir = workspace;
         self.entry_file_path = entry_file;
 
-        self.world = Some(crate::TypstSystemWorld::new(compile_opts));
+        self.world = crate::TypstSystemWorld::new(compile_opts)
+            .map_err(|err| {
+                error!("failed to create world: {:?}", err);
+                err
+            })
+            .ok();
         true
     }
 
