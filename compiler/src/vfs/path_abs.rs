@@ -8,8 +8,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use path_clean::clean;
-
 /// Wrapper around an absolute [`PathBuf`].
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct AbsPathBuf(PathBuf);
@@ -164,7 +162,7 @@ impl AbsPath {
     /// assert_eq!(normalized, AbsPathBuf::assert("/b/c".into()));
     /// ```
     pub fn normalize(&self) -> AbsPathBuf {
-        AbsPathBuf(normalize_path(&self.0))
+        AbsPathBuf(typst_ts_core::path::clean(&self.0))
     }
 
     /// Equivalent of [`Path::to_path_buf`] for `AbsPath`.
@@ -293,8 +291,4 @@ impl RelPath {
     pub fn new_unchecked(path: &Path) -> &RelPath {
         unsafe { &*(path as *const Path as *const RelPath) }
     }
-}
-
-fn normalize_path(path: &Path) -> PathBuf {
-    clean(path)
 }

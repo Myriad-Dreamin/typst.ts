@@ -1,5 +1,4 @@
 use crate::macros::static_assert;
-pub use crate::vfs::path_ext::unix_slash;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::hash::Hasher;
@@ -11,6 +10,8 @@ use std::{
     path::{Component, Path, PathBuf},
     sync::Arc,
 };
+
+use typst_ts_core::path::{clean, unix_slash};
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct DependentDirInfo {
@@ -247,7 +248,7 @@ struct DependencyTreeBuilder {
 impl DependencyTreeBuilder {
     fn new(root: &Path) -> Self {
         Self {
-            root: Some(DirInfoBuilder::new_dir(path_clean::clean(root))),
+            root: Some(DirInfoBuilder::new_dir(clean(root))),
             prefix: HashMap::new(),
         }
     }
