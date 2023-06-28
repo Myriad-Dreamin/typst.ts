@@ -6,12 +6,9 @@ use std::{
 
 use comemo::Prehashed;
 use ttf_parser::GlyphId;
-use typst::{
-    font::{Font, FontBook, FontFlags, FontInfo},
-    util::Buffer,
-};
+use typst::font::{Font, FontBook, FontFlags, FontInfo};
 
-use crate::{artifact::image::TypstImage, FontSlot};
+use crate::{artifact::image::TypstImage, Bytes, FontSlot};
 
 use super::{
     BufferFontLoader, FontGlyphPackBundle, FontInfoKey, FontProfile, GlyphProvider, IGlyphProvider,
@@ -100,7 +97,7 @@ impl FontResolverImpl {
         })
     }
 
-    pub fn modify_font_data(&mut self, idx: usize, buffer: Buffer) {
+    pub fn modify_font_data(&mut self, idx: usize, buffer: Bytes) {
         let mut font_book = self.partial_book.lock().unwrap();
         for (i, info) in FontInfo::iter(buffer.as_slice()).enumerate() {
             let buffer = buffer.clone();

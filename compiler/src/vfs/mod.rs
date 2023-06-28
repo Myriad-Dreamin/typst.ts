@@ -44,9 +44,10 @@ use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
 use typst::{
     diag::{FileError, FileResult},
     syntax::{Source, SourceId},
-    util::{Buffer, PathExt},
+    util::PathExt,
 };
-use typst_ts_core::{typst_affinite_hash, QueryRef};
+
+use typst_ts_core::{typst_affinite_hash, Bytes, QueryRef};
 
 use self::{
     cached::{CachedAccessModel, FileCache},
@@ -73,7 +74,7 @@ pub trait AccessModel {
 
     fn real_path(&self, src: &Path) -> FileResult<Self::RealPath>;
 
-    fn read_all(&self, src: &Path) -> FileResult<Buffer>;
+    fn read_all(&self, src: &Path) -> FileResult<Bytes>;
 }
 
 type FileQuery<T> = QueryRef<T, FileError>;
@@ -84,7 +85,7 @@ pub struct PathSlot {
     sampled_path: once_cell::sync::OnceCell<PathBuf>,
     mtime: FileQuery<std::time::SystemTime>,
     source: FileQuery<Arc<Source>>,
-    buffer: FileQuery<Buffer>,
+    buffer: FileQuery<Bytes>,
 }
 
 impl PathSlot {
@@ -175,7 +176,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// Read a file.
-    fn read(&self, path: &Path) -> FileResult<Buffer> {
+    fn read(&self, path: &Path) -> FileResult<Bytes> {
         if self.access_model.is_file(path)? {
             self.access_model.read_all(path)
         } else {
@@ -199,7 +200,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
         &self,
         path: &Path,
         source_id: SourceId,
-        read: impl FnOnce(&FileCache<Source>) -> FileResult<Buffer>,
+        read: impl FnOnce(&FileCache<Source>) -> FileResult<Bytes>,
     ) -> FileResult<Arc<Source>> {
         if self.access_model.is_file(path)? {
             Ok(self
@@ -404,11 +405,11 @@ impl<M: AccessModel + Sized> Vfs<M> {
                 println!("parse: {:?} {:?}", path, instant.elapsed());
                 return res;
             }
-            self.replace_diff_source(path, source_id, |_| Ok(Buffer::from(content.as_bytes())))
+            self.replace_diff_source(path, source_id, |_| Ok(Bytes::from(content.as_bytes())))
         })
     }
 
-    pub fn file(&self, path: &Path) -> FileResult<Buffer> {
+    pub fn file(&self, path: &Path) -> FileResult<Bytes> {
         let slot = self.slot(path)?;
 
         let buffer = slot.buffer.compute(|| self.read(path))?;

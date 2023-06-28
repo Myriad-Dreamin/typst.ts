@@ -4,13 +4,11 @@ use std::{
 };
 
 use js_sys::ArrayBuffer;
-use typst::{
-    font::{
-        Coverage, Font, FontBook, FontFlags, FontInfo, FontStretch, FontStyle, FontVariant,
-        FontWeight,
-    },
-    util::Buffer,
+use typst::font::{
+    Coverage, Font, FontBook, FontFlags, FontInfo, FontStretch, FontStyle, FontVariant, FontWeight,
 };
+use wasm_bindgen::prelude::*;
+
 use typst_ts_core::{
     cache::FontInfoCache,
     error::prelude::*,
@@ -18,9 +16,8 @@ use typst_ts_core::{
         BufferFontLoader, FontGlyphPack, FontInfoKey, FontProfile, FontResolverImpl, GlyphId,
         PartialFont, PartialFontBook,
     },
-    FontLoader, FontSlot,
+    Bytes, FontLoader, FontSlot,
 };
-use wasm_bindgen::prelude::*;
 
 use crate::font::info::typst_typographic_family;
 
@@ -377,7 +374,7 @@ impl FontLoader for WebFontLoader {
         );
         // let blob = pollster::block_on(JsFuture::from(blob.array_buffer())).unwrap();
         let blob = font.load()?;
-        let blob = Buffer::from(js_sys::Uint8Array::new(&blob).to_vec());
+        let blob = Bytes::from(js_sys::Uint8Array::new(&blob).to_vec());
 
         Font::new(blob, self.index)
     }
@@ -421,7 +418,7 @@ impl BrowserFontSearcher {
     #[cfg(feature = "browser-embedded-fonts")]
     pub fn add_embedded(&mut self) {
         let mut add = |bytes: &'static [u8]| {
-            let buffer = Buffer::from_static(bytes);
+            let buffer = Bytes::from_static(bytes);
             for (_, font) in Font::iter(buffer).enumerate() {
                 self.book.push(font.info().clone());
                 self.fonts.push(FontSlot::with_value(Some(font)));
@@ -487,7 +484,7 @@ impl BrowserFontSearcher {
         Ok(())
     }
 
-    pub fn add_font_data(&mut self, buffer: Buffer) {
+    pub fn add_font_data(&mut self, buffer: Bytes) {
         for (i, info) in FontInfo::iter(buffer.as_slice()).enumerate() {
             self.book.push(info);
 

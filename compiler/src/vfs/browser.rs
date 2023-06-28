@@ -1,12 +1,11 @@
 use std::{path::Path, time::SystemTime};
 
-use typst::{
-    diag::{FileError, FileResult},
-    util::Buffer,
-};
+use typst::diag::{FileError, FileResult};
+use wasm_bindgen::prelude::*;
+
+use typst_ts_core::Bytes;
 
 use super::AccessModel;
-use wasm_bindgen::prelude::*;
 
 pub struct ProxyAccessModel {
     pub context: JsValue,
@@ -64,7 +63,7 @@ impl AccessModel for ProxyAccessModel {
             })
     }
 
-    fn read_all(&self, src: &Path) -> FileResult<Buffer> {
+    fn read_all(&self, src: &Path) -> FileResult<Bytes> {
         let data = self
             .read_all_fn
             .call1(&self.context, &src.to_string_lossy().as_ref().into())
@@ -78,7 +77,7 @@ impl AccessModel for ProxyAccessModel {
             })?;
 
         let data = if let Some(data) = data.dyn_ref::<js_sys::Uint8Array>() {
-            Buffer::from(data.to_vec())
+            Bytes::from(data.to_vec())
         } else {
             return Err(FileError::AccessDenied);
         };

@@ -187,7 +187,7 @@ impl TypstRenderer {
 #[cfg(test)]
 #[cfg(target_arch = "wasm32")]
 mod tests {
-    use typst::util::Buffer;
+    use typst_ts_core::Bytes;
 
     use super::{TypstRenderer, TypstRendererBuilder};
     use std::path::PathBuf;
@@ -204,58 +204,58 @@ mod tests {
         let mut builder = TypstRendererBuilder::new().unwrap();
 
         // todo: prepare font files for test
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/LinLibertine_R.ttf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/LinLibertine_RB.ttf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/LinLibertine_RBI.ttf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/LinLibertine_RI.ttf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/NewCMMath-Book.otf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/NewCMMath-Regular.otf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/InriaSerif-Bold.ttf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/InriaSerif-BoldItalic.ttf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/InriaSerif-Italic.ttf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/InriaSerif-Regular.ttf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/Roboto-Regular.ttf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/NotoSerifCJKsc-Regular.otf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/DejaVuSansMono.ttf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/DejaVuSansMono-Oblique.ttf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/DejaVuSansMono-BoldOblique.ttf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/DejaVuSansMono-Bold.ttf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/TwitterColorEmoji.ttf"
         )));
-        builder.add_raw_font_internal(Buffer::from_static(include_bytes!(
+        builder.add_raw_font_internal(Bytes::from_static(include_bytes!(
             "../../../assets/fonts/NotoColorEmoji.ttf"
         )));
 

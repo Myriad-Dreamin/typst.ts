@@ -7,19 +7,17 @@ use std::{
 
 use memmap2::Mmap;
 use sha2::{Digest, Sha256};
-use typst::{
-    font::{FontBook, FontInfo},
-    util::Buffer,
-};
+use typst::font::{FontBook, FontInfo};
+use walkdir::WalkDir;
+
 use typst_ts_core::{
     build_info,
     font::{
         get_font_coverage_hash, BufferFontLoader, FontInfoItem, FontProfile, FontProfileItem,
         FontResolverImpl, LazyBufferFontLoader, PartialFontBook,
     },
-    FontSlot,
+    Bytes, FontSlot,
 };
-use walkdir::WalkDir;
 
 use crate::vfs::system::LazyFile;
 
@@ -145,7 +143,7 @@ impl SystemFontSearcher {
     }
 
     /// Add an in-memory font.
-    pub fn add_memory_font(&mut self, data: Buffer) {
+    pub fn add_memory_font(&mut self, data: Bytes) {
         for (index, info) in FontInfo::iter(&data).enumerate() {
             self.book.push(info.clone());
             self.fonts.push(FontSlot::new_boxed(BufferFontLoader {

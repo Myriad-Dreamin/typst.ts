@@ -12,13 +12,13 @@ use typst::{
     eval::{Datetime, Library},
     font::{Font, FontBook},
     syntax::{Source, SourceId},
-    util::Buffer,
     World,
 };
+
 use typst_ts_core::{
     artifact_ir::ArtifactHeader,
     font::{FontProfile, FontResolverImpl},
-    FontResolver,
+    Bytes, FontResolver,
 };
 
 use crate::{
@@ -91,7 +91,7 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
         self.font_resolver.font(id)
     }
 
-    fn file(&self, path: &Path) -> FileResult<Buffer> {
+    fn file(&self, path: &Path) -> FileResult<Bytes> {
         self.vfs.file(path)
     }
 
