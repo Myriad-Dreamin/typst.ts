@@ -1,3 +1,6 @@
+mod takable;
+pub use takable::*;
+
 mod hash;
 pub use hash::*;
 

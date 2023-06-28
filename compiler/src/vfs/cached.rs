@@ -1,12 +1,9 @@
 use std::{collections::HashMap, ffi::OsStr, path::Path, sync::Arc, time::SystemTime};
 
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
-use typst::{
-    diag::{FileError, FileResult},
-    util::ArcExt,
-};
+use typst::diag::{FileError, FileResult};
 
-use typst_ts_core::{Bytes, QueryRef};
+use typst_ts_core::{Bytes, QueryRef, TakeAs};
 
 use crate::vfs::from_utf8_or_bom;
 
@@ -109,7 +106,7 @@ impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {
                 .source_state
                 .compute_with_context_ref(|prev_to_diff| {
                     let text = from_utf8_or_bom(&read(entry)?)?.to_owned();
-                    let prev_to_diff = prev_to_diff.map(ArcExt::take);
+                    let prev_to_diff = prev_to_diff.map(TakeAs::take);
                     println!("read: {:?}", instant.elapsed());
                     Ok(Arc::new(compute(prev_to_diff, text)?))
                 })?;
