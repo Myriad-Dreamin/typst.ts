@@ -12,6 +12,7 @@ pub mod system;
 
 pub mod cached;
 pub mod dummy;
+pub mod trace;
 
 mod path_abs;
 mod path_anchored;
@@ -45,9 +46,12 @@ use typst::{
     syntax::{Source, SourceId},
     util::{Buffer, PathExt},
 };
-use typst_ts_core::QueryRef;
+use typst_ts_core::{typst_affinite_hash, QueryRef};
 
-use self::cached::CachedAccessModel;
+use self::{
+    cached::{CachedAccessModel, FileCache},
+    trace::TraceAccessModel,
+};
 
 /// Handle to a file in [`Vfs`]
 ///
@@ -79,7 +83,7 @@ pub struct PathSlot {
     idx: FileId,
     sampled_path: once_cell::sync::OnceCell<PathBuf>,
     mtime: FileQuery<std::time::SystemTime>,
-    source: FileQuery<Source>,
+    source: FileQuery<Arc<Source>>,
     buffer: FileQuery<Buffer>,
 }
 
@@ -96,29 +100,42 @@ impl PathSlot {
 }
 
 pub struct Vfs<M: AccessModel + Sized> {
-    access_model: CachedAccessModel<M>,
-    path_interner: Mutex<PathInterner<<M as AccessModel>::RealPath>>,
+    lifetime_cnt: u64,
+    access_model: TraceAccessModel<CachedAccessModel<M, Source>>,
+    path_interner: Mutex<PathInterner<<M as AccessModel>::RealPath, u64>>,
 
     path2slot: RwLock<HashMap<Arc<OsStr>, FileId>>,
     pub slots: AppendOnlyVec<PathSlot>,
+    pub do_reparse: bool,
 }
 
 impl<M: AccessModel + Sized> Vfs<M> {
     pub fn new(access_model: M) -> Self {
         Self {
-            access_model: CachedAccessModel::new(access_model),
+            lifetime_cnt: 0,
+            access_model: TraceAccessModel::new(CachedAccessModel::new(access_model)),
             path_interner: Mutex::new(PathInterner::default()),
             slots: AppendOnlyVec::new(),
             path2slot: RwLock::new(HashMap::new()),
+            do_reparse: true,
         }
     }
 
     /// Reset the source manager.
     pub fn reset(&mut self) {
+        self.lifetime_cnt += 1;
+        let new_lifetime_cnt = self.lifetime_cnt;
         self.slots = AppendOnlyVec::new();
         self.path2slot.get_mut().clear();
-        self.path_interner.get_mut().clear();
+        self.path_interner
+            .get_mut()
+            .retain(|_, lifetime| new_lifetime_cnt - *lifetime <= 30);
         self.access_model.clear();
+    }
+
+    /// Set the `do_reparse` flag.
+    pub fn set_do_reparse(&mut self, do_reparse: bool) {
+        self.do_reparse = do_reparse;
     }
 
     /// Returns the overall memory usage for the stored files.
@@ -166,6 +183,115 @@ impl<M: AccessModel + Sized> Vfs<M> {
         }
     }
 
+    /// Read a source with diff.
+    fn read_diff_source(&self, path: &Path, source_id: SourceId) -> FileResult<Arc<Source>> {
+        if self.access_model.is_file(path)? {
+            Ok(self
+                .access_model
+                .read_all_diff(path, |x, y| self.reparse(path, source_id, x, y))?)
+        } else {
+            Err(FileError::IsDirectory)
+        }
+    }
+
+    /// Read a source with diff.
+    fn replace_diff_source(
+        &self,
+        path: &Path,
+        source_id: SourceId,
+        read: impl FnOnce(&FileCache<Source>) -> FileResult<Buffer>,
+    ) -> FileResult<Arc<Source>> {
+        if self.access_model.is_file(path)? {
+            Ok(self
+                .access_model
+                .replace_diff(path, read, |x, y| self.reparse(path, source_id, x, y))?)
+        } else {
+            Err(FileError::IsDirectory)
+        }
+    }
+
+    fn reparse(
+        &self,
+        path: &Path,
+        source_id: SourceId,
+        prev: Option<Source>,
+        next: String,
+    ) -> FileResult<Source> {
+        let instant = std::time::Instant::now();
+        println!("reparse: {:?}", path);
+        use dissimilar::Chunk;
+        match prev {
+            Some(mut source) => {
+                let prev = source.text();
+                if prev == next {
+                    println!("same: {:?} -> {:?}", path, typst_affinite_hash(&source));
+                    Ok(source)
+                } else {
+                    let prev = prev.to_owned();
+                    let prev_hash = typst_affinite_hash(&source);
+
+                    let diff = dissimilar::diff(&prev, &next);
+
+                    let elapsed = instant.elapsed();
+                    let diff_instant = std::time::Instant::now();
+
+                    let mut rev_adavance = 0;
+                    let mut last_rep = false;
+                    let prev_len = prev.len();
+                    for op in diff.iter().rev().zip(diff.iter().rev().skip(1)) {
+                        if last_rep {
+                            last_rep = false;
+                            continue;
+                        }
+                        match op {
+                            (Chunk::Delete(t), Chunk::Insert(s))
+                            | (Chunk::Insert(s), Chunk::Delete(t)) => {
+                                println!("[{}] {} -> {}", rev_adavance, t, s);
+                                rev_adavance += t.len();
+                                source.edit(
+                                    prev_len - rev_adavance..prev_len - rev_adavance + t.len(),
+                                    s,
+                                );
+                                last_rep = true;
+                            }
+                            (Chunk::Delete(t), Chunk::Equal(e)) => {
+                                println!("[{}] -- {}", rev_adavance, t);
+                                rev_adavance += t.len();
+                                source.edit(
+                                    prev_len - rev_adavance..prev_len - rev_adavance + t.len(),
+                                    "",
+                                );
+                                rev_adavance += e.len();
+                                last_rep = true;
+                            }
+                            (Chunk::Insert(s), Chunk::Equal(e)) => {
+                                println!("[{}] ++ {}", rev_adavance, s);
+                                source.edit(prev_len - rev_adavance..prev_len - rev_adavance, s);
+                                last_rep = true;
+                                rev_adavance += e.len();
+                            }
+                            (Chunk::Equal(t), _) => {
+                                rev_adavance += t.len();
+                            }
+                            _ => unreachable!(),
+                        }
+                    }
+
+                    println!(
+                        "reparse real: d:{:?} e:{:?} {:?} {:?} -> {:?}",
+                        elapsed,
+                        diff_instant.elapsed(),
+                        path,
+                        prev_hash,
+                        typst_affinite_hash(&source)
+                    );
+                    Ok(source)
+                }
+            }
+            None => Ok(Source::new(source_id, path, next)),
+        }
+    }
+
     /// Get or insert a slot for a path. All paths pointing to the same entity will share the same slot.
     ///
     /// - If `path` does not exists in the `Vfs`, allocate a new id for it, associated with a
@@ -177,7 +303,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
         let real_path = self.access_model.real_path(origin_path)?;
 
         let mut path_interner = self.path_interner.lock();
-        let file_id = path_interner.intern(real_path);
+        let (file_id, _) = path_interner.intern(real_path, self.lifetime_cnt);
         let idx = file_id.0 as usize;
         for i in self.slots.len()..idx + 1 {
             self.slots.push(PathSlot::new(FileId(i as u32)));
@@ -229,7 +355,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
 
     /// Get source id by path.
     /// This function will not check whether the path exists.
-    fn resolve_with_f<ReadContent: FnOnce() -> FileResult<String>>(
+    fn resolve_with_f<ReadContent: FnOnce(SourceId) -> FileResult<Arc<Source>>>(
         &self,
         path: &Path,
         read: ReadContent,
@@ -243,8 +369,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
                 panic!("source id overflow");
             }
 
-            let text = read()?;
-            Ok(Source::new(source_id, path, text))
+            read(source_id)
         })?;
 
         Ok(source_id)
@@ -252,15 +377,35 @@ impl<M: AccessModel + Sized> Vfs<M> {
 
     /// Get source id by path with filesystem content.
     pub fn resolve(&self, path: &Path) -> FileResult<SourceId> {
-        self.resolve_with_f(path, || {
-            let buf = self.read(path)?;
-            Ok(from_utf8_or_bom(&buf)?.to_owned())
+        self.resolve_with_f(path, |source_id| {
+            if !self.do_reparse {
+                let instant = std::time::Instant::now();
+
+                let content = self.read(path)?;
+                let content = from_utf8_or_bom(&content)?.to_owned();
+                let res = Ok(Arc::new(Source::new(source_id, path, content)));
+
+                println!("parse: {:?} {:?}", path, instant.elapsed());
+                return res;
+            }
+            self.read_diff_source(path, source_id)
         })
     }
 
     /// Get source id by path with memory content.
     pub fn resolve_with<P: AsRef<Path>>(&self, path: P, content: &str) -> FileResult<SourceId> {
-        self.resolve_with_f(path.as_ref(), || Ok(content.to_owned()))
+        let path = path.as_ref();
+        self.resolve_with_f(path, |source_id| {
+            if !self.do_reparse {
+                let instant = std::time::Instant::now();
+
+                let res = Ok(Arc::new(Source::new(source_id, path, content.to_owned())));
+
+                println!("parse: {:?} {:?}", path, instant.elapsed());
+                return res;
+            }
+            self.replace_diff_source(path, source_id, |_| Ok(Buffer::from(content.as_bytes())))
+        })
     }
 
     pub fn file(&self, path: &Path) -> FileResult<Buffer> {

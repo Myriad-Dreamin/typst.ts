@@ -114,6 +114,11 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
 }
 
 impl<F: CompilerFeat> CompilerWorld<F> {
+    /// Set the `do_reparse` flag.
+    pub fn set_do_reparse(&mut self, do_reparse: bool) {
+        self.vfs.do_reparse = do_reparse;
+    }
+
     /// Get source id by path with filesystem content.
     pub fn resolve(&self, path: &Path) -> FileResult<SourceId> {
         self.vfs.resolve(path)
