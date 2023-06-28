@@ -34,7 +34,7 @@ fn get_driver(
 macro_rules! artifact_exporters {
     ($($exporters:expr),*) => {
         {
-            let artifact_exporters: Vec<Box<dyn typst_ts_core::Exporter<typst_ts_core::Artifact>>> = vec![
+            let artifact_exporters: Vec<Box<dyn typst_ts_core::Exporter<typst_ts_core::Artifact> + Send>> = vec![
                 $(Box::new($exporters)),*
             ];
             FromExporter::new(artifact_exporters)
@@ -45,7 +45,7 @@ macro_rules! artifact_exporters {
 macro_rules! document_exporters {
     ($($exporters:expr),*) => {
         {
-            let document_exporters: Vec<Box<dyn typst_ts_core::Exporter<typst::doc::Document>>> = vec![
+            let document_exporters: Vec<Box<dyn typst_ts_core::Exporter<typst::doc::Document> + Send>> = vec![
                 $(Box::new($exporters)),*
             ];
             GroupExporter::new(document_exporters)
@@ -56,7 +56,7 @@ macro_rules! document_exporters {
 macro_rules! ir_exporters {
     ($($exporters:expr),*) => {
         {
-            let ir_exporters: Vec<Box<dyn typst_ts_core::Exporter<typst_ts_core::artifact_ir::Artifact>>> = vec![
+            let ir_exporters: Vec<Box<dyn typst_ts_core::Exporter<typst_ts_core::artifact_ir::Artifact> + Send>> = vec![
                 $(Box::new($exporters)),*
             ];
             FromExporter::new(ir_exporters)

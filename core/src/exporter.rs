@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use typst::{diag::SourceResult, World};
 
-pub(crate) type DynExporter<Input, Output = ()> = Box<dyn Exporter<Input, Output>>;
+pub(crate) type DynExporter<Input, Output = ()> = Box<dyn Exporter<Input, Output> + Send>;
 
 pub trait Transformer<Input, Output = ()> {
     /// Export the given input with given world.
