@@ -1,9 +1,8 @@
 use std::{path::Path, time::SystemTime};
 
-use typst::{
-    diag::{FileError, FileResult},
-    util::Buffer,
-};
+use typst::diag::{FileError, FileResult};
+
+use typst_ts_core::Bytes;
 
 use super::AccessModel;
 
@@ -25,7 +24,7 @@ impl AccessModel for DummyAccessModel {
         Ok(src.to_owned())
     }
 
-    fn read_all(&self, _src: &Path) -> FileResult<Buffer> {
+    fn read_all(&self, _src: &Path) -> FileResult<Bytes> {
         Err(FileError::AccessDenied)
     }
 }

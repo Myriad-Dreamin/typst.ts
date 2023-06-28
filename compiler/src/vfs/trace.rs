@@ -3,11 +3,14 @@ use std::{
     sync::{atomic::AtomicU64, Arc},
 };
 
+use typst::diag::FileResult;
+
+use typst_ts_core::Bytes;
+
 use super::{
     cached::{CachedAccessModel, FileCache},
     AccessModel,
 };
-use typst::{diag::FileResult, util::Buffer};
 
 pub struct TraceAccessModel<M: AccessModel + Sized> {
     inner: M,
@@ -26,7 +29,7 @@ impl<M: AccessModel + Sized, C: Clone> TraceAccessModel<CachedAccessModel<M, C>>
     pub fn replace_diff(
         &self,
         src: &Path,
-        read: impl FnOnce(&FileCache<C>) -> FileResult<Buffer>,
+        read: impl FnOnce(&FileCache<C>) -> FileResult<Bytes>,
         compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
     ) -> FileResult<Arc<C>> {
         let instant = std::time::Instant::now();
@@ -99,7 +102,7 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
         res
     }
 
-    fn read_all(&self, src: &Path) -> FileResult<Buffer> {
+    fn read_all(&self, src: &Path) -> FileResult<Bytes> {
         let instant = std::time::Instant::now();
         let res = self.inner.read_all(src);
         let elapsed = instant.elapsed();

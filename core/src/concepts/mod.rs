@@ -9,3 +9,7 @@ pub use read::*;
 
 mod marker;
 pub use marker::*;
+
+/// Re-export of the typst crate.
+mod typst;
+pub use self::typst::*;

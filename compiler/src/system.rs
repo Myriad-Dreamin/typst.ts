@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 
-use typst::util::Buffer;
-use typst_ts_core::config::CompileOpts;
+use typst_ts_core::{config::CompileOpts, Bytes};
 
 use crate::font::system::SystemFontSearcher;
 use crate::vfs::{system::SystemAccessModel, Vfs};
@@ -42,8 +41,8 @@ impl TypstSystemWorld {
         // Source2: add the fonts in memory.
         for font_data in opts.with_embedded_fonts {
             searcher.add_memory_font(match font_data {
-                Cow::Borrowed(data) => Buffer::from_static(data),
-                Cow::Owned(data) => Buffer::from(data),
+                Cow::Borrowed(data) => Bytes::from_static(data),
+                Cow::Owned(data) => Bytes::from(data),
             });
         }
         // Source3: add the fonts from vanilla paths.

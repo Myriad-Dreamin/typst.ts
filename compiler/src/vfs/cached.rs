@@ -3,9 +3,10 @@ use std::{collections::HashMap, ffi::OsStr, path::Path, sync::Arc, time::SystemT
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 use typst::{
     diag::{FileError, FileResult},
-    util::{ArcExt, Buffer},
+    util::ArcExt,
 };
-use typst_ts_core::QueryRef;
+
+use typst_ts_core::{Bytes, QueryRef};
 
 use crate::vfs::from_utf8_or_bom;
 
@@ -18,7 +19,7 @@ pub struct FileCache<S> {
     lifetime_cnt: usize,
     mtime: SystemTime,
     is_file: QueryRef<bool, FileError>,
-    read_all: QueryRef<Buffer, FileError>,
+    read_all: QueryRef<Bytes, FileError>,
     source_state: IncrQueryRef<S, FileError>,
 }
 
@@ -97,7 +98,7 @@ impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {
     pub fn replace_diff(
         &self,
         src: &Path,
-        read: impl FnOnce(&FileCache<C>) -> FileResult<Buffer>,
+        read: impl FnOnce(&FileCache<C>) -> FileResult<Bytes>,
         compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
     ) -> FileResult<Arc<C>> {
         let instant = std::time::Instant::now();
@@ -164,7 +165,7 @@ impl<Inner: AccessModel, C: Clone> AccessModel for CachedAccessModel<Inner, C> {
         self.inner.real_path(src)
     }
 
-    fn read_all(&self, src: &Path) -> FileResult<Buffer> {
+    fn read_all(&self, src: &Path) -> FileResult<Bytes> {
         self.cache_entry(src, |entry| {
             let data = entry.read_all.compute(|| self.inner.read_all(src))?;
             Ok(data.clone())

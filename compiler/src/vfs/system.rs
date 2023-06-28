@@ -1,10 +1,8 @@
 use std::{fs::File, io::Read, path::Path};
 
-use typst::{
-    diag::{FileError, FileResult},
-    util::Buffer,
-};
-use typst_ts_core::ReadAllOnce;
+use typst::diag::{FileError, FileResult};
+
+use typst_ts_core::{Bytes, ReadAllOnce};
 
 use super::AccessModel;
 
@@ -67,7 +65,7 @@ impl AccessModel for SystemAccessModel {
         same_file::Handle::from_path(src).map_err(f)
     }
 
-    fn read_all(&self, src: &Path) -> FileResult<Buffer> {
+    fn read_all(&self, src: &Path) -> FileResult<Bytes> {
         let f = |e| FileError::from_io(e, src);
         let mut buf = Vec::<u8>::new();
         std::fs::File::open(src)

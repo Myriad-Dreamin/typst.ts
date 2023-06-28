@@ -1,11 +1,10 @@
-use crate::TypstCompiler;
+use js_sys::Uint8Array;
+use wasm_bindgen::prelude::*;
 
 use typst_ts_compiler::{font::web::BrowserFontSearcher, vfs::browser::ProxyAccessModel};
+use typst_ts_core::{error::prelude::*, Bytes};
 
-use js_sys::Uint8Array;
-use typst::util::Buffer;
-use typst_ts_core::error::prelude::*;
-use wasm_bindgen::prelude::*;
+use crate::TypstCompiler;
 
 #[wasm_bindgen]
 pub struct TypstCompilerBuilder {
@@ -68,7 +67,7 @@ impl TypstCompilerBuilder {
 }
 
 impl TypstCompilerBuilder {
-    pub fn add_raw_font_internal(&mut self, font_buffer: Buffer) {
+    pub fn add_raw_font_internal(&mut self, font_buffer: Bytes) {
         self.searcher.add_font_data(font_buffer);
     }
 }
