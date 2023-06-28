@@ -1,5 +1,8 @@
 use std::path::{Component, Path};
 
+pub use path_clean::PathClean;
+
+/// Get the path cleaned as a unix-style string.
 pub fn unix_slash(root: &Path) -> String {
     let mut res = String::with_capacity(root.as_os_str().len());
     let mut parent_norm = false;
@@ -40,15 +43,16 @@ pub fn unix_slash(root: &Path) -> String {
     res
 }
 
+/// Get the path cleaned as a platform-style string.
+pub use path_clean::clean;
+
 #[cfg(test)]
 mod test {
     use std::path::{Path, PathBuf};
 
-    use path_clean::{clean as inner_path_clean, PathClean};
+    use super::{clean as inner_path_clean, unix_slash, PathClean};
 
-    use super::unix_slash;
-
-    fn clean<P: AsRef<Path>>(path: P) -> String {
+    pub fn clean<P: AsRef<Path>>(path: P) -> String {
         unix_slash(&inner_path_clean(path))
     }
 

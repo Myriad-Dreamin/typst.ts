@@ -16,7 +16,6 @@ pub mod trace;
 
 mod path_abs;
 mod path_anchored;
-pub(crate) mod path_ext;
 mod path_interner;
 mod path_vfs;
 
@@ -44,10 +43,9 @@ use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
 use typst::{
     diag::{FileError, FileResult},
     syntax::{Source, SourceId},
-    util::PathExt,
 };
 
-use typst_ts_core::{typst_affinite_hash, Bytes, QueryRef};
+use typst_ts_core::{path::PathClean, typst_affinite_hash, Bytes, QueryRef};
 
 use self::{
     cached::{CachedAccessModel, FileCache},
@@ -146,13 +144,13 @@ impl<M: AccessModel + Sized> Vfs<M> {
 
     /// Id of the given path if it exists in the `Vfs` and is not deleted.
     pub fn file_id(&self, path: &Path) -> Option<FileId> {
-        let path = path.normalize();
+        let path = path.clean();
         self.path2slot.read().get(path.as_os_str()).copied()
     }
 
     /// Check whether a path is related to a source.
     pub fn dependant(&self, path: &Path) -> bool {
-        let path = path.normalize();
+        let path = path.clean();
         self.path2slot.read().contains_key(path.as_os_str())
     }
 
@@ -332,7 +330,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
         let inserted = path2slot.insert(origin_path.as_os_str().into(), slot.idx);
         assert!(matches!(inserted, None), "slot already inserted");
 
-        let normalized = origin_path.normalize();
+        let normalized = origin_path.clean();
         if path2slot.get(normalized.as_os_str()).is_none() {
             let inserted = path2slot.insert(normalized.as_os_str().into(), slot.idx);
             assert!(matches!(inserted, None), "slot already inserted");

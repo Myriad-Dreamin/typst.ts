@@ -12,6 +12,7 @@ repository.workspace = true
 typst.workspace = true
 comemo.workspace = true
 ttf-parser.workspace = true
+path-clean.workspace = true
 
 ecow.workspace = true
 base64.workspace = true

@@ -115,6 +115,7 @@ dirs = "5"
 human-panic = "1.1.4"
 notify = "5"
 vergen = { version = "7.5.1", features = ["build", "cargo", "git", "rustc"] }
+path-clean = "1.0.1"
 
 # project core
 typst-ts-core = "0.2"

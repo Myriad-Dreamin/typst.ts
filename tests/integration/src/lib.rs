@@ -2,11 +2,12 @@ pub mod wasm;
 
 use std::{path::Path, sync::Arc};
 
-use typst::{doc::Document, util::PathExt};
+use typst::doc::Document;
 use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
 use typst_ts_core::{
     config::CompileOpts,
     exporter_builtins::{FromExporter, FsPathExporter, GroupExporter},
+    path::PathClean,
     Artifact, AsWritable,
 };
 use typst_ts_pdf_exporter::PdfDocExporter;
@@ -127,9 +128,9 @@ impl ArtifactCompiler {
 
         ArtifactBundle {
             driver,
-            json: json_artifact_file_path.normalize(),
-            tir: tir_file_path.normalize(),
-            pdf: pdf_file_path.normalize(),
+            json: json_artifact_file_path.clean(),
+            tir: tir_file_path.clean(),
+            pdf: pdf_file_path.clean(),
         }
     }
 }

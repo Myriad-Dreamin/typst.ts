@@ -23,6 +23,7 @@ pub mod font;
 pub use font::{FontLoader, FontResolver, FontSlot};
 
 pub(crate) mod hash;
+pub mod path;
 pub use hash::typst_affinite_hash;
 
 pub(crate) mod concepts;
