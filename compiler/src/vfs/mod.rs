@@ -16,7 +16,6 @@ pub mod trace;
 
 mod path_abs;
 mod path_anchored;
-pub(crate) mod path_ext;
 mod path_interner;
 mod path_vfs;
 
