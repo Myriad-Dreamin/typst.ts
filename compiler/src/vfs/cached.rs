@@ -83,6 +83,9 @@ impl<Inner: AccessModel> AccessModel for CachedAccessModel<Inner> {
 
     fn clear(&mut self) {
         self.lifetime_cnt += 1;
+
+        let mut path_results = self.path_results.write();
+        path_results.retain(|_, v| self.lifetime_cnt - v.lifetime_cnt <= 30);
     }
 
     fn mtime(&self, src: &Path) -> FileResult<SystemTime> {

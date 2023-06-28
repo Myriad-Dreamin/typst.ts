@@ -1,4 +1,5 @@
 /// Trim style naming from a family name and fix bad names.
+#[allow(dead_code)]
 pub fn typst_typographic_family(mut family: &str) -> &str {
     // Separators between names, modifiers and styles.
     const SEPARATORS: [char; 3] = [' ', '-', '_'];
