@@ -9,7 +9,7 @@ use typst::doc::Document;
 use crate::{
     flat_incr_vector::FlatIncrRenderVm,
     flat_vector::{FlatRenderVm, ItemPack, SourceMappingNode, SvgDocument},
-    ir::AbsoulteRef,
+    ir::AbsoluteRef,
     vector::{
         codegen::{SvgText, SvgTextNode},
         lowering::LowerBuilder,
@@ -40,9 +40,9 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         let mut acc_height = 0u32;
         let mut render_task = self.fork_page_render_task(&ctx.next.module);
 
-        let reusable: HashSet<AbsoulteRef, RandomState> =
+        let reusable: HashSet<AbsoluteRef, RandomState> =
             HashSet::from_iter(ctx.prev.pages.iter().map(|e| e.0.clone()));
-        let mut unused_prev: std::collections::BTreeMap<usize, AbsoulteRef> = ctx
+        let mut unused_prev: std::collections::BTreeMap<usize, AbsoluteRef> = ctx
             .prev
             .pages
             .iter()

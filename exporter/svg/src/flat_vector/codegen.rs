@@ -5,14 +5,14 @@ use super::{
     FlatTextItem,
 };
 use crate::{
-    ir::{AbsoulteRef, Scalar},
+    ir::{AbsoluteRef, Scalar},
     vector::{SvgText, SvgTextBuilder, SvgTextNode},
     ExportFeature,
 };
 
 /// See [`FlatGroupContext`].
 impl<'s, 'm, 't, Feat: ExportFeature> FlatGroupContext for SvgTextBuilder<'s, 'm, 't, Feat> {
-    fn render_item_ref_at(&mut self, pos: crate::ir::Point, item: &AbsoulteRef) {
+    fn render_item_ref_at(&mut self, pos: crate::ir::Point, item: &AbsoluteRef) {
         let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
 
         let sub_content = self.t.render_flat_item(item);
@@ -26,7 +26,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> FlatGroupContext for SvgTextBuilder<'s, 'm
         })));
     }
 
-    fn render_glyph_ref(&mut self, pos: Scalar, glyph: &AbsoulteRef) {
+    fn render_glyph_ref(&mut self, pos: Scalar, glyph: &AbsoluteRef) {
         self.render_glyph_ref_inner(pos, glyph)
     }
 

@@ -4,23 +4,23 @@ use std::{ops::Deref, sync::Arc};
 
 use crate::flat_vector::{ir, vm::FlatGroupContext};
 use crate::{
-    ir::{AbsoulteRef, Point, Scalar},
+    ir::{AbsoluteRef, Point, Scalar},
     vector::{GroupContext, SvgTextBuilder, SvgTextNode, TransformContext},
     ExportFeature, SvgRenderTask,
 };
 
 /// A RAII trait for rendering flatten SVG items into underlying context.
 pub trait FlatIncrGroupContext: Sized {
-    fn render_diff_item_ref_at(&mut self, pos: Point, item: &AbsoulteRef, prev_item: &AbsoulteRef);
-    fn render_diff_item_ref(&mut self, item: &AbsoulteRef, prev_item: &AbsoulteRef) {
+    fn render_diff_item_ref_at(&mut self, pos: Point, item: &AbsoluteRef, prev_item: &AbsoluteRef);
+    fn render_diff_item_ref(&mut self, item: &AbsoluteRef, prev_item: &AbsoluteRef) {
         self.render_diff_item_ref_at(Point::default(), item, prev_item);
     }
 
-    fn render_diff_reuse_item(&mut self, item_ref: &AbsoulteRef);
+    fn render_diff_reuse_item(&mut self, item_ref: &AbsoluteRef);
 
     fn with_frame(self, group: &ir::GroupRef) -> Self;
     fn with_text(self, text: &ir::FlatTextItem) -> Self;
-    fn with_reuse(self, v: &AbsoulteRef) -> Self;
+    fn with_reuse(self, v: &AbsoluteRef) -> Self;
 }
 
 /// A virtual machine for rendering a flatten frame.
@@ -35,15 +35,15 @@ pub trait FlatIncrRenderVm<'s, 'm> {
         + TransformContext
         + Into<Self::Resultant>;
 
-    fn get_item(&self, value: &AbsoulteRef) -> Option<&'m ir::FlatSvgItem>;
+    fn get_item(&self, value: &AbsoluteRef) -> Option<&'m ir::FlatSvgItem>;
 
-    fn start_flat_group(&'s mut self, value: &AbsoulteRef) -> Self::Group;
+    fn start_flat_group(&'s mut self, value: &AbsoluteRef) -> Self::Group;
 
     /// Render an item into the a `<g/>` element.
     fn render_diff_item(
         &'s mut self,
-        next_abs_ref: &AbsoulteRef,
-        prev_abs_ref: &AbsoulteRef,
+        next_abs_ref: &AbsoluteRef,
+        prev_abs_ref: &AbsoluteRef,
     ) -> Self::Resultant {
         let next_item: &'m ir::FlatSvgItem = self.get_item(next_abs_ref).unwrap();
         let prev_item = self.get_item(prev_abs_ref);
@@ -91,13 +91,13 @@ pub trait FlatIncrRenderVm<'s, 'm> {
         next: &ir::GroupRef,
     ) {
         if let Some(ir::FlatSvgItem::Group(prev_group)) = prev_item_ {
-            let mut unused_prev: BTreeMap<usize, AbsoulteRef> = prev_group
+            let mut unused_prev: BTreeMap<usize, AbsoluteRef> = prev_group
                 .0
                 .iter()
                 .map(|v| v.1.clone())
                 .enumerate()
                 .collect();
-            let reusable: HashSet<AbsoulteRef, RandomState> =
+            let reusable: HashSet<AbsoluteRef, RandomState> =
                 HashSet::from_iter(prev_group.0.iter().map(|e| e.1.clone()));
 
             for (_, item_ref) in next.0.iter() {
@@ -172,11 +172,11 @@ impl<'s, 'm: 's, 't: 's, Feat: ExportFeature + 's> FlatIncrRenderVm<'s, 'm>
     type Resultant = Arc<SvgTextNode>;
     type Group = SvgTextBuilder<'s, 'm, 't, Feat>;
 
-    fn get_item(&self, value: &AbsoulteRef) -> Option<&'m ir::FlatSvgItem> {
+    fn get_item(&self, value: &AbsoluteRef) -> Option<&'m ir::FlatSvgItem> {
         self.module.get_item(value)
     }
 
-    fn start_flat_group(&'s mut self, v: &AbsoulteRef) -> Self::Group {
+    fn start_flat_group(&'s mut self, v: &AbsoluteRef) -> Self::Group {
         Self::Group {
             t: self,
             attributes: vec![("data-tid", v.as_svg_id("g"))],

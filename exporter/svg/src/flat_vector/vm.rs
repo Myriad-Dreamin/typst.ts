@@ -2,19 +2,19 @@ use std::{ops::Deref, sync::Arc};
 
 use super::ir;
 use crate::{
-    ir::{AbsoulteRef, Point, Scalar},
+    ir::{AbsoluteRef, Point, Scalar},
     vector::{GroupContext, SvgTextBuilder, SvgTextNode, TransformContext},
     ExportFeature, SvgRenderTask,
 };
 
 /// A RAII trait for rendering flatten SVG items into underlying context.
 pub trait FlatGroupContext: Sized {
-    fn render_item_ref_at(&mut self, pos: Point, item: &AbsoulteRef);
-    fn render_item_ref(&mut self, item: &AbsoulteRef) {
+    fn render_item_ref_at(&mut self, pos: Point, item: &AbsoluteRef);
+    fn render_item_ref(&mut self, item: &AbsoluteRef) {
         self.render_item_ref_at(Point::default(), item);
     }
 
-    fn render_glyph_ref(&mut self, pos: Scalar, item: &AbsoulteRef);
+    fn render_glyph_ref(&mut self, pos: Scalar, item: &AbsoluteRef);
 
     fn render_flat_text_semantics(&mut self, _text: &ir::FlatTextItem, _width: Scalar) {}
 }
@@ -27,20 +27,20 @@ pub trait FlatRenderVm<'s, 'm> {
     type Resultant;
     type Group: GroupContext + FlatGroupContext + TransformContext + Into<Self::Resultant>;
 
-    fn get_item(&self, value: &AbsoulteRef) -> Option<&'m ir::FlatSvgItem>;
+    fn get_item(&self, value: &AbsoluteRef) -> Option<&'m ir::FlatSvgItem>;
 
-    fn start_flat_group(&'s mut self, value: &AbsoulteRef) -> Self::Group;
+    fn start_flat_group(&'s mut self, value: &AbsoluteRef) -> Self::Group;
 
-    fn start_flat_frame(&'s mut self, value: &AbsoulteRef, _group: &ir::GroupRef) -> Self::Group {
+    fn start_flat_frame(&'s mut self, value: &AbsoluteRef, _group: &ir::GroupRef) -> Self::Group {
         self.start_flat_group(value)
     }
 
-    fn start_flat_text(&'s mut self, value: &AbsoulteRef, _text: &ir::FlatTextItem) -> Self::Group {
+    fn start_flat_text(&'s mut self, value: &AbsoluteRef, _text: &ir::FlatTextItem) -> Self::Group {
         self.start_flat_group(value)
     }
 
     /// Render an item into the a `<g/>` element.
-    fn render_flat_item(&'s mut self, abs_ref: &AbsoulteRef) -> Self::Resultant {
+    fn render_flat_item(&'s mut self, abs_ref: &AbsoluteRef) -> Self::Resultant {
         let item: &'m ir::FlatSvgItem = self.get_item(abs_ref).unwrap();
         match item.deref() {
             ir::FlatSvgItem::Group(group) => self.render_group_ref(abs_ref, group),
@@ -70,7 +70,7 @@ pub trait FlatRenderVm<'s, 'm> {
     /// Render a frame group into underlying context.
     fn render_group_ref(
         &'s mut self,
-        abs_ref: &AbsoulteRef,
+        abs_ref: &AbsoluteRef,
         group: &ir::GroupRef,
     ) -> Self::Resultant {
         let mut group_ctx = self.start_flat_frame(abs_ref, group);
@@ -86,7 +86,7 @@ pub trait FlatRenderVm<'s, 'm> {
     /// Render a transformed frame into underlying context.
     fn render_transformed_ref(
         &'s mut self,
-        abs_ref: &AbsoulteRef,
+        abs_ref: &AbsoluteRef,
         transformed: &ir::TransformedRef,
     ) -> Self::Resultant {
         let mut ts = self.start_flat_group(abs_ref).transform(&transformed.0);
@@ -100,7 +100,7 @@ pub trait FlatRenderVm<'s, 'm> {
     /// Render a text into the underlying context.
     fn render_flat_text(
         &'s mut self,
-        abs_ref: &AbsoulteRef,
+        abs_ref: &AbsoluteRef,
         text: &ir::FlatTextItem,
     ) -> Self::Resultant {
         let group_ctx = self.start_flat_text(abs_ref, text);
@@ -131,11 +131,11 @@ impl<'s, 'm: 's, 't: 's, Feat: ExportFeature + 's> FlatRenderVm<'s, 'm>
     type Resultant = Arc<SvgTextNode>;
     type Group = SvgTextBuilder<'s, 'm, 't, Feat>;
 
-    fn get_item(&self, value: &AbsoulteRef) -> Option<&'m ir::FlatSvgItem> {
+    fn get_item(&self, value: &AbsoluteRef) -> Option<&'m ir::FlatSvgItem> {
         self.module.get_item(value)
     }
 
-    fn start_flat_group(&'s mut self, v: &AbsoulteRef) -> Self::Group {
+    fn start_flat_group(&'s mut self, v: &AbsoluteRef) -> Self::Group {
         Self::Group {
             t: self,
             attributes: vec![("data-tid", v.as_svg_id("g"))],
@@ -143,13 +143,13 @@ impl<'s, 'm: 's, 't: 's, Feat: ExportFeature + 's> FlatRenderVm<'s, 'm>
         }
     }
 
-    fn start_flat_frame(&'s mut self, value: &AbsoulteRef, _group: &ir::GroupRef) -> Self::Group {
+    fn start_flat_frame(&'s mut self, value: &AbsoluteRef, _group: &ir::GroupRef) -> Self::Group {
         let mut g = self.start_flat_group(value);
         g.attributes.push(("class", "typst-group".to_owned()));
         g
     }
 
-    fn start_flat_text(&'s mut self, value: &AbsoulteRef, text: &ir::FlatTextItem) -> Self::Group {
+    fn start_flat_text(&'s mut self, value: &AbsoluteRef, text: &ir::FlatTextItem) -> Self::Group {
         let mut g = self.start_flat_group(value);
         g.with_text_shape(&text.shape);
         g
