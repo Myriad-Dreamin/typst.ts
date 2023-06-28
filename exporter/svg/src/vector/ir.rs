@@ -135,14 +135,14 @@ pub struct DefId(pub u64);
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct AbsoulteRef {
+pub struct AbsoluteRef {
     /// The fingerprint of the item.
     pub fingerprint: Fingerprint,
     /// The local def id of the item.
     pub id: DefId,
 }
 
-impl fmt::Debug for AbsoulteRef {
+impl fmt::Debug for AbsoluteRef {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
@@ -153,13 +153,13 @@ impl fmt::Debug for AbsoulteRef {
     }
 }
 
-impl Hash for AbsoulteRef {
+impl Hash for AbsoluteRef {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.fingerprint.hash(state);
     }
 }
 
-impl AbsoulteRef {
+impl AbsoluteRef {
     /// Create a xml id from the given prefix and the def id of this reference.
     /// Note that the def id may not be stable across compilation.
     /// Note that the entire html document shares namespace for ids.
@@ -451,10 +451,10 @@ pub enum StyleNs {
 }
 
 /// Intermediate representation of an incompleted glyph pack.
-pub type GlyphMapping = HashMap<GlyphItem, AbsoulteRef>;
+pub type GlyphMapping = HashMap<GlyphItem, AbsoluteRef>;
 
 /// A finished pack that stores all the glyph items.
-pub type GlyphPack = Vec<(AbsoulteRef, GlyphItem)>;
+pub type GlyphPack = Vec<(AbsoluteRef, GlyphItem)>;
 
 #[derive(Default)]
 pub struct GlyphPackBuilder;

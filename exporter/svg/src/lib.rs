@@ -209,7 +209,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     }
 
     /// Render glyphs into the svg_body.
-    fn render_glyphs<'a, I: Iterator<Item = (&'a AbsoulteRef, &'a GlyphItem)>>(
+    fn render_glyphs<'a, I: Iterator<Item = (&'a AbsoluteRef, &'a GlyphItem)>>(
         &mut self,
         glyphs: I,
         use_stable_glyph_id: bool,
@@ -313,7 +313,7 @@ pub struct SvgRenderTask<'m, 't, Feat: ExportFeature> {
 }
 
 impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
-    pub fn build_glyph(&mut self, glyph: &GlyphItem) -> AbsoulteRef {
+    pub fn build_glyph(&mut self, glyph: &GlyphItem) -> AbsoluteRef {
         if let Some(id) = self.glyph_defs.get(glyph) {
             return id.clone();
         }
@@ -321,7 +321,7 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
         let id = DefId(self.glyph_defs.len() as u64);
 
         let fingerprint = self.fingerprint_builder.resolve(glyph);
-        let abs_ref = AbsoulteRef { fingerprint, id };
+        let abs_ref = AbsoluteRef { fingerprint, id };
         self.glyph_defs.insert(glyph.clone(), abs_ref.clone());
         abs_ref
     }

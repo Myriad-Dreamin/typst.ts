@@ -3,7 +3,7 @@ use std::sync::Arc;
 use base64::Engine;
 
 use super::{
-    ir::{self, Abs, AbsoulteRef, Axes, Image, PathItem, PathStyle, Ratio, Scalar, Size, StyleNs},
+    ir::{self, Abs, AbsoluteRef, Axes, Image, PathItem, PathStyle, Ratio, Scalar, Size, StyleNs},
     GroupContext, RenderVm, TransformContext,
 };
 use crate::{
@@ -136,7 +136,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> SvgTextBuilder<'s, 'm, 't, Feat> {
 
     /// Assuming the glyphs has already been in the defs, render it by reference.
     #[inline]
-    pub fn render_glyph_ref_inner(&mut self, pos: Scalar, glyph: &AbsoulteRef) {
+    pub fn render_glyph_ref_inner(&mut self, pos: Scalar, glyph: &AbsoluteRef) {
         let adjusted_offset = (pos.0 * 2.).round() / 2.;
 
         // A stable glyph id can help incremental font transfer (IFT).

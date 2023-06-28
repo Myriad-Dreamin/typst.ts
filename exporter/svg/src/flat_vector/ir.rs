@@ -6,7 +6,7 @@ use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 use crate::{
     geom::{Abs, Point, Size},
     ir::{
-        AbsoulteRef, DefId, Fingerprint, FingerprintBuilder, GlyphItem, GlyphMapping,
+        AbsoluteRef, DefId, Fingerprint, FingerprintBuilder, GlyphItem, GlyphMapping,
         GlyphPackBuilder, ImageGlyphItem, ImageItem, ImmutStr, LinkItem, OutlineGlyphItem,
         PathItem, SpanId, SvgItem, TextShape, TransformItem,
     },
@@ -53,7 +53,7 @@ pub struct FlatTextItem {
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct FlatTextItemContent {
     pub content: ImmutStr,
-    pub glyphs: Arc<[(Abs, Abs, AbsoulteRef)]>,
+    pub glyphs: Arc<[(Abs, Abs, AbsoluteRef)]>,
 }
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -77,13 +77,13 @@ impl From<FlatGlyphItem> for GlyphItem {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct TransformedRef(pub TransformItem, pub AbsoulteRef);
+pub struct TransformedRef(pub TransformItem, pub AbsoluteRef);
 
 /// Flatten group item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct GroupRef(pub Arc<[(Point, AbsoulteRef)]>);
+pub struct GroupRef(pub Arc<[(Point, AbsoluteRef)]>);
 
 #[derive(Debug, Default)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
@@ -95,24 +95,24 @@ pub struct ItemPack(pub Vec<(Fingerprint, FlatSvgItem)>);
 /// The svg items are flattened and ready to be serialized.
 #[derive(Debug, Default)]
 pub struct Module {
-    pub glyphs: Vec<(AbsoulteRef, GlyphItem)>,
+    pub glyphs: Vec<(AbsoluteRef, GlyphItem)>,
     pub item_pack: ItemPack,
     pub source_mapping: Vec<SourceMappingNode>,
 }
 
 impl Module {
     /// Get a glyph item by its stable ref.
-    pub fn get_glyph(&self, id: &AbsoulteRef) -> Option<&GlyphItem> {
+    pub fn get_glyph(&self, id: &AbsoluteRef) -> Option<&GlyphItem> {
         self.glyphs.get(id.id.0 as usize).map(|(_, item)| item)
     }
 
     /// Get a svg item by its stable ref.
-    pub fn get_item(&self, id: &AbsoulteRef) -> Option<&FlatSvgItem> {
+    pub fn get_item(&self, id: &AbsoluteRef) -> Option<&FlatSvgItem> {
         self.item_pack.0.get(id.id.0 as usize).map(|(_, item)| item)
     }
 }
 
-pub type Pages = Vec<(AbsoulteRef, Size)>;
+pub type Pages = Vec<(AbsoluteRef, Size)>;
 pub type LayoutElem = (Abs, Pages);
 
 /// Module with page references of a [`typst::doc::Document`].
@@ -158,7 +158,7 @@ impl MultiSvgDocument {
 
         let glyphs = {
             let mut dmap = SharedDeserializeMap::default();
-            let glyphs: Vec<(AbsoulteRef, FlatGlyphItem)> =
+            let glyphs: Vec<(AbsoluteRef, FlatGlyphItem)> =
                 archived.glyphs.deserialize(&mut dmap).unwrap();
             glyphs
                 .into_iter()
@@ -222,7 +222,7 @@ impl ModuleBuilder {
         self.source_mapping_buffer.clear();
     }
 
-    pub fn build_glyph(&mut self, glyph: &GlyphItem) -> AbsoulteRef {
+    pub fn build_glyph(&mut self, glyph: &GlyphItem) -> AbsoluteRef {
         if let Some(id) = self.glyphs.get(glyph) {
             return id.clone();
         }
@@ -230,12 +230,12 @@ impl ModuleBuilder {
         let id = DefId(self.glyphs.len() as u64);
 
         let fingerprint = self.fingerprint_builder.resolve(glyph);
-        let abs_ref = AbsoulteRef { fingerprint, id };
+        let abs_ref = AbsoluteRef { fingerprint, id };
         self.glyphs.insert(glyph.clone(), abs_ref.clone());
         abs_ref
     }
 
-    pub fn build(&mut self, item: SvgItem) -> AbsoulteRef {
+    pub fn build(&mut self, item: SvgItem) -> AbsoluteRef {
         let resolved_item = match item {
             SvgItem::Image((image, span_id)) => {
                 if self.should_attach_debug_info {
@@ -316,7 +316,7 @@ impl ModuleBuilder {
         let fingerprint = self.fingerprint_builder.resolve(&resolved_item);
 
         if let Some(pos) = self.item_pos.get(&fingerprint) {
-            return AbsoulteRef {
+            return AbsoluteRef {
                 fingerprint,
                 id: *pos,
             };
@@ -325,7 +325,7 @@ impl ModuleBuilder {
         let id = DefId(self.items.len() as u64);
         self.items.push((fingerprint, resolved_item));
         self.item_pos.insert(fingerprint, id);
-        AbsoulteRef { fingerprint, id }
+        AbsoluteRef { fingerprint, id }
     }
 }
 
@@ -335,6 +335,6 @@ impl ModuleBuilder {
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct SerializedModule {
     pub item_pack: ItemPack,
-    pub glyphs: Vec<(AbsoulteRef, FlatGlyphItem)>,
-    pub layouts: Vec<(Abs, Vec<(AbsoulteRef, Size)>)>,
+    pub glyphs: Vec<(AbsoluteRef, FlatGlyphItem)>,
+    pub layouts: Vec<(Abs, Vec<(AbsoluteRef, Size)>)>,
 }

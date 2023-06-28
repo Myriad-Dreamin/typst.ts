@@ -3,7 +3,7 @@ use std::sync::Arc;
 use typst::doc::Document;
 
 use crate::{
-    ir::{Abs, AbsoulteRef, GlyphMapping, Size},
+    ir::{Abs, AbsoluteRef, GlyphMapping, Size},
     render::flat::serialize_module,
     vector::lowering::LowerBuilder,
     ModuleBuilder, MultiSvgDocument,
@@ -12,7 +12,7 @@ use crate::{
 #[derive(Default)]
 pub struct DynamicLayoutSvgExporter {
     builder: ModuleBuilder,
-    layouts: Vec<(Abs, Vec<(AbsoulteRef, Size)>)>,
+    layouts: Vec<(Abs, Vec<(AbsoluteRef, Size)>)>,
 }
 
 impl DynamicLayoutSvgExporter {

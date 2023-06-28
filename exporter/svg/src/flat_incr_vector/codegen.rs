@@ -3,7 +3,7 @@ use std::sync::Arc;
 use super::vm::{FlatIncrGroupContext, FlatIncrRenderVm};
 use crate::{
     flat_vector::ir,
-    ir::AbsoulteRef,
+    ir::AbsoluteRef,
     vector::{SvgText, SvgTextBuilder, SvgTextNode},
     ExportFeature,
 };
@@ -13,8 +13,8 @@ impl<'s, 'm, 't, Feat: ExportFeature> FlatIncrGroupContext for SvgTextBuilder<'s
     fn render_diff_item_ref_at(
         &mut self,
         pos: crate::ir::Point,
-        item: &AbsoulteRef,
-        prev_item: &AbsoulteRef,
+        item: &AbsoluteRef,
+        prev_item: &AbsoluteRef,
     ) {
         let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
 
@@ -35,7 +35,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> FlatIncrGroupContext for SvgTextBuilder<'s
         })));
     }
 
-    fn render_diff_reuse_item(&mut self, item_ref: &AbsoulteRef) {
+    fn render_diff_reuse_item(&mut self, item_ref: &AbsoluteRef) {
         self.content.push(SvgText::Content(Arc::new(SvgTextNode {
             attributes: vec![
                 ("data-tid", item_ref.as_svg_id("p")),
@@ -55,7 +55,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> FlatIncrGroupContext for SvgTextBuilder<'s
         self
     }
 
-    fn with_reuse(mut self, v: &AbsoulteRef) -> Self {
+    fn with_reuse(mut self, v: &AbsoluteRef) -> Self {
         self.attributes.push(("data-reuse-from", v.as_svg_id("g")));
         self
     }
