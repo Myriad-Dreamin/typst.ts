@@ -16,7 +16,15 @@ pub async fn run_http(args: RunHttpArgs) {
     let corpora = warp::path("corpus").and(warp::fs::dir(args.corpus));
     let assets = warp::path("assets").and(warp::fs::dir("assets"));
     let core = warp::path("core").and(warp::fs::dir("packages/typst.ts"));
-    let gh_pages = warp::path("typst.ts").and(warp::fs::dir("github-pages"));
+    let gh_pages = warp::path("typst.ts");
+    // map these files to the root of the server
+    // cp packages/compiler/pkg/* github-pages/compiler/
+    // cp packages/renderer/pkg/* github-pages/renderer/
+    // cp packages/typst.ts/dist/main.js github-pages/typst-main.js
+    let renderer = warp::path("renderer").and(warp::fs::dir("packages/renderer/pkg"));
+    let compiler = warp::path("compiler").and(warp::fs::dir("packages/compiler/pkg"));
+    let typst_main = warp::path("typst-main.js").and(warp::fs::file("packages/typst.ts/dist/main.js"));
+    let gh_pages = gh_pages.and(renderer.or(compiler).or(typst_main).or(warp::fs::dir("github-pages")));
 
     let cors = warp::cors().allow_methods(&[Method::GET, Method::POST, Method::DELETE]);
 
