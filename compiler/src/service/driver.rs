@@ -211,10 +211,13 @@ impl CompileDriver {
             };
         }
 
-        match &event.kind {
-            fs_event_must_relevant!() => true,
-            fs_event_may_relevant!() => event.paths.iter().any(|path| self.world.dependant(path)),
-            fs_event_never_relevant!() => false,
-        }
+        return matches!(
+            &event.kind,
+            fs_event_must_relevant!() | fs_event_may_relevant!()
+        );
+        // assert that all cases are covered
+        const _: () = match EventKind::Any {
+            fs_event_must_relevant!() | fs_event_may_relevant!() | fs_event_never_relevant!() => {}
+        };
     }
 }
