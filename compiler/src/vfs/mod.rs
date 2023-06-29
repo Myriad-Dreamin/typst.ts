@@ -149,6 +149,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// Check whether a path is related to a source.
+    /// Note: this does not check the canonical path, but only the normalized one.
     pub fn dependant(&self, path: &Path) -> bool {
         let path = path.clean();
         self.path2slot.read().contains_key(path.as_os_str())
