@@ -23,8 +23,14 @@ pub async fn run_http(args: RunHttpArgs) {
     // cp packages/typst.ts/dist/main.js github-pages/typst-main.js
     let renderer = warp::path("renderer").and(warp::fs::dir("packages/renderer/pkg"));
     let compiler = warp::path("compiler").and(warp::fs::dir("packages/compiler/pkg"));
-    let typst_main = warp::path("typst-main.js").and(warp::fs::file("packages/typst.ts/dist/main.js"));
-    let gh_pages = gh_pages.and(renderer.or(compiler).or(typst_main).or(warp::fs::dir("github-pages")));
+    let typst_main =
+        warp::path("typst-main.js").and(warp::fs::file("packages/typst.ts/dist/main.js"));
+    let gh_pages = gh_pages.and(
+        renderer
+            .or(compiler)
+            .or(typst_main)
+            .or(warp::fs::dir("github-pages")),
+    );
 
     let cors = warp::cors().allow_methods(&[Method::GET, Method::POST, Method::DELETE]);
 
