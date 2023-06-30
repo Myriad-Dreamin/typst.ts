@@ -155,7 +155,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             None => self.root.clone(),
         };
 
-        Ok(root.join(id.path()))
+        Ok(root.join(id.path().strip_prefix(Path::new("/")).unwrap()))
     }
 }
 

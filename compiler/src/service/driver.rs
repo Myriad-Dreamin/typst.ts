@@ -139,10 +139,7 @@ impl CompileDriver {
         } else {
             entry_file
         };
-        let entry_file: PathBuf = [std::path::Component::RootDir]
-            .into_iter()
-            .chain(entry_file.components())
-            .collect();
+        let entry_file: PathBuf = Path::new("/").join(entry_file);
         FileId::new(None, &entry_file)
     }
 
