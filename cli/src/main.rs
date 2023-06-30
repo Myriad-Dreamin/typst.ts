@@ -5,7 +5,7 @@ use std::{
 };
 
 use clap::{Args, Command, FromArgMatches};
-use typst::{font::FontVariant, World};
+use typst::{diag::SourceResult, font::FontVariant, World};
 
 use typst_ts_cli::{
     font::EMBEDDED_FONT,
@@ -105,31 +105,47 @@ fn compile(args: CompileArgs) -> ! {
         }
     };
 
-    let compile_once = if args.dynamic_layout {
-        CompileDriver::once_dynamic
+    #[allow(clippy::type_complexity)]
+    let compile_once: Box<dyn Fn(&mut CompileDriver) -> SourceResult<()>> = if args.dynamic_layout {
+        Box::new(|driver: &mut CompileDriver| {
+            let output_dir = {
+                // If output is specified, use it.
+                let dir = (!args.output.is_empty()).then(|| Path::new(&args.output));
+                // Otherwise, use the parent directory of the entry file.
+                let dir = dir.unwrap_or_else(|| {
+                    driver
+                        .entry_file
+                        .parent()
+                        .expect("entry_file has no parent")
+                });
+                dir.join(
+                    driver
+                        .entry_file
+                        .file_name()
+                        .expect("entry_file has no file name"),
+                )
+            };
+            CompileDriver::once_dynamic(driver, &output_dir)
+        })
     } else {
-        |driver: &mut CompileDriver| {
+        Box::new(|driver: &mut CompileDriver| {
             let doc = Arc::new(driver.compile()?);
             driver.export(doc)
-        }
-    };
-
-    let compile_watch = |driver: &mut CompileDriver, events: Option<Vec<notify::Event>>| {
-        // relevance checking
-        if events.is_some() && !events.unwrap().iter().any(|event| driver.relevant(event)) {
-            return;
-        }
-
-        // compile
-        driver.with_compile_diag::<true, _>(compile_once);
-        comemo::evict(30);
+        })
     };
 
     if args.watch {
-        utils::async_continue(async {
+        utils::async_continue(async move {
             let mut driver = compile_driver();
-            typst_ts_cli::watch::watch_dir(workspace_dir, |events| {
-                compile_watch(&mut driver, events)
+            typst_ts_cli::watch::watch_dir(workspace_dir, move |events| {
+                // relevance checking
+                if events.is_some() && !events.unwrap().iter().any(|event| driver.relevant(event)) {
+                    return;
+                }
+
+                // compile
+                driver.with_compile_diag::<true, _>(&compile_once);
+                comemo::evict(30);
             })
             .await;
         })
