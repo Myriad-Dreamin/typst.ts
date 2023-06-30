@@ -85,7 +85,18 @@ __web = [
     "dep:pollster",
 ]
 web-render = ["__web"]
-browser-compile = ["__web", "web-render"]
+browser-compile = [
+    "__web",
+    "web-render",
+    # todo: remove system dependencies
+    "dep:memmap2",
+    "dep:dirs",
+    "dep:walkdir",
+    "dep:same-file",
+    "dep:notify",
+    "dep:log",
+    "dep:typst-ts-svg-exporter",
+]
 browser-embedded-fonts = ["__web"]
 web = ["__web", "web-render", "browser-compile", "browser-embedded-fonts"]
 default = ["system"]
