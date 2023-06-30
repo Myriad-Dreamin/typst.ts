@@ -10,7 +10,7 @@ use codespan_reporting::{
     },
 };
 
-use typst::syntax::SourceId;
+use typst::file::FileId;
 use typst::{diag::SourceError, World};
 
 /// Get stderr with color support if desirable.
@@ -23,7 +23,7 @@ fn color_stream() -> StandardStream {
 }
 
 /// Print diagnostic messages to the terminal.
-pub fn print_diagnostics<'files, W: World + Files<'files, FileId = SourceId>>(
+pub fn print_diagnostics<'files, W: World + Files<'files, FileId = FileId>>(
     world: &'files W,
     errors: Vec<SourceError>,
 ) -> Result<(), codespan_reporting::files::Error> {
@@ -35,10 +35,13 @@ pub fn print_diagnostics<'files, W: World + Files<'files, FileId = SourceId>>(
 
     for error in errors {
         // The main diagnostic.
-        let range = error.range(world);
+        let source = typst::World::source(world, error.span.id()).ok();
+        let range = source
+            .map(|source| error.span.range_in(&source))
+            .unwrap_or(0..0);
         let diag = Diagnostic::error()
             .with_message(error.message)
-            .with_labels(vec![Label::primary(error.span.source(), range)]);
+            .with_labels(vec![Label::primary(error.span.id(), range)]);
 
         term::emit(&mut w, &config, world, &diag)?;
 
@@ -48,8 +51,8 @@ pub fn print_diagnostics<'files, W: World + Files<'files, FileId = SourceId>>(
             let help = Diagnostic::help()
                 .with_message(message)
                 .with_labels(vec![Label::primary(
-                    point.span.source(),
-                    World::source(world, point.span.source()).range(point.span),
+                    point.span.id(),
+                    point.span.range(world),
                 )]);
 
             term::emit(&mut w, &config, world, &help)?;

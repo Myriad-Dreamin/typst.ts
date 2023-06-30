@@ -1,6 +1,7 @@
 pub(crate) mod macros;
 
 pub mod font;
+pub mod package;
 pub mod vfs;
 pub mod workspace;
 pub mod world;

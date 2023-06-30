@@ -1,8 +1,12 @@
 use std::borrow::Cow;
+use std::path::PathBuf;
 
+use typst::diag::PackageResult;
+use typst::file::PackageSpec;
 use typst_ts_core::{config::CompileOpts, error::prelude::*, Bytes};
 
 use crate::font::system::SystemFontSearcher;
+use crate::package::system::prepare_package;
 use crate::vfs::{system::SystemAccessModel, Vfs};
 use crate::world::CompilerFeat;
 
@@ -12,6 +16,11 @@ pub struct SystemCompilerFeat;
 
 impl CompilerFeat for SystemCompilerFeat {
     type M = SystemAccessModel;
+
+    // todo: add package manager model
+    fn resolve_package(spec: &PackageSpec) -> PackageResult<PathBuf> {
+        prepare_package(spec)
+    }
 }
 
 impl TypstSystemWorld {

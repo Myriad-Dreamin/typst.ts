@@ -1,7 +1,4 @@
-use std::{
-    path::Path,
-    sync::{atomic::AtomicU64, Arc},
-};
+use std::{path::Path, sync::atomic::AtomicU64};
 
 use typst::diag::FileResult;
 
@@ -31,7 +28,7 @@ impl<M: AccessModel + Sized, C: Clone> TraceAccessModel<CachedAccessModel<M, C>>
         src: &Path,
         read: impl FnOnce(&FileCache<C>) -> FileResult<Bytes>,
         compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
-    ) -> FileResult<Arc<C>> {
+    ) -> FileResult<C> {
         let instant = std::time::Instant::now();
         let res = self.inner.replace_diff(src, read, compute);
         let elapsed = instant.elapsed();
@@ -47,7 +44,7 @@ impl<M: AccessModel + Sized, C: Clone> TraceAccessModel<CachedAccessModel<M, C>>
         &self,
         src: &Path,
         compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
-    ) -> FileResult<Arc<C>> {
+    ) -> FileResult<C> {
         let instant = std::time::Instant::now();
         let res = self.inner.read_all_diff(src, compute);
         let elapsed = instant.elapsed();

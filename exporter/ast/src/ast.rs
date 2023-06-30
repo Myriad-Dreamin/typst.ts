@@ -10,9 +10,9 @@ use typst_ts_core::Transformer;
 #[derive(Debug, Clone, Default)]
 pub struct AstExporter {}
 
-struct TranslationUnit<'a> {
+struct TranslationUnit {
     path: String,
-    source: &'a Source,
+    source: Source,
 }
 
 struct AstWriter<'a, W: io::Write> {
@@ -106,7 +106,7 @@ impl<'a, W: io::Write> AstWriter<'a, W> {
     }
 
     fn write_ast(&mut self, src: &Source, ast: &LinkedNode) {
-        let rng = src.range(ast.span());
+        let rng = ast.span().range_in(src);
         let start = rng.start;
         let end = rng.end;
         let start_end = [start, end]
@@ -172,9 +172,9 @@ where
     ) -> typst::diag::SourceResult<()> {
         let mut result = Vec::<TranslationUnit>::new();
 
-        fn collect_translation_unit<'a>(result: &mut Vec<TranslationUnit<'a>>, src: &'a Source) {
+        fn collect_translation_unit(result: &mut Vec<TranslationUnit>, src: Source) {
             result.push(TranslationUnit {
-                path: src.path().display().to_string(),
+                path: src.id().path().display().to_string(),
                 source: src,
             });
         }
@@ -193,7 +193,7 @@ where
                 w: &mut writer,
                 ident: 0,
             };
-            w.write_ast_root(tu.source);
+            w.write_ast_root(&tu.source);
         }
 
         writer.flush().unwrap();

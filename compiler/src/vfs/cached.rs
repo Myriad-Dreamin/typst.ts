@@ -3,14 +3,14 @@ use std::{collections::HashMap, ffi::OsStr, path::Path, sync::Arc, time::SystemT
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 use typst::diag::{FileError, FileResult};
 
-use typst_ts_core::{Bytes, QueryRef, TakeAs};
+use typst_ts_core::{Bytes, QueryRef};
 
 use crate::vfs::from_utf8_or_bom;
 
 use super::AccessModel;
 
 /// incrementally query a value from a self holding state
-type IncrQueryRef<S, E> = QueryRef<Arc<S>, E, Option<Arc<S>>>;
+type IncrQueryRef<S, E> = QueryRef<S, E, Option<S>>;
 
 pub struct FileCache<S> {
     lifetime_cnt: usize,
@@ -97,7 +97,7 @@ impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {
         src: &Path,
         read: impl FnOnce(&FileCache<C>) -> FileResult<Bytes>,
         compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
-    ) -> FileResult<Arc<C>> {
+    ) -> FileResult<C> {
         let instant = std::time::Instant::now();
         self.cache_entry(src, |entry| {
             println!("cache_entry: {:?}", instant.elapsed());
@@ -106,9 +106,8 @@ impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {
                 .source_state
                 .compute_with_context_ref(|prev_to_diff| {
                     let text = from_utf8_or_bom(&read(entry)?)?.to_owned();
-                    let prev_to_diff = prev_to_diff.map(TakeAs::take);
                     println!("read: {:?}", instant.elapsed());
-                    Ok(Arc::new(compute(prev_to_diff, text)?))
+                    compute(prev_to_diff, text)
                 })?;
 
             println!("compute: {:?}", instant.elapsed());
@@ -121,7 +120,7 @@ impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {
         &self,
         src: &Path,
         compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
-    ) -> FileResult<Arc<C>> {
+    ) -> FileResult<C> {
         self.replace_diff(
             src,
             |entry| {

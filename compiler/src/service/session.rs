@@ -43,13 +43,14 @@ impl CompileSession {
         let world = self.world.as_mut().unwrap();
 
         world.reset();
-        world.main = world
-            .resolve(&self.entry_file_path)
-            .map_err(|err| {
-                error!("failed to resolve entry file: {:?}", err);
-                err
-            })
-            .ok()?;
+        // world.main = world
+        //     .resolve(&self.entry_file_path)
+        //     .map_err(|err| {
+        //         error!("failed to resolve entry file: {:?}", err);
+        //         err
+        //     })
+        //     .ok()?;
+        info!("broken take_snapshot");
         info!("take_snapshot resolved in {:?}", begin.elapsed());
 
         let doc = match typst::compile(world) {

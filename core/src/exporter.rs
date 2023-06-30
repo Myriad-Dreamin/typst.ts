@@ -197,6 +197,7 @@ pub mod utils {
     use std::error::Error;
     use typst::{
         diag::{SourceError, SourceResult},
+        file::FileId,
         World,
     };
 
@@ -210,11 +211,16 @@ pub mod utils {
     /// Convert the given error to a vector of source errors.
     // todo: report the component position
     pub fn map_err<E: Error>(world: &dyn World, e: E) -> Box<Vec<SourceError>> {
+        map_err_with_id(world.main().id(), e)
+    }
+
+    /// Convert the given error to a vector of source errors.
+    pub fn map_err_with_id<E: Error>(file_id: FileId, e: E) -> Box<Vec<SourceError>> {
         // the source location is the start of the file
         const START_LOC: u64 = typst::syntax::Span::FULL.start;
 
         Box::new(vec![SourceError::new(
-            typst::syntax::Span::new(world.main().id(), START_LOC),
+            typst::syntax::Span::new(file_id, START_LOC),
             e.to_string(),
         )])
     }

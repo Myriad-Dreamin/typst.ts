@@ -1,4 +1,8 @@
-use std::{fs::File, io::Read, path::Path};
+use std::{
+    fs::File,
+    io::Read,
+    path::{Path, PathBuf},
+};
 
 use typst::diag::{FileError, FileResult};
 
@@ -48,7 +52,7 @@ impl SystemAccessModel {
 }
 
 impl AccessModel for SystemAccessModel {
-    type RealPath = same_file::Handle;
+    type RealPath = PathBuf; // same_file::Handle;
 
     fn mtime(&self, src: &Path) -> FileResult<std::time::SystemTime> {
         let f = |e| FileError::from_io(e, src);
@@ -61,8 +65,9 @@ impl AccessModel for SystemAccessModel {
     }
 
     fn real_path(&self, src: &Path) -> FileResult<Self::RealPath> {
-        let f = |e| FileError::from_io(e, src);
-        same_file::Handle::from_path(src).map_err(f)
+        // let f = |e| FileError::from_io(e, src);
+        // same_file::Handle::from_path(src).map_err(f)
+        Ok(src.to_path_buf())
     }
 
     fn read_all(&self, src: &Path) -> FileResult<Bytes> {

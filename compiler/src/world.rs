@@ -8,10 +8,11 @@ use chrono::Datelike;
 use comemo::Prehashed;
 use serde::{Deserialize, Serialize};
 use typst::{
-    diag::FileResult,
+    diag::{FileResult, PackageResult},
     eval::{Datetime, Library},
+    file::{FileId, PackageSpec},
     font::{Font, FontBook},
-    syntax::{Source, SourceId},
+    syntax::Source,
     World,
 };
 
@@ -31,12 +32,14 @@ type CodespanError = codespan_reporting::files::Error;
 
 pub trait CompilerFeat {
     type M: AccessModel + Sized;
+
+    fn resolve_package(path: &PackageSpec) -> PackageResult<PathBuf>;
 }
 
 /// A world that provides access to the operating system.
 pub struct CompilerWorld<F: CompilerFeat> {
-    root: PathBuf,
-    pub main: SourceId,
+    pub root: PathBuf,
+    pub main: FileId,
 
     library: Prehashed<Library>,
     pub font_resolver: FontResolverImpl,
@@ -55,7 +58,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             root: root_dir,
             library,
             font_resolver,
-            main: SourceId::detached(),
+            main: FileId::detached(),
             today: Cell::new(None),
             vfs,
         }
@@ -63,23 +66,15 @@ impl<F: CompilerFeat> CompilerWorld<F> {
 }
 
 impl<F: CompilerFeat> World for CompilerWorld<F> {
-    fn root(&self) -> &Path {
-        &self.root
-    }
-
     fn library(&self) -> &Prehashed<Library> {
         &self.library
     }
 
-    fn main(&self) -> &Source {
-        self.source(self.main)
+    fn main(&self) -> Source {
+        self.source(self.main).unwrap()
     }
 
-    fn resolve(&self, path: &Path) -> FileResult<SourceId> {
-        self.vfs.resolve(path)
-    }
-
-    fn source(&self, id: SourceId) -> &Source {
+    fn source(&self, id: FileId) -> FileResult<Source> {
         self.vfs.source(id)
     }
 
@@ -91,8 +86,8 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
         self.font_resolver.font(id)
     }
 
-    fn file(&self, path: &Path) -> FileResult<Bytes> {
-        self.vfs.file(path)
+    fn file(&self, id: FileId) -> FileResult<Bytes> {
+        self.vfs.file(&self.path_for_id(id).unwrap())
     }
 
     fn today(&self, offset: Option<i64>) -> Option<Datetime> {
@@ -120,16 +115,17 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     }
 
     /// Get source id by path with filesystem content.
-    pub fn resolve(&self, path: &Path) -> FileResult<SourceId> {
-        self.vfs.resolve(path)
+    pub fn resolve(&self, path: &Path, source_id: FileId) -> FileResult<()> {
+        self.vfs.resolve(path, source_id)
     }
 
-    pub fn resolve_with<P: AsRef<Path>>(&self, path: P, content: &str) -> FileResult<SourceId> {
-        self.vfs.resolve_with(path, content)
-    }
-
-    pub fn dependant(&self, path: &Path) -> bool {
-        self.vfs.dependant(path)
+    pub fn resolve_with<P: AsRef<Path>>(
+        &self,
+        path: P,
+        source_id: FileId,
+        content: &str,
+    ) -> FileResult<()> {
+        self.vfs.resolve_with(path, source_id, content)
     }
 
     pub fn get_dependencies(&self) -> DependencyTree {
@@ -152,51 +148,74 @@ impl<F: CompilerFeat> CompilerWorld<F> {
 
         self.today.set(None);
     }
+
+    fn path_for_id(&self, id: FileId) -> PackageResult<PathBuf> {
+        // Determine the root path relative to which the file path
+        // will be resolved.
+        let root = match id.package() {
+            Some(spec) => F::resolve_package(spec)?,
+            None => self.root.clone(),
+        };
+
+        Ok(root.join(id.path().strip_prefix(Path::new("/")).unwrap()))
+    }
 }
 
 impl<'a, F: CompilerFeat> codespan_reporting::files::Files<'a> for CompilerWorld<F> {
-    type FileId = SourceId;
+    type FileId = FileId;
     type Name = std::path::Display<'a>;
-    type Source = &'a str;
+    type Source = Source;
 
-    fn name(&'a self, id: SourceId) -> CodespanResult<Self::Name> {
-        Ok(World::source(self, id).path().display())
+    fn name(&'a self, id: FileId) -> CodespanResult<Self::Name> {
+        Ok(id.path().display())
     }
 
-    fn source(&'a self, id: SourceId) -> CodespanResult<Self::Source> {
-        Ok(World::source(self, id).text())
+    fn source(&'a self, id: FileId) -> CodespanResult<Self::Source> {
+        World::source(self, id).map_err(|_e| CodespanError::FileMissing)
     }
 
-    fn line_index(&'a self, id: SourceId, given: usize) -> CodespanResult<usize> {
-        let source = World::source(self, id);
+    fn line_index(&'a self, id: FileId, given: usize) -> CodespanResult<usize> {
+        let source = World::source(self, id).ok();
         source
-            .byte_to_line(given)
-            .ok_or_else(|| CodespanError::IndexTooLarge {
-                given,
-                max: source.len_bytes(),
+            .map(|source| {
+                source
+                    .byte_to_line(given)
+                    .ok_or_else(|| CodespanError::IndexTooLarge {
+                        given,
+                        max: source.len_bytes(),
+                    })
             })
+            .unwrap_or(Ok(0))
     }
 
-    fn line_range(&'a self, id: SourceId, given: usize) -> CodespanResult<std::ops::Range<usize>> {
-        let source = World::source(self, id);
+    fn line_range(&'a self, id: FileId, given: usize) -> CodespanResult<std::ops::Range<usize>> {
+        let source = World::source(self, id).ok();
         source
-            .line_to_range(given)
-            .ok_or_else(|| CodespanError::LineTooLarge {
-                given,
-                max: source.len_lines(),
+            .map(|source| {
+                source
+                    .line_to_range(given)
+                    .ok_or_else(|| CodespanError::LineTooLarge {
+                        given,
+                        max: source.len_lines(),
+                    })
             })
+            .unwrap_or(Ok(0..0))
     }
 
-    fn column_number(&'a self, id: SourceId, _: usize, given: usize) -> CodespanResult<usize> {
-        let source = World::source(self, id);
-        source.byte_to_column(given).ok_or_else(|| {
-            let max = source.len_bytes();
-            if given <= max {
-                CodespanError::InvalidCharBoundary { given }
-            } else {
-                CodespanError::IndexTooLarge { given, max }
-            }
-        })
+    fn column_number(&'a self, id: FileId, _: usize, given: usize) -> CodespanResult<usize> {
+        let source = World::source(self, id).ok();
+        source
+            .map(|source| {
+                source.byte_to_column(given).ok_or_else(|| {
+                    let max = source.len_bytes();
+                    if given <= max {
+                        CodespanError::InvalidCharBoundary { given }
+                    } else {
+                        CodespanError::IndexTooLarge { given, max }
+                    }
+                })
+            })
+            .unwrap_or(Ok(0))
     }
 }
 

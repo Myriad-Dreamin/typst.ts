@@ -748,6 +748,9 @@ name = "ecow"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c5c5051925c54d9a42c8652313b5358a7432eed209466b443ed5220431243a14"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "elsa"
@@ -1814,7 +1817,7 @@ dependencies = [
  "log",
  "memchr",
  "mime",
- "spin",
+ "spin 0.9.8",
  "version_check",
 ]
 
@@ -2347,6 +2350,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "ring"
+version = "0.16.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3053cf52e236a3ed746dfc745aa9cacf1b791d846bdaf412f60a8d7d6e17c8fc"
+dependencies = [
+ "cc",
+ "libc",
+ "once_cell",
+ "spin 0.5.2",
+ "untrusted",
+ "web-sys",
+ "winapi",
+]
+
+[[package]]
 name = "rkyv"
 version = "0.7.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2478,12 +2496,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustls"
+version = "0.21.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e32ca28af694bc1bbf399c33a516dbdf1c90090b8ab23c2bc24f834aa2247f5f"
+dependencies = [
+ "log",
+ "ring",
+ "rustls-webpki",
+ "sct",
+]
+
+[[package]]
 name = "rustls-pemfile"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d3987094b1d07b653b7dfdc3f70ce9a1da9c51ac18c1b06b662e4f9a0e9f4b2"
 dependencies = [
  "base64 0.21.2",
+]
+
+[[package]]
+name = "rustls-webpki"
+version = "0.100.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6207cd5ed3d8dca7816f8f3725513a34609c0c765bf652b8c3cb4cfd87db46b"
+dependencies = [
+ "ring",
+ "untrusted",
 ]
 
 [[package]]
@@ -2534,6 +2574,16 @@ name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
+
+[[package]]
+name = "sct"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d53dcdb7c9f8158937a7981b48accfd39a43af418591a5d008c7b22b5e1b7ca4"
+dependencies = [
+ "ring",
+ "untrusted",
+]
 
 [[package]]
 name = "seahash"
@@ -2765,6 +2815,12 @@ dependencies = [
 
 [[package]]
 name = "spin"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
+name = "spin"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
@@ -2932,6 +2988,17 @@ name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
+
+[[package]]
+name = "tar"
+version = "0.4.38"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4b55807c0344e1e6c04d7c965f5289c39a8d94ae23ed5c0b57aabac549f871c6"
+dependencies = [
+ "filetime",
+ "libc",
+ "xattr",
+]
 
 [[package]]
 name = "tempfile"
@@ -3307,8 +3374,8 @@ checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
 
 [[package]]
 name = "typst"
-version = "0.5.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#5835aaf065938de1a082a4e982d5cf1449adba53"
+version = "0.6.0"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#da72ec259c32773fdc1ccd3fdf75d03b6412a9b3"
 dependencies = [
  "bitflags 2.3.3",
  "bytemuck",
@@ -3335,6 +3402,7 @@ dependencies = [
  "svg2pdf",
  "time",
  "tiny-skia",
+ "toml",
  "tracing",
  "ttf-parser",
  "typst-macros",
@@ -3349,8 +3417,8 @@ dependencies = [
 
 [[package]]
 name = "typst-library"
-version = "0.5.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#5835aaf065938de1a082a4e982d5cf1449adba53"
+version = "0.6.0"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#da72ec259c32773fdc1ccd3fdf75d03b6412a9b3"
 dependencies = [
  "az",
  "chinese-number",
@@ -3388,8 +3456,8 @@ dependencies = [
 
 [[package]]
 name = "typst-macros"
-version = "0.5.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#5835aaf065938de1a082a4e982d5cf1449adba53"
+version = "0.6.0"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#da72ec259c32773fdc1ccd3fdf75d03b6412a9b3"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -3492,10 +3560,12 @@ dependencies = [
  "serde_json",
  "sha2",
  "siphasher",
+ "tar",
  "typst",
  "typst-library",
  "typst-ts-core",
  "typst-ts-svg-exporter",
+ "ureq",
  "walkdir",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -3860,6 +3930,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e9df2af067a7953e9c3831320f35c1cc0600c30d44d9f7a12b01db1cd88d6b47"
 
 [[package]]
+name = "untrusted"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
+
+[[package]]
+name = "ureq"
+version = "2.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b11c96ac7ee530603dcdf68ed1557050f374ce55a5a07193ebf8cbc9f8927e9"
+dependencies = [
+ "base64 0.21.2",
+ "flate2",
+ "log",
+ "once_cell",
+ "rustls",
+ "rustls-webpki",
+ "url",
+ "webpki-roots",
+]
+
+[[package]]
 name = "url"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4151,6 +4243,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "webpki-roots"
+version = "0.23.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b03058f88386e5ff5310d9111d53f48b17d732b401aeb83a8d5190f2ac459338"
+dependencies = [
+ "rustls-webpki",
+]
+
+[[package]]
 name = "weezl"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4350,6 +4451,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05f360fc0b24296329c78fda852a1e9ae82de9cf7b27dae4b7f62f118f77b9ed"
 dependencies = [
  "tap",
+]
+
+[[package]]
+name = "xattr"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d1526bbe5aaeb5eb06885f4d987bcdfa5e23187055de9b83fe00156a821fabc"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
