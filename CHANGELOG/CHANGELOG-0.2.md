@@ -1,3 +1,39 @@
+# v0.2.3
+
+Note: There will be large changes in the next version because Typst will introduce experimental package management in `v0.6.0`, so this version is the last version of the 0.2.x series.
+
+## Changelog since v0.2.3
+
+**Full Changelog**: https://github.com/Myriad-Dreamin/typst.ts/compare/v0.2.2...v0.2.3
+
+### Security Notes
+
+No new security note.
+
+### Bug fix
+
+- compiler: correct order of searching fonts in https://github.com/Myriad-Dreamin/typst.ts/pull/175
+- compiler: reset today for each compilation in https://github.com/Myriad-Dreamin/typst.ts/pull/171
+
+### Changes
+
+- cli: add embedded font again in https://github.com/Myriad-Dreamin/typst.ts/pull/176
+- compiler: emit plain text if out isn't a TTY in https://github.com/Myriad-Dreamin/typst.ts/pull/170
+- compiler: ignore utf-8 bom in https://github.com/Myriad-Dreamin/typst.ts/pull/172
+- compiler: loose relevance check for watching fs changes in https://github.com/Myriad-Dreamin/typst.ts/pull/193
+
+### External Feature
+
+- exporter::svg: A new SVG exporter is introduced in https://github.com/Myriad-Dreamin/typst.ts/pull/127
+
+  - with typst semantics, responsive link in https://github.com/Myriad-Dreamin/typst.ts/pull/128, text selection in https://github.com/Myriad-Dreamin/typst.ts/pull/137.
+  - with incremental rendering by Me, @seven-mile and @Enter-tainer in https://github.com/Myriad-Dreamin/typst.ts/pull/129
+  - with dynamic (responsive) layout in https://github.com/Myriad-Dreamin/typst.ts/pull/141
+  - with source mapping from svg elements to typst ones in https://github.com/Myriad-Dreamin/typst.ts/pull/154, https://github.com/Myriad-Dreamin/typst.ts/pull/161, and https://github.com/Myriad-Dreamin/typst.ts/pull/162
+
+- cli: generate and watch svg with dynamic layout in https://github.com/Myriad-Dreamin/typst.ts/pull/142 and https://github.com/Myriad-Dreamin/typst.ts/pull/179
+- compiler: incremental parsing in https://github.com/Myriad-Dreamin/typst.ts/pull/186
+
 # v0.2.2
 
 ## Changelog since v0.2.2
