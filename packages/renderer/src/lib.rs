@@ -76,7 +76,7 @@ impl TypstRenderer {
     ) -> ZResult<()> {
         type UsingExporter = SvgExporter<DefaultExportFeature>;
         let layout = session.doc.layouts.first().unwrap();
-        
+
         // base scale = 2
         let base_cw = root.client_width() as f32;
 

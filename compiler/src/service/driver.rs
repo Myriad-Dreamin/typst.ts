@@ -1,4 +1,8 @@
-use std::{borrow::Cow, path::{PathBuf, Path}, sync::Arc};
+use std::{
+    borrow::Cow,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use crate::TypstSystemWorld;
 use typst::{
