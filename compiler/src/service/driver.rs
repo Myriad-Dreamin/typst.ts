@@ -1,4 +1,4 @@
-use std::{borrow::Cow, path::PathBuf, sync::Arc};
+use std::{borrow::Cow, path::{PathBuf, Path}, sync::Arc};
 
 use crate::TypstSystemWorld;
 use typst::{
@@ -119,7 +119,7 @@ impl CompileDriver {
     }
 
     /// Compile once from scratch.
-    pub fn once_dynamic(&mut self, output_dir: &PathBuf) -> SourceResult<()> {
+    pub fn once_dynamic(&mut self, output_dir: &Path) -> SourceResult<()> {
         // checkout the entry file
         let entry_file = self.entry_file.clone();
         // todo: hexo svg
