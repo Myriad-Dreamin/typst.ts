@@ -119,7 +119,7 @@ impl CompileDriver {
     }
 
     /// Compile once from scratch.
-    pub fn once_dynamic(&mut self) -> SourceResult<()> {
+    pub fn once_dynamic(&mut self, output_dir: &PathBuf) -> SourceResult<()> {
         // checkout the entry file
         let entry_file = self.entry_file.clone();
         // todo: hexo svg
@@ -129,7 +129,7 @@ impl CompileDriver {
         use typst::geom::Abs;
 
         let mut svg_exporter = DynamicLayoutSvgExporter::default();
-        let base_layout = Abs::pt(592.28);
+        let base_layout = Abs::pt(750.0);
 
         // for each 10pt we rerender once
         let instant_begin = std::time::Instant::now();
@@ -170,7 +170,7 @@ impl CompileDriver {
             );
         }
 
-        let module_output = entry_file.with_extension("multi.sir.bin");
+        let module_output = output_dir.with_extension("multi.sir.bin");
 
         let (doc, glyphs) = svg_exporter.finalize();
 
