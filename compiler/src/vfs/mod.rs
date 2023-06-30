@@ -372,8 +372,10 @@ impl<M: AccessModel + Sized> Vfs<M> {
         read: ReadContent,
     ) -> FileResult<()> {
         let slot = self.slot(path)?;
-        self.src2file_id.write().insert(source_id, slot.idx);
-        slot.source.compute(read)?;
+        slot.source.compute(|| {
+            self.src2file_id.write().insert(source_id, slot.idx);
+            read()
+        })?;
 
         Ok(())
     }
