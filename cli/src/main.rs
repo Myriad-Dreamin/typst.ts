@@ -16,7 +16,7 @@ use typst_ts_cli::{
     Subcommands,
 };
 use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
-use typst_ts_core::config::CompileOpts;
+use typst_ts_core::{config::CompileOpts, path::PathClean};
 
 fn get_cli(sub_command_required: bool) -> Command {
     let cli = Command::new("$").disable_version_flag(true);
@@ -72,8 +72,33 @@ fn compile(args: CompileArgs) -> ! {
         .exit()
     }
 
-    let workspace_dir = Path::new(args.workspace.as_str());
-    let entry_file_path = Path::new(args.entry.as_str());
+    let workspace_dir = Path::new(args.workspace.as_str()).clean();
+    let entry_file_path = Path::new(args.entry.as_str()).clean();
+
+    let workspace_dir = if workspace_dir.is_absolute() {
+        workspace_dir
+    } else {
+        let cwd = std::env::current_dir().unwrap_or_exit();
+        cwd.join(workspace_dir)
+    };
+
+    let entry_file_path = if entry_file_path.is_absolute() {
+        entry_file_path
+    } else {
+        let cwd = std::env::current_dir().unwrap_or_exit();
+        cwd.join(entry_file_path)
+    };
+
+    if !entry_file_path.starts_with(&workspace_dir) {
+        clap::Error::raw(
+            clap::error::ErrorKind::InvalidValue,
+            format!(
+                "entry file path must be in workspace directory: {workspace_dir}\n",
+                workspace_dir = workspace_dir.display()
+            ),
+        )
+        .exit()
+    }
 
     let _trace_guard = {
         let guard = args.trace.clone().map(TraceGuard::new);
@@ -87,16 +112,17 @@ fn compile(args: CompileArgs) -> ! {
         guard.unwrap()
     };
 
+    let compile_driver_root_dir = workspace_dir.clone();
     let compile_driver = || {
         let world = TypstSystemWorld::new(CompileOpts {
-            root_dir: workspace_dir.to_owned(),
+            root_dir: compile_driver_root_dir,
             font_paths: args.font_paths.clone(),
             with_embedded_fonts: EMBEDDED_FONT.to_owned(),
             ..CompileOpts::default()
         })
         .unwrap_or_exit();
 
-        let exporter = typst_ts_cli::export::prepare_exporters(&args, entry_file_path);
+        let exporter = typst_ts_cli::export::prepare_exporters(&args, &entry_file_path);
 
         CompileDriver {
             world,
@@ -137,7 +163,7 @@ fn compile(args: CompileArgs) -> ! {
     if args.watch {
         utils::async_continue(async move {
             let mut driver = compile_driver();
-            typst_ts_cli::watch::watch_dir(workspace_dir, move |events| {
+            typst_ts_cli::watch::watch_dir(&workspace_dir, move |events| {
                 // relevance checking
                 if events.is_some() && !events.unwrap().iter().any(|event| driver.relevant(event)) {
                     return;

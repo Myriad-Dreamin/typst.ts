@@ -16,8 +16,6 @@ use typst_ts_core::{
 };
 use wasm_bindgen::prelude::*;
 
-use crate::utils::console_log;
-
 pub mod builder;
 
 pub(crate) mod utils;
@@ -110,24 +108,26 @@ impl TypstCompiler {
         self.world.reset();
     }
 
-    pub fn add_source(&mut self, path: String, content: String, is_main: bool) -> bool {
+    pub fn add_source(&mut self, _path: String, _content: String, _is_main: bool) -> bool {
+        // todo: not longer support
         // checkout the entry file
-        match self
-            .world
-            .resolve_with(std::path::Path::new(&path), &content)
-        {
-            Ok(id) => {
-                if is_main {
-                    self.world.main = id;
-                    console_log!("main: {:?}", id);
-                }
-                true
-            }
-            Err(e) => {
-                console_log!("Error: {:?}", e);
-                false
-            }
-        }
+        // match self
+        //     .world
+        //     .resolve_with(std::path::Path::new(&path), &content)
+        // {
+        //     Ok(id) => {
+        //         if is_main {
+        //             self.world.main = id;
+        //             console_log!("main: {:?}", id);
+        //         }
+        //         true
+        //     }
+        //     Err(e) => {
+        //         console_log!("Error: {:?}", e);
+        //         false
+        //     }
+        // }
+        panic!("not implemented")
     }
 
     pub fn load_snapshot(
@@ -199,11 +199,12 @@ impl TypstCompiler {
             .collect()
     }
 
-    pub fn get_ast(&mut self, main_file_path: String) -> Result<String, JsValue> {
-        self.world.main = self
-            .world
-            .resolve(std::path::Path::new(&main_file_path))
-            .unwrap();
+    pub fn get_ast(&mut self, _main_file_path: String) -> Result<String, JsValue> {
+        // self.world.main = self
+        //     .world
+        //     .resolve(std::path::Path::new(&main_file_path))
+        //     .unwrap();
+        // todo: not longer support
 
         let ast_exporter = typst_ts_core::exporter_builtins::VecExporter::new(
             typst_ts_ast_exporter::AstExporter::default(),
@@ -230,11 +231,12 @@ impl TypstCompiler {
         Ok(artifact_bytes)
     }
 
-    pub fn compile(&mut self, main_file_path: String) -> Result<DocumentReference, JsValue> {
-        self.world.main = self
-            .world
-            .resolve(std::path::Path::new(&main_file_path))
-            .unwrap();
+    pub fn compile(&mut self, _main_file_path: String) -> Result<DocumentReference, JsValue> {
+        // todo: not longer support
+        // self.world.main = self
+        //     .world
+        //     .resolve(std::path::Path::new(&main_file_path))
+        //     .unwrap();
 
         let doc = typst::compile(&self.world).unwrap();
         Ok(DocumentReference {

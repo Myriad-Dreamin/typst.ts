@@ -42,7 +42,8 @@ use append_only_vec::AppendOnlyVec;
 use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
 use typst::{
     diag::{FileError, FileResult},
-    syntax::{Source, SourceId},
+    file::FileId as TypstFileId,
+    syntax::Source,
 };
 
 use typst_ts_core::{path::PathClean, typst_affinite_hash, Bytes, QueryRef};
@@ -82,7 +83,7 @@ pub struct PathSlot {
     idx: FileId,
     sampled_path: once_cell::sync::OnceCell<PathBuf>,
     mtime: FileQuery<std::time::SystemTime>,
-    source: FileQuery<Arc<Source>>,
+    source: FileQuery<Source>,
     buffer: FileQuery<Bytes>,
 }
 
@@ -104,6 +105,7 @@ pub struct Vfs<M: AccessModel + Sized> {
     path_interner: Mutex<PathInterner<<M as AccessModel>::RealPath, u64>>,
 
     path2slot: RwLock<HashMap<Arc<OsStr>, FileId>>,
+    src2file_id: RwLock<HashMap<TypstFileId, FileId>>,
     pub slots: AppendOnlyVec<PathSlot>,
     pub do_reparse: bool,
 }
@@ -115,6 +117,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
             access_model: TraceAccessModel::new(CachedAccessModel::new(access_model)),
             path_interner: Mutex::new(PathInterner::default()),
             slots: AppendOnlyVec::new(),
+            src2file_id: RwLock::new(HashMap::new()),
             path2slot: RwLock::new(HashMap::new()),
             do_reparse: true,
         }
@@ -126,6 +129,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
         let new_lifetime_cnt = self.lifetime_cnt;
         self.slots = AppendOnlyVec::new();
         self.path2slot.get_mut().clear();
+        self.src2file_id.get_mut().clear();
         self.path_interner
             .get_mut()
             .retain(|_, lifetime| new_lifetime_cnt - *lifetime <= 30);
@@ -184,7 +188,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// Read a source with diff.
-    fn read_diff_source(&self, path: &Path, source_id: SourceId) -> FileResult<Arc<Source>> {
+    fn read_diff_source(&self, path: &Path, source_id: TypstFileId) -> FileResult<Source> {
         if self.access_model.is_file(path)? {
             Ok(self
                 .access_model
@@ -198,9 +202,9 @@ impl<M: AccessModel + Sized> Vfs<M> {
     fn replace_diff_source(
         &self,
         path: &Path,
-        source_id: SourceId,
+        source_id: TypstFileId,
         read: impl FnOnce(&FileCache<Source>) -> FileResult<Bytes>,
-    ) -> FileResult<Arc<Source>> {
+    ) -> FileResult<Source> {
         if self.access_model.is_file(path)? {
             Ok(self
                 .access_model
@@ -213,7 +217,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     fn reparse(
         &self,
         path: &Path,
-        source_id: SourceId,
+        source_id: TypstFileId,
         prev: Option<Source>,
         next: String,
     ) -> FileResult<Source> {
@@ -288,7 +292,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
                     Ok(source)
                 }
             }
-            None => Ok(Source::new(source_id, path, next)),
+            None => Ok(Source::new(source_id, next)),
         }
     }
 
@@ -345,45 +349,44 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// Get source by id.
-    pub fn source(&self, id: SourceId) -> &Source {
-        self.slots[id.as_u16() as usize]
+    pub fn source(&self, file_id: TypstFileId) -> FileResult<Source> {
+        let f = *self
+            .src2file_id
+            .read()
+            .get(&file_id)
+            .ok_or_else(|| FileError::NotFound(file_id.path().to_owned()))?;
+
+        self.slots[f.0 as usize]
             .source
             // the value should be computed
             .compute_ref(|| Err(FileError::Other))
-            .unwrap()
+            .cloned()
     }
 
     /// Get source id by path.
     /// This function will not check whether the path exists.
-    fn resolve_with_f<ReadContent: FnOnce(SourceId) -> FileResult<Arc<Source>>>(
+    fn resolve_with_f<ReadContent: FnOnce() -> FileResult<Source>>(
         &self,
         path: &Path,
+        source_id: TypstFileId,
         read: ReadContent,
-    ) -> FileResult<SourceId> {
+    ) -> FileResult<()> {
         let slot = self.slot(path)?;
-        let origin_source_id = slot.idx.0;
-        let source_id = SourceId::from_u16(origin_source_id as u16);
+        self.src2file_id.write().insert(source_id, slot.idx);
+        slot.source.compute(read)?;
 
-        slot.source.compute(|| {
-            if origin_source_id > u16::MAX as u32 {
-                panic!("source id overflow");
-            }
-
-            read(source_id)
-        })?;
-
-        Ok(source_id)
+        Ok(())
     }
 
     /// Get source id by path with filesystem content.
-    pub fn resolve(&self, path: &Path) -> FileResult<SourceId> {
-        self.resolve_with_f(path, |source_id| {
+    pub fn resolve(&self, path: &Path, source_id: TypstFileId) -> FileResult<()> {
+        self.resolve_with_f(path, source_id, || {
             if !self.do_reparse {
                 let instant = std::time::Instant::now();
 
                 let content = self.read(path)?;
                 let content = from_utf8_or_bom(&content)?.to_owned();
-                let res = Ok(Arc::new(Source::new(source_id, path, content)));
+                let res = Ok(Source::new(source_id, content));
 
                 println!("parse: {:?} {:?}", path, instant.elapsed());
                 return res;
@@ -393,13 +396,18 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// Get source id by path with memory content.
-    pub fn resolve_with<P: AsRef<Path>>(&self, path: P, content: &str) -> FileResult<SourceId> {
+    pub fn resolve_with<P: AsRef<Path>>(
+        &self,
+        path: P,
+        source_id: TypstFileId,
+        content: &str,
+    ) -> FileResult<()> {
         let path = path.as_ref();
-        self.resolve_with_f(path, |source_id| {
+        self.resolve_with_f(path, source_id, || {
             if !self.do_reparse {
                 let instant = std::time::Instant::now();
 
-                let res = Ok(Arc::new(Source::new(source_id, path, content.to_owned())));
+                let res = Ok(Source::new(source_id, content.to_owned()));
 
                 println!("parse: {:?} {:?}", path, instant.elapsed());
                 return res;

@@ -493,5 +493,7 @@ fn lower_image(image: &Image, size: Size) -> ir::ImageItem {
 
 fn hack_span_id_to_u64(span_id: &Span) -> u64 {
     const SPAN_BITS: u64 = 48;
-    ((span_id.source().as_u16() as u64) << SPAN_BITS) | span_id.number()
+    // todo: how to get file_id?
+    let file_id = unsafe { std::mem::transmute::<_, &u16>(&span_id.id()) };
+    ((*file_id as u64) << SPAN_BITS) | span_id.number()
 }

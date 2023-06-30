@@ -8,8 +8,14 @@ use crate::TypstSystemWorld;
 use typst::{
     diag::{SourceError, SourceResult},
     doc::Document,
+    file::FileId,
 };
-use typst_ts_core::{exporter_builtins::GroupExporter, exporter_utils::map_err, Exporter};
+use typst_ts_core::{
+    exporter_builtins::GroupExporter,
+    exporter_utils::{map_err, map_err_with_id},
+    path::PathClean,
+    Exporter,
+};
 use typst_ts_svg_exporter::{serialize_multi_doc_standalone, DynamicLayoutSvgExporter};
 
 use super::diag;
@@ -88,7 +94,8 @@ impl CompileDriver {
             }
             Err(errs) => {
                 self.print_status::<WITH_STATUS>(diag::Status::Error(start.elapsed()));
-                self.print_diagnostics(*errs).unwrap();
+                // todo: process errors
+                let _ = self.print_diagnostics(*errs);
                 None
             }
         }
@@ -105,11 +112,12 @@ impl CompileDriver {
         self.world.reset();
 
         // checkout the entry file
-        let entry_file = self.entry_file.clone();
-        self.world.main = self
-            .world
-            .resolve(&entry_file)
-            .map_err(|e: typst::diag::FileError| map_err(&self.world, e))?;
+        let main_id = self.main_id();
+        self.world.main = main_id;
+        // early error cannot use map_err
+        self.world
+            .resolve(&self.entry_file, main_id)
+            .map_err(|e: typst::diag::FileError| map_err_with_id(main_id, e))?;
 
         Ok(())
     }
@@ -122,10 +130,27 @@ impl CompileDriver {
         typst::compile(&self.world)
     }
 
+    pub fn main_id(&self) -> FileId {
+        let entry_file = self.entry_file.clone();
+        let entry_file = if entry_file.is_absolute() {
+            let entry_file = entry_file.clean();
+            let root = self.world.root.clean();
+            entry_file.strip_prefix(root).unwrap().to_owned()
+        } else {
+            entry_file
+        };
+        let entry_file: PathBuf = [std::path::Component::RootDir]
+            .into_iter()
+            .chain(entry_file.components())
+            .collect();
+        FileId::new(None, &entry_file)
+    }
+
     /// Compile once from scratch.
     pub fn once_dynamic(&mut self, output_dir: &Path) -> SourceResult<()> {
         // checkout the entry file
         let entry_file = self.entry_file.clone();
+        let main_id = self.main_id();
         // todo: hexo svg
         let content = { std::fs::read_to_string(&entry_file).expect("Could not read file") };
         // #let ts_page_width = 595.28pt
@@ -156,9 +181,9 @@ impl CompileDriver {
                 .clone()
                 .replace("#let ts_page_width = 595.28pt", &to_layout);
 
-            match self.world.resolve_with(&entry_file, &dyn_content) {
-                Ok(id) => {
-                    self.world.main = id;
+            match self.world.resolve_with(&entry_file, main_id, &dyn_content) {
+                Ok(()) => {
+                    self.world.main = main_id;
                 }
                 Err(e) => return Err(map_err(&self.world, e)),
             }

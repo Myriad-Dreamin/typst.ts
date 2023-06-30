@@ -1,1 +1,1 @@
-pub type Bytes = typst::util::Buffer;
+pub type Bytes = typst::util::Bytes;
