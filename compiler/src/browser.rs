@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use typst::{diag::PackageResult, file::PackageSpec};
 use typst_ts_core::font::FontResolverImpl;
 
 use crate::{vfs::browser::ProxyAccessModel, world::CompilerFeat};
@@ -18,6 +19,10 @@ impl CompilerFeat for BrowserCompilerFeat {
     //   ...
     // };
     // typst::eval::set_lang_items(dummy_library);
+
+    fn resolve_package(_spec: &PackageSpec) -> PackageResult<PathBuf> {
+        todo!()
+    }
 }
 
 impl TypstBrowserWorld {

@@ -8,7 +8,7 @@ use chrono::Datelike;
 use comemo::Prehashed;
 use serde::{Deserialize, Serialize};
 use typst::{
-    diag::{FileResult, PackageError, PackageResult},
+    diag::{FileResult, PackageResult},
     eval::{Datetime, Library},
     file::{FileId, PackageSpec},
     font::{Font, FontBook},
@@ -32,6 +32,8 @@ type CodespanError = codespan_reporting::files::Error;
 
 pub trait CompilerFeat {
     type M: AccessModel + Sized;
+
+    fn resolve_package(path: &PackageSpec) -> PackageResult<PathBuf>;
 }
 
 /// A world that provides access to the operating system.
@@ -151,7 +153,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         // Determine the root path relative to which the file path
         // will be resolved.
         let root = match id.package() {
-            Some(spec) => prepare_package(spec)?,
+            Some(spec) => F::resolve_package(spec)?,
             None => self.root.clone(),
         };
 
@@ -225,74 +227,4 @@ pub struct WorldSnapshot {
     /// document specific data
     pub artifact_header: ArtifactHeader,
     pub artifact_data: String,
-}
-
-/// Make a package available in the on-disk cache.
-fn prepare_package(spec: &PackageSpec) -> PackageResult<PathBuf> {
-    let subdir = format!(
-        "typst/packages/{}/{}-{}",
-        spec.namespace, spec.name, spec.version
-    );
-
-    if let Some(data_dir) = dirs::data_dir() {
-        let dir = data_dir.join(&subdir);
-        if dir.exists() {
-            return Ok(dir);
-        }
-    }
-
-    if let Some(cache_dir) = dirs::cache_dir() {
-        let dir = cache_dir.join(&subdir);
-
-        // Download from network if it doesn't exist yet.
-        if spec.namespace == "preview" && !dir.exists() {
-            download_package(spec, &dir)?;
-        }
-
-        if dir.exists() {
-            return Ok(dir);
-        }
-    }
-
-    Err(PackageError::NotFound(spec.clone()))
-}
-
-/// Download a package over the network.
-fn download_package(spec: &PackageSpec, package_dir: &Path) -> PackageResult<()> {
-    // The `@preview` namespace is the only namespace that supports on-demand
-    // fetching.
-    assert_eq!(spec.namespace, "preview");
-
-    let url = format!(
-        "https://packages.typst.org/preview/{}-{}.tar.gz",
-        spec.name, spec.version
-    );
-
-    print_downloading(spec).unwrap();
-    let reader = match ureq::get(&url).call() {
-        Ok(response) => response.into_reader(),
-        Err(ureq::Error::Status(404, _)) => return Err(PackageError::NotFound(spec.clone())),
-        Err(_) => return Err(PackageError::NetworkFailed),
-    };
-
-    let decompressed = flate2::read::GzDecoder::new(reader);
-    tar::Archive::new(decompressed)
-        .unpack(package_dir)
-        .map_err(|_| {
-            std::fs::remove_dir_all(package_dir).ok();
-            PackageError::MalformedArchive
-        })
-}
-
-/// Print that a package downloading is happening.
-fn print_downloading(_spec: &PackageSpec) -> std::io::Result<()> {
-    // let mut w = color_stream();
-    // let styles = term::Styles::default();
-
-    // w.set_color(&styles.header_help)?;
-    // write!(w, "downloading")?;
-
-    // w.reset()?;
-    // writeln!(w, " {spec}")
-    Ok(())
 }
