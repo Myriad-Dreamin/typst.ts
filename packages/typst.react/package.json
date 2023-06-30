@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst.react",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Typst.ts for React",
   "main": "src/lib/index.js",
   "types": "src/lib/index.d.ts",
