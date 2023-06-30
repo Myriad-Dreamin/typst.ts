@@ -59,7 +59,6 @@ class Renderer {
       '--format=ir',
       '--format=json',
       '--format=json_glyphs',
-      '--font-path=C:\\Users\\7mile\\source\\repos\\typst\\assets\\fonts',
     ]);
 
     await spawnAsync(this.renderCli, [
@@ -71,7 +70,6 @@ class Renderer {
       '--output',
       dataDir,
       '--dynamic-layout',
-      '--font-path=C:\\Users\\7mile\\source\\repos\\typst\\assets\\fonts',
     ]);
 
     const compiled = `
