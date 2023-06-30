@@ -79,18 +79,10 @@ impl TypstRenderer {
 
         let cw = root.client_width() as f32;
         // base scale = 2
-        let base_cw = root.client_width() as f32 / 2.;
+        let base_cw = root.client_width() as f32;
 
         let render = |layout: &LayoutElem| {
             let applying = format!("{}px", layout.0 .0);
-
-            // transform scale
-            let scale = cw / layout.0 .0;
-            root.set_attribute(
-                "style",
-                &format!("transform-origin: 0px 0px; transform: scale({})", scale),
-            )
-            .unwrap();
 
             let applied = root.get_attribute("data-applyed-width");
             if applied.is_some() && applied.unwrap() == applying {

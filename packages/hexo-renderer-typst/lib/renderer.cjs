@@ -2,6 +2,31 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawn } = require('child_process');
+
+async function spawnAsync(cmd, args) {
+  return new Promise((resolve, _reject) => {
+    const child = spawn(cmd, args);
+
+    child.stdout.on('data', data => {
+      console.log(`stdout: ${data}`);
+    });
+
+    child.stderr.on('data', data => {
+      console.error(`stderr: ${data}`);
+    });
+
+    child.on('error', error => {
+      console.error(`error: ${error.message}`);
+      reject(error);
+    });
+
+    child.on('close', code => {
+      console.log(`child process exited with code ${code}`);
+      resolve();
+    });
+  });
+}
 
 class Renderer {
   constructor(hexo) {
@@ -9,7 +34,7 @@ class Renderer {
     this.renderCli = 'typst-ts-cli';
   }
 
-  render(data, _options) {
+  async render(data, _options) {
     const base_dir = this.hexo.base_dir;
 
     const rawDataPath = path
@@ -17,91 +42,84 @@ class Renderer {
       .replace(/\.[^/.]+$/, '')
       .replace(/\\/g, '/');
     const relDataPath = `artifacts/typst/${rawDataPath}`;
+    const renderer_module = '/typst/typst_ts_renderer_bg.wasm';
     const dataPath = path.resolve(base_dir, 'public/', relDataPath);
     const dataDir = path.dirname(dataPath);
     console.log('dataPath', dataPath);
     fs.mkdirSync(dataDir, { recursive: true });
 
-    return new Promise((resolve, _reject) => {
-      const { spawn } = require('child_process');
-      const args = [
-        'compile',
-        '--workspace',
-        base_dir,
-        '--entry',
-        data.path,
-        '--output',
-        dataDir,
-        '--format=ir',
-        '--format=json',
-        '--format=json_glyphs',
-      ];
-      const child = spawn(this.renderCli, args);
+    await spawnAsync(this.renderCli, [
+      'compile',
+      '--workspace',
+      base_dir,
+      '--entry',
+      data.path,
+      '--output',
+      dataDir,
+      '--format=ir',
+      '--format=json',
+      '--format=json_glyphs',
+      '--font-path=C:\\Users\\7mile\\source\\repos\\typst\\assets\\fonts',
+    ]);
 
-      child.stdout.on('data', data => {
-        console.log(`stdout: ${data}`);
-      });
+    await spawnAsync(this.renderCli, [
+      'compile',
+      '--workspace',
+      base_dir,
+      '--entry',
+      data.path,
+      '--output',
+      dataDir,
+      '--dynamic-layout',
+      '--font-path=C:\\Users\\7mile\\source\\repos\\typst\\assets\\fonts',
+    ]);
 
-      child.stderr.on('data', data => {
-        console.error(`stderr: ${data}`);
-      });
+    const compiled = `
+      <div id="typst-app"></div>
+      <script>
+        document.ready(() => {
+          let plugin = window.TypstRenderModule.createTypstSvgRenderer();
+        console.log(plugin);
+        plugin
+          .init({
+            getModule: () =>
+              '${renderer_module}',
+          })
+          .then(async () => {
+            const artifactData = await fetch(
+              '${relDataPath}.multi.sir.bin',
+            )
+              .then(response => response.arrayBuffer())
+              .then(buffer => new Uint8Array(buffer));
 
-      child.on('error', error => {
-        console.error(`error: ${error.message}`);
-      });
+            const t0 = performance.now();
 
-      const renderer_module = '/typst/typst_ts_renderer_bg.wasm';
+            const svgModule = await plugin.createModule(artifactData);
+            let t1 = performance.now();
 
-      child.on('close', code => {
-        console.log(`child process exited with code ${code}`);
+            console.log(\`init took \${t1 - t0} milliseconds\`);
 
-        const compiled = `
-        <div id="typst-app"></div>
-        <script>
-          document.ready(() => {
-            let plugin = window.TypstRenderModule.createTypstRenderer(pdfjsLib);
-            plugin
-              .init({
-                beforeBuild: [
-                ],
-                getModule: () => '${renderer_module}',
-              })
-              .then(() => {
-                let artifactContent = undefined;
-                const getGlyphs = fetch('/${relDataPath}.glyphs.json')
-                  .then(response => response.text())
-                  .then(content => JSON.parse(content))
-                  .catch(e => {
-                    console.log(e);
-                    return undefined;
-                  });
-                fetch('/${relDataPath}.artifact.json')
-                  .then(response => response.arrayBuffer())
-                  .then(buffer => new Uint8Array(buffer))
-                  .then(buffer => {
-                    artifactContent = buffer;
-                  })
-                  .then(() => getGlyphs)
-                  .then(glyphPack => plugin.loadGlyphPack(glyphPack))
-                  .then(() => {
-                    const appContainer = document.getElementById('typst-app');
-                    plugin
-                      .render({
-                        artifactContent,
-                        container: appContainer,
-                        backgroundColor: '#ffffff',
-                        pixelPerPt: 4.5,
-                      })
-                      .then(renderResult => {
-                        console.log('render done');
-                      });
-                  });
-              });
+            const appContainer = document.getElementById('typst-app');
+
+            const runRender = async () => {
+              t1 = performance.now();
+              await plugin.renderSvg(svgModule, appContainer);
+
+              const t2 = performance.now();
+              console.log(
+                \`render took \${t2 - t1} milliseconds. total took \${t2 - t0} milliseconds.\`,
+              );
+            };
+
+            let base = runRender();
+
+            window.onresize = () => {
+              base = base.then(runRender());
+            };
           });
-        </script>`;
-        resolve(compiled);
-      });
-    });
+        });
+      </script>`;
+    return compiled;
   }
 }
 
