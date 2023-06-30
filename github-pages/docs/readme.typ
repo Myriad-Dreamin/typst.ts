@@ -22,12 +22,11 @@
     if it.block {
       rect(
         width: 100%,
-        inset: (x: 4pt, y: 5pt),
+        inset: (x: 10pt, y: 10pt),
         radius: 4pt,
-        fill: rgb(239, 241, 243),
+        fill: rgb("#1a1b26"),
         [
-          #set text(fill: rgb("#000000"))
-          #place(right, text(luma(110), it.lang))
+          #set text(fill: rgb("#ffffff"), weight: 200)
           #it
         ],
       )
@@ -35,6 +34,7 @@
       it
     }
   }
+  set raw(theme: read("tokyo-night.tmTheme"))
 
   // Main body.
   set par(justify: true)
@@ -144,7 +144,7 @@ Import Typst.ts in your project:
 
 - Using #link("https://www.npmjs.com/package/@myriaddreamin/typst.react")[\@myriaddreamin/typst.react]
 
-  ```javascript
+  ```tsx
   import { TypstDocument } from '@myriaddreamin/typst.react';
 
   export const App = (artifact: string) => {
