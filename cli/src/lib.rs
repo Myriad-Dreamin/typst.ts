@@ -45,6 +45,9 @@ pub enum Subcommands {
 
     #[clap(subcommand)]
     Font(FontSubCommands),
+
+    #[clap(subcommand)]
+    Package(PackageSubCommands),
 }
 
 #[derive(Debug, Subcommand)]
@@ -59,6 +62,18 @@ pub enum FontSubCommands {
     List(ListFontsArgs),
     /// Measure fonts and generate a profile file for compiler
     Measure(MeasureFontsArgs),
+}
+
+#[derive(Debug, Subcommand)]
+#[clap(
+    about = "Commands about package for typst.",
+    after_help = "",
+    next_display_order = None
+)]
+#[allow(clippy::large_enum_variant)]
+pub enum PackageSubCommands {
+    /// List all discovered packages in data and cache paths
+    List(ListPackagesArgs),
 }
 
 #[derive(Debug, Clone, Parser)]
@@ -151,3 +166,11 @@ pub struct EnvArgs {
     #[clap(value_name = "KEY")]
     pub key: EnvKey,
 }
+
+#[derive(Debug, Clone, Parser)]
+pub struct ListPackagesArgs {
+    /// Also list other information of each package
+    #[arg(short)]
+    pub long: bool,
+}
+
