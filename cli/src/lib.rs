@@ -74,6 +74,10 @@ pub enum FontSubCommands {
 pub enum PackageSubCommands {
     /// List all discovered packages in data and cache paths
     List(ListPackagesArgs),
+    /// Link a package to local data path
+    Link(LinkPackagesArgs),
+    /// Unlink a package from local data path
+    Unlink(LinkPackagesArgs),
 }
 
 #[derive(Debug, Clone, Parser)]
@@ -172,4 +176,11 @@ pub struct ListPackagesArgs {
     /// Also list other information of each package
     #[arg(short)]
     pub long: bool,
+}
+
+#[derive(Debug, Clone, Parser)]
+pub struct LinkPackagesArgs {
+    /// Path to package manifest file
+    #[arg(long)]
+    pub manifest: PathBuf,
 }

@@ -21,6 +21,16 @@ impl Default for SystemRegistry {
 }
 
 impl SystemRegistry {
+    pub fn local_path(&self) -> Option<Box<Path>> {
+        if let Some(data_dir) = dirs::data_dir() {
+            if data_dir.exists() {
+                return Some(data_dir.join("typst/packages").into());
+            }
+        }
+
+        None
+    }
+
     pub fn paths(&self) -> Vec<Box<Path>> {
         let mut res = vec![];
         if let Some(data_dir) = dirs::data_dir() {
