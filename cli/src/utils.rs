@@ -1,7 +1,6 @@
 use std::{io, path::Path};
 
 use tokio::runtime::Builder;
-use typst_ts_core::path::PathClean;
 
 pub fn async_continue<F: std::future::Future<Output = ()>>(f: F) -> ! {
     Builder::new_multi_thread()
@@ -51,6 +50,7 @@ impl<T, E: std::error::Error> UnwrapOrExit<T> for Result<T, E> {
 pub fn symlink_dir(src: &Path, dst: &Path) -> io::Result<()> {
     #[cfg(windows)]
     {
+        use typst_ts_core::path::PathClean;
         let src = src.clean();
         let dst = dst.clean();
         // set up a junction, which is like a symlink dir but without the permission requirements
@@ -84,6 +84,7 @@ pub fn symlink_dir(src: &Path, dst: &Path) -> io::Result<()> {
 pub fn remove_symlink_dir(path: &Path) -> io::Result<()> {
     #[cfg(windows)]
     {
+        use typst_ts_core::path::PathClean;
         let path = path.clean();
         // remove a junction
         std::process::Command::new("cmd")
