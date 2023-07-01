@@ -319,4 +319,3 @@ fn list_packages(args: ListPackagesArgs) -> ! {
 
     exit(0)
 }
-

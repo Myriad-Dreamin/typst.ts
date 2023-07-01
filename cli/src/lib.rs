@@ -173,4 +173,3 @@ pub struct ListPackagesArgs {
     #[arg(short)]
     pub long: bool,
 }
-
