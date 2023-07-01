@@ -17,34 +17,47 @@ jobs:
         include:
           - os: windows-latest
             rust-target: x86_64-pc-windows-msvc
+            cross: false
             platform: win32
             arch: x64
           - os: windows-latest
             rust-target: i686-pc-windows-msvc
+            cross: false
             platform: win32
             arch: ia32
           - os: windows-latest
             rust-target: aarch64-pc-windows-msvc
+            cross: false
             platform: win32
             arch: arm64
           - os: ubuntu-20.04
             rust-target: x86_64-unknown-linux-gnu
+            cross: false
             platform: linux
             arch: x64
           - os: ubuntu-20.04
             rust-target: aarch64-unknown-linux-gnu
+            cross: false
             platform: linux
             arch: arm64
           - os: ubuntu-20.04
             rust-target: arm-unknown-linux-gnueabihf
+            cross: false
             platform: linux
             arch: armhf
+          - os: ubuntu-20.04
+            rust-target: riscv64gc-unknown-linux-gnu
+            cross: true
+            platform: linux
+            arch: riscv64
           - os: macos-11
             rust-target: x86_64-apple-darwin
+            cross: false
             platform: darwin
             arch: x64
           - os: macos-11
             rust-target: aarch64-apple-darwin
+            cross: false
             platform: darwin
             arch: arm64
 
@@ -70,7 +83,16 @@ jobs:
         run: |
           sudo apt-get update -y
           sudo apt-get install gcc-arm-linux-gnueabihf
-      - shell: pwsh
+      - name: Run Cross Build
+        if: matrix.cross
+        run: |
+          cargo install cross --git https://github.com/cross-rs/cross.git
+          cargo run --release --bin typst-ts-fontctl
+          cross build -p typst-ts-fontctl --release --target ${{ matrix.rust-target }}
+          cross build -p typst-ts-cli --release --target ${{ matrix.rust-target }}
+      - name: Run Native Build
+        shell: pwsh
+        if: ${{ !matrix.cross }}
         run: |
           cargo run --release --bin typst-ts-fontctl
           cargo build --release -p typst-ts-fontctl --target ${{ matrix.rust-target }}
@@ -153,16 +175,17 @@ jobs:
             chmod +x release/$name/bin/typst-ts-*
             tar czvf gh-release/$name.tar.gz -C release $name
           }
-          pack_release win32-x64    x86_64-pc-windows-msvc
-          pack_release win32-ia32   i686-pc-windows-msvc
-          pack_release win32-arm64  aarch64-pc-windows-msvc
-          pack_release linux-x64    x86_64-unknown-linux-gnu
-          pack_release linux-arm64  aarch64-unknown-linux-gnu
-          pack_release linux-armhf  arm-unknown-linux-gnueabihf
-          pack_release darwin-x64   x86_64-apple-darwin
-          pack_release darwin-arm64 aarch64-apple-darwin
-          pack_release alpine-x64   alpine-x64
-          pack_release alpine-x64   x86_64-unknown-linux-musl
+          pack_release win32-x64     x86_64-pc-windows-msvc
+          pack_release win32-ia32    i686-pc-windows-msvc
+          pack_release win32-arm64   aarch64-pc-windows-msvc
+          pack_release linux-x64     x86_64-unknown-linux-gnu
+          pack_release linux-arm64   aarch64-unknown-linux-gnu
+          pack_release linux-armhf   arm-unknown-linux-gnueabihf
+          pack_release linux-riscv64 riscv64gc-unknown-linux-gnu
+          pack_release darwin-x64    x86_64-apple-darwin
+          pack_release darwin-arm64  aarch64-apple-darwin
+          pack_release alpine-x64    alpine-x64
+          pack_release alpine-x64    x86_64-unknown-linux-musl
 
           # typst-ts-font-assets
           mkdir -p release/font-assets
