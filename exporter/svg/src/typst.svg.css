@@ -38,7 +38,7 @@ svg {
   fill: var(--glyph_fill);
 }
 .outline_glyph path {
-  transition: 0.2s all;
+  transition: 0.2s fill;
 }
 .hover .typst-text {
   --glyph_fill: #66bab7;
