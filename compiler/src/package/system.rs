@@ -1,5 +1,6 @@
 use std::{path::Path, sync::Arc};
 
+use parking_lot::Mutex;
 use typst::{
     diag::{PackageError, PackageResult},
     file::PackageSpec,
@@ -8,13 +9,13 @@ use typst::{
 use super::{DummyNotifier, Notifier, Registry};
 
 pub struct SystemRegistry {
-    notifier: Arc<Box<dyn Notifier + Send>>,
+    notifier: Arc<Mutex<dyn Notifier + Send>>,
 }
 
 impl Default for SystemRegistry {
     fn default() -> Self {
         Self {
-            notifier: Arc::new(Box::<DummyNotifier>::default()),
+            notifier: Arc::new(Mutex::<DummyNotifier>::default()),
         }
     }
 }
@@ -57,7 +58,7 @@ impl SystemRegistry {
             spec.name, spec.version
         );
 
-        self.notifier.downloading(spec);
+        self.notifier.lock().downloading(spec);
         let reader = match ureq::get(&url).call() {
             Ok(response) => response.into_reader(),
             Err(ureq::Error::Status(404, _)) => return Err(PackageError::NotFound(spec.clone())),
