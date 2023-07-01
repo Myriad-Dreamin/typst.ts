@@ -98,19 +98,14 @@ impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {
         read: impl FnOnce(&FileCache<C>) -> FileResult<Bytes>,
         compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
     ) -> FileResult<C> {
-        let instant = std::time::Instant::now();
         self.cache_entry(src, |entry| {
-            println!("cache_entry: {:?}", instant.elapsed());
-            let instant = std::time::Instant::now();
             let data = entry
                 .source_state
                 .compute_with_context_ref(|prev_to_diff| {
                     let text = from_utf8_or_bom(&read(entry)?)?.to_owned();
-                    println!("read: {:?}", instant.elapsed());
                     compute(prev_to_diff, text)
                 })?;
 
-            println!("compute: {:?}", instant.elapsed());
             let t = data.clone();
             Ok(t)
         })

@@ -48,10 +48,7 @@ use typst::{
 
 use typst_ts_core::{path::PathClean, typst_affinite_hash, Bytes, QueryRef};
 
-use self::{
-    cached::{CachedAccessModel, FileCache},
-    trace::TraceAccessModel,
-};
+use self::cached::{CachedAccessModel, FileCache};
 
 /// Handle to a file in [`Vfs`]
 ///
@@ -101,7 +98,8 @@ impl PathSlot {
 
 pub struct Vfs<M: AccessModel + Sized> {
     lifetime_cnt: u64,
-    access_model: TraceAccessModel<CachedAccessModel<M, Source>>,
+    // access_model: TraceAccessModel<CachedAccessModel<M, Source>>,
+    access_model: CachedAccessModel<M, Source>,
     path_interner: Mutex<PathInterner<<M as AccessModel>::RealPath, u64>>,
 
     path2slot: RwLock<HashMap<Arc<OsStr>, FileId>>,
@@ -112,9 +110,12 @@ pub struct Vfs<M: AccessModel + Sized> {
 
 impl<M: AccessModel + Sized> Vfs<M> {
     pub fn new(access_model: M) -> Self {
+        let access_model = CachedAccessModel::new(access_model);
+        // let access_model = TraceAccessModel::new(access_model);
+
         Self {
             lifetime_cnt: 0,
-            access_model: TraceAccessModel::new(CachedAccessModel::new(access_model)),
+            access_model,
             path_interner: Mutex::new(PathInterner::default()),
             slots: AppendOnlyVec::new(),
             src2file_id: RwLock::new(HashMap::new()),
@@ -221,8 +222,6 @@ impl<M: AccessModel + Sized> Vfs<M> {
         prev: Option<Source>,
         next: String,
     ) -> FileResult<Source> {
-        let instant = std::time::Instant::now();
-        println!("reparse: {:?}", path);
         use dissimilar::Chunk;
         match prev {
             Some(mut source) => {
@@ -232,12 +231,8 @@ impl<M: AccessModel + Sized> Vfs<M> {
                     Ok(source)
                 } else {
                     let prev = prev.to_owned();
-                    let prev_hash = typst_affinite_hash(&source);
 
                     let diff = dissimilar::diff(&prev, &next);
-
-                    let elapsed = instant.elapsed();
-                    let diff_instant = std::time::Instant::now();
 
                     let mut rev_adavance = 0;
                     let mut last_rep = false;
@@ -281,14 +276,6 @@ impl<M: AccessModel + Sized> Vfs<M> {
                         }
                     }
 
-                    println!(
-                        "reparse real: d:{:?} e:{:?} {:?} {:?} -> {:?}",
-                        elapsed,
-                        diff_instant.elapsed(),
-                        path,
-                        prev_hash,
-                        typst_affinite_hash(&source)
-                    );
                     Ok(source)
                 }
             }
