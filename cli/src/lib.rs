@@ -78,9 +78,11 @@ pub enum PackageSubCommands {
     Link(LinkPackagesArgs),
     /// Unlink a package from local data path
     Unlink(LinkPackagesArgs),
+    /// Generate documentation for a package
+    Doc(GenPackagesDocArgs),
 }
 
-#[derive(Debug, Clone, Parser)]
+#[derive(Default, Debug, Clone, Parser)]
 #[clap(next_help_heading = "Compile options")]
 pub struct CompileArgs {
     /// Path to typst workspace.
@@ -182,5 +184,22 @@ pub struct ListPackagesArgs {
 pub struct LinkPackagesArgs {
     /// Path to package manifest file
     #[arg(long)]
-    pub manifest: PathBuf,
+    pub manifest: String,
+}
+
+#[derive(Debug, Clone, Parser)]
+pub struct GenPackagesDocArgs {
+    /// Path to package manifest file
+    #[arg(long)]
+    pub manifest: String,
+
+    /// Path to output directory
+    #[arg(long, short, default_value = "")]
+    pub output: String,
+
+    /// Generate dynamic layout representation.
+    /// Note: this is an experimental feature and will be merged as
+    ///   format `dyn-svg` in the future.
+    #[clap(long)]
+    pub dynamic_layout: bool,
 }

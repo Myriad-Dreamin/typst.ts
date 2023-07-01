@@ -12,8 +12,8 @@ use typst_ts_cli::{
     tracing::TraceGuard,
     utils::{self, UnwrapOrExit},
     version::intercept_version,
-    CompileArgs, CompletionArgs, EnvKey, FontSubCommands, LinkPackagesArgs, ListFontsArgs,
-    ListPackagesArgs, MeasureFontsArgs, Opts, PackageSubCommands, Subcommands,
+    CompileArgs, CompletionArgs, EnvKey, FontSubCommands, GenPackagesDocArgs, LinkPackagesArgs,
+    ListFontsArgs, ListPackagesArgs, MeasureFontsArgs, Opts, PackageSubCommands, Subcommands,
 };
 use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
 use typst_ts_core::{
@@ -61,6 +61,7 @@ fn main() {
             PackageSubCommands::List(args) => list_packages(args),
             PackageSubCommands::Link(args) => link_packages(args, false),
             PackageSubCommands::Unlink(args) => link_packages(args, true),
+            PackageSubCommands::Doc(args) => doc_packages(args),
         },
         None => help_sub_command(),
     };
@@ -347,7 +348,7 @@ fn link_packages(args: LinkPackagesArgs, should_delete: bool) -> ! {
 
     let local_path = world.registry.local_path().unwrap();
     let pkg_link_target = local_path.join("preview").join(pkg_dirname);
-    let pkg_link_source = args.manifest.parent().unwrap();
+    let pkg_link_source = Path::new(&args.manifest).parent().unwrap();
 
     let action = if should_delete { "unlink" } else { "link" };
 
@@ -374,4 +375,19 @@ fn link_packages(args: LinkPackagesArgs, should_delete: bool) -> ! {
     }
 
     exit(0)
+}
+
+fn doc_packages(args: GenPackagesDocArgs) -> ! {
+    let package_dir = Path::new(&args.manifest).parent().unwrap();
+    let doc_file = package_dir.join("doc.typ");
+
+    let compile_args = CompileArgs {
+        entry: doc_file.to_string_lossy().to_string(),
+        workspace: package_dir.to_string_lossy().to_string(),
+        format: vec!["pdf".to_string(), "svg".to_string()],
+        output: args.output,
+        ..Default::default()
+    };
+
+    compile(compile_args)
 }
