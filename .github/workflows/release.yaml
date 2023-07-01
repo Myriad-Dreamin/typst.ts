@@ -45,11 +45,11 @@ jobs:
             cross: false
             platform: linux
             arch: armhf
-          - os: ubuntu-latest
-            rust-target: riscv64gc-unknown-linux-gnu
-            cross: true
-            platform: linux
-            arch: riscv64
+          # - os: ubuntu-latest
+          #   rust-target: riscv64gc-unknown-linux-gnu
+          #   cross: true
+          #   platform: linux
+          #   arch: riscv64
           - os: macos-11
             rust-target: x86_64-apple-darwin
             cross: false
@@ -67,6 +67,15 @@ jobs:
       target: ${{ matrix.platform }}-${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v3
+      - name: Simulate itarget feature (Darwin)
+        if: matrix.platform == 'darwin'
+        run: python3 scripts/itarget.py ${{ matrix.rust-target }}
+      - name: Simulate itarget feature (Others)
+        if: matrix.platform != 'darwin'
+        run: python scripts/itarget.py ${{ matrix.rust-target }}
+      - name: Simulate itarget feature
+        if: matrix.rust-target == 'aarch64-unknown-linux-gnu'
+        run: python3 scripts/itarget.py ${{ matrix.rust-target }}
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: rust toolchain
@@ -89,14 +98,14 @@ jobs:
           cargo install cross --git https://github.com/cross-rs/cross.git
           cargo run --release --bin typst-ts-fontctl
           cross build -p typst-ts-fontctl --release --target ${{ matrix.rust-target }}
-          cross build -p typst-ts-cli --release --target ${{ matrix.rust-target }}
+          cross build --manifest-path cli/Cargo.toml --release --target ${{ matrix.rust-target }} --bin typst-ts-cli
       - name: Run Native Build
         shell: pwsh
         if: ${{ !matrix.cross }}
         run: |
           cargo run --release --bin typst-ts-fontctl
           cargo build --release -p typst-ts-fontctl --target ${{ matrix.rust-target }}
-          cargo build --release -p typst-ts-cli --target ${{ matrix.rust-target }}
+          cargo build --release --manifest-path cli/Cargo.toml --target ${{ matrix.rust-target }} --bin typst-ts-cli
       - uses: actions/upload-artifact@v3
         with:
           name: typst-ts-${{ env.target }}
@@ -116,9 +125,11 @@ jobs:
       RUSTFLAGS: '-C link-arg=-fuse-ld=lld -C target-feature=-crt-static'
     steps:
       - name: Install dependencies
-        run: apk add --no-cache git clang lld musl-dev npm
+        run: apk add --no-cache git clang lld musl-dev npm python3
       - name: Checkout repository
         uses: actions/checkout@v3
+      - name: Simulate itarget feature
+        run: python3 scripts/itarget.py alpine-x64
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: build binaries
@@ -126,7 +137,7 @@ jobs:
           git config --global --add safe.directory $PWD
           cargo run --release --bin typst-ts-fontctl
           cargo build --release -p typst-ts-fontctl --target $RUST_TARGET
-          cargo build --release -p typst-ts-cli --target $RUST_TARGET
+          cargo build --release --manifest-path cli/Cargo.toml --target $RUST_TARGET --bin typst-ts-cli
       - uses: actions/upload-artifact@v3
         with:
           name: typst-ts-font-assets
