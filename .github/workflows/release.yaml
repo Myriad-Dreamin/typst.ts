@@ -17,51 +17,38 @@ jobs:
         include:
           - os: windows-latest
             rust-target: x86_64-pc-windows-msvc
-            cross: false
             platform: win32
             arch: x64
           - os: windows-latest
             rust-target: i686-pc-windows-msvc
-            cross: false
             platform: win32
             arch: ia32
           - os: windows-latest
             rust-target: aarch64-pc-windows-msvc
-            cross: false
             platform: win32
             arch: arm64
           - os: ubuntu-latest
             rust-target: x86_64-unknown-linux-gnu
-            cross: false
             platform: linux
             arch: x64
           - os: ubuntu-latest
             rust-target: aarch64-unknown-linux-gnu
-            cross: false
             platform: linux
             arch: arm64
           - os: ubuntu-latest
             rust-target: arm-unknown-linux-gnueabihf
-            cross: false
             platform: linux
             arch: armhf
-          # - os: ubuntu-latest
-          #   rust-target: riscv64gc-unknown-linux-gnu
-          #   cross: true
-          #   platform: linux
-          #   arch: riscv64
           - os: macos-11
             rust-target: x86_64-apple-darwin
-            cross: false
             platform: darwin
             arch: x64
           - os: macos-11
             rust-target: aarch64-apple-darwin
-            cross: false
             platform: darwin
             arch: arm64
 
-    name: build (${{ matrix.platform }}-${{ matrix.arch }})
+    name: build (${{ matrix.rust-target }})
     runs-on: ${{ matrix.os }}
     env:
       target: ${{ matrix.platform }}-${{ matrix.arch }}
@@ -73,9 +60,6 @@ jobs:
       - name: Simulate itarget feature (Others)
         if: matrix.platform != 'darwin'
         run: python scripts/itarget.py ${{ matrix.rust-target }}
-      - name: Simulate itarget feature
-        if: matrix.rust-target == 'aarch64-unknown-linux-gnu'
-        run: python3 scripts/itarget.py ${{ matrix.rust-target }}
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: rust toolchain
@@ -92,20 +76,54 @@ jobs:
         run: |
           sudo apt-get update -y
           sudo apt-get install gcc-arm-linux-gnueabihf
-      - name: Run Cross Build
-        if: matrix.cross
-        run: |
-          cargo install cross --git https://github.com/cross-rs/cross.git
-          cargo run --release --bin typst-ts-fontctl
-          cross build -p typst-ts-fontctl --release --target ${{ matrix.rust-target }}
-          cross build --manifest-path cli/Cargo.toml --release --target ${{ matrix.rust-target }} --bin typst-ts-cli
       - name: Run Native Build
         shell: pwsh
-        if: ${{ !matrix.cross }}
         run: |
           cargo run --release --bin typst-ts-fontctl
           cargo build --release -p typst-ts-fontctl --target ${{ matrix.rust-target }}
           cargo build --release --manifest-path cli/Cargo.toml --target ${{ matrix.rust-target }} --bin typst-ts-cli
+      - uses: actions/upload-artifact@v3
+        with:
+          name: typst-ts-${{ env.target }}
+          path: target/${{ matrix.rust-target }}/release/typst-ts-*
+          if-no-files-found: error
+
+  build_linux_riscv64:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rust-target: riscv64gc-unknown-linux-gnu
+            platform: linux
+            arch: riscv64
+
+    name: build (${{ matrix.rust-target }})
+    runs-on: ${{ matrix.os }}
+    env:
+      target: ${{ matrix.platform }}-${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.rust-target }}
+      - name: Simulate itarget feature
+        run: python scripts/itarget.py ${{ matrix.rust-target }}
+      - name: Build cross image
+        run: |
+          docker build -t typst-ts/riscv64 ${GITHUB_WORKSPACE}/.github/cross-linux-riscv64/
+        env:
+          CROSS_DOCKER_IN_DOCKER: true
+      - name: Run Cross Build
+        run: |
+          echo "docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo"
+          docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo run --bin typst-ts-fontctl
+          docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo build -p typst-ts-fontctl --release --target ${CARGO_TARGET}
+          docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo build --manifest-path cli/Cargo.toml --release --target ${CARGO_TARGET} --bin typst-ts-cli
+        env:
+          CROSS_DOCKER_IN_DOCKER: true
+          CARGO_TARGET: ${{ matrix.rust-target }}
+          PKG_CONFIG_PATH: /usr/lib/riscv64-linux-gnu/pkgconfig
+          PKG_CONFIG_ALLOW_CROSS: true
       - uses: actions/upload-artifact@v3
         with:
           name: typst-ts-${{ env.target }}
@@ -151,7 +169,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: [build, build_alpine]
+    needs: [build, build_linux_riscv64, build_alpine]
     if: success() && startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
