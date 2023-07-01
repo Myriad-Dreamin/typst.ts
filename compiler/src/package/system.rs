@@ -21,6 +21,25 @@ impl Default for SystemRegistry {
 }
 
 impl SystemRegistry {
+    pub fn paths(&self) -> Vec<Box<Path>> {
+        let mut res = vec![];
+        if let Some(data_dir) = dirs::data_dir() {
+            let dir: Box<Path> = data_dir.join("typst/packages").into();
+            if dir.exists() {
+                res.push(dir);
+            }
+        }
+
+        if let Some(cache_dir) = dirs::cache_dir() {
+            let dir: Box<Path> = cache_dir.join("typst/packages").into();
+            if dir.exists() {
+                res.push(dir);
+            }
+        }
+
+        res
+    }
+
     /// Make a package available in the on-disk cache.
     pub fn prepare_package(&self, spec: &PackageSpec) -> PackageResult<Arc<Path>> {
         let subdir = format!(

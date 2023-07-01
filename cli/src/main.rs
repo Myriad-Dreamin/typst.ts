@@ -12,11 +12,14 @@ use typst_ts_cli::{
     tracing::TraceGuard,
     utils::{self, UnwrapOrExit},
     version::intercept_version,
-    CompileArgs, CompletionArgs, EnvKey, FontSubCommands, ListFontsArgs, MeasureFontsArgs, Opts,
-    Subcommands,
+    CompileArgs, CompletionArgs, EnvKey, FontSubCommands, ListFontsArgs, ListPackagesArgs,
+    MeasureFontsArgs, Opts, PackageSubCommands, Subcommands,
 };
 use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
-use typst_ts_core::{config::CompileOpts, path::PathClean};
+use typst_ts_core::{
+    config::CompileOpts,
+    path::{unix_slash, PathClean},
+};
 
 fn get_cli(sub_command_required: bool) -> Command {
     let cli = Command::new("$").disable_version_flag(true);
@@ -53,6 +56,9 @@ fn main() {
         Some(Subcommands::Font(font_sub)) => match font_sub {
             FontSubCommands::List(args) => list_fonts(args),
             FontSubCommands::Measure(args) => measure_fonts(args),
+        },
+        Some(Subcommands::Package(pkg_sub)) => match pkg_sub {
+            PackageSubCommands::List(args) => list_packages(args),
         },
         None => help_sub_command(),
     };
@@ -256,6 +262,60 @@ fn measure_fonts(args: MeasureFontsArgs) -> ! {
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(&profile).unwrap();
     std::fs::write(args.output, encoder.finish().unwrap()).unwrap();
+
+    exit(0)
+}
+
+fn list_packages(args: ListPackagesArgs) -> ! {
+    fn get_string(v: &toml::Value) -> &str {
+        match v {
+            toml::Value::String(table) => table,
+            _ => unreachable!(),
+        }
+    }
+
+    let world = TypstSystemWorld::new(CompileOpts::default()).unwrap_or_exit();
+
+    let paths = world.registry.paths();
+
+    for dir in paths {
+        let dir_pretty = unix_slash(&dir);
+        let namespaces = std::fs::read_dir(dir).unwrap();
+
+        for ns in namespaces {
+            let ns = ns.unwrap();
+            let ns_pretty = ns.file_name();
+            let ns_pretty = ns_pretty.to_string_lossy();
+
+            let packages = std::fs::read_dir(ns.path()).unwrap();
+            for pkg in packages {
+                let pkg = pkg.unwrap();
+                let manifest_path = pkg.path().join("typst.toml");
+                let manifest = std::fs::read_to_string(manifest_path).unwrap();
+                let manifest: toml::Table = toml::from_str(&manifest).unwrap();
+
+                let pkg_info = match manifest.get("package").unwrap() {
+                    toml::Value::Table(table) => table,
+                    _ => unreachable!(),
+                };
+
+                let name = get_string(pkg_info.get("name").unwrap());
+                let version = get_string(pkg_info.get("version").unwrap());
+
+                let pkg_name = format!("@{}/{}:{}", ns_pretty, name, version);
+
+                println!("{} in {}", pkg_name, dir_pretty);
+                if args.long {
+                    for (k, v) in pkg_info {
+                        if k == "name" || k == "version" {
+                            continue;
+                        }
+                        println!("  {} = {:?}", k, v);
+                    }
+                }
+            }
+        }
+    }
 
     exit(0)
 }
