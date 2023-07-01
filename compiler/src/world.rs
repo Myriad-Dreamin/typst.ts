@@ -1,6 +1,7 @@
 use std::{
     cell::Cell,
     path::{Path, PathBuf},
+    sync::Arc,
     time::SystemTime,
 };
 
@@ -10,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use typst::{
     diag::{FileResult, PackageResult},
     eval::{Datetime, Library},
-    file::{FileId, PackageSpec},
+    file::FileId,
     font::{Font, FontBook},
     syntax::Source,
     World,
@@ -23,6 +24,7 @@ use typst_ts_core::{
 };
 
 use crate::{
+    package::Registry,
     vfs::{AccessModel, Vfs},
     workspace::dependency::{DependencyTree, DependentFileInfo},
 };
@@ -32,35 +34,44 @@ type CodespanError = codespan_reporting::files::Error;
 
 pub trait CompilerFeat {
     type M: AccessModel + Sized;
-
-    fn resolve_package(path: &PackageSpec) -> PackageResult<PathBuf>;
+    type R: Registry + Sized;
 }
 
 /// A world that provides access to the operating system.
 pub struct CompilerWorld<F: CompilerFeat> {
-    pub root: PathBuf,
+    pub root: Arc<Path>,
     pub main: FileId,
 
-    library: Prehashed<Library>,
     pub font_resolver: FontResolverImpl,
+    pub registry: F::R,
+
+    library: Prehashed<Library>,
     vfs: Vfs<F::M>,
     today: Cell<Option<Datetime>>,
 }
 
 impl<F: CompilerFeat> CompilerWorld<F> {
-    pub fn new_raw(root_dir: PathBuf, vfs: Vfs<F::M>, font_resolver: FontResolverImpl) -> Self {
+    pub fn new_raw(
+        root_dir: PathBuf,
+        vfs: Vfs<F::M>,
+        registry: F::R,
+        font_resolver: FontResolverImpl,
+    ) -> Self {
         // Hook up the lang items.
         // todo: bad upstream changes
         let library = Prehashed::new(typst_library::build());
         typst::eval::set_lang_items(library.items.clone());
 
         Self {
-            root: root_dir,
-            library,
-            font_resolver,
+            root: root_dir.into(),
             main: FileId::detached(),
-            today: Cell::new(None),
+
+            font_resolver,
+            registry,
+
+            library,
             vfs,
+            today: Cell::new(None),
         }
     }
 }
@@ -153,7 +164,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         // Determine the root path relative to which the file path
         // will be resolved.
         let root = match id.package() {
-            Some(spec) => F::resolve_package(spec)?,
+            Some(spec) => self.registry.resolve(spec)?,
             None => self.root.clone(),
         };
 

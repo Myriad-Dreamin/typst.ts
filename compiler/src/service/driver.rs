@@ -247,3 +247,16 @@ impl CompileDriver {
         };
     }
 }
+
+// todo: Print that a package downloading is happening.
+// fn print_downloading(_spec: &PackageSpec) -> std::io::Result<()> {
+// let mut w = color_stream();
+// let styles = term::Styles::default();
+
+// w.set_color(&styles.header_help)?;
+// write!(w, "downloading")?;
+
+// w.reset()?;
+// writeln!(w, " {spec}")
+// Ok(())
+// }
