@@ -86,7 +86,7 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
     }
 
     fn source(&self, id: FileId) -> FileResult<Source> {
-        self.vfs.source(id)
+        self.vfs.resolve(&self.path_for_id(id)?, id)
     }
 
     fn book(&self) -> &Prehashed<FontBook> {
@@ -127,7 +127,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
 
     /// Get source id by path with filesystem content.
     pub fn resolve(&self, path: &Path, source_id: FileId) -> FileResult<()> {
-        self.vfs.resolve(path, source_id)
+        self.vfs.resolve(path, source_id).map(|_| ())
     }
 
     pub fn resolve_with<P: AsRef<Path>>(
@@ -136,7 +136,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         source_id: FileId,
         content: &str,
     ) -> FileResult<()> {
-        self.vfs.resolve_with(path, source_id, content)
+        self.vfs.resolve_with(path, source_id, content).map(|_| ())
     }
 
     pub fn get_dependencies(&self) -> DependencyTree {

@@ -357,18 +357,19 @@ impl<M: AccessModel + Sized> Vfs<M> {
         path: &Path,
         source_id: TypstFileId,
         read: ReadContent,
-    ) -> FileResult<()> {
+    ) -> FileResult<Source> {
         let slot = self.slot(path)?;
-        slot.source.compute(|| {
-            self.src2file_id.write().insert(source_id, slot.idx);
-            read()
-        })?;
 
-        Ok(())
+        slot.source
+            .compute(|| {
+                self.src2file_id.write().insert(source_id, slot.idx);
+                read()
+            })
+            .map(|e| e.clone())
     }
 
     /// Get source id by path with filesystem content.
-    pub fn resolve(&self, path: &Path, source_id: TypstFileId) -> FileResult<()> {
+    pub fn resolve(&self, path: &Path, source_id: TypstFileId) -> FileResult<Source> {
         self.resolve_with_f(path, source_id, || {
             if !self.do_reparse {
                 let instant = std::time::Instant::now();
@@ -390,7 +391,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
         path: P,
         source_id: TypstFileId,
         content: &str,
-    ) -> FileResult<()> {
+    ) -> FileResult<Source> {
         let path = path.as_ref();
         self.resolve_with_f(path, source_id, || {
             if !self.do_reparse {
