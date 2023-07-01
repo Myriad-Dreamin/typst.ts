@@ -1,75 +1,81 @@
-use std::path::{Path, PathBuf};
+use std::{path::Path, sync::Arc};
 
 use typst::{
     diag::{PackageError, PackageResult},
     file::PackageSpec,
 };
-/// Make a package available in the on-disk cache.
-pub fn prepare_package(spec: &PackageSpec) -> PackageResult<PathBuf> {
-    let subdir = format!(
-        "typst/packages/{}/{}-{}",
-        spec.namespace, spec.name, spec.version
-    );
 
-    if let Some(data_dir) = dirs::data_dir() {
-        let dir = data_dir.join(&subdir);
-        if dir.exists() {
-            return Ok(dir);
-        }
-    }
+use super::{DummyNotifier, Notifier, Registry};
 
-    if let Some(cache_dir) = dirs::cache_dir() {
-        let dir = cache_dir.join(&subdir);
-
-        // Download from network if it doesn't exist yet.
-        if spec.namespace == "preview" && !dir.exists() {
-            download_package(spec, &dir)?;
-        }
-
-        if dir.exists() {
-            return Ok(dir);
-        }
-    }
-
-    Err(PackageError::NotFound(spec.clone()))
+pub struct SystemRegistry {
+    notifier: Arc<Box<dyn Notifier + Send>>,
 }
 
-/// Download a package over the network.
-fn download_package(spec: &PackageSpec, package_dir: &Path) -> PackageResult<()> {
-    // The `@preview` namespace is the only namespace that supports on-demand
-    // fetching.
-    assert_eq!(spec.namespace, "preview");
-
-    let url = format!(
-        "https://packages.typst.org/preview/{}-{}.tar.gz",
-        spec.name, spec.version
-    );
-
-    print_downloading(spec).unwrap();
-    let reader = match ureq::get(&url).call() {
-        Ok(response) => response.into_reader(),
-        Err(ureq::Error::Status(404, _)) => return Err(PackageError::NotFound(spec.clone())),
-        Err(_) => return Err(PackageError::NetworkFailed),
-    };
-
-    let decompressed = flate2::read::GzDecoder::new(reader);
-    tar::Archive::new(decompressed)
-        .unpack(package_dir)
-        .map_err(|_| {
-            std::fs::remove_dir_all(package_dir).ok();
-            PackageError::MalformedArchive
-        })
+impl Default for SystemRegistry {
+    fn default() -> Self {
+        Self {
+            notifier: Arc::new(Box::<DummyNotifier>::default()),
+        }
+    }
 }
 
-/// Print that a package downloading is happening.
-fn print_downloading(_spec: &PackageSpec) -> std::io::Result<()> {
-    // let mut w = color_stream();
-    // let styles = term::Styles::default();
+impl SystemRegistry {
+    /// Make a package available in the on-disk cache.
+    pub fn prepare_package(&self, spec: &PackageSpec) -> PackageResult<Arc<Path>> {
+        let subdir = format!(
+            "typst/packages/{}/{}-{}",
+            spec.namespace, spec.name, spec.version
+        );
 
-    // w.set_color(&styles.header_help)?;
-    // write!(w, "downloading")?;
+        if let Some(data_dir) = dirs::data_dir() {
+            let dir = data_dir.join(&subdir);
+            if dir.exists() {
+                return Ok(dir.into());
+            }
+        }
 
-    // w.reset()?;
-    // writeln!(w, " {spec}")
-    Ok(())
+        if let Some(cache_dir) = dirs::cache_dir() {
+            let dir = cache_dir.join(&subdir);
+
+            // Download from network if it doesn't exist yet.
+            if !dir.exists() {
+                self.download_package(spec, &dir)?;
+            }
+
+            if dir.exists() {
+                return Ok(dir.into());
+            }
+        }
+
+        Err(PackageError::NotFound(spec.clone()))
+    }
+
+    /// Download a package over the network.
+    fn download_package(&self, spec: &PackageSpec, package_dir: &Path) -> PackageResult<()> {
+        let url = format!(
+            "https://packages.typst.org/preview/{}-{}.tar.gz",
+            spec.name, spec.version
+        );
+
+        self.notifier.downloading(spec);
+        let reader = match ureq::get(&url).call() {
+            Ok(response) => response.into_reader(),
+            Err(ureq::Error::Status(404, _)) => return Err(PackageError::NotFound(spec.clone())),
+            Err(_) => return Err(PackageError::NetworkFailed),
+        };
+
+        let decompressed = flate2::read::GzDecoder::new(reader);
+        tar::Archive::new(decompressed)
+            .unpack(package_dir)
+            .map_err(|_| {
+                std::fs::remove_dir_all(package_dir).ok();
+                PackageError::MalformedArchive
+            })
+    }
+}
+
+impl Registry for SystemRegistry {
+    fn resolve(&self, spec: &PackageSpec) -> PackageResult<std::sync::Arc<Path>> {
+        self.prepare_package(spec)
+    }
 }
