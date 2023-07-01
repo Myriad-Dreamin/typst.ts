@@ -12,8 +12,8 @@ use typst_ts_cli::{
     tracing::TraceGuard,
     utils::{self, UnwrapOrExit},
     version::intercept_version,
-    CompileArgs, CompletionArgs, EnvKey, FontSubCommands, ListFontsArgs, ListPackagesArgs,
-    MeasureFontsArgs, Opts, PackageSubCommands, Subcommands,
+    CompileArgs, CompletionArgs, EnvKey, FontSubCommands, LinkPackagesArgs, ListFontsArgs,
+    ListPackagesArgs, MeasureFontsArgs, Opts, PackageSubCommands, Subcommands,
 };
 use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
 use typst_ts_core::{
@@ -59,6 +59,8 @@ fn main() {
         },
         Some(Subcommands::Package(pkg_sub)) => match pkg_sub {
             PackageSubCommands::List(args) => list_packages(args),
+            PackageSubCommands::Link(args) => link_packages(args, false),
+            PackageSubCommands::Unlink(args) => link_packages(args, true),
         },
         None => help_sub_command(),
     };
@@ -315,6 +317,60 @@ fn list_packages(args: ListPackagesArgs) -> ! {
                 }
             }
         }
+    }
+
+    exit(0)
+}
+
+fn link_packages(args: LinkPackagesArgs, should_delete: bool) -> ! {
+    fn get_string(v: &toml::Value) -> &str {
+        match v {
+            toml::Value::String(table) => table,
+            _ => unreachable!(),
+        }
+    }
+
+    let world = TypstSystemWorld::new(CompileOpts::default()).unwrap_or_exit();
+
+    let manifest = std::fs::read_to_string(&args.manifest).unwrap();
+    let manifest: toml::Table = toml::from_str(&manifest).unwrap();
+
+    let pkg_info = match manifest.get("package").unwrap() {
+        toml::Value::Table(table) => table,
+        _ => unreachable!(),
+    };
+
+    let name = get_string(pkg_info.get("name").unwrap());
+    let version = get_string(pkg_info.get("version").unwrap());
+
+    let pkg_dirname = format!("{}-{}", name, version);
+
+    let local_path = world.registry.local_path().unwrap();
+    let pkg_link_target = local_path.join("preview").join(pkg_dirname);
+    let pkg_link_source = args.manifest.parent().unwrap();
+
+    let action = if should_delete { "unlink" } else { "link" };
+
+    let src_pretty = unix_slash(pkg_link_source);
+    let dst_pretty = unix_slash(&pkg_link_target);
+
+    eprintln!("{action} package: {} -> {}", src_pretty, dst_pretty);
+
+    if should_delete {
+        if !pkg_link_target.exists() {
+            eprintln!("package not found");
+            exit(1)
+        }
+
+        utils::remove_symlink_dir(&pkg_link_target).unwrap();
+    } else {
+        if pkg_link_target.exists() {
+            eprintln!("package already exists");
+            exit(1)
+        }
+
+        std::fs::create_dir_all(pkg_link_target.parent().unwrap()).unwrap();
+        utils::symlink_dir(pkg_link_source, &pkg_link_target).unwrap();
     }
 
     exit(0)
