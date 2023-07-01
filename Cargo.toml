@@ -120,7 +120,7 @@ path-clean = "1.0.1"
 
 # project core
 typst-ts-core = "0.2"
-typst-ts-compiler = "0.2"
+typst-ts-compiler = { version = "0.2", default-features = false }
 typst-ts-test-common = "0.2"
 
 # project exporters

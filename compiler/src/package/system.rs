@@ -88,7 +88,7 @@ impl SystemRegistry {
         );
 
         self.notifier.lock().downloading(spec);
-        let reader = match ureq::get(&url).call() {
+        let reader = match agent().get(&url).call() {
             Ok(response) => response.into_reader(),
             Err(ureq::Error::Status(404, _)) => return Err(PackageError::NotFound(spec.clone())),
             Err(_) => return Err(PackageError::NetworkFailed),
@@ -108,4 +108,16 @@ impl Registry for SystemRegistry {
     fn resolve(&self, spec: &PackageSpec) -> PackageResult<std::sync::Arc<Path>> {
         self.prepare_package(spec)
     }
+}
+
+#[cfg(not(target_arch = "riscv64"))]
+fn agent() -> ureq::Agent {
+    ureq::AgentBuilder::new().build()
+}
+
+#[cfg(target_arch = "riscv64")]
+fn agent() -> ureq::Agent {
+    ureq::AgentBuilder::new()
+        .tls_connector(Arc::new(native_tls::TlsConnector::new().unwrap()))
+        .build()
 }

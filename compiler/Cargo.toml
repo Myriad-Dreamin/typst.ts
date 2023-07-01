@@ -53,7 +53,6 @@ indexmap.workspace = true
 nohash-hasher = "0.2.0"
 pathdiff = "0.2.1"
 dissimilar = "1.0"
-ureq = "2"
 tar = "0.4"
 
 typst-ts-svg-exporter = { workspace = true, optional = true, features = [
@@ -61,6 +60,13 @@ typst-ts-svg-exporter = { workspace = true, optional = true, features = [
 ] }
 
 typst-ts-core.workspace = true
+
+[target.'cfg(not(any(target_arch = "riscv64", target_arch = "wasm32")))'.dependencies]
+ureq = { version = "2", default-features = false, features = ["rustls"] }
+
+[target.'cfg(target_arch = "riscv64")'.dependencies]
+ureq = { version = "2", default-features = false, features = ["native-tls"] }
+native-tls = { version = "0.2" }
 
 [dev-dependencies]
 serde.workspace = true

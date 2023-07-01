@@ -37,7 +37,9 @@ codespan-reporting.workspace = true
 human-panic.workspace = true
 
 typst-ts-core.workspace = true
-typst-ts-compiler.workspace = true
+typst-ts-compiler = { workspace = true, default-features = false, features = [
+    "system",
+] }
 
 typst-ts-ast-exporter.workspace = true
 typst-ts-pdf-exporter = { workspace = true, optional = true }
