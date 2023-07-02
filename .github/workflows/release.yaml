@@ -27,15 +27,15 @@ jobs:
             rust-target: aarch64-pc-windows-msvc
             platform: win32
             arch: arm64
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
             rust-target: x86_64-unknown-linux-gnu
             platform: linux
             arch: x64
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
             rust-target: aarch64-unknown-linux-gnu
             platform: linux
             arch: arm64
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
             rust-target: arm-unknown-linux-gnueabihf
             platform: linux
             arch: armhf
@@ -48,12 +48,18 @@ jobs:
             platform: darwin
             arch: arm64
 
-    name: build (${{ matrix.platform }}-${{ matrix.arch }})
+    name: build (${{ matrix.rust-target }})
     runs-on: ${{ matrix.os }}
     env:
       target: ${{ matrix.platform }}-${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v3
+      - name: Simulate itarget feature (Darwin)
+        if: matrix.platform == 'darwin'
+        run: python3 scripts/itarget.py ${{ matrix.rust-target }}
+      - name: Simulate itarget feature (Others)
+        if: matrix.platform != 'darwin'
+        run: python scripts/itarget.py ${{ matrix.rust-target }}
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: rust toolchain
@@ -70,11 +76,54 @@ jobs:
         run: |
           sudo apt-get update -y
           sudo apt-get install gcc-arm-linux-gnueabihf
-      - shell: pwsh
+      - name: Run Native Build
+        shell: pwsh
         run: |
           cargo run --release --bin typst-ts-fontctl
           cargo build --release -p typst-ts-fontctl --target ${{ matrix.rust-target }}
-          cargo build --release -p typst-ts-cli --target ${{ matrix.rust-target }}
+          cargo build --release --manifest-path cli/Cargo.toml --target ${{ matrix.rust-target }} --bin typst-ts-cli
+      - uses: actions/upload-artifact@v3
+        with:
+          name: typst-ts-${{ env.target }}
+          path: target/${{ matrix.rust-target }}/release/typst-ts-*
+          if-no-files-found: error
+
+  build_linux_riscv64:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rust-target: riscv64gc-unknown-linux-gnu
+            platform: linux
+            arch: riscv64
+
+    name: build (${{ matrix.rust-target }})
+    runs-on: ${{ matrix.os }}
+    env:
+      target: ${{ matrix.platform }}-${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.rust-target }}
+      - name: Simulate itarget feature
+        run: python scripts/itarget.py ${{ matrix.rust-target }}
+      - name: Build cross image
+        run: |
+          docker build -t typst-ts/riscv64 ${GITHUB_WORKSPACE}/.github/cross-linux-riscv64/
+        env:
+          CROSS_DOCKER_IN_DOCKER: true
+      - name: Run Cross Build
+        run: |
+          echo "docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo"
+          docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo run --bin typst-ts-fontctl
+          docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo build -p typst-ts-fontctl --release --target ${CARGO_TARGET}
+          docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo build --manifest-path cli/Cargo.toml --release --target ${CARGO_TARGET} --bin typst-ts-cli
+        env:
+          CROSS_DOCKER_IN_DOCKER: true
+          CARGO_TARGET: ${{ matrix.rust-target }}
+          PKG_CONFIG_PATH: /usr/lib/riscv64-linux-gnu/pkgconfig
+          PKG_CONFIG_ALLOW_CROSS: true
       - uses: actions/upload-artifact@v3
         with:
           name: typst-ts-${{ env.target }}
@@ -94,17 +143,21 @@ jobs:
       RUSTFLAGS: '-C link-arg=-fuse-ld=lld -C target-feature=-crt-static'
     steps:
       - name: Install dependencies
-        run: apk add --no-cache git clang lld musl-dev npm
+        run: apk add --no-cache git clang lld musl-dev npm python3
       - name: Checkout repository
         uses: actions/checkout@v3
+      - name: Simulate itarget feature
+        run: python3 scripts/itarget.py alpine-x64
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
-      - name: build binaries
+      - name: Configure git
         run: |
           git config --global --add safe.directory $PWD
+      - name: build binaries
+        run: |
           cargo run --release --bin typst-ts-fontctl
           cargo build --release -p typst-ts-fontctl --target $RUST_TARGET
-          cargo build --release -p typst-ts-cli --target $RUST_TARGET
+          cargo build --release --manifest-path cli/Cargo.toml --target $RUST_TARGET --bin typst-ts-cli
       - uses: actions/upload-artifact@v3
         with:
           name: typst-ts-font-assets
@@ -118,7 +171,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: [build, build_alpine]
+    needs: [build, build_linux_riscv64, build_alpine]
     if: success() && startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
@@ -153,16 +206,17 @@ jobs:
             chmod +x release/$name/bin/typst-ts-*
             tar czvf gh-release/$name.tar.gz -C release $name
           }
-          pack_release win32-x64    x86_64-pc-windows-msvc
-          pack_release win32-ia32   i686-pc-windows-msvc
-          pack_release win32-arm64  aarch64-pc-windows-msvc
-          pack_release linux-x64    x86_64-unknown-linux-gnu
-          pack_release linux-arm64  aarch64-unknown-linux-gnu
-          pack_release linux-armhf  arm-unknown-linux-gnueabihf
-          pack_release darwin-x64   x86_64-apple-darwin
-          pack_release darwin-arm64 aarch64-apple-darwin
-          pack_release alpine-x64   alpine-x64
-          pack_release alpine-x64   x86_64-unknown-linux-musl
+          pack_release win32-x64     x86_64-pc-windows-msvc
+          pack_release win32-ia32    i686-pc-windows-msvc
+          pack_release win32-arm64   aarch64-pc-windows-msvc
+          pack_release linux-x64     x86_64-unknown-linux-gnu
+          pack_release linux-arm64   aarch64-unknown-linux-gnu
+          pack_release linux-armhf   arm-unknown-linux-gnueabihf
+          pack_release linux-riscv64 riscv64gc-unknown-linux-gnu
+          pack_release darwin-x64    x86_64-apple-darwin
+          pack_release darwin-arm64  aarch64-apple-darwin
+          pack_release alpine-x64    alpine-x64
+          pack_release alpine-x64    x86_64-unknown-linux-musl
 
           # typst-ts-font-assets
           mkdir -p release/font-assets

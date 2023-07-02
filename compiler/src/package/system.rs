@@ -88,9 +88,12 @@ impl SystemRegistry {
         );
 
         self.notifier.lock().downloading(spec);
-        let reader = match ureq::get(&url).call() {
-            Ok(response) => response.into_reader(),
-            Err(ureq::Error::Status(404, _)) => return Err(PackageError::NotFound(spec.clone())),
+        let client = reqwest::blocking::Client::builder().build().unwrap();
+        let reader = match client.get(url).send() {
+            Ok(response) => response,
+            Err(err) if matches!(err.status().map(|s| s.as_u16()), Some(404)) => {
+                return Err(PackageError::NotFound(spec.clone()))
+            }
             Err(_) => return Err(PackageError::NetworkFailed),
         };
 
