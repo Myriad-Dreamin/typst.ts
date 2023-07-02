@@ -76,9 +76,16 @@ jobs:
           cargo run --release --bin typst-ts-fontctl
           cargo build --release -p typst-ts-fontctl --target ${{ matrix.rust-target }}
           cargo build --release --manifest-path cli/Cargo.toml --target ${{ matrix.rust-target }} --bin typst-ts-cli
+          cargo build --profile release-stripped -p typst-ts-fontctl --target ${{ matrix.rust-target }}
+          cargo build --profile release-stripped --manifest-path cli/Cargo.toml --target ${{ matrix.rust-target }} --bin typst-ts-cli
       - uses: actions/upload-artifact@v3
         with:
           name: typst-ts-${{ env.target }}
+          path: target/${{ matrix.rust-target }}/release-stripped/typst-ts-*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v3
+        with:
+          name: typst-ts-${{ env.target }}-relwithdebuginfo
           path: target/${{ matrix.rust-target }}/release/typst-ts-*
           if-no-files-found: error
 
@@ -110,6 +117,8 @@ jobs:
           docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo run --bin typst-ts-fontctl
           docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo build -p typst-ts-fontctl --release --target ${CARGO_TARGET}
           docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo build --manifest-path cli/Cargo.toml --release --target ${CARGO_TARGET} --bin typst-ts-cli
+          docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo build -p typst-ts-fontctl --profile release-stripped --target ${CARGO_TARGET}
+          docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo build --manifest-path cli/Cargo.toml --profile release-stripped --target ${CARGO_TARGET} --bin typst-ts-cli
         env:
           CROSS_DOCKER_IN_DOCKER: true
           CARGO_TARGET: ${{ matrix.rust-target }}
@@ -118,6 +127,11 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: typst-ts-${{ env.target }}
+          path: target/${{ matrix.rust-target }}/release-stripped/typst-ts-*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v3
+        with:
+          name: typst-ts-${{ env.target }}-relwithdebuginfo
           path: target/${{ matrix.rust-target }}/release/typst-ts-*
           if-no-files-found: error
 
@@ -185,7 +199,7 @@ jobs:
             rm -f artifacts/$src/*.pdb
             
             mkdir -p release/$name/bin
-            cp artifacts/$src/typst-ts-* "release/$name/bin/"
+            cp artifacts/$src-relwithdebuginfo/typst-ts-* "release/$name/bin/"
             cp -r CHANGELOG release/$name/
             cp -r docs release/$name/
             cp README.md \
@@ -193,7 +207,18 @@ jobs:
               CHANGELOG.md \
               release/$name/
             chmod +x release/$name/bin/typst-ts-*
-            tar czvf gh-release/$name.tar.gz -C release $name
+            tar czvf gh-release/$name-relwithdebuginfo.tar.gz -C release $name
+            
+            mkdir -p release-stripped/$name/bin
+            cp artifacts/$src/typst-ts-* "release-stripped/$name/bin/"
+            cp -r CHANGELOG release-stripped/$name/
+            cp -r docs release-stripped/$name/
+            cp README.md \
+              LICENSE \
+              CHANGELOG.md \
+              release-stripped/$name/
+            chmod +x release-stripped/$name/bin/typst-ts-*
+            tar czvf gh-release/$name.tar.gz -C release-stripped $name
           }
           pack_release win32-x64     x86_64-pc-windows-msvc
           pack_release win32-ia32    i686-pc-windows-msvc

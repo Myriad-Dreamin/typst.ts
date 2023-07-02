@@ -42,6 +42,11 @@ opt-level = 3
 debug = true
 lto = "thin"
 
+[profile.release-stripped]
+inherits = "release"
+debug = false
+strip = true
+
 [workspace.dependencies]
 
 # typesetting
