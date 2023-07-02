@@ -16,6 +16,9 @@ RUN apt-get update  && \
     build-essential \
     libc6-dev
 
+# Configure git
+RUN git config --global --add safe.directory /project
+
 # install rust tools
 RUN curl --proto "=https" --tlsv1.2 --retry 3 -sSfL https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"

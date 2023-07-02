@@ -150,9 +150,11 @@ jobs:
         run: python3 scripts/itarget.py alpine-x64
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
-      - name: build binaries
+      - name: Configure git
         run: |
           git config --global --add safe.directory $PWD
+      - name: build binaries
+        run: |
           cargo run --release --bin typst-ts-fontctl
           cargo build --release -p typst-ts-fontctl --target $RUST_TARGET
           cargo build --release --manifest-path cli/Cargo.toml --target $RUST_TARGET --bin typst-ts-cli
