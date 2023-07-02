@@ -1,3 +1,9 @@
+# `-Zfeatures=itarget` requires nightly rust, so we use this script
+# to modify Cargo.toml.
+# The script makes sure that the reqwest dependency is compiled
+# with the correct TLS backend, so we does not have to use
+# `-Zfeatures=itarget` (stable rust).
+
 import re
 import sys
 
