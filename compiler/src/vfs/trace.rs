@@ -4,10 +4,7 @@ use typst::diag::FileResult;
 
 use typst_ts_core::Bytes;
 
-use super::{
-    cached::{CachedAccessModel, FileCache},
-    AccessModel,
-};
+use super::{cached::CachedAccessModel, AccessModel};
 
 pub struct TraceAccessModel<M: AccessModel + Sized> {
     inner: M,
@@ -20,24 +17,6 @@ impl<M: AccessModel + Sized, C: Clone> TraceAccessModel<CachedAccessModel<M, C>>
             inner,
             trace: Default::default(),
         }
-    }
-
-    #[inline]
-    pub fn replace_diff(
-        &self,
-        src: &Path,
-        read: impl FnOnce(&FileCache<C>) -> FileResult<Bytes>,
-        compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
-    ) -> FileResult<C> {
-        let instant = std::time::Instant::now();
-        let res = self.inner.replace_diff(src, read, compute);
-        let elapsed = instant.elapsed();
-        self.trace[5].fetch_add(
-            elapsed.as_nanos() as u64,
-            std::sync::atomic::Ordering::Relaxed,
-        );
-        println!("replace_diff: {:?} {:?}", src, elapsed);
-        res
     }
 
     pub fn read_all_diff(
