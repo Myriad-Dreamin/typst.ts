@@ -1,4 +1,7 @@
-use std::{path::Path, time::SystemTime};
+use std::{
+    path::{Path, PathBuf},
+    time::SystemTime,
+};
 
 use typst::diag::{FileError, FileResult};
 use wasm_bindgen::prelude::*;
@@ -16,7 +19,7 @@ pub struct ProxyAccessModel {
 }
 
 impl AccessModel for ProxyAccessModel {
-    type RealPath = String;
+    type RealPath = PathBuf;
 
     fn mtime(&self, src: &Path) -> FileResult<SystemTime> {
         self.mtime_fn
@@ -52,7 +55,7 @@ impl AccessModel for ProxyAccessModel {
     fn real_path(&self, src: &Path) -> FileResult<Self::RealPath> {
         self.real_path_fn
             .call1(&self.context, &src.to_string_lossy().as_ref().into())
-            .map(|v| v.as_string().unwrap())
+            .map(|v| Path::new(&v.as_string().unwrap()).to_owned())
             .map_err(|e| {
                 web_sys::console::error_3(
                     &"typst_ts::compiler::ProxyAccessModel::real_path failure".into(),

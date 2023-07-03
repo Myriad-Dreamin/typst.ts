@@ -12,6 +12,7 @@ pub mod system;
 
 pub mod cached;
 pub mod dummy;
+pub mod overlay;
 pub mod trace;
 
 mod path_abs;
@@ -48,7 +49,7 @@ use typst::{
 
 use typst_ts_core::{path::PathClean, typst_affinite_hash, Bytes, QueryRef};
 
-use self::cached::{CachedAccessModel, FileCache};
+use self::{cached::CachedAccessModel, overlay::OverlayAccessModel};
 
 /// Handle to a file in [`Vfs`]
 ///
@@ -60,7 +61,7 @@ pub struct FileId(pub u32);
 impl nohash_hasher::IsEnabled for FileId {}
 
 pub trait AccessModel {
-    type RealPath: Hash + Eq + PartialEq;
+    type RealPath: Hash + Eq + PartialEq + Into<PathBuf> + for<'a> From<&'a Path>;
 
     fn clear(&mut self) {}
 
@@ -99,7 +100,7 @@ impl PathSlot {
 pub struct Vfs<M: AccessModel + Sized> {
     lifetime_cnt: u64,
     // access_model: TraceAccessModel<CachedAccessModel<M, Source>>,
-    access_model: CachedAccessModel<M, Source>,
+    access_model: CachedAccessModel<OverlayAccessModel<M>, Source>,
     path_interner: Mutex<PathInterner<<M as AccessModel>::RealPath, u64>>,
 
     path2slot: RwLock<HashMap<Arc<OsStr>, FileId>>,
@@ -110,6 +111,7 @@ pub struct Vfs<M: AccessModel + Sized> {
 
 impl<M: AccessModel + Sized> Vfs<M> {
     pub fn new(access_model: M) -> Self {
+        let access_model = OverlayAccessModel::new(access_model);
         let access_model = CachedAccessModel::new(access_model);
         // let access_model = TraceAccessModel::new(access_model);
 
@@ -183,33 +185,6 @@ impl<M: AccessModel + Sized> Vfs<M> {
     fn read(&self, path: &Path) -> FileResult<Bytes> {
         if self.access_model.is_file(path)? {
             self.access_model.read_all(path)
-        } else {
-            Err(FileError::IsDirectory)
-        }
-    }
-
-    /// Read a source with diff.
-    fn read_diff_source(&self, path: &Path, source_id: TypstFileId) -> FileResult<Source> {
-        if self.access_model.is_file(path)? {
-            Ok(self
-                .access_model
-                .read_all_diff(path, |x, y| self.reparse(path, source_id, x, y))?)
-        } else {
-            Err(FileError::IsDirectory)
-        }
-    }
-
-    /// Read a source with diff.
-    fn replace_diff_source(
-        &self,
-        path: &Path,
-        source_id: TypstFileId,
-        read: impl FnOnce(&FileCache<Source>) -> FileResult<Bytes>,
-    ) -> FileResult<Source> {
-        if self.access_model.is_file(path)? {
-            Ok(self
-                .access_model
-                .replace_diff(path, read, |x, y| self.reparse(path, source_id, x, y))?)
         } else {
             Err(FileError::IsDirectory)
         }
@@ -381,11 +356,18 @@ impl<M: AccessModel + Sized> Vfs<M> {
                 println!("parse: {:?} {:?}", path, instant.elapsed());
                 return res;
             }
-            self.read_diff_source(path, source_id)
+            if self.access_model.is_file(path)? {
+                Ok(self
+                    .access_model
+                    .read_all_diff(path, |x, y| self.reparse(path, source_id, x, y))?)
+            } else {
+                Err(FileError::IsDirectory)
+            }
         })
     }
 
     /// Get source id by path with memory content.
+    // todo: remove this buggy function
     pub fn resolve_with<P: AsRef<Path>>(
         &self,
         path: P,
@@ -393,17 +375,10 @@ impl<M: AccessModel + Sized> Vfs<M> {
         content: &str,
     ) -> FileResult<Source> {
         let path = path.as_ref();
-        self.resolve_with_f(path, source_id, || {
-            if !self.do_reparse {
-                let instant = std::time::Instant::now();
-
-                let res = Ok(Source::new(source_id, content.to_owned()));
-
-                println!("parse: {:?} {:?}", path, instant.elapsed());
-                return res;
-            }
-            self.replace_diff_source(path, source_id, |_| Ok(Bytes::from(content.as_bytes())))
-        })
+        self.access_model
+            .inner()
+            .add_file(path.into(), content.as_bytes().into());
+        self.resolve(path, source_id)
     }
 
     pub fn file(&self, path: &Path) -> FileResult<Bytes> {

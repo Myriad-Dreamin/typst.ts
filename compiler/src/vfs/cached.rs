@@ -34,6 +34,10 @@ impl<Inner: AccessModel, C> CachedAccessModel<Inner, C> {
             path_results: RwLock::new(HashMap::new()),
         }
     }
+
+    pub fn inner(&self) -> &Inner {
+        &self.inner
+    }
 }
 
 impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {
@@ -91,39 +95,23 @@ impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {
 }
 
 impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {
-    #[inline]
-    pub fn replace_diff(
+    pub fn read_all_diff(
         &self,
         src: &Path,
-        read: impl FnOnce(&FileCache<C>) -> FileResult<Bytes>,
         compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
     ) -> FileResult<C> {
         self.cache_entry(src, |entry| {
             let data = entry
                 .source_state
                 .compute_with_context_ref(|prev_to_diff| {
-                    let text = from_utf8_or_bom(&read(entry)?)?.to_owned();
+                    let data = entry.read_all.compute(|| self.inner.read_all(src))?;
+                    let text = from_utf8_or_bom(&data)?.to_owned();
                     compute(prev_to_diff, text)
                 })?;
 
             let t = data.clone();
             Ok(t)
         })
-    }
-
-    pub fn read_all_diff(
-        &self,
-        src: &Path,
-        compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
-    ) -> FileResult<C> {
-        self.replace_diff(
-            src,
-            |entry| {
-                let data = entry.read_all.compute(|| self.inner.read_all(src))?;
-                Ok(data.clone())
-            },
-            compute,
-        )
     }
 }
 
