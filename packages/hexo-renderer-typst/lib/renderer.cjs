@@ -56,9 +56,7 @@ class Renderer {
       data.path,
       '--output',
       dataDir,
-      '--format=ir',
       '--format=json',
-      '--format=json_glyphs',
     ]);
 
     await spawnAsync(this.renderCli, [
@@ -73,8 +71,8 @@ class Renderer {
     ]);
 
     const compiled = `
-      <div id="typst-app"></div>
       <script>
+        let appContainer = document.currentScript && document.currentScript.parentElement;
         document.ready(() => {
           let plugin = window.TypstRenderModule.createTypstSvgRenderer();
         console.log(plugin);
@@ -85,7 +83,7 @@ class Renderer {
           })
           .then(async () => {
             const artifactData = await fetch(
-              '${relDataPath}.multi.sir.bin',
+              '/${relDataPath}.multi.sir.bin',
             )
               .then(response => response.arrayBuffer())
               .then(buffer => new Uint8Array(buffer));
@@ -96,12 +94,15 @@ class Renderer {
             let t1 = performance.now();
 
             console.log(\`init took \${t1 - t0} milliseconds\`);
-
-            const appContainer = document.getElementById('typst-app');
+            const appElem = document.createElement('div');
+            appElem.class = 'typst-app';
+            if (appContainer) {
+              appContainer.appendChild(appElem);
+            }
 
             const runRender = async () => {
               t1 = performance.now();
-              await plugin.renderSvg(svgModule, appContainer);
+              await plugin.renderSvg(svgModule, appElem);
 
               const t2 = performance.now();
               console.log(

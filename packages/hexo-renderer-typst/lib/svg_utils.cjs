@@ -117,7 +117,7 @@ var linkleave = function (event) {
 };
 
 function findAncestor(el, cls) {
-  while ((el = el.parentElement) && !el.classList.contains(cls));
+  while (el && !el.classList.contains(cls)) el = el.parentElement;
   return el;
 }
 
@@ -130,12 +130,41 @@ window.typstProcessSvg = function (docRoot) {
     elem.addEventListener('mouseleave', linkleave);
   }
 
-  setTimeout(() => {
-    window.typstLayoutText(docRoot);
-  }, 0);
+  if (true) {
+    setTimeout(() => {
+      window.layoutText(docRoot);
+    }, 0);
+  }
+
+  docRoot.addEventListener('click', event => {
+    let elem = event.target;
+    while (elem) {
+      const span = elem.getAttribute('data-span');
+      if (span) {
+        console.log('source-span of this svg element', span);
+
+        const docRoot = document.body || document.firstElementChild;
+        const basePos = docRoot.getBoundingClientRect();
+
+        const vw = window.innerWidth || 0;
+        const left = event.clientX - basePos.left + 0.015 * vw;
+        const top = event.clientY - basePos.top + 0.015 * vw;
+
+        triggerRipple(
+          docRoot,
+          left,
+          top,
+          'typst-debug-react-ripple',
+          'typst-debug-react-ripple-effect .4s linear',
+        );
+        return;
+      }
+      elem = elem.parentElement;
+    }
+  });
 };
 
-window.typstLayoutText = function (svg) {
+window.layoutText = function (svg) {
   const divs = svg.querySelectorAll('.tsel');
   const ctx = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas').getContext('2d');
 
@@ -164,7 +193,7 @@ window.typstLayoutText = function (svg) {
     }
   }
 
-  console.log(`typstLayoutText used time ${performance.now() - layoutBegin} ms`);
+  console.log(`layoutText used time ${performance.now() - layoutBegin} ms`);
 };
 
 window.handleTypstLocation = function (elem, page, x, y) {
@@ -193,21 +222,25 @@ window.handleTypstLocation = function (elem, page, x, y) {
       const left = xOffset + xOffsetInnerFix;
       const top = yOffset + yOffsetInnerFix;
 
-      console.log('scrolling to', xOffset, yOffset, left, top);
-
       window.scrollTo(xOffset, yOffset);
-      const ripple = document.createElement('div');
-      ripple.className = 'typst-ripple';
-      docRoot.appendChild(ripple);
 
-      ripple.style.left = left.toString() + 'px';
-      ripple.style.top = top.toString() + 'px';
-
-      ripple.style.animation = 'typst-ripple-effect .4s linear';
-      ripple.onanimationend = () => {
-        docRoot.removeChild(ripple);
-      };
+      triggerRipple(docRoot, left, top, 'typst-jump-ripple', 'typst-jump-ripple-effect .4s linear');
       return;
     }
   }
 };
+
+function triggerRipple(docRoot, left, top, className, animation) {
+  const ripple = document.createElement('div');
+
+  ripple.className = className;
+  ripple.style.left = left.toString() + 'px';
+  ripple.style.top = top.toString() + 'px';
+
+  docRoot.appendChild(ripple);
+
+  ripple.style.animation = animation;
+  ripple.onanimationend = () => {
+    docRoot.removeChild(ripple);
+  };
+}

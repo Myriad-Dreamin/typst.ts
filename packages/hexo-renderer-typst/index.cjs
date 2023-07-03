@@ -21,7 +21,6 @@ function process(data) {
 
 render.disableNunjucks = true;
 
-hexo.extend.injector.register('head_end', require('./lib/injector.pdf.cjs'), 'default');
 hexo.extend.injector.register('head_end', require('./lib/injector.typst.cjs'), 'default');
 hexo.extend.injector.register('head_end', require('./lib/injector.svg.cjs'), 'default');
 hexo.extend.renderer.register('typst', 'html', render);
@@ -37,10 +36,7 @@ hexo.extend.generator.register('typst_assets', function (locals) {
     'node_modules/@myriaddreamin/typst.ts/dist/main.js',
   );
 
-  const svg_utils_path = path.resolve(
-    path.dirname(__filename),
-    'lib/svg_utils.cjs',
-  );
+  const svg_utils_path = path.resolve(path.dirname(__filename), 'lib/svg_utils.cjs');
 
   const renderer_path = path.resolve(
     base_dir,
