@@ -108,22 +108,16 @@ impl<'s, 'm, 't, Feat: ExportFeature> SvgTextBuilder<'s, 'm, 't, Feat> {
     /// attach shape of the text to the node using css rules.
     #[inline]
     pub fn with_text_shape(&mut self, shape: &ir::TextShape) {
-        // shorten black fill
-        let fill = if shape.fill.as_ref() == "#000" {
-            r#"tb"#.to_owned()
-        } else {
-            // insert fill definition
-            let fill_id = format!(r#"f{}"#, shape.fill.trim_start_matches('#'));
-            let fill_key = (StyleNs::Fill, shape.fill.clone());
-            self.t.style_defs.entry(fill_key).or_insert_with(|| {
-                format!(r#"g.{} {{ --glyph_fill: {}; }} "#, fill_id, shape.fill)
-            });
-
-            fill_id
-        };
+        // insert fill definition
+        let fill_id = format!(r#"f{}"#, shape.fill.trim_start_matches('#'));
+        let fill_key = (StyleNs::Fill, shape.fill.clone());
+        self.t
+            .style_defs
+            .entry(fill_key)
+            .or_insert_with(|| format!(r#"g.{} {{ --glyph_fill: {}; }} "#, fill_id, shape.fill));
 
         self.attributes
-            .push(("class", format!("typst-text {}", fill)));
+            .push(("class", format!("typst-text {}", fill_id)));
     }
 
     #[inline]
