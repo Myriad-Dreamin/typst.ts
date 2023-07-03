@@ -149,7 +149,7 @@ Import Typst.ts in your project:
 
 - Using [@myriaddreamin/typst.vue3][npm::typst.vue3]
 
-  Coming soon.
+  Coming soon..
 
 [npm::typst.ts]: https://www.npmjs.com/package/@myriaddreamin/typst.ts
 [npm::typst.react]: https://www.npmjs.com/package/@myriaddreamin/typst.react
