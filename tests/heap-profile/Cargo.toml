@@ -1,0 +1,28 @@
+[package]
+name = "typst-ts-heap-profile-test"
+authors.workspace = true
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+typst.workspace = true
+comemo.workspace = true
+
+sha2.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+
+dhat = "0.3.2"
+typst-ts-dev-server.workspace = true
+typst-ts-test-common.workspace = true
+typst-ts-core.workspace = true
+typst-ts-compiler.workspace = true
+
+typst-ts-tir-exporter = { workspace = true }
+
+[features]
+dhat-heap = []
+default = ["dhat-heap"]
