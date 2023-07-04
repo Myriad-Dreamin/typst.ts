@@ -3,13 +3,33 @@ use std::sync::Arc;
 use base64::Engine;
 
 use super::{
-    ir::{self, Abs, AbsoluteRef, Axes, Image, PathItem, PathStyle, Ratio, Scalar, Size, StyleNs},
+    ir::{self, Abs, AbsoluteRef, Axes, Image, PathItem, PathStyle, Ratio, Scalar, Size},
     GroupContext, RenderVm, TransformContext,
 };
 use crate::{
     escape::{self, TextContentDataEscapes},
-    ExportFeature, SvgRenderTask,
+    ir::{Fingerprint, ImmutStr},
 };
+
+pub trait BuildGlyph {
+    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> AbsoluteRef;
+}
+
+pub trait BuildClipPath {
+    fn build_clip_path(&mut self, path: &PathItem) -> Fingerprint;
+}
+
+pub trait BuildFillStyleClass {
+    fn build_fill_style_class(&mut self, fill: ImmutStr) -> String;
+}
+
+pub trait DynExportFeature {
+    fn should_render_text_element(&self) -> bool;
+
+    fn use_stable_glyph_id(&self) -> bool;
+
+    fn should_attach_debug_info(&self) -> bool;
+}
 
 /// A generated text content.
 pub enum SvgText {
@@ -88,14 +108,13 @@ impl SvgTextNode {
 
 /// A builder for [`SvgTextNode`].
 /// It holds a reference to [`SvgRenderTask`] and state of the building process.
-pub struct SvgTextBuilder<'s, 'm, 't, Feat: ExportFeature> {
-    pub t: &'s mut SvgRenderTask<'m, 't, Feat>,
+pub struct SvgTextBuilder {
     pub attributes: Vec<(&'static str, String)>,
     pub content: Vec<SvgText>,
 }
 
-impl<'s, 'm, 't, Feat: ExportFeature> From<SvgTextBuilder<'s, 'm, 't, Feat>> for Arc<SvgTextNode> {
-    fn from(s: SvgTextBuilder<'s, 'm, 't, Feat>) -> Self {
+impl From<SvgTextBuilder> for Arc<SvgTextNode> {
+    fn from(s: SvgTextBuilder) -> Self {
         Arc::new(SvgTextNode {
             attributes: s.attributes,
             content: s.content,
@@ -104,38 +123,19 @@ impl<'s, 'm, 't, Feat: ExportFeature> From<SvgTextBuilder<'s, 'm, 't, Feat>> for
 }
 
 /// Internal methods for [`SvgTextBuilder`].
-impl<'s, 'm, 't, Feat: ExportFeature> SvgTextBuilder<'s, 'm, 't, Feat> {
-    /// attach shape of the text to the node using css rules.
+impl SvgTextBuilder {
     #[inline]
-    pub fn with_text_shape(&mut self, shape: &ir::TextShape) {
-        // insert fill definition
-        let fill_id = format!(r#"f{}"#, shape.fill.trim_start_matches('#'));
-        let fill_key = (StyleNs::Fill, shape.fill.clone());
-        self.t
-            .style_defs
-            .entry(fill_key)
-            .or_insert_with(|| format!(r#"g.{} {{ --glyph_fill: {}; }} "#, fill_id, shape.fill));
-
-        self.attributes
-            .push(("class", format!("typst-text {}", fill_id)));
-    }
-
-    #[inline]
-    pub fn attach_debug_info(&mut self, span_id: u64) {
-        if self.t.should_attach_debug_info {
-            self.attributes
-                .push(("data-span", format!("{:x}", span_id)));
-        }
-    }
-
-    /// Assuming the glyphs has already been in the defs, render it by reference.
-    #[inline]
-    pub fn render_glyph_ref_inner(&mut self, pos: Scalar, glyph: &AbsoluteRef) {
+    pub fn render_glyph_inner<C: DynExportFeature>(
+        &mut self,
+        ctx: &mut C,
+        pos: Scalar,
+        glyph: &AbsoluteRef,
+    ) {
         let adjusted_offset = (pos.0 * 2.).round() / 2.;
 
         // A stable glyph id can help incremental font transfer (IFT).
         // However, it is permitted unstable if you will not use IFT.
-        let glyph_id = if Feat::USE_STABLE_GLYPH_ID && self.t.use_stable_glyph_id {
+        let glyph_id = if ctx.use_stable_glyph_id() {
             glyph.as_svg_id("g")
         } else {
             glyph.as_unstable_svg_id("g")
@@ -184,8 +184,8 @@ impl<'s, 'm, 't, Feat: ExportFeature> SvgTextBuilder<'s, 'm, 't, Feat> {
 }
 
 /// See [`TransformContext`].
-impl<'s, 'm, 't, Feat: ExportFeature> TransformContext for SvgTextBuilder<'s, 'm, 't, Feat> {
-    fn transform_matrix(mut self, m: &ir::Transform) -> Self {
+impl<C: BuildClipPath> TransformContext<C> for SvgTextBuilder {
+    fn transform_matrix(mut self, _ctx: &mut C, m: &ir::Transform) -> Self {
         self.attributes.push((
             "transform",
             format!(
@@ -196,7 +196,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> TransformContext for SvgTextBuilder<'s, 'm
         self
     }
 
-    fn transform_translate(mut self, matrix: Axes<Abs>) -> Self {
+    fn transform_translate(mut self, _ctx: &mut C, matrix: Axes<Abs>) -> Self {
         self.attributes.push((
             "transform",
             format!(r#"translate({:.3},{:.3})"#, matrix.x.0, matrix.y.0),
@@ -204,19 +204,19 @@ impl<'s, 'm, 't, Feat: ExportFeature> TransformContext for SvgTextBuilder<'s, 'm
         self
     }
 
-    fn transform_scale(mut self, x: Ratio, y: Ratio) -> Self {
+    fn transform_scale(mut self, _ctx: &mut C, x: Ratio, y: Ratio) -> Self {
         self.attributes
             .push(("transform", format!(r#"scale({},{})"#, x.0, y.0)));
         self
     }
 
-    fn transform_rotate(mut self, matrix: Scalar) -> Self {
+    fn transform_rotate(mut self, _ctx: &mut C, matrix: Scalar) -> Self {
         self.attributes
             .push(("transform", format!(r#"rotate({})"#, matrix.0)));
         self
     }
 
-    fn transform_skew(mut self, matrix: (Ratio, Ratio)) -> Self {
+    fn transform_skew(mut self, _ctx: &mut C, matrix: (Ratio, Ratio)) -> Self {
         self.attributes.push((
             "transform",
             format!(r#"skewX({}) skewY({})"#, matrix.0 .0, matrix.1 .0),
@@ -224,8 +224,8 @@ impl<'s, 'm, 't, Feat: ExportFeature> TransformContext for SvgTextBuilder<'s, 'm
         self
     }
 
-    fn transform_clip(mut self, path: &ir::PathItem) -> Self {
-        let clip_id = self.t.build_clip_path(path);
+    fn transform_clip(mut self, ctx: &mut C, path: &ir::PathItem) -> Self {
+        let clip_id = ctx.build_clip_path(path);
 
         self.attributes
             .push(("clip-path", format!(r"url(#{})", clip_id.as_svg_id("c"))));
@@ -234,11 +234,25 @@ impl<'s, 'm, 't, Feat: ExportFeature> TransformContext for SvgTextBuilder<'s, 'm
 }
 
 /// See [`GroupContext`].
-impl<'s, 'm, 't, Feat: ExportFeature> GroupContext for SvgTextBuilder<'s, 'm, 't, Feat> {
-    fn render_item_at(&mut self, pos: ir::Point, item: &ir::SvgItem) {
+impl<
+        C: RenderVm<Resultant = Arc<SvgTextNode>>
+            + BuildGlyph
+            + BuildFillStyleClass
+            + DynExportFeature,
+    > GroupContext<C> for SvgTextBuilder
+{
+    fn with_text_shape(&mut self, ctx: &mut C, shape: &ir::TextShape) {
+        // shorten black fill
+        let fill_id = ctx.build_fill_style_class(shape.fill.clone());
+
+        self.attributes
+            .push(("class", format!("typst-text {}", fill_id)));
+    }
+
+    fn render_item_at(&mut self, ctx: &mut C, pos: ir::Point, item: &ir::SvgItem) {
         let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
 
-        let sub_content = self.t.render_item(item);
+        let sub_content = ctx.render_item(item);
 
         self.content.push(SvgText::Content(Arc::new(SvgTextNode {
             attributes: vec![("transform", translate_attr)],
@@ -246,12 +260,15 @@ impl<'s, 'm, 't, Feat: ExportFeature> GroupContext for SvgTextBuilder<'s, 'm, 't
         })));
     }
 
-    fn render_glyph(&mut self, pos: Scalar, glyph: &ir::GlyphItem) {
-        let glyph_ref = self.t.build_glyph(glyph);
-        self.render_glyph_ref_inner(pos, &glyph_ref)
+    /// Assuming the glyphs has already been in the defs, render it by reference.
+    #[inline]
+    fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &ir::GlyphItem) {
+        let glyph_ref = ctx.build_glyph(glyph);
+
+        self.render_glyph_inner(ctx, pos, &glyph_ref)
     }
 
-    fn render_link(&mut self, link: &ir::LinkItem) {
+    fn render_link(&mut self, _ctx: &mut C, link: &ir::LinkItem) {
         let href_handler = if link.href.starts_with("@typst:") {
             let href = link.href.trim_start_matches("@typst:");
             format!(r##"xlink:href="#" onclick="{href}; return false""##)
@@ -268,23 +285,32 @@ impl<'s, 'm, 't, Feat: ExportFeature> GroupContext for SvgTextBuilder<'s, 'm, 't
         )))
     }
 
-    fn render_path(&mut self, path: &ir::PathItem) {
+    fn render_path(&mut self, _ctx: &mut C, path: &ir::PathItem) {
         self.content.push(SvgText::Plain(render_path(path)))
     }
 
-    fn render_image(&mut self, image_item: &ir::ImageItem) {
+    fn render_image(&mut self, _ctx: &mut C, image_item: &ir::ImageItem) {
         self.content.push(SvgText::Plain(render_image(
             &image_item.image,
             image_item.size,
             true,
         )))
     }
-    fn render_semantic_text(&mut self, text: &ir::TextItem, width: Scalar) {
-        if !(Feat::SHOULD_RENDER_TEXT_ELEMENT && self.t.should_render_text_element) {
+
+    fn render_semantic_text(&mut self, ctx: &mut C, text: &ir::TextItem, width: Scalar) {
+        if !ctx.should_render_text_element() {
             return;
         }
 
         self.render_text_semantics_inner(&text.shape, &text.content.content, width)
+    }
+
+    #[inline]
+    fn attach_debug_info(&mut self, ctx: &mut C, span_id: u64) {
+        if ctx.should_attach_debug_info() {
+            self.attributes
+                .push(("data-span", format!("{:x}", span_id)));
+        }
     }
 }
 

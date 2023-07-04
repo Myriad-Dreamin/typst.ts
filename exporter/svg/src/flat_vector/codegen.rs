@@ -2,20 +2,31 @@ use std::sync::Arc;
 
 use super::{
     vm::{FlatGroupContext, FlatRenderVm},
-    FlatTextItem,
+    FlatTextItem, GroupRef,
 };
 use crate::{
     ir::{AbsoluteRef, Scalar},
-    vector::{SvgText, SvgTextBuilder, SvgTextNode},
-    ExportFeature,
+    vector::{
+        codegen::{BuildFillStyleClass, BuildGlyph, DynExportFeature},
+        vm::{GroupContext, RenderVm},
+        SvgText, SvgTextBuilder, SvgTextNode,
+    },
 };
 
 /// See [`FlatGroupContext`].
-impl<'s, 'm, 't, Feat: ExportFeature> FlatGroupContext for SvgTextBuilder<'s, 'm, 't, Feat> {
-    fn render_item_ref_at(&mut self, pos: crate::ir::Point, item: &AbsoluteRef) {
+impl<
+        'm,
+        C: RenderVm<Resultant = Arc<SvgTextNode>>
+            + FlatRenderVm<'m, Resultant = Arc<SvgTextNode>>
+            + BuildGlyph
+            + BuildFillStyleClass
+            + DynExportFeature,
+    > FlatGroupContext<C> for SvgTextBuilder
+{
+    fn render_item_ref_at(&mut self, ctx: &mut C, pos: crate::ir::Point, item: &AbsoluteRef) {
         let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
 
-        let sub_content = self.t.render_flat_item(item);
+        let sub_content = ctx.render_flat_item(item);
 
         self.content.push(SvgText::Content(Arc::new(SvgTextNode {
             attributes: vec![
@@ -26,15 +37,30 @@ impl<'s, 'm, 't, Feat: ExportFeature> FlatGroupContext for SvgTextBuilder<'s, 'm
         })));
     }
 
-    fn render_glyph_ref(&mut self, pos: Scalar, glyph: &AbsoluteRef) {
-        self.render_glyph_ref_inner(pos, glyph)
+    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, glyph: &AbsoluteRef) {
+        self.render_glyph_inner(ctx, pos, glyph)
     }
 
-    fn render_flat_text_semantics(&mut self, text: &FlatTextItem, width: Scalar) {
-        if !(Feat::SHOULD_RENDER_TEXT_ELEMENT && self.t.should_render_text_element) {
+    fn render_flat_text_semantics(&mut self, ctx: &mut C, text: &FlatTextItem, width: Scalar) {
+        if !ctx.should_render_text_element() {
             return;
         }
 
         self.render_text_semantics_inner(&text.shape, &text.content.content, width)
+    }
+
+    fn with_frame(mut self, _ctx: &mut C, _group: &GroupRef) -> Self {
+        self.attributes.push(("class", "typst-group".to_owned()));
+        self
+    }
+
+    fn with_text(mut self, ctx: &mut C, text: &FlatTextItem) -> Self {
+        self.with_text_shape(ctx, &text.shape);
+        self
+    }
+
+    fn with_reuse(mut self, _ctx: &mut C, v: &AbsoluteRef) -> Self {
+        self.attributes.push(("data-reuse-from", v.as_svg_id("g")));
+        self
     }
 }
