@@ -61,8 +61,7 @@ typst-ts-svg-exporter = { workspace = true, optional = true, features = [
 
 typst-ts-core.workspace = true
 
-# begin itarget-region
-[target.'cfg(not(any(target_arch = "riscv64", target_arch = "wasm32", target = "aarch64-pc-windows-msvc")))'.dependencies]
+[target.'cfg(not(any(target_arch = "riscv64", target_arch = "wasm32", all(target_os = "windows", target_arch = "aarch64"))))'.dependencies]
 reqwest = { version = "^0.11", default-features = false, features = [
     "rustls-tls",
     "blocking",
@@ -76,13 +75,12 @@ reqwest = { version = "^0.11", default-features = false, features = [
     "multipart",
 ] }
 
-[target.aarch64-pc-windows-msvc.dependencies]
+[target.'cfg(all(target_os = "windows", target_arch = "aarch64"))'.dependencies]
 reqwest = { version = "^0.11", default-features = false, features = [
     "native-tls",
     "blocking",
     "multipart",
 ] }
-# end itarget-region
 
 [dev-dependencies]
 serde.workspace = true
