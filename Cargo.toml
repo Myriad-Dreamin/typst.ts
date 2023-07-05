@@ -9,6 +9,7 @@ homepage = "https://myriad-dreamin.github.io/typst.ts/"
 repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 [workspace]
+resolver = "2"
 members = [
     "cli",
     "core",

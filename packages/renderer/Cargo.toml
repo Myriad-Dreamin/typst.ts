@@ -38,6 +38,7 @@ web-sys = { workspace = true, features = [
     "Window",
     "Blob",
     "ImageData",
+    "HtmlDivElement",
 ] }
 
 typst-ts-core.workspace = true

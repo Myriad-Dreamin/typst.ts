@@ -54,12 +54,6 @@ jobs:
       target: ${{ matrix.platform }}-${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v3
-      - name: Simulate itarget feature (Darwin)
-        if: matrix.platform == 'darwin'
-        run: python3 scripts/itarget.py ${{ matrix.rust-target }}
-      - name: Simulate itarget feature (Others)
-        if: matrix.platform != 'darwin'
-        run: python scripts/itarget.py ${{ matrix.rust-target }}
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: rust toolchain
@@ -76,6 +70,9 @@ jobs:
         run: |
           sudo apt-get update -y
           sudo apt-get install gcc-arm-linux-gnueabihf
+      - name: List Depenedencies
+        run: |
+          cargo tree -e features --target ${{ matrix.rust-target }}
       - name: Run Native Build
         shell: pwsh
         run: |
@@ -106,16 +103,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: ${{ matrix.rust-target }}
-      - name: Simulate itarget feature
-        run: python scripts/itarget.py ${{ matrix.rust-target }}
       - name: Build cross image
         run: |
           docker build -t typst-ts/riscv64 ${GITHUB_WORKSPACE}/.github/cross-linux-riscv64/
         env:
           CROSS_DOCKER_IN_DOCKER: true
-      - name: Run Cross Build
+      - name: List Depenedencies
         run: |
           echo "docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo"
+          docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo tree -e features --target ${CARGO_TARGET}
+      - name: Run Cross Build
+        run: |
           docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo run --bin typst-ts-fontctl
           docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo build -p typst-ts-fontctl --release --target ${CARGO_TARGET}
           docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo build --manifest-path cli/Cargo.toml --release --target ${CARGO_TARGET} --bin typst-ts-cli
@@ -143,16 +141,17 @@ jobs:
       RUSTFLAGS: '-C link-arg=-fuse-ld=lld -C target-feature=-crt-static'
     steps:
       - name: Install dependencies
-        run: apk add --no-cache git clang lld musl-dev npm python3
+        run: apk add --no-cache git clang lld musl-dev npm
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Simulate itarget feature
-        run: python3 scripts/itarget.py alpine-x64
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: Configure git
         run: |
           git config --global --add safe.directory $PWD
+      - name: List Depenedencies
+        run: |
+          cargo tree -e features --target $RUST_TARGET
       - name: build binaries
         run: |
           cargo run --release --bin typst-ts-fontctl
