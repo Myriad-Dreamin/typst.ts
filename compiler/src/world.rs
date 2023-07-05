@@ -160,7 +160,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         self.today.set(None);
     }
 
-    fn path_for_id(&self, id: FileId) -> PackageResult<PathBuf> {
+    pub fn path_for_id(&self, id: FileId) -> PackageResult<PathBuf> {
         // Determine the root path relative to which the file path
         // will be resolved.
         let root = match id.package() {
