@@ -24,7 +24,9 @@ pub(crate) mod vector;
 use ir::{GlyphPackBuilder, ImmutStr, StyleNs, SvgItem};
 use render::{flat::serialize_module, GlyphRenderTask};
 use utils::AbsExt;
-use vector::codegen::generate_text;
+use vector::codegen::{
+    generate_text, BuildClipPath, BuildFillStyleClass, BuildGlyph, DynExportFeature,
+};
 use vector::*;
 
 pub use font::{FontGlyphProvider, GlyphProvider, IGlyphProvider};
@@ -312,8 +314,8 @@ pub struct SvgRenderTask<'m, 't, Feat: ExportFeature> {
     pub _m_phantom: std::marker::PhantomData<&'m ()>,
 }
 
-impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
-    pub fn build_glyph(&mut self, glyph: &GlyphItem) -> AbsoluteRef {
+impl<'m, 't, Feat: ExportFeature> BuildGlyph for SvgRenderTask<'m, 't, Feat> {
+    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> AbsoluteRef {
         if let Some(id) = self.glyph_defs.get(glyph) {
             return id.clone();
         }
@@ -325,8 +327,23 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
         self.glyph_defs.insert(glyph.clone(), abs_ref.clone());
         abs_ref
     }
+}
 
-    pub fn build_clip_path(&mut self, path: &PathItem) -> Fingerprint {
+impl<'m, 't, Feat: ExportFeature> BuildFillStyleClass for SvgRenderTask<'m, 't, Feat> {
+    fn build_fill_style_class(&mut self, fill: ImmutStr) -> String {
+        // insert fill definition
+        let fill_id = format!(r#"f{}"#, fill.trim_start_matches('#'));
+        let fill_key = (StyleNs::Fill, fill.clone());
+        self.style_defs
+            .entry(fill_key)
+            .or_insert_with(|| format!(r#"g.{} {{ --glyph_fill: {}; }} "#, fill_id, fill));
+
+        fill_id
+    }
+}
+
+impl<'m, 't, Feat: ExportFeature> BuildClipPath for SvgRenderTask<'m, 't, Feat> {
+    fn build_clip_path(&mut self, path: &PathItem) -> Fingerprint {
         if let Some(id) = self.clip_paths.get(&path.d) {
             return *id;
         }
@@ -334,6 +351,23 @@ impl<'m, 't, Feat: ExportFeature> SvgRenderTask<'m, 't, Feat> {
         let fingerprint = self.fingerprint_builder.resolve(path);
         self.clip_paths.insert(path.d.clone(), fingerprint);
         fingerprint
+    }
+}
+
+impl<'m, 't, Feat: ExportFeature> DynExportFeature for SvgRenderTask<'m, 't, Feat> {
+    #[inline]
+    fn should_render_text_element(&self) -> bool {
+        Feat::SHOULD_RENDER_TEXT_ELEMENT && self.should_render_text_element
+    }
+
+    #[inline]
+    fn use_stable_glyph_id(&self) -> bool {
+        Feat::USE_STABLE_GLYPH_ID && self.use_stable_glyph_id
+    }
+
+    #[inline]
+    fn should_attach_debug_info(&self) -> bool {
+        Feat::SHOULD_ATTACH_DEBUG_INFO && self.should_attach_debug_info
     }
 }
 

@@ -2,16 +2,17 @@ use std::sync::Arc;
 
 use super::vm::{FlatIncrGroupContext, FlatIncrRenderVm};
 use crate::{
-    flat_vector::ir,
     ir::AbsoluteRef,
     vector::{SvgText, SvgTextBuilder, SvgTextNode},
-    ExportFeature,
 };
 
 /// See [`FlatGroupContext`].
-impl<'s, 'm, 't, Feat: ExportFeature> FlatIncrGroupContext for SvgTextBuilder<'s, 'm, 't, Feat> {
+impl<'m, C: FlatIncrRenderVm<'m, Resultant = Arc<SvgTextNode>>> FlatIncrGroupContext<C>
+    for SvgTextBuilder
+{
     fn render_diff_item_ref_at(
         &mut self,
+        ctx: &mut C,
         pos: crate::ir::Point,
         item: &AbsoluteRef,
         prev_item: &AbsoluteRef,
@@ -21,7 +22,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> FlatIncrGroupContext for SvgTextBuilder<'s
         let mut content = vec![];
 
         if item != prev_item {
-            let sub_content = self.t.render_diff_item(item, prev_item);
+            let sub_content = ctx.render_diff_item(item, prev_item);
             content.push(SvgText::Content(sub_content));
         }
 
@@ -35,7 +36,7 @@ impl<'s, 'm, 't, Feat: ExportFeature> FlatIncrGroupContext for SvgTextBuilder<'s
         })));
     }
 
-    fn render_diff_reuse_item(&mut self, item_ref: &AbsoluteRef) {
+    fn render_diff_reuse_item(&mut self, _ctx: &mut C, item_ref: &AbsoluteRef) {
         self.content.push(SvgText::Content(Arc::new(SvgTextNode {
             attributes: vec![
                 ("data-tid", item_ref.as_svg_id("p")),
@@ -43,20 +44,5 @@ impl<'s, 'm, 't, Feat: ExportFeature> FlatIncrGroupContext for SvgTextBuilder<'s
             ],
             content: vec![],
         })));
-    }
-
-    fn with_frame(mut self, _group: &ir::GroupRef) -> Self {
-        self.attributes.push(("class", "typst-group".to_owned()));
-        self
-    }
-
-    fn with_text(mut self, text: &ir::FlatTextItem) -> Self {
-        self.with_text_shape(&text.shape);
-        self
-    }
-
-    fn with_reuse(mut self, v: &AbsoluteRef) -> Self {
-        self.attributes.push(("data-reuse-from", v.as_svg_id("g")));
-        self
     }
 }
