@@ -42,7 +42,7 @@ web-sys = { workspace = true, features = [
 ] }
 
 typst-ts-core.workspace = true
-typst-ts-compiler = { version = "0.2", default-features = false, features = [
+typst-ts-compiler = { version = "0.3", default-features = false, features = [
     "web-render",
 ] }
 typst-ts-canvas-exporter = { workspace = true, optional = true }

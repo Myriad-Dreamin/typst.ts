@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst-ts-renderer",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "WASM module for rendering Typst documents in browser.",
   "keywords": [
     "TypeScript",
