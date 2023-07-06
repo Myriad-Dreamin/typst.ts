@@ -161,6 +161,8 @@ jobs:
           cargo run --release --bin typst-ts-fontctl
           cargo build --release -p typst-ts-fontctl --target $RUST_TARGET
           cargo build --release --manifest-path cli/Cargo.toml --target $RUST_TARGET --bin typst-ts-cli
+          cargo build --profile release-stripped -p typst-ts-fontctl --target $RUST_TARGET
+          cargo build --profile release-stripped --manifest-path cli/Cargo.toml --target $RUST_TARGET --bin typst-ts-cli
       - uses: actions/upload-artifact@v3
         with:
           name: typst-ts-font-assets
@@ -170,6 +172,11 @@ jobs:
         with:
           name: typst-ts-${{ env.target }}
           path: target/${{ env.RUST_TARGET }}/release/typst-ts-*
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v3
+        with:
+          name: typst-ts-${{ env.target }}-relwithdebuginfo
+          path: target/${{ matrix.rust-target }}/release/typst-ts-*
           if-no-files-found: error
 
   release:
