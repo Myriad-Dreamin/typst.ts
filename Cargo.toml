@@ -1,7 +1,7 @@
 [workspace.package]
 description = "Run Typst in JavaScriptWorld."
 authors = ["Typst.ts Developers", "The Typst Project Developers"]
-version = "0.2.3"
+version = "0.3.0"
 edition = "2021"
 readme = "README.md"
 license = "Apache-2.0"
@@ -42,6 +42,11 @@ opt-level = 3
 debug = true
 lto = "thin"
 
+[profile.release-stripped]
+inherits = "release"
+debug = false
+strip = true
+
 [workspace.dependencies]
 
 # typesetting
@@ -71,7 +76,7 @@ tokio = { version = "1.28.1", features = ["full"] }
 comemo = "0.3"
 indexmap = "1.9.3"
 elsa = "1.8.1"
-ecow = "0.1.1"
+ecow = "0.1"
 
 # cli
 clap = { version = "4.3", features = ["derive", "env", "unicode", "wrap_help"] }
@@ -121,22 +126,22 @@ vergen = { version = "7.5.1", features = ["build", "cargo", "git", "rustc"] }
 path-clean = "1.0.1"
 
 # project core
-typst-ts-core = "0.2"
-typst-ts-compiler = { version = "0.2", default-features = false }
-typst-ts-test-common = "0.2"
+typst-ts-core = "0.3"
+typst-ts-compiler = { version = "0.3", default-features = false }
+typst-ts-test-common = "0.3"
 
 # project exporters
-typst-ts-ast-exporter = "0.2"
-typst-ts-pdf-exporter = "0.2"
-typst-ts-canvas-exporter = "0.2"
-typst-ts-raster-exporter = "0.2"
-typst-ts-serde-exporter = "0.2"
-typst-ts-svg-exporter = "0.2"
-typst-ts-tir-exporter = "0.2"
-typst-ts-ws-exporter = "0.2"
+typst-ts-ast-exporter = "0.3"
+typst-ts-pdf-exporter = "0.3"
+typst-ts-canvas-exporter = "0.3"
+typst-ts-raster-exporter = "0.3"
+typst-ts-serde-exporter = "0.3"
+typst-ts-svg-exporter = "0.3"
+typst-ts-tir-exporter = "0.3"
+typst-ts-ws-exporter = "0.3"
 
 # project common components
-typst-ts-dev-server = "0.2"
+typst-ts-dev-server = "0.3"
 
 [patch.crates-io]
 typst-ts-core = { path = "core" }

@@ -1,6 +1,6 @@
 {
   "name": "hexo-renderer-typst",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Typst renderer plugin for Hexo",
   "main": "index.cjs",
   "directories": {
