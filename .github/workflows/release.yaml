@@ -73,7 +73,7 @@ jobs:
       - name: Run Native Build
         shell: pwsh
         run: |
-          cargo run --release --bin typst-ts-fontctl
+          cargo run --bin typst-ts-fontctl
           cargo build --release -p typst-ts-fontctl --target ${{ matrix.rust-target }}
           cargo build --release --manifest-path cli/Cargo.toml --target ${{ matrix.rust-target }} --bin typst-ts-cli
           cargo build --profile release-stripped -p typst-ts-fontctl --target ${{ matrix.rust-target }}
@@ -158,7 +158,7 @@ jobs:
           git config --global --add safe.directory $PWD
       - name: build binaries
         run: |
-          cargo run --release --bin typst-ts-fontctl
+          cargo run --bin typst-ts-fontctl
           cargo build --release -p typst-ts-fontctl --target $RUST_TARGET
           cargo build --release --manifest-path cli/Cargo.toml --target $RUST_TARGET --bin typst-ts-cli
           cargo build --profile release-stripped -p typst-ts-fontctl --target $RUST_TARGET
@@ -176,7 +176,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: typst-ts-${{ env.target }}-relwithdebuginfo
-          path: target/${{ matrix.rust-target }}/release/typst-ts-*
+          path: target/${{ env.RUST_TARGET }}/release/typst-ts-*
           if-no-files-found: error
 
   release:
