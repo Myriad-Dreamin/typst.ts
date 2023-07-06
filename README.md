@@ -53,9 +53,11 @@ Usage: typst-ts-cli [OPTIONS] [COMMAND]
 
 Commands:
   compile  Run compiler. [aliases: c]
+  completion  Generate shell completion script
   env      Dump Client Environment.
   font     Commands about font for typst.
   help     Print this message or the help of the given subcommand(s)
+  package     Commands about package for typst.
 
 Options:
   -V, --version  Print Version
@@ -71,21 +73,39 @@ Run compiler.
 
 Usage: typst-ts-cli compile [OPTIONS] --entry <ENTRY>
 
-Options:
-  -h, --help  Print help
-
 Compile options:
-  -w, --workspace <WORKSPACE>    Path to typst workspace [default: .]
-      --watch                    watch mode
-      --trace <TRACE>            enable tracing. possible usage: --trace=verbosity={0..3} where verbosity: {0..3} -> {warning, info, debug, trace}
-  -e, --entry <ENTRY>            Entry file
-      --format <FORMAT>          Output formats, possible values: `json`, `pdf`, `web_socket`, `ast`, and `rmp`
-      --web-socket <WEB_SOCKET>  Output WebSocket subscriber url [default: ]
-  -o, --output <OUTPUT>          Output to directory, default in the same directory as the entry file [default: ]
-      --font-path <DIR>          Add additional directories to search for fonts
+  -w, --workspace <WORKSPACE>  Path to typst workspace [default: .]
+      --watch                  Watch mode
+      --dynamic-layout         Generate dynamic layout representation. Note: this is an experimental feature and will be merged as format `dyn-svg` in the future
+      --trace <TRACE>          Enable tracing. Possible usage: --trace=verbosity={0..3} where verbosity: {0..3} -> {warning, info, debug, trace}
+  -e, --entry <ENTRY>          Entry file
+      --format <FORMAT>        Output formats, possible values: `json`, `pdf`, `svg`, `json_glyphs`, `ast`, `ir`, and `rmp`
+  -o, --output <OUTPUT>        Output to directory, default in the same directory as the entry file [default: ]
+      --font-path <DIR>        Add additional directories to search for fonts
 ```
 
-### Renderer Example
+Package Help:
+
+```shell
+$ typst-ts-cli package --help
+Commands about package for typst.
+
+Usage: typst-ts-cli package <COMMAND>
+
+Commands:
+  doc     Generate documentation for a package
+  help    Print this message or the help of the given subcommand(s)
+  link    Link a package to local data path
+  list    List all discovered packages in data and cache paths
+  unlink  Unlink a package from local data path
+
+Options:
+  -h, --help  Print help
+```
+
+### Example: Render Typst document in browser (build from source with/without wasm-pack)
+
+Note: see [Troubleshooting WASM Build](docs/troubleshooting-wasm-build.md) for (especially) **Arch Linux** users.
 
 ```shell
 $ cd packages/typst.ts && yarn install && yarn run build && yarn run link:local; cd ../..
@@ -94,7 +114,15 @@ $ cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/
 
 And open your browser to `http://localhost:20810/core/`.
 
-### Precompiler
+You can also run `yarn run build-wrapper` instead of `yarn run build && yarn run link:local` to avoid building the WASM modules from source.
+
+### Sample: generate documentation site for packages developers.
+
+- Link [typst-doc](https://github.com/Mc-Zen/typst-doc) by `typst-ts-cli package link --manifest ./typst.toml`.
+
+- Generate documentation by `typst-ts-cli package doc --manifest ./contrib/templates/typst-ts-templates/typst.toml`.
+
+### Concept: Precompiler
 
 The compiler is capable of producing artifact outputs from a Typst project. Thet artifact outputs can be easily distributed to remote endpoints.
 
@@ -104,7 +132,7 @@ Install `typst-ts-cli` by cargo:
 cargo install --git https://github.com/Myriad-Dreamin/typst.ts typst-ts-cli
 ```
 
-### Renderer
+### Concept: Renderer
 
 The renderer accepts an input in artifact format and renders the document as HTML elements.
 
