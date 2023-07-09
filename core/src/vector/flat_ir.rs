@@ -4,6 +4,11 @@ use std::{collections::HashMap, sync::Arc};
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 
 use crate::{
+    font::{FontGlyphProvider, GlyphProvider},
+    vector::GlyphLowerBuilder,
+};
+
+use super::{
     geom::{Abs, Point, Size},
     ir::{
         AbsoluteRef, DefId, Fingerprint, FingerprintBuilder, GlyphItem, GlyphMapping,
@@ -337,4 +342,56 @@ pub struct SerializedModule {
     pub item_pack: ItemPack,
     pub glyphs: Vec<(AbsoluteRef, FlatGlyphItem)>,
     pub layouts: Vec<(Abs, Vec<(AbsoluteRef, Size)>)>,
+}
+
+pub fn serialize_module(repr: Module) -> Vec<u8> {
+    // Or you can customize your serialization for better performance
+    // and compatibility with #![no_std] environments
+    use rkyv::ser::{serializers::AllocSerializer, Serializer};
+
+    let mut serializer = AllocSerializer::<0>::default();
+    serializer.serialize_value(&repr.item_pack).unwrap();
+    let item_pack = serializer.into_serializer().into_inner();
+
+    item_pack.into_vec()
+}
+
+pub fn serialize_multi_doc_standalone(
+    doc: MultiSvgDocument,
+    glyph_mapping: GlyphMapping,
+) -> Vec<u8> {
+    let glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
+    let glyph_lower_builder = GlyphLowerBuilder::new(&glyph_provider);
+
+    let glyphs = glyph_mapping
+        .into_iter()
+        .filter_map(|(glyph, glyph_id)| {
+            let glyph = glyph_lower_builder.lower_glyph(&glyph);
+            glyph.map(|t| {
+                let t = match t {
+                    GlyphItem::Image(i) => FlatGlyphItem::Image(i),
+                    GlyphItem::Outline(p) => FlatGlyphItem::Outline(p),
+                    _ => unreachable!(),
+                };
+
+                (glyph_id, t)
+            })
+        })
+        .collect::<Vec<_>>();
+
+    // Or you can customize your serialization for better performance
+    // and compatibility with #![no_std] environments
+    use rkyv::ser::{serializers::AllocSerializer, Serializer};
+
+    let mut serializer = AllocSerializer::<0>::default();
+    serializer
+        .serialize_value(&SerializedModule {
+            item_pack: doc.module.item_pack,
+            glyphs,
+            layouts: doc.layouts,
+        })
+        .unwrap();
+    let item_pack = serializer.into_serializer().into_inner();
+
+    item_pack.into_vec()
 }

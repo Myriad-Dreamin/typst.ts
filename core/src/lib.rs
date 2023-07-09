@@ -4,6 +4,7 @@ pub mod artifact;
 pub use artifact::{core::ArtifactMeta, Artifact};
 
 pub mod artifact_ir;
+pub mod vector;
 
 pub mod cache;
 

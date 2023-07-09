@@ -2,21 +2,31 @@ use std::sync::Arc;
 
 use base64::Engine;
 
-use super::{
-    ir::{self, Abs, AbsoluteRef, Axes, Image, PathItem, PathStyle, Ratio, Scalar, Size},
-    GroupContext, RenderVm, TransformContext,
+use typst_ts_core::{
+    font::GlyphProvider,
+    vector::{
+        flat_ir,
+        flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
+        ir::{self, Abs, AbsoluteRef, Axes, Fingerprint, ImmutStr, PathStyle, Ratio, Scalar, Size},
+        vm::{GroupContext, RenderVm, TransformContext},
+        GlyphLowerBuilder,
+    },
 };
-use crate::{
-    escape::{self, TextContentDataEscapes},
-    ir::{Fingerprint, ImmutStr},
-};
+
+pub(crate) mod debug_info;
+pub use debug_info::generate_src_mapping;
+
+mod escape;
+use escape::TextContentDataEscapes;
+
+use crate::utils::ToCssExt;
 
 pub trait BuildGlyph {
     fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> AbsoluteRef;
 }
 
 pub trait BuildClipPath {
-    fn build_clip_path(&mut self, path: &PathItem) -> Fingerprint;
+    fn build_clip_path(&mut self, path: &ir::PathItem) -> Fingerprint;
 }
 
 pub trait BuildFillStyleClass {
@@ -40,7 +50,8 @@ pub enum SvgText {
 }
 
 impl SvgText {
-    /// Recursively estimate the length of the text node for final string allocation.
+    /// Recursively estimate the length of the text node for final string
+    /// allocation.
     pub fn estimated_len(&self) -> usize {
         match self {
             Self::Plain(p) => p.len(),
@@ -72,7 +83,8 @@ pub struct SvgTextNode {
 }
 
 impl SvgTextNode {
-    /// Recursively estimate the length of the text node for final string allocation.
+    /// Recursively estimate the length of the text node for final string
+    /// allocation.
     pub fn estimated_len(&self) -> usize {
         let content_estimated: usize = self.content.iter().map(SvgText::estimated_len).sum();
         let attr_estimated: usize = self
@@ -103,6 +115,72 @@ impl SvgTextNode {
             c.write_string_io(string_io)
         }
         string_io.push_str("</g>");
+    }
+}
+
+pub struct SvgGlyphBuilder {
+    pub glyph_provider: GlyphProvider,
+}
+
+impl SvgGlyphBuilder {
+    pub fn render_glyph(&mut self, glyph_id: &str, glyph_item: &ir::GlyphItem) -> Option<String> {
+        let gp = &self.glyph_provider;
+        Self::render_glyph_inner(gp, glyph_id, glyph_item)
+    }
+
+    #[comemo::memoize]
+    pub fn render_glyph_pure(glyph_id: &str, glyph_item: ir::GlyphItem) -> Option<String> {
+        Self::render_glyph_pure_inner(glyph_id, &glyph_item)
+    }
+
+    #[comemo::memoize]
+    fn render_glyph_inner(
+        gp: &GlyphProvider,
+        glyph_id: &str,
+        glyph_item: &ir::GlyphItem,
+    ) -> Option<String> {
+        if matches!(glyph_item, ir::GlyphItem::Raw(..)) {
+            return Self::render_glyph_pure_inner(
+                glyph_id,
+                &GlyphLowerBuilder::new(gp).lower_glyph(glyph_item)?,
+            );
+        }
+
+        Self::render_glyph_pure_inner(glyph_id, glyph_item)
+    }
+
+    fn render_glyph_pure_inner(glyph_id: &str, glyph_item: &ir::GlyphItem) -> Option<String> {
+        match glyph_item {
+            ir::GlyphItem::Image(image_glyph) => Self::render_image_glyph(glyph_id, image_glyph),
+            ir::GlyphItem::Outline(outline_glyph) => {
+                Self::render_outline_glyph(glyph_id, outline_glyph)
+            }
+            ir::GlyphItem::Raw(..) => unreachable!(),
+        }
+    }
+
+    /// Render an image glyph into the svg text.
+    fn render_image_glyph(glyph_id: &str, ig: &ir::ImageGlyphItem) -> Option<String> {
+        let img = render_image(&ig.image.image, ig.image.size, false);
+
+        let ts = ig.ts.to_css();
+        let symbol_def = format!(
+            r#"<symbol overflow="visible" id="{}" class="image_glyph"><g transform="{}">{}</g></symbol>"#,
+            glyph_id, ts, img
+        );
+        Some(symbol_def)
+    }
+
+    /// Render an outline glyph into svg text. This is the "normal" case.
+    fn render_outline_glyph(
+        glyph_id: &str,
+        outline_glyph: &ir::OutlineGlyphItem,
+    ) -> Option<String> {
+        let symbol_def = format!(
+            r#"<symbol overflow="visible" id="{}" class="outline_glyph"><path d="{}"/></symbol>"#,
+            glyph_id, outline_glyph.d
+        );
+        Some(symbol_def)
     }
 }
 
@@ -260,7 +338,8 @@ impl<
         })));
     }
 
-    /// Assuming the glyphs has already been in the defs, render it by reference.
+    /// Assuming the glyphs has already been in the defs, render it by
+    /// reference.
     #[inline]
     fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &ir::GlyphItem) {
         let glyph_ref = ctx.build_glyph(glyph);
@@ -314,9 +393,107 @@ impl<
     }
 }
 
+/// See [`FlatGroupContext`].
+impl<
+        'm,
+        C: RenderVm<Resultant = Arc<SvgTextNode>>
+            + FlatRenderVm<'m, Resultant = Arc<SvgTextNode>>
+            + BuildGlyph
+            + BuildFillStyleClass
+            + DynExportFeature,
+    > FlatGroupContext<C> for SvgTextBuilder
+{
+    fn render_item_ref_at(&mut self, ctx: &mut C, pos: crate::ir::Point, item: &AbsoluteRef) {
+        let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
+
+        let sub_content = ctx.render_flat_item(item);
+
+        self.content.push(SvgText::Content(Arc::new(SvgTextNode {
+            attributes: vec![
+                ("transform", translate_attr),
+                ("data-tid", item.as_svg_id("p")),
+            ],
+            content: vec![SvgText::Content(sub_content)],
+        })));
+    }
+
+    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, glyph: &AbsoluteRef) {
+        self.render_glyph_inner(ctx, pos, glyph)
+    }
+
+    fn render_flat_text_semantics(
+        &mut self,
+        ctx: &mut C,
+        text: &flat_ir::FlatTextItem,
+        width: Scalar,
+    ) {
+        if !ctx.should_render_text_element() {
+            return;
+        }
+
+        self.render_text_semantics_inner(&text.shape, &text.content.content, width)
+    }
+
+    fn with_frame(mut self, _ctx: &mut C, _group: &flat_ir::GroupRef) -> Self {
+        self.attributes.push(("class", "typst-group".to_owned()));
+        self
+    }
+
+    fn with_text(mut self, ctx: &mut C, text: &flat_ir::FlatTextItem) -> Self {
+        self.with_text_shape(ctx, &text.shape);
+        self
+    }
+
+    fn with_reuse(mut self, _ctx: &mut C, v: &AbsoluteRef) -> Self {
+        self.attributes.push(("data-reuse-from", v.as_svg_id("g")));
+        self
+    }
+}
+
+/// See [`FlatGroupContext`].
+impl<'m, C: FlatIncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBuilder>>
+    FlatIncrGroupContext<C> for SvgTextBuilder
+{
+    fn render_diff_item_ref_at(
+        &mut self,
+        ctx: &mut C,
+        pos: crate::ir::Point,
+        item: &AbsoluteRef,
+        prev_item: &AbsoluteRef,
+    ) {
+        let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
+
+        let mut content = vec![];
+
+        if item != prev_item {
+            let sub_content = ctx.render_diff_item(item, prev_item);
+            content.push(SvgText::Content(sub_content));
+        }
+
+        self.content.push(SvgText::Content(Arc::new(SvgTextNode {
+            attributes: vec![
+                ("transform", translate_attr),
+                ("data-tid", item.as_svg_id("p")),
+                ("data-reuse-from", prev_item.as_svg_id("p")),
+            ],
+            content,
+        })));
+    }
+
+    fn render_diff_reuse_item(&mut self, _ctx: &mut C, item_ref: &AbsoluteRef) {
+        self.content.push(SvgText::Content(Arc::new(SvgTextNode {
+            attributes: vec![
+                ("data-tid", item_ref.as_svg_id("p")),
+                ("data-reuse-from", item_ref.as_svg_id("p")),
+            ],
+            content: vec![],
+        })));
+    }
+}
+
 /// Render a [`PathItem`] into svg text.
 #[comemo::memoize]
-fn render_path(path: &PathItem) -> String {
+fn render_path(path: &ir::PathItem) -> String {
     let mut p = vec![r#"<path class="typst-shape" "#.to_owned()];
     p.push(format!(r#"d="{}" "#, path.d));
     let mut fill_color = "none";
@@ -361,10 +538,11 @@ fn render_path(path: &PathItem) -> String {
 }
 
 /// Render a raster or SVG image into svg text.
-/// is_image_elem: whether the image is an `<image>` element (instead of an image glyph).
+/// is_image_elem: whether the image is an `<image>` element (instead of an
+/// image glyph).
 // todo: error handling
-pub fn render_image(image: &Image, size: Size, is_image_elem: bool) -> String {
-    let image_url = rasterize_embedded_image_url(image).unwrap();
+pub fn render_image(image: &ir::Image, size: Size, is_image_elem: bool) -> String {
+    let image_url = embed_as_image_url(image).unwrap();
 
     let w = size.x.0;
     let h = size.y.0;
@@ -380,7 +558,7 @@ pub fn render_image(image: &Image, size: Size, is_image_elem: bool) -> String {
     )
 }
 
-fn rasterize_embedded_image_url(image: &Image) -> Option<String> {
+fn embed_as_image_url(image: &ir::Image) -> Option<String> {
     let url = format!("data:image/{};base64,", image.format);
 
     let mut data = base64::engine::general_purpose::STANDARD.encode(&image.data);

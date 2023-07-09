@@ -3847,19 +3847,23 @@ dependencies = [
  "byteorder",
  "comemo",
  "ecow",
+ "flate2",
  "hex",
  "js-sys",
  "once_cell",
  "path-clean",
+ "rkyv",
  "serde",
  "serde_json",
  "serde_with",
  "sha2",
  "siphasher",
+ "tiny-skia",
  "ttf-parser",
  "typst",
  "wasm-bindgen",
  "web-sys",
+ "xmlparser",
 ]
 
 [[package]]
@@ -4029,15 +4033,9 @@ version = "0.3.0"
 dependencies = [
  "base64 0.21.2",
  "comemo",
- "flate2",
- "once_cell",
- "rkyv",
- "siphasher",
  "tiny-skia",
- "ttf-parser",
  "typst",
  "typst-ts-core",
- "xmlparser",
 ]
 
 [[package]]

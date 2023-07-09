@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::Arc;
 
-use crate::{hash::typst_affinite_hash, hash::StaticHash128};
+use crate::{hash::typst_affinite_hash, StaticHash128};
 use base64::Engine;
 use siphasher::sip128::{Hasher128, SipHasher13};
 use ttf_parser::GlyphId;
@@ -21,13 +21,16 @@ pub type ImmutStr = Arc<str>;
 pub use super::geom::*;
 
 /// See <https://github.com/rust-lang/rust/blob/master/compiler/rustc_hir/src/stable_hash_impls.rs#L22>
-/// The fingerprint conflicts should be very rare and should be handled by the compiler.
+/// The fingerprint conflicts should be very rare and should be handled by the
+/// compiler.
 ///
 /// > That being said, given a high quality hash function, the collision
-/// > probabilities in question are very small. For example, for a big crate like
+/// > probabilities in question are very small. For example, for a big crate
+/// > like
 /// > `rustc_middle` (with ~50000 `LocalDefId`s as of the time of writing) there
 /// > is a probability of roughly 1 in 14,750,000,000 of a crate-internal
-/// > collision occurring. For a big crate graph with 1000 crates in it, there is
+/// > collision occurring. For a big crate graph with 1000 crates in it, there
+/// > is
 /// > a probability of 1 in 36,890,000,000,000 of a `StableCrateId` collision.
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
@@ -35,8 +38,9 @@ pub use super::geom::*;
 pub struct Fingerprint(u64, u64);
 
 impl Fingerprint {
-    /// Create a xml id from the given prefix and the fingerprint of this reference.
-    /// Note that the entire html document shares namespace for ids.
+    /// Create a xml id from the given prefix and the fingerprint of this
+    /// reference. Note that the entire html document shares namespace for
+    /// ids.
     #[comemo::memoize]
     pub fn as_svg_id(self, prefix: &'static str) -> String {
         let fingerprint_hi =
@@ -130,8 +134,9 @@ impl FingerprintBuilder {
 pub struct DefId(pub u64);
 
 /// A stable absolute reference.
-/// The fingerprint is used to identify the item and likely unique between different svg documents.
-/// The (local) def id is only unique within the svg document.
+/// The fingerprint is used to identify the item and likely unique between
+/// different svg documents. The (local) def id is only unique within the svg
+/// document.
 #[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
@@ -188,7 +193,8 @@ impl AbsoluteRef {
 
 pub type SpanId = u64;
 
-/// A Svg item that is specialized for representing [`typst::doc::Document`] or its subtypes.
+/// A Svg item that is specialized for representing [`typst::doc::Document`] or
+/// its subtypes.
 #[derive(Debug, Clone)]
 pub enum SvgItem {
     Image((ImageItem, SpanId)),

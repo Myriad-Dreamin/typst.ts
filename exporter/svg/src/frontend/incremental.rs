@@ -1,20 +1,19 @@
-use core::fmt;
 use std::{
     collections::{hash_map::RandomState, HashMap, HashSet},
     sync::Arc,
 };
 
 use typst::doc::Document;
+use typst_ts_core::vector::{
+    flat_ir::{ItemPack, Module, ModuleBuilder, SourceMappingNode, SvgDocument},
+    flat_vm::{FlatIncrRenderVm, FlatRenderVm},
+    ir::AbsoluteRef,
+    LowerBuilder,
+};
 
 use crate::{
-    flat_incr_vector::FlatIncrRenderVm,
-    flat_vector::{FlatRenderVm, ItemPack, SourceMappingNode, SvgDocument},
-    ir::AbsoluteRef,
-    vector::{
-        codegen::{SvgText, SvgTextNode},
-        lowering::LowerBuilder,
-    },
-    ExportFeature, Module, ModuleBuilder, SvgExporter, SvgTask,
+    backend::{generate_src_mapping, SvgText, SvgTextNode},
+    ExportFeature, SvgExporter, SvgTask,
 };
 
 /// The feature set which is used for exporting incremental rendered svg.
@@ -38,7 +37,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     /// Render a document difference into the svg_body.
     pub fn render_diff(&mut self, ctx: &IncrementalRenderContext, svg_body: &mut Vec<SvgText>) {
         let mut acc_height = 0u32;
-        let mut render_task = self.fork_page_render_task(&ctx.next.module);
+        let mut render_task = self.get_render_context(&ctx.next.module);
 
         let reusable: HashSet<AbsoluteRef, RandomState> =
             HashSet::from_iter(ctx.prev.pages.iter().map(|e| e.0.clone()));
@@ -119,41 +118,6 @@ pub struct IncrementalSvgExporter {
     should_attach_debug_info: bool,
 }
 
-struct SrcMappingRepr<'a> {
-    mapping: &'a [SourceMappingNode],
-}
-
-impl fmt::Display for SrcMappingRepr<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut st = false;
-        for e in self.mapping {
-            if st {
-                write!(f, "|")?;
-            } else {
-                st = true;
-            }
-            match e {
-                SourceMappingNode::Page(p) => write!(f, "p,{:x}", p)?,
-                SourceMappingNode::Text(t) => write!(f, "t,{:x}", t)?,
-                SourceMappingNode::Image(i) => write!(f, "i,{:x}", i)?,
-                SourceMappingNode::Shape(s) => write!(f, "s,{:x}", s)?,
-                SourceMappingNode::Group(refs) => {
-                    f.write_str("g")?;
-                    for r in refs.iter() {
-                        write!(f, ",{:x}", r)?;
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
-}
-
-fn repr_src_mapping(mapping: &[SourceMappingNode]) -> SrcMappingRepr<'_> {
-    SrcMappingRepr { mapping }
-}
-
 impl IncrementalSvgExporter {
     pub fn set_should_attach_debug_info(&mut self, should_attach_debug_info: bool) {
         self.module_builder.should_attach_debug_info = should_attach_debug_info;
@@ -168,8 +132,8 @@ impl IncrementalSvgExporter {
         let t = &self.page_source_mapping;
         format!(
             r#"<div class="typst-source-mapping" data-pages="{}" data-source-mapping="{}">"#,
-            repr_src_mapping(t),
-            repr_src_mapping(entire)
+            generate_src_mapping(t),
+            generate_src_mapping(entire)
         )
     }
 

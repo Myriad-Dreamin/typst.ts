@@ -13,22 +13,12 @@ typst.workspace = true
 comemo.workspace = true
 
 tiny-skia.workspace = true
-ttf-parser.workspace = true
-flate2.workspace = true
-once_cell.workspace = true
 base64.workspace = true
-siphasher.workspace = true
-xmlparser = "0.13.5"
-rkyv = { version = "0.7.42", optional = true, features = [
-    "validation",
-    "alloc",
-] }
 
 typst-ts-core.workspace = true
 
 
 [features]
-rkyv = ["dep:rkyv"]
-rkyv-validation = ["dep:rkyv"]
-flat-vector = ["rkyv", "rkyv-validation"]
+rkyv = ["typst-ts-core/rkyv"]
+flat-vector = ["rkyv", "typst-ts-core/flat-vector"]
 default = ["flat-vector"]
