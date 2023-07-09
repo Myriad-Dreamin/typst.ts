@@ -35,9 +35,9 @@ type CodespanError = codespan_reporting::files::Error;
 /// type trait interface of [`CompilerWorld`].
 pub trait CompilerFeat {
     /// Specify the access model for VFS.
-    type M: VfsAccessModel + Sized;
+    type AccessModel: VfsAccessModel + Sized;
     /// Specify the package registry.
-    type R: PackageRegistry + Sized;
+    type Registry: PackageRegistry + Sized;
 }
 
 /// A world that provides access to the operating system.
@@ -54,9 +54,9 @@ pub struct CompilerWorld<F: CompilerFeat> {
     /// Provides font management for typst compiler.
     pub font_resolver: FontResolverImpl,
     /// Provides package management for typst compiler.
-    pub registry: F::R,
+    pub registry: F::Registry,
     /// Provides path-based data access for typst compiler.
-    vfs: Vfs<F::M>,
+    vfs: Vfs<F::AccessModel>,
 
     /// The date of today, which is fetched once per compilation.
     today: Cell<Option<Datetime>>,
@@ -71,8 +71,8 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     /// + See [`crate::TypstBrowserWorld::new`] for browser environment.
     pub fn new_raw(
         root_dir: PathBuf,
-        vfs: Vfs<F::M>,
-        registry: F::R,
+        vfs: Vfs<F::AccessModel>,
+        registry: F::Registry,
         font_resolver: FontResolverImpl,
     ) -> Self {
         // Hook up the lang items.

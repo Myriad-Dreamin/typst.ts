@@ -13,9 +13,9 @@ pub struct SystemCompilerFeat;
 
 impl crate::world::CompilerFeat for SystemCompilerFeat {
     /// It accesses a physical file system.
-    type M = SystemAccessModel;
+    type AccessModel = SystemAccessModel;
     /// It performs native HTTP requests for fetching package data.
-    type R = SystemRegistry;
+    type Registry = SystemRegistry;
 }
 
 /// The compiler world in system environment.

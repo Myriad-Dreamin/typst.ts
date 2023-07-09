@@ -11,8 +11,8 @@ pub type TypstBrowserWorld = crate::world::CompilerWorld<BrowserCompilerFeat>;
 pub struct BrowserCompilerFeat;
 
 impl crate::world::CompilerFeat for BrowserCompilerFeat {
-    type M = ProxyAccessModel;
-    type R = DummyRegistry;
+    type AccessModel = ProxyAccessModel;
+    type Registry = DummyRegistry;
 
     // manual construction 13MB
     // let dummy_library = typst::eval::LangItems {
