@@ -61,7 +61,7 @@ pub struct FileId(pub u32);
 impl nohash_hasher::IsEnabled for FileId {}
 
 pub trait AccessModel {
-    type RealPath: Hash + Eq + PartialEq + Into<PathBuf> + for<'a> From<&'a Path>;
+    type RealPath: Hash + Eq + PartialEq + for<'a> From<&'a Path>;
 
     fn clear(&mut self) {}
 
