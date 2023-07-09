@@ -210,6 +210,18 @@ impl<F: CompilerFeat> CompilerWorld<F> {
 
         DependencyTree::from_iter(&self.root, vfs_dependencies)
     }
+
+    fn map_source_or_default<T>(
+        &self,
+        id: FileId,
+        default_v: T,
+        f: impl FnOnce(Source) -> CodespanResult<T>,
+    ) -> CodespanResult<T> {
+        match World::source(self, id).ok() {
+            Some(source) => f(source),
+            None => Ok(default_v),
+        }
+    }
 }
 
 impl<'a, F: CompilerFeat> codespan_reporting::files::Files<'a> for CompilerWorld<F> {
@@ -235,49 +247,40 @@ impl<'a, F: CompilerFeat> codespan_reporting::files::Files<'a> for CompilerWorld
 
     /// See [`codespan_reporting::files::Files::line_index`].
     fn line_index(&'a self, id: FileId, given: usize) -> CodespanResult<usize> {
-        let source = World::source(self, id).ok();
-        source
-            .map(|source| {
-                source
-                    .byte_to_line(given)
-                    .ok_or_else(|| CodespanError::IndexTooLarge {
-                        given,
-                        max: source.len_bytes(),
-                    })
-            })
-            .unwrap_or(Ok(0))
+        self.map_source_or_default(id, 0, |source| {
+            source
+                .byte_to_line(given)
+                .ok_or_else(|| CodespanError::IndexTooLarge {
+                    given,
+                    max: source.len_bytes(),
+                })
+        })
     }
 
     /// See [`codespan_reporting::files::Files::column_number`].
     fn column_number(&'a self, id: FileId, _: usize, given: usize) -> CodespanResult<usize> {
-        let source = World::source(self, id).ok();
-        source
-            .map(|source| {
-                source.byte_to_column(given).ok_or_else(|| {
-                    let max = source.len_bytes();
-                    if given <= max {
-                        CodespanError::InvalidCharBoundary { given }
-                    } else {
-                        CodespanError::IndexTooLarge { given, max }
-                    }
-                })
+        self.map_source_or_default(id, 0, |source| {
+            source.byte_to_column(given).ok_or_else(|| {
+                let max = source.len_bytes();
+                if given <= max {
+                    CodespanError::InvalidCharBoundary { given }
+                } else {
+                    CodespanError::IndexTooLarge { given, max }
+                }
             })
-            .unwrap_or(Ok(0))
+        })
     }
 
     /// See [`codespan_reporting::files::Files::line_range`].
     fn line_range(&'a self, id: FileId, given: usize) -> CodespanResult<std::ops::Range<usize>> {
-        let source = World::source(self, id).ok();
-        source
-            .map(|source| {
-                source
-                    .line_to_range(given)
-                    .ok_or_else(|| CodespanError::LineTooLarge {
-                        given,
-                        max: source.len_lines(),
-                    })
-            })
-            .unwrap_or(Ok(0..0))
+        self.map_source_or_default(id, 0..0, |source| {
+            source
+                .line_to_range(given)
+                .ok_or_else(|| CodespanError::LineTooLarge {
+                    given,
+                    max: source.len_lines(),
+                })
+        })
     }
 }
 
