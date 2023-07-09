@@ -72,11 +72,15 @@ futures = "0.3.28"
 pollster = "0.3.0"
 tokio = { version = "1.28.1", features = ["full"] }
 
-# data structures
+# data structure and algorithm
+append-only-vec = "0.1.2"
 comemo = "0.3"
+dissimilar = "1.0"
 indexmap = "2.0.0"
 elsa = "1.8.1"
 ecow = "0.1"
+fst = "0.4.7"
+pathdiff = "0.2.1"
 
 # cli
 clap = { version = "4.3", features = ["derive", "env", "unicode", "wrap_help"] }
@@ -85,6 +89,12 @@ clap_complete_fig = "4.3"
 
 # net
 tokio-tungstenite = "0.18.0"
+
+# system
+dirs = "5"
+memmap2 = "0.7"
+notify = "5"
+walkdir = "2"
 
 # web
 js-sys = "^0.3"
@@ -98,9 +108,11 @@ base64 = "0.21.0"
 byteorder = "1.4.3"
 hex = "0.4.3"
 flate2 = "1"
+nohash-hasher = "0.2.0"
 rmp-serde = "1.1.1"
 serde = "1.0.164"
 serde_json = "1.0.96"
+tar = "0.4"
 toml = "0.7.5"
 serde-wasm-bindgen = "^0.5"
 sha2 = "0.10.6"
@@ -119,9 +131,7 @@ insta = "1.29.0"
 
 # misc
 codespan-reporting = "0.11"
-dirs = "5"
 human-panic = "1.1.4"
-notify = "5"
 vergen = { version = "7.5.1", features = ["build", "cargo", "git", "rustc"] }
 path-clean = "1.0.1"
 
