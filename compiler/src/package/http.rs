@@ -8,11 +8,11 @@ use typst::{
 
 use super::{DummyNotifier, Notifier, Registry};
 
-pub struct SystemRegistry {
+pub struct HttpRegistry {
     notifier: Arc<Mutex<dyn Notifier + Send>>,
 }
 
-impl Default for SystemRegistry {
+impl Default for HttpRegistry {
     fn default() -> Self {
         Self {
             notifier: Arc::new(Mutex::<DummyNotifier>::default()),
@@ -20,7 +20,7 @@ impl Default for SystemRegistry {
     }
 }
 
-impl SystemRegistry {
+impl HttpRegistry {
     pub fn local_path(&self) -> Option<Box<Path>> {
         if let Some(data_dir) = dirs::data_dir() {
             if data_dir.exists() {
@@ -107,7 +107,7 @@ impl SystemRegistry {
     }
 }
 
-impl Registry for SystemRegistry {
+impl Registry for HttpRegistry {
     fn resolve(&self, spec: &PackageSpec) -> PackageResult<std::sync::Arc<Path>> {
         self.prepare_package(spec)
     }
