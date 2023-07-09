@@ -70,7 +70,7 @@ impl AccessModel for SystemAccessModel {
         Ok(src.to_path_buf())
     }
 
-    fn read_all(&self, src: &Path) -> FileResult<Bytes> {
+    fn content(&self, src: &Path) -> FileResult<Bytes> {
         let f = |e| FileError::from_io(e, src);
         let mut buf = Vec::<u8>::new();
         std::fs::File::open(src)

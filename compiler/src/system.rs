@@ -4,7 +4,7 @@ use typst_ts_core::{config::CompileOpts, error::prelude::*, font::FontResolverIm
 
 use crate::{
     font::system::SystemFontSearcher,
-    package::system::SystemRegistry,
+    package::http::HttpRegistry,
     vfs::{system::SystemAccessModel, Vfs},
 };
 
@@ -13,9 +13,9 @@ pub struct SystemCompilerFeat;
 
 impl crate::world::CompilerFeat for SystemCompilerFeat {
     /// It accesses a physical file system.
-    type M = SystemAccessModel;
+    type AccessModel = SystemAccessModel;
     /// It performs native HTTP requests for fetching package data.
-    type R = SystemRegistry;
+    type Registry = HttpRegistry;
 }
 
 /// The compiler world in system environment.
@@ -29,7 +29,7 @@ impl TypstSystemWorld {
         Ok(Self::new_raw(
             opts.root_dir.clone(),
             Vfs::new(SystemAccessModel {}),
-            SystemRegistry::default(),
+            HttpRegistry::default(),
             Self::resolve_fonts(opts)?,
         ))
     }

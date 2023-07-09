@@ -5,7 +5,7 @@ use typst::{diag::PackageResult, file::PackageSpec};
 pub mod dummy;
 
 #[cfg(feature = "system")]
-pub mod system;
+pub mod http;
 
 pub trait Registry {
     fn reset(&mut self) {}

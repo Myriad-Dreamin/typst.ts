@@ -24,7 +24,7 @@ impl AccessModel for DummyAccessModel {
         Ok(src.to_owned())
     }
 
-    fn read_all(&self, _src: &Path) -> FileResult<Bytes> {
+    fn content(&self, _src: &Path) -> FileResult<Bytes> {
         Err(FileError::AccessDenied)
     }
 }
