@@ -74,7 +74,7 @@ tokio = { version = "1.28.1", features = ["full"] }
 
 # data structures
 comemo = "0.3"
-indexmap = "1.9.3"
+indexmap = "2.0.0"
 elsa = "1.8.1"
 ecow = "0.1"
 

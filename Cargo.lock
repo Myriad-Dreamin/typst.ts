@@ -3801,7 +3801,7 @@ dependencies = [
  "flate2",
  "fst",
  "hex",
- "indexmap 1.9.3",
+ "indexmap 2.0.0",
  "js-sys",
  "log",
  "memmap2",
