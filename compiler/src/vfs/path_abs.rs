@@ -1,6 +1,7 @@
 //! Thin wrappers around `std::path`, distinguishing between absolute and
 //! relative paths.
 
+use core::fmt;
 use std::{
     borrow::Borrow,
     ffi::OsStr,
@@ -67,6 +68,12 @@ impl PartialEq<AbsPath> for AbsPathBuf {
     }
 }
 
+impl fmt::Display for AbsPathBuf {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.0.display(), f)
+    }
+}
+
 impl AbsPathBuf {
     /// Wrap the given absolute path in `AbsPathBuf`
     ///
@@ -98,6 +105,12 @@ impl AbsPathBuf {
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 #[repr(transparent)]
 pub struct AbsPath(Path);
+
+impl fmt::Display for AbsPath {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.0.display(), f)
+    }
+}
 
 impl AsRef<Path> for AbsPath {
     fn as_ref(&self) -> &Path {
@@ -139,7 +152,8 @@ impl AbsPath {
         self.0.parent().map(AbsPath::assert)
     }
 
-    /// Equivalent of [`Path::join`] for `AbsPath` with an additional normalize step afterwards.
+    /// Equivalent of [`Path::join`] for `AbsPath` with an additional normalize
+    /// step afterwards.
     pub fn absolutize(&self, path: impl AsRef<Path>) -> AbsPathBuf {
         self.join(path).normalize()
     }
@@ -215,9 +229,6 @@ impl AbsPath {
     }
     pub fn as_os_str(&self) -> &OsStr {
         self.0.as_os_str()
-    }
-    pub fn display(&self) -> std::path::Display<'_> {
-        self.0.display()
     }
     #[deprecated(note = "use std::fs::metadata().is_ok() instead")]
     pub fn exists(&self) -> bool {
