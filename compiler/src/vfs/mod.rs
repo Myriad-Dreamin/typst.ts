@@ -71,7 +71,7 @@ pub trait AccessModel {
 
     fn real_path(&self, src: &Path) -> FileResult<Self::RealPath>;
 
-    fn read_all(&self, src: &Path) -> FileResult<Bytes>;
+    fn content(&self, src: &Path) -> FileResult<Bytes>;
 }
 
 type FileQuery<T> = QueryRef<T, FileError>;
@@ -185,7 +185,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     /// Read a file.
     fn read(&self, path: &Path) -> FileResult<Bytes> {
         if self.access_model.is_file(path)? {
-            self.access_model.read_all(path)
+            self.access_model.content(path)
         } else {
             Err(FileError::IsDirectory)
         }

@@ -78,9 +78,9 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
         res
     }
 
-    fn read_all(&self, src: &Path) -> FileResult<Bytes> {
+    fn content(&self, src: &Path) -> FileResult<Bytes> {
         let instant = std::time::Instant::now();
-        let res = self.inner.read_all(src);
+        let res = self.inner.content(src);
         let elapsed = instant.elapsed();
         self.trace[3].fetch_add(
             elapsed.as_nanos() as u64,

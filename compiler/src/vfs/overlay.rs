@@ -70,11 +70,11 @@ impl<M: AccessModel> AccessModel for OverlayAccessModel<M> {
         self.model.real_path(src)
     }
 
-    fn read_all(&self, src: &Path) -> FileResult<Bytes> {
+    fn content(&self, src: &Path) -> FileResult<Bytes> {
         if let Some(meta) = self.files.read().get(src) {
             return Ok(meta.content.clone());
         }
 
-        self.model.read_all(src)
+        self.model.content(src)
     }
 }

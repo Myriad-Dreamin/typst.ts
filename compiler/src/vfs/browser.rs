@@ -66,7 +66,7 @@ impl AccessModel for ProxyAccessModel {
             })
     }
 
-    fn read_all(&self, src: &Path) -> FileResult<Bytes> {
+    fn content(&self, src: &Path) -> FileResult<Bytes> {
         let data = self
             .read_all_fn
             .call1(&self.context, &src.to_string_lossy().as_ref().into())

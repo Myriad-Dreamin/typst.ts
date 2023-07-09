@@ -104,7 +104,7 @@ impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {
             let data = entry
                 .source_state
                 .compute_with_context_ref(|prev_to_diff| {
-                    let data = entry.read_all.compute(|| self.inner.read_all(src))?;
+                    let data = entry.read_all.compute(|| self.inner.content(src))?;
                     let text = from_utf8_or_bom(&data)?.to_owned();
                     compute(prev_to_diff, text)
                 })?;
@@ -144,9 +144,9 @@ impl<Inner: AccessModel, C: Clone> AccessModel for CachedAccessModel<Inner, C> {
         self.inner.real_path(src)
     }
 
-    fn read_all(&self, src: &Path) -> FileResult<Bytes> {
+    fn content(&self, src: &Path) -> FileResult<Bytes> {
         self.cache_entry(src, |entry| {
-            let data = entry.read_all.compute(|| self.inner.read_all(src))?;
+            let data = entry.read_all.compute(|| self.inner.content(src))?;
             Ok(data.clone())
         })
     }
