@@ -2,15 +2,15 @@ use std::path::PathBuf;
 
 use typst_ts_core::font::FontResolverImpl;
 
-use crate::{package::dummy::DummyRegistry, vfs::browser::ProxyAccessModel, world::CompilerFeat};
+use crate::{package::dummy::DummyRegistry, vfs::browser::ProxyAccessModel};
 
 /// A world that provides access to the browser.
-
+/// It is under development.
 pub type TypstBrowserWorld = crate::world::CompilerWorld<BrowserCompilerFeat>;
 
 pub struct BrowserCompilerFeat;
 
-impl CompilerFeat for BrowserCompilerFeat {
+impl crate::world::CompilerFeat for BrowserCompilerFeat {
     type M = ProxyAccessModel;
     type R = DummyRegistry;
 

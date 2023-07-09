@@ -1,24 +1,41 @@
 use std::borrow::Cow;
 
-use typst_ts_core::{config::CompileOpts, error::prelude::*, Bytes};
+use typst_ts_core::{config::CompileOpts, error::prelude::*, font::FontResolverImpl, Bytes};
 
-use crate::font::system::SystemFontSearcher;
-use crate::package::system::SystemRegistry;
-use crate::vfs::{system::SystemAccessModel, Vfs};
-use crate::world::CompilerFeat;
+use crate::{
+    font::system::SystemFontSearcher,
+    package::system::SystemRegistry,
+    vfs::{system::SystemAccessModel, Vfs},
+};
 
-pub type TypstSystemWorld = crate::world::CompilerWorld<SystemCompilerFeat>;
-
+/// type trait of [`TypstSystemWorld`].
 pub struct SystemCompilerFeat;
 
-impl CompilerFeat for SystemCompilerFeat {
+impl crate::world::CompilerFeat for SystemCompilerFeat {
+    /// It accesses a physical file system.
     type M = SystemAccessModel;
+    /// It performs native HTTP requests for fetching package data.
     type R = SystemRegistry;
 }
 
+/// The compiler world in system environment.
+pub type TypstSystemWorld = crate::world::CompilerWorld<SystemCompilerFeat>;
+
 impl TypstSystemWorld {
+    /// Create [`TypstSystemWorld`] with the given options.
+    /// See SystemCompilerFeat for instantiation details.
+    /// See [`CompileOpts`] for available options.
     pub fn new(opts: CompileOpts) -> ZResult<Self> {
-        let root_dir = opts.root_dir.clone();
+        Ok(Self::new_raw(
+            opts.root_dir.clone(),
+            Vfs::new(SystemAccessModel {}),
+            SystemRegistry::default(),
+            Self::resolve_fonts(opts)?,
+        ))
+    }
+
+    /// Resolve fonts from given options.
+    fn resolve_fonts(opts: CompileOpts) -> ZResult<FontResolverImpl> {
         let mut searcher = SystemFontSearcher::new();
 
         if opts
@@ -60,15 +77,6 @@ impl TypstSystemWorld {
             searcher.add_profile_by_path(&profile_path);
         }
 
-        let font_resolver = searcher.into();
-
-        let vfs = Vfs::new(SystemAccessModel {});
-
-        Ok(Self::new_raw(
-            root_dir,
-            vfs,
-            SystemRegistry::default(),
-            font_resolver,
-        ))
+        Ok(searcher.into())
     }
 }

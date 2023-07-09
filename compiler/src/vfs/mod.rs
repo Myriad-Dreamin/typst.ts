@@ -156,7 +156,8 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// Check whether a path is related to a source.
-    /// Note: this does not check the canonical path, but only the normalized one.
+    /// Note: this does not check the canonical path, but only the normalized
+    /// one.
     pub fn dependant(&self, path: &Path) -> bool {
         let path = path.clean();
         self.path2slot.read().contains_key(path.as_os_str())
@@ -258,9 +259,11 @@ impl<M: AccessModel + Sized> Vfs<M> {
         }
     }
 
-    /// Get or insert a slot for a path. All paths pointing to the same entity will share the same slot.
+    /// Get or insert a slot for a path. All paths pointing to the same entity
+    /// will share the same slot.
     ///
-    /// - If `path` does not exists in the `Vfs`, allocate a new id for it, associated with a
+    /// - If `path` does not exists in the `Vfs`, allocate a new id for it,
+    ///   associated with a
     /// deleted file;
     /// - Else, returns `path`'s id.
     ///
