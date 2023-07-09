@@ -52,7 +52,7 @@ impl SystemAccessModel {
 }
 
 impl AccessModel for SystemAccessModel {
-    type RealPath = PathBuf; // same_file::Handle;
+    type RealPath = PathBuf;
 
     fn mtime(&self, src: &Path) -> FileResult<std::time::SystemTime> {
         let f = |e| FileError::from_io(e, src);
@@ -65,8 +65,6 @@ impl AccessModel for SystemAccessModel {
     }
 
     fn real_path(&self, src: &Path) -> FileResult<Self::RealPath> {
-        // let f = |e| FileError::from_io(e, src);
-        // same_file::Handle::from_path(src).map_err(f)
         Ok(src.to_path_buf())
     }
 

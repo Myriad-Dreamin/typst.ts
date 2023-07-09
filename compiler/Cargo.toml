@@ -16,7 +16,7 @@ comemo.workspace = true
 
 once_cell.workspace = true
 siphasher.workspace = true
-append-only-vec = "0.1.2"
+append-only-vec.workspace = true
 codespan-reporting.workspace = true
 parking_lot.workspace = true
 hex.workspace = true
@@ -27,14 +27,21 @@ serde.workspace = true
 serde_json.workspace = true
 serde-wasm-bindgen = { workspace = true, optional = true }
 
-memmap2 = { version = "0.5", optional = true }
+memmap2 = { workspace = true, optional = true }
 dirs = { workspace = true, optional = true }
-walkdir = { version = "2", optional = true }
-same-file = { version = "1", optional = true }
+walkdir = { workspace = true, optional = true }
 notify = { workspace = true, optional = true }
 pollster = { workspace = true, optional = true }
 log = { workspace = true, optional = true }
 chrono = { workspace = true }
+base64.workspace = true
+rustc-hash.workspace = true
+indexmap.workspace = true
+fst.workspace = true
+nohash-hasher.workspace = true
+pathdiff.workspace = true
+dissimilar.workspace = true
+tar.workspace = true
 
 wasm-bindgen = { workspace = true, optional = true }
 wasm-bindgen-futures = { workspace = true, optional = true }
@@ -46,14 +53,6 @@ web-sys = { workspace = true, optional = true, features = [
     "ImageData",
 ] }
 
-base64.workspace = true
-rustc-hash.workspace = true
-fst = "0.4.7"
-indexmap.workspace = true
-nohash-hasher = "0.2.0"
-pathdiff = "0.2.1"
-dissimilar = "1.0"
-tar = "0.4"
 
 typst-ts-svg-exporter = { workspace = true, optional = true, features = [
     "flat-vector",
@@ -84,7 +83,6 @@ system = [
     "dep:memmap2",
     "dep:dirs",
     "dep:walkdir",
-    "dep:same-file",
     "dep:notify",
     "dep:log",
     "dep:typst-ts-svg-exporter",

@@ -60,7 +60,7 @@ mod tests {
     use crate::vfs::VfsPath;
 
     use super::PathInterner;
-    use std::path::{Path, PathBuf};
+    use std::path::PathBuf;
 
     #[test]
     fn test_interner_path_buf() {
@@ -76,27 +76,6 @@ mod tests {
         assert_eq!(
             interner.lookup(id),
             &VfsPath::new_virtual_path("/foo".to_owned())
-        );
-    }
-
-    #[test]
-    #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
-
-    fn test_interner_handle() {
-        let test_path = if cfg!(target_os = "windows") {
-            "C:\\Users"
-        } else {
-            "/usr"
-        };
-
-        let mut interner = PathInterner::<same_file::Handle>::default();
-        let (id, ..) = interner.intern(
-            same_file::Handle::from_path(Path::new(test_path)).unwrap(),
-            (),
-        );
-        assert_eq!(
-            interner.lookup(id),
-            &same_file::Handle::from_path(Path::new(test_path)).unwrap()
         );
     }
 }
