@@ -37,6 +37,9 @@ pub mod workspace;
 /// A common implementation of [`typst::World`]
 pub mod world;
 
+/// Diff and parse the source code.
+mod parser;
+
 /// Convenient services over [`world::CompilerWorld`].
 #[cfg(feature = "system")]
 pub mod service;

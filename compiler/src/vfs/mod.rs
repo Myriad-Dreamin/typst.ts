@@ -20,9 +20,6 @@ mod path_anchored;
 mod path_interner;
 mod path_vfs;
 
-mod reparser;
-use reparser::reparse;
-
 pub(crate) use path_interner::PathInterner;
 pub use {
     path_abs::{AbsPath, AbsPathBuf},
@@ -51,6 +48,8 @@ use typst::{
 };
 
 use typst_ts_core::{path::PathClean, Bytes, QueryRef};
+
+use crate::parser::reparse;
 
 use self::{cached::CachedAccessModel, overlay::OverlayAccessModel};
 
