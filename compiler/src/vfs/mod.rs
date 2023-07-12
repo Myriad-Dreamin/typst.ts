@@ -20,6 +20,9 @@ mod path_anchored;
 mod path_interner;
 mod path_vfs;
 
+mod reparser;
+use reparser::reparse;
+
 pub(crate) use path_interner::PathInterner;
 pub use {
     path_abs::{AbsPath, AbsPathBuf},
@@ -47,7 +50,7 @@ use typst::{
     syntax::Source,
 };
 
-use typst_ts_core::{path::PathClean, typst_affinite_hash, Bytes, QueryRef};
+use typst_ts_core::{path::PathClean, Bytes, QueryRef};
 
 use self::{cached::CachedAccessModel, overlay::OverlayAccessModel};
 
@@ -191,74 +194,6 @@ impl<M: AccessModel + Sized> Vfs<M> {
         }
     }
 
-    fn reparse(
-        &self,
-        path: &Path,
-        source_id: TypstFileId,
-        prev: Option<Source>,
-        next: String,
-    ) -> FileResult<Source> {
-        use dissimilar::Chunk;
-        match prev {
-            Some(mut source) => {
-                let prev = source.text();
-                if prev == next {
-                    println!("same: {:?} -> {:?}", path, typst_affinite_hash(&source));
-                    Ok(source)
-                } else {
-                    let prev = prev.to_owned();
-
-                    let diff = dissimilar::diff(&prev, &next);
-
-                    let mut rev_adavance = 0;
-                    let mut last_rep = false;
-                    let prev_len = prev.len();
-                    for op in diff.iter().rev().zip(diff.iter().rev().skip(1)) {
-                        if last_rep {
-                            last_rep = false;
-                            continue;
-                        }
-                        match op {
-                            (Chunk::Delete(t), Chunk::Insert(s))
-                            | (Chunk::Insert(s), Chunk::Delete(t)) => {
-                                println!("[{}] {} -> {}", rev_adavance, t, s);
-                                rev_adavance += t.len();
-                                source.edit(
-                                    prev_len - rev_adavance..prev_len - rev_adavance + t.len(),
-                                    s,
-                                );
-                                last_rep = true;
-                            }
-                            (Chunk::Delete(t), Chunk::Equal(e)) => {
-                                println!("[{}] -- {}", rev_adavance, t);
-                                rev_adavance += t.len();
-                                source.edit(
-                                    prev_len - rev_adavance..prev_len - rev_adavance + t.len(),
-                                    "",
-                                );
-                                rev_adavance += e.len();
-                                last_rep = true;
-                            }
-                            (Chunk::Insert(s), Chunk::Equal(e)) => {
-                                println!("[{}] ++ {}", rev_adavance, s);
-                                source.edit(prev_len - rev_adavance..prev_len - rev_adavance, s);
-                                last_rep = true;
-                                rev_adavance += e.len();
-                            }
-                            (Chunk::Equal(t), _) => {
-                                rev_adavance += t.len();
-                            }
-                            _ => unreachable!(),
-                        }
-                    }
-
-                    Ok(source)
-                }
-            }
-            None => Ok(Source::new(source_id, next)),
-        }
-    }
-
     /// Get or insert a slot for a path. All paths pointing to the same entity
     /// will share the same slot.
     ///
@@ -362,7 +297,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
             if self.access_model.is_file(path)? {
                 Ok(self
                     .access_model
-                    .read_all_diff(path, |x, y| self.reparse(path, source_id, x, y))?)
+                    .read_all_diff(path, |x, y| reparse(path, source_id, x, y))?)
             } else {
                 Err(FileError::IsDirectory)
             }
