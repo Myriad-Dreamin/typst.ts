@@ -13,13 +13,16 @@ use ttf_parser::OutlineBuilder;
 use typst::model::Introspector;
 use typst::syntax::Span;
 
-use super::{ir, GlyphItem, ImageGlyphItem, OutlineGlyphItem, Scalar, SvgItem, TransformItem};
-use crate::{
-    font::GlyphProvider,
+use super::{
+    geom::Scalar,
+    ir::{self, GlyphItem, ImageGlyphItem, OutlineGlyphItem, SvgItem, TransformItem},
+};
+use super::{
     path2d::SvgPath2DBuilder,
     sk,
     utils::{AbsExt, ToCssExt},
 };
+use crate::font::GlyphProvider;
 use ttf_parser::GlyphId;
 
 static WARN_VIEW_BOX: OnceCell<()> = OnceCell::new();
@@ -401,15 +404,17 @@ fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<typs
 
     // Decompress SVGZ.
     let mut decoded = vec![];
-    // The first three bytes of the gzip-encoded document header must be 0x1F, 0x8B, 0x08.
+    // The first three bytes of the gzip-encoded document header must be 0x1F, 0x8B,
+    // 0x08.
     if data.starts_with(&[0x1f, 0x8b]) {
         let mut decoder = flate2::read::GzDecoder::new(data);
         decoder.read_to_end(&mut decoded).ok()?;
         data = &decoded;
     }
 
-    // todo: When a font engine renders glyph 14, the result shall be the same as rendering the following SVG document
-    //   <svg> <defs> <use #glyph{id}> </svg>
+    // todo: When a font engine renders glyph 14, the result shall be the same as
+    // rendering the following SVG document   <svg> <defs> <use #glyph{id}>
+    // </svg>
 
     let upem = typst::geom::Abs::raw(font.units_per_em());
     let (width, height) = (upem.to_f32(), upem.to_f32());

@@ -16,7 +16,7 @@ use typst_ts_core::{
     path::PathClean,
     Exporter,
 };
-use typst_ts_svg_exporter::{serialize_multi_doc_standalone, DynamicLayoutSvgExporter};
+use typst_ts_svg_exporter::{flat_ir::serialize_multi_doc_standalone, DynamicLayoutSvgExporter};
 
 use super::diag;
 
@@ -80,7 +80,8 @@ impl CompileDriver {
         diag::status(&self.entry_file, status).unwrap();
     }
 
-    /// Run inner function with print (optional) status and diagnostics to the terminal.
+    /// Run inner function with print (optional) status and diagnostics to the
+    /// terminal.
     pub fn with_compile_diag<const WITH_STATUS: bool, T>(
         &mut self,
         f: impl FnOnce(&mut Self) -> SourceResult<T>,

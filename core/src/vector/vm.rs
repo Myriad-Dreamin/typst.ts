@@ -1,10 +1,6 @@
-use std::{ops::Deref, sync::Arc};
+use std::ops::Deref;
 
-use super::{
-    ir::{self, Abs, Axes, Point, Ratio, Scalar, SvgItem},
-    SvgTextBuilder, SvgTextNode,
-};
-use crate::{ExportFeature, SvgRenderTask};
+use super::ir::{self, Abs, Axes, Point, Ratio, Scalar, SvgItem};
 
 /// A build pattern for applying transforms to the group of items.
 /// See [`ir::Transform`].
@@ -144,33 +140,5 @@ pub trait RenderVm: Sized {
 
         group_ctx.render_semantic_text(self, text, Scalar(x));
         group_ctx.into()
-    }
-}
-
-/// Example of how to implement a RenderVm.
-impl<'m, 't, Feat: ExportFeature> RenderVm for SvgRenderTask<'m, 't, Feat> {
-    // type Resultant = String;
-    type Resultant = Arc<SvgTextNode>;
-    type Group = SvgTextBuilder;
-
-    fn start_group(&mut self) -> Self::Group {
-        Self::Group {
-            attributes: vec![],
-            content: Vec::with_capacity(1),
-        }
-    }
-
-    fn start_frame(&mut self, _group: &ir::GroupItem) -> Self::Group {
-        let mut g = self.start_group();
-        g.attributes.push(("class", "typst-group".to_owned()));
-        g
-    }
-
-    fn start_text(&mut self, text: &ir::TextItem) -> Self::Group {
-        let mut g = self.start_group();
-        g.with_text_shape(self, &text.shape);
-        g.attach_debug_info(self, text.content.span_id);
-
-        g
     }
 }

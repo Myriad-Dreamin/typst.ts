@@ -1,12 +1,10 @@
 use std::sync::Arc;
 
 use typst::doc::Document;
-
-use crate::{
+use typst_ts_core::vector::{
+    flat_ir::{ModuleBuilder, MultiSvgDocument},
     ir::{Abs, AbsoluteRef, GlyphMapping, Size},
-    render::flat::serialize_module,
-    vector::lowering::LowerBuilder,
-    ModuleBuilder, MultiSvgDocument,
+    LowerBuilder,
 };
 
 #[derive(Default)]
@@ -50,7 +48,7 @@ impl DynamicLayoutSvgExporter {
         let v = self.builder.finalize_ref();
         let item_cnt = v.0.item_pack.0.len();
         let glyph_cnt = v.1.len();
-        let module_data = serialize_module(v.0);
+        let module_data = crate::flat_ir::serialize_module(v.0);
         format!(
             "module size: {} bytes, items count: {}, glyph count: {}",
             module_data.len(),
