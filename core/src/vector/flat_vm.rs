@@ -151,7 +151,7 @@ pub trait FlatIncrGroupContext<C>: Sized {
     fn render_diff_reuse_item(&mut self, ctx: &mut C, item_ref: &AbsoluteRef);
 }
 
-/// A virtual machine for rendering a flatten frame.
+/// A virtual machine that diffs and renders a flatten frame.
 /// This is a stateful object that is used to render a frame.
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
 pub trait FlatIncrRenderVm<'m>: FlatRenderVm<'m> + Sized
