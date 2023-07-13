@@ -40,8 +40,9 @@ js-sys = { workspace = true, optional = true }
 rkyv = ["dep:rkyv", "rkyv/alloc"]
 rkyv-validation = ["dep:rkyv", "rkyv/validation"]
 flat-vector = ["rkyv", "rkyv-validation"]
+vector-bbox = []
 
 __web = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
 web = ["__web"]
-full = ["web", "flat-vector"]
+full = ["web", "flat-vector", "vector-bbox"]
 default = ["full"]

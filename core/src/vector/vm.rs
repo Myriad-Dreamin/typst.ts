@@ -32,7 +32,7 @@ pub trait TransformContext<C>: Sized {
 /// A RAII trait for rendering SVG items into underlying context.
 pub trait GroupContext<C>: Sized {
     /// attach shape of the text to the node using css rules.
-    fn with_text_shape(&mut self, ctx: &mut C, shape: &ir::TextShape);
+    fn with_text_shape(&mut self, _ctx: &mut C, _shape: &ir::TextShape) {}
 
     /// Render an item at point into underlying context.
     fn render_item_at(&mut self, ctx: &mut C, pos: Point, item: &SvgItem);
@@ -51,12 +51,12 @@ pub trait GroupContext<C>: Sized {
     fn render_path(&mut self, ctx: &mut C, path: &ir::PathItem);
 
     /// Render a semantic link into underlying context.
-    fn render_link(&mut self, ctx: &mut C, link: &ir::LinkItem);
+    fn render_link(&mut self, _ctx: &mut C, _link: &ir::LinkItem) {}
 
     /// Render an image into underlying context.
     fn render_image(&mut self, ctx: &mut C, image_item: &ir::ImageItem);
 
-    fn attach_debug_info(&mut self, ctx: &mut C, span_id: u64);
+    fn attach_debug_info(&mut self, _ctx: &mut C, _span_id: u64) {}
 }
 
 /// A trait for rendering SVG items into underlying context.

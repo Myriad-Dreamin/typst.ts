@@ -25,9 +25,15 @@ pub trait FlatGroupContext<C>: Sized {
     ) {
     }
 
-    fn with_frame(self, _ctx: &mut C, _group: &ir::GroupRef) -> Self;
-    fn with_text(self, ctx: &mut C, text: &ir::FlatTextItem) -> Self;
-    fn with_reuse(self, _ctx: &mut C, v: &AbsoluteRef) -> Self;
+    fn with_frame(self, _ctx: &mut C, _group: &ir::GroupRef) -> Self {
+        self
+    }
+    fn with_text(self, _ctx: &mut C, _text: &ir::FlatTextItem) -> Self {
+        self
+    }
+    fn with_reuse(self, _ctx: &mut C, _v: &AbsoluteRef) -> Self {
+        self
+    }
 }
 
 /// A virtual machine for rendering a flatten frame.

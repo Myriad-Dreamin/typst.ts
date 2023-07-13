@@ -12,3 +12,6 @@ pub use lowering::{GlyphLowerBuilder, LowerBuilder};
 
 pub mod flat_ir;
 pub mod flat_vm;
+
+#[cfg(feature = "vector-bbox")]
+pub mod bbox;

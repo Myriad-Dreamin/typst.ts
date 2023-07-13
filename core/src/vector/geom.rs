@@ -218,3 +218,16 @@ impl From<tiny_skia::Transform> for Transform {
         }
     }
 }
+
+impl From<Transform> for tiny_skia::Transform {
+    fn from(ir_transform: Transform) -> Self {
+        Self {
+            sx: ir_transform.sx.into(),
+            ky: ir_transform.ky.into(),
+            kx: ir_transform.kx.into(),
+            sy: ir_transform.sy.into(),
+            tx: ir_transform.tx.into(),
+            ty: ir_transform.ty.into(),
+        }
+    }
+}
