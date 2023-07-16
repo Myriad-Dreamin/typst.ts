@@ -170,6 +170,24 @@ where
     }
 }
 
+impl From<tiny_skia_path::Point> for Point {
+    fn from(typst_axes: tiny_skia_path::Point) -> Self {
+        Self {
+            x: typst_axes.x.into(),
+            y: typst_axes.y.into(),
+        }
+    }
+}
+
+impl From<Point> for tiny_skia_path::Point {
+    fn from(axes: Point) -> Self {
+        Self {
+            x: axes.x.into(),
+            y: axes.y.into(),
+        }
+    }
+}
+
 impl From<TypstPoint> for Point {
     fn from(p: TypstPoint) -> Self {
         Self {
@@ -191,6 +209,38 @@ pub struct Transform {
     pub sy: Ratio,
     pub tx: Abs,
     pub ty: Abs,
+}
+
+impl Transform {
+    pub fn from_scale(sx: Ratio, sy: Ratio) -> Self {
+        Self {
+            sx,
+            ky: 0.0.into(),
+            kx: 0.0.into(),
+            sy,
+            tx: 0.0.into(),
+            ty: 0.0.into(),
+        }
+    }
+
+    pub fn identity() -> Self {
+        Self::from_scale(1.0.into(), 1.0.into())
+    }
+
+    #[inline]
+    pub fn pre_concat(self, other: Self) -> Self {
+        let ts: tiny_skia::Transform = self.into();
+        let other: tiny_skia::Transform = other.into();
+        let ts = ts.pre_concat(other);
+        ts.into()
+    }
+
+    #[inline]
+    pub fn pre_translate(self, tx: f32, ty: f32) -> Self {
+        let ts: tiny_skia::Transform = self.into();
+        let ts = ts.pre_translate(tx, ty);
+        ts.into()
+    }
 }
 
 impl From<TypstTransform> for Transform {
@@ -228,6 +278,109 @@ impl From<Transform> for tiny_skia::Transform {
             sy: ir_transform.sy.into(),
             tx: ir_transform.tx.into(),
             ty: ir_transform.ty.into(),
+        }
+    }
+}
+
+impl From<tiny_skia_path::Transform> for Transform {
+    fn from(skia_transform: tiny_skia_path::Transform) -> Self {
+        Self {
+            sx: skia_transform.sx.into(),
+            ky: skia_transform.ky.into(),
+            kx: skia_transform.kx.into(),
+            sy: skia_transform.sy.into(),
+            tx: skia_transform.tx.into(),
+            ty: skia_transform.ty.into(),
+        }
+    }
+}
+
+impl From<Transform> for tiny_skia_path::Transform {
+    fn from(ir_transform: Transform) -> Self {
+        Self {
+            sx: ir_transform.sx.into(),
+            ky: ir_transform.ky.into(),
+            kx: ir_transform.kx.into(),
+            sy: ir_transform.sy.into(),
+            tx: ir_transform.tx.into(),
+            ty: ir_transform.ty.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Hash, Default)]
+pub struct Rect {
+    pub lo: Point,
+    pub hi: Point,
+}
+
+impl Rect {
+    pub fn empty() -> Self {
+        Self {
+            lo: Point::new(Scalar(0.), Scalar(0.)),
+            hi: Point::new(Scalar(0.), Scalar(0.)),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.lo.x >= self.hi.x || self.lo.y >= self.hi.y
+    }
+
+    pub fn intersect(&self, other: &Self) -> Self {
+        Self {
+            lo: self.lo.max(&other.lo),
+            hi: self.hi.min(&other.hi),
+        }
+    }
+
+    pub fn union(&self, other: &Self) -> Self {
+        if self.is_empty() {
+            return *other;
+        }
+
+        Self {
+            lo: self.lo.min(&other.lo),
+            hi: self.hi.max(&other.hi),
+        }
+    }
+}
+
+impl From<tiny_skia_path::Rect> for Rect {
+    fn from(rect: tiny_skia_path::Rect) -> Self {
+        Self {
+            lo: Point::new(Scalar(rect.left()), Scalar(rect.top())),
+            hi: Point::new(Scalar(rect.right()), Scalar(rect.bottom())),
+        }
+    }
+}
+
+pub trait EuclidMinMax {
+    fn min(&self, other: &Self) -> Self;
+    fn max(&self, other: &Self) -> Self;
+}
+
+impl EuclidMinMax for Scalar {
+    fn min(&self, other: &Self) -> Self {
+        Self(self.0.min(other.0))
+    }
+
+    fn max(&self, other: &Self) -> Self {
+        Self(self.0.max(other.0))
+    }
+}
+
+impl EuclidMinMax for Point {
+    fn min(&self, other: &Self) -> Self {
+        Self {
+            x: self.x.min(other.x),
+            y: self.y.min(other.y),
+        }
+    }
+
+    fn max(&self, other: &Self) -> Self {
+        Self {
+            x: self.x.max(other.x),
+            y: self.y.max(other.y),
         }
     }
 }

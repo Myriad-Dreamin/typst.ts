@@ -3348,7 +3348,7 @@ dependencies = [
  "cfg-if",
  "log",
  "png",
- "tiny-skia-path",
+ "tiny-skia-path 0.9.0",
 ]
 
 [[package]]
@@ -3356,6 +3356,17 @@ name = "tiny-skia-path"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f7acb0ccda1ac91084353a56d0b69b0e29c311fd809d2088b1ed2f9ae1841c47"
+dependencies = [
+ "arrayref",
+ "bytemuck",
+ "strict-num",
+]
+
+[[package]]
+name = "tiny-skia-path"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93a323d1de20dad9bc8b32daf57702c585ce76e80792d8151de1fc9dfc8d1ca7"
 dependencies = [
  "arrayref",
  "bytemuck",
@@ -3641,7 +3652,7 @@ checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
 [[package]]
 name = "typst"
 version = "0.6.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#da72ec259c32773fdc1ccd3fdf75d03b6412a9b3"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#5a2a2a2f24a80a2b8bb211862348c29b92f97736"
 dependencies = [
  "bitflags 2.3.3",
  "bytemuck",
@@ -3684,7 +3695,7 @@ dependencies = [
 [[package]]
 name = "typst-library"
 version = "0.6.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#da72ec259c32773fdc1ccd3fdf75d03b6412a9b3"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#5a2a2a2f24a80a2b8bb211862348c29b92f97736"
 dependencies = [
  "az",
  "chinese-number",
@@ -3723,7 +3734,7 @@ dependencies = [
 [[package]]
 name = "typst-macros"
 version = "0.6.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#da72ec259c32773fdc1ccd3fdf75d03b6412a9b3"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts#5a2a2a2f24a80a2b8bb211862348c29b92f97736"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -3858,7 +3869,9 @@ dependencies = [
  "serde_with",
  "sha2",
  "siphasher",
+ "svgtypes",
  "tiny-skia",
+ "tiny-skia-path 0.11.1",
  "ttf-parser",
  "typst",
  "wasm-bindgen",
