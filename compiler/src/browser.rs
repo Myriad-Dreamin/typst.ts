@@ -29,6 +29,6 @@ impl TypstBrowserWorld {
     ) -> Self {
         let vfs = crate::vfs::Vfs::new(access_model);
 
-        Self::new_raw(root_dir, vfs, DummyRegistry::default(), font_resolver)
+        Self::new_raw(root_dir, vfs, DummyRegistry, font_resolver)
     }
 }
