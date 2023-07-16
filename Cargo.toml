@@ -172,5 +172,5 @@ typst-ts-dev-server = { path = "server/dev" }
 typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts" }
 typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts" }
 
-# typst = { path = "../typst" }
-# typst-library = { path = "../typst/library" }
+# typst = { path = "../typst/crates/typst" }
+# typst-library = { path = "../typst/crates/typst-library" }

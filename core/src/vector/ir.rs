@@ -472,3 +472,7 @@ impl GlyphPackBuilder {
         glyphs.into_iter().map(|(a, b)| (b, a)).collect()
     }
 }
+
+pub trait BuildGlyph {
+    fn build_glyph(&mut self, glyph: &GlyphItem) -> AbsoluteRef;
+}
