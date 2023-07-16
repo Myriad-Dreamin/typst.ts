@@ -266,9 +266,9 @@ impl FontBuilder {
         let mut font_cache: Option<FontInfoCache> = None;
 
         for (k, v) in
-            js_sys::Object::entries(val.dyn_ref().ok_or_else(|| {
-                error_once!("WebFontToTypstFont.entries", val: format!("{:?}", val))
-            })?)
+            js_sys::Object::entries(val.dyn_ref().ok_or_else(
+                || error_once!("WebFontToTypstFont.entries", val: format!("{:?}", val)),
+            )?)
             .iter()
             .map(convert_pair)
         {
@@ -325,9 +325,9 @@ impl FontBuilder {
 
         Ok((
             font_ref.ok_or_else(|| error_once!("WebFontToTypstFont.NoFontRef", family: family))?,
-            font_blob_loader.ok_or_else(|| {
-                error_once!("WebFontToTypstFont.NoFontBlobLoader", family: family)
-            })?,
+            font_blob_loader.ok_or_else(
+                || error_once!("WebFontToTypstFont.NoFontBlobLoader", family: family),
+            )?,
             font_info,
         ))
     }
