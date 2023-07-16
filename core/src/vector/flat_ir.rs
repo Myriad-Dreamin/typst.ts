@@ -157,7 +157,7 @@ impl MultiSvgDocument {
         };
 
         let layouts = {
-            let mut infallible = rkyv::Infallible::default();
+            let mut infallible = rkyv::Infallible;
             archived.layouts.deserialize(&mut infallible).unwrap()
         };
 

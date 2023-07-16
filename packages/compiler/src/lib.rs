@@ -221,7 +221,7 @@ impl TypstCompiler {
 
     pub fn get_artifact(&mut self, _format: String) -> Result<Vec<u8>, JsValue> {
         let ir_exporter = typst_ts_core::exporter_builtins::VecExporter::new(
-            typst_ts_tir_exporter::IRArtifactExporter::default(),
+            typst_ts_tir_exporter::IRArtifactExporter,
         );
 
         let doc = typst::compile(&self.world).unwrap();

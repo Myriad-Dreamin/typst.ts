@@ -76,7 +76,7 @@ fn artifact_json_to_path<P: AsRef<Path>>(
 }
 
 fn artifact_ir_to_path<P: AsRef<Path>>(path: P) -> FsPathExporter<AsWritable, IRArtifactExporter> {
-    FsPathExporter::new(path.as_ref().to_owned(), IRArtifactExporter::default())
+    FsPathExporter::new(path.as_ref().to_owned(), IRArtifactExporter)
 }
 
 fn doc_pdf_to_path<P: AsRef<Path>>(path: P) -> FsPathExporter<Vec<u8>, PdfDocExporter> {
