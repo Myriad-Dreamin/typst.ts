@@ -58,8 +58,9 @@ pub trait FlatRenderVm<'m>: Sized {
         self.start_flat_group(value)
     }
 
-    /// Render an item into the a `<g/>` element.
-    fn render_flat_item(&mut self, abs_ref: &AbsoluteRef) -> Self::Resultant {
+    #[doc(hidden)]
+    /// Default implemenetion to render an item into the a `<g/>` element.
+    fn _render_flat_item(&mut self, abs_ref: &AbsoluteRef) -> Self::Resultant {
         let item: &'m ir::FlatSvgItem = self.get_item(abs_ref).unwrap();
         match item.deref() {
             ir::FlatSvgItem::Group(group) => self.render_group_ref(abs_ref, group),
@@ -84,6 +85,11 @@ pub trait FlatRenderVm<'m>: Sized {
                 panic!("FlatRenderVm.RenderFrame.UnknownItem {:?}", item)
             }
         }
+    }
+
+    /// Render an item into the a `<g/>` element.
+    fn render_flat_item(&mut self, abs_ref: &AbsoluteRef) -> Self::Resultant {
+        self._render_flat_item(abs_ref)
     }
 
     /// Render a frame group into underlying context.
@@ -162,8 +168,9 @@ pub trait FlatIncrRenderVm<'m>: FlatRenderVm<'m> + Sized
 where
     Self::Group: FlatIncrGroupContext<Self>,
 {
-    /// Render an item into the a `<g/>` element.
-    fn render_diff_item(
+    #[doc(hidden)]
+    /// Default implemenetion to Render an item into the a `<g/>` element.
+    fn _render_diff_item(
         &mut self,
         next_abs_ref: &AbsoluteRef,
         prev_abs_ref: &AbsoluteRef,
@@ -209,6 +216,15 @@ where
             }
         }
         .into()
+    }
+
+    /// Render an item into the a `<g/>` element.
+    fn render_diff_item(
+        &mut self,
+        next_abs_ref: &AbsoluteRef,
+        prev_abs_ref: &AbsoluteRef,
+    ) -> Self::Resultant {
+        self._render_diff_item(next_abs_ref, prev_abs_ref)
     }
 
     /// Render a frame group into underlying context.
