@@ -1,11 +1,14 @@
 use std::{collections::HashMap, sync::Arc};
 
-use typst_ts_core::vector::{
-    flat_ir::{FlatSvgItem, FlatTextItem, GroupRef, Module},
-    flat_vm::{FlatIncrRenderVm, FlatRenderVm},
-    ir::{self, DefId, Fingerprint, FingerprintBuilder, GlyphMapping, ImmutStr, PathItem, StyleNs},
-    vm::RenderVm,
-    {ir::AbsoluteRef, vm::GroupContext},
+use typst_ts_core::{
+    hash::{Fingerprint, FingerprintBuilder},
+    vector::{
+        flat_ir::{FlatSvgItem, FlatTextItem, GroupRef, Module},
+        flat_vm::{FlatIncrRenderVm, FlatRenderVm},
+        ir::{self, DefId, GlyphMapping, ImmutStr, PathItem, StyleNs},
+        vm::RenderVm,
+        {ir::AbsoluteRef, vm::GroupContext},
+    },
 };
 
 use crate::{

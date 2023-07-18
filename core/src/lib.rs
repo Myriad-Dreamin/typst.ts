@@ -4,7 +4,7 @@ pub use concepts::*;
 pub mod error;
 pub use error::{ErrKind, Error};
 
-pub(crate) mod hash;
+pub mod hash;
 pub use hash::typst_affinite_hash;
 pub mod path;
 

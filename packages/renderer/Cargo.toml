@@ -18,7 +18,6 @@ typst-library.workspace = true
 comemo.workspace = true
 
 once_cell.workspace = true
-siphasher.workspace = true
 elsa.workspace = true
 
 pollster.workspace = true

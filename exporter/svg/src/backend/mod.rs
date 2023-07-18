@@ -4,10 +4,11 @@ use base64::Engine;
 
 use typst_ts_core::{
     font::GlyphProvider,
+    hash::Fingerprint,
     vector::{
         flat_ir,
         flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
-        ir::{self, Abs, AbsoluteRef, Axes, Fingerprint, ImmutStr, PathStyle, Ratio, Scalar, Size},
+        ir::{self, Abs, AbsoluteRef, Axes, ImmutStr, PathStyle, Ratio, Scalar, Size},
         vm::{GroupContext, RenderVm, TransformContext},
         GlyphLowerBuilder,
     },

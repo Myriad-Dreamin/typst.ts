@@ -1,10 +1,11 @@
+//！todo: move to core/src/hash.rs
+
 use std::{
-    any::Any,
     hash::{Hash, Hasher},
     ops::Deref,
 };
 
-use siphasher::sip128::{Hasher128, SipHasher13};
+use crate::hash::item_hash128;
 
 pub trait StaticHash128 {
     fn get_hash(&self) -> u128;
@@ -15,15 +16,6 @@ impl Hash for dyn StaticHash128 {
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write_u128(self.get_hash());
     }
-}
-
-pub fn make_hash<T: Hash + 'static>(item: &T) -> u128 {
-    // Also hash the TypeId because the type might be converted
-    // through an unsized coercion.
-    let mut state = SipHasher13::new();
-    item.type_id().hash(&mut state);
-    item.hash(&mut state);
-    state.finish128().as_u128()
 }
 
 pub struct HashedTrait<T: ?Sized> {
@@ -56,7 +48,7 @@ impl<T: Hash + Default + 'static> Default for HashedTrait<T> {
     fn default() -> Self {
         let t = T::default();
         Self {
-            hash: make_hash(&t),
+            hash: item_hash128(&t),
             t: Box::new(t),
         }
     }

@@ -15,7 +15,6 @@ typst-library.workspace = true
 comemo.workspace = true
 
 once_cell.workspace = true
-siphasher.workspace = true
 append-only-vec.workspace = true
 codespan-reporting.workspace = true
 parking_lot.workspace = true

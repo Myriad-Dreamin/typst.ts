@@ -19,7 +19,8 @@ use crate::artifact::{
     image::Image,
 };
 use crate::artifact_ir::{FontCoverage, TypstFont, TypstFontInfo};
-use crate::{make_hash, HashedTrait, StaticHash128};
+use crate::hash::item_hash128;
+use crate::{HashedTrait, StaticHash128};
 
 use super::get_font_coverage_hash;
 
@@ -52,7 +53,7 @@ impl GlyphProvider {
     where
         T: IGlyphProvider + Hash + 'static,
     {
-        let hash = make_hash(&provider);
+        let hash = item_hash128(&provider);
         let provider = Box::new(provider);
         Self(Arc::new(HashedTrait::<dyn IGlyphProvider>::new(
             hash, provider,

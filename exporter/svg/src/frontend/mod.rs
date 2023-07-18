@@ -3,12 +3,10 @@ use std::sync::Arc;
 use typst::doc::Document;
 use typst_ts_core::{
     font::GlyphProvider,
+    hash::FingerprintBuilder,
     vector::{
         flat_ir::{self, Module},
-        ir::{
-            AbsoluteRef, Axes, FingerprintBuilder, GlyphItem, GlyphMapping, GlyphPackBuilder, Size,
-            SvgItem,
-        },
+        ir::{AbsoluteRef, Axes, GlyphItem, GlyphMapping, GlyphPackBuilder, Size, SvgItem},
         vm::RenderVm,
         LowerBuilder,
     },
