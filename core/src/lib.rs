@@ -22,6 +22,7 @@ pub use exporter::{mark_transformer_lambda, Exporter, Transformer};
 
 pub mod font;
 pub use font::{FontLoader, FontResolver, FontSlot};
+pub mod package;
 
 pub(crate) mod hash;
 pub mod path;

@@ -1,17 +1,7 @@
-use std::{path::Path, sync::Arc};
-
-use typst::{diag::PackageResult, file::PackageSpec};
-
-pub mod dummy;
+pub use typst_ts_core::package::{PackageError, PackageSpec, Registry};
 
 #[cfg(feature = "system")]
 pub mod http;
-
-pub trait Registry {
-    fn reset(&mut self) {}
-
-    fn resolve(&self, spec: &PackageSpec) -> PackageResult<Arc<Path>>;
-}
 
 pub trait Notifier {
     fn downloading(&self, _spec: &PackageSpec) {}

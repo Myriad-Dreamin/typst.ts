@@ -1,12 +1,8 @@
 use std::{path::Path, sync::Arc};
 
 use parking_lot::Mutex;
-use typst::{
-    diag::{PackageError, PackageResult},
-    file::PackageSpec,
-};
 
-use super::{DummyNotifier, Notifier, Registry};
+use super::{DummyNotifier, Notifier, PackageError, PackageSpec, Registry};
 
 pub struct HttpRegistry {
     notifier: Arc<Mutex<dyn Notifier + Send>>,
@@ -51,7 +47,7 @@ impl HttpRegistry {
     }
 
     /// Make a package available in the on-disk cache.
-    pub fn prepare_package(&self, spec: &PackageSpec) -> PackageResult<Arc<Path>> {
+    pub fn prepare_package(&self, spec: &PackageSpec) -> Result<Arc<Path>, PackageError> {
         let subdir = format!(
             "typst/packages/{}/{}-{}",
             spec.namespace, spec.name, spec.version
@@ -81,7 +77,7 @@ impl HttpRegistry {
     }
 
     /// Download a package over the network.
-    fn download_package(&self, spec: &PackageSpec, package_dir: &Path) -> PackageResult<()> {
+    fn download_package(&self, spec: &PackageSpec, package_dir: &Path) -> Result<(), PackageError> {
         let url = format!(
             "https://packages.typst.org/preview/{}-{}.tar.gz",
             spec.name, spec.version
@@ -108,7 +104,7 @@ impl HttpRegistry {
 }
 
 impl Registry for HttpRegistry {
-    fn resolve(&self, spec: &PackageSpec) -> PackageResult<std::sync::Arc<Path>> {
+    fn resolve(&self, spec: &PackageSpec) -> Result<std::sync::Arc<Path>, PackageError> {
         self.prepare_package(spec)
     }
 }
