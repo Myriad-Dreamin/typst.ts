@@ -153,8 +153,6 @@ pub trait FlatIncrGroupContext<C>: Sized {
     fn render_diff_item_ref(&mut self, ctx: &mut C, item: &AbsoluteRef, prev_item: &AbsoluteRef) {
         self.render_diff_item_ref_at(ctx, Point::default(), item, prev_item);
     }
-
-    fn render_diff_reuse_item(&mut self, ctx: &mut C, item_ref: &AbsoluteRef);
 }
 
 /// A virtual machine that diffs and renders a flatten frame.
@@ -268,7 +266,7 @@ where
             if prev_ref == child_ref)
         {
             // assert!(item != &transformed.0);
-            ts.render_diff_reuse_item(self, child_ref);
+            ts.render_diff_item_ref_at(self, Point::default(), child_ref, child_ref);
             return;
         }
         // failed to reuse
