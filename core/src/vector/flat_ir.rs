@@ -193,7 +193,7 @@ pub struct ModuleBuilder {
 
     fingerprint_builder: FingerprintBuilder,
 
-    /// See [`crate::ExportFeature`].
+    /// See `typst_ts_svg_exporter::ExportFeature`.
     pub should_attach_debug_info: bool,
 }
 
