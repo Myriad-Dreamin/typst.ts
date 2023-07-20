@@ -9,7 +9,7 @@ use chrono::Datelike;
 use comemo::Prehashed;
 use serde::{Deserialize, Serialize};
 use typst::{
-    diag::{FileResult, PackageResult},
+    diag::FileResult,
     eval::{Datetime, Library},
     file::FileId,
     font::{Font, FontBook},
@@ -20,6 +20,7 @@ use typst::{
 use typst_ts_core::{
     artifact_ir::ArtifactHeader,
     font::{FontProfile, FontResolverImpl},
+    package::PackageError,
     Bytes, FontResolver,
 };
 
@@ -184,7 +185,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     }
 
     /// Resolve the real path for a file id.
-    pub fn path_for_id(&self, id: FileId) -> PackageResult<PathBuf> {
+    pub fn path_for_id(&self, id: FileId) -> Result<PathBuf, PackageError> {
         // Determine the root path relative to which the file path
         // will be resolved.
         let root = match id.package() {

@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
-use typst_ts_core::font::FontResolverImpl;
+use typst_ts_core::{font::FontResolverImpl, package::dummy::DummyRegistry};
 
-use crate::{package::dummy::DummyRegistry, vfs::browser::ProxyAccessModel};
+use crate::vfs::browser::ProxyAccessModel;
 
 /// A world that provides access to the browser.
 /// It is under development.
