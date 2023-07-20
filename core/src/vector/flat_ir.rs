@@ -5,15 +5,15 @@ use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 
 use crate::{
     font::{FontGlyphProvider, GlyphProvider},
+    hash::{Fingerprint, FingerprintBuilder},
     vector::GlyphLowerBuilder,
 };
 
 use super::{
     geom::{Abs, Point, Size},
     ir::{
-        AbsoluteRef, DefId, Fingerprint, FingerprintBuilder, GlyphItem, GlyphMapping,
-        GlyphPackBuilder, ImageGlyphItem, ImageItem, ImmutStr, LinkItem, OutlineGlyphItem,
-        PathItem, SpanId, SvgItem, TextShape, TransformItem,
+        AbsoluteRef, DefId, GlyphItem, GlyphMapping, GlyphPackBuilder, ImageGlyphItem, ImageItem,
+        ImmutStr, LinkItem, OutlineGlyphItem, PathItem, SpanId, SvgItem, TextShape, TransformItem,
     },
 };
 

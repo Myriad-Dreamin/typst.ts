@@ -7,13 +7,13 @@ use super::{
     flat_ir::{self, Module},
     flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
     ir::{
-        self, Abs, AbsoluteRef, Axes, BuildGlyph, DefId, FingerprintBuilder, GlyphMapping, Ratio,
-        Rect, Scalar, Transform,
+        self, Abs, AbsoluteRef, Axes, BuildGlyph, DefId, GlyphMapping, Ratio, Rect, Scalar,
+        Transform,
     },
     sk,
     vm::{GroupContext, RenderVm, TransformContext},
 };
-use crate::font::GlyphProvider;
+use crate::{font::GlyphProvider, hash::FingerprintBuilder};
 
 pub trait GlyphIndice<'m> {
     fn get_glyph(&self, value: &AbsoluteRef) -> Option<&'m ir::GlyphItem>;

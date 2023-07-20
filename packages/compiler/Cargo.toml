@@ -21,7 +21,6 @@ comemo.workspace = true
 base64.workspace = true
 
 once_cell.workspace = true
-siphasher.workspace = true
 elsa.workspace = true
 serde-wasm-bindgen.workspace = true
 
