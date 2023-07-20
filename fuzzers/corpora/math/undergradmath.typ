@@ -39,7 +39,7 @@
 })
 
 // Update date
-#let date = "2023-05-22"
+#let date = datetime.today().display()
 
 // Unavailable (last check date)
 #show "??": box(text(red, [#date #emoji.crossmark]))
@@ -100,12 +100,12 @@ The original version is available at #link("https://gitlab.com/jim.hefferon/unde
     [!!], [Get this in a tricky way. Need a simpler method.],
   )
 ) <tricky>
-#figure(
-  table(
-    columns: (1fr, 2fr),
-    [?!], [Don't know how to get this.],
-  )
-) <noidea>
+// #figure(
+//   table(
+//     columns: (1fr, 2fr),
+//     [?!], [Don't know how to get this.],
+//   )
+// ) <noidea>
 
 = Rule One
 Any mathematics at all, even a single character, gets a mathematical setting.
@@ -123,12 +123,13 @@ Your document should contain at least this.
 
 = Common constructs
 #align(center, table(
-  columns: 2,
-  column-gutter: 1.5em,
-  cell($x^2$, `x^2`),
-  cell([$sqrt(2)$, $root(n, 3)$], [`sqrt(2)`, `root(n, 3)`]),
-  cell($x_(i, j)$, `x_(i, j)`),
-  cell([$2 / 3$, $2 \/ 3$], [`2 / 3`, `2 \/ 3` or `2 slash 3`]), // Maybe use `slash`?
+  columns: 4,
+  align: (right, left, right, left),
+  column-gutter: (1em, 1.5em, 1em),
+  [$x^2$], [`x^2`],
+  [$sqrt(2)$, $root(n, 3)$], [`sqrt(2)`, `root(n, 3)`],
+  [$x_(i, j)$], [`x_(i, j)`],
+  [$2 / 3$, $2 \/ 3$], [`2 / 3`, `2 \/ 3` or `2 slash 3`], // Maybe use `slash`?
 ))
 
 = Calligraphic letters
@@ -140,37 +141,39 @@ Getting script letters is @unavailable.
 
 = Greek
 #align(center, table(
-  columns: 2,
-  column-gutter: 1em,
-  cell($alpha$, `alpha`), cell([$xi$, $Xi$], [`xi`, `Xi`]),
-  cell($beta$, `beta`), cell($omicron$, `omicron`),
-  cell([$gamma$, $Gamma$], [`gamma`, `Gamma`]), cell([$pi$, $Pi$], [`pi`, `Pi`]),
-  cell([$delta$, $Delta$], [`delta`, `Delta`]), cell($pi.alt$, `pi.alt`),
-  cell($epsilon.alt$, `epsilon.alt`), cell($rho$, `rho`),
-  cell($epsilon$, `epsilon`), cell($rho.alt$, `rho.alt`),
-  cell($zeta$, `zeta`), cell([$sigma$, $Sigma$], [`sigma`, `Sigma`]),
-  cell($eta$, `eta`), cell($\u{03C2}$, [`\u{03C2}` @tricky]),
-  cell([$theta$, $Theta$], [`theta`, `Theta`]), cell($tau$, `tau`),
-  cell($theta.alt$, `theta.alt`), cell([$upsilon$, $Upsilon$], [`upsilon`, `Upsilon`]),
-  cell($iota$, `iota`), cell([$phi.alt$, $Phi$], [`phi.alt`, `Phi`]),
-  cell($kappa$, $Kappa$), cell($phi$, `phi`),
-  cell([$lambda$, $Lambda$], [`lambda`, `Lambda`]), cell($chi$, `chi`),
-  cell($mu$, `mu`), cell([$psi$, $Psi$], [`psi`, `Psi`]),
-  cell($nu$, `nu`), cell([$omega$, $Omega$], [`omega`, `Omega`]),
+  columns: 4,
+  align: (right, left, right, left),
+  column-gutter: (1em, 1.5em, 1em),
+  [$alpha$], [`alpha`], [$xi$, $Xi$], [`xi`, `Xi`],
+  [$beta$], [`beta`], [$omicron$], [`omicron`],
+  [$gamma$, $Gamma$], [`gamma`, `Gamma`], [$pi$, $Pi$], [`pi`, `Pi`],
+  [$delta$, $Delta$], [`delta`, `Delta`], [$pi.alt$], [`pi.alt`],
+  [$epsilon.alt$], [`epsilon.alt`], [$rho$], [`rho`],
+  [$epsilon$], [`epsilon`], [$rho.alt$], [`rho.alt`],
+  [$zeta$], [`zeta`], [$sigma$, $Sigma$], [`sigma`, `Sigma`],
+  [$eta$], [`eta`], [$sigma.alt$], [`sigma.alt`],
+  [$theta$, $Theta$], [`theta`, `Theta`], [$tau$], [`tau`],
+  [$theta.alt$], [`theta.alt`], [$upsilon$, $Upsilon$], [`upsilon`, `Upsilon`],
+  [$iota$], [`iota`], [$phi.alt$, $Phi$], [`phi.alt`, `Phi`],
+  [$kappa$], [`kappa`], [$phi$], [`phi`],
+  [$lambda$, $Lambda$], [`lambda`, `Lambda`], [$chi$], [`chi`],
+  [$mu$], [`mu`], [$psi$, $Psi$], [`psi`, `Psi`],
+  [$nu$], [`nu`], [$omega$, $Omega$], [`omega`, `Omega`],
 ))
 
 = Sets and logic
 #align(center, table(
-  columns: 3,
-  column-gutter: 1em,
-  cell($union$, `union`), cell($RR$, [`RR`, `bb(R)`]), cell($forall$, `forall`),
-  cell($sect$, `sect`), cell($bb(Z)$, [`ZZ`, `bb(Z)`]), cell($exists$, `exists`),
-  cell($subset$, `subset`), cell($bb(Q)$, [`QQ`, `bb(Q)`]), cell($not$, `not`),
-  cell($subset.eq$, `subset.eq`), cell($bb(N)$, [`NN`, `bb(N)`]), cell($or$, `or`),
-  cell($supset$, `supset`), cell($bb(C)$, [`CC`, `bb(C)`]), cell($and$, `and`),
-  cell($supset.eq$, `supset.eq`), cell($diameter$, [`diameter`]), cell($tack.r$, `tack.r`),
-  cell($in$, `in`), cell($nothing$, `nothing`), cell($models$, `models`),
-  cell($in.not$, `in.not`), cell($alef$, `alef`), cell($without$, `without`),
+  columns: 6,
+  align: (right, left, right, left, right, left),
+  column-gutter: (1em, 1.5em, 1em, 1.5em, 1em),
+  [$union$], [`union`], [$RR$], [`RR`, `bb(R)`], [$forall$], [`forall`],
+  [$sect$], [`sect`], [$bb(Z)$], [`ZZ`, `bb(Z)`], [$exists$], [`exists`],
+  [$subset$], [`subset`], [$bb(Q)$], [`QQ`, `bb(Q)`], [$not$], [`not`],
+  [$subset.eq$], [`subset.eq`], [$bb(N)$], [`NN`, `bb(N)`], [$or$], [`or`],
+  [$supset$], [`supset`], [$bb(C)$], [`CC`, `bb(C)`], [$and$], [`and`],
+  [$supset.eq$], [`supset.eq`], [$diameter$], [`diameter`], [$tack.r$], [`tack.r`],
+  [$in$], [`in`], [$nothing$], [`nothing`], [$models$], [`models`],
+  [$in.not$], [`in.not`], [$alef$], [`alef`], [$without$], [`without`],
 ))
 
 Negate an operator, as in $subset.not$, with `subset.not`.
@@ -200,22 +203,29 @@ Get the set complement $A^(sans(c))$ with `A^(sans(c))` (or $A^(complement)$ wit
 
 = Decorations
 #align(center, table(
-  columns: 3,
-  column-gutter: 1em,
-  cell($f'$, [`f'`, `f prime`]), cell($dot(a)$, `dot(a)`), cell($tilde(a)$, `tilde(a)`),
-  cell($f prime.double$, `f prime.double`), cell($diaer(a)$, `diaer(a)`), cell($macron(a)$, `macron(a)`),
-  cell($Sigma^*$, `Sigma^*`), cell($hat(a)$, `hat(a)`), cell($arrow(a)$, `arrow(a)`),
+  columns: 6,
+  align: (right, left, right, left, right, left),
+  column-gutter: (1em, 1.5em, 1em, 1.5em, 1em),
+  [$f'$], [`f'`, `f prime`], [$dot(a)$], [`dot(a)`], [$tilde(a)$], [`tilde(a)`],
+  [$f prime.double$], [`f prime.double`], [$diaer(a)$], [`diaer(a)`], [$macron(a)$], [`macron(a)`],
+  [$Sigma^*$], [`Sigma^*`], [$hat(a)$], [`hat(a)`], [$arrow(a)$], [`arrow(a)`],
 ))
 
-If the decorated letter is $i$ or $j$ then some decorations need `\u{1D6A4}` @tricky and `\u{1D6A5}` @tricky, as in $arrow(\u{1D6A4})$ with `arrow(\u{1D6A4})`.
+If the decorated letter is $i$ or $j$ then some decorations need `dotless.i` and `dotless.j`, as in $arrow(dotless.i)$ with `arrow(dotless.i)`.
 Some authors use boldface for vectors: `bold(x)`.
 
 Entering `overline(x + y)` produces $overline(x + y)$, and `hat(x + y)` gives $hat(x + y)$.
 Comment on an expression as here (there is also `overbrace(..)`).
 
-#align(center, cell(
-  $underbrace(x + y, |A|)$,
-  `underbrace(x + y, |A|)`,
+#align(center, table(
+  columns: 2,
+  column-gutter: 1em,
+  [$ underbrace(x + y, |A|) $],
+  [
+    ```
+    underbrace(x + y, |A|)
+    ```
+  ],
 ))
 
 = Dots
@@ -227,40 +237,42 @@ You can also get vertical dots `dots.v`, diagonal dots `dots.down` and anti-diag
 Just type them!
 
 #align(center, table(
-  columns: 3,
-  column-gutter: 1.5em,
-  cell($sin$, `sin`), cell($sinh$, `sinh`), cell($arcsin$, `arcsin`),
-  cell($cos$, `cos`), cell($cosh$, `cosh`), cell($arccos$, `arccos`),
-  cell($tan$, `tan`), cell($tanh$, `tanh`), cell($arctan$, `arctan`),
-  cell($sec$, `sec`), cell($coth$, `coth`), cell($min$, `min`),
-  cell($csc$, `csc`), cell($det$, `det`), cell($max$, `max`),
-  cell($cot$, `cot`), cell($dim$, `dim`), cell($inf$, `inf`),
-  cell($exp$, `exp`), cell($ker$, `ker`), cell($sup$, `sup`),
-  cell($log$, `log`), cell($deg$, `deg`), cell($liminf$, `liminf`),
-  cell($ln$, `ln`), cell($arg$, `arg`), cell($limsup$, `limsup`),
-  cell($lg$, `lg`), cell($gcd$, `gcd`), cell($lim$, `lim`),
+  columns: 6,
+  align: (right, left, right, left, right, left),
+  column-gutter: (1em, 1.5em, 1em, 1.5em, 1em),
+  [$sin$], [`sin`], [$sinh$], [`sinh`], [$arcsin$], [`arcsin`],
+  [$cos$], [`cos`], [$cosh$], [`cosh`], [$arccos$], [`arccos`],
+  [$tan$], [`tan`], [$tanh$], [`tanh`], [$arctan$], [`arctan`],
+  [$sec$], [`sec`], [$coth$], [`coth`], [$min$], [`min`],
+  [$csc$], [`csc`], [$det$], [`det`], [$max$], [`max`],
+  [$cot$], [`cot`], [$dim$], [`dim`], [$inf$], [`inf`],
+  [$exp$], [`exp`], [$ker$], [`ker`], [$sup$], [`sup`],
+  [$log$], [`log`], [$deg$], [`deg`], [$liminf$], [`liminf`],
+  [$ln$], [`ln`], [$arg$], [`arg`], [$limsup$], [`limsup`],
+  [$lg$], [`lg`], [$gcd$], [`gcd`], [$lim$], [`lim`],
 ))
 
 = Other symbols
 #align(center, table(
-  columns: 3,
-  column-gutter: 1.2em,
-  cell($<$, [`<`, `lt`]), cell($angle$, `angle`), cell($dot$, [`dot`]),
-  cell($<=$, [`<=`, `lt.eq`]), cell($angle.arc$, `angle.arc`), cell($plus.minus$, `plus.minus`),
-  cell($>$, [`>`, `gt`]), cell($ell$, `ell`), cell($minus.plus$, `minus.plus`),
-  cell($>=$, [`>=`, `gt.eq`]), cell($parallel$, `parallel`), cell($times$, `times`),
-  cell($!=$, [`!=`, `eq.not`]), cell($45 degree$, `45 degree`), cell($div$, `div`),
-  cell($<<$, [`<<`, `lt.double`]), cell($tilde.eqq$, `tilde.eqq`), cell($*$, [`*`, `ast`]),
-  cell($>>$, [`>>`, `gt.double`]), cell($tilde.eqq.not$, `tilde.eqq.not`), cell($divides$, `divides`),
-  cell($approx$, `approx`), cell($tilde$, `tilde`), cell($divides.not$, `divides.not`),
-  cell($\u{224D}$, [`\u{224D}` @tricky]), cell($tilde.eq$, `tilde.eq`), cell($n!$, `n!`),
-  cell($ident$, `ident`), cell($tilde.not$, `tilde.not`), cell($diff$, `diff`),
-  cell($prec$, `prec`), cell($plus.circle$, `plus.circle`), cell($nabla$, `nabla`),
-  cell($prec.eq$, `prec.eq`), cell($minus.circle$, `minus.cirle`), cell($planck.reduce$, `planck.reduce`),
-  cell($succ$, `succ`), cell($dot.circle$, `dot.circle`), cell($circle.stroked.tiny$, `circle.stroked.tiny`),
-  cell($succ.eq$, `succ.eq`), cell($times.circle$, `times.circle`), cell($star$, `star`),
-  cell($prop$, `prop`), cell($\u{2298}$, [`\u{2298}` @tricky]), cell($sqrt("")$, `sqrt("")`),
-  cell($\u{2250}$, [`\u{2250}` @tricky]), cell($harpoon.tr$, `harpoon.tr`), cell($checkmark$, `checkmark`),
+  columns: 6,
+  align: (right, left, right, left, right, left),
+  column-gutter: (0.5em, 1em, 0.5em, 1em, 0.5em),
+  [$<$], [`<`, `lt`], [$angle$], [`angle`], [$dot$], [`dot`],
+  [$<=$], [`<=`, `lt.eq`], [$angle.arc$], [`angle.arc`], [$plus.minus$], [`plus.minus`],
+  [$>$], [`>`, `gt`], [$ell$], [`ell`], [$minus.plus$], [`minus.plus`],
+  [$>=$], [`>=`, `gt.eq`], [$parallel$], [`parallel`], [$times$], [`times`],
+  [$!=$], [`!=`, `eq.not`], [$45 degree$], [`45 degree`], [$div$], [`div`],
+  [$<<$], [`<<`, `lt.double`], [$tilde.eqq$], [`tilde.eqq`], [$*$], [`*`, `ast`],
+  [$>>$], [`>>`, `gt.double`], [$tilde.eqq.not$], [`tilde.eqq.not`], [$divides$], [`divides`],
+  [$approx$], [`approx`], [$tilde$], [`tilde`], [$divides.not$], [`divides.not`],
+  [$\u{224D}$], [`\u{224D}` @tricky], [$tilde.eq$], [`tilde.eq`], [$n!$], [`n!`],
+  [$ident$], [`ident`], [$tilde.not$], [`tilde.not`], [$diff$], [`diff`],
+  [$prec$], [`prec`], [$plus.circle$], [`plus.circle`], [$nabla$], [`nabla`],
+  [$prec.eq$], [`prec.eq`], [$minus.circle$], [`minus.cirle`], [$planck.reduce$], [`planck.reduce`],
+  [$succ$], [`succ`], [$dot.circle$], [`dot.circle`], [$compose$], [`compose`],
+  [$succ.eq$], [`succ.eq`], [$times.circle$], [`times.circle`], [$star$], [`star`],
+  [$prop$], [`prop`], [$\u{2298}$], [`\u{2298}` @tricky], [$sqrt("")$], [`sqrt("")`],
+  [$\u{2250}$], [`\u{2250}` @tricky], [$harpoon.tr$], [`harpoon.tr`], [$checkmark$], [`checkmark`],
 ))
 
 Use `a divides b` for the divides relation, $a divides b$, and `a divides.not b` for the negation, $a divides.not b$.
@@ -268,15 +280,16 @@ Use `|` to get set builder notation ${a in S | a "is odd"}$ with `{a in S | a "i
 
 = Arrows
 #align(center, table(
-  columns: 2,
-  column-gutter: 1.5em,
-  cell($->$, [`->`, `arrow.r`]), cell($|->$, [`|->`, `arrow.r.bar`]),
-  cell($arrow.r.not$, `arrow.r.not`), cell($arrow.r.long.bar$, `arrow.r.long.bar`),
-  cell($arrow.r.long$, `arrow.r.long`), cell($<-$, [`<-`, `arrow.l`]),
-  cell($=>$, [`=>`, `arrow.r.double`]), cell($<->$, [`<->`, `arrow.l.r`]),
-  cell($arrow.r.double.not$, `arrow.r.double.not`), cell($arrow.b$, `arrow.b`),
-  cell($arrow.r.double.long$, `arrow.r.double.long`), cell($arrow.t$, `arrow.t`),
-  cell($arrow.squiggly$, `arrow.squiggly`), cell($arrow.t.b$, `arrow.t.b`),
+  columns: 4,
+  align: (right, left, right, left),
+  column-gutter: (1em, 1.5em, 1em),
+  [$->$], [`->`, `arrow.r`], [$|->$], [`|->`, `arrow.r.bar`],
+  [$arrow.r.not$], [`arrow.r.not`], [$arrow.r.long.bar$], [`arrow.r.long.bar`],
+  [$-->$], [`-->`, `arrow.r.long`], [$<-$], [`<-`, `arrow.l`],
+  [$=>$], [`=>`, `arrow.r.double`], [$<->$], [`<->`, `arrow.l.r`],
+  [$arrow.r.double.not$], [`arrow.r.double.not`], [$arrow.b$], [`arrow.b`],
+  [$==>$], [`==>`, `arrow.r.double.long`], [$arrow.t$], [`arrow.t`],
+  [$arrow.squiggly$], [`arrow.squiggly`], [$arrow.t.b$], [`arrow.t.b`],
 ))
 
 The right arrows in the first column have matching left arrows, such as `arrow.l.not`, and there are some other matches for down arrows, etc.
@@ -289,29 +302,37 @@ $ sum_(j = 0)^3 j^2 qquad integral_(x = 0)^3 x^2 dif x $
 These do the same.
 
 #align(center, table(
-  columns: 3,
-  cell($integral$, `integral`), cell($integral.triple$, `integral.triple`), cell($union.big$, `union.big`),
-  cell($integral.double$, `integral.double`), cell($integral.cont$, `integral.cont`), cell($sect.big$, `sect.big`),
+  columns: 4,
+  align: (right, left, right, left),
+  column-gutter: (1em, 1.5em, 1em),
+  row-gutter: 0.5em,
+  [$integral$], [`integral`], [$integral.double$], [`integral.double`],
+  [$integral.triple$], [`integral.triple`], [$integral.cont$], [`integral.cont`],
+  [$union.big$], [`union.big`], [$sect.big$], [`sect.big`],
 ))
 
 = Fences
 #align(center, table(
-  columns: 3,
-  column-gutter: 1.5em,
-  cell($()$, `()`), cell($angle.l angle.r$, `angle.l angle.r`), cell($abs("")$, `abs("")`),
-  cell($[]$, `[]`), cell($floor("")$, `floor("")`), cell($norm("")$, `norm("")`),
-  cell(${}$, `{}`), cell($ceil("")$, `ceil("")`),
+  columns: 6,
+  align: (right, left, right, left, right, left),
+  column-gutter: (1em, 1.5em, 1em, 1.5em, 1em),
+  row-gutter: 0.5em,
+  [$()$], [`()`], [$angle.l angle.r$], [`angle.l angle.r`], [$abs("")$], [`abs("")`],
+  [$[]$], [`[]`], [$floor("")$], [`floor("")`], [$norm("")$], [`norm("")`],
+  [${}$], [`{}`], [$ceil("")$], [`ceil("")`],
 ))
 
 Fix the size with the `lr` function.
 
 #align(center, table(
   columns: 2,
-  column-gutter: 0.5em,
-  $ lr([sum_(k = 0)^n e^(k^2)], size: #50%) $,
-  ```
-  lr([sum_(k = 0)^n e^(k^2)], size: #50%)
-  ```,
+  column-gutter: 1em,
+  [$ lr([sum_(k = 0)^n e^(k^2)], size: #50%) $],
+  [
+    ```
+    lr([sum_(k = 0)^n e^(k^2)], size: #50%)
+    ```
+  ],
 ))
 
 To have them grow with the enclosed formula, also use the `lr` function.
@@ -319,25 +340,32 @@ To have them grow with the enclosed formula, also use the `lr` function.
 #align(center, table(
   columns: 2,
   column-gutter: 1em,
-  $ lr(angle.l i, 2^(2^i) angle.r) $,
-  ```
-  lr(angle.l i, 2^(2^i) angle.r)
-  ```,
+  [$ lr(angle.l i, 2^(2^i) angle.r) $],
+  [
+    ```
+    lr(angle.l i, 2^(2^i) angle.r)
+    ```
+  ],
 ))
 
 Fences scale by default if entered directly as codepoints, and don't scale automatically if entered as symbol notation.
 
 #align(center, table(
   columns: 2,
+  align: (right + horizon, left + horizon),
   column-gutter: 1em,
-  $ (1 / n^(alpha)) $,
-  ```
-  (1 / n^(alpha))
-  ```,
-  $ paren.l 1 / n^(alpha) paren.r $,
-  ```
-  paren.l 1 / n^(alpha) paren.r
-  ```,
+  [$ (1 / n^(alpha)) $],
+  [
+    ```
+    (1 / n^(alpha))
+    ```
+  ],
+  [$ paren.l 1 / n^(alpha) paren.r $],
+  [
+    ```
+    paren.l 1 / n^(alpha) paren.r
+    ```
+  ],
 ))
 
 The `lr` function also allows to scale unmatched delimiters and one-side fences.
@@ -345,10 +373,12 @@ The `lr` function also allows to scale unmatched delimiters and one-side fences.
 #align(center, table(
   columns: 2,
   column-gutter: 1em,
-  $ lr(frac(dif f, dif x) |)_(x_0) $,
-  ```
-  lr(frac(dif f, dif x) |)_(x_0)
-  ```,
+  [$ lr(frac(dif f, dif x) |)_(x_0) $],
+  [
+    ```
+    lr(frac(dif f, dif x) |)_(x_0)
+    ```
+  ],
 ))
 
 = Arrays, Matrices
@@ -357,13 +387,15 @@ Get a matrix with the `mat` function. You can pass an array to it.
 #align(center, table(
   columns: 2,
   column-gutter: 1em,
-  $ mat(a, b; c, d) $,
-  ```
-  $ mat(a, b; c, d) $
-  ```
+  [$ mat(a, b; c, d) $],
+  [
+    ```
+    $ mat(a, b; c, d) $
+    ```
+  ],
 ))
 
-In Typst, #link("https://typst.app/docs/reference/typst/array")[array] is a sequence of values,
+In Typst, #link("https://typst.app/docs/reference/types/array")[array] is a sequence of values,
 while in #LaTeX, array is a matrix without fences, which is `$mat(delim: #none, ..)$` in Typst.
 
 For the determinant use `|A|`, text operator $det$ `det` or `mat(delim: "|", ..)`.
@@ -373,16 +405,20 @@ Definition by cases can be easily obtained with the `cases` function.
 #align(center, table(
   columns: 2,
   column-gutter: 1em,
-  $ f_n = cases(
-    a &"if" n = 0,
-    r dot f_(n - 1) &"else"
-  ) $,
-  ```
-  $ f_n = cases(
-    a &"if" n = 0,
-    r dot f_(n - 1) &"else"
-  ) $
-  ```
+  [
+    $ f_n = cases(
+      a &"if" n = 0,
+      r dot f_(n - 1) &"else"
+    ) $
+  ],
+  [
+    ```
+    $ f_n = cases(
+      a &"if" n = 0,
+      r dot f_(n - 1) &"else"
+    ) $
+    ```
+  ]
 ))
 
 = Spacing in mathematics
@@ -398,10 +434,12 @@ Display equations in a block level using `$ ... $` with at least one space separ
 #align(center, table(
   columns: 2,
   column-gutter: 1em,
-  $ S = k dot lg W $,
-  ```
-  $ S = k dot lg W $
-  ```,
+  [$ S = k dot lg W $],
+  [
+    ```
+    $ S = k dot lg W $
+    ```
+  ],
 ))
 
 You can break into multiple lines.
@@ -409,12 +447,16 @@ You can break into multiple lines.
 #align(center, table(
   columns: 2,
   column-gutter: 1em,
-  $ sin(x) = x - x^3 / 3! \
-      + x^5 / 5! - dots.h.c $,
-  ```
-  $ sin(x) = x - x^3 / 3! \
+  [
+    $ sin(x) = x - x^3 / 3! \
       + x^5 / 5! - dots.h.c $
-  ```,
+  ],
+  [
+    ```
+    $ sin(x) = x - x^3 / 3! \
+        + x^5 / 5! - dots.h.c $
+    ```
+  ],
 ))
 
 Align equations using `&`
@@ -422,8 +464,10 @@ Align equations using `&`
 #align(center, table(
   columns: 2,
   column-gutter: 1em,
-  $ nabla dot bold(D) &= rho \
-    nabla dot bold(B) &= 0 $,
+  [
+    $ nabla dot bold(D) &= rho \
+      nabla dot bold(B) &= 0 $
+  ],
   ```
   $ nabla dot bold(D) &= rho \
     nabla dot bold(B) &= 0 $
@@ -437,27 +481,34 @@ Get a numbered version by `#set math.equation(numbering: ..)`.
 The last three here are display style.
 
 #align(center, table(
-  align: horizon,
   columns: 2,
   column-gutter: 1em,
-  block($f: RR -> RR$),
-  ```
-  f: RR -> RR
-  ```,
-  block($"9.8" "m/s"^2$),
-  block([`"9.8" "m/s"^2` @tricky]),
-  $ lim_(h->0) (f(x+h)-f(x))/h $,
-  ```
-  lim_(h -> 0) (f(x + h) - f(x)) / h
-  ```,
-  $ integral x^2 dif x = x^3 \/ 3 + C $,
-  ```
-  integral x^2 dif x = x^3 \/ 3 + C
-  ```,
-  $ nabla = bold(i) dif / (dif x) + bold(j) dif / (dif y) + bold(k) dif / (dif z) $,
-  ```
-  nabla = bold(i) dif / (dif x) + bold(j) dif / (dif y) + bold(k) dif / (dif z)
-  ```,
+  [$ f: RR -> RR $],
+  [
+    ```
+    f: RR -> RR
+    ```
+  ],
+  [$ "9.8" "m/s"^2 $],
+  [`"9.8" "m/s"^2` @tricky],
+  [$ lim_(h->0) (f(x+h)-f(x))/h $],
+  [
+    ```
+    lim_(h -> 0) (f(x + h) - f(x)) / h
+    ```
+  ],
+  [$ integral x^2 dif x = x^3 \/ 3 + C $],
+  [
+    ```
+    integral x^2 dif x = x^3 \/ 3 + C
+    ```
+  ],
+  [$ nabla = bold(i) dif / (dif x) + bold(j) dif / (dif y) + bold(k) dif / (dif z) $],
+  [
+    ```
+    nabla = bold(i) dif / (dif x) + bold(j) dif / (dif y) + bold(k) dif / (dif z)
+    ```
+  ],
 ))
 
 = Discrete mathematics examples
@@ -470,16 +521,20 @@ For permutations use $n^(underline(r))$ from `n^(underline(r))` (some authors us
 
 = Statistics examples
 #align(center, table(
-  align: horizon,
   columns: 2,
-  block($sigma^2 = sqrt(sum(x_i - mu)^2 \/ N)$),
-  ```
-  sigma^2 = sqrt(sum(x_i - mu)^2 \/ N)
-  ```,
-  block($E(X) = mu_X = sum(x_i - P(x_i))$),
-  ```
-  E(X) = mu_X = sum(x_i - P(x_i))
-  ```,
+  column-gutter: 1em,
+  [$ sigma^2 = sqrt(sum(x_i - mu)^2 \/ N) $],
+  [
+    ```
+    sigma^2 = sqrt(sum(x_i - mu)^2 \/ N)
+    ```
+  ],
+  [$ E(X) = mu_X = sum(x_i - P(x_i)) $],
+  [
+    ```
+    E(X) = mu_X = sum(x_i - P(x_i))
+    ```
+  ],
 ))
 
 The probability density of the normal distribution
@@ -488,13 +543,12 @@ $ 1 / sqrt(2 sigma^2 pi) e^(- (x - mu)^2 / (2 sigma^2)) $
 
 comes from this.
 
-#grid(
-  "",
+#align(center, [
   ```
   1 / sqrt(2 sigma^2 pi)
     e^(- (x - mu)^2 / (2 sigma^2))
   ```
-)
+])
 
 = For more
 See also the Typst Documentation at #link("https://typst.app/docs").
