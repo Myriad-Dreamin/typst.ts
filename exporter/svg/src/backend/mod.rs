@@ -43,6 +43,7 @@ pub trait DynExportFeature {
 }
 
 /// A generated text content.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SvgText {
     /// Append a plain text.
     Plain(String),
@@ -78,6 +79,7 @@ impl From<&str> for SvgText {
 /// A generated text node in SVG/XML format.
 /// The node is exactly the same as `<g>` tag.
 /// It is formatted as `<g attr.keys()..="attr.values()..">content..</g>`.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SvgTextNode {
     pub attributes: Vec<(&'static str, String)>,
     pub content: Vec<SvgText>,
@@ -367,16 +369,11 @@ impl<
     }
 
     fn render_path(&mut self, _ctx: &mut C, path: &ir::PathItem) {
-        self.content.push(SvgText::Plain(render_path(path)))
+        self.content.push(render_path(path))
     }
 
     fn render_image(&mut self, _ctx: &mut C, image_item: &ir::ImageItem) {
-        self.content.push(SvgText::Plain(render_image(
-            &image_item.image,
-            image_item.size,
-            true,
-            "",
-        )))
+        self.content.push(render_image_item(image_item))
     }
 
     fn render_semantic_text(&mut self, ctx: &mut C, text: &ir::TextItem, width: Scalar) {
@@ -486,9 +483,9 @@ impl<'m, C: FlatIncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBu
     }
 }
 
-/// Render a [`PathItem`] into svg text.
+/// Render a [`ir::PathItem`] into svg text.
 #[comemo::memoize]
-fn render_path(path: &ir::PathItem) -> String {
+fn render_path(path: &ir::PathItem) -> SvgText {
     let mut p = vec![r#"<path class="typst-shape" "#.to_owned()];
     p.push(format!(r#"d="{}" "#, path.d));
     let mut fill_color = "none";
@@ -529,7 +526,13 @@ fn render_path(path: &ir::PathItem) -> String {
     }
     p.push(format!(r#"fill="{}" "#, fill_color));
     p.push("/>".to_owned());
-    p.join("")
+    SvgText::Plain(p.join(""))
+}
+
+/// Render a [`ir::ImageItem`] into svg text.
+#[comemo::memoize]
+fn render_image_item(img: &ir::ImageItem) -> SvgText {
+    SvgText::Plain(render_image(&img.image, img.size, true, ""))
 }
 
 /// Render a raster or SVG image into svg text.
