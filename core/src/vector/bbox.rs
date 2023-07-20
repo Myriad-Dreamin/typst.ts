@@ -1,11 +1,11 @@
-use std::ops::Deref;
 use std::sync::Arc;
+use std::{collections::HashMap, ops::Deref};
 
 use comemo::Prehashed;
 
 use super::{
     flat_ir::{self, Module},
-    flat_vm::{FlatGroupContext, FlatRenderVm},
+    flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
     ir::{
         self, Abs, AbsoluteRef, Axes, BuildGlyph, DefId, FingerprintBuilder, GlyphMapping, Ratio,
         Rect, Scalar, Transform,
@@ -17,6 +17,10 @@ use crate::font::GlyphProvider;
 
 pub trait GlyphIndice<'m> {
     fn get_glyph(&self, value: &AbsoluteRef) -> Option<&'m ir::GlyphItem>;
+}
+
+pub trait BBoxIndice {
+    fn get_bbox(&self, value: &AbsoluteRef) -> Option<BBox>;
 }
 
 pub trait ObservableBounds {
@@ -74,9 +78,11 @@ impl BBox {
     pub fn new(repr: BBoxRepr) -> Self {
         Self(Arc::new(Prehashed::new(repr)))
     }
+}
 
+impl ObservableBounds for BBox {
     #[comemo::memoize]
-    pub fn realize(&self, ts: Transform) -> Rect {
+    fn realize(&self, ts: Transform) -> Rect {
         match &self.0.deref().deref() {
             BBoxRepr::Group(group_ts, items) => {
                 let ts = ts.pre_concat(*group_ts);
@@ -119,7 +125,7 @@ pub struct BBoxBuilder {
     pub inner: Vec<(ir::Point, BBox)>,
 }
 
-impl From<BBoxBuilder> for Arc<BBox> {
+impl From<BBoxBuilder> for BBox {
     fn from(s: BBoxBuilder) -> Self {
         let mut grp = BBox::new(BBoxRepr::Group(s.ts.into(), s.inner.into()));
         if let Some(clipper) = s.clipper {
@@ -128,28 +134,12 @@ impl From<BBoxBuilder> for Arc<BBox> {
                 grp,
             )));
         }
-        Arc::new(grp)
+        grp
     }
 }
 
 /// Internal methods for [`BBoxBuilder`].
 impl BBoxBuilder {
-    fn render_path_at(&mut self, pos: ir::Point, path: &ir::PathItem) {
-        let path = PathRepr::from_item(path).unwrap();
-        self.inner
-            .push((pos, BBox::new(BBoxRepr::Node(Box::new(path)))))
-    }
-
-    fn render_image_at(&mut self, pos: ir::Point, image_item: &ir::ImageItem) {
-        self.inner.push((
-            pos,
-            BBox::new(BBoxRepr::Rect(Rect {
-                lo: ir::Point::default(),
-                hi: image_item.size,
-            })),
-        ))
-    }
-
     pub fn render_glyph_ref_inner(
         &mut self,
         pos: Scalar,
@@ -219,13 +209,10 @@ impl<C> TransformContext<C> for BBoxBuilder {
 }
 
 /// See [`GroupContext`].
-impl<C: BuildGlyph + RenderVm<Resultant = Arc<BBox>>> GroupContext<C> for BBoxBuilder {
+impl<C: BuildGlyph + RenderVm<Resultant = BBox>> GroupContext<C> for BBoxBuilder {
     fn render_item_at(&mut self, ctx: &mut C, pos: ir::Point, item: &ir::SvgItem) {
-        let ts = self.ts;
-        self.ts = ts.post_translate(pos.x.0, pos.y.0);
-        let _bbox = ctx.render_item(item);
-        self.ts = ts;
-        todo!()
+        let bbox = ctx.render_item(item);
+        self.inner.push((pos, bbox));
     }
 
     fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &ir::GlyphItem) {
@@ -234,29 +221,56 @@ impl<C: BuildGlyph + RenderVm<Resultant = Arc<BBox>>> GroupContext<C> for BBoxBu
     }
 
     fn render_path(&mut self, _ctx: &mut C, path: &ir::PathItem) {
-        self.render_path_at(ir::Point::default(), path)
+        let path = PathRepr::from_item(path).unwrap();
+        self.inner.push((
+            ir::Point::default(),
+            BBox::new(BBoxRepr::Node(Box::new(path))),
+        ))
     }
 
     fn render_image(&mut self, _ctx: &mut C, image_item: &ir::ImageItem) {
-        self.render_image_at(ir::Point::default(), image_item)
+        self.inner.push((
+            ir::Point::default(),
+            BBox::new(BBoxRepr::Rect(Rect {
+                lo: ir::Point::default(),
+                hi: image_item.size,
+            })),
+        ))
     }
 }
 
 /// See [`FlatGroupContext`].
-impl<'m, C: FlatRenderVm<'m, Resultant = Arc<BBox>> + GlyphIndice<'m>> FlatGroupContext<C>
+impl<'m, C: FlatRenderVm<'m, Resultant = BBox> + GlyphIndice<'m>> FlatGroupContext<C>
     for BBoxBuilder
 {
     fn render_item_ref_at(&mut self, ctx: &mut C, pos: ir::Point, item: &AbsoluteRef) {
-        let ts = self.ts;
-        self.ts = ts.post_translate(pos.x.0, pos.y.0);
-        let _t = ctx.render_flat_item(item);
-        self.ts = ts;
+        let bbox = ctx.render_flat_item(item);
+        self.inner.push((pos, bbox));
     }
 
     fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, glyph: &AbsoluteRef) {
         if let Some(glyph_data) = ctx.get_glyph(glyph) {
             self.render_glyph_ref_inner(pos, glyph, glyph_data)
         }
+    }
+}
+
+/// See [`FlatIncrGroupContext`].
+impl<'m, C: FlatIncrRenderVm<'m, Resultant = BBox, Group = BBoxBuilder> + BBoxIndice>
+    FlatIncrGroupContext<C> for BBoxBuilder
+{
+    fn render_diff_item_ref_at(
+        &mut self,
+        ctx: &mut C,
+        pos: ir::Point,
+        item: &AbsoluteRef,
+        prev_item: &AbsoluteRef,
+    ) {
+        let bbox = (prev_item == item)
+            .then(|| ctx.get_bbox(prev_item))
+            .flatten();
+        let bbox = bbox.unwrap_or_else(|| ctx.render_diff_item(item, prev_item));
+        self.inner.push((pos, bbox));
     }
 }
 
@@ -277,12 +291,15 @@ pub struct BBoxTask<'m, 't> {
     /// Stores the glyphs used in the document.
     pub(crate) glyph_defs: &'t mut GlyphMapping,
 
+    /// Stores the glyphs used in the document.
+    pub(crate) bbox_cache: &'t mut HashMap<AbsoluteRef, BBox>,
+
     #[cfg(not(feature = "flat-vector"))]
     pub _m_phantom: std::marker::PhantomData<&'m ()>,
 }
 
 impl<'m, 't> RenderVm for BBoxTask<'m, 't> {
-    type Resultant = Arc<BBox>;
+    type Resultant = BBox;
     type Group = BBoxBuilder;
 
     fn start_group(&mut self) -> Self::Group {
@@ -295,7 +312,7 @@ impl<'m, 't> RenderVm for BBoxTask<'m, 't> {
 }
 
 impl<'m, 't> FlatRenderVm<'m> for BBoxTask<'m, 't> {
-    type Resultant = Arc<BBox>;
+    type Resultant = BBox;
     type Group = BBoxBuilder;
 
     fn get_item(&self, value: &AbsoluteRef) -> Option<&'m flat_ir::FlatSvgItem> {
@@ -304,6 +321,28 @@ impl<'m, 't> FlatRenderVm<'m> for BBoxTask<'m, 't> {
 
     fn start_flat_group(&mut self, _v: &AbsoluteRef) -> Self::Group {
         self.start_group()
+    }
+
+    fn render_flat_item(&mut self, abs_ref: &AbsoluteRef) -> Self::Resultant {
+        if let Some(bbox) = self.bbox_cache.get(abs_ref) {
+            return bbox.clone();
+        }
+
+        let bbox = self._render_flat_item(abs_ref);
+        self.bbox_cache.insert(abs_ref.clone(), bbox.clone());
+        bbox
+    }
+}
+
+impl<'m, 't> FlatIncrRenderVm<'m> for BBoxTask<'m, 't> {
+    fn render_diff_item(
+        &mut self,
+        next_abs_ref: &AbsoluteRef,
+        prev_abs_ref: &AbsoluteRef,
+    ) -> Self::Resultant {
+        let bbox = self._render_diff_item(next_abs_ref, prev_abs_ref);
+        self.bbox_cache.insert(next_abs_ref.clone(), bbox.clone());
+        bbox
     }
 }
 
@@ -325,6 +364,12 @@ impl BuildGlyph for BBoxTask<'_, '_> {
 impl<'m> GlyphIndice<'m> for BBoxTask<'m, '_> {
     fn get_glyph(&self, value: &AbsoluteRef) -> Option<&'m ir::GlyphItem> {
         self.module.glyphs.get(value.id.0 as usize).map(|v| &v.1)
+    }
+}
+
+impl<'m> BBoxIndice for BBoxTask<'m, '_> {
+    fn get_bbox(&self, value: &AbsoluteRef) -> Option<BBox> {
+        self.bbox_cache.get(value).cloned()
     }
 }
 
@@ -380,6 +425,7 @@ mod tests {
         glyph_provider: GlyphProvider,
         module: Module,
         glyph_defs: GlyphMapping,
+        bbox_cache: HashMap<AbsoluteRef, BBox>,
         fingerprint_builder: FingerprintBuilder,
     }
 
@@ -389,6 +435,7 @@ mod tests {
                 glyph_provider: self.glyph_provider.clone(),
                 module: &self.module,
                 glyph_defs: &mut self.glyph_defs,
+                bbox_cache: &mut self.bbox_cache,
                 fingerprint_builder: &mut self.fingerprint_builder,
             }
         }
