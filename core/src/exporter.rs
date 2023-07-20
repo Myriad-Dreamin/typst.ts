@@ -194,10 +194,10 @@ pub mod builtins {
 }
 
 pub mod utils {
+    use crate::TypstFileId;
     use std::error::Error;
     use typst::{
         diag::{SourceError, SourceResult},
-        file::FileId,
         World,
     };
 
@@ -215,7 +215,7 @@ pub mod utils {
     }
 
     /// Convert the given error to a vector of source errors.
-    pub fn map_err_with_id<E: Error>(file_id: FileId, e: E) -> Box<Vec<SourceError>> {
+    pub fn map_err_with_id<E: Error>(file_id: TypstFileId, e: E) -> Box<Vec<SourceError>> {
         // the source location is the start of the file
         const START_LOC: u64 = typst::syntax::Span::FULL.start;
 

@@ -43,11 +43,10 @@ use append_only_vec::AppendOnlyVec;
 use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
 use typst::{
     diag::{FileError, FileResult},
-    file::FileId as TypstFileId,
     syntax::Source,
 };
 
-use typst_ts_core::{path::PathClean, Bytes, QueryRef};
+use typst_ts_core::{path::PathClean, Bytes, QueryRef, TypstFileId};
 
 use crate::parser::reparse;
 
