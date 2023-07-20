@@ -162,12 +162,13 @@ impl SvgGlyphBuilder {
 
     /// Render an image glyph into the svg text.
     fn render_image_glyph(glyph_id: &str, ig: &ir::ImageGlyphItem) -> Option<String> {
-        let img = render_image(&ig.image.image, ig.image.size, false);
+        let transform_style = format!(r#" style="transform: {}""#, ig.ts.to_css());
 
-        let ts = ig.ts.to_css();
+        let img = render_image(&ig.image.image, ig.image.size, false, &transform_style);
+
         let symbol_def = format!(
-            r#"<symbol overflow="visible" id="{}" class="image_glyph"><g transform="{}">{}</g></symbol>"#,
-            glyph_id, ts, img
+            r#"<symbol overflow="visible" id="{}" class="image_glyph">{}</symbol>"#,
+            glyph_id, img
         );
         Some(symbol_def)
     }
@@ -221,7 +222,7 @@ impl SvgTextBuilder {
         };
 
         self.content.push(SvgText::Plain(format!(
-            r##"<use style="--o: {}" href="#{}"/>"##,
+            r##"<use x="{}" href="#{}"/>"##,
             adjusted_offset, glyph_id
         )));
     }
@@ -374,6 +375,7 @@ impl<
             &image_item.image,
             image_item.size,
             true,
+            "",
         )))
     }
 
@@ -533,8 +535,9 @@ fn render_path(path: &ir::PathItem) -> String {
 /// Render a raster or SVG image into svg text.
 /// is_image_elem: whether the image is an `<image>` element (instead of an
 /// image glyph).
+/// style: additional style attribute.
 // todo: error handling
-pub fn render_image(image: &ir::Image, size: Size, is_image_elem: bool) -> String {
+pub fn render_image(image: &ir::Image, size: Size, is_image_elem: bool, style: &str) -> String {
     let image_url = embed_as_image_url(image).unwrap();
 
     let w = size.x.0;
@@ -546,8 +549,7 @@ pub fn render_image(image: &ir::Image, size: Size, is_image_elem: bool) -> Strin
         ""
     };
     format!(
-        r#"<image{} x="0" y="0" width="{}" height="{}" style="fill" xlink:href="{}" preserveAspectRatio="none" />"#,
-        cls, w, h, image_url
+        r#"<image{cls} width="{w}" height="{h}" xlink:href="{image_url}" preserveAspectRatio="none"{style}/>"#,
     )
 }
 

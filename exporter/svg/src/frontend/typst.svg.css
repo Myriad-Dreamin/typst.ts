@@ -30,10 +30,6 @@ svg {
   cursor: pointer;
   pointer-events: all;
 }
-.image_glyph image,
-.outline_glyph path {
-  transform: matrix(1, 0, 0, 1, var(--o), 0);
-}
 .outline_glyph path {
   fill: var(--glyph_fill);
 }
