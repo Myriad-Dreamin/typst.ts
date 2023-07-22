@@ -369,9 +369,12 @@ impl<'a> GlyphLowerBuilder<'a> {
         };
 
         // position our image
-        let ascender = font
-            .metrics()
-            .ascender
+        // first, the ascender is used
+        // next, also apply an offset of (1 - ascender) like typst
+        let adjusted = font.metrics().ascender * 2. - typst::geom::Em::one();
+        // let adjusted = font.metrics().ascender;
+
+        let adjusted = adjusted
             .at(typst::geom::Abs::raw(font.metrics().units_per_em))
             .to_f32();
 
@@ -380,7 +383,7 @@ impl<'a> GlyphLowerBuilder<'a> {
         // size
         let dx = raster_x as f32;
         let dy = raster_y as f32;
-        let ts = ts.post_translate(dx, ascender + dy);
+        let ts = ts.post_translate(dx, adjusted + dy);
 
         Some(Arc::new(ImageGlyphItem {
             ts: ts.into(),
