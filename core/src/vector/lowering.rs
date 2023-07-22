@@ -369,9 +369,12 @@ impl<'a> GlyphLowerBuilder<'a> {
         };
 
         // position our image
-        let ascender = font
-            .metrics()
-            .ascender
+        // first, the ascender is used
+        // next, also apply an offset of (1 - ascender) like typst
+        let adjusted = font.metrics().ascender * 2. - typst::geom::Em::one();
+        // let adjusted = font.metrics().ascender;
+
+        let adjusted = adjusted
             .at(typst::geom::Abs::raw(font.metrics().units_per_em))
             .to_f32();
 
@@ -380,7 +383,7 @@ impl<'a> GlyphLowerBuilder<'a> {
         // size
         let dx = raster_x as f32;
         let dy = raster_y as f32;
-        let ts = ts.post_translate(dx, ascender + dy);
+        let ts = ts.post_translate(dx, adjusted + dy);
 
         Some(Arc::new(ImageGlyphItem {
             ts: ts.into(),
@@ -404,17 +407,20 @@ fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<typs
 
     // Decompress SVGZ.
     let mut decoded = vec![];
-    // The first three bytes of the gzip-encoded document header must be 0x1F, 0x8B,
-    // 0x08.
+
+    // The first three bytes of the gzip-encoded document header must be
+    //   0x1F, 0x8B, 0x08.
     if data.starts_with(&[0x1f, 0x8b]) {
         let mut decoder = flate2::read::GzDecoder::new(data);
         decoder.read_to_end(&mut decoded).ok()?;
         data = &decoded;
     }
 
-    // todo: When a font engine renders glyph 14, the result shall be the same as
-    // rendering the following SVG document   <svg> <defs> <use #glyph{id}>
-    // </svg>
+    // todo: It is also legal to provide a SVG document containing multiple glyphs.
+    // > When a font engine renders glyph 14, the result shall be the same as
+    // > rendering the following SVG document:
+    // > `  <svg> <defs> <use #glyph{id}> </svg>`
+    // See: <https://learn.microsoft.com/en-us/typography/opentype/spec/svg#glyph-identifiers>
 
     let upem = typst::geom::Abs::raw(font.units_per_em());
     let (width, height) = (upem.to_f32(), upem.to_f32());
@@ -424,34 +430,15 @@ fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<typs
 
     // todo: verify SVG capability requirements and restrictions
 
-    // Parse XML.
+    // Partially parse the view box attribute
     let mut svg_str = std::str::from_utf8(data).ok()?.to_owned();
-    let document = xmlparser::Tokenizer::from(svg_str.as_str());
-    let mut start_span = None;
-    let mut last_viewbox = None;
-    for n in document {
-        let tok = n.unwrap();
-        match tok {
-            xmlparser::Token::ElementStart { span, local, .. } => {
-                if local.as_str() == "svg" {
-                    start_span = Some(span);
-                    break;
-                }
-            }
-            xmlparser::Token::Attribute {
-                span, local, value, ..
-            } => {
-                if local.as_str() == "viewBox" {
-                    last_viewbox = Some((span, value));
-                }
-            }
-            xmlparser::Token::ElementEnd { .. } => break,
-            _ => {}
-        }
-    }
+    let FindViewBoxResult {
+        start_span,
+        first_viewbox,
+    } = find_viewbox_attr(svg_str.as_str());
 
-    // update view box
-    let view_box = last_viewbox.as_ref()
+    // determine view box
+    let view_box = first_viewbox.as_ref()
         .map(|s| {
             WARN_VIEW_BOX.get_or_init(|| {
                 println!(
@@ -462,16 +449,19 @@ fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<typs
             });
             s.1.as_str().to_owned()
         })
-        .unwrap_or_else(|| format!("0 {} {} {}", -origin_ascender, width, height));
+        .unwrap_or_else(|| format!("0 {} {width} {height}", -origin_ascender));
 
-    match last_viewbox {
+    // determine view box
+    match first_viewbox {
         Some((span, ..)) => {
-            svg_str.replace_range(span.range(), format!(r#"viewBox="{}""#, view_box).as_str());
+            // replace the first viewBox attribute
+            svg_str.replace_range(span.range(), format!(r#"viewBox="{view_box}""#).as_str());
         }
         None => {
+            // insert viewBox attribute to the begin of svg tag
             svg_str.insert_str(
                 start_span.unwrap().range().end,
-                format!(r#" viewBox="{}""#, view_box).as_str(),
+                format!(r#" viewBox="{view_box}""#).as_str(),
             );
         }
     }
@@ -501,4 +491,44 @@ fn hack_span_id_to_u64(span_id: &Span) -> u64 {
     // todo: how to get file_id?
     let file_id = unsafe { std::mem::transmute::<_, &u16>(&span_id.id()) };
     ((*file_id as u64) << SPAN_BITS) | span_id.number()
+}
+
+struct FindViewBoxResult<'a> {
+    start_span: Option<xmlparser::StrSpan<'a>>,
+    first_viewbox: Option<(xmlparser::StrSpan<'a>, xmlparser::StrSpan<'a>)>,
+}
+
+/// Find the string location of the **first** viewBox attribute.
+/// When there are multiple viewBox attributes, the first one is used (as many
+/// xml-based dom engines do).
+fn find_viewbox_attr(svg_str: &'_ str) -> FindViewBoxResult<'_> {
+    let document = xmlparser::Tokenizer::from(svg_str);
+
+    let mut start_span = None;
+    let mut first_viewbox = None;
+    for n in document {
+        let tok = n.unwrap();
+        match tok {
+            xmlparser::Token::ElementStart { span, local, .. } => {
+                if local.as_str() == "svg" {
+                    start_span = Some(span);
+                }
+            }
+            xmlparser::Token::Attribute {
+                span, local, value, ..
+            } => {
+                if local.as_str() == "viewBox" {
+                    first_viewbox = Some((span, value));
+                    break;
+                }
+            }
+            xmlparser::Token::ElementEnd { .. } => break,
+            _ => {}
+        }
+    }
+
+    FindViewBoxResult {
+        start_span,
+        first_viewbox,
+    }
 }
