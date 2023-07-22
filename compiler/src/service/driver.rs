@@ -8,13 +8,12 @@ use crate::TypstSystemWorld;
 use typst::{
     diag::{SourceError, SourceResult},
     doc::Document,
-    file::FileId,
 };
 use typst_ts_core::{
     exporter_builtins::GroupExporter,
     exporter_utils::{map_err, map_err_with_id},
     path::PathClean,
-    Exporter,
+    Exporter, TypstFileId,
 };
 use typst_ts_svg_exporter::{flat_ir::serialize_multi_doc_standalone, DynamicLayoutSvgExporter};
 
@@ -131,7 +130,7 @@ impl CompileDriver {
         typst::compile(&self.world)
     }
 
-    pub fn main_id(&self) -> FileId {
+    pub fn main_id(&self) -> TypstFileId {
         let entry_file = self.entry_file.clone();
         let entry_file = if entry_file.is_absolute() {
             let entry_file = entry_file.clean();
@@ -141,7 +140,7 @@ impl CompileDriver {
             entry_file
         };
         let entry_file: PathBuf = Path::new("/").join(entry_file);
-        FileId::new(None, &entry_file)
+        TypstFileId::new(None, &entry_file)
     }
 
     /// Compile once from scratch.

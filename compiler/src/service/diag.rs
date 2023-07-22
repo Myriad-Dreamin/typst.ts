@@ -10,8 +10,9 @@ use codespan_reporting::{
     },
 };
 
-use typst::file::FileId;
 use typst::{diag::SourceError, World};
+
+use typst_ts_core::TypstFileId;
 
 /// Get stderr with color support if desirable.
 fn color_stream() -> StandardStream {
@@ -23,7 +24,7 @@ fn color_stream() -> StandardStream {
 }
 
 /// Print diagnostic messages to the terminal.
-pub fn print_diagnostics<'files, W: World + Files<'files, FileId = FileId>>(
+pub fn print_diagnostics<'files, W: World + Files<'files, FileId = TypstFileId>>(
     world: &'files W,
     errors: Vec<SourceError>,
 ) -> Result<(), codespan_reporting::files::Error> {

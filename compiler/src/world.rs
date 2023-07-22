@@ -11,7 +11,6 @@ use serde::{Deserialize, Serialize};
 use typst::{
     diag::FileResult,
     eval::{Datetime, Library},
-    file::FileId,
     font::{Font, FontBook},
     syntax::Source,
     World,
@@ -21,7 +20,7 @@ use typst_ts_core::{
     artifact_ir::ArtifactHeader,
     font::{FontProfile, FontResolverImpl},
     package::PackageError,
-    Bytes, FontResolver,
+    Bytes, FontResolver, TypstFileId as FileId,
 };
 
 use crate::{

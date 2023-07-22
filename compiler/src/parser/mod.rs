@@ -1,11 +1,12 @@
 use std::path::Path;
 
-use typst::{diag::FileResult, file::FileId, syntax::Source};
-use typst_ts_core::typst_affinite_hash;
+use typst::{diag::FileResult, syntax::Source};
+
+use typst_ts_core::{typst_affinite_hash, TypstFileId};
 
 pub fn reparse(
     path: &Path,
-    source_id: FileId,
+    source_id: TypstFileId,
     prev: Option<Source>,
     next: String,
 ) -> FileResult<Source> {
@@ -84,11 +85,13 @@ pub fn reparse(
 
 #[cfg(test)]
 mod tests {
+    use typst_ts_core::TypstFileId;
+
     #[test]
     fn test_reparse_issue_typst_preview_vscode_issues_59() {
         use super::reparse;
         let path = std::path::Path::new("/main.typ");
-        let source_id = typst::file::FileId::new(None, path);
+        let source_id = TypstFileId::new(None, path);
         let empty = reparse(path, source_id, None, "".to_owned()).unwrap();
         let with_a = reparse(path, source_id, None, "a".to_owned()).unwrap();
         let edit_a = reparse(path, source_id, Some(empty), "a".to_owned()).unwrap();
