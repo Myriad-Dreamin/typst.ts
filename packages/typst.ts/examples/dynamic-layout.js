@@ -47,7 +47,7 @@ var searchIntersections = function (root) {
   let parent = undefined,
     current = root;
   while (current) {
-    if (current.classList.contains('group')) {
+    if (current.classList.contains('typst-group')) {
       parent = current;
       break;
     }
