@@ -29,6 +29,9 @@ pub(crate) mod frontend;
 pub use frontend::{DynamicLayoutSvgExporter, IncrementalRenderContext, IncrementalSvgExporter};
 pub use frontend::{SvgExporter, SvgTask};
 
+/// Useful transform for SVG Items.
+pub(crate) mod transform;
+
 /// All the features that can be enabled or disabled.
 pub trait ExportFeature {
     /// Whether to enable tracing.
@@ -84,13 +87,15 @@ impl ExportFeature for SvgExportFeature {
 /// Render SVG wrapped with html for [`Document`].
 pub fn render_svg_html(output: &Document) -> String {
     type UsingExporter = SvgExporter<DefaultExportFeature>;
-    generate_text(UsingExporter::render_transient_html(output))
+    let svg_text = UsingExporter::render_transient_html(output);
+    generate_text(transform::minify(svg_text))
 }
 
 /// Render SVG for [`Document`].
 pub fn render_svg(output: &Document) -> String {
     type UsingExporter = SvgExporter<SvgExportFeature>;
-    generate_text(UsingExporter::render_transient_svg(output))
+    let svg_text = UsingExporter::render_transient_html(output);
+    generate_text(transform::minify(svg_text))
 }
 
 #[cfg(feature = "flat-vector")]
@@ -99,7 +104,7 @@ pub use frontend::flat::export_module;
 impl<Feat: ExportFeature> Exporter<Document, String> for SvgExporter<Feat> {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<String> {
         // html wrap
-        Ok(generate_text(Self::render_transient_html(&output)))
+        Ok(render_svg_html(&output))
     }
 }
 
