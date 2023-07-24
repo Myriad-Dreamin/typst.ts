@@ -131,16 +131,21 @@ impl CompileDriver {
     }
 
     pub fn main_id(&self) -> TypstFileId {
-        let entry_file = self.entry_file.clone();
-        let entry_file = if entry_file.is_absolute() {
-            let entry_file = entry_file.clean();
+        self.id_for_path(self.entry_file.clone())
+    }
+
+    /// Get the file id for a given path.
+    /// Note: only works for files in the workspace instead of external packages.
+    pub fn id_for_path(&self, pb: PathBuf) -> TypstFileId {
+        let pb = if pb.is_absolute() {
+            let pb = pb.clean();
             let root = self.world.root.clean();
-            entry_file.strip_prefix(root).unwrap().to_owned()
+            pb.strip_prefix(root).unwrap().to_owned()
         } else {
-            entry_file
+            pb
         };
-        let entry_file: PathBuf = Path::new("/").join(entry_file);
-        TypstFileId::new(None, &entry_file)
+        let pb: PathBuf = Path::new("/").join(pb);
+        TypstFileId::new(None, &pb)
     }
 
     /// Compile once from scratch.
