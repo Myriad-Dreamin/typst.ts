@@ -39,7 +39,7 @@
 })
 
 // Update date
-#let date = datetime.today().display()
+#let date = "2023-07-22"
 
 // Unavailable (last check date)
 #show "??": box(text(red, [#date #emoji.crossmark]))
