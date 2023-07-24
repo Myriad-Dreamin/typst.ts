@@ -140,6 +140,10 @@ impl<M: AccessModel + Sized> Vfs<M> {
         self.access_model.clear();
     }
 
+    pub fn reset_shadow(&mut self) {
+        self.access_model.inner().clear_shadow();
+    }
+
     /// Set the `do_reparse` flag.
     pub fn set_do_reparse(&mut self, do_reparse: bool) {
         self.do_reparse = do_reparse;
@@ -315,6 +319,10 @@ impl<M: AccessModel + Sized> Vfs<M> {
             .inner()
             .add_file(path.into(), content.as_bytes().into());
         self.resolve(path, source_id)
+    }
+
+    pub fn remove_shadow(&self, path: &Path) {
+        self.access_model.inner().remove_file(path);
     }
 
     pub fn file(&self, path: &Path) -> FileResult<Bytes> {

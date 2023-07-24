@@ -28,6 +28,10 @@ impl<M: AccessModel> OverlayAccessModel<M> {
         }
     }
 
+    pub fn clear_shadow(&self) {
+        self.files.write().clear();
+    }
+
     pub fn add_file(&self, path: Arc<Path>, content: Bytes) {
         // we change mt every time, since content almost changes every time
         // Note: we can still benefit from cache, since we incrementally parse source
