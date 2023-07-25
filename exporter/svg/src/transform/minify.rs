@@ -17,10 +17,10 @@ pub fn minify_one(text: &mut SvgText) -> bool {
         && content.attributes[0].0 == "transform"
         && matches!(content.content[0], SvgText::Content(_))
     {
-        let transform = content.attributes[0].1.as_str();
+        // let transform = content.attributes[0].1.as_str();
 
-        println!("minify_one fold transform: {:#?}", transform);
-        println!("minify_one fold transform after: {:#?}", transform);
+        // println!("minify_one fold transform: {:#?}", transform);
+        // println!("minify_one fold transform after: {:#?}", transform);
 
         let sub_content = match &mut content.content[0] {
             SvgText::Plain(_) => unreachable!(),
@@ -65,12 +65,12 @@ pub fn minify_one(text: &mut SvgText) -> bool {
 
 /// Do semantic-aware minification of SVG.
 pub fn minify(mut svg: Vec<SvgText>) -> Vec<SvgText> {
-    println!("minify_svg: {:#?}", svg);
+    // println!("minify_svg: {:#?}", svg);
 
     for text in svg.iter_mut() {
         minify_one(text);
     }
 
-    println!("minify_svg after: {:#?}", svg);
+    // println!("minify_svg after: {:#?}", svg);
     svg
 }
