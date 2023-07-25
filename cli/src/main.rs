@@ -33,15 +33,21 @@ fn help_sub_command() {
 fn main() {
     human_panic::setup_panic!();
 
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Info)
-        .filter_module("typst", log::LevelFilter::Warn)
-        .filter_module("typst_library", log::LevelFilter::Warn)
-        .try_init();
-
     let opts = Opts::from_arg_matches(&get_cli(false).get_matches())
         .map_err(|err| err.exit())
         .unwrap();
+
+    {
+        let mut builder = env_logger::builder();
+        builder.filter_level(log::LevelFilter::Info);
+        // Better?
+        if !matches!(&opts.sub, Some(Subcommands::Compile(CompileArgs { trace: _trace @ Some(_), .. }))) {
+            builder
+                .filter_module("typst::", log::LevelFilter::Warn)
+                .filter_module("typst_library::", log::LevelFilter::Warn);
+        }
+        builder.init();
+    }
 
     intercept_version(opts.version, opts.vv);
 
