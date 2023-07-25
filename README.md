@@ -32,15 +32,15 @@ Visualized Feature:
 
 - Incremental Font Transfer
 
-== Application
+### Application
 
-- #link("https://myriad-dreamin.github.io/typst.ts/")[A Website built with Typst.ts]
+- [A Website built with Typst.ts](https://myriad-dreamin.github.io/typst.ts/)
 
-- #link("https://github.com/Enter-tainer/typst-preview-vscode")[Instant VSCode Preview Plugin]
+- [Instant VSCode Preview Plugin](https://github.com/Enter-tainer/typst-preview-vscode)
 
-- #link("https://www.npmjs.com/package/hexo-renderer-typst")[Renderer Plugin for Hexo, a Blog-aware Static Site Generator]
+- [Renderer Plugin for Hexo, a Blog-aware Static Site Generator](https://www.npmjs.com/package/hexo-renderer-typst)
 
-- Renderer/Component Library for #link("https://www.npmjs.com/package/@myriaddreamin/typst.ts")[JavaScript], #link("https://www.npmjs.com/package/@myriaddreamin/typst.react")[React], and #link("https://www.npmjs.com/package/@myriaddreamin/typst.angular")[Angular]
+- Renderer/Component Library for [JavaScript](https://www.npmjs.com/package/@myriaddreamin/typst.ts), [React](https://www.npmjs.com/package/@myriaddreamin/typst.react), and [Angular](https://www.npmjs.com/package/@myriaddreamin/typst.angular)
 
 ### Prerequisite
 
