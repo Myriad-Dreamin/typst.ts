@@ -1,20 +1,62 @@
-# Typst.ts
 
-<p align="center">
-  <a href="https://github.com/Myriad-Dreamin/typst.ts/actions/workflows/ci.yaml">
-    <img alt="typst_ts::ci" src="https://github.com/Myriad-Dreamin/typst.ts/actions/workflows/ci.yaml/badge.svg"/>
-  </a>
-  <a href="https://github.com/Myriad-Dreamin/typst.ts/blob/main/LICENSE">
-    <img alt="Apache-2 License" src="https://img.shields.io/badge/license-Apache%202-brightgreen"/>
-  </a>
-</p>
+// #import "@preview/canvas:0.1.0": canvas
+// #import "/contrib/typst/typst-canvas/lib.typ": canvas
+#import "data-flow.typ": data-flow-graph
 
-Typst.ts is a project dedicated to bring the power of [Typst](https://github.com/typst/typst) to the world of JavaScript. In short, it composes ways to compile and render your Typst document. In the scope of server-side rendering collaborated by
-$\textcolor{#2ecc40}{\textsf{server}}$ and $\textcolor{#0074d9}{\textsf{browser}}$, there would be a data flow like this:
+// The project function defines how your document looks.
+// It takes your content and some metadata and formats it.
+// Go ahead and customize it to your liking!
+#let project(title: "", authors: (), body) = {
+  // Set the document's basic properties.
 
-<p align="center">
-    <img width="100%" alt="Data Flow" src="https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/docs/data-flow-standalone.artifact.svg"/>
-</p>
+  let style_color = rgb("#ffffff")
+  set document(author: authors, title: title)
+  set page(
+    numbering: none, 
+    number-align: center,
+    height: auto,
+    background: rect(fill: rgb("#343541"), height: 100%, width: 100%)
+  )
+  set text(font: "Linux Libertine", lang: "en", fill: style_color)
+
+  show link: underline
+  
+  // math setting
+  // show math.equation: set text(weight: 400)
+
+  // code block setting
+  show raw: it => {
+    if it.block {
+      rect(
+        width: 100%,
+        inset: (x: 4pt, y: 5pt),
+        radius: 4pt,
+        fill: rgb(239, 241, 243),
+        [
+          #set text(fill: rgb("#000000"))
+          #it
+        ],
+      )
+    } else {
+      it
+    }
+  }
+
+  // Main body.
+  set par(justify: true)
+
+  body
+}
+
+#show: project
+
+Typst.ts is a project dedicated to bring the power of #link("https://github.com/typst/typst")[Typst] to the world of JavaScript. In short, it composes ways to compile and render your Typst document. In the scope of server-side rendering collaborated by #text(fill: green, "server") and #text(fill: blue, "browser"), there would be a data flow like this:
+
+#figure(
+  data-flow-graph,
+  caption: [Browser-side module needed: $dagger$: renderer; $dagger.double$: compiler. ],
+  numbering: none,
+)
 
 Specifically, it provides several typical approaches:
 
@@ -22,7 +64,16 @@ Specifically, it provides several typical approaches:
 
 - Precompile Typst documents to a compressed artifact.
 
-- Run the typst compiler directly in browser, like [typst.app](https://typst.app).
+- Run the typst compiler directly in browser, like #link("https://typst.app")[typst.app].
+
+// Typst.ts allows you to independently run the Typst compiler and exporter (renderer) in your browser.
+
+// You can:
+
+// - locally run the compilation via `typst-ts-cli` to get a precompiled document,
+//   - or use `typst-ts-compiler` to build your backend programmatically.
+// - build your frontend using the lightweight TypeScript library `typst.ts`.
+// - send the precompiled document to your readers' browsers and render it as HTML elements.
 
 Visualized Feature:
 
@@ -42,15 +93,14 @@ Visualized Feature:
 
 - Renderer/Component Library for #link("https://www.npmjs.com/package/@myriaddreamin/typst.ts")[JavaScript], #link("https://www.npmjs.com/package/@myriaddreamin/typst.react")[React], and #link("https://www.npmjs.com/package/@myriaddreamin/typst.angular")[Angular]
 
-### Prerequisite
+== Installation
 
-- The font assets for Typst.ts are not included in this repository. See [Download Font Assets](./docs/download-font-assets.md) for more information.
+See https://github.com/Myriad-Dreamin/typst.ts/releases for precompiler and npm packages in Usage: Renderer section for renderer.
 
-### Installation
+== Usage
 
-Download the latest release from [GitHub Releases](https://github.com/Myriad-Dreamin/typst.ts/releases).
+== CLI (Precompiler)
 
-### CLI
 
 Run Compiler Example:
 
@@ -118,45 +168,22 @@ Options:
   -h, --help  Print help
 ```
 
-### Example: Render Typst document in browser (build from source with/without wasm-pack)
-
-Note: see [Troubleshooting WASM Build](docs/troubleshooting-wasm-build.md) for (especially) **Arch Linux** users.
-
-```shell
-$ cd packages/typst.ts && yarn install && yarn run build && yarn run link:local; cd ../..
-$ cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/
-```
-
-And open your browser to `http://localhost:20810/core/`.
-
-You can also run `yarn run build-wrapper` instead of `yarn run build && yarn run link:local` to avoid building the WASM modules from source.
-
-### Example: generate documentation site for packages developers.
-
-- Link [typst-doc](https://github.com/Mc-Zen/typst-doc) by `typst-ts-cli package link --manifest ./typst.toml`.
-
-- Generate documentation by `typst-ts-cli package doc --manifest ./contrib/templates/typst-ts-templates/typst.toml`.
-
-### Concept: Precompiler
-
-The compiler is capable of producing artifact outputs from a Typst project. Thet artifact outputs can be easily distributed to remote endpoints.
-
-### Concept: Renderer
+==== Renderer <renderer-example>
 
 The renderer accepts an input in artifact format and renders the document as HTML elements.
 
 Import Typst.ts in your project:
 
-- Using [@myriaddreamin/typst.ts][npm::typst.ts]
+- Using #link("https://www.npmjs.com/package/@myriaddreamin/typst.ts")[\@myriaddreamin/typst.ts]
 
-  ```typescript
+  ```ts
   import { createTypstRenderer } from '@myriaddreamin/typst.ts';
   const renderer = createTypstRenderer();
   ```
 
-- Using [@myriaddreamin/typst.react][npm::typst.react]
+- Using #link("https://www.npmjs.com/package/@myriaddreamin/typst.react")[\@myriaddreamin/typst.react]
 
-  ```typescript
+  ```tsx
   import { TypstDocument } from '@myriaddreamin/typst.react';
 
   export const App = (artifact: string) => {
@@ -169,11 +196,11 @@ Import Typst.ts in your project:
   };
   ```
 
-- Using [@myriaddreamin/typst.angular][npm::typst.angular]
+- Using #link("https://www.npmjs.com/package/@myriaddreamin/typst.angular")[\@myriaddreamin/typst.angular]
 
   In the module file of your awesome component.
 
-  ```typescript
+  ```ts
   /// component.module.ts
   import { TypstDocumentModule } from '@myriaddreamin/typst.angular';
   ```
@@ -184,11 +211,24 @@ Import Typst.ts in your project:
   <typst-document fill="#343541" artifact="{{ artifact }}"></typst-document>
   ```
 
-- Using [@myriaddreamin/typst.vue3][npm::typst.vue3]
+- Using #link("https://www.npmjs.com/package/@myriaddreamin/typst.vue3")[\@myriaddreamin/typst.vue3]
 
   Coming soon.
 
-[npm::typst.ts]: https://www.npmjs.com/package/@myriaddreamin/typst.ts
-[npm::typst.react]: https://www.npmjs.com/package/@myriaddreamin/typst.react
-[npm::typst.angular]: https://www.npmjs.com/package/@myriaddreamin/typst.angular
-[npm::typst.vue3]: ./packages/typst.vue3/README.md
+
+== Development (Build from source)
+
+==== Prerequisite
+
+- The font assets for Typst.ts are not included in this repository. See [Download Font Assets](./docs/download-font-assets.md) for more information.
+
+=== Renderer Example
+
+```shell
+$ cd packages/typst.ts && yarn install && yarn run build && yarn run link:local; cd ../..
+$ cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/
+```
+
+And open `http://localhost:8075` in your browser.
+
+You can also run `yarn run build-wrapper` instead of `yarn run build && yarn run link:local` to avoid building the WASM modules from source..
