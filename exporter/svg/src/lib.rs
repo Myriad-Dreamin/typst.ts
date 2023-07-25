@@ -56,6 +56,9 @@ pub trait ExportFeature {
     /// Whether to include js for interactive and responsive actions.
     /// If enabled, users can interact with the svg file.
     const WITH_RESPONSIVE_JS: bool;
+
+    /// Also escape html entity.
+    const AWARE_HTML_ENTITY: bool;
 }
 
 /// The default feature set which is used for exporting full-fledged svg.
@@ -69,6 +72,7 @@ impl ExportFeature for DefaultExportFeature {
     const USE_STABLE_GLYPH_ID: bool = true;
     const WITH_BUILTIN_CSS: bool = true;
     const WITH_RESPONSIVE_JS: bool = true;
+    const AWARE_HTML_ENTITY: bool = true;
 }
 
 /// The feature set which is used for exporting plain svg.
@@ -78,10 +82,11 @@ pub type PlainSvgTask = SvgTask<SvgExportFeature>;
 impl ExportFeature for SvgExportFeature {
     const ENABLE_TRACING: bool = false;
     const SHOULD_ATTACH_DEBUG_INFO: bool = false;
-    const SHOULD_RENDER_TEXT_ELEMENT: bool = false;
+    const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
     const USE_STABLE_GLYPH_ID: bool = true;
     const WITH_BUILTIN_CSS: bool = true;
     const WITH_RESPONSIVE_JS: bool = false;
+    const AWARE_HTML_ENTITY: bool = false;
 }
 
 /// Render SVG wrapped with html for [`Document`].

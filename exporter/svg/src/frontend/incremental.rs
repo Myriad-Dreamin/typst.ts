@@ -26,6 +26,7 @@ impl ExportFeature for IncrementalExportFeature {
     const USE_STABLE_GLYPH_ID: bool = true;
     const WITH_BUILTIN_CSS: bool = false;
     const WITH_RESPONSIVE_JS: bool = false;
+    const AWARE_HTML_ENTITY: bool = true;
 }
 
 pub struct IncrementalRenderContext {
