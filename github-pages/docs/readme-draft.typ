@@ -54,7 +54,7 @@ Typst.ts is a project dedicated to bring the power of #link("https://github.com/
 
 #figure(
   data-flow-graph,
-  caption: [Browser-side module needed: $dagger$: renderer; $dagger.double$: compiler. ],
+  caption: [Browser-side module needed: $dagger$: compiler; $dagger.double$: renderer. ],
   numbering: none,
 )
 
