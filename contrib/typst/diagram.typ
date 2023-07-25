@@ -1,7 +1,7 @@
 
 #let node(pos, label) = (kind: "node", pos: pos, label: label)
 
-#let arr(start, end, label, start_space: none, end_space: none, label_pos: 1em, curve: 0deg, stroke: 0.45pt + white, ..options) = {
+#let arr(start, end, label, start_space: none, end_space: none, label_pos: 1em, curve: 0deg, stroke: 0.45pt, ..options) = {
   (
     kind: "arrow",
     start: start,
@@ -21,7 +21,7 @@
   arr_clearance: 0.7em,
   padding: 1.5em,
   debug: false,
-  bg-color: rgb("#343541"),
+  bg-color: rgb("#fff"),
   ..entities
 ) = {
   style(styles => {

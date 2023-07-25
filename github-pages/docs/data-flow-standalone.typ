@@ -6,6 +6,6 @@
 
 #figure(
   data-flow-graph,
-  caption: [Browser-side module needed: $dagger$: renderer; $dagger.double$: compiler. ],
+  caption: [Browser-side module needed: $dagger$: compiler; $dagger.double$: renderer. ],
   numbering: none,
 )
