@@ -1,7 +1,7 @@
 
 // #import "@preview/canvas:0.1.0": canvas
 // #import "/contrib/typst/typst-canvas/lib.typ": canvas
-#import "/contrib/typst/diagram.typ": node, arr, commutative_diagram
+#import "data-flow.typ": data-flow-graph
 
 // The project function defines how your document looks.
 // It takes your content and some metadata and formats it.
@@ -52,58 +52,17 @@
 
 Typst.ts is a project dedicated to bring the power of #link("https://github.com/typst/typst")[Typst] to the world of JavaScript. In short, it composes ways to compile and render your Typst document. In the scope of server-side rendering collaborated by #text(fill: green, "server") and #text(fill: blue, "browser"), there would be a data flow like this:
 
-#let data-flow-graph = commutative_diagram(
-  node_padding: (70pt, 50pt),
-  node((0, 0), [
-    Typst Documents
-  ]),
-  node((0, 2), [
-    Preprocessed Artifact
-  ]),
-  node((1, 1), [
-    #link("https://developer.mozilla.org/en-US/docs/Web/SVG")[Svg Document] ( `<svg/>` )
-  ]),
-  node((2, 1), [
-    #link("https://developer.mozilla.org/en-US/docs/Web/HTML/Element/canvas")[Canvas] ( `<canvas/>` )
-  ]),
-  arr((0, 0), (0, 2), [
-    #set text(fill: green)
-    `precompile with theme and screen settings`
-  ]),
-  arr((0, 0), (1, 1), label_pos: 0.8em, {
-    set text(fill: green)
-    rotate(17deg)[
-      `compile to svg`
-      #set text(fill: blue)
-      #h(-0.5em) $space^dagger$
-    ]
-  }),
-  arr((0, 0), (2, 1), label_pos: -0.6em, curve: -25deg, {
-    set text(fill: blue)
-    rotate(35deg)[`directly render` #h(-0.5em) $ space^(dagger dot.c dagger.double)$]
-  }),
-  arr((0, 2), (1, 1), label_pos: -0.8em, {
-    set text(fill: blue)
-    rotate(-17deg)[`render to svg` #h(-0.5em) $ space^dagger.double$]
-  }),
-  arr((1, 1), (2, 1), []),
-  arr((0, 2), (2, 1), label_pos: 0.6em, curve: 25deg, {
-    set text(fill: blue)
-    rotate(-35deg)[`render to canvas` #h(-0.5em) $ space^(dagger.double)$]
-  }),
-)
-
 #figure(
   data-flow-graph,
   caption: [Browser-side module needed: $dagger$: renderer; $dagger.double$: compiler. ],
   numbering: none,
 )
 
-Specifically, it supports several typical approaches:
+Specifically, it provides several typical approaches:
 
-- Statically compile your Typst document to browser-friendly SVG documents, which can be easily embedded in your HTML page.
+- Compile Typst documents to browser-friendly SVG documents.
 
-- Precompile your Typst document to a compressed artifact, allowing to render with speicific theme and screen settings at the browser side.
+- Precompile Typst documents to a compressed artifact.
 
 - Run the typst compiler directly in browser, like #link("https://typst.app")[typst.app].
 
@@ -116,12 +75,23 @@ Specifically, it supports several typical approaches:
 // - build your frontend using the lightweight TypeScript library `typst.ts`.
 // - send the precompiled document to your readers' browsers and render it as HTML elements.
 
-The Typst.ts application is designed to be fast due to the following reasons:
+Visualized Feature:
 
-- Precompiled documents are much smaller than their PDF equivalents.
-  - For example, a compressed precompiled document is only 35KB while its corresponding PDF is 342KB.
-- The renderer module has a small code size.
-- Typst itself has great performance.
+- Artifact Streaming
+
+- Incremental Rendering
+
+- Incremental Font Transfer
+
+== Application
+
+- #link("https://myriad-dreamin.github.io/typst.ts/")[A Website built with Typst.ts]
+
+- #link("https://github.com/Enter-tainer/typst-preview-vscode")[Instant VSCode Preview Plugin]
+
+- #link("https://www.npmjs.com/package/hexo-renderer-typst")[Renderer Plugin for Hexo, a Blog-aware Static Site Generator]
+
+- Renderer/Component Library for #link("https://www.npmjs.com/package/@myriaddreamin/typst.ts")[JavaScript], #link("https://www.npmjs.com/package/@myriaddreamin/typst.react")[React], and #link("https://www.npmjs.com/package/@myriaddreamin/typst.angular")[Angular]
 
 == Installation
 
