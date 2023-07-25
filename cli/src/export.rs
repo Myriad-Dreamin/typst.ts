@@ -20,6 +20,7 @@ pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature hint */ &str
     ("nothing", REPORT_BUG_MESSAGE),
     ("pdf", "pdf"),
     ("svg", "svg"),
+    ("svg_html", "svg"),
     ("sir", "svg"),
     ("rmp", "serde-rmp"),
 ];
@@ -97,7 +98,9 @@ fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExp
             #[cfg(feature = "serde-rmp")]
             "rmp"         => sink_path!(WithRmp as _ as artifact, out @@ "artifact.rmp"),
             #[cfg(feature = "svg")]
-            "svg"         => sink_path!(WithSvg as _ as doc, out @@ "artifact.svg.html"),
+            "svg"         => sink_path!(WithSvg as _ as doc, out @@ "artifact.svg"),
+            #[cfg(feature = "svg")]
+            "svg_html"         => sink_path!(WithSvgHtml as _ as doc, out @@ "artifact.svg.html"),
             #[cfg(feature = "svg")]
             "sir"         => sink_path!(WithSIR as _ as doc, out @@ "artifact.sir.bin"),
             _             => exit_by_unknown_format(f),
@@ -120,7 +123,8 @@ fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExp
     type WithJson<T> = typst_ts_serde_exporter::JsonExporter<T>;
     type WithPdf = typst_ts_pdf_exporter::PdfDocExporter;
     type WithRmp = typst_ts_serde_exporter::RmpArtifactExporter;
-    type WithSvg = typst_ts_svg_exporter::SvgExporter<DefaultExportFeature>;
+    type WithSvg = typst_ts_svg_exporter::PureSvgExporter;
+    type WithSvgHtml = typst_ts_svg_exporter::SvgExporter<DefaultExportFeature>;
     type WithSIR = typst_ts_svg_exporter::SvgModuleExporter;
 
     type ExporterVec<T> = Vec<Box<dyn typst_ts_core::Exporter<T> + Send>>;
