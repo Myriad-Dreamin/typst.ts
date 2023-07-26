@@ -75,6 +75,11 @@ impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Fea
     fn should_attach_debug_info(&self) -> bool {
         Feat::SHOULD_ATTACH_DEBUG_INFO && self.should_attach_debug_info
     }
+
+    #[inline]
+    fn should_aware_html_entity(&self) -> bool {
+        Feat::AWARE_HTML_ENTITY
+    }
 }
 
 impl<'m, 't, Feat: ExportFeature> BuildGlyph for RenderContext<'m, 't, Feat> {

@@ -78,6 +78,12 @@ macro_rules! escapes {
 }
 
 escapes!(
+    PcDataEscapes,
+    b'<' => "&lt;",
+    b'&' => "&amp;",
+);
+
+escapes!(
     TextContentDataEscapes,
     b'<' => "&lt;",
     b'&' => "&amp;",

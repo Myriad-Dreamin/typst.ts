@@ -18,7 +18,7 @@ pub(crate) mod debug_info;
 pub use debug_info::generate_src_mapping;
 
 mod escape;
-use escape::TextContentDataEscapes;
+use escape::{PcDataEscapes, TextContentDataEscapes};
 
 use crate::utils::ToCssExt;
 
@@ -40,6 +40,8 @@ pub trait DynExportFeature {
     fn use_stable_glyph_id(&self) -> bool;
 
     fn should_attach_debug_info(&self) -> bool;
+
+    fn should_aware_html_entity(&self) -> bool;
 }
 
 /// A generated text content.
@@ -235,6 +237,7 @@ impl SvgTextBuilder {
         shape: &ir::TextShape,
         content: &str,
         width: Scalar,
+        aware_html_entity: bool,
     ) {
         // upem is the unit per em defined in the font.
         // ppem is calcuated by the font size.
@@ -247,7 +250,11 @@ impl SvgTextBuilder {
         let ascender = shape.ascender.0 / ppem;
         let width = width.0 / ppem;
 
-        let text_content = escape::escape_str::<TextContentDataEscapes>(content);
+        let text_content = if aware_html_entity {
+            escape::escape_str::<TextContentDataEscapes>(content)
+        } else {
+            escape::escape_str::<PcDataEscapes>(content)
+        };
 
         // todo: investigate &nbsp;
         self.content.push(SvgText::Plain(format!(
@@ -381,7 +388,12 @@ impl<
             return;
         }
 
-        self.render_text_semantics_inner(&text.shape, &text.content.content, width)
+        self.render_text_semantics_inner(
+            &text.shape,
+            &text.content.content,
+            width,
+            ctx.should_aware_html_entity(),
+        )
     }
 
     #[inline]
@@ -431,7 +443,12 @@ impl<
             return;
         }
 
-        self.render_text_semantics_inner(&text.shape, &text.content.content, width)
+        self.render_text_semantics_inner(
+            &text.shape,
+            &text.content.content,
+            width,
+            ctx.should_aware_html_entity(),
+        )
     }
 
     fn with_frame(mut self, _ctx: &mut C, _group: &flat_ir::GroupRef) -> Self {
