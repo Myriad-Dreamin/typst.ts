@@ -14,11 +14,6 @@ impl TraceGuard {
     pub fn new(options: String) -> Result<Self, String> {
         let level = level_filter(options)?;
 
-        let logger = env_logger::builder()
-            .filter_level(log::LevelFilter::Info)
-            .build();
-        log::set_boxed_logger(Box::new(logger)).unwrap();
-
         // Build the FMT layer printing to the console.
         let fmt_layer = fmt::Layer::default().with_filter(level);
 
@@ -36,7 +31,6 @@ impl TraceGuard {
 
 /// Returns the log level filter for the given verbosity level.
 fn level_filter(args: String) -> Result<LevelFilter, String> {
-    println!("trace args: {}", args);
     if let Some(res) = args.strip_prefix("verbosity=") {
         return Ok(
             match res
