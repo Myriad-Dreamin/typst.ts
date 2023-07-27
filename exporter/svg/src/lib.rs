@@ -99,7 +99,7 @@ pub fn render_svg_html(output: &Document) -> String {
 /// Render SVG for [`Document`].
 pub fn render_svg(output: &Document) -> String {
     type UsingExporter = SvgExporter<SvgExportFeature>;
-    let svg_text = UsingExporter::render_transient_html(output);
+    let svg_text = UsingExporter::render_transient_svg(output);
     generate_text(transform::minify(svg_text))
 }
 
@@ -110,6 +110,16 @@ impl<Feat: ExportFeature> Exporter<Document, String> for SvgExporter<Feat> {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<String> {
         // html wrap
         Ok(render_svg_html(&output))
+    }
+}
+
+#[derive(Default)]
+pub struct PureSvgExporter;
+
+impl Exporter<Document, String> for PureSvgExporter {
+    fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<String> {
+        // html wrap
+        Ok(render_svg(&output))
     }
 }
 
