@@ -135,7 +135,8 @@ impl CompileDriver {
     }
 
     /// Get the file id for a given path.
-    /// Note: only works for files in the workspace instead of external packages.
+    /// Note: only works for files in the workspace instead of external
+    /// packages.
     pub fn id_for_path(&self, pb: PathBuf) -> TypstFileId {
         let pb = if pb.is_absolute() {
             let pb = pb.clean();
@@ -216,6 +217,14 @@ impl CompileDriver {
     pub fn relevant(&self, event: &notify::Event) -> bool {
         use notify::event::ModifyKind;
         use notify::EventKind;
+
+        if event
+            .paths
+            .iter()
+            .any(|p| p.to_string_lossy().contains(".artifact."))
+        {
+            return false;
+        }
 
         macro_rules! fs_event_must_relevant {
             () => {
