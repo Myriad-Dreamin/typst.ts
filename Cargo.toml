@@ -50,8 +50,9 @@ strip = true
 [workspace.dependencies]
 
 # typesetting
-typst = "0.6.0"
-typst-library = "0.6.0"
+typst = "0.7.0"
+typst-library = "0.7.0"
+typst-syntaxes = "0.7.0"
 tiny-skia = "0.9.0"
 ttf-parser = "0.18.1"
 image = { version = "0.24", default-features = false, features = [

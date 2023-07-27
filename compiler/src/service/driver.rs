@@ -6,8 +6,9 @@ use std::{
 
 use crate::TypstSystemWorld;
 use typst::{
-    diag::{SourceError, SourceResult},
+    diag::{SourceDiagnostic, SourceResult},
     doc::Document,
+    eval::Tracer,
 };
 use typst_ts_core::{
     exporter_builtins::GroupExporter,
@@ -66,7 +67,7 @@ impl CompileDriver {
     /// Print diagnostic messages to the terminal.
     fn print_diagnostics(
         &self,
-        errors: Vec<SourceError>,
+        errors: Vec<SourceDiagnostic>,
     ) -> Result<(), codespan_reporting::files::Error> {
         diag::print_diagnostics(&self.world, errors)
     }
@@ -126,8 +127,9 @@ impl CompileDriver {
     pub fn compile(&mut self) -> SourceResult<Document> {
         self.reset()?;
 
+        let mut tracer = Tracer::default();
         // compile and export document
-        typst::compile(&self.world)
+        typst::compile(&self.world, &mut tracer)
     }
 
     pub fn main_id(&self) -> TypstFileId {
@@ -192,7 +194,8 @@ impl CompileDriver {
             }
 
             // compile and export document
-            let output = Arc::new(typst::compile(&self.world).unwrap());
+            let mut tracer = Tracer::default();
+            let output = Arc::new(typst::compile(&self.world, &mut tracer).unwrap());
             svg_exporter.render(current_width, output);
             println!(
                 "rerendered {} at {:?}, {}",

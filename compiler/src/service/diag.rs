@@ -10,7 +10,7 @@ use codespan_reporting::{
     },
 };
 
-use typst::{diag::SourceError, World};
+use typst::{diag::SourceDiagnostic, World};
 
 use typst_ts_core::TypstFileId;
 
@@ -26,7 +26,7 @@ fn color_stream() -> StandardStream {
 /// Print diagnostic messages to the terminal.
 pub fn print_diagnostics<'files, W: World + Files<'files, FileId = TypstFileId>>(
     world: &'files W,
-    errors: Vec<SourceError>,
+    errors: Vec<SourceDiagnostic>,
 ) -> Result<(), codespan_reporting::files::Error> {
     let mut w = color_stream();
     let config = term::Config {
@@ -38,7 +38,7 @@ pub fn print_diagnostics<'files, W: World + Files<'files, FileId = TypstFileId>>
         // The main diagnostic.
         let source = typst::World::source(world, error.span.id()).ok();
         let range = source
-            .map(|source| error.span.range_in(&source))
+            .map(|source| source.range(error.span))
             .unwrap_or(0..0);
         let diag = Diagnostic::error()
             .with_message(error.message)
@@ -53,7 +53,7 @@ pub fn print_diagnostics<'files, W: World + Files<'files, FileId = TypstFileId>>
                 .with_message(message)
                 .with_labels(vec![Label::primary(
                     point.span.id(),
-                    point.span.range(world),
+                    world.range(point.span),
                 )]);
 
             term::emit(&mut w, &config, world, &help)?;
