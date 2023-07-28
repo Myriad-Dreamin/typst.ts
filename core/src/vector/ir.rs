@@ -361,7 +361,7 @@ pub type GlyphPack = Vec<(AbsoluteRef, GlyphItem)>;
 pub struct GlyphPackBuilder;
 
 impl GlyphPackBuilder {
-    pub fn finalize(glyphs: GlyphMapping) -> GlyphPack {
+    pub fn finalize(glyphs: impl IntoIterator<Item = (GlyphItem, AbsoluteRef)>) -> GlyphPack {
         let mut glyphs = glyphs.into_iter().collect::<Vec<_>>();
         glyphs.sort_by(|(_, a), (_, b)| a.id.0.cmp(&b.id.0));
         glyphs.into_iter().map(|(a, b)| (b, a)).collect()

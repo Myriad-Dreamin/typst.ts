@@ -90,7 +90,7 @@ pub struct TransformedRef(pub TransformItem, pub AbsoluteRef);
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct GroupRef(pub Arc<[(Point, AbsoluteRef)]>);
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct ItemPack(pub Vec<(Fingerprint, FlatSvgItem)>);
@@ -129,6 +129,7 @@ pub struct SvgDocument {
 }
 
 /// Module with multiple documents in a module [`typst::doc::Document`].
+#[derive(Default)]
 pub struct MultiSvgDocument {
     pub module: Module,
     /// References to the page frames.
@@ -136,55 +137,110 @@ pub struct MultiSvgDocument {
     pub layouts: Vec<(Abs, Pages)>,
 }
 
-impl MultiSvgDocument {
-    #[cfg(feature = "rkyv")]
-    pub fn from_slice(v: &[u8]) -> Self {
-        use rkyv::de::deserializers::SharedDeserializeMap;
+#[cfg(feature = "rkyv")]
+pub mod stream {
+    use super::{ArchivedSerializedModule, SerializedModule};
+    use rkyv::de::deserializers::SharedDeserializeMap;
+    use rkyv::{AlignedVec, Deserialize};
 
-        let mut aligned = rkyv::AlignedVec::default();
-        let v = if (v.as_ptr() as usize) % rkyv::AlignedVec::ALIGNMENT != 0 {
-            aligned.extend_from_slice(v);
-            aligned.as_slice()
-        } else {
-            v
-        };
+    enum RkyvStreamData<'a> {
+        Aligned(&'a [u8]),
+        Unaligned(AlignedVec),
+    }
 
-        let archived = rkyv::check_archived_root::<SerializedModule>(v).unwrap();
+    impl<'a> AsRef<[u8]> for RkyvStreamData<'a> {
+        #[inline]
+        fn as_ref(&self) -> &[u8] {
+            match self {
+                Self::Aligned(v) => v,
+                Self::Unaligned(v) => v.as_slice(),
+            }
+        }
+    }
 
-        let item_pack: ItemPack = {
+    pub struct SvgDocumentStream<'a> {
+        data: RkyvStreamData<'a>,
+    }
+
+    impl<'a> SvgDocumentStream<'a> {
+        pub fn from_slice(v: &'a [u8]) -> Self {
+            let v = if (v.as_ptr() as usize) % AlignedVec::ALIGNMENT != 0 {
+                let mut aligned = AlignedVec::with_capacity(v.len());
+                aligned.extend_from_slice(v);
+                RkyvStreamData::Unaligned(aligned)
+            } else {
+                RkyvStreamData::Aligned(v)
+            };
+
+            Self { data: v }
+        }
+
+        pub fn checkout(&self) -> &ArchivedSerializedModule {
+            rkyv::check_archived_root::<SerializedModule>(self.data.as_ref()).unwrap()
+        }
+
+        pub fn checkout_owned(&self) -> SerializedModule {
+            let v = self.checkout();
             let mut dmap = SharedDeserializeMap::default();
-            archived.item_pack.deserialize(&mut dmap).unwrap()
-        };
-
-        let layouts = {
-            let mut infallible = rkyv::Infallible;
-            archived.layouts.deserialize(&mut infallible).unwrap()
-        };
-
-        let glyphs = {
-            let mut dmap = SharedDeserializeMap::default();
-            let glyphs: Vec<(AbsoluteRef, FlatGlyphItem)> =
-                archived.glyphs.deserialize(&mut dmap).unwrap();
-            glyphs
-                .into_iter()
-                .map(|(abs_ref, glyph)| (abs_ref, glyph.into()))
-                .collect()
-        };
-
-        MultiSvgDocument {
-            module: Module {
-                glyphs,
-                item_pack,
-                source_mapping: Default::default(),
-            },
-            layouts,
+            v.deserialize(&mut dmap).unwrap()
         }
     }
 }
 
+pub trait SvgDocumentStreamView {
+    fn get_items(&self) -> ItemPack;
+    fn get_layouts(&self) -> Vec<(Abs, Pages)>;
+    fn get_glyphs(&self) -> Vec<(AbsoluteRef, FlatGlyphItem)>;
+    fn get_metadata(&self) -> Vec<ModuleMetadata>;
+}
+
+// todo: for archived module.
+// todo: zero copy
+#[cfg(feature = "rkyv")]
+impl SvgDocumentStreamView for &SerializedModule {
+    fn get_items(&self) -> ItemPack {
+        self.item_pack.clone()
+    }
+
+    fn get_layouts(&self) -> Vec<(Abs, Pages)> {
+        self.layouts.clone()
+    }
+
+    fn get_glyphs(&self) -> Vec<(AbsoluteRef, FlatGlyphItem)> {
+        self.glyphs.clone()
+    }
+
+    fn get_metadata(&self) -> Vec<ModuleMetadata> {
+        self.metadata.clone()
+    }
+}
+
+impl MultiSvgDocument {
+    pub fn merge_delta(&mut self, v: impl SvgDocumentStreamView) {
+        let item_pack: ItemPack = v.get_items();
+        let layouts = v.get_layouts();
+        let glyphs = v.get_glyphs();
+
+        self.layouts = layouts;
+
+        // since no gc, we do not need a sort here.
+        self.module.item_pack.0.extend(item_pack.0.into_iter());
+        self.module
+            .glyphs
+            .extend(glyphs.into_iter().map(|(id, item)| (id, item.into())));
+    }
+
+    pub fn from_slice(v: &[u8]) -> Self {
+        let data = stream::SvgDocumentStream::from_slice(v);
+
+        let mut res: Self = Default::default();
+        res.merge_delta(&data.checkout_owned());
+        res
+    }
+}
+
 /// Intermediate representation of a incompleted svg item.
-#[derive(Default)]
-pub struct ModuleBuilder {
+pub struct ModuleBuilderImpl<const ENABLE_REF_CNT: bool = false> {
     pub glyphs: GlyphMapping,
     pub items: Vec<(Fingerprint, FlatSvgItem)>,
     pub item_pos: HashMap<Fingerprint, DefId>,
@@ -195,15 +251,52 @@ pub struct ModuleBuilder {
 
     /// See `typst_ts_svg_exporter::ExportFeature`.
     pub should_attach_debug_info: bool,
+
+    pub lifetime: u64,
+    pub incr_items: Vec<(Fingerprint, u64, FlatSvgItem)>,
+    pub incr_glyphs: Vec<u64>,
 }
 
-impl ModuleBuilder {
+pub type ModuleBuilder = ModuleBuilderImpl<false>;
+pub type IncrModuleBuilder = ModuleBuilderImpl<true>;
+
+impl<const ENABLE_REF_CNT: bool> Default for ModuleBuilderImpl<ENABLE_REF_CNT> {
+    fn default() -> Self {
+        Self {
+            lifetime: 0,
+            glyphs: Default::default(),
+            items: Default::default(),
+            item_pos: Default::default(),
+            source_mapping: Default::default(),
+            source_mapping_buffer: Default::default(),
+            fingerprint_builder: Default::default(),
+            incr_items: Default::default(),
+            incr_glyphs: Default::default(),
+            should_attach_debug_info: false,
+        }
+    }
+}
+
+impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
+    pub fn reset(&mut self) {
+        self.source_mapping.clear();
+        self.source_mapping_buffer.clear();
+    }
+
     pub fn finalize_ref(&self) -> (Module, GlyphMapping) {
         let glyphs = GlyphPackBuilder::finalize(self.glyphs.clone());
 
         let module = Module {
             glyphs,
-            item_pack: ItemPack(self.items.clone()),
+            item_pack: ItemPack(if ENABLE_REF_CNT {
+                self.incr_items
+                    .clone()
+                    .into_iter()
+                    .map(|(f, _, i)| (f, i))
+                    .collect()
+            } else {
+                self.items.clone()
+            }),
             source_mapping: self.source_mapping.clone(),
         };
 
@@ -215,16 +308,19 @@ impl ModuleBuilder {
 
         let module = Module {
             glyphs,
-            item_pack: ItemPack(self.items),
+            item_pack: ItemPack(if ENABLE_REF_CNT {
+                self.incr_items
+                    .clone()
+                    .into_iter()
+                    .map(|(f, _, i)| (f, i))
+                    .collect()
+            } else {
+                self.items
+            }),
             source_mapping: self.source_mapping,
         };
 
         (module, self.glyphs)
-    }
-
-    pub fn reset(&mut self) {
-        self.source_mapping.clear();
-        self.source_mapping_buffer.clear();
     }
 
     pub fn build_glyph(&mut self, glyph: &GlyphItem) -> AbsoluteRef {
@@ -237,6 +333,9 @@ impl ModuleBuilder {
         let fingerprint = self.fingerprint_builder.resolve(glyph);
         let abs_ref = AbsoluteRef { fingerprint, id };
         self.glyphs.insert(glyph.clone(), abs_ref.clone());
+        if ENABLE_REF_CNT {
+            self.incr_glyphs.push(self.lifetime);
+        }
         abs_ref
     }
 
@@ -321,6 +420,9 @@ impl ModuleBuilder {
         let fingerprint = self.fingerprint_builder.resolve(&resolved_item);
 
         if let Some(pos) = self.item_pos.get(&fingerprint) {
+            if ENABLE_REF_CNT {
+                self.incr_items[pos.0 as usize].1 = self.lifetime;
+            }
             return AbsoluteRef {
                 fingerprint,
                 id: *pos,
@@ -328,10 +430,58 @@ impl ModuleBuilder {
         }
 
         let id = DefId(self.items.len() as u64);
-        self.items.push((fingerprint, resolved_item));
+        if ENABLE_REF_CNT {
+            self.incr_items
+                .push((fingerprint, self.lifetime, resolved_item));
+        } else {
+            self.items.push((fingerprint, resolved_item));
+        }
         self.item_pos.insert(fingerprint, id);
         AbsoluteRef { fingerprint, id }
     }
+}
+
+impl IncrModuleBuilder {
+    pub fn increment_lifetime(&mut self) {
+        self.lifetime += 1;
+    }
+
+    pub fn gc(&mut self, _threshold: u64) -> Vec<AbsoluteRef> {
+        vec![]
+    }
+
+    pub fn finalize_delta(&mut self) -> (Module, GlyphMapping) {
+        let glyphs = GlyphPackBuilder::finalize(
+            self.glyphs
+                .clone()
+                .into_iter()
+                .filter(|e| self.incr_glyphs[e.1.id.0 as usize] == self.lifetime),
+        );
+
+        let module = Module {
+            glyphs,
+            item_pack: ItemPack(
+                self.incr_items
+                    .clone()
+                    .into_iter()
+                    .filter(|e| e.1 == self.lifetime)
+                    .map(|(f, _, i)| (f, i))
+                    .collect(),
+            ),
+            source_mapping: self.source_mapping.clone(),
+        };
+
+        (module, self.glyphs.clone())
+    }
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub enum ModuleMetadata {
+    SourceMappingData(Vec<SourceMappingNode>),
+    PageSourceMapping(Vec<Vec<SourceMappingNode>>),
+    GarbageCollection(Vec<AbsoluteRef>),
 }
 
 /// Flatten transform item.
@@ -339,11 +489,13 @@ impl ModuleBuilder {
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct SerializedModule {
+    pub metadata: Vec<ModuleMetadata>,
     pub item_pack: ItemPack,
     pub glyphs: Vec<(AbsoluteRef, FlatGlyphItem)>,
     pub layouts: Vec<(Abs, Vec<(AbsoluteRef, Size)>)>,
 }
 
+// todo: remove me
 pub fn serialize_module(repr: Module) -> Vec<u8> {
     // Or you can customize your serialization for better performance
     // and compatibility with #![no_std] environments
@@ -356,16 +508,14 @@ pub fn serialize_module(repr: Module) -> Vec<u8> {
     item_pack.into_vec()
 }
 
-pub fn serialize_multi_doc_standalone(
-    doc: MultiSvgDocument,
-    glyph_mapping: GlyphMapping,
-) -> Vec<u8> {
+pub fn build_flat_glyphs(
+    repr: impl IntoIterator<Item = (GlyphItem, AbsoluteRef)>,
+) -> Vec<(AbsoluteRef, FlatGlyphItem)> {
     let glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
     let glyph_lower_builder = GlyphLowerBuilder::new(&glyph_provider);
 
-    let glyphs = glyph_mapping
-        .into_iter()
-        .filter_map(|(glyph, glyph_id)| {
+    repr.into_iter()
+        .flat_map(|(glyph, glyph_id)| {
             let glyph = glyph_lower_builder.lower_glyph(&glyph);
             glyph.map(|t| {
                 let t = match t {
@@ -377,21 +527,31 @@ pub fn serialize_multi_doc_standalone(
                 (glyph_id, t)
             })
         })
-        .collect::<Vec<_>>();
+        .collect::<Vec<_>>()
+}
 
+pub fn serialize_module_v2(repr: &SerializedModule) -> Vec<u8> {
     // Or you can customize your serialization for better performance
     // and compatibility with #![no_std] environments
     use rkyv::ser::{serializers::AllocSerializer, Serializer};
 
     let mut serializer = AllocSerializer::<0>::default();
-    serializer
-        .serialize_value(&SerializedModule {
-            item_pack: doc.module.item_pack,
-            glyphs,
-            layouts: doc.layouts,
-        })
-        .unwrap();
-    let item_pack = serializer.into_serializer().into_inner();
+    serializer.serialize_value(repr).unwrap();
+    let bytes = serializer.into_serializer().into_inner();
 
-    item_pack.into_vec()
+    bytes.into_vec()
+}
+
+pub fn serialize_multi_doc_standalone(
+    doc: MultiSvgDocument,
+    glyph_mapping: GlyphMapping,
+) -> Vec<u8> {
+    let glyphs = build_flat_glyphs(glyph_mapping);
+
+    serialize_module_v2(&SerializedModule {
+        metadata: vec![],
+        item_pack: doc.module.item_pack,
+        glyphs,
+        layouts: doc.layouts,
+    })
 }

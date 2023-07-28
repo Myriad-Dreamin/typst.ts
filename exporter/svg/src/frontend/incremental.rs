@@ -5,7 +5,7 @@ use std::{
 
 use typst::doc::Document;
 use typst_ts_core::vector::{
-    flat_ir::{ItemPack, Module, ModuleBuilder, SourceMappingNode, SvgDocument},
+    flat_ir::{ItemPack, Module, ModuleBuilder, Pages, SourceMappingNode, SvgDocument},
     flat_vm::{FlatIncrRenderVm, FlatRenderVm},
     ir::AbsoluteRef,
     LowerBuilder,
@@ -29,28 +29,28 @@ impl ExportFeature for IncrementalExportFeature {
     const AWARE_HTML_ENTITY: bool = true;
 }
 
-pub struct IncrementalRenderContext {
-    prev: SvgDocument,
-    next: SvgDocument,
+pub struct IncrementalRenderContext<'a> {
+    pub module: &'a Module,
+    pub prev: &'a Pages,
+    pub next: &'a Pages,
 }
 
 impl<Feat: ExportFeature> SvgTask<Feat> {
     /// Render a document difference into the svg_body.
-    pub fn render_diff(&mut self, ctx: &IncrementalRenderContext, svg_body: &mut Vec<SvgText>) {
+    pub fn render_diff(&mut self, ctx: &IncrementalRenderContext<'_>, svg_body: &mut Vec<SvgText>) {
         let mut acc_height = 0u32;
-        let mut render_task = self.get_render_context(&ctx.next.module);
+        let mut render_task = self.get_render_context(ctx.module);
 
         let reusable: HashSet<AbsoluteRef, RandomState> =
-            HashSet::from_iter(ctx.prev.pages.iter().map(|e| e.0.clone()));
+            HashSet::from_iter(ctx.prev.iter().map(|e| e.0.clone()));
         let mut unused_prev: std::collections::BTreeMap<usize, AbsoluteRef> = ctx
             .prev
-            .pages
             .iter()
             .map(|e| e.0.clone())
             .enumerate()
             .collect::<_>();
 
-        for (entry, _) in ctx.next.pages.iter() {
+        for (entry, _) in ctx.next.iter() {
             if reusable.contains(entry) {
                 let remove_key = unused_prev.iter().find(|(_, v)| *v == entry).unwrap().0;
                 unused_prev.remove(&remove_key.clone());
@@ -60,7 +60,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         println!("reusable: {:?}", reusable);
         println!("unused_prev: {:?}", unused_prev);
 
-        for (idx, (entry, size)) in ctx.next.pages.iter().enumerate() {
+        for (idx, (entry, size)) in ctx.next.iter().enumerate() {
             let size = Self::page_size(*size);
             if reusable.contains(entry) {
                 println!("reuse page: {} {:?}", idx, entry);
@@ -97,7 +97,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             ];
 
             // todo: evaluate simlarity
-            if let Some((abs_ref, ..)) = ctx.prev.pages.get(idx) {
+            if let Some((abs_ref, ..)) = ctx.prev.get(idx) {
                 attributes.push(("data-reuse-from", abs_ref.as_svg_id("p")));
             }
 
@@ -140,7 +140,7 @@ impl IncrementalSvgExporter {
 
     fn render_svg_incremental(
         &mut self,
-        prev: SvgDocument,
+        prev_doc: SvgDocument,
         output: Arc<Document>,
     ) -> (SvgDocument, String) {
         type IncrExporter = SvgExporter<IncrementalExportFeature>;
@@ -151,7 +151,7 @@ impl IncrementalSvgExporter {
         // render the document
         let mut t = SvgTask::<IncrementalExportFeature>::default();
 
-        let (next, used_glyphs) = {
+        let (next_doc, used_glyphs) = {
             let mut lower_builder = LowerBuilder::new(&output);
             let builder = &mut self.module_builder;
             let pages = output
@@ -173,11 +173,11 @@ impl IncrementalSvgExporter {
         };
 
         let mut svg = Vec::<SvgText>::new();
-        svg.push(SvgText::Plain(IncrExporter::header(&next.pages)));
+        svg.push(SvgText::Plain(IncrExporter::header(&next_doc.pages)));
         let mut svg_body = vec![];
 
         let new_glyphs = {
-            let prev_glyphs = prev
+            let prev_glyphs = prev_doc
                 .module
                 .glyphs
                 .iter()
@@ -191,9 +191,12 @@ impl IncrementalSvgExporter {
             t.render_glyphs(new_glyphs, true)
         };
 
-        let render_context = IncrementalRenderContext { prev, next };
+        let render_context = IncrementalRenderContext {
+            module: &next_doc.module,
+            prev: &prev_doc.pages,
+            next: &next_doc.pages,
+        };
         t.render_diff(&render_context, &mut svg_body);
-        let svg_doc = render_context.next;
 
         // attach the glyph defs, clip paths, and style defs
         svg.push(r#"<defs class="glyph">"#.into());
@@ -218,7 +221,7 @@ impl IncrementalSvgExporter {
         for s in svg {
             s.write_string_io(&mut string_io);
         }
-        (svg_doc, string_io)
+        (next_doc, string_io)
     }
 
     pub fn render(&mut self, output: Arc<Document>) -> String {
