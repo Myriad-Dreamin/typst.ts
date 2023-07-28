@@ -164,9 +164,9 @@ class TypstRendererSvgDriver {
     this.renderer = await buildComponent(options, gRendererModule, typst.TypstRendererBuilder, {});
   }
 
-  createModule(b: Uint8Array): Promise<unknown> {
+  createModule(b?: Uint8Array): Promise<unknown> {
     return new Promise(resolve => {
-      resolve(this.renderer.create_svg_session(b));
+      resolve(b ? this.renderer.create_svg_session(b) : this.renderer.create_empty_svg_session());
     });
   }
 
