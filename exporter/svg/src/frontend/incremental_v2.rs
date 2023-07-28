@@ -3,8 +3,8 @@ use std::sync::Arc;
 use typst::doc::Document;
 use typst_ts_core::vector::{
     flat_ir::{
-        build_flat_glyphs, serialize_module_v2, IncrModuleBuilder, Module, ModuleMetadata, Pages,
-        SerializedModule, SourceMappingNode, SvgDocument,
+        build_flat_glyphs, serialize_module_v2, IncrModuleBuilder, ItemPack, Module,
+        ModuleMetadata, Pages, SerializedModule, SourceMappingNode, SvgDocument,
     },
     ir::Scalar,
     LowerBuilder,
@@ -63,7 +63,7 @@ impl IncrementalSvgV2Exporter {
                         (builder.source_mapping.len() - 1) as u64,
                     ));
                 }
-                (abs_ref, p.size().into())
+                (abs_ref.fingerprint, p.size().into())
             })
             .collect::<Vec<_>>();
         let (module, glyph_mapping) = builder.finalize_delta();
@@ -77,7 +77,7 @@ impl IncrementalSvgV2Exporter {
                 ModuleMetadata::GarbageCollection(gc_items),
             ],
             glyphs,
-            item_pack: module.item_pack,
+            item_pack: ItemPack(module.items.clone().into_iter().collect()),
             layouts: vec![(Scalar(0.), pages.clone())],
         });
 
@@ -96,7 +96,7 @@ impl IncrementalSvgV2Exporter {
                 ModuleMetadata::PageSourceMapping(vec![self.page_source_mapping.clone()]),
             ],
             glyphs,
-            item_pack: doc.module.item_pack.clone(),
+            item_pack: ItemPack(doc.module.items.clone().into_iter().collect()),
             layouts: vec![(Scalar(0.), doc.pages.clone())],
         });
         Some([b"diff-v1,", delta.as_slice()].concat())

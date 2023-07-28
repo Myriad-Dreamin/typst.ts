@@ -4,11 +4,13 @@ use std::{
 };
 
 use typst::doc::Document;
-use typst_ts_core::vector::{
-    flat_ir::{ItemPack, Module, ModuleBuilder, Pages, SourceMappingNode, SvgDocument},
-    flat_vm::{FlatIncrRenderVm, FlatRenderVm},
-    ir::AbsoluteRef,
-    LowerBuilder,
+use typst_ts_core::{
+    hash::Fingerprint,
+    vector::{
+        flat_ir::{ItemMap, Module, ModuleBuilder, Pages, SourceMappingNode, SvgDocument},
+        flat_vm::{FlatIncrRenderVm, FlatRenderVm},
+        LowerBuilder,
+    },
 };
 
 use crate::{
@@ -41,14 +43,10 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         let mut acc_height = 0u32;
         let mut render_task = self.get_render_context(ctx.module);
 
-        let reusable: HashSet<AbsoluteRef, RandomState> =
-            HashSet::from_iter(ctx.prev.iter().map(|e| e.0.clone()));
-        let mut unused_prev: std::collections::BTreeMap<usize, AbsoluteRef> = ctx
-            .prev
-            .iter()
-            .map(|e| e.0.clone())
-            .enumerate()
-            .collect::<_>();
+        let reusable: HashSet<Fingerprint, RandomState> =
+            HashSet::from_iter(ctx.prev.iter().map(|e| e.0));
+        let mut unused_prev: std::collections::BTreeMap<usize, Fingerprint> =
+            ctx.prev.iter().map(|e| e.0).enumerate().collect::<_>();
 
         for (entry, _) in ctx.next.iter() {
             if reusable.contains(entry) {
@@ -164,7 +162,7 @@ impl IncrementalSvgExporter {
                             (builder.source_mapping.len() - 1) as u64,
                         ));
                     }
-                    (abs_ref, p.size().into())
+                    (abs_ref.fingerprint, p.size().into())
                 })
                 .collect::<Vec<_>>();
             let (module, glyph_mapping) = builder.finalize_ref();
@@ -239,7 +237,7 @@ impl IncrementalSvgExporter {
                     SvgDocument {
                         module: Module {
                             glyphs: vec![],
-                            item_pack: ItemPack::default(),
+                            items: ItemMap::default(),
                             source_mapping: Default::default(),
                         },
                         pages: vec![],

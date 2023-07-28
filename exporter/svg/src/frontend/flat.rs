@@ -58,7 +58,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             .iter()
             .map(|p| {
                 let abs_ref = builder.build(lower_builder.lower(p));
-                (abs_ref, p.size().into())
+                (abs_ref.fingerprint, p.size().into())
             })
             .collect::<Vec<_>>();
         let (module, glyph_mapping) = builder.finalize();

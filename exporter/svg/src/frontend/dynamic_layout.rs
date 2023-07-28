@@ -1,16 +1,19 @@
 use std::sync::Arc;
 
 use typst::doc::Document;
-use typst_ts_core::vector::{
-    flat_ir::{ModuleBuilder, MultiSvgDocument},
-    ir::{Abs, AbsoluteRef, GlyphMapping, Size},
-    LowerBuilder,
+use typst_ts_core::{
+    hash::Fingerprint,
+    vector::{
+        flat_ir::{ModuleBuilder, MultiSvgDocument},
+        ir::{Abs, GlyphMapping, Size},
+        LowerBuilder,
+    },
 };
 
 #[derive(Default)]
 pub struct DynamicLayoutSvgExporter {
     builder: ModuleBuilder,
-    layouts: Vec<(Abs, Vec<(AbsoluteRef, Size)>)>,
+    layouts: Vec<(Abs, Vec<(Fingerprint, Size)>)>,
 }
 
 impl DynamicLayoutSvgExporter {
@@ -25,7 +28,7 @@ impl DynamicLayoutSvgExporter {
             .iter()
             .map(|p| {
                 let abs_ref = self.builder.build(t.lower(p));
-                (abs_ref, p.size().into())
+                (abs_ref.fingerprint, p.size().into())
             })
             .collect::<Vec<_>>();
 
@@ -46,7 +49,7 @@ impl DynamicLayoutSvgExporter {
 
     pub fn debug_stat(&self) -> String {
         let v = self.builder.finalize_ref();
-        let item_cnt = v.0.item_pack.0.len();
+        let item_cnt = v.0.items.len();
         let glyph_cnt = v.1.len();
         let module_data = crate::flat_ir::serialize_module(v.0);
         format!(

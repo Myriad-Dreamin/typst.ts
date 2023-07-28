@@ -23,6 +23,7 @@ byteorder.workspace = true
 base64-serde = "0.7.0"
 
 once_cell.workspace = true
+rustc-hash.workspace = true
 
 serde.workspace = true
 serde_json.workspace = true

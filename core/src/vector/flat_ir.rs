@@ -82,18 +82,20 @@ impl From<FlatGlyphItem> for GlyphItem {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct TransformedRef(pub TransformItem, pub AbsoluteRef);
+pub struct TransformedRef(pub TransformItem, pub Fingerprint);
 
 /// Flatten group item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct GroupRef(pub Arc<[(Point, AbsoluteRef)]>);
+pub struct GroupRef(pub Arc<[(Point, Fingerprint)]>);
 
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct ItemPack(pub Vec<(Fingerprint, FlatSvgItem)>);
+
+pub type ItemMap = rustc_hash::FxHashMap<Fingerprint, FlatSvgItem>;
 
 /// A finished module that stores all the svg items.
 /// The svg items shares the underlying data.
@@ -101,7 +103,7 @@ pub struct ItemPack(pub Vec<(Fingerprint, FlatSvgItem)>);
 #[derive(Debug, Default)]
 pub struct Module {
     pub glyphs: Vec<(AbsoluteRef, GlyphItem)>,
-    pub item_pack: ItemPack,
+    pub items: ItemMap,
     pub source_mapping: Vec<SourceMappingNode>,
 }
 
@@ -112,12 +114,12 @@ impl Module {
     }
 
     /// Get a svg item by its stable ref.
-    pub fn get_item(&self, id: &AbsoluteRef) -> Option<&FlatSvgItem> {
-        self.item_pack.0.get(id.id.0 as usize).map(|(_, item)| item)
+    pub fn get_item(&self, id: &Fingerprint) -> Option<&FlatSvgItem> {
+        self.items.get(id)
     }
 }
 
-pub type Pages = Vec<(AbsoluteRef, Size)>;
+pub type Pages = Vec<(Fingerprint, Size)>;
 pub type LayoutElem = (Abs, Pages);
 
 /// Module with page references of a [`typst::doc::Document`].
@@ -224,7 +226,7 @@ impl MultiSvgDocument {
         self.layouts = layouts;
 
         // since no gc, we do not need a sort here.
-        self.module.item_pack.0.extend(item_pack.0.into_iter());
+        self.module.items.extend(item_pack.0.into_iter());
         self.module
             .glyphs
             .extend(glyphs.into_iter().map(|(id, item)| (id, item.into())));
@@ -288,7 +290,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
 
         let module = Module {
             glyphs,
-            item_pack: ItemPack(if ENABLE_REF_CNT {
+            items: ItemMap::from_iter(if ENABLE_REF_CNT {
                 self.incr_items
                     .clone()
                     .into_iter()
@@ -308,7 +310,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
 
         let module = Module {
             glyphs,
-            item_pack: ItemPack(if ENABLE_REF_CNT {
+            items: ItemMap::from_iter(if ENABLE_REF_CNT {
                 self.incr_items
                     .clone()
                     .into_iter()
@@ -388,7 +390,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
                 let item_id = self.build(*item.clone());
                 let transform = transformed.0.clone();
 
-                FlatSvgItem::Item(TransformedRef(transform, item_id))
+                FlatSvgItem::Item(TransformedRef(transform, item_id.fingerprint))
             }
             SvgItem::Group(group) => {
                 let t = if self.should_attach_debug_info {
@@ -399,7 +401,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
                 let items = group
                     .0
                     .iter()
-                    .map(|(point, item)| (*point, self.build(item.clone())))
+                    .map(|(point, item)| (*point, self.build(item.clone()).fingerprint))
                     .collect::<Vec<_>>();
 
                 if self.should_attach_debug_info {
@@ -460,13 +462,12 @@ impl IncrModuleBuilder {
 
         let module = Module {
             glyphs,
-            item_pack: ItemPack(
+            items: ItemMap::from_iter(
                 self.incr_items
                     .clone()
                     .into_iter()
                     .filter(|e| e.1 == self.lifetime)
-                    .map(|(f, _, i)| (f, i))
-                    .collect(),
+                    .map(|(f, _, i)| (f, i)),
             ),
             source_mapping: self.source_mapping.clone(),
         };
@@ -492,7 +493,7 @@ pub struct SerializedModule {
     pub metadata: Vec<ModuleMetadata>,
     pub item_pack: ItemPack,
     pub glyphs: Vec<(AbsoluteRef, FlatGlyphItem)>,
-    pub layouts: Vec<(Abs, Vec<(AbsoluteRef, Size)>)>,
+    pub layouts: Vec<(Abs, Vec<(Fingerprint, Size)>)>,
 }
 
 // todo: remove me
@@ -502,7 +503,9 @@ pub fn serialize_module(repr: Module) -> Vec<u8> {
     use rkyv::ser::{serializers::AllocSerializer, Serializer};
 
     let mut serializer = AllocSerializer::<0>::default();
-    serializer.serialize_value(&repr.item_pack).unwrap();
+    serializer
+        .serialize_value(&ItemPack(repr.items.into_iter().collect()))
+        .unwrap();
     let item_pack = serializer.into_serializer().into_inner();
 
     item_pack.into_vec()
@@ -550,7 +553,7 @@ pub fn serialize_multi_doc_standalone(
 
     serialize_module_v2(&SerializedModule {
         metadata: vec![],
-        item_pack: doc.module.item_pack,
+        item_pack: ItemPack(doc.module.items.into_iter().collect()),
         glyphs,
         layouts: doc.layouts,
     })
