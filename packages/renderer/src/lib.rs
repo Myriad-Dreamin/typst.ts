@@ -56,6 +56,7 @@ pub struct TypstRenderer {
 pub struct SvgSession {
     doc: typst_ts_svg_exporter::MultiSvgDocument,
     doc_view: Option<Pages>,
+    glyph_window: usize,
     source_mapping_data: Vec<SourceMappingNode>,
     page_source_mappping: Vec<Vec<SourceMappingNode>>,
 }
@@ -65,6 +66,7 @@ impl SvgSession {
     pub fn reset(&mut self) {
         self.doc = Default::default();
         self.doc_view = None;
+        self.glyph_window = 0;
         self.source_mapping_data = Default::default();
         self.page_source_mappping = Default::default();
     }
@@ -73,6 +75,13 @@ impl SvgSession {
         let delta = typst_ts_svg_exporter::flat_ir::stream::SvgDocumentStream::from_slice(delta);
         let delta = delta.checkout_owned();
 
+        #[cfg(feature = "debug_delta_update")]
+        crate::utils::console_log!(
+            "module counts: {:?},{:?},{:?}",
+            delta.glyphs.len(),
+            delta.item_pack.0.len(),
+            delta.layouts.len()
+        );
         self.doc.merge_delta(&delta);
         for metadata in delta.metadata {
             match metadata {
@@ -82,8 +91,9 @@ impl SvgSession {
                 typst_ts_svg_exporter::flat_ir::ModuleMetadata::PageSourceMapping(data) => {
                     self.page_source_mappping = data;
                 }
-                typst_ts_svg_exporter::flat_ir::ModuleMetadata::GarbageCollection(data) => {
-                    crate::utils::console_log!("garbage collection counts: {:?}", data.len());
+                typst_ts_svg_exporter::flat_ir::ModuleMetadata::GarbageCollection(_data) => {
+                    #[cfg(feature = "debug_delta_update")]
+                    crate::utils::console_log!("garbage collection counts: {:?}", _data.len());
                 }
             }
         }
@@ -104,8 +114,12 @@ impl SvgSession {
 
         let doc_view = self.doc_view.take();
         let next_doc_view = self.doc.layouts[0].1.clone();
-        let res =
-            IncrementalSvgV2Exporter::render_in_window(&self.doc.module, doc_view, &next_doc_view);
+        let res = IncrementalSvgV2Exporter::render_in_window(
+            &self.doc.module,
+            doc_view,
+            &mut self.glyph_window,
+            &next_doc_view,
+        );
         self.doc_view = Some(next_doc_view);
         res
     }
@@ -126,6 +140,7 @@ impl TypstRenderer {
         Ok(SvgSession {
             doc: typst_ts_svg_exporter::MultiSvgDocument::from_slice(artifact_content),
             doc_view: None,
+            glyph_window: 0,
             source_mapping_data: Default::default(),
             page_source_mappping: Default::default(),
         })
@@ -135,6 +150,7 @@ impl TypstRenderer {
         Ok(SvgSession {
             doc: typst_ts_svg_exporter::MultiSvgDocument::default(),
             doc_view: None,
+            glyph_window: 0,
             source_mapping_data: Default::default(),
             page_source_mappping: Default::default(),
         })

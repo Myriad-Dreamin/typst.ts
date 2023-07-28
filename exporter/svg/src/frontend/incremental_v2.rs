@@ -49,7 +49,7 @@ impl IncrementalSvgV2Exporter {
         self.module_builder.increment_lifetime();
 
         // it is important to call gc before building pages
-        let gc_items = self.module_builder.gc(120);
+        let gc_items = self.module_builder.gc(5 * 2);
 
         let mut lower_builder = LowerBuilder::new(&output);
         let builder = &mut self.module_builder;
@@ -66,18 +66,37 @@ impl IncrementalSvgV2Exporter {
                 (abs_ref, p.size().into())
             })
             .collect::<Vec<_>>();
-        let (module, glyph_mapping) = builder.finalize_delta();
+        let delta = builder.finalize_delta();
 
-        let glyphs = build_flat_glyphs(glyph_mapping);
+        let glyphs = build_flat_glyphs(delta.glyphs.into_iter().map(|(x, y)| (y, x)));
 
+        // max, min lifetime current, gc_items
+        #[cfg(feature = "debug_gc")]
+        println!(
+            "gc: max: {}, min: {}, curr: {}, {}",
+            self.module_builder
+                .items
+                .values()
+                .map(|i| i.0)
+                .max()
+                .unwrap_or(0xffffffff),
+            self.module_builder
+                .items
+                .values()
+                .map(|i| i.0)
+                .min()
+                .unwrap_or(0),
+            self.module_builder.lifetime,
+            gc_items.len()
+        );
         let delta = serialize_module_v2(&SerializedModule {
             metadata: vec![
-                ModuleMetadata::SourceMappingData(module.source_mapping),
+                ModuleMetadata::SourceMappingData(delta.source_mapping),
                 ModuleMetadata::PageSourceMapping(vec![self.page_source_mapping.clone()]),
                 ModuleMetadata::GarbageCollection(gc_items),
             ],
             glyphs,
-            item_pack: ItemPack(module.items.clone().into_iter().collect()),
+            item_pack: ItemPack(delta.items.clone().into_iter().collect()),
             layouts: vec![(Scalar(0.), pages.clone())],
         });
 
@@ -102,7 +121,12 @@ impl IncrementalSvgV2Exporter {
         Some([b"diff-v1,", delta.as_slice()].concat())
     }
 
-    pub fn render_in_window(module: &Module, prev: Option<Pages>, next: &Pages) -> String {
+    pub fn render_in_window(
+        module: &Module,
+        prev: Option<Pages>,
+        prev_glyphs: &mut usize,
+        next: &Pages,
+    ) -> String {
         type IncrExporter = SvgExporter<IncrementalExportFeature>;
 
         let mut svg = Vec::<SvgText>::new();
@@ -121,9 +145,19 @@ impl IncrementalSvgV2Exporter {
         t.render_diff(&render_context, &mut svg_body);
 
         // todo: render glyphs
-        // svg.push(r#"<defs class="glyph">"#.into());
-        // svg.extend(new_glyphs);
-        // svg.push("</defs>".into());
+        svg.push(r#"<defs class="glyph">"#.into());
+        let new_glyphs = {
+            let new_glyphs = module
+                .glyphs
+                .iter()
+                .skip(*prev_glyphs)
+                .map(|g| (&g.0, &g.1));
+            *prev_glyphs = module.glyphs.len();
+            t.render_glyphs(new_glyphs, true)
+        };
+
+        svg.extend(new_glyphs);
+        svg.push("</defs>".into());
 
         // attach the clip paths, and style defs
 

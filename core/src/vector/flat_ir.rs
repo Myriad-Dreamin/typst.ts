@@ -412,8 +412,8 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
         let fingerprint = self.fingerprint_builder.resolve(&resolved_item);
 
         if let Some(pos) = self.items.get_mut(&fingerprint) {
-            if ENABLE_REF_CNT {
-                pos.0 = self.lifetime;
+            if ENABLE_REF_CNT && pos.0 != self.lifetime {
+                pos.0 = self.lifetime - 1;
             }
             return fingerprint;
         }
@@ -430,12 +430,13 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
 
 impl IncrModuleBuilder {
     pub fn increment_lifetime(&mut self) {
-        self.lifetime += 1;
+        self.lifetime += 2;
     }
 
     pub fn gc(&mut self, threshold: u64) -> Vec<Fingerprint> {
         let mut gc_items = vec![];
 
+        let threshold = self.lifetime.saturating_sub(threshold);
         self.items.retain(|k, v| {
             if v.0 < threshold {
                 gc_items.push(*k);
@@ -448,21 +449,26 @@ impl IncrModuleBuilder {
         gc_items
     }
 
-    pub fn finalize_delta(&mut self) -> (Module, GlyphMapping) {
+    pub fn finalize_delta(&mut self) -> Module {
         let glyphs = GlyphPackBuilder::finalize(
             self.glyphs
-                .clone()
-                .into_iter()
-                .filter(|e| self.incr_glyphs[e.1.id.0 as usize] == self.lifetime),
+                .iter()
+                .filter(|e| self.incr_glyphs[e.1.id.0 as usize] == self.lifetime)
+                .map(|(x, y)| (x.clone(), y.clone())),
         );
 
-        let module = Module {
-            glyphs,
-            items: ItemMap::from_iter(self.items.clone().into_iter().map(|(f, (_, i))| (f, i))),
-            source_mapping: self.source_mapping.clone(),
-        };
+        let items = ItemMap::from_iter(
+            self.items
+                .iter()
+                .filter(|(_, e)| e.0 == self.lifetime)
+                .map(|(f, (_, i))| (*f, i.clone())),
+        );
 
-        (module, self.glyphs.clone())
+        Module {
+            glyphs,
+            items,
+            source_mapping: self.source_mapping.clone(),
+        }
     }
 }
 
