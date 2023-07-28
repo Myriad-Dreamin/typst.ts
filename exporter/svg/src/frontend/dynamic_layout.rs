@@ -28,7 +28,7 @@ impl DynamicLayoutSvgExporter {
             .iter()
             .map(|p| {
                 let abs_ref = self.builder.build(t.lower(p));
-                (abs_ref.fingerprint, p.size().into())
+                (abs_ref, p.size().into())
             })
             .collect::<Vec<_>>();
 

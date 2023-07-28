@@ -193,7 +193,7 @@ pub trait SvgDocumentStreamView {
     fn get_items(&self) -> ItemPack;
     fn get_layouts(&self) -> Vec<(Abs, Pages)>;
     fn get_glyphs(&self) -> Vec<(AbsoluteRef, FlatGlyphItem)>;
-    fn get_metadata(&self) -> Vec<ModuleMetadata>;
+    fn get_gc_items(&self) -> Option<Vec<Fingerprint>>;
 }
 
 // todo: for archived module.
@@ -212,8 +212,13 @@ impl SvgDocumentStreamView for &SerializedModule {
         self.glyphs.clone()
     }
 
-    fn get_metadata(&self) -> Vec<ModuleMetadata> {
-        self.metadata.clone()
+    fn get_gc_items(&self) -> Option<Vec<Fingerprint>> {
+        for m in &self.metadata {
+            if let ModuleMetadata::GarbageCollection(v) = m {
+                return Some(v.clone());
+            }
+        }
+        None
     }
 }
 
@@ -225,7 +230,12 @@ impl MultiSvgDocument {
 
         self.layouts = layouts;
 
-        // since no gc, we do not need a sort here.
+        if let Some(gc_items) = v.get_gc_items() {
+            for id in gc_items {
+                self.module.items.remove(&id);
+            }
+        }
+
         self.module.items.extend(item_pack.0.into_iter());
         self.module
             .glyphs
@@ -244,8 +254,7 @@ impl MultiSvgDocument {
 /// Intermediate representation of a incompleted svg item.
 pub struct ModuleBuilderImpl<const ENABLE_REF_CNT: bool = false> {
     pub glyphs: GlyphMapping,
-    pub items: Vec<(Fingerprint, FlatSvgItem)>,
-    pub item_pos: HashMap<Fingerprint, DefId>,
+    pub items: HashMap<Fingerprint, (u64, FlatSvgItem)>,
     pub source_mapping: Vec<SourceMappingNode>,
     pub source_mapping_buffer: Vec<u64>,
 
@@ -255,7 +264,6 @@ pub struct ModuleBuilderImpl<const ENABLE_REF_CNT: bool = false> {
     pub should_attach_debug_info: bool,
 
     pub lifetime: u64,
-    pub incr_items: Vec<(Fingerprint, u64, FlatSvgItem)>,
     pub incr_glyphs: Vec<u64>,
 }
 
@@ -268,11 +276,9 @@ impl<const ENABLE_REF_CNT: bool> Default for ModuleBuilderImpl<ENABLE_REF_CNT> {
             lifetime: 0,
             glyphs: Default::default(),
             items: Default::default(),
-            item_pos: Default::default(),
             source_mapping: Default::default(),
             source_mapping_buffer: Default::default(),
             fingerprint_builder: Default::default(),
-            incr_items: Default::default(),
             incr_glyphs: Default::default(),
             should_attach_debug_info: false,
         }
@@ -290,15 +296,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
 
         let module = Module {
             glyphs,
-            items: ItemMap::from_iter(if ENABLE_REF_CNT {
-                self.incr_items
-                    .clone()
-                    .into_iter()
-                    .map(|(f, _, i)| (f, i))
-                    .collect()
-            } else {
-                self.items.clone()
-            }),
+            items: ItemMap::from_iter(self.items.clone().into_iter().map(|(f, (_, i))| (f, i))),
             source_mapping: self.source_mapping.clone(),
         };
 
@@ -310,15 +308,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
 
         let module = Module {
             glyphs,
-            items: ItemMap::from_iter(if ENABLE_REF_CNT {
-                self.incr_items
-                    .clone()
-                    .into_iter()
-                    .map(|(f, _, i)| (f, i))
-                    .collect()
-            } else {
-                self.items
-            }),
+            items: ItemMap::from_iter(self.items.clone().into_iter().map(|(f, (_, i))| (f, i))),
             source_mapping: self.source_mapping,
         };
 
@@ -341,7 +331,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
         abs_ref
     }
 
-    pub fn build(&mut self, item: SvgItem) -> AbsoluteRef {
+    pub fn build(&mut self, item: SvgItem) -> Fingerprint {
         let resolved_item = match item {
             SvgItem::Image((image, span_id)) => {
                 if self.should_attach_debug_info {
@@ -390,7 +380,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
                 let item_id = self.build(*item.clone());
                 let transform = transformed.0.clone();
 
-                FlatSvgItem::Item(TransformedRef(transform, item_id.fingerprint))
+                FlatSvgItem::Item(TransformedRef(transform, item_id))
             }
             SvgItem::Group(group) => {
                 let t = if self.should_attach_debug_info {
@@ -401,7 +391,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
                 let items = group
                     .0
                     .iter()
-                    .map(|(point, item)| (*point, self.build(item.clone()).fingerprint))
+                    .map(|(point, item)| (*point, self.build(item.clone())))
                     .collect::<Vec<_>>();
 
                 if self.should_attach_debug_info {
@@ -421,25 +411,20 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
 
         let fingerprint = self.fingerprint_builder.resolve(&resolved_item);
 
-        if let Some(pos) = self.item_pos.get(&fingerprint) {
+        if let Some(pos) = self.items.get_mut(&fingerprint) {
             if ENABLE_REF_CNT {
-                self.incr_items[pos.0 as usize].1 = self.lifetime;
+                pos.0 = self.lifetime;
             }
-            return AbsoluteRef {
-                fingerprint,
-                id: *pos,
-            };
+            return fingerprint;
         }
 
-        let id = DefId(self.items.len() as u64);
         if ENABLE_REF_CNT {
-            self.incr_items
-                .push((fingerprint, self.lifetime, resolved_item));
+            self.items
+                .insert(fingerprint, (self.lifetime, resolved_item));
         } else {
-            self.items.push((fingerprint, resolved_item));
+            self.items.insert(fingerprint, (0, resolved_item));
         }
-        self.item_pos.insert(fingerprint, id);
-        AbsoluteRef { fingerprint, id }
+        fingerprint
     }
 }
 
@@ -448,8 +433,19 @@ impl IncrModuleBuilder {
         self.lifetime += 1;
     }
 
-    pub fn gc(&mut self, _threshold: u64) -> Vec<AbsoluteRef> {
-        vec![]
+    pub fn gc(&mut self, threshold: u64) -> Vec<Fingerprint> {
+        let mut gc_items = vec![];
+
+        self.items.retain(|k, v| {
+            if v.0 < threshold {
+                gc_items.push(*k);
+                false
+            } else {
+                true
+            }
+        });
+
+        gc_items
     }
 
     pub fn finalize_delta(&mut self) -> (Module, GlyphMapping) {
@@ -462,13 +458,7 @@ impl IncrModuleBuilder {
 
         let module = Module {
             glyphs,
-            items: ItemMap::from_iter(
-                self.incr_items
-                    .clone()
-                    .into_iter()
-                    .filter(|e| e.1 == self.lifetime)
-                    .map(|(f, _, i)| (f, i)),
-            ),
+            items: ItemMap::from_iter(self.items.clone().into_iter().map(|(f, (_, i))| (f, i))),
             source_mapping: self.source_mapping.clone(),
         };
 
@@ -482,7 +472,7 @@ impl IncrModuleBuilder {
 pub enum ModuleMetadata {
     SourceMappingData(Vec<SourceMappingNode>),
     PageSourceMapping(Vec<Vec<SourceMappingNode>>),
-    GarbageCollection(Vec<AbsoluteRef>),
+    GarbageCollection(Vec<Fingerprint>),
 }
 
 /// Flatten transform item.

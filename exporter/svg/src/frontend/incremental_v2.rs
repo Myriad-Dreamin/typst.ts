@@ -63,7 +63,7 @@ impl IncrementalSvgV2Exporter {
                         (builder.source_mapping.len() - 1) as u64,
                     ));
                 }
-                (abs_ref.fingerprint, p.size().into())
+                (abs_ref, p.size().into())
             })
             .collect::<Vec<_>>();
         let (module, glyph_mapping) = builder.finalize_delta();

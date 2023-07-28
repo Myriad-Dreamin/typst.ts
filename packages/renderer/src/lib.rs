@@ -82,7 +82,9 @@ impl SvgSession {
                 typst_ts_svg_exporter::flat_ir::ModuleMetadata::PageSourceMapping(data) => {
                     self.page_source_mappping = data;
                 }
-                _ => {}
+                typst_ts_svg_exporter::flat_ir::ModuleMetadata::GarbageCollection(data) => {
+                    crate::utils::console_log!("garbage collection counts: {:?}", data.len());
+                }
             }
         }
         Ok(())
