@@ -49,9 +49,13 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             ctx.prev.iter().map(|e| e.0).enumerate().collect::<_>();
 
         for (entry, _) in ctx.next.iter() {
+            // todo: reuse remove unused patter, they are also used in render_diff
             if reusable.contains(entry) {
-                let remove_key = unused_prev.iter().find(|(_, v)| *v == entry).unwrap().0;
-                unused_prev.remove(&remove_key.clone());
+                let remove_key = unused_prev.iter().find(|(_, v)| *v == entry);
+                if remove_key.is_none() {
+                    continue;
+                }
+                unused_prev.remove(&remove_key.unwrap().0.clone());
             }
         }
 
