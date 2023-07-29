@@ -319,7 +319,7 @@ pub struct TextShape {
 pub struct TransformedItem(pub TransformItem, pub Box<SvgItem>);
 
 /// Absolute positioning items at their corresponding points.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GroupItem(pub Vec<(Point, SvgItem)>);
 
 /// Item representing all the transform that is applicable to a [`SvgItem`].

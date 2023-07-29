@@ -6,6 +6,8 @@ use typst_ts_core::font::FontResolverImpl;
 use typst_ts_core::vector::geom::Axes;
 use typst_ts_core::vector::geom::Scalar;
 use typst_ts_svg_exporter::flat_ir::SourceMappingNode;
+use typst_ts_svg_exporter::ir::SvgItem;
+use typst_ts_svg_exporter::ModuleBuilder;
 use typst_ts_svg_exporter::{
     DefaultExportFeature, IncrementalSvgV2Exporter, LayoutElem, Pages, SvgExporter,
 };
@@ -55,6 +57,7 @@ pub struct TypstRenderer {
 #[wasm_bindgen]
 pub struct SvgSession {
     doc: typst_ts_svg_exporter::MultiSvgDocument,
+    mb: ModuleBuilder,
     doc_view: Option<Pages>,
     glyph_window: usize,
     source_mapping_data: Vec<SourceMappingNode>,
@@ -69,6 +72,18 @@ impl SvgSession {
         self.glyph_window = 0;
         self.source_mapping_data = Default::default();
         self.page_source_mappping = Default::default();
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn doc_width(&self) -> f32 {
+        let pages = self.doc.layouts[0].1.iter();
+        pages.map(|(_, s)| s.x).max().unwrap_or_default().0
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn doc_height(&self) -> f32 {
+        let pages = self.doc.layouts[0].1.iter();
+        pages.map(|(_, s)| s.y.0).sum()
     }
 
     pub fn merge_delta(&mut self, delta: &[u8]) -> ZResult<()> {
@@ -112,8 +127,27 @@ impl SvgSession {
             hi: Axes::new(Scalar(rect_hi_x), Scalar(rect_hi_y)),
         };
 
+        // todo: better solution?
+        let empty_page = self.mb.build(SvgItem::Group(Default::default()));
+        self.doc
+            .module
+            .items
+            .extend(self.mb.items.iter().map(|(f, (_, v))| (*f, v.clone())));
+
         let doc_view = self.doc_view.take();
-        let next_doc_view = self.doc.layouts[0].1.clone();
+
+        let mut page_off: f32 = 0.;
+        let mut next_doc_view = vec![];
+        for (page, layout) in self.doc.layouts[0].1.iter() {
+            page_off += layout.y.0;
+            if page_off < rect_lo_y || page_off - layout.y.0 > rect_hi_y {
+                next_doc_view.push((empty_page, *layout));
+                continue;
+            }
+
+            next_doc_view.push((*page, *layout));
+        }
+
         let res = IncrementalSvgV2Exporter::render_in_window(
             &self.doc.module,
             doc_view,
@@ -141,6 +175,7 @@ impl TypstRenderer {
             doc: typst_ts_svg_exporter::MultiSvgDocument::from_slice(artifact_content),
             doc_view: None,
             glyph_window: 0,
+            mb: Default::default(),
             source_mapping_data: Default::default(),
             page_source_mappping: Default::default(),
         })
@@ -151,6 +186,7 @@ impl TypstRenderer {
             doc: typst_ts_svg_exporter::MultiSvgDocument::default(),
             doc_view: None,
             glyph_window: 0,
+            mb: Default::default(),
             source_mapping_data: Default::default(),
             page_source_mappping: Default::default(),
         })
