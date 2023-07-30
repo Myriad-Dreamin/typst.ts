@@ -15,7 +15,7 @@ use typst_ts_core::{
     path::PathClean,
     Exporter, TypstFileId,
 };
-use typst_ts_svg_exporter::{flat_ir::serialize_multi_doc_standalone, DynamicLayoutSvgExporter};
+use typst_ts_svg_exporter::{flat_ir::serialize_doc, DynamicLayoutSvgExporter};
 
 use super::diag;
 
@@ -206,7 +206,7 @@ impl CompileDriver {
 
         let (doc, glyphs) = svg_exporter.finalize();
 
-        std::fs::write(module_output, serialize_multi_doc_standalone(doc, glyphs)).unwrap();
+        std::fs::write(module_output, serialize_doc(doc, glyphs)).unwrap();
 
         let instant = std::time::Instant::now();
         println!("rerendering finished at {:?}", instant - instant_begin);

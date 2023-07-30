@@ -4,7 +4,7 @@ use typst::doc::Document;
 use typst_ts_core::{
     hash::Fingerprint,
     vector::{
-        flat_ir::{ModuleBuilder, MultiSvgDocument},
+        flat_ir::{flatten_glyphs, FlatModule, ItemPack, ModuleBuilder, MultiSvgDocument},
         ir::{Abs, GlyphMapping, Size},
         LowerBuilder,
     },
@@ -51,7 +51,15 @@ impl DynamicLayoutSvgExporter {
         let v = self.builder.finalize_ref();
         let item_cnt = v.0.items.len();
         let glyph_cnt = v.1.len();
-        let module_data = crate::flat_ir::serialize_module(v.0);
+        let glyphs = flatten_glyphs(v.1);
+
+        let module_data = FlatModule {
+            metadata: vec![],
+            item_pack: ItemPack(v.0.items.into_iter().collect()),
+            glyphs,
+            layouts: vec![],
+        }
+        .to_bytes();
         format!(
             "module size: {} bytes, items count: {}, glyph count: {}",
             module_data.len(),

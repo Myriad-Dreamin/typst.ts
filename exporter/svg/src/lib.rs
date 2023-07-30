@@ -11,7 +11,7 @@ use typst_ts_core::Exporter;
 pub use typst_ts_core::font::{FontGlyphProvider, GlyphProvider, IGlyphProvider};
 #[cfg(feature = "flat-vector")]
 pub use typst_ts_core::vector::flat_ir::{
-    self, LayoutElem, Module, ModuleBuilder, MultiSvgDocument, Pages, SerializedModule, SvgDocument,
+    self, FlatModule, LayoutElem, Module, ModuleBuilder, MultiSvgDocument, Pages, SvgDocument,
 };
 pub use typst_ts_core::vector::{geom, ir, LowerBuilder};
 
@@ -131,17 +131,6 @@ pub struct SvgModuleExporter {}
 
 impl Exporter<Document, Vec<u8>> for SvgModuleExporter {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<Vec<u8>> {
-        let mut t = LowerBuilder::new(&output);
-
-        let mut builder = ModuleBuilder::default();
-
-        for page in output.pages.iter() {
-            let item = t.lower(page);
-            let _entry_id = builder.build(item);
-        }
-
-        let (repr, ..) = builder.finalize();
-
-        Ok(flat_ir::serialize_module(repr))
+        export_module(&output)
     }
 }

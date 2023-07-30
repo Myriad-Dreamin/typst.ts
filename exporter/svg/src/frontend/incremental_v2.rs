@@ -3,8 +3,8 @@ use std::sync::Arc;
 use typst::doc::Document;
 use typst_ts_core::vector::{
     flat_ir::{
-        build_flat_glyphs, serialize_module_v2, IncrModuleBuilder, ItemPack, Module,
-        ModuleMetadata, Pages, SerializedModule, SourceMappingNode, SvgDocument,
+        flatten_glyphs, FlatModule, IncrModuleBuilder, ItemPack, Module, ModuleMetadata, Pages,
+        SourceMappingNode, SvgDocument,
     },
     ir::Scalar,
     LowerBuilder,
@@ -68,7 +68,7 @@ impl IncrementalSvgV2Exporter {
             .collect::<Vec<_>>();
         let delta = builder.finalize_delta();
 
-        let glyphs = build_flat_glyphs(delta.glyphs.into_iter().map(|(x, y)| (y, x)));
+        let glyphs = flatten_glyphs(delta.glyphs.into_iter().map(|(x, y)| (y, x)));
 
         // max, min lifetime current, gc_items
         #[cfg(feature = "debug_gc")]
@@ -89,7 +89,7 @@ impl IncrementalSvgV2Exporter {
             self.module_builder.lifetime,
             gc_items.len()
         );
-        let delta = serialize_module_v2(&SerializedModule {
+        let delta = FlatModule {
             metadata: vec![
                 ModuleMetadata::SourceMappingData(delta.source_mapping),
                 ModuleMetadata::PageSourceMapping(vec![self.page_source_mapping.clone()]),
@@ -98,7 +98,8 @@ impl IncrementalSvgV2Exporter {
             glyphs,
             item_pack: ItemPack(delta.items.clone().into_iter().collect()),
             layouts: vec![(Scalar(0.), pages.clone())],
-        });
+        }
+        .to_bytes();
 
         println!("svg render time (incremental bin): {:?}", instant.elapsed());
 
@@ -107,9 +108,9 @@ impl IncrementalSvgV2Exporter {
 
     pub fn pack_current(&mut self) -> Option<Vec<u8>> {
         let doc = self.prev.as_ref()?;
-        let glyphs = build_flat_glyphs(self.module_builder.glyphs.clone());
+        let glyphs = flatten_glyphs(self.module_builder.glyphs.clone());
 
-        let delta = serialize_module_v2(&SerializedModule {
+        let delta = FlatModule {
             metadata: vec![
                 ModuleMetadata::SourceMappingData(self.module_builder.source_mapping.clone()),
                 ModuleMetadata::PageSourceMapping(vec![self.page_source_mapping.clone()]),
@@ -117,7 +118,8 @@ impl IncrementalSvgV2Exporter {
             glyphs,
             item_pack: ItemPack(doc.module.items.clone().into_iter().collect()),
             layouts: vec![(Scalar(0.), doc.pages.clone())],
-        });
+        }
+        .to_bytes();
         Some([b"diff-v1,", delta.as_slice()].concat())
     }
 
