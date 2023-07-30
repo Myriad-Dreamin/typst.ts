@@ -27,11 +27,18 @@ impl ExportFeature for IncrementalExportFeature {
 
 #[derive(Default)]
 pub struct IncrSvgDocServer {
-    prev: Option<SvgDocument>,
-    module_builder: IncrModuleBuilder,
-    page_source_mapping: Vec<SourceMappingNode>,
-
+    /// Whether to attach debug info to the output.
     should_attach_debug_info: bool,
+
+    /// Expected exact state of the current Compiler.
+    /// Initially it is None meaning no completed compilation.
+    doc_view: Option<SvgDocument>,
+
+    /// Maintaining document build status
+    module_builder: IncrModuleBuilder,
+
+    /// Optional page source mapping references.
+    page_source_mapping: Vec<SourceMappingNode>,
 }
 
 impl IncrSvgDocServer {
@@ -109,7 +116,7 @@ impl IncrSvgDocServer {
 
     /// Pack the current entirely into a binary blob.
     pub fn pack_current(&mut self) -> Option<Vec<u8>> {
-        let doc = self.prev.as_ref()?;
+        let doc = self.doc_view.as_ref()?;
         let glyphs = flatten_glyphs(self.module_builder.glyphs.clone());
 
         let delta = FlatModule {
@@ -129,12 +136,23 @@ impl IncrSvgDocServer {
 /// maintains the state of the incremental rendering at client side
 #[derive(Default)]
 pub struct IncrSvgDocClient {
+    /// Full information of the current document from server.
     pub doc: MultiSvgDocument,
-    pub mb: ModuleBuilder,
+
+    /// Expected exact state of the current DOM.
+    /// Initially it is None meaning no any page is rendered.
     pub doc_view: Option<Pages>,
+    /// Glyphs that has already committed to the DOM.
+    /// Assmuing glyph_window = N, then `self.doc.module.glyphs[..N]` are
+    /// committed.
     pub glyph_window: usize,
+
+    /// Optional source mapping data.
     pub source_mapping_data: Vec<SourceMappingNode>,
-    pub page_source_mappping: Vec<Vec<SourceMappingNode>>,
+    /// Optional page source mapping references.
+    pub page_source_mappping: Vec</* layout pages */ Vec</* per page */ SourceMappingNode>>,
+
+    mb: ModuleBuilder,
 }
 
 impl IncrSvgDocClient {
