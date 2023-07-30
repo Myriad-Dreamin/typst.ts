@@ -25,7 +25,7 @@ pub(crate) mod incremental;
 pub use incremental::{IncrementalRenderContext, IncrementalSvgExporter};
 #[cfg(feature = "flat-vector")]
 pub(crate) mod incremental_v2;
-pub use incremental_v2::IncrementalSvgV2Exporter;
+pub use incremental_v2::{IncrSvgDocClient, IncrSvgDocServer};
 
 use crate::{
     backend::{SvgGlyphBuilder, SvgText, SvgTextNode},
