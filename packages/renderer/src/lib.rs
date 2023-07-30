@@ -87,7 +87,7 @@ impl SvgSession {
     }
 
     pub fn merge_delta(&mut self, delta: &[u8]) -> ZResult<()> {
-        let delta = typst_ts_core::vector::stream::SvgDocumentStream::from_slice(delta);
+        let delta = typst_ts_core::vector::stream::BytesModuleStream::from_slice(delta);
         let delta = delta.checkout_owned();
 
         #[cfg(feature = "debug_delta_update")]

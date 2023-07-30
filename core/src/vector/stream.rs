@@ -17,11 +17,11 @@ impl<'a> AsRef<[u8]> for RkyvStreamData<'a> {
     }
 }
 
-pub struct SvgDocumentStream<'a> {
+pub struct BytesModuleStream<'a> {
     data: RkyvStreamData<'a>,
 }
 
-impl<'a> SvgDocumentStream<'a> {
+impl<'a> BytesModuleStream<'a> {
     pub fn from_slice(v: &'a [u8]) -> Self {
         let v = if (v.as_ptr() as usize) % AlignedVec::ALIGNMENT != 0 {
             let mut aligned = AlignedVec::with_capacity(v.len());

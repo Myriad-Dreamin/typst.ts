@@ -100,6 +100,18 @@ pub struct ItemPack(pub Vec<(Fingerprint, FlatSvgItem)>);
 
 pub type ItemMap = rustc_hash::FxHashMap<Fingerprint, FlatSvgItem>;
 
+pub type RefItemMap = HashMap<Fingerprint, (u64, FlatSvgItem)>;
+
+pub trait ToItemMap {
+    fn to_item_map(self) -> ItemMap;
+}
+
+impl ToItemMap for RefItemMap {
+    fn to_item_map(self) -> ItemMap {
+        self.into_iter().map(|(k, (_, v))| (k, v)).collect::<_>()
+    }
+}
+
 /// Trait of a streaming representation of a module.
 pub trait ModuleStream {
     fn items(&self) -> ItemPack;
@@ -235,7 +247,7 @@ pub struct MultiSvgDocument {
 impl MultiSvgDocument {
     #[cfg(feature = "rkyv")]
     pub fn from_slice(v: &[u8]) -> Self {
-        type DocStream<'a> = super::stream::SvgDocumentStream<'a>;
+        type DocStream<'a> = super::stream::BytesModuleStream<'a>;
 
         let mut res = Self::default();
         res.merge_delta(&DocStream::from_slice(v).checkout_owned());
@@ -288,24 +300,22 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
         self.source_mapping_buffer.clear();
     }
 
+    // todo: remove GlyphMapping (used by v1)
     pub fn finalize_ref(&self) -> (Module, GlyphMapping) {
-        let glyphs = GlyphPackBuilder::finalize(self.glyphs.clone());
-
         let module = Module {
-            glyphs,
-            items: ItemMap::from_iter(self.items.clone().into_iter().map(|(f, (_, i))| (f, i))),
+            glyphs: GlyphPackBuilder::finalize(self.glyphs.clone()),
+            items: self.items.clone().to_item_map(),
             source_mapping: self.source_mapping.clone(),
         };
 
         (module, self.glyphs.clone())
     }
 
+    // todo: remove GlyphMapping (used by v1)
     pub fn finalize(self) -> (Module, GlyphMapping) {
-        let glyphs = GlyphPackBuilder::finalize(self.glyphs.clone());
-
         let module = Module {
-            glyphs,
-            items: ItemMap::from_iter(self.items.clone().into_iter().map(|(f, (_, i))| (f, i))),
+            glyphs: GlyphPackBuilder::finalize(self.glyphs.clone()),
+            items: self.items.to_item_map(),
             source_mapping: self.source_mapping,
         };
 
@@ -426,14 +436,23 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
 }
 
 impl IncrModuleBuilder {
+    /// Increment the lifetime of the module.
+    /// It increments by 2 which is used to distinguish between the
+    /// retained items and the new items.
+    /// Assuming that the old lifetime is 'l,
+    /// the retained and new lifetime will be 'l + 1 and 'l + 2, respectively.
     pub fn increment_lifetime(&mut self) {
         self.lifetime += 2;
     }
 
+    /// Perform garbage collection with given threshold.
     pub fn gc(&mut self, threshold: u64) -> Vec<Fingerprint> {
         let mut gc_items = vec![];
 
+        // a threshold is set by current lifetime subtracted by the given threshold.
+        // It uses saturating_sub to prevent underflow (u64).
         let threshold = self.lifetime.saturating_sub(threshold);
+
         self.items.retain(|k, v| {
             if v.0 < threshold {
                 gc_items.push(*k);
@@ -446,20 +465,25 @@ impl IncrModuleBuilder {
         gc_items
     }
 
+    /// Finalize modules containing new svg items.
     pub fn finalize_delta(&mut self) -> Module {
-        let glyphs = GlyphPackBuilder::finalize(
-            self.glyphs
-                .iter()
-                .filter(|e| self.incr_glyphs[e.1.id.0 as usize] == self.lifetime)
-                .map(|(x, y)| (x.clone(), y.clone())),
-        );
+        // fliter glyphs by lifetime
+        let glyphs = {
+            let glyphs = self.glyphs.iter();
+            let glyphs = glyphs.filter(|e| self.incr_glyphs[e.1.id.0 as usize] == self.lifetime);
+            let glyphs = glyphs.map(|(x, y)| (x.clone(), y.clone()));
 
-        let items = ItemMap::from_iter(
-            self.items
-                .iter()
-                .filter(|(_, e)| e.0 == self.lifetime)
-                .map(|(f, (_, i))| (*f, i.clone())),
-        );
+            GlyphPackBuilder::finalize(glyphs)
+        };
+
+        // fliter glyphs by lifetime
+        let items = {
+            let items = self.items.iter();
+            let items = items.filter(|(_, e)| e.0 == self.lifetime);
+            let items = items.map(|(f, (_, i))| (*f, i.clone()));
+
+            ItemMap::from_iter(items)
+        };
 
         Module {
             glyphs,
@@ -493,13 +517,12 @@ pub fn flatten_glyphs(
 }
 
 pub fn serialize_doc(doc: MultiSvgDocument, glyph_mapping: GlyphMapping) -> Vec<u8> {
-    let glyphs = flatten_glyphs(glyph_mapping);
-
-    FlatModule {
+    let flatten_module = FlatModule {
         metadata: vec![],
         item_pack: ItemPack(doc.module.items.into_iter().collect()),
-        glyphs,
+        glyphs: flatten_glyphs(glyph_mapping),
         layouts: doc.layouts,
-    }
-    .to_bytes()
+    };
+
+    flatten_module.to_bytes()
 }
