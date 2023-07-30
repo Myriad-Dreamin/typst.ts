@@ -2,6 +2,8 @@ use std::collections::hash_map::RandomState;
 use std::collections::{BTreeMap, HashSet};
 use std::ops::Deref;
 
+use crate::hash::Fingerprint;
+
 use super::flat_ir as ir;
 use super::{
     ir::{AbsoluteRef, Point, Scalar},
@@ -10,8 +12,8 @@ use super::{
 
 /// A RAII trait for rendering flatten SVG items into underlying context.
 pub trait FlatGroupContext<C>: Sized {
-    fn render_item_ref_at(&mut self, ctx: &mut C, pos: Point, item: &AbsoluteRef);
-    fn render_item_ref(&mut self, ctx: &mut C, item: &AbsoluteRef) {
+    fn render_item_ref_at(&mut self, ctx: &mut C, pos: Point, item: &Fingerprint);
+    fn render_item_ref(&mut self, ctx: &mut C, item: &Fingerprint) {
         self.render_item_ref_at(ctx, Point::default(), item);
     }
 
@@ -31,7 +33,7 @@ pub trait FlatGroupContext<C>: Sized {
     fn with_text(self, _ctx: &mut C, _text: &ir::FlatTextItem) -> Self {
         self
     }
-    fn with_reuse(self, _ctx: &mut C, _v: &AbsoluteRef) -> Self {
+    fn with_reuse(self, _ctx: &mut C, _v: &Fingerprint) -> Self {
         self
     }
 }
@@ -46,21 +48,21 @@ pub trait FlatRenderVm<'m>: Sized {
         + TransformContext<Self>
         + Into<Self::Resultant>;
 
-    fn get_item(&self, value: &AbsoluteRef) -> Option<&'m ir::FlatSvgItem>;
+    fn get_item(&self, value: &Fingerprint) -> Option<&'m ir::FlatSvgItem>;
 
-    fn start_flat_group(&mut self, value: &AbsoluteRef) -> Self::Group;
+    fn start_flat_group(&mut self, value: &Fingerprint) -> Self::Group;
 
-    fn start_flat_frame(&mut self, value: &AbsoluteRef, _group: &ir::GroupRef) -> Self::Group {
+    fn start_flat_frame(&mut self, value: &Fingerprint, _group: &ir::GroupRef) -> Self::Group {
         self.start_flat_group(value)
     }
 
-    fn start_flat_text(&mut self, value: &AbsoluteRef, _text: &ir::FlatTextItem) -> Self::Group {
+    fn start_flat_text(&mut self, value: &Fingerprint, _text: &ir::FlatTextItem) -> Self::Group {
         self.start_flat_group(value)
     }
 
     #[doc(hidden)]
     /// Default implemenetion to render an item into the a `<g/>` element.
-    fn _render_flat_item(&mut self, abs_ref: &AbsoluteRef) -> Self::Resultant {
+    fn _render_flat_item(&mut self, abs_ref: &Fingerprint) -> Self::Resultant {
         let item: &'m ir::FlatSvgItem = self.get_item(abs_ref).unwrap();
         match item.deref() {
             ir::FlatSvgItem::Group(group) => self.render_group_ref(abs_ref, group),
@@ -88,12 +90,12 @@ pub trait FlatRenderVm<'m>: Sized {
     }
 
     /// Render an item into the a `<g/>` element.
-    fn render_flat_item(&mut self, abs_ref: &AbsoluteRef) -> Self::Resultant {
+    fn render_flat_item(&mut self, abs_ref: &Fingerprint) -> Self::Resultant {
         self._render_flat_item(abs_ref)
     }
 
     /// Render a frame group into underlying context.
-    fn render_group_ref(&mut self, abs_ref: &AbsoluteRef, group: &ir::GroupRef) -> Self::Resultant {
+    fn render_group_ref(&mut self, abs_ref: &Fingerprint, group: &ir::GroupRef) -> Self::Resultant {
         let mut group_ctx = self.start_flat_frame(abs_ref, group);
 
         for (pos, item_ref) in group.0.iter() {
@@ -107,7 +109,7 @@ pub trait FlatRenderVm<'m>: Sized {
     /// Render a transformed frame into underlying context.
     fn render_transformed_ref(
         &mut self,
-        abs_ref: &AbsoluteRef,
+        abs_ref: &Fingerprint,
         transformed: &ir::TransformedRef,
     ) -> Self::Resultant {
         let mut ts = self
@@ -123,7 +125,7 @@ pub trait FlatRenderVm<'m>: Sized {
     /// Render a text into the underlying context.
     fn render_flat_text(
         &mut self,
-        abs_ref: &AbsoluteRef,
+        abs_ref: &Fingerprint,
         text: &ir::FlatTextItem,
     ) -> Self::Resultant {
         let group_ctx = self.start_flat_text(abs_ref, text);
@@ -153,10 +155,10 @@ pub trait FlatIncrGroupContext<C>: Sized {
         &mut self,
         ctx: &mut C,
         pos: Point,
-        item: &AbsoluteRef,
-        prev_item: &AbsoluteRef,
+        item: &Fingerprint,
+        prev_item: &Fingerprint,
     );
-    fn render_diff_item_ref(&mut self, ctx: &mut C, item: &AbsoluteRef, prev_item: &AbsoluteRef) {
+    fn render_diff_item_ref(&mut self, ctx: &mut C, item: &Fingerprint, prev_item: &Fingerprint) {
         self.render_diff_item_ref_at(ctx, Point::default(), item, prev_item);
     }
 }
@@ -172,8 +174,8 @@ where
     /// Default implemenetion to Render an item into the a `<g/>` element.
     fn _render_diff_item(
         &mut self,
-        next_abs_ref: &AbsoluteRef,
-        prev_abs_ref: &AbsoluteRef,
+        next_abs_ref: &Fingerprint,
+        prev_abs_ref: &Fingerprint,
     ) -> Self::Resultant {
         let next_item: &'m ir::FlatSvgItem = self.get_item(next_abs_ref).unwrap();
         let prev_item = self.get_item(prev_abs_ref);
@@ -221,8 +223,8 @@ where
     /// Render an item into the a `<g/>` element.
     fn render_diff_item(
         &mut self,
-        next_abs_ref: &AbsoluteRef,
-        prev_abs_ref: &AbsoluteRef,
+        next_abs_ref: &Fingerprint,
+        prev_abs_ref: &Fingerprint,
     ) -> Self::Resultant {
         self._render_diff_item(next_abs_ref, prev_abs_ref)
     }
@@ -235,14 +237,10 @@ where
         next: &ir::GroupRef,
     ) {
         if let Some(ir::FlatSvgItem::Group(prev_group)) = prev_item_ {
-            let mut unused_prev: BTreeMap<usize, AbsoluteRef> = prev_group
-                .0
-                .iter()
-                .map(|v| v.1.clone())
-                .enumerate()
-                .collect();
-            let reusable: HashSet<AbsoluteRef, RandomState> =
-                HashSet::from_iter(prev_group.0.iter().map(|e| e.1.clone()));
+            let mut unused_prev: BTreeMap<usize, Fingerprint> =
+                prev_group.0.iter().map(|v| v.1).enumerate().collect();
+            let reusable: HashSet<Fingerprint, RandomState> =
+                HashSet::from_iter(prev_group.0.iter().map(|e| e.1));
 
             for (_, item_ref) in next.0.iter() {
                 if reusable.contains(item_ref) {

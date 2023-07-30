@@ -415,7 +415,7 @@ impl<
             + DynExportFeature,
     > FlatGroupContext<C> for SvgTextBuilder
 {
-    fn render_item_ref_at(&mut self, ctx: &mut C, pos: crate::ir::Point, item: &AbsoluteRef) {
+    fn render_item_ref_at(&mut self, ctx: &mut C, pos: crate::ir::Point, item: &Fingerprint) {
         let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
 
         let sub_content = ctx.render_flat_item(item);
@@ -461,7 +461,7 @@ impl<
         self
     }
 
-    fn with_reuse(mut self, _ctx: &mut C, v: &AbsoluteRef) -> Self {
+    fn with_reuse(mut self, _ctx: &mut C, v: &Fingerprint) -> Self {
         self.attributes.push(("data-reuse-from", v.as_svg_id("g")));
         self
     }
@@ -475,8 +475,8 @@ impl<'m, C: FlatIncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBu
         &mut self,
         ctx: &mut C,
         pos: crate::ir::Point,
-        item: &AbsoluteRef,
-        prev_item: &AbsoluteRef,
+        item: &Fingerprint,
+        prev_item: &Fingerprint,
     ) {
         let content = if item == prev_item {
             vec![]

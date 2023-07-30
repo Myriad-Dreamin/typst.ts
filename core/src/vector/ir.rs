@@ -319,7 +319,7 @@ pub struct TextShape {
 pub struct TransformedItem(pub TransformItem, pub Box<SvgItem>);
 
 /// Absolute positioning items at their corresponding points.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GroupItem(pub Vec<(Point, SvgItem)>);
 
 /// Item representing all the transform that is applicable to a [`SvgItem`].
@@ -361,7 +361,7 @@ pub type GlyphPack = Vec<(AbsoluteRef, GlyphItem)>;
 pub struct GlyphPackBuilder;
 
 impl GlyphPackBuilder {
-    pub fn finalize(glyphs: GlyphMapping) -> GlyphPack {
+    pub fn finalize(glyphs: impl IntoIterator<Item = (GlyphItem, AbsoluteRef)>) -> GlyphPack {
         let mut glyphs = glyphs.into_iter().collect::<Vec<_>>();
         glyphs.sort_by(|(_, a), (_, b)| a.id.0.cmp(&b.id.0));
         glyphs.into_iter().map(|(a, b)| (b, a)).collect()

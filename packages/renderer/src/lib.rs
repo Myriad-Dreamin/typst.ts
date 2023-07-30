@@ -3,7 +3,14 @@ pub(crate) mod utils;
 
 use typst_ts_core::error::prelude::*;
 use typst_ts_core::font::FontResolverImpl;
-use typst_ts_svg_exporter::{DefaultExportFeature, LayoutElem, SvgExporter};
+use typst_ts_core::vector::geom::Axes;
+use typst_ts_core::vector::geom::Scalar;
+use typst_ts_svg_exporter::flat_ir::SourceMappingNode;
+use typst_ts_svg_exporter::ir::SvgItem;
+use typst_ts_svg_exporter::ModuleBuilder;
+use typst_ts_svg_exporter::{
+    DefaultExportFeature, IncrementalSvgV2Exporter, LayoutElem, Pages, SvgExporter,
+};
 use wasm_bindgen::prelude::*;
 
 pub(crate) mod parser;
@@ -50,6 +57,106 @@ pub struct TypstRenderer {
 #[wasm_bindgen]
 pub struct SvgSession {
     doc: typst_ts_svg_exporter::MultiSvgDocument,
+    mb: ModuleBuilder,
+    doc_view: Option<Pages>,
+    glyph_window: usize,
+    source_mapping_data: Vec<SourceMappingNode>,
+    page_source_mappping: Vec<Vec<SourceMappingNode>>,
+}
+
+#[wasm_bindgen]
+impl SvgSession {
+    pub fn reset(&mut self) {
+        self.doc = Default::default();
+        self.doc_view = None;
+        self.glyph_window = 0;
+        self.source_mapping_data = Default::default();
+        self.page_source_mappping = Default::default();
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn doc_width(&self) -> f32 {
+        let pages = self.doc.layouts[0].1.iter();
+        pages.map(|(_, s)| s.x).max().unwrap_or_default().0
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn doc_height(&self) -> f32 {
+        let pages = self.doc.layouts[0].1.iter();
+        pages.map(|(_, s)| s.y.0).sum()
+    }
+
+    pub fn merge_delta(&mut self, delta: &[u8]) -> ZResult<()> {
+        let delta = typst_ts_svg_exporter::flat_ir::stream::SvgDocumentStream::from_slice(delta);
+        let delta = delta.checkout_owned();
+
+        #[cfg(feature = "debug_delta_update")]
+        crate::utils::console_log!(
+            "module counts: {:?},{:?},{:?}",
+            delta.glyphs.len(),
+            delta.item_pack.0.len(),
+            delta.layouts.len()
+        );
+        self.doc.merge_delta(&delta);
+        for metadata in delta.metadata {
+            match metadata {
+                typst_ts_svg_exporter::flat_ir::ModuleMetadata::SourceMappingData(data) => {
+                    self.source_mapping_data = data;
+                }
+                typst_ts_svg_exporter::flat_ir::ModuleMetadata::PageSourceMapping(data) => {
+                    self.page_source_mappping = data;
+                }
+                typst_ts_svg_exporter::flat_ir::ModuleMetadata::GarbageCollection(_data) => {
+                    #[cfg(feature = "debug_delta_update")]
+                    crate::utils::console_log!("garbage collection counts: {:?}", _data.len());
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn render_in_window(
+        &mut self,
+        rect_lo_x: f32,
+        rect_lo_y: f32,
+        rect_hi_x: f32,
+        rect_hi_y: f32,
+    ) -> String {
+        let _rect = typst_ts_core::vector::geom::Rect {
+            lo: Axes::new(Scalar(rect_lo_x), Scalar(rect_lo_y)),
+            hi: Axes::new(Scalar(rect_hi_x), Scalar(rect_hi_y)),
+        };
+
+        // todo: better solution?
+        let empty_page = self.mb.build(SvgItem::Group(Default::default()));
+        self.doc
+            .module
+            .items
+            .extend(self.mb.items.iter().map(|(f, (_, v))| (*f, v.clone())));
+
+        let doc_view = self.doc_view.take();
+
+        let mut page_off: f32 = 0.;
+        let mut next_doc_view = vec![];
+        for (page, layout) in self.doc.layouts[0].1.iter() {
+            page_off += layout.y.0;
+            if page_off < rect_lo_y || page_off - layout.y.0 > rect_hi_y {
+                next_doc_view.push((empty_page, *layout));
+                continue;
+            }
+
+            next_doc_view.push((*page, *layout));
+        }
+
+        let res = IncrementalSvgV2Exporter::render_in_window(
+            &self.doc.module,
+            doc_view,
+            &mut self.glyph_window,
+            &next_doc_view,
+        );
+        self.doc_view = Some(next_doc_view);
+        res
+    }
 }
 
 #[wasm_bindgen]
@@ -66,6 +173,22 @@ impl TypstRenderer {
     pub fn create_svg_session(&self, artifact_content: &[u8]) -> ZResult<SvgSession> {
         Ok(SvgSession {
             doc: typst_ts_svg_exporter::MultiSvgDocument::from_slice(artifact_content),
+            doc_view: None,
+            glyph_window: 0,
+            mb: Default::default(),
+            source_mapping_data: Default::default(),
+            page_source_mappping: Default::default(),
+        })
+    }
+
+    pub fn create_empty_svg_session(&self) -> ZResult<SvgSession> {
+        Ok(SvgSession {
+            doc: typst_ts_svg_exporter::MultiSvgDocument::default(),
+            doc_view: None,
+            glyph_window: 0,
+            mb: Default::default(),
+            source_mapping_data: Default::default(),
+            page_source_mappping: Default::default(),
         })
     }
 

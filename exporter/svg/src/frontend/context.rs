@@ -155,24 +155,24 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Fea
     type Resultant = Arc<SvgTextNode>;
     type Group = SvgTextBuilder;
 
-    fn get_item(&self, value: &AbsoluteRef) -> Option<&'m FlatSvgItem> {
+    fn get_item(&self, value: &Fingerprint) -> Option<&'m FlatSvgItem> {
         self.module.get_item(value)
     }
 
-    fn start_flat_group(&mut self, v: &AbsoluteRef) -> Self::Group {
+    fn start_flat_group(&mut self, v: &Fingerprint) -> Self::Group {
         Self::Group {
             attributes: vec![("data-tid", v.as_svg_id("g"))],
             content: Vec::with_capacity(1),
         }
     }
 
-    fn start_flat_frame(&mut self, value: &AbsoluteRef, _group: &GroupRef) -> Self::Group {
+    fn start_flat_frame(&mut self, value: &Fingerprint, _group: &GroupRef) -> Self::Group {
         let mut g = self.start_flat_group(value);
         g.attributes.push(("class", "typst-group".to_owned()));
         g
     }
 
-    fn start_flat_text(&mut self, value: &AbsoluteRef, text: &FlatTextItem) -> Self::Group {
+    fn start_flat_text(&mut self, value: &Fingerprint, text: &FlatTextItem) -> Self::Group {
         let mut g = self.start_flat_group(value);
         g.with_text_shape(self, &text.shape);
         g

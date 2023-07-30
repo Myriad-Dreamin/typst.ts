@@ -13,6 +13,7 @@ use super::{
     sk,
     vm::{GroupContext, RenderVm, TransformContext},
 };
+use crate::hash::Fingerprint;
 use crate::{font::GlyphProvider, hash::FingerprintBuilder};
 
 pub trait GlyphIndice<'m> {
@@ -20,7 +21,7 @@ pub trait GlyphIndice<'m> {
 }
 
 pub trait BBoxIndice {
-    fn get_bbox(&self, value: &AbsoluteRef) -> Option<BBox>;
+    fn get_bbox(&self, value: &Fingerprint) -> Option<BBox>;
 }
 
 pub trait ObservableBounds {
@@ -243,7 +244,7 @@ impl<C: BuildGlyph + RenderVm<Resultant = BBox>> GroupContext<C> for BBoxBuilder
 impl<'m, C: FlatRenderVm<'m, Resultant = BBox> + GlyphIndice<'m>> FlatGroupContext<C>
     for BBoxBuilder
 {
-    fn render_item_ref_at(&mut self, ctx: &mut C, pos: ir::Point, item: &AbsoluteRef) {
+    fn render_item_ref_at(&mut self, ctx: &mut C, pos: ir::Point, item: &Fingerprint) {
         let bbox = ctx.render_flat_item(item);
         self.inner.push((pos, bbox));
     }
@@ -263,8 +264,8 @@ impl<'m, C: FlatIncrRenderVm<'m, Resultant = BBox, Group = BBoxBuilder> + BBoxIn
         &mut self,
         ctx: &mut C,
         pos: ir::Point,
-        item: &AbsoluteRef,
-        prev_item: &AbsoluteRef,
+        item: &Fingerprint,
+        prev_item: &Fingerprint,
     ) {
         let bbox = (prev_item == item)
             .then(|| ctx.get_bbox(prev_item))
@@ -292,7 +293,7 @@ pub struct BBoxTask<'m, 't> {
     pub(crate) glyph_defs: &'t mut GlyphMapping,
 
     /// Stores the glyphs used in the document.
-    pub(crate) bbox_cache: &'t mut HashMap<AbsoluteRef, BBox>,
+    pub(crate) bbox_cache: &'t mut HashMap<Fingerprint, BBox>,
 
     #[cfg(not(feature = "flat-vector"))]
     pub _m_phantom: std::marker::PhantomData<&'m ()>,
@@ -315,21 +316,21 @@ impl<'m, 't> FlatRenderVm<'m> for BBoxTask<'m, 't> {
     type Resultant = BBox;
     type Group = BBoxBuilder;
 
-    fn get_item(&self, value: &AbsoluteRef) -> Option<&'m flat_ir::FlatSvgItem> {
+    fn get_item(&self, value: &Fingerprint) -> Option<&'m flat_ir::FlatSvgItem> {
         self.module.get_item(value)
     }
 
-    fn start_flat_group(&mut self, _v: &AbsoluteRef) -> Self::Group {
+    fn start_flat_group(&mut self, _v: &Fingerprint) -> Self::Group {
         self.start_group()
     }
 
-    fn render_flat_item(&mut self, abs_ref: &AbsoluteRef) -> Self::Resultant {
+    fn render_flat_item(&mut self, abs_ref: &Fingerprint) -> Self::Resultant {
         if let Some(bbox) = self.bbox_cache.get(abs_ref) {
             return bbox.clone();
         }
 
         let bbox = self._render_flat_item(abs_ref);
-        self.bbox_cache.insert(abs_ref.clone(), bbox.clone());
+        self.bbox_cache.insert(*abs_ref, bbox.clone());
         bbox
     }
 }
@@ -337,11 +338,11 @@ impl<'m, 't> FlatRenderVm<'m> for BBoxTask<'m, 't> {
 impl<'m, 't> FlatIncrRenderVm<'m> for BBoxTask<'m, 't> {
     fn render_diff_item(
         &mut self,
-        next_abs_ref: &AbsoluteRef,
-        prev_abs_ref: &AbsoluteRef,
+        next_abs_ref: &Fingerprint,
+        prev_abs_ref: &Fingerprint,
     ) -> Self::Resultant {
         let bbox = self._render_diff_item(next_abs_ref, prev_abs_ref);
-        self.bbox_cache.insert(next_abs_ref.clone(), bbox.clone());
+        self.bbox_cache.insert(*next_abs_ref, bbox.clone());
         bbox
     }
 }
@@ -368,7 +369,7 @@ impl<'m> GlyphIndice<'m> for BBoxTask<'m, '_> {
 }
 
 impl<'m> BBoxIndice for BBoxTask<'m, '_> {
-    fn get_bbox(&self, value: &AbsoluteRef) -> Option<BBox> {
+    fn get_bbox(&self, value: &Fingerprint) -> Option<BBox> {
         self.bbox_cache.get(value).cloned()
     }
 }
@@ -425,7 +426,7 @@ mod tests {
         glyph_provider: GlyphProvider,
         module: Module,
         glyph_defs: GlyphMapping,
-        bbox_cache: HashMap<AbsoluteRef, BBox>,
+        bbox_cache: HashMap<Fingerprint, BBox>,
         fingerprint_builder: FingerprintBuilder,
     }
 

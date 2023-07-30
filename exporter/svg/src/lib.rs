@@ -26,7 +26,10 @@ pub use backend::SvgGlyphBuilder;
 /// the document.
 pub(crate) mod frontend;
 #[cfg(feature = "flat-vector")]
-pub use frontend::{DynamicLayoutSvgExporter, IncrementalRenderContext, IncrementalSvgExporter};
+pub use frontend::{
+    DynamicLayoutSvgExporter, IncrementalRenderContext, IncrementalSvgExporter,
+    IncrementalSvgV2Exporter,
+};
 pub use frontend::{SvgExporter, SvgTask};
 
 /// Useful transform for SVG Items.
