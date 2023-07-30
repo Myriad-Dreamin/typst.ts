@@ -27,8 +27,8 @@ pub use backend::SvgGlyphBuilder;
 pub(crate) mod frontend;
 #[cfg(feature = "flat-vector")]
 pub use frontend::{
-    DynamicLayoutSvgExporter, IncrementalRenderContext, IncrementalSvgExporter,
-    IncrementalSvgV2Exporter,
+    DynamicLayoutSvgExporter, IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderContext,
+    IncrementalSvgExporter,
 };
 pub use frontend::{SvgExporter, SvgTask};
 
