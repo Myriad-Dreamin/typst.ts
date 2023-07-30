@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use typst::{diag::SourceResult, doc::Document};
 use typst_ts_core::vector::{
-    flat_ir::{self, Module, ModuleBuilder, Pages, SvgDocument},
+    flat_ir::{flatten_glyphs, FlatModule, ItemPack, Module, ModuleBuilder, Pages, SvgDocument},
     flat_vm::FlatRenderVm,
     ir::GlyphMapping,
     LowerBuilder,
@@ -89,12 +89,23 @@ pub fn export_module(output: &Document) -> SourceResult<Vec<u8>> {
 
     let mut builder = ModuleBuilder::default();
 
+    let mut pages = vec![];
     for page in output.pages.iter() {
         let item = t.lower(page);
-        let _entry_id = builder.build(item);
+        let entry = builder.build(item);
+        pages.push((entry, page.size().into()));
     }
 
-    let (repr, ..) = builder.finalize();
+    let (repr, glyphs) = builder.finalize();
+    let glyphs = flatten_glyphs(glyphs);
 
-    Ok(flat_ir::serialize_module(repr))
+    let module_data = FlatModule {
+        metadata: vec![],
+        item_pack: ItemPack(repr.items.into_iter().collect()),
+        glyphs,
+        layouts: vec![(Default::default(), pages)],
+    }
+    .to_bytes();
+
+    Ok(module_data)
 }

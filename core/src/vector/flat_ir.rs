@@ -61,6 +61,8 @@ pub struct FlatTextItemContent {
     pub glyphs: Arc<[(Abs, Abs, AbsoluteRef)]>,
 }
 
+/// The glyph item definition with all of variants of [`GlyphItem`] other than
+/// [`GlyphItem::Raw`], hence it is serializable.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
@@ -90,12 +92,24 @@ pub struct TransformedRef(pub TransformItem, pub Fingerprint);
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct GroupRef(pub Arc<[(Point, Fingerprint)]>);
 
+/// Flatten mapping fingerprints to svg items.
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct ItemPack(pub Vec<(Fingerprint, FlatSvgItem)>);
 
 pub type ItemMap = rustc_hash::FxHashMap<Fingerprint, FlatSvgItem>;
+
+/// Trait of a streaming representation of a module.
+pub trait ModuleStream {
+    fn items(&self) -> ItemPack;
+    fn layouts(&self) -> Vec<(Abs, Pages)>;
+    fn glyphs(&self) -> Vec<(AbsoluteRef, FlatGlyphItem)>;
+    fn gc_items(&self) -> Option<Vec<Fingerprint>> {
+        // never gc items
+        None
+    }
+}
 
 /// A finished module that stores all the svg items.
 /// The svg items shares the underlying data.
@@ -117,102 +131,76 @@ impl Module {
     pub fn get_item(&self, id: &Fingerprint) -> Option<&FlatSvgItem> {
         self.items.get(id)
     }
+
+    pub fn merge_delta(&mut self, v: impl ModuleStream) {
+        let item_pack: ItemPack = v.items();
+        let glyphs = v.glyphs();
+
+        if let Some(gc_items) = v.gc_items() {
+            for id in gc_items {
+                self.items.remove(&id);
+            }
+        }
+
+        self.items.extend(item_pack.0.into_iter());
+        self.glyphs
+            .extend(glyphs.into_iter().map(|(id, item)| (id, item.into())));
+    }
 }
 
-pub type Pages = Vec<(Fingerprint, Size)>;
-pub type LayoutElem = (Abs, Pages);
-
-/// Module with page references of a [`typst::doc::Document`].
-pub struct SvgDocument {
-    pub module: Module,
-    /// References to the page frames.
-    /// Use [`Module::get_item`] to get the actual item.
-    pub pages: Pages,
+/// metadata that can be attached to a module.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub enum ModuleMetadata {
+    SourceMappingData(Vec<SourceMappingNode>),
+    PageSourceMapping(Vec<Vec<SourceMappingNode>>),
+    GarbageCollection(Vec<Fingerprint>),
 }
 
-/// Module with multiple documents in a module [`typst::doc::Document`].
-#[derive(Default)]
-pub struct MultiSvgDocument {
-    pub module: Module,
-    /// References to the page frames.
-    /// Use [`Module::get_item`] to get the actual item.
-    pub layouts: Vec<(Abs, Pages)>,
+/// Flatten module so that it can be serialized.
+#[derive(Debug)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub struct FlatModule {
+    pub metadata: Vec<ModuleMetadata>,
+    pub item_pack: ItemPack,
+    pub glyphs: Vec<(AbsoluteRef, FlatGlyphItem)>,
+    pub layouts: Vec<(Abs, Vec<(Fingerprint, Size)>)>,
 }
 
 #[cfg(feature = "rkyv")]
-pub mod stream {
-    use super::{ArchivedSerializedModule, SerializedModule};
-    use rkyv::de::deserializers::SharedDeserializeMap;
-    use rkyv::{AlignedVec, Deserialize};
+impl FlatModule {
+    pub fn to_bytes(self: &FlatModule) -> Vec<u8> {
+        // Or you can customize your serialization for better performance
+        // and compatibility with #![no_std] environments
+        use rkyv::ser::{serializers::AllocSerializer, Serializer};
 
-    enum RkyvStreamData<'a> {
-        Aligned(&'a [u8]),
-        Unaligned(AlignedVec),
+        let mut serializer = AllocSerializer::<0>::default();
+        serializer.serialize_value(self).unwrap();
+        let bytes = serializer.into_serializer().into_inner();
+
+        bytes.into_vec()
     }
-
-    impl<'a> AsRef<[u8]> for RkyvStreamData<'a> {
-        #[inline]
-        fn as_ref(&self) -> &[u8] {
-            match self {
-                Self::Aligned(v) => v,
-                Self::Unaligned(v) => v.as_slice(),
-            }
-        }
-    }
-
-    pub struct SvgDocumentStream<'a> {
-        data: RkyvStreamData<'a>,
-    }
-
-    impl<'a> SvgDocumentStream<'a> {
-        pub fn from_slice(v: &'a [u8]) -> Self {
-            let v = if (v.as_ptr() as usize) % AlignedVec::ALIGNMENT != 0 {
-                let mut aligned = AlignedVec::with_capacity(v.len());
-                aligned.extend_from_slice(v);
-                RkyvStreamData::Unaligned(aligned)
-            } else {
-                RkyvStreamData::Aligned(v)
-            };
-
-            Self { data: v }
-        }
-
-        pub fn checkout(&self) -> &ArchivedSerializedModule {
-            rkyv::check_archived_root::<SerializedModule>(self.data.as_ref()).unwrap()
-        }
-
-        pub fn checkout_owned(&self) -> SerializedModule {
-            let v = self.checkout();
-            let mut dmap = SharedDeserializeMap::default();
-            v.deserialize(&mut dmap).unwrap()
-        }
-    }
-}
-
-pub trait SvgDocumentStreamView {
-    fn get_items(&self) -> ItemPack;
-    fn get_layouts(&self) -> Vec<(Abs, Pages)>;
-    fn get_glyphs(&self) -> Vec<(AbsoluteRef, FlatGlyphItem)>;
-    fn get_gc_items(&self) -> Option<Vec<Fingerprint>>;
 }
 
 // todo: for archived module.
 // todo: zero copy
 #[cfg(feature = "rkyv")]
-impl SvgDocumentStreamView for &SerializedModule {
-    fn get_items(&self) -> ItemPack {
+impl ModuleStream for &FlatModule {
+    fn items(&self) -> ItemPack {
         self.item_pack.clone()
     }
 
-    fn get_layouts(&self) -> Vec<(Abs, Pages)> {
+    fn layouts(&self) -> Vec<(Abs, Pages)> {
         self.layouts.clone()
     }
 
-    fn get_glyphs(&self) -> Vec<(AbsoluteRef, FlatGlyphItem)> {
+    fn glyphs(&self) -> Vec<(AbsoluteRef, FlatGlyphItem)> {
         self.glyphs.clone()
     }
 
-    fn get_gc_items(&self) -> Option<Vec<Fingerprint>> {
+    fn gc_items(&self) -> Option<Vec<Fingerprint>> {
         for m in &self.metadata {
             if let ModuleMetadata::GarbageCollection(v) = m {
                 return Some(v.clone());
@@ -222,32 +210,41 @@ impl SvgDocumentStreamView for &SerializedModule {
     }
 }
 
+pub type Pages = Vec<(/* item ref */ Fingerprint, /* page size */ Size)>;
+pub type LayoutElem = (/* layout width */ Abs, /* layout pages */ Pages);
+
+/// Module with page references of a [`typst::doc::Document`].
+pub struct SvgDocument {
+    /// module containing all of the data related to this document.
+    pub module: Module,
+    /// References to the page frames.
+    /// Use [`Module::get_item`] to get the actual item.
+    pub pages: Pages,
+}
+
+/// Module with multiple documents in a module [`typst::doc::Document`].
+#[derive(Default)]
+pub struct MultiSvgDocument {
+    /// module containing all of the data related to this document.
+    pub module: Module,
+    /// References to the page frames.
+    /// Use [`Module::get_item`] to get the actual item.
+    pub layouts: Vec<LayoutElem>,
+}
+
 impl MultiSvgDocument {
-    pub fn merge_delta(&mut self, v: impl SvgDocumentStreamView) {
-        let item_pack: ItemPack = v.get_items();
-        let layouts = v.get_layouts();
-        let glyphs = v.get_glyphs();
+    #[cfg(feature = "rkyv")]
+    pub fn from_slice(v: &[u8]) -> Self {
+        type DocStream<'a> = super::stream::SvgDocumentStream<'a>;
 
-        self.layouts = layouts;
-
-        if let Some(gc_items) = v.get_gc_items() {
-            for id in gc_items {
-                self.module.items.remove(&id);
-            }
-        }
-
-        self.module.items.extend(item_pack.0.into_iter());
-        self.module
-            .glyphs
-            .extend(glyphs.into_iter().map(|(id, item)| (id, item.into())));
+        let mut res = Self::default();
+        res.merge_delta(&DocStream::from_slice(v).checkout_owned());
+        res
     }
 
-    pub fn from_slice(v: &[u8]) -> Self {
-        let data = stream::SvgDocumentStream::from_slice(v);
-
-        let mut res: Self = Default::default();
-        res.merge_delta(&data.checkout_owned());
-        res
+    pub fn merge_delta(&mut self, v: impl ModuleStream) {
+        self.layouts = v.layouts();
+        self.module.merge_delta(v);
     }
 }
 
@@ -267,8 +264,8 @@ pub struct ModuleBuilderImpl<const ENABLE_REF_CNT: bool = false> {
     pub incr_glyphs: Vec<u64>,
 }
 
-pub type ModuleBuilder = ModuleBuilderImpl<false>;
-pub type IncrModuleBuilder = ModuleBuilderImpl<true>;
+pub type ModuleBuilder = ModuleBuilderImpl</* ENABLE_REF_CNT */ false>;
+pub type IncrModuleBuilder = ModuleBuilderImpl</* ENABLE_REF_CNT */ true>;
 
 impl<const ENABLE_REF_CNT: bool> Default for ModuleBuilderImpl<ENABLE_REF_CNT> {
     fn default() -> Self {
@@ -472,42 +469,8 @@ impl IncrModuleBuilder {
     }
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub enum ModuleMetadata {
-    SourceMappingData(Vec<SourceMappingNode>),
-    PageSourceMapping(Vec<Vec<SourceMappingNode>>),
-    GarbageCollection(Vec<Fingerprint>),
-}
-
-/// Flatten transform item.
-#[derive(Debug)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct SerializedModule {
-    pub metadata: Vec<ModuleMetadata>,
-    pub item_pack: ItemPack,
-    pub glyphs: Vec<(AbsoluteRef, FlatGlyphItem)>,
-    pub layouts: Vec<(Abs, Vec<(Fingerprint, Size)>)>,
-}
-
-// todo: remove me
-pub fn serialize_module(repr: Module) -> Vec<u8> {
-    // Or you can customize your serialization for better performance
-    // and compatibility with #![no_std] environments
-    use rkyv::ser::{serializers::AllocSerializer, Serializer};
-
-    let mut serializer = AllocSerializer::<0>::default();
-    serializer
-        .serialize_value(&ItemPack(repr.items.into_iter().collect()))
-        .unwrap();
-    let item_pack = serializer.into_serializer().into_inner();
-
-    item_pack.into_vec()
-}
-
-pub fn build_flat_glyphs(
+// todo: remove this function
+pub fn flatten_glyphs(
     repr: impl IntoIterator<Item = (GlyphItem, AbsoluteRef)>,
 ) -> Vec<(AbsoluteRef, FlatGlyphItem)> {
     let glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
@@ -529,28 +492,14 @@ pub fn build_flat_glyphs(
         .collect::<Vec<_>>()
 }
 
-pub fn serialize_module_v2(repr: &SerializedModule) -> Vec<u8> {
-    // Or you can customize your serialization for better performance
-    // and compatibility with #![no_std] environments
-    use rkyv::ser::{serializers::AllocSerializer, Serializer};
+pub fn serialize_doc(doc: MultiSvgDocument, glyph_mapping: GlyphMapping) -> Vec<u8> {
+    let glyphs = flatten_glyphs(glyph_mapping);
 
-    let mut serializer = AllocSerializer::<0>::default();
-    serializer.serialize_value(repr).unwrap();
-    let bytes = serializer.into_serializer().into_inner();
-
-    bytes.into_vec()
-}
-
-pub fn serialize_multi_doc_standalone(
-    doc: MultiSvgDocument,
-    glyph_mapping: GlyphMapping,
-) -> Vec<u8> {
-    let glyphs = build_flat_glyphs(glyph_mapping);
-
-    serialize_module_v2(&SerializedModule {
+    FlatModule {
         metadata: vec![],
         item_pack: ItemPack(doc.module.items.into_iter().collect()),
         glyphs,
         layouts: doc.layouts,
-    })
+    }
+    .to_bytes()
 }
