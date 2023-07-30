@@ -152,7 +152,9 @@ pub struct IncrSvgDocClient {
     /// Optional page source mapping references.
     pub page_source_mappping: Vec</* layout pages */ Vec</* per page */ SourceMappingNode>>,
 
-    mb: ModuleBuilder,
+    /// Don't use this
+    /// it is public to make Default happy
+    pub mb: ModuleBuilder,
 }
 
 impl IncrSvgDocClient {
