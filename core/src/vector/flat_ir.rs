@@ -1,3 +1,23 @@
+//! Flat intermediate representation of svg items.
+//!
+//! SvgDoc and Module Relation:
+//!
+//! ┌──────────────┐ serialize  ┌────────────────────────────────────┐
+//! │[`FlatModule`]├───────────►│[`super::stream::BytesModuleStream`]│
+//! └──────────────┘            └───────────┬────────────────────────┘
+//!      ▲                                  │
+//!      │flatten                           │implement
+//!      │                                  ▼
+//! ┌────┴─────┐        merge       ┌────────────────┐
+//! │[`Module`]│◄───────────────────┤[`ModuleStream`]│
+//! └────┬─────┘                    └───────┬────────┘
+//!      │                                  │
+//!      │Store data of                     │merge
+//!      ▼                                  ▼
+//! ┌───────────────┐  select layout ┌────────────────────┐
+//! │[`SvgDocument`]│◄───────────────┤[`MultiSvgDocument`]│
+//! └───────────────┘                └────────────────────┘
+
 use std::{collections::HashMap, sync::Arc};
 
 #[cfg(feature = "rkyv")]
