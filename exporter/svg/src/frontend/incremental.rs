@@ -82,14 +82,6 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                 continue;
             }
 
-            let item = if let Some(prev_entry) = unused_prev.pop_first().map(|(_, v)| v) {
-                println!("diff page: {} {:?} {:?}", idx, entry, prev_entry);
-                render_task.render_diff_item(entry, &prev_entry)
-            } else {
-                println!("rebuild page: {} {:?}", idx, entry);
-                render_task.render_flat_item(entry)
-            };
-
             let mut attributes = vec![
                 ("class", "typst-page".into()),
                 ("transform", format!("translate(0, {})", acc_height)),
@@ -99,9 +91,16 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             ];
 
             // todo: evaluate simlarity
-            if let Some((abs_ref, ..)) = ctx.prev.get(idx) {
-                attributes.push(("data-reuse-from", abs_ref.as_svg_id("p")));
-            }
+            let item = if let Some(prev_entry) = unused_prev.pop_first().map(|(_, v)| v) {
+                println!("diff page: {} {:?} {:?}", idx, entry, prev_entry);
+                attributes.push(("data-reuse-from", prev_entry.as_svg_id("p")));
+
+                render_task.render_diff_item(entry, &prev_entry)
+            } else {
+                // todo: find a box
+                println!("rebuild page: {} {:?}", idx, entry);
+                render_task.render_flat_item(entry)
+            };
 
             svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
                 attributes,
