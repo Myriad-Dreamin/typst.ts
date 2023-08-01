@@ -63,12 +63,20 @@ impl SvgSession {
 
     #[wasm_bindgen(getter)]
     pub fn doc_width(&self) -> f32 {
+        if self.client.doc.layouts.is_empty() {
+            return 0.;
+        }
+
         let pages = self.client.doc.layouts[0].1.iter();
         pages.map(|(_, s)| s.x).max().unwrap_or_default().0
     }
 
     #[wasm_bindgen(getter)]
     pub fn doc_height(&self) -> f32 {
+        if self.client.doc.layouts.is_empty() {
+            return 0.;
+        }
+
         let pages = self.client.doc.layouts[0].1.iter();
         pages.map(|(_, s)| s.y.0).sum()
     }
