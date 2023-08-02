@@ -14,9 +14,6 @@ use typst_ts_core::{
     },
 };
 
-pub(crate) mod debug_info;
-pub use debug_info::generate_src_mapping;
-
 mod escape;
 use escape::{PcDataEscapes, TextContentDataEscapes};
 

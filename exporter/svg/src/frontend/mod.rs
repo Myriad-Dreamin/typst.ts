@@ -22,16 +22,12 @@ pub use dynamic_layout::DynamicLayoutSvgExporter;
 pub(crate) mod flat;
 #[cfg(feature = "flat-vector")]
 pub(crate) mod incremental;
-pub use incremental::{IncrementalRenderContext, IncrementalSvgExporter};
-#[cfg(feature = "flat-vector")]
-pub(crate) mod incremental_v2;
-pub use incremental_v2::{IncrSvgDocClient, IncrSvgDocServer};
-
 use crate::{
     backend::{SvgGlyphBuilder, SvgText, SvgTextNode},
     utils::AbsExt,
     ExportFeature,
 };
+pub use incremental::{IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderContext};
 
 pub struct SvgExporter<Feat: ExportFeature> {
     pub _feat_phantom: std::marker::PhantomData<Feat>,
