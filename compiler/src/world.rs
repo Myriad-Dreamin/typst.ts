@@ -9,17 +9,17 @@ use chrono::Datelike;
 use comemo::Prehashed;
 use serde::{Deserialize, Serialize};
 use typst::{
-    diag::FileResult,
+    diag::{FileError, FileResult},
     eval::{Datetime, Library},
     font::{Font, FontBook},
     syntax::Source,
+    util::PathExt,
     World,
 };
 
 use typst_ts_core::{
     artifact_ir::ArtifactHeader,
     font::{FontProfile, FontResolverImpl},
-    package::PackageError,
     Bytes, FontResolver, TypstFileId as FileId,
 };
 
@@ -127,7 +127,7 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
 
     /// Try to access the specified file.
     fn file(&self, id: FileId) -> FileResult<Bytes> {
-        self.vfs.file(&self.path_for_id(id).unwrap())
+        self.vfs.file(&self.path_for_id(id)?)
     }
 
     /// Get the current date.
@@ -192,7 +192,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     }
 
     /// Resolve the real path for a file id.
-    pub fn path_for_id(&self, id: FileId) -> Result<PathBuf, PackageError> {
+    pub fn path_for_id(&self, id: FileId) -> Result<PathBuf, FileError> {
         // Determine the root path relative to which the file path
         // will be resolved.
         let root = match id.package() {
@@ -200,7 +200,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             None => self.root.clone(),
         };
 
-        Ok(root.join(id.path().strip_prefix(Path::new("/")).unwrap()))
+        root.join_rooted(id.path()).ok_or(FileError::AccessDenied)
     }
 
     /// Get found dependencies in current state of vfs.
