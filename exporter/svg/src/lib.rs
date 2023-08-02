@@ -28,7 +28,6 @@ pub(crate) mod frontend;
 #[cfg(feature = "flat-vector")]
 pub use frontend::{
     DynamicLayoutSvgExporter, IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderContext,
-    IncrementalSvgExporter,
 };
 pub use frontend::{SvgExporter, SvgTask};
 
