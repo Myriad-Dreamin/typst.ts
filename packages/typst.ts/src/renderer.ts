@@ -149,6 +149,10 @@ export function createTypstSvgRenderer(): TypstSvgRenderer {
   return new TypstRendererSvgDriver();
 }
 
+export function rendererBuildInfo(): any {
+  return typst.renderer_build_info();
+}
+
 function randstr(prefix?: string): string {
   return Math.random()
     .toString(36)

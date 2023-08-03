@@ -3999,6 +3999,7 @@ dependencies = [
 name = "typst-ts-renderer"
 version = "0.3.0"
 dependencies = [
+ "anyhow",
  "byteorder",
  "comemo",
  "console_error_panic_hook",
@@ -4022,6 +4023,7 @@ dependencies = [
  "typst-ts-raster-exporter",
  "typst-ts-svg-exporter",
  "typst-ts-test-common",
+ "vergen",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
