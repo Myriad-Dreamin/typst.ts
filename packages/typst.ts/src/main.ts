@@ -9,7 +9,7 @@ export type {
 export { preloadRemoteFonts, preloadSystemFonts } from './options.init';
 import * as renderer from './renderer';
 export type { TypstRenderer } from './renderer';
-export { createTypstRenderer, createTypstSvgRenderer } from './renderer';
+export { rendererBuildInfo, createTypstRenderer, createTypstSvgRenderer } from './renderer';
 import { RenderView, renderTextLayer } from './view';
 import * as compiler from './compiler';
 import { FetchAccessModel } from './fs';

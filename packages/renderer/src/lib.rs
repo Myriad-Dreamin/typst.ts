@@ -22,6 +22,64 @@ pub use session::RenderSession;
 
 pub use session::{RenderSessionManager, RenderSessionOptions};
 
+pub mod build_info {
+    /// The version of the typst-ts-renderer crate.
+    pub static VERSION: &str = env!("CARGO_PKG_VERSION");
+
+    /// The features of the typst-ts-renderer crate.
+    pub static FEATURES: &str = env!("VERGEN_CARGO_FEATURES");
+
+    /// The commit hash of the typst-ts-renderer crate.
+    pub static COMMIT_HASH: &str = env!("VERGEN_GIT_SHA");
+
+    /// The profile of the typst-ts-renderer crate.
+    /// It should be typically "debug" or "release". It is specifically exactly
+    /// the value passed by `cargo build --profile $VALUE`.
+    pub static PROFILE: &str = env!("VERGEN_CARGO_PROFILE");
+
+    pub fn features() -> Vec<&'static str> {
+        FEATURES.split(',').collect::<Vec<_>>()
+    }
+}
+
+#[wasm_bindgen]
+pub fn renderer_build_info() -> JsValue {
+    let obj = js_sys::Object::new();
+
+    js_sys::Reflect::set(
+        &obj,
+        &JsValue::from_str("version"),
+        &JsValue::from_str(build_info::VERSION),
+    )
+    .unwrap();
+
+    js_sys::Reflect::set(
+        &obj,
+        &JsValue::from_str("features"),
+        &build_info::features()
+            .into_iter()
+            .map(JsValue::from_str)
+            .collect::<js_sys::Array>(),
+    )
+    .unwrap();
+
+    js_sys::Reflect::set(
+        &obj,
+        &JsValue::from_str("commit_hash"),
+        &JsValue::from_str(build_info::COMMIT_HASH),
+    )
+    .unwrap();
+
+    js_sys::Reflect::set(
+        &obj,
+        &JsValue::from_str("profile"),
+        &JsValue::from_str(build_info::PROFILE),
+    )
+    .unwrap();
+
+    obj.into()
+}
+
 #[wasm_bindgen]
 #[derive(Debug, Default)]
 pub struct RenderPageImageOptions {
