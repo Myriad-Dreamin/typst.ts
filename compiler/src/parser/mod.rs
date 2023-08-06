@@ -2,10 +2,10 @@ use std::path::Path;
 
 use typst::{diag::FileResult, syntax::Source};
 
-use typst_ts_core::{typst_affinite_hash, TypstFileId};
+use typst_ts_core::TypstFileId;
 
 pub fn reparse(
-    path: &Path,
+    _path: &Path,
     source_id: TypstFileId,
     prev: Option<Source>,
     next: String,
