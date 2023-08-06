@@ -199,7 +199,7 @@ impl IncrSvgDocServer {
         }
         .to_bytes();
 
-        println!("svg render time (incremental bin): {:?}", instant.elapsed());
+        log::info!("svg render time (incremental bin): {:?}", instant.elapsed());
 
         [b"diff-v1,", delta.as_slice()].concat()
     }

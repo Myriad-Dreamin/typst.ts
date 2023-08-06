@@ -16,6 +16,7 @@ tiny-skia.workspace = true
 base64.workspace = true
 
 typst-ts-core.workspace = true
+log.workspace = true
 
 
 [features]

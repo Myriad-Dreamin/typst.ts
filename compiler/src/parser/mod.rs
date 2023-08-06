@@ -15,7 +15,6 @@ pub fn reparse(
         Some(mut source) => {
             let prev = source.text();
             if prev == next {
-                println!("same: {:?} -> {:?}", path, typst_affinite_hash(&source));
                 Ok(source)
             } else {
                 let prev = prev.to_owned();
@@ -45,7 +44,6 @@ pub fn reparse(
                     match op {
                         (Chunk::Delete(t), Chunk::Insert(s))
                         | (Chunk::Insert(s), Chunk::Delete(t)) => {
-                            println!("[{}] {} -> {}", rev_adavance, t, s);
                             rev_adavance += t.len();
                             source.edit(
                                 prev_len - rev_adavance..prev_len - rev_adavance + t.len(),
@@ -54,7 +52,6 @@ pub fn reparse(
                             last_rep = true;
                         }
                         (Chunk::Delete(t), Chunk::Equal(e)) => {
-                            println!("[{}] -- {}", rev_adavance, t);
                             rev_adavance += t.len();
                             source.edit(
                                 prev_len - rev_adavance..prev_len - rev_adavance + t.len(),
@@ -64,7 +61,6 @@ pub fn reparse(
                             last_rep = true;
                         }
                         (Chunk::Insert(s), Chunk::Equal(e)) => {
-                            println!("[{}] ++ {}", rev_adavance, s);
                             source.edit(prev_len - rev_adavance..prev_len - rev_adavance, s);
                             last_rep = true;
                             rev_adavance += e.len();
