@@ -95,101 +95,101 @@ mod tests {
         check_bundle_facts!("layout", "clip_1", @r###"
         ---
         name: layout/clip_1.typ
-        origin_pdf_hash: "sha256:b6437eb720e2dc8dfd60f71227fa8aedee251c5b7c145ae50aea39b6e9e45507"
-        artifact_pdf_hash: "sha256:b6437eb720e2dc8dfd60f71227fa8aedee251c5b7c145ae50aea39b6e9e45507"
+        origin_pdf_hash: "sha256:cfeee7c32bef59ee25284442ef46855430c289295007f03edcf1ace2f5e12e5c"
+        artifact_pdf_hash: "sha256:cfeee7c32bef59ee25284442ef46855430c289295007f03edcf1ace2f5e12e5c"
         "###);
         check_bundle_facts!("layout", "clip_2", @r###"
         ---
         name: layout/clip_2.typ
-        origin_pdf_hash: "sha256:78e4aaa4640f27533f8df1eba3b96c657f569fd69f7d1cc5cad432bb2c70438d"
-        artifact_pdf_hash: "sha256:78e4aaa4640f27533f8df1eba3b96c657f569fd69f7d1cc5cad432bb2c70438d"
+        origin_pdf_hash: "sha256:ebe45489f2f471094112c427c9aee520de24d0333af5a18b951dcccc5e1c48d9"
+        artifact_pdf_hash: "sha256:ebe45489f2f471094112c427c9aee520de24d0333af5a18b951dcccc5e1c48d9"
         "###);
         check_bundle_facts!("layout", "clip_3", @r###"
         ---
         name: layout/clip_3.typ
-        origin_pdf_hash: "sha256:81c13609847913bc0cf8961d7a60f64e46300e1eba2b70802cfbd3df6722d0f8"
-        artifact_pdf_hash: "sha256:81c13609847913bc0cf8961d7a60f64e46300e1eba2b70802cfbd3df6722d0f8"
+        origin_pdf_hash: "sha256:e15bc75b69ab8e37c38f7c4882b6bfe4156ce21fbf005df212833669e8749828"
+        artifact_pdf_hash: "sha256:e15bc75b69ab8e37c38f7c4882b6bfe4156ce21fbf005df212833669e8749828"
         "###);
         check_bundle_facts!("layout", "clip_4", @r###"
         ---
         name: layout/clip_4.typ
-        origin_pdf_hash: "sha256:85d345941d82d57d7a9f86c7509ca6b3fffdd44bc1adf13da63c5545b9fc7908"
-        artifact_pdf_hash: "sha256:85d345941d82d57d7a9f86c7509ca6b3fffdd44bc1adf13da63c5545b9fc7908"
+        origin_pdf_hash: "sha256:5b6ea45846ece4de47a73a350abdf8f8f147be13df3d29d2de929fb0f6dc5629"
+        artifact_pdf_hash: "sha256:5b6ea45846ece4de47a73a350abdf8f8f147be13df3d29d2de929fb0f6dc5629"
         "###);
 
         check_bundle_facts!("layout", "list_marker_1", @r###"
         ---
         name: layout/list_marker_1.typ
-        origin_pdf_hash: "sha256:99fbfa5c4edbe141af9bfa5ccb16a4e4f188c92297d8a5cb1928b5fd65973345"
-        artifact_pdf_hash: "sha256:99fbfa5c4edbe141af9bfa5ccb16a4e4f188c92297d8a5cb1928b5fd65973345"
+        origin_pdf_hash: "sha256:4164254fc4f28c66f1338d506a42b680af24b5286c491058a0d474562e31cb11"
+        artifact_pdf_hash: "sha256:4164254fc4f28c66f1338d506a42b680af24b5286c491058a0d474562e31cb11"
         "###);
         check_bundle_facts!("layout", "list_marker_2", @r###"
         ---
         name: layout/list_marker_2.typ
-        origin_pdf_hash: "sha256:e7588ed6f34fa428c9f9c913755aa211809f4e5644f88b44d7fa65c53a3b1d5f"
-        artifact_pdf_hash: "sha256:e7588ed6f34fa428c9f9c913755aa211809f4e5644f88b44d7fa65c53a3b1d5f"
+        origin_pdf_hash: "sha256:4f056160819ebd0e51388b249def3bf5e8c12519370c0a3c5faa7fa02ed84684"
+        artifact_pdf_hash: "sha256:4f056160819ebd0e51388b249def3bf5e8c12519370c0a3c5faa7fa02ed84684"
         "###);
         check_bundle_facts!("layout", "list_marker_3", @r###"
         ---
         name: layout/list_marker_3.typ
-        origin_pdf_hash: "sha256:7d56e142562e33cab2ac2527520ef56a7dc08300ad984278b4062eaaf0bd8ce2"
-        artifact_pdf_hash: "sha256:7d56e142562e33cab2ac2527520ef56a7dc08300ad984278b4062eaaf0bd8ce2"
+        origin_pdf_hash: "sha256:765f999bda1a2bbabc3a9c59485ee394906dd7addb125939a9a13542a4621fec"
+        artifact_pdf_hash: "sha256:765f999bda1a2bbabc3a9c59485ee394906dd7addb125939a9a13542a4621fec"
         "###);
         check_bundle_facts!("layout", "list_marker_4", @r###"
         ---
         name: layout/list_marker_4.typ
-        origin_pdf_hash: "sha256:4d776c3a50e63277219475df469fd5ca11d0d5c6bcfe62dc7a4c53463b690a84"
-        artifact_pdf_hash: "sha256:4d776c3a50e63277219475df469fd5ca11d0d5c6bcfe62dc7a4c53463b690a84"
+        origin_pdf_hash: "sha256:e95e86d140bfb2f067ee684ee6701cd6ba26138580b8bada019010667dcd5048"
+        artifact_pdf_hash: "sha256:e95e86d140bfb2f067ee684ee6701cd6ba26138580b8bada019010667dcd5048"
         "###);
 
         check_bundle_facts!("layout", "transform_1", @r###"
         ---
         name: layout/transform_1.typ
-        origin_pdf_hash: "sha256:cb1d6880801b04f42b4aa702f49f4a84b6fdd17a56ec42eff65a45c643c245ef"
-        artifact_pdf_hash: "sha256:cb1d6880801b04f42b4aa702f49f4a84b6fdd17a56ec42eff65a45c643c245ef"
+        origin_pdf_hash: "sha256:a455739a49b965b400aee08e9f3402cfebb44b8d3c5b40037c1d11e7bc6ddfea"
+        artifact_pdf_hash: "sha256:a455739a49b965b400aee08e9f3402cfebb44b8d3c5b40037c1d11e7bc6ddfea"
         "###);
         check_bundle_facts!("layout", "transform_2", @r###"
         ---
         name: layout/transform_2.typ
-        origin_pdf_hash: "sha256:3627a123dc74c917ef1f3ca216909997b27a9394bbf3b42b1c4210f772f75108"
-        artifact_pdf_hash: "sha256:3627a123dc74c917ef1f3ca216909997b27a9394bbf3b42b1c4210f772f75108"
+        origin_pdf_hash: "sha256:40f02a3a903fb30cc48beeb608590c97a04e6fabf8a4e37f9719d3a82e5118ae"
+        artifact_pdf_hash: "sha256:40f02a3a903fb30cc48beeb608590c97a04e6fabf8a4e37f9719d3a82e5118ae"
         "###);
         check_bundle_facts!("layout", "transform_3", @r###"
         ---
         name: layout/transform_3.typ
-        origin_pdf_hash: "sha256:4b34f08261293150aa0bc03df3db4c956b1b7207e9f5a19471f746841d8512b4"
-        artifact_pdf_hash: "sha256:4b34f08261293150aa0bc03df3db4c956b1b7207e9f5a19471f746841d8512b4"
+        origin_pdf_hash: "sha256:3c6a87f0002d995952b661188f8320a9d1917dcbcfbcce808dce6a6b32f74991"
+        artifact_pdf_hash: "sha256:3c6a87f0002d995952b661188f8320a9d1917dcbcfbcce808dce6a6b32f74991"
         "###);
         check_bundle_facts!("layout", "transform_4", @r###"
         ---
         name: layout/transform_4.typ
-        origin_pdf_hash: "sha256:f8cb255abd54d67e2795d55f8f96f204b65bffb4c04d2f70af77c54db9daa9b1"
-        artifact_pdf_hash: "sha256:f8cb255abd54d67e2795d55f8f96f204b65bffb4c04d2f70af77c54db9daa9b1"
+        origin_pdf_hash: "sha256:6507a6bc34f0a3f507261953bcadbfa9ffd4e12bec0d2334b6e2997510af2de7"
+        artifact_pdf_hash: "sha256:6507a6bc34f0a3f507261953bcadbfa9ffd4e12bec0d2334b6e2997510af2de7"
         "###);
 
         check_bundle_facts!("visualize", "line_1", @r###"
         ---
         name: visualize/line_1.typ
-        origin_pdf_hash: "sha256:11e85e7280f5f7e4ac0726a2b181e7806f934654aea732bc65538b8a167b0f3c"
-        artifact_pdf_hash: "sha256:11e85e7280f5f7e4ac0726a2b181e7806f934654aea732bc65538b8a167b0f3c"
+        origin_pdf_hash: "sha256:441ac5c31daa5345f0106582f3373ffc254fc62ea5f5bcd7f9954e2169a80338"
+        artifact_pdf_hash: "sha256:441ac5c31daa5345f0106582f3373ffc254fc62ea5f5bcd7f9954e2169a80338"
         "###);
         check_bundle_facts!("visualize", "line_2", @r###"
         ---
         name: visualize/line_2.typ
-        origin_pdf_hash: "sha256:2998b95ee4117f0277849eea9e72b2a535d31e16b98703814e3a539a586dedc3"
-        artifact_pdf_hash: "sha256:2998b95ee4117f0277849eea9e72b2a535d31e16b98703814e3a539a586dedc3"
+        origin_pdf_hash: "sha256:2ad4012029fbf490f7500fdc0eb2288850defa474b6d35bcbc8428c2fa4fa316"
+        artifact_pdf_hash: "sha256:2ad4012029fbf490f7500fdc0eb2288850defa474b6d35bcbc8428c2fa4fa316"
         "###);
         check_bundle_facts!("visualize", "path_1", @r###"
         ---
         name: visualize/path_1.typ
-        origin_pdf_hash: "sha256:6eae467756cb46021f7d9e826013374e56366186ad14f742a9c8da70ca60d621"
-        artifact_pdf_hash: "sha256:6eae467756cb46021f7d9e826013374e56366186ad14f742a9c8da70ca60d621"
+        origin_pdf_hash: "sha256:bdd63662ddf4b45cd9408a09da491a87168864bb558c6125839eefc62d43d5d4"
+        artifact_pdf_hash: "sha256:bdd63662ddf4b45cd9408a09da491a87168864bb558c6125839eefc62d43d5d4"
         "###);
         check_bundle_facts!("visualize", "polygon_1", @r###"
         ---
         name: visualize/polygon_1.typ
-        origin_pdf_hash: "sha256:cf52d8b5714a727217ef159423acc1c6f8848c1ef9f95ffbd3135a242e420799"
-        artifact_pdf_hash: "sha256:cf52d8b5714a727217ef159423acc1c6f8848c1ef9f95ffbd3135a242e420799"
+        origin_pdf_hash: "sha256:1b0b1ccb67a2889627c4adb6ae27396de700b9fb476c567a3117e15c2d311a1c"
+        artifact_pdf_hash: "sha256:1b0b1ccb67a2889627c4adb6ae27396de700b9fb476c567a3117e15c2d311a1c"
         "###);
 
         // todo: does not preserve outline
@@ -198,139 +198,139 @@ mod tests {
         check_bundle_facts!("visualize", "shape_aspect_1", @r###"
         ---
         name: visualize/shape_aspect_1.typ
-        origin_pdf_hash: "sha256:a0289f41ec2f4202d2493eae027b5cc98b991d56b69be995f38e3e517aa4480e"
-        artifact_pdf_hash: "sha256:a0289f41ec2f4202d2493eae027b5cc98b991d56b69be995f38e3e517aa4480e"
+        origin_pdf_hash: "sha256:e66f4aa150a59fafbb23552e50953e805574ccbdde6341151d67b655e4215894"
+        artifact_pdf_hash: "sha256:e66f4aa150a59fafbb23552e50953e805574ccbdde6341151d67b655e4215894"
         "###);
         check_bundle_facts!("visualize", "shape_aspect_2", @r###"
         ---
         name: visualize/shape_aspect_2.typ
-        origin_pdf_hash: "sha256:3bc8a7216a5b8ef851dcf8766a750c581e2fffee6eba5e58eab947f9e72adf9d"
-        artifact_pdf_hash: "sha256:3bc8a7216a5b8ef851dcf8766a750c581e2fffee6eba5e58eab947f9e72adf9d"
+        origin_pdf_hash: "sha256:55668a27965507a5ecc3d5d76670e99f0229e4306959ed832ed14037648cd261"
+        artifact_pdf_hash: "sha256:55668a27965507a5ecc3d5d76670e99f0229e4306959ed832ed14037648cd261"
         "###);
         check_bundle_facts!("visualize", "shape_aspect_3", @r###"
         ---
         name: visualize/shape_aspect_3.typ
-        origin_pdf_hash: "sha256:4bddcc9236aaff4cebf1f36ad16baa8abe4cbb36ba01d6cc4428105a6acaae51"
-        artifact_pdf_hash: "sha256:4bddcc9236aaff4cebf1f36ad16baa8abe4cbb36ba01d6cc4428105a6acaae51"
+        origin_pdf_hash: "sha256:bfdd05bb4e504472fe1f16272d189a7926665ffe31ba8edb73fbc0012ac629bd"
+        artifact_pdf_hash: "sha256:bfdd05bb4e504472fe1f16272d189a7926665ffe31ba8edb73fbc0012ac629bd"
         "###);
         check_bundle_facts!("visualize", "shape_aspect_4", @r###"
         ---
         name: visualize/shape_aspect_4.typ
-        origin_pdf_hash: "sha256:65472e6c14c510305714e39912be43a23c936ac550ad750c36e9e223c77efc2f"
-        artifact_pdf_hash: "sha256:65472e6c14c510305714e39912be43a23c936ac550ad750c36e9e223c77efc2f"
+        origin_pdf_hash: "sha256:e03847b6ea9202bff0a3b3bad8a4d6b773a131e4570569f5dadaf2da0f252590"
+        artifact_pdf_hash: "sha256:e03847b6ea9202bff0a3b3bad8a4d6b773a131e4570569f5dadaf2da0f252590"
         "###);
         check_bundle_facts!("visualize", "shape_aspect_5", @r###"
         ---
         name: visualize/shape_aspect_5.typ
-        origin_pdf_hash: "sha256:6e914b8908e90a69d37a16ffcd27132efe986eeca6bf3c196e671bfe04ebbb3a"
-        artifact_pdf_hash: "sha256:6e914b8908e90a69d37a16ffcd27132efe986eeca6bf3c196e671bfe04ebbb3a"
+        origin_pdf_hash: "sha256:54f7fee4397628d8e64b829471788211d2f7b24848ea3fadbcaffaf45dcfd9a9"
+        artifact_pdf_hash: "sha256:54f7fee4397628d8e64b829471788211d2f7b24848ea3fadbcaffaf45dcfd9a9"
         "###);
         check_bundle_facts!("visualize", "shape_aspect_6", @r###"
         ---
         name: visualize/shape_aspect_6.typ
-        origin_pdf_hash: "sha256:4abd19dbcb71a051d02bb929fdf71c5372960a2c64c4bf2ddb711618fca57658"
-        artifact_pdf_hash: "sha256:4abd19dbcb71a051d02bb929fdf71c5372960a2c64c4bf2ddb711618fca57658"
+        origin_pdf_hash: "sha256:64eb2b3ee34f99174e264137d172e605c5a57f1deeb3bf8e8ecfd450596355b6"
+        artifact_pdf_hash: "sha256:64eb2b3ee34f99174e264137d172e605c5a57f1deeb3bf8e8ecfd450596355b6"
         "###);
         check_bundle_facts!("visualize", "shape_circle_1", @r###"
         ---
         name: visualize/shape_circle_1.typ
-        origin_pdf_hash: "sha256:2af37fc60a4cb4abc8374b157c171cf3478f0d1bb354c84ad7b438662dfa9736"
-        artifact_pdf_hash: "sha256:2af37fc60a4cb4abc8374b157c171cf3478f0d1bb354c84ad7b438662dfa9736"
+        origin_pdf_hash: "sha256:5ba8d5b24e22993ba9bf69bd3a527e70305c3e1676c1c5955411647d1ada8cd3"
+        artifact_pdf_hash: "sha256:5ba8d5b24e22993ba9bf69bd3a527e70305c3e1676c1c5955411647d1ada8cd3"
         "###);
         check_bundle_facts!("visualize", "shape_circle_2", @r###"
         ---
         name: visualize/shape_circle_2.typ
-        origin_pdf_hash: "sha256:b8d22281e35b43118d0e5331d690bd41b49d98758b6389884e6959456b3cecb3"
-        artifact_pdf_hash: "sha256:b8d22281e35b43118d0e5331d690bd41b49d98758b6389884e6959456b3cecb3"
+        origin_pdf_hash: "sha256:d9f7900e14d38cf7d7b6b96ba9f0cb1b0a96e8572362ccd8b1265ad14dc1e84c"
+        artifact_pdf_hash: "sha256:d9f7900e14d38cf7d7b6b96ba9f0cb1b0a96e8572362ccd8b1265ad14dc1e84c"
         "###);
         check_bundle_facts!("visualize", "shape_circle_3", @r###"
         ---
         name: visualize/shape_circle_3.typ
-        origin_pdf_hash: "sha256:637f5265a3b25f29cca0e1053640307e01dc407087a9d070d21005642d53e6e3"
-        artifact_pdf_hash: "sha256:637f5265a3b25f29cca0e1053640307e01dc407087a9d070d21005642d53e6e3"
+        origin_pdf_hash: "sha256:edfe4cdc7338ab8c124fd8c76d623efa9fc0d94342a2bb932e310369bc7f505e"
+        artifact_pdf_hash: "sha256:edfe4cdc7338ab8c124fd8c76d623efa9fc0d94342a2bb932e310369bc7f505e"
         "###);
         check_bundle_facts!("visualize", "shape_circle_4", @r###"
         ---
         name: visualize/shape_circle_4.typ
-        origin_pdf_hash: "sha256:d9f1073eb598a62f75f669bcdf08010efdba3980fa74c7f065668b0377a2354e"
-        artifact_pdf_hash: "sha256:d9f1073eb598a62f75f669bcdf08010efdba3980fa74c7f065668b0377a2354e"
+        origin_pdf_hash: "sha256:7656b2956c6a438045e144860420461d63297263a596060fa4365cb5a0670565"
+        artifact_pdf_hash: "sha256:7656b2956c6a438045e144860420461d63297263a596060fa4365cb5a0670565"
         "###);
         // todo: typst cannot pass visualize/stroke_4 test.
         check_bundle_facts!("visualize", "stroke_1", @r###"
         ---
         name: visualize/stroke_1.typ
-        origin_pdf_hash: "sha256:64734195769470c8fbe95f0d501a7b73e61f25d63513718691bad2ab4e3d5de8"
-        artifact_pdf_hash: "sha256:64734195769470c8fbe95f0d501a7b73e61f25d63513718691bad2ab4e3d5de8"
+        origin_pdf_hash: "sha256:520eb4e544f583f68ded37ea6e348bfdd4abcd3746761b1a6c709ff5d5d8cd98"
+        artifact_pdf_hash: "sha256:520eb4e544f583f68ded37ea6e348bfdd4abcd3746761b1a6c709ff5d5d8cd98"
         "###);
         check_bundle_facts!("visualize", "stroke_2", @r###"
         ---
         name: visualize/stroke_2.typ
-        origin_pdf_hash: "sha256:32c7db206ace75f0b3cb7c58392e0477f3959a83f759fd60edc073e841f20abf"
-        artifact_pdf_hash: "sha256:32c7db206ace75f0b3cb7c58392e0477f3959a83f759fd60edc073e841f20abf"
+        origin_pdf_hash: "sha256:7da96f655deb0a4167718775b9ed03af7baca8d545913f13a25e3a56c18b8901"
+        artifact_pdf_hash: "sha256:7da96f655deb0a4167718775b9ed03af7baca8d545913f13a25e3a56c18b8901"
         "###);
         check_bundle_facts!("visualize", "stroke_3", @r###"
         ---
         name: visualize/stroke_3.typ
-        origin_pdf_hash: "sha256:65103be4a373417258b964aadb7bc3ade60bebd73181b30e780954dd69cd0aff"
-        artifact_pdf_hash: "sha256:65103be4a373417258b964aadb7bc3ade60bebd73181b30e780954dd69cd0aff"
+        origin_pdf_hash: "sha256:4ed2e2f053c3bb53e9a698425fe7be8f37ee6804bcce17fa8e169d7ae42a232d"
+        artifact_pdf_hash: "sha256:4ed2e2f053c3bb53e9a698425fe7be8f37ee6804bcce17fa8e169d7ae42a232d"
         "###);
         check_bundle_facts!("visualize", "stroke_4", @r###"
         ---
         name: visualize/stroke_4.typ
-        origin_pdf_hash: "sha256:a705e05dd32ff91407373e49e5f939c592a37f0c8b61903ad1ea0c7395a0aa63"
-        artifact_pdf_hash: "sha256:a705e05dd32ff91407373e49e5f939c592a37f0c8b61903ad1ea0c7395a0aa63"
+        origin_pdf_hash: "sha256:8eb4e3ef1bf6098fe1fde4172e5afc89a91d9d25ac7b0eca169af3da1eae2f45"
+        artifact_pdf_hash: "sha256:8eb4e3ef1bf6098fe1fde4172e5afc89a91d9d25ac7b0eca169af3da1eae2f45"
         "###);
         check_bundle_facts!("visualize", "stroke_5", @r###"
         ---
         name: visualize/stroke_5.typ
-        origin_pdf_hash: "sha256:2df82172746635e220bb8ad7173070e479c3bce78968933d3df57865e81f0bca"
-        artifact_pdf_hash: "sha256:2df82172746635e220bb8ad7173070e479c3bce78968933d3df57865e81f0bca"
+        origin_pdf_hash: "sha256:3c107e3bea0b5ecd2bb3148f30d443c3bbedf45f1c6da8bad81d605cd317747c"
+        artifact_pdf_hash: "sha256:3c107e3bea0b5ecd2bb3148f30d443c3bbedf45f1c6da8bad81d605cd317747c"
         "###);
         check_bundle_facts!("visualize", "stroke_6", @r###"
         ---
         name: visualize/stroke_6.typ
-        origin_pdf_hash: "sha256:56baa4dd6324590e28be5f0a9cd632f6cc3a3396e6de2fae01b3c7a8aa6cfd19"
-        artifact_pdf_hash: "sha256:56baa4dd6324590e28be5f0a9cd632f6cc3a3396e6de2fae01b3c7a8aa6cfd19"
+        origin_pdf_hash: "sha256:0fee152787b0234cfcc767c110eae8197866bbb077f1baff5b1e7f147d5d5fe1"
+        artifact_pdf_hash: "sha256:0fee152787b0234cfcc767c110eae8197866bbb077f1baff5b1e7f147d5d5fe1"
         "###);
 
         check_bundle_facts!("text", "chinese", @r###"
         ---
         name: text/chinese.typ
-        origin_pdf_hash: "sha256:de94be2f518feaa75dc0647d340f38272b01151c9bc6223e82f6c2190f697b43"
-        artifact_pdf_hash: "sha256:de94be2f518feaa75dc0647d340f38272b01151c9bc6223e82f6c2190f697b43"
+        origin_pdf_hash: "sha256:74cd5fa5938b57ed100da382567460a98662ef4de72eab24894d529ebca5151d"
+        artifact_pdf_hash: "sha256:74cd5fa5938b57ed100da382567460a98662ef4de72eab24894d529ebca5151d"
         "###);
 
         check_bundle_facts!("text", "deco_1", @r###"
         ---
         name: text/deco_1.typ
-        origin_pdf_hash: "sha256:5759095c93bb58ecb31468cc3cfb32e0e02a65a82331415d7f93fe76ea40be1f"
-        artifact_pdf_hash: "sha256:5759095c93bb58ecb31468cc3cfb32e0e02a65a82331415d7f93fe76ea40be1f"
+        origin_pdf_hash: "sha256:a9e03a591e5b930da0397a16e6a21d77973a93f6556f85e4a1bad66a4a449538"
+        artifact_pdf_hash: "sha256:a9e03a591e5b930da0397a16e6a21d77973a93f6556f85e4a1bad66a4a449538"
         "###);
         // todo: figure out why rgba does not work
         check_bundle_facts!("text", "deco_2", @r###"
         ---
         name: text/deco_2.typ
-        origin_pdf_hash: "sha256:75a06b1b425917b6486b27eaba2db1bb42efc1ae280dd80f8fc766d34db0209b"
-        artifact_pdf_hash: "sha256:75a06b1b425917b6486b27eaba2db1bb42efc1ae280dd80f8fc766d34db0209b"
+        origin_pdf_hash: "sha256:abd47bb191f85eb0343cd9f2fde209b879362cfe6c9a35e48c1807e08385caa3"
+        artifact_pdf_hash: "sha256:abd47bb191f85eb0343cd9f2fde209b879362cfe6c9a35e48c1807e08385caa3"
         "###);
         check_bundle_facts!("text", "deco_3", @r###"
         ---
         name: text/deco_3.typ
-        origin_pdf_hash: "sha256:7c67e578dd76f0571558c127253ecb64586d93481198bf094fff900974e90a92"
-        artifact_pdf_hash: "sha256:7c67e578dd76f0571558c127253ecb64586d93481198bf094fff900974e90a92"
+        origin_pdf_hash: "sha256:6dcd3913deed9aec0f532855932f90d53ccfc2697e3b9bf4f429a8b34c20da5c"
+        artifact_pdf_hash: "sha256:6dcd3913deed9aec0f532855932f90d53ccfc2697e3b9bf4f429a8b34c20da5c"
         "###);
 
         check_bundle_facts!("text", "emoji_1", @r###"
         ---
         name: text/emoji_1.typ
-        origin_pdf_hash: "sha256:a22cc8f238cc29b43c0b705fe65fd72ed0eb2a457f67e1f0cd279e562b29212f"
-        artifact_pdf_hash: "sha256:a22cc8f238cc29b43c0b705fe65fd72ed0eb2a457f67e1f0cd279e562b29212f"
+        origin_pdf_hash: "sha256:81b7ddbedf14d5c832256571591480f3522a043769f9e26c3a27c3432987e350"
+        artifact_pdf_hash: "sha256:81b7ddbedf14d5c832256571591480f3522a043769f9e26c3a27c3432987e350"
         "###);
         check_bundle_facts!("text", "emoji_2", @r###"
         ---
         name: text/emoji_2.typ
-        origin_pdf_hash: "sha256:9c5e3b9668a1dfa72a5206be82074edb2ed89ebfb3c18bfdbc5d0a8360968925"
-        artifact_pdf_hash: "sha256:9c5e3b9668a1dfa72a5206be82074edb2ed89ebfb3c18bfdbc5d0a8360968925"
+        origin_pdf_hash: "sha256:38a9b8adfcc095b848dfa71aee1caa1154a1029493c8ed540e5fb04802eaf709"
+        artifact_pdf_hash: "sha256:38a9b8adfcc095b848dfa71aee1caa1154a1029493c8ed540e5fb04802eaf709"
         "###);
         // todo: typst cannot pass visualize/stroke_6 test.
 
