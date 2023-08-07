@@ -1,4 +1,4 @@
-pub type Bytes = typst::util::Bytes;
+pub type Bytes = typst::eval::Bytes;
 
 /// Although this is not good to expose this, we make an alias here to let it as
 /// a part of typst-ts.
