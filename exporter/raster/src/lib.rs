@@ -5,12 +5,14 @@ use std::sync::Arc;
 
 use image::imageops::FilterType;
 use image::{GenericImageView, Rgba};
+use pixglyph::Bitmap;
 use resvg::FitTo;
 use tiny_skia as sk;
 use ttf_parser::{GlyphId, OutlineBuilder};
 use usvg::{NodeExt, TreeParsing};
 
 use typst::doc::{Frame, FrameItem, GroupItem, Meta, TextItem};
+use typst::font::Font;
 use typst::geom::{self, Abs, Color, Geometry, Paint, PathItem, Shape, Size, Stroke};
 use typst::image::{DecodedImage, Image};
 
@@ -289,10 +291,25 @@ fn render_outline_glyph(
     }
 
     // Rasterize the glyph with `pixglyph`.
+    #[comemo::memoize]
+    fn rasterize(font: &Font, id: GlyphId, x: u32, y: u32, size: u32) -> Option<Arc<Bitmap>> {
+        let glyph = pixglyph::Glyph::load(font.ttf(), id)?;
+        Some(Arc::new(glyph.rasterize(
+            f32::from_bits(x),
+            f32::from_bits(y),
+            f32::from_bits(size),
+        )))
+    }
+
     // Try to retrieve a prepared glyph or prepare it from scratch if it
     // doesn't exist, yet.
-    let glyph = pixglyph::Glyph::load(text.font.ttf(), id)?;
-    let bitmap = glyph.rasterize(ts.tx, ts.ty, ppem);
+    let bitmap = rasterize(
+        &text.font,
+        id,
+        ts.tx.to_bits(),
+        ts.ty.to_bits(),
+        ppem.to_bits(),
+    )?;
 
     // If we have a clip mask we first render to a pixmap that we then blend
     // with our canvas
@@ -325,8 +342,6 @@ fn render_outline_glyph(
             sk::Transform::identity(),
             mask,
         );
-
-        Some(())
     } else {
         let cw = canvas.width() as i32;
         let ch = canvas.height() as i32;
@@ -366,9 +381,9 @@ fn render_outline_glyph(
                 pixels[pi] = blend_src_over(applied, pixels[pi]);
             }
         }
-
-        Some(())
     }
+
+    Some(())
 }
 
 /// Render a geometrical shape into the canvas.
@@ -490,14 +505,27 @@ fn render_image(
     let view_width = size.x.to_f32();
     let view_height = size.y.to_f32();
 
+    // For better-looking output, resize `image` to its final size before
+    // painting it to `canvas`. For the math, see:
+    // https://github.com/typst/typst/issues/1404#issuecomment-1598374652
+    let theta = f32::atan2(-ts.kx, ts.sx);
+
+    // To avoid division by 0, choose the one of { sin, cos } that is
+    // further from 0.
+    let prefer_sin = theta.sin().abs() > std::f32::consts::FRAC_1_SQRT_2;
+    let scale_x = f32::abs(if prefer_sin {
+        ts.kx / theta.sin()
+    } else {
+        ts.sx / theta.cos()
+    });
+
     let aspect = (image.width() as f32) / (image.height() as f32);
-    let scale = ts.sx.max(ts.sy);
-    let w = (scale * view_width.max(aspect * view_height)).ceil() as u32;
+    let w = (scale_x * view_width.max(aspect * view_height)).ceil() as u32;
     let h = ((w as f32) / aspect).ceil() as u32;
 
     let pixmap = scaled_texture(image, w, h)?;
-    let scale_x = view_width / pixmap.width() as f32;
-    let scale_y = view_height / pixmap.height() as f32;
+    let paint_scale_x = view_width / pixmap.width() as f32;
+    let paint_scale_y = view_height / pixmap.height() as f32;
 
     let paint = sk::Paint {
         shader: sk::Pattern::new(
@@ -505,7 +533,7 @@ fn render_image(
             sk::SpreadMode::Pad,
             sk::FilterQuality::Nearest,
             1.0,
-            sk::Transform::from_scale(scale_x, scale_y),
+            sk::Transform::from_scale(paint_scale_x, paint_scale_y),
         ),
         ..Default::default()
     };
