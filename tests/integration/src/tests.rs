@@ -193,7 +193,8 @@ mod tests {
         "###);
 
         // todo: does not preserve outline
-        // check_bundle_facts!("skyzh-cv", "main", @"sha256:b6a2363f54b7cd2fb58660d16b74d1c2931f76c724e87d51edc441a08310a6f1");
+        // check_bundle_facts!("skyzh-cv", "main",
+        // @"sha256:b6a2363f54b7cd2fb58660d16b74d1c2931f76c724e87d51edc441a08310a6f1");
 
         check_bundle_facts!("visualize", "shape_aspect_1", @r###"
         ---
@@ -659,27 +660,33 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         ---
         name: math_undergradmath_artifact_ir
-        data_content_phash: "phash-gradient:YGMAQMtNZIzN7CXxZujtZKoW5AT1cGbRLG9mmI1ilIQ2MINiMMNmOEdmMMdkOMPmmGbmmEZkmYbW2GzONInhUAxjSY43KAYA"
-        text_content_hash: "sha256:3968674673649bbdbac381e31bc464e6f311821332abf26e511ea31e357e6d31"
+        data_content_phash: "phash-gradient:YGMAQMtNZIzN7CXxZujtZKoW5AT1cGbRDG9mmI1ilIQ2MINiMMNmOEdmMMdkOMPmmGbmmEZkmYbW2GzONInhUAxjSY43KAYA"
+        text_content_hash: "sha256:f3d341f4cdd35ca3fa6908adfb1f90b8c4ef907c552a33899138844db4e894b6"
         "###);
         check_canvas_render_test_point!(@r###"
         ---
         name: math_undergradmath_artifact_json
-        data_content_phash: "phash-gradient:YGMAQMtNZIzN7CXxZujtZKoW5AT1cGbRLG9mmI1ilIQ2MINiMMNmOEdmMMdkOMPmmGbmmEZkmYbW2GzONInhUAxjSY43KAYA"
-        text_content_hash: "sha256:3968674673649bbdbac381e31bc464e6f311821332abf26e511ea31e357e6d31"
+        data_content_phash: "phash-gradient:YGMAQMtNZIzN7CXxZujtZKoW5AT1cGbRDG9mmI1ilIQ2MINiMMNmOEdmMMdkOMPmmGbmmEZkmYbW2GzONInhUAxjSY43KAYA"
+        text_content_hash: "sha256:f3d341f4cdd35ca3fa6908adfb1f90b8c4ef907c552a33899138844db4e894b6"
         "###);
         // todo: the size of cjk font file is quite big
         // check_canvas_render_test_point!(@r###"
         // ---
         // name: text_chinese_artifact_ir
-        // data_content_phash: "phash-gradient:KKprrKlq6Kxm0KTmZKpaZIrbNGI0pNI0tZI1qBI1rDy1bIpqLJpjqFU2qFUlVFS1hIkalIkasGoasKpStWhmpGhmiCoGqZYE"
-        // text_content_hash: "sha256:08633df6b8b06027fee154dccd3d530fd53db36851c597621c8e8b65e52b028b"
+        // data_content_phash:
+        // "phash-gradient:
+        // KKprrKlq6Kxm0KTmZKpaZIrbNGI0pNI0tZI1qBI1rDy1bIpqLJpjqFU2qFUlVFS1hIkalIkasGoasKpStWhmpGhmiCoGqZYE"
+        // text_content_hash:
+        // "sha256:08633df6b8b06027fee154dccd3d530fd53db36851c597621c8e8b65e52b028b"
         // "###);
         // check_canvas_render_test_point!(@r###"
         // ---
         // name: text_chinese_artifact_json
-        // data_content_phash: "phash-gradient:KKprrKlq6Kxm0KTmZKpaZIrbNGI0pNI0tZI1qBI1rDy1bIpqLJpjqFU2qFUlVFS1hIkalIkasGoasKpStWhmpGhmiCoGqZYE"
-        // text_content_hash: "sha256:08633df6b8b06027fee154dccd3d530fd53db36851c597621c8e8b65e52b028b"
+        // data_content_phash:
+        // "phash-gradient:
+        // KKprrKlq6Kxm0KTmZKpaZIrbNGI0pNI0tZI1qBI1rDy1bIpqLJpjqFU2qFUlVFS1hIkalIkasGoasKpStWhmpGhmiCoGqZYE"
+        // text_content_hash:
+        // "sha256:08633df6b8b06027fee154dccd3d530fd53db36851c597621c8e8b65e52b028b"
         // "###);
         check_canvas_render_test_point!(@r###"
         ---
@@ -721,14 +728,20 @@ mod tests {
         // check_canvas_render_test_point!(@r###"
         // ---
         // name: text_emoji_1_artifact_ir
-        // data_content_phash: "phash-gradient:AABAwKdFQLZFyIdFwINFAABCAABAQIBBSKBFSKBFQKBBAABAgMFBAAZAAPZBANFFANJCAABBAIBBAABAQCJLCCdLCCZLANhD"
-        // text_content_hash: "sha256:e96d18327a60513e2375c2dfa12d17872c97304df451630781965a6ae8031b45"
+        // data_content_phash:
+        // "phash-gradient:
+        // AABAwKdFQLZFyIdFwINFAABCAABAQIBBSKBFSKBFQKBBAABAgMFBAAZAAPZBANFFANJCAABBAIBBAABAQCJLCCdLCCZLANhD"
+        // text_content_hash:
+        // "sha256:e96d18327a60513e2375c2dfa12d17872c97304df451630781965a6ae8031b45"
         // "###);
         // check_canvas_render_test_point!(@r###"
         // ---
         // name: text_emoji_1_artifact_json
-        // data_content_phash: "phash-gradient:AABAwKdFQLZFyIdFwINFAABCAABAQIBBSKBFSKBFQKBBAABAgMFBAAZAAPZBANFFANJCAABBAIBBAABAQCJLCCdLCCZLANhD"
-        // text_content_hash: "sha256:e96d18327a60513e2375c2dfa12d17872c97304df451630781965a6ae8031b45"
+        // data_content_phash:
+        // "phash-gradient:
+        // AABAwKdFQLZFyIdFwINFAABCAABAQIBBSKBFSKBFQKBBAABAgMFBAAZAAPZBANFFANJCAABBAIBBAABAQCJLCCdLCCZLANhD"
+        // text_content_hash:
+        // "sha256:e96d18327a60513e2375c2dfa12d17872c97304df451630781965a6ae8031b45"
         // "###);
         check_canvas_render_test_point!(@r###"
         ---
