@@ -297,29 +297,32 @@ fn list_packages(args: ListPackagesArgs) -> ! {
             let ns_pretty = ns_pretty.to_string_lossy();
 
             let packages = std::fs::read_dir(ns.path()).unwrap();
-            for pkg in packages {
-                let pkg = pkg.unwrap();
-                let manifest_path = pkg.path().join("typst.toml");
-                let manifest = std::fs::read_to_string(manifest_path).unwrap();
-                let manifest: toml::Table = toml::from_str(&manifest).unwrap();
+            for pkg_base in packages {
+                let packages2 = std::fs::read_dir(pkg_base.unwrap().path()).unwrap();
+                for pkg in packages2 {
+                    let pkg = pkg.unwrap();
+                    let manifest_path = pkg.path().join("typst.toml");
+                    let manifest = std::fs::read_to_string(manifest_path).unwrap();
+                    let manifest: toml::Table = toml::from_str(&manifest).unwrap();
 
-                let pkg_info = match manifest.get("package").unwrap() {
-                    toml::Value::Table(table) => table,
-                    _ => unreachable!(),
-                };
+                    let pkg_info = match manifest.get("package").unwrap() {
+                        toml::Value::Table(table) => table,
+                        _ => unreachable!(),
+                    };
 
-                let name = get_string(pkg_info.get("name").unwrap());
-                let version = get_string(pkg_info.get("version").unwrap());
+                    let name = get_string(pkg_info.get("name").unwrap());
+                    let version = get_string(pkg_info.get("version").unwrap());
 
-                let pkg_name = format!("@{}/{}:{}", ns_pretty, name, version);
+                    let pkg_name = format!("@{}/{}:{}", ns_pretty, name, version);
 
-                println!("{} in {}", pkg_name, dir_pretty);
-                if args.long {
-                    for (k, v) in pkg_info {
-                        if k == "name" || k == "version" {
-                            continue;
+                    println!("{} in {}", pkg_name, dir_pretty);
+                    if args.long {
+                        for (k, v) in pkg_info {
+                            if k == "name" || k == "version" {
+                                continue;
+                            }
+                            println!("  {} = {:?}", k, v);
                         }
-                        println!("  {} = {:?}", k, v);
                     }
                 }
             }
@@ -350,7 +353,7 @@ fn link_packages(args: LinkPackagesArgs, should_delete: bool) -> ! {
     let name = get_string(pkg_info.get("name").unwrap());
     let version = get_string(pkg_info.get("version").unwrap());
 
-    let pkg_dirname = format!("{}-{}", name, version);
+    let pkg_dirname = format!("{}/{}", name, version);
 
     let local_path = world.registry.local_path().unwrap();
     let pkg_link_target = local_path.join("preview").join(pkg_dirname);
