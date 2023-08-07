@@ -35,3 +35,15 @@ Caused by: missing field package at line 91 column 1
 ```
 
 It may be due to an outdated or corrupted version of `wasm-pack` installed on your computer. Please update `wasm-pack` to the correct version.
+
+### LinkError: function import requires a callable
+
+If you receive the following error when you are running Wasm modules:
+
+```
+Uncaught (in promise) LinkError: WebAssembly.instantiate(): Import #122 module="wbg" function="\_\_wbindgen_closure_wrapper2753" error: function import requires a callable
+```
+
+It may be due to inconsistency between `packages/typst.ts` and Wasm modules you are using. Please also rebuild the js library `packages/typst.ts` to ensure consistency between `packages/typst.ts` and Wasm modules.
+
+Note: the correct build command is `cd packages/typst.ts && yarn run build` instead of build renderer or compiler module individually.
