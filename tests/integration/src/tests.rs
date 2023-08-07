@@ -8,6 +8,7 @@ mod tests {
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
     use typst_ts_dev_server::{http::run_http, RunHttpArgs};
+    use typst_ts_integration_test::EditingArtifactBundle;
     use typst_ts_integration_test::{wasm::wasm_pack_test, ArtifactBundle, ArtifactCompiler};
     use typst_ts_test_common::{corpus_root, package_renderer_dir};
 
@@ -193,7 +194,8 @@ mod tests {
         "###);
 
         // todo: does not preserve outline
-        // check_bundle_facts!("skyzh-cv", "main", @"sha256:b6a2363f54b7cd2fb58660d16b74d1c2931f76c724e87d51edc441a08310a6f1");
+        // check_bundle_facts!("skyzh-cv", "main",
+        // @"sha256:b6a2363f54b7cd2fb58660d16b74d1c2931f76c724e87d51edc441a08310a6f1");
 
         check_bundle_facts!("visualize", "shape_aspect_1", @r###"
         ---
@@ -356,6 +358,81 @@ mod tests {
                 origin_pdf_hash,
             }
         }
+    }
+
+    #[test]
+    fn test_incr_svg_stability() -> anyhow::Result<()> {
+        let corpus_root = typst_ts_test_common::corpus_root();
+        let artifact_dir = typst_ts_test_common::artifact_dir().join("integrations");
+
+        let compiler = ArtifactCompiler {
+            corpus_root,
+            artifact_dir,
+        };
+
+        #[derive(Default, Debug, Serialize, Deserialize)]
+        struct Facts {
+            name: String,
+            edit_hash: Vec<String>,
+        }
+
+        macro_rules! check_bundle_facts {
+            ($workspace:expr, $name:expr, @$edit_hash:literal $(,)?) => {
+                let workspace = $workspace.to_string();
+                let full_name = format!("{}/{}.typ", workspace, $name);
+                let bundle = compiler.edit_test(workspace, full_name.clone());
+                let facts: Facts = bundle_to_facts(full_name, &bundle);
+                let value = insta::_macro_support::serialize_value(
+                    &facts,
+                    insta::_macro_support::SerializationFormat::Yaml,
+                    insta::_macro_support::SnapshotLocation::Inline,
+                );
+
+                let debug_expr = &format!(
+                    "facts does not match the older one",
+                );
+                insta::assert_snapshot!(
+                    value,
+                    debug_expr,
+                    @$edit_hash
+                );
+                assert_eq!(
+                    facts.edit_hash, facts.edit_hash,
+                    "facts.edit_hash == facts.edit_hash"
+                );
+            };
+        }
+
+        check_bundle_facts!("pkuthss-typst", "thesis", @r###"
+        ---
+        name: pkuthss-typst/thesis.typ
+        edit_hash:
+          - "sha256:971da35978a7b9fd5fbdfe5ece497bc8829dcf1ef6124fcdb9d2855b7c80903b"
+          - "sha256:5e5f4363aca6f3a307fc80577c2a987c4b287092c4692a2566ba14e7bf161415"
+          - "sha256:e066b3d0eb39f80da17980134acc1c83525e266725b5950252db8f818640f8d6"
+          - "sha256:43a9a852476100529f9467dc2b002ebdc8d8374598ff23dd5e6e1e93b2fde77f"
+          - "sha256:ff311770d84e892c6fee0575b6ae56187ac059f6acf68eaf2ec2eb43822c3d18"
+          - "sha256:8404686b6041ce82868488aab0ba3f57cfd98ab89a1f3bc92960b96126700850"
+          - "sha256:f078491a626abdd6e1e80bbd4a3287d488d7c326dca6eaaf4664af6cabc515d5"
+          - "sha256:f5373b869c1049eb99714356e3205e1d14cfc455a24e0bbcac885be339fc2ff2"
+          - "sha256:2df697f7fd62c4ae6dc673ae9464a892d08500639e71b26426ab73128ec2fe2c"
+          - "sha256:60627bfe374b7943351021b0a2c63a1607d5301a20ba8b361eb08987ec73ef50"
+        "###);
+
+        fn bundle_to_facts(name: String, bundle: &EditingArtifactBundle) -> Facts {
+            let edit_hash = bundle
+                .editing_artifacts
+                .iter()
+                .map(|x| {
+                    let content = std::fs::read(x).unwrap();
+                    hash_bytes(content)
+                })
+                .collect::<Vec<_>>();
+
+            Facts { name, edit_hash }
+        }
+
+        Ok(())
     }
 
     #[tokio::test]
@@ -672,14 +749,20 @@ mod tests {
         // check_canvas_render_test_point!(@r###"
         // ---
         // name: text_chinese_artifact_ir
-        // data_content_phash: "phash-gradient:KKprrKlq6Kxm0KTmZKpaZIrbNGI0pNI0tZI1qBI1rDy1bIpqLJpjqFU2qFUlVFS1hIkalIkasGoasKpStWhmpGhmiCoGqZYE"
-        // text_content_hash: "sha256:08633df6b8b06027fee154dccd3d530fd53db36851c597621c8e8b65e52b028b"
+        // data_content_phash:
+        // "phash-gradient:
+        // KKprrKlq6Kxm0KTmZKpaZIrbNGI0pNI0tZI1qBI1rDy1bIpqLJpjqFU2qFUlVFS1hIkalIkasGoasKpStWhmpGhmiCoGqZYE"
+        // text_content_hash:
+        // "sha256:08633df6b8b06027fee154dccd3d530fd53db36851c597621c8e8b65e52b028b"
         // "###);
         // check_canvas_render_test_point!(@r###"
         // ---
         // name: text_chinese_artifact_json
-        // data_content_phash: "phash-gradient:KKprrKlq6Kxm0KTmZKpaZIrbNGI0pNI0tZI1qBI1rDy1bIpqLJpjqFU2qFUlVFS1hIkalIkasGoasKpStWhmpGhmiCoGqZYE"
-        // text_content_hash: "sha256:08633df6b8b06027fee154dccd3d530fd53db36851c597621c8e8b65e52b028b"
+        // data_content_phash:
+        // "phash-gradient:
+        // KKprrKlq6Kxm0KTmZKpaZIrbNGI0pNI0tZI1qBI1rDy1bIpqLJpjqFU2qFUlVFS1hIkalIkasGoasKpStWhmpGhmiCoGqZYE"
+        // text_content_hash:
+        // "sha256:08633df6b8b06027fee154dccd3d530fd53db36851c597621c8e8b65e52b028b"
         // "###);
         check_canvas_render_test_point!(@r###"
         ---
@@ -721,14 +804,20 @@ mod tests {
         // check_canvas_render_test_point!(@r###"
         // ---
         // name: text_emoji_1_artifact_ir
-        // data_content_phash: "phash-gradient:AABAwKdFQLZFyIdFwINFAABCAABAQIBBSKBFSKBFQKBBAABAgMFBAAZAAPZBANFFANJCAABBAIBBAABAQCJLCCdLCCZLANhD"
-        // text_content_hash: "sha256:e96d18327a60513e2375c2dfa12d17872c97304df451630781965a6ae8031b45"
+        // data_content_phash:
+        // "phash-gradient:
+        // AABAwKdFQLZFyIdFwINFAABCAABAQIBBSKBFSKBFQKBBAABAgMFBAAZAAPZBANFFANJCAABBAIBBAABAQCJLCCdLCCZLANhD"
+        // text_content_hash:
+        // "sha256:e96d18327a60513e2375c2dfa12d17872c97304df451630781965a6ae8031b45"
         // "###);
         // check_canvas_render_test_point!(@r###"
         // ---
         // name: text_emoji_1_artifact_json
-        // data_content_phash: "phash-gradient:AABAwKdFQLZFyIdFwINFAABCAABAQIBBSKBFSKBFQKBBAABAgMFBAAZAAPZBANFFANJCAABBAIBBAABAQCJLCCdLCCZLANhD"
-        // text_content_hash: "sha256:e96d18327a60513e2375c2dfa12d17872c97304df451630781965a6ae8031b45"
+        // data_content_phash:
+        // "phash-gradient:
+        // AABAwKdFQLZFyIdFwINFAABCAABAQIBBSKBFSKBFQKBBAABAgMFBAAZAAPZBANFFANJCAABBAIBBAABAQCJLCCdLCCZLANhD"
+        // text_content_hash:
+        // "sha256:e96d18327a60513e2375c2dfa12d17872c97304df451630781965a6ae8031b45"
         // "###);
         check_canvas_render_test_point!(@r###"
         ---

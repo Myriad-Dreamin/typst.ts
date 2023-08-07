@@ -31,6 +31,7 @@ typst-ts-compiler = { workspace = true, features = ["system"] }
 typst-ts-pdf-exporter = { workspace = true }
 typst-ts-serde-exporter = { workspace = true, features = ["json"] }
 typst-ts-tir-exporter = { workspace = true }
+typst-ts-svg-exporter = { workspace = true, features = ["flat-vector"] }
 
 [[test]]
 name = "tests"

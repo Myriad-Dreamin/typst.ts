@@ -90,6 +90,11 @@ pub struct ArtifactBundle {
     pub pdf: std::path::PathBuf,
 }
 
+pub struct EditingArtifactBundle {
+    pub driver: CompileDriver,
+    pub editing_artifacts: Vec<std::path::PathBuf>,
+}
+
 pub struct ArtifactCompiler {
     pub corpus_root: std::path::PathBuf,
     pub artifact_dir: std::path::PathBuf,
@@ -132,6 +137,50 @@ impl ArtifactCompiler {
             json: json_artifact_file_path.clean(),
             tir: tir_file_path.clean(),
             pdf: pdf_file_path.clean(),
+        }
+    }
+
+    pub fn edit_test(&self, workspace_dir: String, entry_file: String) -> EditingArtifactBundle {
+        let entry_file_base = Path::new(&entry_file);
+
+        let entry_file = self.corpus_root.join(entry_file_base);
+        let workspace_dir = self.corpus_root.join(workspace_dir);
+
+        let artifact_dir = &self.artifact_dir;
+
+        let edit_artifact_file_path =
+            |i| artifact_dir.join(entry_file_base.with_extension(format!("edit{i}.artifact.sir")));
+
+        let artifact_dir_to_create = edit_artifact_file_path(0).parent().unwrap().to_owned();
+        std::fs::create_dir_all(artifact_dir_to_create).unwrap();
+
+        let mut driver = get_driver(&workspace_dir, &entry_file, document_exporters![]);
+
+        let main_id = driver.main_id();
+        let mut content = { std::fs::read_to_string(&entry_file).expect("Could not read file") };
+
+        let mut incr_server = typst_ts_svg_exporter::IncrSvgDocServer::default();
+        incr_server.set_should_stablize_output(true);
+        let mut editing_artifacts = vec![];
+
+        for i in 0..10 {
+            content.push_str("\nedit\n");
+            driver
+                .world
+                .resolve_with(&entry_file, main_id, &content)
+                .unwrap();
+
+            let res = Arc::new(driver.compile().unwrap());
+
+            let p = edit_artifact_file_path(i);
+            let t = incr_server.pack_delta(res);
+            std::fs::write(&p, t).expect("Could not write edit data");
+            editing_artifacts.push(p);
+        }
+
+        EditingArtifactBundle {
+            driver,
+            editing_artifacts,
         }
     }
 }

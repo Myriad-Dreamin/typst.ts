@@ -3946,6 +3946,7 @@ dependencies = [
  "typst-ts-dev-server",
  "typst-ts-pdf-exporter",
  "typst-ts-serde-exporter",
+ "typst-ts-svg-exporter",
  "typst-ts-test-common",
  "typst-ts-tir-exporter",
 ]

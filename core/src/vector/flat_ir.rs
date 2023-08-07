@@ -113,7 +113,7 @@ pub struct TransformedRef(pub TransformItem, pub Fingerprint);
 pub struct GroupRef(pub Arc<[(Point, Fingerprint)]>);
 
 /// Flatten mapping fingerprints to svg items.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Hash, Default)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct ItemPack(pub Vec<(Fingerprint, FlatSvgItem)>);

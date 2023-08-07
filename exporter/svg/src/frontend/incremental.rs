@@ -120,6 +120,9 @@ pub struct IncrSvgDocServer {
     /// Whether to attach debug info to the output.
     should_attach_debug_info: bool,
 
+    /// Whether to stablize the output.
+    should_stablize_output: bool,
+
     /// Expected exact state of the current Compiler.
     /// Initially it is None meaning no completed compilation.
     doc_view: Option<SvgDocument>,
@@ -135,6 +138,10 @@ impl IncrSvgDocServer {
     pub fn set_should_attach_debug_info(&mut self, should_attach_debug_info: bool) {
         self.module_builder.should_attach_debug_info = should_attach_debug_info;
         self.should_attach_debug_info = should_attach_debug_info;
+    }
+
+    pub fn set_should_stablize_output(&mut self, should_stablize_output: bool) {
+        self.should_stablize_output = should_stablize_output;
     }
 
     /// Pack the delta into a binary blob.
@@ -187,6 +194,14 @@ impl IncrSvgDocServer {
             self.module_builder.lifetime,
             gc_items.len()
         );
+
+        let mut gc_items = gc_items;
+        let mut item_pack = ItemPack(delta.items.clone().into_iter().collect());
+        if self.should_stablize_output {
+            gc_items.sort();
+            item_pack.0.sort_by(|a, b| a.0.cmp(&b.0));
+        }
+
         let delta = FlatModule {
             metadata: vec![
                 ModuleMetadata::SourceMappingData(delta.source_mapping),
@@ -194,10 +209,10 @@ impl IncrSvgDocServer {
                 ModuleMetadata::GarbageCollection(gc_items),
             ],
             glyphs,
-            item_pack: ItemPack(delta.items.clone().into_iter().collect()),
+            item_pack,
             layouts: vec![(Scalar(0.), pages.clone())],
-        }
-        .to_bytes();
+        };
+        let delta = delta.to_bytes();
 
         log::info!("svg render time (incremental bin): {:?}", instant.elapsed());
 
