@@ -262,11 +262,11 @@ Just type them!
   [$>$], [`>`, `gt`], [$ell$], [`ell`], [$minus.plus$], [`minus.plus`],
   [$>=$], [`>=`, `gt.eq`], [$parallel$], [`parallel`], [$times$], [`times`],
   [$!=$], [`!=`, `eq.not`], [$45 degree$], [`45 degree`], [$div$], [`div`],
-  [$<<$], [`<<`, `lt.double`], [$tilde.eqq$], [`tilde.eqq`], [$*$], [`*`, `ast`],
-  [$>>$], [`>>`, `gt.double`], [$tilde.eqq.not$], [`tilde.eqq.not`], [$divides$], [`divides`],
+  [$<<$], [`<<`, `lt.double`], [$tilde.equiv$], [`tilde.equiv`], [$*$], [`*`, `ast`],
+  [$>>$], [`>>`, `gt.double`], [$tilde.equiv.not$], [`tilde.equiv.not`], [$divides$], [`divides`],
   [$approx$], [`approx`], [$tilde$], [`tilde`], [$divides.not$], [`divides.not`],
   [$\u{224D}$], [`\u{224D}` @tricky], [$tilde.eq$], [`tilde.eq`], [$n!$], [`n!`],
-  [$ident$], [`ident`], [$tilde.not$], [`tilde.not`], [$diff$], [`diff`],
+  [$equiv$], [`equiv`], [$tilde.not$], [`tilde.not`], [$diff$], [`diff`],
   [$prec$], [`prec`], [$plus.circle$], [`plus.circle`], [$nabla$], [`nabla`],
   [$prec.eq$], [`prec.eq`], [$minus.circle$], [`minus.cirle`], [$planck.reduce$], [`planck.reduce`],
   [$succ$], [`succ`], [$dot.circle$], [`dot.circle`], [$compose$], [`compose`],
@@ -512,7 +512,7 @@ The last three here are display style.
 ))
 
 = Discrete mathematics examples
-For modulo, there is a symbol $ident$ from `ident` and a text operator $mod$ from `mod`.
+For modulo, there is a symbol $equiv$ from `equiv` and a text operator $mod$ from `mod`.
 
 For combinations the binomial symbol $binom(n, k)$ is from `binom(n, k)`.
 This resizes to be bigger in a display.
