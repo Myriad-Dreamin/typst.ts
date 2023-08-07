@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use typst::doc::Document;
+use typst::{doc::Document, eval::Tracer};
 use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter};
 
@@ -48,7 +48,8 @@ pub fn test_compiler(
             .unwrap();
 
         // compile and export document
-        typst::compile(&driver.world).unwrap();
+        let mut tracer = Tracer::default();
+        typst::compile(&driver.world, &mut tracer).unwrap();
         comemo::evict(10);
     }
 }

@@ -106,7 +106,7 @@ impl<'a, W: io::Write> AstWriter<'a, W> {
     }
 
     fn write_ast(&mut self, src: &Source, ast: &LinkedNode) {
-        let rng = ast.span().range_in(src);
+        let rng = src.range(ast.span());
         let start = rng.start;
         let end = rng.end;
         let start_end = [start, end]

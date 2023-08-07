@@ -3,6 +3,7 @@ use std::{str::FromStr, sync::Arc};
 use base64::{engine::DecodeEstimate, Engine};
 use js_sys::{JsString, Uint8Array};
 use typst::{
+    eval::Tracer,
     font::Font,
     geom::{Color, RgbaColor},
 };
@@ -211,7 +212,8 @@ impl TypstCompiler {
         );
 
         // compile and export document
-        let doc = typst::compile(&self.world).unwrap();
+        let mut tracer = Tracer::default();
+        let doc = typst::compile(&self.world, &mut tracer).unwrap();
         let data = ast_exporter.export(&self.world, Arc::new(doc)).unwrap();
 
         let converted =
@@ -224,7 +226,8 @@ impl TypstCompiler {
             typst_ts_tir_exporter::IRArtifactExporter,
         );
 
-        let doc = typst::compile(&self.world).unwrap();
+        let mut tracer = Tracer::default();
+        let doc = typst::compile(&self.world, &mut tracer).unwrap();
         let artifact_bytes = ir_exporter
             .export(&self.world, Arc::new((&doc).into()))
             .unwrap();
@@ -238,7 +241,8 @@ impl TypstCompiler {
         //     .resolve(std::path::Path::new(&main_file_path))
         //     .unwrap();
 
-        let doc = typst::compile(&self.world).unwrap();
+        let mut tracer = Tracer::default();
+        let doc = typst::compile(&self.world, &mut tracer).unwrap();
         Ok(DocumentReference {
             doc: Some(Arc::new(doc)),
         })

@@ -49,7 +49,7 @@ impl HttpRegistry {
     /// Make a package available in the on-disk cache.
     pub fn prepare_package(&self, spec: &PackageSpec) -> Result<Arc<Path>, PackageError> {
         let subdir = format!(
-            "typst/packages/{}/{}-{}",
+            "typst/packages/{}/{}/{}",
             spec.namespace, spec.name, spec.version
         );
 

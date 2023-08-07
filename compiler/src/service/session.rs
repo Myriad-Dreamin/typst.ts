@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use base64::Engine;
 use log::{error, info};
+use typst::eval::Tracer;
 use typst_ts_core::{artifact_ir::ArtifactHeader, config::CompileOpts};
 
 use crate::world::WorldSnapshot;
@@ -53,7 +54,8 @@ impl CompileSession {
         info!("broken take_snapshot");
         info!("take_snapshot resolved in {:?}", begin.elapsed());
 
-        let doc = match typst::compile(world) {
+        let mut tracer = Tracer::default();
+        let doc = match typst::compile(world, &mut tracer) {
             Ok(doc) => doc,
             Err(err) => {
                 error!("failed to compile: {:?}", err);
