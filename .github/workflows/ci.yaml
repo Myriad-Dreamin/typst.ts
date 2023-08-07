@@ -10,6 +10,9 @@ jobs:
     steps:
       - name: Download Repo
         uses: actions/checkout@v3
+      - name: Clone Typst Corpus
+        run: |
+          git clone https://github.com/lucifer1004/pkuthss-typst fuzzers/corpora/pkuthss-typst
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       # https://github.com/Renumics/spotlight/blob/main/.github/workflows/ci.yml
