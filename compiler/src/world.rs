@@ -1,12 +1,12 @@
 use std::{
-    cell::Cell,
     path::{Path, PathBuf},
     sync::Arc,
     time::SystemTime,
 };
 
-use chrono::Datelike;
+use chrono::{DateTime, Datelike, Local};
 use comemo::Prehashed;
+use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use typst::{
     diag::{FileError, FileResult},
@@ -58,8 +58,9 @@ pub struct CompilerWorld<F: CompilerFeat> {
     /// Provides path-based data access for typst compiler.
     vfs: Vfs<F::AccessModel>,
 
-    /// The date of today, which is fetched once per compilation.
-    today: Cell<Option<Datetime>>,
+    /// The current datetime if requested. This is stored here to ensure it is
+    /// always the same within one compilation. Reset between compilations.
+    now: OnceCell<DateTime<Local>>,
 }
 
 impl<F: CompilerFeat> CompilerWorld<F> {
@@ -89,7 +90,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             registry,
             vfs,
 
-            today: Cell::new(None),
+            now: OnceCell::new(),
         }
     }
 }
@@ -138,20 +139,18 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
     /// If this function returns `None`, Typst's `datetime` function will
     /// return an error.
     fn today(&self, offset: Option<i64>) -> Option<Datetime> {
-        if self.today.get().is_none() {
-            let datetime = match offset {
-                None => chrono::Local::now().naive_local(),
-                Some(o) => (chrono::Utc::now() + chrono::Duration::hours(o)).naive_utc(),
-            };
+        let now = self.now.get_or_init(chrono::Local::now);
 
-            self.today.set(Some(Datetime::from_ymd(
-                datetime.year(),
-                datetime.month().try_into().ok()?,
-                datetime.day().try_into().ok()?,
-            )?))
-        }
+        let naive = match offset {
+            None => now.naive_local(),
+            Some(o) => now.naive_utc() + chrono::Duration::hours(o),
+        };
 
-        self.today.get()
+        Datetime::from_ymd(
+            naive.year(),
+            naive.month().try_into().ok()?,
+            naive.day().try_into().ok()?,
+        )
     }
 }
 
@@ -160,7 +159,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     pub fn reset(&mut self) {
         self.vfs.reset();
 
-        self.today.set(None);
+        self.now.take();
     }
 
     pub fn reset_shadow(&mut self) {
