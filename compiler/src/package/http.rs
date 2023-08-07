@@ -64,7 +64,7 @@ impl HttpRegistry {
             let dir = cache_dir.join(&subdir);
 
             // Download from network if it doesn't exist yet.
-            if !dir.exists() {
+            if spec.namespace == "preview" && !dir.exists() {
                 self.download_package(spec, &dir)?;
             }
 
