@@ -546,3 +546,39 @@ pub fn serialize_doc(doc: MultiSvgDocument, glyph_mapping: GlyphMapping) -> Vec<
 
     flatten_module.to_bytes()
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::hash::Fingerprint;
+    use crate::vector::geom::{Axes, Scalar};
+
+    use crate::vector::ir::{Image, ImageItem};
+
+    /// Test image serialization.
+    #[test]
+    fn test_image_serialization() {
+        let img = ImageItem {
+            image: Arc::new(Image {
+                data: vec![0, 1, 2, 3],
+                format: "png".into(),
+                size: Axes::new(10, 10),
+                alt: None,
+                hash: Fingerprint::from_pair(0xdeadbeef, 0),
+            }),
+            size: Axes::new(Scalar(10.0), Scalar(10.0)),
+        };
+
+        // Or you can customize your serialization for better performance
+        // and compatibility with #![no_std] environments
+        use rkyv::ser::{serializers::AllocSerializer, Serializer};
+
+        let mut serializer = AllocSerializer::<0>::default();
+        serializer.serialize_value(&img).unwrap();
+        let bytes = serializer.into_serializer().into_inner();
+
+        let ret = bytes.into_vec();
+        assert_eq!("00010203706e6700f8ffffff04000000f4ffffff030000000a0000000a000000efbeadde000000000000000000000000000000000000000000000000000000000000204100002041c0ffffff", hex::encode(ret));
+    }
+}
