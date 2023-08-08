@@ -30,6 +30,7 @@ members = [
     "server/dev",
     "server/remote",
 
+    "tools/rkyv-assertions",
     "tools/fontctl",
 
     "tests/common",

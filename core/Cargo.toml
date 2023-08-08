@@ -40,7 +40,7 @@ web-sys = { workspace = true, optional = true }
 js-sys = { workspace = true, optional = true }
 
 [features]
-rkyv = ["dep:rkyv", "rkyv/alloc"]
+rkyv = ["dep:rkyv", "rkyv/alloc", "rkyv/archive_le"]
 rkyv-validation = ["dep:rkyv", "rkyv/validation"]
 flat-vector = ["rkyv", "rkyv-validation"]
 vector-bbox = []

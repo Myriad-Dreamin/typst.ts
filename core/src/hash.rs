@@ -23,6 +23,18 @@ use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 pub struct Fingerprint(u64, u64);
 
 impl Fingerprint {
+    pub fn from_pair(lo: u64, hi: u64) -> Self {
+        Self(lo, hi)
+    }
+
+    pub fn from_u128(hash: u128) -> Self {
+        Self(hash as u64, (hash >> 64) as u64)
+    }
+
+    pub fn to_u128(self) -> u128 {
+        ((self.1 as u128) << 64) | self.0 as u128
+    }
+
     /// Create a xml id from the given prefix and the fingerprint of this
     /// reference. Note that the entire html document shares namespace for
     /// ids.

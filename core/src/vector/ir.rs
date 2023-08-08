@@ -114,7 +114,7 @@ pub struct Image {
     /// A text describing the image.
     pub alt: Option<ImmutStr>,
     /// prehashed image content.
-    pub hash: u128,
+    pub hash: Fingerprint,
 }
 
 /// Collect image data from [`typst::image::Image`].
@@ -139,7 +139,7 @@ impl From<typst::image::Image> for Image {
             format: format.into(),
             size: image.size().into(),
             alt: image.alt().map(|s| s.into()),
-            hash,
+            hash: Fingerprint::from_u128(hash),
         }
     }
 }
@@ -165,7 +165,7 @@ impl Hash for Image {
 impl StaticHash128 for Image {
     /// Returns the hash of the image data.
     fn get_hash(&self) -> u128 {
-        self.hash
+        self.hash.to_u128()
     }
 }
 

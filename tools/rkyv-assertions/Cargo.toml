@@ -1,0 +1,13 @@
+[package]
+name = "typst-ts-rkyv-assertions"
+description = "Generate assertion code for rkyv"
+authors.workspace = true
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+typst-ts-core.workspace = true
