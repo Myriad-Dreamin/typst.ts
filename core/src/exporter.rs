@@ -52,6 +52,14 @@ pub mod builtins {
         pub fn new(exporters: Vec<DynExporter<I>>) -> Self {
             Self { exporters }
         }
+
+        pub fn push_front(&mut self, exporter: DynExporter<I>) {
+            self.exporters.insert(0, exporter)
+        }
+
+        pub fn push(&mut self, exporter: DynExporter<I>) {
+            self.exporters.push(exporter)
+        }
     }
 
     impl<I> Exporter<I> for GroupExporter<I> {
