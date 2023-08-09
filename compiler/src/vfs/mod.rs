@@ -7,7 +7,7 @@
 #[cfg(feature = "browser-compile")]
 pub mod browser;
 
-#[cfg(feature = "system")]
+#[cfg(feature = "system-compile")]
 pub mod system;
 
 pub mod cached;

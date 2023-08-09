@@ -41,13 +41,13 @@ pub mod world;
 mod parser;
 
 /// Convenient services over [`world::CompilerWorld`].
-#[cfg(feature = "system")]
+#[cfg(feature = "system-compile")]
 pub mod service;
 
 /// Run the compiler in the system environment.
-#[cfg(feature = "system")]
+#[cfg(feature = "system-compile")]
 pub(crate) mod system;
-#[cfg(feature = "system")]
+#[cfg(feature = "system-compile")]
 pub use system::TypstSystemWorld;
 
 /// Run the compiler in the browser environment.

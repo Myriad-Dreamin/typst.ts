@@ -30,6 +30,7 @@ memmap2 = { workspace = true, optional = true }
 dirs = { workspace = true, optional = true }
 walkdir = { workspace = true, optional = true }
 notify = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
 pollster = { workspace = true, optional = true }
 log = { workspace = true, optional = true }
 chrono = { workspace = true }
@@ -78,7 +79,7 @@ serde.workspace = true
 
 [features]
 cjk = []
-system = [
+system-compile = [
     "dep:memmap2",
     "dep:dirs",
     "dep:walkdir",
@@ -86,6 +87,8 @@ system = [
     "dep:log",
     "dep:typst-ts-svg-exporter",
 ]
+system-watch = ["dep:notify", "dep:tokio"]
+system = ["system-compile", "system-watch"]
 __web = [
     "dep:wasm-bindgen",
     "dep:wasm-bindgen-futures",

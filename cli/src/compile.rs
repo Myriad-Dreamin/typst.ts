@@ -1,7 +1,10 @@
 use std::{path::Path, sync::Arc};
 
 use typst::{diag::SourceResult, doc::Document};
-use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
+use typst_ts_compiler::{
+    service::{watch_dir, CompileDriver},
+    TypstSystemWorld,
+};
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
 
 use crate::{
@@ -109,7 +112,7 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
     if args.watch {
         utils::async_continue(async move {
             let mut driver = compile_driver();
-            crate::watch::watch_dir(&workspace_dir, move |events| {
+            watch_dir(&workspace_dir, move |events| {
                 // relevance checking
                 if events.is_some() && !events.unwrap().iter().any(|event| driver.relevant(event)) {
                     return;
