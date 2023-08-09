@@ -1,0 +1,25 @@
+#V2
+asd
+this_is_a_ve_ry_long_history_code
+this_is_a_ve_ry_short
+this_is_a_ve_ry_long_history_code
+.vscode\\launch.json
+assets\\fonts\\
+assets\\fonts\\IBMPlexSerif-Regular.ttf
+"\\Documents and Settings\\
+"\\Program Files (x86)\\AIMP\\!Backup\\z Before install v5.11.2427 (64-bit) [2023.05.10 00-59-57].zip
+D:\\Local\\Buffer\\25330.1000.230325-1609.RS_PRERELEASE_CLIENTPRO_OEMRET_X64FRE_EN-US.ISO
+[asdkmakmsd]
+[[[[[[[]]]]]]][[[[[[[]]]]]]]
+.vscode\\askjnfjasnjdnjsa
+.vscode\\launch.json
+packages\\
+packages\\compiler\\package.json
+packages\\compiler\\src\\lib.rs
+github-pages\\demo\\typst.react\\.gitignore
+askdmaksmd
+packages\\compiler\\src\\lib.rs
+packages\\hexo-renderer-typst\\lib\\svg_polyfill.cjs
+exit
+quit
+heading.where(level: 1)

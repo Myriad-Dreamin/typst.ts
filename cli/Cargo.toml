@@ -16,6 +16,8 @@ clap.workspace = true
 clap_complete.workspace = true
 clap_complete_fig.workspace = true
 
+rustyline.workspace = true
+
 comemo.workspace = true
 chrono.workspace = true
 tokio.workspace = true

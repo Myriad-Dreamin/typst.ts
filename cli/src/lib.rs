@@ -4,6 +4,7 @@ pub mod compile;
 pub mod export;
 pub mod font;
 pub mod query;
+pub mod query_repl;
 pub mod tracing;
 pub mod utils;
 pub mod version;
@@ -40,6 +41,8 @@ pub enum Subcommands {
 
     /// Processes an input file to extract provided metadata
     Query(QueryArgs),
+
+    QueryRepl(QueryReplArgs),
 
     #[clap(about = "Generate shell completion script.")]
     Completion(CompletionArgs),
@@ -155,6 +158,14 @@ pub struct QueryArgs {
     /// Expect and retrieve exactly one element
     #[clap(long = "one", default_value = "false")]
     pub one: bool,
+}
+
+/// TODO: Repl Doc
+#[derive(Debug, Clone, Parser)]
+pub struct QueryReplArgs {
+    /// compile arguments before query.
+    #[clap(flatten)]
+    pub compile: CompileArgs,
 }
 
 /// List all discovered fonts in system and custom font paths
