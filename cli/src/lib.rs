@@ -91,26 +91,10 @@ pub enum PackageSubCommands {
 
 #[derive(Default, Debug, Clone, Parser)]
 #[clap(next_help_heading = "Compile options")]
-pub struct CompileArgs {
+pub struct CompileOnceArgs {
     /// Path to typst workspace.
     #[clap(long, short, default_value = ".")]
     pub workspace: String,
-
-    /// Watch mode.
-    #[clap(long)]
-    pub watch: bool,
-
-    /// Generate dynamic layout representation.
-    /// Note: this is an experimental feature and will be merged as
-    ///   format `dyn-svg` in the future.
-    #[clap(long)]
-    pub dynamic_layout: bool,
-
-    /// Enable tracing.
-    /// Possible usage: --trace=verbosity={0..3}
-    ///   where verbosity: {0..3} -> {warning, info, debug, trace}
-    #[clap(long)]
-    pub trace: Option<String>,
 
     /// Entry file.
     #[clap(long, short, required = true)]
@@ -128,6 +112,35 @@ pub struct CompileArgs {
     /// Add additional directories to search for fonts
     #[clap(long = "font-path", value_name = "DIR", action = ArgAction::Append)]
     pub font_paths: Vec<PathBuf>,
+}
+
+#[derive(Default, Debug, Clone, Parser)]
+#[clap(next_help_heading = "Compile options")]
+pub struct CompileArgs {
+    /// compile arguments before query.
+    #[clap(flatten)]
+    pub compile: CompileOnceArgs,
+
+    /// Watch mode.
+    #[clap(long)]
+    pub watch: bool,
+
+    /// Generate dynamic layout representation.
+    /// Note: this is an experimental feature and will be merged as
+    ///   format `dyn-svg` in the future.
+    #[clap(long)]
+    pub dynamic_layout: bool,
+
+    /// Enable tracing.
+    /// Possible usage: --trace=verbosity={0..3}
+    ///   where verbosity: {0..3} -> {warning, info, debug, trace}
+    #[clap(long)]
+    pub trace: Option<String>,
+
+    /// Output formats, possible values: `json`, `pdf`, `svg`,
+    ///   `json_glyphs`, `ast`, `ir`, and `rmp`.
+    #[clap(long)]
+    pub format: Vec<String>,
 }
 
 /// Processes an input file to extract provided metadata
@@ -165,7 +178,7 @@ pub struct QueryArgs {
 pub struct QueryReplArgs {
     /// compile arguments before query.
     #[clap(flatten)]
-    pub compile: CompileArgs,
+    pub compile: CompileOnceArgs,
 }
 
 /// List all discovered fonts in system and custom font paths

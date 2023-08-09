@@ -6,9 +6,10 @@ use std::{
 
 use crate::TypstSystemWorld;
 use typst::{
-    diag::{SourceDiagnostic, SourceResult},
+    diag::{SourceDiagnostic, SourceResult, StrResult},
     doc::Document,
     eval::Tracer,
+    model::Content,
 };
 use typst_ts_core::{
     exporter_builtins::GroupExporter, exporter_utils::map_err, path::PathClean, Exporter,
@@ -128,6 +129,11 @@ impl CompileDriver {
         let mut tracer = Tracer::default();
         // compile and export document
         typst::compile(&self.world, &mut tracer)
+    }
+
+    /// Query the matches for the selector.
+    pub fn query(&mut self, selector: String, document: &Document) -> StrResult<Vec<Content>> {
+        super::query::retrieve(&self.world, &selector, document)
     }
 
     pub fn main_id(&self) -> TypstFileId {

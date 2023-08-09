@@ -3,6 +3,8 @@ pub(crate) mod diag;
 pub(crate) mod driver;
 pub use driver::*;
 
+pub mod query;
+
 pub(crate) mod session;
 pub use session::*;
 
