@@ -131,7 +131,7 @@ pub struct CompileArgs {
 /// Processes an input file to extract provided metadata
 ///
 /// Examples:
-/// ```
+/// ```shell
 /// # query elements with selector "heading"
 /// query --selector "heading"
 /// # query elements with selector "heading" which is of level 1
