@@ -11,10 +11,8 @@ use typst::{
     eval::Tracer,
 };
 use typst_ts_core::{
-    exporter_builtins::GroupExporter,
-    exporter_utils::{map_err, map_err_with_id},
-    path::PathClean,
-    Exporter, TypstFileId,
+    exporter_builtins::GroupExporter, exporter_utils::map_err, path::PathClean, Exporter,
+    TypstFileId,
 };
 use typst_ts_svg_exporter::{flat_ir::serialize_doc, DynamicLayoutSvgExporter};
 
@@ -118,7 +116,7 @@ impl CompileDriver {
         // early error cannot use map_err
         self.world
             .resolve(&self.entry_file, main_id)
-            .map_err(|e: typst::diag::FileError| map_err_with_id(main_id, e))?;
+            .map_err(map_err)?;
 
         Ok(())
     }
@@ -190,7 +188,7 @@ impl CompileDriver {
                 Ok(()) => {
                     self.world.main = main_id;
                 }
-                Err(e) => return Err(map_err(&self.world, e)),
+                Err(e) => return Err(map_err(e)),
             }
 
             // compile and export document

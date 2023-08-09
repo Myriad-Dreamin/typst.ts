@@ -9,8 +9,8 @@ use crate::map_err;
 pub struct RmpArtifactExporter;
 
 impl Exporter<Artifact, Vec<u8>> for RmpArtifactExporter {
-    fn export(&self, world: &dyn World, output: Arc<Artifact>) -> SourceResult<Vec<u8>> {
+    fn export(&self, _world: &dyn World, output: Arc<Artifact>) -> SourceResult<Vec<u8>> {
         let rmp_data = rmp_serde::to_vec_named(output.as_ref());
-        rmp_data.map_err(|e| map_err(world, e))
+        rmp_data.map_err(map_err)
     }
 }

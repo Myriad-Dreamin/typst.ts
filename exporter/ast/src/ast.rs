@@ -183,12 +183,10 @@ where
         let mut writer = std::io::BufWriter::new(writer);
 
         for tu in result {
-            writer
-                .write_all("---\n".as_bytes())
-                .map_err(|e| map_err(world, e))?;
+            writer.write_all("---\n".as_bytes()).map_err(map_err)?;
             writer
                 .write_fmt(format_args!("path: {}\nast:\n  ", tu.path))
-                .map_err(|e| map_err(world, e))?;
+                .map_err(map_err)?;
             let mut w = AstWriter {
                 w: &mut writer,
                 ident: 0,
