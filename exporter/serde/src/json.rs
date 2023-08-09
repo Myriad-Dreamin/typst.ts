@@ -29,17 +29,16 @@ impl<T> Default for JsonExporter<T> {
 }
 
 impl<T: Serialize> Exporter<T, String> for JsonExporter<T> {
-    fn export(&self, world: &dyn World, output: Arc<T>) -> SourceResult<String> {
+    fn export(&self, _world: &dyn World, output: Arc<T>) -> SourceResult<String> {
         let json_doc = {
             if self.should_truncate_precision {
-                let value =
-                    &serde_json::to_value(output.as_ref()).map_err(|e| map_err(world, e))?;
+                let value = &serde_json::to_value(output.as_ref()).map_err(map_err)?;
                 serde_json::to_string(&truncate_precision(value))
             } else {
                 serde_json::to_string(output.as_ref())
             }
         };
-        json_doc.map_err(|e| map_err(world, e))
+        json_doc.map_err(map_err)
     }
 }
 
@@ -47,17 +46,16 @@ impl<W, T: Serialize> Transformer<(Arc<T>, W)> for JsonExporter<T>
 where
     W: std::io::Write,
 {
-    fn export(&self, world: &dyn World, (output, writer): (Arc<T>, W)) -> SourceResult<()> {
+    fn export(&self, _world: &dyn World, (output, writer): (Arc<T>, W)) -> SourceResult<()> {
         let json_doc = {
             if self.should_truncate_precision {
-                let value =
-                    &serde_json::to_value(output.as_ref()).map_err(|e| map_err(world, e))?;
+                let value = &serde_json::to_value(output.as_ref()).map_err(map_err)?;
                 serde_json::to_writer(writer, &truncate_precision(value))
             } else {
                 serde_json::to_writer(writer, output.as_ref())
             }
         };
-        json_doc.map_err(|e| map_err(world, e))
+        json_doc.map_err(map_err)
     }
 }
 
