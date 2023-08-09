@@ -13,7 +13,7 @@ pub trait Transformer<Input, Output = ()> {
 /// Lambda can automatically implement the Transformer trait.
 impl<I, O, F> Transformer<I, O> for F
 where
-    F: (for<'a, 'b> Fn(&'a (dyn World + 'b), I) -> SourceResult<O>) + Sized,
+    F: (for<'a> Fn(&'a (dyn World + 'a), I) -> SourceResult<O>) + Sized,
 {
     fn export(&self, world: &dyn World, output: I) -> SourceResult<O> {
         self(world, output)
@@ -29,20 +29,11 @@ pub trait Exporter<Input, Output = ()> {
 /// Lambda can automatically implement the Exporter trait.
 impl<I, O, F> Exporter<I, O> for F
 where
-    F: (for<'a, 'b> Fn(&'a (dyn World + 'b), Arc<I>) -> SourceResult<O>) + Sized,
+    F: (for<'a> Fn(&'a (dyn World + 'a), Arc<I>) -> SourceResult<O>) + Sized,
 {
     fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<O> {
         self(world, output)
     }
-}
-
-/// This function is used to work around the lifetime issue of a closure lambda.
-/// See <https://github.com/rust-lang/rust/issues/70263>
-pub fn mark_transformer_lambda<I, O, F>(f: F) -> F
-where
-    F: (for<'a, 'b> Fn(&'a (dyn World + 'b), I) -> SourceResult<O>) + Sized,
-{
-    f
 }
 
 pub mod builtins {
