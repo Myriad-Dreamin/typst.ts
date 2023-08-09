@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 
+pub mod compile;
 pub mod export;
 pub mod font;
+pub mod query;
 pub mod tracing;
 pub mod utils;
 pub mod version;
@@ -36,6 +38,9 @@ pub struct Opts {
 pub enum Subcommands {
     #[clap(visible_alias = "c", about = "Run compiler.")]
     Compile(CompileArgs),
+
+    /// Processes an input file to extract provided metadata
+    Query(QueryArgs),
 
     #[clap(about = "Generate shell completion script.")]
     Completion(CompletionArgs),
@@ -102,7 +107,6 @@ pub struct CompileArgs {
     /// Enable tracing.
     /// Possible usage: --trace=verbosity={0..3}
     ///   where verbosity: {0..3} -> {warning, info, debug, trace}
-    ///
     #[clap(long)]
     pub trace: Option<String>,
 
@@ -122,6 +126,36 @@ pub struct CompileArgs {
     /// Add additional directories to search for fonts
     #[clap(long = "font-path", value_name = "DIR", action = ArgAction::Append)]
     pub font_paths: Vec<PathBuf>,
+}
+
+/// Processes an input file to extract provided metadata
+///
+/// Examples:
+/// ```
+/// # query elements with selector "heading"
+/// query --selector "heading"
+/// # query elements with selector "heading" which is of level 1
+/// query --selector "heading.where(level: 1)"
+/// # query first element with selector "heading" which is of level 1
+/// query --selector "heading.where(level: 1)" --one
+/// ```
+#[derive(Debug, Clone, Parser)]
+pub struct QueryArgs {
+    /// compile arguments before query.
+    #[clap(flatten)]
+    pub compile: CompileArgs,
+
+    /// Define what elements to retrieve
+    #[clap(long = "selector")]
+    pub selector: String,
+
+    /// Extract just one field from all retrieved elements
+    #[clap(long = "field")]
+    pub field: Option<String>,
+
+    /// Expect and retrieve exactly one element
+    #[clap(long = "one", default_value = "false")]
+    pub one: bool,
 }
 
 /// List all discovered fonts in system and custom font paths

@@ -5,19 +5,21 @@ use std::{
 };
 
 use clap::{Args, Command, FromArgMatches};
-use typst::{diag::SourceResult, font::FontVariant, World};
+use typst::{doc::Document, font::FontVariant, World};
 
 use typst_ts_cli::{
+    compile::compile_export,
     font::EMBEDDED_FONT,
-    tracing::TraceGuard,
     utils::{self, UnwrapOrExit},
     version::intercept_version,
     CompileArgs, CompletionArgs, EnvKey, FontSubCommands, GenPackagesDocArgs, LinkPackagesArgs,
-    ListFontsArgs, ListPackagesArgs, MeasureFontsArgs, Opts, PackageSubCommands, Subcommands,
+    ListFontsArgs, ListPackagesArgs, MeasureFontsArgs, Opts, PackageSubCommands, QueryArgs,
+    Subcommands,
 };
-use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
+use typst_ts_compiler::TypstSystemWorld;
 use typst_ts_core::{
     config::CompileOpts,
+    exporter_utils::map_err,
     path::{unix_slash, PathClean},
 };
 
@@ -53,6 +55,7 @@ fn main() {
 
     match opts.sub {
         Some(Subcommands::Compile(args)) => compile(args),
+        Some(Subcommands::Query(args)) => query(args),
         Some(Subcommands::Completion(args)) => generate_completion(args),
         Some(Subcommands::Env(args)) => match args.key {
             EnvKey::Features => {
@@ -79,121 +82,28 @@ fn main() {
 }
 
 fn compile(args: CompileArgs) -> ! {
-    if args.trace.is_some() && args.watch {
-        clap::Error::raw(
-            clap::error::ErrorKind::ArgumentConflict,
-            "cannot use option \"--trace\" and \"--watch\" at the same time\n",
-        )
-        .exit()
-    }
-
-    let workspace_dir = Path::new(args.workspace.as_str()).clean();
     let entry_file_path = Path::new(args.entry.as_str()).clean();
+    let exporter = typst_ts_cli::export::prepare_exporters(&args, &entry_file_path);
 
-    let workspace_dir = if workspace_dir.is_absolute() {
-        workspace_dir
-    } else {
-        let cwd = std::env::current_dir().unwrap_or_exit();
-        cwd.join(workspace_dir)
-    };
+    compile_export(args, exporter)
+}
 
-    let entry_file_path = if entry_file_path.is_absolute() {
-        entry_file_path
-    } else {
-        let cwd = std::env::current_dir().unwrap_or_exit();
-        cwd.join(entry_file_path)
-    };
+/// Execute a query command.
+pub fn query(args: QueryArgs) -> ! {
+    use typst_ts_cli::query::{format, retrieve};
+    let compile_args = args.compile.clone();
 
-    if !entry_file_path.starts_with(&workspace_dir) {
-        clap::Error::raw(
-            clap::error::ErrorKind::InvalidValue,
-            format!(
-                "entry file path must be in workspace directory: {workspace_dir}\n",
-                workspace_dir = workspace_dir.display()
-            ),
-        )
-        .exit()
-    }
+    let entry_file_path = Path::new(compile_args.entry.as_str()).clean();
+    let mut exporter = typst_ts_cli::export::prepare_exporters(&compile_args, &entry_file_path);
 
-    let _trace_guard = {
-        let guard = args.trace.clone().map(TraceGuard::new);
-        let guard = guard.transpose().map_err(|err| {
-            clap::Error::raw(
-                clap::error::ErrorKind::InvalidValue,
-                format!("init trace failed: {err}\n"),
-            )
-            .exit()
-        });
-        guard.unwrap()
-    };
+    exporter.push_front(Box::new(move |world: &dyn World, output: Arc<Document>| {
+        let data = retrieve(world, &args, &output).map_err(map_err)?;
+        let serialized = format(data, &args).map_err(map_err)?;
+        println!("{serialized}");
+        Ok(())
+    }));
 
-    let compile_driver_root_dir = workspace_dir.clone();
-    let compile_driver = || {
-        let world = TypstSystemWorld::new(CompileOpts {
-            root_dir: compile_driver_root_dir,
-            font_paths: args.font_paths.clone(),
-            with_embedded_fonts: EMBEDDED_FONT.to_owned(),
-            ..CompileOpts::default()
-        })
-        .unwrap_or_exit();
-
-        let exporter = typst_ts_cli::export::prepare_exporters(&args, &entry_file_path);
-
-        CompileDriver {
-            world,
-            entry_file: entry_file_path.to_owned(),
-            exporter,
-        }
-    };
-
-    #[allow(clippy::type_complexity)]
-    let compile_once: Box<dyn Fn(&mut CompileDriver) -> SourceResult<()>> = if args.dynamic_layout {
-        Box::new(|driver: &mut CompileDriver| {
-            let output_dir = {
-                // If output is specified, use it.
-                let dir = (!args.output.is_empty()).then(|| Path::new(&args.output));
-                // Otherwise, use the parent directory of the entry file.
-                let dir = dir.unwrap_or_else(|| {
-                    driver
-                        .entry_file
-                        .parent()
-                        .expect("entry_file has no parent")
-                });
-                dir.join(
-                    driver
-                        .entry_file
-                        .file_name()
-                        .expect("entry_file has no file name"),
-                )
-            };
-            CompileDriver::once_dynamic(driver, &output_dir)
-        })
-    } else {
-        Box::new(|driver: &mut CompileDriver| {
-            let doc = Arc::new(driver.compile()?);
-            driver.export(doc)
-        })
-    };
-
-    if args.watch {
-        utils::async_continue(async move {
-            let mut driver = compile_driver();
-            typst_ts_cli::watch::watch_dir(&workspace_dir, move |events| {
-                // relevance checking
-                if events.is_some() && !events.unwrap().iter().any(|event| driver.relevant(event)) {
-                    return;
-                }
-
-                // compile
-                driver.with_compile_diag::<true, _>(&compile_once);
-                comemo::evict(30);
-            })
-            .await;
-        })
-    } else {
-        let compiled = compile_driver().with_compile_diag::<false, _>(compile_once);
-        utils::logical_exit(compiled.is_some());
-    }
+    compile_export(compile_args, exporter)
 }
 
 fn generate_completion(CompletionArgs { shell }: CompletionArgs) -> ! {
