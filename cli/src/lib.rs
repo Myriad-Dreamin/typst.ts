@@ -7,7 +7,6 @@ pub mod query;
 pub mod tracing;
 pub mod utils;
 pub mod version;
-pub mod watch;
 
 use clap::{ArgAction, Parser, Subcommand, ValueEnum};
 use typst_ts_core::build_info::VERSION;

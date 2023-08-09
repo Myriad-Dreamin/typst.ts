@@ -18,7 +18,6 @@ clap_complete_fig.workspace = true
 
 comemo.workspace = true
 chrono.workspace = true
-notify.workspace = true
 tokio.workspace = true
 
 serde.workspace = true

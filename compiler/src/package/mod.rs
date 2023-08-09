@@ -1,6 +1,6 @@
 pub use typst_ts_core::package::{PackageError, PackageSpec, Registry};
 
-#[cfg(feature = "system")]
+#[cfg(feature = "system-compile")]
 pub mod http;
 
 pub trait Notifier {

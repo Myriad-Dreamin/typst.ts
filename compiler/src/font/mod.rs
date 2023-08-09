@@ -1,6 +1,6 @@
 pub use typst_ts_core::font::FontSlot;
 
-#[cfg(feature = "system")]
+#[cfg(feature = "system-compile")]
 pub mod system;
 
 #[cfg(feature = "web-render")]
