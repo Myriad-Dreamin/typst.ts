@@ -101,6 +101,17 @@ impl CompileDriver {
         }
     }
 
+    /// Remove shadow file after closure.
+    pub fn with_shadow_file<T>(
+        &mut self,
+        file: &PathBuf,
+        f: impl FnOnce(&mut Self) -> SourceResult<T>,
+    ) -> SourceResult<T> {
+        let res = f(self);
+        self.world.remove_shadow(file);
+        res
+    }
+
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
     pub fn export(&self, output: Arc<typst::doc::Document>) -> SourceResult<()> {
         self.exporter.export(&self.world, output)
