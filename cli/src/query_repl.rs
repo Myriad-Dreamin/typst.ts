@@ -87,6 +87,16 @@ impl Highlighter for ReplContext {
     }
 }
 
+fn to_repl_completion_pair(item: typst::ide::Completion) -> Pair {
+    // we does not support code snippet
+    // let rep = item.apply.as_ref().unwrap_or(&item.label).into();
+    let rep = item.label.clone().into();
+    Pair {
+        display: item.label.into(),
+        replacement: rep,
+    }
+}
+
 impl Completer for ReplContext {
     type Candidate = Pair;
 
@@ -97,67 +107,78 @@ impl Completer for ReplContext {
         _ctx: &rustyline::Context<'_>,
     ) -> rustyline::Result<(usize, Vec<Pair>)> {
         let mut driver = self.driver.borrow_mut();
-        let map_io_err = |e| ReadlineError::Io(e);
 
         // commit line changes
         let main_id = driver.main_id();
+        driver.world.main = main_id;
 
-        let content = std::fs::read_to_string(&driver.entry_file).map_err(map_io_err)?;
-        println!("content: {} \"{}\"", content.len(), content);
-
-        let static_prefix = content + "\r\n" + "#show ";
+        let content = std::fs::read_to_string(&driver.entry_file).map_err(ReadlineError::Io)?;
+        let static_prefix = content + "\n#show ";
         let static_prefix_len = static_prefix.len();
+        let cursor = static_prefix_len + pos;
         let dyn_content = static_prefix + line;
 
-        let file = driver.entry_file.clone();
+        #[cfg(feature = "debug-repl")]
+        println!("slen: {}, dlen: {}", static_prefix_len, dyn_content.len());
 
-        driver
-            .with_shadow_file(&file, |driver| {
-                driver.world.reset();
-
-                match driver
-                    .world
-                    .resolve_with(&driver.entry_file, main_id, &dyn_content)
-                {
-                    Ok(()) => {
-                        driver.world.main = main_id;
-                    }
-                    Err(e) => return Err(map_err(e)),
-                }
-
+        driver.world.reset();
+        let typst_completions = driver
+            .with_shadow_file(main_id, &dyn_content, |driver| {
+                let frames = driver.compile().map(|d| d.pages);
+                let frames = frames.as_ref().map(|v| v.as_slice()).unwrap_or_default();
                 let source = driver.world.main();
-                let cursor = static_prefix_len + pos;
+                Ok(autocomplete(&driver.world, frames, &source, cursor, true))
+            })
+            .ok()
+            .flatten();
 
-                let res = autocomplete(&driver.world, &[], &source, cursor, true);
-                match res {
-                    Some((start, items)) => {
-                        println!("start: {} cursor: {} slen: {}", start, cursor, static_prefix_len);
-                        let start = start.saturating_sub(static_prefix_len);
-                        Ok((
-                            start,
-                            items
-                                .into_iter()
-                                .map(|item| {
-                                    let rep =
-                                        item.apply.as_ref().unwrap_or(&item.label).to_string();
-                                    Pair {
-                                        display: item.label.to_string(),
-                                        replacement: rep,
-                                    }
-                                })
-                                .collect(),
-                        ))
+        let (start, items) = if let Some(res) = typst_completions {
+            res
+        } else {
+            #[cfg(feature = "debug-repl")]
+            println!("no results");
+            return Ok((0, vec![]));
+        };
+
+        #[cfg(feature = "debug-repl")]
+        println!(
+            "start: {}, pref_len: {}, items: {:?}",
+            start,
+            static_prefix_len,
+            items.iter().map(|t| t.label.clone()).collect::<Vec<_>>()
+        );
+
+        if start < static_prefix_len {
+            return Ok((0, vec![]));
+        }
+
+        let completing_prefix_len = start - static_prefix_len;
+        let completing_suffix = &line[completing_prefix_len..];
+        let items = items.into_iter().map(to_repl_completion_pair);
+        let items = items.filter(|item| {
+            if completing_suffix.is_empty() {
+                return true;
+            }
+
+            // lcs based filtering
+            let mut completing_suffix_chars = completing_suffix.chars();
+            let mut cur = completing_suffix_chars.next().unwrap();
+            for ch in item.replacement.chars() {
+                if cur == ch {
+                    if let Some(nxt) = completing_suffix_chars.next() {
+                        cur = nxt;
+                    } else {
+                        return true;
                     }
-                    None => {
-                        Ok((0, vec![]))
-                    }
+                } else {
+                    continue;
                 }
-            })
-            .map_err(|err| {
-                println!("error: {:?}", err);
-                err
-            })
-            .map_or(Ok((0, vec![])), |res| Ok(res))
+            }
+
+            false
+        });
+
+        Ok((completing_prefix_len, items.collect()))
     }
 }
 

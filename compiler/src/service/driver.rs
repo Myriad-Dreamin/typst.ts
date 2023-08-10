@@ -6,10 +6,11 @@ use std::{
 
 use crate::TypstSystemWorld;
 use typst::{
-    diag::{SourceDiagnostic, SourceResult, StrResult},
+    diag::{At, SourceDiagnostic, SourceResult, StrResult},
     doc::Document,
     eval::Tracer,
     model::Content,
+    syntax::Span,
 };
 use typst_ts_core::{
     exporter_builtins::GroupExporter, exporter_utils::map_err, path::PathClean, Exporter,
@@ -101,14 +102,20 @@ impl CompileDriver {
         }
     }
 
-    /// Remove shadow file after closure.
+    /// Wrap the driver with a given shadow file and run the inner function.
     pub fn with_shadow_file<T>(
         &mut self,
-        file: &PathBuf,
+        file_id: TypstFileId,
+        content: &str,
         f: impl FnOnce(&mut Self) -> SourceResult<T>,
     ) -> SourceResult<T> {
+        let file_path = self.world.path_for_id(file_id).at(Span::detached())?;
+        match self.world.resolve_with(&file_path, file_id, content) {
+            Ok(()) => {}
+            Err(e) => return Err(map_err(e)),
+        }
         let res = f(self);
-        self.world.remove_shadow(file);
+        self.world.remove_shadow(&file_path);
         res
     }
 
