@@ -49,23 +49,6 @@ impl CompileDriver {
         self.entry_file = entry_file.into().into_owned();
     }
 
-    /// Wrap the driver with a given shadow file and run the inner function.
-    pub fn with_shadow_file<T>(
-        &mut self,
-        file_id: TypstFileId,
-        content: &str,
-        f: impl FnOnce(&mut Self) -> SourceResult<T>,
-    ) -> SourceResult<T> {
-        let file_path = self.world.path_for_id(file_id).at(Span::detached())?;
-        match self.world.resolve_with(&file_path, file_id, content) {
-            Ok(()) => {}
-            Err(e) => return Err(map_err(e)),
-        }
-        let res = f(self);
-        self.world.remove_shadow(&file_path);
-        res
-    }
-
     /// Get the file id for a given path.
     /// Note: only works for files in the workspace instead of external
     /// packages.
@@ -130,7 +113,11 @@ impl Compiler for CompileDriver {
 
 impl ShadowApi for CompileDriver {
     fn _shadow_map_id(&self, file_id: TypstFileId) -> typst::diag::FileResult<PathBuf> {
-        self.world.path_for_id(file_id)
+        self.world._shadow_map_id(file_id)
+    }
+
+    fn reset_shadow(&mut self) {
+        self.world.reset_shadow()
     }
 
     fn map_shadow(&self, path: &Path, content: &str) -> typst::diag::FileResult<()> {

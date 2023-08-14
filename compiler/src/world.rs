@@ -163,10 +163,6 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         self.now.take();
     }
 
-    pub fn reset_shadow(&mut self) {
-        self.vfs.reset_shadow()
-    }
-
     /// Set the `do_reparse` flag.
     pub fn set_do_reparse(&mut self, do_reparse: bool) {
         self.vfs.do_reparse = do_reparse;
@@ -185,10 +181,6 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         content: &str,
     ) -> FileResult<()> {
         self.vfs.resolve_with(path, source_id, content).map(|_| ())
-    }
-
-    pub fn remove_shadow(&self, path: &Path) {
-        self.vfs.remove_shadow(path)
     }
 
     /// Resolve the real path for a file id.
@@ -235,6 +227,10 @@ impl<F: CompilerFeat> CompilerWorld<F> {
 impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
     fn _shadow_map_id(&self, file_id: FileId) -> FileResult<PathBuf> {
         self.path_for_id(file_id)
+    }
+
+    fn reset_shadow(&mut self) {
+        self.vfs.reset_shadow()
     }
 
     fn map_shadow(&self, path: &Path, content: &str) -> FileResult<()> {

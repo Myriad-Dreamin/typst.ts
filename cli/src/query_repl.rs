@@ -1,6 +1,7 @@
 use std::borrow::Cow::{self, Owned};
 use std::cell::RefCell;
 use typst_ts_compiler::service::{CompileDriver, Compiler, DiagObserver};
+use typst_ts_compiler::ShadowApi;
 
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
@@ -121,7 +122,7 @@ impl Completer for ReplContext {
 
         driver.world.reset();
         let typst_completions = driver
-            .with_shadow_file(main_id, &dyn_content, |driver| {
+            .with_shadow_file_by_id(main_id, &dyn_content, |driver| {
                 let frames = driver.compile().map(|d| d.pages);
                 let frames = frames.as_ref().map(|v| v.as_slice()).unwrap_or_default();
                 let source = driver.world.main();
