@@ -310,10 +310,10 @@ fn doc_packages(args: GenPackagesDocArgs) -> ! {
     let doc_file = package_dir.join("doc.typ");
 
     let compile_args = CompileArgs {
+        format: vec!["pdf".to_string(), "svg".to_string()],
         compile: CompileOnceArgs {
             entry: doc_file.to_string_lossy().to_string(),
             workspace: package_dir.to_string_lossy().to_string(),
-            format: vec!["pdf".to_string(), "svg".to_string()],
             output: args.output,
             ..Default::default()
         },
