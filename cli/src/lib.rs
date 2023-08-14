@@ -89,9 +89,26 @@ pub enum PackageSubCommands {
     Doc(GenPackagesDocArgs),
 }
 
+/// Shared arguments for font related commands
+#[derive(Default, Debug, Clone, Parser)]
+pub struct FontArgs {
+    /// Add additional directories to search for fonts
+    #[clap(
+        long = "font-path",
+        env = "TYPST_FONT_PATHS", 
+        value_name = "DIR",
+        action = ArgAction::Append,
+    )]
+    pub paths: Vec<PathBuf>,
+}
+
 #[derive(Default, Debug, Clone, Parser)]
 #[clap(next_help_heading = "Compile options")]
 pub struct CompileOnceArgs {
+    /// Shared arguments for font related commands.
+    #[clap(flatten)]
+    pub font: FontArgs,
+
     /// Path to typst workspace.
     #[clap(long, short, default_value = ".")]
     pub workspace: String,
@@ -103,10 +120,6 @@ pub struct CompileOnceArgs {
     /// Output to directory, default in the same directory as the entry file.
     #[clap(long, short, default_value = "")]
     pub output: String,
-
-    /// Add additional directories to search for fonts
-    #[clap(long = "font-path", value_name = "DIR", action = ArgAction::Append)]
-    pub font_paths: Vec<PathBuf>,
 }
 
 #[derive(Default, Debug, Clone, Parser)]
@@ -179,9 +192,9 @@ pub struct QueryReplArgs {
 /// List all discovered fonts in system and custom font paths
 #[derive(Debug, Clone, Parser)]
 pub struct ListFontsArgs {
-    /// Add additional directories to search for fonts
-    #[clap(long = "font-path", value_name = "DIR", action = ArgAction::Append)]
-    pub font_paths: Vec<PathBuf>,
+    /// Shared arguments for font related commands.
+    #[clap(flatten)]
+    pub font: FontArgs,
 
     /// Also list style variants of each font family
     #[arg(long)]
@@ -191,9 +204,9 @@ pub struct ListFontsArgs {
 /// Measure fonts and generate a profile file for compiler
 #[derive(Debug, Clone, Parser)]
 pub struct MeasureFontsArgs {
-    /// Add additional directories to search for fonts
-    #[clap(long = "font-path", value_name = "DIR", action = ArgAction::Append)]
-    pub font_paths: Vec<PathBuf>,
+    /// Shared arguments for font related commands.
+    #[clap(flatten)]
+    pub font: FontArgs,
 
     /// Path to output profile file
     #[arg(long, required = true)]

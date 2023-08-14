@@ -45,7 +45,7 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
 
     let world = TypstSystemWorld::new(CompileOpts {
         root_dir: workspace_dir.clone(),
-        font_paths: args.font_paths.clone(),
+        font_paths: args.font.paths.clone(),
         with_embedded_fonts: EMBEDDED_FONT.to_owned(),
         ..CompileOpts::default()
     })
