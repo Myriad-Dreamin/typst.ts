@@ -12,17 +12,17 @@ use typst_ts_cli::{
     font::EMBEDDED_FONT,
     utils::{self, UnwrapOrExit},
     version::intercept_version,
-    CompileArgs, CompletionArgs, EnvKey, FontSubCommands, GenPackagesDocArgs, LinkPackagesArgs,
-    ListFontsArgs, ListPackagesArgs, MeasureFontsArgs, Opts, PackageSubCommands, QueryArgs,
-    Subcommands,
+    CompileArgs, CompileOnceArgs, CompletionArgs, EnvKey, FontSubCommands, GenPackagesDocArgs,
+    LinkPackagesArgs, ListFontsArgs, ListPackagesArgs, MeasureFontsArgs, Opts, PackageSubCommands,
+    QueryArgs, QueryReplArgs, Subcommands,
 };
 use typst_ts_compiler::TypstSystemWorld;
+use typst_ts_core::exporter_builtins::GroupExporter;
 use typst_ts_core::{
     config::CompileOpts,
     exporter_utils::map_err,
     path::{unix_slash, PathClean},
 };
-
 fn get_cli(sub_command_required: bool) -> Command {
     let cli = Command::new("$").disable_version_flag(true);
     Opts::augment_args(cli).subcommand_required(sub_command_required)
@@ -56,6 +56,7 @@ fn main() {
     match opts.sub {
         Some(Subcommands::Compile(args)) => compile(args),
         Some(Subcommands::Query(args)) => query(args),
+        Some(Subcommands::QueryRepl(args)) => query_repl(args),
         Some(Subcommands::Completion(args)) => generate_completion(args),
         Some(Subcommands::Env(args)) => match args.key {
             EnvKey::Features => {
@@ -82,7 +83,7 @@ fn main() {
 }
 
 fn compile(args: CompileArgs) -> ! {
-    let entry_file_path = Path::new(args.entry.as_str()).clean();
+    let entry_file_path = Path::new(args.compile.entry.as_str()).clean();
     let exporter = typst_ts_cli::export::prepare_exporters(&args, &entry_file_path);
 
     compile_export(args, exporter)
@@ -90,20 +91,28 @@ fn compile(args: CompileArgs) -> ! {
 
 /// Execute a query command.
 pub fn query(args: QueryArgs) -> ! {
-    use typst_ts_cli::query::{format, retrieve};
+    use typst_ts_cli::query::format;
+    use typst_ts_compiler::service::query::retrieve;
     let compile_args = args.compile.clone();
 
-    let entry_file_path = Path::new(compile_args.entry.as_str()).clean();
-    let mut exporter = typst_ts_cli::export::prepare_exporters(&compile_args, &entry_file_path);
+    let mut exporter = GroupExporter::<Document>::new(vec![]);
 
     exporter.push_front(Box::new(move |world: &dyn World, output: Arc<Document>| {
-        let data = retrieve(world, &args, &output).map_err(map_err)?;
+        let data = retrieve(world, &args.selector, &output).map_err(map_err)?;
         let serialized = format(data, &args).map_err(map_err)?;
         println!("{serialized}");
         Ok(())
     }));
 
     compile_export(compile_args, exporter)
+}
+
+fn query_repl(args: QueryReplArgs) -> ! {
+    use typst_ts_cli::query_repl::start_repl_test;
+    let compile_args = args.compile.clone();
+
+    start_repl_test(compile_args).unwrap();
+    exit(0)
 }
 
 fn generate_completion(CompletionArgs { shell }: CompletionArgs) -> ! {
@@ -301,10 +310,13 @@ fn doc_packages(args: GenPackagesDocArgs) -> ! {
     let doc_file = package_dir.join("doc.typ");
 
     let compile_args = CompileArgs {
-        entry: doc_file.to_string_lossy().to_string(),
-        workspace: package_dir.to_string_lossy().to_string(),
-        format: vec!["pdf".to_string(), "svg".to_string()],
-        output: args.output,
+        compile: CompileOnceArgs {
+            entry: doc_file.to_string_lossy().to_string(),
+            workspace: package_dir.to_string_lossy().to_string(),
+            format: vec!["pdf".to_string(), "svg".to_string()],
+            output: args.output,
+            ..Default::default()
+        },
         ..Default::default()
     };
 

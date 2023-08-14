@@ -11,18 +11,10 @@ use crate::{
     font::EMBEDDED_FONT,
     tracing::TraceGuard,
     utils::{self, UnwrapOrExit},
-    CompileArgs,
+    CompileArgs, CompileOnceArgs,
 };
 
-pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> ! {
-    if args.trace.is_some() && args.watch {
-        clap::Error::raw(
-            clap::error::ErrorKind::ArgumentConflict,
-            "cannot use option \"--trace\" and \"--watch\" at the same time\n",
-        )
-        .exit()
-    }
-
+pub fn create_driver(args: CompileOnceArgs, exporter: GroupExporter<Document>) -> CompileDriver {
     let workspace_dir = Path::new(args.workspace.as_str()).clean();
     let entry_file_path = Path::new(args.entry.as_str()).clean();
 
@@ -51,6 +43,32 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
         .exit()
     }
 
+    let world = TypstSystemWorld::new(CompileOpts {
+        root_dir: workspace_dir.clone(),
+        font_paths: args.font_paths.clone(),
+        with_embedded_fonts: EMBEDDED_FONT.to_owned(),
+        ..CompileOpts::default()
+    })
+    .unwrap_or_exit();
+
+    CompileDriver {
+        world,
+        entry_file: entry_file_path.to_owned(),
+        exporter,
+    }
+}
+
+pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> ! {
+    if args.trace.is_some() && args.watch {
+        clap::Error::raw(
+            clap::error::ErrorKind::ArgumentConflict,
+            "cannot use option \"--trace\" and \"--watch\" at the same time\n",
+        )
+        .exit()
+    }
+
+    let mut driver = create_driver(args.compile.clone(), exporter);
+
     let _trace_guard = {
         let guard = args.trace.clone().map(TraceGuard::new);
         let guard = guard.transpose().map_err(|err| {
@@ -63,29 +81,13 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
         guard.unwrap()
     };
 
-    let compile_driver_root_dir = workspace_dir.clone();
-    let compile_driver = || {
-        let world = TypstSystemWorld::new(CompileOpts {
-            root_dir: compile_driver_root_dir,
-            font_paths: args.font_paths.clone(),
-            with_embedded_fonts: EMBEDDED_FONT.to_owned(),
-            ..CompileOpts::default()
-        })
-        .unwrap_or_exit();
-
-        CompileDriver {
-            world,
-            entry_file: entry_file_path.to_owned(),
-            exporter,
-        }
-    };
-
     #[allow(clippy::type_complexity)]
     let compile_once: Box<dyn Fn(&mut CompileDriver) -> SourceResult<()>> = if args.dynamic_layout {
         Box::new(|driver: &mut CompileDriver| {
             let output_dir = {
                 // If output is specified, use it.
-                let dir = (!args.output.is_empty()).then(|| Path::new(&args.output));
+                let dir =
+                    (!args.compile.output.is_empty()).then(|| Path::new(&args.compile.output));
                 // Otherwise, use the parent directory of the entry file.
                 let dir = dir.unwrap_or_else(|| {
                     driver
@@ -111,8 +113,7 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
 
     if args.watch {
         utils::async_continue(async move {
-            let mut driver = compile_driver();
-            watch_dir(&workspace_dir, move |events| {
+            watch_dir(&driver.world.root.clone(), move |events| {
                 // relevance checking
                 if events.is_some() && !events.unwrap().iter().any(|event| driver.relevant(event)) {
                     return;
@@ -125,7 +126,7 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
             .await;
         })
     } else {
-        let compiled = compile_driver().with_compile_diag::<false, _>(compile_once);
+        let compiled = driver.with_compile_diag::<false, _>(compile_once);
         utils::logical_exit(compiled.is_some());
     }
 }
