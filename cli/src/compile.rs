@@ -103,8 +103,8 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
 
     // CompileExporter + DynamicLayoutCompiler + WatchDriver
     let driver = CompileExporter::new(driver).with_exporter(exporter);
-    let driver = DynamicLayoutCompiler::new(driver, output_dir).set_enable(args.dynamic_layout);
-    let mut driver = WatchDriver::new(driver, watch_root).set_enable(args.watch);
+    let driver = DynamicLayoutCompiler::new(driver, output_dir).with_enable(args.dynamic_layout);
+    let mut driver = WatchDriver::new(driver, watch_root).with_enable(args.watch);
 
     utils::async_continue(async move {
         utils::logical_exit(driver.compile().await);

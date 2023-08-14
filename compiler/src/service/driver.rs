@@ -196,7 +196,11 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
         }
     }
 
-    pub fn set_enable(mut self, enable_dynamic_layout: bool) -> Self {
+    pub fn set_output_dir(&mut self, output_dir: PathBuf) {
+        self.output_dir = output_dir;
+    }
+
+    pub fn with_enable(mut self, enable_dynamic_layout: bool) -> Self {
         self.enable_dynamic_layout = enable_dynamic_layout;
         self
     }
@@ -240,7 +244,12 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
             // replace layout
             let current_width = base_layout - Abs::pt(i as f64 * 10.0);
 
-            let variables: String = format!("#let page-width = {:2}pt", current_width.to_pt());
+            let variables: String = format!(
+                r##"
+#let page-width = {:2}pt
+#let target = "web""##,
+                current_width.to_pt()
+            );
             println!(
                 "rerendering {} at {:?}, {variables}",
                 i,
@@ -293,7 +302,7 @@ where
         }
     }
 
-    pub fn set_enable(mut self, enable_watch: bool) -> Self {
+    pub fn with_enable(mut self, enable_watch: bool) -> Self {
         self.enable_watch = enable_watch;
         self
     }
