@@ -2,10 +2,7 @@ use std::path::Path;
 
 use typst::doc::Document;
 use typst_ts_compiler::{
-    service::{
-        watch_dir, CompileDriver, CompileExporter, Compiler, DiagObserver, DynamicLayoutCompiler,
-        WrappedCompiler,
-    },
+    service::{CompileDriver, CompileExporter, Compiler, DynamicLayoutCompiler, WatchDriver},
     TypstSystemWorld,
 };
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
@@ -102,32 +99,14 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
         )
     };
 
-    // CompileExporter
+    let watch_root = driver.world().root.as_ref().to_owned();
+
+    // CompileExporter + DynamicLayoutCompiler + WatchDriver
     let driver = CompileExporter::new(driver).with_exporter(exporter);
-    let mut driver = DynamicLayoutCompiler::new(driver, output_dir).set_enable(args.dynamic_layout);
+    let driver = DynamicLayoutCompiler::new(driver, output_dir).set_enable(args.dynamic_layout);
+    let mut driver = WatchDriver::new(driver, watch_root).set_enable(args.watch);
 
-    if args.watch {
-        utils::async_continue(async move {
-            watch_dir(&driver.world().root.clone(), move |events| {
-                // relevance checking
-                if events.is_some()
-                    && !events
-                        .unwrap()
-                        .iter()
-                        // todo: inner
-                        .any(|event| driver.inner().inner().relevant(event))
-                {
-                    return;
-                }
-
-                // compile
-                driver.with_compile_diag::<true, _>(|driver| driver.compile());
-                comemo::evict(30);
-            })
-            .await;
-        })
-    } else {
-        let compiled = driver.with_compile_diag::<false, _>(|driver| driver.compile());
-        utils::logical_exit(compiled.is_some());
-    }
+    utils::async_continue(async move {
+        utils::logical_exit(driver.compile().await);
+    })
 }
