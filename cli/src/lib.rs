@@ -100,11 +100,6 @@ pub struct CompileOnceArgs {
     #[clap(long, short, required = true)]
     pub entry: String,
 
-    /// Output formats, possible values: `json`, `pdf`, `svg`,
-    ///   `json_glyphs`, `ast`, `ir`, and `rmp`.
-    #[clap(long)]
-    pub format: Vec<String>,
-
     /// Output to directory, default in the same directory as the entry file.
     #[clap(long, short, default_value = "")]
     pub output: String,
@@ -131,16 +126,16 @@ pub struct CompileArgs {
     #[clap(long)]
     pub dynamic_layout: bool,
 
+    /// Output formats, possible values: `json`, `pdf`, `svg`,
+    ///   `json_glyphs`, `ast`, `ir`, and `rmp`.
+    #[clap(long)]
+    pub format: Vec<String>,
+
     /// Enable tracing.
     /// Possible usage: --trace=verbosity={0..3}
     ///   where verbosity: {0..3} -> {warning, info, debug, trace}
     #[clap(long)]
     pub trace: Option<String>,
-
-    /// Output formats, possible values: `json`, `pdf`, `svg`,
-    ///   `json_glyphs`, `ast`, `ir`, and `rmp`.
-    #[clap(long)]
-    pub format: Vec<String>,
 }
 
 /// Processes an input file to extract provided metadata
