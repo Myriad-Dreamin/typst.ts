@@ -1,14 +1,17 @@
 use std::path::Path;
 
-use typst::{doc::Document, eval::Tracer};
-use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
+use typst::doc::Document;
+use typst_ts_compiler::{
+    service::{CompileDriver, CompileExporter, Compiler},
+    ShadowApi, TypstSystemWorld,
+};
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter};
 
 fn get_driver(
     workspace_dir: &Path,
     entry_file_path: &Path,
     exporter: GroupExporter<Document>,
-) -> CompileDriver {
+) -> CompileExporter<CompileDriver> {
     let world = TypstSystemWorld::new(CompileOpts {
         root_dir: workspace_dir.to_owned(),
         no_system_fonts: true,
@@ -16,11 +19,12 @@ fn get_driver(
     })
     .unwrap();
 
-    CompileDriver {
+    let driver = CompileDriver {
         world,
         entry_file: entry_file_path.to_owned(),
-        exporter,
-    }
+    };
+
+    CompileExporter::new(driver).with_exporter(exporter)
 }
 
 pub fn test_compiler(
@@ -33,23 +37,16 @@ pub fn test_compiler(
 
     for i in 0..200 {
         println!("Iteration {}", i);
-        // reset the world caches
-        driver.world.reset();
 
         content.push_str(" user edit");
 
         // checkout the entry file
         let main_id = driver.main_id();
-        driver.world.main = main_id;
-        // early error cannot use map_err
+
         driver
-            .world
-            .resolve_with(&driver.entry_file, main_id, &content)
+            .with_shadow_file_by_id(main_id, &content, |driver| driver.compile())
             .unwrap();
 
-        // compile and export document
-        let mut tracer = Tracer::default();
-        typst::compile(&driver.world, &mut tracer).unwrap();
         comemo::evict(10);
     }
 }

@@ -314,11 +314,16 @@ impl<M: AccessModel + Sized> Vfs<M> {
         source_id: TypstFileId,
         content: &str,
     ) -> FileResult<Source> {
-        let path = path.as_ref();
+        self.map_shadow(path.as_ref(), content)?;
+        self.resolve(path.as_ref(), source_id)
+    }
+
+    pub fn map_shadow(&self, path: &Path, content: &str) -> FileResult<()> {
         self.access_model
             .inner()
             .add_file(path.into(), content.as_bytes().into());
-        self.resolve(path, source_id)
+
+        Ok(())
     }
 
     pub fn remove_shadow(&self, path: &Path) {

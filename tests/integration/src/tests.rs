@@ -7,6 +7,7 @@ mod tests {
     use image::codecs::png::PngDecoder;
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
+    use typst_ts_compiler::service::Compiler;
     use typst_ts_dev_server::{http::run_http, RunHttpArgs};
     use typst_ts_integration_test::{wasm::wasm_pack_test, ArtifactBundle, ArtifactCompiler};
     use typst_ts_test_common::{corpus_root, package_renderer_dir};
@@ -340,7 +341,7 @@ mod tests {
             let json_artifact = serde_json::from_slice::<typst_ts_core::Artifact>(&json_artifact)
                 .expect("failed to deserialize json artifact");
 
-            let doc = json_artifact.to_document(&bundle.driver.world.font_resolver);
+            let doc = json_artifact.to_document(&bundle.driver.world().font_resolver);
             let pdf_doc = typst::export::pdf(&doc);
 
             let pdf_path = bundle.pdf.with_extension("artifact.pdf");

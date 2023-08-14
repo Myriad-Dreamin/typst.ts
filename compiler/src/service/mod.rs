@@ -1,3 +1,15 @@
+use crate::ShadowApi;
+use codespan_reporting::files::Files;
+use typst::{
+    diag::{At, SourceDiagnostic, SourceResult},
+    doc::Document,
+    eval::Tracer,
+    model::Content,
+    syntax::Span,
+    World,
+};
+use typst_ts_core::TypstFileId;
+
 pub(crate) mod diag;
 
 pub(crate) mod driver;
@@ -12,3 +24,199 @@ pub use session::*;
 pub(crate) mod watch;
 #[cfg(feature = "system-watch")]
 pub use watch::*;
+
+pub trait Compiler {
+    type World: World;
+
+    fn world(&self) -> &Self::World;
+
+    fn world_mut(&mut self) -> &mut Self::World;
+
+    fn main_id(&self) -> TypstFileId;
+
+    /// reset the compilation state
+    fn reset(&mut self) -> SourceResult<()>;
+
+    /// Compile once from scratch.
+    fn pure_compile(&mut self) -> SourceResult<Document> {
+        self.reset()?;
+
+        let mut tracer = Tracer::default();
+        // compile and export document
+        typst::compile(self.world(), &mut tracer)
+    }
+
+    /// With **the compilation state**, query the matches for the selector.
+    fn pure_query(&mut self, selector: String, document: &Document) -> SourceResult<Vec<Content>> {
+        self::query::retrieve(self.world(), &selector, document).at(Span::detached())
+    }
+
+    /// Compile once from scratch.
+    fn compile(&mut self) -> SourceResult<Document> {
+        self.pure_compile()
+    }
+
+    /// With **the compilation state**, query the matches for the selector.
+    fn query(&mut self, selector: String, document: &Document) -> SourceResult<Vec<Content>> {
+        self.pure_query(selector, document)
+    }
+}
+
+pub trait WrappedCompiler {
+    type Compiler: Compiler;
+
+    fn inner(&self) -> &Self::Compiler;
+
+    fn inner_mut(&mut self) -> &mut Self::Compiler;
+
+    fn wrap_main_id(&self) -> TypstFileId {
+        self.inner().main_id()
+    }
+
+    /// Hooked world access
+    fn wrap_world(&self) -> &<Self::Compiler as Compiler>::World {
+        self.inner().world()
+    }
+
+    /// Hooked world mut access
+    fn wrap_world_mut(&mut self) -> &mut <Self::Compiler as Compiler>::World {
+        self.inner_mut().world_mut()
+    }
+
+    /// Hooked reset the compilation state
+    fn wrap_reset(&mut self) -> SourceResult<()> {
+        self.inner_mut().reset()
+    }
+
+    /// Hooked compile once from scratch.
+    fn wrap_compile(&mut self) -> SourceResult<Document> {
+        self.inner_mut().compile()
+    }
+
+    /// With **the compilation state**, hooked query the matches for the
+    /// selector.
+    fn wrap_query(&mut self, selector: String, document: &Document) -> SourceResult<Vec<Content>> {
+        self.inner_mut().query(selector, document)
+    }
+}
+
+/// A blanket implementation for all `WrappedCompiler`.
+/// If you want to wrap a compiler, you should override methods in
+/// `WrappedCompiler`.
+impl<T: WrappedCompiler> Compiler for T {
+    type World = <T::Compiler as Compiler>::World;
+
+    #[inline]
+    fn world(&self) -> &Self::World {
+        self.wrap_world()
+    }
+
+    #[inline]
+    fn world_mut(&mut self) -> &mut Self::World {
+        self.wrap_world_mut()
+    }
+
+    #[inline]
+    fn main_id(&self) -> TypstFileId {
+        self.wrap_main_id()
+    }
+
+    #[inline]
+    fn reset(&mut self) -> SourceResult<()> {
+        self.wrap_reset()
+    }
+
+    #[inline]
+    fn pure_compile(&mut self) -> SourceResult<Document> {
+        self.inner_mut().pure_compile()
+    }
+
+    #[inline]
+    fn pure_query(&mut self, selector: String, document: &Document) -> SourceResult<Vec<Content>> {
+        self.inner_mut().pure_query(selector, document)
+    }
+
+    #[inline]
+    fn compile(&mut self) -> SourceResult<Document> {
+        self.wrap_compile()
+    }
+
+    #[inline]
+    fn query(&mut self, selector: String, document: &Document) -> SourceResult<Vec<Content>> {
+        self.wrap_query(selector, document)
+    }
+}
+
+impl<T: WrappedCompiler> ShadowApi for T
+where
+    T::Compiler: ShadowApi,
+{
+    fn map_shadow(&self, path: &std::path::Path, content: &str) -> typst::diag::FileResult<()> {
+        self.inner().map_shadow(path, content)
+    }
+
+    fn unmap_shadow(&self, path: &std::path::Path) -> typst::diag::FileResult<()> {
+        self.inner().unmap_shadow(path)
+    }
+}
+
+pub trait DiagObserver {
+    /// Print diagnostic messages to the terminal.
+    fn print_diagnostics(
+        &self,
+        errors: Vec<SourceDiagnostic>,
+    ) -> Result<(), codespan_reporting::files::Error>;
+
+    /// Print status message to the terminal.
+    fn print_status<const WITH_STATUS: bool>(&self, status: diag::Status);
+
+    /// Run inner function with print (optional) status and diagnostics to the
+    /// terminal.
+    fn with_compile_diag<const WITH_STATUS: bool, T>(
+        &mut self,
+        f: impl FnOnce(&mut Self) -> SourceResult<T>,
+    ) -> Option<T>;
+}
+
+impl<C: Compiler> DiagObserver for C
+where
+    C::World: for<'files> Files<'files, FileId = TypstFileId>,
+{
+    /// Print diagnostic messages to the terminal.
+    fn print_diagnostics(
+        &self,
+        errors: Vec<SourceDiagnostic>,
+    ) -> Result<(), codespan_reporting::files::Error> {
+        diag::print_diagnostics(self.world(), errors)
+    }
+
+    /// Print status message to the terminal.
+    fn print_status<const WITH_STATUS: bool>(&self, status: diag::Status) {
+        if !WITH_STATUS {
+            return;
+        }
+        diag::status(self.main_id(), status).unwrap();
+    }
+
+    /// Run inner function with print (optional) status and diagnostics to the
+    /// terminal.
+    fn with_compile_diag<const WITH_STATUS: bool, T>(
+        &mut self,
+        f: impl FnOnce(&mut Self) -> SourceResult<T>,
+    ) -> Option<T> {
+        self.print_status::<WITH_STATUS>(diag::Status::Compiling);
+        let start = std::time::Instant::now();
+        match f(self) {
+            Ok(val) => {
+                self.print_status::<WITH_STATUS>(diag::Status::Success(start.elapsed()));
+                Some(val)
+            }
+            Err(errs) => {
+                self.print_status::<WITH_STATUS>(diag::Status::Error(start.elapsed()));
+                // todo: process errors
+                let _ = self.print_diagnostics(*errs);
+                None
+            }
+        }
+    }
+}

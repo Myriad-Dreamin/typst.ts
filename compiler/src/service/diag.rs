@@ -1,5 +1,4 @@
 use std::io::{self, IsTerminal};
-use std::path::Path;
 
 use codespan_reporting::files::Files;
 use codespan_reporting::{
@@ -71,8 +70,8 @@ pub enum Status {
 }
 
 /// Render the status message.
-pub fn status(entry_file: &Path, status: Status) -> io::Result<()> {
-    let input = entry_file.display();
+pub fn status(entry_file: TypstFileId, status: Status) -> io::Result<()> {
+    let input = entry_file;
     match status {
         Status::Compiling => log::info!("{}: compiling ...", input),
         Status::Success(duration) => {
