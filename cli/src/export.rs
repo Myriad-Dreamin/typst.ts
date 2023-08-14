@@ -11,7 +11,8 @@ use crate::CompileArgs;
 
 type GroupDocExporter = GroupExporter<typst::doc::Document>;
 
-/// builtin formats should be enabled by default, and non-builtin formats should be
+/// builtin formats should be enabled by default, and non-builtin formats should
+/// be
 pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature hint */ &str)] = &[
     ("ast", REPORT_BUG_MESSAGE),
     ("ir", REPORT_BUG_MESSAGE),
@@ -134,7 +135,7 @@ fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExp
 pub fn prepare_exporters(args: &CompileArgs, entry_file: &Path) -> GroupDocExporter {
     let output_dir = {
         // If output is specified, use it.
-        let dir = (!args.output.is_empty()).then(|| Path::new(&args.output));
+        let dir = (!args.compile.output.is_empty()).then(|| Path::new(&args.compile.output));
         // Otherwise, use the parent directory of the entry file.
         let dir = dir.unwrap_or_else(|| entry_file.parent().expect("entry_file has no parent"));
         dir.join(entry_file.file_name().expect("entry_file has no file name"))

@@ -4,6 +4,7 @@ pub mod compile;
 pub mod export;
 pub mod font;
 pub mod query;
+pub mod query_repl;
 pub mod tracing;
 pub mod utils;
 pub mod version;
@@ -40,6 +41,8 @@ pub enum Subcommands {
 
     /// Processes an input file to extract provided metadata
     Query(QueryArgs),
+
+    QueryRepl(QueryReplArgs),
 
     #[clap(about = "Generate shell completion script.")]
     Completion(CompletionArgs),
@@ -88,10 +91,30 @@ pub enum PackageSubCommands {
 
 #[derive(Default, Debug, Clone, Parser)]
 #[clap(next_help_heading = "Compile options")]
-pub struct CompileArgs {
+pub struct CompileOnceArgs {
     /// Path to typst workspace.
     #[clap(long, short, default_value = ".")]
     pub workspace: String,
+
+    /// Entry file.
+    #[clap(long, short, required = true)]
+    pub entry: String,
+
+    /// Output to directory, default in the same directory as the entry file.
+    #[clap(long, short, default_value = "")]
+    pub output: String,
+
+    /// Add additional directories to search for fonts
+    #[clap(long = "font-path", value_name = "DIR", action = ArgAction::Append)]
+    pub font_paths: Vec<PathBuf>,
+}
+
+#[derive(Default, Debug, Clone, Parser)]
+#[clap(next_help_heading = "Compile options")]
+pub struct CompileArgs {
+    /// compile arguments before query.
+    #[clap(flatten)]
+    pub compile: CompileOnceArgs,
 
     /// Watch mode.
     #[clap(long)]
@@ -103,28 +126,16 @@ pub struct CompileArgs {
     #[clap(long)]
     pub dynamic_layout: bool,
 
-    /// Enable tracing.
-    /// Possible usage: --trace=verbosity={0..3}
-    ///   where verbosity: {0..3} -> {warning, info, debug, trace}
-    #[clap(long)]
-    pub trace: Option<String>,
-
-    /// Entry file.
-    #[clap(long, short, required = true)]
-    pub entry: String,
-
     /// Output formats, possible values: `json`, `pdf`, `svg`,
     ///   `json_glyphs`, `ast`, `ir`, and `rmp`.
     #[clap(long)]
     pub format: Vec<String>,
 
-    /// Output to directory, default in the same directory as the entry file.
-    #[clap(long, short, default_value = "")]
-    pub output: String,
-
-    /// Add additional directories to search for fonts
-    #[clap(long = "font-path", value_name = "DIR", action = ArgAction::Append)]
-    pub font_paths: Vec<PathBuf>,
+    /// Enable tracing.
+    /// Possible usage: --trace=verbosity={0..3}
+    ///   where verbosity: {0..3} -> {warning, info, debug, trace}
+    #[clap(long)]
+    pub trace: Option<String>,
 }
 
 /// Processes an input file to extract provided metadata
@@ -155,6 +166,14 @@ pub struct QueryArgs {
     /// Expect and retrieve exactly one element
     #[clap(long = "one", default_value = "false")]
     pub one: bool,
+}
+
+/// TODO: Repl Doc
+#[derive(Debug, Clone, Parser)]
+pub struct QueryReplArgs {
+    /// compile arguments before query.
+    #[clap(flatten)]
+    pub compile: CompileOnceArgs,
 }
 
 /// List all discovered fonts in system and custom font paths
