@@ -60,6 +60,60 @@ pub trait Compiler {
     fn query(&mut self, selector: String, document: &Document) -> SourceResult<Vec<Content>> {
         self.pure_query(selector, document)
     }
+
+    /// Determine whether the event is relevant to the compiler.
+    /// The default implementation is conservative, which means that
+    /// `MaybeRelevant` implies `MustRelevant`.
+    fn relevant(&self, event: &notify::Event) -> bool {
+        self._relevant(event).unwrap_or(true)
+    }
+
+    /// The default implementation of `relevant` method, which performs a
+    /// simple check on the event kind.
+    /// It returns following values:
+    /// - `Some(true)`: the event must be relevant to the compiler.
+    /// - `Some(false)`: the event must not be relevant to the compiler.
+    /// - `None`: the event may be relevant to the compiler.
+    fn _relevant(&self, event: &notify::Event) -> Option<bool> {
+        use notify::event::ModifyKind;
+        use notify::EventKind;
+
+        macro_rules! fs_event_must_relevant {
+            () => {
+                // create a file in workspace
+                EventKind::Create(_) |
+                // rename a file in workspace
+                EventKind::Modify(ModifyKind::Name(_))
+            };
+        }
+        macro_rules! fs_event_may_relevant {
+            () => {
+                // remove/modify file in workspace
+                EventKind::Remove(_) | EventKind::Modify(ModifyKind::Data(_)) |
+                // unknown manipulation in workspace
+                EventKind::Any | EventKind::Modify(ModifyKind::Any)
+            };
+        }
+        macro_rules! fs_event_never_relevant {
+            () => {
+                // read/write meta event
+                EventKind::Access(_) | EventKind::Modify(ModifyKind::Metadata(_)) |
+                // `::notify` internal events other event that we cannot identify
+                EventKind::Other | EventKind::Modify(ModifyKind::Other)
+            };
+        }
+
+        return match &event.kind {
+            fs_event_must_relevant!() => Some(true),
+            fs_event_may_relevant!() => None,
+            fs_event_never_relevant!() => Some(false),
+        };
+
+        // assert that all cases are covered
+        const _: () = match EventKind::Any {
+            fs_event_must_relevant!() | fs_event_may_relevant!() | fs_event_never_relevant!() => {}
+        };
+    }
 }
 
 pub trait WrappedCompiler {

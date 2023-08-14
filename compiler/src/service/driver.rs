@@ -6,6 +6,7 @@ use std::{
 };
 
 use crate::{ShadowApi, TypstSystemWorld};
+use codespan_reporting::files::Files;
 use typst::{
     diag::{At, SourceResult},
     syntax::{PackageSpec, Span},
@@ -16,7 +17,7 @@ use typst_ts_core::{
 };
 use typst_ts_svg_exporter::{flat_ir::serialize_doc, DynamicLayoutSvgExporter};
 
-use super::{Compiler, WrappedCompiler};
+use super::{watch_dir, Compiler, DiagObserver, WrappedCompiler};
 
 /// CompileDriver is a driver for typst compiler.
 /// It is responsible for operating the compiler without leaking implementation
@@ -79,54 +80,6 @@ impl CompileDriver {
         let pb: PathBuf = Path::new("/").join(pb);
         TypstFileId::new(None, &pb)
     }
-
-    /// Check whether a file system event is relevant to the world.
-    pub fn relevant(&self, event: &notify::Event) -> bool {
-        use notify::event::ModifyKind;
-        use notify::EventKind;
-
-        if event
-            .paths
-            .iter()
-            .any(|p| p.to_string_lossy().contains(".artifact."))
-        {
-            return false;
-        }
-
-        macro_rules! fs_event_must_relevant {
-            () => {
-                // create a file in workspace
-                EventKind::Create(_) |
-                // rename a file in workspace
-                EventKind::Modify(ModifyKind::Name(_))
-            };
-        }
-        macro_rules! fs_event_may_relevant {
-            () => {
-                // remove/modify file in workspace
-                EventKind::Remove(_) | EventKind::Modify(ModifyKind::Data(_)) |
-                // unknown manipulation in workspace
-                EventKind::Any | EventKind::Modify(ModifyKind::Any)
-            };
-        }
-        macro_rules! fs_event_never_relevant {
-            () => {
-                // read/write meta event
-                EventKind::Access(_) | EventKind::Modify(ModifyKind::Metadata(_)) |
-                // `::notify` internal events other event that we cannot identify
-                EventKind::Other | EventKind::Modify(ModifyKind::Other)
-            };
-        }
-
-        return matches!(
-            &event.kind,
-            fs_event_must_relevant!() | fs_event_may_relevant!()
-        );
-        // assert that all cases are covered
-        const _: () = match EventKind::Any {
-            fs_event_must_relevant!() | fs_event_may_relevant!() | fs_event_never_relevant!() => {}
-        };
-    }
 }
 
 impl Compiler for CompileDriver {
@@ -158,6 +111,20 @@ impl Compiler for CompileDriver {
             .map_err(map_err)?;
 
         Ok(())
+    }
+
+    /// Check whether a file system event is relevant to the world.
+    fn relevant(&self, event: &notify::Event) -> bool {
+        // todo: remove this check
+        if event
+            .paths
+            .iter()
+            .any(|p| p.to_string_lossy().contains(".artifact."))
+        {
+            return false;
+        }
+
+        self._relevant(event).unwrap_or(true)
     }
 }
 
@@ -318,6 +285,59 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
         println!("rerendering finished at {:?}", instant - instant_begin);
 
         Ok(pure_doc.take())
+    }
+}
+
+pub struct WatchDriver<C: Compiler> {
+    pub compiler: C,
+    pub root: PathBuf,
+    pub enable_watch: bool,
+}
+
+impl<C: Compiler> WatchDriver<C>
+where
+    C::World: for<'files> Files<'files, FileId = TypstFileId>,
+{
+    pub fn new(compiler: C, root: PathBuf) -> Self {
+        Self {
+            compiler,
+            root,
+            enable_watch: false,
+        }
+    }
+
+    pub fn set_enable(mut self, enable_watch: bool) -> Self {
+        self.enable_watch = enable_watch;
+        self
+    }
+
+    pub async fn compile(&mut self) -> bool {
+        if !self.enable_watch {
+            let compiled = self
+                .compiler
+                .with_compile_diag::<false, _>(|driver| driver.compile());
+            return compiled.is_some();
+        }
+
+        watch_dir(&self.root.clone(), move |events| {
+            // relevance checking
+            if events.is_some()
+                && !events
+                    .unwrap()
+                    .iter()
+                    // todo: inner
+                    .any(|event| self.compiler.relevant(event))
+            {
+                return;
+            }
+
+            // compile
+            self.compiler
+                .with_compile_diag::<true, _>(|driver| driver.compile());
+            comemo::evict(30);
+        })
+        .await;
+        true
     }
 }
 
