@@ -69,6 +69,9 @@ pub trait ShadowApi {
         unimplemented!()
     }
 
+    /// Reset the shadow files.
+    fn reset_shadow(&mut self);
+
     /// Add a shadow file to the driver.
     fn map_shadow(&self, path: &Path, content: &str) -> FileResult<()>;
 

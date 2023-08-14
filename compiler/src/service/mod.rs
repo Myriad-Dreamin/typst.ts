@@ -1,7 +1,9 @@
+use std::path::{Path, PathBuf};
+
 use crate::ShadowApi;
 use codespan_reporting::files::Files;
 use typst::{
-    diag::{At, SourceDiagnostic, SourceResult},
+    diag::{At, FileResult, SourceDiagnostic, SourceResult},
     doc::Document,
     eval::Tracer,
     model::Content,
@@ -205,11 +207,23 @@ impl<T: WrappedCompiler> ShadowApi for T
 where
     T::Compiler: ShadowApi,
 {
-    fn map_shadow(&self, path: &std::path::Path, content: &str) -> typst::diag::FileResult<()> {
+    #[inline]
+    fn _shadow_map_id(&self, _file_id: TypstFileId) -> FileResult<PathBuf> {
+        self.inner()._shadow_map_id(_file_id)
+    }
+
+    #[inline]
+    fn reset_shadow(&mut self) {
+        self.inner_mut().reset_shadow()
+    }
+
+    #[inline]
+    fn map_shadow(&self, path: &Path, content: &str) -> FileResult<()> {
         self.inner().map_shadow(path, content)
     }
 
-    fn unmap_shadow(&self, path: &std::path::Path) -> typst::diag::FileResult<()> {
+    #[inline]
+    fn unmap_shadow(&self, path: &Path) -> FileResult<()> {
         self.inner().unmap_shadow(path)
     }
 }
