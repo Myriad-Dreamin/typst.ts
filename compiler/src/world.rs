@@ -27,6 +27,7 @@ use crate::{
     package::Registry as PackageRegistry,
     vfs::{AccessModel as VfsAccessModel, Vfs},
     workspace::dependency::{DependencyTree, DependentFileInfo},
+    ShadowApi,
 };
 
 type CodespanResult<T> = Result<T, CodespanError>;
@@ -228,6 +229,22 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             Some(source) => f(source),
             None => Ok(default_v),
         }
+    }
+}
+
+impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
+    fn _shadow_map_id(&self, file_id: FileId) -> FileResult<PathBuf> {
+        self.path_for_id(file_id)
+    }
+
+    fn map_shadow(&self, path: &Path, content: &str) -> FileResult<()> {
+        self.vfs.map_shadow(path, content)
+    }
+
+    fn unmap_shadow(&self, path: &Path) -> FileResult<()> {
+        self.vfs.remove_shadow(path);
+
+        Ok(())
     }
 }
 

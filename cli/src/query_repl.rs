@@ -1,8 +1,6 @@
 use std::borrow::Cow::{self, Owned};
 use std::cell::RefCell;
-use typst_ts_compiler::service::CompileDriver;
-use typst_ts_core::exporter_builtins::GroupExporter;
-use typst_ts_core::exporter_utils::map_err;
+use typst_ts_compiler::service::{CompileDriver, Compiler, DiagObserver};
 
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
@@ -16,7 +14,7 @@ use crate::query::serialize;
 use crate::CompileOnceArgs;
 
 use typst::ide::autocomplete;
-use typst::{doc::Document, World};
+use typst::World;
 
 #[derive(Helper, Validator)]
 struct ReplContext {
@@ -191,8 +189,7 @@ pub fn start_repl_test(args: CompileOnceArgs) -> rustyline::Result<()> {
         .edit_mode(EditMode::Emacs)
         .build();
 
-    let exporter = GroupExporter::<Document>::new(vec![]);
-    let driver = crate::compile::create_driver(args.clone(), exporter);
+    let driver = crate::compile::create_driver(args.clone());
 
     let mut rl = Editor::with_config(config)?;
     rl.set_helper(Some(ReplContext::new(driver)));
@@ -233,7 +230,7 @@ impl ReplContext {
                 .borrow_mut()
                 .with_compile_diag::<false, _>(|driver: &mut CompileDriver| {
                     let doc = driver.compile()?;
-                    driver.query(line, &doc).map_err(map_err)
+                    driver.query(line, &doc)
                 });
 
         if let Some(compiled) = compiled {

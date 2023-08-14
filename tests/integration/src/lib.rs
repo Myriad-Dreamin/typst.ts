@@ -1,9 +1,12 @@
 pub mod wasm;
 
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 
 use typst::doc::Document;
-use typst_ts_compiler::{service::CompileDriver, TypstSystemWorld};
+use typst_ts_compiler::{
+    service::{CompileDriver, CompileExporter, Compiler},
+    TypstSystemWorld,
+};
 use typst_ts_core::{
     config::CompileOpts,
     exporter_builtins::{FromExporter, FsPathExporter, GroupExporter},
@@ -18,7 +21,7 @@ fn get_driver(
     workspace_dir: &Path,
     entry_file_path: &Path,
     exporter: GroupExporter<Document>,
-) -> CompileDriver {
+) -> CompileExporter<CompileDriver> {
     let world = TypstSystemWorld::new(CompileOpts {
         root_dir: workspace_dir.to_owned(),
         no_system_fonts: true,
@@ -26,11 +29,12 @@ fn get_driver(
     })
     .unwrap();
 
-    CompileDriver {
+    let driver = CompileDriver {
         world,
         entry_file: entry_file_path.to_owned(),
-        exporter,
-    }
+    };
+
+    CompileExporter::new(driver).with_exporter(exporter)
 }
 
 macro_rules! artifact_exporters {
@@ -84,7 +88,7 @@ fn doc_pdf_to_path<P: AsRef<Path>>(path: P) -> FsPathExporter<Vec<u8>, PdfDocExp
 }
 
 pub struct ArtifactBundle {
-    pub driver: CompileDriver,
+    pub driver: CompileExporter<CompileDriver>,
     pub json: std::path::PathBuf,
     pub tir: std::path::PathBuf,
     pub pdf: std::path::PathBuf,
@@ -122,10 +126,7 @@ impl ArtifactCompiler {
             ],
         );
 
-        driver
-            .compile()
-            .and_then(|doc| driver.export(Arc::new(doc)))
-            .unwrap();
+        driver.compile().unwrap();
 
         ArtifactBundle {
             driver,

@@ -47,6 +47,8 @@ pub mod service;
 /// Run the compiler in the system environment.
 #[cfg(feature = "system-compile")]
 pub(crate) mod system;
+use std::path::{Path, PathBuf};
+
 #[cfg(feature = "system-compile")]
 pub use system::TypstSystemWorld;
 
@@ -55,3 +57,64 @@ pub use system::TypstSystemWorld;
 pub(crate) mod browser;
 #[cfg(feature = "browser-compile")]
 pub use browser::TypstBrowserWorld;
+use typst::{
+    diag::{At, FileResult, SourceResult},
+    syntax::Span,
+};
+use typst_ts_core::TypstFileId;
+
+/// Latest version of the shadow api, which is in beta.
+pub trait ShadowApi {
+    fn _shadow_map_id(&self, _file_id: TypstFileId) -> FileResult<PathBuf> {
+        unimplemented!()
+    }
+
+    /// Add a shadow file to the driver.
+    fn map_shadow(&self, path: &Path, content: &str) -> FileResult<()>;
+
+    /// Add a shadow file to the driver.
+    fn unmap_shadow(&self, path: &Path) -> FileResult<()>;
+
+    /// Wrap the driver with a given shadow file and run the inner function.
+    fn with_shadow_file<T>(
+        &mut self,
+        file_path: &Path,
+        content: &str,
+        f: impl FnOnce(&mut Self) -> SourceResult<T>,
+    ) -> SourceResult<T> {
+        self.map_shadow(file_path, content).at(Span::detached())?;
+        let res: Result<T, Box<Vec<typst::diag::SourceDiagnostic>>> = f(self);
+        self.unmap_shadow(file_path).at(Span::detached())?;
+        res
+    }
+
+    /// Add a shadow file to the driver by file id.
+    /// Note: to enable this function, `ShadowApi` must implement
+    /// `_shadow_map_id`.
+    fn map_shadow_by_id(&self, file_id: TypstFileId, content: &str) -> FileResult<()> {
+        let file_path = self._shadow_map_id(file_id)?;
+        self.map_shadow(&file_path, content)
+    }
+
+    /// Add a shadow file to the driver by file id.
+    /// Note: to enable this function, `ShadowApi` must implement
+    /// `_shadow_map_id`.
+    fn unmap_shadow_by_id(&self, file_id: TypstFileId) -> FileResult<()> {
+        let file_path = self._shadow_map_id(file_id)?;
+        self.unmap_shadow(&file_path)
+    }
+
+    /// Wrap the driver with a given shadow file and run the inner function by
+    /// file id.
+    /// Note: to enable this function, `ShadowApi` must implement
+    /// `_shadow_map_id`.
+    fn with_shadow_file_by_id<T>(
+        &mut self,
+        file_id: TypstFileId,
+        content: &str,
+        f: impl FnOnce(&mut Self) -> SourceResult<T>,
+    ) -> SourceResult<T> {
+        let file_path = self._shadow_map_id(file_id).at(Span::detached())?;
+        self.with_shadow_file(&file_path, content, f)
+    }
+}

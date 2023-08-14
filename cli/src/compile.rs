@@ -1,8 +1,11 @@
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 
-use typst::{diag::SourceResult, doc::Document};
+use typst::doc::Document;
 use typst_ts_compiler::{
-    service::{watch_dir, CompileDriver},
+    service::{
+        watch_dir, CompileDriver, CompileExporter, Compiler, DiagObserver, DynamicLayoutCompiler,
+        WrappedCompiler,
+    },
     TypstSystemWorld,
 };
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
@@ -14,7 +17,7 @@ use crate::{
     CompileArgs, CompileOnceArgs,
 };
 
-pub fn create_driver(args: CompileOnceArgs, exporter: GroupExporter<Document>) -> CompileDriver {
+pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
     let workspace_dir = Path::new(args.workspace.as_str()).clean();
     let entry_file_path = Path::new(args.entry.as_str()).clean();
 
@@ -54,7 +57,6 @@ pub fn create_driver(args: CompileOnceArgs, exporter: GroupExporter<Document>) -
     CompileDriver {
         world,
         entry_file: entry_file_path.to_owned(),
-        exporter,
     }
 }
 
@@ -67,7 +69,7 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
         .exit()
     }
 
-    let mut driver = create_driver(args.compile.clone(), exporter);
+    let driver = create_driver(args.compile.clone());
 
     let _trace_guard = {
         let guard = args.trace.clone().map(TraceGuard::new);
@@ -81,52 +83,51 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
         guard.unwrap()
     };
 
-    #[allow(clippy::type_complexity)]
-    let compile_once: Box<dyn Fn(&mut CompileDriver) -> SourceResult<()>> = if args.dynamic_layout {
-        Box::new(|driver: &mut CompileDriver| {
-            let output_dir = {
-                // If output is specified, use it.
-                let dir =
-                    (!args.compile.output.is_empty()).then(|| Path::new(&args.compile.output));
-                // Otherwise, use the parent directory of the entry file.
-                let dir = dir.unwrap_or_else(|| {
-                    driver
-                        .entry_file
-                        .parent()
-                        .expect("entry_file has no parent")
-                });
-                dir.join(
-                    driver
-                        .entry_file
-                        .file_name()
-                        .expect("entry_file has no file name"),
-                )
-            };
-            CompileDriver::once_dynamic(driver, &output_dir)
-        })
-    } else {
-        Box::new(|driver: &mut CompileDriver| {
-            let doc = Arc::new(driver.compile()?);
-            driver.export(doc)
-        })
+    // todo: make dynamic layout exporter
+    let output_dir = {
+        // If output is specified, use it.
+        let dir = (!args.compile.output.is_empty()).then(|| Path::new(&args.compile.output));
+        // Otherwise, use the parent directory of the entry file.
+        let dir = dir.unwrap_or_else(|| {
+            driver
+                .entry_file
+                .parent()
+                .expect("entry_file has no parent")
+        });
+        dir.join(
+            driver
+                .entry_file
+                .file_name()
+                .expect("entry_file has no file name"),
+        )
     };
+
+    // CompileExporter
+    let driver = CompileExporter::new(driver).with_exporter(exporter);
+    let mut driver = DynamicLayoutCompiler::new(driver, output_dir).set_enable(args.dynamic_layout);
 
     if args.watch {
         utils::async_continue(async move {
-            watch_dir(&driver.world.root.clone(), move |events| {
+            watch_dir(&driver.world().root.clone(), move |events| {
                 // relevance checking
-                if events.is_some() && !events.unwrap().iter().any(|event| driver.relevant(event)) {
+                if events.is_some()
+                    && !events
+                        .unwrap()
+                        .iter()
+                        // todo: inner
+                        .any(|event| driver.inner().inner().relevant(event))
+                {
                     return;
                 }
 
                 // compile
-                driver.with_compile_diag::<true, _>(&compile_once);
+                driver.with_compile_diag::<true, _>(|driver| driver.compile());
                 comemo::evict(30);
             })
             .await;
         })
     } else {
-        let compiled = driver.with_compile_diag::<false, _>(compile_once);
+        let compiled = driver.with_compile_diag::<false, _>(|driver| driver.compile());
         utils::logical_exit(compiled.is_some());
     }
 }
