@@ -10,7 +10,7 @@ use typst::{doc::Document, font::FontVariant, World};
 use typst_ts_cli::{
     compile::compile_export,
     font::EMBEDDED_FONT,
-    utils::{self, UnwrapOrExit},
+    utils::{self, make_absolute, UnwrapOrExit},
     version::intercept_version,
     CompileArgs, CompileOnceArgs, CompletionArgs, EnvKey, FontSubCommands, GenPackagesDocArgs,
     LinkPackagesArgs, ListFontsArgs, ListPackagesArgs, MeasureFontsArgs, Opts, PackageSubCommands,
@@ -275,12 +275,12 @@ fn link_packages(args: LinkPackagesArgs, should_delete: bool) -> ! {
     let pkg_dirname = format!("{}/{}", name, version);
 
     let local_path = world.registry.local_path().unwrap();
-    let pkg_link_target = local_path.join("preview").join(pkg_dirname);
-    let pkg_link_source = Path::new(&args.manifest).parent().unwrap();
+    let pkg_link_target = make_absolute(&local_path.join("preview").join(pkg_dirname));
+    let pkg_link_source = make_absolute(Path::new(&args.manifest).parent().unwrap());
 
     let action = if should_delete { "unlink" } else { "link" };
 
-    let src_pretty = unix_slash(pkg_link_source);
+    let src_pretty = unix_slash(&pkg_link_source);
     let dst_pretty = unix_slash(&pkg_link_target);
 
     eprintln!("{action} package: {} -> {}", src_pretty, dst_pretty);
@@ -299,7 +299,7 @@ fn link_packages(args: LinkPackagesArgs, should_delete: bool) -> ! {
         }
 
         std::fs::create_dir_all(pkg_link_target.parent().unwrap()).unwrap();
-        utils::symlink_dir(pkg_link_source, &pkg_link_target).unwrap();
+        utils::symlink_dir(&pkg_link_source, &pkg_link_target).unwrap();
     }
 
     exit(0)

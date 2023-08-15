@@ -1,4 +1,7 @@
-use std::{io, path::Path};
+use std::{
+    io,
+    path::{Path, PathBuf},
+};
 
 use tokio::runtime::Builder;
 
@@ -53,8 +56,8 @@ pub fn symlink_dir(src: &Path, dst: &Path) -> io::Result<()> {
         use typst_ts_core::path::PathClean;
         let src = src.clean();
         let dst = dst.clean();
-        // set up a junction, which is like a symlink dir but without the permission requirements
-        // todo: filesystem other than NTFS?
+        // set up a junction, which is like a symlink dir but without the permission
+        // requirements todo: filesystem other than NTFS?
         std::process::Command::new("cmd")
             .arg("/C")
             .arg("mklink")
@@ -107,4 +110,20 @@ pub fn remove_symlink_dir(path: &Path) -> io::Result<()> {
             "symlinks are not supported on this platform",
         ))
     }
+}
+
+pub fn current_dir() -> PathBuf {
+    std::env::current_dir().unwrap_or_exit()
+}
+
+pub fn make_absolute_from(path: &Path, relative_to: impl FnOnce() -> PathBuf) -> PathBuf {
+    if path.is_absolute() {
+        path.to_owned()
+    } else {
+        relative_to().join(path)
+    }
+}
+
+pub fn make_absolute(path: &Path) -> PathBuf {
+    make_absolute_from(path, current_dir)
 }
