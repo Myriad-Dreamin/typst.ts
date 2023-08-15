@@ -196,7 +196,7 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
         }
     }
 
-    pub fn set_output_dir(&mut self, output_dir: PathBuf) {
+    pub fn set_output(&mut self, output_dir: PathBuf) {
         self.output_dir = output_dir;
     }
 
