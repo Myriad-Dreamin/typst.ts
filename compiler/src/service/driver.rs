@@ -180,11 +180,14 @@ impl<C: Compiler> WrappedCompiler for CompileExporter<C> {
     }
 }
 
+pub type LayoutWidths = Vec<typst::geom::Abs>;
+
 pub struct DynamicLayoutCompiler<C: Compiler + ShadowApi, const ALWAYS_ENABLE: bool = false> {
     pub compiler: C,
     // todo: abstract this
     output_dir: PathBuf,
     pub enable_dynamic_layout: bool,
+    pub layout_widths: LayoutWidths,
 }
 
 impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
@@ -193,11 +196,19 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
             compiler,
             output_dir,
             enable_dynamic_layout: false,
+            layout_widths: LayoutWidths::from_iter(
+                (0..40)
+                    .map(|i| typst::geom::Abs::pt(750.0) - typst::geom::Abs::pt(i as f64 * 10.0)),
+            ),
         }
     }
 
     pub fn set_output(&mut self, output_dir: PathBuf) {
         self.output_dir = output_dir;
+    }
+
+    pub fn set_layout_widths(&mut self, layout_widths: LayoutWidths) {
+        self.layout_widths = layout_widths;
     }
 
     pub fn with_enable(mut self, enable_dynamic_layout: bool) -> Self {
@@ -232,17 +243,13 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
         // self.export(doc.clone())?;
         // checkout the entry file
 
-        use typst::geom::Abs;
-
         let mut svg_exporter = DynamicLayoutSvgExporter::default();
-        let base_layout = Abs::pt(750.0);
 
         // for each 10pt we rerender once
         let instant_begin = std::time::Instant::now();
-        for i in 0..40 {
+        for (i, current_width) in self.layout_widths.clone().into_iter().enumerate() {
             let instant = std::time::Instant::now();
             // replace layout
-            let current_width = base_layout - Abs::pt(i as f64 * 10.0);
 
             let variables: String = format!(
                 r##"
