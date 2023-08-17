@@ -295,7 +295,6 @@ impl TypstRenderer {
             root.set_inner_html(&svg);
             let window = web_sys::window().unwrap();
             if let Ok(proc) = js_sys::Reflect::get(&window, &JsValue::from_str("typstProcessSvg")) {
-                web_sys::console::log_1(&proc);
                 proc.dyn_ref::<js_sys::Function>()
                     .unwrap()
                     .call1(&JsValue::NULL, &root.first_element_child().unwrap())
