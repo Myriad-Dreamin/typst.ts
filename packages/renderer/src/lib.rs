@@ -308,18 +308,33 @@ impl TypstRenderer {
             Ok(())
         };
 
-        if layout.0 .0 < base_cw {
+        // console_log!("base_cw {}", base_cw);
+
+        // console_log!(
+        //     "layouts {:?}",
+        //     session
+        //         .client
+        //         .doc
+        //         .layouts
+        //         .iter()
+        //         .map(|x| x.0)
+        //         .collect::<Vec<_>>()
+        // );
+
+        const EPS: f32 = 1e-2;
+
+        if layout.0 .0 < base_cw + EPS {
             return render(layout);
         }
 
         let layout = session.client.doc.layouts.last().unwrap();
 
-        if layout.0 .0 > base_cw {
+        if layout.0 .0 + EPS > base_cw {
             return render(layout);
         }
 
         for layout in &session.client.doc.layouts {
-            if layout.0 .0 < base_cw {
+            if layout.0 .0 < base_cw + EPS {
                 return render(layout);
             }
         }
