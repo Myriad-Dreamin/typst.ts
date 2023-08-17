@@ -253,6 +253,17 @@ pub mod prelude {
         };
     }
 
+    #[macro_export]
+    macro_rules! error_once_map_string {
+        ($loc:expr, $($arg_key:ident: $arg:expr),+ $(,)?) => {
+            map_string_err_with_args($loc, [$((stringify!($arg_key), $arg.to_string())),+])
+        };
+        ($loc:expr $(,)?) => {
+            map_string_err($loc)
+        };
+    }
+
     pub use error_once;
     pub use error_once_map;
+    pub use error_once_map_string;
 }
