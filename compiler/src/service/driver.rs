@@ -187,6 +187,7 @@ pub struct DynamicLayoutCompiler<C: Compiler + ShadowApi, const ALWAYS_ENABLE: b
     // todo: abstract this
     output_dir: PathBuf,
     pub enable_dynamic_layout: bool,
+    pub extension: String,
     pub layout_widths: LayoutWidths,
 }
 
@@ -196,6 +197,7 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
             compiler,
             output_dir,
             enable_dynamic_layout: false,
+            extension: "multi.sir.bin".to_owned(),
             layout_widths: LayoutWidths::from_iter(
                 (0..40)
                     .map(|i| typst::geom::Abs::pt(750.0) - typst::geom::Abs::pt(i as f64 * 10.0)),
@@ -205,6 +207,10 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
 
     pub fn set_output(&mut self, output_dir: PathBuf) {
         self.output_dir = output_dir;
+    }
+
+    pub fn set_extension(&mut self, extension: String) {
+        self.extension = extension;
     }
 
     pub fn set_layout_widths(&mut self, layout_widths: LayoutWidths) {
@@ -277,7 +283,7 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
             })?;
         }
 
-        let module_output = self.output_dir.with_extension("multi.sir.bin");
+        let module_output = self.output_dir.with_extension(&self.extension);
 
         let (doc, glyphs) = svg_exporter.finalize();
 
