@@ -76,13 +76,21 @@ impl LowerBuilder {
         }
 
         // swap link items
-        let mut ls = items.len();
-        for i in (0..ls).rev() {
-            if matches!(&items[i], (_, SvgItem::Link(..))) {
-                ls -= 1;
-                items.swap(i, ls);
+        items.sort_by(|x, y| {
+            let x_is_link = matches!(x.1, SvgItem::Link(..));
+            let y_is_link = matches!(y.1, SvgItem::Link(..));
+            if x_is_link || y_is_link {
+                if x_is_link && y_is_link {
+                    return std::cmp::Ordering::Equal;
+                } else if x_is_link {
+                    return std::cmp::Ordering::Greater;
+                } else {
+                    return std::cmp::Ordering::Less;
+                }
             }
-        }
+
+            std::cmp::Ordering::Equal
+        });
 
         SvgItem::Group(ir::GroupItem(items))
     }
