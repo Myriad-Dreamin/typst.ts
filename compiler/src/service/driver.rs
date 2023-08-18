@@ -258,14 +258,14 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
                 current_width.to_pt()
             );
             println!(
-                "rerendering {} at {:?}, {variables}",
+                "rerendering {} at {:?}, width={current_width:?} target=web",
                 i,
                 instant - instant_begin
             );
 
             self.with_shadow_file_by_id(variable_file, &variables, |this| {
                 // compile and export document
-                let output = Arc::new(this.inner_mut().compile().unwrap());
+                let output = Arc::new(this.inner_mut().compile()?);
                 svg_exporter.render(current_width, output);
                 println!(
                     "rerendered {} at {:?}, {}",
@@ -274,8 +274,7 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
                     svg_exporter.debug_stat()
                 );
                 Ok(())
-            })
-            .unwrap();
+            })?;
         }
 
         let module_output = self.output_dir.with_extension("multi.sir.bin");
