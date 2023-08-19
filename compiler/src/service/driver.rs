@@ -184,29 +184,41 @@ pub type LayoutWidths = Vec<typst::geom::Abs>;
 
 pub struct DynamicLayoutCompiler<C: Compiler + ShadowApi, const ALWAYS_ENABLE: bool = false> {
     pub compiler: C,
-    // todo: abstract this
-    output_dir: PathBuf,
+
     pub enable_dynamic_layout: bool,
+
+    // todo: abstract this
+    output: PathBuf,
     pub extension: String,
+
     pub layout_widths: LayoutWidths,
+
+    /// Specify the target. It's default value is `web`.
+    /// You can specify a sub target like `web-dark` to refine the target.
+    /// Though we even don't encourage you to do so.
+    ///
+    /// Before typst allowing passing arguments to the compiler, this is
+    /// (probably) the only way to control the typst code's behavior.
+    pub target: String,
 }
 
 impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
-    pub fn new(compiler: C, output_dir: PathBuf) -> Self {
+    pub fn new(compiler: C, output: PathBuf) -> Self {
         Self {
             compiler,
-            output_dir,
+            output,
             enable_dynamic_layout: false,
             extension: "multi.sir.bin".to_owned(),
             layout_widths: LayoutWidths::from_iter(
                 (0..40)
                     .map(|i| typst::geom::Abs::pt(750.0) - typst::geom::Abs::pt(i as f64 * 10.0)),
             ),
+            target: "web".to_owned(),
         }
     }
 
-    pub fn set_output(&mut self, output_dir: PathBuf) {
-        self.output_dir = output_dir;
+    pub fn set_output(&mut self, output: PathBuf) {
+        self.output = output;
     }
 
     pub fn set_extension(&mut self, extension: String) {
@@ -215,6 +227,10 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
 
     pub fn set_layout_widths(&mut self, layout_widths: LayoutWidths) {
         self.layout_widths = layout_widths;
+    }
+
+    pub fn set_target(&mut self, target: String) {
+        self.target = target;
     }
 
     pub fn with_enable(mut self, enable_dynamic_layout: bool) -> Self {
@@ -260,13 +276,15 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
             let variables: String = format!(
                 r##"
 #let page-width = {:2}pt
-#let target = "web""##,
-                current_width.to_pt()
+#let target = "{}""##,
+                current_width.to_pt(),
+                self.target,
             );
             println!(
-                "rerendering {} at {:?}, width={current_width:?} target=web",
+                "rerendering {} at {:?}, width={current_width:?} target={}",
                 i,
-                instant - instant_begin
+                instant - instant_begin,
+                self.target,
             );
 
             self.with_shadow_file_by_id(variable_file, &variables, |this| {
@@ -283,7 +301,7 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
             })?;
         }
 
-        let module_output = self.output_dir.with_extension(&self.extension);
+        let module_output = self.output.with_extension(&self.extension);
 
         let (doc, glyphs) = svg_exporter.finalize();
 
