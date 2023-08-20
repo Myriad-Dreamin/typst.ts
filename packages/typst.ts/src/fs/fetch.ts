@@ -36,8 +36,8 @@ export class FetchAccessModel implements FsAccessModel {
   mRealPaths: Map<string, string | undefined> = new Map();
   mData: Map<string, Uint8Array | undefined> = new Map();
   constructor(private root: string, options?: FetchAccessOptions) {
-    if (!root.endsWith('/')) {
-      this.root += '/';
+    if (root.endsWith('/')) {
+      this.root = this.root.slice(0, this.root.length - 1);
     }
     if (options?.polyfillHeadRequest) {
       void 0;

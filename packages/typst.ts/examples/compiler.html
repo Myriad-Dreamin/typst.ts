@@ -6,7 +6,7 @@
     <meta http-equiv="origin-trial" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Typst.ts</title>
-    <script type="module" src="/dist/main.js"></script>
+    <script type="module" src="/core/dist/main.js"></script>
     <!-- pdf.js v3.5.141 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.min.js"></script>
     <link
@@ -17,7 +17,7 @@
       referrerpolicy="no-referrer"
     />
 
-    <script src="/examples/typst.js"></script>
+    <script src="/core/examples/typst.js"></script>
     <script>
       pdfjsLib.GlobalWorkerOptions.workerSrc =
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
@@ -29,7 +29,7 @@
         const runCompile = async () => {
           const begin = performance.now();
           compilerPlugin.reset();
-          const ast = await compilerPlugin.getAst('skyzh-cv/main.typ');
+          const ast = await compilerPlugin.getAst('corpus/skyzh-cv/main.typ');
           const end = performance.now();
           const rounded = Math.round((end - begin) * 1000) / 1000;
 
@@ -44,22 +44,22 @@
           .init({
             beforeBuild: [
               window.TypstCompileModule.preloadRemoteFonts([
-                'http://localhost:20811/fonts/LinLibertine_R.ttf',
-                'http://localhost:20811/fonts/LinLibertine_RB.ttf',
-                'http://localhost:20811/fonts/LinLibertine_RBI.ttf',
-                'http://localhost:20811/fonts/LinLibertine_RI.ttf',
-                'http://localhost:20811/fonts/NewCMMath-Book.otf',
-                'http://localhost:20811/fonts/NewCMMath-Regular.otf',
+                'http://localhost:20810/assets/fonts/LinLibertine_R.ttf',
+                'http://localhost:20810/assets/fonts/LinLibertine_RB.ttf',
+                'http://localhost:20810/assets/fonts/LinLibertine_RBI.ttf',
+                'http://localhost:20810/assets/fonts/LinLibertine_RI.ttf',
+                'http://localhost:20810/assets/fonts/NewCMMath-Book.otf',
+                'http://localhost:20810/assets/fonts/NewCMMath-Regular.otf',
               ]),
-              window.TypstCompileModule.preloadSystemFonts({
-                byFamily: ['Segoe UI Symbol'],
-              }),
+              // window.TypstCompileModule.preloadSystemFonts({
+              //   byFamily: ['Segoe UI Symbol'],
+              // }),
               window.TypstCompileModule.withAccessModel(
-                new window.TypstCompileModule.FetchAccessModel('http://localhost:20810/'),
+                new window.TypstCompileModule.FetchAccessModel('http://localhost:20810'),
               ),
             ],
             getModule: () =>
-              '/node_modules/@myriaddreamin/typst-ts-web-compiler/typst_ts_web_compiler_bg.wasm',
+              '/core/node_modules/@myriaddreamin/typst-ts-web-compiler/typst_ts_web_compiler_bg.wasm',
           })
           .then(() => {
             document.getElementById('compile-button').addEventListener('click', () => {
@@ -70,7 +70,7 @@
       });
     </script>
 
-    <link rel="stylesheet" href="/examples/typst.ts.css" />
+    <link rel="stylesheet" href="/core/examples/typst.ts.css" />
     <style>
       .content {
         display: flex;
@@ -120,13 +120,13 @@
       <div class="navigator">
         <ul>
           <li style="padding: 10px 40px">
-            <a href="/">Embed Your Typst Document</a>
+            <a href="/core">Embed Your Typst Document</a>
           </li>
           <li style="padding: 10px 40px">
-            <a href="/">Renderer Demo</a>
+            <a href="/core">Renderer Demo</a>
           </li>
           <li style="padding: 10px 40px">
-            <a href="/examples/compiler.html">Compiler Demo</a>
+            <a href="/core/examples/compiler.html">Compiler Demo</a>
           </li>
         </ul>
         <div class="clear"></div>

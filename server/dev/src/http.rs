@@ -30,7 +30,8 @@ pub async fn run_http(args: RunHttpArgs) {
             .or(warp::fs::dir("github-pages"))
     });
 
-    let cors = warp::cors().allow_methods(&[Method::GET, Method::POST, Method::DELETE]);
+    let cors =
+        warp::cors().allow_methods(&[Method::HEAD, Method::GET, Method::POST, Method::DELETE]);
 
     let routes = corpora
         .or(assets)
