@@ -1,37 +1,29 @@
 use std::{
-    borrow::Cow,
     path::{Path, PathBuf},
-    str::FromStr,
     sync::Arc,
 };
 
-use crate::{ShadowApi, TypstSystemWorld};
-use codespan_reporting::files::Files;
-use typst::{
-    diag::{At, SourceResult},
-    syntax::{PackageSpec, Span},
-};
+use crate::ShadowApi;
+use typst::{diag::SourceResult, World};
 use typst_ts_core::{
-    exporter_builtins::GroupExporter, exporter_utils::map_err, path::PathClean, Exporter, TakeAs,
-    TypstFileId,
+    exporter_builtins::GroupExporter, path::PathClean, Exporter, TakeAs, TypstFileId,
 };
-use typst_ts_svg_exporter::{flat_ir::serialize_doc, DynamicLayoutSvgExporter};
 
-use super::{watch_dir, Compiler, DiagObserver, WrappedCompiler};
+use super::{Compiler, WorkspaceProvider, WrappedCompiler};
 
-/// CompileDriver is a driver for typst compiler.
+/// CompileDriverImpl is a driver for typst compiler.
 /// It is responsible for operating the compiler without leaking implementation
 /// details of the compiler.
-pub struct CompileDriver {
+pub struct CompileDriverImpl<W: World> {
     /// World that has access to the file system.
-    pub world: TypstSystemWorld,
+    pub world: W,
     /// Path to the entry file.
     pub entry_file: PathBuf,
 }
 
-impl CompileDriver {
+impl<W: World> CompileDriverImpl<W> {
     /// Create a new driver.
-    pub fn new(world: TypstSystemWorld) -> Self {
+    pub fn new(world: W) -> Self {
         Self {
             world,
             entry_file: PathBuf::default(),
@@ -45,17 +37,19 @@ impl CompileDriver {
     }
 
     /// set an entry file.
-    pub fn set_entry_file<'a>(&mut self, entry_file: impl Into<Cow<'a, PathBuf>>) {
-        self.entry_file = entry_file.into().into_owned();
+    pub fn set_entry_file(&mut self, entry_file: PathBuf) {
+        self.entry_file = entry_file;
     }
+}
 
+impl<W: World + WorkspaceProvider> CompileDriverImpl<W> {
     /// Get the file id for a given path.
     /// Note: only works for files in the workspace instead of external
     /// packages.
     pub fn id_for_path(&self, pb: PathBuf) -> TypstFileId {
         let pb = if pb.is_absolute() {
             let pb = pb.clean();
-            let root = self.world.root.clean();
+            let root = self.world.workspace_root().clean();
             pb.strip_prefix(root).unwrap().to_owned()
         } else {
             pb
@@ -65,8 +59,8 @@ impl CompileDriver {
     }
 }
 
-impl Compiler for CompileDriver {
-    type World = TypstSystemWorld;
+impl<W: World + WorkspaceProvider> Compiler for CompileDriverImpl<W> {
+    type World = W;
 
     fn world(&self) -> &Self::World {
         &self.world
@@ -83,20 +77,16 @@ impl Compiler for CompileDriver {
     /// reset the compilation state
     fn reset(&mut self) -> SourceResult<()> {
         // reset the world caches
-        self.world.reset();
-
+        self.world.reset()?;
         // checkout the entry file
-        let main_id = self.main_id();
-        self.world.main = main_id;
-        // early error cannot use map_err
-        self.world
-            .resolve(&self.entry_file, main_id)
-            .map_err(map_err)?;
+        self.world.set_main_id(self.main_id());
 
         Ok(())
     }
 
     /// Check whether a file system event is relevant to the world.
+    // todo: remove cfg feature here
+    #[cfg(feature = "system-watch")]
     fn relevant(&self, event: &notify::Event) -> bool {
         // todo: remove this check
         if event
@@ -111,7 +101,7 @@ impl Compiler for CompileDriver {
     }
 }
 
-impl ShadowApi for CompileDriver {
+impl<W: World + ShadowApi> ShadowApi for CompileDriverImpl<W> {
     fn _shadow_map_id(&self, file_id: TypstFileId) -> typst::diag::FileResult<PathBuf> {
         self.world._shadow_map_id(file_id)
     }
@@ -239,6 +229,7 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
     }
 }
 
+#[cfg(feature = "dynamic-layout")]
 impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
     type Compiler = C;
 
@@ -251,6 +242,13 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
     }
 
     fn wrap_compile(&mut self) -> SourceResult<typst::doc::Document> {
+        use std::str::FromStr;
+        use typst::{
+            diag::At,
+            syntax::{PackageSpec, Span},
+        };
+        use typst_ts_svg_exporter::{flat_ir::serialize_doc, DynamicLayoutSvgExporter};
+
         if !self.enable_dynamic_layout {
             return self.inner_mut().compile();
         }
@@ -320,9 +318,13 @@ pub struct WatchDriver<C: Compiler> {
     pub enable_watch: bool,
 }
 
+// todo: remove cfg feature here
+#[cfg(feature = "system-watch")]
+use super::DiagObserver;
+#[cfg(feature = "system-watch")]
 impl<C: Compiler> WatchDriver<C>
 where
-    C::World: for<'files> Files<'files, FileId = TypstFileId>,
+    C::World: for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>,
 {
     pub fn new(compiler: C, root: PathBuf) -> Self {
         Self {
@@ -345,7 +347,7 @@ where
             return compiled.is_some();
         }
 
-        watch_dir(&self.root.clone(), move |events| {
+        super::watch_dir(&self.root.clone(), move |events| {
             // relevance checking
             if events.is_some()
                 && !events

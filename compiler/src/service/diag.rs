@@ -13,6 +13,8 @@ use typst::{diag::SourceDiagnostic, World};
 
 use typst_ts_core::TypstFileId;
 
+use super::DiagStatus;
+
 /// Get stderr with color support if desirable.
 fn color_stream() -> StandardStream {
     StandardStream::stderr(if std::io::stderr().is_terminal() {
@@ -62,22 +64,17 @@ pub fn print_diagnostics<'files, W: World + Files<'files, FileId = TypstFileId>>
     Ok(())
 }
 
-/// The status in which the watcher can be.
-pub enum Status {
-    Compiling,
-    Success(std::time::Duration),
-    Error(std::time::Duration),
-}
-
 /// Render the status message.
-pub fn status(entry_file: TypstFileId, status: Status) -> io::Result<()> {
+pub fn status(entry_file: TypstFileId, status: DiagStatus) -> io::Result<()> {
     let input = entry_file;
     match status {
-        Status::Compiling => log::info!("{}: compiling ...", input),
-        Status::Success(duration) => {
+        DiagStatus::Compiling => log::info!("{}: compiling ...", input),
+        DiagStatus::Success(duration) => {
             log::info!("{}: Compilation succeeded in {:?}", input, duration)
         }
-        Status::Error(duration) => log::info!("{}: Compilation failed after {:?}", input, duration),
+        DiagStatus::Error(duration) => {
+            log::info!("{}: Compilation failed after {:?}", input, duration)
+        }
     };
     Ok(())
 }

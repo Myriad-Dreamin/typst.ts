@@ -1,21 +1,25 @@
-use std::{str::FromStr, sync::Arc};
+use std::{path::Path, str::FromStr, sync::Arc};
 
 use base64::{engine::DecodeEstimate, Engine};
 use js_sys::{JsString, Uint8Array};
 use typst::{
-    eval::Tracer,
     font::Font,
     geom::{Color, RgbaColor},
 };
 use typst_ts_canvas_exporter::{CanvasRenderTask, DefaultRenderFeature};
 pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
-    font::web::BrowserFontSearcher, vfs::browser::ProxyAccessModel, world::WorldSnapshot,
+    font::web::BrowserFontSearcher,
+    service::{CompileDriverImpl, Compiler},
+    vfs::browser::ProxyAccessModel,
+    world::WorldSnapshot,
 };
 use typst_ts_core::{
     artifact_ir, cache::FontInfoCache, error::prelude::*, Exporter, FontLoader, FontSlot,
 };
 use wasm_bindgen::prelude::*;
+
+use crate::utils::console_log;
 
 pub mod builder;
 
@@ -23,7 +27,7 @@ pub(crate) mod utils;
 
 #[wasm_bindgen]
 pub struct TypstCompiler {
-    pub(crate) world: TypstBrowserWorld,
+    pub(crate) compiler: CompileDriverImpl<TypstBrowserWorld>,
 }
 
 impl TypstCompiler {
@@ -32,11 +36,11 @@ impl TypstCompiler {
         searcher: BrowserFontSearcher,
     ) -> Result<Self, JsValue> {
         Ok(Self {
-            world: TypstBrowserWorld::new(
+            compiler: CompileDriverImpl::new(TypstBrowserWorld::new(
                 std::path::Path::new("/").to_owned(),
                 access_model,
                 searcher.into(),
-            ),
+            )),
         })
     }
 }
@@ -106,29 +110,24 @@ unsafe impl Send for SnapshotFontLoader {}
 impl TypstCompiler {
     pub fn reset(&mut self) {
         // reset the world caches
-        self.world.reset();
+        self.compiler.reset().unwrap();
     }
 
-    pub fn add_source(&mut self, _path: String, _content: String, _is_main: bool) -> bool {
-        // todo: not longer support
-        // checkout the entry file
-        // match self
-        //     .world
-        //     .resolve_with(std::path::Path::new(&path), &content)
-        // {
-        //     Ok(id) => {
-        //         if is_main {
-        //             self.world.main = id;
-        //             console_log!("main: {:?}", id);
-        //         }
-        //         true
-        //     }
-        //     Err(e) => {
-        //         console_log!("Error: {:?}", e);
-        //         false
-        //     }
-        // }
-        panic!("not implemented")
+    pub fn add_source(&mut self, path: String, content: String, is_main: bool) -> bool {
+        let path = Path::new(&path).to_owned();
+        match self.compiler.map_shadow(&path, &content) {
+            Ok(_) => {
+                if is_main {
+                    self.compiler.set_entry_file(path);
+                }
+
+                true
+            }
+            Err(e) => {
+                console_log!("Error: {:?}", e);
+                false
+            }
+        }
     }
 
     pub fn load_snapshot(
@@ -147,7 +146,7 @@ impl TypstCompiler {
                 // item.info
                 for (idx, info) in item.info.into_iter().enumerate() {
                     let font_idx = info.index().unwrap_or(idx as u32);
-                    self.world.font_resolver.append_font(
+                    self.compiler.world_mut().font_resolver.append_font(
                         info.info,
                         FontSlot::new_boxed(SnapshotFontLoader {
                             font_cb: font_cb.clone(),
@@ -175,46 +174,46 @@ impl TypstCompiler {
                     },
                     artifact_header,
                 )
-                .to_document(&self.world.font_resolver),
+                .to_document(&self.compiler.world_mut().font_resolver),
             )),
         })
     }
 
     pub fn modify_font_data(&mut self, idx: usize, buffer: Uint8Array) {
-        self.world
+        self.compiler
+            .world_mut()
             .font_resolver
             .modify_font_data(idx, buffer.to_vec().into());
     }
 
     pub fn rebuild(&mut self) {
-        if self.world.font_resolver.partial_resolved() {
-            self.world.font_resolver.rebuild();
+        if self.compiler.world_mut().font_resolver.partial_resolved() {
+            self.compiler.world_mut().font_resolver.rebuild();
         }
     }
 
     pub fn get_loaded_fonts(&mut self) -> Vec<JsString> {
-        self.world
+        self.compiler
+            .world_mut()
             .font_resolver
             .loaded_fonts()
             .map(|s| format!("<{}, {:?}>", s.0, s.1).into())
             .collect()
     }
 
-    pub fn get_ast(&mut self, _main_file_path: String) -> Result<String, JsValue> {
-        // self.world.main = self
-        //     .world
-        //     .resolve(std::path::Path::new(&main_file_path))
-        //     .unwrap();
-        // todo: not longer support
+    pub fn get_ast(&mut self, main_file_path: String) -> Result<String, JsValue> {
+        self.compiler
+            .set_entry_file(Path::new(&main_file_path).to_owned());
 
         let ast_exporter = typst_ts_core::exporter_builtins::VecExporter::new(
             typst_ts_ast_exporter::AstExporter::default(),
         );
 
         // compile and export document
-        let mut tracer = Tracer::default();
-        let doc = typst::compile(&self.world, &mut tracer).unwrap();
-        let data = ast_exporter.export(&self.world, Arc::new(doc)).unwrap();
+        let doc = self.compiler.compile().unwrap();
+        let data = ast_exporter
+            .export(self.compiler.world(), Arc::new(doc))
+            .unwrap();
 
         let converted =
             ansi_to_html::convert_escaped(String::from_utf8(data).unwrap().as_str()).unwrap();
@@ -226,23 +225,18 @@ impl TypstCompiler {
             typst_ts_tir_exporter::IRArtifactExporter,
         );
 
-        let mut tracer = Tracer::default();
-        let doc = typst::compile(&self.world, &mut tracer).unwrap();
+        let doc = self.compiler.compile().unwrap();
         let artifact_bytes = ir_exporter
-            .export(&self.world, Arc::new((&doc).into()))
+            .export(self.compiler.world(), Arc::new((&doc).into()))
             .unwrap();
         Ok(artifact_bytes)
     }
 
     pub fn compile(&mut self, _main_file_path: String) -> Result<DocumentReference, JsValue> {
-        // todo: not longer support
-        // self.world.main = self
-        //     .world
-        //     .resolve(std::path::Path::new(&main_file_path))
-        //     .unwrap();
+        self.compiler
+            .set_entry_file(Path::new(&_main_file_path).to_owned());
 
-        let mut tracer = Tracer::default();
-        let doc = typst::compile(&self.world, &mut tracer).unwrap();
+        let doc = self.compiler.compile().unwrap();
         Ok(DocumentReference {
             doc: Some(Arc::new(doc)),
         })
