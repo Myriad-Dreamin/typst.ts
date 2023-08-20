@@ -47,16 +47,13 @@ export class TypstDocumentComponent {
           {
             beforeBuild: [
               typst.preloadRemoteFonts([
-                'http://localhost:20811/fonts/LinLibertine_R.ttf',
-                'http://localhost:20811/fonts/LinLibertine_RB.ttf',
-                'http://localhost:20811/fonts/LinLibertine_RBI.ttf',
-                'http://localhost:20811/fonts/LinLibertine_RI.ttf',
-                'http://localhost:20811/fonts/NewCMMath-Book.otf',
-                'http://localhost:20811/fonts/NewCMMath-Regular.otf',
+                'http://localhost:20810/assets/fonts/LinLibertine_R.ttf',
+                'http://localhost:20810/assets/fonts/LinLibertine_RB.ttf',
+                'http://localhost:20810/assets/fonts/LinLibertine_RBI.ttf',
+                'http://localhost:20810/assets/fonts/LinLibertine_RI.ttf',
+                'http://localhost:20810/assets/fonts/NewCMMath-Book.otf',
+                'http://localhost:20810/assets/fonts/NewCMMath-Regular.otf',
               ]),
-              typst.preloadSystemFonts({
-                byFamily: ['Segoe UI Symbol'],
-              }),
             ],
             getModule: () => '/assets/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
           },
