@@ -9,7 +9,7 @@ use comemo::Prehashed;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use typst::{
-    diag::{FileError, FileResult},
+    diag::{FileError, FileResult, SourceResult},
     eval::{Datetime, Library},
     font::{Font, FontBook},
     syntax::Source,
@@ -25,6 +25,7 @@ use typst_ts_core::{
 
 use crate::{
     package::Registry as PackageRegistry,
+    service::WorkspaceProvider,
     vfs::{AccessModel as VfsAccessModel, Vfs},
     workspace::dependency::{DependencyTree, DependentFileInfo},
     ShadowApi,
@@ -241,6 +242,21 @@ impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
         self.vfs.remove_shadow(path);
 
         Ok(())
+    }
+}
+
+impl<F: CompilerFeat> WorkspaceProvider for CompilerWorld<F> {
+    fn reset(&mut self) -> SourceResult<()> {
+        self.reset();
+        Ok(())
+    }
+
+    fn workspace_root(&self) -> Arc<Path> {
+        self.root.clone()
+    }
+
+    fn set_main_id(&mut self, id: FileId) {
+        self.main = id
     }
 }
 

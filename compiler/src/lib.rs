@@ -41,7 +41,6 @@ pub mod world;
 mod parser;
 
 /// Convenient services over [`world::CompilerWorld`].
-#[cfg(feature = "system-compile")]
 pub mod service;
 
 /// Run the compiler in the system environment.

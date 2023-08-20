@@ -1,7 +1,9 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use crate::ShadowApi;
-use codespan_reporting::files::Files;
 use typst::{
     diag::{At, FileResult, SourceDiagnostic, SourceResult},
     doc::Document,
@@ -12,6 +14,7 @@ use typst::{
 };
 use typst_ts_core::TypstFileId;
 
+#[cfg(feature = "system-compile")]
 pub(crate) mod diag;
 
 pub(crate) mod driver;
@@ -19,13 +22,28 @@ pub use driver::*;
 
 pub mod query;
 
+#[cfg(feature = "system-compile")]
 pub(crate) mod session;
+#[cfg(feature = "system-compile")]
 pub use session::*;
 
 #[cfg(feature = "system-watch")]
 pub(crate) mod watch;
 #[cfg(feature = "system-watch")]
 pub use watch::*;
+
+#[cfg(feature = "system-compile")]
+pub type CompileDriver = CompileDriverImpl<crate::TypstSystemWorld>;
+
+pub trait WorkspaceProvider {
+    fn reset(&mut self) -> SourceResult<()> {
+        Ok(())
+    }
+
+    fn workspace_root(&self) -> Arc<Path>;
+
+    fn set_main_id(&mut self, id: TypstFileId);
+}
 
 pub trait Compiler {
     type World: World;
@@ -66,6 +84,8 @@ pub trait Compiler {
     /// Determine whether the event is relevant to the compiler.
     /// The default implementation is conservative, which means that
     /// `MaybeRelevant` implies `MustRelevant`.
+    // todo: remove cfg feature here
+    #[cfg(feature = "system-watch")]
     fn relevant(&self, event: &notify::Event) -> bool {
         self._relevant(event).unwrap_or(true)
     }
@@ -76,6 +96,8 @@ pub trait Compiler {
     /// - `Some(true)`: the event must be relevant to the compiler.
     /// - `Some(false)`: the event must not be relevant to the compiler.
     /// - `None`: the event may be relevant to the compiler.
+    // todo: remove cfg feature here
+    #[cfg(feature = "system-watch")]
     fn _relevant(&self, event: &notify::Event) -> Option<bool> {
         use notify::event::ModifyKind;
         use notify::EventKind;
@@ -228,6 +250,13 @@ where
     }
 }
 
+/// The status in which the watcher can be.
+pub enum DiagStatus {
+    Compiling,
+    Success(std::time::Duration),
+    Error(std::time::Duration),
+}
+
 pub trait DiagObserver {
     /// Print diagnostic messages to the terminal.
     fn print_diagnostics(
@@ -236,7 +265,7 @@ pub trait DiagObserver {
     ) -> Result<(), codespan_reporting::files::Error>;
 
     /// Print status message to the terminal.
-    fn print_status<const WITH_STATUS: bool>(&self, status: diag::Status);
+    fn print_status<const WITH_STATUS: bool>(&self, status: DiagStatus);
 
     /// Run inner function with print (optional) status and diagnostics to the
     /// terminal.
@@ -246,9 +275,10 @@ pub trait DiagObserver {
     ) -> Option<T>;
 }
 
+#[cfg(feature = "system-compile")]
 impl<C: Compiler> DiagObserver for C
 where
-    C::World: for<'files> Files<'files, FileId = TypstFileId>,
+    C::World: for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>,
 {
     /// Print diagnostic messages to the terminal.
     fn print_diagnostics(
@@ -259,7 +289,7 @@ where
     }
 
     /// Print status message to the terminal.
-    fn print_status<const WITH_STATUS: bool>(&self, status: diag::Status) {
+    fn print_status<const WITH_STATUS: bool>(&self, status: DiagStatus) {
         if !WITH_STATUS {
             return;
         }
@@ -272,15 +302,15 @@ where
         &mut self,
         f: impl FnOnce(&mut Self) -> SourceResult<T>,
     ) -> Option<T> {
-        self.print_status::<WITH_STATUS>(diag::Status::Compiling);
+        self.print_status::<WITH_STATUS>(DiagStatus::Compiling);
         let start = std::time::Instant::now();
         match f(self) {
             Ok(val) => {
-                self.print_status::<WITH_STATUS>(diag::Status::Success(start.elapsed()));
+                self.print_status::<WITH_STATUS>(DiagStatus::Success(start.elapsed()));
                 Some(val)
             }
             Err(errs) => {
-                self.print_status::<WITH_STATUS>(diag::Status::Error(start.elapsed()));
+                self.print_status::<WITH_STATUS>(DiagStatus::Error(start.elapsed()));
                 // todo: process errors
                 let _ = self.print_diagnostics(*errs);
                 None

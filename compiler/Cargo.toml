@@ -85,10 +85,10 @@ system-compile = [
     "dep:walkdir",
     "dep:notify",
     "dep:log",
-    "dep:typst-ts-svg-exporter",
 ]
 system-watch = ["dep:notify", "dep:tokio"]
 system = ["system-compile", "system-watch"]
+dynamic-layout = ["dep:typst-ts-svg-exporter"]
 __web = [
     "dep:wasm-bindgen",
     "dep:wasm-bindgen-futures",
@@ -101,4 +101,4 @@ web-render = ["__web"]
 browser-compile = ["__web", "web-render"]
 browser-embedded-fonts = ["__web"]
 web = ["__web", "web-render", "browser-compile", "browser-embedded-fonts"]
-default = ["system"]
+default = ["system", "dynamic-layout"]
