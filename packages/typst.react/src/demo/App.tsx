@@ -4,7 +4,7 @@ import { TypstDocument } from '../lib';
 export const App = () => {
   const [artifact, setArtifact] = useState<Uint8Array>(new Uint8Array(0));
 
-  const getArtifactJson = async () => {
+  const getArtifactData = async () => {
     const response = await fetch('http://localhost:20810/skyzh-cv/main.artifact.json').then(response =>
       response.arrayBuffer(),
     );
@@ -13,7 +13,7 @@ export const App = () => {
   };
 
   useEffect(() => {
-    getArtifactJson();
+    getArtifactData();
   }, []);
 
   return (
