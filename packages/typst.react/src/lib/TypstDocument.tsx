@@ -16,6 +16,20 @@ async function queryFontPermission() {
   } else console.log('permission was denied 👎');
 }
 
+let moduleInitOptions: typst.InitOptions = {
+  beforeBuild: [
+    typst.preloadRemoteFonts([
+      '/fonts/LinLibertine_R.ttf',
+      '/fonts/LinLibertine_RB.ttf',
+      '/fonts/LinLibertine_RBI.ttf',
+      '/fonts/LinLibertine_RI.ttf',
+      '/fonts/NewCMMath-Book.otf',
+      '/fonts/NewCMMath-Regular.otf',
+    ]),
+  ],
+  getModule: () => '/node_modules/@myriaddreamin/typst-ts-renderer/typst_ts_renderer_bg.wasm',
+};
+
 export const TypstDocument = ({ fill, artifact }: TypstDocumentProps) => {
   /// --- beg: manipulate permission --- ///
 
@@ -46,9 +60,6 @@ export const TypstDocument = ({ fill, artifact }: TypstDocumentProps) => {
   /// --- beg: update document --- ///
   const displayDivRef = useRef<HTMLDivElement>(null);
   const getDisplayLayerDiv = () => {
-    if (!permission && displayDivRef?.current?.checkVisibility()) {
-      return null;
-    }
     return displayDivRef?.current;
   };
   const doRender = (renderer: typst.TypstRenderer) => {
@@ -81,23 +92,7 @@ export const TypstDocument = ({ fill, artifact }: TypstDocumentProps) => {
     withGlobalRenderer(
       typst.createTypstRenderer,
       (window as unknown as any).pdfjsLib,
-      {
-        beforeBuild: [
-          typst.preloadRemoteFonts([
-            'fonts/LinLibertine_R.ttf',
-            'fonts/LinLibertine_RB.ttf',
-            'fonts/LinLibertine_RBI.ttf',
-            'fonts/LinLibertine_RI.ttf',
-            'fonts/NewCMMath-Book.otf',
-            'fonts/NewCMMath-Regular.otf',
-          ]),
-          typst.preloadSystemFonts({
-            byFamily: ['Segoe UI Symbol'],
-          }),
-        ],
-        getModule: () =>
-          'node_modules/@myriaddreamin/typst-ts-renderer/typst_ts_renderer_bg.wasm',
-      },
+      moduleInitOptions,
       doRender,
     );
   }, [permission, displayDivRef, fill, artifact]);
@@ -110,3 +105,7 @@ export const TypstDocument = ({ fill, artifact }: TypstDocumentProps) => {
     </div>
   );
 };
+
+TypstDocument.setWasmModuleInitOptions = (opts: typst.InitOptions) => {
+  moduleInitOptions = opts;
+}
