@@ -35,12 +35,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18.x
-      - name: Install Yarn
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: install # will run `yarn install` command
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # if needed
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
       - name: Install Artifact Cache
@@ -50,16 +44,13 @@ jobs:
       - name: Build
         run: |
           cargo build --bin typst-ts-cli
-      - name: Build packages (Install)
+      - name: Install packages
         uses: borales/actions-yarn@v4
         with:
           cmd: install
-          dir: 'packages/typst.ts'
-      - name: Build packages (Compile)
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: build
-          dir: 'packages/typst.ts'
+      - name: Build Typescript packages
+        run: |
+          npx turbo run build
       - name: Prepare artifacts
         run: |
           cargo run --bin typst-ts-cli -- compile --workspace ./github-pages/docs/ --entry ./github-pages/docs/readme.typ --format=ir --format=json --format=json_glyphs --format=pdf

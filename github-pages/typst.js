@@ -19,7 +19,7 @@
             // '/typst.ts/assets/fonts/DejaVuSansMono-Oblique.ttf',
           ]),
         ],
-        getModule: () => '/typst.ts/renderer/pkg/typst_ts_renderer_bg.wasm',
+        getModule: () => '/typst.ts/renderer/typst_ts_renderer_bg.wasm',
       })
       .then(() => {
         let artifactContent = undefined;
