@@ -135,7 +135,7 @@ $ cargo build -p typst-ts-cli && cargo run --bin typst-ts-dev-server -- compile 
 $ cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/
 ```
 
-And open your browser to `http://localhost:20810/core/`.
+And open your browser to `http://localhost:20810/`.
 
 You can also run `yarn run build-wrapper` instead of `yarn run build && yarn run link:local` to avoid building the WASM modules from source.
 
