@@ -122,12 +122,20 @@ Options:
 
 Note: see [Troubleshooting WASM Build](docs/troubleshooting-wasm-build.md) for (especially) **Arch Linux** users.
 
+Note: Since we use turborepo for `>=v0.4.0` development, if you are the earlier developer of typst.ts, please clean up all of your node_modules and dist folders before running the commands.
+
 ```shell
-$ cd packages/typst.ts && yarn install && yarn run build && yarn run link:local; cd ../..
+# Optional: download the font assets if you haven't done so.
+$ cargo run --bin typst-ts-fontctl
+# build all of typescript packages
+$ yarn install && npx turbo run build
+# compile typst document for demo
+$ cargo build -p typst-ts-cli && cargo run --bin typst-ts-dev-server -- compile --compiler debug corpus skyzh-cv
+# start a local server
 $ cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/
 ```
 
-And open your browser to `http://localhost:20810/core/`.
+And open your browser to `http://localhost:20810/`.
 
 You can also run `yarn run build-wrapper` instead of `yarn run build && yarn run link:local` to avoid building the WASM modules from source.
 

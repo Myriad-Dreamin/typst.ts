@@ -96,6 +96,7 @@ fn compile_corpus(args: CompileCorpusArgs) {
     if compile_formats.is_empty() {
         compile_formats.push("ir".to_owned());
         compile_formats.push("json".to_owned());
+        compile_formats.push("json_glyphs".to_owned());
     }
 
     let compiler_path = COMPILER_PATH.lock().unwrap();

@@ -1,0 +1,4 @@
+{
+  "typst-preview.refresh": "onType",
+  "typst-preview.partialRendering": true
+}

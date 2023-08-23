@@ -1,0 +1,24 @@
+{
+  "name": "@myriaddreamin/typst.ts",
+  "version": "0.3.1",
+  "author": "Myriad-Dreamin",
+  "description": "Run Typst in JavaScriptWorld.",
+  "license": "Apache-2.0",
+  "keywords": [
+    "TypeScript",
+    "Typst"
+  ],
+  "bugs": "https://github.com/Myriad-Dreamin/typst.ts/issues",
+  "homepage": "https://myriad-dreamin.github.io/typst.ts/",
+  "private": true,
+  "workspaces": [
+    "packages/compiler",
+    "packages/renderer",
+    "packages/hexo-renderer-typst",
+    "packages/typst.ts",
+    "packages/typst.react",
+    "packages/typst.vue3",
+    "packages/typst.angular"
+  ],
+  "scripts": {}
+}

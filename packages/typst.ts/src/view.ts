@@ -1,7 +1,6 @@
 import { PageInfo } from './internal.types';
 import { RenderOptionsBase } from './options.render';
 import { PageViewport } from './viewport';
-import type * as pdfjsModule from 'pdfjs-dist';
 
 /** @internal */
 export class RenderView {
@@ -195,7 +194,7 @@ export class RenderView {
 }
 
 export function renderTextLayer(
-  pdfjsLib: unknown,
+  pdfjsLib: any,
   container: HTMLDivElement,
   pageInfos: PageInfo[],
   layerList: HTMLDivElement[],
@@ -226,7 +225,7 @@ export function renderTextLayer(
       dontFlip: false,
     });
 
-    (pdfjsLib as typeof pdfjsModule).renderTextLayer({
+    pdfjsLib.renderTextLayer({
       textContentSource: textSourceList[i],
       container: layer,
       viewport,

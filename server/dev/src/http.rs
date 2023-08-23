@@ -13,9 +13,12 @@ pub async fn run_http(args: RunHttpArgs) {
     }
     let http_addr: SocketAddr = http_addr.parse().unwrap();
 
+    let root = (warp::path::end().or(warp::path("index.html")))
+        .map(|_| warp::redirect(warp::http::Uri::from_static("/core/index.html")));
     let corpora = warp::path("corpus").and(warp::fs::dir(args.corpus));
     let assets = warp::path("assets").and(warp::fs::dir("assets"));
     let core = warp::path("core").and(warp::fs::dir("packages/typst.ts"));
+    let base = warp::path("base").and(warp::fs::dir(""));
 
     // map these files to the root of the github-pages server
     let gh_pages = warp::path("typst.ts").and({
@@ -33,9 +36,11 @@ pub async fn run_http(args: RunHttpArgs) {
     let cors =
         warp::cors().allow_methods(&[Method::HEAD, Method::GET, Method::POST, Method::DELETE]);
 
-    let routes = corpora
+    let routes = root
+        .or(corpora)
         .or(assets)
         .or(core)
+        .or(base)
         .or(gh_pages)
         .with(cors)
         .with(warp::compression::gzip());

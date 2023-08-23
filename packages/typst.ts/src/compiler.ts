@@ -1,5 +1,5 @@
 // @ts-ignore
-import typstInit, * as typst from '../../compiler/pkg/typst_ts_web_compiler';
+import typstInit, * as typst from '@myriaddreamin/typst-ts-web-compiler';
 import { buildComponent, globalFontPromises } from './init';
 import { DocumentReference, FsAccessModel } from './internal.types';
 

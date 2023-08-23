@@ -27,7 +27,7 @@ let moduleInitOptions: typst.InitOptions = {
       '/fonts/NewCMMath-Regular.otf',
     ]),
   ],
-  getModule: () => '/node_modules/@myriaddreamin/typst-ts-renderer/typst_ts_renderer_bg.wasm',
+  getModule: () => '/node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
 };
 
 export const TypstDocument = ({ fill, artifact }: TypstDocumentProps) => {

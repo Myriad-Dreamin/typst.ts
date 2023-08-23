@@ -46,7 +46,7 @@ const context = await esbuild.context({
   format: 'esm',
   tsconfig: 'tsconfig.lib.json',
   platform: 'browser',
-  external: [...builtins],
+  // external: [...builtins],
   target: 'es2020',
   logLevel: 'info',
   sourcemap: IS_PRODUCTION ? false : 'inline',

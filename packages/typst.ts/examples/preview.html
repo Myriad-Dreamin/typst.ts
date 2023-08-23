@@ -389,7 +389,7 @@
           .init({
             beforeBuild: [window.TypstCompileModule.withAccessModel(sourceFetchModel)],
             getModule: () =>
-              '${resource-root}/node_modules/@myriaddreamin/typst-ts-web-compiler/typst_ts_web_compiler_bg.wasm',
+              '${resource-root}/node_modules/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm',
           })
           .then(async () => {
             await Promise.all([

@@ -1,4 +1,4 @@
-import { get_font_info } from '../../compiler/pkg/typst_ts_web_compiler';
+import { get_font_info } from '@myriaddreamin/typst-ts-web-compiler';
 import { BeforeBuildMark, InitOptions } from './options.init';
 import { LazyWasmModule } from './wasm';
 import * as idb from 'idb';

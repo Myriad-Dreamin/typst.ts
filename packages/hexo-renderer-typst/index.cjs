@@ -40,7 +40,7 @@ hexo.extend.generator.register('typst_assets', function (locals) {
 
   const renderer_path = path.resolve(
     base_dir,
-    'node_modules/@myriaddreamin/typst-ts-renderer/typst_ts_renderer_bg.wasm',
+    'node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
   );
   console.log(assetPathConfig);
   return [
