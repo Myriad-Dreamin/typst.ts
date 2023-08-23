@@ -5,18 +5,18 @@ import * as typst from '@myriaddreamin/typst.ts';
 TypstDocument.setWasmModuleInitOptions({
   beforeBuild: [
     typst.preloadRemoteFonts([
-      '/fonts/LinLibertine_R.ttf',
-      '/fonts/LinLibertine_RB.ttf',
-      '/fonts/LinLibertine_RBI.ttf',
-      '/fonts/LinLibertine_RI.ttf',
-      '/fonts/NewCMMath-Book.otf',
-      '/fonts/NewCMMath-Regular.otf',
+      'http://localhost:20810/assets/fonts/LinLibertine_R.ttf',
+      'http://localhost:20810/assets/fonts/LinLibertine_RB.ttf',
+      'http://localhost:20810/assets/fonts/LinLibertine_RBI.ttf',
+      'http://localhost:20810/assets/fonts/LinLibertine_RI.ttf',
+      'http://localhost:20810/assets/fonts/NewCMMath-Book.otf',
+      'http://localhost:20810/assets/fonts/NewCMMath-Regular.otf',
     ]),
     // typst.preloadSystemFonts({
     //   byFamily: ['Segoe UI Symbol'],
     // }),
   ],
-  getModule: () => '/node_modules/@myriaddreamin/typst-ts-renderer/typst_ts_renderer_bg.wasm',
+  getModule: () => 'http://localhost:20810/base/node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
 });
 
 export const App = () => {

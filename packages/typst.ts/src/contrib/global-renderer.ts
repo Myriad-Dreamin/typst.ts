@@ -1,6 +1,5 @@
 import type { InitOptions } from '../options.init';
 import type { TypstRenderer } from '../renderer';
-import type * as pdfjsModule from 'pdfjs-dist';
 
 let globalRenderer: TypstRenderer | undefined = undefined;
 let globalRendererInitReady: Promise<TypstRenderer>;
@@ -11,13 +10,13 @@ export function getGlobalRenderer(): TypstRenderer | undefined {
 }
 
 export function createGlobalRenderer(
-  creator: (pdf: /* typeof pdfjsModule */ unknown) => TypstRenderer,
+  creator: (pdf: /* typeof pdfjsModule */ any) => TypstRenderer,
   pdf: /* typeof pdfjsModule */ unknown,
   initOptions: InitOptions,
 ): Promise<TypstRenderer> {
   // todo: determine renderer thread-safety
   // todo: check inconsistent initOptions
-  const renderer = globalRenderer || creator(pdf as typeof pdfjsModule);
+  const renderer = globalRenderer || creator(pdf);
 
   if (globalRendererInitReady !== undefined) {
     return globalRendererInitReady;

@@ -1,5 +1,6 @@
 // @ts-ignore
-import type * as typst from '../../pkg/typst_ts_renderer';
+import type * as typstRenderer from '@myriaddreamin/typst-ts-renderer';
+import type * as typstCompiler from '@myriaddreamin/typst-ts-web-compiler';
 import type { FsAccessModel } from './internal.types';
 import type { WebAssemblyModuleRef } from './wasm';
 
@@ -149,9 +150,11 @@ export function withAccessModel(accessModel: FsAccessModel): BeforeBuildFn {
 // todo: search browser
 // searcher.search_browser().await?;
 
+type Builder = typstRenderer.TypstRendererBuilder & typstCompiler.TypstCompilerBuilder;
+
 interface InitContext {
   ref: {
-    loadFont(builder: typst.TypstRendererBuilder, fontPath: string): Promise<void>;
+    loadFont(builder: Builder, fontPath: string): Promise<void>;
   };
-  builder: typst.TypstRendererBuilder;
+  builder: Builder;
 }

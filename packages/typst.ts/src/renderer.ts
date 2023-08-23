@@ -1,7 +1,6 @@
 // @ts-ignore
-import typstInit, * as typst from '../../renderer/pkg/typst_ts_renderer';
+import typstInit, * as typst from '@myriaddreamin/typst-ts-renderer';
 
-import type * as pdfjsModule from 'pdfjs-dist';
 import type { InitOptions } from './options.init';
 import { PageViewport } from './viewport';
 import { PageInfo, RenderSession } from './internal.types';
@@ -136,8 +135,8 @@ const gRendererModule = new LazyWasmModule(typstInit);
  * });
  * ```
  */
-export function createTypstRenderer(pdf: unknown): TypstRenderer {
-  return new TypstRendererDriver(pdf as typeof pdfjsModule);
+export function createTypstRenderer(pdf: any): TypstRenderer {
+  return new TypstRendererDriver(pdf);
 }
 
 export interface TypstSvgRenderer {
@@ -184,7 +183,7 @@ class TypstRendererSvgDriver {
 class TypstRendererDriver {
   renderer: typst.TypstRenderer;
 
-  constructor(private pdf: typeof pdfjsModule) {}
+  constructor(private pdf: any) {}
 
   async init(options?: Partial<InitOptions>): Promise<void> {
     this.renderer = await buildComponent(options, gRendererModule, typst.TypstRendererBuilder, {});

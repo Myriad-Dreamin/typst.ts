@@ -1,6 +1,6 @@
 .DS_STORE
 .idea
-.vscode
+.turbo
 
 *.glyphs.json
 *.artifact.json
@@ -17,3 +17,5 @@ target/
 out/
 /assets/
 /assets
+dist/
+node_modules/

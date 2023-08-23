@@ -8,6 +8,7 @@ edition.workspace = true
 homepage.workspace = true
 repository.workspace = true
 
+
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = false
 
