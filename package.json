@@ -20,5 +20,8 @@
     "packages/typst.vue3",
     "packages/typst.angular"
   ],
-  "scripts": {}
+  "devDependencies": {
+    "typescript": "^5.0.4",
+    "@babel/runtime": "^7.22.6"
+  }
 }

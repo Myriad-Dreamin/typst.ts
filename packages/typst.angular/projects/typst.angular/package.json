@@ -11,14 +11,10 @@
   "scripts": {
     "link:local": "cd ../../dist/typst.angular && yarn link && npm link"
   },
-  "peerDependencies": {
-    "@angular/common": "^16.0.2",
-    "@angular/core": "^16.0.2",
-    "@myriaddreamin/typst.ts": "^0.2",
-    "@myriaddreamin/typst-ts-renderer": "^0.2"
-  },
   "dependencies": {
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "@myriaddreamin/typst.ts": "*",
+    "@myriaddreamin/typst-ts-renderer": "*"
   },
   "sideEffects": false
 }

@@ -9,7 +9,6 @@
     "build": "ng build --project typst.angular && cd dist/typst.angular && yarn link && cd ../../../../ && yarn link @myriaddreamin/typst.angular",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "link:local": "npm link @myriaddreamin/typst.ts @myriaddreamin/typst-ts-renderer @myriaddreamin/typst.angular",
     "lint": "ng lint"
   },
   "private": true,
@@ -22,8 +21,8 @@
     "@angular/platform-browser": "^16.0.2",
     "@angular/platform-browser-dynamic": "^16.0.2",
     "@angular/router": "^16.0.2",
-    "@myriaddreamin/typst.ts": "^0.2",
-    "@myriaddreamin/typst-ts-renderer": "^0.2",
+    "@myriaddreamin/typst.ts": "*",
+    "@myriaddreamin/typst-ts-renderer": "*",
     "rxjs": "~7.8.1",
     "tslib": "^2.5.2",
     "zone.js": "~0.13.0"
@@ -49,7 +48,6 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.0.0",
-    "ng-packagr": "^16.0.1",
-    "typescript": "~5.0.4"
+    "ng-packagr": "^16.0.1"
   }
 }

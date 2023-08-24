@@ -24,9 +24,6 @@
     "build-renderer:dev": "yarn run build-renderer:wasm:dev",
     "build-compiler": "yarn run build-compiler:wasm && yarn run build-wrapper",
     "build-compiler:dev": "yarn run build-compiler:wasm:dev && yarn run build-wrapper:dev",
-    "link:renderer": "cd ../renderer/ && yarn link:local",
-    "link:compiler": "cd ../compiler/ && yarn link:local",
-    "link:local": " yarn link:renderer && yarn link:compiler && yarn link @myriaddreamin/typst-ts-renderer @myriaddreamin/typst-ts-web-compiler && yarn link && npm link",
     "prepublish": "npm run build",
     "publish:dry": "npm publish --dry-run --access public",
     "publish": "npm publish --access public"
@@ -40,8 +37,7 @@
     "eslint": "^8.41.0",
     "esbuild": "0.17.19",
     "esbuild-plugin-wasm": "^1.1.0",
-    "tslib": "2.5.2",
-    "typescript": "5.0.4"
+    "tslib": "2.5.2"
   },
   "dependencies": {
     "idb": "^7.1.1",

@@ -19,7 +19,6 @@
   "scripts": {
     "build:dev": "wasm-pack build --target web --scope myriaddreamin --dev -- --no-default-features --features web",
     "build": "wasm-pack build --target web --scope myriaddreamin -- --no-default-features --features web",
-    "link:local": "yarn link",
     "prepublish": "npm run build",
     "publish:dry": "npm publish --dry-run --access public",
     "publish": "npm publish --access public",
