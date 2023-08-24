@@ -18,10 +18,15 @@ export interface CompileOptions {
  * @property {function} compile - Compile a Typst document.
  */
 export interface TypstCompiler {
+  /**
+   *
+   * @param options
+   */
   init(options?: Partial<InitOptions>): Promise<void>;
   reset(): Promise<void>;
   addSource(path: string, source: string, isMain: boolean): Promise<void>;
   getAst(mainFilePath: string): Promise<string>;
+
   compile(options: CompileOptions): Promise<DocumentReference>;
   renderPageToCanvas(
     canvas: CanvasRenderingContext2D,
@@ -30,6 +35,7 @@ export interface TypstCompiler {
     pixel_per_pt: number,
     background_color: string,
   ): Promise<RenderPageResult>;
+
   loadSnapshot(snapshot: unknown, fontServer: FsAccessModel): Promise<any>;
 }
 

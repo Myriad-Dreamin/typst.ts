@@ -1,12 +1,11 @@
 import { PageInfo } from './internal.types';
-import { RenderOptionsBase } from './options.render';
+import { RenderArtifactOptionsBase } from './options.render';
 import { PageViewport } from './viewport';
 
 /** @internal */
 export class RenderView {
   loadPageCount: number;
   imageScaleFactor: number;
-  partialPageRendering: boolean;
 
   container: HTMLDivElement;
   canvasList: HTMLCanvasElement[];
@@ -16,19 +15,14 @@ export class RenderView {
   textLayerParentList: HTMLDivElement[];
   semanticLayerList: HTMLDivElement[];
 
-  constructor(public pageInfos: PageInfo[], container: HTMLDivElement, options: RenderOptionsBase) {
-    this.partialPageRendering = options.pages !== undefined;
+  constructor(
+    public pageInfos: PageInfo[],
+    container: HTMLDivElement,
+    options: RenderArtifactOptionsBase,
+  ) {
     this.imageScaleFactor = options.pixelPerPt ?? 2;
 
-    /// all children
-    const commonDivList = Array.from(container.getElementsByTagName('div')).filter(
-      (div: HTMLDivElement) => {
-        div.parentElement === container;
-      },
-    );
-    if (!options.pages) {
-      container.innerHTML = '';
-    }
+    container.innerHTML = '';
     container.style.width = '100%';
 
     // canvas[data-typst-session='{}']
@@ -88,107 +82,51 @@ export class RenderView {
       }
     };
 
-    if (options.pages) {
-      for (let i = 0; i < this.pageInfos.length; i++) {
-        const pageAst = this.pageInfos[i];
-        const width = Math.ceil(pageAst.width) * this.imageScaleFactor;
-        const height = Math.ceil(pageAst.height) * this.imageScaleFactor;
+    for (let i = 0; i < this.pageInfos.length; i++) {
+      const pageAst = this.pageInfos[i];
+      const width = Math.ceil(pageAst.width) * this.imageScaleFactor;
+      const height = Math.ceil(pageAst.height) * this.imageScaleFactor;
 
-        // const commonDiv = document.createElement('div');
-        let commonDiv = undefined;
+      // const commonDiv = document.createElement('div');
+      let commonDiv: HTMLDivElement | undefined = undefined;
 
-        while (pageAst.pageOffset >= commonDivList.length) {
-          const elem = document.createElement('div');
-          commonDivList.push(elem);
-          container.appendChild(elem);
-        }
-        commonDiv = this.commonList[i] = commonDivList[pageAst.pageOffset];
-        if (commonDiv) {
-          commonDiv.innerHTML = '';
-        }
-
-        createOver(i, width, height, commonDiv);
-      }
-    } else {
-      for (let i = 0; i < this.pageInfos.length; i++) {
-        const pageAst = this.pageInfos[i];
-        const width = Math.ceil(pageAst.width) * this.imageScaleFactor;
-        const height = Math.ceil(pageAst.height) * this.imageScaleFactor;
-
-        // const commonDiv = document.createElement('div');
-        let commonDiv = undefined;
-
-        commonDiv = this.commonList[i] = document.createElement('div');
-        container.appendChild(commonDiv);
-        createOver(i, width, height, commonDiv);
-      }
+      commonDiv = this.commonList[i] = document.createElement('div');
+      container.appendChild(commonDiv);
+      createOver(i, width, height, commonDiv);
     }
   }
 
   resetLayout() {
     /// resize again to avoid bad width change after render
-    if (this.partialPageRendering) {
-      for (let i = 0; i < this.pageInfos.length; i++) {
-        const pageAst = this.pageInfos[i];
-        const width = Math.ceil(pageAst.width) * this.imageScaleFactor;
-        const height = Math.ceil(pageAst.height) * this.imageScaleFactor;
+    for (let i = 0; i < this.pageInfos.length; i++) {
+      const pageAst = this.pageInfos[i];
+      const width = Math.ceil(pageAst.width) * this.imageScaleFactor;
+      const height = Math.ceil(pageAst.height) * this.imageScaleFactor;
 
-        const canvasDiv = this.canvasList[i].parentElement;
-        if (!canvasDiv) {
-          throw new Error(
-            `canvasDiv is null for page ${i}, canvas list length ${this.canvasList.length}`,
-          );
-        }
-        const commonDiv = this.commonList[i];
-        const textLayerParent = this.textLayerParentList[i];
-        const annotationLayer = this.annotationLayerList[i];
-
-        /// on width change
-        const containerWidth = this.container.offsetWidth;
-        const orignalScale = containerWidth / width;
-        textLayerParent.style.width = `${containerWidth}px`;
-        textLayerParent.style.height = `${height * orignalScale}px`;
-        annotationLayer.style.width = `${containerWidth}px`;
-        annotationLayer.style.height = `${height * orignalScale}px`;
-        commonDiv.style.width = `${containerWidth}px`;
-        commonDiv.style.height = `${height * orignalScale}px`;
-
-        // compute scaling factor according to the paper size
-        const currentScale = this.container.offsetWidth / width;
-        canvasDiv.style.transformOrigin = '0px 0px';
-        canvasDiv.style.transform = `scale(${currentScale})`;
+      const canvasDiv = this.canvasList[i].parentElement;
+      if (!canvasDiv) {
+        throw new Error(
+          `canvasDiv is null for page ${i}, canvas list length ${this.canvasList.length}`,
+        );
       }
-    } else {
-      for (let i = 0; i < this.pageInfos.length; i++) {
-        const pageAst = this.pageInfos[i];
-        const width = Math.ceil(pageAst.width) * this.imageScaleFactor;
-        const height = Math.ceil(pageAst.height) * this.imageScaleFactor;
+      const commonDiv = this.commonList[i];
+      const textLayerParent = this.textLayerParentList[i];
+      const annotationLayer = this.annotationLayerList[i];
 
-        const canvasDiv = this.canvasList[i].parentElement;
-        if (!canvasDiv) {
-          throw new Error(
-            `canvasDiv is null for page ${i}, canvas list length ${this.canvasList.length}`,
-          );
-        }
-        const commonDiv = this.commonList[i];
-        const textLayerParent = this.textLayerParentList[i];
-        const annotationLayer = this.annotationLayerList[i];
+      /// on width change
+      const containerWidth = this.container.offsetWidth;
+      const orignalScale = containerWidth / width;
+      textLayerParent.style.width = `${containerWidth}px`;
+      textLayerParent.style.height = `${height * orignalScale}px`;
+      annotationLayer.style.width = `${containerWidth}px`;
+      annotationLayer.style.height = `${height * orignalScale}px`;
+      commonDiv.style.width = `${containerWidth}px`;
+      commonDiv.style.height = `${height * orignalScale}px`;
 
-        /// on width change
-        const containerWidth = this.container.offsetWidth;
-        const orignalScale = containerWidth / width;
-        textLayerParent.style.width = `${containerWidth}px`;
-        textLayerParent.style.height = `${height * orignalScale}px`;
-        annotationLayer.style.width = `${containerWidth}px`;
-        annotationLayer.style.height = `${height * orignalScale}px`;
-        commonDiv.style.width = `${containerWidth}px`;
-        commonDiv.style.height = `${height * orignalScale}px`;
-
-        // compute scaling factor according to the paper size
-        const currentScale = this.container.offsetWidth / width;
-        canvasDiv.style.transformOrigin = '0px 0px';
-        canvasDiv.style.transform = `scale(${currentScale})`;
-      }
+      // compute scaling factor according to the paper size
+      const currentScale = this.container.offsetWidth / width;
+      canvasDiv.style.transformOrigin = '0px 0px';
+      canvasDiv.style.transform = `scale(${currentScale})`;
     }
   }
 }

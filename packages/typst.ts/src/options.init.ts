@@ -6,7 +6,6 @@ import type { WebAssemblyModuleRef } from './wasm';
 
 /**
  * staged options function
- * @typedef StagedOptFn
  * @template S - stage mark
  * @template T - context type
  */
@@ -14,30 +13,27 @@ export type StagedOptFn<S extends symbol, T = any> = (s: S, t: T) => Promise<voi
 
 /**
  * this mark is used to identify the beforeBuild stage
- * @type {unique symbol}
  * @description will not be used in runtime code
  */
-const BeforeBuildSymbol = Symbol('beforeBuild');
+const BeforeBuildSymbol: unique symbol = Symbol('beforeBuild');
 
 /**
  * this mark is used to identify the beforeBuild stage
- * @typedef BeforeBuildMark
  * @description cannot be created by any runtime code
  */
 export type BeforeBuildMark = typeof BeforeBuildSymbol;
 
 /**
  * before build stage
- * @typedef BeforeBuildFn
  * @description possible created by:
  *   - preloadRemoteFonts
  *   - preloadSystemFonts
+ *   - withAccessModel
  */
-export type BeforeBuildFn = StagedOptFn<BeforeBuildMark, unknown>;
+export type BeforeBuildFn = StagedOptFn<BeforeBuildMark>;
 
 /**
  *
- * @typedef InitOptions
  * @property {BeforeBuildFn[]} beforeBuild - callbacks before build stage
  */
 export interface InitOptions {
@@ -48,6 +44,7 @@ export interface InitOptions {
    * possible options:
    * - preloadRemoteFonts
    * - preloadSystemFonts
+   * - withAccessModel
    */
   beforeBuild: BeforeBuildFn[];
 
@@ -120,6 +117,12 @@ export function preloadSystemFonts({ byFamily }: { byFamily?: string[] }): Befor
   };
 }
 
+/**
+ * (compile only) set access model
+ *
+ * @param accessModel: when compiling, the access model is used to access the data of files
+ * @returns {BeforeBuildFn}
+ */
 export function withAccessModel(accessModel: FsAccessModel): BeforeBuildFn {
   return async (_, { builder }: InitContext) => {
     return new Promise(resolve => {
@@ -147,14 +150,20 @@ export function withAccessModel(accessModel: FsAccessModel): BeforeBuildFn {
   };
 }
 
-// todo: search browser
-// searcher.search_browser().await?;
-
+/**
+ * @internal builder
+ */
 type Builder = typstRenderer.TypstRendererBuilder & typstCompiler.TypstCompilerBuilder;
 
+/**
+ * @internal build context
+ */
 interface InitContext {
   ref: {
     loadFont(builder: Builder, fontPath: string): Promise<void>;
   };
   builder: Builder;
 }
+
+// todo: search browser
+// searcher.search_browser().await?;

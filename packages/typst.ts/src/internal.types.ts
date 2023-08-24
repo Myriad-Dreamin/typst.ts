@@ -15,6 +15,11 @@ export interface RenderSession {
 }
 
 /**
+ * The session of a Typst document (already rendered to svg format).
+ */
+export interface SvgSession {}
+
+/**
  * The page information of a Typst document.
  * @typedef {Object} PageInfo
  * @property {number} pageOffset - The offset of the page.
