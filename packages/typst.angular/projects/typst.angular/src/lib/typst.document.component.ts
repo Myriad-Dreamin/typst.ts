@@ -13,6 +13,8 @@ export class TypstDocumentComponent {
 
   @Input() fill: string = '#ffffff';
 
+  @Input() format: 'json' | 'vector' = 'json';
+
   @Input()
   set artifact(artifact: Uint8Array) {
     this._artifact = artifact;
@@ -30,9 +32,12 @@ export class TypstDocumentComponent {
       const displayDiv = this.typst_app?.nativeElement;
       if (this.artifact?.length) {
         const doRender = (renderer: typst.TypstRenderer) => {
-          console.log(renderer);
+          if (this.format === 'vector') {
+            throw new Error('not implemented');
+          }
           renderer.render({
             artifactContent: this.artifact,
+            format: (this.format == 'json' ? 'js' : undefined) /* never */ || 'js',
             backgroundColor: this.fill,
             container: displayDiv,
             pixelPerPt: 8,

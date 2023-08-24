@@ -6,6 +6,8 @@ import React from 'react';
 export interface TypstDocumentProps {
   fill?: string;
   artifact: Uint8Array;
+  // todo: add vector format
+  format?: 'json';
 }
 
 // This just queries the existing state of the permission, it does not change it.
@@ -31,7 +33,7 @@ let moduleInitOptions: typst.InitOptions = {
   getModule: () => '/node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
 };
 
-export const TypstDocument = ({ fill, artifact }: TypstDocumentProps) => {
+export const TypstDocument = ({ fill, artifact, format }: TypstDocumentProps) => {
   /// --- beg: manipulate permission --- ///
 
   // todo: acquire permission
@@ -63,13 +65,16 @@ export const TypstDocument = ({ fill, artifact }: TypstDocumentProps) => {
   const getDisplayLayerDiv = () => {
     return displayDivRef?.current;
   };
+
   const doRender = (renderer: typst.TypstRenderer) => {
     const divElem = getDisplayLayerDiv();
     if (!divElem) {
       return;
     }
+
     return renderer.render({
       artifactContent: artifact,
+      format: (format == 'json' ? 'js' : undefined /* never */) || 'js',
       backgroundColor: fill,
       container: divElem,
       pixelPerPt: 8,
