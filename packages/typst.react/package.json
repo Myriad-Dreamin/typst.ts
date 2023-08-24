@@ -4,8 +4,8 @@
   "description": "Typst.ts for React",
   "scripts": {
     "start": "webpack serve --config webpack/webpack.config.js --env env=dev",
-    "build": "tsc -p ./tsconfig.build.json --outDir dist && webpack --config webpack/webpack.config.js --env env=prod",
-    "build:lib": "tsc -p ./tsconfig.build.json --outDir ./dist/lib && node ./scripts/prepublish.lib.js",
+    "build": "tsc -p ./tsconfig.build.json && webpack --config webpack/webpack.config.js --env env=prod",
+    "build:lib": "tsc -p ./tsconfig.build.json",
     "lint": "eslint --fix \"./src/**/*.{js,jsx,ts,tsx,json}\"",
     "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -20,18 +20,9 @@
   ],
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
-  "exports": {
-    ".": {
-      "require": "./dist/src/lib/index.js",
-      "import": "./dist/src/lib/index.js",
-      "types": "./dist/src/lib/index.d.ts"
-    },
-    "./*": {
-      "require": "./dist/src/lib/*.js",
-      "import": "./dist/src/lib/*.js",
-      "types": "./dist/src/lib/*.d.ts"
-    }
-  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "peerDependencies": {
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
@@ -45,7 +36,7 @@
     "@babel/preset-react": "^7.18.6",
     "@babel/preset-typescript": "^7.21.5",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.10",
-    "@types/react": "^17.0.2",
+    "@types/react": "^17.0.1",
     "@types/react-dom": "^17.0.1",
     "@typescript-eslint/eslint-plugin": "^5.59.6",
     "@typescript-eslint/parser": "^5.59.6",

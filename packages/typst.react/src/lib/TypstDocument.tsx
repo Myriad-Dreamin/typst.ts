@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { withGlobalRenderer } from '@myriaddreamin/typst.ts/contrib/global-renderer';
+import { withGlobalRenderer } from '@myriaddreamin/typst.ts/dist/esm/contrib/global-renderer';
 import * as typst from '@myriaddreamin/typst.ts';
+import React from 'react';
 
 export interface TypstDocumentProps {
   fill?: string;

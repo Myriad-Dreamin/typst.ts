@@ -13,6 +13,7 @@
     "noFallthroughCasesInSwitch": true,
     "sourceMap": true,
     "declaration": false,
+    "skipLibCheck": true,
     "downlevelIteration": true,
     "experimentalDecorators": true,
     "moduleResolution": "node",
@@ -21,7 +22,7 @@
     "module": "ES2022",
     "useDefineForClassFields": false,
     "paths": {
-      "@angular/*": ["./node_modules/@angular/*"],
+      "@angular/*": ["../../node_modules/@angular/*"],
       "typst.angular": ["dist/typst.angular"]
     },
     "lib": ["ES2022"]

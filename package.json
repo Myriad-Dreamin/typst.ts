@@ -22,7 +22,12 @@
   ],
   "scripts": {
     "publish-packages": "turbo run build lint test",
-    "start:react": "yarn workspace @myriaddreamin/typst.react start"
+    "start:react": "yarn workspace @myriaddreamin/typst.react start",
+    "start:angular": "yarn workspace typst.angular start"
+  },
+  "dependencies": {
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1"
   },
   "devDependencies": {
     "typescript": "^5.0.4",

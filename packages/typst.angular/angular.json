@@ -130,7 +130,7 @@
               "projects/demo/src/assets",
               {
                 "glob": "**/*",
-                "input": "./node_modules/@myriaddreamin/typst-ts-renderer",
+                "input": "../../node_modules/@myriaddreamin/typst-ts-renderer",
                 "output": "./assets/typst-ts-renderer"
               }
             ],
