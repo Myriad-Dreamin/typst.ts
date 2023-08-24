@@ -1,6 +1,6 @@
 import { Component, ElementRef, Input, ViewChild } from '@angular/core';
-import { withGlobalRenderer } from '@myriaddreamin/typst.ts/dist/contrib/global-renderer';
-import * as typst from '@myriaddreamin/typst.ts';
+import { withGlobalRenderer } from '@myriaddreamin/typst.ts/dist/esm/contrib/global-renderer';
+import * as typst from '@myriaddreamin/typst.ts/dist/esm/main';
 
 @Component({
   selector: 'typst-document',

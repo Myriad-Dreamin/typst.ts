@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "ng serve --project demo",
     "build": "ng build --project typst.angular && cd dist/typst.angular && yarn link && cd ../../../../ && yarn link @myriaddreamin/typst.angular",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
@@ -21,11 +21,13 @@
     "@angular/platform-browser": "^16.0.2",
     "@angular/platform-browser-dynamic": "^16.0.2",
     "@angular/router": "^16.0.2",
-    "@myriaddreamin/typst.ts": "*",
-    "@myriaddreamin/typst-ts-renderer": "*",
     "rxjs": "~7.8.1",
     "tslib": "^2.5.2",
     "zone.js": "~0.13.0"
+  },
+  "peerDependencies": {
+    "@myriaddreamin/typst.ts": "*",
+    "@myriaddreamin/typst-ts-renderer": "*"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^16.0.2",

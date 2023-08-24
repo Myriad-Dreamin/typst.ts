@@ -8,7 +8,7 @@
   ],
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
-  "main": "pkg/typst_ts_web_compiler.js",
+  "module": "pkg/typst_ts_web_compiler.js",
   "types": "pkg/typst_ts_web_compiler.d.ts",
   "files": [
     "pkg/typst_ts_web_compiler_bg.wasm",
@@ -19,9 +19,9 @@
   "scripts": {
     "build:dev": "wasm-pack build --target web --scope myriaddreamin --dev -- --no-default-features --features web",
     "build": "wasm-pack build --target web --scope myriaddreamin -- --no-default-features --features web",
-    "prepublish": "npm run build",
+    "prepublish": "turbo build",
     "publish:dry": "npm publish --dry-run --access public",
-    "publish": "npm publish --access public"
+    "publish:lib": "npm publish --access public"
   },
   "devDependencies": {
     "turbo": "^1.10.12"

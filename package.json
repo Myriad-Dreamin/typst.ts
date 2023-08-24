@@ -20,6 +20,10 @@
     "packages/typst.vue3",
     "packages/typst.angular"
   ],
+  "scripts": {
+    "publish-packages": "turbo run build lint test",
+    "start:react": "yarn workspace @myriaddreamin/typst.react start"
+  },
   "devDependencies": {
     "typescript": "^5.0.4",
     "@babel/runtime": "^7.22.6"
