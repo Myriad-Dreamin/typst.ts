@@ -24,8 +24,8 @@ pub async fn run_http(args: RunHttpArgs) {
     let gh_pages = warp::path("typst.ts").and({
         let renderer = warp::path("renderer").and(warp::fs::dir("packages/renderer/pkg"));
         let compiler = warp::path("compiler").and(warp::fs::dir("packages/compiler/pkg"));
-        let typst_main =
-            warp::path("typst-main.js").and(warp::fs::file("packages/typst.ts/dist/main.js"));
+        let typst_main = warp::path("typst-main.js")
+            .and(warp::fs::file("packages/typst.ts/dist/esm/main.bundle.js"));
 
         renderer
             .or(compiler)

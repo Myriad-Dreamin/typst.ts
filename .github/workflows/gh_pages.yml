@@ -62,7 +62,7 @@ jobs:
           mkdir -p github-pages/renderer/
           cp packages/compiler/pkg/* github-pages/compiler/
           cp packages/renderer/pkg/* github-pages/renderer/
-          cp packages/typst.ts/dist/main.js github-pages/typst-main.js
+          cp packages/typst.ts/dist/esm/main.bundle.js github-pages/typst-main.js
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Upload artifact

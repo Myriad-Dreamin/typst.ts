@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { withGlobalRenderer } from '@myriaddreamin/typst.ts/dist/contrib/global-renderer';
+import { withGlobalRenderer } from '@myriaddreamin/typst.ts/contrib/global-renderer';
 import * as typst from '@myriaddreamin/typst.ts';
 
 export interface TypstDocumentProps {

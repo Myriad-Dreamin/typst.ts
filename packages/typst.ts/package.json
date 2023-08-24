@@ -8,25 +8,28 @@
   ],
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
-  "main": "dist/main.js",
-  "types": "dist/main.d.ts",
   "bugs": {
     "url": "https://github.com/Myriad-Dreamin/typst.ts/issues"
   },
   "homepage": "https://myriad-dreamin.github.io/typst.ts/",
+  "exports": {
+    ".": {
+      "require": "./dist/cjs/main.js", 
+      "import": "./dist/esm/main.js",
+      "types": "./dist/esm/main.d.ts"
+    },
+    "./*": {
+      "require": "./dist/cjs/*.js",
+      "import": "./dist/esm/*.js",
+      "types": "./dist/esm/*.d.ts"
+    }
+  },
   "scripts": {
-    "build": "tsc -p ./tsconfig.lib.json --emitDeclarationOnly --outDir dist && tsc -p ./tsconfig.lib.json -noEmit -skipLibCheck && node esbuild.config.mjs production",
-    "build:dev": "yarn run build-renderer:wasm:dev && yarn run build-compiler:wasm:dev && yarn run build-wrapper:dev",
-    "build-renderer:wasm:dev": "cd ../renderer/ && yarn run build:dev",
-    "build-compiler:wasm:dev": "cd ../compiler/ && yarn run build:dev",
-    "build-wrapper:dev": "tsc -p ./tsconfig.lib.json --emitDeclarationOnly --outDir dist && node esbuild.config.mjs",
-    "build-renderer": "yarn run build-renderer:wasm && yarn run build-wrapper",
-    "build-renderer:dev": "yarn run build-renderer:wasm:dev",
-    "build-compiler": "yarn run build-compiler:wasm && yarn run build-wrapper",
-    "build-compiler:dev": "yarn run build-compiler:wasm:dev && yarn run build-wrapper:dev",
-    "prepublish": "npm run build",
+    "build": "node scripts/mkdir.mjs && tsc -p ./tsconfig.lib.json && tsc -p ./tsconfig.cjs.json && tsc -p ./tsconfig.lib.json -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "build:dev": "node scripts/mkdir.mjs && tsc -p ./tsconfig.lib.json && tsc -p ./tsconfig.cjs.json && node esbuild.config.mjs",
+    "prepublish": "turbo build",
     "publish:dry": "npm publish --dry-run --access public",
-    "publish": "npm publish --access public"
+    "publish:lib": "npm publish --access public"
   },
   "devDependencies": {
     "@types/node": "^20.2.1",

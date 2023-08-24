@@ -33,7 +33,7 @@ hexo.extend.generator.register('typst_assets', function (locals) {
   const base_dir = hexo.base_dir;
   const typst_main_path = path.resolve(
     base_dir,
-    'node_modules/@myriaddreamin/typst.ts/dist/main.js',
+    'node_modules/@myriaddreamin/typst.ts/dist/esm/main.bundle.js',
   );
 
   const svg_utils_path = path.resolve(path.dirname(__filename), 'lib/svg_utils.cjs');

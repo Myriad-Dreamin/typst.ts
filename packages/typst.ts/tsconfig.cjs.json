@@ -2,9 +2,8 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "module": "ES2020",
-    "moduleResolution": "node",
-    "outDir": "dist/esm",
+    "outDir": "dist/cjs",
+    "module": "CommonJS",
     "declaration": true,
     "declarationMap": true,
     "inlineSources": true,

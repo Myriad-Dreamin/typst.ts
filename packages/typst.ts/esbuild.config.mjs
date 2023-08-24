@@ -40,13 +40,16 @@ const context = await esbuild.context({
   banner: {
     js: banner,
   },
-  outdir: 'dist',
+  outdir: 'dist/esm',
+  outExtension: {
+    '.js': '.bundle.js',
+  },
   entryPoints: ['src/main.ts', 'src/contrib/global-renderer.ts', 'src/contrib/sync-worker.ts'],
   bundle: true,
   format: 'esm',
   tsconfig: 'tsconfig.lib.json',
   platform: 'browser',
-  // external: [...builtins],
+  external: [...builtins],
   target: 'es2020',
   logLevel: 'info',
   sourcemap: IS_PRODUCTION ? false : 'inline',
