@@ -260,8 +260,10 @@ impl Hash for PartialFontGlyphProvider {
     }
 }
 
+pub type SharedFontResolver = Arc<RwLock<FontResolverImpl>>;
+
 impl PartialFontGlyphProvider {
-    pub fn new(base: GlyphProvider, resolver: Arc<RwLock<FontResolverImpl>>) -> Self {
+    pub fn new(base: GlyphProvider, resolver: SharedFontResolver) -> Self {
         Self { base, resolver }
     }
 }

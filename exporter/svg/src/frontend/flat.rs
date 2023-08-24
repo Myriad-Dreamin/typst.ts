@@ -75,12 +75,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
 
         let glyphs = t.render_glyphs(module.glyphs.iter().map(|(x, y)| (x, y)), true);
 
-        generate_text(Self::render_svg_template(
-            t,
-            header,
-            svg_body,
-            glyphs.into_iter(),
-        ))
+        generate_text(Self::render_svg_template(t, header, svg_body, glyphs))
     }
 }
 

@@ -173,7 +173,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         let glyphs = t.render_glyphs(glyphs.iter().map(|(x, y)| (x, y)), false);
 
         // template SVG
-        Self::render_svg_template(t, header, svg_body, glyphs.into_iter())
+        Self::render_svg_template(t, header, svg_body, glyphs)
     }
 
     /// Render SVG wrapped with HTML for [`Document`].

@@ -25,7 +25,7 @@ use image::*;
 pub mod core;
 use self::core::*;
 
-pub(self) mod alloc;
+mod alloc;
 use self::alloc::*;
 
 pub use crate::artifact::core::ArtifactMeta;
@@ -1028,6 +1028,12 @@ mod tests {
         let align_view = &view_buffer.as_slice()[..builder.buffer().len()];
 
         let item = raw_item.deref(align_view);
-        assert!(matches!(item.baseline, Some(_)));
+        assert!(item.baseline.is_some());
     }
+}
+
+#[test]
+fn test_document_is_send() {
+    fn ensure_send<T: Send>() {}
+    ensure_send::<Artifact>();
 }

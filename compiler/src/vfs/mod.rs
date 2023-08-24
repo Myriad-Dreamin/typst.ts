@@ -235,12 +235,12 @@ impl<M: AccessModel + Sized> Vfs<M> {
         // note: path aliases will share the same slot
         let mut path2slot = RwLockUpgradableReadGuard::upgrade(path2slot);
         let inserted = path2slot.insert(origin_path.as_os_str().into(), slot.idx);
-        assert!(matches!(inserted, None), "slot already inserted");
+        assert!(inserted.is_none(), "slot already inserted");
 
         let normalized = origin_path.clean();
         if path2slot.get(normalized.as_os_str()).is_none() {
             let inserted = path2slot.insert(normalized.as_os_str().into(), slot.idx);
-            assert!(matches!(inserted, None), "slot already inserted");
+            assert!(inserted.is_none(), "slot already inserted");
         }
 
         // prefetch a early mtime

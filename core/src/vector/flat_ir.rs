@@ -174,7 +174,7 @@ impl Module {
             }
         }
 
-        self.items.extend(item_pack.0.into_iter());
+        self.items.extend(item_pack.0);
         self.glyphs
             .extend(glyphs.into_iter().map(|(id, item)| (id, item.into())));
     }

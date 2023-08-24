@@ -2,7 +2,8 @@ use core::fmt;
 use core::ptr::NonNull;
 use std::alloc;
 
-// this is not exact the item aligen, but a constant for the all possible items on all platforms.
+// this is not exact the item aligen, but a constant for the all possible items
+// on all platforms.
 pub(super) const fn item_align_up(x: usize) -> usize {
     const ALIGN: usize = 8;
     const MASK: usize = !(ALIGN - 1);
@@ -92,7 +93,7 @@ impl AlignedBuffer {
     }
 
     #[inline]
-    pub fn as_mut_slice(&mut self) -> &mut [u8] {
+    pub(crate) fn as_mut_slice(&mut self) -> &mut [u8] {
         unsafe { core::slice::from_raw_parts_mut(self.ptr.as_ptr(), self.len) }
     }
 
@@ -101,3 +102,7 @@ impl AlignedBuffer {
         unsafe { core::slice::from_raw_parts(self.ptr.as_ptr(), self.len) }
     }
 }
+
+// Safety: AlignedBuffer is used read-only
+unsafe impl Send for AlignedBuffer {}
+unsafe impl Sync for AlignedBuffer {}

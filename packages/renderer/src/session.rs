@@ -252,6 +252,7 @@ impl RenderSessionManager {
 }
 
 impl RenderSessionManager {
+    #[allow(clippy::arc_with_non_send_sync)]
     pub fn new(fr: FontResolverImpl) -> Self {
         Self {
             font_resolver: Arc::new(RwLock::new(fr)),
