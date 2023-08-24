@@ -49,6 +49,8 @@
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.0.0",
-    "ng-packagr": "^16.0.1"
+    "ng-packagr": "^16.0.1",
+    "@myriaddreamin/typst.ts": "*",
+    "@myriaddreamin/typst-ts-renderer": "*"
   }
 }
