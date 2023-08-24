@@ -15,7 +15,7 @@
   },
   "homepage": "https://myriad-dreamin.github.io/typst.ts/",
   "scripts": {
-    "build": "tsc -p ./tsconfig.lib.json --emitDeclarationOnly --outDir dist && tsc -p ./tsconfig.lib.json -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "build": "node scripts/mkdir.js && tsc -p ./tsconfig.lib.json --emitDeclarationOnly --outDir dist && tsc -p ./tsconfig.lib.json -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "build:dev": "yarn run build-renderer:wasm:dev && yarn run build-compiler:wasm:dev && yarn run build-wrapper:dev",
     "build-renderer:wasm:dev": "cd ../renderer/ && yarn run build:dev",
     "build-compiler:wasm:dev": "cd ../compiler/ && yarn run build:dev",
