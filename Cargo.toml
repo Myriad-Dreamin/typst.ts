@@ -1,7 +1,7 @@
 [workspace.package]
 description = "Run Typst in JavaScriptWorld."
 authors = ["Typst.ts Developers", "The Typst Project Developers"]
-version = "0.3.1"
+version = "0.4.0-rc1"
 edition = "2021"
 readme = "README.md"
 license = "Apache-2.0"
@@ -145,22 +145,22 @@ vergen = { version = "7.5.1", features = ["build", "cargo", "git", "rustc"] }
 path-clean = "1.0.1"
 
 # project core
-typst-ts-core = "0.3"
-typst-ts-compiler = { version = "0.3", default-features = false }
-typst-ts-test-common = "0.3"
+typst-ts-core = "0.4.0-rc1"
+typst-ts-compiler = { version = "0.4.0-rc1", default-features = false }
+typst-ts-test-common = "0.4.0-rc1"
 
 # project exporters
-typst-ts-ast-exporter = "0.3"
-typst-ts-pdf-exporter = "0.3"
-typst-ts-canvas-exporter = "0.3"
-typst-ts-raster-exporter = "0.3"
-typst-ts-serde-exporter = "0.3"
-typst-ts-svg-exporter = "0.3"
-typst-ts-tir-exporter = "0.3"
-typst-ts-ws-exporter = "0.3"
+typst-ts-ast-exporter = "0.4.0-rc1"
+typst-ts-pdf-exporter = "0.4.0-rc1"
+typst-ts-canvas-exporter = "0.4.0-rc1"
+typst-ts-raster-exporter = "0.4.0-rc1"
+typst-ts-serde-exporter = "0.4.0-rc1"
+typst-ts-svg-exporter = "0.4.0-rc1"
+typst-ts-tir-exporter = "0.4.0-rc1"
+typst-ts-ws-exporter = "0.4.0-rc1"
 
 # project common components
-typst-ts-dev-server = "0.3"
+typst-ts-dev-server = "0.4.0-rc1"
 
 [patch.crates-io]
 typst-ts-core = { path = "core" }

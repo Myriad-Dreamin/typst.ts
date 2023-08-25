@@ -26,11 +26,21 @@
       // (and not the monorepo root)
       "outputs": [".next/**", "!.next/cache/**"]
     },
-    "deploy": {
-      // A package's `deploy` script depends on the `build`,
+    "prepublish": {
+      // A package's `prepublish` script depends on the `build`,
       // `test`, and `lint` scripts of the same package
       // being completed. It also has no filesystem outputs.
       "dependsOn": ["build", "test", "lint"]
+    },
+    "publish:dry": {
+      // Try to publish a package to npm, but don't actually
+      "dependsOn": ["prepublish", "^publish:dry"],
+      "cache": false
+    },
+    "publish:lib": {
+      // Publish a package to npm.
+      "dependsOn": ["prepublish", "^publish:lib"],
+      "cache": false
     },
     "test": {
       // A package's `test` script depends on that package's

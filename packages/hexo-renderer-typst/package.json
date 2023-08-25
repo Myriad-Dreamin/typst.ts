@@ -1,27 +1,28 @@
 {
   "name": "hexo-renderer-typst",
-  "version": "0.3.1",
+  "version": "0.4.0-rc1",
   "description": "Typst renderer plugin for Hexo",
-  "main": "index.cjs",
-  "directories": {
-    "lib": "./lib"
-  },
-  "files": [
-    "index.cjs",
-    "lib/"
-  ],
-  "repository": "https://github.com/Myriad-Dreamin/typst.ts",
+  "author": "Myriad Dreamin <camiyoru@gmail.com>",
+  "license": "Apache-2.0",
   "keywords": [
     "hexo",
     "typst",
     "renderer"
   ],
-  "author": "Myriad Dreamin <camiyoru@gmail.com>",
-  "maintainers": [
-    "Myriad Dreamin <camiyoru@gmail.com>"
+  "repository": "https://github.com/Myriad-Dreamin/typst.ts",
+  "main": "index.cjs",
+  "files": [
+    "index.cjs",
+    "lib/"
   ],
-  "license": "Apache-2.0",
+  "directories": {
+    "lib": "./lib"
+  },
   "devDependencies": {},
+  "scripts": {
+    "publish:dry": "npm publish --dry-run",
+    "publish:lib": "npm publish"
+  },
   "engines": {
     "node": ">=12"
   }

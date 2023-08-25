@@ -1,25 +1,18 @@
 {
   "name": "@myriaddreamin/typst.react",
-  "version": "0.3.1",
+  "version": "0.4.0-rc1",
   "description": "Typst.ts for React",
-  "scripts": {
-    "start": "webpack serve --config webpack/webpack.config.js --env env=dev",
-    "build": "tsc -p ./tsconfig.build.json --outDir dist && webpack --config webpack/webpack.config.js --env env=prod",
-    "build:lib": "tsc -p ./tsconfig.build.json --outDir ./dist/lib && node ./scripts/prepublish.lib.js",
-    "lint": "eslint --fix \"./src/**/*.{js,jsx,ts,tsx,json}\"",
-    "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
-    "test": "exit 0",
-    "prepublish": "npm run build:lib",
-    "publish:dry": "npm publish --dry-run --access public ./dist/lib",
-    "publish": "npm publish --access public ./dist/lib"
-  },
+  "author": "Myriad-Dreamin",
+  "license": "Apache-2.0",
   "keywords": [
     "React",
     "TypeScript",
     "Typst"
   ],
-  "author": "Myriad-Dreamin",
-  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/Myriad-Dreamin/typst.ts/issues"
+  },
+  "homepage": "https://myriad-dreamin.github.io/typst.ts/",
   "exports": {
     ".": {
       "require": "./dist/src/lib/index.js",
@@ -31,6 +24,18 @@
       "import": "./dist/src/lib/*.js",
       "types": "./dist/src/lib/*.d.ts"
     }
+  },
+  "files": [
+    "dist/**/*.{ts,js}"
+  ],
+  "scripts": {
+    "start": "webpack serve --config webpack/webpack.config.js --env env=dev",
+    "build": "tsc -p ./tsconfig.build.json --outDir dist && webpack --config webpack/webpack.config.js --env env=prod",
+    "lint": "eslint --fix \"./src/**/*.{js,jsx,ts,tsx,json}\"",
+    "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
+    "test": "exit 0",
+    "publish:dry": "npm publish --dry-run --access public",
+    "publish:lib": "npm publish --access public"
   },
   "peerDependencies": {
     "react": "^17.0.1",

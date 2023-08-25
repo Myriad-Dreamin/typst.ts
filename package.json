@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst.ts",
-  "version": "0.3.1",
+  "version": "0.4.0-rc1",
   "author": "Myriad-Dreamin",
   "description": "Run Typst in JavaScriptWorld.",
   "license": "Apache-2.0",
@@ -21,7 +21,10 @@
     "packages/typst.angular"
   ],
   "scripts": {
-    "publish-packages": "turbo run deploy && python scripts/publish.py",
+    "bump-packages": "python scripts/bump_version.py",
+    "prepublish-packages": "turbo run prepublish",
+    "publish:dry": "turbo run prepublish publish:dry",
+    "publish:lib": "turbo run prepublish publish:lib",
     "start:react": "yarn workspace @myriaddreamin/typst.react start",
     "start:angular": "yarn workspace typst.angular start"
   },
