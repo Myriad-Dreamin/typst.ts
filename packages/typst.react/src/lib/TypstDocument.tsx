@@ -1,22 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { withGlobalRenderer } from '@myriaddreamin/typst.ts/dist/esm/contrib/global-renderer';
 import * as typst from '@myriaddreamin/typst.ts';
-import React from 'react';
 
 export interface TypstDocumentProps {
   fill?: string;
   artifact: Uint8Array;
   // todo: add vector format
   format?: 'json';
-}
-
-// This just queries the existing state of the permission, it does not change it.
-async function queryFontPermission() {
-  const status = await navigator.permissions.query({ name: 'local-fonts' as PermissionName });
-  if (status.state === 'granted') console.log('permission was granted 👍');
-  else if (status.state === 'prompt') {
-    console.log('permission will be requested');
-  } else console.log('permission was denied 👎');
 }
 
 let moduleInitOptions: typst.InitOptions = {
@@ -66,22 +56,22 @@ export const TypstDocument = ({ fill, artifact, format }: TypstDocumentProps) =>
     return displayDivRef?.current;
   };
 
-  const doRender = (renderer: typst.TypstRenderer) => {
-    const divElem = getDisplayLayerDiv();
-    if (!divElem) {
-      return;
-    }
-
-    return renderer.render({
-      artifactContent: artifact,
-      format: (format == 'json' ? 'js' : undefined /* never */) || 'js',
-      backgroundColor: fill,
-      container: divElem,
-      pixelPerPt: 8,
-    });
-  };
-
   useEffect(() => {
+    const doRender = (renderer: typst.TypstRenderer) => {
+      const divElem = getDisplayLayerDiv();
+      if (!divElem) {
+        return;
+      }
+
+      return renderer.render({
+        artifactContent: artifact,
+        format: (format == 'json' ? 'js' : undefined) /* never */ || 'js',
+        backgroundColor: fill,
+        container: divElem,
+        pixelPerPt: 8,
+      });
+    };
+
     /// get display layer div
     const divElem = getDisplayLayerDiv();
     if (!divElem) {
@@ -97,11 +87,12 @@ export const TypstDocument = ({ fill, artifact, format }: TypstDocumentProps) =>
     /// render after init
     withGlobalRenderer(
       typst.createTypstRenderer,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as unknown as any).pdfjsLib,
       moduleInitOptions,
       doRender,
     );
-  }, [permission, displayDivRef, fill, artifact]);
+  }, [permission, displayDivRef, fill, artifact, format]);
 
   /// --- end: update document --- ///
 
@@ -114,4 +105,4 @@ export const TypstDocument = ({ fill, artifact, format }: TypstDocumentProps) =>
 
 TypstDocument.setWasmModuleInitOptions = (opts: typst.InitOptions) => {
   moduleInitOptions = opts;
-}
+};

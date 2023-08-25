@@ -16,16 +16,17 @@ TypstDocument.setWasmModuleInitOptions({
     //   byFamily: ['Segoe UI Symbol'],
     // }),
   ],
-  getModule: () => 'http://localhost:20810/base/node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
+  getModule: () =>
+    'http://localhost:20810/base/node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
 });
 
 export const App = () => {
   const [artifact, setArtifact] = useState<Uint8Array>(new Uint8Array(0));
 
   const getArtifactData = async () => {
-    const response = await fetch('http://localhost:20810/corpus/skyzh-cv/main.white.artifact.json').then(response =>
-      response.arrayBuffer(),
-    );
+    const response = await fetch(
+      'http://localhost:20810/corpus/skyzh-cv/main.white.artifact.json',
+    ).then(response => response.arrayBuffer());
 
     setArtifact(new Uint8Array(response));
   };

@@ -30,7 +30,8 @@
     "react-dom": "^17.0.1"
   },
   "devDependencies": {
-    "typescript": "^5.0.4",
-    "@babel/runtime": "^7.22.6"
+    "@babel/runtime": "^7.22.6",
+    "prettier": "^3.0.2",
+    "typescript": "^5.0.4"
   }
 }
