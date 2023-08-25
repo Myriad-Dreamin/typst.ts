@@ -1,2 +1,5 @@
 * text=auto
 *.typ linguist-language=rust
+
+# Use JSONC for syntax highlighting the turbo.json
+turbo.json linguist-language=jsonc
