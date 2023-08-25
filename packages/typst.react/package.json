@@ -8,7 +8,7 @@
     "build:lib": "tsc -p ./tsconfig.build.json --outDir ./dist/lib && node ./scripts/prepublish.lib.js",
     "lint": "eslint --fix \"./src/**/*.{js,jsx,ts,tsx,json}\"",
     "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "exit 0",
     "prepublish": "npm run build:lib",
     "publish:dry": "npm publish --dry-run --access public ./dist/lib",
     "publish": "npm publish --access public ./dist/lib"

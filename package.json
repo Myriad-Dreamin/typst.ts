@@ -21,7 +21,7 @@
     "packages/typst.angular"
   ],
   "scripts": {
-    "publish-packages": "turbo run build lint test",
+    "publish-packages": "turbo run deploy && python scripts/publish.py",
     "start:react": "yarn workspace @myriaddreamin/typst.react start",
     "start:angular": "yarn workspace typst.angular start"
   },

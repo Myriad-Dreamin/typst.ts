@@ -27,7 +27,7 @@ def main(old_version: str, new_version: str):
   # validate version format
   for v in [old_version, new_version]:
     if len(v.split('.')) != 3:
-      raise ValueError(f'Version String "{v}" must be in the form x.y.z')
+      raise ValueError(f'Version String "{v}" must be in the form x.y.z(-rcN)')
 
   bump_rust_self_version = lambda: itertools.product(
     [ # file paths
@@ -38,6 +38,7 @@ def main(old_version: str, new_version: str):
 
   bump_javascript_self_version = lambda: itertools.product(
     [ # file paths
+      "package.json",
       "packages/compiler/package.json",
       "packages/renderer/package.json",
       "packages/hexo-renderer-typst/package.json",

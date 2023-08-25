@@ -7,7 +7,7 @@
     "start": "ng serve --project demo",
     "build": "ng build --project typst.angular && cd dist/typst.angular && yarn link && cd ../../../../ && yarn link @myriaddreamin/typst.angular",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
+    "test": "ng test --watch=false",
     "lint": "ng lint"
   },
   "private": true,

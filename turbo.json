@@ -7,24 +7,42 @@
       // `build` tasks  being completed first
       // (the `^` symbol signifies `upstream`).
       "dependsOn": ["^build"],
+      // A package's `build` script should only be rerun when
+      // any source file has changed in related folders.
+      "inputs": [
+        "core/src/**/*.rs",
+        "compiler/src/**/*.{rs,ts,tsx,js,jsx,css,html}",
+        "exporter/**/*.rs",
+        "packages/compiler/src/**/*.rs",
+        "packages/renderer/src/**/*.rs",
+        "packages/typst.angular/projects/**/*.{ts,js,css,sass,html}",
+        "!packages/typst.angular/projects/**/*.spec.{ts,js}",
+        "packages/typst.react/src/**/*.{ts,tsx,js,jsx}",
+        "!packages/typst.react/src/**/*.spec.{ts,tsx,js,jsx}",
+        "packages/typst.ts/src/**/*.{ts,js}",
+        "packages/typst.vue3/src/**/*.{ts,js,css,sass,html,vue3}"
+      ],
       // note: output globs are relative to each package's `package.json`
       // (and not the monorepo root)
       "outputs": [".next/**", "!.next/cache/**"]
     },
-    // "deploy": {
-    //   // A package's `deploy` script depends on the `build`,
-    //   // `test`, and `lint` scripts of the same package
-    //   // being completed. It also has no filesystem outputs.
-    //   "dependsOn": ["build", "test", "lint"]
-    // },
-    // "test": {
-    //   // A package's `test` script depends on that package's
-    //   // own `build` script being completed first.
-    //   "dependsOn": ["build"],
-    //   // A package's `test` script should only be rerun when
-    //   // either a `.tsx` or `.ts` file has changed in `src` or `test` folders.
-    //   "inputs": ["src/**/*.tsx", "src/**/*.ts", "test/**/*.ts", "test/**/*.tsx"]
-    // },
+    "deploy": {
+      // A package's `deploy` script depends on the `build`,
+      // `test`, and `lint` scripts of the same package
+      // being completed. It also has no filesystem outputs.
+      "dependsOn": ["build", "test", "lint"]
+    },
+    "test": {
+      // A package's `test` script depends on that package's
+      // own `build` script being completed first.
+      "dependsOn": ["build"],
+      // A package's `test` script should only be rerun when
+      // any specification file has changed in related folders.
+      "inputs": [
+        "packages/typst.angular/projects/**/*.spec.{ts,tsx,js,jsx}",
+        "packages/typst.react/src/**/*.spec.{ts,tsx,js,jsx}"
+      ]
+    },
     // A package's `lint` script has no dependencies and
     // can be run whenever. It also has no filesystem outputs.
     "lint": {},
