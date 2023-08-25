@@ -285,9 +285,9 @@ impl TypstRenderer {
         let render = |layout: &LayoutElem| {
             let applying = format!("{}px", layout.0 .0);
 
-            let applied = root.get_attribute("data-applyed-width");
+            let applied = root.get_attribute("data-applied-width");
             if applied.is_some() && applied.unwrap() == applying {
-                console_log!("already applied {}", applying);
+                // console_log!("already applied {}", applying);
                 return Ok(());
             }
 
@@ -301,8 +301,8 @@ impl TypstRenderer {
                     .unwrap();
             }
 
-            root.set_attribute("data-applyed-width", &applying).unwrap();
-            console_log!("applied {}", applying);
+            root.set_attribute("data-applied-width", &applying).unwrap();
+            // console_log!("applied {}", applying);
 
             Ok(())
         };

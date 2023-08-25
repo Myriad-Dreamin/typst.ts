@@ -25,7 +25,15 @@
     "publish:dry": "npm publish --dry-run --access public",
     "publish:lib": "npm publish --access public"
   },
+  "dependencies": {
+    "idb": "^7.1.1"
+  },
+  "peerDependencies": {
+    "@myriaddreamin/typst-ts-renderer": "*",
+    "@myriaddreamin/typst-ts-web-compiler": "*"
+  },
   "devDependencies": {
+    
     "@types/node": "^20.2.1",
     "@types/web": "^0.0.99",
     "@typescript-eslint/eslint-plugin": "5.59.6",
@@ -34,10 +42,7 @@
     "eslint": "^8.41.0",
     "esbuild": "0.17.19",
     "esbuild-plugin-wasm": "^1.1.0",
-    "tslib": "2.5.2"
-  },
-  "dependencies": {
-    "idb": "^7.1.1",
+    "tslib": "2.5.2",
     "@myriaddreamin/typst-ts-renderer": "*",
     "@myriaddreamin/typst-ts-web-compiler": "*"
   }
