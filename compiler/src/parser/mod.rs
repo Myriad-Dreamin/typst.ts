@@ -72,6 +72,18 @@ pub fn reparse(
                     }
                 }
 
+                if !last_rep {
+                    match diff[0] {
+                        Chunk::Insert(s) => {
+                            source.edit(0..0, s);
+                        }
+                        Chunk::Delete(s) => {
+                            source.edit(0..s.len(), "");
+                        }
+                        Chunk::Equal(_) => {}
+                    }
+                }
+
                 Ok(source)
             }
         }
@@ -83,6 +95,40 @@ pub fn reparse(
 mod tests {
     use typst_ts_core::TypstFileId;
 
+    #[track_caller]
+    fn assert_same_ast(a: &typst::syntax::SyntaxNode, b: &typst::syntax::SyntaxNode) {
+        assert_eq!(a.text(), b.text());
+        assert_eq!(format!("{:#?}", a), format!("{:#?}", b));
+    }
+
+    #[test]
+    fn test_reparse_add_prefix_suffix() {
+        use super::reparse;
+        let path = std::path::Path::new("/main.typ");
+        let source_id = TypstFileId::new(None, path);
+        let empty = reparse(path, source_id, None, "".to_owned()).unwrap();
+        let with_ba = reparse(path, source_id, None, "ba".to_owned()).unwrap();
+
+        let edit_a = reparse(path, source_id, Some(empty.clone()), "a".to_owned()).unwrap();
+        let edit_ba = reparse(path, source_id, Some(edit_a.clone()), "ba".to_owned()).unwrap();
+        assert_same_ast(with_ba.root(), edit_ba.root());
+
+        let edit_b = reparse(path, source_id, Some(empty.clone()), "b".to_owned()).unwrap();
+        let edit_ba = reparse(path, source_id, Some(edit_b.clone()), "ba".to_owned()).unwrap();
+        assert_same_ast(with_ba.root(), edit_ba.root());
+
+        let with_aba = reparse(path, source_id, None, "aba".to_owned()).unwrap();
+
+        let edit_aba = reparse(path, source_id, Some(edit_b), "aba".to_owned()).unwrap();
+        assert_same_ast(with_aba.root(), edit_aba.root());
+
+        let edit_aba = reparse(path, source_id, Some(edit_a), "aba".to_owned()).unwrap();
+        assert_same_ast(with_aba.root(), edit_aba.root());
+
+        let edit_aba = reparse(path, source_id, Some(empty), "aba".to_owned()).unwrap();
+        assert_same_ast(with_aba.root(), edit_aba.root());
+    }
+
     #[test]
     fn test_reparse_issue_typst_preview_vscode_issues_59() {
         use super::reparse;
@@ -91,6 +137,6 @@ mod tests {
         let empty = reparse(path, source_id, None, "".to_owned()).unwrap();
         let with_a = reparse(path, source_id, None, "a".to_owned()).unwrap();
         let edit_a = reparse(path, source_id, Some(empty), "a".to_owned()).unwrap();
-        assert_eq!(with_a.root(), edit_a.root());
+        assert_same_ast(with_a.root(), edit_a.root());
     }
 }
