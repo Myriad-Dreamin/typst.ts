@@ -278,7 +278,8 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
                 current_width.to_pt(),
                 self.target,
             );
-            println!(
+
+            log::trace!(
                 "rerendering {} at {:?}, width={current_width:?} target={}",
                 i,
                 instant - instant_begin,
@@ -289,7 +290,7 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
                 // compile and export document
                 let output = Arc::new(this.inner_mut().compile()?);
                 svg_exporter.render(current_width, output);
-                println!(
+                log::trace!(
                     "rerendered {} at {:?}, {}",
                     i,
                     instant - instant_begin,
@@ -306,7 +307,7 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
         std::fs::write(module_output, serialize_doc(doc, glyphs)).unwrap();
 
         let instant = std::time::Instant::now();
-        println!("rerendering finished at {:?}", instant - instant_begin);
+        log::trace!("multiple layouts finished at {:?}", instant - instant_begin);
 
         Ok(pure_doc.take())
     }
