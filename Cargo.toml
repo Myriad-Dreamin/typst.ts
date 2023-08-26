@@ -1,7 +1,7 @@
 [workspace.package]
 description = "Run Typst in JavaScriptWorld."
 authors = ["Typst.ts Developers", "The Typst Project Developers"]
-version = "0.4.0-rc1"
+version = "0.4.0-rc2"
 edition = "2021"
 readme = "README.md"
 license = "Apache-2.0"
@@ -146,7 +146,7 @@ path-clean = "1.0.1"
 
 # project core
 typst-ts-core = "0.4.0-rc1"
-typst-ts-compiler = { version = "0.4.0-rc1", default-features = false }
+typst-ts-compiler = { version = "0.4.0-rc2", default-features = false }
 typst-ts-test-common = "0.4.0-rc1"
 
 # project exporters

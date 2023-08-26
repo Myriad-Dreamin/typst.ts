@@ -1,6 +1,6 @@
 {
   "name": "hexo-renderer-typst",
-  "version": "0.4.0-rc1",
+  "version": "0.4.0-rc2",
   "description": "Typst renderer plugin for Hexo",
   "author": "Myriad Dreamin <camiyoru@gmail.com>",
   "license": "Apache-2.0",
