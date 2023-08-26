@@ -10,17 +10,11 @@
       // A package's `build` script should only be rerun when
       // any source file has changed in related folders.
       "inputs": [
-        "core/src/**/*.rs",
-        "compiler/src/**/*.{rs,ts,tsx,js,jsx,css,html}",
-        "exporter/**/*.rs",
-        "packages/compiler/src/**/*.rs",
-        "packages/renderer/src/**/*.rs",
-        "packages/typst.angular/projects/**/*.{ts,js,css,sass,html}",
-        "!packages/typst.angular/projects/**/*.spec.{ts,js}",
-        "packages/typst.react/src/**/*.{ts,tsx,js,jsx}",
-        "!packages/typst.react/src/**/*.spec.{ts,tsx,js,jsx}",
-        "packages/typst.ts/src/**/*.{ts,js}",
-        "packages/typst.vue3/src/**/*.{ts,js,css,sass,html,vue3}"
+        "tsconfig*.json",
+        "index.html",
+        "{public,src,projects,webpack}/**/*",
+        "!projects/**/*.spec.{ts,js}",
+        "!{projects,src}/**/*.spec.{ts,js}"
       ],
       // note: output globs are relative to each package's `package.json`
       // (and not the monorepo root)
@@ -48,10 +42,7 @@
       "dependsOn": ["build"],
       // A package's `test` script should only be rerun when
       // any specification file has changed in related folders.
-      "inputs": [
-        "packages/typst.angular/projects/**/*.spec.{ts,tsx,js,jsx}",
-        "packages/typst.react/src/**/*.spec.{ts,tsx,js,jsx}"
-      ]
+      "inputs": ["{projects,src}/**/*.spec.{ts,tsx,js,jsx}"]
     },
     // A package's `lint` script has no dependencies and
     // can be run whenever. It also has no filesystem outputs.
