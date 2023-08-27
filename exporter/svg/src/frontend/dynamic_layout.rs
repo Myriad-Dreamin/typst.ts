@@ -33,7 +33,7 @@ impl DynamicLayoutSvgExporter {
             .collect::<Vec<_>>();
 
         self.layouts.push((layout_width.into(), pages));
-        println!("svg dynamic layout render time: {:?}", instant.elapsed());
+        log::trace!("svg dynamic layout render time: {:?}", instant.elapsed());
     }
 
     pub fn finalize(self) -> (MultiSvgDocument, GlyphMapping) {
