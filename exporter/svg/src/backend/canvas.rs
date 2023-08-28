@@ -1,3 +1,7 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(clippy::all)]
+
 use std::sync::Arc;
 use tiny_skia as sk;
 
