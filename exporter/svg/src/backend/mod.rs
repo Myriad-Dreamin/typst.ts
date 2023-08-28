@@ -589,3 +589,6 @@ pub fn generate_text(text_list: Vec<SvgText>) -> String {
     }
     string_io
 }
+
+#[cfg(feature = "canvas")]
+pub(crate) mod canvas;

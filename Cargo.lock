@@ -185,6 +185,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-trait"
+version = "0.1.73"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc00ceb34980c03614e35a3a4e218276a0a824e911d07651cd0d858a51e8c0f0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.29",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4426,12 +4437,16 @@ dependencies = [
 name = "typst-ts-svg-exporter"
 version = "0.4.0-rc2"
 dependencies = [
+ "async-trait",
  "base64 0.21.2",
  "comemo",
+ "js-sys",
  "log",
  "tiny-skia",
  "typst",
  "typst-ts-core",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
