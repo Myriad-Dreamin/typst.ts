@@ -1,4 +1,4 @@
-# Typst.ts
+# typst.ts
 
 <p align="center">
   <a href="https://github.com/Myriad-Dreamin/typst.ts/actions/workflows/ci.yaml">
@@ -9,7 +9,7 @@
   </a>
 </p>
 
-Typst.ts is a project dedicated to bring the power of [Typst](https://github.com/typst/typst) to the world of JavaScript. In short, it composes ways to compile and render your Typst document. In the scope of server-side rendering collaborated by
+`typst.ts` is a project dedicated to bring the power of [Typst](https://github.com/typst/typst) to the world of JavaScript. In short, it provides an `typst::World` implementation and several exporters to help compile and render your Typst document. In the scope of server-side rendering collaborated by
 $\textcolor{#2ecc40}{\textsf{server}}$ and $\textcolor{#0074d9}{\textsf{browser}}$, there would be a data flow like this:
 
 <p align="center">
@@ -18,11 +18,11 @@ $\textcolor{#2ecc40}{\textsf{server}}$ and $\textcolor{#0074d9}{\textsf{browser}
 
 Specifically, it provides several typical approaches:
 
-- Compile Typst documents to browser-friendly SVG documents.
+- Provides a render to export typst document as browser-friendly SVG documents.
 
-- Precompile Typst documents to a compressed artifact.
+- Arrange typst documents to a compressed artifact, which then get realized in client side.
 
-- Run the typst compiler directly in browser, like [typst.app](https://typst.app).
+- Provide a world implementation suitable for NodeJs or Browser environments, to bind typst's compiler to Javascript.
 
 Visualized Feature:
 
@@ -38,6 +38,8 @@ Visualized Feature:
 
 - [Instant VSCode Preview Plugin](https://github.com/Enter-tainer/typst-preview-vscode)
 
+- [typst-book - A simple tool for creating modern online books in pure typst.](https://github.com/Myriad-Dreamin/typst-book)
+
 - [Renderer Plugin for Hexo, a Blog-aware Static Site Generator](https://www.npmjs.com/package/hexo-renderer-typst)
 
 - Renderer/Component Library for [JavaScript](https://www.npmjs.com/package/@myriaddreamin/typst.ts), [React](https://www.npmjs.com/package/@myriaddreamin/typst.react), and [Angular](https://www.npmjs.com/package/@myriaddreamin/typst.angular)
@@ -52,7 +54,7 @@ Download the latest release from [GitHub Releases](https://github.com/Myriad-Dre
 
 ### CLI
 
-Run Compiler Example:
+Run [Typst compiler](https://github.com/typst/typst) with `typst.ts`'s exporters (renderers) Example:
 
 ```shell
 typst-ts-cli compile --workspace "fuzzers/corpora/math" --entry "fuzzers/corpora/math/main.typ"
@@ -80,25 +82,6 @@ Options:
   -h, --help     Print help
 ```
 
-Compile Help:
-
-```shell
-$ typst-ts-cli compile --help
-Run compiler.
-
-Usage: typst-ts-cli compile [OPTIONS] --entry <ENTRY>
-
-Compile options:
-  -w, --workspace <WORKSPACE>  Path to typst workspace [default: .]
-      --watch                  Watch mode
-      --dynamic-layout         Generate dynamic layout representation. Note: this is an experimental feature and will be merged as format `dyn-svg` in the future
-      --trace <TRACE>          Enable tracing. Possible usage: --trace=verbosity={0..3} where verbosity: {0..3} -> {warning, info, debug, trace}
-  -e, --entry <ENTRY>          Entry file
-      --format <FORMAT>        Output formats, possible values: `json`, `pdf`, `svg`, `json_glyphs`, `ast`, `ir`, and `rmp`
-  -o, --output <OUTPUT>        Output to directory, default in the same directory as the entry file [default: ]
-      --font-path <DIR>        Add additional directories to search for fonts
-```
-
 Package Help:
 
 ```shell
@@ -122,7 +105,7 @@ Options:
 
 Note: see [Troubleshooting WASM Build](docs/troubleshooting-wasm-build.md) for (especially) **Arch Linux** users.
 
-Note: Since we use turborepo for `>=v0.4.0` development, if you are the earlier developer of typst.ts, please clean up all of your node_modules and dist folders before running the commands.
+Note: Since we use turborepo for `>=v0.4.0` development, if you are the earlier developer of `typst.ts`, please clean up all of your node_modules and dist folders before running the commands.
 
 ```shell
 # Optional: download the font assets if you haven't done so.
@@ -153,7 +136,7 @@ The compiler is capable of producing artifact outputs from a Typst project. Thet
 
 The renderer accepts an input in artifact format and renders the document as HTML elements.
 
-Import Typst.ts in your project:
+Import `typst.ts` in your project:
 
 - Using [@myriaddreamin/typst.ts][npm::typst.ts]
 
