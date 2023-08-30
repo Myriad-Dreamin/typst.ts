@@ -21,6 +21,7 @@ siphasher.workspace = true
 sha2.workspace = true
 byteorder.workspace = true
 base64-serde = "0.7.0"
+fxhash = "0.2.1"
 
 once_cell.workspace = true
 rustc-hash.workspace = true

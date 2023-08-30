@@ -27,6 +27,7 @@ use crate::{
     font::{FontGlyphProvider, GlyphProvider},
     hash::{Fingerprint, FingerprintBuilder},
     vector::GlyphLowerBuilder,
+    TakeAs,
 };
 
 use super::{
@@ -322,7 +323,7 @@ impl ToItemMap for RefItemMap {
 /// Trait of a streaming representation of a module.
 pub trait ModuleStream {
     fn items(&self) -> ItemPack;
-    fn layouts(&self) -> LayoutRegion;
+    fn layouts(&self) -> Arc<LayoutRegion>;
     fn glyphs(&self) -> Vec<(DefId, FlatGlyphItem)>;
     fn gc_items(&self) -> Option<Vec<Fingerprint>> {
         // never gc items
@@ -393,6 +394,7 @@ pub enum ModuleMetadata {
 const _: () = assert!(core::mem::size_of::<ModuleMetadata>() == 32);
 
 #[repr(usize)]
+#[allow(dead_code)]
 enum MetaIndices {
     Version,
     SourceMapping,
@@ -462,9 +464,9 @@ impl ModuleStream for &FlatModule {
         let sz = &self.meta_indices[MetaIndices::Item as usize];
         let sz = sz.get_or_init(|| {
             let mut sz = usize::MAX; // will panic if not found
-            for m in &self.metadata {
-                if let ModuleMetadata::Item(v) = m {
-                    sz = v.0.len();
+            for (idx, m) in self.metadata.iter().enumerate() {
+                if let ModuleMetadata::Item(_) = m {
+                    sz = idx;
                     break;
                 }
             }
@@ -480,9 +482,27 @@ impl ModuleStream for &FlatModule {
         }
     }
 
-    fn layouts(&self) -> LayoutRegion {
-        // self.layouts.clone()
-        todo!()
+    fn layouts(&self) -> Arc<LayoutRegion> {
+        // cache the index
+        let sz = &self.meta_indices[MetaIndices::Layout as usize];
+        let sz = sz.get_or_init(|| {
+            let mut sz = usize::MAX; // will panic if not found
+            for (idx, m) in self.metadata.iter().enumerate() {
+                if let ModuleMetadata::Layout(_) = m {
+                    sz = idx;
+                    break;
+                }
+            }
+            sz
+        });
+
+        // get the item pack
+        let m = &self.metadata[*sz];
+        if let ModuleMetadata::Layout(v) = m {
+            v.clone()
+        } else {
+            unreachable!()
+        }
     }
 
     fn glyphs(&self) -> Vec<(DefId, FlatGlyphItem)> {
@@ -544,7 +564,7 @@ impl MultiSvgDocument {
     }
 
     pub fn merge_delta(&mut self, v: impl ModuleStream) {
-        self.layouts = v.layouts();
+        self.layouts = v.layouts().take();
         self.module.merge_delta(v);
     }
 }
@@ -585,16 +605,11 @@ impl<const ENABLE_REF_CNT: bool> Default for ModuleBuilderImpl<ENABLE_REF_CNT> {
 
 impl<const ENABLE_REF_CNT: bool> BuildGlyph for ModuleBuilderImpl<ENABLE_REF_CNT> {
     fn build_glyph(&mut self, glyph: &GlyphItem) -> GlyphRef {
-        // if ENABLE_REF_CNT {
-        //     self.incr_glyphs.push(self.lifetime);
-        // }
-        todo!() // todo: font
-
-        // self.glyphs.build_glyph(glyph)
-
-        // let abs_ref = AbsoluteRef { fingerprint, id };
-        // self.glyphs.insert(glyph.clone(), abs_ref.clone());
-        // abs_ref
+        let (glyph_ref, inserted) = self.glyphs.build_glyph(glyph);
+        if ENABLE_REF_CNT && inserted {
+            self.incr_glyphs.push(self.lifetime);
+        }
+        glyph_ref
     }
 }
 
@@ -804,17 +819,13 @@ pub fn flatten_glyphs(
 }
 
 pub fn serialize_doc(doc: MultiSvgDocument) -> Vec<u8> {
-    // let flatten_module = FlatModule {
-    //     magic: *b"tsvr\x00\x00\x00\x00",
-    //     metadata: vec![],
-    //     // item_pack: ItemPack(doc.module.items.into_iter().collect()),
-    //     // glyphs: flatten_glyphs(glyph_mapping),
-    //     // layouts: doc.layouts,
-    //     meta_indices: Default::default(),
-    // };
+    let flatten_module = FlatModule::new(vec![
+        ModuleMetadata::Item(ItemPack(doc.module.items.into_iter().collect())),
+        ModuleMetadata::Glyph(Arc::new(flatten_glyphs(doc.module.glyphs).into())),
+        ModuleMetadata::Layout(Arc::new(doc.layouts)),
+    ]);
 
-    // flatten_module.to_bytes()
-    todo!()
+    flatten_module.to_bytes()
 }
 
 #[cfg(test)]

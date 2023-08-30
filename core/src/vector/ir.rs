@@ -4,7 +4,7 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 use crate::{
-    hash::{typst_affinite_hash, Fingerprint},
+    hash::{item_hash128, typst_affinite_hash, Fingerprint},
     StaticHash128,
 };
 use base64::Engine;
@@ -21,12 +21,33 @@ pub type ImmutStr = Arc<str>;
 
 pub use super::geom::*;
 
+/// Create a xml id from the given prefix and the def id of this reference.
+/// Note that the def id may not be stable across compilation.
+/// Note that the entire html document shares namespace for ids.
+fn as_svg_id(b: &[u8], prefix: &'static str) -> String {
+    // truncate zero
+    let rev_zero = b.iter().rev().skip_while(|&&b| b == 0).count();
+    let id = &b[..rev_zero];
+    let id = base64::engine::general_purpose::STANDARD_NO_PAD.encode(id);
+    [prefix, &id].join("")
+}
+
 /// The local id of a svg item.
 /// This id is only unique within the svg document.
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct DefId(pub u64);
+
+impl DefId {
+    /// Create a xml id from the given prefix and the def id of this reference.
+    /// Note that the def id may not be stable across compilation.
+    /// Note that the entire html document shares namespace for ids.
+    #[comemo::memoize]
+    pub fn as_svg_id(self, prefix: &'static str) -> String {
+        as_svg_id(self.0.to_le_bytes().as_slice(), prefix)
+    }
+}
 
 /// A stable absolute reference.
 /// The fingerprint is used to identify the item and likely unique between
@@ -40,6 +61,35 @@ pub struct AbsoluteRef {
     pub fingerprint: Fingerprint,
     /// The local def id of the item.
     pub id: DefId,
+}
+
+impl fmt::Debug for AbsoluteRef {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "<AbsRef: {}{}>",
+            self.fingerprint.as_svg_id(""),
+            self.id.0
+        )
+    }
+}
+
+impl Hash for AbsoluteRef {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.fingerprint.hash(state);
+    }
+}
+
+impl AbsoluteRef {
+    #[inline]
+    pub fn as_svg_id(&self, prefix: &'static str) -> String {
+        self.fingerprint.as_svg_id(prefix)
+    }
+
+    #[inline]
+    pub fn as_unstable_svg_id(&self, prefix: &'static str) -> String {
+        self.id.as_svg_id(prefix)
+    }
 }
 
 /// Reference a font item in a more friendly format to compress and store
@@ -69,47 +119,10 @@ pub struct GlyphRef {
     pub glyph_idx: u32,
 }
 
-impl fmt::Debug for AbsoluteRef {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(
-            f,
-            "<AbsRef: {}{}>",
-            self.fingerprint.as_svg_id(""),
-            self.id.0
-        )
-    }
-}
-
-impl Hash for AbsoluteRef {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.fingerprint.hash(state);
-    }
-}
-
-impl AbsoluteRef {
-    /// Create a xml id from the given prefix and the def id of this reference.
-    /// Note that the def id may not be stable across compilation.
-    /// Note that the entire html document shares namespace for ids.
+impl GlyphRef {
     #[comemo::memoize]
-    fn as_unstable_svg_id_inner(id: u64, prefix: &'static str) -> String {
-        let id = {
-            let id = id.to_le_bytes();
-            // truncate zero
-            let rev_zero = id.iter().rev().skip_while(|&&b| b == 0).count();
-            let id = &id[..rev_zero];
-            base64::engine::general_purpose::STANDARD_NO_PAD.encode(id)
-        };
-        [prefix, &id].join("")
-    }
-
-    #[inline]
-    pub fn as_svg_id(&self, prefix: &'static str) -> String {
-        self.fingerprint.as_svg_id(prefix)
-    }
-
-    #[inline]
     pub fn as_unstable_svg_id(&self, prefix: &'static str) -> String {
-        Self::as_unstable_svg_id_inner(self.id.0, prefix)
+        as_svg_id(self.glyph_idx.to_le_bytes().as_ref(), prefix)
     }
 }
 
@@ -324,6 +337,13 @@ pub enum GlyphItem {
     Outline(Arc<OutlineGlyphItem>),
 }
 
+impl GlyphItem {
+    #[comemo::memoize]
+    pub fn get_fingerprint(&self) -> Fingerprint {
+        Fingerprint::from_u128(item_hash128(self))
+    }
+}
+
 /// The shape metadata of a [`TextItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
@@ -399,24 +419,48 @@ impl GlyphPackBuilder {
             .map(|(a, b)| (DefId(b.1.idx as u64), a))
             .collect()
     }
+
+    fn build_font(&mut self, font: &Font) -> FontRef {
+        if let Some(id) = self.font_mapping.get(font) {
+            return id.clone();
+        }
+
+        let id = FontRef {
+            hash: fxhash::hash32(font),
+            idx: self.font_mapping.len() as u32,
+        };
+        self.font_mapping.insert(font.clone(), id.clone());
+        id
+    }
+
+    pub fn build_glyph(&mut self, glyph: &GlyphItem) -> (GlyphRef, /* inserted */ bool) {
+        if let Some(id) = self.glyph_defs.get(glyph) {
+            return (id.0.clone(), false);
+        }
+
+        let g = match glyph {
+            GlyphItem::Raw(g, _) => g,
+            _ => todo!(),
+        };
+
+        let font_ref = self.build_font(g);
+
+        let glyph_idx = self.glyph_defs.len() as u32;
+
+        let abs_ref = GlyphRef {
+            font_hash: font_ref.idx,
+            glyph_idx,
+        };
+        self.glyph_defs
+            .insert(glyph.clone(), (abs_ref.clone(), font_ref));
+        (abs_ref, true)
+    }
 }
 
 pub trait BuildGlyph {
     fn build_glyph(&mut self, glyph: &GlyphItem) -> GlyphRef;
 }
 
-impl BuildGlyph for GlyphPackBuilder {
-    fn build_glyph(&mut self, glyph: &GlyphItem) -> GlyphRef {
-        if let Some(id) = self.glyph_defs.get(glyph) {
-            return id.0.clone();
-        }
-
-        let id = DefId(self.glyph_defs.len() as u64);
-
-        // let fingerprint = self.fingerprint_builder.resolve(glyph);
-        // let abs_ref = AbsoluteRef { fingerprint, id };
-        // self.glyph_defs.insert(glyph.clone(), abs_ref.clone());
-        // abs_ref
-        todo!() // glyph things
-    }
+pub trait GlyphHashStablizer {
+    fn stablize_hash(&mut self, glyph: &GlyphRef) -> Fingerprint;
 }

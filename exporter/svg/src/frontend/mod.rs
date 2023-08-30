@@ -6,7 +6,7 @@ use typst_ts_core::{
     hash::FingerprintBuilder,
     vector::{
         flat_ir::{self, Module},
-        ir::{AbsoluteRef, Axes, DefId, GlyphItem, GlyphPackBuilder, Size, SvgItem},
+        ir::{Axes, DefId, GlyphItem, GlyphPackBuilder, Size, SvgItem},
         vm::RenderVm,
         LowerBuilder,
     },
@@ -170,7 +170,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
 
         // render the glyphs collected from the pages
         let glyphs = std::mem::take(&mut t.glyph_defs).finalize();
-        let glyphs = t.render_glyphs(glyphs.iter().map(|(x, y)| (x, y)), false);
+        let glyphs = t.render_glyphs(glyphs.iter().enumerate().map(|(x, (_, y))| (x, y)), false);
 
         // template SVG
         Self::render_svg_template(t, header, svg_body, glyphs)
@@ -303,7 +303,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     }
 
     /// Render glyphs into the svg_body.
-    pub(crate) fn render_glyphs<'a, I: Iterator<Item = (&'a DefId, &'a GlyphItem)>>(
+    pub(crate) fn render_glyphs<'a, I: Iterator<Item = (usize, &'a GlyphItem)>>(
         &mut self,
         glyphs: I,
         use_stable_glyph_id: bool,
@@ -315,17 +315,16 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         let mut svg_body = Vec::new();
 
         for (abs_ref, item) in glyphs {
-            // let glyph_id = if Feat::USE_STABLE_GLYPH_ID && use_stable_glyph_id {
-            //     abs_ref.as_svg_id("g")
-            // } else {
-            //     abs_ref.as_unstable_svg_id("g")
-            // };
-            // svg_body.push(SvgText::Plain(
-            //     render_task
-            //         .render_glyph(&glyph_id, item)
-            //         .unwrap_or_default(),
-            // ))
-            todo!()
+            let glyph_id = if Feat::USE_STABLE_GLYPH_ID && use_stable_glyph_id {
+                item.get_fingerprint().as_svg_id("g")
+            } else {
+                (DefId(abs_ref as u64)).as_svg_id("g")
+            };
+            svg_body.push(SvgText::Plain(
+                render_task
+                    .render_glyph(&glyph_id, item)
+                    .unwrap_or_default(),
+            ))
         }
 
         svg_body

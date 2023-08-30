@@ -339,7 +339,7 @@ impl<'m, 't> FlatIncrRenderVm<'m> for BBoxTask<'m, 't> {
 
 impl BuildGlyph for BBoxTask<'_, '_> {
     fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
-        self.glyph_defs.build_glyph(glyph)
+        self.glyph_defs.build_glyph(glyph).0
     }
 }
 

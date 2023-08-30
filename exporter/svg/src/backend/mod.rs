@@ -9,8 +9,8 @@ use typst_ts_core::{
         flat_ir,
         flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
         ir::{
-            self, Abs, AbsoluteRef, Axes, BuildGlyph, GlyphRef, ImmutStr, PathStyle, Ratio, Scalar,
-            Size,
+            self, Abs, Axes, BuildGlyph, GlyphHashStablizer, GlyphRef, ImmutStr, PathStyle, Ratio,
+            Scalar, Size,
         },
         vm::{GroupContext, RenderVm, TransformContext},
         GlyphLowerBuilder,
@@ -205,7 +205,7 @@ impl From<SvgTextBuilder> for Arc<SvgTextNode> {
 /// Internal methods for [`SvgTextBuilder`].
 impl SvgTextBuilder {
     #[inline]
-    pub fn render_glyph_inner<C: DynExportFeature>(
+    pub fn render_glyph_inner<C: DynExportFeature + GlyphHashStablizer>(
         &mut self,
         ctx: &mut C,
         pos: Scalar,
@@ -215,17 +215,16 @@ impl SvgTextBuilder {
 
         // A stable glyph id can help incremental font transfer (IFT).
         // However, it is permitted unstable if you will not use IFT.
-        // let glyph_id = if ctx.use_stable_glyph_id() {
-        //     glyph.as_svg_id("g")
-        // } else {
-        //     glyph.as_unstable_svg_id("g")
-        // };
+        let glyph_id = if ctx.use_stable_glyph_id() {
+            ctx.stablize_hash(glyph).as_svg_id("g")
+        } else {
+            glyph.as_unstable_svg_id("g")
+        };
 
-        // self.content.push(SvgText::Plain(format!(
-        //     r##"<use x="{}" href="#{}"/>"##,
-        //     adjusted_offset, glyph_id
-        // )));
-        todo!();
+        self.content.push(SvgText::Plain(format!(
+            r##"<use x="{}" href="#{}"/>"##,
+            adjusted_offset, glyph_id
+        )));
     }
 
     #[inline]
@@ -323,6 +322,7 @@ impl<C: BuildClipPath> TransformContext<C> for SvgTextBuilder {
 impl<
         C: RenderVm<Resultant = Arc<SvgTextNode>>
             + BuildGlyph
+            + GlyphHashStablizer
             + BuildFillStyleClass
             + DynExportFeature,
     > GroupContext<C> for SvgTextBuilder
@@ -408,6 +408,7 @@ impl<
         C: RenderVm<Resultant = Arc<SvgTextNode>>
             + FlatRenderVm<'m, Resultant = Arc<SvgTextNode>>
             + BuildGlyph
+            + GlyphHashStablizer
             + BuildFillStyleClass
             + DynExportFeature,
     > FlatGroupContext<C> for SvgTextBuilder

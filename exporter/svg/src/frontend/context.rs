@@ -1,13 +1,16 @@
 use std::{collections::HashMap, sync::Arc};
 
 use typst_ts_core::{
-    hash::{Fingerprint, FingerprintBuilder},
+    hash::{item_hash128, Fingerprint, FingerprintBuilder},
     vector::{
         flat_ir::{FlatSvgItem, FlatTextItem, GroupRef, Module},
         flat_vm::{FlatIncrRenderVm, FlatRenderVm},
-        ir::{self, BuildGlyph, DefId, GlyphPackBuilder, GlyphRef, ImmutStr, PathItem, StyleNs},
+        ir::{
+            self, BuildGlyph, GlyphHashStablizer, GlyphPackBuilder, GlyphRef, ImmutStr, PathItem,
+            StyleNs,
+        },
+        vm::GroupContext,
         vm::RenderVm,
-        {ir::AbsoluteRef, vm::GroupContext},
     },
 };
 
@@ -81,7 +84,15 @@ impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Fea
 
 impl<'m, 't, Feat: ExportFeature> BuildGlyph for RenderContext<'m, 't, Feat> {
     fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
-        self.glyph_defs.build_glyph(glyph)
+        self.glyph_defs.build_glyph(glyph).0
+    }
+}
+
+impl<'m, 't, Feat: ExportFeature> GlyphHashStablizer for RenderContext<'m, 't, Feat> {
+    fn stablize_hash(&mut self, glyph: &GlyphRef) -> Fingerprint {
+        Fingerprint::from_u128(item_hash128(
+            &self.module.glyphs[glyph.glyph_idx as usize].1,
+        ))
     }
 }
 

@@ -1,5 +1,6 @@
 use std::{
     collections::{hash_map::RandomState, HashSet},
+    ops::Deref,
     sync::Arc,
 };
 
@@ -13,7 +14,7 @@ use typst_ts_core::{
             MultiSvgDocument, Page, SourceMappingNode, SvgDocument,
         },
         flat_vm::{FlatIncrRenderVm, FlatRenderVm},
-        ir::{Rect, Scalar, SvgItem},
+        ir::{Rect, SvgItem},
         LowerBuilder,
     },
     TakeAs,
@@ -313,17 +314,28 @@ impl IncrSvgDocClient {
         // otherwise, we keep document layout
         let mut page_off: f32 = 0.;
         let mut next_doc_view = vec![];
-        // if !self.doc.layouts.is_empty() {
-        //     for (page, layout) in self.doc.layouts[0].1.iter() {
-        //         page_off += layout.y.0;
-        //         if page_off < rect.lo.y.0 || page_off - layout.y.0 > rect.hi.y.0 {
-        //             next_doc_view.push((empty_page, *layout));
-        //             continue;
-        //         }
+        if !self.doc.layouts.is_empty() {
+            let t = &self.doc.layouts[0];
+            let pages = match t {
+                LayoutRegionNode::Pages(a) => {
+                    let (_, pages) = a.deref();
+                    pages
+                }
+                _ => todo!(),
+            };
+            for page in pages.iter() {
+                page_off += page.size.y.0;
+                if page_off < rect.lo.y.0 || page_off - page.size.y.0 > rect.hi.y.0 {
+                    next_doc_view.push(Page {
+                        content: empty_page,
+                        size: page.size,
+                    });
+                    continue;
+                }
 
-        //         next_doc_view.push((*page, *layout));
-        //     }
-        // }
+                next_doc_view.push(page.clone());
+            }
+        }
         // todo: fix this
 
         let mut t = SvgTask::<IncrementalExportFeature>::default();
@@ -348,7 +360,7 @@ impl IncrSvgDocClient {
         let glyphs = self.doc.module.glyphs.iter();
         // skip the glyphs that are already rendered
         let new_glyphs = glyphs.skip(self.glyph_window);
-        let glyph_defs = t.render_glyphs(new_glyphs.map(|g| (&g.0, &g.1)), true);
+        let glyph_defs = t.render_glyphs(new_glyphs.enumerate().map(|(x, (_, y))| (x, y)), true);
 
         svg.extend(glyph_defs);
         svg.push("</defs>".into());

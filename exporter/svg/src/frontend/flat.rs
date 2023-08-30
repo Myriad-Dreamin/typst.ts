@@ -77,7 +77,10 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         let mut svg_body = vec![];
         t.render(module, pages, &mut svg_body);
 
-        let glyphs = t.render_glyphs(module.glyphs.iter().map(|(x, y)| (x, y)), true);
+        let glyphs = t.render_glyphs(
+            module.glyphs.iter().enumerate().map(|(x, (_, y))| (x, y)),
+            true,
+        );
 
         generate_text(Self::render_svg_template(t, header, svg_body, glyphs))
     }
