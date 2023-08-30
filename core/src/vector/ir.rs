@@ -42,6 +42,33 @@ pub struct AbsoluteRef {
     pub id: DefId,
 }
 
+/// Reference a font item in a more friendly format to compress and store
+/// information, similar to [`GlyphRef`].
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub struct FontRef {
+    /// The hash of the font to avoid collision.
+    pub hash: u32,
+    /// The local id of the font.
+    pub idx: u32,
+}
+
+/// Reference a glyph item in a more friendly format to compress and store
+/// information. The glyphs are locally stored in the svg module.
+/// With a glyph reference, we can get both the font metric and the glyph data.
+/// The `font_hash` is to let it safe to be cached, please see
+/// [`crate::vector::flat_ir::FlatFontItem`] for more details.
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub struct GlyphRef {
+    /// The hash of the font to avoid collision.
+    pub font_hash: u32,
+    /// The local id of the glyph.
+    pub glyph_idx: u32,
+}
+
 impl fmt::Debug for AbsoluteRef {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
@@ -302,8 +329,8 @@ pub enum GlyphItem {
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct TextShape {
-    // todo: save direction
-    // pub dir: Dir,
+    /// The direction of the text item.
+    pub dir: ImmutStr,
     /// The ascent of the font used by the text item.
     pub ascender: Abs,
     /// The units per em of the font used by the text item.
@@ -351,23 +378,45 @@ pub enum StyleNs {
     Fill,
 }
 
-/// Intermediate representation of an incompleted glyph pack.
-pub type GlyphMapping = HashMap<GlyphItem, AbsoluteRef>;
-
 /// A finished pack that stores all the glyph items.
-pub type GlyphPack = Vec<(AbsoluteRef, GlyphItem)>;
+pub type GlyphPack = Vec<(DefId, GlyphItem)>;
 
-#[derive(Default)]
-pub struct GlyphPackBuilder;
+#[derive(Default, Clone)]
+pub struct GlyphPackBuilder {
+    /// Intermediate representation of an incompleted font pack.
+    font_mapping: HashMap<Font, FontRef>,
+
+    /// Intermediate representation of an incompleted glyph pack.
+    glyph_defs: HashMap<GlyphItem, (GlyphRef, FontRef)>,
+}
 
 impl GlyphPackBuilder {
-    pub fn finalize(glyphs: impl IntoIterator<Item = (GlyphItem, AbsoluteRef)>) -> GlyphPack {
-        let mut glyphs = glyphs.into_iter().collect::<Vec<_>>();
-        glyphs.sort_by(|(_, a), (_, b)| a.id.0.cmp(&b.id.0));
-        glyphs.into_iter().map(|(a, b)| (b, a)).collect()
+    pub fn finalize(&self) -> GlyphPack {
+        let mut glyphs = self.glyph_defs.clone().into_iter().collect::<Vec<_>>();
+        glyphs.sort_by(|(_, a), (_, b)| a.0.glyph_idx.cmp(&b.0.glyph_idx));
+        glyphs
+            .into_iter()
+            .map(|(a, b)| (DefId(b.1.idx as u64), a))
+            .collect()
     }
 }
 
 pub trait BuildGlyph {
-    fn build_glyph(&mut self, glyph: &GlyphItem) -> AbsoluteRef;
+    fn build_glyph(&mut self, glyph: &GlyphItem) -> GlyphRef;
+}
+
+impl BuildGlyph for GlyphPackBuilder {
+    fn build_glyph(&mut self, glyph: &GlyphItem) -> GlyphRef {
+        if let Some(id) = self.glyph_defs.get(glyph) {
+            return id.0.clone();
+        }
+
+        let id = DefId(self.glyph_defs.len() as u64);
+
+        // let fingerprint = self.fingerprint_builder.resolve(glyph);
+        // let abs_ref = AbsoluteRef { fingerprint, id };
+        // self.glyph_defs.insert(glyph.clone(), abs_ref.clone());
+        // abs_ref
+        todo!() // glyph things
+    }
 }

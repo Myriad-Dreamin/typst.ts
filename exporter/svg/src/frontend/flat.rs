@@ -2,9 +2,11 @@ use std::sync::Arc;
 
 use typst::{diag::SourceResult, doc::Document};
 use typst_ts_core::vector::{
-    flat_ir::{flatten_glyphs, FlatModule, ItemPack, Module, ModuleBuilder, Pages, SvgDocument},
+    flat_ir::{
+        flatten_glyphs, FlatModule, GlyphPack, ItemPack, LayoutRegion, LayoutRegionNode,
+        LayoutRegionRepr, Module, ModuleBuilder, ModuleMetadata, Page, SvgDocument,
+    },
     flat_vm::FlatRenderVm,
-    ir::GlyphMapping,
     LowerBuilder,
 };
 
@@ -15,13 +17,13 @@ use crate::{
 
 impl<Feat: ExportFeature> SvgTask<Feat> {
     /// Render a document into the svg_body.
-    pub fn render(&mut self, module: &Module, pages: &Pages, svg_body: &mut Vec<SvgText>) {
+    pub fn render(&mut self, module: &Module, pages: &[Page], svg_body: &mut Vec<SvgText>) {
         let mut render_task = self.get_render_context(module);
 
         let mut acc_height = 0u32;
         for page in pages.iter() {
-            let entry = &page.0;
-            let size = Self::page_size(page.1);
+            let entry = &page.content;
+            let size = Self::page_size(page.size);
 
             svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
                 attributes: vec![
@@ -38,19 +40,19 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 }
 
 impl<Feat: ExportFeature> SvgExporter<Feat> {
-    pub(crate) fn header(output: &Pages) -> String {
+    pub(crate) fn header(output: &[Page]) -> String {
         // calculate the width and height of the svg
         let w = output
             .iter()
-            .map(|p| p.1.x.0.ceil())
+            .map(|p| p.size.x.0.ceil())
             .max_by(|a, b| a.total_cmp(b))
             .unwrap();
-        let h = output.iter().map(|p| p.1.y.0.ceil()).sum::<f32>();
+        let h = output.iter().map(|p| p.size.y.0.ceil()).sum::<f32>();
 
         Self::header_inner(w, h)
     }
 
-    pub fn svg_doc(output: &Document) -> (SvgDocument, GlyphMapping) {
+    pub fn svg_doc(output: &Document) -> SvgDocument {
         let mut lower_builder = LowerBuilder::new(output);
         let mut builder = ModuleBuilder::default();
         let pages = output
@@ -58,15 +60,17 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             .iter()
             .map(|p| {
                 let abs_ref = builder.build(lower_builder.lower(p));
-                (abs_ref, p.size().into())
+                Page {
+                    content: abs_ref,
+                    size: p.size().into(),
+                }
             })
             .collect::<Vec<_>>();
-        let (module, glyph_mapping) = builder.finalize();
-
-        (SvgDocument { pages, module }, glyph_mapping)
+        let module = builder.finalize();
+        SvgDocument { pages, module }
     }
 
-    pub fn render_flat_svg(module: &Module, pages: &Pages) -> String {
+    pub fn render_flat_svg(module: &Module, pages: &[Page]) -> String {
         let header = Self::header(pages);
 
         let mut t = SvgTask::<Feat>::default();
@@ -87,19 +91,31 @@ pub fn export_module(output: &Document) -> SourceResult<Vec<u8>> {
     let mut pages = vec![];
     for page in output.pages.iter() {
         let item = t.lower(page);
-        let entry = builder.build(item);
-        pages.push((entry, page.size().into()));
+        let content = builder.build(item);
+        pages.push(Page {
+            content,
+            size: page.size().into(),
+        });
     }
 
-    let (repr, glyphs) = builder.finalize();
-    let glyphs = flatten_glyphs(glyphs);
+    let repr: Module = builder.finalize();
 
-    let module_data = FlatModule {
-        metadata: vec![],
-        item_pack: ItemPack(repr.items.into_iter().collect()),
-        glyphs,
-        layouts: vec![(Default::default(), pages)],
-    }
+    let glyphs = GlyphPack {
+        items: flatten_glyphs(repr.glyphs),
+        incremental_base: 0, // todo: correct incremental_base
+    };
+
+    let module_data = FlatModule::new(vec![
+        ModuleMetadata::Item(ItemPack(repr.items.into_iter().collect())),
+        ModuleMetadata::Glyph(Arc::new(glyphs)),
+        ModuleMetadata::Layout(Arc::new(LayoutRegion::ByScalar(LayoutRegionRepr {
+            kind: "width".into(),
+            layouts: vec![(
+                Default::default(),
+                LayoutRegionNode::Pages(Arc::new((Default::default(), pages))),
+            )],
+        }))),
+    ])
     .to_bytes();
 
     Ok(module_data)

@@ -4,8 +4,8 @@ use typst::doc::Document;
 use typst_ts_core::{
     hash::Fingerprint,
     vector::{
-        flat_ir::{flatten_glyphs, FlatModule, ItemPack, ModuleBuilder, MultiSvgDocument},
-        ir::{Abs, GlyphMapping, Size},
+        flat_ir::{FlatModule, ItemPack, ModuleBuilder, ModuleMetadata, MultiSvgDocument},
+        ir::{Abs, Size},
         LowerBuilder,
     },
 };
@@ -36,29 +36,28 @@ impl DynamicLayoutSvgExporter {
         log::trace!("svg dynamic layout render time: {:?}", instant.elapsed());
     }
 
-    pub fn finalize(self) -> (MultiSvgDocument, GlyphMapping) {
-        let (module, glyph_mapping) = self.builder.finalize();
-        (
-            MultiSvgDocument {
-                module,
-                layouts: self.layouts,
-            },
-            glyph_mapping,
-        )
+    pub fn finalize(self) -> MultiSvgDocument {
+        // let (module, glyph_mapping) = self.builder.finalize();
+        // (
+        //     MultiSvgDocument {
+        //         module,
+        //         layouts: self.layouts,
+        //     },
+        //     glyph_mapping,
+        // )
+        todo!()
     }
 
     pub fn debug_stat(&self) -> String {
         let v = self.builder.finalize_ref();
-        let item_cnt = v.0.items.len();
-        let glyph_cnt = v.1.len();
-        let glyphs = flatten_glyphs(v.1);
+        let item_cnt = v.items.len();
+        let glyph_cnt = v.glyphs.len();
+        // let glyphs = GlyphPack::from_iter(v.1);
 
-        let module_data = FlatModule {
-            metadata: vec![],
-            item_pack: ItemPack(v.0.items.into_iter().collect()),
-            glyphs,
-            layouts: vec![],
-        }
+        let module_data = FlatModule::new(vec![
+            // ModuleMetadata::Glyph(Arc::new(glyphs)),
+            ModuleMetadata::Item(ItemPack(v.items.into_iter().collect())),
+        ])
         .to_bytes();
         format!(
             "module size: {} bytes, items count: {}, glyph count: {}",

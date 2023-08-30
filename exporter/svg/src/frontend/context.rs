@@ -5,17 +5,14 @@ use typst_ts_core::{
     vector::{
         flat_ir::{FlatSvgItem, FlatTextItem, GroupRef, Module},
         flat_vm::{FlatIncrRenderVm, FlatRenderVm},
-        ir::{self, DefId, GlyphMapping, ImmutStr, PathItem, StyleNs},
+        ir::{self, BuildGlyph, DefId, GlyphPackBuilder, GlyphRef, ImmutStr, PathItem, StyleNs},
         vm::RenderVm,
         {ir::AbsoluteRef, vm::GroupContext},
     },
 };
 
 use crate::{
-    backend::{
-        BuildClipPath, BuildFillStyleClass, BuildGlyph, DynExportFeature, SvgTextBuilder,
-        SvgTextNode,
-    },
+    backend::{BuildClipPath, BuildFillStyleClass, DynExportFeature, SvgTextBuilder, SvgTextNode},
     ExportFeature, GlyphProvider,
 };
 
@@ -42,7 +39,7 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     /// Stores the glyphs used in the document.
     // todo: used in SvgItem rendering, but
     // unused in FlatSvgItem rendering, which is confusing.
-    pub(crate) glyph_defs: &'t mut GlyphMapping,
+    pub(crate) glyph_defs: &'t mut GlyphPackBuilder,
     /// Stores the style definitions used in the document.
     pub(crate) style_defs: &'t mut StyleDefMap,
     /// Stores the clip paths used in the document.
@@ -83,17 +80,8 @@ impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Fea
 }
 
 impl<'m, 't, Feat: ExportFeature> BuildGlyph for RenderContext<'m, 't, Feat> {
-    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> AbsoluteRef {
-        if let Some(id) = self.glyph_defs.get(glyph) {
-            return id.clone();
-        }
-
-        let id = DefId(self.glyph_defs.len() as u64);
-
-        let fingerprint = self.fingerprint_builder.resolve(glyph);
-        let abs_ref = AbsoluteRef { fingerprint, id };
-        self.glyph_defs.insert(glyph.clone(), abs_ref.clone());
-        abs_ref
+    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
+        self.glyph_defs.build_glyph(glyph)
     }
 }
 

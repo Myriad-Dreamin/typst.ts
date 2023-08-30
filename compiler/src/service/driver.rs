@@ -302,9 +302,9 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
 
         let module_output = self.output.with_extension(&self.extension);
 
-        let (doc, glyphs) = svg_exporter.finalize();
+        let doc = svg_exporter.finalize();
 
-        std::fs::write(module_output, serialize_doc(doc, glyphs)).unwrap();
+        std::fs::write(module_output, serialize_doc(doc)).unwrap();
 
         let instant = std::time::Instant::now();
         log::trace!("multiple layouts finished at {:?}", instant - instant_begin);

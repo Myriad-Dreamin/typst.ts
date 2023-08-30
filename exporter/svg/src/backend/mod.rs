@@ -8,7 +8,10 @@ use typst_ts_core::{
     vector::{
         flat_ir,
         flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
-        ir::{self, Abs, AbsoluteRef, Axes, ImmutStr, PathStyle, Ratio, Scalar, Size},
+        ir::{
+            self, Abs, AbsoluteRef, Axes, BuildGlyph, GlyphRef, ImmutStr, PathStyle, Ratio, Scalar,
+            Size,
+        },
         vm::{GroupContext, RenderVm, TransformContext},
         GlyphLowerBuilder,
     },
@@ -18,10 +21,6 @@ mod escape;
 use escape::{PcDataEscapes, TextContentDataEscapes};
 
 use crate::utils::ToCssExt;
-
-pub trait BuildGlyph {
-    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> AbsoluteRef;
-}
 
 pub trait BuildClipPath {
     fn build_clip_path(&mut self, path: &ir::PathItem) -> Fingerprint;
@@ -210,22 +209,23 @@ impl SvgTextBuilder {
         &mut self,
         ctx: &mut C,
         pos: Scalar,
-        glyph: &AbsoluteRef,
+        glyph: &GlyphRef,
     ) {
         let adjusted_offset = (pos.0 * 2.).round() / 2.;
 
         // A stable glyph id can help incremental font transfer (IFT).
         // However, it is permitted unstable if you will not use IFT.
-        let glyph_id = if ctx.use_stable_glyph_id() {
-            glyph.as_svg_id("g")
-        } else {
-            glyph.as_unstable_svg_id("g")
-        };
+        // let glyph_id = if ctx.use_stable_glyph_id() {
+        //     glyph.as_svg_id("g")
+        // } else {
+        //     glyph.as_unstable_svg_id("g")
+        // };
 
-        self.content.push(SvgText::Plain(format!(
-            r##"<use x="{}" href="#{}"/>"##,
-            adjusted_offset, glyph_id
-        )));
+        // self.content.push(SvgText::Plain(format!(
+        //     r##"<use x="{}" href="#{}"/>"##,
+        //     adjusted_offset, glyph_id
+        // )));
+        todo!();
     }
 
     #[inline]
@@ -426,7 +426,7 @@ impl<
         })));
     }
 
-    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, glyph: &AbsoluteRef) {
+    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, glyph: &GlyphRef) {
         self.render_glyph_inner(ctx, pos, glyph)
     }
 

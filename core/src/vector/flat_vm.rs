@@ -5,8 +5,9 @@ use std::ops::Deref;
 use crate::hash::Fingerprint;
 
 use super::flat_ir as ir;
+use super::ir::GlyphRef;
 use super::{
-    ir::{AbsoluteRef, Point, Scalar},
+    ir::{Point, Scalar},
     vm::{GroupContext, TransformContext},
 };
 
@@ -17,7 +18,7 @@ pub trait FlatGroupContext<C>: Sized {
         self.render_item_ref_at(ctx, Point::default(), item);
     }
 
-    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, item: &AbsoluteRef);
+    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, item: &GlyphRef);
 
     fn render_flat_text_semantics(
         &mut self,
