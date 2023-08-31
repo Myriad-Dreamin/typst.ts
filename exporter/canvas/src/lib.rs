@@ -1,7 +1,3 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-#![allow(clippy::all)]
-
 use js_sys::Promise;
 use std::{fmt::Debug, ops::Deref, sync::Arc};
 use tiny_skia as sk;
@@ -11,7 +7,7 @@ use web_sys::{CanvasRenderingContext2d, HtmlImageElement, Path2d};
 
 use typst_ts_core::{
     font::GlyphProvider,
-    hash::{Fingerprint, FingerprintBuilder},
+    hash::Fingerprint,
     vector::{
         bbox::GlyphIndice,
         flat_ir::{
@@ -53,7 +49,7 @@ pub trait CanvasElem: Debug {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d);
 }
 
-pub type CanvasNode = Arc<Box<dyn CanvasElem>>;
+pub type CanvasNode = Arc<Box<dyn CanvasElem + Send + Sync>>;
 
 #[inline]
 fn set_transform(canvas: &web_sys::CanvasRenderingContext2d, transform: sk::Transform) {
@@ -112,7 +108,7 @@ pub struct CanvasClipElem {
 #[async_trait(?Send)]
 impl CanvasElem for CanvasClipElem {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
-        let guard = CanvasStateGuard::new(canvas);
+        let _guard = CanvasStateGuard::new(canvas);
 
         set_transform(canvas, ts);
         canvas.clip_with_path_2d(&Path2d::new_with_path_string(&self.d).unwrap());
@@ -349,9 +345,6 @@ pub struct CanvasRenderTask<'m, 't, Feat: ExportFeature> {
 
     pub module: &'m Module,
 
-    /// A fingerprint builder for generating unique id.
-    pub(crate) fingerprint_builder: &'t mut FingerprintBuilder,
-
     /// Stores the glyphs used in the document.
     pub(crate) glyph_defs: &'t mut GlyphPackBuilder,
 
@@ -400,7 +393,7 @@ impl CanvasStack {
     pub fn render_glyph_ref_inner(
         &mut self,
         pos: Scalar,
-        glyph: &GlyphRef,
+        _glyph_ref: &GlyphRef,
         glyph_data: &GlyphItem,
     ) {
         self.inner.push((
@@ -416,27 +409,27 @@ impl CanvasStack {
 
 /// See [`TransformContext`].
 impl<C> TransformContext<C> for CanvasStack {
-    fn transform_matrix(mut self, ctx: &mut C, m: &ir::Transform) -> Self {
+    fn transform_matrix(mut self, _ctx: &mut C, m: &ir::Transform) -> Self {
         let sub_ts: sk::Transform = (*m).into();
         self.ts = self.ts.post_concat(sub_ts);
         self
     }
 
-    fn transform_translate(mut self, ctx: &mut C, matrix: Axes<Abs>) -> Self {
+    fn transform_translate(mut self, _ctx: &mut C, matrix: Axes<Abs>) -> Self {
         self.ts = self.ts.post_translate(matrix.x.0, matrix.y.0);
         self
     }
 
-    fn transform_scale(mut self, ctx: &mut C, x: Ratio, y: Ratio) -> Self {
+    fn transform_scale(mut self, _ctx: &mut C, x: Ratio, y: Ratio) -> Self {
         self.ts = self.ts.post_scale(x.0, y.0);
         self
     }
 
-    fn transform_rotate(self, ctx: &mut C, _matrix: Scalar) -> Self {
+    fn transform_rotate(self, _ctx: &mut C, _matrix: Scalar) -> Self {
         todo!()
     }
 
-    fn transform_skew(mut self, ctx: &mut C, matrix: (Ratio, Ratio)) -> Self {
+    fn transform_skew(mut self, _ctx: &mut C, matrix: (Ratio, Ratio)) -> Self {
         self.ts = self.ts.post_concat(sk::Transform {
             sx: 1.,
             sy: 1.,
@@ -448,7 +441,7 @@ impl<C> TransformContext<C> for CanvasStack {
         self
     }
 
-    fn transform_clip(mut self, ctx: &mut C, matrix: &ir::PathItem) -> Self {
+    fn transform_clip(mut self, _ctx: &mut C, matrix: &ir::PathItem) -> Self {
         self.clipper = Some(matrix.clone());
         self
     }
@@ -469,7 +462,7 @@ impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> Gro
         }
     }
 
-    fn render_path(&mut self, ctx: &mut C, path: &ir::PathItem) {
+    fn render_path(&mut self, _ctx: &mut C, path: &ir::PathItem) {
         self.inner.push((
             ir::Point::default(),
             Arc::new(Box::new(CanvasPathElem {
@@ -478,7 +471,7 @@ impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> Gro
         ))
     }
 
-    fn render_image(&mut self, ctx: &mut C, image_item: &ir::ImageItem) {
+    fn render_image(&mut self, _ctx: &mut C, image_item: &ir::ImageItem) {
         self.inner.push((
             ir::Point::default(),
             Arc::new(Box::new(CanvasImageElem {
@@ -566,9 +559,6 @@ pub struct CanvasTask<Feat: ExportFeature> {
     /// See [`GlyphProvider`].
     glyph_provider: GlyphProvider,
 
-    /// A fingerprint builder for generating unique id.
-    fingerprint_builder: FingerprintBuilder,
-
     /// Stores the glyphs used in the document.
     pub(crate) glyph_defs: GlyphPackBuilder,
 
@@ -580,8 +570,6 @@ impl<Feat: ExportFeature> Default for CanvasTask<Feat> {
     fn default() -> Self {
         Self {
             glyph_provider: GlyphProvider::default(),
-
-            fingerprint_builder: FingerprintBuilder::default(),
 
             glyph_defs: GlyphPackBuilder::default(),
 
@@ -601,8 +589,6 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
 
             module,
 
-            fingerprint_builder: &mut self.fingerprint_builder,
-
             glyph_defs: &mut self.glyph_defs,
 
             should_render_text_element: true,
@@ -615,7 +601,7 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
 
 #[derive(Default)]
 pub struct IncrementalCanvasExporter {
-    pub pages: Vec<(Arc<Box<dyn CanvasElem>>, Size)>,
+    pub pages: Vec<(Arc<Box<dyn CanvasElem + Send + Sync>>, Size)>,
 }
 
 impl IncrementalCanvasExporter {
@@ -623,11 +609,11 @@ impl IncrementalCanvasExporter {
         // render the document
         let mut t = CanvasTask::<DefaultExportFeature>::default();
 
-        let mut ct = t.fork_canvas_render_task(&module);
+        let mut ct = t.fork_canvas_render_task(module);
 
         let pages = pages
             .iter()
-            .map(|Page { content, size }| (ct.render_flat_item(content), size.clone()))
+            .map(|Page { content, size }| (ct.render_flat_item(content), *size))
             .collect();
         self.pages = pages;
     }
