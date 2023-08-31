@@ -14,8 +14,8 @@ use crate::{
 };
 
 use super::{
-    FlatSvgItem, FlatTextItem, FlatTextItemContent, GlyphPack, GroupRef, ItemPack,
-    LayoutRegion, SourceMappingNode, TransformedRef,
+    FlatSvgItem, FlatTextItem, FlatTextItemContent, GlyphPack, GroupRef, ItemPack, LayoutRegion,
+    SourceMappingNode, TransformedRef,
 };
 
 pub type ItemMap = BTreeMap<Fingerprint, FlatSvgItem>;
