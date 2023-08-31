@@ -10,10 +10,11 @@ use comemo::Prehashed;
 use crate::{
     hash::{Fingerprint, FingerprintBuilder},
     vector::ir::{AbsoluteRef, BuildGlyph, DefId, GlyphItem, GlyphPackBuilder, GlyphRef, SvgItem},
+    TakeAs,
 };
 
 use super::{
-    FlatGlyphItem, FlatSvgItem, FlatTextItem, FlatTextItemContent, GroupRef, ItemPack,
+    FlatSvgItem, FlatTextItem, FlatTextItemContent, GlyphPack, GroupRef, ItemPack,
     LayoutRegion, SourceMappingNode, TransformedRef,
 };
 
@@ -35,7 +36,7 @@ impl ToItemMap for RefItemMap {
 pub trait ModuleStream {
     fn items(&self) -> ItemPack;
     fn layouts(&self) -> Arc<LayoutRegion>;
-    fn glyphs(&self) -> Vec<(DefId, FlatGlyphItem)>;
+    fn glyphs(&self) -> Arc<GlyphPack>;
     fn gc_items(&self) -> Option<Vec<Fingerprint>> {
         // never gc items
         None
@@ -78,8 +79,13 @@ impl Module {
         }
 
         self.items.extend(item_pack.0);
-        self.glyphs
-            .extend(glyphs.into_iter().map(|(id, item)| (id, item.into())));
+        self.glyphs.extend(
+            glyphs
+                .take()
+                .items
+                .into_iter()
+                .map(|(id, item)| (id, item.into())),
+        );
     }
 }
 

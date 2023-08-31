@@ -141,7 +141,7 @@ impl LayoutRegion {
         }
     }
 
-    pub fn unwrap_single(self) -> LayoutRegionNode {
+    pub fn unwrap_single(&self) -> LayoutRegionNode {
         match self {
             Self::ByScalar(v) => v.layouts.first().unwrap().1.clone(),
             Self::ByStr(v) => v.layouts.first().unwrap().1.clone(),

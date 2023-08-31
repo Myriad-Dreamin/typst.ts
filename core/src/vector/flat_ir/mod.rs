@@ -202,7 +202,7 @@ impl FromIterator<(GlyphItem, (GlyphRef, FontRef))> for GlyphPack {
 }
 
 /// Describing reference to a page
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct Page {
@@ -360,9 +360,27 @@ impl ModuleStream for &FlatModule {
         }
     }
 
-    fn glyphs(&self) -> Vec<(DefId, FlatGlyphItem)> {
-        // self.glyphs.clone()
-        todo!()
+    fn glyphs(&self) -> Arc<GlyphPack> {
+        // cache the index
+        let sz = &self.meta_indices[MetaIndices::Glyph as usize];
+        let sz = sz.get_or_init(|| {
+            let mut sz = usize::MAX; // will panic if not found
+            for (idx, m) in self.metadata.iter().enumerate() {
+                if let ModuleMetadata::Glyph(_) = m {
+                    sz = idx;
+                    break;
+                }
+            }
+            sz
+        });
+
+        // get the item pack
+        let m = &self.metadata[*sz];
+        if let ModuleMetadata::Glyph(v) = m {
+            v.clone()
+        } else {
+            unreachable!()
+        }
     }
 
     fn gc_items(&self) -> Option<Vec<Fingerprint>> {
