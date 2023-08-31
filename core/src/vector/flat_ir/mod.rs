@@ -18,20 +18,20 @@
 //! │[`SvgDocument`]│◄───────────────┤[`MultiSvgDocument`]│
 //! └───────────────┘                └────────────────────┘
 
-use std::{collections::HashMap, sync::Arc};
-
-mod layout;
-pub use layout::*;
+use std::sync::Arc;
 
 mod module;
 pub use module::*;
+
+mod layout;
+pub use layout::*;
 
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 
 use crate::{
     font::{FontGlyphProvider, GlyphProvider},
-    hash::{Fingerprint, FingerprintBuilder},
+    hash::Fingerprint,
     vector::GlyphLowerBuilder,
     TakeAs,
 };
@@ -39,9 +39,8 @@ use crate::{
 use super::{
     geom::{Abs, Point, Size},
     ir::{
-        BuildGlyph, DefId, FontRef, GlyphItem, GlyphPackBuilder, GlyphRef, ImageGlyphItem,
-        ImageItem, ImmutStr, LinkItem, OutlineGlyphItem, PathItem, SpanId, SvgItem, TextShape,
-        TransformItem,
+        DefId, FontRef, GlyphItem, GlyphRef, ImageGlyphItem, ImageItem, ImmutStr, LinkItem,
+        OutlineGlyphItem, PathItem, SpanId, TextShape, TransformItem,
     },
 };
 
@@ -417,232 +416,6 @@ impl MultiSvgDocument {
     pub fn merge_delta(&mut self, v: impl ModuleStream) {
         self.layouts = v.layouts().take();
         self.module.merge_delta(v);
-    }
-}
-
-/// Intermediate representation of a incompleted svg item.
-pub struct ModuleBuilderImpl<const ENABLE_REF_CNT: bool = false> {
-    pub glyphs: GlyphPackBuilder,
-    pub items: HashMap<Fingerprint, (u64, FlatSvgItem)>,
-    pub source_mapping: Vec<SourceMappingNode>,
-    pub source_mapping_buffer: Vec<u64>,
-
-    fingerprint_builder: FingerprintBuilder,
-
-    /// See `typst_ts_svg_exporter::ExportFeature`.
-    pub should_attach_debug_info: bool,
-
-    pub lifetime: u64,
-    pub incr_glyphs: Vec<u64>,
-}
-
-pub type ModuleBuilder = ModuleBuilderImpl</* ENABLE_REF_CNT */ false>;
-pub type IncrModuleBuilder = ModuleBuilderImpl</* ENABLE_REF_CNT */ true>;
-
-impl<const ENABLE_REF_CNT: bool> Default for ModuleBuilderImpl<ENABLE_REF_CNT> {
-    fn default() -> Self {
-        Self {
-            lifetime: 0,
-            glyphs: Default::default(),
-            items: Default::default(),
-            source_mapping: Default::default(),
-            source_mapping_buffer: Default::default(),
-            fingerprint_builder: Default::default(),
-            incr_glyphs: Default::default(),
-            should_attach_debug_info: false,
-        }
-    }
-}
-
-impl<const ENABLE_REF_CNT: bool> BuildGlyph for ModuleBuilderImpl<ENABLE_REF_CNT> {
-    fn build_glyph(&mut self, glyph: &GlyphItem) -> GlyphRef {
-        let (glyph_ref, inserted) = self.glyphs.build_glyph(glyph);
-        if ENABLE_REF_CNT && inserted {
-            self.incr_glyphs.push(self.lifetime);
-        }
-        glyph_ref
-    }
-}
-
-impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
-    pub fn reset(&mut self) {
-        self.source_mapping.clear();
-        self.source_mapping_buffer.clear();
-    }
-
-    // todo: remove GlyphMapping (used by v1)
-    pub fn finalize_ref(&self) -> Module {
-        Module {
-            glyphs: self.glyphs.finalize(),
-            items: self.items.clone().to_item_map(),
-            source_mapping: self.source_mapping.clone(),
-        }
-    }
-
-    // todo: remove GlyphMapping (used by v1)
-    pub fn finalize(self) -> Module {
-        Module {
-            glyphs: self.glyphs.finalize(),
-            items: self.items.to_item_map(),
-            source_mapping: self.source_mapping,
-        }
-    }
-
-    pub fn build(&mut self, item: SvgItem) -> Fingerprint {
-        let resolved_item = match item {
-            SvgItem::Image((image, span_id)) => {
-                if self.should_attach_debug_info {
-                    let sm_id = self.source_mapping.len() as u64;
-                    self.source_mapping.push(SourceMappingNode::Image(span_id));
-                    self.source_mapping_buffer.push(sm_id);
-                }
-
-                FlatSvgItem::Image(image)
-            }
-            SvgItem::Path((path, span_id)) => {
-                if self.should_attach_debug_info {
-                    let sm_id = self.source_mapping.len() as u64;
-                    self.source_mapping.push(SourceMappingNode::Shape(span_id));
-                    self.source_mapping_buffer.push(sm_id);
-                }
-
-                FlatSvgItem::Path(path)
-            }
-            SvgItem::Link(link) => FlatSvgItem::Link(link),
-            SvgItem::Text(text) => {
-                let glyphs = text
-                    .content
-                    .glyphs
-                    .iter()
-                    .cloned()
-                    .map(|(offset, advance, glyph)| (offset, advance, self.build_glyph(&glyph)))
-                    .collect::<Arc<_>>();
-                let shape = text.shape.clone();
-                let content = text.content.content.clone();
-
-                if self.should_attach_debug_info {
-                    let sm_id = self.source_mapping.len() as u64;
-                    self.source_mapping
-                        .push(SourceMappingNode::Text(text.content.span_id));
-                    self.source_mapping_buffer.push(sm_id);
-                }
-
-                FlatSvgItem::Text(FlatTextItem {
-                    content: Arc::new(FlatTextItemContent { content, glyphs }),
-                    shape,
-                })
-            }
-            SvgItem::Transformed(transformed) => {
-                let item = &transformed.1;
-                let item_id = self.build(*item.clone());
-                let transform = transformed.0.clone();
-
-                FlatSvgItem::Item(TransformedRef(transform, item_id))
-            }
-            SvgItem::Group(group) => {
-                let t = if self.should_attach_debug_info {
-                    Some(self.source_mapping_buffer.len())
-                } else {
-                    None
-                };
-                let items = group
-                    .0
-                    .iter()
-                    .map(|(point, item)| (*point, self.build(item.clone())))
-                    .collect::<Vec<_>>();
-
-                if self.should_attach_debug_info {
-                    let sm_start = unsafe { t.unwrap_unchecked() };
-                    let sm_range = self
-                        .source_mapping_buffer
-                        .splice(sm_start..self.source_mapping_buffer.len(), []);
-
-                    let sm_id = self.source_mapping.len() as u64;
-                    self.source_mapping
-                        .push(SourceMappingNode::Group(sm_range.collect()));
-                    self.source_mapping_buffer.push(sm_id);
-                }
-                FlatSvgItem::Group(GroupRef(items.into()))
-            }
-        };
-
-        let fingerprint = self.fingerprint_builder.resolve(&resolved_item);
-
-        if let Some(pos) = self.items.get_mut(&fingerprint) {
-            if ENABLE_REF_CNT && pos.0 != self.lifetime {
-                pos.0 = self.lifetime - 1;
-            }
-            return fingerprint;
-        }
-
-        if ENABLE_REF_CNT {
-            self.items
-                .insert(fingerprint, (self.lifetime, resolved_item));
-        } else {
-            self.items.insert(fingerprint, (0, resolved_item));
-        }
-        fingerprint
-    }
-}
-
-impl IncrModuleBuilder {
-    /// Increment the lifetime of the module.
-    /// It increments by 2 which is used to distinguish between the
-    /// retained items and the new items.
-    /// Assuming that the old lifetime is 'l,
-    /// the retained and new lifetime will be 'l + 1 and 'l + 2, respectively.
-    pub fn increment_lifetime(&mut self) {
-        self.lifetime += 2;
-    }
-
-    /// Perform garbage collection with given threshold.
-    pub fn gc(&mut self, threshold: u64) -> Vec<Fingerprint> {
-        let mut gc_items = vec![];
-
-        // a threshold is set by current lifetime subtracted by the given threshold.
-        // It uses saturating_sub to prevent underflow (u64).
-        let threshold = self.lifetime.saturating_sub(threshold);
-
-        self.items.retain(|k, v| {
-            if v.0 < threshold {
-                gc_items.push(*k);
-                false
-            } else {
-                true
-            }
-        });
-
-        gc_items
-    }
-
-    /// Finalize modules containing new svg items.
-    pub fn finalize_delta(&mut self) -> Module {
-        // fliter glyphs by lifetime
-        let glyphs = {
-            // let glyphs = self.glyphs.iter();
-            // let glyphs =
-            //     glyphs.filter(|e| self.incr_glyphs[e.1 .0.glyph_idx as usize] ==
-            // self.lifetime); let glyphs = glyphs.map(|(x, y)| (x.clone(),
-            // y.clone()));
-
-            // GlyphPackBuilder::finalize(glyphs)
-            self.glyphs.finalize()
-        };
-
-        // fliter glyphs by lifetime
-        let items = {
-            let items = self.items.iter();
-            let items = items.filter(|(_, e)| e.0 == self.lifetime);
-            let items = items.map(|(f, (_, i))| (*f, i.clone()));
-
-            ItemMap::from_iter(items)
-        };
-
-        Module {
-            glyphs,
-            items,
-            source_mapping: self.source_mapping.clone(),
-        }
     }
 }
 

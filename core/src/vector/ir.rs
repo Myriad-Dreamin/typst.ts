@@ -3,10 +3,9 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::Arc;
 
-use crate::{
-    hash::{item_hash128, typst_affinite_hash, Fingerprint},
-    StaticHash128,
-};
+#[cfg(feature = "rkyv")]
+use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
+
 use base64::Engine;
 use ttf_parser::GlyphId;
 use typst::{
@@ -14,8 +13,10 @@ use typst::{
     image::{ImageFormat, RasterFormat, VectorFormat},
 };
 
-#[cfg(feature = "rkyv")]
-use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
+use crate::{
+    hash::{item_hash128, typst_affinite_hash, Fingerprint},
+    StaticHash128,
+};
 
 pub type ImmutStr = Arc<str>;
 
