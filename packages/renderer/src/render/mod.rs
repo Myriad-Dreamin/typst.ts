@@ -7,6 +7,9 @@ pub mod pdf;
 #[cfg(feature = "render_raster")]
 pub mod raster;
 
+#[cfg(feature = "render_svg")]
+pub mod svg;
+
 #[cfg(not(feature = "render_raster"))]
 pub mod raster_stub {
     #![allow(dead_code)]

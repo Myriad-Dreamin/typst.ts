@@ -1,12 +1,8 @@
-use std::{path::Path, str::FromStr, sync::Arc};
+use std::{path::Path, sync::Arc};
 
 use base64::{engine::DecodeEstimate, Engine};
 use js_sys::{JsString, Uint8Array};
-use typst::{
-    font::Font,
-    geom::{Color, RgbaColor},
-};
-use typst_ts_canvas_exporter::{CanvasRenderTask, DefaultRenderFeature};
+use typst::font::Font;
 pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
     font::web::BrowserFontSearcher,
@@ -245,26 +241,27 @@ impl TypstCompiler {
     // todo: move to renderer
     pub async fn render_page_to_canvas(
         &mut self,
-        canvas: &web_sys::CanvasRenderingContext2d,
-        doc: &DocumentReference,
-        page_off: usize,
-        pixel_per_pt: f32,
-        background_color: String,
+        _canvas: &web_sys::CanvasRenderingContext2d,
+        _doc: &DocumentReference,
+        _page_off: usize,
+        _pixel_per_pt: f32,
+        _background_color: String,
     ) -> ZResult<JsValue> {
-        let doc = doc.doc_ref();
-        let mut worker = CanvasRenderTask::<DefaultRenderFeature>::new(
-            canvas,
-            doc,
-            page_off,
-            pixel_per_pt,
-            Color::Rgba(
-                RgbaColor::from_str(&background_color)
-                    .map_err(map_err("Renderer.InvalidBackgroundColor"))?,
-            ),
-        )?;
+        // let doc = doc.doc_ref();
+        // let mut worker = CanvasRenderTask::<DefaultRenderFeature>::new(
+        //     canvas,
+        //     doc,
+        //     page_off,
+        //     pixel_per_pt,
+        //     Color::Rgba(
+        //         RgbaColor::from_str(&background_color)
+        //             .map_err(map_err("Renderer.InvalidBackgroundColor"))?,
+        //     ),
+        // )?;
 
-        worker.render(&doc.pages[page_off]).await?;
-        serde_wasm_bindgen::to_value(&worker.text_content)
-            .map_err(map_into_err::<JsValue, _>("Compiler.EncodeContent"))
+        // worker.render(&doc.pages[page_off]).await?;
+        // serde_wasm_bindgen::to_value(&worker.text_content)
+        //     .map_err(map_into_err::<JsValue, _>("Compiler.EncodeContent"))
+        todo!()
     }
 }

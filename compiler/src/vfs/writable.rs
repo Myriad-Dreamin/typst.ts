@@ -1,8 +1,7 @@
-#![allow(unused, dead_code)]
 //! upstream <https://github.com/rust-lang/rust-analyzer/tree/master/crates/vfs>
 // todo: migrate to Vfs<M>
 
-use std::{fmt, mem};
+use std::mem;
 
 use super::{FileId, PathInterner, VfsPath};
 
@@ -63,9 +62,11 @@ impl Vfs {
             })
     }
 
-    /// Update the `path` with the given `contents`. `None` means the file was deleted.
+    /// Update the `path` with the given `contents`. `None` means the file was
+    /// deleted.
     ///
-    /// Returns `true` if the file was modified, and saves the [change](ChangedFile).
+    /// Returns `true` if the file was modified, and saves the
+    /// [change](ChangedFile).
     ///
     /// If the path does not currently exists in the `Vfs`, allocates a new
     /// [`FileId`] for it.
@@ -101,7 +102,8 @@ impl Vfs {
 
     /// Returns the id associated with `path`
     ///
-    /// - If `path` does not exists in the `Vfs`, allocate a new id for it, associated with a
+    /// - If `path` does not exists in the `Vfs`, allocate a new id for it,
+    ///   associated with a
     /// deleted file;
     /// - Else, returns `path`'s id.
     ///

@@ -1,14 +1,10 @@
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex};
 
 use js_sys::Uint8Array;
-use typst::geom::Abs;
-use typst_ts_core::artifact::doc::Frame;
+use typst_ts_canvas_exporter::IncrCanvasDocClient;
 use typst_ts_core::error::prelude::*;
-use typst_ts_core::{font::FontResolverImpl, Artifact, ArtifactMeta, FontResolver};
+use typst_ts_svg_exporter::ir::Scalar;
 use wasm_bindgen::prelude::*;
-
-use crate::parser::ir_artifact_from_bin;
-use crate::parser::{artifact_from_js_string, page_from_js_string};
 
 #[wasm_bindgen]
 #[derive(Default, Debug)]
@@ -64,8 +60,8 @@ impl RenderSessionOptions {
 #[derive(Clone)]
 pub struct PageInfo {
     pub(crate) page_off: usize,
-    pub(crate) width: Abs,
-    pub(crate) height: Abs,
+    pub(crate) width: f64,
+    pub(crate) height: f64,
 }
 
 #[wasm_bindgen]
@@ -77,17 +73,17 @@ impl PageInfo {
 
     #[wasm_bindgen(getter)]
     pub fn width_pt(&self) -> f64 {
-        self.width.to_pt()
+        self.width
     }
 
     #[wasm_bindgen(getter)]
     pub fn height_pt(&self) -> f64 {
-        self.height.to_pt()
+        self.height
     }
 }
 
 #[wasm_bindgen]
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct PagesInfo {
     pub(crate) pages: Vec<PageInfo>,
 }
@@ -111,14 +107,27 @@ impl PagesInfo {
     pub fn page(&self, i: usize) -> PageInfo {
         self.pages[i].clone()
     }
+
+    pub fn width(&self) -> f32 {
+        self.pages
+            .iter()
+            .map(|s| Scalar(s.width as f32))
+            .max()
+            .unwrap_or_default()
+            .0
+    }
+
+    pub fn height(&self) -> f32 {
+        self.pages.iter().map(|s| s.height as f32).sum()
+    }
 }
 
+#[derive(Default)]
 #[wasm_bindgen]
 pub struct RenderSession {
     pub(crate) pixel_per_pt: f32,
     pub(crate) background_color: String,
-    pub(crate) doc: typst::doc::Document,
-    pub(crate) artifact_meta: ArtifactMeta,
+    pub(crate) client: Arc<Mutex<IncrCanvasDocClient>>,
     pub(crate) pages_info: PagesInfo,
 }
 
@@ -141,72 +150,49 @@ impl RenderSession {
 }
 
 impl RenderSession {
-    pub(crate) fn from_artifact(artifact_meta: ArtifactMeta, doc: typst::doc::Document) -> Self {
+    pub fn merge_delta(&mut self, delta: &[u8]) -> ZResult<()> {
+        use typst_ts_core::vector::stream::BytesModuleStream;
+
+        let delta = BytesModuleStream::from_slice(delta).checkout_owned();
+
+        #[cfg(feature = "debug_delta_update")]
+        crate::utils::console_log!(
+            "module counts: {:?},{:?},{:?}",
+            delta.glyphs.len(),
+            delta.item_pack.0.len(),
+            delta.layouts.len()
+        );
+
+        let mut client = self.client.lock().unwrap();
+        client.merge_delta(delta);
+
         let pages_info = PagesInfo {
             pages: {
                 let mut pages = Vec::new();
-                pages.reserve(doc.pages.len());
-                for (i, page) in doc.pages.iter().enumerate() {
+                pages.reserve(client.elements.pages.len());
+                for (i, (_, size)) in client.elements.pages.iter().enumerate() {
                     pages.push(PageInfo {
                         page_off: i,
-                        width: page.size().x,
-                        height: page.size().y,
+                        width: size.x.0 as f64,
+                        height: size.y.0 as f64,
                     });
                 }
                 pages
             },
         };
 
-        Self {
-            pixel_per_pt: 0.,
-            background_color: "".to_string(),
-            doc,
-            artifact_meta,
-            pages_info,
-        }
-    }
-
-    pub(crate) fn load_page<T: FontResolver>(
-        &mut self,
-        page_off: usize,
-        frame: Frame,
-        font_resolver: &T,
-    ) {
-        let mut artifact = Artifact {
-            meta: self.artifact_meta.clone(),
-            pages: Vec::new(),
-        };
-        artifact.pages.push(frame);
-        let doc = artifact.to_document(font_resolver);
-        let page = &doc.pages[0];
-        let page_info = PageInfo {
-            page_off,
-            width: page.size().x,
-            height: page.size().y,
-        };
-
-        let mut pages = self.pages_info.pages.clone();
-        let idx = pages.iter().position(|p| p.page_off == page_off);
-        if let Some(idx) = idx {
-            pages[idx] = page_info;
-            self.doc.pages[idx] = page.clone();
-        } else {
-            let idx = pages.iter().position(|p| p.page_off > page_off);
-            if let Some(idx) = idx {
-                pages.insert(idx, page_info);
-                self.doc.pages.insert(idx, page.clone());
-            } else {
-                pages.push(page_info);
-                self.doc.pages.push(page.clone());
-            }
-        }
-        self.pages_info = PagesInfo { pages };
+        self.pages_info = pages_info;
+        Ok(())
     }
 }
 
 #[wasm_bindgen]
-pub struct RenderSessionManager {
-    pub(crate) font_resolver: Arc<RwLock<FontResolverImpl>>,
+pub struct RenderSessionManager {}
+
+impl Default for RenderSessionManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[wasm_bindgen]
@@ -228,7 +214,7 @@ impl RenderSessionManager {
             .as_ref()
             .and_then(|o| o.format.as_ref())
             .map(|f| f.as_str())
-            .unwrap_or("js");
+            .unwrap_or("vector");
         let mut ses = self.session_from_artifact(artifact_content.to_vec().as_slice(), format)?;
 
         ses.pixel_per_pt = options.as_ref().and_then(|o| o.pixel_per_pt).unwrap_or(2.);
@@ -240,23 +226,12 @@ impl RenderSessionManager {
 
         Ok(ses)
     }
-
-    pub fn load_page(
-        &self,
-        session: &mut RenderSession,
-        page_number: usize,
-        page_content: String,
-    ) -> ZResult<()> {
-        self.session_load_page(session, page_number, page_content, "js")
-    }
 }
 
 impl RenderSessionManager {
     #[allow(clippy::arc_with_non_send_sync)]
-    pub fn new(fr: FontResolverImpl) -> Self {
-        Self {
-            font_resolver: Arc::new(RwLock::new(fr)),
-        }
+    pub fn new() -> Self {
+        Self {}
     }
 
     pub fn session_from_artifact(
@@ -264,107 +239,20 @@ impl RenderSessionManager {
         artifact_content: &[u8],
         decoder: &str,
     ) -> ZResult<RenderSession> {
-        if decoder != "ir" {
-            self.session_from_json_artifact(artifact_content, decoder)
-        } else {
-            self.session_from_ir_artifact(artifact_content)
-        }
-    }
-
-    // todo: set return error to typst_ts_core::Error
-    fn session_from_json_artifact(
-        &self,
-        artifact_content: &[u8],
-        decoder: &str,
-    ) -> ZResult<RenderSession> {
-        // 550KB -> 147KB
-        // https://medium.com/@wl1508/avoiding-using-serde-and-deserde-in-rust-webassembly-c1e4640970ca
-        let artifact: Artifact = match decoder {
-            "js" => {
-                let artifact: Artifact = artifact_from_js_string(
-                    std::str::from_utf8(artifact_content)
-                        .map_err(map_string_err("artifact_content"))?,
-                )?;
-
-                artifact
-            }
-
-            #[cfg(feature = "serde_json")]
-            "serde_json" => {
-                let artifact: Artifact = serde_json::from_slice(artifact_content)
-                    .map_err(map_string_err("parse_artifact"))?;
-
-                artifact
-            }
-            _ => {
-                panic!("unknown decoder: {}", decoder);
-            }
-        };
-
-        #[cfg(debug)]
-        {
-            use super::utils::console_log;
-            console_log!(
-                "{} pages to render. font info: {:?}",
-                artifact.pages.len(),
-                artifact
-                    .fonts
-                    .iter()
-                    .map(|f| f.family.as_str()) // serde_json::to_string(f).unwrap())
-                    .collect::<Vec<&str>>()
-                    .join(", ")
-            );
+        if decoder == "vector" {
+            return self.session_from_vector_artifact(artifact_content);
         }
 
-        let font_resolver = self.font_resolver.read().unwrap();
-        let session: RenderSession = RenderSession::from_artifact(
-            artifact.meta.clone(),
-            artifact.to_document(&*font_resolver),
-        );
-        Ok(session)
+        if decoder == "serde_json" || decoder == "js" || decoder == "ir" {
+            Err(error_once!("deprecated format are removal in v0.4.0"))?
+        }
+
+        Err(error_once!("Renderer.UnsupportedDecoder", decoder: decoder))
     }
 
-    fn session_from_ir_artifact(&self, artifact_content: &[u8]) -> ZResult<RenderSession> {
-        let artifact = ir_artifact_from_bin(artifact_content)?;
-
-        let font_resolver = self.font_resolver.read().unwrap();
-        let session = RenderSession::from_artifact(
-            artifact.metadata.clone(),
-            artifact.to_document(&*font_resolver),
-        );
+    fn session_from_vector_artifact(&self, artifact_content: &[u8]) -> ZResult<RenderSession> {
+        let mut session = RenderSession::default();
+        session.merge_delta(artifact_content)?;
         Ok(session)
-    }
-
-    pub fn session_load_page(
-        &self,
-        session: &mut RenderSession,
-        page_number: usize,
-        page_content: String,
-        decoder: &str,
-    ) -> ZResult<()> {
-        // 550KB -> 147KB
-        // https://medium.com/@wl1508/avoiding-using-serde-and-deserde-in-rust-webassembly-c1e4640970ca
-        let frame: Frame = match decoder {
-            "js" => {
-                let frame: Frame = page_from_js_string(&page_content)?;
-
-                frame
-            }
-
-            #[cfg(feature = "serde_json")]
-            "serde_json" => {
-                let frame: Frame = serde_json::from_str(page_content.as_str())
-                    .map_err(map_string_err("parse_page"))?;
-
-                frame
-            }
-            _ => {
-                panic!("unknown decoder: {}", decoder);
-            }
-        };
-
-        let font_resolver = self.font_resolver.read().unwrap();
-        session.load_page(page_number, frame, &*font_resolver);
-        Ok(())
     }
 }

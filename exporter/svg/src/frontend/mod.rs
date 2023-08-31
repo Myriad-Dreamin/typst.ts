@@ -206,10 +206,10 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
 pub struct SvgTask<Feat: ExportFeature> {
     /// Provides glyphs.
     /// See [`GlyphProvider`].
-    glyph_provider: GlyphProvider,
+    pub(crate) glyph_provider: GlyphProvider,
 
     /// A fingerprint builder for generating unique id.
-    fingerprint_builder: FingerprintBuilder,
+    pub(crate) fingerprint_builder: FingerprintBuilder,
 
     /// Stores the glyphs used in the document.
     pub(crate) glyph_defs: GlyphPackBuilder,

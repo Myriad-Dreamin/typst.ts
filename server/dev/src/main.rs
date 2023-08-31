@@ -94,9 +94,8 @@ fn find_compiler_path(compile_opts: &CompileOpts) {
 fn compile_corpus(args: CompileCorpusArgs) {
     let mut compile_formats = args.format.clone();
     if compile_formats.is_empty() {
-        compile_formats.push("ir".to_owned());
-        compile_formats.push("json".to_owned());
-        compile_formats.push("json_glyphs".to_owned());
+        compile_formats.push("svg".to_owned());
+        compile_formats.push("sir".to_owned());
     }
 
     let compiler_path = COMPILER_PATH.lock().unwrap();

@@ -1,3 +1,7 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(clippy::all)]
+
 use js_sys::Promise;
 use std::{fmt::Debug, ops::Deref, sync::Arc};
 use tiny_skia as sk;
@@ -7,12 +11,12 @@ use web_sys::{CanvasRenderingContext2d, HtmlImageElement, Path2d};
 
 use typst_ts_core::{
     font::GlyphProvider,
-    hash::Fingerprint,
+    hash::{Fingerprint, FingerprintBuilder},
     vector::{
         bbox::GlyphIndice,
         flat_ir::{
-            self, FlatModule, LayoutRegionNode, LayoutSourceMapping, Module, ModuleBuilder,
-            ModuleMetadata, MultiSvgDocument, Page, SourceMappingNode,
+            FlatModule, LayoutRegionNode, LayoutSourceMapping, ModuleBuilder, ModuleMetadata,
+            MultiSvgDocument, Page, SourceMappingNode,
         },
         flat_vm::{FlatGroupContext, FlatRenderVm},
         ir::{
@@ -24,24 +28,8 @@ use typst_ts_core::{
     TakeAs,
 };
 
-/// All the features that can be enabled or disabled.
-pub trait ExportFeature {
-    /// Whether to enable tracing.
-    const ENABLE_TRACING: bool;
-
-    /// Whether to render text element.
-    /// The text elements is selectable and searchable.
-    const SHOULD_RENDER_TEXT_ELEMENT: bool;
-}
-
-/// The default feature set which is used for exporting full-fledged svg.
-pub struct DefaultExportFeature;
-pub type DefaultSvgTask = CanvasTask<DefaultExportFeature>;
-
-impl ExportFeature for DefaultExportFeature {
-    const ENABLE_TRACING: bool = false;
-    const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
-}
+use crate::{flat_ir, DefaultExportFeature, SvgTask};
+use crate::{ExportFeature, Module};
 
 use async_trait::async_trait;
 #[async_trait(?Send)]
@@ -49,7 +37,7 @@ pub trait CanvasElem: Debug {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d);
 }
 
-pub type CanvasNode = Arc<Box<dyn CanvasElem + Send + Sync>>;
+pub type CanvasNode = Arc<Box<dyn CanvasElem>>;
 
 #[inline]
 fn set_transform(canvas: &web_sys::CanvasRenderingContext2d, transform: sk::Transform) {
@@ -108,7 +96,7 @@ pub struct CanvasClipElem {
 #[async_trait(?Send)]
 impl CanvasElem for CanvasClipElem {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
-        let _guard = CanvasStateGuard::new(canvas);
+        let guard = CanvasStateGuard::new(canvas);
 
         set_transform(canvas, ts);
         canvas.clip_with_path_2d(&Path2d::new_with_path_string(&self.d).unwrap());
@@ -343,7 +331,11 @@ pub struct CanvasRenderTask<'m, 't, Feat: ExportFeature> {
     /// See [`GlyphProvider`].
     pub glyph_provider: GlyphProvider,
 
+    #[cfg(feature = "flat-vector")]
     pub module: &'m Module,
+
+    /// A fingerprint builder for generating unique id.
+    pub(crate) fingerprint_builder: &'t mut FingerprintBuilder,
 
     /// Stores the glyphs used in the document.
     pub(crate) glyph_defs: &'t mut GlyphPackBuilder,
@@ -354,11 +346,12 @@ pub struct CanvasRenderTask<'m, 't, Feat: ExportFeature> {
     pub use_stable_glyph_id: bool,
 
     pub _feat_phantom: std::marker::PhantomData<Feat>,
+    #[cfg(not(feature = "flat-vector"))]
+    pub _m_phantom: std::marker::PhantomData<&'m ()>,
 }
 
-/// A builder for [`CanvasNode`].
-/// It holds a reference to [`CanvasRenderTask`] and state of the building
-/// process.
+/// A builder for [`SvgTextNode`].
+/// It holds a reference to [`SvgRenderTask`] and state of the building process.
 pub struct CanvasStack {
     pub ts: sk::Transform,
     pub clipper: Option<ir::PathItem>,
@@ -393,7 +386,7 @@ impl CanvasStack {
     pub fn render_glyph_ref_inner(
         &mut self,
         pos: Scalar,
-        _glyph_ref: &GlyphRef,
+        glyph: &GlyphRef,
         glyph_data: &GlyphItem,
     ) {
         self.inner.push((
@@ -409,27 +402,27 @@ impl CanvasStack {
 
 /// See [`TransformContext`].
 impl<C> TransformContext<C> for CanvasStack {
-    fn transform_matrix(mut self, _ctx: &mut C, m: &ir::Transform) -> Self {
+    fn transform_matrix(mut self, ctx: &mut C, m: &ir::Transform) -> Self {
         let sub_ts: sk::Transform = (*m).into();
         self.ts = self.ts.post_concat(sub_ts);
         self
     }
 
-    fn transform_translate(mut self, _ctx: &mut C, matrix: Axes<Abs>) -> Self {
+    fn transform_translate(mut self, ctx: &mut C, matrix: Axes<Abs>) -> Self {
         self.ts = self.ts.post_translate(matrix.x.0, matrix.y.0);
         self
     }
 
-    fn transform_scale(mut self, _ctx: &mut C, x: Ratio, y: Ratio) -> Self {
+    fn transform_scale(mut self, ctx: &mut C, x: Ratio, y: Ratio) -> Self {
         self.ts = self.ts.post_scale(x.0, y.0);
         self
     }
 
-    fn transform_rotate(self, _ctx: &mut C, _matrix: Scalar) -> Self {
+    fn transform_rotate(self, ctx: &mut C, _matrix: Scalar) -> Self {
         todo!()
     }
 
-    fn transform_skew(mut self, _ctx: &mut C, matrix: (Ratio, Ratio)) -> Self {
+    fn transform_skew(mut self, ctx: &mut C, matrix: (Ratio, Ratio)) -> Self {
         self.ts = self.ts.post_concat(sk::Transform {
             sx: 1.,
             sy: 1.,
@@ -441,7 +434,7 @@ impl<C> TransformContext<C> for CanvasStack {
         self
     }
 
-    fn transform_clip(mut self, _ctx: &mut C, matrix: &ir::PathItem) -> Self {
+    fn transform_clip(mut self, ctx: &mut C, matrix: &ir::PathItem) -> Self {
         self.clipper = Some(matrix.clone());
         self
     }
@@ -462,7 +455,7 @@ impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> Gro
         }
     }
 
-    fn render_path(&mut self, _ctx: &mut C, path: &ir::PathItem) {
+    fn render_path(&mut self, ctx: &mut C, path: &ir::PathItem) {
         self.inner.push((
             ir::Point::default(),
             Arc::new(Box::new(CanvasPathElem {
@@ -471,7 +464,7 @@ impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> Gro
         ))
     }
 
-    fn render_image(&mut self, _ctx: &mut C, image_item: &ir::ImageItem) {
+    fn render_image(&mut self, ctx: &mut C, image_item: &ir::ImageItem) {
         self.inner.push((
             ir::Point::default(),
             Arc::new(Box::new(CanvasImageElem {
@@ -552,33 +545,7 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for CanvasRenderTask<'m, 't, 
     }
 }
 
-/// The task context for exporting canvas.
-/// It is also as a namespace for all the functions used in the task.
-pub struct CanvasTask<Feat: ExportFeature> {
-    /// Provides glyphs.
-    /// See [`GlyphProvider`].
-    glyph_provider: GlyphProvider,
-
-    /// Stores the glyphs used in the document.
-    pub(crate) glyph_defs: GlyphPackBuilder,
-
-    _feat_phantom: std::marker::PhantomData<Feat>,
-}
-
-/// Unfortunately, `Default` derive does not work for generic structs.
-impl<Feat: ExportFeature> Default for CanvasTask<Feat> {
-    fn default() -> Self {
-        Self {
-            glyph_provider: GlyphProvider::default(),
-
-            glyph_defs: GlyphPackBuilder::default(),
-
-            _feat_phantom: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<Feat: ExportFeature> CanvasTask<Feat> {
+impl<Feat: ExportFeature> SvgTask<Feat> {
     /// fork a render task with module.
     pub fn fork_canvas_render_task<'m, 't>(
         &'t mut self,
@@ -588,6 +555,8 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
             glyph_provider: self.glyph_provider.clone(),
 
             module,
+
+            fingerprint_builder: &mut self.fingerprint_builder,
 
             glyph_defs: &mut self.glyph_defs,
 
@@ -601,19 +570,19 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
 
 #[derive(Default)]
 pub struct IncrementalCanvasExporter {
-    pub pages: Vec<(Arc<Box<dyn CanvasElem + Send + Sync>>, Size)>,
+    pub pages: Vec<(Arc<Box<dyn CanvasElem>>, Size)>,
 }
 
 impl IncrementalCanvasExporter {
     pub fn interpret_changes(&mut self, module: &Module, pages: &[Page]) {
         // render the document
-        let mut t = CanvasTask::<DefaultExportFeature>::default();
+        let mut t = SvgTask::<DefaultExportFeature>::default();
 
-        let mut ct = t.fork_canvas_render_task(module);
+        let mut ct = t.fork_canvas_render_task(&module);
 
         let pages = pages
             .iter()
-            .map(|Page { content, size }| (ct.render_flat_item(content), *size))
+            .map(|Page { content, size }| (ct.render_flat_item(content), size.clone()))
             .collect();
         self.pages = pages;
     }
@@ -745,5 +714,3 @@ fn rasterize_image(_image: &Image) -> Option<HtmlImageElement> {
         .dyn_into::<HtmlImageElement>()
         .ok()
 }
-
-// pub use backend::canvas::IncrCanvasDocClient;

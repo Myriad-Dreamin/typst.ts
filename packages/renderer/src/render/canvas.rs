@@ -1,11 +1,8 @@
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
-use typst::geom::{Color, RgbaColor};
-use typst_ts_canvas_exporter::{CanvasRenderTask, DefaultRenderFeature, RenderFeature};
-use typst_ts_core::{
-    error::prelude::*,
-    font::{FontGlyphProvider, GlyphProvider, PartialFontGlyphProvider},
-};
+use typst_ts_canvas_exporter::{DefaultExportFeature, ExportFeature};
+use typst_ts_core::error::prelude::*;
+use typst_ts_svg_exporter::ir::{Axes, Rect, Scalar};
 use wasm_bindgen::prelude::*;
 
 use crate::{RenderPageImageOptions, RenderSession, TypstRenderer};
@@ -19,7 +16,7 @@ impl TypstRenderer {
         options: Option<RenderPageImageOptions>,
     ) -> ZResult<JsValue> {
         let (text_content, annotation_list, ..) = self
-            .render_page_to_canvas_internal::<DefaultRenderFeature>(ses, canvas, options)
+            .render_page_to_canvas_internal::<DefaultExportFeature>(ses, canvas, options)
             .await?;
 
         let res = js_sys::Object::new();
@@ -32,64 +29,78 @@ impl TypstRenderer {
 }
 
 impl TypstRenderer {
-    pub async fn render_page_to_canvas_internal<Feat: RenderFeature>(
+    #[allow(clippy::await_holding_lock)]
+    pub async fn render_page_to_canvas_internal<Feat: ExportFeature>(
         &mut self,
         ses: &RenderSession,
         canvas: &web_sys::CanvasRenderingContext2d,
-        options: Option<RenderPageImageOptions>,
+        _options: Option<RenderPageImageOptions>,
     ) -> ZResult<(JsValue, JsValue, Option<HashMap<String, f64>>)> {
-        let page_off = self.retrieve_page_off(ses, options)?;
-
-        let perf_events = if Feat::ENABLE_TRACING {
-            Some(elsa::FrozenMap::<&'static str, Box<f64>>::default())
-        } else {
-            None
+        let rect_lo_x: f32 = -1.;
+        let rect_lo_y: f32 = -1.;
+        let rect_hi_x: f32 = 1e30;
+        let rect_hi_y: f32 = 1e30;
+        let rect = Rect {
+            lo: Axes::new(Scalar(rect_lo_x), Scalar(rect_lo_y)),
+            hi: Axes::new(Scalar(rect_hi_x), Scalar(rect_hi_y)),
         };
 
-        let mut worker = CanvasRenderTask::<Feat>::new(
-            canvas,
-            &ses.doc,
-            page_off,
-            ses.pixel_per_pt,
-            Color::Rgba(
-                RgbaColor::from_str(&ses.background_color)
-                    .map_err(map_err("Renderer.InvalidBackgroundColor"))?,
-            ),
-        )?;
+        let mut client = ses.client.lock().unwrap();
+        client.render_in_window(canvas, rect).await;
+        // let page_off = self.retrieve_page_off(ses, options)?;
 
-        let def_provider = GlyphProvider::new(FontGlyphProvider::default());
-        let partial_providier =
-            PartialFontGlyphProvider::new(def_provider, self.session_mgr.font_resolver.clone());
+        // let perf_events = if Feat::ENABLE_TRACING {
+        //     Some(elsa::FrozenMap::<&'static str, Box<f64>>::default())
+        // } else {
+        //     None
+        // };
 
-        worker.set_glyph_provider(GlyphProvider::new(partial_providier));
+        // let mut worker = CanvasRenderTask::<Feat>::new(
+        //     canvas,
+        //     &ses.doc,
+        //     page_off,
+        //     ses.pixel_per_pt,
+        //     Color::Rgba(
+        //         RgbaColor::from_str(&ses.background_color)
+        //             .map_err(map_err("Renderer.InvalidBackgroundColor"))?,
+        //     ),
+        // )?;
 
-        crate::utils::console_log!("use partial font glyph provider");
+        // let def_provider = GlyphProvider::new(FontGlyphProvider::default());
+        // let partial_providier =
+        //     PartialFontGlyphProvider::new(def_provider,
+        // self.session_mgr.font_resolver.clone());
 
-        if let Some(perf_events) = perf_events.as_ref() {
-            worker.set_perf_events(perf_events)
-        };
+        // worker.set_glyph_provider(GlyphProvider::new(partial_providier));
 
-        worker.render(&ses.doc.pages[page_off]).await?;
+        // crate::utils::console_log!("use partial font glyph provider");
 
-        Ok((
-            serde_wasm_bindgen::to_value(&worker.text_content)
-                .map_err(map_into_err::<JsValue, _>("Renderer.EncodeTextContent"))?,
-            serde_wasm_bindgen::to_value(&worker.annotations).map_err(
-                map_into_err::<JsValue, _>("Renderer.EncodeAnnotationContent"),
-            )?,
-            perf_events.map(|perf_events| {
-                perf_events
-                    .into_map()
-                    .into_iter()
-                    .map(|(k, v)| (k.to_string(), *v))
-                    .collect()
-            }),
-        ))
+        // if let Some(perf_events) = perf_events.as_ref() {
+        //     worker.set_perf_events(perf_events)
+        // };
+
+        // worker.render(&ses.doc.pages[page_off]).await?;
+
+        // Ok((
+        //     serde_wasm_bindgen::to_value(&worker.text_content)
+        //         .map_err(map_into_err::<JsValue,
+        // _>("Renderer.EncodeTextContent"))?,
+        //     serde_wasm_bindgen::to_value(&worker.annotations).map_err(
+        //         map_into_err::<JsValue,
+        // _>("Renderer.EncodeAnnotationContent"),     )?,
+        //     perf_events.map(|perf_events| {
+        //         perf_events
+        //             .into_map()
+        //             .into_iter()
+        //             .map(|(k, v)| (k.to_string(), *v))
+        //             .collect()
+        //     }),
+        // ))
+        Ok(("".into(), "".into(), None))
     }
 }
 
 #[cfg(test)]
-#[cfg(target_arch = "wasm32")]
 // #[cfg(target_arch = "wasm32")]
 mod tests {
     #![allow(clippy::await_holding_lock)]
@@ -99,7 +110,7 @@ mod tests {
     use send_wrapper::SendWrapper;
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
-    use typst_ts_canvas_exporter::RenderFeature;
+    use typst_ts_canvas_exporter::ExportFeature;
     use typst_ts_test_common::web_artifact::get_corpus;
     use wasm_bindgen::JsCast;
     use wasm_bindgen_test::*;
@@ -128,8 +139,9 @@ mod tests {
 
     pub struct CIRenderFeature;
 
-    impl RenderFeature for CIRenderFeature {
+    impl ExportFeature for CIRenderFeature {
         const ENABLE_TRACING: bool = true;
+        const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
     }
 
     static RENDERER: Mutex<once_cell::sync::OnceCell<SendWrapper<Mutex<TypstRenderer>>>> =
@@ -162,16 +174,17 @@ mod tests {
                 .create_session(
                     artifact,
                     Some(RenderSessionOptions {
-                        pixel_per_pt: Some(3.0),
+                        pixel_per_pt: Some(3.),
                         background_color: Some("ffffff".to_string()),
                         format: Some(format.to_string()),
                     }),
                 )
                 .unwrap();
 
-            let sizes = session.doc.pages[0].size();
-            canvas.set_width((sizes.x.to_pt() * 3.).ceil() as u32);
-            canvas.set_height((sizes.y.to_pt() * 3.).ceil() as u32);
+            // todo: canvas exporter respect pixel per pt
+            let sizes = &session.pages_info;
+            canvas.set_width((sizes.width() * 3.).ceil() as u32);
+            canvas.set_height((sizes.height() * 3.).ceil() as u32);
 
             let context: web_sys::CanvasRenderingContext2d = canvas
                 .get_context("2d")
@@ -252,24 +265,17 @@ mod tests {
     }
 
     async fn get_ir_artifact(name: &str) -> Vec<u8> {
-        let array_buffer = get_corpus(format!("{}.artifact.tir.bin", name))
+        let array_buffer = get_corpus(format!("{}.artifact.sir.bin", name))
             .await
             .unwrap();
-        js_sys::Uint8Array::new(&array_buffer).to_vec()
-    }
-
-    async fn get_json_artifact(name: &str) -> Vec<u8> {
-        let array_buffer = get_corpus(format!("{}.artifact.json", name)).await.unwrap();
         js_sys::Uint8Array::new(&array_buffer).to_vec()
     }
 
     async fn render_test_from_corpus(path: &str) {
         let point = path.replace('/', "_");
         let ir_point = format!("{}_artifact_ir", point);
-        let json_point = format!("{}_artifact_json", point);
 
-        render_test_template(&ir_point, &get_ir_artifact(path).await, "ir").await;
-        render_test_template(&json_point, &get_json_artifact(path).await, "js").await;
+        render_test_template(&ir_point, &get_ir_artifact(path).await, "vector").await;
     }
 
     macro_rules! make_test_point {
