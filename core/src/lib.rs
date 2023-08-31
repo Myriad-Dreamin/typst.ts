@@ -25,9 +25,6 @@ pub use font::{FontLoader, FontResolver, FontSlot};
 pub mod package;
 
 // Intermediate representation of typst-ts.
-pub mod artifact;
-pub use artifact::{core::ArtifactMeta, Artifact};
-pub mod artifact_ir;
 pub mod vector;
 
 pub mod build_info {

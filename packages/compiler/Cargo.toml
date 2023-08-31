@@ -47,7 +47,7 @@ typst-ts-compiler = { version = "0.4.0-rc1", default-features = false, features 
 ] }
 typst-ts-ast-exporter = { workspace = true }
 typst-ts-canvas-exporter = { workspace = true }
-typst-ts-tir-exporter = { workspace = true }
+typst-ts-svg-exporter = { workspace = true }
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires

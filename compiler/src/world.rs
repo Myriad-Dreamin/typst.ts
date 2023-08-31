@@ -18,7 +18,6 @@ use typst::{
 };
 
 use typst_ts_core::{
-    artifact_ir::ArtifactHeader,
     font::{FontProfile, FontResolverImpl},
     Bytes, FontResolver, TypstFileId as FileId,
 };
@@ -326,6 +325,5 @@ pub struct WorldSnapshot {
     pub dependencies: DependencyTree,
 
     /// document specific data
-    pub artifact_header: ArtifactHeader,
     pub artifact_data: String,
 }

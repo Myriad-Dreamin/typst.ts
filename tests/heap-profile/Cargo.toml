@@ -21,8 +21,6 @@ typst-ts-test-common.workspace = true
 typst-ts-core.workspace = true
 typst-ts-compiler.workspace = true
 
-typst-ts-tir-exporter = { workspace = true }
-
 [features]
 dhat-heap = []
 default = ["dhat-heap"]

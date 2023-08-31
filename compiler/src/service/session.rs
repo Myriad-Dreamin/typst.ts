@@ -1,9 +1,7 @@
 use std::path::PathBuf;
 
-use base64::Engine;
 use log::{error, info};
-use typst::eval::Tracer;
-use typst_ts_core::{artifact_ir::ArtifactHeader, config::CompileOpts};
+use typst_ts_core::config::CompileOpts;
 
 use crate::world::WorldSnapshot;
 
@@ -12,10 +10,6 @@ pub struct CompileSession {
     workspace_dir: PathBuf,
     entry_file_path: PathBuf,
     world: Option<crate::TypstSystemWorld>,
-}
-
-fn to_base64(data: &[u8]) -> String {
-    base64::engine::general_purpose::STANDARD.encode(data)
 }
 
 impl CompileSession {
@@ -54,49 +48,52 @@ impl CompileSession {
         info!("broken take_snapshot");
         info!("take_snapshot resolved in {:?}", begin.elapsed());
 
-        let mut tracer = Tracer::default();
-        let doc = match typst::compile(world, &mut tracer) {
-            Ok(doc) => doc,
-            Err(err) => {
-                error!("failed to compile: {:?}", err);
-                return None;
-            }
-        };
-        info!("take_snapshot compiled in {:?}", begin.elapsed());
+        None
 
-        let font_profile_begin = std::time::Instant::now();
-        let font_profile = world.font_resolver.profile().clone();
-        let font_profile_elapsed = font_profile_begin.elapsed();
+        // let mut tracer = Tracer::default();
+        // let doc = match typst::compile(world, &mut tracer) {
+        //     Ok(doc) => doc,
+        //     Err(err) => {
+        //         error!("failed to compile: {:?}", err);
+        //         return None;
+        //     }
+        // };
+        // info!("take_snapshot compiled in {:?}", begin.elapsed());
 
-        let dependencies_begin = std::time::Instant::now();
-        let dependencies = world.get_dependencies();
-        let dependencies_elapsed = dependencies_begin.elapsed();
+        // let font_profile_begin = std::time::Instant::now();
+        // let font_profile = world.font_resolver.profile().clone();
+        // let font_profile_elapsed = font_profile_begin.elapsed();
 
-        let artifact_begin = std::time::Instant::now();
-        let ir = typst_ts_core::artifact_ir::Artifact::from(&doc);
-        let artifact_data = to_base64(ir.get_buffer());
-        let artifact_header = ArtifactHeader {
-            metadata: ir.metadata,
-            pages: ir.pages,
-            offsets: ir.offsets,
-        };
-        let artifact_elapsed = artifact_begin.elapsed();
+        // let dependencies_begin = std::time::Instant::now();
+        // let dependencies = world.get_dependencies();
+        // let dependencies_elapsed = dependencies_begin.elapsed();
 
-        let snapshot = Some(WorldSnapshot {
-            font_profile: Some(font_profile),
-            dependencies,
+        // let artifact_begin = std::time::Instant::now();
+        // let ir = typst_ts_core::artifact_ir::Artifact::from(&doc);
+        // let artifact_data = to_base64(ir.get_buffer());
+        // let artifact_header = ArtifactHeader {
+        //     metadata: ir.metadata,
+        //     pages: ir.pages,
+        //     offsets: ir.offsets,
+        // };
+        // let artifact_elapsed = artifact_begin.elapsed();
 
-            artifact_header,
-            artifact_data,
-        });
+        // let snapshot = Some(WorldSnapshot {
+        //     font_profile: Some(font_profile),
+        //     dependencies,
 
-        info!(
-            "take_snapshot packed in {:?}: font_profile/dependencies/artifact_elasped = {:?}/{:?}/{:?}",
-            begin.elapsed(),
-            font_profile_elapsed,
-            dependencies_elapsed,
-            artifact_elapsed
-        );
-        snapshot
+        //     artifact_header,
+        //     artifact_data,
+        // });
+
+        // info!(
+        //     "take_snapshot packed in {:?}:
+        // font_profile/dependencies/artifact_elasped = {:?}/{:?}/{:?}",
+        //     begin.elapsed(),
+        //     font_profile_elapsed,
+        //     dependencies_elapsed,
+        //     artifact_elapsed
+        // );
+        // snapshot
     }
 }

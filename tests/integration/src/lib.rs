@@ -9,13 +9,11 @@ use typst_ts_compiler::{
 };
 use typst_ts_core::{
     config::CompileOpts,
-    exporter_builtins::{FromExporter, FsPathExporter, GroupExporter},
+    exporter_builtins::{FsPathExporter, GroupExporter},
     path::PathClean,
-    Artifact, AsWritable,
 };
 use typst_ts_pdf_exporter::PdfDocExporter;
-use typst_ts_serde_exporter::JsonExporter;
-use typst_ts_tir_exporter::IRArtifactExporter;
+use typst_ts_svg_exporter::SvgModuleExporter;
 
 fn get_driver(
     workspace_dir: &Path,
@@ -37,17 +35,6 @@ fn get_driver(
     CompileExporter::new(driver).with_exporter(exporter)
 }
 
-macro_rules! artifact_exporters {
-    ($($exporters:expr),*) => {
-        {
-            let artifact_exporters: Vec<Box<dyn typst_ts_core::Exporter<typst_ts_core::Artifact> + Send>> = vec![
-                $(Box::new($exporters)),*
-            ];
-            FromExporter::new(artifact_exporters)
-        }
-    };
-}
-
 macro_rules! document_exporters {
     ($($exporters:expr),*) => {
         {
@@ -59,28 +46,8 @@ macro_rules! document_exporters {
     };
 }
 
-macro_rules! ir_exporters {
-    ($($exporters:expr),*) => {
-        {
-            let ir_exporters: Vec<Box<dyn typst_ts_core::Exporter<typst_ts_core::artifact_ir::Artifact> + Send>> = vec![
-                $(Box::new($exporters)),*
-            ];
-            FromExporter::new(ir_exporters)
-        }
-    };
-}
-
-fn artifact_json_to_path<P: AsRef<Path>>(
-    path: P,
-) -> FsPathExporter<AsWritable, JsonExporter<Artifact>> {
-    FsPathExporter::new(
-        path.as_ref().to_owned(),
-        JsonExporter::<Artifact>::default(),
-    )
-}
-
-fn artifact_ir_to_path<P: AsRef<Path>>(path: P) -> FsPathExporter<AsWritable, IRArtifactExporter> {
-    FsPathExporter::new(path.as_ref().to_owned(), IRArtifactExporter)
+fn artifact_ir_to_path<P: AsRef<Path>>(path: P) -> FsPathExporter<Vec<u8>, SvgModuleExporter> {
+    FsPathExporter::new(path.as_ref().to_owned(), SvgModuleExporter::default())
 }
 
 fn doc_pdf_to_path<P: AsRef<Path>>(path: P) -> FsPathExporter<Vec<u8>, PdfDocExporter> {
@@ -110,7 +77,7 @@ impl ArtifactCompiler {
 
         let json_artifact_file_path =
             artifact_dir.join(entry_file_base.with_extension("artifact.json"));
-        let tir_file_path = artifact_dir.join(entry_file_base.with_extension("artifact.tir.bin"));
+        let sir_file_path = artifact_dir.join(entry_file_base.with_extension("artifact.sir.bin"));
         let pdf_file_path = artifact_dir.join(entry_file_base.with_extension("pdf"));
 
         let artifact_dir_to_create = json_artifact_file_path.parent().unwrap().to_owned();
@@ -120,8 +87,7 @@ impl ArtifactCompiler {
             &real_workspace_dir,
             &real_entry_file_path,
             document_exporters![
-                artifact_exporters![artifact_json_to_path(json_artifact_file_path.clone())],
-                ir_exporters![artifact_ir_to_path(tir_file_path.clone())],
+                artifact_ir_to_path(sir_file_path.clone()),
                 doc_pdf_to_path(pdf_file_path.clone())
             ],
         );
@@ -131,7 +97,7 @@ impl ArtifactCompiler {
         ArtifactBundle {
             driver,
             json: json_artifact_file_path.clean(),
-            tir: tir_file_path.clean(),
+            tir: sir_file_path.clean(),
             pdf: pdf_file_path.clean(),
         }
     }
