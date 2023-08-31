@@ -19,6 +19,7 @@ typst-ts-core.workspace = true
 log.workspace = true
 
 wasm-bindgen = { workspace = true, optional = true }
+wasm-bindgen-futures.workspace = true
 js-sys = { workspace = true, optional = true }
 web-sys = { workspace = true, features = [
     "console",

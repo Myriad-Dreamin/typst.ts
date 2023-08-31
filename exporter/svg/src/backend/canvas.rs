@@ -2,11 +2,12 @@
 #![allow(unused_variables)]
 #![allow(clippy::all)]
 
+use js_sys::Promise;
 use std::{fmt::Debug, ops::Deref, sync::Arc};
 use tiny_skia as sk;
 
-use wasm_bindgen::JsValue;
-use web_sys::Path2d;
+use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
+use web_sys::{CanvasRenderingContext2d, HtmlImageElement, Path2d};
 
 use typst_ts_core::{
     font::GlyphProvider,
@@ -19,7 +20,7 @@ use typst_ts_core::{
         },
         flat_vm::{FlatGroupContext, FlatRenderVm},
         ir::{
-            self, Abs, Axes, BuildGlyph, GlyphItem, GlyphPackBuilder, GlyphRef, ImageItem,
+            self, Abs, Axes, BuildGlyph, GlyphItem, GlyphPackBuilder, GlyphRef, Image, ImageItem,
             ImmutStr, PathStyle, Ratio, Rect, Scalar, Size, SvgItem,
         },
         vm::{GroupContext, RenderVm, TransformContext},
@@ -53,6 +54,21 @@ fn set_transform(canvas: &web_sys::CanvasRenderingContext2d, transform: sk::Tran
     maybe_err.unwrap();
 }
 
+pub struct CanvasStateGuard<'a>(&'a CanvasRenderingContext2d);
+
+impl<'a> CanvasStateGuard<'a> {
+    pub fn new(context: &'a CanvasRenderingContext2d) -> Self {
+        context.save();
+        Self(context)
+    }
+}
+
+impl<'a> Drop for CanvasStateGuard<'a> {
+    fn drop(&mut self) {
+        self.0.restore();
+    }
+}
+
 #[derive(Debug)]
 pub struct CanvasGroupElem {
     pub ts: sk::Transform,
@@ -62,12 +78,30 @@ pub struct CanvasGroupElem {
 #[async_trait(?Send)]
 impl CanvasElem for CanvasGroupElem {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
-        web_sys::console::log_2(&"CanvasGroupElem".into(), &"realize".into());
-        let ts = ts.post_concat(self.ts);
+        let ts = ts.pre_concat(self.ts);
         for (pos, sub_elem) in &self.inner {
-            let ts = ts.post_translate(pos.x.0, pos.y.0);
+            let ts = ts.pre_translate(pos.x.0, pos.y.0);
             sub_elem.realize(ts, canvas).await;
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct CanvasClipElem {
+    pub ts: sk::Transform,
+    pub d: ImmutStr,
+    pub inner: CanvasNode,
+}
+
+#[async_trait(?Send)]
+impl CanvasElem for CanvasClipElem {
+    async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
+        let guard = CanvasStateGuard::new(canvas);
+
+        set_transform(canvas, ts);
+        canvas.clip_with_path_2d(&Path2d::new_with_path_string(&self.d).unwrap());
+
+        self.inner.realize(ts, canvas).await
     }
 }
 
@@ -79,6 +113,7 @@ pub struct CanvasPathElem {
 #[async_trait(?Send)]
 impl CanvasElem for CanvasPathElem {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
+        let _guard = CanvasStateGuard::new(canvas);
         set_transform(canvas, ts);
         // todo style
         // map_err(map_err("CanvasRenderTask.BuildPath2d")
@@ -139,18 +174,125 @@ pub struct CanvasImageElem {
     pub image_data: ImageItem,
 }
 
+impl CanvasImageElem {
+    async fn load_image_cached(image: &Image, image_elem: &HtmlImageElement) {
+        let image_loaded = image_elem.get_attribute("data-typst-loaded-image");
+        match image_loaded {
+            Some(t) if t == "true" => {}
+            _ => {
+                Self::load_image_slow(image, image_elem).await;
+                image_elem
+                    .set_attribute("data-typst-loaded-image", "true")
+                    .unwrap();
+            }
+        }
+    }
+
+    async fn load_image_slow(image: &Image, image_elem: &HtmlImageElement) {
+        let u = js_sys::Uint8Array::new_with_length(image.data.len() as u32);
+        u.copy_from(&image.data);
+
+        let parts = js_sys::Array::new();
+        parts.push(&u);
+        let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(
+            &parts,
+            // todo: security check
+            // https://security.stackexchange.com/questions/148507/how-to-prevent-xss-in-svg-file-upload
+            // todo: use our custom font
+            web_sys::BlobPropertyBag::new().type_(&format!("image/{}", image.format)),
+        )
+        .unwrap();
+
+        let data_url = web_sys::Url::create_object_url_with_blob(&blob).unwrap();
+
+        let img_load_promise = Promise::new(
+            &mut move |complete: js_sys::Function, _reject: js_sys::Function| {
+                let data_url = data_url.clone();
+                let data_url2 = data_url.clone();
+                let complete2 = complete.clone();
+
+                image_elem.set_src(&data_url);
+
+                // simulate async callback from another thread
+                let a = Closure::<dyn Fn()>::new(move || {
+                    web_sys::Url::revoke_object_url(&data_url).unwrap();
+                    complete.call0(&complete).unwrap();
+                });
+
+                image_elem.set_onload(Some(a.as_ref().unchecked_ref()));
+                a.forget();
+
+                let a = Closure::<dyn Fn(JsValue)>::new(move |e: JsValue| {
+                    web_sys::Url::revoke_object_url(&data_url2).unwrap();
+                    complete2.call0(&complete2).unwrap();
+                    // let end = std::time::Instant::now();
+                    web_sys::console::log_1(
+                        &format!(
+                            "err image loading in {:?} {:?} {:?} {}",
+                            // end - begin,
+                            0,
+                            js_sys::Reflect::get(&e, &"type".into()).unwrap(),
+                            js_sys::JSON::stringify(&e).unwrap(),
+                            data_url2,
+                        )
+                        .into(),
+                    );
+                });
+
+                image_elem.set_onerror(Some(a.as_ref().unchecked_ref()));
+                a.forget();
+            },
+        );
+
+        wasm_bindgen_futures::JsFuture::from(img_load_promise)
+            .await
+            .unwrap();
+    }
+
+    async fn draw_image(
+        ts: sk::Transform,
+        canvas: &web_sys::CanvasRenderingContext2d,
+        image_data: &ImageItem,
+    ) {
+        set_transform(canvas, ts);
+
+        let image = &image_data.image;
+
+        let image_elem = rasterize_image(image).unwrap();
+        Self::load_image_cached(image, &image_elem).await;
+
+        // resize image to fit the view
+        let (w, h) = {
+            let size = image_data.size;
+            let view_width = size.x.0;
+            let view_height = size.y.0;
+
+            let aspect = (image.width() as f32) / (image.height() as f32);
+
+            let w = view_width.max(aspect * view_height);
+            let h = w / aspect;
+            (w, h)
+        };
+
+        let state = CanvasStateGuard::new(canvas);
+        set_transform(canvas, ts);
+        canvas
+            .draw_image_with_html_image_element_and_dw_and_dh(
+                &image_elem,
+                0.,
+                0.,
+                w as f64,
+                h as f64,
+            )
+            .unwrap();
+        drop(state);
+    }
+}
+
 #[async_trait(?Send)]
 impl CanvasElem for CanvasImageElem {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
-        set_transform(canvas, ts);
-        // self.content.push(SvgText::Plain(render_image(
-        //     &image_item.image,
-        //     image_item.size,
-        // )))
-
-        // self.t.canvas.draw_image_with_html_image_element_and_dw_and_dh(, dx,
-        // dy, dw, dh)
-        // todo!()
+        Self::draw_image(ts, canvas, &self.image_data).await
     }
 }
 
@@ -163,18 +305,20 @@ pub struct CanvasGlyphElem {
 #[async_trait(?Send)]
 impl CanvasElem for CanvasGlyphElem {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
+        let _guard = CanvasStateGuard::new(canvas);
         set_transform(canvas, ts);
         match &self.glyph_data {
             GlyphItem::Raw(..) => unreachable!(),
             GlyphItem::Outline(path) => {
-                web_sys::console::log_2(&"CanvasGlyphElem".into(), &"realize".into());
                 let fill: &str = &self.fill;
                 canvas.set_fill_style(&fill.into());
                 canvas.fill_with_path_2d(&Path2d::new_with_path_string(&path.d).unwrap());
             }
-            GlyphItem::Image(_path) => {
-                // todo!()
+            GlyphItem::Image(glyph) => {
+                CanvasImageElem::draw_image(ts.pre_concat(glyph.ts.into()), canvas, &glyph.image)
+                    .await
             }
+            GlyphItem::None => {}
         }
     }
 }
@@ -217,10 +361,19 @@ pub struct CanvasStack {
 
 impl From<CanvasStack> for CanvasNode {
     fn from(s: CanvasStack) -> Self {
-        Arc::new(Box::new(CanvasGroupElem {
+        let inner: CanvasNode = Arc::new(Box::new(CanvasGroupElem {
             ts: s.ts,
             inner: s.inner,
-        }))
+        }));
+        if let Some(clipper) = s.clipper {
+            Arc::new(Box::new(CanvasClipElem {
+                ts: s.ts,
+                d: clipper.d.clone(),
+                inner,
+            }))
+        } else {
+            inner
+        }
     }
 }
 
@@ -436,8 +589,16 @@ impl IncrementalCanvasExporter {
 
     pub async fn flush_page(&mut self, idx: usize, canvas: &web_sys::CanvasRenderingContext2d) {
         let pg = &self.pages[idx];
-        pg.0.realize(sk::Transform::from_scale(3.5, 3.5), canvas)
-            .await;
+        let ts = sk::Transform::from_scale(3., 3.);
+        let sumy = self
+            .pages
+            .iter()
+            .take(idx)
+            .map(|(_, size)| size.y.0)
+            .sum::<f32>();
+        let ts = ts.pre_translate(0., sumy);
+
+        pg.0.realize(ts, canvas).await;
     }
 }
 
@@ -540,4 +701,16 @@ impl IncrCanvasDocClient {
             }
         }
     }
+}
+
+#[comemo::memoize]
+fn rasterize_image(_image: &Image) -> Option<HtmlImageElement> {
+    let window = web_sys::window().unwrap();
+    window
+        .document()
+        .unwrap()
+        .create_element("img")
+        .unwrap()
+        .dyn_into::<HtmlImageElement>()
+        .ok()
 }

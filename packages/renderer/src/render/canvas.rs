@@ -173,16 +173,17 @@ mod tests {
                 .create_session(
                     artifact,
                     Some(RenderSessionOptions {
-                        pixel_per_pt: Some(3.0),
+                        pixel_per_pt: Some(3.),
                         background_color: Some("ffffff".to_string()),
                         format: Some(format.to_string()),
                     }),
                 )
                 .unwrap();
 
-            let sizes = session.pages_info.page(0);
-            canvas.set_width((sizes.width_pt() * 3.).ceil() as u32);
-            canvas.set_height((sizes.height_pt() * 3.).ceil() as u32);
+            // todo: canvas exporter respect pixel per pt
+            let sizes = &session.pages_info;
+            canvas.set_width((sizes.width() * 3.).ceil() as u32);
+            canvas.set_height((sizes.height() * 3.).ceil() as u32);
 
             let context: web_sys::CanvasRenderingContext2d = canvas
                 .get_context("2d")
@@ -288,81 +289,80 @@ mod tests {
     }
 
     make_test_point!(test_render_math_main, "math/main");
-    // make_test_point!(test_render_math_undergradmath, "math/undergradmath");
+    make_test_point!(test_render_math_undergradmath, "math/undergradmath");
 
-    // make_test_point!(
-    //     test_render_layout_clip,
-    //     "layout/clip_1",
-    //     "layout/clip_2",
-    //     "layout/clip_3",
-    //     "layout/clip_4",
-    // );
-    // make_test_point!(
-    //     test_render_layout_list_marker,
-    //     "layout/list_marker_1",
-    //     "layout/list_marker_2",
-    //     "layout/list_marker_3",
-    //     "layout/list_marker_4",
-    // );
-    // make_test_point!(
-    //     test_render_layout_transform,
-    //     "layout/transform_1",
-    //     "layout/transform_2",
-    //     "layout/transform_3",
-    //     "layout/transform_4",
-    // );
+    make_test_point!(
+        test_render_layout_clip,
+        "layout/clip_1",
+        "layout/clip_2",
+        "layout/clip_3",
+        "layout/clip_4",
+    );
+    make_test_point!(
+        test_render_layout_list_marker,
+        "layout/list_marker_1",
+        "layout/list_marker_2",
+        "layout/list_marker_3",
+        "layout/list_marker_4",
+    );
+    make_test_point!(
+        test_render_layout_transform,
+        "layout/transform_1",
+        "layout/transform_2",
+        "layout/transform_3",
+        "layout/transform_4",
+    );
 
-    // make_test_point!(
-    //     test_render_visual_line,
-    //     "visualize/line_1",
-    //     "visualize/line_2"
-    // );
+    make_test_point!(
+        test_render_visual_line,
+        "visualize/line_1",
+        "visualize/line_2"
+    );
 
-    // make_test_point!(test_render_visualize_path, "visualize/path_1");
-    // make_test_point!(test_render_visualize_polygon, "visualize/polygon_1");
-    // make_test_point!(
-    //     test_render_visualize_shape_aspect,
-    //     "visualize/shape_aspect_1",
-    //     "visualize/shape_aspect_2",
-    //     "visualize/shape_aspect_3",
-    //     "visualize/shape_aspect_4",
-    //     "visualize/shape_aspect_5",
-    //     "visualize/shape_aspect_6",
-    // );
-    // make_test_point!(
-    //     test_render_visualize_shape_circle,
-    //     "visualize/shape_circle_1",
-    //     "visualize/shape_circle_2",
-    //     "visualize/shape_circle_3",
-    //     "visualize/shape_circle_4",
-    // );
-    // make_test_point!(
-    //     test_render_visualize_stroke,
-    //     "visualize/stroke_1",
-    //     "visualize/stroke_2",
-    //     "visualize/stroke_3",
-    //     "visualize/stroke_4",
-    //     "visualize/stroke_5",
-    //     "visualize/stroke_6",
-    // );
+    make_test_point!(test_render_visualize_path, "visualize/path_1");
+    make_test_point!(test_render_visualize_polygon, "visualize/polygon_1");
+    make_test_point!(
+        test_render_visualize_shape_aspect,
+        "visualize/shape_aspect_1",
+        "visualize/shape_aspect_2",
+        "visualize/shape_aspect_3",
+        "visualize/shape_aspect_4",
+        "visualize/shape_aspect_5",
+        "visualize/shape_aspect_6",
+    );
+    make_test_point!(
+        test_render_visualize_shape_circle,
+        "visualize/shape_circle_1",
+        "visualize/shape_circle_2",
+        "visualize/shape_circle_3",
+        "visualize/shape_circle_4",
+    );
+    make_test_point!(
+        test_render_visualize_stroke,
+        "visualize/stroke_1",
+        "visualize/stroke_2",
+        "visualize/stroke_3",
+        "visualize/stroke_4",
+        "visualize/stroke_5",
+        "visualize/stroke_6",
+    );
 
-    // // todo: This will use font from local machine, which is unstable
-    // // make_test_point!(test_render_visualize_svg_text,
-    // "visualize/svg_text");
+    // todo: This will use font from local machine, which is unstable
+    // make_test_point!(test_render_visualize_svg_text, "visualize/svg_text");
 
-    // // todo: get cjk font from remote server
-    // // make_test_point!(test_render_text_chinese, "text/chinese");
+    // todo: get cjk font from remote server
+    // make_test_point!(test_render_text_chinese, "text/chinese");
 
-    // make_test_point!(
-    //     test_render_text_deco,
-    //     "text/deco_1",
-    //     "text/deco_2",
-    //     "text/deco_3"
-    // );
+    make_test_point!(
+        test_render_text_deco,
+        "text/deco_1",
+        "text/deco_2",
+        "text/deco_3"
+    );
 
-    // make_test_point!(
-    //     test_render_text_emoji,
-    //     // "text/emoji_1",
-    //     "text/emoji_2"
-    // );
+    make_test_point!(
+        test_render_text_emoji,
+        // "text/emoji_1",
+        "text/emoji_2"
+    );
 }

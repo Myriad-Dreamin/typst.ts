@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use js_sys::Uint8Array;
 use typst_ts_core::error::prelude::*;
-use typst_ts_svg_exporter::IncrCanvasDocClient;
+use typst_ts_svg_exporter::{ir::Scalar, IncrCanvasDocClient};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -105,6 +105,19 @@ impl PagesInfo {
 
     pub fn page(&self, i: usize) -> PageInfo {
         self.pages[i].clone()
+    }
+
+    pub fn width(&self) -> f32 {
+        self.pages
+            .iter()
+            .map(|s| Scalar(s.width as f32))
+            .max()
+            .unwrap_or_default()
+            .0
+    }
+
+    pub fn height(&self) -> f32 {
+        self.pages.iter().map(|s| s.height as f32).sum()
     }
 }
 

@@ -4446,6 +4446,7 @@ dependencies = [
  "typst",
  "typst-ts-core",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 
