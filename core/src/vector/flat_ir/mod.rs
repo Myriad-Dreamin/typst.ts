@@ -18,7 +18,13 @@
 //! │[`SvgDocument`]│◄───────────────┤[`MultiSvgDocument`]│
 //! └───────────────┘                └────────────────────┘
 
-use std::{collections::HashMap, ops::Index, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
+
+mod layout;
+pub use layout::*;
+
+mod module;
+pub use module::*;
 
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
@@ -33,9 +39,9 @@ use crate::{
 use super::{
     geom::{Abs, Point, Size},
     ir::{
-        AbsoluteRef, BuildGlyph, DefId, FontRef, GlyphItem, GlyphPackBuilder, GlyphRef,
-        ImageGlyphItem, ImageItem, ImmutStr, LinkItem, OutlineGlyphItem, PathItem, Scalar, SpanId,
-        SvgItem, TextShape, TransformItem,
+        BuildGlyph, DefId, FontRef, GlyphItem, GlyphPackBuilder, GlyphRef, ImageGlyphItem,
+        ImageItem, ImmutStr, LinkItem, OutlineGlyphItem, PathItem, SpanId, SvgItem, TextShape,
+        TransformItem,
     },
 };
 
@@ -218,159 +224,6 @@ pub enum PageMetadata {
     Glyph(Arc<GlyphPack>),
 }
 
-/// Describing
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-#[repr(C)]
-pub enum LayoutRegionNode {
-    // next indirection
-    Indirect(usize),
-    // flat page layout
-    Pages(Arc<(Vec<PageMetadata>, Vec<Page>)>),
-    // source mapping node per page
-    SourceMapping(Arc<(Vec<PageMetadata>, Vec<SourceMappingNode>)>),
-}
-
-impl LayoutRegionNode {
-    pub fn new_pages(pages: Vec<Page>) -> Self {
-        Self::Pages(Arc::new((Default::default(), pages)))
-    }
-
-    pub fn new_source_mapping(source_mapping: Vec<SourceMappingNode>) -> Self {
-        Self::SourceMapping(Arc::new((Default::default(), source_mapping)))
-    }
-}
-
-/// Describing
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct LayoutRegionRepr<T> {
-    pub kind: ImmutStr,
-    pub layouts: Vec<(T, LayoutRegionNode)>,
-}
-
-/// Describing
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub enum LayoutRegion {
-    ByScalar(LayoutRegionRepr<Scalar>),
-    ByStr(LayoutRegionRepr<ImmutStr>),
-}
-
-impl LayoutRegion {
-    pub fn new_single(layout: LayoutRegionNode) -> Self {
-        Self::ByScalar(LayoutRegionRepr {
-            kind: "_".into(),
-            layouts: vec![(Default::default(), layout)],
-        })
-    }
-    pub fn by_scalar(kind: ImmutStr, layouts: Vec<(Scalar, LayoutRegionNode)>) -> Self {
-        Self::ByScalar(LayoutRegionRepr { kind, layouts })
-    }
-
-    pub fn is_empty(&self) -> bool {
-        match self {
-            Self::ByScalar(v) => v.layouts.is_empty(),
-            Self::ByStr(v) => v.layouts.is_empty(),
-        }
-    }
-}
-
-impl Index<usize> for LayoutRegion {
-    type Output = LayoutRegionNode;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        match self {
-            Self::ByScalar(v) => &v.layouts[index].1,
-            Self::ByStr(v) => &v.layouts[index].1,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct LayoutSourceMapping(pub LayoutRegion);
-
-impl Default for LayoutSourceMapping {
-    fn default() -> Self {
-        Self::new_single(Default::default())
-    }
-}
-
-impl LayoutSourceMapping {
-    pub fn new_single(source_mapping: Vec<SourceMappingNode>) -> Self {
-        Self(LayoutRegion::new_single(
-            LayoutRegionNode::new_source_mapping(source_mapping),
-        ))
-    }
-}
-
-pub type ItemMap = rustc_hash::FxHashMap<Fingerprint, FlatSvgItem>;
-
-pub type RefItemMap = HashMap<Fingerprint, (u64, FlatSvgItem)>;
-
-pub trait ToItemMap {
-    fn to_item_map(self) -> ItemMap;
-}
-
-impl ToItemMap for RefItemMap {
-    fn to_item_map(self) -> ItemMap {
-        self.into_iter().map(|(k, (_, v))| (k, v)).collect::<_>()
-    }
-}
-
-/// Trait of a streaming representation of a module.
-pub trait ModuleStream {
-    fn items(&self) -> ItemPack;
-    fn layouts(&self) -> Arc<LayoutRegion>;
-    fn glyphs(&self) -> Vec<(DefId, FlatGlyphItem)>;
-    fn gc_items(&self) -> Option<Vec<Fingerprint>> {
-        // never gc items
-        None
-    }
-}
-
-/// A finished module that stores all the svg items.
-/// The svg items shares the underlying data.
-/// The svg items are flattened and ready to be serialized.
-#[derive(Debug, Default)]
-pub struct Module {
-    pub glyphs: Vec<(DefId, GlyphItem)>,
-    pub items: ItemMap,
-    pub source_mapping: Vec<SourceMappingNode>,
-}
-
-impl Module {
-    /// Get a glyph item by its stable ref.
-    pub fn get_glyph(&self, id: &AbsoluteRef) -> Option<&GlyphItem> {
-        self.glyphs.get(id.id.0 as usize).map(|(_, item)| item)
-    }
-
-    /// Get a svg item by its stable ref.
-    pub fn get_item(&self, id: &Fingerprint) -> Option<&FlatSvgItem> {
-        self.items.get(id)
-    }
-
-    pub fn merge_delta(&mut self, v: impl ModuleStream) {
-        let item_pack: ItemPack = v.items();
-        let glyphs = v.glyphs();
-
-        if let Some(gc_items) = v.gc_items() {
-            for id in gc_items {
-                self.items.remove(&id);
-            }
-        }
-
-        self.items.extend(item_pack.0);
-        self.glyphs
-            .extend(glyphs.into_iter().map(|(id, item)| (id, item.into())));
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
@@ -522,11 +375,6 @@ impl ModuleStream for &FlatModule {
         None
     }
 }
-
-pub type LayoutElem = (
-    /* layout width */ Abs,
-    /* layout pages */ Vec<Page>,
-);
 
 /// Module with page references of a [`typst::doc::Document`].
 pub struct SvgDocument {
