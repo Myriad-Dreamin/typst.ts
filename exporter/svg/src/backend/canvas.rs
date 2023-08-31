@@ -2,9 +2,10 @@
 #![allow(unused_variables)]
 #![allow(clippy::all)]
 
-use std::sync::Arc;
+use std::{fmt::Debug, ops::Deref, sync::Arc};
 use tiny_skia as sk;
 
+use wasm_bindgen::JsValue;
 use web_sys::Path2d;
 
 use typst_ts_core::{
@@ -12,21 +13,26 @@ use typst_ts_core::{
     hash::{Fingerprint, FingerprintBuilder},
     vector::{
         bbox::GlyphIndice,
+        flat_ir::{
+            FlatModule, LayoutRegionNode, LayoutSourceMapping, ModuleBuilder, ModuleMetadata,
+            MultiSvgDocument, Page, SourceMappingNode,
+        },
         flat_vm::{FlatGroupContext, FlatRenderVm},
         ir::{
-            self, Abs, AbsoluteRef, Axes, BuildGlyph, DefId, GlyphItem, GlyphMapping, ImageItem,
-            ImmutStr, Ratio, Scalar,
+            self, Abs, Axes, BuildGlyph, GlyphItem, GlyphPackBuilder, GlyphRef, ImageItem,
+            ImmutStr, PathStyle, Ratio, Rect, Scalar, Size, SvgItem,
         },
         vm::{GroupContext, RenderVm, TransformContext},
     },
+    TakeAs,
 };
 
-use crate::{flat_ir, DefaultExportFeature, SvgDocument, SvgTask};
+use crate::{flat_ir, DefaultExportFeature, SvgTask};
 use crate::{ExportFeature, Module};
 
 use async_trait::async_trait;
 #[async_trait(?Send)]
-pub trait CanvasElem {
+pub trait CanvasElem: Debug {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d);
 }
 
@@ -47,6 +53,7 @@ fn set_transform(canvas: &web_sys::CanvasRenderingContext2d, transform: sk::Tran
     maybe_err.unwrap();
 }
 
+#[derive(Debug)]
 pub struct CanvasGroupElem {
     pub ts: sk::Transform,
     pub inner: Vec<(ir::Point, CanvasNode)>,
@@ -55,6 +62,7 @@ pub struct CanvasGroupElem {
 #[async_trait(?Send)]
 impl CanvasElem for CanvasGroupElem {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
+        web_sys::console::log_2(&"CanvasGroupElem".into(), &"realize".into());
         let ts = ts.post_concat(self.ts);
         for (pos, sub_elem) in &self.inner {
             let ts = ts.post_translate(pos.x.0, pos.y.0);
@@ -63,6 +71,7 @@ impl CanvasElem for CanvasGroupElem {
     }
 }
 
+#[derive(Debug)]
 pub struct CanvasPathElem {
     pub path_data: ir::PathItem,
 }
@@ -72,10 +81,60 @@ impl CanvasElem for CanvasPathElem {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         set_transform(canvas, ts);
         // todo style
-        canvas.fill_with_path_2d(&Path2d::new_with_path_string(&self.path_data.d).unwrap());
+        // map_err(map_err("CanvasRenderTask.BuildPath2d")
+
+        let mut fill_color = "none".into();
+        let mut fill = false;
+        let mut stroke_color = "none".into();
+        let mut stroke = false;
+
+        for style in &self.path_data.styles {
+            match style {
+                PathStyle::Fill(color) => {
+                    fill_color = color.clone();
+                    fill = true;
+                }
+                PathStyle::Stroke(color) => {
+                    stroke_color = color.clone();
+                    stroke = true;
+                }
+                PathStyle::StrokeWidth(width) => {
+                    canvas.set_line_width(width.0 as f64);
+                }
+                PathStyle::StrokeLineCap(cap) => {
+                    canvas.set_line_cap(cap);
+                }
+                PathStyle::StrokeLineJoin(join) => {
+                    canvas.set_line_join(join);
+                }
+                PathStyle::StrokeMitterLimit(limit) => {
+                    canvas.set_miter_limit(limit.0 as f64);
+                }
+                PathStyle::StrokeDashArray(array) => {
+                    let dash_array = js_sys::Array::from_iter(
+                        array.iter().map(|d| JsValue::from_f64(d.0 as f64)),
+                    );
+                    canvas.set_line_dash(&dash_array).unwrap();
+                }
+                PathStyle::StrokeDashOffset(offset) => {
+                    canvas.set_line_dash_offset(offset.0 as f64);
+                }
+            }
+        }
+
+        if fill {
+            canvas.set_fill_style(&fill_color.as_ref().into());
+            canvas.fill_with_path_2d(&Path2d::new_with_path_string(&self.path_data.d).unwrap());
+        }
+
+        if stroke {
+            canvas.set_stroke_style(&stroke_color.as_ref().into());
+            canvas.stroke_with_path(&Path2d::new_with_path_string(&self.path_data.d).unwrap());
+        }
     }
 }
 
+#[derive(Debug)]
 pub struct CanvasImageElem {
     pub image_data: ImageItem,
 }
@@ -89,12 +148,13 @@ impl CanvasElem for CanvasImageElem {
         //     image_item.size,
         // )))
 
-        // self.t.canvas.draw_image_with_html_image_element_and_dw_and_dh(, dx, dy, dw,
-        // dh)
-        todo!()
+        // self.t.canvas.draw_image_with_html_image_element_and_dw_and_dh(, dx,
+        // dy, dw, dh)
+        // todo!()
     }
 }
 
+#[derive(Debug)]
 pub struct CanvasGlyphElem {
     pub fill: ImmutStr,
     pub glyph_data: GlyphItem,
@@ -107,11 +167,14 @@ impl CanvasElem for CanvasGlyphElem {
         match &self.glyph_data {
             GlyphItem::Raw(..) => unreachable!(),
             GlyphItem::Outline(path) => {
+                web_sys::console::log_2(&"CanvasGlyphElem".into(), &"realize".into());
                 let fill: &str = &self.fill;
                 canvas.set_fill_style(&fill.into());
                 canvas.fill_with_path_2d(&Path2d::new_with_path_string(&path.d).unwrap());
             }
-            GlyphItem::Image(_path) => todo!(),
+            GlyphItem::Image(_path) => {
+                // todo!()
+            }
         }
     }
 }
@@ -131,7 +194,7 @@ pub struct CanvasRenderTask<'m, 't, Feat: ExportFeature> {
     pub(crate) fingerprint_builder: &'t mut FingerprintBuilder,
 
     /// Stores the glyphs used in the document.
-    pub(crate) glyph_defs: &'t mut GlyphMapping,
+    pub(crate) glyph_defs: &'t mut GlyphPackBuilder,
 
     /// See [`ExportFeature`].
     pub should_render_text_element: bool,
@@ -170,7 +233,7 @@ impl CanvasStack {
     pub fn render_glyph_ref_inner(
         &mut self,
         pos: Scalar,
-        glyph: &AbsoluteRef,
+        glyph: &GlyphRef,
         glyph_data: &GlyphItem,
     ) {
         self.inner.push((
@@ -229,10 +292,7 @@ impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> Gro
     for CanvasStack
 {
     fn render_item_at(&mut self, ctx: &mut C, pos: ir::Point, item: &ir::SvgItem) {
-        let ts = self.ts;
-        self.ts = ts.post_translate(pos.x.0, pos.y.0);
-        ctx.render_item(item);
-        self.ts = ts;
+        self.inner.push((pos, ctx.render_item(item)));
     }
 
     fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &ir::GlyphItem) {
@@ -266,13 +326,10 @@ impl<'m, C: FlatRenderVm<'m, Resultant = CanvasNode> + GlyphIndice<'m>> FlatGrou
     for CanvasStack
 {
     fn render_item_ref_at(&mut self, ctx: &mut C, pos: crate::ir::Point, item: &Fingerprint) {
-        let ts = self.ts;
-        self.ts = ts.post_translate(pos.x.0, pos.y.0);
-        ctx.render_flat_item(item);
-        self.ts = ts;
+        self.inner.push((pos, ctx.render_flat_item(item)));
     }
 
-    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, glyph: &AbsoluteRef) {
+    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, glyph: &GlyphRef) {
         if let Some(glyph_data) = ctx.get_glyph(glyph) {
             self.render_glyph_ref_inner(pos, glyph, glyph_data)
         }
@@ -280,23 +337,14 @@ impl<'m, C: FlatRenderVm<'m, Resultant = CanvasNode> + GlyphIndice<'m>> FlatGrou
 }
 
 impl<'m, 't, Feat: ExportFeature> BuildGlyph for CanvasRenderTask<'m, 't, Feat> {
-    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> AbsoluteRef {
-        if let Some(id) = self.glyph_defs.get(glyph) {
-            return id.clone();
-        }
-
-        let id = DefId(self.glyph_defs.len() as u64);
-
-        let fingerprint = self.fingerprint_builder.resolve(glyph);
-        let abs_ref = AbsoluteRef { fingerprint, id };
-        self.glyph_defs.insert(glyph.clone(), abs_ref.clone());
-        abs_ref
+    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
+        self.glyph_defs.build_glyph(glyph).0
     }
 }
 
 impl<'m, 't, Feat: ExportFeature> GlyphIndice<'m> for CanvasRenderTask<'m, 't, Feat> {
-    fn get_glyph(&self, value: &AbsoluteRef) -> Option<&'m ir::GlyphItem> {
-        self.module.glyphs.get(value.id.0 as usize).map(|v| &v.1)
+    fn get_glyph(&self, g: &GlyphRef) -> Option<&'m ir::GlyphItem> {
+        self.module.glyphs.get(g.glyph_idx as usize).map(|v| &v.1)
     }
 }
 
@@ -369,27 +417,127 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 
 #[derive(Default)]
 pub struct IncrementalCanvasExporter {
-    pub pages: Vec<Arc<Box<dyn CanvasElem>>>,
+    pub pages: Vec<(Arc<Box<dyn CanvasElem>>, Size)>,
 }
 
 impl IncrementalCanvasExporter {
-    pub fn interpret_changes(&mut self, diff_doc: SvgDocument) {
+    pub fn interpret_changes(&mut self, module: &Module, pages: &[Page]) {
         // render the document
         let mut t = SvgTask::<DefaultExportFeature>::default();
 
-        let mut ct = t.fork_canvas_render_task(&diff_doc.module);
+        let mut ct = t.fork_canvas_render_task(&module);
 
-        let pages = diff_doc
-            .pages
+        let pages = pages
             .iter()
-            .map(|(abs_ref, ..)| ct.render_flat_item(abs_ref))
+            .map(|Page { content, size }| (ct.render_flat_item(content), size.clone()))
             .collect();
         self.pages = pages;
     }
 
     pub async fn flush_page(&mut self, idx: usize, canvas: &web_sys::CanvasRenderingContext2d) {
         let pg = &self.pages[idx];
-        pg.realize(sk::Transform::from_scale(3.5, 3.5), canvas)
+        pg.0.realize(sk::Transform::from_scale(3.5, 3.5), canvas)
             .await;
+    }
+}
+
+/// maintains the state of the incremental rendering at client side
+#[derive(Default)]
+pub struct IncrCanvasDocClient {
+    /// Full information of the current document from server.
+    pub doc: MultiSvgDocument,
+
+    pub elements: IncrementalCanvasExporter,
+
+    /// Expected exact state of the current DOM.
+    /// Initially it is None meaning no any page is rendered.
+    pub doc_view: Option<Vec<Page>>,
+
+    /// Optional source mapping data.
+    pub source_mapping_data: Vec<SourceMappingNode>,
+    /// Optional page source mapping references.
+    pub page_source_mappping: LayoutSourceMapping,
+
+    /// Don't use this
+    /// it is public to make Default happy
+    pub mb: ModuleBuilder,
+}
+
+impl IncrCanvasDocClient {
+    /// Merge the delta from server.
+    pub fn merge_delta(&mut self, delta: FlatModule) {
+        self.doc.merge_delta(&delta);
+        for metadata in delta.metadata {
+            match metadata {
+                ModuleMetadata::SourceMappingData(data) => {
+                    self.source_mapping_data = data;
+                }
+                ModuleMetadata::PageSourceMapping(data) => {
+                    self.page_source_mappping = data.take();
+                }
+                _ => {}
+            }
+        }
+
+        let layout = self.doc.layouts.unwrap_single();
+        let pages = layout.pages(&self.doc.module);
+        if let Some(pages) = pages {
+            self.elements
+                .interpret_changes(pages.module(), pages.pages());
+        }
+    }
+
+    /// Render the document in the given window.
+    pub async fn render_in_window(
+        &mut self,
+        canvas: &web_sys::CanvasRenderingContext2d,
+        rect: Rect,
+    ) {
+        // prepare an empty page for the pages that are not rendered
+        // todo: better solution?
+        let empty_page = self.mb.build(SvgItem::Group(Default::default()));
+        self.doc
+            .module
+            .items
+            .extend(self.mb.items.iter().map(|(f, (_, v))| (*f, v.clone())));
+
+        // get previous doc_view
+        // it is exact state of the current DOM.
+        let prev_doc_view = self.doc_view.take().unwrap_or_default();
+
+        // render next doc_view
+        // for pages that is not in the view, we use empty_page
+        // otherwise, we keep document layout
+        let mut page_off: f32 = 0.;
+        let mut next_doc_view = vec![];
+        if !self.doc.layouts.is_empty() {
+            let t = &self.doc.layouts[0];
+            let pages = match t {
+                LayoutRegionNode::Pages(a) => {
+                    let (_, pages) = a.deref();
+                    pages
+                }
+                _ => todo!(),
+            };
+            for page in pages.iter() {
+                page_off += page.size.y.0;
+                if page_off < rect.lo.y.0 || page_off - page.size.y.0 > rect.hi.y.0 {
+                    next_doc_view.push(Page {
+                        content: empty_page,
+                        size: page.size,
+                    });
+                    continue;
+                }
+
+                next_doc_view.push(page.clone());
+            }
+        }
+
+        for (idx, y) in next_doc_view.iter().enumerate() {
+            let x = prev_doc_view.get(idx);
+            if x.is_none() || (x.unwrap() != y && y.content != empty_page) {
+                self.elements.flush_page(idx, canvas).await;
+            }
+        }
     }
 }

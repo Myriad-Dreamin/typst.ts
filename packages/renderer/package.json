@@ -24,7 +24,7 @@
     "publish:lib": "npm publish --access public",
     "test:chrome:verbose": "wasm-pack test --chrome --headless --release --features web_verbose",
     "test:firefox:verbose": "wasm-pack test --firefox --headless --release --features web_verbose",
-    "test:chrome": "wasm-pack test --chrome --headless --release",
+    "test:chrome": "wasm-pack test --chrome --release",
     "test:firefox": "wasm-pack test --firefox --headless --release"
   }
 }

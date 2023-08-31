@@ -25,6 +25,7 @@ pub use backend::SvgGlyphBuilder;
 /// frontend of SVG export, which provides a bunch of approaches to rendering
 /// the document.
 pub(crate) mod frontend;
+pub use backend::canvas::IncrCanvasDocClient;
 #[cfg(feature = "flat-vector")]
 pub use frontend::{
     DynamicLayoutSvgExporter, IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderContext,

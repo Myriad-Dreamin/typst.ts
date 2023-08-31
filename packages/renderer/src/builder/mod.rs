@@ -1,7 +1,5 @@
 use crate::TypstRenderer;
 
-use typst_ts_compiler::font::web::BrowserFontSearcher;
-
 use typst_ts_core::error::prelude::*;
 use wasm_bindgen::prelude::*;
 
@@ -15,9 +13,7 @@ pub mod raw_font;
 pub mod web_font;
 
 #[wasm_bindgen]
-pub struct TypstRendererBuilder {
-    searcher: BrowserFontSearcher,
-}
+pub struct TypstRendererBuilder {}
 
 /// A builder for [`TypstRenderer`].
 /// The builder is used to configure the renderer before building it.
@@ -30,18 +26,15 @@ pub struct TypstRendererBuilder {
 /// const builder = new TypstRendererBuilder();
 /// const renderer = await builder.build();
 /// ```
-///
 #[wasm_bindgen]
 impl TypstRendererBuilder {
     #[wasm_bindgen(constructor)]
     pub fn new() -> ZResult<TypstRendererBuilder> {
         console_error_panic_hook::set_once();
-        Ok(Self {
-            searcher: BrowserFontSearcher::new(),
-        })
+        Ok(Self {})
     }
 
     pub async fn build(self) -> ZResult<TypstRenderer> {
-        Ok(TypstRenderer::new(self.searcher.into()))
+        Ok(TypstRenderer::new())
     }
 }

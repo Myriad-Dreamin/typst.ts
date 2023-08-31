@@ -9,12 +9,12 @@ homepage.workspace = true
 repository.workspace = true
 
 
-[package.metadata.wasm-pack.profile.release]
-wasm-opt = false
+# [package.metadata.wasm-pack.profile.release]
+# wasm-opt = false
 
-[package.metadata.wasm-pack.profile.release.wasm-bindgen]
-debug-js-glue = true
-demangle-name-section = true
+# [package.metadata.wasm-pack.profile.release.wasm-bindgen]
+# debug-js-glue = true
+# demangle-name-section = true
 
 [lib]
 crate-type = ["cdylib"]
@@ -54,7 +54,7 @@ typst-ts-compiler = { version = "0.4.0-rc1", default-features = false, features 
 ] }
 typst-ts-canvas-exporter = { workspace = true, optional = true }
 typst-ts-raster-exporter = { workspace = true, optional = true }
-typst-ts-svg-exporter = { workspace = true }
+typst-ts-svg-exporter = { workspace = true, optional = true }
 console_error_panic_hook = { version = "0.1.1" } # , optional = true
 
 [dev-dependencies]
@@ -94,13 +94,15 @@ build_full = ["build_glyph_pack", "build_raw_font", "build_web_font"]
 
 render_canvas = [
     "dep:typst-ts-canvas-exporter",
+    "dep:typst-ts-svg-exporter",
     "web-sys/CanvasRenderingContext2d",
 ]
 render_pdf = []
 render_raster = ["dep:typst-ts-raster-exporter"]
-render_full = ["render_canvas", "render_pdf", "render_raster"]
+render_svg = ["dep:typst-ts-svg-exporter"]
+render_full = ["render_canvas", "render_pdf", "render_svg", "render_raster"]
 
-full = ["serde_json", "serde_rmp", "build_full", "render_full", "web_test"]
+full = ["serde_json", "serde_rmp", "render_full", "web_test"]
 
 default = ["full"]
-web = ["build_full", "render_canvas", "render_pdf"]
+web = ["render_canvas"]
