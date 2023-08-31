@@ -53,9 +53,8 @@ impl TypstCompilerBuilder {
         self.searcher.add_web_fonts(fonts).await
     }
 
-    pub async fn add_glyph_pack(&mut self, pack: JsValue) -> ZResult<()> {
-        let pack = serde_wasm_bindgen::from_value(pack).unwrap();
-        self.searcher.add_glyph_pack(pack).await
+    pub async fn add_glyph_pack(&mut self, _pack: JsValue) -> ZResult<()> {
+        self.searcher.add_glyph_pack().await
     }
 
     pub async fn build(self) -> Result<TypstCompiler, JsValue> {

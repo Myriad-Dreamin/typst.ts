@@ -4189,7 +4189,6 @@ dependencies = [
  "typst-ts-raster-exporter",
  "typst-ts-serde-exporter",
  "typst-ts-svg-exporter",
- "typst-ts-tir-exporter",
  "vergen",
 ]
 
@@ -4310,7 +4309,6 @@ dependencies = [
  "typst-ts-core",
  "typst-ts-dev-server",
  "typst-ts-test-common",
- "typst-ts-tir-exporter",
 ]
 
 [[package]]
@@ -4334,8 +4332,8 @@ dependencies = [
  "typst-ts-dev-server",
  "typst-ts-pdf-exporter",
  "typst-ts-serde-exporter",
+ "typst-ts-svg-exporter",
  "typst-ts-test-common",
- "typst-ts-tir-exporter",
 ]
 
 [[package]]
@@ -4460,17 +4458,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "typst-ts-tir-exporter"
-version = "0.4.0-rc2"
-dependencies = [
- "byteorder",
- "serde",
- "serde_json",
- "typst",
- "typst-ts-core",
-]
-
-[[package]]
 name = "typst-ts-web-compiler"
 version = "0.4.0-rc2"
 dependencies = [
@@ -4488,27 +4475,11 @@ dependencies = [
  "typst-ts-canvas-exporter",
  "typst-ts-compiler",
  "typst-ts-core",
- "typst-ts-tir-exporter",
+ "typst-ts-svg-exporter",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
  "web-sys",
-]
-
-[[package]]
-name = "typst-ts-ws-exporter"
-version = "0.4.0-rc2"
-dependencies = [
- "anyhow",
- "env_logger",
- "futures",
- "log",
- "serde",
- "serde_json",
- "tokio",
- "tokio-tungstenite",
- "typst",
- "typst-ts-core",
 ]
 
 [[package]]

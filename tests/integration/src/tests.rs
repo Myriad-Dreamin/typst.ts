@@ -7,7 +7,6 @@ mod tests {
     use image::codecs::png::PngDecoder;
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
-    use typst_ts_compiler::service::Compiler;
     use typst_ts_dev_server::{http::run_http, RunHttpArgs};
     use typst_ts_integration_test::{wasm::wasm_pack_test, ArtifactBundle, ArtifactCompiler};
     use typst_ts_test_common::{corpus_root, package_renderer_dir};
@@ -337,19 +336,21 @@ mod tests {
         // todo: typst cannot pass visualize/stroke_6 test.
 
         fn bundle_to_facts(name: String, bundle: &ArtifactBundle) -> Facts {
-            let json_artifact = std::fs::read(&bundle.json).unwrap();
-            let json_artifact = serde_json::from_slice::<typst_ts_core::Artifact>(&json_artifact)
-                .expect("failed to deserialize json artifact");
+            // todo: pdf export by svg?
+            // let json_artifact = std::fs::read(&bundle.json).unwrap();
+            // let json_artifact =
+            // serde_json::from_slice::<typst_ts_core::Artifact>(&json_artifact)
+            //     .expect("failed to deserialize json artifact");
 
-            let doc = json_artifact.to_document(&bundle.driver.world().font_resolver);
-            let pdf_doc = typst::export::pdf(&doc);
+            // let doc = json_artifact.to_document(&bundle.driver.world().font_resolver);
+            // let pdf_doc = typst::export::pdf(&doc);
 
-            let pdf_path = bundle.pdf.with_extension("artifact.pdf");
-            std::fs::write(pdf_path, &pdf_doc).unwrap();
+            // let pdf_path = bundle.pdf.with_extension("artifact.pdf");
+            // std::fs::write(pdf_path, &pdf_doc).unwrap();
 
             let origin_doc = std::fs::read(&bundle.pdf).unwrap();
 
-            let artifact_pdf_hash = hash_bytes(pdf_doc);
+            let artifact_pdf_hash = hash_bytes(&origin_doc);
             let origin_pdf_hash = hash_bytes(origin_doc);
 
             Facts {

@@ -8,4 +8,4 @@ pub use json::JsonExporter;
 #[cfg(feature = "rmp")]
 pub(crate) mod rmp;
 #[cfg(feature = "rmp")]
-pub use rmp::RmpArtifactExporter;
+pub use rmp::RmpExporter;

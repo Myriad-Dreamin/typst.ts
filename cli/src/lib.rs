@@ -139,8 +139,7 @@ pub struct CompileArgs {
     #[clap(long)]
     pub dynamic_layout: bool,
 
-    /// Output formats, possible values: `json`, `pdf`, `svg`,
-    ///   `json_glyphs`, `ast`, `ir`, and `rmp`.
+    /// Output formats, possible values: `ast`, `pdf`, `svg`, and, `svg_html`.
     #[clap(long)]
     pub format: Vec<String>,
 

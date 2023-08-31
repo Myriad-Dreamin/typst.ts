@@ -1,6 +1,5 @@
 use std::{path::Path, sync::Arc};
 
-use base64::{engine::DecodeEstimate, Engine};
 use js_sys::{JsString, Uint8Array};
 use typst::font::Font;
 pub use typst_ts_compiler::*;
@@ -8,11 +7,8 @@ use typst_ts_compiler::{
     font::web::BrowserFontSearcher,
     service::{CompileDriverImpl, Compiler},
     vfs::browser::ProxyAccessModel,
-    world::WorldSnapshot,
 };
-use typst_ts_core::{
-    artifact_ir, cache::FontInfoCache, error::prelude::*, Exporter, FontLoader, FontSlot,
-};
+use typst_ts_core::{cache::FontInfoCache, error::prelude::*, Exporter, FontLoader};
 use wasm_bindgen::prelude::*;
 
 use crate::utils::console_log;
@@ -128,51 +124,53 @@ impl TypstCompiler {
 
     pub fn load_snapshot(
         &mut self,
-        snapshot: JsValue,
-        font_cb: js_sys::Function,
+        _snapshot: JsValue,
+        _font_cb: js_sys::Function,
     ) -> Result<DocumentReference, JsValue> {
-        let mut snapshot: WorldSnapshot = serde_wasm_bindgen::from_value(snapshot).unwrap();
-        if let Some(font_profile) = snapshot.font_profile.take() {
-            for item in font_profile.items {
-                let path = if let Some(path) = item.path() {
-                    path.clone()
-                } else {
-                    continue;
-                };
-                // item.info
-                for (idx, info) in item.info.into_iter().enumerate() {
-                    let font_idx = info.index().unwrap_or(idx as u32);
-                    self.compiler.world_mut().font_resolver.append_font(
-                        info.info,
-                        FontSlot::new_boxed(SnapshotFontLoader {
-                            font_cb: font_cb.clone(),
-                            index: font_idx,
-                            path: path.clone(),
-                        }),
-                    );
-                }
-            }
-        };
-        self.rebuild();
+        todo!()
+        // let mut snapshot: WorldSnapshot =
+        // serde_wasm_bindgen::from_value(snapshot).unwrap();
+        // if let Some(font_profile) = snapshot.font_profile.take() {
+        //     for item in font_profile.items {
+        //         let path = if let Some(path) = item.path() {
+        //             path.clone()
+        //         } else {
+        //             continue;
+        //         };
+        //         // item.info
+        //         for (idx, info) in item.info.into_iter().enumerate() {
+        //             let font_idx = info.index().unwrap_or(idx as u32);
+        //             self.compiler.world_mut().font_resolver.append_font(
+        //                 info.info,
+        //                 FontSlot::new_boxed(SnapshotFontLoader {
+        //                     font_cb: font_cb.clone(),
+        //                     index: font_idx,
+        //                     path: path.clone(),
+        //                 }),
+        //             );
+        //         }
+        //     }
+        // };
+        // self.rebuild();
 
-        let artifact_header = snapshot.artifact_header;
-        let cap = base64::engine::general_purpose::STANDARD
-            .internal_decoded_len_estimate(snapshot.artifact_data.len())
-            .decoded_len_estimate();
-        Ok(DocumentReference {
-            doc: Some(Arc::new(
-                artifact_ir::Artifact::with_initializer(
-                    cap,
-                    |buf_mut| {
-                        base64::engine::general_purpose::STANDARD
-                            .decode_slice(snapshot.artifact_data.as_bytes(), buf_mut)
-                            .unwrap();
-                    },
-                    artifact_header,
-                )
-                .to_document(&self.compiler.world_mut().font_resolver),
-            )),
-        })
+        // let artifact_header = snapshot.artifact_header;
+        // let cap = base64::engine::general_purpose::STANDARD
+        //     .internal_decoded_len_estimate(snapshot.artifact_data.len())
+        //     .decoded_len_estimate();
+        // Ok(DocumentReference {
+        //     doc: Some(Arc::new(
+        //         artifact_ir::Artifact::with_initializer(
+        //             cap,
+        //             |buf_mut| {
+        //                 base64::engine::general_purpose::STANDARD
+        //                     .decode_slice(snapshot.artifact_data.as_bytes(),
+        // buf_mut)                     .unwrap();
+        //             },
+        //             artifact_header,
+        //         )
+        //         .to_document(&self.compiler.world_mut().font_resolver),
+        //     )),
+        // })
     }
 
     pub fn modify_font_data(&mut self, idx: usize, buffer: Uint8Array) {
@@ -218,12 +216,12 @@ impl TypstCompiler {
 
     pub fn get_artifact(&mut self, _format: String) -> Result<Vec<u8>, JsValue> {
         let ir_exporter = typst_ts_core::exporter_builtins::VecExporter::new(
-            typst_ts_tir_exporter::IRArtifactExporter,
+            typst_ts_svg_exporter::SvgModuleExporter::default(),
         );
 
         let doc = self.compiler.compile().unwrap();
         let artifact_bytes = ir_exporter
-            .export(self.compiler.world(), Arc::new((&doc).into()))
+            .export(self.compiler.world(), Arc::new(doc))
             .unwrap();
         Ok(artifact_bytes)
     }

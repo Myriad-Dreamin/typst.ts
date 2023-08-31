@@ -1,9 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use typst_ts_core::{
-    exporter_builtins::{FromExporter, FsPathExporter, GroupExporter},
+    exporter_builtins::{FsPathExporter, GroupExporter},
     program_meta::REPORT_BUG_MESSAGE,
-    AsWritable,
 };
 use typst_ts_svg_exporter::DefaultExportFeature;
 
@@ -15,15 +14,11 @@ type GroupDocExporter = GroupExporter<typst::doc::Document>;
 /// be
 pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature hint */ &str)] = &[
     ("ast", REPORT_BUG_MESSAGE),
-    ("ir", REPORT_BUG_MESSAGE),
-    ("json", "serde-json"),
-    ("json_glyphs", "serde-json"),
     ("nothing", REPORT_BUG_MESSAGE),
     ("pdf", "pdf"),
     ("svg", "svg"),
     ("svg_html", "svg"),
     ("sir", "svg"),
-    ("rmp", "serde-rmp"),
 ];
 
 /// Hint the user that the given format is not enable or not available.
@@ -56,12 +51,10 @@ fn exit_by_unknown_format(f: &str) -> ! {
 
 /// With the given arguments, prepare exporters for the compilation.
 fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExporter {
-    let mut artifact: ExporterVec<Artifact> = vec![];
     let mut doc: ExporterVec<Doc> = vec![];
-    let mut glyph_pack: ExporterVec<GlyphPack> = vec![];
-    let mut ir: ExporterVec<IR> = vec![];
 
     /// connect export flow from $x to $y
+    #[allow(unused_macros)]
     macro_rules! sink_flow {
         ($x:ident -> $y:ident) => {
             if !$y.is_empty() {
@@ -89,15 +82,8 @@ fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExp
         formats.iter().map(String::as_str).for_each(|f| match f {
             "nothing"     => (),
             "ast"         => sink_path!(WithAst as _ as doc, out @@ "ast.ansi.text"),
-            "ir"          => sink_path!(WithIR as _ as ir, out @@ "artifact.tir.bin"),
             #[cfg(feature = "pdf")]
             "pdf"         => sink_path!(WithPdf as _ as doc, out @@ "pdf"),
-            #[cfg(feature = "serde-json")]
-            "json"        => sink_path!(WithJson<_> as AsWritable as artifact, out @@ "artifact.json"),
-            #[cfg(feature = "serde-json")]
-            "json_glyphs" => sink_path!(WithJson<_> as AsWritable as glyph_pack, out @@ "glyphs.json"),
-            #[cfg(feature = "serde-rmp")]
-            "rmp"         => sink_path!(WithRmp as _ as artifact, out @@ "artifact.rmp"),
             #[cfg(feature = "svg")]
             "svg"         => sink_path!(WithSvg as _ as doc, out @@ "artifact.svg"),
             #[cfg(feature = "svg")]
@@ -107,23 +93,14 @@ fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExp
             _             => exit_by_unknown_format(f),
         });
     }
-    {
-        sink_flow!(doc -> artifact);
-        sink_flow!(doc -> ir);
-        sink_flow!(doc -> glyph_pack);
-    }
     return GroupExporter::new(doc);
 
-    type Artifact = typst_ts_core::artifact::Artifact;
     type Doc = typst::doc::Document;
-    type GlyphPack = typst_ts_core::font::FontGlyphPackBundle;
-    type IR = typst_ts_core::artifact_ir::Artifact;
 
     type WithAst = typst_ts_ast_exporter::AstExporter;
-    type WithIR = typst_ts_tir_exporter::IRArtifactExporter;
-    type WithJson<T> = typst_ts_serde_exporter::JsonExporter<T>;
+    // type WithJson<T> = typst_ts_serde_exporter::JsonExporter<T>;
     type WithPdf = typst_ts_pdf_exporter::PdfDocExporter;
-    type WithRmp = typst_ts_serde_exporter::RmpArtifactExporter;
+    // type WithRmp<T> = typst_ts_serde_exporter::RmpExporter<T>;
     type WithSvg = typst_ts_svg_exporter::PureSvgExporter;
     type WithSvgHtml = typst_ts_svg_exporter::SvgExporter<DefaultExportFeature>;
     type WithSIR = typst_ts_svg_exporter::SvgModuleExporter;
