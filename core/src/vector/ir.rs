@@ -326,6 +326,8 @@ pub struct OutlineGlyphItem {
 /// A glyph item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum GlyphItem {
+    None,
+
     /// Raw glyph representation.
     /// The raw glyphs is generated in lowering stage.
     Raw(Font, GlyphId),

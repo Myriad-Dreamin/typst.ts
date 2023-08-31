@@ -157,6 +157,7 @@ impl SvgGlyphBuilder {
                 Self::render_outline_glyph(glyph_id, outline_glyph)
             }
             ir::GlyphItem::Raw(..) => unreachable!(),
+            ir::GlyphItem::None => None,
         }
     }
 

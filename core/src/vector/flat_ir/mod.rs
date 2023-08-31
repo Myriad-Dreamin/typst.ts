@@ -115,6 +115,7 @@ pub struct FlatFontItem {
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub enum FlatGlyphItem {
+    None,
     Image(Arc<ImageGlyphItem>),
     Outline(Arc<OutlineGlyphItem>),
 }
@@ -124,6 +125,7 @@ impl From<FlatGlyphItem> for GlyphItem {
         match item {
             FlatGlyphItem::Image(item) => GlyphItem::Image(item),
             FlatGlyphItem::Outline(item) => GlyphItem::Outline(item),
+            FlatGlyphItem::None => GlyphItem::None,
         }
     }
 }
@@ -180,17 +182,19 @@ impl FromIterator<(GlyphItem, (GlyphRef, FontRef))> for GlyphPack {
 
         let items = iter
             .into_iter()
-            .flat_map(|(glyph, glyph_id)| {
+            .map(|(glyph, glyph_id)| {
                 let glyph = glyph_lower_builder.lower_glyph(&glyph);
-                glyph.map(|t| {
-                    let t = match t {
-                        GlyphItem::Image(i) => FlatGlyphItem::Image(i),
-                        GlyphItem::Outline(p) => FlatGlyphItem::Outline(p),
-                        _ => unreachable!(),
-                    };
+                glyph
+                    .map(|t| {
+                        let t = match t {
+                            GlyphItem::Image(i) => FlatGlyphItem::Image(i),
+                            GlyphItem::Outline(p) => FlatGlyphItem::Outline(p),
+                            _ => unreachable!(),
+                        };
 
-                    (DefId(glyph_id.1.idx as u64), t)
-                })
+                        (DefId(glyph_id.1.idx as u64), t)
+                    })
+                    .unwrap_or_else(|| (DefId(glyph_id.1.idx as u64), FlatGlyphItem::None))
             })
             .collect::<Vec<_>>();
 
@@ -445,17 +449,19 @@ pub fn flatten_glyphs(
     let glyph_lower_builder = GlyphLowerBuilder::new(&glyph_provider);
 
     repr.into_iter()
-        .flat_map(|(glyph_id, glyph)| {
+        .map(|(font_id, glyph)| {
             let glyph = glyph_lower_builder.lower_glyph(&glyph);
-            glyph.map(|t| {
-                let t = match t {
-                    GlyphItem::Image(i) => FlatGlyphItem::Image(i),
-                    GlyphItem::Outline(p) => FlatGlyphItem::Outline(p),
-                    _ => unreachable!(),
-                };
+            glyph
+                .map(|t| {
+                    let t = match t {
+                        GlyphItem::Image(i) => FlatGlyphItem::Image(i),
+                        GlyphItem::Outline(p) => FlatGlyphItem::Outline(p),
+                        _ => unreachable!(),
+                    };
 
-                (glyph_id, t)
-            })
+                    (font_id, t)
+                })
+                .unwrap_or_else(|| (font_id, FlatGlyphItem::None))
         })
         .collect::<Vec<_>>()
 }

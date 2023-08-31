@@ -324,6 +324,7 @@ impl<'a> GlyphLowerBuilder<'a> {
                     .or_else(|| self.lower_outline_glyph(font, id).map(GlyphItem::Outline))
             }
             GlyphItem::Image(..) | GlyphItem::Outline(..) => Some(glyph_item.clone()),
+            GlyphItem::None => Some(GlyphItem::None),
         }
     }
 
