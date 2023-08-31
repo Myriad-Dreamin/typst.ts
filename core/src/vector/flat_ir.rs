@@ -267,6 +267,9 @@ impl LayoutRegion {
             layouts: vec![(Default::default(), layout)],
         })
     }
+    pub fn by_scalar(kind: ImmutStr, layouts: Vec<(Scalar, LayoutRegionNode)>) -> Self {
+        Self::ByScalar(LayoutRegionRepr { kind, layouts })
+    }
 
     pub fn is_empty(&self) -> bool {
         match self {

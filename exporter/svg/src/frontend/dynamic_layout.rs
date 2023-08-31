@@ -1,19 +1,19 @@
 use std::sync::Arc;
 
 use typst::doc::Document;
-use typst_ts_core::{
-    hash::Fingerprint,
-    vector::{
-        flat_ir::{FlatModule, ItemPack, ModuleBuilder, ModuleMetadata, MultiSvgDocument},
-        ir::{Abs, Size},
-        LowerBuilder,
+use typst_ts_core::vector::{
+    flat_ir::{
+        FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, ModuleBuilder, ModuleMetadata,
+        MultiSvgDocument, Page,
     },
+    ir::Abs,
+    LowerBuilder,
 };
 
 #[derive(Default)]
 pub struct DynamicLayoutSvgExporter {
     builder: ModuleBuilder,
-    layouts: Vec<(Abs, Vec<(Fingerprint, Size)>)>,
+    layouts: Vec<(Abs, LayoutRegionNode)>,
 }
 
 impl DynamicLayoutSvgExporter {
@@ -28,24 +28,24 @@ impl DynamicLayoutSvgExporter {
             .iter()
             .map(|p| {
                 let abs_ref = self.builder.build(t.lower(p));
-                (abs_ref, p.size().into())
+                Page {
+                    content: abs_ref,
+                    size: p.size().into(),
+                }
             })
             .collect::<Vec<_>>();
 
-        self.layouts.push((layout_width.into(), pages));
+        self.layouts
+            .push((layout_width.into(), LayoutRegionNode::new_pages(pages)));
         log::trace!("svg dynamic layout render time: {:?}", instant.elapsed());
     }
 
     pub fn finalize(self) -> MultiSvgDocument {
-        // let (module, glyph_mapping) = self.builder.finalize();
-        // (
-        //     MultiSvgDocument {
-        //         module,
-        //         layouts: self.layouts,
-        //     },
-        //     glyph_mapping,
-        // )
-        todo!()
+        let module = self.builder.finalize();
+        MultiSvgDocument {
+            module,
+            layouts: LayoutRegion::by_scalar("width".into(), self.layouts),
+        }
     }
 
     pub fn debug_stat(&self) -> String {
