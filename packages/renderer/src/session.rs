@@ -1,8 +1,9 @@
 use std::sync::{Arc, Mutex};
 
 use js_sys::Uint8Array;
+use typst_ts_canvas_exporter::IncrCanvasDocClient;
 use typst_ts_core::error::prelude::*;
-use typst_ts_svg_exporter::{ir::Scalar, IncrCanvasDocClient};
+use typst_ts_svg_exporter::ir::Scalar;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

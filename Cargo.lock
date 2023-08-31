@@ -4139,11 +4139,14 @@ name = "typst-ts-canvas-exporter"
 version = "0.4.0-rc2"
 dependencies = [
  "async-recursion",
+ "async-trait",
+ "base64 0.21.2",
  "comemo",
  "data-url",
  "elsa",
  "flate2",
  "js-sys",
+ "log",
  "once_cell",
  "tiny-skia",
  "ttf-parser",
@@ -4437,17 +4440,12 @@ dependencies = [
 name = "typst-ts-svg-exporter"
 version = "0.4.0-rc2"
 dependencies = [
- "async-trait",
  "base64 0.21.2",
  "comemo",
- "js-sys",
  "log",
  "tiny-skia",
  "typst",
  "typst-ts-core",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
 ]
 
 [[package]]

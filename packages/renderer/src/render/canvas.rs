@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use typst_ts_canvas_exporter::{DefaultRenderFeature, RenderFeature};
+use typst_ts_canvas_exporter::{DefaultExportFeature, ExportFeature};
 use typst_ts_core::error::prelude::*;
 use typst_ts_svg_exporter::ir::{Axes, Rect, Scalar};
 use wasm_bindgen::prelude::*;
@@ -16,7 +16,7 @@ impl TypstRenderer {
         options: Option<RenderPageImageOptions>,
     ) -> ZResult<JsValue> {
         let (text_content, annotation_list, ..) = self
-            .render_page_to_canvas_internal::<DefaultRenderFeature>(ses, canvas, options)
+            .render_page_to_canvas_internal::<DefaultExportFeature>(ses, canvas, options)
             .await?;
 
         let res = js_sys::Object::new();
@@ -30,7 +30,7 @@ impl TypstRenderer {
 
 impl TypstRenderer {
     #[allow(clippy::await_holding_lock)]
-    pub async fn render_page_to_canvas_internal<Feat: RenderFeature>(
+    pub async fn render_page_to_canvas_internal<Feat: ExportFeature>(
         &mut self,
         ses: &RenderSession,
         canvas: &web_sys::CanvasRenderingContext2d,
@@ -110,7 +110,7 @@ mod tests {
     use send_wrapper::SendWrapper;
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
-    use typst_ts_canvas_exporter::RenderFeature;
+    use typst_ts_canvas_exporter::ExportFeature;
     use typst_ts_test_common::web_artifact::get_corpus;
     use wasm_bindgen::JsCast;
     use wasm_bindgen_test::*;
@@ -139,8 +139,9 @@ mod tests {
 
     pub struct CIRenderFeature;
 
-    impl RenderFeature for CIRenderFeature {
+    impl ExportFeature for CIRenderFeature {
         const ENABLE_TRACING: bool = true;
+        const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
     }
 
     static RENDERER: Mutex<once_cell::sync::OnceCell<SendWrapper<Mutex<TypstRenderer>>>> =

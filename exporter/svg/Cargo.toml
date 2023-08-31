@@ -18,27 +18,8 @@ base64.workspace = true
 typst-ts-core.workspace = true
 log.workspace = true
 
-wasm-bindgen = { workspace = true, optional = true }
-wasm-bindgen-futures.workspace = true
-js-sys = { workspace = true, optional = true }
-web-sys = { workspace = true, features = [
-    "console",
-    "CanvasRenderingContext2d",
-    "Path2d",
-    "Blob",
-    "ImageData",
-    "HtmlImageElement",
-    "HtmlElement",
-    "Url",
-    "BlobPropertyBag",
-    "DomParser",
-    "SupportedType",
-    "HtmlCollection",
-], optional = true }
-async-trait = "0.1.68"
 
 [features]
 rkyv = ["typst-ts-core/rkyv"]
 flat-vector = ["rkyv", "typst-ts-core/flat-vector"]
-default = ["flat-vector", "canvas"]
-canvas = ["flat-vector", "dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
+default = ["flat-vector"]

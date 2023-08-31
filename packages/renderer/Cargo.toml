@@ -9,12 +9,9 @@ homepage.workspace = true
 repository.workspace = true
 
 
-# [package.metadata.wasm-pack.profile.release]
-# wasm-opt = false
-
-# [package.metadata.wasm-pack.profile.release.wasm-bindgen]
-# debug-js-glue = true
-# demangle-name-section = true
+[package.metadata.wasm-pack.profile.release.wasm-bindgen]
+debug-js-glue = true
+demangle-name-section = true
 
 [lib]
 crate-type = ["cdylib"]
@@ -105,4 +102,4 @@ render_full = ["render_canvas", "render_pdf", "render_svg", "render_raster"]
 full = ["serde_json", "serde_rmp", "render_full", "web_test"]
 
 default = ["full"]
-web = ["render_canvas"]
+web = ["render_canvas", "render_svg"]
