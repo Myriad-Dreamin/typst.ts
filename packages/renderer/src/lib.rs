@@ -5,9 +5,10 @@ use typst_ts_core::error::prelude::*;
 use typst_ts_core::font::FontResolverImpl;
 use typst_ts_core::vector::geom::Axes;
 use typst_ts_core::vector::geom::Scalar;
+use typst_ts_svg_exporter::flat_ir::LayoutRegionNode;
 use typst_ts_svg_exporter::flat_ir::SourceMappingNode;
 use typst_ts_svg_exporter::IncrSvgDocClient;
-use typst_ts_svg_exporter::{DefaultExportFeature, LayoutElem, SvgExporter};
+use typst_ts_svg_exporter::{DefaultExportFeature, SvgExporter};
 use wasm_bindgen::prelude::*;
 
 pub(crate) mod parser;
@@ -132,8 +133,9 @@ impl SvgSession {
             return 0.;
         }
 
-        let pages = self.client.doc.layouts[0].1.iter();
-        pages.map(|(_, s)| s.x).max().unwrap_or_default().0
+        // let pages = self.client.doc.layouts[0].iter();
+        // pages.map(|(_, s)| s.x).max().unwrap_or_default().0
+        todo!()
     }
 
     #[wasm_bindgen(getter)]
@@ -142,8 +144,9 @@ impl SvgSession {
             return 0.;
         }
 
-        let pages = self.client.doc.layouts[0].1.iter();
-        pages.map(|(_, s)| s.y.0).sum()
+        // let pages = self.client.doc.layouts[0].iter();
+        // pages.map(|(_, s)| s.y.0).sum()
+        todo!()
     }
 
     pub fn merge_delta(&mut self, delta: &[u8]) -> ZResult<()> {
@@ -192,20 +195,22 @@ impl SvgSession {
         let mut index_item: Option<&SourceMappingNode> = None;
 
         let source_mapping = self.client.source_mapping_data.as_slice();
-        let page_sources = self.client.page_source_mappping[0].as_slice();
+        let page_sources = self.client.page_source_mappping[0]
+            .source_mapping(&self.client.doc.module)
+            .unwrap();
+        let page_sources = page_sources.source_mapping();
 
         for (chunk_idx, v) in path.chunks_exact(2).enumerate() {
             let (ty, idx) = (v[0], v[1] as usize);
 
-            let this_item = match index_item {
+            let this_item: &SourceMappingNode = match index_item {
                 Some(SourceMappingNode::Group(q)) => {
                     let idx = *access_slice(q, idx, "group_index", chunk_idx)? as usize;
                     access_slice(source_mapping, idx, "source_mapping", chunk_idx)?
                 }
                 Some(_) => {
-                    return Err(
-                        error_once!("cannot index", pos: chunk_idx, indexing: format!("{:?}", index_item)),
-                    )
+                    return Err(error_once!("cannot index", pos:
+        chunk_idx, indexing: format!("{:?}", index_item)))
                 }
                 None => access_slice(page_sources, idx, "page_sources", chunk_idx)?,
             };
@@ -228,8 +233,8 @@ impl SvgSession {
                     return Ok(Some(format!("{n:x}")));
                 }
                 _ => {
-                    return Err(error_once!("invalid/mismatch node type",
-                        pos: chunk_idx, ty: ty,
+                    return Err(error_once!("invalid/mismatch node
+                    type",                         pos: chunk_idx, ty: ty,
                         actual: format!("{:?}", this_item),
                         parent: format!("{:?}", index_item),
                         child_idx_in_parent: idx,
@@ -277,12 +282,13 @@ impl TypstRenderer {
         root: web_sys::HtmlDivElement,
     ) -> ZResult<()> {
         type UsingExporter = SvgExporter<DefaultExportFeature>;
-        let layout = session.client.doc.layouts.first().unwrap();
+        let layouts = session.client.doc.layouts.by_scalar().unwrap();
+        let layout = layouts.first().unwrap();
 
         // base scale = 2
         let base_cw = root.client_width() as f32;
 
-        let render = |layout: &LayoutElem| {
+        let render = |layout: &(Scalar, LayoutRegionNode)| {
             let applying = format!("{}px", layout.0 .0);
 
             let applied = root.get_attribute("data-applied-width");
@@ -291,7 +297,9 @@ impl TypstRenderer {
                 return Ok(());
             }
 
-            let svg = UsingExporter::render_flat_svg(&session.client.doc.module, &layout.1);
+            let view = layout.1.pages(&session.client.doc.module).unwrap();
+
+            let svg = UsingExporter::render_flat_svg(view.module(), view.pages());
             root.set_inner_html(&svg);
             let window = web_sys::window().unwrap();
             if let Ok(proc) = js_sys::Reflect::get(&window, &JsValue::from_str("typstProcessSvg")) {
@@ -326,13 +334,13 @@ impl TypstRenderer {
             return render(layout);
         }
 
-        let layout = session.client.doc.layouts.last().unwrap();
+        let layout = layouts.last().unwrap();
 
         if layout.0 .0 + EPS > base_cw {
             return render(layout);
         }
 
-        for layout in &session.client.doc.layouts {
+        for layout in layouts {
             if layout.0 .0 < base_cw + EPS {
                 return render(layout);
             }

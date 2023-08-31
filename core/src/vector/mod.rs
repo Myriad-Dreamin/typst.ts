@@ -69,7 +69,7 @@ fn rkyv_assertions() {
     const _: () = assert!(core::mem::align_of::<ArchivedGroupRef>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedItemPack>() == 8);
     const _: () = assert!(core::mem::align_of::<ArchivedItemPack>() == 4);
-    const _: () = assert!(core::mem::size_of::<ArchivedFlatModule>() == 32);
+    const _: () = assert!(core::mem::size_of::<ArchivedFlatModule>() == 16);
     const _: () = assert!(core::mem::align_of::<ArchivedFlatModule>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedDefId>() == 8);
     const _: () = assert!(core::mem::align_of::<ArchivedDefId>() == 8);
@@ -87,10 +87,18 @@ fn rkyv_assertions() {
     const _: () = assert!(core::mem::align_of::<ArchivedImageGlyphItem>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedOutlineGlyphItem>() == 36);
     const _: () = assert!(core::mem::align_of::<ArchivedOutlineGlyphItem>() == 4);
-    const _: () = assert!(core::mem::size_of::<ArchivedTextShape>() == 20);
+    const _: () = assert!(core::mem::size_of::<ArchivedTextShape>() == 28);
     const _: () = assert!(core::mem::align_of::<ArchivedTextShape>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedPathStyle>() == 12);
     const _: () = assert!(core::mem::align_of::<ArchivedPathStyle>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedTransformItem>() == 8);
     const _: () = assert!(core::mem::align_of::<ArchivedTransformItem>() == 4);
+    const _: () = assert!(core::mem::size_of::<ArchivedGlyphPack>() == 12);
+    const _: () = assert!(core::mem::align_of::<ArchivedGlyphPack>() == 4);
+    const _: () = assert!(core::mem::size_of::<ArchivedPage>() == 24);
+    const _: () = assert!(core::mem::align_of::<ArchivedPage>() == 8);
+    const _: () = assert!(core::mem::size_of::<ArchivedLayoutRegion>() == 20);
+    const _: () = assert!(core::mem::align_of::<ArchivedLayoutRegion>() == 4);
+    const _: () = assert!(core::mem::size_of::<ArchivedBuildInfo>() == 16);
+    const _: () = assert!(core::mem::align_of::<ArchivedBuildInfo>() == 4);
 }

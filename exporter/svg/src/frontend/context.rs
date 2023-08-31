@@ -1,21 +1,21 @@
 use std::{collections::HashMap, sync::Arc};
 
 use typst_ts_core::{
-    hash::{Fingerprint, FingerprintBuilder},
+    hash::{item_hash128, Fingerprint, FingerprintBuilder},
     vector::{
         flat_ir::{FlatSvgItem, FlatTextItem, GroupRef, Module},
         flat_vm::{FlatIncrRenderVm, FlatRenderVm},
-        ir::{self, DefId, GlyphMapping, ImmutStr, PathItem, StyleNs},
+        ir::{
+            self, BuildGlyph, GlyphHashStablizer, GlyphPackBuilder, GlyphRef, ImmutStr, PathItem,
+            StyleNs,
+        },
+        vm::GroupContext,
         vm::RenderVm,
-        {ir::AbsoluteRef, vm::GroupContext},
     },
 };
 
 use crate::{
-    backend::{
-        BuildClipPath, BuildFillStyleClass, BuildGlyph, DynExportFeature, SvgTextBuilder,
-        SvgTextNode,
-    },
+    backend::{BuildClipPath, BuildFillStyleClass, DynExportFeature, SvgTextBuilder, SvgTextNode},
     ExportFeature, GlyphProvider,
 };
 
@@ -42,7 +42,7 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     /// Stores the glyphs used in the document.
     // todo: used in SvgItem rendering, but
     // unused in FlatSvgItem rendering, which is confusing.
-    pub(crate) glyph_defs: &'t mut GlyphMapping,
+    pub(crate) glyph_defs: &'t mut GlyphPackBuilder,
     /// Stores the style definitions used in the document.
     pub(crate) style_defs: &'t mut StyleDefMap,
     /// Stores the clip paths used in the document.
@@ -83,17 +83,16 @@ impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Fea
 }
 
 impl<'m, 't, Feat: ExportFeature> BuildGlyph for RenderContext<'m, 't, Feat> {
-    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> AbsoluteRef {
-        if let Some(id) = self.glyph_defs.get(glyph) {
-            return id.clone();
-        }
+    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
+        self.glyph_defs.build_glyph(glyph).0
+    }
+}
 
-        let id = DefId(self.glyph_defs.len() as u64);
-
-        let fingerprint = self.fingerprint_builder.resolve(glyph);
-        let abs_ref = AbsoluteRef { fingerprint, id };
-        self.glyph_defs.insert(glyph.clone(), abs_ref.clone());
-        abs_ref
+impl<'m, 't, Feat: ExportFeature> GlyphHashStablizer for RenderContext<'m, 't, Feat> {
+    fn stablize_hash(&mut self, glyph: &GlyphRef) -> Fingerprint {
+        Fingerprint::from_u128(item_hash128(
+            &self.module.glyphs[glyph.glyph_idx as usize].1,
+        ))
     }
 }
 

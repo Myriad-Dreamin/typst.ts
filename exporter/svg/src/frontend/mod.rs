@@ -6,7 +6,7 @@ use typst_ts_core::{
     hash::FingerprintBuilder,
     vector::{
         flat_ir::{self, Module},
-        ir::{AbsoluteRef, Axes, GlyphItem, GlyphMapping, GlyphPackBuilder, Size, SvgItem},
+        ir::{Axes, DefId, GlyphItem, GlyphPackBuilder, Size, SvgItem},
         vm::RenderVm,
         LowerBuilder,
     },
@@ -169,8 +169,8 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         t.render_pages_transient(output, pages, &mut svg_body);
 
         // render the glyphs collected from the pages
-        let glyphs = GlyphPackBuilder::finalize(std::mem::take(&mut t.glyph_defs));
-        let glyphs = t.render_glyphs(glyphs.iter().map(|(x, y)| (x, y)), false);
+        let glyphs = std::mem::take(&mut t.glyph_defs).finalize();
+        let glyphs = t.render_glyphs(glyphs.iter().enumerate().map(|(x, (_, y))| (x, y)), false);
 
         // template SVG
         Self::render_svg_template(t, header, svg_body, glyphs)
@@ -212,7 +212,7 @@ pub struct SvgTask<Feat: ExportFeature> {
     fingerprint_builder: FingerprintBuilder,
 
     /// Stores the glyphs used in the document.
-    pub(crate) glyph_defs: GlyphMapping,
+    pub(crate) glyph_defs: GlyphPackBuilder,
     /// Stores the style definitions used in the document.
     pub(crate) style_defs: StyleDefMap,
     /// Stores the clip paths used in the document.
@@ -229,7 +229,7 @@ impl<Feat: ExportFeature> Default for SvgTask<Feat> {
 
             fingerprint_builder: FingerprintBuilder::default(),
 
-            glyph_defs: GlyphMapping::default(),
+            glyph_defs: GlyphPackBuilder::default(),
             style_defs: StyleDefMap::default(),
             clip_paths: ClipPathMap::default(),
 
@@ -303,7 +303,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     }
 
     /// Render glyphs into the svg_body.
-    pub(crate) fn render_glyphs<'a, I: Iterator<Item = (&'a AbsoluteRef, &'a GlyphItem)>>(
+    pub(crate) fn render_glyphs<'a, I: Iterator<Item = (usize, &'a GlyphItem)>>(
         &mut self,
         glyphs: I,
         use_stable_glyph_id: bool,
@@ -316,9 +316,9 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 
         for (abs_ref, item) in glyphs {
             let glyph_id = if Feat::USE_STABLE_GLYPH_ID && use_stable_glyph_id {
-                abs_ref.as_svg_id("g")
+                item.get_fingerprint().as_svg_id("g")
             } else {
-                abs_ref.as_unstable_svg_id("g")
+                (DefId(abs_ref as u64)).as_svg_id("g")
             };
             svg_body.push(SvgText::Plain(
                 render_task

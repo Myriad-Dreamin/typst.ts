@@ -1,19 +1,19 @@
 use std::sync::Arc;
 
 use typst::doc::Document;
-use typst_ts_core::{
-    hash::Fingerprint,
-    vector::{
-        flat_ir::{flatten_glyphs, FlatModule, ItemPack, ModuleBuilder, MultiSvgDocument},
-        ir::{Abs, GlyphMapping, Size},
-        LowerBuilder,
+use typst_ts_core::vector::{
+    flat_ir::{
+        FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, ModuleBuilder, ModuleMetadata,
+        MultiSvgDocument, Page,
     },
+    ir::Abs,
+    LowerBuilder,
 };
 
 #[derive(Default)]
 pub struct DynamicLayoutSvgExporter {
     builder: ModuleBuilder,
-    layouts: Vec<(Abs, Vec<(Fingerprint, Size)>)>,
+    layouts: Vec<(Abs, LayoutRegionNode)>,
 }
 
 impl DynamicLayoutSvgExporter {
@@ -28,37 +28,36 @@ impl DynamicLayoutSvgExporter {
             .iter()
             .map(|p| {
                 let abs_ref = self.builder.build(t.lower(p));
-                (abs_ref, p.size().into())
+                Page {
+                    content: abs_ref,
+                    size: p.size().into(),
+                }
             })
             .collect::<Vec<_>>();
 
-        self.layouts.push((layout_width.into(), pages));
+        self.layouts
+            .push((layout_width.into(), LayoutRegionNode::new_pages(pages)));
         log::trace!("svg dynamic layout render time: {:?}", instant.elapsed());
     }
 
-    pub fn finalize(self) -> (MultiSvgDocument, GlyphMapping) {
-        let (module, glyph_mapping) = self.builder.finalize();
-        (
-            MultiSvgDocument {
-                module,
-                layouts: self.layouts,
-            },
-            glyph_mapping,
-        )
+    pub fn finalize(self) -> MultiSvgDocument {
+        let module = self.builder.finalize();
+        MultiSvgDocument {
+            module,
+            layouts: LayoutRegion::new_by_scalar("width".into(), self.layouts),
+        }
     }
 
     pub fn debug_stat(&self) -> String {
         let v = self.builder.finalize_ref();
-        let item_cnt = v.0.items.len();
-        let glyph_cnt = v.1.len();
-        let glyphs = flatten_glyphs(v.1);
+        let item_cnt = v.items.len();
+        let glyph_cnt = v.glyphs.len();
+        // let glyphs = GlyphPack::from_iter(v.1);
 
-        let module_data = FlatModule {
-            metadata: vec![],
-            item_pack: ItemPack(v.0.items.into_iter().collect()),
-            glyphs,
-            layouts: vec![],
-        }
+        let module_data = FlatModule::new(vec![
+            // ModuleMetadata::Glyph(Arc::new(glyphs)),
+            ModuleMetadata::Item(ItemPack(v.items.into_iter().collect())),
+        ])
         .to_bytes();
         format!(
             "module size: {} bytes, items count: {}, glyph count: {}",

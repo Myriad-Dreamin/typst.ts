@@ -11,7 +11,7 @@ use typst_ts_core::Exporter;
 pub use typst_ts_core::font::{FontGlyphProvider, GlyphProvider, IGlyphProvider};
 #[cfg(feature = "flat-vector")]
 pub use typst_ts_core::vector::flat_ir::{
-    self, FlatModule, LayoutElem, Module, ModuleBuilder, MultiSvgDocument, Pages, SvgDocument,
+    self, FlatModule, Module, ModuleBuilder, MultiSvgDocument, SvgDocument,
 };
 pub use typst_ts_core::vector::{geom, ir, LowerBuilder};
 

@@ -6,7 +6,7 @@ use std::sync::Arc;
 use once_cell::sync::OnceCell;
 use typst::doc::{Destination, Document, Frame, FrameItem, GroupItem, Meta, Position, TextItem};
 use typst::font::Font;
-use typst::geom::{Geometry, LineCap, LineJoin, Paint, PathItem, Shape, Size, Stroke};
+use typst::geom::{Dir, Geometry, LineCap, LineJoin, Paint, PathItem, Shape, Size, Stroke};
 use typst::image::Image;
 
 use ttf_parser::OutlineBuilder;
@@ -192,7 +192,13 @@ impl LowerBuilder {
                 span_id,
             }),
             shape: Arc::new(ir::TextShape {
-                // dir: text.lang.dir(),
+                dir: match text.lang.dir() {
+                    Dir::LTR => "ltr",
+                    Dir::RTL => "rtl",
+                    Dir::TTB => "ttb",
+                    Dir::BTT => "btt",
+                }
+                .into(),
                 ascender: text.font.metrics().ascender.at(text.size).into(),
                 upem: Scalar::from(text.font.units_per_em() as f32),
                 ppem: Scalar::from(ppem),
@@ -318,6 +324,7 @@ impl<'a> GlyphLowerBuilder<'a> {
                     .or_else(|| self.lower_outline_glyph(font, id).map(GlyphItem::Outline))
             }
             GlyphItem::Image(..) | GlyphItem::Outline(..) => Some(glyph_item.clone()),
+            GlyphItem::None => Some(GlyphItem::None),
         }
     }
 

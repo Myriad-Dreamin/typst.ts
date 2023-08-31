@@ -3,21 +3,19 @@ use std::{collections::HashMap, ops::Deref};
 
 use comemo::Prehashed;
 
+use super::ir::{GlyphPackBuilder, GlyphRef};
 use super::{
     flat_ir::{self, Module},
     flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
-    ir::{
-        self, Abs, AbsoluteRef, Axes, BuildGlyph, DefId, GlyphMapping, Ratio, Rect, Scalar,
-        Transform,
-    },
+    ir::{self, Abs, Axes, BuildGlyph, Ratio, Rect, Scalar, Transform},
     sk,
     vm::{GroupContext, RenderVm, TransformContext},
 };
+use crate::font::GlyphProvider;
 use crate::hash::Fingerprint;
-use crate::{font::GlyphProvider, hash::FingerprintBuilder};
 
 pub trait GlyphIndice<'m> {
-    fn get_glyph(&self, value: &AbsoluteRef) -> Option<&'m ir::GlyphItem>;
+    fn get_glyph(&self, value: &GlyphRef) -> Option<&'m ir::GlyphItem>;
 }
 
 pub trait BBoxIndice {
@@ -141,12 +139,7 @@ impl From<BBoxBuilder> for BBox {
 
 /// Internal methods for [`BBoxBuilder`].
 impl BBoxBuilder {
-    pub fn render_glyph_ref_inner(
-        &mut self,
-        pos: Scalar,
-        _id: &AbsoluteRef,
-        glyph: &ir::GlyphItem,
-    ) {
+    pub fn render_glyph_ref_inner(&mut self, pos: Scalar, _id: &GlyphRef, glyph: &ir::GlyphItem) {
         let pos = ir::Point::new(pos, Scalar(0.));
         match glyph {
             ir::GlyphItem::Outline(outline) => {
@@ -249,7 +242,7 @@ impl<'m, C: FlatRenderVm<'m, Resultant = BBox> + GlyphIndice<'m>> FlatGroupConte
         self.inner.push((pos, bbox));
     }
 
-    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, glyph: &AbsoluteRef) {
+    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, glyph: &GlyphRef) {
         if let Some(glyph_data) = ctx.get_glyph(glyph) {
             self.render_glyph_ref_inner(pos, glyph, glyph_data)
         }
@@ -286,13 +279,10 @@ pub struct BBoxTask<'m, 't> {
     #[cfg(feature = "flat-vector")]
     pub module: &'m Module,
 
-    /// A fingerprint builder for generating unique id.
-    pub(crate) fingerprint_builder: &'t mut FingerprintBuilder,
+    /// Stores the fonts and glyphs used in the document.
+    pub(crate) glyph_defs: &'t mut GlyphPackBuilder,
 
-    /// Stores the glyphs used in the document.
-    pub(crate) glyph_defs: &'t mut GlyphMapping,
-
-    /// Stores the glyphs used in the document.
+    /// Stores the bboxes used in the document.
     pub(crate) bbox_cache: &'t mut HashMap<Fingerprint, BBox>,
 
     #[cfg(not(feature = "flat-vector"))]
@@ -348,23 +338,14 @@ impl<'m, 't> FlatIncrRenderVm<'m> for BBoxTask<'m, 't> {
 }
 
 impl BuildGlyph for BBoxTask<'_, '_> {
-    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> AbsoluteRef {
-        if let Some(id) = self.glyph_defs.get(glyph) {
-            return id.clone();
-        }
-
-        let id = DefId(self.glyph_defs.len() as u64);
-
-        let fingerprint = self.fingerprint_builder.resolve(glyph);
-        let abs_ref = AbsoluteRef { fingerprint, id };
-        self.glyph_defs.insert(glyph.clone(), abs_ref.clone());
-        abs_ref
+    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
+        self.glyph_defs.build_glyph(glyph).0
     }
 }
 
 impl<'m> GlyphIndice<'m> for BBoxTask<'m, '_> {
-    fn get_glyph(&self, value: &AbsoluteRef) -> Option<&'m ir::GlyphItem> {
-        self.module.glyphs.get(value.id.0 as usize).map(|v| &v.1)
+    fn get_glyph(&self, g: &GlyphRef) -> Option<&'m ir::GlyphItem> {
+        self.module.glyphs.get(g.glyph_idx as usize).map(|v| &v.1)
     }
 }
 
@@ -425,9 +406,8 @@ mod tests {
     struct BBoxRenderer {
         glyph_provider: GlyphProvider,
         module: Module,
-        glyph_defs: GlyphMapping,
+        glyph_defs: GlyphPackBuilder,
         bbox_cache: HashMap<Fingerprint, BBox>,
-        fingerprint_builder: FingerprintBuilder,
     }
 
     impl BBoxRenderer {
@@ -437,7 +417,6 @@ mod tests {
                 module: &self.module,
                 glyph_defs: &mut self.glyph_defs,
                 bbox_cache: &mut self.bbox_cache,
-                fingerprint_builder: &mut self.fingerprint_builder,
             }
         }
     }

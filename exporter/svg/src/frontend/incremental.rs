@@ -1,5 +1,6 @@
 use std::{
     collections::{hash_map::RandomState, HashSet},
+    ops::Deref,
     sync::Arc,
 };
 
@@ -8,13 +9,15 @@ use typst_ts_core::{
     hash::Fingerprint,
     vector::{
         flat_ir::{
-            flatten_glyphs, FlatModule, IncrModuleBuilder, ItemPack, Module, ModuleBuilder,
-            ModuleMetadata, MultiSvgDocument, Pages, SourceMappingNode, SvgDocument,
+            flatten_glyphs, FlatModule, GlyphPack, IncrModuleBuilder, ItemPack, LayoutRegion,
+            LayoutRegionNode, LayoutSourceMapping, Module, ModuleBuilder, ModuleMetadata,
+            MultiSvgDocument, Page, SourceMappingNode, SvgDocument,
         },
         flat_vm::{FlatIncrRenderVm, FlatRenderVm},
-        ir::{Rect, Scalar, SvgItem},
+        ir::{Rect, SvgItem},
         LowerBuilder,
     },
+    TakeAs,
 };
 
 use crate::{
@@ -37,8 +40,8 @@ impl ExportFeature for IncrementalExportFeature {
 
 pub struct IncrementalRenderContext<'a> {
     pub module: &'a Module,
-    pub prev: &'a Pages,
-    pub next: &'a Pages,
+    pub prev: &'a [Page],
+    pub next: &'a [Page],
 }
 
 impl<Feat: ExportFeature> SvgTask<Feat> {
@@ -48,11 +51,15 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         let mut render_task = self.get_render_context(ctx.module);
 
         let reusable: HashSet<Fingerprint, RandomState> =
-            HashSet::from_iter(ctx.prev.iter().map(|e| e.0));
-        let mut unused_prev: std::collections::BTreeMap<usize, Fingerprint> =
-            ctx.prev.iter().map(|e| e.0).enumerate().collect::<_>();
+            HashSet::from_iter(ctx.prev.iter().map(|e| e.content));
+        let mut unused_prev: std::collections::BTreeMap<usize, Fingerprint> = ctx
+            .prev
+            .iter()
+            .map(|e| e.content)
+            .enumerate()
+            .collect::<_>();
 
-        for (entry, _) in ctx.next.iter() {
+        for Page { content: entry, .. } in ctx.next.iter() {
             // todo: reuse remove unused patter, they are also used in render_diff
             if reusable.contains(entry) {
                 let remove_key = unused_prev.iter().find(|(_, v)| *v == entry);
@@ -66,7 +73,14 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         println!("reusable: {:?}", reusable);
         println!("unused_prev: {:?}", unused_prev);
 
-        for (idx, (entry, size)) in ctx.next.iter().enumerate() {
+        for (
+            idx,
+            Page {
+                content: entry,
+                size,
+            },
+        ) in ctx.next.iter().enumerate()
+        {
             let size = Self::page_size(*size);
             if reusable.contains(entry) {
                 println!("reuse page: {} {:?}", idx, entry);
@@ -161,12 +175,14 @@ impl IncrSvgDocServer {
                         (builder.source_mapping.len() - 1) as u64,
                     ));
                 }
-                (abs_ref, p.size().into())
+
+                Page {
+                    content: abs_ref,
+                    size: p.size().into(),
+                }
             })
             .collect::<Vec<_>>();
         let delta = builder.finalize_delta();
-
-        let glyphs = flatten_glyphs(delta.glyphs.into_iter().map(|(x, y)| (y, x)));
 
         // max, min lifetime current, gc_items
         #[cfg(feature = "debug_gc")]
@@ -187,16 +203,25 @@ impl IncrSvgDocServer {
             self.module_builder.lifetime,
             gc_items.len()
         );
-        let delta = FlatModule {
-            metadata: vec![
-                ModuleMetadata::SourceMappingData(delta.source_mapping),
-                ModuleMetadata::PageSourceMapping(vec![self.page_source_mapping.clone()]),
-                ModuleMetadata::GarbageCollection(gc_items),
-            ],
-            glyphs,
-            item_pack: ItemPack(delta.items.clone().into_iter().collect()),
-            layouts: vec![(Scalar(0.), pages.clone())],
-        }
+
+        let glyphs = GlyphPack {
+            items: flatten_glyphs(delta.glyphs),
+            incremental_base: 0, // todo: correct incremental_base
+        };
+
+        let pages = LayoutRegionNode::new_pages(pages.clone());
+        let pages = Arc::new(LayoutRegion::new_single(pages));
+
+        let delta = FlatModule::new(vec![
+            ModuleMetadata::SourceMappingData(delta.source_mapping),
+            ModuleMetadata::PageSourceMapping(Arc::new(LayoutSourceMapping::new_single(
+                self.page_source_mapping.clone(),
+            ))),
+            ModuleMetadata::GarbageCollection(gc_items),
+            ModuleMetadata::Glyph(Arc::new(glyphs)),
+            ModuleMetadata::Item(ItemPack(delta.items.clone().into_iter().collect())),
+            ModuleMetadata::Layout(pages),
+        ])
         .to_bytes();
 
         log::info!("svg render time (incremental bin): {:?}", instant.elapsed());
@@ -207,17 +232,21 @@ impl IncrSvgDocServer {
     /// Pack the current entirely into a binary blob.
     pub fn pack_current(&mut self) -> Option<Vec<u8>> {
         let doc = self.doc_view.as_ref()?;
-        let glyphs = flatten_glyphs(self.module_builder.glyphs.clone());
+        let glyphs = flatten_glyphs(self.module_builder.glyphs.finalize());
 
-        let delta = FlatModule {
-            metadata: vec![
-                ModuleMetadata::SourceMappingData(self.module_builder.source_mapping.clone()),
-                ModuleMetadata::PageSourceMapping(vec![self.page_source_mapping.clone()]),
-            ],
-            glyphs,
-            item_pack: ItemPack(doc.module.items.clone().into_iter().collect()),
-            layouts: vec![(Scalar(0.), doc.pages.clone())],
-        }
+        let pages = LayoutRegionNode::new_pages(doc.pages.clone());
+        let pages = Arc::new(LayoutRegion::new_single(pages));
+
+        let delta = FlatModule::new(vec![
+            ModuleMetadata::SourceMappingData(self.module_builder.source_mapping.clone()),
+            ModuleMetadata::PageSourceMapping(Arc::new(LayoutSourceMapping::new_single(
+                self.page_source_mapping.clone(),
+            ))),
+            // todo: correct incremental_base
+            ModuleMetadata::Glyph(Arc::new(glyphs.into())),
+            ModuleMetadata::Item(ItemPack(doc.module.items.clone().into_iter().collect())),
+            ModuleMetadata::Layout(pages),
+        ])
         .to_bytes();
         Some([b"new,", delta.as_slice()].concat())
     }
@@ -231,7 +260,7 @@ pub struct IncrSvgDocClient {
 
     /// Expected exact state of the current DOM.
     /// Initially it is None meaning no any page is rendered.
-    pub doc_view: Option<Pages>,
+    pub doc_view: Option<Vec<Page>>,
     /// Glyphs that has already committed to the DOM.
     /// Assmuing glyph_window = N, then `self.doc.module.glyphs[..N]` are
     /// committed.
@@ -240,7 +269,7 @@ pub struct IncrSvgDocClient {
     /// Optional source mapping data.
     pub source_mapping_data: Vec<SourceMappingNode>,
     /// Optional page source mapping references.
-    pub page_source_mappping: Vec</* layout pages */ Vec</* per page */ SourceMappingNode>>,
+    pub page_source_mappping: LayoutSourceMapping,
 
     /// Don't use this
     /// it is public to make Default happy
@@ -257,7 +286,7 @@ impl IncrSvgDocClient {
                     self.source_mapping_data = data;
                 }
                 ModuleMetadata::PageSourceMapping(data) => {
-                    self.page_source_mappping = data;
+                    self.page_source_mappping = data.take();
                 }
                 _ => {}
             }
@@ -286,16 +315,28 @@ impl IncrSvgDocClient {
         let mut page_off: f32 = 0.;
         let mut next_doc_view = vec![];
         if !self.doc.layouts.is_empty() {
-            for (page, layout) in self.doc.layouts[0].1.iter() {
-                page_off += layout.y.0;
-                if page_off < rect.lo.y.0 || page_off - layout.y.0 > rect.hi.y.0 {
-                    next_doc_view.push((empty_page, *layout));
+            let t = &self.doc.layouts[0];
+            let pages = match t {
+                LayoutRegionNode::Pages(a) => {
+                    let (_, pages) = a.deref();
+                    pages
+                }
+                _ => todo!(),
+            };
+            for page in pages.iter() {
+                page_off += page.size.y.0;
+                if page_off < rect.lo.y.0 || page_off - page.size.y.0 > rect.hi.y.0 {
+                    next_doc_view.push(Page {
+                        content: empty_page,
+                        size: page.size,
+                    });
                     continue;
                 }
 
-                next_doc_view.push((*page, *layout));
+                next_doc_view.push(page.clone());
             }
         }
+        // todo: fix this
 
         let mut t = SvgTask::<IncrementalExportFeature>::default();
 
@@ -319,7 +360,7 @@ impl IncrSvgDocClient {
         let glyphs = self.doc.module.glyphs.iter();
         // skip the glyphs that are already rendered
         let new_glyphs = glyphs.skip(self.glyph_window);
-        let glyph_defs = t.render_glyphs(new_glyphs.map(|g| (&g.0, &g.1)), true);
+        let glyph_defs = t.render_glyphs(new_glyphs.enumerate().map(|(x, (_, y))| (x, y)), true);
 
         svg.extend(glyph_defs);
         svg.push("</defs>".into());

@@ -51,5 +51,9 @@ fn main() {
         ArchivedTextShape,
         ArchivedPathStyle,
         ArchivedTransformItem,
+        ArchivedGlyphPack,
+        ArchivedPage,
+        ArchivedLayoutRegion,
+        ArchivedBuildInfo,
     );
 }
