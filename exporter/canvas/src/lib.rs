@@ -498,7 +498,7 @@ impl<'m, C: FlatRenderVm<'m, Resultant = CanvasNode> + GlyphIndice<'m>> FlatGrou
 
 impl<'m, 't, Feat: ExportFeature> BuildGlyph for CanvasRenderTask<'m, 't, Feat> {
     fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
-        self.glyph_defs.build_glyph(glyph).0
+        self.glyph_defs.build_glyph(glyph)
     }
 }
 
