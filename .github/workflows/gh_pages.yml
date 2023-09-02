@@ -2,9 +2,8 @@ name: typst_ts::release::gh_pages
 
 on:
   # Runs on pushes targeting the default branch
-  # todo: recover gh_pages
-  # push:
-  #   branches: ['main']
+  push:
+    branches: ['main']
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
