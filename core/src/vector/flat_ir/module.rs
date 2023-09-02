@@ -207,7 +207,6 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
         self.source_mapping_buffer.clear();
     }
 
-    // todo: remove GlyphMapping (used by v1)
     pub fn finalize_ref(&self) -> Module {
         Module {
             glyphs: self.glyphs.finalize(),
@@ -216,7 +215,6 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
         }
     }
 
-    // todo: remove GlyphMapping (used by v1)
     pub fn finalize(self) -> Module {
         Module {
             glyphs: self.glyphs.finalize(),
