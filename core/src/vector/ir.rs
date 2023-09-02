@@ -108,8 +108,7 @@ pub struct FontRef {
 /// Reference a glyph item in a more friendly format to compress and store
 /// information. The glyphs are locally stored in the svg module.
 /// With a glyph reference, we can get both the font metric and the glyph data.
-/// The `font_hash` is to let it safe to be cached, please see
-/// [`crate::vector::flat_ir::FlatFontItem`] for more details.
+/// The `font_hash` is to let it safe to be cached, please see [`FontItem`] for more details.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
@@ -435,45 +434,8 @@ pub enum TransformItem {
     Clip(Arc<PathItem>),
 }
 
-/// See [`TransformContext`].
+/// See [`TransformItem`].
 impl From<TransformItem> for Transform {
-    // fn transform_matrix(mut self, _ctx: &mut C, m: &ir::Transform) -> Self {
-    //     let sub_ts: sk::Transform = (*m).into();
-    //     self.ts = self.ts.post_concat(sub_ts);
-    //     self
-    // }
-
-    // fn transform_translate(mut self, _ctx: &mut C, matrix: Axes<Abs>) -> Self {
-    //     self.ts = self.ts.post_translate(matrix.x.0, matrix.y.0);
-    //     self
-    // }
-
-    // fn transform_scale(mut self, _ctx: &mut C, x: Ratio, y: Ratio) -> Self {
-    //     self.ts = self.ts.post_scale(x.0, y.0);
-    //     self
-    // }
-
-    // fn transform_rotate(self, _ctx: &mut C, _matrix: Scalar) -> Self {
-    //     todo!()
-    // }
-
-    // fn transform_skew(mut self, _ctx: &mut C, matrix: (Ratio, Ratio)) -> Self {
-    //     self.ts = self.ts.post_concat(sk::Transform {
-    //         sx: 1.,
-    //         sy: 1.,
-    //         kx: matrix.0 .0,
-    //         ky: matrix.1 .0,
-    //         tx: 0.,
-    //         ty: 0.,
-    //     });
-    //     self
-    // }
-
-    // fn transform_clip(mut self, _ctx: &mut C, matrix: &ir::PathItem) -> Self {
-    //     self.clipper = Some(matrix.clone());
-    //     self
-    // }
-
     fn from(value: TransformItem) -> Self {
         match value {
             TransformItem::Matrix(m) => *m,
