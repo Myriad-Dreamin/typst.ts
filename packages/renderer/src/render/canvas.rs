@@ -137,7 +137,7 @@ impl TypstRenderer {
 }
 
 #[cfg(test)]
-// #[cfg(target_arch = "wasm32")]
+#[cfg(target_arch = "wasm32")]
 mod tests {
     #![allow(clippy::await_holding_lock)]
 

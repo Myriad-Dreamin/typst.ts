@@ -37,13 +37,7 @@ wasm-bindgen.workspace = true
 js-sys.workspace = true
 wasm-bindgen-futures.workspace = true
 serde-wasm-bindgen.workspace = true
-web-sys = { workspace = true, features = [
-    "console",
-    "Window",
-    "Blob",
-    "ImageData",
-    "HtmlDivElement",
-] }
+web-sys = { workspace = true, features = ["console", "Window"] }
 
 typst-ts-core.workspace = true
 typst-ts-compiler = { version = "0.4.0-rc1", default-features = false, features = [
@@ -62,11 +56,7 @@ web-sys = { workspace = true, features = [
     "Performance",
     "PerformanceTiming",
     "Window",
-    "Blob",
-    "ImageData",
     "Document",
-    "HtmlCanvasElement",
-    "HtmlDivElement",
 ] }
 hex.workspace = true
 sha2.workspace = true
@@ -92,11 +82,12 @@ build_full = ["build_glyph_pack", "build_raw_font", "build_web_font"]
 render_canvas = [
     "dep:typst-ts-canvas-exporter",
     "dep:typst-ts-svg-exporter",
+    "web-sys/HtmlCanvasElement",
     "web-sys/CanvasRenderingContext2d",
 ]
 render_pdf = []
-render_raster = ["dep:typst-ts-raster-exporter"]
-render_svg = ["dep:typst-ts-svg-exporter"]
+render_raster = ["dep:typst-ts-raster-exporter", "web-sys/ImageData"]
+render_svg = ["dep:typst-ts-svg-exporter", "web-sys/HtmlDivElement"]
 render_full = ["render_canvas", "render_pdf", "render_svg", "render_raster"]
 
 full = ["serde_json", "serde_rmp", "render_full", "web_test"]
