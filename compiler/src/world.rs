@@ -173,16 +173,6 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         self.vfs.resolve(path, source_id).map(|_| ())
     }
 
-    /// Override the content of a file.
-    pub fn resolve_with<P: AsRef<Path>>(
-        &self,
-        path: P,
-        source_id: FileId,
-        content: &str,
-    ) -> FileResult<()> {
-        self.vfs.resolve_with(path, source_id, content).map(|_| ())
-    }
-
     /// Resolve the real path for a file id.
     pub fn path_for_id(&self, id: FileId) -> Result<PathBuf, FileError> {
         // Determine the root path relative to which the file path

@@ -306,18 +306,6 @@ impl<M: AccessModel + Sized> Vfs<M> {
         })
     }
 
-    /// Get source id by path with memory content.
-    // todo: remove this buggy function
-    pub fn resolve_with<P: AsRef<Path>>(
-        &self,
-        path: P,
-        source_id: TypstFileId,
-        content: &str,
-    ) -> FileResult<Source> {
-        self.map_shadow(path.as_ref(), content)?;
-        self.resolve(path.as_ref(), source_id)
-    }
-
     pub fn map_shadow(&self, path: &Path, content: &str) -> FileResult<()> {
         self.access_model
             .inner()
