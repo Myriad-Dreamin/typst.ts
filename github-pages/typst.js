@@ -3,22 +3,6 @@
     let plugin = window.TypstRenderModule.createTypstRenderer(pdfjsLib);
     plugin
       .init({
-        beforeBuild: [
-          window.TypstRenderModule.preloadRemoteFonts([
-            // use glyphs.json
-            // '/typst.ts/assets/fonts/LinLibertine_R.ttf',
-            // '/typst.ts/assets/fonts/LinLibertine_RB.ttf',
-            // '/typst.ts/assets/fonts/LinLibertine_RBI.ttf',
-            // '/typst.ts/assets/fonts/LinLibertine_RI.ttf',
-            // '/typst.ts/assets/fonts/NewCMMath-Regular.otf',
-            // '/typst.ts/assets/fonts/DejaVuSansMono.ttf',
-            // not used
-            // '/typst.ts/assets/fonts/NewCMMath-Book.otf',
-            // '/typst.ts/assets/fonts/DejaVuSansMono-Bold.ttf',
-            // '/typst.ts/assets/fonts/DejaVuSansMono-BoldOblique.ttf',
-            // '/typst.ts/assets/fonts/DejaVuSansMono-Oblique.ttf',
-          ]),
-        ],
         getModule: () => '/typst.ts/renderer/typst_ts_renderer_bg.wasm',
       })
       .then(() => {
