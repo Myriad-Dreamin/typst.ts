@@ -217,7 +217,6 @@ mod tests {
                 )
                 .unwrap();
 
-            // todo: canvas exporter respect pixel per pt
             let sizes = &session.pages_info;
             canvas.set_width((sizes.width() * 3.).ceil() as u32);
             canvas.set_height((sizes.height() * 3.).ceil() as u32);

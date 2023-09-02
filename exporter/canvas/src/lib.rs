@@ -134,7 +134,6 @@ impl CanvasElem for CanvasPathElem {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         let _guard = CanvasStateGuard::new(canvas);
         set_transform(canvas, ts);
-        // todo style
         // map_err(map_err("CanvasRenderTask.BuildPath2d")
 
         let mut fill_color = "none".into();

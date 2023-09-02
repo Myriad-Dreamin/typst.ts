@@ -287,7 +287,6 @@ impl LowerBuilder {
                 LineJoin::Round => styles.push(ir::PathStyle::StrokeLineJoin("round".into())),
             }
 
-            // todo: default color
             let Paint::Solid(color) = paint;
             styles.push(ir::PathStyle::Stroke(color.to_css().into()));
         }
@@ -310,7 +309,6 @@ impl<'a> GlyphLowerBuilder<'a> {
         match glyph_item {
             GlyphItem::Raw(font, id) => {
                 let id = *id;
-                // todo: server side render
                 self.lower_svg_glyph(font, id)
                     .map(GlyphItem::Image)
                     .or_else(|| self.lower_bitmap_glyph(font, id).map(GlyphItem::Image))
