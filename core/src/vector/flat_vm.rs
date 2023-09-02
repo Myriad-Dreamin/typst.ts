@@ -5,7 +5,7 @@ use std::ops::Deref;
 use crate::hash::Fingerprint;
 
 use super::flat_ir as ir;
-use super::ir::GlyphRef;
+use super::ir::{FontIndice, GlyphRef};
 use super::{
     ir::{Point, Scalar},
     vm::{GroupContext, TransformContext},
@@ -42,7 +42,7 @@ pub trait FlatGroupContext<C>: Sized {
 /// A virtual machine for rendering a flatten frame.
 /// This is a stateful object that is used to render a frame.
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
-pub trait FlatRenderVm<'m>: Sized {
+pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
     type Resultant;
     type Group: GroupContext<Self>
         + FlatGroupContext<Self>
@@ -131,14 +131,21 @@ pub trait FlatRenderVm<'m>: Sized {
     ) -> Self::Resultant {
         let group_ctx = self.start_flat_text(abs_ref, text);
 
-        let ppem = Scalar(text.shape.ppem.0);
+        let font = self.get_font(&text.font).unwrap();
+
+        // upem is the unit per em defined in the font.
+        // ppem is calcuated by the font size.
+        // > ppem = text_size / upem
+        let upem = font.unit_per_em.0;
+        let ppem = Scalar(text.shape.size.0 / upem);
+        let inv_ppem = upem / text.shape.size.0;
 
         let mut group_ctx = group_ctx.transform_scale(self, ppem, -ppem);
 
         let mut x = 0f32;
         for (offset, advance, glyph) in text.content.glyphs.iter() {
             let offset = x + offset.0;
-            let ts = offset / ppem.0;
+            let ts = offset * inv_ppem;
 
             group_ctx.render_glyph_ref(self, Scalar(ts), glyph);
 
@@ -294,14 +301,21 @@ where
         group_ctx: Self::Group,
         text: &ir::FlatTextItem,
     ) -> Self::Group {
-        let ppem = Scalar(text.shape.ppem.0);
+        let font = self.get_font(&text.font).unwrap();
+
+        // upem is the unit per em defined in the font.
+        // ppem is calcuated by the font size.
+        // > ppem = text_size / upem
+        let upem = font.unit_per_em.0;
+        let ppem = Scalar(text.shape.size.0 / upem);
+        let inv_ppem = upem / text.shape.size.0;
 
         let mut group_ctx = group_ctx.transform_scale(self, ppem, -ppem);
 
         let mut x = 0f32;
         for (offset, advance, glyph) in text.content.glyphs.iter() {
             let offset = x + offset.0;
-            let ts = offset / ppem.0;
+            let ts = offset * inv_ppem;
 
             group_ctx.render_glyph_ref(self, Scalar(ts), glyph);
 

@@ -170,12 +170,6 @@ impl LowerBuilder {
         let Paint::Solid(fill) = text.fill;
         let fill = fill.to_css().into();
 
-        let ppem = {
-            let pixel_per_unit: f32 = text.size.to_f32();
-            let units_per_em = text.font.units_per_em() as f32;
-            pixel_per_unit / units_per_em
-        };
-
         let span_id = text
             .glyphs
             .iter()
@@ -201,9 +195,6 @@ impl LowerBuilder {
                     Dir::BTT => "btt",
                 }
                 .into(),
-                ascender: text.font.metrics().ascender.at(text.size).into(),
-                upem: Scalar::from(text.font.units_per_em() as f32),
-                ppem: Scalar::from(ppem),
                 fill,
             }),
         })

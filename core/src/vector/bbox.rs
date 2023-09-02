@@ -4,7 +4,7 @@ use std::{collections::HashMap, ops::Deref};
 use comemo::Prehashed;
 use typst::font::Font;
 
-use super::ir::{FontRef, GlyphPackBuilder, GlyphRef};
+use super::ir::{FontIndice, FontRef, GlyphPackBuilder, GlyphRef};
 use super::{
     flat_ir::{self, Module},
     flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
@@ -345,6 +345,12 @@ impl BuildGlyph for BBoxTask<'_, '_> {
 
     fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
         self.glyph_defs.build_glyph(glyph)
+    }
+}
+
+impl<'m> FontIndice<'m> for BBoxTask<'m, '_> {
+    fn get_font(&self, value: &FontRef) -> Option<&'m ir::FontItem> {
+        self.module.fonts.get(value.idx as usize)
     }
 }
 

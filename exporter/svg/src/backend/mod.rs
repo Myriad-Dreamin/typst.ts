@@ -9,8 +9,8 @@ use typst_ts_core::{
         flat_ir,
         flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
         ir::{
-            self, Abs, Axes, BuildGlyph, GlyphHashStablizer, GlyphRef, ImmutStr, PathStyle, Ratio,
-            Scalar, Size,
+            self, Abs, Axes, BuildGlyph, FontIndice, GlyphHashStablizer, GlyphRef, ImmutStr,
+            PathStyle, Ratio, Scalar, Size,
         },
         vm::{GroupContext, RenderVm, TransformContext},
         GlyphLowerBuilder,
@@ -234,18 +234,20 @@ impl SvgTextBuilder {
         shape: &ir::TextShape,
         content: &str,
         width: Scalar,
+        ascender: Scalar,
+        upem: Scalar,
         aware_html_entity: bool,
     ) {
         // upem is the unit per em defined in the font.
         // ppem is calcuated by the font size.
         // > ppem = text_size / upem
-        let upem = shape.upem.0;
-        let ppem = shape.ppem.0;
+        let upem = upem.0;
 
         // because the text is already scaled by the font size,
         // we need to scale it back to the original size.
-        let ascender = shape.ascender.0 / ppem;
-        let width = width.0 / ppem;
+        // todo: infinite multiplication
+        let ascender = ascender.0 * upem;
+        let width = width.0 * upem / shape.size.0;
 
         let text_content = if aware_html_entity {
             escape::escape_str::<TextContentDataEscapes>(content)
@@ -390,6 +392,8 @@ impl<
             &text.shape,
             &text.content.content,
             width,
+            Scalar::from(text.font.metrics().ascender.get() as f32),
+            Scalar::from(text.font.units_per_em() as f32),
             ctx.should_aware_html_entity(),
         )
     }
@@ -409,6 +413,7 @@ impl<
         C: RenderVm<Resultant = Arc<SvgTextNode>>
             + FlatRenderVm<'m, Resultant = Arc<SvgTextNode>>
             + BuildGlyph
+            + FontIndice<'m>
             + GlyphHashStablizer
             + BuildFillStyleClass
             + DynExportFeature,
@@ -442,10 +447,14 @@ impl<
             return;
         }
 
+        let font = ctx.get_font(&text.font).unwrap();
+
         self.render_text_semantics_inner(
             &text.shape,
             &text.content.content,
             width,
+            font.ascender,
+            font.unit_per_em,
             ctx.should_aware_html_entity(),
         )
     }
