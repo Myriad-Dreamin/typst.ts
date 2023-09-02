@@ -1,10 +1,12 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 class Processor {
   constructor(hexo) {
     this.hexo = hexo;
     this.Post = hexo.model('Post');
+    this.renderCli = 'typst-ts-cli';
 
     const postProcessor = require(path.resolve(
       hexo.base_dir,
@@ -20,16 +22,25 @@ class Processor {
 
     const base_dir = this.hexo.base_dir;
 
-    const rawDataPath = data.source.replace(/\.[^/.]+$/, '');
-    const dataPath = path.resolve(base_dir, 'public/artifacts/typst/source', rawDataPath);
+    const title = JSON.parse(execSync([
+      this.renderCli,
+      'query',
+      '--workspace',
+      base_dir,
+      '--entry',
+      `"source/${data.source}"`,
+      '--selector',
+      'document_title',
+    ].join(' '), {
+      encoding: 'utf-8',
+    }));
 
-    const artifactPath = path.join(dataPath + '.artifact.json');
-    const artifactContent = fs.readFileSync(artifactPath);
-    const artifact = JSON.parse(artifactContent);
-    const title = artifact.title;
-
-    data.title = title;
-    data.published = true;
+    if ((!title) || title === null) {
+      console.log('[typst]', `title not found in ${data.source}`);
+    } else {
+      data.title = title;
+      data.published = true;
+    }
 
     return data;
   }

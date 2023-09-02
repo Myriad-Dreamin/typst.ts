@@ -4,9 +4,9 @@ node_modules/
 examples/
 
 index.html
-*.artifact.json
 *.rmp
-*.bin
+*.sir.in
+*.pdf
 *.tsbuildinfo
 *.ts.map
 esbuild.*

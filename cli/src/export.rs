@@ -19,6 +19,7 @@ pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature hint */ &str
     ("svg", "svg"),
     ("svg_html", "svg"),
     ("sir", "svg"),
+    ("vector", "svg"),
 ];
 
 /// Hint the user that the given format is not enable or not available.
@@ -89,7 +90,9 @@ fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExp
             #[cfg(feature = "svg")]
             "svg_html"         => sink_path!(WithSvgHtml as _ as doc, out @@ "artifact.svg.html"),
             #[cfg(feature = "svg")]
-            "sir"         => sink_path!(WithSIR as _ as doc, out @@ "artifact.sir.bin"),
+            "sir"         => sink_path!(WithSIR as _ as doc, out @@ "artifact.sir.in"),
+            #[cfg(feature = "svg")]
+            "vector"      => sink_path!(WithSIR as _ as doc, out @@ "artifact.sir.in"),
             _             => exit_by_unknown_format(f),
         });
     }
@@ -123,7 +126,7 @@ pub fn prepare_exporters(args: &CompileArgs, entry_file: &Path) -> GroupDocExpor
         let mut formats = args.format.clone();
         // Otherwise, use default formats.
         if formats.is_empty() {
-            formats.extend(["pdf", "json"].map(str::to_owned));
+            formats.extend(["pdf", "vector"].map(str::to_owned));
         }
         formats
     };

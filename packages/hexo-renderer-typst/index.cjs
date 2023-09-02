@@ -29,7 +29,6 @@ hexo.extend.renderer.register('typ', 'html', render);
 hexo.extend.filter.register('after_post_render', process);
 
 hexo.extend.generator.register('typst_assets', function (locals) {
-  var assetPathConfig = hexo.config.asset_path;
   const base_dir = hexo.base_dir;
   const typst_main_path = path.resolve(
     base_dir,
@@ -42,7 +41,6 @@ hexo.extend.generator.register('typst_assets', function (locals) {
     base_dir,
     'node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
   );
-  console.log(assetPathConfig);
   return [
     {
       path: 'typst/typst-main.js',

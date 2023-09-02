@@ -10,6 +10,7 @@ use typst::{doc::Document, font::FontVariant, World};
 use typst_ts_cli::{
     compile::compile_export,
     font::EMBEDDED_FONT,
+    query::serialize,
     utils::{self, make_absolute, UnwrapOrExit},
     version::intercept_version,
     CompileArgs, CompileOnceArgs, CompletionArgs, EnvKey, FontSubCommands, GenPackagesDocArgs,
@@ -98,6 +99,13 @@ pub fn query(args: QueryArgs) -> ! {
     let mut exporter = GroupExporter::<Document>::new(vec![]);
 
     exporter.push_front(Box::new(move |world: &dyn World, output: Arc<Document>| {
+        if args.selector == "document_title" {
+            let title = output.title.clone().unwrap_or("null".into());
+            let serialized = serialize(&title, "json").map_err(map_err)?;
+            println!("{}", serialized);
+            return Ok(());
+        }
+
         let data = retrieve(world, &args.selector, &output).map_err(map_err)?;
         let serialized = format(data, &args).map_err(map_err)?;
         println!("{serialized}");

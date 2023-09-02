@@ -2,13 +2,6 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
 
-#[cfg(target_arch = "wasm32")]
-pub const MAIN_ARTIFACT_JSON: &[u8] =
-    include_bytes!("../../../fuzzers/corpora/math/main.artifact.json");
-#[cfg(target_arch = "wasm32")]
-pub const MAIN_ARTIFACT_IR: &[u8] =
-    include_bytes!("../../../fuzzers/corpora/math/main.artifact.tir.bin");
-
 #[wasm_bindgen]
 pub async fn get_corpus(corpus: String) -> Result<js_sys::ArrayBuffer, JsValue> {
     let mut opts = RequestInit::new();

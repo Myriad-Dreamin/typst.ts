@@ -101,7 +101,7 @@ impl TypstRenderer {
 }
 
 #[cfg(test)]
-// #[cfg(target_arch = "wasm32")]
+#[cfg(target_arch = "wasm32")]
 mod tests {
     #![allow(clippy::await_holding_lock)]
 
@@ -265,7 +265,7 @@ mod tests {
     }
 
     async fn get_ir_artifact(name: &str) -> Vec<u8> {
-        let array_buffer = get_corpus(format!("{}.artifact.sir.bin", name))
+        let array_buffer = get_corpus(format!("{}.artifact.sir.in", name))
             .await
             .unwrap();
         js_sys::Uint8Array::new(&array_buffer).to_vec()
