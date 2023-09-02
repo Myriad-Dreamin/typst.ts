@@ -145,30 +145,27 @@ path-clean = "1.0.1"
 # project core
 typst-ts-core = "0.4.0-rc1"
 typst-ts-compiler = { version = "0.4.0-rc2", default-features = false }
-typst-ts-test-common = "0.4.0-rc1"
+typst-ts-test-common = { version = "0.4.0-rc1", path = "tests/common" }
 
 # project exporters
 typst-ts-ast-exporter = "0.4.0-rc1"
 typst-ts-pdf-exporter = "0.4.0-rc1"
-typst-ts-canvas-exporter = "0.4.0-rc1"
+typst-ts-canvas-exporter = { version = "0.4.0-rc1", path = "exporter/canvas" }
 typst-ts-raster-exporter = "0.4.0-rc1"
 typst-ts-serde-exporter = "0.4.0-rc1"
 typst-ts-svg-exporter = "0.4.0-rc1"
 
 # project common components
-typst-ts-dev-server = "0.4.0-rc1"
+typst-ts-dev-server = { version = "0.4.0-rc1", path = "server/dev" }
 
 [patch.crates-io]
 typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }
-typst-ts-test-common = { path = "tests/common" }
 typst-ts-ast-exporter = { path = "exporter/ast" }
-typst-ts-canvas-exporter = { path = "exporter/canvas" }
 typst-ts-pdf-exporter = { path = "exporter/pdf" }
 typst-ts-raster-exporter = { path = "exporter/raster" }
 typst-ts-serde-exporter = { path = "exporter/serde" }
 typst-ts-svg-exporter = { path = "exporter/svg" }
-typst-ts-dev-server = { path = "server/dev" }
 
 typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts" }
 typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts" }
