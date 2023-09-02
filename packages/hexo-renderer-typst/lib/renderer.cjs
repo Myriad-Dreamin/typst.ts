@@ -22,7 +22,9 @@ async function spawnAsync(cmd, args) {
     });
 
     child.on('close', code => {
-      console.log(`child process exited with code ${code}`);
+      if (code) {
+        console.log(`child process exited with code ${code}`);
+      }
       resolve();
     });
   });
@@ -45,19 +47,8 @@ class Renderer {
     const renderer_module = '/typst/typst_ts_renderer_bg.wasm';
     const dataPath = path.resolve(base_dir, 'public/', relDataPath);
     const dataDir = path.dirname(dataPath);
-    console.log('dataPath', dataPath);
+    console.log('[typst] rendering', data.path, '...');
     fs.mkdirSync(dataDir, { recursive: true });
-
-    await spawnAsync(this.renderCli, [
-      'compile',
-      '--workspace',
-      base_dir,
-      '--entry',
-      data.path,
-      '--output',
-      dataDir,
-      '--format=vector',
-    ]);
 
     await spawnAsync(this.renderCli, [
       'compile',
@@ -69,6 +60,8 @@ class Renderer {
       dataDir,
       '--dynamic-layout',
     ]);
+    
+    console.log('[typst] render   ', data.path, 'ok');
 
     const compiled = `
       <script>
