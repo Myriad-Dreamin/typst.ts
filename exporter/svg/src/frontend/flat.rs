@@ -3,8 +3,8 @@ use std::sync::Arc;
 use typst::{diag::SourceResult, doc::Document};
 use typst_ts_core::vector::{
     flat_ir::{
-        flatten_glyphs, FlatModule, GlyphPack, ItemPack, LayoutRegion, LayoutRegionNode,
-        LayoutRegionRepr, Module, ModuleBuilder, ModuleMetadata, Page, SvgDocument,
+        flatten_glyphs, FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, LayoutRegionRepr,
+        Module, ModuleBuilder, ModuleMetadata, Page, SvgDocument,
     },
     flat_vm::FlatRenderVm,
     LowerBuilder,
@@ -103,13 +103,11 @@ pub fn export_module(output: &Document) -> SourceResult<Vec<u8>> {
 
     let repr: Module = builder.finalize();
 
-    let glyphs = GlyphPack {
-        items: flatten_glyphs(repr.glyphs),
-        incremental_base: 0, // todo: correct incremental_base
-    };
+    let glyphs = flatten_glyphs(repr.glyphs).into();
 
     let module_data = FlatModule::new(vec![
         ModuleMetadata::Item(ItemPack(repr.items.into_iter().collect())),
+        ModuleMetadata::Font(Arc::new(repr.fonts.into())),
         ModuleMetadata::Glyph(Arc::new(glyphs)),
         ModuleMetadata::Layout(Arc::new(LayoutRegion::ByScalar(LayoutRegionRepr {
             kind: "width".into(),

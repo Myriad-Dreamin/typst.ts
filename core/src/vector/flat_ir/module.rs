@@ -6,12 +6,13 @@ use std::{
 };
 
 use comemo::Prehashed;
+use typst::font::Font;
 
 use crate::{
     hash::{Fingerprint, FingerprintBuilder},
     vector::ir::{
-        AbsoluteRef, BuildGlyph, DefId, FontItem, GlyphItem, GlyphPackBuilderImpl, GlyphRef,
-        SvgItem,
+        AbsoluteRef, BuildGlyph, DefId, FontItem, FontRef, GlyphItem, GlyphPackBuilderImpl,
+        GlyphRef, SvgItem,
     },
     TakeAs,
 };
@@ -199,6 +200,10 @@ impl<const ENABLE_REF_CNT: bool> Default for ModuleBuilderImpl<ENABLE_REF_CNT> {
 }
 
 impl<const ENABLE_REF_CNT: bool> BuildGlyph for ModuleBuilderImpl<ENABLE_REF_CNT> {
+    fn build_font(&mut self, font: &Font) -> FontRef {
+        self.glyphs.build_font(font)
+    }
+
     fn build_glyph(&mut self, glyph: &GlyphItem) -> GlyphRef {
         self.glyphs.build_glyph(glyph)
     }
@@ -252,6 +257,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
             }
             SvgItem::Link(link) => FlatSvgItem::Link(link),
             SvgItem::Text(text) => {
+                let font = self.build_font(&text.font);
                 let glyphs = text
                     .content
                     .glyphs
@@ -270,6 +276,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
                 }
 
                 FlatSvgItem::Text(FlatTextItem {
+                    font,
                     content: Arc::new(FlatTextItemContent { content, glyphs }),
                     shape,
                 })

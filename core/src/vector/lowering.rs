@@ -186,12 +186,14 @@ impl LowerBuilder {
             .unwrap_or_else(|| hack_span_id_to_u64(&Span::detached()));
 
         SvgItem::Text(ir::TextItem {
+            font: text.font.clone(),
             content: Arc::new(ir::TextItemContent {
                 content: glyph_chars.into(),
                 glyphs,
                 span_id,
             }),
             shape: Arc::new(ir::TextShape {
+                size: Scalar(text.size.to_f32()),
                 dir: match text.lang.dir() {
                     Dir::LTR => "ltr",
                     Dir::RTL => "rtl",

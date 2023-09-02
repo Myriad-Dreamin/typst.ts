@@ -6,6 +6,7 @@ use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, HtmlImageElement, Path2d};
 
 use typst_ts_core::{
+    error::prelude::*,
     font::GlyphProvider,
     hash::Fingerprint,
     vector::{
@@ -16,13 +17,19 @@ use typst_ts_core::{
         },
         flat_vm::{FlatGroupContext, FlatRenderVm},
         ir::{
-            self, Abs, Axes, BuildGlyph, GlyphItem, GlyphPackBuilder, GlyphRef, Image, ImageItem,
-            ImmutStr, PathStyle, Ratio, Rect, Scalar, Size, SvgItem,
+            self, Abs, Axes, BuildGlyph, FontRef, GlyphItem, GlyphPackBuilder, GlyphRef, Image,
+            ImageItem, ImmutStr, PathStyle, Ratio, Rect, Scalar, Size, SvgItem,
         },
         vm::{GroupContext, RenderVm, TransformContext},
     },
     TakeAs,
 };
+
+mod content;
+pub use content::TextContentTask;
+
+mod annotation;
+pub use annotation::AnnotationListTask;
 
 /// All the features that can be enabled or disabled.
 pub trait ExportFeature {
@@ -497,6 +504,10 @@ impl<'m, C: FlatRenderVm<'m, Resultant = CanvasNode> + GlyphIndice<'m>> FlatGrou
 }
 
 impl<'m, 't, Feat: ExportFeature> BuildGlyph for CanvasRenderTask<'m, 't, Feat> {
+    fn build_font(&mut self, font: &typst::font::Font) -> FontRef {
+        self.glyph_defs.build_font(font)
+    }
+
     fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
         self.glyph_defs.build_glyph(glyph)
     }
@@ -599,9 +610,18 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
     }
 }
 
-#[derive(Default)]
 pub struct IncrementalCanvasExporter {
+    pub pixel_per_pt: f32,
     pub pages: Vec<(Arc<Box<dyn CanvasElem + Send + Sync>>, Size)>,
+}
+
+impl Default for IncrementalCanvasExporter {
+    fn default() -> Self {
+        Self {
+            pixel_per_pt: 3.,
+            pages: vec![],
+        }
+    }
 }
 
 impl IncrementalCanvasExporter {
@@ -620,7 +640,7 @@ impl IncrementalCanvasExporter {
 
     pub async fn flush_page(&mut self, idx: usize, canvas: &web_sys::CanvasRenderingContext2d) {
         let pg = &self.pages[idx];
-        let ts = sk::Transform::from_scale(3., 3.);
+        let ts = sk::Transform::from_scale(self.pixel_per_pt, self.pixel_per_pt);
         let sumy = self
             .pages
             .iter()
@@ -679,6 +699,10 @@ impl IncrCanvasDocClient {
         }
     }
 
+    pub fn set_pixel_per_pt(&mut self, pixel_per_pt: f32) {
+        self.elements.pixel_per_pt = pixel_per_pt;
+    }
+
     /// Render the document in the given window.
     pub async fn render_in_window(
         &mut self,
@@ -703,7 +727,7 @@ impl IncrCanvasDocClient {
         let mut page_off: f32 = 0.;
         let mut next_doc_view = vec![];
         if !self.doc.layouts.is_empty() {
-            let t = &self.doc.layouts[0];
+            let t = &self.doc.layouts[0]; // todo: multiple layout
             let pages = match t {
                 LayoutRegionNode::Pages(a) => {
                     let (_, pages) = a.deref();
@@ -731,6 +755,22 @@ impl IncrCanvasDocClient {
                 self.elements.flush_page(idx, canvas).await;
             }
         }
+    }
+
+    /// Render the document in the given window.
+    pub async fn render_page_in_window(
+        &mut self,
+        canvas: &web_sys::CanvasRenderingContext2d,
+        idx: usize,
+        _rect: Rect,
+    ) -> ZResult<()> {
+        if idx >= self.elements.pages.len() {
+            Err(error_once!("Renderer.OutofPageRange", idx: idx))?;
+        }
+
+        self.elements.flush_page(idx, canvas).await;
+
+        Ok(())
     }
 }
 

@@ -2,8 +2,9 @@ use std::sync::Arc;
 use std::{collections::HashMap, ops::Deref};
 
 use comemo::Prehashed;
+use typst::font::Font;
 
-use super::ir::{GlyphPackBuilder, GlyphRef};
+use super::ir::{FontRef, GlyphPackBuilder, GlyphRef};
 use super::{
     flat_ir::{self, Module},
     flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
@@ -338,6 +339,10 @@ impl<'m, 't> FlatIncrRenderVm<'m> for BBoxTask<'m, 't> {
 }
 
 impl BuildGlyph for BBoxTask<'_, '_> {
+    fn build_font(&mut self, font: &Font) -> FontRef {
+        self.glyph_defs.build_font(font)
+    }
+
     fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
         self.glyph_defs.build_glyph(glyph)
     }

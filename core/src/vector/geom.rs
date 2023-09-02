@@ -223,6 +223,28 @@ impl Transform {
         }
     }
 
+    pub fn from_translate(tx: Abs, ty: Abs) -> Self {
+        Self {
+            sx: 1.0.into(),
+            ky: 0.0.into(),
+            kx: 0.0.into(),
+            sy: 1.0.into(),
+            tx,
+            ty,
+        }
+    }
+
+    pub fn from_skew(kx: Ratio, ky: Ratio) -> Self {
+        Self {
+            sx: 1.0.into(),
+            ky,
+            kx,
+            sy: 1.0.into(),
+            tx: 0.0.into(),
+            ty: 0.0.into(),
+        }
+    }
+
     pub fn identity() -> Self {
         Self::from_scale(1.0.into(), 1.0.into())
     }

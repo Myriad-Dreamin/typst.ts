@@ -285,6 +285,8 @@ pub enum PathStyle {
 /// Item representing an `<g><text/><g/>` element.
 #[derive(Debug, Clone)]
 pub struct TextItem {
+    /// The font of the text item.
+    pub font: Font,
     /// The content of the text item.
     pub content: Arc<TextItemContent>,
     /// The shape of the text item.
@@ -368,8 +370,8 @@ pub struct FontItem {
     pub hash: u32,
 
     pub family: ImmutStr,
-    pub ascent: Abs,
-    pub descent: Abs,
+    pub ascender: Abs,
+    pub descender: Abs,
     pub vertical: bool,
 }
 
@@ -382,8 +384,8 @@ impl From<Font> for FontItem {
             fingerprint,
             hash,
             family: font.info().family.clone().into(),
-            ascent: Scalar(font.metrics().ascender.get() as f32),
-            descent: Scalar(font.metrics().descender.get() as f32),
+            ascender: Scalar(font.metrics().ascender.get() as f32),
+            descender: Scalar(font.metrics().descender.get() as f32),
             vertical: false, // todo: check vertical
         }
     }
@@ -398,6 +400,8 @@ pub struct TextShape {
     pub dir: ImmutStr,
     /// The ascent of the font used by the text item.
     pub ascender: Abs,
+    /// The size of text
+    pub size: Scalar,
     /// The units per em of the font used by the text item.
     pub upem: Scalar,
     /// The pixels per em of the font used by the text item.
@@ -433,6 +437,57 @@ pub enum TransformItem {
 
     /// clip path.
     Clip(Arc<PathItem>),
+}
+
+/// See [`TransformContext`].
+impl From<TransformItem> for Transform {
+    // fn transform_matrix(mut self, _ctx: &mut C, m: &ir::Transform) -> Self {
+    //     let sub_ts: sk::Transform = (*m).into();
+    //     self.ts = self.ts.post_concat(sub_ts);
+    //     self
+    // }
+
+    // fn transform_translate(mut self, _ctx: &mut C, matrix: Axes<Abs>) -> Self {
+    //     self.ts = self.ts.post_translate(matrix.x.0, matrix.y.0);
+    //     self
+    // }
+
+    // fn transform_scale(mut self, _ctx: &mut C, x: Ratio, y: Ratio) -> Self {
+    //     self.ts = self.ts.post_scale(x.0, y.0);
+    //     self
+    // }
+
+    // fn transform_rotate(self, _ctx: &mut C, _matrix: Scalar) -> Self {
+    //     todo!()
+    // }
+
+    // fn transform_skew(mut self, _ctx: &mut C, matrix: (Ratio, Ratio)) -> Self {
+    //     self.ts = self.ts.post_concat(sk::Transform {
+    //         sx: 1.,
+    //         sy: 1.,
+    //         kx: matrix.0 .0,
+    //         ky: matrix.1 .0,
+    //         tx: 0.,
+    //         ty: 0.,
+    //     });
+    //     self
+    // }
+
+    // fn transform_clip(mut self, _ctx: &mut C, matrix: &ir::PathItem) -> Self {
+    //     self.clipper = Some(matrix.clone());
+    //     self
+    // }
+
+    fn from(value: TransformItem) -> Self {
+        match value {
+            TransformItem::Matrix(m) => *m,
+            TransformItem::Scale(m) => Transform::from_scale(m.0, m.1),
+            TransformItem::Translate(m) => Transform::from_translate(m.x, m.y),
+            TransformItem::Rotate(_m) => todo!(),
+            TransformItem::Skew(m) => Transform::from_skew(m.0, m.1),
+            TransformItem::Clip(_m) => Transform::identity(),
+        }
+    }
 }
 
 /// Global style namespace.
@@ -493,7 +548,7 @@ impl<const ENABLE_REF_CNT: bool> GlyphPackBuilderImpl<ENABLE_REF_CNT> {
         (fonts, glyphs)
     }
 
-    fn build_font(&mut self, font: &Font) -> FontRef {
+    pub fn build_font(&mut self, font: &Font) -> FontRef {
         if let Some(id) = self.font_mapping.get(font) {
             return id.clone();
         }
@@ -560,6 +615,7 @@ impl IncrGlyphPackBuilder {
 }
 
 pub trait BuildGlyph {
+    fn build_font(&mut self, font: &Font) -> FontRef;
     fn build_glyph(&mut self, glyph: &GlyphItem) -> GlyphRef;
 }
 

@@ -1,8 +1,13 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref};
 
-use typst_ts_canvas_exporter::{DefaultExportFeature, ExportFeature};
+use typst_ts_canvas_exporter::{
+    AnnotationListTask, DefaultExportFeature, ExportFeature, TextContentTask,
+};
 use typst_ts_core::error::prelude::*;
-use typst_ts_svg_exporter::ir::{Axes, Rect, Scalar};
+use typst_ts_svg_exporter::{
+    flat_ir::LayoutRegionNode,
+    ir::{Axes, Rect, Scalar},
+};
 use wasm_bindgen::prelude::*;
 
 use crate::{RenderPageImageOptions, RenderSession, TypstRenderer};
@@ -34,7 +39,7 @@ impl TypstRenderer {
         &mut self,
         ses: &RenderSession,
         canvas: &web_sys::CanvasRenderingContext2d,
-        _options: Option<RenderPageImageOptions>,
+        options: Option<RenderPageImageOptions>,
     ) -> ZResult<(JsValue, JsValue, Option<HashMap<String, f64>>)> {
         let rect_lo_x: f32 = -1.;
         let rect_lo_y: f32 = -1.;
@@ -46,25 +51,10 @@ impl TypstRenderer {
         };
 
         let mut client = ses.client.lock().unwrap();
-        client.render_in_window(canvas, rect).await;
-        // let page_off = self.retrieve_page_off(ses, options)?;
+        client.set_pixel_per_pt(ses.pixel_per_pt);
 
-        // let perf_events = if Feat::ENABLE_TRACING {
-        //     Some(elsa::FrozenMap::<&'static str, Box<f64>>::default())
-        // } else {
-        //     None
-        // };
-
-        // let mut worker = CanvasRenderTask::<Feat>::new(
-        //     canvas,
-        //     &ses.doc,
-        //     page_off,
-        //     ses.pixel_per_pt,
-        //     Color::Rgba(
-        //         RgbaColor::from_str(&ses.background_color)
-        //             .map_err(map_err("Renderer.InvalidBackgroundColor"))?,
-        //     ),
-        // )?;
+        let mut tc = Default::default();
+        let mut annotations = Default::default();
 
         // let def_provider = GlyphProvider::new(FontGlyphProvider::default());
         // let partial_providier =
@@ -75,33 +65,79 @@ impl TypstRenderer {
 
         // crate::utils::console_log!("use partial font glyph provider");
 
+        let perf_events = if Feat::ENABLE_TRACING {
+            Some(elsa::FrozenMap::<&'static str, Box<f64>>::default())
+        } else {
+            None
+        };
+
         // if let Some(perf_events) = perf_events.as_ref() {
         //     worker.set_perf_events(perf_events)
         // };
 
-        // worker.render(&ses.doc.pages[page_off]).await?;
+        let mut page_num = usize::MAX;
+        if let Some(options) = options {
+            page_num = options.page_off;
+            client
+                .render_page_in_window(canvas, options.page_off, rect)
+                .await?;
+        } else {
+            client.render_in_window(canvas, rect).await;
+        }
 
-        // Ok((
-        //     serde_wasm_bindgen::to_value(&worker.text_content)
-        //         .map_err(map_into_err::<JsValue,
-        // _>("Renderer.EncodeTextContent"))?,
-        //     serde_wasm_bindgen::to_value(&worker.annotations).map_err(
-        //         map_into_err::<JsValue,
-        // _>("Renderer.EncodeAnnotationContent"),     )?,
-        //     perf_events.map(|perf_events| {
-        //         perf_events
-        //             .into_map()
-        //             .into_iter()
-        //             .map(|(k, v)| (k.to_string(), *v))
-        //             .collect()
-        //     }),
-        // ))
-        Ok(("".into(), "".into(), None))
+        let mut worker = TextContentTask::new(&client.doc.module, &mut tc);
+        let mut annotation_list_worker =
+            AnnotationListTask::new(&client.doc.module, &mut annotations);
+        // todo: reuse
+        if !client.doc.layouts.is_empty() {
+            let t = &client.doc.layouts[0]; // todo: multiple layout
+            let pages = match t {
+                LayoutRegionNode::Pages(a) => {
+                    let (_, pages) = a.deref();
+                    pages
+                }
+                _ => todo!(),
+            };
+            let mut page_off = 0.;
+            for (idx, page) in pages.iter().enumerate() {
+                if page_num != usize::MAX && idx != page_num {
+                    page_off += page.size.y.0;
+                    continue;
+                }
+                let partial_page_off = if page_num != usize::MAX { 0. } else { page_off };
+                worker.page_height = partial_page_off + page.size.y.0;
+                worker.process_flat_item(
+                    tiny_skia::Transform::from_translate(partial_page_off, 0.),
+                    &page.content,
+                );
+                annotation_list_worker.page_num = page_num as u32;
+                annotation_list_worker.process_flat_item(
+                    tiny_skia::Transform::from_translate(partial_page_off, 0.),
+                    &page.content,
+                );
+                page_off += page.size.y.0;
+            }
+        }
+
+        Ok((
+            serde_wasm_bindgen::to_value(&tc)
+                .map_err(map_into_err::<JsValue, _>("Renderer.EncodeTextContent"))?,
+            serde_wasm_bindgen::to_value(&annotations).map_err(map_into_err::<JsValue, _>(
+                "Renderer.EncodeAnnotationContent",
+            ))?,
+            perf_events.map(|perf_events| {
+                perf_events
+                    .into_map()
+                    .into_iter()
+                    .map(|(k, v)| (k.to_string(), *v))
+                    .collect()
+            }),
+        ))
     }
 }
 
 #[cfg(test)]
-#[cfg(target_arch = "wasm32")]
+// #[cfg(target_arch = "wasm32")]
 mod tests {
     #![allow(clippy::await_holding_lock)]
 
