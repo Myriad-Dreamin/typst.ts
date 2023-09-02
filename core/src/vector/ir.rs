@@ -372,6 +372,7 @@ pub struct FontItem {
     pub family: ImmutStr,
     pub ascender: Abs,
     pub descender: Abs,
+    pub unit_per_em: Abs,
     pub vertical: bool,
 }
 
@@ -386,6 +387,7 @@ impl From<Font> for FontItem {
             family: font.info().family.clone().into(),
             ascender: Scalar(font.metrics().ascender.get() as f32),
             descender: Scalar(font.metrics().descender.get() as f32),
+            unit_per_em: Scalar(font.units_per_em() as f32),
             vertical: false, // todo: check vertical
         }
     }
@@ -398,14 +400,8 @@ impl From<Font> for FontItem {
 pub struct TextShape {
     /// The direction of the text item.
     pub dir: ImmutStr,
-    /// The ascent of the font used by the text item.
-    pub ascender: Abs,
     /// The size of text
     pub size: Scalar,
-    /// The units per em of the font used by the text item.
-    pub upem: Scalar,
-    /// The pixels per em of the font used by the text item.
-    pub ppem: Scalar,
     /// Fill font text with css color.
     pub fill: ImmutStr,
 }
@@ -612,6 +608,10 @@ impl IncrGlyphPackBuilder {
 
         (fonts, glyphs)
     }
+}
+
+pub trait FontIndice<'m> {
+    fn get_font(&self, value: &FontRef) -> Option<&'m FontItem>;
 }
 
 pub trait BuildGlyph {

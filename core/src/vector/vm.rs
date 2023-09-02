@@ -124,14 +124,19 @@ pub trait RenderVm: Sized {
     fn render_text(&mut self, text: &ir::TextItem) -> Self::Resultant {
         let group_ctx = self.start_text(text);
 
-        let ppem = Scalar(text.shape.ppem.0);
+        // upem is the unit per em defined in the font.
+        // ppem is calcuated by the font size.
+        // > ppem = text_size / upem
+        let upem = text.font.units_per_em() as f32;
+        let ppem = Scalar(text.shape.size.0 / upem);
+        let inv_ppem = upem / text.shape.size.0;
 
         let mut group_ctx = group_ctx.transform_scale(self, ppem, -ppem);
 
         let mut x = 0f32;
         for (offset, advance, glyph) in text.content.glyphs.iter() {
             let offset = x + offset.0;
-            let ts = offset / ppem.0;
+            let ts = offset * inv_ppem;
 
             group_ctx.render_glyph(self, Scalar(ts), glyph);
 

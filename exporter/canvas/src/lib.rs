@@ -17,8 +17,8 @@ use typst_ts_core::{
         },
         flat_vm::{FlatGroupContext, FlatRenderVm},
         ir::{
-            self, Abs, Axes, BuildGlyph, FontRef, GlyphItem, GlyphPackBuilder, GlyphRef, Image,
-            ImageItem, ImmutStr, PathStyle, Ratio, Rect, Scalar, Size, SvgItem,
+            self, Abs, Axes, BuildGlyph, FontIndice, FontRef, GlyphItem, GlyphPackBuilder,
+            GlyphRef, Image, ImageItem, ImmutStr, PathStyle, Ratio, Rect, Scalar, Size, SvgItem,
         },
         vm::{GroupContext, RenderVm, TransformContext},
     },
@@ -510,6 +510,12 @@ impl<'m, 't, Feat: ExportFeature> BuildGlyph for CanvasRenderTask<'m, 't, Feat> 
 
     fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
         self.glyph_defs.build_glyph(glyph)
+    }
+}
+
+impl<'m, 't, Feat: ExportFeature> FontIndice<'m> for CanvasRenderTask<'m, 't, Feat> {
+    fn get_font(&self, value: &FontRef) -> Option<&'m ir::FontItem> {
+        self.module.fonts.get(value.idx as usize)
     }
 }
 

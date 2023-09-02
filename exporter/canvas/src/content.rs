@@ -10,7 +10,7 @@ use typst_ts_core::{
     vector::{
         flat_ir::{self, FlatSvgItem, FlatTextItem, GroupRef, Module},
         flat_vm::{FlatGroupContext, FlatRenderVm},
-        ir::{self, Abs, Axes, FontRef, Ratio, Scalar, SvgItem},
+        ir::{self, Abs, Axes, FontIndice, FontRef, Ratio, Scalar, SvgItem},
         vm::{GroupContext, RenderVm, TransformContext},
     },
     TextContent,
@@ -414,6 +414,12 @@ impl TextFlow {
         }
 
         (this, has_eol)
+    }
+}
+
+impl<'m, 't> FontIndice<'m> for TextContentTask<'m, 't> {
+    fn get_font(&self, value: &FontRef) -> Option<&'m ir::FontItem> {
+        self.module.fonts.get(value.idx as usize)
     }
 }
 

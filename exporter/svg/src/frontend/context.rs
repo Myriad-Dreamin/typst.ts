@@ -6,8 +6,8 @@ use typst_ts_core::{
         flat_ir::{FlatSvgItem, FlatTextItem, GroupRef, Module},
         flat_vm::{FlatIncrRenderVm, FlatRenderVm},
         ir::{
-            self, BuildGlyph, FontRef, GlyphHashStablizer, GlyphPackBuilder, GlyphRef, ImmutStr,
-            PathItem, StyleNs,
+            self, BuildGlyph, FontIndice, FontRef, GlyphHashStablizer, GlyphPackBuilder, GlyphRef,
+            ImmutStr, PathItem, StyleNs,
         },
         vm::GroupContext,
         vm::RenderVm,
@@ -79,6 +79,12 @@ impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Fea
     #[inline]
     fn should_aware_html_entity(&self) -> bool {
         Feat::AWARE_HTML_ENTITY
+    }
+}
+
+impl<'m, 't, Feat: ExportFeature> FontIndice<'m> for RenderContext<'m, 't, Feat> {
+    fn get_font(&self, value: &FontRef) -> Option<&'m ir::FontItem> {
+        self.module.fonts.get(value.idx as usize)
     }
 }
 
