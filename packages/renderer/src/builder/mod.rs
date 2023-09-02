@@ -38,3 +38,101 @@ impl TypstRendererBuilder {
         Ok(TypstRenderer::new())
     }
 }
+
+#[cfg(not(feature = "build_glyph_pack"))]
+pub mod glyph_pack_stub {
+
+    use std::sync::Mutex;
+
+    use typst_ts_core::error::prelude::*;
+    use wasm_bindgen::prelude::*;
+
+    use crate::{TypstRenderer, TypstRendererBuilder};
+
+    static WARN_ONCE1: Mutex<once_cell::sync::OnceCell<()>> =
+        Mutex::new(once_cell::sync::OnceCell::new());
+    static WARN_ONCE2: Mutex<once_cell::sync::OnceCell<()>> =
+        Mutex::new(once_cell::sync::OnceCell::new());
+
+    #[wasm_bindgen]
+    impl TypstRendererBuilder {
+        pub async fn add_glyph_pack(&mut self, _pack: JsValue) -> ZResult<()> {
+            WARN_ONCE1.lock().unwrap().get_or_init(|| {
+                web_sys::console::warn_1(
+                    &"[typst-ts-renderer]: build_glyph_pack feature is not enabled, calling TypstRendererBuilder::add_glyph_pack".into(),
+                );
+            });
+            Ok(())
+        }
+    }
+
+    #[wasm_bindgen]
+    impl TypstRenderer {
+        pub fn load_glyph_pack(&self, _v: JsValue) -> ZResult<()> {
+            WARN_ONCE2.lock().unwrap().get_or_init(|| {
+                web_sys::console::warn_1(
+                    &"[typst-ts-renderer]: build_glyph_pack feature is not enabled, calling TypstRenderer::load_glyph_pack".into(),
+                );
+            });
+            Ok(())
+        }
+    }
+}
+#[cfg(not(feature = "build_glyph_pack"))]
+pub use glyph_pack_stub::*;
+
+#[cfg(not(feature = "build_raw_font"))]
+pub mod raw_font_stub {
+
+    use std::sync::Mutex;
+
+    use typst_ts_core::error::prelude::*;
+    use wasm_bindgen::prelude::*;
+
+    use crate::TypstRendererBuilder;
+
+    static WARN_ONCE: Mutex<once_cell::sync::OnceCell<()>> =
+        Mutex::new(once_cell::sync::OnceCell::new());
+
+    #[wasm_bindgen]
+    impl TypstRendererBuilder {
+        pub async fn add_raw_font(&mut self, _font_buffer: js_sys::Uint8Array) -> ZResult<()> {
+            WARN_ONCE.lock().unwrap().get_or_init(|| {
+                web_sys::console::warn_1(
+                    &"[typst-ts-renderer]: build_raw_font feature is not enabled".into(),
+                );
+            });
+            Ok(())
+        }
+    }
+}
+#[cfg(not(feature = "build_raw_font"))]
+pub use raw_font_stub::*;
+
+#[cfg(not(feature = "build_web_font"))]
+pub mod web_font_stub {
+
+    use std::sync::Mutex;
+
+    use typst_ts_core::error::prelude::*;
+    use wasm_bindgen::prelude::*;
+
+    use crate::TypstRendererBuilder;
+
+    static WARN_ONCE: Mutex<once_cell::sync::OnceCell<()>> =
+        Mutex::new(once_cell::sync::OnceCell::new());
+
+    #[wasm_bindgen]
+    impl TypstRendererBuilder {
+        pub async fn add_web_fonts(&mut self, _fonts: js_sys::Array) -> ZResult<()> {
+            WARN_ONCE.lock().unwrap().get_or_init(|| {
+                web_sys::console::warn_1(
+                    &"[typst-ts-renderer]: build_web_font feature is not enabled".into(),
+                );
+            });
+            Ok(())
+        }
+    }
+}
+#[cfg(not(feature = "build_web_font"))]
+pub use web_font_stub::*;

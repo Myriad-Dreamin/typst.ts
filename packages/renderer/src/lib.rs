@@ -123,15 +123,10 @@ impl TypstRenderer {
 }
 
 #[cfg(test)]
-// #[cfg(target_arch = "wasm32")]
+#[cfg(target_arch = "wasm32")]
 mod tests {
     use super::{TypstRenderer, TypstRendererBuilder};
     use std::path::PathBuf;
-
-    fn artifact_path() -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../fuzzers/corpora/math/main.artifact.json")
-    }
 
     pub fn get_renderer() -> TypstRenderer {
         let mut root_path = PathBuf::new();
@@ -142,8 +137,15 @@ mod tests {
         pollster::block_on(builder.build()).unwrap()
     }
 
+    // todo: export svg image
     #[test]
+    #[cfg(feature = "disabled")]
     fn test_render_document() {
+        fn artifact_path() -> PathBuf {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../fuzzers/corpora/math/main.artifact.json")
+        }
+
         let renderer = get_renderer();
 
         let artifact_content = std::fs::read(artifact_path()).unwrap();

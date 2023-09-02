@@ -21,7 +21,7 @@
           })
           .then(async () => {
             const artifactData = await fetch(
-              'http://localhost:20810/corpus/math/undergradmath-relative.multi.sir.bin',
+              'http://localhost:20810/corpus/math/undergradmath-relative.multi.sir.in',
             )
               .then(response => response.arrayBuffer())
               .then(buffer => new Uint8Array(buffer));

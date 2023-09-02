@@ -2,12 +2,9 @@
 .idea
 .turbo
 
-*.glyphs.json
-*.artifact.json
 *.artifact.svg
 *.artifact.svg.html
-*.tir.bin
-*.sir.bin
+*.sir.in
 *.pdf
 *.rmp
 *.tsbuildinfo

@@ -56,7 +56,6 @@ fn doc_pdf_to_path<P: AsRef<Path>>(path: P) -> FsPathExporter<Vec<u8>, PdfDocExp
 
 pub struct ArtifactBundle {
     pub driver: CompileExporter<CompileDriver>,
-    pub json: std::path::PathBuf,
     pub tir: std::path::PathBuf,
     pub pdf: std::path::PathBuf,
 }
@@ -75,12 +74,10 @@ impl ArtifactCompiler {
 
         let artifact_dir = &self.artifact_dir;
 
-        let json_artifact_file_path =
-            artifact_dir.join(entry_file_base.with_extension("artifact.json"));
-        let sir_file_path = artifact_dir.join(entry_file_base.with_extension("artifact.sir.bin"));
+        let sir_file_path = artifact_dir.join(entry_file_base.with_extension("artifact.sir.in"));
         let pdf_file_path = artifact_dir.join(entry_file_base.with_extension("pdf"));
 
-        let artifact_dir_to_create = json_artifact_file_path.parent().unwrap().to_owned();
+        let artifact_dir_to_create = sir_file_path.parent().unwrap().to_owned();
         std::fs::create_dir_all(artifact_dir_to_create).unwrap();
 
         let mut driver = get_driver(
@@ -96,7 +93,6 @@ impl ArtifactCompiler {
 
         ArtifactBundle {
             driver,
-            json: json_artifact_file_path.clean(),
             tir: sir_file_path.clean(),
             pdf: pdf_file_path.clean(),
         }

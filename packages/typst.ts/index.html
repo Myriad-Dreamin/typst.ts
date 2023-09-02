@@ -31,23 +31,10 @@
           })
           .then(async () => {
             const artifactData = await fetch(
-              'http://localhost:20810/corpus/skyzh-cv/main.white.artifact.json',
+              'http://localhost:20810/corpus/skyzh-cv/main.white.artifact.sir.in',
             )
               .then(response => response.arrayBuffer())
               .then(buffer => new Uint8Array(buffer));
-            const glyphPack = await fetch(
-              'http://localhost:20810/corpus/skyzh-cv/main.white.glyphs.json',
-            )
-              .then(response => response.text())
-              .then(content => JSON.parse(content))
-              .catch(e => {
-                console.log(e);
-                return undefined;
-              });
-            if (glyphPack) {
-              console.log('glyph_info', glyphPack);
-              plugin.loadGlyphPack(glyphPack);
-            }
 
             const appContainer = document.getElementById('typst-app');
 

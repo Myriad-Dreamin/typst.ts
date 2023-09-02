@@ -56,7 +56,7 @@ jobs:
           npx turbo run build
       - name: Prepare artifacts
         run: |
-          cargo run --bin typst-ts-cli -- compile --workspace ./github-pages/docs/ --entry ./github-pages/docs/readme.typ --format=ir --format=json --format=json_glyphs --format=pdf
+          cargo run --bin typst-ts-cli -- compile --workspace ./github-pages/docs/ --entry ./github-pages/docs/readme.typ --format=pdf --format=vector
       - name: Copy assets
         run: |
           mkdir -p github-pages/compiler/

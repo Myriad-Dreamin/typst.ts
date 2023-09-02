@@ -56,7 +56,7 @@ class Renderer {
       data.path,
       '--output',
       dataDir,
-      '--format=json',
+      '--format=vector',
     ]);
 
     await spawnAsync(this.renderCli, [
@@ -83,7 +83,7 @@ class Renderer {
           })
           .then(async () => {
             const artifactData = await fetch(
-              '/${relDataPath}.multi.sir.bin',
+              '/${relDataPath}.multi.sir.in',
             )
               .then(response => response.arrayBuffer())
               .then(buffer => new Uint8Array(buffer));

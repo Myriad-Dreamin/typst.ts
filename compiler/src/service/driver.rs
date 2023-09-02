@@ -198,7 +198,7 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
             compiler,
             output,
             enable_dynamic_layout: false,
-            extension: "multi.sir.bin".to_owned(),
+            extension: "multi.sir.in".to_owned(),
             layout_widths: LayoutWidths::from_iter(
                 (0..40)
                     .map(|i| typst::geom::Abs::pt(750.0) - typst::geom::Abs::pt(i as f64 * 10.0)),

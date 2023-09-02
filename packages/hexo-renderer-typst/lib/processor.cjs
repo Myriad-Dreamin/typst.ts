@@ -18,17 +18,18 @@ class Processor {
       return;
     }
 
-    const base_dir = this.hexo.base_dir;
+    // todo: retrieve artifact
+    // const base_dir = this.hexo.base_dir;
 
-    const rawDataPath = data.source.replace(/\.[^/.]+$/, '');
-    const dataPath = path.resolve(base_dir, 'public/artifacts/typst/source', rawDataPath);
+    // const rawDataPath = data.source.replace(/\.[^/.]+$/, '');
+    // const dataPath = path.resolve(base_dir, 'public/artifacts/typst/source', rawDataPath);
 
-    const artifactPath = path.join(dataPath + '.artifact.json');
-    const artifactContent = fs.readFileSync(artifactPath);
-    const artifact = JSON.parse(artifactContent);
-    const title = artifact.title;
+    // const artifactPath = path.join(dataPath + '.artifact.json');
+    // const artifactContent = fs.readFileSync(artifactPath);
+    // const artifact = JSON.parse(artifactContent);
+    // const title = artifact.title;
 
-    data.title = title;
+    data.title = "[title]";
     data.published = true;
 
     return data;

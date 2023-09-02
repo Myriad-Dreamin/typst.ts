@@ -24,22 +24,12 @@
       .then(() => {
         let artifactContent = undefined;
 
-        const getGlyphs = fetch('/typst.ts/docs/readme.glyphs.json')
-          .then(response => response.text())
-          .then(content => JSON.parse(content))
-          .catch(e => {
-            console.log(e);
-            return undefined;
-          });
-
-        fetch('/typst.ts/docs/readme.artifact.json')
+        fetch('/typst.ts/docs/readme.artifact.sir.in')
           .then(response => response.arrayBuffer())
           .then(buffer => new Uint8Array(buffer))
           .then(buffer => {
             artifactContent = buffer;
           })
-          .then(() => getGlyphs)
-          .then(glyphPack => plugin.loadGlyphPack(glyphPack))
           .then(() => {
             const appContainer = document.getElementById('typst-app');
 
