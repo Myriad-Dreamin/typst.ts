@@ -347,6 +347,48 @@ impl GlyphItem {
     }
 }
 
+/// Reference a font item in a more friendly format to compress and store
+/// information. The fonts are locally stored in the svg module.
+/// With a font reference, we can get both the font metric and the font data.
+/// The `font_hash` is to let it safe to be cached.
+/// By estimation, <https://stackoverflow.com/a/29628053/9323228>
+/// If the hash algorithm for `font_hash` is good enough.
+/// When you have about 500 fonts (in windows), the collision rate is about:
+/// ```plain
+/// p(n = 500, d = 2^32) = 1 - exp(-n^2/(2d))
+///   = 1 - exp(-500^2/(2*(2^32))) = 0.0000291034
+/// ```
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub struct FontItem {
+    /// The hash of the font to avoid global collision.
+    pub fingerprint: Fingerprint,
+    /// The inlined hash of the font to avoid local collision.
+    pub hash: u32,
+
+    pub family: ImmutStr,
+    pub ascent: Abs,
+    pub descent: Abs,
+    pub vertical: bool,
+}
+
+impl From<Font> for FontItem {
+    fn from(font: Font) -> Self {
+        let hash = fxhash::hash32(&font);
+        let fingerprint = Fingerprint::from_u128(item_hash128(&font));
+
+        Self {
+            fingerprint,
+            hash,
+            family: font.info().family.clone().into(),
+            ascent: Scalar(font.metrics().ascender.get() as f32),
+            descent: Scalar(font.metrics().descender.get() as f32),
+            vertical: false, // todo: check vertical
+        }
+    }
+}
+
 /// The shape metadata of a [`TextItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
@@ -401,26 +443,54 @@ pub enum StyleNs {
     Fill,
 }
 
+/// A finished pack that stores all the font items.
+pub type FontPack = Vec<FontItem>;
+
 /// A finished pack that stores all the glyph items.
 pub type GlyphPack = Vec<(DefId, GlyphItem)>;
 
-#[derive(Default, Clone)]
-pub struct GlyphPackBuilder {
+#[derive(Clone)]
+pub struct GlyphPackBuilderImpl<const ENABLE_REF_CNT: bool = false> {
     /// Intermediate representation of an incompleted font pack.
     font_mapping: HashMap<Font, FontRef>,
 
     /// Intermediate representation of an incompleted glyph pack.
     glyph_defs: HashMap<GlyphItem, (GlyphRef, FontRef)>,
+
+    pub lifetime: u64,
+    pub incr_fonts: Vec<u64>,
+    pub incr_glyphs: Vec<u64>,
 }
 
-impl GlyphPackBuilder {
-    pub fn finalize(&self) -> GlyphPack {
+pub type GlyphPackBuilder = GlyphPackBuilderImpl</* ENABLE_REF_CNT */ false>;
+pub type IncrGlyphPackBuilder = GlyphPackBuilderImpl</* ENABLE_REF_CNT */ true>;
+
+impl<const ENABLE_REF_CNT: bool> Default for GlyphPackBuilderImpl<ENABLE_REF_CNT> {
+    fn default() -> Self {
+        Self {
+            lifetime: 0,
+            font_mapping: Default::default(),
+            glyph_defs: Default::default(),
+            incr_fonts: Default::default(),
+            incr_glyphs: Default::default(),
+        }
+    }
+}
+
+impl<const ENABLE_REF_CNT: bool> GlyphPackBuilderImpl<ENABLE_REF_CNT> {
+    pub fn finalize(&self) -> (FontPack, GlyphPack) {
+        let mut fonts = self.font_mapping.clone().into_iter().collect::<Vec<_>>();
+        fonts.sort_by(|(_, a), (_, b)| a.idx.cmp(&b.idx));
+        let fonts = fonts.into_iter().map(|(a, _)| a.into()).collect();
+
         let mut glyphs = self.glyph_defs.clone().into_iter().collect::<Vec<_>>();
         glyphs.sort_by(|(_, a), (_, b)| a.0.glyph_idx.cmp(&b.0.glyph_idx));
-        glyphs
+        let glyphs = glyphs
             .into_iter()
             .map(|(a, b)| (DefId(b.1.idx as u64), a))
-            .collect()
+            .collect();
+
+        (fonts, glyphs)
     }
 
     fn build_font(&mut self, font: &Font) -> FontRef {
@@ -433,12 +503,15 @@ impl GlyphPackBuilder {
             idx: self.font_mapping.len() as u32,
         };
         self.font_mapping.insert(font.clone(), id.clone());
+        if ENABLE_REF_CNT {
+            self.incr_fonts.push(self.lifetime);
+        }
         id
     }
 
-    pub fn build_glyph(&mut self, glyph: &GlyphItem) -> (GlyphRef, /* inserted */ bool) {
+    pub fn build_glyph(&mut self, glyph: &GlyphItem) -> GlyphRef {
         if let Some(id) = self.glyph_defs.get(glyph) {
-            return (id.0.clone(), false);
+            return id.0.clone();
         }
 
         let g = match glyph {
@@ -456,7 +529,33 @@ impl GlyphPackBuilder {
         };
         self.glyph_defs
             .insert(glyph.clone(), (abs_ref.clone(), font_ref));
-        (abs_ref, true)
+        if ENABLE_REF_CNT {
+            self.incr_glyphs.push(self.lifetime);
+        }
+        abs_ref
+    }
+}
+
+impl IncrGlyphPackBuilder {
+    pub fn finalize_delta(&self) -> (FontPack, GlyphPack) {
+        let fonts = self.font_mapping.iter();
+        let fonts = fonts.filter(|e| self.incr_fonts[e.1.idx as usize] == self.lifetime);
+        let mut fonts = fonts.map(|(x, y)| (y.idx, x.clone())).collect::<Vec<_>>();
+        // order is important
+        fonts.sort_by(|(a, _), (b, _)| a.cmp(b));
+        let fonts = fonts.into_iter().map(|(_, a)| a.into()).collect();
+
+        let glyphs = self.glyph_defs.iter();
+        let glyphs =
+            glyphs.filter(|e| self.incr_glyphs[e.1 .0.glyph_idx as usize] == self.lifetime);
+        let mut glyphs = glyphs
+            .map(|(x, y)| (y.0.glyph_idx, (DefId(y.1.idx as u64), x.clone())))
+            .collect::<Vec<_>>();
+        // order is important
+        glyphs.sort_by(|(a, _), (b, _)| a.cmp(b));
+        let glyphs = glyphs.into_iter().map(|(_, a)| a).collect();
+
+        (fonts, glyphs)
     }
 }
 

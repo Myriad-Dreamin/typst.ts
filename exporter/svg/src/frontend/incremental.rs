@@ -9,9 +9,9 @@ use typst_ts_core::{
     hash::Fingerprint,
     vector::{
         flat_ir::{
-            flatten_glyphs, FlatModule, GlyphPack, IncrModuleBuilder, ItemPack, LayoutRegion,
-            LayoutRegionNode, LayoutSourceMapping, Module, ModuleBuilder, ModuleMetadata,
-            MultiSvgDocument, Page, SourceMappingNode, SvgDocument,
+            flatten_glyphs, FlatModule, FontPack, GlyphPack, IncrModuleBuilder, ItemPack,
+            LayoutRegion, LayoutRegionNode, LayoutSourceMapping, Module, ModuleBuilder,
+            ModuleMetadata, MultiSvgDocument, Page, SourceMappingNode, SvgDocument,
         },
         flat_vm::{FlatIncrRenderVm, FlatRenderVm},
         ir::{Rect, SvgItem},
@@ -204,6 +204,11 @@ impl IncrSvgDocServer {
             gc_items.len()
         );
 
+        let fonts = FontPack {
+            items: delta.fonts,
+            incremental_base: 0, // todo: correct incremental_base
+        };
+
         let glyphs = GlyphPack {
             items: flatten_glyphs(delta.glyphs),
             incremental_base: 0, // todo: correct incremental_base
@@ -218,6 +223,7 @@ impl IncrSvgDocServer {
                 self.page_source_mapping.clone(),
             ))),
             ModuleMetadata::GarbageCollection(gc_items),
+            ModuleMetadata::Font(Arc::new(fonts)),
             ModuleMetadata::Glyph(Arc::new(glyphs)),
             ModuleMetadata::Item(ItemPack(delta.items.clone().into_iter().collect())),
             ModuleMetadata::Layout(pages),
@@ -232,7 +238,9 @@ impl IncrSvgDocServer {
     /// Pack the current entirely into a binary blob.
     pub fn pack_current(&mut self) -> Option<Vec<u8>> {
         let doc = self.doc_view.as_ref()?;
-        let glyphs = flatten_glyphs(self.module_builder.glyphs.finalize());
+
+        let (fonts, glyphs) = self.module_builder.glyphs.finalize();
+        let glyphs = flatten_glyphs(glyphs);
 
         let pages = LayoutRegionNode::new_pages(doc.pages.clone());
         let pages = Arc::new(LayoutRegion::new_single(pages));
@@ -243,6 +251,7 @@ impl IncrSvgDocServer {
                 self.page_source_mapping.clone(),
             ))),
             // todo: correct incremental_base
+            ModuleMetadata::Font(Arc::new(fonts.into())),
             ModuleMetadata::Glyph(Arc::new(glyphs.into())),
             ModuleMetadata::Item(ItemPack(doc.module.items.clone().into_iter().collect())),
             ModuleMetadata::Layout(pages),

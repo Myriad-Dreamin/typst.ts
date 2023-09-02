@@ -169,7 +169,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         t.render_pages_transient(output, pages, &mut svg_body);
 
         // render the glyphs collected from the pages
-        let glyphs = std::mem::take(&mut t.glyph_defs).finalize();
+        let (_, glyphs) = std::mem::take(&mut t.glyph_defs).finalize();
         let glyphs = t.render_glyphs(glyphs.iter().enumerate().map(|(x, (_, y))| (x, y)), false);
 
         // template SVG

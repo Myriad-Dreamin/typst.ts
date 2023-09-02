@@ -39,8 +39,8 @@ use crate::{
 use super::{
     geom::{Abs, Point, Size},
     ir::{
-        DefId, FontRef, GlyphItem, GlyphRef, ImageGlyphItem, ImageItem, ImmutStr, LinkItem,
-        OutlineGlyphItem, PathItem, SpanId, TextShape, TransformItem,
+        DefId, FontItem, FontRef, GlyphItem, GlyphRef, ImageGlyphItem, ImageItem, ImmutStr,
+        LinkItem, OutlineGlyphItem, PathItem, SpanId, TextShape, TransformItem,
     },
 };
 
@@ -88,27 +88,6 @@ pub struct FlatTextItemContent {
     pub glyphs: Arc<[(Abs, Abs, GlyphRef)]>,
 }
 
-/// Reference a glyph item in a more friendly format to compress and store
-/// information. The glyphs are locally stored in the svg module.
-/// With a glyph reference, we can get both the font metric and the glyph data.
-/// The `font_hash` is to let it safe to be cached.
-/// By estimation, <https://stackoverflow.com/a/29628053/9323228>
-/// If the hash algorithm for `font_hash` is good enough.
-/// When you have about 500 fonts (in windows), the collision rate is about:
-/// ```plain
-/// p(n = 500, d = 2^32) = 1 - exp(-n^2/(2d))
-///   = 1 - exp(-500^2/(2*(2^32))) = 0.0000291034
-/// ```
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct FlatFontItem {
-    /// The hash of the font to avoid global collision.
-    pub fingerprint: Fingerprint,
-    /// The inlined hash of the font to avoid local collision.
-    pub hash: u32,
-}
-
 /// The glyph item definition with all of variants of [`GlyphItem`] other than
 /// [`GlyphItem::Raw`], hence it is serializable.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -153,8 +132,17 @@ pub struct ItemPack(pub Vec<(Fingerprint, FlatSvgItem)>);
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct FontPack {
-    pub items: Vec<FlatFontItem>,
+    pub items: Vec<FontItem>,
     pub incremental_base: usize,
+}
+
+impl From<Vec<FontItem>> for FontPack {
+    fn from(items: Vec<FontItem>) -> Self {
+        Self {
+            items,
+            incremental_base: 0,
+        }
+    }
 }
 
 /// Flatten mapping fingerprints to glyph items.
@@ -246,6 +234,7 @@ pub enum ModuleMetadata {
     PageSourceMapping(Arc<LayoutSourceMapping>),
     GarbageCollection(Vec<Fingerprint>),
     Item(ItemPack),
+    Font(Arc<FontPack>),
     Glyph(Arc<GlyphPack>),
     Layout(Arc<LayoutRegion>),
 }
@@ -260,6 +249,7 @@ enum MetaIndices {
     PageSourceMapping,
     GarbageCollection,
     Item,
+    Font,
     Glyph,
     Layout,
     Max,
@@ -358,6 +348,29 @@ impl ModuleStream for &FlatModule {
         // get the item pack
         let m = &self.metadata[*sz];
         if let ModuleMetadata::Layout(v) = m {
+            v.clone()
+        } else {
+            unreachable!()
+        }
+    }
+
+    fn fonts(&self) -> Arc<FontPack> {
+        // cache the index
+        let sz = &self.meta_indices[MetaIndices::Font as usize];
+        let sz = sz.get_or_init(|| {
+            let mut sz = usize::MAX; // will panic if not found
+            for (idx, m) in self.metadata.iter().enumerate() {
+                if let ModuleMetadata::Font(_) = m {
+                    sz = idx;
+                    break;
+                }
+            }
+            sz
+        });
+
+        // get the item pack
+        let m = &self.metadata[*sz];
+        if let ModuleMetadata::Font(v) = m {
             v.clone()
         } else {
             unreachable!()
@@ -469,6 +482,7 @@ pub fn flatten_glyphs(
 pub fn serialize_doc(doc: MultiSvgDocument) -> Vec<u8> {
     let flatten_module = FlatModule::new(vec![
         ModuleMetadata::Item(ItemPack(doc.module.items.into_iter().collect())),
+        ModuleMetadata::Font(Arc::new(doc.module.fonts.into())),
         ModuleMetadata::Glyph(Arc::new(flatten_glyphs(doc.module.glyphs).into())),
         ModuleMetadata::Layout(Arc::new(doc.layouts)),
     ]);

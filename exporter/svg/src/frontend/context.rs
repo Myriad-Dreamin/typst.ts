@@ -84,7 +84,7 @@ impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Fea
 
 impl<'m, 't, Feat: ExportFeature> BuildGlyph for RenderContext<'m, 't, Feat> {
     fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
-        self.glyph_defs.build_glyph(glyph).0
+        self.glyph_defs.build_glyph(glyph)
     }
 }
 

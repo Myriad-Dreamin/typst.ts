@@ -55,6 +55,7 @@ impl DynamicLayoutSvgExporter {
         // let glyphs = GlyphPack::from_iter(v.1);
 
         let module_data = FlatModule::new(vec![
+            // ModuleMetadata::Font(Arc::new(fonts)),
             // ModuleMetadata::Glyph(Arc::new(glyphs)),
             ModuleMetadata::Item(ItemPack(v.items.into_iter().collect())),
         ])

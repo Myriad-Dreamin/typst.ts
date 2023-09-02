@@ -9,13 +9,16 @@ use comemo::Prehashed;
 
 use crate::{
     hash::{Fingerprint, FingerprintBuilder},
-    vector::ir::{AbsoluteRef, BuildGlyph, DefId, GlyphItem, GlyphPackBuilder, GlyphRef, SvgItem},
+    vector::ir::{
+        AbsoluteRef, BuildGlyph, DefId, FontItem, GlyphItem, GlyphPackBuilderImpl, GlyphRef,
+        SvgItem,
+    },
     TakeAs,
 };
 
 use super::{
-    FlatSvgItem, FlatTextItem, FlatTextItemContent, GlyphPack, GroupRef, ItemPack, LayoutRegion,
-    SourceMappingNode, TransformedRef,
+    FlatSvgItem, FlatTextItem, FlatTextItemContent, FontPack, GlyphPack, GroupRef, ItemPack,
+    LayoutRegion, SourceMappingNode, TransformedRef,
 };
 
 pub type ItemMap = BTreeMap<Fingerprint, FlatSvgItem>;
@@ -36,6 +39,7 @@ impl ToItemMap for RefItemMap {
 pub trait ModuleStream {
     fn items(&self) -> ItemPack;
     fn layouts(&self) -> Arc<LayoutRegion>;
+    fn fonts(&self) -> Arc<FontPack>;
     fn glyphs(&self) -> Arc<GlyphPack>;
     fn gc_items(&self) -> Option<Vec<Fingerprint>> {
         // never gc items
@@ -48,6 +52,7 @@ pub trait ModuleStream {
 /// The svg items are flattened and ready to be serialized.
 #[derive(Debug, Default, Clone, Hash)]
 pub struct Module {
+    pub fonts: Vec<FontItem>,
     pub glyphs: Vec<(DefId, GlyphItem)>,
     pub items: ItemMap,
     pub source_mapping: Vec<SourceMappingNode>,
@@ -70,15 +75,17 @@ impl Module {
 
     pub fn merge_delta(&mut self, v: impl ModuleStream) {
         let item_pack: ItemPack = v.items();
-        let glyphs = v.glyphs();
-
+        self.items.extend(item_pack.0);
         if let Some(gc_items) = v.gc_items() {
             for id in gc_items {
                 self.items.remove(&id);
             }
         }
 
-        self.items.extend(item_pack.0);
+        let fonts = v.fonts();
+        self.fonts.extend(fonts.take().items);
+
+        let glyphs = v.glyphs();
         self.glyphs.extend(
             glyphs
                 .take()
@@ -159,7 +166,7 @@ impl Borrow<Module> for FrozenModule {
 
 /// Intermediate representation of a incompleted svg item.
 pub struct ModuleBuilderImpl<const ENABLE_REF_CNT: bool = false> {
-    pub glyphs: GlyphPackBuilder,
+    pub glyphs: GlyphPackBuilderImpl<ENABLE_REF_CNT>,
     pub items: HashMap<Fingerprint, (u64, FlatSvgItem)>,
     pub source_mapping: Vec<SourceMappingNode>,
     pub source_mapping_buffer: Vec<u64>,
@@ -193,11 +200,7 @@ impl<const ENABLE_REF_CNT: bool> Default for ModuleBuilderImpl<ENABLE_REF_CNT> {
 
 impl<const ENABLE_REF_CNT: bool> BuildGlyph for ModuleBuilderImpl<ENABLE_REF_CNT> {
     fn build_glyph(&mut self, glyph: &GlyphItem) -> GlyphRef {
-        let (glyph_ref, inserted) = self.glyphs.build_glyph(glyph);
-        if ENABLE_REF_CNT && inserted {
-            self.incr_glyphs.push(self.lifetime);
-        }
-        glyph_ref
+        self.glyphs.build_glyph(glyph)
     }
 }
 
@@ -208,16 +211,20 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
     }
 
     pub fn finalize_ref(&self) -> Module {
+        let (fonts, glyphs) = self.glyphs.finalize();
         Module {
-            glyphs: self.glyphs.finalize(),
+            fonts,
+            glyphs,
             items: self.items.clone().to_item_map(),
             source_mapping: self.source_mapping.clone(),
         }
     }
 
     pub fn finalize(self) -> Module {
+        let (fonts, glyphs) = self.glyphs.finalize();
         Module {
-            glyphs: self.glyphs.finalize(),
+            fonts,
+            glyphs,
             items: self.items.to_item_map(),
             source_mapping: self.source_mapping,
         }
@@ -328,6 +335,7 @@ impl IncrModuleBuilder {
     /// the retained and new lifetime will be 'l + 1 and 'l + 2, respectively.
     pub fn increment_lifetime(&mut self) {
         self.lifetime += 2;
+        self.glyphs.lifetime = self.lifetime;
     }
 
     /// Perform garbage collection with given threshold.
@@ -352,19 +360,10 @@ impl IncrModuleBuilder {
 
     /// Finalize modules containing new svg items.
     pub fn finalize_delta(&mut self) -> Module {
-        // fliter glyphs by lifetime
-        let glyphs = {
-            // let glyphs = self.glyphs.iter();
-            // let glyphs =
-            //     glyphs.filter(|e| self.incr_glyphs[e.1 .0.glyph_idx as usize] ==
-            // self.lifetime); let glyphs = glyphs.map(|(x, y)| (x.clone(),
-            // y.clone()));
+        // filter glyphs by lifetime
+        let (fonts, glyphs) = self.glyphs.finalize_delta();
 
-            // GlyphPackBuilder::finalize(glyphs)
-            self.glyphs.finalize()
-        };
-
-        // fliter glyphs by lifetime
+        // filter items by lifetime
         let items = {
             let items = self.items.iter();
             let items = items.filter(|(_, e)| e.0 == self.lifetime);
@@ -374,6 +373,7 @@ impl IncrModuleBuilder {
         };
 
         Module {
+            fonts,
             glyphs,
             items,
             source_mapping: self.source_mapping.clone(),
