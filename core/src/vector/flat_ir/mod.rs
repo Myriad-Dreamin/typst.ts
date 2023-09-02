@@ -75,6 +75,7 @@ pub enum FlatSvgItem {
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct FlatTextItem {
+    pub font: FontRef,
     pub content: Arc<FlatTextItemContent>,
     pub shape: Arc<TextShape>,
 }

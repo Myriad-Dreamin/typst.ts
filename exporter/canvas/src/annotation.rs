@@ -1,48 +1,109 @@
-use typst::{doc::Destination, geom::Size};
+use tiny_skia as sk;
+
 use typst_ts_core::{
     annotation::{
-        link::{AnnotationBox, GoToAction, LinkAction, UrlOpenAction},
-        LinkAnnotation,
+        link::{AnnotationBox, LinkAction, UrlOpenAction},
+        AnnotationList, LinkAnnotation,
     },
-    error::prelude::*,
+    hash::Fingerprint,
+    vector::{
+        flat_ir::{FlatSvgItem, GroupRef, Module},
+        ir::{self, SvgItem},
+    },
 };
 
-use crate::{sk, utils::AbsExt, CanvasRenderTask, RenderFeature};
+/// Task to create annotation list with vector IR
+/// The 'm lifetime is the lifetime of the module which stores the frame data.
+pub struct AnnotationListTask<'m, 't> {
+    pub module: &'m Module,
 
-impl<'a, Feat: RenderFeature> CanvasRenderTask<'a, Feat> {
-    /// Render a semantic link
-    pub(crate) fn render_link(
-        &mut self,
-        ts: sk::Transform,
-        sz: &Size,
-        dest: &Destination,
-    ) -> ZResult<()> {
-        // adapt scale for pdf.js
-        let ts = ts.post_scale(1. / self.pixel_per_pt, 1. / self.pixel_per_pt);
+    pub page_num: u32,
+    pub annotations: &'t mut AnnotationList,
+}
 
+// todo: ugly implementation
+impl<'m, 't> AnnotationListTask<'m, 't> {
+    pub fn new(module: &'m Module, annotations: &'t mut AnnotationList) -> Self {
+        Self {
+            module,
+            page_num: 0,
+            annotations,
+        }
+    }
+
+    pub fn process_item(&mut self, ts: sk::Transform, item: &ir::SvgItem) {
+        match item {
+            SvgItem::Transformed(t) => self.process_item(
+                ts.pre_concat({
+                    let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
+                    t.into()
+                }),
+                &t.1,
+            ),
+            SvgItem::Group(group) => self.process_group(ts, group),
+            SvgItem::Link(link) => self.process_link(ts, link),
+            _ => {}
+        }
+    }
+
+    fn process_group(&mut self, ts: sk::Transform, group: &ir::GroupItem) {
+        for (pos, item) in &group.0 {
+            let ts = ts.pre_translate(pos.x.0, pos.y.0);
+
+            self.process_item(ts, item);
+        }
+    }
+
+    pub fn process_flat_item(&mut self, ts: sk::Transform, item: &Fingerprint) {
+        let item = self.module.get_item(item).unwrap();
+        match item {
+            FlatSvgItem::Item(t) => self.process_flat_item(
+                ts.pre_concat({
+                    let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
+                    t.into()
+                }),
+                &t.1,
+            ),
+            FlatSvgItem::Group(group) => self.process_flat_group(ts, group),
+            FlatSvgItem::Link(link) => self.process_link(ts, link),
+            _ => {}
+        }
+    }
+
+    fn process_flat_group(&mut self, ts: sk::Transform, group: &GroupRef) {
+        for (pos, item) in group.0.as_ref() {
+            let ts = ts.pre_translate(pos.x.0, pos.y.0);
+
+            self.process_flat_item(ts, item);
+        }
+    }
+
+    fn process_link(&mut self, ts: sk::Transform, link: &ir::LinkItem) {
         let annotation_box = AnnotationBox {
-            page_ref: self.page_off as u32,
-            width: sz.x.to_f32(),
-            height: sz.y.to_f32(),
+            page_ref: self.page_num,
+            width: link.size.x.0,
+            height: link.size.y.0,
             transform: [ts.sx, ts.ky, ts.kx, ts.sy, ts.tx, ts.ty],
         };
 
-        let action = match dest {
-            Destination::Url(url) => LinkAction::Url(UrlOpenAction {
-                url: url.to_string(),
-            }),
-            Destination::Position(pos) => LinkAction::GoTo(GoToAction {
-                page_ref: pos.page.get() as u32,
-                x: pos.point.x.to_f32(),
-                y: pos.point.y.to_f32(),
-            }),
-            _ => panic!("Unsupported destination type"),
-        };
+        // let action = match dest {
+        //     Destination::Url(url) => LinkAction::Url(UrlOpenAction {
+        //         url: url.to_string(),
+        //     }),
+        //     Destination::Position(pos) => LinkAction::GoTo(GoToAction {
+        //         page_ref: pos.page.get() as u32,
+        //         x: pos.point.x.to_f32(),
+        //         y: pos.point.y.to_f32(),
+        //     }),
+        //     _ => panic!("Unsupported destination type"),
+        // };
 
         self.annotations.links.push(LinkAnnotation {
             annotation_box,
-            action,
+            // todo: goto action
+            action: LinkAction::Url(UrlOpenAction {
+                url: link.href.as_ref().to_owned(),
+            }),
         });
-        Ok(())
     }
 }

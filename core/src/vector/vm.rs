@@ -45,16 +45,16 @@ pub trait GroupContext<C>: Sized {
     fn render_semantic_text(&mut self, _ctx: &mut C, _text: &ir::TextItem, _width: Scalar) {}
 
     /// Render a glyph into underlying context.
-    fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, item: &ir::GlyphItem);
+    fn render_glyph(&mut self, _ctx: &mut C, _pos: Scalar, _item: &ir::GlyphItem) {}
 
     /// Render a geometrical shape into underlying context.
-    fn render_path(&mut self, ctx: &mut C, path: &ir::PathItem);
+    fn render_path(&mut self, _ctx: &mut C, _path: &ir::PathItem) {}
 
     /// Render a semantic link into underlying context.
     fn render_link(&mut self, _ctx: &mut C, _link: &ir::LinkItem) {}
 
     /// Render an image into underlying context.
-    fn render_image(&mut self, ctx: &mut C, image_item: &ir::ImageItem);
+    fn render_image(&mut self, _ctx: &mut C, _image_item: &ir::ImageItem) {}
 
     fn attach_debug_info(&mut self, _ctx: &mut C, _span_id: u64) {}
 }

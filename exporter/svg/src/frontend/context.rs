@@ -6,8 +6,8 @@ use typst_ts_core::{
         flat_ir::{FlatSvgItem, FlatTextItem, GroupRef, Module},
         flat_vm::{FlatIncrRenderVm, FlatRenderVm},
         ir::{
-            self, BuildGlyph, GlyphHashStablizer, GlyphPackBuilder, GlyphRef, ImmutStr, PathItem,
-            StyleNs,
+            self, BuildGlyph, FontRef, GlyphHashStablizer, GlyphPackBuilder, GlyphRef, ImmutStr,
+            PathItem, StyleNs,
         },
         vm::GroupContext,
         vm::RenderVm,
@@ -83,6 +83,10 @@ impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Fea
 }
 
 impl<'m, 't, Feat: ExportFeature> BuildGlyph for RenderContext<'m, 't, Feat> {
+    fn build_font(&mut self, font: &typst::font::Font) -> FontRef {
+        self.glyph_defs.build_font(font)
+    }
+
     fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
         self.glyph_defs.build_glyph(glyph)
     }

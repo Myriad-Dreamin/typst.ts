@@ -18,7 +18,7 @@ pub trait FlatGroupContext<C>: Sized {
         self.render_item_ref_at(ctx, Point::default(), item);
     }
 
-    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, item: &GlyphRef);
+    fn render_glyph_ref(&mut self, _ctx: &mut C, _pos: Scalar, _item: &GlyphRef) {}
 
     fn render_flat_text_semantics(
         &mut self,
