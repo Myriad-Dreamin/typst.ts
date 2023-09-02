@@ -1,6 +1,8 @@
+#[cfg(feature = "render_canvas")]
 use std::sync::{Arc, Mutex};
 
 use js_sys::Uint8Array;
+#[cfg(feature = "render_canvas")]
 use typst_ts_canvas_exporter::IncrCanvasDocClient;
 use typst_ts_core::error::prelude::*;
 use typst_ts_svg_exporter::ir::Scalar;
@@ -127,6 +129,7 @@ impl PagesInfo {
 pub struct RenderSession {
     pub(crate) pixel_per_pt: f32,
     pub(crate) background_color: String,
+    #[cfg(feature = "render_canvas")]
     pub(crate) client: Arc<Mutex<IncrCanvasDocClient>>,
     pub(crate) pages_info: PagesInfo,
 }
@@ -149,6 +152,7 @@ impl RenderSession {
     }
 }
 
+#[cfg(feature = "render_canvas")]
 impl RenderSession {
     pub fn merge_delta(&mut self, delta: &[u8]) -> ZResult<()> {
         use typst_ts_core::vector::stream::BytesModuleStream;
@@ -236,11 +240,13 @@ impl RenderSessionManager {
 
     pub fn session_from_artifact(
         &self,
-        artifact_content: &[u8],
+        _artifact_content: &[u8],
         decoder: &str,
     ) -> ZResult<RenderSession> {
+        // todo: share session between renderers
+        #[cfg(feature = "render_canvas")]
         if decoder == "vector" {
-            return self.session_from_vector_artifact(artifact_content);
+            return self.session_from_vector_artifact(_artifact_content);
         }
 
         if decoder == "serde_json" || decoder == "js" || decoder == "ir" {
@@ -250,6 +256,7 @@ impl RenderSessionManager {
         Err(error_once!("Renderer.UnsupportedDecoder", decoder: decoder))
     }
 
+    #[cfg(feature = "render_canvas")]
     fn session_from_vector_artifact(&self, artifact_content: &[u8]) -> ZResult<RenderSession> {
         let mut session = RenderSession::default();
         session.merge_delta(artifact_content)?;

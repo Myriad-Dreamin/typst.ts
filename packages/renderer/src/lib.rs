@@ -123,7 +123,7 @@ impl TypstRenderer {
 }
 
 #[cfg(test)]
-// #[cfg(target_arch = "wasm32")]
+#[cfg(target_arch = "wasm32")]
 mod tests {
     use super::{TypstRenderer, TypstRendererBuilder};
     use std::path::PathBuf;
