@@ -1,9 +1,11 @@
+use clap::Parser;
 use log::info;
-use typst_ts_dev_server::{http::run_http, utils::async_continue, CompileOpts, RunSubCommands};
-
 use std::{path::PathBuf, process::exit, sync::Mutex};
 
-use clap::Parser;
+use typst_ts_compiler::service::{CompileExporter, Compiler, DiagObserver, WrappedCompiler};
+use typst_ts_core::path::PathClean;
+use typst_ts_dev_server::{http::run_http, utils::async_continue, CompileOpts, RunSubCommands};
+
 use typst_ts_dev_server::{CompileCorpusArgs, CompileSubCommands, Opts, Subcommands};
 
 static COMPILER_PATH: Mutex<Option<String>> = Mutex::new(None);
@@ -11,6 +13,8 @@ static COMPILER_PATH: Mutex<Option<String>> = Mutex::new(None);
 fn main() {
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Info)
+        .filter_module("typst::", log::LevelFilter::Warn)
+        .filter_module("typst_library::", log::LevelFilter::Warn)
         .try_init();
 
     let opts = Opts::parse();
@@ -92,52 +96,61 @@ fn find_compiler_path(compile_opts: &CompileOpts) {
 }
 
 fn compile_corpus(args: CompileCorpusArgs) {
+    let corpus_path = "fuzzers/corpora";
+
     let mut compile_formats = args.format.clone();
     if compile_formats.is_empty() {
         compile_formats.push("svg".to_owned());
         compile_formats.push("sir".to_owned());
     }
 
-    let compiler_path = COMPILER_PATH.lock().unwrap();
-    let compiler_path = compiler_path.clone().unwrap();
-    info!("compile corpus in {}...", args.name);
+    let compile_args = typst_ts_cli::CompileArgs {
+        compile: typst_ts_cli::CompileOnceArgs {
+            font: typst_ts_cli::FontArgs { paths: vec![] },
+            workspace: ".".to_owned(),
+            entry: "".to_owned(),
+            ..Default::default()
+        },
+        format: compile_formats.clone(),
+        ..Default::default()
+    };
 
-    let corpus_path = "fuzzers/corpora";
+    let driver = typst_ts_cli::compile::create_driver(compile_args.compile.clone());
+
+    let mut driver = CompileExporter::new(driver);
+
+    let mut compile = |cat: String, name: String| {
+        let entry = PathBuf::from(corpus_path).join(cat).join(name).clean();
+
+        let exporter = typst_ts_cli::export::prepare_exporters(&compile_args, &entry);
+        driver.set_exporter(exporter);
+        driver.inner_mut().set_entry_file(entry);
+
+        driver.with_compile_diag::<true, _>(|driver| driver.compile());
+
+        // if status.code().unwrap() != 0 {
+        //     eprintln!("compile corpus failed.");
+        //     exit(status.code().unwrap());
+        // }
+    };
 
     // get all corpus in workspace_path
-    let workspace_path = PathBuf::from(corpus_path).join(&args.name);
 
-    let corpora = std::fs::read_dir(&workspace_path).unwrap();
+    for cat in args.catergories.clone() {
+        info!("compile corpus in {cat}...");
 
-    for corpus in corpora {
-        let corpus_name = corpus.unwrap().file_name();
-        if !corpus_name.to_string_lossy().ends_with(".typ") {
-            continue;
-        }
-        info!("compile corpus: {}", corpus_name.to_string_lossy());
-        let mut cmd = std::process::Command::new(&compiler_path);
-        cmd.arg("compile");
-        cmd.arg("--workspace");
-        cmd.arg(workspace_path.to_str().unwrap());
-        cmd.arg("--entry");
-        let entry_path = PathBuf::from(corpus_path)
-            .join(&args.name)
-            .join(corpus_name);
-        cmd.arg(entry_path.to_str().unwrap());
+        let cat_dir = PathBuf::from(corpus_path).join(&cat);
 
-        for compile_format in &compile_formats {
-            cmd.arg("--format");
-            cmd.arg(compile_format);
-        }
+        let corpora = std::fs::read_dir(&cat_dir).unwrap();
 
-        cmd.stdout(std::process::Stdio::inherit());
-        cmd.stderr(std::process::Stdio::inherit());
+        for corpus in corpora {
+            let corpus_name = corpus.unwrap().file_name();
+            if !corpus_name.to_string_lossy().ends_with(".typ") {
+                continue;
+            }
+            info!("compile corpus: {cat:10} {}", corpus_name.to_string_lossy());
 
-        let status = cmd.status().unwrap();
-
-        if status.code().unwrap() != 0 {
-            eprintln!("compile corpus failed.");
-            exit(status.code().unwrap());
+            compile(cat.clone(), corpus_name.to_string_lossy().to_string());
         }
     }
     exit(0);

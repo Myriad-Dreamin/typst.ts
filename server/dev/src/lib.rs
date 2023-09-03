@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::{Parser, Subcommand};
+use clap::{ArgAction, Parser, Subcommand};
 use typst_ts_core::build_info::VERSION;
 
 pub mod http;
@@ -60,8 +60,8 @@ pub enum CompileSubCommands {
 #[clap(next_help_heading = "Compile Corpus options")]
 pub struct CompileCorpusArgs {
     /// The name of Corpus.
-    #[clap(value_name = "NAME", index = 1)]
-    pub name: String,
+    #[clap(long = "cat", value_name = "CAT", value_delimiter = ',', action = ArgAction::Append)]
+    pub catergories: Vec<String>,
 
     /// Output formats.
     #[clap(long)]

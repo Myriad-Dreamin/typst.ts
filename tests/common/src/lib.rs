@@ -14,3 +14,5 @@ pub fn package_renderer_dir() -> PathBuf {
 
 #[cfg(feature = "web_artifacts")]
 pub mod web_artifact;
+
+pub mod std_artifact;
