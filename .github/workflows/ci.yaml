@@ -35,7 +35,7 @@ jobs:
         run: cargo run --release --bin typst-ts-fontctl
       - name: Prepare assets
         run: |
-          git clone https://github.com/typst/typst fuzzers/typst
+          git clone https://github.com/Myriad-Dreamin/typst fuzzers/typst
           cd fuzzers/typst
           git reset --hard 20a988e48374675f7d0d05c4822cd297a3293f41
           cp -r ./assets/files/ ../../assets/files/
