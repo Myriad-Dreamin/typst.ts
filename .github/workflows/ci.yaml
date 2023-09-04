@@ -42,9 +42,9 @@ jobs:
       - name: Fmt check
         run: cargo fmt --check --all
       - name: Clippy check
-        run: cargo clippy --workspace --all-targets
+        run: cargo clippy --release --workspace --all-targets
       - name: Documentation check
-        run: cargo doc --workspace --no-deps
+        run: cargo doc --release --workspace --no-deps
       - name: Build
         run: |
           cargo build --workspace --release
