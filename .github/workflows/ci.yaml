@@ -51,12 +51,11 @@ jobs:
       - name: Prepare artifacts
         run: |
           cargo run --release --bin typst-ts-dev-server -- compile corpus --cat bugs,layout,lint,math,meta,text,visualize
-      # todo: recover ci test
-      # - name: Test
-      #   run: cargo test --workspace --no-fail-fast
-      # - name: Archive Test Results (WebAssembly Renderer in Chrome)
-      #   if: always()
-      #   uses: actions/upload-artifact@v2
-      #   with:
-      #     name: wasm-renderer-chrome.test_points.json.gz
-      #     path: target/typst-artifacts/integrations/renderer/test_points.chrome.json.gz
+      - name: Test
+        run: cargo test --release --workspace --no-fail-fast
+      - name: Archive Test Results (WebAssembly Renderer in Chrome)
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: wasm-renderer-chrome.test_points.json.gz
+          path: target/typst-artifacts/integrations/renderer/test_points.chrome.json.gz

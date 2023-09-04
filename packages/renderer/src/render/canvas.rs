@@ -147,6 +147,7 @@ mod tests {
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
     use typst_ts_canvas_exporter::ExportFeature;
+    // use typst_ts_test_common::std_artifact::STD_TEST_FILES;
     use typst_ts_test_common::web_artifact::get_corpus;
     use wasm_bindgen::JsCast;
     use wasm_bindgen_test::*;
@@ -329,58 +330,75 @@ mod tests {
 
     make_test_point!(
         test_render_layout_clip,
-        "layout/clip_1",
-        "layout/clip_2",
-        "layout/clip_3",
-        "layout/clip_4",
+        "layout/clip_00",
+        "layout/clip_01",
+        "layout/clip_02",
+        "layout/clip_03",
     );
     make_test_point!(
         test_render_layout_list_marker,
-        "layout/list_marker_1",
-        "layout/list_marker_2",
-        "layout/list_marker_3",
-        "layout/list_marker_4",
+        "layout/list-marker_00",
+        "layout/list-marker_01",
+        "layout/list-marker_02",
+        "layout/list-marker_03",
+        "layout/list-marker_04",
     );
     make_test_point!(
         test_render_layout_transform,
-        "layout/transform_1",
-        "layout/transform_2",
-        "layout/transform_3",
-        "layout/transform_4",
+        "layout/transform_00",
+        "layout/transform_01",
+        "layout/transform_02",
+        "layout/transform_03",
     );
 
     make_test_point!(
         test_render_visual_line,
-        "visualize/line_1",
-        "visualize/line_2"
+        "visualize/line_00",
+        "visualize/line_01",
+        "visualize/line_02",
+        "visualize/line_03"
     );
 
-    make_test_point!(test_render_visualize_path, "visualize/path_1");
-    make_test_point!(test_render_visualize_polygon, "visualize/polygon_1");
+    make_test_point!(
+        test_render_visualize_path,
+        "visualize/path_00",
+        "visualize/path_01",
+        "visualize/path_02",
+        "visualize/path_03"
+    );
+    make_test_point!(
+        test_render_visualize_polygon,
+        "visualize/polygon_00",
+        "visualize/polygon_01"
+    );
     make_test_point!(
         test_render_visualize_shape_aspect,
-        "visualize/shape_aspect_1",
-        "visualize/shape_aspect_2",
-        "visualize/shape_aspect_3",
-        "visualize/shape_aspect_4",
-        "visualize/shape_aspect_5",
-        "visualize/shape_aspect_6",
+        "visualize/shape-aspect_00",
+        "visualize/shape-aspect_01",
+        "visualize/shape-aspect_02",
+        "visualize/shape-aspect_03",
+        "visualize/shape-aspect_04",
+        "visualize/shape-aspect_05",
+        "visualize/shape-aspect_06",
     );
     make_test_point!(
         test_render_visualize_shape_circle,
-        "visualize/shape_circle_1",
-        "visualize/shape_circle_2",
-        "visualize/shape_circle_3",
-        "visualize/shape_circle_4",
+        "visualize/shape-circle_00",
+        "visualize/shape-circle_01",
+        "visualize/shape-circle_02",
+        "visualize/shape-circle_03",
+        "visualize/shape-circle_04",
     );
     make_test_point!(
         test_render_visualize_stroke,
-        "visualize/stroke_1",
-        "visualize/stroke_2",
-        "visualize/stroke_3",
-        "visualize/stroke_4",
-        "visualize/stroke_5",
-        "visualize/stroke_6",
+        "visualize/stroke_00",
+        "visualize/stroke_01",
+        "visualize/stroke_02",
+        "visualize/stroke_03",
+        "visualize/stroke_04",
+        "visualize/stroke_05",
+        "visualize/stroke_06",
+        "visualize/stroke_07",
     );
 
     // todo: This will use font from local machine, which is unstable
@@ -391,14 +409,14 @@ mod tests {
 
     make_test_point!(
         test_render_text_deco,
-        "text/deco_1",
-        "text/deco_2",
-        "text/deco_3"
+        "text/deco_00",
+        "text/deco_01",
+        "text/deco_02"
     );
 
     make_test_point!(
         test_render_text_emoji,
-        // "text/emoji_1",
-        "text/emoji_2"
+        // "text/emoji_00",
+        "text/emoji_01"
     );
 }
