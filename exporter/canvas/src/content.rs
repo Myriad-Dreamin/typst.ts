@@ -261,11 +261,12 @@ impl<'m, 't> TextContentTask<'m, 't> {
                 font_family: font_item.family.as_ref().to_owned(),
                 ascent: font_item.ascender.0,
                 descent: font_item.descender.0,
-                vertical: false, // todo: check vertical
+                vertical: font_item.vertical,
             });
         font_ref
     }
 
+    // todo: unify with append_flat_text_font
     fn append_text_font(&mut self, font: &typst::font::Font) -> u32 {
         if let Some(&font) = self.font_map.get(font.info()) {
             return font;
@@ -283,7 +284,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
                 font_family: font.info().family.clone(),
                 ascent: font.metrics().ascender.get() as f32,
                 descent: font.metrics().descender.get() as f32,
-                vertical: false, // todo: check vertical
+                vertical: false,
             });
         font_ref
     }

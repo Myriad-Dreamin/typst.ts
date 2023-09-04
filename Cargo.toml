@@ -34,6 +34,7 @@ members = [
     "tests/common",
     "tests/heap-profile",
     "tests/integration",
+    "tests/std",
 ]
 
 [profile.release]
@@ -66,20 +67,21 @@ chrono = { version = "0.4.24", default-features = false, features = [
     "clock",
     "std",
 ] }
+futures = "0.3.28"
 once_cell = "1.17.1"
 parking_lot = "0.12.1"
-futures = "0.3.28"
 pollster = "0.3.0"
+rayon = "1.7.0"
 tokio = { version = "1.28.1", features = ["full"] }
 
 # data structure and algorithm
 append-only-vec = "0.1.2"
 comemo = "0.3"
 dissimilar = "1.0"
-indexmap = "2.0.0"
 elsa = "1.8.1"
 ecow = "0.1"
 fst = "0.4.7"
+indexmap = "2.0.0"
 pathdiff = "0.2.1"
 
 # cli
@@ -121,9 +123,9 @@ serde = { version = ">= 1.0.126, <= 1.0.171" }
 serde_json = "1.0.96"
 serde-wasm-bindgen = "^0.5"
 sha2 = "0.10.6"
+siphasher = "0.3.10"
 tar = "0.4"
 toml = "0.7.5"
-siphasher = "0.3.10"
 xmlparser = "0.13.5"
 
 # logging and tracing
@@ -139,8 +141,8 @@ insta = "1.29.0"
 # misc
 codespan-reporting = "0.11"
 human-panic = "1.1.4"
-vergen = { version = "7.5.1", features = ["build", "cargo", "git", "rustc"] }
 path-clean = "1.0.1"
+vergen = { version = "7.5.1", features = ["build", "cargo", "git", "rustc"] }
 
 # project core
 typst-ts-core = "0.4.0-rc1"
@@ -157,6 +159,7 @@ typst-ts-svg-exporter = "0.4.0-rc1"
 
 # project common components
 typst-ts-dev-server = { version = "0.4.0-rc1", path = "server/dev" }
+typst-ts-cli = { version = "0.4.0-rc1", path = "cli" }
 
 [patch.crates-io]
 typst-ts-core = { path = "core" }

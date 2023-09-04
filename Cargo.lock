@@ -4277,6 +4277,8 @@ dependencies = [
  "log",
  "once_cell",
  "tokio",
+ "typst-ts-cli",
+ "typst-ts-compiler",
  "typst-ts-core",
  "warp",
 ]
@@ -4432,6 +4434,15 @@ dependencies = [
  "serde_json",
  "typst",
  "typst-ts-core",
+]
+
+[[package]]
+name = "typst-ts-std-test"
+version = "0.4.0-rc2"
+dependencies = [
+ "anyhow",
+ "rayon",
+ "walkdir",
 ]
 
 [[package]]
