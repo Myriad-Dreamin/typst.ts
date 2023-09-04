@@ -535,7 +535,7 @@ fn render_path(path: &ir::PathItem) -> SvgText {
                 p.push(format!(r#"stroke-miterlimit="{}" "#, limit.0));
             }
             PathStyle::StrokeDashArray(array) => {
-                p.push(r#"stroke-dasharray="#.to_owned());
+                p.push(r#"stroke-dasharray=""#.to_owned());
                 for (i, v) in array.iter().enumerate() {
                     if i > 0 {
                         p.push(" ".to_owned());
