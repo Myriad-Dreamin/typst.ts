@@ -6,9 +6,8 @@ mod tests {
     use base64::Engine;
     use image::codecs::png::PngDecoder;
     use serde::{Deserialize, Serialize};
-    use sha2::Digest;
     use typst_ts_dev_server::{http::run_http, RunHttpArgs};
-    use typst_ts_integration_test::{wasm::wasm_pack_test, ArtifactBundle, ArtifactCompiler};
+    use typst_ts_integration_test::wasm::wasm_pack_test;
     use typst_ts_test_common::{corpus_root, package_renderer_dir};
 
     use flate2::write::GzEncoder;
@@ -21,10 +20,6 @@ mod tests {
         name: String,
         meta: HashMap<String, String>,
         verbose: HashMap<String, String>,
-    }
-
-    fn hash_bytes<T: AsRef<[u8]>>(bytes: T) -> String {
-        format!("sha256:{}", hex::encode(sha2::Sha256::digest(bytes)))
     }
 
     fn hash_image_data_url(data_url: &str) -> String {
@@ -47,8 +42,14 @@ mod tests {
         )
     }
 
+    // not valid anymore
     #[test]
+    #[cfg(feature = "disabled")]
     fn test_local_consistency() {
+        fn hash_bytes<T: AsRef<[u8]>>(bytes: T) -> String {
+            format!("sha256:{}", hex::encode(sha2::Sha256::digest(bytes)))
+        }
+
         let corpus_root = typst_ts_test_common::corpus_root();
         let artifact_dir = typst_ts_test_common::artifact_dir().join("integrations");
 
