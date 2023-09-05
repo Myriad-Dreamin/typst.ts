@@ -1,4 +1,8 @@
-FROM rust:1.70.0-bullseye AS build
+
+# Minimum version of Rust compiler: 1.70.0
+ARG RUST_VERSION=1.72.0
+
+FROM rust:${RUST_VERSION}-bullseye AS build
 ADD . /app
 WORKDIR /app
 ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
