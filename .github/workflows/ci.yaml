@@ -47,7 +47,8 @@ jobs:
         run: cargo doc --release --workspace --no-deps
       - name: Build
         run: |
-          cargo build --workspace --release
+          cargo build --release --bin typst-ts-cli
+          cargo build --release --bin typst-ts-dev-server
       - name: Prepare artifacts
         run: |
           cargo run --release --bin typst-ts-dev-server -- compile corpus --cat bugs,layout,lint,math,meta,text,visualize
