@@ -40,10 +40,18 @@ members = [
 [profile.release]
 opt-level = 3
 debug = true
+incremental = true
 lto = "thin"
 
 [profile.release-stripped]
 inherits = "release"
+lto = "fat"
+debug = false
+strip = true
+
+[profile.release-ci]
+inherits = "release"
+opt-level = 1
 debug = false
 strip = true
 

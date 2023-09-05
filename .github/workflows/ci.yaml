@@ -3,6 +3,7 @@ on: [push, pull_request]
 
 env:
   RUSTFLAGS: '-Dwarnings'
+  CARGO_INCREMENTAL: '0'
 
 jobs:
   ci:
@@ -32,7 +33,7 @@ jobs:
       - name: Install Artifact Cache
         uses: Swatinem/rust-cache@v2
       - name: Prepare fonts
-        run: cargo run --release --bin typst-ts-fontctl
+        run: cargo run --profile release-ci --bin typst-ts-fontctl
       - name: Prepare assets
         run: |
           git clone https://github.com/Myriad-Dreamin/typst fuzzers/typst
@@ -42,18 +43,18 @@ jobs:
       - name: Fmt check
         run: cargo fmt --check --all
       - name: Clippy check
-        run: cargo clippy --release --workspace --all-targets
+        run: cargo clippy --profile release-ci --workspace --all-targets
       - name: Documentation check
-        run: cargo doc --release --workspace --no-deps
+        run: cargo doc --profile release-ci --workspace --no-deps
       - name: Build
         run: |
-          cargo build --release --bin typst-ts-cli
-          cargo build --release --bin typst-ts-dev-server
+          cargo build --profile release-ci --bin typst-ts-cli
+          cargo build --profile release-ci --bin typst-ts-dev-server
       - name: Prepare artifacts
         run: |
-          cargo run --release --bin typst-ts-dev-server -- compile corpus --cat bugs,layout,lint,math,meta,text,visualize
+          cargo run --profile release-ci --bin typst-ts-dev-server -- compile corpus --cat bugs,layout,lint,math,meta,text,visualize
       - name: Test
-        run: cargo test --release --workspace --no-fail-fast
+        run: cargo test --profile release-ci --workspace --no-fail-fast
       - name: Archive Test Results (WebAssembly Renderer in Chrome)
         if: always()
         uses: actions/upload-artifact@v2
