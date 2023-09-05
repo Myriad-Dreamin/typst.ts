@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use super::ir::{self, Abs, Axes, Point, Ratio, Scalar, SvgItem};
 
 /// A build pattern for applying transforms to the group of items.
@@ -79,7 +77,7 @@ pub trait RenderVm: Sized {
 
     /// Render an item into underlying context.
     fn render_item(&mut self, item: &SvgItem) -> Self::Resultant {
-        match item.deref() {
+        match &item {
             ir::SvgItem::Group(group) => self.render_group(group),
             ir::SvgItem::Transformed(transformed) => self.render_transformed(transformed),
             ir::SvgItem::Text(text) => self.render_text(text),

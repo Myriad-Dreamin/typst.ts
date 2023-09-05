@@ -174,11 +174,7 @@ impl TypstRenderer {
         })
     }
 
-    pub fn render_svg(
-        &self,
-        session: &mut SvgSession,
-        root: web_sys::HtmlDivElement,
-    ) -> ZResult<()> {
+    pub fn render_svg(&self, session: &SvgSession, root: web_sys::HtmlDivElement) -> ZResult<()> {
         type UsingExporter = SvgExporter<DefaultExportFeature>;
         let layouts = session.client.doc.layouts.by_scalar().unwrap();
         let layout = layouts.first().unwrap();

@@ -1,6 +1,5 @@
 use std::collections::hash_map::RandomState;
 use std::collections::{BTreeMap, HashSet};
-use std::ops::Deref;
 
 use crate::hash::Fingerprint;
 
@@ -65,7 +64,7 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
     /// Default implemenetion to render an item into the a `<g/>` element.
     fn _render_flat_item(&mut self, abs_ref: &Fingerprint) -> Self::Resultant {
         let item: &'m ir::FlatSvgItem = self.get_item(abs_ref).unwrap();
-        match item.deref() {
+        match &item {
             ir::FlatSvgItem::Group(group) => self.render_group_ref(abs_ref, group),
             ir::FlatSvgItem::Item(transformed) => self.render_transformed_ref(abs_ref, transformed),
             ir::FlatSvgItem::Text(text) => self.render_flat_text(abs_ref, text),
@@ -190,7 +189,7 @@ where
 
         let mut group_ctx = self.start_flat_group(next_abs_ref);
 
-        match next_item.deref() {
+        match &next_item {
             ir::FlatSvgItem::Group(group) => {
                 let mut group_ctx = group_ctx
                     .with_reuse(self, prev_abs_ref)

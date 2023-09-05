@@ -172,8 +172,7 @@ impl RenderSession {
 
         let pages_info = PagesInfo {
             pages: {
-                let mut pages = Vec::new();
-                pages.reserve(client.elements.pages.len());
+                let mut pages = Vec::with_capacity(client.elements.pages.len());
                 for (i, (_, size)) in client.elements.pages.iter().enumerate() {
                     pages.push(PageInfo {
                         page_off: i,
