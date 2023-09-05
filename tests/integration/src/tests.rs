@@ -834,11 +834,10 @@ mod tests {
         data_content_phash: "phash-gradient:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
         "###);
-        // todo: does not respect stroke
         check_canvas_render_test_point!(@r###"
         ---
         name: visualize_stroke_07_artifact_ir
-        data_content_phash: "phash-gradient:AAAAEAAAIAAAXAAAVAAAHAAAWAAAWAAAEgAA2AAAGAAAoAUAmAEAAAAAgAAAmgAAmAAAZAMArAsArAsAZBMAAAAAABoACBgA"
+        data_content_phash: "phash-gradient:AAAAAAAAAAAAAAAACAAAIAAAWAAAWAAAAAAAWAAAGAAAAAAACAAAAAAAgAAAmgAAmAAAJAAAmgAAmAAAJAAAkAAAAAAAAAAA"
         text_content_hash: "sha256:aef9ee65873105011bd50fd5fa6397394955a7b58273209100345c7c8b091791"
         "###);
 

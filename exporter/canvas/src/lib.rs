@@ -140,6 +140,7 @@ impl CanvasElem for CanvasPathElem {
         let mut fill = false;
         let mut stroke_color = "none".into();
         let mut stroke = false;
+        let mut stroke_width = 0.;
 
         for style in &self.path_data.styles {
             match style {
@@ -153,6 +154,7 @@ impl CanvasElem for CanvasPathElem {
                 }
                 PathStyle::StrokeWidth(width) => {
                     canvas.set_line_width(width.0 as f64);
+                    stroke_width = width.0;
                 }
                 PathStyle::StrokeLineCap(cap) => {
                     canvas.set_line_cap(cap);
@@ -180,7 +182,7 @@ impl CanvasElem for CanvasPathElem {
             canvas.fill_with_path_2d(&Path2d::new_with_path_string(&self.path_data.d).unwrap());
         }
 
-        if stroke {
+        if stroke && stroke_width.abs() > 1e-5 {
             canvas.set_stroke_style(&stroke_color.as_ref().into());
             canvas.stroke_with_path(&Path2d::new_with_path_string(&self.path_data.d).unwrap());
         }
