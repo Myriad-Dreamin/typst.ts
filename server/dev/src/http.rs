@@ -4,6 +4,7 @@ use warp::Filter;
 
 use crate::RunHttpArgs;
 
+/// See: <https://fasterthanli.me/articles/why-is-my-rust-build-so-slow>
 pub async fn run_http(args: RunHttpArgs) {
     use warp::http::Method;
 
@@ -14,18 +15,26 @@ pub async fn run_http(args: RunHttpArgs) {
     let http_addr: SocketAddr = http_addr.parse().unwrap();
 
     let root = (warp::path::end().or(warp::path("index.html")))
-        .map(|_| warp::redirect(warp::http::Uri::from_static("/core/index.html")));
-    let corpora = warp::path("corpus").and(warp::fs::dir(args.corpus));
-    let assets = warp::path("assets").and(warp::fs::dir("assets"));
-    let core = warp::path("core").and(warp::fs::dir("packages/typst.ts"));
-    let base = warp::path("base").and(warp::fs::dir(""));
+        .map(|_| warp::redirect(warp::http::Uri::from_static("/core/index.html")))
+        .boxed();
+    let corpora = warp::path("corpus").and(warp::fs::dir(args.corpus)).boxed();
+    let assets = warp::path("assets").and(warp::fs::dir("assets")).boxed();
+    let core = warp::path("core")
+        .and(warp::fs::dir("packages/typst.ts"))
+        .boxed();
+    let base = warp::path("base").and(warp::fs::dir("")).boxed();
 
     // map these files to the root of the github-pages server
     let gh_pages = warp::path("typst.ts").and({
-        let renderer = warp::path("renderer").and(warp::fs::dir("packages/renderer/pkg"));
-        let compiler = warp::path("compiler").and(warp::fs::dir("packages/compiler/pkg"));
+        let renderer = warp::path("renderer")
+            .and(warp::fs::dir("packages/renderer/pkg"))
+            .boxed();
+        let compiler = warp::path("compiler")
+            .and(warp::fs::dir("packages/compiler/pkg"))
+            .boxed();
         let typst_main = warp::path("typst-main.js")
-            .and(warp::fs::file("packages/typst.ts/dist/esm/main.bundle.js"));
+            .and(warp::fs::file("packages/typst.ts/dist/esm/main.bundle.js"))
+            .boxed();
 
         renderer
             .or(compiler)
