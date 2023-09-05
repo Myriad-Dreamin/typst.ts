@@ -1,14 +1,12 @@
 use clap::Parser;
 use log::info;
-use std::{path::PathBuf, process::exit, sync::Mutex};
+use std::{path::PathBuf, process::exit};
 
 use typst_ts_compiler::service::{CompileExporter, Compiler, DiagObserver, WrappedCompiler};
 use typst_ts_core::path::PathClean;
-use typst_ts_dev_server::{http::run_http, utils::async_continue, CompileOpts, RunSubCommands};
+use typst_ts_dev_server::{http::run_http, utils::async_continue, RunSubCommands};
 
 use typst_ts_dev_server::{CompileCorpusArgs, CompileSubCommands, Opts, Subcommands};
-
-static COMPILER_PATH: Mutex<Option<String>> = Mutex::new(None);
 
 fn main() {
     let _ = env_logger::builder()
@@ -20,12 +18,9 @@ fn main() {
     let opts = Opts::parse();
 
     match opts.sub {
-        Subcommands::Compile(compile_opts) => {
-            find_compiler_path(&compile_opts);
-            match compile_opts.sub {
-                CompileSubCommands::Corpus(args) => compile_corpus(args),
-            }
-        }
+        Subcommands::Compile(compile_opts) => match compile_opts.sub {
+            CompileSubCommands::Corpus(args) => compile_corpus(args),
+        },
         Subcommands::Run(run_sub) => match run_sub {
             RunSubCommands::Http(args) => async_continue(async move {
                 run_http(args).await;
@@ -38,61 +33,6 @@ fn main() {
     {
         unreachable!("The subcommand must exit the process.");
     }
-}
-
-fn find_program_path(dir: &str, program: &str) -> Option<String> {
-    let program = PathBuf::from(dir).join(program);
-    if program.exists() {
-        return Some(program.to_str().unwrap().to_string());
-    } else if program.with_extension("exe").exists() {
-        return Some(program.with_extension("exe").to_str().unwrap().to_string());
-    }
-    None
-}
-
-fn find_compiler_path(compile_opts: &CompileOpts) {
-    const COMPILER_NAME: &str = "typst-ts-cli";
-
-    let mut compiler_path = COMPILER_PATH.lock().unwrap();
-
-    if !compile_opts.compiler.is_empty() {
-        let compiler = compile_opts.compiler.clone();
-        match compiler.as_str() {
-            "debug" => {
-                *compiler_path = find_program_path("target/debug", COMPILER_NAME);
-            }
-            "release" => {
-                *compiler_path = find_program_path("target/release", COMPILER_NAME);
-            }
-            _ => {
-                let path = PathBuf::from(&compiler);
-                *compiler_path = find_program_path(
-                    path.parent().unwrap().to_str().unwrap(),
-                    path.file_name().unwrap().to_str().unwrap(),
-                );
-            }
-        }
-    } else {
-        if compiler_path.is_none() {
-            *compiler_path = find_program_path(".", COMPILER_NAME);
-        }
-
-        if compiler_path.is_none() {
-            *compiler_path = find_program_path("target/debug", COMPILER_NAME);
-        }
-
-        if compiler_path.is_none() {
-            *compiler_path = find_program_path("target/release", COMPILER_NAME);
-        }
-    }
-
-    if compiler_path.is_none() {
-        eprintln!(
-            "Cannot find typst-ts-cli in current directory, target/debug, or target/release."
-        );
-        exit(1);
-    }
-    info!("using compiler path: {}", compiler_path.clone().unwrap());
 }
 
 fn compile_corpus(args: CompileCorpusArgs) {
