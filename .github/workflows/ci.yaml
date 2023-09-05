@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Download Repo
         uses: actions/checkout@v3
+      - name: Install Mold
+        uses: rui314/setup-mold@v1
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       # https://github.com/Renumics/spotlight/blob/main/.github/workflows/ci.yml
