@@ -1,6 +1,8 @@
 name: typst_ts::release::gh_pages
 
 env:
+  SCCACHE_GHA_ENABLED: 'true'
+  RUSTC_WRAPPER: 'sccache'
   CARGO_INCREMENTAL: '0'
 
 on:
@@ -44,8 +46,8 @@ jobs:
           node-version: 18.x
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
-      - name: Install Artifact Cache
-        uses: Swatinem/rust-cache@v2
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
       - name: Prepare fonts
         run: cargo run --profile release-ci --bin typst-ts-fontctl
       - name: Build
