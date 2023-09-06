@@ -283,12 +283,41 @@ mod tests {
             (end - start, perf_events, data_content_hash, artifact)
         };
 
+        let div = window
+            .document()
+            .unwrap()
+            .create_element("div")
+            .unwrap()
+            .dyn_into::<web_sys::HtmlElement>()
+            .unwrap();
+
+        div.set_attribute("style", "display block; border: 1px solid #000;")
+            .unwrap();
+
+        let title = window
+            .document()
+            .unwrap()
+            .create_element("div")
+            .unwrap()
+            .dyn_into::<web_sys::HtmlElement>()
+            .unwrap();
+
+        title.set_inner_html(&format!(
+            "{point} => {data_content_hash} {time_used:.3}ms",
+            point = point,
+            data_content_hash = data_content_hash,
+            time_used = time_used,
+        ));
+
+        div.append_child(&title).unwrap();
+        div.append_child(&canvas).unwrap();
+
         window
             .document()
             .unwrap()
             .body()
             .unwrap()
-            .append_child(&canvas)
+            .append_child(&div)
             .unwrap();
 
         let perf_events = perf_events
