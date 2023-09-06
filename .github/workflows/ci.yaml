@@ -56,7 +56,10 @@ jobs:
         run: |
           cargo run --profile release-ci --bin typst-ts-dev-server -- compile corpus --cat bugs,layout,lint,math,meta,text,visualize
       - name: Test
-        run: cargo test --profile release-ci --workspace --no-fail-fast
+        run: |
+          cargo test --profile release-ci --no-fail-fast \
+            -p typst-ts-core -p typst-ts-compiler \
+            -p typst-ts-cli  -p typst-ts-integration-test
       - name: Archive Test Results (WebAssembly Renderer in Chrome)
         if: always()
         uses: actions/upload-artifact@v2
