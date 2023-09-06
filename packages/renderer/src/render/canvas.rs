@@ -85,12 +85,12 @@ impl TypstRenderer {
             client.render_in_window(canvas, rect).await;
         }
 
-        let mut worker = TextContentTask::new(&client.doc.module, &mut tc);
+        // todo: leaking abstraction
+        let mut worker = TextContentTask::new(&client.kern.doc.module, &mut tc);
         let mut annotation_list_worker =
-            AnnotationListTask::new(&client.doc.module, &mut annotations);
+            AnnotationListTask::new(&client.kern.doc.module, &mut annotations);
         // todo: reuse
-        if !client.doc.layouts.is_empty() {
-            let t = &client.doc.layouts[0]; // todo: multiple layout
+        if let Some(t) = &client.kern.layout {
             let pages = match t {
                 LayoutRegionNode::Pages(a) => {
                     let (_, pages) = a.deref();

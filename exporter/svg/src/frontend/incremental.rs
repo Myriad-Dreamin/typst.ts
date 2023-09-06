@@ -14,10 +14,10 @@ use typst_ts_core::{
             ModuleMetadata, MultiSvgDocument, Page, SourceMappingNode, SvgDocument,
         },
         flat_vm::{FlatIncrRenderVm, FlatRenderVm},
+        incr::{IncrDocClient, IncrDocClientKern},
         ir::{Rect, SvgItem},
         LowerBuilder,
     },
-    TakeAs,
 };
 
 use crate::{
@@ -264,8 +264,8 @@ impl IncrSvgDocServer {
 /// maintains the state of the incremental rendering at client side
 #[derive(Default)]
 pub struct IncrSvgDocClient {
-    /// Full information of the current document from server.
-    pub doc: MultiSvgDocument,
+    /// underlying communication client model
+    pub kern: IncrDocClient,
 
     /// Expected exact state of the current DOM.
     /// Initially it is None meaning no any page is rendered.
@@ -275,31 +275,40 @@ pub struct IncrSvgDocClient {
     /// committed.
     pub glyph_window: usize,
 
-    /// Optional source mapping data.
-    pub source_mapping_data: Vec<SourceMappingNode>,
-    /// Optional page source mapping references.
-    pub page_source_mappping: LayoutSourceMapping,
-
     /// Don't use this
     /// it is public to make Default happy
     pub mb: ModuleBuilder,
 }
 
 impl IncrSvgDocClient {
+    pub fn new(doc: MultiSvgDocument) -> Self {
+        Self {
+            kern: IncrDocClient {
+                doc,
+                ..Default::default()
+            },
+            ..Default::default()
+        }
+    }
+
+    /// Kern of the client without leaking abstraction.
+    pub fn kern(&self) -> IncrDocClientKern<'_> {
+        IncrDocClientKern::new(&self.kern)
+    }
+
     /// Merge the delta from server.
     pub fn merge_delta(&mut self, delta: FlatModule) {
-        self.doc.merge_delta(&delta);
-        for metadata in delta.metadata {
-            match metadata {
-                ModuleMetadata::SourceMappingData(data) => {
-                    self.source_mapping_data = data;
-                }
-                ModuleMetadata::PageSourceMapping(data) => {
-                    self.page_source_mappping = data.take();
-                }
-                _ => {}
-            }
+        self.kern.merge_delta(delta);
+
+        // checkout the current layout
+        let layouts = &self.kern.doc.layouts;
+        if !layouts.is_empty() {
+            self.kern.set_layout(layouts.unwrap_single());
         }
+    }
+
+    fn module_mut(&mut self) -> &mut Module {
+        &mut self.kern.doc.module
     }
 
     /// Render the document in the given window.
@@ -309,7 +318,8 @@ impl IncrSvgDocClient {
         // prepare an empty page for the pages that are not rendered
         // todo: better solution?
         let empty_page = self.mb.build(SvgItem::Group(Default::default()));
-        self.doc
+        self.kern
+            .doc
             .module
             .items
             .extend(self.mb.items.iter().map(|(f, (_, v))| (*f, v.clone())));
@@ -323,8 +333,7 @@ impl IncrSvgDocClient {
         // otherwise, we keep document layout
         let mut page_off: f32 = 0.;
         let mut next_doc_view = vec![];
-        if !self.doc.layouts.is_empty() {
-            let t = &self.doc.layouts[0];
+        if let Some(t) = &self.kern.layout {
             let pages = match t {
                 LayoutRegionNode::Pages(a) => {
                     let (_, pages) = a.deref();
@@ -357,7 +366,7 @@ impl IncrSvgDocClient {
         let mut svg_body = vec![];
         t.render_diff(
             &IncrementalRenderContext {
-                module: &self.doc.module,
+                module: self.module_mut(),
                 prev: &prev_doc_view,
                 next: &next_doc_view,
             },
@@ -366,7 +375,7 @@ impl IncrSvgDocClient {
 
         // render the glyphs
         svg.push(r#"<defs class="glyph">"#.into());
-        let glyphs = self.doc.module.glyphs.iter();
+        let glyphs = self.kern.doc.module.glyphs.iter();
         // skip the glyphs that are already rendered
         let new_glyphs = glyphs.skip(self.glyph_window);
         let glyph_defs = t.render_glyphs(new_glyphs.enumerate().map(|(x, (_, y))| (x, y)), true);
@@ -395,7 +404,7 @@ impl IncrSvgDocClient {
 
         // update the state
         self.doc_view = Some(next_doc_view);
-        self.glyph_window = self.doc.module.glyphs.len();
+        self.glyph_window = self.module_mut().glyphs.len();
 
         // return the svg
         string_io

@@ -12,6 +12,7 @@ pub use lowering::{GlyphLowerBuilder, LowerBuilder};
 
 pub mod flat_ir;
 pub mod flat_vm;
+pub mod incr;
 
 #[cfg(feature = "rkyv")]
 pub mod stream;
