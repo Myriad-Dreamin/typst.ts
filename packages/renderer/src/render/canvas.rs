@@ -51,7 +51,12 @@ impl TypstRenderer {
         };
 
         let mut client = ses.client.lock().unwrap();
-        client.set_pixel_per_pt(ses.pixel_per_pt);
+        client.set_pixel_per_pt(ses.pixel_per_pt.unwrap_or(3.));
+        client.set_fill(ses.background_color.as_deref().unwrap_or("ffffff").into());
+        console_log!(
+            "background_color: {:?}",
+            ses.background_color.as_deref().unwrap_or("ffffff")
+        );
 
         let mut tc = Default::default();
         let mut annotations = Default::default();

@@ -1,4 +1,4 @@
-use crate::{RenderSession, RenderSessionOptions, TypstRenderer};
+use crate::TypstRenderer;
 use typst_ts_core::error::prelude::*;
 use typst_ts_core::vector::geom::Axes;
 use typst_ts_core::vector::geom::Scalar;
@@ -67,15 +67,6 @@ impl SvgSession {
 
 #[wasm_bindgen]
 impl TypstRenderer {
-    pub fn create_session(
-        &self,
-        artifact_content: &[u8],
-        options: Option<RenderSessionOptions>,
-    ) -> ZResult<RenderSession> {
-        self.session_mgr
-            .create_session_internal(artifact_content, options)
-    }
-
     pub fn create_svg_session(&self, artifact_content: &[u8]) -> ZResult<SvgSession> {
         use typst_ts_svg_exporter::MultiSvgDocument;
 

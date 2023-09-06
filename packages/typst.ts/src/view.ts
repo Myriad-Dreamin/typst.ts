@@ -1,5 +1,5 @@
 import { PageInfo } from './internal.types';
-import { RenderArtifactOptionsBase } from './options.render';
+import { RenderToCanvasOptions } from './options.render';
 import { PageViewport } from './viewport';
 
 /** @internal */
@@ -7,7 +7,7 @@ export class RenderView {
   loadPageCount: number;
   imageScaleFactor: number;
 
-  container: HTMLDivElement;
+  container: HTMLElement;
   canvasList: HTMLCanvasElement[];
   textLayerList: HTMLDivElement[];
   annotationLayerList: HTMLDivElement[];
@@ -17,8 +17,8 @@ export class RenderView {
 
   constructor(
     public pageInfos: PageInfo[],
-    container: HTMLDivElement,
-    options: RenderArtifactOptionsBase,
+    container: HTMLElement,
+    options: RenderToCanvasOptions,
   ) {
     this.imageScaleFactor = options.pixelPerPt ?? 2;
 
@@ -133,7 +133,7 @@ export class RenderView {
 
 export function renderTextLayer(
   pdfjsLib: any,
-  container: HTMLDivElement,
+  container: HTMLElement,
   pageInfos: PageInfo[],
   layerList: HTMLDivElement[],
   textSourceList: any[],

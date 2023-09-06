@@ -10,16 +10,7 @@ export interface TypstDocumentProps {
 }
 
 let moduleInitOptions: typst.InitOptions = {
-  beforeBuild: [
-    typst.preloadRemoteFonts([
-      '/fonts/LinLibertine_R.ttf',
-      '/fonts/LinLibertine_RB.ttf',
-      '/fonts/LinLibertine_RBI.ttf',
-      '/fonts/LinLibertine_RI.ttf',
-      '/fonts/NewCMMath-Book.otf',
-      '/fonts/NewCMMath-Regular.otf',
-    ]),
-  ],
+  beforeBuild: [],
   getModule: () => '/node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
 };
 
@@ -65,7 +56,7 @@ export const TypstDocument = ({ fill, artifact, format }: TypstDocumentProps) =>
 
       return renderer.render({
         artifactContent: artifact,
-        format: (format == 'json' ? 'js' : undefined) /* never */ || 'js',
+        format: 'vector',
         backgroundColor: fill,
         container: divElem,
         pixelPerPt: 8,

@@ -3,15 +3,13 @@ import typstInit, * as typst from '@myriaddreamin/typst-ts-renderer';
 
 import type { InitOptions } from './options.init';
 import { PageViewport } from './viewport';
-import { PageInfo, RenderSession, SvgSession } from './internal.types';
+import { PageInfo, RenderSession } from './internal.types';
 import {
-  ArtifactFormat,
-  RenderByContentOptions,
+  CreateSessionOptions,
+  RenderToCanvasOptions,
   RenderOptions,
   RenderOptionsBase,
   RenderPageOptions,
-  SvgFormat,
-  isRenderSvgOption,
 } from './options.render';
 import { RenderView, renderTextLayer } from './view';
 import { LazyWasmModule } from './wasm';
@@ -26,42 +24,6 @@ import { buildComponent } from './init';
 export interface RenderResult {
   width: number;
   height: number;
-}
-
-type TransformMatrix = [number, number, number, number, number, number];
-
-interface AnnotationBox {
-  height: number;
-  width: number;
-  page_ref: number;
-  transform: TransformMatrix;
-}
-
-interface UrlLinkAction {
-  t: 'Url';
-  v: {
-    url: string;
-  };
-}
-
-interface GoToLinkAction {
-  t: 'GoTo';
-  v: {
-    page_ref: number;
-    x: number;
-    y: number;
-  };
-}
-
-type LinkAction = UrlLinkAction | GoToLinkAction;
-
-interface LinkAnnotation {
-  annotation_box: AnnotationBox;
-  action: LinkAction;
-}
-
-interface AnnotationList {
-  links: LinkAnnotation[];
 }
 
 export interface RenderPageResult {
@@ -81,22 +43,29 @@ export interface TypstRenderer {
   init(options?: Partial<InitOptions>): Promise<void>;
   loadGlyphPack(pack: unknown): Promise<void>;
 
-  render(options: RenderOptions): Promise<RenderResult>;
+  /**
+   * alias to {@link TypstRenderer.renderToCanvas}, will remove in v0.5.0
+   * @deprecated
+   */
+  render(options: RenderOptions<RenderToCanvasOptions>): Promise<RenderResult>;
+
+  /**
+   * Render a Typst document to canvas.
+   * @param {RenderToCanvasOptions} options - The options for rendering a Typst document to specified container.
+   * @returns {RenderResult} - The result of rendering a Typst document.
+   */
+  renderToCanvas(options: RenderOptions<RenderToCanvasOptions>): Promise<RenderResult>;
 
   /// run a function with a session, and the sesssion is only available during the
   /// function call.
   ///
   /// the lifetime of session is quite bug-prone, so we current does not make it
   /// longer live than the function call.
+  runWithSession<T>(fn: (session: RenderSession) => Promise<T>): Promise<T>;
   runWithSession<T>(
-    options: RenderByContentOptions<ArtifactFormat>,
+    options: CreateSessionOptions,
     fn: (session: RenderSession) => Promise<T>,
   ): Promise<T>;
-  runWithSession<T>(
-    options: RenderByContentOptions<SvgFormat>,
-    fn: (session: SvgSession) => Promise<T>,
-  ): Promise<T>;
-  runWithSession<T>(options: RenderByContentOptions, fn: (session: any) => Promise<T>): Promise<T>;
 }
 
 const gRendererModule = new LazyWasmModule(typstInit);
@@ -171,30 +140,20 @@ class TypstRendererDriver {
     this.renderer = await buildComponent(options, gRendererModule, typst.TypstRendererBuilder, {});
   }
 
-  loadGlyphPack(pack: unknown): Promise<void> {
-    this.renderer.load_glyph_pack(pack);
+  loadGlyphPack(_pack: unknown): Promise<void> {
+    // this.renderer.load_glyph_pack(pack);
     return Promise.resolve();
   }
 
-  private artifactOptionsToRust(
-    options: RenderOptions<ArtifactFormat>,
-  ): typst.RenderSessionOptions {
-    const rustOptions = new typst.RenderSessionOptions();
-    rustOptions.pixel_per_pt = options.pixelPerPt ?? 2;
-
-    if (options.backgroundColor !== undefined) {
-      if (!/^#[0-9a-f]{6}$/.test(options.backgroundColor)) {
-        throw new Error(
-          'Invalid typst.RenderOptions.backgroundColor color for matching ^#[0-9a-f]{6}$ ' +
-            options.backgroundColor,
-        );
-      }
-
-      rustOptions.background_color = options.backgroundColor.slice(1);
-    }
+  private createOptionsToRust(options: Partial<CreateSessionOptions>): typst.CreateSessionOptions {
+    const rustOptions = new typst.CreateSessionOptions();
 
     if (options.format !== undefined) {
       rustOptions.format = options.format;
+    }
+
+    if (options.artifactContent !== undefined) {
+      rustOptions.artifact_content = options.artifactContent;
     }
 
     return rustOptions;
@@ -253,9 +212,9 @@ class TypstRendererDriver {
 
   private async renderDisplayLayer(
     session: typst.RenderSession,
-    container: HTMLDivElement,
+    container: HTMLElement,
     canvasList: HTMLCanvasElement[],
-    options: RenderOptions,
+    options: RenderToCanvasOptions,
   ): Promise<[RenderResult, RenderPageResult[]]> {
     const pages_info = session.pages_info;
     const page_count = pages_info.page_count;
@@ -341,7 +300,7 @@ class TypstRendererDriver {
   private renderTextLayer(
     session: typst.RenderSession,
     view: RenderView,
-    container: HTMLDivElement,
+    container: HTMLElement,
     layerList: HTMLDivElement[],
     textSourceList: any[],
   ) {
@@ -351,7 +310,7 @@ class TypstRendererDriver {
   private renderAnnotationLayer(
     _session: typst.RenderSession,
     view: RenderView,
-    _container: HTMLDivElement,
+    _container: HTMLElement,
     layerList: HTMLDivElement[],
     annotationSourceList: AnnotationList[],
   ) {
@@ -423,7 +382,21 @@ class TypstRendererDriver {
     console.log(`annotation layer used: render = ${(t3 - t2).toFixed(1)}ms`);
   }
 
-  async renderArtifact(options: RenderOptions<ArtifactFormat>): Promise<RenderResult> {
+  async render(options: RenderOptions<RenderToCanvasOptions>): Promise<RenderResult> {
+    if ('format' in options) {
+      if (options.format !== 'vector') {
+        const artifactFormats = ['serde_json', 'js', 'ir'] as const;
+        if (artifactFormats.includes(options.format as any)) {
+          // deprecated
+          throw new Error(`deprecated format ${options.format}, please use vector format`);
+        }
+      }
+    }
+
+    return this.renderToCanvas(options);
+  }
+
+  async renderToCanvas(options: RenderOptions<RenderToCanvasOptions>): Promise<RenderResult> {
     let session: typst.RenderSession;
     let renderResult: RenderResult;
     let renderPageResults: RenderPageResult[];
@@ -452,6 +425,27 @@ class TypstRendererDriver {
       if (session.pages_info.page_count === 0) {
         throw new Error(`No page found in session`);
       }
+
+      if (options.pixelPerPt !== undefined && options.pixelPerPt <= 0) {
+        throw new Error(
+          'Invalid typst.RenderOptions.pixelPerPt, should be a positive number ' +
+            options.pixelPerPt,
+        );
+      }
+
+      let backgroundColor = options.backgroundColor;
+      if (backgroundColor !== undefined) {
+        if (!/^#[0-9a-f]{6}$/.test(backgroundColor)) {
+          throw new Error(
+            'Invalid typst.backgroundColor color for matching ^#?[0-9a-f]{6}$ ' + backgroundColor,
+          );
+        }
+      }
+
+      session.pixel_per_pt = options.pixelPerPt ?? 3;
+      session.background_color = backgroundColor ?? '#ffffff';
+
+      // todo: background color
 
       const t = performance.now();
 
@@ -484,41 +478,27 @@ class TypstRendererDriver {
     });
   }
 
-  async renderSvg(options: RenderOptions<SvgFormat>): Promise<RenderResult> {
-    throw new Error('unimplemented');
-  }
-
-  async render(options: RenderOptions): Promise<RenderResult> {
-    if (isRenderSvgOption(options)) {
-      return this.renderSvg(options);
-    } else {
-      return this.renderArtifact(options);
-    }
-  }
+  // async renderSvg(options: RenderAsCanvasOption<SvgFormat>): Promise<RenderResult> {
+  //   throw new Error('unimplemented');
+  // }
 
   private withinOptionSession<T>(
-    options: RenderOptions<ArtifactFormat>,
+    options: RenderToCanvasOptions | CreateSessionOptions,
     fn: (session: typst.RenderSession) => Promise<T>,
-  ): Promise<T>;
-  private withinOptionSession<T>(
-    options: RenderOptions<SvgFormat>,
-    fn: (session: typst.SvgSession) => Promise<T>,
-  ): Promise<T>;
-  private withinOptionSession<T>(
-    options: RenderOptions,
-    fn: (session: any) => Promise<T>,
   ): Promise<T> {
-    if ('renderSession' in options) {
-      return fn(options.renderSession);
+    function isRenderByContentOption(
+      options: RenderToCanvasOptions | CreateSessionOptions,
+    ): options is CreateSessionOptions {
+      return 'artifactContent' in options;
     }
 
-    function isRenderByContentOption<T>(options: RenderOptions): options is RenderByContentOptions {
-      return 'artifactContent' in options;
+    if ('renderSession' in options) {
+      return fn(options.renderSession as typst.RenderSession);
     }
 
     if (isRenderByContentOption(options)) {
       // todo: remove any
-      return this.runWithSession(options as any, fn);
+      return this.runWithSession(options as any, fn as any);
     }
 
     throw new Error(
@@ -526,27 +506,22 @@ class TypstRendererDriver {
     );
   }
 
+  async runWithSession<T>(fn: (session: RenderSession) => Promise<T>): Promise<T>;
   runWithSession<T>(
-    options: RenderByContentOptions<ArtifactFormat>,
+    options: CreateSessionOptions,
     fn: (session: RenderSession) => Promise<T>,
   ): Promise<T>;
-  runWithSession<T>(
-    options: RenderByContentOptions<SvgFormat>,
-    fn: (session: SvgSession) => Promise<T>,
-  ): Promise<T>;
-  async runWithSession<T>(
-    options: RenderByContentOptions,
-    fn: (session: any) => Promise<T>,
-  ): Promise<T> {
+  async runWithSession<T>(arg1: any, arg2?: any): Promise<T> {
+    let options: Partial<CreateSessionOptions> = arg1;
+    let fn: (session: RenderSession) => Promise<T> = arg2;
+
+    if (!arg2) {
+      options = {};
+      fn = arg1;
+    }
+
     // const t = performance.now();
-    const session = isRenderSvgOption(options)
-      ? options.artifactContent
-        ? this.renderer.create_svg_session(options.artifactContent)
-        : this.renderer.create_empty_svg_session()
-      : this.renderer.create_session(
-          options.artifactContent,
-          /* moved */ this.artifactOptionsToRust(options),
-        );
+    const session = this.renderer.create_session(/* moved */ this.createOptionsToRust(options));
     // const t3 = performance.now();
 
     // console.log(`create session used: render = ${(t3 - t).toFixed(1)}ms`);
@@ -562,4 +537,40 @@ class TypstRendererDriver {
       throw e;
     }
   }
+}
+
+type TransformMatrix = [number, number, number, number, number, number];
+
+interface AnnotationBox {
+  height: number;
+  width: number;
+  page_ref: number;
+  transform: TransformMatrix;
+}
+
+interface UrlLinkAction {
+  t: 'Url';
+  v: {
+    url: string;
+  };
+}
+
+interface GoToLinkAction {
+  t: 'GoTo';
+  v: {
+    page_ref: number;
+    x: number;
+    y: number;
+  };
+}
+
+type LinkAction = UrlLinkAction | GoToLinkAction;
+
+interface LinkAnnotation {
+  annotation_box: AnnotationBox;
+  action: LinkAction;
+}
+
+interface AnnotationList {
+  links: LinkAnnotation[];
 }

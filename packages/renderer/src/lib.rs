@@ -1,6 +1,7 @@
 #[macro_use]
 pub(crate) mod utils;
 
+use session::CreateSessionOptions;
 use typst_ts_core::error::prelude::*;
 use wasm_bindgen::prelude::*;
 
@@ -11,8 +12,7 @@ pub(crate) mod render;
 
 pub(crate) mod session;
 pub use session::RenderSession;
-
-pub use session::{RenderSessionManager, RenderSessionOptions};
+pub use session::RenderSessionOptions;
 
 pub mod build_info {
     /// The version of the typst-ts-renderer crate.
@@ -99,9 +99,7 @@ impl RenderPageImageOptions {
 }
 
 #[wasm_bindgen]
-pub struct TypstRenderer {
-    pub(crate) session_mgr: RenderSessionManager,
-}
+pub struct TypstRenderer {}
 
 impl Default for TypstRenderer {
     fn default() -> Self {
@@ -109,17 +107,61 @@ impl Default for TypstRenderer {
     }
 }
 
+#[wasm_bindgen]
 impl TypstRenderer {
+    #[wasm_bindgen(constructor)]
     pub fn new() -> TypstRenderer {
-        Self {
-            session_mgr: RenderSessionManager::new(),
+        Self {}
+    }
+
+    pub fn create_session(&self, options: Option<CreateSessionOptions>) -> ZResult<RenderSession> {
+        match options {
+            Some(options) => {
+                let format = options.format.as_deref().unwrap_or("vector");
+
+                let artifact_content = options
+                    .artifact_content
+                    .as_deref()
+                    .ok_or_else(|| error_once!("Renderer.MissingArtifactContent"))?;
+
+                self.session_from_artifact(artifact_content, format)
+            }
+            None => Ok(RenderSession::default()),
         }
     }
 
-    pub fn session_from_artifact(&self, artifact_content: &[u8]) -> ZResult<RenderSession> {
-        self.session_mgr
-            .session_from_artifact(artifact_content, "vector")
+    pub fn session_from_artifact(
+        &self,
+        artifact_content: &[u8],
+        decoder: &str,
+    ) -> ZResult<RenderSession> {
+        // todo: share session between renderers
+        #[cfg(feature = "render_canvas")]
+        if decoder == "vector" {
+            return self.session_from_vector_artifact(artifact_content);
+        }
+
+        if decoder == "serde_json" || decoder == "js" || decoder == "ir" {
+            Err(error_once!("deprecated format are removal in v0.4.0"))?
+        }
+
+        Err(error_once!("Renderer.UnsupportedDecoder", decoder: decoder))
     }
+
+    #[cfg(feature = "render_canvas")]
+    fn session_from_vector_artifact(&self, artifact_content: &[u8]) -> ZResult<RenderSession> {
+        let mut session = RenderSession::default();
+        session.merge_delta(artifact_content)?;
+        Ok(session)
+    }
+
+    // ses.pixel_per_pt = options.as_ref().and_then(|o|
+    // o.pixel_per_pt).unwrap_or(2.);
+
+    // ses.background_color = options
+    //     .as_ref()
+    //     .and_then(|o| o.background_color.clone())
+    //     .unwrap_or("ffffff".to_string());
 }
 
 #[cfg(test)]

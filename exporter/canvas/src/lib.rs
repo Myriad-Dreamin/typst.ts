@@ -22,6 +22,8 @@ use typst_ts_core::{
     },
 };
 
+mod utils;
+
 mod content;
 pub use content::TextContentTask;
 
@@ -616,6 +618,7 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
 
 pub struct IncrementalCanvasExporter {
     pub pixel_per_pt: f32,
+    pub fill: ImmutStr,
     pub pages: Vec<(Arc<Box<dyn CanvasElem + Send + Sync>>, Size)>,
 }
 
@@ -623,6 +626,7 @@ impl Default for IncrementalCanvasExporter {
     fn default() -> Self {
         Self {
             pixel_per_pt: 3.,
+            fill: "#ffffff".into(),
             pages: vec![],
         }
     }
@@ -652,6 +656,10 @@ impl IncrementalCanvasExporter {
             .map(|(_, size)| size.y.0)
             .sum::<f32>();
         let ts = ts.pre_translate(0., sumy);
+
+        set_transform(canvas, ts);
+        canvas.set_fill_style(&self.fill.as_ref().into());
+        canvas.fill_rect(0., 0., pg.1.x.0 as f64, pg.1.y.0 as f64);
 
         pg.0.realize(ts, canvas).await;
     }
@@ -698,6 +706,10 @@ impl IncrCanvasDocClient {
 
     pub fn set_pixel_per_pt(&mut self, pixel_per_pt: f32) {
         self.elements.pixel_per_pt = pixel_per_pt;
+    }
+
+    pub fn set_fill(&mut self, fill: ImmutStr) {
+        self.elements.fill = fill;
     }
 
     /// Render the document in the given window.
