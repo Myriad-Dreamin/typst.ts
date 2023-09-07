@@ -29,6 +29,7 @@ rustc-hash.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tiny-skia.workspace = true
+log.workspace = true
 flate2.workspace = true
 xmlparser.workspace = true
 serde_with = { version = "2.3.2", features = ["base64"] }

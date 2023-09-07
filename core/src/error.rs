@@ -225,21 +225,17 @@ pub mod prelude {
         }
     }
 
+    pub fn _error_once(loc: &'static str, args: Box<[(&'static str, String)]>) -> Error {
+        Error::new(loc, crate::ErrKind::None, args)
+    }
+
     #[macro_export]
     macro_rules! error_once {
         ($loc:expr, $($arg_key:ident: $arg:expr),+ $(,)?) => {
-            typst_ts_core::Error::new (
-                $loc,
-                typst_ts_core::ErrKind::None,
-                Box::new([$((stringify!($arg_key), $arg.to_string())),+]),
-            )
+            _error_once($loc, Box::new([$((stringify!($arg_key), $arg.to_string())),+]))
         };
         ($loc:expr $(,)?) => {
-            typst_ts_core::Error::new (
-                $loc,
-                typst_ts_core::ErrKind::None,
-                Box::new([]),
-            )
+            _error_once($loc, Box::new([]))
         };
     }
 

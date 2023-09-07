@@ -4247,6 +4247,7 @@ dependencies = [
  "fxhash",
  "hex",
  "js-sys",
+ "log",
  "once_cell",
  "path-clean",
  "rkyv",

@@ -34,10 +34,16 @@ impl LayoutRegionNode {
         Self::SourceMapping(Arc::new((Default::default(), source_mapping)))
     }
 
+    pub fn pages_meta(&self) -> Option<&[Page]> {
+        let Self::Pages(v) = self else {
+            return None;
+        };
+
+        Some(&v.1)
+    }
+
     pub fn pages<'a>(&'a self, module: &'a Module) -> Option<LayoutRegionPagesRAII<'a>> {
-        let v = if let Self::Pages(v) = self {
-            v
-        } else {
+        let Self::Pages(v) = self else {
             return None;
         };
 
