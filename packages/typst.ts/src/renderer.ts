@@ -8,8 +8,8 @@ import {
   CreateSessionOptions,
   RenderToCanvasOptions,
   RenderOptions,
-  RenderOptionsBase,
   RenderPageOptions,
+  RenderToSvgOptions,
 } from './options.render';
 import { RenderView, renderTextLayer } from './view';
 import { LazyWasmModule } from './wasm';
@@ -39,15 +39,9 @@ export interface RenderPageResult {
  * @property {function} runWithSession - Run a function with a session to interact
  *   with the wasm module multiple times programmatically.
  */
-export interface TypstRenderer {
+export interface TypstRenderer extends TypstSvgRenderer {
   init(options?: Partial<InitOptions>): Promise<void>;
   loadGlyphPack(pack: unknown): Promise<void>;
-
-  /**
-   * alias to {@link TypstRenderer.renderToCanvas}, will remove in v0.5.0
-   * @deprecated
-   */
-  render(options: RenderOptions<RenderToCanvasOptions>): Promise<RenderResult>;
 
   /**
    * Render a Typst document to canvas.
@@ -55,6 +49,13 @@ export interface TypstRenderer {
    * @returns {RenderResult} - The result of rendering a Typst document.
    */
   renderToCanvas(options: RenderOptions<RenderToCanvasOptions>): Promise<RenderResult>;
+
+  /**
+   * Render a Typst document to canvas.
+   * @param {RenderToCanvasOptions} options - The options for rendering a Typst document to specified container.
+   * @returns {RenderResult} - The result of rendering a Typst document.
+   */
+  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<unknown>;
 
   /// run a function with a session, and the sesssion is only available during the
   /// function call.
@@ -66,6 +67,12 @@ export interface TypstRenderer {
     options: CreateSessionOptions,
     fn: (session: RenderSession) => Promise<T>,
   ): Promise<T>;
+
+  /**
+   * alias to {@link TypstRenderer.renderToCanvas}, will remove in v0.5.0
+   * @deprecated
+   */
+  render(options: RenderOptions<RenderToCanvasOptions>): Promise<RenderResult>;
 }
 
 const gRendererModule = new LazyWasmModule(typstInit);
@@ -92,11 +99,24 @@ export function createTypstRenderer(pdf: any): TypstRenderer {
 
 export interface TypstSvgRenderer {
   init(options?: Partial<InitOptions>): Promise<void>;
+
+  /**
+   * Create a svg session.
+   * @deprecated
+   */
   createModule(b: Uint8Array): Promise<unknown>;
+
+  /**
+   * Render a Typst document to canvas.
+   * @param {RenderToCanvasOptions} options - The options for rendering a Typst document to specified container.
+   * @returns {RenderResult} - The result of rendering a Typst document.
+   * @deprecated
+   */
+  renderSvg(session: unknown, options: HTMLElement): Promise<unknown>;
 }
 
 export function createTypstSvgRenderer(): TypstSvgRenderer {
-  return new TypstRendererSvgDriver();
+  return new TypstRendererDriver(undefined);
 }
 
 export function rendererBuildInfo(): any {
@@ -107,28 +127,6 @@ function randstr(prefix?: string): string {
   return Math.random()
     .toString(36)
     .replace('0.', prefix || '');
-}
-
-class TypstRendererSvgDriver {
-  renderer: typst.TypstRenderer;
-
-  constructor() {}
-
-  async init(options?: Partial<InitOptions>): Promise<void> {
-    this.renderer = await buildComponent(options, gRendererModule, typst.TypstRendererBuilder, {});
-  }
-
-  createModule(b?: Uint8Array): Promise<unknown> {
-    return new Promise(resolve => {
-      resolve(b ? this.renderer.create_svg_session(b) : this.renderer.create_empty_svg_session());
-    });
-  }
-
-  renderSvg(session: unknown, container: HTMLDivElement): Promise<unknown> {
-    return new Promise(resolve => {
-      resolve(this.renderer.render_svg(session as typst.SvgSession, container));
-    });
-  }
 }
 
 class TypstRendererDriver {
@@ -159,7 +157,7 @@ class TypstRendererDriver {
     return rustOptions;
   }
 
-  loadPagesInfo(session: typst.RenderSession, options: RenderOptionsBase): PageInfo[] {
+  loadPagesInfo(session: typst.RenderSession, options: RenderToCanvasOptions): PageInfo[] {
     const pages_info = session.pages_info;
     const pageInfos: PageInfo[] = [];
     const pageCount = pages_info.page_count;
@@ -475,6 +473,24 @@ class TypstRendererDriver {
       );
 
       return renderResult;
+    });
+  }
+
+  createModule(b?: Uint8Array): Promise<unknown> {
+    return new Promise(resolve => {
+      resolve(b ? this.renderer.create_svg_session(b) : this.renderer.create_empty_svg_session());
+    });
+  }
+
+  renderSvg(session: unknown, container: HTMLElement): Promise<unknown> {
+    return new Promise(resolve => {
+      resolve(this.renderer.render_svg(session as typst.SvgSession, container));
+    });
+  }
+
+  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<unknown> {
+    return this.withinOptionSession(options, async sessionRef => {
+      return this.renderSvg(sessionRef, options.container);
     });
   }
 

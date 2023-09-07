@@ -37,12 +37,6 @@ export type RenderInSessionOptions<Base = RenderToCanvasOptions> = Base & {
 export type RenderByContentOptions<Base = RenderToCanvasOptions> = Base & CreateSessionOptions;
 
 /**
- * The options for rendering a Typst document to specified container.
- * see {@link RenderToCanvasOptions} and {@link RenderAsSvgOptions}
- */
-export type RenderOptionsBase = RenderToCanvasOptions | RenderAsSvgOptions;
-
-/**
  * The options for rendering a preprocessed Typst document to specified container.
  * @property {HTMLElement} [container] - The container to render the Typst document.
  * @property {string} [backgroundColor] - The background color will replace the default one by typst document.
@@ -59,7 +53,7 @@ export interface RenderToCanvasOptions {
  * The options for rendering a preprocessed Typst document to specified container.
  * @property {HTMLElement} [container] - The container to render the Typst document.
  */
-export interface RenderAsSvgOptions {
+export interface RenderToSvgOptions {
   container: HTMLElement;
 }
 

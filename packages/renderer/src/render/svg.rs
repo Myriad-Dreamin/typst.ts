@@ -82,7 +82,7 @@ impl TypstRenderer {
         })
     }
 
-    pub fn render_svg(&self, session: &SvgSession, root: web_sys::HtmlDivElement) -> ZResult<()> {
+    pub fn render_svg(&self, session: &SvgSession, root: web_sys::HtmlElement) -> ZResult<()> {
         type UsingExporter = SvgExporter<DefaultExportFeature>;
         // todo: leaking abstraction
         let layouts = session.client.kern.doc.layouts.by_scalar().unwrap();
