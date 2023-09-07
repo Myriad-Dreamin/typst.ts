@@ -19,7 +19,6 @@ export type { TypstCompiler } from './compiler';
 export { createTypstCompiler } from './compiler';
 
 // Export module on window.
-// todo: graceful way?
 if (window) {
   (window as any).TypstRenderModule = {
     RenderView,

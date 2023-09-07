@@ -158,7 +158,7 @@ mod tests {
     use wasm_bindgen_test::*;
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-    use crate::{session::RenderSessionOptions, TypstRenderer};
+    use crate::{session::CreateSessionOptions, TypstRenderer};
 
     fn hash_bytes<T: AsRef<[u8]>>(bytes: T) -> String {
         format!("sha256:{}", hex::encode(sha2::Sha256::digest(bytes)))
@@ -212,16 +212,14 @@ mod tests {
             let renderer = &mut renderer.lock().unwrap();
 
             let start = performance.now();
-            let session = renderer
-                .create_session(
-                    artifact,
-                    Some(RenderSessionOptions {
-                        pixel_per_pt: Some(3.),
-                        background_color: Some("ffffff".to_string()),
-                        format: Some(format.to_string()),
-                    }),
-                )
+            let mut session = renderer
+                .create_session(Some(CreateSessionOptions {
+                    format: Some(format.to_string()),
+                    artifact_content: Some(artifact.to_owned()),
+                }))
                 .unwrap();
+            session.set_background_color("#ffffff".to_string());
+            session.set_pixel_per_pt(3.);
 
             let sizes = &session.pages_info;
             canvas.set_width((sizes.width() * 3.).ceil() as u32);
