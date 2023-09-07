@@ -13,7 +13,7 @@ export class TypstDocumentComponent {
 
   @Input() fill: string = '#ffffff';
 
-  @Input() format: 'json' | 'vector' = 'json';
+  @Input() format = 'vector' as const;
 
   @Input()
   set artifact(artifact: Uint8Array) {
@@ -37,7 +37,7 @@ export class TypstDocumentComponent {
           }
           renderer.render({
             artifactContent: this.artifact,
-            format: (this.format == 'json' ? 'js' : undefined) /* never */ || 'js',
+            format: 'vector',
             backgroundColor: this.fill,
             container: displayDiv,
             pixelPerPt: 8,
@@ -50,16 +50,7 @@ export class TypstDocumentComponent {
           typst.createTypstRenderer,
           (window as unknown as any).pdfjsLib,
           {
-            beforeBuild: [
-              typst.preloadRemoteFonts([
-                'http://localhost:20810/assets/fonts/LinLibertine_R.ttf',
-                'http://localhost:20810/assets/fonts/LinLibertine_RB.ttf',
-                'http://localhost:20810/assets/fonts/LinLibertine_RBI.ttf',
-                'http://localhost:20810/assets/fonts/LinLibertine_RI.ttf',
-                'http://localhost:20810/assets/fonts/NewCMMath-Book.otf',
-                'http://localhost:20810/assets/fonts/NewCMMath-Regular.otf',
-              ]),
-            ],
+            beforeBuild: [typst.preloadRemoteFonts([])],
             getModule: () => '/assets/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
           },
           doRender,

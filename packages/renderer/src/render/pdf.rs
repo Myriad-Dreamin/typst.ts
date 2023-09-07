@@ -7,7 +7,7 @@ use crate::{RenderSession, TypstRenderer};
 #[wasm_bindgen]
 impl TypstRenderer {
     pub fn render_to_pdf(&mut self, artifact_content: &[u8]) -> ZResult<Uint8Array> {
-        let session = self.session_from_artifact(artifact_content)?;
+        let session = self.session_from_vector_artifact(artifact_content)?;
         self.render_to_pdf_in_session(&session)
     }
 

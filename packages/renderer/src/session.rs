@@ -1,7 +1,6 @@
 #[cfg(feature = "render_canvas")]
 use std::sync::{Arc, Mutex};
 
-use js_sys::Uint8Array;
 #[cfg(feature = "render_canvas")]
 use typst_ts_canvas_exporter::IncrCanvasDocClient;
 use typst_ts_core::error::prelude::*;
@@ -55,6 +54,34 @@ impl RenderSessionOptions {
     #[wasm_bindgen(setter)]
     pub fn set_format(&mut self, format: String) {
         self.format = Some(format);
+    }
+}
+
+#[wasm_bindgen]
+#[derive(Default, Debug)]
+pub struct CreateSessionOptions {
+    pub(crate) format: Option<String>,
+    pub(crate) artifact_content: Option<Vec<u8>>,
+}
+
+#[wasm_bindgen]
+impl CreateSessionOptions {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Self {
+        Self {
+            format: None,
+            artifact_content: None,
+        }
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_format(&mut self, format: String) {
+        self.format = Some(format);
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_artifact_content(&mut self, artifact_content: Vec<u8>) {
+        self.artifact_content = Some(artifact_content);
     }
 }
 
@@ -127,8 +154,8 @@ impl PagesInfo {
 #[derive(Default)]
 #[wasm_bindgen]
 pub struct RenderSession {
-    pub(crate) pixel_per_pt: f32,
-    pub(crate) background_color: String,
+    pub(crate) pixel_per_pt: Option<f32>,
+    pub(crate) background_color: Option<String>,
     #[cfg(feature = "render_canvas")]
     pub(crate) client: Arc<Mutex<IncrCanvasDocClient>>,
     pub(crate) pages_info: PagesInfo,
@@ -137,13 +164,23 @@ pub struct RenderSession {
 #[wasm_bindgen]
 impl RenderSession {
     #[wasm_bindgen(getter)]
-    pub fn pixel_per_pt(&self) -> f32 {
+    pub fn pixel_per_pt(&self) -> Option<f32> {
         self.pixel_per_pt
     }
 
+    #[wasm_bindgen(setter)]
+    pub fn set_pixel_per_pt(&mut self, pixel_per_pt: f32) {
+        self.pixel_per_pt = Some(pixel_per_pt);
+    }
+
     #[wasm_bindgen(getter)]
-    pub fn background_color(&self) -> String {
+    pub fn background_color(&self) -> Option<String> {
         self.background_color.clone()
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_background_color(&mut self, background_color: String) {
+        self.background_color = Some(background_color);
     }
 
     #[wasm_bindgen(getter)]
@@ -186,79 +223,5 @@ impl RenderSession {
 
         self.pages_info = pages_info;
         Ok(())
-    }
-}
-
-#[wasm_bindgen]
-pub struct RenderSessionManager {}
-
-impl Default for RenderSessionManager {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[wasm_bindgen]
-impl RenderSessionManager {
-    pub fn create_session(
-        &self,
-        artifact_content: Uint8Array,
-        options: Option<RenderSessionOptions>,
-    ) -> ZResult<RenderSession> {
-        self.create_session_internal(artifact_content.to_vec().as_slice(), options)
-    }
-
-    pub(crate) fn create_session_internal(
-        &self,
-        artifact_content: &[u8],
-        options: Option<RenderSessionOptions>,
-    ) -> ZResult<RenderSession> {
-        let format = options
-            .as_ref()
-            .and_then(|o| o.format.as_ref())
-            .map(|f| f.as_str())
-            .unwrap_or("vector");
-        let mut ses = self.session_from_artifact(artifact_content.to_vec().as_slice(), format)?;
-
-        ses.pixel_per_pt = options.as_ref().and_then(|o| o.pixel_per_pt).unwrap_or(2.);
-
-        ses.background_color = options
-            .as_ref()
-            .and_then(|o| o.background_color.clone())
-            .unwrap_or("ffffff".to_string());
-
-        Ok(ses)
-    }
-}
-
-impl RenderSessionManager {
-    #[allow(clippy::arc_with_non_send_sync)]
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    pub fn session_from_artifact(
-        &self,
-        _artifact_content: &[u8],
-        decoder: &str,
-    ) -> ZResult<RenderSession> {
-        // todo: share session between renderers
-        #[cfg(feature = "render_canvas")]
-        if decoder == "vector" {
-            return self.session_from_vector_artifact(_artifact_content);
-        }
-
-        if decoder == "serde_json" || decoder == "js" || decoder == "ir" {
-            Err(error_once!("deprecated format are removal in v0.4.0"))?
-        }
-
-        Err(error_once!("Renderer.UnsupportedDecoder", decoder: decoder))
-    }
-
-    #[cfg(feature = "render_canvas")]
-    fn session_from_vector_artifact(&self, artifact_content: &[u8]) -> ZResult<RenderSession> {
-        let mut session = RenderSession::default();
-        session.merge_delta(artifact_content)?;
-        Ok(session)
     }
 }

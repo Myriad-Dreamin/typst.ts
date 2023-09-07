@@ -18,21 +18,5 @@ macro_rules! console_log {
     }
 }
 
-use std::sync::Arc;
-
 #[allow(unused_imports)]
 pub(crate) use console_log;
-use typst::geom::{Abs, Color};
-use web_sys::{CanvasRenderingContext2d, Performance};
-
-/// Additional methods for [`Length`].
-pub trait AbsExt {
-    /// Convert to a number of points as f32.
-    fn to_f32(self) -> f32;
-}
-
-impl AbsExt for Abs {
-    fn to_f32(self) -> f32 {
-        self.to_pt() as f32
-    }
-}
