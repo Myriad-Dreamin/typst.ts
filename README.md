@@ -150,7 +150,7 @@ Import `typst.ts` in your project:
   ```typescript
   import { TypstDocument } from '@myriaddreamin/typst.react';
 
-  export const App = (artifact: string) => {
+  export const App = (artifact: Uint8Array) => {
     return (
       <div>
         <h1>Demo: Embed Your Typst Document in React</h1>
