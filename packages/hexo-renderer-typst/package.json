@@ -18,6 +18,11 @@
   "directories": {
     "lib": "./lib"
   },
+  "peerDependencies": {
+    "hexo": "*",
+    "@myriaddreamin/typst.ts": "*",
+    "@myriaddreamin/typst-ts-renderer": "*"
+  },
   "devDependencies": {},
   "scripts": {
     "publish:dry": "npm publish --dry-run",

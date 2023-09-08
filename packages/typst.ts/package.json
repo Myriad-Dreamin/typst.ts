@@ -28,9 +28,17 @@
   "dependencies": {
     "idb": "^7.1.1"
   },
-  "optionalDependencies": {
+  "peerDependencies": {
     "@myriaddreamin/typst-ts-renderer": "*",
     "@myriaddreamin/typst-ts-web-compiler": "*"
+  },
+  "peerDependenciesMeta": {
+    "@myriaddreamin/typst-ts-renderer": {
+      "optional": true
+    },
+    "@myriaddreamin/typst-ts-web-compiler": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/node": "^20.2.1",
