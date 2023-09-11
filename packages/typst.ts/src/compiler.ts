@@ -24,11 +24,11 @@ export interface TypstCompiler {
    */
   init(options?: Partial<InitOptions>): Promise<void>;
   reset(): Promise<void>;
-  addSource(path: string, source: string, isMain: boolean): Promise<void>;
-  getAst(mainFilePath: string): Promise<string>;
 
+  addSource(path: string, source: string, isMain: boolean): Promise<void>;
+
+  getAst(mainFilePath: string): Promise<string>;
   compile(options: CompileOptions): Promise<Uint8Array>;
-  renderPageToCanvas(): Promise<RenderPageResult>;
 
   loadSnapshot(snapshot: unknown, fontServer: FsAccessModel): Promise<any>;
 }

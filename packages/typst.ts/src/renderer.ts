@@ -34,11 +34,6 @@ export interface RenderPageResult {
 
 /**
  * The interface of Typst renderer.
- * @typedef {Object} TypstRenderer
- * @property {function} init - Initialize the Typst renderer.
- * @property {function} render - Render a Typst document to specified container.
- * @property {function} runWithSession - Run a function with a session to interact
- *   with the wasm module multiple times programmatically.
  */
 export interface TypstRenderer extends TypstSvgRenderer {
   init(options?: Partial<InitOptions>): Promise<void>;
@@ -58,13 +53,82 @@ export interface TypstRenderer extends TypstSvgRenderer {
    */
   renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<unknown>;
 
+  /**
+   * Manipulate the Typst document in the session. See {@link ManipulateDataOptions} for more details.
+   * @param {RenderSession} session - The Typst document session that has been created by TypstRenderer.
+   * @param {ManipulateDataOptions} options - The options for manipulating the Typst document in the session.
+   * @returns {void}
+   * @example reset the data to the initial state.
+   * ```typescript
+   * const session = await renderer.createSession(...);
+   * await renderer.manipulateData(session, {
+   *   action: 'reset',
+   *   data: new Uint8Array(...),
+   * });
+   * ```
+   * @example merge the data to the current state.
+   * ```typescript
+   * const session = await renderer.createSession(...);
+   * /// reset the data to the initial state
+   * await renderer.manipulateData(session, data('reset'));
+   * /// merge the data to the current state
+   * await renderer.manipulateData(session, data('merge'));
+   * /// incrementally merge the data again
+   * await renderer.manipulateData(session, data('merge'));
+   * ```
+   */
   manipulateData(session: RenderSession, opts: ManipulateDataOptions): Promise<void>;
 
-  /// run a function with a session, and the sesssion is only available during the
-  /// function call.
-  ///
-  /// the lifetime of session is quite bug-prone, so we current does not make it
-  /// longer live than the function call.
+  /**
+   * Run a function with a session, and the sesssion is only available during the
+   * function call.
+   *
+   * the lifetime of session is quite bug-prone, so we current does not make it
+   * longer live than the function call.
+   * @param {function} fn - The function to run with a session.
+   * @returns {Promise<T>} - The result of the function.
+   * @example run a function with an session with empty state.
+   * ```typescript
+   * const res = await renderer.runWithSession(async session => {
+   *   await renderer.manipulateData(session, data('reset'));
+   *   return await renderer.renderToCanvas({
+   *     renderSession: session,
+   *     container: document.getElementById('container'),
+   *     backgroundColor: '#ffffff',
+   *   });
+   * });
+   * ```
+   * @example run a function with an session with initial state.
+   * ```typescript
+   * const res = await renderer.runWithSession({
+   *   format: 'vector',
+   *   artifactContent: new Uint8Array(...),
+   * }, workWithSession(session));
+   * ```
+   * @example leak the life span of session (need typescript >= v5.2)
+   * ```typescript
+   * class StackedSession {
+   *   session: RenderSession;
+   *   private resolve: (session: RenderSession) => void;
+   *   [Symbol.dispose]() {
+   *     this.resolve();
+   *   }
+   *   static async create() {
+   *     return new Promise<StackedSession>(resolve => {
+   *       const session = await renderer.runWithSession(session => {
+   *       const stackedSession = new StackedSession();
+   *       stackedSession.session = session;
+   *       stackedSession.resolve = resolve;
+   *       return stackedSession;
+   *     });
+   *   }
+   * }
+   *
+   * {
+   *   await using session = StackedSession.create();
+   *   /// do something with session
+   * }
+   */
   runWithSession<T>(fn: (session: RenderSession) => Promise<T>): Promise<T>;
   runWithSession<T>(
     options: CreateSessionOptions,
