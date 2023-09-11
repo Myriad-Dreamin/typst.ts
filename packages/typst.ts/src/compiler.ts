@@ -27,14 +27,8 @@ export interface TypstCompiler {
   addSource(path: string, source: string, isMain: boolean): Promise<void>;
   getAst(mainFilePath: string): Promise<string>;
 
-  compile(options: CompileOptions): Promise<DocumentReference>;
-  renderPageToCanvas(
-    canvas: CanvasRenderingContext2D,
-    doc: DocumentReference,
-    page_off: number,
-    pixel_per_pt: number,
-    background_color: string,
-  ): Promise<RenderPageResult>;
+  compile(options: CompileOptions): Promise<Uint8Array>;
+  renderPageToCanvas(): Promise<RenderPageResult>;
 
   loadSnapshot(snapshot: unknown, fontServer: FsAccessModel): Promise<any>;
 }
@@ -112,26 +106,13 @@ class TypstCompilerDriver {
     return this.runSyncCodeUntilStable(() => this.compiler.get_ast(mainFilePath));
   }
 
-  compile(options: CompileOptions): Promise<DocumentReference> {
-    return new Promise<DocumentReference>(resolve => {
-      const data: DocumentReference = this.compiler.compile(options.mainFilePath);
-      resolve(data);
+  compile(options: CompileOptions): Promise<Uint8Array> {
+    return new Promise<Uint8Array>(resolve => {
+      resolve(this.compiler.compile(options.mainFilePath));
     });
   }
 
-  renderPageToCanvas(
-    canvas: CanvasRenderingContext2D,
-    doc: DocumentReference,
-    page_off: number,
-    pixel_per_pt: number,
-    background_color: string,
-  ): Promise<any> {
-    return this.compiler.render_page_to_canvas(
-      canvas,
-      doc as typst.DocumentReference,
-      page_off,
-      pixel_per_pt,
-      background_color,
-    );
+  renderPageToCanvas(): Promise<any> {
+    throw new Error('Please use the api TypstRenderer.renderToCanvas in v0.4.0');
   }
 }
