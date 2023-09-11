@@ -11,7 +11,7 @@ use typst_ts_core::{
     hash::Fingerprint,
     vector::{
         bbox::GlyphIndice,
-        flat_ir::{self, FlatModule, LayoutRegionNode, Module, ModuleBuilder, Page},
+        flat_ir::{self, LayoutRegionNode, Module, ModuleBuilder, Page},
         flat_vm::{FlatGroupContext, FlatRenderVm},
         incr::IncrDocClient,
         ir::{
@@ -616,10 +616,17 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
     }
 }
 
+#[derive(Clone)]
+pub struct CanvasPage {
+    pub content: Fingerprint,
+    pub elem: Arc<Box<dyn CanvasElem + Send + Sync>>,
+    pub size: Size,
+}
+
 pub struct IncrementalCanvasExporter {
     pub pixel_per_pt: f32,
     pub fill: ImmutStr,
-    pub pages: Vec<(Arc<Box<dyn CanvasElem + Send + Sync>>, Size)>,
+    pub pages: Vec<CanvasPage>,
 }
 
 impl Default for IncrementalCanvasExporter {
@@ -641,7 +648,19 @@ impl IncrementalCanvasExporter {
 
         let pages = pages
             .iter()
-            .map(|Page { content, size }| (ct.render_flat_item(content), *size))
+            .enumerate()
+            .map(|(idx, Page { content, size })| {
+                if idx < self.pages.len() && self.pages[idx].content == *content {
+                    return self.pages[idx].clone();
+                }
+
+                // (ct.render_flat_item(content), *size, *content)
+                CanvasPage {
+                    content: *content,
+                    elem: ct.render_flat_item(content),
+                    size: *size,
+                }
+            })
             .collect();
         self.pages = pages;
     }
@@ -653,24 +672,21 @@ impl IncrementalCanvasExporter {
             .pages
             .iter()
             .take(idx)
-            .map(|(_, size)| size.y.0)
+            .map(|CanvasPage { size, .. }| size.y.0)
             .sum::<f32>();
         let ts = ts.pre_translate(0., sumy);
 
         set_transform(canvas, ts);
         canvas.set_fill_style(&self.fill.as_ref().into());
-        canvas.fill_rect(0., 0., pg.1.x.0 as f64, pg.1.y.0 as f64);
+        canvas.fill_rect(0., 0., pg.size.x.0 as f64, pg.size.y.0 as f64);
 
-        pg.0.realize(ts, canvas).await;
+        pg.elem.realize(ts, canvas).await;
     }
 }
 
 /// maintains the state of the incremental rendering at client side
 #[derive(Default)]
 pub struct IncrCanvasDocClient {
-    /// underlying communication client model
-    pub kern: IncrDocClient,
-
     /// canvas state
     pub elements: IncrementalCanvasExporter,
 
@@ -684,26 +700,6 @@ pub struct IncrCanvasDocClient {
 }
 
 impl IncrCanvasDocClient {
-    /// Merge the delta from server.
-    pub fn merge_delta(&mut self, delta: FlatModule) {
-        self.kern.merge_delta(delta);
-
-        // todo: multiple layout
-        // checkout the current layout
-        let layouts = &self.kern.doc.layouts;
-        if !layouts.is_empty() {
-            let layout = layouts.unwrap_single();
-
-            let pages = layout.pages(&self.kern.doc.module);
-            if let Some(pages) = pages {
-                self.elements
-                    .interpret_changes(pages.module(), pages.pages());
-            }
-
-            self.kern.set_layout(layout);
-        }
-    }
-
     pub fn set_pixel_per_pt(&mut self, pixel_per_pt: f32) {
         self.elements.pixel_per_pt = pixel_per_pt;
     }
@@ -712,17 +708,29 @@ impl IncrCanvasDocClient {
         self.elements.fill = fill;
     }
 
+    fn patch_delta(&mut self, kern: &IncrDocClient) {
+        if let Some(layout) = &kern.layout {
+            let pages = layout.pages(&kern.doc.module);
+            if let Some(pages) = pages {
+                self.elements
+                    .interpret_changes(pages.module(), pages.pages());
+            }
+        }
+    }
+
     /// Render the document in the given window.
     pub async fn render_in_window(
         &mut self,
+        kern: &mut IncrDocClient,
         canvas: &web_sys::CanvasRenderingContext2d,
         rect: Rect,
     ) {
+        self.patch_delta(kern);
+
         // prepare an empty page for the pages that are not rendered
         // todo: better solution?
         let empty_page = self.mb.build(SvgItem::Group(Default::default()));
-        self.kern
-            .doc
+        kern.doc
             .module
             .items
             .extend(self.mb.items.iter().map(|(f, (_, v))| (*f, v.clone())));
@@ -736,7 +744,7 @@ impl IncrCanvasDocClient {
         // otherwise, we keep document layout
         let mut page_off: f32 = 0.;
         let mut next_doc_view = vec![];
-        if let Some(t) = &self.kern.layout {
+        if let Some(t) = &kern.layout {
             let pages = match t {
                 LayoutRegionNode::Pages(a) => {
                     let (_, pages) = a.deref();
@@ -769,10 +777,13 @@ impl IncrCanvasDocClient {
     /// Render the document in the given window.
     pub async fn render_page_in_window(
         &mut self,
+        kern: &mut IncrDocClient,
         canvas: &web_sys::CanvasRenderingContext2d,
         idx: usize,
         _rect: Rect,
     ) -> ZResult<()> {
+        self.patch_delta(kern);
+
         if idx >= self.elements.pages.len() {
             Err(error_once!("Renderer.OutofPageRange", idx: idx))?;
         }

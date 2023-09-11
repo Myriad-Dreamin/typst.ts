@@ -10,6 +10,7 @@ import {
   RenderOptions,
   RenderPageOptions,
   RenderToSvgOptions,
+  ManipulateDataOptions,
 } from './options.render';
 import { RenderView, renderTextLayer } from './view';
 import { LazyWasmModule } from './wasm';
@@ -56,6 +57,8 @@ export interface TypstRenderer extends TypstSvgRenderer {
    * @returns {RenderResult} - The result of rendering a Typst document.
    */
   renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<unknown>;
+
+  manipulateData(session: RenderSession, opts: ManipulateDataOptions): Promise<void>;
 
   /// run a function with a session, and the sesssion is only available during the
   /// function call.
@@ -477,15 +480,18 @@ class TypstRendererDriver {
   }
 
   createModule(b?: Uint8Array): Promise<unknown> {
-    return new Promise(resolve => {
-      resolve(b ? this.renderer.create_svg_session(b) : this.renderer.create_empty_svg_session());
-    });
+    return Promise.resolve(
+      this.renderer.create_session(
+        this.createOptionsToRust({
+          format: 'vector',
+          artifactContent: b,
+        }),
+      ),
+    );
   }
 
   renderSvg(session: unknown, container: HTMLElement): Promise<unknown> {
-    return new Promise(resolve => {
-      resolve(this.renderer.render_svg(session as typst.SvgSession, container));
-    });
+    return Promise.resolve(this.renderer.render_svg(session as typst.RenderSession, container));
   }
 
   renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<unknown> {
@@ -494,9 +500,15 @@ class TypstRendererDriver {
     });
   }
 
-  // async renderSvg(options: RenderAsCanvasOption<SvgFormat>): Promise<RenderResult> {
-  //   throw new Error('unimplemented');
-  // }
+  manipulateData(session: RenderSession, opts: ManipulateDataOptions): Promise<void> {
+    return Promise.resolve(
+      this.renderer.manipulate_data(
+        session as typst.RenderSession,
+        opts.action ?? 'reset',
+        opts.data,
+      ),
+    );
+  }
 
   private withinOptionSession<T>(
     options: RenderToCanvasOptions | CreateSessionOptions,

@@ -12,7 +12,7 @@ use crate::{
 };
 
 use super::flat_ir::{
-    FlatModule, IncrModuleBuilder, LayoutRegionNode, LayoutSourceMapping, ModuleMetadata,
+    FlatModule, IncrModuleBuilder, LayoutRegionNode, LayoutSourceMapping, Module, ModuleMetadata,
     MultiSvgDocument, Page, SourceMappingNode, SvgDocument,
 };
 
@@ -185,6 +185,19 @@ impl IncrDocClient {
     /// Please wrap this for your own use case.
     pub fn set_layout(&mut self, layout: LayoutRegionNode) {
         self.layout = Some(layout);
+    }
+
+    /// Kern of the client without leaking abstraction.
+    pub fn kern(&self) -> IncrDocClientKern<'_> {
+        IncrDocClientKern::new(self)
+    }
+
+    pub fn module(&self) -> &Module {
+        &self.doc.module
+    }
+
+    pub fn module_mut(&mut self) -> &mut Module {
+        &mut self.doc.module
     }
 }
 

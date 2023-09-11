@@ -1,10 +1,13 @@
-#[cfg(feature = "render_canvas")]
 use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "render_canvas")]
 use typst_ts_canvas_exporter::IncrCanvasDocClient;
-use typst_ts_core::error::prelude::*;
-use typst_ts_svg_exporter::ir::Scalar;
+use typst_ts_core::{
+    error::prelude::*,
+    vector::{flat_ir::Page, incr::IncrDocClient, ir::Scalar},
+};
+#[cfg(feature = "render_svg")]
+use typst_ts_svg_exporter::IncrSvgDocClient;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -156,8 +159,12 @@ impl PagesInfo {
 pub struct RenderSession {
     pub(crate) pixel_per_pt: Option<f32>,
     pub(crate) background_color: Option<String>,
+    /// underlying communication client model
+    pub(crate) client: Arc<Mutex<IncrDocClient>>,
     #[cfg(feature = "render_canvas")]
-    pub(crate) client: Arc<Mutex<IncrCanvasDocClient>>,
+    pub(crate) canvas_kern: Arc<Mutex<IncrCanvasDocClient>>,
+    #[cfg(feature = "render_svg")]
+    pub(crate) svg_kern: Arc<Mutex<IncrSvgDocClient>>,
     pub(crate) pages_info: PagesInfo,
 }
 
@@ -189,9 +196,42 @@ impl RenderSession {
     }
 }
 
-#[cfg(feature = "render_canvas")]
+#[wasm_bindgen]
 impl RenderSession {
-    pub fn merge_delta(&mut self, delta: &[u8]) -> ZResult<()> {
+    pub(crate) fn client(&self) -> std::sync::MutexGuard<'_, IncrDocClient> {
+        self.client.lock().unwrap()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn doc_width(&self) -> f32 {
+        self.client().kern().doc_width().unwrap_or_default()
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn doc_height(&self) -> f32 {
+        self.client().kern().doc_height().unwrap_or_default()
+    }
+
+    pub fn source_span(&self, path: &[u32]) -> ZResult<Option<String>> {
+        self.client().kern().source_span(path)
+    }
+
+    pub(crate) fn reset_current(&mut self, delta: &[u8]) -> ZResult<()> {
+        let mut client = self.client.lock().unwrap();
+        *client = IncrDocClient::default();
+        Self::merge_delta_inner(&mut self.pages_info, &mut client, delta)
+    }
+
+    pub(crate) fn merge_delta(&mut self, delta: &[u8]) -> ZResult<()> {
+        let mut client = self.client.lock().unwrap();
+        Self::merge_delta_inner(&mut self.pages_info, &mut client, delta)
+    }
+
+    pub(crate) fn merge_delta_inner(
+        pages_info: &mut PagesInfo,
+        client: &mut IncrDocClient,
+        delta: &[u8],
+    ) -> ZResult<()> {
         use typst_ts_core::vector::stream::BytesModuleStream;
 
         let delta = BytesModuleStream::from_slice(delta).checkout_owned();
@@ -204,24 +244,37 @@ impl RenderSession {
             delta.layouts.len()
         );
 
-        let mut client = self.client.lock().unwrap();
         client.merge_delta(delta);
+        // checkout the current layout
+        // todo: multiple layout
+        let layouts = &client.doc.layouts;
+        if !layouts.is_empty() {
+            let layout = layouts.unwrap_single();
+            client.set_layout(layout);
+        }
 
-        let pages_info = PagesInfo {
-            pages: {
-                let mut pages = Vec::with_capacity(client.elements.pages.len());
-                for (i, (_, size)) in client.elements.pages.iter().enumerate() {
+        // checkout the current pages
+        let pages = if let Some(layout) = &client.layout {
+            let mut pages = vec![];
+            let view = layout.pages(&client.doc.module);
+            if let Some(view) = view {
+                // Vec::with_capacity(client.elements.pages.len());
+                pages.reserve(view.pages().len());
+                for (i, Page { size, .. }) in view.pages().iter().enumerate() {
                     pages.push(PageInfo {
                         page_off: i,
                         width: size.x.0 as f64,
                         height: size.y.0 as f64,
                     });
                 }
-                pages
-            },
+            }
+
+            pages
+        } else {
+            vec![]
         };
 
-        self.pages_info = pages_info;
+        *pages_info = PagesInfo { pages };
         Ok(())
     }
 }
