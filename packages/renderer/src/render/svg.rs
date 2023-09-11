@@ -41,7 +41,7 @@ impl TypstRenderer {
         type UsingExporter = SvgExporter<DefaultExportFeature>;
         // todo: leaking abstraction
         let client = session.client.lock().unwrap();
-        let layouts = client.doc.layouts.by_scalar().unwrap();
+        let layouts = client.doc.layouts[0].by_scalar().unwrap();
         let layout = layouts.first().unwrap();
 
         // base scale = 2
@@ -75,17 +75,6 @@ impl TypstRenderer {
         };
 
         // console_log!("base_cw {}", base_cw);
-
-        // console_log!(
-        //     "layouts {:?}",
-        //     session
-        //         .client
-        //         .doc
-        //         .layouts
-        //         .iter()
-        //         .map(|x| x.0)
-        //         .collect::<Vec<_>>()
-        // );
 
         const EPS: f32 = 1e-2;
 

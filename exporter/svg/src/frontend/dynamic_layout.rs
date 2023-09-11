@@ -44,7 +44,7 @@ impl DynamicLayoutSvgExporter {
         let module = self.builder.finalize();
         MultiSvgDocument {
             module,
-            layouts: LayoutRegion::new_by_scalar("width".into(), self.layouts),
+            layouts: vec![LayoutRegion::new_by_scalar("width".into(), self.layouts)],
         }
     }
 

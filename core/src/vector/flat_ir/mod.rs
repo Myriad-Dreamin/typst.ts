@@ -237,7 +237,7 @@ pub enum ModuleMetadata {
     Item(ItemPack),
     Font(Arc<FontPack>),
     Glyph(Arc<GlyphPack>),
-    Layout(Arc<LayoutRegion>),
+    Layout(Arc<Vec<LayoutRegion>>),
 }
 
 const _: () = assert!(core::mem::size_of::<ModuleMetadata>() == 32);
@@ -332,7 +332,7 @@ impl ModuleStream for &FlatModule {
         }
     }
 
-    fn layouts(&self) -> Arc<LayoutRegion> {
+    fn layouts(&self) -> Arc<Vec<LayoutRegion>> {
         // cache the index
         let sz = &self.meta_indices[MetaIndices::Layout as usize];
         let sz = sz.get_or_init(|| {
@@ -426,7 +426,7 @@ pub struct MultiSvgDocument {
     pub module: Module,
     /// References to the page frames.
     /// Use [`Module::get_item`] to get the actual item.
-    pub layouts: LayoutRegion,
+    pub layouts: Vec<LayoutRegion>,
 }
 
 impl Default for MultiSvgDocument {
@@ -434,7 +434,7 @@ impl Default for MultiSvgDocument {
         let pages = LayoutRegionNode::new_pages(Default::default());
         Self {
             module: Default::default(),
-            layouts: LayoutRegion::new_single(pages),
+            layouts: vec![LayoutRegion::new_single(pages)],
         }
     }
 }
