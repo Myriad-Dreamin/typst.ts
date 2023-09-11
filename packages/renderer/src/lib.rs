@@ -130,13 +130,24 @@ impl TypstRenderer {
         }
     }
 
+    pub fn manipulate_data(
+        &mut self,
+        session: &mut RenderSession,
+        action: &str,
+        data: &[u8],
+    ) -> ZResult<()> {
+        match action {
+            "reset" => session.reset_current(data),
+            "merge" => session.merge_delta(data),
+            _ => Err(error_once!("Renderer.UnsupportedAction", action: action)),
+        }
+    }
+
     pub fn session_from_artifact(
         &self,
         artifact_content: &[u8],
         decoder: &str,
     ) -> ZResult<RenderSession> {
-        // todo: share session between renderers
-        #[cfg(feature = "render_canvas")]
         if decoder == "vector" {
             return self.session_from_vector_artifact(artifact_content);
         }
@@ -148,10 +159,9 @@ impl TypstRenderer {
         Err(error_once!("Renderer.UnsupportedDecoder", decoder: decoder))
     }
 
-    #[cfg(feature = "render_canvas")]
     fn session_from_vector_artifact(&self, artifact_content: &[u8]) -> ZResult<RenderSession> {
         let mut session = RenderSession::default();
-        session.merge_delta(artifact_content)?;
+        session.reset_current(artifact_content)?;
         Ok(session)
     }
 

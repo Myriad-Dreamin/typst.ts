@@ -50,7 +50,8 @@ impl TypstRenderer {
             hi: Axes::new(Scalar(rect_hi_x), Scalar(rect_hi_y)),
         };
 
-        let mut client = ses.client.lock().unwrap();
+        let mut kern = ses.client.lock().unwrap();
+        let mut client = ses.canvas_kern.lock().unwrap();
         client.set_pixel_per_pt(ses.pixel_per_pt.unwrap_or(3.));
         client.set_fill(ses.background_color.as_deref().unwrap_or("ffffff").into());
         console_log!(
@@ -84,18 +85,18 @@ impl TypstRenderer {
         if let Some(options) = options {
             page_num = options.page_off;
             client
-                .render_page_in_window(canvas, options.page_off, rect)
+                .render_page_in_window(&mut kern, canvas, options.page_off, rect)
                 .await?;
         } else {
-            client.render_in_window(canvas, rect).await;
+            client.render_in_window(&mut kern, canvas, rect).await;
         }
 
         // todo: leaking abstraction
-        let mut worker = TextContentTask::new(&client.kern.doc.module, &mut tc);
+        let mut worker = TextContentTask::new(&kern.doc.module, &mut tc);
         let mut annotation_list_worker =
-            AnnotationListTask::new(&client.kern.doc.module, &mut annotations);
+            AnnotationListTask::new(&kern.doc.module, &mut annotations);
         // todo: reuse
-        if let Some(t) = &client.kern.layout {
+        if let Some(t) = &kern.layout {
             let pages = match t {
                 LayoutRegionNode::Pages(a) => {
                     let (_, pages) = a.deref();

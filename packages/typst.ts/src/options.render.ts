@@ -6,7 +6,7 @@ export type VectorFormat = (typeof vectorFormats)[0];
 /**
  * The options for creating a session.
  * @property {string} [format] - specify the format of render data
- *   + `vector`: decode {@link CreateSessionOptions.artifactContent} in binary vector format
+ *   + `vector`: decode {@link CreateSessionOptions['artifactContent']} in binary vector format
  * @property {Uint8Array} artifactContent - The artifact content of Typst document.
  */
 export interface CreateSessionOptions<T = VectorFormat> {
@@ -55,6 +55,24 @@ export interface RenderToCanvasOptions {
  */
 export interface RenderToSvgOptions {
   container: HTMLElement;
+}
+
+/**
+ * The options for rendering a preprocessed Typst document to specified container.
+ * @property {HTMLElement} [container] - The container to render the Typst document.
+ */
+export interface ManipulateDataOptions {
+  /**
+   * The action to manipulate the data.
+   * @description `reset`: reset the data to the initial state.
+   * @description `merge`: merge the data to the current state.
+   * @default 'reset'
+   */
+  action?: 'reset' | 'merge';
+  /**
+   * Opaque data to manipulate the Typst document from server.
+   */
+  data: Uint8Array;
 }
 
 /**

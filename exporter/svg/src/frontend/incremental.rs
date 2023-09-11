@@ -7,9 +7,9 @@ use std::{
 use typst_ts_core::{
     hash::Fingerprint,
     vector::{
-        flat_ir::{FlatModule, LayoutRegionNode, Module, ModuleBuilder, MultiSvgDocument, Page},
+        flat_ir::{LayoutRegionNode, Module, ModuleBuilder, Page},
         flat_vm::{FlatIncrRenderVm, FlatRenderVm},
-        incr::{IncrDocClient, IncrDocClientKern, IncrDocServer},
+        incr::{IncrDocClient, IncrDocServer},
         ir::{Rect, SvgItem},
     },
 };
@@ -128,9 +128,6 @@ pub type IncrSvgDocServer = IncrDocServer;
 /// maintains the state of the incremental rendering at client side
 #[derive(Default)]
 pub struct IncrSvgDocClient {
-    /// underlying communication client model
-    pub kern: IncrDocClient,
-
     /// Expected exact state of the current DOM.
     /// Initially it is None meaning no any page is rendered.
     pub doc_view: Option<Vec<Page>>,
@@ -145,46 +142,20 @@ pub struct IncrSvgDocClient {
 }
 
 impl IncrSvgDocClient {
-    pub fn new(doc: MultiSvgDocument) -> Self {
+    pub fn new() -> Self {
         Self {
-            kern: IncrDocClient {
-                doc,
-                ..Default::default()
-            },
             ..Default::default()
         }
     }
 
-    /// Kern of the client without leaking abstraction.
-    pub fn kern(&self) -> IncrDocClientKern<'_> {
-        IncrDocClientKern::new(&self.kern)
-    }
-
-    /// Merge the delta from server.
-    pub fn merge_delta(&mut self, delta: FlatModule) {
-        self.kern.merge_delta(delta);
-
-        // checkout the current layout
-        let layouts = &self.kern.doc.layouts;
-        if !layouts.is_empty() {
-            self.kern.set_layout(layouts.unwrap_single());
-        }
-    }
-
-    fn module_mut(&mut self) -> &mut Module {
-        &mut self.kern.doc.module
-    }
-
     /// Render the document in the given window.
-    pub fn render_in_window(&mut self, rect: Rect) -> String {
+    pub fn render_in_window(&mut self, kern: &mut IncrDocClient, rect: Rect) -> String {
         type IncrExporter = SvgExporter<IncrementalExportFeature>;
 
         // prepare an empty page for the pages that are not rendered
         // todo: better solution?
         let empty_page = self.mb.build(SvgItem::Group(Default::default()));
-        self.kern
-            .doc
-            .module
+        kern.module_mut()
             .items
             .extend(self.mb.items.iter().map(|(f, (_, v))| (*f, v.clone())));
 
@@ -197,7 +168,7 @@ impl IncrSvgDocClient {
         // otherwise, we keep document layout
         let mut page_off: f32 = 0.;
         let mut next_doc_view = vec![];
-        if let Some(t) = &self.kern.layout {
+        if let Some(t) = &kern.layout {
             let pages = match t {
                 LayoutRegionNode::Pages(a) => {
                     let (_, pages) = a.deref();
@@ -230,7 +201,7 @@ impl IncrSvgDocClient {
         let mut svg_body = vec![];
         t.render_diff(
             &IncrementalRenderContext {
-                module: self.module_mut(),
+                module: kern.module_mut(),
                 prev: &prev_doc_view,
                 next: &next_doc_view,
             },
@@ -239,7 +210,7 @@ impl IncrSvgDocClient {
 
         // render the glyphs
         svg.push(r#"<defs class="glyph">"#.into());
-        let glyphs = self.kern.doc.module.glyphs.iter();
+        let glyphs = kern.module_mut().glyphs.iter();
         // skip the glyphs that are already rendered
         let new_glyphs = glyphs.skip(self.glyph_window);
         let glyph_defs = t.render_glyphs(new_glyphs.enumerate().map(|(x, (_, y))| (x, y)), true);
@@ -268,7 +239,7 @@ impl IncrSvgDocClient {
 
         // update the state
         self.doc_view = Some(next_doc_view);
-        self.glyph_window = self.module_mut().glyphs.len();
+        self.glyph_window = kern.module_mut().glyphs.len();
 
         // return the svg
         string_io
