@@ -38,6 +38,14 @@ jobs:
         uses: rui314/setup-mold@v1
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+      - name: Download font assets
+        run: |
+          curl -L https://github.com/Myriad-Dreamin/typst-book/releases/download/v0.1.0/charter-font-assets.tar.gz | tar -xvz -C assets/fonts
+      - name: Download & install typst-book
+        run: |
+          curl -L https://github.com/Myriad-Dreamin/typst-book/releases/download/v0.1.1-nightly1/typst-book-x86_64-unknown-linux-gnu.tar.gz | tar -xvz
+          chmod +x typst-book-x86_64-unknown-linux-gnu/bin/typst-book
+          sudo cp typst-book-x86_64-unknown-linux-gnu/bin/typst-book /usr/bin/typst-book
       - name: Install Rust for Wasm targets
         run: rustup target add wasm32-unknown-unknown
       - name: Set Node.js 18.x
@@ -62,6 +70,7 @@ jobs:
           npx turbo run build
       - name: Prepare artifacts
         run: |
+          typst-book build --font-path assets/fonts --path-to-root /typst.ts/cookery/ -w . -d ../../github-pages/cookery/ docs/cookery
           cargo run --profile release-ci --bin typst-ts-cli -- compile --workspace ./github-pages/docs/ --entry ./github-pages/docs/readme.typ --format=pdf --format=vector
       - name: Copy assets
         run: |
