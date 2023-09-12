@@ -1,7 +1,7 @@
 // @ts-ignore
 import typstInit, * as typst from '@myriaddreamin/typst-ts-web-compiler';
 import { buildComponent, globalFontPromises } from './init';
-import { DocumentReference, FsAccessModel } from './internal.types';
+import { FsAccessModel } from './internal.types';
 
 import type { InitOptions } from './options.init';
 import { RenderPageResult } from './renderer';

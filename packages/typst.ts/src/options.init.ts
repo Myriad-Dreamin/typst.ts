@@ -48,6 +48,13 @@ export interface InitOptions {
    */
   beforeBuild: BeforeBuildFn[];
 
+  /**
+   * callbacks to fetch the wasm module
+   *
+   * There are many ways to provide a wasm module, see
+   * {@link WebAssemblyModuleRef} for more details. If you don't provide a wasm
+   * module, the default module will be used.
+   */
   getModule(): WebAssemblyModuleRef | Promise<WebAssemblyModuleRef>;
 }
 
@@ -67,6 +74,7 @@ export interface InitOptions {
  *     ]),
  *   ],
  * });
+ * ```
  */
 export function preloadRemoteFonts(fonts: string[]): BeforeBuildFn {
   return async (_, { ref, builder }: InitContext) => {
@@ -120,7 +128,8 @@ export function preloadSystemFonts({ byFamily }: { byFamily?: string[] }): Befor
 /**
  * (compile only) set access model
  *
- * @param accessModel: when compiling, the access model is used to access the data of files
+ * @param accessModel: when compiling, the access model is used to access the
+ * data of files
  * @returns {BeforeBuildFn}
  */
 export function withAccessModel(accessModel: FsAccessModel): BeforeBuildFn {
