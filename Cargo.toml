@@ -98,12 +98,12 @@ human-panic = "1.1.4"
 rustyline = { version = "12.0.0", features = ["derive"] }
 
 # net
-tokio-tungstenite = "0.18.0"
+tokio-tungstenite = "0.20.0"
 
 # system
 dirs = "5"
 memmap2 = "0.7"
-notify = "5"
+notify = "6"
 path-clean = "1.0.1"
 pathdiff = "0.2.1"
 walkdir = "2"
@@ -139,7 +139,7 @@ ansi-to-html = "0.1.3"
 base64 = "0.21.0"
 base64-serde = "0.7.0"
 byteorder = "1.4.3"
-data-url = "0.2.0"
+data-url = "0.3.0"
 hex = "0.4.3"
 flate2 = "1"
 fxhash = "0.2.1"
@@ -150,9 +150,10 @@ roxmltree = "0.18"
 rustc-hash = "1.1.0"
 serde = { version = "1.0.188" }
 serde_json = "1.0.106"
-serde_with = { version = "2.3.2", features = ["base64"] }
+serde_with = { version = "3.3", features = ["base64"] }
 serde-wasm-bindgen = "^0.5"
 sha2 = "0.10.6"
+# todo: typst prevent it, we should notice and bump it later
 siphasher = "0.3.10"
 tar = "0.4"
 toml = "0.7.5"
@@ -170,7 +171,13 @@ insta = "1.29.0"
 
 # misc
 codespan-reporting = "0.11"
-vergen = { version = "7.5.1", features = ["build", "cargo", "git", "rustc"] }
+vergen = { version = "8.2.5", features = [
+    "build",
+    "cargo",
+    "git",
+    "git2",
+    "rustc",
+] }
 
 # project core
 typst-ts-core = "0.4.0-rc1"
