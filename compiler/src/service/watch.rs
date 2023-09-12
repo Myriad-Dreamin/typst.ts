@@ -2,6 +2,7 @@ use std::path::Path;
 
 use log::{error, info};
 use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
+use typst::eval::eco_format;
 
 pub async fn watch_dir(
     workspace_dir: &Path,
@@ -18,7 +19,7 @@ pub async fn watch_dir(
         },
         notify::Config::default(),
     )
-    .map_err(|_| "failed to watch directory")
+    .map_err(|err| eco_format!("failed to watch directory ({err})"))
     .unwrap();
 
     // Add a path to be watched. All files and directories at that path and

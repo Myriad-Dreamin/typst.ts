@@ -106,24 +106,29 @@ impl<'a, W: io::Write> AstWriter<'a, W> {
     }
 
     fn write_ast(&mut self, src: &Source, ast: &LinkedNode) {
-        let rng = src.range(ast.span());
-        let start = rng.start;
-        let end = rng.end;
-        let start_end = [start, end]
-            .iter()
-            .map(|s| {
-                (
-                    src.byte_to_line(*s).map(|l| l + 1).unwrap_or(0),
-                    src.byte_to_column(*s).unwrap_or(0),
+        let head = src
+            .range(ast.span())
+            .map(|rng| {
+                let start = rng.start;
+                let end = rng.end;
+                let start_end = [start, end]
+                    .iter()
+                    .map(|s| {
+                        (
+                            src.byte_to_line(*s).map(|l| l + 1).unwrap_or(0),
+                            src.byte_to_column(*s).unwrap_or(0),
+                        )
+                    })
+                    .collect::<Vec<_>>();
+                format!(
+                    " <{:?}:{:?}~{:?}:{:?}>",
+                    start_end[0].0, start_end[0].1, start_end[1].0, start_end[1].1
                 )
             })
-            .collect::<Vec<_>>();
+            .unwrap_or_else(|| "<detached>".to_owned());
+
         self.w.write_all("s: ".as_bytes()).unwrap();
         self.write_repr(ast);
-        let head = format!(
-            " <{:?}:{:?}~{:?}:{:?}>",
-            start_end[0].0, start_end[0].1, start_end[1].0, start_end[1].1
-        );
         self.w.write_all(head.as_bytes()).unwrap();
         if ast.children().next().is_none() {
             return;
@@ -174,7 +179,7 @@ where
 
         fn collect_translation_unit(result: &mut Vec<TranslationUnit>, src: Source) {
             result.push(TranslationUnit {
-                path: src.id().path().display().to_string(),
+                path: src.id().vpath().as_rootless_path().display().to_string(),
                 source: src,
             });
         }

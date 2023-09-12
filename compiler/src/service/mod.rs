@@ -4,6 +4,7 @@ use std::{
 };
 
 use crate::ShadowApi;
+use log::error;
 use typst::{
     diag::{At, FileResult, SourceDiagnostic, SourceResult},
     doc::Document,
@@ -311,8 +312,10 @@ where
             }
             Err(errs) => {
                 self.print_status::<WITH_STATUS>(DiagStatus::Error(start.elapsed()));
-                // todo: process errors
-                let _ = self.print_diagnostics(*errs);
+                let err = self.print_diagnostics(*errs);
+                if err.is_err() {
+                    error!("failed to print diagnostics: {:?}", err);
+                }
                 None
             }
         }

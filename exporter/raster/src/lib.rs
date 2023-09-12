@@ -13,7 +13,7 @@ use usvg::{NodeExt, TreeParsing};
 
 use typst::doc::{Frame, FrameItem, GroupItem, Meta, TextItem};
 use typst::font::Font;
-use typst::geom::{self, Abs, Color, Geometry, Paint, PathItem, Shape, Size, Stroke};
+use typst::geom::{self, Abs, Color, FixedStroke, Geometry, Paint, PathItem, Shape, Size};
 use typst::image::{DecodedImage, Image};
 
 pub mod pixmap;
@@ -418,7 +418,7 @@ fn render_shape(
         canvas.fill_path(&path, &paint, rule, ts, mask);
     }
 
-    if let Some(Stroke {
+    if let Some(FixedStroke {
         paint,
         thickness,
         line_cap,
