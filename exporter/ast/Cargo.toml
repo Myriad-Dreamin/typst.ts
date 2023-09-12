@@ -13,4 +13,4 @@ repository.workspace = true
 typst.workspace = true
 typst-ts-core.workspace = true
 
-ansi_term = "0.12.1"
+ansi_term.workspace = true

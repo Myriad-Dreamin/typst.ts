@@ -12,16 +12,12 @@ repository.workspace = true
 typst.workspace = true
 comemo.workspace = true
 
-image = { version = "0.24", default-features = false, features = [
-    "png",
-    "jpeg",
-    "gif",
-] }
-usvg = { version = "0.32", default-features = false, features = ["text"] }
+image.workspace = true
+usvg.workspace = true
 tiny-skia.workspace = true
 ttf-parser.workspace = true
-roxmltree = "0.18"
-bytemuck = "1"
-pixglyph = "0.1"
+roxmltree.workspace = true
+bytemuck.workspace = true
+pixglyph.workspace = true
 flate2.workspace = true
-resvg = { version = "0.32", default-features = false }
+resvg.workspace = true

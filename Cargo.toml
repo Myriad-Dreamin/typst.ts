@@ -58,19 +58,16 @@ strip = true
 [workspace.dependencies]
 
 # typesetting
+pixglyph = "0.1"
 typst = "0.7.0"
 typst-library = "0.7.0"
 typst-syntaxes = "0.7.0"
-tiny-skia = "0.9.0"
 ttf-parser = "0.18.1"
-image = { version = "0.24", default-features = false, features = [
-    "png",
-    "jpeg",
-    "gif",
-] }
 
 # general
 anyhow = "1"
+async-recursion = "1.0.4"
+async-trait = "0.1.68"
 chrono = { version = "0.4.24", default-features = false, features = [
     "clock",
     "std",
@@ -84,20 +81,20 @@ tokio = { version = "1.28.1", features = ["full"] }
 
 # data structure and algorithm
 append-only-vec = "0.1.2"
+bytemuck = "1"
 comemo = "0.3"
 dissimilar = "1.0"
 elsa = "1.8.1"
 ecow = "0.1"
 fst = "0.4.7"
 indexmap = "2.0.0"
-pathdiff = "0.2.1"
 
-# cli
+# cli, terminal and tui
+ansi_term = "0.12.1"
 clap = { version = "4.3", features = ["derive", "env", "unicode", "wrap_help"] }
 clap_complete = "4.3"
 clap_complete_fig = "4.3"
-
-# tui
+human-panic = "1.1.4"
 rustyline = { version = "12.0.0", features = ["derive"] }
 
 # net
@@ -107,6 +104,8 @@ tokio-tungstenite = "0.18.0"
 dirs = "5"
 memmap2 = "0.7"
 notify = "5"
+path-clean = "1.0.1"
+pathdiff = "0.2.1"
 walkdir = "2"
 
 # web
@@ -115,18 +114,43 @@ wasm-bindgen = "^0.2"
 wasm-bindgen-futures = "^0.4"
 wasm-bindgen-test = "0.3.36"
 web-sys = "^0.3"
+# The `console_error_panic_hook` crate provides better debugging of panics by
+# logging them with `console.error`. This is great for development, but requires
+# all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
+# code size when deploying.
+console_error_panic_hook = { version = "0.1.1" }
+
+# image processing
+image = { version = "0.24", default-features = false, features = [
+    "png",
+    "jpeg",
+    "gif",
+] }
+resvg = { version = "0.32", default-features = false, features = [
+    "raster-images",
+] }
+svgtypes = "0.11"
+tiny-skia = "0.9.0"
+tiny-skia-path = "0.11"
+usvg = { version = "0.32", default-features = false, features = ["text"] }
 
 # cryptography and processing
+ansi-to-html = "0.1.3"
 base64 = "0.21.0"
+base64-serde = "0.7.0"
 byteorder = "1.4.3"
+data-url = "0.2.0"
 hex = "0.4.3"
 flate2 = "1"
+fxhash = "0.2.1"
 nohash-hasher = "0.2.0"
 rkyv = "0.7.42"
 rmp-serde = "1.1.2"
+roxmltree = "0.18"
 rustc-hash = "1.1.0"
 serde = { version = "1.0.188" }
 serde_json = "1.0.106"
+serde_with = { version = "2.3.2", features = ["base64"] }
 serde-wasm-bindgen = "^0.5"
 sha2 = "0.10.6"
 siphasher = "0.3.10"
@@ -146,8 +170,6 @@ insta = "1.29.0"
 
 # misc
 codespan-reporting = "0.11"
-human-panic = "1.1.4"
-path-clean = "1.0.1"
 vergen = { version = "7.5.1", features = ["build", "cargo", "git", "rustc"] }
 
 # project core
