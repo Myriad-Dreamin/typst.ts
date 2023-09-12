@@ -38,14 +38,6 @@ jobs:
         uses: rui314/setup-mold@v1
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-      - name: Download font assets
-        run: |
-          curl -L https://github.com/Myriad-Dreamin/typst-book/releases/download/v0.1.0/charter-font-assets.tar.gz | tar -xvz -C assets/fonts
-      - name: Download & install typst-book
-        run: |
-          curl -L https://github.com/Myriad-Dreamin/typst-book/releases/download/v0.1.1-nightly1/typst-book-x86_64-unknown-linux-gnu.tar.gz | tar -xvz
-          chmod +x typst-book-x86_64-unknown-linux-gnu/bin/typst-book
-          sudo cp typst-book-x86_64-unknown-linux-gnu/bin/typst-book /usr/bin/typst-book
       - name: Install Rust for Wasm targets
         run: rustup target add wasm32-unknown-unknown
       - name: Set Node.js 18.x
@@ -54,10 +46,18 @@ jobs:
           node-version: 18.x
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
+      - name: Download & install typst-book
+        run: |
+          curl -L https://github.com/Myriad-Dreamin/typst-book/releases/download/v0.1.1-nightly1/typst-book-x86_64-unknown-linux-gnu.tar.gz | tar -xvz
+          chmod +x typst-book-x86_64-unknown-linux-gnu/bin/typst-book
+          sudo cp typst-book-x86_64-unknown-linux-gnu/bin/typst-book /usr/bin/typst-book
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: Prepare fonts
         run: cargo run --profile release-ci --bin typst-ts-fontctl
+      - name: Download font assets
+        run: |
+          curl -L https://github.com/Myriad-Dreamin/typst-book/releases/download/v0.1.0/charter-font-assets.tar.gz | tar -xvz -C assets/fonts
       - name: Build
         run: |
           cargo build --profile release-ci --bin typst-ts-cli
