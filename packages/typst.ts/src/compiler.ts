@@ -1,7 +1,7 @@
 // @ts-ignore
 import typstInit, * as typst from '@myriaddreamin/typst-ts-web-compiler';
 import { buildComponent, globalFontPromises } from './init';
-import { DocumentReference, FsAccessModel } from './internal.types';
+import { FsAccessModel } from './internal.types';
 
 import type { InitOptions } from './options.init';
 import { RenderPageResult } from './renderer';
@@ -24,11 +24,11 @@ export interface TypstCompiler {
    */
   init(options?: Partial<InitOptions>): Promise<void>;
   reset(): Promise<void>;
-  addSource(path: string, source: string, isMain: boolean): Promise<void>;
-  getAst(mainFilePath: string): Promise<string>;
 
+  addSource(path: string, source: string, isMain: boolean): Promise<void>;
+
+  getAst(mainFilePath: string): Promise<string>;
   compile(options: CompileOptions): Promise<Uint8Array>;
-  renderPageToCanvas(): Promise<RenderPageResult>;
 
   loadSnapshot(snapshot: unknown, fontServer: FsAccessModel): Promise<any>;
 }

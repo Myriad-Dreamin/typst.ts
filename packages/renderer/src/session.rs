@@ -157,15 +157,25 @@ impl PagesInfo {
 #[derive(Default)]
 #[wasm_bindgen]
 pub struct RenderSession {
+    /// pixel per point
+    /// Only used for canvas rendering
     pub(crate) pixel_per_pt: Option<f32>,
+
+    /// background color
+    /// Only used for canvas rendering
     pub(crate) background_color: Option<String>,
+
+    /// stored pages info
+    pub(crate) pages_info: PagesInfo,
+
     /// underlying communication client model
     pub(crate) client: Arc<Mutex<IncrDocClient>>,
+    /// underlying incremental state of canvas rendering
     #[cfg(feature = "render_canvas")]
     pub(crate) canvas_kern: Arc<Mutex<IncrCanvasDocClient>>,
+    /// underlying incremental state of svg rendering
     #[cfg(feature = "render_svg")]
     pub(crate) svg_kern: Arc<Mutex<IncrSvgDocClient>>,
-    pub(crate) pages_info: PagesInfo,
 }
 
 #[wasm_bindgen]

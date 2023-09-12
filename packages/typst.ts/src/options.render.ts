@@ -58,8 +58,7 @@ export interface RenderToSvgOptions {
 }
 
 /**
- * The options for rendering a preprocessed Typst document to specified container.
- * @property {HTMLElement} [container] - The container to render the Typst document.
+ * The options for manipulating the Typst document in the session.
  */
 export interface ManipulateDataOptions {
   /**

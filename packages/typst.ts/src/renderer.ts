@@ -34,37 +34,148 @@ export interface RenderPageResult {
 
 /**
  * The interface of Typst renderer.
- * @typedef {Object} TypstRenderer
- * @property {function} init - Initialize the Typst renderer.
- * @property {function} render - Render a Typst document to specified container.
- * @property {function} runWithSession - Run a function with a session to interact
- *   with the wasm module multiple times programmatically.
  */
 export interface TypstRenderer extends TypstSvgRenderer {
+  /**
+   * Initialize the Typst renderer.
+   * @param {Partial<InitOptions>} options - The options for initializing the
+   * Typst renderer.
+   */
   init(options?: Partial<InitOptions>): Promise<void>;
+
+  /**
+   * Load a glyph pack for all of the Typst documents to render.
+   * Note: this function is still under development.
+   * @param pack
+   */
   loadGlyphPack(pack: unknown): Promise<void>;
 
   /**
    * Render a Typst document to canvas.
-   * @param {RenderToCanvasOptions} options - The options for rendering a Typst document to specified container.
+   * @param {RenderOptions<RenderToCanvasOptions>} options - The options for
+   * rendering a Typst document to specified container.
    * @returns {RenderResult} - The result of rendering a Typst document.
+   * @example
+   * ```typescript
+   * let fetchDoc = (path) => fetch(path).then(
+   *   response => new Uint8Array(response.arrayBuffer()))
+   * renderer.renderToCanvas({
+   *   container: document.getElementById('container'),
+   *   pixelPerPt: 3,
+   *   backgroundColor: '#ffffff',
+   *   artifactContent: await fetchDoc('typst-main.sir.in'),
+   * });
+   * ```
    */
-  renderToCanvas(options: RenderOptions<RenderToCanvasOptions>): Promise<RenderResult>;
+  renderToCanvas(options: RenderOptions<RenderToCanvasOptions>): Promise<void>;
 
   /**
-   * Render a Typst document to canvas.
-   * @param {RenderToCanvasOptions} options - The options for rendering a Typst document to specified container.
+   * Render a Typst document to svg.
+   * @param {RenderOptions<RenderToSvgOptions>} options - The options for
+   * rendering a Typst document to specified container.
    * @returns {RenderResult} - The result of rendering a Typst document.
+   * @example
+   * ```typescript
+   * let fetchDoc = (path) => fetch(path).then(
+   *   response => new Uint8Array(response.arrayBuffer()))
+   * renderer.renderToSvg({
+   *   container: document.getElementById('container'),
+   *   artifactContent: await fetchDoc('typst-main.sir.in'),
+   * });
+   * ```
    */
-  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<unknown>;
+  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<void>;
 
+  /**
+   * Manipulate the Typst document in the session.
+   * See {@link ManipulateDataOptions} for more details.
+   * @param {RenderSession} session - The Typst document session that has been
+   * created by TypstRenderer.
+   * @param {ManipulateDataOptions} opts - The options for manipulating the
+   * Typst document in the session.
+   *
+   * @example
+   * reset the data to the initial state.
+   * ```typescript
+   * const session = await renderer.createSession(...);
+   * await renderer.manipulateData(session, {
+   *   action: 'reset',
+   *   data: new Uint8Array(...),
+   * });
+   * ```
+   * @example
+   * merge the data to the current state.
+   * ```typescript
+   * const session = await renderer.createSession(...);
+   * /// reset the data to the initial state
+   * await renderer.manipulateData(session, data('reset'));
+   * /// merge the data to the current state
+   * await renderer.manipulateData(session, data('merge'));
+   * /// incrementally merge the data again
+   * await renderer.manipulateData(session, data('merge'));
+   * ```
+   */
   manipulateData(session: RenderSession, opts: ManipulateDataOptions): Promise<void>;
 
-  /// run a function with a session, and the sesssion is only available during the
-  /// function call.
-  ///
-  /// the lifetime of session is quite bug-prone, so we current does not make it
-  /// longer live than the function call.
+  /**
+   * Run a function with a session, and the sesssion is only available during
+   * the function call.
+   *
+   * the lifetime of session is quite bug-prone, so we current does not make it
+   * longer live than the function call.
+   * @param {function} fn - The function to run with a session.
+   * @returns {Promise<T>} - The result of the function.
+   * @example
+   * run a function with an session with empty state.
+   *
+   * ```typescript
+   * const res = await renderer.runWithSession(async session => {
+   *   await renderer.manipulateData(session, data('reset'));
+   *   return await renderer.renderToCanvas({
+   *     renderSession: session,
+   *     container: document.getElementById('container'),
+   *     backgroundColor: '#ffffff',
+   *   });
+   * });
+   * ```
+   *
+   * @example
+   * run a function with an session with initial state.
+   *
+   * ```typescript
+   * const res = await renderer.runWithSession({
+   *   format: 'vector',
+   *   artifactContent: new Uint8Array(...),
+   * }, workWithSession(session));
+   * ```
+   *
+   * @example
+   * leak the life span of session (need typescript >= v5.2)
+   *
+   * ```typescript
+   * class StackedSession {
+   *   session: RenderSession;
+   *   private resolve: (session: RenderSession) => void;
+   *   [Symbol.dispose]() {
+   *     this.resolve();
+   *   }
+   *   static async create() {
+   *     return new Promise<StackedSession>(resolve => {
+   *       const session = await renderer.runWithSession(session => {
+   *       const stackedSession = new StackedSession();
+   *       stackedSession.session = session;
+   *       stackedSession.resolve = resolve;
+   *       return stackedSession;
+   *     });
+   *   }
+   * }
+   *
+   * {
+   *   await using session = StackedSession.create();
+   *   /// do something with session
+   * }
+   * ```
+   */
   runWithSession<T>(fn: (session: RenderSession) => Promise<T>): Promise<T>;
   runWithSession<T>(
     options: CreateSessionOptions,
@@ -75,7 +186,7 @@ export interface TypstRenderer extends TypstSvgRenderer {
    * alias to {@link TypstRenderer.renderToCanvas}, will remove in v0.5.0
    * @deprecated
    */
-  render(options: RenderOptions<RenderToCanvasOptions>): Promise<RenderResult>;
+  render(options: RenderOptions<RenderToCanvasOptions>): Promise<void>;
 }
 
 const gRendererModule = new LazyWasmModule(typstInit);
@@ -107,15 +218,17 @@ export interface TypstSvgRenderer {
    * Create a svg session.
    * @deprecated
    */
-  createModule(b: Uint8Array): Promise<unknown>;
+  createModule(b: Uint8Array): Promise<RenderSession>;
 
   /**
    * Render a Typst document to canvas.
-   * @param {RenderToCanvasOptions} options - The options for rendering a Typst document to specified container.
-   * @returns {RenderResult} - The result of rendering a Typst document.
+   * @param session - The Typst document session that has been created by
+   * TypstRenderer.
+   * @param {HTMLElement} options - The options for rendering a Typst
+   * document to specified container.
    * @deprecated
    */
-  renderSvg(session: unknown, options: HTMLElement): Promise<unknown>;
+  renderSvg(session: RenderSession, options: HTMLElement): Promise<unknown>;
 }
 
 export function createTypstSvgRenderer(): TypstSvgRenderer {
@@ -176,7 +289,7 @@ class TypstRendererDriver {
     return pageInfos;
   }
 
-  renderImageInSession(
+  renderCanvasInSession(
     session: RenderSession,
     canvas: CanvasRenderingContext2D,
     options?: RenderPageOptions,
@@ -193,10 +306,6 @@ class TypstRendererDriver {
 
   // async renderPdf(artifactContent: string): Promise<Uint8Array> {
   // return this.renderer.render_to_pdf(artifactContent);
-  // }
-  //
-  // async renderPdfInSession(session: RenderSession): Promise<Uint8Array> {
-  // return this.renderer.render_to_pdf_in_session(session as typst.RenderSession);
   // }
 
   private async inAnimationFrame<T>(fn: () => Promise<T>): Promise<T> {
@@ -216,12 +325,9 @@ class TypstRendererDriver {
     container: HTMLElement,
     canvasList: HTMLCanvasElement[],
     options: RenderToCanvasOptions,
-  ): Promise<[RenderResult, RenderPageResult[]]> {
+  ): Promise<RenderPageResult[]> {
     const pages_info = session.pages_info;
     const page_count = pages_info.page_count;
-
-    /// render each page
-    let renderResult = undefined as unknown as RenderResult;
 
     const doRender = async (i: number, page_off: number) => {
       const canvas = canvasList[i];
@@ -229,16 +335,9 @@ class TypstRendererDriver {
       if (!ctx) {
         throw new Error('canvas context is null');
       }
-      const res = await this.renderImageInSession(session, ctx, {
+      return await this.renderCanvasInSession(session, ctx, {
         page_off,
       });
-      if (i === 0) {
-        renderResult = {
-          width: canvas.width,
-          height: canvas.height,
-        };
-      }
-      return res;
     };
 
     return this.inAnimationFrame(async () => {
@@ -247,7 +346,7 @@ class TypstRendererDriver {
       const textContentList = (
         await Promise.all(
           //   canvasList.map(async (canvas, i) => {
-          //     const renderResult = await this.renderImageInSession(session, {
+          //     await this.renderImageInSession(session, {
           //       page_off: i,
           //     });
           //     console.log(cyrb53(renderResult.data));
@@ -281,7 +380,7 @@ class TypstRendererDriver {
 
       console.log(`display layer used: render = ${(t3 - t).toFixed(1)}ms`);
 
-      return [renderResult, textContentList];
+      return textContentList;
     });
   }
 
@@ -383,7 +482,7 @@ class TypstRendererDriver {
     console.log(`annotation layer used: render = ${(t3 - t2).toFixed(1)}ms`);
   }
 
-  async render(options: RenderOptions<RenderToCanvasOptions>): Promise<RenderResult> {
+  async render(options: RenderOptions<RenderToCanvasOptions>): Promise<void> {
     if ('format' in options) {
       if (options.format !== 'vector') {
         const artifactFormats = ['serde_json', 'js', 'ir'] as const;
@@ -397,9 +496,8 @@ class TypstRendererDriver {
     return this.renderToCanvas(options);
   }
 
-  async renderToCanvas(options: RenderOptions<RenderToCanvasOptions>): Promise<RenderResult> {
+  async renderToCanvas(options: RenderOptions<RenderToCanvasOptions>): Promise<void> {
     let session: typst.RenderSession;
-    let renderResult: RenderResult;
     let renderPageResults: RenderPageResult[];
     const mountContainer = options.container;
     mountContainer.style.visibility = 'hidden';
@@ -409,7 +507,7 @@ class TypstRendererDriver {
       resetLayout: () => void,
     ) => {
       try {
-        [renderResult, renderPageResults] = await this.renderDisplayLayer(
+        renderPageResults = await this.renderDisplayLayer(
           session,
           mountContainer,
           canvasList,
@@ -446,8 +544,6 @@ class TypstRendererDriver {
       session.pixel_per_pt = options.pixelPerPt ?? 3;
       session.background_color = backgroundColor ?? '#ffffff';
 
-      // todo: background color
-
       const t = performance.now();
 
       const pageView = new RenderView(
@@ -475,11 +571,11 @@ class TypstRendererDriver {
         renderPageResults.map(r => r.annotationList),
       );
 
-      return renderResult;
+      return;
     });
   }
 
-  createModule(b?: Uint8Array): Promise<unknown> {
+  createModule(b?: Uint8Array): Promise<RenderSession> {
     return Promise.resolve(
       this.renderer.create_session(
         this.createOptionsToRust({
@@ -490,11 +586,11 @@ class TypstRendererDriver {
     );
   }
 
-  renderSvg(session: unknown, container: HTMLElement): Promise<unknown> {
+  renderSvg(session: RenderSession, container: HTMLElement): Promise<void> {
     return Promise.resolve(this.renderer.render_svg(session as typst.RenderSession, container));
   }
 
-  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<unknown> {
+  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<void> {
     return this.withinOptionSession(options, async sessionRef => {
       return this.renderSvg(sessionRef, options.container);
     });
