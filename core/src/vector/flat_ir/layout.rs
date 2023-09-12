@@ -1,12 +1,15 @@
 use std::{
     borrow::Cow,
+    collections::HashMap,
     ops::{Deref, Index},
     sync::Arc,
 };
 
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
+use serde::{Deserialize, Serialize};
 
+use crate::error::prelude::*;
 use crate::vector::ir::{ImmutStr, Scalar};
 
 use super::{Module, ModuleView, Page, PageMetadata, SourceMappingNode};
@@ -110,6 +113,27 @@ impl<'a> LayoutRegionSourceMappingRAII<'a> {
     }
 }
 
+pub trait LayoutSelector {
+    fn select_by_scalar(
+        &self,
+        kind: &str,
+        layouts: &[(Scalar, LayoutRegionNode)],
+    ) -> ZResult<LayoutRegionNode>;
+
+    fn select_by_str(
+        &self,
+        kind: &str,
+        layouts: &[(ImmutStr, LayoutRegionNode)],
+    ) -> ZResult<LayoutRegionNode>;
+
+    fn resolve_indirect(&self, ind: usize) -> ZResult<&LayoutRegion> {
+        Err(error_once!(
+            "LayoutSelector: unimplemented indirect layout selector",
+            ind: ind,
+        ))
+    }
+}
+
 /// Describing
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
@@ -148,10 +172,7 @@ impl LayoutRegion {
     }
 
     pub fn unwrap_single(&self) -> LayoutRegionNode {
-        match self {
-            Self::ByScalar(v) => v.layouts.first().unwrap().1.clone(),
-            Self::ByStr(v) => v.layouts.first().unwrap().1.clone(),
-        }
+        self.by_selector(&LayoutSelectorExpr::Any).unwrap()
     }
 
     pub fn by_scalar(&self) -> Option<&[(Scalar, LayoutRegionNode)]> {
@@ -159,6 +180,22 @@ impl LayoutRegion {
             Some(&v.layouts)
         } else {
             None
+        }
+    }
+
+    pub fn by_selector(&self, selector: &impl LayoutSelector) -> ZResult<LayoutRegionNode> {
+        let mut t = Ok(self);
+        loop {
+            let next = match t? {
+                Self::ByScalar(v) => selector.select_by_scalar(&v.kind, &v.layouts),
+                Self::ByStr(v) => selector.select_by_str(&v.kind, &v.layouts),
+            }?;
+
+            if let LayoutRegionNode::Indirect(i) = next {
+                t = selector.resolve_indirect(i);
+            } else {
+                return Ok(next);
+            }
         }
     }
 }
@@ -198,5 +235,147 @@ impl Deref for LayoutSourceMapping {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "t", content = "v")]
+pub enum LayoutSelectorExpr {
+    /// Selects any layout (smartly).
+    Any,
+    /// Selects the first layout.
+    First,
+    /// Selects the last layout.
+    Last,
+    /// Selects the max first layout with scalar value less than the given
+    /// value.
+    ScalarLB(f32),
+    /// Selects the min last layout with scalar value greater than the given
+    /// value.
+    ScalarUB(f32),
+    /// Selects the last layout with string value equal to the given value.
+    StrEQ(String),
+}
+
+impl Default for LayoutSelectorExpr {
+    fn default() -> Self {
+        Self::Any
+    }
+}
+
+impl LayoutSelector for LayoutSelectorExpr {
+    fn select_by_scalar(
+        &self,
+        kind: &str,
+        layouts: &[(Scalar, LayoutRegionNode)],
+    ) -> ZResult<LayoutRegionNode> {
+        let t = match self {
+            LayoutSelectorExpr::Any | LayoutSelectorExpr::First => layouts.first(),
+            LayoutSelectorExpr::Last => layouts.last(),
+            LayoutSelectorExpr::ScalarLB(v) => {
+                layouts.iter().filter(|(scalar, _)| scalar.0 < *v).last()
+            }
+            LayoutSelectorExpr::ScalarUB(v) => layouts
+                .iter()
+                .rev()
+                .filter(|(scalar, _)| scalar.0 > *v)
+                .last(),
+            LayoutSelectorExpr::StrEQ(..) => {
+                return Err(
+                    error_once!("LayoutMappingSelector: cannot select kind by scalar type", kind: kind.to_owned()),
+                )
+            }
+        };
+        let t = t.map(|(_, v)| v.clone());
+
+        t.ok_or_else(
+            || error_once!("LayoutMappingSelector: no layout found by kind", kind: kind.to_owned(), is_not_found: true),
+        )
+    }
+
+    fn select_by_str(
+        &self,
+        kind: &str,
+        layouts: &[(ImmutStr, LayoutRegionNode)],
+    ) -> ZResult<LayoutRegionNode> {
+        let t = match self {
+            LayoutSelectorExpr::Any | LayoutSelectorExpr::First => {
+                layouts.first().map(|(_, v)| v.clone())
+            }
+            LayoutSelectorExpr::Last => layouts.last().map(|(_, v)| v.clone()),
+            LayoutSelectorExpr::StrEQ(v) => layouts
+                .iter()
+                .filter(|(s, _)| s.as_ref() == v)
+                .last()
+                .map(|(_, v)| v.clone()),
+            LayoutSelectorExpr::ScalarLB(..) | LayoutSelectorExpr::ScalarUB(..) => {
+                return Err(
+                    error_once!("LayoutMappingSelector: cannot select kind by str type", kind: kind.to_owned()),
+                )
+            }
+        };
+
+        t.ok_or_else(
+            || error_once!("LayoutMappingSelector: no layout found by kind", kind: kind.to_owned(), is_not_found: true),
+        )
+    }
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub struct LayoutMappingSelector {
+    pub selectors: HashMap<String, LayoutSelectorExpr>,
+}
+
+impl LayoutSelector for LayoutMappingSelector {
+    fn select_by_scalar(
+        &self,
+        kind: &str,
+        layouts: &[(Scalar, LayoutRegionNode)],
+    ) -> ZResult<LayoutRegionNode> {
+        self.selectors
+            .get(kind)
+            .unwrap_or(&LayoutSelectorExpr::Any)
+            .select_by_scalar(kind, layouts)
+    }
+
+    fn select_by_str(
+        &self,
+        kind: &str,
+        layouts: &[(ImmutStr, LayoutRegionNode)],
+    ) -> ZResult<LayoutRegionNode> {
+        self.selectors
+            .get(kind)
+            .unwrap_or(&LayoutSelectorExpr::Any)
+            .select_by_str(kind, layouts)
+    }
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct LayoutNestSelector<'l, T> {
+    pub layouts: &'l [LayoutRegion],
+    pub inner: T,
+}
+
+impl<'l, T: LayoutSelector> LayoutSelector for LayoutNestSelector<'l, T> {
+    fn select_by_scalar(
+        &self,
+        kind: &str,
+        layouts: &[(Scalar, LayoutRegionNode)],
+    ) -> ZResult<LayoutRegionNode> {
+        self.inner.select_by_scalar(kind, layouts)
+    }
+
+    fn select_by_str(
+        &self,
+        kind: &str,
+        layouts: &[(ImmutStr, LayoutRegionNode)],
+    ) -> ZResult<LayoutRegionNode> {
+        self.inner.select_by_str(kind, layouts)
+    }
+
+    fn resolve_indirect(&self, ind: usize) -> ZResult<&LayoutRegion> {
+        self.layouts
+            .get(ind)
+            .ok_or_else(|| error_once!("LayoutNestSelector: indirect layout not found", ind: ind))
     }
 }

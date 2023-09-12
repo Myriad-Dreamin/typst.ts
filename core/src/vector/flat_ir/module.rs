@@ -39,7 +39,7 @@ impl ToItemMap for RefItemMap {
 /// Trait of a streaming representation of a module.
 pub trait ModuleStream {
     fn items(&self) -> ItemPack;
-    fn layouts(&self) -> Arc<LayoutRegion>;
+    fn layouts(&self) -> Arc<Vec<LayoutRegion>>;
     fn fonts(&self) -> Arc<FontPack>;
     fn glyphs(&self) -> Arc<GlyphPack>;
     fn gc_items(&self) -> Option<Vec<Fingerprint>> {

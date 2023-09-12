@@ -109,13 +109,13 @@ pub fn export_module(output: &Document) -> SourceResult<Vec<u8>> {
         ModuleMetadata::Item(ItemPack(repr.items.into_iter().collect())),
         ModuleMetadata::Font(Arc::new(repr.fonts.into())),
         ModuleMetadata::Glyph(Arc::new(glyphs)),
-        ModuleMetadata::Layout(Arc::new(LayoutRegion::ByScalar(LayoutRegionRepr {
+        ModuleMetadata::Layout(Arc::new(vec![LayoutRegion::ByScalar(LayoutRegionRepr {
             kind: "width".into(),
             layouts: vec![(
                 Default::default(),
                 LayoutRegionNode::Pages(Arc::new((Default::default(), pages))),
             )],
-        }))),
+        })])),
     ])
     .to_bytes();
 

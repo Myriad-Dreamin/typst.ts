@@ -103,7 +103,7 @@ impl IncrDocServer {
         };
 
         let pages = LayoutRegionNode::new_pages(pages.clone());
-        let pages = Arc::new(LayoutRegion::new_single(pages));
+        let pages = Arc::new(vec![LayoutRegion::new_single(pages)]);
 
         let delta = FlatModule::new(vec![
             ModuleMetadata::SourceMappingData(delta.source_mapping),
@@ -130,7 +130,7 @@ impl IncrDocServer {
         let glyphs = flatten_glyphs(glyphs);
 
         let pages = LayoutRegionNode::new_pages(doc.pages.clone());
-        let pages = Arc::new(LayoutRegion::new_single(pages));
+        let pages = Arc::new(vec![LayoutRegion::new_single(pages)]);
 
         let delta = FlatModule::new(vec![
             ModuleMetadata::SourceMappingData(self.module_builder.source_mapping.clone()),

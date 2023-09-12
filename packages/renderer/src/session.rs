@@ -247,7 +247,7 @@ impl RenderSession {
         client.merge_delta(delta);
         // checkout the current layout
         // todo: multiple layout
-        let layouts = &client.doc.layouts;
+        let layouts = &client.doc.layouts[0];
         if !layouts.is_empty() {
             let layout = layouts.unwrap_single();
             client.set_layout(layout);
