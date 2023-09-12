@@ -4,7 +4,6 @@ use std::{
 };
 
 use crate::ShadowApi;
-use log::error;
 use typst::{
     diag::{At, FileResult, SourceDiagnostic, SourceResult},
     doc::Document,
@@ -312,9 +311,11 @@ where
             }
             Err(errs) => {
                 self.print_status::<WITH_STATUS>(DiagStatus::Error(start.elapsed()));
-                let err = self.print_diagnostics(*errs);
-                if err.is_err() {
-                    error!("failed to print diagnostics: {:?}", err);
+                let _err = self.print_diagnostics(*errs);
+                // todo: log in browser compiler
+                #[cfg(feature = "system-compile")]
+                if _err.is_err() {
+                    log::error!("failed to print diagnostics: {:?}", _err);
                 }
                 None
             }

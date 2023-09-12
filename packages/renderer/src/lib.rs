@@ -131,6 +131,11 @@ impl TypstRenderer {
         }
     }
 
+    pub fn reset(&mut self, session: &mut RenderSession) -> ZResult<()> {
+        session.reset();
+        Ok(())
+    }
+
     pub fn manipulate_data(
         &mut self,
         session: &mut RenderSession,

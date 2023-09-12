@@ -6,7 +6,7 @@ export type {
   RenderOptions,
 } from './options.render';
 export { preloadRemoteFonts, preloadSystemFonts } from './options.init';
-export type { TypstRenderer } from './renderer';
+export type { RenderSession, TypstRenderer } from './renderer';
 export { rendererBuildInfo, createTypstRenderer, createTypstSvgRenderer } from './renderer';
 export { FetchAccessModel } from './fs';
 export type { FetchAccessOptions } from './fs';

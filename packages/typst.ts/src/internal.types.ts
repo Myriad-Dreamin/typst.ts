@@ -1,6 +1,8 @@
+export const kObject = Symbol.for('reflexo-obj');
+
 /**
- * The session of a Typst document.
- * @typedef {Object} RenderSession
+ * The session kernel of a Typst document.
+ * @typedef {Object} RenderSessionKernel
  * @property {string} background_color - The background color of the Typst
  * document.
  * @property {number} pixel_per_pt - The pixel per point scale up the image.
@@ -11,7 +13,7 @@
  *   + Never clone the object and pass it back to typst renderer.
  *   + You must not hold a reference, since it will be freed after a while
  */
-export interface RenderSession {
+export interface RenderSessionKernel {
   /**
    * Set the background color of the Typst document.
    * @param {string} - The background color in format of `^#?[0-9a-f]{6}$`
@@ -50,4 +52,14 @@ export interface FsAccessModel {
   isFile(path: string): boolean | undefined;
   getRealPath(path: string): string | undefined;
   readAll(path: string): Uint8Array | undefined;
+}
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface Rect {
+  lo: Point;
+  hi: Point;
 }

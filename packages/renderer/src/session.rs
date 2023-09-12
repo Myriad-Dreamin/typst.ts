@@ -226,6 +226,11 @@ impl RenderSession {
         self.client().kern().source_span(path)
     }
 
+    pub(crate) fn reset(&mut self) {
+        let mut client = self.client.lock().unwrap();
+        *client = IncrDocClient::default();
+    }
+
     pub(crate) fn reset_current(&mut self, delta: &[u8]) -> ZResult<()> {
         let mut client = self.client.lock().unwrap();
         *client = IncrDocClient::default();
