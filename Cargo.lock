@@ -4076,7 +4076,7 @@ checksum = "497961ef93d974e23eb6f433eb5fe1b7930b659f06d12dec6fc44a8f554c0bba"
 [[package]]
 name = "typst"
 version = "0.8.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#62f8cb7e393f81560faec4620c7808735ed7bd50"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#76b8e564baa501c7f3f693a45f7658735b89f7d1"
 dependencies = [
  "base64 0.21.4",
  "bitflags 2.4.0",
@@ -4125,7 +4125,7 @@ dependencies = [
 [[package]]
 name = "typst-library"
 version = "0.8.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#62f8cb7e393f81560faec4620c7808735ed7bd50"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#76b8e564baa501c7f3f693a45f7658735b89f7d1"
 dependencies = [
  "az",
  "chinese-number",
@@ -4165,7 +4165,7 @@ dependencies = [
 [[package]]
 name = "typst-macros"
 version = "0.8.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#62f8cb7e393f81560faec4620c7808735ed7bd50"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#76b8e564baa501c7f3f693a45f7658735b89f7d1"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -4176,7 +4176,7 @@ dependencies = [
 [[package]]
 name = "typst-syntax"
 version = "0.8.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#62f8cb7e393f81560faec4620c7808735ed7bd50"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#76b8e564baa501c7f3f693a45f7658735b89f7d1"
 dependencies = [
  "comemo",
  "ecow",
@@ -4191,7 +4191,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-ast-exporter"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "ansi_term",
  "typst",
@@ -4200,7 +4200,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-canvas-exporter"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -4223,7 +4223,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-cli"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4258,7 +4258,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-compiler"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "append-only-vec",
  "base64 0.21.4",
@@ -4301,7 +4301,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-core"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "base64 0.21.4",
  "base64-serde",
@@ -4334,7 +4334,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-dev-server"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "clap",
  "clap_complete",
@@ -4351,7 +4351,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-fontctl"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "anyhow",
  "clap",
@@ -4365,7 +4365,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-heap-profile-test"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4381,7 +4381,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-integration-test"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "anyhow",
  "base64 0.21.4",
@@ -4406,7 +4406,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-pdf-exporter"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "typst",
  "typst-ts-core",
@@ -4414,7 +4414,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-raster-exporter"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "bytemuck",
  "comemo",
@@ -4431,7 +4431,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-remote-server"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "clap",
  "clap_complete",
@@ -4451,7 +4451,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-renderer"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -4486,14 +4486,14 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-rkyv-assertions"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "typst-ts-core",
 ]
 
 [[package]]
 name = "typst-ts-serde-exporter"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "rmp-serde",
  "serde",
@@ -4504,7 +4504,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-std-test"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "anyhow",
  "rayon",
@@ -4513,7 +4513,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-svg-exporter"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "base64 0.21.4",
  "comemo",
@@ -4525,7 +4525,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-test-common"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -4536,7 +4536,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-web-compiler"
-version = "0.4.0-rc3"
+version = "0.4.0-rc4"
 dependencies = [
  "ansi-to-html",
  "base64 0.21.4",
