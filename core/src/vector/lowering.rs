@@ -68,7 +68,11 @@ impl LowerBuilder {
                             Self::lower_position(dest, *size)
                         }
                     },
-                    Meta::Elem(..) | Meta::PageNumbering(..) | Meta::Hide => continue,
+                    // todo: support page label
+                    Meta::PdfPageLabel(..)
+                    | Meta::Elem(..)
+                    | Meta::PageNumbering(..)
+                    | Meta::Hide => continue,
                 },
             };
 
