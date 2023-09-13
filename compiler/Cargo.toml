@@ -21,6 +21,7 @@ parking_lot.workspace = true
 hex.workspace = true
 sha2.workspace = true
 flate2.workspace = true
+instant = { version = "0.1", features = ["wasm-bindgen"] }
 
 serde.workspace = true
 serde_json.workspace = true
@@ -79,6 +80,7 @@ serde.workspace = true
 
 [features]
 cjk = []
+emoji = []
 system-compile = [
     "dep:memmap2",
     "dep:dirs",
@@ -100,5 +102,12 @@ __web = [
 web-render = ["__web"]
 browser-compile = ["__web", "web-render"]
 browser-embedded-fonts = ["__web"]
-web = ["__web", "web-render", "browser-compile", "browser-embedded-fonts"]
-default = ["system", "dynamic-layout"]
+web = [
+    "__web",
+    "web-render",
+    "browser-compile",
+    "browser-embedded-fonts",
+    "cjk",
+    "emoji",
+]
+default = ["system", "dynamic-layout", "cjk", "emoji"]

@@ -72,9 +72,9 @@ impl TypstCompiler {
         self.compiler.reset().unwrap();
     }
 
-    pub fn add_source(&mut self, path: String, content: String, is_main: bool) -> bool {
-        let path = Path::new(&path).to_owned();
-        match self.compiler.map_shadow(&path, &content) {
+    pub fn add_source(&mut self, path: &str, content: &str, is_main: bool) -> bool {
+        let path = Path::new(path).to_owned();
+        match self.compiler.map_shadow(&path, content) {
             Ok(_) => {
                 if is_main {
                     self.compiler.set_entry_file(path);
@@ -187,4 +187,152 @@ impl TypstCompiler {
 
         self.get_artifact("vector".into())
     }
+}
+
+#[cfg(test)]
+#[cfg(target_arch = "wasm32")]
+mod tests {
+    #![allow(clippy::await_holding_lock)]
+
+    use sha2::Digest;
+    use typst_ts_svg_exporter::MultiSvgDocument;
+    use typst_ts_test_common::web_artifact::get_corpus;
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen_test::*;
+
+    use crate::builder::TypstCompilerBuilder;
+    wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
+    async fn get_source(name: &str) -> Vec<u8> {
+        let array_buffer = get_corpus(format!("{}.typ", name)).await.unwrap();
+        js_sys::Uint8Array::new(&array_buffer).to_vec()
+    }
+
+    async fn get_ir_artifact(name: &str) -> Vec<u8> {
+        let array_buffer = get_corpus(format!("{}.artifact.sir.in", name))
+            .await
+            .unwrap();
+        js_sys::Uint8Array::new(&array_buffer).to_vec()
+    }
+
+    fn hash_bytes<T: AsRef<[u8]>>(bytes: T) -> String {
+        format!("sha256:{}", hex::encode(sha2::Sha256::digest(bytes)))
+    }
+
+    fn render_svg(artifact: &[u8]) -> String {
+        let doc = MultiSvgDocument::from_slice(artifact);
+        type UsingExporter =
+            typst_ts_svg_exporter::SvgExporter<typst_ts_svg_exporter::SvgExportFeature>;
+
+        let node = doc.layouts[0].unwrap_single();
+        let view = node.pages(&doc.module).unwrap();
+        UsingExporter::render_flat_svg(&doc.module, view.pages())
+    }
+
+    async fn render_test_template(point: &str, source: &[u8], artifact: &[u8]) {
+        let window = web_sys::window().expect("should have a window in this context");
+        let performance = window
+            .performance()
+            .expect("performance should be available");
+
+        let mut compiler = TypstCompilerBuilder::new().unwrap();
+        compiler.set_dummy_access_model().await.unwrap();
+        let mut compiler = compiler.build().await.unwrap();
+        let start = performance.now();
+        if !compiler.add_source(
+            &format!("/{point}.typ"),
+            std::str::from_utf8(source).unwrap(),
+            true,
+        ) {
+            panic!("Failed to add source {point}");
+        }
+        let end = performance.now();
+        let time_used = end - start;
+
+        let browser_artifact = compiler.compile(format!("/{point}.typ")).unwrap();
+
+        let x_svg = render_svg(&browser_artifact);
+        let y_svg = render_svg(artifact);
+
+        let x_hash = hash_bytes(&x_svg);
+        let y_hash = hash_bytes(&y_svg);
+
+        use base64::Engine;
+        let e = base64::engine::general_purpose::STANDARD;
+        let x = web_sys::HtmlImageElement::new().unwrap();
+        x.set_src(&format!("data:image/svg+xml;base64,{}", e.encode(x_svg)));
+        x.set_attribute("style", "flex: 1;").unwrap();
+        let y = web_sys::HtmlImageElement::new().unwrap();
+        y.set_src(&format!("data:image/svg+xml;base64,{}", e.encode(y_svg)));
+        y.set_attribute("style", "flex: 1;").unwrap();
+
+        let div = window
+            .document()
+            .unwrap()
+            .create_element("div")
+            .unwrap()
+            .dyn_into::<web_sys::HtmlElement>()
+            .unwrap();
+
+        div.set_attribute("style", "display block; border: 1px solid #000;")
+            .unwrap();
+
+        let title = window
+            .document()
+            .unwrap()
+            .create_element("div")
+            .unwrap()
+            .dyn_into::<web_sys::HtmlElement>()
+            .unwrap();
+
+        title.set_inner_html(&format!(
+            "{point} => {time_used:.3}ms, hash_cmp: {x_hash} v.s. {y_hash}",
+        ));
+
+        div.append_child(&title).unwrap();
+
+        let cmp = window
+            .document()
+            .unwrap()
+            .create_element("div")
+            .unwrap()
+            .dyn_into::<web_sys::HtmlElement>()
+            .unwrap();
+        cmp.set_attribute("style", "display: flex;").unwrap();
+
+        cmp.append_child(&x).unwrap();
+        cmp.append_child(&y).unwrap();
+
+        div.append_child(&cmp).unwrap();
+
+        let body = window.document().unwrap().body().unwrap();
+
+        body.append_child(&div).unwrap();
+    }
+
+    async fn render_test_from_corpus(path: &str) {
+        let point = path.replace('/', "_");
+        let ir_point = format!("{}_artifact_ir", point);
+
+        render_test_template(
+            &ir_point,
+            &get_source(path).await,
+            &get_ir_artifact(path).await,
+        )
+        .await;
+    }
+
+    macro_rules! make_test_point {
+        ($name:ident, $($path:literal),+ $(,)?) => {
+            #[wasm_bindgen_test]
+            async fn $name() {
+                $(
+                    render_test_from_corpus($path).await;
+                )*
+            }
+        };
+    }
+
+    make_test_point!(test_render_math_main, "math/main");
+    make_test_point!(test_render_math_undergradmath, "math/undergradmath");
 }

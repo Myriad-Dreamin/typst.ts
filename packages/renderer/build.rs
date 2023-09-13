@@ -1,6 +1,13 @@
 use anyhow::Result;
-use vergen::{vergen, Config};
+use vergen::EmitBuilder;
 
 fn main() -> Result<()> {
-    vergen(Config::default())
+    // Emit the instructions
+    EmitBuilder::builder()
+        .cargo_features()
+        .cargo_opt_level()
+        .build_timestamp()
+        .git_sha(false)
+        .emit()?;
+    Ok(())
 }

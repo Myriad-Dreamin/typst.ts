@@ -3,7 +3,7 @@ import typstInit, * as typst from '@myriaddreamin/typst-ts-renderer';
 
 import type { InitOptions } from './options.init';
 import { PageViewport } from './viewport';
-import { PageInfo, RenderSession } from './internal.types';
+import { PageInfo, Rect, RenderSessionKernel, kObject } from './internal.types';
 import {
   CreateSessionOptions,
   RenderToCanvasOptions,
@@ -11,6 +11,8 @@ import {
   RenderPageOptions,
   RenderToSvgOptions,
   ManipulateDataOptions,
+  RenderSvgOptions,
+  RenderInSessionOptions,
 } from './options.render';
 import { RenderView, renderTextLayer } from './view';
 import { LazyWasmModule } from './wasm';
@@ -33,6 +35,125 @@ export interface RenderPageResult {
 }
 
 /**
+ * The session of a Typst document.
+ * @typedef {Object} RenderSession
+ * @property {string} backgroundColor - The background color of the Typst
+ * document.
+ * @property {number} pixelPerPt - The pixel per point scale up the image.
+ *
+ */
+export class RenderSession {
+  /**
+   * @internal
+   */
+  public [kObject]: typst.RenderSession;
+
+  constructor(
+    private plugin: TypstRenderer,
+    o: typst.RenderSession,
+  ) {
+    this[kObject] = o;
+  }
+
+  set backgroundColor(t: string) {
+    this[kObject].background_color = t;
+  }
+
+  get backgroundColor(): string {
+    return this[kObject].background_color;
+  }
+
+  set pixelPerPt(t: number) {
+    this[kObject].pixel_per_pt = t;
+  }
+
+  get pixelPerPt(): number {
+    return this[kObject].pixel_per_pt;
+  }
+
+  reset(): void {
+    this.plugin.resetSession(this);
+  }
+
+  /**
+   * @deprecated
+   */
+  get doc_width(): number {
+    return this[kObject].doc_width;
+  }
+
+  get docWidth(): number {
+    return this[kObject].doc_width;
+  }
+
+  /**
+   * @deprecated
+   */
+  get doc_height(): number {
+    return this[kObject].doc_height;
+  }
+
+  get docHeight(): number {
+    return this[kObject].doc_height;
+  }
+
+  /**
+   * @deprecated
+   */
+  render_in_window(rect_lo_x: number, rect_lo_y: number, rect_hi_x: number, rect_hi_y: number) {
+    return this[kObject].render_in_window(rect_lo_x, rect_lo_y, rect_hi_x, rect_hi_y);
+  }
+
+  /**
+   * @deprecated
+   */
+  merge_delta(data: Uint8Array) {
+    this.plugin.manipulateData({
+      renderSession: this,
+      action: 'merge',
+      data,
+    });
+  }
+
+  retrievePagesInfo(): PageInfo[] {
+    const pages_info = this[kObject].pages_info;
+    const pageInfos: PageInfo[] = [];
+    const pageCount = pages_info.page_count;
+    for (let i = 0; i < pageCount; i++) {
+      const pageAst = pages_info.page(i);
+      pageInfos.push({
+        pageOffset: pageAst.page_off,
+        width: pageAst.width_pt,
+        height: pageAst.height_pt,
+      });
+    }
+
+    return pageInfos;
+  }
+
+  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<void> {
+    return this.plugin.renderToSvg({
+      renderSession: this,
+      ...options,
+    });
+  }
+
+  manipulateData(opts: ManipulateDataOptions) {
+    this.plugin.manipulateData({
+      renderSession: this,
+      ...opts,
+    });
+  }
+
+  renderSvgDiff(opts: RenderSvgOptions): string {
+    return this.plugin.renderSvgDiff({
+      renderSession: this,
+      ...opts,
+    });
+  }
+}
+
+/**
  * The interface of Typst renderer.
  */
 export interface TypstRenderer extends TypstSvgRenderer {
@@ -49,6 +170,16 @@ export interface TypstRenderer extends TypstSvgRenderer {
    * @param pack
    */
   loadGlyphPack(pack: unknown): Promise<void>;
+
+  /**
+   * Reset state
+   */
+  resetSession(session: RenderSession): void;
+
+  /**
+   * Retreive page information of current selected document
+   */
+  retrievePagesInfoFromSession(session: RenderSession): PageInfo[];
 
   /**
    * Render a Typst document to canvas.
@@ -87,6 +218,11 @@ export interface TypstRenderer extends TypstSvgRenderer {
   renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<void>;
 
   /**
+   * experimental
+   */
+  renderSvgDiff(options: RenderInSessionOptions<RenderSvgOptions>): string;
+
+  /**
    * Manipulate the Typst document in the session.
    * See {@link ManipulateDataOptions} for more details.
    * @param {RenderSession} session - The Typst document session that has been
@@ -115,7 +251,7 @@ export interface TypstRenderer extends TypstSvgRenderer {
    * await renderer.manipulateData(session, data('merge'));
    * ```
    */
-  manipulateData(session: RenderSession, opts: ManipulateDataOptions): Promise<void>;
+  manipulateData(opts: RenderInSessionOptions<ManipulateDataOptions>): void;
 
   /**
    * Run a function with a session, and the sesssion is only available during
@@ -231,6 +367,9 @@ export interface TypstSvgRenderer {
   renderSvg(session: RenderSession, options: HTMLElement): Promise<unknown>;
 }
 
+/**
+ * @deprecated
+ */
 export function createTypstSvgRenderer(): TypstSvgRenderer {
   return new TypstRendererDriver(undefined);
 }
@@ -273,20 +412,8 @@ class TypstRendererDriver {
     return rustOptions;
   }
 
-  loadPagesInfo(session: typst.RenderSession, options: RenderToCanvasOptions): PageInfo[] {
-    const pages_info = session.pages_info;
-    const pageInfos: PageInfo[] = [];
-    const pageCount = pages_info.page_count;
-    for (let i = 0; i < pageCount; i++) {
-      const pageAst = pages_info.page(i);
-      pageInfos.push({
-        pageOffset: pageAst.page_off,
-        width: pageAst.width_pt,
-        height: pageAst.height_pt,
-      });
-    }
-
-    return pageInfos;
+  retrievePagesInfoFromSession(session: RenderSession): PageInfo[] {
+    return session.retrievePagesInfo();
   }
 
   renderCanvasInSession(
@@ -295,13 +422,13 @@ class TypstRendererDriver {
     options?: RenderPageOptions,
   ): Promise<RenderPageResult> {
     if (!options) {
-      return this.renderer.render_page_to_canvas(session as typst.RenderSession, canvas);
+      return this.renderer.render_page_to_canvas(session[kObject], canvas);
     }
 
     const rustOptions = new typst.RenderPageImageOptions();
     rustOptions.page_off = options.page_off;
 
-    return this.renderer.render_page_to_canvas(session as typst.RenderSession, canvas, rustOptions);
+    return this.renderer.render_page_to_canvas(session[kObject], canvas, rustOptions);
   }
 
   // async renderPdf(artifactContent: string): Promise<Uint8Array> {
@@ -321,12 +448,12 @@ class TypstRendererDriver {
   }
 
   private async renderDisplayLayer(
-    session: typst.RenderSession,
+    session: RenderSession,
     container: HTMLElement,
     canvasList: HTMLCanvasElement[],
     options: RenderToCanvasOptions,
   ): Promise<RenderPageResult[]> {
-    const pages_info = session.pages_info;
+    const pages_info = session[kObject].pages_info;
     const page_count = pages_info.page_count;
 
     const doRender = async (i: number, page_off: number) => {
@@ -398,7 +525,7 @@ class TypstRendererDriver {
   }
 
   private renderTextLayer(
-    session: typst.RenderSession,
+    session: RenderSession,
     view: RenderView,
     container: HTMLElement,
     layerList: HTMLDivElement[],
@@ -408,7 +535,7 @@ class TypstRendererDriver {
   }
 
   private renderAnnotationLayer(
-    _session: typst.RenderSession,
+    _session: RenderSession,
     view: RenderView,
     _container: HTMLElement,
     layerList: HTMLDivElement[],
@@ -497,7 +624,7 @@ class TypstRendererDriver {
   }
 
   async renderToCanvas(options: RenderOptions<RenderToCanvasOptions>): Promise<void> {
-    let session: typst.RenderSession;
+    let session: RenderSession;
     let renderPageResults: RenderPageResult[];
     const mountContainer = options.container;
     mountContainer.style.visibility = 'hidden';
@@ -521,7 +648,7 @@ class TypstRendererDriver {
 
     return this.withinOptionSession(options, async sessionRef => {
       session = sessionRef;
-      if (session.pages_info.page_count === 0) {
+      if (session[kObject].pages_info.page_count === 0) {
         throw new Error(`No page found in session`);
       }
 
@@ -541,13 +668,13 @@ class TypstRendererDriver {
         }
       }
 
-      session.pixel_per_pt = options.pixelPerPt ?? 3;
-      session.background_color = backgroundColor ?? '#ffffff';
+      session.pixelPerPt = options.pixelPerPt ?? 3;
+      session.backgroundColor = backgroundColor ?? '#ffffff';
 
       const t = performance.now();
 
       const pageView = new RenderView(
-        this.loadPagesInfo(session, options),
+        this.retrievePagesInfoFromSession(session),
         mountContainer,
         options,
       );
@@ -577,17 +704,34 @@ class TypstRendererDriver {
 
   createModule(b?: Uint8Array): Promise<RenderSession> {
     return Promise.resolve(
-      this.renderer.create_session(
-        this.createOptionsToRust({
-          format: 'vector',
-          artifactContent: b,
-        }),
+      new RenderSession(
+        this,
+        this.renderer.create_session(
+          this.createOptionsToRust({
+            format: 'vector',
+            artifactContent: b,
+          }),
+        ),
       ),
     );
   }
 
   renderSvg(session: RenderSession, container: HTMLElement): Promise<void> {
-    return Promise.resolve(this.renderer.render_svg(session as typst.RenderSession, container));
+    return Promise.resolve(this.renderer.render_svg(session[kObject], container));
+  }
+
+  renderSvgDiff(options: RenderInSessionOptions<RenderSvgOptions>): string {
+    if (!options.window) {
+      return this.renderer.render_svg_diff(options.renderSession[kObject], 0, 0, 1e33, 1e33);
+    }
+
+    return this.renderer.render_svg_diff(
+      options.renderSession[kObject],
+      options.window.lo.x,
+      options.window.lo.y,
+      options.window.hi.x,
+      options.window.hi.y,
+    );
   }
 
   renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<void> {
@@ -596,19 +740,21 @@ class TypstRendererDriver {
     });
   }
 
-  manipulateData(session: RenderSession, opts: ManipulateDataOptions): Promise<void> {
-    return Promise.resolve(
-      this.renderer.manipulate_data(
-        session as typst.RenderSession,
-        opts.action ?? 'reset',
-        opts.data,
-      ),
+  resetSession(session: RenderSession): void {
+    return this.renderer.reset(session[kObject]);
+  }
+
+  manipulateData(opts: RenderInSessionOptions<ManipulateDataOptions>): void {
+    return this.renderer.manipulate_data(
+      opts.renderSession[kObject] as typst.RenderSession,
+      opts.action ?? 'reset',
+      opts.data,
     );
   }
 
   private withinOptionSession<T>(
-    options: RenderToCanvasOptions | CreateSessionOptions,
-    fn: (session: typst.RenderSession) => Promise<T>,
+    options: RenderOptions<RenderToCanvasOptions | CreateSessionOptions>,
+    fn: (session: RenderSession) => Promise<T>,
   ): Promise<T> {
     function isRenderByContentOption(
       options: RenderToCanvasOptions | CreateSessionOptions,
@@ -617,7 +763,7 @@ class TypstRendererDriver {
     }
 
     if ('renderSession' in options) {
-      return fn(options.renderSession as typst.RenderSession);
+      return fn(options.renderSession);
     }
 
     if (isRenderByContentOption(options)) {
@@ -651,7 +797,7 @@ class TypstRendererDriver {
     // console.log(`create session used: render = ${(t3 - t).toFixed(1)}ms`);
     try {
       // console.log(`session`, JSON.stringify(session), `activated`);
-      const res = await fn(session);
+      const res = await fn(new RenderSession(this, session));
       // console.log(`session`, JSON.stringify(session), `deactivated`);
       session.free();
       return res;

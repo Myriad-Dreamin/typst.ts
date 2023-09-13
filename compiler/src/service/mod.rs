@@ -303,7 +303,7 @@ where
         f: impl FnOnce(&mut Self) -> SourceResult<T>,
     ) -> Option<T> {
         self.print_status::<WITH_STATUS>(DiagStatus::Compiling);
-        let start = std::time::Instant::now();
+        let start = instant::Instant::now();
         match f(self) {
             Ok(val) => {
                 self.print_status::<WITH_STATUS>(DiagStatus::Success(start.elapsed()));
@@ -311,8 +311,12 @@ where
             }
             Err(errs) => {
                 self.print_status::<WITH_STATUS>(DiagStatus::Error(start.elapsed()));
-                // todo: process errors
-                let _ = self.print_diagnostics(*errs);
+                let _err = self.print_diagnostics(*errs);
+                // todo: log in browser compiler
+                #[cfg(feature = "system-compile")]
+                if _err.is_err() {
+                    log::error!("failed to print diagnostics: {:?}", _err);
+                }
                 None
             }
         }

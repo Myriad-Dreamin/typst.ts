@@ -449,6 +449,14 @@ impl BrowserFontSearcher {
         add(include_bytes!(
             "../../../../assets/fonts/NotoSerifCJKsc-Regular.otf"
         ));
+        #[cfg(feature = "emoji")]
+        add(include_bytes!(
+            "../../../../assets/fonts/TwitterColorEmoji.ttf"
+        ));
+        #[cfg(feature = "emoji")]
+        add(include_bytes!(
+            "../../../../assets/fonts/NotoColorEmoji.ttf"
+        ));
     }
 
     pub async fn add_web_fonts(&mut self, fonts: js_sys::Array) -> ZResult<()> {

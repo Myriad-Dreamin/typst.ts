@@ -109,7 +109,7 @@ impl Completer for ReplContext {
 
         // commit line changes
         let main_id = driver.main_id();
-        driver.world.main = main_id;
+        driver.world.main = Some(main_id);
 
         let content = std::fs::read_to_string(&driver.entry_file).map_err(ReadlineError::Io)?;
         let static_prefix = content + "\n#show ";

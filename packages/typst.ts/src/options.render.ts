@@ -1,4 +1,5 @@
-import { RenderSession } from './internal.types';
+import { Rect } from './internal.types';
+import { RenderSession } from './renderer';
 
 const vectorFormats = ['vector'] as const;
 export type VectorFormat = (typeof vectorFormats)[0];
@@ -50,10 +51,17 @@ export interface RenderToCanvasOptions {
 }
 
 /**
+ * The options for rendering a svg string.
+ */
+export interface RenderSvgOptions {
+  window?: Rect;
+}
+
+/**
  * The options for rendering a preprocessed Typst document to specified container.
  * @property {HTMLElement} [container] - The container to render the Typst document.
  */
-export interface RenderToSvgOptions {
+export interface RenderToSvgOptions extends RenderSvgOptions {
   container: HTMLElement;
 }
 

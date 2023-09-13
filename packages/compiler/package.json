@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst-ts-web-compiler",
-  "version": "0.4.0-rc2",
+  "version": "0.4.0-rc3",
   "description": "WASM module for Compiling Typst documents in JavaScript environment.",
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
@@ -21,7 +21,9 @@
     "build": "wasm-pack build --target web --scope myriaddreamin -- --no-default-features --features web",
     "prepublish": "turbo build",
     "publish:dry": "npm publish --dry-run --access public",
-    "publish:lib": "npm publish --access public"
+    "publish:lib": "npm publish --access public",
+    "test:chrome": "wasm-pack test --chrome --headless --release",
+    "test:firefox": "wasm-pack test --firefox --headless --release"
   },
   "devDependencies": {
     "turbo": "^1.10.12"

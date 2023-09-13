@@ -9,8 +9,12 @@ use codespan_reporting::{
     },
 };
 
+use typst::diag::Severity;
+use typst::syntax::Span;
+use typst::WorldExt;
 use typst::{diag::SourceDiagnostic, World};
 
+use typst::eval::eco_format;
 use typst_ts_core::TypstFileId;
 
 use super::DiagStatus;
@@ -35,27 +39,29 @@ pub fn print_diagnostics<'files, W: World + Files<'files, FileId = TypstFileId>>
         ..Default::default()
     };
 
-    for error in errors {
-        // The main diagnostic.
-        let source = typst::World::source(world, error.span.id()).ok();
-        let range = source
-            .map(|source| source.range(error.span))
-            .unwrap_or(0..0);
-        let diag = Diagnostic::error()
-            .with_message(error.message)
-            .with_labels(vec![Label::primary(error.span.id(), range)]);
+    for diagnostic in errors {
+        let diag = match diagnostic.severity {
+            Severity::Error => Diagnostic::error(),
+            Severity::Warning => Diagnostic::warning(),
+        }
+        .with_message(diagnostic.message.clone())
+        .with_notes(
+            diagnostic
+                .hints
+                .iter()
+                .map(|e| (eco_format!("hint: {e}")).into())
+                .collect(),
+        )
+        .with_labels(label(world, diagnostic.span).into_iter().collect());
 
         term::emit(&mut w, &config, world, &diag)?;
 
         // Stacktrace-like helper diagnostics.
-        for point in error.trace {
+        for point in diagnostic.trace {
             let message = point.v.to_string();
             let help = Diagnostic::help()
                 .with_message(message)
-                .with_labels(vec![Label::primary(
-                    point.span.id(),
-                    world.range(point.span),
-                )]);
+                .with_labels(label(world, point.span).into_iter().collect());
 
             term::emit(&mut w, &config, world, &help)?;
         }
@@ -64,16 +70,24 @@ pub fn print_diagnostics<'files, W: World + Files<'files, FileId = TypstFileId>>
     Ok(())
 }
 
+/// Create a label for a span.
+fn label<'files, W: World + Files<'files, FileId = TypstFileId>>(
+    world: &'files W,
+    span: Span,
+) -> Option<Label<TypstFileId>> {
+    Some(Label::primary(span.id()?, world.range(span)?))
+}
+
 /// Render the status message.
 pub fn status(entry_file: TypstFileId, status: DiagStatus) -> io::Result<()> {
     let input = entry_file;
     match status {
-        DiagStatus::Compiling => log::info!("{}: compiling ...", input),
+        DiagStatus::Compiling => log::info!("{:?}: compiling ...", input),
         DiagStatus::Success(duration) => {
-            log::info!("{}: Compilation succeeded in {:?}", input, duration)
+            log::info!("{:?}: Compilation succeeded in {:?}", input, duration)
         }
         DiagStatus::Error(duration) => {
-            log::info!("{}: Compilation failed after {:?}", input, duration)
+            log::info!("{:?}: Compilation failed after {:?}", input, duration)
         }
     };
     Ok(())

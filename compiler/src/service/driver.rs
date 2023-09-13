@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::ShadowApi;
-use typst::{diag::SourceResult, World};
+use typst::{diag::SourceResult, syntax::VirtualPath, World};
 use typst_ts_core::{
     exporter_builtins::GroupExporter, path::PathClean, Exporter, TakeAs, TypstFileId,
 };
@@ -54,8 +54,7 @@ impl<W: World + WorkspaceProvider> CompileDriverImpl<W> {
         } else {
             pb
         };
-        let pb: PathBuf = Path::new("/").join(pb);
-        TypstFileId::new(None, &pb)
+        TypstFileId::new(None, VirtualPath::new(pb))
     }
 }
 
@@ -255,7 +254,7 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
 
         let variable_file = TypstFileId::new(
             Some(PackageSpec::from_str("@preview/typst-ts-variables:0.1.0").at(Span::detached())?),
-            std::path::Path::new("/lib.typ"),
+            VirtualPath::new("lib.typ"),
         );
 
         let pure_doc = Arc::new(self.inner_mut().compile()?);
@@ -266,9 +265,9 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
         let mut svg_exporter = DynamicLayoutSvgExporter::default();
 
         // for each 10pt we rerender once
-        let instant_begin = std::time::Instant::now();
+        let instant_begin = instant::Instant::now();
         for (i, current_width) in self.layout_widths.clone().into_iter().enumerate() {
-            let instant = std::time::Instant::now();
+            let instant = instant::Instant::now();
             // replace layout
 
             let variables: String = format!(
@@ -306,7 +305,7 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
 
         std::fs::write(module_output, serialize_doc(doc)).unwrap();
 
-        let instant = std::time::Instant::now();
+        let instant = instant::Instant::now();
         log::trace!("multiple layouts finished at {:?}", instant - instant_begin);
 
         Ok(pure_doc.take())

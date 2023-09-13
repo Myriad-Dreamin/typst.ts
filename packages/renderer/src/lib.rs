@@ -24,10 +24,8 @@ pub mod build_info {
     /// The commit hash of the typst-ts-renderer crate.
     pub static COMMIT_HASH: &str = env!("VERGEN_GIT_SHA");
 
-    /// The profile of the typst-ts-renderer crate.
-    /// It should be typically "debug" or "release". It is specifically exactly
-    /// the value passed by `cargo build --profile $VALUE`.
-    pub static PROFILE: &str = env!("VERGEN_CARGO_PROFILE");
+    /// The profile.opt_level of the typst-ts-renderer crate.
+    pub static OPT_LEVEL: &str = env!("VERGEN_CARGO_OPT_LEVEL");
 
     pub fn features() -> Vec<&'static str> {
         FEATURES.split(',').collect::<Vec<_>>()
@@ -67,7 +65,10 @@ pub fn renderer_build_info() -> JsValue {
     js_sys::Reflect::set(
         &obj,
         &JsValue::from_str("profile"),
-        &JsValue::from_str(build_info::PROFILE),
+        &JsValue::from_str(&format!(
+            "opt_level({opt_level})",
+            opt_level = build_info::OPT_LEVEL
+        )),
     )
     .unwrap();
 
@@ -128,6 +129,11 @@ impl TypstRenderer {
             }
             None => Ok(RenderSession::default()),
         }
+    }
+
+    pub fn reset(&mut self, session: &mut RenderSession) -> ZResult<()> {
+        session.reset();
+        Ok(())
     }
 
     pub fn manipulate_data(

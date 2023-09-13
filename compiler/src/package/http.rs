@@ -1,6 +1,7 @@
 use std::{path::Path, sync::Arc};
 
 use parking_lot::Mutex;
+use typst::eval::eco_format;
 
 use super::{DummyNotifier, Notifier, PackageError, PackageSpec, Registry};
 
@@ -90,15 +91,15 @@ impl HttpRegistry {
             Err(err) if matches!(err.status().map(|s| s.as_u16()), Some(404)) => {
                 return Err(PackageError::NotFound(spec.clone()))
             }
-            Err(_) => return Err(PackageError::NetworkFailed),
+            Err(err) => return Err(PackageError::NetworkFailed(Some(eco_format!("{err}")))),
         };
 
         let decompressed = flate2::read::GzDecoder::new(reader);
         tar::Archive::new(decompressed)
             .unpack(package_dir)
-            .map_err(|_| {
+            .map_err(|err| {
                 std::fs::remove_dir_all(package_dir).ok();
-                PackageError::MalformedArchive
+                PackageError::MalformedArchive(Some(eco_format!("{err}")))
             })
     }
 }

@@ -9,11 +9,7 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 impl RenderSession {
-    pub fn reset(&mut self) {
-        self.client = Default::default();
-    }
-
-    pub fn render_svg_in_window(
+    pub fn render_in_window(
         &mut self,
         rect_lo_x: f32,
         rect_lo_y: f32,
@@ -37,6 +33,17 @@ impl RenderSession {
 
 #[wasm_bindgen]
 impl TypstRenderer {
+    pub fn render_svg_diff(
+        &mut self,
+        session: &mut RenderSession,
+        rect_lo_x: f32,
+        rect_lo_y: f32,
+        rect_hi_x: f32,
+        rect_hi_y: f32,
+    ) -> String {
+        session.render_in_window(rect_lo_x, rect_lo_y, rect_hi_x, rect_hi_y)
+    }
+
     pub fn render_svg(&self, session: &RenderSession, root: web_sys::HtmlElement) -> ZResult<()> {
         type UsingExporter = SvgExporter<DefaultExportFeature>;
         // todo: leaking abstraction

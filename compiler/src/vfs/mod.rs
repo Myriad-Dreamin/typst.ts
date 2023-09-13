@@ -48,7 +48,7 @@ use typst::{
 
 use typst_ts_core::{path::PathClean, Bytes, QueryRef, TypstFileId};
 
-use crate::parser::reparse;
+use crate::{parser::reparse, time::SystemTime};
 
 use self::{cached::CachedAccessModel, overlay::OverlayAccessModel};
 
@@ -66,7 +66,7 @@ pub trait AccessModel {
 
     fn clear(&mut self) {}
 
-    fn mtime(&self, src: &Path) -> FileResult<std::time::SystemTime>;
+    fn mtime(&self, src: &Path) -> FileResult<SystemTime>;
 
     fn is_file(&self, src: &Path) -> FileResult<bool>;
 
@@ -81,7 +81,7 @@ type FileQuery<T> = QueryRef<T, FileError>;
 pub struct PathSlot {
     idx: FileId,
     sampled_path: once_cell::sync::OnceCell<PathBuf>,
-    mtime: FileQuery<std::time::SystemTime>,
+    mtime: FileQuery<SystemTime>,
     source: FileQuery<Source>,
     buffer: FileQuery<Bytes>,
 }
@@ -169,10 +169,13 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// Get all the files in the VFS.
-    pub fn iter_dependencies(&self) -> impl Iterator<Item = (&Path, std::time::SystemTime)> {
+    pub fn iter_dependencies(&self) -> impl Iterator<Item = (&Path, SystemTime)> {
         self.slots.iter().map(|slot| {
             let dep_path = slot.sampled_path.get().unwrap();
-            let dep_mtime = slot.mtime.compute(|| Err(FileError::Other)).unwrap();
+            let dep_mtime = slot
+                .mtime
+                .compute(|| Err(other_reason("vfs: uninitialized")))
+                .unwrap();
 
             (dep_path.as_path(), *dep_mtime)
         })
@@ -252,16 +255,22 @@ impl<M: AccessModel + Sized> Vfs<M> {
 
     /// Get source by id.
     pub fn source(&self, file_id: TypstFileId) -> FileResult<Source> {
-        let f = *self
-            .src2file_id
-            .read()
-            .get(&file_id)
-            .ok_or_else(|| FileError::NotFound(file_id.path().to_owned()))?;
+        let f = *self.src2file_id.read().get(&file_id).ok_or_else(|| {
+            FileError::NotFound({
+                // Path with package name
+                let path_repr = file_id
+                    .package()
+                    .and_then(|pkg| file_id.vpath().resolve(Path::new(&pkg.to_string())));
+
+                // Path without package name
+                path_repr.unwrap_or_else(|| file_id.vpath().as_rootless_path().to_owned())
+            })
+        })?;
 
         self.slots[f.0 as usize]
             .source
             // the value should be computed
-            .compute_ref(|| Err(FileError::Other))
+            .compute_ref(|| Err(other_reason("vfs: not computed source")))
             .cloned()
     }
 
@@ -287,7 +296,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     pub fn resolve(&self, path: &Path, source_id: TypstFileId) -> FileResult<Source> {
         self.resolve_with_f(path, source_id, || {
             if !self.do_reparse {
-                let instant = std::time::Instant::now();
+                let instant = instant::Instant::now();
 
                 let content = self.read(path)?;
                 let content = from_utf8_or_bom(&content)?.to_owned();
@@ -299,7 +308,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
             if self.access_model.is_file(path)? {
                 Ok(self
                     .access_model
-                    .read_all_diff(path, |x, y| reparse(path, source_id, x, y))?)
+                    .read_all_diff(path, |x, y| reparse(source_id, x, y))?)
             } else {
                 Err(FileError::IsDirectory)
             }
@@ -334,4 +343,8 @@ fn from_utf8_or_bom(buf: &[u8]) -> FileResult<&str> {
         // Assume UTF-8
         buf
     })?)
+}
+
+fn other_reason(err: &str) -> FileError {
+    FileError::Other(Some(err.into()))
 }

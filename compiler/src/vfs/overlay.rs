@@ -1,10 +1,12 @@
 use std::sync::Arc;
-use std::{collections::HashMap, path::Path, time::SystemTime};
+use std::{collections::HashMap, path::Path};
 
 use parking_lot::RwLock;
 use typst::diag::FileResult;
 
 use typst_ts_core::Bytes;
+
+use crate::time::SystemTime;
 
 use super::AccessModel;
 
@@ -36,7 +38,6 @@ impl<M: AccessModel> OverlayAccessModel<M> {
         // we change mt every time, since content almost changes every time
         // Note: we can still benefit from cache, since we incrementally parse source
 
-        // todo: in browser, we can't get mt
         let mt = SystemTime::now();
         let meta = OverlayFileMeta { mt, content };
         self.files.write().insert(path, meta);

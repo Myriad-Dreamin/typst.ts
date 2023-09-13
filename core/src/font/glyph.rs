@@ -5,7 +5,7 @@ use std::{ops::Deref, sync::Arc};
 pub use ttf_parser::GlyphId;
 use typst::font::Font;
 use typst::geom::Axes;
-use typst::image::Image as TypstImage;
+use typst::image::{Image as TypstImage, RasterFormat};
 
 use crate::hash::item_hash128;
 use crate::{HashedTrait, StaticHash128};
@@ -90,10 +90,15 @@ impl IGlyphProvider for FontGlyphProvider {
 
         let raster = font_face.glyph_raster_image(id, ppem)?;
 
+        // todo: more raster image support?
+        if raster.format != ttf_parser::RasterImageFormat::PNG {
+            return None;
+        }
+
         // convert to typst's image format
         let glyph_image = TypstImage::new_raw(
             raster.data.into(),
-            raster.format.into(),
+            RasterFormat::Png.into(),
             Axes::new(raster.width as u32, raster.height as u32),
             None,
         )

@@ -1,7 +1,6 @@
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
-    time::SystemTime,
 };
 
 use chrono::{DateTime, Datelike, Local};
@@ -13,7 +12,6 @@ use typst::{
     eval::{Datetime, Library},
     font::{Font, FontBook},
     syntax::Source,
-    util::PathExt,
     World,
 };
 
@@ -25,6 +23,7 @@ use typst_ts_core::{
 use crate::{
     package::Registry as PackageRegistry,
     service::WorkspaceProvider,
+    time::SystemTime,
     vfs::{AccessModel as VfsAccessModel, Vfs},
     workspace::dependency::{DependencyTree, DependentFileInfo},
     ShadowApi,
@@ -48,7 +47,7 @@ pub struct CompilerWorld<F: CompilerFeat> {
     pub root: Arc<Path>,
     /// Identifier of the main file.
     /// After resetting the world, this is set to a detached file.
-    pub main: FileId,
+    pub main: Option<FileId>,
 
     /// Provides library for typst compiler.
     library: Prehashed<Library>,
@@ -84,7 +83,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
 
         Self {
             root: root_dir.into(),
-            main: FileId::detached(),
+            main: None,
 
             library,
             font_resolver,
@@ -104,7 +103,7 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
 
     /// Access the main source file.
     fn main(&self) -> Source {
-        self.source(self.main).unwrap()
+        self.source(self.main.unwrap()).unwrap()
     }
 
     /// Metadata about all known fonts.
@@ -182,7 +181,9 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             None => self.root.clone(),
         };
 
-        root.join_rooted(id.path()).ok_or(FileError::AccessDenied)
+        // Join the path to the root. If it tries to escape, deny
+        // access. Note: It can still escape via symlinks.
+        id.vpath().resolve(&root).ok_or(FileError::AccessDenied)
     }
 
     /// Get found dependencies in current state of vfs.
@@ -211,6 +212,13 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             Some(source) => f(source),
             None => Ok(default_v),
         }
+    }
+
+    /// Lookup a source file by id.
+    #[track_caller]
+    fn lookup(&self, id: FileId) -> Source {
+        self.source(id)
+            .expect("file id does not point to any source file")
     }
 }
 
@@ -245,7 +253,7 @@ impl<F: CompilerFeat> WorkspaceProvider for CompilerWorld<F> {
     }
 
     fn set_main_id(&mut self, id: FileId) {
-        self.main = id
+        self.main = Some(id)
     }
 }
 
@@ -255,44 +263,55 @@ impl<'a, F: CompilerFeat> codespan_reporting::files::Files<'a> for CompilerWorld
     type FileId = FileId;
 
     /// The user-facing name of a file, to be displayed in diagnostics.
-    type Name = std::path::Display<'a>;
+    type Name = String;
 
     /// The source code of a file.
     type Source = Source;
 
     /// The user-facing name of a file.
     fn name(&'a self, id: FileId) -> CodespanResult<Self::Name> {
-        Ok(id.path().display())
+        let vpath = id.vpath();
+        Ok(if let Some(package) = id.package() {
+            format!("{package}{}", vpath.as_rooted_path().display())
+        } else {
+            // Try to express the path relative to the working directory.
+            vpath
+                .resolve(&self.root)
+                // differ from typst
+                // .and_then(|abs| pathdiff::diff_paths(&abs, self.workdir()))
+                .as_deref()
+                .unwrap_or_else(|| vpath.as_rootless_path())
+                .to_string_lossy()
+                .into()
+        })
     }
 
     /// The source code of a file.
     fn source(&'a self, id: FileId) -> CodespanResult<Self::Source> {
-        World::source(self, id).map_err(|_e| CodespanError::FileMissing)
+        Ok(self.lookup(id))
     }
 
     /// See [`codespan_reporting::files::Files::line_index`].
     fn line_index(&'a self, id: FileId, given: usize) -> CodespanResult<usize> {
-        self.map_source_or_default(id, 0, |source| {
-            source
-                .byte_to_line(given)
-                .ok_or_else(|| CodespanError::IndexTooLarge {
-                    given,
-                    max: source.len_bytes(),
-                })
-        })
+        let source = self.lookup(id);
+        source
+            .byte_to_line(given)
+            .ok_or_else(|| CodespanError::IndexTooLarge {
+                given,
+                max: source.len_bytes(),
+            })
     }
 
     /// See [`codespan_reporting::files::Files::column_number`].
     fn column_number(&'a self, id: FileId, _: usize, given: usize) -> CodespanResult<usize> {
-        self.map_source_or_default(id, 0, |source| {
-            source.byte_to_column(given).ok_or_else(|| {
-                let max = source.len_bytes();
-                if given <= max {
-                    CodespanError::InvalidCharBoundary { given }
-                } else {
-                    CodespanError::IndexTooLarge { given, max }
-                }
-            })
+        let source = self.lookup(id);
+        source.byte_to_column(given).ok_or_else(|| {
+            let max = source.len_bytes();
+            if given <= max {
+                CodespanError::InvalidCharBoundary { given }
+            } else {
+                CodespanError::IndexTooLarge { given, max }
+            }
         })
     }
 

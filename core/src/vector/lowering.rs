@@ -6,7 +6,7 @@ use std::sync::Arc;
 use once_cell::sync::OnceCell;
 use typst::doc::{Destination, Document, Frame, FrameItem, GroupItem, Meta, Position, TextItem};
 use typst::font::Font;
-use typst::geom::{Dir, Geometry, LineCap, LineJoin, Paint, PathItem, Shape, Size, Stroke};
+use typst::geom::{Dir, FixedStroke, Geometry, LineCap, LineJoin, Paint, PathItem, Shape, Size};
 use typst::image::Image;
 
 use ttf_parser::OutlineBuilder;
@@ -68,7 +68,11 @@ impl LowerBuilder {
                             Self::lower_position(dest, *size)
                         }
                     },
-                    Meta::Elem(..) | Meta::PageNumbering(..) | Meta::Hide => continue,
+                    // todo: support page label
+                    Meta::PdfPageLabel(..)
+                    | Meta::Elem(..)
+                    | Meta::PageNumbering(..)
+                    | Meta::Hide => continue,
                 },
             };
 
@@ -258,7 +262,7 @@ impl LowerBuilder {
         }
 
         // todo: default miter_limit, thickness
-        if let Some(Stroke {
+        if let Some(FixedStroke {
             paint,
             thickness,
             line_cap,
