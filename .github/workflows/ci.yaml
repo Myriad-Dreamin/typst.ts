@@ -22,13 +22,13 @@ jobs:
       # cp ./chromedriver-linux64/chromedriver /${HOME}/.cargo/bin/
       - name: Set up Chrome
         run: |
-          VERSION_STRING="116.0.5845.96-1"
+          VERSION_STRING="117.0.5938.62-1"
           wget "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${VERSION_STRING}_amd64.deb"
           sudo dpkg -i "google-chrome-stable_${VERSION_STRING}_amd64.deb"
           google-chrome --version
       - name: Set up Chrome driver
         run: |
-          curl -O https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/116.0.5845.96/linux64/chromedriver-linux64.zip
+          curl -O https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/117.0.5938.62/linux64/chromedriver-linux64.zip
           unzip chromedriver-linux64.zip
           sudo mv ./chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
           chromedriver --version
