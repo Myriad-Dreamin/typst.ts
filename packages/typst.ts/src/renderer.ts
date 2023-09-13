@@ -3,7 +3,7 @@ import typstInit, * as typst from '@myriaddreamin/typst-ts-renderer';
 
 import type { InitOptions } from './options.init';
 import { PageViewport } from './viewport';
-import { PageInfo, Rect, RenderSessionKernel, kObject } from './internal.types';
+import { PageInfo, kObject } from './internal.types';
 import {
   CreateSessionOptions,
   RenderToCanvasOptions,
@@ -707,10 +707,11 @@ class TypstRendererDriver {
       new RenderSession(
         this,
         this.renderer.create_session(
-          this.createOptionsToRust({
-            format: 'vector',
-            artifactContent: b,
-          }),
+          b &&
+            this.createOptionsToRust({
+              format: 'vector',
+              artifactContent: b,
+            }),
         ),
       ),
     );
@@ -782,16 +783,18 @@ class TypstRendererDriver {
     fn: (session: RenderSession) => Promise<T>,
   ): Promise<T>;
   async runWithSession<T>(arg1: any, arg2?: any): Promise<T> {
-    let options: Partial<CreateSessionOptions> = arg1;
+    let options: Partial<CreateSessionOptions> | undefined = arg1;
     let fn: (session: RenderSession) => Promise<T> = arg2;
 
     if (!arg2) {
-      options = {};
+      options = undefined;
       fn = arg1;
     }
 
     // const t = performance.now();
-    const session = this.renderer.create_session(/* moved */ this.createOptionsToRust(options));
+    const session = this.renderer.create_session(
+      /* moved */ options && this.createOptionsToRust(options),
+    );
     // const t3 = performance.now();
 
     // console.log(`create session used: render = ${(t3 - t).toFixed(1)}ms`);
