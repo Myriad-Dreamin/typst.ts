@@ -28,8 +28,11 @@ pub(crate) mod macros;
 
 /// font things about compiler.
 pub mod font;
+
 /// package things about compiler.
 pub mod package;
+/// time things about compiler.
+pub mod time;
 /// A vfs implementation for compiler.
 pub mod vfs;
 /// Workspace management for compiler.

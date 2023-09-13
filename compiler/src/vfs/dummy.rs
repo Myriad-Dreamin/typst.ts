@@ -1,8 +1,10 @@
-use std::{path::Path, time::SystemTime};
+use std::path::Path;
 
 use typst::diag::{FileError, FileResult};
 
 use typst_ts_core::Bytes;
+
+use crate::time::SystemTime;
 
 use super::AccessModel;
 

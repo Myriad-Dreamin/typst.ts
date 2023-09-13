@@ -265,9 +265,9 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
         let mut svg_exporter = DynamicLayoutSvgExporter::default();
 
         // for each 10pt we rerender once
-        let instant_begin = std::time::Instant::now();
+        let instant_begin = instant::Instant::now();
         for (i, current_width) in self.layout_widths.clone().into_iter().enumerate() {
-            let instant = std::time::Instant::now();
+            let instant = instant::Instant::now();
             // replace layout
 
             let variables: String = format!(
@@ -305,7 +305,7 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
 
         std::fs::write(module_output, serialize_doc(doc)).unwrap();
 
-        let instant = std::time::Instant::now();
+        let instant = instant::Instant::now();
         log::trace!("multiple layouts finished at {:?}", instant - instant_begin);
 
         Ok(pure_doc.take())

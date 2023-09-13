@@ -44,7 +44,7 @@ impl IncrDocServer {
         self.module_builder.reset();
         self.page_source_mapping.clear();
 
-        let instant: std::time::Instant = std::time::Instant::now();
+        // let instant: std::time::Instant = std::time::Instant::now();
 
         self.module_builder.increment_lifetime();
 
@@ -118,7 +118,7 @@ impl IncrDocServer {
         ])
         .to_bytes();
 
-        log::info!("svg render time (incremental bin): {:?}", instant.elapsed());
+        // log::info!("svg render time (incremental bin): {:?}", instant.elapsed());
         [b"diff-v1,", delta.as_slice()].concat()
     }
 

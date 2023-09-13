@@ -1,12 +1,11 @@
-use std::{
-    path::{Path, PathBuf},
-    time::SystemTime,
-};
+use std::path::{Path, PathBuf};
 
 use typst::diag::{FileError, FileResult};
 use wasm_bindgen::prelude::*;
 
 use typst_ts_core::Bytes;
+
+use crate::time::SystemTime;
 
 use super::AccessModel;
 

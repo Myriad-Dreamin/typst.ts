@@ -303,7 +303,7 @@ where
         f: impl FnOnce(&mut Self) -> SourceResult<T>,
     ) -> Option<T> {
         self.print_status::<WITH_STATUS>(DiagStatus::Compiling);
-        let start = std::time::Instant::now();
+        let start = instant::Instant::now();
         match f(self) {
             Ok(val) => {
                 self.print_status::<WITH_STATUS>(DiagStatus::Success(start.elapsed()));

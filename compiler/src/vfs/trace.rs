@@ -4,6 +4,8 @@ use typst::diag::FileResult;
 
 use typst_ts_core::Bytes;
 
+use crate::time::SystemTime;
+
 use super::{cached::CachedAccessModel, AccessModel};
 
 pub struct TraceAccessModel<M: AccessModel + Sized> {
@@ -24,7 +26,7 @@ impl<M: AccessModel + Sized, C: Clone> TraceAccessModel<CachedAccessModel<M, C>>
         src: &Path,
         compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
     ) -> FileResult<C> {
-        let instant = std::time::Instant::now();
+        let instant = instant::Instant::now();
         let res = self.inner.read_all_diff(src, compute);
         let elapsed = instant.elapsed();
         self.trace[4].fetch_add(
@@ -41,8 +43,8 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
         self.inner.clear();
     }
 
-    fn mtime(&self, src: &Path) -> FileResult<std::time::SystemTime> {
-        let instant = std::time::Instant::now();
+    fn mtime(&self, src: &Path) -> FileResult<SystemTime> {
+        let instant = instant::Instant::now();
         let res = self.inner.mtime(src);
         let elapsed = instant.elapsed();
         // self.trace[0] += elapsed.as_nanos() as u64;
@@ -55,7 +57,7 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
     }
 
     fn is_file(&self, src: &Path) -> FileResult<bool> {
-        let instant = std::time::Instant::now();
+        let instant = instant::Instant::now();
         let res = self.inner.is_file(src);
         let elapsed = instant.elapsed();
         self.trace[1].fetch_add(
@@ -67,7 +69,7 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
     }
 
     fn real_path(&self, src: &Path) -> FileResult<Self::RealPath> {
-        let instant = std::time::Instant::now();
+        let instant = instant::Instant::now();
         let res = self.inner.real_path(src);
         let elapsed = instant.elapsed();
         self.trace[2].fetch_add(
@@ -79,7 +81,7 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
     }
 
     fn content(&self, src: &Path) -> FileResult<Bytes> {
-        let instant = std::time::Instant::now();
+        let instant = instant::Instant::now();
         let res = self.inner.content(src);
         let elapsed = instant.elapsed();
         self.trace[3].fetch_add(

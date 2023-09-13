@@ -34,7 +34,7 @@ impl CompileSession {
     }
 
     pub fn take_snapshot(&mut self) -> Option<WorldSnapshot> {
-        let begin = std::time::Instant::now();
+        let begin = instant::Instant::now();
         let world = self.world.as_mut().unwrap();
 
         world.reset();
@@ -60,15 +60,15 @@ impl CompileSession {
         // };
         // info!("take_snapshot compiled in {:?}", begin.elapsed());
 
-        // let font_profile_begin = std::time::Instant::now();
+        // let font_profile_begin = instant::Instant::now();
         // let font_profile = world.font_resolver.profile().clone();
         // let font_profile_elapsed = font_profile_begin.elapsed();
 
-        // let dependencies_begin = std::time::Instant::now();
+        // let dependencies_begin = instant::Instant::now();
         // let dependencies = world.get_dependencies();
         // let dependencies_elapsed = dependencies_begin.elapsed();
 
-        // let artifact_begin = std::time::Instant::now();
+        // let artifact_begin = instant::Instant::now();
         // let ir = typst_ts_core::artifact_ir::Artifact::from(&doc);
         // let artifact_data = to_base64(ir.get_buffer());
         // let artifact_header = ArtifactHeader {

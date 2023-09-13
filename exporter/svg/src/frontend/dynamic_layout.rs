@@ -19,7 +19,7 @@ pub struct DynamicLayoutSvgExporter {
 impl DynamicLayoutSvgExporter {
     pub fn render(&mut self, layout_width: typst::geom::Abs, output: Arc<Document>) {
         self.builder.reset();
-        let instant = std::time::Instant::now();
+        // let instant = std::time::Instant::now();
         // check the document
         let mut t = LowerBuilder::new(&output);
 
@@ -37,7 +37,8 @@ impl DynamicLayoutSvgExporter {
 
         self.layouts
             .push((layout_width.into(), LayoutRegionNode::new_pages(pages)));
-        log::trace!("svg dynamic layout render time: {:?}", instant.elapsed());
+        // log::trace!("svg dynamic layout render time: {:?}",
+        // instant.elapsed());
     }
 
     pub fn finalize(self) -> MultiSvgDocument {

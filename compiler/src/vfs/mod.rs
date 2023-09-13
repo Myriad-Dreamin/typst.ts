@@ -48,7 +48,7 @@ use typst::{
 
 use typst_ts_core::{path::PathClean, Bytes, QueryRef, TypstFileId};
 
-use crate::parser::reparse;
+use crate::{parser::reparse, time::SystemTime};
 
 use self::{cached::CachedAccessModel, overlay::OverlayAccessModel};
 
@@ -66,7 +66,7 @@ pub trait AccessModel {
 
     fn clear(&mut self) {}
 
-    fn mtime(&self, src: &Path) -> FileResult<std::time::SystemTime>;
+    fn mtime(&self, src: &Path) -> FileResult<SystemTime>;
 
     fn is_file(&self, src: &Path) -> FileResult<bool>;
 
@@ -81,7 +81,7 @@ type FileQuery<T> = QueryRef<T, FileError>;
 pub struct PathSlot {
     idx: FileId,
     sampled_path: once_cell::sync::OnceCell<PathBuf>,
-    mtime: FileQuery<std::time::SystemTime>,
+    mtime: FileQuery<SystemTime>,
     source: FileQuery<Source>,
     buffer: FileQuery<Bytes>,
 }
@@ -169,7 +169,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// Get all the files in the VFS.
-    pub fn iter_dependencies(&self) -> impl Iterator<Item = (&Path, std::time::SystemTime)> {
+    pub fn iter_dependencies(&self) -> impl Iterator<Item = (&Path, SystemTime)> {
         self.slots.iter().map(|slot| {
             let dep_path = slot.sampled_path.get().unwrap();
             let dep_mtime = slot
@@ -296,7 +296,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     pub fn resolve(&self, path: &Path, source_id: TypstFileId) -> FileResult<Source> {
         self.resolve_with_f(path, source_id, || {
             if !self.do_reparse {
-                let instant = std::time::Instant::now();
+                let instant = instant::Instant::now();
 
                 let content = self.read(path)?;
                 let content = from_utf8_or_bom(&content)?.to_owned();

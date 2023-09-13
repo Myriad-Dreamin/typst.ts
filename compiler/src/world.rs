@@ -1,7 +1,6 @@
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
-    time::SystemTime,
 };
 
 use chrono::{DateTime, Datelike, Local};
@@ -24,6 +23,7 @@ use typst_ts_core::{
 use crate::{
     package::Registry as PackageRegistry,
     service::WorkspaceProvider,
+    time::SystemTime,
     vfs::{AccessModel as VfsAccessModel, Vfs},
     workspace::dependency::{DependencyTree, DependentFileInfo},
     ShadowApi,
