@@ -52,9 +52,14 @@ typst-ts-svg-exporter.workspace = true
 
 [dev-dependencies]
 wasm-bindgen-test.workspace = true
+typst-ts-test-common.workspace = true
+hex.workspace = true
+sha2.workspace = true
 web-sys = { workspace = true, features = ["console"] }
 
 [features]
-full = ["web"]
+web_test = ["typst-ts-test-common/web_artifacts"]
+
+full = ["web", "web_test"]
 web = []
 default = ["full"]
