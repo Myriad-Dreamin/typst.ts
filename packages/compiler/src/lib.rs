@@ -72,9 +72,9 @@ impl TypstCompiler {
         self.compiler.reset().unwrap();
     }
 
-    pub fn add_source(&mut self, path: String, content: String, is_main: bool) -> bool {
-        let path = Path::new(&path).to_owned();
-        match self.compiler.map_shadow(&path, &content) {
+    pub fn add_source(&mut self, path: &str, content: &str, is_main: bool) -> bool {
+        let path = Path::new(path).to_owned();
+        match self.compiler.map_shadow(&path, content) {
             Ok(_) => {
                 if is_main {
                     self.compiler.set_entry_file(path);
