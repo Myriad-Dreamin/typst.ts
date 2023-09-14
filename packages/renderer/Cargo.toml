@@ -69,6 +69,8 @@ vergen.workspace = true
 
 [features]
 
+debug_delta_update = []
+
 web_test = ["typst-ts-test-common/web_artifacts"]
 web_verbose = ["web_test"]                        # for test debug
 serde_json = ["dep:serde_json"]
