@@ -76,12 +76,12 @@ impl Module {
 
     pub fn merge_delta(&mut self, v: impl ModuleStream) {
         let item_pack: ItemPack = v.items();
-        self.items.extend(item_pack.0);
         if let Some(gc_items) = v.gc_items() {
             for id in gc_items {
                 self.items.remove(&id);
             }
         }
+        self.items.extend(item_pack.0);
 
         let fonts = v.fonts();
         self.fonts.extend(fonts.take().items);

@@ -73,24 +73,32 @@ impl IncrDocServer {
         let delta = builder.finalize_delta();
 
         // max, min lifetime current, gc_items
-        #[cfg(feature = "debug_gc")]
-        println!(
-            "gc: max: {}, min: {}, curr: {}, {}",
-            self.module_builder
-                .items
-                .values()
-                .map(|i| i.0)
-                .max()
-                .unwrap_or(0xffffffff),
-            self.module_builder
+        #[cfg(feature = "debug-gc")]
+        {
+            let mi = self
+                .module_builder
                 .items
                 .values()
                 .map(|i| i.0)
                 .min()
-                .unwrap_or(0),
-            self.module_builder.lifetime,
-            gc_items.len()
-        );
+                .unwrap_or(0);
+            println!(
+                "gc[{}]: max: {}, min: {}, remove: {}",
+                self.module_builder.lifetime,
+                self.module_builder
+                    .items
+                    .values()
+                    .map(|i| i.0)
+                    .max()
+                    .unwrap_or(0xffffffff),
+                mi,
+                gc_items.len()
+            );
+
+            for (fg, (_, item)) in self.module_builder.items.iter().filter(|(_, i)| i.0 == mi) {
+                println!("mi {fg:?} => {item:#?}");
+            }
+        }
 
         let fonts = FontPack {
             items: delta.fonts,
