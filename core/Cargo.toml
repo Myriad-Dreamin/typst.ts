@@ -46,6 +46,7 @@ rkyv = ["dep:rkyv", "rkyv/alloc", "rkyv/archive_le"]
 rkyv-validation = ["dep:rkyv", "rkyv/validation"]
 flat-vector = ["rkyv", "rkyv-validation"]
 vector-bbox = []
+debug-gc = []
 
 __web = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
 web = ["__web"]
