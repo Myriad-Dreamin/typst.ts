@@ -1,4 +1,3 @@
-import { get_font_info } from '@myriaddreamin/typst-ts-web-compiler';
 import { BeforeBuildMark, InitOptions } from './options.init';
 import { LazyWasmModule } from './wasm';
 import * as idb from 'idb';
@@ -52,6 +51,8 @@ async function addPartialFonts<T>({ builder, hooks }: InitContext<T>): Promise<v
         return (await db.get('font-information', postscriptName))?.info;
       }),
     );
+
+    const get_font_info = (builder as any).handler_for_font_info();
 
     await builder.add_web_fonts(
       fonts.map((font, font_idx) => {
