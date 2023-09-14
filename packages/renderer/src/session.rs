@@ -250,13 +250,18 @@ impl RenderSession {
         use typst_ts_core::vector::stream::BytesModuleStream;
 
         let delta = BytesModuleStream::from_slice(delta).checkout_owned();
+        let _delta_ref = &delta;
+
+        #[cfg(feature = "debug_delta_update")]
+        use typst_ts_core::vector::flat_ir::ModuleStream;
 
         #[cfg(feature = "debug_delta_update")]
         crate::utils::console_log!(
-            "module counts: {:?},{:?},{:?}",
-            delta.glyphs.len(),
-            delta.item_pack.0.len(),
-            delta.layouts.len()
+            "module counts: g:{:?},i:{:?},l:{:?},gc:{:?}",
+            _delta_ref.glyphs().items.len(),
+            _delta_ref.items().0.len(),
+            _delta_ref.layouts().len(),
+            _delta_ref.gc_items().map(|s| s.len()),
         );
 
         client.merge_delta(delta);
