@@ -65,11 +65,15 @@ impl FontLoader for SnapshotFontLoader {
 // todo: remove this
 unsafe impl Send for SnapshotFontLoader {}
 
+// todo: design error handling
+// todo: we return a string for now which is better than nothing
 #[wasm_bindgen]
 impl TypstCompiler {
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self) -> Result<(), JsValue> {
         // reset the world caches
-        self.compiler.reset().unwrap();
+        self.compiler.reset().map_err(|e| format!("{e:?}"))?;
+
+        Ok(())
     }
 
     pub fn add_source(&mut self, path: &str, content: &str, is_main: bool) -> bool {
@@ -155,13 +159,17 @@ impl TypstCompiler {
         );
 
         // compile and export document
-        let doc = self.compiler.compile().unwrap();
+        let doc = self.compiler.compile().map_err(|e| format!("{e:?}"))?;
         let data = ast_exporter
             .export(self.compiler.world(), Arc::new(doc))
-            .unwrap();
+            .map_err(|e| format!("{e:?}"))?;
 
-        let converted =
-            ansi_to_html::convert_escaped(String::from_utf8(data).unwrap().as_str()).unwrap();
+        let converted = ansi_to_html::convert_escaped(
+            String::from_utf8(data)
+                .map_err(|e| format!("{e:?}"))?
+                .as_str(),
+        )
+        .map_err(|e| format!("{e:?}"))?;
         Ok(converted)
     }
 
@@ -174,10 +182,10 @@ impl TypstCompiler {
             typst_ts_svg_exporter::SvgModuleExporter::default(),
         );
 
-        let doc = self.compiler.compile().unwrap();
+        let doc = self.compiler.compile().map_err(|e| format!("{e:?}"))?;
         let artifact_bytes = ir_exporter
             .export(self.compiler.world(), Arc::new(doc))
-            .unwrap();
+            .map_err(|e| format!("{e:?}"))?;
         Ok(artifact_bytes)
     }
 
