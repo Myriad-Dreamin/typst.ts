@@ -91,11 +91,10 @@ const gCompilerModule = new LazyWasmModule(typstInit);
  * @example
  * ```typescript
  * import { createTypstCompiler } from 'typst';
- * import * as pdfjs from 'pdfjs-dist';
- * const compiler = createTypstCompiler(pdfjs);
+ * const compiler = createTypstCompiler();
  * await compiler.init();
- * await compiler.compile({
- * });
+ * compiler.addSource('/main.typ', 'Hello, typst!');
+ * await compiler.compile({ mainFilePath: '/main.typ' });
  * ```
  */
 export function createTypstCompiler(): TypstCompiler {
