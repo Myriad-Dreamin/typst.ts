@@ -77,6 +77,7 @@ export class RenderSession {
 
   /**
    * @deprecated
+   * use {@link docWidth} instead
    */
   get doc_width(): number {
     return this[kObject].doc_width;
@@ -88,6 +89,7 @@ export class RenderSession {
 
   /**
    * @deprecated
+   * use {@link docHeight} instead
    */
   get doc_height(): number {
     return this[kObject].doc_height;
@@ -99,6 +101,7 @@ export class RenderSession {
 
   /**
    * @deprecated
+   * use {@link renderSvgDiff} instead
    */
   render_in_window(rect_lo_x: number, rect_lo_y: number, rect_hi_x: number, rect_hi_y: number) {
     return this[kObject].render_in_window(rect_lo_x, rect_lo_y, rect_hi_x, rect_hi_y);
@@ -106,6 +109,7 @@ export class RenderSession {
 
   /**
    * @deprecated
+   * use {@link manipulateData} instead
    */
   merge_delta(data: Uint8Array) {
     this.plugin.manipulateData({
@@ -150,6 +154,18 @@ export class RenderSession {
       renderSession: this,
       ...opts,
     });
+  }
+
+  /**
+   * @deprecated
+   * use {@link getSourceLoc} instead
+   */
+  get_source_loc(path: Uint32Array): string | undefined {
+    return (this[kObject] as typst.RenderSession).source_span(path);
+  }
+
+  getSourceLoc(path: Uint32Array): string | undefined {
+    return (this[kObject] as typst.RenderSession).source_span(path);
   }
 }
 
@@ -321,6 +337,7 @@ export interface TypstRenderer extends TypstSvgRenderer {
   /**
    * alias to {@link TypstRenderer.renderToCanvas}, will remove in v0.5.0
    * @deprecated
+   * use {@link renderToCanvas} instead
    */
   render(options: RenderOptions<RenderToCanvasOptions>): Promise<void>;
 }
@@ -353,6 +370,7 @@ export interface TypstSvgRenderer {
   /**
    * Create a svg session.
    * @deprecated
+   * use {@link TypstRenderer['runWithSession']} instead
    */
   createModule(b: Uint8Array): Promise<RenderSession>;
 
@@ -363,12 +381,14 @@ export interface TypstSvgRenderer {
    * @param {HTMLElement} options - The options for rendering a Typst
    * document to specified container.
    * @deprecated
+   * use {@link TypstRenderer['renderToSvg']} instead
    */
   renderSvg(session: RenderSession, options: HTMLElement): Promise<unknown>;
 }
 
 /**
  * @deprecated
+ * use {@link createTypstRenderer} instead
  */
 export function createTypstSvgRenderer(): TypstSvgRenderer {
   return new TypstRendererDriver(undefined);
