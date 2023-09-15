@@ -63,7 +63,7 @@ use typst::{
     diag::{At, FileResult, SourceResult},
     syntax::Span,
 };
-use typst_ts_core::TypstFileId;
+use typst_ts_core::{Bytes, TypstFileId};
 
 /// Latest version of the shadow api, which is in beta.
 pub trait ShadowApi {
@@ -75,7 +75,7 @@ pub trait ShadowApi {
     fn reset_shadow(&mut self);
 
     /// Add a shadow file to the driver.
-    fn map_shadow(&self, path: &Path, content: &str) -> FileResult<()>;
+    fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()>;
 
     /// Add a shadow file to the driver.
     fn unmap_shadow(&self, path: &Path) -> FileResult<()>;
@@ -84,7 +84,7 @@ pub trait ShadowApi {
     fn with_shadow_file<T>(
         &mut self,
         file_path: &Path,
-        content: &str,
+        content: Bytes,
         f: impl FnOnce(&mut Self) -> SourceResult<T>,
     ) -> SourceResult<T> {
         self.map_shadow(file_path, content).at(Span::detached())?;
@@ -96,7 +96,7 @@ pub trait ShadowApi {
     /// Add a shadow file to the driver by file id.
     /// Note: to enable this function, `ShadowApi` must implement
     /// `_shadow_map_id`.
-    fn map_shadow_by_id(&self, file_id: TypstFileId, content: &str) -> FileResult<()> {
+    fn map_shadow_by_id(&self, file_id: TypstFileId, content: Bytes) -> FileResult<()> {
         let file_path = self._shadow_map_id(file_id)?;
         self.map_shadow(&file_path, content)
     }
@@ -116,7 +116,7 @@ pub trait ShadowApi {
     fn with_shadow_file_by_id<T>(
         &mut self,
         file_id: TypstFileId,
-        content: &str,
+        content: Bytes,
         f: impl FnOnce(&mut Self) -> SourceResult<T>,
     ) -> SourceResult<T> {
         let file_path = self._shadow_map_id(file_id).at(Span::detached())?;

@@ -122,7 +122,7 @@ impl Completer for ReplContext {
 
         driver.world.reset();
         let typst_completions = driver
-            .with_shadow_file_by_id(main_id, &dyn_content, |driver| {
+            .with_shadow_file_by_id(main_id, dyn_content.as_bytes().into(), |driver| {
                 let frames = driver.compile().map(|d| d.pages);
                 let frames = frames.as_ref().map(|v| v.as_slice()).unwrap_or_default();
                 let source = driver.world.main();

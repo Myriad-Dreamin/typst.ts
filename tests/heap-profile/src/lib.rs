@@ -44,7 +44,9 @@ pub fn test_compiler(
         let main_id = driver.main_id();
 
         driver
-            .with_shadow_file_by_id(main_id, &content, |driver| driver.compile())
+            .with_shadow_file_by_id(main_id, content.as_bytes().into(), |driver| {
+                driver.compile()
+            })
             .unwrap();
 
         comemo::evict(10);

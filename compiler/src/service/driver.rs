@@ -6,7 +6,7 @@ use std::{
 use crate::ShadowApi;
 use typst::{diag::SourceResult, syntax::VirtualPath, World};
 use typst_ts_core::{
-    exporter_builtins::GroupExporter, path::PathClean, Exporter, TakeAs, TypstFileId,
+    exporter_builtins::GroupExporter, path::PathClean, Bytes, Exporter, TakeAs, TypstFileId,
 };
 
 use super::{Compiler, WorkspaceProvider, WrappedCompiler};
@@ -109,7 +109,7 @@ impl<W: World + ShadowApi> ShadowApi for CompileDriverImpl<W> {
         self.world.reset_shadow()
     }
 
-    fn map_shadow(&self, path: &Path, content: &str) -> typst::diag::FileResult<()> {
+    fn map_shadow(&self, path: &Path, content: Bytes) -> typst::diag::FileResult<()> {
         self.world.map_shadow(path, content)
     }
 
@@ -285,7 +285,7 @@ impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
                 self.target,
             );
 
-            self.with_shadow_file_by_id(variable_file, &variables, |this| {
+            self.with_shadow_file_by_id(variable_file, variables.as_bytes().into(), |this| {
                 // compile and export document
                 let output = Arc::new(this.inner_mut().compile()?);
                 svg_exporter.render(current_width, output);

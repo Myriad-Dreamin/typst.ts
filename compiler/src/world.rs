@@ -231,7 +231,7 @@ impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
         self.vfs.reset_shadow()
     }
 
-    fn map_shadow(&self, path: &Path, content: &str) -> FileResult<()> {
+    fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()> {
         self.vfs.map_shadow(path, content)
     }
 
