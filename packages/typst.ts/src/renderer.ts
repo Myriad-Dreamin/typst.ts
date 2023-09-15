@@ -2,7 +2,7 @@
 import typstInit, * as typst from '@myriaddreamin/typst-ts-renderer';
 
 import type { InitOptions } from './options.init';
-import { PageViewport } from './viewport';
+import { PageViewport } from './render/canvas/viewport';
 import { PageInfo, kObject } from './internal.types';
 import {
   CreateSessionOptions,
@@ -14,7 +14,7 @@ import {
   RenderSvgOptions,
   RenderInSessionOptions,
 } from './options.render';
-import { RenderView, renderTextLayer } from './view';
+import { RenderView, renderTextLayer } from './render/canvas/view';
 import { LazyWasmModule } from './wasm';
 import { buildComponent } from './init';
 

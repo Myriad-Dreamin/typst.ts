@@ -1,5 +1,5 @@
-import { PageInfo } from './internal.types';
-import { RenderToCanvasOptions } from './options.render';
+import { PageInfo } from '../../internal.types';
+import { RenderToCanvasOptions } from '../../options.render';
 import { PageViewport } from './viewport';
 
 /** @internal */
