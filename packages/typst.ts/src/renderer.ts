@@ -3,7 +3,7 @@ import typstInit, * as typst from '@myriaddreamin/typst-ts-renderer';
 
 import type { InitOptions } from './options.init';
 import { PageViewport } from './render/canvas/viewport';
-import { PageInfo, kObject } from './internal.types';
+import { PageInfo, TransformMatrix, kObject } from './internal.types';
 import {
   CreateSessionOptions,
   RenderToCanvasOptions,
@@ -36,7 +36,6 @@ export interface RenderPageResult {
 
 /**
  * The session of a Typst document.
- * @typedef {Object} RenderSession
  * @property {string} backgroundColor - The background color of the Typst
  * document.
  * @property {number} pixelPerPt - The pixel per point scale up the image.
@@ -48,29 +47,67 @@ export class RenderSession {
    */
   public [kObject]: typst.RenderSession;
 
+  /**
+   * @internal
+   */
   constructor(
+    /**
+     * @internal
+     */
     private plugin: TypstRenderer,
     o: typst.RenderSession,
   ) {
     this[kObject] = o;
   }
 
+  /**
+   * Set the background color of the Typst document.
+   * @param {string} t - The background color in format of `^#?[0-9a-f]{6}$`
+   *
+   * Note: Default to `#ffffff`.
+   *
+   * Note: Only available in canvas rendering mode.
+   */
   set backgroundColor(t: string) {
     this[kObject].background_color = t;
   }
 
+  /**
+   * Get the background color of the Typst document.
+   *
+   * Note: Default to `#ffffff`.
+   *
+   * Note: Only available in canvas rendering mode.
+   */
   get backgroundColor(): string {
     return this[kObject].background_color;
   }
 
+  /**
+   * Set the pixel per point scale up the canvas panel.
+   *
+   * Note: Default to `3`.
+   *
+   * Note: Only available in canvas rendering mode.
+   */
   set pixelPerPt(t: number) {
     this[kObject].pixel_per_pt = t;
   }
 
+  /**
+   * Get the pixel per point scale up the canvas panel.
+   *
+   * Note: Default to `3`.
+   *
+   * Note: Only available in canvas rendering mode.
+   */
   get pixelPerPt(): number {
     return this[kObject].pixel_per_pt;
   }
 
+  /**
+   * Reset state
+   */
   reset(): void {
     this.plugin.resetSession(this);
   }
@@ -99,6 +136,64 @@ export class RenderSession {
     return this[kObject].doc_height;
   }
 
+  retrievePagesInfo(): PageInfo[] {
+    const pages_info = this[kObject].pages_info;
+    const pageInfos: PageInfo[] = [];
+    const pageCount = pages_info.page_count;
+    for (let i = 0; i < pageCount; i++) {
+      const pageAst = pages_info.page(i);
+      pageInfos.push({
+        pageOffset: pageAst.page_off,
+        width: pageAst.width_pt,
+        height: pageAst.height_pt,
+      });
+    }
+
+    return pageInfos;
+  }
+
+  getSourceLoc(path: Uint32Array): string | undefined {
+    return (this[kObject] as typst.RenderSession).source_span(path);
+  }
+
+  /**
+   * See {@link TypstRenderer.renderToSvg} for more details.
+   */
+  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<void> {
+    return this.plugin.renderToSvg({
+      renderSession: this,
+      ...options,
+    });
+  }
+
+  /**
+   * See {@link TypstRenderer.manipulateData} for more details.
+   */
+  manipulateData(opts: ManipulateDataOptions) {
+    this.plugin.manipulateData({
+      renderSession: this,
+      ...opts,
+    });
+  }
+
+  /**
+   * See {@link TypstRenderer.renderSvgDiff} for more details.
+   */
+  renderSvgDiff(opts: RenderSvgOptions): string {
+    return this.plugin.renderSvgDiff({
+      renderSession: this,
+      ...opts,
+    });
+  }
+
+  /**
+   * @deprecated
+   * use {@link getSourceLoc} instead
+   */
+  get_source_loc(path: Uint32Array): string | undefined {
+    return (this[kObject] as typst.RenderSession).source_span(path);
+  }
+
   /**
    * @deprecated
    * use {@link renderSvgDiff} instead
@@ -117,55 +212,6 @@ export class RenderSession {
       action: 'merge',
       data,
     });
-  }
-
-  retrievePagesInfo(): PageInfo[] {
-    const pages_info = this[kObject].pages_info;
-    const pageInfos: PageInfo[] = [];
-    const pageCount = pages_info.page_count;
-    for (let i = 0; i < pageCount; i++) {
-      const pageAst = pages_info.page(i);
-      pageInfos.push({
-        pageOffset: pageAst.page_off,
-        width: pageAst.width_pt,
-        height: pageAst.height_pt,
-      });
-    }
-
-    return pageInfos;
-  }
-
-  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<void> {
-    return this.plugin.renderToSvg({
-      renderSession: this,
-      ...options,
-    });
-  }
-
-  manipulateData(opts: ManipulateDataOptions) {
-    this.plugin.manipulateData({
-      renderSession: this,
-      ...opts,
-    });
-  }
-
-  renderSvgDiff(opts: RenderSvgOptions): string {
-    return this.plugin.renderSvgDiff({
-      renderSession: this,
-      ...opts,
-    });
-  }
-
-  /**
-   * @deprecated
-   * use {@link getSourceLoc} instead
-   */
-  get_source_loc(path: Uint32Array): string | undefined {
-    return (this[kObject] as typst.RenderSession).source_span(path);
-  }
-
-  getSourceLoc(path: Uint32Array): string | undefined {
-    return (this[kObject] as typst.RenderSession).source_span(path);
   }
 }
 
@@ -831,8 +877,6 @@ class TypstRendererDriver {
     }
   }
 }
-
-type TransformMatrix = [number, number, number, number, number, number];
 
 interface AnnotationBox {
   height: number;

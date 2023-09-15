@@ -1,4 +1,4 @@
-import { PageInfo, Rect } from './internal.types';
+import { PageInfo, Rect, TransformMatrix } from './internal.types';
 import { RenderOptions } from './options.render';
 import { patchRoot } from './render/svg/patch';
 import { RenderSession, TypstRenderer } from './renderer';
@@ -14,7 +14,7 @@ export interface RenderPiece {
   invisible?: boolean;
   at?: Element;
   window?: Rect;
-  ts?: [number, number, number, number, number, number];
+  ts?: TransformMatrix;
 }
 
 export interface TypstDocumentProps {
