@@ -406,8 +406,8 @@ const gRendererModule = new LazyWasmModule(typstInit);
  * });
  * ```
  */
-export function createTypstRenderer(pdf: any): TypstRenderer {
-  return new TypstRendererDriver(pdf);
+export function createTypstRenderer(pdf?: any): TypstRenderer {
+  return new TypstRendererDriver(pdf || undefined);
 }
 
 export interface TypstSvgRenderer {
