@@ -174,9 +174,9 @@ export class RenderSession {
  */
 export interface TypstRenderer extends TypstSvgRenderer {
   /**
-   * Initialize the Typst renderer.
+   * Initialize the typst renderer.
    * @param {Partial<InitOptions>} options - The options for initializing the
-   * Typst renderer.
+   * typst renderer.
    */
   init(options?: Partial<InitOptions>): Promise<void>;
 
