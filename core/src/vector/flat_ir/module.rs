@@ -301,6 +301,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
                     .collect::<Vec<_>>();
 
                 if self.should_attach_debug_info {
+                    // Safety: `t` is `Some` only if `should_attach_debug_info` is `true`.
                     let sm_start = unsafe { t.unwrap_unchecked() };
                     let sm_range = self
                         .source_mapping_buffer
