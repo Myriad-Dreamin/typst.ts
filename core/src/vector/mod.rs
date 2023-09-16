@@ -8,7 +8,7 @@ pub mod ir;
 pub mod vm;
 
 mod lowering;
-pub use lowering::{GlyphLowerBuilder, LowerBuilder};
+pub use lowering::{span_id_from_u64, span_id_to_u64, GlyphLowerBuilder, LowerBuilder};
 
 pub mod flat_ir;
 pub mod flat_vm;

@@ -53,10 +53,10 @@ impl LowerBuilder {
                 FrameItem::Group(group) => self.lower_group(group),
                 FrameItem::Text(text) => Self::lower_text(text),
                 FrameItem::Shape(shape, span_id) => {
-                    SvgItem::Path((Self::lower_shape(shape), hack_span_id_to_u64(span_id)))
+                    SvgItem::Path((Self::lower_shape(shape), span_id_to_u64(span_id)))
                 }
                 FrameItem::Image(image, size, span_id) => {
-                    SvgItem::Image((lower_image(image, *size), hack_span_id_to_u64(span_id)))
+                    SvgItem::Image((lower_image(image, *size), span_id_to_u64(span_id)))
                 }
                 FrameItem::Meta(meta, size) => match meta {
                     Meta::Link(lnk) => match lnk {
@@ -179,9 +179,9 @@ impl LowerBuilder {
             .iter()
             .filter(|g| g.span.0 != Span::detached())
             .map(|g| &g.span.0)
-            .map(hack_span_id_to_u64)
+            .map(span_id_to_u64)
             .max()
-            .unwrap_or_else(|| hack_span_id_to_u64(&Span::detached()));
+            .unwrap_or_else(|| span_id_to_u64(&Span::detached()));
 
         SvgItem::Text(ir::TextItem {
             font: text.font.clone(),
@@ -496,13 +496,6 @@ fn lower_image(image: &Image, size: Size) -> ir::ImageItem {
     }
 }
 
-fn hack_span_id_to_u64(span_id: &Span) -> u64 {
-    const SPAN_BITS: u64 = 48;
-    // todo: how to get file_id?
-    let file_id = unsafe { std::mem::transmute::<_, &u16>(&span_id.id()) };
-    ((*file_id as u64) << SPAN_BITS) | span_id.number()
-}
-
 struct FindViewBoxResult<'a> {
     start_span: Option<xmlparser::StrSpan<'a>>,
     first_viewbox: Option<(xmlparser::StrSpan<'a>, xmlparser::StrSpan<'a>)>,
@@ -540,5 +533,51 @@ fn find_viewbox_attr(svg_str: &'_ str) -> FindViewBoxResult<'_> {
     FindViewBoxResult {
         start_span,
         first_viewbox,
+    }
+}
+
+const DETACHED: u64 = 1;
+const SPAN_BITS: u64 = 48;
+
+// todo: more safe way to transfer span id across process
+/// Note: this function may be removed in the future.
+pub fn span_id_to_u64(span_id: &Span) -> u64 {
+    span_id
+        .id()
+        .map(|file_id| ((file_id.into_raw() as u64) << SPAN_BITS) | span_id.number())
+        .unwrap_or(DETACHED)
+}
+
+/// Note: this function may be removed in the future.
+pub fn span_id_from_u64(span_id: u64) -> Option<Span> {
+    use typst::syntax::FileId;
+    let file_id = if span_id == DETACHED {
+        return Some(Span::detached());
+    } else {
+        let file_id = (span_id >> SPAN_BITS) as u16;
+        FileId::from_raw(file_id)
+    };
+
+    Span::new(file_id, span_id & ((1u64 << SPAN_BITS) - 1))
+}
+
+#[cfg(test)]
+mod tests {
+    use typst::syntax::FileId;
+    use typst::syntax::Span;
+
+    use super::DETACHED;
+    use super::SPAN_BITS;
+    use super::{span_id_from_u64, span_id_to_u64};
+
+    #[test]
+    fn test_span_id_to_u64() {
+        let file_id = FileId::from_raw(1);
+        let span_id = Span::new(file_id, 2).unwrap();
+        assert_eq!(span_id_to_u64(&Span::detached()), DETACHED);
+        assert_eq!(span_id_to_u64(&span_id), (1u64 << SPAN_BITS) | 2);
+
+        assert_eq!(span_id_from_u64(DETACHED), Some(Span::detached()));
+        assert_eq!(span_id_from_u64(span_id_to_u64(&span_id)), Some(span_id));
     }
 }
