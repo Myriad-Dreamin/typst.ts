@@ -53,10 +53,10 @@ impl LowerBuilder {
                 FrameItem::Group(group) => self.lower_group(group),
                 FrameItem::Text(text) => Self::lower_text(text),
                 FrameItem::Shape(shape, span_id) => {
-                    SvgItem::Path((Self::lower_shape(shape), hack_span_id_to_u64(span_id)))
+                    SvgItem::Path((Self::lower_shape(shape), span_id.as_raw()))
                 }
                 FrameItem::Image(image, size, span_id) => {
-                    SvgItem::Image((lower_image(image, *size), hack_span_id_to_u64(span_id)))
+                    SvgItem::Image((lower_image(image, *size), span_id.as_raw()))
                 }
                 FrameItem::Meta(meta, size) => match meta {
                     Meta::Link(lnk) => match lnk {
@@ -179,9 +179,9 @@ impl LowerBuilder {
             .iter()
             .filter(|g| g.span.0 != Span::detached())
             .map(|g| &g.span.0)
-            .map(hack_span_id_to_u64)
+            .map(|x| x.as_raw())
             .max()
-            .unwrap_or_else(|| hack_span_id_to_u64(&Span::detached()));
+            .unwrap_or_else(|| Span::detached().as_raw());
 
         SvgItem::Text(ir::TextItem {
             font: text.font.clone(),
@@ -494,13 +494,6 @@ fn lower_image(image: &Image, size: Size) -> ir::ImageItem {
         image: Arc::new(image.clone().into()),
         size: size.into(),
     }
-}
-
-fn hack_span_id_to_u64(span_id: &Span) -> u64 {
-    const SPAN_BITS: u64 = 48;
-    // todo: how to get file_id?
-    let file_id = unsafe { std::mem::transmute::<_, &u16>(&span_id.id()) };
-    ((*file_id as u64) << SPAN_BITS) | span_id.number()
 }
 
 struct FindViewBoxResult<'a> {

@@ -301,7 +301,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
                     .collect::<Vec<_>>();
 
                 if self.should_attach_debug_info {
-                    let sm_start = unsafe { t.unwrap_unchecked() };
+                    let sm_start = t.unwrap();
                     let sm_range = self
                         .source_mapping_buffer
                         .splice(sm_start..self.source_mapping_buffer.len(), []);
