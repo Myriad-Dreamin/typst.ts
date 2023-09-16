@@ -76,21 +76,41 @@ impl TypstCompiler {
         Ok(())
     }
 
-    pub fn add_source(&mut self, path: &str, content: &str, is_main: bool) -> bool {
+    pub fn add_source(&mut self, path: &str, content: &str) -> bool {
         let path = Path::new(path).to_owned();
         match self.compiler.map_shadow(&path, content.as_bytes().into()) {
-            Ok(_) => {
-                if is_main {
-                    self.compiler.set_entry_file(path);
-                }
-
-                true
-            }
+            Ok(_) => true,
             Err(e) => {
                 console_log!("Error: {:?}", e);
                 false
             }
         }
+    }
+
+    pub fn map_shadow(&mut self, path: &str, content: &[u8]) -> bool {
+        let path = Path::new(path).to_owned();
+        match self.compiler.map_shadow(&path, content.into()) {
+            Ok(_) => true,
+            Err(e) => {
+                console_log!("Error: {:?}", e);
+                false
+            }
+        }
+    }
+
+    pub fn unmap_shadow(&mut self, path: &str) -> bool {
+        let path = Path::new(path).to_owned();
+        match self.compiler.unmap_shadow(&path) {
+            Ok(_) => true,
+            Err(e) => {
+                console_log!("Error: {:?}", e);
+                false
+            }
+        }
+    }
+
+    pub fn reset_shadow(&mut self) {
+        self.compiler.reset_shadow()
     }
 
     pub fn load_snapshot(

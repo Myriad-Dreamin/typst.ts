@@ -13,23 +13,73 @@ export interface CompileOptions {
 
 /**
  * The interface of Typst compiler.
- * @typedef {Object} TypstCompiler
- * @property {function} init - Initialize the Typst compiler.
- * @property {function} compile - Compile a Typst document.
  */
 export interface TypstCompiler {
   /**
-   *
-   * @param options
+   * Initialize the typst compiler.
+   * @param {Partial<InitOptions>} options - The options for initializing the
+   * typst compiler.
    */
   init(options?: Partial<InitOptions>): Promise<void>;
+
+  /**
+   * Reset the typst compiler to the initial state.
+   * Note: without calling this function, the compiler will always keep caches
+   * such as:
+   * - loaded fonts
+   * - source files corresponding to typst modules
+   *
+   * Note: this function is independent to the {@link resetShadow} function.
+   * This is intended to optimize the performance of the compiler.
+   */
   reset(): Promise<void>;
 
-  addSource(path: string, source: string, isMain: boolean): Promise<void>;
-
-  getAst(mainFilePath: string): Promise<string>;
+  /**
+   * Compile an document with the maintained state.
+   * @param {CompileOptions} options - The options for compiling the document.
+   * @returns {Promise<Uint8Array>} - artifact in vector format.
+   * You can then load the artifact to the renderer to render the document.
+   */
   compile(options: CompileOptions): Promise<Uint8Array>;
 
+  /**
+   * Print the AST of the main file.
+   * @param {string} mainFilePath - The path of the main file.
+   * @returns {Promise<string>} - an string representation of the AST.
+   */
+  getAst(mainFilePath: string): Promise<string>;
+
+  /**
+   * Add a source file to the compiler.
+   * @param {string} path - The path of the source file.
+   * @param {string} source - The source code of the source file.
+   *
+   */
+  addSource(path: string, source: string): void;
+
+  /**
+   * Add a shadow file to the compiler.
+   * @param {string} path - The path to the shadow file.
+   * @param {Uint8Array} content - The content of the shadow file.
+   *
+   */
+  mapShadow(path: string, content: Uint8Array): void;
+
+  /**
+   * Remove a shadow file from the compiler.
+   * @param {string} path - The path to the shadow file.
+   */
+  unmapShadow(path: string): void;
+
+  /**
+   * Reset the shadow files.
+   * Note: this function is independent to the {@link reset} function.
+   */
+  resetShadow(): void;
+
+  /**
+   * experimental
+   */
   loadSnapshot(snapshot: unknown, fontServer: FsAccessModel): Promise<any>;
 }
 
@@ -41,11 +91,10 @@ const gCompilerModule = new LazyWasmModule(typstInit);
  * @example
  * ```typescript
  * import { createTypstCompiler } from 'typst';
- * import * as pdfjs from 'pdfjs-dist';
- * const compiler = createTypstCompiler(pdfjs);
+ * const compiler = createTypstCompiler();
  * await compiler.init();
- * await compiler.compile({
- * });
+ * compiler.addSource('/main.typ', 'Hello, typst!');
+ * await compiler.compile({ mainFilePath: '/main.typ' });
  * ```
  */
 export function createTypstCompiler(): TypstCompiler {
@@ -59,6 +108,16 @@ class TypstCompilerDriver {
 
   async init(options?: Partial<InitOptions>): Promise<void> {
     this.compiler = await buildComponent(options, gCompilerModule, typst.TypstCompilerBuilder, {});
+  }
+
+  compile(options: CompileOptions): Promise<Uint8Array> {
+    return new Promise<Uint8Array>(resolve => {
+      resolve(this.compiler.compile(options.mainFilePath));
+    });
+  }
+
+  async getAst(mainFilePath: string): Promise<string> {
+    return this.runSyncCodeUntilStable(() => this.compiler.get_ast(mainFilePath));
   }
 
   async runSyncCodeUntilStable<T>(execute: () => T): Promise<T> {
@@ -95,21 +154,26 @@ class TypstCompilerDriver {
     });
   }
 
-  async addSource(path: string, source: string, isMain: boolean): Promise<void> {
-    await new Promise<void>(resolve => {
-      this.compiler.add_source(path, source, isMain);
-      resolve(undefined);
-    });
+  addSource(path: string, source: string): void {
+    if (arguments.length > 2) {
+      throw new Error(
+        'use of addSource(path, source, isMain) is deprecated, please use addSource(path, source) instead',
+      );
+    }
+
+    this.compiler.add_source(path, source);
   }
 
-  async getAst(mainFilePath: string): Promise<string> {
-    return this.runSyncCodeUntilStable(() => this.compiler.get_ast(mainFilePath));
+  mapShadow(path: string, content: Uint8Array): void {
+    this.compiler.map_shadow(path, content);
   }
 
-  compile(options: CompileOptions): Promise<Uint8Array> {
-    return new Promise<Uint8Array>(resolve => {
-      resolve(this.compiler.compile(options.mainFilePath));
-    });
+  unmapShadow(path: string): void {
+    this.compiler.unmap_shadow(path);
+  }
+
+  resetShadow(): void {
+    this.compiler.reset_shadow();
   }
 
   renderPageToCanvas(): Promise<any> {

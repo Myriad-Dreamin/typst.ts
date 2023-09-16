@@ -46,7 +46,18 @@ export type RenderByContentOptions<Base = RenderToCanvasOptions> = Base & Create
 export interface RenderToCanvasOptions {
   container: HTMLElement;
 
+  /**
+   * Set the background color in format of `^#?[0-9a-f]{6}$`
+   *
+   * Note: Default to `#ffffff`.
+   */
   backgroundColor?: string;
+
+  /**
+   * Set the pixel per point scale up the canvas panel.
+   *
+   * Note: Default to `3`.
+   */
   pixelPerPt?: number;
 }
 

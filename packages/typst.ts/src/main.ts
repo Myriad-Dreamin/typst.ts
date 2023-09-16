@@ -10,7 +10,7 @@ export { preloadRemoteFonts, preloadSystemFonts } from './options.init';
 import * as renderer from './renderer';
 export type { RenderSession, TypstRenderer } from './renderer';
 export { rendererBuildInfo, createTypstRenderer, createTypstSvgRenderer } from './renderer';
-import { RenderView, renderTextLayer } from './view';
+import { RenderView, renderTextLayer } from './render/canvas/view';
 import * as compiler from './compiler';
 import { FetchAccessModel } from './fs';
 export { FetchAccessModel } from './fs';
@@ -25,7 +25,7 @@ if (window) {
     renderTextLayer,
 
     createTypstRenderer: renderer.createTypstRenderer,
-    createTypstSvgRenderer: renderer.createTypstSvgRenderer,
+    createTypstSvgRenderer: renderer.createTypstRenderer,
     preloadRemoteFonts: initOptions.preloadRemoteFonts,
     preloadSystemFonts: initOptions.preloadSystemFonts,
   };
