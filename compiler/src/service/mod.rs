@@ -12,7 +12,7 @@ use typst::{
     syntax::Span,
     World,
 };
-use typst_ts_core::TypstFileId;
+use typst_ts_core::{Bytes, TypstFileId};
 
 #[cfg(feature = "system-compile")]
 pub(crate) mod diag;
@@ -240,7 +240,7 @@ where
     }
 
     #[inline]
-    fn map_shadow(&self, path: &Path, content: &str) -> FileResult<()> {
+    fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()> {
         self.inner().map_shadow(path, content)
     }
 

@@ -315,10 +315,8 @@ impl<M: AccessModel + Sized> Vfs<M> {
         })
     }
 
-    pub fn map_shadow(&self, path: &Path, content: &str) -> FileResult<()> {
-        self.access_model
-            .inner()
-            .add_file(path.into(), content.as_bytes().into());
+    pub fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()> {
+        self.access_model.inner().add_file(path.into(), content);
 
         Ok(())
     }
