@@ -571,13 +571,19 @@ mod tests {
     use super::{span_id_from_u64, span_id_to_u64};
 
     #[test]
-    fn test_span_id_to_u64() {
+    fn test_convert_span_id_u64() {
         let file_id = FileId::from_raw(1);
         let span_id = Span::new(file_id, 2).unwrap();
+
+        // test span -> u64
         assert_eq!(span_id_to_u64(&Span::detached()), DETACHED);
         assert_eq!(span_id_to_u64(&span_id), (1u64 << SPAN_BITS) | 2);
 
+        // test u64 -> span
         assert_eq!(span_id_from_u64(DETACHED), Some(Span::detached()));
         assert_eq!(span_id_from_u64(span_id_to_u64(&span_id)), Some(span_id));
+
+        // test invalid u64
+        assert_eq!(span_id_from_u64(0), None);
     }
 }
