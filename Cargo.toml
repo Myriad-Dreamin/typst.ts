@@ -43,6 +43,15 @@ debug = true
 incremental = true
 lto = "thin"
 
+[profile.min-size]
+inherits = "release"
+opt-level = "z"
+debug = false
+lto = true
+strip = true
+codegen-units = 1
+panic = "abort"
+
 [profile.release-stripped]
 inherits = "release"
 lto = "fat"

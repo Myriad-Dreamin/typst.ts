@@ -102,12 +102,5 @@ __web = [
 web-render = ["__web"]
 browser-compile = ["__web", "web-render"]
 browser-embedded-fonts = ["__web"]
-web = [
-    "__web",
-    "web-render",
-    "browser-compile",
-    "browser-embedded-fonts",
-    "cjk",
-    "emoji",
-]
+web = ["__web", "web-render", "browser-compile", "cjk", "emoji"]
 default = ["system", "dynamic-layout", "cjk", "emoji"]
