@@ -10,7 +10,7 @@ export class AppService {
 
   getArtifact(): Observable<Uint8Array> {
     return this.http
-      .get('http://localhost:20810/corpus/skyzh-cv/main.white.artifact.json', {
+      .get('http://localhost:20810/corpus/skyzh-cv/main.white.artifact.sir.in', {
         responseType: 'arraybuffer',
       })
       .pipe(map(a => new Uint8Array(a)));

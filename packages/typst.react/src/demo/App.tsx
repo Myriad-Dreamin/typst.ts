@@ -25,7 +25,7 @@ export const App = () => {
 
   const getArtifactData = async () => {
     const response = await fetch(
-      'http://localhost:20810/corpus/skyzh-cv/main.white.artifact.json',
+      'http://localhost:20810/corpus/skyzh-cv/main.white.artifact.sir.in',
     ).then(response => response.arrayBuffer());
 
     setArtifact(new Uint8Array(response));
