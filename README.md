@@ -113,7 +113,7 @@ $ cargo run --bin typst-ts-fontctl
 # build all of typescript packages
 $ yarn install && npx turbo run build
 # compile typst document for demo
-$ cargo build -p typst-ts-cli && cargo run --bin typst-ts-dev-server -- compile --compiler debug corpus skyzh-cv
+$ cargo run --bin typst-ts-dev-server -- compile --compiler debug corpus --cat skyzh-cv
 # start a local server
 $ cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/
 ```
