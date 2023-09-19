@@ -214,9 +214,9 @@ typst-ts-raster-exporter = { path = "exporter/raster" }
 typst-ts-serde-exporter = { path = "exporter/serde" }
 typst-ts-svg-exporter = { path = "exporter/svg" }
 
-typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.8.0" }
-typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.8.0" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.8.0" }
+typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typstjax" }
+typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typstjax" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typstjax" }
 
 # typst = { path = "../typst/crates/typst" }
 # typst-library = { path = "../typst/crates/typst-library" }
