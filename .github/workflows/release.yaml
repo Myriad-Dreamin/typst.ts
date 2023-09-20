@@ -54,7 +54,10 @@ jobs:
     env:
       target: ${{ matrix.platform }}-${{ matrix.arch }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: rust toolchain
@@ -104,7 +107,10 @@ jobs:
     env:
       target: ${{ matrix.platform }}-${{ matrix.arch }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: ${{ matrix.rust-target }}
@@ -187,7 +193,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
         with:
           fetch-depth: 0
       - uses: actions/download-artifact@v2

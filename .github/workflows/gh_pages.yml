@@ -32,8 +32,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout
+      - name: Checkout Repo
         uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Install Mold
         uses: rui314/setup-mold@v1
       - name: Install Rust
