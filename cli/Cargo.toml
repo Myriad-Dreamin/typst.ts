@@ -62,4 +62,13 @@ raster = ["typst-ts-raster-exporter"]
 serde-json = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/json"]
 serde-rmp = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/rmp"]
 svg = ["typst-ts-svg-exporter"]
-default = ["pdf", "raster", "serde-json", "serde-rmp", "svg", "embedded-fonts"]
+default = [
+    "pdf",
+    "raster",
+    "serde-json",
+    "serde-rmp",
+    "svg",
+    "embedded-fonts",
+    "embedded-cjk-fonts",
+    "embedded-emoji-fonts",
+]

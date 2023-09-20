@@ -109,7 +109,7 @@ Note: Since we use turborepo for `>=v0.4.0` development, if you are the earlier 
 
 ```shell
 # Optional: download the font assets if you haven't done so.
-$ cargo run --bin typst-ts-fontctl
+$ git submodule update --init --recursive .
 # build all of typescript packages
 $ yarn install && npx turbo run build
 # compile typst document for demo

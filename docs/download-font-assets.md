@@ -10,6 +10,24 @@ There are several ways to downloading the font files:
 
 - Download the font files from [Typst repository](https://github.com/typst/typst/tree/main/assets/fonts).
 
+- Download the font files via `git`:
+
+  Please use following command inside of `typst.ts` repo:
+
+  ```shell
+  # init inside typst.ts repository
+  $ git submodule update --init --recursive .
+  # update inside typst.ts repository
+  $ git submodule update --recursive
+  ```
+
+  Please use following command outside of `typst.ts` repo:
+
+  ```shell
+  # outside typst.ts repository
+  $ git clone https://github.com/Myriad-Dreamin/typst/ fonts --single-branch --branch assets-fonts --depth 1
+  ```
+
 - Download font files from our [Release Page](https://github.com/Myriad-Dreamin/typst.ts/releases/tag/v0.1.0).
 
 - Download font files using `tools/fontctl`
