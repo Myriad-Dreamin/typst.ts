@@ -18,10 +18,10 @@
 
 #let main-font = (
   "Charter",
-  "Source Han Serif SC",
-  "Source Han Serif TC",
   // typst-book's embedded font
   "Linux Libertine",
+  "Source Han Serif SC",
+  "Source Han Serif TC",
 )
 
 #let code-font = (
