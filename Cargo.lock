@@ -2603,6 +2603,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rand_xoshiro"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f97cdb2a36ed4183de61b2f824cc45c9f1037f28afe0a322e9fff4c108b5aaa"
+dependencies = [
+ "rand_core",
+]
+
+[[package]]
 name = "rayon"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4280,6 +4289,26 @@ dependencies = [
  "typst-ts-compiler",
  "typst-ts-core",
  "typst-ts-dev-server",
+ "typst-ts-test-common",
+]
+
+[[package]]
+name = "typst-ts-incremental-test"
+version = "0.4.0-rc6"
+dependencies = [
+ "anyhow",
+ "comemo",
+ "hex",
+ "rand",
+ "rand_xoshiro",
+ "sha2",
+ "tokio",
+ "typst",
+ "typst-syntax",
+ "typst-ts-compiler",
+ "typst-ts-core",
+ "typst-ts-dev-server",
+ "typst-ts-svg-exporter",
  "typst-ts-test-common",
 ]
 
