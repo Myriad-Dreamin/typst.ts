@@ -17,13 +17,15 @@ impl TypstCompilerBuilder {
     #[wasm_bindgen(constructor)]
     pub fn new() -> ZResult<TypstCompilerBuilder> {
         console_error_panic_hook::set_once();
-        Ok(Self {
+        let mut res = Self {
             access_model: None,
             searcher: BrowserFontSearcher::new(),
-        })
+        };
+        res.set_dummy_access_model()?;
+        Ok(res)
     }
 
-    pub async fn set_dummy_access_model(&mut self) -> ZResult<()> {
+    pub fn set_dummy_access_model(&mut self) -> ZResult<()> {
         self.access_model = Some(ProxyAccessModel {
             context: wasm_bindgen::JsValue::UNDEFINED,
             mtime_fn: js_sys::Function::new_no_args("return new Date(0)"),
