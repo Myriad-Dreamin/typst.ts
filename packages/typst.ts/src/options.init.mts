@@ -58,6 +58,70 @@ export interface InitOptions {
   getModule(): WebAssemblyModuleRef | Promise<WebAssemblyModuleRef>;
 }
 
+/** @internal */
+const _textFonts: string[] = [
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/LinLibertine_R.ttf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/LinLibertine_RB.ttf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/LinLibertine_RBI.ttf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/LinLibertine_RI.ttf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NewCMMath-Book.otf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NewCMMath-Regular.otf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NewCM10-Regular.otf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NewCM10-Bold.otf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NewCM10-Italic.otf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NewCM10-BoldItalic.otf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/DejaVuSansMono.ttf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/DejaVuSansMono-Bold.ttf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/DejaVuSansMono-Oblique.ttf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/DejaVuSansMono-BoldOblique.ttf',
+];
+/** @internal */
+const _cjkFonts: string[] = [
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/InriaSerif-Bold.ttf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/InriaSerif-BoldItalic.ttf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/InriaSerif-Italic.ttf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/InriaSerif-Regular.ttf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/Roboto-Regular.ttf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NotoSerifCJKsc-Regular.otf',
+];
+/** @internal */
+const _emojiFonts: string[] = [
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/TwitterColorEmoji.ttf',
+  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NotoColorEmoji.ttf',
+];
+
+type AvailableFontAsset = 'text' | 'cjk' | 'emoji';
+
+export interface LoadRemoteAssetsOptions {
+  /**
+   * preload font assets or don't preload any font assets
+   * @default ['text']
+   */
+  assets?: AvailableFontAsset[] | false;
+  /**
+   * custom fetcher
+   * Note: the default fetcher for node.js does not cache any fonts
+   * @default fetch
+   */
+  fetcher?: typeof fetch;
+}
+
+export interface LoadRemoteFontsOptions extends LoadRemoteAssetsOptions {}
+
+/**
+ * disable default font assets
+ */
+export function disableDefaultFontAssets(): BeforeBuildFn {
+  return preloadRemoteFonts([], { assets: false });
+}
+
+/**
+ * preload font assets
+ */
+export function preloadFontAssets(options?: LoadRemoteAssetsOptions): BeforeBuildFn {
+  return preloadRemoteFonts([], options);
+}
+
 /**
  * preload remote fonts
  *
@@ -76,10 +140,40 @@ export interface InitOptions {
  * });
  * ```
  */
-export function preloadRemoteFonts(fonts: string[]): BeforeBuildFn {
-  return async (_, { ref, builder }: InitContext) => {
-    await Promise.all(fonts.map(font => ref.loadFont(builder, font)));
+export function preloadRemoteFonts(
+  userFonts: (string | Uint8Array)[],
+  options?: LoadRemoteFontsOptions,
+): BeforeBuildFn {
+  const fonts = [...userFonts];
+  if (
+    options &&
+    options?.assets !== false &&
+    options?.assets?.length &&
+    options?.assets?.length > 0
+  ) {
+    for (const asset of options.assets) {
+      switch (asset) {
+        case 'text':
+          fonts.push(..._textFonts);
+          break;
+        case 'cjk':
+          fonts.push(..._cjkFonts);
+          break;
+        case 'emoji':
+          fonts.push(..._emojiFonts);
+          break;
+      }
+    }
+  }
+
+  const loader = async (_: BeforeBuildMark, { ref, builder }: InitContext) => {
+    if (options?.fetcher) {
+      ref.setFetcher(options.fetcher);
+    }
+    await ref.loadFonts(builder, fonts);
   };
+  loader._preloadRemoteFontOptions = options;
+  return loader;
 }
 
 /**
@@ -169,7 +263,8 @@ type Builder = typstRenderer.TypstRendererBuilder & typstCompiler.TypstCompilerB
  */
 interface InitContext {
   ref: {
-    loadFont(builder: Builder, fontPath: string): Promise<void>;
+    setFetcher(fetcher: typeof fetch): void;
+    loadFonts(builder: Builder, fonts: (string | Uint8Array)[]): Promise<void>;
   };
   builder: Builder;
 }

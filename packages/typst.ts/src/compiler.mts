@@ -3,7 +3,7 @@ import type * as typst from '@myriaddreamin/typst-ts-web-compiler/pkg/wasm-pack-
 import { buildComponent, globalFontPromises } from './init.mjs';
 import { FsAccessModel } from './internal.types.mjs';
 
-import type { InitOptions } from './options.init.mjs';
+import { preloadRemoteFonts, type InitOptions } from './options.init.mjs';
 import { LazyWasmModule } from './wasm.mjs';
 
 export interface CompileOptions {
@@ -112,6 +112,26 @@ class TypstCompilerDriver {
   async init(options?: Partial<InitOptions>): Promise<void> {
     this.compilerJs = await import('@myriaddreamin/typst-ts-web-compiler/pkg/wasm-pack-shim.mjs');
     const TypstCompilerBuilder = this.compilerJs.TypstCompilerBuilder;
+
+    const compilerOptions = { ...(options || {}) };
+    const hasPreloadRemoteFonts = compilerOptions.beforeBuild?.some(
+      (fn: any) => fn._preloadRemoteFontOptions !== undefined,
+    );
+    const hasSpecifiedAssets = compilerOptions.beforeBuild?.some(
+      (fn: any) => fn._preloadRemoteFontOptions?.assets !== undefined,
+    );
+    const hasDisableAssets = compilerOptions.beforeBuild?.some(
+      (fn: any) => fn._preloadRemoteFontOptions?.assets === false,
+    );
+
+    if (!hasPreloadRemoteFonts || (!hasSpecifiedAssets && !hasDisableAssets)) {
+      compilerOptions.beforeBuild?.push(
+        preloadRemoteFonts([], {
+          assets: ['text'],
+        }),
+      );
+    }
+
     this.compiler = await buildComponent(options, gCompilerModule, TypstCompilerBuilder, {});
   }
 
