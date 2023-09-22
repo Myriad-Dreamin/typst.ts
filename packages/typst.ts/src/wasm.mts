@@ -12,7 +12,7 @@ export type WebAssemblyModuleRef = RequestInfo | URL | Response | BufferSource |
 /**
  * @internal
  */
-const once = <T>(fn: () => T) => {
+const once = <T extends any>(fn: () => T) => {
   let called = false;
   let res: T;
   return () => {

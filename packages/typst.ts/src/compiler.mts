@@ -1,11 +1,10 @@
 // @ts-ignore
-import typstInit, * as typst from '@myriaddreamin/typst-ts-web-compiler';
-import { buildComponent, globalFontPromises } from './init';
-import { FsAccessModel } from './internal.types';
+import type * as typst from '@myriaddreamin/typst-ts-web-compiler/pkg/wasm-pack-shim.mjs';
+import { buildComponent, globalFontPromises } from './init.mjs';
+import { FsAccessModel } from './internal.types.mjs';
 
-import type { InitOptions } from './options.init';
-import { RenderPageResult } from './renderer';
-import { LazyWasmModule } from './wasm';
+import type { InitOptions } from './options.init.mjs';
+import { LazyWasmModule } from './wasm.mjs';
 
 export interface CompileOptions {
   mainFilePath: string;
@@ -83,7 +82,10 @@ export interface TypstCompiler {
   loadSnapshot(snapshot: unknown, fontServer: FsAccessModel): Promise<any>;
 }
 
-const gCompilerModule = new LazyWasmModule(typstInit);
+const gCompilerModule = new LazyWasmModule(async (bin?: any) => {
+  const module = await import('@myriaddreamin/typst-ts-web-compiler/pkg/wasm-pack-shim.mjs');
+  return await module.default(bin);
+});
 
 /**
  * create a Typst compiler.
@@ -103,11 +105,14 @@ export function createTypstCompiler(): TypstCompiler {
 
 class TypstCompilerDriver {
   compiler: typst.TypstCompiler;
+  compilerJs: typeof typst;
 
   constructor() {}
 
   async init(options?: Partial<InitOptions>): Promise<void> {
-    this.compiler = await buildComponent(options, gCompilerModule, typst.TypstCompilerBuilder, {});
+    this.compilerJs = await import('@myriaddreamin/typst-ts-web-compiler/pkg/wasm-pack-shim.mjs');
+    const TypstCompilerBuilder = this.compilerJs.TypstCompilerBuilder;
+    this.compiler = await buildComponent(options, gCompilerModule, TypstCompilerBuilder, {});
   }
 
   compile(options: CompileOptions): Promise<Uint8Array> {

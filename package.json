@@ -18,7 +18,8 @@
     "packages/typst.ts",
     "packages/typst.react",
     "packages/typst.vue3",
-    "packages/typst.angular"
+    "packages/typst.angular",
+    "packages/templates/*"
   ],
   "scripts": {
     "bump-packages": "python scripts/bump_version.py",
@@ -34,7 +35,8 @@
   },
   "devDependencies": {
     "@babel/runtime": "^7.22.6",
+    "@types/node": "^20.6.3",
     "prettier": "^3.0.2",
-    "typescript": "^5.0.4"
+    "typescript": "=5.0.4"
   }
 }

@@ -15,22 +15,22 @@
   "homepage": "https://myriad-dreamin.github.io/typst.ts/",
   "exports": {
     ".": {
-      "require": "./dist/src/lib/index.js",
-      "import": "./dist/src/lib/index.js",
-      "types": "./dist/src/lib/index.d.ts"
+      "require": "./dist/src/lib/index.mjs",
+      "import": "./dist/src/lib/index.mjs",
+      "types": "./dist/src/lib/index.d.mts"
     },
     "./*": {
-      "require": "./dist/src/lib/*.js",
-      "import": "./dist/src/lib/*.js",
-      "types": "./dist/src/lib/*.d.ts"
+      "require": "./dist/src/lib/*.mjs",
+      "import": "./dist/src/lib/*.mjs",
+      "types": "./dist/src/lib/*.d.mts"
     }
   },
   "files": [
-    "dist/**/*.{ts,js}"
+    "dist/**/*.{mts,mjs,js,ts}"
   ],
   "scripts": {
     "start": "webpack serve --config webpack/webpack.config.js --env env=dev",
-    "build": "tsc -p ./tsconfig.build.json --outDir dist && webpack --config webpack/webpack.config.js --env env=prod",
+    "build": "tsc --outDir dist && webpack --config webpack/webpack.config.js --env env=prod",
     "lint": "eslint --fix \"./src/**/*.{js,jsx,ts,tsx,json}\"",
     "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
     "test": "exit 0",

@@ -1,6 +1,6 @@
-import { PageInfo } from '../../internal.types';
-import { RenderToCanvasOptions } from '../../options.render';
-import { PageViewport } from './viewport';
+import { PageInfo } from '../../internal.types.mjs';
+import { RenderToCanvasOptions } from '../../options.render.mjs';
+import { PageViewport } from './viewport.mjs';
 
 /** @internal */
 export class RenderView {

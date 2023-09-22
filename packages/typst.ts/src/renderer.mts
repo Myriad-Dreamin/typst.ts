@@ -1,9 +1,9 @@
 // @ts-ignore
-import typstInit, * as typst from '@myriaddreamin/typst-ts-renderer';
+import type * as typst from '@myriaddreamin/typst-ts-renderer/pkg/wasm-pack-shim.mjs';
 
-import type { InitOptions } from './options.init';
-import { PageViewport } from './render/canvas/viewport';
-import { PageInfo, TransformMatrix, kObject } from './internal.types';
+import type { InitOptions } from './options.init.mjs';
+import { PageViewport } from './render/canvas/viewport.mjs';
+import { PageInfo, TransformMatrix, kObject } from './internal.types.mjs';
 import {
   CreateSessionOptions,
   RenderToCanvasOptions,
@@ -13,10 +13,10 @@ import {
   ManipulateDataOptions,
   RenderSvgOptions,
   RenderInSessionOptions,
-} from './options.render';
-import { RenderView, renderTextLayer } from './render/canvas/view';
-import { LazyWasmModule } from './wasm';
-import { buildComponent } from './init';
+} from './options.render.mjs';
+import { RenderView, renderTextLayer } from './render/canvas/view.mjs';
+import { LazyWasmModule } from './wasm.mjs';
+import { buildComponent } from './init.mjs';
 
 /**
  * The result of rendering a Typst document.
@@ -68,8 +68,10 @@ export class RenderSession {
    *
    * Note: Only available in canvas rendering mode.
    */
-  set backgroundColor(t: string) {
-    this[kObject].background_color = t;
+  set backgroundColor(t: string | undefined) {
+    if (t !== undefined) {
+      this[kObject].background_color = t;
+    }
   }
 
   /**
@@ -79,7 +81,7 @@ export class RenderSession {
    *
    * Note: Only available in canvas rendering mode.
    */
-  get backgroundColor(): string {
+  get backgroundColor(): string | undefined {
     return this[kObject].background_color;
   }
 
@@ -90,8 +92,10 @@ export class RenderSession {
    *
    * Note: Only available in canvas rendering mode.
    */
-  set pixelPerPt(t: number) {
-    this[kObject].pixel_per_pt = t;
+  set pixelPerPt(t: number | undefined) {
+    if (t !== undefined) {
+      this[kObject].pixel_per_pt = t;
+    }
   }
 
   /**
@@ -101,7 +105,7 @@ export class RenderSession {
    *
    * Note: Only available in canvas rendering mode.
    */
-  get pixelPerPt(): number {
+  get pixelPerPt(): number | undefined {
     return this[kObject].pixel_per_pt;
   }
 
@@ -388,7 +392,10 @@ export interface TypstRenderer extends TypstSvgRenderer {
   render(options: RenderOptions<RenderToCanvasOptions>): Promise<void>;
 }
 
-const gRendererModule = new LazyWasmModule(typstInit);
+const gRendererModule = new LazyWasmModule(async (bin?: any) => {
+  const module = await import('@myriaddreamin/typst-ts-renderer/pkg/wasm-pack-shim.mjs');
+  return await module.default(bin);
+});
 
 /**
  * create a Typst renderer.
@@ -440,8 +447,9 @@ export function createTypstSvgRenderer(): TypstSvgRenderer {
   return new TypstRendererDriver(undefined);
 }
 
-export function rendererBuildInfo(): any {
-  return typst.renderer_build_info();
+export async function rendererBuildInfo(): Promise<any> {
+  const renderModule = await import('@myriaddreamin/typst-ts-renderer/pkg/wasm-pack-shim.mjs');
+  return renderModule.renderer_build_info();
 }
 
 function randstr(prefix?: string): string {
@@ -452,11 +460,14 @@ function randstr(prefix?: string): string {
 
 class TypstRendererDriver {
   renderer: typst.TypstRenderer;
+  rendererJs: typeof typst;
 
   constructor(private pdf: any) {}
 
   async init(options?: Partial<InitOptions>): Promise<void> {
-    this.renderer = await buildComponent(options, gRendererModule, typst.TypstRendererBuilder, {});
+    this.rendererJs = await import('@myriaddreamin/typst-ts-renderer/pkg/wasm-pack-shim.mjs');
+    const TypstRendererBuilder = this.rendererJs.TypstRendererBuilder;
+    this.renderer = await buildComponent(options, gRendererModule, TypstRendererBuilder, {});
   }
 
   loadGlyphPack(_pack: unknown): Promise<void> {
@@ -465,7 +476,7 @@ class TypstRendererDriver {
   }
 
   private createOptionsToRust(options: Partial<CreateSessionOptions>): typst.CreateSessionOptions {
-    const rustOptions = new typst.CreateSessionOptions();
+    const rustOptions = new this.rendererJs.CreateSessionOptions();
 
     if (options.format !== undefined) {
       rustOptions.format = options.format;
@@ -488,10 +499,10 @@ class TypstRendererDriver {
     options?: RenderPageOptions,
   ): Promise<RenderPageResult> {
     if (!options) {
-      return this.renderer.render_page_to_canvas(session[kObject], canvas);
+      return this.renderer.render_page_to_canvas(session[kObject], canvas, options || undefined);
     }
 
-    const rustOptions = new typst.RenderPageImageOptions();
+    const rustOptions = new this.rendererJs.RenderPageImageOptions();
     rustOptions.page_off = options.page_off;
 
     return this.renderer.render_page_to_canvas(session[kObject], canvas, rustOptions);

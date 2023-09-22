@@ -1,5 +1,5 @@
-import type { InitOptions } from '../options.init';
-import type { TypstRenderer } from '../renderer';
+import type { InitOptions } from '../options.init.mjs';
+import type { TypstRenderer } from '../renderer.mjs';
 
 let globalRenderer: TypstRenderer | undefined = undefined;
 let globalRendererInitReady: Promise<TypstRenderer>;

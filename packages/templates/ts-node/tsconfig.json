@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "types": ["node"],
+    "baseUrl": ".",
+    "target": "ES2020",
+    "allowJs": true,
+    "noImplicitAny": true,
+    "importHelpers": true,
+    "isolatedModules": true,
+    "strictNullChecks": true,
+    "stripInternal": true,
+    "rootDir": "src",
+    "module": "ES2020",
+    "moduleResolution": "Node",
+    "outDir": "dist/esm",
+    "declaration": true,
+    "declarationMap": true,
+    "inlineSources": true,
+    "inlineSourceMap": true,
+    "lib": ["ES5", "ES6", "ES7", "ES2018"]
+  },
+  "include": ["src/**/*.ts"]
+}
