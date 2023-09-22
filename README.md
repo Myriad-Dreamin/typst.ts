@@ -50,7 +50,13 @@ Visualized Feature:
 
 ### Installation
 
-Download the latest release from [GitHub Releases](https://github.com/Myriad-Dreamin/typst.ts/releases).
+Install latest precompiler via cargo:
+
+```shell
+cargo install --locked --git https://github.com/Myriad-Dreamin/typst.ts typst-ts-cli
+```
+
+Or Download the latest release from [GitHub Releases](https://github.com/Myriad-Dreamin/typst.ts/releases).
 
 ### CLI
 
@@ -120,7 +126,8 @@ $ cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/
 
 And open your browser to `http://localhost:20810/`.
 
-You can also run `yarn run build-wrapper` instead of `yarn run build && yarn run link:local` to avoid building the WASM modules from source.
+You can also run `yarn run build:core` instead of `npx turbo run build` to build
+core library (`@myriaddreamin/typst.ts`) and avoid building the WASM modules from source.
 
 ### Example: generate documentation site for packages developers.
 
@@ -130,7 +137,15 @@ You can also run `yarn run build-wrapper` instead of `yarn run build && yarn run
 
 ### Concept: Precompiler
 
-The compiler is capable of producing artifact outputs from a Typst project. Thet artifact outputs can be easily distributed to remote endpoints.
+The precompiler is capable of producing artifact outputs from a Typst project. Thet artifact outputs can be easily distributed to remote endpoints.
+
+Install latest precompiler via cargo:
+
+```shell
+cargo install --locked --git https://github.com/Myriad-Dreamin/typst.ts typst-ts-cli
+```
+
+Or Download the latest release from [GitHub Releases](https://github.com/Myriad-Dreamin/typst.ts/releases).
 
 ### Concept: Renderer
 
@@ -143,6 +158,10 @@ Import `typst.ts` in your project:
   ```typescript
   import { createTypstRenderer } from '@myriaddreamin/typst.ts';
   const renderer = createTypstRenderer();
+  await renderer.init();
+  const svg = await renderer.runWithSession(async session => {
+    // do something with session
+  });
   ```
 
 - Using [@myriaddreamin/typst.react][npm::typst.react]

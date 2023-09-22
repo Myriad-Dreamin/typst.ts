@@ -22,6 +22,7 @@
     "packages/templates/*"
   ],
   "scripts": {
+    "build:core": "yarn workspace @myriaddreamin/typst.ts build",
     "bump-packages": "python scripts/bump_version.py",
     "prepublish-packages": "turbo run prepublish",
     "publish:dry": "turbo run prepublish publish:dry",
