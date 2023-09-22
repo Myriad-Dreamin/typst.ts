@@ -118,7 +118,15 @@ class ComponentBuilder<T> {
 
   async loadFonts(builder: TypstCommonBuilder<T>, fonts: (string | Uint8Array)[]): Promise<void> {
     const escapeImport = (t: string) => import(t);
-    const fetcher = (this.fetcher ||= await escapeImport('node-fetch'));
+    const fetcher = (this.fetcher ||= await (async function () {
+      const { fetchBuilder, FileSystemCache } = await escapeImport('node-fetch-cache');
+      const cache = new FileSystemCache({
+        /// By default, we don't have a complicated cache policy.
+        cacheDirectory: '.cache/typst/fonts',
+      });
+
+      return fetchBuilder.withCache(cache);
+    })());
 
     const fontsToLoad = fonts.filter(font => {
       if (font instanceof Uint8Array) {
