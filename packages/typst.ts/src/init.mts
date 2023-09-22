@@ -20,7 +20,7 @@ export interface ComponentBuildHooks {
 
 interface InitContext<T> {
   ref: {
-    loadFont(builder: TypstCommonBuilder<T>, fontPath: string): Promise<void>;
+    loadFonts(builder: TypstCommonBuilder<T>, fonts: (string | Uint8Array)[]): Promise<void>;
   };
   builder: TypstCommonBuilder<T>;
   hooks: ComponentBuildHooks;
@@ -109,10 +109,64 @@ async function addPartialFonts<T>({ builder, hooks }: InitContext<T>): Promise<v
 }
 
 class ComponentBuilder<T> {
-  async loadFont(builder: TypstCommonBuilder<T>, fontPath: string): Promise<void> {
-    const response = await fetch(fontPath);
-    const fontBuffer = new Uint8Array(await response.arrayBuffer());
-    await builder.add_raw_font(fontBuffer);
+  loadedFonts = new Set<string>();
+  fetcher?: typeof fetch = fetch;
+
+  setFetcher(fetcher: typeof fetch): void {
+    this.fetcher = fetcher;
+  }
+
+  async loadFonts(builder: TypstCommonBuilder<T>, fonts: (string | Uint8Array)[]): Promise<void> {
+    const escapeImport = (t: string) => import(t);
+    const fetcher = (this.fetcher ||= await (async function () {
+      const { fetchBuilder, FileSystemCache } = await escapeImport('node-fetch-cache');
+      const cache = new FileSystemCache({
+        /// By default, we don't have a complicated cache policy.
+        cacheDirectory: '.cache/typst/fonts',
+      });
+
+      const cachedFetcher = fetchBuilder.withCache(cache);
+
+      return function (input: RequestInfo | URL, init?: RequestInit) {
+        const timeout = setTimeout(() => {
+          console.warn('font fetching is stucking:', input);
+        }, 15000);
+        return cachedFetcher(input, init).finally(() => {
+          clearTimeout(timeout);
+        });
+      };
+    })());
+
+    const fontsToLoad = fonts.filter(font => {
+      if (font instanceof Uint8Array) {
+        return true;
+      }
+
+      if (this.loadedFonts.has(font)) {
+        return false;
+      }
+
+      this.loadedFonts.add(font);
+      return true;
+    });
+
+    const fontLists = await Promise.all(
+      fontsToLoad.map(async font => {
+        if (font instanceof Uint8Array) {
+          await builder.add_raw_font(font);
+          return;
+        }
+
+        return new Uint8Array(await (await fetcher(font)).arrayBuffer());
+      }),
+    );
+
+    for (const font of fontLists) {
+      if (!font) {
+        continue;
+      }
+      await builder.add_raw_font(font);
+    }
   }
 
   async build(
