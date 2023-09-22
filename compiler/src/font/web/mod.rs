@@ -389,74 +389,54 @@ impl BrowserFontSearcher {
             version: "v1beta".to_owned(),
             ..Default::default()
         };
-        let searcher = Self {
+        let mut searcher = Self {
             book: FontBook::new(),
             fonts: vec![],
             profile,
             partial_book: Arc::new(Mutex::new(PartialFontBook::default())),
         };
 
-        #[cfg(feature = "browser-embedded-fonts")]
-        let searcher = {
-            let mut searcher = searcher;
+        if cfg!(feature = "browser-embedded-fonts") {
             searcher.add_embedded();
-            searcher
-        };
+        }
 
         searcher
     }
 
     /// Add fonts that are embedded in the binary.
-    #[cfg(feature = "browser-embedded-fonts")]
     pub fn add_embedded(&mut self) {
-        let mut add = |bytes: &'static [u8]| {
-            let buffer = Bytes::from_static(bytes);
-            for (_, font) in Font::iter(buffer).enumerate() {
-                self.book.push(font.info().clone());
-                self.fonts.push(FontSlot::with_value(Some(font)));
-            }
-        };
+        #[cfg(feature = "browser-embedded-fonts")]
+        macro_rules! embed_font {
+            ($fp:literal) => {
+                let buffer = Bytes::from_static(include_bytes!($fp));
+                for (_, font) in Font::iter(buffer).enumerate() {
+                    self.book.push(font.info().clone());
+                    self.fonts.push(FontSlot::with_value(Some(font)));
+                }
+            };
+        }
+
+        #[cfg(not(feature = "browser-embedded-fonts"))]
+        macro_rules! embed_font {
+            ($fp:literal) => {};
+        }
 
         // Embed default fonts.
-        add(include_bytes!(
-            "../../../../assets/fonts/LinLibertine_R.ttf"
-        ));
-        add(include_bytes!(
-            "../../../../assets/fonts/LinLibertine_RB.ttf"
-        ));
-        add(include_bytes!(
-            "../../../../assets/fonts/LinLibertine_RBI.ttf"
-        ));
-        add(include_bytes!(
-            "../../../../assets/fonts/LinLibertine_RI.ttf"
-        ));
-        add(include_bytes!(
-            "../../../../assets/fonts/NewCMMath-Book.otf"
-        ));
-        add(include_bytes!(
-            "../../../../assets/fonts/NewCMMath-Regular.otf"
-        ));
-        add(include_bytes!(
-            "../../../../assets/fonts/DejaVuSansMono.ttf"
-        ));
-        add(include_bytes!(
-            "../../../../assets/fonts/DejaVuSansMono-Bold.ttf"
-        ));
-        add(include_bytes!(
-            "../../../../assets/fonts/Roboto-Regular.ttf"
-        ));
+        embed_font!("../../../../assets/fonts/LinLibertine_R.ttf");
+        embed_font!("../../../../assets/fonts/LinLibertine_RB.ttf");
+        embed_font!("../../../../assets/fonts/LinLibertine_RBI.ttf");
+        embed_font!("../../../../assets/fonts/LinLibertine_RI.ttf");
+        embed_font!("../../../../assets/fonts/NewCMMath-Book.otf");
+        embed_font!("../../../../assets/fonts/NewCMMath-Regular.otf");
+        embed_font!("../../../../assets/fonts/DejaVuSansMono.ttf");
+        embed_font!("../../../../assets/fonts/DejaVuSansMono-Bold.ttf");
+        embed_font!("../../../../assets/fonts/Roboto-Regular.ttf");
         #[cfg(feature = "cjk")]
-        add(include_bytes!(
-            "../../../../assets/fonts/NotoSerifCJKsc-Regular.otf"
-        ));
+        embed_font!("../../../../assets/fonts/NotoSerifCJKsc-Regular.otf");
         #[cfg(feature = "emoji")]
-        add(include_bytes!(
-            "../../../../assets/fonts/TwitterColorEmoji.ttf"
-        ));
+        embed_font!("../../../../assets/fonts/TwitterColorEmoji.ttf");
         #[cfg(feature = "emoji")]
-        add(include_bytes!(
-            "../../../../assets/fonts/NotoColorEmoji.ttf"
-        ));
+        embed_font!("../../../../assets/fonts/NotoColorEmoji.ttf");
     }
 
     pub async fn add_web_fonts(&mut self, fonts: js_sys::Array) -> ZResult<()> {
