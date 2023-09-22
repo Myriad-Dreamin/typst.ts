@@ -125,7 +125,16 @@ class ComponentBuilder<T> {
         cacheDirectory: '.cache/typst/fonts',
       });
 
-      return fetchBuilder.withCache(cache);
+      const cachedFetcher = fetchBuilder.withCache(cache);
+
+      return function (input: RequestInfo | URL, init?: RequestInit) {
+        const timeout = setTimeout(() => {
+          console.warn('font fetching is stucking:', input);
+        }, 15000);
+        return cachedFetcher(input, init).finally(() => {
+          clearTimeout(timeout);
+        });
+      };
     })());
 
     const fontsToLoad = fonts.filter(font => {
