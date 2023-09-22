@@ -1,0 +1,19 @@
+{
+  "name": "@myriaddreamin/typst-template-node-js",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Template for Typescript+node.js using @myriaddremain/typst.ts",
+  "module": "dist/esm/main.js",
+  "author": "Myriad-Dreamin",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@myriaddreamin/typst-ts-renderer": "^0.4.0-rc5",
+    "@myriaddreamin/typst.ts": "^0.4.0-rc5"
+  },
+  "devDependencies": {
+    "@types/web": "^0.0.99",
+    "@types/node": "^20.6.3",
+    "typescript": "=5.0.4",
+    "tslib": "2.5.2"
+  }
+}

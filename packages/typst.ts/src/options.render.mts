@@ -1,5 +1,5 @@
-import { Rect } from './internal.types';
-import { RenderSession } from './renderer';
+import { Rect } from './internal.types.mjs';
+import { RenderSession } from './renderer.mjs';
 
 const vectorFormats = ['vector'] as const;
 export type VectorFormat = (typeof vectorFormats)[0];

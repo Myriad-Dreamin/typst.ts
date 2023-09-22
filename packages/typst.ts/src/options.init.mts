@@ -1,8 +1,8 @@
 // @ts-ignore
 import type * as typstRenderer from '@myriaddreamin/typst-ts-renderer';
 import type * as typstCompiler from '@myriaddreamin/typst-ts-web-compiler';
-import type { FsAccessModel } from './internal.types';
-import type { WebAssemblyModuleRef } from './wasm';
+import type { FsAccessModel } from './internal.types.mjs';
+import type { WebAssemblyModuleRef } from './wasm.mjs';
 
 /**
  * staged options function

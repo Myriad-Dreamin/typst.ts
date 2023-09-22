@@ -1,5 +1,5 @@
-import { BeforeBuildMark, InitOptions } from './options.init';
-import { LazyWasmModule } from './wasm';
+import { BeforeBuildMark, InitOptions } from './options.init.mjs';
+import { LazyWasmModule } from './wasm.mjs';
 import * as idb from 'idb';
 
 /** @internal */
@@ -146,9 +146,7 @@ export async function buildComponent<T>(
   hooks: ComponentBuildHooks,
 ): Promise<T> {
   /// init typst wasm module
-  if (options?.getModule) {
-    await gModule.init(options.getModule());
-  }
+  await gModule.init(options?.getModule?.());
 
   return await new ComponentBuilder<T>().build(options, new Builder(), hooks);
 }

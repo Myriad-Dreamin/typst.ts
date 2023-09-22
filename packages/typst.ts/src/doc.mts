@@ -1,7 +1,7 @@
-import { PageInfo, Rect, TransformMatrix } from './internal.types';
-import { RenderOptions } from './options.render';
-import { patchRoot } from './render/svg/patch';
-import { RenderSession, TypstRenderer } from './renderer';
+import { PageInfo, Rect, TransformMatrix } from './internal.types.mjs';
+import { RenderOptions } from './options.render.mjs';
+import { patchRoot } from './render/svg/patch.mjs';
+import { RenderSession, TypstRenderer } from './renderer.mjs';
 
 export interface LayoutContext {}
 

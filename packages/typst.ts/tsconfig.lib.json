@@ -3,12 +3,12 @@
   "compilerOptions": {
     "rootDir": "src",
     "module": "ES2020",
-    "moduleResolution": "node",
+    "moduleResolution": "NodeNext",
     "outDir": "dist/esm",
     "declaration": true,
     "declarationMap": true,
     "inlineSources": true,
     "inlineSourceMap": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.mts"]
 }

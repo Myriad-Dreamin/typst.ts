@@ -1,4 +1,4 @@
-import { FsAccessModel } from '../internal.types';
+import { FsAccessModel } from '../internal.types.mjs';
 
 export interface FetchAccessOptions {
   polyfillHeadRequest?: boolean;
@@ -35,7 +35,10 @@ export class FetchAccessModel implements FsAccessModel {
   mTimes: Map<string, Date | undefined> = new Map();
   mRealPaths: Map<string, string | undefined> = new Map();
   mData: Map<string, Uint8Array | undefined> = new Map();
-  constructor(private root: string, options?: FetchAccessOptions) {
+  constructor(
+    private root: string,
+    options?: FetchAccessOptions,
+  ) {
     if (root.endsWith('/')) {
       this.root = this.root.slice(0, this.root.length - 1);
     }
