@@ -124,6 +124,62 @@ mod tests {
     }
 
     #[test]
+    fn test_reparse_multiple_selection() {
+        use super::reparse;
+        let path = VirtualPath::new("main.typ");
+        let source_id = TypstFileId::new(None, path);
+        let empty = reparse(source_id, None, "".to_owned()).unwrap();
+        let with_ba = reparse(
+            source_id,
+            None,
+            "Long TeX TeX, TeX, It is a long text".to_owned(),
+        )
+        .unwrap();
+
+        let edit_a = reparse(
+            source_id,
+            Some(empty.clone()),
+            "Long Text Text, Text, It is long text".to_owned(),
+        )
+        .unwrap();
+        let edit_ba = reparse(
+            source_id,
+            Some(edit_a.clone()),
+            "Long TeX TeX, TeX, It is a long text".to_owned(),
+        )
+        .unwrap();
+        assert_same_ast(with_ba.root(), edit_ba.root());
+
+        let edit_a = reparse(
+            source_id,
+            Some(empty.clone()),
+            "Long  , , It is long text".to_owned(),
+        )
+        .unwrap();
+        let edit_ba = reparse(
+            source_id,
+            Some(edit_a.clone()),
+            "Long TeX TeX, TeX, It is a long text".to_owned(),
+        )
+        .unwrap();
+        assert_same_ast(with_ba.root(), edit_ba.root());
+
+        let edit_a = reparse(
+            source_id,
+            Some(empty.clone()),
+            "Long LaTeX LaTeX, LaTeX, It is long text".to_owned(),
+        )
+        .unwrap();
+        let edit_ba = reparse(
+            source_id,
+            Some(edit_a.clone()),
+            "Long TeX TeX, TeX, It is a long text".to_owned(),
+        )
+        .unwrap();
+        assert_same_ast(with_ba.root(), edit_ba.root());
+    }
+
+    #[test]
     fn test_reparse_issue_typst_preview_vscode_issues_59() {
         use super::reparse;
         let path = VirtualPath::new("main.typ");
