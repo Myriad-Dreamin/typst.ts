@@ -4,7 +4,7 @@
 #set page(
   paper: "a4",
   header: align(right)[
-    Multi-purpose Combat Chassis [FALKEN]
+    Multi-purpose Combat Chassis
   ],
   numbering: "1",
   margin: (x:20mm, y:12.7mm)
@@ -46,30 +46,32 @@
 
 #let img = "/assets/files/tiger.jpg"
 
-= #lorem(4)
+= Seed
 
 #outline(title:none, indent:auto, )
 
 #booktab()
 
-#lorem(5000)
+Seed2 Seed4
+
+Seed3 Seed4
 
 #pagebreak()
 == #lorem(3)
 
 #emp_block()[
-#lorem(100)
+ Seed4 Seed4 Seed4 Seed4
 ]
 #booktab()
 
-#lorem(5000)
+ Seed4 Seed4 Seed4 Seed4 Seed4 Seed4 Seed4 Seed4 Seed4 Seed4 Seed4 Seed4 Seed4 Seed4
 
 #pagebreak()
 == 隼的轻武器
 
 #booktab()
 
-#lorem(5000)
+Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed
 
 #let images_rkg3=("tiger.jpg","tiger.jpg")
 
@@ -80,7 +82,7 @@
   )
 ]
 
-#lorem(300)
+Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed
 
 #let images_pistol=("tiger.jpg","tiger.jpg")
 #let cell = rect.with(
@@ -96,37 +98,37 @@
   ..images_pistol.map(n=>align(center)[#image(img, width:20%)])
 )
 
-#lorem(450)
+Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed
 
 #figure(
   image(img, width: 50%)
 )
 
-#lorem(450)
+Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed
 
 #figure(
   image(img, width: 50%)
 )
 
-#lorem(300)
+Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed
 
 === 电磁枪
 
-#lorem(450)
+Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed
 
 #pagebreak()
 == 武器舱和背部重武器
 
 #booktab()
 
-#lorem(300)
+Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed
 
 #figure(
   image(img, width: 60%),
   caption: [30mm Rapid Railgun with Extended Barrel, also retrofitted as 2nd stage rail on Arclight]
 )
 
-#lorem(5000)
+Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed
 
 #figure(
   image(img, width: 60%),
@@ -140,18 +142,18 @@
   caption: [炮管展开60°的状态]
 )
 
-#lorem(300)
+Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed
 
 #figure(
   image(img, width: 80%),
   caption: [4Sure Ballistics Man-Portable ASAT Missile]
 )
 
-#lorem(500)
+Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed
 
 #pagebreak()
 == 辅助机 —— "FRAMER"
 
 #booktab()
 
-#lorem(500)
+Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed Seed
