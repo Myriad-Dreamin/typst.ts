@@ -1,5 +1,9 @@
 # typst.ts
 
+[Markdown](https://github.com/Myriad-Dreamin/typst.ts/blob/main/README.md) | [Typst](./docs/cookery/introduction.typ) |
+[Online SVG](https://myriad-dreamin.github.io/typst.ts/cookery/) |
+[Online Canvas](https://myriad-dreamin.github.io/typst.ts/)
+
 <p align="center">
   <a href="https://github.com/Myriad-Dreamin/typst.ts/actions/workflows/ci.yaml">
     <img alt="typst_ts::ci" src="https://github.com/Myriad-Dreamin/typst.ts/actions/workflows/ci.yaml/badge.svg"/>
