@@ -50,7 +50,7 @@
 
 #show: project
 
-Typst.ts is a project dedicated to bring the power of #link("https://github.com/typst/typst")[Typst] to the world of JavaScript. In short, it composes ways to compile and render your Typst document. In the scope of server-side rendering collaborated by #text(fill: green, "server") and #text(fill: blue, "browser"), there would be a data flow like this:
+Typst.ts is a project dedicated to bring the power of #link("https://github.com/typst/typst")[Typst] to the world of JavaScript. In short, it composes ways to compile and render your Typst document. In the scope of server-side rendering collaborated by #text(fill: rgb("#3c9123"), "server") and #text(fill: blue, "browser"), there would be a data flow like this:
 
 #figure(
   data-flow-graph(),

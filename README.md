@@ -14,7 +14,7 @@
 </p>
 
 `typst.ts` is a project dedicated to bring the power of [Typst](https://github.com/typst/typst) to the world of JavaScript. In short, it provides an `typst::World` implementation and several exporters to help compile and render your Typst document. In the scope of server-side rendering collaborated by
-$\textcolor{#2ecc40}{\textsf{server}}$ and $\textcolor{#0074d9}{\textsf{browser}}$, there would be a data flow like this:
+$\textcolor{#3c9123}{\textsf{server}}$ and $\textcolor{#0074d9}{\textsf{browser}}$, there would be a data flow like this:
 
 <p align="center">
   <picture>

@@ -6,7 +6,7 @@
 #show link: underline
 
 #figure(
-  data-flow-graph(stroke: white, bg-color: rgb(13, 17, 23)),
+  data-flow-graph(stroke: white, bg-color: rgb(13, 17, 23), light-theme: false),
   caption: [Browser-side module needed: $dagger$: compiler; $dagger.double$: renderer. ],
   numbering: none,
 )
