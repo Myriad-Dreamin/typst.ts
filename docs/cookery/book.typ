@@ -29,9 +29,10 @@
     = Quickstart
     - #chapter("get-started.typ", section: "1")[Get started]
       - #chapter(none, section: "1.1")[All-in-one JavaScript Library]
-    - #chapter("guide/precompilers.typ", section: "2")[Precompilers]
-      - #chapter(none, section: "2.1")[Command Line Interface]
-      - #chapter(none, section: "2.2")[Compiler Service Library]
+    - #chapter("guide/compilers.typ", section: "2")[Compilers]
+      - #chapter("guide/compiler/ts-cli.typ", section: "2.1")[Command Line Interface]
+      - #chapter("guide/compiler/service.typ", section: "2.2")[Compiler Service Library]
+      - #chapter("guide/compiler/serverless.typ", section: "2.3")[Serverless (In-browser) Compiler]
     - #chapter("guide/e2e-renderers.typ", section: "3")[End-to-end Renderers]
       - #chapter(none, section: "3.1")[React Library]
       - #chapter(none, section: "3.2")[Angular Library]

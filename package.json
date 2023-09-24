@@ -22,6 +22,7 @@
     "packages/templates/*"
   ],
   "scripts": {
+    "book": "typst-book serve --font-path assets/fonts -w . docs/cookery",
     "build:core": "yarn workspace @myriaddreamin/typst.ts build",
     "bump-packages": "python scripts/bump_version.py",
     "prepublish-packages": "turbo run prepublish",
