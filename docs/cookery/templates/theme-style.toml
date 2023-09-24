@@ -3,28 +3,33 @@
 color-scheme = "light"
 main-color = "#000"
 dash-color = "#20609f"
+background-color = "#ffffff"
 code-theme = ""
 
 [rust]
 color-scheme = "light"
 main-color = "#262625"
 dash-color = "#2b79a2"
+background-color = "#e1e1db"
 code-theme = ""
 
 [coal]
 color-scheme = "dark"
 main-color = "#98a3ad"
 dash-color = "#2b79a2"
+background-color = "#131516"
 code-theme = "/github-pages/assets/tokyo-night.tmTheme"
 
 [navy]
 color-scheme = "dark"
 main-color = "#bcbdd0"
 dash-color = "#2b79a2"
+background-color = "#161923"
 code-theme = "/github-pages/assets/tokyo-night.tmTheme"
 
 [ayu]
 color-scheme = "dark"
 main-color = "#c5c5c5"
 dash-color = "#0096cf"
+background-color = "#0f141a"
 code-theme = "/github-pages/assets/tokyo-night.tmTheme"

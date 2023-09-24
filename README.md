@@ -16,21 +16,41 @@ $\textcolor{#2ecc40}{\textsf{server}}$ and $\textcolor{#0074d9}{\textsf{browser}
     <img width="100%" alt="Data Flow" src="https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/docs/data-flow-standalone.artifact.svg"/>
 </p>
 
-Specifically, it provides several typical approaches:
+Specifically, it first typically presents a typst document in three forms:
 
-- Provides a render to export typst document as browser-friendly SVG documents.
+- [Form1](https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/ts-cli.html): Render to SVG and then embed it as a high-quality vectored image directly.
 
-- Arrange typst documents to a compressed artifact, which then get realized in client side.
+- [Form2](https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/ts-cli.html): Preprocessed to a Vector Format artifact.
 
-- Provide a world implementation suitable for NodeJs or Browser environments, to bind typst's compiler to Javascript.
+- [Form3](https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/serverless.html): Manipulate a canvas element directly.
 
-Visualized Feature:
+The _Form2: Vector Format_ is developed specially for typst documents, and it has several fancy features: Todo: Visualized Feature:
 
-- Artifact Streaming
+- Data Sharing across multiple layouts.
 
-- Incremental Rendering
+- Artifact Streaming.
 
-- Incremental Font Transfer
+- Incremental Rendering.
+
+So with _Form2_, you can continue rendeing the document in different ways:
+
+##### Static but <ins>responsive</ins> rendering
+
+Example Application: [single-file](https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/index.html), [typst-book](https://github.com/Myriad-Dreamin/typst-book) and [hexo-renderer-typst](https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/hexo-renderer-typst)
+
+A compressed artifact containing data for different theme and screen settings. The bundle size of artifacts is optimized for typst documents.
+
+##### <ins>Incremental</ins> server-side rendering
+
+Example Application: [typst-preview](https://github.com/Enter-tainer/typst-preview-vscode)
+
+Build a server for compilation with [Compiler Service](https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/service.html), streaming the artifact, and render it incrementally.
+
+##### <ins>Serverless</ins> client-side rendering
+
+Example Application: [single-file](https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/examples/compiler.html)
+
+Run the entire typst directly in browser, like [typst.app](https://typst.app).
 
 ### Application
 
@@ -44,68 +64,15 @@ Visualized Feature:
 
 - Renderer/Component Library for [JavaScript](https://www.npmjs.com/package/@myriaddreamin/typst.ts), [React](https://www.npmjs.com/package/@myriaddreamin/typst.react), and [Angular](https://www.npmjs.com/package/@myriaddreamin/typst.angular)
 
-### Prerequisite
-
-- The font assets for Typst.ts are not included in this repository. See [Download Font Assets](./docs/download-font-assets.md) for more information.
-
 ### Installation
 
-Install latest precompiler via cargo:
+Install latest CLI of typst.ts via cargo:
 
 ```shell
 cargo install --locked --git https://github.com/Myriad-Dreamin/typst.ts typst-ts-cli
 ```
 
 Or Download the latest release from [GitHub Releases](https://github.com/Myriad-Dreamin/typst.ts/releases).
-
-### CLI
-
-Run [Typst compiler](https://github.com/typst/typst) with `typst.ts`'s exporters (renderers) Example:
-
-```shell
-typst-ts-cli compile --workspace "fuzzers/corpora/math" --entry "fuzzers/corpora/math/main.typ"
-```
-
-Help:
-
-```shell
-$ typst-ts-cli --help
-The cli for typst.ts.
-
-Usage: typst-ts-cli [OPTIONS] [COMMAND]
-
-Commands:
-  compile  Run compiler. [aliases: c]
-  completion  Generate shell completion script
-  env      Dump Client Environment.
-  font     Commands about font for typst.
-  help     Print this message or the help of the given subcommand(s)
-  package     Commands about package for typst.
-
-Options:
-  -V, --version  Print Version
-      --VV <VV>  Print Version in format [default: none] [possible values: none, short, full, json, json-plain]
-  -h, --help     Print help
-```
-
-Package Help:
-
-```shell
-$ typst-ts-cli package --help
-Commands about package for typst.
-
-Usage: typst-ts-cli package <COMMAND>
-
-Commands:
-  doc     Generate documentation for a package
-  help    Print this message or the help of the given subcommand(s)
-  link    Link a package to local data path
-  list    List all discovered packages in data and cache paths
-  unlink  Unlink a package from local data path
-
-Options:
-  -h, --help  Print help
-```
 
 ### Example: Render Typst document in browser (build from source with/without wasm-pack)
 

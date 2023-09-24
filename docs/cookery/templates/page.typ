@@ -8,6 +8,7 @@
 
 // todo: move theme style parser to another lib file
 #let theme-target = if target.contains("-") { target.split("-").at(1) } else { "light" }
+// #let theme-target = "ayu"
 #let theme-style = toml("theme-style.toml").at(theme-target)
 
 #let is-dark-theme = theme-style.at("color-scheme") == "dark"
@@ -15,6 +16,7 @@
 
 #let main-color = rgb(theme-style.at("main-color"))
 #let dash-color = rgb(theme-style.at("dash-color"))
+#let background-color = rgb(theme-style.at("background-color"))
 
 #let main-font = (
   "Charter",
@@ -75,6 +77,7 @@
     numbering: none, 
     number-align: center,
     width: page-width,
+    // fill: background-color,
   )
 
   // remove margins for web target
@@ -137,6 +140,12 @@
 
   // Main body.
   set par(justify: true)
+
+  if is-web-target {
+    link("https://github.com/Myriad-Dreamin/typst.ts/commits/main/docs/cookery")[Edition History]
+    
+    v(-.5em)
+  }
 
   body
 }

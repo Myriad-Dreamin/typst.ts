@@ -1,7 +1,11 @@
 #import "/contrib/typst/diagram.typ": node, arr, commutative_diagram
+#import "/docs/cookery/templates/page.typ": main-color, background-color
 
-#let data-flow-graph = commutative_diagram(
+#let arr = arr.with(stroke: main-color)
+
+#let data-flow-graph() = commutative_diagram(
   node_padding: (70pt, 50pt),
+  bg-color: background-color,
   node((0, 0), [
     Typst Documents
   ]),
@@ -9,7 +13,7 @@
     Preprocessed Artifact
   ]),
   node((1, 1), [
-    #link("https://developer.mozilla.org/en-US/docs/Web/SVG")[Svg Document] ( `<svg/>` )
+    #link("https://developer.mozilla.org/en-US/docs/Web/SVG")[SVG Document] ( `<svg/>` )
   ]),
   node((2, 1), [
     #link("https://developer.mozilla.org/en-US/docs/Web/HTML/Element/canvas")[Canvas] ( `<canvas/>` )
