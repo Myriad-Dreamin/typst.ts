@@ -1,3 +1,4 @@
+use core::fmt;
 use std::{
     cell::{RefCell, RefMut},
     sync::Mutex,
@@ -14,6 +15,12 @@ impl<'a, T> std::ops::Deref for QueryResult<'a, T> {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl<'a, T: fmt::Debug> fmt::Debug for QueryResult<'a, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("QueryResult").field(&self.0).finish()
     }
 }
 
@@ -42,7 +49,8 @@ impl<T, E, QC> QueryRef<T, E, QC> {
 }
 
 impl<T, E: Clone, QC> QueryRef<T, E, QC> {
-    /// Clone the error so that it can escape the borrowed reference to the ref cell.
+    /// Clone the error so that it can escape the borrowed reference to the ref
+    /// cell.
     #[inline]
     fn clone_err(r: RefMut<'_, QueryCell<T, E, QC>>) -> E {
         let initialized_res = r.1.as_ref().unwrap();
@@ -50,7 +58,8 @@ impl<T, E: Clone, QC> QueryRef<T, E, QC> {
         checked_res.unwrap_err().clone()
     }
 
-    /// Get the reference to the query result, which asserts that the query result is initialized.
+    /// Get the reference to the query result, which asserts that the query
+    /// result is initialized.
     #[inline]
     fn get_ref(&self) -> Result<&T, E> {
         let holding = unsafe { (*self.cell.as_ptr()).1.as_ref().unwrap_unchecked() };

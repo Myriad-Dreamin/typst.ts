@@ -82,7 +82,7 @@ fn label<'files, W: World + Files<'files, FileId = TypstFileId>>(
 pub fn status(entry_file: TypstFileId, status: DiagStatus) -> io::Result<()> {
     let input = entry_file;
     match status {
-        DiagStatus::Compiling => log::info!("{:?}: compiling ...", input),
+        DiagStatus::Stage(stage) => log::info!("{:?}: {} ...", input, stage),
         DiagStatus::Success(duration) => {
             log::info!("{:?}: Compilation succeeded in {:?}", input, duration)
         }

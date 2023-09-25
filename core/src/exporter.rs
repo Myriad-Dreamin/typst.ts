@@ -36,6 +36,15 @@ where
     }
 }
 
+impl<I, O, F> From<F> for DynExporter<I, O>
+where
+    F: (for<'a> Fn(&'a (dyn World + 'a), Arc<I>) -> SourceResult<O>) + Sized + Send + 'static,
+{
+    fn from(f: F) -> Self {
+        Box::new(f)
+    }
+}
+
 pub mod builtins {
     use std::{fs::File, sync::Arc};
 

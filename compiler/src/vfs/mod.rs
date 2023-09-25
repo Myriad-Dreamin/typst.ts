@@ -103,11 +103,13 @@ impl PathSlot {
     }
 }
 
+type VfsAccessModel<M> = CachedAccessModel<OverlayAccessModel<NotifyAccessModel<M>>, Source>;
+
 pub struct Vfs<M: AccessModel + Sized> {
     lifetime_cnt: u64,
-    // access_model: TraceAccessModel<CachedAccessModel<M, Source>>,
+    // access_model: TraceAccessModel<VfsAccessModel<M>>,
     // we add notify access model here since notify access model doesn't introduce overheads
-    access_model: CachedAccessModel<OverlayAccessModel<NotifyAccessModel<M>>, Source>,
+    access_model: VfsAccessModel<M>,
     path_interner: Mutex<PathInterner<<M as AccessModel>::RealPath, u64>>,
 
     path2slot: RwLock<HashMap<Arc<OsStr>, FileId>>,

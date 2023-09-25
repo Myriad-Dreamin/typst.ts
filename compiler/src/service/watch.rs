@@ -13,12 +13,16 @@ use std::{collections::HashMap, fs, path::PathBuf};
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::mpsc;
 
-use typst_ts_core::{hash::item_hash128, Bytes};
+use typst::diag::FileResult;
+use typst_ts_core::Bytes;
 
-use crate::vfs::{
-    notify::{FileChangeSet, FilesystemEvent, NotifyMessage},
-    system::SystemAccessModel,
-    AccessModel,
+use crate::{
+    time::SystemTime,
+    vfs::{
+        notify::{FileChangeSet, FilesystemEvent, NotifyMessage},
+        system::SystemAccessModel,
+        AccessModel,
+    },
 };
 
 type NotifyEvent = notify::Result<notify::Event>;
@@ -27,12 +31,42 @@ struct WatchedEntry {
     // todo: generalize lifetime
     lifetime: usize,
     candidate_paths: Vec<PathBuf>,
-    mtime: instant::SystemTime,
-    prev: Option<Bytes>,
+    prev: Option<FileResult<(SystemTime, Bytes)>>,
+}
+
+impl WatchedEntry {
+    fn same_prev(&self, content: &mut FileResult<(SystemTime, Bytes)>) -> bool {
+        match (&self.prev, content) {
+            (Some(Err(..)), Err(..)) => {
+                // Both are errors, so they are the same.
+                true
+            }
+            (Some(Ok((pt, prev))), Ok((nt, content))) => {
+                // Both are Ok, so compare the content.
+                if prev == content {
+                    return true;
+                }
+
+                if nt == pt {
+                    *nt = pt.checked_add(std::time::Duration::from_micros(1)).unwrap();
+                    log::info!("same content and mtime...: {:?}", self.candidate_paths);
+                }
+                false
+            }
+            _ => false,
+        }
+    }
+}
+
+#[derive(Debug)]
+enum WatchEvent {
+    // ReCheckEmptyFile(PathBuf),
+    Message(NotifyMessage),
+    NotifyEvent(NotifyEvent),
 }
 
 // Drop order is significant.
-struct NotifyActor {
+pub struct NotifyActor {
     inner: SystemAccessModel,
     lifetime: usize,
     watch: Option<()>,
@@ -40,12 +74,6 @@ struct NotifyActor {
     // accessing_files: HashMap<PathBuf, same_file::Handle>,
     watched_entries: HashMap<same_file::Handle, WatchedEntry>,
     watcher: Option<(RecommendedWatcher, mpsc::UnboundedReceiver<NotifyEvent>)>,
-}
-
-#[derive(Debug)]
-enum WatchEvent {
-    Message(NotifyMessage),
-    NotifyEvent(NotifyEvent),
 }
 
 impl NotifyActor {
@@ -118,35 +146,59 @@ impl NotifyActor {
                             }
                         }
 
-                        for entry in config.into_iter() {
+                        let mut insert_entries = vec![];
+                        for path in config.into_iter() {
                             let watch = self.watch.is_some(); // config.watch.contains(&i);
+                            let meta = path.metadata().unwrap();
+
                             if watch {
-                                let handle = same_file::Handle::from_path(entry.clone()).unwrap();
-                                self.watched_entries
+                                let handle = same_file::Handle::from_path(path.clone()).unwrap();
+                                let entry = self
+                                    .watched_entries
                                     .entry(handle)
                                     .and_modify(|watch_entry| {
                                         // watch_entry.candidate_paths.push(watch_entry.clone());
                                         if !watch_entry
                                             .candidate_paths
                                             .iter()
-                                            .any(|it| **it == entry)
+                                            .any(|it| **it == path)
                                         {
-                                            watch_entry.candidate_paths.push(entry.clone());
+                                            watch_entry.candidate_paths.push(path.clone());
                                         }
                                         watch_entry.lifetime = self.lifetime;
                                     })
                                     .or_insert_with(|| WatchedEntry {
                                         lifetime: self.lifetime,
-                                        candidate_paths: vec![entry.to_owned()],
-                                        // prevent some broken file not watched
-                                        mtime: instant::SystemTime::UNIX_EPOCH
-                                            .checked_add(std::time::Duration::from_micros(1))
-                                            .unwrap(),
+                                        candidate_paths: vec![path.to_owned()],
                                         prev: None,
                                     });
-                            }
 
-                            self.watch_entry(entry, watch);
+                                if !meta.is_dir() {
+                                    if let Some((watcher, _)) = &mut self.watcher {
+                                        log_notify_error(
+                                            watcher
+                                                .watch(path.as_ref(), RecursiveMode::NonRecursive),
+                                        );
+
+                                        let mut watched = self
+                                            .inner
+                                            .content(&path)
+                                            .map(|e| (meta.modified().unwrap(), e));
+                                        if !entry.same_prev(&mut watched) {
+                                            entry.prev = Some(watched.clone());
+                                            insert_entries.push((path, watched));
+                                        }
+                                    } else {
+                                        unreachable!()
+                                    }
+                                }
+                            } else {
+                                let watched = self
+                                    .inner
+                                    .content(&path)
+                                    .map(|e| (meta.modified().unwrap(), e));
+                                insert_entries.push((path, watched));
+                            }
                         }
 
                         let mut remove_entries = vec![];
@@ -159,9 +211,9 @@ impl NotifyActor {
                             }
                         });
 
-                        if !remove_entries.is_empty() {
-                            self.send(FilesystemEvent::Changed(FileChangeSet {
-                                insert: vec![],
+                        if !insert_entries.is_empty() || !remove_entries.is_empty() {
+                            self.send(FilesystemEvent::Update(FileChangeSet {
+                                insert: insert_entries,
                                 remove: remove_entries,
                             }));
                         }
@@ -169,6 +221,7 @@ impl NotifyActor {
                 },
                 WatchEvent::NotifyEvent(event) => {
                     if let Some(event) = log_notify_error(event) {
+                        log::info!("notify event {event:?}");
                         let files = event
                             .paths
                             .into_iter()
@@ -197,37 +250,21 @@ impl NotifyActor {
                                 // Find entry and continue
                                 let entry = self.watched_entries.get_mut(&handle)?;
 
-                                // Fast path: same mtime
-                                if entry.mtime == mtime {
+                                // Fast path: compare content
+                                let mut content = self.inner.content(&path).map(|it| (mtime, it));
+
+                                if entry.same_prev(&mut content) {
                                     return None;
                                 }
+                                entry.prev = Some(content.clone());
 
-                                // Slower path: compare content
-                                let content = self.inner.content(&path);
-
-                                if let Ok(content) = content.as_ref() {
-                                    if entry.prev.as_ref() == Some(content) {
-                                        return None;
-                                    }
-                                    entry.prev = Some(content.clone())
-                                } else {
-                                    entry.prev = None;
-                                }
-
-                                println!(
-                                    "compare {:?} {:?} {:?}",
-                                    path,
-                                    content.iter().map(item_hash128),
-                                    entry.prev.iter().map(item_hash128)
-                                );
-
-                                // Slowest path: trigger the compiler
-                                Some((path, content.map(|it| (mtime, it))))
+                                // Slow path: trigger the compiler
+                                Some((path, content))
                             })
                             .collect::<Vec<_>>();
 
                         if !files.is_empty() {
-                            self.send(FilesystemEvent::Changed(FileChangeSet {
+                            self.send(FilesystemEvent::Update(FileChangeSet {
                                 insert: files,
                                 remove: vec![],
                             }));
@@ -238,24 +275,6 @@ impl NotifyActor {
         }
     }
 
-    fn watch_entry(&mut self, path: PathBuf, watch: bool) {
-        // -> Vec<(PathBuf, FileResult<(std::time::SystemTime, Bytes)>)>
-        let meta = path.metadata().unwrap();
-        if meta.is_dir() {
-            // todo: will never process dir
-            return;
-        }
-
-        if watch {
-            self.watch(path);
-        }
-    }
-
-    fn watch(&mut self, path: PathBuf) {
-        if let Some((watcher, _)) = &mut self.watcher {
-            log_notify_error(watcher.watch(path.as_ref(), RecursiveMode::NonRecursive));
-        }
-    }
     fn send(&mut self, msg: FilesystemEvent) {
         self.sender.send(msg).unwrap();
     }
@@ -268,7 +287,7 @@ fn log_notify_error<T>(res: notify::Result<T>) -> Option<T> {
 pub async fn watch_deps(
     inbox: mpsc::UnboundedReceiver<NotifyMessage>,
     mut interrupted_by_events: impl FnMut(Option<FilesystemEvent>),
-) -> ! {
+) {
     // Setup file watching.
     let (tx, mut rx) = mpsc::unbounded_channel();
     let actor = NotifyActor::new(tx);
@@ -282,6 +301,4 @@ pub async fn watch_deps(
     while let Some(event) = rx.recv().await {
         interrupted_by_events(Some(event));
     }
-
-    std::process::exit(0);
 }

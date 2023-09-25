@@ -226,13 +226,13 @@ pub fn start_repl_test(args: CompileOnceArgs) -> rustyline::Result<()> {
 
 impl ReplContext {
     fn repl_process_line(&mut self, line: String) {
-        let compiled =
-            self.driver
-                .borrow_mut()
-                .with_compile_diag::<false, _>(|driver: &mut CompileDriver| {
-                    let doc = driver.compile()?;
-                    driver.query(line, &doc)
-                });
+        let compiled = self.driver.borrow_mut().with_stage_diag::<false, _>(
+            "compiling",
+            |driver: &mut CompileDriver| {
+                let doc = driver.compile()?;
+                driver.query(line, &doc)
+            },
+        );
 
         if let Some(compiled) = compiled {
             let serialized = serialize(&compiled, "json").unwrap();

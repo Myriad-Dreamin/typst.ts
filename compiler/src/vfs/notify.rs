@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use typst::diag::{FileError, FileResult};
+use typst::diag::FileResult;
 use typst_ts_core::Bytes;
 
 use crate::vfs::AccessModel;
@@ -14,20 +14,36 @@ pub enum NotifyMessage {
     SyncDependency(Vec<PathBuf>),
 }
 
+#[derive(Debug, Clone)]
 pub struct FileChangeSet {
     pub insert: Vec<(PathBuf, FileResult<(std::time::SystemTime, Bytes)>)>,
     pub remove: Vec<PathBuf>,
 }
 
+impl FileChangeSet {
+    pub fn new_remove(paths: Vec<PathBuf>) -> Self {
+        Self {
+            insert: vec![],
+            remove: paths.into_iter().collect(),
+        }
+    }
+
+    pub fn new_insert(inserts: Vec<(PathBuf, FileResult<(std::time::SystemTime, Bytes)>)>) -> Self {
+        Self {
+            insert: inserts,
+            remove: vec![],
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum FilesystemEvent {
-    Changed(FileChangeSet),
-    CancelChanged,
+    Update(FileChangeSet),
 }
 
 pub struct NotifyAccessModel<M: AccessModel> {
     files: HashMap<PathBuf, FileResult<(std::time::SystemTime, Bytes)>>,
     pub inner: M,
-    has_undeterminted_state: (bool, bool),
 }
 
 impl<M: AccessModel> NotifyAccessModel<M> {
@@ -35,41 +51,20 @@ impl<M: AccessModel> NotifyAccessModel<M> {
         Self {
             files: HashMap::new(),
             inner,
-            has_undeterminted_state: (false, false),
         }
     }
 
     pub fn notify(&mut self, event: FilesystemEvent) {
         match event {
-            FilesystemEvent::Changed(files) => {
-                let mut has_undeterminted_state = false;
-
-                for removed in files.remove {
-                    self.files.remove(&removed);
+            FilesystemEvent::Update(files) => {
+                for path in files.remove {
+                    self.files.remove(&path);
                 }
 
                 for (path, contents) in files.insert {
-                    // peek state
-                    has_undeterminted_state = has_undeterminted_state
-                        || match contents.as_ref() {
-                            Ok(contents) => contents.1.is_empty(),
-                            Err(err) => {
-                                matches!(
-                                    err,
-                                    FileError::NotFound(..)
-                                        | FileError::Other(..)
-                                        | FileError::InvalidUtf8
-                                )
-                            }
-                        };
-
                     self.files.insert(path, contents);
                 }
-
-                let prev = self.has_undeterminted_state.1;
-                self.has_undeterminted_state = (prev, has_undeterminted_state);
             }
-            FilesystemEvent::CancelChanged => {}
         }
     }
 }

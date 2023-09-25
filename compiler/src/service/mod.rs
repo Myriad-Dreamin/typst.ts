@@ -16,6 +16,7 @@ use typst_ts_core::{Bytes, TypstFileId};
 
 #[cfg(feature = "system-compile")]
 pub(crate) mod diag;
+
 #[cfg(feature = "system-watch")]
 pub(crate) mod watch;
 #[cfg(feature = "system-watch")]
@@ -24,6 +25,10 @@ pub use watch::*;
 pub(crate) mod driver;
 pub use driver::*;
 
+pub(crate) mod compile;
+pub use compile::*;
+pub(crate) mod export;
+pub use export::*;
 pub mod query;
 
 #[cfg(feature = "system-compile")]
@@ -267,7 +272,7 @@ where
 
 /// The status in which the watcher can be.
 pub enum DiagStatus {
-    Compiling,
+    Stage(&'static str),
     Success(std::time::Duration),
     Error(std::time::Duration),
 }
@@ -283,9 +288,18 @@ pub trait DiagObserver {
     fn print_status<const WITH_STATUS: bool>(&self, status: DiagStatus);
 
     /// Run inner function with print (optional) status and diagnostics to the
-    /// terminal.
+    /// terminal (for compilation).
+    #[deprecated(note = "use `with_stage_diag` instead")]
     fn with_compile_diag<const WITH_STATUS: bool, T>(
         &mut self,
+        f: impl FnOnce(&mut Self) -> SourceResult<T>,
+    ) -> Option<T>;
+
+    /// Run inner function with print (optional) status and diagnostics to the
+    /// terminal.
+    fn with_stage_diag<const WITH_STATUS: bool, T>(
+        &mut self,
+        stage: &'static str,
         f: impl FnOnce(&mut Self) -> SourceResult<T>,
     ) -> Option<T>;
 }
@@ -312,12 +326,22 @@ where
     }
 
     /// Run inner function with print (optional) status and diagnostics to the
-    /// terminal.
+    /// terminal (for compilation).
     fn with_compile_diag<const WITH_STATUS: bool, T>(
         &mut self,
         f: impl FnOnce(&mut Self) -> SourceResult<T>,
     ) -> Option<T> {
-        self.print_status::<WITH_STATUS>(DiagStatus::Compiling);
+        self.with_stage_diag::<WITH_STATUS, _>("compiling", f)
+    }
+
+    /// Run inner function with print (optional) status and diagnostics to the
+    /// terminal (for stages).
+    fn with_stage_diag<const WITH_STATUS: bool, T>(
+        &mut self,
+        stage: &'static str,
+        f: impl FnOnce(&mut Self) -> SourceResult<T>,
+    ) -> Option<T> {
+        self.print_status::<WITH_STATUS>(DiagStatus::Stage(stage));
         let start = instant::Instant::now();
         match f(self) {
             Ok(val) => {

@@ -21,6 +21,14 @@ impl<M: AccessModel + Sized, C: Clone> TraceAccessModel<CachedAccessModel<M, C>>
         }
     }
 
+    pub fn inner(&self) -> &M {
+        self.inner.inner()
+    }
+
+    pub fn inner_mut(&mut self) -> &mut M {
+        self.inner.inner_mut()
+    }
+
     pub fn read_all_diff(
         &self,
         src: &Path,

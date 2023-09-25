@@ -66,7 +66,7 @@ fn compile_corpus(args: CompileCorpusArgs) {
         driver.set_exporter(exporter);
         driver.inner_mut().set_entry_file(entry);
 
-        driver.with_compile_diag::<true, _>(|driver| driver.compile());
+        driver.with_stage_diag::<true, _>("compiling", |driver| driver.compile());
 
         // if status.code().unwrap() != 0 {
         //     eprintln!("compile corpus failed.");

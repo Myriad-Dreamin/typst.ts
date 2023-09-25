@@ -150,8 +150,8 @@ impl<Inner: AccessModel, C: Clone> AccessModel for CachedAccessModel<Inner, C> {
 
     fn content(&self, src: &Path) -> FileResult<Bytes> {
         self.cache_entry(src, |entry| {
-            let data = entry.read_all.compute(|| self.inner.content(src))?;
-            Ok(data.clone())
+            let data = entry.read_all.compute(|| self.inner.content(src));
+            Ok(data?.clone())
         })
     }
 }
