@@ -6,7 +6,8 @@ use std::{
 use crate::{NotifyApi, ShadowApi};
 use typst::{diag::SourceResult, syntax::VirtualPath, World};
 use typst_ts_core::{
-    exporter_builtins::GroupExporter, path::PathClean, Bytes, Exporter, TakeAs, TypstFileId,
+    exporter_builtins::GroupExporter, path::PathClean, Bytes, DynExporter, TakeAs, TypstDocument,
+    TypstFileId,
 };
 
 use super::{Compiler, WorkspaceProvider, WrappedCompiler};
@@ -128,26 +129,26 @@ impl<W: World + ShadowApi> ShadowApi for CompileDriverImpl<W> {
 
 pub struct CompileExporter<C: Compiler> {
     pub compiler: C,
-    pub exporter: GroupExporter<typst::doc::Document>,
+    pub exporter: DynExporter<TypstDocument>,
 }
 
 impl<C: Compiler> CompileExporter<C> {
     pub fn new(compiler: C) -> Self {
         Self {
             compiler,
-            exporter: GroupExporter::new(vec![]),
+            exporter: GroupExporter::new(vec![]).into(),
         }
     }
 
     /// Wrap driver with a given exporter.
-    pub fn with_exporter(mut self, exporter: GroupExporter<typst::doc::Document>) -> Self {
-        self.exporter = exporter;
+    pub fn with_exporter(mut self, exporter: impl Into<DynExporter<TypstDocument>>) -> Self {
+        self.set_exporter(exporter);
         self
     }
 
     /// set an exporter.
-    pub fn set_exporter(&mut self, exporter: GroupExporter<typst::doc::Document>) {
-        self.exporter = exporter;
+    pub fn set_exporter(&mut self, exporter: impl Into<DynExporter<TypstDocument>>) {
+        self.exporter = exporter.into();
     }
 
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
