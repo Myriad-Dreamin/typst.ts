@@ -6,6 +6,7 @@ use std::{
     collections::{hash_map::DefaultHasher, HashMap},
     ffi::OsStr,
     hash::Hash,
+    iter::Iterator,
     iter::Peekable,
     path::{Component, Path, PathBuf},
     sync::Arc,

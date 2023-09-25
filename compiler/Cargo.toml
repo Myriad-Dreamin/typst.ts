@@ -27,6 +27,8 @@ serde.workspace = true
 serde_json.workspace = true
 serde-wasm-bindgen = { workspace = true, optional = true }
 
+same-file = { version = "1", optional = true }
+
 memmap2 = { workspace = true, optional = true }
 dirs = { workspace = true, optional = true }
 walkdir = { workspace = true, optional = true }
@@ -43,7 +45,6 @@ nohash-hasher.workspace = true
 pathdiff.workspace = true
 dissimilar.workspace = true
 tar.workspace = true
-
 wasm-bindgen = { workspace = true, optional = true }
 wasm-bindgen-futures = { workspace = true, optional = true }
 js-sys = { workspace = true, optional = true }
@@ -88,7 +89,7 @@ system-compile = [
     "dep:notify",
     "dep:log",
 ]
-system-watch = ["dep:notify", "dep:tokio"]
+system-watch = ["dep:notify", "dep:tokio", "dep:same-file"]
 system = ["system-compile", "system-watch"]
 dynamic-layout = ["dep:typst-ts-svg-exporter"]
 __web = [

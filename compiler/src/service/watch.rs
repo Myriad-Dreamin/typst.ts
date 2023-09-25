@@ -1,47 +1,287 @@
-use std::path::Path;
+//! An implementation of `loader::Handle`, based on `walkdir` and `notify`.
+//!
+//! The file watching bits here are untested and quite probably buggy. For this
+//! reason, by default we don't watch files and rely on editor's file watching
+//! capabilities.
+//!
+//! Hopefully, one day a reliable file watching/walking crate appears on
+//! crates.io, and we can reduce this to trivial glue code.
 
-use log::{error, info};
-use notify::{Event, RecommendedWatcher, RecursiveMode, Watcher};
-use typst::eval::eco_format;
+use std::{collections::HashMap, fs, path::PathBuf};
 
-pub async fn watch_dir(
-    workspace_dir: &Path,
-    mut interrupted_by_events: impl FnMut(Option<Vec<Event>>),
-) -> ! {
-    // Setup file watching.
-    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-    let mut watcher = RecommendedWatcher::new(
-        move |res: Result<notify::Event, _>| match res {
-            Ok(e) => {
-                tx.send(e).unwrap();
+// use crossbeam_channel::{never, select, unbounded, Receiver, Sender};
+use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
+use tokio::sync::mpsc;
+
+use typst_ts_core::{hash::item_hash128, Bytes};
+
+use crate::vfs::{
+    notify::{FileChangeSet, FilesystemEvent, NotifyMessage},
+    system::SystemAccessModel,
+    AccessModel,
+};
+
+type NotifyEvent = notify::Result<notify::Event>;
+
+struct WatchedEntry {
+    // todo: generalize lifetime
+    lifetime: usize,
+    candidate_paths: Vec<PathBuf>,
+    mtime: instant::SystemTime,
+    prev: Option<Bytes>,
+}
+
+// Drop order is significant.
+struct NotifyActor {
+    inner: SystemAccessModel,
+    lifetime: usize,
+    watch: Option<()>,
+    sender: mpsc::UnboundedSender<FilesystemEvent>,
+    // accessing_files: HashMap<PathBuf, same_file::Handle>,
+    watched_entries: HashMap<same_file::Handle, WatchedEntry>,
+    watcher: Option<(RecommendedWatcher, mpsc::UnboundedReceiver<NotifyEvent>)>,
+}
+
+#[derive(Debug)]
+enum WatchEvent {
+    Message(NotifyMessage),
+    NotifyEvent(NotifyEvent),
+}
+
+impl NotifyActor {
+    fn new(sender: mpsc::UnboundedSender<FilesystemEvent>) -> NotifyActor {
+        NotifyActor {
+            inner: SystemAccessModel,
+            lifetime: 0,
+            watch: Some(()),
+            sender,
+            // accessing_files: HashMap::new(),
+            watched_entries: HashMap::new(),
+            watcher: None,
+        }
+    }
+
+    async fn next_event(
+        &mut self,
+        receiver: &mut mpsc::UnboundedReceiver<NotifyMessage>,
+    ) -> Option<WatchEvent> {
+        let watcher_receiver = self.watcher.as_mut().map(|(_, receiver)| receiver);
+        // watcher_receiver.unwrap_or(&never())
+        match watcher_receiver {
+            Some(watcher_receiver) => tokio::select! {
+                Some(it) = receiver.recv() => Some(WatchEvent::Message(it)),
+                Some(it) = watcher_receiver.recv() => Some(WatchEvent::NotifyEvent(it)),
+            },
+            None => receiver.recv().await.map(WatchEvent::Message),
+        }
+    }
+
+    async fn run(mut self, mut inbox: mpsc::UnboundedReceiver<NotifyMessage>) {
+        while let Some(event) = self.next_event(&mut inbox).await {
+            // log::info!("vfs-notify event {event:?}");
+            match event {
+                WatchEvent::Message(msg) => match msg {
+                    NotifyMessage::SyncDependency(config) => {
+                        self.lifetime += 1;
+                        self.watcher = None;
+                        if self.watch.is_some() {
+                            match &mut self.watcher {
+                                Some((old_watcher, _)) => {
+                                    let entries = self.watched_entries.values();
+                                    for path in entries.flat_map(|entry| &entry.candidate_paths) {
+                                        // Remove the watch if it still exists.
+                                        if let Err(err) = old_watcher.unwatch(path) {
+                                            match err {
+                                                notify::Error {
+                                                    kind: notify::ErrorKind::WatchNotFound,
+                                                    ..
+                                                } => {}
+                                                err => panic!("failed to watch {err}"),
+                                            }
+                                        }
+                                    }
+                                }
+                                None => {
+                                    let (watcher_sender, watcher_receiver) =
+                                        mpsc::unbounded_channel();
+                                    let watcher = log_notify_error(RecommendedWatcher::new(
+                                        move |event| {
+                                            let res = watcher_sender.send(event);
+                                            if let Err(err) = res {
+                                                log::warn!("error to send event: {err}");
+                                            }
+                                        },
+                                        Config::default(),
+                                    ));
+                                    self.watcher = watcher.map(|it| (it, watcher_receiver));
+                                }
+                            }
+                        }
+
+                        for entry in config.into_iter() {
+                            let watch = self.watch.is_some(); // config.watch.contains(&i);
+                            if watch {
+                                let handle = same_file::Handle::from_path(entry.clone()).unwrap();
+                                self.watched_entries
+                                    .entry(handle)
+                                    .and_modify(|watch_entry| {
+                                        // watch_entry.candidate_paths.push(watch_entry.clone());
+                                        if !watch_entry
+                                            .candidate_paths
+                                            .iter()
+                                            .any(|it| **it == entry)
+                                        {
+                                            watch_entry.candidate_paths.push(entry.clone());
+                                        }
+                                        watch_entry.lifetime = self.lifetime;
+                                    })
+                                    .or_insert_with(|| WatchedEntry {
+                                        lifetime: self.lifetime,
+                                        candidate_paths: vec![entry.to_owned()],
+                                        // prevent some broken file not watched
+                                        mtime: instant::SystemTime::UNIX_EPOCH
+                                            .checked_add(std::time::Duration::from_micros(1))
+                                            .unwrap(),
+                                        prev: None,
+                                    });
+                            }
+
+                            self.watch_entry(entry, watch);
+                        }
+
+                        let mut remove_entries = vec![];
+                        self.watched_entries.retain(|_, entry| {
+                            if self.lifetime - entry.lifetime < 30 {
+                                true
+                            } else {
+                                remove_entries.extend(std::mem::take(&mut entry.candidate_paths));
+                                false
+                            }
+                        });
+
+                        if !remove_entries.is_empty() {
+                            self.send(FilesystemEvent::Changed(FileChangeSet {
+                                insert: vec![],
+                                remove: remove_entries,
+                            }));
+                        }
+                    }
+                },
+                WatchEvent::NotifyEvent(event) => {
+                    if let Some(event) = log_notify_error(event) {
+                        let files = event
+                            .paths
+                            .into_iter()
+                            .filter_map(|path| {
+                                let meta = fs::metadata(&path).ok()?;
+                                // if meta.file_type().is_dir()
+                                //     && self
+                                //         .watched_entries
+                                //         .iter()
+                                //         .any(|entry| entry.contains_dir(&path))
+                                // {
+                                //     self.watch(path);
+                                //     return None;
+                                // }
+
+                                if !meta.file_type().is_file() {
+                                    return None;
+                                }
+
+                                // Check meta, path, and content
+
+                                // Get meta, real path and ignore errors
+                                let mtime = meta.modified().ok()?;
+                                let handle = same_file::Handle::from_path(&path).ok()?;
+
+                                // Find entry and continue
+                                let entry = self.watched_entries.get_mut(&handle)?;
+
+                                // Fast path: same mtime
+                                if entry.mtime == mtime {
+                                    return None;
+                                }
+
+                                // Slower path: compare content
+                                let content = self.inner.content(&path);
+
+                                if let Ok(content) = content.as_ref() {
+                                    if entry.prev.as_ref() == Some(content) {
+                                        return None;
+                                    }
+                                    entry.prev = Some(content.clone())
+                                } else {
+                                    entry.prev = None;
+                                }
+
+                                println!(
+                                    "compare {:?} {:?} {:?}",
+                                    path,
+                                    content.iter().map(item_hash128),
+                                    entry.prev.iter().map(item_hash128)
+                                );
+
+                                // Slowest path: trigger the compiler
+                                Some((path, content.map(|it| (mtime, it))))
+                            })
+                            .collect::<Vec<_>>();
+
+                        if !files.is_empty() {
+                            self.send(FilesystemEvent::Changed(FileChangeSet {
+                                insert: files,
+                                remove: vec![],
+                            }));
+                        }
+                    }
+                }
             }
-            Err(e) => error!("watch error: {:#}", e),
-        },
-        notify::Config::default(),
-    )
-    .map_err(|err| eco_format!("failed to watch directory ({err})"))
-    .unwrap();
+        }
+    }
 
-    // Add a path to be watched. All files and directories at that path and
-    // below will be monitored for changes.
-    watcher
-        .watch(workspace_dir, RecursiveMode::Recursive)
-        .unwrap();
-
-    // Handle events.
-    info!("start watching files...");
-    interrupted_by_events(None);
-    loop {
-        let mut events = vec![];
-        while let Ok(e) =
-            tokio::time::timeout(tokio::time::Duration::from_millis(100), rx.recv()).await
-        {
-            if e.is_none() {
-                continue;
-            }
-            events.push(e.unwrap());
+    fn watch_entry(&mut self, path: PathBuf, watch: bool) {
+        // -> Vec<(PathBuf, FileResult<(std::time::SystemTime, Bytes)>)>
+        let meta = path.metadata().unwrap();
+        if meta.is_dir() {
+            // todo: will never process dir
+            return;
         }
 
-        interrupted_by_events(Some(events));
+        if watch {
+            self.watch(path);
+        }
     }
+
+    fn watch(&mut self, path: PathBuf) {
+        if let Some((watcher, _)) = &mut self.watcher {
+            log_notify_error(watcher.watch(path.as_ref(), RecursiveMode::NonRecursive));
+        }
+    }
+    fn send(&mut self, msg: FilesystemEvent) {
+        self.sender.send(msg).unwrap();
+    }
+}
+
+fn log_notify_error<T>(res: notify::Result<T>) -> Option<T> {
+    res.map_err(|err| log::warn!("notify error: {}", err)).ok()
+}
+
+pub async fn watch_deps(
+    inbox: mpsc::UnboundedReceiver<NotifyMessage>,
+    mut interrupted_by_events: impl FnMut(Option<FilesystemEvent>),
+) -> ! {
+    // Setup file watching.
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    let actor = NotifyActor::new(tx);
+
+    // Watch messages to notify
+    tokio::spawn(actor.run(inbox));
+
+    // Handle events.
+    log::info!("start watching files...");
+    interrupted_by_events(None);
+    while let Some(event) = rx.recv().await {
+        interrupted_by_events(Some(event));
+    }
+
+    std::process::exit(0);
 }

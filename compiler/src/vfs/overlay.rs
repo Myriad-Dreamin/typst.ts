@@ -30,6 +30,14 @@ impl<M: AccessModel> OverlayAccessModel<M> {
         }
     }
 
+    pub fn inner(&self) -> &M {
+        &self.model
+    }
+
+    pub fn inner_mut(&mut self) -> &mut M {
+        &mut self.model
+    }
+
     pub fn clear_shadow(&self) {
         self.files.write().clear();
     }

@@ -12,6 +12,7 @@ pub mod system;
 
 pub mod cached;
 pub mod dummy;
+pub mod notify;
 pub mod overlay;
 pub mod trace;
 
@@ -50,7 +51,11 @@ use typst_ts_core::{path::PathClean, Bytes, QueryRef, TypstFileId};
 
 use crate::{parser::reparse, time::SystemTime};
 
-use self::{cached::CachedAccessModel, overlay::OverlayAccessModel};
+use self::{
+    cached::CachedAccessModel,
+    notify::{FilesystemEvent, NotifyAccessModel},
+    overlay::OverlayAccessModel,
+};
 
 /// Handle to a file in [`Vfs`]
 ///
@@ -101,7 +106,8 @@ impl PathSlot {
 pub struct Vfs<M: AccessModel + Sized> {
     lifetime_cnt: u64,
     // access_model: TraceAccessModel<CachedAccessModel<M, Source>>,
-    access_model: CachedAccessModel<OverlayAccessModel<M>, Source>,
+    // we add notify access model here since notify access model doesn't introduce overheads
+    access_model: CachedAccessModel<OverlayAccessModel<NotifyAccessModel<M>>, Source>,
     path_interner: Mutex<PathInterner<<M as AccessModel>::RealPath, u64>>,
 
     path2slot: RwLock<HashMap<Arc<OsStr>, FileId>>,
@@ -112,6 +118,7 @@ pub struct Vfs<M: AccessModel + Sized> {
 
 impl<M: AccessModel + Sized> Vfs<M> {
     pub fn new(access_model: M) -> Self {
+        let access_model = NotifyAccessModel::new(access_model);
         let access_model = OverlayAccessModel::new(access_model);
         let access_model = CachedAccessModel::new(access_model);
         // let access_model = TraceAccessModel::new(access_model);
@@ -179,6 +186,19 @@ impl<M: AccessModel + Sized> Vfs<M> {
 
             (dep_path.as_path(), *dep_mtime)
         })
+    }
+
+    /// Get all the files in the VFS.
+    pub fn iter_dependencies_dyn<'a>(&'a self, f: &mut dyn FnMut(&'a Path, instant::SystemTime)) {
+        for slot in self.slots.iter() {
+            let dep_path = slot.sampled_path.get().unwrap();
+            let dep_mtime = slot
+                .mtime
+                .compute(|| Err(other_reason("vfs: uninitialized")))
+                .unwrap();
+
+            f(dep_path.as_path(), *dep_mtime)
+        }
     }
 
     /// File path corresponding to the given `file_id`.
@@ -323,6 +343,10 @@ impl<M: AccessModel + Sized> Vfs<M> {
 
     pub fn remove_shadow(&self, path: &Path) {
         self.access_model.inner().remove_file(path);
+    }
+
+    pub fn notify_fs_event(&mut self, event: FilesystemEvent) {
+        self.access_model.inner_mut().inner_mut().notify(event);
     }
 
     pub fn file(&self, path: &Path) -> FileResult<Bytes> {

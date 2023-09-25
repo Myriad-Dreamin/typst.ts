@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::ShadowApi;
+use crate::{NotifyApi, ShadowApi};
 use typst::{diag::SourceResult, syntax::VirtualPath, World};
 use typst_ts_core::{
     exporter_builtins::GroupExporter, path::PathClean, Bytes, Exporter, TakeAs, TypstFileId,
@@ -58,7 +58,7 @@ impl<W: World + WorkspaceProvider> CompileDriverImpl<W> {
     }
 }
 
-impl<W: World + WorkspaceProvider> Compiler for CompileDriverImpl<W> {
+impl<W: World + WorkspaceProvider + NotifyApi> Compiler for CompileDriverImpl<W> {
     type World = W;
 
     fn world(&self) -> &Self::World {
@@ -97,6 +97,14 @@ impl<W: World + WorkspaceProvider> Compiler for CompileDriverImpl<W> {
         }
 
         self._relevant(event).unwrap_or(true)
+    }
+
+    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a Path, instant::SystemTime)) {
+        self.world.iter_dependencies(f)
+    }
+
+    fn notify_fs_event(&mut self, event: crate::vfs::notify::FilesystemEvent) {
+        self.world.notify_fs_event(event)
     }
 }
 
@@ -347,22 +355,25 @@ where
             return compiled.is_some();
         }
 
-        super::watch_dir(&self.root.clone(), move |events| {
-            // relevance checking
-            if events.is_some()
-                && !events
-                    .unwrap()
-                    .iter()
-                    // todo: inner
-                    .any(|event| self.compiler.relevant(event))
-            {
-                return;
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+
+        super::watch_deps(rx, move |event| {
+            // apply system change
+            if let Some(event) = event {
+                self.compiler.notify_fs_event(event);
             }
 
             // compile
             self.compiler
                 .with_compile_diag::<true, _>(|driver| driver.compile());
             comemo::evict(30);
+
+            let mut deps = vec![];
+            self.compiler
+                .iter_dependencies(&mut |dep, _| deps.push(dep.to_owned()));
+            tx.send(crate::vfs::notify::NotifyMessage::SyncDependency(deps))
+                .unwrap();
+            // tx
         })
         .await;
         true

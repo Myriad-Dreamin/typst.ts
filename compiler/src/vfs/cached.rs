@@ -38,6 +38,10 @@ impl<Inner: AccessModel, C> CachedAccessModel<Inner, C> {
     pub fn inner(&self) -> &Inner {
         &self.inner
     }
+
+    pub fn inner_mut(&mut self) -> &mut Inner {
+        &mut self.inner
+    }
 }
 
 impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {

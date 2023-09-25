@@ -64,6 +64,7 @@ use typst::{
     syntax::Span,
 };
 use typst_ts_core::{Bytes, TypstFileId};
+use vfs::notify::FilesystemEvent;
 
 /// Latest version of the shadow api, which is in beta.
 pub trait ShadowApi {
@@ -122,4 +123,11 @@ pub trait ShadowApi {
         let file_path = self._shadow_map_id(file_id).at(Span::detached())?;
         self.with_shadow_file(&file_path, content, f)
     }
+}
+
+/// Latest version of the notify api, which is in beta.
+pub trait NotifyApi {
+    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a Path, instant::SystemTime));
+
+    fn notify_fs_event(&mut self, event: FilesystemEvent);
 }

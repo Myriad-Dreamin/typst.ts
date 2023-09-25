@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::ShadowApi;
+use crate::{vfs::notify::FilesystemEvent, ShadowApi};
 use typst::{
     diag::{At, FileResult, SourceDiagnostic, SourceResult},
     doc::Document,
@@ -16,6 +16,10 @@ use typst_ts_core::{Bytes, TypstFileId};
 
 #[cfg(feature = "system-compile")]
 pub(crate) mod diag;
+#[cfg(feature = "system-watch")]
+pub(crate) mod watch;
+#[cfg(feature = "system-watch")]
+pub use watch::*;
 
 pub(crate) mod driver;
 pub use driver::*;
@@ -26,11 +30,6 @@ pub mod query;
 pub(crate) mod session;
 #[cfg(feature = "system-compile")]
 pub use session::*;
-
-#[cfg(feature = "system-watch")]
-pub(crate) mod watch;
-#[cfg(feature = "system-watch")]
-pub use watch::*;
 
 #[cfg(feature = "system-compile")]
 pub type CompileDriver = CompileDriverImpl<crate::TypstSystemWorld>;
@@ -80,6 +79,12 @@ pub trait Compiler {
     fn query(&mut self, selector: String, document: &Document) -> SourceResult<Vec<Content>> {
         self.pure_query(selector, document)
     }
+
+    /// Iterate over the dependencies of found by the compiler.
+    /// Note: reset the compiler will clear the dependencies cache.
+    fn iter_dependencies<'a>(&'a self, _f: &mut dyn FnMut(&'a Path, instant::SystemTime)) {}
+
+    fn notify_fs_event(&mut self, _event: FilesystemEvent) {}
 
     /// Determine whether the event is relevant to the compiler.
     /// The default implementation is conservative, which means that
@@ -222,6 +227,16 @@ impl<T: WrappedCompiler> Compiler for T {
     #[inline]
     fn query(&mut self, selector: String, document: &Document) -> SourceResult<Vec<Content>> {
         self.wrap_query(selector, document)
+    }
+
+    #[inline]
+    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a Path, instant::SystemTime)) {
+        self.inner().iter_dependencies(f)
+    }
+
+    #[inline]
+    fn notify_fs_event(&mut self, event: crate::vfs::notify::FilesystemEvent) {
+        self.inner_mut().notify_fs_event(event)
     }
 }
 
