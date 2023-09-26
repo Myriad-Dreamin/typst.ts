@@ -1,12 +1,8 @@
 use std::{num::NonZeroUsize, path::PathBuf, sync::Arc, thread::JoinHandle};
 
 use serde::Serialize;
-use tokio::{
-    sync::{mpsc, oneshot},
-    time::timeout,
-};
+use tokio::sync::{mpsc, oneshot};
 use typst::{
-    diag::FileError,
     doc::{Frame, FrameItem, Position},
     geom::Point,
     syntax::{LinkedNode, Source, Span, SyntaxKind, VirtualPath},
@@ -37,93 +33,6 @@ fn ensure_single_thread<F: std::future::Future<Output = ()> + Send + 'static>(
     })
 }
 
-pub struct StablizeDocActor {
-    inner: mpsc::UnboundedSender<TickedDocument>,
-}
-
-#[derive(Debug)]
-pub struct TickedDocument {
-    pub logical_tick: usize,
-    pub doc: Arc<TypstDocument>,
-}
-
-#[derive(Debug)]
-pub enum CompileArtifact {
-    CompileError,
-    Compiled(TickedDocument),
-    PossiblyCompiled(TickedDocument),
-}
-
-impl CompileArtifact {
-    fn is_determinstic(&self) -> bool {
-        matches!(
-            self,
-            CompileArtifact::Compiled(..) | CompileArtifact::CompileError
-        )
-    }
-
-    fn tick(&self) -> usize {
-        match self {
-            CompileArtifact::CompileError => 0,
-            CompileArtifact::Compiled(doc) => doc.logical_tick,
-            CompileArtifact::PossiblyCompiled(doc) => doc.logical_tick,
-        }
-    }
-}
-
-impl From<CompileArtifact> for Option<TickedDocument> {
-    fn from(event: CompileArtifact) -> Self {
-        match event {
-            CompileArtifact::CompileError => None,
-            CompileArtifact::Compiled(doc) => Some(doc),
-            CompileArtifact::PossiblyCompiled(doc) => Some(doc),
-        }
-    }
-}
-
-impl StablizeDocActor {
-    pub fn new(inner: mpsc::UnboundedSender<TickedDocument>) -> StablizeDocActor {
-        StablizeDocActor { inner }
-    }
-
-    pub async fn run(self, mut inbox: mpsc::UnboundedReceiver<CompileArtifact>) {
-        let to = std::time::Duration::from_millis(100);
-
-        loop {
-            let mut event = inbox.recv().await;
-            log::trace!(
-                "StablizeDocActor: event incoming {:?}",
-                event.as_ref().map(|t| (t.is_determinstic(), t.tick()))
-            );
-            while !event
-                .as_ref()
-                .map(CompileArtifact::is_determinstic)
-                .unwrap_or(true)
-            {
-                let more_event = timeout(to, inbox.recv()).await;
-                match more_event {
-                    Ok(e) => {
-                        let t = e.as_ref().map(|t| (t.is_determinstic(), t.tick()));
-                        log::trace!("StablizeDocActor: more_event incoming {:?}", t);
-                        event = e;
-                    }
-                    Err(..) => {
-                        break;
-                    }
-                }
-            }
-
-            if let Some(event) = event {
-                if let Some(req) = event.into() {
-                    self.inner.send(req).unwrap();
-                }
-            } else {
-                break;
-            }
-        }
-    }
-}
-
 pub enum MemoryEvent {
     Sync(FileChangeSet),
     Update(FileChangeSet),
@@ -134,15 +43,12 @@ enum CompilerInterrupt<Ctx> {
     Fs(Option<FilesystemEvent>),
     /// Interrupted by memory file changes.
     Memory(MemoryEvent),
-    /// Interrupted by unstable document timer.
-    Tick(TickedDocument),
     /// Interrupted by task.
     Task(BorrowTask<Ctx>),
 }
 
 enum CompilerResponse {
     Notify(NotifyMessage),
-    Stablize(CompileArtifact),
 }
 
 type BorrowTask<Ctx> = Box<dyn FnOnce(&mut Ctx) + Send + 'static>;
@@ -152,7 +58,6 @@ pub struct CompileActor<C: Compiler> {
     pub root: PathBuf,
     pub enable_watch: bool,
 
-    logical_tick: usize,
     latest_doc: Option<Arc<TypstDocument>>,
 
     steal_send: mpsc::UnboundedSender<BorrowTask<Self>>,
@@ -179,7 +84,6 @@ where
             root,
             enable_watch: false,
 
-            logical_tick: 0,
             latest_doc: None,
 
             steal_send,
@@ -190,29 +94,12 @@ where
         }
     }
 
-    fn compile(&mut self, has_undeterminted_state: bool, send: impl Fn(CompilerResponse)) {
+    fn compile(&mut self, send: impl Fn(CompilerResponse)) {
         use CompilerResponse::*;
 
         // compile
-        self.logical_tick += 1;
-        let doc = self
-            .compiler
-            .with_stage_diag::<true, _>("compiling", |driver| driver.pure_compile());
-        if let Some(doc) = doc {
-            let doc = Arc::new(doc);
-            self.latest_doc = Some(doc.clone());
-            let doc = TickedDocument {
-                logical_tick: self.logical_tick,
-                doc,
-            };
-            if has_undeterminted_state {
-                send(Stablize(CompileArtifact::PossiblyCompiled(doc)));
-            } else {
-                send(Stablize(CompileArtifact::Compiled(doc)));
-            }
-        } else if !has_undeterminted_state {
-            send(Stablize(CompileArtifact::CompileError));
-        }
+        self.compiler
+            .with_stage_diag::<true, _>("compiling", |driver| driver.compile());
 
         comemo::evict(30);
 
@@ -226,38 +113,13 @@ where
     fn process(&mut self, event: CompilerInterrupt<Self>, send: impl Fn(CompilerResponse)) {
         match event {
             CompilerInterrupt::Fs(event) => {
-                log::info!(
-                    "CompileActor: fs event incoming {} {:?}",
-                    self.logical_tick + 1,
-                    event
-                );
-                let mut has_undeterminted_state = false;
+                log::info!("CompileActor: fs event incoming {:?}", event);
 
-                // apply system change
                 if let Some(event) = event {
-                    match &event {
-                        FilesystemEvent::Update(event) => {
-                            for (_, contents) in &event.insert {
-                                // peek state
-                                has_undeterminted_state = has_undeterminted_state
-                                    || match contents.as_ref() {
-                                        Ok(contents) => contents.1.is_empty(),
-                                        Err(err) => {
-                                            matches!(
-                                                err,
-                                                FileError::NotFound(..)
-                                                    | FileError::Other(..)
-                                                    | FileError::InvalidUtf8
-                                            )
-                                        }
-                                    };
-                            }
-                        }
-                    }
-
                     self.compiler.notify_fs_event(event);
-                    self.compile(has_undeterminted_state, send);
                 }
+
+                self.compile(send);
             }
             CompilerInterrupt::Memory(event) => {
                 log::info!("CompileActor: memory event incoming");
@@ -276,21 +138,7 @@ where
                     }
                 }
 
-                self.compile(/* has_undeterminted_state */ false, send);
-            }
-            CompilerInterrupt::Tick(doc) => {
-                log::info!(
-                    "CompileActor: account unstable document doc:{}, self:{}",
-                    doc.logical_tick,
-                    self.logical_tick,
-                );
-                // match driver.export(doc) {
-                //     Ok(()) => {
-                //     },
-                //     Err
-                // };
-                self.compiler
-                    .with_stage_diag::<true, _>("exporting", |driver| driver.export(doc.doc));
+                self.compile(send);
             }
             CompilerInterrupt::Task(task) => task(self),
         }
@@ -304,20 +152,14 @@ where
         }
 
         let (dep_tx, dep_rx) = tokio::sync::mpsc::unbounded_channel();
-        let (st_tx, mut st_rx) = tokio::sync::mpsc::unbounded_channel();
         let (fs_tx, mut fs_rx) = tokio::sync::mpsc::unbounded_channel();
-        let (tick_tx, tick_rx) = tokio::sync::mpsc::unbounded_channel();
 
         tokio::spawn(super::watch_deps(dep_rx, move |event| {
             fs_tx.send(event).unwrap();
         }));
 
-        let actor = StablizeDocActor::new(st_tx);
-        tokio::spawn(actor.run(tick_rx));
-
         let compiler_ack = move |res: CompilerResponse| match res {
             CompilerResponse::Notify(msg) => dep_tx.send(msg).unwrap(),
-            CompilerResponse::Stablize(msg) => tick_tx.send(msg).unwrap(),
         };
 
         let compile_thread = ensure_single_thread("typst-compiler", async move {
@@ -325,7 +167,6 @@ where
             while let Some(event) = tokio::select! {
                 Some(it) = fs_rx.recv() => Some(CompilerInterrupt::Fs(it)),
                 Some(it) = self.memory_recv.recv() => Some(CompilerInterrupt::Memory(it)),
-                Some(it) = st_rx.recv() => Some(CompilerInterrupt::Tick(it)),
                 Some(it) = self.steal_recv.recv() => Some(CompilerInterrupt::Task(it)),
             } {
                 self.process(event, &compiler_ack);
