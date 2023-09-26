@@ -1,4 +1,4 @@
-//! An implementation of `loader::Handle`, based on `walkdir` and `notify`.
+//! An implementation of `watch_deps` using `notify` crate.
 //!
 //! The file watching bits here are untested and quite probably buggy. For this
 //! reason, by default we don't watch files and rely on editor's file watching
@@ -9,57 +9,51 @@
 
 use std::{collections::HashMap, fs, path::PathBuf};
 
-// use crossbeam_channel::{never, select, unbounded, Receiver, Sender};
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::mpsc;
+use typst::diag::{FileError, FileResult};
 
-use typst::diag::FileResult;
 use typst_ts_core::Bytes;
 
-use crate::{
-    time::SystemTime,
-    vfs::{
-        notify::{FileChangeSet, FilesystemEvent, NotifyFile, NotifyMessage},
-        system::SystemAccessModel,
-        AccessModel,
-    },
+use crate::vfs::{
+    notify::{FileChangeSet, FilesystemEvent, NotifyFile, NotifyMessage},
+    system::SystemAccessModel,
+    AccessModel,
 };
 
+type WatcherPair = (RecommendedWatcher, mpsc::UnboundedReceiver<NotifyEvent>);
 type NotifyEvent = notify::Result<notify::Event>;
 type FileEntry = (/* key */ PathBuf, /* value */ NotifyFile);
+type NotifyFilePair = FileResult<(instant::SystemTime, Bytes)>;
+
+#[derive(Debug)]
+enum WatchState {
+    Fresh,
+    EmptyOrRemoval {
+        recheck_at: usize,
+        payload: NotifyFilePair,
+    },
+}
+
+impl Default for WatchState {
+    fn default() -> Self {
+        Self::Fresh
+    }
+}
 
 struct WatchedEntry {
     // todo: generalize lifetime
     lifetime: usize,
+    state: WatchState,
     candidate_paths: Vec<PathBuf>,
-    prev: Option<FileResult<(SystemTime, Bytes)>>,
+    prev: Option<NotifyFilePair>,
 }
 
-impl WatchedEntry {
-    fn same_prev(&self, content: &mut FileResult<(SystemTime, Bytes)>) -> bool {
-        match (&self.prev, content) {
-            (Some(Err(..)), Err(..)) => {
-                // Both are errors, so they are the same.
-                true
-            }
-            (Some(Ok((pt, prev))), Ok((nt, content))) => {
-                // Both are Ok, so compare the content.
-                if prev == content {
-                    return true;
-                }
-
-                if nt == pt {
-                    *nt = pt.checked_add(std::time::Duration::from_micros(1)).unwrap();
-                    log::info!(
-                        "same content but mtime is different...: {:?}",
-                        self.candidate_paths
-                    );
-                }
-                false
-            }
-            _ => false,
-        }
-    }
+#[derive(Debug)]
+struct UndeterminedNotifyEvent {
+    at_realtime: instant::Instant,
+    at_logical_tick: usize,
+    path: PathBuf,
 }
 
 // Drop order is significant.
@@ -68,18 +62,28 @@ pub struct NotifyActor {
     lifetime: usize,
     watch: Option<()>,
     sender: mpsc::UnboundedSender<FilesystemEvent>,
+
+    undetermined_send: mpsc::UnboundedSender<UndeterminedNotifyEvent>,
+    undetermined_recv: mpsc::UnboundedReceiver<UndeterminedNotifyEvent>,
+
     // accessing_files: HashMap<PathBuf, same_file::Handle>,
     watched_entries: HashMap<same_file::Handle, WatchedEntry>,
-    watcher: Option<(RecommendedWatcher, mpsc::UnboundedReceiver<NotifyEvent>)>,
+    watcher: Option<WatcherPair>,
 }
 
 impl NotifyActor {
     fn new(sender: mpsc::UnboundedSender<FilesystemEvent>) -> NotifyActor {
+        let (undetermined_send, undetermined_recv) = mpsc::unbounded_channel();
+
         NotifyActor {
             inner: SystemAccessModel,
-            lifetime: 0,
+            lifetime: 1,
             watch: Some(()),
             sender,
+
+            undetermined_send,
+            undetermined_recv,
+
             // accessing_files: HashMap::new(),
             watched_entries: HashMap::new(),
             watcher: None,
@@ -90,21 +94,27 @@ impl NotifyActor {
         self.sender.send(msg).unwrap();
     }
 
+    async fn get_notify_event(watcher: &mut Option<WatcherPair>) -> Option<NotifyEvent> {
+        match watcher {
+            Some((_, watcher_receiver)) => watcher_receiver.recv().await,
+            None => None,
+        }
+    }
+
     async fn run(mut self, mut inbox: mpsc::UnboundedReceiver<NotifyMessage>) {
         #[derive(Debug)]
         enum ActorEvent {
             // ReCheckEmptyFile(PathBuf),
+            ReCheck(UndeterminedNotifyEvent),
             Message(NotifyMessage),
             NotifyEvent(NotifyEvent),
         }
 
         loop {
-            let event = match self.watcher.as_mut() {
-                Some((.., watcher_receiver)) => tokio::select! {
-                    Some(it) = inbox.recv() => Some(ActorEvent::Message(it)),
-                    Some(it) = watcher_receiver.recv() => Some(ActorEvent::NotifyEvent(it)),
-                },
-                None => inbox.recv().await.map(ActorEvent::Message),
+            let event = tokio::select! {
+                Some(it) = inbox.recv() => Some(ActorEvent::Message(it)),
+                Some(it) = Self::get_notify_event(&mut self.watcher) => Some(ActorEvent::NotifyEvent(it)),
+                Some(it) = self.undetermined_recv.recv() => Some(ActorEvent::ReCheck(it)),
             };
 
             let Some(event) = event else {
@@ -118,7 +128,17 @@ impl NotifyActor {
                     self.sync_dependency(paths).await;
                 }
                 ActorEvent::NotifyEvent(event) => {
-                    self.notify_event(event).await;
+                    // log::info!("notify event {event:?}");
+                    if let Some(event) = log_notify_error(event, "failed to notify") {
+                        self.notify_event(event).await;
+                    }
+                }
+                ActorEvent::ReCheck(event) => {
+                    if let Some(stablized_change) = self.recheck_notify_event(event).await {
+                        let mut changeset = FileChangeSet::default();
+                        changeset.inserts.push(stablized_change);
+                        self.send(FilesystemEvent::Update(changeset));
+                    }
                 }
             }
         }
@@ -127,7 +147,7 @@ impl NotifyActor {
     async fn sync_dependency(&mut self, paths: Vec<PathBuf>) {
         self.lifetime += 1;
 
-        let changeset = FileChangeSet::default();
+        let mut changeset = FileChangeSet::default();
 
         // Remove old watches, if any.
         self.watcher = None;
@@ -164,7 +184,6 @@ impl NotifyActor {
         }
 
         // Update watched entries.
-        let mut insert_entries = vec![];
         for path in paths.into_iter() {
             let watch = self.watch.is_some(); // paths.watch.contains(&i);
             let meta = path.metadata().unwrap();
@@ -172,8 +191,7 @@ impl NotifyActor {
             if watch {
                 // Remove old watches, if any.
                 let handle = same_file::Handle::from_path(path.clone()).unwrap();
-                let entry = self
-                    .watched_entries
+                self.watched_entries
                     .entry(handle)
                     .and_modify(|watch_entry| {
                         // watch_entry.candidate_paths.push(watch_entry.clone());
@@ -184,6 +202,7 @@ impl NotifyActor {
                     })
                     .or_insert_with(|| WatchedEntry {
                         lifetime: self.lifetime,
+                        state: WatchState::Fresh,
                         candidate_paths: vec![path.to_owned()],
                         prev: None,
                     });
@@ -196,14 +215,7 @@ impl NotifyActor {
                             "failed to watch",
                         );
 
-                        let mut watched = self
-                            .inner
-                            .content(&path)
-                            .map(|e| (meta.modified().unwrap(), e));
-                        if !entry.same_prev(&mut watched) {
-                            entry.prev = Some(watched.clone());
-                            insert_entries.push((path, watched));
-                        }
+                        changeset.may_insert(self.notify_entry_update(path.clone(), Some(meta)));
                     } else {
                         unreachable!()
                     }
@@ -213,16 +225,17 @@ impl NotifyActor {
                     .inner
                     .content(&path)
                     .map(|e| (meta.modified().unwrap(), e));
-                insert_entries.push((path, watched));
+                changeset.inserts.push((path, watched.into()));
             }
         }
 
-        let mut remove_entries = vec![];
         self.watched_entries.retain(|_, entry| {
-            if self.lifetime - entry.lifetime < 30 {
+            if self.lifetime - entry.lifetime < 500 {
                 true
             } else {
-                remove_entries.extend(std::mem::take(&mut entry.candidate_paths));
+                changeset
+                    .removes
+                    .extend(std::mem::take(&mut entry.candidate_paths));
                 false
             }
         });
@@ -232,13 +245,29 @@ impl NotifyActor {
         }
     }
 
-    fn notify_entry_update(&mut self, path: PathBuf) -> Option<FileEntry> {
-        let meta = fs::metadata(&path).ok()?;
-        // if meta.file_type().is_dir()
-        //     && self
-        //         .watched_entries
-        //         .iter()
-        //         .any(|entry| entry.contains_dir(&path))
+    async fn notify_event(&mut self, event: notify::Event) {
+        // Account file updates.
+        let mut changeset = FileChangeSet::default();
+        for path in event.paths.into_iter() {
+            changeset.may_insert(self.notify_entry_update(path.clone(), None));
+        }
+
+        // Send file updates.
+        if !changeset.is_empty() {
+            self.send(FilesystemEvent::Update(changeset));
+        }
+    }
+
+    fn notify_entry_update(
+        &mut self,
+        path: PathBuf,
+        meta: Option<std::fs::Metadata>,
+    ) -> Option<FileEntry> {
+        let meta = meta.or_else(|| fs::metadata(&path).ok())?;
+
+        // The following code in rust-analyzer is commented out
+        // if meta.file_type().is_dir() && self
+        //   .watched_entriesiter().any(|entry| entry.contains_dir(&path))
         // {
         //     self.watch(path);
         //     return None;
@@ -257,36 +286,121 @@ impl NotifyActor {
         // Find entry and continue
         let entry = self.watched_entries.get_mut(&handle)?;
 
-        // Fast path: compare content
-        let mut content = self.inner.content(&path).map(|it| (mtime, it));
+        let mut file = self.inner.content(&path).map(|it| (mtime, it));
 
-        if entry.same_prev(&mut content) {
-            return None;
-        }
-        entry.prev = Some(content.clone());
+        // Check state
+        // Fast path: compare content
+        match (&entry.prev, &mut file) {
+            (None, ..) | (Some(Err(..)), Ok(..)) => {}
+            (Some(..), Err(err)) => match &mut entry.state {
+                WatchState::Fresh => {
+                    if matches!(err, FileError::NotFound(..) | FileError::Other(..)) {
+                        entry.state = WatchState::EmptyOrRemoval {
+                            recheck_at: self.lifetime,
+                            payload: file.clone(),
+                        };
+                        entry.prev = Some(file);
+                        self.undetermined_send
+                            .send(UndeterminedNotifyEvent {
+                                at_realtime: instant::Instant::now(),
+                                at_logical_tick: self.lifetime,
+                                path: path.clone(),
+                            })
+                            .unwrap();
+                        return None;
+                    }
+                }
+
+                // Very complicated case of check error sequence, so we simplify
+                // a bit, we regard any subsequent error as the same error.
+                WatchState::EmptyOrRemoval { payload, .. } => {
+                    // update payload
+                    *payload = file;
+                    return None;
+                }
+            },
+            (Some(Ok((pt, prev))), Ok((nt, content))) => {
+                // Both are Ok, so compare the content.
+                if prev == content {
+                    return None;
+                }
+
+                match entry.state {
+                    WatchState::Fresh => {
+                        if content.is_empty() {
+                            entry.state = WatchState::EmptyOrRemoval {
+                                recheck_at: self.lifetime,
+                                payload: file.clone(),
+                            };
+                            entry.prev = Some(file);
+                            self.undetermined_send
+                                .send(UndeterminedNotifyEvent {
+                                    at_realtime: instant::Instant::now(),
+                                    at_logical_tick: self.lifetime,
+                                    path,
+                                })
+                                .unwrap();
+                            return None;
+                        }
+                    }
+
+                    // Still empty
+                    WatchState::EmptyOrRemoval { .. } if content.is_empty() => return None,
+                    WatchState::EmptyOrRemoval { .. } => {
+                        entry.state = WatchState::Fresh;
+                    }
+                }
+
+                // this should be never happen, but we still check it
+                if nt == pt {
+                    // this is necessary to invalidate our mtime-based cache
+                    *nt = pt.checked_add(std::time::Duration::from_micros(1)).unwrap();
+                    log::warn!(
+                        "same content but mtime is different...: {:?}",
+                        entry.candidate_paths
+                    );
+                };
+            }
+        };
+
+        entry.state = WatchState::Fresh;
+        entry.prev = Some(file.clone());
 
         // Slow path: trigger the compiler
-        Some((path, content.into()))
+        Some((path, file.into()))
     }
 
-    async fn notify_event(&mut self, event: NotifyEvent) {
-        // log::info!("notify event {event:?}");
-        let event = log_notify_error(event, "failed to notify");
+    async fn recheck_notify_event(&mut self, event: UndeterminedNotifyEvent) -> Option<FileEntry> {
+        let now = instant::Instant::now();
+        log::info!("recheck event {event:?} at {now:?}");
 
-        // Account file updates.
-        let file_update = event.map(|event| {
-            let paths = event.paths.into_iter();
-            let updates = paths.filter_map(|path| self.notify_entry_update(path));
+        // The aysnc scheduler is not accurate, so we need to ensure a window here
+        let reserved = now - event.at_realtime;
+        if reserved < std::time::Duration::from_millis(50) {
+            let send = self.undetermined_send.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_millis(50) - reserved).await;
+                send.send(event).unwrap();
+            });
+            return None;
+        }
 
-            updates.collect()
-        });
+        let handle = same_file::Handle::from_path(&event.path).ok()?;
 
-        // Send file updates.
-        let Some(changeset) = file_update.map(FileChangeSet::new_inserts) else {
-            return;
-        };
-        if !changeset.is_empty() {
-            self.send(FilesystemEvent::Update(changeset));
+        let entry = self.watched_entries.get_mut(&handle)?;
+        match std::mem::take(&mut entry.state) {
+            WatchState::Fresh => None,
+            WatchState::EmptyOrRemoval {
+                recheck_at,
+                payload,
+            } => {
+                if recheck_at == event.at_logical_tick {
+                    log::info!("notify event is real {event:?}, state: {:?}", payload);
+                    Some((event.path, payload.into()))
+                } else {
+                    None
+                }
+            }
         }
     }
 }

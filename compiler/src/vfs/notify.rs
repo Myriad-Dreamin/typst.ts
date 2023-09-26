@@ -61,6 +61,12 @@ impl FileChangeSet {
             removes: vec![],
         }
     }
+
+    pub fn may_insert(&mut self, v: Option<(PathBuf, NotifyFile)>) {
+        if let Some(v) = v {
+            self.inserts.push(v);
+        }
+    }
 }
 
 #[derive(Debug)]
