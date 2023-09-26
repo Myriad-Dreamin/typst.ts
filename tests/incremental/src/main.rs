@@ -1,4 +1,4 @@
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 
 use typst::doc::Document;
 use typst_ts_compiler::{
@@ -98,7 +98,6 @@ pub fn test_compiler(
             })
             .unwrap();
 
-        let doc = Arc::new(doc);
         let delta = incr_server.pack_delta(doc);
         let delta = BytesModuleStream::from_slice(&delta).checkout_owned();
         incr_client.merge_delta(delta);

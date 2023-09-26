@@ -62,12 +62,12 @@ pub trait Compiler {
     fn reset(&mut self) -> SourceResult<()>;
 
     /// Compile once from scratch.
-    fn pure_compile(&mut self) -> SourceResult<Document> {
+    fn pure_compile(&mut self) -> SourceResult<Arc<Document>> {
         self.reset()?;
 
         let mut tracer = Tracer::default();
         // compile and export document
-        typst::compile(self.world(), &mut tracer)
+        typst::compile(self.world(), &mut tracer).map(Arc::new)
     }
 
     /// With **the compilation state**, query the matches for the selector.
@@ -76,7 +76,7 @@ pub trait Compiler {
     }
 
     /// Compile once from scratch.
-    fn compile(&mut self) -> SourceResult<Document> {
+    fn compile(&mut self) -> SourceResult<Arc<Document>> {
         self.pure_compile()
     }
 
@@ -177,7 +177,7 @@ pub trait WrappedCompiler {
     }
 
     /// Hooked compile once from scratch.
-    fn wrap_compile(&mut self) -> SourceResult<Document> {
+    fn wrap_compile(&mut self) -> SourceResult<Arc<Document>> {
         self.inner_mut().compile()
     }
 
@@ -215,7 +215,7 @@ impl<T: WrappedCompiler> Compiler for T {
     }
 
     #[inline]
-    fn pure_compile(&mut self) -> SourceResult<Document> {
+    fn pure_compile(&mut self) -> SourceResult<Arc<Document>> {
         self.inner_mut().pure_compile()
     }
 
@@ -225,7 +225,7 @@ impl<T: WrappedCompiler> Compiler for T {
     }
 
     #[inline]
-    fn compile(&mut self) -> SourceResult<Document> {
+    fn compile(&mut self) -> SourceResult<Arc<Document>> {
         self.wrap_compile()
     }
 

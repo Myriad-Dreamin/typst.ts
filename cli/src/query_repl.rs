@@ -10,6 +10,7 @@ use rustyline::hint::{Hinter, HistoryHinter};
 use rustyline::validate::MatchingBracketValidator;
 use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, KeyEvent};
 use rustyline::{Helper, Validator};
+use typst_ts_core::TakeAs;
 
 use crate::query::serialize;
 use crate::CompileOnceArgs;
@@ -123,7 +124,7 @@ impl Completer for ReplContext {
         driver.world.reset();
         let typst_completions = driver
             .with_shadow_file_by_id(main_id, dyn_content.as_bytes().into(), |driver| {
-                let frames = driver.compile().map(|d| d.pages);
+                let frames = driver.compile().map(|d| d.take().pages);
                 let frames = frames.as_ref().map(|v| v.as_slice()).unwrap_or_default();
                 let source = driver.world.main();
                 Ok(autocomplete(&driver.world, frames, &source, cursor, true))
