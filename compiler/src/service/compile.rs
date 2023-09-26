@@ -110,7 +110,7 @@ where
         // tx
     }
 
-    fn process(&mut self, event: CompilerInterrupt<Self>, send: impl Fn(CompilerResponse)) {
+    fn process(&mut self, event: CompilerInterrupt<Self>) -> bool {
         match event {
             CompilerInterrupt::Fs(event) => {
                 log::info!("CompileActor: fs event incoming {:?}", event);
@@ -119,7 +119,7 @@ where
                     self.compiler.notify_fs_event(event);
                 }
 
-                self.compile(send);
+                true
             }
             CompilerInterrupt::Memory(event) => {
                 log::info!("CompileActor: memory event incoming");
@@ -138,9 +138,12 @@ where
                     }
                 }
 
-                self.compile(send);
+                true
             }
-            CompilerInterrupt::Task(task) => task(self),
+            CompilerInterrupt::Task(task) => {
+                task(self);
+                false
+            }
         }
     }
 
@@ -169,7 +172,26 @@ where
                 Some(it) = self.memory_recv.recv() => Some(CompilerInterrupt::Memory(it)),
                 Some(it) = self.steal_recv.recv() => Some(CompilerInterrupt::Task(it)),
             } {
-                self.process(event, &compiler_ack);
+                let mut need_recompile = false;
+                need_recompile = self.process(event) || need_recompile;
+                while let Some(event) = fs_rx
+                    .try_recv()
+                    .ok()
+                    .map(CompilerInterrupt::Fs)
+                    .or_else(|| {
+                        self.memory_recv
+                            .try_recv()
+                            .ok()
+                            .map(CompilerInterrupt::Memory)
+                    })
+                    .or_else(|| self.steal_recv.try_recv().ok().map(CompilerInterrupt::Task))
+                {
+                    need_recompile = self.process(event) || need_recompile;
+                }
+
+                if need_recompile {
+                    self.compile(&compiler_ack);
+                }
             }
         })
         .unwrap();
