@@ -19,13 +19,14 @@ use typst_ts_core::Bytes;
 use crate::{
     time::SystemTime,
     vfs::{
-        notify::{FileChangeSet, FilesystemEvent, NotifyMessage},
+        notify::{FileChangeSet, FilesystemEvent, NotifyFile, NotifyMessage},
         system::SystemAccessModel,
         AccessModel,
     },
 };
 
 type NotifyEvent = notify::Result<notify::Event>;
+type FileEntry = (/* key */ PathBuf, /* value */ NotifyFile);
 
 struct WatchedEntry {
     // todo: generalize lifetime
@@ -61,13 +62,6 @@ impl WatchedEntry {
     }
 }
 
-#[derive(Debug)]
-enum WatchEvent {
-    // ReCheckEmptyFile(PathBuf),
-    Message(NotifyMessage),
-    NotifyEvent(NotifyEvent),
-}
-
 // Drop order is significant.
 pub struct NotifyActor {
     inner: SystemAccessModel,
@@ -96,34 +90,35 @@ impl NotifyActor {
         self.sender.send(msg).unwrap();
     }
 
-    async fn next_event(
-        &mut self,
-        receiver: &mut mpsc::UnboundedReceiver<NotifyMessage>,
-    ) -> Option<WatchEvent> {
-        let watcher_receiver = self.watcher.as_mut().map(|(_, receiver)| receiver);
-        // watcher_receiver.unwrap_or(&never())
-        match watcher_receiver {
-            Some(watcher_receiver) => tokio::select! {
-                Some(it) = receiver.recv() => Some(WatchEvent::Message(it)),
-                Some(it) = watcher_receiver.recv() => Some(WatchEvent::NotifyEvent(it)),
-            },
-            None => receiver.recv().await.map(WatchEvent::Message),
-        }
-    }
-
     async fn run(mut self, mut inbox: mpsc::UnboundedReceiver<NotifyMessage>) {
-        while let Some(event) = self.next_event(&mut inbox).await {
-            // log::info!("vfs-notify event {event:?}");
-            match event {
-                WatchEvent::Message(msg) => match msg {
-                    NotifyMessage::SyncDependency(paths) => {
-                        self.sync_dependency(paths).await;
-                    }
+        #[derive(Debug)]
+        enum ActorEvent {
+            // ReCheckEmptyFile(PathBuf),
+            Message(NotifyMessage),
+            NotifyEvent(NotifyEvent),
+        }
+
+        loop {
+            let event = match self.watcher.as_mut() {
+                Some((.., watcher_receiver)) => tokio::select! {
+                    Some(it) = inbox.recv() => Some(ActorEvent::Message(it)),
+                    Some(it) = watcher_receiver.recv() => Some(ActorEvent::NotifyEvent(it)),
                 },
-                WatchEvent::NotifyEvent(event) => {
-                    if let Some(event) = log_notify_error(event) {
-                        self.notify_event(event).await;
-                    }
+                None => inbox.recv().await.map(ActorEvent::Message),
+            };
+
+            let Some(event) = event else {
+                return;
+            };
+
+            // log::info!("vfs-notify event {event:?}");
+
+            match event {
+                ActorEvent::Message(NotifyMessage::SyncDependency(paths)) => {
+                    self.sync_dependency(paths).await;
+                }
+                ActorEvent::NotifyEvent(event) => {
+                    self.notify_event(event).await;
                 }
             }
         }
@@ -131,6 +126,10 @@ impl NotifyActor {
 
     async fn sync_dependency(&mut self, paths: Vec<PathBuf>) {
         self.lifetime += 1;
+
+        let changeset = FileChangeSet::default();
+
+        // Remove old watches, if any.
         self.watcher = None;
         if self.watch.is_some() {
             match &mut self.watcher {
@@ -139,38 +138,39 @@ impl NotifyActor {
                     for path in entries.flat_map(|entry| &entry.candidate_paths) {
                         // Remove the watch if it still exists.
                         if let Err(err) = old_watcher.unwatch(path) {
-                            match err {
-                                notify::Error {
-                                    kind: notify::ErrorKind::WatchNotFound,
-                                    ..
-                                } => {}
-                                err => panic!("failed to watch {err}"),
+                            if !matches!(err.kind, notify::ErrorKind::WatchNotFound) {
+                                log::warn!("failed to unwatch: {err}");
                             }
                         }
                     }
                 }
                 None => {
                     let (watcher_sender, watcher_receiver) = mpsc::unbounded_channel();
-                    let watcher = log_notify_error(RecommendedWatcher::new(
-                        move |event| {
-                            let res = watcher_sender.send(event);
-                            if let Err(err) = res {
-                                log::warn!("error to send event: {err}");
-                            }
-                        },
-                        Config::default(),
-                    ));
+                    let watcher = log_notify_error(
+                        RecommendedWatcher::new(
+                            move |event| {
+                                let res = watcher_sender.send(event);
+                                if let Err(err) = res {
+                                    log::warn!("error to send event: {err}");
+                                }
+                            },
+                            Config::default(),
+                        ),
+                        "failed to create watcher",
+                    );
                     self.watcher = watcher.map(|it| (it, watcher_receiver));
                 }
             }
         }
 
+        // Update watched entries.
         let mut insert_entries = vec![];
         for path in paths.into_iter() {
             let watch = self.watch.is_some(); // paths.watch.contains(&i);
             let meta = path.metadata().unwrap();
 
             if watch {
+                // Remove old watches, if any.
                 let handle = same_file::Handle::from_path(path.clone()).unwrap();
                 let entry = self
                     .watched_entries
@@ -188,9 +188,13 @@ impl NotifyActor {
                         prev: None,
                     });
 
+                // Watch the file again if it's not a directory.
                 if !meta.is_dir() {
                     if let Some((watcher, _)) = &mut self.watcher {
-                        log_notify_error(watcher.watch(path.as_ref(), RecursiveMode::NonRecursive));
+                        log_notify_error(
+                            watcher.watch(path.as_ref(), RecursiveMode::NonRecursive),
+                            "failed to watch",
+                        );
 
                         let mut watched = self
                             .inner
@@ -223,68 +227,74 @@ impl NotifyActor {
             }
         });
 
-        if !insert_entries.is_empty() || !remove_entries.is_empty() {
-            self.send(FilesystemEvent::Update(FileChangeSet {
-                insert: insert_entries,
-                remove: remove_entries,
-            }));
+        if !changeset.is_empty() {
+            self.send(FilesystemEvent::Update(changeset));
         }
     }
 
-    async fn notify_event(&mut self, event: notify::Event) {
-        log::info!("notify event {event:?}");
-        let files = event
-            .paths
-            .into_iter()
-            .filter_map(|path| {
-                let meta = fs::metadata(&path).ok()?;
-                // if meta.file_type().is_dir()
-                //     && self
-                //         .watched_entries
-                //         .iter()
-                //         .any(|entry| entry.contains_dir(&path))
-                // {
-                //     self.watch(path);
-                //     return None;
-                // }
+    fn notify_entry_update(&mut self, path: PathBuf) -> Option<FileEntry> {
+        let meta = fs::metadata(&path).ok()?;
+        // if meta.file_type().is_dir()
+        //     && self
+        //         .watched_entries
+        //         .iter()
+        //         .any(|entry| entry.contains_dir(&path))
+        // {
+        //     self.watch(path);
+        //     return None;
+        // }
 
-                if !meta.file_type().is_file() {
-                    return None;
-                }
+        if !meta.file_type().is_file() {
+            return None;
+        }
 
-                // Check meta, path, and content
+        // Check meta, path, and content
 
-                // Get meta, real path and ignore errors
-                let mtime = meta.modified().ok()?;
-                let handle = same_file::Handle::from_path(&path).ok()?;
+        // Get meta, real path and ignore errors
+        let mtime = meta.modified().ok()?;
+        let handle = same_file::Handle::from_path(&path).ok()?;
 
-                // Find entry and continue
-                let entry = self.watched_entries.get_mut(&handle)?;
+        // Find entry and continue
+        let entry = self.watched_entries.get_mut(&handle)?;
 
-                // Fast path: compare content
-                let mut content = self.inner.content(&path).map(|it| (mtime, it));
+        // Fast path: compare content
+        let mut content = self.inner.content(&path).map(|it| (mtime, it));
 
-                if entry.same_prev(&mut content) {
-                    return None;
-                }
-                entry.prev = Some(content.clone());
+        if entry.same_prev(&mut content) {
+            return None;
+        }
+        entry.prev = Some(content.clone());
 
-                // Slow path: trigger the compiler
-                Some((path, content))
-            })
-            .collect::<Vec<_>>();
+        // Slow path: trigger the compiler
+        Some((path, content.into()))
+    }
 
-        if !files.is_empty() {
-            self.send(FilesystemEvent::Update(FileChangeSet {
-                insert: files,
-                remove: vec![],
-            }));
+    async fn notify_event(&mut self, event: NotifyEvent) {
+        // log::info!("notify event {event:?}");
+        let event = log_notify_error(event, "failed to notify");
+
+        // Account file updates.
+        let file_update = event.map(|event| {
+            let paths = event.paths.into_iter();
+            let updates = paths.filter_map(|path| self.notify_entry_update(path));
+
+            updates.collect()
+        });
+
+        // Send file updates.
+        let Some(changeset) = file_update.map(FileChangeSet::new_inserts) else {
+            return;
+        };
+        if !changeset.is_empty() {
+            self.send(FilesystemEvent::Update(changeset));
         }
     }
 }
 
-fn log_notify_error<T>(res: notify::Result<T>) -> Option<T> {
-    res.map_err(|err| log::warn!("notify error: {}", err)).ok()
+#[inline]
+fn log_notify_error<T>(res: notify::Result<T>, reason: &'static str) -> Option<T> {
+    res.map_err(|err| log::warn!("{reason}: notify error: {}", err))
+        .ok()
 }
 
 pub async fn watch_deps(

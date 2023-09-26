@@ -129,11 +129,11 @@ where
                 }
                 match event {
                     MemoryEvent::Update(event) | MemoryEvent::Sync(event) => {
-                        for removes in event.remove {
+                        for removes in event.removes {
                             let _ = self.compiler.unmap_shadow(&removes);
                         }
-                        for (p, t) in event.insert {
-                            let _ = self.compiler.map_shadow(&p, t.unwrap().1);
+                        for (p, t) in event.inserts {
+                            let _ = self.compiler.map_shadow(&p, t.content().cloned().unwrap());
                         }
                     }
                 }
