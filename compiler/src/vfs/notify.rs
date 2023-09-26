@@ -67,6 +67,12 @@ impl FileChangeSet {
             self.inserts.push(v);
         }
     }
+
+    pub fn may_extend(&mut self, v: Option<impl Iterator<Item = (PathBuf, NotifyFile)>>) {
+        if let Some(v) = v {
+            self.inserts.extend(v);
+        }
+    }
 }
 
 #[derive(Debug)]
