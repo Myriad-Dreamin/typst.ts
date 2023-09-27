@@ -30,30 +30,36 @@ export class FetchPackageRegistry implements PackageRegistry {
       return undefined;
     }
 
+    /// Check cache
     const path = this.resolvePath(spec);
     if (this.cache.has(path)) {
       return this.cache.get(path)!();
     }
 
+    /// Fetch data
     const data = this.pullPackageData(spec);
     if (!data) {
       return undefined;
     }
 
+    /// Extract package bundle to the underlying access model `this.am`
     const previewDir = `/@memory/fetch/packages/preview/${spec.namespace}/${spec.name}/${spec.version}`;
-
     const entries: [string, Uint8Array, Date][] = [];
     context.untar(data, (path: string, data: Uint8Array, mtime: number) => {
       entries.push([previewDir + '/' + path, data, new Date(mtime)]);
     });
-
     const cacheClosure = () => {
       for (const [path, data, mtime] of entries) {
         this.am.insertFile(path, data, mtime);
       }
+
+      /// Return the resolved directory to the package
+      /// It is then used to access the package data by the access model `this.am`
       return previewDir;
     };
+    this.cache.set(path, cacheClosure);
 
+    /// Trigger write out
     return cacheClosure();
   }
 }
