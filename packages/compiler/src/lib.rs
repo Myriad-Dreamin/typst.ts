@@ -6,6 +6,7 @@ use typst::font::Font;
 pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
     font::web::BrowserFontSearcher,
+    package::browser::ProxyRegistry,
     service::{CompileDriverImpl, Compiler},
     vfs::browser::ProxyAccessModel,
     world::WorldSnapshot,
@@ -30,12 +31,14 @@ pub struct TypstCompiler {
 impl TypstCompiler {
     pub async fn new(
         access_model: ProxyAccessModel,
+        registry: ProxyRegistry,
         searcher: BrowserFontSearcher,
     ) -> Result<Self, JsValue> {
         Ok(Self {
             compiler: CompileDriverImpl::new(TypstBrowserWorld::new(
                 std::path::Path::new("/").to_owned(),
                 access_model,
+                registry,
                 searcher.into(),
             )),
         })

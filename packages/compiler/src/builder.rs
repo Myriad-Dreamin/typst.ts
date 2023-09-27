@@ -1,7 +1,9 @@
 use js_sys::Uint8Array;
 use wasm_bindgen::prelude::*;
 
-use typst_ts_compiler::{font::web::BrowserFontSearcher, vfs::browser::ProxyAccessModel};
+use typst_ts_compiler::{
+    font::web::BrowserFontSearcher, package::browser::ProxyRegistry, vfs::browser::ProxyAccessModel,
+};
 use typst_ts_core::{error::prelude::*, Bytes};
 
 use crate::TypstCompiler;
@@ -9,6 +11,7 @@ use crate::TypstCompiler;
 #[wasm_bindgen]
 pub struct TypstCompilerBuilder {
     access_model: Option<ProxyAccessModel>,
+    package_registry: Option<ProxyRegistry>,
     searcher: BrowserFontSearcher,
 }
 
@@ -19,6 +22,7 @@ impl TypstCompilerBuilder {
         console_error_panic_hook::set_once();
         let mut res = Self {
             access_model: None,
+            package_registry: None,
             searcher: BrowserFontSearcher::new(),
         };
         res.set_dummy_access_model()?;
@@ -31,7 +35,15 @@ impl TypstCompilerBuilder {
             mtime_fn: js_sys::Function::new_no_args("return new Date(0)"),
             is_file_fn: js_sys::Function::new_no_args("return true"),
             real_path_fn: js_sys::Function::new_with_args("path", "return path"),
-            read_all_fn: js_sys::Function::new_no_args("throw new Error('Dummy AccessModel')"),
+            read_all_fn: js_sys::Function::new_no_args(
+                "throw new Error('Dummy AccessModel, please initialize compiler with withAccessModel()')",
+            ),
+        });
+        self.package_registry = Some(ProxyRegistry {
+            context: wasm_bindgen::JsValue::UNDEFINED,
+            real_resolve_fn: js_sys::Function::new_no_args(
+                "throw new Error('Dummy Registry, please initialize compiler with withPackageRegistry()')",
+            ),
         });
         Ok(())
     }
@@ -50,6 +62,19 @@ impl TypstCompilerBuilder {
             is_file_fn,
             real_path_fn,
             read_all_fn,
+        });
+
+        Ok(())
+    }
+
+    pub async fn set_package_registry(
+        &mut self,
+        context: JsValue,
+        real_resolve_fn: js_sys::Function,
+    ) -> ZResult<()> {
+        self.package_registry = Some(ProxyRegistry {
+            context,
+            real_resolve_fn,
         });
 
         Ok(())
@@ -74,7 +99,10 @@ impl TypstCompilerBuilder {
         let access_model = self
             .access_model
             .ok_or_else(|| "TypstCompilerBuilder::build: access_model is not set".to_string())?;
-        TypstCompiler::new(access_model, self.searcher).await
+        let registry = self.package_registry.ok_or_else(|| {
+            "TypstCompilerBuilder::build: package_registry is not set".to_string()
+        })?;
+        TypstCompiler::new(access_model, registry, self.searcher).await
     }
 }
 
