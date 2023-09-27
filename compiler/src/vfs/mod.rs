@@ -32,13 +32,7 @@ pub(crate) mod writable;
 pub use writable::Vfs as MemVfs;
 pub use writable::{ChangeKind, ChangedFile};
 
-use std::{
-    collections::HashMap,
-    ffi::OsStr,
-    hash::Hash,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{collections::HashMap, ffi::OsStr, hash::Hash, path::Path, sync::Arc};
 
 use append_only_vec::AppendOnlyVec;
 use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
@@ -47,7 +41,7 @@ use typst::{
     syntax::Source,
 };
 
-use typst_ts_core::{path::PathClean, Bytes, QueryRef, TypstFileId};
+use typst_ts_core::{path::PathClean, Bytes, ImmutPath, QueryRef, TypstFileId};
 
 use crate::{parser::reparse, time::SystemTime};
 
@@ -85,7 +79,7 @@ type FileQuery<T> = QueryRef<T, FileError>;
 /// Holds canonical data for all paths pointing to the same entity.
 pub struct PathSlot {
     idx: FileId,
-    sampled_path: once_cell::sync::OnceCell<PathBuf>,
+    sampled_path: once_cell::sync::OnceCell<ImmutPath>,
     mtime: FileQuery<SystemTime>,
     source: FileQuery<Source>,
     buffer: FileQuery<Bytes>,
@@ -182,7 +176,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// Get all the files in the VFS.
-    pub fn iter_dependencies(&self) -> impl Iterator<Item = (&Path, SystemTime)> {
+    pub fn iter_dependencies(&self) -> impl Iterator<Item = (&ImmutPath, SystemTime)> {
         self.slots.iter().map(|slot| {
             let dep_path = slot.sampled_path.get().unwrap();
             let dep_mtime = slot
@@ -190,12 +184,15 @@ impl<M: AccessModel + Sized> Vfs<M> {
                 .compute(|| Err(other_reason("vfs: uninitialized")))
                 .unwrap();
 
-            (dep_path.as_path(), *dep_mtime)
+            (dep_path, *dep_mtime)
         })
     }
 
     /// Get all the files in the VFS.
-    pub fn iter_dependencies_dyn<'a>(&'a self, f: &mut dyn FnMut(&'a Path, instant::SystemTime)) {
+    pub fn iter_dependencies_dyn<'a>(
+        &'a self,
+        f: &mut dyn FnMut(&'a ImmutPath, instant::SystemTime),
+    ) {
         for slot in self.slots.iter() {
             let dep_path = slot.sampled_path.get().unwrap();
             let dep_mtime = slot
@@ -203,7 +200,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
                 .compute(|| Err(other_reason("vfs: uninitialized")))
                 .unwrap();
 
-            f(dep_path.as_path(), *dep_mtime)
+            f(dep_path, *dep_mtime)
         }
     }
 
@@ -245,7 +242,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
         }
 
         let slot = &self.slots[idx];
-        slot.sampled_path.get_or_init(|| origin_path.to_path_buf());
+        slot.sampled_path.get_or_init(|| origin_path.into());
         Ok(&self.slots[idx])
     }
 

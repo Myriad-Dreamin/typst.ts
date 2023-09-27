@@ -5,7 +5,7 @@ use std::{
 
 use crate::{NotifyApi, ShadowApi};
 use typst::{diag::SourceResult, syntax::VirtualPath, World};
-use typst_ts_core::{path::PathClean, Bytes, TypstFileId};
+use typst_ts_core::{path::PathClean, Bytes, ImmutPath, TypstFileId};
 
 use super::{Compiler, WorkspaceProvider};
 
@@ -97,7 +97,7 @@ impl<W: World + WorkspaceProvider + NotifyApi> Compiler for CompileDriverImpl<W>
         self._relevant(event).unwrap_or(true)
     }
 
-    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a Path, instant::SystemTime)) {
+    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, instant::SystemTime)) {
         self.world.iter_dependencies(f)
     }
 

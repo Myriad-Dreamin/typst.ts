@@ -18,7 +18,7 @@ use crate::{
     StaticHash128,
 };
 
-pub type ImmutStr = Arc<str>;
+pub use crate::ImmutStr;
 
 pub use super::geom::*;
 
@@ -108,7 +108,8 @@ pub struct FontRef {
 /// Reference a glyph item in a more friendly format to compress and store
 /// information. The glyphs are locally stored in the svg module.
 /// With a glyph reference, we can get both the font metric and the glyph data.
-/// The `font_hash` is to let it safe to be cached, please see [`FontItem`] for more details.
+/// The `font_hash` is to let it safe to be cached, please see [`FontItem`] for
+/// more details.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]

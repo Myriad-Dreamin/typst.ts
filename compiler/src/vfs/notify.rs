@@ -1,10 +1,7 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, path::Path};
 
 use typst::diag::FileResult;
-use typst_ts_core::Bytes;
+use typst_ts_core::{Bytes, ImmutPath};
 
 use crate::vfs::AccessModel;
 
@@ -51,9 +48,9 @@ impl From<FileResult<(instant::SystemTime, Bytes)>> for NotifyFile {
 #[derive(Debug, Clone, Default)]
 pub struct FileChangeSet {
     /// Files to remove
-    pub removes: Vec<PathBuf>,
+    pub removes: Vec<ImmutPath>,
     /// Files to insert or update
-    pub inserts: Vec<(PathBuf, NotifyFile)>,
+    pub inserts: Vec<(ImmutPath, NotifyFile)>,
 }
 
 impl FileChangeSet {
@@ -63,7 +60,7 @@ impl FileChangeSet {
     }
 
     /// Create a new changeset with removing files
-    pub fn new_removes(removes: Vec<PathBuf>) -> Self {
+    pub fn new_removes(removes: Vec<ImmutPath>) -> Self {
         Self {
             removes,
             inserts: vec![],
@@ -71,7 +68,7 @@ impl FileChangeSet {
     }
 
     /// Create a new changeset with inserting files
-    pub fn new_inserts(inserts: Vec<(PathBuf, NotifyFile)>) -> Self {
+    pub fn new_inserts(inserts: Vec<(ImmutPath, NotifyFile)>) -> Self {
         Self {
             removes: vec![],
             inserts,
@@ -79,14 +76,14 @@ impl FileChangeSet {
     }
 
     /// Utility function to insert a possible file to insert or update
-    pub fn may_insert(&mut self, v: Option<(PathBuf, NotifyFile)>) {
+    pub fn may_insert(&mut self, v: Option<(ImmutPath, NotifyFile)>) {
         if let Some(v) = v {
             self.inserts.push(v);
         }
     }
 
     /// Utility function to insert multiple possible files to insert or update
-    pub fn may_extend(&mut self, v: Option<impl Iterator<Item = (PathBuf, NotifyFile)>>) {
+    pub fn may_extend(&mut self, v: Option<impl Iterator<Item = (ImmutPath, NotifyFile)>>) {
         if let Some(v) = v {
             self.inserts.extend(v);
         }
@@ -119,7 +116,7 @@ pub enum MemoryEvent {
 #[derive(Debug)]
 pub struct UpstreamUpdateEvent {
     /// Associated files that the event causes to invalidate
-    pub invalidates: Vec<PathBuf>,
+    pub invalidates: Vec<ImmutPath>,
     /// Opaque data that is passed to the file watcher
     pub opaque: Box<dyn std::any::Any + Send>,
 }
@@ -141,7 +138,7 @@ pub enum FilesystemEvent {
 #[derive(Debug)]
 pub enum NotifyMessage {
     /// override all dependencies
-    SyncDependency(Vec<PathBuf>),
+    SyncDependency(Vec<ImmutPath>),
     /// upstream invalidation This is very important to make some atomic changes
     ///
     /// Example:
@@ -170,7 +167,7 @@ pub enum NotifyMessage {
 /// Notify shadowing access model, which the typical underlying access model is
 /// [`crate::vfs::system::SystemAccessModel`]
 pub struct NotifyAccessModel<M: AccessModel> {
-    files: HashMap<PathBuf, NotifyFile>,
+    files: HashMap<ImmutPath, NotifyFile>,
     pub inner: M,
 }
 

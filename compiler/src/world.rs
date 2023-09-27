@@ -17,7 +17,7 @@ use typst::{
 
 use typst_ts_core::{
     font::{FontProfile, FontResolverImpl},
-    Bytes, FontResolver, TypstFileId as FileId,
+    Bytes, FontResolver, ImmutPath, TypstFileId as FileId,
 };
 
 use crate::{
@@ -190,7 +190,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     pub fn get_dependencies(&self) -> DependencyTree {
         let t = self.vfs.iter_dependencies();
         let vfs_dependencies = t.map(|(path, mtime)| DependentFileInfo {
-            path: (*path).to_owned(),
+            path: path.as_ref().to_owned(),
             mtime: mtime
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .unwrap()
@@ -251,7 +251,7 @@ impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
 
 impl<F: CompilerFeat> NotifyApi for CompilerWorld<F> {
     #[inline]
-    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a Path, instant::SystemTime)) {
+    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, instant::SystemTime)) {
         self.vfs.iter_dependencies_dyn(f)
     }
 

@@ -9,13 +9,13 @@
 //! Hopefully, one day a reliable file watching/walking crate appears on
 //! crates.io, and we can reduce this to trivial glue code.
 
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{collections::HashMap, fs};
 
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::mpsc;
 use typst::diag::{FileError, FileResult};
 
-use typst_ts_core::Bytes;
+use typst_ts_core::{Bytes, ImmutPath};
 
 use crate::vfs::{
     notify::{FileChangeSet, FilesystemEvent, NotifyFile, NotifyMessage, UpstreamUpdateEvent},
@@ -25,7 +25,7 @@ use crate::vfs::{
 
 type WatcherPair = (RecommendedWatcher, mpsc::UnboundedReceiver<NotifyEvent>);
 type NotifyEvent = notify::Result<notify::Event>;
-type FileEntry = (/* key */ PathBuf, /* value */ NotifyFile);
+type FileEntry = (/* key */ ImmutPath, /* value */ NotifyFile);
 type NotifyFilePair = FileResult<(
     /* mtime */ instant::SystemTime,
     /* content */ Bytes,
@@ -79,7 +79,7 @@ struct UndeterminedNotifyEvent {
     /// The logical tick when the event is produced.
     at_logical_tick: usize,
     /// The path of the file.
-    path: PathBuf,
+    path: ImmutPath,
 }
 
 // Drop order is significant.
@@ -111,7 +111,7 @@ pub struct NotifyActor {
     undetermined_recv: mpsc::UnboundedReceiver<UndeterminedNotifyEvent>,
 
     /// The holded entries for watching, one entry for per file.
-    watched_entries: HashMap<PathBuf, WatchedEntry>,
+    watched_entries: HashMap<ImmutPath, WatchedEntry>,
 
     /// The builtin watcher object.
     watcher: Option<WatcherPair>,
@@ -219,7 +219,7 @@ impl NotifyActor {
     }
 
     /// Update the watches of corresponding files.
-    fn update_watches(&mut self, paths: &[PathBuf]) -> Option<FileChangeSet> {
+    fn update_watches(&mut self, paths: &[ImmutPath]) -> Option<FileChangeSet> {
         // Increase the lifetime per external message.
         self.lifetime += 1;
 
@@ -331,7 +331,8 @@ impl NotifyActor {
         // Account file updates.
         let mut changeset = FileChangeSet::default();
         for path in event.paths.into_iter() {
-            changeset.may_insert(self.notify_entry_update(path.clone(), None));
+            // todo: remove this clone: path.into()
+            changeset.may_insert(self.notify_entry_update(path.into(), None));
         }
 
         // Send file updates.
@@ -343,7 +344,7 @@ impl NotifyActor {
     /// Notify any update of the file entry
     fn notify_entry_update(
         &mut self,
-        path: PathBuf,
+        path: ImmutPath,
         meta: Option<std::fs::Metadata>,
     ) -> Option<FileEntry> {
         let meta = meta.or_else(|| fs::metadata(&path).ok())?;

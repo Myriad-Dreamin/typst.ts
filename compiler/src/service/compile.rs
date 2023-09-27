@@ -230,7 +230,7 @@ where
         // Notify the new file dependencies.
         let mut deps = vec![];
         self.compiler
-            .iter_dependencies(&mut |dep, _| deps.push(dep.to_owned()));
+            .iter_dependencies(&mut |dep, _| deps.push(dep.clone()));
         send(Notify(NotifyMessage::SyncDependency(deps)));
     }
 
@@ -288,7 +288,7 @@ where
                 self.dirty_shadow_logical_tick = self.logical_tick;
                 send(Notify(NotifyMessage::UpstreamUpdate(
                     crate::vfs::notify::UpstreamUpdateEvent {
-                        invalidates: files.iter().map(|e| e.as_ref().to_owned()).collect(),
+                        invalidates: files.into_iter().collect(),
                         opaque: Box::new(TaggedMemoryEvent {
                             logical_tick: self.logical_tick,
                             event,
