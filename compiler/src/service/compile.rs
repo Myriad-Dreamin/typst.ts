@@ -55,10 +55,18 @@ enum CompilerResponse {
 
 type BorrowTask<Ctx> = Box<dyn FnOnce(&mut Ctx) + Send + 'static>;
 
+struct TaggedMemoryEvent {
+    logical_tick: usize,
+    event: MemoryEvent,
+}
+
 pub struct CompileActor<C: Compiler> {
     pub compiler: C,
     pub root: PathBuf,
     pub enable_watch: bool,
+
+    logical_tick: usize,
+    dirty_shadow_logical_tick: usize,
 
     estimated_shadow_files: HashSet<Arc<Path>>,
     latest_doc: Option<Arc<TypstDocument>>,
@@ -85,7 +93,10 @@ where
         Self {
             compiler,
             root,
+
+            logical_tick: 1,
             enable_watch: false,
+            dirty_shadow_logical_tick: 0,
 
             estimated_shadow_files: Default::default(),
             latest_doc: None,
@@ -115,8 +126,25 @@ where
         // tx
     }
 
+    fn apply_memory_changes(&mut self, event: MemoryEvent) {
+        if matches!(event, MemoryEvent::Sync(..)) {
+            self.compiler.reset_shadow();
+        }
+        match event {
+            MemoryEvent::Update(event) | MemoryEvent::Sync(event) => {
+                for removes in event.removes {
+                    let _ = self.compiler.unmap_shadow(&removes);
+                }
+                for (p, t) in event.inserts {
+                    let _ = self.compiler.map_shadow(&p, t.content().cloned().unwrap());
+                }
+            }
+        }
+    }
+
     fn process(&mut self, event: CompilerInterrupt<Self>, send: impl Fn(CompilerResponse)) -> bool {
         use CompilerResponse::*;
+        self.logical_tick += 1;
 
         match event {
             CompilerInterrupt::Fs(event) => {
@@ -125,22 +153,16 @@ where
                 if let Some(mut event) = event {
                     if let FilesystemEvent::UpstreamUpdate { upstream_event, .. } = &mut event {
                         let event = upstream_event.take().unwrap().opaque;
-                        let event = *event.downcast::<MemoryEvent>().unwrap();
+                        let TaggedMemoryEvent {
+                            logical_tick,
+                            event,
+                        } = *event.downcast().unwrap();
 
-                        if matches!(event, MemoryEvent::Sync(..)) {
-                            self.compiler.reset_shadow();
+                        if logical_tick == self.dirty_shadow_logical_tick {
+                            self.dirty_shadow_logical_tick = 0;
                         }
-                        match event {
-                            MemoryEvent::Update(event) | MemoryEvent::Sync(event) => {
-                                for removes in event.removes {
-                                    let _ = self.compiler.unmap_shadow(&removes);
-                                }
-                                for (p, t) in event.inserts {
-                                    let _ =
-                                        self.compiler.map_shadow(&p, t.content().cloned().unwrap());
-                                }
-                            }
-                        }
+
+                        self.apply_memory_changes(event);
                     }
 
                     self.compiler.notify_fs_event(event);
@@ -169,10 +191,19 @@ where
                     }
                 }
 
+                if files.is_empty() && self.dirty_shadow_logical_tick == 0 {
+                    self.apply_memory_changes(event);
+                    return true;
+                }
+
+                self.dirty_shadow_logical_tick = self.logical_tick;
                 send(Notify(NotifyMessage::UpstreamUpdate(
                     crate::vfs::notify::UpstreamUpdateEvent {
                         invalidates: files.iter().map(|e| e.as_ref().to_owned()).collect(),
-                        opaque: Box::new(event),
+                        opaque: Box::new(TaggedMemoryEvent {
+                            logical_tick: self.logical_tick,
+                            event,
+                        }),
                     },
                 )));
 
@@ -210,6 +241,8 @@ where
                 Some(it) = self.memory_recv.recv() => Some(CompilerInterrupt::Memory(it)),
                 Some(it) = self.steal_recv.recv() => Some(CompilerInterrupt::Task(it)),
             } {
+                self.logical_tick += 1;
+
                 let mut need_recompile = false;
                 need_recompile = self.process(event, &compiler_ack) || need_recompile;
                 while let Some(event) = fs_rx
