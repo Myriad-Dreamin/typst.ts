@@ -1,0 +1,234 @@
+use std::{collections::HashMap, path::Path};
+
+use typst::diag::FileResult;
+use typst_ts_core::{Bytes, ImmutPath};
+
+use crate::vfs::AccessModel;
+
+/// internal representation of [`NotifyFile`]
+#[derive(Debug, Clone)]
+struct NotifyFileRepr {
+    mtime: instant::SystemTime,
+    content: Bytes,
+}
+
+/// A file snapshot that is notified by some external source
+#[derive(Debug, Clone)]
+pub struct NotifyFile(FileResult<NotifyFileRepr>);
+
+impl NotifyFile {
+    /// mtime of the file
+    pub fn mtime(&self) -> FileResult<&instant::SystemTime> {
+        self.0.as_ref().map(|e| &e.mtime).map_err(|e| e.clone())
+    }
+
+    /// content of the file
+    pub fn content(&self) -> FileResult<&Bytes> {
+        self.0.as_ref().map(|e| &e.content).map_err(|e| e.clone())
+    }
+
+    /// Whether the related file is a file
+    pub fn is_file(&self) -> FileResult<bool> {
+        self.0.as_ref().map(|_| true).map_err(|e| e.clone())
+    }
+}
+
+/// Convenent function to create a [`NotifyFile`] from tuple
+impl From<FileResult<(instant::SystemTime, Bytes)>> for NotifyFile {
+    fn from(result: FileResult<(instant::SystemTime, Bytes)>) -> Self {
+        Self(result.map(|(mtime, content)| NotifyFileRepr { mtime, content }))
+    }
+}
+
+/// A set of changes to the filesystem.
+///
+/// The correct order of applying changes is:
+/// 1. Remove files
+/// 2. Upsert (Insert or Update) files
+#[derive(Debug, Clone, Default)]
+pub struct FileChangeSet {
+    /// Files to remove
+    pub removes: Vec<ImmutPath>,
+    /// Files to insert or update
+    pub inserts: Vec<(ImmutPath, NotifyFile)>,
+}
+
+impl FileChangeSet {
+    /// Create a new empty changeset
+    pub fn is_empty(&self) -> bool {
+        self.inserts.is_empty() && self.removes.is_empty()
+    }
+
+    /// Create a new changeset with removing files
+    pub fn new_removes(removes: Vec<ImmutPath>) -> Self {
+        Self {
+            removes,
+            inserts: vec![],
+        }
+    }
+
+    /// Create a new changeset with inserting files
+    pub fn new_inserts(inserts: Vec<(ImmutPath, NotifyFile)>) -> Self {
+        Self {
+            removes: vec![],
+            inserts,
+        }
+    }
+
+    /// Utility function to insert a possible file to insert or update
+    pub fn may_insert(&mut self, v: Option<(ImmutPath, NotifyFile)>) {
+        if let Some(v) = v {
+            self.inserts.push(v);
+        }
+    }
+
+    /// Utility function to insert multiple possible files to insert or update
+    pub fn may_extend(&mut self, v: Option<impl Iterator<Item = (ImmutPath, NotifyFile)>>) {
+        if let Some(v) = v {
+            self.inserts.extend(v);
+        }
+    }
+}
+
+/// A memory event that is notified by some external source
+#[derive(Debug)]
+pub enum MemoryEvent {
+    /// Reset all dependencies and update according to the given changeset
+    ///
+    /// We have not provided a way to reset all dependencies without updating
+    /// yet, but you can create a memory event with empty changeset to achieve
+    /// this:
+    ///
+    /// ```
+    /// use typst_ts_compiler::vfs::notify::{MemoryEvent, FileChangeSet};
+    /// let event = MemoryEvent::Sync(FileChangeSet::default());
+    /// ```
+    Sync(FileChangeSet),
+    /// Update according to the given changeset
+    Update(FileChangeSet),
+}
+
+/// A upstream update event that is notified by some external source.
+///
+/// This event is used to notify some file watcher to invalidate some files
+/// before applying upstream changes. This is very important to make some atomic
+/// changes.
+#[derive(Debug)]
+pub struct UpstreamUpdateEvent {
+    /// Associated files that the event causes to invalidate
+    pub invalidates: Vec<ImmutPath>,
+    /// Opaque data that is passed to the file watcher
+    pub opaque: Box<dyn std::any::Any + Send>,
+}
+
+/// Aggregated filesystem events from some file watcher
+#[derive(Debug)]
+pub enum FilesystemEvent {
+    /// Update file system files according to the given changeset
+    Update(FileChangeSet),
+    /// See [`UpstreamUpdateEvent`]
+    UpstreamUpdate {
+        /// New changeset produced by invalidation
+        changeset: FileChangeSet,
+        upstream_event: Option<UpstreamUpdateEvent>,
+    },
+}
+
+/// A message that is sent to some file watcher
+#[derive(Debug)]
+pub enum NotifyMessage {
+    /// override all dependencies
+    SyncDependency(Vec<ImmutPath>),
+    /// upstream invalidation This is very important to make some atomic changes
+    ///
+    /// Example:
+    /// ```plain
+    ///   /// Receive memory event
+    ///   let event: MemoryEvent = retrieve();
+    ///   let invalidates = event.invalidates();
+    ///
+    ///   /// Send memory change event to [`NotifyActor`]
+    ///   let event = Box::new(event);
+    ///   self.send(NotifyMessage::UpstreamUpdate{ invalidates, opaque: event });
+    ///
+    ///   /// Wait for [`NotifyActor`] to finish
+    ///   let fs_event = self.fs_notify.block_receive();
+    ///   let event: MemoryEvent = fs_event.opaque.downcast().unwrap();
+    ///
+    ///   /// Apply changes
+    ///   self.lock();
+    ///   update_memory(event);
+    ///   apply_fs_changes(fs_event.changeset);
+    ///   self.unlock();
+    /// ```
+    UpstreamUpdate(UpstreamUpdateEvent),
+}
+
+/// Notify shadowing access model, which the typical underlying access model is
+/// [`crate::vfs::system::SystemAccessModel`]
+pub struct NotifyAccessModel<M: AccessModel> {
+    files: HashMap<ImmutPath, NotifyFile>,
+    pub inner: M,
+}
+
+impl<M: AccessModel> NotifyAccessModel<M> {
+    /// Create a new notify access model
+    pub fn new(inner: M) -> Self {
+        Self {
+            files: HashMap::new(),
+            inner,
+        }
+    }
+
+    /// Notify the access model with a filesystem event
+    pub fn notify(&mut self, event: FilesystemEvent) {
+        match event {
+            FilesystemEvent::UpstreamUpdate { changeset, .. }
+            | FilesystemEvent::Update(changeset) => {
+                for path in changeset.removes {
+                    self.files.remove(&path);
+                }
+
+                for (path, contents) in changeset.inserts {
+                    self.files.insert(path, contents);
+                }
+            }
+        }
+    }
+}
+
+impl<M: AccessModel> AccessModel for NotifyAccessModel<M> {
+    type RealPath = M::RealPath;
+
+    fn mtime(&self, src: &Path) -> FileResult<crate::time::SystemTime> {
+        if let Some(entry) = self.files.get(src) {
+            return entry.mtime().cloned();
+        }
+
+        self.inner.mtime(src)
+    }
+
+    fn is_file(&self, src: &Path) -> FileResult<bool> {
+        if let Some(entry) = self.files.get(src) {
+            return entry.is_file();
+        }
+
+        self.inner.is_file(src)
+    }
+
+    fn real_path(&self, src: &Path) -> FileResult<Self::RealPath> {
+        if self.files.get(src).is_some() {
+            return Ok(src.into());
+        }
+
+        self.inner.real_path(src)
+    }
+
+    fn content(&self, src: &Path) -> FileResult<Bytes> {
+        if let Some(entry) = self.files.get(src) {
+            return entry.content().cloned();
+        }
+
+        self.inner.content(src)
+    }
+}

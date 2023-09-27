@@ -17,7 +17,7 @@ use typst::{
 
 use typst_ts_core::{
     font::{FontProfile, FontResolverImpl},
-    Bytes, FontResolver, TypstFileId as FileId,
+    Bytes, FontResolver, ImmutPath, TypstFileId as FileId,
 };
 
 use crate::{
@@ -26,7 +26,7 @@ use crate::{
     time::SystemTime,
     vfs::{AccessModel as VfsAccessModel, Vfs},
     workspace::dependency::{DependencyTree, DependentFileInfo},
-    ShadowApi,
+    NotifyApi, ShadowApi,
 };
 
 type CodespanResult<T> = Result<T, CodespanError>;
@@ -188,16 +188,14 @@ impl<F: CompilerFeat> CompilerWorld<F> {
 
     /// Get found dependencies in current state of vfs.
     pub fn get_dependencies(&self) -> DependencyTree {
-        let vfs_dependencies =
-            self.vfs
-                .iter_dependencies()
-                .map(|(path, mtime)| DependentFileInfo {
-                    path: path.to_owned(),
-                    mtime: mtime
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .unwrap()
-                        .as_micros() as u64,
-                });
+        let t = self.vfs.iter_dependencies();
+        let vfs_dependencies = t.map(|(path, mtime)| DependentFileInfo {
+            path: path.as_ref().to_owned(),
+            mtime: mtime
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_micros() as u64,
+        });
 
         DependencyTree::from_iter(&self.root, vfs_dependencies)
     }
@@ -223,22 +221,43 @@ impl<F: CompilerFeat> CompilerWorld<F> {
 }
 
 impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
+    #[inline]
     fn _shadow_map_id(&self, file_id: FileId) -> FileResult<PathBuf> {
         self.path_for_id(file_id)
     }
 
+    #[inline]
+    fn shadow_paths(&self) -> Vec<Arc<Path>> {
+        self.vfs.shadow_paths()
+    }
+
+    #[inline]
     fn reset_shadow(&mut self) {
         self.vfs.reset_shadow()
     }
 
+    #[inline]
     fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()> {
         self.vfs.map_shadow(path, content)
     }
 
+    #[inline]
     fn unmap_shadow(&self, path: &Path) -> FileResult<()> {
         self.vfs.remove_shadow(path);
 
         Ok(())
+    }
+}
+
+impl<F: CompilerFeat> NotifyApi for CompilerWorld<F> {
+    #[inline]
+    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, instant::SystemTime)) {
+        self.vfs.iter_dependencies_dyn(f)
+    }
+
+    #[inline]
+    fn notify_fs_event(&mut self, event: crate::vfs::notify::FilesystemEvent) {
+        self.vfs.notify_fs_event(event)
     }
 }
 

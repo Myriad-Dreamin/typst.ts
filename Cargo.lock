@@ -4196,6 +4196,7 @@ dependencies = [
  "pollster",
  "reqwest",
  "rustc-hash",
+ "same-file",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",

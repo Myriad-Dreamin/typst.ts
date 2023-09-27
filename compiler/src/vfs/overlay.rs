@@ -30,8 +30,20 @@ impl<M: AccessModel> OverlayAccessModel<M> {
         }
     }
 
+    pub fn inner(&self) -> &M {
+        &self.model
+    }
+
+    pub fn inner_mut(&mut self) -> &mut M {
+        &mut self.model
+    }
+
     pub fn clear_shadow(&self) {
         self.files.write().clear();
+    }
+
+    pub fn file_paths(&self) -> Vec<Arc<Path>> {
+        self.files.read().keys().cloned().collect()
     }
 
     pub fn add_file(&self, path: Arc<Path>, content: Bytes) {

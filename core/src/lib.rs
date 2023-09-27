@@ -19,7 +19,7 @@ pub mod config;
 // Core mechanism of typst-ts.
 pub(crate) mod exporter;
 pub use exporter::{builtins as exporter_builtins, utils as exporter_utils};
-pub use exporter::{Exporter, Transformer};
+pub use exporter::{DynExporter, Exporter, Transformer};
 pub mod font;
 pub use font::{FontLoader, FontResolver, FontSlot};
 pub mod package;

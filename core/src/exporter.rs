@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use typst::{diag::SourceResult, World};
 
-pub(crate) type DynExporter<Input, Output = ()> = Box<dyn Exporter<Input, Output> + Send>;
+pub type DynExporter<Input, Output = ()> = Box<dyn Exporter<Input, Output> + Send>;
 
 pub trait Transformer<Input, Output = ()> {
     /// Export the given input with given world.
@@ -33,6 +33,15 @@ where
 {
     fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<O> {
         self(world, output)
+    }
+}
+
+impl<I, O, F> From<F> for DynExporter<I, O>
+where
+    F: (for<'a> Fn(&'a (dyn World + 'a), Arc<I>) -> SourceResult<O>) + Sized + Send + 'static,
+{
+    fn from(f: F) -> Self {
+        Box::new(f)
     }
 }
 
@@ -78,6 +87,12 @@ pub mod builtins {
         }
     }
 
+    impl<I: 'static> From<GroupExporter<I>> for DynExporter<I> {
+        fn from(exporter: GroupExporter<I>) -> Self {
+            Box::new(exporter)
+        }
+    }
+
     /// The Exporter<From<&Input>> must be explicitly constructed.
     pub struct FromExporter<Input, AsInput> {
         exporter: GroupExporter<AsInput>,
@@ -101,6 +116,15 @@ pub mod builtins {
         fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<()> {
             let as_output = output.as_ref().into();
             self.exporter.export(world, Arc::new(as_output))
+        }
+    }
+
+    impl<I: 'static + Send, A: 'static> From<FromExporter<I, A>> for DynExporter<I>
+    where
+        A: for<'a> From<&'a I>,
+    {
+        fn from(exporter: FromExporter<I, A>) -> Self {
+            Box::new(exporter)
         }
     }
 
@@ -142,6 +166,25 @@ pub mod builtins {
 
             self.exporter.export(world, (output, file))?;
             Ok(())
+        }
+    }
+
+    impl<I, Bytes: 'static + Send, E: 'static + Send> From<FsPathExporter<Bytes, E>> for DynExporter<I>
+    where
+        E: Exporter<I, Bytes>,
+        Bytes: AsRef<[u8]>,
+    {
+        fn from(exporter: FsPathExporter<Bytes, E>) -> Self {
+            Box::new(exporter)
+        }
+    }
+
+    impl<I, E: 'static + Send> From<FsPathExporter<AsWritable, E>> for DynExporter<I>
+    where
+        E: Transformer<(Arc<I>, File)>,
+    {
+        fn from(exporter: FsPathExporter<AsWritable, E>) -> Self {
+            Box::new(exporter)
         }
     }
 

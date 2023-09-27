@@ -1,4 +1,4 @@
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 
 use base64::Engine;
 use js_sys::{JsString, Uint8Array};
@@ -181,7 +181,7 @@ impl TypstCompiler {
         // compile and export document
         let doc = self.compiler.compile().map_err(|e| format!("{e:?}"))?;
         let data = ast_exporter
-            .export(self.compiler.world(), Arc::new(doc))
+            .export(self.compiler.world(), doc)
             .map_err(|e| format!("{e:?}"))?;
 
         let converted = ansi_to_html::convert_escaped(
@@ -204,7 +204,7 @@ impl TypstCompiler {
 
         let doc = self.compiler.compile().map_err(|e| format!("{e:?}"))?;
         let artifact_bytes = ir_exporter
-            .export(self.compiler.world(), Arc::new(doc))
+            .export(self.compiler.world(), doc)
             .map_err(|e| format!("{e:?}"))?;
         Ok(artifact_bytes)
     }

@@ -1,4 +1,4 @@
-//! based on project https://github.com/frozolotl/typst-mutilate
+//! based on project <https://github.com/frozolotl/typst-mutilate>
 //! LICENSE: European Union Public License 1.2
 use rand::{seq::IteratorRandom, Rng, SeedableRng};
 use rand_xoshiro::Xoshiro256PlusPlus;
