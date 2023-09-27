@@ -481,7 +481,7 @@ impl NotifyActor {
     /// Recheck the notify event after a while.
     async fn recheck_notify_event(&mut self, event: UndeterminedNotifyEvent) -> Option<()> {
         let now = instant::Instant::now();
-        log::info!("recheck event {event:?} at {now:?}");
+        log::debug!("recheck event {event:?} at {now:?}");
 
         // The aysnc scheduler is not accurate, so we need to ensure a window here
         let reserved = now - event.at_realtime;
@@ -508,7 +508,7 @@ impl NotifyActor {
                 payload,
             } => {
                 if recheck_at == event.at_logical_tick {
-                    log::info!("notify event is real {event:?}, state: {:?}", payload);
+                    log::debug!("notify event real happened {event:?}, state: {:?}", payload);
 
                     // Send the underlying change to the consumer
                     let mut changeset = FileChangeSet::default();
@@ -540,7 +540,7 @@ pub async fn watch_deps(
     tokio::spawn(actor.run(inbox));
 
     // Handle events.
-    log::info!("start watching files...");
+    log::debug!("start watching files...");
     interrupted_by_events(None);
     while let Some(event) = rx.recv().await {
         interrupted_by_events(Some(event));

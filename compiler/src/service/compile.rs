@@ -159,7 +159,7 @@ where
         };
 
         let compile_thread = ensure_single_thread("typst-compiler", async move {
-            log::info!("CompileActor: initialized");
+            log::debug!("CompileActor: initialized");
             while let Some(event) = tokio::select! {
                 Some(it) = fs_rx.recv() => Some(CompilerInterrupt::Fs(it)),
                 Some(it) = self.memory_recv.recv() => Some(CompilerInterrupt::Memory(it)),
@@ -188,6 +188,7 @@ where
                     self.compile(&compiler_ack);
                 }
             }
+            log::debug!("CompileActor: exited");
         })
         .unwrap();
 
@@ -220,7 +221,7 @@ where
 
         match event {
             CompilerInterrupt::Fs(event) => {
-                log::info!("CompileActor: fs event incoming {:?}", event);
+                log::debug!("CompileActor: fs event incoming {:?}", event);
 
                 if let Some(mut event) = event {
                     if let FilesystemEvent::UpstreamUpdate { upstream_event, .. } = &mut event {
@@ -243,7 +244,7 @@ where
                 true
             }
             CompilerInterrupt::Memory(event) => {
-                log::info!("CompileActor: memory event incoming");
+                log::debug!("CompileActor: memory event incoming");
 
                 let mut files = HashSet::new();
                 if matches!(event, MemoryEvent::Sync(..)) {
@@ -282,6 +283,8 @@ where
                 false
             }
             CompilerInterrupt::Task(task) => {
+                log::debug!("CompileActor: execute task");
+
                 task(self);
                 false
             }
