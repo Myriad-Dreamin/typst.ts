@@ -1,8 +1,8 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::ShadowApi;
-use typst::{diag::SourceResult, syntax::VirtualPath};
-use typst_ts_core::{exporter_builtins::GroupExporter, DynExporter, TypstDocument, TypstFileId};
+use typst::diag::SourceResult;
+use typst_ts_core::{exporter_builtins::GroupExporter, DynExporter, TypstDocument};
 
 use super::{Compiler, WrappedCompiler};
 
@@ -125,10 +125,13 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
     fn export(&mut self, _output: Arc<typst::doc::Document>) -> SourceResult<()> {
         use std::str::FromStr;
+
         use typst::{
             diag::At,
-            syntax::{PackageSpec, Span},
+            syntax::{PackageSpec, Span, VirtualPath},
         };
+
+        use typst_ts_core::TypstFileId;
         use typst_ts_svg_exporter::{flat_ir::serialize_doc, DynamicLayoutSvgExporter};
 
         let variable_file = TypstFileId::new(
