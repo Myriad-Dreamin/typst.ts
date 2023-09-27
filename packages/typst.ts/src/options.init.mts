@@ -1,7 +1,7 @@
 // @ts-ignore
 import type * as typstRenderer from '@myriaddreamin/typst-ts-renderer';
 import type * as typstCompiler from '@myriaddreamin/typst-ts-web-compiler';
-import type { FsAccessModel } from './internal.types.mjs';
+import type { FsAccessModel, PackageRegistry, PackageSpec } from './internal.types.mjs';
 import type { WebAssemblyModuleRef } from './wasm.mjs';
 
 /**
@@ -29,6 +29,7 @@ export type BeforeBuildMark = typeof BeforeBuildSymbol;
  *   - preloadRemoteFonts
  *   - preloadSystemFonts
  *   - withAccessModel
+ *   - withPackageRegistry
  */
 export type BeforeBuildFn = StagedOptFn<BeforeBuildMark>;
 
@@ -216,6 +217,24 @@ export function preloadSystemFonts({ byFamily }: { byFamily?: string[] }): Befor
 
     const t2 = performance.now();
     console.log('preload system font time used:', t2 - t);
+  };
+}
+
+/**
+ * (compile only) set pacoage registry
+ *
+ * @param accessModel: when compiling, the pacoage registry is used to access the
+ * data of files
+ * @returns {BeforeBuildFn}
+ */
+export function withPackageRegistry(packageRegistry: PackageRegistry): BeforeBuildFn {
+  return async (_, { builder }: InitContext) => {
+    return new Promise(resolve => {
+      builder.set_package_registry(packageRegistry, function (spec: PackageSpec) {
+        return packageRegistry.resolve(spec, this);
+      });
+      resolve();
+    });
   };
 }
 

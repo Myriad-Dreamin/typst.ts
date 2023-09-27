@@ -30,8 +30,12 @@
           const begin = performance.now();
           compilerPlugin.reset();
 
+          const mainFilePath = '/corpus/skyzh-cv/main.typ';
+          // const mainFilePath = '/corpus/package/example.typ';
+          // compilerPlugin.addSource(mainFilePath, `#import "@preview/example:0.1.0": add`);
+
           if (fmt === 'ast') {
-            const ast = await compilerPlugin.getAst('corpus/skyzh-cv/main.typ');
+            const ast = await compilerPlugin.getAst(mainFilePath);
             const end = performance.now();
             const rounded = Math.round((end - begin) * 1000) / 1000;
 
@@ -41,7 +45,7 @@
             terminalContent.innerHTML = [compileInfo, ast].join('\n');
           } else if (fmt === 'pdf') {
             const pdfData = await compilerPlugin.compile({
-              mainFilePath: 'corpus/skyzh-cv/main.typ',
+              mainFilePath,
               format: 'pdf',
             });
             const end = performance.now();
@@ -69,11 +73,17 @@
         };
 
         let compilerPlugin = window.TypstCompileModule.createTypstCompiler();
+
+        // const fetchBackend = new window.TypstCompileModule.MemoryAccessModel();
+        const fetchBackend = new window.TypstCompileModule.FetchAccessModel(
+          'http://localhost:20810',
+        );
         compilerPlugin
           .init({
             beforeBuild: [
-              window.TypstCompileModule.withAccessModel(
-                new window.TypstCompileModule.FetchAccessModel('http://localhost:20810'),
+              window.TypstCompileModule.withAccessModel(fetchBackend),
+              window.TypstCompileModule.withPackageRegistry(
+                new window.TypstCompileModule.FetchPackageRegistry(fetchBackend),
               ),
             ],
             getModule: () =>
