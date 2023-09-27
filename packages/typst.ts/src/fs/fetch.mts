@@ -1,4 +1,5 @@
 import { FsAccessModel } from '../internal.types.mjs';
+import { WritableAccessModel } from './index.mjs';
 
 export interface FetchAccessOptions {
   polyfillHeadRequest?: boolean;
@@ -30,7 +31,7 @@ const bufferToBase64 = async (data: Uint8Array) => {
   return base64url || '';
 };
 
-export class FetchAccessModel implements FsAccessModel {
+export class FetchAccessModel implements FsAccessModel, WritableAccessModel {
   fullyCached: boolean;
   mTimes: Map<string, Date | undefined> = new Map();
   mRealPaths: Map<string, string | undefined> = new Map();
@@ -56,6 +57,16 @@ export class FetchAccessModel implements FsAccessModel {
 
   resolvePath(path: string): string {
     return this.root + path;
+  }
+
+  insertFile(path: string, data: Uint8Array, mtime: Date) {
+    this.mTimes.set(path, mtime);
+    this.mData.set(path, data);
+  }
+
+  removeFile(path: string) {
+    this.mTimes.delete(path);
+    this.mData.delete(path);
   }
 
   async loadSnapshot(snapshot: FetchSnapshot): Promise<void> {
@@ -172,6 +183,15 @@ export class FetchAccessModel implements FsAccessModel {
   }
 
   getMTime(path: string): Date | undefined {
+    // todo: no hack
+    if (path.startsWith('/@memory/')) {
+      if (this.mTimes.has(path)) {
+        return this.mTimes.get(path);
+      }
+
+      return undefined;
+    }
+
     if (!this.fullyCached) {
       return this.getMTimeInternal(path);
     }
@@ -215,6 +235,14 @@ export class FetchAccessModel implements FsAccessModel {
   }
 
   readAll(path: string): Uint8Array | undefined {
+    if (path.startsWith('/@memory/')) {
+      if (this.mData.has(path)) {
+        return this.mData.get(path);
+      }
+
+      return undefined;
+    }
+
     if (!this.fullyCached) {
       return this.readAllInternal(path);
     }

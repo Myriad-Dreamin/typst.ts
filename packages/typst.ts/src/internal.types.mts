@@ -19,6 +19,20 @@ export interface FsAccessModel {
   readAll(path: string): Uint8Array | undefined;
 }
 
+export interface PackageSpec {
+  namespace: string;
+  name: string;
+  version: string;
+}
+
+export interface PackageResolveContext {
+  untar(data: Uint8Array, cb: (path: string, data: Uint8Array, mtime: number) => void): void;
+}
+
+export interface PackageRegistry {
+  resolve(path: PackageSpec, context: PackageResolveContext): string | undefined;
+}
+
 export interface Point {
   x: number;
   y: number;

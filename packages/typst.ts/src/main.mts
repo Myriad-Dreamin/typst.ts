@@ -13,7 +13,9 @@ export { rendererBuildInfo, createTypstRenderer, createTypstSvgRenderer } from '
 import { RenderView, renderTextLayer } from './render/canvas/view.mjs';
 import * as compiler from './compiler.mjs';
 import { FetchAccessModel } from './fs/index.mjs';
+import { FetchPackageRegistry } from './fs/package.mjs';
 export { FetchAccessModel } from './fs/index.mjs';
+export { FetchPackageRegistry } from './fs/package.mjs';
 export type { FetchAccessOptions } from './fs/index.mjs';
 export type { TypstCompiler } from './compiler.mjs';
 export { createTypstCompiler } from './compiler.mjs';
@@ -35,7 +37,9 @@ if (window) {
     preloadSystemFonts: initOptions.preloadSystemFonts,
 
     FetchAccessModel,
+    FetchPackageRegistry,
 
     withAccessModel: initOptions.withAccessModel,
+    withPackageRegistry: initOptions.withPackageRegistry,
   };
 }

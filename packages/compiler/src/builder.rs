@@ -2,7 +2,9 @@ use js_sys::Uint8Array;
 use wasm_bindgen::prelude::*;
 
 use typst_ts_compiler::{
-    font::web::BrowserFontSearcher, package::browser::ProxyRegistry, vfs::browser::ProxyAccessModel,
+    font::web::BrowserFontSearcher,
+    package::browser::{ProxyContext, ProxyRegistry},
+    vfs::browser::ProxyAccessModel,
 };
 use typst_ts_core::{error::prelude::*, Bytes};
 
@@ -40,7 +42,7 @@ impl TypstCompilerBuilder {
             ),
         });
         self.package_registry = Some(ProxyRegistry {
-            context: wasm_bindgen::JsValue::UNDEFINED,
+            context: ProxyContext::new(wasm_bindgen::JsValue::UNDEFINED),
             real_resolve_fn: js_sys::Function::new_no_args(
                 "throw new Error('Dummy Registry, please initialize compiler with withPackageRegistry()')",
             ),
@@ -73,7 +75,7 @@ impl TypstCompilerBuilder {
         real_resolve_fn: js_sys::Function,
     ) -> ZResult<()> {
         self.package_registry = Some(ProxyRegistry {
-            context,
+            context: ProxyContext::new(context),
             real_resolve_fn,
         });
 
