@@ -14,6 +14,7 @@ use typst::{
 };
 use typst_ts_core::{Bytes, TypstFileId};
 
+// todo: remove cfg feature here
 #[cfg(feature = "system-compile")]
 pub(crate) mod diag;
 
@@ -25,8 +26,11 @@ pub use watch::*;
 pub(crate) mod driver;
 pub use driver::*;
 
+#[cfg(feature = "system-watch")]
 pub(crate) mod compile;
+#[cfg(feature = "system-watch")]
 pub use compile::*;
+
 pub(crate) mod export;
 pub use export::*;
 pub mod query;

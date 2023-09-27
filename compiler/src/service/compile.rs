@@ -27,19 +27,12 @@ use typst_ts_core::{
 
 use super::{Compiler, WorkspaceProvider, WorldExporter};
 
-fn ensure_single_thread<F: std::future::Future<Output = ()> + Send + 'static>(
-    name: &str,
-    f: F,
-) -> std::io::Result<std::thread::JoinHandle<()>> {
-    std::thread::Builder::new().name(name.to_owned()).spawn(|| {
-        tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(f);
-    })
-}
+/// A task that can be sent to the context (compiler thread)
+///
+/// The internal function will be dereferenced and called on the context.
+type BorrowTask<Ctx> = Box<dyn FnOnce(&mut Ctx) + Send + 'static>;
 
+/// Interrupts for the compiler thread.
 enum CompilerInterrupt<Ctx> {
     /// Interrupted by file system event.
     Fs(Option<FilesystemEvent>),
@@ -49,43 +42,51 @@ enum CompilerInterrupt<Ctx> {
     Task(BorrowTask<Ctx>),
 }
 
+/// Responses from the compiler thread.
 enum CompilerResponse {
     Notify(NotifyMessage),
 }
 
-type BorrowTask<Ctx> = Box<dyn FnOnce(&mut Ctx) + Send + 'static>;
-
+/// A tagged memory event with logical tick.
 struct TaggedMemoryEvent {
     logical_tick: usize,
     event: MemoryEvent,
 }
 
+/// The compiler thread.
 pub struct CompileActor<C: Compiler> {
+    /// The underlying compiler.
     pub compiler: C,
+    /// The root path of the workspace.
     pub root: PathBuf,
+    /// Whether to enable file system watching.
     pub enable_watch: bool,
 
+    /// The current logical tick.
     logical_tick: usize,
+    /// Last logical tick when invalidation is caused by shadow update.
     dirty_shadow_logical_tick: usize,
 
+    /// Estimated latest set of shadow files.
     estimated_shadow_files: HashSet<Arc<Path>>,
+    /// The latest compiled document.
     latest_doc: Option<Arc<TypstDocument>>,
 
+    /// Internal channel for stealing the compiler thread.
     steal_send: mpsc::UnboundedSender<BorrowTask<Self>>,
     steal_recv: mpsc::UnboundedReceiver<BorrowTask<Self>>,
 
+    /// Internal channel for memory events.
     memory_send: mpsc::UnboundedSender<MemoryEvent>,
     memory_recv: mpsc::UnboundedReceiver<MemoryEvent>,
 }
 
-// todo: remove cfg feature here
-#[cfg(feature = "system-watch")]
 use super::DiagObserver;
-#[cfg(feature = "system-watch")]
 impl<C: Compiler + ShadowApi + WorldExporter + Send + 'static> CompileActor<C>
 where
     C::World: for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>,
 {
+    /// Create a new compiler thread.
     pub fn new(compiler: C, root: PathBuf) -> Self {
         let (steal_send, steal_recv) = mpsc::unbounded_channel();
         let (memory_send, memory_recv) = mpsc::unbounded_channel();
@@ -109,39 +110,110 @@ where
         }
     }
 
+    /// Run the compiler thread synchronously.
+    pub fn run(self) -> bool {
+        use tokio::runtime::Handle;
+
+        if Handle::try_current().is_err() && self.enable_watch {
+            log::error!("Typst compiler thread with watch enabled must be run in a tokio runtime");
+            return false;
+        }
+
+        tokio::task::block_in_place(move || Handle::current().block_on(self.block_run_inner()))
+    }
+
+    /// Inner function for `run`, it launches the compiler thread and blocks
+    /// until it exits.
+    async fn block_run_inner(mut self) -> bool {
+        if !self.enable_watch {
+            let compiled = self
+                .compiler
+                .with_stage_diag::<false, _>("compiling", |driver| driver.compile());
+            return compiled.is_some();
+        }
+
+        if let Some(h) = self.spawn().await {
+            h.join().unwrap();
+        }
+
+        true
+    }
+
+    /// Spawn the compiler thread.
+    pub async fn spawn(mut self) -> Option<JoinHandle<()>> {
+        if !self.enable_watch {
+            self.compiler
+                .with_stage_diag::<false, _>("compiling", |driver| driver.compile());
+            return None;
+        }
+
+        let (dep_tx, dep_rx) = tokio::sync::mpsc::unbounded_channel();
+        let (fs_tx, mut fs_rx) = tokio::sync::mpsc::unbounded_channel();
+
+        tokio::spawn(super::watch_deps(dep_rx, move |event| {
+            fs_tx.send(event).unwrap();
+        }));
+
+        let compiler_ack = move |res: CompilerResponse| match res {
+            CompilerResponse::Notify(msg) => dep_tx.send(msg).unwrap(),
+        };
+
+        let compile_thread = ensure_single_thread("typst-compiler", async move {
+            log::info!("CompileActor: initialized");
+            while let Some(event) = tokio::select! {
+                Some(it) = fs_rx.recv() => Some(CompilerInterrupt::Fs(it)),
+                Some(it) = self.memory_recv.recv() => Some(CompilerInterrupt::Memory(it)),
+                Some(it) = self.steal_recv.recv() => Some(CompilerInterrupt::Task(it)),
+            } {
+                self.logical_tick += 1;
+
+                let mut need_recompile = false;
+                need_recompile = self.process(event, &compiler_ack) || need_recompile;
+                while let Some(event) = fs_rx
+                    .try_recv()
+                    .ok()
+                    .map(CompilerInterrupt::Fs)
+                    .or_else(|| {
+                        self.memory_recv
+                            .try_recv()
+                            .ok()
+                            .map(CompilerInterrupt::Memory)
+                    })
+                    .or_else(|| self.steal_recv.try_recv().ok().map(CompilerInterrupt::Task))
+                {
+                    need_recompile = self.process(event, &compiler_ack) || need_recompile;
+                }
+
+                if need_recompile {
+                    self.compile(&compiler_ack);
+                }
+            }
+        })
+        .unwrap();
+
+        Some(compile_thread)
+    }
+
+    /// Compile the document.
     fn compile(&mut self, send: impl Fn(CompilerResponse)) {
         use CompilerResponse::*;
 
-        // compile
+        // Compile the document.
         self.latest_doc = self
             .compiler
             .with_stage_diag::<true, _>("compiling", |driver| driver.compile());
 
+        // Evict compilation cache.
         comemo::evict(30);
 
+        // Notify the new file dependencies.
         let mut deps = vec![];
         self.compiler
             .iter_dependencies(&mut |dep, _| deps.push(dep.to_owned()));
         send(Notify(NotifyMessage::SyncDependency(deps)));
-        // tx
     }
 
-    fn apply_memory_changes(&mut self, event: MemoryEvent) {
-        if matches!(event, MemoryEvent::Sync(..)) {
-            self.compiler.reset_shadow();
-        }
-        match event {
-            MemoryEvent::Update(event) | MemoryEvent::Sync(event) => {
-                for removes in event.removes {
-                    let _ = self.compiler.unmap_shadow(&removes);
-                }
-                for (p, t) in event.inserts {
-                    let _ = self.compiler.map_shadow(&p, t.content().cloned().unwrap());
-                }
-            }
-        }
-    }
-
+    /// Process some interrupt.
     fn process(&mut self, event: CompilerInterrupt<Self>, send: impl Fn(CompilerResponse)) -> bool {
         use CompilerResponse::*;
         self.logical_tick += 1;
@@ -216,73 +288,21 @@ where
         }
     }
 
-    pub async fn spawn(mut self) -> Option<JoinHandle<()>> {
-        if !self.enable_watch {
-            self.compiler
-                .with_stage_diag::<false, _>("compiling", |driver| driver.compile());
-            return None;
+    /// Apply memory changes to underlying compiler.
+    fn apply_memory_changes(&mut self, event: MemoryEvent) {
+        if matches!(event, MemoryEvent::Sync(..)) {
+            self.compiler.reset_shadow();
         }
-
-        let (dep_tx, dep_rx) = tokio::sync::mpsc::unbounded_channel();
-        let (fs_tx, mut fs_rx) = tokio::sync::mpsc::unbounded_channel();
-
-        tokio::spawn(super::watch_deps(dep_rx, move |event| {
-            fs_tx.send(event).unwrap();
-        }));
-
-        let compiler_ack = move |res: CompilerResponse| match res {
-            CompilerResponse::Notify(msg) => dep_tx.send(msg).unwrap(),
-        };
-
-        let compile_thread = ensure_single_thread("typst-compiler", async move {
-            log::info!("CompileActor: initialized");
-            while let Some(event) = tokio::select! {
-                Some(it) = fs_rx.recv() => Some(CompilerInterrupt::Fs(it)),
-                Some(it) = self.memory_recv.recv() => Some(CompilerInterrupt::Memory(it)),
-                Some(it) = self.steal_recv.recv() => Some(CompilerInterrupt::Task(it)),
-            } {
-                self.logical_tick += 1;
-
-                let mut need_recompile = false;
-                need_recompile = self.process(event, &compiler_ack) || need_recompile;
-                while let Some(event) = fs_rx
-                    .try_recv()
-                    .ok()
-                    .map(CompilerInterrupt::Fs)
-                    .or_else(|| {
-                        self.memory_recv
-                            .try_recv()
-                            .ok()
-                            .map(CompilerInterrupt::Memory)
-                    })
-                    .or_else(|| self.steal_recv.try_recv().ok().map(CompilerInterrupt::Task))
-                {
-                    need_recompile = self.process(event, &compiler_ack) || need_recompile;
+        match event {
+            MemoryEvent::Update(event) | MemoryEvent::Sync(event) => {
+                for removes in event.removes {
+                    let _ = self.compiler.unmap_shadow(&removes);
                 }
-
-                if need_recompile {
-                    self.compile(&compiler_ack);
+                for (p, t) in event.inserts {
+                    let _ = self.compiler.map_shadow(&p, t.content().cloned().unwrap());
                 }
             }
-        })
-        .unwrap();
-
-        Some(compile_thread)
-    }
-
-    pub async fn block_run(mut self) -> bool {
-        if !self.enable_watch {
-            let compiled = self
-                .compiler
-                .with_stage_diag::<false, _>("compiling", |driver| driver.compile());
-            return compiled.is_some();
         }
-
-        if let Some(h) = self.spawn().await {
-            h.join().unwrap();
-        }
-
-        true
     }
 }
 
@@ -417,6 +437,22 @@ where
         })
         .await
     }
+}
+
+/// Spawn a thread and run the given future on it.
+///
+/// Note: the future is run on a single-threaded tokio runtime.
+fn ensure_single_thread<F: std::future::Future<Output = ()> + Send + 'static>(
+    name: &str,
+    f: F,
+) -> std::io::Result<std::thread::JoinHandle<()>> {
+    std::thread::Builder::new().name(name.to_owned()).spawn(|| {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(f);
+    })
 }
 
 /// Find the output location in the document for a cursor position.

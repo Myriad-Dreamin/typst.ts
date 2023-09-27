@@ -208,7 +208,10 @@ impl NotifyActor {
 
     /// Update the watches of corresponding invalidation
     fn invalidate_upstream(&mut self, event: UpstreamUpdateEvent) {
+        // Update watches of invalidated files.
         let changeset = self.update_watches(&event.invalidates).unwrap_or_default();
+
+        // Send the event to the consumer.
         self.send(FilesystemEvent::UpstreamUpdate {
             changeset,
             upstream_event: Some(event),

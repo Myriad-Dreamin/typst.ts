@@ -107,6 +107,6 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
     let actor = CompileActor::new(driver, watch_root).with_watch(args.watch);
 
     utils::async_continue(async move {
-        utils::logical_exit(actor.block_run().await);
+        utils::logical_exit(actor.run());
     })
 }
