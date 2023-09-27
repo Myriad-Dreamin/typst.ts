@@ -6,9 +6,21 @@ import { FsAccessModel } from './internal.types.mjs';
 import { preloadRemoteFonts, type InitOptions } from './options.init.mjs';
 import { LazyWasmModule } from './wasm.mjs';
 
+/**
+ * The options for compiling the document.
+ */
 export interface CompileOptions {
+  /**
+   * The path of the main file.
+   */
   mainFilePath: string;
-  format: 'vector' | 'pdf';
+  /**
+   * The format of the artifact.
+   * - 'vector': can then load to the renderer to render the document.
+   * - 'pdf': for finally exporting pdf to the user.
+   * @default 'vector'
+   */
+  format?: 'vector' | 'pdf';
 }
 
 /**
