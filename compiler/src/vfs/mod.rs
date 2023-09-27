@@ -16,21 +16,9 @@ pub mod notify;
 pub mod overlay;
 pub mod trace;
 
-mod path_abs;
-mod path_anchored;
 mod path_interner;
-mod path_vfs;
 
 pub(crate) use path_interner::PathInterner;
-pub use {
-    path_abs::{AbsPath, AbsPathBuf},
-    path_anchored::{AnchoredPath, AnchoredPathBuf},
-    path_vfs::VfsPath,
-};
-
-pub(crate) mod writable;
-pub use writable::Vfs as MemVfs;
-pub use writable::{ChangeKind, ChangedFile};
 
 use std::{collections::HashMap, ffi::OsStr, hash::Hash, path::Path, sync::Arc};
 

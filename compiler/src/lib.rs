@@ -29,14 +29,14 @@ pub(crate) mod macros;
 /// font things about compiler.
 pub mod font;
 
+/// Dependency things about compiler
+pub mod dependency;
 /// package things about compiler.
 pub mod package;
 /// time things about compiler.
 pub mod time;
 /// A vfs implementation for compiler.
 pub mod vfs;
-/// Workspace management for compiler.
-pub mod workspace;
 /// A common implementation of [`typst::World`]
 pub mod world;
 

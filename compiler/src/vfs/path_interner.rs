@@ -50,6 +50,7 @@ impl<P: Hash + Eq, Ext> PathInterner<P, Ext> {
     /// # Panics
     ///
     /// Panics if `id` does not exists in `self`.
+    #[allow(dead_code)]
     pub(crate) fn lookup(&self, id: FileId) -> &P {
         self.map.get_index(id.0 as usize).unwrap().0
     }
@@ -57,8 +58,6 @@ impl<P: Hash + Eq, Ext> PathInterner<P, Ext> {
 
 #[cfg(test)]
 mod tests {
-    use crate::vfs::VfsPath;
-
     use super::PathInterner;
     use std::path::PathBuf;
 
@@ -67,15 +66,5 @@ mod tests {
         let mut interner = PathInterner::<PathBuf>::default();
         let (id, ..) = interner.intern(PathBuf::from("foo"), ());
         assert_eq!(interner.lookup(id), &PathBuf::from("foo"));
-    }
-
-    #[test]
-    fn test_interner_vfs_path() {
-        let mut interner = PathInterner::<VfsPath>::default();
-        let (id, ..) = interner.intern(VfsPath::new_virtual_path("/foo".to_owned()), ());
-        assert_eq!(
-            interner.lookup(id),
-            &VfsPath::new_virtual_path("/foo".to_owned())
-        );
     }
 }

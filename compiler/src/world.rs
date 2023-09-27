@@ -21,11 +21,11 @@ use typst_ts_core::{
 };
 
 use crate::{
+    dependency::{DependencyTree, DependentFileInfo},
     package::Registry as PackageRegistry,
     service::WorkspaceProvider,
     time::SystemTime,
     vfs::{AccessModel as VfsAccessModel, Vfs},
-    workspace::dependency::{DependencyTree, DependentFileInfo},
     NotifyApi, ShadowApi,
 };
 
