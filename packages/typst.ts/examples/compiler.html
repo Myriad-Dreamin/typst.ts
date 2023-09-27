@@ -30,8 +30,9 @@
           const begin = performance.now();
           compilerPlugin.reset();
 
-          const mainFilePath = 'corpus/skyzh-cv/main.typ';
-          // const mainFilePath = 'corpus/package/example.typ';
+          const mainFilePath = '/corpus/skyzh-cv/main.typ';
+          // const mainFilePath = '/corpus/package/example.typ';
+          // compilerPlugin.addSource(mainFilePath, `#import "@preview/example:0.1.0": add`);
 
           if (fmt === 'ast') {
             const ast = await compilerPlugin.getAst(mainFilePath);
@@ -73,6 +74,7 @@
 
         let compilerPlugin = window.TypstCompileModule.createTypstCompiler();
 
+        // const fetchBackend = new window.TypstCompileModule.MemoryAccessModel();
         const fetchBackend = new window.TypstCompileModule.FetchAccessModel(
           'http://localhost:20810',
         );

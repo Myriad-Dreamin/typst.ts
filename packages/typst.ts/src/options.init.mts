@@ -29,6 +29,7 @@ export type BeforeBuildMark = typeof BeforeBuildSymbol;
  *   - preloadRemoteFonts
  *   - preloadSystemFonts
  *   - withAccessModel
+ *   - withPackageRegistry
  */
 export type BeforeBuildFn = StagedOptFn<BeforeBuildMark>;
 
