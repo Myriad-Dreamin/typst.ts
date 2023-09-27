@@ -25,7 +25,7 @@ use typst_ts_core::{
     error::prelude::ZResult, vector::span_id_from_u64, TypstDocument, TypstFileId,
 };
 
-use super::{Compiler, WorkspaceProvider, WorldExporter};
+use super::{Compiler, DiagObserver, WorkspaceProvider, WorldExporter};
 
 /// A task that can be sent to the context (compiler thread)
 ///
@@ -34,22 +34,30 @@ type BorrowTask<Ctx> = Box<dyn FnOnce(&mut Ctx) + Send + 'static>;
 
 /// Interrupts for the compiler thread.
 enum CompilerInterrupt<Ctx> {
-    /// Interrupted by file system event.
-    Fs(Option<FilesystemEvent>),
+    /// Interrupted by task.
+    ///
+    /// See [`CompileClient<Ctx>::steal`] for more information.
+    Task(BorrowTask<Ctx>),
     /// Interrupted by memory file changes.
     Memory(MemoryEvent),
-    /// Interrupted by task.
-    Task(BorrowTask<Ctx>),
+    /// Interrupted by file system event.
+    ///
+    /// If the event is `None`, it means the initial file system scan is done.
+    /// Otherwise, it means a file system event is received.
+    Fs(Option<FilesystemEvent>),
 }
 
 /// Responses from the compiler thread.
 enum CompilerResponse {
+    /// Response to the file watcher
     Notify(NotifyMessage),
 }
 
 /// A tagged memory event with logical tick.
 struct TaggedMemoryEvent {
+    /// The logical tick when the event is received.
     logical_tick: usize,
+    /// The memory event happened.
     event: MemoryEvent,
 }
 
@@ -81,7 +89,6 @@ pub struct CompileActor<C: Compiler> {
     memory_recv: mpsc::UnboundedReceiver<MemoryEvent>,
 }
 
-use super::DiagObserver;
 impl<C: Compiler + ShadowApi + WorldExporter + Send + 'static> CompileActor<C>
 where
     C::World: for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>,
@@ -133,6 +140,8 @@ where
         }
 
         if let Some(h) = self.spawn().await {
+            // Note: this is blocking the current thread.
+            // Note: the block safety is ensured by `run` function.
             h.join().unwrap();
         }
 
@@ -147,26 +156,34 @@ where
             return None;
         }
 
+        // Setup internal channels.
         let (dep_tx, dep_rx) = tokio::sync::mpsc::unbounded_channel();
         let (fs_tx, mut fs_rx) = tokio::sync::mpsc::unbounded_channel();
 
-        tokio::spawn(super::watch_deps(dep_rx, move |event| {
-            fs_tx.send(event).unwrap();
-        }));
-
+        // Wrap sender to send compiler response.
         let compiler_ack = move |res: CompilerResponse| match res {
             CompilerResponse::Notify(msg) => dep_tx.send(msg).unwrap(),
         };
 
+        // Spawn file system watcher.
+        tokio::spawn(super::watch_deps(dep_rx, move |event| {
+            fs_tx.send(event).unwrap();
+        }));
+
+        // Spawn compiler thread.
         let compile_thread = ensure_single_thread("typst-compiler", async move {
             log::debug!("CompileActor: initialized");
+
+            // Wait for first events.
             while let Some(event) = tokio::select! {
                 Some(it) = fs_rx.recv() => Some(CompilerInterrupt::Fs(it)),
                 Some(it) = self.memory_recv.recv() => Some(CompilerInterrupt::Memory(it)),
                 Some(it) = self.steal_recv.recv() => Some(CompilerInterrupt::Task(it)),
             } {
+                // Small step to warp the logical clock.
                 self.logical_tick += 1;
 
+                // Accumulate events.
                 let mut need_recompile = false;
                 need_recompile = self.process(event, &compiler_ack) || need_recompile;
                 while let Some(event) = fs_rx
@@ -184,14 +201,17 @@ where
                     need_recompile = self.process(event, &compiler_ack) || need_recompile;
                 }
 
+                // Compile if needed.
                 if need_recompile {
                     self.compile(&compiler_ack);
                 }
             }
+
             log::debug!("CompileActor: exited");
         })
         .unwrap();
 
+        // Return the thread handle.
         Some(compile_thread)
     }
 
@@ -217,35 +237,26 @@ where
     /// Process some interrupt.
     fn process(&mut self, event: CompilerInterrupt<Self>, send: impl Fn(CompilerResponse)) -> bool {
         use CompilerResponse::*;
+        // warp the logical clock by one.
         self.logical_tick += 1;
 
         match event {
-            CompilerInterrupt::Fs(event) => {
-                log::debug!("CompileActor: fs event incoming {:?}", event);
+            // Borrow the compiler thread and run the task.
+            //
+            // See [`CompileClient::steal`] for more information.
+            CompilerInterrupt::Task(task) => {
+                log::debug!("CompileActor: execute task");
 
-                if let Some(mut event) = event {
-                    if let FilesystemEvent::UpstreamUpdate { upstream_event, .. } = &mut event {
-                        let event = upstream_event.take().unwrap().opaque;
-                        let TaggedMemoryEvent {
-                            logical_tick,
-                            event,
-                        } = *event.downcast().unwrap();
+                task(self);
 
-                        if logical_tick == self.dirty_shadow_logical_tick {
-                            self.dirty_shadow_logical_tick = 0;
-                        }
-
-                        self.apply_memory_changes(event);
-                    }
-
-                    self.compiler.notify_fs_event(event);
-                }
-
-                true
+                // Will never trigger compilation
+                false
             }
+            // Handle memory events.
             CompilerInterrupt::Memory(event) => {
                 log::debug!("CompileActor: memory event incoming");
 
+                // Emulate memory changes.
                 let mut files = HashSet::new();
                 if matches!(event, MemoryEvent::Sync(..)) {
                     files = self.estimated_shadow_files.clone();
@@ -264,11 +275,16 @@ where
                     }
                 }
 
+                // If there is no invalidation happening, apply memory changes directly.
                 if files.is_empty() && self.dirty_shadow_logical_tick == 0 {
                     self.apply_memory_changes(event);
+
+                    // Will trigger compilation
                     return true;
                 }
 
+                // Otherwise, send upstream update event.
+                // Also, record the logical tick when shadow is dirty.
                 self.dirty_shadow_logical_tick = self.logical_tick;
                 send(Notify(NotifyMessage::UpstreamUpdate(
                     crate::vfs::notify::UpstreamUpdateEvent {
@@ -280,13 +296,37 @@ where
                     },
                 )));
 
+                // Delayed trigger compilation
                 false
             }
-            CompilerInterrupt::Task(task) => {
-                log::debug!("CompileActor: execute task");
+            // Handle file system events.
+            CompilerInterrupt::Fs(event) => {
+                log::debug!("CompileActor: fs event incoming {:?}", event);
 
-                task(self);
-                false
+                // Handle file system event if any.
+                if let Some(mut event) = event {
+                    // Handle delayed upstream update event before applying file system changes
+                    if let FilesystemEvent::UpstreamUpdate { upstream_event, .. } = &mut event {
+                        let event = upstream_event.take().unwrap().opaque;
+                        let TaggedMemoryEvent {
+                            logical_tick,
+                            event,
+                        } = *event.downcast().unwrap();
+
+                        // Recovery from dirty shadow state.
+                        if logical_tick == self.dirty_shadow_logical_tick {
+                            self.dirty_shadow_logical_tick = 0;
+                        }
+
+                        self.apply_memory_changes(event);
+                    }
+
+                    // Apply file system changes.
+                    self.compiler.notify_fs_event(event);
+                }
+
+                // Will trigger compilation
+                true
             }
         }
     }
