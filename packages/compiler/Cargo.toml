@@ -49,6 +49,7 @@ typst-ts-compiler = { version = "0.4.0-rc1", default-features = false, features 
 typst-ts-ast-exporter.workspace = true
 typst-ts-canvas-exporter.workspace = true
 typst-ts-svg-exporter.workspace = true
+typst-ts-pdf-exporter.workspace = true
 
 [dev-dependencies]
 wasm-bindgen-test.workspace = true

@@ -8,6 +8,7 @@ import { LazyWasmModule } from './wasm.mjs';
 
 export interface CompileOptions {
   mainFilePath: string;
+  format: 'vector' | 'pdf';
 }
 
 /**
@@ -137,7 +138,7 @@ class TypstCompilerDriver {
 
   compile(options: CompileOptions): Promise<Uint8Array> {
     return new Promise<Uint8Array>(resolve => {
-      resolve(this.compiler.compile(options.mainFilePath));
+      resolve(this.compiler.compile(options.mainFilePath, options.format || 'vector'));
     });
   }
 

@@ -10,7 +10,10 @@ use typst_ts_compiler::{
     vfs::browser::ProxyAccessModel,
     world::WorldSnapshot,
 };
-use typst_ts_core::{cache::FontInfoCache, error::prelude::*, Exporter, FontLoader, FontSlot};
+use typst_ts_core::{
+    cache::FontInfoCache, error::prelude::*, DynExporter, Exporter, FontLoader, FontSlot,
+    TypstDocument,
+};
 use wasm_bindgen::prelude::*;
 
 use crate::utils::console_log;
@@ -194,26 +197,28 @@ impl TypstCompiler {
     }
 
     pub fn get_artifact(&mut self, fmt: String) -> Result<Vec<u8>, JsValue> {
-        if fmt != "vector" {
-            return Err(error_once!("Unsupported fmt", format: fmt).into());
-        }
-
-        let ir_exporter = typst_ts_core::exporter_builtins::VecExporter::new(
-            typst_ts_svg_exporter::SvgModuleExporter::default(),
-        );
+        let vec_exporter: DynExporter<TypstDocument, Vec<u8>> = match fmt.as_str() {
+            "vector" => Box::new(typst_ts_core::exporter_builtins::VecExporter::new(
+                typst_ts_svg_exporter::SvgModuleExporter::default(),
+            )),
+            "pdf" => Box::<typst_ts_pdf_exporter::PdfDocExporter>::default(),
+            _ => {
+                return Err(error_once!("Unsupported fmt", format: fmt).into());
+            }
+        };
 
         let doc = self.compiler.compile().map_err(|e| format!("{e:?}"))?;
-        let artifact_bytes = ir_exporter
+        let artifact_bytes = vec_exporter
             .export(self.compiler.world(), doc)
             .map_err(|e| format!("{e:?}"))?;
         Ok(artifact_bytes)
     }
 
-    pub fn compile(&mut self, main_file_path: String) -> Result<Vec<u8>, JsValue> {
+    pub fn compile(&mut self, main_file_path: String, fmt: String) -> Result<Vec<u8>, JsValue> {
         self.compiler
             .set_entry_file(Path::new(&main_file_path).to_owned());
 
-        self.get_artifact("vector".into())
+        self.get_artifact(fmt)
     }
 }
 

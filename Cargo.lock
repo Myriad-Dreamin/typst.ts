@@ -4488,6 +4488,7 @@ dependencies = [
  "typst-ts-canvas-exporter",
  "typst-ts-compiler",
  "typst-ts-core",
+ "typst-ts-pdf-exporter",
  "typst-ts-svg-exporter",
  "typst-ts-test-common",
  "wasm-bindgen",
