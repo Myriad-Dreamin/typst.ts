@@ -24,36 +24,54 @@
 
       document.ready(() => {
         const terminalContent = document.getElementById('terminal-content');
-        terminalContent.innerHTML = 'Compiling...';
+        terminalContent.innerHTML = 'Downloading font assets...';
 
-        const runCompile = async () => {
+        const runCompile = async fmt => {
           const begin = performance.now();
           compilerPlugin.reset();
-          const ast = await compilerPlugin.getAst('corpus/skyzh-cv/main.typ');
-          const end = performance.now();
-          const rounded = Math.round((end - begin) * 1000) / 1000;
 
-          const compileInfo = `---
-      <span style="color:#c0caf5">Compiled in <span style="color:#7dcfff">${rounded}</span>ms</span>`;
+          if (fmt === 'ast') {
+            const ast = await compilerPlugin.getAst('corpus/skyzh-cv/main.typ');
+            const end = performance.now();
+            const rounded = Math.round((end - begin) * 1000) / 1000;
 
-          terminalContent.innerHTML = [compileInfo, ast].join('\n');
+            const compileInfo = `---
+<span style="color:#c0caf5">Compiled to AST in <span style="color:#7dcfff">${rounded}</span>ms</span>`;
+
+            terminalContent.innerHTML = [compileInfo, ast].join('\n');
+          } else if (fmt === 'pdf') {
+            const pdfData = await compilerPlugin.compile({
+              mainFilePath: 'corpus/skyzh-cv/main.typ',
+              format: 'pdf',
+            });
+            const end = performance.now();
+            const rounded = Math.round((end - begin) * 1000) / 1000;
+
+            const compileInfo = `<span style="color:#c0caf5">Compiled to PDF in <span style="color:#7dcfff">${rounded}</span>ms</span>`;
+
+            terminalContent.innerHTML = compileInfo;
+            console.log(pdfData);
+            var pdfFile = new Blob([pdfData], { type: 'application/pdf' });
+
+            // Create element with <a> tag
+            const link = document.createElement('a');
+
+            // Add file content in the object URL
+            link.href = URL.createObjectURL(pdfFile);
+
+            // Add file name
+            link.target = '_blank';
+
+            // Add click event to <a> tag to save file.
+            link.click();
+            URL.revokeObjectURL(link.href);
+          }
         };
 
         let compilerPlugin = window.TypstCompileModule.createTypstCompiler();
         compilerPlugin
           .init({
             beforeBuild: [
-              window.TypstCompileModule.preloadRemoteFonts([
-                'http://localhost:20810/assets/fonts/LinLibertine_R.ttf',
-                'http://localhost:20810/assets/fonts/LinLibertine_RB.ttf',
-                'http://localhost:20810/assets/fonts/LinLibertine_RBI.ttf',
-                'http://localhost:20810/assets/fonts/LinLibertine_RI.ttf',
-                'http://localhost:20810/assets/fonts/NewCMMath-Book.otf',
-                'http://localhost:20810/assets/fonts/NewCMMath-Regular.otf',
-              ]),
-              // window.TypstCompileModule.preloadSystemFonts({
-              //   byFamily: ['Segoe UI Symbol'],
-              // }),
               window.TypstCompileModule.withAccessModel(
                 new window.TypstCompileModule.FetchAccessModel('http://localhost:20810'),
               ),
@@ -63,9 +81,12 @@
           })
           .then(() => {
             document.getElementById('compile-button').addEventListener('click', () => {
-              runCompile();
+              runCompile('ast');
             });
-            return runCompile();
+            document.getElementById('compile-to-pdf-button').addEventListener('click', () => {
+              runCompile('pdf');
+            });
+            return runCompile('ast');
           });
       });
     </script>
@@ -107,7 +128,12 @@
       }
 
       .terminal pre {
-        font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+        font-family:
+          SFMono-Regular,
+          Consolas,
+          Liberation Mono,
+          Menlo,
+          monospace;
         color: white;
         padding: 0 1rem 1rem;
         margin: 0;
@@ -133,7 +159,8 @@
       </div>
       <div class="content">
         <div>
-          <button id="compile-button">Compile</button>
+          <button id="compile-button">Export to AST</button>
+          <button id="compile-to-pdf-button">Export to PDF</button>
         </div>
         <div class="terminal">
           <pre id="terminal-content">hello world</pre>
