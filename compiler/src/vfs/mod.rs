@@ -153,6 +153,10 @@ impl<M: AccessModel + Sized> Vfs<M> {
         self.access_model.inner().clear_shadow();
     }
 
+    pub fn shadow_paths(&self) -> Vec<Arc<Path>> {
+        self.access_model.inner().file_paths()
+    }
+
     /// Set the `do_reparse` flag.
     pub fn set_do_reparse(&mut self, do_reparse: bool) {
         self.do_reparse = do_reparse;

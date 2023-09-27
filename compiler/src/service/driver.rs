@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use crate::{NotifyApi, ShadowApi};
 use typst::{diag::SourceResult, syntax::VirtualPath, World};
@@ -104,18 +107,27 @@ impl<W: World + WorkspaceProvider + NotifyApi> Compiler for CompileDriverImpl<W>
 }
 
 impl<W: World + ShadowApi> ShadowApi for CompileDriverImpl<W> {
+    #[inline]
     fn _shadow_map_id(&self, file_id: TypstFileId) -> typst::diag::FileResult<PathBuf> {
         self.world._shadow_map_id(file_id)
     }
 
+    #[inline]
+    fn shadow_paths(&self) -> Vec<Arc<Path>> {
+        self.world.shadow_paths()
+    }
+
+    #[inline]
     fn reset_shadow(&mut self) {
         self.world.reset_shadow()
     }
 
+    #[inline]
     fn map_shadow(&self, path: &Path, content: Bytes) -> typst::diag::FileResult<()> {
         self.world.map_shadow(path, content)
     }
 
+    #[inline]
     fn unmap_shadow(&self, path: &Path) -> typst::diag::FileResult<()> {
         self.world.unmap_shadow(path)
     }

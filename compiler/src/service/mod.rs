@@ -255,6 +255,11 @@ where
     }
 
     #[inline]
+    fn shadow_paths(&self) -> Vec<Arc<Path>> {
+        self.inner().shadow_paths()
+    }
+
+    #[inline]
     fn reset_shadow(&mut self) {
         self.inner_mut().reset_shadow()
     }

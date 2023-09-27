@@ -42,6 +42,10 @@ impl<M: AccessModel> OverlayAccessModel<M> {
         self.files.write().clear();
     }
 
+    pub fn file_paths(&self) -> Vec<Arc<Path>> {
+        self.files.read().keys().cloned().collect()
+    }
+
     pub fn add_file(&self, path: Arc<Path>, content: Bytes) {
         // we change mt every time, since content almost changes every time
         // Note: we can still benefit from cache, since we incrementally parse source

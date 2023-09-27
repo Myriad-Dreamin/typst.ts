@@ -227,6 +227,11 @@ impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
     }
 
     #[inline]
+    fn shadow_paths(&self) -> Vec<Arc<Path>> {
+        self.vfs.shadow_paths()
+    }
+
+    #[inline]
     fn reset_shadow(&mut self) {
         self.vfs.reset_shadow()
     }

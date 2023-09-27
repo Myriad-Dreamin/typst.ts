@@ -49,7 +49,10 @@ pub mod service;
 /// Run the compiler in the system environment.
 #[cfg(feature = "system-compile")]
 pub(crate) mod system;
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 #[cfg(feature = "system-compile")]
 pub use system::TypstSystemWorld;
@@ -72,8 +75,15 @@ pub trait ShadowApi {
         unimplemented!()
     }
 
+    /// Get the shadow files.
+    fn shadow_paths(&self) -> Vec<Arc<Path>>;
+
     /// Reset the shadow files.
-    fn reset_shadow(&mut self);
+    fn reset_shadow(&mut self) {
+        for path in self.shadow_paths() {
+            self.unmap_shadow(&path).unwrap();
+        }
+    }
 
     /// Add a shadow file to the driver.
     fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()>;

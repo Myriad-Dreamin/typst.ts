@@ -1,4 +1,11 @@
-use std::{num::NonZeroUsize, path::PathBuf, sync::Arc, thread::JoinHandle};
+use std::{
+    collections::HashSet,
+    num::NonZeroUsize,
+    ops::Deref,
+    path::{Path, PathBuf},
+    sync::Arc,
+    thread::JoinHandle,
+};
 
 use serde::Serialize;
 use tokio::sync::{mpsc, oneshot};
@@ -10,7 +17,7 @@ use typst::{
 };
 
 use crate::{
-    vfs::notify::{FileChangeSet, FilesystemEvent, NotifyMessage},
+    vfs::notify::{FilesystemEvent, MemoryEvent, NotifyMessage},
     world::{CompilerFeat, CompilerWorld},
     ShadowApi,
 };
@@ -33,11 +40,6 @@ fn ensure_single_thread<F: std::future::Future<Output = ()> + Send + 'static>(
     })
 }
 
-pub enum MemoryEvent {
-    Sync(FileChangeSet),
-    Update(FileChangeSet),
-}
-
 enum CompilerInterrupt<Ctx> {
     /// Interrupted by file system event.
     Fs(Option<FilesystemEvent>),
@@ -58,6 +60,7 @@ pub struct CompileActor<C: Compiler> {
     pub root: PathBuf,
     pub enable_watch: bool,
 
+    estimated_shadow_files: HashSet<Arc<Path>>,
     latest_doc: Option<Arc<TypstDocument>>,
 
     steal_send: mpsc::UnboundedSender<BorrowTask<Self>>,
@@ -84,6 +87,7 @@ where
             root,
             enable_watch: false,
 
+            estimated_shadow_files: Default::default(),
             latest_doc: None,
 
             steal_send,
@@ -98,7 +102,8 @@ where
         use CompilerResponse::*;
 
         // compile
-        self.compiler
+        self.latest_doc = self
+            .compiler
             .with_stage_diag::<true, _>("compiling", |driver| driver.compile());
 
         comemo::evict(30);
@@ -110,12 +115,34 @@ where
         // tx
     }
 
-    fn process(&mut self, event: CompilerInterrupt<Self>) -> bool {
+    fn process(&mut self, event: CompilerInterrupt<Self>, send: impl Fn(CompilerResponse)) -> bool {
+        use CompilerResponse::*;
+
         match event {
             CompilerInterrupt::Fs(event) => {
                 log::info!("CompileActor: fs event incoming {:?}", event);
 
-                if let Some(event) = event {
+                if let Some(mut event) = event {
+                    if let FilesystemEvent::UpstreamUpdate { upstream_event, .. } = &mut event {
+                        let event = upstream_event.take().unwrap().opaque;
+                        let event = *event.downcast::<MemoryEvent>().unwrap();
+
+                        if matches!(event, MemoryEvent::Sync(..)) {
+                            self.compiler.reset_shadow();
+                        }
+                        match event {
+                            MemoryEvent::Update(event) | MemoryEvent::Sync(event) => {
+                                for removes in event.removes {
+                                    let _ = self.compiler.unmap_shadow(&removes);
+                                }
+                                for (p, t) in event.inserts {
+                                    let _ =
+                                        self.compiler.map_shadow(&p, t.content().cloned().unwrap());
+                                }
+                            }
+                        }
+                    }
+
                     self.compiler.notify_fs_event(event);
                 }
 
@@ -124,21 +151,32 @@ where
             CompilerInterrupt::Memory(event) => {
                 log::info!("CompileActor: memory event incoming");
 
+                let mut files = HashSet::new();
                 if matches!(event, MemoryEvent::Sync(..)) {
-                    self.compiler.reset_shadow();
+                    files = self.estimated_shadow_files.clone();
+                    self.estimated_shadow_files.clear();
                 }
-                match event {
-                    MemoryEvent::Update(event) | MemoryEvent::Sync(event) => {
-                        for removes in event.removes {
-                            let _ = self.compiler.unmap_shadow(&removes);
+                match &event {
+                    MemoryEvent::Sync(event) | MemoryEvent::Update(event) => {
+                        for path in event.removes.iter().map(Deref::deref) {
+                            self.estimated_shadow_files.remove(path);
+                            files.insert(path.into());
                         }
-                        for (p, t) in event.inserts {
-                            let _ = self.compiler.map_shadow(&p, t.content().cloned().unwrap());
+                        for path in event.inserts.iter().map(|e| e.0.deref()) {
+                            self.estimated_shadow_files.insert(path.into());
+                            files.remove(path);
                         }
                     }
                 }
 
-                true
+                send(Notify(NotifyMessage::UpstreamUpdate(
+                    crate::vfs::notify::UpstreamUpdateEvent {
+                        invalidates: files.iter().map(|e| e.as_ref().to_owned()).collect(),
+                        opaque: Box::new(event),
+                    },
+                )));
+
+                false
             }
             CompilerInterrupt::Task(task) => {
                 task(self);
@@ -173,7 +211,7 @@ where
                 Some(it) = self.steal_recv.recv() => Some(CompilerInterrupt::Task(it)),
             } {
                 let mut need_recompile = false;
-                need_recompile = self.process(event) || need_recompile;
+                need_recompile = self.process(event, &compiler_ack) || need_recompile;
                 while let Some(event) = fs_rx
                     .try_recv()
                     .ok()
@@ -186,7 +224,7 @@ where
                     })
                     .or_else(|| self.steal_recv.try_recv().ok().map(CompilerInterrupt::Task))
                 {
-                    need_recompile = self.process(event) || need_recompile;
+                    need_recompile = self.process(event, &compiler_ack) || need_recompile;
                 }
 
                 if need_recompile {

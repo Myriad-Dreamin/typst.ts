@@ -18,7 +18,7 @@ use typst::diag::{FileError, FileResult};
 use typst_ts_core::Bytes;
 
 use crate::vfs::{
-    notify::{FileChangeSet, FilesystemEvent, NotifyFile, NotifyMessage},
+    notify::{FileChangeSet, FilesystemEvent, NotifyFile, NotifyMessage, UpstreamUpdateEvent},
     system::SystemAccessModel,
     AccessModel,
 };
@@ -139,7 +139,7 @@ impl NotifyActor {
         }
     }
 
-    /// Send a message to the actor.
+    /// Send a filesystem event to remove.
     fn send(&mut self, msg: FilesystemEvent) {
         self.sender.send(msg).unwrap();
     }
@@ -185,13 +185,18 @@ impl NotifyActor {
             // log::info!("vfs-notify event {event:?}");
             // function entries to handle some event
             match event {
+                ActorEvent::Message(NotifyMessage::UpstreamUpdate(event)) => {
+                    self.invalidate_upstream(event);
+                }
                 ActorEvent::Message(NotifyMessage::SyncDependency(paths)) => {
-                    self.update_watches(paths).await;
+                    if let Some(changeset) = self.update_watches(&paths) {
+                        self.send(FilesystemEvent::Update(changeset));
+                    }
                 }
                 ActorEvent::NotifyEvent(event) => {
                     // log::info!("notify event {event:?}");
                     if let Some(event) = log_notify_error(event, "failed to notify") {
-                        self.notify_event(event).await;
+                        self.notify_event(event);
                     }
                 }
                 ActorEvent::ReCheck(event) => {
@@ -201,8 +206,17 @@ impl NotifyActor {
         }
     }
 
+    /// Update the watches of corresponding invalidation
+    fn invalidate_upstream(&mut self, event: UpstreamUpdateEvent) {
+        let changeset = self.update_watches(&event.invalidates).unwrap_or_default();
+        self.send(FilesystemEvent::UpstreamUpdate {
+            changeset,
+            upstream_event: Some(event),
+        });
+    }
+
     /// Update the watches of corresponding files.
-    async fn update_watches(&mut self, paths: Vec<PathBuf>) {
+    fn update_watches(&mut self, paths: &[PathBuf]) -> Option<FileChangeSet> {
         // Increase the lifetime per external message.
         self.lifetime += 1;
 
@@ -247,7 +261,7 @@ impl NotifyActor {
         //
         // Also check whether the file is updated since there is a window
         // between unwatch the file and watch the file again.
-        for path in paths.into_iter() {
+        for path in paths.iter() {
             // Update or insert the entry with the new lifetime.
             let entry = self
                 .watched_entries
@@ -288,9 +302,9 @@ impl NotifyActor {
             } else {
                 let watched = self
                     .inner
-                    .content(&path)
+                    .content(path)
                     .map(|e| (meta.modified().unwrap(), e));
-                changeset.inserts.push((path, watched.into()));
+                changeset.inserts.push((path.clone(), watched.into()));
             }
         }
 
@@ -306,13 +320,11 @@ impl NotifyActor {
             }
         });
 
-        if !changeset.is_empty() {
-            self.send(FilesystemEvent::Update(changeset));
-        }
+        (!changeset.is_empty()).then_some(changeset)
     }
 
     /// Notify the event from the builtin watcher.
-    async fn notify_event(&mut self, event: notify::Event) {
+    fn notify_event(&mut self, event: notify::Event) {
         // Account file updates.
         let mut changeset = FileChangeSet::default();
         for path in event.paths.into_iter() {

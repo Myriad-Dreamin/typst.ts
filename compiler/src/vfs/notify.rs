@@ -76,14 +76,53 @@ impl FileChangeSet {
 }
 
 #[derive(Debug)]
+pub enum MemoryEvent {
+    Sync(FileChangeSet),
+    Update(FileChangeSet),
+}
+
+#[derive(Debug)]
+pub struct UpstreamUpdateEvent {
+    pub invalidates: Vec<PathBuf>,
+    pub opaque: Box<dyn std::any::Any + Send>,
+}
+
+#[derive(Debug)]
+pub enum FilesystemEvent {
+    Update(FileChangeSet),
+    UpstreamUpdate {
+        changeset: FileChangeSet,
+        upstream_event: Option<UpstreamUpdateEvent>,
+    },
+}
+
+#[derive(Debug)]
 pub enum NotifyMessage {
     /// override all dependencies
     SyncDependency(Vec<PathBuf>),
-}
-
-#[derive(Debug, Clone)]
-pub enum FilesystemEvent {
-    Update(FileChangeSet),
+    /// upstream invalidation This is very important to make some atomic changes
+    ///
+    /// Example:
+    /// ```plain
+    ///   /// Receive memory event
+    ///   let event: MemoryEvent = retrieve();
+    ///   let invalidates = event.invalidates();
+    ///
+    ///   /// Send memory change event to [`NotifyActor`]
+    ///   let event = Box::new(event);
+    ///   self.send(NotifyMessage::UpstreamUpdate{ invalidates, opaque: event });
+    ///
+    ///   /// Wait for [`NotifyActor`] to finish
+    ///   let fs_event = self.fs_notify.block_receive();
+    ///   let event: MemoryEvent = fs_event.opaque.downcast().unwrap();
+    ///
+    ///   /// Apply changes
+    ///   self.lock();
+    ///   update_memory(event);
+    ///   apply_fs_changes(fs_event.changeset);
+    ///   self.unlock();
+    /// ```
+    UpstreamUpdate(UpstreamUpdateEvent),
 }
 
 pub struct NotifyAccessModel<M: AccessModel> {
@@ -101,12 +140,13 @@ impl<M: AccessModel> NotifyAccessModel<M> {
 
     pub fn notify(&mut self, event: FilesystemEvent) {
         match event {
-            FilesystemEvent::Update(files) => {
-                for path in files.removes {
+            FilesystemEvent::UpstreamUpdate { changeset, .. }
+            | FilesystemEvent::Update(changeset) => {
+                for path in changeset.removes {
                     self.files.remove(&path);
                 }
 
-                for (path, contents) in files.inserts {
+                for (path, contents) in changeset.inserts {
                     self.files.insert(path, contents);
                 }
             }
