@@ -5,13 +5,14 @@ use std::{
 
 use crate::{vfs::notify::FilesystemEvent, ShadowApi};
 use typst::{
-    diag::{At, FileResult, SourceDiagnostic, SourceResult},
+    diag::{At, FileResult, Hint, SourceDiagnostic, SourceResult},
     doc::Document,
     eval::Tracer,
     model::Content,
     syntax::Span,
     World,
 };
+use typst_library::prelude::{eco_format, EcoString};
 use typst_ts_core::{Bytes, ImmutPath, TypstFileId};
 
 // todo: remove cfg feature here
@@ -68,6 +69,13 @@ pub trait Compiler {
     /// Compile once from scratch.
     fn pure_compile(&mut self) -> SourceResult<Arc<Document>> {
         self.reset()?;
+
+        let main_id = self.main_id();
+
+        self.world_mut()
+            .source(main_id)
+            .hint(AtFile(main_id))
+            .at(Span::detached())?;
 
         let mut tracer = Tracer::default();
         // compile and export document
@@ -368,5 +376,13 @@ where
                 None
             }
         }
+    }
+}
+
+struct AtFile(TypstFileId);
+
+impl From<AtFile> for EcoString {
+    fn from(at: AtFile) -> Self {
+        eco_format!("at file {:?}", at.0)
     }
 }
