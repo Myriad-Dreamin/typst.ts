@@ -7,6 +7,11 @@ import { preloadRemoteFonts, type InitOptions } from './options.init.mjs';
 import { LazyWasmModule } from './wasm.mjs';
 
 /**
+ * Available formats for compiling the document.
+ */
+export type CompileFormat = 'vector' | 'pdf';
+
+/**
  * The options for compiling the document.
  */
 export interface CompileOptions {
@@ -20,7 +25,7 @@ export interface CompileOptions {
    * - 'pdf': for finally exporting pdf to the user.
    * @default 'vector'
    */
-  format?: 'vector' | 'pdf';
+  format?: CompileFormat;
 }
 
 /**
