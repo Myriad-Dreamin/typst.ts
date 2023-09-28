@@ -120,9 +120,9 @@
 
   // code block setting
   show raw: it => {
-    set par(justify: false)
     set text(font: code-font)
     if "block" in it.fields() and it.block {
+      set par(justify: false)
       rect(
         width: 100%,
         inset: (x: 4pt, y: 5pt),
