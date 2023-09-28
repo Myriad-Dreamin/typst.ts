@@ -1,7 +1,10 @@
 
 #import "@preview/book:0.2.2": *
+#import "./templates/page.typ": main-color
 
 #show: book
+
+#let main-color = main-color
 
 // #let section-numbers = state("book-section", ())
 #let section-numbers = ()

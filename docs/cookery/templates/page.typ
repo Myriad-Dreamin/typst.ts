@@ -100,6 +100,8 @@
   // set text style
   set text(font: main-font, size: 16pt, fill: main-color, lang: "en")
 
+  set line(stroke: main-color)
+
   // render a dash to hint headings instead of bolding it.
   show heading : set text(weight: "regular") if is-web-target
   show heading : it => locate(loc => {
