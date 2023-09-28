@@ -64,12 +64,6 @@ impl ErrKindExt for &dyn std::fmt::Display {
     }
 }
 
-impl ErrKindExt for wasm_bindgen::JsValue {
-    fn to_error_kind(self) -> ErrKind {
-        ErrKind::Msg(format!("{:?}", self))
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct ErrorImpl {
     loc: &'static str,
@@ -123,6 +117,13 @@ impl fmt::Display for Error {
 }
 
 impl std::error::Error for Error {}
+
+#[cfg(feature = "web")]
+impl ErrKindExt for wasm_bindgen::JsValue {
+    fn to_error_kind(self) -> ErrKind {
+        ErrKind::Msg(format!("{:?}", self))
+    }
+}
 
 #[cfg(feature = "web")]
 impl From<Error> for wasm_bindgen::JsValue {
