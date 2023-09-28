@@ -10,9 +10,6 @@ pub enum ErrKind {
     Msg(String),
     File(FileError),
     Inner(Error),
-
-    #[cfg(feature = "web")]
-    JsError(wasm_bindgen::JsValue),
 }
 
 pub trait ErrKindExt {
@@ -69,7 +66,7 @@ impl ErrKindExt for &dyn std::fmt::Display {
 
 impl ErrKindExt for wasm_bindgen::JsValue {
     fn to_error_kind(self) -> ErrKind {
-        ErrKind::JsError(self)
+        ErrKind::Msg(format!("{:?}", self))
     }
 }
 
@@ -120,8 +117,6 @@ impl fmt::Display for Error {
             ErrKind::File(e) => write!(f, "{}: {} with {:?}", err.loc, e, err.arguments),
             ErrKind::Msg(msg) => write!(f, "{}: {} with {:?}", err.loc, msg, err.arguments),
             ErrKind::Inner(e) => write!(f, "{}: {} with {:?}", err.loc, e, err.arguments),
-            #[cfg(feature = "web")]
-            ErrKind::JsError(e) => write!(f, "{}: {:?} with {:?}", err.loc, e, err.arguments),
             ErrKind::None => write!(f, "{}: with {:?}", err.loc, err.arguments),
         }
     }
@@ -262,4 +257,10 @@ pub mod prelude {
     pub use error_once;
     pub use error_once_map;
     pub use error_once_map_string;
+}
+
+#[test]
+fn test_send() {
+    fn is_send<T: Send>() {}
+    is_send::<Error>();
 }
