@@ -60,7 +60,10 @@ typst-ts-svg-exporter = { workspace = true, optional = true, features = [
     "flat-vector",
 ] }
 
-typst-ts-core.workspace = true
+typst-ts-core = { workspace = true, default-features = false, features = [
+    "flat-vector",
+    "vector-bbox",
+] }
 
 [target.'cfg(not(any(target_arch = "riscv64", target_arch = "wasm32", all(target_os = "windows", target_arch = "aarch64"))))'.dependencies]
 reqwest = { version = "^0.11", default-features = false, features = [
@@ -99,6 +102,7 @@ __web = [
     "dep:web-sys",
     "dep:serde-wasm-bindgen",
     "dep:pollster",
+    "typst-ts-core/web",
 ]
 web-render = ["__web"]
 browser-compile = ["__web", "web-render"]
