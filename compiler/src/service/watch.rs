@@ -18,14 +18,14 @@ use typst::diag::{FileError, FileResult};
 use typst_ts_core::{Bytes, ImmutPath};
 
 use crate::vfs::{
-    notify::{FileChangeSet, FilesystemEvent, NotifyFile, NotifyMessage, UpstreamUpdateEvent},
+    notify::{FileChangeSet, FileSnapshot, FilesystemEvent, NotifyMessage, UpstreamUpdateEvent},
     system::SystemAccessModel,
     AccessModel,
 };
 
 type WatcherPair = (RecommendedWatcher, mpsc::UnboundedReceiver<NotifyEvent>);
 type NotifyEvent = notify::Result<notify::Event>;
-type FileEntry = (/* key */ ImmutPath, /* value */ NotifyFile);
+type FileEntry = (/* key */ ImmutPath, /* value */ FileSnapshot);
 type NotifyFilePair = FileResult<(
     /* mtime */ instant::SystemTime,
     /* content */ Bytes,

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::Path};
 
-use typst::diag::FileResult;
+use typst::diag::{FileError, FileResult};
 use typst_ts_core::{Bytes, ImmutPath};
 
 use crate::vfs::AccessModel;
@@ -13,30 +13,43 @@ struct NotifyFileRepr {
 }
 
 /// A file snapshot that is notified by some external source
+///
+/// Note: The error is boxed to avoid large stack size
 #[derive(Debug, Clone)]
-pub struct NotifyFile(FileResult<NotifyFileRepr>);
+pub struct FileSnapshot(Result<NotifyFileRepr, Box<FileError>>);
 
-impl NotifyFile {
+impl FileSnapshot {
+    /// Access the internal data of the file snapshot
+    #[inline]
+    #[track_caller]
+    fn retrieve<'a, T>(&'a self, f: impl FnOnce(&'a NotifyFileRepr) -> T) -> FileResult<T> {
+        self.0.as_ref().map(f).map_err(|e| *e.clone())
+    }
+
     /// mtime of the file
     pub fn mtime(&self) -> FileResult<&instant::SystemTime> {
-        self.0.as_ref().map(|e| &e.mtime).map_err(|e| e.clone())
+        self.retrieve(|e| &e.mtime)
     }
 
     /// content of the file
     pub fn content(&self) -> FileResult<&Bytes> {
-        self.0.as_ref().map(|e| &e.content).map_err(|e| e.clone())
+        self.retrieve(|e| &e.content)
     }
 
     /// Whether the related file is a file
     pub fn is_file(&self) -> FileResult<bool> {
-        self.0.as_ref().map(|_| true).map_err(|e| e.clone())
+        self.retrieve(|_| true)
     }
 }
 
 /// Convenent function to create a [`NotifyFile`] from tuple
-impl From<FileResult<(instant::SystemTime, Bytes)>> for NotifyFile {
+impl From<FileResult<(instant::SystemTime, Bytes)>> for FileSnapshot {
     fn from(result: FileResult<(instant::SystemTime, Bytes)>) -> Self {
-        Self(result.map(|(mtime, content)| NotifyFileRepr { mtime, content }))
+        Self(
+            result
+                .map(|(mtime, content)| NotifyFileRepr { mtime, content })
+                .map_err(Box::new),
+        )
     }
 }
 
@@ -50,7 +63,7 @@ pub struct FileChangeSet {
     /// Files to remove
     pub removes: Vec<ImmutPath>,
     /// Files to insert or update
-    pub inserts: Vec<(ImmutPath, NotifyFile)>,
+    pub inserts: Vec<(ImmutPath, FileSnapshot)>,
 }
 
 impl FileChangeSet {
@@ -68,7 +81,7 @@ impl FileChangeSet {
     }
 
     /// Create a new changeset with inserting files
-    pub fn new_inserts(inserts: Vec<(ImmutPath, NotifyFile)>) -> Self {
+    pub fn new_inserts(inserts: Vec<(ImmutPath, FileSnapshot)>) -> Self {
         Self {
             removes: vec![],
             inserts,
@@ -76,14 +89,14 @@ impl FileChangeSet {
     }
 
     /// Utility function to insert a possible file to insert or update
-    pub fn may_insert(&mut self, v: Option<(ImmutPath, NotifyFile)>) {
+    pub fn may_insert(&mut self, v: Option<(ImmutPath, FileSnapshot)>) {
         if let Some(v) = v {
             self.inserts.push(v);
         }
     }
 
     /// Utility function to insert multiple possible files to insert or update
-    pub fn may_extend(&mut self, v: Option<impl Iterator<Item = (ImmutPath, NotifyFile)>>) {
+    pub fn may_extend(&mut self, v: Option<impl Iterator<Item = (ImmutPath, FileSnapshot)>>) {
         if let Some(v) = v {
             self.inserts.extend(v);
         }
@@ -167,7 +180,7 @@ pub enum NotifyMessage {
 /// Notify shadowing access model, which the typical underlying access model is
 /// [`crate::vfs::system::SystemAccessModel`]
 pub struct NotifyAccessModel<M: AccessModel> {
-    files: HashMap<ImmutPath, NotifyFile>,
+    files: HashMap<ImmutPath, FileSnapshot>,
     pub inner: M,
 }
 
