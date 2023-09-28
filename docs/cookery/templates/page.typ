@@ -120,6 +120,7 @@
 
   // code block setting
   show raw: it => {
+    set par(justify: false)
     set text(font: code-font)
     if "block" in it.fields() and it.block {
       rect(
