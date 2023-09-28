@@ -141,7 +141,7 @@ impl NotifyActor {
 
     /// Send a filesystem event to remove.
     fn send(&mut self, msg: FilesystemEvent) {
-        self.sender.send(msg).unwrap();
+        log_send_error("fs_event", self.sender.send(msg));
     }
 
     /// Get the notify event from the watcher.
@@ -392,13 +392,12 @@ impl NotifyActor {
                             payload: file.clone(),
                         };
                         entry.prev = Some(file);
-                        self.undetermined_send
-                            .send(UndeterminedNotifyEvent {
-                                at_realtime: instant::Instant::now(),
-                                at_logical_tick: self.logical_tick,
-                                path: path.clone(),
-                            })
-                            .unwrap();
+                        let event = UndeterminedNotifyEvent {
+                            at_realtime: instant::Instant::now(),
+                            at_logical_tick: self.logical_tick,
+                            path: path.clone(),
+                        };
+                        log_send_error("recheck", self.undetermined_send.send(event));
                         return None;
                     }
                     // Otherwise, we push the error to the consumer.
@@ -430,13 +429,12 @@ impl NotifyActor {
                                 payload: file.clone(),
                             };
                             entry.prev = Some(file);
-                            self.undetermined_send
-                                .send(UndeterminedNotifyEvent {
-                                    at_realtime: instant::Instant::now(),
-                                    at_logical_tick: self.logical_tick,
-                                    path,
-                                })
-                                .unwrap();
+                            let event = UndeterminedNotifyEvent {
+                                at_realtime: instant::Instant::now(),
+                                at_logical_tick: self.logical_tick,
+                                path,
+                            };
+                            log_send_error("recheck", self.undetermined_send.send(event));
                             return None;
                         }
                     }
@@ -490,7 +488,7 @@ impl NotifyActor {
             let send = self.undetermined_send.clone();
             tokio::spawn(async move {
                 tokio::time::sleep(std::time::Duration::from_millis(50) - reserved).await;
-                send.send(event).unwrap();
+                log_send_error("reschedule", send.send(event));
             });
             return None;
         }
@@ -525,8 +523,14 @@ impl NotifyActor {
 
 #[inline]
 fn log_notify_error<T>(res: notify::Result<T>, reason: &'static str) -> Option<T> {
-    res.map_err(|err| log::warn!("{reason}: notify error: {}", err))
+    res.map_err(|err| log::warn!("{reason}: notify error: {err}"))
         .ok()
+}
+
+#[inline]
+fn log_send_error<T>(chan: &'static str, res: Result<(), mpsc::error::SendError<T>>) -> bool {
+    res.map_err(|err| log::warn!("NotifyActor: send to {chan} error: {err}"))
+        .is_ok()
 }
 
 pub async fn watch_deps(
