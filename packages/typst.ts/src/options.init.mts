@@ -61,35 +61,32 @@ export interface InitOptions {
 
 /** @internal */
 const _textFonts: string[] = [
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/LinLibertine_R.ttf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/LinLibertine_RB.ttf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/LinLibertine_RBI.ttf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/LinLibertine_RI.ttf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NewCMMath-Book.otf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NewCMMath-Regular.otf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NewCM10-Regular.otf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NewCM10-Bold.otf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NewCM10-Italic.otf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NewCM10-BoldItalic.otf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/DejaVuSansMono.ttf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/DejaVuSansMono-Bold.ttf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/DejaVuSansMono-Oblique.ttf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/DejaVuSansMono-BoldOblique.ttf',
+  'LinLibertine_R.ttf',
+  'LinLibertine_RB.ttf',
+  'LinLibertine_RBI.ttf',
+  'LinLibertine_RI.ttf',
+  'NewCMMath-Book.otf',
+  'NewCMMath-Regular.otf',
+  'NewCM10-Regular.otf',
+  'NewCM10-Bold.otf',
+  'NewCM10-Italic.otf',
+  'NewCM10-BoldItalic.otf',
+  'DejaVuSansMono.ttf',
+  'DejaVuSansMono-Bold.ttf',
+  'DejaVuSansMono-Oblique.ttf',
+  'DejaVuSansMono-BoldOblique.ttf',
 ];
 /** @internal */
 const _cjkFonts: string[] = [
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/InriaSerif-Bold.ttf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/InriaSerif-BoldItalic.ttf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/InriaSerif-Italic.ttf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/InriaSerif-Regular.ttf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/Roboto-Regular.ttf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NotoSerifCJKsc-Regular.otf',
+  'InriaSerif-Bold.ttf',
+  'InriaSerif-BoldItalic.ttf',
+  'InriaSerif-Italic.ttf',
+  'InriaSerif-Regular.ttf',
+  'Roboto-Regular.ttf',
+  'NotoSerifCJKsc-Regular.otf',
 ];
 /** @internal */
-const _emojiFonts: string[] = [
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/TwitterColorEmoji.ttf',
-  'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/NotoColorEmoji.ttf',
-];
+const _emojiFonts: string[] = ['TwitterColorEmoji.ttf', 'NotoColorEmoji.ttf'];
 
 type AvailableFontAsset = 'text' | 'cjk' | 'emoji';
 
@@ -99,6 +96,21 @@ export interface LoadRemoteAssetsOptions {
    * @default ['text']
    */
   assets?: AvailableFontAsset[] | false;
+
+  /**
+   * customize url prefix for default assets from remote
+   *
+   * The default assets are hosted on github, you can download them and host
+   * them on your own server, which is more practical for production.
+   *
+   * Hosted at: https://github.com/Myriad-Dreamin/typst/tree/assets-fonts
+   * List of assets:
+   * See {@link _textFonts}, {@link _cjkFonts}, and {@link _emojiFonts}
+   *
+   * @default 'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/''
+   */
+  assetUrlPrefix?: string;
+
   /**
    * custom fetcher
    * Note: the default fetcher for node.js does not cache any fonts
@@ -152,16 +164,23 @@ export function preloadRemoteFonts(
     options?.assets?.length &&
     options?.assets?.length > 0
   ) {
+    let assetUrlPrefix =
+      options.assetUrlPrefix ??
+      'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts';
+    if (assetUrlPrefix[assetUrlPrefix.length - 1] !== '/') {
+      assetUrlPrefix += '/';
+    }
+    const prefix = (f: string[]) => f.map(font => assetUrlPrefix + font);
     for (const asset of options.assets) {
       switch (asset) {
         case 'text':
-          fonts.push(..._textFonts);
+          fonts.push(...prefix(_textFonts));
           break;
         case 'cjk':
-          fonts.push(..._cjkFonts);
+          fonts.push(...prefix(_cjkFonts));
           break;
         case 'emoji':
-          fonts.push(..._emojiFonts);
+          fonts.push(...prefix(_emojiFonts));
           break;
       }
     }
