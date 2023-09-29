@@ -8,6 +8,7 @@
 #show link: it => underline(stroke: style_color, it)
 #set page(
  margin: (x: 0.9cm, y: 1.3cm),
+//  fill: rgb("#343541")
 )
 #set par(justify: true)
 
@@ -21,40 +22,40 @@ skyzh\@cmu.edu |
 == Education
 #chiline()
 
-*#lorem(2)* #h(1fr) 2333/23 -- 2333/23 \
-#lorem(5) #h(1fr) #lorem(2) \
-- #lorem(10)
+#let education = [
+  *#lorem(2)* #h(1fr) 2333/23 -- 2333/23 \
+  #lorem(5) #h(1fr) #lorem(2) \
+  - #lorem(10)
+]
 
-*#lorem(2)* #h(1fr) 2333/23 -- 2333/23 \
-#lorem(5) #h(1fr) #lorem(2) \
-- #lorem(10)
+#education
+#education
+#education
+#education
 
 == Work Experience
 #chiline()
 
-*#lorem(2)* #h(1fr) 2333/23 -- 2333/23 \
-#lorem(5) #h(1fr) #lorem(2) \
-- #lorem(20)
-- #lorem(30)
-- #lorem(40)
+#let experience = [
+  *#lorem(2)* #h(1fr) 2333/23 -- 2333/23 \
+  #lorem(5) #h(1fr) #lorem(2) \
+  - #lorem(20)
+  - #lorem(30)
+  - #lorem(40)
+]
 
-*#lorem(2)* #h(1fr) 2333/23 -- 2333/23 \
-#lorem(5) #h(1fr) #lorem(2) \
-- #lorem(20)
-- #lorem(30)
-- #lorem(40)
+#experience
+#experience
+#experience
 
 == Projects
 #chiline()
 
-*#lorem(2)* #h(1fr) 2333/23 -- 2333/23 \
-#lorem(5) #h(1fr) #lorem(2) \
-- #lorem(20)
-- #lorem(30)
-- #lorem(40)
+#let project = experience
 
-*#lorem(2)* #h(1fr) 2333/23 -- 2333/23 \
-#lorem(5) #h(1fr) #lorem(2) \
-- #lorem(20)
-- #lorem(30)
-- #lorem(40)
+#project
+#project
+#project
+#project
+#project
+#project
