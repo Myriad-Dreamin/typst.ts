@@ -665,16 +665,13 @@ impl IncrementalCanvasExporter {
         self.pages = pages;
     }
 
-    pub async fn flush_page(&mut self, idx: usize, canvas: &web_sys::CanvasRenderingContext2d) {
+    pub async fn flush_page(
+        &mut self,
+        idx: usize,
+        canvas: &web_sys::CanvasRenderingContext2d,
+        ts: sk::Transform,
+    ) {
         let pg = &self.pages[idx];
-        let ts = sk::Transform::from_scale(self.pixel_per_pt, self.pixel_per_pt);
-        let sumy = self
-            .pages
-            .iter()
-            .take(idx)
-            .map(|CanvasPage { size, .. }| size.y.0)
-            .sum::<f32>();
-        let ts = ts.pre_translate(0., sumy);
 
         set_transform(canvas, ts);
         canvas.set_fill_style(&self.fill.as_ref().into());
@@ -766,11 +763,18 @@ impl IncrCanvasDocClient {
             }
         }
 
+        let s = self.elements.pixel_per_pt;
+        let ts = sk::Transform::from_scale(s, s);
+
+        // accumulate offset_y
+        let mut offset_y = 0.;
         for (idx, y) in next_doc_view.iter().enumerate() {
             let x = prev_doc_view.get(idx);
             if x.is_none() || (x.unwrap() != y && y.content != empty_page) {
-                self.elements.flush_page(idx, canvas).await;
+                let ts = ts.pre_translate(0., offset_y);
+                self.elements.flush_page(idx, canvas, ts).await;
             }
+            offset_y += y.size.y.0;
         }
     }
 
@@ -788,7 +792,9 @@ impl IncrCanvasDocClient {
             Err(error_once!("Renderer.OutofPageRange", idx: idx))?;
         }
 
-        self.elements.flush_page(idx, canvas).await;
+        let s = self.elements.pixel_per_pt;
+        let ts = sk::Transform::from_scale(s, s);
+        self.elements.flush_page(idx, canvas, ts).await;
 
         Ok(())
     }
