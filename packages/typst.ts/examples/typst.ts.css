@@ -8,6 +8,10 @@ body {
   margin: 0;
 }
 
+.typst-page.canvas {
+  margin: 0;
+}
+
 .text-layer {
   position: relative;
   left: 0;

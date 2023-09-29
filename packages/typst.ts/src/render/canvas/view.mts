@@ -71,6 +71,8 @@ export class RenderView {
         annotationLayer.style.width = `${containerWidth}px`;
         annotationLayer.style.height = `${height * orignalScale}px`;
         annotationLayer.style.position = 'absolute';
+        commonDiv.classList.add('typst-page');
+        commonDiv.classList.add('canvas');
         commonDiv.style.width = `${containerWidth}px`;
         commonDiv.style.height = `${height * orignalScale}px`;
         commonDiv.style.position = 'relative';
