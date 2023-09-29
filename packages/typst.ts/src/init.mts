@@ -117,7 +117,7 @@ class ComponentBuilder<T> {
   }
 
   async loadFonts(builder: TypstCommonBuilder<T>, fonts: (string | Uint8Array)[]): Promise<void> {
-    const escapeImport = (t: string) => import(t);
+    const escapeImport = new Function('m', 'return import(m)');
     const fetcher = (this.fetcher ||= await (async function () {
       const { fetchBuilder, FileSystemCache } = await escapeImport('node-fetch-cache');
       const cache = new FileSystemCache({
