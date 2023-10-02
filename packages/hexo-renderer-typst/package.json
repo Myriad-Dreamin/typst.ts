@@ -26,7 +26,7 @@
   "devDependencies": {},
   "scripts": {
     "publish:dry": "npm publish --dry-run",
-    "publish:lib": "npm publish"
+    "publish:lib": "npm publish || exit 0"
   },
   "engines": {
     "node": ">=12"

@@ -24,7 +24,7 @@
     "build": "wasm-pack build --target web --scope myriaddreamin -- --no-default-features --features web && node ../tools/wasm-debundle.mjs",
     "prepublish": "turbo build",
     "publish:dry": "npm publish --dry-run --access public",
-    "publish:lib": "npm publish --access public",
+    "publish:lib": "npm publish --access public || exit 0",
     "test:chrome": "wasm-pack test --chrome --headless --release",
     "test:firefox": "wasm-pack test --firefox --headless --release"
   },

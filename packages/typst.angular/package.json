@@ -9,7 +9,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false",
     "publish:dry": "cd dist/typst.angular && npm publish --dry-run --access public",
-    "publish:lib": "cd dist/typst.angular && npm publish --access public",
+    "publish:lib": "cd dist/typst.angular && npm publish --access public || exit 0",
     "lint": "ng lint"
   },
   "private": true,

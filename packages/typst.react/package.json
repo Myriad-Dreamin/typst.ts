@@ -35,7 +35,7 @@
     "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
     "test": "exit 0",
     "publish:dry": "npm publish --dry-run --access public",
-    "publish:lib": "npm publish --access public"
+    "publish:lib": "npm publish --access public || exit 0"
   },
   "peerDependencies": {
     "react": "^17.0.1",
