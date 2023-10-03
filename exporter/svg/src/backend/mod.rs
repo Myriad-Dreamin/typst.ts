@@ -557,6 +557,13 @@ fn render_path(path: &ir::PathItem) -> SvgText {
 /// Render a [`ir::ImageItem`] into svg text.
 #[comemo::memoize]
 fn render_image_item(img: &ir::ImageItem) -> SvgText {
+    match &img.image.alt {
+        Some(t) if t.as_ref() == "!typst-inlined-svg" => {
+            return SvgText::Plain(String::from_utf8(img.image.data.clone()).unwrap())
+        }
+        _ => {}
+    }
+
     SvgText::Plain(render_image(&img.image, img.size, true, ""))
 }
 
