@@ -100,13 +100,13 @@ renderer.init({}).then(...);
 
 There are several templates for developing typst.ts with Node.js:
 
-- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/templates/node.js-next")[Use renderer, with typescript configured with:]
+- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/templates/node.js")[Use renderer, with typescript configured with:]
   ```json { "moduleResolution": "Node" }``` or #linebreak()
   ```json { "moduleResolution": "Node10" }```
 - #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/templates/node.js-next")[Use renderer, with typescript configured with:]
   ```json { "moduleResolution": "Node16" }``` or #linebreak()
   ```json { "moduleResolution": "NodeNext" }```
-- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/templates/ts-node-next")[Use ts-node, with typescript configured with:]
+- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/templates/ts-node")[Use ts-node, with typescript configured with:]
   ```json { "moduleResolution": "Node" }``` or #linebreak()
   ```json { "moduleResolution": "Node10" }```
 - #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/templates/ts-node-next")[Use ts-node, with and typescript configured with:]
@@ -164,7 +164,7 @@ renderer.init({
 }).then(...);
 ```
 
-You can load them in several ways:
+You can load `__wasm_module_resource__` in several ways:
 
 ```ts
 // from url
@@ -195,3 +195,5 @@ const getModule = async () => {/* above four ways */};
 == Configure and run renderer <run-renderer>
 
 - Configure font resources, same as compiler.
+
+=== Full Code Listing
