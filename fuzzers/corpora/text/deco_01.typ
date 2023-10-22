@@ -8,4 +8,3 @@
 // Abuse thickness and transparency for redacting and highlighting stuff.
 Sometimes, we work #redact[in secret].
 There might be #highlight[redacted] things.
- underline()

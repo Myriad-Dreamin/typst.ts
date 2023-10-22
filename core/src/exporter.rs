@@ -51,6 +51,7 @@ pub mod builtins {
     use crate::{exporter_utils::map_err, AsOwnedBytes, AsOwnedString, AsWritable, Transformer};
 
     use super::{utils, DynExporter, Exporter};
+    use ecow::EcoVec;
     use typst::{diag::SourceResult, World};
 
     pub struct GroupExporter<Input> {
@@ -73,7 +74,7 @@ pub mod builtins {
 
     impl<I> Exporter<I> for GroupExporter<I> {
         fn export(&self, world: &dyn World, output: Arc<I>) -> SourceResult<()> {
-            let mut errors = Vec::new();
+            let mut errors = EcoVec::new();
 
             for f in &self.exporters {
                 utils::collect_err(&mut errors, f.export(world, output.clone()))
@@ -82,7 +83,7 @@ pub mod builtins {
             if errors.is_empty() {
                 Ok(())
             } else {
-                Err(Box::new(errors))
+                Err(errors)
             }
         }
     }
@@ -237,21 +238,21 @@ pub mod builtins {
 
 pub mod utils {
     use core::fmt::Display;
+    use ecow::{eco_vec, EcoVec};
     use typst::diag::{SourceDiagnostic, SourceResult};
 
-    pub fn collect_err(errors: &mut Vec<SourceDiagnostic>, res: SourceResult<()>) {
+    pub fn collect_err(errors: &mut EcoVec<SourceDiagnostic>, res: SourceResult<()>) {
         if let Err(errs) = res {
-            let mut errs = *errs;
-            errors.append(&mut errs);
+            errors.extend(errs);
         }
     }
 
     /// Convert the given error to a vector of source errors.
     // todo: report the component position
-    pub fn map_err<E: Display>(e: E) -> Box<Vec<SourceDiagnostic>> {
-        Box::new(vec![SourceDiagnostic::error(
+    pub fn map_err<E: Display>(e: E) -> EcoVec<SourceDiagnostic> {
+        eco_vec![SourceDiagnostic::error(
             typst::syntax::Span::detached(),
             e.to_string(),
-        )])
+        )]
     }
 }

@@ -22,9 +22,9 @@ pub trait ToCssExt {
 
 impl ToCssExt for Color {
     fn to_css(self) -> String {
-        let color = self.to_rgba();
-        if color.a == 255 {
-            let shorter = format!("#{:02x}{:02x}{:02x}", color.r, color.g, color.b);
+        let [r, g, b, a] = self.to_vec4_u8();
+        if a == 255 {
+            let shorter = format!("#{:02x}{:02x}{:02x}", r, g, b);
             if shorter.chars().nth(1) == shorter.chars().nth(2)
                 && shorter.chars().nth(3) == shorter.chars().nth(4)
                 && shorter.chars().nth(5) == shorter.chars().nth(6)
@@ -39,10 +39,7 @@ impl ToCssExt for Color {
             return shorter;
         }
 
-        format!(
-            "#{:02x}{:02x}{:02x}{:02x}",
-            color.r, color.g, color.b, color.a
-        )
+        format!("#{:02x}{:02x}{:02x}{:02x}", r, g, b, a)
     }
 }
 

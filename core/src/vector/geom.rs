@@ -33,13 +33,13 @@ impl From<Scalar> for f32 {
 
 impl From<TypstScalar> for Scalar {
     fn from(scalar: TypstScalar) -> Self {
-        Self(scalar.0 as f32)
+        Self(scalar.get() as f32)
     }
 }
 
 impl From<Scalar> for TypstScalar {
     fn from(scalar: Scalar) -> Self {
-        Self(scalar.0 as f64)
+        Self::from(scalar.0 as f64)
     }
 }
 

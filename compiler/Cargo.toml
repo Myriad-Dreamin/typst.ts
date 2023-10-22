@@ -21,13 +21,12 @@ parking_lot.workspace = true
 hex.workspace = true
 sha2.workspace = true
 flate2.workspace = true
-instant = { version = "0.1", features = ["wasm-bindgen"] }
+ecow.workspace = true
+instant.workspace = true
 
 serde.workspace = true
 serde_json.workspace = true
 serde-wasm-bindgen = { workspace = true, optional = true }
-
-same-file = { version = "1", optional = true }
 
 memmap2 = { workspace = true, optional = true }
 dirs = { workspace = true, optional = true }
@@ -92,7 +91,7 @@ system-compile = [
     "dep:notify",
     "dep:log",
 ]
-system-watch = ["dep:notify", "dep:tokio", "dep:same-file"]
+system-watch = ["dep:notify", "dep:tokio"]
 system = ["system-compile", "system-watch"]
 dynamic-layout = ["dep:typst-ts-svg-exporter"]
 __web = [

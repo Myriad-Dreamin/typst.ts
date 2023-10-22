@@ -99,7 +99,7 @@ pub trait ShadowApi {
         f: impl FnOnce(&mut Self) -> SourceResult<T>,
     ) -> SourceResult<T> {
         self.map_shadow(file_path, content).at(Span::detached())?;
-        let res: Result<T, Box<Vec<typst::diag::SourceDiagnostic>>> = f(self);
+        let res: Result<T, ecow::EcoVec<typst::diag::SourceDiagnostic>> = f(self);
         self.unmap_shadow(file_path).at(Span::detached())?;
         res
     }

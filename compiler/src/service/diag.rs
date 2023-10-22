@@ -31,7 +31,7 @@ fn color_stream() -> StandardStream {
 /// Print diagnostic messages to the terminal.
 pub fn print_diagnostics<'files, W: World + Files<'files, FileId = TypstFileId>>(
     world: &'files W,
-    errors: Vec<SourceDiagnostic>,
+    errors: ecow::EcoVec<SourceDiagnostic>,
 ) -> Result<(), codespan_reporting::files::Error> {
     let mut w = color_stream();
     let config = term::Config {

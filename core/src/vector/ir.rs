@@ -178,7 +178,7 @@ impl From<typst::image::Image> for Image {
         Image {
             data: image.data().to_vec(),
             format: format.into(),
-            size: image.size().into(),
+            size: Axes::new(image.width(), image.height()),
             alt: image.alt().map(|s| s.into()),
             hash: Fingerprint::from_u128(hash),
         }

@@ -6,15 +6,18 @@ use std::sync::Arc;
 use image::imageops::FilterType;
 use image::{GenericImageView, Rgba};
 use pixglyph::Bitmap;
-use sk::IntRect;
+use resvg::tiny_skia::IntRect;
 use tiny_skia as sk;
 use ttf_parser::{GlyphId, OutlineBuilder};
 use usvg::{NodeExt, TreeParsing};
 
-use typst::doc::{Frame, FrameItem, GroupItem, Meta, TextItem};
+use typst::doc::{Frame, FrameItem, FrameKind, GroupItem, Meta, TextItem};
 use typst::font::Font;
-use typst::geom::{self, Abs, Color, FixedStroke, Geometry, Paint, PathItem, Shape, Size};
-use typst::image::{DecodedImage, Image, RasterFormat};
+use typst::geom::{
+    self, Abs, Axes, Color, FixedStroke, Geometry, Gradient, Paint, PathItem, Point, Ratio,
+    Relative, Shape, Size, Transform,
+};
+use typst::image::{Image, ImageKind, RasterFormat};
 
 pub mod pixmap;
 
@@ -24,35 +27,93 @@ pub mod pixmap;
 /// the resulting `tiny-skia` pixel buffer.
 pub fn render(canvas: &mut sk::PixmapMut, frame: &Frame, pixel_per_pt: f32, fill: Color) {
     canvas.fill(fill.into());
+    let size = frame.size();
 
     let ts = sk::Transform::from_scale(pixel_per_pt, pixel_per_pt);
-    render_frame(canvas, ts, None, frame);
+    render_frame(canvas, State::new(size, ts, pixel_per_pt), frame);
+}
+
+/// Additional metadata carried through the rendering process.
+#[derive(Clone, Copy, Default)]
+struct State<'a> {
+    /// The transform of the current item.
+    transform: sk::Transform,
+    /// The transform of the first hard frame in the hierarchy.
+    container_transform: sk::Transform,
+    /// The mask of the current item.
+    mask: Option<&'a sk::Mask>,
+    /// The pixel per point ratio.
+    pixel_per_pt: f32,
+    /// The size of the first hard frame in the hierarchy.
+    size: Size,
+}
+
+impl<'a> State<'a> {
+    fn new(size: Size, transform: sk::Transform, pixel_per_pt: f32) -> Self {
+        Self {
+            size,
+            transform,
+            container_transform: transform,
+            pixel_per_pt,
+            ..Default::default()
+        }
+    }
+
+    /// Pre translate the current item's transform.
+    fn pre_translate(self, pos: Point) -> Self {
+        Self {
+            transform: self.transform.pre_translate(pos.x.to_f32(), pos.y.to_f32()),
+            ..self
+        }
+    }
+
+    /// Pre concat the current item's transform.
+    fn pre_concat(self, transform: sk::Transform) -> Self {
+        Self {
+            transform: self.transform.pre_concat(transform),
+            ..self
+        }
+    }
+
+    /// Sets the current mask.
+    fn with_mask(self, mask: Option<&sk::Mask>) -> State<'_> {
+        // Ensure that we're using the parent's mask if we don't have one.
+        if mask.is_some() {
+            State { mask, ..self }
+        } else {
+            State { mask: None, ..self }
+        }
+    }
+
+    /// Sets the size of the first hard frame in the hierarchy.
+    fn with_size(self, size: Size) -> Self {
+        Self { size, ..self }
+    }
+
+    /// Pre concat the container's transform.
+    fn pre_concat_container(self, transform: sk::Transform) -> Self {
+        Self {
+            container_transform: self.container_transform.pre_concat(transform),
+            ..self
+        }
+    }
 }
 
 /// Render a frame into the canvas.
-fn render_frame(
-    canvas: &mut sk::PixmapMut,
-    ts: sk::Transform,
-    mask: Option<&sk::Mask>,
-    frame: &Frame,
-) {
+fn render_frame(canvas: &mut sk::PixmapMut, state: State, frame: &Frame) {
     for (pos, item) in frame.items() {
-        let x = pos.x.to_f32();
-        let y = pos.y.to_f32();
-        let ts = ts.pre_translate(x, y);
-
         match item {
             FrameItem::Group(group) => {
-                render_group(canvas, ts, mask, group);
+                render_group(canvas, state, *pos, group);
             }
             FrameItem::Text(text) => {
-                render_text(canvas, ts, mask, text);
+                render_text(canvas, state.pre_translate(*pos), text);
             }
             FrameItem::Shape(shape, _) => {
-                render_shape(canvas, ts, mask, shape);
+                render_shape(canvas, state.pre_translate(*pos), shape);
             }
             FrameItem::Image(image, size, _) => {
-                render_image(canvas, ts, mask, image, *size);
+                render_image(canvas, state.pre_translate(*pos), image, *size);
             }
             FrameItem::Meta(meta, _) => match meta {
                 Meta::Link(_) => {}
@@ -66,23 +127,26 @@ fn render_frame(
 }
 
 /// Render a group frame with optional transform and clipping into the canvas.
-fn render_group(
-    canvas: &mut sk::PixmapMut,
-    ts: sk::Transform,
-    mask: Option<&sk::Mask>,
-    group: &GroupItem,
-) {
-    let ts = ts.pre_concat(group.transform.into());
+fn render_group(canvas: &mut sk::PixmapMut, state: State, pos: Point, group: &GroupItem) {
+    let state = match group.frame.kind() {
+        FrameKind::Soft => state.pre_translate(pos).pre_concat(group.transform.into()),
+        FrameKind::Hard => state
+            .pre_translate(pos)
+            .pre_concat(group.transform.into())
+            .pre_concat_container(
+                state
+                    .transform
+                    .post_concat(state.container_transform.invert().unwrap()),
+            )
+            .pre_concat_container(Transform::translate(pos.x, pos.y).into())
+            .pre_concat_container(group.transform.into())
+            .with_size(group.frame.size()),
+    };
 
-    let mut mask = mask;
+    let mut mask = state.mask;
     let storage;
-    if group.clips {
-        let size = group.frame.size();
-        let w = size.x.to_f32();
-        let h = size.y.to_f32();
-        if let Some(path) = sk::Rect::from_xywh(0.0, 0.0, w, h)
-            .map(sk::PathBuilder::from_rect)
-            .and_then(|path| path.transform(ts))
+    if let Some(clip_path) = group.clip_path.as_ref() {
+        if let Some(path) = convert_path(clip_path).and_then(|path| path.transform(state.transform))
         {
             if let Some(mask) = mask {
                 let mut mask = mask.clone();
@@ -115,25 +179,20 @@ fn render_group(
         }
     }
 
-    render_frame(canvas, ts, mask, &group.frame);
+    render_frame(canvas, state.with_mask(mask), &group.frame);
 }
 
 /// Render a text run into the canvas.
-fn render_text(
-    canvas: &mut sk::PixmapMut,
-    ts: sk::Transform,
-    mask: Option<&sk::Mask>,
-    text: &TextItem,
-) {
+fn render_text(canvas: &mut sk::PixmapMut, state: State, text: &TextItem) {
     let mut x = 0.0;
     for glyph in &text.glyphs {
         let id = GlyphId(glyph.id);
         let offset = x + glyph.x_offset.at(text.size).to_f32();
-        let ts = ts.pre_translate(offset, 0.0);
+        let state = state.pre_translate(Point::new(Abs::raw(offset as _), Abs::raw(0.0)));
 
-        render_svg_glyph(canvas, ts, mask, text, id)
-            .or_else(|| render_bitmap_glyph(canvas, ts, mask, text, id))
-            .or_else(|| render_outline_glyph(canvas, ts, mask, text, id));
+        render_svg_glyph(canvas, state, text, id)
+            .or_else(|| render_bitmap_glyph(canvas, state, text, id))
+            .or_else(|| render_outline_glyph(canvas, state, text, id));
 
         x += glyph.x_advance.at(text.size).to_f32();
     }
@@ -142,11 +201,11 @@ fn render_text(
 /// Render an SVG glyph into the canvas.
 fn render_svg_glyph(
     canvas: &mut sk::PixmapMut,
-    ts: sk::Transform,
-    mask: Option<&sk::Mask>,
+    state: State,
     text: &TextItem,
     id: GlyphId,
 ) -> Option<()> {
+    let ts = &state.transform;
     let mut data = text.font.ttf().glyph_svg_image(id)?;
 
     // Decompress SVGZ.
@@ -220,7 +279,7 @@ fn render_svg_glyph(
         pixmap.as_ref(),
         &sk::PixmapPaint::default(),
         sk::Transform::identity(),
-        mask,
+        state.mask,
     );
 
     Some(())
@@ -229,11 +288,11 @@ fn render_svg_glyph(
 /// Render a bitmap glyph into the canvas.
 fn render_bitmap_glyph(
     canvas: &mut sk::PixmapMut,
-    ts: sk::Transform,
-    mask: Option<&sk::Mask>,
+    state: State,
     text: &TextItem,
     id: GlyphId,
 ) -> Option<()> {
+    let ts = state.transform;
     let size = text.size.to_f32();
     let ppem = size * ts.sy;
     let raster = text.font.ttf().glyph_raster_image(id, ppem as u16)?;
@@ -249,18 +308,22 @@ fn render_bitmap_glyph(
     let w = (image.width() as f64 / image.height() as f64) * h;
     let dx = (raster.x as f32) / (image.width() as f32) * size;
     let dy = (raster.y as f32) / (image.height() as f32) * size;
-    let ts = ts.pre_translate(dx, -size - dy);
-    render_image(canvas, ts, mask, &image, Size::new(w, h))
+    render_image(
+        canvas,
+        state.pre_translate(Point::new(Abs::raw(dx as _), Abs::raw((-size - dy) as _))),
+        &image,
+        Size::new(w, h),
+    )
 }
 
 /// Render an outline glyph into the canvas. This is the "normal" case.
 fn render_outline_glyph(
     canvas: &mut sk::PixmapMut,
-    ts: sk::Transform,
-    mask: Option<&sk::Mask>,
+    state: State,
     text: &TextItem,
     id: GlyphId,
 ) -> Option<()> {
+    let ts = &state.transform;
     let ppem = text.size.to_f32() * ts.sy;
 
     // Render a glyph directly as a path. This only happens when the fast glyph
@@ -273,14 +336,25 @@ fn render_outline_glyph(
             builder.0.finish()?
         };
 
-        let paint = (&text.fill).into();
+        let scale = text.size.to_f32() / text.font.units_per_em() as f32;
+
+        let mut pixmap = None;
+        let paint = to_sk_paint(
+            &text.fill,
+            state.pre_concat(sk::Transform::from_scale(scale, -scale)),
+            Size::zero(),
+            true,
+            None,
+            &mut pixmap,
+            None,
+        );
+
         let rule = sk::FillRule::default();
 
         // Flip vertically because font design coordinate
         // system is Y-up.
-        let scale = text.size.to_f32() / text.font.units_per_em() as f32;
         let ts = ts.pre_scale(scale, -scale);
-        canvas.fill_path(&path, &paint, rule, ts, mask);
+        canvas.fill_path(&path, &paint, rule, ts, state.mask);
         return Some(());
     }
 
@@ -304,15 +378,30 @@ fn render_outline_glyph(
         ts.ty.to_bits(),
         ppem.to_bits(),
     )?;
+    match &text.fill {
+        Paint::Gradient(gradient) => {
+            let sampler = GradientSampler::new(gradient, &state, Size::zero(), true);
+            write_bitmap(canvas, &bitmap, &state, sampler)?;
+        }
+        Paint::Solid(color) => {
+            write_bitmap(canvas, &bitmap, &state, *color)?;
+        }
+    }
 
+    Some(())
+}
+
+fn write_bitmap<S: PaintSampler>(
+    canvas: &mut sk::PixmapMut,
+    bitmap: &Bitmap,
+    state: &State,
+    sampler: S,
+) -> Option<()> {
     // If we have a clip mask we first render to a pixmap that we then blend
     // with our canvas
-    if mask.is_some() {
+    if state.mask.is_some() {
         let mw = bitmap.width;
         let mh = bitmap.height;
-
-        let Paint::Solid(color) = text.fill;
-        let c = color.to_rgba();
 
         // Pad the pixmap with 1 pixel in each dimension so that we do
         // not get any problem with floating point errors along their border
@@ -320,8 +409,11 @@ fn render_outline_glyph(
         for x in 0..mw {
             for y in 0..mh {
                 let alpha = bitmap.coverage[(y * mw + x) as usize];
-                let color = sk::ColorU8::from_rgba(c.r, c.g, c.b, alpha).premultiply();
-                pixmap.pixels_mut()[((y + 1) * (mw + 2) + (x + 1)) as usize] = color;
+                let color: sk::ColorU8 = sampler.sample((x, y)).into();
+
+                pixmap.pixels_mut()[((y + 1) * (mw + 2) + (x + 1)) as usize] =
+                    sk::ColorU8::from_rgba(color.red(), color.green(), color.blue(), alpha)
+                        .premultiply();
             }
         }
 
@@ -334,7 +426,7 @@ fn render_outline_glyph(
             pixmap.as_ref(),
             &sk::PixmapPaint::default(),
             sk::Transform::identity(),
-            mask,
+            state.mask,
         );
     } else {
         let cw = canvas.width() as i32;
@@ -348,11 +440,6 @@ fn render_outline_glyph(
         let top = bitmap.top;
         let bottom = top + mh;
 
-        // Premultiply the text color.
-        let Paint::Solid(color) = text.fill;
-        let c = color.to_rgba();
-        let color = bytemuck::cast(sk::ColorU8::from_rgba(c.r, c.g, c.b, 255).premultiply());
-
         // Blend the glyph bitmap with the existing pixels on the canvas.
         let pixels = bytemuck::cast_slice_mut::<u8, u32>(canvas.data_mut());
         for x in left.clamp(0, cw)..right.clamp(0, cw) {
@@ -363,6 +450,8 @@ fn render_outline_glyph(
                     continue;
                 }
 
+                let color: sk::ColorU8 = sampler.sample((x as _, y as _)).into();
+                let color = bytemuck::cast(color.premultiply());
                 let pi = (y * cw + x) as usize;
                 if cov == 255 {
                     pixels[pi] = color;
@@ -379,12 +468,8 @@ fn render_outline_glyph(
 }
 
 /// Render a geometrical shape into the canvas.
-fn render_shape(
-    canvas: &mut sk::PixmapMut,
-    ts: sk::Transform,
-    mask: Option<&sk::Mask>,
-    shape: &Shape,
-) -> Option<()> {
+fn render_shape(canvas: &mut sk::PixmapMut, state: State, shape: &Shape) -> Option<()> {
+    let ts = state.transform;
     let path = match shape.geometry {
         Geometry::Line(target) => {
             let mut builder = sk::PathBuilder::new();
@@ -401,13 +486,23 @@ fn render_shape(
     };
 
     if let Some(fill) = &shape.fill {
-        let mut paint: sk::Paint = fill.into();
+        let mut pixmap = None;
+        let mut paint: sk::Paint = to_sk_paint(
+            fill,
+            state,
+            shape.geometry.bbox_size(),
+            false,
+            None,
+            &mut pixmap,
+            None,
+        );
+
         if matches!(shape.geometry, Geometry::Rect(_)) {
             paint.anti_alias = false;
         }
 
         let rule = sk::FillRule::default();
-        canvas.fill_path(&path, &paint, rule, ts, mask);
+        canvas.fill_path(&path, &paint, rule, ts, state.mask);
     }
 
     if let Some(FixedStroke {
@@ -442,15 +537,46 @@ fn render_shape(
 
                 sk::StrokeDash::new(dash_array, pattern.phase.to_f32())
             });
-            let paint = paint.into();
+
+            let bbox = shape.geometry.bbox_size();
+            let offset_bbox = (!matches!(shape.geometry, Geometry::Line(..)))
+                .then(|| offset_bounding_box(bbox, *thickness))
+                .unwrap_or(bbox);
+
+            let fill_transform = (!matches!(shape.geometry, Geometry::Line(..)))
+                .then(|| sk::Transform::from_translate(-thickness.to_f32(), -thickness.to_f32()));
+
+            let gradient_map = (!matches!(shape.geometry, Geometry::Line(..))).then(|| {
+                (
+                    Point::new(
+                        -*thickness * state.pixel_per_pt as f64,
+                        -*thickness * state.pixel_per_pt as f64,
+                    ),
+                    Axes::new(
+                        Ratio::new(offset_bbox.x / bbox.x),
+                        Ratio::new(offset_bbox.y / bbox.y),
+                    ),
+                )
+            });
+
+            let mut pixmap = None;
+            let paint = to_sk_paint(
+                paint,
+                state,
+                offset_bbox,
+                false,
+                fill_transform,
+                &mut pixmap,
+                gradient_map,
+            );
             let stroke = sk::Stroke {
                 width,
                 line_cap: line_cap.into(),
                 line_join: line_join.into(),
                 dash,
-                miter_limit: miter_limit.0 as f32,
+                miter_limit: miter_limit.get() as f32,
             };
-            canvas.stroke_path(&path, &paint, &stroke, ts, mask);
+            canvas.stroke_path(&path, &paint, &stroke, ts, state.mask);
         }
     }
 
@@ -487,13 +613,8 @@ fn convert_path(path: &geom::Path) -> Option<sk::Path> {
 }
 
 /// Render a raster or SVG image into the canvas.
-fn render_image(
-    canvas: &mut sk::PixmapMut,
-    ts: sk::Transform,
-    mask: Option<&sk::Mask>,
-    image: &Image,
-    size: Size,
-) -> Option<()> {
+fn render_image(canvas: &mut sk::PixmapMut, state: State, image: &Image, size: Size) -> Option<()> {
+    let ts = state.transform;
     let view_width = size.x.to_f32();
     let view_height = size.y.to_f32();
 
@@ -531,7 +652,7 @@ fn render_image(
     };
 
     let rect = sk::Rect::from_xywh(0.0, 0.0, view_width, view_height)?;
-    canvas.fill_rect(rect, &paint, ts, mask);
+    canvas.fill_rect(rect, &paint, ts, state.mask);
 
     Some(())
 }
@@ -540,30 +661,190 @@ fn render_image(
 #[comemo::memoize]
 fn scaled_texture(image: &Image, w: u32, h: u32) -> Option<Arc<sk::Pixmap>> {
     let mut pixmap = sk::Pixmap::new(w, h)?;
-    match image.decoded().as_ref() {
-        DecodedImage::Raster(dynamic, _, _) => {
+    match image.kind() {
+        ImageKind::Raster(raster) => {
             let downscale = w < image.width();
             let filter = if downscale {
                 FilterType::Lanczos3
             } else {
                 FilterType::CatmullRom
             };
-            let buf = dynamic.resize(w, h, filter);
+            let buf = raster.dynamic().resize(w, h, filter);
             for ((_, _, src), dest) in buf.pixels().zip(pixmap.pixels_mut()) {
                 let Rgba([r, g, b, a]) = src;
                 *dest = sk::ColorU8::from_rgba(r, g, b, a).premultiply();
             }
         }
-        DecodedImage::Svg(tree) => {
-            let tree = resvg::Tree::from_usvg(tree);
-            let ts = tiny_skia::Transform::from_scale(
-                w as f32 / tree.size.width(),
-                h as f32 / tree.size.height(),
-            );
-            tree.render(ts, &mut pixmap.as_mut())
-        }
+        // Safety: We do not keep any references to tree nodes beyond the scope
+        // of `with`.
+        ImageKind::Svg(svg) => unsafe {
+            svg.with(|tree| {
+                let tree = resvg::Tree::from_usvg(tree);
+                let ts = tiny_skia::Transform::from_scale(
+                    w as f32 / tree.size.width(),
+                    h as f32 / tree.size.height(),
+                );
+                tree.render(ts, &mut pixmap.as_mut())
+            });
+        },
     }
     Some(Arc::new(pixmap))
+}
+
+/// Trait for sampling of a paint, used as a generic
+/// abstraction over solid colors and gradients.
+trait PaintSampler: Copy {
+    /// Sample the color at the `pos` in the pixmap.
+    fn sample(self, pos: (u32, u32)) -> Color;
+}
+
+impl PaintSampler for Color {
+    fn sample(self, _: (u32, u32)) -> Color {
+        self
+    }
+}
+
+/// State used when sampling colors for text.
+///
+/// It caches the inverse transform to the parent, so that we can
+/// reuse it instead of recomputing it for each pixel.
+#[derive(Clone, Copy)]
+struct GradientSampler<'a> {
+    gradient: &'a Gradient,
+    container_size: Size,
+    transform_to_parent: sk::Transform,
+}
+
+impl<'a> GradientSampler<'a> {
+    fn new(gradient: &'a Gradient, state: &State, item_size: Size, on_text: bool) -> Self {
+        let relative = gradient.unwrap_relative(on_text);
+        let container_size = match relative {
+            Relative::Self_ => item_size,
+            Relative::Parent => state.size,
+        };
+
+        let fill_transform = match relative {
+            Relative::Self_ => sk::Transform::identity(),
+            Relative::Parent => state.container_transform.invert().unwrap(),
+        };
+
+        Self {
+            gradient,
+            container_size,
+            transform_to_parent: fill_transform,
+        }
+    }
+}
+
+impl PaintSampler for GradientSampler<'_> {
+    /// Samples a single point in a glyph.
+    fn sample(self, (x, y): (u32, u32)) -> Color {
+        // Compute the point in the gradient's coordinate space.
+        let mut point = sk::Point {
+            x: x as f32,
+            y: y as f32,
+        };
+        self.transform_to_parent.map_point(&mut point);
+
+        // Sample the gradient
+        self.gradient.sample_at(
+            (point.x, point.y),
+            (
+                self.container_size.x.to_f32(),
+                self.container_size.y.to_f32(),
+            ),
+        )
+    }
+}
+
+/// Transforms a [`Paint`] into a [`sk::Paint`].
+/// Applying the necessary transform, if the paint is a gradient.
+///
+/// `gradient_map` is used to scale and move the gradient being sampled,
+/// this is used to line up the stroke and the fill of a shape.
+fn to_sk_paint<'a>(
+    paint: &Paint,
+    state: State,
+    item_size: Size,
+    on_text: bool,
+    fill_transform: Option<sk::Transform>,
+    pixmap: &'a mut Option<Arc<sk::Pixmap>>,
+    gradient_map: Option<(Point, Axes<Ratio>)>,
+) -> sk::Paint<'a> {
+    /// Actual sampling of the gradient, cached for performance.
+    #[comemo::memoize]
+    fn cached(
+        gradient: &Gradient,
+        width: u32,
+        height: u32,
+        gradient_map: Option<(Point, Axes<Ratio>)>,
+    ) -> Arc<sk::Pixmap> {
+        let (offset, scale) =
+            gradient_map.unwrap_or_else(|| (Point::zero(), Axes::splat(Ratio::one())));
+        let mut pixmap = sk::Pixmap::new(width.max(1), height.max(1)).unwrap();
+        for x in 0..width {
+            for y in 0..height {
+                let color: sk::Color = gradient
+                    .sample_at(
+                        (
+                            (x as f32 + offset.x.to_f32()) * scale.x.get() as f32,
+                            (y as f32 + offset.y.to_f32()) * scale.y.get() as f32,
+                        ),
+                        (width as f32, height as f32),
+                    )
+                    .into();
+
+                pixmap.pixels_mut()[(y * width + x) as usize] = color.premultiply().to_color_u8();
+            }
+        }
+
+        Arc::new(pixmap)
+    }
+
+    let mut sk_paint: sk::Paint<'_> = sk::Paint::default();
+    match paint {
+        Paint::Solid(color) => {
+            sk_paint.set_color((*color).into());
+            sk_paint.anti_alias = true;
+        }
+        Paint::Gradient(gradient) => {
+            let relative = gradient.unwrap_relative(on_text);
+            let container_size = match relative {
+                Relative::Self_ => item_size,
+                Relative::Parent => state.size,
+            };
+
+            let fill_transform = match relative {
+                Relative::Self_ => fill_transform.unwrap_or_default(),
+                Relative::Parent => state
+                    .container_transform
+                    .post_concat(state.transform.invert().unwrap()),
+            };
+            let width = (container_size.x.to_f32() * state.pixel_per_pt).ceil() as u32;
+            let height = (container_size.y.to_f32() * state.pixel_per_pt).ceil() as u32;
+
+            *pixmap = Some(cached(
+                gradient,
+                width.max(state.pixel_per_pt.ceil() as u32),
+                height.max(state.pixel_per_pt.ceil() as u32),
+                gradient_map,
+            ));
+
+            // We can use FilterQuality::Nearest here because we're
+            // rendering to a pixmap that is already at native resolution.
+            sk_paint.shader = sk::Pattern::new(
+                pixmap.as_ref().unwrap().as_ref().as_ref(),
+                sk::SpreadMode::Pad,
+                sk::FilterQuality::Nearest,
+                1.0,
+                fill_transform.pre_scale(1.0 / state.pixel_per_pt, 1.0 / state.pixel_per_pt),
+            );
+
+            sk_paint.anti_alias = gradient.anti_alias();
+        }
+    }
+
+    sk_paint
 }
 
 /// Allows to build tiny-skia paths from glyph outlines.
@@ -618,4 +899,8 @@ fn alpha_mul(color: u32, scale: u32) -> u32 {
     let rb = ((color & mask) * scale) >> 8;
     let ag = ((color >> 8) & mask) * scale;
     (rb & mask) | (ag & !mask)
+}
+
+fn offset_bounding_box(bbox: Size, stroke_width: Abs) -> Size {
+    Size::new(bbox.x + stroke_width * 2.0, bbox.y + stroke_width * 2.0)
 }

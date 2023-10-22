@@ -6,7 +6,7 @@ use std::sync::Arc;
 use once_cell::sync::OnceCell;
 use typst::doc::{Destination, Document, Frame, FrameItem, GroupItem, Meta, Position, TextItem};
 use typst::font::Font;
-use typst::geom::{Dir, FixedStroke, Geometry, LineCap, LineJoin, Paint, PathItem, Shape, Size};
+use typst::geom::{Dir, FixedStroke, Geometry, LineCap, LineJoin, PathItem, Shape, Size};
 use typst::image::Image;
 
 use ttf_parser::OutlineBuilder;
@@ -103,24 +103,39 @@ impl LowerBuilder {
     fn lower_group(&mut self, group: &GroupItem) -> SvgItem {
         let mut inner = self.lower_frame(&group.frame);
 
-        if group.clips {
-            let mask_box = {
-                let mut builder = SvgPath2DBuilder::default();
+        if let Some(p) = group.clip_path.as_ref() {
+            // todo: merge
+            let mut builder = SvgPath2DBuilder(String::new());
 
-                // build a rectangle path
-                let size = group.frame.size();
-                let w = size.x.to_f32();
-                let h = size.y.to_f32();
-                builder.rect(0., 0., w, h);
-
-                builder.0
-            };
+            // to ensure that our shape focus on the original point
+            builder.move_to(0., 0.);
+            for elem in &p.0 {
+                match elem {
+                    PathItem::MoveTo(p) => {
+                        builder.move_to(p.x.to_f32(), p.y.to_f32());
+                    }
+                    PathItem::LineTo(p) => {
+                        builder.line_to(p.x.to_f32(), p.y.to_f32());
+                    }
+                    PathItem::CubicTo(p1, p2, p3) => {
+                        builder.curve_to(
+                            p1.x.to_f32(),
+                            p1.y.to_f32(),
+                            p2.x.to_f32(),
+                            p2.y.to_f32(),
+                            p3.x.to_f32(),
+                            p3.y.to_f32(),
+                        );
+                    }
+                    PathItem::ClosePath => {
+                        builder.close();
+                    }
+                };
+            }
+            let d = builder.0.into();
 
             inner = SvgItem::Transformed(ir::TransformedItem(
-                TransformItem::Clip(Arc::new(ir::PathItem {
-                    d: mask_box.into(),
-                    styles: vec![],
-                })),
+                TransformItem::Clip(Arc::new(ir::PathItem { d, styles: vec![] })),
                 Box::new(inner),
             ));
         };
@@ -171,8 +186,7 @@ impl LowerBuilder {
 
         let glyph_chars: String = text.text.to_string();
 
-        let Paint::Solid(fill) = text.fill;
-        let fill = fill.to_css().into();
+        let fill = text.fill.clone().to_css().into();
 
         let span_id = text
             .glyphs
@@ -255,10 +269,7 @@ impl LowerBuilder {
         let mut styles = Vec::new();
 
         if let Some(paint_fill) = &shape.fill {
-            let Paint::Solid(color) = paint_fill;
-            let c = color.to_css();
-
-            styles.push(ir::PathStyle::Fill(c.into()));
+            styles.push(ir::PathStyle::Fill(paint_fill.clone().to_css().into()));
         }
 
         // todo: default miter_limit, thickness
@@ -291,8 +302,7 @@ impl LowerBuilder {
                 LineJoin::Round => styles.push(ir::PathStyle::StrokeLineJoin("round".into())),
             }
 
-            let Paint::Solid(color) = paint;
-            styles.push(ir::PathStyle::Stroke(color.to_css().into()));
+            styles.push(ir::PathStyle::Stroke(paint.clone().to_css().into()));
         }
 
         ir::PathItem { d, styles }
@@ -326,17 +336,7 @@ impl<'a> GlyphLowerBuilder<'a> {
     /// Lower an SVG glyph into svg item.
     /// More information: https://learn.microsoft.com/zh-cn/typography/opentype/spec/svg
     fn lower_svg_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ImageGlyphItem>> {
-        let glyph_image = extract_svg_glyph(self.gp, font, id)?;
-
-        let sz = Size::new(
-            typst::geom::Abs::raw(glyph_image.width() as f64),
-            typst::geom::Abs::raw(glyph_image.height() as f64),
-        );
-
-        let image = ir::ImageItem {
-            image: Arc::new(glyph_image.into()),
-            size: sz.into(),
-        };
+        let image = extract_svg_glyph(self.gp, font, id)?;
 
         // position our image
         let ascender = font
@@ -409,7 +409,7 @@ impl<'a> GlyphLowerBuilder<'a> {
     }
 }
 
-fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<typst::image::Image> {
+fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<ir::ImageItem> {
     let data = g.svg_glyph(font, id)?;
     let mut data = data.as_ref();
 
@@ -476,15 +476,23 @@ fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<typs
         }
     }
 
-    let image = typst::image::Image::new_raw(
+    let glyph_image = typst::image::Image::new(
         svg_str.as_bytes().to_vec().into(),
         typst::image::ImageFormat::Vector(typst::image::VectorFormat::Svg),
-        typst::geom::Axes::new(width as u32, height as u32),
+        // typst::geom::Axes::new(width as u32, height as u32),
         None,
     )
     .ok()?;
 
-    Some(image)
+    let sz = Size::new(
+        typst::geom::Abs::raw(glyph_image.width() as f64),
+        typst::geom::Abs::raw(glyph_image.height() as f64),
+    );
+
+    Some(ir::ImageItem {
+        image: Arc::new(glyph_image.into()),
+        size: sz.into(),
+    })
 }
 
 /// Lower a raster or SVG image into svg item.
