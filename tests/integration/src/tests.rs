@@ -562,7 +562,7 @@ mod tests {
         ---
         name: layout_transform_00_artifact_ir
         data_content_phash: "phash-gradient:AAAAAAAAAAAASGgAAIIAzGgBzWgBYWsAuGsBgNkCVPMACLIAAEAAkDIAwLIAlHoAkHQAmDUAFD0AAE0AEC0AAAAAAAAAAAAA"
-        text_content_hash: "sha256:7edb598501de9a2babff930a6d3cfc64d0e4edc90999d7cced03eae759a520ac"
+        text_content_hash: "sha256:3cf0c26e1d53973b2cb02aaa6084116ac7e4ff1b54c1bf5cb944f40ddcfafe61"
         "###);
         check_canvas_render_test_point!(@r###"
         ---
@@ -586,13 +586,13 @@ mod tests {
         ---
         name: math_main_artifact_ir
         data_content_phash: "phash-gradient:AAAAgNwAAMQAmAYA2M4AAMgAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAABAA"
-        text_content_hash: "sha256:b00908ed4b0670c6eba39a3476a22b94b9dae9cd057c39e8e9e95a72c177cba2"
+        text_content_hash: "sha256:1a243912d1aa482060284b7154af2b7ebacfe76268abbf4e90547c93a07559e6"
         "###);
         check_canvas_render_test_point!(@r###"
         ---
         name: math_undergradmath_artifact_ir
-        data_content_phash: "phash-gradient:YM7N5Kz17Cb3MM92MMdmmEbkmMzmSA5jzI7YsCf/ZI5k5Iz8qI7ceIbpNI98qM/WwAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        text_content_hash: "sha256:9521d1dcaaadb4af01dfd55b90afe9562a5c9c651111711700e5a874b2dd0f9e"
+        data_content_phash: "phash-gradient:YM7N5Kz17Cb3MM92MMdmmEbkmMzmSA5jzI7YsIf3ZI5k5Iz8qI7ceIbpNI98qM/WwAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+        text_content_hash: "sha256:28d6d9109eec4e92b0c23e622c864aaea274d61cfc2eed29010bb18f3d447cab"
         "###);
         // todo: the size of cjk font file is quite big
         // check_canvas_render_test_point!(@r###"
@@ -616,8 +616,8 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         ---
         name: text_deco_01_artifact_ir
-        data_content_phash: "phash-gradient:AAAAhAAkYCQChABklCVlICZlJEtkSABg2AsJ0FoawJ5b2CIlAAMAVF0BoNECIOkCWGMBoIwAoC0AKC4AOC0AAAwAIAIAAAAA"
-        text_content_hash: "sha256:683a8f00ef1a4cb609f8cdf6afb11342e1a00f0e6685f187e97c76e3a2b4eb39"
+        data_content_phash: "phash-gradient:AAAAAAAghAAAYCRihABklCVlaSZlIG9kAAhgwGQKSAMpwEo6yNxawA4byAABAEMSUA0B1N0AIPECYOkCCGMBAJAAACEAAAAA"
+        text_content_hash: "sha256:7d06f127160753245ec72b1f3fc062bea7e30fa559048a71912b674ce698e8e5"
         "###);
         check_canvas_render_test_point!(@r###"
         ---
@@ -717,7 +717,7 @@ mod tests {
         ---
         name: visualize_shape-aspect_01_artifact_ir
         data_content_phash: "phash-gradient:AAAAAAQAAAAAiA4AJK0B3AwCkM8FlCULJBQCFJkWFIkUFAkUFMkNFMkNRIkFFAkUxNkUxJkWJDQKVC0DKM4EABACCIYAAAAA"
-        text_content_hash: "sha256:947b9874583143663e9972ece2d1cfb35f47050b2115567a6c8a96258489a4e6"
+        text_content_hash: "sha256:bedfe90689b8d4883245ebb688ce48e306cec12e697921a47d6cffcb775d8961"
         "###);
         check_canvas_render_test_point!(@r###"
         ---

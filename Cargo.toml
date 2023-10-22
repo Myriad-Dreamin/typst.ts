@@ -61,6 +61,7 @@ strip = true
 # typesetting
 pixglyph = "0.2"
 typst = "0.8.0"
+typst-ide = "0.8.0"
 typst-library = "0.8.0"
 typst-syntax = "0.8.0"
 ttf-parser = "0.19.2"
@@ -86,7 +87,7 @@ bytemuck = "1"
 comemo = "0.3"
 dissimilar = "1.0"
 elsa = "1.8.1"
-ecow = "0.1"
+ecow = "0.2"
 fst = "0.4.7"
 indexmap = "2"
 
@@ -103,11 +104,12 @@ tokio-tungstenite = "0.20.0"
 
 # system
 dirs = "5"
-memmap2 = "0.7"
+memmap2 = "0.9"
 notify = "6"
 path-clean = "1.0.1"
 pathdiff = "0.2"
 walkdir = "2"
+instant = { version = "0.1", features = ["wasm-bindgen"] }
 
 # web
 js-sys = "^0.3"
@@ -152,7 +154,7 @@ rustc-hash = "1.1.0"
 serde = { version = "1.0.188" }
 serde_json = "1.0.106"
 serde_with = { version = "3.3", features = ["base64"] }
-serde-wasm-bindgen = "^0.5"
+serde-wasm-bindgen = "^0.6"
 sha2 = "0.10.6"
 # todo: typst prevent it, we should notice and bump it later
 siphasher = "0.3.10"
@@ -206,9 +208,12 @@ typst-ts-raster-exporter = { path = "exporter/raster" }
 typst-ts-serde-exporter = { path = "exporter/serde" }
 typst-ts-svg-exporter = { path = "exporter/svg" }
 
-typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.8.0" }
-typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.8.0" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.8.0" }
+typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0" }
+typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0" }
+typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0" }
 
 # typst = { path = "../typst/crates/typst" }
 # typst-library = { path = "../typst/crates/typst-library" }
+# typst-syntax = { path = "../typst/crates/typst-syntax" }
+# typst-ide = { path = "../typst/crates/typst-ide" }

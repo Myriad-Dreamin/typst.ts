@@ -15,8 +15,8 @@ use typst_ts_core::TakeAs;
 use crate::query::serialize;
 use crate::CompileOnceArgs;
 
-use typst::ide::autocomplete;
 use typst::World;
+use typst_ide::autocomplete;
 
 #[derive(Helper, Validator)]
 struct ReplContext {
@@ -87,7 +87,7 @@ impl Highlighter for ReplContext {
     }
 }
 
-fn to_repl_completion_pair(item: typst::ide::Completion) -> Pair {
+fn to_repl_completion_pair(item: typst_ide::Completion) -> Pair {
     // we does not support code snippet
     // let rep = item.apply.as_ref().unwrap_or(&item.label).into();
     let rep = item.label.clone().into();

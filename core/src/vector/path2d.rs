@@ -5,6 +5,7 @@ pub struct SvgPath2DBuilder(pub String);
 
 /// See: https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorial/Paths
 impl SvgPath2DBuilder {
+    #[allow(dead_code)]
     pub fn rect(&mut self, x: f32, y: f32, w: f32, h: f32) {
         write!(
             &mut self.0,

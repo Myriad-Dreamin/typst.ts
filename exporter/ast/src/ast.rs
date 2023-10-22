@@ -2,8 +2,7 @@ use std::fmt::Display;
 use std::io::{self, Write};
 use std::sync::Arc;
 
-use typst::ide::Tag;
-use typst::syntax::{LinkedNode, Source, SyntaxKind};
+use typst::syntax::{LinkedNode, Source, SyntaxKind, Tag};
 use typst_ts_core::exporter_utils::map_err;
 use typst_ts_core::Transformer;
 
@@ -42,7 +41,7 @@ impl<'a, W: io::Write> AstWriter<'a, W> {
 
     fn write_repr(&mut self, ast: &LinkedNode) {
         let k = ast.kind();
-        if let Some(hl) = typst::ide::highlight(ast) {
+        if let Some(hl) = typst::syntax::highlight(ast) {
             match hl {
                 Tag::Comment => {
                     self.painted(COMMENT, format!("Ct::{:?}", k));
