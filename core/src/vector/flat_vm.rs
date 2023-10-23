@@ -5,6 +5,7 @@ use crate::hash::Fingerprint;
 
 use super::flat_ir as ir;
 use super::ir::{FontIndice, GlyphRef};
+use super::vm::RenderState;
 use super::{
     ir::{Point, Scalar},
     vm::{GroupContext, TransformContext},
@@ -30,7 +31,13 @@ pub trait FlatGroupContext<C>: Sized {
     fn with_frame(self, _ctx: &mut C, _group: &ir::GroupRef) -> Self {
         self
     }
-    fn with_text(self, _ctx: &mut C, _text: &ir::FlatTextItem) -> Self {
+    fn with_text(
+        self,
+        _ctx: &mut C,
+        _text: &ir::FlatTextItem,
+        _fill_key: &Fingerprint,
+        _state: RenderState,
+    ) -> Self {
         self
     }
     fn with_reuse(self, _ctx: &mut C, _v: &Fingerprint) -> Self {
@@ -56,21 +63,28 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
         self.start_flat_group(value)
     }
 
-    fn start_flat_text(&mut self, value: &Fingerprint, _text: &ir::FlatTextItem) -> Self::Group {
+    fn start_flat_text(
+        &mut self,
+        _state: RenderState,
+        value: &Fingerprint,
+        _text: &ir::FlatTextItem,
+    ) -> Self::Group {
         self.start_flat_group(value)
     }
 
     #[doc(hidden)]
     /// Default implemenetion to render an item into the a `<g/>` element.
     fn _render_flat_item(&mut self, abs_ref: &Fingerprint) -> Self::Resultant {
+        // todo state
+        let state = RenderState::default();
         let item: &'m ir::FlatSvgItem = self.get_item(abs_ref).unwrap();
         match &item {
-            ir::FlatSvgItem::Group(group) => self.render_group_ref(abs_ref, group),
+            ir::FlatSvgItem::Group(group, _) => self.render_group_ref(abs_ref, group),
             ir::FlatSvgItem::Item(transformed) => self.render_transformed_ref(abs_ref, transformed),
-            ir::FlatSvgItem::Text(text) => self.render_flat_text(abs_ref, text),
+            ir::FlatSvgItem::Text(text) => self.render_flat_text(state, abs_ref, text),
             ir::FlatSvgItem::Path(path) => {
                 let mut g = self.start_flat_group(abs_ref);
-                g.render_path(self, path);
+                g.render_path(self, path, abs_ref);
                 g.into()
             }
             ir::FlatSvgItem::Link(link) => {
@@ -83,7 +97,7 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
                 g.render_image(self, image);
                 g.into()
             }
-            ir::FlatSvgItem::None => {
+            ir::FlatSvgItem::Gradient(..) | ir::FlatSvgItem::None => {
                 panic!("FlatRenderVm.RenderFrame.UnknownItem {:?}", item)
             }
         }
@@ -125,10 +139,11 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
     /// Render a text into the underlying context.
     fn render_flat_text(
         &mut self,
+        state: RenderState,
         abs_ref: &Fingerprint,
         text: &ir::FlatTextItem,
     ) -> Self::Resultant {
-        let group_ctx = self.start_flat_text(abs_ref, text);
+        let group_ctx = self.start_flat_text(state, abs_ref, text);
 
         let font = self.get_font(&text.font).unwrap();
 
@@ -184,13 +199,15 @@ where
         next_abs_ref: &Fingerprint,
         prev_abs_ref: &Fingerprint,
     ) -> Self::Resultant {
+        // todo state
+        let state = RenderState::default();
         let next_item: &'m ir::FlatSvgItem = self.get_item(next_abs_ref).unwrap();
         let prev_item = self.get_item(prev_abs_ref);
 
         let mut group_ctx = self.start_flat_group(next_abs_ref);
 
         match &next_item {
-            ir::FlatSvgItem::Group(group) => {
+            ir::FlatSvgItem::Group(group, _) => {
                 let mut group_ctx = group_ctx
                     .with_reuse(self, prev_abs_ref)
                     .with_frame(self, group);
@@ -205,11 +222,11 @@ where
                 group_ctx
             }
             ir::FlatSvgItem::Text(text) => {
-                let group_ctx = group_ctx.with_text(self, text);
+                let group_ctx = group_ctx.with_text(self, text, next_abs_ref, state);
                 self.render_diff_flat_text(group_ctx, text)
             }
             ir::FlatSvgItem::Path(path) => {
-                group_ctx.render_path(self, path);
+                group_ctx.render_path(self, path, next_abs_ref);
                 group_ctx
             }
             ir::FlatSvgItem::Link(link) => {
@@ -220,7 +237,7 @@ where
                 group_ctx.render_image(self, image);
                 group_ctx
             }
-            ir::FlatSvgItem::None => {
+            ir::FlatSvgItem::Gradient(..) | ir::FlatSvgItem::None => {
                 panic!("FlatRenderVm.RenderFrame.UnknownItem {:?}", next_item)
             }
         }
@@ -243,7 +260,7 @@ where
         prev_item_: Option<&ir::FlatSvgItem>,
         next: &ir::GroupRef,
     ) {
-        if let Some(ir::FlatSvgItem::Group(prev_group)) = prev_item_ {
+        if let Some(ir::FlatSvgItem::Group(prev_group, _)) = prev_item_ {
             let mut unused_prev: BTreeMap<usize, Fingerprint> =
                 prev_group.0.iter().map(|v| v.1).enumerate().collect();
             let reusable: HashSet<Fingerprint, RandomState> =

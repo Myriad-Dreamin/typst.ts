@@ -55,5 +55,6 @@ fn main() {
         ArchivedPage,
         ArchivedLayoutRegion,
         ArchivedBuildInfo,
+        ArchivedColorItem,
     );
 }

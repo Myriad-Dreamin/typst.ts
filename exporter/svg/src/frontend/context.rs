@@ -1,7 +1,8 @@
-use std::{collections::HashMap, sync::Arc};
+use siphasher::sip128::Hasher128;
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use typst_ts_core::{
-    hash::{item_hash128, Fingerprint, FingerprintBuilder},
+    hash::{item_hash128, Fingerprint, FingerprintBuilder, FingerprintSipHasherBase},
     vector::{
         flat_ir::{FlatSvgItem, FlatTextItem, GroupRef, Module},
         flat_vm::{FlatIncrRenderVm, FlatRenderVm},
@@ -10,12 +11,15 @@ use typst_ts_core::{
             ImmutStr, PathItem, StyleNs,
         },
         vm::GroupContext,
-        vm::RenderVm,
+        vm::{RenderState, RenderVm},
     },
 };
 
 use crate::{
-    backend::{BuildClipPath, BuildFillStyleClass, DynExportFeature, SvgTextBuilder, SvgTextNode},
+    backend::{
+        BuildClipPath, BuildFillStyleClass, DynExportFeature, NotifyPaint, SvgTextBuilder,
+        SvgTextNode,
+    },
     ExportFeature, GlyphProvider,
 };
 
@@ -24,6 +28,8 @@ use crate::{
 pub(crate) type StyleDefMap = HashMap<(StyleNs, ImmutStr), String>;
 /// Maps the clip path's data to the clip path id.
 pub(crate) type ClipPathMap = HashMap<ImmutStr, Fingerprint>;
+/// Maps the clip path's data to the clip path id.
+pub(crate) type GradientMap = HashMap<ImmutStr, (u8, Fingerprint)>;
 
 /// The task context for rendering svg items
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
@@ -47,6 +53,8 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     pub(crate) style_defs: &'t mut StyleDefMap,
     /// Stores the clip paths used in the document.
     pub(crate) clip_paths: &'t mut ClipPathMap,
+    /// Stores the clip paths used in the document.
+    pub(crate) gradients: &'t mut GradientMap,
 
     /// See [`ExportFeature`].
     pub should_render_text_element: bool,
@@ -131,6 +139,39 @@ impl<'m, 't, Feat: ExportFeature> BuildClipPath for RenderContext<'m, 't, Feat> 
     }
 }
 
+impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
+    fn notify_paint(&mut self, url_ref: ImmutStr) -> (u8, Fingerprint) {
+        if let Some(f) = self.gradients.get(&url_ref) {
+            return *f;
+        }
+
+        // url(#ghash)
+        if !url_ref.starts_with("url(#g") || !url_ref.ends_with(')') {
+            panic!("Invalid url reference: {}", url_ref);
+        }
+
+        let id = url_ref.trim_start_matches("url(#g").trim_end_matches(')');
+        let id = Fingerprint::try_from_str(id).unwrap();
+
+        let kind = match self.get_item(&id) {
+            Some(FlatSvgItem::Gradient(g)) => &g.kind,
+            _ => {
+                // #[cfg(debug_assertions)]
+                panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
+            }
+        };
+
+        let kind = match kind {
+            ir::GradientKind::Linear(..) => b'l',
+            ir::GradientKind::Radial(..) => b'r',
+            ir::GradientKind::Conic(..) => b'p',
+        };
+
+        self.gradients.insert(url_ref, (kind, id));
+        (kind, id)
+    }
+}
+
 /// Example of how to implement a RenderVm.
 impl<'m, 't, Feat: ExportFeature> RenderVm for RenderContext<'m, 't, Feat> {
     // type Resultant = String;
@@ -140,6 +181,7 @@ impl<'m, 't, Feat: ExportFeature> RenderVm for RenderContext<'m, 't, Feat> {
     fn start_group(&mut self) -> Self::Group {
         Self::Group {
             attributes: vec![],
+            text_fill: None,
             content: Vec::with_capacity(1),
         }
     }
@@ -150,9 +192,16 @@ impl<'m, 't, Feat: ExportFeature> RenderVm for RenderContext<'m, 't, Feat> {
         g
     }
 
-    fn start_text(&mut self, text: &ir::TextItem) -> Self::Group {
+    fn start_text(&mut self, state: RenderState, text: &ir::TextItem) -> Self::Group {
         let mut g = self.start_group();
-        g.with_text_shape(self, &text.shape);
+
+        let mut k = FingerprintSipHasherBase::new();
+        text.font.hash(&mut k);
+        text.content.glyphs.hash(&mut k);
+        text.shape.hash(&mut k);
+        let k = k.finish128().as_u128();
+
+        g.with_text_shape(self, &text.shape, &Fingerprint::from_u128(k), state);
         g.attach_debug_info(self, text.content.span_id);
 
         g
@@ -171,6 +220,7 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Fea
     fn start_flat_group(&mut self, v: &Fingerprint) -> Self::Group {
         Self::Group {
             attributes: vec![("data-tid", v.as_svg_id("g"))],
+            text_fill: None,
             content: Vec::with_capacity(1),
         }
     }
@@ -181,9 +231,14 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Fea
         g
     }
 
-    fn start_flat_text(&mut self, value: &Fingerprint, text: &FlatTextItem) -> Self::Group {
+    fn start_flat_text(
+        &mut self,
+        state: RenderState,
+        value: &Fingerprint,
+        text: &FlatTextItem,
+    ) -> Self::Group {
         let mut g = self.start_flat_group(value);
-        g.with_text_shape(self, &text.shape);
+        g.with_text_shape(self, &text.shape, value, state);
         g
     }
 }

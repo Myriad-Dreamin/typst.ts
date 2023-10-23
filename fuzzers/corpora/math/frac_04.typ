@@ -1,6 +1,6 @@
 
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
-// 
-// // Error: 8-13 missing argument: lower
-// $ binom(x^2) $
+
+// Test multinomial coefficients.
+$ binom(n, k_1, k_2, k_3) $

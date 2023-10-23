@@ -17,7 +17,7 @@ base64.workspace = true
 
 typst-ts-core.workspace = true
 log.workspace = true
-
+siphasher.workspace = true
 
 [features]
 rkyv = ["typst-ts-core/rkyv"]

@@ -5,6 +5,7 @@ use siphasher::sip128::{Hasher128, SipHasher13};
 
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
+use typst::diag::StrResult;
 
 /// See <https://github.com/rust-lang/rust/blob/master/compiler/rustc_hir/src/stable_hash_impls.rs#L22>
 /// The fingerprint conflicts should be very rare and should be handled by the
@@ -35,26 +36,39 @@ impl Fingerprint {
         ((self.1 as u128) << 64) | self.0 as u128
     }
 
+    pub fn try_from_str(s: &str) -> StrResult<Self> {
+        let bytes = base64::engine::general_purpose::STANDARD_NO_PAD
+            .decode(&s.as_bytes()[..11])
+            .expect("invalid base64 string");
+        let lo = u64::from_le_bytes(bytes.try_into().unwrap());
+        let mut bytes = base64::engine::general_purpose::STANDARD_NO_PAD
+            .decode(&s.as_bytes()[11..])
+            .expect("invalid base64 string");
+        bytes.resize(8, 0);
+        let hi = u64::from_le_bytes(bytes.try_into().unwrap());
+        Ok(Self::from_pair(lo, hi))
+    }
+
     /// Create a xml id from the given prefix and the fingerprint of this
     /// reference. Note that the entire html document shares namespace for
     /// ids.
     #[comemo::memoize]
     pub fn as_svg_id(self, prefix: &'static str) -> String {
-        let fingerprint_hi =
+        let fingerprint_lo =
             base64::engine::general_purpose::STANDARD_NO_PAD.encode(self.0.to_le_bytes());
         if self.1 == 0 {
-            return [prefix, &fingerprint_hi].join("");
+            return [prefix, &fingerprint_lo].join("");
         }
 
         // possible the id in the lower 64 bits.
-        let fingerprint_lo = {
+        let fingerprint_hi = {
             let id = self.1.to_le_bytes();
             // truncate zero
             let rev_zero = id.iter().rev().skip_while(|&&b| b == 0).count();
             let id = &id[..rev_zero];
             base64::engine::general_purpose::STANDARD_NO_PAD.encode(id)
         };
-        [prefix, &fingerprint_hi, &fingerprint_lo].join("")
+        [prefix, &fingerprint_lo, &fingerprint_hi].join("")
     }
 }
 
@@ -66,10 +80,13 @@ pub trait FingerprintHasher: std::hash::Hasher {
 }
 
 /// A fingerprint hasher that uses the [`SipHasher13`] algorithm.
-struct FingerprintSipHasher {
+#[derive(Default)]
+pub struct FingerprintSipHasher {
     /// The underlying data passed to the hasher.
     data: Vec<u8>,
 }
+
+pub type FingerprintSipHasherBase = SipHasher13;
 
 impl std::hash::Hasher for FingerprintSipHasher {
     fn write(&mut self, bytes: &[u8]) {
@@ -77,7 +94,7 @@ impl std::hash::Hasher for FingerprintSipHasher {
     }
 
     fn finish(&self) -> u64 {
-        let mut inner = SipHasher13::new();
+        let mut inner = FingerprintSipHasherBase::new();
         self.data.hash(&mut inner);
         inner.finish()
     }
@@ -86,7 +103,7 @@ impl std::hash::Hasher for FingerprintSipHasher {
 impl FingerprintHasher for FingerprintSipHasher {
     fn finish_fingerprint(&self) -> (Fingerprint, Vec<u8>) {
         let buffer = self.data.clone();
-        let mut inner = SipHasher13::new();
+        let mut inner = FingerprintSipHasherBase::new();
         buffer.hash(&mut inner);
         let hash = inner.finish128();
         (Fingerprint(hash.h1, hash.h2), buffer)
@@ -156,4 +173,19 @@ pub fn item_hash128<T: Hash + 'static>(item: &T) -> u128 {
 #[inline]
 pub fn hash128<T: std::hash::Hash>(t: &T) -> u128 {
     typst::util::hash128(t)
+}
+
+#[test]
+fn test_fingerprint() {
+    let t = Fingerprint::from_pair(0, 1);
+    assert_eq!(Fingerprint::try_from_str(&t.as_svg_id("")).unwrap(), t);
+
+    let t = Fingerprint::from_pair(1, 1);
+    assert_eq!(Fingerprint::try_from_str(&t.as_svg_id("")).unwrap(), t);
+
+    let t = Fingerprint::from_pair(1, 0);
+    assert_eq!(Fingerprint::try_from_str(&t.as_svg_id("")).unwrap(), t);
+
+    let t = Fingerprint::from_pair(0, 0);
+    assert_eq!(Fingerprint::try_from_str(&t.as_svg_id("")).unwrap(), t);
 }

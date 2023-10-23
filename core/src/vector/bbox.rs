@@ -5,6 +5,7 @@ use comemo::Prehashed;
 use typst::font::Font;
 
 use super::ir::{FontIndice, FontRef, GlyphPackBuilder, GlyphRef};
+use super::vm::RenderState;
 use super::{
     flat_ir::{self, Module},
     flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
@@ -205,8 +206,14 @@ impl<C> TransformContext<C> for BBoxBuilder {
 
 /// See [`GroupContext`].
 impl<C: BuildGlyph + RenderVm<Resultant = BBox>> GroupContext<C> for BBoxBuilder {
-    fn render_item_at(&mut self, ctx: &mut C, pos: ir::Point, item: &ir::SvgItem) {
-        let bbox = ctx.render_item(item);
+    fn render_item_at(
+        &mut self,
+        state: RenderState,
+        ctx: &mut C,
+        pos: ir::Point,
+        item: &ir::SvgItem,
+    ) {
+        let bbox = ctx.render_item(state, item);
         self.inner.push((pos, bbox));
     }
 
@@ -215,7 +222,7 @@ impl<C: BuildGlyph + RenderVm<Resultant = BBox>> GroupContext<C> for BBoxBuilder
         self.render_glyph_ref_inner(pos, &glyph_ref, glyph)
     }
 
-    fn render_path(&mut self, _ctx: &mut C, path: &ir::PathItem) {
+    fn render_path(&mut self, _ctx: &mut C, path: &ir::PathItem, _abs_ref: &Fingerprint) {
         let path = PathRepr::from_item(path).unwrap();
         self.inner.push((
             ir::Point::default(),
@@ -407,7 +414,7 @@ fn convert_path(path_data: &str) -> Option<tiny_skia_path::Path> {
 
 #[cfg(test)]
 mod tests {
-    use tests::ir::PathItem;
+    use tests::ir::{PathItem, Size};
 
     use crate::vector::path2d::SvgPath2DBuilder;
 
@@ -438,6 +445,7 @@ mod tests {
         let d = d.0.into();
         let path = PathItem {
             d,
+            size: None,
             styles: Default::default(),
         };
 
@@ -450,7 +458,10 @@ mod tests {
         let mut task = t.get();
 
         let rect = get_rect_item(1., 2., 10., 20.);
-        let bbox = task.render_item(&rect);
+        let bbox = task.render_item(
+            RenderState::new_size(Size::new(Scalar(10.), Scalar(20.))),
+            &rect,
+        );
 
         println!("{:?}", bbox.realize(Transform::identity()));
     }
@@ -461,7 +472,10 @@ mod tests {
         let mut task = t.get();
 
         let rect = get_rect_item(1., 2., 10., 20.);
-        let bbox = task.render_item(&rect);
+        let bbox = task.render_item(
+            RenderState::new_size(Size::new(Scalar(10.), Scalar(20.))),
+            &rect,
+        );
 
         let ts = sk::Transform::from_translate(10., 20.);
         println!("{:?}", bbox.realize(ts.into()));

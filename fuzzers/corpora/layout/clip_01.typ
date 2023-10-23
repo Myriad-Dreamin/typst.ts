@@ -4,7 +4,7 @@
 
 // Test cliping text
 #block(width: 5em, height: 2em, clip: false, stroke: 1pt + black)[
-  But, soft! what light through 
+  But, soft! what light through
 ]
 
 #v(2em)

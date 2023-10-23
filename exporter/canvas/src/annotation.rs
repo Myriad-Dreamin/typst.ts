@@ -40,7 +40,7 @@ impl<'m, 't> AnnotationListTask<'m, 't> {
                 }),
                 &t.1,
             ),
-            SvgItem::Group(group) => self.process_group(ts, group),
+            SvgItem::Group(group, _) => self.process_group(ts, group),
             SvgItem::Link(link) => self.process_link(ts, link),
             _ => {}
         }
@@ -64,7 +64,7 @@ impl<'m, 't> AnnotationListTask<'m, 't> {
                 }),
                 &t.1,
             ),
-            FlatSvgItem::Group(group) => self.process_flat_group(ts, group),
+            FlatSvgItem::Group(group, _) => self.process_flat_group(ts, group),
             FlatSvgItem::Link(link) => self.process_link(ts, link),
             _ => {}
         }

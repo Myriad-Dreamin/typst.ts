@@ -11,7 +11,7 @@ use typst_ts_core::{
         flat_ir::{self, FlatSvgItem, FlatTextItem, GroupRef, Module},
         flat_vm::{FlatGroupContext, FlatRenderVm},
         ir::{self, Abs, Axes, FontIndice, FontRef, Ratio, Scalar, SvgItem},
-        vm::{GroupContext, RenderVm, TransformContext},
+        vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
     TextContent,
 };
@@ -69,9 +69,15 @@ trait TranslateCtx {
 
 /// See [`GroupContext`].
 impl<C: TranslateCtx + RenderVm<Resultant = ()>> GroupContext<C> for TextContentBuilder {
-    fn render_item_at(&mut self, ctx: &mut C, pos: ir::Point, item: &ir::SvgItem) {
+    fn render_item_at(
+        &mut self,
+        state: RenderState,
+        ctx: &mut C,
+        pos: ir::Point,
+        item: &ir::SvgItem,
+    ) {
         ctx.translate(pos.x, pos.y);
-        ctx.render_item(item);
+        ctx.render_item(state, item);
         ctx.translate(-pos.x, -pos.y);
     }
 }
@@ -122,7 +128,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
                 }),
                 &t.1,
             ),
-            SvgItem::Group(group) => self.process_group(ts, group),
+            SvgItem::Group(group, _) => self.process_group(ts, group),
             SvgItem::Text(text) => self.process_text(ts, text),
             _ => {}
         }
@@ -142,7 +148,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
                     }),
                     &t.1,
                 ),
-                SvgItem::Group(group) => {
+                SvgItem::Group(group, _) => {
                     self.process_group(ts, group);
                 }
                 SvgItem::Text(text) => {
@@ -186,7 +192,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
                 }),
                 &t.1,
             ),
-            FlatSvgItem::Group(group) => self.process_flat_group(ts, group),
+            FlatSvgItem::Group(group, _) => self.process_flat_group(ts, group),
             FlatSvgItem::Text(text) => self.process_flat_text(ts, text),
             _ => {}
         }
@@ -207,7 +213,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
                     }),
                     &t.1,
                 ),
-                FlatSvgItem::Group(group) => {
+                FlatSvgItem::Group(group, _) => {
                     self.process_flat_group(ts, group);
                 }
                 FlatSvgItem::Text(text) => {

@@ -4476,6 +4476,7 @@ dependencies = [
  "base64",
  "comemo",
  "log",
+ "siphasher",
  "tiny-skia",
  "typst",
  "typst-ts-core",

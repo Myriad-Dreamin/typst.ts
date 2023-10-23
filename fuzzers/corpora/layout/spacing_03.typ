@@ -1,7 +1,8 @@
 
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
-// 
-// // Missing spacing.
-// // Error: 11-13 missing argument: amount
-// Totally #h() ignored
+
+// Test RTL spacing.
+#set text(dir: rtl)
+A #h(10pt) B \
+A #h(1fr) B

@@ -18,7 +18,7 @@ use typst_ts_core::{
             self, Abs, Axes, BuildGlyph, FontIndice, FontRef, GlyphItem, GlyphPackBuilder,
             GlyphRef, Image, ImageItem, ImmutStr, PathStyle, Ratio, Rect, Scalar, Size, SvgItem,
         },
-        vm::{GroupContext, RenderVm, TransformContext},
+        vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
 };
 
@@ -177,11 +177,20 @@ impl CanvasElem for CanvasPathElem {
         }
 
         if fill {
+            // todo: canvas gradient
+            if fill_color.starts_with("url") {
+                fill_color = "black".into()
+            }
             canvas.set_fill_style(&fill_color.as_ref().into());
             canvas.fill_with_path_2d(&Path2d::new_with_path_string(&self.path_data.d).unwrap());
         }
 
         if stroke && stroke_width.abs() > 1e-5 {
+            // todo: canvas gradient
+            if stroke_color.starts_with("url") {
+                stroke_color = "black".into()
+            }
+
             canvas.set_stroke_style(&stroke_color.as_ref().into());
             canvas.stroke_with_path(&Path2d::new_with_path_string(&self.path_data.d).unwrap());
         }
@@ -458,8 +467,14 @@ impl<C> TransformContext<C> for CanvasStack {
 impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> GroupContext<C>
     for CanvasStack
 {
-    fn render_item_at(&mut self, ctx: &mut C, pos: ir::Point, item: &ir::SvgItem) {
-        self.inner.push((pos, ctx.render_item(item)));
+    fn render_item_at(
+        &mut self,
+        state: RenderState,
+        ctx: &mut C,
+        pos: ir::Point,
+        item: &ir::SvgItem,
+    ) {
+        self.inner.push((pos, ctx.render_item(state, item)));
     }
 
     fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &ir::GlyphItem) {
@@ -469,7 +484,7 @@ impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> Gro
         }
     }
 
-    fn render_path(&mut self, _ctx: &mut C, path: &ir::PathItem) {
+    fn render_path(&mut self, _ctx: &mut C, path: &ir::PathItem, _abs_ref: &Fingerprint) {
         self.inner.push((
             ir::Point::default(),
             Arc::new(Box::new(CanvasPathElem {
@@ -560,6 +575,7 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for CanvasRenderTask<'m, 't, 
 
     fn start_flat_text(
         &mut self,
+        _state: RenderState,
         value: &Fingerprint,
         text: &flat_ir::FlatTextItem,
     ) -> Self::Group {
@@ -726,7 +742,7 @@ impl IncrCanvasDocClient {
 
         // prepare an empty page for the pages that are not rendered
         // todo: better solution?
-        let empty_page = self.mb.build(SvgItem::Group(Default::default()));
+        let empty_page = self.mb.build(SvgItem::Group(Default::default(), None));
         kern.doc
             .module
             .items
