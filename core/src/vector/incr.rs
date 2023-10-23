@@ -70,6 +70,10 @@ impl IncrDocServer {
                 }
             })
             .collect::<Vec<_>>();
+
+        for (_, ext) in lower_builder.extra_items.into_iter() {
+            builder.build(ext);
+        }
         let delta = builder.finalize_delta();
 
         // max, min lifetime current, gc_items

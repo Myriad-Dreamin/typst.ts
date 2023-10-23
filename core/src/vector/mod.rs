@@ -82,7 +82,7 @@ fn rkyv_assertions() {
     const _: () = assert!(core::mem::align_of::<ArchivedImageItem>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedLinkItem>() == 16);
     const _: () = assert!(core::mem::align_of::<ArchivedLinkItem>() == 4);
-    const _: () = assert!(core::mem::size_of::<ArchivedPathItem>() == 16);
+    const _: () = assert!(core::mem::size_of::<ArchivedPathItem>() == 28);
     const _: () = assert!(core::mem::align_of::<ArchivedPathItem>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedImageGlyphItem>() == 36);
     const _: () = assert!(core::mem::align_of::<ArchivedImageGlyphItem>() == 4);
@@ -102,4 +102,6 @@ fn rkyv_assertions() {
     const _: () = assert!(core::mem::align_of::<ArchivedLayoutRegion>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedBuildInfo>() == 16);
     const _: () = assert!(core::mem::align_of::<ArchivedBuildInfo>() == 4);
+    const _: () = assert!(core::mem::size_of::<ArchivedColorItem>() == 4);
+    const _: () = assert!(core::mem::align_of::<ArchivedColorItem>() == 1);
 }

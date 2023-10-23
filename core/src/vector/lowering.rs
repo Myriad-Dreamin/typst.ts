@@ -1,12 +1,19 @@
 //! Lowering Typst Document into SvgItem.
 
+use std::any::Any;
+use std::hash::Hash;
 use std::io::Read;
 use std::sync::Arc;
 
 use once_cell::sync::OnceCell;
-use typst::doc::{Destination, Document, Frame, FrameItem, GroupItem, Meta, Position, TextItem};
+use typst::doc::{
+    Destination, Document, Frame, FrameItem, FrameKind, GroupItem, Meta, Position, TextItem,
+};
 use typst::font::Font;
-use typst::geom::{Dir, FixedStroke, Geometry, LineCap, LineJoin, PathItem, Shape, Size};
+use typst::geom::{
+    Abs as TypstAbs, Dir, FixedStroke, Geometry, Gradient, LineCap, LineJoin, Paint, PathItem,
+    Ratio as TypstRatio, Relative, Shape, Size, Smart,
+};
 use typst::image::Image;
 
 use ttf_parser::OutlineBuilder;
@@ -23,19 +30,34 @@ use super::{
     utils::{AbsExt, ToCssExt},
 };
 use crate::font::GlyphProvider;
+use crate::hash::{Fingerprint, FingerprintHasher, FingerprintSipHasher};
+use crate::vector::flat_ir::FlatSvgItem;
+use crate::vector::ir::{ColorItem, GradientItem, GradientKind};
+use crate::ImmutStr;
 use ttf_parser::GlyphId;
 
 static WARN_VIEW_BOX: OnceCell<()> = OnceCell::new();
 
+#[derive(Clone)]
+struct ShapeInfo {
+    path: ir::PathItem,
+    fill_gradient: Option<(Fingerprint, GradientItem)>,
+    stroke_gradient: Option<(Fingerprint, GradientItem)>,
+}
+
 /// Lower a frame item into svg item.
 pub struct LowerBuilder {
     introspector: Introspector,
+    /// Extra items that used by the document but not directly rendered.
+    /// For example, gradients.
+    pub extra_items: Vec<(Fingerprint, ir::SvgItem)>,
 }
 
 impl LowerBuilder {
     pub fn new(output: &Document) -> Self {
         Self {
             introspector: Introspector::new(&output.pages),
+            extra_items: Vec::new(),
         }
     }
 
@@ -51,9 +73,17 @@ impl LowerBuilder {
         for (pos, item) in frame.items() {
             let item = match item {
                 FrameItem::Group(group) => self.lower_group(group),
-                FrameItem::Text(text) => Self::lower_text(text),
+                FrameItem::Text(text) => self.lower_text(text),
                 FrameItem::Shape(shape, span_id) => {
-                    SvgItem::Path((Self::lower_shape(shape), span_id_to_u64(span_id)))
+                    let s = Self::lower_shape(shape);
+                    if let Some((f, gradient)) = s.fill_gradient {
+                        self.extra_items.push((f, ir::SvgItem::Gradient(gradient)));
+                    }
+                    if let Some((f, gradient)) = s.stroke_gradient {
+                        self.extra_items.push((f, ir::SvgItem::Gradient(gradient)));
+                    }
+
+                    SvgItem::Path((s.path, span_id_to_u64(span_id)))
                 }
                 FrameItem::Image(image, size, span_id) => {
                     SvgItem::Image((lower_image(image, *size), span_id_to_u64(span_id)))
@@ -96,7 +126,10 @@ impl LowerBuilder {
             std::cmp::Ordering::Equal
         });
 
-        SvgItem::Group(ir::GroupItem(items))
+        match frame.kind() {
+            FrameKind::Hard => SvgItem::Group(ir::GroupItem(items), Some(frame.size().into())),
+            FrameKind::Soft => SvgItem::Group(ir::GroupItem(items), None),
+        }
     }
 
     /// Lower a group frame with optional transform and clipping into svg item.
@@ -135,7 +168,11 @@ impl LowerBuilder {
             let d = builder.0.into();
 
             inner = SvgItem::Transformed(ir::TransformedItem(
-                TransformItem::Clip(Arc::new(ir::PathItem { d, styles: vec![] })),
+                TransformItem::Clip(Arc::new(ir::PathItem {
+                    d,
+                    size: None,
+                    styles: vec![],
+                })),
                 Box::new(inner),
             ));
         };
@@ -173,7 +210,7 @@ impl LowerBuilder {
 
     /// Lower a text into svg item.
     // #[comemo::memoize]
-    pub(super) fn lower_text(text: &TextItem) -> SvgItem {
+    pub(super) fn lower_text(&mut self, text: &TextItem) -> SvgItem {
         let mut glyphs = Vec::with_capacity(text.glyphs.len());
         for glyph in &text.glyphs {
             let id = GlyphId(glyph.id);
@@ -186,7 +223,12 @@ impl LowerBuilder {
 
         let glyph_chars: String = text.text.to_string();
 
-        let fill = text.fill.clone().to_css().into();
+        // let fill = text.fill.clone().to_css().into();
+        let mut fill_gradient = None;
+        let fill = Self::lower_paint(text.fill.clone(), &mut fill_gradient);
+        if let Some((f, gradient)) = fill_gradient {
+            self.extra_items.push((f, ir::SvgItem::Gradient(gradient)));
+        }
 
         let span_id = text
             .glyphs
@@ -220,7 +262,7 @@ impl LowerBuilder {
 
     /// Lower a geometrical shape into svg item.
     #[comemo::memoize]
-    pub(super) fn lower_shape(shape: &Shape) -> ir::PathItem {
+    fn lower_shape(shape: &Shape) -> ShapeInfo {
         let mut builder = SvgPath2DBuilder(String::new());
 
         // to ensure that our shape focus on the original point
@@ -268,10 +310,15 @@ impl LowerBuilder {
 
         let mut styles = Vec::new();
 
+        let mut fill_gradient = None;
         if let Some(paint_fill) = &shape.fill {
-            styles.push(ir::PathStyle::Fill(paint_fill.clone().to_css().into()));
+            styles.push(ir::PathStyle::Fill(Self::lower_paint(
+                paint_fill.clone(),
+                &mut fill_gradient,
+            )));
         }
 
+        let mut stroke_gradient = None;
         // todo: default miter_limit, thickness
         if let Some(FixedStroke {
             paint,
@@ -302,10 +349,110 @@ impl LowerBuilder {
                 LineJoin::Round => styles.push(ir::PathStyle::StrokeLineJoin("round".into())),
             }
 
-            styles.push(ir::PathStyle::Stroke(paint.clone().to_css().into()));
+            styles.push(ir::PathStyle::Stroke(Self::lower_paint(
+                paint.clone(),
+                &mut stroke_gradient,
+            )));
         }
 
-        ir::PathItem { d, styles }
+        let mut shape_size = shape.geometry.bbox_size();
+        // Edge cases for strokes.
+        if shape_size.x.to_pt() == 0.0 {
+            shape_size.x = TypstAbs::pt(1.0);
+        }
+
+        if shape_size.y.to_pt() == 0.0 {
+            shape_size.y = TypstAbs::pt(1.0);
+        }
+
+        ShapeInfo {
+            path: ir::PathItem {
+                d,
+                size: Some(shape_size.into()),
+                styles,
+            },
+            fill_gradient,
+            stroke_gradient,
+        }
+    }
+
+    #[inline]
+    pub(super) fn lower_paint(
+        g: Paint,
+        cell: &mut Option<(Fingerprint, GradientItem)>,
+    ) -> ImmutStr {
+        match g {
+            Paint::Solid(c) => c.to_css().into(),
+            Paint::Gradient(g) => {
+                let (g, fingerprint) = Self::lower_graident(g);
+                *cell = Some((fingerprint, g));
+                format!("url(#{})", fingerprint.as_svg_id("g")).into()
+            }
+        }
+    }
+
+    #[comemo::memoize]
+    pub(super) fn lower_graident(g: Gradient) -> (GradientItem, Fingerprint) {
+        let mut stops = Vec::with_capacity(g.stops_ref().len());
+        for (c, step) in g.stops_ref() {
+            let [r, g, b, a] = c.to_vec4_u8();
+            stops.push((ColorItem { r, g, b, a }, (*step).into()))
+        }
+
+        let relative_to_self = match g.relative() {
+            Smart::Auto => None,
+            Smart::Custom(t) => Some(t == Relative::Self_),
+        };
+
+        let anti_alias = g.anti_alias();
+        let space = g.space().into();
+
+        let mut styles = Vec::new();
+        let kind = match g {
+            Gradient::Linear(l) => GradientKind::Linear(l.angle.into()),
+            Gradient::Radial(l) => {
+                if l.center.x != TypstRatio::new(0.5) || l.center.y != TypstRatio::new(0.5) {
+                    styles.push(ir::GradientStyle::Center(l.center.into()));
+                }
+
+                if l.focal_center.x != TypstRatio::new(0.5)
+                    || l.focal_center.y != TypstRatio::new(0.5)
+                {
+                    styles.push(ir::GradientStyle::FocalCenter(l.focal_center.into()));
+                }
+
+                if l.focal_radius != TypstRatio::zero() {
+                    styles.push(ir::GradientStyle::FocalRadius(l.focal_radius.into()));
+                }
+
+                GradientKind::Radial(l.radius.into())
+            }
+            Gradient::Conic(l) => {
+                if l.center.x != TypstRatio::new(0.5) || l.center.y != TypstRatio::new(0.5) {
+                    styles.push(ir::GradientStyle::Center(l.center.into()));
+                }
+
+                GradientKind::Conic(l.angle.into())
+            }
+        };
+
+        let g = GradientItem {
+            stops,
+            relative_to_self,
+            anti_alias,
+            space,
+            kind,
+            styles,
+        };
+
+        // todo: don't leak the fingerprint primitive
+        let flat_item = &FlatSvgItem::Gradient(g.clone());
+        let mut f = FingerprintSipHasher::default();
+        flat_item.type_id().hash(&mut f);
+        flat_item.hash(&mut f);
+        let (f, _) = f.finish_fingerprint();
+
+        (g, f)
     }
 }
 

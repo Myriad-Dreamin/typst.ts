@@ -4,4 +4,4 @@
 
 // This, too.
 // Ref: false
-#set document(author: ("A", "B"))
+#set document(author: ("A", "B"), date: datetime.today())

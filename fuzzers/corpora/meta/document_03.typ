@@ -2,7 +2,7 @@
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
 // 
-// Hello
-// 
-// // Error: 2-30 document set rules must appear before any content
-// #set document(title: "Hello")
+// // This, too.
+// // Error: 23-29 expected string, found integer
+// #set document(author: (123,))
+// What's up?

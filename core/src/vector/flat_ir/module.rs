@@ -255,6 +255,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
 
                 FlatSvgItem::Path(path)
             }
+            SvgItem::Gradient(g) => FlatSvgItem::Gradient(g),
             SvgItem::Link(link) => FlatSvgItem::Link(link),
             SvgItem::Text(text) => {
                 let font = self.build_font(&text.font);
@@ -288,7 +289,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
 
                 FlatSvgItem::Item(TransformedRef(transform, item_id))
             }
-            SvgItem::Group(group) => {
+            SvgItem::Group(group, size) => {
                 let t = if self.should_attach_debug_info {
                     Some(self.source_mapping_buffer.len())
                 } else {
@@ -312,7 +313,8 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
                         .push(SourceMappingNode::Group(sm_range.collect()));
                     self.source_mapping_buffer.push(sm_id);
                 }
-                FlatSvgItem::Group(GroupRef(items.into()))
+
+                FlatSvgItem::Group(GroupRef(items.into()), size)
             }
         };
 

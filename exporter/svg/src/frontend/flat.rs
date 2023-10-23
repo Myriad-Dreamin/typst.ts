@@ -3,8 +3,8 @@ use std::sync::Arc;
 use typst::{diag::SourceResult, doc::Document};
 use typst_ts_core::vector::{
     flat_ir::{
-        flatten_glyphs, FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, LayoutRegionRepr,
-        Module, ModuleBuilder, ModuleMetadata, Page, SvgDocument,
+        flatten_glyphs, FlatModule, FlatSvgItem, ItemPack, LayoutRegion, LayoutRegionNode,
+        LayoutRegionRepr, Module, ModuleBuilder, ModuleMetadata, Page, SvgDocument,
     },
     flat_vm::FlatRenderVm,
     LowerBuilder,
@@ -82,7 +82,22 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             true,
         );
 
-        generate_text(Self::render_svg_template(t, header, svg_body, glyphs))
+        let gradients = std::mem::take(&mut t.gradients);
+        let gradients = gradients
+            .values()
+            .filter_map(|(_, id)| match module.get_item(id) {
+                Some(FlatSvgItem::Gradient(g)) => Some((id, g)),
+                _ => {
+                    // #[cfg(debug_assertions)]
+                    panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
+                    #[allow(unreachable_code)]
+                    None
+                }
+            });
+
+        generate_text(Self::render_svg_template(
+            t, header, svg_body, glyphs, gradients,
+        ))
     }
 }
 
@@ -99,6 +114,10 @@ pub fn export_module(output: &Document) -> SourceResult<Vec<u8>> {
             content,
             size: page.size().into(),
         });
+    }
+
+    for (_, ext) in t.extra_items.into_iter() {
+        builder.build(ext);
     }
 
     let repr: Module = builder.finalize();

@@ -39,8 +39,8 @@ use crate::{
 use super::{
     geom::{Abs, Point, Size},
     ir::{
-        DefId, FontItem, FontRef, GlyphItem, GlyphRef, ImageGlyphItem, ImageItem, ImmutStr,
-        LinkItem, OutlineGlyphItem, PathItem, SpanId, TextShape, TransformItem,
+        DefId, FontItem, FontRef, GlyphItem, GlyphRef, GradientItem, ImageGlyphItem, ImageItem,
+        ImmutStr, LinkItem, OutlineGlyphItem, PathItem, SpanId, TextShape, TransformItem,
     },
 };
 
@@ -67,7 +67,8 @@ pub enum FlatSvgItem {
     Path(PathItem),
     Text(FlatTextItem),
     Item(TransformedRef),
-    Group(GroupRef),
+    Group(GroupRef, Option<Size>),
+    Gradient(GradientItem),
 }
 
 /// Flatten text item.

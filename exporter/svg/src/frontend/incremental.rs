@@ -151,7 +151,7 @@ impl IncrSvgDocClient {
 
         // prepare an empty page for the pages that are not rendered
         // todo: better solution?
-        let empty_page = self.mb.build(SvgItem::Group(Default::default()));
+        let empty_page = self.mb.build(SvgItem::Group(Default::default(), None));
         kern.module_mut()
             .items
             .extend(self.mb.items.iter().map(|(f, (_, v))| (*f, v.clone())));
