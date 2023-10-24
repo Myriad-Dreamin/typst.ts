@@ -86,9 +86,15 @@ impl<C: TranslateCtx + RenderVm<Resultant = ()>> GroupContext<C> for TextContent
 impl<'m, C: TranslateCtx + FlatRenderVm<'m, Resultant = ()>> FlatGroupContext<C>
     for TextContentBuilder
 {
-    fn render_item_ref_at(&mut self, ctx: &mut C, pos: ir::Point, item: &Fingerprint) {
+    fn render_item_ref_at(
+        &mut self,
+        state: RenderState,
+        ctx: &mut C,
+        pos: ir::Point,
+        item: &Fingerprint,
+    ) {
         ctx.translate(pos.x, pos.y);
-        ctx.render_flat_item(item);
+        ctx.render_flat_item(state, item);
         ctx.translate(-pos.x, -pos.y);
     }
 }

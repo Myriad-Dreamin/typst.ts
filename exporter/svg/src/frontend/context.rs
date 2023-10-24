@@ -8,7 +8,7 @@ use typst_ts_core::{
         flat_vm::{FlatIncrRenderVm, FlatRenderVm},
         ir::{
             self, BuildGlyph, FontIndice, FontRef, GlyphHashStablizer, GlyphPackBuilder, GlyphRef,
-            ImmutStr, PathItem, StyleNs,
+            ImmutStr, PathItem, Scalar, StyleNs,
         },
         vm::GroupContext,
         vm::{RenderState, RenderVm},
@@ -29,7 +29,7 @@ pub(crate) type StyleDefMap = HashMap<(StyleNs, ImmutStr), String>;
 /// Maps the clip path's data to the clip path id.
 pub(crate) type ClipPathMap = HashMap<ImmutStr, Fingerprint>;
 /// Maps the clip path's data to the clip path id.
-pub(crate) type GradientMap = HashMap<ImmutStr, (u8, Fingerprint)>;
+pub(crate) type GradientMap = HashMap<ImmutStr, (u8, Fingerprint, Option<bool>)>;
 
 /// The task context for rendering svg items
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
@@ -140,7 +140,7 @@ impl<'m, 't, Feat: ExportFeature> BuildClipPath for RenderContext<'m, 't, Feat> 
 }
 
 impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
-    fn notify_paint(&mut self, url_ref: ImmutStr) -> (u8, Fingerprint) {
+    fn notify_paint(&mut self, url_ref: ImmutStr) -> (u8, Fingerprint, Option<bool>) {
         if let Some(f) = self.gradients.get(&url_ref) {
             return *f;
         }
@@ -153,8 +153,8 @@ impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
         let id = url_ref.trim_start_matches("url(#g").trim_end_matches(')');
         let id = Fingerprint::try_from_str(id).unwrap();
 
-        let kind = match self.get_item(&id) {
-            Some(FlatSvgItem::Gradient(g)) => &g.kind,
+        let (kind, relative_to_self) = match self.get_item(&id) {
+            Some(FlatSvgItem::Gradient(g)) => (&g.kind, g.relative_to_self),
             _ => {
                 // #[cfg(debug_assertions)]
                 panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
@@ -167,8 +167,8 @@ impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
             ir::GradientKind::Conic(..) => b'p',
         };
 
-        self.gradients.insert(url_ref, (kind, id));
-        (kind, id)
+        self.gradients.insert(url_ref, (kind, id, relative_to_self));
+        (kind, id, relative_to_self)
     }
 }
 
@@ -201,7 +201,15 @@ impl<'m, 't, Feat: ExportFeature> RenderVm for RenderContext<'m, 't, Feat> {
         text.shape.hash(&mut k);
         let k = k.finish128().as_u128();
 
-        g.with_text_shape(self, &text.shape, &Fingerprint::from_u128(k), state);
+        let upem = Scalar(text.font.metrics().units_per_em as f32);
+
+        g.with_text_shape(
+            self,
+            upem,
+            &text.shape,
+            &state.at(&Fingerprint::from_u128(k)),
+            state,
+        );
         g.attach_debug_info(self, text.content.span_id);
 
         g
@@ -238,7 +246,11 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Fea
         text: &FlatTextItem,
     ) -> Self::Group {
         let mut g = self.start_flat_group(value);
-        g.with_text_shape(self, &text.shape, value, state);
+
+        let font = self.get_font(&text.font).unwrap();
+        let upem = font.unit_per_em;
+
+        g.with_text_shape(self, upem, &text.shape, &state.at(value), state);
         g
     }
 }

@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, HashSet};
 use crate::hash::Fingerprint;
 
 use super::flat_ir as ir;
-use super::ir::{FontIndice, GlyphRef};
+use super::ir::{FontIndice, GlyphRef, Size, Transform};
 use super::vm::RenderState;
 use super::{
     ir::{Point, Scalar},
@@ -13,9 +13,15 @@ use super::{
 
 /// A RAII trait for rendering flatten SVG items into underlying context.
 pub trait FlatGroupContext<C>: Sized {
-    fn render_item_ref_at(&mut self, ctx: &mut C, pos: Point, item: &Fingerprint);
-    fn render_item_ref(&mut self, ctx: &mut C, item: &Fingerprint) {
-        self.render_item_ref_at(ctx, Point::default(), item);
+    fn render_item_ref_at(
+        &mut self,
+        state: RenderState,
+        ctx: &mut C,
+        pos: Point,
+        item: &Fingerprint,
+    );
+    fn render_item_ref(&mut self, state: RenderState, ctx: &mut C, item: &Fingerprint) {
+        self.render_item_ref_at(state, ctx, Point::default(), item);
     }
 
     fn render_glyph_ref(&mut self, _ctx: &mut C, _pos: Scalar, _item: &GlyphRef) {}
@@ -42,6 +48,17 @@ pub trait FlatGroupContext<C>: Sized {
     }
     fn with_reuse(self, _ctx: &mut C, _v: &Fingerprint) -> Self {
         self
+    }
+
+    fn begin_flat_text(&mut self, _text: &ir::FlatTextItem) {}
+
+    fn end_flat_text(
+        &mut self,
+        _state: RenderState,
+        _ctx: &mut C,
+        _width: Scalar,
+        _text: &ir::FlatTextItem,
+    ) {
     }
 }
 
@@ -74,17 +91,17 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
 
     #[doc(hidden)]
     /// Default implemenetion to render an item into the a `<g/>` element.
-    fn _render_flat_item(&mut self, abs_ref: &Fingerprint) -> Self::Resultant {
-        // todo state
-        let state = RenderState::default();
+    fn _render_flat_item(&mut self, state: RenderState, abs_ref: &Fingerprint) -> Self::Resultant {
         let item: &'m ir::FlatSvgItem = self.get_item(abs_ref).unwrap();
         match &item {
-            ir::FlatSvgItem::Group(group, _) => self.render_group_ref(abs_ref, group),
-            ir::FlatSvgItem::Item(transformed) => self.render_transformed_ref(abs_ref, transformed),
+            ir::FlatSvgItem::Group(group, sz) => self.render_group_ref(state, abs_ref, group, sz),
+            ir::FlatSvgItem::Item(transformed) => {
+                self.render_transformed_ref(state, abs_ref, transformed)
+            }
             ir::FlatSvgItem::Text(text) => self.render_flat_text(state, abs_ref, text),
             ir::FlatSvgItem::Path(path) => {
                 let mut g = self.start_flat_group(abs_ref);
-                g.render_path(self, path, abs_ref);
+                g.render_path(state, self, path, abs_ref);
                 g.into()
             }
             ir::FlatSvgItem::Link(link) => {
@@ -104,17 +121,27 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
     }
 
     /// Render an item into the a `<g/>` element.
-    fn render_flat_item(&mut self, abs_ref: &Fingerprint) -> Self::Resultant {
-        self._render_flat_item(abs_ref)
+    fn render_flat_item(&mut self, state: RenderState, abs_ref: &Fingerprint) -> Self::Resultant {
+        self._render_flat_item(state, abs_ref)
     }
 
     /// Render a frame group into underlying context.
-    fn render_group_ref(&mut self, abs_ref: &Fingerprint, group: &ir::GroupRef) -> Self::Resultant {
+    fn render_group_ref(
+        &mut self,
+        mut state: RenderState,
+        abs_ref: &Fingerprint,
+        group: &ir::GroupRef,
+        sz: &Option<Size>,
+    ) -> Self::Resultant {
         let mut group_ctx = self.start_flat_frame(abs_ref, group);
+
+        if let Some(sz) = sz {
+            state = state.with_transform(Transform::identity()).with_size(*sz);
+        }
 
         for (pos, item_ref) in group.0.iter() {
             // let item = self.get_item(&item_ref).unwrap();
-            group_ctx.render_item_ref_at(self, *pos, item_ref);
+            group_ctx.render_item_ref_at(state.pre_translate(*pos), self, *pos, item_ref);
         }
 
         group_ctx.into()
@@ -123,6 +150,7 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
     /// Render a transformed frame into underlying context.
     fn render_transformed_ref(
         &mut self,
+        state: RenderState,
         abs_ref: &Fingerprint,
         transformed: &ir::TransformedRef,
     ) -> Self::Resultant {
@@ -132,7 +160,7 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
 
         let item_ref = &transformed.1;
         // let item = self.get_item(&item_ref).unwrap();
-        ts.render_item_ref(self, item_ref);
+        ts.render_item_ref(state.pre_apply(&transformed.0), self, item_ref);
         ts.into()
     }
 
@@ -156,6 +184,7 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
 
         let mut group_ctx = group_ctx.transform_scale(self, ppem, -ppem);
 
+        group_ctx.begin_flat_text(text);
         let mut x = 0f32;
         for (offset, advance, glyph) in text.content.glyphs.iter() {
             let offset = x + offset.0;
@@ -165,6 +194,7 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
 
             x += advance.0;
         }
+        group_ctx.end_flat_text(state, self, Scalar(x), text);
 
         group_ctx.render_flat_text_semantics(self, text, Scalar(x));
         group_ctx.into()
@@ -175,13 +205,21 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
 pub trait FlatIncrGroupContext<C>: Sized {
     fn render_diff_item_ref_at(
         &mut self,
+        state: RenderState,
         ctx: &mut C,
+
         pos: Point,
         item: &Fingerprint,
         prev_item: &Fingerprint,
     );
-    fn render_diff_item_ref(&mut self, ctx: &mut C, item: &Fingerprint, prev_item: &Fingerprint) {
-        self.render_diff_item_ref_at(ctx, Point::default(), item, prev_item);
+    fn render_diff_item_ref(
+        &mut self,
+        state: RenderState,
+        ctx: &mut C,
+        item: &Fingerprint,
+        prev_item: &Fingerprint,
+    ) {
+        self.render_diff_item_ref_at(state, ctx, Point::default(), item, prev_item);
     }
 }
 
@@ -196,37 +234,36 @@ where
     /// Default implemenetion to Render an item into the a `<g/>` element.
     fn _render_diff_item(
         &mut self,
+        state: RenderState,
         next_abs_ref: &Fingerprint,
         prev_abs_ref: &Fingerprint,
     ) -> Self::Resultant {
-        // todo state
-        let state = RenderState::default();
         let next_item: &'m ir::FlatSvgItem = self.get_item(next_abs_ref).unwrap();
         let prev_item = self.get_item(prev_abs_ref);
 
         let mut group_ctx = self.start_flat_group(next_abs_ref);
 
         match &next_item {
-            ir::FlatSvgItem::Group(group, _) => {
+            ir::FlatSvgItem::Group(group, sz) => {
                 let mut group_ctx = group_ctx
                     .with_reuse(self, prev_abs_ref)
                     .with_frame(self, group);
-                self.render_diff_group_ref(&mut group_ctx, prev_item, group);
+                self.render_diff_group_ref(state, &mut group_ctx, prev_item, group, sz);
                 group_ctx
             }
             ir::FlatSvgItem::Item(transformed) => {
                 let mut group_ctx = group_ctx
                     .with_reuse(self, prev_abs_ref)
                     .transform(self, &transformed.0);
-                self.render_diff_transformed_ref(&mut group_ctx, prev_item, transformed);
+                self.render_diff_transformed_ref(state, &mut group_ctx, prev_item, transformed);
                 group_ctx
             }
             ir::FlatSvgItem::Text(text) => {
                 let group_ctx = group_ctx.with_text(self, text, next_abs_ref, state);
-                self.render_diff_flat_text(group_ctx, text)
+                self.render_diff_flat_text(state, group_ctx, text)
             }
             ir::FlatSvgItem::Path(path) => {
-                group_ctx.render_path(self, path, next_abs_ref);
+                group_ctx.render_path(state, self, path, next_abs_ref);
                 group_ctx
             }
             ir::FlatSvgItem::Link(link) => {
@@ -247,19 +284,26 @@ where
     /// Render an item into the a `<g/>` element.
     fn render_diff_item(
         &mut self,
+        state: RenderState,
         next_abs_ref: &Fingerprint,
         prev_abs_ref: &Fingerprint,
     ) -> Self::Resultant {
-        self._render_diff_item(next_abs_ref, prev_abs_ref)
+        self._render_diff_item(state, next_abs_ref, prev_abs_ref)
     }
 
     /// Render a frame group into underlying context.
     fn render_diff_group_ref(
         &mut self,
+        mut state: RenderState,
         group_ctx: &mut Self::Group,
         prev_item_: Option<&ir::FlatSvgItem>,
         next: &ir::GroupRef,
+        sz: &Option<Size>,
     ) {
+        if let Some(sz) = sz {
+            state = state.with_size(*sz);
+        }
+
         if let Some(ir::FlatSvgItem::Group(prev_group, _)) = prev_item_ {
             let mut unused_prev: BTreeMap<usize, Fingerprint> =
                 prev_group.0.iter().map(|v| v.1).enumerate().collect();
@@ -277,17 +321,18 @@ where
             }
 
             for (pos, item_ref) in next.0.iter() {
+                let state = state.pre_translate(*pos);
                 if reusable.contains(item_ref) {
-                    group_ctx.render_diff_item_ref_at(self, *pos, item_ref, item_ref);
+                    group_ctx.render_diff_item_ref_at(state, self, *pos, item_ref, item_ref);
                 } else if let Some((_, prev_item_re_)) = &unused_prev.pop_first() {
-                    group_ctx.render_diff_item_ref_at(self, *pos, item_ref, prev_item_re_)
+                    group_ctx.render_diff_item_ref_at(state, self, *pos, item_ref, prev_item_re_)
                 } else {
-                    group_ctx.render_item_ref_at(self, *pos, item_ref)
+                    group_ctx.render_item_ref_at(state, self, *pos, item_ref)
                 }
             }
         } else {
             for (pos, item_ref) in next.0.iter() {
-                group_ctx.render_item_ref_at(self, *pos, item_ref);
+                group_ctx.render_item_ref_at(state.pre_translate(*pos), self, *pos, item_ref);
             }
         }
     }
@@ -295,25 +340,28 @@ where
     /// Render a transformed frame into underlying context.
     fn render_diff_transformed_ref(
         &mut self,
+        state: RenderState,
         ts: &mut Self::Group,
         prev_item_: Option<&ir::FlatSvgItem>,
         transformed: &ir::TransformedRef,
     ) {
         let child_ref = &transformed.1;
+        let state = state.pre_apply(&transformed.0);
         if matches!(prev_item_, Some(ir::FlatSvgItem::Item(ir::TransformedRef(_item, prev_ref)))
             if prev_ref == child_ref)
         {
             // assert!(item != &transformed.0);
-            ts.render_diff_item_ref_at(self, Point::default(), child_ref, child_ref);
+            ts.render_diff_item_ref_at(state, self, Point::default(), child_ref, child_ref);
             return;
         }
         // failed to reuse
-        ts.render_item_ref(self, child_ref);
+        ts.render_item_ref(state, self, child_ref);
     }
 
     /// Render a text into the underlying context.
     fn render_diff_flat_text(
         &mut self,
+        state: RenderState,
         group_ctx: Self::Group,
         text: &ir::FlatTextItem,
     ) -> Self::Group {
@@ -328,6 +376,7 @@ where
 
         let mut group_ctx = group_ctx.transform_scale(self, ppem, -ppem);
 
+        group_ctx.begin_flat_text(text);
         let mut x = 0f32;
         for (offset, advance, glyph) in text.content.glyphs.iter() {
             let offset = x + offset.0;
@@ -337,6 +386,7 @@ where
 
             x += advance.0;
         }
+        group_ctx.end_flat_text(state, self, Scalar(x), text);
 
         group_ctx.render_flat_text_semantics(self, text, Scalar(x));
         group_ctx

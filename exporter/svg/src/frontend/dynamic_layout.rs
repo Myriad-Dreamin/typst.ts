@@ -35,7 +35,7 @@ impl DynamicLayoutSvgExporter {
             })
             .collect::<Vec<_>>();
 
-        for (_, ext) in t.extra_items.into_iter() {
+        for ext in t.extra_items.into_values() {
             self.builder.build(ext);
         }
 

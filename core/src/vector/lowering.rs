@@ -1,6 +1,7 @@
 //! Lowering Typst Document into SvgItem.
 
 use std::any::Any;
+use std::collections::HashMap;
 use std::hash::Hash;
 use std::io::Read;
 use std::sync::Arc;
@@ -50,14 +51,14 @@ pub struct LowerBuilder {
     introspector: Introspector,
     /// Extra items that used by the document but not directly rendered.
     /// For example, gradients.
-    pub extra_items: Vec<(Fingerprint, ir::SvgItem)>,
+    pub extra_items: HashMap<Fingerprint, ir::SvgItem>,
 }
 
 impl LowerBuilder {
     pub fn new(output: &Document) -> Self {
         Self {
             introspector: Introspector::new(&output.pages),
-            extra_items: Vec::new(),
+            extra_items: HashMap::new(),
         }
     }
 
@@ -77,10 +78,10 @@ impl LowerBuilder {
                 FrameItem::Shape(shape, span_id) => {
                     let s = Self::lower_shape(shape);
                     if let Some((f, gradient)) = s.fill_gradient {
-                        self.extra_items.push((f, ir::SvgItem::Gradient(gradient)));
+                        self.extra_items.insert(f, ir::SvgItem::Gradient(gradient));
                     }
                     if let Some((f, gradient)) = s.stroke_gradient {
-                        self.extra_items.push((f, ir::SvgItem::Gradient(gradient)));
+                        self.extra_items.insert(f, ir::SvgItem::Gradient(gradient));
                     }
 
                     SvgItem::Path((s.path, span_id_to_u64(span_id)))
@@ -227,7 +228,7 @@ impl LowerBuilder {
         let mut fill_gradient = None;
         let fill = Self::lower_paint(text.fill.clone(), &mut fill_gradient);
         if let Some((f, gradient)) = fill_gradient {
-            self.extra_items.push((f, ir::SvgItem::Gradient(gradient)));
+            self.extra_items.insert(f, ir::SvgItem::Gradient(gradient));
         }
 
         let span_id = text

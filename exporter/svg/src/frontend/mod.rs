@@ -385,7 +385,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             .collect::<Vec<_>>();
         let mut module = ModuleBuilder::default();
 
-        for (_, ext) in lower_builder.extra_items.clone().into_iter() {
+        for ext in lower_builder.extra_items.clone().into_values() {
             module.build(ext);
         }
 
