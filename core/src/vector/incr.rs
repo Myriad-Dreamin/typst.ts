@@ -71,7 +71,7 @@ impl IncrDocServer {
             })
             .collect::<Vec<_>>();
 
-        for (_, ext) in lower_builder.extra_items.into_iter() {
+        for ext in lower_builder.extra_items.into_values() {
             builder.build(ext);
         }
         let delta = builder.finalize_delta();

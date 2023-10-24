@@ -35,6 +35,7 @@ pub trait GroupContext<C>: Sized {
     fn with_text_shape(
         &mut self,
         _ctx: &mut C,
+        _upem: Scalar,
         _shape: &ir::TextShape,
         _fill_key: &Fingerprint,
         _state: RenderState,
@@ -59,7 +60,14 @@ pub trait GroupContext<C>: Sized {
     fn render_glyph(&mut self, _ctx: &mut C, _pos: Scalar, _item: &ir::GlyphItem) {}
 
     /// Render a geometrical shape into underlying context.
-    fn render_path(&mut self, _ctx: &mut C, _path: &ir::PathItem, _abs_ref: &Fingerprint) {}
+    fn render_path(
+        &mut self,
+        _state: RenderState,
+        _ctx: &mut C,
+        _path: &ir::PathItem,
+        _abs_ref: &Fingerprint,
+    ) {
+    }
 
     /// Render a semantic link into underlying context.
     fn render_link(&mut self, _ctx: &mut C, _link: &ir::LinkItem) {}
@@ -71,7 +79,7 @@ pub trait GroupContext<C>: Sized {
 }
 
 /// Contextual information for rendering.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Hash)]
 pub struct RenderState {
     /// The transform of the current item.
     pub transform: Transform,
@@ -119,7 +127,7 @@ impl RenderState {
         Self { transform, ..self }
     }
 
-    fn pre_apply(self, transform: &ir::TransformItem) -> RenderState {
+    pub fn pre_apply(self, transform: &ir::TransformItem) -> RenderState {
         match transform {
             ir::TransformItem::Matrix(transform) => self.pre_concat(**transform),
             ir::TransformItem::Translate(transform) => {
@@ -136,6 +144,17 @@ impl RenderState {
             }
             ir::TransformItem::Clip(_transform) => self,
         }
+    }
+
+    pub fn inv_transform(&self) -> Transform {
+        Transform::from_scale(self.size.x, self.size.y)
+            .post_concat(self.transform.invert().unwrap())
+    }
+
+    pub fn at(&self, pos: &Fingerprint) -> Fingerprint {
+        // todo: performance
+        let item = (*self, *pos);
+        Fingerprint::from_u128(item_hash128(&item))
     }
 }
 
@@ -165,7 +184,12 @@ pub trait RenderVm: Sized {
             ir::SvgItem::Text(text) => self.render_text(state, text),
             ir::SvgItem::Path((path, ..)) => {
                 let mut g = self.start_group();
-                g.render_path(self, path, &Fingerprint::from_u128(item_hash128(path)));
+                g.render_path(
+                    state,
+                    self,
+                    path,
+                    &Fingerprint::from_u128(item_hash128(path)),
+                );
                 g.into()
             }
             ir::SvgItem::Link(link) => {

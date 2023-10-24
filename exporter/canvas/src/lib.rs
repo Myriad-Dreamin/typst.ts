@@ -484,7 +484,13 @@ impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> Gro
         }
     }
 
-    fn render_path(&mut self, _ctx: &mut C, path: &ir::PathItem, _abs_ref: &Fingerprint) {
+    fn render_path(
+        &mut self,
+        _state: RenderState,
+        _ctx: &mut C,
+        path: &ir::PathItem,
+        _abs_ref: &Fingerprint,
+    ) {
         self.inner.push((
             ir::Point::default(),
             Arc::new(Box::new(CanvasPathElem {
@@ -507,8 +513,14 @@ impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> Gro
 impl<'m, C: FlatRenderVm<'m, Resultant = CanvasNode> + GlyphIndice<'m>> FlatGroupContext<C>
     for CanvasStack
 {
-    fn render_item_ref_at(&mut self, ctx: &mut C, pos: crate::ir::Point, item: &Fingerprint) {
-        self.inner.push((pos, ctx.render_flat_item(item)));
+    fn render_item_ref_at(
+        &mut self,
+        state: RenderState,
+        ctx: &mut C,
+        pos: crate::ir::Point,
+        item: &Fingerprint,
+    ) {
+        self.inner.push((pos, ctx.render_flat_item(state, item)));
     }
 
     fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, glyph: &GlyphRef) {
@@ -671,9 +683,10 @@ impl IncrementalCanvasExporter {
                 }
 
                 // (ct.render_flat_item(content), *size, *content)
+                let state = RenderState::new_size(*size);
                 CanvasPage {
                     content: *content,
-                    elem: ct.render_flat_item(content),
+                    elem: ct.render_flat_item(state, content),
                     size: *size,
                 }
             })

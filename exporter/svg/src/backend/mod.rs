@@ -32,7 +32,7 @@ pub trait BuildFillStyleClass {
 }
 
 pub trait NotifyPaint {
-    fn notify_paint(&mut self, url_ref: ImmutStr) -> (u8, Fingerprint);
+    fn notify_paint(&mut self, url_ref: ImmutStr) -> (u8, Fingerprint, Option<bool>);
 }
 
 pub trait DynExportFeature {
@@ -340,6 +340,7 @@ impl<
     fn with_text_shape(
         &mut self,
         ctx: &mut C,
+        upem: Scalar,
         shape: &ir::TextShape,
         fill_key: &Fingerprint,
         state: RenderState,
@@ -347,41 +348,24 @@ impl<
         let color = &shape.fill;
         // shorten black fill
         let fill_id = if shape.fill.starts_with("url") {
-            // todo
-            let (kind, f) = ctx.notify_paint(color.clone());
+            let (kind, cano_ref, relative_to_self) = ctx.notify_paint(shape.fill.clone());
+
+            let text_scale = upem.0 / shape.size.0;
+            let text_scale = Transform::from_scale(Scalar(text_scale), Scalar(-text_scale));
+
+            let mat = if relative_to_self.unwrap_or(false) {
+                text_scale
+            } else {
+                state.inv_transform().post_concat(text_scale)
+            };
+            let mat = mat.to_css();
+
             // abs_ref
             let paint_id = fill_key.as_svg_id("tf");
             self.text_fill = Some(*fill_key);
 
-            let tag = match kind {
-                b'l' => "linearGradient",
-                b'r' => "radialGradient",
-                b'p' => "pattern",
-                _ => unreachable!(),
-            };
-
-            let transform = match kind {
-                b'p' => "patternTransform",
-                _ => "gradientTransform",
-            };
-
-            // todo: bbox
-            let bbox = state.size;
-            let t = Transform::from_scale(bbox.x, bbox.y)
-                .post_concat(state.transform.invert().unwrap())
-                .post_concat(Transform::from_scale(Scalar(204.8), Scalar(-204.8)))
-                .to_css();
-
-            self.content.push(SvgText::Plain(format!(
-                r##"<{} id="{}" {}="{}" href="#{}" xlink:href="#{}"></{}>"##,
-                tag,
-                paint_id,
-                transform,
-                t,
-                f.as_svg_id("g"),
-                f.as_svg_id("g"),
-                tag
-            )));
+            let decl = transform_gradient(kind, cano_ref, &paint_id, &mat);
+            self.content.push(decl);
 
             "".to_owned()
         } else {
@@ -477,49 +461,46 @@ impl<
         )))
     }
 
-    fn render_path(&mut self, ctx: &mut C, path: &ir::PathItem, abs_ref: &Fingerprint) {
+    fn render_path(
+        &mut self,
+        state: RenderState,
+        ctx: &mut C,
+        path: &ir::PathItem,
+        abs_ref: &Fingerprint,
+    ) {
         for s in &path.styles {
             match s {
                 PathStyle::Fill(color) | PathStyle::Stroke(color) => {
                     let is_fill = matches!(s, PathStyle::Fill(..));
                     if color.starts_with("url") {
                         // todo
-                        let (kind, f) = ctx.notify_paint(color.clone());
-                        // abs_ref
-                        let paint_id = abs_ref.as_svg_id(if is_fill { "pf" } else { "ps" });
+                        let (kind, cano_ref, relative_to_self) = ctx.notify_paint(color.clone());
 
-                        let tag = match kind {
-                            b'l' => "linearGradient",
-                            b'r' => "radialGradient",
-                            b'p' => "pattern",
-                            _ => unreachable!(),
+                        let relative_to_self = relative_to_self.unwrap_or(true);
+
+                        let transform_matrix = if relative_to_self {
+                            let self_bbox = path.size.unwrap();
+                            Transform::from_scale(self_bbox.x, self_bbox.y)
+                        } else {
+                            println!("state: {:?}", state.inv_transform());
+                            state.inv_transform()
                         };
+                        let transform_matrix = transform_matrix.to_css();
 
-                        let transform = match kind {
-                            b'p' => "patternTransform",
-                            _ => "gradientTransform",
-                        };
+                        let paint_id =
+                            state
+                                .at(abs_ref)
+                                .as_svg_id(if is_fill { "pf" } else { "ps" });
 
-                        // todo: bbox
-                        let bbox = path.size.unwrap();
-                        let t = Transform::from_scale(bbox.x, bbox.y).to_css();
+                        let decl = transform_gradient(kind, cano_ref, &paint_id, &transform_matrix);
 
-                        self.content.push(SvgText::Plain(format!(
-                            r##"<{} id="{}" {}="{}" href="#{}" xlink:href="#{}"></{}>"##,
-                            tag,
-                            paint_id,
-                            transform,
-                            t,
-                            f.as_svg_id("g"),
-                            f.as_svg_id("g"),
-                            tag
-                        )));
+                        self.content.push(decl);
                     }
                 }
                 _ => {}
             }
         }
-        self.content.push(render_path(path, abs_ref))
+        self.content.push(render_path(path, state, abs_ref))
     }
 
     fn render_image(&mut self, _ctx: &mut C, image_item: &ir::ImageItem) {
@@ -563,10 +544,16 @@ impl<
             + DynExportFeature,
     > FlatGroupContext<C> for SvgTextBuilder
 {
-    fn render_item_ref_at(&mut self, ctx: &mut C, pos: crate::ir::Point, item: &Fingerprint) {
+    fn render_item_ref_at(
+        &mut self,
+        state: RenderState,
+        ctx: &mut C,
+        pos: crate::ir::Point,
+        item: &Fingerprint,
+    ) {
         let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
 
-        let sub_content = ctx.render_flat_item(item);
+        let sub_content = ctx.render_flat_item(state, item);
 
         self.content.push(SvgText::Content(Arc::new(SvgTextNode {
             attributes: vec![
@@ -615,13 +602,61 @@ impl<
         fill_key: &Fingerprint,
         state: RenderState,
     ) -> Self {
-        self.with_text_shape(ctx, &text.shape, fill_key, state);
+        let font = ctx.get_font(&text.font).unwrap();
+        let upem = font.unit_per_em;
+
+        self.with_text_shape(ctx, upem, &text.shape, &state.at(fill_key), state);
         self
     }
 
     fn with_reuse(mut self, _ctx: &mut C, v: &Fingerprint) -> Self {
         self.attributes.push(("data-reuse-from", v.as_svg_id("g")));
         self
+    }
+
+    fn begin_flat_text(&mut self, _text: &flat_ir::FlatTextItem) {
+        if let Some(fill) = &self.text_fill {
+            // clip path rect
+            let clip_id = fill.as_svg_id("tc");
+            self.content.push(SvgText::Plain(format!(
+                r#"<clipPath id="{}" clipPathUnits="userSpaceOnUse">"#,
+                clip_id
+            )));
+        }
+    }
+
+    fn end_flat_text(
+        &mut self,
+        _state: RenderState,
+        ctx: &mut C,
+        width: Scalar,
+        text: &flat_ir::FlatTextItem,
+    ) {
+        if let Some(fill) = &self.text_fill {
+            let font_item = ctx.get_font(&text.font).unwrap();
+
+            // upem is the unit per em defined in the font.
+            // ppem is calcuated by the font size.
+            // > ppem = text_size / upem
+            let upem = font_item.unit_per_em.0;
+
+            // because the text is already scaled by the font size,
+            // we need to scale it back to the original size.
+            // todo: infinite multiplication
+            let descender = font_item.descender.0 * upem;
+            let width = width.0 * upem / text.shape.size.0;
+
+            self.content
+                .push(SvgText::Plain(r#"</clipPath>"#.to_owned()));
+
+            let fill_id = fill.as_svg_id("tf");
+            let clip_id = fill.as_svg_id("tc");
+            // clip path rect
+            self.content.push(SvgText::Plain(format!(
+                r##"<rect fill="url(#{})" width="{}" height="{}" y="{}" clip-path="url(#{})"/>"##,
+                fill_id, width, upem, descender, clip_id
+            )));
+        }
     }
 }
 
@@ -631,15 +666,17 @@ impl<'m, C: FlatIncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBu
 {
     fn render_diff_item_ref_at(
         &mut self,
+        state: RenderState,
         ctx: &mut C,
         pos: crate::ir::Point,
         item: &Fingerprint,
         prev_item: &Fingerprint,
     ) {
         let content = if item == prev_item {
+            // todo: update transform
             vec![]
         } else {
-            let sub_content = ctx.render_diff_item(item, prev_item);
+            let sub_content = ctx.render_diff_item(state, item, prev_item);
             vec![SvgText::Content(sub_content)]
         };
 
@@ -660,7 +697,7 @@ impl<'m, C: FlatIncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBu
 
 /// Render a [`ir::PathItem`] into svg text.
 #[comemo::memoize]
-fn render_path(path: &ir::PathItem, abs_ref: &Fingerprint) -> SvgText {
+fn render_path(path: &ir::PathItem, state: RenderState, abs_ref: &Fingerprint) -> SvgText {
     let mut p = vec![r#"<path class="typst-shape" "#.to_owned()];
     p.push(format!(r#"d="{}" "#, path.d));
     #[allow(unused_assignments)]
@@ -670,7 +707,7 @@ fn render_path(path: &ir::PathItem, abs_ref: &Fingerprint) -> SvgText {
         match style {
             PathStyle::Fill(color) => {
                 fill_color = if color.starts_with("url") {
-                    ft = format!(r#"url(#{})"#, abs_ref.as_svg_id("pf"));
+                    ft = format!(r#"url(#{})"#, state.at(abs_ref).as_svg_id("pf"));
                     &ft
                 } else {
                     color
@@ -679,7 +716,7 @@ fn render_path(path: &ir::PathItem, abs_ref: &Fingerprint) -> SvgText {
             PathStyle::Stroke(color) => {
                 // compress the stroke color
                 p.push(if color.starts_with("url") {
-                    let ps = abs_ref.as_svg_id("ps");
+                    let ps = state.at(abs_ref).as_svg_id("ps");
                     format!(r##"stroke="url(#{})" "##, &ps)
                 } else {
                     format!(r##"stroke="{}" "##, color)
@@ -767,4 +804,29 @@ pub fn generate_text(text_list: Vec<SvgText>) -> String {
         s.write_string_io(&mut string_io);
     }
     string_io
+}
+
+fn transform_gradient(kind: u8, f: Fingerprint, paint_id: &str, transform_matrix: &str) -> SvgText {
+    let tag = match kind {
+        b'l' => "linearGradient",
+        b'r' => "radialGradient",
+        b'p' => "pattern",
+        _ => unreachable!(),
+    };
+
+    let transform = match kind {
+        b'p' => "patternTransform",
+        _ => "gradientTransform",
+    };
+
+    SvgText::Plain(format!(
+        r##"<{} id="{}" {}="{}" href="#{}" xlink:href="#{}"></{}>"##,
+        tag,
+        paint_id,
+        transform,
+        transform_matrix,
+        f.as_svg_id("g"),
+        f.as_svg_id("g"),
+        tag
+    ))
 }

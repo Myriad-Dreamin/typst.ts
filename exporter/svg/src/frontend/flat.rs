@@ -7,6 +7,7 @@ use typst_ts_core::vector::{
         LayoutRegionRepr, Module, ModuleBuilder, ModuleMetadata, Page, SvgDocument,
     },
     flat_vm::FlatRenderVm,
+    vm::RenderState,
     LowerBuilder,
 };
 
@@ -25,6 +26,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             let entry = &page.content;
             let size = Self::page_size(page.size);
 
+            let state = RenderState::new_size(page.size);
             svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
                 attributes: vec![
                     ("transform", format!("translate(0, {})", acc_height)),
@@ -32,7 +34,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                     ("data-page-width", size.x.to_string()),
                     ("data-page-height", size.y.to_string()),
                 ],
-                content: vec![SvgText::Content(render_task.render_flat_item(entry))],
+                content: vec![SvgText::Content(render_task.render_flat_item(state, entry))],
             })));
             acc_height += size.y;
         }
@@ -85,7 +87,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         let gradients = std::mem::take(&mut t.gradients);
         let gradients = gradients
             .values()
-            .filter_map(|(_, id)| match module.get_item(id) {
+            .filter_map(|(_, id, _)| match module.get_item(id) {
                 Some(FlatSvgItem::Gradient(g)) => Some((id, g)),
                 _ => {
                     // #[cfg(debug_assertions)]
@@ -116,7 +118,7 @@ pub fn export_module(output: &Document) -> SourceResult<Vec<u8>> {
         });
     }
 
-    for (_, ext) in t.extra_items.into_iter() {
+    for ext in t.extra_items.into_values() {
         builder.build(ext);
     }
 
