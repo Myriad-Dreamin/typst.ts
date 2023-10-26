@@ -15,14 +15,14 @@
   "homepage": "https://myriad-dreamin.github.io/typst.ts/",
   "exports": {
     ".": {
-      "require": "./dist/src/lib/index.mjs",
-      "import": "./dist/src/lib/index.mjs",
-      "types": "./dist/src/lib/index.d.mts"
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js"
     },
     "./*": {
-      "require": "./dist/src/lib/*.mjs",
-      "import": "./dist/src/lib/*.mjs",
-      "types": "./dist/src/lib/*.d.mts"
+      "types": "./dist/*.d.ts",
+      "require": "./dist/*.js",
+      "import": "./dist/*.js"
     }
   },
   "files": [
