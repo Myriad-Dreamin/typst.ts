@@ -49,17 +49,6 @@ pub trait FlatGroupContext<C>: Sized {
     fn with_reuse(self, _ctx: &mut C, _v: &Fingerprint) -> Self {
         self
     }
-
-    fn begin_flat_text(&mut self, _text: &ir::FlatTextItem) {}
-
-    fn end_flat_text(
-        &mut self,
-        _state: RenderState,
-        _ctx: &mut C,
-        _width: Scalar,
-        _text: &ir::FlatTextItem,
-    ) {
-    }
 }
 
 /// A virtual machine for rendering a flatten frame.
@@ -98,7 +87,12 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
             ir::FlatSvgItem::Item(transformed) => {
                 self.render_transformed_ref(state, abs_ref, transformed)
             }
-            ir::FlatSvgItem::Text(text) => self.render_flat_text(state, abs_ref, text),
+            ir::FlatSvgItem::Text(text) => {
+                let mut g = self.start_flat_text(state, abs_ref, text);
+                g = self.render_flat_text(state, g, abs_ref, text);
+
+                g.into()
+            }
             ir::FlatSvgItem::Path(path) => {
                 let mut g = self.start_flat_group(abs_ref);
                 g.render_path(state, self, path, abs_ref);
@@ -167,37 +161,21 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
     /// Render a text into the underlying context.
     fn render_flat_text(
         &mut self,
-        state: RenderState,
-        abs_ref: &Fingerprint,
+        _state: RenderState,
+        mut group_ctx: Self::Group,
+        _abs_ref: &Fingerprint,
         text: &ir::FlatTextItem,
-    ) -> Self::Resultant {
-        let group_ctx = self.start_flat_text(state, abs_ref, text);
-
-        let font = self.get_font(&text.font).unwrap();
-
+    ) -> Self::Group {
         // upem is the unit per em defined in the font.
-        // ppem is calcuated by the font size.
-        // > ppem = text_size / upem
-        let upem = font.unit_per_em.0;
-        let ppem = Scalar(text.shape.size.0 / upem);
-        let inv_ppem = upem / text.shape.size.0;
+        let font = self.get_font(&text.font).unwrap();
+        let upem = Scalar(font.unit_per_em.0);
 
-        let mut group_ctx = group_ctx.transform_scale(self, ppem, -ppem);
-
-        group_ctx.begin_flat_text(text);
-        let mut x = 0f32;
-        for (offset, advance, glyph) in text.content.glyphs.iter() {
-            let offset = x + offset.0;
-            let ts = offset * inv_ppem;
-
-            group_ctx.render_glyph_ref(self, Scalar(ts), glyph);
-
-            x += advance.0;
-        }
-        group_ctx.end_flat_text(state, self, Scalar(x), text);
-
-        group_ctx.render_flat_text_semantics(self, text, Scalar(x));
-        group_ctx.into()
+        // Rescale the font size and put glyphs into the group.
+        group_ctx = text.shape.add_transform(self, group_ctx, upem);
+        text.render_glyphs(upem, |x, g| {
+            group_ctx.render_glyph_ref(self, x, g);
+        });
+        group_ctx
     }
 }
 
@@ -260,7 +238,7 @@ where
             }
             ir::FlatSvgItem::Text(text) => {
                 let group_ctx = group_ctx.with_text(self, text, next_abs_ref, state);
-                self.render_diff_flat_text(state, group_ctx, text)
+                self.render_diff_flat_text(state, group_ctx, next_abs_ref, prev_abs_ref, text)
             }
             ir::FlatSvgItem::Path(path) => {
                 group_ctx.render_path(state, self, path, next_abs_ref);
@@ -358,37 +336,15 @@ where
         ts.render_item_ref(state, self, child_ref);
     }
 
-    /// Render a text into the underlying context.
+    /// Render a diff text into the underlying context.
     fn render_diff_flat_text(
         &mut self,
         state: RenderState,
         group_ctx: Self::Group,
+        next_abs_ref: &Fingerprint,
+        _prev_abs_ref: &Fingerprint,
         text: &ir::FlatTextItem,
     ) -> Self::Group {
-        let font = self.get_font(&text.font).unwrap();
-
-        // upem is the unit per em defined in the font.
-        // ppem is calcuated by the font size.
-        // > ppem = text_size / upem
-        let upem = font.unit_per_em.0;
-        let ppem = Scalar(text.shape.size.0 / upem);
-        let inv_ppem = upem / text.shape.size.0;
-
-        let mut group_ctx = group_ctx.transform_scale(self, ppem, -ppem);
-
-        group_ctx.begin_flat_text(text);
-        let mut x = 0f32;
-        for (offset, advance, glyph) in text.content.glyphs.iter() {
-            let offset = x + offset.0;
-            let ts = offset * inv_ppem;
-
-            group_ctx.render_glyph_ref(self, Scalar(ts), glyph);
-
-            x += advance.0;
-        }
-        group_ctx.end_flat_text(state, self, Scalar(x), text);
-
-        group_ctx.render_flat_text_semantics(self, text, Scalar(x));
-        group_ctx
+        self.render_flat_text(state, group_ctx, next_abs_ref, text)
     }
 }

@@ -81,6 +81,13 @@ pub struct FlatTextItem {
     pub shape: Arc<TextShape>,
 }
 
+impl FlatTextItem {
+    pub fn render_glyphs(&self, upem: Abs, consume_glyph: impl FnMut(Abs, &GlyphRef)) -> Abs {
+        self.shape
+            .render_glyphs(upem, self.content.glyphs.iter(), consume_glyph)
+    }
+}
+
 /// The content metadata of a [`FlatTextItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]

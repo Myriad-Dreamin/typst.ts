@@ -10,13 +10,13 @@ use typst_ts_core::{
     font::GlyphProvider,
     hash::Fingerprint,
     vector::{
-        bbox::GlyphIndice,
         flat_ir::{self, LayoutRegionNode, Module, ModuleBuilder, Page},
         flat_vm::{FlatGroupContext, FlatRenderVm},
         incr::IncrDocClient,
         ir::{
-            self, Abs, Axes, BuildGlyph, FontIndice, FontRef, GlyphItem, GlyphPackBuilder,
-            GlyphRef, Image, ImageItem, ImmutStr, PathStyle, Ratio, Rect, Scalar, Size, SvgItem,
+            self, Abs, Axes, BuildGlyph, FontIndice, FontRef, GlyphIndice, GlyphItem,
+            GlyphPackBuilder, GlyphRef, Image, ImageItem, ImmutStr, PathStyle, Ratio, Rect, Scalar,
+            Size, SvgItem,
         },
         vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
