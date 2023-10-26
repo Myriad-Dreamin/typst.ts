@@ -387,7 +387,7 @@ impl LowerBuilder {
             Paint::Gradient(g) => {
                 let (g, fingerprint) = Self::lower_graident(g);
                 *cell = Some((fingerprint, g));
-                format!("url(#{})", fingerprint.as_svg_id("g")).into()
+                format!("@{}", fingerprint.as_svg_id("g")).into()
             }
         }
     }

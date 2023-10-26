@@ -21,6 +21,7 @@ use crate::{
 pub use crate::ImmutStr;
 
 pub use super::geom::*;
+use super::vm::{GroupContext, TransformContext};
 
 /// Create a xml id from the given prefix and the def id of this reference.
 /// Note that the def id may not be stable across compilation.
@@ -430,6 +431,13 @@ pub struct TextItem {
     pub shape: Arc<TextShape>,
 }
 
+impl TextItem {
+    pub fn render_glyphs(&self, upem: Abs, consume_glyph: impl FnMut(Abs, &GlyphItem)) -> Abs {
+        self.shape
+            .render_glyphs(upem, self.content.glyphs.iter(), consume_glyph)
+    }
+}
+
 /// The content metadata of a [`TextItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct TextItemContent {
@@ -540,6 +548,50 @@ pub struct TextShape {
     pub size: Scalar,
     /// Fill font text with css color.
     pub fill: ImmutStr,
+}
+
+impl TextShape {
+    /// ppem is calcuated by the font size.
+    fn ppem(&self, upem: f32) -> Scalar {
+        Scalar(self.size.0 / upem)
+    }
+
+    /// inv_ppem is calcuated by the font size.
+    fn inv_ppem(&self, upem: f32) -> Scalar {
+        Scalar(upem / self.size.0)
+    }
+
+    pub fn add_transform<C, T: GroupContext<C> + TransformContext<C>>(
+        &self,
+        ctx: &mut C,
+        group_ctx: T,
+        upem: Scalar,
+    ) -> T {
+        let ppem = self.ppem(upem.0);
+        group_ctx.transform_scale(ctx, ppem, -ppem)
+    }
+
+    #[inline]
+    pub(super) fn render_glyphs<'a, Glyph: 'a>(
+        &self,
+        upem: Abs,
+        glyph_iter: impl Iterator<Item = &'a (Abs, Abs, Glyph)>,
+        mut consume_glyph: impl FnMut(Abs, &'a Glyph),
+    ) -> Abs {
+        let inv_ppem = self.inv_ppem(upem.0).0;
+
+        let mut x = 0f32;
+        for (offset, advance, glyph) in glyph_iter {
+            let offset = x + offset.0;
+            let ts = offset * inv_ppem;
+
+            consume_glyph(Scalar(ts), glyph);
+
+            x += advance.0;
+        }
+
+        Scalar(x)
+    }
 }
 
 /// Item representing an `<g/>` element applied with a [`TransformItem`].
@@ -711,6 +763,10 @@ impl IncrGlyphPackBuilder {
 
 pub trait FontIndice<'m> {
     fn get_font(&self, value: &FontRef) -> Option<&'m FontItem>;
+}
+
+pub trait GlyphIndice<'m> {
+    fn get_glyph(&self, value: &GlyphRef) -> Option<&'m GlyphItem>;
 }
 
 pub trait BuildGlyph {

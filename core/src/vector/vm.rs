@@ -42,19 +42,12 @@ pub trait GroupContext<C>: Sized {
     ) {
     }
 
-    fn begin_text(&mut self, _text: &ir::TextItem) {}
-
-    fn end_text(&mut self, _state: RenderState, _width: Scalar, _text: &ir::TextItem) {}
-
     /// Render an item at point into underlying context.
     fn render_item_at(&mut self, state: RenderState, ctx: &mut C, pos: Point, item: &SvgItem);
     /// Render an item into underlying context.
     fn render_item(&mut self, state: RenderState, ctx: &mut C, item: &SvgItem) {
         self.render_item_at(state, ctx, Point::default(), item);
     }
-
-    /// Render a semantic text into underlying context.
-    fn render_semantic_text(&mut self, _ctx: &mut C, _text: &ir::TextItem, _width: Scalar) {}
 
     /// Render a glyph into underlying context.
     fn render_glyph(&mut self, _ctx: &mut C, _pos: Scalar, _item: &ir::GlyphItem) {}
@@ -240,32 +233,17 @@ pub trait RenderVm: Sized {
     }
 
     /// Render a text into the underlying context.
-    // todo: combine with flat item one
     fn render_text(&mut self, state: RenderState, text: &ir::TextItem) -> Self::Resultant {
-        let group_ctx = self.start_text(state, text);
-
         // upem is the unit per em defined in the font.
-        // ppem is calcuated by the font size.
-        // > ppem = text_size / upem
-        let upem = text.font.units_per_em() as f32;
-        let ppem = Scalar(text.shape.size.0 / upem);
-        let inv_ppem = upem / text.shape.size.0;
+        let upem = Scalar(text.font.units_per_em() as f32);
 
-        let mut group_ctx = group_ctx.transform_scale(self, ppem, -ppem);
+        let group_ctx = self.start_text(state, text);
+        let mut group_ctx = text.shape.add_transform(self, group_ctx, upem);
 
-        group_ctx.begin_text(text);
-        let mut x = 0f32;
-        for (offset, advance, glyph) in text.content.glyphs.iter() {
-            let offset = x + offset.0;
-            let ts = offset * inv_ppem;
+        text.render_glyphs(upem, |x, g| {
+            group_ctx.render_glyph(self, x, g);
+        });
 
-            group_ctx.render_glyph(self, Scalar(ts), glyph);
-
-            x += advance.0;
-        }
-        group_ctx.end_text(state, Scalar(x), text);
-
-        group_ctx.render_semantic_text(self, text, Scalar(x));
         group_ctx.into()
     }
 }

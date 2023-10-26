@@ -4,7 +4,7 @@ use std::{collections::HashMap, ops::Deref};
 use comemo::Prehashed;
 use typst::font::Font;
 
-use super::ir::{FontIndice, FontRef, GlyphPackBuilder, GlyphRef};
+use super::ir::{FontIndice, FontRef, GlyphIndice, GlyphPackBuilder, GlyphRef};
 use super::vm::RenderState;
 use super::{
     flat_ir::{self, Module},
@@ -15,10 +15,6 @@ use super::{
 };
 use crate::font::GlyphProvider;
 use crate::hash::Fingerprint;
-
-pub trait GlyphIndice<'m> {
-    fn get_glyph(&self, value: &GlyphRef) -> Option<&'m ir::GlyphItem>;
-}
 
 pub trait BBoxIndice {
     fn get_bbox(&self, value: &Fingerprint) -> Option<BBox>;

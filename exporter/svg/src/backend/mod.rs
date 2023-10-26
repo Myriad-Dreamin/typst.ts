@@ -9,13 +9,12 @@ use typst_ts_core::{
         flat_ir,
         flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
         ir::{
-            self, Abs, Axes, BuildGlyph, FontIndice, GlyphHashStablizer, GlyphRef, ImmutStr,
-            PathStyle, Ratio, Scalar, Size, Transform,
+            self, Abs, Axes, BuildGlyph, FontIndice, GlyphHashStablizer, GlyphIndice, GlyphRef,
+            ImmutStr, PathStyle, Ratio, Scalar, Size, Transform,
         },
         vm::{GroupContext, RenderState, RenderVm, TransformContext},
         GlyphLowerBuilder,
     },
-    TypstAbs,
 };
 
 mod escape;
@@ -129,14 +128,19 @@ pub struct SvgGlyphBuilder {
 }
 
 impl SvgGlyphBuilder {
+    pub fn new(glyph_provider: GlyphProvider) -> Self {
+        Self { glyph_provider }
+    }
+
+    // todo: merge is_image_glyph and render_glyph
     pub fn render_glyph(&mut self, glyph_id: &str, glyph_item: &ir::GlyphItem) -> Option<String> {
         let gp = &self.glyph_provider;
         Self::render_glyph_inner(gp, glyph_id, glyph_item)
     }
 
-    #[comemo::memoize]
-    pub fn render_glyph_pure(glyph_id: &str, glyph_item: ir::GlyphItem) -> Option<String> {
-        Self::render_glyph_pure_inner(glyph_id, &glyph_item)
+    pub fn is_image_glyph(&mut self, glyph_item: &ir::GlyphItem) -> Option<bool> {
+        let gp: &GlyphProvider = &self.glyph_provider;
+        Self::is_image_glyph_inner(gp, glyph_item)
     }
 
     #[comemo::memoize]
@@ -155,12 +159,32 @@ impl SvgGlyphBuilder {
         Self::render_glyph_pure_inner(glyph_id, glyph_item)
     }
 
+    #[comemo::memoize]
+    fn is_image_glyph_inner(gp: &GlyphProvider, glyph_item: &ir::GlyphItem) -> Option<bool> {
+        if matches!(glyph_item, ir::GlyphItem::Raw(..)) {
+            return Self::is_image_glyph_pure_inner(
+                &GlyphLowerBuilder::new(gp).lower_glyph(glyph_item)?,
+            );
+        }
+
+        Self::is_image_glyph_pure_inner(glyph_item)
+    }
+
     fn render_glyph_pure_inner(glyph_id: &str, glyph_item: &ir::GlyphItem) -> Option<String> {
         match glyph_item {
             ir::GlyphItem::Image(image_glyph) => Self::render_image_glyph(glyph_id, image_glyph),
             ir::GlyphItem::Outline(outline_glyph) => {
                 Self::render_outline_glyph(glyph_id, outline_glyph)
             }
+            ir::GlyphItem::Raw(..) => unreachable!(),
+            ir::GlyphItem::None => None,
+        }
+    }
+
+    fn is_image_glyph_pure_inner(glyph_item: &ir::GlyphItem) -> Option<bool> {
+        match glyph_item {
+            ir::GlyphItem::Image(..) => Some(true),
+            ir::GlyphItem::Outline(..) => Some(false),
             ir::GlyphItem::Raw(..) => unreachable!(),
             ir::GlyphItem::None => None,
         }
@@ -329,9 +353,11 @@ impl<C: BuildClipPath> TransformContext<C> for SvgTextBuilder {
 
 /// See [`GroupContext`].
 impl<
+        'm,
         C: RenderVm<Resultant = Arc<SvgTextNode>>
             + BuildGlyph
             + GlyphHashStablizer
+            + GlyphIndice<'m>
             + BuildFillStyleClass
             + NotifyPaint
             + DynExportFeature,
@@ -347,7 +373,7 @@ impl<
     ) {
         let color = &shape.fill;
         // shorten black fill
-        let fill_id = if shape.fill.starts_with("url") {
+        let fill_id = if shape.fill.starts_with('@') {
             let (kind, cano_ref, relative_to_self) = ctx.notify_paint(shape.fill.clone());
 
             let text_scale = upem.0 / shape.size.0;
@@ -374,48 +400,6 @@ impl<
 
         self.attributes
             .push(("class", format!("typst-text {}", fill_id)));
-    }
-
-    fn begin_text(&mut self, _text: &ir::TextItem) {
-        if let Some(fill) = &self.text_fill {
-            // clip path rect
-            let clip_id = fill.as_svg_id("tc");
-            self.content.push(SvgText::Plain(format!(
-                r#"<clipPath id="{}" clipPathUnits="userSpaceOnUse">"#,
-                clip_id
-            )));
-        }
-    }
-
-    fn end_text(&mut self, _state: RenderState, width: Scalar, text: &ir::TextItem) {
-        if let Some(fill) = &self.text_fill {
-            // upem is the unit per em defined in the font.
-            // ppem is calcuated by the font size.
-            // > ppem = text_size / upem
-            let upem = text.font.metrics().units_per_em as f32;
-
-            // because the text is already scaled by the font size,
-            // we need to scale it back to the original size.
-            // todo: infinite multiplication
-            let descender = text
-                .font
-                .metrics()
-                .descender
-                .at(TypstAbs::raw(upem as f64))
-                .to_pt() as f32;
-            let width = width.0 * upem / text.shape.size.0;
-
-            self.content
-                .push(SvgText::Plain(r#"</clipPath>"#.to_owned()));
-
-            let fill_id = fill.as_svg_id("tf");
-            let clip_id = fill.as_svg_id("tc");
-            // clip path rect
-            self.content.push(SvgText::Plain(format!(
-                r##"<rect fill="url(#{})" width="{}" height="{}" y="{}" clip-path="url(#{})"/>"##,
-                fill_id, width, upem, descender, clip_id
-            )));
-        }
     }
 
     fn render_item_at(
@@ -472,7 +456,7 @@ impl<
             match s {
                 PathStyle::Fill(color) | PathStyle::Stroke(color) => {
                     let is_fill = matches!(s, PathStyle::Fill(..));
-                    if color.starts_with("url") {
+                    if color.starts_with('@') {
                         // todo
                         let (kind, cano_ref, relative_to_self) = ctx.notify_paint(color.clone());
 
@@ -507,21 +491,6 @@ impl<
         self.content.push(render_image_item(image_item))
     }
 
-    fn render_semantic_text(&mut self, ctx: &mut C, text: &ir::TextItem, width: Scalar) {
-        if !ctx.should_render_text_element() {
-            return;
-        }
-
-        self.render_text_semantics_inner(
-            &text.shape,
-            &text.content.content,
-            width,
-            Scalar::from(text.font.metrics().ascender.get() as f32),
-            Scalar::from(text.font.units_per_em() as f32),
-            ctx.should_aware_html_entity(),
-        )
-    }
-
     #[inline]
     fn attach_debug_info(&mut self, ctx: &mut C, span_id: u64) {
         if ctx.should_attach_debug_info() {
@@ -537,6 +506,7 @@ impl<
         C: RenderVm<Resultant = Arc<SvgTextNode>>
             + FlatRenderVm<'m, Resultant = Arc<SvgTextNode>>
             + BuildGlyph
+            + GlyphIndice<'m>
             + FontIndice<'m>
             + GlyphHashStablizer
             + BuildFillStyleClass
@@ -612,51 +582,6 @@ impl<
     fn with_reuse(mut self, _ctx: &mut C, v: &Fingerprint) -> Self {
         self.attributes.push(("data-reuse-from", v.as_svg_id("g")));
         self
-    }
-
-    fn begin_flat_text(&mut self, _text: &flat_ir::FlatTextItem) {
-        if let Some(fill) = &self.text_fill {
-            // clip path rect
-            let clip_id = fill.as_svg_id("tc");
-            self.content.push(SvgText::Plain(format!(
-                r#"<clipPath id="{}" clipPathUnits="userSpaceOnUse">"#,
-                clip_id
-            )));
-        }
-    }
-
-    fn end_flat_text(
-        &mut self,
-        _state: RenderState,
-        ctx: &mut C,
-        width: Scalar,
-        text: &flat_ir::FlatTextItem,
-    ) {
-        if let Some(fill) = &self.text_fill {
-            let font_item = ctx.get_font(&text.font).unwrap();
-
-            // upem is the unit per em defined in the font.
-            // ppem is calcuated by the font size.
-            // > ppem = text_size / upem
-            let upem = font_item.unit_per_em.0;
-
-            // because the text is already scaled by the font size,
-            // we need to scale it back to the original size.
-            // todo: infinite multiplication
-            let descender = font_item.descender.0 * upem;
-            let width = width.0 * upem / text.shape.size.0;
-
-            self.content
-                .push(SvgText::Plain(r#"</clipPath>"#.to_owned()));
-
-            let fill_id = fill.as_svg_id("tf");
-            let clip_id = fill.as_svg_id("tc");
-            // clip path rect
-            self.content.push(SvgText::Plain(format!(
-                r##"<rect fill="url(#{})" width="{}" height="{}" y="{}" clip-path="url(#{})"/>"##,
-                fill_id, width, upem, descender, clip_id
-            )));
-        }
     }
 }
 
