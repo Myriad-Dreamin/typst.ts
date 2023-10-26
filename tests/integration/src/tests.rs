@@ -698,7 +698,7 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         ---
         name: visualize_polygon_00_artifact_ir
-        data_content_phash: "phash-gradient:AAAAAAAAgAAAYAYAgAEAgBMAYAYAQF4AgB8AgAEAgAsAgAEAQAcK4AYAAPAfAPAPwAAA5GABgAwBIMAAAMEeANYfwMMAAMAK"
+        data_content_phash: "phash-gradient:AAAAYAYAgAMAgB8AAB4AgEEEwAcAAPYPwPAP4AAAAMEeAMMeEPgAAPAHpMcGJPAACHAvAIcHAIofAPAfAPAvAMoPBNIvBMIP"
         text_content_hash: "sha256:7697c705e134fe39094c2ad9d6076210e20079cb32d7479079961e97237081d1"
         "###);
         check_canvas_render_test_point!(@r###"
