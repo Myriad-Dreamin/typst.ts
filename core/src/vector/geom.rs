@@ -371,32 +371,6 @@ impl From<Transform> for tiny_skia::Transform {
     }
 }
 
-impl From<tiny_skia_path::Transform> for Transform {
-    fn from(skia_transform: tiny_skia_path::Transform) -> Self {
-        Self {
-            sx: skia_transform.sx.into(),
-            ky: skia_transform.ky.into(),
-            kx: skia_transform.kx.into(),
-            sy: skia_transform.sy.into(),
-            tx: skia_transform.tx.into(),
-            ty: skia_transform.ty.into(),
-        }
-    }
-}
-
-impl From<Transform> for tiny_skia_path::Transform {
-    fn from(ir_transform: Transform) -> Self {
-        Self {
-            sx: ir_transform.sx.into(),
-            ky: ir_transform.ky.into(),
-            kx: ir_transform.kx.into(),
-            sy: ir_transform.sy.into(),
-            tx: ir_transform.tx.into(),
-            ty: ir_transform.ty.into(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Hash, Default)]
 pub struct Rect {
     pub lo: Point,
