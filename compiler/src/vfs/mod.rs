@@ -182,11 +182,15 @@ impl<M: AccessModel + Sized> Vfs<M> {
         f: &mut dyn FnMut(&'a ImmutPath, instant::SystemTime),
     ) {
         for slot in self.slots.iter() {
-            let dep_path = slot.sampled_path.get().unwrap();
-            let dep_mtime = slot
+            let Some(dep_path) = slot.sampled_path.get() else {
+                continue;
+            };
+            let Ok(dep_mtime) = slot
                 .mtime
                 .compute(|| Err(other_reason("vfs: uninitialized")))
-                .unwrap();
+            else {
+                continue;
+            };
 
             f(dep_path, *dep_mtime)
         }
