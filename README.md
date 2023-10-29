@@ -81,7 +81,13 @@ cargo install --locked --git https://github.com/Myriad-Dreamin/typst.ts typst-ts
 
 Or Download the latest release from [GitHub Releases](https://github.com/Myriad-Dreamin/typst.ts/releases).
 
-### Example: Render Typst document in browser (build from source with/without wasm-pack)
+### Documentation
+
+See [Documentation](https://myriad-dreamin.github.io/typst.ts/cookery).
+
+### Build from source and check
+
+Note: you could build from source with/without wasm-pack.
 
 Note: see [Troubleshooting WASM Build](docs/troubleshooting-wasm-build.md) for (especially) **Arch Linux** users.
 
@@ -103,11 +109,11 @@ And open your browser to `http://localhost:20810/`.
 You can also run `yarn run build:core` instead of `npx turbo run build` to build
 core library (`@myriaddreamin/typst.ts`) and avoid building the WASM modules from source.
 
-### Example: generate documentation site for packages developers.
+<!-- ### Example: generate documentation site for packages developers.
 
 - Link [typst-doc](https://github.com/Mc-Zen/typst-doc) by `typst-ts-cli package link --manifest ./typst.toml`.
 
-- Generate documentation by `typst-ts-cli package doc --manifest ./contrib/templates/typst-ts-templates/typst.toml`.
+- Generate documentation by `typst-ts-cli package doc --manifest ./contrib/templates/typst-ts-templates/typst.toml`. -->
 
 ### Concept: Precompiler
 

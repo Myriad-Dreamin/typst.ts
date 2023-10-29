@@ -800,11 +800,17 @@ class TypstRendererDriver {
 
   renderSvgDiff(options: RenderInSessionOptions<RenderSvgOptions>): string {
     if (!options.window) {
-      return this.renderer.render_svg_diff(options.renderSession[kObject], 0, 0, 1e33, 1e33);
+      return this.renderer.render_svg_diff(
+        (options.renderSession as any)[kObject],
+        0,
+        0,
+        1e33,
+        1e33,
+      );
     }
 
     return this.renderer.render_svg_diff(
-      options.renderSession[kObject],
+      (options.renderSession as any)[kObject],
       options.window.lo.x,
       options.window.lo.y,
       options.window.hi.x,
@@ -824,7 +830,7 @@ class TypstRendererDriver {
 
   manipulateData(opts: RenderInSessionOptions<ManipulateDataOptions>): void {
     return this.renderer.manipulate_data(
-      opts.renderSession[kObject] as typst.RenderSession,
+      (opts.renderSession as any)[kObject] as typst.RenderSession,
       opts.action ?? 'reset',
       opts.data,
     );
@@ -841,7 +847,7 @@ class TypstRendererDriver {
     }
 
     if ('renderSession' in options) {
-      return fn(options.renderSession);
+      return fn(options.renderSession as RenderSession);
     }
 
     if (isRenderByContentOption(options)) {

@@ -50,7 +50,7 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
       - name: Download & install typst-book
         run: |
-          curl -L https://github.com/Myriad-Dreamin/typst-book/releases/download/v0.1.2-nightly1/typst-book-x86_64-unknown-linux-gnu.tar.gz | tar -xvz
+          curl -L https://github.com/Myriad-Dreamin/typst-book/releases/download/v0.1.2-nightly2/typst-book-x86_64-unknown-linux-gnu.tar.gz | tar -xvz
           chmod +x typst-book-x86_64-unknown-linux-gnu/bin/typst-book
           sudo cp typst-book-x86_64-unknown-linux-gnu/bin/typst-book /usr/bin/typst-book
       - name: Run sccache-cache

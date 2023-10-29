@@ -26,6 +26,12 @@
   "Source Han Serif TC",
 )
 
+#let main-font-size = if is-web-target {
+  16pt
+} else {
+  12pt
+}
+
 #let code-font = (
   "BlexMono Nerd Font Mono",
   // typst-book's embedded font
@@ -98,7 +104,7 @@
   ) if is-web-target;
 
   // set text style
-  set text(font: main-font, size: 16pt, fill: main-color, lang: "en")
+  set text(font: main-font, size: main-font-size, fill: main-color, lang: "en")
 
   set line(stroke: main-color)
 
