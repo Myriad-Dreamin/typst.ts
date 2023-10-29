@@ -136,13 +136,20 @@ Import `typst.ts` in your project:
 - Using [@myriaddreamin/typst.ts][npm::typst.ts]
 
   ```typescript
-  import { createTypstRenderer } from '@myriaddreamin/typst.ts';
-  const renderer = createTypstRenderer();
-  await renderer.init();
-  const svg = await renderer.runWithSession(async session => {
-    // do something with session
-  });
+  import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs';
+  const mainContent = 'Hello, typst!';
+
+  console.log(await $typst.svg({ mainContent }));
   ```
+
+  Specify correct path to the wasm modules if it complains.
+
+  ```typescript
+  $typst.setCompilerInitOptions({ getModule: ... });
+  $typst.setRendererInitOptions({ getModule: ... });
+  ```
+
+  The path option is likely required in browser but not in node.js.
 
 - Using [@myriaddreamin/typst.react][npm::typst.react]
 
