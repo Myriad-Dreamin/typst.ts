@@ -128,7 +128,7 @@ Note: the compilation is already cached by typst's `comemo` implicitly.
 
 == Specify extra init options
 
-The extra init options must be at the start of the main routine, or accurately before all invocations.
+Ideally, you don't have to specify any options. But if necessary, the extra init options must be at the start of the main routine, or accurately before all invocations.
 
 ```ts
 // Example: cache default fonts to file system
@@ -141,6 +141,8 @@ $typst.setPdfjsModule(pdfJsLib);
 // The compiler instance is initialized in this call.
 await $typst.svg({ mainContent });
 ```
+
+Note: There are more documentation about initialization in the *Import typst.ts to your project* section of #link("https://myriad-dreamin.github.io/typst.ts/cookery/get-started.html")[Get started with Typst.ts].
 
 == Specify extra render options
 

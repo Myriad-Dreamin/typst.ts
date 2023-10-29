@@ -180,6 +180,21 @@ const getModule = () => WebAssembly.instantiate(/* params */);
 const getModule = async () => {/* above four ways */};
 ```
 
+== Run the compiler or renderer with simplified APIs
+
+The most simple examples always work with the all-in-one JavaScript Library:
+
+```ts
+import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs';
+console.log((await $typst.svg({
+  mainContent: 'Hello, typst!' })).length);
+// :-> 7317
+```
+
+See #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/all-in-one.html")[All-in-one (Simplified) JavaScript Library] for more example usage.
+
+Once you feel more conformtable, please continue reading following sections.
+
 == Configure and run compiler <run-compiler>
 
 - Configure font resources
