@@ -4,7 +4,10 @@
 
 = Serverless Compiler
 
-The most simple examples always work with `snippet` utility library:
+#let snippet-source = "https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/src/contrib/snippet.mts"
+#let snippet-lib = link(snippet-source)[`snippet`]
+
+The most simple examples always work with #snippet-lib utility library, an all-in-one JavaScript Library with simplified API interfaces:
 
 ```ts
 import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs';
@@ -13,18 +16,18 @@ console.log((await $typst.svg({
 // :-> 7317
 ```
 
-Please
+Please check #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/all-in-one.html")[All-in-one (Simplified) JavaScript Library] for more details.
 
-Quick example:
+Quick example for the harder way to serverless compiler:
 
 ```ts
 import { createTypstCompiler } from '@myriaddreamin/typst.ts';
 
-const mainFile = '/main.typ';
+const mainFilePath = '/main.typ';
 const cc /* compiler */ = createTypstCompiler();
 await cc.init();
-cc.addSource(mainFile, 'Hello, typst!');
-await cc.compile({ mainFilePath: mainFile });
+cc.addSource(mainFilePath, 'Hello, typst!');
+await cc.compile({ mainFilePath });
 ```
 
 Note: For #link("https://developer.mozilla.org/en-US/docs/Glossary/Tree_shaking")[_tree-shaking_], you should import it with longer path:

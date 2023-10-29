@@ -54,7 +54,7 @@ const $typst = new TypstSnippet(() => {
 
 === Example: get output from input
 
-get output with *single file*:
+get output with *single input file*:
 
 ```ts
 const mainContent = 'Hello, typst!';
@@ -68,7 +68,7 @@ await $typst.pdf({ mainContent });
 await $typst.canvas(div, { mainContent });
 ```
 
-get output with *multiple files*:
+get output with *multiple input files*:
 
 ```ts
 // the default value of main path is '/main.typ'
@@ -90,7 +90,7 @@ await $typst.addSource(mainFilePath, mainContent);
 await $typst.svg({ mainFilePath });
 ```
 
-get output with *binary files*:
+get output with *binary input files*:
 
 ```ts
 const encoder = new TextEncoder();
