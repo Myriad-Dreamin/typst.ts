@@ -1,5 +1,5 @@
 use js_sys::Promise;
-use std::{fmt::Debug, ops::Deref, sync::Arc};
+use std::{fmt::Debug, ops::Deref, rc::Rc, sync::Arc};
 use tiny_skia as sk;
 
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
@@ -55,7 +55,7 @@ pub trait CanvasElem: Debug {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d);
 }
 
-pub type CanvasNode = Arc<Box<dyn CanvasElem + Send + Sync>>;
+pub type CanvasNode = Rc<Box<dyn CanvasElem>>;
 
 #[inline]
 fn set_transform(canvas: &web_sys::CanvasRenderingContext2d, transform: sk::Transform) {
@@ -88,6 +88,9 @@ impl<'a> Drop for CanvasStateGuard<'a> {
 }
 
 #[derive(Debug)]
+pub struct CanvasColor(pub JsValue);
+
+#[derive(Debug)]
 pub struct CanvasGroupElem {
     pub ts: sk::Transform,
     pub inner: Vec<(ir::Point, CanvasNode)>,
@@ -107,7 +110,7 @@ impl CanvasElem for CanvasGroupElem {
 #[derive(Debug)]
 pub struct CanvasClipElem {
     pub ts: sk::Transform,
-    pub d: ImmutStr,
+    pub d: Path2d,
     pub inner: CanvasNode,
 }
 
@@ -117,7 +120,7 @@ impl CanvasElem for CanvasClipElem {
         let _guard = CanvasStateGuard::new(canvas);
 
         set_transform(canvas, ts);
-        canvas.clip_with_path_2d(&Path2d::new_with_path_string(&self.d).unwrap());
+        canvas.clip_with_path_2d(&self.d);
 
         self.inner.realize(ts, canvas).await
     }
@@ -126,6 +129,10 @@ impl CanvasElem for CanvasClipElem {
 #[derive(Debug)]
 pub struct CanvasPathElem {
     pub path_data: ir::PathItem,
+    pub fill_color: Option<CanvasColor>,
+    pub stroke_color: Option<CanvasColor>,
+    pub line_dash: Option<js_sys::Array>,
+    pub d: Path2d,
 }
 
 #[async_trait(?Send)]
@@ -135,22 +142,11 @@ impl CanvasElem for CanvasPathElem {
         set_transform(canvas, ts);
         // map_err(map_err("CanvasRenderTask.BuildPath2d")
 
-        let mut fill_color = "none".into();
-        let mut fill = false;
-        let mut stroke_color = "none".into();
-        let mut stroke = false;
         let mut stroke_width = 0.;
 
         for style in &self.path_data.styles {
             match style {
-                PathStyle::Fill(color) => {
-                    fill_color = color.clone();
-                    fill = true;
-                }
-                PathStyle::Stroke(color) => {
-                    stroke_color = color.clone();
-                    stroke = true;
-                }
+                PathStyle::Fill(..) | PathStyle::Stroke(..) => {}
                 PathStyle::StrokeWidth(width) => {
                     canvas.set_line_width(width.0 as f64);
                     stroke_width = width.0;
@@ -164,11 +160,10 @@ impl CanvasElem for CanvasPathElem {
                 PathStyle::StrokeMitterLimit(limit) => {
                     canvas.set_miter_limit(limit.0 as f64);
                 }
-                PathStyle::StrokeDashArray(array) => {
-                    let dash_array = js_sys::Array::from_iter(
-                        array.iter().map(|d| JsValue::from_f64(d.0 as f64)),
-                    );
-                    canvas.set_line_dash(&dash_array).unwrap();
+                PathStyle::StrokeDashArray(..) => {
+                    canvas
+                        .set_line_dash(&self.line_dash.clone().unwrap())
+                        .unwrap();
                 }
                 PathStyle::StrokeDashOffset(offset) => {
                     canvas.set_line_dash_offset(offset.0 as f64);
@@ -176,23 +171,16 @@ impl CanvasElem for CanvasPathElem {
             }
         }
 
-        if fill {
-            // todo: canvas gradient
-            if fill_color.starts_with("url") {
-                fill_color = "black".into()
-            }
-            canvas.set_fill_style(&fill_color.as_ref().into());
-            canvas.fill_with_path_2d(&Path2d::new_with_path_string(&self.path_data.d).unwrap());
+        if let Some(fill_color) = &self.fill_color {
+            canvas.set_fill_style(&fill_color.0);
+            canvas.fill_with_path_2d(&self.d);
         }
 
-        if stroke && stroke_width.abs() > 1e-5 {
-            // todo: canvas gradient
-            if stroke_color.starts_with("url") {
-                stroke_color = "black".into()
+        if let Some(stroke_color) = &self.stroke_color {
+            if stroke_width.abs() > 1e-5 {
+                canvas.set_stroke_style(&stroke_color.0);
+                canvas.stroke_with_path(&self.d);
             }
-
-            canvas.set_stroke_style(&stroke_color.as_ref().into());
-            canvas.stroke_with_path(&Path2d::new_with_path_string(&self.path_data.d).unwrap());
         }
     }
 }
@@ -384,14 +372,14 @@ pub struct CanvasStack {
 
 impl From<CanvasStack> for CanvasNode {
     fn from(s: CanvasStack) -> Self {
-        let inner: CanvasNode = Arc::new(Box::new(CanvasGroupElem {
+        let inner: CanvasNode = Rc::new(Box::new(CanvasGroupElem {
             ts: s.ts,
             inner: s.inner,
         }));
         if let Some(clipper) = s.clipper {
-            Arc::new(Box::new(CanvasClipElem {
+            Rc::new(Box::new(CanvasClipElem {
                 ts: s.ts,
-                d: clipper.d.clone(),
+                d: Path2d::new_with_path_string(&clipper.d).unwrap(),
                 inner,
             }))
         } else {
@@ -406,6 +394,20 @@ impl CanvasStack {
         self.fill = Some(shape.fill.clone())
     }
 
+    #[comemo::memoize]
+    fn create_glyph_elem(fill: Arc<str>, glyph_data: ir::GlyphItem) -> CanvasNode {
+        Rc::new(Box::new(CanvasGlyphElem { fill, glyph_data }))
+    }
+
+    fn create_color(&mut self, mut fill: Arc<str>) -> CanvasColor {
+        // todo: canvas gradient
+        if fill.starts_with('@') {
+            fill = "black".into()
+        }
+
+        CanvasColor(fill.as_ref().into())
+    }
+
     pub fn render_glyph_ref_inner(
         &mut self,
         pos: Scalar,
@@ -414,11 +416,7 @@ impl CanvasStack {
     ) {
         self.inner.push((
             ir::Point::new(pos, Scalar(0.)),
-            Arc::new(Box::new(CanvasGlyphElem {
-                fill: self.fill.clone().unwrap(),
-                // todo: arc glyph item
-                glyph_data: glyph_data.clone(),
-            })),
+            Self::create_glyph_elem(self.fill.clone().unwrap(), glyph_data.clone()),
         ))
     }
 }
@@ -491,10 +489,35 @@ impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> Gro
         path: &ir::PathItem,
         _abs_ref: &Fingerprint,
     ) {
+        let mut fill_color = None;
+        let mut stroke_color = None;
+        let mut line_dash = None;
+
+        for style in &path.styles {
+            match style {
+                PathStyle::Fill(color) => {
+                    fill_color = Some(self.create_color(color.clone()));
+                }
+                PathStyle::Stroke(color) => {
+                    stroke_color = Some(self.create_color(color.clone()));
+                }
+                PathStyle::StrokeDashArray(array) => {
+                    line_dash = Some(js_sys::Array::from_iter(
+                        array.iter().map(|d| JsValue::from_f64(d.0 as f64)),
+                    ));
+                }
+                _ => {}
+            }
+        }
+
         self.inner.push((
             ir::Point::default(),
-            Arc::new(Box::new(CanvasPathElem {
+            Rc::new(Box::new(CanvasPathElem {
                 path_data: path.clone(),
+                fill_color,
+                stroke_color,
+                line_dash,
+                d: Path2d::new_with_path_string(&path.d).unwrap(),
             })),
         ))
     }
@@ -502,7 +525,7 @@ impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> Gro
     fn render_image(&mut self, _ctx: &mut C, image_item: &ir::ImageItem) {
         self.inner.push((
             ir::Point::default(),
-            Arc::new(Box::new(CanvasImageElem {
+            Rc::new(Box::new(CanvasImageElem {
                 image_data: image_item.clone(),
             })),
         ))
@@ -647,7 +670,7 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
 #[derive(Clone)]
 pub struct CanvasPage {
     pub content: Fingerprint,
-    pub elem: Arc<Box<dyn CanvasElem + Send + Sync>>,
+    pub elem: Rc<Box<dyn CanvasElem>>,
     pub size: Size,
 }
 
