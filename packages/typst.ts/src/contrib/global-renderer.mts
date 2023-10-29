@@ -12,7 +12,7 @@ export function getGlobalRenderer(): TypstRenderer | undefined {
 export function createGlobalRenderer(
   creator: (pdf: /* typeof pdfjsModule */ any) => TypstRenderer,
   pdf: /* typeof pdfjsModule */ any,
-  initOptions: InitOptions,
+  initOptions?: Partial<InitOptions>,
 ): Promise<TypstRenderer> {
   // todo: determine renderer thread-safety
   // todo: check inconsistent initOptions
@@ -32,7 +32,7 @@ export function createGlobalRenderer(
 export function withGlobalRenderer(
   creator: (pdf: /* typeof pdfjsModule */ any) => TypstRenderer,
   pdf: /* typeof pdfjsModule */ any,
-  initOptions: InitOptions,
+  initOptions: Partial<InitOptions> | undefined,
   resolve: (renderer: TypstRenderer) => void,
   reject?: (err: any) => void,
 ) {

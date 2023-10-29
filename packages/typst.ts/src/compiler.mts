@@ -14,7 +14,7 @@ export type CompileFormat = 'vector' | 'pdf';
 /**
  * The options for compiling the document.
  */
-export interface CompileOptions {
+export interface CompileOptions<F extends CompileFormat = any> {
   /**
    * The path of the main file.
    */
@@ -25,7 +25,7 @@ export interface CompileOptions {
    * - 'pdf': for finally exporting pdf to the user.
    * @default 'vector'
    */
-  format?: CompileFormat;
+  format?: F;
 }
 
 /**
@@ -57,6 +57,8 @@ export interface TypstCompiler {
    * @returns {Promise<Uint8Array>} - artifact in vector format.
    * You can then load the artifact to the renderer to render the document.
    */
+  compile(options: CompileOptions<'vector'>): Promise<Uint8Array>;
+  compile(options: CompileOptions<'pdf'>): Promise<Uint8Array>;
   compile(options: CompileOptions): Promise<Uint8Array>;
 
   /**
