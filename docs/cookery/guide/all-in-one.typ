@@ -118,6 +118,11 @@ The compilation result could be stored in an artifact in #link("https://github.c
 
 ```ts
 const vectorData = await $typst.vector({ mainContent });
+// or load vector data from remote
+const remoteData = await (fetch(
+    './main.sir.in').then(resp => resp.arrayBuffer()));
+const vectorData = new Uint8Array(remoteData);
+
 // into svg format
 await $typst.svg({ vectorData });
 // into canvas operations
