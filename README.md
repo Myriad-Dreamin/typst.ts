@@ -151,6 +151,8 @@ Import `typst.ts` in your project:
 
   The path option is likely required in browser but not in node.js.
 
+  Further reading: [Get Started with Typst.ts](https://myriad-dreamin.github.io/typst.ts/cookery/get-started.html)
+
 - Using [@myriaddreamin/typst.react][npm::typst.react]
 
   ```typescript
