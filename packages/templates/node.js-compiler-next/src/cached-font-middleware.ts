@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import * as path from 'path';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 
-export async function cachedFontInitOptoins() {
+export async function cachedFontInitOptions() {
   const fetcher = (await import('node-fetch')).default;
   const dataDir =
     process.env.APPDATA ||

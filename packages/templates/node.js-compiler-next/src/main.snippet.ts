@@ -1,9 +1,9 @@
 import { $typst } from '@myriaddreamin/typst.ts/dist/cjs/contrib/snippet.cjs';
 
-import { cachedFontInitOptoins } from './cached-font-middleware';
+import { cachedFontInitOptions } from './cached-font-middleware';
 
 async function main() {
-  $typst.setCompilerInitOptions(await cachedFontInitOptoins());
+  $typst.setCompilerInitOptions(await cachedFontInitOptions());
 
   const svg = await $typst.svg({
     mainContent: 'Hello, typst!',

@@ -8,11 +8,11 @@ import { preloadFontAssets } from '@myriaddreamin/typst.ts/dist/cjs/options.init
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import * as path from 'path';
 import { HttpsProxyAgent } from 'https-proxy-agent';
-import { cachedFontInitOptoins } from './cached-font-middleware';
+import { cachedFontInitOptions } from './cached-font-middleware';
 
 async function main() {
   const compiler = createTypstCompiler();
-  await compiler.init(await cachedFontInitOptoins());
+  await compiler.init(await cachedFontInitOptions());
 
   compiler.addSource('/main.typ', 'Hello, typst!');
   const artifactData = await compiler.compile({
