@@ -80,7 +80,7 @@ export class TypstSnippet {
   /**
    * Create a new instance of {@link TypstSnippet}.
    * @param cc the compiler instance, see {@link PromiseJust} and {@link TypstCompiler}.
-   * @param ex the compiler instance, see {@link PromiseJust} and {@link TypstRenderer}.
+   * @param ex the renderer instance, see {@link PromiseJust} and {@link TypstRenderer}.
    *
    * @example
    *
@@ -100,6 +100,36 @@ export class TypstSnippet {
     this.mainFilePath = '/main.typ';
   }
 
+  /**
+   * Set lazy initialized compiler instance for the utility instance.
+   * @param cc the compiler instance, see {@link PromiseJust} and {@link TypstCompiler}.
+   */
+  setCompiler(cc: PromiseJust<TypstCompiler>) {
+    this.cc = cc;
+  }
+
+  /**
+   * Get an initialized compiler instance from the utility instance.
+   */
+  async getCompiler() {
+    return (typeof this.cc === 'function' ? (this.cc = await this.cc()) : this.cc)!;
+  }
+
+  /**
+   * Set lazy initialized renderer instance for the utility instance.
+   * @param ex the renderer instance, see {@link PromiseJust} and {@link TypstRenderer}.
+   */
+  setRenderer(ex: PromiseJust<TypstRenderer>) {
+    this.ex = ex;
+  }
+
+  /**
+   * Get an initialized renderer instance from the utility instance.
+   */
+  async getRenderer() {
+    return typeof this.ex === 'function' ? (this.ex = await this.ex()) : this.ex;
+  }
+
   /** @internal */
   static ccOptions: Partial<InitOptions> | undefined = undefined;
   /**
@@ -107,12 +137,7 @@ export class TypstSnippet {
    * See {@link InitOptions}.
    */
   setCompilerInitOptions(options: Partial<InitOptions>) {
-    if (typeof this.cc !== 'function') {
-      throw new Error('compiler has been initialized');
-    }
-    if (this !== $typst) {
-      throw new Error('can not set options for non-global instance');
-    }
+    this.requireIs$typstAndUninitialized('compiler', this.cc);
     TypstSnippet.ccOptions = options;
   }
 
@@ -123,12 +148,7 @@ export class TypstSnippet {
    * See {@link InitOptions}.
    */
   setRendererInitOptions(options: Partial<InitOptions>) {
-    if (typeof this.ex !== 'function') {
-      throw new Error('renderer has been initialized');
-    }
-    if (this !== $typst) {
-      throw new Error('can not set options for non-global instance');
-    }
+    this.requireIs$typstAndUninitialized('renderer', this.ex);
     TypstSnippet.exOptions = options;
   }
 
@@ -138,12 +158,7 @@ export class TypstSnippet {
    * Set pdf.js module for initializing global instance {@link $typst}.
    */
   setPdfjsModule(module: unknown) {
-    if (typeof this.ex !== 'function') {
-      throw new Error('renderer has been initialized');
-    }
-    if (this !== $typst) {
-      throw new Error('can not set pdfjs module for non-global instance');
-    }
+    this.requireIs$typstAndUninitialized('renderer', this.ex);
     TypstSnippet.pdfjsModule = module;
   }
 
@@ -258,14 +273,6 @@ export class TypstSnippet {
     });
   }
 
-  private async getCompiler() {
-    return (typeof this.cc === 'function' ? (this.cc = await this.cc()) : this.cc)!;
-  }
-
-  private async getRenderer() {
-    return typeof this.ex === 'function' ? (this.ex = await this.ex()) : this.ex;
-  }
-
   private async getCompileOptions(opts?: SweetCompileOptions): Promise<CompileOptions> {
     if (opts === undefined) {
       return { mainFilePath: this.mainFilePath };
@@ -284,6 +291,15 @@ export class TypstSnippet {
 
     const options = await this.getCompileOptions(opts);
     return (await this.getCompiler()).compile(options);
+  }
+
+  private requireIs$typstAndUninitialized<T>(role: string, c: PromiseJust<T>) {
+    if (typeof c !== 'function') {
+      throw new Error(`${role} has been initialized: ${c}`);
+    }
+    if (this !== $typst) {
+      throw new Error('can not set options for non-global instance');
+    }
   }
 }
 
