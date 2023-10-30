@@ -215,7 +215,7 @@
         let t = 0.33
         rect(q, vadd(q, (t/4*5, t)), fill: dark-doc-bg, stroke: stroke-color + 0.2pt, name: "dark-doc")
         content((v => vadd(v, (-0.05, 0)), "dark-doc"), std-scale(30%, [
-          #set text(fill: stroke-color)
+          #set text(fill: white)
           dead #linebreak()
           beef
         ]))
