@@ -125,7 +125,7 @@
     let light-doc-bg = black.lighten(98%)
     let dark-doc-bg = rgb("#343541")
     let rect = rect.with(stroke: (0.5pt*stroke-factor) + stroke-color)
-    let circle = circle.with(stroke: (0.5pt*stroke-factor))
+    let circle = circle.with(stroke: (0.5pt*stroke-factor) + stroke-color)
     let line = line.with(stroke: (0.5pt*stroke-factor) + stroke-color)
     let light-line = line.with(stroke: (0.3pt*stroke-factor) + stroke-color)
     let exlight-line = line.with(stroke: (0.2pt*stroke-factor) + stroke-color)
@@ -166,7 +166,7 @@
 
       let sref-rect(q, name) = {
         let r = 0.08
-        circle(vadd(q, (r, r)), radius: r, name: name, fill: orange, stroke: 0.2pt)
+        circle(vadd(q, (r, r)), radius: r, name: name, fill: orange, stroke: 0.2pt + stroke-color)
       }
 
       let q = (0.1, 1.5)
