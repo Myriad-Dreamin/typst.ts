@@ -1,6 +1,6 @@
 # typst.ts
 
-[Markdown](https://github.com/Myriad-Dreamin/typst.ts/blob/main/README.md) | [Typst](./docs/cookery/introduction.typ) |
+[Markdown](https://github.com/Myriad-Dreamin/typst.ts/blob/main/README.md) | [typst](./docs/cookery/introduction.typ) |
 [Online SVG](https://myriad-dreamin.github.io/typst.ts/cookery/) |
 [Online Canvas](https://myriad-dreamin.github.io/typst.ts/)
 
@@ -14,7 +14,7 @@
 </p>
 
 `typst.ts` is a project dedicated to bring the power of
-[Typst](https://github.com/typst/typst) to the world of JavaScript. In short, it
+[typst](https://github.com/typst/typst) to the world of JavaScript. In short, it
 provides an `typst::World` implementation and several exporters to help compile
 and render your Typst document inside _Browser Environment_. In the scope of server-side rendering
 collaborated by
@@ -76,7 +76,7 @@ Run the entire typst directly in browser, like [typst.app](https://typst.app).
 
 - Renderer/Component Library for [JavaScript](https://www.npmjs.com/package/@myriaddreamin/typst.ts), [React](https://www.npmjs.com/package/@myriaddreamin/typst.react), and [Angular](https://www.npmjs.com/package/@myriaddreamin/typst.angular)
 
-### Installation
+### Installation (CLI)
 
 Install latest CLI of typst.ts via cargo:
 
@@ -85,6 +85,31 @@ cargo install --locked --git https://github.com/Myriad-Dreamin/typst.ts typst-ts
 ```
 
 Or Download the latest release from [GitHub Releases](https://github.com/Myriad-Dreamin/typst.ts/releases).
+
+### Installation (Packages)
+
+The JavaScript packages are published on [npm](https://www.npmjs.com/).
+
+- Core (Wrapper) Library: [@myriaddreamin/typst.ts][npm::typst.ts]
+
+- React Library: [@myriaddreamin/typst.react][npm::typst.react]
+
+- Angular Library: [@myriaddreamin/typst.angular][npm::typst.angular]
+
+- (Internal) Web compiler WASM module:
+  [@myriaddreamin/typst-ts-web-compiler](https://www.npmjs.com/package/@myriaddreamin/typst-ts-web-compiler)
+
+- (Internal) Renderer WASM module:
+  [@myriaddreamin/typst-ts-renderer](https://www.npmjs.com/package/@myriaddreamin/typst-ts-renderer)
+
+The rust crates are not published on [crates.io](https://crates.io/) yet, since
+it has the git dependency on [typst](https://github.com/typst/typst).
+
+- Core Library: [typst-ts-core](./core/)
+
+- Compiler Library: [typst-ts-compiler](./compiler/)
+
+- CLI as a Library: [typst-ts-cli](./cli/)
 
 ### Documentation
 
