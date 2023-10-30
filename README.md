@@ -13,7 +13,11 @@
   </a>
 </p>
 
-`typst.ts` is a project dedicated to bring the power of [Typst](https://github.com/typst/typst) to the world of JavaScript. In short, it provides an `typst::World` implementation and several exporters to help compile and render your Typst document. In the scope of server-side rendering collaborated by
+`typst.ts` is a project dedicated to bring the power of
+[Typst](https://github.com/typst/typst) to the world of JavaScript. In short, it
+provides an `typst::World` implementation and several exporters to help compile
+and render your Typst document inside _Browser Environment_. In the scope of server-side rendering
+collaborated by
 $\textcolor{#3c9123}{\textsf{server}}$ and $\textcolor{#0074d9}{\textsf{browser}}$, there would be a data flow like this:
 
 <p align="center">
@@ -31,13 +35,14 @@ Specifically, it first typically presents a typst document in three forms:
 
 - [Form3](https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/serverless.html): Manipulate a canvas element directly.
 
-The _Form2: Vector Format_ is developed specially for typst documents, and it has several fancy features: Todo: Visualized Feature:
+The _Form2: Vector Format_ is developed specially for typst documents, and it has several fancy features:
 
-- Data Sharing across multiple layouts.
-
-- Artifact Streaming.
-
-- Incremental Rendering.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/docs/ir-features.dark.artifact.svg">
+    <img width="100%" alt="Data Flow" src="https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/docs/ir-features.artifact.svg"/>
+  </picture>
+</p>
 
 So with _Form2_, you can continue rendeing the document in different ways:
 

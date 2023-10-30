@@ -1,22 +1,33 @@
 #import "/docs/cookery/book.typ": book-page
-#import "/github-pages/docs/data-flow.typ": data-flow-graph
+#import "/github-pages/docs/graphs.typ": data-flow-graph, ir-feature-graph
 
 #show: book-page.with(title: "Introduction")
 
+
+#let natural-image(img) = style(styles => {
+  let (width, height) = measure(img, styles)
+  layout(page => {
+    let width_scale = 0.8 * page.width / width
+    block(width: width_scale * width, height: width_scale * height)[
+      #scale(x: width_scale * 100%, y: width_scale * 100%, origin: center+top)[#img]
+    ]
+  })
+})
+
 = Introduction
 
-Typst.ts is a project dedicated to bring the power of #link("https://github.com/typst/typst")[Typst] to the world of JavaScript. In short, it composes ways to compile and render your Typst document. In the scope of server-side rendering collaborated by #text(fill: rgb("#3c9123"), "server") and #text(fill: blue, "browser"), there would be a data flow like this basically:
+Typst.ts is a project dedicated to bring the power of #link("https://github.com/typst/typst")[Typst] to the world of JavaScript. In short, it composes ways to compile and render your Typst document inside *Browser Environment*. In the scope of server-side rendering collaborated by #text(fill: rgb("#3c9123"), "server") and #text(fill: blue, "browser"), there would be a data flow like this basically:
 
 #figure(
   {
     set text(size: 12pt)
-    data-flow-graph()
+    natural-image(data-flow-graph())
   },
   caption: [Browser-side module needed: $dagger$: compiler; $dagger.double$: renderer. ],
   numbering: none,
 )
 
-Specifically, it first typically presents a typst document in three forms:
+Specifically, it first presents a typst document in three typical forms:
 
 - #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/ts-cli.html")[Form1]: Render to SVG and then embed it as a high-quality vectored image directly.
 
@@ -24,13 +35,18 @@ Specifically, it first typically presents a typst document in three forms:
 
 - #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/serverless.html")[Form3]: Manipulate a canvas element directly.
 
-The #emph("Form2: Vector Format") is developed specially for typst documents, and it has several fancy features: Todo: Visualized Feature:
+The #emph("Form2: Vector Format") is developed specially for typst documents, and it has several fancy features: 
 
-- Data Sharing across multiple layouts.
-
-- Artifact Streaming.
-
-- Incremental Rendering.
+#figure(
+  scale(120%, {
+    set text(size: 12pt)
+    v(0.5em)
+    natural-image(ir-feature-graph())
+    v(0.5em)
+  }),
+  caption: [Figure: Features of the #emph("Vector Format"). ],
+  numbering: none,
+)
 
 // - Incremental Font Transfer
 

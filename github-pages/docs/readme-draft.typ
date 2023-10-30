@@ -1,7 +1,7 @@
 
 // #import "@preview/canvas:0.1.0": canvas
 // #import "/contrib/typst/typst-canvas/lib.typ": canvas
-#import "data-flow.typ": data-flow-graph
+#import "graphs.typ": data-flow-graph
 
 // The project function defines how your document looks.
 // It takes your content and some metadata and formats it.

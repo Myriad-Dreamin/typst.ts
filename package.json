@@ -22,6 +22,11 @@
     "packages/templates/*"
   ],
   "scripts": {
+    "md": "yarn run md0 && yarn run md1 && yarn run md2 && yarn run md3",
+    "md0": "cargo run --bin typst-ts-cli -- compile --workspace . --entry ./github-pages/docs/ir-features.typ --format=svg",
+    "md1": "cargo run --bin typst-ts-cli -- compile --workspace . --entry ./github-pages/docs/ir-features.dark.typ --format=svg",
+    "md2": "cargo run --bin typst-ts-cli -- compile --workspace . --entry ./github-pages/docs/data-flow-standalone.typ --format=svg",
+    "md3": "cargo run --bin typst-ts-cli -- compile --workspace . --entry ./github-pages/docs/data-flow-standalone.dark.typ --format=svg",
     "book": "typst-book serve --font-path assets/fonts -w . docs/cookery",
     "build:core": "yarn workspace @myriaddreamin/typst.ts build",
     "bump-packages": "python scripts/bump_version.py",
