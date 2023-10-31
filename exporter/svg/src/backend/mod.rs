@@ -20,7 +20,7 @@ use typst_ts_core::{
 mod escape;
 use escape::{PcDataEscapes, TextContentDataEscapes};
 
-use crate::utils::ToCssExt;
+use crate::{frontend::HasGradient, utils::ToCssExt};
 
 pub trait BuildClipPath {
     fn build_clip_path(&mut self, path: &ir::PathItem) -> Fingerprint;
@@ -586,8 +586,10 @@ impl<
 }
 
 /// See [`FlatGroupContext`].
-impl<'m, C: FlatIncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBuilder>>
-    FlatIncrGroupContext<C> for SvgTextBuilder
+impl<
+        'm,
+        C: FlatIncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBuilder> + HasGradient,
+    > FlatIncrGroupContext<C> for SvgTextBuilder
 {
     fn render_diff_item_ref_at(
         &mut self,
@@ -597,7 +599,8 @@ impl<'m, C: FlatIncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBu
         item: &Fingerprint,
         prev_item: &Fingerprint,
     ) {
-        let content = if item == prev_item {
+        let has_gradient = ctx.has_gradient(item);
+        let content = if item == prev_item && !has_gradient {
             // todo: update transform
             vec![]
         } else {
@@ -612,6 +615,9 @@ impl<'m, C: FlatIncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBu
         };
         attributes.push(("data-tid", item.as_svg_id("p")));
         attributes.push(("data-reuse-from", prev_item.as_svg_id("p")));
+        if has_gradient {
+            attributes.push(("data-bad-equality", "1".to_owned()));
+        }
 
         self.content.push(SvgText::Content(Arc::new(SvgTextNode {
             attributes,
