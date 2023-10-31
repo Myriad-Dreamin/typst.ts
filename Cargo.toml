@@ -60,10 +60,10 @@ strip = true
 
 # typesetting
 pixglyph = "0.2"
-typst = "0.8.0"
-typst-ide = "0.8.0"
-typst-library = "0.8.0"
-typst-syntax = "0.8.0"
+typst = "0.9.0"
+typst-ide = "0.9.0"
+typst-library = "0.9.0"
+typst-syntax = "0.9.0"
 ttf-parser = "0.19.2"
 
 # general
@@ -212,8 +212,10 @@ typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.t
 typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0" }
 typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0" }
 typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0" }
+hayagriva = { git = "https://github.com/Myriad-Dreamin/hayagriva.git", branch = "typst.ts-v0.9.0" }
 
 # typst = { path = "../typst/crates/typst" }
 # typst-library = { path = "../typst/crates/typst-library" }
 # typst-syntax = { path = "../typst/crates/typst-syntax" }
 # typst-ide = { path = "../typst/crates/typst-ide" }
+# hayagriva = { path = "../hayagriva" }

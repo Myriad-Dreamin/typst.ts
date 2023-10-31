@@ -14,6 +14,7 @@ impl Exporter<typst::doc::Document, Vec<u8>> for PdfDocExporter {
         _world: &dyn World,
         output: Arc<typst::doc::Document>,
     ) -> SourceResult<Vec<u8>> {
-        Ok(typst::export::pdf(output.as_ref()))
+        // todo: ident and timestamp option
+        Ok(typst::export::pdf(output.as_ref(), None, None))
     }
 }

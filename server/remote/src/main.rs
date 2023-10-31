@@ -11,6 +11,7 @@ use typst_ts_remote_server::{
 fn main() {
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Info)
+        .filter_module("tracing::", log::LevelFilter::Off)
         .try_init();
 
     let opts = Opts::parse();
