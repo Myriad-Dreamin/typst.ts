@@ -38,8 +38,7 @@
     "publish:lib": "npm publish --access public || exit 0"
   },
   "dependencies": {
-    "idb": "^7.1.1",
-    "sync-request": "^6.1.0"
+    "idb": "^7.1.1"
   },
   "peerDependencies": {
     "@myriaddreamin/typst-ts-renderer": "*",
