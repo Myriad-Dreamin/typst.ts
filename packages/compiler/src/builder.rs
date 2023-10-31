@@ -34,7 +34,7 @@ impl TypstCompilerBuilder {
     pub fn set_dummy_access_model(&mut self) -> ZResult<()> {
         self.access_model = Some(ProxyAccessModel {
             context: wasm_bindgen::JsValue::UNDEFINED,
-            mtime_fn: js_sys::Function::new_no_args("return new Date(0)"),
+            mtime_fn: js_sys::Function::new_no_args("return 0"),
             is_file_fn: js_sys::Function::new_no_args("return true"),
             real_path_fn: js_sys::Function::new_with_args("path", "return path"),
             read_all_fn: js_sys::Function::new_no_args(
