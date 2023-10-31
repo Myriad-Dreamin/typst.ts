@@ -1,7 +1,16 @@
 import type { CompileOptions, TypstCompiler } from '../compiler.mjs';
-import type { InitOptions } from '../options.init.mjs';
-import type { TypstRenderer } from '../renderer.mjs';
+import {
+  withPackageRegistry,
+  withAccessModel,
+  type BeforeBuildFn,
+  type InitOptions,
+  preloadFontAssets,
+} from '../options.init.mjs';
+import type { TypstRenderer, RenderSession } from '../renderer.mjs';
 import type { RenderToCanvasOptions, RenderSvgOptions } from '../options.render.mjs';
+import { MemoryAccessModel, type WritableAccessModel } from '../fs/index.mjs';
+import { FetchPackageRegistry } from '../fs/package.mjs';
+import { PackageRegistry, PackageSpec } from '../internal.types.mjs';
 
 /**
  * Some function that returns a promise of value or just that value.
@@ -36,6 +45,22 @@ export type SweetRenderOptions =
        */
       vectorData: Uint8Array;
     };
+
+type Role = 'compiler' | 'renderer';
+
+/**
+ * The sweet snippet provider for bullding the compiler or renderer component.
+ * See {@link TypstSnippet#use} for more details.
+ */
+export interface TypstSnippetProvider {
+  key: string;
+  forRoles: Role[];
+  provides: BeforeBuildFn[];
+}
+
+const isNode =
+  // @ts-ignore
+  typeof process !== 'undefined' && process.versions != null && process.versions.node != null;
 
 /**
  * Convenient util class for compiling documents, which is a wrapper of the
@@ -98,6 +123,7 @@ export class TypstSnippet {
     this.cc = options?.compiler;
     this.ex = options?.renderer;
     this.mainFilePath = '/main.typ';
+    this.providers = [];
   }
 
   /**
@@ -130,36 +156,216 @@ export class TypstSnippet {
     return typeof this.ex === 'function' ? (this.ex = await this.ex()) : this.ex;
   }
 
+  /**
+   * provider for bullding the compiler or renderer component.
+   */
+  private providers?: PromiseJust<TypstSnippetProvider>[];
+  use(...providers: PromiseJust<TypstSnippetProvider>[]) {
+    if (!this.providers) {
+      throw new Error('already prepare uses for instances');
+    }
+    this.providers.push(...providers);
+  }
+
+  private async prepareUse() {
+    if (!this.providers) {
+      return;
+    }
+
+    const providers = await Promise.all(
+      this.providers.map(p => (typeof p === 'function' ? p() : p)),
+    );
+    this.providers = [];
+
+    if (
+      $typst == this &&
+      !providers.some(p => p.key.includes('package-registry') || p.key.includes('access-model'))
+    ) {
+      // Note: the default fetch backend always adds a withAccessModel(mem)
+      if (isNode) {
+        const escapeImport = new Function('m', 'return import(m)');
+        try {
+          const m = new MemoryAccessModel();
+          const { default: request } = await escapeImport('sync-request');
+
+          $typst.use(
+            TypstSnippet.withAccessModel(m),
+            TypstSnippet.fetchPackageBy(m, (_: unknown, path: string) => {
+              const response = request('GET', path);
+
+              if (response.statusCode === 200) {
+                return response.getBody(undefined);
+              }
+              return undefined;
+            }),
+          );
+        } catch (e) {}
+      } else {
+        $typst.use(TypstSnippet.fetchPackageRegistry());
+      }
+    }
+
+    const providers2 = await Promise.all(
+      this.providers.map(p => (typeof p === 'function' ? p() : p)),
+    );
+
+    const ccOptions = (this.ccOptions ||= {});
+    const ccBeforeBuild = (ccOptions.beforeBuild ||= []);
+
+    const exOptions = (this.exOptions ||= {});
+    const exBeforeBuild = (exOptions.beforeBuild ||= []);
+
+    for (const provider of [...providers, ...providers2]) {
+      if (provider.forRoles.includes('compiler')) {
+        this.requireIsUninitialized('compiler', this.cc, TypstSnippet.$buildC);
+        ccBeforeBuild.push(...provider.provides);
+      }
+      if (provider.forRoles.includes('renderer')) {
+        this.requireIsUninitialized('renderer', this.ex, TypstSnippet.$buildR);
+        exBeforeBuild.push(...provider.provides);
+      }
+    }
+    this.providers = undefined;
+  }
+
+  /**
+   * Set accessl model for the compiler instance
+   * @example
+   *
+   * use memory access model
+   *
+   * ```typescript
+   * const m = new MemoryAccessModel();
+   * $typst.use(TypstSnippet.withAccessModel(m));
+   * ```
+   */
+  static withAccessModel(accessModel: WritableAccessModel): TypstSnippetProvider {
+    return {
+      key: 'access-model',
+      forRoles: ['compiler'],
+      provides: [withAccessModel(accessModel)],
+    };
+  }
+
+  /**
+   * Set package registry for the compiler instance
+   * @example
+   *
+   * use a customized package registry
+   *
+   * ```typescript
+   * const n = new NodeFetchPackageRegistry();
+   * $typst.use(TypstSnippet.withPackageRegistry(n));
+   * ```
+   */
+  static withPackageRegistry(registry: PackageRegistry): TypstSnippetProvider {
+    return {
+      key: 'package-registry',
+      forRoles: ['compiler'],
+      provides: [withPackageRegistry(registry)],
+    };
+  }
+
+  /**
+   * Set access model for the compiler instance
+   *
+   * @example
+   *
+   * use default (memory) access model
+   *
+   * ```typescript
+   * $typst.use(await TypstSnippet.fetchPackageRegistry());
+   * ```
+   *
+   * @example
+   *
+   * use external access model
+   *
+   * ```typescript
+   * const m = new MemoryAccessModel();
+   * $typst.use(TypstSnippet.withAccessModel(m), await TypstSnippet.fetchPackageRegistry(m));
+   * ```
+   */
+  static fetchPackageRegistry(accessModel?: WritableAccessModel): TypstSnippetProvider {
+    const m = accessModel || new MemoryAccessModel();
+    const provides = [
+      ...(accessModel ? [] : [withAccessModel(m)]),
+      withPackageRegistry(new FetchPackageRegistry(m)),
+    ];
+    return {
+      key: 'package-registry$fetch',
+      forRoles: ['compiler'],
+      provides,
+    };
+  }
+
+  /**
+   * Set access model for the compiler instance
+   * @example
+   *
+   * use a customized fetcher
+   *
+   * ```typescript
+   * import request from 'sync-request-curl';
+   * const m = new MemoryAccessModel();
+   * $typst.use(TypstSnippet.withAccessModel(m), await TypstSnippet.fetchPackageBy(m, (_, httpUrl) => {
+   *   const response = request('GET', this.resolvePath(path), {
+   *     insecure: true,
+   *   });
+   *
+   *   if (response.statusCode === 200) {
+   *     return response.getBody(undefined);
+   *   }
+   *   return undefined;
+   * }));
+   * ```
+   */
+  static fetchPackageBy(
+    accessModel: WritableAccessModel,
+    fetcher: (path: PackageSpec, defaultHttpUrl: string) => Uint8Array | undefined,
+  ): TypstSnippetProvider {
+    class HttpPackageRegistry extends FetchPackageRegistry {
+      pullPackageData(path: PackageSpec): Uint8Array | undefined {
+        return fetcher(path, this.resolvePath(path));
+      }
+    }
+    return {
+      key: 'package-registry$lambda',
+      forRoles: ['compiler'],
+      provides: [withPackageRegistry(new HttpPackageRegistry(accessModel))],
+    };
+  }
+
   /** @internal */
-  static ccOptions: Partial<InitOptions> | undefined = undefined;
+  ccOptions: Partial<InitOptions>;
   /**
    * Set compiler init options for initializing global instance {@link $typst}.
    * See {@link InitOptions}.
    */
   setCompilerInitOptions(options: Partial<InitOptions>) {
-    this.requireIs$typstAndUninitialized('compiler', this.cc);
-    TypstSnippet.ccOptions = options;
+    this.requireIsUninitialized('compiler', this.cc, TypstSnippet.$buildC);
+    this.ccOptions = options;
   }
 
   /** @internal */
-  static exOptions: Partial<InitOptions> | undefined = undefined;
+  exOptions: Partial<InitOptions>;
   /**
    * Set renderer init options for initializing global instance {@link $typst}.
    * See {@link InitOptions}.
    */
   setRendererInitOptions(options: Partial<InitOptions>) {
-    this.requireIs$typstAndUninitialized('renderer', this.ex);
-    TypstSnippet.exOptions = options;
+    this.requireIsUninitialized('renderer', this.ex, TypstSnippet.$buildR);
+    this.exOptions = options;
   }
 
   /** @internal */
-  static pdfjsModule: unknown | undefined = undefined;
+  pdfjsModule: unknown | undefined = undefined;
   /**
    * Set pdf.js module for initializing global instance {@link $typst}.
    */
   setPdfjsModule(module: unknown) {
-    this.requireIs$typstAndUninitialized('renderer', this.ex);
-    TypstSnippet.pdfjsModule = module;
+    this.requireIsUninitialized('renderer', this.ex, TypstSnippet.$buildR);
+    this.pdfjsModule = module;
   }
 
   /**
@@ -228,22 +434,12 @@ export class TypstSnippet {
    * See {@link SweetRenderOptions} and {@link RenderSvgOptions}.
    */
   async svg(o?: SweetRenderOptions & RenderSvgOptions) {
-    const rr = await this.getRenderer();
-    if (!rr) {
-      throw new Error('does not provide renderer instance');
-    }
-    const data = await this.getVector(o);
-    return await rr.runWithSession(async session => {
-      rr.manipulateData({
-        renderSession: session,
-        action: 'reset',
-        data,
-      });
-      return rr.renderSvgDiff({
+    return this.transientRender(o, (renderer, renderSession) =>
+      renderer.renderSvgDiff({
         ...o,
-        renderSession: session,
-      });
-    });
+        renderSession,
+      }),
+    );
   }
 
   /**
@@ -254,28 +450,20 @@ export class TypstSnippet {
     container: HTMLElement,
     o?: SweetRenderOptions & Omit<RenderToCanvasOptions, 'container'>,
   ) {
-    const rr = await this.getRenderer();
-    if (!rr) {
-      throw new Error('does not provide renderer instance');
-    }
-    const data = await this.getVector(o);
-    return await rr.runWithSession(async session => {
-      rr.manipulateData({
-        renderSession: session,
-        action: 'reset',
-        data,
-      });
-      rr.renderToCanvas({
+    return this.transientRender(o, (renderer, renderSession) =>
+      renderer.renderToCanvas({
         container,
         ...o,
-        renderSession: session,
-      });
-    });
+        renderSession,
+      }),
+    );
   }
 
   private async getCompileOptions(opts?: SweetCompileOptions): Promise<CompileOptions> {
     if (opts === undefined) {
       return { mainFilePath: this.mainFilePath };
+    } else if (typeof opts === 'string') {
+      throw new Error(`please specify opts as {mainContent: '...'} or {mainFilePath: '...'}`);
     } else if ('mainFilePath' in opts) {
       return { ...opts };
     } else {
@@ -293,22 +481,36 @@ export class TypstSnippet {
     return (await this.getCompiler()).compile(options);
   }
 
-  private requireIs$typstAndUninitialized<T>(role: string, c: PromiseJust<T>) {
+  private async transientRender<T>(
+    opts: SweetRenderOptions | undefined,
+    f: (rr: TypstRenderer, session: RenderSession) => T,
+  ): Promise<T> {
+    const rr = await this.getRenderer();
+    if (!rr) {
+      throw new Error('does not provide renderer instance');
+    }
+    const data = await this.getVector(opts);
+    return await rr.runWithSession(async session => {
+      rr.manipulateData({
+        renderSession: session,
+        action: 'reset',
+        data,
+      });
+      return f(rr, session);
+    });
+  }
+
+  private requireIsUninitialized<T>(role: string, c: PromiseJust<T>, e?: PromiseJust<T>) {
     if (typeof c !== 'function') {
       throw new Error(`${role} has been initialized: ${c}`);
     }
-    if (this !== $typst) {
-      throw new Error('can not set options for non-global instance');
+    if (e && c != e) {
+      throw new Error(`${role} instance is set to non default value`);
     }
   }
-}
 
-/**
- * The lazy initialized global shared instance of {@link TypstSnippet}. See
- * {@link TypstSnippet} for more details.
- */
-export const $typst = new TypstSnippet({
-  compiler: async () => {
+  /** @internal */
+  static async $buildC(this: TypstSnippet) {
     // lazy import compile module
     const { createGlobalCompiler } = (await import(
       '@myriaddreamin/typst.ts/dist/esm/contrib/global-compiler.mjs'
@@ -317,9 +519,12 @@ export const $typst = new TypstSnippet({
       '@myriaddreamin/typst.ts/dist/esm/compiler.mjs'
     )) as any as typeof import('../compiler.mjs');
 
-    return createGlobalCompiler(createTypstCompiler, TypstSnippet.ccOptions);
-  },
-  renderer: async () => {
+    await this.prepareUse();
+    return createGlobalCompiler(createTypstCompiler, this.ccOptions);
+  }
+
+  /** @internal */
+  static async $buildR(this: TypstSnippet) {
     // lazy import renderer module
     const { createGlobalRenderer } = (await import(
       '@myriaddreamin/typst.ts/dist/esm/contrib/global-renderer.mjs'
@@ -328,8 +533,17 @@ export const $typst = new TypstSnippet({
       '@myriaddreamin/typst.ts/dist/esm/renderer.mjs'
     )) as any as typeof import('../renderer.mjs');
 
-    const pdfjs =
-      TypstSnippet.pdfjsModule || (typeof window !== 'undefined' && (window as any)?.pdfjsLib);
-    return createGlobalRenderer(createTypstRenderer, pdfjs, TypstSnippet.exOptions);
-  },
+    const pdfjs = this.pdfjsModule || (typeof window !== 'undefined' && (window as any)?.pdfjsLib);
+    await this.prepareUse();
+    return createGlobalRenderer(createTypstRenderer, pdfjs, this.exOptions);
+  }
+}
+
+/**
+ * The lazy initialized global shared instance of {@link TypstSnippet}. See
+ * {@link TypstSnippet} for more details.
+ */
+export const $typst = new TypstSnippet({
+  compiler: TypstSnippet.$buildC,
+  renderer: TypstSnippet.$buildR,
 });

@@ -11,7 +11,7 @@
     "@myriaddreamin/typst-ts-web-compiler": "^0.4.0-rc6",
     "@myriaddreamin/typst.ts": "^0.4.0-rc6",
     "node-fetch": "3.3.2",
-    "sync-request-curl": "^2.1.9"
+    "sync-request": "^6.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.6.3",

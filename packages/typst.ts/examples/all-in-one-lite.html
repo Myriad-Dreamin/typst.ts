@@ -1,0 +1,177 @@
+<html lang="en">
+  <!-- This is the example for typst.ts -->
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="origin-trial" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Typst.ts</title>
+    <script type="module" src="/core/dist/esm/contrib/all-in-one.bundle.js"></script>
+    <link rel="stylesheet" href="/core/examples/typst.ts.css" />
+
+    <script src="/core/examples/typst.js"></script>
+    <script>
+      document.ready(() => {
+        const terminalContent = document.getElementById('terminal-content');
+        const svgContent = document.getElementById('svg-content');
+        const textContent = document.getElementById('text-content');
+        terminalContent.innerHTML = 'Downloading font assets...';
+
+        console.log($typst);
+
+        let initTime = 0;
+        const runCompile = async fmt => {
+          const mainContent = textContent.value;
+          const begin = performance.now();
+
+          const mainFilePath = '/corpus/skyzh-cv/main.typ';
+
+          let svg = '';
+          if (mainContent?.length) {
+            svg = await $typst.svg({
+              mainContent: textContent.value,
+            });
+          } else {
+            svg = await $typst.svg({
+              mainFilePath: '/corpus/skyzh-cv/main.typ',
+            });
+          }
+
+          const end = performance.now();
+          const rounded = Math.round((end - begin) * 1000) / 1000;
+          if (!initTime) {
+            initTime = rounded;
+          }
+
+          const compileInfo = `---
+<span style="color:#c0caf5">Compiled to SVG in init: <span style="color:#7dcfff">${initTime}</span>ms</span>, incr: <span style="color:#7dcfff">${rounded}</span>ms</span>
+---`;
+
+          terminalContent.innerHTML = [compileInfo, `svg length: ${svg.length}`].join('\n');
+          svgContent.innerHTML = svg;
+          const svgElem = svgContent.firstElementChild;
+          const width = Number.parseFloat(svgElem.getAttribute('width'));
+          const height = Number.parseFloat(svgElem.getAttribute('height'));
+          const cw = terminalContent.clientWidth - 40;
+          svgElem.setAttribute('width', cw);
+          svgElem.setAttribute('height', (height * cw) / width);
+        };
+
+        // optional: You could also run without fetch backend
+        // const fetchBackend = new window.TypstCompileModule.MemoryAccessModel();
+        // textContent.value = 'Hello, typst!';
+
+        const fetchBackend = new window.TypstCompileModule.FetchAccessModel(
+          'http://localhost:20810',
+        );
+
+        $typst.setCompilerInitOptions({
+          getModule: () =>
+            '/base/node_modules/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm',
+        });
+        $typst.setRendererInitOptions({
+          getModule: () =>
+            '/base/node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
+        });
+
+        $typst.use(
+          TypstSnippet.withAccessModel(fetchBackend),
+          TypstSnippet.fetchPackageRegistry(fetchBackend),
+        );
+        runCompile('svg').then(() => {
+          runCompile('svg');
+        });
+        document.getElementById('compile-button').addEventListener('click', () => {
+          runCompile('svg');
+        });
+        textContent.oninput = () => {
+          runCompile('svg');
+        };
+      });
+    </script>
+
+    <style>
+      .content {
+        display: flex;
+        margin: 82px auto 32px;
+        padding: 0 16px;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .terminal {
+        position: relative;
+        width: 90%;
+        max-width: 2000px;
+        border-radius: 6px;
+        padding-top: 45px;
+        margin-top: 8px;
+        overflow: hidden;
+        background-color: rgb(15, 15, 16);
+      }
+
+      .terminal::before {
+        content: '\2022 \2022 \2022';
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 4px;
+        background: rgb(58, 58, 58);
+        color: #c2c3c4;
+        width: 100%;
+        font-size: 2rem;
+        line-height: 0;
+        padding: 14px 0;
+        text-indent: 4px;
+      }
+
+      .terminal pre {
+        font-family:
+          SFMono-Regular,
+          Consolas,
+          Liberation Mono,
+          Menlo,
+          monospace;
+        color: white;
+        padding: 0 1rem 1rem;
+        margin: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <body>
+      <div class="navigator">
+        <ul>
+          <li style="padding: 10px 40px">
+            <a href="/core">Embed Your Typst Document</a>
+          </li>
+          <li style="padding: 10px 40px">
+            <a href="/core/examples/all-in-one.html">All-in-one Demo</a>
+          </li>
+          <li style="padding: 10px 40px">
+            <a href="/core">Renderer Demo</a>
+          </li>
+          <li style="padding: 10px 40px">
+            <a href="/core/examples/compiler.html">Compiler Demo</a>
+          </li>
+        </ul>
+        <div class="clear"></div>
+      </div>
+      <div class="content">
+        <div>
+          <button id="compile-button">Export to SVG</button>
+          <button id="compile-to-pdf-button">Export to PDF</button>
+        </div>
+        <textarea
+          id="text-content"
+          style="width: 90%; margin-top: 8px; min-height: 100px"
+        ></textarea>
+        <div class="terminal">
+          <pre id="terminal-content">hello world</pre>
+        </div>
+        <div id="svg-content" style="background-color: white; margin-top: 20px"></div>
+      </div>
+    </body>
+  </body>
+</html>

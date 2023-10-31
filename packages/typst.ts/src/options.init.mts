@@ -265,9 +265,15 @@ export function withPackageRegistry(packageRegistry: PackageRegistry): BeforeBui
  * @returns {BeforeBuildFn}
  */
 export function withAccessModel(accessModel: FsAccessModel): BeforeBuildFn {
-  return async (_, { builder }: InitContext) => {
+  return async (_, ctx: InitContext) => {
+    if (ctx.alreadySetAccessModel) {
+      throw new Error(
+        `already set some assess model before: ${ctx.alreadySetAccessModel.constructor?.name}(${ctx.alreadySetAccessModel})`,
+      );
+    }
+    ctx.alreadySetAccessModel = accessModel;
     return new Promise(resolve => {
-      builder.set_access_model(
+      ctx.builder.set_access_model(
         accessModel,
         (path: string) => {
           const lastModified = accessModel.getMTime(path);
@@ -305,6 +311,7 @@ interface InitContext {
     loadFonts(builder: Builder, fonts: (string | Uint8Array)[]): Promise<void>;
   };
   builder: Builder;
+  alreadySetAccessModel: any;
 }
 
 // todo: search browser

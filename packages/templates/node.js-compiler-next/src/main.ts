@@ -3,11 +3,6 @@ import * as _1 from '@myriaddreamin/typst-ts-renderer';
 import * as _2 from '@myriaddreamin/typst-ts-web-compiler';
 
 import { createTypstCompiler, createTypstRenderer } from '@myriaddreamin/typst.ts';
-
-import { preloadFontAssets } from '@myriaddreamin/typst.ts/dist/cjs/options.init.cjs';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import * as path from 'path';
-import { HttpsProxyAgent } from 'https-proxy-agent';
 import { cachedFontInitOptions } from './cached-font-middleware';
 
 async function main() {

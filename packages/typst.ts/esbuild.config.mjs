@@ -26,14 +26,26 @@ let wasmPlugin = {
         namespace: 'wasm-binary',
       };
     });
+
     // Virtual modules in the "wasm-binary" namespace contain the
     // actual bytes of the WebAssembly file. This uses esbuild's
     // built-in "binary" loader instead of manually embedding the
     // binary data inside JavaScript code ourselves.
-    build.onLoad({ filter: /.*/, namespace: 'wasm-binary' }, async args => ({
-      contents: await fs.promises.readFile(args.path),
-      loader: 'binary',
-    }));
+    build.onLoad({ filter: /.*/, namespace: 'wasm-binary' }, async args => {
+      let contents = new Uint8Array();
+
+      try {
+        contents = await fs.promises.readFile(args.path);
+      } catch (e) {
+        if (args.importer.includes('all-in-one.mts')) {
+          console.log('error while importing:', args, e);
+        }
+      }
+      return {
+        contents,
+        loader: 'binary',
+      };
+    });
   },
 };
 
@@ -45,7 +57,14 @@ const context = await esbuild.context({
   outExtension: {
     '.js': '.bundle.js',
   },
-  entryPoints: ['src/main.mts', 'src/contrib/global-renderer.mts', 'src/contrib/sync-worker.mts'],
+  entryPoints: [
+    'src/main.mts',
+    'src/contrib/global-compiler.mts',
+    'src/contrib/global-renderer.mts',
+    'src/contrib/all-in-one-lite.mts',
+    'src/contrib/all-in-one.mts',
+    'src/contrib/sync-worker.mts',
+  ],
   bundle: true,
   format: IS_COMMON_JS ? 'cjs' : 'esm',
   tsconfig: 'tsconfig.lib.json',

@@ -1,9 +1,10 @@
 import { preloadFontAssets } from '@myriaddreamin/typst.ts/dist/cjs/options.init.cjs';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import * as fs from 'fs';
 import * as path from 'path';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 
 export async function cachedFontInitOptions() {
+  const { existsSync, mkdirSync, readFileSync, writeFileSync } = fs;
   const fetcher = (await import('node-fetch')).default;
   const dataDir =
     process.env.APPDATA ||

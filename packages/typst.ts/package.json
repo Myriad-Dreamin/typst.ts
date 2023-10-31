@@ -27,7 +27,8 @@
     ]
   },
   "files": [
-    "dist/**/*.{mts,mjs,cjs,cts,ts,js}"
+    "dist/**/*.{mts,mjs,cjs,cts,ts,js}",
+    "!dist/**/all-in-one.bundle.js"
   ],
   "scripts": {
     "build": "node scripts/mkdir.mjs && tsc -p ./tsconfig.lib.json && tsc -p ./tsconfig.cjs.json && node scripts/fix-cjs.mjs && node esbuild.config.mjs commonjs production && node esbuild.config.mjs production",
@@ -37,7 +38,8 @@
     "publish:lib": "npm publish --access public || exit 0"
   },
   "dependencies": {
-    "idb": "^7.1.1"
+    "idb": "^7.1.1",
+    "sync-request": "^6.1.0"
   },
   "peerDependencies": {
     "@myriaddreamin/typst-ts-renderer": "*",
@@ -52,15 +54,15 @@
     }
   },
   "devDependencies": {
+    "@myriaddreamin/typst-ts-renderer": "*",
+    "@myriaddreamin/typst-ts-web-compiler": "*",
     "@types/web": "^0.0.99",
     "@typescript-eslint/eslint-plugin": "5.59.6",
     "@typescript-eslint/parser": "5.59.6",
     "builtin-modules": "3.3.0",
-    "eslint": "^8.41.0",
     "esbuild": "0.17.19",
     "esbuild-plugin-wasm": "^1.1.0",
-    "tslib": "2.5.2",
-    "@myriaddreamin/typst-ts-renderer": "*",
-    "@myriaddreamin/typst-ts-web-compiler": "*"
+    "eslint": "^8.41.0",
+    "tslib": "2.5.2"
   }
 }

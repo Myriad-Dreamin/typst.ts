@@ -6,27 +6,15 @@ import {
   FetchPackageRegistry,
 } from '@myriaddreamin/typst.ts';
 import { MemoryAccessModel } from '@myriaddreamin/typst.ts/dist/cjs/fs/memory.cjs';
+import { NodeFetchPackageRegistry } from '@myriaddreamin/typst.ts/dist/cjs/fs/package.node.cjs';
 import {
   withAccessModel,
   withPackageRegistry,
 } from '@myriaddreamin/typst.ts/dist/cjs/options.init.cjs';
-import { PackageSpec } from '@myriaddreamin/typst.ts/dist/cjs/internal.types.cjs';
 import { cachedFontInitOptions } from './cached-font-middleware';
-import request from 'sync-request-curl';
 import { writeFileSync } from 'fs';
-
-class NodeFetchPackageRegistry extends FetchPackageRegistry {
-  pullPackageData(path: PackageSpec): Uint8Array | undefined {
-    const response = request('GET', this.resolvePath(path), {
-      insecure: true,
-    });
-
-    if (response.statusCode === 200) {
-      return response.getBody(undefined);
-    }
-    return undefined;
-  }
-}
+import request, { HttpVerb, Options } from 'sync-request';
+// import request, { HttpVerb, Options } from 'sync-request-curl';
 
 async function main(coordinate: { x: number; y: number }) {
   let typstCode: string = `#import "@preview/cetz:0.1.2"
@@ -39,15 +27,25 @@ async function main(coordinate: { x: number; y: number }) {
 
   const compiler = createTypstCompiler();
   const accessModel = new MemoryAccessModel();
+  // use faster sync-request-curl but insecure
   await compiler.init({
     beforeBuild: [
       ...(await cachedFontInitOptions()).beforeBuild,
       withAccessModel(accessModel),
-      withPackageRegistry(new NodeFetchPackageRegistry(accessModel)),
+      withPackageRegistry(
+        new NodeFetchPackageRegistry(
+          accessModel,
+          (method: HttpVerb, url: string, options?: Options) => {
+            return request(method, url, {
+              // insecure: true,
+              ...(options ?? {}),
+            });
+          },
+        ),
+      ),
     ],
   });
 
-  console.log('/main.typ');
   compiler.addSource('/main.typ', typstCode);
   let artifact: Uint8Array = await compiler.compile({
     mainFilePath: '/main.typ',
@@ -73,5 +71,5 @@ async function main(coordinate: { x: number; y: number }) {
 
 main({ x: 15, y: 15 }).then(svg => {
   //   console.log(svg);
-  writeFileSync('test.svg', svg);
+  writeFileSync('test.artifact.svg', svg);
 });
