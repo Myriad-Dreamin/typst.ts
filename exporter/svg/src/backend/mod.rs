@@ -466,7 +466,7 @@ impl<
                             let self_bbox = path.size.unwrap();
                             Transform::from_scale(self_bbox.x, self_bbox.y)
                         } else {
-                            println!("state: {:?}", state.inv_transform());
+                            // println!("state: {:?}", state.inv_transform());
                             state.inv_transform()
                         };
                         let transform_matrix = transform_matrix.to_css();
