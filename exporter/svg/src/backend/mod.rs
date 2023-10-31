@@ -631,7 +631,7 @@ fn render_path(path: &ir::PathItem, state: RenderState, abs_ref: &Fingerprint) -
     for style in &path.styles {
         match style {
             PathStyle::Fill(color) => {
-                fill_color = if color.starts_with("url") {
+                fill_color = if color.starts_with('@') {
                     ft = format!(r#"url(#{})"#, state.at(abs_ref).as_svg_id("pf"));
                     &ft
                 } else {
@@ -640,7 +640,7 @@ fn render_path(path: &ir::PathItem, state: RenderState, abs_ref: &Fingerprint) -
             }
             PathStyle::Stroke(color) => {
                 // compress the stroke color
-                p.push(if color.starts_with("url") {
+                p.push(if color.starts_with('@') {
                     let ps = state.at(abs_ref).as_svg_id("ps");
                     format!(r##"stroke="url(#{})" "##, &ps)
                 } else {

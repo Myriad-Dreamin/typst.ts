@@ -178,7 +178,7 @@ impl CanvasElem for CanvasPathElem {
 
         if fill {
             // todo: canvas gradient
-            if fill_color.starts_with("url") {
+            if fill_color.starts_with('@') {
                 fill_color = "black".into()
             }
             canvas.set_fill_style(&fill_color.as_ref().into());
@@ -187,7 +187,7 @@ impl CanvasElem for CanvasPathElem {
 
         if stroke && stroke_width.abs() > 1e-5 {
             // todo: canvas gradient
-            if stroke_color.starts_with("url") {
+            if stroke_color.starts_with('@') {
                 stroke_color = "black".into()
             }
 
