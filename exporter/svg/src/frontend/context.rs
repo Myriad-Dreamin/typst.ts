@@ -232,20 +232,10 @@ impl<'m, 't, Feat: ExportFeature> RenderVm for RenderContext<'m, 't, Feat> {
 
         let mut group_ctx = text.shape.add_transform(self, group_ctx, upem);
 
-        if let Some(fill) = &group_ctx.text_fill {
+        let width = if let Some(fill) = &group_ctx.text_fill {
             // clip path rect
             let clip_id = fill.as_svg_id("tc");
-            group_ctx.content.push(SvgText::Plain(format!(
-                r#"<clipPath id="{}" clipPathUnits="userSpaceOnUse">"#,
-                clip_id
-            )));
-        }
-        let width = text.render_glyphs(upem, |x, g| {
-            group_ctx.render_glyph(self, x, g);
-        });
-        if let Some(fill) = &group_ctx.text_fill {
             let fill_id = fill.as_svg_id("tf");
-            let clip_id = fill.as_svg_id("tc");
 
             // because the text is already scaled by the font size,
             // we need to scale it back to the original size.
@@ -256,16 +246,26 @@ impl<'m, 't, Feat: ExportFeature> RenderVm for RenderContext<'m, 't, Feat> {
                 .descender
                 .at(TypstAbs::raw(upem.0 as f64))
                 .to_pt() as f32;
-            let width = width.0 * upem.0 / text.shape.size.0;
+
+            group_ctx.content.push(SvgText::Plain(format!(
+                r#"<clipPath id="{}" clipPathUnits="userSpaceOnUse">"#,
+                clip_id
+            )));
+
+            let width = text.render_glyphs(upem, |x, g| {
+                group_ctx.render_glyph(self, x, g);
+                group_ctx.content.push(SvgText::Plain("<path/>".into()));
+            });
 
             group_ctx
                 .content
                 .push(SvgText::Plain(r#"</clipPath>"#.to_owned()));
 
             // clip path rect
+            let scaled_width = width.0 * upem.0 / text.shape.size.0;
             group_ctx.content.push(SvgText::Plain(format!(
                 r##"<rect fill="url(#{})" width="{:.1}" height="{:.1}" y="{:.1}" clip-path="url(#{})"/>"##,
-                fill_id, width, upem.0, descender, clip_id
+                fill_id, scaled_width, upem.0, descender, clip_id
             )));
 
             // image glyphs
@@ -276,7 +276,13 @@ impl<'m, 't, Feat: ExportFeature> RenderVm for RenderContext<'m, 't, Feat> {
                 }
                 group_ctx.render_glyph(self, x, g);
             });
-        }
+
+            width
+        } else {
+            text.render_glyphs(upem, |x, g| {
+                group_ctx.render_glyph(self, x, g);
+            })
+        };
 
         if self.should_render_text_element() {
             group_ctx.render_text_semantics_inner(
@@ -346,35 +352,35 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Fea
 
         group_ctx = text.shape.add_transform(self, group_ctx, upem);
 
-        if let Some(fill) = &group_ctx.text_fill {
+        let width = if let Some(fill) = &group_ctx.text_fill {
             // clip path rect
             let clip_id = fill.as_svg_id("tc");
-            group_ctx.content.push(SvgText::Plain(format!(
-                r#"<clipPath id="{}" clipPathUnits="userSpaceOnUse">"#,
-                clip_id
-            )));
-        }
-        let width = text.render_glyphs(upem, |x, g| {
-            group_ctx.render_glyph_ref(self, x, g);
-        });
-        if let Some(fill) = &group_ctx.text_fill {
             let fill_id = fill.as_svg_id("tf");
-            let clip_id = fill.as_svg_id("tc");
 
             // because the text is already scaled by the font size,
             // we need to scale it back to the original size.
             // todo: infinite multiplication
             let descender = font.descender.0 * upem.0;
-            let width = width.0 * upem.0 / text.shape.size.0;
+
+            group_ctx.content.push(SvgText::Plain(format!(
+                r#"<clipPath id="{}" clipPathUnits="userSpaceOnUse">"#,
+                clip_id
+            )));
+
+            let width = text.render_glyphs(upem, |x, g| {
+                group_ctx.render_glyph_ref(self, x, g);
+                group_ctx.content.push(SvgText::Plain("<path/>".into()));
+            });
 
             group_ctx
                 .content
                 .push(SvgText::Plain(r#"</clipPath>"#.to_owned()));
 
             // clip path rect
+            let scaled_width = width.0 * upem.0 / text.shape.size.0;
             group_ctx.content.push(SvgText::Plain(format!(
                 r##"<rect fill="url(#{})" width="{:.1}" height="{:.1}" y="{:.1}" clip-path="url(#{})"/>"##,
-                fill_id, width, upem.0, descender, clip_id
+                fill_id, scaled_width, upem.0, descender, clip_id
             )));
 
             // image glyphs
@@ -388,7 +394,13 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Fea
                 }
                 group_ctx.render_glyph_ref(self, x, g);
             });
-        }
+
+            width
+        } else {
+            text.render_glyphs(upem, |x, g| {
+                group_ctx.render_glyph_ref(self, x, g);
+            })
+        };
 
         if self.should_render_text_element() {
             group_ctx.render_text_semantics_inner(
