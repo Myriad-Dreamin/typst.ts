@@ -60,3 +60,18 @@ impl ToCssExt for ir::Transform {
         )
     }
 }
+
+#[derive(Clone, Copy)]
+pub(crate) struct MemorizeFree<'a, T>(pub &'a T);
+
+impl<'a, T> std::hash::Hash for MemorizeFree<'a, T> {
+    fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {}
+}
+
+impl<'a, T> std::cmp::PartialEq for MemorizeFree<'a, T> {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl<'a, T> std::cmp::Eq for MemorizeFree<'a, T> {}

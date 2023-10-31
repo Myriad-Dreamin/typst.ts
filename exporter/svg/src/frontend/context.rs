@@ -8,7 +8,7 @@ use typst_ts_core::{
         flat_vm::{FlatGroupContext, FlatIncrRenderVm, FlatRenderVm},
         ir::{
             self, BuildGlyph, FontIndice, FontRef, GlyphHashStablizer, GlyphIndice, GlyphItem,
-            GlyphPackBuilder, GlyphRef, ImmutStr, PathItem, Scalar, StyleNs,
+            GlyphPackBuilder, GlyphRef, ImmutStr, PathItem, PathStyle, Scalar, StyleNs,
         },
         vm::GroupContext,
         vm::{RenderState, RenderVm},
@@ -21,8 +21,11 @@ use crate::{
         BuildClipPath, BuildFillStyleClass, DynExportFeature, NotifyPaint, SvgText, SvgTextBuilder,
         SvgTextNode,
     },
+    utils::MemorizeFree,
     ExportFeature, GlyphProvider, SvgGlyphBuilder,
 };
+
+use super::HasGradient;
 
 /// Maps the style name to the style definition.
 /// See [`StyleNs`].
@@ -143,6 +146,36 @@ impl<'m, 't, Feat: ExportFeature> BuildClipPath for RenderContext<'m, 't, Feat> 
         let fingerprint = self.fingerprint_builder.resolve(path);
         self.clip_paths.insert(path.d.clone(), fingerprint);
         fingerprint
+    }
+}
+
+#[comemo::memoize]
+fn has_gradient<'m, 't, Feat: ExportFeature>(
+    ctx: &MemorizeFree<RenderContext<'m, 't, Feat>>,
+    x: &Fingerprint,
+) -> bool {
+    let Some(item) = ctx.0.get_item(x) else {
+        // overestimated
+        return true;
+    };
+
+    use FlatSvgItem::*;
+    match item {
+        Gradient(..) => true,
+        Image(..) | Link(..) | None => false,
+        Item(t) => has_gradient(ctx, &t.1),
+        Group(g, ..) => g.0.iter().any(|(_, x)| has_gradient(ctx, x)),
+        Path(p) => p.styles.iter().any(|s| match s {
+            PathStyle::Fill(color) | PathStyle::Stroke(color) => color.starts_with('@'),
+            _ => false,
+        }),
+        Text(p) => p.shape.fill.starts_with('@'),
+    }
+}
+
+impl<'m, 't, Feat: ExportFeature> HasGradient for RenderContext<'m, 't, Feat> {
+    fn has_gradient(&self, a: &Fingerprint) -> bool {
+        has_gradient(&MemorizeFree(self), a)
     }
 }
 

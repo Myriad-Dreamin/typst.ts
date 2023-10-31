@@ -752,3 +752,7 @@ impl std::fmt::Display for RatioRepr {
         write!(f, "{:.3}%", self.0 * 100.0)
     }
 }
+
+pub trait HasGradient {
+    fn has_gradient(&self, f: &Fingerprint) -> bool;
+}
