@@ -1,3 +1,4 @@
+use core::fmt;
 use std::{collections::HashMap, path::Path};
 
 use typst::diag::{FileError, FileResult};
@@ -15,8 +16,26 @@ struct NotifyFileRepr {
 /// A file snapshot that is notified by some external source
 ///
 /// Note: The error is boxed to avoid large stack size
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct FileSnapshot(Result<NotifyFileRepr, Box<FileError>>);
+
+impl fmt::Debug for FileSnapshot {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.0.as_ref() {
+            Ok(v) => f
+                .debug_struct("FileSnapshot")
+                .field("mtime", &v.mtime)
+                .field(
+                    "content",
+                    &FileContent {
+                        len: v.content.len(),
+                    },
+                )
+                .finish(),
+            Err(e) => f.debug_struct("FileSnapshot").field("error", &e).finish(),
+        }
+    }
+}
 
 impl FileSnapshot {
     /// Access the internal data of the file snapshot
@@ -244,4 +263,10 @@ impl<M: AccessModel> AccessModel for NotifyAccessModel<M> {
 
         self.inner.content(src)
     }
+}
+
+#[derive(Debug)]
+#[allow(dead_code)]
+struct FileContent {
+    len: usize,
 }
