@@ -21,6 +21,7 @@ use crate::{
 pub use crate::ImmutStr;
 
 pub use super::geom::*;
+use super::vm::{GroupContext, TransformContext};
 
 /// Create a xml id from the given prefix and the def id of this reference.
 /// Note that the def id may not be stable across compilation.
@@ -138,7 +139,9 @@ pub enum SvgItem {
     Path((PathItem, SpanId)),
     Text(TextItem),
     Transformed(TransformedItem),
-    Group(GroupItem),
+    Group(GroupItem, Option<Size>),
+    // todo: big size 64
+    Gradient(GradientItem),
 }
 
 /// Data of an `<image/>` element.
@@ -178,7 +181,7 @@ impl From<typst::image::Image> for Image {
         Image {
             data: image.data().to_vec(),
             format: format.into(),
-            size: image.size().into(),
+            size: Axes::new(image.width(), image.height()),
             alt: image.alt().map(|s| s.into()),
             hash: Fingerprint::from_u128(hash),
         }
@@ -236,12 +239,146 @@ pub struct LinkItem {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub struct ColorItem {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
+}
+
+impl ColorItem {
+    // todo: to_css
+    pub fn to_hex(self) -> String {
+        let Self { r, g, b, a } = self;
+        if a != 255 {
+            format!("#{:02x}{:02x}{:02x}{:02x}", r, g, b, a)
+        } else {
+            format!("#{:02x}{:02x}{:02x}", r, g, b)
+        }
+    }
+
+    pub fn typst(&self) -> typst::geom::Color {
+        typst::geom::Color::from_u8(self.r, self.g, self.b, self.a)
+    }
+}
+
+/// A color space for mixing.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub enum ColorSpace {
+    /// A perceptual color space.
+    Oklab,
+
+    /// The standard RGB color space.
+    Srgb,
+
+    /// The D65-gray color space.
+    D65Gray,
+
+    /// The linear RGB color space.
+    LinearRgb,
+
+    /// The HSL color space.
+    Hsl,
+
+    /// The HSV color space.
+    Hsv,
+
+    /// The CMYK color space.
+    Cmyk,
+}
+
+impl From<typst::geom::ColorSpace> for ColorSpace {
+    fn from(value: typst::geom::ColorSpace) -> Self {
+        use typst::geom::ColorSpace::*;
+        match value {
+            Oklab => Self::Oklab,
+            Srgb => Self::Srgb,
+            D65Gray => Self::D65Gray,
+            LinearRgb => Self::LinearRgb,
+            Hsl => Self::Hsl,
+            Hsv => Self::Hsv,
+            Cmyk => Self::Cmyk,
+        }
+    }
+}
+
+impl From<ColorSpace> for typst::geom::ColorSpace {
+    fn from(value: ColorSpace) -> Self {
+        use typst::geom::ColorSpace::*;
+        match value {
+            ColorSpace::Oklab => Oklab,
+            ColorSpace::Srgb => Srgb,
+            ColorSpace::D65Gray => D65Gray,
+            ColorSpace::LinearRgb => LinearRgb,
+            ColorSpace::Hsl => Hsl,
+            ColorSpace::Hsv => Hsv,
+            ColorSpace::Cmyk => Cmyk,
+        }
+    }
+}
+
+/// Item representing an `<path/>` element.
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub struct GradientItem {
+    /// The path instruction.
+    pub stops: Vec<(ColorItem, Scalar)>,
+    /// Whether the gradient is relative to itself (its own bounding box).
+    /// Otherwise, the gradient is relative to the parent bounding box.
+    pub relative_to_self: Option<bool>,
+    /// Whether to anti-alias the gradient (used for sharp gradients).
+    pub anti_alias: bool,
+    /// A color space for mixing.
+    pub space: ColorSpace,
+    /// The gradient kind.
+    /// See [`GradientKind`] for more information.
+    pub kind: GradientKind,
+    /// Additional gradient styles.
+    /// See [`GradientStyle`] for more information.
+    pub styles: Vec<GradientStyle>,
+}
+
+/// Item representing an `<path/>` element.
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct PathItem {
     /// The path instruction.
     pub d: ImmutStr,
+    /// bbox of the path.
+    pub size: Option<Size>,
     /// The path style.
     /// See [`PathStyle`] for more information.
     pub styles: Vec<PathStyle>,
+}
+
+/// Kind of graidents for [`GradientItem`].
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub enum GradientKind {
+    /// Angle of a linear gradient.
+    Linear(Scalar),
+    /// Radius of a radial gradient.
+    Radial(Scalar),
+    /// Angle of a conic gradient.
+    Conic(Scalar),
+}
+
+/// Attributes that is applicable to the [`GradientItem`].
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub enum GradientStyle {
+    /// Center of a radial or conic gradient.
+    Center(Point),
+    /// Focal center of a radial gradient.
+    FocalCenter(Point),
+    /// Focal radius of a radial gradient.
+    FocalRadius(Scalar),
 }
 
 /// Attributes that is applicable to the [`PathItem`].
@@ -292,6 +429,13 @@ pub struct TextItem {
     /// The shape of the text item.
     /// See [`TextShape`] for more information.
     pub shape: Arc<TextShape>,
+}
+
+impl TextItem {
+    pub fn render_glyphs(&self, upem: Abs, consume_glyph: impl FnMut(Abs, &GlyphItem)) -> Abs {
+        self.shape
+            .render_glyphs(upem, self.content.glyphs.iter(), consume_glyph)
+    }
 }
 
 /// The content metadata of a [`TextItem`].
@@ -404,6 +548,50 @@ pub struct TextShape {
     pub size: Scalar,
     /// Fill font text with css color.
     pub fill: ImmutStr,
+}
+
+impl TextShape {
+    /// ppem is calcuated by the font size.
+    fn ppem(&self, upem: f32) -> Scalar {
+        Scalar(self.size.0 / upem)
+    }
+
+    /// inv_ppem is calcuated by the font size.
+    fn inv_ppem(&self, upem: f32) -> Scalar {
+        Scalar(upem / self.size.0)
+    }
+
+    pub fn add_transform<C, T: GroupContext<C> + TransformContext<C>>(
+        &self,
+        ctx: &mut C,
+        group_ctx: T,
+        upem: Scalar,
+    ) -> T {
+        let ppem = self.ppem(upem.0);
+        group_ctx.transform_scale(ctx, ppem, -ppem)
+    }
+
+    #[inline]
+    pub(super) fn render_glyphs<'a, Glyph: 'a>(
+        &self,
+        upem: Abs,
+        glyph_iter: impl Iterator<Item = &'a (Abs, Abs, Glyph)>,
+        mut consume_glyph: impl FnMut(Abs, &'a Glyph),
+    ) -> Abs {
+        let inv_ppem = self.inv_ppem(upem.0).0;
+
+        let mut x = 0f32;
+        for (offset, advance, glyph) in glyph_iter {
+            let offset = x + offset.0;
+            let ts = offset * inv_ppem;
+
+            consume_glyph(Scalar(ts), glyph);
+
+            x += advance.0;
+        }
+
+        Scalar(x)
+    }
 }
 
 /// Item representing an `<g/>` element applied with a [`TransformItem`].
@@ -575,6 +763,10 @@ impl IncrGlyphPackBuilder {
 
 pub trait FontIndice<'m> {
     fn get_font(&self, value: &FontRef) -> Option<&'m FontItem>;
+}
+
+pub trait GlyphIndice<'m> {
+    fn get_glyph(&self, value: &GlyphRef) -> Option<&'m GlyphItem>;
 }
 
 pub trait BuildGlyph {

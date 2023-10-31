@@ -13,6 +13,7 @@ fn main() {
         .filter_level(log::LevelFilter::Info)
         .filter_module("typst::", log::LevelFilter::Warn)
         .filter_module("typst_library::", log::LevelFilter::Warn)
+        .filter_module("tracing::", log::LevelFilter::Off)
         .try_init();
 
     let opts = Opts::parse();

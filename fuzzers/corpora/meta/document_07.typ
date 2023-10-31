@@ -3,6 +3,6 @@
 #show: test-page
 // 
 // #box[
-//   // Error: 4-15 pagebreaks are not allowed inside of containers
-//   #pagebreak()
+//   // Error: 4-18 page configuration is not allowed inside of containers
+//   #set page("a4")
 // ]

@@ -7,10 +7,11 @@ use std::{
 use typst_ts_core::{
     hash::Fingerprint,
     vector::{
-        flat_ir::{LayoutRegionNode, Module, ModuleBuilder, Page},
+        flat_ir::{FlatSvgItem, LayoutRegionNode, Module, ModuleBuilder, Page},
         flat_vm::{FlatIncrRenderVm, FlatRenderVm},
         incr::{IncrDocClient, IncrDocServer},
         ir::{Rect, SvgItem},
+        vm::RenderState,
     },
 };
 
@@ -69,10 +70,10 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 
         for Page {
             content: entry,
-            size,
+            size: size_f32,
         } in ctx.next.iter()
         {
-            let size = Self::page_size(*size);
+            let size = Self::page_size(*size_f32);
             if reusable.contains(entry) {
                 // println!("reuse page: {} {:?}", idx, entry);
                 svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
@@ -100,15 +101,16 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             ];
 
             // todo: evaluate simlarity
+            let state = RenderState::new_size(*size_f32);
             let item = if let Some(prev_entry) = unused_prev.pop_first().map(|(_, v)| v) {
                 // println!("diff page: {} {:?} {:?}", idx, entry, prev_entry);
                 attributes.push(("data-reuse-from", prev_entry.as_svg_id("p")));
 
-                render_task.render_diff_item(entry, &prev_entry)
+                render_task.render_diff_item(state, entry, &prev_entry)
             } else {
                 // todo: find a box
                 // println!("rebuild page: {} {:?}", idx, entry);
-                render_task.render_flat_item(entry)
+                render_task.render_flat_item(state, entry)
             };
 
             svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
@@ -151,7 +153,7 @@ impl IncrSvgDocClient {
 
         // prepare an empty page for the pages that are not rendered
         // todo: better solution?
-        let empty_page = self.mb.build(SvgItem::Group(Default::default()));
+        let empty_page = self.mb.build(SvgItem::Group(Default::default(), None));
         kern.module_mut()
             .items
             .extend(self.mb.items.iter().map(|(f, (_, v))| (*f, v.clone())));
@@ -205,9 +207,23 @@ impl IncrSvgDocClient {
             &mut svg_body,
         );
 
+        let module_ref = kern.module_mut();
+        let gradients = std::mem::take(&mut t.gradients);
+        let gradients = gradients
+            .values()
+            .filter_map(|(_, id, _)| match module_ref.get_item(id) {
+                Some(FlatSvgItem::Gradient(g)) => Some((id, g)),
+                _ => {
+                    // #[cfg(debug_assertions)]
+                    panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
+                    #[allow(unreachable_code)]
+                    None
+                }
+            });
+
         // render the glyphs
         svg.push(r#"<defs class="glyph">"#.into());
-        let glyphs = kern.module_mut().glyphs.iter();
+        let glyphs = module_ref.glyphs.iter();
         // skip the glyphs that are already rendered
         let new_glyphs = glyphs.skip(self.glyph_window);
         let glyph_defs = t.render_glyphs(new_glyphs.enumerate().map(|(x, (_, y))| (x, y)), true);
@@ -219,6 +235,7 @@ impl IncrSvgDocClient {
 
         svg.push(r#"<defs class="clip-path">"#.into());
         IncrExporter::clip_paths(t.clip_paths, &mut svg);
+        IncrExporter::gradients(gradients, &mut svg);
         svg.push("</defs>".into());
 
         IncrExporter::style_defs(t.style_defs, &mut svg);

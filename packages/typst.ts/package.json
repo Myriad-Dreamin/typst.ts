@@ -17,13 +17,13 @@
   "types": "./dist/esm/index.d.mts",
   "exports": {
     ".": {
+      "types": "./dist/esm/index.d.mts",
       "require": "./dist/cjs/index.cjs",
-      "import": "./dist/esm/index.mjs",
-      "types": "./dist/esm/index.d.mts"
+      "import": "./dist/esm/index.mjs"
     },
     "./*": [
       "./*",
-      "./*.d.ts"
+      "./*.d.mts"
     ]
   },
   "files": [

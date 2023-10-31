@@ -298,7 +298,7 @@ pub trait DiagObserver {
     /// Print diagnostic messages to the terminal.
     fn print_diagnostics(
         &self,
-        errors: Vec<SourceDiagnostic>,
+        errors: ecow::EcoVec<SourceDiagnostic>,
     ) -> Result<(), codespan_reporting::files::Error>;
 
     /// Print status message to the terminal.
@@ -329,7 +329,7 @@ where
     /// Print diagnostic messages to the terminal.
     fn print_diagnostics(
         &self,
-        errors: Vec<SourceDiagnostic>,
+        errors: ecow::EcoVec<SourceDiagnostic>,
     ) -> Result<(), codespan_reporting::files::Error> {
         diag::print_diagnostics(self.world(), errors)
     }
@@ -367,7 +367,7 @@ where
             }
             Err(errs) => {
                 self.print_status::<WITH_STATUS>(DiagStatus::Error(start.elapsed()));
-                let _err = self.print_diagnostics(*errs);
+                let _err = self.print_diagnostics(errs);
                 // todo: log in browser compiler
                 #[cfg(feature = "system-compile")]
                 if _err.is_err() {

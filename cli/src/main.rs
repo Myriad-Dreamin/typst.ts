@@ -47,7 +47,8 @@ fn main() {
         if !matches!(&opts.sub, Some(Subcommands::Compile(CompileArgs { trace: _trace @ Some(_), .. }))) {
             builder
                 .filter_module("typst::", log::LevelFilter::Warn)
-                .filter_module("typst_library::", log::LevelFilter::Warn);
+                .filter_module("typst_library::", log::LevelFilter::Warn)
+                .filter_module("tracing::", log::LevelFilter::Off);
         }
         builder.init();
     }

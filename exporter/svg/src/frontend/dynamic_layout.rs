@@ -35,6 +35,10 @@ impl DynamicLayoutSvgExporter {
             })
             .collect::<Vec<_>>();
 
+        for ext in t.extra_items.into_values() {
+            self.builder.build(ext);
+        }
+
         self.layouts
             .push((layout_width.into(), LayoutRegionNode::new_pages(pages)));
         // log::trace!("svg dynamic layout render time: {:?}",

@@ -2,6 +2,5 @@
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
 
-// Rotated
-$x + cancel(y, rotation: #90deg) - cancel(z, rotation: #135deg)$
-$ e + cancel((j + e)/(f + e)) - cancel((j + e)/(f + e), rotation: #30deg) $
+// Specifying cancel line angle with an absolute angle
+$cancel(x, angle: #0deg) + cancel(x, angle: #45deg) + cancel(x, angle: #90deg) + cancel(x, angle: #135deg)$

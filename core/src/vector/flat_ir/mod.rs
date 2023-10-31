@@ -39,8 +39,8 @@ use crate::{
 use super::{
     geom::{Abs, Point, Size},
     ir::{
-        DefId, FontItem, FontRef, GlyphItem, GlyphRef, ImageGlyphItem, ImageItem, ImmutStr,
-        LinkItem, OutlineGlyphItem, PathItem, SpanId, TextShape, TransformItem,
+        DefId, FontItem, FontRef, GlyphItem, GlyphRef, GradientItem, ImageGlyphItem, ImageItem,
+        ImmutStr, LinkItem, OutlineGlyphItem, PathItem, SpanId, TextShape, TransformItem,
     },
 };
 
@@ -67,7 +67,8 @@ pub enum FlatSvgItem {
     Path(PathItem),
     Text(FlatTextItem),
     Item(TransformedRef),
-    Group(GroupRef),
+    Group(GroupRef, Option<Size>),
+    Gradient(GradientItem),
 }
 
 /// Flatten text item.
@@ -78,6 +79,13 @@ pub struct FlatTextItem {
     pub font: FontRef,
     pub content: Arc<FlatTextItemContent>,
     pub shape: Arc<TextShape>,
+}
+
+impl FlatTextItem {
+    pub fn render_glyphs(&self, upem: Abs, consume_glyph: impl FnMut(Abs, &GlyphRef)) -> Abs {
+        self.shape
+            .render_glyphs(upem, self.content.glyphs.iter(), consume_glyph)
+    }
 }
 
 /// The content metadata of a [`FlatTextItem`].

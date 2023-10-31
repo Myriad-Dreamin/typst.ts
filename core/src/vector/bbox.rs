@@ -4,7 +4,8 @@ use std::{collections::HashMap, ops::Deref};
 use comemo::Prehashed;
 use typst::font::Font;
 
-use super::ir::{FontIndice, FontRef, GlyphPackBuilder, GlyphRef};
+use super::ir::{FontIndice, FontRef, GlyphIndice, GlyphPackBuilder, GlyphRef};
+use super::vm::RenderState;
 use super::{
     flat_ir::{self, Module},
     flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
@@ -14,10 +15,6 @@ use super::{
 };
 use crate::font::GlyphProvider;
 use crate::hash::Fingerprint;
-
-pub trait GlyphIndice<'m> {
-    fn get_glyph(&self, value: &GlyphRef) -> Option<&'m ir::GlyphItem>;
-}
 
 pub trait BBoxIndice {
     fn get_bbox(&self, value: &Fingerprint) -> Option<BBox>;
@@ -205,8 +202,14 @@ impl<C> TransformContext<C> for BBoxBuilder {
 
 /// See [`GroupContext`].
 impl<C: BuildGlyph + RenderVm<Resultant = BBox>> GroupContext<C> for BBoxBuilder {
-    fn render_item_at(&mut self, ctx: &mut C, pos: ir::Point, item: &ir::SvgItem) {
-        let bbox = ctx.render_item(item);
+    fn render_item_at(
+        &mut self,
+        state: RenderState,
+        ctx: &mut C,
+        pos: ir::Point,
+        item: &ir::SvgItem,
+    ) {
+        let bbox = ctx.render_item(state, item);
         self.inner.push((pos, bbox));
     }
 
@@ -215,7 +218,13 @@ impl<C: BuildGlyph + RenderVm<Resultant = BBox>> GroupContext<C> for BBoxBuilder
         self.render_glyph_ref_inner(pos, &glyph_ref, glyph)
     }
 
-    fn render_path(&mut self, _ctx: &mut C, path: &ir::PathItem) {
+    fn render_path(
+        &mut self,
+        _state: RenderState,
+        _ctx: &mut C,
+        path: &ir::PathItem,
+        _abs_ref: &Fingerprint,
+    ) {
         let path = PathRepr::from_item(path).unwrap();
         self.inner.push((
             ir::Point::default(),
@@ -238,8 +247,14 @@ impl<C: BuildGlyph + RenderVm<Resultant = BBox>> GroupContext<C> for BBoxBuilder
 impl<'m, C: FlatRenderVm<'m, Resultant = BBox> + GlyphIndice<'m>> FlatGroupContext<C>
     for BBoxBuilder
 {
-    fn render_item_ref_at(&mut self, ctx: &mut C, pos: ir::Point, item: &Fingerprint) {
-        let bbox = ctx.render_flat_item(item);
+    fn render_item_ref_at(
+        &mut self,
+        state: RenderState,
+        ctx: &mut C,
+        pos: ir::Point,
+        item: &Fingerprint,
+    ) {
+        let bbox = ctx.render_flat_item(state, item);
         self.inner.push((pos, bbox));
     }
 
@@ -256,6 +271,7 @@ impl<'m, C: FlatIncrRenderVm<'m, Resultant = BBox, Group = BBoxBuilder> + BBoxIn
 {
     fn render_diff_item_ref_at(
         &mut self,
+        state: RenderState,
         ctx: &mut C,
         pos: ir::Point,
         item: &Fingerprint,
@@ -264,7 +280,7 @@ impl<'m, C: FlatIncrRenderVm<'m, Resultant = BBox, Group = BBoxBuilder> + BBoxIn
         let bbox = (prev_item == item)
             .then(|| ctx.get_bbox(prev_item))
             .flatten();
-        let bbox = bbox.unwrap_or_else(|| ctx.render_diff_item(item, prev_item));
+        let bbox = bbox.unwrap_or_else(|| ctx.render_diff_item(state, item, prev_item));
         self.inner.push((pos, bbox));
     }
 }
@@ -315,12 +331,12 @@ impl<'m, 't> FlatRenderVm<'m> for BBoxTask<'m, 't> {
         self.start_group()
     }
 
-    fn render_flat_item(&mut self, abs_ref: &Fingerprint) -> Self::Resultant {
+    fn render_flat_item(&mut self, state: RenderState, abs_ref: &Fingerprint) -> Self::Resultant {
         if let Some(bbox) = self.bbox_cache.get(abs_ref) {
             return bbox.clone();
         }
 
-        let bbox = self._render_flat_item(abs_ref);
+        let bbox = self._render_flat_item(state, abs_ref);
         self.bbox_cache.insert(*abs_ref, bbox.clone());
         bbox
     }
@@ -329,10 +345,11 @@ impl<'m, 't> FlatRenderVm<'m> for BBoxTask<'m, 't> {
 impl<'m, 't> FlatIncrRenderVm<'m> for BBoxTask<'m, 't> {
     fn render_diff_item(
         &mut self,
+        state: RenderState,
         next_abs_ref: &Fingerprint,
         prev_abs_ref: &Fingerprint,
     ) -> Self::Resultant {
-        let bbox = self._render_diff_item(next_abs_ref, prev_abs_ref);
+        let bbox = self._render_diff_item(state, next_abs_ref, prev_abs_ref);
         self.bbox_cache.insert(*next_abs_ref, bbox.clone());
         bbox
     }
@@ -407,7 +424,7 @@ fn convert_path(path_data: &str) -> Option<tiny_skia_path::Path> {
 
 #[cfg(test)]
 mod tests {
-    use tests::ir::PathItem;
+    use tests::ir::{PathItem, Size};
 
     use crate::vector::path2d::SvgPath2DBuilder;
 
@@ -438,6 +455,7 @@ mod tests {
         let d = d.0.into();
         let path = PathItem {
             d,
+            size: None,
             styles: Default::default(),
         };
 
@@ -450,7 +468,10 @@ mod tests {
         let mut task = t.get();
 
         let rect = get_rect_item(1., 2., 10., 20.);
-        let bbox = task.render_item(&rect);
+        let bbox = task.render_item(
+            RenderState::new_size(Size::new(Scalar(10.), Scalar(20.))),
+            &rect,
+        );
 
         println!("{:?}", bbox.realize(Transform::identity()));
     }
@@ -461,7 +482,10 @@ mod tests {
         let mut task = t.get();
 
         let rect = get_rect_item(1., 2., 10., 20.);
-        let bbox = task.render_item(&rect);
+        let bbox = task.render_item(
+            RenderState::new_size(Size::new(Scalar(10.), Scalar(20.))),
+            &rect,
+        );
 
         let ts = sk::Transform::from_translate(10., 20.);
         println!("{:?}", bbox.realize(ts.into()));

@@ -2,5 +2,7 @@
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
 // 
-// // Error: 10-12 can only be used in set rules
-// #document()
+// Hello
+// 
+// // Error: 2-30 document set rules must appear before any content
+// #set document(title: "Hello")

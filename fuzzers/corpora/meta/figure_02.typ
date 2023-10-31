@@ -7,7 +7,7 @@
 #show figure.where(kind: "theorem"): it => {
   let name = none
   if not it.caption == none {
-    name = [ #emph(it.caption)]
+    name = [ #emph(it.caption.body)]
   } else {
     name = []
   }

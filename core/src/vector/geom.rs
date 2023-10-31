@@ -5,8 +5,8 @@ use std::{
 };
 
 use typst::geom::{
-    Abs as TypstAbs, Axes as TypstAxes, Point as TypstPoint, Ratio as TypstRatio,
-    Scalar as TypstScalar, Transform as TypstTransform,
+    Abs as TypstAbs, Angle as TypstAngle, Axes as TypstAxes, Point as TypstPoint,
+    Ratio as TypstRatio, Scalar as TypstScalar, Transform as TypstTransform,
 };
 
 #[cfg(feature = "rkyv")]
@@ -18,6 +18,12 @@ use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct Scalar(pub f32);
+
+impl Scalar {
+    fn is_zero(&self) -> bool {
+        self.0 == 0.0
+    }
+}
 
 impl From<f32> for Scalar {
     fn from(float: f32) -> Self {
@@ -33,13 +39,13 @@ impl From<Scalar> for f32 {
 
 impl From<TypstScalar> for Scalar {
     fn from(scalar: TypstScalar) -> Self {
-        Self(scalar.0 as f32)
+        Self(scalar.get() as f32)
     }
 }
 
 impl From<Scalar> for TypstScalar {
     fn from(scalar: Scalar) -> Self {
-        Self(scalar.0 as f64)
+        Self::from(scalar.0 as f64)
     }
 }
 
@@ -52,6 +58,12 @@ impl From<TypstRatio> for Scalar {
 impl From<TypstAbs> for Scalar {
     fn from(ratio: TypstAbs) -> Self {
         Self(ratio.to_pt() as f32)
+    }
+}
+
+impl From<TypstAngle> for Scalar {
+    fn from(scalar: TypstAngle) -> Self {
+        Self(scalar.to_rad() as f32)
     }
 }
 
@@ -128,6 +140,8 @@ pub type Size = Axes<Abs>;
 pub type Point = Axes<Scalar>;
 /// Ratio within range [0, 1]
 pub type Ratio = Scalar;
+/// Angle in radians
+pub type Angle = Scalar;
 
 /// A container with a horizontal and vertical component.
 #[derive(Default, Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -258,10 +272,63 @@ impl Transform {
     }
 
     #[inline]
+    pub fn post_concat(self, other: Self) -> Self {
+        other.pre_concat(self)
+    }
+
+    #[inline]
     pub fn pre_translate(self, tx: f32, ty: f32) -> Self {
         let ts: tiny_skia::Transform = self.into();
         let ts = ts.pre_translate(tx, ty);
         ts.into()
+    }
+
+    /// Whether this is the identity transformation.
+    pub fn is_identity(self) -> bool {
+        self == Self::identity()
+    }
+
+    /// Inverts the transformation.
+    ///
+    /// Returns `None` if the determinant of the matrix is zero.
+    pub fn invert(self) -> Option<Self> {
+        // Allow the trivial case to be inlined.
+        if self.is_identity() {
+            return Some(self);
+        }
+
+        // Fast path for scale-translate-only transforms.
+        if self.kx.is_zero() && self.ky.is_zero() {
+            if self.sx.is_zero() || self.sy.is_zero() {
+                return Some(Self::from_translate(-self.tx, -self.ty));
+            }
+
+            let inv_x = 1.0 / self.sx.0;
+            let inv_y = 1.0 / self.sy.0;
+            return Some(Self {
+                sx: Scalar(inv_x),
+                ky: Scalar(0.),
+                kx: Scalar(0.),
+                sy: Scalar(inv_y),
+                tx: Scalar(-self.tx.0 * inv_x),
+                ty: Scalar(-self.ty.0 * inv_y),
+            });
+        }
+
+        let det = self.sx.0 * self.sy.0 - self.kx.0 * self.ky.0;
+        if det.abs() < 1e-12 {
+            return None;
+        }
+
+        let inv_det = 1.0 / det;
+        Some(Self {
+            sx: Scalar(self.sy.0 * inv_det),
+            ky: Scalar(-self.ky.0 * inv_det),
+            kx: Scalar(-self.kx.0 * inv_det),
+            sy: Scalar(self.sx.0 * inv_det),
+            tx: Scalar((self.kx.0 * self.ty.0 - self.sy.0 * self.tx.0) * inv_det),
+            ty: Scalar((self.ky.0 * self.tx.0 - self.sx.0 * self.ty.0) * inv_det),
+        })
     }
 }
 
@@ -292,32 +359,6 @@ impl From<tiny_skia::Transform> for Transform {
 }
 
 impl From<Transform> for tiny_skia::Transform {
-    fn from(ir_transform: Transform) -> Self {
-        Self {
-            sx: ir_transform.sx.into(),
-            ky: ir_transform.ky.into(),
-            kx: ir_transform.kx.into(),
-            sy: ir_transform.sy.into(),
-            tx: ir_transform.tx.into(),
-            ty: ir_transform.ty.into(),
-        }
-    }
-}
-
-impl From<tiny_skia_path::Transform> for Transform {
-    fn from(skia_transform: tiny_skia_path::Transform) -> Self {
-        Self {
-            sx: skia_transform.sx.into(),
-            ky: skia_transform.ky.into(),
-            kx: skia_transform.kx.into(),
-            sy: skia_transform.sy.into(),
-            tx: skia_transform.tx.into(),
-            ty: skia_transform.ty.into(),
-        }
-    }
-}
-
-impl From<Transform> for tiny_skia_path::Transform {
     fn from(ir_transform: Transform) -> Self {
         Self {
             sx: ir_transform.sx.into(),

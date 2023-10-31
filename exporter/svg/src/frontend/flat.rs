@@ -3,10 +3,11 @@ use std::sync::Arc;
 use typst::{diag::SourceResult, doc::Document};
 use typst_ts_core::vector::{
     flat_ir::{
-        flatten_glyphs, FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, LayoutRegionRepr,
-        Module, ModuleBuilder, ModuleMetadata, Page, SvgDocument,
+        flatten_glyphs, FlatModule, FlatSvgItem, ItemPack, LayoutRegion, LayoutRegionNode,
+        LayoutRegionRepr, Module, ModuleBuilder, ModuleMetadata, Page, SvgDocument,
     },
     flat_vm::FlatRenderVm,
+    vm::RenderState,
     LowerBuilder,
 };
 
@@ -25,6 +26,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             let entry = &page.content;
             let size = Self::page_size(page.size);
 
+            let state = RenderState::new_size(page.size);
             svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
                 attributes: vec![
                     ("transform", format!("translate(0, {})", acc_height)),
@@ -32,7 +34,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                     ("data-page-width", size.x.to_string()),
                     ("data-page-height", size.y.to_string()),
                 ],
-                content: vec![SvgText::Content(render_task.render_flat_item(entry))],
+                content: vec![SvgText::Content(render_task.render_flat_item(state, entry))],
             })));
             acc_height += size.y;
         }
@@ -82,7 +84,22 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             true,
         );
 
-        generate_text(Self::render_svg_template(t, header, svg_body, glyphs))
+        let gradients = std::mem::take(&mut t.gradients);
+        let gradients = gradients
+            .values()
+            .filter_map(|(_, id, _)| match module.get_item(id) {
+                Some(FlatSvgItem::Gradient(g)) => Some((id, g)),
+                _ => {
+                    // #[cfg(debug_assertions)]
+                    panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
+                    #[allow(unreachable_code)]
+                    None
+                }
+            });
+
+        generate_text(Self::render_svg_template(
+            t, header, svg_body, glyphs, gradients,
+        ))
     }
 }
 
@@ -99,6 +116,10 @@ pub fn export_module(output: &Document) -> SourceResult<Vec<u8>> {
             content,
             size: page.size().into(),
         });
+    }
+
+    for ext in t.extra_items.into_values() {
+        builder.build(ext);
     }
 
     let repr: Module = builder.finalize();
