@@ -32,9 +32,6 @@ export class TypstDocumentComponent {
       const displayDiv = this.typst_app?.nativeElement;
       if (this.artifact?.length) {
         const doRender = (renderer: typst.TypstRenderer) => {
-          if (this.format === 'vector') {
-            throw new Error('not implemented');
-          }
           renderer.render({
             artifactContent: this.artifact,
             format: 'vector',
