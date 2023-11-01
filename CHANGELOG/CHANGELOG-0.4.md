@@ -1,6 +1,19 @@
-# v0.4.0-rc3
+# v0.4.0
 
-This is a major upgrade of typst.ts, so we decide to increment the minor version number. The most important change is that we have stabilized the API for TypstRenderer. We have added extensive documentation (https://www.npmjs.com/package/@myriaddreamin/typst.ts?activeTab=code), but are still working on more docs, so this release is 0.4.0-rc3 rather than 0.4.0.
+This is a major upgrade of typst.ts, so we decide to increment the minor version number. The most important change is that we have stabilized the API for TypstRenderer. We have also added guidance to typst.ts in https://github.com/Myriad-Dreamin/typst.ts/pull/391.
+
+One of the best features since v0.4.0 is that we provide a more user-friendly way to start exploring typst.ts, the all-in-one library apis:
+
+```
+<script type="module" src="/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one.bundle.js"></script>
+<script>
+  document.ready(() => {
+    const svg = await $typst.svg({ mainContent: 'Hello, typst!' });
+  });
+</script>
+```
+
+See [All-in-one Library sample](https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/examples/all-in-one.html) for sample that previewing document in less than 200 LoCs and a single HTML.
 
 We have reworked vector format (IR) in
 https://github.com/Myriad-Dreamin/typst.ts/pull/317, https://github.com/Myriad-Dreamin/typst.ts/pull/324, and
@@ -12,11 +25,11 @@ https://github.com/Myriad-Dreamin/typst.ts/pull/342. As a result, there are seve
 
 - Reworked canvas renderer with vector IR in https://github.com/Myriad-Dreamin/typst.ts/pull/318 and https://github.com/Myriad-Dreamin/typst.ts/pull/325. The new canvas renderer no longer needs to preload fonts (https://github.com/Myriad-Dreamin/typst.ts/pull/330).
 
-## Changelog since v0.4.0-rc3
+## Changelog since v0.4.0
 
 ## What's Changed
 
-**Full Changelog**: https://github.com/Myriad-Dreamin/typst.ts/compare/v0.3.1...v0.4.0-rc3
+**Full Changelog**: https://github.com/Myriad-Dreamin/typst.ts/compare/v0.3.1...v0.4.0
 
 ### Security Notes
 
@@ -41,6 +54,26 @@ No new security note.
 
 - compiler: reparse prefix editing in https://github.com/Myriad-Dreamin/typst.ts/pull/316
 
+---
+
+Since v0.4.0-rc3
+
+- core: gc order in https://github.com/Myriad-Dreamin/typst.ts/pull/352
+
+- core: hold span to/from u64 safety for users in https://github.com/Myriad-Dreamin/typst.ts/pull/361
+
+- core: error is not send in https://github.com/Myriad-Dreamin/typst.ts/commit/05060cfe5a3bf9f0ba7404f069320cfcb3bb2aaa
+
+- compiler: eagle check syntax of the main file in https://github.com/Myriad-Dreamin/typst.ts/pull/374
+
+- compiler: vfs panic when file not found by @Enter-tainer in https://github.com/Myriad-Dreamin/typst.ts/pull/380
+
+- exporter::svg: broken clip on adjacent paths in https://github.com/Myriad-Dreamin/typst.ts/pull/386
+
+- exporter::svg: partially disable incr rendering in https://github.com/Myriad-Dreamin/typst.ts/pull/387Dreamin/typst.ts/commit/ad69d915d14f587d8e9a40300bc85f6dac4364a1
+
+- pkg::compiler: set default dummy access model in https://github.com/Myriad-Dreamin/typst.ts/pull/364
+
 ### Changes
 
 - build: setup typescript monorepo with turbo in https://github.com/Myriad-Dreamin/typst.ts/pull/312
@@ -54,6 +87,25 @@ No new security note.
   https://github.com/Myriad-Dreamin/typst.ts/pull/328
 
 - pkg::core: refactor render api in https://github.com/Myriad-Dreamin/typst.ts/pull/336 and https://github.com/Myriad-Dreamin/typst.ts/pull/338
+
+---
+
+Since v0.4.0-rc3
+
+- CSS change since typst v0.9.0 in https://github.com/Myriad-Dreamin/typst.ts/pull/384
+
+  Reference change: https://github.com/Myriad-Dreamin/typst.ts/commit/c9f185a6e16a901ae253bed2aef3c9ab1f49fd83#diff-8913391598d5e624d7d91114b7d3deb33a841833b79d7f6045258a5144abccfbL33-R36
+
+  ```css
+  - .outline_glyph path {
+  + .outline_glyph path, path.outline_glyph {
+    fill: var(--glyph_fill);
+  }
+  - .outline_glyph path {
+  + .outline_glyph path, path.outline_glyph {
+    transition: 0.2s fill;
+  }
+  ```
 
 ### External Feature
 
@@ -80,6 +132,36 @@ No new security note.
 
 - docs: init typst.ts documentation in https://github.com/Myriad-Dreamin/typst.ts/pull/340
 
+---
+
+Since v0.4.0-rc3
+
+- more convenient way to integrate projects in https://github.com/Myriad-Dreamin/typst.ts/pull/388
+
+- exporter::svg: embed transparent html elements in https://github.com/Myriad-Dreamin/typst.ts/pull/379
+
+- pkg::core: all-in-one library support in https://github.com/Myriad-Dreamin/typst.ts/commit/17d86f8a9325c62eddf59d5b52a117f1da2d3167
+
+- pkg::core: let typst.ts work with node.js (nodenext) in https://github.com/Myriad-Dreamin/typst.ts/pull/366
+
+- pkg::core: add option of assetUrlPrefix in https://github.com/Myriad-
+
+- pkg::compiler: load font asset from remote in https://github.com/Myriad-Dreamin/typst.ts/pull/368
+
+- pkg::compiler: export to pdf api in https://github.com/Myriad-Dreamin/typst.ts/pull/372
+
+- pkg::compiler: fetch package support in https://github.com/Myriad-Dreamin/typst.ts/pull/373
+
+- compiler: new font distribute strategy in https://github.com/Myriad-Dreamin/typst.ts/pull/362
+
+  You can install `typst-ts-cli` by cargo since this PR:
+
+  ```
+  cargo install --locked --git https://github.com/Myriad-Dreamin/typst.ts typst-ts-cli
+  ```
+
+- compiler: add actor for watch compiler in https://github.com/Myriad-Dreamin/typst.ts/pull/371
+
 ### Internal Feature
 
 - core: rework vector format (IR) in
@@ -91,3 +173,9 @@ No new security note.
 - exporter::canvas: rework with vector ir in https://github.com/Myriad-Dreamin/typst.ts/pull/318 and https://github.com/Myriad-Dreamin/typst.ts/pull/325
 
 - corpora: auto add std test cases in https://github.com/Myriad-Dreamin/typst.ts/pull/331
+
+---
+
+Since v0.4.0-rc3
+
+- test: add incremental compilation fuzzer in https://github.com/Myriad-Dreamin/typst.ts/pull/370
