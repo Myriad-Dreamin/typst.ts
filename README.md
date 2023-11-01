@@ -16,7 +16,7 @@
 `typst.ts` is a project dedicated to bring the power of
 [typst](https://github.com/typst/typst) to the world of JavaScript. In short, it
 provides an `typst::World` implementation and several exporters to help compile
-and render your Typst document inside _Browser Environment_. In the scope of server-side rendering
+and render your Typst document typically inside _Browser Environment_. In the scope of server-side rendering
 collaborated by
 $\textcolor{#3c9123}{\textsf{server}}$ and $\textcolor{#0074d9}{\textsf{browser}}$, there would be a data flow like this:
 
@@ -44,7 +44,7 @@ The _Form2: Vector Format_ is developed specially for typst documents, and it ha
   </picture>
 </p>
 
-So with _Form2_, you can continue rendeing the document in different ways:
+So with _Form2_, you can continue rendering the document in different ways:
 
 ##### Static but <ins>responsive</ins> rendering
 
