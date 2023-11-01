@@ -11,11 +11,46 @@
     ></script>
   </head>
   <body>
-    <textarea id="input" style="width: 100%"></textarea>
+    <button id="export">Export To PDF</button>
+    <textarea id="input">Hello, Typst!</textarea>
     <div id="content"></div>
     <script>
       const input = document.getElementById('input');
-      input.value = 'Hello, Typst!';
+      const contentDiv = document.getElementById('content');
+
+      const previewSvg = mainContent => {
+        $typst.svg({ mainContent }).then(svg => {
+          console.log(`rendered! SvgElement { len: ${svg.length} }`);
+          // append svg text
+          contentDiv.innerHTML = svg;
+
+          const svgElem = contentDiv.firstElementChild;
+          const width = Number.parseFloat(svgElem.getAttribute('width'));
+          const height = Number.parseFloat(svgElem.getAttribute('height'));
+          const cw = document.body.clientWidth - 40;
+          svgElem.setAttribute('width', cw);
+          svgElem.setAttribute('height', (height * cw) / width);
+        });
+      };
+
+      const exportPdf = mainContent =>
+        $typst.pdf({ mainContent }).then(pdfData => {
+          var pdfFile = new Blob([pdfData], { type: 'application/pdf' });
+
+          // Create element with <a> tag
+          const link = document.createElement('a');
+
+          // Add file content in the object URL
+          link.href = URL.createObjectURL(pdfFile);
+
+          // Add file name
+          link.target = '_blank';
+
+          // Add click event to <a> tag to save file.
+          link.click();
+          URL.revokeObjectURL(link.href);
+        });
+
       document.getElementById('typst').addEventListener('load', function () {
         $typst.setCompilerInitOptions({
           getModule: () =>
@@ -26,16 +61,33 @@
             'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
         });
 
-        const compile = function (mainContent) {
-          $typst.svg({ mainContent }).then(svg => {
-            console.log(`rendered! SvgElement { len: ${svg.length} }`);
-            // append svg text
-            document.getElementById('content').innerHTML = svg;
-          });
+        document.getElementById('export').onclick = () => exportPdf(input.value);
+        input.oninput = () => {
+          previewSvg(input.value);
+          input.style.height = '5px';
+          input.style.height = input.scrollHeight + 'px';
         };
-        input.oninput = () => compile(input.value);
-        compile(input.value);
+        previewSvg(input.value);
       });
     </script>
+    <style>
+      body {
+        margin: 0px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      #export {
+        width: 100%;
+        height: 20px;
+      }
+      #input {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        border-width: 0;
+        height: auto;
+      }
+    </style>
   </body>
 </html>
