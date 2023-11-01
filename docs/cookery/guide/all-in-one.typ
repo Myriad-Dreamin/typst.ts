@@ -5,7 +5,7 @@
 = All-in-one (Simplified) JavaScript Library
 
 #let snippet-source = "https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/src/contrib/snippet.mts"
-#let snippet-lib = link(snippet-source)[`snippet`]
+#let snippet-lib = link(snippet-source)[`snippet.mts`]
 
 The most simple examples always work with #snippet-lib utility library, an all-in-one JavaScript Library with simplified API interfaces:
 
@@ -41,15 +41,17 @@ because the compilation process may change the state of that.
 === Example: Create an instance of the utility class:
 
 ```typescript
-// optional renderer instance
-const renderer = enableRendering ?? (() => {
-  return createGlobalRenderer(createTypstRenderer,
-    undefined /* pdfJsLib */, initOptions);
+const $typst = new TypstSnippet({
+  // optional renderer instance
+  renderer: enableRendering ?? (() => {
+    return createGlobalRenderer(createTypstRenderer,
+      undefined /* pdfJsLib */, initOptions);
+  }),
+  compiler() => {
+    return createGlobalCompiler(createTypstCompiler,
+      initOptions);
+  }
 });
-const $typst = new TypstSnippet(() => {
-  return createGlobalCompiler(createTypstCompiler,
-    initOptions);
-}, renderer);
 ```
 
 === Example: get output from input
@@ -149,6 +151,62 @@ await $typst.svg({ mainContent });
 
 Note: There are more documentation about initialization in the *Import typst.ts to your project* section of #link("https://myriad-dreamin.github.io/typst.ts/cookery/get-started.html")[Get started with Typst.ts].
 
+== Configure snippet by the `use` API
+
+Specify address to a http server for filesystem backend (shadowed by the `addSource` and `mapShadow` api):
+
+```js
+const cm = window.TypstCompileModule;
+const fetchBackend = new cm.FetchAccessModel(
+  'http://localhost:20810',
+);
+$typst.use(
+  TypstSnippet.withAccessModel(fetchBackend),
+);
+```
+
+Specify a memory filesystem backend (shadowed by the `addSource` and `mapShadow` api):
+
+```js
+const memoryAccessModel = new cm.MemoryAccessModel();
+$typst.use(
+  TypstSnippet.withAccessModel(memoryAccessModel),
+);
+```
+
+Fetch package from remote registry:
+
+```js
+const acessModel = cm.FetchAccessModel() or
+  cm.MemoryAccessModel() or others;
+$typst.use(
+  TypstSnippet.fetchPackageRegistry(fetchBackend),
+);
+```
+
 == Specify extra render options
 
 See #link(snippet-source)[comments on source] for more details.
+
+== Configure dependencies of canvas export
+
+To display text layer of canvas, it needs pdf.js.
+
+#include "renderer/pdfjs.typ"
+
+=== Sample application: real-time preview document
+
+See #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/examples/all-in-one.html")[Preview by all-in-one Library] by a single included file (`all-in-one.bundle.js`).
+
+See #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/examples/all-in-one-lite.html")[Preview by all-in-one-lite Library] by the more pratical single included file (`all-in-one-lite.bundle.js`), which needs configure your frontend to have access to wasm module files:
+
+```js
+$typst.setCompilerInitOptions({
+  getModule: () =>
+    '/path/to/typst_ts_web_compiler_bg.wasm',
+});
+$typst.setRendererInitOptions({
+  getModule: () =>
+    '/path/to/typst_ts_renderer_bg.wasm',
+});
+```

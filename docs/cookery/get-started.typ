@@ -1,4 +1,5 @@
 #import "/docs/cookery/book.typ": book-page
+#import "/docs/cookery/term.typ" as term
 
 #show: book-page.with(title: "Get Started")
 
@@ -34,27 +35,43 @@ There are several ways to setup typst.ts. The difficulty of each approach is eva
 #let difficult-medium = text(fill: orange.darken(25%), "medium")
 #let difficult-hard = text(fill: hard_color, "hard")
 
-- #box(link(<approach-bundle>)[Approach 1]), difficulty: #difficult-easy
-  
+- #box(link(<approach-all-in-one>)[Approach 1]) (Recommended)
+  start with the all-in-one JavaScript Library.
+
+- #box(link(<approach-bundle>)[Approach 2])
   Use a bundled javascript file along with wasm modules.
 
-- #box(link(<approach-node-lib>)[Approach 2]), difficulty: #difficult-easy
-
+- #box(link(<approach-node-lib>)[Approach 3])
   Use typst.ts as a library in Node.js. 
 
-- #box(link(<approach-ts-lib>)[Approach 3]), difficulty: #difficult-medium:
-
+- #box(link(<approach-ts-lib>)[Approach 4])
   Use typst.ts as a library in browser (for TypeScript users).
 
-- #box(link(<approach-js-lib>)[Approach 4]), difficulty: #difficult-medium:
-
+- #box(link(<approach-js-lib>)[Approach 5])
   Use typst.ts as a library in browser (for JavaScript users).
 
-- #box(link(<approach-ts-lib-from-source>)[Approach 5]), difficulty: #difficult-hard:
-
+- #box(link(<approach-ts-lib-from-source>)[Approach 6])
   Use typst.ts with customized renderer/compiler modules.
 
 #line(length: 100%)
+
+=== Run the compiler or renderer with simplified APIs <approach-all-in-one>
+#let easy-preview-example = link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/examples/all-in-one.html")[Single HTML file for real-time previewing typst document]
+
+Difficulty: #difficult-easy, Example: #easy-preview-example
+
+The most simple examples always work with the all-in-one JavaScript Library:
+
+```ts
+import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs';
+console.log((await $typst.svg({
+  mainContent: 'Hello, typst!' })).length);
+// :-> 7317
+```
+
+See #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/all-in-one.html")[All-in-one (Simplified) JavaScript Library] for more example usage.
+
+Once you feel more conformtable, please continue to try other approaches.
 
 === Use a bundled javascript file along with wasm modules. <approach-bundle>
 #let bundle-example = link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/index.html")[Single HTML file]
@@ -180,21 +197,6 @@ const getModule = () => WebAssembly.instantiate(/* params */);
 const getModule = async () => {/* above four ways */};
 ```
 
-== Run the compiler or renderer with simplified APIs
-
-The most simple examples always work with the all-in-one JavaScript Library:
-
-```ts
-import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs';
-console.log((await $typst.svg({
-  mainContent: 'Hello, typst!' })).length);
-// :-> 7317
-```
-
-See #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/all-in-one.html")[All-in-one (Simplified) JavaScript Library] for more example usage.
-
-Once you feel more conformtable, please continue reading following sections.
-
 == Configure and run compiler <run-compiler>
 
 - Configure font resources
@@ -203,12 +205,25 @@ Once you feel more conformtable, please continue reading following sections.
 
 - Configure package registry
 
+See #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/src/options.init.mts")[options.init.mts] for more details.
+
 === Precompile with `typst-ts-cli`
 
+See #term.ts-cli for more details.
+
 === Build a compilation service in rust
+
+See #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/service.html")[Compiler Service Library] for more details.
 
 == Configure and run renderer <run-renderer>
 
 - Configure font resources, same as compiler.
 
-=== Full Code Listing
+See #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/src/options.init.mts")[options.init.mts] for more details.
+
+== Further reading
+
++ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/all-in-one.html")[All-in-one (Simplified) JavaScript Library]
++ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compilers.html")[Compilers]
++ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/renderers.html")[Renderers]
++ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/trouble-shooting.html")[Troble shooting]

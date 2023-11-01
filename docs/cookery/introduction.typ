@@ -16,7 +16,7 @@
 
 = Introduction
 
-Typst.ts is a project dedicated to bring the power of #link("https://github.com/typst/typst")[typst] to the world of JavaScript. In short, it composes ways to compile and render your Typst document inside *Browser Environment*. In the scope of server-side rendering collaborated by #text(fill: rgb("#3c9123"), "server") and #text(fill: blue, "browser"), there would be a data flow like this basically:
+Typst.ts is a project dedicated to bring the power of #link("https://github.com/typst/typst")[typst] to the world of JavaScript. In short, it composes ways to compile and render your Typst document typically inside *Browser Environment*. In the scope of server-side rendering collaborated by #text(fill: rgb("#3c9123"), "server") and #text(fill: blue, "browser"), there would be a data flow like this:
 
 #figure(
   {
@@ -50,7 +50,7 @@ The #emph("Form2: Vector Format") is developed specially for typst documents, an
 
 // - Incremental Font Transfer
 
-So with *Form2*, you can continue rendeing the document in different ways:
+So with *Form2*, you can continue rendering the document in different ways:
 
 === Static but #underline("responsive") rendering
 
@@ -92,3 +92,4 @@ Run the entire typst directly in browser, like #link("https://typst.app")[typst.
 == Further reading
 
 + #link("https://myriad-dreamin.github.io/typst.ts/cookery/get-started.html")[Get started with Typst.ts]
++ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/trouble-shooting.html")[Troble shooting]

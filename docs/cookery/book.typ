@@ -29,7 +29,7 @@
   title: "reflexo-typst Documentation",
   summary: [
     #prefix-chapter("introduction.typ")[Introduction]
-    = Quickstart
+    = Guidance
     - #chapter("get-started.typ", section: "1")[Get started]
       - #chapter("guide/all-in-one.typ", section: "1.1")[All-in-one JavaScript Library]
     - #chapter("guide/compilers.typ", section: "2")[Compilers]
@@ -37,11 +37,12 @@
       - #chapter("guide/compiler/service.typ", section: "2.2")[Compiler Service Library]
       - #chapter("guide/compiler/serverless.typ", section: "2.3")[Serverless (In-browser) Compiler]
       - #chapter("guide/compiler/node.typ", section: "2.4")[Compiler for Node.js]
-    - #chapter("guide/e2e-renderers.typ", section: "3")[End-to-end Renderers]
-      - #chapter(none, section: "3.1")[React Library]
-      - #chapter(none, section: "3.2")[Angular Library]
-      - #chapter(none, section: "3.3")[Vue3 Library]
-      - #chapter(none, section: "3.4")[Hexo Plugin]
+    - #chapter("guide/renderers.typ", section: "3")[Renderers]
+      - #chapter("guide/renderer/ts-lib.typ", section: "3.1")[JavaScript/TypeScript Library]
+      - #chapter("guide/renderer/react.typ", section: "3.2")[React Library]
+      - #chapter("guide/renderer/angular.typ", section: "3.3")[Angular Library]
+      - #chapter("guide/renderer/vue3.typ", section: "3.4")[Vue3 Library]
+      - #chapter("guide/renderer/hexo.typ", section: "3.5")[Hexo Plugin]
     - #chapter("guide/trouble-shooting.typ", section: "4")[Trouble Shooting]
     = Advanced development
     - #chapter("guide/env-setup.typ", section: "5")[Environment Setup]
