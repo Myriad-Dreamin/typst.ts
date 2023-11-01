@@ -4323,7 +4323,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "typst-ts-incremental-test"
+name = "typst-ts-incremental-fuzzer"
 version = "0.4.0-rc11"
 dependencies = [
  "anyhow",

@@ -14,7 +14,7 @@ use typst_ts_core::{
         stream::BytesModuleStream,
     },
 };
-use typst_ts_incremental_test::mutate;
+use typst_ts_incremental_fuzzer::mutate;
 use typst_ts_svg_exporter::IncrSvgDocClient;
 
 fn get_driver(

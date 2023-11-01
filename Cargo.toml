@@ -22,6 +22,8 @@ members = [
     "exporter/serde",
     "exporter/svg",
 
+    "fuzzers/incremental",
+
     "packages/compiler",
     "packages/renderer",
 
@@ -33,7 +35,6 @@ members = [
 
     "tests/common",
     "tests/heap-profile",
-    "tests/incremental",
     "tests/integration",
     "tests/std",
 ]

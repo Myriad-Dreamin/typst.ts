@@ -1,5 +1,5 @@
 [package]
-name = "typst-ts-incremental-test"
+name = "typst-ts-incremental-fuzzer"
 authors.workspace = true
 version.workspace = true
 license.workspace = true
