@@ -100,19 +100,19 @@ renderer.init({}).then(...);
 
 There are several templates for developing typst.ts with Node.js:
 
-- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/templates/node.js")[Use renderer, with typescript configured with:]
+- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/templates/node.js")[Use renderer, with typescript configured with:]
   ```json { "moduleResolution": "Node" }``` or #linebreak()
   ```json { "moduleResolution": "Node10" }```
-- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/templates/node.js-next")[Use renderer, with typescript configured with:]
+- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/templates/node.js-next")[Use renderer, with typescript configured with:]
   ```json { "moduleResolution": "Node16" }``` or #linebreak()
   ```json { "moduleResolution": "NodeNext" }```
-- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/templates/ts-node")[Use ts-node, with typescript configured with:]
+- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/templates/ts-node")[Use ts-node, with typescript configured with:]
   ```json { "moduleResolution": "Node" }``` or #linebreak()
   ```json { "moduleResolution": "Node10" }```
-- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/templates/ts-node-next")[Use ts-node, with and typescript configured with:]
+- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/templates/ts-node-next")[Use ts-node, with and typescript configured with:]
   ```json { "moduleResolution": "Node16" }``` or #linebreak()
   ```json { "moduleResolution": "NodeNext" }```
-- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/templates/node.js-compiler-next")[Use compiler, with typescript configured with:]
+- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/templates/node.js-compiler-next")[Use compiler, with typescript configured with:]
   ```json { "moduleResolution": "Node16" }``` or #linebreak()
   ```json { "moduleResolution": "NodeNext" }```
 
