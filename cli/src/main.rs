@@ -85,6 +85,24 @@ fn main() {
 }
 
 fn compile(args: CompileArgs) -> ! {
+    // adjust arguments
+    let args = {
+        let mut args = args;
+        if args.dynamic_layout {
+            if !args.format.is_empty() {
+                clap::Error::raw(
+                    clap::error::ErrorKind::ArgumentConflict,
+                    "cannot use option \"--dynamic-layout\" and \"--format\" at the same time\n",
+                )
+                .exit()
+            }
+
+            args.format.push("nothing".to_owned());
+        }
+
+        args
+    };
+
     let entry_file_path = Path::new(args.compile.entry.as_str()).clean();
     let exporter = typst_ts_cli::export::prepare_exporters(&args, &entry_file_path);
 
