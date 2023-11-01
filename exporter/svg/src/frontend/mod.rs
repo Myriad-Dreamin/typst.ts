@@ -31,7 +31,7 @@ pub(crate) mod incremental;
 use crate::{
     backend::{SvgGlyphBuilder, SvgText, SvgTextNode},
     utils::AbsExt,
-    ExportFeature,
+    ExportFeature, SvgDataSelection,
 };
 pub use incremental::{IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderContext};
 
@@ -329,32 +329,43 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         mut body: Vec<SvgText>,
         glyphs: impl IntoIterator<Item = SvgText>,
         gradients: impl Iterator<Item = (&'a Fingerprint, &'a GradientItem)>,
+        parts: Option<SvgDataSelection>,
     ) -> Vec<SvgText> {
         let mut svg = vec![
             SvgText::Plain(header),
             // base style
         ];
 
-        if Feat::WITH_BUILTIN_CSS {
+        let parts = parts.as_ref();
+        let with_css = parts.map_or(true, |parts| parts.css);
+        let with_defs = parts.map_or(true, |parts| parts.defs);
+        let with_body = parts.map_or(true, |parts| parts.body);
+        let with_js = parts.map_or(true, |parts| parts.js);
+
+        if Feat::WITH_BUILTIN_CSS && with_css {
             svg.push(r#"<style type="text/css">"#.into());
             svg.push(include_str!("./typst.svg.css").into());
             svg.push("</style>".into());
         }
 
-        // attach the glyph defs, clip paths, and style defs
-        svg.push(r#"<defs class="glyph">"#.into());
-        svg.extend(glyphs);
-        svg.push("</defs>".into());
-        svg.push(r#"<defs class="clip-path">"#.into());
-        Self::clip_paths(t.clip_paths, &mut svg);
-        Self::gradients(gradients, &mut svg);
-        svg.push("</defs>".into());
-        Self::style_defs(t.style_defs, &mut svg);
+        if with_defs {
+            // attach the glyph defs, clip paths, and style defs
+            svg.push(r#"<defs class="glyph">"#.into());
+            svg.extend(glyphs);
+            svg.push("</defs>".into());
+            svg.push(r#"<defs class="clip-path">"#.into());
+            Self::clip_paths(t.clip_paths, &mut svg);
+            Self::gradients(gradients, &mut svg);
+            svg.push("</defs>".into());
+            Self::style_defs(t.style_defs, &mut svg);
+        }
 
         // body
-        svg.append(&mut body);
+        if with_body {
+            svg.append(&mut body);
+        }
 
-        if Feat::WITH_RESPONSIVE_JS {
+        if Feat::WITH_RESPONSIVE_JS && with_js {
             // attach the javascript for animations
             svg.push(r#"<script type="text/javascript">"#.into());
             svg.push(include_str!("./typst.svg.js").into());
@@ -408,7 +419,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             });
 
         // template SVG
-        Self::render_svg_template(t, header, svg_body, glyphs, gradients)
+        Self::render_svg_template(t, header, svg_body, glyphs, gradients, None)
     }
 
     /// Render SVG wrapped with HTML for [`Document`].

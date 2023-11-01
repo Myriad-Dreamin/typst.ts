@@ -25,7 +25,7 @@ async function main() {
       action: 'reset',
       data: artifactData,
     });
-    return renderer.renderSvgDiff({
+    return renderer.renderSvg({
       renderSession: session,
     });
   });

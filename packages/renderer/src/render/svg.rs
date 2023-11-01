@@ -4,6 +4,7 @@ use typst_ts_core::error::prelude::*;
 use typst_ts_core::vector::geom::Axes;
 use typst_ts_core::vector::geom::Scalar;
 use typst_ts_svg_exporter::flat_ir::LayoutRegionNode;
+use typst_ts_svg_exporter::SvgDataSelection;
 use typst_ts_svg_exporter::{DefaultExportFeature, SvgExporter};
 use wasm_bindgen::prelude::*;
 
@@ -44,6 +45,28 @@ impl TypstRenderer {
         session.render_in_window(rect_lo_x, rect_lo_y, rect_hi_x, rect_hi_y)
     }
 
+    pub fn svg_data(&mut self, session: &mut RenderSession, parts: Option<u32>) -> ZResult<String> {
+        type UsingExporter = SvgExporter<DefaultExportFeature>;
+
+        let client = session.client.lock().unwrap();
+        let Some(layout) = &client.layout else {
+            return Err(error_once!("Renderer.MissingLayout"));
+        };
+
+        let view = layout.pages(client.module()).unwrap();
+
+        let parts = parts.map(|parts| SvgDataSelection {
+            body: 0 != (parts & (1 << 0)),
+            defs: 0 != (parts & (1 << 1)),
+            css: 0 != (parts & (1 << 2)),
+            js: 0 != (parts & (1 << 3)),
+        });
+
+        let svg = UsingExporter::render_flat_svg(view.module(), view.pages(), parts);
+
+        Ok(svg)
+    }
+
     pub fn render_svg(&self, session: &RenderSession, root: web_sys::HtmlElement) -> ZResult<()> {
         type UsingExporter = SvgExporter<DefaultExportFeature>;
         // todo: leaking abstraction
@@ -65,7 +88,7 @@ impl TypstRenderer {
 
             let view = layout.1.pages(client.module()).unwrap();
 
-            let svg = UsingExporter::render_flat_svg(view.module(), view.pages());
+            let svg = UsingExporter::render_flat_svg(view.module(), view.pages(), None);
             root.set_inner_html(&svg);
             let window = web_sys::window().unwrap();
             if let Ok(proc) = js_sys::Reflect::get(&window, &JsValue::from_str("typstProcessSvg")) {

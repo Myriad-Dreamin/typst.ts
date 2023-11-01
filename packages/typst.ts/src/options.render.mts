@@ -65,7 +65,24 @@ export interface RenderToCanvasOptions {
  * The options for rendering a svg string.
  */
 export interface RenderSvgOptions {
+  /**
+   * Render the svg content inside a window, where the pages are placed vertically.
+   */
   window?: Rect;
+  /**
+   * The selection of the data to render.
+   * @description `body`: render the body of the document.
+   * @description `defs`: render the defs of the document.
+   * @description `css`: render the css of the document.
+   * @description `js`: render the js of the document.
+   * @default: all of fields set to `true`
+   */
+  data_selection?: {
+    body: boolean;
+    defs: boolean;
+    css: boolean;
+    js: boolean;
+  };
 }
 
 /**

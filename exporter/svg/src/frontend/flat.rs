@@ -13,7 +13,7 @@ use typst_ts_core::vector::{
 
 use crate::{
     backend::{generate_text, SvgText, SvgTextNode},
-    ExportFeature, SvgExporter, SvgTask,
+    ExportFeature, SvgDataSelection, SvgExporter, SvgTask,
 };
 
 impl<Feat: ExportFeature> SvgTask<Feat> {
@@ -72,7 +72,11 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         SvgDocument { pages, module }
     }
 
-    pub fn render_flat_svg(module: &Module, pages: &[Page]) -> String {
+    pub fn render_flat_svg(
+        module: &Module,
+        pages: &[Page],
+        parts: Option<SvgDataSelection>,
+    ) -> String {
         let header = Self::header(pages);
 
         let mut t = SvgTask::<Feat>::default();
@@ -98,7 +102,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             });
 
         generate_text(Self::render_svg_template(
-            t, header, svg_body, glyphs, gradients,
+            t, header, svg_body, glyphs, gradients, parts,
         ))
     }
 }

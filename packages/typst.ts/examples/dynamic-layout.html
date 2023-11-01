@@ -37,7 +37,7 @@
 
             const runRender = async () => {
               t1 = performance.now();
-              await plugin.renderSvg(svgModule, appContainer);
+              await plugin.renderToSvg(svgModule, appContainer);
 
               const t2 = performance.now();
               console.log(

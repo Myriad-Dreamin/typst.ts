@@ -161,7 +161,17 @@ export class RenderSession {
   }
 
   /**
-   * See {@link TypstRenderer.renderToSvg} for more details.
+   * See {@link TypstRenderer#renderSvg} for more details.
+   */
+  renderSvg(options: RenderOptions<RenderSvgOptions>): Promise<string> {
+    return this.plugin.renderSvg({
+      renderSession: this,
+      ...options,
+    });
+  }
+
+  /**
+   * See {@link TypstRenderer#renderToSvg} for more details.
    */
   renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<void> {
     return this.plugin.renderToSvg({
@@ -171,7 +181,7 @@ export class RenderSession {
   }
 
   /**
-   * See {@link TypstRenderer.manipulateData} for more details.
+   * See {@link TypstRenderer#manipulateData} for more details.
    */
   manipulateData(opts: ManipulateDataOptions) {
     this.plugin.manipulateData({
@@ -181,7 +191,7 @@ export class RenderSession {
   }
 
   /**
-   * See {@link TypstRenderer.renderSvgDiff} for more details.
+   * See {@link TypstRenderer#renderSvgDiff} for more details.
    */
   renderSvgDiff(opts: RenderSvgOptions): string {
     return this.plugin.renderSvgDiff({
@@ -267,10 +277,25 @@ export interface TypstRenderer extends TypstSvgRenderer {
   renderToCanvas(options: RenderOptions<RenderToCanvasOptions>): Promise<void>;
 
   /**
+   * Render a Typst document to (non-incremental) svg string.
+   * @param {RenderOptions<RenderSvgOptions>} options - The options for
+   * rendering a Typst document to specified container.
+   * @returns {string} - The rendered content.
+   * @example
+   * ```typescript
+   * let fetchDoc = (path) => fetch(path).then(
+   *   response => new Uint8Array(response.arrayBuffer()))
+   * const svg = renderer.renderSvg({
+   *   artifactContent: await fetchDoc('typst-main.sir.in'),
+   * });
+   * ```
+   */
+  renderSvg(options: RenderOptions<RenderSvgOptions>): Promise<string>;
+
+  /**
    * Render a Typst document to svg.
    * @param {RenderOptions<RenderToSvgOptions>} options - The options for
    * rendering a Typst document to specified container.
-   * @returns {RenderResult} - The result of rendering a Typst document.
    * @example
    * ```typescript
    * let fetchDoc = (path) => fetch(path).then(
@@ -385,7 +410,7 @@ export interface TypstRenderer extends TypstSvgRenderer {
   ): Promise<T>;
 
   /**
-   * alias to {@link TypstRenderer.renderToCanvas}, will remove in v0.5.0
+   * alias to {@link TypstRenderer#renderToCanvas}, will remove in v0.5.0
    * @deprecated
    * use {@link renderToCanvas} instead
    */
@@ -428,15 +453,21 @@ export interface TypstSvgRenderer {
   createModule(b: Uint8Array): Promise<RenderSession>;
 
   /**
-   * Render a Typst document to canvas.
-   * @param session - The Typst document session that has been created by
-   * TypstRenderer.
-   * @param {HTMLElement} options - The options for rendering a Typst
-   * document to specified container.
-   * @deprecated
-   * use {@link TypstRenderer['renderToSvg']} instead
+   * Render a Typst document to svg.
+   * @param {RenderOptions<RenderToSvgOptions>} options - The options for
+   * rendering a Typst document to specified container.
+   * @returns {RenderResult} - The result of rendering a Typst document.
+   * @example
+   * ```typescript
+   * let fetchDoc = (path) => fetch(path).then(
+   *   response => new Uint8Array(response.arrayBuffer()))
+   * renderer.renderToSvg({
+   *   container: document.getElementById('container'),
+   *   artifactContent: await fetchDoc('typst-main.sir.in'),
+   * });
+   * ```
    */
-  renderSvg(session: RenderSession, options: HTMLElement): Promise<unknown>;
+  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<void>;
 }
 
 /**
@@ -794,8 +825,31 @@ class TypstRendererDriver {
     );
   }
 
-  renderSvg(session: RenderSession, container: HTMLElement): Promise<void> {
-    return Promise.resolve(this.renderer.render_svg(session[kObject], container));
+  renderSvg(options: RenderOptions<RenderSvgOptions>, container?: any): Promise<string> {
+    if (options instanceof RenderSession || container) {
+      throw new Error('removed api, please use renderToSvg({ renderSession, container }) instead');
+    }
+
+    return this.withinOptionSession(options, async sessionRef => {
+      let parts: number | undefined = undefined;
+      if (options.data_selection) {
+        parts = 0;
+        if (options.data_selection.body) {
+          parts |= 1 << 0;
+        }
+        if (options.data_selection.defs) {
+          parts |= 1 << 1;
+        }
+        if (options.data_selection.css) {
+          parts |= 1 << 2;
+        }
+        if (options.data_selection.js) {
+          parts |= 1 << 3;
+        }
+      }
+
+      return Promise.resolve(this.renderer.svg_data(sessionRef[kObject], parts));
+    });
   }
 
   renderSvgDiff(options: RenderInSessionOptions<RenderSvgOptions>): string {
@@ -820,7 +874,7 @@ class TypstRendererDriver {
 
   renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<void> {
     return this.withinOptionSession(options, async sessionRef => {
-      return this.renderSvg(sessionRef, options.container);
+      return Promise.resolve(this.renderer.render_svg(sessionRef[kObject], options.container));
     });
   }
 
@@ -837,11 +891,11 @@ class TypstRendererDriver {
   }
 
   private withinOptionSession<T>(
-    options: RenderOptions<RenderToCanvasOptions | CreateSessionOptions>,
+    options: RenderOptions<RenderSvgOptions | RenderToCanvasOptions | CreateSessionOptions>,
     fn: (session: RenderSession) => Promise<T>,
   ): Promise<T> {
     function isRenderByContentOption(
-      options: RenderToCanvasOptions | CreateSessionOptions,
+      options: RenderSvgOptions | RenderToCanvasOptions | CreateSessionOptions,
     ): options is CreateSessionOptions {
       return 'artifactContent' in options;
     }

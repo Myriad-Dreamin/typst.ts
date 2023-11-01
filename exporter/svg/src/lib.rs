@@ -34,6 +34,14 @@ pub use frontend::{SvgExporter, SvgTask};
 /// Useful transform for SVG Items.
 pub(crate) mod transform;
 
+#[derive(Default)]
+pub struct SvgDataSelection {
+    pub body: bool,
+    pub defs: bool,
+    pub css: bool,
+    pub js: bool,
+}
+
 /// All the features that can be enabled or disabled.
 pub trait ExportFeature {
     /// Whether to enable tracing.

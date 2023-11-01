@@ -61,7 +61,7 @@ async function main(coordinate: { x: number; y: number }) {
       action: 'reset',
       data: artifact,
     });
-    return renderer.renderSvgDiff({
+    return renderer.renderSvg({
       renderSession: session,
     });
   });

@@ -439,7 +439,7 @@ export class TypstSnippet {
    */
   async svg(o?: SweetRenderOptions & RenderSvgOptions) {
     return this.transientRender(o, (renderer, renderSession) =>
-      renderer.renderSvgDiff({
+      renderer.renderSvg({
         ...o,
         renderSession,
       }),
