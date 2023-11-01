@@ -111,6 +111,10 @@ it has the git dependency on [typst](https://github.com/typst/typst).
 
 - CLI as a Library: [typst-ts-cli](./cli/)
 
+### Installation (All-in-one Bundle)
+
+Download the latest bundle file from [GitHub Releases](https://github.com/Myriad-Dreamin/typst.ts/releases).
+
 ### Documentation
 
 See [Documentation](https://myriad-dreamin.github.io/typst.ts/cookery).
@@ -118,6 +122,40 @@ See [Documentation](https://myriad-dreamin.github.io/typst.ts/cookery).
 ### Templates
 
 Please check [Templates](./templates) and usage in [Get Started](https://myriad-dreamin.github.io/typst.ts/cookery/get-started.html).
+
+### Minimal Example
+
+Note: In default, `all-in-one.bundle.js` will download the font assets from
+GitHub in browser, so you need to connect to the Internet.
+
+Download `all-in-one.bundle.js` from [GitHub Releases](https://github.com/Myriad-Dreamin/typst.ts/releases) and start a local server with following
+content of `index.html`:
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Svg Document</title>
+  </head>
+  <body>
+    <script type="module" src="http://localhost:12345/all-in-one.bundle.js" id="typst"></script>
+    <script>
+      document.getElementById('typst').addEventListener('load', function () {
+        $typst.svg({ mainContent: 'Hello, World!' }).then(svg => {
+          console.log(`rendered! SvgElement { len: ${svg.length} }`);
+          // append svg text
+          document.getElementById('content').innerHTML = svg;
+        });
+      });
+    </script>
+    <div id="content"></div>
+  </body>
+</html>
+```
+
+And you will see the result.
 
 ### Develop projects along with a local built typst.ts
 
