@@ -162,7 +162,7 @@ pub trait Compiler {
     }
 }
 
-pub trait WrappedCompiler {
+pub trait CompileMiddleware {
     type Compiler: Compiler;
 
     fn inner(&self) -> &Self::Compiler;
@@ -200,10 +200,10 @@ pub trait WrappedCompiler {
     }
 }
 
-/// A blanket implementation for all `WrappedCompiler`.
+/// A blanket implementation for all `CompileMiddleware`.
 /// If you want to wrap a compiler, you should override methods in
-/// `WrappedCompiler`.
-impl<T: WrappedCompiler> Compiler for T {
+/// `CompileMiddleware`.
+impl<T: CompileMiddleware> Compiler for T {
     type World = <T::Compiler as Compiler>::World;
 
     #[inline]
@@ -257,7 +257,7 @@ impl<T: WrappedCompiler> Compiler for T {
     }
 }
 
-impl<T: WrappedCompiler> ShadowApi for T
+impl<T: CompileMiddleware> ShadowApi for T
 where
     T::Compiler: ShadowApi,
 {

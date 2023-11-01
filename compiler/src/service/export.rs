@@ -4,7 +4,7 @@ use crate::ShadowApi;
 use typst::diag::SourceResult;
 use typst_ts_core::{exporter_builtins::GroupExporter, DynExporter, TypstDocument};
 
-use super::{Compiler, WrappedCompiler};
+use super::{CompileMiddleware, Compiler};
 
 pub trait WorldExporter {
     fn export(&mut self, output: Arc<typst::doc::Document>) -> SourceResult<()>;
@@ -42,7 +42,7 @@ impl<C: Compiler> WorldExporter for CompileExporter<C> {
     }
 }
 
-impl<C: Compiler> WrappedCompiler for CompileExporter<C> {
+impl<C: Compiler> CompileMiddleware for CompileExporter<C> {
     type Compiler = C;
 
     fn inner(&self) -> &Self::Compiler {
@@ -193,7 +193,7 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
 }
 
 #[cfg(feature = "dynamic-layout")]
-impl<C: Compiler + ShadowApi> WrappedCompiler for DynamicLayoutCompiler<C> {
+impl<C: Compiler + ShadowApi> CompileMiddleware for DynamicLayoutCompiler<C> {
     type Compiler = C;
 
     fn inner(&self) -> &Self::Compiler {

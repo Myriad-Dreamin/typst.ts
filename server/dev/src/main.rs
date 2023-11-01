@@ -2,7 +2,7 @@ use clap::Parser;
 use log::info;
 use std::{path::PathBuf, process::exit};
 
-use typst_ts_compiler::service::{CompileExporter, Compiler, DiagObserver, WrappedCompiler};
+use typst_ts_compiler::service::{CompileExporter, CompileMiddleware, Compiler, DiagObserver};
 use typst_ts_core::path::PathClean;
 use typst_ts_dev_server::{http::run_http, utils::async_continue, RunSubCommands};
 
