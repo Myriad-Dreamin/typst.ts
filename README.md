@@ -115,6 +115,10 @@ it has the git dependency on [typst](https://github.com/typst/typst).
 
 See [Documentation](https://myriad-dreamin.github.io/typst.ts/cookery).
 
+### Templates
+
+Please check [Templates](./templates) and usage in [Get Started](https://myriad-dreamin.github.io/typst.ts/cookery/get-started.html).
+
 ### Develop projects along with a local built typst.ts
 
 You can put your owned projects under the `projects` folder, and that yarn workspace will
