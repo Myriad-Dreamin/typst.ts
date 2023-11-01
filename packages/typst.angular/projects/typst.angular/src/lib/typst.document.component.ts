@@ -2,6 +2,11 @@ import { Component, ElementRef, Input, ViewChild } from '@angular/core';
 import { withGlobalRenderer } from '@myriaddreamin/typst.ts/dist/esm/contrib/global-renderer.mjs';
 import * as typst from '@myriaddreamin/typst.ts/dist/esm/main.mjs';
 
+let moduleInitOptions: typst.InitOptions = {
+  beforeBuild: [],
+  getModule: () => '/assets/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
+};
+
 @Component({
   selector: 'typst-document',
   templateUrl: `./typst.document.component.html`,
@@ -46,15 +51,16 @@ export class TypstDocumentComponent {
         withGlobalRenderer(
           typst.createTypstRenderer,
           (window as unknown as any).pdfjsLib,
-          {
-            beforeBuild: [typst.preloadRemoteFonts([])],
-            getModule: () => '/assets/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
-          },
+          moduleInitOptions,
           doRender,
         );
       } else {
         displayDiv.innerHTML = '';
       }
     }
+  }
+
+  static setWasmModuleInitOptions(opts: typst.InitOptions) {
+    moduleInitOptions = opts;
   }
 }
