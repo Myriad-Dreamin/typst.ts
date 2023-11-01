@@ -138,19 +138,26 @@ content of `index.html`:
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Svg Document</title>
+    <script type="module" src="http://localhost:12345/all-in-one.bundle.js" id="typst"></script>
   </head>
   <body>
-    <script type="module" src="http://localhost:12345/all-in-one.bundle.js" id="typst"></script>
+    <textarea id="input" style="width: 100%"></textarea>
+    <div id="content"></div>
     <script>
+      const input = document.getElementById('input');
+      input.value = 'Hello, Typst!';
       document.getElementById('typst').addEventListener('load', function () {
-        $typst.svg({ mainContent: 'Hello, World!' }).then(svg => {
-          console.log(`rendered! SvgElement { len: ${svg.length} }`);
-          // append svg text
-          document.getElementById('content').innerHTML = svg;
-        });
+        const compile = function (mainContent) {
+          $typst.svg({ mainContent }).then(svg => {
+            console.log(`rendered! SvgElement { len: ${svg.length} }`);
+            // append svg text
+            document.getElementById('content').innerHTML = svg;
+          });
+        };
+        input.oninput = () => compile(input.value);
+        compile(input.value);
       });
     </script>
-    <div id="content"></div>
   </body>
 </html>
 ```
@@ -166,14 +173,18 @@ You can also load the all-in-one bundle file and wasm modules from [jsdelivr](ht
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Svg Document</title>
-  </head>
-  <body>
     <script
       type="module"
       src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one-lite.bundle.js"
       id="typst"
     ></script>
+  </head>
+  <body>
+    <textarea id="input" style="width: 100%"></textarea>
+    <div id="content"></div>
     <script>
+      const input = document.getElementById('input');
+      input.value = 'Hello, Typst!';
       document.getElementById('typst').addEventListener('load', function () {
         $typst.setCompilerInitOptions({
           getModule: () =>
@@ -183,14 +194,18 @@ You can also load the all-in-one bundle file and wasm modules from [jsdelivr](ht
           getModule: () =>
             'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
         });
-        $typst.svg({ mainContent: 'Hello, World!' }).then(svg => {
-          console.log(`rendered! SvgElement { len: ${svg.length} }`);
-          // append svg text
-          document.getElementById('content').innerHTML = svg;
-        });
+
+        const compile = function (mainContent) {
+          $typst.svg({ mainContent }).then(svg => {
+            console.log(`rendered! SvgElement { len: ${svg.length} }`);
+            // append svg text
+            document.getElementById('content').innerHTML = svg;
+          });
+        };
+        input.oninput = () => compile(input.value);
+        compile(input.value);
       });
     </script>
-    <div id="content"></div>
   </body>
 </html>
 ```
