@@ -85,13 +85,17 @@ const isNode =
  * Create an instance of utility:
  *
  * ```typescript
- * // optional renderer instance
- * const renderer = enableRendering ?? (() => {
- *   return createGlobalRenderer(createTypstRenderer, pdfJsLib, initOptions);
+ * const $typst = new TypstSnippet({
+ *   // optional renderer instance
+ *   renderer: enableRendering ?? (() => {
+ *     return createGlobalRenderer(createTypstRenderer,
+ *       undefined, initOptions);
+ *   }),
+ *   compiler() => {
+ *     return createGlobalCompiler(createTypstCompiler,
+ *       initOptions);
+ *   }
  * });
- * const $typst = new TypstSnippet(() => {
- *   return createGlobalCompiler(createTypstCompiler, initOptions);
- * }, renderer);
  * ```
  */
 export class TypstSnippet {
