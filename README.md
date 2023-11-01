@@ -166,7 +166,7 @@ Note: Since we use turborepo for `>=v0.4.0` development, if you are the earlier 
 # Optional: download the font assets if you haven't done so.
 $ git submodule update --init --recursive .
 # build all of typescript packages
-$ yarn install && npx turbo run build
+$ yarn install && yarn run build:pkg
 # compile typst document for demo
 $ cargo run --bin typst-ts-dev-server -- compile --compiler debug corpus --cat skyzh-cv
 # start a local server
@@ -175,7 +175,7 @@ $ cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/
 
 And open your browser to `http://localhost:20810/`.
 
-You can also run `yarn run build:core` instead of `npx turbo run build` to build
+You can also run `yarn run build:core` instead of `yarn run build:pkg` to build
 core library (`@myriaddreamin/typst.ts`) and avoid building the WASM modules from source.
 
 <!-- ### Example: generate documentation site for packages developers.
