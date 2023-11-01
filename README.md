@@ -117,12 +117,13 @@ See [Documentation](https://myriad-dreamin.github.io/typst.ts/cookery).
 
 ### Develop projects along with a local built typst.ts
 
-You can add your owned projects to the `projects` folder, so that yarn workspace will
-automatically identify your project.
+You can put your owned projects under the `projects` folder, and that yarn workspace will
+automatically identify your project. We recommend you to use [git](https://git-scm.com/), [Yarn](https://yarnpkg.com/), and
+[turbo](https://turbo.build/) to manage your projects.
 
 ##### Example: link a project by git submodule
 
-To develop core external projects, e.g. `typst-preview`, you could initialize it
+To develop core external projects, e.g. `typst-preview`, you could initialize them
 by command:
 
 ```shell
@@ -133,7 +134,7 @@ git submodule update --init --checkout projects/typst-preview
 
 Ensured that you have [built typst.ts from
 source](#build-from-source-and-check), you can build and run the project by
-(typst-preview as a example):
+(typst-preview as an example):
 
 ```shell
 # install dependencies for project
@@ -152,7 +153,7 @@ typst-preview:build: ✓ built in 1.01s
 typst-preview:build: Done in 3.73s.
 ```
 
-The project (typst-preview as a example) will cache and use the local built packages.
+The project (typst-preview as an example) will cache and use the local built packages.
 
 ### Build from source and check
 
