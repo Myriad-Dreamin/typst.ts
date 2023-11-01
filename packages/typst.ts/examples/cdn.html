@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Svg Document</title>
+  </head>
+  <body>
+    <script
+      type="module"
+      src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one-lite.bundle.js"
+      id="typst"
+    ></script>
+    <script>
+      document.getElementById('typst').addEventListener('load', function () {
+        $typst.setCompilerInitOptions({
+          getModule: () =>
+            'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm',
+        });
+        $typst.setRendererInitOptions({
+          getModule: () =>
+            'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
+        });
+        $typst.svg({ mainContent: 'Hello, World!' }).then(svg => {
+          console.log(`rendered! SvgElement { len: ${svg.length} }`);
+          // append svg text
+          document.getElementById('content').innerHTML = svg;
+        });
+      });
+    </script>
+    <div id="content"></div>
+  </body>
+</html>
