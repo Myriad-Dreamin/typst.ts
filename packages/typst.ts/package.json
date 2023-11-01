@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst.ts",
-  "version": "0.4.0-rc11",
+  "version": "0.4.0",
   "description": "Run Typst in JavaScriptWorld.",
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
