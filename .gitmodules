@@ -6,3 +6,18 @@
 	path = assets/files
 	url = https://github.com/Myriad-Dreamin/typst.git
 	branch = assets-files
+
+[submodule "projects/typst-preview"]
+	path = projects/typst-preview
+	url = https://github.com/Enter-tainer/typst-preview.git
+	branch = main
+	fetchRecurseSubmodules = false
+	update=none
+	ignore=all
+[submodule "projects/typst-book"]
+	path = projects/typst-book
+	url = https://github.com/Myriad-Dreamin/typst-book.git
+	branch = main
+	fetchRecurseSubmodules = false
+	update=none
+	ignore=all

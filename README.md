@@ -48,7 +48,7 @@ So with _Form2_, you can continue rendeing the document in different ways:
 
 ##### Static but <ins>responsive</ins> rendering
 
-Example Application: [single-file](https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/index.html), [typst-book](https://github.com/Myriad-Dreamin/typst-book) and [hexo-renderer-typst](https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/hexo-renderer-typst)
+Example Application: [single-file](https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/index.html), [typst-book](https://github.com/Myriad-Dreamin/typst-book) and [hexo-renderer-typst](https://github.com/Myriad-Dreamin/typst.ts/tree/main/projects/hexo-renderer-typst)
 
 A compressed artifact containing data for different theme and screen settings. The bundle size of artifacts is optimized for typst documents.
 
@@ -115,6 +115,46 @@ it has the git dependency on [typst](https://github.com/typst/typst).
 
 See [Documentation](https://myriad-dreamin.github.io/typst.ts/cookery).
 
+### Develop projects along with a local built typst.ts
+
+You can put your owned projects under the `projects` folder, and that yarn workspace will
+automatically identify your project. We recommend you to use [git](https://git-scm.com/), [Yarn](https://yarnpkg.com/), and
+[turbo](https://turbo.build/) to manage your projects.
+
+##### Example: link a project by git submodule
+
+To develop core external projects, e.g. `typst-preview`, you could initialize them
+by command:
+
+```shell
+git submodule update --init --checkout projects/typst-preview
+```
+
+##### Example: build and run
+
+Ensured that you have [built typst.ts from
+source](#build-from-source-and-check), you can build and run the project by
+(typst-preview as an example):
+
+```shell
+# install dependencies for project
+yarn install --pure-lockfile
+# build typst-preview and its dependencies
+turbo build --filter=typst-preview
+@myriaddreamin/typst-ts-renderer:build: cache hit, replaying logs bc0a0b151bd8eb6d
+@myriaddreamin/typst.ts:build: cache hit, replaying logs 729cb43a3242b80
+typst-preview-frontend:build: cache miss, executing 5ae30471e8957877
+typst-preview-frontend:build: ...
+typst-preview-frontend:build: ✓ built in 1.25s
+typst-preview-frontend:build: Done in 4.57s.
+typst-preview:build: cache miss, executing a1bd8ca8233f8a0c
+typst-preview:build: ...
+typst-preview:build: ✓ built in 1.01s
+typst-preview:build: Done in 3.73s.
+```
+
+The project (typst-preview as an example) will cache and use the local built packages.
+
 ### Build from source and check
 
 Note: you could build from source with/without wasm-pack.
@@ -127,7 +167,7 @@ Note: Since we use turborepo for `>=v0.4.0` development, if you are the earlier 
 # Optional: download the font assets if you haven't done so.
 $ git submodule update --init --recursive .
 # build all of typescript packages
-$ yarn install && npx turbo run build
+$ yarn install && yarn run build:pkg
 # compile typst document for demo
 $ cargo run --bin typst-ts-dev-server -- compile --compiler debug corpus --cat skyzh-cv
 # start a local server
@@ -136,7 +176,7 @@ $ cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/
 
 And open your browser to `http://localhost:20810/`.
 
-You can also run `yarn run build:core` instead of `npx turbo run build` to build
+You can also run `yarn run build:core` instead of `yarn run build:pkg` to build
 core library (`@myriaddreamin/typst.ts`) and avoid building the WASM modules from source.
 
 <!-- ### Example: generate documentation site for packages developers.
