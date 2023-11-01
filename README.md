@@ -48,7 +48,7 @@ So with _Form2_, you can continue rendeing the document in different ways:
 
 ##### Static but <ins>responsive</ins> rendering
 
-Example Application: [single-file](https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/index.html), [typst-book](https://github.com/Myriad-Dreamin/typst-book) and [hexo-renderer-typst](https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/hexo-renderer-typst)
+Example Application: [single-file](https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/index.html), [typst-book](https://github.com/Myriad-Dreamin/typst-book) and [hexo-renderer-typst](https://github.com/Myriad-Dreamin/typst.ts/tree/main/projects/hexo-renderer-typst)
 
 A compressed artifact containing data for different theme and screen settings. The bundle size of artifacts is optimized for typst documents.
 

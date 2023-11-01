@@ -1,13 +1,87 @@
 use core::fmt;
 
 use ecow::EcoString;
-use typst::diag::FileError;
+use typst::{diag::FileError, syntax::Source};
+
+use crate::ImmutStr;
+
+pub use typst::diag::SourceDiagnostic as TypstSourceDiagnostic;
+
+#[derive(Debug, Clone)]
+pub struct DiagMessage {
+    pub resource: ImmutStr,
+    pub message: String,
+    pub code: u32,
+    pub severity: u32,
+    pub start_line_number: u32,
+    pub start_column: u32,
+    pub end_line_number: u32,
+    pub end_column: u32,
+    // These field could be added to ErrorImpl::arguments
+    // owner: Option<ImmutStr>,
+    // source: ImmutStr,
+}
+
+pub trait ErrorConverter {
+    // todo: file_id to path
+    /// Convert typst.ts diagnostic to error
+    /// It has a simple implementation.
+    /// If you want to customize it, you can implement it yourself.
+    fn convert_typst(&self, world: &dyn typst::World, diag: TypstSourceDiagnostic) -> Error {
+        let mut arguments = Vec::new();
+        arguments.push((
+            "severity",
+            match diag.severity {
+                typst::diag::Severity::Error => "error".to_string(),
+                typst::diag::Severity::Warning => "warning".to_string(),
+            },
+        ));
+
+        if let Some(id) = diag.span.id() {
+            if let Some(pkg) = id.package() {
+                arguments.push(("package", pkg.to_string()));
+            };
+            arguments.push(("path", format!("{:?}", id.vpath())));
+
+            if let Some((rng, src)) = world
+                .source(id)
+                .ok()
+                .and_then(|src| Some((src.find(diag.span)?.range(), src)))
+            {
+                let resolve_off =
+                    |src: &Source, off: usize| src.byte_to_line(off).zip(src.byte_to_column(off));
+                if let Some((l, c)) = resolve_off(&src, rng.start) {
+                    arguments.push(("start_line", l.to_string()));
+                    arguments.push(("start_column", c.to_string()));
+                }
+                if let Some((l, c)) = resolve_off(&src, rng.start) {
+                    arguments.push(("end_line", l.to_string()));
+                    arguments.push(("end_column", c.to_string()));
+                }
+            }
+        }
+
+        Error::new(
+            "typst",
+            ErrKind::Msg(format!(
+                "{msg}, hints: {hints:?}, traces: {traces:?}",
+                msg = diag.message,
+                hints = diag.hints,
+                traces = diag.trace
+            )),
+            arguments.into_boxed_slice(),
+        )
+    }
+}
+
+impl DiagMessage {}
 
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub enum ErrKind {
     None,
     Msg(String),
+    Diag(DiagMessage),
     File(FileError),
     Inner(Error),
 }
@@ -110,6 +184,9 @@ impl fmt::Display for Error {
         match &err.kind {
             ErrKind::File(e) => write!(f, "{}: {} with {:?}", err.loc, e, err.arguments),
             ErrKind::Msg(msg) => write!(f, "{}: {} with {:?}", err.loc, msg, err.arguments),
+            ErrKind::Diag(diag) => {
+                write!(f, "{}: {} with {:?}", err.loc, diag.message, err.arguments)
+            }
             ErrKind::Inner(e) => write!(f, "{}: {} with {:?}", err.loc, e, err.arguments),
             ErrKind::None => write!(f, "{}: with {:?}", err.loc, err.arguments),
         }

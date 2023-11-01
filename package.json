@@ -14,7 +14,6 @@
   "workspaces": [
     "packages/compiler",
     "packages/renderer",
-    "packages/hexo-renderer-typst",
     "packages/typst.ts",
     "packages/typst.react",
     "packages/typst.vue3",
