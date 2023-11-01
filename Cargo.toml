@@ -37,6 +37,7 @@ members = [
     "tests/integration",
     "tests/std",
 ]
+exclude = ["projects"]
 
 [profile.release]
 opt-level = 3
