@@ -122,7 +122,7 @@ class PreviewState {
 
     let isMain = () => false;
     if (this.previewingDef === '' || this.previewingDef == 'main') {
-      console.log('previewing main', $typst, this);
+      // console.log('previewing main', $typst, this);
       content = await this.drawInteractive();
       isMain = () => true;
     } else {
@@ -381,7 +381,7 @@ import cetz.draw: *
   ${instances.join(INEW_LINE)}
 }, length: 1pt)
 `;
-    console.log({ mainContent });
+    // console.log({ mainContent });
 
     switch (kind) {
       case 'svg':
@@ -523,12 +523,12 @@ import cetz.draw: *
         sigs.push(def.sig);
       }
     });
-    console.log(sigs);
+    // console.log(sigs);
     return sigs;
   }
 
   flushDefinitions(editor: EditorState) {
-    console.log('flushDefinitions', editor);
+    // console.log('flushDefinitions', editor);
     if (editor.definitions) {
       this.definitions = new Map();
       for (const def of editor.definitions) {
