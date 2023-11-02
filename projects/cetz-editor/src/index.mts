@@ -1,13 +1,27 @@
 import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs';
-// let compiler = fetch(
-//   'http://127.0.0.1:20810/base/node_modules/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm',
-// );
+
+// Use CDN
 let compiler = fetch(
   'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm',
 );
 let renderer = fetch(
   'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
 );
+
+// Use local server
+// let compiler = fetch(
+//   'http://127.0.0.1:20810/base/node_modules/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm',
+// );
+// let renderer = fetch(
+//   'http://127.0.0.1:20810/base/node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
+// );
+
+// Bundle
+// @ts-ignore
+// import compiler from '@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm?url';
+// @ts-ignore
+// import renderer from '@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm?url';
+
 $typst.setCompilerInitOptions({
   getModule: () => compiler,
 });

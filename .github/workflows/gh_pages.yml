@@ -69,7 +69,7 @@ jobs:
           cmd: install
       - name: Build Typescript packages
         run: |
-          npx turbo run build
+          yarn run build:pkg
       - name: Prepare artifacts
         run: |
           typst-book build --font-path assets/fonts --path-to-root /typst.ts/cookery/ -w . -d ../../github-pages/cookery/ docs/cookery
