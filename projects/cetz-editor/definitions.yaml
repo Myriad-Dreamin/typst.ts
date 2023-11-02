@@ -1,0 +1,43 @@
+definitions:
+  - id: x-circle
+    props: # default props
+      rad: 200
+      inner-text: '""'
+    draw: |
+      {
+        circle((0, 0), radius: rad, name: node-label)
+        debug-label((-rad*0.7, -rad*0.7))
+        content(node-label, inner-text)
+      }
+  - id: x-rect
+    props: # default props
+      x: 200
+      y: none
+      inner-text: '""'
+    draw: |
+      {
+        let y = if y == none {
+          x
+        } else {
+          y
+        }
+        rect((0, 0), (x, y), name: node-label)
+        debug-label((0, 0))
+        content(node-label, inner-text)
+
+      }
+  - id: x-arrow
+    props: # default props
+      start: (0, 10)
+      end: (50, 10)
+      inner-text: '""'
+      mark: |
+        (end: ">")
+    draw: |
+      {
+        set-style(mark: (fill: none, size: 7))
+        line(start, end, name: "t", mark: mark)
+        content("t", inner-text)
+      }
+width: 600pt
+height: 600pt

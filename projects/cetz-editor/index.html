@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <link rel="icon" href="favicon.svg" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cetz Editor</title>
+    <script>
+      window.script$jsYamlLoad = new Promise(resolve => {
+        window.script$jsYamlLoadResolve = resolve;
+      });
+    </script>
+    <script id="script-main" type="module" src="/dist/esm/index.mjs"></script>
+    <link rel="stylesheet" href="typst-style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.26.1/min/vs/loader.min.js"></script>
+    <script type="module">
+      import jsYaml from 'https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/+esm';
+      window.jsYaml = jsYaml;
+      window.script$jsYamlLoadResolve(jsYaml);
+    </script>
+  </head>
+  <body style="height: 100vh; overflow: hidden">
+    <div id="main">
+      <div style="display: flex; flex-direction: column; flex: 4; height: 100vh">
+        <div id="def-editor" style="flex: 5"></div>
+        <div id="main-editor" style="flex: 2"></div>
+      </div>
+      <div id="preview" style="flex: 6">
+        <div>
+          <button id="export-svg">Export As SVG</button>
+          <button id="export-pdf">PDF</button>
+          <button id="export-cetz">CeTZ Code</button>
+          <button id="export-elem">Element</button>
+        </div>
+        <div>
+          <span>Element Id:</span>
+          <input id="insert-name" type="text" />
+          <button id="insert-elem">Insert</button>
+        </div>
+        <select id="insert-selector"></select>
+        <div>Show Definition:</div>
+        <select id="preview-selector"></select>
+        <div id="preview-panel"></div>
+      </div>
+    </div>
+    <script>
+      window.onload = function () {
+        const insertSelector = document.getElementById('insert-selector');
+        const insertName = document.getElementById('insert-name');
+        const previewSelector = document.getElementById('preview-selector');
+
+        // require is provided by loader.min.js.
+        require.config({
+          paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.26.1/min/vs' },
+        });
+        require(['vs/editor/editor.main'], () => {
+          const definitionEditor = monaco.editor.create(document.getElementById('def-editor'), {
+            value: '',
+            language: 'yaml',
+            theme: 'vs-dark',
+          });
+          const mainEditor = monaco.editor.create(document.getElementById('main-editor'), {
+            value: '',
+            language: 'yaml',
+            theme: 'vs-dark',
+          });
+          window.updateMainContent = v => mainEditor.setValue(v);
+          $preview.bindElement(document.getElementById('preview-panel'));
+          document.getElementById('export-svg').addEventListener('click', () => {
+            $preview.exportSvg();
+          });
+          document.getElementById('export-pdf').addEventListener('click', () => {
+            $preview.exportPdf();
+          });
+          document.getElementById('export-cetz').addEventListener('click', () => {
+            $preview.exportCetz();
+          });
+          document.getElementById('insert-elem').addEventListener('click', () => {
+            let insertNameValue = insertName.value;
+            if (!insertNameValue) {
+              insertNameValue = 'node-' + Math.random().toString(36).substring(7).replace('0.', '');
+            }
+            console.log('insertSelector.value', insertSelector.value, insertNameValue);
+            $preview.insertElem(insertSelector.value, insertNameValue);
+          });
+
+          const triggerSyncDefinition = () => {
+            const yml = definitionEditor.getValue();
+            script$jsYamlLoad.then(() => {
+              try {
+                $preview.flushDefinitions(jsYaml.load(yml));
+                previewSelector.innerHTML = '';
+                insertSelector.innerHTML = '';
+                for (const def of ['main', ...$preview.getDefinitionNames()]) {
+                  const option = document.createElement('option');
+                  option.value = def;
+                  option.innerText = def;
+                  previewSelector.appendChild(option.cloneNode(true));
+                  if (def !== 'main') {
+                    insertSelector.appendChild(option);
+                  }
+                }
+              } catch (e) {
+                console.log('error', e);
+              }
+            });
+          };
+          definitionEditor.getModel().onDidChangeContent(e => {
+            triggerSyncDefinition();
+          });
+
+          const triggerSyncMain = () => {
+            const yml = mainEditor.getValue();
+            script$jsYamlLoad.then(() => {
+              try {
+                $preview.flushMain(jsYaml.load(yml));
+              } catch (e) {
+                console.log('error', e);
+              }
+            });
+          };
+          mainEditor.getModel().onDidChangeContent(e => {
+            if (e.isFlush) {
+              return;
+            }
+            triggerSyncMain();
+          });
+
+          definitionEditor.setValue(`definitions:
+- id: x-circle
+  props: # default props
+    rad: 200
+    inner-text: '""'
+  draw: |
+    {
+      circle((0, 0), radius: rad, name: node-label)
+      debug-label((-rad*0.7, -rad*0.7))
+      content(node-label, inner-text)
+    }
+- id: x-rect
+  props: # default props
+    x: 200
+    y: none
+    inner-text: '""'
+  draw: |
+    {
+      let y = if y == none {
+        x
+      } else {
+        y
+      }
+      rect((0, 0), (x, y), name: node-label)
+      debug-label((0, 0))
+      content(node-label, inner-text)
+
+    }
+- id: x-arrow
+  props: # default props
+    start: (0, 10)
+    end: (50, 10)
+    inner-text: '""'
+    mark: |
+      (end: ">")
+  draw: |
+    {
+      set-style(mark: (fill: none, size: 7))
+      line(start, end, name: "t", mark: mark)
+      content("t", inner-text)
+    }
+width: 600pt
+height: 600pt`);
+          mainEditor.setValue(`
+- name: c0
+  type: x-circle
+  args:
+    rad: 50
+  pos: [0, 0]
+- name: c1
+  type: x-rect
+  args:
+    x: 100
+  pos: [50, 50]
+- name: c2
+  type: x-circle
+  args:
+    rad: 50
+  pos: [200, 0]
+- name: c1toc2
+  type: x-arrow
+  args:
+    start: '"c1"'
+    end: '"c2"'
+  pos: [0, 0]
+`);
+          triggerSyncDefinition();
+          triggerSyncMain();
+
+          previewSelector.onchange = () => {
+            console.log('previewSelector.value', previewSelector.value);
+            $preview.previewDefinition(previewSelector.value);
+          };
+
+          $preview.previewDefinition('');
+        });
+      };
+    </script>
+    <ul id="svg-edit-menu" class="absolute hidden"></menu>
+  </body>
+</html>
