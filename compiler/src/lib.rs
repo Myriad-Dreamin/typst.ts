@@ -42,6 +42,7 @@ pub mod world;
 
 /// Diff and parse the source code.
 mod parser;
+mod utils;
 
 /// Convenient services over [`world::CompilerWorld`].
 pub mod service;
