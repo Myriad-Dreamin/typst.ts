@@ -1,0 +1,39 @@
+{
+  "name": "@myriaddreamin/cetz-editor",
+  "private": true,
+  "version": "0.4.0",
+  "description": "Simple visualized cetz editor",
+  "author": "Myriad Dreamin <camiyoru@gmail.com>",
+  "license": "Apache-2.0",
+  "keywords": [
+    "cetz",
+    "typst",
+    "renderer"
+  ],
+  "repository": "https://github.com/Myriad-Dreamin/typst.ts",
+  "main": "dist/index.mjs",
+  "files": [
+    "dist/index.mjs"
+  ],
+  "peerDependencies": {
+    "@myriaddreamin/typst.ts": "*",
+    "@myriaddreamin/typst-ts-renderer": "*",
+    "@myriaddreamin/typst-ts-web-compiler": "*"
+  },
+  "devDependencies": {
+    "vite": "^4.3.9",
+    "vite-plugin-singlefile": "^0.13.5",
+    "vitest": "^0.32.2"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "test": "vitest",
+    "coverage": "vitest run --coverage",
+    "publish:dry": "npm publish --dry-run",
+    "publish:lib": "npm publish || exit 0"
+  },
+  "engines": {
+    "node": ">=12"
+  }
+}

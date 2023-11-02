@@ -1,0 +1,52 @@
+body {
+  margin: 0;
+  padding: 0;
+}
+
+#main {
+  display: flex;
+  flex-direction: row;
+}
+
+#preview {
+  display: flex;
+  flex-direction: column;
+}
+
+#preview-panel {
+  padding: 20px;
+}
+.typst-cetz-elem {
+  pointer-events: bounding-box;
+}
+
+#svg-edit-menu {
+  position: absolute;
+
+  /* Reset */
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+
+  /* Misc */
+  border: 1px solid #cbd5e0;
+  border-radius: 0.25rem;
+  background-color: #f7fafc;
+}
+
+.hidden {
+  /* The menu is hidden at first */
+  display: none;
+}
+
+.menu-item {
+  white-space: nowrap;
+}
+
+.menu-item span {
+  float: left;
+}
+
+.menu-item input {
+  float: right;
+}
