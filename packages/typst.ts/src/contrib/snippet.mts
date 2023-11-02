@@ -160,76 +160,15 @@ export class TypstSnippet {
     return typeof this.ex === 'function' ? (this.ex = await this.ex()) : this.ex;
   }
 
-  /**
-   * provider for bullding the compiler or renderer component.
-   */
   private providers?: PromiseJust<TypstSnippetProvider>[];
+  /**
+   * add providers for bullding the compiler or renderer component.
+   */
   use(...providers: PromiseJust<TypstSnippetProvider>[]) {
     if (!this.providers) {
       throw new Error('already prepare uses for instances');
     }
     this.providers.push(...providers);
-  }
-
-  private async prepareUse() {
-    if (!this.providers) {
-      return;
-    }
-
-    const providers = await Promise.all(
-      this.providers.map(p => (typeof p === 'function' ? p() : p)),
-    );
-    this.providers = [];
-
-    if (
-      $typst == this &&
-      !providers.some(p => p.key.includes('package-registry') || p.key.includes('access-model'))
-    ) {
-      // Note: the default fetch backend always adds a withAccessModel(mem)
-      if (isNode) {
-        const escapeImport = new Function('m', 'return import(m)');
-        try {
-          const m = new MemoryAccessModel();
-          const { default: request } = await escapeImport('sync-request');
-
-          $typst.use(
-            TypstSnippet.withAccessModel(m),
-            TypstSnippet.fetchPackageBy(m, (_: unknown, path: string) => {
-              const response = request('GET', path);
-
-              if (response.statusCode === 200) {
-                return response.getBody(undefined);
-              }
-              return undefined;
-            }),
-          );
-        } catch (e) {}
-      } else {
-        $typst.use(TypstSnippet.fetchPackageRegistry());
-      }
-    }
-
-    const providers2 = await Promise.all(
-      this.providers.map(p => (typeof p === 'function' ? p() : p)),
-    );
-
-    const ccOptions = (this.ccOptions ||= {});
-    const ccBeforeBuild = (ccOptions.beforeBuild ||= []);
-
-    const exOptions = (this.exOptions ||= {});
-    const exBeforeBuild = (exOptions.beforeBuild ||= []);
-
-    for (const provider of [...providers, ...providers2]) {
-      if (provider.forRoles.includes('compiler')) {
-        this.requireIsUninitialized('compiler', this.cc, TypstSnippet.$buildC);
-        ccBeforeBuild.push(...provider.provides);
-      }
-      if (provider.forRoles.includes('renderer')) {
-        this.requireIsUninitialized('renderer', this.ex, TypstSnippet.$buildR);
-        exBeforeBuild.push(...provider.provides);
-      }
-    }
-    this.providers = undefined;
   }
 
   /**
@@ -271,7 +210,8 @@ export class TypstSnippet {
   }
 
   /**
-   * Set access model for the compiler instance
+   * Retrieve an access model to store the data of fetched files.
+   * Provide a PackageRegistry instance for the compiler instance.
    *
    * @example
    *
@@ -304,7 +244,8 @@ export class TypstSnippet {
   }
 
   /**
-   * Set access model for the compiler instance
+   * Retrieve a fetcher for fetching package data.
+   * Provide a PackageRegistry instance for the compiler instance.
    * @example
    *
    * use a customized fetcher
@@ -387,6 +328,7 @@ export class TypstSnippet {
   }
 
   /**
+   * Add a source file to the compiler.
    * See {@link TypstCompiler#addSource}.
    */
   async addSource(path: string, content: string) {
@@ -394,6 +336,8 @@ export class TypstSnippet {
   }
 
   /**
+   * Reset the shadow files.
+   * Note: this function is independent to the {@link reset} function.
    * See {@link TypstCompiler#resetShadow}.
    */
   async resetShadow() {
@@ -401,6 +345,7 @@ export class TypstSnippet {
   }
 
   /**
+   * Add a shadow file to the compiler.
    * See {@link TypstCompiler#mapShadow}.
    */
   async mapShadow(path: string, content: Uint8Array) {
@@ -408,6 +353,7 @@ export class TypstSnippet {
   }
 
   /**
+   * Remove a shadow file from the compiler.
    * See {@link TypstCompiler#unmapShadow}.
    */
   async unmapShadow(path: string) {
@@ -471,7 +417,7 @@ export class TypstSnippet {
     } else if ('mainFilePath' in opts) {
       return { ...opts };
     } else {
-      this.addSource(this.mainFilePath, opts.mainContent);
+      await this.addSource(this.mainFilePath, opts.mainContent);
       return { mainFilePath: this.mainFilePath };
     }
   }
@@ -502,6 +448,67 @@ export class TypstSnippet {
       });
       return f(rr, session);
     });
+  }
+
+  private async prepareUse() {
+    if (!this.providers) {
+      return;
+    }
+
+    const providers = await Promise.all(
+      this.providers.map(p => (typeof p === 'function' ? p() : p)),
+    );
+    this.providers = [];
+
+    if (
+      $typst == this &&
+      !providers.some(p => p.key.includes('package-registry') || p.key.includes('access-model'))
+    ) {
+      // Note: the default fetch backend always adds a withAccessModel(mem)
+      if (isNode) {
+        const escapeImport = new Function('m', 'return import(m)');
+        try {
+          const m = new MemoryAccessModel();
+          const { default: request } = await escapeImport('sync-request');
+
+          $typst.use(
+            TypstSnippet.withAccessModel(m),
+            TypstSnippet.fetchPackageBy(m, (_: unknown, path: string) => {
+              const response = request('GET', path);
+
+              if (response.statusCode === 200) {
+                return response.getBody(undefined);
+              }
+              return undefined;
+            }),
+          );
+        } catch (e) {}
+      } else {
+        $typst.use(TypstSnippet.fetchPackageRegistry());
+      }
+    }
+
+    const providers2 = await Promise.all(
+      this.providers.map(p => (typeof p === 'function' ? p() : p)),
+    );
+
+    const ccOptions = (this.ccOptions ||= {});
+    const ccBeforeBuild = (ccOptions.beforeBuild ||= []);
+
+    const exOptions = (this.exOptions ||= {});
+    const exBeforeBuild = (exOptions.beforeBuild ||= []);
+
+    for (const provider of [...providers, ...providers2]) {
+      if (provider.forRoles.includes('compiler')) {
+        this.requireIsUninitialized('compiler', this.cc, TypstSnippet.$buildC);
+        ccBeforeBuild.push(...provider.provides);
+      }
+      if (provider.forRoles.includes('renderer')) {
+        this.requireIsUninitialized('renderer', this.ex, TypstSnippet.$buildR);
+        exBeforeBuild.push(...provider.provides);
+      }
+    }
+    this.providers = undefined;
   }
 
   private requireIsUninitialized<T>(role: string, c: PromiseJust<T>, e?: PromiseJust<T>) {
