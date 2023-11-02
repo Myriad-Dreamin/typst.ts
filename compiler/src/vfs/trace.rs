@@ -41,7 +41,7 @@ impl<M: AccessModel + Sized, C: Clone> TraceAccessModel<CachedAccessModel<M, C>>
             elapsed.as_nanos() as u64,
             std::sync::atomic::Ordering::Relaxed,
         );
-        println!("read_all_diff: {:?} {:?}", src, elapsed);
+        crate::utils::console_log!("read_all_diff: {:?} {:?}", src, elapsed);
         res
     }
 }
@@ -60,7 +60,7 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
             elapsed.as_nanos() as u64,
             std::sync::atomic::Ordering::Relaxed,
         );
-        println!("mtime: {:?} {:?}", src, elapsed);
+        crate::utils::console_log!("mtime: {:?} {:?} => {:?}", src, elapsed, res);
         res
     }
 
@@ -72,7 +72,7 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
             elapsed.as_nanos() as u64,
             std::sync::atomic::Ordering::Relaxed,
         );
-        println!("is_file: {:?} {:?}", src, elapsed);
+        crate::utils::console_log!("is_file: {:?} {:?}", src, elapsed);
         res
     }
 
@@ -84,7 +84,7 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
             elapsed.as_nanos() as u64,
             std::sync::atomic::Ordering::Relaxed,
         );
-        println!("real_path: {:?} {:?}", src, elapsed);
+        crate::utils::console_log!("real_path: {:?} {:?}", src, elapsed);
         res
     }
 
@@ -96,7 +96,7 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
             elapsed.as_nanos() as u64,
             std::sync::atomic::Ordering::Relaxed,
         );
-        println!("read_all: {:?} {:?}", src, elapsed);
+        crate::utils::console_log!("read_all: {:?} {:?}", src, elapsed);
         res
     }
 
