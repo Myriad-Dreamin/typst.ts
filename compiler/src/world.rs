@@ -11,7 +11,7 @@ use typst::{
     diag::{FileError, FileResult, SourceResult},
     eval::{Datetime, Library},
     font::{Font, FontBook},
-    syntax::Source,
+    syntax::{Source, VirtualPath},
     World,
 };
 
@@ -23,6 +23,9 @@ use typst_ts_core::{
 use crate::{
     dependency::{DependencyTree, DependentFileInfo},
     package::Registry as PackageRegistry,
+    parser::{
+        get_semantic_tokens_full, get_semantic_tokens_legend, SemanticToken, SemanticTokensLegend,
+    },
     service::WorkspaceProvider,
     time::SystemTime,
     vfs::{AccessModel as VfsAccessModel, Vfs},
@@ -198,6 +201,23 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         });
 
         DependencyTree::from_iter(&self.root, vfs_dependencies)
+    }
+
+    pub fn get_semantic_token_legend(&self) -> Arc<SemanticTokensLegend> {
+        Arc::new(get_semantic_tokens_legend())
+    }
+
+    pub fn get_semantic_tokens(&self, file_path: Option<String>) -> Arc<Vec<SemanticToken>> {
+        Arc::new(get_semantic_tokens_full(
+            &file_path
+                .and_then(|e| {
+                    let relative_path = Path::new(&e).strip_prefix(&self.workspace_root()).ok()?;
+
+                    let source_id = FileId::new(None, VirtualPath::new(relative_path));
+                    self.source(source_id).ok()
+                })
+                .unwrap_or_else(|| self.main()),
+        ))
     }
 
     fn map_source_or_default<T>(

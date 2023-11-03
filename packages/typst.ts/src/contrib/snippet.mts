@@ -10,7 +10,12 @@ import type { TypstRenderer, RenderSession } from '../renderer.mjs';
 import type { RenderToCanvasOptions, RenderSvgOptions } from '../options.render.mjs';
 import { MemoryAccessModel, type WritableAccessModel } from '../fs/index.mjs';
 import { FetchPackageRegistry } from '../fs/package.mjs';
-import { PackageRegistry, PackageSpec } from '../internal.types.mjs';
+import {
+  PackageRegistry,
+  PackageSpec,
+  SemanticTokens,
+  SemanticTokensLegend,
+} from '../internal.types.mjs';
 
 /**
  * Some function that returns a promise of value or just that value.
@@ -407,6 +412,37 @@ export class TypstSnippet {
         renderSession,
       }),
     );
+  }
+
+  /**
+   * Get semantic tokens for the document.
+   */
+  async query<T>(opts: SweetCompileOptions & { selector: string; field?: string }): Promise<T> {
+    const options = await this.getCompileOptions(opts);
+    return (await this.getCompiler()).query({
+      ...opts,
+      ...options,
+    });
+  }
+
+  /**
+   * Get token legend for semantic tokens.
+   */
+  async getSemanticTokenLegend(): Promise<SemanticTokensLegend> {
+    return (await this.getCompiler()).getSemanticTokenLegend();
+  }
+
+  /**
+   * Get semantic tokens for the document.
+   */
+  async getSemanticTokens(
+    opts: SweetCompileOptions & { resultId?: string },
+  ): Promise<SemanticTokens> {
+    const options = await this.getCompileOptions(opts);
+    return (await this.getCompiler()).getSemanticTokens({
+      mainFilePath: options.mainFilePath,
+      resultId: opts.resultId,
+    });
   }
 
   private async getCompileOptions(opts?: SweetCompileOptions): Promise<CompileOptions> {

@@ -1,6 +1,15 @@
+mod modifier_set;
+mod semantic_tokens;
+// mod token_encode;
+mod typst_tokens;
+
 use typst::{diag::FileResult, syntax::Source};
 
 use typst_ts_core::TypstFileId;
+
+pub use semantic_tokens::{
+    get_semantic_tokens_full, get_semantic_tokens_legend, SemanticToken, SemanticTokensLegend,
+};
 
 pub fn reparse(source_id: TypstFileId, prev: Option<Source>, next: String) -> FileResult<Source> {
     use dissimilar::Chunk;

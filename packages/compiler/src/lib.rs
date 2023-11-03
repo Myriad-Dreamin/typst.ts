@@ -1,8 +1,8 @@
 use std::path::Path;
 
 use base64::Engine;
-use js_sys::{JsString, Uint8Array};
-use typst::font::Font;
+use js_sys::{JsString, Uint32Array, Uint8Array};
+use typst::{eval::IntoValue, font::Font};
 pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
     font::web::BrowserFontSearcher,
@@ -199,6 +199,47 @@ impl TypstCompiler {
         Ok(converted)
     }
 
+    pub fn get_semantic_token_legend(&mut self) -> Result<JsValue, JsValue> {
+        let tokens = self.compiler.world_mut().get_semantic_token_legend();
+        serde_wasm_bindgen::to_value(tokens.as_ref()).map_err(|e| format!("{e:?}").into())
+    }
+
+    pub fn get_semantic_tokens(
+        &mut self,
+        file_path: Option<String>,
+        result_id: Option<String>,
+    ) -> Result<js_sys::Object, JsValue> {
+        if let Some(result_id) = result_id {
+            return Err(
+                error_once!("Not implemented", result_id: format!("{:?}", result_id)).into(),
+            );
+        }
+
+        let tokens = self.compiler.world_mut().get_semantic_tokens(file_path);
+        let mut result = Vec::new();
+        for token in tokens.iter() {
+            result.push(token.delta_line);
+            result.push(token.delta_start_character);
+            result.push(token.length);
+            result.push(token.token_type);
+            result.push(token.token_modifiers);
+        }
+
+        let semantic_tokens = js_sys::Object::new();
+        js_sys::Reflect::set(
+            &semantic_tokens,
+            &"data".into(),
+            &Uint32Array::from(&result[..]).into(),
+        )?;
+        js_sys::Reflect::set(
+            &semantic_tokens,
+            &"resultId".into(),
+            &JsString::from("").into(),
+        )?;
+
+        Ok(semantic_tokens)
+    }
+
     pub fn get_artifact(&mut self, fmt: String) -> Result<Vec<u8>, JsValue> {
         let vec_exporter: DynExporter<TypstDocument, Vec<u8>> = match fmt.as_str() {
             "vector" => Box::new(typst_ts_core::exporter_builtins::VecExporter::new(
@@ -215,6 +256,32 @@ impl TypstCompiler {
             .export(self.compiler.world(), doc)
             .map_err(|e| format!("{e:?}"))?;
         Ok(artifact_bytes)
+    }
+
+    pub fn query(
+        &mut self,
+        main_file_path: String,
+        selector: String,
+        field: Option<String>,
+    ) -> Result<String, JsValue> {
+        self.compiler
+            .set_entry_file(Path::new(&main_file_path).to_owned());
+
+        let doc = self.compiler.compile().map_err(|e| format!("{e:?}"))?;
+        let elements: Vec<typst::model::Content> = self
+            .compiler
+            .query(selector, &doc)
+            .map_err(|e| format!("{e:?}"))?;
+
+        let mapped: Vec<_> = elements
+            .into_iter()
+            .filter_map(|c| match &field {
+                Some(field) => c.field(field),
+                _ => Some(c.into_value()),
+            })
+            .collect();
+
+        Ok(serde_json::to_string_pretty(&mapped).map_err(|e| format!("{e:?}"))?)
     }
 
     pub fn compile(&mut self, main_file_path: String, fmt: String) -> Result<Vec<u8>, JsValue> {
