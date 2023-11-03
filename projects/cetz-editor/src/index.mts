@@ -1,20 +1,12 @@
 import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs';
+import type { WebAssemblyModuleRef } from '@myriaddreamin/typst.ts/dist/esm/wasm.mjs';
 
-// Use CDN
-let compiler = fetch(
-  'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm',
-);
-let renderer = fetch(
-  'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
-);
+type ModuleSource = 'local' | 'jsdelivr';
 
-// Use local server
-// let compiler = fetch(
-//   'http://127.0.0.1:20810/base/node_modules/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm',
-// );
-// let renderer = fetch(
-//   'http://127.0.0.1:20810/base/node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
-// );
+/// Begin of Retrieve Wasm Modules from somewhere
+/// We need a compiler module and a renderer module
+/// - `@myriaddreamin/typst-ts-web-compiler`
+/// - `@myriaddreamin/typst-ts-renderer`
 
 // Bundle
 // @ts-ignore
@@ -22,261 +14,282 @@ let renderer = fetch(
 // @ts-ignore
 // import renderer from '@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm?url';
 
+// window.$typst$moduleSource = 'local';
+
+let moduleSource: ModuleSource = (window.$typst$moduleSource || 'jsdelivr') as any;
+
+let compiler: WebAssemblyModuleRef;
+let renderer: WebAssemblyModuleRef;
+
+switch (moduleSource) {
+  case 'jsdelivr':
+    compiler = fetch(
+      'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm',
+    );
+    renderer = fetch(
+      'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
+    );
+    break;
+  case 'local':
+    compiler = fetch(
+      'http://127.0.0.1:20810/base/node_modules/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm',
+    );
+    renderer = fetch(
+      'http://127.0.0.1:20810/base/node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
+    );
+    break;
+  default:
+    console.warn('unknown module source for importing typst module', moduleSource);
+}
+
 $typst.setCompilerInitOptions({
-  getModule: () => compiler,
+  getModule: () => compiler || window.$wasm$typst_compiler,
 });
 $typst.setRendererInitOptions({
-  getModule: () => renderer,
+  getModule: () => renderer || window.$wasm$typst_renderer,
 });
 
+/// End of Retrieve Wasm Modules from somewhere
+
+/**
+ * Newline with 2 spaces indent
+ */
 const INEW_LINE = '\n  ';
 
 interface ElementDefinition {
   id: string;
   interactive?: boolean;
+  props?: Record<string, any>;
   draw: string;
+
   sig: string;
   interactiveSig: string;
-  props?: Record<string, any>;
 }
 
-interface EditorState {
+interface DefinitionEditorState {
   definitions?: ElementDefinition[];
   width?: string;
   height?: string;
-  main?: any;
 }
 
-class PreviewState {
+type ExportKind = 'svg' | 'pdf' | 'cetz';
+
+/**
+ * Global singleton state for preview
+ */
+export class PreviewState {
+  /// Editor states
+  /**
+   * Map from definition id to definition
+   */
   definitions: Map<string, ElementDefinition> = new Map();
+  /**
+   * Map from instance id to instance
+   */
+  instances: Record<string, any> = {};
+  /**
+   * Selected definition id for preview
+   * @default "main"
+   */
   previewingDef: string = '';
-  isMain = false;
+  /**
+   * Preview panel element
+   */
+  panelElem: HTMLElement | null = null;
+  /**
+   * svg width of the preview panel
+   */
   width: number = 500;
+  /**
+   * svg height of the preview panel
+   */
   height: number = 500;
-  main: Record<string, any> = {};
-  element: HTMLElement | null = null;
-  selectedElement: SVGElement | null = null;
-  svg: SVGSVGElement | null = null;
-  offset: any;
-  transform: any;
+  /**
+   * Update main content of the editor
+   */
   updateMainContent: (content: string) => void = undefined!;
+
+  /// Rendering states
+  /**
+   * Whether the preview is rendering main content
+   */
+  isMain = false;
+  /**
+   * Current svg element
+   */
+  svgElem: SVGSVGElement | null = null;
+  /**
+   * Selected element for drag
+   */
+  selectedElem: SVGElement | null = null;
+  /**
+   * Offset for drag
+   */
+  offset: any;
+  /**
+   * Transform for drag
+   */
+  transform: any;
+
   constructor() {}
 
-  bindElement(element: HTMLElement) {
-    this.element = element;
-    this.element.addEventListener('click', e => {});
-    this.element.addEventListener('mousedown', e => this.startDrag(e));
-    this.element.addEventListener('mousemove', e => this.drag(e));
-    this.element.addEventListener('mouseup', e => this.endDrag(e));
-    this.element.addEventListener('mouseleave', e => this.endDrag(e));
-    element.addEventListener('contextmenu', e => {
-      e.preventDefault();
-      this.checkContextMenuAction(e);
-    });
-    this.flushPreview();
+  /**
+   * Bind preview panel element
+   * @param panel preview panel element
+   */
+  bindElement(panel: HTMLElement, updateMainContent: (content: string) => void) {
+    this.panelElem = panel;
+    this.updateMainContent = updateMainContent;
 
-    this.updateMainContent = (window as any).updateMainContent;
+    // element.addEventListener('click', e => {});
+    panel.addEventListener('mousedown', e => this.startDrag(e));
+    panel.addEventListener('mousemove', e => this.drag(e));
+    panel.addEventListener('mouseup', e => this.endDrag(e));
+    panel.addEventListener('mouseleave', e => this.endDrag(e));
+    panel.addEventListener('contextmenu', e => this.doToggleContextMenu(e));
+
+    this.renderPreview();
   }
 
-  // exportSvg();
-  async exportSvg() {
-    const d = await this.exportAs('svg');
-    var b = new Blob([d], { type: 'image/svg' });
-    this.exportBlobTo(b);
+  /**
+   * Get stored definition names of the preview
+   * @returns definition names
+   */
+  getDefinitionNames() {
+    return Array.from(this.definitions.keys());
   }
 
-  async exportPdf() {
-    const d = await this.exportAs('pdf');
-    var b = new Blob([d], { type: 'application/pdf' });
-    this.exportBlobTo(b);
-  }
-
-  async exportCetz() {
-    const d = await this.exportAs('cetz');
-    var b = new Blob([d], { type: 'text/plain' });
-    this.exportBlobTo(b);
-  }
-
-  private exportBlobTo(blob: Blob) {
-    // Create element with <a> tag
-    const link = document.createElement('a');
-
-    // Add file content in the object URL
-    link.href = URL.createObjectURL(blob);
-
-    // Add file name
-    link.target = '_blank';
-
-    // Add click event to <a> tag to save file.
-    link.click();
-    URL.revokeObjectURL(link.href);
-  }
-
-  previewPromise: Promise<void> | null = null;
-  flushPreview() {
-    if (this.previewPromise) {
-      this.previewPromise = this.previewPromise
-        .then(() => this.workPreview())
-        .catch(e => console.log(e));
-    } else {
-      this.previewPromise = this.workPreview();
-    }
-  }
-
-  async workPreview() {
-    if (!this.element) {
-      return;
-    }
+  getSignatures(interactive?: boolean) {
     const sigs: string[] = [];
     this.definitions.forEach(def => {
-      sigs.push(def.sig);
+      if (interactive) {
+        sigs.push(def.interactiveSig);
+      } else {
+        sigs.push(def.sig);
+      }
     });
-
-    let content: string | undefined = undefined;
-
-    let isMain = () => false;
-    if (this.previewingDef === '' || this.previewingDef == 'main') {
-      // console.log('previewing main', $typst, this);
-      content = await this.drawInteractive();
-      isMain = () => true;
-    } else {
-      const def = this.definitions.get(this.previewingDef);
-      if (def) {
-        // console.log('previewing definition', def, $typst, this);
-        content = await this.drawDefinition(def);
-      }
-    }
-
-    if (content !== undefined) {
-      // console.log({ content });
-      this.element.innerHTML = content;
-
-      const svgElem = this.element.firstElementChild;
-      this.svg = svgElem as any;
-      if (!svgElem) {
-        return;
-      }
-      const width = Number.parseFloat(svgElem.getAttribute('width')!);
-      const height = Number.parseFloat(svgElem.getAttribute('height')!);
-      const cw = document.body.clientWidth / 2 - 40;
-      svgElem.setAttribute('width', cw.toString());
-      svgElem.setAttribute('height', ((height * cw) / width).toString());
-      this.isMain = isMain();
-    }
+    // console.log(sigs);
+    return sigs;
   }
 
-  find(target: Element) {
-    while (target) {
-      if (target.classList.contains('typst-cetz-elem')) {
-        return target;
+  /// Begin of Preview Actions
+
+  /**
+   * Select definition for preview
+   * @param id definition id
+   */
+  doSelectDef(id: string) {
+    this.previewingDef = id;
+    this.renderPreview();
+  }
+
+  /**
+   * Set definitions for preview
+   * @param editor editor state
+   */
+  doSetDefinitions(editor: DefinitionEditorState) {
+    // console.log('doSetDefinitions', editor);
+    if (editor.definitions) {
+      this.definitions = new Map();
+      for (const def of editor.definitions) {
+        const props = Object.keys(def.props || {})
+          .map(k => `${k}: ${def.props![k]}`)
+          .join(', ');
+        let draw = def.draw.trim();
+        const sig = `let ${def.id}(${props}, tag: black, node-label: none) = ${draw}`;
+        const interactiveSig =
+          def.interactive !== false
+            ? `let ${def.id}(${props}, tag: black, node-label: none) = {
+  rect((0, 0), (1, 1), stroke: 0.00012345pt + tag)
+  let debug-label(pos) = content(pos, box(fill: color.linear-rgb(153, 199, 240, 70%), inset: 5pt, [
+    #set text(fill: color.linear-rgb(0, 0, 0, 70%))
+    #node-label
+  ]))
+  ${draw}
+  rect((0, 0), (1, 1), stroke: 0.00012345pt + tag)
+}`
+            : sig;
+        // console.log({ sig, draw });
+        this.definitions.set(def.id, { ...def, sig, interactiveSig });
       }
-      target = target.parentElement!;
     }
-    return undefined;
+    if (editor.width) {
+      this.width = Number.parseFloat(editor.width.replace('pt', ''));
+    }
+    if (editor.height) {
+      this.height = Number.parseFloat(editor.height.replace('pt', ''));
+    }
+    this.renderPreview();
   }
 
-  getMousePosition(evt: MouseEvent) {
-    var CTM = this.svg!.getScreenCTM()!;
-    return {
-      x: (evt.clientX - CTM.e) / CTM.a,
-      y: (evt.clientY - CTM.f) / CTM.d,
-    };
+  /**
+   * Set content for preview
+   * @param editor editor state
+   */
+  doSetMainContent(editor: any[]) {
+    const main: any = {};
+    let idx = 0;
+    for (let i = 0; i < editor.length; i++) {
+      const ins = editor[i];
+      idx += 1;
+      ins.idx = idx;
+      main[ins.name] = ins;
+    }
+    this.instances = main;
   }
 
-  startDrag(evt: MouseEvent) {
-    if (!this.isMain) {
+  /**
+   * Insert element to main content
+   * @param ty definition id
+   * @param id instance id
+   * @returns
+   */
+  doInsertElem(ty: string, id: string) {
+    const def = this.definitions.get(ty);
+    if (!def) {
       return;
     }
-
-    let target = this.find(evt.target as Element);
-    if (target) {
-      const elem = (this.selectedElement = target as any);
-
-      this.offset = this.getMousePosition(evt);
-      // Get all the transforms currently on this element
-      let transforms = elem.transform.baseVal;
-      // Ensure the first transform is a translate transform
-      if (
-        transforms.length === 0 ||
-        transforms.getItem(0).type !== SVGTransform.SVG_TRANSFORM_TRANSLATE
-      ) {
-        // Create an transform that translates by (0, 0)
-        var translate = this.svg!.createSVGTransform();
-        translate.setTranslate(0, 0);
-        // Add the translation to the front of the transforms list
-        elem.transform.baseVal.insertItemBefore(translate, 0);
-      }
-      // Get initial translation amount
-      this.transform = transforms.getItem(0);
-      this.offset.x -= this.transform.matrix.e;
-      this.offset.y -= this.transform.matrix.f;
-
-      const typstId = target.id.replace('cetz-app-', '');
-      if (!this.main[typstId].initPos) {
-        this.main[typstId].initPos = [...this.main[typstId].pos];
-      }
-    } else {
-      this.selectedElement = null;
-    }
+    this.instances[id] = {
+      type: ty,
+      pos: [0, 0],
+      name: id,
+      idx: Object.keys(this.instances).length,
+    };
+    this.renderPreview();
+    this.syncMainContent();
   }
 
-  syncMainContent() {
-    const data: string[] = [];
-    for (const [_, ins] of Object.entries(this.main).sort((x, y) => {
-      return x[1].idx - y[1].idx;
-    })) {
-      let args = '';
-      const argEntries = Object.entries(ins.args ?? {});
-      if (argEntries.length) {
-        args = '  args:';
-        for (const [k, v] of argEntries) {
-          args += `\n    ${k}: ${v}`;
-        }
-      }
-      let [x, y] = ins.pos;
-      if (ins.deltaPos) {
-        x = ins.initPos[0] + ins.deltaPos[0];
-        y = ins.initPos[1] - ins.deltaPos[1];
-      }
-      data.push(`- name: ${ins.name}\n  type: ${ins.type}${args}\n  pos: [${x}, ${y}]`);
+  /**
+   * Export as kind
+   * See {@link ExportKind}
+   * @param kind export kind
+   */
+  async doExport(kind: ExportKind) {
+    let blobType: string;
+    switch (kind) {
+      case 'svg':
+        blobType = 'image/svg+xml';
+        break;
+      case 'pdf':
+        blobType = 'application/pdf';
+        break;
+      case 'cetz':
+        blobType = 'text/plain';
+        break;
+      default:
+        throw new Error(`unknown export kind ${kind}`);
     }
-    this.updateMainContent(data.join('\n'));
+
+    const d = await this.exportAs(kind);
+    var b = new Blob([d], { type: blobType });
+    this.exportBlobTo(b);
   }
 
-  drag(evt: MouseEvent) {
-    const selectedElement = this.selectedElement;
-    if (selectedElement) {
-      evt.preventDefault();
-      var coord = this.getMousePosition(evt);
-      const x = coord.x - this.offset.x;
-      const y = coord.y - this.offset.y;
-      this.transform.setTranslate(x, y);
-      const typstId = selectedElement.id.replace('cetz-app-', '');
-      this.main[typstId].deltaPos = [x, y];
-      this.syncMainContent();
-    }
-  }
-
-  endDrag(e: MouseEvent) {
-    if (this.selectedElement) {
-      const typstId = this.selectedElement.id.replace('cetz-app-', '');
-      const ins = this.main[typstId];
-      if (ins.deltaPos) {
-        ins.pos[0] = ins.initPos[0] + ins.deltaPos[0];
-        ins.pos[1] = ins.initPos[1] - ins.deltaPos[1];
-        ins.deltaPos = undefined;
-        ins.initPos = undefined;
-        console.log(JSON.stringify(ins));
-        setTimeout(() => {
-          this.flushPreview();
-        }, 16);
-      }
-      this.selectedElement = null;
-    }
-  }
-
-  checkContextMenuAction(e: MouseEvent) {
-    let target = this.find(e.target as Element);
+  /**
+   * Toggle context menu for interactive elements
+   */
+  doToggleContextMenu(e: MouseEvent) {
+    let target = this.findTaggedTypstElement(e.target as Element);
     if (!target) {
       return;
     }
@@ -286,7 +299,7 @@ class PreviewState {
     console.log('checkClickAction', target.id);
 
     const typstId = target.id.replace('cetz-app-', '');
-    const ins = this.main[typstId];
+    const ins = this.instances[typstId];
     const def = this.definitions.get(ins.type)!;
     if (!def || def.interactive === false) {
       return;
@@ -321,7 +334,7 @@ class PreviewState {
         console.log('change', inputValue);
         ins.args = ins.args ?? {};
         ins.args[k] = inputValue;
-        this.flushPreview();
+        this.renderPreview();
       });
       div.appendChild(input);
 
@@ -335,36 +348,71 @@ class PreviewState {
     menu.classList.toggle('hidden');
   }
 
-  async drawInteractive() {
-    //     const instances: string[] = [];
-    //     for (const k of Object.keys(this.main)) {
-    //       const ins = this.main[k];
-    //       // const pos = `(${ins.pos[0]}, ${ins.pos[1]})`;
-    //       const def = await this.drawDefinition(this.definitions.get(ins.type)!, ins.args?.trim());
-    //       instances.push(
-    //         `<g id="cetz-app-${k}" class="typst-cetz-elem" transform="translate(${ins.pos[0]}, ${ins.pos[1]})">${def}</g>`,
-    //       );
-    //     }
+  /// End of Preview Actions
 
-    //     return `<svg viewBox="0 0 ${this.width} ${this.height}" width="${this.width}" height="${
-    //       this.height
-    //     }" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">
-    //   ${instances.join(INEW_LINE)}
-    // </svg>`;
+  /// Begin of Export Actions
 
-    return (await this.exportAs('svg', true)) as string;
+  /**
+   * Export blob to file
+   * @param blob blob to export
+   */
+  private exportBlobTo(blob: Blob) {
+    // Create element with <a> tag
+    const link = document.createElement('a');
+
+    // Add file content in the object URL
+    link.href = URL.createObjectURL(blob);
+
+    // Add file name
+    link.target = '_blank';
+
+    // Add click event to <a> tag to save file.
+    link.click();
+    URL.revokeObjectURL(link.href);
   }
 
-  getDefinitionNames() {
-    return Array.from(this.definitions.keys());
+  /**
+   * Export definition as cetz code
+   * @param def definition
+   * @param extraElemArgs element arguments
+   * @returns
+   */
+  async exportDefinition(def: ElementDefinition, extraElemArgs?: string) {
+    let elemArgs = `node-label: "t"`;
+    if (extraElemArgs) {
+      elemArgs += `, ${extraElemArgs}`;
+    }
+    const mainContent = `
+#import "@preview/cetz:0.1.2"
+#set page(margin: 3pt, width: auto, height: auto)
+#let debug-label(_) = ()
+#cetz.canvas({
+  import cetz.draw: *
+  ${this.getSignatures().join(INEW_LINE)}
+  ${def.id}(${elemArgs})
+}, length: 1pt)
+`;
+    console.log({ mainContent });
+    const content = await $typst.svg({ mainContent });
+    return content;
   }
 
-  async exportAs(kind?: string, interactive?: boolean) {
+  /**
+   * Export as kind
+   * @param kind kind of export
+   * @param interactive whether to export as interactive cetz code
+   */
+  async exportAs(kind: 'cetz', interactive?: boolean): Promise<string>;
+  async exportAs(kind: 'svg', interactive?: boolean): Promise<string>;
+  async exportAs(kind: 'pdf', interactive?: boolean): Promise<Uint8Array>;
+  async exportAs(kind: ExportKind, interactive?: boolean): Promise<string | Uint8Array>;
+  async exportAs(kind: ExportKind, interactive?: boolean): Promise<string | Uint8Array> {
     const instances: string[] = [];
     let prevPos = [0, 0];
     let t = 1;
     const tagMapping: string[] = [];
-    for (const [k, ins] of Object.entries(this.main).sort((x, y) => {
+
+    for (const [k, ins] of Object.entries(this.instances).sort((x, y) => {
       return x[1].idx - y[1].idx;
     })) {
       let args = `node-label: "${k}"`;
@@ -391,7 +439,7 @@ class PreviewState {
 #let debug-label(_) = ()
 #cetz.canvas({
 import cetz.draw: *
-  ${this.sigs(interactive).join(INEW_LINE)}
+  ${this.getSignatures(interactive).join(INEW_LINE)}
   ${instances.join(INEW_LINE)}
 }, length: 1pt)
 `;
@@ -399,214 +447,375 @@ import cetz.draw: *
 
     switch (kind) {
       case 'svg':
-        return this.postProcess(await $typst.svg({ mainContent }), tagMapping);
+        return postProcess(await $typst.svg({ mainContent }));
       case 'pdf':
         return await $typst.pdf({ mainContent });
       case 'cetz':
       default:
         return mainContent;
     }
-  }
 
-  postProcess(svg: string, tagMapping: string[]) {
-    if (!tagMapping.length) {
-      return svg;
+    /**
+     * Post process svg with instrumented tags
+     * @param svgContent svg content
+     * @returns post processed svg content
+     */
+    function postProcess(svgContent: string): string {
+      if (!tagMapping.length) {
+        /// No tag mapping, return original svg content
+        return svgContent;
+      }
+
+      /// Parse svg content
+      const svgDiv = document.createElement('div');
+      svgDiv.innerHTML = svgContent;
+      const svgElem = svgDiv.firstElementChild;
+      if (!svgElem) {
+        return svgContent;
+      }
+
+      /// Post process svg element
+      postProcessElement(svgElem);
+
+      /// Return post processed svg content
+      return svgDiv.innerHTML;
     }
-    const div = document.createElement('div');
-    div.innerHTML = svg;
-    const svgElem = div.firstElementChild;
-    if (!svgElem) {
-      return svg;
-    }
 
-    this.postProcessElement(svgElem, tagMapping);
-    return div.innerHTML;
-  }
+    /**
+     * Post process svg element
+     * @returns if the element is an instrumented tag, return the tag name,
+     * otherwise return undefined
+     */
+    function postProcessElement(elem: Element) {
+      /// Post process path element
+      if (elem.tagName === 'path') {
+        // console.log('found path', elem);
 
-  postProcessElement(elem: Element, tagMapping: string[]) {
-    if (elem.tagName === 'path') {
-      // console.log('found path', elem);
-      // if (elem.)
-      // path data starts with M 0 0 M
-      const pathData = elem.getAttribute('d');
-      if (!pathData) {
+        /// Process `<path d="M 0 0 M ...">` to `<path d="M ...">`
+        /// This would fix the bounding box of the path
+        const pathData = elem.getAttribute('d');
+        if (!pathData) {
+          return;
+        }
+        /// path data starts with M 0 0 M
+        if (pathData.startsWith('M 0 0 M')) {
+          elem.setAttribute('d', pathData.slice('M 0 0 '.length));
+        }
+
+        return undefined;
+      }
+
+      /// Post process other elements
+
+      /// Detect an instrumented tag
+      if (elem.tagName === 'g') {
+        /// Cast a group element to a single inner path element
+        let pathChildren = elem;
+        while (pathChildren && pathChildren.children.length === 1) {
+          pathChildren = pathChildren.children[0];
+        }
+
+        const strokeWith = Number.parseFloat(pathChildren.getAttribute('stroke-width') || '0');
+        if (Math.abs(strokeWith - 0.00012345) < 1e-8) {
+          const color = pathChildren.getAttribute('stroke');
+          // console.log('found color', color);
+          if (!color) {
+            return;
+          }
+          const tagIdx = Number.parseInt(color.replace('#', ''), 16);
+
+          /// Return the tag name
+          return tagMapping[tagIdx - 1];
+        }
+      }
+
+      /// Post process children
+
+      /// Check tags in children
+      /**
+       * Nested identified elements with tags
+       * @example
+       * ```typescript
+       * [['c1', [elem1,elem2]], [undefined, [elem3]]]
+       * ```
+       */
+      const nestElements: [string | undefined, Element[]][] = [];
+      /**
+       * Scanned elements to be appended to `nestElements`
+       */
+      let elements: Element[] = [];
+      /**
+       * Scanned tag start
+       */
+      let tagStart: string | undefined = undefined;
+      for (const child of elem.children) {
+        let tag = postProcessElement(child);
+        if (!tag) {
+          /// Not an instrumented tag, append to `elements`
+          elements.push(child);
+          continue;
+        }
+
+        // console.log('found tagIdx', tag, tagStart);
+
+        /// Found an instrumented tag
+
+        if (!tagStart) {
+          /// No tag start, set tag start
+          tagStart = tag;
+
+          /// Account for untagged elements
+          if (elements.length) {
+            nestElements.push([undefined, elements]);
+            elements = [];
+          }
+        } else {
+          // console.log('found', tagStart, tag);
+
+          /// Broken tag, reset tag start
+          if (tag !== tagStart) {
+            console.warn('broken tag', tagStart, tag);
+            return;
+          }
+
+          /// Account for tagged elements
+          nestElements.push([tag, elements]);
+          elements = [];
+
+          /// Reset tag start
+          tagStart = undefined;
+        }
+      }
+
+      /// No instrumented tag found, return directly
+      if (elements.length === elem.children.length) {
         return;
       }
-      if (pathData.startsWith('M 0 0 M')) {
-        elem.setAttribute('d', pathData.replace('M 0 0', '').trim());
-      }
-    }
 
-    if (elem.tagName === 'g') {
-      let pathChildren = elem;
-      while (pathChildren && pathChildren.children.length === 1) {
-        pathChildren = pathChildren.children[0];
+      // remove all children
+      while (elem.firstChild) {
+        elem.removeChild(elem.firstChild);
       }
-      const strokeWith = Number.parseFloat(pathChildren.getAttribute('stroke-width') || '0');
-      if (Math.abs(strokeWith - 0.00012345) < 1e-6) {
-        const color = pathChildren.getAttribute('stroke');
-        // console.log('found color', color);
-        if (!color) {
-          return;
+      for (const [tag, elements] of nestElements) {
+        if (!tag) {
+          elem.append(...elements!);
+          continue;
         }
-        const tagIdx = Number.parseInt(color.replace('#', ''), 16);
-        return tagMapping[tagIdx - 1];
-      }
-    }
 
-    let elements = [];
-    const nestElements = [];
-    let tagStart: string | undefined = undefined;
-    for (const child of elem.children) {
-      let tag = this.postProcessElement(child, tagMapping);
-      if (!tag) {
-        elements.push(child);
-        continue;
+        /// Create a group element for the tag
+        const g = document.createElement('g');
+        g.setAttribute('id', `cetz-app-${tag}`);
+        g.setAttribute('class', 'typst-cetz-elem');
+        g.append(...elements!);
+        elem.appendChild(g);
       }
 
-      // console.log('found tagIdx', tag, tagStart);
-
-      if (!tagStart) {
-        tagStart = tag;
-        if (elements.length) {
-          nestElements.push([undefined, elements]);
-          elements = [];
-        }
-      } else {
-        // console.log('found', tagStart, tag);
-        if (tag !== tagStart) {
-          return;
-        }
-        nestElements.push([tag, elements]);
-        elements = [];
-        tagStart = undefined;
-      }
-    }
-
-    if (elements.length === elem.children.length) {
-      return;
-    }
-
-    // remove all children
-    while (elem.firstChild) {
-      elem.removeChild(elem.firstChild);
-    }
-    for (const [tag, elements] of nestElements) {
-      if (!tag) {
+      /// Append tail elements
+      if (elements.length) {
         elem.append(...elements!);
-        continue;
       }
 
-      const g = document.createElement('g');
-      g.setAttribute('id', `cetz-app-${tag}`);
-      g.setAttribute('class', 'typst-cetz-elem');
-      g.append(...elements!);
-      elem.appendChild(g);
+      return undefined;
     }
+  }
 
-    if (elements.length) {
-      elem.append(...elements!);
+  /// End of Export Actions
+  /// Begin of DOM State Fetch/Push Actions
+
+  /**
+   * A Fetch Action from DOM
+   *
+   * Find the tagged typst element from the target element
+   * @param target
+   * @returns
+   */
+  findTaggedTypstElement(target: Element) {
+    while (target) {
+      if (target.classList.contains('typst-cetz-elem')) {
+        return target;
+      }
+      target = target.parentElement!;
     }
-
     return undefined;
   }
 
-  async drawDefinition(def: ElementDefinition, extraArgs?: string) {
-    let arg = extraArgs ?? '';
-    const mainContent = `
-#import "@preview/cetz:0.1.2"
-#set page(margin: 0pt, width: auto, height: auto)
-#let debug-label(_) = ()
-#cetz.canvas({
-  import cetz.draw: *
-  ${this.sigs().join(INEW_LINE)}
-  ${def.id}(${arg})
-}, length: 1pt)
-`;
-    console.log({ mainContent });
-    const content = await $typst.svg({ mainContent });
-    return content;
+  /**
+   * A Fetch Action from DOM
+   *
+   */
+  getMousePosition(evt: MouseEvent) {
+    var CTM = this.svgElem!.getScreenCTM()!;
+    return {
+      x: (evt.clientX - CTM.e) / CTM.a,
+      y: (evt.clientY - CTM.f) / CTM.d,
+    };
   }
 
-  sigs(interactive?: boolean) {
-    const sigs: string[] = [];
-    this.definitions.forEach(def => {
-      if (interactive) {
-        sigs.push(def.interactiveSig);
-      } else {
-        sigs.push(def.sig);
+  /**
+   * A Push Action to DOM
+   *
+   */
+  syncMainContent() {
+    const data: string[] = [];
+    for (const [_, ins] of Object.entries(this.instances).sort((x, y) => {
+      return x[1].idx - y[1].idx;
+    })) {
+      let args = '';
+      const argEntries = Object.entries(ins.args ?? {});
+      if (argEntries.length) {
+        args = '  args:';
+        for (const [k, v] of argEntries) {
+          args += `\n    ${k}: ${v}`;
+        }
       }
-    });
-    // console.log(sigs);
-    return sigs;
-  }
-
-  flushDefinitions(editor: EditorState) {
-    // console.log('flushDefinitions', editor);
-    if (editor.definitions) {
-      this.definitions = new Map();
-      for (const def of editor.definitions) {
-        const props = Object.keys(def.props || {})
-          .map(k => `${k}: ${def.props![k]}`)
-          .join(', ');
-        let draw = def.draw.trim();
-        const sig = `let ${def.id}(${props}, tag: black, node-label: none) = ${draw}`;
-        const interactiveSig =
-          def.interactive !== false
-            ? `let ${def.id}(${props}, tag: black, node-label: none) = {
-  rect((0, 0), (1, 1), stroke: 0.00012345pt + tag)
-  let debug-label(pos) = content(pos, box(fill: color.linear-rgb(153, 199, 240, 70%), inset: 5pt, [
-    #set text(fill: color.linear-rgb(0, 0, 0, 70%))
-    #node-label
-  ]))
-  ${draw}
-  rect((0, 0), (1, 1), stroke: 0.00012345pt + tag)
-}`
-            : sig;
-        // console.log({ sig, draw });
-        this.definitions.set(def.id, { ...def, sig, interactiveSig });
+      let [x, y] = ins.pos;
+      if (ins.deltaPos) {
+        x = ins.initPos[0] + ins.deltaPos[0];
+        y = ins.initPos[1] - ins.deltaPos[1];
       }
+      data.push(`- name: ${ins.name}\n  type: ${ins.type}${args}\n  pos: [${x}, ${y}]`);
     }
-    if (editor.width) {
-      this.width = Number.parseFloat(editor.width.replace('pt', ''));
-    }
-    if (editor.height) {
-      this.height = Number.parseFloat(editor.height.replace('pt', ''));
-    }
-    this.flushPreview();
+    this.updateMainContent(data.join('\n'));
   }
 
-  flushMain(editor: any[]) {
-    const main: any = {};
-    let idx = 0;
-    for (let i = 0; i < editor.length; i++) {
-      const ins = editor[i];
-      idx += 1;
-      ins.idx = idx;
-      main[ins.name] = ins;
+  /// End of Render State Fetch/Push Actions
+
+  /// Begin of Rendering Actions
+
+  previewPromise: Promise<void> | null = null;
+
+  /**
+   * Flush Rendering preview panel
+   */
+  renderPreview() {
+    if (this.previewPromise) {
+      this.previewPromise = this.previewPromise
+        .then(() => this.workPreview())
+        .catch(e => console.log(e));
+    } else {
+      this.previewPromise = this.workPreview();
     }
-    this.main = main;
   }
 
-  previewDefinition(id: string) {
-    this.previewingDef = id;
-    this.flushPreview();
-  }
-
-  insertElem(ty: string, id: string) {
-    const def = this.definitions.get(ty);
-    if (!def) {
+  /**
+   * Work for rendering preview panel
+   */
+  async workPreview() {
+    if (!this.panelElem) {
       return;
     }
-    this.main[id] = {
-      type: ty,
-      pos: [0, 0],
-      name: id,
-      idx: Object.keys(this.main).length,
-    };
-    this.flushPreview();
-    this.syncMainContent();
+    const sigs: string[] = [];
+    this.definitions.forEach(def => {
+      sigs.push(def.sig);
+    });
+
+    let content: string | undefined = undefined;
+
+    let isMain = () => false;
+    if (this.previewingDef === '' || this.previewingDef == 'main') {
+      // console.log('previewing main', $typst, this);
+      content = await this.exportAs('svg', true);
+      isMain = () => true;
+    } else {
+      const def = this.definitions.get(this.previewingDef);
+      if (def) {
+        // console.log('previewing definition', def, $typst, this);
+        content = await this.exportDefinition(def);
+      }
+    }
+
+    if (content !== undefined) {
+      // console.log({ content });
+      this.panelElem.innerHTML = content;
+
+      const svgElem = this.panelElem.firstElementChild;
+      this.svgElem = svgElem as any;
+      if (!svgElem) {
+        return;
+      }
+      const width = Number.parseFloat(svgElem.getAttribute('width')!);
+      const height = Number.parseFloat(svgElem.getAttribute('height')!);
+      const cw = document.body.clientWidth / 2 - 40;
+      svgElem.setAttribute('width', cw.toString());
+      svgElem.setAttribute('height', ((height * cw) / width).toString());
+      this.isMain = isMain();
+    }
   }
+
+  /// End of Rendering Actions
+
+  /// Begin of Rendering Drag Actions
+
+  startDrag(evt: MouseEvent) {
+    if (!this.isMain) {
+      return;
+    }
+
+    let target = this.findTaggedTypstElement(evt.target as Element);
+    if (target) {
+      const elem = (this.selectedElem = target as any);
+
+      this.offset = this.getMousePosition(evt);
+      // Get all the transforms currently on this element
+      let transforms = elem.transform.baseVal;
+      // Ensure the first transform is a translate transform
+      if (
+        transforms.length === 0 ||
+        transforms.getItem(0).type !== SVGTransform.SVG_TRANSFORM_TRANSLATE
+      ) {
+        // Create an transform that translates by (0, 0)
+        var translate = this.svgElem!.createSVGTransform();
+        translate.setTranslate(0, 0);
+        // Add the translation to the front of the transforms list
+        elem.transform.baseVal.insertItemBefore(translate, 0);
+      }
+      // Get initial translation amount
+      this.transform = transforms.getItem(0);
+      this.offset.x -= this.transform.matrix.e;
+      this.offset.y -= this.transform.matrix.f;
+
+      const typstId = target.id.replace('cetz-app-', '');
+      if (!this.instances[typstId].initPos) {
+        this.instances[typstId].initPos = [...this.instances[typstId].pos];
+      }
+    } else {
+      this.selectedElem = null;
+    }
+  }
+
+  drag(evt: MouseEvent) {
+    const selectedElement = this.selectedElem;
+    if (selectedElement) {
+      evt.preventDefault();
+      var coord = this.getMousePosition(evt);
+      const x = coord.x - this.offset.x;
+      const y = coord.y - this.offset.y;
+      this.transform.setTranslate(x, y);
+      const typstId = selectedElement.id.replace('cetz-app-', '');
+      this.instances[typstId].deltaPos = [x, y];
+      this.syncMainContent();
+    }
+  }
+
+  endDrag(_evt: MouseEvent) {
+    if (this.selectedElem) {
+      const typstId = this.selectedElem.id.replace('cetz-app-', '');
+      const ins = this.instances[typstId];
+      if (ins.deltaPos) {
+        ins.pos[0] = ins.initPos[0] + ins.deltaPos[0];
+        ins.pos[1] = ins.initPos[1] - ins.deltaPos[1];
+        ins.deltaPos = undefined;
+        ins.initPos = undefined;
+        console.log(JSON.stringify(ins));
+        setTimeout(() => {
+          this.renderPreview();
+        }, 16);
+      }
+      this.selectedElem = null;
+    }
+  }
+
+  /// End of Rendering Drag Actions
 }
 
-(window as any).$preview = new PreviewState();
+window.$preview = new PreviewState();

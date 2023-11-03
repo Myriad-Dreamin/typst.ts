@@ -64,16 +64,15 @@
             language: 'yaml',
             theme: 'vs-dark',
           });
-          window.updateMainContent = v => mainEditor.setValue(v);
-          $preview.bindElement(document.getElementById('preview-panel'));
+          $preview.bindElement(document.getElementById('preview-panel'), v => mainEditor.setValue(v));
           document.getElementById('export-svg').addEventListener('click', () => {
-            $preview.exportSvg();
+            $preview.doExport('svg');
           });
           document.getElementById('export-pdf').addEventListener('click', () => {
-            $preview.exportPdf();
+            $preview.doExport('pdf');
           });
           document.getElementById('export-cetz').addEventListener('click', () => {
-            $preview.exportCetz();
+            $preview.doExport('cetz');
           });
           document.getElementById('insert-elem').addEventListener('click', () => {
             let insertNameValue = insertName.value;
@@ -81,14 +80,14 @@
               insertNameValue = 'node-' + Math.random().toString(36).substring(7).replace('0.', '');
             }
             console.log('insertSelector.value', insertSelector.value, insertNameValue);
-            $preview.insertElem(insertSelector.value, insertNameValue);
+            $preview.doInsertElem(insertSelector.value, insertNameValue);
           });
 
           const triggerSyncDefinition = () => {
             const yml = definitionEditor.getValue();
             script$jsYamlLoad.then(() => {
               try {
-                $preview.flushDefinitions(jsYaml.load(yml));
+                $preview.doSetDefinitions(jsYaml.load(yml));
                 previewSelector.innerHTML = '';
                 insertSelector.innerHTML = '';
                 for (const def of ['main', ...$preview.getDefinitionNames()]) {
@@ -113,7 +112,7 @@
             const yml = mainEditor.getValue();
             script$jsYamlLoad.then(() => {
               try {
-                $preview.flushMain(jsYaml.load(yml));
+                $preview.doSetMainContent(jsYaml.load(yml));
               } catch (e) {
                 console.log('error', e);
               }
@@ -197,10 +196,10 @@ height: 600pt`);
 
           previewSelector.onchange = () => {
             console.log('previewSelector.value', previewSelector.value);
-            $preview.previewDefinition(previewSelector.value);
+            $preview.doSelectDef(previewSelector.value);
           };
 
-          $preview.previewDefinition('');
+          $preview.doSelectDef('');
         });
       };
     </script>
