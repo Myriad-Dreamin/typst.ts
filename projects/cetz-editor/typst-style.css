@@ -7,7 +7,7 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #16161e;
+  background-color: #1a1b26;
   color: rgba(156, 163, 175, 1);
   font-family: BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
     'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
@@ -139,11 +139,11 @@ body {
 }
 
 .editor-code-select option {
-  background-color: #16161e;
+  background-color: #1a1b26;
 }
 
 .editor-input-box {
-  background-color: #16161e;
+  background-color: #1a1b26;
   border: 1px solid hsla(0, 0%, 100%, 0.1);
   border-radius: 0.25rem;
   transition: border-color 0.2s;
@@ -166,7 +166,7 @@ body {
 }
 
 .editor-input-button {
-  background-color: #16161e;
+  background-color: #1a1b26;
   border-radius: 0.25rem;
   border: 1px solid #a3a3a3;
   color: #e5e5e5;

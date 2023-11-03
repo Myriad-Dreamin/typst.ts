@@ -14,7 +14,7 @@ type ModuleSource = 'local' | 'jsdelivr';
 // @ts-ignore
 // import renderer from '@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm?url';
 
-// window.$typst$moduleSource = 'local';
+window.$typst$moduleSource = 'local';
 
 let moduleSource: ModuleSource = (window.$typst$moduleSource || 'jsdelivr') as any;
 
@@ -67,7 +67,7 @@ interface ElementDefinition {
 }
 
 interface DefinitionEditorState {
-  definitions?: ElementDefinition[];
+  content?: string;
   width?: string;
   height?: string;
 }
@@ -189,9 +189,10 @@ export class PreviewState {
    */
   doSetDefinitions(editor: DefinitionEditorState) {
     // console.log('doSetDefinitions', editor);
-    if (editor.definitions) {
+    const defs = this.parseCode(editor.content ?? '', 'definition');
+    if (defs) {
       this.definitions = new Map();
-      for (const def of editor.definitions) {
+      for (const def of defs) {
         const props = Object.keys(def.props || {})
           .map(k => `${k}: ${def.props![k]}`)
           .join(', ');
@@ -226,16 +227,19 @@ export class PreviewState {
    * Set content for preview
    * @param editor editor state
    */
-  doSetMainContent(editor: any[]) {
+  doSetMainContent(editor: { content: string }) {
+    const editorContent = this.parseCode(editor.content, 'main');
+
     const main: any = {};
     let idx = 0;
-    for (let i = 0; i < editor.length; i++) {
-      const ins = editor[i];
+    for (let i = 0; i < editorContent.length; i++) {
+      const ins = editorContent[i];
       idx += 1;
       ins.idx = idx;
       main[ins.name] = ins;
     }
     this.instances = main;
+    this.renderPreview();
   }
 
   /**
@@ -398,7 +402,7 @@ export class PreviewState {
 }, length: 1pt)
 `;
     console.log({ mainContent });
-    const content = await $typst.svg({ mainContent });
+    const content = await this.previewSvg(mainContent);
     return content;
   }
 
@@ -452,9 +456,9 @@ import cetz.draw: *
 
     switch (kind) {
       case 'svg':
-        return postProcess(await $typst.svg({ mainContent }));
+        return postProcess(await this.previewSvg(mainContent));
       case 'pdf':
-        return await $typst.pdf({ mainContent });
+        return await this.previewPdf(mainContent);
       case 'cetz':
       default:
         return mainContent;
@@ -624,6 +628,16 @@ import cetz.draw: *
     }
   }
 
+  async previewSvg(mainContent: string): Promise<string> {
+    await $typst.addSource('/preview.typ', mainContent);
+    return $typst.svg({ mainFilePath: '/preview.typ' });
+  }
+
+  async previewPdf(mainContent: string): Promise<Uint8Array> {
+    await $typst.addSource('/preview.typ', mainContent);
+    return $typst.pdf({ mainFilePath: '/preview.typ' });
+  }
+
   /// End of Export Actions
   /// Begin of DOM State Fetch/Push Actions
 
@@ -678,9 +692,15 @@ import cetz.draw: *
         x = ins.initPos[0] + ins.deltaPos[0];
         y = ins.initPos[1] - ins.deltaPos[1];
       }
-      data.push(`- name: ${ins.name}\n  type: ${ins.type}${args}\n  pos: [${x}, ${y}]`);
+      // data.push(`- name: ${ins.name}\n  type: ${ins.type}${args}\n  pos:
+      // [${x}, ${y}]`);
+      x = Math.round(x * 1000) / 1000;
+      y = Math.round(y * 1000) / 1000;
+      data.push(`make-ins("${ins.name}", (${x}, ${y}), ${ins.type}, (${args}))`);
     }
-    this.updateMainContent(data.join('\n'));
+    this.updateMainContent(`#{
+  ${data.join(INEW_LINE)}
+}`);
   }
 
   /// End of Render State Fetch/Push Actions
@@ -718,7 +738,7 @@ import cetz.draw: *
 
     let isMain = () => false;
     if (this.previewingDef === '' || this.previewingDef == 'main') {
-      // console.log('previewing main', $typst, this);
+      console.log('previewing main', $typst, this);
       content = await this.exportAs('svg', true);
       isMain = () => true;
     } else {
@@ -821,6 +841,543 @@ import cetz.draw: *
   }
 
   /// End of Rendering Drag Actions
+
+  parseCode(s: string, mode: 'definition'): ElementDefinition[];
+  parseCode(s: string, mode: 'main'): any[];
+  parseCode(s: string, mode: 'main' | 'definition') {
+    // ElementDefinition[]
+    // console.log('parseCode', s);
+
+    // analyze brackets
+    let leftChars: [number, string][] = [];
+    let jumpMap = new Map<number, number>();
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      if (c === '(' || c === '{' || c === '[') {
+        leftChars.push([i, c]);
+      } else if (c === ')' || c === '}' || c === ']') {
+        const left = leftChars.pop();
+        if (left === undefined) {
+          throw new Error(`unmatched right bracket at ${i}`);
+        }
+        switch (c) {
+          case ')':
+            if (left[1] !== '(') {
+              throw new Error(`unmatched right bracket at ${i}`);
+            }
+            break;
+          case '}':
+            if (left[1] !== '{') {
+              throw new Error(`unmatched right bracket at ${i}`);
+            }
+            break;
+          case ']':
+            if (left[1] !== '[') {
+              throw new Error(`unmatched right bracket at ${i}`);
+            }
+            break;
+        }
+        jumpMap.set(left[0], i);
+      }
+    }
+
+    console.log(jumpMap);
+
+    // analyze definitions
+
+    function skipLine(i: number) {
+      for (; i < s.length; i++) {
+        const c = s[i];
+        if (c === '\n') {
+          return i;
+        }
+      }
+      return i;
+    }
+
+    function skipSpaces(i: number) {
+      for (; i < s.length; i++) {
+        const c = s[i];
+        if (!' \t\r\n'.includes(c)) {
+          return i;
+        }
+      }
+      return i;
+    }
+
+    const identMatcher = /^[a-zA-Z_][a-zA-Z0-9_\-]*/;
+    function skipIdent(i: number) {
+      let res = identMatcher.exec(s.slice(i));
+      // console.log(res, s.slice(i));
+      if (!res) {
+        return i;
+      }
+
+      return i + res[0].length;
+    }
+
+    const valueMatcher =
+      /^(?:((?:0x[a-zA-Z_]+)|(?:0[a-zA-Z\d]+)|(?:\d*\.?\d*E\-?\d*)|(?:\d*\.(?:\d{0,3}_?)*)|(?:\d+)|(?:\d*\.\d+)))|(?:["`]([^"`\\]|\\.)*["`])/;
+    function skipValue(i: number) {
+      let res = valueMatcher.exec(s.slice(i));
+      // console.log(res, s.slice(i));
+      if (!res) {
+        return i;
+      }
+
+      return i + res[0].length;
+    }
+
+    function skipExpression(i: number) {
+      if ('([{'.includes(s[i])) {
+        let bodyRight = jumpMap.get(i);
+        if (bodyRight === undefined) {
+          throw new Error(`unmatched left bracket at ${i}`);
+        }
+
+        return bodyRight + 1;
+      } else {
+        let j = skipIdent(i);
+        if (i !== j) {
+          return j;
+        }
+
+        j = skipValue(i);
+        if (i !== j) {
+          return j;
+        }
+
+        return skipLine(i);
+      }
+    }
+
+    function eatToken(i: number, token: string) {
+      if (s[i] !== token) {
+        throw new Error(`expected token ${token} at ${i}`);
+      }
+      return i + 1;
+    }
+
+    function parseProps([argsLeft, argsRight]: number[]) {
+      // console.log('parseArgs', s.slice(argsLeft, argsRight));
+
+      const props: Record<string, any> = {};
+
+      for (;;) {
+        let i = skipSpaces(argsLeft);
+        if (i === argsRight) {
+          break;
+        }
+
+        let j = skipIdent(i);
+        if (i === j) {
+          throw new Error(`expected ident at ${i}`);
+        }
+
+        const ident = s.slice(i, j);
+        i = skipSpaces(eatToken(skipIdent(j), ':'));
+        // console.log('found prop', ident, '<<', s.slice(i, i + 10));
+
+        let valueRight = skipExpression(i);
+        let defaultValue = s.slice(i, valueRight);
+        i = skipSpaces(valueRight);
+        // console.log('found propDefault', defaultValue, '<<', s.slice(i, i + 10));
+
+        props[ident] = defaultValue;
+
+        if (s[i] === ',') {
+          i += 1;
+        }
+
+        if (i <= argsLeft) {
+          break;
+        }
+
+        argsLeft = i;
+        // console.log('next round <<', s.slice(i, i + 10));
+      }
+
+      return props;
+    }
+
+    function parseDefinition() {
+      const defs: ElementDefinition[] = [];
+      for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (' \t\r\n'.includes(c)) {
+          continue;
+        }
+        if (c === '#') {
+          i += 1;
+          // console.log('found #', i, s.slice(i, i + 10));
+
+          if (!s.slice(i).startsWith('let')) {
+            i = skipLine(i);
+            continue;
+          }
+
+          i += 3;
+          i = skipSpaces(i);
+          // console.log('found #let', i, '<<', s.slice(i, i + 10));
+
+          let j = skipIdent(i);
+          let ident = s.slice(i, j);
+          // console.log('found #let ident', s.slice(i, j), '<<', s.slice(j, j + 10));
+          i = j;
+
+          i = skipSpaces(i);
+
+          if (!s.slice(i).startsWith('(')) {
+            i = skipLine(i);
+            continue;
+          }
+
+          let fnArgsRight = jumpMap.get(i);
+          if (fnArgsRight === undefined) {
+            throw new Error(`unmatched left bracket at ${i}`);
+          }
+
+          let fnArgs = [i + 1, fnArgsRight];
+          i = fnArgsRight + 1;
+
+          // console.log('found #let ident(args = ...)', s.slice(i, i + 10));
+
+          i = skipSpaces(eatToken(skipSpaces(i), '='));
+
+          // console.log('found #let ident(args = ...) = $exp = ', s.slice(i, i + 10));
+
+          let bodyRight = skipExpression(i);
+          let body = s.slice(i, bodyRight);
+          i = bodyRight;
+
+          const def = {
+            id: ident,
+            props: parseProps(fnArgs),
+            draw: body,
+          };
+          // console.log('found definition', def);
+
+          defs.push(def as ElementDefinition);
+        } else if (c === '/') {
+          i += 1;
+          if (s.slice(i).startsWith('/')) {
+            i = skipLine(i);
+          } else if (s.slice(i).startsWith('*')) {
+            i += 1;
+            while (i < s.length) {
+              if (s.slice(i).startsWith('*/')) {
+                i += 2;
+                break;
+              }
+              i += 1;
+            }
+          } else {
+            throw new Error(`invalid character ${c} at ${i}`);
+          }
+        } else {
+          throw new Error(`invalid character ${c} at ${i}`);
+        }
+      }
+
+      return defs;
+    }
+
+    function parseMainContent() {
+      // console.log('parseMainContent', s);
+      const instances: any[] = [];
+      let i = 0;
+      i = eatToken(skipSpaces(i), '#');
+      if (!s.slice(i).startsWith('{')) {
+        throw new Error(`expected left bracket at ${i}`);
+      }
+
+      let j = jumpMap.get(i);
+      if (j === undefined) {
+        throw new Error(`unmatched left bracket at ${i}`);
+      }
+      let bodyRight = j;
+      j = skipSpaces(j + 1);
+      if (j !== s.length) {
+        throw new Error(`unexpected content at ${j}`);
+      }
+      // console.log('found #{ ... }', s.slice(i + 1, j - 1));
+
+      let bodyLeft = i + 1;
+      while (bodyLeft < bodyRight) {
+        i = bodyLeft;
+        i = skipSpaces(i);
+        if (i >= bodyRight) {
+          break;
+        }
+        j = skipIdent(i);
+        if (i === j) {
+          throw new Error(`expected ident at ${i}`);
+        }
+        let ident = s.slice(i, j);
+        i = skipSpaces(j);
+        // console.log('found ident', ident, '<<', s.slice(i, i + 10));
+
+        if (!s.slice(i).startsWith('(')) {
+          throw new Error(`expected call at ${i}`);
+        }
+        let fnArgsRight = jumpMap.get(i);
+        if (fnArgsRight === undefined) {
+          throw new Error(`unmatched left bracket at ${i}`);
+        }
+        let fnArgs = [];
+
+        i += 1;
+        while (i < fnArgsRight) {
+          i = skipSpaces(i);
+          let arg = skipExpression(i);
+          fnArgs.push([i, arg]);
+          i = skipSpaces(arg);
+          if (s[i] === ',') {
+            i += 1;
+          }
+        }
+
+        i = fnArgsRight + 1;
+
+        // console.log(
+        //   'found call',
+        //   { ident, fnArgs: fnArgs.map(e => s.slice(e[0], e[1])) },
+        //   i,
+        //   '<<',
+        //   s.slice(i, i + 10),
+        // );
+
+        if (ident === 'make-ins') {
+          fnArgs = fnArgs.map(e => [e[0] + 1, e[1] - 1]);
+          const nodeName = s.slice(fnArgs[0][0], fnArgs[0][1]);
+          const position = s
+            .slice(fnArgs[1][0], fnArgs[1][1])
+            .split(',')
+            .map(e => Number.parseFloat(e.trim()));
+          const ty = s.slice(fnArgs[2][0], fnArgs[2][1]);
+          // console.log('parseProps', s.slice(fnArgs[3][0], fnArgs[3][1]));
+          const fnArgsParsed = parseProps(fnArgs[3]);
+          const ins = {
+            name: nodeName,
+            pos: position,
+            type: ty,
+            args: fnArgsParsed,
+          };
+          // console.log('found instance', ins);
+          instances.push(ins);
+        } else {
+          throw new Error(`unknown function ${ident} at ${i}`);
+        }
+
+        if (i <= bodyLeft) {
+          break;
+        }
+        bodyLeft = i;
+      }
+
+      return instances;
+    }
+
+    switch (mode) {
+      case 'definition':
+        return parseDefinition();
+      case 'main':
+        return parseMainContent();
+      default:
+        throw new Error(`unknown mode ${mode}`);
+    }
+  }
+
+  async queryInstances(content: string) {
+    const instances: any[] = [];
+    await $typst.addSource(
+      '/cetz-editor-preset.typ',
+      `#let instances-state = state("instance", ())
+#let template(content) = {
+  locate(loc => [
+    #metadata(instances-state.final(loc)) <cetz-instances>
+  ])
+  content
+}
+#let make-ins(name, pos, factory, props) = {
+  instances-state.update(it => {
+    it.push((name: name, pos: pos, factory: factory, props: props))
+    it
+  })
+}`,
+    );
+    await $typst.addSource('/query-instance.typ', content);
+    const checkedInstances = await $typst.query({
+      mainFilePath: '/query-instance.typ',
+      selector: '<cetz-instances>',
+    });
+    console.log(checkedInstances);
+    return instances;
+  }
+}
+
+const scopeRenamingRules: { scopes: Record<string, any> } = {
+  scopes: {
+    // vscode rules
+    namespace: ['entity.name.namespace'],
+    type: ['entity.name.type'],
+    'type.defaultLibrary': ['support.type'],
+    struct: ['storage.type.struct'],
+    class: ['entity.name.type.class'],
+    'class.defaultLibrary': ['support.class'],
+    interface: ['entity.name.type.interface'],
+    enum: ['entity.name.type.enum'],
+    function: ['entity.name.function'],
+    'function.defaultLibrary': ['support.function'],
+    method: ['entity.name.function.member'],
+    macro: ['entity.name.function.macro'],
+    variable: ['variable.other.readwrite , entity.name.variable'],
+    'variable.readonly': ['variable.other.constant'],
+    'variable.readonly.defaultLibrary': ['support.constant'],
+    parameter: ['variable.parameter'],
+    property: ['variable.other.property'],
+    'property.readonly': ['variable.other.constant.property'],
+    enumMember: ['variable.other.enummember'],
+    event: ['variable.other.event'],
+
+    // typst rules
+    '*.strong.emph': ['markup.bold.typst markup.italic.typst'],
+    '*.strong': ['markup.bold.typst'],
+    '*.emph': ['markup.italic.typst'],
+    '*.math': ['markup.math.typst'],
+    bool: ['constant.language.boolean.typst'],
+    punct: ['punctuation.typst', 'punctuation.definition.typst'],
+    escape: [
+      'constant.character.escape.typst',
+      'keyword.operator.typst',
+      'punctuation.definition.typst',
+    ],
+    link: ['markup.underline.link.typst'],
+    raw: ['markup.inline.raw.typst', 'markup.raw.inline.typst'],
+    'delim.math': [
+      'punctuation.definition.math.typst',
+      'punctuation.definition.string.end.math.typst',
+      'string.quoted.other.typst',
+    ],
+    pol: ['variable.other.readwrite , entity.name.variable'],
+  },
+};
+
+const typstTokens = [
+  'comment',
+  'string',
+  'keyword',
+  'operator',
+  'number',
+  'function',
+  'decorator',
+  'bool',
+  'punctuation',
+  'escape',
+  'link',
+  'raw',
+  'label',
+  'ref',
+  'heading',
+  'marker',
+  'term',
+  'delim',
+  'pol',
+  'error',
+  'text',
+];
+
+(window as any).adaptVsCodeThemeForTypst = (theme: any) => {
+  const { tokenColors, semanticTokenColors } = theme;
+
+  // ...Object.keys(vscodeTheme.semanticTokenColors).map((k) => {
+  //   return { token: k, foreground: vscodeTheme.semanticTokenColors[k] };
+  // }),
+  const newTokenColors: any[] = [];
+  const defaultSettings = { foreground: theme.colors.foreground };
+
+  const rules = new Map<string, any>();
+  for (const tokenColor of tokenColors) {
+    for (const s of tokenColor.scope) {
+      rules.set(s, tokenColor);
+    }
+  }
+
+  const semanticTokenRules = new Map<string, any>();
+  for (const [k, settings] of Object.entries(semanticTokenColors)) {
+    semanticTokenRules.set(k, settings);
+
+    if (k.startsWith('*.')) {
+      let suffix = k.slice('*.'.length);
+      for (const token of typstTokens) {
+        semanticTokenRules.set(`${token}.${suffix}`, settings);
+      }
+    }
+  }
+
+  for (const [k, renamedScopes] of Object.entries(scopeRenamingRules.scopes)) {
+    let scopes: string[] = [];
+    if (k.startsWith('*.')) {
+      let suffix = k.slice('*.'.length);
+      for (const token of typstTokens) {
+        scopes.push(`${token}.${suffix}`);
+      }
+    } else {
+      scopes.push(k);
+    }
+
+    let settings = defaultSettings;
+    if (semanticTokenRules.has(k)) {
+      settings = semanticTokenRules.get(k);
+    } else {
+      for (let i = 0; i < renamedScopes.length; i++) {
+        const renamedScope = renamedScopes[i];
+
+        for (let j = renamedScope.length; j > 0; j--) {
+          if (j !== renamedScope.length && renamedScope[j] !== '.') {
+            continue;
+          }
+          const rule = rules.get(renamedScope.slice(0, j));
+          if (rule) {
+            settings = rule.settings;
+            break;
+          }
+        }
+      }
+    }
+    newTokenColors.push({
+      name: `typst ${k}`,
+      scope: scopes,
+      settings,
+    });
+  }
+
+  console.log('newTokenColors', rules, newTokenColors);
+  return {
+    ...theme,
+    tokenColors: [...tokenColors, ...newTokenColors],
+  };
+};
+
+class SemanticTokensProvider {
+  constructor(private legend: any) {}
+
+  getLegend() {
+    return this.legend;
+  }
+
+  async provideDocumentSemanticTokens(model: any, lastResultId: string) {
+    // todo: support incremental update
+    void lastResultId;
+    await $typst.addSource('/semantic-tokens.typ', model.getValue());
+    return $typst.getSemanticTokens({ mainFilePath: '/semantic-tokens.typ' });
+  }
+
+  async releaseDocumentSemanticTokens(resultId: string) {}
 }
 
 window.$preview = new PreviewState();
+
+window.$typst$semanticTokensProvider = $typst.getSemanticTokenLegend().then(legend => {
+  return new SemanticTokensProvider(legend);
+});
