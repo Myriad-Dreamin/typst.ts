@@ -40,12 +40,17 @@
                         <span>from</span>
                         <div class="flex-row" style="display: inline-flex; justify-content:
             space-around; gap: 5px">
-                            <select id="definition-source-selector" class="editor-code-select">
-                                <option value="builtin">builtin</option>
+                            <select id="definition-source-selector"
+                            class="editor-code-select" style="width: 5em;">
+                                <option value="builtin">Builtin</option>
                                 <option value="url">Url</option>
                                 <option value="file">File</option>
                             </select>
-                            <input id="definition-source-value" class="editor-input-box" type="text" placeholder="https://..." />
+                            <input id="definition-source-value"
+                            class="editor-input-box" type="text"
+                            placeholder="https://..." />
+                            <button id="definition-source-confirm"
+                            class="editor-input-button">Pull</button>
                         </div>
                         </div>
                     <div class="editor-action-group">
@@ -101,7 +106,7 @@
                     );
                 }
             }
-            console.log("baseTokenColors", baseTokenColors);
+            // console.log("baseTokenColors", baseTokenColors);
             const monacoTheme = {
                 base: "vs-dark",
                 inherit: true,
@@ -119,6 +124,7 @@
             const previewSelector = document.getElementById('preview-selector');
             const definitionSourceSelector = document.getElementById('definition-source-selector');
             const definitionSourceValue = document.getElementById('definition-source-value');
+            const definitionSourceConfirm = document.getElementById('definition-source-confirm');
             const inputSvgWidth = document.getElementById('input-svg-width');
             const inputSvgHeight = document.getElementById('input-svg-height');
             inputSvgWidth.value = inputSvgHeight.value = '600';
@@ -223,7 +229,45 @@
                     triggerSyncMain();
                 });
 
-                const builtinDefinitions = `
+                const checkDefinitionSource = () => {
+                    if (definitionSourceSelector.value === 'builtin') {
+                        definitionEditor.setValue(builtinDefinitions);
+                    } else if (definitionSourceSelector.value === 'url') {
+                        console.log('definitionSourceValue.value', definitionSourceValue.value);
+                        if (definitionSourceValue.value) {
+                            fetch(definitionSourceValue.value).then(r => r.text()).then(t => {
+                                definitionEditor.setValue(t);
+                            });
+                        }
+                        // set url param
+                        const urlParams = new URLSearchParams(window.location.search);
+                        urlParams.set('url', definitionSourceValue.value);
+                        window.history.replaceState({}, '', `${location.pathname}?${urlParams}`);
+                    } else if (definitionSourceSelector.value === 'file') {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.onchange = () => {
+                            const file = input.files[0];
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                                definitionEditor.setValue(reader.result);
+                            };
+                            reader.readAsText(file);
+                            definitionSourceValue.value = file.name;
+                        };
+                        input.click();
+                    }
+                };
+
+                /// check ?url=xxx option
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlParamUrl = urlParams.get('url');
+                if (urlParamUrl) {
+                    definitionSourceSelector.value = 'url';
+                    definitionSourceValue.value = urlParamUrl;
+                    checkDefinitionSource();
+                } else {
+                    const builtinDefinitions = `
 #let x-circle(rad: 200, inner-text: "") = {
   circle((0, 0), radius: rad, name: node-label)
   debug-label((-rad*0.7, -rad*0.7))
@@ -245,29 +289,6 @@
   content("t", inner-text)
 }`;
                 definitionEditor.setValue(builtinDefinitions);
-                //         mainEditor.setValue(`
-                // - name: c0
-                //   type: x-circle
-                //   args:
-                //     rad: 50
-                //   pos: [0, 0]
-                // - name: c1
-                //   type: x-rect
-                //   args:
-                //     x: 100
-                //   pos: [50, 50]
-                // - name: c2
-                //   type: x-circle
-                //   args:
-                //     rad: 50
-                //   pos: [200, 0]
-                // - name: c1toc2
-                //   type: x-arrow
-                //   args:
-                //     start: '"c1"'
-                //     end: '"c2"'
-                //   pos: [0, 0]
-                // `);
                 mainEditor.setValue(`#{
   make-ins("c0", (0, 0), "x-circle", (rad: 50))
   make-ins("c1", (50, 50), "x-rect", (x: 100))
@@ -275,6 +296,8 @@
   make-ins("c1toc2", (0, 0), "x-arrow", (start: "c1", end: "c2"))
 }
 `);
+                }
+
                 triggerSyncEditorState();
                 triggerSyncMain();
 
@@ -285,30 +308,11 @@
 
                 $preview.doSelectDef('');
 
+                definitionSourceConfirm.onclick = checkDefinitionSource;
                 definitionSourceSelector.onchange = () => {
-                    if (definitionSourceSelector.value === 'builtin') {
-                        definitionEditor.setValue(builtinDefinitions);
-                    } else if (definitionSourceSelector.value === 'url') {
-                        console.log('definitionSourceValue.value', definitionSourceValue.value);
-                        if (definitionSourceValue.value) {
-                            fetch(definitionSourceValue.value).then(r => r.text()).then(t => {
-                                definitionEditor.setValue(t);
-                            });
-                        }
-                    } else if (definitionSourceSelector.value === 'file') {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.onchange = () => {
-                            const file = input.files[0];
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                                definitionEditor.setValue(reader.result);
-                            };
-                            reader.readAsText(file);
-                            definitionSourceValue.value = file.name;
-                        };
-                        input.click();
-                    }
+                    if (definitionSourceSelector.value === 'builtin' || definitionSourceSelector.value === 'file') {
+                        checkDefinitionSource();
+                    } 
                 };
             });
         };

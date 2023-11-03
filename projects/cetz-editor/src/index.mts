@@ -738,7 +738,7 @@ import cetz.draw: *
 
     let isMain = () => false;
     if (this.previewingDef === '' || this.previewingDef == 'main') {
-      console.log('previewing main', $typst, this);
+      // console.log('previewing main', $typst, this);
       content = await this.exportAs('svg', true);
       isMain = () => true;
     } else {
@@ -881,7 +881,7 @@ import cetz.draw: *
       }
     }
 
-    console.log(jumpMap);
+    // console.log(jumpMap);
 
     // analyze definitions
 
@@ -1352,7 +1352,7 @@ const typstTokens = [
     });
   }
 
-  console.log('newTokenColors', rules, newTokenColors);
+  // console.log('newTokenColors', rules, newTokenColors);
   return {
     ...theme,
     tokenColors: [...tokenColors, ...newTokenColors],
