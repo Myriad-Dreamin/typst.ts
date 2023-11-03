@@ -44,3 +44,20 @@ export interface Rect {
 }
 
 export type TransformMatrix = [number, number, number, number, number, number];
+
+//#region Semantic tokens: https://github.com/microsoft/vscode/issues/86415
+export interface SemanticTokensLegend {
+  readonly tokenTypes: string[];
+  readonly tokenModifiers: string[];
+}
+
+export interface SemanticTokens {
+  /**
+   * The result id of the tokens.
+   *
+   * This is the id that will be passed to `DocumentSemanticTokensProvider.provideDocumentSemanticTokensEdits` (if implemented).
+   */
+  readonly resultId?: string;
+  readonly data: Uint32Array;
+}
+//#endregion

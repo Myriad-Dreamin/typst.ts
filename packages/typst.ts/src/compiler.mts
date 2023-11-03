@@ -1,7 +1,7 @@
 // @ts-ignore
 import type * as typst from '@myriaddreamin/typst-ts-web-compiler/pkg/wasm-pack-shim.mjs';
 import { buildComponent, globalFontPromises } from './init.mjs';
-import { FsAccessModel } from './internal.types.mjs';
+import { FsAccessModel, SemanticTokens, SemanticTokensLegend } from './internal.types.mjs';
 
 import { preloadRemoteFonts, type InitOptions } from './options.init.mjs';
 import { LazyWasmModule } from './wasm.mjs';
@@ -62,6 +62,12 @@ export interface TypstCompiler {
   compile(options: CompileOptions): Promise<Uint8Array>;
 
   /**
+   * experimental
+   * Query the result with document
+   */
+  query<T>(options: { mainFilePath: string; selector: string; field?: string }): Promise<T>;
+
+  /**
    * Print the AST of the main file.
    * @param {string} mainFilePath - The path of the main file.
    * @returns {Promise<string>} - an string representation of the AST.
@@ -100,6 +106,18 @@ export interface TypstCompiler {
    * experimental
    */
   loadSnapshot(snapshot: unknown, fontServer: FsAccessModel): Promise<any>;
+
+  /**
+   * experimental
+   * See Semantic tokens: https://github.com/microsoft/vscode/issues/86415
+   */
+  getSemanticTokenLegend(): Promise<SemanticTokensLegend>;
+
+  /**
+   * experimental
+   * See Semantic tokens: https://github.com/microsoft/vscode/issues/86415
+   */
+  getSemanticTokens(opts: { mainFilePath: string; resultId?: string }): Promise<SemanticTokens>;
 }
 
 const gCompilerModule = new LazyWasmModule(async (bin?: any) => {
@@ -158,6 +176,27 @@ class TypstCompilerDriver {
   compile(options: CompileOptions): Promise<Uint8Array> {
     return new Promise<Uint8Array>(resolve => {
       resolve(this.compiler.compile(options.mainFilePath, options.format || 'vector'));
+    });
+  }
+
+  query(options: { mainFilePath: string; selector: string; field?: string }): Promise<any> {
+    return new Promise<any>(resolve => {
+      resolve(
+        JSON.parse(this.compiler.query(options.mainFilePath, options.selector, options.field)),
+      );
+    });
+  }
+
+  getSemanticTokenLegend(): Promise<SemanticTokensLegend> {
+    return new Promise<SemanticTokensLegend>(resolve => {
+      resolve(this.compiler.get_semantic_token_legend());
+    });
+  }
+
+  getSemanticTokens(opts: { mainFilePath: string; resultId?: string }): Promise<SemanticTokens> {
+    return new Promise<SemanticTokens>(resolve => {
+      this.compiler.reset();
+      resolve(this.compiler.get_semantic_tokens(opts.mainFilePath, opts.resultId) as any);
     });
   }
 

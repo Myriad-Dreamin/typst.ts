@@ -24,6 +24,7 @@ base64.workspace = true
 once_cell.workspace = true
 elsa.workspace = true
 serde-wasm-bindgen.workspace = true
+serde_json.workspace = true
 
 # Everything to do with wasm
 wasm-bindgen.workspace = true
