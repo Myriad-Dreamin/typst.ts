@@ -1,11 +1,26 @@
+@font-face {
+  font-family: Inter;
+  src: local('Inter'),
+    url('https://interactive-examples.mdn.mozilla.net/media/fonts/Inter.var.woff2');
+}
+
 body {
   margin: 0;
   padding: 0;
+  background-color: #16161e;
+  color: rgba(156, 163, 175, 1);
+  font-family: BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 }
 
-#main {
+.flex-row {
   display: flex;
   flex-direction: row;
+}
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
 }
 
 #preview {
@@ -15,6 +30,8 @@ body {
 
 #preview-panel {
   padding: 20px;
+  background-color: white;
+  overflow: scroll;
 }
 .typst-cetz-elem {
   pointer-events: bounding-box;
@@ -34,6 +51,21 @@ body {
   background-color: #f7fafc;
 }
 
+.editor-menu {
+  padding: 0 0.61rem;
+  font-family: BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  border: 0px solid #cbd5e0;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s;
+}
+
+.editor-menu:hover {
+  cursor: pointer;
+  /* border rect */
+  background-color: hsla(0, 0%, 100%, 0.15);
+}
+
 .hidden {
   /* The menu is hidden at first */
   display: none;
@@ -49,4 +81,101 @@ body {
 
 .menu-item input {
   float: right;
+}
+
+.editor-action-group,
+.editor-menu-group {
+  display: inline-block;
+  border-width: 1px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  padding: 3px;
+}
+
+#insert-name {
+  max-width: 80px;
+}
+
+.editor-code-select {
+  appearance: none;
+  /* safari */
+  -webkit-appearance: none;
+  /* other styles for aesthetics */
+  width: 6.5em;
+  background-color: hsla(0, 0%, 100%, 0.1);
+
+  transition: color 0.3s;
+}
+.editor-code-select:focus,
+.editor-code-select:focus-visible {
+  outline: none;
+}
+
+.editor-code-select:hover,
+.editor-code-select:focus,
+.editor-code-select:focus-visible {
+  color: #fff;
+}
+
+.editor-code-select,
+.editor-code-select option {
+  text-overflow: ellipsis;
+  padding: 0.125rem 0.25em;
+  font-size: 1rem;
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  border-radius: 0.25rem;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    Liberation Mono,
+    Courier New,
+    monospace;
+}
+
+.editor-code-select option {
+  background-color: #16161e;
+}
+
+.editor-input-box {
+  background-color: #16161e;
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  border-radius: 0.25rem;
+  transition: border-color 0.2s;
+  color: #e5e5e5;
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    Liberation Mono,
+    Courier New,
+    monospace;
+}
+
+.editor-input-box:focus,
+.editor-input-box:focus-visible {
+  outline: none;
+  border-color: hsla(0, 0%, 100%, 0.5);
+}
+
+.editor-input-button {
+  background-color: #16161e;
+  border-radius: 0.25rem;
+  border: 1px solid #a3a3a3;
+  color: #e5e5e5;
+  transition: border-color 0.3s;
+  font-weight: 500;
+  font-family: Inter, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
+    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+.editor-input-button:hover {
+  border-color: #e5e5e5;
 }

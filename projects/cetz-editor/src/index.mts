@@ -249,6 +249,11 @@ export class PreviewState {
     if (!def) {
       return;
     }
+
+    if (this.instances[id]) {
+      return;
+    }
+
     this.instances[id] = {
       type: ty,
       pos: [0, 0],
