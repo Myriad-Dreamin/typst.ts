@@ -2,299 +2,319 @@
 <html lang="en">
 
 <head>
-  <link rel="icon" href="favicon.svg" />
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cetz Editor</title>
-  <script>
-    window.script$jsYamlLoad = new Promise(resolve => {
-      window.script$jsYamlLoadResolve = resolve;
-    });
-  </script>
-  <script id="script-main" type="module" src="/dist/esm/index.mjs"></script>
-  <link rel="stylesheet" href="typst-style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.33.0/dev/vs/loader.min.js"></script>
-  <script type="module">
-    import jsYaml from 'https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/+esm';
-    window.jsYaml = jsYaml;
-    window.script$jsYamlLoadResolve(jsYaml);
-  </script>
+    <link rel="icon" href="favicon.svg" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cetz Editor</title>
+    <script>
+        window.script$jsYamlLoad = new Promise(resolve => {
+            window.script$jsYamlLoadResolve = resolve;
+        });
+    </script>
+    <script id="script-main" type="module" src="/dist/esm/index.mjs"></script>
+    <link rel="stylesheet" href="typst-style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.33.0/dev/vs/loader.min.js"></script>
 </head>
 
 <body style="height: 100vh; overflow: hidden">
-  <div class="editor-main flex-column" style="height: 100vh">
-    <div class="top-panel" style="flex: 0 0 auto">
-      <div class="flex-row" style="margin: 5px; align-items: center;">
-        <image src="favicon.svg" style="height: 1rem; margin: 3px; margin-left: 2px;"></image>
-        <div class="editor-menu-group" style="margin-left: 1em; padding: 1px 3px;">
-          <a class="editor-menu" id="export-svg">SVG</a>
-          <a class="editor-menu" id="export-pdf">PDF</a>
-          <a class="editor-menu" id="export-cetz">CeTZ</a>
-          <a class="editor-menu" id="export-elem">Element</a>
-        </div>
-      </div>
-    </div>
-    <div class="bottom-panel flex-row" style="flex: 1">
-      <div style="flex: 0 0 35px">
-      </div>
-      <div class="flex-column" style="flex: 1">
-        <div style="margin: 5px; flex: 1">
-          <div class="editor-action-group">
-            <span>definition:</span>
-            <select id="preview-selector" class="editor-code-select"></select>
-          </div>
-          <div class="editor-action-group">
-            <span>element:</span>
-            <div class="flex-row" style="display: inline-flex; justify-content:
-            space-around; gap: 5px">
-              <select id="insert-selector" class="editor-code-select"></select>
-              <input id="insert-name" class="editor-input-box" type="text" placeholder="name" />
-              <button id="insert-elem" class="editor-input-button">Insert</button>
+    <div class="editor-main flex-column" style="height: 100vh">
+        <div class="top-panel" style="flex: 0 0 auto">
+            <div class="flex-row" style="margin: 5px; align-items: center;">
+                <image src="favicon.svg" style="height: 1rem; margin: 3px; margin-left: 2px;"></image>
+                <div class="editor-menu-group" style="margin-left: 1em; padding: 1px 3px;">
+                    <a class="editor-menu" id="export-svg">SVG</a>
+                    <a class="editor-menu" id="export-pdf">PDF</a>
+                    <a class="editor-menu" id="export-cetz">CeTZ</a>
+                    <a class="editor-menu" id="export-elem">Element</a>
+                </div>
             </div>
-          </div>
-          <div class="editor-action-group" style="float: right;">
-            <span>viewport:</span>
-            <input id="input-svg-width" class="editor-input-box" type="text"
-            placeholder="width" style="width: 2.5em;" />
-            <span>·</span>
-            <input id="input-svg-height" class="editor-input-box" type="text" placeholder="height" style="width: 2.5em;" />
-          </div>
         </div>
-        <div class="flex-row" style="flex: 1">
-          <div class="flex-column" style="flex: 4; height: 100vh">
-            <div id="def-editor" style="flex: 5"></div>
-            <div id="main-editor" style="flex: 2"></div>
-          </div>
-          <div id="preview" style="flex: 6">
-            <div id="preview-panel"></div>
-          </div>
+        <div class="bottom-panel flex-row" style="flex: 1">
+            <div style="flex: 0 0 35px">
+            </div>
+            <div class="flex-column" style="flex: 1">
+                <div style="margin: 5px; flex: 1">
+                    <div class="editor-action-group">
+                        <span>definition:</span>
+                        <select id="preview-selector" class="editor-code-select"></select>
+                        <span>from</span>
+                        <div class="flex-row" style="display: inline-flex; justify-content:
+            space-around; gap: 5px">
+                            <select id="definition-source-selector" class="editor-code-select">
+                                <option value="builtin">builtin</option>
+                                <option value="url">Url</option>
+                                <option value="file">File</option>
+                            </select>
+                            <input id="definition-source-value" class="editor-input-box" type="text" placeholder="https://..." />
+                        </div>
+                        </div>
+                    <div class="editor-action-group">
+                        <span>element:</span>
+                        <div class="flex-row" style="display: inline-flex; justify-content:
+            space-around; gap: 5px">
+                            <select id="insert-selector" class="editor-code-select"></select>
+                            <input id="insert-name" class="editor-input-box" type="text" placeholder="name" />
+                            <button id="insert-elem" class="editor-input-button">Insert</button>
+                        </div>
+                    </div>
+                    <div class="editor-action-group" style="float: right;">
+                        <span>viewport:</span>
+                        <input id="input-svg-width" class="editor-input-box" type="text" placeholder="width"
+                            style="width: 2.5em;" />
+                        <span>·</span>
+                        <input id="input-svg-height" class="editor-input-box" type="text" placeholder="height"
+                            style="width: 2.5em;" />
+                    </div>
+                </div>
+                <div class="flex-row" style="flex: 1">
+                    <div class="flex-column" style="flex: 4; height: 100vh">
+                        <div id="def-editor" style="flex: 5"></div>
+                        <div id="main-editor" style="flex: 2"></div>
+                    </div>
+                    <div id="preview" style="flex: 6">
+                        <div id="preview-panel"></div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
-  <script>
-    function parseJson5(str) {
-      str = str.replace(
-        /\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g,
-        (m, g) => (g ? "" : m)
-      );
-      return JSON.parse(str);
-    }
-
-    function monacoThemeFromVscTheme(vscodeTheme) {
-      const baseTokenColors = [];
-      for (const tc of vscodeTheme.tokenColors) {
-        if (typeof tc.scope === "string") {
-          baseTokenColors.push({ token: tc.scope, ...tc.settings });
-        } else {
-          baseTokenColors.push(
-            ...tc.scope.map((s) => {
-              return { token: s, ...tc.settings };
-            })
-          );
+    <script>
+        function parseJson5(str) {
+            str = str.replace(
+                /\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g,
+                (m, g) => (g ? "" : m)
+            );
+            return JSON.parse(str);
         }
-      }
-      console.log("baseTokenColors", baseTokenColors);
-      const monacoTheme = {
-        base: "vs-dark",
-        inherit: true,
-        colors: vscodeTheme.colors,
-        rules: [
-          ...Object.keys(vscodeTheme.semanticTokenColors).map((k) => {
-            return { token: k, foreground: vscodeTheme.semanticTokenColors[k] };
-          }),
-          ...baseTokenColors,
-        ],
-      };
-      return monacoTheme;
-    }
 
-
-
-    window.onload = function () {
-      const insertSelector = document.getElementById('insert-selector');
-      const insertName = document.getElementById('insert-name');
-      const previewSelector = document.getElementById('preview-selector');
-      const inputSvgWidth = document.getElementById('input-svg-width');
-      const inputSvgHeight = document.getElementById('input-svg-height');
-      inputSvgWidth.value = inputSvgHeight.value = '600';
-
-      // require is provided by loader.min.js.
-      require.config({
-        paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.33.0/min/vs' },
-      });
-      require(['vs/editor/editor.main'], () => {
-        monaco.editor.defineTheme("tokyo-night", tokyoNightTheme());
-        const definitionEditor = monaco.editor.create(document.getElementById('def-editor'), {
-          value: '',
-          language: 'yaml',
-          theme: 'tokyo-night',
-        });
-        const mainEditor = monaco.editor.create(document.getElementById('main-editor'), {
-          value: '',
-          language: 'yaml',
-          theme: 'tokyo-night',
-        });
-        $preview.bindElement(document.getElementById('preview-panel'), v => mainEditor.setValue(v));
-        document.getElementById('export-svg').addEventListener('click', () => {
-          $preview.doExport('svg');
-        });
-        document.getElementById('export-pdf').addEventListener('click', () => {
-          $preview.doExport('pdf');
-        });
-        document.getElementById('export-cetz').addEventListener('click', () => {
-          $preview.doExport('cetz');
-        });
-        document.getElementById('insert-elem').addEventListener('click', () => {
-          let insertNameValue = insertName.value;
-          if (!insertNameValue) {
-            insertNameValue = 'node-' + Math.random().toString(36).substring(7).replace('0.', '');
-          }
-          console.log('insertSelector.value', insertSelector.value, insertNameValue);
-          $preview.doInsertElem(insertSelector.value, insertNameValue);
-        });
-
-        const checkLength = (v) => {
-          if (v.endsWith('pt')) {
-            v = v.substring(0, t.length - 2);
-          }
-          if (!v) {
-            v = '600';
-          }
-
-          const t = Number.parseFloat(v);
-          if (Number.isNaN(t)) {
-            throw new Error('invalid number');
-          }
-
-          return `${t}pt`;
-        };
-
-        const triggerSyncEditorState = () => {
-          const yml = definitionEditor.getValue();
-          script$jsYamlLoad.then(() => {
-            try {
-              const defs = jsYaml.load(yml);
-              defs.width = checkLength(inputSvgWidth.value);
-              defs.height = checkLength(inputSvgHeight.value);
-              $preview.doSetDefinitions({ ...defs });
-              previewSelector.innerHTML = '';
-              insertSelector.innerHTML = '';
-              for (const def of ['main', ...$preview.getDefinitionNames()]) {
-                const option = document.createElement('option');
-                option.value = def;
-                option.innerText = def;
-                previewSelector.appendChild(option.cloneNode(true));
-                if (def !== 'main') {
-                  insertSelector.appendChild(option);
+        function monacoThemeFromVscTheme(vscodeTheme) {
+            vscodeTheme = adaptVsCodeThemeForTypst(vscodeTheme);
+            const baseTokenColors = [];
+            for (const tc of vscodeTheme.tokenColors) {
+                if (typeof tc.scope === "string") {
+                    baseTokenColors.push({ token: tc.scope, ...tc.settings });
+                } else {
+                    baseTokenColors.push(
+                        ...tc.scope.map((s) => {
+                            return { token: s, ...tc.settings };
+                        })
+                    );
                 }
-              }
-            } catch (e) {
-              console.log('error', e);
             }
-          });
-        };
-        definitionEditor.getModel().onDidChangeContent(e => {
-          triggerSyncEditorState();
-        });
-        inputSvgWidth.oninput = triggerSyncEditorState;
-        inputSvgHeight.oninput = triggerSyncEditorState;
+            console.log("baseTokenColors", baseTokenColors);
+            const monacoTheme = {
+                base: "vs-dark",
+                inherit: true,
+                colors: vscodeTheme.colors,
+                rules: baseTokenColors,
+            };
+            return monacoTheme;
+        }
 
-        const triggerSyncMain = () => {
-          const yml = mainEditor.getValue();
-          script$jsYamlLoad.then(() => {
-            try {
-              $preview.doSetMainContent(jsYaml.load(yml));
-            } catch (e) {
-              console.log('error', e);
-            }
-          });
-        };
-        mainEditor.getModel().onDidChangeContent(e => {
-          if (e.isFlush) {
-            return;
-          }
-          triggerSyncMain();
-        });
 
-        definitionEditor.setValue(`definitions:
-- id: x-circle
-  props: # default props
-    rad: 200
-    inner-text: '""'
-  draw: |
-    {
-      circle((0, 0), radius: rad, name: node-label)
-      debug-label((-rad*0.7, -rad*0.7))
-      content(node-label, inner-text)
-    }
-- id: x-rect
-  props: # default props
-    x: 200
-    y: none
-    inner-text: '""'
-  draw: |
-    {
-      let y = if y == none {
-        x
-      } else {
-        y
-      }
-      rect((0, 0), (x, y), name: node-label)
-      debug-label((0, 0))
-      content(node-label, inner-text)
 
-    }
-- id: x-arrow
-  props: # default props
-    start: (0, 10)
-    end: (50, 10)
-    inner-text: '""'
-    mark: |
-      (end: ">")
-  draw: |
-    {
-      set-style(mark: (fill: none, size: 7))
-      line(start, end, name: "t", mark: mark)
-      content("t", inner-text)
-    }`);
-        mainEditor.setValue(`
-- name: c0
-  type: x-circle
-  args:
-    rad: 50
-  pos: [0, 0]
-- name: c1
-  type: x-rect
-  args:
-    x: 100
-  pos: [50, 50]
-- name: c2
-  type: x-circle
-  args:
-    rad: 50
-  pos: [200, 0]
-- name: c1toc2
-  type: x-arrow
-  args:
-    start: '"c1"'
-    end: '"c2"'
-  pos: [0, 0]
+        window.onload = function () {
+            const insertSelector = document.getElementById('insert-selector');
+            const insertName = document.getElementById('insert-name');
+            const previewSelector = document.getElementById('preview-selector');
+            const definitionSourceSelector = document.getElementById('definition-source-selector');
+            const definitionSourceValue = document.getElementById('definition-source-value');
+            const inputSvgWidth = document.getElementById('input-svg-width');
+            const inputSvgHeight = document.getElementById('input-svg-height');
+            inputSvgWidth.value = inputSvgHeight.value = '600';
+
+            // require is provided by loader.min.js.
+            require.config({
+                paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.33.0/min/vs' },
+            });
+            require(['vs/editor/editor.main'], async () => {
+                monaco.editor.defineTheme("tokyo-night", tokyoNightTheme());
+                // Register a new language
+                monaco.languages.register({ id: "typst", extensions: ['.typ'] });
+                monaco.languages.registerDocumentSemanticTokensProvider('typst', await $typst$semanticTokensProvider);
+
+                const definitionEditor = monaco.editor.create(document.getElementById('def-editor'), {
+                    value: '',
+                    language: 'typst',
+                    theme: 'tokyo-night',
+                    'semanticHighlighting.enabled': true,
+                     "bracketPairColorization.enabled": true,
+                });
+                const mainEditor = monaco.editor.create(document.getElementById('main-editor'), {
+                    value: '',
+                    language: 'typst',
+                    theme: 'tokyo-night',
+                    'semanticHighlighting.enabled': true,
+                     "bracketPairColorization.enabled": true,
+                });
+                $preview.bindElement(document.getElementById('preview-panel'), v => mainEditor.setValue(v));
+                document.getElementById('export-svg').addEventListener('click', () => {
+                    $preview.doExport('svg');
+                });
+                document.getElementById('export-pdf').addEventListener('click', () => {
+                    $preview.doExport('pdf');
+                });
+                document.getElementById('export-cetz').addEventListener('click', () => {
+                    $preview.doExport('cetz');
+                });
+                document.getElementById('insert-elem').addEventListener('click', () => {
+                    let insertNameValue = insertName.value;
+                    if (!insertNameValue) {
+                        insertNameValue = 'node-' + Math.random().toString(36).substring(7).replace('0.', '');
+                    }
+                    console.log('insertSelector.value', insertSelector.value, insertNameValue);
+                    $preview.doInsertElem(insertSelector.value, insertNameValue);
+                });
+
+                const checkLength = (v) => {
+                    if (v.endsWith('pt')) {
+                        v = v.substring(0, t.length - 2);
+                    }
+                    if (!v) {
+                        v = '600';
+                    }
+
+                    const t = Number.parseFloat(v);
+                    if (Number.isNaN(t)) {
+                        throw new Error('invalid number');
+                    }
+
+                    return `${t}pt`;
+                };
+
+                const triggerSyncEditorState = () => {
+                    const defs = {
+                        content: definitionEditor.getValue(),
+                        width: checkLength(inputSvgWidth.value),
+                        height: checkLength(inputSvgHeight.value),
+                    };
+                    $preview.doSetDefinitions(defs);
+                    previewSelector.innerHTML = '';
+                    insertSelector.innerHTML = '';
+                    for (const def of ['main', ...$preview.getDefinitionNames()]) {
+                        const option = document.createElement('option');
+                        option.value = def;
+                        option.innerText = def;
+                        previewSelector.appendChild(option.cloneNode(true));
+                        if (def !== 'main') {
+                            insertSelector.appendChild(option);
+                        }
+                    }
+                };
+                definitionEditor.getModel().onDidChangeContent(e => {
+                    triggerSyncEditorState();
+                });
+                inputSvgWidth.oninput = triggerSyncEditorState;
+                inputSvgHeight.oninput = triggerSyncEditorState;
+
+                const triggerSyncMain = () => {
+                    try {
+                        $preview.doSetMainContent({
+                            content: mainEditor.getValue(),
+                        });
+                    } catch (e) {
+                        console.log('error', e);
+                    }
+                };
+                mainEditor.getModel().onDidChangeContent(e => {
+                    if (e.isFlush) {
+                        return;
+                    }
+                    triggerSyncMain();
+                });
+
+                const builtinDefinitions = `
+#let x-circle(rad: 200, inner-text: "") = {
+  circle((0, 0), radius: rad, name: node-label)
+  debug-label((-rad*0.7, -rad*0.7))
+  content(node-label, inner-text)
+}
+#let x-rect(x: 200, y: none, inner-text: "") = {
+  let y = if y == none {
+    x
+  } else {
+    y
+  }
+  rect((0, 0), (x, y), name: node-label)
+  debug-label((0, 0))
+  content(node-label, inner-text)
+}
+#let x-arrow(start: (0, 10), end: (50, 10), inner-text: "", mark: (end: ">")) = {
+  set-style(mark: (fill: none, size: 14))
+  line(start, end, name: "t", mark: mark)
+  content("t", inner-text)
+}`;
+                definitionEditor.setValue(builtinDefinitions);
+                //         mainEditor.setValue(`
+                // - name: c0
+                //   type: x-circle
+                //   args:
+                //     rad: 50
+                //   pos: [0, 0]
+                // - name: c1
+                //   type: x-rect
+                //   args:
+                //     x: 100
+                //   pos: [50, 50]
+                // - name: c2
+                //   type: x-circle
+                //   args:
+                //     rad: 50
+                //   pos: [200, 0]
+                // - name: c1toc2
+                //   type: x-arrow
+                //   args:
+                //     start: '"c1"'
+                //     end: '"c2"'
+                //   pos: [0, 0]
+                // `);
+                mainEditor.setValue(`#{
+  make-ins("c0", (0, 0), "x-circle", (rad: 50))
+  make-ins("c1", (50, 50), "x-rect", (x: 100))
+  make-ins("c2", (200, 0), "x-circle", (rad: 50))
+  make-ins("c1toc2", (0, 0), "x-arrow", (start: "c1", end: "c2"))
+}
 `);
-        triggerSyncEditorState();
-        triggerSyncMain();
+                triggerSyncEditorState();
+                triggerSyncMain();
 
-        previewSelector.onchange = () => {
-          console.log('previewSelector.value', previewSelector.value);
-          $preview.doSelectDef(previewSelector.value);
+                previewSelector.onchange = () => {
+                  console.log('previewSelector.value', previewSelector.value);
+                  $preview.doSelectDef(previewSelector.value);
+                };
+
+                $preview.doSelectDef('');
+
+                definitionSourceSelector.onchange = () => {
+                    if (definitionSourceSelector.value === 'builtin') {
+                        definitionEditor.setValue(builtinDefinitions);
+                    } else if (definitionSourceSelector.value === 'url') {
+                        console.log('definitionSourceValue.value', definitionSourceValue.value);
+                        if (definitionSourceValue.value) {
+                            fetch(definitionSourceValue.value).then(r => r.text()).then(t => {
+                                definitionEditor.setValue(t);
+                            });
+                        }
+                    } else if (definitionSourceSelector.value === 'file') {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.onchange = () => {
+                            const file = input.files[0];
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                                definitionEditor.setValue(reader.result);
+                            };
+                            reader.readAsText(file);
+                            definitionSourceValue.value = file.name;
+                        };
+                        input.click();
+                    }
+                };
+            });
         };
 
-        $preview.doSelectDef('');
-      });
-    };
-
-    function tokyoNightTheme() {
-      return monacoThemeFromVscTheme(parseJson5(`{
+        function tokyoNightTheme() {
+            return monacoThemeFromVscTheme(parseJson5(`{
     "name": "Tokyo Night",
     "author": "Enkia",
     "maintainers": [
@@ -1807,11 +1827,11 @@
         }
     ]
 }`));
-    }
+        }
 
-  </script>
-  <ul id="svg-edit-menu" class="absolute hidden">
-    </menu>
+    </script>
+    <ul id="svg-edit-menu" class="absolute hidden">
+        </menu>
 </body>
 
 </html>
