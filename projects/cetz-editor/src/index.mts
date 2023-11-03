@@ -14,7 +14,7 @@ type ModuleSource = 'local' | 'jsdelivr';
 // @ts-ignore
 // import renderer from '@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm?url';
 
-window.$typst$moduleSource = 'local';
+// window.$typst$moduleSource = 'local';
 
 let moduleSource: ModuleSource = (window.$typst$moduleSource || 'jsdelivr') as any;
 
