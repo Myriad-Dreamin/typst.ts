@@ -1,7 +1,7 @@
 {
   "name": "@myriaddreamin/cetz-editor",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.4.1-rc1",
   "description": "Simple visualized cetz editor",
   "author": "Myriad Dreamin <camiyoru@gmail.com>",
   "license": "Apache-2.0",
@@ -21,6 +21,9 @@
     "@myriaddreamin/typst-ts-web-compiler": "*"
   },
   "devDependencies": {
+    "@myriaddreamin/typst.ts": "*",
+    "@myriaddreamin/typst-ts-renderer": "*",
+    "@myriaddreamin/typst-ts-web-compiler": "*",
     "vite": "^4.3.9",
     "vite-plugin-singlefile": "^0.13.5",
     "vitest": "^0.32.2"
