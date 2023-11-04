@@ -84,7 +84,6 @@ pollster = "0.3.0"
 rayon = "1.7.0"
 strum = { version = "0.25.0", features = ["derive"] }
 tokio = { version = "1.28.1", features = ["full"] }
-strum = { version = "0.25.0", features = ["derive"] }
 
 # data structure and algorithm
 append-only-vec = "0.1.2"
