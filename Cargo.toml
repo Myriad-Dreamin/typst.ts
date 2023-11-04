@@ -82,6 +82,7 @@ parking_lot = "0.12.1"
 pollster = "0.3.0"
 rayon = "1.7.0"
 tokio = { version = "1.28.1", features = ["full"] }
+strum = { version = "0.25.0", features = ["derive"] }
 
 # data structure and algorithm
 append-only-vec = "0.1.2"
