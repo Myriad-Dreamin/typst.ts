@@ -8,7 +8,8 @@ use typst::{diag::FileResult, syntax::Source};
 use typst_ts_core::TypstFileId;
 
 pub use semantic_tokens::{
-    get_semantic_tokens_full, get_semantic_tokens_legend, SemanticToken, SemanticTokensLegend,
+    get_semantic_tokens_full, get_semantic_tokens_legend, OffsetEncoding, SemanticToken,
+    SemanticTokensLegend,
 };
 
 pub fn reparse(source_id: TypstFileId, prev: Option<Source>, next: String) -> FileResult<Source> {

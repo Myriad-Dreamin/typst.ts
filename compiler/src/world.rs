@@ -24,7 +24,8 @@ use crate::{
     dependency::{DependencyTree, DependentFileInfo},
     package::Registry as PackageRegistry,
     parser::{
-        get_semantic_tokens_full, get_semantic_tokens_legend, SemanticToken, SemanticTokensLegend,
+        get_semantic_tokens_full, get_semantic_tokens_legend, OffsetEncoding, SemanticToken,
+        SemanticTokensLegend,
     },
     service::WorkspaceProvider,
     time::SystemTime,
@@ -207,17 +208,21 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         Arc::new(get_semantic_tokens_legend())
     }
 
-    pub fn get_semantic_tokens(&self, file_path: Option<String>) -> Arc<Vec<SemanticToken>> {
-        Arc::new(get_semantic_tokens_full(
-            &file_path
-                .and_then(|e| {
-                    let relative_path = Path::new(&e).strip_prefix(&self.workspace_root()).ok()?;
+    pub fn get_semantic_tokens(
+        &self,
+        file_path: Option<String>,
+        encoding: OffsetEncoding,
+    ) -> Arc<Vec<SemanticToken>> {
+        let src = &file_path
+            .and_then(|e| {
+                let relative_path = Path::new(&e).strip_prefix(&self.workspace_root()).ok()?;
 
-                    let source_id = FileId::new(None, VirtualPath::new(relative_path));
-                    self.source(source_id).ok()
-                })
-                .unwrap_or_else(|| self.main()),
-        ))
+                let source_id = FileId::new(None, VirtualPath::new(relative_path));
+                self.source(source_id).ok()
+            })
+            .unwrap_or_else(|| self.main());
+
+        Arc::new(get_semantic_tokens_full(src, encoding))
     }
 
     fn map_source_or_default<T>(

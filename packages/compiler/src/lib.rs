@@ -7,6 +7,7 @@ pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
     font::web::BrowserFontSearcher,
     package::browser::ProxyRegistry,
+    parser::OffsetEncoding,
     service::{CompileDriverImpl, Compiler},
     vfs::browser::ProxyAccessModel,
     world::WorldSnapshot,
@@ -206,6 +207,7 @@ impl TypstCompiler {
 
     pub fn get_semantic_tokens(
         &mut self,
+        offset_encoding: String,
         file_path: Option<String>,
         result_id: Option<String>,
     ) -> Result<js_sys::Object, JsValue> {
@@ -215,7 +217,16 @@ impl TypstCompiler {
             );
         }
 
-        let tokens = self.compiler.world_mut().get_semantic_tokens(file_path);
+        let tokens = self.compiler.world_mut().get_semantic_tokens(
+            file_path,
+            match offset_encoding.as_str() {
+               "utf-16" => OffsetEncoding::Utf16,
+              "utf-8" => OffsetEncoding::Utf8,
+                _ => {
+                    return Err(error_once!("Unsupported offset encoding", offset_encoding: offset_encoding).into());
+                }
+            },
+        );
         let mut result = Vec::new();
         for token in tokens.iter() {
             result.push(token.delta_line);

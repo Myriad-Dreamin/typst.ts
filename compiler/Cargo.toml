@@ -23,7 +23,7 @@ sha2.workspace = true
 flate2.workspace = true
 ecow.workspace = true
 instant.workspace = true
-strum = { version = "0.25.0", features = ["derive"] }
+strum.workspace = true
 
 serde.workspace = true
 serde_json.workspace = true
