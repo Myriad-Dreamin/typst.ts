@@ -434,6 +434,8 @@ export class TypstSnippet {
 
   /**
    * Get semantic tokens for the document.
+   * See {@link SweetCompileOptions}.
+   * See {@link TypstCompiler#getSemanticTokens}.
    */
   async getSemanticTokens(
     opts: SweetCompileOptions & { resultId?: string },

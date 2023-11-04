@@ -116,8 +116,20 @@ export interface TypstCompiler {
   /**
    * experimental
    * See Semantic tokens: https://github.com/microsoft/vscode/issues/86415
+   *
+   * @param {string} opts.mainFilePath - The path of the main file.
+   * @param {string} opts.resultId - The id of the result.
+   * @param {string} opts.offsetEncoding - The encoding of the offset.
+   *   - 'utf-16': the offset is encoded in utf-16.
+   *   - 'utf-8': the offset is encoded in utf-8.
+   *   @default 'utf-16'
+   * @returns {Promise<SemanticTokens>} - The semantic tokens.
    */
-  getSemanticTokens(opts: { mainFilePath: string; resultId?: string }): Promise<SemanticTokens>;
+  getSemanticTokens(opts: {
+    mainFilePath: string;
+    resultId?: string;
+    offsetEncoding?: string;
+  }): Promise<SemanticTokens>;
 }
 
 const gCompilerModule = new LazyWasmModule(async (bin?: any) => {
@@ -193,10 +205,20 @@ class TypstCompilerDriver {
     });
   }
 
-  getSemanticTokens(opts: { mainFilePath: string; resultId?: string }): Promise<SemanticTokens> {
+  getSemanticTokens(opts: {
+    mainFilePath: string;
+    resultId?: string;
+    offsetEncoding?: string;
+  }): Promise<SemanticTokens> {
     return new Promise<SemanticTokens>(resolve => {
       this.compiler.reset();
-      resolve(this.compiler.get_semantic_tokens(opts.mainFilePath, opts.resultId) as any);
+      resolve(
+        this.compiler.get_semantic_tokens(
+          opts.offsetEncoding || 'utf-16',
+          opts.mainFilePath,
+          opts.resultId,
+        ) as any,
+      );
     });
   }
 

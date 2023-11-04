@@ -33,12 +33,26 @@ pub fn get_semantic_tokens_legend() -> SemanticTokensLegend {
     }
 }
 
-pub fn get_semantic_tokens_full(source: &Source) -> Vec<SemanticToken> {
+pub enum OffsetEncoding {
+    Utf8,
+    Utf16,
+}
+
+pub fn get_semantic_tokens_full(source: &Source, encoding: OffsetEncoding) -> Vec<SemanticToken> {
     let root = LinkedNode::new(source.root());
-    let mut full = tokenize_tree(source, &root, ModifierSet::empty());
+    let mut full = tokenize_tree(&root, ModifierSet::empty());
 
     let mut init = (0, 0);
     for token in full.iter_mut() {
+        // resolve offset to position
+        let offset = ((token.delta_line as u64) << 32) | token.delta_start_character as u64;
+        let position = (match encoding {
+            OffsetEncoding::Utf8 => offset_to_position_utf8,
+            OffsetEncoding::Utf16 => offset_to_position_utf16,
+        })(offset as usize, source);
+        token.delta_line = position.0;
+        token.delta_start_character = position.1;
+
         let next = (token.delta_line, token.delta_start_character);
         token.delta_line -= init.0;
         if token.delta_line == 0 {
@@ -50,30 +64,22 @@ pub fn get_semantic_tokens_full(source: &Source) -> Vec<SemanticToken> {
     full
 }
 
-fn tokenize_single_node(
-    ctx: &Source,
-    node: &LinkedNode,
-    modifiers: ModifierSet,
-) -> Option<SemanticToken> {
+fn tokenize_single_node(node: &LinkedNode, modifiers: ModifierSet) -> Option<SemanticToken> {
     let is_leaf = node.children().next().is_none();
 
     token_from_node(node)
         .or_else(|| is_leaf.then_some(TokenType::Text))
-        .map(|token_type| SemanticToken::new(ctx, token_type, modifiers, node))
+        .map(|token_type| SemanticToken::new(token_type, modifiers, node))
 }
 
 /// Tokenize a node and its children
-fn tokenize_tree(
-    ctx: &Source,
-    root: &LinkedNode<'_>,
-    parent_modifiers: ModifierSet,
-) -> Vec<SemanticToken> {
+fn tokenize_tree(root: &LinkedNode<'_>, parent_modifiers: ModifierSet) -> Vec<SemanticToken> {
     let modifiers = parent_modifiers | modifiers_from_node(root);
 
-    let token = tokenize_single_node(ctx, root, modifiers).into_iter();
+    let token = tokenize_single_node(root, modifiers).into_iter();
     let children = root
         .children()
-        .flat_map(move |child| tokenize_tree(ctx, &child, modifiers));
+        .flat_map(move |child| tokenize_tree(&child, modifiers));
     token.chain(children).collect()
 }
 
@@ -86,21 +92,17 @@ pub struct SemanticToken {
 }
 
 impl SemanticToken {
-    pub fn new(
-        ctx: &Source,
-        token_type: TokenType,
-        modifiers: ModifierSet,
-        node: &LinkedNode,
-    ) -> Self {
+    fn new(token_type: TokenType, modifiers: ModifierSet, node: &LinkedNode) -> Self {
         let source = node.get().clone().into_text();
 
-        let position = offset_to_position(node.offset(), ctx);
+        let raw_position = node.offset() as u64;
+        let raw_position = ((raw_position >> 32) as u32, raw_position as u32);
 
         Self {
             token_type: token_type as u32,
             token_modifiers: modifiers.bitset(),
-            delta_line: position.0,
-            delta_start_character: position.1,
+            delta_line: raw_position.0,
+            delta_start_character: raw_position.1,
             length: source.chars().map(char::len_utf16).sum::<usize>() as u32,
         }
     }
@@ -202,7 +204,14 @@ fn token_from_hashtag(hashtag: &LinkedNode) -> Option<TokenType> {
         .and_then(token_from_node)
 }
 
-fn offset_to_position(typst_offset: usize, typst_source: &Source) -> (u32, u32) {
+fn offset_to_position_utf8(typst_offset: usize, typst_source: &Source) -> (u32, u32) {
+    let line_index = typst_source.byte_to_line(typst_offset).unwrap();
+    let column_index = typst_source.byte_to_column(typst_offset).unwrap();
+
+    (line_index as u32, column_index as u32)
+}
+
+fn offset_to_position_utf16(typst_offset: usize, typst_source: &Source) -> (u32, u32) {
     let line_index = typst_source.byte_to_line(typst_offset).unwrap();
 
     let lsp_line = line_index as u32;
