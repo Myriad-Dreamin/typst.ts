@@ -1,0 +1,34 @@
+{
+  "name": "@myriaddreamin/typst-ts-parser",
+  "version": "0.4.1-rc1",
+  "description": "WASM module for Parsing Typst documents in JavaScript environment.",
+  "author": "Myriad-Dreamin",
+  "license": "Apache-2.0",
+  "keywords": [
+    "TypeScript",
+    "Typst"
+  ],
+  "type": "module",
+  "module": "pkg/wasm-pack-shim.mjs",
+  "types": "pkg/typst_ts_parser.d.ts",
+  "files": [
+    "pkg/wasm-pack-shim.mjs",
+    "pkg/typst_ts_parser_bg.wasm",
+    "pkg/typst_ts_parser_bg.wasm.d.ts",
+    "pkg/typst_ts_parser.mjs",
+    "pkg/typst_ts_parser.d.ts"
+  ],
+  "scripts": {
+    "build:dev": "wasm-pack build --target web --scope myriaddreamin --dev -- --no-default-features --features web",
+    "build:node": "wasm-pack build --target nodejs --scope myriaddreamin -- --no-default-features --features web",
+    "build": "wasm-pack build --target web --scope myriaddreamin -- --no-default-features --features web && node ../tools/wasm-debundle.mjs",
+    "prepublish": "turbo build",
+    "publish:dry": "npm publish --dry-run --access public",
+    "publish:lib": "npm publish --access public || exit 0",
+    "test:chrome": "wasm-pack test --chrome --headless --release",
+    "test:firefox": "wasm-pack test --firefox --headless --release"
+  },
+  "devDependencies": {
+    "turbo": "^1.10.12"
+  }
+}

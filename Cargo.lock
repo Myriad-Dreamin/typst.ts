@@ -4391,6 +4391,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "typst-ts-parser"
+version = "0.4.1-rc1"
+dependencies = [
+ "base64",
+ "comemo",
+ "console_error_panic_hook",
+ "elsa",
+ "hex",
+ "js-sys",
+ "once_cell",
+ "serde-wasm-bindgen",
+ "serde_json",
+ "sha2",
+ "typst",
+ "typst-library",
+ "typst-ts-compiler",
+ "typst-ts-core",
+ "typst-ts-test-common",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wasm-bindgen-test",
+ "web-sys",
+]
+
+[[package]]
 name = "typst-ts-pdf-exporter"
 version = "0.4.1-rc1"
 dependencies = [

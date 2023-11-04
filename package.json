@@ -12,6 +12,7 @@
   "homepage": "https://myriad-dreamin.github.io/typst.ts/",
   "private": true,
   "workspaces": [
+    "packages/parser",
     "packages/compiler",
     "packages/renderer",
     "packages/typst.ts",

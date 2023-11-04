@@ -24,6 +24,7 @@ members = [
 
     "fuzzers/incremental",
 
+    "packages/parser",
     "packages/compiler",
     "packages/renderer",
 
@@ -81,6 +82,7 @@ once_cell = "1.17.1"
 parking_lot = "0.12.1"
 pollster = "0.3.0"
 rayon = "1.7.0"
+strum = { version = "0.25.0", features = ["derive"] }
 tokio = { version = "1.28.1", features = ["full"] }
 strum = { version = "0.25.0", features = ["derive"] }
 

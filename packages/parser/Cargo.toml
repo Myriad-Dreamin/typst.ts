@@ -1,0 +1,58 @@
+[package]
+name = "typst-ts-parser"
+description = "Parse Typst documents in JavaScript environment."
+authors.workspace = true
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+
+typst.workspace = true
+typst-library.workspace = true
+comemo.workspace = true
+base64.workspace = true
+
+once_cell.workspace = true
+elsa.workspace = true
+serde-wasm-bindgen.workspace = true
+serde_json.workspace = true
+
+# Everything to do with wasm
+wasm-bindgen.workspace = true
+js-sys.workspace = true
+wasm-bindgen-futures.workspace = true
+web-sys = { workspace = true, features = [
+    "console",
+    "Performance",
+    "PerformanceTiming",
+    "Window",
+    "Blob",
+    "Document",
+] }
+console_error_panic_hook.workspace = true
+
+typst-ts-core.workspace = true
+typst-ts-compiler = { version = "0.4.1-rc1", default-features = false, features = [
+    "web",
+] }
+
+[dev-dependencies]
+wasm-bindgen-test.workspace = true
+typst-ts-test-common.workspace = true
+hex.workspace = true
+sha2.workspace = true
+web-sys = { workspace = true, features = ["console"] }
+
+[features]
+web_test = ["typst-ts-test-common/web_artifacts"]
+
+full = ["web", "web_test"]
+web = []
+default = ["full"]
