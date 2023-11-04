@@ -1,0 +1,37 @@
+{
+  "name": "@myriaddreamin/highlighter-typst",
+  "version": "0.4.1-rc1",
+  "description": "typst code highlighting support in web",
+  "author": "Myriad Dreamin <camiyoru@gmail.com>",
+  "license": "Apache-2.0",
+  "keywords": [
+    "highlighting",
+    "typst"
+  ],
+  "repository": "https://github.com/Myriad-Dreamin/typst.ts",
+  "main": "dist/hljs.mjs",
+  "files": [
+    "dist/hljs.mjs"
+  ],
+  "peerDependencies": {
+    "@myriaddreamin/typst.ts": "*",
+    "@myriaddreamin/typst-ts-parser": "*"
+  },
+  "devDependencies": {
+    "@myriaddreamin/typst.ts": "*",
+    "@myriaddreamin/typst-ts-parser": "*",
+    "vite": "^4.3.9",
+    "vitest": "^0.32.2"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && tsc -p ./tsconfig.cjs.json && vite build && node scripts/fix-cjs.mjs && node esbuild.config.mjs commonjs production && node esbuild.config.mjs production",
+    "test": "vitest",
+    "coverage": "vitest run --coverage",
+    "publish:dry": "npm publish --dry-run",
+    "publish:lib": "npm publish || exit 0"
+  },
+  "engines": {
+    "node": ">=12"
+  }
+}

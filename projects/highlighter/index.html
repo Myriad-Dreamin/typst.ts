@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <link rel="icon" href="favicon.svg" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Highlighting Demo</title>
+    <script>
+      // window.$typst$parserModuleSource = 'local';
+    </script>
+    <!-- <script id="script-main" type="module" src="/dist/esm/contrib/hljs/typst.bundle.js"></script> -->
+    <!-- <script id="script-main" type="module" src="/dist/esm/contrib/hljs/typst-lite.mjs"></script> -->
+    <!-- <script id="script-main" type="module" src="/dist/esm/contrib/hljs/typst-lite.bundle.js"></script> -->
+    <!-- <script id="script-main" src="/dist/cjs/contrib/hljs/typst-lite.bundle.js"></script> -->
+    <script id="script-main" src="/dist/cjs/contrib/hljs/typst.bundle.js"></script>
+    <link rel="stylesheet" href="typst-style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css"
+    />
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background-color: hsl(39, 77%, 95%);
+      }
+      pre,
+      p {
+        padding: 0;
+        margin: 1.5em 0;
+        white-space: normal;
+      }
+      pre code {
+        white-space: pre;
+        border-radius: 3px;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+    <script>
+      let loaded = fetch('http://localhost:20810/corpus/math/undergradmath.typ')
+        .then(res => res.text())
+        .then(text => {
+          // pre, code
+          const pre = document.createElement('pre');
+          const code = document.createElement('code');
+          code.classList.add('language-typst');
+          code.textContent = text;
+          pre.appendChild(code);
+          document.body.appendChild(pre);
+        });
+
+      let contentLoaded = new Promise(resolve => {
+        document.addEventListener('DOMContentLoaded', resolve);
+      });
+      const run = () => {
+        if (!$typst$parserModule) {
+          return;
+        }
+        $typst$parserModule.then(contentLoaded).then(() => {
+          hljs.registerLanguage(
+            'typst',
+            window.hljsTypst({
+              codeBlockDefaultLanguage: 'typst',
+            }),
+          );
+          const h = () =>
+            document.querySelectorAll('pre code').forEach(el => {
+              if (!el.getAttribute('data-highlighted')) {
+                hljs.highlightElement(el);
+              }
+            });
+          h();
+          loaded.then(h);
+        });
+      };
+      document.getElementById('script-main').onload = run;
+      run();
+    </script>
+  </head>
+  <body style="margin: 20px">
+    <div style="margin: 40px"></div>
+    <p>Usage:</p>
+    <pre>
+      <code class="language-typescript">export interface TypstHljsOptions {
+  handleCodeBlocks?: boolean | ((code: string, emitter: any) => /*handled*/ boolean);
+  codeBlockDefaultLanguage?: string;
+}
+      
+$typst$parserModule.then(() => {
+  hljs.registerLanguage(
+    'typst',
+    window.hljsTypst({ // TypstHljsOptions
+      codeBlockDefaultLanguage: 'typst',
+    }),
+  );</code>
+    </pre>
+    <p>Example:</p>
+    <pre>
+      <code class="language-typst">#let x = 1;
+#import cetz.canvas;
+```js
+function nestedCodeRender() {}
+```
+Example Code:
+```typst
+#let x = 1;
+#import cetz.canvas;
+```
+
+#raw(lang: typst, `
+#let nestedCodeRender() {}`)</code>
+    </pre>
+    <p>Set Default language to typst:</p>
+    <pre>
+      <code class="language-typst">#let x = 1;
+```
+* I'm an inferred typst code *
+```</code>
+    </pre>
+  </body>
+</html>
