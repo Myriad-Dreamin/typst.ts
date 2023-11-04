@@ -6,11 +6,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cetz Editor</title>
-    <script>
-        window.script$jsYamlLoad = new Promise(resolve => {
-            window.script$jsYamlLoadResolve = resolve;
-        });
-    </script>
     <script id="script-main" type="module" src="/dist/esm/index.mjs"></script>
     <link rel="stylesheet" href="typst-style.css" />
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.33.0/dev/vs/loader.min.js"></script>
@@ -40,19 +35,16 @@
                         <span>from</span>
                         <div class="flex-row" style="display: inline-flex; justify-content:
             space-around; gap: 5px">
-                            <select id="definition-source-selector"
-                            class="editor-code-select" style="width: 5em;">
+                            <select id="definition-source-selector" class="editor-code-select" style="width: 5em;">
                                 <option value="builtin">Builtin</option>
                                 <option value="url">Url</option>
                                 <option value="file">File</option>
                             </select>
-                            <input id="definition-source-value"
-                            class="editor-input-box" type="text"
-                            placeholder="https://..." />
-                            <button id="definition-source-confirm"
-                            class="editor-input-button">Pull</button>
+                            <input id="definition-source-value" class="editor-input-box" type="text"
+                                placeholder="https://..." />
+                            <button id="definition-source-confirm" class="editor-input-button">Pull</button>
                         </div>
-                        </div>
+                    </div>
                     <div class="editor-action-group">
                         <span>element:</span>
                         <div class="flex-row" style="display: inline-flex; justify-content:
@@ -144,14 +136,14 @@
                     language: 'typst',
                     theme: 'tokyo-night',
                     'semanticHighlighting.enabled': true,
-                     "bracketPairColorization.enabled": true,
+                    "bracketPairColorization.enabled": true,
                 });
                 const mainEditor = monaco.editor.create(document.getElementById('main-editor'), {
                     value: '',
                     language: 'typst',
                     theme: 'tokyo-night',
                     'semanticHighlighting.enabled': true,
-                     "bracketPairColorization.enabled": true,
+                    "bracketPairColorization.enabled": true,
                 });
                 $preview.bindElement(document.getElementById('preview-panel'), v => mainEditor.setValue(v));
                 document.getElementById('export-svg').addEventListener('click', () => {
@@ -288,8 +280,8 @@
   line(start, end, name: "t", mark: mark)
   content("t", inner-text)
 }`;
-                definitionEditor.setValue(builtinDefinitions);
-                mainEditor.setValue(`#{
+                    definitionEditor.setValue(builtinDefinitions);
+                    mainEditor.setValue(`#{
   make-ins("c0", (0, 0), "x-circle", (rad: 50))
   make-ins("c1", (50, 50), "x-rect", (x: 100))
   make-ins("c2", (200, 0), "x-circle", (rad: 50))
@@ -302,8 +294,8 @@
                 triggerSyncMain();
 
                 previewSelector.onchange = () => {
-                  console.log('previewSelector.value', previewSelector.value);
-                  $preview.doSelectDef(previewSelector.value);
+                    console.log('previewSelector.value', previewSelector.value);
+                    $preview.doSelectDef(previewSelector.value);
                 };
 
                 $preview.doSelectDef('');
@@ -312,7 +304,7 @@
                 definitionSourceSelector.onchange = () => {
                     if (definitionSourceSelector.value === 'builtin' || definitionSourceSelector.value === 'file') {
                         checkDefinitionSource();
-                    } 
+                    }
                 };
             });
         };

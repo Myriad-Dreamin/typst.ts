@@ -682,9 +682,11 @@ import cetz.draw: *
       let args = '';
       const argEntries = Object.entries(ins.args ?? {});
       if (argEntries.length) {
-        args = '  args:';
         for (const [k, v] of argEntries) {
-          args += `\n    ${k}: ${v}`;
+          if (args) {
+            args += ', ';
+          }
+          args += `${k}: ${v}`;
         }
       }
       let [x, y] = ins.pos;
@@ -696,7 +698,7 @@ import cetz.draw: *
       // [${x}, ${y}]`);
       x = Math.round(x * 1000) / 1000;
       y = Math.round(y * 1000) / 1000;
-      data.push(`make-ins("${ins.name}", (${x}, ${y}), ${ins.type}, (${args}))`);
+      data.push(`make-ins("${ins.name}", (${x}, ${y}), "${ins.type}", (${args}))`);
     }
     this.updateMainContent(`#{
   ${data.join(INEW_LINE)}
@@ -971,7 +973,7 @@ import cetz.draw: *
 
         let j = skipIdent(i);
         if (i === j) {
-          throw new Error(`expected ident at ${i}`);
+          throw new Error(`expected ident at ${i} ${s.slice(i)}`);
         }
 
         const ident = s.slice(i, j);
@@ -1083,7 +1085,7 @@ import cetz.draw: *
     }
 
     function parseMainContent() {
-      // console.log('parseMainContent', s);
+      console.log('parseMainContent', s);
       const instances: any[] = [];
       let i = 0;
       i = eatToken(skipSpaces(i), '#');
@@ -1111,7 +1113,7 @@ import cetz.draw: *
         }
         j = skipIdent(i);
         if (i === j) {
-          throw new Error(`expected ident at ${i}`);
+          throw new Error(`expected ident at ${i} ${s.slice(i)}`);
         }
         let ident = s.slice(i, j);
         i = skipSpaces(j);
