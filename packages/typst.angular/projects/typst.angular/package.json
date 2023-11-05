@@ -15,8 +15,8 @@
     "tslib": "^2.3.0"
   },
   "peerDependencies": {
-    "@myriaddreamin/typst.ts": "*",
-    "@myriaddreamin/typst-ts-renderer": "*"
+    "@myriaddreamin/typst.ts": "0",
+    "@myriaddreamin/typst-ts-renderer": "0"
   },
   "sideEffects": false
 }

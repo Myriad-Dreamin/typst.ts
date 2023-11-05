@@ -41,8 +41,8 @@
     "idb": "^7.1.1"
   },
   "peerDependencies": {
-    "@myriaddreamin/typst-ts-renderer": "*",
-    "@myriaddreamin/typst-ts-web-compiler": "*"
+    "@myriaddreamin/typst-ts-renderer": "0",
+    "@myriaddreamin/typst-ts-web-compiler": "0"
   },
   "peerDependenciesMeta": {
     "@myriaddreamin/typst-ts-renderer": {
@@ -53,8 +53,8 @@
     }
   },
   "devDependencies": {
-    "@myriaddreamin/typst-ts-renderer": "*",
-    "@myriaddreamin/typst-ts-web-compiler": "*",
+    "@myriaddreamin/typst-ts-renderer": "0",
+    "@myriaddreamin/typst-ts-web-compiler": "0",
     "@types/web": "^0.0.99",
     "@typescript-eslint/eslint-plugin": "5.59.6",
     "@typescript-eslint/parser": "5.59.6",

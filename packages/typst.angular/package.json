@@ -27,8 +27,8 @@
     "zone.js": "~0.13.0"
   },
   "peerDependencies": {
-    "@myriaddreamin/typst.ts": "*",
-    "@myriaddreamin/typst-ts-renderer": "*"
+    "@myriaddreamin/typst.ts": "0",
+    "@myriaddreamin/typst-ts-renderer": "0"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^16.2.0",
@@ -52,7 +52,7 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.0.0",
     "ng-packagr": "^16.0.1",
-    "@myriaddreamin/typst.ts": "*",
-    "@myriaddreamin/typst-ts-renderer": "*"
+    "@myriaddreamin/typst.ts": "0",
+    "@myriaddreamin/typst-ts-renderer": "0"
   }
 }
