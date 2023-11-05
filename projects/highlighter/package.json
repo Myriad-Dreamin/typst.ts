@@ -27,12 +27,12 @@
     "dist/**/*.{mts,mjs,cjs,cts,ts,js}"
   ],
   "peerDependencies": {
-    "@myriaddreamin/typst.ts": "0",
-    "@myriaddreamin/typst-ts-parser": "0"
+    "@myriaddreamin/typst.ts": "^0.4.0",
+    "@myriaddreamin/typst-ts-parser": "^0.4.0"
   },
   "devDependencies": {
-    "@myriaddreamin/typst.ts": "0",
-    "@myriaddreamin/typst-ts-parser": "0",
+    "@myriaddreamin/typst.ts": "^0.4.0",
+    "@myriaddreamin/typst-ts-parser": "^0.4.0",
     "vite": "^4.3.9",
     "vitest": "^0.32.2"
   },
