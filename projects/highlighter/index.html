@@ -8,11 +8,15 @@
     <script>
       // window.$typst$parserModuleSource = 'local';
     </script>
+    <script
+      id="script-main"
+      src="https://cdn.jsdelivr.net/npm/@myriaddreamin/highlighter-typst/dist/cjs/contrib/hljs/typst.bundle.js"
+    ></script>
     <!-- <script id="script-main" type="module" src="/dist/esm/contrib/hljs/typst.bundle.js"></script> -->
     <!-- <script id="script-main" type="module" src="/dist/esm/contrib/hljs/typst-lite.mjs"></script> -->
     <!-- <script id="script-main" type="module" src="/dist/esm/contrib/hljs/typst-lite.bundle.js"></script> -->
     <!-- <script id="script-main" src="/dist/cjs/contrib/hljs/typst-lite.bundle.js"></script> -->
-    <script id="script-main" src="/dist/cjs/contrib/hljs/typst.bundle.js"></script>
+    <!-- <script id="script-main" src="/dist/cjs/contrib/hljs/typst.bundle.js"></script> -->
     <link rel="stylesheet" href="typst-style.css" />
     <link
       rel="stylesheet"
@@ -56,13 +60,14 @@
         document.addEventListener('DOMContentLoaded', resolve);
       });
       const run = () => {
-        if (!$typst$parserModule) {
+        if (!('$typst$parserModule' in window)) {
           return;
         }
         $typst$parserModule.then(contentLoaded).then(() => {
           hljs.registerLanguage(
             'typst',
             window.hljsTypst({
+              handleCodeBlocks: true,
               codeBlockDefaultLanguage: 'typst',
             }),
           );
@@ -84,7 +89,22 @@
     <div style="margin: 40px"></div>
     <p>Usage:</p>
     <pre>
-      <code class="language-typescript">export interface TypstHljsOptions {
+      <code class="language-typescript">/**
+* Options for the `hljsTypst` function.
+* @param handleCodeBlocks - Whether to handle code blocks.
+*   Defaults to true.
+*   If set to false, code blocks will be rendered as plain code blocks.
+*   If set to true, a default handler will be used.
+*   If set to a function, the function will be used as the handler.
+*
+*   When the `hljsTypst` has a code block handler, the code block will be called with the code block content and the emitter.
+*
+*   If the handler return false, the code block will be still rendered as plain code blocks.
+*
+* @param codeBlockDefaultLanguage - The default language for code blocks.
+*   Defaults to undefined.
+*/
+export interface TypstHljsOptions {
   handleCodeBlocks?: boolean | ((code: string, emitter: any) => /*handled*/ boolean);
   codeBlockDefaultLanguage?: string;
 }
@@ -97,6 +117,9 @@ $typst$parserModule.then(() => {
     }),
   );</code>
     </pre>
+    <span>Also see</span>
+    <a href="https://github.com/Myriad-Dreamin/typst.ts/tree/main/projects/highlighter">README</a
+    ><span>.</span>
     <p>Example:</p>
     <pre>
       <code class="language-typst">#let x = 1;

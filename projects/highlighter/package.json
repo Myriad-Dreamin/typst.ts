@@ -9,9 +9,22 @@
     "typst"
   ],
   "repository": "https://github.com/Myriad-Dreamin/typst.ts",
-  "main": "dist/hljs.mjs",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.mjs",
+  "types": "./dist/esm/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.mts",
+      "require": "./dist/cjs/index.cjs",
+      "import": "./dist/esm/index.mjs"
+    },
+    "./*": [
+      "./*",
+      "./*.d.mts"
+    ]
+  },
   "files": [
-    "dist/hljs.mjs"
+    "dist/**/*.{mts,mjs,cjs,cts,ts,js}"
   ],
   "peerDependencies": {
     "@myriaddreamin/typst.ts": "0",
@@ -29,7 +42,7 @@
     "test": "vitest",
     "coverage": "vitest run --coverage",
     "publish:dry": "npm publish --dry-run",
-    "publish:lib": "npm publish || exit 0"
+    "publish:lib": "npm publish --access public || exit 0"
   },
   "engines": {
     "node": ">=12"

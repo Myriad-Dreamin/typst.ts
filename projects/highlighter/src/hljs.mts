@@ -544,11 +544,8 @@ export function hljsTypst(options?: TypstHljsOptions) {
       langTag: string,
       useDefault: boolean,
     ) => {
-      emitter.startScope('code');
-      emitter.addText('```');
       code = code.slice(3);
       if (!useDefault) {
-        emitter.addText(langTag);
         code = code.slice(langTag.length);
       }
       code = code.slice(0, code.length - 3);
@@ -556,6 +553,15 @@ export function hljsTypst(options?: TypstHljsOptions) {
         language: langTag,
         ignoreIllegals: true,
       });
+      if (result.errorRaised) {
+        return false;
+      }
+      emitter.startScope('code');
+      emitter.addText('```');
+      if (!useDefault) {
+        emitter.addText(langTag);
+      }
+      console.log('handleNestedCodeBlocks', langTag, code, useDefault, result);
       emitter.__addSublanguage(result._emitter, langTag);
       emitter.addText('```');
       emitter.endScope('code');
@@ -579,7 +585,6 @@ export function hljsTypst(options?: TypstHljsOptions) {
               if (!langTag && useDefault) {
                 return handleSubLanguage(code, emitter, useDefault, true);
               }
-              // console.log('handleNestedCodeBlocks', langTag);
               if (langTag && hljs.getLanguage(langTag)) {
                 return handleSubLanguage(code, emitter, langTag, false);
               }
