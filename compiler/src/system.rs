@@ -54,23 +54,23 @@ impl TypstSystemWorld {
             if path.is_dir() {
                 searcher.search_dir(&path);
             } else {
-                searcher.search_file(&path);
+                let _ = searcher.search_file(&path);
             }
         }
         // Source2: add the fonts from system paths.
         if !opts.no_system_fonts {
             searcher.search_system();
         }
+
+        // flush source1 and source2 before adding source3
+        searcher.flush();
+
         // Source3: add the fonts in memory.
         for font_data in opts.with_embedded_fonts {
             searcher.add_memory_font(match font_data {
                 Cow::Borrowed(data) => Bytes::from_static(data),
                 Cow::Owned(data) => Bytes::from(data),
             });
-        }
-        // Source4: add the fonts from the profile cache.
-        for profile_path in opts.font_profile_paths {
-            searcher.add_profile_by_path(&profile_path);
         }
 
         Ok(searcher.into())

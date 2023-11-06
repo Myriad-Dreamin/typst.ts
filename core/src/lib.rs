@@ -1,4 +1,8 @@
 // Core type system/concepts of typst-ts.
+// #![warn(missing_docs)]
+// #![warn(missing_debug_implementations)]
+// #![warn(missing_copy_implementations)]
+
 pub(crate) mod concepts;
 pub use concepts::*;
 pub mod error;
