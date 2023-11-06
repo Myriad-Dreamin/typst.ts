@@ -108,7 +108,7 @@ tokio-tungstenite = "0.20.0"
 
 # system
 dirs = "5"
-fontdb = "0.15.0"                                          # "0.15.0"
+fontdb = "0.15.0"
 memmap2 = "0.9"
 notify = "6"
 path-clean = "1.0.1"
