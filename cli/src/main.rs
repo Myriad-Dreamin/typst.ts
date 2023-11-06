@@ -194,7 +194,6 @@ fn measure_fonts(args: MeasureFontsArgs) -> ! {
 
     let world = TypstSystemWorld::new(CompileOpts {
         root_dir: root_path,
-        font_profile_paths,
         font_paths: args.font.paths,
         font_profile_cache_path: args.output.clone(),
         no_system_fonts: args.no_system_fonts,

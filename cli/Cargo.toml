@@ -41,6 +41,7 @@ human-panic.workspace = true
 typst-ts-core.workspace = true
 typst-ts-compiler = { workspace = true, default-features = false, features = [
     "system",
+    # "lazy-fontdb",
     "dynamic-layout",
 ] }
 

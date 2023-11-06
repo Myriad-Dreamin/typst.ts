@@ -24,18 +24,20 @@ flate2.workspace = true
 ecow.workspace = true
 instant.workspace = true
 strum.workspace = true
+rayon.workspace = true
 
 serde.workspace = true
 serde_json.workspace = true
 serde-wasm-bindgen = { workspace = true, optional = true }
 
-memmap2 = { workspace = true, optional = true }
 dirs = { workspace = true, optional = true }
 walkdir = { workspace = true, optional = true }
 notify = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 pollster = { workspace = true, optional = true }
 log = { workspace = true, optional = true }
+fontdb = { workspace = true, optional = true }
+
 chrono = { workspace = true }
 base64.workspace = true
 rustc-hash.workspace = true
@@ -85,12 +87,13 @@ serde.workspace = true
 [features]
 cjk = []
 emoji = []
+lazy-fontdb = []
 system-compile = [
-    "dep:memmap2",
     "dep:dirs",
     "dep:walkdir",
     "dep:notify",
     "dep:log",
+    "dep:fontdb",
 ]
 system-watch = ["dep:notify", "dep:tokio"]
 system = ["system-compile", "system-watch"]
