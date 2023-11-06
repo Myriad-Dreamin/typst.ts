@@ -2119,22 +2119,22 @@
   resolved "https://registry.yarnpkg.com/@leichtgewicht/ip-codec/-/ip-codec-2.0.4.tgz#b2ac626d6cb9c8718ab459166d4bb405b8ffa78b"
   integrity sha512-Hcv+nVC0kZnQ3tD9GVu5xSMR4VVYOteQIr/hwFPVEvPdlXqgGEuRjiheChHgdM+JyqdgNcmzZOX/tnl0JOiI7A==
 
-"@myriaddreamin/typst-ts-parser@^0.4.0":
+"@myriaddreamin/typst-ts-parser@*":
   version "0.4.0"
   resolved "https://registry.yarnpkg.com/@myriaddreamin/typst-ts-parser/-/typst-ts-parser-0.4.0.tgz#8f7be838ba1a52d073c256a07441ad9a69a8f37c"
   integrity sha512-/Inhg1K55hFELXy7AiU8qE0vqhy6GVSub9OsJ/SZxU+ATjfhPKg0Yej4VrRzVpZjr0dBn8ycjVLZBYWo53uDSQ==
 
-"@myriaddreamin/typst-ts-renderer@^0.4.0":
+"@myriaddreamin/typst-ts-renderer@*", "@myriaddreamin/typst-ts-renderer@^0.4.0":
   version "0.4.0"
   resolved "https://registry.yarnpkg.com/@myriaddreamin/typst-ts-renderer/-/typst-ts-renderer-0.4.0.tgz#97dcf9ba9b392f2d7ef3d87731c251a2ab3c3def"
   integrity sha512-FK8oCEzXmEMuAf++Oz4lljRIC99yZxGvAjDkiE13b5EAUMmd7e0urFrzWZ8HUi77dPxu0wEvHhmgZ7Vc8Zvayw==
 
-"@myriaddreamin/typst-ts-web-compiler@^0.4.0":
+"@myriaddreamin/typst-ts-web-compiler@*", "@myriaddreamin/typst-ts-web-compiler@^0.4.0":
   version "0.4.0"
   resolved "https://registry.yarnpkg.com/@myriaddreamin/typst-ts-web-compiler/-/typst-ts-web-compiler-0.4.0.tgz#87d9a15d2d8d24f7d107d3f827cf64b2d578143d"
   integrity sha512-38wJUehLMk3nt4Od3F1tLcrv3nIfNEwBGcTJ3nC1BTEInt7b3kVquJ4uQVIRkwRKUVVE/2mD5jVZIaXY/iXSeg==
 
-"@myriaddreamin/typst.ts@^0.4.0":
+"@myriaddreamin/typst.ts@*", "@myriaddreamin/typst.ts@^0.4.0":
   version "0.4.0"
   resolved "https://registry.yarnpkg.com/@myriaddreamin/typst.ts/-/typst.ts-0.4.0.tgz#308a84d1f71924582a861fc06a54b8244276a965"
   integrity sha512-heB5Zzma7CaujAzIvDfFSPiVlM9ClT8F8n4mXLGnYwy6U0aml0H24s9tdAG5i1rKwJ0q/CgwIAlHyz73R08QPg==

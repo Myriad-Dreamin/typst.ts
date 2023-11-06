@@ -71,7 +71,7 @@
     "webpack-cli": "^5.1.1",
     "webpack-dev-server": "^4.15.0",
     "webpack-merge": "^5.8.0",
-    "@myriaddreamin/typst.ts": "^0.4.0",
-    "@myriaddreamin/typst-ts-renderer": "^0.4.0"
+    "@myriaddreamin/typst.ts": "*",
+    "@myriaddreamin/typst-ts-renderer": "*"
   }
 }
