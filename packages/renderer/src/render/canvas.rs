@@ -1,9 +1,14 @@
-use std::{collections::HashMap, ops::Deref};
+use std::{collections::HashMap, hash::Hash, ops::Deref};
 
 use typst_ts_canvas_exporter::{
     AnnotationListTask, DefaultExportFeature, ExportFeature, TextContentTask,
 };
-use typst_ts_core::error::prelude::*;
+use typst_ts_core::{
+    annotation::AnnotationList,
+    error::prelude::*,
+    hash::{Fingerprint, FingerprintHasher, FingerprintSipHasher},
+    TextContent,
+};
 use typst_ts_svg_exporter::{
     flat_ir::LayoutRegionNode,
     ir::{Axes, Rect, Scalar},
@@ -11,6 +16,13 @@ use typst_ts_svg_exporter::{
 use wasm_bindgen::prelude::*;
 
 use crate::{RenderPageImageOptions, RenderSession, TypstRenderer};
+
+#[derive(Default)]
+pub struct CanvasDataSelection {
+    pub body: bool,
+    pub text_content: bool,
+    pub annotation_list: bool,
+}
 
 #[wasm_bindgen]
 impl TypstRenderer {
@@ -20,11 +32,14 @@ impl TypstRenderer {
         canvas: &web_sys::CanvasRenderingContext2d,
         options: Option<RenderPageImageOptions>,
     ) -> ZResult<JsValue> {
-        let (text_content, annotation_list, ..) = self
+        let (fingerprint, text_content, annotation_list, ..) = self
             .render_page_to_canvas_internal::<DefaultExportFeature>(ses, canvas, options)
             .await?;
 
         let res = js_sys::Object::new();
+        let err =
+            js_sys::Reflect::set(&res, &"cacheKey".into(), &fingerprint.as_svg_id("c").into());
+        err.map_err(map_into_err::<JsValue, _>("Renderer.SetCacheKey"))?;
         let err = js_sys::Reflect::set(&res, &"textContent".into(), &text_content);
         err.map_err(map_into_err::<JsValue, _>("Renderer.SetTextContent"))?;
         let err = js_sys::Reflect::set(&res, &"annotationList".into(), &annotation_list);
@@ -40,7 +55,7 @@ impl TypstRenderer {
         ses: &RenderSession,
         canvas: &web_sys::CanvasRenderingContext2d,
         options: Option<RenderPageImageOptions>,
-    ) -> ZResult<(JsValue, JsValue, Option<HashMap<String, f64>>)> {
+    ) -> ZResult<(Fingerprint, JsValue, JsValue, Option<HashMap<String, f64>>)> {
         let rect_lo_x: f32 = -1.;
         let rect_lo_y: f32 = -1.;
         let rect_hi_x: f32 = 1e30;
@@ -54,13 +69,18 @@ impl TypstRenderer {
         let mut client = ses.canvas_kern.lock().unwrap();
         client.set_pixel_per_pt(ses.pixel_per_pt.unwrap_or(3.));
         client.set_fill(ses.background_color.as_deref().unwrap_or("ffffff").into());
-        console_log!(
-            "background_color: {:?}",
-            ses.background_color.as_deref().unwrap_or("ffffff")
-        );
+        // console_log!(
+        //     "background_color: {:?}",
+        //     ses.background_color.as_deref().unwrap_or("ffffff")
+        // );
 
-        let mut tc = Default::default();
-        let mut annotations = Default::default();
+        let data_selection = options
+            .as_ref()
+            .and_then(|o| o.data_selection)
+            .unwrap_or(u32::MAX);
+
+        let mut tc = ((data_selection & (1 << 1)) != 0).then(TextContent::default);
+        let mut annotations = ((data_selection & (1 << 2)) != 0).then(AnnotationList::default);
 
         // let def_provider = GlyphProvider::new(FontGlyphProvider::default());
         // let partial_providier =
@@ -76,25 +96,59 @@ impl TypstRenderer {
         } else {
             None
         };
-
         // if let Some(perf_events) = perf_events.as_ref() {
         //     worker.set_perf_events(perf_events)
         // };
 
-        let mut page_num = usize::MAX;
-        if let Some(options) = options {
-            page_num = options.page_off;
-            client
-                .render_page_in_window(&mut kern, canvas, options.page_off, rect)
-                .await?;
+        // todo: reuse
+        let Some(t) = &kern.layout else {
+            todo!();
+        };
+        let pages = t.pages(kern.module()).unwrap().pages();
+
+        let fingerprint;
+        let page_off;
+
+        if let Some(RenderPageImageOptions {
+            page_off: Some(c), ..
+        }) = options
+        {
+            fingerprint = pages[c].content;
+            page_off = Some(c);
         } else {
-            client.render_in_window(&mut kern, canvas, rect).await;
+            let mut f = FingerprintSipHasher::default();
+            for page in pages.iter() {
+                page.content.hash(&mut f);
+            }
+            fingerprint = f.finish_fingerprint().0;
+            page_off = None;
+        }
+
+        let cached = options
+            .and_then(|o| o.cache_key)
+            .map(|c| c == fingerprint.as_svg_id("c"))
+            .unwrap_or(false);
+
+        console_log!("cached: {}", cached);
+
+        if !cached {
+            if let Some(page_off) = page_off {
+                client
+                    .render_page_in_window(&mut kern, canvas, page_off, rect)
+                    .await?;
+            } else {
+                client.render_in_window(&mut kern, canvas, rect).await;
+            }
         }
 
         // todo: leaking abstraction
-        let mut worker = TextContentTask::new(&kern.doc.module, &mut tc);
-        let mut annotation_list_worker =
-            AnnotationListTask::new(&kern.doc.module, &mut annotations);
+        let page_num = usize::MAX;
+        let mut worker = tc
+            .as_mut()
+            .map(|tc| TextContentTask::new(&kern.doc.module, tc));
+        let mut annotation_list_worker = annotations
+            .as_mut()
+            .map(|annotations| AnnotationListTask::new(&kern.doc.module, annotations));
         // todo: reuse
         if let Some(t) = &kern.layout {
             let pages = match t {
@@ -111,21 +165,26 @@ impl TypstRenderer {
                     continue;
                 }
                 let partial_page_off = if page_num != usize::MAX { 0. } else { page_off };
-                worker.page_height = partial_page_off + page.size.y.0;
-                worker.process_flat_item(
-                    tiny_skia::Transform::from_translate(partial_page_off, 0.),
-                    &page.content,
-                );
-                annotation_list_worker.page_num = page_num as u32;
-                annotation_list_worker.process_flat_item(
-                    tiny_skia::Transform::from_translate(partial_page_off, 0.),
-                    &page.content,
-                );
+                if let Some(worker) = worker.as_mut() {
+                    worker.page_height = partial_page_off + page.size.y.0;
+                    worker.process_flat_item(
+                        tiny_skia::Transform::from_translate(partial_page_off, 0.),
+                        &page.content,
+                    );
+                }
+                if let Some(worker) = annotation_list_worker.as_mut() {
+                    worker.page_num = page_num as u32;
+                    worker.process_flat_item(
+                        tiny_skia::Transform::from_translate(partial_page_off, 0.),
+                        &page.content,
+                    );
+                }
                 page_off += page.size.y.0;
             }
         }
 
         Ok((
+            fingerprint,
             serde_wasm_bindgen::to_value(&tc)
                 .map_err(map_into_err::<JsValue, _>("Renderer.EncodeTextContent"))?,
             serde_wasm_bindgen::to_value(&annotations).map_err(map_into_err::<JsValue, _>(
@@ -235,7 +294,7 @@ mod tests {
 
             let prepare = performance.now();
 
-            let (res, _, perf_events) = renderer
+            let (_fingerprint, res, _, perf_events) = renderer
                 .render_page_to_canvas_internal::<CIRenderFeature>(&session, &context, None)
                 .await
                 .unwrap();

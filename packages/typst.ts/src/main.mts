@@ -3,7 +3,7 @@ export type { InitOptions, BeforeBuildFn } from './options.init.mjs';
 export type {
   RenderByContentOptions,
   RenderInSessionOptions,
-  RenderPageOptions,
+  RenderCanvasOptions as RenderPageOptions,
   RenderOptions,
 } from './options.render.mjs';
 export { preloadRemoteFonts, preloadSystemFonts } from './options.init.mjs';
