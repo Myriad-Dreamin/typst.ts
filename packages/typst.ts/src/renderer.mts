@@ -3,12 +3,18 @@ import type * as typst from '@myriaddreamin/typst-ts-renderer/pkg/wasm-pack-shim
 
 import type { InitOptions } from './options.init.mjs';
 import { PageViewport } from './render/canvas/viewport.mjs';
-import { PageInfo, TransformMatrix, kObject } from './internal.types.mjs';
+import {
+  AnnotationList,
+  PageInfo,
+  RenderCanvasResult,
+  TransformMatrix,
+  kObject,
+} from './internal.types.mjs';
 import {
   CreateSessionOptions,
   RenderToCanvasOptions,
   RenderOptions,
-  RenderPageOptions,
+  RenderCanvasOptions,
   RenderToSvgOptions,
   ManipulateDataOptions,
   RenderSvgOptions,
@@ -29,10 +35,7 @@ export interface RenderResult {
   height: number;
 }
 
-export interface RenderPageResult {
-  textContent: any;
-  annotationList: AnnotationList;
-}
+type ContextedRenderOptions<T> = T | RenderOptions<T>;
 
 /**
  * The session of a Typst document.
@@ -163,7 +166,7 @@ export class RenderSession {
   /**
    * See {@link TypstRenderer#renderSvg} for more details.
    */
-  renderSvg(options: RenderOptions<RenderSvgOptions>): Promise<string> {
+  renderSvg(options: ContextedRenderOptions<RenderSvgOptions>): Promise<string> {
     return this.plugin.renderSvg({
       renderSession: this,
       ...options,
@@ -173,8 +176,18 @@ export class RenderSession {
   /**
    * See {@link TypstRenderer#renderToSvg} for more details.
    */
-  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<void> {
+  renderToSvg(options: ContextedRenderOptions<RenderToSvgOptions>): Promise<void> {
     return this.plugin.renderToSvg({
+      renderSession: this,
+      ...options,
+    });
+  }
+
+  /**
+   * See {@link TypstRenderer#renderCanvas} for more details.
+   */
+  renderCanvas(options: ContextedRenderOptions<RenderCanvasOptions>): Promise<RenderCanvasResult> {
+    return this.plugin.renderCanvas({
       renderSession: this,
       ...options,
     });
@@ -259,9 +272,14 @@ export interface TypstRenderer extends TypstSvgRenderer {
 
   /**
    * Render a Typst document to canvas.
+   */
+  renderCanvas(options: RenderOptions<RenderCanvasOptions>): Promise<RenderCanvasResult>;
+
+  /**
+   * Render a Typst document to canvas.
    * @param {RenderOptions<RenderToCanvasOptions>} options - The options for
    * rendering a Typst document to specified container.
-   * @returns {RenderResult} - The result of rendering a Typst document.
+   * @returns {void} - The result of rendering a Typst document.
    * @example
    * ```typescript
    * let fetchDoc = (path) => fetch(path).then(
@@ -456,7 +474,7 @@ export interface TypstSvgRenderer {
    * Render a Typst document to svg.
    * @param {RenderOptions<RenderToSvgOptions>} options - The options for
    * rendering a Typst document to specified container.
-   * @returns {RenderResult} - The result of rendering a Typst document.
+   * @returns {void} - The result of rendering a Typst document.
    * @example
    * ```typescript
    * let fetchDoc = (path) => fetch(path).then(
@@ -524,19 +542,33 @@ class TypstRendererDriver {
     return session.retrievePagesInfo();
   }
 
-  renderCanvasInSession(
-    session: RenderSession,
-    canvas: CanvasRenderingContext2D,
-    options?: RenderPageOptions,
-  ): Promise<RenderPageResult> {
-    if (!options) {
-      return this.renderer.render_page_to_canvas(session[kObject], canvas, options || undefined);
-    }
-
-    const rustOptions = new this.rendererJs.RenderPageImageOptions();
-    rustOptions.page_off = options.page_off;
-
-    return this.renderer.render_page_to_canvas(session[kObject], canvas, rustOptions);
+  /**
+   * Render a Typst document to canvas.
+   */
+  renderCanvas(options: RenderOptions<RenderCanvasOptions>): Promise<RenderCanvasResult> {
+    return this.withinOptionSession(options, async sessionRef => {
+      const rustOptions = new this.rendererJs.RenderPageImageOptions();
+      if (options.pageOffset !== undefined) {
+        rustOptions.page_off = options.pageOffset;
+      }
+      if (options.cacheKey !== undefined) {
+        rustOptions.cache_key = options.cacheKey;
+      }
+      if (options.dataSelection !== undefined) {
+        let encoded = 0;
+        if (options.dataSelection.body) {
+          encoded |= 1 << 0;
+        }
+        if (options.dataSelection.text) {
+          encoded |= 1 << 1;
+        }
+        if (options.dataSelection.annotation) {
+          encoded |= 1 << 2;
+        }
+        rustOptions.data_selection = encoded;
+      }
+      return this.renderer.render_page_to_canvas(sessionRef[kObject], options.canvas, rustOptions);
+    });
   }
 
   // async renderPdf(artifactContent: string): Promise<Uint8Array> {
@@ -560,7 +592,7 @@ class TypstRendererDriver {
     container: HTMLElement,
     canvasList: HTMLCanvasElement[],
     options: RenderToCanvasOptions,
-  ): Promise<RenderPageResult[]> {
+  ): Promise<RenderCanvasResult[]> {
     const pages_info = session[kObject].pages_info;
     const page_count = pages_info.page_count;
 
@@ -570,8 +602,10 @@ class TypstRendererDriver {
       if (!ctx) {
         throw new Error('canvas context is null');
       }
-      return await this.renderCanvasInSession(session, ctx, {
-        page_off,
+      return await this.renderCanvas({
+        canvas: ctx,
+        renderSession: session,
+        pageOffset: page_off,
       });
     };
 
@@ -600,7 +634,7 @@ class TypstRendererDriver {
           /// seq
           [
             (async () => {
-              const results: RenderPageResult[] = [];
+              const results: RenderCanvasResult[] = [];
               for (let i = 0; i < page_count; i++) {
                 results.push(await doRender(i, i));
               }
@@ -616,19 +650,6 @@ class TypstRendererDriver {
       console.log(`display layer used: render = ${(t3 - t).toFixed(1)}ms`);
 
       return textContentList;
-    });
-  }
-
-  private renderOnePageTextLayer(
-    container: HTMLElement,
-    viewport: PageViewport,
-    textContentSource: any,
-  ) {
-    // console.log(viewport);
-    this.pdf.renderTextLayer({
-      textContentSource,
-      container,
-      viewport,
     });
   }
 
@@ -733,7 +754,7 @@ class TypstRendererDriver {
 
   async renderToCanvas(options: RenderOptions<RenderToCanvasOptions>): Promise<void> {
     let session: RenderSession;
-    let renderPageResults: RenderPageResult[];
+    let renderPageResults: RenderCanvasResult[];
     const mountContainer = options.container;
     mountContainer.style.visibility = 'hidden';
 
@@ -891,12 +912,10 @@ class TypstRendererDriver {
   }
 
   private withinOptionSession<T>(
-    options: RenderOptions<RenderSvgOptions | RenderToCanvasOptions | CreateSessionOptions>,
+    options: RenderOptions<any>,
     fn: (session: RenderSession) => Promise<T>,
   ): Promise<T> {
-    function isRenderByContentOption(
-      options: RenderSvgOptions | RenderToCanvasOptions | CreateSessionOptions,
-    ): options is CreateSessionOptions {
+    function isRenderByContentOption(options: RenderOptions<any>): options is CreateSessionOptions {
       return 'artifactContent' in options;
     }
 
@@ -947,38 +966,4 @@ class TypstRendererDriver {
       throw e;
     }
   }
-}
-
-interface AnnotationBox {
-  height: number;
-  width: number;
-  page_ref: number;
-  transform: TransformMatrix;
-}
-
-interface UrlLinkAction {
-  t: 'Url';
-  v: {
-    url: string;
-  };
-}
-
-interface GoToLinkAction {
-  t: 'GoTo';
-  v: {
-    page_ref: number;
-    x: number;
-    y: number;
-  };
-}
-
-type LinkAction = UrlLinkAction | GoToLinkAction;
-
-interface LinkAnnotation {
-  annotation_box: AnnotationBox;
-  action: LinkAction;
-}
-
-interface AnnotationList {
-  links: LinkAnnotation[];
 }

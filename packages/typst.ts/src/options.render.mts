@@ -111,9 +111,31 @@ export interface ManipulateDataOptions {
 }
 
 /**
- * The options for rendering a page to an image.
+ * The options for rendering a page to a canvas.
  * @property {number} page_off - The page offset to render.
  */
-export class RenderPageOptions {
-  page_off: number;
+export class RenderCanvasOptions {
+  canvas: CanvasRenderingContext2D;
+
+  /**
+   * The page offset to render.
+   */
+  pageOffset?: number;
+  /**
+   * The previous render state.
+   */
+  cacheKey?: string;
+
+  /**
+   * The selection of the data to render.
+   * @description `body`: render the body of the document.
+   * @description `text`: render the text repr of the document.
+   * @description `annnotation`: render the annnotation of the document.
+   * @default: all of fields set to `true`
+   */
+  dataSelection?: {
+    body?: boolean;
+    text?: boolean;
+    annotation?: boolean;
+  };
 }

@@ -78,24 +78,50 @@ pub fn renderer_build_info() -> JsValue {
 #[wasm_bindgen]
 #[derive(Debug, Default)]
 pub struct RenderPageImageOptions {
-    pub(crate) page_off: usize,
+    pub(crate) page_off: Option<usize>,
+    pub(crate) cache_key: Option<String>,
+    pub(crate) data_selection: Option<u32>,
 }
 
 #[wasm_bindgen]
 impl RenderPageImageOptions {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Self { page_off: 0 }
+        Self {
+            page_off: None,
+            cache_key: None,
+            data_selection: None,
+        }
     }
 
     #[wasm_bindgen(getter)]
-    pub fn page_off(&self) -> usize {
+    pub fn page_off(&self) -> Option<usize> {
         self.page_off
     }
 
     #[wasm_bindgen(setter)]
-    pub fn set_page_off(&mut self, page_off: usize) {
+    pub fn set_page_off(&mut self, page_off: Option<usize>) {
         self.page_off = page_off;
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn cache_key(&self) -> Option<String> {
+        self.cache_key.clone()
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_cache_key(&mut self, cache_key: Option<String>) {
+        self.cache_key = cache_key;
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn data_selection(&self) -> Option<u32> {
+        self.data_selection
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_data_selection(&mut self, data_selection: Option<u32>) {
+        self.data_selection = data_selection;
     }
 }
 
