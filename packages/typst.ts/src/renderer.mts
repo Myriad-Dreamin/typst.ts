@@ -551,6 +551,9 @@ class TypstRendererDriver {
       if (options.pageOffset !== undefined) {
         rustOptions.page_off = options.pageOffset;
       }
+      if (options.cacheKey !== undefined) {
+        rustOptions.cache_key = options.cacheKey;
+      }
       if (options.dataSelection !== undefined) {
         let encoded = 0;
         if (options.dataSelection.body) {
