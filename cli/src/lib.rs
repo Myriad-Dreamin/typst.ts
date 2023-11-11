@@ -3,13 +3,15 @@ use std::path::PathBuf;
 pub mod compile;
 pub mod export;
 pub mod font;
+#[cfg(feature = "gen-manual")]
+pub mod manual;
 pub mod query;
 pub mod query_repl;
 pub mod tracing;
 pub mod utils;
 pub mod version;
 
-use clap::{ArgAction, Parser, Subcommand, ValueEnum};
+use clap::{ArgAction, Args, Command, Parser, Subcommand, ValueEnum};
 use typst_ts_core::build_info::VERSION;
 use version::VersionFormat;
 
@@ -46,6 +48,9 @@ pub enum Subcommands {
 
     #[clap(about = "Generate shell completion script.")]
     Completion(CompletionArgs),
+
+    #[clap(about = "Generate manual.")]
+    Manual(ManualArgs),
 
     #[clap(about = "Dump Client Environment.")]
     Env(EnvArgs),
@@ -229,6 +234,13 @@ pub struct CompletionArgs {
     pub shell: clap_complete::Shell,
 }
 
+/// Generate shell completion script.
+#[derive(Debug, Clone, Parser)]
+pub struct ManualArgs {
+    /// Path to output directory
+    pub dest: PathBuf,
+}
+
 /// Dump Client Environment.
 #[derive(Debug, Clone, Parser)]
 pub struct EnvArgs {
@@ -266,4 +278,9 @@ pub struct GenPackagesDocArgs {
     ///   format `dyn-svg` in the future.
     #[clap(long)]
     pub dynamic_layout: bool,
+}
+
+pub fn get_cli(sub_command_required: bool) -> Command {
+    let cli = Command::new("$").disable_version_flag(true);
+    Opts::augment_args(cli).subcommand_required(sub_command_required)
 }

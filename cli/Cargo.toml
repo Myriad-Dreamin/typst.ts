@@ -16,6 +16,7 @@ typst-ide.workspace = true
 clap.workspace = true
 clap_complete.workspace = true
 clap_complete_fig.workspace = true
+clap_mangen = { workspace = true, optional = true }
 
 rustyline.workspace = true
 
@@ -56,6 +57,7 @@ anyhow.workspace = true
 vergen.workspace = true
 
 [features]
+gen-manual = ["dep:clap_mangen"]
 embedded-fonts = []
 embedded-cjk-fonts = []
 embedded-emoji-fonts = []
@@ -70,6 +72,7 @@ default = [
     "serde-json",
     "serde-rmp",
     "svg",
+    "gen-manual",
     "embedded-fonts",
     "embedded-cjk-fonts",
     "embedded-emoji-fonts",

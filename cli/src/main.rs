@@ -4,12 +4,14 @@ use std::{
     sync::Arc,
 };
 
-use clap::{Args, Command, FromArgMatches};
+use clap::FromArgMatches;
 use typst::{doc::Document, font::FontVariant, World};
 
 use typst_ts_cli::{
     compile::compile_export,
     font::EMBEDDED_FONT,
+    get_cli,
+    manual::generate_manual,
     query::serialize,
     utils::{self, make_absolute, UnwrapOrExit},
     version::intercept_version,
@@ -21,13 +23,10 @@ use typst_ts_compiler::TypstSystemWorld;
 use typst_ts_core::exporter_builtins::GroupExporter;
 use typst_ts_core::{
     config::CompileOpts,
+    error::prelude::*,
     exporter_utils::map_err,
     path::{unix_slash, PathClean},
 };
-fn get_cli(sub_command_required: bool) -> Command {
-    let cli = Command::new("$").disable_version_flag(true);
-    Opts::augment_args(cli).subcommand_required(sub_command_required)
-}
 
 fn help_sub_command() {
     Opts::from_arg_matches(&get_cli(true).get_matches()).unwrap();
@@ -60,6 +59,14 @@ fn main() {
         Some(Subcommands::Query(args)) => query(args),
         Some(Subcommands::QueryRepl(args)) => query_repl(args),
         Some(Subcommands::Completion(args)) => generate_completion(args),
+        #[cfg(feature = "gen-manual")]
+        Some(Subcommands::Manual(args)) => {
+            generate_manual(get_cli(true), &args.dest)
+                .map_err(typst_ts_core::error_once_map_string!("generation failed"))
+                .unwrap_or_exit();
+
+            exit(0);
+        }
         Some(Subcommands::Env(args)) => match args.key {
             EnvKey::Features => {
                 intercept_version(false, typst_ts_cli::version::VersionFormat::Features)

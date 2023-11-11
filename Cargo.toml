@@ -100,6 +100,7 @@ ansi_term = "0.12.1"
 clap = { version = "4.4", features = ["derive", "env", "unicode", "wrap_help"] }
 clap_complete = "4.4"
 clap_complete_fig = "4.4"
+clap_mangen = { vesrion = "0.2.15" }
 human-panic = "1.1.4"
 rustyline = { version = "12.0.0", features = ["derive"] }
 
