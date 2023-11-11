@@ -5,8 +5,8 @@ use typst::{diag::SourceResult, World};
 pub type DynExporter<Input, Output = ()> = Box<dyn Exporter<Input, Output> + Send>;
 
 pub trait Transformer<Input, Output = ()> {
-    /// Export the given input with given world.
-    /// the writable world is hiden by trait itself.
+    /// Export the given input with given world. the writable world is hiden by
+    /// trait itself.
     fn export(&self, world: &dyn World, output: Input) -> SourceResult<Output>;
 }
 
@@ -21,8 +21,8 @@ where
 }
 
 pub trait Exporter<Input, Output = ()> {
-    /// Export the given input with given world.
-    /// the writable world is hiden by trait itself.
+    /// Export the given input with given world. the writable world is hiden by
+    /// trait itself.
     fn export(&self, world: &dyn World, output: Arc<Input>) -> SourceResult<Output>;
 }
 
@@ -42,6 +42,55 @@ where
 {
     fn from(f: F) -> Self {
         Box::new(f)
+    }
+}
+
+pub type DynGenericExporter<X, Input, Output = ()> =
+    Box<dyn GenericExporter<Input, Output, W = X> + Send>;
+
+pub trait GenericTransformer<Input, Output = ()> {
+    type W;
+
+    /// Export the given input with given world. the writable world is hiden by
+    /// trait itself.
+    fn export(&self, world: &Self::W, output: Input) -> SourceResult<Output>;
+}
+
+pub trait GenericExporter<Input, Output = ()> {
+    type W;
+
+    /// Export the given input with given world. the writable world is hiden by
+    /// trait itself.
+    fn export(&self, world: &Self::W, output: Arc<Input>) -> SourceResult<Output>;
+}
+
+pub enum DynPolymorphicExporter<W, Input, Output> {
+    /// It is just applied to exactly the same world type.
+    Just(DynGenericExporter<W, Input, Output>),
+    /// A dynamic exporter that can be applied to any dyn world.
+    Dyn(DynExporter<Input, Output>),
+}
+
+impl<X, Input, Output> DynPolymorphicExporter<X, Input, Output> {
+    pub fn new(exporter: DynExporter<Input, Output>) -> Self {
+        Self::Dyn(exporter)
+    }
+    pub fn new_dyn(exporter: DynExporter<Input, Output>) -> Self {
+        Self::Dyn(exporter)
+    }
+}
+
+impl<X, Input, Output> GenericExporter<Input, Output> for DynPolymorphicExporter<X, Input, Output>
+where
+    X: World,
+{
+    type W = X;
+
+    fn export(&self, world: &Self::W, output: Arc<Input>) -> SourceResult<Output> {
+        match self {
+            Self::Just(exporter) => exporter.export(world, output),
+            Self::Dyn(exporter) => exporter.export(world, output),
+        }
     }
 }
 
