@@ -7,6 +7,18 @@ use serde_with::{
 };
 use serde_with::{DeserializeAs, SerializeAs};
 
+/// Generic marker for type that only occurs in parameter position.
+///
+/// Safety: The signature is type checked by the compiler.
+pub struct PhantomParamData<X>(std::marker::PhantomData<X>);
+unsafe impl<X> Send for PhantomParamData<X> {}
+
+impl<X> Default for PhantomParamData<X> {
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
+
 /// This is an implementation for `Write + !AsRef<AnyBytes>`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AsWritable;
