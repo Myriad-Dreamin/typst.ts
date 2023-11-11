@@ -507,6 +507,8 @@ function randstr(prefix?: string): string {
     .replace('0.', prefix || '');
 }
 
+let warnOnceCanvasSet = true;
+
 class TypstRendererDriver {
   renderer: typst.TypstRenderer;
   rendererJs: typeof typst;
@@ -558,9 +560,9 @@ class TypstRendererDriver {
         let encoded = 0;
         if (options.dataSelection.body) {
           encoded |= 1 << 0;
-          if (!options.canvas) {
-            throw new Error('dataSelection.body is set but no canvas for body is provided');
-          }
+        } else if (options.canvas && warnOnceCanvasSet) {
+          warnOnceCanvasSet = false;
+          console.warn('dataSelection.body is not set but providing canvas for body');
         }
         if (options.dataSelection.text) {
           encoded |= 1 << 1;
