@@ -39,6 +39,7 @@ def main(old_version: str, new_version: str):
   bump_javascript_self_version = lambda: itertools.product(
     [ # file paths
       "package.json",
+      "packages/parser/package.json",
       "packages/compiler/package.json",
       "packages/renderer/package.json",
       "projects/hexo-renderer-typst/package.json",
