@@ -11,6 +11,7 @@ use typst_ts_core::{Bytes, ReadAllOnce};
 use super::AccessModel;
 use crate::Time;
 
+#[derive(Debug)]
 pub struct LazyFile {
     path: std::path::PathBuf,
     file: Option<std::io::Result<File>>,
@@ -35,11 +36,13 @@ impl ReadAllOnce for LazyFile {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct SystemFileMeta {
     mt: std::time::SystemTime,
     is_file: bool,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct SystemAccessModel;
 
 impl SystemAccessModel {

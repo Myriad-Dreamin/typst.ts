@@ -70,13 +70,11 @@ impl<C: Compiler> CompileMiddleware for CompileExporter<C> {
 pub type ReportExporter = DynExporter<CompileReport>;
 pub type FeaturedReportExporter = DynExporter<(Arc<FeatureSet>, CompileReport)>;
 
-#[allow(dead_code)]
 pub struct CompileReporter<C: Compiler> {
     pub compiler: C,
     pub reporter: DynGenericExporter<C::World, (Arc<FeatureSet>, CompileReport)>,
 }
 
-#[allow(dead_code)]
 impl<C: Compiler> CompileReporter<C>
 where
     C::World: 'static,

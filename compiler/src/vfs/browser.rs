@@ -9,6 +9,7 @@ use crate::Time;
 
 use super::AccessModel;
 
+#[derive(Debug)]
 pub struct ProxyAccessModel {
     pub context: JsValue,
     pub mtime_fn: js_sys::Function,

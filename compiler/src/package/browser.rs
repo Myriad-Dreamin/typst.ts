@@ -7,7 +7,7 @@ use wasm_bindgen::{prelude::*, JsValue};
 use super::{PackageError, PackageSpec, Registry};
 
 #[wasm_bindgen]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ProxyContext {
     context: JsValue,
 }
@@ -70,6 +70,7 @@ impl ProxyContext {
     }
 }
 
+#[derive(Debug)]
 pub struct ProxyRegistry {
     pub context: ProxyContext,
     pub real_resolve_fn: js_sys::Function,

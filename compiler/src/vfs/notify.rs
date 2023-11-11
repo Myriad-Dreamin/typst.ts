@@ -198,6 +198,7 @@ pub enum NotifyMessage {
 
 /// Notify shadowing access model, which the typical underlying access model is
 /// [`crate::vfs::system::SystemAccessModel`]
+#[derive(Debug)]
 pub struct NotifyAccessModel<M: AccessModel> {
     files: HashMap<ImmutPath, FileSnapshot>,
     pub inner: M,

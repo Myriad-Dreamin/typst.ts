@@ -6,6 +6,7 @@ use typst_ts_core::Bytes;
 
 use super::{cached::CachedAccessModel, AccessModel};
 
+#[derive(Debug)]
 pub struct TraceAccessModel<M: AccessModel + Sized> {
     inner: M,
     trace: [AtomicU64; 6],

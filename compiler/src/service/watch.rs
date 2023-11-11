@@ -52,6 +52,7 @@ impl Default for WatchState {
 }
 
 /// The data entry of a watched file.
+#[derive(Debug)]
 struct WatchedEntry {
     /// The lifetime of the entry.
     ///
@@ -82,6 +83,7 @@ struct UndeterminedNotifyEvent {
 // Drop order is significant.
 /// The actor that watches files.
 /// It is used to watch files and send events to the consumers
+#[derive(Debug)]
 pub struct NotifyActor {
     /// The access model of the actor.
     /// We concrete the access model to `SystemAccessModel` for now.

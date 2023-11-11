@@ -8,7 +8,7 @@ use crate::Time;
 
 use super::AccessModel;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, Copy)]
 pub struct DummyAccessModel;
 
 impl AccessModel for DummyAccessModel {

@@ -20,6 +20,7 @@ mod path_interner;
 
 pub(crate) use path_interner::PathInterner;
 
+use core::fmt;
 use std::{collections::HashMap, ffi::OsStr, hash::Hash, path::Path, sync::Arc};
 
 use append_only_vec::AppendOnlyVec;
@@ -65,6 +66,7 @@ pub trait AccessModel {
 type FileQuery<T> = QueryRef<T, FileError>;
 
 /// Holds canonical data for all paths pointing to the same entity.
+#[derive(Debug)]
 pub struct PathSlot {
     idx: FileId,
     sampled_path: once_cell::sync::OnceCell<ImmutPath>,
@@ -98,6 +100,18 @@ pub struct Vfs<M: AccessModel + Sized> {
     src2file_id: RwLock<HashMap<TypstFileId, FileId>>,
     pub slots: AppendOnlyVec<PathSlot>,
     pub do_reparse: bool,
+}
+
+impl<M: AccessModel + Sized> fmt::Debug for Vfs<M> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Vfs")
+            .field("lifetime_cnt", &self.lifetime_cnt)
+            .field("path2slot", &self.path2slot)
+            .field("src2file_id", &self.src2file_id)
+            .field("slots", &self.slots)
+            .field("do_reparse", &self.do_reparse)
+            .finish()
+    }
 }
 
 impl<M: AccessModel + Sized> Vfs<M> {

@@ -23,6 +23,9 @@
 //!   - [`service::CompileDriver`]: A driver for the compiler. Examples:
 //!     - Single thread (Sync): <https://github.com/Myriad-Dreamin/typst.ts/blob/main/cli/src/main.rs>
 //!     - Multiple thread (Async): <https://github.com/Enter-tainer/typst-preview-vscode/blob/main/src/main.rs>
+// #![warn(missing_docs)]
+// #![warn(missing_debug_implementations)]
+// #![warn(missing_copy_implementations)]
 
 pub(crate) mod macros;
 

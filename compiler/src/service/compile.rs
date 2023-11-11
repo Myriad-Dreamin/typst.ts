@@ -421,6 +421,7 @@ impl<C: Compiler> CompileActor<C> {
         self.latest_doc.clone()
     }
 }
+#[derive(Debug, Clone)]
 pub struct CompileClient<Ctx> {
     steal_send: mpsc::UnboundedSender<BorrowTask<Ctx>>,
     memory_send: mpsc::UnboundedSender<MemoryEvent>,

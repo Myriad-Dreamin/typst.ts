@@ -6,7 +6,7 @@ use typst::syntax::{ast, LinkedNode, Source, SyntaxKind};
 use super::modifier_set::ModifierSet;
 use super::typst_tokens::{Modifier, TokenType};
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct SemanticTokensLegend {
     #[serde(rename = "tokenTypes")]
     pub token_types: Vec<String>,
@@ -33,6 +33,7 @@ pub fn get_semantic_tokens_legend() -> SemanticTokensLegend {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum OffsetEncoding {
     Utf8,
     Utf16,
@@ -83,6 +84,7 @@ fn tokenize_tree(root: &LinkedNode<'_>, parent_modifiers: ModifierSet) -> Vec<Se
     token.chain(children).collect()
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct SemanticToken {
     pub delta_line: u32,
     pub delta_start_character: u32,

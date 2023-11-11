@@ -12,6 +12,7 @@ use super::AccessModel;
 /// incrementally query a value from a self holding state
 type IncrQueryRef<S, E> = QueryRef<S, E, Option<S>>;
 
+#[derive(Debug)]
 pub struct FileCache<S> {
     lifetime_cnt: usize,
     mtime: Time,
@@ -20,6 +21,7 @@ pub struct FileCache<S> {
     source_state: IncrQueryRef<S, FileError>,
 }
 
+#[derive(Debug)]
 pub struct CachedAccessModel<Inner: AccessModel, C> {
     inner: Inner,
     lifetime_cnt: usize,

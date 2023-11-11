@@ -44,6 +44,7 @@ pub trait CompilerFeat {
 }
 
 /// A world that provides access to the operating system.
+#[derive(Debug)]
 pub struct CompilerWorld<F: CompilerFeat> {
     /// Path to the root directory of compilation.
     /// The world forbids direct access to files outside this directory.
