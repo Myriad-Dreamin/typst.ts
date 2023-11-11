@@ -1,4 +1,5 @@
 use std::io::{self, IsTerminal};
+use std::sync::Arc;
 
 use codespan_reporting::files::Files;
 use codespan_reporting::{
@@ -9,15 +10,29 @@ use codespan_reporting::{
     },
 };
 
-use typst::diag::Severity;
+use typst::diag::{Severity, SourceResult};
 use typst::syntax::Span;
 use typst::WorldExt;
 use typst::{diag::SourceDiagnostic, World};
 
 use typst::eval::eco_format;
-use typst_ts_core::TypstFileId;
+use typst_ts_core::{GenericExporter, PhantomParamData, TakeAs, TypstFileId};
 
-use super::DiagStatus;
+use super::features::{CompileFeature, FeatureSet, WITH_COMPILING_STATUS_FEATURE};
+use super::{CompileReport, DiagStatus};
+
+/// Which format to use for diagnostics.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+pub enum DiagnosticFormat {
+    Human,
+    Short,
+}
+
+impl Default for DiagnosticFormat {
+    fn default() -> Self {
+        Self::Human
+    }
+}
 
 /// Get stderr with color support if desirable.
 fn color_stream() -> StandardStream {
@@ -91,4 +106,58 @@ pub fn status(entry_file: TypstFileId, status: DiagStatus) -> io::Result<()> {
         }
     };
     Ok(())
+}
+
+pub struct ConsoleDiagReporter<W>(PhantomParamData<W>);
+
+impl<W> Default for ConsoleDiagReporter<W>
+where
+    W: for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>,
+{
+    fn default() -> Self {
+        Self(PhantomParamData::default())
+    }
+}
+
+impl<X> GenericExporter<(Arc<FeatureSet>, CompileReport)> for ConsoleDiagReporter<X>
+where
+    X: World + for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>,
+{
+    type W = X;
+
+    fn export(
+        &self,
+        world: &Self::W,
+        output: Arc<(Arc<FeatureSet>, CompileReport)>,
+    ) -> SourceResult<()> {
+        let (features, output) = output.take();
+
+        if WITH_COMPILING_STATUS_FEATURE.retrieve(&features) {
+            use CompileReport::*;
+            status(
+                output.compiling_id(),
+                match &output {
+                    Stage(_, stage, ..) => DiagStatus::Stage(stage),
+                    CompileError(..) | ExportError(..) => {
+                        DiagStatus::Error(output.duration().unwrap())
+                    }
+                    CompileSuccess(..) | CompileWarning(..) => {
+                        DiagStatus::Success(output.duration().unwrap())
+                    }
+                },
+            )
+            .unwrap();
+        }
+
+        if let Some(diag) = output.diagnostics() {
+            let _err = print_diagnostics(world, diag);
+            // todo: log in browser compiler
+            #[cfg(feature = "system-compile")]
+            if _err.is_err() {
+                log::error!("failed to print diagnostics: {:?}", _err);
+            }
+        }
+
+        Ok(())
+    }
 }

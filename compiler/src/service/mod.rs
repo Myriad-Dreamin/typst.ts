@@ -18,6 +18,8 @@ use typst_ts_core::{Bytes, ImmutPath, TypstFileId};
 // todo: remove cfg feature here
 #[cfg(feature = "system-compile")]
 pub(crate) mod diag;
+#[cfg(feature = "system-compile")]
+pub use diag::ConsoleDiagReporter;
 
 #[cfg(feature = "system-watch")]
 pub(crate) mod watch;
@@ -34,12 +36,15 @@ pub use compile::*;
 
 pub(crate) mod export;
 pub use export::*;
+pub mod features;
 pub mod query;
 
 #[cfg(feature = "system-compile")]
 pub(crate) mod session;
 #[cfg(feature = "system-compile")]
 pub use session::*;
+
+use self::features::FeatureSet;
 
 #[cfg(feature = "system-compile")]
 pub type CompileDriver = CompileDriverImpl<crate::TypstSystemWorld>;
@@ -57,6 +62,19 @@ pub trait WorkspaceProvider {
 #[derive(Clone, Default)]
 pub struct CompileEnv {
     pub tracer: Option<Tracer>,
+    pub features: Arc<FeatureSet>,
+}
+
+impl CompileEnv {
+    pub fn configure(mut self, feature_set: FeatureSet) -> Self {
+        self.features = Arc::new(feature_set);
+        self
+    }
+
+    pub fn configure_shared(mut self, feature_set: Arc<FeatureSet>) -> Self {
+        self.features = feature_set;
+        self
+    }
 }
 
 pub trait Compiler {
