@@ -6,6 +6,10 @@ use typst_ts_core::Bytes;
 
 use super::{cached::CachedAccessModel, AccessModel};
 
+/// Provides trace access model which traces the underlying access model.
+///
+/// It simply wraps the underlying access model and prints all the access to the
+/// stdout or the browser console.
 #[derive(Debug)]
 pub struct TraceAccessModel<M: AccessModel + Sized> {
     inner: M,
@@ -13,6 +17,7 @@ pub struct TraceAccessModel<M: AccessModel + Sized> {
 }
 
 impl<M: AccessModel + Sized, C: Clone> TraceAccessModel<CachedAccessModel<M, C>> {
+    /// Create a new [`TraceAccessModel`] with the given inner access model
     pub fn new(inner: CachedAccessModel<M, C>) -> Self {
         Self {
             inner,
@@ -20,14 +25,18 @@ impl<M: AccessModel + Sized, C: Clone> TraceAccessModel<CachedAccessModel<M, C>>
         }
     }
 
+    /// Get the inner access model
     pub fn inner(&self) -> &M {
         self.inner.inner()
     }
 
+    /// Get the mutable reference to the inner access model
     pub fn inner_mut(&mut self) -> &mut M {
         self.inner.inner_mut()
     }
 
+    /// This is not a common interface for access model, but it is used for vfs
+    /// incremental parsing.
     pub fn read_all_diff(
         &self,
         src: &Path,
