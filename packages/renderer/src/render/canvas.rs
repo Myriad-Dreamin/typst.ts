@@ -29,7 +29,7 @@ impl TypstRenderer {
     pub async fn render_page_to_canvas(
         &mut self,
         ses: &RenderSession,
-        canvas: &web_sys::CanvasRenderingContext2d,
+        canvas: Option<web_sys::CanvasRenderingContext2d>,
         options: Option<RenderPageImageOptions>,
     ) -> ZResult<JsValue> {
         let (fingerprint, text_content, annotation_list, ..) = self
@@ -53,7 +53,7 @@ impl TypstRenderer {
     pub async fn render_page_to_canvas_internal<Feat: ExportFeature>(
         &mut self,
         ses: &RenderSession,
-        canvas: &web_sys::CanvasRenderingContext2d,
+        canvas: Option<web_sys::CanvasRenderingContext2d>,
         options: Option<RenderPageImageOptions>,
     ) -> ZResult<(Fingerprint, JsValue, JsValue, Option<HashMap<String, f64>>)> {
         let rect_lo_x: f32 = -1.;
@@ -69,16 +69,13 @@ impl TypstRenderer {
         let mut client = ses.canvas_kern.lock().unwrap();
         client.set_pixel_per_pt(ses.pixel_per_pt.unwrap_or(3.));
         client.set_fill(ses.background_color.as_deref().unwrap_or("ffffff").into());
-        // console_log!(
-        //     "background_color: {:?}",
-        //     ses.background_color.as_deref().unwrap_or("ffffff")
-        // );
 
         let data_selection = options
             .as_ref()
             .and_then(|o| o.data_selection)
             .unwrap_or(u32::MAX);
 
+        let should_render_body = (data_selection & (1 << 0)) != 0;
         let mut tc = ((data_selection & (1 << 1)) != 0).then(TextContent::default);
         let mut annotations = ((data_selection & (1 << 2)) != 0).then(AnnotationList::default);
 
@@ -124,18 +121,22 @@ impl TypstRenderer {
             page_off = None;
         }
 
-        let cached = options
-            .and_then(|o| o.cache_key)
-            .map(|c| c == fingerprint.as_svg_id("c"))
-            .unwrap_or(false);
+        if should_render_body {
+            let cached = options
+                .and_then(|o| o.cache_key)
+                .map(|c| c == fingerprint.as_svg_id("c"))
+                .unwrap_or(false);
 
-        if !cached {
-            if let Some(page_off) = page_off {
-                client
-                    .render_page_in_window(&mut kern, canvas, page_off, rect)
-                    .await?;
-            } else {
-                client.render_in_window(&mut kern, canvas, rect).await;
+            let canvas = &canvas.ok_or_else(|| error_once!("Renderer.MissingCanvasForBody"))?;
+
+            if !cached {
+                if let Some(page_off) = page_off {
+                    client
+                        .render_page_in_window(&mut kern, canvas, page_off, rect)
+                        .await?;
+                } else {
+                    client.render_in_window(&mut kern, canvas, rect).await;
+                }
             }
         }
 
@@ -293,7 +294,7 @@ mod tests {
             let prepare = performance.now();
 
             let (_fingerprint, res, _, perf_events) = renderer
-                .render_page_to_canvas_internal::<CIRenderFeature>(&session, &context, None)
+                .render_page_to_canvas_internal::<CIRenderFeature>(&session, Some(context), None)
                 .await
                 .unwrap();
             let end = performance.now();
