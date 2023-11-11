@@ -61,6 +61,110 @@ impl<C: Compiler> CompileMiddleware for CompileExporter<C> {
     }
 }
 
+pub enum CompileReport {
+    None,
+    CompileError(EcoVec<SourceDiagnostic>),
+    ExportError(EcoVec<SourceDiagnostic>),
+    CompileWarning(EcoVec<SourceDiagnostic>),
+    Ok(EcoVec<SourceDiagnostic>),
+}
+
+impl CompileReport {
+    pub fn diagnostics(self) -> EcoVec<SourceDiagnostic> {
+        match self {
+            Self::None => EcoVec::new(),
+            Self::CompileError(diagnostics) => diagnostics,
+            Self::ExportError(diagnostics) => diagnostics,
+            Self::CompileWarning(diagnostics) => diagnostics,
+            Self::Ok(diagnostics) => diagnostics,
+        }
+    }
+}
+
+#[allow(dead_code)]
+struct CompileReporter<C: Compiler> {
+    pub compiler: C,
+    pub reporter: DynExporter<CompileReport>,
+}
+
+#[allow(dead_code)]
+impl<C: Compiler> CompileReporter<C> {
+    pub fn new(compiler: C) -> Self {
+        Self {
+            compiler,
+            reporter: GroupExporter::new(vec![]).into(),
+        }
+    }
+
+    /// Wrap driver with a given reporter.
+    pub fn with_reporter(mut self, reporter: impl Into<DynExporter<CompileReport>>) -> Self {
+        self.set_reporter(reporter);
+        self
+    }
+
+    /// set an reporter.
+    pub fn set_reporter(&mut self, reporter: impl Into<DynExporter<CompileReport>>) {
+        self.reporter = reporter.into();
+    }
+}
+
+impl<C: Compiler + WorldExporter> WorldExporter for CompileReporter<C> {
+    /// Export a typst document using `typst_ts_core::DocumentExporter`.
+    fn export(&mut self, output: Arc<typst::doc::Document>) -> SourceResult<()> {
+        self.compiler.export(output)
+    }
+}
+
+impl<C: Compiler + WorldExporter> CompileMiddleware for CompileReporter<C> {
+    type Compiler = C;
+
+    fn inner(&self) -> &Self::Compiler {
+        &self.compiler
+    }
+
+    fn inner_mut(&mut self) -> &mut Self::Compiler {
+        &mut self.compiler
+    }
+
+    fn wrap_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<typst::doc::Document>> {
+        let tracer = env.tracer.take();
+        let origin = tracer.is_some();
+
+        env.tracer = Some(tracer.unwrap_or_default());
+
+        let doc = self.inner_mut().compile(env);
+
+        let rep;
+
+        let doc = match doc {
+            Ok(doc) => {
+                let warnings = env.tracer.as_ref().unwrap().clone().warnings();
+                if warnings.is_empty() {
+                    rep = CompileReport::Ok(warnings);
+                } else {
+                    rep = CompileReport::CompileWarning(warnings);
+                }
+
+                Ok(doc)
+            }
+            Err(err) => {
+                rep = CompileReport::CompileError(err);
+                Err(ecow::eco_vec![])
+            }
+        };
+
+        if !origin {
+            env.tracer = None;
+        }
+
+        let rep = Arc::new(rep);
+        // we currently ignore export error here
+        let _ = self.reporter.export(self.compiler.world(), rep);
+
+        doc
+    }
+}
+
 pub type LayoutWidths = Vec<typst::geom::Abs>;
 
 pub struct DynamicLayoutCompiler<C: Compiler + ShadowApi, const ALWAYS_ENABLE: bool = false> {
