@@ -1,6 +1,8 @@
 use ecow::EcoString;
 use once_cell::sync::Lazy;
 
+use super::diag::DiagnosticFormat;
+
 #[derive(Debug, Clone, Copy)]
 pub struct FeatureSlot(u16);
 
@@ -20,7 +22,7 @@ impl From<&LazyFeatureSlot> for FeatureSlot {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct FeatureSet {
     features: Vec<EcoString>,
 }
@@ -50,6 +52,30 @@ impl FeatureSet {
 pub trait CompileFeature<T> {
     fn configure(&self, features: FeatureSet, value: T) -> FeatureSet;
     fn retrieve(&self, features: &FeatureSet) -> T;
+}
+
+pub struct DiagFmtFeature;
+const DIAG_FEATURE: FeatureSlot = FeatureSlot(0);
+pub static DIAG_FMT_FEATURE: DiagFmtFeature = DiagFmtFeature;
+
+impl CompileFeature<DiagnosticFormat> for DiagFmtFeature {
+    fn configure(&self, features: FeatureSet, value: DiagnosticFormat) -> FeatureSet {
+        features.configure_slot(
+            DIAG_FEATURE,
+            match value {
+                DiagnosticFormat::Human => "",
+                DiagnosticFormat::Short => "s",
+            }
+            .into(),
+        )
+    }
+
+    fn retrieve(&self, features: &FeatureSet) -> DiagnosticFormat {
+        features
+            .slot(DIAG_FEATURE)
+            .and_then(|s| (s == "s").then_some(DiagnosticFormat::Short))
+            .unwrap_or_default()
+    }
 }
 
 #[derive(Default)]

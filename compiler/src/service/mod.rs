@@ -44,7 +44,7 @@ pub(crate) mod session;
 #[cfg(feature = "system-compile")]
 pub use session::*;
 
-use self::features::FeatureSet;
+pub use self::{diag::DiagnosticFormat, features::FeatureSet};
 
 #[cfg(feature = "system-compile")]
 pub type CompileDriver = CompileDriverImpl<crate::TypstSystemWorld>;
@@ -358,7 +358,7 @@ where
         &self,
         errors: ecow::EcoVec<SourceDiagnostic>,
     ) -> Result<(), codespan_reporting::files::Error> {
-        diag::print_diagnostics(self.world(), errors)
+        diag::print_diagnostics(self.world(), errors, DiagnosticFormat::Human)
     }
 
     /// Print status message to the terminal.

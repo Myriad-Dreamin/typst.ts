@@ -2,7 +2,10 @@ use std::path::Path;
 
 use typst::doc::Document;
 use typst_ts_compiler::{
-    service::{CompileActor, CompileDriver, CompileExporter, Compiler, DynamicLayoutCompiler},
+    service::{
+        features::{FeatureSet, DIAG_FMT_FEATURE},
+        CompileActor, CompileDriver, CompileExporter, Compiler, DynamicLayoutCompiler,
+    },
     TypstSystemWorld,
 };
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
@@ -101,10 +104,14 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
 
     let watch_root = driver.world().root.as_ref().to_owned();
 
+    let feature_set =
+        FeatureSet::default().configure(&DIAG_FMT_FEATURE, args.diagnostic_format.into());
+
     // CompileExporter + DynamicLayoutCompiler + WatchDriver
     let driver = CompileExporter::new(driver).with_exporter(exporter);
     let driver = DynamicLayoutCompiler::new(driver, output_dir).with_enable(args.dynamic_layout);
-    let actor = CompileActor::new(driver, watch_root).with_watch(args.watch);
+    let actor =
+        CompileActor::new_with_features(driver, watch_root, feature_set).with_watch(args.watch);
 
     utils::async_continue(async move {
         utils::logical_exit(actor.run());

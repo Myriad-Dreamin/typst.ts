@@ -1,3 +1,4 @@
+use core::fmt;
 use std::path::PathBuf;
 
 pub mod compile;
@@ -148,6 +149,14 @@ pub struct CompileArgs {
     #[clap(long)]
     pub format: Vec<String>,
 
+    /// In which format to emit diagnostics
+    #[clap(
+        long,
+        default_value_t = DiagnosticFormat::Human,
+        value_parser = clap::value_parser!(DiagnosticFormat)
+    )]
+    pub diagnostic_format: DiagnosticFormat,
+
     /// Enable tracing.
     /// Possible usage: --trace=verbosity={0..3}
     ///   where verbosity: {0..3} -> {warning, info, debug, trace}
@@ -278,6 +287,37 @@ pub struct GenPackagesDocArgs {
     ///   format `dyn-svg` in the future.
     #[clap(long)]
     pub dynamic_layout: bool,
+}
+
+/// Which format to use for diagnostics.
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, ValueEnum)]
+pub enum DiagnosticFormat {
+    Human,
+    Short,
+}
+
+impl From<DiagnosticFormat> for typst_ts_compiler::service::DiagnosticFormat {
+    fn from(fmt: DiagnosticFormat) -> Self {
+        match fmt {
+            DiagnosticFormat::Human => Self::Human,
+            DiagnosticFormat::Short => Self::Short,
+        }
+    }
+}
+
+impl Default for DiagnosticFormat {
+    fn default() -> Self {
+        Self::Human
+    }
+}
+
+impl fmt::Display for DiagnosticFormat {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.to_possible_value()
+            .expect("no values are skipped")
+            .get_name()
+            .fmt(f)
+    }
 }
 
 pub fn get_cli(sub_command_required: bool) -> Command {

@@ -85,6 +85,8 @@ pub struct CompileActor<C: Compiler> {
     estimated_shadow_files: HashSet<Arc<Path>>,
     /// The latest compiled document.
     latest_doc: Option<Arc<TypstDocument>>,
+    /// feature set for compile_once mode.
+    once_feature_set: FeatureSet,
     /// Shared feature set for watch mode.
     watch_feature_set: Arc<FeatureSet>,
 
@@ -101,13 +103,15 @@ impl<C: Compiler + ShadowApi + WorldExporter + Send + 'static> CompileActor<C>
 where
     C::World: for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>,
 {
-    /// Create a new compiler thread.
-    pub fn new(compiler: C, root: PathBuf) -> Self {
+    pub fn new_with_features(compiler: C, root: PathBuf, feature_set: FeatureSet) -> Self {
         let (steal_send, steal_recv) = mpsc::unbounded_channel();
         let (memory_send, memory_recv) = mpsc::unbounded_channel();
 
-        let watch_feature_set =
-            Arc::new(FeatureSet::default().configure(&WITH_COMPILING_STATUS_FEATURE, true));
+        let watch_feature_set = Arc::new(
+            feature_set
+                .clone()
+                .configure(&WITH_COMPILING_STATUS_FEATURE, true),
+        );
 
         Self {
             compiler: CompileReporter::new(compiler)
@@ -120,6 +124,7 @@ where
 
             estimated_shadow_files: Default::default(),
             latest_doc: None,
+            once_feature_set: feature_set,
             watch_feature_set,
 
             steal_send,
@@ -128,6 +133,11 @@ where
             memory_send,
             memory_recv,
         }
+    }
+
+    /// Create a new compiler thread.
+    pub fn new(compiler: C, root: PathBuf) -> Self {
+        Self::new_with_features(compiler, root, FeatureSet::default())
     }
 
     /// Run the compiler thread synchronously.
@@ -146,7 +156,9 @@ where
     /// until it exits.
     async fn block_run_inner(mut self) -> bool {
         if !self.enable_watch {
-            let compiled = self.compiler.compile(&mut Default::default());
+            let compiled = self
+                .compiler
+                .compile(&mut CompileEnv::default().configure(self.once_feature_set));
             return compiled.is_ok();
         }
 
@@ -162,7 +174,9 @@ where
     /// Spawn the compiler thread.
     pub async fn spawn(mut self) -> Option<JoinHandle<()>> {
         if !self.enable_watch {
-            self.compiler.compile(&mut Default::default()).ok();
+            self.compiler
+                .compile(&mut CompileEnv::default().configure(self.once_feature_set))
+                .ok();
             return None;
         }
 

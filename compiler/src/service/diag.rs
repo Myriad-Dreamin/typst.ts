@@ -18,7 +18,9 @@ use typst::{diag::SourceDiagnostic, World};
 use typst::eval::eco_format;
 use typst_ts_core::{GenericExporter, PhantomParamData, TakeAs, TypstFileId};
 
-use super::features::{CompileFeature, FeatureSet, WITH_COMPILING_STATUS_FEATURE};
+use super::features::{
+    CompileFeature, FeatureSet, DIAG_FMT_FEATURE, WITH_COMPILING_STATUS_FEATURE,
+};
 use super::{CompileReport, DiagStatus};
 
 /// Which format to use for diagnostics.
@@ -47,12 +49,20 @@ fn color_stream() -> StandardStream {
 pub fn print_diagnostics<'files, W: World + Files<'files, FileId = TypstFileId>>(
     world: &'files W,
     errors: ecow::EcoVec<SourceDiagnostic>,
+    diagnostic_format: DiagnosticFormat,
 ) -> Result<(), codespan_reporting::files::Error> {
-    let mut w = color_stream();
-    let config = term::Config {
+    let mut w = match diagnostic_format {
+        DiagnosticFormat::Human => color_stream(),
+        DiagnosticFormat::Short => StandardStream::stderr(ColorChoice::Never),
+    };
+
+    let mut config = term::Config {
         tab_width: 2,
         ..Default::default()
     };
+    if diagnostic_format == DiagnosticFormat::Short {
+        config.display_style = term::DisplayStyle::Short;
+    }
 
     for diagnostic in errors {
         let diag = match diagnostic.severity {
@@ -150,7 +160,7 @@ where
         }
 
         if let Some(diag) = output.diagnostics() {
-            let _err = print_diagnostics(world, diag);
+            let _err = print_diagnostics(world, diag, DIAG_FMT_FEATURE.retrieve(&features));
             // todo: log in browser compiler
             #[cfg(feature = "system-compile")]
             if _err.is_err() {
