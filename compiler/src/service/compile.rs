@@ -137,7 +137,9 @@ where
         if !self.enable_watch {
             let compiled = self
                 .compiler
-                .with_stage_diag::<false, _>("compiling", |driver| driver.compile());
+                .with_stage_diag::<false, _>("compiling", |driver| {
+                    driver.compile(&mut Default::default())
+                });
             return compiled.is_some();
         }
 
@@ -154,7 +156,9 @@ where
     pub async fn spawn(mut self) -> Option<JoinHandle<()>> {
         if !self.enable_watch {
             self.compiler
-                .with_stage_diag::<false, _>("compiling", |driver| driver.compile());
+                .with_stage_diag::<false, _>("compiling", |driver| {
+                    driver.compile(&mut Default::default())
+                });
             return None;
         }
 
@@ -226,7 +230,9 @@ where
         // Compile the document.
         self.latest_doc = self
             .compiler
-            .with_stage_diag::<true, _>("compiling", |driver| driver.compile());
+            .with_stage_diag::<true, _>("compiling", |driver| {
+                driver.compile(&mut Default::default())
+            });
 
         // Evict compilation cache.
         comemo::evict(30);

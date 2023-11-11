@@ -1,10 +1,11 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::ShadowApi;
-use typst::diag::SourceResult;
+use ecow::EcoVec;
+use typst::diag::{SourceDiagnostic, SourceResult};
 use typst_ts_core::{exporter_builtins::GroupExporter, DynExporter, TypstDocument};
 
-use super::{CompileMiddleware, Compiler};
+use super::{CompileEnv, CompileMiddleware, Compiler};
 
 pub trait WorldExporter {
     fn export(&mut self, output: Arc<typst::doc::Document>) -> SourceResult<()>;
@@ -53,8 +54,8 @@ impl<C: Compiler> CompileMiddleware for CompileExporter<C> {
         &mut self.compiler
     }
 
-    fn wrap_compile(&mut self) -> SourceResult<Arc<typst::doc::Document>> {
-        let doc = self.inner_mut().compile()?;
+    fn wrap_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<typst::doc::Document>> {
+        let doc = self.inner_mut().compile(env)?;
         self.export(doc.clone())?;
 
         Ok(doc)
@@ -167,7 +168,7 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
 
             self.with_shadow_file_by_id(variable_file, variables.as_bytes().into(), |this| {
                 // compile and export document
-                let output = this.inner_mut().compile()?;
+                let output = this.inner_mut().compile(&mut Default::default())?;
                 svg_exporter.render(current_width, output);
                 log::trace!(
                     "rerendered {} at {:?}, {}",
@@ -204,12 +205,12 @@ impl<C: Compiler + ShadowApi> CompileMiddleware for DynamicLayoutCompiler<C> {
         &mut self.compiler
     }
 
-    fn wrap_compile(&mut self) -> SourceResult<Arc<TypstDocument>> {
+    fn wrap_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<TypstDocument>> {
         if !self.enable_dynamic_layout {
-            return self.inner_mut().compile();
+            return self.inner_mut().compile(env);
         }
 
-        let pure_doc = self.inner_mut().compile()?;
+        let pure_doc = self.inner_mut().compile(env)?;
         self.export(pure_doc.clone())?;
 
         Ok(pure_doc)

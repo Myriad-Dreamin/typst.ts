@@ -89,7 +89,7 @@ impl ArtifactCompiler {
             ],
         );
 
-        driver.compile().unwrap();
+        driver.compile(&mut Default::default()).unwrap();
 
         ArtifactBundle {
             driver,
