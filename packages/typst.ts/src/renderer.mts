@@ -507,6 +507,8 @@ function randstr(prefix?: string): string {
     .replace('0.', prefix || '');
 }
 
+let warnOnceCanvasSet = true;
+
 class TypstRendererDriver {
   renderer: typst.TypstRenderer;
   rendererJs: typeof typst;
@@ -558,6 +560,9 @@ class TypstRendererDriver {
         let encoded = 0;
         if (options.dataSelection.body) {
           encoded |= 1 << 0;
+        } else if (options.canvas && warnOnceCanvasSet) {
+          warnOnceCanvasSet = false;
+          console.warn('dataSelection.body is not set but providing canvas for body');
         }
         if (options.dataSelection.text) {
           encoded |= 1 << 1;
@@ -567,7 +572,11 @@ class TypstRendererDriver {
         }
         rustOptions.data_selection = encoded;
       }
-      return this.renderer.render_page_to_canvas(sessionRef[kObject], options.canvas, rustOptions);
+      return this.renderer.render_page_to_canvas(
+        sessionRef[kObject],
+        options.canvas || undefined,
+        rustOptions,
+      );
     });
   }
 

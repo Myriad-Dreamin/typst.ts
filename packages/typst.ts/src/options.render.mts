@@ -115,7 +115,7 @@ export interface ManipulateDataOptions {
  * @property {number} page_off - The page offset to render.
  */
 export class RenderCanvasOptions {
-  canvas: CanvasRenderingContext2D;
+  canvas?: CanvasRenderingContext2D;
 
   /**
    * The page offset to render.
