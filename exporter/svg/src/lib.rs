@@ -50,6 +50,9 @@ pub trait ExportFeature {
     /// Whether to attach debug info to svg elements.
     const SHOULD_ATTACH_DEBUG_INFO: bool;
 
+    /// Whether to enable inlined svg.
+    const ENABLE_INLINED_SVG: bool;
+
     /// Whether to render text element.
     /// The text elements is selectable and searchable.
     const SHOULD_RENDER_TEXT_ELEMENT: bool;
@@ -76,6 +79,7 @@ pub struct DefaultExportFeature;
 pub type DefaultSvgTask = SvgTask<DefaultExportFeature>;
 
 impl ExportFeature for DefaultExportFeature {
+    const ENABLE_INLINED_SVG: bool = false;
     const ENABLE_TRACING: bool = false;
     const SHOULD_ATTACH_DEBUG_INFO: bool = false;
     const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
@@ -90,6 +94,7 @@ pub struct SvgExportFeature;
 pub type PlainSvgTask = SvgTask<SvgExportFeature>;
 
 impl ExportFeature for SvgExportFeature {
+    const ENABLE_INLINED_SVG: bool = false;
     const ENABLE_TRACING: bool = false;
     const SHOULD_ATTACH_DEBUG_INFO: bool = false;
     const SHOULD_RENDER_TEXT_ELEMENT: bool = true;

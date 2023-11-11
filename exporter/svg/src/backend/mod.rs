@@ -35,6 +35,8 @@ pub trait NotifyPaint {
 }
 
 pub trait DynExportFeature {
+    fn enable_inlined_svg(&self) -> bool;
+
     fn should_render_text_element(&self) -> bool;
 
     fn use_stable_glyph_id(&self) -> bool;
@@ -487,8 +489,9 @@ impl<
         self.content.push(render_path(path, state, abs_ref))
     }
 
-    fn render_image(&mut self, _ctx: &mut C, image_item: &ir::ImageItem) {
-        self.content.push(render_image_item(image_item))
+    fn render_image(&mut self, ctx: &mut C, image_item: &ir::ImageItem) {
+        self.content
+            .push(render_image_item(image_item, ctx.enable_inlined_svg()))
     }
 
     #[inline]
@@ -687,12 +690,14 @@ fn render_path(path: &ir::PathItem, state: RenderState, abs_ref: &Fingerprint) -
 
 /// Render a [`ir::ImageItem`] into svg text.
 #[comemo::memoize]
-fn render_image_item(img: &ir::ImageItem) -> SvgText {
-    match &img.image.alt {
-        Some(t) if t.as_ref() == "!typst-inlined-svg" => {
-            return SvgText::Plain(String::from_utf8(img.image.data.clone()).unwrap())
+fn render_image_item(img: &ir::ImageItem, enable_inlined: bool) -> SvgText {
+    if enable_inlined {
+        match &img.image.alt {
+            Some(t) if t.as_ref() == "!typst-inlined-svg" => {
+                return SvgText::Plain(String::from_utf8(img.image.data.clone()).unwrap())
+            }
+            _ => {}
         }
-        _ => {}
     }
 
     SvgText::Plain(render_image(&img.image, img.size, true, ""))
