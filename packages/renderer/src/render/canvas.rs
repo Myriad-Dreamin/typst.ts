@@ -129,8 +129,6 @@ impl TypstRenderer {
             .map(|c| c == fingerprint.as_svg_id("c"))
             .unwrap_or(false);
 
-        console_log!("cached: {}", cached);
-
         if !cached {
             if let Some(page_off) = page_off {
                 client
