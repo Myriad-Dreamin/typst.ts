@@ -16,7 +16,7 @@ use rustyline::{Helper, Validator};
 
 use typst_ts_compiler::service::{CompileDriver, CompileReport, Compiler, ConsoleDiagReporter};
 use typst_ts_compiler::{ShadowApi, TypstSystemWorld};
-use typst_ts_core::{GenericExporter, TakeAs};
+use typst_ts_core::{typst::prelude::*, GenericExporter, TakeAs};
 
 use crate::query::serialize;
 use crate::CompileOnceArgs;
@@ -236,7 +236,7 @@ impl ReplContext {
     fn process_err(
         &self,
         driver: &RefMut<CompileDriver>,
-        err: ecow::EcoVec<SourceDiagnostic>,
+        err: EcoVec<SourceDiagnostic>,
     ) -> Result<(), ()> {
         let rep = CompileReport::CompileError(driver.main_id(), err, Default::default());
         let _ = self.reporter.export(driver.world(), Arc::new(rep));

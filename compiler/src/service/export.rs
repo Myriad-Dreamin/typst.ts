@@ -1,14 +1,13 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::ShadowApi;
-use ecow::EcoVec;
 use typst::{
     diag::{SourceDiagnostic, SourceResult},
     World,
 };
 use typst_ts_core::{
-    exporter_builtins::GroupExporter, DynExporter, DynGenericExporter, DynPolymorphicExporter,
-    GenericExporter, TakeAs, TypstDocument, TypstFileId,
+    exporter_builtins::GroupExporter, typst::prelude::*, DynExporter, DynGenericExporter,
+    DynPolymorphicExporter, GenericExporter, TakeAs, TypstDocument, TypstFileId,
 };
 
 use super::{
@@ -235,7 +234,7 @@ impl<C: Compiler> CompileMiddleware for CompileReporter<C> {
             }
             Err(err) => {
                 rep = CompileReport::CompileError(id, err, elapsed);
-                Err(ecow::eco_vec![])
+                Err(eco_vec![])
             }
         };
 

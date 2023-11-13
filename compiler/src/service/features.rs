@@ -1,5 +1,5 @@
-use ecow::EcoString;
 use once_cell::sync::Lazy;
+use typst_ts_core::typst::prelude::*;
 
 use super::diag::DiagnosticFormat;
 

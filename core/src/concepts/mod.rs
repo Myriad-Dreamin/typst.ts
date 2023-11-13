@@ -16,8 +16,8 @@ mod marker;
 pub use marker::*;
 
 /// Re-export of the typst crate.
-mod typst;
-pub use self::typst::*;
+pub mod typst;
+pub use typst::well_known::*;
 
 pub type ImmutStr = Arc<str>;
 pub type ImmutPath = Arc<Path>;

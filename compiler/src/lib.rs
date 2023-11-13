@@ -67,7 +67,7 @@ use typst::{
     diag::{At, FileResult, SourceResult},
     syntax::Span,
 };
-use typst_ts_core::{Bytes, ImmutPath, TypstFileId};
+use typst_ts_core::{typst::prelude::*, Bytes, ImmutPath, TypstFileId};
 use vfs::notify::FilesystemEvent;
 
 /// Latest version of the shadow api, which is in beta.
@@ -100,7 +100,7 @@ pub trait ShadowApi {
         f: impl FnOnce(&mut Self) -> SourceResult<T>,
     ) -> SourceResult<T> {
         self.map_shadow(file_path, content).at(Span::detached())?;
-        let res: Result<T, ecow::EcoVec<typst::diag::SourceDiagnostic>> = f(self);
+        let res: Result<T, EcoVec<typst::diag::SourceDiagnostic>> = f(self);
         self.unmap_shadow(file_path).at(Span::detached())?;
         res
     }

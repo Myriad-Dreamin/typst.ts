@@ -16,7 +16,7 @@ use typst::WorldExt;
 use typst::{diag::SourceDiagnostic, World};
 
 use typst::eval::eco_format;
-use typst_ts_core::{GenericExporter, PhantomParamData, TakeAs, TypstFileId};
+use typst_ts_core::{typst::prelude::*, GenericExporter, PhantomParamData, TakeAs, TypstFileId};
 
 use crate::service::features::{
     CompileFeature, FeatureSet, DIAG_FMT_FEATURE, WITH_COMPILING_STATUS_FEATURE,
@@ -37,7 +37,7 @@ fn color_stream() -> StandardStream {
 /// Print diagnostic messages to the terminal.
 pub fn print_diagnostics<'files, W: World + Files<'files, FileId = TypstFileId>>(
     world: &'files W,
-    errors: ecow::EcoVec<SourceDiagnostic>,
+    errors: EcoVec<SourceDiagnostic>,
     diagnostic_format: DiagnosticFormat,
 ) -> Result<(), codespan_reporting::files::Error> {
     let mut w = match diagnostic_format {
