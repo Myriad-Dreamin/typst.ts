@@ -24,6 +24,7 @@ use crate::{
 struct IncrementalExportFeature;
 
 impl ExportFeature for IncrementalExportFeature {
+    const ENABLE_INLINED_SVG: bool = false;
     const ENABLE_TRACING: bool = false;
     const SHOULD_ATTACH_DEBUG_INFO: bool = false;
     const SHOULD_RENDER_TEXT_ELEMENT: bool = true;

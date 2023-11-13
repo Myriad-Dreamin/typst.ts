@@ -74,6 +74,11 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
 
 impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Feat> {
     #[inline]
+    fn enable_inlined_svg(&self) -> bool {
+        Feat::ENABLE_INLINED_SVG
+    }
+
+    #[inline]
     fn should_render_text_element(&self) -> bool {
         Feat::SHOULD_RENDER_TEXT_ELEMENT && self.should_render_text_element
     }
