@@ -4,7 +4,7 @@ use crate::ShadowApi;
 use typst::{diag::SourceResult, World};
 use typst_ts_core::{
     exporter_builtins::GroupExporter, typst::prelude::*, DynExporter, DynGenericExporter,
-    DynPolymorphicExporter, GenericExporter, TakeAs, TypstDocument, TypstFileId,
+    DynPolymorphicExporter, GenericExporter, TakeAs, TypstDocument,
 };
 
 use super::{
@@ -275,6 +275,7 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
             diag::At,
             syntax::{PackageSpec, Span, VirtualPath},
         };
+        use typst_ts_core::TypstFileId;
 
         use typst_ts_svg_exporter::{flat_ir::serialize_doc, DynamicLayoutSvgExporter};
 
