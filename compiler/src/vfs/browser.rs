@@ -5,7 +5,7 @@ use wasm_bindgen::prelude::*;
 
 use typst_ts_core::Bytes;
 
-use crate::time::SystemTime;
+use crate::Time;
 
 use super::AccessModel;
 
@@ -20,12 +20,12 @@ pub struct ProxyAccessModel {
 impl AccessModel for ProxyAccessModel {
     type RealPath = PathBuf;
 
-    fn mtime(&self, src: &Path) -> FileResult<SystemTime> {
+    fn mtime(&self, src: &Path) -> FileResult<Time> {
         self.mtime_fn
             .call1(&self.context, &src.to_string_lossy().as_ref().into())
             .map(|v| {
                 let v = v.as_f64().unwrap();
-                SystemTime::UNIX_EPOCH + std::time::Duration::from_secs_f64(v)
+                Time::UNIX_EPOCH + std::time::Duration::from_secs_f64(v)
             })
             .map_err(|e| {
                 web_sys::console::error_3(

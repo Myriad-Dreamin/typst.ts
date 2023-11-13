@@ -70,6 +70,8 @@ use typst::{
 use typst_ts_core::{typst::prelude::*, Bytes, ImmutPath, TypstFileId};
 use vfs::notify::FilesystemEvent;
 
+pub use time::Time;
+
 /// Latest version of the shadow api, which is in beta.
 pub trait ShadowApi {
     fn _shadow_map_id(&self, _file_id: TypstFileId) -> FileResult<PathBuf> {
@@ -138,7 +140,7 @@ pub trait ShadowApi {
 
 /// Latest version of the notify api, which is in beta.
 pub trait NotifyApi {
-    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, instant::SystemTime));
+    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, crate::Time));
 
     fn notify_fs_event(&mut self, event: FilesystemEvent);
 }

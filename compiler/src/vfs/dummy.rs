@@ -4,7 +4,7 @@ use typst::diag::{FileError, FileResult};
 
 use typst_ts_core::Bytes;
 
-use crate::time::SystemTime;
+use crate::Time;
 
 use super::AccessModel;
 
@@ -14,8 +14,8 @@ pub struct DummyAccessModel;
 impl AccessModel for DummyAccessModel {
     type RealPath = std::path::PathBuf;
 
-    fn mtime(&self, _src: &Path) -> FileResult<SystemTime> {
-        Ok(SystemTime::UNIX_EPOCH)
+    fn mtime(&self, _src: &Path) -> FileResult<Time> {
+        Ok(Time::UNIX_EPOCH)
     }
 
     fn is_file(&self, _src: &Path) -> FileResult<bool> {

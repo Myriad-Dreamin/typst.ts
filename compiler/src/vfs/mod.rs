@@ -31,7 +31,7 @@ use typst::{
 
 use typst_ts_core::{path::PathClean, Bytes, ImmutPath, QueryRef, TypstFileId};
 
-use crate::{parser::reparse, time::SystemTime};
+use crate::{parser::reparse, Time};
 
 use self::{
     cached::CachedAccessModel,
@@ -53,7 +53,7 @@ pub trait AccessModel {
 
     fn clear(&mut self) {}
 
-    fn mtime(&self, src: &Path) -> FileResult<SystemTime>;
+    fn mtime(&self, src: &Path) -> FileResult<Time>;
 
     fn is_file(&self, src: &Path) -> FileResult<bool>;
 
@@ -68,7 +68,7 @@ type FileQuery<T> = QueryRef<T, FileError>;
 pub struct PathSlot {
     idx: FileId,
     sampled_path: once_cell::sync::OnceCell<ImmutPath>,
-    mtime: FileQuery<SystemTime>,
+    mtime: FileQuery<Time>,
     source: FileQuery<Source>,
     buffer: FileQuery<Bytes>,
 }
@@ -164,7 +164,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// Get all the files in the VFS.
-    pub fn iter_dependencies(&self) -> impl Iterator<Item = (&ImmutPath, SystemTime)> {
+    pub fn iter_dependencies(&self) -> impl Iterator<Item = (&ImmutPath, instant::SystemTime)> {
         self.slots.iter().map(|slot| {
             let dep_path = slot.sampled_path.get().unwrap();
             let dep_mtime = slot
@@ -177,10 +177,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// Get all the files in the VFS.
-    pub fn iter_dependencies_dyn<'a>(
-        &'a self,
-        f: &mut dyn FnMut(&'a ImmutPath, instant::SystemTime),
-    ) {
+    pub fn iter_dependencies_dyn<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, Time)) {
         for slot in self.slots.iter() {
             let Some(dep_path) = slot.sampled_path.get() else {
                 continue;

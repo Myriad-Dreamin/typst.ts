@@ -97,7 +97,7 @@ impl<W: World + WorkspaceProvider + NotifyApi> Compiler for CompileDriverImpl<W>
         self._relevant(event).unwrap_or(true)
     }
 
-    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, instant::SystemTime)) {
+    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, crate::Time)) {
         self.world.iter_dependencies(f)
     }
 

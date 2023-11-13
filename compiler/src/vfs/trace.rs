@@ -4,8 +4,6 @@ use typst::diag::FileResult;
 
 use typst_ts_core::Bytes;
 
-use crate::time::SystemTime;
-
 use super::{cached::CachedAccessModel, AccessModel};
 
 pub struct TraceAccessModel<M: AccessModel + Sized> {
@@ -51,7 +49,7 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
         self.inner.clear();
     }
 
-    fn mtime(&self, src: &Path) -> FileResult<SystemTime> {
+    fn mtime(&self, src: &Path) -> FileResult<crate::Time> {
         let instant = instant::Instant::now();
         let res = self.inner.mtime(src);
         let elapsed = instant.elapsed();

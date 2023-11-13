@@ -26,10 +26,7 @@ use crate::vfs::{
 type WatcherPair = (RecommendedWatcher, mpsc::UnboundedReceiver<NotifyEvent>);
 type NotifyEvent = notify::Result<notify::Event>;
 type FileEntry = (/* key */ ImmutPath, /* value */ FileSnapshot);
-type NotifyFilePair = FileResult<(
-    /* mtime */ instant::SystemTime,
-    /* content */ Bytes,
-)>;
+type NotifyFilePair = FileResult<(/* mtime */ crate::Time, /* content */ Bytes)>;
 
 /// The state of a watched file.
 ///

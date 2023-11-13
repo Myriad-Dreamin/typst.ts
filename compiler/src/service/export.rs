@@ -72,11 +72,11 @@ impl<C: Compiler> CompileMiddleware for CompileExporter<C> {
 
 #[derive(Clone, Debug)]
 pub enum CompileReport {
-    Stage(TypstFileId, &'static str, std::time::SystemTime),
-    CompileError(TypstFileId, EcoVec<SourceDiagnostic>, std::time::Duration),
-    ExportError(TypstFileId, EcoVec<SourceDiagnostic>, std::time::Duration),
-    CompileWarning(TypstFileId, EcoVec<SourceDiagnostic>, std::time::Duration),
-    CompileSuccess(TypstFileId, EcoVec<SourceDiagnostic>, std::time::Duration),
+    Stage(TypstFileId, &'static str, crate::Time),
+    CompileError(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
+    ExportError(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
+    CompileWarning(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
+    CompileSuccess(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
 }
 
 impl CompileReport {
@@ -201,7 +201,7 @@ impl<C: Compiler> CompileMiddleware for CompileReporter<C> {
     }
 
     fn wrap_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<typst::doc::Document>> {
-        let start = instant::SystemTime::now();
+        let start = crate::Time::now();
         let id = self.main_id();
         if WITH_COMPILING_STATUS_FEATURE.retrieve(&env.features) {
             let rep = CompileReport::Stage(id, "compiling", start);
