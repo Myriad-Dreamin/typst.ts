@@ -45,7 +45,7 @@ pub fn test_compiler(
 
         driver
             .with_shadow_file_by_id(main_id, content.as_bytes().into(), |driver| {
-                driver.compile()
+                driver.compile(&mut Default::default())
             })
             .unwrap();
 

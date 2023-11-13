@@ -54,6 +54,11 @@ pub trait WorkspaceProvider {
     fn set_main_id(&mut self, id: TypstFileId);
 }
 
+#[derive(Clone, Default)]
+pub struct CompileEnv {
+    pub tracer: Option<Tracer>,
+}
+
 pub trait Compiler {
     type World: World;
 
@@ -67,7 +72,7 @@ pub trait Compiler {
     fn reset(&mut self) -> SourceResult<()>;
 
     /// Compile once from scratch.
-    fn pure_compile(&mut self) -> SourceResult<Arc<Document>> {
+    fn pure_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
         self.reset()?;
 
         let main_id = self.main_id();
@@ -77,9 +82,13 @@ pub trait Compiler {
             .hint(AtFile(main_id))
             .at(Span::detached())?;
 
-        let mut tracer = Tracer::default();
-        // compile and export document
-        typst::compile(self.world(), &mut tracer).map(Arc::new)
+        let res = match env.tracer.as_mut() {
+            Some(tracer) => typst::compile(self.world(), tracer),
+            None => typst::compile(self.world(), &mut Tracer::default()),
+        };
+
+        // compile document
+        res.map(Arc::new)
     }
 
     /// With **the compilation state**, query the matches for the selector.
@@ -88,8 +97,8 @@ pub trait Compiler {
     }
 
     /// Compile once from scratch.
-    fn compile(&mut self) -> SourceResult<Arc<Document>> {
-        self.pure_compile()
+    fn compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
+        self.pure_compile(env)
     }
 
     /// With **the compilation state**, query the matches for the selector.
@@ -189,8 +198,8 @@ pub trait CompileMiddleware {
     }
 
     /// Hooked compile once from scratch.
-    fn wrap_compile(&mut self) -> SourceResult<Arc<Document>> {
-        self.inner_mut().compile()
+    fn wrap_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
+        self.inner_mut().compile(env)
     }
 
     /// With **the compilation state**, hooked query the matches for the
@@ -227,8 +236,8 @@ impl<T: CompileMiddleware> Compiler for T {
     }
 
     #[inline]
-    fn pure_compile(&mut self) -> SourceResult<Arc<Document>> {
-        self.inner_mut().pure_compile()
+    fn pure_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
+        self.inner_mut().pure_compile(env)
     }
 
     #[inline]
@@ -237,8 +246,8 @@ impl<T: CompileMiddleware> Compiler for T {
     }
 
     #[inline]
-    fn compile(&mut self) -> SourceResult<Arc<Document>> {
-        self.wrap_compile()
+    fn compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
+        self.wrap_compile(env)
     }
 
     #[inline]

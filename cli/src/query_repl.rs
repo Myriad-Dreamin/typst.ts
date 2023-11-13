@@ -124,7 +124,9 @@ impl Completer for ReplContext {
         driver.world.reset();
         let typst_completions = driver
             .with_shadow_file_by_id(main_id, dyn_content.as_bytes().into(), |driver| {
-                let frames = driver.compile().map(|d| d.take().pages);
+                let frames = driver
+                    .compile(&mut Default::default())
+                    .map(|d| d.take().pages);
                 let frames = frames.as_ref().map(|v| v.as_slice()).unwrap_or_default();
                 let source = driver.world.main();
                 Ok(autocomplete(&driver.world, frames, &source, cursor, true))
@@ -230,7 +232,7 @@ impl ReplContext {
         let compiled = self.driver.borrow_mut().with_stage_diag::<false, _>(
             "compiling",
             |driver: &mut CompileDriver| {
-                let doc = driver.compile()?;
+                let doc = driver.compile(&mut Default::default())?;
                 driver.query(line, &doc)
             },
         );

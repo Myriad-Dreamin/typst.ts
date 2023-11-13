@@ -186,7 +186,10 @@ impl TypstCompiler {
         );
 
         // compile and export document
-        let doc = self.compiler.compile().map_err(|e| format!("{e:?}"))?;
+        let doc = self
+            .compiler
+            .compile(&mut Default::default())
+            .map_err(|e| format!("{e:?}"))?;
         let data = ast_exporter
             .export(self.compiler.world(), doc)
             .map_err(|e| format!("{e:?}"))?;
@@ -262,7 +265,10 @@ impl TypstCompiler {
             }
         };
 
-        let doc = self.compiler.compile().map_err(|e| format!("{e:?}"))?;
+        let doc = self
+            .compiler
+            .compile(&mut Default::default())
+            .map_err(|e| format!("{e:?}"))?;
         let artifact_bytes = vec_exporter
             .export(self.compiler.world(), doc)
             .map_err(|e| format!("{e:?}"))?;
@@ -278,7 +284,10 @@ impl TypstCompiler {
         self.compiler
             .set_entry_file(Path::new(&main_file_path).to_owned());
 
-        let doc = self.compiler.compile().map_err(|e| format!("{e:?}"))?;
+        let doc = self
+            .compiler
+            .compile(&mut Default::default())
+            .map_err(|e| format!("{e:?}"))?;
         let elements: Vec<typst::model::Content> = self
             .compiler
             .query(selector, &doc)
