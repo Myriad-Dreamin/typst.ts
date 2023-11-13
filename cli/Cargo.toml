@@ -12,6 +12,7 @@ repository.workspace = true
 typst.workspace = true
 typst-library.workspace = true
 typst-ide.workspace = true
+ecow.workspace = true
 
 clap.workspace = true
 clap_complete.workspace = true

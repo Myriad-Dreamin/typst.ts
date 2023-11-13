@@ -5,7 +5,7 @@ use std::{
 
 use crate::{vfs::notify::FilesystemEvent, ShadowApi};
 use typst::{
-    diag::{At, FileResult, Hint, SourceDiagnostic, SourceResult},
+    diag::{At, FileResult, Hint, SourceResult},
     doc::Document,
     eval::Tracer,
     model::Content,
@@ -15,8 +15,6 @@ use typst::{
 use typst_library::prelude::{eco_format, EcoString};
 use typst_ts_core::{Bytes, ImmutPath, TypstFileId};
 
-// todo: remove cfg feature here
-#[cfg(feature = "system-compile")]
 pub(crate) mod diag;
 #[cfg(feature = "system-compile")]
 pub use diag::ConsoleDiagReporter;
@@ -311,98 +309,6 @@ where
     #[inline]
     fn unmap_shadow(&self, path: &Path) -> FileResult<()> {
         self.inner().unmap_shadow(path)
-    }
-}
-
-/// The status in which the watcher can be.
-pub enum DiagStatus {
-    Stage(&'static str),
-    Success(std::time::Duration),
-    Error(std::time::Duration),
-}
-
-pub trait DiagObserver {
-    /// Print diagnostic messages to the terminal.
-    fn print_diagnostics(
-        &self,
-        errors: ecow::EcoVec<SourceDiagnostic>,
-    ) -> Result<(), codespan_reporting::files::Error>;
-
-    /// Print status message to the terminal.
-    fn print_status<const WITH_STATUS: bool>(&self, status: DiagStatus);
-
-    /// Run inner function with print (optional) status and diagnostics to the
-    /// terminal (for compilation).
-    #[deprecated(note = "use `with_stage_diag` instead")]
-    fn with_compile_diag<const WITH_STATUS: bool, T>(
-        &mut self,
-        f: impl FnOnce(&mut Self) -> SourceResult<T>,
-    ) -> Option<T>;
-
-    /// Run inner function with print (optional) status and diagnostics to the
-    /// terminal.
-    fn with_stage_diag<const WITH_STATUS: bool, T>(
-        &mut self,
-        stage: &'static str,
-        f: impl FnOnce(&mut Self) -> SourceResult<T>,
-    ) -> Option<T>;
-}
-
-#[cfg(feature = "system-compile")]
-impl<C: Compiler> DiagObserver for C
-where
-    C::World: for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>,
-{
-    /// Print diagnostic messages to the terminal.
-    fn print_diagnostics(
-        &self,
-        errors: ecow::EcoVec<SourceDiagnostic>,
-    ) -> Result<(), codespan_reporting::files::Error> {
-        diag::print_diagnostics(self.world(), errors, DiagnosticFormat::Human)
-    }
-
-    /// Print status message to the terminal.
-    fn print_status<const WITH_STATUS: bool>(&self, status: DiagStatus) {
-        if !WITH_STATUS {
-            return;
-        }
-        diag::status(self.main_id(), status).unwrap();
-    }
-
-    /// Run inner function with print (optional) status and diagnostics to the
-    /// terminal (for compilation).
-    fn with_compile_diag<const WITH_STATUS: bool, T>(
-        &mut self,
-        f: impl FnOnce(&mut Self) -> SourceResult<T>,
-    ) -> Option<T> {
-        self.with_stage_diag::<WITH_STATUS, _>("compiling", f)
-    }
-
-    /// Run inner function with print (optional) status and diagnostics to the
-    /// terminal (for stages).
-    fn with_stage_diag<const WITH_STATUS: bool, T>(
-        &mut self,
-        stage: &'static str,
-        f: impl FnOnce(&mut Self) -> SourceResult<T>,
-    ) -> Option<T> {
-        self.print_status::<WITH_STATUS>(DiagStatus::Stage(stage));
-        let start = instant::Instant::now();
-        match f(self) {
-            Ok(val) => {
-                self.print_status::<WITH_STATUS>(DiagStatus::Success(start.elapsed()));
-                Some(val)
-            }
-            Err(errs) => {
-                self.print_status::<WITH_STATUS>(DiagStatus::Error(start.elapsed()));
-                let _err = self.print_diagnostics(errs);
-                // todo: log in browser compiler
-                #[cfg(feature = "system-compile")]
-                if _err.is_err() {
-                    log::error!("failed to print diagnostics: {:?}", _err);
-                }
-                None
-            }
-        }
     }
 }
 

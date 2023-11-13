@@ -18,23 +18,12 @@ use typst::{diag::SourceDiagnostic, World};
 use typst::eval::eco_format;
 use typst_ts_core::{GenericExporter, PhantomParamData, TakeAs, TypstFileId};
 
-use super::features::{
+use crate::service::features::{
     CompileFeature, FeatureSet, DIAG_FMT_FEATURE, WITH_COMPILING_STATUS_FEATURE,
 };
-use super::{CompileReport, DiagStatus};
+use crate::service::CompileReport;
 
-/// Which format to use for diagnostics.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
-pub enum DiagnosticFormat {
-    Human,
-    Short,
-}
-
-impl Default for DiagnosticFormat {
-    fn default() -> Self {
-        Self::Human
-    }
-}
+use super::{DiagStatus, DiagnosticFormat};
 
 /// Get stderr with color support if desirable.
 fn color_stream() -> StandardStream {
@@ -126,6 +115,17 @@ where
 {
     fn default() -> Self {
         Self(PhantomParamData::default())
+    }
+}
+
+impl<X> GenericExporter<CompileReport> for ConsoleDiagReporter<X>
+where
+    X: World + for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>,
+{
+    type W = X;
+
+    fn export(&self, world: &Self::W, output: Arc<CompileReport>) -> SourceResult<()> {
+        self.export(world, Arc::new((Default::default(), output.take())))
     }
 }
 

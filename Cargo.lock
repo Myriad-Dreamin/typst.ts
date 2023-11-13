@@ -4223,6 +4223,7 @@ dependencies = [
  "clap_mangen",
  "codespan-reporting",
  "comemo",
+ "ecow",
  "env_logger",
  "flate2",
  "human-panic",

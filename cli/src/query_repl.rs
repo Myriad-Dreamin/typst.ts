@@ -1,7 +1,10 @@
 use std::borrow::Cow::{self, Owned};
-use std::cell::RefCell;
-use typst_ts_compiler::service::{CompileDriver, Compiler, DiagObserver};
-use typst_ts_compiler::ShadowApi;
+use std::cell::{RefCell, RefMut};
+use std::sync::Arc;
+
+use typst::diag::SourceDiagnostic;
+use typst::World;
+use typst_ide::autocomplete;
 
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
@@ -10,13 +13,13 @@ use rustyline::hint::{Hinter, HistoryHinter};
 use rustyline::validate::MatchingBracketValidator;
 use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, KeyEvent};
 use rustyline::{Helper, Validator};
-use typst_ts_core::TakeAs;
+
+use typst_ts_compiler::service::{CompileDriver, CompileReport, Compiler, ConsoleDiagReporter};
+use typst_ts_compiler::{ShadowApi, TypstSystemWorld};
+use typst_ts_core::{GenericExporter, TakeAs};
 
 use crate::query::serialize;
 use crate::CompileOnceArgs;
-
-use typst::World;
-use typst_ide::autocomplete;
 
 #[derive(Helper, Validator)]
 struct ReplContext {
@@ -28,6 +31,7 @@ struct ReplContext {
 
     // typst world state
     driver: RefCell<CompileDriver>,
+    reporter: ConsoleDiagReporter<TypstSystemWorld>,
 }
 
 impl ReplContext {
@@ -37,6 +41,7 @@ impl ReplContext {
             hinter: HistoryHinter {},
             validator: MatchingBracketValidator::new(),
             driver: RefCell::new(driver),
+            reporter: ConsoleDiagReporter::default(),
         }
     }
 }
@@ -228,14 +233,30 @@ pub fn start_repl_test(args: CompileOnceArgs) -> rustyline::Result<()> {
 }
 
 impl ReplContext {
+    fn process_err(
+        &self,
+        driver: &RefMut<CompileDriver>,
+        err: ecow::EcoVec<SourceDiagnostic>,
+    ) -> Result<(), ()> {
+        let rep = CompileReport::CompileError(driver.main_id(), err, Default::default());
+        let _ = self.reporter.export(driver.world(), Arc::new(rep));
+        Ok(())
+    }
+
     fn repl_process_line(&mut self, line: String) {
-        let compiled = self.driver.borrow_mut().with_stage_diag::<false, _>(
-            "compiling",
-            |driver: &mut CompileDriver| {
-                let doc = driver.compile(&mut Default::default())?;
-                driver.query(line, &doc)
-            },
-        );
+        let compiled = {
+            let mut driver = self.driver.borrow_mut();
+            let doc = driver
+                .compile(&mut Default::default())
+                .map_err(|err| self.process_err(&driver, err))
+                .ok();
+            doc.and_then(|doc| {
+                driver
+                    .query(line, &doc)
+                    .map_err(|err| self.process_err(&driver, err))
+                    .ok()
+            })
+        };
 
         if let Some(compiled) = compiled {
             let serialized = serialize(&compiled, "json").unwrap();
