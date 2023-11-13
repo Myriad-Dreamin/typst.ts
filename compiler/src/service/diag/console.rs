@@ -1,4 +1,4 @@
-use std::io::{self, IsTerminal};
+use std::io::IsTerminal;
 use std::sync::Arc;
 
 use codespan_reporting::files::Files;
@@ -23,7 +23,7 @@ use crate::service::features::{
 };
 use crate::service::CompileReport;
 
-use super::{DiagStatus, DiagnosticFormat};
+use super::DiagnosticFormat;
 
 /// Get stderr with color support if desirable.
 fn color_stream() -> StandardStream {
@@ -35,7 +35,7 @@ fn color_stream() -> StandardStream {
 }
 
 /// Print diagnostic messages to the terminal.
-pub fn print_diagnostics<'files, W: World + Files<'files, FileId = TypstFileId>>(
+fn print_diagnostics<'files, W: World + Files<'files, FileId = TypstFileId>>(
     world: &'files W,
     errors: EcoVec<SourceDiagnostic>,
     diagnostic_format: DiagnosticFormat,
@@ -92,21 +92,7 @@ fn label<'files, W: World + Files<'files, FileId = TypstFileId>>(
     Some(Label::primary(span.id()?, world.range(span)?))
 }
 
-/// Render the status message.
-pub fn status(entry_file: TypstFileId, status: DiagStatus) -> io::Result<()> {
-    let input = entry_file;
-    match status {
-        DiagStatus::Stage(stage) => log::info!("{:?}: {} ...", input, stage),
-        DiagStatus::Success(duration) => {
-            log::info!("{:?}: Compilation succeeded in {:?}", input, duration)
-        }
-        DiagStatus::Error(duration) => {
-            log::info!("{:?}: Compilation failed after {:?}", input, duration)
-        }
-    };
-    Ok(())
-}
-
+#[derive(Debug, Clone, Copy)]
 pub struct ConsoleDiagReporter<W>(PhantomParamData<W>);
 
 impl<W> Default for ConsoleDiagReporter<W>
@@ -140,26 +126,13 @@ where
         world: &Self::W,
         output: Arc<(Arc<FeatureSet>, CompileReport)>,
     ) -> SourceResult<()> {
-        let (features, output) = output.take();
+        let (features, report) = output.take();
 
         if WITH_COMPILING_STATUS_FEATURE.retrieve(&features) {
-            use CompileReport::*;
-            status(
-                output.compiling_id(),
-                match &output {
-                    Stage(_, stage, ..) => DiagStatus::Stage(stage),
-                    CompileError(..) | ExportError(..) => {
-                        DiagStatus::Error(output.duration().unwrap())
-                    }
-                    CompileSuccess(..) | CompileWarning(..) => {
-                        DiagStatus::Success(output.duration().unwrap())
-                    }
-                },
-            )
-            .unwrap();
+            log::info!("{}", report.message());
         }
 
-        if let Some(diag) = output.diagnostics() {
+        if let Some(diag) = report.diagnostics() {
             let _err = print_diagnostics(world, diag, DIAG_FMT_FEATURE.retrieve(&features));
             // todo: log in browser compiler
             #[cfg(feature = "system-compile")]

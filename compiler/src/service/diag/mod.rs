@@ -16,11 +16,3 @@ impl Default for DiagnosticFormat {
         Self::Human
     }
 }
-
-/// The status in which the watcher can be.
-#[derive(Debug, Clone, Copy)]
-pub enum DiagStatus {
-    Stage(&'static str),
-    Success(std::time::Duration),
-    Error(std::time::Duration),
-}

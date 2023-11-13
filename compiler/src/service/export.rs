@@ -1,10 +1,7 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::ShadowApi;
-use typst::{
-    diag::{SourceDiagnostic, SourceResult},
-    World,
-};
+use typst::{diag::SourceResult, World};
 use typst_ts_core::{
     exporter_builtins::GroupExporter, typst::prelude::*, DynExporter, DynGenericExporter,
     DynPolymorphicExporter, GenericExporter, TakeAs, TypstDocument, TypstFileId,
@@ -12,7 +9,7 @@ use typst_ts_core::{
 
 use super::{
     features::{CompileFeature, FeatureSet, WITH_COMPILING_STATUS_FEATURE},
-    CompileEnv, CompileMiddleware, Compiler,
+    CompileEnv, CompileMiddleware, CompileReport, Compiler,
 };
 
 pub trait WorldExporter {
@@ -67,47 +64,6 @@ impl<C: Compiler> CompileMiddleware for CompileExporter<C> {
         self.export(doc.clone())?;
 
         Ok(doc)
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum CompileReport {
-    Stage(TypstFileId, &'static str, crate::Time),
-    CompileError(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
-    ExportError(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
-    CompileWarning(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
-    CompileSuccess(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
-}
-
-impl CompileReport {
-    pub fn compiling_id(&self) -> TypstFileId {
-        match self {
-            Self::Stage(id, ..)
-            | Self::CompileError(id, ..)
-            | Self::ExportError(id, ..)
-            | Self::CompileWarning(id, ..)
-            | Self::CompileSuccess(id, ..) => *id,
-        }
-    }
-
-    pub fn duration(&self) -> Option<std::time::Duration> {
-        match self {
-            Self::Stage(..) => None,
-            Self::CompileError(_, _, dur)
-            | Self::ExportError(_, _, dur)
-            | Self::CompileWarning(_, _, dur)
-            | Self::CompileSuccess(_, _, dur) => Some(*dur),
-        }
-    }
-
-    pub fn diagnostics(self) -> Option<EcoVec<SourceDiagnostic>> {
-        match self {
-            Self::Stage(..) => None,
-            Self::CompileError(_, diagnostics, ..)
-            | Self::ExportError(_, diagnostics, ..)
-            | Self::CompileWarning(_, diagnostics, ..)
-            | Self::CompileSuccess(_, diagnostics, ..) => Some(diagnostics),
-        }
     }
 }
 

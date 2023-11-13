@@ -1,3 +1,4 @@
+use core::fmt;
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
@@ -5,15 +6,14 @@ use std::{
 
 use crate::{vfs::notify::FilesystemEvent, ShadowApi};
 use typst::{
-    diag::{At, FileResult, Hint, SourceResult},
+    diag::{At, FileResult, Hint, SourceDiagnostic, SourceResult},
     doc::Document,
     eval::Tracer,
     model::Content,
     syntax::Span,
     World,
 };
-use typst_library::prelude::{eco_format, EcoString};
-use typst_ts_core::{Bytes, ImmutPath, TypstFileId};
+use typst_ts_core::{typst::prelude::*, Bytes, ImmutPath, TypstFileId};
 
 pub(crate) mod diag;
 #[cfg(feature = "system-compile")]
@@ -72,6 +72,71 @@ impl CompileEnv {
     pub fn configure_shared(mut self, feature_set: Arc<FeatureSet>) -> Self {
         self.features = feature_set;
         self
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum CompileReport {
+    Stage(TypstFileId, &'static str, crate::Time),
+    CompileError(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
+    ExportError(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
+    CompileWarning(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
+    CompileSuccess(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
+}
+
+impl CompileReport {
+    pub fn compiling_id(&self) -> TypstFileId {
+        match self {
+            Self::Stage(id, ..)
+            | Self::CompileError(id, ..)
+            | Self::ExportError(id, ..)
+            | Self::CompileWarning(id, ..)
+            | Self::CompileSuccess(id, ..) => *id,
+        }
+    }
+
+    pub fn duration(&self) -> Option<std::time::Duration> {
+        match self {
+            Self::Stage(..) => None,
+            Self::CompileError(_, _, dur)
+            | Self::ExportError(_, _, dur)
+            | Self::CompileWarning(_, _, dur)
+            | Self::CompileSuccess(_, _, dur) => Some(*dur),
+        }
+    }
+
+    pub fn diagnostics(self) -> Option<EcoVec<SourceDiagnostic>> {
+        match self {
+            Self::Stage(..) => None,
+            Self::CompileError(_, diagnostics, ..)
+            | Self::ExportError(_, diagnostics, ..)
+            | Self::CompileWarning(_, diagnostics, ..)
+            | Self::CompileSuccess(_, diagnostics, ..) => Some(diagnostics),
+        }
+    }
+
+    /// Get the status message.
+    pub fn message(&self) -> CompileReportMsg<'_> {
+        CompileReportMsg(self)
+    }
+}
+
+pub struct CompileReportMsg<'a>(&'a CompileReport);
+
+impl<'a> fmt::Display for CompileReportMsg<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use CompileReport::*;
+
+        let input = self.0.compiling_id();
+        match self.0 {
+            Stage(_, stage, ..) => writeln!(f, "{:?}: {} ...", input, stage),
+            CompileSuccess(_, _, duration) | CompileWarning(_, _, duration) => {
+                writeln!(f, "{:?}: Compilation succeeded in {:?}", input, duration)
+            }
+            CompileError(_, _, duration) | ExportError(_, _, duration) => {
+                writeln!(f, "{:?}: Compilation failed after {:?}", input, duration)
+            }
+        }
     }
 }
 
