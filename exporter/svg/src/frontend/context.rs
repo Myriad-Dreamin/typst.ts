@@ -167,7 +167,7 @@ fn has_gradient<'m, 't, Feat: ExportFeature>(
     use FlatSvgItem::*;
     match item {
         Gradient(..) => true,
-        Image(..) | Link(..) | None => false,
+        Image(..) | Link(..) | ContentHint(..) | None => false,
         Item(t) => has_gradient(ctx, &t.1),
         Group(g, ..) => g.0.iter().any(|(_, x)| has_gradient(ctx, x)),
         Path(p) => p.styles.iter().any(|s| match s {

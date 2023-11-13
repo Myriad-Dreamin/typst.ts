@@ -599,6 +599,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             let size = Self::page_size(size_f32);
 
             let attributes = vec![
+                ("class", "typst-page".into()),
                 ("transform", format!("translate(0, {})", acc_height)),
                 ("data-page-width", size.x.to_string()),
                 ("data-page-height", size.y.to_string()),

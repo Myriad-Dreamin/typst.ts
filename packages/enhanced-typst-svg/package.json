@@ -1,0 +1,34 @@
+{
+  "name": "enhanced-typst-svg",
+  "private": true,
+  "version": "0.4.1-rc2",
+  "description": "Typst svg enhancement",
+  "author": "Myriad Dreamin <camiyoru@gmail.com>",
+  "license": "Apache-2.0",
+  "keywords": [
+    "typst",
+    "renderer"
+  ],
+  "repository": "https://github.com/Myriad-Dreamin/typst.ts",
+  "main": "dist/index.cjs",
+  "files": [
+    "index.cjs",
+    "lib/"
+  ],
+  "directories": {
+    "lib": "./lib"
+  },
+  "peerDependencies": {},
+  "devDependencies": {
+    "esbuild": "0.17.19"
+  },
+  "scripts": {
+    "build": "npx tsc",
+    "debug": "node esbuild.debug.mjs",
+    "watch:min": "npx esbuild --watch ./src/index.ts --minify --outfile=dist/index.min.js",
+    "build:min": "npx esbuild ./src/index.ts --minify --outfile=dist/index.min.js"
+  },
+  "engines": {
+    "node": ">=12"
+  }
+}

@@ -51,6 +51,7 @@ pub mod vfs;
 /// A common implementation of [`typst::World`]
 pub mod world;
 
+pub mod eval;
 /// Diff and parse the source code.
 pub mod parser;
 mod utils;

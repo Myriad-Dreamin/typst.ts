@@ -54,6 +54,13 @@ pub struct LowerBuilder {
     pub extra_items: HashMap<Fingerprint, ir::SvgItem>,
 }
 
+static LINE_HINT_ELEMENTS: once_cell::sync::Lazy<std::collections::HashSet<&'static str>> =
+    once_cell::sync::Lazy::new(|| {
+        let mut set = std::collections::HashSet::new();
+        set.insert("heading");
+        set
+    });
+
 impl LowerBuilder {
     pub fn new(output: &Document) -> Self {
         Self {
@@ -99,11 +106,16 @@ impl LowerBuilder {
                             Self::lower_position(dest, *size)
                         }
                     },
+                    Meta::Elem(elem) => {
+                        if !LINE_HINT_ELEMENTS.contains(elem.func().name()) {
+                            continue;
+                        }
+
+                        SvgItem::ContentHint('\n')
+                    }
+                    Meta::ContentHint(c) => SvgItem::ContentHint(*c),
                     // todo: support page label
-                    Meta::PdfPageLabel(..)
-                    | Meta::Elem(..)
-                    | Meta::PageNumbering(..)
-                    | Meta::Hide => continue,
+                    Meta::PdfPageLabel(..) | Meta::PageNumbering(..) | Meta::Hide => continue,
                 },
             };
 

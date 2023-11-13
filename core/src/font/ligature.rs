@@ -110,6 +110,7 @@ fn get_ligature_resolver(font: &Font) -> Rc<LigatureResolver> {
 
 pub(super) fn resolve_ligature(font: &Font, id: GlyphId) -> Option<ImmutStr> {
     let resolver = get_ligature_resolver(font);
-    // println!("resolve_ligature {:?} {:?}", font, id);
+    // let res = resolver.resolve(font.ttf(), id);
+    // println!("resolve_ligature {:?} {:?} -> {:?}", font, id, res);
     resolver.resolve(font.ttf(), id)
 }
