@@ -1,8 +1,7 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::ShadowApi;
-use ecow::EcoVec;
-use typst::diag::{SourceDiagnostic, SourceResult};
+use typst::diag::SourceResult;
 use typst_ts_core::{exporter_builtins::GroupExporter, DynExporter, TypstDocument};
 
 use super::{CompileEnv, CompileMiddleware, Compiler};
