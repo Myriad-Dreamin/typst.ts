@@ -11,6 +11,7 @@ repository.workspace = true
 [dependencies]
 typst.workspace = true
 comemo.workspace = true
+elsa.workspace = true
 ttf-parser.workspace = true
 path-clean.workspace = true
 
@@ -47,6 +48,7 @@ rkyv-validation = ["dep:rkyv", "rkyv/validation"]
 flat-vector = ["rkyv", "rkyv-validation"]
 vector-bbox = []
 debug-gc = []
+experimental-ligature = []
 
 __web = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
 web = ["__web"]

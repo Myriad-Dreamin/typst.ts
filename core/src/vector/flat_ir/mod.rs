@@ -175,7 +175,7 @@ impl From<Vec<(DefId, FlatGlyphItem)>> for GlyphPack {
 impl FromIterator<(GlyphItem, (GlyphRef, FontRef))> for GlyphPack {
     fn from_iter<T: IntoIterator<Item = (GlyphItem, (GlyphRef, FontRef))>>(iter: T) -> Self {
         let glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
-        let glyph_lower_builder = GlyphLowerBuilder::new(&glyph_provider);
+        let glyph_lower_builder = GlyphLowerBuilder::new(&glyph_provider, true);
 
         let items = iter
             .into_iter()
@@ -468,7 +468,7 @@ pub fn flatten_glyphs(
     repr: impl IntoIterator<Item = (DefId, GlyphItem)>,
 ) -> Vec<(DefId, FlatGlyphItem)> {
     let glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
-    let glyph_lower_builder = GlyphLowerBuilder::new(&glyph_provider);
+    let glyph_lower_builder = GlyphLowerBuilder::new(&glyph_provider, false);
 
     repr.into_iter()
         .map(|(font_id, glyph)| {
