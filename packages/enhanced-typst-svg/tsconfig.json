@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "types": ["web", "./src/global.d.ts"],
+    "baseUrl": ".",
+    "outDir": "dist",
+    "target": "ES2018",
+    "allowJs": true,
+    "noImplicitAny": true,
+    "importHelpers": true,
+    "isolatedModules": true,
+    "strictNullChecks": true,
+    "declaration": false,
+    "stripInternal": true,
+
+    "lib": ["ES5", "ES6", "ES7", "ES2018"]
+  }
+}

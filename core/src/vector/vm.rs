@@ -69,6 +69,9 @@ pub trait GroupContext<C>: Sized {
     fn render_image(&mut self, _ctx: &mut C, _image_item: &ir::ImageItem) {}
 
     fn attach_debug_info(&mut self, _ctx: &mut C, _span_id: u64) {}
+
+    /// Render a semantic link into underlying context.
+    fn render_content_hint(&mut self, _ctx: &mut C, _ch: char) {}
 }
 
 /// Contextual information for rendering.
@@ -193,6 +196,11 @@ pub trait RenderVm: Sized {
             ir::SvgItem::Image((image, ..)) => {
                 let mut g = self.start_group();
                 g.render_image(self, image);
+                g.into()
+            }
+            ir::SvgItem::ContentHint(c) => {
+                let mut g = self.start_group();
+                g.render_content_hint(self, *c);
                 g.into()
             }
             ir::SvgItem::Gradient(..) => {

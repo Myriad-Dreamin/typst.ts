@@ -69,6 +69,7 @@ pub enum FlatSvgItem {
     Item(TransformedRef),
     Group(GroupRef, Option<Size>),
     Gradient(GradientItem),
+    ContentHint(char),
 }
 
 /// Flatten text item.

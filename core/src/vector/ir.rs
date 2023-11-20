@@ -142,6 +142,7 @@ pub enum SvgItem {
     Group(GroupItem, Option<Size>),
     // todo: big size 64
     Gradient(GradientItem),
+    ContentHint(char),
 }
 
 /// Data of an `<image/>` element.

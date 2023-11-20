@@ -140,6 +140,15 @@ impl SvgGlyphBuilder {
         Self::render_glyph_inner(gp, glyph_id, glyph_item)
     }
 
+    fn render_ligature_attr(ll: u8) -> String {
+        // println!("ligature len: {}", ll);
+        if ll > 0 {
+            format!(r#" data-liga-len="{}""#, ll)
+        } else {
+            "".to_owned()
+        }
+    }
+
     pub fn is_image_glyph(&mut self, glyph_item: &ir::GlyphItem) -> Option<bool> {
         let gp: &GlyphProvider = &self.glyph_provider;
         Self::is_image_glyph_inner(gp, glyph_item)
@@ -198,8 +207,11 @@ impl SvgGlyphBuilder {
 
         let img = render_image(&ig.image.image, ig.image.size, false, &transform_style);
 
+        // Ligature information
+        let li = Self::render_ligature_attr(ig.ligature_len);
+
         let symbol_def = format!(
-            r#"<symbol overflow="visible" id="{}" class="image_glyph">{}</symbol>"#,
+            r#"<symbol overflow="visible" id="{}" class="image_glyph"{li}>{}</symbol>"#,
             glyph_id, img
         );
         Some(symbol_def)
@@ -210,8 +222,11 @@ impl SvgGlyphBuilder {
         glyph_id: &str,
         outline_glyph: &ir::OutlineGlyphItem,
     ) -> Option<String> {
+        // Ligature information
+        let li = Self::render_ligature_attr(outline_glyph.ligature_len);
+
         let symbol_def = format!(
-            r#"<path id="{}" class="outline_glyph" d="{}"/>"#,
+            r#"<path id="{}" class="outline_glyph" d="{}"{li}/>"#,
             glyph_id, outline_glyph.d
         );
         Some(symbol_def)
@@ -288,17 +303,25 @@ impl SvgTextBuilder {
         };
 
         // todo: investigate &nbsp;
+
+        // we also apply some additional scaling.
+        // so that the font-size doesn't hit the limit of the browser.
+        // See <https://stackoverflow.com/questions/13416989/computed-font-size-is-bigger-than-defined-in-css-on-the-asus-nexus-7>
         self.content.push(SvgText::Plain(format!(
             concat!(
                 // apply a negative scaleY to flip the text, since a glyph in font is
                 // rendered upside down.
-                r#"<g transform="scale(1,-1)">"#,
-                r#"<foreignObject x="0" y="-{}" width="{}" height="{}">"#,
+                r#"<g transform="scale(16,-16)">"#,
+                r#"<foreignObject x="0" y="-{:.2}" width="{:.2}" height="{:.2}">"#,
                 r#"<h5:div class="tsel" style="font-size: {}px">"#,
                 "{}",
                 r#"</h5:div></foreignObject></g>"#,
             ),
-            ascender, width, upem, upem, text_content
+            ascender / 16.,
+            width / 16.,
+            upem / 16.,
+            ((upem + 1e-3) / 16.) as u32,
+            text_content
         )))
     }
 }
@@ -492,6 +515,13 @@ impl<
     fn render_image(&mut self, ctx: &mut C, image_item: &ir::ImageItem) {
         self.content
             .push(render_image_item(image_item, ctx.enable_inlined_svg()))
+    }
+
+    fn render_content_hint(&mut self, _ctx: &mut C, ch: char) {
+        self.attributes
+            .push(("class", "typst-content-hint".to_owned()));
+        self.attributes
+            .push(("data-hint", format!("{:x}", ch as u32)));
     }
 
     #[inline]

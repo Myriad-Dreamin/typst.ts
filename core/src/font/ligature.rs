@@ -73,7 +73,12 @@ impl LigatureResolver {
         let c: ImmutStr = ligature
             .components
             .into_iter()
-            .map(|g| self.rev_cmap.get(&g).unwrap())
+            .map(|g| {
+                self.rev_cmap.get(&g).unwrap_or_else(|| {
+                    println!("ligature component not found: {:?} {:?}", g, face);
+                    &' '
+                })
+            })
             .collect::<String>()
             .into();
 
@@ -110,6 +115,7 @@ fn get_ligature_resolver(font: &Font) -> Rc<LigatureResolver> {
 
 pub(super) fn resolve_ligature(font: &Font, id: GlyphId) -> Option<ImmutStr> {
     let resolver = get_ligature_resolver(font);
-    // println!("resolve_ligature {:?} {:?}", font, id);
+    // let res = resolver.resolve(font.ttf(), id);
+    // println!("resolve_ligature {:?} {:?} -> {:?}", font, id, res);
     resolver.resolve(font.ttf(), id)
 }

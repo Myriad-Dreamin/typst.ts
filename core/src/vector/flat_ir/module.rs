@@ -316,6 +316,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
 
                 FlatSvgItem::Group(GroupRef(items.into()), size)
             }
+            SvgItem::ContentHint(c) => FlatSvgItem::ContentHint(c),
         };
 
         let fingerprint = self.fingerprint_builder.resolve(&resolved_item);

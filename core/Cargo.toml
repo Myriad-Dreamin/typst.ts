@@ -49,6 +49,7 @@ flat-vector = ["rkyv", "rkyv-validation"]
 vector-bbox = []
 debug-gc = []
 experimental-ligature = []
+no-content-hint = []
 
 __web = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
 web = ["__web"]

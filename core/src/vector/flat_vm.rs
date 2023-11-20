@@ -108,6 +108,11 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
                 g.render_image(self, image);
                 g.into()
             }
+            ir::FlatSvgItem::ContentHint(c) => {
+                let mut g = self.start_flat_group(abs_ref);
+                g.render_content_hint(self, *c);
+                g.into()
+            }
             ir::FlatSvgItem::Gradient(..) | ir::FlatSvgItem::None => {
                 panic!("FlatRenderVm.RenderFrame.UnknownItem {:?}", item)
             }
@@ -250,6 +255,10 @@ where
             }
             ir::FlatSvgItem::Image(image) => {
                 group_ctx.render_image(self, image);
+                group_ctx
+            }
+            ir::FlatSvgItem::ContentHint(c) => {
+                group_ctx.render_content_hint(self, *c);
                 group_ctx
             }
             ir::FlatSvgItem::Gradient(..) | ir::FlatSvgItem::None => {

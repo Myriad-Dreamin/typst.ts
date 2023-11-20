@@ -29,6 +29,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             let state = RenderState::new_size(page.size);
             svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
                 attributes: vec![
+                    ("class", "typst-page".into()),
                     ("transform", format!("translate(0, {})", acc_height)),
                     ("data-tid", entry.as_svg_id("p")),
                     ("data-page-width", size.x.to_string()),
