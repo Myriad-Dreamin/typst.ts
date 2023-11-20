@@ -19,13 +19,21 @@ fn is_ligature(face: &ttf_parser::Face<'_>, id: GlyphId) -> bool {
 /// get reverse cmap
 fn get_rev_cmap(face: &ttf_parser::Face<'_>) -> std::collections::HashMap<GlyphId, char> {
     let mut rev_cmap = std::collections::HashMap::new();
-    for i in 0..(u16::MAX as usize) {
-        let c = char::from_u32(i as u32);
-        if let Some(c) = c {
-            let g = face.glyph_index(c);
-            if let Some(g) = g {
-                rev_cmap.insert(g, c);
+    if let Some(cmap) = face.tables().cmap {
+        for subtable in cmap.subtables {
+            if !subtable.is_unicode() {
+                continue;
             }
+
+            subtable.codepoints(|c| {
+                let c = char::from_u32(c);
+                if let Some(c) = c {
+                    let g = face.glyph_index(c);
+                    if let Some(g) = g {
+                        rev_cmap.insert(g, c);
+                    }
+                }
+            })
         }
     }
     rev_cmap
