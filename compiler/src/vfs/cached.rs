@@ -5,7 +5,7 @@ use typst::diag::{FileError, FileResult};
 
 use typst_ts_core::{Bytes, QueryRef};
 
-use crate::{time::SystemTime, vfs::from_utf8_or_bom};
+use crate::{vfs::from_utf8_or_bom, Time};
 
 use super::AccessModel;
 
@@ -14,7 +14,7 @@ type IncrQueryRef<S, E> = QueryRef<S, E, Option<S>>;
 
 pub struct FileCache<S> {
     lifetime_cnt: usize,
-    mtime: SystemTime,
+    mtime: Time,
     is_file: QueryRef<bool, FileError>,
     read_all: QueryRef<Bytes, FileError>,
     source_state: IncrQueryRef<S, FileError>,
@@ -45,7 +45,7 @@ impl<Inner: AccessModel, C> CachedAccessModel<Inner, C> {
 }
 
 impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {
-    fn mtime_inner(&self, src: &Path) -> FileResult<SystemTime> {
+    fn mtime_inner(&self, src: &Path) -> FileResult<Time> {
         self.inner.mtime(src)
     }
 
@@ -130,7 +130,7 @@ impl<Inner: AccessModel, C: Clone> AccessModel for CachedAccessModel<Inner, C> {
         path_results.retain(|_, v| new_lifetime - v.lifetime_cnt <= 30);
     }
 
-    fn mtime(&self, src: &Path) -> FileResult<SystemTime> {
+    fn mtime(&self, src: &Path) -> FileResult<Time> {
         self.cache_entry(src, |entry| Ok(entry.mtime))
     }
 

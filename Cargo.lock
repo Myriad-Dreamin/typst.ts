@@ -4259,7 +4259,6 @@ dependencies = [
  "comemo",
  "dirs",
  "dissimilar",
- "ecow",
  "flate2",
  "fontdb",
  "fst",

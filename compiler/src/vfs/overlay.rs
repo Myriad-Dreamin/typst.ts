@@ -6,13 +6,13 @@ use typst::diag::FileResult;
 
 use typst_ts_core::Bytes;
 
-use crate::time::SystemTime;
+use crate::Time;
 
 use super::AccessModel;
 
 #[derive(Debug, Clone)]
 struct OverlayFileMeta {
-    mt: SystemTime,
+    mt: Time,
     content: Bytes,
 }
 
@@ -50,7 +50,7 @@ impl<M: AccessModel> OverlayAccessModel<M> {
         // we change mt every time, since content almost changes every time
         // Note: we can still benefit from cache, since we incrementally parse source
 
-        let mt = SystemTime::now();
+        let mt = Time::now();
         let meta = OverlayFileMeta { mt, content };
         self.files
             .write()
@@ -62,7 +62,7 @@ impl<M: AccessModel> OverlayAccessModel<M> {
                 if e.mt == meta.mt && e.content != meta.content {
                     e.mt = meta
                         .mt
-                        // instant::SystemTime has a minimum resolution of 1ms
+                        // [`crate::Time`] has a minimum resolution of 1ms
                         // we negate the time by 1ms so that the time is always
                         // invalidated
                         .checked_sub(std::time::Duration::from_millis(1))
@@ -83,7 +83,7 @@ impl<M: AccessModel> OverlayAccessModel<M> {
 impl<M: AccessModel> AccessModel for OverlayAccessModel<M> {
     type RealPath = M::RealPath;
 
-    fn mtime(&self, src: &Path) -> FileResult<SystemTime> {
+    fn mtime(&self, src: &Path) -> FileResult<Time> {
         if let Some(meta) = self.files.read().get(src) {
             return Ok(meta.mt);
         }

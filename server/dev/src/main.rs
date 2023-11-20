@@ -1,8 +1,12 @@
 use clap::Parser;
 use log::info;
 use std::{path::PathBuf, process::exit};
+use typst_ts_compiler::service::features::WITH_COMPILING_STATUS_FEATURE;
 
-use typst_ts_compiler::service::{CompileExporter, CompileMiddleware, Compiler, DiagObserver};
+use typst_ts_compiler::service::{
+    CompileEnv, CompileExporter, CompileMiddleware, CompileReporter, Compiler, ConsoleDiagReporter,
+    FeatureSet,
+};
 use typst_ts_core::path::PathClean;
 use typst_ts_dev_server::{http::run_http, utils::async_continue, RunSubCommands};
 
@@ -58,23 +62,26 @@ fn compile_corpus(args: CompileCorpusArgs) {
 
     let driver = typst_ts_cli::compile::create_driver(compile_args.compile.clone());
 
-    let mut driver = CompileExporter::new(driver);
+    let driver = CompileExporter::new(driver);
+
+    let mut driver = CompileReporter::new(driver);
+    driver.set_generic_reporter(ConsoleDiagReporter::default());
+
+    // enable compiling status
+    let feat_set = FeatureSet::default().configure(&WITH_COMPILING_STATUS_FEATURE, true);
+    let feat_set = std::sync::Arc::new(feat_set);
 
     let mut compile = |cat: String, name: String| {
         let entry = PathBuf::from(corpus_path).join(cat).join(name).clean();
 
         let exporter = typst_ts_cli::export::prepare_exporters(&compile_args, &entry);
-        driver.set_exporter(exporter);
-        driver.inner_mut().set_entry_file(entry);
 
-        driver.with_stage_diag::<true, _>("compiling", |driver| {
-            driver.compile(&mut Default::default())
-        });
+        let exporter_layer = driver.inner_mut();
 
-        // if status.code().unwrap() != 0 {
-        //     eprintln!("compile corpus failed.");
-        //     exit(status.code().unwrap());
-        // }
+        exporter_layer.set_exporter(exporter);
+        exporter_layer.inner_mut().set_entry_file(entry);
+
+        let _ = driver.compile(&mut CompileEnv::default().configure_shared(feat_set.clone()));
     };
 
     // get all corpus in workspace_path

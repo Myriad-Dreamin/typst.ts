@@ -1,1 +1,1 @@
-pub type SystemTime = instant::SystemTime;
+pub use instant::SystemTime as Time;

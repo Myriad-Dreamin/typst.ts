@@ -1,10 +1,16 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::ShadowApi;
-use typst::diag::SourceResult;
-use typst_ts_core::{exporter_builtins::GroupExporter, DynExporter, TypstDocument};
+use typst::{diag::SourceResult, World};
+use typst_ts_core::{
+    exporter_builtins::GroupExporter, typst::prelude::*, DynExporter, DynGenericExporter,
+    DynPolymorphicExporter, GenericExporter, TakeAs, TypstDocument,
+};
 
-use super::{CompileEnv, CompileMiddleware, Compiler};
+use super::{
+    features::{CompileFeature, FeatureSet, WITH_COMPILING_STATUS_FEATURE},
+    CompileEnv, CompileMiddleware, CompileReport, Compiler,
+};
 
 pub trait WorldExporter {
     fn export(&mut self, output: Arc<typst::doc::Document>) -> SourceResult<()>;
@@ -58,6 +64,145 @@ impl<C: Compiler> CompileMiddleware for CompileExporter<C> {
         self.export(doc.clone())?;
 
         Ok(doc)
+    }
+}
+
+pub type ReportExporter = DynExporter<CompileReport>;
+pub type FeaturedReportExporter = DynExporter<(Arc<FeatureSet>, CompileReport)>;
+
+#[allow(dead_code)]
+pub struct CompileReporter<C: Compiler> {
+    pub compiler: C,
+    pub reporter: DynGenericExporter<C::World, (Arc<FeatureSet>, CompileReport)>,
+}
+
+#[allow(dead_code)]
+impl<C: Compiler> CompileReporter<C>
+where
+    C::World: 'static,
+{
+    pub fn new(compiler: C) -> Self {
+        let x: FeaturedReportExporter = GroupExporter::new(vec![]).into();
+        Self {
+            compiler,
+            reporter: Box::new(DynPolymorphicExporter::<C::World, _, _>::new(x)),
+        }
+    }
+
+    /// Wrap driver with a given reporter.
+    pub fn with_reporter(mut self, reporter: impl Into<ReportExporter>) -> Self {
+        self.set_reporter(reporter);
+        self
+    }
+
+    /// set an reporter.
+    pub fn set_reporter(&mut self, reporter: impl Into<ReportExporter>) {
+        let reporter = reporter.into();
+        let reporter: FeaturedReportExporter = Box::new(
+            move |world: &dyn World, inp: Arc<(Arc<FeatureSet>, CompileReport)>| {
+                // it is believed that no clone will happen here
+                reporter.export(world, Arc::new(inp.take().1))
+            },
+        );
+        self.reporter = Box::new(DynPolymorphicExporter::<C::World, _, _>::new(reporter));
+    }
+
+    /// Wrap driver with a given featured reporter.
+    pub fn with_featured_reporter(mut self, reporter: impl Into<FeaturedReportExporter>) -> Self {
+        self.set_featured_reporter(reporter);
+        self
+    }
+
+    /// set an featured reporter.
+    pub fn set_featured_reporter(&mut self, reporter: impl Into<FeaturedReportExporter>) {
+        self.reporter = Box::new(DynPolymorphicExporter::<C::World, _, _>::new(
+            reporter.into(),
+        ));
+    }
+
+    /// Wrap driver with a given generic reporter.
+    pub fn with_generic_reporter(
+        mut self,
+        reporter: impl GenericExporter<(Arc<FeatureSet>, CompileReport), W = C::World> + Send + 'static,
+    ) -> Self {
+        self.reporter = Box::new(reporter);
+        self
+    }
+
+    /// set an generic reporter.
+    pub fn set_generic_reporter(
+        &mut self,
+        reporter: impl GenericExporter<(Arc<FeatureSet>, CompileReport), W = C::World> + Send + 'static,
+    ) {
+        self.reporter = Box::new(reporter);
+    }
+}
+
+impl<C: Compiler + WorldExporter> WorldExporter for CompileReporter<C> {
+    /// Export a typst document using `typst_ts_core::DocumentExporter`.
+    fn export(&mut self, output: Arc<typst::doc::Document>) -> SourceResult<()> {
+        self.compiler.export(output)
+    }
+}
+
+impl<C: Compiler> CompileMiddleware for CompileReporter<C> {
+    type Compiler = C;
+
+    fn inner(&self) -> &Self::Compiler {
+        &self.compiler
+    }
+
+    fn inner_mut(&mut self) -> &mut Self::Compiler {
+        &mut self.compiler
+    }
+
+    fn wrap_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<typst::doc::Document>> {
+        let start = crate::Time::now();
+        let id = self.main_id();
+        if WITH_COMPILING_STATUS_FEATURE.retrieve(&env.features) {
+            let rep = CompileReport::Stage(id, "compiling", start);
+            let rep = Arc::new((env.features.clone(), rep));
+            // we currently ignore export error here
+            let _ = self.reporter.export(self.compiler.world(), rep);
+        }
+
+        let tracer = env.tracer.take();
+        let origin = tracer.is_some();
+
+        env.tracer = Some(tracer.unwrap_or_default());
+
+        let doc = self.inner_mut().compile(env);
+
+        let elapsed = start.elapsed().unwrap_or_default();
+
+        let rep;
+
+        let doc = match doc {
+            Ok(doc) => {
+                let warnings = env.tracer.as_ref().unwrap().clone().warnings();
+                if warnings.is_empty() {
+                    rep = CompileReport::CompileSuccess(id, warnings, elapsed);
+                } else {
+                    rep = CompileReport::CompileWarning(id, warnings, elapsed);
+                }
+
+                Ok(doc)
+            }
+            Err(err) => {
+                rep = CompileReport::CompileError(id, err, elapsed);
+                Err(eco_vec![])
+            }
+        };
+
+        if !origin {
+            env.tracer = None;
+        }
+
+        let rep = Arc::new((env.features.clone(), rep));
+        // we currently ignore export error here
+        let _ = self.reporter.export(self.compiler.world(), rep);
+
+        doc
     }
 }
 
@@ -130,8 +275,8 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
             diag::At,
             syntax::{PackageSpec, Span, VirtualPath},
         };
-
         use typst_ts_core::TypstFileId;
+
         use typst_ts_svg_exporter::{flat_ir::serialize_doc, DynamicLayoutSvgExporter};
 
         let variable_file = TypstFileId::new(

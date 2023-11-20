@@ -28,9 +28,8 @@ use crate::{
         SemanticTokensLegend,
     },
     service::WorkspaceProvider,
-    time::SystemTime,
     vfs::{AccessModel as VfsAccessModel, Vfs},
-    NotifyApi, ShadowApi,
+    NotifyApi, ShadowApi, Time,
 };
 
 type CodespanResult<T> = Result<T, CodespanError>;
@@ -195,10 +194,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         let t = self.vfs.iter_dependencies();
         let vfs_dependencies = t.map(|(path, mtime)| DependentFileInfo {
             path: path.as_ref().to_owned(),
-            mtime: mtime
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_micros() as u64,
+            mtime: mtime.duration_since(Time::UNIX_EPOCH).unwrap().as_micros() as u64,
         });
 
         DependencyTree::from_iter(&self.root, vfs_dependencies)
@@ -276,7 +272,7 @@ impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
 
 impl<F: CompilerFeat> NotifyApi for CompilerWorld<F> {
     #[inline]
-    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, instant::SystemTime)) {
+    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, Time)) {
         self.vfs.iter_dependencies_dyn(f)
     }
 

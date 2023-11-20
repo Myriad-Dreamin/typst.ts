@@ -17,6 +17,7 @@ use typst::{
 };
 
 use crate::{
+    service::features::WITH_COMPILING_STATUS_FEATURE,
     vfs::notify::{FilesystemEvent, MemoryEvent, NotifyMessage},
     world::{CompilerFeat, CompilerWorld},
     ShadowApi,
@@ -27,7 +28,10 @@ use typst_ts_core::{
     TypstDocument, TypstFileId,
 };
 
-use super::{Compiler, DiagObserver, WorkspaceProvider, WorldExporter};
+use super::{
+    features::FeatureSet, CompileEnv, CompileReporter, Compiler, ConsoleDiagReporter,
+    WorkspaceProvider, WorldExporter,
+};
 
 /// A task that can be sent to the context (compiler thread)
 ///
@@ -66,7 +70,7 @@ struct TaggedMemoryEvent {
 /// The compiler thread.
 pub struct CompileActor<C: Compiler> {
     /// The underlying compiler.
-    pub compiler: C,
+    pub compiler: CompileReporter<C>,
     /// The root path of the workspace.
     pub root: PathBuf,
     /// Whether to enable file system watching.
@@ -81,6 +85,10 @@ pub struct CompileActor<C: Compiler> {
     estimated_shadow_files: HashSet<Arc<Path>>,
     /// The latest compiled document.
     latest_doc: Option<Arc<TypstDocument>>,
+    /// feature set for compile_once mode.
+    once_feature_set: FeatureSet,
+    /// Shared feature set for watch mode.
+    watch_feature_set: Arc<FeatureSet>,
 
     /// Internal channel for stealing the compiler thread.
     steal_send: mpsc::UnboundedSender<BorrowTask<Self>>,
@@ -95,13 +103,19 @@ impl<C: Compiler + ShadowApi + WorldExporter + Send + 'static> CompileActor<C>
 where
     C::World: for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>,
 {
-    /// Create a new compiler thread.
-    pub fn new(compiler: C, root: PathBuf) -> Self {
+    pub fn new_with_features(compiler: C, root: PathBuf, feature_set: FeatureSet) -> Self {
         let (steal_send, steal_recv) = mpsc::unbounded_channel();
         let (memory_send, memory_recv) = mpsc::unbounded_channel();
 
+        let watch_feature_set = Arc::new(
+            feature_set
+                .clone()
+                .configure(&WITH_COMPILING_STATUS_FEATURE, true),
+        );
+
         Self {
-            compiler,
+            compiler: CompileReporter::new(compiler)
+                .with_generic_reporter(ConsoleDiagReporter::default()),
             root,
 
             logical_tick: 1,
@@ -110,6 +124,8 @@ where
 
             estimated_shadow_files: Default::default(),
             latest_doc: None,
+            once_feature_set: feature_set,
+            watch_feature_set,
 
             steal_send,
             steal_recv,
@@ -117,6 +133,11 @@ where
             memory_send,
             memory_recv,
         }
+    }
+
+    /// Create a new compiler thread.
+    pub fn new(compiler: C, root: PathBuf) -> Self {
+        Self::new_with_features(compiler, root, FeatureSet::default())
     }
 
     /// Run the compiler thread synchronously.
@@ -137,10 +158,8 @@ where
         if !self.enable_watch {
             let compiled = self
                 .compiler
-                .with_stage_diag::<false, _>("compiling", |driver| {
-                    driver.compile(&mut Default::default())
-                });
-            return compiled.is_some();
+                .compile(&mut CompileEnv::default().configure(self.once_feature_set));
+            return compiled.is_ok();
         }
 
         if let Some(h) = self.spawn().await {
@@ -156,9 +175,8 @@ where
     pub async fn spawn(mut self) -> Option<JoinHandle<()>> {
         if !self.enable_watch {
             self.compiler
-                .with_stage_diag::<false, _>("compiling", |driver| {
-                    driver.compile(&mut Default::default())
-                });
+                .compile(&mut CompileEnv::default().configure(self.once_feature_set))
+                .ok();
             return None;
         }
 
@@ -230,9 +248,8 @@ where
         // Compile the document.
         self.latest_doc = self
             .compiler
-            .with_stage_diag::<true, _>("compiling", |driver| {
-                driver.compile(&mut Default::default())
-            });
+            .compile(&mut CompileEnv::default().configure_shared(self.watch_feature_set.clone()))
+            .ok();
 
         // Evict compilation cache.
         comemo::evict(30);

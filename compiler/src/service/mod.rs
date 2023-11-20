@@ -1,3 +1,4 @@
+use core::fmt;
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
@@ -12,12 +13,11 @@ use typst::{
     syntax::Span,
     World,
 };
-use typst_library::prelude::{eco_format, EcoString};
-use typst_ts_core::{Bytes, ImmutPath, TypstFileId};
+use typst_ts_core::{typst::prelude::*, Bytes, ImmutPath, TypstFileId};
 
-// todo: remove cfg feature here
-#[cfg(feature = "system-compile")]
 pub(crate) mod diag;
+#[cfg(feature = "system-compile")]
+pub use diag::ConsoleDiagReporter;
 
 #[cfg(feature = "system-watch")]
 pub(crate) mod watch;
@@ -34,12 +34,15 @@ pub use compile::*;
 
 pub(crate) mod export;
 pub use export::*;
+pub mod features;
 pub mod query;
 
 #[cfg(feature = "system-compile")]
 pub(crate) mod session;
 #[cfg(feature = "system-compile")]
 pub use session::*;
+
+pub use self::{diag::DiagnosticFormat, features::FeatureSet};
 
 #[cfg(feature = "system-compile")]
 pub type CompileDriver = CompileDriverImpl<crate::TypstSystemWorld>;
@@ -57,6 +60,84 @@ pub trait WorkspaceProvider {
 #[derive(Clone, Default)]
 pub struct CompileEnv {
     pub tracer: Option<Tracer>,
+    pub features: Arc<FeatureSet>,
+}
+
+impl CompileEnv {
+    pub fn configure(mut self, feature_set: FeatureSet) -> Self {
+        self.features = Arc::new(feature_set);
+        self
+    }
+
+    pub fn configure_shared(mut self, feature_set: Arc<FeatureSet>) -> Self {
+        self.features = feature_set;
+        self
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum CompileReport {
+    Stage(TypstFileId, &'static str, crate::Time),
+    CompileError(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
+    ExportError(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
+    CompileWarning(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
+    CompileSuccess(TypstFileId, EcoVec<SourceDiagnostic>, instant::Duration),
+}
+
+impl CompileReport {
+    pub fn compiling_id(&self) -> TypstFileId {
+        match self {
+            Self::Stage(id, ..)
+            | Self::CompileError(id, ..)
+            | Self::ExportError(id, ..)
+            | Self::CompileWarning(id, ..)
+            | Self::CompileSuccess(id, ..) => *id,
+        }
+    }
+
+    pub fn duration(&self) -> Option<std::time::Duration> {
+        match self {
+            Self::Stage(..) => None,
+            Self::CompileError(_, _, dur)
+            | Self::ExportError(_, _, dur)
+            | Self::CompileWarning(_, _, dur)
+            | Self::CompileSuccess(_, _, dur) => Some(*dur),
+        }
+    }
+
+    pub fn diagnostics(self) -> Option<EcoVec<SourceDiagnostic>> {
+        match self {
+            Self::Stage(..) => None,
+            Self::CompileError(_, diagnostics, ..)
+            | Self::ExportError(_, diagnostics, ..)
+            | Self::CompileWarning(_, diagnostics, ..)
+            | Self::CompileSuccess(_, diagnostics, ..) => Some(diagnostics),
+        }
+    }
+
+    /// Get the status message.
+    pub fn message(&self) -> CompileReportMsg<'_> {
+        CompileReportMsg(self)
+    }
+}
+
+pub struct CompileReportMsg<'a>(&'a CompileReport);
+
+impl<'a> fmt::Display for CompileReportMsg<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use CompileReport::*;
+
+        let input = self.0.compiling_id();
+        match self.0 {
+            Stage(_, stage, ..) => writeln!(f, "{:?}: {} ...", input, stage),
+            CompileSuccess(_, _, duration) | CompileWarning(_, _, duration) => {
+                writeln!(f, "{:?}: Compilation succeeded in {:?}", input, duration)
+            }
+            CompileError(_, _, duration) | ExportError(_, _, duration) => {
+                writeln!(f, "{:?}: Compilation failed after {:?}", input, duration)
+            }
+        }
+    }
 }
 
 pub trait Compiler {
@@ -108,7 +189,7 @@ pub trait Compiler {
 
     /// Iterate over the dependencies of found by the compiler.
     /// Note: reset the compiler will clear the dependencies cache.
-    fn iter_dependencies<'a>(&'a self, _f: &mut dyn FnMut(&'a ImmutPath, instant::SystemTime)) {}
+    fn iter_dependencies<'a>(&'a self, _f: &mut dyn FnMut(&'a ImmutPath, crate::Time)) {}
 
     fn notify_fs_event(&mut self, _event: FilesystemEvent) {}
 
@@ -256,7 +337,7 @@ impl<T: CompileMiddleware> Compiler for T {
     }
 
     #[inline]
-    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, instant::SystemTime)) {
+    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, crate::Time)) {
         self.inner().iter_dependencies(f)
     }
 
@@ -293,98 +374,6 @@ where
     #[inline]
     fn unmap_shadow(&self, path: &Path) -> FileResult<()> {
         self.inner().unmap_shadow(path)
-    }
-}
-
-/// The status in which the watcher can be.
-pub enum DiagStatus {
-    Stage(&'static str),
-    Success(std::time::Duration),
-    Error(std::time::Duration),
-}
-
-pub trait DiagObserver {
-    /// Print diagnostic messages to the terminal.
-    fn print_diagnostics(
-        &self,
-        errors: ecow::EcoVec<SourceDiagnostic>,
-    ) -> Result<(), codespan_reporting::files::Error>;
-
-    /// Print status message to the terminal.
-    fn print_status<const WITH_STATUS: bool>(&self, status: DiagStatus);
-
-    /// Run inner function with print (optional) status and diagnostics to the
-    /// terminal (for compilation).
-    #[deprecated(note = "use `with_stage_diag` instead")]
-    fn with_compile_diag<const WITH_STATUS: bool, T>(
-        &mut self,
-        f: impl FnOnce(&mut Self) -> SourceResult<T>,
-    ) -> Option<T>;
-
-    /// Run inner function with print (optional) status and diagnostics to the
-    /// terminal.
-    fn with_stage_diag<const WITH_STATUS: bool, T>(
-        &mut self,
-        stage: &'static str,
-        f: impl FnOnce(&mut Self) -> SourceResult<T>,
-    ) -> Option<T>;
-}
-
-#[cfg(feature = "system-compile")]
-impl<C: Compiler> DiagObserver for C
-where
-    C::World: for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>,
-{
-    /// Print diagnostic messages to the terminal.
-    fn print_diagnostics(
-        &self,
-        errors: ecow::EcoVec<SourceDiagnostic>,
-    ) -> Result<(), codespan_reporting::files::Error> {
-        diag::print_diagnostics(self.world(), errors)
-    }
-
-    /// Print status message to the terminal.
-    fn print_status<const WITH_STATUS: bool>(&self, status: DiagStatus) {
-        if !WITH_STATUS {
-            return;
-        }
-        diag::status(self.main_id(), status).unwrap();
-    }
-
-    /// Run inner function with print (optional) status and diagnostics to the
-    /// terminal (for compilation).
-    fn with_compile_diag<const WITH_STATUS: bool, T>(
-        &mut self,
-        f: impl FnOnce(&mut Self) -> SourceResult<T>,
-    ) -> Option<T> {
-        self.with_stage_diag::<WITH_STATUS, _>("compiling", f)
-    }
-
-    /// Run inner function with print (optional) status and diagnostics to the
-    /// terminal (for stages).
-    fn with_stage_diag<const WITH_STATUS: bool, T>(
-        &mut self,
-        stage: &'static str,
-        f: impl FnOnce(&mut Self) -> SourceResult<T>,
-    ) -> Option<T> {
-        self.print_status::<WITH_STATUS>(DiagStatus::Stage(stage));
-        let start = instant::Instant::now();
-        match f(self) {
-            Ok(val) => {
-                self.print_status::<WITH_STATUS>(DiagStatus::Success(start.elapsed()));
-                Some(val)
-            }
-            Err(errs) => {
-                self.print_status::<WITH_STATUS>(DiagStatus::Error(start.elapsed()));
-                let _err = self.print_diagnostics(errs);
-                // todo: log in browser compiler
-                #[cfg(feature = "system-compile")]
-                if _err.is_err() {
-                    log::error!("failed to print diagnostics: {:?}", _err);
-                }
-                None
-            }
-        }
     }
 }
 

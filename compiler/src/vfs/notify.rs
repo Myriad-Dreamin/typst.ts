@@ -9,7 +9,7 @@ use crate::vfs::AccessModel;
 /// internal representation of [`NotifyFile`]
 #[derive(Debug, Clone)]
 struct NotifyFileRepr {
-    mtime: instant::SystemTime,
+    mtime: crate::Time,
     content: Bytes,
 }
 
@@ -46,7 +46,7 @@ impl FileSnapshot {
     }
 
     /// mtime of the file
-    pub fn mtime(&self) -> FileResult<&instant::SystemTime> {
+    pub fn mtime(&self) -> FileResult<&crate::Time> {
         self.retrieve(|e| &e.mtime)
     }
 
@@ -62,8 +62,8 @@ impl FileSnapshot {
 }
 
 /// Convenent function to create a [`NotifyFile`] from tuple
-impl From<FileResult<(instant::SystemTime, Bytes)>> for FileSnapshot {
-    fn from(result: FileResult<(instant::SystemTime, Bytes)>) -> Self {
+impl From<FileResult<(crate::Time, Bytes)>> for FileSnapshot {
+    fn from(result: FileResult<(crate::Time, Bytes)>) -> Self {
         Self(
             result
                 .map(|(mtime, content)| NotifyFileRepr { mtime, content })
@@ -232,7 +232,7 @@ impl<M: AccessModel> NotifyAccessModel<M> {
 impl<M: AccessModel> AccessModel for NotifyAccessModel<M> {
     type RealPath = M::RealPath;
 
-    fn mtime(&self, src: &Path) -> FileResult<crate::time::SystemTime> {
+    fn mtime(&self, src: &Path) -> FileResult<crate::Time> {
         if let Some(entry) = self.files.get(src) {
             return entry.mtime().cloned();
         }

@@ -9,6 +9,7 @@ use typst::diag::{FileError, FileResult};
 use typst_ts_core::{Bytes, ReadAllOnce};
 
 use super::AccessModel;
+use crate::Time;
 
 pub struct LazyFile {
     path: std::path::PathBuf,
@@ -54,7 +55,7 @@ impl SystemAccessModel {
 impl AccessModel for SystemAccessModel {
     type RealPath = PathBuf;
 
-    fn mtime(&self, src: &Path) -> FileResult<std::time::SystemTime> {
+    fn mtime(&self, src: &Path) -> FileResult<Time> {
         let f = |e| FileError::from_io(e, src);
         Ok(self.stat(src).map_err(f)?.mt)
     }
