@@ -220,10 +220,10 @@ typst-ts-svg-exporter = { path = "exporter/svg" }
 # typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0" }
 hayagriva = { git = "https://github.com/Myriad-Dreamin/hayagriva.git", branch = "typst.ts-v0.9.0" }
 
-typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "content-hint" }
-typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "content-hint" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "content-hint" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "content-hint" }
+typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0-content-hint" }
+typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0-content-hint" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0-content-hint" }
+typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0-content-hint" }
 # hayagriva = { git = "https://github.com/Myriad-Dreamin/hayagriva.git", branch = "typst.ts-v0.9.0" }
 
 # typst = { path = "../typst/crates/typst" }
