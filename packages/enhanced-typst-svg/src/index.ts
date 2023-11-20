@@ -132,7 +132,30 @@ function findAncestor(el: Element, cls: string) {
   return el;
 }
 
-window.typstProcessSvg = function (docRoot: Element) {
+function findGlyphListForText(n: Element) {
+  const np = findAncestor(n, 'typst-text')!;
+  if (!np) {
+    // console.log('no typst-text found...');
+    return undefined;
+  }
+  return Array.from(np.children).filter(e => e.tagName === 'use');
+}
+
+function getGlyphLenShape(glyphRefs: Element[]) {
+  return glyphRefs.map(e => {
+    const href = e.getAttribute('href')!;
+    const e2 = document.getElementById(href.slice(1));
+    return 1 + Number.parseInt(e2?.getAttribute('data-liga-len') || '0');
+  });
+}
+
+function getGlyphAdvanceShape(glyphRefs: Element[]) {
+  return glyphRefs.map(e => {
+    return Number.parseInt(e.getAttribute('x')! || '0');
+  });
+}
+
+window.typstProcessSvg = function (docRoot: SVGElement) {
   var elements = docRoot.getElementsByClassName('pseudo-link');
 
   for (var i = 0; i < elements.length; i++) {
@@ -141,8 +164,50 @@ window.typstProcessSvg = function (docRoot: Element) {
     elem.addEventListener('mouseleave', linkleave);
   }
 
-  if (false) {
+  if (true) {
     setTimeout(() => {
+      // add rule: .tsel monospace
+      const style = document.createElement('style');
+      style.innerHTML = `.tsel { font-family: monospace; text-align-last: left !important;
+        -moz-text-size-adjust: none;
+        -webkit-text-size-adjust: none;
+        text-size-adjust: none; }
+        .tsel span {
+          float: left !important;
+          position: absolute !important;
+          width: fit-content !important;
+          top: 0 !important;
+        }
+        
+        .typst-search-hint {
+          font-size: 2048px;
+          color: transparent;
+          width: 100%;
+          height: 100%;
+        }
+        .typst-search-hint {
+          color: transpaent;
+          user-select: none;
+        }
+        .typst-search-hint::-moz-selection {
+          color: transpaent;
+          background: #00000001;
+        }
+        .typst-search-hint::selection {
+          color: transpaent;
+          background: #00000001;
+        }
+        `;
+      document.getElementsByTagName('head')[0].appendChild(style);
+
+      // add css variable, font scale
+      const devicePixelRatio = window.devicePixelRatio || 1;
+      docRoot.style.setProperty('--typst-font-scale', devicePixelRatio.toString());
+      window.addEventListener('resize', () => {
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        docRoot.style.setProperty('--typst-font-scale', devicePixelRatio.toString());
+      });
+
       window.layoutText(docRoot);
     }, 0);
   }
@@ -206,23 +271,23 @@ window.typstProcessSvg = function (docRoot: Element) {
 
   docRoot.addEventListener('copy', (event: ClipboardEvent) => {
     const selection = getSelectedNodes(
-      (n: Element) => n.classList?.contains('tsel') || n.classList?.contains('typst-content-hint'),
+      (n: Element) =>
+        n.classList?.contains('tsel') ||
+        n.classList?.contains('tsel-tok') ||
+        n.classList?.contains('typst-content-hint'),
     ) as Element[];
-
-    // for (let n of selection) {
-    //   if (n.classList.contains('typst-group')) {
-    //     console.log(n, (n as Element).getBoundingClientRect());
-    //   }
-    // }
 
     const textContent = [];
     let prevContent = false;
     for (let n of selection) {
-      // console.log(n, (n as Element).getBoundingClientRect(), n.textContent);
       if (n.classList.contains('tsel')) {
-        textContent.push(n.textContent);
-        const r = n.getBoundingClientRect();
+        if (!n.hasAttribute('data-typst-layout-checked')) {
+          textContent.push(n.textContent);
+        }
         prevContent = true;
+      } else if (n.classList.contains('tsel-tok')) {
+        textContent.push(n.textContent);
+        // console.log(n, n.textContent);
       } else if (prevContent) {
         const hint =
           String.fromCodePoint(Number.parseInt(n.getAttribute('data-hint') || '0', 16)) || '\n';
@@ -235,15 +300,14 @@ window.typstProcessSvg = function (docRoot: Element) {
     const text = textContent.join('').replace(/\u00a0/g, ' ');
 
     // console.log('user copy', text);
-    event.clipboardData!.setData('text/plain', text);
+    if (navigator?.clipboard) {
+      // console.log('clipboard api', text);
+      navigator.clipboard.writeText(text);
+    } else {
+      event.clipboardData!.setData('text/plain', text);
+    }
     event.preventDefault();
   });
-
-  // let startMousePos: any = undefined;
-  // document.addEventListener('selectstart', (event: any) => {
-  //   startMousePos = { x: event.clientX, y: event.clientY };
-  //   console.log(event, event.initEvent, Object.keys(event), Object.getOwnPropertyNames(event));
-  // });
 
   const pickElem = (t: Node): Element | null =>
     t.nodeType === Node.TEXT_NODE ? t.parentElement : (t as Element);
@@ -288,14 +352,20 @@ window.typstProcessSvg = function (docRoot: Element) {
     }
 
     const isPageGuardSelected = (ca: SVGGElement | null) => {
-      return ca?.classList.contains('text-guard') || ca?.classList.contains('typst-page');
+      return (
+        ca?.classList.contains('text-guard') ||
+        ca?.classList.contains('typst-page') ||
+        ca?.classList.contains('typst-search-hint')
+      );
     };
 
-    if (
-      isPageGuardSelected(pickElem(rng.startContainer) as SVGGElement | null) ||
-      isPageGuardSelected(pickElem(rng.endContainer) as SVGGElement | null)
-    ) {
+    const stIsPageGuard = isPageGuardSelected(pickElem(rng.startContainer) as SVGGElement | null);
+    const edIsPageGuard = isPageGuardSelected(pickElem(rng.endContainer) as SVGGElement | null);
+    if (stIsPageGuard || edIsPageGuard) {
       console.log('page guard selected');
+      if (stIsPageGuard && edIsPageGuard) {
+        clearSelBox(selBox);
+      }
       return;
     }
 
@@ -318,82 +388,78 @@ window.typstProcessSvg = function (docRoot: Element) {
     const end = pickTselElem(rng.endContainer);
 
     const selectedTextList = getSelectedNodes(
-      (n: Element) => n.classList?.contains('tsel'),
+      (n: Element) =>
+        n.classList?.contains('tsel') ||
+        n.classList?.contains('typst-search-hint') ||
+        n.classList?.contains('tsel-tok'),
     ) as Element[];
 
-    // console.log(
-    //   'selectionchange',
-    //   rng,
-    //   selectedTextList,
-    //   start,
-    //   rng.startOffset,
-    //   end,
-    //   rng.endOffset,
-    // );
-
     const selRng = new Range();
+    const createSelGlyphs = (st: Node, ed: Node) => {
+      selRng.setStartBefore(st);
+      selRng.setEndAfter(ed);
+      createSelBox(selBox!, selRng);
+    };
+
+    const tselRanges = new Map<Element, [number, number]>();
+
     for (let n of selectedTextList) {
-      if (n.classList.contains('tsel')) {
+      if (n.classList.contains('tsel-tok')) {
+        const n2 = n.parentElement!;
+        const nth = Array.from(n2.children).indexOf(n);
+        // console.log('tsel-tok', n, nth);
+        if (!tselRanges.has(n2)) {
+          tselRanges.set(n2, [nth, nth]);
+        } else {
+          const [st, ed] = tselRanges.get(n2)!;
+          tselRanges.set(n2, [Math.min(st, nth), Math.max(ed, nth)]);
+        }
+      } else if (n.classList.contains('tsel') && !n.hasAttribute('data-typst-layout-checked')) {
         const st = n === start ? rng.startOffset : 0;
-        const ed = n === end ? rng.endOffset : -1;
-
-        const np = findAncestor(n, 'typst-text')!;
-        if (!np) {
-          // console.log('no typst-text found...');
-          continue;
-        }
-        const glyphRefs = Array.from(np.children).filter(e => e.tagName === 'use');
-        if (!glyphRefs.length) {
-          // console.log('no glyphs found...');
-          continue;
-        }
-
-        let stGlyph = glyphRefs[0];
-        let edGlyph: Element | undefined = undefined;
-
-        const createSelGlyphs = () => {
-          selRng.setStartBefore(stGlyph);
-          if (edGlyph === undefined) {
-            selRng.setEndAfter(glyphRefs[glyphRefs.length - 1]);
-          } else {
-            selRng.setEndBefore(edGlyph);
-          }
-          createSelBox(selBox!, selRng);
-        };
-
-        if (st === 0 && ed === -1) {
-          // console.log('select all', stGlyph, edGlyph);
-          createSelGlyphs();
-          continue;
-        }
-
-        const glyphLens = glyphRefs.map(e => {
-          const href = e.getAttribute('href')!;
-          const e2 = document.getElementById(href.slice(1));
-          return 1 + Number.parseInt(e2?.getAttribute('data-liga-len') || '0');
-        });
-
-        const findPos = (l: number) => {
-          let pos = 0;
-          for (let i = 0; i < glyphLens.length; i++) {
-            if (pos + glyphLens[i] > l) {
-              return glyphRefs[i];
-            }
-            pos += glyphLens[i];
-          }
-        };
-
-        if (st !== 0) {
-          stGlyph = findPos(st) || stGlyph;
-        }
-
-        if (ed !== -1) {
-          edGlyph = findPos(ed);
-        }
-
-        // console.log('select', np, st, ed, stGlyph, edGlyph, glyphLens);
-        createSelGlyphs();
+        const ed = n === end ? rng.endOffset - 1 : -1;
+        tselRanges.set(n, [st, ed]);
       }
+    }
+
+    // console.log(tselRanges);
+
+    for (let [n, [st, ed]] of tselRanges) {
+      const glyphRefs = findGlyphListForText(n);
+      if (!glyphRefs?.length) {
+        // console.log('no glyphs found...');
+        continue;
+      }
+
+      if (st === 0 && ed === -1) {
+        // console.log('select all', stGlyph, edGlyph);
+        createSelGlyphs(glyphRefs[0], glyphRefs[glyphRefs.length - 1]);
+        continue;
+      }
+
+      const glyphLens = getGlyphLenShape(glyphRefs);
+
+      const findPos = (l: number) => {
+        let pos = 0;
+        for (let i = 0; i < glyphLens.length; i++) {
+          if (pos + glyphLens[i] > l) {
+            return glyphRefs[i];
+          }
+          pos += glyphLens[i];
+        }
+      };
+
+      let stGlyph = glyphRefs[0];
+      if (st !== 0) {
+        stGlyph = findPos(st) || stGlyph;
+      }
+
+      let edGlyph = glyphRefs[glyphRefs.length - 1];
+      if (ed !== -1) {
+        edGlyph = findPos(ed) || edGlyph;
+      }
+
+      // console.log('select', st, ed, stGlyph, edGlyph, glyphLens, glyphRefs);
+      createSelGlyphs(stGlyph, edGlyph);
     }
   });
 
@@ -447,22 +513,8 @@ window.typstProcessSvg = function (docRoot: Element) {
     e.prepend(createPseudoText('text-guard'));
   });
 
-  // docRoot.querySelectorAll('.typst-group').forEach((e: SVGGElement) => {
-  //   console.log('typst-group', e, e.getBBox());
-  //   const bbox = e.getBBox();
-  //   const hit = createPseudoText('text-hit');
-  //   const hit2 = hit.cloneNode(true) as Element;
-  //   hit.setAttribute('width', '1');
-  //   hit.setAttribute('x', bbox.width.toString());
-  //   hit.setAttribute('height', bbox.height.toString());
-  //   hit2.setAttribute('width', bbox.width.toString());
-  //   hit2.setAttribute('y', bbox.height.toString());
-  //   hit2.setAttribute('height', '1');
-  //   e.append(hit, hit2);
-  // });
-
   if (window.location.hash) {
-    console.log('hash', window.location.hash);
+    // console.log('hash', window.location.hash);
 
     // parse location.hash = `loc-${page}x${x.toFixed(2)}x${y.toFixed(2)}`;
     const hash = window.location.hash;
@@ -480,28 +532,170 @@ window.typstProcessSvg = function (docRoot: Element) {
 };
 
 window.layoutText = function (svg: Element) {
-  //   const divs = svg.querySelectorAll('.tsel');
-  //   const ctx = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas').getContext('2d');
-  //   const layoutBegin = performance.now();
-  //   for (let d of divs) {
-  //     if (d.getAttribute('data-typst-layout-checked')) {
-  //       continue;
-  //     }
-  //     if (d.style.fontSize) {
-  //       const foreignObj = d.parentElement;
-  //       const innerText = d.innerText;
-  //       const targetWidth = Number.parseFloat(foreignObj.getAttribute('width'));
-  //       const currentX = Number.parseFloat(foreignObj.getAttribute('x')) || 0;
-  //       ctx.font = `${d.style.fontSize} sans-serif`;
-  //       const selfWidth = ctx.measureText(innerText).width;
-  //       const scale = targetWidth / selfWidth;
-  //       d.style.transform = `scaleX(${scale})`;
-  //       foreignObj.setAttribute('width', selfWidth);
-  //       foreignObj.setAttribute('x', currentX - (selfWidth - targetWidth) * 0.5);
-  //       d.setAttribute('data-typst-layout-checked', '1');
-  //     }
-  //   }
-  //   console.log(`layoutText used time ${performance.now() - layoutBegin} ms`);
+  const allElements = Array.from(svg.querySelectorAll('.tsel')) as HTMLDivElement[];
+  const layoutBegin = performance.now();
+  const ctx = (
+    document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement
+  ).getContext('2d')!;
+  // 128 * 16 = 2048
+  ctx.font = `128px sans-serif`;
+  const enCharWidth = ctx.measureText('A').width;
+  // console.log('width of single char', enCharWidth);
+
+  const searchHints = [];
+
+  const layoutRange = (divs: HTMLDivElement[]) => {
+    for (let d of divs) {
+      if (d.getAttribute('data-typst-layout-checked')) {
+        continue;
+      }
+
+      if (d.style.fontSize) {
+        // scale:
+        // const fontSize = Number.parseFloat(d.style.fontSize.replace('px', ''));
+        // d.style.fontSize = `${fontSize}px`;
+
+        // d.style.fontSize = 'calc(' + d.style.fontSize + ' * var(--typst-font-scale))';
+        const foreignObj = d.parentElement!;
+        // const innerText = d.innerText;
+        // const targetWidth = Number.parseFloat(foreignObj.getAttribute('width')!);
+        // const currentX = Number.parseFloat(foreignObj.getAttribute('x') || '0');
+        // const currentY = Number.parseFloat(foreignObj.getAttribute('y') || '0');
+        const textContent = d.innerText;
+
+        // foreignObj
+        // put search hint before foreignObj
+        const hint = foreignObj.cloneNode(true) as Element;
+        // hint.innerHTML = '<span class="typst-search-hint">' + textContent + '</span>';
+        const firstSpan = hint.firstElementChild!;
+        if (firstSpan) {
+          firstSpan.className = 'typst-search-hint';
+        }
+        foreignObj.parentElement!.insertBefore(hint, foreignObj);
+
+        // hint.setAttribute('width', '1');
+        // hint.setAttribute('height', '1');
+        // hint.setAttribute('x', foreignObj.getAttribute('x'));
+        // hint.setAttribute('y', foreignObj.getAttribute('y'));
+
+        searchHints.push([d, textContent]);
+
+        const charLen = textContent.length;
+
+        // hint.setAttribute(
+        //   'width',
+        //   (Number.parseFloat(foreignObj.getAttribute('width')!) / charLen).toString(),
+        // );
+
+        const glyphs = findGlyphListForText(d);
+        if (!glyphs) {
+          // console.log('no glyphs found...');
+          continue;
+        }
+        const glyphLens = getGlyphLenShape(glyphs);
+        const glyphAdvances = getGlyphAdvanceShape(glyphs).map(t => t / 16);
+        // console.log(
+        //   d,
+        //   targetWidth,
+        //   currentX,
+        //   'estimated',
+        //   enCharWidth,
+        //   d.clientWidth,
+        //   charLen * enCharWidth,
+        //   glyphs,
+        //   textContent.split(''),
+        //   glyphAdvances,
+        //   glyphLens,
+        // );
+
+        // split chars by glyphLens
+        // const chars: string[] = [];
+        // let splitMe = textContent;
+        // for (let i = 0; i < glyphLens.length; i++) {
+        //   const len = glyphLens[i];
+        //   if (splitMe.length < len) {
+        //     splitMe = undefined!;
+        //     break;
+        //   }
+        //   const char = splitMe.slice(0, len);
+        //   chars.push(char);
+        //   splitMe = splitMe.slice(len);
+        // }
+        // if (splitMe === undefined || splitMe.length > 0) {
+        //   console.log('split failed', d, textContent, glyphLens);
+        //   continue;
+        // }
+
+        let failed = false;
+        const charContainers: HTMLSpanElement[] = [];
+        let j = 0,
+          k = 0;
+        for (let c of textContent) {
+          // console.log('c', c, j, k, glyphAdvances);
+          if (j >= glyphAdvances.length) {
+            failed = true;
+            break;
+          }
+          let advance = glyphAdvances[j];
+          if (glyphLens[j] > 1) {
+            // console.log(
+            //   'multi glyph estimated',
+            //   c,
+            //   glyphLens[j],
+            //   glyphs[j].getBoundingClientRect().width,
+            // );
+            // advance += (k * glyphs[j].getBoundingClientRect().width) / glyphLens[j];
+            // use enCharWidth instead of glyph width for speed
+            advance += k * enCharWidth;
+          }
+          k++;
+          if (k >= glyphLens[j]) {
+            j++;
+            k = 0;
+          }
+
+          const span = document.createElement('span');
+          span.textContent = c;
+          span.classList.add('tsel-tok');
+          span.style.left = advance.toString();
+          charContainers.push(span);
+        }
+
+        if (failed) {
+          continue;
+        }
+
+        d.innerHTML = '';
+        d.append(...charContainers);
+
+        // console.log(d);
+
+        // const scale = targetWidth / selfWidth;
+        // d.style.transform = `scaleX(${scale})`;
+        // foreignObj.setAttribute('width', selfWidth);
+        // foreignObj.setAttribute('x', currentX - (selfWidth - targetWidth) * 0.5);
+
+        // const currentY = Number.parseFloat(foreignObj.getAttribute('y')!) || 0;
+        // foreignObj.setAttribute('y', (currentY - 2500 / 16).toString());
+
+        d.setAttribute('data-typst-layout-checked', '1');
+        // return;
+      }
+    }
+
+    console.log(
+      `layoutText ${allElements.length} elements used since ${performance.now() - layoutBegin} ms`,
+    );
+  };
+
+  // chunk elements
+  const chunkSize = 100;
+  for (let i = 0; i < allElements.length; i += chunkSize) {
+    const chunkBegin = i;
+    setTimeout(() => {
+      layoutRange(allElements.slice(chunkBegin, chunkBegin + chunkSize));
+    });
+  }
 };
 
 window.handleTypstLocation = function (elem: Element, page: number, x: number, y: number) {
@@ -561,7 +755,7 @@ function triggerRipple(
 
 var scriptTag = document.currentScript;
 if (scriptTag) {
-  // console.log('new svg util updated 26  ');
+  // console.log('new svg util updated 30  ');
   const docRoot = findAncestor(scriptTag, 'typst-doc');
   if (docRoot) {
     window.typstProcessSvg(docRoot);
