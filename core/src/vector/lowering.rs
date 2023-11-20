@@ -113,6 +113,7 @@ impl LowerBuilder {
 
                         SvgItem::ContentHint('\n')
                     }
+                    #[cfg(feature = "content-hint")]
                     Meta::ContentHint(c) => SvgItem::ContentHint(*c),
                     // todo: support page label
                     Meta::PdfPageLabel(..) | Meta::PageNumbering(..) | Meta::Hide => continue,

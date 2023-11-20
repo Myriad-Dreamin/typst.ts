@@ -39,7 +39,7 @@ tracing-subscriber.workspace = true
 codespan-reporting.workspace = true
 human-panic.workspace = true
 
-typst-ts-core.workspace = true
+typst-ts-core = { workspace = true, features = ["content-hint"] }
 typst-ts-compiler = { workspace = true, default-features = false, features = [
     "system",
     # "lazy-fontdb",
@@ -62,10 +62,18 @@ embedded-fonts = []
 embedded-cjk-fonts = []
 embedded-emoji-fonts = []
 pdf = ["typst-ts-pdf-exporter"]
-raster = ["typst-ts-raster-exporter"]
+raster = [
+    # 
+    "typst-ts-raster-exporter",
+    "typst-ts-raster-exporter/content-hint",
+]
 serde-json = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/json"]
 serde-rmp = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/rmp"]
-svg = ["typst-ts-svg-exporter", "typst-ts-svg-exporter/experimental-ligature"]
+svg = [
+    #
+    "typst-ts-svg-exporter",
+    "typst-ts-svg-exporter/experimental-ligature",
+]
 default = [
     "pdf",
     "raster",

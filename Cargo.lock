@@ -4051,7 +4051,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 [[package]]
 name = "typst"
 version = "0.9.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.9.0#1e987a9ebad28c4f425d7fb02ca1c98aeea28ee2"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=content-hint#6d4d16b604c99ed9a78bffc7a867455e8c881822"
 dependencies = [
  "base64",
  "bitflags 2.4.1",
@@ -4100,7 +4100,7 @@ dependencies = [
 [[package]]
 name = "typst-ide"
 version = "0.9.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.9.0#1e987a9ebad28c4f425d7fb02ca1c98aeea28ee2"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=content-hint#6d4d16b604c99ed9a78bffc7a867455e8c881822"
 dependencies = [
  "comemo",
  "ecow",
@@ -4114,7 +4114,7 @@ dependencies = [
 [[package]]
 name = "typst-library"
 version = "0.9.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.9.0#1e987a9ebad28c4f425d7fb02ca1c98aeea28ee2"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=content-hint#6d4d16b604c99ed9a78bffc7a867455e8c881822"
 dependencies = [
  "az",
  "chinese-number",
@@ -4155,7 +4155,7 @@ dependencies = [
 [[package]]
 name = "typst-macros"
 version = "0.9.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.9.0#1e987a9ebad28c4f425d7fb02ca1c98aeea28ee2"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=content-hint#6d4d16b604c99ed9a78bffc7a867455e8c881822"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -4166,7 +4166,7 @@ dependencies = [
 [[package]]
 name = "typst-syntax"
 version = "0.9.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.9.0#1e987a9ebad28c4f425d7fb02ca1c98aeea28ee2"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=content-hint#6d4d16b604c99ed9a78bffc7a867455e8c881822"
 dependencies = [
  "comemo",
  "ecow",

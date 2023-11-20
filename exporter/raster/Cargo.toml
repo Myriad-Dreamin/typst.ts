@@ -21,3 +21,6 @@ bytemuck.workspace = true
 pixglyph.workspace = true
 flate2.workspace = true
 resvg.workspace = true
+
+[features]
+content-hint = []

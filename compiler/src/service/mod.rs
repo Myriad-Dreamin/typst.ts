@@ -168,10 +168,6 @@ pub trait Compiler {
             None => typst::compile(self.world(), &mut Tracer::default()),
         };
 
-        use std::io::Write;
-        let mut f = std::fs::File::create("e_module.log").unwrap();
-        writeln!(f, "{:#?}", res.clone().unwrap()).unwrap();
-
         // compile document
         res.map(Arc::new)
     }
