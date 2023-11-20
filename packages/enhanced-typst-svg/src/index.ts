@@ -168,36 +168,12 @@ window.typstProcessSvg = function (docRoot: SVGElement) {
     setTimeout(() => {
       // add rule: .tsel monospace
       const style = document.createElement('style');
-      style.innerHTML = `.tsel { font-family: monospace; text-align-last: left !important;
-        -moz-text-size-adjust: none;
-        -webkit-text-size-adjust: none;
-        text-size-adjust: none; }
-        .tsel span {
-          float: left !important;
-          position: absolute !important;
-          width: fit-content !important;
-          top: 0 !important;
-        }
-        
-        .typst-search-hint {
-          font-size: 2048px;
-          color: transparent;
-          width: 100%;
-          height: 100%;
-        }
-        .typst-search-hint {
-          color: transpaent;
-          user-select: none;
-        }
-        .typst-search-hint::-moz-selection {
-          color: transpaent;
-          background: #00000001;
-        }
-        .typst-search-hint::selection {
-          color: transpaent;
-          background: #00000001;
-        }
-        `;
+      style.innerHTML = `.tsel { font-family: monospace; text-align-last: left !important; -moz-text-size-adjust: none; -webkit-text-size-adjust: none; text-size-adjust: none; }
+.tsel span { float: left !important; position: absolute !important; width: fit-content !important; top: 0 !important; }
+.typst-search-hint { font-size: 2048px; color: transparent; width: 100%; height: 100%; }
+.typst-search-hint { color: transpaent; user-select: none; }
+.typst-search-hint::-moz-selection { color: transpaent; background: #00000001; }
+.typst-search-hint::selection { color: transpaent; background: #00000001; } `;
       document.getElementsByTagName('head')[0].appendChild(style);
 
       // add css variable, font scale
