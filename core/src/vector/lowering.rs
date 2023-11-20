@@ -460,11 +460,17 @@ impl LowerBuilder {
 /// Lower a glyph into svg item.
 pub struct GlyphLowerBuilder<'a> {
     gp: &'a GlyphProvider,
+
+    /// Whether to lower ligature information
+    lowering_ligature: bool,
 }
 
 impl<'a> GlyphLowerBuilder<'a> {
-    pub fn new(gp: &'a GlyphProvider) -> Self {
-        Self { gp }
+    pub fn new(gp: &'a GlyphProvider, lowering_ligature: bool) -> Self {
+        Self {
+            gp,
+            lowering_ligature: cfg!(feature = "experimental-ligature") && lowering_ligature,
+        }
     }
 
     pub fn lower_glyph(&self, glyph_item: &GlyphItem) -> Option<GlyphItem> {
@@ -479,6 +485,17 @@ impl<'a> GlyphLowerBuilder<'a> {
             GlyphItem::Image(..) | GlyphItem::Outline(..) => Some(glyph_item.clone()),
             GlyphItem::None => Some(GlyphItem::None),
         }
+    }
+
+    fn ligature_len(&self, font: &Font, id: GlyphId) -> u8 {
+        if !self.lowering_ligature {
+            return 0;
+        }
+
+        self.gp
+            .ligature_glyph(font, id)
+            .map(|l| l.len())
+            .unwrap_or_default() as u8
     }
 
     /// Lower an SVG glyph into svg item.
@@ -503,6 +520,7 @@ impl<'a> GlyphLowerBuilder<'a> {
                 ty: Scalar(ascender),
             },
             image,
+            ligature_len: self.ligature_len(font, id),
         }))
     }
 
@@ -546,6 +564,7 @@ impl<'a> GlyphLowerBuilder<'a> {
         Some(Arc::new(ImageGlyphItem {
             ts: ts.into(),
             image,
+            ligature_len: self.ligature_len(font, id),
         }))
     }
 
@@ -553,7 +572,11 @@ impl<'a> GlyphLowerBuilder<'a> {
     fn lower_outline_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<OutlineGlyphItem>> {
         let d = self.gp.outline_glyph(font, id)?.into();
 
-        Some(Arc::new(OutlineGlyphItem { ts: None, d }))
+        Some(Arc::new(OutlineGlyphItem {
+            ts: None,
+            d,
+            ligature_len: self.ligature_len(font, id),
+        }))
     }
 }
 

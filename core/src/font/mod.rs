@@ -15,3 +15,4 @@ pub use resolver::*;
 
 pub(crate) mod partial_book;
 pub use partial_book::*;
+mod ligature;

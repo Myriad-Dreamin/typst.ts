@@ -8,12 +8,18 @@ use typst::font::Font;
 use typst::image::{Image as TypstImage, RasterFormat};
 
 use crate::hash::item_hash128;
-use crate::{HashedTrait, StaticHash128};
+use crate::{HashedTrait, ImmutStr, StaticHash128};
+
+use super::ligature::resolve_ligature;
 
 /// IGlyphProvider extracts the font data from the font.
 /// Note (Possibly block unsafe): If a [`Font`] is dummy (lazy loaded),
 ///   it will block current thread and fetch the font data from the server.
 pub trait IGlyphProvider {
+    /// With font with glyph id, return the raw ligature string.
+    /// See [`FontGlyphProvider::ligature_glyph`] for the default implementation.
+    fn ligature_glyph(&self, font: &Font, id: GlyphId) -> Option<ImmutStr>;
+
     /// With font with glyph id, return the svg document data.
     /// Note: The returned data is possibly compressed.
     /// See [`FontGlyphProvider::svg_glyph`] for the default implementation.
@@ -75,6 +81,11 @@ impl Default for GlyphProvider {
 pub struct FontGlyphProvider {}
 
 impl IGlyphProvider for FontGlyphProvider {
+    /// See [`IGlyphProvider::ligature_glyph`] for more information.
+    fn ligature_glyph(&self, font: &Font, id: GlyphId) -> Option<ImmutStr> {
+        resolve_ligature(font, id)
+    }
+
     /// See [`IGlyphProvider::svg_glyph`] for more information.
     fn svg_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<[u8]>> {
         let font_face = font.ttf();

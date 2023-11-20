@@ -458,6 +458,7 @@ pub struct TextItemContent {
 pub struct ImageGlyphItem {
     pub ts: Transform,
     pub image: ImageItem,
+    pub ligature_len: u8,
 }
 
 /// A glyph item.
@@ -465,8 +466,9 @@ pub struct ImageGlyphItem {
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct OutlineGlyphItem {
-    pub ts: Option<Transform>,
+    pub ts: Option<Box<Transform>>,
     pub d: ImmutStr,
+    pub ligature_len: u8,
 }
 
 /// A glyph item.

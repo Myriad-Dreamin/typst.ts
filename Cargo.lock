@@ -4302,6 +4302,7 @@ dependencies = [
  "byteorder",
  "comemo",
  "ecow",
+ "elsa",
  "flate2",
  "fxhash",
  "hex",

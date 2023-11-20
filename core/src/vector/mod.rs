@@ -84,9 +84,9 @@ fn rkyv_assertions() {
     const _: () = assert!(core::mem::align_of::<ArchivedLinkItem>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedPathItem>() == 28);
     const _: () = assert!(core::mem::align_of::<ArchivedPathItem>() == 4);
-    const _: () = assert!(core::mem::size_of::<ArchivedImageGlyphItem>() == 36);
+    const _: () = assert!(core::mem::size_of::<ArchivedImageGlyphItem>() == 40);
     const _: () = assert!(core::mem::align_of::<ArchivedImageGlyphItem>() == 4);
-    const _: () = assert!(core::mem::size_of::<ArchivedOutlineGlyphItem>() == 36);
+    const _: () = assert!(core::mem::size_of::<ArchivedOutlineGlyphItem>() == 20);
     const _: () = assert!(core::mem::align_of::<ArchivedOutlineGlyphItem>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedTextShape>() == 20);
     const _: () = assert!(core::mem::align_of::<ArchivedTextShape>() == 4);
