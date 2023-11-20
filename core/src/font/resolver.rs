@@ -36,6 +36,7 @@ pub trait FontResolver {
     }
 }
 
+#[derive(Debug)]
 /// The default FontResolver implementation.
 pub struct FontResolverImpl {
     book: Prehashed<FontBook>,

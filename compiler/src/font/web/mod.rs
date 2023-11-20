@@ -347,6 +347,7 @@ impl WebFont {
 
 unsafe impl Send for WebFont {}
 
+#[derive(Debug)]
 pub struct WebFontLoader {
     font: WebFont,
     index: u32,

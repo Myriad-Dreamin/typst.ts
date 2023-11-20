@@ -10,6 +10,7 @@ use rustc_hash::FxHasher;
 use super::FileId;
 
 /// Structure to map between [`VfsPath`] and [`FileId`].
+#[derive(Debug)]
 pub(crate) struct PathInterner<P, Ext = ()> {
     map: IndexMap<P, Ext, BuildHasherDefault<FxHasher>>,
 }

@@ -11,7 +11,7 @@ pub struct FeatureSlot(u16);
 static ALLOCATOR: Lazy<std::sync::atomic::AtomicU16> =
     Lazy::new(|| std::sync::atomic::AtomicU16::new(1));
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct LazyFeatureSlot(once_cell::sync::OnceCell<FeatureSlot>);
 
 impl From<&LazyFeatureSlot> for FeatureSlot {
@@ -22,7 +22,7 @@ impl From<&LazyFeatureSlot> for FeatureSlot {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct FeatureSet {
     features: Vec<EcoString>,
 }
@@ -54,6 +54,7 @@ pub trait CompileFeature<T> {
     fn retrieve(&self, features: &FeatureSet) -> T;
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct DiagFmtFeature;
 const DIAG_FEATURE: FeatureSlot = FeatureSlot(0);
 pub static DIAG_FMT_FEATURE: DiagFmtFeature = DiagFmtFeature;
@@ -78,7 +79,7 @@ impl CompileFeature<DiagnosticFormat> for DiagFmtFeature {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct BuiltinFeature<T>(LazyFeatureSlot, std::marker::PhantomData<T>);
 
 impl<T> BuiltinFeature<T> {

@@ -162,6 +162,7 @@ pub enum FilesystemEvent {
     UpstreamUpdate {
         /// New changeset produced by invalidation
         changeset: FileChangeSet,
+        /// The upstream event that causes the invalidation
         upstream_event: Option<UpstreamUpdateEvent>,
     },
 }
@@ -196,10 +197,16 @@ pub enum NotifyMessage {
     UpstreamUpdate(UpstreamUpdateEvent),
 }
 
-/// Notify shadowing access model, which the typical underlying access model is
+/// Provides notify access model which retrieves file system events and changes
+/// from some notify backend.
+///
+/// It simply hold notified filesystem data in memory, but still have a fallback
+/// access model, whose the typical underlying access model is
 /// [`crate::vfs::system::SystemAccessModel`]
+#[derive(Debug)]
 pub struct NotifyAccessModel<M: AccessModel> {
     files: HashMap<ImmutPath, FileSnapshot>,
+    /// The fallback access model when the file is not notified ever.
     pub inner: M,
 }
 

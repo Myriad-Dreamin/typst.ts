@@ -127,3 +127,19 @@ impl<T, E> Default for QueryRef<T, E> {
         }
     }
 }
+
+impl<T, E, QC> fmt::Debug for QueryRef<T, E, QC>
+where
+    T: fmt::Debug,
+    E: fmt::Debug,
+    QC: fmt::Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let borrowed = self.cell.borrow();
+        let (ref ctx, ref res) = *borrowed;
+        f.debug_struct("QueryRef")
+            .field("context", &ctx)
+            .field("result", &res)
+            .finish()
+    }
+}

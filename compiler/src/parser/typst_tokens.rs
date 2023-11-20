@@ -4,7 +4,7 @@ use strum::EnumIter;
 
 /// Very similar to [`typst_ide::Tag`], but with convenience traits, and
 /// extensible because we want to further customize highlighting
-#[derive(Clone, Copy, EnumIter)]
+#[derive(Debug, Clone, Copy, EnumIter)]
 #[repr(u32)]
 pub enum TokenType {
     // Standard LSP types
@@ -68,7 +68,7 @@ impl From<TokenType> for &'static str {
     }
 }
 
-#[derive(Clone, Copy, EnumIter)]
+#[derive(Debug, Clone, Copy, EnumIter)]
 #[repr(u8)]
 pub enum Modifier {
     Strong,

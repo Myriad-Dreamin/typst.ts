@@ -9,6 +9,7 @@ use crate::{
 };
 
 /// type trait of [`TypstSystemWorld`].
+#[derive(Debug, Clone, Copy)]
 pub struct SystemCompilerFeat;
 
 impl crate::world::CompilerFeat for SystemCompilerFeat {

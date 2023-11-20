@@ -9,11 +9,20 @@ use crate::Time;
 
 use super::AccessModel;
 
+/// Provides proxy access model from typst compiler to some JavaScript
+/// implementation.
+#[derive(Debug)]
 pub struct ProxyAccessModel {
+    /// The `this` value when calling the JavaScript functions
     pub context: JsValue,
+    /// The JavaScript function to get the mtime of a file
     pub mtime_fn: js_sys::Function,
+    /// The JavaScript function to check if a path corresponds to a file or a
+    /// directory
     pub is_file_fn: js_sys::Function,
+    /// The JavaScript function to get the real path of a file
     pub real_path_fn: js_sys::Function,
+    /// The JavaScript function to get the content of a file
     pub read_all_fn: js_sys::Function,
 }
 

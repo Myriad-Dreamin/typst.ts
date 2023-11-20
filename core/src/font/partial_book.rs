@@ -21,7 +21,7 @@ impl From<&FontInfo> for FontInfoKey {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct PartialFontBook {
     pub revision: usize,
     pub partial_hit: bool,

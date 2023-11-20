@@ -1,3 +1,5 @@
+use core::fmt;
+
 use typst::font::Font;
 
 use crate::{FontLoader, QueryRef};
@@ -33,5 +35,13 @@ impl FontSlot {
     pub fn get_or_init(&self) -> Option<Font> {
         let res = self.0.compute_with_context(|mut c| Ok(c.load()));
         { unsafe { res.unwrap_unchecked() } }.clone()
+    }
+}
+
+impl fmt::Debug for FontSlot {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_tuple("FontSlot")
+            .field(&self.get_uninitialized())
+            .finish()
     }
 }

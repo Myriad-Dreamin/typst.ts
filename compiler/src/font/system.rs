@@ -23,7 +23,7 @@ use typst_ts_core::{
 
 use crate::vfs::system::LazyFile;
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct FontProfileRebuilder {
     path_items: HashMap<PathBuf, FontProfileItem>,
     pub profile: FontProfile,
@@ -77,6 +77,7 @@ impl FontProfileRebuilder {
 }
 
 /// Searches for fonts.
+#[derive(Debug)]
 pub struct SystemFontSearcher {
     db: Database,
 

@@ -8,6 +8,7 @@ use crate::{package::browser::ProxyRegistry, vfs::browser::ProxyAccessModel};
 /// It is under development.
 pub type TypstBrowserWorld = crate::world::CompilerWorld<BrowserCompilerFeat>;
 
+#[derive(Debug, Clone, Copy)]
 pub struct BrowserCompilerFeat;
 
 impl crate::world::CompilerFeat for BrowserCompilerFeat {
