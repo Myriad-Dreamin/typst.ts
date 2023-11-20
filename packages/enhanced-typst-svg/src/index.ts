@@ -141,6 +141,63 @@ function findGlyphListForText(n: Element) {
   return Array.from(np.children).filter(e => e.tagName === 'use');
 }
 
+function nextNode(node: Node) {
+  if (node.hasChildNodes()) {
+    return node.firstChild;
+  } else {
+    while (node && !node.nextSibling) {
+      node = node.parentNode!;
+    }
+    if (!node) {
+      return null;
+    }
+    return node.nextSibling;
+  }
+}
+
+function getRangeSelectedNodes(range: Range, filter: (a: any) => boolean | undefined) {
+  var node = range.startContainer;
+  var endNode = range.endContainer;
+
+  // Special case for a range that is contained within a single node
+  if (node == endNode) {
+    if (filter(node)) {
+      return [node];
+    }
+    if (filter(node.parentElement)) {
+      return [node.parentElement];
+    }
+  }
+
+  // Iterate nodes until we hit the end container
+  var rangeNodes = [];
+  while (node && node != endNode) {
+    node = nextNode(node)!;
+    if (filter(node)) {
+      rangeNodes.push(node);
+    }
+  }
+
+  // Add partially selected nodes at the start of the range
+  node = range.startContainer;
+  while (node && node != range.commonAncestorContainer) {
+    if (filter(node)) rangeNodes.unshift(node);
+    node = node.parentNode!;
+  }
+
+  return rangeNodes;
+}
+
+function getSelectedNodes(filter: (a: any) => boolean | undefined) {
+  if (window.getSelection) {
+    var sel = window.getSelection()!;
+    if (!sel.isCollapsed) {
+      return getRangeSelectedNodes(sel.getRangeAt(0), filter);
+    }
+  }
+  return [];
+}
+
 function getGlyphLenShape(glyphRefs: Element[]) {
   return glyphRefs.map(e => {
     const href = e.getAttribute('href')!;
@@ -155,96 +212,7 @@ function getGlyphAdvanceShape(glyphRefs: Element[]) {
   });
 }
 
-window.typstProcessSvg = function (docRoot: SVGElement) {
-  var elements = docRoot.getElementsByClassName('pseudo-link');
-
-  for (var i = 0; i < elements.length; i++) {
-    var elem = elements[i];
-    elem.addEventListener('mousemove', linkmove);
-    elem.addEventListener('mouseleave', linkleave);
-  }
-
-  if (true) {
-    setTimeout(() => {
-      // add rule: .tsel monospace
-      const style = document.createElement('style');
-      style.innerHTML = `.tsel { font-family: monospace; text-align-last: left !important; -moz-text-size-adjust: none; -webkit-text-size-adjust: none; text-size-adjust: none; }
-.tsel span { float: left !important; position: absolute !important; width: fit-content !important; top: 0 !important; }
-.typst-search-hint { font-size: 2048px; color: transparent; width: 100%; height: 100%; }
-.typst-search-hint { color: transpaent; user-select: none; }
-.typst-search-hint::-moz-selection { color: transpaent; background: #00000001; }
-.typst-search-hint::selection { color: transpaent; background: #00000001; } `;
-      document.getElementsByTagName('head')[0].appendChild(style);
-
-      // add css variable, font scale
-      const devicePixelRatio = window.devicePixelRatio || 1;
-      docRoot.style.setProperty('--typst-font-scale', devicePixelRatio.toString());
-      window.addEventListener('resize', () => {
-        const devicePixelRatio = window.devicePixelRatio || 1;
-        docRoot.style.setProperty('--typst-font-scale', devicePixelRatio.toString());
-      });
-
-      window.layoutText(docRoot);
-    }, 0);
-  }
-
-  function nextNode(node: Node) {
-    if (node.hasChildNodes()) {
-      return node.firstChild;
-    } else {
-      while (node && !node.nextSibling) {
-        node = node.parentNode!;
-      }
-      if (!node) {
-        return null;
-      }
-      return node.nextSibling;
-    }
-  }
-
-  function getRangeSelectedNodes(range: Range, filter: (a: any) => boolean | undefined) {
-    var node = range.startContainer;
-    var endNode = range.endContainer;
-
-    // Special case for a range that is contained within a single node
-    if (node == endNode) {
-      if (filter(node)) {
-        return [node];
-      }
-      if (filter(node.parentElement)) {
-        return [node.parentElement];
-      }
-    }
-
-    // Iterate nodes until we hit the end container
-    var rangeNodes = [];
-    while (node && node != endNode) {
-      node = nextNode(node)!;
-      if (filter(node)) {
-        rangeNodes.push(node);
-      }
-    }
-
-    // Add partially selected nodes at the start of the range
-    node = range.startContainer;
-    while (node && node != range.commonAncestorContainer) {
-      if (filter(node)) rangeNodes.unshift(node);
-      node = node.parentNode!;
-    }
-
-    return rangeNodes;
-  }
-
-  function getSelectedNodes(filter: (a: any) => boolean | undefined) {
-    if (window.getSelection) {
-      var sel = window.getSelection()!;
-      if (!sel.isCollapsed) {
-        return getRangeSelectedNodes(sel.getRangeAt(0), filter);
-      }
-    }
-    return [];
-  }
-
+function adjsutTextSelection(docRoot: Element) {
   docRoot.addEventListener('copy', (event: ClipboardEvent) => {
     const selection = getSelectedNodes(
       (n: Element) =>
@@ -291,7 +259,6 @@ window.typstProcessSvg = function (docRoot: SVGElement) {
     const elem = pickElem(t);
     return elem?.classList?.contains('tsel') ? elem : undefined;
   };
-
   const createSelBox = (selBox: Element, range: Range) => {
     const div = document.createElement('div');
     const b = range.getBoundingClientRect();
@@ -304,7 +271,6 @@ window.typstProcessSvg = function (docRoot: SVGElement) {
     div.style.backgroundColor = '#7db9dea0';
     selBox.appendChild(div);
   };
-
   const clearSelBox = (selBox: Element | null) => {
     if (selBox) {
       selBox.innerHTML = '';
@@ -438,6 +404,78 @@ window.typstProcessSvg = function (docRoot: SVGElement) {
       createSelGlyphs(stGlyph, edGlyph);
     }
   });
+}
+
+function createPseudoText(cls: string) {
+  const foreignObj = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+  foreignObj.setAttribute('width', '1');
+  foreignObj.setAttribute('height', '1');
+  foreignObj.setAttribute('x', '0');
+  foreignObj.setAttribute('y', '0');
+
+  const tsel = document.createElement('span');
+  tsel.textContent = '&nbsp;';
+  // tsel.style.fontSize = '2048px';
+  tsel.style.width = tsel.style.height = '100%';
+  tsel.style.textAlign = 'justify';
+  tsel.style.opacity = '0';
+  tsel.classList.add(cls);
+  foreignObj.append(tsel);
+
+  return foreignObj;
+}
+
+interface ProcessOptions {
+  layoutText?: boolean;
+}
+
+// background: transparent;
+
+window.typstProcessSvg = function (docRoot: SVGElement, options?: ProcessOptions) {
+  var elements = docRoot.getElementsByClassName('pseudo-link');
+
+  for (var i = 0; i < elements.length; i++) {
+    var elem = elements[i];
+    elem.addEventListener('mousemove', linkmove);
+    elem.addEventListener('mouseleave', linkleave);
+  }
+
+  const layoutText = options?.layoutText ?? true;
+
+  if (layoutText) {
+    setTimeout(() => {
+      // add rule: .tsel monospace
+      // todo: outline styles
+      const style = document.createElement('style');
+      style.innerHTML = `.tsel { font-family: monospace; text-align-last: left !important; -moz-text-size-adjust: none; -webkit-text-size-adjust: none; text-size-adjust: none; }
+.tsel span { float: left !important; position: absolute !important; width: fit-content !important; top: 0 !important; }
+.typst-search-hint { font-size: 2048px; color: transparent; width: 100%; height: 100%; }
+.typst-search-hint { color: transpaent; user-select: none; }
+.typst-search-hint::-moz-selection { color: transpaent; background: #00000001; }
+.typst-search-hint::selection { color: transpaent; background: #00000001; }
+.tsel span::-moz-selection,
+.tsel::-moz-selection {
+  background: transparent !important;
+}
+.tsel span::selection,
+.tsel::selection {
+  background: transparent !important;
+} `;
+      document.getElementsByTagName('head')[0].appendChild(style);
+
+      // add css variable, font scale
+      const devicePixelRatio = window.devicePixelRatio || 1;
+      docRoot.style.setProperty('--typst-font-scale', devicePixelRatio.toString());
+      window.addEventListener('resize', () => {
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        docRoot.style.setProperty('--typst-font-scale', devicePixelRatio.toString());
+      });
+
+      window.layoutText(docRoot);
+    }, 0);
+
+    adjsutTextSelection(docRoot);
+  }
 
   docRoot.addEventListener('click', (event: MouseEvent) => {
     let elem: HTMLElement | null = event.target as HTMLElement;
@@ -466,28 +504,11 @@ window.typstProcessSvg = function (docRoot: SVGElement) {
     }
   });
 
-  const createPseudoText = (cls: string) => {
-    const foreignObj = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-    foreignObj.setAttribute('width', '1');
-    foreignObj.setAttribute('height', '1');
-    foreignObj.setAttribute('x', '0');
-    foreignObj.setAttribute('y', '0');
-
-    const tsel = document.createElement('span');
-    tsel.textContent = '&nbsp;';
-    // tsel.style.fontSize = '2048px';
-    tsel.style.width = tsel.style.height = '100%';
-    tsel.style.textAlign = 'justify';
-    tsel.style.opacity = '0';
-    tsel.classList.add(cls);
-    foreignObj.append(tsel);
-
-    return foreignObj;
-  };
-
-  docRoot.querySelectorAll('.typst-page').forEach((e: Element) => {
-    e.prepend(createPseudoText('text-guard'));
-  });
+  if (layoutText) {
+    docRoot.querySelectorAll('.typst-page').forEach((e: Element) => {
+      e.prepend(createPseudoText('text-guard'));
+    });
+  }
 
   if (window.location.hash) {
     // console.log('hash', window.location.hash);

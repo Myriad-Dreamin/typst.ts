@@ -14,15 +14,13 @@
 }
 .tsel span::-moz-selection,
 .tsel::-moz-selection {
-  color: transpaent;
-  background: transparent;
-  /* background: #7db9dea0; */
+  color: transparent;
+  background: #7db9dea0;
 }
 .tsel span::selection,
 .tsel::selection {
-  color: transpaent;
-  background: transparent;
-  /* background: #7db9dea0; */
+  color: transparent;
+  background: #7db9dea0;
 }
 svg {
   --glyph_fill: black;
