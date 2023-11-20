@@ -73,7 +73,12 @@ impl LigatureResolver {
         let c: ImmutStr = ligature
             .components
             .into_iter()
-            .map(|g| self.rev_cmap.get(&g).unwrap())
+            .map(|g| {
+                self.rev_cmap.get(&g).unwrap_or_else(|| {
+                    println!("ligature component not found: {:?} {:?}", g, face);
+                    &' '
+                })
+            })
             .collect::<String>()
             .into();
 
