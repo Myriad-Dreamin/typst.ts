@@ -537,13 +537,13 @@ mod tests {
         ---
         name: layout_list-marker_01_artifact_ir
         data_content_phash: "phash-gradient:AAAAAAAAIAAASAAAoAAApAAApAAAIAAARAAAIAAAwAAA0AIA1AIAwAAAAAEAQAAAAAMAAAEAQAUAAAMAQAAAAAEAAAAAAAAA"
-        text_content_hash: "sha256:38a76f24b45fed639e757041c031c7eb9f7ab5636d554b480ca81e571ad2ea98"
+        text_content_hash: "sha256:30fde40ad5a6fe509629f74ca21e6fbbe79420974db548ef8f2af5c3fbb09358"
         "###);
         check_canvas_render_test_point!(@r###"
         ---
         name: layout_list-marker_02_artifact_ir
         data_content_phash: "phash-gradient:EAAABAAAMAAAtAAAtAAAWAAANAAAtAAAAAAAxAIA0AAAwAAAwAAA0AIA0AIAAAAAAAUAQAEABAMAUAAAVAEAVAAAIAAAFAAA"
-        text_content_hash: "sha256:41dabb769a7fa297bf5b5faef6ed7e281e02de75e4dd7171c794499fb0bf5b48"
+        text_content_hash: "sha256:5df50944945cdc36ebd7d5659a88b86df1599ee8eb41ae90fa8c0c43828ccbb9"
         "###);
         check_canvas_render_test_point!(@r###"
         ---
@@ -592,7 +592,7 @@ mod tests {
         ---
         name: math_undergradmath_artifact_ir
         data_content_phash: "phash-gradient:YM7N5Kz17Cb3MM92MMdmmEbkmMzmSA5jzI7YsIf3ZI5k5Iz8qI7ceIbpNI98qG/WwAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        text_content_hash: "sha256:d12bf636df32b6f8cf615f8be058dd3141d48c02b76ac6b861be4f598269d1d3"
+        text_content_hash: "sha256:c0ae4968cf68ba90146d38c784da4b6a780b99e041817dd172e6c950b845d203"
         "###);
         // todo: the size of cjk font file is quite big
         // check_canvas_render_test_point!(@r###"
@@ -611,7 +611,7 @@ mod tests {
         ---
         name: text_deco_00_artifact_ir
         data_content_phash: "phash-gradient:AAAArDQakCRbJNJIbJJsSLV4AAAA5Gog0GwUDAkApCwVoMQ0UCwAkGoRgAQAGFg0kNiykJQwjCocREldMJkZtAEAkAUIAAAA"
-        text_content_hash: "sha256:edda2f80ce95a09fa77040efd2acb1f50137095e847f3358af04ac3c87ac1227"
+        text_content_hash: "sha256:216955f5a1c5f5ea52b1bc154c2488b852f7bf498545acfef50f96203144e4db"
         "###);
         check_canvas_render_test_point!(@r###"
         ---
