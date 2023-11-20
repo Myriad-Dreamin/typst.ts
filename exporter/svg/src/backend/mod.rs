@@ -303,17 +303,25 @@ impl SvgTextBuilder {
         };
 
         // todo: investigate &nbsp;
+
+        // we also apply some additional scaling.
+        // so that the font-size doesn't hit the limit of the browser.
+        // See <https://stackoverflow.com/questions/13416989/computed-font-size-is-bigger-than-defined-in-css-on-the-asus-nexus-7>
         self.content.push(SvgText::Plain(format!(
             concat!(
                 // apply a negative scaleY to flip the text, since a glyph in font is
                 // rendered upside down.
-                r#"<g transform="scale(1,-1)">"#,
-                r#"<foreignObject x="0" y="-{}" width="{}" height="{}">"#,
+                r#"<g transform="scale(16,-16)">"#,
+                r#"<foreignObject x="0" y="-{:.2}" width="{:.2}" height="{:.2}">"#,
                 r#"<h5:div class="tsel" style="font-size: {}px">"#,
                 "{}",
                 r#"</h5:div></foreignObject></g>"#,
             ),
-            ascender, width, upem, upem, text_content
+            ascender / 16.,
+            width / 16.,
+            upem / 16.,
+            ((upem + 1e-3) / 16.) as u32,
+            text_content
         )))
     }
 }
