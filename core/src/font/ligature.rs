@@ -1,20 +1,10 @@
 use std::rc::Rc;
 
-use ttf_parser::gdef::GlyphClass;
 use ttf_parser::gsub::{Ligature, SubstitutionSubtable};
 use ttf_parser::GlyphId;
 use typst::font::Font;
 
 use crate::ImmutStr;
-
-fn is_ligature(face: &ttf_parser::Face<'_>, id: GlyphId) -> bool {
-    let table = match face.tables().gdef {
-        Some(v) => v,
-        None => return false,
-    };
-
-    matches!(table.glyph_class(id), Some(GlyphClass::Ligature))
-}
 
 /// get reverse cmap
 fn get_rev_cmap(face: &ttf_parser::Face<'_>) -> std::collections::HashMap<GlyphId, char> {
@@ -39,8 +29,30 @@ fn get_rev_cmap(face: &ttf_parser::Face<'_>) -> std::collections::HashMap<GlyphI
     rev_cmap
 }
 
+/// Some ttf fonts do not have well gdbf table, so we need to manually get ligature coverage
+fn get_liga_cov(face: &ttf_parser::Face<'_>) -> std::collections::HashSet<GlyphId> {
+    let mut res = std::collections::HashSet::new();
+    let Some(gsub) = face.tables().gsub else {
+        return res;
+    };
+    for lookup in gsub.lookups {
+        for subtable in lookup.subtables.into_iter() {
+            if let SubstitutionSubtable::Ligature(ligatures) = subtable {
+                for ligature_set in ligatures.ligature_sets {
+                    for ligature in ligature_set {
+                        res.insert(ligature.glyph);
+                    }
+                }
+            }
+        }
+    }
+
+    res
+}
+
 pub struct LigatureResolver {
     rev_cmap: std::collections::HashMap<GlyphId, char>,
+    ligature_cov: std::collections::HashSet<GlyphId>,
     ligature_cmap: elsa::FrozenBTreeMap<GlyphId, Box<Option<ImmutStr>>>,
 }
 
@@ -48,6 +60,7 @@ impl LigatureResolver {
     pub fn new(face: &ttf_parser::Face<'_>) -> Self {
         Self {
             rev_cmap: get_rev_cmap(face),
+            ligature_cov: get_liga_cov(face),
             ligature_cmap: elsa::FrozenBTreeMap::new(),
         }
     }
@@ -58,7 +71,7 @@ impl LigatureResolver {
             return s.clone();
         }
 
-        if is_ligature(face, id) {
+        if self.ligature_cov.contains(&id) {
             return Some(self.get(face, id));
         }
 
