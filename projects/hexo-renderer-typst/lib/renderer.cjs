@@ -95,7 +95,7 @@ class Renderer {
 
             const runRender = async () => {
               t1 = performance.now();
-              await plugin.renderToSvg(svgModule, appElem);
+              await plugin.renderToSvg({ renderSession: svgModule, container: appElem });
 
               const t2 = performance.now();
               console.log(
