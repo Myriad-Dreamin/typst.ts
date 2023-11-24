@@ -469,7 +469,7 @@ pub fn flatten_glyphs(
     repr: impl IntoIterator<Item = (DefId, GlyphItem)>,
 ) -> Vec<(DefId, FlatGlyphItem)> {
     let glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
-    let glyph_lower_builder = GlyphLowerBuilder::new(&glyph_provider, false);
+    let glyph_lower_builder = GlyphLowerBuilder::new(&glyph_provider, true);
 
     repr.into_iter()
         .map(|(font_id, glyph)| {
