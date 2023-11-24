@@ -264,10 +264,10 @@ function adjsutTextSelection(docRoot: Element) {
     const b = range.getBoundingClientRect();
     div.style.position = 'absolute';
     div.style.float = 'left';
-    div.style.left = (b.left + window.scrollX).toString();
-    div.style.top = (b.top + window.scrollY).toString();
-    div.style.width = b.width.toString();
-    div.style.height = b.height.toString();
+    div.style.left = `${b.left + window.scrollX}px`;
+    div.style.top = `${b.top + window.scrollY}px`;
+    div.style.width = `${b.width}px`;
+    div.style.height = `${b.height}px`;
     div.style.backgroundColor = '#7db9dea0';
     selBox.appendChild(div);
   };
@@ -654,7 +654,7 @@ window.layoutText = function (svg: Element) {
           const span = document.createElement('span');
           span.textContent = c;
           span.classList.add('tsel-tok');
-          span.style.left = advance.toString();
+          span.style.left = `${advance}px`;
           charContainers.push(span);
         }
 
@@ -739,8 +739,8 @@ function triggerRipple(
   const ripple = document.createElement('div');
 
   ripple.className = className;
-  ripple.style.left = left.toString() + 'px';
-  ripple.style.top = top.toString() + 'px';
+  ripple.style.left = `${left}px`;
+  ripple.style.top = `${top}px`;
 
   docRoot.appendChild(ripple);
 
