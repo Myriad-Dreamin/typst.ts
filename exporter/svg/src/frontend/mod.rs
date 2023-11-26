@@ -431,7 +431,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
 
         // wrap SVG with html
         let mut html: Vec<SvgText> = Vec::with_capacity(svg.len() + 3);
-        html.push(r#"<html><head><meta charset="utf-8" /><title>"#.into());
+        html.push(r#"<!DOCTYPE html><html><head><meta charset="utf-8" /><title>"#.into());
         html.push(SvgText::Plain(
             output
                 .title
