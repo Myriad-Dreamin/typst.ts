@@ -697,6 +697,10 @@ window.layoutText = function (svg: Element) {
 
 window.handleTypstLocation = function (elem: Element, page: number, x: number, y: number) {
   const docRoot = findAncestor(elem, 'typst-doc');
+  if (!docRoot) {
+    console.warn('no typst-doc found', elem);
+    return;
+  }
   const children = docRoot.children;
   let nthPage = 0;
   for (let i = 0; i < children.length; i++) {
@@ -704,26 +708,67 @@ window.handleTypstLocation = function (elem: Element, page: number, x: number, y
       nthPage++;
     }
     if (nthPage == page) {
-      const page = children[i];
-      const dataWidth = Number.parseFloat(page.getAttribute('data-page-width')!);
-      const dataHeight = Number.parseFloat(page.getAttribute('data-page-height')!);
-      const rect = page.getBoundingClientRect();
-      const xOffsetInner = Math.max(0, x / dataWidth - 0.05) * rect.width;
-      const yOffsetInner = Math.max(0, y / dataHeight - 0.05) * rect.height;
-      const xOffsetInnerFix = (x / dataWidth) * rect.width - xOffsetInner;
-      const yOffsetInnerFix = (y / dataHeight) * rect.height - yOffsetInner;
+      // evaluate window viewport 1vw
+      const pw = window.innerWidth * 0.01;
+      const ph = window.innerHeight * 0.01;
 
-      const docRoot = document.body || document.firstElementChild;
-      const basePos = docRoot.getBoundingClientRect();
+      const page = children[i] as SVGGElement;
+      const dataWidth = Number.parseFloat(docRoot.getAttribute('data-width') || '0') || 0;
+      const dataHeight = Number.parseFloat(docRoot.getAttribute('data-height') || '0') || 0;
+      // console.log(page, vw, vh, x, y, dataWidth, dataHeight, docRoot);
+      const svgRectBase = docRoot.getBoundingClientRect();
+      const svgRect = {
+        left: svgRectBase.left,
+        top: svgRectBase.top,
+        width: svgRectBase.width,
+        height: svgRectBase.height,
+      };
+      const xOffsetInnerFix = 7 * pw;
+      const yOffsetInnerFix = 38.2 * ph;
 
-      const xOffset = rect.left - basePos.left + xOffsetInner;
-      const yOffset = rect.top - basePos.top + yOffsetInner;
+      const transform = page.transform.baseVal.consolidate()?.matrix;
+      if (transform) {
+        // console.log(transform.e, transform.f);
+        svgRect.left += (transform.e / dataWidth) * svgRect.width;
+        svgRect.top += (transform.f / dataHeight) * svgRect.height;
+      }
+
+      const pageRect = page.getBoundingClientRect();
+
+      const windowRoot = document.body || document.firstElementChild;
+      const basePos = windowRoot.getBoundingClientRect();
+
+      const xOffset =
+        svgRect.left - basePos.left + (x / dataWidth) * svgRect.width - xOffsetInnerFix;
+      const yOffset =
+        svgRect.top - basePos.top + (y / dataHeight) * svgRect.height - yOffsetInnerFix;
       const left = xOffset + xOffsetInnerFix;
       const top = yOffset + yOffsetInnerFix;
 
-      window.scrollTo(xOffset, yOffset);
+      const widthOccupied = (100 * 100 * pw) / pageRect.width;
 
-      triggerRipple(docRoot, left, top, 'typst-jump-ripple', 'typst-jump-ripple-effect .4s linear');
+      const pageAdjustLeft = pageRect.left - basePos.left - 5 * pw;
+      const pageAdjust = pageRect.left - basePos.left + pageRect.width - 95 * pw;
+
+      // default single-column or multi-column layout
+      if (widthOccupied >= 90 || widthOccupied < 50) {
+        window.scrollTo({ behavior: 'smooth', left: xOffset, top: yOffset });
+      } else {
+        // for double-column layout
+        // console.log('occupied adjustment', widthOccupied, page);
+
+        const xOffsetAdjsut = xOffset > pageAdjust ? pageAdjust : pageAdjustLeft;
+
+        window.scrollTo({ behavior: 'smooth', left: xOffsetAdjsut, top: yOffset });
+      }
+
+      triggerRipple(
+        windowRoot,
+        left,
+        top,
+        'typst-jump-ripple',
+        'typst-jump-ripple-effect .4s linear',
+      );
       return;
     }
   }
