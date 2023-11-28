@@ -15,7 +15,7 @@
   "files": [
     "dist/index.mjs"
   ],
-  "peerDependencies": {
+  "dependencies": {
     "@myriaddreamin/typst.ts": "0.4.1-rc3",
     "@myriaddreamin/typst-ts-renderer": "0.4.1-rc3",
     "@myriaddreamin/typst-ts-web-compiler": "0.4.1-rc3"
@@ -31,7 +31,7 @@
     "typescript": "=5.0.4"
   },
   "scripts": {
-    "dev": "tsc -w & vite",
+    "dev": "vite",
     "build": "tsc && vite build",
     "test": "vitest",
     "coverage": "vitest run --coverage",
