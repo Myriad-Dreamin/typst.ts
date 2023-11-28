@@ -16,9 +16,9 @@
     "dist/index.mjs"
   ],
   "peerDependencies": {
-    "@myriaddreamin/typst.ts": "^0.4.0",
-    "@myriaddreamin/typst-ts-renderer": "^0.4.0",
-    "@myriaddreamin/typst-ts-web-compiler": "^0.4.0"
+    "@myriaddreamin/typst.ts": "0.4.1-rc2",
+    "@myriaddreamin/typst-ts-renderer": "0.4.1-rc2",
+    "@myriaddreamin/typst-ts-web-compiler": "0.4.1-rc2"
   },
   "devDependencies": {
     "@myriaddreamin/typst.ts": "*",
