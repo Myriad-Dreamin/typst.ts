@@ -192,7 +192,16 @@ function getSelectedNodes(filter: (a: any) => boolean | undefined) {
   if (window.getSelection) {
     var sel = window.getSelection()!;
     if (!sel.isCollapsed) {
-      return getRangeSelectedNodes(sel.getRangeAt(0), filter);
+      if (sel.rangeCount === 1) {
+        return getRangeSelectedNodes(sel.getRangeAt(0), filter);
+      }
+
+      let result = [];
+      for (let i = 0, e = sel.rangeCount; i < e; i++) {
+        result.push(...getRangeSelectedNodes(sel.getRangeAt(i), filter));
+      }
+
+      return result;
     }
   }
   return [];
@@ -277,7 +286,10 @@ function adjsutTextSelection(docRoot: Element) {
     }
   };
 
-  document.addEventListener('selectionchange', event => {
+  document.addEventListener('selectionchange', () => updateSelection(false));
+  function updateSelection(isTextFlow: false): void;
+  function updateSelection(isTextFlow: true, event: MouseEvent): void;
+  function updateSelection(isTextFlow: boolean, event?: MouseEvent) {
     const selection = window.getSelection();
 
     let selBox = document.getElementById('tsel-sel-box');
@@ -288,8 +300,9 @@ function adjsutTextSelection(docRoot: Element) {
       return;
     }
 
-    const rng = selection?.getRangeAt(0);
-    if (!rng) {
+    const rngBeg = selection.getRangeAt(0);
+    const rngEnd = selection.getRangeAt(selection.rangeCount - 1);
+    if (!rngBeg || !rngEnd) {
       return;
     }
 
@@ -301,8 +314,10 @@ function adjsutTextSelection(docRoot: Element) {
       );
     };
 
-    const stIsPageGuard = isPageGuardSelected(pickElem(rng.startContainer) as SVGGElement | null);
-    const edIsPageGuard = isPageGuardSelected(pickElem(rng.endContainer) as SVGGElement | null);
+    const stIsPageGuard = isPageGuardSelected(
+      pickElem(rngBeg.startContainer) as SVGGElement | null,
+    );
+    const edIsPageGuard = isPageGuardSelected(pickElem(rngEnd.endContainer) as SVGGElement | null);
     if (stIsPageGuard || edIsPageGuard) {
       console.log('page guard selected');
       if (stIsPageGuard && edIsPageGuard) {
@@ -326,8 +341,8 @@ function adjsutTextSelection(docRoot: Element) {
       document.body.appendChild(selBox);
     }
 
-    const start = pickTselElem(rng.startContainer);
-    const end = pickTselElem(rng.endContainer);
+    const start = pickTselElem(rngBeg.startContainer);
+    const end = pickTselElem(rngEnd.endContainer);
 
     const selectedTextList = getSelectedNodes(
       (n: Element) =>
@@ -344,6 +359,7 @@ function adjsutTextSelection(docRoot: Element) {
     };
 
     const tselRanges = new Map<Element, [number, number]>();
+    // console.log('firefox', selectedTextList);
 
     for (let n of selectedTextList) {
       if (n.classList.contains('tsel-tok')) {
@@ -357,11 +373,16 @@ function adjsutTextSelection(docRoot: Element) {
           tselRanges.set(n2, [Math.min(st, nth), Math.max(ed, nth)]);
         }
       } else if (n.classList.contains('tsel') && !n.hasAttribute('data-typst-layout-checked')) {
-        const st = n === start ? rng.startOffset : 0;
-        const ed = n === end ? rng.endOffset - 1 : -1;
+        const st = n === start ? rngBeg.startOffset : 0;
+        const ed = n === end ? rngEnd.endOffset - 1 : -1;
         tselRanges.set(n, [st, ed]);
       }
     }
+
+    if (isTextFlow) {
+      console.log('text-flow', event, tselRanges);
+    }
+    // console.log('firefox', tselRanges);
 
     // console.log(tselRanges);
 
@@ -403,7 +424,7 @@ function adjsutTextSelection(docRoot: Element) {
       // console.log('select', st, ed, stGlyph, edGlyph, glyphLens, glyphRefs);
       createSelGlyphs(stGlyph, edGlyph);
     }
-  });
+  }
 }
 
 function createPseudoText(cls: string) {
@@ -450,9 +471,9 @@ window.typstProcessSvg = function (docRoot: SVGElement, options?: ProcessOptions
       style.innerHTML = `.tsel { font-family: monospace; text-align-last: left !important; -moz-text-size-adjust: none; -webkit-text-size-adjust: none; text-size-adjust: none; }
 .tsel span { float: left !important; position: absolute !important; width: fit-content !important; top: 0 !important; }
 .typst-search-hint { font-size: 2048px; color: transparent; width: 100%; height: 100%; }
-.typst-search-hint { color: transpaent; user-select: none; }
-.typst-search-hint::-moz-selection { color: transpaent; background: #00000001; }
-.typst-search-hint::selection { color: transpaent; background: #00000001; }
+.typst-search-hint { color: transparent; user-select: none; }
+.typst-search-hint::-moz-selection { color: transparent; background: #00000001; }
+.typst-search-hint::selection { color: transparent; background: #00000001; }
 .tsel span::-moz-selection,
 .tsel::-moz-selection {
   background: transparent !important;

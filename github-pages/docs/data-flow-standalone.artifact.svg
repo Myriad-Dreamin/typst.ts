@@ -14,12 +14,12 @@
 }
 .tsel span::-moz-selection,
 .tsel::-moz-selection {
-  color: transpaent;
+  color: transparent;
   background: #7db9dea0;
 }
 .tsel span::selection,
 .tsel::selection {
-  color: transpaent;
+  color: transparent;
   background: #7db9dea0;
 }
 svg {
