@@ -6,7 +6,7 @@ use typst_ts_core::{
 };
 use typst_ts_svg_exporter::DefaultExportFeature;
 
-use crate::CompileArgs;
+use crate::{CompileArgs, ExportArgs};
 
 type GroupDocExporter = GroupExporter<typst::doc::Document>;
 
@@ -51,7 +51,11 @@ fn exit_by_unknown_format(f: &str) -> ! {
 }
 
 /// With the given arguments, prepare exporters for the compilation.
-fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExporter {
+fn prepare_exporters_impl(
+    args: ExportArgs,
+    out: PathBuf,
+    mut formats: Vec<String>,
+) -> GroupDocExporter {
     let mut doc: ExporterVec<Doc> = vec![];
 
     /// connect export flow from $x to $y
@@ -73,6 +77,13 @@ fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExp
                 <$exporter>::default(),
             )));
         }};
+        (|| $exporter:tt as $ser:ty as $exporters:ident, $output_dir:ident @@ $extension:literal) => {{
+            let output_path = $output_dir.with_extension($extension);
+            $exporters.push(Box::new(FsPathExporter::<$ser, _>::new(
+                output_path,
+                $exporter,
+            )));
+        }};
     }
 
     // sink exporters according to the given formats
@@ -84,7 +95,9 @@ fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExp
             "nothing"     => (),
             "ast"         => sink_path!(WithAst as _ as doc, out @@ "ast.ansi.text"),
             #[cfg(feature = "pdf")]
-            "pdf"         => sink_path!(WithPdf as _ as doc, out @@ "pdf"),
+            "pdf"         => sink_path!(|| {
+                WithPdf::default().with_timestamp(args.pdf_timestamp)
+            } as _ as doc, out @@ "pdf"),
             #[cfg(feature = "svg")]
             "svg"         => sink_path!(WithSvg as _ as doc, out @@ "artifact.svg"),
             #[cfg(feature = "svg")]
@@ -131,5 +144,5 @@ pub fn prepare_exporters(args: &CompileArgs, entry_file: &Path) -> GroupDocExpor
         formats
     };
 
-    prepare_exporters_impl(output_dir, formats)
+    prepare_exporters_impl(args.export.clone(), output_dir, formats)
 }

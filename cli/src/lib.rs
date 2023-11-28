@@ -129,11 +129,22 @@ pub struct CompileOnceArgs {
 }
 
 #[derive(Default, Debug, Clone, Parser)]
+#[clap(next_help_heading = "Export options")]
+pub struct ExportArgs {
+    /// Export pdf with timestamp.
+    #[clap(long, default_value_t = false)]
+    pub pdf_timestamp: bool,
+}
+
+#[derive(Default, Debug, Clone, Parser)]
 #[clap(next_help_heading = "Compile options")]
 pub struct CompileArgs {
     /// compile arguments before query.
     #[clap(flatten)]
     pub compile: CompileOnceArgs,
+
+    #[clap(flatten)]
+    pub export: ExportArgs,
 
     /// Watch mode.
     #[clap(long)]
