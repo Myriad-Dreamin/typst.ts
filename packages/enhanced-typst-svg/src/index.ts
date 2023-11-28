@@ -221,7 +221,7 @@ function getGlyphAdvanceShape(glyphRefs: Element[]) {
   });
 }
 
-function adjsutTextSelection(docRoot: Element) {
+function adjsutTextSelection(docRoot: Element, textFlowCache: TextFlowCache) {
   docRoot.addEventListener('copy', (event: ClipboardEvent) => {
     const selection = getSelectedNodes(
       (n: Element) =>
@@ -252,7 +252,7 @@ function adjsutTextSelection(docRoot: Element) {
 
     const text = textContent.join('').replace(/\u00a0/g, ' ');
 
-    // console.log('user copy', text);
+    console.log('user copy', text);
     if (navigator?.clipboard) {
       // console.log('clipboard api', text);
       navigator.clipboard.writeText(text);
@@ -285,6 +285,36 @@ function adjsutTextSelection(docRoot: Element) {
       selBox.innerHTML = '';
     }
   };
+
+  let mouseLeftIsDown = false;
+  window.addEventListener('mousedown', (event: MouseEvent) => {
+    if (event.button === 0) {
+      mouseLeftIsDown = true;
+    }
+  });
+  window.addEventListener('mouseup', (event: MouseEvent) => {
+    if (event.button === 0) {
+      mouseLeftIsDown = false;
+    }
+  });
+  docRoot.addEventListener('mousemove', (event: MouseEvent) => {
+    if (mouseLeftIsDown) {
+      ignoredEvent(
+        () => {
+          selectTextFlow(event);
+        },
+        2,
+        'doc-text-sel',
+      );
+    }
+  });
+
+  function selectTextFlow(e: MouseEvent) {
+    if ((e.target as HTMLSpanElement)?.classList.contains('tsel-tok')) {
+      return;
+    }
+    updateSelection(true, e);
+  }
 
   document.addEventListener('selectionchange', () => updateSelection(false));
   function updateSelection(isTextFlow: false): void;
@@ -380,7 +410,45 @@ function adjsutTextSelection(docRoot: Element) {
     }
 
     if (isTextFlow) {
-      console.log('text-flow', event, tselRanges);
+      let rngSt = 1e11,
+        rngEd = -1;
+      for (const div of tselRanges.keys()) {
+        const idxStr = div.getAttribute('data-selection-index');
+        if (!idxStr) {
+          continue;
+        }
+        const idx = Number.parseInt(idxStr);
+        rngSt = Math.min(rngSt, idx);
+        rngEd = Math.max(rngEd, idx);
+      }
+
+      if (rngEd !== -1) {
+        // console.log('text-flow', event, tselRanges, textFlowCache, rngSt, rngEd);
+        const cx = event!.clientX;
+        const cy = event!.clientY;
+
+        const flow = textFlowCache.flow;
+        for (;;) {
+          const lastTsel = flow[rngEd];
+          const bbox = lastTsel.getBoundingClientRect();
+          // console.log('check last', lastTsel, bbox, cx, cy);
+          if (cx > bbox.right || cy > bbox.bottom) {
+            tselRanges.set(lastTsel, [0, -1]);
+
+            if (rngEd + 1 < flow.length) {
+              rngEd += 1;
+              const nextTsel = flow[rngEd];
+              const nxBbox = nextTsel.getBoundingClientRect();
+              // todo: avoid assuming horizontal ltr
+              if (bbox.bottom > nxBbox.top && bbox.top < nxBbox.bottom) {
+                console.log('same line', lastTsel, nextTsel);
+                continue;
+              }
+            }
+          }
+          break;
+        }
+      }
     }
     // console.log('firefox', tselRanges);
 
@@ -452,7 +520,15 @@ interface ProcessOptions {
 
 // background: transparent;
 
+interface TextFlowCache {
+  flow: HTMLDivElement[];
+}
+
 window.typstProcessSvg = function (docRoot: SVGElement, options?: ProcessOptions) {
+  let textFlowCache: TextFlowCache = {
+    flow: [],
+  };
+
   var elements = docRoot.getElementsByClassName('pseudo-link');
 
   for (var i = 0; i < elements.length; i++) {
@@ -492,10 +568,10 @@ window.typstProcessSvg = function (docRoot: SVGElement, options?: ProcessOptions
         docRoot.style.setProperty('--typst-font-scale', devicePixelRatio.toString());
       });
 
-      window.layoutText(docRoot);
+      window.layoutText(docRoot, textFlowCache);
     }, 0);
 
-    adjsutTextSelection(docRoot);
+    adjsutTextSelection(docRoot, textFlowCache);
   }
 
   docRoot.addEventListener('click', (event: MouseEvent) => {
@@ -549,8 +625,9 @@ window.typstProcessSvg = function (docRoot: SVGElement, options?: ProcessOptions
   }
 };
 
-window.layoutText = function (svg: Element) {
+window.layoutText = function (svg: Element, textFlowCache: TextFlowCache) {
   const allElements = Array.from(svg.querySelectorAll('.tsel')) as HTMLDivElement[];
+  textFlowCache.flow = allElements;
   const layoutBegin = performance.now();
   const ctx = (
     document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement
@@ -562,11 +639,16 @@ window.layoutText = function (svg: Element) {
 
   const searchHints = [];
 
-  const layoutRange = (divs: HTMLDivElement[]) => {
+  const layoutRange = (tselSt: number, tselEd: number) => {
+    const divs = allElements.slice(tselSt, tselEd);
+    tselSt -= 1;
     for (let d of divs) {
+      tselSt += 1;
       if (d.getAttribute('data-typst-layout-checked')) {
         continue;
       }
+      d.setAttribute('data-selection-index', tselSt.toString());
+      d.setAttribute('data-typst-layout-checked', '1');
 
       if (d.style.fontSize) {
         // scale:
@@ -696,7 +778,6 @@ window.layoutText = function (svg: Element) {
         // const currentY = Number.parseFloat(foreignObj.getAttribute('y')!) || 0;
         // foreignObj.setAttribute('y', (currentY - 2500 / 16).toString());
 
-        d.setAttribute('data-typst-layout-checked', '1');
         // return;
       }
     }
@@ -711,7 +792,7 @@ window.layoutText = function (svg: Element) {
   for (let i = 0; i < allElements.length; i += chunkSize) {
     const chunkBegin = i;
     setTimeout(() => {
-      layoutRange(allElements.slice(chunkBegin, chunkBegin + chunkSize));
+      layoutRange(chunkBegin, chunkBegin + chunkSize);
     });
   }
 };
