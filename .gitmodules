@@ -21,3 +21,10 @@
 	fetchRecurseSubmodules = false
 	update=none
 	ignore=all
+[submodule "projects/cetz-editor"]
+	path = projects/cetz-editor
+	url = https://github.com/Myriad-Dreamin/cetz-editor.git
+	branch = main
+	fetchRecurseSubmodules = false
+	update=none
+	ignore=all
