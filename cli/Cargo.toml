@@ -51,6 +51,7 @@ typst-ts-pdf-exporter = { workspace = true, optional = true }
 typst-ts-raster-exporter = { workspace = true, optional = true }
 typst-ts-serde-exporter = { workspace = true, optional = true }
 typst-ts-svg-exporter = { workspace = true, optional = true }
+typst-ts-text-exporter = { workspace = true, optional = true }
 
 [build-dependencies]
 anyhow.workspace = true
@@ -70,12 +71,14 @@ svg = [
     "typst-ts-svg-exporter",
     "typst-ts-svg-exporter/experimental-ligature",
 ]
+text = ["typst-ts-text-exporter"]
 default = [
     "pdf",
     "raster",
     "serde-json",
     "serde-rmp",
     "svg",
+    "text",
     "gen-manual",
     "embedded-fonts",
     "embedded-cjk-fonts",

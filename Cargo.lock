@@ -4245,6 +4245,7 @@ dependencies = [
  "typst-ts-raster-exporter",
  "typst-ts-serde-exporter",
  "typst-ts-svg-exporter",
+ "typst-ts-text-exporter",
  "vergen",
 ]
 
@@ -4573,6 +4574,14 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
  "web-sys",
+]
+
+[[package]]
+name = "typst-ts-text-exporter"
+version = "0.4.1-rc2"
+dependencies = [
+ "typst",
+ "typst-ts-core",
 ]
 
 [[package]]

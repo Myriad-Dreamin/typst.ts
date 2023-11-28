@@ -20,6 +20,7 @@ pub static AVAILABLE_FORMATS: &[(/* format name */ &str, /* feature hint */ &str
     ("svg_html", "svg"),
     ("sir", "svg"),
     ("vector", "svg"),
+    ("text", "text"),
 ];
 
 /// Hint the user that the given format is not enable or not available.
@@ -93,6 +94,8 @@ fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExp
             "sir"         => sink_path!(WithSIR as _ as doc, out @@ "artifact.sir.in"),
             #[cfg(feature = "svg")]
             "vector"      => sink_path!(WithSIR as _ as doc, out @@ "artifact.sir.in"),
+            #[cfg(feature = "text")]
+            "text"      => sink_path!(WithText as _ as doc, out @@ "txt"),
             _             => exit_by_unknown_format(f),
         });
     }
@@ -107,6 +110,7 @@ fn prepare_exporters_impl(out: PathBuf, mut formats: Vec<String>) -> GroupDocExp
     type WithSvg = typst_ts_svg_exporter::PureSvgExporter;
     type WithSvgHtml = typst_ts_svg_exporter::SvgExporter<DefaultExportFeature>;
     type WithSIR = typst_ts_svg_exporter::SvgModuleExporter;
+    type WithText = typst_ts_text_exporter::TextExporter;
 
     type ExporterVec<T> = Vec<Box<dyn typst_ts_core::Exporter<T> + Send>>;
 }

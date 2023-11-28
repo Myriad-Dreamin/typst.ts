@@ -200,6 +200,7 @@ typst-ts-canvas-exporter = { version = "0.4.1-rc2", path = "exporter/canvas" }
 typst-ts-raster-exporter = "0.4.1-rc1"
 typst-ts-serde-exporter = "0.4.1-rc1"
 typst-ts-svg-exporter = "0.4.1-rc1"
+typst-ts-text-exporter = "0.4.1-rc1"
 
 # project common components
 typst-ts-dev-server = { version = "0.4.1-rc2", path = "server/dev" }
@@ -213,6 +214,7 @@ typst-ts-pdf-exporter = { path = "exporter/pdf" }
 typst-ts-raster-exporter = { path = "exporter/raster" }
 typst-ts-serde-exporter = { path = "exporter/serde" }
 typst-ts-svg-exporter = { path = "exporter/svg" }
+typst-ts-text-exporter = { path = "exporter/text" }
 
 # typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0" }
 # typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0" }
