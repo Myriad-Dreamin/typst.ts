@@ -3,8 +3,11 @@ use std::{path::PathBuf, sync::Arc};
 use crate::ShadowApi;
 use typst::{diag::SourceResult, World};
 use typst_ts_core::{
-    exporter_builtins::GroupExporter, typst::prelude::*, DynExporter, DynGenericExporter,
-    DynPolymorphicExporter, GenericExporter, TakeAs, TypstDocument,
+    exporter_builtins::GroupExporter,
+    typst::prelude::*,
+    vector::flat_ir::{LayoutRegion, LayoutRegionNode, ModuleBuilder},
+    DynExporter, DynGenericExporter, DynPolymorphicExporter, GenericExporter, TakeAs,
+    TypstDocument,
 };
 
 use super::{
@@ -206,6 +209,15 @@ impl<C: Compiler> CompileMiddleware for CompileReporter<C> {
 
 pub type LayoutWidths = Vec<typst::geom::Abs>;
 
+pub type PostProcessLayoutFn = Box<
+    dyn Fn(&mut ModuleBuilder, Arc<TypstDocument>, LayoutRegionNode) -> LayoutRegionNode
+        + Send
+        + Sync,
+>;
+
+pub type PostProcessLayoutsFn =
+    Box<dyn Fn(&mut ModuleBuilder, Vec<LayoutRegion>) -> Vec<LayoutRegion> + Send + Sync>;
+
 pub struct DynamicLayoutCompiler<C: Compiler + ShadowApi, const ALWAYS_ENABLE: bool = false> {
     pub compiler: C,
 
@@ -216,6 +228,9 @@ pub struct DynamicLayoutCompiler<C: Compiler + ShadowApi, const ALWAYS_ENABLE: b
     pub extension: String,
 
     pub layout_widths: LayoutWidths,
+
+    post_process_layout: Option<PostProcessLayoutFn>,
+    post_process_layouts: Option<PostProcessLayoutsFn>,
 
     /// Specify the target. It's default value is `web`.
     /// You can specify a sub target like `web-dark` to refine the target.
@@ -237,6 +252,8 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
                 (0..40)
                     .map(|i| typst::geom::Abs::pt(750.0) - typst::geom::Abs::pt(i as f64 * 10.0)),
             ),
+            post_process_layout: None,
+            post_process_layouts: None,
             target: "web".to_owned(),
         }
     }
@@ -257,6 +274,28 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
         self.target = target;
     }
 
+    /// Experimental
+    pub fn set_post_process_layout(
+        &mut self,
+        post_process_layout: impl Fn(&mut ModuleBuilder, Arc<TypstDocument>, LayoutRegionNode) -> LayoutRegionNode
+            + Send
+            + Sync
+            + 'static,
+    ) {
+        self.post_process_layout = Some(Box::new(post_process_layout));
+    }
+
+    /// Experimental
+    pub fn set_post_process_layouts(
+        &mut self,
+        post_process_layouts: impl Fn(&mut ModuleBuilder, Vec<LayoutRegion>) -> Vec<LayoutRegion>
+            + Send
+            + Sync
+            + 'static,
+    ) {
+        self.post_process_layouts = Some(Box::new(post_process_layouts));
+    }
+
     pub fn with_enable(mut self, enable_dynamic_layout: bool) -> Self {
         self.enable_dynamic_layout = enable_dynamic_layout;
         self
@@ -274,8 +313,9 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
             syntax::{PackageSpec, Span, VirtualPath},
         };
         use typst_ts_core::TypstFileId;
-
-        use typst_ts_svg_exporter::{flat_ir::serialize_doc, DynamicLayoutSvgExporter};
+        use typst_ts_svg_exporter::{
+            flat_ir::serialize_doc, DynamicLayoutSvgExporter, MultiSvgDocument,
+        };
 
         let variable_file = TypstFileId::new(
             Some(PackageSpec::from_str("@preview/typst-ts-variables:0.1.0").at(Span::detached())?),
@@ -311,7 +351,13 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
             self.with_shadow_file_by_id(variable_file, variables.as_bytes().into(), |this| {
                 // compile and export document
                 let output = this.inner_mut().compile(&mut Default::default())?;
-                svg_exporter.render(current_width, output);
+                let mut layout = svg_exporter.render(&output);
+
+                if let Some(post_process_layout) = &this.post_process_layout {
+                    layout = post_process_layout(&mut svg_exporter.builder, output, layout);
+                }
+                svg_exporter.layouts.push((current_width.into(), layout));
+
                 log::trace!(
                     "rerendered {} at {:?}, {}",
                     i,
@@ -322,10 +368,19 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
             })?;
         }
 
+        // post process
+        let mut layouts = vec![LayoutRegion::new_by_scalar(
+            "width".into(),
+            svg_exporter.layouts,
+        )];
+        if let Some(post_process_layouts) = &self.post_process_layouts {
+            layouts = post_process_layouts(&mut svg_exporter.builder, layouts);
+        }
+
+        // finalize
+        let module = svg_exporter.builder.finalize();
+        let doc = MultiSvgDocument { module, layouts };
         let module_output = self.output.with_extension(&self.extension);
-
-        let doc = svg_exporter.finalize();
-
         std::fs::write(module_output, serialize_doc(doc)).unwrap();
 
         let instant = instant::Instant::now();
