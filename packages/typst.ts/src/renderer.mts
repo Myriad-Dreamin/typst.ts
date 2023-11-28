@@ -176,7 +176,7 @@ export class RenderSession {
   /**
    * See {@link TypstRenderer#renderToSvg} for more details.
    */
-  renderToSvg(options: ContextedRenderOptions<RenderToSvgOptions>): Promise<void> {
+  renderToSvg(options: ContextedRenderOptions<RenderToSvgOptions>): Promise<boolean> {
     return this.plugin.renderToSvg({
       renderSession: this,
       ...options,
@@ -324,7 +324,12 @@ export interface TypstRenderer extends TypstSvgRenderer {
    * });
    * ```
    */
-  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<void>;
+  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<boolean>;
+
+  /**
+   * Return selected current svg
+   */
+  getCustomV1(options: RenderInSessionOptions<{}>): Promise<any>;
 
   /**
    * experimental
@@ -485,7 +490,7 @@ export interface TypstSvgRenderer {
    * });
    * ```
    */
-  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<void>;
+  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<boolean>;
 }
 
 /**
@@ -902,10 +907,14 @@ class TypstRendererDriver {
     );
   }
 
-  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<void> {
+  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<boolean> {
     return this.withinOptionSession(options, async sessionRef => {
       return Promise.resolve(this.renderer.render_svg(sessionRef[kObject], options.container));
     });
+  }
+
+  getCustomV1(options: RenderInSessionOptions<{}>): Promise<any> {
+    return Promise.resolve(this.renderer.get_customs(options.renderSession[kObject]));
   }
 
   resetSession(session: RenderSession): void {
