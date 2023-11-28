@@ -33,7 +33,7 @@ use crate::{
     font::{FontGlyphProvider, GlyphProvider},
     hash::Fingerprint,
     vector::GlyphLowerBuilder,
-    TakeAs,
+    ImmutBytes, TakeAs,
 };
 
 use super::{
@@ -223,6 +223,7 @@ pub enum PageMetadata {
     GarbageCollection(Vec<Fingerprint>),
     Item(ItemPack),
     Glyph(Arc<GlyphPack>),
+    Custom(Vec<(ImmutStr, ImmutBytes)>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
