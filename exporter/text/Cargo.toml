@@ -1,0 +1,14 @@
+[package]
+name = "typst-ts-text-exporter"
+description = "Export a frame of Typst document into plain text."
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+typst.workspace = true
+typst-ts-core.workspace = true
+
+[features]
