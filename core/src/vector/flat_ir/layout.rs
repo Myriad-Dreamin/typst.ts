@@ -10,7 +10,10 @@ use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 use serde::{Deserialize, Serialize};
 
 use crate::error::prelude::*;
-use crate::vector::ir::{ImmutStr, Scalar};
+use crate::{
+    vector::ir::{ImmutStr, Scalar},
+    ImmutBytes,
+};
 
 use super::{Module, ModuleView, Page, PageMetadata, SourceMappingNode};
 
@@ -50,14 +53,11 @@ impl LayoutRegionNode {
             return None;
         };
 
-        if v.0.is_empty() {
-            return Some(LayoutRegionPagesRAII {
-                module: Cow::Borrowed(ModuleView::new(module)),
-                pages: &v.1,
-            });
-        }
-
-        None
+        return Some(LayoutRegionPagesRAII {
+            module: Cow::Borrowed(ModuleView::new(module)),
+            meta: &v.0,
+            pages: &v.1,
+        });
     }
 
     pub fn source_mapping<'a>(
@@ -83,6 +83,7 @@ impl LayoutRegionNode {
 
 pub struct LayoutRegionPagesRAII<'a> {
     module: Cow<'a, ModuleView>,
+    meta: &'a [PageMetadata],
     pages: &'a [Page],
     // todo: chaining module
 }
@@ -94,6 +95,20 @@ impl<'a> LayoutRegionPagesRAII<'a> {
 
     pub fn pages(&self) -> &'a [Page] {
         self.pages
+    }
+
+    pub fn meta(&self) -> &'a [PageMetadata] {
+        self.meta
+    }
+
+    pub fn customs(&self) -> impl Iterator<Item = &'_ (ImmutStr, ImmutBytes)> {
+        self.meta
+            .iter()
+            .flat_map(move |meta| match meta {
+                PageMetadata::Custom(customs) => Some(customs.iter()),
+                _ => None,
+            })
+            .flatten()
     }
 }
 
