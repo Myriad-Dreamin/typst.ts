@@ -85,12 +85,18 @@ interface ElementState {
   target?: Element & { relatedElements?: Element[] };
 }
 
-var getRelatedElements = function (event: Event & ElementState) {
-  let relatedElements = event.target.relatedElements;
+const gr = (window.typstGetRelatedElements = function (
+  elem: Element & { relatedElements?: Element[] },
+) {
+  let relatedElements = elem.relatedElements;
   if (relatedElements === undefined || relatedElements === null) {
-    relatedElements = event.target.relatedElements = searchIntersections(event.target);
+    relatedElements = elem.relatedElements = searchIntersections(elem);
   }
   return relatedElements;
+});
+
+const getRelatedElements = function (event: Event & ElementState) {
+  return gr(event.target);
 };
 
 var linkmove = function (event: Event & ElementState) {
@@ -797,7 +803,23 @@ window.layoutText = function (svg: Element, textFlowCache: TextFlowCache) {
   }
 };
 
-window.handleTypstLocation = function (elem: Element, page: number, x: number, y: number) {
+interface HandleOptions {
+  behavior: ScrollBehavior;
+}
+window.handleTypstLocation = function (
+  elem: Element,
+  page: number,
+  x: number,
+  y: number,
+  options?: HandleOptions,
+) {
+  const behavior = options?.behavior || 'smooth';
+  const assignHashLoc =
+    window.assignSemaHash ||
+    ((u: number, x: number, y: number) => {
+      // todo: multiple documents
+      location.hash = `loc-${u}x${x.toFixed(2)}x${y.toFixed(2)}`;
+    });
   const docRoot = findAncestor(elem, 'typst-doc');
   if (!docRoot) {
     console.warn('no typst-doc found', elem);
@@ -815,8 +837,14 @@ window.handleTypstLocation = function (elem: Element, page: number, x: number, y
       const ph = window.innerHeight * 0.01;
 
       const page = children[i] as SVGGElement;
-      const dataWidth = Number.parseFloat(docRoot.getAttribute('data-width') || '0') || 0;
-      const dataHeight = Number.parseFloat(docRoot.getAttribute('data-height') || '0') || 0;
+      const dataWidth =
+        Number.parseFloat(
+          docRoot.getAttribute('data-width') || docRoot.getAttribute('width') || '0',
+        ) || 0;
+      const dataHeight =
+        Number.parseFloat(
+          docRoot.getAttribute('data-height') || docRoot.getAttribute('height') || '0',
+        ) || 0;
       // console.log(page, vw, vh, x, y, dataWidth, dataHeight, docRoot);
       const svgRectBase = docRoot.getBoundingClientRect();
       const svgRect = {
@@ -835,8 +863,6 @@ window.handleTypstLocation = function (elem: Element, page: number, x: number, y
         svgRect.top += (transform.f / dataHeight) * svgRect.height;
       }
 
-      const pageRect = page.getBoundingClientRect();
-
       const windowRoot = document.body || document.firstElementChild;
       const basePos = windowRoot.getBoundingClientRect();
 
@@ -847,30 +873,19 @@ window.handleTypstLocation = function (elem: Element, page: number, x: number, y
       const left = xOffset + xOffsetInnerFix;
       const top = yOffset + yOffsetInnerFix;
 
-      const widthOccupied = (100 * 100 * pw) / pageRect.width;
+      window.scrollTo({ behavior, left: xOffset, top: yOffset });
 
-      const pageAdjustLeft = pageRect.left - basePos.left - 5 * pw;
-      const pageAdjust = pageRect.left - basePos.left + pageRect.width - 95 * pw;
-
-      // default single-column or multi-column layout
-      if (widthOccupied >= 90 || widthOccupied < 50) {
-        window.scrollTo({ behavior: 'smooth', left: xOffset, top: yOffset });
-      } else {
-        // for double-column layout
-        // console.log('occupied adjustment', widthOccupied, page);
-
-        const xOffsetAdjsut = xOffset > pageAdjust ? pageAdjust : pageAdjustLeft;
-
-        window.scrollTo({ behavior: 'smooth', left: xOffsetAdjsut, top: yOffset });
+      if (behavior !== 'instant') {
+        triggerRipple(
+          windowRoot,
+          left,
+          top,
+          'typst-jump-ripple',
+          'typst-jump-ripple-effect .4s linear',
+        );
       }
 
-      triggerRipple(
-        windowRoot,
-        left,
-        top,
-        'typst-jump-ripple',
-        'typst-jump-ripple-effect .4s linear',
-      );
+      assignHashLoc(nthPage, x, y);
       return;
     }
   }
