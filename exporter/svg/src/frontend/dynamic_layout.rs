@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use typst::doc::Document;
 use typst_ts_core::vector::{
     flat_ir::{
@@ -12,16 +10,16 @@ use typst_ts_core::vector::{
 
 #[derive(Default)]
 pub struct DynamicLayoutSvgExporter {
-    builder: ModuleBuilder,
-    layouts: Vec<(Abs, LayoutRegionNode)>,
+    pub builder: ModuleBuilder,
+    pub layouts: Vec<(Abs, LayoutRegionNode)>,
 }
 
 impl DynamicLayoutSvgExporter {
-    pub fn render(&mut self, layout_width: typst::geom::Abs, output: Arc<Document>) {
+    pub fn render(&mut self, output: &Document) -> LayoutRegionNode {
         self.builder.reset();
         // let instant = std::time::Instant::now();
         // check the document
-        let mut t = LowerBuilder::new(&output);
+        let mut t = LowerBuilder::new(output);
 
         let pages = output
             .pages
@@ -39,10 +37,10 @@ impl DynamicLayoutSvgExporter {
             self.builder.build(ext);
         }
 
-        self.layouts
-            .push((layout_width.into(), LayoutRegionNode::new_pages(pages)));
         // log::trace!("svg dynamic layout render time: {:?}",
         // instant.elapsed());
+
+        LayoutRegionNode::new_pages(pages)
     }
 
     pub fn finalize(self) -> MultiSvgDocument {

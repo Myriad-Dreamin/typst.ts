@@ -9,7 +9,7 @@ use std::{
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 use serde::{Deserialize, Serialize};
 
-use crate::error::prelude::*;
+use crate::{error::prelude::*, TakeAs};
 use crate::{
     vector::ir::{ImmutStr, Scalar},
     ImmutBytes,
@@ -78,6 +78,17 @@ impl LayoutRegionNode {
         }
 
         None
+    }
+
+    pub fn mutate_pages(self, f: &impl Fn(&mut (Vec<PageMetadata>, Vec<Page>))) -> Self {
+        match self {
+            Self::Pages(v) => Self::Pages(Arc::new({
+                let mut v = v.take();
+                f(&mut v);
+                v
+            })),
+            Self::SourceMapping(..) | Self::Indirect(..) => self,
+        }
     }
 }
 
@@ -211,6 +222,27 @@ impl LayoutRegion {
             } else {
                 return Ok(next);
             }
+        }
+    }
+
+    pub fn mutate_pages(self, f: &impl Fn(&mut (Vec<PageMetadata>, Vec<Page>))) -> Self {
+        match self {
+            Self::ByScalar(v) => Self::ByScalar(LayoutRegionRepr {
+                kind: v.kind,
+                layouts: v
+                    .layouts
+                    .into_iter()
+                    .map(|(k, v)| (k, v.mutate_pages(f)))
+                    .collect(),
+            }),
+            Self::ByStr(v) => Self::ByStr(LayoutRegionRepr {
+                kind: v.kind,
+                layouts: v
+                    .layouts
+                    .into_iter()
+                    .map(|(k, v)| (k, v.mutate_pages(f)))
+                    .collect(),
+            }),
         }
     }
 }
