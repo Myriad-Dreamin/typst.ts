@@ -18,6 +18,7 @@
 //! │[`SvgDocument`]│◄───────────────┤[`MultiSvgDocument`]│
 //! └───────────────┘                └────────────────────┘
 
+use core::fmt;
 use std::sync::Arc;
 
 mod module;
@@ -204,7 +205,7 @@ impl FromIterator<(GlyphItem, (GlyphRef, FontRef))> for GlyphPack {
 }
 
 /// Describing reference to a page
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct Page {
@@ -214,8 +215,20 @@ pub struct Page {
     pub size: Size,
 }
 
+impl fmt::Debug for Page {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Page({}, {:.3}x{:.3})",
+            self.content.as_svg_id(""),
+            self.size.x.0,
+            self.size.y.0
+        )
+    }
+}
+
 /// metadata that can be attached to a module.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 #[repr(C, align(32))]
@@ -224,6 +237,32 @@ pub enum PageMetadata {
     Item(ItemPack),
     Glyph(Arc<GlyphPack>),
     Custom(Vec<(ImmutStr, ImmutBytes)>),
+}
+
+impl fmt::Debug for PageMetadata {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PageMetadata::GarbageCollection(v) => f
+                .debug_struct("GarbageCollection")
+                .field("len", &v.len())
+                .finish(),
+            PageMetadata::Item(v) => f.debug_struct("Item").field("len", &v.0.len()).finish(),
+            PageMetadata::Glyph(v) => f
+                .debug_struct("Glyph")
+                .field("len", &v.items.len())
+                .field("base", &v.incremental_base)
+                .finish(),
+            PageMetadata::Custom(v) => {
+                write!(f, "Custom")?;
+                f.debug_map()
+                    .entries(
+                        v.iter()
+                            .map(|(k, v)| (k.as_ref(), format!("Bytes({})", v.len()))),
+                    )
+                    .finish()
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -480,6 +519,7 @@ pub fn flatten_glyphs(
                     let t = match t {
                         GlyphItem::Image(i) => FlatGlyphItem::Image(i),
                         GlyphItem::Outline(p) => FlatGlyphItem::Outline(p),
+                        GlyphItem::None => FlatGlyphItem::None,
                         _ => unreachable!(),
                     };
 

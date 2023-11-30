@@ -1,3 +1,4 @@
+use core::fmt;
 use std::{
     borrow::Cow,
     collections::HashMap,
@@ -180,7 +181,7 @@ pub struct LayoutRegionRepr<T> {
 }
 
 /// Describing
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub enum LayoutRegion {
@@ -279,6 +280,27 @@ impl Index<usize> for LayoutRegion {
         match self {
             Self::ByScalar(v) => &v.layouts[index].1,
             Self::ByStr(v) => &v.layouts[index].1,
+        }
+    }
+}
+
+impl fmt::Debug for LayoutRegion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ByScalar(v) => {
+                write!(f, "LayoutRegion({:?})", v.kind)?;
+
+                f.debug_map()
+                    .entries(v.layouts.iter().map(|(ref k, ref v)| (k, v)))
+                    .finish()
+            }
+            Self::ByStr(v) => {
+                write!(f, "LayoutRegion({:?})", v.kind)?;
+
+                f.debug_map()
+                    .entries(v.layouts.iter().map(|(ref k, ref v)| (k, v)))
+                    .finish()
+            }
         }
     }
 }
