@@ -80,7 +80,14 @@ impl LayoutRegionNode {
         None
     }
 
-    pub fn mutate_pages(self, f: &impl Fn(&mut (Vec<PageMetadata>, Vec<Page>))) -> Self {
+    pub fn visit_pages(&self, f: &mut impl FnMut(&(Vec<PageMetadata>, Vec<Page>))) {
+        match self {
+            Self::Pages(v) => f(v),
+            Self::SourceMapping(..) | Self::Indirect(..) => {}
+        }
+    }
+
+    pub fn mutate_pages(self, f: &mut impl FnMut(&mut (Vec<PageMetadata>, Vec<Page>))) -> Self {
         match self {
             Self::Pages(v) => Self::Pages(Arc::new({
                 let mut v = v.take();
@@ -89,6 +96,15 @@ impl LayoutRegionNode {
             })),
             Self::SourceMapping(..) | Self::Indirect(..) => self,
         }
+    }
+
+    pub fn customs(v: &[PageMetadata]) -> impl Iterator<Item = &'_ (ImmutStr, ImmutBytes)> {
+        v.iter()
+            .flat_map(move |meta| match meta {
+                PageMetadata::Custom(customs) => Some(customs.iter()),
+                _ => None,
+            })
+            .flatten()
     }
 }
 
@@ -113,13 +129,7 @@ impl<'a> LayoutRegionPagesRAII<'a> {
     }
 
     pub fn customs(&self) -> impl Iterator<Item = &'_ (ImmutStr, ImmutBytes)> {
-        self.meta
-            .iter()
-            .flat_map(move |meta| match meta {
-                PageMetadata::Custom(customs) => Some(customs.iter()),
-                _ => None,
-            })
-            .flatten()
+        LayoutRegionNode::customs(self.meta)
     }
 }
 
@@ -225,7 +235,22 @@ impl LayoutRegion {
         }
     }
 
-    pub fn mutate_pages(self, f: &impl Fn(&mut (Vec<PageMetadata>, Vec<Page>))) -> Self {
+    pub fn visit_pages(&self, f: &mut impl FnMut(&(Vec<PageMetadata>, Vec<Page>))) {
+        match self {
+            Self::ByScalar(v) => {
+                for (_, v) in v.layouts.iter() {
+                    v.visit_pages(f)
+                }
+            }
+            Self::ByStr(v) => {
+                for (_, v) in v.layouts.iter() {
+                    v.visit_pages(f)
+                }
+            }
+        }
+    }
+
+    pub fn mutate_pages(self, f: &mut impl FnMut(&mut (Vec<PageMetadata>, Vec<Page>))) -> Self {
         match self {
             Self::ByScalar(v) => Self::ByScalar(LayoutRegionRepr {
                 kind: v.kind,
