@@ -300,6 +300,10 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
         self.enable_dynamic_layout = enable_dynamic_layout;
         self
     }
+
+    pub fn module_dest_path(&self) -> PathBuf {
+        self.output.with_extension(&self.extension)
+    }
 }
 
 #[cfg(feature = "dynamic-layout")]
@@ -380,8 +384,7 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
         // finalize
         let module = svg_exporter.builder.finalize();
         let doc = MultiSvgDocument { module, layouts };
-        let module_output = self.output.with_extension(&self.extension);
-        std::fs::write(module_output, serialize_doc(doc)).unwrap();
+        std::fs::write(self.module_dest_path(), serialize_doc(doc)).unwrap();
 
         let instant = instant::Instant::now();
         log::trace!("multiple layouts finished at {:?}", instant - instant_begin);
