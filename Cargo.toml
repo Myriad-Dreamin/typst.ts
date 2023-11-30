@@ -59,6 +59,11 @@ opt-level = 1
 debug = false
 strip = true
 
+# todo: https://github.com/typst/typst/pull/2771
+
+# [workspace.lints.clippy]
+# uninlined_format_args = "warn"
+
 [workspace.dependencies]
 
 # typesetting

@@ -40,6 +40,8 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: Fmt check
         run: cargo fmt --check --all
+      # todo: https://github.com/typst/typst/pull/2767
+      #  --all-features
       - name: Clippy check
         run: cargo clippy --profile release-ci --workspace --all-targets
       - name: Documentation check

@@ -111,3 +111,6 @@ browser-compile = ["__web", "web-render"]
 browser-embedded-fonts = ["__web"]
 web = ["__web", "web-render", "browser-compile"]
 default = ["system", "dynamic-layout", "cjk", "emoji"]
+
+[lints]
+workspace = true

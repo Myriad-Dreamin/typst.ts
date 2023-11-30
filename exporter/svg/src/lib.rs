@@ -1,5 +1,12 @@
 //! Rendering into svg text or module.
 
+// todo: https://github.com/typst/typst/pull/2740
+// also 3c22c9f31914727f665ce10d6db9dac39a26eacb
+// gradient pattern
+
+// todo: https://github.com/typst/typst/pull/2610
+// color export
+
 use std::sync::Arc;
 
 use typst::doc::Document;
