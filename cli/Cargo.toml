@@ -8,9 +8,6 @@ edition.workspace = true
 homepage.workspace = true
 repository.workspace = true
 
-[lints]
-workspace = true
-
 [dependencies]
 typst.workspace = true
 typst-library.workspace = true

@@ -60,6 +60,7 @@ debug = false
 strip = true
 
 # todo: https://github.com/typst/typst/pull/2771
+# nightly feature
 
 # [workspace.lints.clippy]
 # uninlined_format_args = "warn"
