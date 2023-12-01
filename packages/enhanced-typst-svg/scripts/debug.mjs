@@ -3,9 +3,9 @@ import { existsSync, writeFileSync, readFileSync } from 'fs';
 
 export function updateDebugScript() {
   const svg_util = projectRoot + '/packages/enhanced-typst-svg/dist/index.min.js';
-  const svg_html = projectRoot + '/fuzzers/corpora/math/undergradmath.artifact.svg.html';
+  const svg_html = projectRoot + '/fuzzers/corpora/perf/long.artifact.svg.html';
   const svg_html_debug =
-    projectRoot + '/fuzzers/corpora/math/undergradmath.debug.artifact.svg.html';
+    projectRoot + '/fuzzers/corpora/perf/long.debug.artifact.svg.html';
 
   const svg_util_data = readFileSync(svg_util, 'utf8');
   const svg_html_data = readFileSync(svg_html, 'utf8');
