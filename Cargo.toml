@@ -18,7 +18,6 @@ members = [
     "exporter/ast",
     "exporter/canvas",
     "exporter/pdf",
-    "exporter/raster",
     "exporter/serde",
     "exporter/svg",
 
@@ -203,7 +202,6 @@ typst-ts-test-common = { version = "0.4.1-rc3", path = "tests/common" }
 typst-ts-ast-exporter = "0.4.1-rc1"
 typst-ts-pdf-exporter = "0.4.1-rc1"
 typst-ts-canvas-exporter = { version = "0.4.1-rc3", path = "exporter/canvas" }
-typst-ts-raster-exporter = "0.4.1-rc1"
 typst-ts-serde-exporter = "0.4.1-rc1"
 typst-ts-svg-exporter = "0.4.1-rc1"
 typst-ts-text-exporter = "0.4.1-rc1"
@@ -217,7 +215,6 @@ typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }
 typst-ts-ast-exporter = { path = "exporter/ast" }
 typst-ts-pdf-exporter = { path = "exporter/pdf" }
-typst-ts-raster-exporter = { path = "exporter/raster" }
 typst-ts-serde-exporter = { path = "exporter/serde" }
 typst-ts-svg-exporter = { path = "exporter/svg" }
 typst-ts-text-exporter = { path = "exporter/text" }

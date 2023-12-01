@@ -4,9 +4,6 @@ pub mod canvas;
 #[cfg(feature = "render_pdf")]
 pub mod pdf;
 
-#[cfg(feature = "render_raster")]
-pub mod raster;
-
 #[cfg(feature = "render_svg")]
 pub mod svg;
 
