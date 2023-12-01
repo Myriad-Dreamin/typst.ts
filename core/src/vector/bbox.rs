@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::{collections::HashMap, ops::Deref};
 
 use comemo::Prehashed;
-use typst::font::Font;
+use typst::text::Font;
 
 use super::ir::{FontIndice, FontRef, GlyphIndice, GlyphPackBuilder, GlyphRef};
 use super::vm::RenderState;

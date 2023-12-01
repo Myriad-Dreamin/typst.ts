@@ -9,10 +9,10 @@ use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use typst::{
     diag::{FileError, FileResult, SourceResult},
-    eval::{Datetime, Library},
-    font::{Font, FontBook},
+    foundations::Datetime,
     syntax::{Source, VirtualPath},
-    World,
+    text::{Font, FontBook},
+    Library, World,
 };
 
 use typst_ts_core::{
@@ -82,8 +82,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     ) -> Self {
         // Hook up the lang items.
         // todo: bad upstream changes
-        let library = Prehashed::new(typst_library::build());
-        typst::eval::set_lang_items(library.items.clone());
+        let library = Prehashed::new(typst::Library::build());
 
         Self {
             root: root_dir.into(),

@@ -1,8 +1,9 @@
 use std::{collections::HashSet, f32::consts::TAU, fmt::Write, sync::Arc};
 
 use typst::{
-    doc::Document,
-    geom::{Angle, Color, ColorSpace, Hsl, Hsv, Quadrant, WeightedColor},
+    layout::{Angle, Quadrant},
+    model::Document,
+    visualize::{Color, ColorSpace, Hsl, Hsv, WeightedColor},
 };
 use typst_ts_core::{
     font::GlyphProvider,
@@ -127,7 +128,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             match &gradient.kind {
                 GradientKind::Linear(angle) => {
                     // todo: use native angle
-                    let angle = typst::geom::Angle::rad(angle.0 as f64);
+                    let angle = typst::layout::Angle::rad(angle.0 as f64);
 
                     // todo: correct aspect ratio
                     // let angle = Gradient::correct_aspect_ratio(linear.angle, *ratio);

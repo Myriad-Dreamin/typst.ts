@@ -1,8 +1,4 @@
 use serde::{Deserialize, Serialize};
-use typst::{
-    doc::{Document, Position},
-    model::{Introspector, Location},
-};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct AnnotationBox {
@@ -45,20 +41,4 @@ pub struct LinkAnnotation {
     pub annotation_box: AnnotationBox,
     /// The action to perform when the annotation is activated.
     pub action: LinkAction,
-}
-
-pub struct AnnotationProcessor {
-    introspector: Introspector,
-}
-
-impl AnnotationProcessor {
-    pub fn new(doc: &Document) -> Self {
-        Self {
-            introspector: Introspector::new(&doc.pages),
-        }
-    }
-
-    pub fn process_location(&self, location: Location) -> Position {
-        self.introspector.position(location)
-    }
 }

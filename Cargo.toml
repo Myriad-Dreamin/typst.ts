@@ -71,7 +71,7 @@ strip = true
 pixglyph = "0.2"
 typst = "0.9.0"
 typst-ide = "0.9.0"
-typst-library = "0.9.0"
+typst-pdf = "0.9.0"
 typst-syntax = "0.9.0"
 ttf-parser = "0.19.2"
 
@@ -94,7 +94,7 @@ tokio = { version = "1.28.1", features = ["full"] }
 # data structure and algorithm
 append-only-vec = "0.1.2"
 bytemuck = "1"
-comemo = "0.3"
+comemo = "0.3.1"
 dissimilar = "1.0"
 elsa = "1.8.1"
 ecow = "0.2"
@@ -222,22 +222,19 @@ typst-ts-serde-exporter = { path = "exporter/serde" }
 typst-ts-svg-exporter = { path = "exporter/svg" }
 typst-ts-text-exporter = { path = "exporter/text" }
 
-# typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0" }
-# typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0" }
-# typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0" }
-# typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0" }
-hayagriva = { git = "https://github.com/Myriad-Dreamin/hayagriva.git", branch = "typst.ts-v0.9.0" }
+# typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }
+# typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }
+# typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }
+# typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
-typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0-content-hint" }
-typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0-content-hint" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0-content-hint" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.9.0-content-hint" }
-# hayagriva = { git = "https://github.com/Myriad-Dreamin/hayagriva.git", branch = "typst.ts-v0.9.0" }
+typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0-content-hint" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0-content-hint" }
+typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0-content-hint" }
+typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0-content-hint" }
 
 # typst = { path = "../typst/crates/typst" }
-# typst-library = { path = "../typst/crates/typst-library" }
 # typst-syntax = { path = "../typst/crates/typst-syntax" }
 # typst-ide = { path = "../typst/crates/typst-ide" }
-# hayagriva = { path = "../hayagriva" }
+# typst-pdf = { path = "../typst/crates/typst-pdf" }
 
 # fontdb = { path = "../fontdb" }

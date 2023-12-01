@@ -29,7 +29,7 @@ where
 struct FullTextDigest(Arc<TypstDocument>);
 
 impl FullTextDigest {
-    fn export_frame(f: &mut fmt::Formatter<'_>, doc: &typst::doc::Frame) -> fmt::Result {
+    fn export_frame(f: &mut fmt::Formatter<'_>, doc: &typst::layout::Frame) -> fmt::Result {
         for (_, item) in doc.items() {
             Self::export_item(f, item)?;
         }
@@ -37,10 +37,10 @@ impl FullTextDigest {
         Ok(())
     }
 
-    fn export_item(f: &mut fmt::Formatter<'_>, item: &typst::doc::FrameItem) -> fmt::Result {
+    fn export_item(f: &mut fmt::Formatter<'_>, item: &typst::layout::FrameItem) -> fmt::Result {
         use std::fmt::Write;
-        use typst::doc::FrameItem::*;
-        use typst::doc::Meta::*;
+        use typst::introspection::Meta::*;
+        use typst::layout::FrameItem::*;
         match item {
             Group(g) => Self::export_frame(f, &g.frame),
             Text(t) => f.write_str(t.text.as_str()),

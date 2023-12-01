@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use typst::doc::Document;
+use typst::model::Document;
 
 use crate::{
     error::prelude::*,

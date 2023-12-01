@@ -10,5 +10,6 @@ repository.workspace = true
 [dependencies]
 
 typst.workspace = true
+typst-pdf.workspace = true
 
 typst-ts-core.workspace = true

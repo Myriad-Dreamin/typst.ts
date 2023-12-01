@@ -8,7 +8,7 @@ use typst_ts_svg_exporter::DefaultExportFeature;
 
 use crate::{CompileArgs, ExportArgs};
 
-type GroupDocExporter = GroupExporter<typst::doc::Document>;
+type GroupDocExporter = GroupExporter<typst::model::Document>;
 
 /// builtin formats should be enabled by default, and non-builtin formats should
 /// be
@@ -114,7 +114,7 @@ fn prepare_exporters_impl(
     }
     return GroupExporter::new(doc);
 
-    type Doc = typst::doc::Document;
+    type Doc = typst::model::Document;
 
     type WithAst = typst_ts_ast_exporter::AstExporter;
     // type WithJson<T> = typst_ts_serde_exporter::JsonExporter<T>;

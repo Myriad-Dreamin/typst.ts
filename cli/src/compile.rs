@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use typst::doc::Document;
+use typst::model::Document;
 use typst_ts_compiler::{
     service::{
         features::{FeatureSet, DIAG_FMT_FEATURE},

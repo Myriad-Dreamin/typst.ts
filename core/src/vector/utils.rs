@@ -1,5 +1,6 @@
 use tiny_skia::Transform;
-use typst::geom::{Abs, Color, Paint};
+use typst::layout::Abs;
+use typst::visualize::{Color, Paint};
 
 use super::ir;
 
@@ -47,6 +48,8 @@ impl ToCssExt for Paint {
     fn to_css(self) -> String {
         let fill = match self {
             Paint::Solid(color) => color,
+            // todo: pattern
+            Paint::Pattern(..) => Color::BLACK,
             // todo: gradient
             Paint::Gradient(..) => Color::BLACK,
         };

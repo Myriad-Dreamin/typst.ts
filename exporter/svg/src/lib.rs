@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use typst::doc::Document;
+use typst::model::Document;
 use typst::{diag::SourceResult, World};
 
 use typst_ts_core::Exporter;

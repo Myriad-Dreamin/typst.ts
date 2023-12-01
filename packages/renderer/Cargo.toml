@@ -19,7 +19,6 @@ crate-type = ["cdylib"]
 [dependencies]
 
 typst.workspace = true
-typst-library.workspace = true
 comemo.workspace = true
 
 once_cell.workspace = true

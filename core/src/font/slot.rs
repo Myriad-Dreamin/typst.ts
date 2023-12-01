@@ -1,6 +1,6 @@
 use core::fmt;
 
-use typst::font::Font;
+use typst::text::Font;
 
 use crate::{FontLoader, QueryRef};
 

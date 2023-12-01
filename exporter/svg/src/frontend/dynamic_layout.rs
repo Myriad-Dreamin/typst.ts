@@ -1,4 +1,4 @@
-use typst::doc::Document;
+use typst::model::Document;
 use typst_ts_core::vector::{
     flat_ir::{
         FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, ModuleBuilder, ModuleMetadata,

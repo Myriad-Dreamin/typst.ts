@@ -1,5 +1,6 @@
 use tiny_skia::Transform;
-use typst::geom::{Abs, Color};
+use typst::layout::Abs;
+use typst::visualize::Color;
 
 use super::ir;
 

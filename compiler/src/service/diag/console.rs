@@ -15,7 +15,7 @@ use typst::syntax::Span;
 use typst::WorldExt;
 use typst::{diag::SourceDiagnostic, World};
 
-use typst::eval::eco_format;
+use typst::diag::eco_format;
 use typst_ts_core::{typst::prelude::*, GenericExporter, PhantomParamData, TakeAs, TypstFileId};
 
 use crate::service::features::{

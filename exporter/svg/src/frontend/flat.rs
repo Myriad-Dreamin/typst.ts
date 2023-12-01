@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use typst::{diag::SourceResult, doc::Document};
+use typst::{diag::SourceResult, model::Document};
 use typst_ts_core::vector::{
     flat_ir::{
         flatten_glyphs, FlatModule, FlatSvgItem, ItemPack, LayoutRegion, LayoutRegionNode,

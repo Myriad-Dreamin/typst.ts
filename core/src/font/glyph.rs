@@ -3,9 +3,9 @@ use std::hash::{Hash, Hasher};
 use std::{ops::Deref, sync::Arc};
 
 pub use ttf_parser::GlyphId;
-use typst::font::Font;
+use typst::text::Font;
 // use typst::geom::Axes;
-use typst::image::{Image as TypstImage, RasterFormat};
+use typst::visualize::{Image as TypstImage, RasterFormat};
 
 use crate::hash::item_hash128;
 use crate::{HashedTrait, ImmutStr, StaticHash128};

@@ -1,6 +1,6 @@
 use core::fmt;
 
-use typst::font::{FontFlags, FontInfo, FontVariant};
+use typst::text::{FontFlags, FontInfo, FontVariant};
 
 use crate::FontSlot;
 

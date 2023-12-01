@@ -1,9 +1,9 @@
 use comemo::Track;
 use typst::{
     diag::{EcoString, StrResult},
-    doc::Document,
-    eval::{eval_string, EvalMode, Scope},
-    model::{Content, Introspector, LocatableSelector},
+    eval::{eval_string, EvalMode},
+    foundations::{Content, LocatableSelector, Scope},
+    model::Document,
     syntax::Span,
     World,
 };
@@ -28,7 +28,8 @@ pub fn retrieve(world: &dyn World, selector: &str, document: &Document) -> StrRe
     })?
     .cast::<LocatableSelector>()?;
 
-    Ok(Introspector::new(&document.pages)
+    Ok(document
+        .introspector
         .query(&selector.0)
         .into_iter()
         .map(|x| x.into_inner())

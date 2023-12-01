@@ -15,7 +15,6 @@ crate-type = ["cdylib"]
 [dependencies]
 
 typst.workspace = true
-typst-library.workspace = true
 comemo.workspace = true
 base64.workspace = true
 

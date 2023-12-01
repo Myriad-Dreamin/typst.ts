@@ -165,14 +165,14 @@ impl<'a, W: io::Write> AstWriter<'a, W> {
     }
 }
 
-impl<W> Transformer<(Arc<typst::doc::Document>, W)> for AstExporter
+impl<W> Transformer<(Arc<typst::model::Document>, W)> for AstExporter
 where
     W: std::io::Write,
 {
     fn export(
         &self,
         world: &dyn typst::World,
-        (_output, writer): (Arc<typst::doc::Document>, W),
+        (_output, writer): (Arc<typst::model::Document>, W),
     ) -> typst::diag::SourceResult<()> {
         let mut result = Vec::<TranslationUnit>::new();
 

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::{collections::HashMap, time::SystemTime};
-use typst::font::{Coverage, FontInfo};
+use typst::text::{Coverage, FontInfo};
 
 type FontMetaDict = HashMap<String, String>;
 

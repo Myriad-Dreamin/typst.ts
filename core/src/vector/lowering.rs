@@ -7,18 +7,20 @@ use std::io::Read;
 use std::sync::Arc;
 
 use once_cell::sync::OnceCell;
-use typst::doc::{
-    Destination, Document, Frame, FrameItem, FrameKind, GroupItem, Meta, Position, TextItem,
+use typst::foundations::Smart;
+use typst::introspection::{Introspector, Meta};
+use typst::layout::{
+    Abs as TypstAbs, Dir, Frame, FrameItem, FrameKind, GroupItem, Position, Ratio as TypstRatio,
+    Size,
 };
-use typst::font::Font;
-use typst::geom::{
-    Abs as TypstAbs, Dir, FixedStroke, Geometry, Gradient, LineCap, LineJoin, Paint, PathItem,
-    Ratio as TypstRatio, Relative, Shape, Size, Smart,
+use typst::model::{Destination, Document};
+use typst::text::{Font, TextItem};
+use typst::visualize::{
+    FixedStroke, Geometry, Gradient, LineCap, LineJoin, Paint, PathItem, Shape,
 };
-use typst::image::Image;
+use typst::visualize::{Image, RelativeTo};
 
 use ttf_parser::OutlineBuilder;
-use typst::model::Introspector;
 use typst::syntax::Span;
 
 use super::{
@@ -64,7 +66,8 @@ static LINE_HINT_ELEMENTS: once_cell::sync::Lazy<std::collections::HashSet<&'sta
 impl LowerBuilder {
     pub fn new(output: &Document) -> Self {
         Self {
-            introspector: Introspector::new(&output.pages),
+            //todo: introspector
+            introspector: output.introspector.clone(),
             extra_items: HashMap::new(),
         }
     }
@@ -397,6 +400,7 @@ impl LowerBuilder {
     ) -> ImmutStr {
         match g {
             Paint::Solid(c) => c.to_css().into(),
+            Paint::Pattern(_) => todo!(),
             Paint::Gradient(g) => {
                 let (g, fingerprint) = Self::lower_graident(g);
                 *cell = Some((fingerprint, g));
@@ -415,7 +419,7 @@ impl LowerBuilder {
 
         let relative_to_self = match g.relative() {
             Smart::Auto => None,
-            Smart::Custom(t) => Some(t == Relative::Self_),
+            Smart::Custom(t) => Some(t == RelativeTo::Self_),
         };
 
         let anti_alias = g.anti_alias();
@@ -520,7 +524,7 @@ impl<'a> GlyphLowerBuilder<'a> {
         let ascender = font
             .metrics()
             .ascender
-            .at(typst::geom::Abs::raw(font.metrics().units_per_em))
+            .at(typst::layout::Abs::raw(font.metrics().units_per_em))
             .to_f32();
 
         Some(Arc::new(ImageGlyphItem {
@@ -550,7 +554,7 @@ impl<'a> GlyphLowerBuilder<'a> {
 
         let w = glyph_image.width() as f64;
         let h = glyph_image.height() as f64;
-        let sz = Size::new(typst::geom::Abs::raw(w), typst::geom::Abs::raw(h));
+        let sz = Size::new(typst::layout::Abs::raw(w), typst::layout::Abs::raw(h));
 
         let image = ir::ImageItem {
             image: Arc::new(glyph_image.into()),
@@ -560,11 +564,11 @@ impl<'a> GlyphLowerBuilder<'a> {
         // position our image
         // first, the ascender is used
         // next, also apply an offset of (1 - ascender) like typst
-        let adjusted = font.metrics().ascender * 2. - typst::geom::Em::one();
+        let adjusted = font.metrics().ascender * 2. - typst::layout::Em::one();
         // let adjusted = font.metrics().ascender;
 
         let adjusted = adjusted
-            .at(typst::geom::Abs::raw(font.metrics().units_per_em))
+            .at(typst::layout::Abs::raw(font.metrics().units_per_em))
             .to_f32();
 
         let ts = sk::Transform::from_scale(upem / w as f32, -upem / h as f32);
@@ -616,7 +620,7 @@ fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<ir::
     // > `  <svg> <defs> <use #glyph{id}> </svg>`
     // See: <https://learn.microsoft.com/en-us/typography/opentype/spec/svg#glyph-identifiers>
 
-    let upem = typst::geom::Abs::raw(font.units_per_em());
+    let upem = typst::layout::Abs::raw(font.units_per_em());
     let (width, height) = (upem.to_f32(), upem.to_f32());
     let origin_ascender = font_metrics.ascender.at(upem).to_f32();
 
@@ -660,17 +664,17 @@ fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<ir::
         }
     }
 
-    let glyph_image = typst::image::Image::new(
+    let glyph_image = typst::visualize::Image::new(
         svg_str.as_bytes().to_vec().into(),
-        typst::image::ImageFormat::Vector(typst::image::VectorFormat::Svg),
+        typst::visualize::ImageFormat::Vector(typst::visualize::VectorFormat::Svg),
         // typst::geom::Axes::new(width as u32, height as u32),
         None,
     )
     .ok()?;
 
     let sz = Size::new(
-        typst::geom::Abs::raw(glyph_image.width() as f64),
-        typst::geom::Abs::raw(glyph_image.height() as f64),
+        typst::layout::Abs::raw(glyph_image.width() as f64),
+        typst::layout::Abs::raw(glyph_image.height() as f64),
     );
 
     Some(ir::ImageItem {

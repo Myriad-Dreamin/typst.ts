@@ -6,7 +6,7 @@ use std::{
 };
 
 use comemo::Prehashed;
-use typst::font::Font;
+use typst::text::Font;
 
 use crate::{
     hash::{Fingerprint, FingerprintBuilder},

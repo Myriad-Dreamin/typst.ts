@@ -1,7 +1,7 @@
 use std::{path::Path, sync::Arc};
 
 use parking_lot::Mutex;
-use typst::eval::eco_format;
+use typst::diag::eco_format;
 
 use super::{DummyNotifier, Notifier, PackageError, PackageSpec, Registry};
 

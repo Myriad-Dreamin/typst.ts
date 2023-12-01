@@ -1,9 +1,5 @@
 use comemo::{Track, TrackedMut};
-use typst::{
-    diag::SourceResult,
-    eval::{Module, Route, Tracer},
-    World,
-};
+use typst::{diag::SourceResult, engine::Route, eval::Tracer, foundations::Module, World};
 
 /// Compile a source file into a module.
 ///

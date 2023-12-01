@@ -4,10 +4,11 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use typst::geom::{
+use typst::layout::{
     Abs as TypstAbs, Angle as TypstAngle, Axes as TypstAxes, Point as TypstPoint,
-    Ratio as TypstRatio, Scalar as TypstScalar, Transform as TypstTransform,
+    Ratio as TypstRatio, Transform as TypstTransform,
 };
+use typst::util::Scalar as TypstScalar;
 
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};

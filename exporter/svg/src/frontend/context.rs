@@ -112,7 +112,7 @@ impl<'m, 't, Feat: ExportFeature> GlyphIndice<'m> for RenderContext<'m, 't, Feat
 }
 
 impl<'m, 't, Feat: ExportFeature> BuildGlyph for RenderContext<'m, 't, Feat> {
-    fn build_font(&mut self, font: &typst::font::Font) -> FontRef {
+    fn build_font(&mut self, font: &typst::text::Font) -> FontRef {
         self.glyph_defs.build_font(font)
     }
 

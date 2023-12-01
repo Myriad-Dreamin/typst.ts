@@ -22,7 +22,7 @@ pub struct PixmapBuffer {
 }
 
 impl PixmapBuffer {
-    pub fn for_size(size: typst::geom::Size, pixel_per_pt: f32) -> Option<Self> {
+    pub fn for_size(size: typst::layout::Size, pixel_per_pt: f32) -> Option<Self> {
         let (mut prealloc, size) = {
             let pxw = (pixel_per_pt * (size.x.to_pt() as f32)).round().max(1.0) as u32;
             let pxh = (pixel_per_pt * (size.y.to_pt() as f32)).round().max(1.0) as u32;

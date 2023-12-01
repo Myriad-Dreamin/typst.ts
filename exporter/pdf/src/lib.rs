@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-pub use typst::export::pdf;
+pub use typst_pdf::pdf;
 use typst_ts_core::Exporter;
 
 use typst::{diag::SourceResult, World};
@@ -17,15 +17,15 @@ impl PdfDocExporter {
     }
 }
 
-impl Exporter<typst::doc::Document, Vec<u8>> for PdfDocExporter {
+impl Exporter<typst::model::Document, Vec<u8>> for PdfDocExporter {
     fn export(
         &self,
         world: &dyn World,
-        output: Arc<typst::doc::Document>,
+        output: Arc<typst::model::Document>,
     ) -> SourceResult<Vec<u8>> {
         // todo: ident option
 
         let timestamp = self.with_timestamp.then(|| world.today(None)).flatten();
-        Ok(typst::export::pdf(output.as_ref(), None, timestamp))
+        Ok(typst_pdf::pdf(output.as_ref(), None, timestamp))
     }
 }

@@ -5,7 +5,7 @@ use std::{
 };
 
 use comemo::Prehashed;
-use typst::font::{Font, FontBook, FontInfo};
+use typst::text::{Font, FontBook, FontInfo};
 
 use crate::{Bytes, FontSlot};
 
