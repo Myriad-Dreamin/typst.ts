@@ -203,7 +203,7 @@ pub trait RenderVm: Sized {
                 g.render_content_hint(self, *c);
                 g.into()
             }
-            ir::SvgItem::Gradient(..) => {
+            ir::SvgItem::Pattern(..) | ir::SvgItem::Gradient(..) => {
                 panic!("RenderVm.RenderFrame.UnknownItem {:?}", item)
             }
         }

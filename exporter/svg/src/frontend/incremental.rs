@@ -207,13 +207,14 @@ impl IncrSvgDocClient {
             },
             &mut svg_body,
         );
-
         let module_ref = kern.module_mut();
+        let patterns = t.render_flat_patterns(module_ref);
+
         let gradients = std::mem::take(&mut t.gradients);
         let gradients = gradients
             .values()
             .filter_map(|(_, id, _)| match module_ref.get_item(id) {
-                Some(FlatSvgItem::Gradient(g)) => Some((id, g)),
+                Some(FlatSvgItem::Gradient(g)) => Some((id, g.as_ref())),
                 _ => {
                     // #[cfg(debug_assertions)]
                     panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
@@ -237,6 +238,7 @@ impl IncrSvgDocClient {
         svg.push(r#"<defs class="clip-path">"#.into());
         IncrExporter::clip_paths(t.clip_paths, &mut svg);
         IncrExporter::gradients(gradients, &mut svg);
+        IncrExporter::patterns(patterns.into_iter(), &mut svg);
         svg.push("</defs>".into());
 
         IncrExporter::style_defs(t.style_defs, &mut svg);

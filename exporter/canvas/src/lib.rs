@@ -177,7 +177,7 @@ impl CanvasElem for CanvasPathElem {
         }
 
         if fill {
-            // todo: canvas gradient
+            // todo: canvas gradient and pattern
             if fill_color.starts_with('@') {
                 fill_color = "black".into()
             }
@@ -186,7 +186,7 @@ impl CanvasElem for CanvasPathElem {
         }
 
         if stroke && stroke_width.abs() > 1e-5 {
-            // todo: canvas gradient
+            // todo: canvas gradient and pattern
             if stroke_color.starts_with('@') {
                 stroke_color = "black".into()
             }

@@ -74,6 +74,14 @@ impl fmt::Debug for Scalar {
     }
 }
 
+impl std::ops::Add for Scalar {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0)
+    }
+}
+
 impl Eq for Scalar {}
 
 impl PartialEq for Scalar {
@@ -181,6 +189,21 @@ where
         Self {
             x: axes.x.into(),
             y: axes.y.into(),
+        }
+    }
+}
+
+// impl Add for Axes
+impl<T> std::ops::Add for Axes<T>
+where
+    T: std::ops::Add<Output = T>,
+{
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
         }
     }
 }

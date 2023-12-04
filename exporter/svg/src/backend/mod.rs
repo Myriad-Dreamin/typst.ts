@@ -20,7 +20,7 @@ use typst_ts_core::{
 mod escape;
 use escape::{PcDataEscapes, TextContentDataEscapes};
 
-use crate::{frontend::HasGradient, utils::ToCssExt};
+use crate::{frontend::HasStatefulFill, utils::ToCssExt};
 
 pub trait BuildClipPath {
     fn build_clip_path(&mut self, path: &ir::PathItem) -> Fingerprint;
@@ -400,7 +400,6 @@ impl<
         // shorten black fill
         let fill_id = if shape.fill.starts_with('@') {
             let (kind, cano_ref, relative_to_self) = ctx.notify_paint(shape.fill.clone());
-
             let text_scale = upem.0 / shape.size.0;
             let text_scale = Transform::from_scale(Scalar(text_scale), Scalar(-text_scale));
 
@@ -415,9 +414,8 @@ impl<
             let paint_id = fill_key.as_svg_id("tf");
             self.text_fill = Some(*fill_key);
 
-            let decl = transform_gradient(kind, cano_ref, &paint_id, &mat);
+            let decl = transform_paint_fill(kind, cano_ref, &paint_id, &mat);
             self.content.push(decl);
-
             "".to_owned()
         } else {
             ctx.build_fill_style_class(color.clone())
@@ -480,8 +478,9 @@ impl<
         for s in &path.styles {
             match s {
                 PathStyle::Fill(color) | PathStyle::Stroke(color) => {
+                    // todo: whether we need to distinguish fill and stroke here?
                     let is_fill = matches!(s, PathStyle::Fill(..));
-                    if color.starts_with('@') {
+                    if color.starts_with("@g") {
                         // todo
                         let (kind, cano_ref, relative_to_self) = ctx.notify_paint(color.clone());
 
@@ -501,7 +500,8 @@ impl<
                                 .at(abs_ref)
                                 .as_svg_id(if is_fill { "pf" } else { "ps" });
 
-                        let decl = transform_gradient(kind, cano_ref, &paint_id, &transform_matrix);
+                        let decl =
+                            transform_paint_fill(kind, cano_ref, &paint_id, &transform_matrix);
 
                         self.content.push(decl);
                     }
@@ -621,7 +621,8 @@ impl<
 /// See [`FlatGroupContext`].
 impl<
         'm,
-        C: FlatIncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBuilder> + HasGradient,
+        C: FlatIncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBuilder>
+            + HasStatefulFill,
     > FlatIncrGroupContext<C> for SvgTextBuilder
 {
     fn render_diff_item_ref_at(
@@ -632,7 +633,7 @@ impl<
         item: &Fingerprint,
         prev_item: &Fingerprint,
     ) {
-        let has_gradient = ctx.has_gradient(item);
+        let has_gradient = ctx.has_stateful_fill(item);
         let content = if item == prev_item && !has_gradient {
             // todo: update transform
             vec![]
@@ -772,7 +773,12 @@ pub fn generate_text(text_list: Vec<SvgText>) -> String {
     string_io
 }
 
-fn transform_gradient(kind: u8, f: Fingerprint, paint_id: &str, transform_matrix: &str) -> SvgText {
+fn transform_paint_fill(
+    kind: u8,
+    f: Fingerprint,
+    paint_id: &str,
+    transform_matrix: &str,
+) -> SvgText {
     let tag = match kind {
         b'l' => "linearGradient",
         b'r' => "radialGradient",

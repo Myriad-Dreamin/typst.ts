@@ -2,12 +2,14 @@ use std::sync::Arc;
 
 use typst::{diag::SourceResult, model::Document};
 use typst_ts_core::{
+    hash::Fingerprint,
     vector::{
         flat_ir::{
             flatten_glyphs, FlatModule, FlatSvgItem, ItemPack, LayoutRegion, LayoutRegionNode,
             LayoutRegionRepr, Module, ModuleBuilder, ModuleMetadata, Page, SvgDocument,
         },
         flat_vm::FlatRenderVm,
+        ir::Size,
         vm::RenderState,
         LowerBuilder,
     },
@@ -42,6 +44,28 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             })));
             acc_height += size.y;
         }
+    }
+
+    pub fn render_flat_patterns(
+        &mut self,
+        module: &Module,
+    ) -> Vec<(Fingerprint, Size, Arc<SvgTextNode>)> {
+        self.collect_patterns(|t: &mut Self, id| match module.get_item(id) {
+            Some(FlatSvgItem::Pattern(g)) => {
+                let size = g.size + g.spacing;
+                let state = RenderState::new_size(size);
+                let content = t
+                    .get_render_context(module)
+                    .render_flat_item(state, &g.frame);
+                Some((*id, size, content))
+            }
+            _ => {
+                // #[cfg(debug_assertions)]
+                panic!("Invalid pattern reference: {}", id.as_svg_id("p"));
+                #[allow(unreachable_code)]
+                None
+            }
+        })
     }
 }
 
@@ -86,6 +110,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         let mut t = SvgTask::<Feat>::default();
         let mut svg_body = vec![];
         t.render(module, pages, &mut svg_body);
+        let patterns = t.render_flat_patterns(module);
 
         let glyphs = t.render_glyphs(
             module.glyphs.iter().enumerate().map(|(x, (_, y))| (x, y)),
@@ -96,7 +121,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         let gradients = gradients
             .values()
             .filter_map(|(_, id, _)| match module.get_item(id) {
-                Some(FlatSvgItem::Gradient(g)) => Some((id, g)),
+                Some(FlatSvgItem::Gradient(g)) => Some((id, g.as_ref())),
                 _ => {
                     // #[cfg(debug_assertions)]
                     panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
@@ -106,7 +131,13 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             });
 
         generate_text(Self::render_svg_template(
-            t, header, svg_body, glyphs, gradients, parts,
+            t,
+            header,
+            svg_body,
+            glyphs,
+            gradients,
+            patterns.into_iter(),
+            parts,
         ))
     }
 }

@@ -36,7 +36,6 @@ use super::{
 };
 use crate::font::GlyphProvider;
 use crate::hash::{Fingerprint, FingerprintHasher, FingerprintSipHasher};
-use crate::vector::flat_ir::FlatSvgItem;
 use crate::vector::ir::{ColorItem, GradientItem, GradientKind};
 use crate::ImmutStr;
 use ttf_parser::GlyphId;
@@ -44,13 +43,6 @@ use ttf_parser::GlyphId;
 static WARN_VIEW_BOX: OnceCell<()> = OnceCell::new();
 
 type ExtraSvgItems = rpds::RedBlackTreeMap<Fingerprint, Arc<SvgItem>>;
-
-#[derive(Clone)]
-struct ShapeInfo {
-    path: ir::PathItem,
-    fill_gradient: Option<(Fingerprint, GradientItem)>,
-    stroke_gradient: Option<(Fingerprint, GradientItem)>,
-}
 
 /// Lower a frame item into svg item.
 pub struct LowerBuilder<'a> {
@@ -96,32 +88,21 @@ impl<'a> LowerBuilder<'a> {
             let item = match item {
                 FrameItem::Group(group) => {
                     let (item, sub_extras) = Self::lower_group(introspector, group);
-
-                    for (f, item) in sub_extras.into_iter() {
-                        extras = extras.insert(*f, item.clone());
-                    }
+                    extras = merge_extras(extras, sub_extras);
 
                     item
                 }
                 FrameItem::Text(text) => {
-                    let (item, sub_extras) = Self::lower_text(text);
-
-                    for (f, item) in sub_extras.into_iter() {
-                        extras = extras.insert(*f, item.clone());
-                    }
+                    let (item, sub_extras) = Self::lower_text(introspector, text);
+                    extras = merge_extras(extras, sub_extras);
 
                     item
                 }
                 FrameItem::Shape(shape, span_id) => {
-                    let s = Self::lower_shape(shape);
-                    if let Some((f, gradient)) = s.fill_gradient {
-                        extras = extras.insert(f, Arc::new(ir::SvgItem::Gradient(gradient)));
-                    }
-                    if let Some((f, gradient)) = s.stroke_gradient {
-                        extras = extras.insert(f, Arc::new(ir::SvgItem::Gradient(gradient)));
-                    }
+                    let (s, sub_extras) = Self::lower_shape(introspector, shape);
+                    extras = merge_extras(extras, sub_extras);
 
-                    SvgItem::Path((s.path, span_id_to_u64(span_id)))
+                    SvgItem::Path((s, span_id_to_u64(span_id)))
                 }
                 FrameItem::Image(image, size, span_id) => {
                     SvgItem::Image((lower_image(image, *size), span_id_to_u64(span_id)))
@@ -264,7 +245,10 @@ impl<'a> LowerBuilder<'a> {
 
     /// Lower a text into svg item.
     #[comemo::memoize]
-    pub(super) fn lower_text(text: &TextItem) -> (SvgItem, ExtraSvgItems) {
+    pub(super) fn lower_text(
+        introspector: Tracked<Introspector>,
+        text: &TextItem,
+    ) -> (SvgItem, ExtraSvgItems) {
         let mut glyphs = Vec::with_capacity(text.glyphs.len());
         for glyph in &text.glyphs {
             let id = GlyphId(glyph.id);
@@ -276,14 +260,10 @@ impl<'a> LowerBuilder<'a> {
         }
 
         let glyph_chars: String = text.text.to_string();
+        let mut extras = ExtraSvgItems::default();
 
         // let fill = text.fill.clone().to_css().into();
-        let mut fill_gradient = None;
-        let fill = Self::lower_paint(&text.fill, &mut fill_gradient);
-        let mut extras = ExtraSvgItems::default();
-        if let Some((f, gradient)) = fill_gradient {
-            extras = extras.insert(f, Arc::new(ir::SvgItem::Gradient(gradient)));
-        }
+        let fill = Self::lower_paint(introspector, &text.fill, &mut extras);
 
         let span_id = text
             .glyphs
@@ -320,8 +300,12 @@ impl<'a> LowerBuilder<'a> {
 
     /// Lower a geometrical shape into svg item.
     #[comemo::memoize]
-    fn lower_shape(shape: &Shape) -> ShapeInfo {
+    fn lower_shape(
+        introspector: Tracked<Introspector>,
+        shape: &Shape,
+    ) -> (ir::PathItem, ExtraSvgItems) {
         let mut builder = SvgPath2DBuilder(String::new());
+        let mut extras = ExtraSvgItems::default();
 
         // to ensure that our shape focus on the original point
         builder.move_to(0., 0.);
@@ -368,15 +352,14 @@ impl<'a> LowerBuilder<'a> {
 
         let mut styles = Vec::new();
 
-        let mut fill_gradient = None;
         if let Some(paint_fill) = &shape.fill {
             styles.push(ir::PathStyle::Fill(Self::lower_paint(
+                introspector,
                 paint_fill,
-                &mut fill_gradient,
+                &mut extras,
             )));
         }
 
-        let mut stroke_gradient = None;
         // todo: default miter_limit, thickness
         if let Some(FixedStroke {
             paint,
@@ -408,8 +391,9 @@ impl<'a> LowerBuilder<'a> {
             }
 
             styles.push(ir::PathStyle::Stroke(Self::lower_paint(
+                introspector,
                 paint,
-                &mut stroke_gradient,
+                &mut extras,
             )));
         }
 
@@ -423,28 +407,31 @@ impl<'a> LowerBuilder<'a> {
             shape_size.y = TypstAbs::pt(1.0);
         }
 
-        ShapeInfo {
-            path: ir::PathItem {
-                d,
-                size: Some(shape_size.into()),
-                styles,
-            },
-            fill_gradient,
-            stroke_gradient,
-        }
+        let item = ir::PathItem {
+            d,
+            size: Some(shape_size.into()),
+            styles,
+        };
+
+        (item, extras)
     }
 
     #[inline]
     pub(super) fn lower_paint(
+        introspector: Tracked<Introspector>,
         g: &Paint,
-        cell: &mut Option<(Fingerprint, GradientItem)>,
+        cell: &mut ExtraSvgItems,
     ) -> ImmutStr {
         match g {
             Paint::Solid(c) => c.to_css().into(),
-            Paint::Pattern(_) => todo!(),
+            Paint::Pattern(e) => {
+                let (g, fingerprint) = Self::lower_pattern(introspector, e, cell);
+                *cell = cell.insert(fingerprint, Arc::new(ir::SvgItem::Pattern(g)));
+                format!("@{}", fingerprint.as_svg_id("e")).into()
+            }
             Paint::Gradient(g) => {
                 let (g, fingerprint) = Self::lower_graident(g);
-                *cell = Some((fingerprint, g));
+                *cell = cell.insert(fingerprint, Arc::new(ir::SvgItem::Gradient(Arc::new(g))));
                 format!("@{}", fingerprint.as_svg_id("g")).into()
             }
         }
@@ -505,13 +492,41 @@ impl<'a> LowerBuilder<'a> {
         };
 
         // todo: don't leak the fingerprint primitive
-        let flat_item = &FlatSvgItem::Gradient(g.clone());
         let mut f = FingerprintSipHasher::default();
-        flat_item.type_id().hash(&mut f);
-        flat_item.hash(&mut f);
+        g.type_id().hash(&mut f);
+        g.hash(&mut f);
         let (f, _) = f.finish_fingerprint();
 
         (g, f)
+    }
+
+    pub(super) fn lower_pattern(
+        introspector: Tracked<Introspector>,
+        g: &Pattern,
+        cell: &mut ExtraSvgItems,
+    ) -> (PatternItem, Fingerprint) {
+        let (frame, extras) = Self::lower_frame(introspector, g.frame());
+        *cell = merge_extras(extras, cell.clone());
+
+        let relative_to_self = match g.relative() {
+            Smart::Auto => None,
+            Smart::Custom(t) => Some(t == RelativeTo::Self_),
+        };
+
+        let pattern = PatternItem {
+            frame: Arc::new(frame),
+            size: g.size().into(),
+            spacing: g.spacing().into(),
+            relative_to_self,
+        };
+
+        // todo: don't leak the fingerprint primitive
+        let mut f = FingerprintSipHasher::default();
+        pattern.type_id().hash(&mut f);
+        g.hash(&mut f);
+        let (f, _) = f.finish_fingerprint();
+
+        (pattern, f)
     }
 }
 
@@ -771,6 +786,18 @@ fn find_viewbox_attr(svg_str: &'_ str) -> FindViewBoxResult<'_> {
         start_span,
         first_viewbox,
     }
+}
+
+fn merge_extras(mut extras: ExtraSvgItems, mut other: ExtraSvgItems) -> ExtraSvgItems {
+    // swap ensure O(n log n) complexity for merging
+    if extras.size() < other.size() {
+        std::mem::swap(&mut extras, &mut other);
+    }
+
+    for (f, item) in other.into_iter() {
+        extras = extras.insert(*f, item.clone());
+    }
+    extras
 }
 
 const DETACHED: u64 = 1;

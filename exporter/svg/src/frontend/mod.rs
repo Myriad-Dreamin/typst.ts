@@ -9,15 +9,13 @@ use typst_ts_core::{
     font::GlyphProvider,
     hash::{item_hash128, Fingerprint, FingerprintBuilder},
     vector::{
-        flat_ir::{self, ModuleBuilder},
+        flat_ir,
         ir::{
             Axes, DefId, GlyphItem, GlyphPackBuilder, GradientItem, GradientKind, GradientStyle,
             Scalar, Size, SvgItem,
         },
         vm::{RenderState, RenderVm},
-        LowerBuilder,
     },
-    TakeAs,
 };
 
 pub(crate) mod context;
@@ -32,12 +30,11 @@ pub(crate) mod flat;
 pub(crate) mod incremental;
 use crate::{
     backend::{SvgGlyphBuilder, SvgText, SvgTextNode},
-    utils::AbsExt,
     ExportFeature, SvgDataSelection,
 };
 pub use incremental::{IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderContext};
 
-use self::context::GradientMap;
+use self::context::PaintFillMap;
 
 pub struct SvgExporter<Feat: ExportFeature> {
     pub _feat_phantom: std::marker::PhantomData<Feat>,
@@ -60,26 +57,6 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             r#"<svg class="typst-doc" viewBox="0 0 {:.3} {:.3}" width="{:.3}" height="{:.3}" data-width="{:.3}" data-height="{:.3}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">"#,
             w, h, w, h, w, h,
         )
-    }
-
-    /// Render the header of SVG for [`Document`].
-    /// <svg> .. </svg>
-    /// ^^^^^
-    fn header_doc(output: &Document) -> String {
-        // calculate the width and height of SVG
-        let w = output
-            .pages
-            .iter()
-            .map(|p| p.size().x.to_f32().ceil())
-            .max_by(|a, b| a.total_cmp(b))
-            .unwrap();
-        let h = output
-            .pages
-            .iter()
-            .map(|p| p.size().y.to_f32().ceil())
-            .sum::<f32>();
-
-        Self::header_inner(w, h)
     }
 
     /// Render the style for SVG
@@ -324,6 +301,24 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         }
     }
 
+    fn patterns(
+        patterns: impl Iterator<Item = (Fingerprint, Size, Arc<SvgTextNode>)>,
+        svg: &mut Vec<SvgText>,
+    ) {
+        for (id, size, pattern) in patterns {
+            svg.push(SvgText::Plain(format!(
+                r##"<pattern id="{}" patternUnits="userSpaceOnUse" width="{:.3}" height="{:.3}" viewBox="0 0 {:.3} {:.3}">"##,
+                id.as_svg_id("g"),
+                size.x.0, size.y.0,
+                size.x.0, size.y.0,
+            )));
+
+            svg.push(SvgText::Content(pattern));
+
+            svg.push(SvgText::Plain("</pattern>".to_owned()));
+        }
+    }
+
     /// Template SVG.
     fn render_svg_template<'a>(
         t: SvgTask<Feat>,
@@ -331,6 +326,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         mut body: Vec<SvgText>,
         glyphs: impl IntoIterator<Item = SvgText>,
         gradients: impl Iterator<Item = (&'a Fingerprint, &'a GradientItem)>,
+        patterns: impl Iterator<Item = (Fingerprint, Size, Arc<SvgTextNode>)>,
         parts: Option<SvgDataSelection>,
     ) -> Vec<SvgText> {
         let mut svg = vec![
@@ -358,6 +354,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             svg.push(r#"<defs class="clip-path">"#.into());
             Self::clip_paths(t.clip_paths, &mut svg);
             Self::gradients(gradients, &mut svg);
+            Self::patterns(patterns, &mut svg);
             svg.push("</defs>".into());
             Self::style_defs(t.style_defs, &mut svg);
         }
@@ -383,46 +380,9 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
     /// Render SVG for [`Document`].
     /// It does not flatten the vector items before rendering so called
     /// "transient".
-    pub(crate) fn render_transient_svg(output: &Document) -> Vec<SvgText> {
-        let mut t = SvgTask::<Feat>::default();
-
-        // render SVG header
-        let header = Self::header_doc(output);
-
-        // lowering the document into svg items
-        let mut lower_builder = LowerBuilder::new(output);
-        let pages = output
-            .pages
-            .iter()
-            .map(|p| lower_builder.lower(p))
-            .collect::<Vec<_>>();
-        let mut module = ModuleBuilder::default();
-
-        for ext in lower_builder.extra_items.clone().into_values() {
-            module.build(ext.take());
-        }
-
-        let module = module.finalize();
-
-        // render SVG body
-        let mut svg_body = vec![];
-        t.render_pages_transient(module, output, pages, &mut svg_body);
-
-        // render the glyphs collected from the pages
-        let (_, glyphs) = std::mem::take(&mut t.glyph_defs).finalize();
-        let glyphs = t.render_glyphs(glyphs.iter().enumerate().map(|(x, (_, y))| (x, y)), false);
-
-        let gradients =
-            lower_builder
-                .extra_items
-                .iter()
-                .filter_map(|(f, item)| match item.as_ref() {
-                    SvgItem::Gradient(item) => Some((f, item)),
-                    _ => None,
-                });
-
-        // template SVG
-        Self::render_svg_template(t, header, svg_body, glyphs, gradients, None)
+    // remove me
+    pub(crate) fn render_transient_svg(_output: &Document) -> Vec<SvgText> {
+        todo!()
     }
 
     /// Render SVG wrapped with HTML for [`Document`].
@@ -466,8 +426,10 @@ pub struct SvgTask<Feat: ExportFeature> {
     pub(crate) style_defs: StyleDefMap,
     /// Stores the clip paths used in the document.
     pub(crate) clip_paths: ClipPathMap,
-    /// Stores the gradients used in the document.
-    pub(crate) gradients: GradientMap,
+    /// Stores the gradient used in the document.
+    pub(crate) gradients: PaintFillMap,
+    /// Stores the patterns used in the document.
+    pub(crate) patterns: PaintFillMap,
 
     _feat_phantom: std::marker::PhantomData<Feat>,
 }
@@ -483,7 +445,8 @@ impl<Feat: ExportFeature> Default for SvgTask<Feat> {
             glyph_defs: GlyphPackBuilder::default(),
             style_defs: StyleDefMap::default(),
             clip_paths: ClipPathMap::default(),
-            gradients: GradientMap::default(),
+            gradients: PaintFillMap::default(),
+            patterns: PaintFillMap::default(),
 
             _feat_phantom: std::marker::PhantomData,
         }
@@ -525,6 +488,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             style_defs: &mut self.style_defs,
             clip_paths: &mut self.clip_paths,
             gradients: &mut self.gradients,
+            patterns: &mut self.patterns,
 
             should_attach_debug_info: Feat::SHOULD_ATTACH_DEBUG_INFO,
             should_render_text_element: true,
@@ -583,15 +547,47 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         svg_body
     }
 
+    pub fn collect_patterns(
+        &mut self,
+        render: impl Fn(&mut Self, &Fingerprint) -> Option<(Fingerprint, Size, Arc<SvgTextNode>)>,
+    ) -> Vec<(Fingerprint, Size, Arc<SvgTextNode>)> {
+        let mut used = std::mem::take(&mut self.patterns);
+        let mut patterns = vec![];
+
+        patterns.extend(used.values().filter_map(|(_, id, _)| render(self, id)));
+        if self.patterns.is_empty() {
+            return patterns;
+        }
+
+        loop {
+            let mut updated = false;
+            for (k, v) in std::mem::take(&mut self.patterns) {
+                if let std::collections::hash_map::Entry::Vacant(e) = used.entry(k) {
+                    if let Some(res) = render(self, &v.1) {
+                        patterns.push(res);
+                    }
+                    e.insert(v);
+                    updated = true;
+                }
+            }
+
+            if !updated {
+                break;
+            }
+        }
+
+        patterns
+    }
+
     /// Render pages into the svg_body.
     pub fn render_pages_transient(
         &mut self,
-        module: flat_ir::Module,
+        module: &flat_ir::Module,
         output: &Document,
         pages: Vec<SvgItem>,
         svg_body: &mut Vec<SvgText>,
     ) {
-        let mut render_task = self.get_render_context(&module);
+        let mut render_task = self.get_render_context(module);
 
         render_task.use_stable_glyph_id = false;
 

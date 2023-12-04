@@ -69,7 +69,8 @@ pub enum FlatSvgItem {
     Text(FlatTextItem),
     Item(TransformedRef),
     Group(GroupRef, Option<Size>),
-    Gradient(GradientItem),
+    Gradient(Arc<GradientItem>),
+    Pattern(Arc<FlatPatternItem>),
     ContentHint(char),
 }
 
@@ -154,6 +155,22 @@ impl From<Vec<FontItem>> for FontPack {
             incremental_base: 0,
         }
     }
+}
+
+/// Item representing an `<pattern/>` element.
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub struct FlatPatternItem {
+    /// The pattern's rendered content.
+    pub frame: Fingerprint,
+    /// The pattern's tile size.
+    pub size: Size,
+    /// The pattern's tile spacing.
+    pub spacing: Size,
+    /// Whether the pattern is relative to itself (its own bounding box).
+    /// Otherwise, the pattern is relative to the parent bounding box.
+    pub relative_to_self: Option<bool>,
 }
 
 /// Flatten mapping fingerprints to glyph items.
