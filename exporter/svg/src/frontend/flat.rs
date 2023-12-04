@@ -1,14 +1,17 @@
 use std::sync::Arc;
 
 use typst::{diag::SourceResult, model::Document};
-use typst_ts_core::vector::{
-    flat_ir::{
-        flatten_glyphs, FlatModule, FlatSvgItem, ItemPack, LayoutRegion, LayoutRegionNode,
-        LayoutRegionRepr, Module, ModuleBuilder, ModuleMetadata, Page, SvgDocument,
+use typst_ts_core::{
+    vector::{
+        flat_ir::{
+            flatten_glyphs, FlatModule, FlatSvgItem, ItemPack, LayoutRegion, LayoutRegionNode,
+            LayoutRegionRepr, Module, ModuleBuilder, ModuleMetadata, Page, SvgDocument,
+        },
+        flat_vm::FlatRenderVm,
+        vm::RenderState,
+        LowerBuilder,
     },
-    flat_vm::FlatRenderVm,
-    vm::RenderState,
-    LowerBuilder,
+    TakeAs,
 };
 
 use crate::{
@@ -124,7 +127,7 @@ pub fn export_module(output: &Document) -> SourceResult<Vec<u8>> {
     }
 
     for ext in t.extra_items.into_values() {
-        builder.build(ext);
+        builder.build(ext.take());
     }
 
     let repr: Module = builder.finalize();

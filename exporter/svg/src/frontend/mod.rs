@@ -17,6 +17,7 @@ use typst_ts_core::{
         vm::{RenderState, RenderVm},
         LowerBuilder,
     },
+    TakeAs,
 };
 
 pub(crate) mod context;
@@ -398,7 +399,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         let mut module = ModuleBuilder::default();
 
         for ext in lower_builder.extra_items.clone().into_values() {
-            module.build(ext);
+            module.build(ext.take());
         }
 
         let module = module.finalize();
@@ -411,13 +412,14 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         let (_, glyphs) = std::mem::take(&mut t.glyph_defs).finalize();
         let glyphs = t.render_glyphs(glyphs.iter().enumerate().map(|(x, (_, y))| (x, y)), false);
 
-        let gradients = lower_builder
-            .extra_items
-            .iter()
-            .filter_map(|(f, item)| match item {
-                SvgItem::Gradient(item) => Some((f, item)),
-                _ => None,
-            });
+        let gradients =
+            lower_builder
+                .extra_items
+                .iter()
+                .filter_map(|(f, item)| match item.as_ref() {
+                    SvgItem::Gradient(item) => Some((f, item)),
+                    _ => None,
+                });
 
         // template SVG
         Self::render_svg_template(t, header, svg_body, glyphs, gradients, None)
@@ -766,6 +768,6 @@ impl std::fmt::Display for RatioRepr {
     }
 }
 
-pub trait HasGradient {
-    fn has_gradient(&self, f: &Fingerprint) -> bool;
+pub trait HasStatefulFill {
+    fn has_stateful_fill(&self, f: &Fingerprint) -> bool;
 }
