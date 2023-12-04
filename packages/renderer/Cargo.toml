@@ -87,7 +87,7 @@ render_canvas = [
 ]
 render_pdf = []
 render_svg = ["dep:typst-ts-svg-exporter", "web-sys/HtmlDivElement"]
-render_full = ["render_canvas", "render_pdf", "render_svg", "render_raster"]
+render_full = ["render_canvas", "render_pdf", "render_svg"]
 
 full = ["serde_json", "serde_rmp", "render_full", "web_test"]
 
