@@ -1,6 +1,15 @@
 
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
-// 
-// // Error: 25-28 expected `start`, `left`, `center`, `right`, or `end`, found top
-// #set enum(number-align: top)
+
+// Test valid number align values (horizontal and vertical)
+// Ref: false
+#set enum(number-align: start)
+#set enum(number-align: end)
+#set enum(number-align: left)
+#set enum(number-align: center)
+#set enum(number-align: right)
+#set enum(number-align: top)
+#set enum(number-align: horizon)
+#set enum(number-align: bottom)
+

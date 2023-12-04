@@ -2,9 +2,13 @@
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
 
-// Test valid number align values (horizontal)
-// Ref: false
+// Number align option should not be affected by the context.
+#set align(center)
 #set enum(number-align: start)
-#set enum(number-align: end)
-#set enum(number-align: left)
-#set enum(number-align: right)
+
+4.  c
+8.  d
+16. e\ f
+   2.  f\ g
+   32. g
+   64. h
