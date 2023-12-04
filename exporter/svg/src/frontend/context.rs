@@ -43,7 +43,6 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     /// See [`GlyphProvider`].
     pub glyph_provider: GlyphProvider,
 
-    #[cfg(feature = "flat-vector")]
     pub module: &'m Module,
 
     /// A fingerprint builder for generating unique id.
@@ -70,8 +69,6 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     pub use_stable_glyph_id: bool,
 
     pub _feat_phantom: std::marker::PhantomData<Feat>,
-    #[cfg(not(feature = "flat-vector"))]
-    pub _m_phantom: std::marker::PhantomData<&'m ()>,
 }
 
 impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Feat> {

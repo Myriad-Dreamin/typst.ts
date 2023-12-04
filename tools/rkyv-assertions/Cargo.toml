@@ -10,4 +10,4 @@ repository.workspace = true
 
 [dependencies]
 
-typst-ts-core = { workspace = true, features = ["flat-vector"] }
+typst-ts-core.workspace = true

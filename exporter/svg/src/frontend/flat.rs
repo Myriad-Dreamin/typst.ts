@@ -13,7 +13,6 @@ use typst_ts_core::{
         vm::RenderState,
         LowerBuilder,
     },
-    TakeAs,
 };
 
 use crate::{
@@ -70,18 +69,6 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 }
 
 impl<Feat: ExportFeature> SvgExporter<Feat> {
-    pub(crate) fn header(output: &[Page]) -> String {
-        // calculate the width and height of the svg
-        let w = output
-            .iter()
-            .map(|p| p.size.x.0.ceil())
-            .max_by(|a, b| a.total_cmp(b))
-            .unwrap();
-        let h = output.iter().map(|p| p.size.y.0.ceil()).sum::<f32>();
-
-        Self::header_inner(w, h)
-    }
-
     pub fn svg_doc(output: &Document) -> SvgDocument {
         let mut lower_builder = LowerBuilder::new(output);
         let mut builder = ModuleBuilder::default();
@@ -105,69 +92,17 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         pages: &[Page],
         parts: Option<SvgDataSelection>,
     ) -> String {
-        let header = Self::header(pages);
-
-        let mut t = SvgTask::<Feat>::default();
-        let mut svg_body = vec![];
-        t.render(module, pages, &mut svg_body);
-        let patterns = t.render_flat_patterns(module);
-
-        let glyphs = t.render_glyphs(
-            module.glyphs.iter().enumerate().map(|(x, (_, y))| (x, y)),
-            true,
-        );
-
-        let gradients = std::mem::take(&mut t.gradients);
-        let gradients = gradients
-            .values()
-            .filter_map(|(_, id, _)| match module.get_item(id) {
-                Some(FlatSvgItem::Gradient(g)) => Some((id, g.as_ref())),
-                _ => {
-                    // #[cfg(debug_assertions)]
-                    panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
-                    #[allow(unreachable_code)]
-                    None
-                }
-            });
-
-        generate_text(Self::render_svg_template(
-            t,
-            header,
-            svg_body,
-            glyphs,
-            gradients,
-            patterns.into_iter(),
-            parts,
-        ))
+        generate_text(Self::render(module, pages, parts))
     }
 }
 
-pub fn export_module(output: &Document) -> SourceResult<Vec<u8>> {
-    let mut t = LowerBuilder::new(output);
-
-    let mut builder = ModuleBuilder::default();
-
-    let mut pages = vec![];
-    for page in output.pages.iter() {
-        let item = t.lower(page);
-        let content = builder.build(item);
-        pages.push(Page {
-            content,
-            size: page.size().into(),
-        });
-    }
-
-    for ext in t.extra_items.into_values() {
-        builder.build(ext.take());
-    }
-
-    let repr: Module = builder.finalize();
-
-    let glyphs = flatten_glyphs(repr.glyphs).into();
+pub fn export_module(output: SvgDocument) -> SourceResult<Vec<u8>> {
+    let SvgDocument { pages, module } = output;
+    let glyphs = flatten_glyphs(module.glyphs).into();
 
     let module_data = FlatModule::new(vec![
-        ModuleMetadata::Item(ItemPack(repr.items.into_iter().collect())),
-        ModuleMetadata::Font(Arc::new(repr.fonts.into())),
+        ModuleMetadata::Item(ItemPack(module.items.into_iter().collect())),
+        ModuleMetadata::Font(Arc::new(module.fonts.into())),
         ModuleMetadata::Glyph(Arc::new(glyphs)),
         ModuleMetadata::Layout(Arc::new(vec![LayoutRegion::ByScalar(LayoutRegionRepr {
             kind: "width".into(),

@@ -56,9 +56,7 @@ web-sys = { workspace = true, optional = true, features = [
 ] }
 
 
-typst-ts-svg-exporter = { workspace = true, optional = true, features = [
-    "flat-vector",
-] }
+typst-ts-svg-exporter = { workspace = true, optional = true }
 
 typst-ts-core = { workspace = true, default-features = false, features = [
     "flat-vector",
