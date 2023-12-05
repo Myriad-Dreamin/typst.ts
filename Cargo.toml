@@ -70,10 +70,10 @@ strip = true
 
 # typesetting
 pixglyph = "0.2"
-typst = "0.9.0"
-typst-ide = "0.9.0"
-typst-pdf = "0.9.0"
-typst-syntax = "0.9.0"
+typst = "0.10.0"
+typst-ide = "0.10.0"
+typst-pdf = "0.10.0"
+typst-syntax = "0.10.0"
 ttf-parser = "0.19.2"
 
 # general
@@ -227,10 +227,10 @@ typst-ts-text-exporter = { path = "exporter/text" }
 # typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
-typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0-content-hint" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0-content-hint" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0-content-hint" }
-typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0-content-hint" }
+typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint" }
+typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint" }
+typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint" }
 
 # typst = { path = "../typst/crates/typst" }
 # typst-syntax = { path = "../typst/crates/typst-syntax" }
