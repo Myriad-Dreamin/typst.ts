@@ -1,5 +1,5 @@
 use std::{
-    borrow::Borrow,
+    borrow::{Borrow, Cow},
     collections::{BTreeMap, HashMap},
     ops::Deref,
     sync::Arc,
@@ -62,6 +62,11 @@ pub struct Module {
 impl Module {
     pub fn freeze(self) -> FrozenModule {
         FrozenModule(Arc::new(Prehashed::new(self)))
+    }
+
+    /// Get a font item by its stable ref.
+    pub fn get_font(&self, id: &FontRef) -> Option<&FontItem> {
+        self.fonts.get(id.idx as usize)
     }
 
     /// Get a glyph item by its stable ref.
@@ -209,6 +214,46 @@ impl<const ENABLE_REF_CNT: bool> BuildGlyph for ModuleBuilderImpl<ENABLE_REF_CNT
     }
 }
 
+impl ModuleBuilder {
+    pub fn intern(&mut self, module: &Module, f: &Fingerprint) {
+        let item = module.get_item(f).unwrap();
+        match item {
+            FlatSvgItem::None
+            | FlatSvgItem::Link(_)
+            | FlatSvgItem::Image(_)
+            | FlatSvgItem::Path(_)
+            | FlatSvgItem::Gradient(_)
+            | FlatSvgItem::ContentHint(_) => {
+                self.insert(*f, Cow::Borrowed(item));
+            }
+            FlatSvgItem::Text(t) => {
+                self.glyphs.used_fonts.insert(t.font.clone());
+                self.glyphs
+                    .used_glyphs
+                    .extend(t.content.glyphs.iter().map(|(_, _, glyph)| glyph).cloned());
+
+                self.insert(*f, Cow::Borrowed(item));
+            }
+            FlatSvgItem::Item(t) => {
+                self.insert(*f, Cow::Borrowed(item));
+
+                if !self.items.contains_key(&t.1) {
+                    self.intern(module, &t.1);
+                }
+            }
+            FlatSvgItem::Group(g, _) => {
+                self.insert(*f, Cow::Borrowed(item));
+
+                for (_, id) in g.0.iter() {
+                    if !self.items.contains_key(id) {
+                        self.intern(module, id);
+                    }
+                }
+            }
+        }
+    }
+}
+
 impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
     pub fn reset(&mut self) {
         self.source_mapping.clear();
@@ -233,6 +278,23 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
             items: self.items.to_item_map(),
             source_mapping: self.source_mapping,
         }
+    }
+
+    fn insert(&mut self, fg: Fingerprint, item: Cow<FlatSvgItem>) -> bool {
+        if let Some(pos) = self.items.get_mut(&fg) {
+            if ENABLE_REF_CNT && pos.0 != self.lifetime {
+                pos.0 = self.lifetime - 1;
+            }
+            return true;
+        }
+
+        if ENABLE_REF_CNT {
+            self.items.insert(fg, (self.lifetime, item.into_owned()));
+        } else {
+            self.items.insert(fg, (0, item.into_owned()));
+        }
+
+        false
     }
 
     pub fn build(&mut self, item: SvgItem) -> Fingerprint {
@@ -321,19 +383,7 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
 
         let fingerprint = self.fingerprint_builder.resolve(&resolved_item);
 
-        if let Some(pos) = self.items.get_mut(&fingerprint) {
-            if ENABLE_REF_CNT && pos.0 != self.lifetime {
-                pos.0 = self.lifetime - 1;
-            }
-            return fingerprint;
-        }
-
-        if ENABLE_REF_CNT {
-            self.items
-                .insert(fingerprint, (self.lifetime, resolved_item));
-        } else {
-            self.items.insert(fingerprint, (0, resolved_item));
-        }
+        self.insert(fingerprint, Cow::Owned(resolved_item));
         fingerprint
     }
 }

@@ -1,5 +1,5 @@
 use core::fmt;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::sync::Arc;
 
@@ -665,6 +665,10 @@ pub struct GlyphPackBuilderImpl<const ENABLE_REF_CNT: bool = false> {
     pub lifetime: u64,
     pub incr_fonts: Vec<u64>,
     pub incr_glyphs: Vec<u64>,
+
+    /// for interning
+    pub used_fonts: HashSet<FontRef>,
+    pub used_glyphs: HashSet<GlyphRef>,
 }
 
 pub type GlyphPackBuilder = GlyphPackBuilderImpl</* ENABLE_REF_CNT */ false>;
@@ -678,6 +682,8 @@ impl<const ENABLE_REF_CNT: bool> Default for GlyphPackBuilderImpl<ENABLE_REF_CNT
             glyph_defs: Default::default(),
             incr_fonts: Default::default(),
             incr_glyphs: Default::default(),
+            used_fonts: Default::default(),
+            used_glyphs: Default::default(),
         }
     }
 }
