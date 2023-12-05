@@ -1,3 +1,77 @@
+# v0.4.1
+
+## Changelog since v0.4.1
+
+**Full Changelog**: https://github.com/Myriad-Dreamin/typst.ts/compare/v0.4.0...v0.4.1
+
+### Security Notes
+
+No new security note.
+
+### Bug fix
+
+- compiler: compile race condition in browser in https://github.com/Myriad-Dreamin/typst.ts/pull/393
+
+- pkg::core: add a missing await in https://github.com/Myriad-Dreamin/typst.ts/pull/394
+
+### Changes
+
+- cli: improve TYPST_FONT_PATHS (typst#2746) in https://github.com/Myriad-Dreamin/typst.ts/pull/432
+
+- compiler: use fontdb to load system fonts in https://github.com/Myriad-Dreamin/typst.ts/pull/403
+
+- compiler: compile with env on stack in https://github.com/Myriad-Dreamin/typst.ts/pull/409
+
+- compiler: replace diag features by CompileReporter in https://github.com/Myriad-Dreamin/typst.ts/pull/413
+
+### External Feature
+
+- build: build: upgrade to typst v0.10.0 in https://github.com/Myriad-Dreamin/typst.ts/pull/432
+
+- pkg::parser: init in https://github.com/Myriad-Dreamin/typst.ts/pull/401
+
+- pkg::core: expose render canvas api in https://github.com/Myriad-Dreamin/typst.ts/pull/404 and https://github.com/Myriad-Dreamin/typst.ts/pull/405
+
+- cli: manual generation in https://github.com/Myriad-Dreamin/typst.ts/pull/408
+
+- cli: export pdf with timestamp in https://github.com/Myriad-Dreamin/typst.ts/pull/423
+
+- compiler: add query, getSemanticTokens api in https://github.com/Myriad-Dreamin/typst.ts/pull/398
+
+- compiler: add offset encoding option for getSemanticTokens in https://github.com/Myriad-Dreamin/typst.ts/pull/400
+
+- compiler: compile with env on stack in https://github.com/Myriad-Dreamin/typst.ts/pull/409
+
+- compiler: post process handler for dyn layout in https://github.com/Myriad-Dreamin/typst.ts/pull/428
+
+- exporter::text: add text exporter in https://github.com/Myriad-Dreamin/typst.ts/pull/422
+
+- exporter::svg: layout and shape text in browser in https://github.com/Myriad-Dreamin/typst.ts/pull/416 and https://github.com/Myriad-Dreamin/typst.ts/pull/420
+
+- exporter::svg: basic left-to-right text flow detection in https://github.com/Myriad-Dreamin/typst.ts/pull/421
+
+- exporter::svg: pull better location handler from preview in https://github.com/Myriad-Dreamin/typst.ts/pull/419
+
+- exporter::svg: update location handler for semantic labels in https://github.com/Myriad-Dreamin/typst.ts/pull/426
+
+### Internal Feature
+
+- proj: add cetz-editor in https://github.com/Myriad-Dreamin/typst.ts/pull/395
+
+- proj: init highlighter in https://github.com/Myriad-Dreamin/typst.ts/pull/402
+
+- core: add DynGenericExporter and DynPolymorphicExporter in https://github.com/Myriad-Dreamin/typst.ts/pull/411
+
+- core: implement ligature handling in https://github.com/Myriad-Dreamin/typst.ts/pull/414
+
+- core: add `PageMetadata::Custom` in https://github.com/Myriad-Dreamin/typst.ts/pull/425
+
+- core: add getCustomV1 api in https://github.com/Myriad-Dreamin/typst.ts/pull/427
+
+- compiler: export destination path to module in https://github.com/Myriad-Dreamin/typst.ts/pull/430
+
+- compiler: add intern support in https://github.com/Myriad-Dreamin/typst.ts/pull/429
+
 # v0.4.0
 
 This is a major upgrade of typst.ts, so we decide to increment the minor version number. The most important change is that we have stabilized the API for TypstRenderer. We have also added guidance to typst.ts in https://github.com/Myriad-Dreamin/typst.ts/pull/391.
