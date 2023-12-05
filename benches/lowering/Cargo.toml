@@ -1,0 +1,27 @@
+[package]
+name = "typst-ts-bench-lowering"
+description = "Lowering bench for Typst.ts."
+authors.workspace = true
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+divan = "0.1.3"
+typst.workspace = true
+once_cell.workspace = true
+typst-ts-core = { workspace = true, features = ["flat-vector"] }
+typst-ts-cli.workspace = true
+typst-ts-compiler = { workspace = true, default-features = false, features = [
+    "system",
+    # "lazy-fontdb",
+    "dynamic-layout",
+] }
+comemo.workspace = true
+
+[[bench]]
+name = "typst-ts-bench-lowering"
+path = "src/lowering.rs"
+harness = false

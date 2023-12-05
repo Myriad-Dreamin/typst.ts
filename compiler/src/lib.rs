@@ -34,6 +34,8 @@
 // #![warn(clippy::host_endian_bytes)]
 // #![warn(missing_debug_implementations)]
 // #![warn(missing_copy_implementations)]
+// todo: why does typst#2771 not work
+// #![warn(clippy::uninlined_format_args)]
 
 pub(crate) mod macros;
 

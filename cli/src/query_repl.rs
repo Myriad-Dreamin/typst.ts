@@ -16,7 +16,7 @@ use rustyline::{Helper, Validator};
 
 use typst_ts_compiler::service::{CompileDriver, CompileReport, Compiler, ConsoleDiagReporter};
 use typst_ts_compiler::{ShadowApi, TypstSystemWorld};
-use typst_ts_core::{typst::prelude::*, GenericExporter, TakeAs};
+use typst_ts_core::{typst::prelude::*, GenericExporter};
 
 use crate::query::serialize;
 use crate::CompileOnceArgs;
@@ -129,12 +129,15 @@ impl Completer for ReplContext {
         driver.world.reset();
         let typst_completions = driver
             .with_shadow_file_by_id(main_id, dyn_content.as_bytes().into(), |driver| {
-                let frames = driver
-                    .compile(&mut Default::default())
-                    .map(|d| d.take().pages);
-                let frames = frames.as_ref().map(|v| v.as_slice()).unwrap_or_default();
+                let doc = driver.compile(&mut Default::default()).ok();
                 let source = driver.world.main();
-                Ok(autocomplete(&driver.world, frames, &source, cursor, true))
+                Ok(autocomplete(
+                    &driver.world,
+                    doc.as_ref().map(|f| f.as_ref()),
+                    &source,
+                    cursor,
+                    true,
+                ))
             })
             .ok()
             .flatten();

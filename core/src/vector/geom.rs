@@ -4,10 +4,11 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use typst::geom::{
+use typst::layout::{
     Abs as TypstAbs, Angle as TypstAngle, Axes as TypstAxes, Point as TypstPoint,
-    Ratio as TypstRatio, Scalar as TypstScalar, Transform as TypstTransform,
+    Ratio as TypstRatio, Transform as TypstTransform,
 };
+use typst::util::Scalar as TypstScalar;
 
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
@@ -70,6 +71,14 @@ impl From<TypstAngle> for Scalar {
 impl fmt::Debug for Scalar {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl std::ops::Add for Scalar {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0)
     }
 }
 
@@ -180,6 +189,21 @@ where
         Self {
             x: axes.x.into(),
             y: axes.y.into(),
+        }
+    }
+}
+
+// impl Add for Axes
+impl<T> std::ops::Add for Axes<T>
+where
+    T: std::ops::Add<Output = T>,
+{
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
         }
     }
 }

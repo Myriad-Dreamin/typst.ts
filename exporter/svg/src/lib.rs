@@ -1,15 +1,21 @@
 //! Rendering into svg text or module.
 
+// todo: https://github.com/typst/typst/pull/2740
+// also 3c22c9f31914727f665ce10d6db9dac39a26eacb
+// gradient pattern
+
+// todo: https://github.com/typst/typst/pull/2610
+// color export
+
 use std::sync::Arc;
 
-use typst::doc::Document;
+use typst::model::Document;
 use typst::{diag::SourceResult, World};
 
 use typst_ts_core::Exporter;
 
 /// re-export the core types.
 pub use typst_ts_core::font::{FontGlyphProvider, GlyphProvider, IGlyphProvider};
-#[cfg(feature = "flat-vector")]
 pub use typst_ts_core::vector::flat_ir::{
     self, FlatModule, Module, ModuleBuilder, MultiSvgDocument, SvgDocument,
 };
@@ -25,7 +31,6 @@ pub use backend::SvgGlyphBuilder;
 /// frontend of SVG export, which provides a bunch of approaches to rendering
 /// the document.
 pub(crate) mod frontend;
-#[cfg(feature = "flat-vector")]
 pub use frontend::{
     DynamicLayoutSvgExporter, IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderContext,
 };
@@ -107,19 +112,36 @@ impl ExportFeature for SvgExportFeature {
 /// Render SVG wrapped with html for [`Document`].
 pub fn render_svg_html(output: &Document) -> String {
     type UsingExporter = SvgExporter<DefaultExportFeature>;
-    let svg_text = UsingExporter::render_transient_html(output);
-    generate_text(transform::minify(svg_text))
+    let doc = UsingExporter::svg_doc(output);
+    let mut svg = UsingExporter::render(&doc.module, &doc.pages, None);
+
+    // wrap SVG with html
+    let mut html: Vec<SvgText> = Vec::with_capacity(svg.len() + 3);
+    html.push(r#"<!DOCTYPE html><html><head><meta charset="utf-8" /><title>"#.into());
+    html.push(SvgText::Plain(
+        output
+            .title
+            .clone()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "Typst Document".into()),
+    ));
+    html.push(r#"</title></head><body>"#.into());
+    html.append(&mut svg);
+    html.push(r#"</body></html>"#.into());
+    generate_text(transform::minify(html))
 }
 
 /// Render SVG for [`Document`].
 pub fn render_svg(output: &Document) -> String {
     type UsingExporter = SvgExporter<SvgExportFeature>;
-    let svg_text = UsingExporter::render_transient_svg(output);
+    let doc = UsingExporter::svg_doc(output);
+    let svg_text = UsingExporter::render(&doc.module, &doc.pages, None);
     generate_text(transform::minify(svg_text))
 }
 
-#[cfg(feature = "flat-vector")]
 pub use frontend::flat::export_module;
+
+use crate::backend::SvgText;
 
 impl<Feat: ExportFeature> Exporter<Document, String> for SvgExporter<Feat> {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<String> {
@@ -143,6 +165,7 @@ pub struct SvgModuleExporter {}
 
 impl Exporter<Document, Vec<u8>> for SvgModuleExporter {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<Vec<u8>> {
-        export_module(&output)
+        type UsingExporter = SvgExporter<DefaultExportFeature>;
+        export_module(UsingExporter::svg_doc(&output))
     }
 }

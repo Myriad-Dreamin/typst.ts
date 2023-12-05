@@ -33,6 +33,7 @@ fn main() {
         ArchivedSourceMappingNode,
         ArchivedFlatSvgItem,
         ArchivedFlatGlyphItem,
+        ArchivedFlatPatternItem,
         ArchivedModuleMetadata,
         ArchivedFlatTextItem,
         ArchivedFlatTextItemContent,
@@ -56,5 +57,6 @@ fn main() {
         ArchivedLayoutRegion,
         ArchivedBuildInfo,
         ArchivedColorItem,
+        ArchivedGradientItem,
     );
 }

@@ -15,8 +15,8 @@ use typst_ts_dev_server::{CompileCorpusArgs, CompileSubCommands, Opts, Subcomman
 fn main() {
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Info)
-        .filter_module("typst::", log::LevelFilter::Warn)
-        .filter_module("typst_library::", log::LevelFilter::Warn)
+        .filter_module("typst", log::LevelFilter::Warn)
+        .filter_module("typst_ts", log::LevelFilter::Info)
         .filter_module("tracing::", log::LevelFilter::Off)
         .try_init();
 

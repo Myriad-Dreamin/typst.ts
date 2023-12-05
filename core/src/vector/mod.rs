@@ -58,6 +58,8 @@ fn rkyv_assertions() {
     const _: () = assert!(core::mem::align_of::<ArchivedFlatSvgItem>() == 8);
     const _: () = assert!(core::mem::size_of::<ArchivedFlatGlyphItem>() == 8);
     const _: () = assert!(core::mem::align_of::<ArchivedFlatGlyphItem>() == 4);
+    const _: () = assert!(core::mem::size_of::<ArchivedFlatPatternItem>() == 40);
+    const _: () = assert!(core::mem::align_of::<ArchivedFlatPatternItem>() == 8);
     const _: () = assert!(core::mem::size_of::<ArchivedModuleMetadata>() == 12);
     const _: () = assert!(core::mem::align_of::<ArchivedModuleMetadata>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedFlatTextItem>() == 16);
@@ -104,4 +106,6 @@ fn rkyv_assertions() {
     const _: () = assert!(core::mem::align_of::<ArchivedBuildInfo>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedColorItem>() == 4);
     const _: () = assert!(core::mem::align_of::<ArchivedColorItem>() == 1);
+    const _: () = assert!(core::mem::size_of::<ArchivedGradientItem>() == 28);
+    const _: () = assert!(core::mem::align_of::<ArchivedGradientItem>() == 4);
 }

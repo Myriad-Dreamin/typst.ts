@@ -1,9 +1,9 @@
 
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
-// 
-// // Test ambiguous reference.
-// = Introduction <arrgh>
-// // Error: 1-7 label occurs in the document and its bibliography
-// @arrgh
-// #bibliography("/assets/files/works.bib")
+
+#set page(width: 200pt)
+
+= Details
+See also @arrgh #cite(<distress>, supplement: [p.~22]), @arrgh[p.~4], and @distress[p.~5].
+#bibliography("/assets/files/works.bib")

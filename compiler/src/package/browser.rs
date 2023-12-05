@@ -1,7 +1,7 @@
 use std::{io::Read, path::Path};
 
 use js_sys::Uint8Array;
-use typst_library::prelude::*;
+use typst::diag::eco_format;
 use wasm_bindgen::{prelude::*, JsValue};
 
 use super::{PackageError, PackageSpec, Registry};

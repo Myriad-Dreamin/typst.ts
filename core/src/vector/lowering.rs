@@ -6,21 +6,25 @@ use std::hash::Hash;
 use std::io::Read;
 use std::sync::Arc;
 
+use comemo::{Track, Tracked};
 use once_cell::sync::OnceCell;
-use typst::doc::{
-    Destination, Document, Frame, FrameItem, FrameKind, GroupItem, Meta, Position, TextItem,
+use typst::foundations::Smart;
+use typst::introspection::{Introspector, Meta};
+use typst::layout::{
+    Abs as TypstAbs, Dir, Frame, FrameItem, FrameKind, GroupItem, Position, Ratio as TypstRatio,
+    Size,
 };
-use typst::font::Font;
-use typst::geom::{
-    Abs as TypstAbs, Dir, FixedStroke, Geometry, Gradient, LineCap, LineJoin, Paint, PathItem,
-    Ratio as TypstRatio, Relative, Shape, Size, Smart,
+use typst::model::{Destination, Document};
+use typst::text::{Font, TextItem};
+use typst::visualize::{
+    FixedStroke, Geometry, Gradient, LineCap, LineJoin, Paint, PathItem, Pattern, Shape,
 };
-use typst::image::Image;
+use typst::visualize::{Image, RelativeTo};
 
 use ttf_parser::OutlineBuilder;
-use typst::model::Introspector;
 use typst::syntax::Span;
 
+use super::ir::PatternItem;
 use super::{
     geom::Scalar,
     ir::{self, GlyphItem, ImageGlyphItem, OutlineGlyphItem, SvgItem, TransformItem},
@@ -32,26 +36,20 @@ use super::{
 };
 use crate::font::GlyphProvider;
 use crate::hash::{Fingerprint, FingerprintHasher, FingerprintSipHasher};
-use crate::vector::flat_ir::FlatSvgItem;
 use crate::vector::ir::{ColorItem, GradientItem, GradientKind};
 use crate::ImmutStr;
 use ttf_parser::GlyphId;
 
 static WARN_VIEW_BOX: OnceCell<()> = OnceCell::new();
 
-#[derive(Clone)]
-struct ShapeInfo {
-    path: ir::PathItem,
-    fill_gradient: Option<(Fingerprint, GradientItem)>,
-    stroke_gradient: Option<(Fingerprint, GradientItem)>,
-}
+type ExtraSvgItems = rpds::RedBlackTreeMap<Fingerprint, Arc<SvgItem>>;
 
 /// Lower a frame item into svg item.
-pub struct LowerBuilder {
-    introspector: Introspector,
+pub struct LowerBuilder<'a> {
+    introspector: &'a Introspector,
     /// Extra items that used by the document but not directly rendered.
     /// For example, gradients.
-    pub extra_items: HashMap<Fingerprint, ir::SvgItem>,
+    pub extra_items: HashMap<Fingerprint, Arc<SvgItem>>,
 }
 
 static LINE_HINT_ELEMENTS: once_cell::sync::Lazy<std::collections::HashSet<&'static str>> =
@@ -61,48 +59,61 @@ static LINE_HINT_ELEMENTS: once_cell::sync::Lazy<std::collections::HashSet<&'sta
         set
     });
 
-impl LowerBuilder {
-    pub fn new(output: &Document) -> Self {
+impl<'a> LowerBuilder<'a> {
+    pub fn new(output: &'a Document) -> Self {
         Self {
-            introspector: Introspector::new(&output.pages),
+            //todo: introspector
+            introspector: &output.introspector,
             extra_items: HashMap::new(),
         }
     }
 
     /// Lower a frame into svg item.
     pub fn lower(&mut self, frame: &Frame) -> SvgItem {
-        self.lower_frame(frame)
+        let introspector = self.introspector.track();
+        let (item, extras) = Self::lower_frame(introspector, frame);
+        self.extra_items
+            .extend(extras.into_iter().map(|t| (*t.0, t.1.clone())));
+        item
     }
 
     /// Lower a frame into svg item.
-    fn lower_frame(&mut self, frame: &Frame) -> SvgItem {
+    // #[comemo::memoize]
+    // suboptimal since the frame is not prehashed
+    fn lower_frame(introspector: Tracked<Introspector>, frame: &Frame) -> (SvgItem, ExtraSvgItems) {
         let mut items = Vec::with_capacity(frame.items().len());
+        let mut extras = ExtraSvgItems::default();
 
         for (pos, item) in frame.items() {
             let item = match item {
-                FrameItem::Group(group) => self.lower_group(group),
-                FrameItem::Text(text) => self.lower_text(text),
-                FrameItem::Shape(shape, span_id) => {
-                    let s = Self::lower_shape(shape);
-                    if let Some((f, gradient)) = s.fill_gradient {
-                        self.extra_items.insert(f, ir::SvgItem::Gradient(gradient));
-                    }
-                    if let Some((f, gradient)) = s.stroke_gradient {
-                        self.extra_items.insert(f, ir::SvgItem::Gradient(gradient));
-                    }
+                FrameItem::Group(group) => {
+                    let (item, sub_extras) = Self::lower_group(introspector, group);
+                    extras = merge_extras(extras, sub_extras);
 
-                    SvgItem::Path((s.path, span_id_to_u64(span_id)))
+                    item
+                }
+                FrameItem::Text(text) => {
+                    let (item, sub_extras) = Self::lower_text(introspector, text);
+                    extras = merge_extras(extras, sub_extras);
+
+                    item
+                }
+                FrameItem::Shape(shape, span_id) => {
+                    let (s, sub_extras) = Self::lower_shape(introspector, shape);
+                    extras = merge_extras(extras, sub_extras);
+
+                    SvgItem::Path((s, span_id_to_u64(span_id)))
                 }
                 FrameItem::Image(image, size, span_id) => {
                     SvgItem::Image((lower_image(image, *size), span_id_to_u64(span_id)))
                 }
                 FrameItem::Meta(meta, size) => match meta {
                     Meta::Link(lnk) => match lnk {
-                        Destination::Url(url) => self.lower_link(url, *size),
+                        Destination::Url(url) => Self::lower_link(url, *size),
                         Destination::Position(dest) => Self::lower_position(*dest, *size),
                         Destination::Location(loc) => {
                             // todo: process location before lowering
-                            let dest = self.introspector.position(*loc);
+                            let dest = introspector.position(*loc);
                             Self::lower_position(dest, *size)
                         }
                     },
@@ -140,15 +151,22 @@ impl LowerBuilder {
             std::cmp::Ordering::Equal
         });
 
-        match frame.kind() {
+        let item = match frame.kind() {
             FrameKind::Hard => SvgItem::Group(ir::GroupItem(items), Some(frame.size().into())),
             FrameKind::Soft => SvgItem::Group(ir::GroupItem(items), None),
-        }
+        };
+
+        (item, extras)
     }
 
     /// Lower a group frame with optional transform and clipping into svg item.
-    fn lower_group(&mut self, group: &GroupItem) -> SvgItem {
-        let mut inner = self.lower_frame(&group.frame);
+    // #[comemo::memoize]
+    // suboptimal since the frame is not prehashed
+    fn lower_group(
+        introspector: Tracked<Introspector>,
+        group: &GroupItem,
+    ) -> (SvgItem, ExtraSvgItems) {
+        let (mut inner, extras) = Self::lower_frame(introspector, &group.frame);
 
         if let Some(p) = group.clip_path.as_ref() {
             // todo: merge
@@ -191,14 +209,17 @@ impl LowerBuilder {
             ));
         };
 
-        SvgItem::Transformed(ir::TransformedItem(
-            TransformItem::Matrix(Arc::new(group.transform.into())),
-            Box::new(inner),
-        ))
+        (
+            SvgItem::Transformed(ir::TransformedItem(
+                TransformItem::Matrix(Arc::new(group.transform.into())),
+                Box::new(inner),
+            )),
+            extras,
+        )
     }
 
     /// Lower a link into svg item.
-    pub(super) fn lower_link(&self, url: &str, size: Size) -> ir::SvgItem {
+    pub(super) fn lower_link(url: &str, size: Size) -> ir::SvgItem {
         SvgItem::Link(ir::LinkItem {
             href: url.into(),
             size: size.into(),
@@ -223,8 +244,11 @@ impl LowerBuilder {
     }
 
     /// Lower a text into svg item.
-    // #[comemo::memoize]
-    pub(super) fn lower_text(&mut self, text: &TextItem) -> SvgItem {
+    #[comemo::memoize]
+    pub(super) fn lower_text(
+        introspector: Tracked<Introspector>,
+        text: &TextItem,
+    ) -> (SvgItem, ExtraSvgItems) {
         let mut glyphs = Vec::with_capacity(text.glyphs.len());
         for glyph in &text.glyphs {
             let id = GlyphId(glyph.id);
@@ -236,13 +260,10 @@ impl LowerBuilder {
         }
 
         let glyph_chars: String = text.text.to_string();
+        let mut extras = ExtraSvgItems::default();
 
         // let fill = text.fill.clone().to_css().into();
-        let mut fill_gradient = None;
-        let fill = Self::lower_paint(text.fill.clone(), &mut fill_gradient);
-        if let Some((f, gradient)) = fill_gradient {
-            self.extra_items.insert(f, ir::SvgItem::Gradient(gradient));
-        }
+        let fill = Self::lower_paint(introspector, &text.fill, &mut extras);
 
         let span_id = text
             .glyphs
@@ -253,31 +274,38 @@ impl LowerBuilder {
             .max()
             .unwrap_or_else(|| span_id_to_u64(&Span::detached()));
 
-        SvgItem::Text(ir::TextItem {
-            font: text.font.clone(),
-            content: Arc::new(ir::TextItemContent {
-                content: glyph_chars.into(),
-                glyphs,
-                span_id,
+        (
+            SvgItem::Text(ir::TextItem {
+                font: text.font.clone(),
+                content: Arc::new(ir::TextItemContent {
+                    content: glyph_chars.into(),
+                    glyphs,
+                    span_id,
+                }),
+                shape: Arc::new(ir::TextShape {
+                    size: Scalar(text.size.to_f32()),
+                    dir: match text.lang.dir() {
+                        Dir::LTR => "ltr",
+                        Dir::RTL => "rtl",
+                        Dir::TTB => "ttb",
+                        Dir::BTT => "btt",
+                    }
+                    .into(),
+                    fill,
+                }),
             }),
-            shape: Arc::new(ir::TextShape {
-                size: Scalar(text.size.to_f32()),
-                dir: match text.lang.dir() {
-                    Dir::LTR => "ltr",
-                    Dir::RTL => "rtl",
-                    Dir::TTB => "ttb",
-                    Dir::BTT => "btt",
-                }
-                .into(),
-                fill,
-            }),
-        })
+            extras,
+        )
     }
 
     /// Lower a geometrical shape into svg item.
     #[comemo::memoize]
-    fn lower_shape(shape: &Shape) -> ShapeInfo {
+    fn lower_shape(
+        introspector: Tracked<Introspector>,
+        shape: &Shape,
+    ) -> (ir::PathItem, ExtraSvgItems) {
         let mut builder = SvgPath2DBuilder(String::new());
+        let mut extras = ExtraSvgItems::default();
 
         // to ensure that our shape focus on the original point
         builder.move_to(0., 0.);
@@ -324,15 +352,14 @@ impl LowerBuilder {
 
         let mut styles = Vec::new();
 
-        let mut fill_gradient = None;
         if let Some(paint_fill) = &shape.fill {
             styles.push(ir::PathStyle::Fill(Self::lower_paint(
-                paint_fill.clone(),
-                &mut fill_gradient,
+                introspector,
+                paint_fill,
+                &mut extras,
             )));
         }
 
-        let mut stroke_gradient = None;
         // todo: default miter_limit, thickness
         if let Some(FixedStroke {
             paint,
@@ -364,8 +391,9 @@ impl LowerBuilder {
             }
 
             styles.push(ir::PathStyle::Stroke(Self::lower_paint(
-                paint.clone(),
-                &mut stroke_gradient,
+                introspector,
+                paint,
+                &mut extras,
             )));
         }
 
@@ -379,34 +407,38 @@ impl LowerBuilder {
             shape_size.y = TypstAbs::pt(1.0);
         }
 
-        ShapeInfo {
-            path: ir::PathItem {
-                d,
-                size: Some(shape_size.into()),
-                styles,
-            },
-            fill_gradient,
-            stroke_gradient,
-        }
+        let item = ir::PathItem {
+            d,
+            size: Some(shape_size.into()),
+            styles,
+        };
+
+        (item, extras)
     }
 
     #[inline]
     pub(super) fn lower_paint(
-        g: Paint,
-        cell: &mut Option<(Fingerprint, GradientItem)>,
+        introspector: Tracked<Introspector>,
+        g: &Paint,
+        cell: &mut ExtraSvgItems,
     ) -> ImmutStr {
         match g {
             Paint::Solid(c) => c.to_css().into(),
+            Paint::Pattern(e) => {
+                let (g, fingerprint) = Self::lower_pattern(introspector, e, cell);
+                *cell = cell.insert(fingerprint, Arc::new(ir::SvgItem::Pattern(g)));
+                format!("@{}", fingerprint.as_svg_id("p")).into()
+            }
             Paint::Gradient(g) => {
                 let (g, fingerprint) = Self::lower_graident(g);
-                *cell = Some((fingerprint, g));
+                *cell = cell.insert(fingerprint, Arc::new(ir::SvgItem::Gradient(Arc::new(g))));
                 format!("@{}", fingerprint.as_svg_id("g")).into()
             }
         }
     }
 
     #[comemo::memoize]
-    pub(super) fn lower_graident(g: Gradient) -> (GradientItem, Fingerprint) {
+    pub(super) fn lower_graident(g: &Gradient) -> (GradientItem, Fingerprint) {
         let mut stops = Vec::with_capacity(g.stops_ref().len());
         for (c, step) in g.stops_ref() {
             let [r, g, b, a] = c.to_vec4_u8();
@@ -415,7 +447,7 @@ impl LowerBuilder {
 
         let relative_to_self = match g.relative() {
             Smart::Auto => None,
-            Smart::Custom(t) => Some(t == Relative::Self_),
+            Smart::Custom(t) => Some(t == RelativeTo::Self_),
         };
 
         let anti_alias = g.anti_alias();
@@ -460,13 +492,41 @@ impl LowerBuilder {
         };
 
         // todo: don't leak the fingerprint primitive
-        let flat_item = &FlatSvgItem::Gradient(g.clone());
         let mut f = FingerprintSipHasher::default();
-        flat_item.type_id().hash(&mut f);
-        flat_item.hash(&mut f);
+        g.type_id().hash(&mut f);
+        g.hash(&mut f);
         let (f, _) = f.finish_fingerprint();
 
         (g, f)
+    }
+
+    pub(super) fn lower_pattern(
+        introspector: Tracked<Introspector>,
+        g: &Pattern,
+        cell: &mut ExtraSvgItems,
+    ) -> (PatternItem, Fingerprint) {
+        let (frame, extras) = Self::lower_frame(introspector, g.frame());
+        *cell = merge_extras(extras, cell.clone());
+
+        let relative_to_self = match g.relative() {
+            Smart::Auto => None,
+            Smart::Custom(t) => Some(t == RelativeTo::Self_),
+        };
+
+        let pattern = PatternItem {
+            frame: Arc::new(frame),
+            size: g.size().into(),
+            spacing: g.spacing().into(),
+            relative_to_self,
+        };
+
+        // todo: don't leak the fingerprint primitive
+        let mut f = FingerprintSipHasher::default();
+        pattern.type_id().hash(&mut f);
+        g.hash(&mut f);
+        let (f, _) = f.finish_fingerprint();
+
+        (pattern, f)
     }
 }
 
@@ -520,7 +580,7 @@ impl<'a> GlyphLowerBuilder<'a> {
         let ascender = font
             .metrics()
             .ascender
-            .at(typst::geom::Abs::raw(font.metrics().units_per_em))
+            .at(typst::layout::Abs::raw(font.metrics().units_per_em))
             .to_f32();
 
         Some(Arc::new(ImageGlyphItem {
@@ -550,7 +610,7 @@ impl<'a> GlyphLowerBuilder<'a> {
 
         let w = glyph_image.width() as f64;
         let h = glyph_image.height() as f64;
-        let sz = Size::new(typst::geom::Abs::raw(w), typst::geom::Abs::raw(h));
+        let sz = Size::new(typst::layout::Abs::raw(w), typst::layout::Abs::raw(h));
 
         let image = ir::ImageItem {
             image: Arc::new(glyph_image.into()),
@@ -560,11 +620,11 @@ impl<'a> GlyphLowerBuilder<'a> {
         // position our image
         // first, the ascender is used
         // next, also apply an offset of (1 - ascender) like typst
-        let adjusted = font.metrics().ascender * 2. - typst::geom::Em::one();
+        let adjusted = font.metrics().ascender * 2. - typst::layout::Em::one();
         // let adjusted = font.metrics().ascender;
 
         let adjusted = adjusted
-            .at(typst::geom::Abs::raw(font.metrics().units_per_em))
+            .at(typst::layout::Abs::raw(font.metrics().units_per_em))
             .to_f32();
 
         let ts = sk::Transform::from_scale(upem / w as f32, -upem / h as f32);
@@ -616,7 +676,7 @@ fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<ir::
     // > `  <svg> <defs> <use #glyph{id}> </svg>`
     // See: <https://learn.microsoft.com/en-us/typography/opentype/spec/svg#glyph-identifiers>
 
-    let upem = typst::geom::Abs::raw(font.units_per_em());
+    let upem = typst::layout::Abs::raw(font.units_per_em());
     let (width, height) = (upem.to_f32(), upem.to_f32());
     let origin_ascender = font_metrics.ascender.at(upem).to_f32();
 
@@ -660,17 +720,17 @@ fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<ir::
         }
     }
 
-    let glyph_image = typst::image::Image::new(
+    let glyph_image = typst::visualize::Image::new(
         svg_str.as_bytes().to_vec().into(),
-        typst::image::ImageFormat::Vector(typst::image::VectorFormat::Svg),
+        typst::visualize::ImageFormat::Vector(typst::visualize::VectorFormat::Svg),
         // typst::geom::Axes::new(width as u32, height as u32),
         None,
     )
     .ok()?;
 
     let sz = Size::new(
-        typst::geom::Abs::raw(glyph_image.width() as f64),
-        typst::geom::Abs::raw(glyph_image.height() as f64),
+        typst::layout::Abs::raw(glyph_image.width() as f64),
+        typst::layout::Abs::raw(glyph_image.height() as f64),
     );
 
     Some(ir::ImageItem {
@@ -726,6 +786,18 @@ fn find_viewbox_attr(svg_str: &'_ str) -> FindViewBoxResult<'_> {
         start_span,
         first_viewbox,
     }
+}
+
+fn merge_extras(mut extras: ExtraSvgItems, mut other: ExtraSvgItems) -> ExtraSvgItems {
+    // swap ensure O(n log n) complexity for merging
+    if extras.size() < other.size() {
+        std::mem::swap(&mut extras, &mut other);
+    }
+
+    for (f, item) in other.into_iter() {
+        extras = extras.insert(*f, item.clone());
+    }
+    extras
 }
 
 const DETACHED: u64 = 1;

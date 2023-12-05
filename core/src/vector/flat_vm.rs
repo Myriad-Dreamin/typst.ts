@@ -113,7 +113,9 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
                 g.render_content_hint(self, *c);
                 g.into()
             }
-            ir::FlatSvgItem::Gradient(..) | ir::FlatSvgItem::None => {
+            ir::FlatSvgItem::Gradient(..)
+            | ir::FlatSvgItem::Pattern(..)
+            | ir::FlatSvgItem::None => {
                 panic!("FlatRenderVm.RenderFrame.UnknownItem {:?}", item)
             }
         }
@@ -261,7 +263,9 @@ where
                 group_ctx.render_content_hint(self, *c);
                 group_ctx
             }
-            ir::FlatSvgItem::Gradient(..) | ir::FlatSvgItem::None => {
+            ir::FlatSvgItem::Gradient(..)
+            | ir::FlatSvgItem::Pattern(..)
+            | ir::FlatSvgItem::None => {
                 panic!("FlatRenderVm.RenderFrame.UnknownItem {:?}", next_item)
             }
         }

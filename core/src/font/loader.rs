@@ -1,4 +1,4 @@
-use typst::font::Font;
+use typst::text::Font;
 
 use crate::{Bytes, ReadAllOnce};
 

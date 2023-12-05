@@ -1,6 +1,8 @@
 use serde::Serialize;
-use typst::diag::{bail, StrResult};
-use typst_library::prelude::*;
+use typst::{
+    diag::{bail, eco_format, StrResult},
+    foundations::{Content, IntoValue},
+};
 
 use crate::QueryArgs;
 
@@ -13,7 +15,7 @@ pub fn format(elements: Vec<Content>, command: &QueryArgs) -> StrResult<String> 
     let mapped: Vec<_> = elements
         .into_iter()
         .filter_map(|c| match &command.field {
-            Some(field) => c.field(field),
+            Some(field) => c.get_by_name(field),
             _ => Some(c.into_value()),
         })
         .collect();

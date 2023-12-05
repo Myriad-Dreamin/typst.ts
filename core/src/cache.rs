@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use typst::font::FontInfo;
+use typst::text::FontInfo;
 
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "t", content = "v")]

@@ -5,7 +5,7 @@ use std::{
 };
 
 use clap::FromArgMatches;
-use typst::{doc::Document, font::FontVariant, World};
+use typst::{model::Document, text::FontVariant, World};
 
 use typst_ts_cli::{
     compile::compile_export,
@@ -45,8 +45,8 @@ fn main() {
         // Better?
         if !matches!(&opts.sub, Some(Subcommands::Compile(CompileArgs { trace: _trace @ Some(_), .. }))) {
             builder
-                .filter_module("typst::", log::LevelFilter::Warn)
-                .filter_module("typst_library::", log::LevelFilter::Warn)
+            .filter_module("typst", log::LevelFilter::Warn)
+            .filter_module("typst_ts", log::LevelFilter::Info)
                 .filter_module("tracing::", log::LevelFilter::Off);
         }
         builder.init();

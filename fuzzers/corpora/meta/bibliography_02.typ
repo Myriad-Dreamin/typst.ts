@@ -2,17 +2,10 @@
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
 
-// Test unconventional order.
 #set page(width: 200pt)
-#bibliography(
-  "/assets/files/works.bib",
-  title: [Works to be cited],
-  style: "chicago-author-date",
-)
-#line(length: 100%)
+#set heading(numbering: "1.")
+#show bibliography: set heading(numbering: "1.")
 
-#[#set cite(brackets: false)
-As described by @netwok],
-the net-work is a creature of its own.
-This is close to piratery! @arrgh
-And quark! @quark
+= Multiple Bibs
+Now we have multiple bibliographies containing @glacier-melt @keshav2007read
+#bibliography(("/assets/files/works.bib", "/assets/files/works_too.bib"))

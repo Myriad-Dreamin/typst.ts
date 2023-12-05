@@ -2,7 +2,7 @@ use std::path::Path;
 
 use base64::Engine;
 use js_sys::{JsString, Uint32Array, Uint8Array};
-use typst::{eval::IntoValue, font::Font};
+use typst::{foundations::IntoValue, text::Font};
 pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
     font::web::BrowserFontSearcher,
@@ -75,6 +75,7 @@ unsafe impl Send for SnapshotFontLoader {}
 // todo: design error handling
 // todo: we return a string for now which is better than nothing
 #[wasm_bindgen]
+#[allow(non_snake_case)]
 impl TypstCompiler {
     pub fn reset(&mut self) -> Result<(), JsValue> {
         // reset the world caches
@@ -288,7 +289,7 @@ impl TypstCompiler {
             .compiler
             .compile(&mut Default::default())
             .map_err(|e| format!("{e:?}"))?;
-        let elements: Vec<typst::model::Content> = self
+        let elements: Vec<typst::foundations::Content> = self
             .compiler
             .query(selector, &doc)
             .map_err(|e| format!("{e:?}"))?;
@@ -296,7 +297,7 @@ impl TypstCompiler {
         let mapped: Vec<_> = elements
             .into_iter()
             .filter_map(|c| match &field {
-                Some(field) => c.field(field),
+                Some(field) => c.get_by_name(field),
                 _ => Some(c.into_value()),
             })
             .collect();

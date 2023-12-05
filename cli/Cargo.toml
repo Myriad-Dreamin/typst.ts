@@ -10,7 +10,6 @@ repository.workspace = true
 
 [dependencies]
 typst.workspace = true
-typst-library.workspace = true
 typst-ide.workspace = true
 
 clap.workspace = true
@@ -48,7 +47,6 @@ typst-ts-compiler = { workspace = true, default-features = false, features = [
 
 typst-ts-ast-exporter.workspace = true
 typst-ts-pdf-exporter = { workspace = true, optional = true }
-typst-ts-raster-exporter = { workspace = true, optional = true }
 typst-ts-serde-exporter = { workspace = true, optional = true }
 typst-ts-svg-exporter = { workspace = true, optional = true }
 typst-ts-text-exporter = { workspace = true, optional = true }
@@ -63,7 +61,6 @@ embedded-fonts = []
 embedded-cjk-fonts = []
 embedded-emoji-fonts = []
 pdf = ["typst-ts-pdf-exporter"]
-raster = ["typst-ts-raster-exporter"]
 serde-json = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/json"]
 serde-rmp = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/rmp"]
 svg = [
@@ -74,7 +71,6 @@ svg = [
 text = ["typst-ts-text-exporter"]
 default = [
     "pdf",
-    "raster",
     "serde-json",
     "serde-rmp",
     "svg",

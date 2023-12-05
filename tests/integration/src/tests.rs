@@ -512,19 +512,19 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         ---
         name: layout_clip_01_artifact_ir
-        data_content_phash: "phash-gradient:FBIAAAAANFsAFBMAFBMABBIAvDYAJFcAEBsALAEAiBMAmAMAAAAAABEAAAAAqBgAFFMAFDMAJBEAnBYApBYApF4AAAAAJBQA"
+        data_content_phash: "phash-gradient:FBIAAAAANFsAFBMAFBMABBIAvDYAJFcAEBsALAEAiBMAmAMAAAAAABEAAAAAqBgAFFMAFDMAJBEAnBYApBYApF4AAAAAABQA"
         text_content_hash: "sha256:96bd89114d72bcd04666bb988dd0c191f708bbdcb4e272d3513b4a19529e6067"
         "###);
         check_canvas_render_test_point!(@r###"
         ---
         name: layout_clip_02_artifact_ir
-        data_content_phash: "phash-gradient:AAAAAAAAAAAABIABMAACTO4FWKkFcJMFULIFTJIFYJIFAJIFAAAAAJIBTAACTOwFULsFcJMFWLIFQO0BoAAAAKAAAAAAAAAA"
+        data_content_phash: "phash-gradient:AAAAAAAAAAAABIABMAACTO4FWKkFcJMFULIFTJIFYJIFAJIFAAAAAJIBTAACTIQFUJMFcJMFWJIFQO0BoAAAAIAAAAAAAAAA"
         text_content_hash: "sha256:24963c5baa5ad6e68e49a5111c0e2e0effb29c6bce113f93df50b26fa8b6ebb6"
         "###);
         check_canvas_render_test_point!(@r###"
         ---
         name: layout_clip_03_artifact_ir
-        data_content_phash: "phash-gradient:EAAARAAAbAEAcAJEAQAANJPOFCnelCHHLGnSnGHckJbQAAAAAAAABKXh7Grc5ErOJCXAFGvWKJRgAAAAAAAAAAAAAAAAAAAA"
+        data_content_phash: "phash-gradient:EAAARAAAbAEAcAJEAQAANJPOFCnelCHHLGnSnGHckJbQAAAAAAAABKXh7Grc5ErOJCXAFGvWKJVhAAAAAAAAAAAAAAAAAAAA"
         text_content_hash: "sha256:e07d03f1fbd648ca5904eafd5381b4e9eeb6e00af8cd08c67c0911ec0c3b6a7f"
         "###);
         check_canvas_render_test_point!(@r###"
@@ -592,7 +592,7 @@ mod tests {
         ---
         name: math_undergradmath_artifact_ir
         data_content_phash: "phash-gradient:YM7N5Kz17Cb3MM92MMdmmEbkmMzmSA5jzI7YsIf3ZI5k5Iz8qI7ceIbpNI98qG/WwAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        text_content_hash: "sha256:c0ae4968cf68ba90146d38c784da4b6a780b99e041817dd172e6c950b845d203"
+        text_content_hash: "sha256:ebad9f56d2173cc7f5d74b7e5d844b4e1698b32a80ef7f1feb09195788ff66a1"
         "###);
         // todo: the size of cjk font file is quite big
         // check_canvas_render_test_point!(@r###"

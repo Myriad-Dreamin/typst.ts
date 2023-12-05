@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use typst::doc::Document;
+use typst::model::Document;
 
 use crate::{
     error::prelude::*,
@@ -71,8 +71,10 @@ impl IncrDocServer {
             })
             .collect::<Vec<_>>();
 
-        for ext in lower_builder.extra_items.into_values() {
-            builder.build(ext);
+        for (fg, ext) in lower_builder.extra_items {
+            let data_fg = builder.build(ext.take());
+            let item = builder.items.get(&data_fg).unwrap();
+            builder.items.insert(fg, item.clone());
         }
         let delta = builder.finalize_delta();
 

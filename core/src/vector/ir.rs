@@ -9,8 +9,8 @@ use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 use base64::Engine;
 use ttf_parser::GlyphId;
 use typst::{
-    font::Font,
-    image::{ImageFormat, RasterFormat, VectorFormat},
+    text::Font,
+    visualize::{ImageFormat, RasterFormat, VectorFormat},
 };
 
 use crate::{
@@ -140,8 +140,8 @@ pub enum SvgItem {
     Text(TextItem),
     Transformed(TransformedItem),
     Group(GroupItem, Option<Size>),
-    // todo: big size 64
-    Gradient(GradientItem),
+    Gradient(Arc<GradientItem>),
+    Pattern(PatternItem),
     ContentHint(char),
 }
 
@@ -163,8 +163,8 @@ pub struct Image {
 }
 
 /// Collect image data from [`typst::image::Image`].
-impl From<typst::image::Image> for Image {
-    fn from(image: typst::image::Image) -> Self {
+impl From<typst::visualize::Image> for Image {
+    fn from(image: typst::visualize::Image) -> Self {
         let format = match image.format() {
             ImageFormat::Raster(e) => match e {
                 RasterFormat::Jpg => "jpeg",
@@ -258,8 +258,8 @@ impl ColorItem {
         }
     }
 
-    pub fn typst(&self) -> typst::geom::Color {
-        typst::geom::Color::from_u8(self.r, self.g, self.b, self.a)
+    pub fn typst(&self) -> typst::visualize::Color {
+        typst::visualize::Color::from_u8(self.r, self.g, self.b, self.a)
     }
 }
 
@@ -288,13 +288,17 @@ pub enum ColorSpace {
 
     /// The CMYK color space.
     Cmyk,
+
+    /// The perceptual Oklch color space.
+    Oklch,
 }
 
-impl From<typst::geom::ColorSpace> for ColorSpace {
-    fn from(value: typst::geom::ColorSpace) -> Self {
-        use typst::geom::ColorSpace::*;
+impl From<typst::visualize::ColorSpace> for ColorSpace {
+    fn from(value: typst::visualize::ColorSpace) -> Self {
+        use typst::visualize::ColorSpace::*;
         match value {
             Oklab => Self::Oklab,
+            Oklch => Self::Oklch,
             Srgb => Self::Srgb,
             D65Gray => Self::D65Gray,
             LinearRgb => Self::LinearRgb,
@@ -305,11 +309,12 @@ impl From<typst::geom::ColorSpace> for ColorSpace {
     }
 }
 
-impl From<ColorSpace> for typst::geom::ColorSpace {
+impl From<ColorSpace> for typst::visualize::ColorSpace {
     fn from(value: ColorSpace) -> Self {
-        use typst::geom::ColorSpace::*;
+        use typst::visualize::ColorSpace::*;
         match value {
             ColorSpace::Oklab => Oklab,
+            ColorSpace::Oklch => Oklch,
             ColorSpace::Srgb => Srgb,
             ColorSpace::D65Gray => D65Gray,
             ColorSpace::LinearRgb => LinearRgb,
@@ -320,7 +325,7 @@ impl From<ColorSpace> for typst::geom::ColorSpace {
     }
 }
 
-/// Item representing an `<path/>` element.
+/// Item representing an `<gradient/>` element.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
@@ -340,6 +345,20 @@ pub struct GradientItem {
     /// Additional gradient styles.
     /// See [`GradientStyle`] for more information.
     pub styles: Vec<GradientStyle>,
+}
+
+/// Item representing an `<pattern/>` element.
+#[derive(Debug, Clone)]
+pub struct PatternItem {
+    /// The pattern's rendered content.
+    pub frame: Arc<SvgItem>,
+    /// The pattern's tile size.
+    pub size: Size,
+    /// The pattern's tile spacing.
+    pub spacing: Size,
+    /// Whether the pattern is relative to itself (its own bounding box).
+    /// Otherwise, the pattern is relative to the parent bounding box.
+    pub relative_to_self: Option<bool>,
 }
 
 /// Item representing an `<path/>` element.

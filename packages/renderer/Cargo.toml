@@ -19,7 +19,6 @@ crate-type = ["cdylib"]
 [dependencies]
 
 typst.workspace = true
-typst-library.workspace = true
 comemo.workspace = true
 
 once_cell.workspace = true
@@ -44,7 +43,6 @@ typst-ts-compiler = { version = "0.4.1-rc1", default-features = false, features 
     "web-render",
 ] }
 typst-ts-canvas-exporter = { workspace = true, optional = true }
-typst-ts-raster-exporter = { workspace = true, optional = true }
 typst-ts-svg-exporter = { workspace = true, optional = true }
 console_error_panic_hook.workspace = true
 
@@ -88,9 +86,8 @@ render_canvas = [
     "web-sys/CanvasRenderingContext2d",
 ]
 render_pdf = []
-render_raster = ["dep:typst-ts-raster-exporter", "web-sys/ImageData"]
 render_svg = ["dep:typst-ts-svg-exporter", "web-sys/HtmlDivElement"]
-render_full = ["render_canvas", "render_pdf", "render_svg", "render_raster"]
+render_full = ["render_canvas", "render_pdf", "render_svg"]
 
 full = ["serde_json", "serde_rmp", "render_full", "web_test"]
 

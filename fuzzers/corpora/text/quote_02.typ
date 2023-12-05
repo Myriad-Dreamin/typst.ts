@@ -4,6 +4,7 @@
 
 // Spacing with other blocks
 #set quote(block: true)
+#set text(8pt)
 
 #lorem(10)
 #quote(lorem(10))

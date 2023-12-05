@@ -4,9 +4,6 @@ pub mod canvas;
 #[cfg(feature = "render_pdf")]
 pub mod pdf;
 
-#[cfg(feature = "render_raster")]
-pub mod raster;
-
 #[cfg(feature = "render_svg")]
 pub mod svg;
 
@@ -34,27 +31,3 @@ pub mod canvas_stub {
 }
 #[cfg(not(feature = "render_canvas"))]
 pub use canvas_stub::*;
-
-#[cfg(not(feature = "render_raster"))]
-pub mod raster_stub {
-    #![allow(dead_code)]
-    #![allow(unused_imports)]
-
-    use typst_ts_core::error::prelude::*;
-    use wasm_bindgen::prelude::*;
-
-    use crate::{RenderPageImageOptions, RenderSession, TypstRenderer};
-
-    #[wasm_bindgen]
-    impl TypstRenderer {
-        pub fn render_page(
-            &mut self,
-            _session: &RenderSession,
-            _options: Option<RenderPageImageOptions>,
-        ) -> ZResult<JsValue> {
-            Err(error_once!("Renderer.RasterFeatureNotEnabled"))
-        }
-    }
-}
-#[cfg(not(feature = "render_raster"))]
-pub use raster_stub::*;

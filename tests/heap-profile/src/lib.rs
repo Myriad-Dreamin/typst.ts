@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use typst::doc::Document;
+use typst::model::Document;
 use typst_ts_compiler::{
     service::{CompileDriver, CompileExporter, Compiler},
     ShadowApi, TypstSystemWorld,

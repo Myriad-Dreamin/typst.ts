@@ -7,9 +7,9 @@ use std::{
 use crate::{vfs::notify::FilesystemEvent, ShadowApi};
 use typst::{
     diag::{At, FileResult, Hint, SourceDiagnostic, SourceResult},
-    doc::Document,
     eval::Tracer,
-    model::Content,
+    foundations::Content,
+    model::Document,
     syntax::Span,
     World,
 };

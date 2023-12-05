@@ -21,6 +21,4 @@ siphasher.workspace = true
 
 [features]
 experimental-ligature = ["typst-ts-core/experimental-ligature"]
-rkyv = ["typst-ts-core/rkyv"]
-flat-vector = ["rkyv", "typst-ts-core/flat-vector"]
-default = ["flat-vector"]
+default = []

@@ -1,11 +1,14 @@
-use typst::doc::Document;
-use typst_ts_core::vector::{
-    flat_ir::{
-        FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, ModuleBuilder, ModuleMetadata,
-        MultiSvgDocument, Page,
+use typst::model::Document;
+use typst_ts_core::{
+    vector::{
+        flat_ir::{
+            FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, ModuleBuilder, ModuleMetadata,
+            MultiSvgDocument, Page,
+        },
+        ir::Abs,
+        LowerBuilder,
     },
-    ir::Abs,
-    LowerBuilder,
+    TakeAs,
 };
 
 #[derive(Default)]
@@ -33,8 +36,11 @@ impl DynamicLayoutSvgExporter {
             })
             .collect::<Vec<_>>();
 
-        for ext in t.extra_items.into_values() {
-            self.builder.build(ext);
+        // todo: merge lower and builder, avoid hacking
+        for (fg, ext) in t.extra_items {
+            let data_fg = self.builder.build(ext.take());
+            let item = self.builder.items.get(&data_fg).unwrap();
+            self.builder.items.insert(fg, item.clone());
         }
 
         // log::trace!("svg dynamic layout render time: {:?}",

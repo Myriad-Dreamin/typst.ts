@@ -6,7 +6,7 @@ use std::{
 };
 
 use comemo::Prehashed;
-use typst::font::Font;
+use typst::text::Font;
 
 use crate::{
     hash::{Fingerprint, FingerprintBuilder},
@@ -18,8 +18,8 @@ use crate::{
 };
 
 use super::{
-    FlatSvgItem, FlatTextItem, FlatTextItemContent, FontPack, GlyphPack, GroupRef, ItemPack,
-    LayoutRegion, SourceMappingNode, TransformedRef,
+    FlatPatternItem, FlatSvgItem, FlatTextItem, FlatTextItemContent, FontPack, GlyphPack, GroupRef,
+    ItemPack, LayoutRegion, SourceMappingNode, TransformedRef,
 };
 
 pub type ItemMap = BTreeMap<Fingerprint, FlatSvgItem>;
@@ -223,6 +223,7 @@ impl ModuleBuilder {
             | FlatSvgItem::Image(_)
             | FlatSvgItem::Path(_)
             | FlatSvgItem::Gradient(_)
+            | FlatSvgItem::Pattern(_)
             | FlatSvgItem::ContentHint(_) => {
                 self.insert(*f, Cow::Borrowed(item));
             }
@@ -318,6 +319,15 @@ impl<const ENABLE_REF_CNT: bool> ModuleBuilderImpl<ENABLE_REF_CNT> {
                 FlatSvgItem::Path(path)
             }
             SvgItem::Gradient(g) => FlatSvgItem::Gradient(g),
+            SvgItem::Pattern(g) => {
+                let frame = self.build(g.frame.take());
+                FlatSvgItem::Pattern(Arc::new(FlatPatternItem {
+                    frame,
+                    size: g.size,
+                    spacing: g.spacing,
+                    relative_to_self: g.relative_to_self,
+                }))
+            }
             SvgItem::Link(link) => FlatSvgItem::Link(link),
             SvgItem::Text(text) => {
                 let font = self.build_font(&text.font);

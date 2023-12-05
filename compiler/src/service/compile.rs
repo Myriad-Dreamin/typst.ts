@@ -10,8 +10,7 @@ use std::{
 use serde::Serialize;
 use tokio::sync::{mpsc, oneshot};
 use typst::{
-    doc::{Frame, FrameItem, Position},
-    geom::Point,
+    layout::{Frame, FrameItem, Point, Position},
     syntax::{LinkedNode, Source, Span, SyntaxKind, VirtualPath},
     World,
 };

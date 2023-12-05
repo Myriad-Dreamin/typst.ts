@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use js_sys::ArrayBuffer;
-use typst::font::{
+use typst::text::{
     Coverage, Font, FontBook, FontFlags, FontInfo, FontStretch, FontStyle, FontVariant, FontWeight,
 };
 use wasm_bindgen::prelude::*;
@@ -250,7 +250,7 @@ impl FontBuilder {
     fn font_web_to_typst(
         &self,
         val: &JsValue,
-    ) -> ZResult<(JsValue, js_sys::Function, Vec<typst::font::FontInfo>)> {
+    ) -> ZResult<(JsValue, js_sys::Function, Vec<typst::text::FontInfo>)> {
         let mut postscript_name = String::new();
         let mut family = String::new();
         let mut full_name = String::new();

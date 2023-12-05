@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use tiny_skia as sk;
 use typst::{
-    font::FontInfo,
-    geom::{Axis, Dir},
+    layout::{Axis, Dir},
+    text::FontInfo,
 };
 
 use typst_ts_core::{
@@ -279,7 +279,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
     }
 
     // todo: unify with append_flat_text_font
-    fn append_text_font(&mut self, font: &typst::font::Font) -> u32 {
+    fn append_text_font(&mut self, font: &typst::text::Font) -> u32 {
         if let Some(&font) = self.font_map.get(font.info()) {
             return font;
         }

@@ -25,15 +25,15 @@ use crate::{
     ExportFeature, GlyphProvider, SvgGlyphBuilder,
 };
 
-use super::HasGradient;
+use super::HasStatefulFill;
 
 /// Maps the style name to the style definition.
 /// See [`StyleNs`].
 pub(crate) type StyleDefMap = HashMap<(StyleNs, ImmutStr), String>;
-/// Maps the clip path's data to the clip path id.
+/// Maps the clip path id to clip path's data.
 pub(crate) type ClipPathMap = HashMap<ImmutStr, Fingerprint>;
-/// Maps the clip path's data to the clip path id.
-pub(crate) type GradientMap = HashMap<ImmutStr, (u8, Fingerprint, Option<bool>)>;
+/// Maps paint fill id to the paint fill's data.
+pub(crate) type PaintFillMap = HashMap<ImmutStr, (u8, Fingerprint, Option<bool>)>;
 
 /// The task context for rendering svg items
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
@@ -43,7 +43,6 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     /// See [`GlyphProvider`].
     pub glyph_provider: GlyphProvider,
 
-    #[cfg(feature = "flat-vector")]
     pub module: &'m Module,
 
     /// A fingerprint builder for generating unique id.
@@ -57,8 +56,10 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     pub(crate) style_defs: &'t mut StyleDefMap,
     /// Stores the clip paths used in the document.
     pub(crate) clip_paths: &'t mut ClipPathMap,
-    /// Stores the clip paths used in the document.
-    pub(crate) gradients: &'t mut GradientMap,
+    /// Stores the graidents used in the document.
+    pub(crate) gradients: &'t mut PaintFillMap,
+    /// Stores the patterns used in the document.
+    pub(crate) patterns: &'t mut PaintFillMap,
 
     /// See [`ExportFeature`].
     pub should_render_text_element: bool,
@@ -68,8 +69,6 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     pub use_stable_glyph_id: bool,
 
     pub _feat_phantom: std::marker::PhantomData<Feat>,
-    #[cfg(not(feature = "flat-vector"))]
-    pub _m_phantom: std::marker::PhantomData<&'m ()>,
 }
 
 impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Feat> {
@@ -112,7 +111,7 @@ impl<'m, 't, Feat: ExportFeature> GlyphIndice<'m> for RenderContext<'m, 't, Feat
 }
 
 impl<'m, 't, Feat: ExportFeature> BuildGlyph for RenderContext<'m, 't, Feat> {
-    fn build_font(&mut self, font: &typst::font::Font) -> FontRef {
+    fn build_font(&mut self, font: &typst::text::Font) -> FontRef {
         self.glyph_defs.build_font(font)
     }
 
@@ -155,7 +154,7 @@ impl<'m, 't, Feat: ExportFeature> BuildClipPath for RenderContext<'m, 't, Feat> 
 }
 
 #[comemo::memoize]
-fn has_gradient<'m, 't, Feat: ExportFeature>(
+fn has_stateful_fill<'m, 't, Feat: ExportFeature>(
     ctx: &MemorizeFree<RenderContext<'m, 't, Feat>>,
     x: &Fingerprint,
 ) -> bool {
@@ -166,10 +165,10 @@ fn has_gradient<'m, 't, Feat: ExportFeature>(
 
     use FlatSvgItem::*;
     match item {
-        Gradient(..) => true,
+        Gradient(..) | Pattern(..) => true,
         Image(..) | Link(..) | ContentHint(..) | None => false,
-        Item(t) => has_gradient(ctx, &t.1),
-        Group(g, ..) => g.0.iter().any(|(_, x)| has_gradient(ctx, x)),
+        Item(t) => has_stateful_fill(ctx, &t.1),
+        Group(g, ..) => g.0.iter().any(|(_, x)| has_stateful_fill(ctx, x)),
         Path(p) => p.styles.iter().any(|s| match s {
             PathStyle::Fill(color) | PathStyle::Stroke(color) => color.starts_with('@'),
             _ => false,
@@ -178,42 +177,66 @@ fn has_gradient<'m, 't, Feat: ExportFeature>(
     }
 }
 
-impl<'m, 't, Feat: ExportFeature> HasGradient for RenderContext<'m, 't, Feat> {
-    fn has_gradient(&self, a: &Fingerprint) -> bool {
-        has_gradient(&MemorizeFree(self), a)
+impl<'m, 't, Feat: ExportFeature> HasStatefulFill for RenderContext<'m, 't, Feat> {
+    fn has_stateful_fill(&self, a: &Fingerprint) -> bool {
+        has_stateful_fill(&MemorizeFree(self), a)
     }
 }
 
 impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
     fn notify_paint(&mut self, url_ref: ImmutStr) -> (u8, Fingerprint, Option<bool>) {
-        if let Some(f) = self.gradients.get(&url_ref) {
+        let mp = if url_ref.starts_with("@g") {
+            &mut self.gradients
+        } else if url_ref.starts_with("@p") {
+            &mut self.patterns
+        } else {
+            panic!("Invalid url reference: {}", url_ref);
+        };
+
+        if let Some(f) = mp.get(&url_ref) {
             return *f;
         }
 
         // url(#ghash)
-        if !url_ref.starts_with("@g") {
+        if url_ref.starts_with("@g") {
+            let id = url_ref.trim_start_matches("@g");
+            let id = Fingerprint::try_from_str(id).unwrap();
+
+            let (kind, relative_to_self) = match self.get_item(&id) {
+                Some(FlatSvgItem::Gradient(g)) => (&g.kind, g.relative_to_self),
+                _ => {
+                    // #[cfg(debug_assertions)]
+                    panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
+                }
+            };
+
+            let kind = match kind {
+                ir::GradientKind::Linear(..) => b'l',
+                ir::GradientKind::Radial(..) => b'r',
+                ir::GradientKind::Conic(..) => b'p',
+            };
+
+            self.gradients.insert(url_ref, (kind, id, relative_to_self));
+            (kind, id, relative_to_self)
+        } else if url_ref.starts_with("@p") {
+            let id = url_ref.trim_start_matches("@p");
+            let id = Fingerprint::try_from_str(id).unwrap();
+
+            let relative_to_self = match self.get_item(&id) {
+                Some(FlatSvgItem::Pattern(g)) => g.relative_to_self,
+                _ => {
+                    // #[cfg(debug_assertions)]
+                    panic!("Invalid pattern reference: {}", id.as_svg_id("p"));
+                }
+            };
+
+            let kind = b'p';
+
+            self.patterns.insert(url_ref, (kind, id, relative_to_self));
+            (kind, id, relative_to_self)
+        } else {
             panic!("Invalid url reference: {}", url_ref);
         }
-
-        let id = url_ref.trim_start_matches("@g");
-        let id = Fingerprint::try_from_str(id).unwrap();
-
-        let (kind, relative_to_self) = match self.get_item(&id) {
-            Some(FlatSvgItem::Gradient(g)) => (&g.kind, g.relative_to_self),
-            _ => {
-                // #[cfg(debug_assertions)]
-                panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
-            }
-        };
-
-        let kind = match kind {
-            ir::GradientKind::Linear(..) => b'l',
-            ir::GradientKind::Radial(..) => b'r',
-            ir::GradientKind::Conic(..) => b'p',
-        };
-
-        self.gradients.insert(url_ref, (kind, id, relative_to_self));
-        (kind, id, relative_to_self)
     }
 }
 

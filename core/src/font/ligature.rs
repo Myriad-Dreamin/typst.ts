@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use ttf_parser::gsub::{Ligature, SubstitutionSubtable};
 use ttf_parser::GlyphId;
-use typst::font::Font;
+use typst::text::Font;
 
 use crate::ImmutStr;
 

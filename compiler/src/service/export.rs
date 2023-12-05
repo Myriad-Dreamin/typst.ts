@@ -16,7 +16,7 @@ use super::{
 };
 
 pub trait WorldExporter {
-    fn export(&mut self, output: Arc<typst::doc::Document>) -> SourceResult<()>;
+    fn export(&mut self, output: Arc<typst::model::Document>) -> SourceResult<()>;
 }
 
 pub struct CompileExporter<C: Compiler> {
@@ -46,7 +46,7 @@ impl<C: Compiler> CompileExporter<C> {
 
 impl<C: Compiler> WorldExporter for CompileExporter<C> {
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
-    fn export(&mut self, output: Arc<typst::doc::Document>) -> SourceResult<()> {
+    fn export(&mut self, output: Arc<typst::model::Document>) -> SourceResult<()> {
         self.exporter.export(self.compiler.world(), output)
     }
 }
@@ -62,7 +62,7 @@ impl<C: Compiler> CompileMiddleware for CompileExporter<C> {
         &mut self.compiler
     }
 
-    fn wrap_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<typst::doc::Document>> {
+    fn wrap_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<typst::model::Document>> {
         let doc = self.inner_mut().compile(env)?;
         self.export(doc.clone())?;
 
@@ -141,7 +141,7 @@ where
 
 impl<C: Compiler + WorldExporter> WorldExporter for CompileReporter<C> {
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
-    fn export(&mut self, output: Arc<typst::doc::Document>) -> SourceResult<()> {
+    fn export(&mut self, output: Arc<typst::model::Document>) -> SourceResult<()> {
         self.compiler.export(output)
     }
 }
@@ -157,7 +157,7 @@ impl<C: Compiler> CompileMiddleware for CompileReporter<C> {
         &mut self.compiler
     }
 
-    fn wrap_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<typst::doc::Document>> {
+    fn wrap_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<typst::model::Document>> {
         let start = crate::Time::now();
         let id = self.main_id();
         if WITH_COMPILING_STATUS_FEATURE.retrieve(&env.features) {
@@ -207,7 +207,7 @@ impl<C: Compiler> CompileMiddleware for CompileReporter<C> {
     }
 }
 
-pub type LayoutWidths = Vec<typst::geom::Abs>;
+pub type LayoutWidths = Vec<typst::layout::Abs>;
 
 pub type PostProcessLayoutFn = Box<
     dyn Fn(&mut ModuleBuilder, Arc<TypstDocument>, LayoutRegionNode) -> LayoutRegionNode
@@ -249,8 +249,9 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
             enable_dynamic_layout: false,
             extension: "multi.sir.in".to_owned(),
             layout_widths: LayoutWidths::from_iter(
-                (0..40)
-                    .map(|i| typst::geom::Abs::pt(750.0) - typst::geom::Abs::pt(i as f64 * 10.0)),
+                (0..40).map(|i| {
+                    typst::layout::Abs::pt(750.0) - typst::layout::Abs::pt(i as f64 * 10.0)
+                }),
             ),
             post_process_layout: None,
             post_process_layouts: None,
@@ -309,7 +310,7 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
 #[cfg(feature = "dynamic-layout")]
 impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
-    fn export(&mut self, _output: Arc<typst::doc::Document>) -> SourceResult<()> {
+    fn export(&mut self, _output: Arc<typst::model::Document>) -> SourceResult<()> {
         use std::str::FromStr;
 
         use typst::{

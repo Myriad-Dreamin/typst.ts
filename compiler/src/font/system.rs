@@ -9,7 +9,7 @@ use fontdb::Database;
 use sha2::{Digest, Sha256};
 use typst::{
     diag::{FileError, FileResult},
-    font::{FontBook, FontInfo},
+    text::{FontBook, FontInfo},
 };
 
 use typst_ts_core::{
