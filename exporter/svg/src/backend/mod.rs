@@ -270,6 +270,7 @@ impl SvgTextBuilder {
         };
 
         self.content.push(SvgText::Plain(format!(
+            // r##"<typst-glyph x="{}" href="#{}"/>"##,
             r##"<use x="{}" href="#{}"/>"##,
             adjusted_offset, glyph_id
         )));

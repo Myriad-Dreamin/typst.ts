@@ -22,16 +22,11 @@ const ignoredEvent = (function () {
   };
 })();
 
-const overLappingSimp = function (a: Element, b: Element) {
-  var aRect = a.getBoundingClientRect();
-  var bRect = b.getBoundingClientRect();
-
-  return !(
-    aRect.right < bRect.left ||
-    aRect.left > bRect.right ||
-    aRect.bottom < bRect.top ||
-    aRect.top > bRect.bottom
-  );
+const overLappingSimp = function (
+  a: DOMRect,
+  b: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>,
+) {
+  return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
 };
 
 const overLapping = function (a: Element, b: Element) {
@@ -39,7 +34,7 @@ const overLapping = function (a: Element, b: Element) {
   var bRect = b.getBoundingClientRect();
 
   return (
-    overLappingSimp(a, b) &&
+    overLappingSimp(aRect, bRect) &&
     /// determine overlapping by area
     (Math.abs(aRect.left - bRect.left) + Math.abs(aRect.right - bRect.right)) /
       Math.max(aRect.width, bRect.width) <
@@ -531,6 +526,161 @@ interface TextFlowCache {
 }
 
 window.typstProcessSvg = function (docRoot: SVGElement, options?: ProcessOptions) {
+  if (false) {
+    console.log('typst-text', docRoot.getElementsByClassName('typst-text').length);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+    Promise.all(
+      Array.from(docRoot.getElementsByClassName('typst-text')).map(async g => {
+        console.log('typst-text');
+        const glyphs = Array.from(g.children).filter(e => e.tagName === 'typst-glyph');
+        if (glyphs.length === 0) {
+          return;
+        }
+        const firstGlyph = glyphs[0];
+
+        const width =
+          Math.max(...glyphs.map(e => Number.parseFloat(e.getAttribute('x') || '0'))) + 2048;
+        canvas.width = width / 32;
+        canvas.height = 2048 / 32;
+        ctx.clearRect(0, 0, width / 32, 2048 / 32);
+        ctx.scale(1 / 32, 1 / 32);
+        ctx.translate(0, 2048 - 1440);
+        let prevX = 0;
+        for (const glyph of glyphs) {
+          const x = Number.parseFloat(glyph.getAttribute('x') || '0');
+          const href = glyph.getAttribute('href')!;
+          const e = document.getElementById(href.slice(1)) as Element | null;
+          if (e) {
+            // translate x
+            ctx.translate(x - prevX, 0);
+            prevX = x;
+            if (e.tagName === 'path') {
+              const path = new Path2D(e.getAttribute('d')!);
+              ctx.fillStyle = 'black';
+              ctx.fill(path);
+            } else {
+              ctx.drawImage(e as SVGImageElement, 0, 0);
+            }
+          }
+        }
+
+        const imageUrl = canvas.toDataURL();
+
+        // const generatedFrozenSvg = [];
+        // const generatedFrozenSvgDefs = [];
+        // const generatedFrozenSvgUses = [];
+        const svgBBox = g.getBoundingClientRect();
+
+        // generatedFrozenSvg.push(
+        //   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${
+        //     114.44 * 16 - 2048
+        //   } ${width} ${2048}" width="${width}px" height="${2048}px">`,
+        // );
+        // for (const glyph of glyphs) {
+        //   const x = Number.parseFloat(glyph.getAttribute('x') || '0');
+        //   const href = glyph.getAttribute('href')!;
+        //   const e = document.getElementById(href.slice(1));
+        //   if (e) {
+        //     generatedFrozenSvgDefs.push(e!.outerHTML);
+        //   }
+        //   generatedFrozenSvgUses.push(`<use href="#${href.slice(1)}" x="${x}" />`);
+        // }
+        // generatedFrozenSvg.push(
+        //   '<defs>',
+        //   ...generatedFrozenSvgDefs,
+        //   '</defs>',
+        //   ...generatedFrozenSvgUses,
+        //   '</svg>',
+        // );
+        // const svgText = generatedFrozenSvg.join('');
+
+        // out of window
+        // if (
+        //   (svgBBox.right < 0 || svgBBox.right > window.innerWidth) &&
+        //   (svgBBox.bottom < 0 || svgBBox.bottom > window.innerHeight) &&
+        //   (svgBBox.left < 0 || svgBBox.left > window.innerWidth) &&
+        //   (svgBBox.top < 0 || svgBBox.top > window.innerHeight)
+        // ) {
+        //   firstGlyph.remove();
+        //   return;
+        // }
+        // the above check is not accurate, we need to consider intersection
+        // if (
+        //   !overLappingSimp(svgBBox, {
+        //     left: 0,
+        //     top: 0,
+        //     right: window.innerWidth,
+        //     bottom: window.innerHeight,
+        //   })
+        // ) {
+        //   for (const glyph of glyphs) {
+        //     glyph.remove();
+        //   }
+        //   return;
+        // }
+
+        // console.log('typst-text', g, firstGlyph.parentElement);
+        // console.log(svgBBox, window.innerWidth, window.innerHeight);
+        // const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+        // const imageUrl = URL.createObjectURL(svgBlob);
+
+        // const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        // img.setAttribute('preserveAspectRatio', 'none');
+        // img.setAttribute('href', imageUrl);
+        // img.setAttribute('x', '0');
+        // img.setAttribute('width', width.toString());
+        // img.setAttribute('height', '2048');
+        // firstGlyph.replaceWith(img);
+        // g.prepend(img);
+
+        // const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+        // img.setAttribute('preserveAspectRatio', 'none');
+        // img.setAttribute('href', imageUrl);
+        // img.setAttribute('x', '0');
+        // img.setAttribute('width', width.toString());
+        // img.setAttribute('height', '2048');
+        // firstGlyph.replaceWith(img);
+        // g.prepend(img);
+
+        const div = document.createElement('div');
+        div.style.width = '100%';
+        div.style.height = '100%';
+        div.style.background =
+          'conic-gradient(from 0.5turn at 50% 25%, red, orange, yellow, green, blue)';
+        let fill = `url(${imageUrl})`;
+        div.style.maskImage = fill;
+        // webkit
+        // div.style.webkitMaskImage = fill;
+        div.style.setProperty('mask-image', fill);
+        div.style.setProperty('-webkit-mask-image', fill);
+        // console.log(fill);
+        // mask size
+        div.style.setProperty('mask-size', '100% 100%');
+        div.style.setProperty('-webkit-mask-size', '100% 100%');
+        // const htmlImage = new Image();
+        // htmlImage.src = imageUrl;
+        // htmlImage.setAttribute('preserveAspectRatio', 'none');
+        // htmlImage.setAttribute('width', '100%');
+        // htmlImage.setAttribute('height', '100%');
+        // document.body.prepend(htmlImage);
+        const foreignObj = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+        foreignObj.setAttribute('width', width.toString());
+        foreignObj.setAttribute('height', '2048');
+        foreignObj.setAttribute('x', '0');
+        foreignObj.setAttribute('y', '0');
+        // foreignObj.append(htmlImage);
+        foreignObj.append(div);
+        g.prepend(foreignObj);
+
+        // document.body.prepend(img.cloneNode(true));
+        for (const glyph of glyphs) {
+          glyph.remove();
+        }
+      }),
+    );
+  }
+
   let textFlowCache: TextFlowCache = {
     flow: [],
   };
@@ -914,7 +1064,7 @@ function triggerRipple(
 
 var scriptTag = document.currentScript;
 if (scriptTag) {
-  // console.log('new svg util updated 30  ');
+  console.log('new svg util updated 37  ', performance.now());
   const docRoot = findAncestor(scriptTag, 'typst-doc');
   if (docRoot) {
     window.typstProcessSvg(docRoot);
