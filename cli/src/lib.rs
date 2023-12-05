@@ -12,9 +12,13 @@ pub mod tracing;
 pub mod utils;
 pub mod version;
 
-use clap::{ArgAction, Args, Command, Parser, Subcommand, ValueEnum};
+use clap::{Args, Command, Parser, Subcommand, ValueEnum};
 use typst_ts_core::build_info::VERSION;
 use version::VersionFormat;
+
+/// The character typically used to separate path components
+/// in environment variables.
+const ENV_PATH_SEP: char = if cfg!(windows) { ';' } else { ':' };
 
 #[derive(Debug, Parser)]
 #[clap(name = "typst-ts-cli", version = VERSION)]
@@ -103,7 +107,7 @@ pub struct FontArgs {
         long = "font-path",
         env = "TYPST_FONT_PATHS", 
         value_name = "DIR",
-        action = ArgAction::Append,
+        value_delimiter = ENV_PATH_SEP,
     )]
     pub paths: Vec<PathBuf>,
 }
