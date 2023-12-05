@@ -1,10 +1,8 @@
-import * as _1 from '@myriaddreamin/typst-ts-renderer';
-
 import {
   createTypstCompiler,
   createTypstRenderer,
   FetchPackageRegistry,
-} from '@myriaddreamin/typst.ts';
+} from '@myriaddreamin/typst.ts/dist/cjs/index.cjs';
 import { MemoryAccessModel } from '@myriaddreamin/typst.ts/dist/cjs/fs/memory.cjs';
 import { NodeFetchPackageRegistry } from '@myriaddreamin/typst.ts/dist/cjs/fs/package.node.cjs';
 import {
