@@ -226,7 +226,7 @@ impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
                 Some(FlatSvgItem::Pattern(g)) => g.relative_to_self,
                 _ => {
                     // #[cfg(debug_assertions)]
-                    panic!("Invalid pattern reference: {}", id.as_svg_id("g"));
+                    panic!("Invalid pattern reference: {}", id.as_svg_id("p"));
                 }
             };
 

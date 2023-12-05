@@ -143,6 +143,10 @@ impl RenderState {
     }
 
     pub fn inv_transform(&self) -> Transform {
+        self.transform.invert().unwrap()
+    }
+
+    pub fn body_inv_transform(&self) -> Transform {
         Transform::from_scale(self.size.x, self.size.y)
             .post_concat(self.transform.invert().unwrap())
     }

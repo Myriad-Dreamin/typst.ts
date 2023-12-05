@@ -427,7 +427,7 @@ impl<'a> LowerBuilder<'a> {
             Paint::Pattern(e) => {
                 let (g, fingerprint) = Self::lower_pattern(introspector, e, cell);
                 *cell = cell.insert(fingerprint, Arc::new(ir::SvgItem::Pattern(g)));
-                format!("@{}", fingerprint.as_svg_id("e")).into()
+                format!("@{}", fingerprint.as_svg_id("p")).into()
             }
             Paint::Gradient(g) => {
                 let (g, fingerprint) = Self::lower_graident(g);

@@ -13,6 +13,7 @@ use typst_ts_core::{
         vm::RenderState,
         LowerBuilder,
     },
+    TakeAs,
 };
 
 use crate::{
@@ -83,6 +84,14 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
                 }
             })
             .collect::<Vec<_>>();
+
+        // todo: avoid hacking
+        for (fg, ext) in lower_builder.extra_items {
+            let data_fg = builder.build(ext.take());
+            let item = builder.items.get(&data_fg).unwrap();
+            builder.items.insert(fg, item.clone());
+        }
+
         let module = builder.finalize();
         SvgDocument { pages, module }
     }

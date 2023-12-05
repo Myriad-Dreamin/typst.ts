@@ -403,9 +403,18 @@ impl<
             let text_scale = upem.0 / shape.size.0;
             let text_scale = Transform::from_scale(Scalar(text_scale), Scalar(-text_scale));
 
-            let mat = if relative_to_self.unwrap_or(false) {
+            let relative_to_self = relative_to_self.unwrap_or(false);
+            let is_gradient = color.starts_with("@g");
+            let mat = if is_gradient {
+                if relative_to_self {
+                    text_scale
+                } else {
+                    state.body_inv_transform().post_concat(text_scale)
+                }
+            } else if relative_to_self {
                 text_scale
             } else {
+                // println!("state: {:?}", state.inv_transform());
                 state.inv_transform().post_concat(text_scale)
             };
             let mat = mat.to_css();
@@ -478,17 +487,26 @@ impl<
         for s in &path.styles {
             match s {
                 PathStyle::Fill(color) | PathStyle::Stroke(color) => {
-                    // todo: whether we need to distinguish fill and stroke here?
-                    let is_fill = matches!(s, PathStyle::Fill(..));
-                    if color.starts_with("@g") {
+                    if color.starts_with('@') {
+                        // todo: whether we need to distinguish fill and stroke here?
+                        let is_fill = matches!(s, PathStyle::Fill(..));
+                        let is_gradient = color.starts_with("@g");
+
                         // todo
                         let (kind, cano_ref, relative_to_self) = ctx.notify_paint(color.clone());
 
                         let relative_to_self = relative_to_self.unwrap_or(true);
 
-                        let transform_matrix = if relative_to_self {
-                            let self_bbox = path.size.unwrap();
-                            Transform::from_scale(self_bbox.x, self_bbox.y)
+                        let transform_matrix = if is_gradient {
+                            if relative_to_self {
+                                let self_bbox = path.size.unwrap();
+                                Transform::from_scale(self_bbox.x, self_bbox.y)
+                            } else {
+                                // println!("state: {:?}", state.inv_transform());
+                                state.body_inv_transform()
+                            }
+                        } else if relative_to_self {
+                            Transform::identity()
                         } else {
                             // println!("state: {:?}", state.inv_transform());
                             state.inv_transform()
