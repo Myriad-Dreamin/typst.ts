@@ -6,9 +6,8 @@
 // @doc (event.timeStamp): http://api.jquery.com/event.timeStamp/
 // @bug (event.currentTime): https://bugzilla.mozilla.org/show_bug.cgi?id=238041
 const ignoredEvent = (function () {
-  var last: Record<string, number> = {},
-    diff,
-    time;
+  const last: Record<string, number> = {};
+  let diff, time;
 
   return function (callback: any, delay: any, id: string) {
     time = new Date().getTime();
@@ -22,67 +21,46 @@ const ignoredEvent = (function () {
   };
 })();
 
-const overLappingSimp = function (
-  a: DOMRect,
-  b: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>,
-) {
+/// Filter HTMLCollection by fn
+const fc = <T extends Element = Element>(
+  collection: HTMLCollection,
+  fn: (elem: T) => boolean,
+): T[] => {
+  const res: T[] = [];
+  for (let i = 0; i < collection.length; i++) {
+    const elem = collection[i] as T;
+    if (fn(elem)) {
+      res.push(elem);
+    }
+  }
+  return res;
+};
+
+/// Check whether two dom rects are overlapping
+const overLappingDom = (a: DOMRect, b: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>) => {
   return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
 };
 
-const overLapping = function (a: Element, b: Element) {
-  var aRect = a.getBoundingClientRect();
-  var bRect = b.getBoundingClientRect();
+/// Check whether two elements are almost overlapping
+const almostOverLapping = (a: Element, b: Element) => {
+  const aRect = a.getBoundingClientRect();
+  const bRect = b.getBoundingClientRect();
 
   return (
-    overLappingSimp(aRect, bRect) &&
+    overLappingDom(aRect, bRect) &&
     /// determine overlapping by area
-    (Math.abs(aRect.left - bRect.left) + Math.abs(aRect.right - bRect.right)) /
-      Math.max(aRect.width, bRect.width) <
-      0.5 &&
-    (Math.abs(aRect.bottom - bRect.bottom) + Math.abs(aRect.top - bRect.top)) /
-      Math.max(aRect.height, bRect.height) <
-      0.5
+    Math.abs(aRect.left - bRect.left) + Math.abs(aRect.right - bRect.right) <
+      0.5 * Math.max(aRect.width, bRect.width) &&
+    Math.abs(aRect.bottom - bRect.bottom) + Math.abs(aRect.top - bRect.top) <
+      0.5 * Math.max(aRect.height, bRect.height)
   );
-};
-
-var searchIntersections = function (root: Element) {
-  let parent = undefined,
-    current: Element | null = root;
-  while (current) {
-    if (current.classList.contains('typst-group')) {
-      parent = current;
-      break;
-    }
-    current = current.parentElement;
-  }
-  if (!current) {
-    console.log('no group found');
-    return;
-  }
-  const group = parent!;
-  const children = group.children;
-  const childCount = children.length;
-
-  const res = [];
-
-  for (let i = 0; i < childCount; i++) {
-    const child = children[i];
-    if (!overLapping(child, root)) {
-      continue;
-    }
-    res.push(child);
-  }
-
-  return res;
 };
 
 interface ElementState {
   target?: Element & { relatedElements?: Element[] };
 }
 
-const gr = (window.typstGetRelatedElements = function (
-  elem: Element & { relatedElements?: Element[] },
-) {
+const gr = (window.typstGetRelatedElements = (elem: Element & { relatedElements?: Element[] }) => {
   let relatedElements = elem.relatedElements;
   if (relatedElements === undefined || relatedElements === null) {
     relatedElements = elem.relatedElements = searchIntersections(elem);
@@ -90,57 +68,23 @@ const gr = (window.typstGetRelatedElements = function (
   return relatedElements;
 });
 
-const getRelatedElements = function (event: Event & ElementState) {
-  return gr(event.target);
-};
+/// Get all related elements of an event target (must be an element)
+const getRelatedElements = (event: Event & ElementState) => gr(event.target);
 
-var linkmove = function (event: Event & ElementState) {
-  ignoredEvent(
-    function () {
-      const elements = getRelatedElements(event);
-      if (elements === undefined || elements === null) {
-        return;
-      }
-      for (var i = 0; i < elements.length; i++) {
-        var elem = elements[i];
-        if (elem.classList.contains('hover')) {
-          continue;
-        }
-        elem.classList.add('hover');
-      }
-    },
-    200,
-    'mouse-move',
-  );
-};
-
-var linkleave = function (event: Event & ElementState) {
-  const elements = getRelatedElements(event);
-  if (elements === undefined || elements === null) {
-    return;
-  }
-  for (var i = 0; i < elements.length; i++) {
-    var elem = elements[i];
-    if (!elem.classList.contains('hover')) {
-      continue;
-    }
-    elem.classList.remove('hover');
-  }
-};
-
-function findAncestor(el: Element, cls: string) {
+const findAncestor = (el: Element, cls: string) => {
   while (el && !el.classList.contains(cls)) el = el.parentElement!;
   return el;
-}
+};
 
 function findGlyphListForText(n: Element) {
-  const np = findAncestor(n, 'typst-text')!;
-  if (!np) {
-    // console.log('no typst-text found...');
-    return undefined;
-  }
-  return Array.from(np.children).filter(e => e.tagName === 'use');
+  const textEl = findAncestor(n, 'typst-text')!;
+  return textEl && fc(textEl.children, e => e.tagName === 'use');
 }
+
+const searchIntersections = function (root: Element) {
+  const groupEl = findAncestor(root, 'typst-group');
+  return groupEl && fc(groupEl.children, e => almostOverLapping(e, root));
+};
 
 function nextNode(node: Node) {
   if (node.hasChildNodes()) {
@@ -515,6 +459,14 @@ function createPseudoText(cls: string) {
   return foreignObj;
 }
 
+/// Process mouse move event on pseudo-link elements
+const linkmove = (event: Event & ElementState) =>
+  ignoredEvent(() => gr(event.target)?.forEach(e => e.classList.add('hover')), 200, 'mouse-move');
+
+/// Process mouse leave event on pseudo-link elements
+const linkleave = (event: Event & ElementState) =>
+  gr(event.target)?.forEach(e => e.classList.remove('hover'));
+
 interface ProcessOptions {
   layoutText?: boolean;
 }
@@ -807,41 +759,18 @@ window.layoutText = function (svg: Element, textFlowCache: TextFlowCache) {
       d.setAttribute('data-typst-layout-checked', '1');
 
       if (d.style.fontSize) {
-        // scale:
-        // const fontSize = Number.parseFloat(d.style.fontSize.replace('px', ''));
-        // d.style.fontSize = `${fontSize}px`;
-
-        // d.style.fontSize = 'calc(' + d.style.fontSize + ' * var(--typst-font-scale))';
         const foreignObj = d.parentElement!;
-        // const innerText = d.innerText;
-        // const targetWidth = Number.parseFloat(foreignObj.getAttribute('width')!);
-        // const currentX = Number.parseFloat(foreignObj.getAttribute('x') || '0');
-        // const currentY = Number.parseFloat(foreignObj.getAttribute('y') || '0');
         const textContent = d.innerText;
 
-        // foreignObj
         // put search hint before foreignObj
         const hint = foreignObj.cloneNode(true) as Element;
-        // hint.innerHTML = '<span class="typst-search-hint">' + textContent + '</span>';
         const firstSpan = hint.firstElementChild!;
         if (firstSpan) {
           firstSpan.className = 'typst-search-hint';
         }
         foreignObj.parentElement!.insertBefore(hint, foreignObj);
 
-        // hint.setAttribute('width', '1');
-        // hint.setAttribute('height', '1');
-        // hint.setAttribute('x', foreignObj.getAttribute('x'));
-        // hint.setAttribute('y', foreignObj.getAttribute('y'));
-
         searchHints.push([d, textContent]);
-
-        const charLen = textContent.length;
-
-        // hint.setAttribute(
-        //   'width',
-        //   (Number.parseFloat(foreignObj.getAttribute('width')!) / charLen).toString(),
-        // );
 
         const glyphs = findGlyphListForText(d);
         if (!glyphs) {
@@ -863,24 +792,6 @@ window.layoutText = function (svg: Element, textFlowCache: TextFlowCache) {
         //   glyphAdvances,
         //   glyphLens,
         // );
-
-        // split chars by glyphLens
-        // const chars: string[] = [];
-        // let splitMe = textContent;
-        // for (let i = 0; i < glyphLens.length; i++) {
-        //   const len = glyphLens[i];
-        //   if (splitMe.length < len) {
-        //     splitMe = undefined!;
-        //     break;
-        //   }
-        //   const char = splitMe.slice(0, len);
-        //   chars.push(char);
-        //   splitMe = splitMe.slice(len);
-        // }
-        // if (splitMe === undefined || splitMe.length > 0) {
-        //   console.log('split failed', d, textContent, glyphLens);
-        //   continue;
-        // }
 
         let failed = false;
         const charContainers: HTMLSpanElement[] = [];
@@ -923,18 +834,7 @@ window.layoutText = function (svg: Element, textFlowCache: TextFlowCache) {
 
         d.innerHTML = '';
         d.append(...charContainers);
-
         // console.log(d);
-
-        // const scale = targetWidth / selfWidth;
-        // d.style.transform = `scaleX(${scale})`;
-        // foreignObj.setAttribute('width', selfWidth);
-        // foreignObj.setAttribute('x', currentX - (selfWidth - targetWidth) * 0.5);
-
-        // const currentY = Number.parseFloat(foreignObj.getAttribute('y')!) || 0;
-        // foreignObj.setAttribute('y', (currentY - 2500 / 16).toString());
-
-        // return;
       }
     }
 
