@@ -213,17 +213,10 @@ function adjsutTextSelection(docRoot: Element, textFlowCache: TextFlowCache) {
     const elem = pickElem(t);
     return elem?.classList?.contains('tsel') ? elem : undefined;
   };
-  const createSelBox = (selBox: Element, range: Range) => {
-    const div = document.createElement('div');
-    const b = range.getBoundingClientRect();
-    div.style.position = 'absolute';
-    div.style.float = 'left';
-    div.style.left = `${b.left + window.scrollX}px`;
-    div.style.top = `${b.top + window.scrollY}px`;
-    div.style.width = `${b.width}px`;
-    div.style.height = `${b.height}px`;
-    div.style.backgroundColor = '#7db9dea0';
-    selBox.appendChild(div);
+  const createSelBox = (b: Pick<DOMRect, 'left' | 'top' | 'width' | 'height'>) => {
+    return `<div style="position: absolute; float: left; left: ${b.left + window.scrollX}px; top: ${
+      b.top + window.scrollY
+    }px; width: ${b.width}px; height: ${b.height}px; background-color: #7db9dea0;"></div>`;
   };
   const clearSelBox = (selBox: Element | null) => {
     if (selBox) {
@@ -265,6 +258,7 @@ function adjsutTextSelection(docRoot: Element, textFlowCache: TextFlowCache) {
   function updateSelection(isTextFlow: false): void;
   function updateSelection(isTextFlow: true, event: MouseEvent): void;
   function updateSelection(isTextFlow: boolean, event?: MouseEvent) {
+    // const p0 = performance.now();
     const selection = window.getSelection();
 
     let selBox = document.getElementById('tsel-sel-box');
@@ -275,12 +269,14 @@ function adjsutTextSelection(docRoot: Element, textFlowCache: TextFlowCache) {
       return;
     }
 
+    // const p1 = performance.now();
     const rngBeg = selection.getRangeAt(0);
     const rngEnd = selection.getRangeAt(selection.rangeCount - 1);
     if (!rngBeg || !rngEnd) {
       return;
     }
 
+    // const p2 = performance.now();
     const isPageGuardSelected = (ca: SVGGElement | null) => {
       return (
         ca?.classList.contains('text-guard') ||
@@ -294,15 +290,19 @@ function adjsutTextSelection(docRoot: Element, textFlowCache: TextFlowCache) {
     );
     const edIsPageGuard = isPageGuardSelected(pickElem(rngEnd.endContainer) as SVGGElement | null);
     if (stIsPageGuard || edIsPageGuard) {
-      console.log('page guard selected');
+      // console.log('page guard selected');
       if (stIsPageGuard && edIsPageGuard) {
         clearSelBox(selBox);
       }
       return;
     }
 
+    // const p3 = performance.now();
+
     // clean up
     clearSelBox(selBox);
+
+    // const p4 = performance.now();
 
     if (!selBox) {
       selBox = document.createElement('div');
@@ -327,14 +327,34 @@ function adjsutTextSelection(docRoot: Element, textFlowCache: TextFlowCache) {
     ) as Element[];
 
     const selRng = new Range();
-    const createSelGlyphs = (st: Node, ed: Node) => {
+    const pieces: string[] = [];
+    const createSelGlyphs = (st: Element, ed: Element, span: number) => {
+      // console.log(st, span);
       selRng.setStartBefore(st);
       selRng.setEndAfter(ed);
-      createSelBox(selBox!, selRng);
+      // selRng.getBoundingClientRect()
+
+      // const x = st.getBoundingClientRect();
+      // const y = ed.getBoundingClientRect();
+      // const parent = st.parentElement!.getBoundingClientRect();
+      // const z = {
+      //   left: Math.min(x.left, y.left),
+      //   right: Math.max(x.right, y.right),
+      //   top: Math.min(x.top, y.top, parent.top),
+      //   bottom: Math.max(x.bottom, y.bottom, parent.bottom),
+      //   width: 0,
+      //   height: 0,
+      // };
+
+      // z.width = z.right - z.left;
+      // z.height = z.bottom - z.top;
+      pieces.push(createSelBox(selRng.getBoundingClientRect()));
     };
 
     const tselRanges = new Map<Element, [number, number]>();
     // console.log('firefox', selectedTextList);
+
+    // const p5 = performance.now();
 
     for (let n of selectedTextList) {
       if (n.classList.contains('tsel-tok')) {
@@ -353,6 +373,8 @@ function adjsutTextSelection(docRoot: Element, textFlowCache: TextFlowCache) {
         tselRanges.set(n, [st, ed]);
       }
     }
+
+    // const p6 = performance.now();
 
     if (isTextFlow) {
       let rngSt = 1e11,
@@ -386,7 +408,7 @@ function adjsutTextSelection(docRoot: Element, textFlowCache: TextFlowCache) {
               const nxBbox = nextTsel.getBoundingClientRect();
               // todo: avoid assuming horizontal ltr
               if (bbox.bottom > nxBbox.top && bbox.top < nxBbox.bottom) {
-                console.log('same line', lastTsel, nextTsel);
+                // console.log('same line', lastTsel, nextTsel);
                 continue;
               }
             }
@@ -395,6 +417,8 @@ function adjsutTextSelection(docRoot: Element, textFlowCache: TextFlowCache) {
         }
       }
     }
+
+    // const p7 = performance.now();
     // console.log('firefox', tselRanges);
 
     // console.log(tselRanges);
@@ -408,7 +432,7 @@ function adjsutTextSelection(docRoot: Element, textFlowCache: TextFlowCache) {
 
       if (st === 0 && ed === -1) {
         // console.log('select all', stGlyph, edGlyph);
-        createSelGlyphs(glyphRefs[0], glyphRefs[glyphRefs.length - 1]);
+        createSelGlyphs(glyphRefs[0], glyphRefs[glyphRefs.length - 1], ed);
         continue;
       }
 
@@ -435,8 +459,19 @@ function adjsutTextSelection(docRoot: Element, textFlowCache: TextFlowCache) {
       }
 
       // console.log('select', st, ed, stGlyph, edGlyph, glyphLens, glyphRefs);
-      createSelGlyphs(stGlyph, edGlyph);
+      createSelGlyphs(stGlyph, edGlyph, ed);
     }
+
+    // const p8 = performance.now();
+
+    selBox!.innerHTML = pieces.join('');
+
+    // const p9 = performance.now();
+
+    // const dms = (s: number, t: number) => `${(t - s).toFixed(2)} ms`;
+    // let arr = [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9];
+    // const perf = arr.slice(1).map((t, i) => dms(arr[i], t));
+    // console.log(`updateSelection ${perf.join(' ')}`);
   }
 }
 
