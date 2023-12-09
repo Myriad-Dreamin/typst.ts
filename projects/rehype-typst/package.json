@@ -1,0 +1,32 @@
+{
+  "name": "rehype-typst",
+  "version": "0.1.0",
+  "description": "rehype plugin for rendering typst math equations",
+  "main": "index.js",
+  "license": "MIT",
+  "sideEffects": false,
+  "type": "module",
+  "exports": "./index.js",
+  "files": [
+    "lib/",
+    "index.d.ts",
+    "index.js"
+  ],
+  "dependencies": {
+    "@myriaddreamin/typst-ts-renderer": "^0.4.1",
+    "@myriaddreamin/typst.ts": "^0.4.1",
+    "@types/hast": "^3.0.0",
+    "@types/katex": "^0.16.0",
+    "hast-util-from-html-isomorphic": "^2.0.0",
+    "hast-util-to-text": "^4.0.0",
+    "unist-util-visit-parents": "^6.0.0",
+    "vfile": "^6.0.0"
+  },
+  "devDependencies": {
+    "rehype-stringify": "^10.0.0",
+    "remark-math": "^6.0.0",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.0.0",
+    "unified": "^11.0.4"
+  }
+}
