@@ -1,5 +1,5 @@
 {
-  "name": "rehype-typst",
+  "name": "@myriaddreamin/rehype-typst",
   "version": "0.1.0",
   "description": "rehype plugin for rendering typst math equations",
   "main": "index.js",
@@ -24,10 +24,12 @@
     "vfile": "^6.0.0"
   },
   "devDependencies": {
+    "rehype-parse": "^9.0.0",
     "rehype-stringify": "^10.0.0",
     "remark-math": "^6.0.0",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.0.0",
+    "to-vfile": "^8.0.0",
     "unified": "^11.0.4"
   }
 }
