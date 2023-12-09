@@ -8,13 +8,13 @@
 import { fromHtmlIsomorphic } from 'hast-util-from-html-isomorphic'
 import { toText } from 'hast-util-to-text'
 import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs'
-
 import { SKIP, visitParents } from 'unist-util-visit-parents'
-
+import { cachedFontInitOptions } from './cached-font-middleware.js'
 /** @type {Readonly<Options>} */
 const emptyOptions = {}
 /** @type {ReadonlyArray<unknown>} */
 const emptyClasses = []
+$typst.setCompilerInitOptions(await cachedFontInitOptions());
 await $typst.svg({
   mainContent: ''
 })
