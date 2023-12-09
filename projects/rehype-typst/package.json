@@ -19,6 +19,7 @@
     "@types/katex": "^0.16.0",
     "hast-util-from-html-isomorphic": "^2.0.0",
     "hast-util-to-text": "^4.0.0",
+    "https-proxy-agent": "^7.0.2",
     "unist-util-visit-parents": "^6.0.0",
     "vfile": "^6.0.0"
   },

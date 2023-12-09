@@ -32,5 +32,6 @@ unified()
   .use(rehypeTypst)
   .use(rehypeStringify)
   .process(test_code, (err, file) => {
+    if (err) throw err
     console.log(String(file))
   })
