@@ -44,10 +44,6 @@
     "md2": "cargo run --bin typst-ts-cli -- compile --workspace . --entry ./github-pages/docs/data-flow-standalone.typ --format=svg",
     "md3": "cargo run --bin typst-ts-cli -- compile --workspace . --entry ./github-pages/docs/data-flow-standalone.dark.typ --format=svg"
   },
-  "dependencies": {
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1"
-  },
   "devDependencies": {
     "@babel/runtime": "^7.22.6",
     "@types/node": "^20.6.3",
