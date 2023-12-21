@@ -103,23 +103,19 @@ impl TypstRenderer {
         };
         let pages = t.pages(kern.module()).unwrap().pages();
 
-        let fingerprint;
-        let page_off;
-
-        if let Some(RenderPageImageOptions {
-            page_off: Some(c), ..
+        let (page_num, fingerprint) = if let Some(RenderPageImageOptions {
+            page_off: Some(c),
+            ..
         }) = options
         {
-            fingerprint = pages[c].content;
-            page_off = Some(c);
+            (Some(c), pages[c].content)
         } else {
             let mut f = FingerprintSipHasher::default();
             for page in pages.iter() {
                 page.content.hash(&mut f);
             }
-            fingerprint = f.finish_fingerprint().0;
-            page_off = None;
-        }
+            (None, f.finish_fingerprint().0)
+        };
 
         if should_render_body {
             let cached = options
@@ -130,9 +126,9 @@ impl TypstRenderer {
             let canvas = &canvas.ok_or_else(|| error_once!("Renderer.MissingCanvasForBody"))?;
 
             if !cached {
-                if let Some(page_off) = page_off {
+                if let Some(page_num) = page_num {
                     client
-                        .render_page_in_window(&mut kern, canvas, page_off, rect)
+                        .render_page_in_window(&mut kern, canvas, page_num, rect)
                         .await?;
                 } else {
                     client.render_in_window(&mut kern, canvas, rect).await;
@@ -141,7 +137,6 @@ impl TypstRenderer {
         }
 
         // todo: leaking abstraction
-        let page_num = usize::MAX;
         let mut worker = tc
             .as_mut()
             .map(|tc| TextContentTask::new(&kern.doc.module, tc));
@@ -159,11 +154,11 @@ impl TypstRenderer {
             };
             let mut page_off = 0.;
             for (idx, page) in pages.iter().enumerate() {
-                if page_num != usize::MAX && idx != page_num {
+                if page_num.map_or(false, |p| p != idx) {
                     page_off += page.size.y.0;
                     continue;
                 }
-                let partial_page_off = if page_num != usize::MAX { 0. } else { page_off };
+                let partial_page_off = if page_num.is_some() { 0. } else { page_off };
                 if let Some(worker) = worker.as_mut() {
                     worker.page_height = partial_page_off + page.size.y.0;
                     worker.process_flat_item(
@@ -172,7 +167,7 @@ impl TypstRenderer {
                     );
                 }
                 if let Some(worker) = annotation_list_worker.as_mut() {
-                    worker.page_num = page_num as u32;
+                    worker.page_num = idx as u32;
                     worker.process_flat_item(
                         tiny_skia::Transform::from_translate(partial_page_off, 0.),
                         &page.content,
