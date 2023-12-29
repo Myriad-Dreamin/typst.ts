@@ -36,8 +36,15 @@ const fc = <T extends Element = Element>(
   return res;
 };
 
+interface DOMBox {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
 /// Check whether two dom rects are overlapping
-const overLappingDom = (a: DOMRect, b: Pick<DOMRect, 'left' | 'right' | 'top' | 'bottom'>) => {
+const overLappingBox = (a: DOMBox, b: DOMBox) => {
   return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
 };
 
@@ -47,7 +54,7 @@ const almostOverLapping = (a: Element, b: Element) => {
   const bRect = b.getBoundingClientRect();
 
   return (
-    overLappingDom(aRect, bRect) &&
+    overLappingBox(aRect, bRect) &&
     /// determine overlapping by area
     Math.abs(aRect.left - bRect.left) + Math.abs(aRect.right - bRect.right) <
       0.5 * Math.max(aRect.width, bRect.width) &&
@@ -56,11 +63,11 @@ const almostOverLapping = (a: Element, b: Element) => {
   );
 };
 
-interface ElementState {
-  target?: Element & { relatedElements?: Element[] };
+interface ElementState extends Element {
+  relatedElements?: Element[];
 }
 
-const gr = (window.typstGetRelatedElements = (elem: Element & { relatedElements?: Element[] }) => {
+const gr = (window.typstGetRelatedElements = (elem: ElementState) => {
   let relatedElements = elem.relatedElements;
   if (relatedElements === undefined || relatedElements === null) {
     relatedElements = elem.relatedElements = searchIntersections(elem);
@@ -69,7 +76,7 @@ const gr = (window.typstGetRelatedElements = (elem: Element & { relatedElements?
 });
 
 /// Get all related elements of an event target (must be an element)
-const getRelatedElements = (event: Event & ElementState) => gr(event.target);
+const getRelatedElements = (event: Event & { target: ElementState }) => gr(event.target);
 
 const findAncestor = (el: Element, cls: string) => {
   while (el && !el.classList.contains(cls)) el = el.parentElement!;
@@ -166,341 +173,12 @@ function getGlyphAdvanceShape(glyphRefs: Element[]) {
   });
 }
 
-function adjsutTextSelection(docRoot: Element, textFlowCache: TextFlowCache) {
-  docRoot.addEventListener('copy', (event: ClipboardEvent) => {
-    const selection = getSelectedNodes(
-      (n: Element) =>
-        n.classList?.contains('tsel') ||
-        n.classList?.contains('tsel-tok') ||
-        n.classList?.contains('typst-content-hint'),
-    ) as Element[];
-
-    const textContent = [];
-    let prevContent = false;
-    for (let n of selection) {
-      if (n.classList.contains('tsel')) {
-        if (!n.hasAttribute('data-typst-layout-checked')) {
-          textContent.push(n.textContent);
-        }
-        prevContent = true;
-      } else if (n.classList.contains('tsel-tok')) {
-        textContent.push(n.textContent);
-        // console.log(n, n.textContent);
-      } else if (prevContent) {
-        const hint =
-          String.fromCodePoint(Number.parseInt(n.getAttribute('data-hint') || '0', 16)) || '\n';
-        // console.log('hint', hint);
-        textContent.push(hint);
-        prevContent = true; // collapse lines if false;
-      }
-    }
-
-    const text = textContent.join('').replace(/\u00a0/g, ' ');
-
-    console.log('user copy', text);
-    if (navigator?.clipboard) {
-      // console.log('clipboard api', text);
-      navigator.clipboard.writeText(text);
-    } else {
-      event.clipboardData!.setData('text/plain', text);
-    }
-    event.preventDefault();
-  });
-
-  const pickElem = (t: Node): Element | null =>
-    t.nodeType === Node.TEXT_NODE ? t.parentElement : (t as Element);
-  const pickTselElem = (t: Node) => {
-    const elem = pickElem(t);
-    return elem?.classList?.contains('tsel') ? elem : undefined;
-  };
-  const createSelBox = (b: Pick<DOMRect, 'left' | 'top' | 'width' | 'height'>) => {
-    return `<div style="position: absolute; float: left; left: ${b.left + window.scrollX}px; top: ${
-      b.top + window.scrollY
-    }px; width: ${b.width}px; height: ${b.height}px; background-color: #7db9dea0;"></div>`;
-  };
-  const clearSelBox = (selBox: Element | null) => {
-    if (selBox) {
-      selBox.innerHTML = '';
-    }
-  };
-
-  let mouseLeftIsDown = false;
-  window.addEventListener('mousedown', (event: MouseEvent) => {
-    if (event.button === 0) {
-      mouseLeftIsDown = true;
-    }
-  });
-  window.addEventListener('mouseup', (event: MouseEvent) => {
-    if (event.button === 0) {
-      mouseLeftIsDown = false;
-    }
-  });
-  docRoot.addEventListener('mousemove', (event: MouseEvent) => {
-    if (mouseLeftIsDown) {
-      ignoredEvent(
-        () => {
-          selectTextFlow(event);
-        },
-        2,
-        'doc-text-sel',
-      );
-    }
-  });
-
-  function selectTextFlow(e: MouseEvent) {
-    if ((e.target as HTMLSpanElement)?.classList.contains('tsel-tok')) {
-      return;
-    }
-    updateSelection(true, e);
-  }
-
-  document.addEventListener('selectionchange', () => updateSelection(false));
-  function updateSelection(isTextFlow: false): void;
-  function updateSelection(isTextFlow: true, event: MouseEvent): void;
-  function updateSelection(isTextFlow: boolean, event?: MouseEvent) {
-    // const p0 = performance.now();
-    const selection = window.getSelection();
-
-    let selBox = document.getElementById('tsel-sel-box');
-
-    if (!selection?.rangeCount) {
-      // clean up
-      clearSelBox(selBox);
-      return;
-    }
-
-    // const p1 = performance.now();
-    const rngBeg = selection.getRangeAt(0);
-    const rngEnd = selection.getRangeAt(selection.rangeCount - 1);
-    if (!rngBeg || !rngEnd) {
-      return;
-    }
-
-    // const p2 = performance.now();
-    const isPageGuardSelected = (ca: SVGGElement | null) => {
-      return (
-        ca?.classList.contains('text-guard') ||
-        ca?.classList.contains('typst-page') ||
-        ca?.classList.contains('typst-search-hint')
-      );
-    };
-
-    const stIsPageGuard = isPageGuardSelected(
-      pickElem(rngBeg.startContainer) as SVGGElement | null,
-    );
-    const edIsPageGuard = isPageGuardSelected(pickElem(rngEnd.endContainer) as SVGGElement | null);
-    if (stIsPageGuard || edIsPageGuard) {
-      // console.log('page guard selected');
-      if (stIsPageGuard && edIsPageGuard) {
-        clearSelBox(selBox);
-      }
-      return;
-    }
-
-    // const p3 = performance.now();
-
-    // clean up
-    clearSelBox(selBox);
-
-    // const p4 = performance.now();
-
-    if (!selBox) {
-      selBox = document.createElement('div');
-      selBox.id = 'tsel-sel-box';
-      selBox.style.zIndex = '100';
-      selBox.style.position = 'absolute';
-      selBox.style.pointerEvents = 'none';
-      selBox.style.left = '0';
-      selBox.style.top = '0';
-      selBox.style.float = 'left';
-      document.body.appendChild(selBox);
-    }
-
-    const start = pickTselElem(rngBeg.startContainer);
-    const end = pickTselElem(rngEnd.endContainer);
-
-    const selectedTextList = getSelectedNodes(
-      (n: Element) =>
-        n.classList?.contains('tsel') ||
-        n.classList?.contains('typst-search-hint') ||
-        n.classList?.contains('tsel-tok'),
-    ) as Element[];
-
-    const selRng = new Range();
-    const pieces: string[] = [];
-    const createSelGlyphs = (st: Element, ed: Element, span: number) => {
-      // console.log(st, span);
-      selRng.setStartBefore(st);
-      selRng.setEndAfter(ed);
-      // selRng.getBoundingClientRect()
-
-      // const x = st.getBoundingClientRect();
-      // const y = ed.getBoundingClientRect();
-      // const parent = st.parentElement!.getBoundingClientRect();
-      // const z = {
-      //   left: Math.min(x.left, y.left),
-      //   right: Math.max(x.right, y.right),
-      //   top: Math.min(x.top, y.top, parent.top),
-      //   bottom: Math.max(x.bottom, y.bottom, parent.bottom),
-      //   width: 0,
-      //   height: 0,
-      // };
-
-      // z.width = z.right - z.left;
-      // z.height = z.bottom - z.top;
-      pieces.push(createSelBox(selRng.getBoundingClientRect()));
-    };
-
-    const tselRanges = new Map<Element, [number, number]>();
-    // console.log('firefox', selectedTextList);
-
-    // const p5 = performance.now();
-
-    for (let n of selectedTextList) {
-      if (n.classList.contains('tsel-tok')) {
-        const n2 = n.parentElement!;
-        const nth = Array.from(n2.children).indexOf(n);
-        // console.log('tsel-tok', n, nth);
-        if (!tselRanges.has(n2)) {
-          tselRanges.set(n2, [nth, nth]);
-        } else {
-          const [st, ed] = tselRanges.get(n2)!;
-          tselRanges.set(n2, [Math.min(st, nth), Math.max(ed, nth)]);
-        }
-      } else if (n.classList.contains('tsel') && !n.hasAttribute('data-typst-layout-checked')) {
-        const st = n === start ? rngBeg.startOffset : 0;
-        const ed = n === end ? rngEnd.endOffset - 1 : -1;
-        tselRanges.set(n, [st, ed]);
-      }
-    }
-
-    // const p6 = performance.now();
-
-    if (isTextFlow) {
-      let rngSt = 1e11,
-        rngEd = -1;
-      for (const div of tselRanges.keys()) {
-        const idxStr = div.getAttribute('data-selection-index');
-        if (!idxStr) {
-          continue;
-        }
-        const idx = Number.parseInt(idxStr);
-        rngSt = Math.min(rngSt, idx);
-        rngEd = Math.max(rngEd, idx);
-      }
-
-      if (rngEd !== -1) {
-        // console.log('text-flow', event, tselRanges, textFlowCache, rngSt, rngEd);
-        const cx = event!.clientX;
-        const cy = event!.clientY;
-
-        const flow = textFlowCache.flow;
-        for (;;) {
-          const lastTsel = flow[rngEd];
-          const bbox = lastTsel.getBoundingClientRect();
-          // console.log('check last', lastTsel, bbox, cx, cy);
-          if (cx > bbox.right || cy > bbox.bottom) {
-            tselRanges.set(lastTsel, [0, -1]);
-
-            if (rngEd + 1 < flow.length) {
-              rngEd += 1;
-              const nextTsel = flow[rngEd];
-              const nxBbox = nextTsel.getBoundingClientRect();
-              // todo: avoid assuming horizontal ltr
-              if (bbox.bottom > nxBbox.top && bbox.top < nxBbox.bottom) {
-                // console.log('same line', lastTsel, nextTsel);
-                continue;
-              }
-            }
-          }
-          break;
-        }
-      }
-    }
-
-    // const p7 = performance.now();
-    // console.log('firefox', tselRanges);
-
-    // console.log(tselRanges);
-
-    for (let [n, [st, ed]] of tselRanges) {
-      const glyphRefs = findGlyphListForText(n);
-      if (!glyphRefs?.length) {
-        // console.log('no glyphs found...');
-        continue;
-      }
-
-      if (st === 0 && ed === -1) {
-        // console.log('select all', stGlyph, edGlyph);
-        createSelGlyphs(glyphRefs[0], glyphRefs[glyphRefs.length - 1], ed);
-        continue;
-      }
-
-      const glyphLens = getGlyphLenShape(glyphRefs);
-
-      const findPos = (l: number) => {
-        let pos = 0;
-        for (let i = 0; i < glyphLens.length; i++) {
-          if (pos + glyphLens[i] > l) {
-            return glyphRefs[i];
-          }
-          pos += glyphLens[i];
-        }
-      };
-
-      let stGlyph = glyphRefs[0];
-      if (st !== 0) {
-        stGlyph = findPos(st) || stGlyph;
-      }
-
-      let edGlyph = glyphRefs[glyphRefs.length - 1];
-      if (ed !== -1) {
-        edGlyph = findPos(ed) || edGlyph;
-      }
-
-      // console.log('select', st, ed, stGlyph, edGlyph, glyphLens, glyphRefs);
-      createSelGlyphs(stGlyph, edGlyph, ed);
-    }
-
-    // const p8 = performance.now();
-
-    selBox!.innerHTML = pieces.join('');
-
-    // const p9 = performance.now();
-
-    // const dms = (s: number, t: number) => `${(t - s).toFixed(2)} ms`;
-    // let arr = [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9];
-    // const perf = arr.slice(1).map((t, i) => dms(arr[i], t));
-    // console.log(`updateSelection ${perf.join(' ')}`);
-  }
-}
-
-function createPseudoText(cls: string) {
-  const foreignObj = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-  foreignObj.setAttribute('width', '1');
-  foreignObj.setAttribute('height', '1');
-  foreignObj.setAttribute('x', '0');
-  foreignObj.setAttribute('y', '0');
-
-  const tsel = document.createElement('span');
-  tsel.textContent = '&nbsp;';
-  // tsel.style.fontSize = '2048px';
-  tsel.style.width = tsel.style.height = '100%';
-  tsel.style.textAlign = 'justify';
-  tsel.style.opacity = '0';
-  tsel.classList.add(cls);
-  foreignObj.append(tsel);
-
-  return foreignObj;
-}
-
 /// Process mouse move event on pseudo-link elements
-const linkmove = (event: Event & ElementState) =>
-  ignoredEvent(() => gr(event.target)?.forEach(e => e.classList.add('hover')), 200, 'mouse-move');
+const linkmove = (elem: ElementState) =>
+  ignoredEvent(() => gr(elem)?.forEach(e => e.classList.add('hover')), 200, 'mouse-move');
 
 /// Process mouse leave event on pseudo-link elements
-const linkleave = (event: Event & ElementState) =>
-  gr(event.target)?.forEach(e => e.classList.remove('hover'));
+const linkleave = (elem: ElementState) => gr(elem)?.forEach(e => e.classList.remove('hover'));
 
 interface ProcessOptions {
   layoutText?: boolean;
@@ -513,171 +191,12 @@ interface TextFlowCache {
 }
 
 window.typstProcessSvg = function (docRoot: SVGElement, options?: ProcessOptions) {
-  if (false) {
-    console.log('typst-text', docRoot.getElementsByClassName('typst-text').length);
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d')!;
-    Promise.all(
-      Array.from(docRoot.getElementsByClassName('typst-text')).map(async g => {
-        console.log('typst-text');
-        const glyphs = Array.from(g.children).filter(e => e.tagName === 'typst-glyph');
-        if (glyphs.length === 0) {
-          return;
-        }
-        const firstGlyph = glyphs[0];
-
-        const width =
-          Math.max(...glyphs.map(e => Number.parseFloat(e.getAttribute('x') || '0'))) + 2048;
-        canvas.width = width / 32;
-        canvas.height = 2048 / 32;
-        ctx.clearRect(0, 0, width / 32, 2048 / 32);
-        ctx.scale(1 / 32, 1 / 32);
-        ctx.translate(0, 2048 - 1440);
-        let prevX = 0;
-        for (const glyph of glyphs) {
-          const x = Number.parseFloat(glyph.getAttribute('x') || '0');
-          const href = glyph.getAttribute('href')!;
-          const e = document.getElementById(href.slice(1)) as Element | null;
-          if (e) {
-            // translate x
-            ctx.translate(x - prevX, 0);
-            prevX = x;
-            if (e.tagName === 'path') {
-              const path = new Path2D(e.getAttribute('d')!);
-              ctx.fillStyle = 'black';
-              ctx.fill(path);
-            } else {
-              ctx.drawImage(e as SVGImageElement, 0, 0);
-            }
-          }
-        }
-
-        const imageUrl = canvas.toDataURL();
-
-        // const generatedFrozenSvg = [];
-        // const generatedFrozenSvgDefs = [];
-        // const generatedFrozenSvgUses = [];
-        const svgBBox = g.getBoundingClientRect();
-
-        // generatedFrozenSvg.push(
-        //   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${
-        //     114.44 * 16 - 2048
-        //   } ${width} ${2048}" width="${width}px" height="${2048}px">`,
-        // );
-        // for (const glyph of glyphs) {
-        //   const x = Number.parseFloat(glyph.getAttribute('x') || '0');
-        //   const href = glyph.getAttribute('href')!;
-        //   const e = document.getElementById(href.slice(1));
-        //   if (e) {
-        //     generatedFrozenSvgDefs.push(e!.outerHTML);
-        //   }
-        //   generatedFrozenSvgUses.push(`<use href="#${href.slice(1)}" x="${x}" />`);
-        // }
-        // generatedFrozenSvg.push(
-        //   '<defs>',
-        //   ...generatedFrozenSvgDefs,
-        //   '</defs>',
-        //   ...generatedFrozenSvgUses,
-        //   '</svg>',
-        // );
-        // const svgText = generatedFrozenSvg.join('');
-
-        // out of window
-        // if (
-        //   (svgBBox.right < 0 || svgBBox.right > window.innerWidth) &&
-        //   (svgBBox.bottom < 0 || svgBBox.bottom > window.innerHeight) &&
-        //   (svgBBox.left < 0 || svgBBox.left > window.innerWidth) &&
-        //   (svgBBox.top < 0 || svgBBox.top > window.innerHeight)
-        // ) {
-        //   firstGlyph.remove();
-        //   return;
-        // }
-        // the above check is not accurate, we need to consider intersection
-        // if (
-        //   !overLappingSimp(svgBBox, {
-        //     left: 0,
-        //     top: 0,
-        //     right: window.innerWidth,
-        //     bottom: window.innerHeight,
-        //   })
-        // ) {
-        //   for (const glyph of glyphs) {
-        //     glyph.remove();
-        //   }
-        //   return;
-        // }
-
-        // console.log('typst-text', g, firstGlyph.parentElement);
-        // console.log(svgBBox, window.innerWidth, window.innerHeight);
-        // const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
-        // const imageUrl = URL.createObjectURL(svgBlob);
-
-        // const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-        // img.setAttribute('preserveAspectRatio', 'none');
-        // img.setAttribute('href', imageUrl);
-        // img.setAttribute('x', '0');
-        // img.setAttribute('width', width.toString());
-        // img.setAttribute('height', '2048');
-        // firstGlyph.replaceWith(img);
-        // g.prepend(img);
-
-        // const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-        // img.setAttribute('preserveAspectRatio', 'none');
-        // img.setAttribute('href', imageUrl);
-        // img.setAttribute('x', '0');
-        // img.setAttribute('width', width.toString());
-        // img.setAttribute('height', '2048');
-        // firstGlyph.replaceWith(img);
-        // g.prepend(img);
-
-        const div = document.createElement('div');
-        div.style.width = '100%';
-        div.style.height = '100%';
-        div.style.background =
-          'conic-gradient(from 0.5turn at 50% 25%, red, orange, yellow, green, blue)';
-        let fill = `url(${imageUrl})`;
-        div.style.maskImage = fill;
-        // webkit
-        // div.style.webkitMaskImage = fill;
-        div.style.setProperty('mask-image', fill);
-        div.style.setProperty('-webkit-mask-image', fill);
-        // console.log(fill);
-        // mask size
-        div.style.setProperty('mask-size', '100% 100%');
-        div.style.setProperty('-webkit-mask-size', '100% 100%');
-        // const htmlImage = new Image();
-        // htmlImage.src = imageUrl;
-        // htmlImage.setAttribute('preserveAspectRatio', 'none');
-        // htmlImage.setAttribute('width', '100%');
-        // htmlImage.setAttribute('height', '100%');
-        // document.body.prepend(htmlImage);
-        const foreignObj = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-        foreignObj.setAttribute('width', width.toString());
-        foreignObj.setAttribute('height', '2048');
-        foreignObj.setAttribute('x', '0');
-        foreignObj.setAttribute('y', '0');
-        // foreignObj.append(htmlImage);
-        foreignObj.append(div);
-        g.prepend(foreignObj);
-
-        // document.body.prepend(img.cloneNode(true));
-        for (const glyph of glyphs) {
-          glyph.remove();
-        }
-      }),
-    );
-  }
-
-  let textFlowCache: TextFlowCache = {
-    flow: [],
-  };
-
   var elements = docRoot.getElementsByClassName('pseudo-link');
 
   for (var i = 0; i < elements.length; i++) {
     var elem = elements[i];
-    elem.addEventListener('mousemove', linkmove);
-    elem.addEventListener('mouseleave', linkleave);
+    elem.addEventListener('mousemove', e => linkmove(e.target as any as ElementState));
+    elem.addEventListener('mouseleave', e => linkleave(e.target as any as ElementState));
   }
 
   const layoutText = options?.layoutText ?? true;
@@ -687,34 +206,12 @@ window.typstProcessSvg = function (docRoot: SVGElement, options?: ProcessOptions
       // add rule: .tsel monospace
       // todo: outline styles
       const style = document.createElement('style');
-      style.innerHTML = `.tsel { font-family: monospace; text-align-last: left !important; -moz-text-size-adjust: none; -webkit-text-size-adjust: none; text-size-adjust: none; }
-.tsel span { float: left !important; position: absolute !important; width: fit-content !important; top: 0 !important; }
-.typst-search-hint { font-size: 2048px; color: transparent; width: 100%; height: 100%; }
-.typst-search-hint { color: transparent; user-select: none; }
-.typst-search-hint::-moz-selection { color: transparent; background: #00000001; }
-.typst-search-hint::selection { color: transparent; background: #00000001; }
-.tsel span::-moz-selection,
-.tsel::-moz-selection {
-  background: transparent !important;
-}
-.tsel span::selection,
-.tsel::selection {
-  background: transparent !important;
-} `;
+      style.innerHTML = `.tsel { font-family: monospace; text-align-last: left !important; -moz-text-size-adjust: none; -webkit-text-size-adjust: none; text-size-adjust: none; overflow: hidden; }
+.tsel span { position: relative !important; width: fit-content !important;  }`;
       document.getElementsByTagName('head')[0].appendChild(style);
 
-      // add css variable, font scale
-      const devicePixelRatio = window.devicePixelRatio || 1;
-      docRoot.style.setProperty('--typst-font-scale', devicePixelRatio.toString());
-      window.addEventListener('resize', () => {
-        const devicePixelRatio = window.devicePixelRatio || 1;
-        docRoot.style.setProperty('--typst-font-scale', devicePixelRatio.toString());
-      });
-
-      window.layoutText(docRoot, textFlowCache);
+      window.layoutText(docRoot);
     }, 0);
-
-    adjsutTextSelection(docRoot, textFlowCache);
   }
 
   docRoot.addEventListener('click', (event: MouseEvent) => {
@@ -744,12 +241,6 @@ window.typstProcessSvg = function (docRoot: SVGElement, options?: ProcessOptions
     }
   });
 
-  if (layoutText) {
-    docRoot.querySelectorAll('.typst-page').forEach((e: Element) => {
-      e.prepend(createPseudoText('text-guard'));
-    });
-  }
-
   if (window.location.hash) {
     // console.log('hash', window.location.hash);
 
@@ -768,108 +259,261 @@ window.typstProcessSvg = function (docRoot: SVGElement, options?: ProcessOptions
   }
 };
 
-window.layoutText = function (svg: Element, textFlowCache: TextFlowCache) {
-  const allElements = Array.from(svg.querySelectorAll('.tsel')) as HTMLDivElement[];
-  textFlowCache.flow = allElements;
+const LB = '\n'.codePointAt(0)!;
+
+window.layoutText = async function (svg: Element) {
+  const allElements = Array.from(
+    svg.querySelectorAll('.tsel, .typst-content-hint, .pseudo-link'),
+  ) as HTMLDivElement[];
   const layoutBegin = performance.now();
   const ctx = (
     document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas') as HTMLCanvasElement
   ).getContext('2d')!;
   // 128 * 16 = 2048
-  ctx.font = `128px sans-serif`;
+  ctx.font = `128px monospace`;
   const enCharWidth = ctx.measureText('A').width;
+  const offset = svg.getBoundingClientRect();
+  const coordLeft = offset.left + window.scrollX;
+  const coordTop = offset.top + window.scrollY;
+  const resolveCoord = (elem: SVGGElement, x: number, y: number) => {
+    var matrix = elem.getScreenCTM();
+
+    if (!matrix) {
+      return { x: 0, y: 0 };
+    }
+
+    return {
+      x: matrix.a * x + matrix.c * y + matrix.e - coordLeft,
+      y: matrix.b * x + matrix.d * y + matrix.f - coordTop,
+    };
+  };
   // console.log('width of single char', enCharWidth);
 
-  const searchHints = [];
+  let semanticContainer: HTMLDivElement | undefined;
+  // insert exact after svg
+  // svg may have no next sibling
+  const sp = svg.parentElement;
+  if (!sp) {
+    semanticContainer = undefined;
+  } else {
+    if (svg.nextElementSibling?.classList.contains('typst-semantic-layer')) {
+      semanticContainer = svg.nextElementSibling as HTMLDivElement;
+    } else {
+      semanticContainer = document.createElement('div');
+      const svgWrapper = document.createElement('div');
+      svgWrapper.style.position = 'relative';
+      sp.replaceChild(svgWrapper, svg);
+      svgWrapper.appendChild(svg);
+      svgWrapper.appendChild(semanticContainer);
+
+      semanticContainer.classList.add('typst-semantic-layer');
+      semanticContainer.style.position = 'absolute';
+      semanticContainer.style.left = '0';
+      semanticContainer.style.top = '0';
+      semanticContainer.style.zIndex = '1';
+      semanticContainer.style.float = 'left';
+      const svgWidth = svg.getAttribute('width');
+      semanticContainer.style.width = `${svgWidth}px`;
+      const svgHeight = svg.getAttribute('height');
+      semanticContainer.style.height = `${svgHeight}px`;
+      // semanticContainer.style.pointerEvents = 'all';
+    }
+  }
+
+  // const textElements: { e: HTMLElement; x: number; y: number }[] = [];
+  interface ParaBox extends DOMBox {}
+  let paraBox: ParaBox = { left: 0, right: 0, bottom: 0, top: 0 };
+  let paraBoxes: [HTMLSpanElement | null, ParaBox][] = [];
+  const createTextElem = (elem: SVGGElement, primitive = 'span') => {
+    const textElem = document.createElement(primitive);
+
+    const bbox = elem.getBBox();
+    const leftTop = resolveCoord(elem, bbox.x, bbox.y);
+    const rightBottom = resolveCoord(elem, bbox.x + bbox.width, bbox.y + bbox.height);
+    // const realBBox = {
+    //   x: Math.min(leftTop.x, rightBottom.x),
+    //   y: Math.min(leftTop.y, rightBottom.y),
+    //   width: Math.abs(leftTop.x - rightBottom.x),
+    //   height: Math.abs(leftTop.y - rightBottom.y),
+    // };
+    // console.log('realBBox', realBBox);
+    // convert to global fixed position
+    const xx = Math.min(leftTop.x, rightBottom.x);
+    const x = xx + window.scrollX;
+    const yy = Math.min(leftTop.y, rightBottom.y);
+    const y = yy + window.scrollY;
+    const width = Math.abs(leftTop.x - rightBottom.x);
+    const height = Math.abs(leftTop.y - rightBottom.y);
+
+    const halfH = height / 2;
+    const paraBoxNew: ParaBox = {
+      left: x - halfH,
+      top: y - halfH,
+      right: x + width + halfH,
+      bottom: y + height + halfH,
+    };
+    if (overLappingBox(paraBox, paraBoxNew)) {
+      paraBox.left = Math.min(paraBox.left, paraBoxNew.left);
+      paraBox.top = Math.min(paraBox.top, paraBoxNew.top);
+      paraBox.right = Math.max(paraBox.right, paraBoxNew.right);
+      paraBox.bottom = Math.max(paraBox.bottom, paraBoxNew.bottom);
+    } else {
+      paraBoxes.push([textElem, paraBox]);
+      paraBox = paraBoxNew;
+    }
+
+    // intersected with previous para box
+
+    // textElem.style.border = '1px solid gray';
+
+    textElem.classList.add('tsel');
+    // textElem.style.position = 'relative';
+    // textElem.style.display = 'inline-block';
+    textElem.style.position = 'absolute';
+
+    textElem.style.left = `${x}px`;
+    textElem.style.top = `${y}px`;
+
+    textElem.style.width = `${width}px`;
+    textElem.style.height = `${height}px`;
+
+    // textElements.push({ e: textElem, x, y });
+    return textElem;
+  };
+
+  const isTablet = false;
+  // const isTablet = true;
 
   const layoutRange = (tselSt: number, tselEd: number) => {
     const divs = allElements.slice(tselSt, tselEd);
-    tselSt -= 1;
     for (let d of divs) {
-      tselSt += 1;
-      if (d.getAttribute('data-typst-layout-checked')) {
-        continue;
-      }
-      d.setAttribute('data-selection-index', tselSt.toString());
-      d.setAttribute('data-typst-layout-checked', '1');
+      const elem = d.parentElement! as any as SVGForeignObjectElement;
 
-      if (d.style.fontSize) {
-        const foreignObj = d.parentElement!;
-        const textContent = d.innerText;
-
-        // put search hint before foreignObj
-        const hint = foreignObj.cloneNode(true) as Element;
-        const firstSpan = hint.firstElementChild!;
-        if (firstSpan) {
-          firstSpan.className = 'typst-search-hint';
-        }
-        foreignObj.parentElement!.insertBefore(hint, foreignObj);
-
-        searchHints.push([d, textContent]);
-
-        const glyphs = findGlyphListForText(d);
-        if (!glyphs) {
-          // console.log('no glyphs found...');
+      if (semanticContainer) {
+        if (d.classList.contains('typst-content-hint')) {
+          const textElem = createTextElem(d as any as SVGGElement);
+          textElem.style.fontSize = '0.1px';
+          textElem.style.width = '0.1px';
+          textElem.style.height = '0.1px';
+          const hint = Number.parseInt(d.getAttribute('data-hint') || '0', 16) || LB;
+          // encode hint as html entity
+          textElem.innerHTML = hint === LB ? '<br/>' : `&#x${hint.toString(16)};`;
+          semanticContainer.append(textElem);
+          continue;
+        } else if (d.classList.contains('pseudo-link')) {
+          // mouse move binding
+          const textElem = createTextElem(d as any as SVGGElement, 'a');
+          textElem.style.cursor = 'pointer';
+          textElem.addEventListener('mousemove', () => linkmove(d as any as ElementState));
+          textElem.addEventListener('mouseleave', () => linkleave(d as any as ElementState));
+          textElem.onclick = () => {
+            d.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          };
+          // on mouse enter, change href
+          textElem.addEventListener('mouseenter', () => {
+            const href =
+              d.parentElement?.getAttribute('href') || d.parentElement?.getAttribute('xlink:href');
+            if (textElem.getAttribute('href') !== href) {
+              textElem.setAttribute('href', href || '');
+            }
+          });
+          semanticContainer.append(textElem);
           continue;
         }
-        const glyphLens = getGlyphLenShape(glyphs);
-        const glyphAdvances = getGlyphAdvanceShape(glyphs).map(t => t / 16);
-        // console.log(
-        //   d,
-        //   targetWidth,
-        //   currentX,
-        //   'estimated',
-        //   enCharWidth,
-        //   d.clientWidth,
-        //   charLen * enCharWidth,
-        //   glyphs,
-        //   textContent.split(''),
-        //   glyphAdvances,
-        //   glyphLens,
-        // );
+      }
 
-        let failed = false;
+      if (d.style.fontSize) {
         const charContainers: HTMLSpanElement[] = [];
-        let j = 0,
-          k = 0;
-        for (let c of textContent) {
-          // console.log('c', c, j, k, glyphAdvances);
-          if (j >= glyphAdvances.length) {
-            failed = true;
-            break;
+        const textContent = d.innerText;
+        const relativeEnCharWidth = (enCharWidth * Number.parseFloat(d.style.fontSize)) / 128;
+        if (!isTablet) {
+          const glyphs = findGlyphListForText(d);
+          if (!glyphs) {
+            // console.log('no glyphs found...');
+            continue;
           }
-          let advance = glyphAdvances[j];
-          if (glyphLens[j] > 1) {
-            // console.log(
-            //   'multi glyph estimated',
-            //   c,
-            //   glyphLens[j],
-            //   glyphs[j].getBoundingClientRect().width,
-            // );
-            // advance += (k * glyphs[j].getBoundingClientRect().width) / glyphLens[j];
-            // use enCharWidth instead of glyph width for speed
-            advance += k * enCharWidth;
-          }
-          k++;
-          if (k >= glyphLens[j]) {
-            j++;
-            k = 0;
+          const glyphLens = getGlyphLenShape(glyphs);
+          const glyphAdvances = getGlyphAdvanceShape(glyphs).map(t => t / 16);
+
+          let failed = false;
+          let j = 0,
+            k = 0,
+            l = 0;
+          let prevSpan: HTMLSpanElement | undefined = undefined;
+          let prevAdvance = 0;
+          for (let c of textContent) {
+            // console.log('c', c, j, k, glyphAdvances);
+            if (j >= glyphAdvances.length) {
+              failed = true;
+              break;
+            }
+            let advance = glyphAdvances[j];
+            if (glyphLens[j] > 1) {
+              advance += k * relativeEnCharWidth;
+            }
+            k++;
+            if (k >= glyphLens[j]) {
+              j++;
+              k = 0;
+            }
+
+            const span = document.createElement('span');
+            span.textContent = c;
+            span.classList.add('tsel-tok');
+            if (prevSpan) {
+              prevSpan.style.letterSpacing = `${advance - prevAdvance - relativeEnCharWidth}px`;
+            }
+            prevSpan = span;
+            prevAdvance = advance;
+            charContainers.push(span);
+            l += 1;
           }
 
+          if (failed) {
+            continue;
+          }
+        } else {
           const span = document.createElement('span');
-          span.textContent = c;
-          span.classList.add('tsel-tok');
-          span.style.left = `${advance}px`;
+          span.textContent = textContent;
+          // calculate scalex
+          const bbox = elem.getBBox();
+          const realWidth = relativeEnCharWidth * textContent.length;
+          if (elem) {
+            const scalex = bbox.width / realWidth;
+            span.style.display = 'inline-block';
+            span.style.transform = `scaleX(${scalex})`;
+            span.style.transformOrigin = 'left';
+          }
+
           charContainers.push(span);
         }
 
-        if (failed) {
-          continue;
-        }
-
         d.innerHTML = '';
-        d.append(...charContainers);
-        // console.log(d);
+        if (semanticContainer) {
+          // inherit font size with scaling
+          // textElem.style.fontSize = d.style.fontSize;
+          const baseSize = Number.parseFloat(d.style.fontSize || '0');
+          const scaledFontSize = Math.abs(
+            resolveCoord(elem, 0, baseSize).y - resolveCoord(elem, 0, 0).y,
+          );
+
+          if (!isTablet) {
+            const ratio = scaledFontSize / baseSize;
+            for (let c of charContainers) {
+              // letter spacing
+              c.style.letterSpacing = `${
+                Number.parseFloat(c.style.letterSpacing || '0') * ratio
+              }px`;
+            }
+          }
+
+          const textElem = createTextElem(elem);
+          textElem.style.fontSize = `${scaledFontSize}px`;
+          textElem.append(...charContainers);
+          semanticContainer.append(textElem);
+        } else {
+          d.append(...charContainers);
+        }
       }
     }
 
@@ -882,9 +526,77 @@ window.layoutText = function (svg: Element, textFlowCache: TextFlowCache) {
   const chunkSize = 100;
   for (let i = 0; i < allElements.length; i += chunkSize) {
     const chunkBegin = i;
-    setTimeout(() => {
-      layoutRange(chunkBegin, chunkBegin + chunkSize);
+    await new Promise(resolve => {
+      setTimeout(() => {
+        layoutRange(chunkBegin, chunkBegin + chunkSize);
+        resolve(undefined);
+      });
     });
+  }
+
+  if (semanticContainer && paraBox.right != 0) {
+    paraBoxes.push([null, paraBox]);
+  }
+  // get all elements in semantic container
+  // if (semanticContainer?.children.length) {
+  //   const perfBegin = performance.now();
+  //   // retrieve all offset left and top at once to avoid reflow
+  //   const elems = Array.from(textElements).map(({ e, x, y }) => {
+  //     const offsetLeft = e.offsetLeft;
+  //     const offsetTop = e.offsetTop;
+  //     return { e, x, y, offsetLeft, offsetTop };
+  //   });
+  //   elems.forEach(({ e, x, y, offsetLeft, offsetTop }) => {
+  //     //
+  //     e.style.left = `${x - offsetLeft}px`;
+  //     e.style.top = `${y - offsetTop}px`;
+  //   });
+  //   console.log(`relative positioning elements used since ${performance.now() - perfBegin} ms`);
+  // }
+  if (semanticContainer) {
+    const perfBegin = performance.now();
+    const colorRotate = ['red', 'green', 'blue', 'purple', 'orange'];
+    let cnt = 0;
+    for (let [elem, box] of paraBoxes) {
+      if (cnt < paraBoxes.length - 1) {
+        let nextBox = paraBoxes[cnt + 1][1];
+        let leftLess = box.left < nextBox.left;
+        let topLess = box.top < nextBox.top;
+        let rightLess = box.right < nextBox.right;
+        let bottomLess = box.bottom < nextBox.bottom;
+
+        // adjust horizontal box
+        if (leftLess != rightLess) {
+          box.left = Math.min(box.left, nextBox.left);
+          box.right = Math.max(box.right, nextBox.right);
+        }
+        // adjust vertical box
+        if (topLess != bottomLess) {
+          box.top = Math.min(box.top, nextBox.top);
+          box.bottom = Math.max(box.bottom, nextBox.bottom);
+        }
+      }
+
+      // elem.style.left = `${box.left}px`;
+      // elem.style.top = `${box.top}px`;
+      // elem.style.width = `${box.right - box.left}px`;
+      // elem.style.height = `${box.bottom - box.top}px`;
+
+      const paraSpan = document.createElement('span');
+      paraSpan.style.zIndex = '-1';
+      paraSpan.style.position = 'absolute';
+      paraSpan.style.left = `${box.left}px`;
+      paraSpan.style.top = `${box.top}px`;
+      paraSpan.style.width = `${box.right - box.left}px`;
+      paraSpan.style.height = `${box.bottom - box.top}px`;
+      paraSpan.dir = 'ltr';
+      paraSpan.style.unicodeBidi = 'isolated';
+      // paraSpan.style.border = '1px solid red';
+      // paraSpan.style.border = `1px solid ${colorRotate[cnt % colorRotate.length]}`;
+      semanticContainer.insertBefore(paraSpan, elem);
+      cnt++;
+    }
+    console.log(`layout paragraph used since ${performance.now() - perfBegin} ms`);
   }
 };
 
@@ -898,6 +610,10 @@ window.handleTypstLocation = function (
   y: number,
   options?: HandleOptions,
 ) {
+  if (elem.classList.contains('typst-semantic-layer')) {
+    elem = elem.firstElementChild!;
+    return elem && window.handleTypstLocation(elem, page, x, y, options);
+  }
   const behavior = options?.behavior || 'smooth';
   const assignHashLoc =
     window.assignSemaHash ||
