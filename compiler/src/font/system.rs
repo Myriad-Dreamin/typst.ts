@@ -230,7 +230,7 @@ impl SystemFontSearcher {
     pub fn flush(&mut self) {
         use fontdb::Source;
 
-        for (_idx, face) in self.db.faces().enumerate() {
+        for face in self.db.faces() {
             let path = match &face.source {
                 Source::File(path) | Source::SharedFile(path, _) => path,
                 // We never add binary sources to the database, so there

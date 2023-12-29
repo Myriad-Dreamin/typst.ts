@@ -78,7 +78,9 @@ pub mod glyph_pack_stub {
         }
     }
 }
+
 #[cfg(not(feature = "build_glyph_pack"))]
+#[allow(unused_imports)]
 pub use glyph_pack_stub::*;
 
 #[cfg(not(feature = "build_raw_font"))]
@@ -107,6 +109,7 @@ pub mod raw_font_stub {
     }
 }
 #[cfg(not(feature = "build_raw_font"))]
+#[allow(unused_imports)]
 pub use raw_font_stub::*;
 
 #[cfg(not(feature = "build_web_font"))]
@@ -135,4 +138,5 @@ pub mod web_font_stub {
     }
 }
 #[cfg(not(feature = "build_web_font"))]
+#[allow(unused_imports)]
 pub use web_font_stub::*;

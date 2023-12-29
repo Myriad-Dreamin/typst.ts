@@ -290,16 +290,16 @@ impl fmt::Debug for LayoutRegion {
             Self::ByScalar(v) => {
                 write!(f, "LayoutRegion({:?})", v.kind)?;
 
-                f.debug_map()
-                    .entries(v.layouts.iter().map(|(ref k, ref v)| (k, v)))
-                    .finish()
+                #[allow(clippy::map_identity)]
+                let vs = v.layouts.iter().map(|(k, v)| (k, v));
+                f.debug_map().entries(vs).finish()
             }
             Self::ByStr(v) => {
                 write!(f, "LayoutRegion({:?})", v.kind)?;
 
-                f.debug_map()
-                    .entries(v.layouts.iter().map(|(ref k, ref v)| (k, v)))
-                    .finish()
+                #[allow(clippy::map_identity)]
+                let vs = v.layouts.iter().map(|(k, v)| (k, v));
+                f.debug_map().entries(vs).finish()
             }
         }
     }
