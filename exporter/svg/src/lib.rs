@@ -69,6 +69,10 @@ pub trait ExportFeature {
     /// However, it is also permitted unstable if you will not use IFT.
     const USE_STABLE_GLYPH_ID: bool;
 
+    /// Whether to rasterize text.
+    const SHOULD_RASTERIZE_TEXT: bool;
+
+    /// Whether to include builtin css.
     const WITH_BUILTIN_CSS: bool;
 
     /// Whether to include js for interactive and responsive actions.
@@ -89,6 +93,7 @@ impl ExportFeature for DefaultExportFeature {
     const SHOULD_ATTACH_DEBUG_INFO: bool = false;
     const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
     const USE_STABLE_GLYPH_ID: bool = true;
+    const SHOULD_RASTERIZE_TEXT: bool = false;
     const WITH_BUILTIN_CSS: bool = true;
     const WITH_RESPONSIVE_JS: bool = true;
     const AWARE_HTML_ENTITY: bool = true;
@@ -104,6 +109,7 @@ impl ExportFeature for SvgExportFeature {
     const SHOULD_ATTACH_DEBUG_INFO: bool = false;
     const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
     const USE_STABLE_GLYPH_ID: bool = true;
+    const SHOULD_RASTERIZE_TEXT: bool = false;
     const WITH_BUILTIN_CSS: bool = true;
     const WITH_RESPONSIVE_JS: bool = false;
     const AWARE_HTML_ENTITY: bool = false;

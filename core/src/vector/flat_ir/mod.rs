@@ -41,7 +41,7 @@ use super::{
     geom::{Abs, Point, Size},
     ir::{
         DefId, FontItem, FontRef, GlyphItem, GlyphRef, GradientItem, ImageGlyphItem, ImageItem,
-        ImmutStr, LinkItem, OutlineGlyphItem, PathItem, SpanId, TextShape, TransformItem,
+        ImmutStr, LinkItem, OutlineGlyphItem, PathItem, Scalar, SpanId, TextShape, TransformItem,
     },
 };
 
@@ -85,9 +85,23 @@ pub struct FlatTextItem {
 }
 
 impl FlatTextItem {
-    pub fn render_glyphs(&self, upem: Abs, consume_glyph: impl FnMut(Abs, &GlyphRef)) -> Abs {
+    pub fn width(&self) -> Abs {
+        Scalar(
+            self.content
+                .glyphs
+                .iter()
+                .map(|(_, advance, _)| advance.0)
+                .sum(),
+        )
+    }
+
+    pub fn render_glyphs<'a, 'b: 'a>(
+        &'a self,
+        upem: Abs,
+        width: &'b mut f32,
+    ) -> impl Iterator<Item = (Abs, &'a GlyphRef)> {
         self.shape
-            .render_glyphs(upem, self.content.glyphs.iter(), consume_glyph)
+            .render_glyphs(upem, self.content.glyphs.iter(), width)
     }
 }
 

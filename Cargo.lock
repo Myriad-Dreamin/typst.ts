@@ -4559,6 +4559,7 @@ dependencies = [
  "siphasher 1.0.0",
  "tiny-skia",
  "typst",
+ "typst-ts-canvas-exporter",
  "typst-ts-core",
 ]
 
