@@ -34,6 +34,7 @@ web-sys = { workspace = true, features = [
     "Blob",
     "ImageData",
     "HtmlImageElement",
+    "HtmlDivElement",
     "HtmlCanvasElement",
     "HtmlElement",
     "Url",

@@ -1,5 +1,6 @@
 use siphasher::sip128::Hasher128;
 use std::{collections::HashMap, hash::Hash, sync::Arc};
+use typst_ts_canvas_exporter::CanvasRenderSnippets;
 
 use typst_ts_core::{
     hash::{item_hash128, Fingerprint, FingerprintBuilder, FingerprintSipHasherBase},
@@ -13,7 +14,6 @@ use typst_ts_core::{
         vm::GroupContext,
         vm::{RenderState, RenderVm},
     },
-    TypstAbs,
 };
 
 use crate::{
@@ -22,7 +22,7 @@ use crate::{
         SvgTextNode,
     },
     utils::MemorizeFree,
-    ExportFeature, GlyphProvider, SvgGlyphBuilder,
+    ExportFeature, GlyphProvider,
 };
 
 use super::HasStatefulFill;
@@ -63,6 +63,8 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     pub should_attach_debug_info: bool,
     /// See [`ExportFeature`].
     pub use_stable_glyph_id: bool,
+    /// See [`ExportFeature`].
+    pub should_rasterize_text: bool,
 
     pub _feat_phantom: std::marker::PhantomData<Feat>,
 }
@@ -81,6 +83,11 @@ impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Fea
     #[inline]
     fn use_stable_glyph_id(&self) -> bool {
         Feat::USE_STABLE_GLYPH_ID && self.use_stable_glyph_id
+    }
+
+    #[inline]
+    fn should_rasterize_text(&self) -> bool {
+        Feat::SHOULD_RASTERIZE_TEXT && self.should_rasterize_text
     }
 
     #[inline]
@@ -117,6 +124,7 @@ impl<'m, 't, Feat: ExportFeature> BuildGlyph for RenderContext<'m, 't, Feat> {
 }
 
 impl<'m, 't, Feat: ExportFeature> GlyphHashStablizer for RenderContext<'m, 't, Feat> {
+    // todo: this is slow
     fn stablize_hash(&mut self, glyph: &GlyphRef) -> Fingerprint {
         Fingerprint::from_u128(item_hash128(
             &self.module.glyphs[glyph.glyph_idx as usize].1,
@@ -274,79 +282,8 @@ impl<'m, 't, Feat: ExportFeature> RenderVm for RenderContext<'m, 't, Feat> {
     }
 
     /// Render a text into the underlying context.
-    // todo: combine with flat item one
-    fn render_text(&mut self, state: RenderState, text: &ir::TextItem) -> Self::Resultant {
-        let group_ctx = self.start_text(state, text);
-
-        // upem is the unit per em defined in the font.
-        let upem = Scalar(text.font.units_per_em() as f32);
-
-        let mut group_ctx = text.shape.add_transform(self, group_ctx, upem);
-
-        let width = if let Some(fill) = &group_ctx.text_fill {
-            // clip path rect
-            let clip_id = fill.as_svg_id("tc");
-            let fill_id = fill.as_svg_id("tf");
-
-            // because the text is already scaled by the font size,
-            // we need to scale it back to the original size.
-            // todo: infinite multiplication
-            let descender = text
-                .font
-                .metrics()
-                .descender
-                .at(TypstAbs::raw(upem.0 as f64))
-                .to_pt() as f32;
-
-            group_ctx.content.push(SvgText::Plain(format!(
-                r#"<clipPath id="{}" clipPathUnits="userSpaceOnUse">"#,
-                clip_id
-            )));
-
-            let width = text.render_glyphs(upem, |x, g| {
-                group_ctx.render_glyph(self, x, g);
-                group_ctx.content.push(SvgText::Plain("<path/>".into()));
-            });
-
-            group_ctx
-                .content
-                .push(SvgText::Plain(r#"</clipPath>"#.to_owned()));
-
-            // clip path rect
-            let scaled_width = width.0 * upem.0 / text.shape.size.0;
-            group_ctx.content.push(SvgText::Plain(format!(
-                r##"<rect fill="url(#{})" width="{:.1}" height="{:.1}" y="{:.1}" clip-path="url(#{})"/>"##,
-                fill_id, scaled_width, upem.0, descender, clip_id
-            )));
-
-            // image glyphs
-            text.render_glyphs(upem, |x, g| {
-                let built = SvgGlyphBuilder::new(self.glyph_provider.clone()).is_image_glyph(g);
-                if matches!(built, Some(false) | None) {
-                    return;
-                }
-                group_ctx.render_glyph(self, x, g);
-            });
-
-            width
-        } else {
-            text.render_glyphs(upem, |x, g| {
-                group_ctx.render_glyph(self, x, g);
-            })
-        };
-
-        if self.should_render_text_element() {
-            group_ctx.render_text_semantics_inner(
-                &text.shape,
-                &text.content.content,
-                width,
-                Scalar::from(text.font.metrics().ascender.get() as f32),
-                upem,
-                self.should_aware_html_entity(),
-            )
-        }
-
-        group_ctx.into()
+    fn render_text(&mut self, _state: RenderState, _text: &ir::TextItem) -> Self::Resultant {
+        unreachable!();
     }
 }
 
@@ -392,10 +329,81 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Fea
     fn render_flat_text(
         &mut self,
         _state: RenderState,
-        mut group_ctx: Self::Group,
-        _abs_ref: &Fingerprint,
+        group_ctx: Self::Group,
+        abs_ref: &Fingerprint,
         text: &FlatTextItem,
     ) -> Self::Group {
+        if self.should_rasterize_text() {
+            self.rasterize_and_put_text(group_ctx, abs_ref, text)
+        } else {
+            self.render_flat_text_inplace(group_ctx, text)
+        }
+    }
+}
+
+impl<'m, 't, Feat: ExportFeature> FlatIncrRenderVm<'m> for RenderContext<'m, 't, Feat> {}
+
+impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
+    /// Raseterize the text and put it into the group context.
+    fn rasterize_and_put_text(
+        &mut self,
+        mut group_ctx: SvgTextBuilder,
+        abs_ref: &Fingerprint,
+        text: &FlatTextItem,
+    ) -> SvgTextBuilder {
+        let font = self.get_font(&text.font).unwrap();
+
+        // upem is the unit per em defined in the font.
+        let upem = font.unit_per_em;
+
+        group_ctx = text.shape.add_transform(self, group_ctx, upem);
+
+        //
+
+        let width = text.width();
+        let mut _width = 0f32;
+        let iter = text
+            .render_glyphs(upem, &mut _width)
+            .flat_map(|(pos, g)| self.get_glyph(g).map(|g| (pos, g)));
+        let scaled_width = width.0 * upem.0 / text.shape.size.0;
+        let decender_adjust = (font.descender.0 * upem.0).abs();
+        // .max(0.)
+        let div_text = CanvasRenderSnippets::rasterize_text(
+            abs_ref,
+            iter,
+            scaled_width,
+            upem.0,
+            decender_adjust,
+            "#000",
+        );
+
+        group_ctx.content.push(SvgText::Plain(format!(
+            r#"<foreignObject width="{:.1}" height="{:.1}" x="0" y="{:.1}">{div_text}</foreignObject>"#,
+            scaled_width,
+            upem.0 + decender_adjust,
+            -decender_adjust,
+        )));
+
+        if self.should_render_text_element() {
+            group_ctx.render_text_semantics_inner(
+                &text.shape,
+                &text.content.content,
+                width,
+                font.ascender,
+                upem,
+                self.should_aware_html_entity(),
+            )
+        }
+
+        group_ctx
+    }
+
+    /// Render a text into the underlying context.
+    fn render_flat_text_inplace(
+        &mut self,
+        mut group_ctx: SvgTextBuilder,
+        text: &FlatTextItem,
+    ) -> SvgTextBuilder {
         let font = self.get_font(&text.font).unwrap();
 
         // upem is the unit per em defined in the font.
@@ -418,46 +426,51 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Fea
                 clip_id
             )));
 
-            let width = text.render_glyphs(upem, |x, g| {
+            let mut width = 0f32;
+            for (x, g) in text.render_glyphs(upem, &mut width) {
                 group_ctx.render_glyph_ref(self, x, g);
                 group_ctx.content.push(SvgText::Plain("<path/>".into()));
-            });
+            }
 
             group_ctx
                 .content
                 .push(SvgText::Plain(r#"</clipPath>"#.to_owned()));
 
             // clip path rect
-            let scaled_width = width.0 * upem.0 / text.shape.size.0;
+            let scaled_width = width * upem.0 / text.shape.size.0;
             group_ctx.content.push(SvgText::Plain(format!(
                 r##"<rect fill="url(#{})" width="{:.1}" height="{:.1}" y="{:.1}" clip-path="url(#{})"/>"##,
                 fill_id, scaled_width, upem.0, descender, clip_id
             )));
 
             // image glyphs
-            text.render_glyphs(upem, |x, g| {
+            let mut _width = 0f32;
+            for (x, g) in text.render_glyphs(upem, &mut _width) {
                 let built = self.get_glyph(g);
                 if matches!(
                     built,
                     Some(GlyphItem::Outline(..) | GlyphItem::Raw(..)) | None
                 ) {
-                    return;
+                    continue;
                 }
                 group_ctx.render_glyph_ref(self, x, g);
-            });
+            }
 
             width
         } else {
-            text.render_glyphs(upem, |x, g| {
+            let mut width = 0f32;
+            for (x, g) in text.render_glyphs(upem, &mut width) {
                 group_ctx.render_glyph_ref(self, x, g);
-            })
+            }
+
+            width
         };
 
         if self.should_render_text_element() {
             group_ctx.render_text_semantics_inner(
                 &text.shape,
                 &text.content.content,
-                width,
+                Scalar(width),
                 font.ascender,
                 upem,
                 self.should_aware_html_entity(),
@@ -467,5 +480,3 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Fea
         group_ctx
     }
 }
-
-impl<'m, 't, Feat: ExportFeature> FlatIncrRenderVm<'m> for RenderContext<'m, 't, Feat> {}

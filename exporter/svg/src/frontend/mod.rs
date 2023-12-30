@@ -1,6 +1,13 @@
+pub(crate) mod context;
+pub(crate) mod dynamic_layout;
+pub(crate) mod flat;
+pub(crate) mod incremental;
+
+pub use dynamic_layout::DynamicLayoutSvgExporter;
+pub use incremental::{IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderContext};
+
 use std::{collections::HashSet, f32::consts::TAU, fmt::Write, sync::Arc};
 
-use crate::SvgDataSelection;
 use typst::{
     layout::{Angle, Quadrant},
     visualize::{Color, ColorSpace, Hsl, Hsv, WeightedColor},
@@ -17,20 +24,11 @@ use typst_ts_core::{
     },
 };
 
-pub(crate) mod context;
-use context::{RenderContext, StyleDefMap};
-
-pub(crate) mod dynamic_layout;
-pub use dynamic_layout::DynamicLayoutSvgExporter;
-pub(crate) mod flat;
-pub(crate) mod incremental;
 use crate::{
     backend::{SvgGlyphBuilder, SvgText, SvgTextNode},
-    ExportFeature,
+    ExportFeature, SvgDataSelection,
 };
-pub use incremental::{IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderContext};
-
-use self::context::PaintFillMap;
+use context::{PaintFillMap, RenderContext, StyleDefMap};
 
 pub struct SvgExporter<Feat: ExportFeature> {
     pub _feat_phantom: std::marker::PhantomData<Feat>,
@@ -468,6 +466,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             should_attach_debug_info: Feat::SHOULD_ATTACH_DEBUG_INFO,
             should_render_text_element: true,
             use_stable_glyph_id: true,
+            should_rasterize_text: true,
 
             _feat_phantom: Default::default(),
         }

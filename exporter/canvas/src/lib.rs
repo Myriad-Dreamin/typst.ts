@@ -3,7 +3,7 @@ use std::{fmt::Debug, ops::Deref, sync::Arc};
 use tiny_skia as sk;
 
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
-use web_sys::{CanvasRenderingContext2d, HtmlImageElement, Path2d};
+use web_sys::{CanvasRenderingContext2d, HtmlDivElement, HtmlImageElement, Path2d};
 
 use typst_ts_core::{
     error::prelude::*,
@@ -50,6 +50,7 @@ impl ExportFeature for DefaultExportFeature {
 }
 
 use async_trait::async_trait;
+
 #[async_trait(?Send)]
 pub trait CanvasElem: Debug {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d);
@@ -829,16 +830,154 @@ impl IncrCanvasDocClient {
     }
 }
 
+fn create_image() -> Option<HtmlImageElement> {
+    let doc = web_sys::window()?.document()?;
+    doc.create_element("img").ok()?.dyn_into().ok()
+}
+
 #[comemo::memoize]
 fn rasterize_image(_image: &Image) -> Option<HtmlImageElement> {
-    let window = web_sys::window().unwrap();
-    window
-        .document()
-        .unwrap()
-        .create_element("img")
-        .unwrap()
-        .dyn_into::<HtmlImageElement>()
-        .ok()
+    create_image()
+}
+
+#[comemo::memoize]
+fn rasterize_text(_fg: Fingerprint) -> Option<HtmlDivElement> {
+    let doc = web_sys::window()?.document()?;
+    doc.create_element("div").ok()?.dyn_into().ok()
+}
+
+pub struct CanvasRenderSnippets;
+
+impl CanvasRenderSnippets {
+    fn put_glyph(
+        canvas: &web_sys::CanvasRenderingContext2d,
+        fill: &str,
+        glyph_item: &GlyphItem,
+        ts: sk::Transform,
+    ) {
+        let _guard = CanvasStateGuard::new(canvas);
+        set_transform(canvas, ts);
+        match &glyph_item {
+            GlyphItem::Raw(..) => unreachable!(),
+            GlyphItem::Outline(path) => {
+                canvas.set_fill_style(&fill.into());
+                canvas.fill_with_path_2d(&Path2d::new_with_path_string(&path.d).unwrap());
+            }
+            GlyphItem::Image(_glyph) => {
+                unimplemented!();
+            }
+            GlyphItem::None => {}
+        }
+    }
+
+    // note we need
+    pub fn rasterize_text<'a>(
+        fg: &Fingerprint,
+        glyphs: impl Iterator<Item = (Scalar, &'a GlyphItem)>,
+        width: f32,
+        height: f32,
+        decender: f32,
+        fill: &str,
+    ) -> String {
+        let Some(elem) = rasterize_text(*fg) else {
+            return Default::default();
+        };
+        let image_loaded = elem.get_attribute("data-typst-loaded-image");
+        if matches!(image_loaded, Some(t) if t == "true") {
+            return elem.outer_html();
+        }
+
+        let random_token = format!(
+            "text-{}",
+            js_sys::Math::random().to_string().replace('.', "")
+        );
+
+        // presentational text
+        elem.set_class_name(format!("typst-ptext {}", random_token).as_str());
+        elem.set_attribute("data-typst-loaded-image", "true")
+            .unwrap();
+
+        crate::utils::console_log!(
+            "rasterize_text {:?} {} {} {} {}",
+            fg,
+            fill,
+            width,
+            height,
+            decender
+        );
+
+        // style.set_property("width", "100%").unwrap();
+        // style.set_property("height", "100%").unwrap();
+        // style
+        //     .set_property("background", "var(--glyph_fill)")
+        //     .unwrap();
+        elem.set_attribute(
+            "style",
+            "width: 100%; height: 100%; background: transparent;",
+        )
+        .unwrap();
+
+        Self::rasterize_text_slow(
+            elem.clone(),
+            random_token,
+            glyphs,
+            width,
+            height,
+            decender,
+            fill,
+        );
+
+        // console_log!("rasterize_text done {}", elem.outer_html());
+        // let _guard = CanvasStateGuard::new(canvas);
+        // set_transform(canvas, ts);
+        // canvas.set_fill_style(&fill.into());
+        // canvas.fill_text(&text.text, 0., 0.).unwrap();
+        elem.outer_html()
+    }
+
+    fn rasterize_text_slow<'a>(
+        elem: HtmlDivElement,
+        random_token: String,
+        glyphs: impl Iterator<Item = (Scalar, &'a GlyphItem)>,
+        width: f32,
+        height: f32,
+        decender: f32,
+        fill: &str,
+    ) {
+        const RATIO: f32 = 8f32;
+        let canvas = web_sys::window()
+            .unwrap()
+            .document()
+            .unwrap()
+            .create_element("canvas")
+            .unwrap()
+            .dyn_into::<web_sys::HtmlCanvasElement>()
+            .unwrap();
+        canvas.set_width((width / RATIO).ceil() as u32);
+        canvas.set_height(((height + decender) / RATIO).ceil() as u32);
+        let ctx = canvas
+            .get_context("2d")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<web_sys::CanvasRenderingContext2d>()
+            .unwrap();
+
+        let ts = sk::Transform::from_scale(1. / RATIO, 1. / RATIO).pre_translate(0., decender);
+        for (pos, glyph) in glyphs {
+            Self::put_glyph(&ctx, fill, glyph, ts.pre_translate(pos.0, 0.));
+        }
+
+        // window.handleTextRasterized = function (canvas: HTMLCanvasElement, elem:
+        // Element, randomToken: string) get handle and call
+        let window = web_sys::window().unwrap();
+        if let Ok(proc) = js_sys::Reflect::get(&window, &JsValue::from_str("handleTextRasterized"))
+        {
+            proc.dyn_ref::<js_sys::Function>()
+                .unwrap()
+                .call3(&JsValue::NULL, &canvas, &elem, &random_token.into())
+                .unwrap();
+        }
+    }
 }
 
 // pub use backend::canvas::IncrCanvasDocClient;

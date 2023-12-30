@@ -18,9 +18,11 @@ tiny-skia.workspace = true
 base64.workspace = true
 
 typst-ts-core.workspace = true
+typst-ts-canvas-exporter = { workspace = true, optional = true }
 log.workspace = true
 siphasher.workspace = true
 
 [features]
 experimental-ligature = ["typst-ts-core/experimental-ligature"]
-default = []
+aggresive-browser-rasterization = ["typst-ts-canvas-exporter"]
+default = ["aggresive-browser-rasterization"]

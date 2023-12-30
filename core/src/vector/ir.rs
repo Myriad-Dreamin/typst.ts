@@ -452,9 +452,13 @@ pub struct TextItem {
 }
 
 impl TextItem {
-    pub fn render_glyphs(&self, upem: Abs, consume_glyph: impl FnMut(Abs, &GlyphItem)) -> Abs {
+    pub fn render_glyphs<'a, 'b: 'a>(
+        &'a self,
+        upem: Abs,
+        width: &'b mut f32,
+    ) -> impl Iterator<Item = (Abs, &'a GlyphItem)> {
         self.shape
-            .render_glyphs(upem, self.content.glyphs.iter(), consume_glyph)
+            .render_glyphs(upem, self.content.glyphs.iter(), width)
     }
 }
 
@@ -594,25 +598,23 @@ impl TextShape {
     }
 
     #[inline]
-    pub(super) fn render_glyphs<'a, Glyph: 'a>(
+    pub(super) fn render_glyphs<'a, 'b: 'a, Glyph: 'a>(
         &self,
         upem: Abs,
         glyph_iter: impl Iterator<Item = &'a (Abs, Abs, Glyph)>,
-        mut consume_glyph: impl FnMut(Abs, &'a Glyph),
-    ) -> Abs {
-        let inv_ppem = self.inv_ppem(upem.0).0;
+        width: &'b mut f32,
+    ) -> impl Iterator<Item = (Abs, &'a Glyph)> {
+        *width = 0f32;
 
-        let mut x = 0f32;
-        for (offset, advance, glyph) in glyph_iter {
-            let offset = x + offset.0;
+        let inv_ppem = self.inv_ppem(upem.0).0;
+        glyph_iter.into_iter().map(move |(offset, advance, glyph)| {
+            let offset = *width + offset.0;
             let ts = offset * inv_ppem;
 
-            consume_glyph(Scalar(ts), glyph);
+            *width += advance.0;
 
-            x += advance.0;
-        }
-
-        Scalar(x)
+            (Scalar(ts), glyph)
+        })
     }
 }
 

@@ -179,9 +179,11 @@ pub trait FlatRenderVm<'m>: Sized + FontIndice<'m> {
 
         // Rescale the font size and put glyphs into the group.
         group_ctx = text.shape.add_transform(self, group_ctx, upem);
-        text.render_glyphs(upem, |x, g| {
+        let mut _width = 0f32;
+        for (x, g) in text.render_glyphs(upem, &mut _width) {
             group_ctx.render_glyph_ref(self, x, g);
-        });
+        }
+
         group_ctx
     }
 }
