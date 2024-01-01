@@ -13,8 +13,8 @@
     "index.js"
   ],
   "dependencies": {
-    "@myriaddreamin/typst-ts-renderer": "^0.4.1",
-    "@myriaddreamin/typst.ts": "^0.4.1",
+    "@myriaddreamin/typst-ts-renderer": "^0.4.2-rc1",
+    "@myriaddreamin/typst.ts": "^0.4.2-rc1",
     "@types/hast": "^3.0.0",
     "@types/katex": "^0.16.0",
     "hast-util-from-html-isomorphic": "^2.0.0",
