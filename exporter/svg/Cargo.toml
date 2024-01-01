@@ -9,6 +9,8 @@ repository.workspace = true
 
 [dependencies]
 
+once_cell.workspace = true
+
 typst.workspace = true
 comemo.workspace = true
 

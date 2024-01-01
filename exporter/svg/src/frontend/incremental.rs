@@ -34,6 +34,20 @@ impl ExportFeature for IncrementalExportFeature {
     const AWARE_HTML_ENTITY: bool = true;
 }
 
+static EMPTY_PAGE: once_cell::sync::Lazy<(Fingerprint, Vec<(Fingerprint, FlatSvgItem)>)> =
+    once_cell::sync::Lazy::new(|| {
+        // prepare an empty page for the pages that are not rendered
+        let mut mb = ModuleBuilder::default();
+        let empty_page = mb.build(SvgItem::Group(Default::default(), None));
+        (
+            empty_page,
+            mb.items
+                .iter()
+                .map(|(f, (_, v))| (*f, v.clone()))
+                .collect::<Vec<_>>(),
+        )
+    });
+
 pub struct IncrementalRenderContext<'a> {
     pub module: &'a Module,
     pub prev: &'a [Page],
@@ -69,30 +83,14 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         // println!("reusable: {:?}", reusable);
         // println!("unused_prev: {:?}", unused_prev);
 
+        let empty_page = EMPTY_PAGE.0;
+
         for Page {
             content: entry,
             size: size_f32,
         } in ctx.next.iter()
         {
             let size = Self::page_size(*size_f32);
-            if reusable.contains(entry) {
-                // println!("reuse page: {} {:?}", idx, entry);
-                svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
-                    attributes: vec![
-                        ("class", "typst-page".into()),
-                        ("transform", format!("translate(0, {})", acc_height)),
-                        ("data-tid", entry.as_svg_id("p")),
-                        ("data-reuse-from", entry.as_svg_id("p")),
-                        ("data-page-width", size.x.to_string()),
-                        ("data-page-height", size.y.to_string()),
-                    ],
-                    content: vec![],
-                })));
-
-                acc_height += size.y;
-                continue;
-            }
-
             let mut attributes = vec![
                 ("class", "typst-page".into()),
                 ("transform", format!("translate(0, {})", acc_height)),
@@ -100,6 +98,22 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                 ("data-page-width", size.x.to_string()),
                 ("data-page-height", size.y.to_string()),
             ];
+            if *entry == empty_page {
+                attributes.push(("data-dummy", "1".into()));
+            }
+            println!("page: {} {:?} {:?}", acc_height, entry, empty_page);
+
+            if reusable.contains(entry) {
+                attributes.push(("data-reuse-from", entry.as_svg_id("p")));
+                // println!("reuse page: {} {:?}", idx, entry);
+                svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
+                    attributes,
+                    content: vec![],
+                })));
+
+                acc_height += size.y;
+                continue;
+            }
 
             // todo: evaluate simlarity
             let state = RenderState::new_size(*size_f32);
@@ -154,10 +168,8 @@ impl IncrSvgDocClient {
 
         // prepare an empty page for the pages that are not rendered
         // todo: better solution?
-        let empty_page = self.mb.build(SvgItem::Group(Default::default(), None));
-        kern.module_mut()
-            .items
-            .extend(self.mb.items.iter().map(|(f, (_, v))| (*f, v.clone())));
+        let (empty_page, resources) = EMPTY_PAGE.clone();
+        kern.module_mut().items.extend(resources);
 
         // get previous doc_view
         // it is exact state of the current DOM.

@@ -4537,6 +4537,7 @@ dependencies = [
  "base64",
  "comemo",
  "log",
+ "once_cell",
  "siphasher 1.0.0",
  "tiny-skia",
  "typst",
