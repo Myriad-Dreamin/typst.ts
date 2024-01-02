@@ -4393,6 +4393,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "typst-ts-incremental-test"
+version = "0.4.2-rc1"
+dependencies = [
+ "anyhow",
+ "comemo",
+ "hex",
+ "sha2",
+ "tokio",
+ "typst",
+ "typst-syntax",
+ "typst-ts-compiler",
+ "typst-ts-core",
+ "typst-ts-dev-server",
+ "typst-ts-svg-exporter",
+ "typst-ts-test-common",
+]
+
+[[package]]
 name = "typst-ts-integration-test"
 version = "0.4.2-rc1"
 dependencies = [
