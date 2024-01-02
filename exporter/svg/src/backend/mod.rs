@@ -369,10 +369,13 @@ impl<C: BuildClipPath> TransformContext<C> for SvgTextBuilder {
     }
 
     fn transform_clip(mut self, ctx: &mut C, path: &ir::PathItem) -> Self {
-        let clip_id = ctx.build_clip_path(path);
-
+        let clip_id = ctx.build_clip_path(path).as_svg_id("c");
+        self.content.push(SvgText::Plain(format!(
+            r##"<clipPath id="{}"><path d="{}"/></clipPath>"##,
+            clip_id, path.d
+        )));
         self.attributes
-            .push(("clip-path", format!(r"url(#{})", clip_id.as_svg_id("c"))));
+            .push(("clip-path", format!(r"url(#{})", clip_id)));
         self
     }
 }

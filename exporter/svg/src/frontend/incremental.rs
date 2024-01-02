@@ -248,7 +248,6 @@ impl IncrSvgDocClient {
         // attach the clip paths, and style defs
 
         svg.push(r#"<defs class="clip-path">"#.into());
-        IncrExporter::clip_paths(t.clip_paths, &mut svg);
         IncrExporter::gradients(gradients, &mut svg);
         IncrExporter::patterns(patterns.into_iter(), &mut svg);
         svg.push("</defs>".into());

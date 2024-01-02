@@ -30,8 +30,6 @@ use super::HasStatefulFill;
 /// Maps the style name to the style definition.
 /// See [`StyleNs`].
 pub(crate) type StyleDefMap = HashMap<(StyleNs, ImmutStr), String>;
-/// Maps the clip path id to clip path's data.
-pub(crate) type ClipPathMap = HashMap<ImmutStr, Fingerprint>;
 /// Maps paint fill id to the paint fill's data.
 pub(crate) type PaintFillMap = HashMap<ImmutStr, (u8, Fingerprint, Option<bool>)>;
 
@@ -54,8 +52,6 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     pub(crate) glyph_defs: &'t mut GlyphPackBuilder,
     /// Stores the style definitions used in the document.
     pub(crate) style_defs: &'t mut StyleDefMap,
-    /// Stores the clip paths used in the document.
-    pub(crate) clip_paths: &'t mut ClipPathMap,
     /// Stores the graidents used in the document.
     pub(crate) gradients: &'t mut PaintFillMap,
     /// Stores the patterns used in the document.
@@ -143,13 +139,7 @@ impl<'m, 't, Feat: ExportFeature> BuildFillStyleClass for RenderContext<'m, 't, 
 
 impl<'m, 't, Feat: ExportFeature> BuildClipPath for RenderContext<'m, 't, Feat> {
     fn build_clip_path(&mut self, path: &PathItem) -> Fingerprint {
-        if let Some(id) = self.clip_paths.get(&path.d) {
-            return *id;
-        }
-
-        let fingerprint = self.fingerprint_builder.resolve(path);
-        self.clip_paths.insert(path.d.clone(), fingerprint);
-        fingerprint
+        self.fingerprint_builder.resolve(path)
     }
 }
 
