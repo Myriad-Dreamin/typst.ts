@@ -37,6 +37,7 @@ members = [
 
     "tests/common",
     "tests/heap-profile",
+    "tests/incremental",
     "tests/integration",
     "tests/std",
 ]

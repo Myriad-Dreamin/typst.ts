@@ -338,15 +338,15 @@ where
     ) {
         let child_ref = &transformed.1;
         let state = state.pre_apply(&transformed.0);
-        if matches!(prev_item_, Some(ir::FlatSvgItem::Item(ir::TransformedRef(_item, prev_ref)))
-            if prev_ref == child_ref)
-        {
-            // assert!(item != &transformed.0);
-            ts.render_diff_item_ref_at(state, self, Point::default(), child_ref, child_ref);
-            return;
+        match prev_item_ {
+            // if both items are transformed, we can reuse the internal item with transforming it a
+            // bit.
+            Some(ir::FlatSvgItem::Item(ir::TransformedRef(_item, prev_ref))) => {
+                ts.render_diff_item_ref_at(state, self, Point::default(), child_ref, prev_ref);
+            }
+            _ => ts.render_item_ref(state, self, child_ref),
         }
         // failed to reuse
-        ts.render_item_ref(state, self, child_ref);
     }
 
     /// Render a diff text into the underlying context.
