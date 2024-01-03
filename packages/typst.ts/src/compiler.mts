@@ -293,9 +293,11 @@ class TypstCompilerDriver {
 
   async withIncrementalServer<T>(f: (s: IncrementalServer) => Promise<T>): Promise<T> {
     const srv = new IncrementalServer(this.compiler.create_incr_server());
-    const res = f(srv);
-    srv[kObject].free();
-    return res;
+    try {
+      return await f(srv);
+    } finally {
+      srv[kObject].free();
+    }
   }
 
   async getAst(mainFilePath: string): Promise<string> {
