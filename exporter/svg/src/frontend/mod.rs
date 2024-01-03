@@ -18,7 +18,7 @@ use typst_ts_core::{
 };
 
 pub(crate) mod context;
-use context::{ClipPathMap, RenderContext, StyleDefMap};
+use context::{RenderContext, StyleDefMap};
 
 pub(crate) mod dynamic_layout;
 pub use dynamic_layout::DynamicLayoutSvgExporter;
@@ -82,22 +82,6 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         svg.extend(style_defs.into_iter().map(|v| SvgText::Plain(v.1)));
 
         svg.push("</style>".into());
-    }
-
-    /// Render the clip paths for SVG
-    /// <svg> <defs> <clipPath/> </defs> .. </svg>
-    ///              ^^^^^^^^^^^
-    /// See [`ClipPathMap`].
-    fn clip_paths(clip_paths: ClipPathMap, svg: &mut Vec<SvgText>) {
-        let mut clip_paths = clip_paths.into_iter().collect::<Vec<_>>();
-        clip_paths.sort_by(|a, b| a.1.cmp(&b.1));
-        for (clip_path, id) in clip_paths {
-            svg.push(SvgText::Plain(format!(
-                r##"<clipPath id="{}"><path d="{}"/></clipPath>"##,
-                id.as_svg_id("c"),
-                clip_path
-            )));
-        }
     }
 
     /// Render the gradients for SVG
@@ -381,7 +365,6 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             svg.extend(glyphs);
             svg.push("</defs>".into());
             svg.push(r#"<defs class="clip-path">"#.into());
-            Self::clip_paths(t.clip_paths, &mut svg);
             Self::gradients(gradients, &mut svg);
             Self::patterns(patterns.into_iter(), &mut svg);
             svg.push("</defs>".into());
@@ -421,8 +404,6 @@ pub struct SvgTask<Feat: ExportFeature> {
     pub(crate) glyph_defs: GlyphPackBuilder,
     /// Stores the style definitions used in the document.
     pub(crate) style_defs: StyleDefMap,
-    /// Stores the clip paths used in the document.
-    pub(crate) clip_paths: ClipPathMap,
     /// Stores the gradient used in the document.
     pub(crate) gradients: PaintFillMap,
     /// Stores the patterns used in the document.
@@ -441,7 +422,6 @@ impl<Feat: ExportFeature> Default for SvgTask<Feat> {
 
             glyph_defs: GlyphPackBuilder::default(),
             style_defs: StyleDefMap::default(),
-            clip_paths: ClipPathMap::default(),
             gradients: PaintFillMap::default(),
             patterns: PaintFillMap::default(),
 
@@ -482,7 +462,6 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 
             glyph_defs: &mut self.glyph_defs,
             style_defs: &mut self.style_defs,
-            clip_paths: &mut self.clip_paths,
             gradients: &mut self.gradients,
             patterns: &mut self.patterns,
 
