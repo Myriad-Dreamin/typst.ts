@@ -317,7 +317,14 @@ impl TypstCompiler {
         Ok(IncrServer::default())
     }
 
-    pub fn incr_compile(&mut self, state: &mut IncrServer) -> Result<Vec<u8>, JsValue> {
+    pub fn incr_compile(
+        &mut self,
+        main_file_path: String,
+        state: &mut IncrServer,
+    ) -> Result<Vec<u8>, JsValue> {
+        self.compiler
+            .set_entry_file(Path::new(&main_file_path).to_owned());
+
         let doc = self
             .compiler
             .compile(&mut Default::default())

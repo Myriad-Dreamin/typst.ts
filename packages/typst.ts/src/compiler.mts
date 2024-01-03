@@ -1,7 +1,7 @@
 // @ts-ignore
 import type * as typst from '@myriaddreamin/typst-ts-web-compiler/pkg/wasm-pack-shim.mjs';
 import { buildComponent, globalFontPromises } from './init.mjs';
-import { FsAccessModel, SemanticTokens, SemanticTokensLegend } from './internal.types.mjs';
+import { FsAccessModel, SemanticTokens, SemanticTokensLegend, kObject } from './internal.types.mjs';
 
 import { preloadRemoteFonts, type InitOptions } from './options.init.mjs';
 import { LazyWasmModule } from './wasm.mjs';
@@ -11,10 +11,7 @@ import { LazyWasmModule } from './wasm.mjs';
  */
 export type CompileFormat = 'vector' | 'pdf';
 
-/**
- * The options for compiling the document.
- */
-export interface CompileOptions<F extends CompileFormat = any> {
+interface TransientCompileOptions<F extends CompileFormat = any> {
   /**
    * The path of the main file.
    */
@@ -26,6 +23,61 @@ export interface CompileOptions<F extends CompileFormat = any> {
    * @default 'vector'
    */
   format?: F;
+}
+
+interface IncrementalCompileOptions {
+  /**
+   * The path of the main file.
+   */
+  mainFilePath: string;
+  /**
+   * The format of the incrementally exported artifact.
+   * @default 'vector'
+   */
+  format?: 'vector';
+  /**
+   * The incremental server for the document.
+   */
+  incrementalServer: IncrementalServer;
+}
+
+/**
+ * The options for compiling the document.
+ */
+export type CompileOptions<F extends CompileFormat = any> =
+  | TransientCompileOptions<F>
+  | IncrementalCompileOptions;
+
+export class IncrementalServer {
+  /**
+   * @internal
+   */
+  [kObject]: typst.IncrServer;
+
+  constructor(s: typst.IncrServer) {
+    this[kObject] = s;
+  }
+
+  /**
+   * Reset the incremental server to the initial state.
+   */
+  reset(): void {
+    this[kObject].reset();
+  }
+
+  /**
+   * Return current result.
+   */
+  current(): Uint8Array | undefined {
+    return this[kObject].current();
+  }
+
+  /**
+   * Also attach the debug info to the result.
+   */
+  setAttachDebugInfo(enable: boolean): void {
+    this[kObject].set_attach_debug_info(enable);
+  }
 }
 
 /**
@@ -130,6 +182,17 @@ export interface TypstCompiler {
     resultId?: string;
     offsetEncoding?: string;
   }): Promise<SemanticTokens>;
+
+  /**
+   * experimental
+   * Run with an incremental server which holds the state of the document in wasm.
+   *
+   * @param {function(IncrementalServer): Promise<T>} f - The function to run with the incremental server.
+   * @returns {Promise<T>} - The result of the function.
+   *
+   * Note: the incremental server will be freed after the function is finished.
+   */
+  withIncrementalServer<T>(f: (s: IncrementalServer) => Promise<T>): Promise<T>;
 }
 
 const gCompilerModule = new LazyWasmModule(async (bin?: any) => {
@@ -187,6 +250,12 @@ class TypstCompilerDriver {
 
   compile(options: CompileOptions): Promise<Uint8Array> {
     return new Promise<Uint8Array>(resolve => {
+      if ('incrementalServer' in options) {
+        resolve(
+          this.compiler.incr_compile(options.mainFilePath, options.incrementalServer[kObject]),
+        );
+        return;
+      }
       resolve(this.compiler.compile(options.mainFilePath, options.format || 'vector'));
     });
   }
@@ -220,6 +289,13 @@ class TypstCompilerDriver {
         ) as any,
       );
     });
+  }
+
+  async withIncrementalServer<T>(f: (s: IncrementalServer) => Promise<T>): Promise<T> {
+    const srv = new IncrementalServer(this.compiler.create_incr_server());
+    const res = f(srv);
+    srv[kObject].free();
+    return res;
   }
 
   async getAst(mainFilePath: string): Promise<string> {
