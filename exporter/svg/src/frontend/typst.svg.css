@@ -4,6 +4,7 @@
 
 .tsel span,
 .tsel {
+  left: 0;
   position: fixed;
   text-align: justify;
   white-space: nowrap;
