@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst.ts",
-  "version": "0.4.2-rc3",
+  "version": "0.4.2-rc4",
   "description": "Run Typst in JavaScriptWorld.",
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
@@ -41,8 +41,8 @@
     "idb": "^7.1.1"
   },
   "peerDependencies": {
-    "@myriaddreamin/typst-ts-renderer": "^0.4.2-rc3",
-    "@myriaddreamin/typst-ts-web-compiler": "^0.4.2-rc3"
+    "@myriaddreamin/typst-ts-renderer": "^0.4.2-rc4",
+    "@myriaddreamin/typst-ts-web-compiler": "^0.4.2-rc4"
   },
   "peerDependenciesMeta": {
     "@myriaddreamin/typst-ts-renderer": {
