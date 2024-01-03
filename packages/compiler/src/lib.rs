@@ -18,10 +18,11 @@ use typst_ts_core::{
 };
 use wasm_bindgen::prelude::*;
 
-use crate::utils::console_log;
+use crate::{incr::IncrServer, utils::console_log};
 
 pub mod builder;
 
+mod incr;
 pub(crate) mod utils;
 
 #[wasm_bindgen]
@@ -310,6 +311,18 @@ impl TypstCompiler {
             .set_entry_file(Path::new(&main_file_path).to_owned());
 
         self.get_artifact(fmt)
+    }
+
+    pub fn create_incr_server(&mut self) -> Result<IncrServer, JsValue> {
+        Ok(IncrServer::default())
+    }
+
+    pub fn incr_compile(&mut self, state: &mut IncrServer) -> Result<Vec<u8>, JsValue> {
+        let doc = self
+            .compiler
+            .compile(&mut Default::default())
+            .map_err(|e| format!("{e:?}"))?;
+        Ok(state.update(doc))
     }
 }
 
