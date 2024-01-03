@@ -38,7 +38,7 @@ web-sys = { workspace = true, features = [
 console_error_panic_hook.workspace = true
 
 typst-ts-core.workspace = true
-typst-ts-compiler = { version = "0.4.2-rc2", default-features = false, features = [
+typst-ts-compiler = { version = "0.4.2-rc3", default-features = false, features = [
     "web",
 ] }
 
