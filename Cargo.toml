@@ -75,7 +75,7 @@ typst = "0.10.0"
 typst-ide = "0.10.0"
 typst-pdf = "0.10.0"
 typst-syntax = "0.10.0"
-ttf-parser = "0.19.2"
+ttf-parser = "0.20.0"
 
 # general
 anyhow = "1"
@@ -96,7 +96,7 @@ tokio = { version = "1.28.1", features = ["full"] }
 # data structure and algorithm
 append-only-vec = "0.1.2"
 bytemuck = "1"
-comemo = "0.3.1"
+comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
 dissimilar = "1.0"
 elsa = "1.8.1"
 rpds = "1.1.0"
@@ -227,11 +227,13 @@ typst-ts-text-exporter = { path = "exporter/text" }
 # typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
-typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint" }
-typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint" }
+# comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
+typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
+typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
+typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
 
+# comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }
 # typst-syntax = { path = "../typst/crates/typst-syntax" }
 # typst-ide = { path = "../typst/crates/typst-ide" }
