@@ -1,6 +1,7 @@
 use js_sys::Promise;
 use std::{fmt::Debug, ops::Deref, sync::Arc};
 use tiny_skia as sk;
+use typst::{introspection::Introspector, layout::Frame};
 
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, HtmlDivElement, HtmlImageElement, Path2d};
@@ -10,13 +11,13 @@ use typst_ts_core::{
     font::GlyphProvider,
     hash::Fingerprint,
     vector::{
-        flat_ir::{self, LayoutRegionNode, Module, ModuleBuilder, Page},
+        flat_ir::{self, FlatSvgItem, LayoutRegionNode, Module, ModuleBuilder, Page},
         flat_vm::{FlatGroupContext, FlatRenderVm},
         incr::IncrDocClient,
         ir::{
             self, Abs, Axes, BuildGlyph, FontIndice, FontRef, GlyphIndice, GlyphItem,
             GlyphPackBuilder, GlyphRef, Image, ImageItem, ImmutStr, PathStyle, Ratio, Rect, Scalar,
-            Size, SvgItem,
+            Size,
         },
         vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
@@ -48,6 +49,22 @@ impl ExportFeature for DefaultExportFeature {
     const ENABLE_TRACING: bool = false;
     const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
 }
+
+static EMPTY_PAGE: once_cell::sync::Lazy<(Fingerprint, Vec<(Fingerprint, FlatSvgItem)>)> =
+    once_cell::sync::Lazy::new(|| {
+        // prepare an empty page for the pages that are not rendered
+        let mb = ModuleBuilder::default();
+        let i = Introspector::default();
+        let empty_page = mb.build(&i, &Frame::default());
+        (
+            empty_page,
+            mb.items
+                .clone()
+                .into_iter()
+                .map(|(f, (_, v))| (f, v))
+                .collect::<Vec<_>>(),
+        )
+    });
 
 use async_trait::async_trait;
 
@@ -468,16 +485,6 @@ impl<C> TransformContext<C> for CanvasStack {
 impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> GroupContext<C>
     for CanvasStack
 {
-    fn render_item_at(
-        &mut self,
-        state: RenderState,
-        ctx: &mut C,
-        pos: ir::Point,
-        item: &ir::SvgItem,
-    ) {
-        self.inner.push((pos, ctx.render_item(state, item)));
-    }
-
     fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &ir::GlyphItem) {
         let glyph_ref = ctx.build_glyph(glyph);
         if let Some(glyph_data) = ctx.get_glyph(&glyph_ref) {
@@ -756,11 +763,8 @@ impl IncrCanvasDocClient {
 
         // prepare an empty page for the pages that are not rendered
         // todo: better solution?
-        let empty_page = self.mb.build(SvgItem::Group(Default::default(), None));
-        kern.doc
-            .module
-            .items
-            .extend(self.mb.items.iter().map(|(f, (_, v))| (*f, v.clone())));
+        let (empty_page, resources) = EMPTY_PAGE.clone();
+        kern.module_mut().items.extend(resources);
 
         // get previous doc_view
         // it is exact state of the current DOM.

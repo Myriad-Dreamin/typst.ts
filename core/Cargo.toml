@@ -27,7 +27,9 @@ fxhash.workspace = true
 once_cell.workspace = true
 rustc-hash.workspace = true
 
-rpds.workspace = true
+parking_lot.workspace = true
+lockfree = "0.5.0"
+chashmap = "2.2.2"
 serde.workspace = true
 serde_json.workspace = true
 tiny-skia.workspace = true
@@ -35,6 +37,7 @@ log.workspace = true
 flate2.workspace = true
 xmlparser.workspace = true
 serde_with.workspace = true
+rayon.workspace = true
 rkyv = { workspace = true, optional = true }
 svgtypes.workspace = true
 tiny-skia-path.workspace = true
