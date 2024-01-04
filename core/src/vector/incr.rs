@@ -4,10 +4,7 @@ use typst::model::Document;
 
 use crate::{
     error::prelude::*,
-    vector::{
-        flat_ir::{flatten_glyphs, FontPack, GlyphPack, ItemPack, LayoutRegion},
-        LowerBuilder,
-    },
+    vector::flat_ir::{flatten_glyphs, FontPack, GlyphPack, ItemPack, LayoutRegion},
     TakeAs,
 };
 
@@ -51,31 +48,20 @@ impl IncrDocServer {
         // it is important to call gc before building pages
         let gc_items = self.module_builder.gc(5 * 2);
 
-        let mut lower_builder = LowerBuilder::new(&output);
         let builder = &mut self.module_builder;
-        let pages = output
-            .pages
-            .iter()
-            .map(|p| {
-                let abs_ref = builder.build(lower_builder.lower(p));
-                if self.should_attach_debug_info {
-                    self.page_source_mapping.push(SourceMappingNode::Page(
-                        (builder.source_mapping.len() - 1) as u64,
-                    ));
-                }
+        let pages = builder.build_doc(&output.introspector, &output);
 
-                Page {
-                    content: abs_ref,
-                    size: p.size().into(),
-                }
-            })
-            .collect::<Vec<_>>();
+        // todo
+        // if self.should_attach_debug_info {
+        // self.page_source_mapping.push(SourceMappingNode::Page(
+        //     (builder.source_mapping.len() - 1) as u64,
+        // ));
+        // }
 
-        for (fg, ext) in lower_builder.extra_items {
-            let data_fg = builder.build(ext.take());
-            let item = builder.items.get(&data_fg).unwrap();
-            builder.items.insert(fg, item.clone());
-        }
+        // let new_items = builder.new_items.get_mut().len();
+        // let new_fonts = builder.glyphs.new_fonts.get_mut().len();
+        // let new_glyphs = builder.glyphs.new_glyphs.get_mut().len();
+
         let delta = builder.finalize_delta();
 
         // max, min lifetime current, gc_items
@@ -84,26 +70,32 @@ impl IncrDocServer {
             let mi = self
                 .module_builder
                 .items
-                .values()
-                .map(|i| i.0)
+                .clone()
+                .into_iter()
+                .map(|i| i.1 .0)
                 .min()
                 .unwrap_or(0);
             println!(
-                "gc[{}]: max: {}, min: {}, remove: {}",
+                "gc[{}]: i/f/g: {}/{}/{} max: {}, min: {}, remove: {}",
                 self.module_builder.lifetime,
+                new_items,
+                new_fonts,
+                new_glyphs,
                 self.module_builder
                     .items
-                    .values()
-                    .map(|i| i.0)
+                    .clone()
+                    .into_iter()
+                    .map(|i| i.1 .0)
                     .max()
                     .unwrap_or(0xffffffff),
                 mi,
                 gc_items.len()
             );
 
-            for (fg, (_, item)) in self.module_builder.items.iter().filter(|(_, i)| i.0 == mi) {
-                println!("mi {fg:?} => {item:#?}");
-            }
+            // for (fg, (_, item)) in
+            //     self.module_builder.items.iter().filter(|(_, i)| i.0 == mi) {
+            //     println!("mi {fg:?} => {item:#?}");
+            // }
         }
 
         let fonts = FontPack {

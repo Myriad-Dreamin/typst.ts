@@ -11,9 +11,7 @@ use typst_ts_core::{
         flat_vm::FlatRenderVm,
         ir::Size,
         vm::RenderState,
-        LowerBuilder,
     },
-    TakeAs,
 };
 
 use crate::{
@@ -71,26 +69,8 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 
 impl<Feat: ExportFeature> SvgExporter<Feat> {
     pub fn svg_doc(output: &Document) -> SvgDocument {
-        let mut lower_builder = LowerBuilder::new(output);
-        let mut builder = ModuleBuilder::default();
-        let pages = output
-            .pages
-            .iter()
-            .map(|p| {
-                let abs_ref = builder.build(lower_builder.lower(p));
-                Page {
-                    content: abs_ref,
-                    size: p.size().into(),
-                }
-            })
-            .collect::<Vec<_>>();
-
-        // todo: avoid hacking
-        for (fg, ext) in lower_builder.extra_items {
-            let data_fg = builder.build(ext.take());
-            let item = builder.items.get(&data_fg).unwrap();
-            builder.items.insert(fg, item.clone());
-        }
+        let builder = ModuleBuilder::default();
+        let pages = builder.build_doc(&output.introspector, output);
 
         let module = builder.finalize();
         SvgDocument { pages, module }

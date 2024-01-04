@@ -332,23 +332,6 @@ impl<
             .push(("class", format!("typst-text {}", fill_id)));
     }
 
-    fn render_item_at(
-        &mut self,
-        state: RenderState,
-        ctx: &mut C,
-        pos: ir::Point,
-        item: &ir::SvgItem,
-    ) {
-        let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
-
-        let sub_content = ctx.render_item(state, item);
-
-        self.content.push(SvgText::Content(Arc::new(SvgTextNode {
-            attributes: vec![("transform", translate_attr)],
-            content: vec![SvgText::Content(sub_content)],
-        })));
-    }
-
     /// Assuming the glyphs has already been in the defs, render it by
     /// reference.
     #[inline]

@@ -9,7 +9,7 @@ use typst_ts_core::{
         flat_vm::{FlatGroupContext, FlatIncrRenderVm, FlatRenderVm},
         ir::{
             self, BuildGlyph, FontIndice, FontRef, GlyphHashStablizer, GlyphIndice, GlyphItem,
-            GlyphPackBuilder, GlyphRef, ImmutStr, PathItem, PathStyle, Scalar, StyleNs,
+            GlyphPackBuilder, GlyphRef, ImmutStr, PathItem, Scalar, StyleNs,
         },
         vm::GroupContext,
         vm::{RenderState, RenderVm},
@@ -151,28 +151,30 @@ impl<'m, 't, Feat: ExportFeature> BuildClipPath for RenderContext<'m, 't, Feat> 
     }
 }
 
+// todo
 // #[comemo::memoize]
 fn has_stateful_fill<Feat: ExportFeature>(
-    ctx: &MemorizeFree<RenderContext<Feat>>,
-    x: &Fingerprint,
+    _ctx: &MemorizeFree<RenderContext<Feat>>,
+    _x: &Fingerprint,
 ) -> bool {
-    let Some(item) = ctx.0.get_item(x) else {
-        // overestimated
-        return true;
-    };
+    false
+    // let Some(item) = ctx.0.get_item(x) else {
+    //     // overestimated
+    //     return true;
+    // };
 
-    use FlatSvgItem::*;
-    match item {
-        Gradient(..) | Pattern(..) => true,
-        Image(..) | Link(..) | ContentHint(..) | None => false,
-        Item(t) => has_stateful_fill(ctx, &t.1),
-        Group(g, ..) => g.0.iter().any(|(_, x)| has_stateful_fill(ctx, x)),
-        Path(p) => p.styles.iter().any(|s| match s {
-            PathStyle::Fill(color) | PathStyle::Stroke(color) => color.starts_with('@'),
-            _ => false,
-        }),
-        Text(p) => p.shape.fill.starts_with('@'),
-    }
+    // use FlatSvgItem::*;
+    // match item {
+    //     Gradient(..) | Pattern(..) => true,
+    //     Image(..) | Link(..) | ContentHint(..) | None => false,
+    //     Item(t) => has_stateful_fill(ctx, &t.1),
+    //     Group(g, ..) => g.0.iter().any(|(_, x)| has_stateful_fill(ctx, x)),
+    //     Path(p) => p.styles.iter().any(|s| match s {
+    //         PathStyle::Fill(color) | PathStyle::Stroke(color) =>
+    // color.starts_with('@'),         _ => false,
+    //     }),
+    //     Text(p) => p.shape.fill.starts_with('@'),
+    // }
 }
 
 impl<'m, 't, Feat: ExportFeature> HasStatefulFill for RenderContext<'m, 't, Feat> {
@@ -279,11 +281,6 @@ impl<'m, 't, Feat: ExportFeature> RenderVm for RenderContext<'m, 't, Feat> {
         g.attach_debug_info(self, text.content.span_id);
 
         g
-    }
-
-    /// Render a text into the underlying context.
-    fn render_text(&mut self, _state: RenderState, _text: &ir::TextItem) -> Self::Resultant {
-        unreachable!();
     }
 }
 

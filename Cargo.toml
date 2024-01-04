@@ -99,7 +99,6 @@ bytemuck = "1"
 comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
 dissimilar = "1.0"
 elsa = "1.8.1"
-rpds = "1.1.0"
 ecow = "0.2"
 fst = "0.4.7"
 indexmap = "2"

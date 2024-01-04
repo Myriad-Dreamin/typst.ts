@@ -1,9 +1,5 @@
 //! Rendering into svg text or module.
 
-// todo: https://github.com/typst/typst/pull/2740
-// also 3c22c9f31914727f665ce10d6db9dac39a26eacb
-// gradient pattern
-
 // todo: https://github.com/typst/typst/pull/2610
 // color export
 
@@ -19,7 +15,7 @@ pub use typst_ts_core::font::{FontGlyphProvider, GlyphProvider, IGlyphProvider};
 pub use typst_ts_core::vector::flat_ir::{
     self, FlatModule, Module, ModuleBuilder, MultiSvgDocument, SvgDocument,
 };
-pub use typst_ts_core::vector::{geom, ir, LowerBuilder};
+pub use typst_ts_core::vector::{geom, ir};
 
 pub(crate) mod utils;
 

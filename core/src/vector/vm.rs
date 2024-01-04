@@ -1,6 +1,6 @@
 use crate::hash::{item_hash128, Fingerprint};
 
-use super::ir::{self, Abs, Axes, Point, Ratio, Scalar, Size, SvgItem, Transform};
+use super::ir::{self, Abs, Axes, Point, Ratio, Scalar, Size, Transform};
 
 /// A build pattern for applying transforms to the group of items.
 /// See [`ir::Transform`].
@@ -40,13 +40,6 @@ pub trait GroupContext<C>: Sized {
         _fill_key: &Fingerprint,
         _state: RenderState,
     ) {
-    }
-
-    /// Render an item at point into underlying context.
-    fn render_item_at(&mut self, state: RenderState, ctx: &mut C, pos: Point, item: &SvgItem);
-    /// Render an item into underlying context.
-    fn render_item(&mut self, state: RenderState, ctx: &mut C, item: &SvgItem) {
-        self.render_item_at(state, ctx, Point::default(), item);
     }
 
     /// Render a glyph into underlying context.
@@ -174,89 +167,5 @@ pub trait RenderVm: Sized {
     /// Start a new `<g/>` like object for text.
     fn start_text(&mut self, _state: RenderState, _text: &ir::TextItem) -> Self::Group {
         self.start_group()
-    }
-
-    /// Render an item into underlying context.
-    fn render_item(&mut self, state: RenderState, item: &SvgItem) -> Self::Resultant {
-        match &item {
-            ir::SvgItem::Group(group, sz) => self.render_group(state, group, sz),
-            ir::SvgItem::Transformed(transformed) => self.render_transformed(state, transformed),
-            ir::SvgItem::Text(text) => self.render_text(state, text),
-            ir::SvgItem::Path((path, ..)) => {
-                let mut g = self.start_group();
-                g.render_path(
-                    state,
-                    self,
-                    path,
-                    &Fingerprint::from_u128(item_hash128(path)),
-                );
-                g.into()
-            }
-            ir::SvgItem::Link(link) => {
-                let mut g = self.start_group();
-                g.render_link(self, link);
-                g.into()
-            }
-            ir::SvgItem::Image((image, ..)) => {
-                let mut g = self.start_group();
-                g.render_image(self, image);
-                g.into()
-            }
-            ir::SvgItem::ContentHint(c) => {
-                let mut g = self.start_group();
-                g.render_content_hint(self, *c);
-                g.into()
-            }
-            ir::SvgItem::Pattern(..) | ir::SvgItem::Gradient(..) => {
-                panic!("RenderVm.RenderFrame.UnknownItem {:?}", item)
-            }
-        }
-    }
-
-    /// Render a frame group into underlying context.
-    fn render_group(
-        &mut self,
-        mut state: RenderState,
-        group: &ir::GroupItem,
-        sz: &Option<Size>,
-    ) -> Self::Resultant {
-        let mut group_ctx = self.start_frame(group);
-
-        if let Some(sz) = sz {
-            state = state.with_transform(Transform::identity()).with_size(*sz);
-        }
-
-        for (pos, item_ref) in group.0.iter() {
-            group_ctx.render_item_at(state.pre_translate(*pos), self, *pos, item_ref);
-        }
-
-        group_ctx.into()
-    }
-
-    /// Render a transformed frame into underlying context.
-    fn render_transformed(
-        &mut self,
-        state: RenderState,
-        transformed: &ir::TransformedItem,
-    ) -> Self::Resultant {
-        let mut ts = self.start_group().transform(self, &transformed.0);
-        ts.render_item(state.pre_apply(&transformed.0), self, &transformed.1);
-        ts.into()
-    }
-
-    /// Render a text into the underlying context.
-    fn render_text(&mut self, state: RenderState, text: &ir::TextItem) -> Self::Resultant {
-        // upem is the unit per em defined in the font.
-        let upem = Scalar(text.font.units_per_em() as f32);
-
-        let group_ctx = self.start_text(state, text);
-        let mut group_ctx = text.shape.add_transform(self, group_ctx, upem);
-
-        let mut _width = 0f32;
-        for (x, g) in text.render_glyphs(upem, &mut _width) {
-            group_ctx.render_glyph(self, x, g);
-        }
-
-        group_ctx.into()
     }
 }

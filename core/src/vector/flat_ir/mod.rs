@@ -24,6 +24,8 @@ use std::sync::Arc;
 mod module;
 pub use module::*;
 
+pub(crate) mod lowering;
+
 mod layout;
 pub use layout::*;
 

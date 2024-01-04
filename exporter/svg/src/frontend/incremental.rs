@@ -10,7 +10,7 @@ use typst_ts_core::{
         flat_ir::{FlatSvgItem, LayoutRegionNode, Module, ModuleBuilder, Page},
         flat_vm::{FlatIncrRenderVm, FlatRenderVm},
         incr::{IncrDocClient, IncrDocServer},
-        ir::{Rect, SvgItem},
+        ir::Rect,
         vm::RenderState,
     },
 };
@@ -37,14 +37,17 @@ impl ExportFeature for IncrementalExportFeature {
 
 static EMPTY_PAGE: once_cell::sync::Lazy<(Fingerprint, Vec<(Fingerprint, FlatSvgItem)>)> =
     once_cell::sync::Lazy::new(|| {
+        use typst::{introspection::Introspector, layout::Frame};
         // prepare an empty page for the pages that are not rendered
-        let mut mb = ModuleBuilder::default();
-        let empty_page = mb.build(SvgItem::Group(Default::default(), None));
+        let mb = ModuleBuilder::default();
+        let i = Introspector::default();
+        let empty_page = mb.build(&i, &Frame::default());
         (
             empty_page,
             mb.items
-                .iter()
-                .map(|(f, (_, v))| (*f, v.clone()))
+                .clone()
+                .into_iter()
+                .map(|(f, (_, v))| (f, v))
                 .collect::<Vec<_>>(),
         )
     });
