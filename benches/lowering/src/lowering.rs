@@ -1,6 +1,9 @@
 use divan::Bencher;
-use std::sync::{Arc, Mutex};
-use typst_ts_cli::CompileOnceArgs;
+use std::{
+    path::Path,
+    sync::{Arc, Mutex},
+};
+use typst_ts_cli::{CompileOnceArgs, FontArgs};
 
 use once_cell::sync::Lazy;
 use typst::model::Document;
@@ -90,19 +93,22 @@ fn lower_incr(bencher: Bencher) {
 }
 
 // v0.4.1-rc2
-// typst_ts_bench_lowering  fastest       │ slowest       │ median        │ mean          │ samples │ iters
-// ├─ lower_cached          720.3 µs      │ 1.634 ms      │ 870 µs        │ 902.1 µs      │ 100     │ 100
-// ├─ lower_incr            23.55 ms      │ 30.62 ms      │ 24.69 ms      │ 24.94 ms      │ 100     │ 100
-// ╰─ lower_uncached        741.3 µs      │ 1.343 ms      │ 804.1 µs      │ 855.2 µs      │ 100     │ 100
+// typst_ts_bench_lowering  fastest       │ slowest       │ median        │ mean
+// │ samples │ iters ├─ lower_cached          720.3 µs      │ 1.634 ms      │
+// 870 µs        │ 902.1 µs      │ 100     │ 100 ├─ lower_incr            23.55
+// ms      │ 30.62 ms      │ 24.69 ms      │ 24.94 ms      │ 100     │ 100
+// ╰─ lower_uncached        741.3 µs      │ 1.343 ms      │ 804.1 µs      │
+// 855.2 µs      │ 100     │ 100
 
 // v0.4.1-rc3 with text item cache
-// typst_ts_bench_lowering  fastest       │ slowest       │ median        │ mean          │ samples │ iters
-// ├─ lower_cached          248.2 µs      │ 1.158 ms      │ 262.4 µs      │ 286.3 µs      │ 100     │ 100
-// ├─ lower_incr            8.488 ms      │ 13.19 ms      │ 9.048 ms      │ 9.191 ms      │ 100     │ 100
-// ├─ lower_the_thesis      972.7 ms      │ 1.555 s       │ 1.315 s       │ 1.29 s        │ 100     │ 100
-// ╰─ lower_uncached        1.055 ms      │ 1.837 ms      │ 1.12 ms       │ 1.191 ms      │ 100     │ 100
+// typst_ts_bench_lowering  fastest       │ slowest       │ median        │ mean
+// │ samples │ iters ├─ lower_cached          248.2 µs      │ 1.158 ms      │
+// 262.4 µs      │ 286.3 µs      │ 100     │ 100 ├─ lower_incr            8.488
+// ms      │ 13.19 ms      │ 9.048 ms      │ 9.191 ms      │ 100     │ 100
+// ├─ lower_the_thesis      972.7 ms      │ 1.555 s       │ 1.315 s       │ 1.29
+// s        │ 100     │ 100 ╰─ lower_uncached        1.055 ms      │ 1.837 ms
+// │ 1.12 ms       │ 1.191 ms      │ 100     │ 100
 
-#[cfg(feature = "the-thesis")]
 static THE_THESIS_COMPILER: CompileDriver = once_cell::sync::Lazy::new(|| {
     let the_thesis_path =
         env!("CARGO_MANIFEST_DIR").to_owned() + "../../../../../typst/masterproef";
@@ -117,7 +123,6 @@ static THE_THESIS_COMPILER: CompileDriver = once_cell::sync::Lazy::new(|| {
 });
 
 // Check lowering performance for the thesis
-#[cfg(feature = "the-thesis")]
 #[divan::bench]
 fn lower_the_thesis(bencher: Bencher) {
     let test_file = {
@@ -126,7 +131,7 @@ fn lower_the_thesis(bencher: Bencher) {
         std::fs::read_to_string(Path::new(&e)).unwrap()
     };
 
-    let file_contents = (0..32)
+    let file_contents = (0..4)
         .map(|i| test_file.clone() + &("\nTest Incr").repeat(i))
         .collect::<Vec<_>>();
     let docs = file_contents
