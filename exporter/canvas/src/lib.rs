@@ -287,7 +287,7 @@ impl CanvasImageElem {
 
         let image = &image_data.image;
 
-        let image_elem = rasterize_image(image).unwrap();
+        let image_elem = rasterize_image(image.deref().clone()).unwrap();
         Self::load_image_cached(image, &image_elem).await;
 
         // resize image to fit the view
@@ -835,12 +835,12 @@ fn create_image() -> Option<HtmlImageElement> {
     doc.create_element("img").ok()?.dyn_into().ok()
 }
 
-#[comemo::memoize]
-fn rasterize_image(_image: &Image) -> Option<HtmlImageElement> {
+#[comemo::memoize(local)]
+fn rasterize_image(_image: Image) -> Option<HtmlImageElement> {
     create_image()
 }
 
-#[comemo::memoize]
+#[comemo::memoize(local)]
 fn rasterize_text(_fg: Fingerprint) -> Option<HtmlDivElement> {
     let doc = web_sys::window()?.document()?;
     doc.create_element("div").ok()?.dyn_into().ok()

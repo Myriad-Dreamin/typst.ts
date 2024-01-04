@@ -42,7 +42,7 @@ use ttf_parser::GlyphId;
 
 static WARN_VIEW_BOX: OnceCell<()> = OnceCell::new();
 
-type ExtraSvgItems = rpds::RedBlackTreeMap<Fingerprint, Arc<SvgItem>>;
+type ExtraSvgItems = rpds::RedBlackTreeMapSync<Fingerprint, Arc<SvgItem>>;
 
 /// Lower a frame item into svg item.
 pub struct LowerBuilder<'a> {
@@ -364,13 +364,13 @@ impl<'a> LowerBuilder<'a> {
         if let Some(FixedStroke {
             paint,
             thickness,
-            line_cap,
-            line_join,
-            dash_pattern,
+            cap,
+            join,
+            dash,
             miter_limit,
         }) = &shape.stroke
         {
-            if let Some(pattern) = dash_pattern.as_ref() {
+            if let Some(pattern) = dash.as_ref() {
                 styles.push(ir::PathStyle::StrokeDashOffset(pattern.phase.into()));
                 let d = pattern.array.clone();
                 let d = d.into_iter().map(Scalar::from).collect();
@@ -379,12 +379,12 @@ impl<'a> LowerBuilder<'a> {
 
             styles.push(ir::PathStyle::StrokeWidth((*thickness).into()));
             styles.push(ir::PathStyle::StrokeMitterLimit((*miter_limit).into()));
-            match line_cap {
+            match cap {
                 LineCap::Butt => {}
                 LineCap::Round => styles.push(ir::PathStyle::StrokeLineCap("round".into())),
                 LineCap::Square => styles.push(ir::PathStyle::StrokeLineCap("square".into())),
             };
-            match line_join {
+            match join {
                 LineJoin::Miter => {}
                 LineJoin::Bevel => styles.push(ir::PathStyle::StrokeLineJoin("bevel".into())),
                 LineJoin::Round => styles.push(ir::PathStyle::StrokeLineJoin("round".into())),

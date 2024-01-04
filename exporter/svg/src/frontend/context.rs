@@ -151,9 +151,9 @@ impl<'m, 't, Feat: ExportFeature> BuildClipPath for RenderContext<'m, 't, Feat> 
     }
 }
 
-#[comemo::memoize]
-fn has_stateful_fill<'m, 't, Feat: ExportFeature>(
-    ctx: &MemorizeFree<RenderContext<'m, 't, Feat>>,
+// #[comemo::memoize]
+fn has_stateful_fill<Feat: ExportFeature>(
+    ctx: &MemorizeFree<RenderContext<Feat>>,
     x: &Fingerprint,
 ) -> bool {
     let Some(item) = ctx.0.get_item(x) else {
