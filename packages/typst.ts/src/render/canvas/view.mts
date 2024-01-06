@@ -1,4 +1,4 @@
-import { PageInfo } from '../../internal.types.mjs';
+import { PageInfo, TypstDefaultParams } from '../../internal.types.mjs';
 import { RenderToCanvasOptions } from '../../options.render.mjs';
 import { PageViewport } from './viewport.mjs';
 
@@ -20,7 +20,7 @@ export class RenderView {
     container: HTMLElement,
     options: RenderToCanvasOptions,
   ) {
-    this.imageScaleFactor = options.pixelPerPt ?? 2;
+    this.imageScaleFactor = options.pixelPerPt ?? TypstDefaultParams.PIXEL_PER_PT;
 
     container.innerHTML = '';
     container.style.width = '100%';
