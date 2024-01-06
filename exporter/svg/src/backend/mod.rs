@@ -283,7 +283,6 @@ impl<
             + GlyphIndice<'m>
             + NotifyPaint
             + RenderVm<'m, Resultant = Arc<SvgTextNode>>
-            + BuildGlyph
             + FontIndice<'m>
             + BuildFillStyleClass
             + DynExportFeature,
@@ -512,8 +511,8 @@ impl<
         item: &Fingerprint,
         prev_item: &Fingerprint,
     ) {
-        let has_gradient = ctx.has_stateful_fill(item);
-        let content = if item == prev_item && !has_gradient {
+        let has_stateful_fill = ctx.has_stateful_fill(item);
+        let content = if item == prev_item && !has_stateful_fill {
             // todo: update transform
             vec![]
         } else {
@@ -528,7 +527,7 @@ impl<
         };
         attributes.push(("data-tid", item.as_svg_id("p")));
         attributes.push(("data-reuse-from", prev_item.as_svg_id("p")));
-        if has_gradient {
+        if has_stateful_fill {
             attributes.push(("data-bad-equality", "1".to_owned()));
         }
 

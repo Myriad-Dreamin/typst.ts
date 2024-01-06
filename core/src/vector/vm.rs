@@ -420,7 +420,7 @@ where
         sz: &Option<Size>,
     ) {
         if let Some(sz) = sz {
-            state = state.with_size(*sz);
+            state = state.with_transform(Transform::identity()).with_size(*sz);
         }
 
         if let Some(ir::VecItem::Group(prev_group, _)) = prev_item_ {
