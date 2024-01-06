@@ -12,7 +12,7 @@ pub mod tracing;
 pub mod utils;
 pub mod version;
 
-use clap::{Args, Command, Parser, Subcommand, ValueEnum};
+use clap::{builder::ValueParser, ArgAction, Args, Command, Parser, Subcommand, ValueEnum};
 use typst_ts_core::build_info::VERSION;
 use version::VersionFormat;
 
@@ -43,33 +43,38 @@ pub struct Opts {
 )]
 #[allow(clippy::large_enum_variant)]
 pub enum Subcommands {
-    #[clap(visible_alias = "c", about = "Run compiler.")]
+    /// Compiles or Watches an entry file into one or multiple supported output
+    /// format(s)
+    #[clap(visible_alias = "c")]
     Compile(CompileArgs),
 
     /// Processes an input file to extract provided metadata
     Query(QueryArgs),
 
+    /// Runs repl for query
     QueryRepl(QueryReplArgs),
 
-    #[clap(about = "Generate shell completion script.")]
+    /// Generates a shell completion script for CLI.
     Completion(CompletionArgs),
 
-    #[clap(about = "Generate manual.")]
+    /// Generates a manual for CLI.
     Manual(ManualArgs),
 
-    #[clap(about = "Dump Client Environment.")]
+    /// Dumps identified client environment of CLI.
     Env(EnvArgs),
 
+    /// Font commands
     #[clap(subcommand)]
     Font(FontSubCommands),
 
+    /// Package commands
     #[clap(subcommand)]
     Package(PackageSubCommands),
 }
 
 #[derive(Debug, Subcommand)]
 #[clap(
-    about = "Commands about font for typst.",
+    about = "Font commands about font for typst.",
     after_help = "",
     next_display_order = None
 )]
@@ -83,19 +88,19 @@ pub enum FontSubCommands {
 
 #[derive(Debug, Subcommand)]
 #[clap(
-    about = "Commands about package for typst.",
+    about = "Package commands about package for typst.",
     after_help = "",
     next_display_order = None
 )]
 #[allow(clippy::large_enum_variant)]
 pub enum PackageSubCommands {
-    /// List all discovered packages in data and cache paths
+    /// Lists all discovered packages in data and cache paths
     List(ListPackagesArgs),
-    /// Link a package to local data path
+    /// Links a package to local data path
     Link(LinkPackagesArgs),
-    /// Unlink a package from local data path
+    /// Unlinks a package from local data path
     Unlink(LinkPackagesArgs),
-    /// Generate documentation for a package
+    /// Generates documentation for a package
     Doc(GenPackagesDocArgs),
 }
 
@@ -127,9 +132,34 @@ pub struct CompileOnceArgs {
     #[clap(long, short, required = true)]
     pub entry: String,
 
+    /// Add a string key-value pair visible through `sys.inputs`
+    #[clap(
+        long = "input",
+        value_name = "key=value",
+        action = ArgAction::Append,
+        value_parser = ValueParser::new(parse_input_pair),
+    )]
+    pub inputs: Vec<(String, String)>,
+
     /// Output to directory, default in the same directory as the entry file.
     #[clap(long, short, default_value = "")]
     pub output: String,
+}
+
+/// Parses key/value pairs split by the first equal sign.
+///
+/// This function will return an error if the argument contains no equals sign
+/// or contains the key (before the equals sign) is empty.
+fn parse_input_pair(raw: &str) -> Result<(String, String), String> {
+    let (key, val) = raw
+        .split_once('=')
+        .ok_or("input must be a key and a value separated by an equal sign")?;
+    let key = key.trim().to_owned();
+    if key.is_empty() {
+        return Err("the key was missing or empty".to_owned());
+    }
+    let val = val.trim().to_owned();
+    Ok((key, val))
 }
 
 #[derive(Default, Debug, Clone, Parser)]
@@ -150,21 +180,22 @@ pub struct CompileArgs {
     #[clap(flatten)]
     pub export: ExportArgs,
 
-    /// Watch mode.
+    /// Runs compilation in watch mode.
     #[clap(long)]
     pub watch: bool,
 
-    /// Generate dynamic layout representation.
+    /// Generates dynamic layout representation.
     /// Note: this is an experimental feature and will be merged as
     ///   format `dyn-svg` in the future.
     #[clap(long)]
     pub dynamic_layout: bool,
 
-    /// Output formats, possible values: `ast`, `pdf`, `svg`, and, `svg_html`.
+    /// Outputs format(s), possible values: `ast`, `pdf`, `svg`, and,
+    /// `svg_html`.
     #[clap(long)]
     pub format: Vec<String>,
 
-    /// In which format to emit diagnostics
+    /// The format to emit diagnostics in
     #[clap(
         long,
         default_value_t = DiagnosticFormat::Human,

@@ -64,7 +64,7 @@ impl IncrDocServer {
         #[cfg(feature = "debug-gc")]
         {
             let mi = self
-                .module_builder
+                .typst2vec
                 .items
                 .clone()
                 .into_iter()
@@ -72,12 +72,9 @@ impl IncrDocServer {
                 .min()
                 .unwrap_or(0);
             println!(
-                "gc[{}]: i/f/g: {}/{}/{} max: {}, min: {}, remove: {}",
-                self.module_builder.lifetime,
-                new_items,
-                new_fonts,
-                new_glyphs,
-                self.module_builder
+                "gc[{}]: max: {}, min: {}, remove: {}",
+                self.typst2vec.lifetime,
+                self.typst2vec
                     .items
                     .clone()
                     .into_iter()
@@ -89,7 +86,7 @@ impl IncrDocServer {
             );
 
             // for (fg, (_, item)) in
-            //     self.module_builder.items.iter().filter(|(_, i)| i.0 == mi) {
+            //     self.typst2vec.items.iter().filter(|(_, i)| i.0 == mi) {
             //     println!("mi {fg:?} => {item:#?}");
             // }
         }

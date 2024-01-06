@@ -418,8 +418,15 @@ pub struct SvgTask<'a, Feat: ExportFeature> {
 /// Unfortunately, `Default` derive does not work for generic structs.
 impl<Feat: ExportFeature> Default for SvgTask<'_, Feat> {
     fn default() -> Self {
+        let glyph_provider = if cfg!(target_arch = "wasm32") {
+            // todo: provides implementation on wasm32
+            GlyphProvider::new(DummyFontGlyphProvider::default())
+        } else {
+            GlyphProvider::default()
+        };
+
         Self {
-            glyph_provider: GlyphProvider::default(),
+            glyph_provider,
 
             fingerprint_builder: FingerprintBuilder::default(),
 

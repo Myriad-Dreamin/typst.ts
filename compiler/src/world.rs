@@ -1,4 +1,5 @@
 use std::{
+    ops::Deref,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -8,9 +9,9 @@ use comemo::Prehashed;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use typst::{
-    diag::{FileError, FileResult, SourceResult},
-    foundations::Datetime,
-    syntax::{Source, VirtualPath},
+    diag::{eco_format, At, FileError, FileResult, Hint, SourceResult},
+    foundations::{Datetime, Dict},
+    syntax::{Source, Span, VirtualPath},
     text::{Font, FontBook},
     Library, World,
 };
@@ -27,7 +28,7 @@ use crate::{
         get_semantic_tokens_full, get_semantic_tokens_legend, OffsetEncoding, SemanticToken,
         SemanticTokensLegend,
     },
-    service::WorkspaceProvider,
+    service::{EnvWorld, WorkspaceProvider},
     vfs::{AccessModel as VfsAccessModel, Vfs},
     NotifyApi, ShadowApi, Time,
 };
@@ -52,9 +53,11 @@ pub struct CompilerWorld<F: CompilerFeat> {
     /// Identifier of the main file.
     /// After resetting the world, this is set to a detached file.
     pub main: Option<FileId>,
+    /// Additional input arguments to compile the entry file.
+    pub inputs: Arc<Prehashed<Dict>>,
 
     /// Provides library for typst compiler.
-    library: Prehashed<Library>,
+    library: Option<Arc<Prehashed<Library>>>,
     /// Provides font management for typst compiler.
     pub font_resolver: FontResolverImpl,
     /// Provides package management for typst compiler.
@@ -80,15 +83,12 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         registry: F::Registry,
         font_resolver: FontResolverImpl,
     ) -> Self {
-        // Hook up the lang items.
-        // todo: bad upstream changes
-        let library = Prehashed::new(typst::Library::default());
-
         Self {
             root: root_dir.into(),
             main: None,
+            inputs: Arc::new(Prehashed::new(Dict::new())),
 
-            library,
+            library: None,
             font_resolver,
             registry,
             vfs,
@@ -96,12 +96,45 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             now: OnceCell::new(),
         }
     }
+
+    pub fn set_inputs(&mut self, inputs: Arc<Prehashed<Dict>>) {
+        self.inputs = inputs;
+    }
+}
+
+#[comemo::memoize]
+fn create_library(inputs: Arc<Prehashed<Dict>>) -> Arc<Prehashed<Library>> {
+    let lib = typst::Library::builder()
+        .with_inputs(inputs.deref().deref().clone())
+        .build();
+
+    Arc::new(Prehashed::new(lib))
+}
+
+impl<F: CompilerFeat> EnvWorld for CompilerWorld<F> {
+    fn ensure_env(&mut self) -> SourceResult<()> {
+        if self.library.is_none() {
+            return Err(eco_format!("library not initialized"))
+                .hint(eco_format!("do you forget to run compilation?"))
+                .at(Span::detached());
+        }
+
+        Ok(())
+    }
+
+    fn prepare_env(&mut self, _env: &mut crate::service::CompileEnv) -> SourceResult<()> {
+        // Hook up the lang items.
+        // todo: bad upstream changes
+        self.library = Some(create_library(self.inputs.clone()));
+
+        Ok(())
+    }
 }
 
 impl<F: CompilerFeat> World for CompilerWorld<F> {
     /// The standard library.
     fn library(&self) -> &Prehashed<Library> {
-        &self.library
+        self.library.as_ref().unwrap()
     }
 
     /// Access the main source file.
