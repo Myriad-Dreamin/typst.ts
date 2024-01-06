@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use typst::foundations::{Dict, IntoValue};
 use typst::model::Document;
 use typst_ts_compiler::{
     service::{
@@ -46,8 +47,16 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
         .exit()
     }
 
+    // Convert the input pairs to a dictionary.
+    let inputs: Dict = args
+        .inputs
+        .iter()
+        .map(|(k, v)| (k.as_str().into(), v.as_str().into_value()))
+        .collect();
+
     let world = TypstSystemWorld::new(CompileOpts {
         root_dir: workspace_dir.clone(),
+        inputs,
         font_paths: args.font.paths.clone(),
         with_embedded_fonts: EMBEDDED_FONT.to_owned(),
         ..CompileOpts::default()

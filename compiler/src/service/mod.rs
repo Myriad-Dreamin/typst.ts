@@ -140,8 +140,18 @@ impl<'a> fmt::Display for CompileReportMsg<'a> {
     }
 }
 
+pub trait EnvWorld {
+    fn prepare_env(&mut self, _env: &mut CompileEnv) -> SourceResult<()> {
+        Ok(())
+    }
+
+    fn ensure_env(&mut self) -> SourceResult<()> {
+        Ok(())
+    }
+}
+
 pub trait Compiler {
-    type World: World;
+    type World: World + EnvWorld;
 
     fn world(&self) -> &Self::World;
 
@@ -155,6 +165,8 @@ pub trait Compiler {
     /// Compile once from scratch.
     fn pure_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
         self.reset()?;
+
+        self.world_mut().prepare_env(env)?;
 
         let main_id = self.main_id();
 
