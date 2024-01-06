@@ -15,7 +15,7 @@ use super::{preludes::*, *};
 pub type ItemMap = BTreeMap<Fingerprint, VecItem>;
 
 pub type RefItemMap = HashMap<Fingerprint, (u64, VecItem)>;
-pub type RefItemMapSync = chashmap::CHashMap<Fingerprint, (u64, VecItem)>;
+pub type RefItemMapSync = crate::adt::CHashMap<Fingerprint, (u64, VecItem)>;
 
 pub trait ToItemMap {
     fn to_item_map(self) -> ItemMap;

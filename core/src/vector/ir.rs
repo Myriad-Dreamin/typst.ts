@@ -217,11 +217,11 @@ pub type GlyphPack = Vec<(DefId, FlatGlyphItem)>;
 
 pub struct GlyphPackBuilderImpl<const ENABLE_REF_CNT: bool = false> {
     /// Intermediate representation of an incompleted font pack.
-    font_mapping: chashmap::CHashMap<Font, FontRef>,
+    font_mapping: crate::adt::CHashMap<Font, FontRef>,
     font_write_lock: Mutex<()>,
 
     /// Intermediate representation of an incompleted glyph pack.
-    glyph_defs: chashmap::CHashMap<GlyphItem, (GlyphRef, FontRef)>,
+    glyph_defs: crate::adt::CHashMap<GlyphItem, (GlyphRef, FontRef)>,
     glyph_write_lock: Mutex<()>,
 
     pub lifetime: u64,
