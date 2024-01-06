@@ -30,4 +30,5 @@ pub mod canvas_stub {
     }
 }
 #[cfg(not(feature = "render_canvas"))]
+#[allow(unused_imports)]
 pub use canvas_stub::*;
