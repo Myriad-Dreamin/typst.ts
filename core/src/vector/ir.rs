@@ -15,7 +15,7 @@
 //!      │Store data of                     │merge
 //!      ▼                                  ▼
 //! ┌───────────────┐  select layout ┌────────────────────┐
-//! │[`SvgDocument`]│◄───────────────┤[`MultiSvgDocument`]│
+//! │[`VecDocument`]│◄───────────────┤[`MultiVecDocument`]│
 //! └───────────────┘                └────────────────────┘
 
 use core::fmt;
@@ -54,7 +54,7 @@ use crate::{font::GlyphProvider, hash::Fingerprint, TakeAs};
 
 pub use crate::ImmutStr;
 
-use super::GlyphLowerBuilder;
+use super::Glyph2VecPass;
 
 /// A vector item that is specialized for representing
 /// [`typst::model::Document`] or its subtypes.
@@ -393,11 +393,11 @@ pub fn flatten_glyphs(
     repr: impl IntoIterator<Item = (DefId, GlyphItem)>,
 ) -> Vec<(DefId, FlatGlyphItem)> {
     let glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
-    let glyph_lower_builder = GlyphLowerBuilder::new(&glyph_provider, true);
+    let glyph_lower_builder = Glyph2VecPass::new(&glyph_provider, true);
 
     repr.into_iter()
         .map(|(font_id, glyph)| {
-            let glyph = glyph_lower_builder.lower_glyph(&glyph);
+            let glyph = glyph_lower_builder.glyph(&glyph);
             glyph
                 .map(|t| {
                     let t = match t {

@@ -6,31 +6,30 @@ use std::sync::Arc;
 use once_cell::sync::OnceCell;
 use ttf_parser::GlyphId;
 use typst::layout::Size;
-use typst::syntax::Span;
 use typst::text::Font;
 use typst::visualize::Image;
 
-use super::{
+use crate::font::GlyphProvider;
+use crate::vector::{
     geom::Scalar,
     ir::{self, GlyphItem, ImageGlyphItem, OutlineGlyphItem},
     utils::AbsExt,
 };
-use crate::font::GlyphProvider;
 
 static WARN_VIEW_BOX: OnceCell<()> = OnceCell::new();
 
 /// Use types from `tiny-skia` crate.
 use tiny_skia as sk;
 
-/// Lower a glyph into svg item.
-pub struct GlyphLowerBuilder<'a> {
+/// Lower a glyph into vector item.
+pub struct Glyph2VecPass<'a> {
     gp: &'a GlyphProvider,
 
     /// Whether to lower ligature information
     lowering_ligature: bool,
 }
 
-impl<'a> GlyphLowerBuilder<'a> {
+impl<'a> Glyph2VecPass<'a> {
     pub fn new(gp: &'a GlyphProvider, lowering_ligature: bool) -> Self {
         Self {
             gp,
@@ -38,14 +37,14 @@ impl<'a> GlyphLowerBuilder<'a> {
         }
     }
 
-    pub fn lower_glyph(&self, glyph_item: &GlyphItem) -> Option<GlyphItem> {
+    pub fn glyph(&self, glyph_item: &GlyphItem) -> Option<GlyphItem> {
         match glyph_item {
             GlyphItem::Raw(font, id) => {
                 let id = *id;
-                self.lower_svg_glyph(font, id)
+                self.svg_glyph(font, id)
                     .map(GlyphItem::Image)
-                    .or_else(|| self.lower_bitmap_glyph(font, id).map(GlyphItem::Image))
-                    .or_else(|| self.lower_outline_glyph(font, id).map(GlyphItem::Outline))
+                    .or_else(|| self.bitmap_glyph(font, id).map(GlyphItem::Image))
+                    .or_else(|| self.outline_glyph(font, id).map(GlyphItem::Outline))
             }
             GlyphItem::Image(..) | GlyphItem::Outline(..) => Some(glyph_item.clone()),
             GlyphItem::None => Some(GlyphItem::None),
@@ -65,7 +64,7 @@ impl<'a> GlyphLowerBuilder<'a> {
 
     /// Lower an SVG glyph into svg item.
     /// More information: https://learn.microsoft.com/zh-cn/typography/opentype/spec/svg
-    fn lower_svg_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ImageGlyphItem>> {
+    fn svg_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ImageGlyphItem>> {
         let image = extract_svg_glyph(self.gp, font, id)?;
 
         // position our image
@@ -90,7 +89,7 @@ impl<'a> GlyphLowerBuilder<'a> {
     }
 
     /// Lower a bitmap glyph into the svg text.
-    fn lower_bitmap_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ImageGlyphItem>> {
+    fn bitmap_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ImageGlyphItem>> {
         let ppem = u16::MAX;
         let upem = font.metrics().units_per_em as f32;
 
@@ -134,7 +133,7 @@ impl<'a> GlyphLowerBuilder<'a> {
     }
 
     /// Lower an outline glyph into svg text. This is the "normal" case.
-    fn lower_outline_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<OutlineGlyphItem>> {
+    fn outline_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<OutlineGlyphItem>> {
         let d = self.gp.outline_glyph(font, id)?.into();
 
         Some(Arc::new(OutlineGlyphItem {
@@ -277,57 +276,5 @@ fn find_viewbox_attr(svg_str: &'_ str) -> FindViewBoxResult<'_> {
     FindViewBoxResult {
         start_span,
         first_viewbox,
-    }
-}
-
-const DETACHED: u64 = 1;
-const SPAN_BITS: u64 = 48;
-
-// todo: more safe way to transfer span id across process
-/// Note: this function may be removed in the future.
-pub fn span_id_to_u64(span_id: &Span) -> u64 {
-    span_id
-        .id()
-        .map(|file_id| ((file_id.into_raw() as u64) << SPAN_BITS) | span_id.number())
-        .unwrap_or(DETACHED)
-}
-
-/// Note: this function may be removed in the future.
-pub fn span_id_from_u64(span_id: u64) -> Option<Span> {
-    use typst::syntax::FileId;
-    let file_id = if span_id == DETACHED {
-        return Some(Span::detached());
-    } else {
-        let file_id = (span_id >> SPAN_BITS) as u16;
-        FileId::from_raw(file_id)
-    };
-
-    Span::new(file_id, span_id & ((1u64 << SPAN_BITS) - 1))
-}
-
-#[cfg(test)]
-mod tests {
-    use typst::syntax::FileId;
-    use typst::syntax::Span;
-
-    use super::DETACHED;
-    use super::SPAN_BITS;
-    use super::{span_id_from_u64, span_id_to_u64};
-
-    #[test]
-    fn test_convert_span_id_u64() {
-        let file_id = FileId::from_raw(1);
-        let span_id = Span::new(file_id, 2).unwrap();
-
-        // test span -> u64
-        assert_eq!(span_id_to_u64(&Span::detached()), DETACHED);
-        assert_eq!(span_id_to_u64(&span_id), (1u64 << SPAN_BITS) | 2);
-
-        // test u64 -> span
-        assert_eq!(span_id_from_u64(DETACHED), Some(Span::detached()));
-        assert_eq!(span_id_from_u64(span_id_to_u64(&span_id)), Some(span_id));
-
-        // test invalid u64
-        assert_eq!(span_id_from_u64(0), None);
     }
 }

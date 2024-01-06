@@ -1,6 +1,6 @@
 use typst_ts_core::{
     font::GlyphProvider,
-    vector::{ir, GlyphLowerBuilder},
+    vector::{ir, Glyph2VecPass},
 };
 
 use crate::utils::ToCssExt;
@@ -45,7 +45,7 @@ impl SvgGlyphBuilder {
         if matches!(glyph_item, ir::GlyphItem::Raw(..)) {
             return Self::render_glyph_pure_inner(
                 glyph_id,
-                &GlyphLowerBuilder::new(gp, true).lower_glyph(glyph_item)?,
+                &Glyph2VecPass::new(gp, true).glyph(glyph_item)?,
             );
         }
 
@@ -56,7 +56,7 @@ impl SvgGlyphBuilder {
     fn is_image_glyph_inner(gp: &GlyphProvider, glyph_item: &ir::GlyphItem) -> Option<bool> {
         if matches!(glyph_item, ir::GlyphItem::Raw(..)) {
             return Self::is_image_glyph_pure_inner(
-                &GlyphLowerBuilder::new(gp, true).lower_glyph(glyph_item)?,
+                &Glyph2VecPass::new(gp, true).glyph(glyph_item)?,
             );
         }
 
