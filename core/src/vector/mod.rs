@@ -2,7 +2,6 @@
 // pub mod bbox;
 pub mod incr;
 pub mod ir;
-pub(crate) mod lowering;
 pub mod pass;
 mod path2d;
 #[cfg(feature = "rkyv")]
@@ -11,7 +10,7 @@ mod utils;
 pub mod vm;
 
 pub use ir::geom;
-pub use lowering::{span_id_from_u64, span_id_to_u64, GlyphLowerBuilder};
+pub use pass::{span_id_from_u64, span_id_to_u64, Glyph2VecPass};
 
 #[cfg(feature = "rkyv")]
 #[allow(dead_code)]
