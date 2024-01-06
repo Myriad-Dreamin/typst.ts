@@ -19,6 +19,7 @@ pub use content::TextContent;
 // todo: move me to compiler
 pub mod cache;
 pub mod config;
+pub mod debug_loc;
 
 // Core mechanism of typst-ts.
 pub(crate) mod exporter;
