@@ -1,25 +1,24 @@
-use typst_ts_core::{
-    font::GlyphProvider,
-    vector::{ir, Glyph2VecPass},
-};
+use typst_ts_core::vector::ir;
 
 use crate::utils::ToCssExt;
 
 use super::render_image;
 
-pub struct SvgGlyphBuilder {
-    pub glyph_provider: GlyphProvider,
-}
+#[derive(Default)]
+pub struct SvgGlyphBuilder {}
 
 impl SvgGlyphBuilder {
-    pub fn new(glyph_provider: GlyphProvider) -> Self {
-        Self { glyph_provider }
+    pub fn new() -> Self {
+        Self {}
     }
 
     // todo: merge is_image_glyph and render_glyph
-    pub fn render_glyph(&mut self, glyph_id: &str, glyph_item: &ir::GlyphItem) -> Option<String> {
-        let gp = &self.glyph_provider;
-        Self::render_glyph_inner(gp, glyph_id, glyph_item)
+    pub fn render_glyph(
+        &mut self,
+        glyph_id: &str,
+        glyph_item: &ir::FlatGlyphItem,
+    ) -> Option<String> {
+        Self::render_glyph_inner(glyph_id, glyph_item)
     }
 
     fn render_ligature_attr(ll: u8) -> String {
@@ -31,55 +30,16 @@ impl SvgGlyphBuilder {
         }
     }
 
-    pub fn is_image_glyph(&mut self, glyph_item: &ir::GlyphItem) -> Option<bool> {
-        let gp: &GlyphProvider = &self.glyph_provider;
-        Self::is_image_glyph_inner(gp, glyph_item)
-    }
-
     #[comemo::memoize]
-    fn render_glyph_inner(
-        gp: &GlyphProvider,
-        glyph_id: &str,
-        glyph_item: &ir::GlyphItem,
-    ) -> Option<String> {
-        if matches!(glyph_item, ir::GlyphItem::Raw(..)) {
-            return Self::render_glyph_pure_inner(
-                glyph_id,
-                &Glyph2VecPass::new(gp, true).glyph(glyph_item)?,
-            );
-        }
-
-        Self::render_glyph_pure_inner(glyph_id, glyph_item)
-    }
-
-    #[comemo::memoize]
-    fn is_image_glyph_inner(gp: &GlyphProvider, glyph_item: &ir::GlyphItem) -> Option<bool> {
-        if matches!(glyph_item, ir::GlyphItem::Raw(..)) {
-            return Self::is_image_glyph_pure_inner(
-                &Glyph2VecPass::new(gp, true).glyph(glyph_item)?,
-            );
-        }
-
-        Self::is_image_glyph_pure_inner(glyph_item)
-    }
-
-    fn render_glyph_pure_inner(glyph_id: &str, glyph_item: &ir::GlyphItem) -> Option<String> {
+    fn render_glyph_inner(glyph_id: &str, glyph_item: &ir::FlatGlyphItem) -> Option<String> {
         match glyph_item {
-            ir::GlyphItem::Image(image_glyph) => Self::render_image_glyph(glyph_id, image_glyph),
-            ir::GlyphItem::Outline(outline_glyph) => {
+            ir::FlatGlyphItem::Image(image_glyph) => {
+                Self::render_image_glyph(glyph_id, image_glyph)
+            }
+            ir::FlatGlyphItem::Outline(outline_glyph) => {
                 Self::render_outline_glyph(glyph_id, outline_glyph)
             }
-            ir::GlyphItem::Raw(..) => unreachable!(),
-            ir::GlyphItem::None => None,
-        }
-    }
-
-    fn is_image_glyph_pure_inner(glyph_item: &ir::GlyphItem) -> Option<bool> {
-        match glyph_item {
-            ir::GlyphItem::Image(..) => Some(true),
-            ir::GlyphItem::Outline(..) => Some(false),
-            ir::GlyphItem::Raw(..) => unreachable!(),
-            ir::GlyphItem::None => None,
+            ir::FlatGlyphItem::None => None,
         }
     }
 

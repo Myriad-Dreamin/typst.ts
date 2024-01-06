@@ -19,9 +19,6 @@
 //! └───────────────┘                └────────────────────┘
 
 use core::fmt;
-use std::cell::RefCell;
-use std::collections::HashSet;
-use std::ops::DerefMut;
 use std::sync::Arc;
 
 mod color;
@@ -43,17 +40,14 @@ pub use primitives::*;
 pub use text::*;
 pub use visualize::*;
 
-use parking_lot::Mutex;
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 
-use typst::text::Font;
-
-use crate::font::FontGlyphProvider;
-use crate::{font::GlyphProvider, hash::Fingerprint, TakeAs};
+use crate::{hash::Fingerprint, TakeAs};
 
 pub use crate::ImmutStr;
 
+use super::pass::IncrGlyph2VecPass;
 use super::Glyph2VecPass;
 
 /// A vector item that is specialized for representing
@@ -215,165 +209,11 @@ pub type FontPack = Vec<FontItem>;
 /// A finished pack that stores all the glyph items.
 pub type GlyphPack = Vec<(DefId, FlatGlyphItem)>;
 
-pub struct GlyphPackBuilderImpl<const ENABLE_REF_CNT: bool = false> {
-    /// Intermediate representation of an incompleted font pack.
-    font_mapping: crate::adt::CHashMap<Font, FontRef>,
-    font_write_lock: Mutex<()>,
-
-    /// Intermediate representation of an incompleted glyph pack.
-    glyph_defs: crate::adt::CHashMap<GlyphItem, (GlyphRef, FontRef)>,
-    glyph_write_lock: Mutex<()>,
-
-    pub lifetime: u64,
-    pub new_fonts: Mutex<Vec<FontItem>>,
-    pub new_glyphs: Mutex<Vec<(DefId, GlyphItem)>>,
-
-    /// for interning
-    pub used_fonts: HashSet<FontRef>,
-    pub used_glyphs: HashSet<GlyphRef>,
-}
-
-pub type GlyphPackBuilder = GlyphPackBuilderImpl</* ENABLE_REF_CNT */ false>;
-pub type IncrGlyphPackBuilder = GlyphPackBuilderImpl</* ENABLE_REF_CNT */ true>;
-
-impl<const ENABLE_REF_CNT: bool> Default for GlyphPackBuilderImpl<ENABLE_REF_CNT> {
-    fn default() -> Self {
-        Self {
-            lifetime: 0,
-            font_mapping: Default::default(),
-            font_write_lock: Default::default(),
-            glyph_defs: Default::default(),
-            glyph_write_lock: Default::default(),
-            new_fonts: Default::default(),
-            new_glyphs: Default::default(),
-            used_fonts: Default::default(),
-            used_glyphs: Default::default(),
-        }
-    }
-}
-
-impl<const ENABLE_REF_CNT: bool> GlyphPackBuilderImpl<ENABLE_REF_CNT> {
-    pub fn finalize(&self) -> (FontPack, Vec<(DefId, GlyphItem)>) {
-        let mut fonts = self.font_mapping.clone().into_iter().collect::<Vec<_>>();
-        fonts.sort_by(|(_, a), (_, b)| a.idx.cmp(&b.idx));
-        let fonts = fonts.into_iter().map(|(a, _)| a.into()).collect();
-
-        let mut glyphs = self.glyph_defs.clone().into_iter().collect::<Vec<_>>();
-        glyphs.sort_by(|(_, a), (_, b)| a.0.glyph_idx.cmp(&b.0.glyph_idx));
-        let glyphs = glyphs
-            .into_iter()
-            .map(|(a, b)| (DefId(b.1.idx as u64), a))
-            .collect();
-
-        (fonts, glyphs)
-    }
-
-    pub fn build_font(&self, font: &Font) -> FontRef {
-        if let Some(id) = self.font_mapping.get(font) {
-            return id.clone();
-        }
-        let _write_lock = self.font_write_lock.lock();
-
-        let new_abs_ref = RefCell::new(FontRef {
-            hash: 0xfffe,
-            idx: 0xfffe,
-        });
-
-        self.font_mapping.alter(font.clone(), |e| {
-            if e.is_some() {
-                *new_abs_ref.borrow_mut() = e.as_ref().unwrap().clone();
-                return e;
-            }
-
-            let abs_ref = FontRef {
-                hash: fxhash::hash32(font),
-                idx: self.font_mapping.len() as u32,
-            };
-            *new_abs_ref.borrow_mut() = abs_ref.clone();
-            if ENABLE_REF_CNT {
-                self.new_fonts.lock().push(font.clone().into());
-            }
-            Some(abs_ref)
-        });
-
-        new_abs_ref.into_inner()
-    }
-
-    pub fn build_glyph(&self, glyph: &GlyphItem) -> GlyphRef {
-        if let Some(id) = self.glyph_defs.get(glyph) {
-            return id.0.clone();
-        }
-        let _write_lock = self.glyph_write_lock.lock();
-
-        let new_abs_ref = RefCell::new(GlyphRef {
-            font_hash: 0xfffe,
-            glyph_idx: 0xfffe,
-        });
-
-        self.glyph_defs.alter(glyph.clone(), |e| {
-            if e.is_some() {
-                *new_abs_ref.borrow_mut() = e.as_ref().unwrap().0.clone();
-                return e;
-            }
-
-            let g = match glyph {
-                GlyphItem::Raw(g, _) => g,
-                _ => todo!(),
-            };
-
-            let font_ref = self.build_font(g);
-
-            let glyph_idx = self.glyph_defs.len() as u32;
-
-            let abs_ref = GlyphRef {
-                font_hash: font_ref.hash,
-                glyph_idx,
-            };
-            *new_abs_ref.borrow_mut() = abs_ref.clone();
-            if ENABLE_REF_CNT {
-                self.new_glyphs
-                    .lock()
-                    .push((DefId(font_ref.idx as u64), glyph.clone()));
-            }
-            Some((abs_ref, font_ref))
-        });
-
-        new_abs_ref.into_inner()
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn verify_glyph(&self, id: GlyphRef, data: &GlyphItem) {
-        if let Some(glyph) = self.glyph_defs.get(data) {
-            assert_eq!(glyph.0, id);
-        } else {
-            panic!("glyph not found");
-        }
-    }
-}
-
-impl IncrGlyphPackBuilder {
-    pub fn finalize_delta(&self) -> (FontPack, Vec<(DefId, GlyphItem)>) {
-        let fonts = std::mem::take(self.new_fonts.lock().deref_mut());
-        let glyphs = std::mem::take(self.new_glyphs.lock().deref_mut());
-        (fonts, glyphs)
-    }
-}
+pub type GlyphPackBuilder = Glyph2VecPass;
+pub type IncrGlyphPackBuilder = IncrGlyph2VecPass;
 
 pub trait FontIndice<'m> {
     fn get_font(&self, value: &FontRef) -> Option<&'m FontItem>;
-}
-
-pub trait GlyphIndice<'m> {
-    fn get_glyph(&self, value: &GlyphRef) -> Option<&'m GlyphItem>;
-}
-
-pub trait BuildGlyph {
-    fn build_font(&mut self, font: &Font) -> FontRef;
-    fn build_glyph(&mut self, glyph: &GlyphItem) -> GlyphRef;
-}
-
-pub trait GlyphHashStablizer {
-    fn stablize_hash(&mut self, glyph: &GlyphRef) -> Fingerprint;
 }
 
 /// Source mapping
@@ -388,37 +228,11 @@ pub enum SourceMappingNode {
     Page(u64),
 }
 
-// todo: remove this function
-pub fn flatten_glyphs(
-    repr: impl IntoIterator<Item = (DefId, GlyphItem)>,
-) -> Vec<(DefId, FlatGlyphItem)> {
-    let glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
-    let glyph_lower_builder = Glyph2VecPass::new(&glyph_provider, true);
-
-    repr.into_iter()
-        .map(|(font_id, glyph)| {
-            let glyph = glyph_lower_builder.glyph(&glyph);
-            glyph
-                .map(|t| {
-                    let t = match t {
-                        GlyphItem::Image(i) => FlatGlyphItem::Image(i),
-                        GlyphItem::Outline(p) => FlatGlyphItem::Outline(p),
-                        GlyphItem::None => FlatGlyphItem::None,
-                        _ => unreachable!(),
-                    };
-
-                    (font_id, t)
-                })
-                .unwrap_or_else(|| (font_id, FlatGlyphItem::None))
-        })
-        .collect::<Vec<_>>()
-}
-
 pub fn serialize_doc(doc: MultiVecDocument) -> Vec<u8> {
     let flatten_module = FlatModule::new(vec![
         ModuleMetadata::Item(ItemPack(doc.module.items.into_iter().collect())),
         ModuleMetadata::Font(Arc::new(doc.module.fonts.into())),
-        ModuleMetadata::Glyph(Arc::new(flatten_glyphs(doc.module.glyphs).into())),
+        ModuleMetadata::Glyph(Arc::new(doc.module.glyphs.into())),
         ModuleMetadata::Layout(Arc::new(doc.layouts)),
     ]);
 

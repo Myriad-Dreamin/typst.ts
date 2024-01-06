@@ -144,7 +144,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
 
                     // has end of line (concept from pdf.js)
                     if has_eol {
-                        let font_name = self.append_flat_text_font(text.font.clone());
+                        let font_name = self.append_flat_text_font(text.shape.font);
                         self.append_text_break(ts, font_name, &text.shape)
                     }
 
@@ -156,7 +156,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
     }
 
     fn process_flat_text(&mut self, ts: sk::Transform, text: &TextItem) {
-        let font_name = self.append_flat_text_font(text.font.clone());
+        let font_name = self.append_flat_text_font(text.shape.font);
         let width = text.content.glyphs.iter().map(|g| g.0 .0 + g.1 .0).sum();
         self.append_text_content(
             ts,

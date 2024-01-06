@@ -2,7 +2,7 @@ use crate::hash::{item_hash128, Fingerprint};
 use std::collections::hash_map::RandomState;
 use std::collections::{BTreeMap, HashSet};
 
-use super::ir::{self, Abs, Axes, FontIndice, GlyphRef, Point, Ratio, Scalar, Size, Transform};
+use super::ir::{self, Abs, Axes, FontIndice, FontItem, Point, Ratio, Scalar, Size, Transform};
 
 /// A build pattern for applying transforms to the group of items.
 /// See [`ir::Transform`].
@@ -44,9 +44,6 @@ pub trait GroupContext<C>: Sized {
     ) {
     }
 
-    /// Render a glyph into underlying context.
-    fn render_glyph(&mut self, _ctx: &mut C, _pos: Scalar, _item: &ir::GlyphItem) {}
-
     /// Render a geometrical shape into underlying context.
     fn render_path(
         &mut self,
@@ -79,7 +76,7 @@ pub trait GroupContext<C>: Sized {
         self.render_item_ref_at(state, ctx, Point::default(), item);
     }
 
-    fn render_glyph_ref(&mut self, _ctx: &mut C, _pos: Scalar, _item: &GlyphRef) {}
+    fn render_glyph_ref(&mut self, _ctx: &mut C, _pos: Scalar, _font: &FontItem, _glyph_id: u32) {}
 
     fn render_flat_text_semantics(&mut self, _ctx: &mut C, _text: &ir::TextItem, _width: Scalar) {}
 
@@ -324,14 +321,14 @@ pub trait RenderVm<'m>: Sized + FontIndice<'m> {
         text: &ir::TextItem,
     ) -> Self::Group {
         // upem is the unit per em defined in the font.
-        let font = self.get_font(&text.font).unwrap();
+        let font = self.get_font(&text.shape.font).unwrap();
         let upem = Scalar(font.unit_per_em.0);
 
         // Rescale the font size and put glyphs into the group.
         group_ctx = text.shape.add_transform(self, group_ctx, upem);
         let mut _width = 0f32;
         for (x, g) in text.render_glyphs(upem, &mut _width) {
-            group_ctx.render_glyph_ref(self, x, g);
+            group_ctx.render_glyph_ref(self, x, font, g);
         }
 
         group_ctx

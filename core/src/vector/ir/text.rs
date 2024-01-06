@@ -76,6 +76,18 @@ pub struct FontItem {
     pub descender: Abs,
     pub unit_per_em: Abs,
     pub vertical: bool,
+
+    pub glyphs: Vec<Arc<FlatGlyphItem>>,
+
+    #[with(rkyv::with::Skip)]
+    pub glyph_cov: bitvec::vec::BitVec<u32>,
+}
+
+impl FontItem {
+    /// Get a glyph item by its index
+    pub fn get_glyph(&self, glyph_id: u32) -> Option<&Arc<FlatGlyphItem>> {
+        self.glyphs.get(glyph_id as usize)
+    }
 }
 
 impl From<Font> for FontItem {
@@ -91,6 +103,8 @@ impl From<Font> for FontItem {
             descender: Scalar(font.metrics().descender.get() as f32),
             unit_per_em: Scalar(font.units_per_em() as f32),
             vertical: false, // todo: check vertical
+            glyphs: Vec::new(),
+            glyph_cov: bitvec::vec::BitVec::new(),
         }
     }
 }
@@ -100,12 +114,16 @@ impl From<Font> for FontItem {
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct TextShape {
+    /// The font of the text item.
+    pub font: FontRef,
     /// The direction of the text item.
     pub dir: ImmutStr,
     /// The size of text
     pub size: Scalar,
     /// Fill font text with css color.
     pub fill: ImmutStr,
+    /// Stroke font text with css color.
+    pub stroke: Option<ImmutStr>,
 }
 
 impl TextShape {
@@ -130,12 +148,12 @@ impl TextShape {
     }
 
     #[inline]
-    pub(crate) fn render_glyphs<'a, 'b: 'a, Glyph: 'a>(
+    pub(crate) fn render_glyphs<'a, 'b: 'a>(
         &self,
         upem: Abs,
-        glyph_iter: impl Iterator<Item = &'a (Abs, Abs, Glyph)>,
+        glyph_iter: impl Iterator<Item = &'a (Abs, Abs, u32)> + 'a,
         width: &'b mut f32,
-    ) -> impl Iterator<Item = (Abs, &'a Glyph)> {
+    ) -> impl Iterator<Item = (Abs, u32)> + 'a {
         *width = 0f32;
 
         let inv_ppem = self.inv_ppem(upem.0).0;
@@ -145,7 +163,7 @@ impl TextShape {
 
             *width += advance.0;
 
-            (Scalar(ts), glyph)
+            (Scalar(ts), *glyph)
         })
     }
 }
@@ -156,9 +174,8 @@ impl TextShape {
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct TextItem {
-    pub font: FontRef,
-    pub content: Arc<TextItemContent>,
     pub shape: Arc<TextShape>,
+    pub content: Arc<TextItemContent>,
 }
 
 impl TextItem {
@@ -176,7 +193,7 @@ impl TextItem {
         &'a self,
         upem: Abs,
         width: &'b mut f32,
-    ) -> impl Iterator<Item = (Abs, &'a GlyphRef)> {
+    ) -> impl Iterator<Item = (Abs, u32)> + 'a {
         self.shape
             .render_glyphs(upem, self.content.glyphs.iter(), width)
     }
@@ -192,7 +209,7 @@ pub struct TextItemContent {
     pub content: ImmutStr,
     /// The glyphs in the text.
     /// (offset, advance, glyph): ([`Abs`], [`Abs`], [`GlyphItem`])
-    pub glyphs: Arc<[(Abs, Abs, GlyphRef)]>,
+    pub glyphs: Arc<[(Abs, Abs, u32)]>,
     // Source span for this text item.
     // pub span_id: u64,
 }

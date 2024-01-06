@@ -51,7 +51,7 @@ pub trait ModuleStream {
 #[derive(Debug, Default, Clone, Hash)]
 pub struct Module {
     pub fonts: Vec<FontItem>,
-    pub glyphs: Vec<(DefId, GlyphItem)>,
+    pub glyphs: Vec<(GlyphRef, FlatGlyphItem)>,
     pub items: ItemMap,
 }
 
@@ -60,14 +60,35 @@ impl Module {
         FrozenModule(Arc::new(Prehashed::new(self)))
     }
 
+    pub fn prepare_glyphs(&mut self) {
+        let glyphs = std::mem::take(&mut self.glyphs);
+        if glyphs.is_empty() {
+            return;
+        }
+        let mut hash2idx = HashMap::new();
+        for (id, item) in glyphs.into_iter() {
+            let idx = hash2idx.entry(id.font_hash).or_insert_with(|| {
+                self.fonts
+                    .iter()
+                    .position(|f| f.hash == id.font_hash)
+                    .unwrap()
+            });
+            let font = &mut self.fonts[*idx];
+            if font.glyphs.len() <= id.glyph_idx as usize {
+                font.glyphs
+                    .resize(id.glyph_idx as usize + 1, Arc::new(FlatGlyphItem::None));
+            }
+            font.glyphs[id.glyph_idx as usize] = Arc::new(item);
+            if font.glyph_cov.is_empty() {
+                font.glyph_cov = bitvec::vec::BitVec::repeat(false, 65536);
+            }
+            font.glyph_cov.set(id.glyph_idx as usize, true);
+        }
+    }
+
     /// Get a font item by its stable ref.
     pub fn get_font(&self, id: &FontRef) -> Option<&FontItem> {
         self.fonts.get(id.idx as usize)
-    }
-
-    /// Get a glyph item by its stable ref.
-    pub fn get_glyph(&self, id: &AbsoluteRef) -> Option<&GlyphItem> {
-        self.glyphs.get(id.id.0 as usize).map(|(_, item)| item)
     }
 
     /// Get a svg item by its stable ref.
@@ -88,13 +109,24 @@ impl Module {
         self.fonts.extend(fonts.take().items);
 
         let glyphs = v.glyphs();
-        self.glyphs.extend(
-            glyphs
-                .take()
-                .items
-                .into_iter()
-                .map(|(id, item)| (id, item.into())),
-        );
+        if !glyphs.items.is_empty() {
+            self.glyphs = glyphs.take().items;
+            self.prepare_glyphs();
+        }
+    }
+
+    pub fn glyphs_all(&self) -> impl Iterator<Item = (GlyphRef, &FlatGlyphItem)> {
+        self.fonts.iter().flat_map(|font| {
+            font.glyph_cov.iter_ones().map(move |glyph_idx| {
+                (
+                    GlyphRef {
+                        font_hash: font.hash,
+                        glyph_idx: glyph_idx as u32,
+                    },
+                    font.glyphs[glyph_idx].deref(),
+                )
+            })
+        })
     }
 }
 

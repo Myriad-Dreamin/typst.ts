@@ -12,9 +12,9 @@ use typst_ts_core::{
     vector::{
         incr::IncrDocClient,
         ir::{
-            self, Abs, Axes, BuildGlyph, FontIndice, FontRef, GlyphIndice, GlyphItem,
-            GlyphPackBuilder, GlyphRef, Image, ImageItem, ImmutStr, LayoutRegionNode, Module, Page,
-            PathStyle, Ratio, Rect, Scalar, Size,
+            self, Abs, Axes, FlatGlyphItem, FontIndice, FontItem, FontRef, GlyphItem, Image,
+            ImageItem, ImmutStr, LayoutRegionNode, Module, Page, PathStyle, Ratio, Rect, Scalar,
+            Size,
         },
         vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
@@ -326,7 +326,7 @@ impl CanvasElem for CanvasImageElem {
 #[derive(Debug)]
 pub struct CanvasGlyphElem {
     pub fill: ImmutStr,
-    pub glyph_data: GlyphItem,
+    pub glyph_data: Arc<FlatGlyphItem>,
 }
 
 #[async_trait(?Send)]
@@ -334,18 +334,17 @@ impl CanvasElem for CanvasGlyphElem {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         let _guard = CanvasStateGuard::new(canvas);
         set_transform(canvas, ts);
-        match &self.glyph_data {
-            GlyphItem::Raw(..) => unreachable!(),
-            GlyphItem::Outline(path) => {
+        match self.glyph_data.as_ref() {
+            FlatGlyphItem::Outline(path) => {
                 let fill: &str = &self.fill;
                 canvas.set_fill_style(&fill.into());
                 canvas.fill_with_path_2d(&Path2d::new_with_path_string(&path.d).unwrap());
             }
-            GlyphItem::Image(glyph) => {
+            FlatGlyphItem::Image(glyph) => {
                 CanvasImageElem::draw_image(ts.pre_concat(glyph.ts.into()), canvas, &glyph.image)
                     .await
             }
-            GlyphItem::None => {}
+            FlatGlyphItem::None => {}
         }
     }
 }
@@ -360,15 +359,12 @@ pub struct CanvasRenderTask<'m, 't, Feat: ExportFeature> {
 
     pub module: &'m Module,
 
-    /// Stores the glyphs used in the document.
-    pub(crate) glyph_defs: &'t mut GlyphPackBuilder,
-
     /// See [`ExportFeature`].
     pub should_render_text_element: bool,
     /// See [`ExportFeature`].
     pub use_stable_glyph_id: bool,
 
-    pub _feat_phantom: std::marker::PhantomData<Feat>,
+    pub _feat_phantom: std::marker::PhantomData<&'t Feat>,
 }
 
 /// A builder for [`CanvasNode`].
@@ -403,22 +399,6 @@ impl From<CanvasStack> for CanvasNode {
 impl CanvasStack {
     pub fn with_text_shape(&mut self, shape: &ir::TextShape) {
         self.fill = Some(shape.fill.clone())
-    }
-
-    pub fn render_glyph_ref_inner(
-        &mut self,
-        pos: Scalar,
-        _glyph_ref: &GlyphRef,
-        glyph_data: &GlyphItem,
-    ) {
-        self.inner.push((
-            ir::Point::new(pos, Scalar(0.)),
-            Arc::new(Box::new(CanvasGlyphElem {
-                fill: self.fill.clone().unwrap(),
-                // todo: arc glyph item
-                glyph_data: glyph_data.clone(),
-            })),
-        ))
     }
 }
 
@@ -463,18 +443,7 @@ impl<C> TransformContext<C> for CanvasStack {
 }
 
 /// See [`FlatGroupContext`].
-impl<
-        'm,
-        C: BuildGlyph + GlyphIndice<'m> + RenderVm<'m, Resultant = CanvasNode> + GlyphIndice<'m>,
-    > GroupContext<C> for CanvasStack
-{
-    fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &ir::GlyphItem) {
-        let glyph_ref = ctx.build_glyph(glyph);
-        if let Some(glyph_data) = ctx.get_glyph(&glyph_ref) {
-            self.render_glyph_ref_inner(pos, &glyph_ref, glyph_data)
-        }
-    }
-
+impl<'m, C: RenderVm<'m, Resultant = CanvasNode>> GroupContext<C> for CanvasStack {
     fn render_path(
         &mut self,
         _state: RenderState,
@@ -509,32 +478,22 @@ impl<
         self.inner.push((pos, ctx.render_flat_item(state, item)));
     }
 
-    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, glyph: &GlyphRef) {
-        if let Some(glyph_data) = ctx.get_glyph(glyph) {
-            self.render_glyph_ref_inner(pos, glyph, glyph_data)
+    fn render_glyph_ref(&mut self, _ctx: &mut C, pos: Scalar, font: &FontItem, glyph: u32) {
+        if let Some(glyph_data) = font.get_glyph(glyph) {
+            self.inner.push((
+                ir::Point::new(pos, Scalar(0.)),
+                Arc::new(Box::new(CanvasGlyphElem {
+                    fill: self.fill.clone().unwrap(),
+                    glyph_data: glyph_data.clone(),
+                })),
+            ))
         }
-    }
-}
-
-impl<'m, 't, Feat: ExportFeature> BuildGlyph for CanvasRenderTask<'m, 't, Feat> {
-    fn build_font(&mut self, font: &typst::text::Font) -> FontRef {
-        self.glyph_defs.build_font(font)
-    }
-
-    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
-        self.glyph_defs.build_glyph(glyph)
     }
 }
 
 impl<'m, 't, Feat: ExportFeature> FontIndice<'m> for CanvasRenderTask<'m, 't, Feat> {
     fn get_font(&self, value: &FontRef) -> Option<&'m ir::FontItem> {
         self.module.fonts.get(value.idx as usize)
-    }
-}
-
-impl<'m, 't, Feat: ExportFeature> GlyphIndice<'m> for CanvasRenderTask<'m, 't, Feat> {
-    fn get_glyph(&self, g: &GlyphRef) -> Option<&'m ir::GlyphItem> {
-        self.module.glyphs.get(g.glyph_idx as usize).map(|v| &v.1)
     }
 }
 
@@ -575,9 +534,6 @@ pub struct CanvasTask<Feat: ExportFeature> {
     /// See [`GlyphProvider`].
     glyph_provider: GlyphProvider,
 
-    /// Stores the glyphs used in the document.
-    pub(crate) glyph_defs: GlyphPackBuilder,
-
     _feat_phantom: std::marker::PhantomData<Feat>,
 }
 
@@ -586,8 +542,6 @@ impl<Feat: ExportFeature> Default for CanvasTask<Feat> {
     fn default() -> Self {
         Self {
             glyph_provider: GlyphProvider::new(DummyFontGlyphProvider::default()),
-
-            glyph_defs: GlyphPackBuilder::default(),
 
             _feat_phantom: std::marker::PhantomData,
         }
@@ -604,8 +558,6 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
             glyph_provider: self.glyph_provider.clone(),
 
             module,
-
-            glyph_defs: &mut self.glyph_defs,
 
             should_render_text_element: true,
             use_stable_glyph_id: true,

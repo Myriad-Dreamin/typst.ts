@@ -53,7 +53,7 @@ fn rkyv_assertions() {
     const _: () = assert!(core::mem::align_of::<ArchivedPatternItem>() == 8);
     const _: () = assert!(core::mem::size_of::<ArchivedModuleMetadata>() == 12);
     const _: () = assert!(core::mem::align_of::<ArchivedModuleMetadata>() == 4);
-    const _: () = assert!(core::mem::size_of::<ArchivedTextItem>() == 16);
+    const _: () = assert!(core::mem::size_of::<ArchivedTextItem>() == 8);
     const _: () = assert!(core::mem::align_of::<ArchivedTextItem>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedTextItemContent>() == 16);
     const _: () = assert!(core::mem::align_of::<ArchivedTextItemContent>() == 4);
@@ -81,7 +81,7 @@ fn rkyv_assertions() {
     const _: () = assert!(core::mem::align_of::<ArchivedImageGlyphItem>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedOutlineGlyphItem>() == 20);
     const _: () = assert!(core::mem::align_of::<ArchivedOutlineGlyphItem>() == 4);
-    const _: () = assert!(core::mem::size_of::<ArchivedTextShape>() == 20);
+    const _: () = assert!(core::mem::size_of::<ArchivedTextShape>() == 40);
     const _: () = assert!(core::mem::align_of::<ArchivedTextShape>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedPathStyle>() == 12);
     const _: () = assert!(core::mem::align_of::<ArchivedPathStyle>() == 4);

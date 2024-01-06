@@ -29,6 +29,7 @@ rustc-hash.workspace = true
 
 parking_lot = { workspace = true, features = ["owning_ref"] }
 owning_ref = "0.4"
+bitvec = { version = "1" }
 serde.workspace = true
 serde_json.workspace = true
 tiny-skia.workspace = true

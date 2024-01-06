@@ -6,8 +6,8 @@ use typst_ts_core::{
     hash::Fingerprint,
     vector::{
         ir::{
-            flatten_glyphs, FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, LayoutRegionRepr,
-            Module, ModuleMetadata, Page, Size, VecDocument, VecItem,
+            FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, LayoutRegionRepr, Module,
+            ModuleMetadata, Page, Size, VecDocument, VecItem,
         },
         vm::{RenderState, RenderVm},
     },
@@ -86,12 +86,11 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
 
 pub fn export_module(output: VecDocument) -> SourceResult<Vec<u8>> {
     let VecDocument { pages, module } = output;
-    let glyphs = flatten_glyphs(module.glyphs).into();
 
     let module_data = FlatModule::new(vec![
         ModuleMetadata::Item(ItemPack(module.items.into_iter().collect())),
         ModuleMetadata::Font(Arc::new(module.fonts.into())),
-        ModuleMetadata::Glyph(Arc::new(glyphs)),
+        ModuleMetadata::Glyph(Arc::new(module.glyphs.into())),
         ModuleMetadata::Layout(Arc::new(vec![LayoutRegion::ByScalar(LayoutRegionRepr {
             kind: "width".into(),
             layouts: vec![(

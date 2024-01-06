@@ -81,7 +81,7 @@ impl AbsoluteRef {
 
 /// Reference a font item in a more friendly format to compress and store
 /// information, similar to [`GlyphRef`].
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct FontRef {
@@ -96,7 +96,7 @@ pub struct FontRef {
 /// With a glyph reference, we can get both the font metric and the glyph data.
 /// The `font_hash` is to let it safe to be cached, please see [`FontItem`] for
 /// more details.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct GlyphRef {
@@ -108,7 +108,11 @@ pub struct GlyphRef {
 
 impl GlyphRef {
     #[comemo::memoize]
-    pub fn as_unstable_svg_id(&self, prefix: &'static str) -> String {
-        as_svg_id(self.glyph_idx.to_le_bytes().as_ref(), prefix)
+    pub fn as_svg_id(&self, prefix: &'static str) -> String {
+        let t = ((self.font_hash as u64) | ((self.glyph_idx as u64) << 32)).to_le_bytes();
+        let t = &t.as_slice()[..6];
+
+        let fingerprint_lo = base64::engine::general_purpose::STANDARD_NO_PAD.encode(t);
+        return [prefix, &fingerprint_lo].join("");
     }
 }
