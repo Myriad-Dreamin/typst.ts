@@ -3,7 +3,7 @@ use crate::{
     hash::Fingerprint,
 };
 
-use super::{preludes::*, text::*, GlyphLowerBuilder, VecItem};
+use super::{preludes::*, text::*, Glyph2VecPass, VecItem};
 
 /// Flatten mapping fingerprints to vector items.
 #[derive(Debug, Clone, Default)]
@@ -50,12 +50,12 @@ impl From<Vec<(DefId, FlatGlyphItem)>> for IncrGlyphPack {
 impl FromIterator<(GlyphItem, (GlyphRef, FontRef))> for IncrGlyphPack {
     fn from_iter<T: IntoIterator<Item = (GlyphItem, (GlyphRef, FontRef))>>(iter: T) -> Self {
         let glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
-        let glyph_lower_builder = GlyphLowerBuilder::new(&glyph_provider, true);
+        let glyph_lower_builder = Glyph2VecPass::new(&glyph_provider, true);
 
         let items = iter
             .into_iter()
             .map(|(glyph, glyph_id)| {
-                let glyph = glyph_lower_builder.lower_glyph(&glyph);
+                let glyph = glyph_lower_builder.glyph(&glyph);
                 glyph
                     .map(|t| {
                         let t = match t {
