@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use crate::AsCowBytes;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
+use typst::foundations::Dict;
 
 #[serde_as]
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
@@ -14,6 +15,9 @@ pub struct CompileOpts {
 
     /// Path to entry
     pub entry: PathBuf,
+
+    /// Additional input arguments to compile the entry file.
+    pub inputs: Dict,
 
     /// Path to font profile for cache
     #[serde(rename = "fontProfileCachePath")]

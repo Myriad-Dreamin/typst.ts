@@ -1,3 +1,6 @@
+use std::sync::Arc;
+
+use comemo::Prehashed;
 use typst_ts_core::{config::CompileOpts, error::prelude::*, font::FontResolverImpl};
 
 use crate::{
@@ -24,13 +27,16 @@ impl TypstSystemWorld {
     /// Create [`TypstSystemWorld`] with the given options.
     /// See SystemCompilerFeat for instantiation details.
     /// See [`CompileOpts`] for available options.
-    pub fn new(opts: CompileOpts) -> ZResult<Self> {
-        Ok(Self::new_raw(
+    pub fn new(mut opts: CompileOpts) -> ZResult<Self> {
+        let inputs = std::mem::take(&mut opts.inputs);
+        let mut w = Self::new_raw(
             opts.root_dir.clone(),
             Vfs::new(SystemAccessModel {}),
             HttpRegistry::default(),
             Self::resolve_fonts(opts)?,
-        ))
+        );
+        w.set_inputs(Arc::new(Prehashed::new(inputs)));
+        Ok(w)
     }
 
     /// Resolve fonts from given options.

@@ -3,7 +3,7 @@ pub mod boxed;
 
 pub use boxed::{BoxedCompiler, NodeCompilerTrait};
 
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, path::Path, sync::Arc};
 
 use napi::Either;
 use napi_derive::napi;
@@ -15,7 +15,10 @@ use typst_ts_compiler::{
     TypstSystemWorld,
 };
 use typst_ts_core::{
-    config::CompileOpts, error::prelude::*, typst::foundations::IntoValue, Bytes, TypstDict,
+    config::CompileOpts,
+    error::prelude::*,
+    typst::{foundations::IntoValue, prelude::Prehashed},
+    Bytes, TypstDict,
 };
 
 /// let [`CompileDriver`] boxable.
@@ -148,14 +151,13 @@ pub fn create_driver(args: NodeCompileArgs) -> ZResult<CompileDriver> {
         ..CompileOpts::default()
     })?;
 
-    let world = TypstSystemWorld::new_raw(
+    let mut world = TypstSystemWorld::new_raw(
         workspace_dir.clone(),
         Vfs::new(SystemAccessModel {}),
         HttpRegistry::default(),
         searcher.into(),
     );
-    // world.set_inputs(Arc::new(Prehashed::new(inputs)));
-    let _ = inputs;
+    world.set_inputs(Arc::new(Prehashed::new(inputs)));
 
     Ok(CompileDriver {
         world,
