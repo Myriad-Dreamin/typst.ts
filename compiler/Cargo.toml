@@ -90,6 +90,7 @@ system-compile = [
     "dep:notify",
     "dep:log",
     "dep:fontdb",
+    "typst-ts-core/glyph2vec",
 ]
 system-watch = ["dep:notify", "dep:tokio"]
 system = ["system-compile", "system-watch"]
@@ -104,7 +105,7 @@ __web = [
     "typst-ts-core/web",
 ]
 web-render = ["__web"]
-browser-compile = ["__web", "web-render"]
+browser-compile = ["__web", "web-render", "typst-ts-core/glyph2vec"]
 browser-embedded-fonts = ["__web"]
 web = ["__web", "web-render", "browser-compile"]
 default = ["system", "dynamic-layout", "cjk", "emoji"]

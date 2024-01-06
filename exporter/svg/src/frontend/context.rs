@@ -1,8 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
-use typst_ts_canvas_exporter::CanvasRenderSnippets;
 
 use typst_ts_core::{
-    hash::{item_hash128, Fingerprint, FingerprintBuilder},
+    hash::{Fingerprint, FingerprintBuilder},
     vector::{
         ir::{
             self, BuildGlyph, FontIndice, FontRef, GlyphHashStablizer, GlyphIndice, GlyphItem,
@@ -121,11 +120,9 @@ impl<'m, 't, Feat: ExportFeature> BuildGlyph for RenderContext<'m, 't, Feat> {
 }
 
 impl<'m, 't, Feat: ExportFeature> GlyphHashStablizer for RenderContext<'m, 't, Feat> {
-    // todo: this is slow
     fn stablize_hash(&mut self, glyph: &GlyphRef) -> Fingerprint {
-        Fingerprint::from_u128(item_hash128(
-            &self.module.glyphs[glyph.glyph_idx as usize].1,
-        ))
+        let glyph = &self.module.glyphs[glyph.glyph_idx as usize].1;
+        glyph.get_fingerprint()
     }
 }
 
@@ -294,6 +291,20 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, 't, Feat> {
 
 impl<'m, 't, Feat: ExportFeature> IncrRenderVm<'m> for RenderContext<'m, 't, Feat> {}
 
+#[cfg(not(feature = "aggresive-browser-rasterization"))]
+impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
+    /// Raseterize the text and put it into the group context.
+    fn rasterize_and_put_text(
+        &mut self,
+        _group_ctx: SvgTextBuilder,
+        _abs_ref: &Fingerprint,
+        _text: &TextItem,
+    ) -> SvgTextBuilder {
+        panic!("Rasterization is not enabled.")
+    }
+}
+
+#[cfg(feature = "aggresive-browser-rasterization")]
 impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
     /// Raseterize the text and put it into the group context.
     fn rasterize_and_put_text(
@@ -302,6 +313,8 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
         abs_ref: &Fingerprint,
         text: &TextItem,
     ) -> SvgTextBuilder {
+        use typst_ts_canvas_exporter::CanvasRenderSnippets;
+
         let font = self.get_font(&text.font).unwrap();
 
         // upem is the unit per em defined in the font.
@@ -348,7 +361,9 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
 
         group_ctx
     }
+}
 
+impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
     /// Render a text into the underlying context.
     fn render_flat_text_inplace(
         &mut self,

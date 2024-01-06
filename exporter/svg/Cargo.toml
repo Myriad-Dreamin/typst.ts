@@ -26,4 +26,4 @@ rayon.workspace = true
 [features]
 experimental-ligature = ["typst-ts-core/experimental-ligature"]
 aggresive-browser-rasterization = ["typst-ts-canvas-exporter"]
-default = ["aggresive-browser-rasterization"]
+default = []

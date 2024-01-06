@@ -717,10 +717,11 @@ impl IncrCanvasDocClient {
         canvas: &web_sys::CanvasRenderingContext2d,
         rect: Rect,
     ) {
+        const NULL_PAGE: Fingerprint = Fingerprint::from_u128(1);
+
         self.patch_delta(kern);
 
         // prepare an empty page for the pages that are not rendered
-        let null_page = Fingerprint::from_u128(0);
 
         // get previous doc_view
         // it is exact state of the current DOM.
@@ -743,7 +744,7 @@ impl IncrCanvasDocClient {
                 page_off += page.size.y.0;
                 if page_off < rect.lo.y.0 || page_off - page.size.y.0 > rect.hi.y.0 {
                     next_doc_view.push(Page {
-                        content: null_page,
+                        content: NULL_PAGE,
                         size: page.size,
                     });
                     continue;
@@ -760,7 +761,7 @@ impl IncrCanvasDocClient {
         let mut offset_y = 0.;
         for (idx, y) in next_doc_view.iter().enumerate() {
             let x = prev_doc_view.get(idx);
-            if x.is_none() || (x.unwrap() != y && y.content != null_page) {
+            if x.is_none() || (x.unwrap() != y && y.content != NULL_PAGE) {
                 let ts = ts.pre_translate(0., offset_y);
                 self.elements.flush_page(idx, canvas, ts).await;
             }

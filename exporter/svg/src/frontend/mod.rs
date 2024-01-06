@@ -316,7 +316,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         let mut t = SvgTask::<Feat>::default();
         let mut svg_body = vec![];
         t.render(module, pages, &mut svg_body);
-        let patterns = t.render_flat_patterns(module);
+        let patterns = t.render_patterns(module);
 
         // note in order!: pattern may use glyphs
         let glyphs = t.render_glyphs(
