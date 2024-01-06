@@ -1,5 +1,6 @@
 pub mod glyph2vec;
 pub mod typst2vec;
+pub mod vec2source_mapping;
 
 pub use glyph2vec::*;
 pub use typst2vec::*;
