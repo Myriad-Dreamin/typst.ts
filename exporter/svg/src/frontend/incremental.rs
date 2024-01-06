@@ -9,7 +9,6 @@ use typst_ts_core::{
     vector::{
         incr::{IncrDocClient, IncrDocServer},
         ir::{LayoutRegionNode, Module, Page, Rect, VecItem},
-        pass::Typst2VecPass,
         vm::{IncrRenderVm, RenderState, RenderVm},
     },
 };
@@ -34,22 +33,7 @@ impl ExportFeature for IncrementalExportFeature {
     const AWARE_HTML_ENTITY: bool = true;
 }
 
-static EMPTY_PAGE: once_cell::sync::Lazy<(Fingerprint, Vec<(Fingerprint, VecItem)>)> =
-    once_cell::sync::Lazy::new(|| {
-        use typst::{introspection::Introspector, layout::Frame};
-        // prepare an empty page for the pages that are not rendered
-        let pass = Typst2VecPass::default();
-        let i = Introspector::default();
-        let empty_page = pass.frame(&i, &Frame::default());
-        (
-            empty_page,
-            pass.items
-                .clone()
-                .into_iter()
-                .map(|(f, (_, v))| (f, v))
-                .collect::<Vec<_>>(),
-        )
-    });
+const NULL_PAGE: Fingerprint = Fingerprint::from_u128(1);
 
 pub struct IncrementalRenderContext<'a> {
     pub module: &'a Module,
@@ -86,8 +70,6 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         // println!("reusable: {:?}", reusable);
         // println!("unused_prev: {:?}", unused_prev);
 
-        let empty_page = EMPTY_PAGE.0;
-
         for Page {
             content: entry,
             size: size_f32,
@@ -101,10 +83,19 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                 ("data-page-width", size.x.to_string()),
                 ("data-page-height", size.y.to_string()),
             ];
-            if *entry == empty_page {
+
+            if *entry == NULL_PAGE {
                 attributes.push(("data-dummy", "1".into()));
+                // println!("reuse page: {} {:?}", idx, entry);
+                svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
+                    attributes,
+                    content: vec![],
+                })));
+
+                acc_height += size.y;
+                continue;
             }
-            println!("page: {} {:?} {:?}", acc_height, entry, empty_page);
+            // println!("page: {} {:?} {:?}", acc_height, entry, EMPTY_PAGE);
 
             if reusable.contains(entry) {
                 attributes.push(("data-reuse-from", entry.as_svg_id("p")));
@@ -165,11 +156,6 @@ impl IncrSvgDocClient {
     pub fn render_in_window(&mut self, kern: &mut IncrDocClient, rect: Rect) -> String {
         type IncrExporter = SvgExporter<IncrementalExportFeature>;
 
-        // prepare an empty page for the pages that are not rendered
-        // todo: better solution?
-        let (empty_page, resources) = EMPTY_PAGE.clone();
-        kern.module_mut().items.extend(resources);
-
         // get previous doc_view
         // it is exact state of the current DOM.
         let prev_doc_view = self.doc_view.take().unwrap_or_default();
@@ -191,7 +177,7 @@ impl IncrSvgDocClient {
                 page_off += page.size.y.0;
                 if page_off < rect.lo.y.0 || page_off - page.size.y.0 > rect.hi.y.0 {
                     next_doc_view.push(Page {
-                        content: empty_page,
+                        content: NULL_PAGE,
                         size: page.size,
                     });
                     continue;
@@ -219,7 +205,7 @@ impl IncrSvgDocClient {
             &mut svg_body,
         );
         let module_ref = kern.module_mut();
-        let patterns = t.render_flat_patterns(module_ref);
+        let patterns = t.render_patterns(module_ref);
 
         let gradients = std::mem::take(&mut t.gradients);
         let gradients = gradients

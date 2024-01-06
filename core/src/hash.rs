@@ -28,7 +28,7 @@ impl Fingerprint {
         Self(lo, hi)
     }
 
-    pub fn from_u128(hash: u128) -> Self {
+    pub const fn from_u128(hash: u128) -> Self {
         Self(hash as u64, (hash >> 64) as u64)
     }
 

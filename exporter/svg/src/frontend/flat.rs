@@ -43,7 +43,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         }
     }
 
-    pub fn render_flat_patterns(
+    pub fn render_patterns(
         &mut self,
         module: &Module,
     ) -> Vec<(Fingerprint, Size, Arc<SvgTextNode>)> {
