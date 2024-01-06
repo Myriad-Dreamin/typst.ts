@@ -6,8 +6,8 @@ use typst::text::Font;
 
 use super::{
     ir::{
-        self, Abs, Axes, BuildGlyph, FontIndice, FontRef, GlyphIndice, GlyphPackBuilder, GlyphRef,
-        Module, Ratio, Rect, Scalar, Transform,
+        self, Abs, Axes, FontIndice, FontRef, GlyphIndice, GlyphPackBuilder, GlyphRef, Module,
+        Ratio, Rect, Scalar, Transform,
     },
     vm::{
         FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm, GroupContext,
@@ -205,7 +205,7 @@ impl<C> TransformContext<C> for BBoxBuilder {
 }
 
 /// See [`GroupContext`].
-impl<C: BuildGlyph + RenderVm<Resultant = BBox>> GroupContext<C> for BBoxBuilder {
+impl<C: RenderVm<Resultant = BBox>> GroupContext<C> for BBoxBuilder {
     fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &ir::GlyphItem) {
         let glyph_ref = ctx.build_glyph(glyph);
         self.render_glyph_ref_inner(pos, &glyph_ref, glyph)
@@ -336,16 +336,6 @@ impl<'m, 't> FlatIncrRenderVm<'m> for BBoxTask<'m, 't> {
         let bbox = self._render_diff_item(state, next_abs_ref, prev_abs_ref);
         self.bbox_cache.insert(*next_abs_ref, bbox.clone());
         bbox
-    }
-}
-
-impl BuildGlyph for BBoxTask<'_, '_> {
-    fn build_font(&mut self, font: &Font) -> FontRef {
-        self.glyph_defs.build_font(font)
-    }
-
-    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
-        self.glyph_defs.build_glyph(glyph)
     }
 }
 

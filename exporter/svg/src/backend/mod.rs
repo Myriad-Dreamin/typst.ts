@@ -12,8 +12,8 @@ use typst_ts_core::{
     hash::Fingerprint,
     vector::{
         ir::{
-            self, Abs, Axes, BuildGlyph, FontIndice, GlyphHashStablizer, GlyphIndice, GlyphRef,
-            ImmutStr, PathStyle, Ratio, Scalar, Size, Transform,
+            self, Abs, Axes, FontIndice, FontItem, GlyphRef, ImmutStr, PathStyle, Ratio, Scalar,
+            Size, Transform,
         },
         vm::{
             GroupContext, IncrGroupContext, IncrRenderVm, RenderState, RenderVm, TransformContext,
@@ -148,30 +148,6 @@ impl From<SvgTextBuilder> for Arc<SvgTextNode> {
 /// Internal methods for [`SvgTextBuilder`].
 impl SvgTextBuilder {
     #[inline]
-    pub fn render_glyph_inner<C: DynExportFeature + GlyphHashStablizer>(
-        &mut self,
-        ctx: &mut C,
-        pos: Scalar,
-        glyph: &GlyphRef,
-    ) {
-        let adjusted_offset = (pos.0 * 2.).round() / 2.;
-
-        // A stable glyph id can help incremental font transfer (IFT).
-        // However, it is permitted unstable if you will not use IFT.
-        let glyph_id = if ctx.use_stable_glyph_id() {
-            ctx.stablize_hash(glyph).as_svg_id("g")
-        } else {
-            glyph.as_unstable_svg_id("g")
-        };
-
-        self.content.push(SvgText::Plain(format!(
-            // r##"<typst-glyph x="{}" href="#{}"/>"##,
-            r##"<use x="{}" href="#{}"/>"##,
-            adjusted_offset, glyph_id
-        )));
-    }
-
-    #[inline]
     pub fn render_text_semantics_inner(
         &mut self,
         shape: &ir::TextShape,
@@ -278,10 +254,7 @@ impl<C: BuildClipPath> TransformContext<C> for SvgTextBuilder {
 /// See [`FlatGroupContext`].
 impl<
         'm,
-        C: BuildGlyph
-            + GlyphHashStablizer
-            + GlyphIndice<'m>
-            + NotifyPaint
+        C: NotifyPaint
             + RenderVm<'m, Resultant = Arc<SvgTextNode>>
             + FontIndice<'m>
             + BuildFillStyleClass
@@ -331,15 +304,6 @@ impl<
 
         self.attributes
             .push(("class", format!("typst-text {}", fill_id)));
-    }
-
-    /// Assuming the glyphs has already been in the defs, render it by
-    /// reference.
-    #[inline]
-    fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &ir::GlyphItem) {
-        let glyph_ref = ctx.build_glyph(glyph);
-
-        self.render_glyph_inner(ctx, pos, &glyph_ref)
     }
 
     fn render_link(&mut self, _ctx: &mut C, link: &ir::LinkItem) {
@@ -451,8 +415,22 @@ impl<
         })));
     }
 
-    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, glyph: &GlyphRef) {
-        self.render_glyph_inner(ctx, pos, glyph)
+    fn render_glyph_ref(&mut self, _ctx: &mut C, pos: Scalar, font: &FontItem, glyph: u32) {
+        let adjusted_offset = (pos.0 * 2.).round() / 2.;
+
+        // A stable glyph id can help incremental font transfer (IFT).
+        // However, it is permitted unstable if you will not use IFT.
+        let glyph_id = (GlyphRef {
+            font_hash: font.hash,
+            glyph_idx: glyph,
+        })
+        .as_svg_id("g");
+
+        self.content.push(SvgText::Plain(format!(
+            // r##"<typst-glyph x="{}" href="#{}"/>"##,
+            r##"<use x="{}" href="#{}"/>"##,
+            adjusted_offset, glyph_id
+        )));
     }
 
     fn render_flat_text_semantics(&mut self, ctx: &mut C, text: &ir::TextItem, width: Scalar) {
@@ -460,7 +438,7 @@ impl<
             return;
         }
 
-        let font = ctx.get_font(&text.font).unwrap();
+        let font = ctx.get_font(&text.shape.font).unwrap();
 
         self.render_text_semantics_inner(
             &text.shape,
@@ -484,7 +462,7 @@ impl<
         fill_key: &Fingerprint,
         state: RenderState,
     ) -> Self {
-        let font = ctx.get_font(&text.font).unwrap();
+        let font = ctx.get_font(&text.shape.font).unwrap();
         let upem = font.unit_per_em;
 
         self.with_text_shape(ctx, upem, &text.shape, &state.at(fill_key), state);

@@ -113,7 +113,8 @@ impl ExportFeature for SvgExportFeature {
 /// Render SVG wrapped with html for [`Document`].
 pub fn render_svg_html(output: &Document) -> String {
     type UsingExporter = SvgExporter<DefaultExportFeature>;
-    let doc = UsingExporter::svg_doc(output);
+    let mut doc = UsingExporter::svg_doc(output);
+    doc.module.prepare_glyphs();
     let mut svg = UsingExporter::render(&doc.module, &doc.pages, None);
 
     // wrap SVG with html
@@ -135,7 +136,8 @@ pub fn render_svg_html(output: &Document) -> String {
 /// Render SVG for [`Document`].
 pub fn render_svg(output: &Document) -> String {
     type UsingExporter = SvgExporter<SvgExportFeature>;
-    let doc = UsingExporter::svg_doc(output);
+    let mut doc = UsingExporter::svg_doc(output);
+    doc.module.prepare_glyphs();
     let svg_text = UsingExporter::render(&doc.module, &doc.pages, None);
     generate_text(transform::minify(svg_text))
 }

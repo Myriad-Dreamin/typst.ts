@@ -9,7 +9,7 @@ use typst::{
     layout::{Abs, Axes, Dir, Frame, FrameItem, FrameKind, Position, Ratio as TypstRatio, Size},
     model::{Destination, Document as TypstDocument},
     syntax::Span,
-    text::{Font, TextItem as TypstTextItem},
+    text::TextItem as TypstTextItem,
     visualize::{
         FixedStroke, Geometry, Gradient, Image as TypstImage, LineCap, LineJoin, Paint,
         PathItem as TypstPathItem, Pattern, RelativeTo, Shape,
@@ -17,6 +17,7 @@ use typst::{
 };
 
 use crate::{
+    font::GlyphProvider,
     hash::{Fingerprint, FingerprintBuilder},
     vector::{
         ir::*,
@@ -27,9 +28,11 @@ use crate::{
     ImmutStr, TypstAbs,
 };
 
+use super::TGlyph2VecPass;
+
 /// Intermediate representation of a flatten vector item.
 pub struct ConvertImpl<const ENABLE_REF_CNT: bool = false> {
-    pub glyphs: GlyphPackBuilderImpl<ENABLE_REF_CNT>,
+    pub glyphs: TGlyph2VecPass<ENABLE_REF_CNT>,
     pub cache_items: crate::adt::CHashMap<Fingerprint, (u64, Fingerprint, VecItem)>,
     pub items: crate::adt::CHashMap<Fingerprint, (u64, VecItem)>,
     pub new_items: Mutex<Vec<(Fingerprint, VecItem)>>,
@@ -48,26 +51,18 @@ pub type IncrTypst2VecPass = ConvertImpl</* ENABLE_REF_CNT */ true>;
 
 impl<const ENABLE_REF_CNT: bool> Default for ConvertImpl<ENABLE_REF_CNT> {
     fn default() -> Self {
+        let glyphs = TGlyph2VecPass::new(GlyphProvider::default(), true);
+
         Self {
             lifetime: 0,
             cache_items: Default::default(),
-            glyphs: Default::default(),
+            glyphs,
             items: Default::default(),
             new_items: Default::default(),
             fingerprint_builder: Default::default(),
             incr_glyphs: Default::default(),
             should_attach_debug_info: false,
         }
-    }
-}
-
-impl<const ENABLE_REF_CNT: bool> BuildGlyph for ConvertImpl<ENABLE_REF_CNT> {
-    fn build_font(&mut self, font: &Font) -> FontRef {
-        self.glyphs.build_font(font)
-    }
-
-    fn build_glyph(&mut self, glyph: &GlyphItem) -> GlyphRef {
-        self.glyphs.build_glyph(glyph)
     }
 }
 
@@ -84,13 +79,14 @@ impl Typst2VecPass {
             | VecItem::ContentHint(_) => {
                 self.insert(*f, Cow::Borrowed(item));
             }
-            VecItem::Text(t) => {
-                self.glyphs.used_fonts.insert(t.font.clone());
-                self.glyphs
-                    .used_glyphs
-                    .extend(t.content.glyphs.iter().map(|(_, _, glyph)| glyph).cloned());
+            VecItem::Text(_t) => {
+                // self.glyphs.used_fonts.insert(t.shape.font.clone());
+                // self.glyphs
+                //     .used_glyphs
+                //     .extend(t.content.glyphs.iter().map(|(_, _, glyph)| glyph).cloned());
 
-                self.insert(*f, Cow::Borrowed(item));
+                // self.insert(*f, Cow::Borrowed(item));
+                todo!()
             }
             VecItem::Item(t) => {
                 self.insert(*f, Cow::Borrowed(item));
@@ -339,17 +335,16 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
         self.store_cached(&cond, || {
             let fill = stateful_fill.unwrap_or_else(|| self.paint(introspector, &text.fill));
+            let font = self.glyphs.build_font(&text.font);
 
             let mut glyphs = Vec::with_capacity(text.glyphs.len());
             for glyph in &text.glyphs {
-                let id = GlyphId(glyph.id);
-                let data = GlyphItem::Raw(text.font.clone(), id);
-                let id = self.glyphs.build_glyph(&data);
-                // self.glyphs.verify_glyph(id.clone(), &data);
+                self.glyphs
+                    .build_glyph(font, GlyphItem::Raw(text.font.clone(), GlyphId(glyph.id)));
                 glyphs.push((
                     glyph.x_offset.at(text.size).into(),
                     glyph.x_advance.at(text.size).into(),
-                    id,
+                    glyph.id as u32,
                 ));
             }
 
@@ -365,16 +360,13 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                 .max()
                 .unwrap_or_else(|| span_id_to_u64(&Span::detached()));
 
-            let glyphs = glyphs.into();
-
-            let font = self.glyphs.build_font(&text.font);
             VecItem::Text(TextItem {
-                font,
                 content: Arc::new(TextItemContent {
                     content: glyph_chars.into(),
-                    glyphs,
+                    glyphs: glyphs.into(),
                 }),
                 shape: Arc::new(TextShape {
+                    font,
                     size: Scalar(text.size.to_f32()),
                     dir: match text.lang.dir() {
                         Dir::LTR => "ltr",
@@ -384,6 +376,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                     }
                     .into(),
                     fill,
+                    stroke: None,
                 }),
             })
         })

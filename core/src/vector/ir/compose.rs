@@ -1,9 +1,6 @@
-use crate::{
-    font::{FontGlyphProvider, GlyphProvider},
-    hash::Fingerprint,
-};
+use crate::hash::Fingerprint;
 
-use super::{preludes::*, text::*, Glyph2VecPass, VecItem};
+use super::{preludes::*, text::*, VecItem};
 
 /// Flatten mapping fingerprints to vector items.
 #[derive(Debug, Clone, Default)]
@@ -34,12 +31,12 @@ impl From<Vec<FontItem>> for IncrFontPack {
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct IncrGlyphPack {
-    pub items: Vec<(DefId, FlatGlyphItem)>,
+    pub items: Vec<(GlyphRef, FlatGlyphItem)>,
     pub incremental_base: usize,
 }
 
-impl From<Vec<(DefId, FlatGlyphItem)>> for IncrGlyphPack {
-    fn from(items: Vec<(DefId, FlatGlyphItem)>) -> Self {
+impl From<Vec<(GlyphRef, FlatGlyphItem)>> for IncrGlyphPack {
+    fn from(items: Vec<(GlyphRef, FlatGlyphItem)>) -> Self {
         Self {
             items,
             incremental_base: 0,
@@ -47,31 +44,10 @@ impl From<Vec<(DefId, FlatGlyphItem)>> for IncrGlyphPack {
     }
 }
 
-impl FromIterator<(GlyphItem, (GlyphRef, FontRef))> for IncrGlyphPack {
-    fn from_iter<T: IntoIterator<Item = (GlyphItem, (GlyphRef, FontRef))>>(iter: T) -> Self {
-        let glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
-        let glyph_lower_builder = Glyph2VecPass::new(&glyph_provider, true);
-
-        let items = iter
-            .into_iter()
-            .map(|(glyph, glyph_id)| {
-                let glyph = glyph_lower_builder.glyph(&glyph);
-                glyph
-                    .map(|t| {
-                        let t = match t {
-                            GlyphItem::Image(i) => FlatGlyphItem::Image(i),
-                            GlyphItem::Outline(p) => FlatGlyphItem::Outline(p),
-                            _ => unreachable!(),
-                        };
-
-                        (DefId(glyph_id.1.idx as u64), t)
-                    })
-                    .unwrap_or_else(|| (DefId(glyph_id.1.idx as u64), FlatGlyphItem::None))
-            })
-            .collect::<Vec<_>>();
-
+impl FromIterator<(GlyphRef, FlatGlyphItem)> for IncrGlyphPack {
+    fn from_iter<T: IntoIterator<Item = (GlyphRef, FlatGlyphItem)>>(iter: T) -> Self {
         Self {
-            items,
+            items: iter.into_iter().collect(),
             incremental_base: 0,
         }
     }
