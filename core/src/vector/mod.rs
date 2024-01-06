@@ -3,6 +3,7 @@
 pub mod incr;
 pub mod ir;
 pub(crate) mod lowering;
+pub mod pass;
 mod path2d;
 #[cfg(feature = "rkyv")]
 pub mod stream;
