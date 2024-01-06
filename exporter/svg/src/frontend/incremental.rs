@@ -7,11 +7,9 @@ use std::{
 use typst_ts_core::{
     hash::Fingerprint,
     vector::{
-        flat_ir::{FlatSvgItem, LayoutRegionNode, Module, ModuleBuilder, Page},
-        flat_vm::{FlatIncrRenderVm, FlatRenderVm},
         incr::{IncrDocClient, IncrDocServer},
-        ir::Rect,
-        vm::RenderState,
+        ir::{LayoutRegionNode, Module, ModuleBuilder, Page, Rect, VecItem},
+        vm::{IncrRenderVm, RenderState, RenderVm},
     },
 };
 
@@ -35,7 +33,7 @@ impl ExportFeature for IncrementalExportFeature {
     const AWARE_HTML_ENTITY: bool = true;
 }
 
-static EMPTY_PAGE: once_cell::sync::Lazy<(Fingerprint, Vec<(Fingerprint, FlatSvgItem)>)> =
+static EMPTY_PAGE: once_cell::sync::Lazy<(Fingerprint, Vec<(Fingerprint, VecItem)>)> =
     once_cell::sync::Lazy::new(|| {
         use typst::{introspection::Introspector, layout::Frame};
         // prepare an empty page for the pages that are not rendered
@@ -234,7 +232,7 @@ impl IncrSvgDocClient {
         let gradients = gradients
             .values()
             .filter_map(|(_, id, _)| match module_ref.get_item(id) {
-                Some(FlatSvgItem::Gradient(g)) => Some((id, g.as_ref())),
+                Some(VecItem::Gradient(g)) => Some((id, g.as_ref())),
                 _ => {
                     // #[cfg(debug_assertions)]
                     panic!("Invalid gradient reference: {}", id.as_svg_id("g"));

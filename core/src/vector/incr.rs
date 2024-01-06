@@ -2,16 +2,12 @@ use std::sync::Arc;
 
 use typst::model::Document;
 
-use crate::{
-    error::prelude::*,
-    vector::flat_ir::{flatten_glyphs, FontPack, GlyphPack, ItemPack, LayoutRegion},
-    TakeAs,
+use super::ir::{
+    flatten_glyphs, FlatModule, IncrFontPack, IncrGlyphPack, IncrModuleBuilder, ItemPack,
+    LayoutRegion, LayoutRegionNode, LayoutSourceMapping, Module, ModuleMetadata, MultiVecDocument,
+    Page, SourceMappingNode, VecDocument,
 };
-
-use super::flat_ir::{
-    FlatModule, IncrModuleBuilder, LayoutRegionNode, LayoutSourceMapping, Module, ModuleMetadata,
-    MultiSvgDocument, Page, SourceMappingNode, SvgDocument,
-};
+use crate::{error::prelude::*, TakeAs};
 
 /// maintains the data of the incremental rendering at server side
 #[derive(Default)]
@@ -21,7 +17,7 @@ pub struct IncrDocServer {
 
     /// Expected exact state of the current Compiler.
     /// Initially it is None meaning no completed compilation.
-    doc_view: Option<SvgDocument>,
+    doc_view: Option<VecDocument>,
 
     /// Maintaining document build status
     module_builder: IncrModuleBuilder,
@@ -98,12 +94,12 @@ impl IncrDocServer {
             // }
         }
 
-        let fonts = FontPack {
+        let fonts = IncrFontPack {
             items: delta.fonts,
             incremental_base: 0, // todo: correct incremental_base
         };
 
-        let glyphs = GlyphPack {
+        let glyphs = IncrGlyphPack {
             items: flatten_glyphs(delta.glyphs),
             incremental_base: 0, // todo: correct incremental_base
         };
@@ -158,7 +154,7 @@ impl IncrDocServer {
 #[derive(Default)]
 pub struct IncrDocClient {
     /// Full information of the current document from server.
-    pub doc: MultiSvgDocument,
+    pub doc: MultiVecDocument,
 
     /// checkout of the current document.
     pub layout: Option<LayoutRegionNode>,

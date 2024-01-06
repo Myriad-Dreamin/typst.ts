@@ -6,10 +6,7 @@ use typst_ts_core::{
         AnnotationList, LinkAnnotation,
     },
     hash::Fingerprint,
-    vector::{
-        flat_ir::{FlatSvgItem, GroupRef, Module},
-        ir::{self},
-    },
+    vector::ir::{self, GroupRef, Module, VecItem},
 };
 
 /// Task to create annotation list with vector IR
@@ -34,15 +31,15 @@ impl<'m, 't> AnnotationListTask<'m, 't> {
     pub fn process_flat_item(&mut self, ts: sk::Transform, item: &Fingerprint) {
         let item = self.module.get_item(item).unwrap();
         match item {
-            FlatSvgItem::Item(t) => self.process_flat_item(
+            VecItem::Item(t) => self.process_flat_item(
                 ts.pre_concat({
                     let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
                     t.into()
                 }),
                 &t.1,
             ),
-            FlatSvgItem::Group(group, _) => self.process_flat_group(ts, group),
-            FlatSvgItem::Link(link) => self.process_link(ts, link),
+            VecItem::Group(group, _) => self.process_flat_group(ts, group),
+            VecItem::Link(link) => self.process_link(ts, link),
             _ => {}
         }
     }

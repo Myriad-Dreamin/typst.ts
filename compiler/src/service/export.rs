@@ -5,7 +5,7 @@ use typst::{diag::SourceResult, World};
 use typst_ts_core::{
     exporter_builtins::GroupExporter,
     typst::prelude::*,
-    vector::flat_ir::{LayoutRegion, LayoutRegionNode, ModuleBuilder},
+    vector::ir::{LayoutRegion, LayoutRegionNode, ModuleBuilder},
     DynExporter, DynGenericExporter, DynPolymorphicExporter, GenericExporter, TakeAs,
     TypstDocument,
 };
@@ -319,7 +319,7 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
         };
         use typst_ts_core::TypstFileId;
         use typst_ts_svg_exporter::{
-            flat_ir::serialize_doc, DynamicLayoutSvgExporter, MultiSvgDocument,
+            ir::serialize_doc, DynamicLayoutSvgExporter, MultiVecDocument,
         };
 
         let variable_file = TypstFileId::new(
@@ -384,7 +384,7 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
 
         // finalize
         let module = svg_exporter.builder.finalize();
-        let doc = MultiSvgDocument { module, layouts };
+        let doc = MultiVecDocument { module, layouts };
         std::fs::write(self.module_dest_path(), serialize_doc(doc)).unwrap();
 
         let instant = instant::Instant::now();

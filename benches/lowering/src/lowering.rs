@@ -1,16 +1,16 @@
+use std::sync::{Arc, Mutex};
+
 use divan::Bencher;
+use once_cell::sync::Lazy;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
-use std::sync::{Arc, Mutex};
-use typst_ts_cli::CompileOnceArgs;
-use typst_ts_core::vector::flat_ir::{IncrModuleBuilder, ModuleBuilder};
-
-use once_cell::sync::Lazy;
 use typst::model::Document;
+use typst_ts_cli::CompileOnceArgs;
 use typst_ts_compiler::{
     service::{CompileDriverImpl, Compiler},
     ShadowApi, TypstSystemWorld,
 };
+use typst_ts_core::vector::ir::{IncrModuleBuilder, ModuleBuilder};
 
 type CompileDriver = Lazy<Mutex<CompileDriverImpl<TypstSystemWorld>>>;
 

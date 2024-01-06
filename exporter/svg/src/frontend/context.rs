@@ -1,17 +1,14 @@
-use siphasher::sip128::Hasher128;
-use std::{collections::HashMap, hash::Hash, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use typst_ts_core::{
-    hash::{Fingerprint, FingerprintBuilder, FingerprintSipHasherBase},
+    hash::{Fingerprint, FingerprintBuilder},
     vector::{
-        flat_ir::{FlatSvgItem, FlatTextItem, GroupRef, Module},
-        flat_vm::{FlatGroupContext, FlatIncrRenderVm, FlatRenderVm},
         ir::{
             self, BuildGlyph, FontIndice, FontRef, GlyphHashStablizer, GlyphIndice, GlyphItem,
-            GlyphPackBuilder, GlyphRef, ImmutStr, PathItem, Scalar, StyleNs,
+            GlyphPackBuilder, GlyphRef, GroupRef, ImmutStr, Module, PathItem, Scalar, StyleNs,
+            TextItem, VecItem,
         },
-        vm::GroupContext,
-        vm::{RenderState, RenderVm},
+        vm::{GroupContext, IncrRenderVm, RenderState, RenderVm},
     },
 };
 
@@ -32,9 +29,9 @@ pub(crate) type StyleDefMap = HashMap<(StyleNs, ImmutStr), String>;
 /// Maps paint fill id to the paint fill's data.
 pub(crate) type PaintFillMap = HashMap<ImmutStr, (u8, Fingerprint, Option<bool>)>;
 
-/// The task context for rendering svg items
+/// The task context for rendering vector items
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
-/// The 't lifetime is the lifetime of SVG task.
+/// The 't lifetime is the lifetime of Vector task.
 pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     /// Provides glyphs.
     /// See [`GlyphProvider`].
@@ -200,7 +197,7 @@ impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
             let id = Fingerprint::try_from_str(id).unwrap();
 
             let (kind, relative_to_self) = match self.get_item(&id) {
-                Some(FlatSvgItem::Gradient(g)) => (&g.kind, g.relative_to_self),
+                Some(VecItem::Gradient(g)) => (&g.kind, g.relative_to_self),
                 _ => {
                     // #[cfg(debug_assertions)]
                     panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
@@ -220,7 +217,7 @@ impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
             let id = Fingerprint::try_from_str(id).unwrap();
 
             let relative_to_self = match self.get_item(&id) {
-                Some(FlatSvgItem::Pattern(g)) => g.relative_to_self,
+                Some(VecItem::Pattern(g)) => g.relative_to_self,
                 _ => {
                     // #[cfg(debug_assertions)]
                     panic!("Invalid pattern reference: {}", id.as_svg_id("p"));
@@ -237,56 +234,13 @@ impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
     }
 }
 
-/// Example of how to implement a RenderVm.
-impl<'m, 't, Feat: ExportFeature> RenderVm for RenderContext<'m, 't, Feat> {
+/// Example of how to implement a FlatRenderVm.
+impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, 't, Feat> {
     // type Resultant = String;
     type Resultant = Arc<SvgTextNode>;
     type Group = SvgTextBuilder;
 
-    fn start_group(&mut self) -> Self::Group {
-        Self::Group {
-            attributes: vec![],
-            text_fill: None,
-            content: Vec::with_capacity(1),
-        }
-    }
-
-    fn start_frame(&mut self, _group: &ir::GroupItem) -> Self::Group {
-        let mut g = self.start_group();
-        g.attributes.push(("class", "typst-group".to_owned()));
-        g
-    }
-
-    fn start_text(&mut self, state: RenderState, text: &ir::TextItem) -> Self::Group {
-        let mut g = self.start_group();
-
-        let mut k = FingerprintSipHasherBase::new();
-        text.font.hash(&mut k);
-        text.content.glyphs.hash(&mut k);
-        text.shape.hash(&mut k);
-        let k = k.finish128().as_u128();
-
-        let upem = Scalar(text.font.units_per_em() as f32);
-
-        g.with_text_shape(
-            self,
-            upem,
-            &text.shape,
-            &state.at(&Fingerprint::from_u128(k)),
-            state,
-        );
-        g.attach_debug_info(self, text.content.span_id);
-
-        g
-    }
-}
-
-impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Feat> {
-    // type Resultant = String;
-    type Resultant = Arc<SvgTextNode>;
-    type Group = SvgTextBuilder;
-
-    fn get_item(&self, value: &Fingerprint) -> Option<&'m FlatSvgItem> {
+    fn get_item(&self, value: &Fingerprint) -> Option<&'m VecItem> {
         self.module.get_item(value)
     }
 
@@ -308,7 +262,7 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Fea
         &mut self,
         state: RenderState,
         value: &Fingerprint,
-        text: &FlatTextItem,
+        text: &TextItem,
     ) -> Self::Group {
         let mut g = self.start_flat_group(value);
 
@@ -325,7 +279,7 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Fea
         _state: RenderState,
         group_ctx: Self::Group,
         abs_ref: &Fingerprint,
-        text: &FlatTextItem,
+        text: &TextItem,
     ) -> Self::Group {
         if self.should_rasterize_text() {
             self.rasterize_and_put_text(group_ctx, abs_ref, text)
@@ -335,7 +289,7 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Fea
     }
 }
 
-impl<'m, 't, Feat: ExportFeature> FlatIncrRenderVm<'m> for RenderContext<'m, 't, Feat> {}
+impl<'m, 't, Feat: ExportFeature> IncrRenderVm<'m> for RenderContext<'m, 't, Feat> {}
 
 #[cfg(not(feature = "aggresive-browser-rasterization"))]
 impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
@@ -344,7 +298,7 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
         &mut self,
         _group_ctx: SvgTextBuilder,
         _abs_ref: &Fingerprint,
-        _text: &FlatTextItem,
+        _text: &TextItem,
     ) -> SvgTextBuilder {
         panic!("Rasterization is not enabled.")
     }
@@ -357,7 +311,7 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
         &mut self,
         mut group_ctx: SvgTextBuilder,
         abs_ref: &Fingerprint,
-        text: &FlatTextItem,
+        text: &TextItem,
     ) -> SvgTextBuilder {
         use typst_ts_canvas_exporter::CanvasRenderSnippets;
 
@@ -414,7 +368,7 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
     fn render_flat_text_inplace(
         &mut self,
         mut group_ctx: SvgTextBuilder,
-        text: &FlatTextItem,
+        text: &TextItem,
     ) -> SvgTextBuilder {
         let font = self.get_font(&text.font).unwrap();
 

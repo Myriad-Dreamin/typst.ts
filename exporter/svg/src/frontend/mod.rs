@@ -15,12 +15,9 @@ use typst::{
 use typst_ts_core::{
     font::GlyphProvider,
     hash::{item_hash128, Fingerprint, FingerprintBuilder},
-    vector::{
-        flat_ir::{self, FlatSvgItem, Module, Page},
-        ir::{
-            Axes, DefId, GlyphItem, GlyphPackBuilder, GradientItem, GradientKind, GradientStyle,
-            Scalar, Size,
-        },
+    vector::ir::{
+        self, Axes, DefId, GlyphItem, GlyphPackBuilder, GradientItem, GradientKind, GradientStyle,
+        Module, Page, Scalar, Size, VecItem,
     },
 };
 
@@ -331,7 +328,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             .gradients
             .values()
             .filter_map(|(_, id, _)| match module.get_item(id) {
-                Some(FlatSvgItem::Gradient(g)) => Some((id, g.as_ref())),
+                Some(VecItem::Gradient(g)) => Some((id, g.as_ref())),
                 _ => {
                     // #[cfg(debug_assertions)]
                     panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
@@ -449,7 +446,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     /// fork a render task with module.
     pub fn get_render_context<'m, 't>(
         &'t mut self,
-        module: &'m flat_ir::Module,
+        module: &'m ir::Module,
     ) -> RenderContext<'m, 't, Feat> {
         RenderContext::<Feat> {
             glyph_provider: self.glyph_provider.clone(),

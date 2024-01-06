@@ -4,21 +4,23 @@ use std::io::Read;
 use std::sync::Arc;
 
 use once_cell::sync::OnceCell;
+use ttf_parser::GlyphId;
 use typst::layout::Size;
+use typst::syntax::Span;
 use typst::text::Font;
 use typst::visualize::Image;
 
-use typst::syntax::Span;
-
-use crate::font::GlyphProvider;
-use crate::vector::{
+use super::{
     geom::Scalar,
     ir::{self, GlyphItem, ImageGlyphItem, OutlineGlyphItem},
+    utils::AbsExt,
 };
-use crate::vector::{sk, utils::AbsExt};
-use ttf_parser::GlyphId;
+use crate::font::GlyphProvider;
 
 static WARN_VIEW_BOX: OnceCell<()> = OnceCell::new();
+
+/// Use types from `tiny-skia` crate.
+use tiny_skia as sk;
 
 /// Lower a glyph into svg item.
 pub struct GlyphLowerBuilder<'a> {

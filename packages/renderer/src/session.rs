@@ -4,7 +4,10 @@ use std::sync::{Arc, Mutex};
 use typst_ts_canvas_exporter::IncrCanvasDocClient;
 use typst_ts_core::{
     error::prelude::*,
-    vector::{flat_ir::Page, incr::IncrDocClient, ir::Scalar},
+    vector::{
+        incr::IncrDocClient,
+        ir::{Page, Scalar},
+    },
 };
 #[cfg(feature = "render_svg")]
 use typst_ts_svg_exporter::IncrSvgDocClient;
@@ -269,7 +272,7 @@ impl RenderSession {
         let _delta_ref = &delta;
 
         #[cfg(feature = "debug_delta_update")]
-        use typst_ts_core::vector::flat_ir::ModuleStream;
+        use typst_ts_core::vector::ir::ModuleStream;
 
         #[cfg(feature = "debug_delta_update")]
         crate::utils::console_log!(

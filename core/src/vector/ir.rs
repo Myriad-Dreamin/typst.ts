@@ -1,232 +1,159 @@
+//! Intermediate representation of vector items.
+//!
+//! VectorDoc and Module Relation:
+//!
+//! ┌──────────────┐ serialize  ┌────────────────────────────────────┐
+//! │[`FlatModule`]├───────────►│[`super::stream::BytesModuleStream`]│
+//! └──────────────┘            └───────────┬────────────────────────┘
+//!      ▲                                  │
+//!      │flatten                           │implement
+//!      │                                  ▼
+//! ┌────┴─────┐        merge       ┌────────────────┐
+//! │[`Module`]│◄───────────────────┤[`ModuleStream`]│
+//! └────┬─────┘                    └───────┬────────┘
+//!      │                                  │
+//!      │Store data of                     │merge
+//!      ▼                                  ▼
+//! ┌───────────────┐  select layout ┌────────────────────┐
+//! │[`SvgDocument`]│◄───────────────┤[`MultiSvgDocument`]│
+//! └───────────────┘                └────────────────────┘
+
 use core::fmt;
 use std::cell::RefCell;
 use std::collections::HashSet;
-use std::hash::Hash;
 use std::ops::DerefMut;
 use std::sync::Arc;
+
+mod color;
+mod compose;
+pub mod geom;
+pub mod layout;
+pub mod module;
+mod preludes;
+mod primitives;
+mod text;
+mod visualize;
+
+pub use color::*;
+pub use compose::*;
+pub use geom::*;
+pub use layout::*;
+pub use module::*;
+pub use primitives::*;
+pub use text::*;
+pub use visualize::*;
 
 use parking_lot::Mutex;
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 
-use base64::Engine;
-use ttf_parser::GlyphId;
-use typst::{
-    text::Font,
-    visualize::{ImageFormat, RasterFormat, VectorFormat},
-};
+use typst::text::Font;
 
-use crate::{
-    hash::{item_hash128, typst_affinite_hash, Fingerprint},
-    StaticHash128,
-};
+use crate::font::FontGlyphProvider;
+use crate::{font::GlyphProvider, hash::Fingerprint, TakeAs};
 
 pub use crate::ImmutStr;
 
-pub use super::geom::*;
-use super::vm::{GroupContext, TransformContext};
+use super::GlyphLowerBuilder;
 
-/// Create a xml id from the given prefix and the def id of this reference.
-/// Note that the def id may not be stable across compilation.
-/// Note that the entire html document shares namespace for ids.
-fn as_svg_id(b: &[u8], prefix: &'static str) -> String {
-    // truncate zero
-    let rev_zero = b.iter().rev().skip_while(|&&b| b == 0).count();
-    let id = &b[..rev_zero];
-    let id = base64::engine::general_purpose::STANDARD_NO_PAD.encode(id);
-    [prefix, &id].join("")
-}
-
-/// The local id of a svg item.
-/// This id is only unique within the svg document.
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct DefId(pub u64);
-
-impl DefId {
-    /// Create a xml id from the given prefix and the def id of this reference.
-    /// Note that the def id may not be stable across compilation.
-    /// Note that the entire html document shares namespace for ids.
-    #[comemo::memoize]
-    pub fn as_svg_id(self, prefix: &'static str) -> String {
-        as_svg_id(self.0.to_le_bytes().as_slice(), prefix)
-    }
-}
-
-/// A stable absolute reference.
-/// The fingerprint is used to identify the item and likely unique between
-/// different svg documents. The (local) def id is only unique within the svg
-/// document.
-#[derive(Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct AbsoluteRef {
-    /// The fingerprint of the item.
-    pub fingerprint: Fingerprint,
-    /// The local def id of the item.
-    pub id: DefId,
-}
-
-impl fmt::Debug for AbsoluteRef {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(
-            f,
-            "<AbsRef: {}{}>",
-            self.fingerprint.as_svg_id(""),
-            self.id.0
-        )
-    }
-}
-
-impl Hash for AbsoluteRef {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.fingerprint.hash(state);
-    }
-}
-
-impl AbsoluteRef {
-    #[inline]
-    pub fn as_svg_id(&self, prefix: &'static str) -> String {
-        self.fingerprint.as_svg_id(prefix)
-    }
-
-    #[inline]
-    pub fn as_unstable_svg_id(&self, prefix: &'static str) -> String {
-        self.id.as_svg_id(prefix)
-    }
-}
-
-/// Reference a font item in a more friendly format to compress and store
-/// information, similar to [`GlyphRef`].
+/// A vector item that is specialized for representing
+/// [`typst::model::Document`] or its subtypes.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct FontRef {
-    /// The hash of the font to avoid collision.
-    pub hash: u32,
-    /// The local id of the font.
-    pub idx: u32,
-}
-
-/// Reference a glyph item in a more friendly format to compress and store
-/// information. The glyphs are locally stored in the svg module.
-/// With a glyph reference, we can get both the font metric and the glyph data.
-/// The `font_hash` is to let it safe to be cached, please see [`FontItem`] for
-/// more details.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct GlyphRef {
-    /// The hash of the font to avoid collision.
-    pub font_hash: u32,
-    /// The local id of the glyph.
-    pub glyph_idx: u32,
-}
-
-impl GlyphRef {
-    #[comemo::memoize]
-    pub fn as_unstable_svg_id(&self, prefix: &'static str) -> String {
-        as_svg_id(self.glyph_idx.to_le_bytes().as_ref(), prefix)
-    }
-}
-
-pub type SpanId = u64;
-
-/// A Svg item that is specialized for representing [`typst::doc::Document`] or
-/// its subtypes.
-#[derive(Debug, Clone)]
-pub enum SvgItem {
-    Image((ImageItem, SpanId)),
+pub enum VecItem {
+    None,
+    Image(ImageItem),
     Link(LinkItem),
-    Path((PathItem, SpanId)),
+    Path(PathItem),
     Text(TextItem),
-    Transformed(TransformedItem),
-    Group(GroupItem, Option<Size>),
+    Item(TransformedRef),
+    Group(GroupRef, Option<Size>),
     Gradient(Arc<GradientItem>),
-    Pattern(PatternItem),
+    Pattern(Arc<PatternItem>),
     ContentHint(char),
 }
 
-/// Data of an `<image/>` element.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct Image {
-    /// The encoded image data.
-    pub data: Vec<u8>,
-    /// The format of the encoded `buffer`.
-    pub format: ImmutStr,
-    /// The size of the image.
-    pub size: Axes<u32>,
-    /// A text describing the image.
-    pub alt: Option<ImmutStr>,
-    /// prehashed image content.
-    pub hash: Fingerprint,
+/// Module with page references of a [`typst::model::Document`].
+pub struct VecDocument {
+    /// module containing all of the data related to this document.
+    pub module: Module,
+    /// References to the page frames.
+    /// Use [`Module::get_item`] to get the actual item.
+    pub pages: Vec<Page>,
 }
 
-/// Collect image data from [`typst::image::Image`].
-impl From<typst::visualize::Image> for Image {
-    fn from(image: typst::visualize::Image) -> Self {
-        let format = match image.format() {
-            ImageFormat::Raster(e) => match e {
-                RasterFormat::Jpg => "jpeg",
-                RasterFormat::Png => "png",
-                RasterFormat::Gif => "gif",
-            },
-            ImageFormat::Vector(e) => match e {
-                VectorFormat::Svg => "svg+xml",
-            },
-        };
+/// Module with multiple documents in a module [`typst::model::Document`].
+pub struct MultiVecDocument {
+    /// module containing all of the data related to this document.
+    pub module: Module,
+    /// References to the page frames.
+    /// Use [`Module::get_item`] to get the actual item.
+    pub layouts: Vec<LayoutRegion>,
+}
 
-        // steal prehash from [`typst::image::Image`]
-        let hash = typst_affinite_hash(&image);
-
-        Image {
-            data: image.data().to_vec(),
-            format: format.into(),
-            size: Axes::new(image.width(), image.height()),
-            alt: image.alt().map(|s| s.into()),
-            hash: Fingerprint::from_u128(hash),
+impl Default for MultiVecDocument {
+    fn default() -> Self {
+        let pages = LayoutRegionNode::new_pages(Default::default());
+        Self {
+            module: Default::default(),
+            layouts: vec![LayoutRegion::new_single(pages)],
         }
     }
 }
 
-impl Image {
-    /// Returns the width of the image.
-    pub fn width(&self) -> u32 {
-        self.size.x
+impl MultiVecDocument {
+    #[cfg(feature = "rkyv")]
+    pub fn from_slice(v: &[u8]) -> Self {
+        type DocStream<'a> = super::stream::BytesModuleStream<'a>;
+
+        let mut res = Self::default();
+        res.merge_delta(&DocStream::from_slice(v).checkout_owned());
+        res
     }
-    /// Returns the height of the image.
-    pub fn height(&self) -> u32 {
-        self.size.y
+
+    pub fn merge_delta(&mut self, v: impl ModuleStream) {
+        self.layouts = v.layouts().take();
+        self.module.merge_delta(v);
     }
 }
 
-/// Prehashed image data.
-impl Hash for Image {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.hash.hash(state);
+/// Describing reference to a page
+#[derive(Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub struct Page {
+    /// Unique hash to content
+    pub content: Fingerprint,
+    /// Page size for cropping content
+    pub size: Size,
+}
+
+impl fmt::Debug for Page {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Page({}, {:.3}x{:.3})",
+            self.content.as_svg_id(""),
+            self.size.x.0,
+            self.size.y.0
+        )
     }
 }
 
-impl StaticHash128 for Image {
-    /// Returns the hash of the image data.
-    fn get_hash(&self) -> u128 {
-        self.hash.to_u128()
-    }
-}
-
-/// Item representing an `<image/>` element.
+/// Flatten transform item.
+/// Item representing an `<g/>` element applied with a [`TransformItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct ImageItem {
-    /// The source image data.
-    pub image: Arc<Image>,
-    /// The target size of the image.
-    pub size: Size,
-}
+pub struct TransformedRef(pub TransformItem, pub Fingerprint);
+
+/// Flatten group item.
+/// Absolute positioning items at their corresponding points.
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub struct GroupRef(pub Arc<[(Point, Fingerprint)]>);
 
 /// Item representing an `<a/>` element.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -238,396 +165,6 @@ pub struct LinkItem {
     /// The box size of the link item.
     pub size: Size,
 }
-
-/// Item representing an `<path/>` element.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct ColorItem {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
-}
-
-impl ColorItem {
-    // todo: to_css
-    pub fn to_hex(self) -> String {
-        let Self { r, g, b, a } = self;
-        if a != 255 {
-            format!("#{:02x}{:02x}{:02x}{:02x}", r, g, b, a)
-        } else {
-            format!("#{:02x}{:02x}{:02x}", r, g, b)
-        }
-    }
-
-    pub fn typst(&self) -> typst::visualize::Color {
-        typst::visualize::Color::from_u8(self.r, self.g, self.b, self.a)
-    }
-}
-
-/// A color space for mixing.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub enum ColorSpace {
-    /// A perceptual color space.
-    Oklab,
-
-    /// The standard RGB color space.
-    Srgb,
-
-    /// The D65-gray color space.
-    D65Gray,
-
-    /// The linear RGB color space.
-    LinearRgb,
-
-    /// The HSL color space.
-    Hsl,
-
-    /// The HSV color space.
-    Hsv,
-
-    /// The CMYK color space.
-    Cmyk,
-
-    /// The perceptual Oklch color space.
-    Oklch,
-}
-
-impl From<typst::visualize::ColorSpace> for ColorSpace {
-    fn from(value: typst::visualize::ColorSpace) -> Self {
-        use typst::visualize::ColorSpace::*;
-        match value {
-            Oklab => Self::Oklab,
-            Oklch => Self::Oklch,
-            Srgb => Self::Srgb,
-            D65Gray => Self::D65Gray,
-            LinearRgb => Self::LinearRgb,
-            Hsl => Self::Hsl,
-            Hsv => Self::Hsv,
-            Cmyk => Self::Cmyk,
-        }
-    }
-}
-
-impl From<ColorSpace> for typst::visualize::ColorSpace {
-    fn from(value: ColorSpace) -> Self {
-        use typst::visualize::ColorSpace::*;
-        match value {
-            ColorSpace::Oklab => Oklab,
-            ColorSpace::Oklch => Oklch,
-            ColorSpace::Srgb => Srgb,
-            ColorSpace::D65Gray => D65Gray,
-            ColorSpace::LinearRgb => LinearRgb,
-            ColorSpace::Hsl => Hsl,
-            ColorSpace::Hsv => Hsv,
-            ColorSpace::Cmyk => Cmyk,
-        }
-    }
-}
-
-/// Item representing an `<gradient/>` element.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct GradientItem {
-    /// The path instruction.
-    pub stops: Vec<(ColorItem, Scalar)>,
-    /// Whether the gradient is relative to itself (its own bounding box).
-    /// Otherwise, the gradient is relative to the parent bounding box.
-    pub relative_to_self: Option<bool>,
-    /// Whether to anti-alias the gradient (used for sharp gradients).
-    pub anti_alias: bool,
-    /// A color space for mixing.
-    pub space: ColorSpace,
-    /// The gradient kind.
-    /// See [`GradientKind`] for more information.
-    pub kind: GradientKind,
-    /// Additional gradient styles.
-    /// See [`GradientStyle`] for more information.
-    pub styles: Vec<GradientStyle>,
-}
-
-/// Item representing an `<pattern/>` element.
-#[derive(Debug, Clone)]
-pub struct PatternItem {
-    /// The pattern's rendered content.
-    pub frame: Arc<SvgItem>,
-    /// The pattern's tile size.
-    pub size: Size,
-    /// The pattern's tile spacing.
-    pub spacing: Size,
-    /// Whether the pattern is relative to itself (its own bounding box).
-    /// Otherwise, the pattern is relative to the parent bounding box.
-    pub relative_to_self: Option<bool>,
-}
-
-/// Item representing an `<path/>` element.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct PathItem {
-    /// The path instruction.
-    pub d: ImmutStr,
-    /// bbox of the path.
-    pub size: Option<Size>,
-    /// The path style.
-    /// See [`PathStyle`] for more information.
-    pub styles: Vec<PathStyle>,
-}
-
-/// Kind of graidents for [`GradientItem`].
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub enum GradientKind {
-    /// Angle of a linear gradient.
-    Linear(Scalar),
-    /// Radius of a radial gradient.
-    Radial(Scalar),
-    /// Angle of a conic gradient.
-    Conic(Scalar),
-}
-
-/// Attributes that is applicable to the [`GradientItem`].
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub enum GradientStyle {
-    /// Center of a radial or conic gradient.
-    Center(Point),
-    /// Focal center of a radial gradient.
-    FocalCenter(Point),
-    /// Focal radius of a radial gradient.
-    FocalRadius(Scalar),
-}
-
-/// Attributes that is applicable to the [`PathItem`].
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub enum PathStyle {
-    /// `fill` attribute.
-    /// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/fill>
-    Fill(ImmutStr),
-
-    /// `stroke` attribute.
-    /// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/stroke>
-    Stroke(ImmutStr),
-
-    /// `stroke-linecap` attribute.
-    /// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/stroke-linecap>
-    StrokeLineCap(ImmutStr),
-
-    /// `stroke-linejoin` attribute.
-    /// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/stroke-linejoin>
-    StrokeLineJoin(ImmutStr),
-
-    /// `stroke-miterlimit` attribute.
-    /// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/stroke-miterlimit>
-    StrokeMitterLimit(Scalar),
-
-    /// `stroke-dashoffset` attribute.
-    /// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/stroke-dashoffset>
-    StrokeDashOffset(Abs),
-
-    /// `stroke-dasharray` attribute.
-    /// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/stroke-dasharray>
-    StrokeDashArray(Arc<[Abs]>),
-
-    /// `stroke-width` attribute.
-    /// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/stroke-width>
-    StrokeWidth(Abs),
-}
-
-/// Item representing an `<g><text/><g/>` element.
-#[derive(Debug, Clone)]
-pub struct TextItem {
-    /// The font of the text item.
-    pub font: Font,
-    /// The content of the text item.
-    pub content: Arc<TextItemContent>,
-    /// The shape of the text item.
-    /// See [`TextShape`] for more information.
-    pub shape: Arc<TextShape>,
-}
-
-impl TextItem {
-    pub fn render_glyphs<'a, 'b: 'a>(
-        &'a self,
-        upem: Abs,
-        width: &'b mut f32,
-    ) -> impl Iterator<Item = (Abs, &'a GlyphItem)> {
-        self.shape
-            .render_glyphs(upem, self.content.glyphs.iter(), width)
-    }
-}
-
-/// The content metadata of a [`TextItem`].
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub struct TextItemContent {
-    /// The plain utf-8 content of the text item.
-    /// Note: witout XML escaping.
-    pub content: ImmutStr,
-    /// The glyphs in the text.
-    /// (offset, advance, glyph): ([`Abs`], [`Abs`], [`GlyphItem`])
-    pub glyphs: Vec<(Abs, Abs, GlyphItem)>,
-    /// Source span for this text item.
-    pub span_id: u64,
-}
-
-/// A glyph item.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct ImageGlyphItem {
-    pub ts: Transform,
-    pub image: ImageItem,
-    pub ligature_len: u8,
-}
-
-/// A glyph item.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct OutlineGlyphItem {
-    pub ts: Option<Box<Transform>>,
-    pub d: ImmutStr,
-    pub ligature_len: u8,
-}
-
-/// A glyph item.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub enum GlyphItem {
-    None,
-
-    /// Raw glyph representation.
-    /// The raw glyphs is generated in lowering stage.
-    Raw(Font, GlyphId),
-
-    /// Glyphs in SVG or Bitmap format.
-    Image(Arc<ImageGlyphItem>),
-
-    /// Glyphs in path instructions, known as the "d" attribute of a
-    /// `<path/>` element.
-    Outline(Arc<OutlineGlyphItem>),
-}
-
-impl GlyphItem {
-    #[comemo::memoize]
-    pub fn get_fingerprint(&self) -> Fingerprint {
-        Fingerprint::from_u128(item_hash128(self))
-    }
-}
-
-/// Reference a font item in a more friendly format to compress and store
-/// information. The fonts are locally stored in the svg module.
-/// With a font reference, we can get both the font metric and the font data.
-/// The `font_hash` is to let it safe to be cached.
-/// By estimation, <https://stackoverflow.com/a/29628053/9323228>
-/// If the hash algorithm for `font_hash` is good enough.
-/// When you have about 500 fonts (in windows), the collision rate is about:
-/// ```plain
-/// p(n = 500, d = 2^32) = 1 - exp(-n^2/(2d))
-///   = 1 - exp(-500^2/(2*(2^32))) = 0.0000291034
-/// ```
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct FontItem {
-    /// The hash of the font to avoid global collision.
-    pub fingerprint: Fingerprint,
-    /// The inlined hash of the font to avoid local collision.
-    pub hash: u32,
-
-    pub family: ImmutStr,
-    pub ascender: Abs,
-    pub descender: Abs,
-    pub unit_per_em: Abs,
-    pub vertical: bool,
-}
-
-impl From<Font> for FontItem {
-    fn from(font: Font) -> Self {
-        let hash = fxhash::hash32(&font);
-        let fingerprint = Fingerprint::from_u128(item_hash128(&font));
-
-        Self {
-            fingerprint,
-            hash,
-            family: font.info().family.clone().into(),
-            ascender: Scalar(font.metrics().ascender.get() as f32),
-            descender: Scalar(font.metrics().descender.get() as f32),
-            unit_per_em: Scalar(font.units_per_em() as f32),
-            vertical: false, // todo: check vertical
-        }
-    }
-}
-
-/// The shape metadata of a [`TextItem`].
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct TextShape {
-    /// The direction of the text item.
-    pub dir: ImmutStr,
-    /// The size of text
-    pub size: Scalar,
-    /// Fill font text with css color.
-    pub fill: ImmutStr,
-}
-
-impl TextShape {
-    /// ppem is calcuated by the font size.
-    fn ppem(&self, upem: f32) -> Scalar {
-        Scalar(self.size.0 / upem)
-    }
-
-    /// inv_ppem is calcuated by the font size.
-    fn inv_ppem(&self, upem: f32) -> Scalar {
-        Scalar(upem / self.size.0)
-    }
-
-    pub fn add_transform<C, T: GroupContext<C> + TransformContext<C>>(
-        &self,
-        ctx: &mut C,
-        group_ctx: T,
-        upem: Scalar,
-    ) -> T {
-        let ppem = self.ppem(upem.0);
-        group_ctx.transform_scale(ctx, ppem, -ppem)
-    }
-
-    #[inline]
-    pub(super) fn render_glyphs<'a, 'b: 'a, Glyph: 'a>(
-        &self,
-        upem: Abs,
-        glyph_iter: impl Iterator<Item = &'a (Abs, Abs, Glyph)>,
-        width: &'b mut f32,
-    ) -> impl Iterator<Item = (Abs, &'a Glyph)> {
-        *width = 0f32;
-
-        let inv_ppem = self.inv_ppem(upem.0).0;
-        glyph_iter.into_iter().map(move |(offset, advance, glyph)| {
-            let offset = *width + offset.0;
-            let ts = offset * inv_ppem;
-
-            *width += advance.0;
-
-            (Scalar(ts), glyph)
-        })
-    }
-}
-
-/// Item representing an `<g/>` element applied with a [`TransformItem`].
-#[derive(Debug, Clone)]
-pub struct TransformedItem(pub TransformItem, pub Box<SvgItem>);
-
-/// Absolute positioning items at their corresponding points.
-#[derive(Debug, Clone, Default)]
-pub struct GroupItem(pub Vec<(Point, SvgItem)>);
 
 /// Item representing all the transform that is applicable to a [`SvgItem`].
 /// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/transform>
@@ -676,7 +213,7 @@ pub enum StyleNs {
 pub type FontPack = Vec<FontItem>;
 
 /// A finished pack that stores all the glyph items.
-pub type GlyphPack = Vec<(DefId, GlyphItem)>;
+pub type GlyphPack = Vec<(DefId, FlatGlyphItem)>;
 
 pub struct GlyphPackBuilderImpl<const ENABLE_REF_CNT: bool = false> {
     /// Intermediate representation of an incompleted font pack.
@@ -716,7 +253,7 @@ impl<const ENABLE_REF_CNT: bool> Default for GlyphPackBuilderImpl<ENABLE_REF_CNT
 }
 
 impl<const ENABLE_REF_CNT: bool> GlyphPackBuilderImpl<ENABLE_REF_CNT> {
-    pub fn finalize(&self) -> (FontPack, GlyphPack) {
+    pub fn finalize(&self) -> (FontPack, Vec<(DefId, GlyphItem)>) {
         let mut fonts = self.font_mapping.clone().into_iter().collect::<Vec<_>>();
         fonts.sort_by(|(_, a), (_, b)| a.idx.cmp(&b.idx));
         let fonts = fonts.into_iter().map(|(a, _)| a.into()).collect();
@@ -815,7 +352,7 @@ impl<const ENABLE_REF_CNT: bool> GlyphPackBuilderImpl<ENABLE_REF_CNT> {
 }
 
 impl IncrGlyphPackBuilder {
-    pub fn finalize_delta(&self) -> (FontPack, GlyphPack) {
+    pub fn finalize_delta(&self) -> (FontPack, Vec<(DefId, GlyphItem)>) {
         let fonts = std::mem::take(self.new_fonts.lock().deref_mut());
         let glyphs = std::mem::take(self.new_glyphs.lock().deref_mut());
         (fonts, glyphs)
@@ -837,4 +374,89 @@ pub trait BuildGlyph {
 
 pub trait GlyphHashStablizer {
     fn stablize_hash(&mut self, glyph: &GlyphRef) -> Fingerprint;
+}
+
+/// Source mapping
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub enum SourceMappingNode {
+    Group(Arc<[u64]>),
+    Text(SpanId),
+    Image(SpanId),
+    Shape(SpanId),
+    Page(u64),
+}
+
+// todo: remove this function
+pub fn flatten_glyphs(
+    repr: impl IntoIterator<Item = (DefId, GlyphItem)>,
+) -> Vec<(DefId, FlatGlyphItem)> {
+    let glyph_provider = GlyphProvider::new(FontGlyphProvider::default());
+    let glyph_lower_builder = GlyphLowerBuilder::new(&glyph_provider, true);
+
+    repr.into_iter()
+        .map(|(font_id, glyph)| {
+            let glyph = glyph_lower_builder.lower_glyph(&glyph);
+            glyph
+                .map(|t| {
+                    let t = match t {
+                        GlyphItem::Image(i) => FlatGlyphItem::Image(i),
+                        GlyphItem::Outline(p) => FlatGlyphItem::Outline(p),
+                        GlyphItem::None => FlatGlyphItem::None,
+                        _ => unreachable!(),
+                    };
+
+                    (font_id, t)
+                })
+                .unwrap_or_else(|| (font_id, FlatGlyphItem::None))
+        })
+        .collect::<Vec<_>>()
+}
+
+pub fn serialize_doc(doc: MultiVecDocument) -> Vec<u8> {
+    let flatten_module = FlatModule::new(vec![
+        ModuleMetadata::Item(ItemPack(doc.module.items.into_iter().collect())),
+        ModuleMetadata::Font(Arc::new(doc.module.fonts.into())),
+        ModuleMetadata::Glyph(Arc::new(flatten_glyphs(doc.module.glyphs).into())),
+        ModuleMetadata::Layout(Arc::new(doc.layouts)),
+    ]);
+
+    flatten_module.to_bytes()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::hash::Fingerprint;
+    use crate::vector::geom::{Axes, Scalar};
+
+    use crate::vector::ir::{Image, ImageItem};
+
+    /// Test image serialization.
+    #[test]
+    fn test_image_serialization() {
+        let img = ImageItem {
+            image: Arc::new(Image {
+                data: vec![0, 1, 2, 3],
+                format: "png".into(),
+                size: Axes::new(10, 10),
+                alt: None,
+                hash: Fingerprint::from_pair(0xdeadbeef, 0),
+            }),
+            size: Axes::new(Scalar(10.0), Scalar(10.0)),
+        };
+
+        // Or you can customize your serialization for better performance
+        // and compatibility with #![no_std] environments
+        use rkyv::ser::{serializers::AllocSerializer, Serializer};
+
+        let mut serializer = AllocSerializer::<0>::default();
+        serializer.serialize_value(&img).unwrap();
+        let bytes = serializer.into_serializer().into_inner();
+
+        let ret = bytes.into_vec();
+        assert_eq!("00010203706e6700f8ffffff04000000f4ffffff030000000a0000000a000000efbeadde000000000000000000000000000000000000000000000000000000000000204100002041c0ffffff", hex::encode(ret));
+    }
 }
