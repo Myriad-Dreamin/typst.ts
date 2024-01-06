@@ -30,8 +30,8 @@ use crate::{
 /// Intermediate representation of a flatten vector item.
 pub struct ConvertImpl<const ENABLE_REF_CNT: bool = false> {
     pub glyphs: GlyphPackBuilderImpl<ENABLE_REF_CNT>,
-    pub cache_items: chashmap::CHashMap<Fingerprint, (u64, Fingerprint, VecItem)>,
-    pub items: chashmap::CHashMap<Fingerprint, (u64, VecItem)>,
+    pub cache_items: crate::adt::CHashMap<Fingerprint, (u64, Fingerprint, VecItem)>,
+    pub items: crate::adt::CHashMap<Fingerprint, (u64, VecItem)>,
     pub new_items: Mutex<Vec<(Fingerprint, VecItem)>>,
 
     fingerprint_builder: FingerprintBuilder,

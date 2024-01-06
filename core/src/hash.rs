@@ -116,7 +116,7 @@ impl FingerprintHasher for FingerprintSipHasher {
 #[derive(Default)]
 pub struct FingerprintBuilder {
     /// The conflict checker mapping fingerprints to their underlying data.
-    conflict_checker: lockfree::map::Map<Fingerprint, Vec<u8>>,
+    conflict_checker: crate::adt::CHashMap<Fingerprint, Vec<u8>>,
 }
 
 impl FingerprintBuilder {
@@ -133,7 +133,7 @@ impl FingerprintBuilder {
         item.hash(&mut s);
         let (fingerprint, featured_data) = s.finish_fingerprint();
         if let Some(prev_featured_data) = self.conflict_checker.get(&fingerprint) {
-            if prev_featured_data.1 != featured_data {
+            if *prev_featured_data != featured_data {
                 // todo: soft error
                 panic!("Fingerprint conflict detected!");
             }
