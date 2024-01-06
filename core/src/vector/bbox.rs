@@ -4,17 +4,21 @@ use std::{collections::HashMap, ops::Deref};
 use comemo::Prehashed;
 use typst::text::Font;
 
-use super::ir::{FontIndice, FontRef, GlyphIndice, GlyphPackBuilder, GlyphRef};
-use super::vm::RenderState;
 use super::{
-    flat_ir::{self, Module},
-    flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
-    ir::{self, Abs, Axes, BuildGlyph, Ratio, Rect, Scalar, Transform},
-    sk,
-    vm::{GroupContext, RenderVm, TransformContext},
+    ir::{
+        self, Abs, Axes, BuildGlyph, FontIndice, FontRef, GlyphIndice, GlyphPackBuilder, GlyphRef,
+        Module, Ratio, Rect, Scalar, Transform,
+    },
+    vm::{
+        FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm, GroupContext,
+        RenderState, RenderVm, TransformContext,
+    },
 };
 use crate::font::GlyphProvider;
 use crate::hash::Fingerprint;
+
+/// Use types from `tiny-skia` crate.
+use tiny_skia as sk;
 
 pub trait BBoxIndice {
     fn get_bbox(&self, value: &Fingerprint) -> Option<BBox>;
@@ -295,29 +299,20 @@ pub struct BBoxTask<'m, 't> {
     pub _m_phantom: std::marker::PhantomData<&'m ()>,
 }
 
-impl<'m, 't> RenderVm for BBoxTask<'m, 't> {
+impl<'m, 't> FlatRenderVm<'m> for BBoxTask<'m, 't> {
     type Resultant = BBox;
     type Group = BBoxBuilder;
 
-    fn start_group(&mut self) -> Self::Group {
+    fn get_item(&self, value: &Fingerprint) -> Option<&'m ir::FlatSvgItem> {
+        self.module.get_item(value)
+    }
+
+    fn start_flat_group(&mut self, _v: &Fingerprint) -> Self::Group {
         Self::Group {
             ts: sk::Transform::identity(),
             clipper: None,
             inner: vec![],
         }
-    }
-}
-
-impl<'m, 't> FlatRenderVm<'m> for BBoxTask<'m, 't> {
-    type Resultant = BBox;
-    type Group = BBoxBuilder;
-
-    fn get_item(&self, value: &Fingerprint) -> Option<&'m flat_ir::FlatSvgItem> {
-        self.module.get_item(value)
-    }
-
-    fn start_flat_group(&mut self, _v: &Fingerprint) -> Self::Group {
-        self.start_group()
     }
 
     fn render_flat_item(&mut self, state: RenderState, abs_ref: &Fingerprint) -> Self::Resultant {

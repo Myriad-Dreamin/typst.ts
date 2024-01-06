@@ -12,10 +12,9 @@ use typst_ts_core::Exporter;
 
 /// re-export the core types.
 pub use typst_ts_core::font::{FontGlyphProvider, GlyphProvider, IGlyphProvider};
-pub use typst_ts_core::vector::flat_ir::{
-    self, FlatModule, Module, ModuleBuilder, MultiSvgDocument, SvgDocument,
+pub use typst_ts_core::vector::ir::{
+    self, geom, FlatModule, Module, ModuleBuilder, MultiVecDocument, VecDocument,
 };
-pub use typst_ts_core::vector::{geom, ir};
 
 pub(crate) mod utils;
 

@@ -1,10 +1,7 @@
 use typst::model::Document;
-use typst_ts_core::vector::{
-    flat_ir::{
-        FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, ModuleBuilder, ModuleMetadata,
-        MultiSvgDocument,
-    },
-    ir::Abs,
+use typst_ts_core::vector::ir::{
+    Abs, FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, ModuleBuilder, ModuleMetadata,
+    MultiVecDocument,
 };
 
 #[derive(Default)]
@@ -28,9 +25,9 @@ impl DynamicLayoutSvgExporter {
         LayoutRegionNode::new_pages(pages)
     }
 
-    pub fn finalize(self) -> MultiSvgDocument {
+    pub fn finalize(self) -> MultiVecDocument {
         let module = self.builder.finalize();
-        MultiSvgDocument {
+        MultiVecDocument {
             module,
             layouts: vec![LayoutRegion::new_by_scalar("width".into(), self.layouts)],
         }

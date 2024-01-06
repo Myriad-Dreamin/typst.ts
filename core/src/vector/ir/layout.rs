@@ -10,13 +10,8 @@ use std::{
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 use serde::{Deserialize, Serialize};
 
-use crate::{error::prelude::*, TakeAs};
-use crate::{
-    vector::ir::{ImmutStr, Scalar},
-    ImmutBytes,
-};
-
-use super::{Module, ModuleView, Page, PageMetadata, SourceMappingNode};
+use super::{Module, ModuleView, Page, PageMetadata, Scalar, SourceMappingNode};
+use crate::{error::prelude::*, ImmutBytes, ImmutStr, TakeAs};
 
 /// Describing
 #[derive(Debug, Clone)]
