@@ -1,23 +1,23 @@
 use typst::model::Document;
 use typst_ts_core::vector::ir::{
-    Abs, FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, ModuleBuilder, ModuleMetadata,
-    MultiVecDocument,
+    Abs, FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, ModuleMetadata, MultiVecDocument,
 };
+use typst_ts_core::vector::pass::Typst2VecPass;
 
 #[derive(Default)]
 pub struct DynamicLayoutSvgExporter {
-    pub builder: ModuleBuilder,
+    pub typst2vec: Typst2VecPass,
     pub layouts: Vec<(Abs, LayoutRegionNode)>,
 }
 
 impl DynamicLayoutSvgExporter {
     pub fn render(&mut self, output: &Document) -> LayoutRegionNode {
-        self.builder.reset();
+        self.typst2vec.reset();
         // let instant = std::time::Instant::now();
         // check the document
         // let mut t = LowerBuilder::new(output);
 
-        let pages = self.builder.build_doc(&output.introspector, output);
+        let pages = self.typst2vec.doc(&output.introspector, output);
 
         // log::trace!("svg dynamic layout render time: {:?}",
         // instant.elapsed());
@@ -26,7 +26,7 @@ impl DynamicLayoutSvgExporter {
     }
 
     pub fn finalize(self) -> MultiVecDocument {
-        let module = self.builder.finalize();
+        let module = self.typst2vec.finalize();
         MultiVecDocument {
             module,
             layouts: vec![LayoutRegion::new_by_scalar("width".into(), self.layouts)],
@@ -34,7 +34,7 @@ impl DynamicLayoutSvgExporter {
     }
 
     pub fn debug_stat(&self) -> String {
-        let v = self.builder.finalize_ref();
+        let v = self.typst2vec.finalize_ref();
         let item_cnt = v.items.len();
         let glyph_cnt = v.glyphs.len();
         // let glyphs = GlyphPack::from_iter(v.1);

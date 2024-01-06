@@ -5,15 +5,13 @@ use std::{
 
 use divan::Bencher;
 use once_cell::sync::Lazy;
-use rayon::iter::IntoParallelRefIterator;
-use rayon::iter::ParallelIterator;
 use typst::model::Document;
 use typst_ts_cli::{CompileOnceArgs, FontArgs};
 use typst_ts_compiler::{
     service::{CompileDriverImpl, Compiler},
     ShadowApi, TypstSystemWorld,
 };
-use typst_ts_core::vector::ir::{IncrModuleBuilder, ModuleBuilder};
+use typst_ts_core::vector::pass::{IncrTypst2VecPass, Typst2VecPass};
 
 type CompileDriver = Lazy<Mutex<CompileDriverImpl<TypstSystemWorld>>>;
 
@@ -53,26 +51,16 @@ fn main() {
 fn lower_impl(doc: &Document) {
     // use rayon::iter::ParallelIterator;
 
-    let lower_builder = ModuleBuilder::default();
-    let i = &doc.introspector;
-    let _ = doc
-        .pages
-        .par_iter()
-        .map(|f| lower_builder.build(i, f))
-        .collect::<Vec<_>>();
+    let pass = Typst2VecPass::default();
+    let _ = pass.doc(&doc.introspector, doc);
 }
 
 fn lower_incr_impl<'a>(docs: impl Iterator<Item = &'a Arc<Document>>) {
-    let mut lower_builder = IncrModuleBuilder::default();
+    let mut pass = IncrTypst2VecPass::default();
     for doc in docs {
-        lower_builder.increment_lifetime();
+        pass.increment_lifetime();
         // lower_builder.gc(5 * 2);
-        let i = &doc.introspector;
-        let _ = doc
-            .pages
-            .par_iter()
-            .map(|f| lower_builder.build(i, f))
-            .collect::<Vec<_>>();
+        let _ = pass.doc(&doc.introspector, doc);
         // comemo::evict(30);
     }
     // comemo::evict(0);
