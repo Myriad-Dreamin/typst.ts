@@ -8,6 +8,7 @@ import {
   PageInfo,
   RenderCanvasResult,
   TransformMatrix,
+  TypstDefaultParams,
   kObject,
 } from './internal.types.mjs';
 import {
@@ -811,7 +812,7 @@ class TypstRendererDriver {
         }
       }
 
-      session.pixelPerPt = options.pixelPerPt ?? 3;
+      session.pixelPerPt = options.pixelPerPt ?? TypstDefaultParams.PIXEL_PER_PT;
       session.backgroundColor = backgroundColor ?? '#ffffff';
 
       const t = performance.now();
