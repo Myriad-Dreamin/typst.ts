@@ -4,13 +4,11 @@ use typst::{diag::SourceResult, model::Document};
 use typst_ts_core::{
     hash::Fingerprint,
     vector::{
-        flat_ir::{
-            flatten_glyphs, FlatModule, FlatSvgItem, ItemPack, LayoutRegion, LayoutRegionNode,
-            LayoutRegionRepr, Module, ModuleBuilder, ModuleMetadata, Page, SvgDocument,
+        ir::{
+            flatten_glyphs, FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, LayoutRegionRepr,
+            Module, ModuleBuilder, ModuleMetadata, Page, Size, VecDocument, VecItem,
         },
-        flat_vm::FlatRenderVm,
-        ir::Size,
-        vm::RenderState,
+        vm::{RenderState, RenderVm},
     },
 };
 
@@ -49,7 +47,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
         module: &Module,
     ) -> Vec<(Fingerprint, Size, Arc<SvgTextNode>)> {
         self.collect_patterns(|t: &mut Self, id| match module.get_item(id) {
-            Some(FlatSvgItem::Pattern(g)) => {
+            Some(VecItem::Pattern(g)) => {
                 let size = g.size + g.spacing;
                 let state = RenderState::new_size(size);
                 let content = t
@@ -68,12 +66,12 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 }
 
 impl<Feat: ExportFeature> SvgExporter<Feat> {
-    pub fn svg_doc(output: &Document) -> SvgDocument {
+    pub fn svg_doc(output: &Document) -> VecDocument {
         let builder = ModuleBuilder::default();
         let pages = builder.build_doc(&output.introspector, output);
 
         let module = builder.finalize();
-        SvgDocument { pages, module }
+        VecDocument { pages, module }
     }
 
     pub fn render_flat_svg(
@@ -85,8 +83,8 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
     }
 }
 
-pub fn export_module(output: SvgDocument) -> SourceResult<Vec<u8>> {
-    let SvgDocument { pages, module } = output;
+pub fn export_module(output: VecDocument) -> SourceResult<Vec<u8>> {
+    let VecDocument { pages, module } = output;
     let glyphs = flatten_glyphs(module.glyphs).into();
 
     let module_data = FlatModule::new(vec![

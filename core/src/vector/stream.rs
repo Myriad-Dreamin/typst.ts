@@ -1,4 +1,4 @@
-use super::flat_ir::{ArchivedFlatModule, FlatModule};
+use super::ir::{ArchivedFlatModule, FlatModule};
 use rkyv::de::deserializers::SharedDeserializeMap;
 use rkyv::{AlignedVec, Deserialize};
 

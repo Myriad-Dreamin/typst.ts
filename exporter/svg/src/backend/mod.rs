@@ -11,13 +11,13 @@ use escape::{PcDataEscapes, TextContentDataEscapes};
 use typst_ts_core::{
     hash::Fingerprint,
     vector::{
-        flat_ir,
-        flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
         ir::{
             self, Abs, Axes, BuildGlyph, FontIndice, GlyphHashStablizer, GlyphIndice, GlyphRef,
             ImmutStr, PathStyle, Ratio, Scalar, Size, Transform,
         },
-        vm::{GroupContext, RenderState, RenderVm, TransformContext},
+        vm::{
+            GroupContext, IncrGroupContext, IncrRenderVm, RenderState, RenderVm, TransformContext,
+        },
     },
 };
 
@@ -275,15 +275,17 @@ impl<C: BuildClipPath> TransformContext<C> for SvgTextBuilder {
     }
 }
 
-/// See [`GroupContext`].
+/// See [`FlatGroupContext`].
 impl<
         'm,
-        C: RenderVm<Resultant = Arc<SvgTextNode>>
-            + BuildGlyph
+        C: BuildGlyph
             + GlyphHashStablizer
             + GlyphIndice<'m>
-            + BuildFillStyleClass
             + NotifyPaint
+            + RenderVm<'m, Resultant = Arc<SvgTextNode>>
+            + BuildGlyph
+            + FontIndice<'m>
+            + BuildFillStyleClass
             + DynExportFeature,
     > GroupContext<C> for SvgTextBuilder
 {
@@ -430,22 +432,6 @@ impl<
                 .push(("data-span", format!("{:x}", span_id)));
         }
     }
-}
-
-/// See [`FlatGroupContext`].
-impl<
-        'm,
-        C: RenderVm<Resultant = Arc<SvgTextNode>>
-            + FlatRenderVm<'m, Resultant = Arc<SvgTextNode>>
-            + BuildGlyph
-            + GlyphIndice<'m>
-            + FontIndice<'m>
-            + GlyphHashStablizer
-            + BuildFillStyleClass
-            + NotifyPaint
-            + DynExportFeature,
-    > FlatGroupContext<C> for SvgTextBuilder
-{
     fn render_item_ref_at(
         &mut self,
         state: RenderState,
@@ -470,12 +456,7 @@ impl<
         self.render_glyph_inner(ctx, pos, glyph)
     }
 
-    fn render_flat_text_semantics(
-        &mut self,
-        ctx: &mut C,
-        text: &flat_ir::FlatTextItem,
-        width: Scalar,
-    ) {
+    fn render_flat_text_semantics(&mut self, ctx: &mut C, text: &ir::TextItem, width: Scalar) {
         if !ctx.should_render_text_element() {
             return;
         }
@@ -492,7 +473,7 @@ impl<
         )
     }
 
-    fn with_frame(mut self, _ctx: &mut C, _group: &flat_ir::GroupRef) -> Self {
+    fn with_frame(mut self, _ctx: &mut C, _group: &ir::GroupRef) -> Self {
         self.attributes.push(("class", "typst-group".to_owned()));
         self
     }
@@ -500,7 +481,7 @@ impl<
     fn with_text(
         mut self,
         ctx: &mut C,
-        text: &flat_ir::FlatTextItem,
+        text: &ir::TextItem,
         fill_key: &Fingerprint,
         state: RenderState,
     ) -> Self {
@@ -520,9 +501,8 @@ impl<
 /// See [`FlatGroupContext`].
 impl<
         'm,
-        C: FlatIncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBuilder>
-            + HasStatefulFill,
-    > FlatIncrGroupContext<C> for SvgTextBuilder
+        C: IncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBuilder> + HasStatefulFill,
+    > IncrGroupContext<C> for SvgTextBuilder
 {
     fn render_diff_item_ref_at(
         &mut self,

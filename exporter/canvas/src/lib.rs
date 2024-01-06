@@ -11,13 +11,11 @@ use typst_ts_core::{
     font::GlyphProvider,
     hash::Fingerprint,
     vector::{
-        flat_ir::{self, FlatSvgItem, LayoutRegionNode, Module, ModuleBuilder, Page},
-        flat_vm::{FlatGroupContext, FlatRenderVm},
         incr::IncrDocClient,
         ir::{
             self, Abs, Axes, BuildGlyph, FontIndice, FontRef, GlyphIndice, GlyphItem,
-            GlyphPackBuilder, GlyphRef, Image, ImageItem, ImmutStr, PathStyle, Ratio, Rect, Scalar,
-            Size,
+            GlyphPackBuilder, GlyphRef, Image, ImageItem, ImmutStr, LayoutRegionNode, Module,
+            ModuleBuilder, Page, PathStyle, Ratio, Rect, Scalar, Size, VecItem,
         },
         vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
@@ -50,7 +48,7 @@ impl ExportFeature for DefaultExportFeature {
     const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
 }
 
-static EMPTY_PAGE: once_cell::sync::Lazy<(Fingerprint, Vec<(Fingerprint, FlatSvgItem)>)> =
+static EMPTY_PAGE: once_cell::sync::Lazy<(Fingerprint, Vec<(Fingerprint, VecItem)>)> =
     once_cell::sync::Lazy::new(|| {
         // prepare an empty page for the pages that are not rendered
         let mb = ModuleBuilder::default();
@@ -481,9 +479,11 @@ impl<C> TransformContext<C> for CanvasStack {
     }
 }
 
-/// See [`GroupContext`].
-impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> GroupContext<C>
-    for CanvasStack
+/// See [`FlatGroupContext`].
+impl<
+        'm,
+        C: BuildGlyph + GlyphIndice<'m> + RenderVm<'m, Resultant = CanvasNode> + GlyphIndice<'m>,
+    > GroupContext<C> for CanvasStack
 {
     fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &ir::GlyphItem) {
         let glyph_ref = ctx.build_glyph(glyph);
@@ -515,12 +515,7 @@ impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> Gro
             })),
         ))
     }
-}
 
-/// See [`FlatGroupContext`].
-impl<'m, C: FlatRenderVm<'m, Resultant = CanvasNode> + GlyphIndice<'m>> FlatGroupContext<C>
-    for CanvasStack
-{
     fn render_item_ref_at(
         &mut self,
         state: RenderState,
@@ -560,27 +555,12 @@ impl<'m, 't, Feat: ExportFeature> GlyphIndice<'m> for CanvasRenderTask<'m, 't, F
     }
 }
 
-impl<'m, 't, Feat: ExportFeature> RenderVm for CanvasRenderTask<'m, 't, Feat> {
+impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, 't, Feat> {
     // type Resultant = String;
     type Resultant = CanvasNode;
     type Group = CanvasStack;
 
-    fn start_group(&mut self) -> Self::Group {
-        Self::Group {
-            ts: sk::Transform::identity(),
-            clipper: None,
-            fill: None,
-            inner: vec![],
-        }
-    }
-}
-
-impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for CanvasRenderTask<'m, 't, Feat> {
-    // type Resultant = String;
-    type Resultant = CanvasNode;
-    type Group = CanvasStack;
-
-    fn get_item(&self, value: &Fingerprint) -> Option<&'m flat_ir::FlatSvgItem> {
+    fn get_item(&self, value: &Fingerprint) -> Option<&'m ir::VecItem> {
         self.module.get_item(value)
     }
 
@@ -597,7 +577,7 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for CanvasRenderTask<'m, 't, 
         &mut self,
         _state: RenderState,
         value: &Fingerprint,
-        text: &flat_ir::FlatTextItem,
+        text: &ir::TextItem,
     ) -> Self::Group {
         let mut g = self.start_flat_group(value);
         g.with_text_shape(&text.shape);
@@ -635,7 +615,7 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
     /// fork a render task with module.
     pub fn fork_canvas_render_task<'m, 't>(
         &'t mut self,
-        module: &'m flat_ir::Module,
+        module: &'m ir::Module,
     ) -> CanvasRenderTask<'m, 't, Feat> {
         CanvasRenderTask::<Feat> {
             glyph_provider: self.glyph_provider.clone(),

@@ -5,9 +5,10 @@ use typst::layout::{Axis, Dir};
 use typst_ts_core::{
     hash::Fingerprint,
     vector::{
-        flat_ir::{self, FlatSvgItem, FlatTextItem, GroupRef, Module},
-        flat_vm::{FlatGroupContext, FlatRenderVm},
-        ir::{self, Abs, Axes, FontIndice, FontRef, Ratio, Scalar},
+        ir::{
+            self, Abs, Axes, FontIndice, FontRef, GroupRef, Module, Ratio, Scalar, TextItem,
+            VecItem,
+        },
         vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
     TextContent,
@@ -64,13 +65,8 @@ trait TranslateCtx {
     fn translate(&mut self, x: Scalar, y: Scalar);
 }
 
-/// See [`GroupContext`].
-impl<C: TranslateCtx + RenderVm<Resultant = ()>> GroupContext<C> for TextContentBuilder {}
-
 /// See [`FlatGroupContext`].
-impl<'m, C: TranslateCtx + FlatRenderVm<'m, Resultant = ()>> FlatGroupContext<C>
-    for TextContentBuilder
-{
+impl<'m, C: TranslateCtx + RenderVm<'m, Resultant = ()>> GroupContext<C> for TextContentBuilder {
     fn render_item_ref_at(
         &mut self,
         state: RenderState,
@@ -111,15 +107,15 @@ impl<'m, 't> TextContentTask<'m, 't> {
     pub fn process_flat_item(&mut self, ts: sk::Transform, item: &Fingerprint) {
         let item = self.module.get_item(item).unwrap();
         match item {
-            FlatSvgItem::Item(t) => self.process_flat_item(
+            VecItem::Item(t) => self.process_flat_item(
                 ts.pre_concat({
                     let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
                     t.into()
                 }),
                 &t.1,
             ),
-            FlatSvgItem::Group(group, _) => self.process_flat_group(ts, group),
-            FlatSvgItem::Text(text) => self.process_flat_text(ts, text),
+            VecItem::Group(group, _) => self.process_flat_group(ts, group),
+            VecItem::Text(text) => self.process_flat_text(ts, text),
             _ => {}
         }
     }
@@ -132,17 +128,17 @@ impl<'m, 't> TextContentTask<'m, 't> {
 
             let item = self.module.get_item(item).unwrap();
             match item {
-                FlatSvgItem::Item(t) => self.process_flat_item(
+                VecItem::Item(t) => self.process_flat_item(
                     ts.pre_concat({
                         let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
                         t.into()
                     }),
                     &t.1,
                 ),
-                FlatSvgItem::Group(group, _) => {
+                VecItem::Group(group, _) => {
                     self.process_flat_group(ts, group);
                 }
-                FlatSvgItem::Text(text) => {
+                VecItem::Text(text) => {
                     let (next_text_flow, has_eol) = TextFlow::notify(text_flow, &ts, &text.shape);
                     text_flow = next_text_flow;
 
@@ -159,7 +155,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
         }
     }
 
-    fn process_flat_text(&mut self, ts: sk::Transform, text: &FlatTextItem) {
+    fn process_flat_text(&mut self, ts: sk::Transform, text: &TextItem) {
         let font_name = self.append_flat_text_font(text.font.clone());
         let width = text.content.glyphs.iter().map(|g| g.0 .0 + g.1 .0).sum();
         self.append_text_content(
@@ -333,24 +329,15 @@ impl<'m, 't> FontIndice<'m> for TextContentTask<'m, 't> {
     }
 }
 
-impl<'m, 't> RenderVm for TextContentTask<'m, 't> {
+impl<'m, 't> RenderVm<'m> for TextContentTask<'m, 't> {
     type Resultant = ();
     type Group = TextContentBuilder;
 
-    fn start_group(&mut self) -> Self::Group {
-        Self::Group { ts: self.ts }
-    }
-}
-
-impl<'m, 't> FlatRenderVm<'m> for TextContentTask<'m, 't> {
-    type Resultant = ();
-    type Group = TextContentBuilder;
-
-    fn get_item(&self, value: &Fingerprint) -> Option<&'m flat_ir::FlatSvgItem> {
+    fn get_item(&self, value: &Fingerprint) -> Option<&'m ir::VecItem> {
         self.module.get_item(value)
     }
 
     fn start_flat_group(&mut self, _v: &Fingerprint) -> Self::Group {
-        self.start_group()
+        Self::Group { ts: self.ts }
     }
 }

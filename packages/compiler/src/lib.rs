@@ -339,7 +339,7 @@ mod tests {
     #![allow(clippy::await_holding_lock)]
 
     use sha2::Digest;
-    use typst_ts_svg_exporter::MultiSvgDocument;
+    use typst_ts_svg_exporter::MultiVecDocument;
     use typst_ts_test_common::web_artifact::get_corpus;
     use wasm_bindgen::JsCast;
     use wasm_bindgen_test::*;
