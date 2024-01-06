@@ -39,19 +39,19 @@ pub trait IGlyphProvider {
 }
 
 #[derive(Clone)]
-pub struct GlyphProvider(Arc<HashedTrait<dyn IGlyphProvider>>);
+pub struct GlyphProvider(Arc<HashedTrait<dyn IGlyphProvider + Send + Sync>>);
 
 impl GlyphProvider {
     #[allow(clippy::arc_with_non_send_sync)]
     pub fn new<T>(provider: T) -> Self
     where
-        T: IGlyphProvider + Hash + 'static,
+        T: IGlyphProvider + Send + Sync + Hash + 'static,
     {
         let hash = item_hash128(&provider);
         let provider = Box::new(provider);
-        Self(Arc::new(HashedTrait::<dyn IGlyphProvider>::new(
-            hash, provider,
-        )))
+        Self(Arc::new(
+            HashedTrait::<dyn IGlyphProvider + Send + Sync>::new(hash, provider),
+        ))
     }
 }
 

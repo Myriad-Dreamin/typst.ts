@@ -3,7 +3,7 @@ use std::sync::Arc;
 use typst::model::Document;
 
 use super::ir::{
-    flatten_glyphs, FlatModule, IncrFontPack, IncrGlyphPack, ItemPack, LayoutRegion,
+    FlatGlyphItem, FlatModule, GlyphRef, IncrFontPack, IncrGlyphPack, ItemPack, LayoutRegion,
     LayoutRegionNode, LayoutSourceMapping, Module, ModuleMetadata, MultiVecDocument, Page,
     SourceMappingNode, VecDocument,
 };
@@ -93,7 +93,7 @@ impl IncrDocServer {
         };
 
         let glyphs = IncrGlyphPack {
-            items: flatten_glyphs(delta.glyphs),
+            items: delta.glyphs,
             incremental_base: 0, // todo: correct incremental_base
         };
 
@@ -121,7 +121,6 @@ impl IncrDocServer {
         let doc = self.doc_view.as_ref()?;
 
         let (fonts, glyphs) = self.typst2vec.glyphs.finalize();
-        let glyphs = flatten_glyphs(glyphs);
 
         let pages = LayoutRegionNode::new_pages(doc.pages.clone());
         let pages = Arc::new(vec![LayoutRegion::new_single(pages)]);
@@ -146,6 +145,8 @@ impl IncrDocServer {
 pub struct IncrDocClient {
     /// Full information of the current document from server.
     pub doc: MultiVecDocument,
+    /// Hold glyphs.
+    pub glyphs: Vec<(GlyphRef, FlatGlyphItem)>,
 
     /// checkout of the current document.
     pub layout: Option<LayoutRegionNode>,
@@ -161,6 +162,9 @@ impl IncrDocClient {
         self.doc.merge_delta(&delta);
         for metadata in delta.metadata {
             match metadata {
+                ModuleMetadata::Glyph(data) => {
+                    self.glyphs.extend(data.take().items.into_iter());
+                }
                 ModuleMetadata::SourceMappingData(data) => {
                     self.source_mapping_data = data;
                 }

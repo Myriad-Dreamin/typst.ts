@@ -1,12 +1,11 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use typst_ts_core::{
     hash::{Fingerprint, FingerprintBuilder},
     vector::{
         ir::{
-            self, BuildGlyph, FontIndice, FontRef, GlyphHashStablizer, GlyphIndice, GlyphItem,
-            GlyphPackBuilder, GlyphRef, GroupRef, ImmutStr, Module, PathItem, PathStyle, Scalar,
-            StyleNs, TextItem, VecItem,
+            self, FlatGlyphItem, FontIndice, FontRef, GroupRef, ImmutStr, Module, PathItem,
+            PathStyle, Scalar, StyleNs, TextItem, VecItem,
         },
         vm::{GroupContext, IncrRenderVm, RenderState, RenderVm},
     },
@@ -17,7 +16,7 @@ use crate::{
         BuildClipPath, BuildFillStyleClass, DynExportFeature, NotifyPaint, SvgText, SvgTextBuilder,
         SvgTextNode,
     },
-    ExportFeature, GlyphProvider,
+    ExportFeature,
 };
 
 use super::HasStatefulFill;
@@ -32,18 +31,11 @@ pub(crate) type PaintFillMap = HashMap<ImmutStr, (u8, Fingerprint, Option<bool>)
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
 /// The 't lifetime is the lifetime of Vector task.
 pub struct RenderContext<'m, 't, Feat: ExportFeature> {
-    /// Provides glyphs.
-    /// See [`GlyphProvider`].
-    pub glyph_provider: GlyphProvider,
-
     pub module: &'m Module,
 
     /// A fingerprint builder for generating unique id.
     pub(crate) fingerprint_builder: &'t mut FingerprintBuilder,
 
-    /// Stores the glyphs used in the document.
-    // todo: remove this, it is unused during rendering now
-    pub(crate) glyph_defs: &'t mut GlyphPackBuilder,
     /// Stores the style definitions used in the document.
     pub(crate) style_defs: &'t mut StyleDefMap,
     /// Stores the graidents used in the document.
@@ -99,30 +91,14 @@ impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Fea
 
 impl<'m, 't, Feat: ExportFeature> FontIndice<'m> for RenderContext<'m, 't, Feat> {
     fn get_font(&self, value: &FontRef) -> Option<&'m ir::FontItem> {
-        self.module.fonts.get(value.idx as usize)
-    }
-}
+        self.module.fonts.get(value.idx as usize).map(|e| {
+            // canary check
+            if e.hash != value.hash {
+                panic!("Invalid font reference: {:?}", value);
+            }
 
-impl<'m, 't, Feat: ExportFeature> GlyphIndice<'m> for RenderContext<'m, 't, Feat> {
-    fn get_glyph(&self, g: &GlyphRef) -> Option<&'m ir::GlyphItem> {
-        self.module.glyphs.get(g.glyph_idx as usize).map(|v| &v.1)
-    }
-}
-
-impl<'m, 't, Feat: ExportFeature> BuildGlyph for RenderContext<'m, 't, Feat> {
-    fn build_font(&mut self, font: &typst::text::Font) -> FontRef {
-        self.glyph_defs.build_font(font)
-    }
-
-    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
-        self.glyph_defs.build_glyph(glyph)
-    }
-}
-
-impl<'m, 't, Feat: ExportFeature> GlyphHashStablizer for RenderContext<'m, 't, Feat> {
-    fn stablize_hash(&mut self, glyph: &GlyphRef) -> Fingerprint {
-        let glyph = &self.module.glyphs[glyph.glyph_idx as usize].1;
-        glyph.get_fingerprint()
+            e
+        })
     }
 }
 
@@ -273,7 +249,7 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, 't, Feat> {
     ) -> Self::Group {
         let mut g = self.start_flat_group(value);
 
-        let font = self.get_font(&text.font).unwrap();
+        let font = self.get_font(&text.shape.font).unwrap();
         let upem = font.unit_per_em;
 
         g.with_text_shape(self, upem, &text.shape, &state.at(value), state);
@@ -377,7 +353,7 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
         mut group_ctx: SvgTextBuilder,
         text: &TextItem,
     ) -> SvgTextBuilder {
-        let font = self.get_font(&text.font).unwrap();
+        let font = self.get_font(&text.shape.font).unwrap();
 
         // upem is the unit per em defined in the font.
         let upem = font.unit_per_em;
@@ -401,7 +377,7 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
 
             let mut width = 0f32;
             for (x, g) in text.render_glyphs(upem, &mut width) {
-                group_ctx.render_glyph_ref(self, x, g);
+                group_ctx.render_glyph_ref(self, x, font, g);
                 group_ctx.content.push(SvgText::Plain("<path/>".into()));
             }
 
@@ -419,21 +395,21 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
             // image glyphs
             let mut _width = 0f32;
             for (x, g) in text.render_glyphs(upem, &mut _width) {
-                let built = self.get_glyph(g);
+                let built = font.get_glyph(g);
                 if matches!(
-                    built,
-                    Some(GlyphItem::Outline(..) | GlyphItem::Raw(..)) | None
+                    built.map(Deref::deref),
+                    Some(FlatGlyphItem::Outline(..)) | None
                 ) {
                     continue;
                 }
-                group_ctx.render_glyph_ref(self, x, g);
+                group_ctx.render_glyph_ref(self, x, font, g);
             }
 
             width
         } else {
             let mut width = 0f32;
             for (x, g) in text.render_glyphs(upem, &mut width) {
-                group_ctx.render_glyph_ref(self, x, g);
+                group_ctx.render_glyph_ref(self, x, font, g);
             }
 
             width

@@ -212,6 +212,20 @@ impl IncrSvgDocClient {
             },
             &mut svg_body,
         );
+
+        // render the glyphs
+        svg.push(r#"<defs class="glyph">"#.into());
+        let glyphs = kern.glyphs.iter();
+        // skip the glyphs that are already rendered
+        let new_glyphs = glyphs.skip(self.glyph_window);
+        let glyph_defs = t.render_glyphs(new_glyphs.map(|(x, y)| (*x, y)));
+
+        svg.extend(glyph_defs);
+        svg.push("</defs>".into());
+
+        // attach the clip paths, and style defs
+
+        svg.push(r#"<defs class="clip-path">"#.into());
         let module_ref = kern.module_mut();
         let patterns = t.render_patterns(module_ref);
 
@@ -227,20 +241,6 @@ impl IncrSvgDocClient {
                     None
                 }
             });
-
-        // render the glyphs
-        svg.push(r#"<defs class="glyph">"#.into());
-        let glyphs = module_ref.glyphs.iter();
-        // skip the glyphs that are already rendered
-        let new_glyphs = glyphs.skip(self.glyph_window);
-        let glyph_defs = t.render_glyphs(new_glyphs.enumerate().map(|(x, (_, y))| (x, y)), true);
-
-        svg.extend(glyph_defs);
-        svg.push("</defs>".into());
-
-        // attach the clip paths, and style defs
-
-        svg.push(r#"<defs class="clip-path">"#.into());
         IncrExporter::gradients(gradients, &mut svg);
         IncrExporter::patterns(patterns.into_iter(), &mut svg);
         svg.push("</defs>".into());
@@ -260,7 +260,7 @@ impl IncrSvgDocClient {
 
         // update the state
         self.doc_view = Some(next_doc_view);
-        self.glyph_window = kern.module_mut().glyphs.len();
+        self.glyph_window = kern.glyphs.len();
 
         // return the svg
         string_io

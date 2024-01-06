@@ -1,25 +1,178 @@
 //! Lowering Typst Document into SvgItem.
 
+use std::cell::RefCell;
+use std::collections::HashSet;
+use std::ops::DerefMut;
 use std::sync::Arc;
 
+use parking_lot::Mutex;
+use rayon::iter::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 use ttf_parser::GlyphId;
 use typst::layout::Size;
 use typst::text::Font;
 use typst::visualize::Image;
 
 use crate::font::GlyphProvider;
-use crate::vector::ir::{self, GlyphItem};
 
-/// Lower a glyph into vector item.
-pub struct Glyph2VecPass<'a> {
-    pub gp: &'a GlyphProvider,
+use crate::vector::ir::{self, FlatGlyphItem, FontItem, FontPack, FontRef, GlyphItem, GlyphRef};
+
+pub type Glyph2VecPass = TGlyph2VecPass</* ENABLE_REF_CNT */ false>;
+pub type IncrGlyph2VecPass = TGlyph2VecPass</* ENABLE_REF_CNT */ true>;
+
+pub struct ConvertInnerImpl {
+    pub gp: GlyphProvider,
 
     /// Whether to lower ligature information
     pub lowering_ligature: bool,
 }
 
-impl<'a> Glyph2VecPass<'a> {
-    pub fn new(gp: &'a GlyphProvider, lowering_ligature: bool) -> Self {
+/// Lower a glyph into vector item.
+pub struct TGlyph2VecPass<const ENABLE_REF_CNT: bool = false> {
+    pub inner: ConvertInnerImpl,
+
+    pub lifetime: u64,
+    pub new_fonts: Mutex<Vec<FontItem>>,
+    pub new_glyphs: Mutex<Vec<(GlyphRef, GlyphItem)>>,
+
+    /// Intermediate representation of an incompleted font pack.
+    font_mapping: crate::adt::CHashMap<Font, FontRef>,
+    font_write_lock: Mutex<()>,
+
+    /// Intermediate representation of an incompleted glyph pack.
+    glyph_defs: crate::adt::CHashMap<GlyphItem, (GlyphRef, FontRef)>,
+
+    /// for interning
+    pub used_fonts: HashSet<FontRef>,
+    pub used_glyphs: HashSet<GlyphRef>,
+}
+
+impl<const ENABLE_REF_CNT: bool> TGlyph2VecPass<ENABLE_REF_CNT> {
+    pub fn new(gp: GlyphProvider, lowering_ligature: bool) -> Self {
+        Self {
+            inner: ConvertInnerImpl::new(gp, lowering_ligature),
+
+            lifetime: 0,
+            font_mapping: Default::default(),
+            font_write_lock: Default::default(),
+            glyph_defs: Default::default(),
+            new_fonts: Default::default(),
+            new_glyphs: Default::default(),
+            used_fonts: Default::default(),
+            used_glyphs: Default::default(),
+        }
+    }
+
+    pub fn finalize(&self) -> (FontPack, Vec<(GlyphRef, FlatGlyphItem)>) {
+        let mut fonts = self.font_mapping.clone().into_iter().collect::<Vec<_>>();
+        fonts.sort_by(|(_, a), (_, b)| a.idx.cmp(&b.idx));
+        let fonts = fonts.into_iter().map(|(a, _)| a.into()).collect();
+
+        let glyphs = self.glyph_defs.clone().into_iter().collect::<Vec<_>>();
+        let glyphs = glyphs
+            .into_par_iter()
+            .flat_map(|(a, b)| {
+                self.inner.must_flat_glyph(&a).map(|g| {
+                    (
+                        GlyphRef {
+                            font_hash: b.1.hash,
+                            glyph_idx: b.0.glyph_idx,
+                        },
+                        g,
+                    )
+                })
+            })
+            .collect();
+
+        (fonts, glyphs)
+    }
+
+    pub fn build_font(&self, font: &Font) -> FontRef {
+        if let Some(id) = self.font_mapping.get(font) {
+            return *id;
+        }
+        let _write_lock = self.font_write_lock.lock();
+
+        let new_abs_ref = RefCell::new(FontRef {
+            hash: 0xfffe,
+            idx: 0xfffe,
+        });
+
+        self.font_mapping.alter(font.clone(), |e| {
+            if e.is_some() {
+                *new_abs_ref.borrow_mut() = *e.as_ref().unwrap();
+                return e;
+            }
+
+            let abs_ref = FontRef {
+                hash: fxhash::hash32(font),
+                idx: self.font_mapping.len() as u32,
+            };
+            *new_abs_ref.borrow_mut() = abs_ref;
+            if ENABLE_REF_CNT {
+                self.new_fonts.lock().push(font.clone().into());
+            }
+            Some(abs_ref)
+        });
+
+        new_abs_ref.into_inner()
+    }
+
+    pub fn build_glyph(&self, font_ref: FontRef, glyph: GlyphItem) -> GlyphRef {
+        let (_, id) = match &glyph {
+            GlyphItem::Raw(g, id) => (g, id),
+            _ => todo!(),
+        };
+
+        let glyph_idx = id.0 as u32;
+
+        let abs_ref = GlyphRef {
+            font_hash: font_ref.hash,
+            glyph_idx,
+        };
+
+        if self
+            .glyph_defs
+            .insert(glyph.clone(), (abs_ref, font_ref))
+            .is_some()
+        {
+            return abs_ref;
+        }
+
+        if ENABLE_REF_CNT {
+            self.new_glyphs.lock().push((abs_ref, glyph));
+        }
+
+        abs_ref
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn verify_glyph(&self, id: GlyphRef, data: &GlyphItem) {
+        if let Some(glyph) = self.glyph_defs.get(data) {
+            assert_eq!(glyph.0, id);
+        } else {
+            panic!("glyph not found");
+        }
+    }
+}
+
+impl IncrGlyph2VecPass {
+    pub fn finalize_delta(&self) -> (FontPack, Vec<(GlyphRef, FlatGlyphItem)>) {
+        let fonts = std::mem::take(self.new_fonts.lock().deref_mut());
+        let glyphs = std::mem::take(self.new_glyphs.lock().deref_mut());
+        let glyphs = glyphs
+            .into_par_iter()
+            .flat_map(|(id, glyph)| {
+                let glyph = self.inner.must_flat_glyph(&glyph);
+                glyph.map(|glyph| (id, glyph))
+            })
+            .collect::<Vec<_>>();
+        (fonts, glyphs)
+    }
+}
+
+impl ConvertInnerImpl {
+    pub fn new(gp: GlyphProvider, lowering_ligature: bool) -> Self {
         Self {
             gp,
             lowering_ligature: cfg!(feature = "experimental-ligature") && lowering_ligature,
@@ -34,6 +187,15 @@ impl<'a> Glyph2VecPass<'a> {
         }
     }
 
+    pub fn must_flat_glyph(&self, glyph_item: &GlyphItem) -> Option<FlatGlyphItem> {
+        let glyph_item = self.glyph(glyph_item)?;
+        match glyph_item {
+            GlyphItem::Outline(i) => Some(FlatGlyphItem::Outline(i)),
+            GlyphItem::Image(i) => Some(FlatGlyphItem::Image(i)),
+            GlyphItem::None | GlyphItem::Raw(..) => None,
+        }
+    }
+
     #[cfg(not(feature = "glyph2vec"))]
     fn raw_glyph(&self, _font: &Font, _id: GlyphId) -> Option<GlyphItem> {
         None
@@ -41,7 +203,7 @@ impl<'a> Glyph2VecPass<'a> {
 }
 
 #[cfg(feature = "glyph2vec")]
-impl<'a> Glyph2VecPass<'a> {
+impl ConvertInnerImpl {
     fn ligature_len(&self, font: &Font, id: GlyphId) -> u8 {
         if !self.lowering_ligature {
             return 0;
@@ -66,7 +228,7 @@ impl<'a> Glyph2VecPass<'a> {
         use crate::vector::ir::Scalar;
         use crate::vector::utils::AbsExt;
 
-        let image = Self::extract_svg_glyph(self.gp, font, id)?;
+        let image = Self::extract_svg_glyph(&self.gp, font, id)?;
 
         // position our image
         let ascender = font

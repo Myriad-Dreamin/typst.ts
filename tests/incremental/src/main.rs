@@ -72,10 +72,11 @@ pub fn test_compiler(
     incr_client.merge_delta(server_delta);
     let _ = incr_svg_client.render_in_window(&mut incr_client, window);
 
-    for i in 0..200 {
+    for i in 0..20 {
         println!("Iteration {}", i);
 
-        content = content.replace("@netwok2020", "@netwok2020 x");
+        // content = content.replace("@netwok2020", "@netwok2020 x");
+        content += " x\n";
 
         let doc = driver
             .with_shadow_file_by_id(main_id, content.as_bytes().into(), |driver| {
@@ -108,6 +109,9 @@ pub fn main() {
     #[cfg(feature = "pku-thesis")]
     let entry_file_path = workspace_dir.join(r#"thesis.typ"#);
 
-    let noop_exporter = GroupExporter::new(vec![]);
-    test_compiler(&workspace_dir, &entry_file_path, noop_exporter);
+    for i in 0..10 {
+        println!("Over Iteration {}", i);
+        let noop_exporter = GroupExporter::new(vec![]);
+        test_compiler(&workspace_dir, &entry_file_path, noop_exporter);
+    }
 }
