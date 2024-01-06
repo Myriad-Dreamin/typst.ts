@@ -6,6 +6,8 @@ pub use takable::*;
 mod hash;
 pub use hash::*;
 
+pub mod cow_mut;
+
 mod query;
 pub use query::*;
 

@@ -5,8 +5,8 @@ use typst_ts_core::{
     vector::{
         ir::{
             self, BuildGlyph, FontIndice, FontRef, GlyphHashStablizer, GlyphIndice, GlyphItem,
-            GlyphPackBuilder, GlyphRef, GroupRef, ImmutStr, Module, PathItem, Scalar, StyleNs,
-            TextItem, VecItem,
+            GlyphPackBuilder, GlyphRef, GroupRef, ImmutStr, Module, PathItem, PathStyle, Scalar,
+            StyleNs, TextItem, VecItem,
         },
         vm::{GroupContext, IncrRenderVm, RenderState, RenderVm},
     },
@@ -17,7 +17,6 @@ use crate::{
         BuildClipPath, BuildFillStyleClass, DynExportFeature, NotifyPaint, SvgText, SvgTextBuilder,
         SvgTextNode,
     },
-    utils::MemorizeFree,
     ExportFeature, GlyphProvider,
 };
 
@@ -43,8 +42,7 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     pub(crate) fingerprint_builder: &'t mut FingerprintBuilder,
 
     /// Stores the glyphs used in the document.
-    // todo: used in SvgItem rendering, but
-    // unused in FlatSvgItem rendering, which is confusing.
+    // todo: remove this, it is unused during rendering now
     pub(crate) glyph_defs: &'t mut GlyphPackBuilder,
     /// Stores the style definitions used in the document.
     pub(crate) style_defs: &'t mut StyleDefMap,
@@ -52,6 +50,8 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     pub(crate) gradients: &'t mut PaintFillMap,
     /// Stores the patterns used in the document.
     pub(crate) patterns: &'t mut PaintFillMap,
+    /// Stores whether an item has stateful fill.
+    pub(crate) stateful_fill_cache: &'t mut HashMap<Fingerprint, bool>,
 
     /// See [`ExportFeature`].
     pub should_render_text_element: bool,
@@ -145,35 +145,42 @@ impl<'m, 't, Feat: ExportFeature> BuildClipPath for RenderContext<'m, 't, Feat> 
     }
 }
 
-// todo
-// #[comemo::memoize]
-fn has_stateful_fill<Feat: ExportFeature>(
-    _ctx: &MemorizeFree<RenderContext<Feat>>,
-    _x: &Fingerprint,
-) -> bool {
-    false
-    // let Some(item) = ctx.0.get_item(x) else {
-    //     // overestimated
-    //     return true;
-    // };
-
-    // use FlatSvgItem::*;
-    // match item {
-    //     Gradient(..) | Pattern(..) => true,
-    //     Image(..) | Link(..) | ContentHint(..) | None => false,
-    //     Item(t) => has_stateful_fill(ctx, &t.1),
-    //     Group(g, ..) => g.0.iter().any(|(_, x)| has_stateful_fill(ctx, x)),
-    //     Path(p) => p.styles.iter().any(|s| match s {
-    //         PathStyle::Fill(color) | PathStyle::Stroke(color) =>
-    // color.starts_with('@'),         _ => false,
-    //     }),
-    //     Text(p) => p.shape.fill.starts_with('@'),
-    // }
-}
-
 impl<'m, 't, Feat: ExportFeature> HasStatefulFill for RenderContext<'m, 't, Feat> {
-    fn has_stateful_fill(&self, a: &Fingerprint) -> bool {
-        has_stateful_fill(&MemorizeFree(self), a)
+    // todo: may it concurrent?
+    fn has_stateful_fill(&mut self, fg: &Fingerprint) -> bool {
+        let Some(item) = self.get_item(fg) else {
+            // overestimated
+            return true;
+        };
+
+        match item {
+            Gradient(..) | Pattern(..) => return true,
+            Image(..) | Link(..) | ContentHint(..) | None => return false,
+            Text(p) => return p.shape.fill.starts_with('@'),
+            _ => {}
+        };
+
+        if let Some(v) = self.stateful_fill_cache.get(fg) {
+            return *v;
+        }
+
+        use VecItem::*;
+        let res = match item {
+            Gradient(..) | Pattern(..) | Image(..) | Link(..) | ContentHint(..) | None
+            | Text(..) => {
+                panic!("Invalid item type for stateful fill: {:?}", fg)
+            }
+            Item(t) => self.has_stateful_fill(&t.1),
+            Group(g, ..) => g.0.iter().any(|(_, x)| self.has_stateful_fill(x)),
+            Path(p) => p.styles.iter().any(|s| match s {
+                PathStyle::Fill(color) | PathStyle::Stroke(color) => color.starts_with('@'),
+                _ => false,
+            }),
+        };
+
+        self.stateful_fill_cache.insert(*fg, res);
+
+        res
     }
 }
 

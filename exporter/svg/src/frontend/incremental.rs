@@ -1,5 +1,5 @@
 use std::{
-    collections::{hash_map::RandomState, HashSet},
+    collections::{hash_map::RandomState, HashMap, HashSet},
     ops::Deref,
     sync::Arc,
 };
@@ -41,7 +41,7 @@ pub struct IncrementalRenderContext<'a> {
     pub next: &'a [Page],
 }
 
-impl<Feat: ExportFeature> SvgTask<Feat> {
+impl<Feat: ExportFeature> SvgTask<'_, Feat> {
     /// Render a document difference into the svg_body.
     pub fn render_diff(&mut self, ctx: &IncrementalRenderContext<'_>, svg_body: &mut Vec<SvgText>) {
         let mut acc_height = 0u32;
@@ -57,7 +57,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             .collect::<_>();
 
         for Page { content: entry, .. } in ctx.next.iter() {
-            // todo: reuse remove unused patter, they are also used in render_diff
+            // todo: reuse these code, they are also used in render_diff
             if reusable.contains(entry) {
                 let remove_key = unused_prev.iter().find(|(_, v)| *v == entry);
                 if remove_key.is_none() {
@@ -117,7 +117,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 
                 render_task.render_diff_item(state, entry, &prev_entry)
             } else {
-                // todo: find a box
+                // todo: find a bbox
                 // println!("rebuild page: {} {:?}", idx, entry);
                 render_task.render_flat_item(state, entry)
             };
@@ -143,6 +143,8 @@ pub struct IncrSvgDocClient {
     /// Assmuing glyph_window = N, then `self.doc.module.glyphs[..N]` are
     /// committed.
     pub glyph_window: usize,
+    /// Stateful fill cache for rendering items
+    stateful_fill_cache: HashMap<Fingerprint, bool>,
 }
 
 impl IncrSvgDocClient {
@@ -189,6 +191,7 @@ impl IncrSvgDocClient {
         // todo: fix this
 
         let mut t = SvgTask::<IncrementalExportFeature>::default();
+        t.set_stateful_fill_cache(&mut self.stateful_fill_cache);
 
         // start to render document difference
         let mut svg = Vec::<SvgText>::new();
