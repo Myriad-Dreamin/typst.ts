@@ -50,7 +50,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             .iter()
             .map(|p| p.size.x.0.ceil())
             .max_by(|a, b| a.total_cmp(b))
-            .unwrap();
+            .unwrap_or_default();
         let h = output.iter().map(|p| p.size.y.0.ceil()).sum::<f32>();
 
         Self::header_inner(w, h)
