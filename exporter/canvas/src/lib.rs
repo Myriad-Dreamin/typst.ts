@@ -692,6 +692,8 @@ pub struct IncrCanvasDocClient {
 }
 
 impl IncrCanvasDocClient {
+    pub fn reset(&mut self) {}
+
     pub fn set_pixel_per_pt(&mut self, pixel_per_pt: f32) {
         self.elements.pixel_per_pt = pixel_per_pt;
     }
