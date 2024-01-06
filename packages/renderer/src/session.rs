@@ -232,11 +232,27 @@ impl RenderSession {
     pub(crate) fn reset(&mut self) {
         let mut client = self.client.lock().unwrap();
         *client = IncrDocClient::default();
+        if cfg!(feature = "render_canvas") {
+            let mut canvas_kern = self.canvas_kern.lock().unwrap();
+            canvas_kern.reset();
+        }
+        if cfg!(feature = "render_svg") {
+            let mut svg_kern = self.svg_kern.lock().unwrap();
+            svg_kern.reset();
+        }
     }
 
     pub(crate) fn reset_current(&mut self, delta: &[u8]) -> ZResult<()> {
         let mut client = self.client.lock().unwrap();
         *client = IncrDocClient::default();
+        if cfg!(feature = "render_canvas") {
+            let mut canvas_kern = self.canvas_kern.lock().unwrap();
+            canvas_kern.reset();
+        }
+        if cfg!(feature = "render_svg") {
+            let mut svg_kern = self.svg_kern.lock().unwrap();
+            svg_kern.reset();
+        }
         Self::merge_delta_inner(&mut self.pages_info, &mut client, delta)
     }
 
