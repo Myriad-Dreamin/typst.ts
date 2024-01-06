@@ -81,7 +81,6 @@ build_full = ["build_glyph_pack", "build_raw_font", "build_web_font"]
 
 render_canvas = [
     "dep:typst-ts-canvas-exporter",
-    "dep:typst-ts-svg-exporter",
     "web-sys/HtmlCanvasElement",
     "web-sys/CanvasRenderingContext2d",
 ]

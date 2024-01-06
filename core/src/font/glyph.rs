@@ -131,6 +131,38 @@ impl IGlyphProvider for FontGlyphProvider {
     }
 }
 
+/// The dummy [`IGlyphProvider`] implementation.
+/// It performs no operation and always returns [`None`].
+#[derive(Default, Hash)]
+pub struct DummyFontGlyphProvider {}
+
+impl IGlyphProvider for DummyFontGlyphProvider {
+    /// See [`IGlyphProvider::ligature_glyph`] for more information.
+    fn ligature_glyph(&self, _font: &Font, _id: GlyphId) -> Option<ImmutStr> {
+        None
+    }
+
+    /// See [`IGlyphProvider::svg_glyph`] for more information.
+    fn svg_glyph(&self, _font: &Font, _id: GlyphId) -> Option<Arc<[u8]>> {
+        None
+    }
+
+    /// See [`IGlyphProvider::bitmap_glyph`] for more information.
+    fn bitmap_glyph(
+        &self,
+        _font: &Font,
+        _id: GlyphId,
+        _ppem: u16,
+    ) -> Option<(TypstImage, i16, i16)> {
+        None
+    }
+
+    /// See [`IGlyphProvider::outline_glyph`] for more information.
+    fn outline_glyph(&self, _font: &Font, _id: GlyphId) -> Option<String> {
+        None
+    }
+}
+
 #[derive(Default)]
 struct SvgOutlineBuilder(pub String);
 

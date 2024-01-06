@@ -1,23 +1,21 @@
 use js_sys::Promise;
 use std::{fmt::Debug, ops::Deref, sync::Arc};
 use tiny_skia as sk;
-use typst::{introspection::Introspector, layout::Frame};
 
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, HtmlDivElement, HtmlImageElement, Path2d};
 
 use typst_ts_core::{
     error::prelude::*,
-    font::GlyphProvider,
+    font::{DummyFontGlyphProvider, GlyphProvider},
     hash::Fingerprint,
     vector::{
         incr::IncrDocClient,
         ir::{
             self, Abs, Axes, BuildGlyph, FontIndice, FontRef, GlyphIndice, GlyphItem,
             GlyphPackBuilder, GlyphRef, Image, ImageItem, ImmutStr, LayoutRegionNode, Module, Page,
-            PathStyle, Ratio, Rect, Scalar, Size, VecItem,
+            PathStyle, Ratio, Rect, Scalar, Size,
         },
-        pass::Typst2VecPass,
         vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
 };
@@ -48,22 +46,6 @@ impl ExportFeature for DefaultExportFeature {
     const ENABLE_TRACING: bool = false;
     const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
 }
-
-static EMPTY_PAGE: once_cell::sync::Lazy<(Fingerprint, Vec<(Fingerprint, VecItem)>)> =
-    once_cell::sync::Lazy::new(|| {
-        // prepare an empty page for the pages that are not rendered
-        let pass = Typst2VecPass::default();
-        let i = Introspector::default();
-        let empty_page = pass.frame(&i, &Frame::default());
-        (
-            empty_page,
-            pass.items
-                .clone()
-                .into_iter()
-                .map(|(f, (_, v))| (f, v))
-                .collect::<Vec<_>>(),
-        )
-    });
 
 use async_trait::async_trait;
 
@@ -603,7 +585,7 @@ pub struct CanvasTask<Feat: ExportFeature> {
 impl<Feat: ExportFeature> Default for CanvasTask<Feat> {
     fn default() -> Self {
         Self {
-            glyph_provider: GlyphProvider::default(),
+            glyph_provider: GlyphProvider::new(DummyFontGlyphProvider::default()),
 
             glyph_defs: GlyphPackBuilder::default(),
 
@@ -671,7 +653,6 @@ impl IncrementalCanvasExporter {
                     return self.pages[idx].clone();
                 }
 
-                // (ct.render_flat_item(content), *size, *content)
                 let state = RenderState::new_size(*size);
                 CanvasPage {
                     content: *content,
@@ -739,9 +720,7 @@ impl IncrCanvasDocClient {
         self.patch_delta(kern);
 
         // prepare an empty page for the pages that are not rendered
-        // todo: better solution?
-        let (empty_page, resources) = EMPTY_PAGE.clone();
-        kern.module_mut().items.extend(resources);
+        let null_page = Fingerprint::from_u128(0);
 
         // get previous doc_view
         // it is exact state of the current DOM.
@@ -764,7 +743,7 @@ impl IncrCanvasDocClient {
                 page_off += page.size.y.0;
                 if page_off < rect.lo.y.0 || page_off - page.size.y.0 > rect.hi.y.0 {
                     next_doc_view.push(Page {
-                        content: empty_page,
+                        content: null_page,
                         size: page.size,
                     });
                     continue;
@@ -781,7 +760,7 @@ impl IncrCanvasDocClient {
         let mut offset_y = 0.;
         for (idx, y) in next_doc_view.iter().enumerate() {
             let x = prev_doc_view.get(idx);
-            if x.is_none() || (x.unwrap() != y && y.content != empty_page) {
+            if x.is_none() || (x.unwrap() != y && y.content != null_page) {
                 let ts = ts.pre_translate(0., offset_y);
                 self.elements.flush_page(idx, canvas, ts).await;
             }
