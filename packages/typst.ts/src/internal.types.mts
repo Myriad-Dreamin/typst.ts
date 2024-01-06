@@ -105,3 +105,7 @@ export interface RenderCanvasResult {
   // still unstable type
   annotationList: AnnotationList;
 }
+
+export const enum TypstDefaultParams {
+  PIXEL_PER_PT = 3,
+}
