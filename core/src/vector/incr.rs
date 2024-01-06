@@ -3,10 +3,11 @@ use std::sync::Arc;
 use typst::model::Document;
 
 use super::ir::{
-    flatten_glyphs, FlatModule, IncrFontPack, IncrGlyphPack, IncrModuleBuilder, ItemPack,
-    LayoutRegion, LayoutRegionNode, LayoutSourceMapping, Module, ModuleMetadata, MultiVecDocument,
-    Page, SourceMappingNode, VecDocument,
+    flatten_glyphs, FlatModule, IncrFontPack, IncrGlyphPack, ItemPack, LayoutRegion,
+    LayoutRegionNode, LayoutSourceMapping, Module, ModuleMetadata, MultiVecDocument, Page,
+    SourceMappingNode, VecDocument,
 };
+use super::pass::IncrTypst2VecPass;
 use crate::{error::prelude::*, TakeAs};
 
 /// maintains the data of the incremental rendering at server side
@@ -19,8 +20,8 @@ pub struct IncrDocServer {
     /// Initially it is None meaning no completed compilation.
     doc_view: Option<VecDocument>,
 
-    /// Maintaining document build status
-    module_builder: IncrModuleBuilder,
+    /// Maintaining typst -> vector status
+    typst2vec: IncrTypst2VecPass,
 
     /// Optional page source mapping references.
     page_source_mapping: Vec<SourceMappingNode>,
@@ -28,24 +29,23 @@ pub struct IncrDocServer {
 
 impl IncrDocServer {
     pub fn set_should_attach_debug_info(&mut self, should_attach_debug_info: bool) {
-        self.module_builder.should_attach_debug_info = should_attach_debug_info;
+        self.typst2vec.should_attach_debug_info = should_attach_debug_info;
         self.should_attach_debug_info = should_attach_debug_info;
     }
 
     /// Pack the delta into a binary blob.
     pub fn pack_delta(&mut self, output: Arc<Document>) -> Vec<u8> {
-        self.module_builder.reset();
         self.page_source_mapping.clear();
 
         // let instant: std::time::Instant = std::time::Instant::now();
 
-        self.module_builder.increment_lifetime();
+        self.typst2vec.increment_lifetime();
 
         // it is important to call gc before building pages
-        let gc_items = self.module_builder.gc(5 * 2);
+        let gc_items = self.typst2vec.gc(5 * 2);
 
-        let builder = &mut self.module_builder;
-        let pages = builder.build_doc(&output.introspector, &output);
+        let builder = &mut self.typst2vec;
+        let pages = builder.doc(&output.introspector, &output);
 
         // todo
         // if self.should_attach_debug_info {
@@ -108,7 +108,8 @@ impl IncrDocServer {
         let pages = Arc::new(vec![LayoutRegion::new_single(pages)]);
 
         let delta = FlatModule::new(vec![
-            ModuleMetadata::SourceMappingData(delta.source_mapping),
+            // todo
+            // ModuleMetadata::SourceMappingData(delta.source_mapping),
             ModuleMetadata::PageSourceMapping(Arc::new(LayoutSourceMapping::new_single(
                 self.page_source_mapping.clone(),
             ))),
@@ -128,14 +129,15 @@ impl IncrDocServer {
     pub fn pack_current(&mut self) -> Option<Vec<u8>> {
         let doc = self.doc_view.as_ref()?;
 
-        let (fonts, glyphs) = self.module_builder.glyphs.finalize();
+        let (fonts, glyphs) = self.typst2vec.glyphs.finalize();
         let glyphs = flatten_glyphs(glyphs);
 
         let pages = LayoutRegionNode::new_pages(doc.pages.clone());
         let pages = Arc::new(vec![LayoutRegion::new_single(pages)]);
 
         let delta = FlatModule::new(vec![
-            ModuleMetadata::SourceMappingData(self.module_builder.source_mapping.clone()),
+            // todo
+            // ModuleMetadata::SourceMappingData(self.module_builder.source_mapping.clone()),
             ModuleMetadata::PageSourceMapping(Arc::new(LayoutSourceMapping::new_single(
                 self.page_source_mapping.clone(),
             ))),

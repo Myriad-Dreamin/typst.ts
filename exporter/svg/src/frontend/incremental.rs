@@ -8,7 +8,8 @@ use typst_ts_core::{
     hash::Fingerprint,
     vector::{
         incr::{IncrDocClient, IncrDocServer},
-        ir::{LayoutRegionNode, Module, ModuleBuilder, Page, Rect, VecItem},
+        ir::{LayoutRegionNode, Module, Page, Rect, VecItem},
+        pass::Typst2VecPass,
         vm::{IncrRenderVm, RenderState, RenderVm},
     },
 };
@@ -37,12 +38,12 @@ static EMPTY_PAGE: once_cell::sync::Lazy<(Fingerprint, Vec<(Fingerprint, VecItem
     once_cell::sync::Lazy::new(|| {
         use typst::{introspection::Introspector, layout::Frame};
         // prepare an empty page for the pages that are not rendered
-        let mb = ModuleBuilder::default();
+        let pass = Typst2VecPass::default();
         let i = Introspector::default();
-        let empty_page = mb.build(&i, &Frame::default());
+        let empty_page = pass.frame(&i, &Frame::default());
         (
             empty_page,
-            mb.items
+            pass.items
                 .clone()
                 .into_iter()
                 .map(|(f, (_, v))| (f, v))
@@ -151,10 +152,6 @@ pub struct IncrSvgDocClient {
     /// Assmuing glyph_window = N, then `self.doc.module.glyphs[..N]` are
     /// committed.
     pub glyph_window: usize,
-
-    /// Don't use this
-    /// it is public to make Default happy
-    pub mb: ModuleBuilder,
 }
 
 impl IncrSvgDocClient {

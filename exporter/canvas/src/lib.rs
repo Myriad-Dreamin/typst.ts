@@ -14,9 +14,10 @@ use typst_ts_core::{
         incr::IncrDocClient,
         ir::{
             self, Abs, Axes, BuildGlyph, FontIndice, FontRef, GlyphIndice, GlyphItem,
-            GlyphPackBuilder, GlyphRef, Image, ImageItem, ImmutStr, LayoutRegionNode, Module,
-            ModuleBuilder, Page, PathStyle, Ratio, Rect, Scalar, Size, VecItem,
+            GlyphPackBuilder, GlyphRef, Image, ImageItem, ImmutStr, LayoutRegionNode, Module, Page,
+            PathStyle, Ratio, Rect, Scalar, Size, VecItem,
         },
+        pass::Typst2VecPass,
         vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
 };
@@ -51,12 +52,12 @@ impl ExportFeature for DefaultExportFeature {
 static EMPTY_PAGE: once_cell::sync::Lazy<(Fingerprint, Vec<(Fingerprint, VecItem)>)> =
     once_cell::sync::Lazy::new(|| {
         // prepare an empty page for the pages that are not rendered
-        let mb = ModuleBuilder::default();
+        let pass = Typst2VecPass::default();
         let i = Introspector::default();
-        let empty_page = mb.build(&i, &Frame::default());
+        let empty_page = pass.frame(&i, &Frame::default());
         (
             empty_page,
-            mb.items
+            pass.items
                 .clone()
                 .into_iter()
                 .map(|(f, (_, v))| (f, v))
@@ -707,10 +708,6 @@ pub struct IncrCanvasDocClient {
     /// Expected exact state of the current DOM.
     /// Initially it is None meaning no any page is rendered.
     pub doc_view: Option<Vec<Page>>,
-
-    /// Don't use this
-    /// it is public to make Default happy
-    pub mb: ModuleBuilder,
 }
 
 impl IncrCanvasDocClient {
