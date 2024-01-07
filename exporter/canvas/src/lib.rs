@@ -442,7 +442,7 @@ impl<C> TransformContext<C> for CanvasStack {
     }
 }
 
-/// See [`FlatGroupContext`].
+/// See [`GroupContext`].
 impl<'m, C: RenderVm<'m, Resultant = CanvasNode>> GroupContext<C> for CanvasStack {
     fn render_path(
         &mut self,

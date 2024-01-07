@@ -4,7 +4,7 @@ use typst::visualize::{Color, Paint};
 
 use super::ir;
 
-/// Additional methods for [`Length`].
+/// Additional methods for [`typst::layout::Abs`].
 pub trait AbsExt {
     /// Convert to a number of points as f32.
     fn to_f32(self) -> f32;

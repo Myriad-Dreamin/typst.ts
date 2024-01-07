@@ -95,8 +95,8 @@ impl IGlyphProvider for FontGlyphProvider {
     }
 
     /// See [`IGlyphProvider::bitmap_glyph`] for more information.
-    /// Note: It converts the data into [`typst::image::Image`] and introduces
-    /// overhead.
+    /// Note: It converts the data into [`typst::visualize::Image`] and
+    /// introduces overhead.
     fn bitmap_glyph(&self, font: &Font, id: GlyphId, ppem: u16) -> Option<(TypstImage, i16, i16)> {
         let font_face = font.ttf();
 

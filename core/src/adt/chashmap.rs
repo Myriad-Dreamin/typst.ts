@@ -35,7 +35,7 @@
 //! When two hashes collide, they cannot share the same bucket, so there must be
 //! an algorithm which can resolve collisions. In our case, we use linear
 //! probing, which means that we take the bucket following it, and repeat until
-//! https://gitlab.redox-os.org/redox-os/chashmap/-/blob/6431474393ce55c222eab380481dffdeb01b0726/src/lib.rs
+//! <https://gitlab.redox-os.org/redox-os/chashmap/-/blob/6431474393ce55c222eab380481dffdeb01b0726/src/lib.rs>
 //! we find a free bucket.
 //!
 //! This method is far from ideal, but superior methods like Robin-Hood hashing

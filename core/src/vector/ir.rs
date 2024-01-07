@@ -157,6 +157,8 @@ pub struct GroupRef(pub Arc<[(Point, Fingerprint)]>);
 pub enum StyleNs {
     /// style that contains a single css rule: `fill: #color`.
     Fill,
+    /// style that contains a single css rule: `stroke: #color`.
+    Stroke,
 }
 
 /// A finished pack that stores all the font items.
