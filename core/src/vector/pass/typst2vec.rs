@@ -129,16 +129,21 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
     }
 
     pub fn doc(&self, introspector: &Introspector, doc: &TypstDocument) -> Vec<Page> {
-        doc.pages
+        let doc_reg = self.spans.start();
+
+        let pages = doc
+            .pages
             .par_iter()
             .enumerate()
             .map(|(idx, p)| {
-                let abs_ref = self.frame(introspector, p);
+                let page_reg = self.spans.start();
+
+                let abs_ref = self.frame(introspector, p, page_reg, idx);
 
                 self.spans.push_span(SourceRegion {
-                    region: 0,
+                    region: doc_reg,
                     idx: idx as u32,
-                    kind: SourceNodeKind::Page,
+                    kind: SourceNodeKind::Page { region: page_reg },
                     item: abs_ref,
                 });
 
@@ -147,10 +152,22 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                     size: p.size().into(),
                 }
             })
-            .collect()
+            .collect();
+
+        self.spans
+            .doc_region
+            .store(doc_reg, std::sync::atomic::Ordering::SeqCst);
+
+        pages
     }
 
-    pub fn frame(&self, introspector: &Introspector, frame: &Frame) -> Fingerprint {
+    pub fn frame(
+        &self,
+        introspector: &Introspector,
+        frame: &Frame,
+        parent_reg: usize,
+        index: usize,
+    ) -> Fingerprint {
         // let mut items = Vec::with_capacity(frame.items().len());
         let src_reg = self.spans.start();
 
@@ -161,14 +178,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                 let mut is_link = false;
                 let item = match item {
                     FrameItem::Group(group) => {
-                        let mut inner = self.frame(introspector, &group.frame);
-
-                        self.spans.push_span(SourceRegion {
-                            region: src_reg,
-                            idx: idx as u32,
-                            kind: SourceNodeKind::GroupRef,
-                            item: inner,
-                        });
+                        let mut inner = self.frame(introspector, &group.frame, src_reg, idx);
 
                         if let Some(p) = group.clip_path.as_ref() {
                             // todo: merge
@@ -322,9 +332,9 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
         ));
 
         self.spans.push_span(SourceRegion {
-            region: src_reg,
-            idx: 0u32,
-            kind: SourceNodeKind::Group,
+            region: parent_reg,
+            idx: index as u32,
+            kind: SourceNodeKind::Group { region: src_reg },
             item: g,
         });
 
@@ -724,7 +734,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
     }
 
     fn pattern(&self, introspector: &Introspector, g: &Pattern) -> Fingerprint {
-        let frame = self.frame(introspector, g.frame());
+        let frame = self.frame(introspector, g.frame(), 0, 0);
 
         let relative_to_self = match g.relative() {
             Smart::Auto => None,
