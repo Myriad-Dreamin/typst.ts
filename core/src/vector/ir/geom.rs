@@ -2,6 +2,7 @@ use core::fmt;
 use std::{
     cmp::Ordering,
     hash::{Hash, Hasher},
+    sync::Arc,
 };
 
 use typst::layout::{
@@ -12,6 +13,8 @@ use typst::util::Scalar as TypstScalar;
 
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
+
+use super::PathItem;
 
 /// Scalar value of Vector representation.
 /// Note: Unlike Typst's Scalar, all lengths with Scalar type are in pt.
@@ -468,6 +471,41 @@ impl EuclidMinMax for Point {
         Self {
             x: self.x.max(other.x),
             y: self.y.max(other.y),
+        }
+    }
+}
+
+/// Item representing all the transform that is applicable to a [`VecItem`].
+/// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/transform>
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub enum TransformItem {
+    /// `matrix` transform.
+    Matrix(Arc<Transform>),
+    /// `translate` transform.
+    Translate(Arc<Axes<Abs>>),
+    /// `scale` transform.
+    Scale(Arc<(Ratio, Ratio)>),
+    /// `rotate` transform.
+    Rotate(Arc<Scalar>),
+    /// `skewX skewY` transform.
+    Skew(Arc<(Ratio, Ratio)>),
+
+    /// clip path.
+    Clip(Arc<PathItem>),
+}
+
+/// See [`TransformItem`].
+impl From<TransformItem> for Transform {
+    fn from(value: TransformItem) -> Self {
+        match value {
+            TransformItem::Matrix(m) => *m,
+            TransformItem::Scale(m) => Transform::from_scale(m.0, m.1),
+            TransformItem::Translate(m) => Transform::from_translate(m.x, m.y),
+            TransformItem::Rotate(_m) => todo!(),
+            TransformItem::Skew(m) => Transform::from_skew(m.0, m.1),
+            TransformItem::Clip(_m) => Transform::identity(),
         }
     }
 }

@@ -28,6 +28,7 @@ mod color;
 mod compose;
 pub mod geom;
 pub mod layout;
+mod meta;
 pub mod module;
 mod preludes;
 mod primitives;
@@ -38,6 +39,7 @@ pub use color::*;
 pub use compose::*;
 pub use geom::*;
 pub use layout::*;
+pub use meta::*;
 pub use module::*;
 pub use primitives::*;
 pub use text::*;
@@ -154,52 +156,6 @@ pub struct TransformedRef(pub TransformItem, pub Fingerprint);
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct GroupRef(pub Arc<[(Point, Fingerprint)]>);
-
-/// Item representing an `<a/>` element.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct LinkItem {
-    /// The target of the link item.
-    pub href: ImmutStr,
-    /// The box size of the link item.
-    pub size: Size,
-}
-
-/// Item representing all the transform that is applicable to a [`SvgItem`].
-/// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/transform>
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub enum TransformItem {
-    /// `matrix` transform.
-    Matrix(Arc<Transform>),
-    /// `translate` transform.
-    Translate(Arc<Axes<Abs>>),
-    /// `scale` transform.
-    Scale(Arc<(Ratio, Ratio)>),
-    /// `rotate` transform.
-    Rotate(Arc<Scalar>),
-    /// `skewX skewY` transform.
-    Skew(Arc<(Ratio, Ratio)>),
-
-    /// clip path.
-    Clip(Arc<PathItem>),
-}
-
-/// See [`TransformItem`].
-impl From<TransformItem> for Transform {
-    fn from(value: TransformItem) -> Self {
-        match value {
-            TransformItem::Matrix(m) => *m,
-            TransformItem::Scale(m) => Transform::from_scale(m.0, m.1),
-            TransformItem::Translate(m) => Transform::from_translate(m.x, m.y),
-            TransformItem::Rotate(_m) => todo!(),
-            TransformItem::Skew(m) => Transform::from_skew(m.0, m.1),
-            TransformItem::Clip(_m) => Transform::identity(),
-        }
-    }
-}
 
 /// Global style namespace.
 #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
@@ -361,6 +317,9 @@ impl IncrGlyphPackBuilder {
 
 pub trait FontIndice<'m> {
     fn get_font(&self, value: &FontRef) -> Option<&'m FontItem>;
+}
+pub trait ItemIndice<'m> {
+    fn get_item(&self, value: &Fingerprint) -> Option<&'m VecItem>;
 }
 
 pub trait GlyphIndice<'m> {
