@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use typst::model::Document;
+use typst::syntax::Span;
 
 use super::ir::{
     FlatGlyphItem, FlatModule, GlyphRef, IncrFontPack, IncrGlyphPack, ItemPack, LayoutRegion,
@@ -99,11 +100,6 @@ impl IncrDocServer {
         let pages = Arc::new(vec![LayoutRegion::new_single(pages)]);
 
         let delta = FlatModule::new(vec![
-            // todo
-            // ModuleMetadata::SourceMappingData(delta.source_mapping),
-            ModuleMetadata::PageSourceMapping(Arc::new(LayoutSourceMapping::new_single(
-                self.page_source_mapping.clone(),
-            ))),
             ModuleMetadata::GarbageCollection(gc_items),
             ModuleMetadata::Font(Arc::new(fonts)),
             ModuleMetadata::Glyph(Arc::new(glyphs)),
@@ -126,11 +122,6 @@ impl IncrDocServer {
         let pages = Arc::new(vec![LayoutRegion::new_single(pages)]);
 
         let delta = FlatModule::new(vec![
-            // todo
-            // ModuleMetadata::SourceMappingData(self.module_builder.source_mapping.clone()),
-            ModuleMetadata::PageSourceMapping(Arc::new(LayoutSourceMapping::new_single(
-                self.page_source_mapping.clone(),
-            ))),
             // todo: correct incremental_base
             ModuleMetadata::Font(Arc::new(fonts.into())),
             ModuleMetadata::Glyph(Arc::new(glyphs.into())),
@@ -139,6 +130,11 @@ impl IncrDocServer {
         ])
         .to_bytes();
         Some([b"new,", delta.as_slice()].concat())
+    }
+
+    /// Get the source location of the given path.
+    pub fn source_span(&mut self, path: &[(u32, u32, String)]) -> ZResult<Option<(Span, Span)>> {
+        self.typst2vec.spans.query(path)
     }
 }
 
