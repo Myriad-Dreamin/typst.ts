@@ -1,6 +1,10 @@
-use std::{any::Any, hash::Hash};
+use std::{
+    any::Any,
+    hash::{Hash, Hasher},
+};
 
 use base64::Engine;
+use fxhash::FxHasher32;
 use siphasher::sip128::{Hasher128, SipHasher13};
 
 #[cfg(feature = "rkyv")]
@@ -76,7 +80,7 @@ impl Fingerprint {
 pub trait FingerprintHasher: std::hash::Hasher {
     /// Finish the fingerprint and return the fingerprint and the data.
     /// The data is used to resolve the conflict.
-    fn finish_fingerprint(&self) -> (Fingerprint, Vec<u8>);
+    fn finish_fingerprint(self) -> (Fingerprint, Vec<u8>);
 }
 
 /// A fingerprint hasher that uses the [`SipHasher13`] algorithm.
@@ -88,25 +92,33 @@ pub struct FingerprintSipHasher {
 
 pub type FingerprintSipHasherBase = SipHasher13;
 
+impl FingerprintSipHasher {
+    pub fn fast_hash(&self) -> (u32, &Vec<u8>) {
+        let mut inner = FxHasher32::default();
+        self.data.hash(&mut inner);
+        (inner.finish() as u32, &self.data)
+    }
+}
+
 impl std::hash::Hasher for FingerprintSipHasher {
     fn write(&mut self, bytes: &[u8]) {
         self.data.extend_from_slice(bytes);
     }
 
     fn finish(&self) -> u64 {
-        let mut inner = FingerprintSipHasherBase::new();
+        let mut inner = FingerprintSipHasherBase::default();
         self.data.hash(&mut inner);
         inner.finish()
     }
 }
 
 impl FingerprintHasher for FingerprintSipHasher {
-    fn finish_fingerprint(&self) -> (Fingerprint, Vec<u8>) {
+    fn finish_fingerprint(self) -> (Fingerprint, Vec<u8>) {
         let buffer = self.data.clone();
-        let mut inner = FingerprintSipHasherBase::new();
+        let mut inner = FingerprintSipHasherBase::default();
         buffer.hash(&mut inner);
-        let hash = inner.finish128();
-        (Fingerprint(hash.h1, hash.h2), buffer)
+        let hash = inner.finish();
+        (Fingerprint(hash, 0), buffer)
     }
 }
 
@@ -115,34 +127,87 @@ impl FingerprintHasher for FingerprintSipHasher {
 /// See [`Fingerprint`] for more information.
 #[derive(Default)]
 pub struct FingerprintBuilder {
+    /// The fast conflict checker mapping fingerprints to their underlying data.
+    #[cfg(feature = "bi-hash")]
+    fast_conflict_checker: crate::adt::CHashMap<u32, Vec<u8>>,
     /// The conflict checker mapping fingerprints to their underlying data.
     conflict_checker: crate::adt::CHashMap<Fingerprint, Vec<u8>>,
 }
 
+#[cfg(not(feature = "bi-hash"))]
 impl FingerprintBuilder {
     pub fn resolve_unchecked<T: Hash>(&self, item: &T) -> Fingerprint {
-        let mut s = FingerprintSipHasherBase::default();
+        let mut s = FingerprintSipHasher { data: Vec::new() };
         item.hash(&mut s);
-        let hash = s.finish128();
-        Fingerprint(hash.h1, hash.h2)
+        let (fingerprint, _featured_data) = s.finish_fingerprint();
+        fingerprint
     }
 
     pub fn resolve<T: Hash + 'static>(&self, item: &T) -> Fingerprint {
         let mut s = FingerprintSipHasher { data: Vec::new() };
         item.type_id().hash(&mut s);
         item.hash(&mut s);
-        let (fingerprint, featured_data) = s.finish_fingerprint();
-        if let Some(prev_featured_data) = self.conflict_checker.get(&fingerprint) {
-            if *prev_featured_data != featured_data {
-                // todo: soft error
-                panic!("Fingerprint conflict detected!");
-            }
 
+        let (fingerprint, featured_data) = s.finish_fingerprint();
+        let Some(prev_featured_data) = self.conflict_checker.get(&fingerprint) else {
+            self.conflict_checker.insert(fingerprint, featured_data);
+            return fingerprint;
+        };
+
+        if *prev_featured_data == *featured_data {
             return fingerprint;
         }
 
-        self.conflict_checker.insert(fingerprint, featured_data);
+        // todo: soft error
+        panic!("Fingerprint conflict detected!");
+    }
+}
+
+#[cfg(feature = "bi-hash")]
+impl FingerprintBuilder {
+    pub fn resolve_unchecked<T: Hash>(&self, item: &T) -> Fingerprint {
+        let mut s = FingerprintSipHasher { data: Vec::new() };
+        item.hash(&mut s);
+        let (fingerprint, featured_data) = s.fast_hash();
+        let Some(prev_featured_data) = self.fast_conflict_checker.get(&fingerprint) else {
+            self.fast_conflict_checker.insert(fingerprint, s.data);
+            return Fingerprint::from_pair(fingerprint as u64, 0);
+        };
+
+        if *prev_featured_data == *featured_data {
+            return Fingerprint::from_pair(fingerprint as u64, 0);
+        }
+
+        let (fingerprint, _featured_data) = s.finish_fingerprint();
         fingerprint
+    }
+
+    pub fn resolve<T: Hash + 'static>(&self, item: &T) -> Fingerprint {
+        let mut s = FingerprintSipHasher { data: Vec::new() };
+        item.type_id().hash(&mut s);
+        item.hash(&mut s);
+        let (fingerprint, featured_data) = s.fast_hash();
+        let Some(prev_featured_data) = self.fast_conflict_checker.get(&fingerprint) else {
+            self.fast_conflict_checker.insert(fingerprint, s.data);
+            return Fingerprint::from_pair(fingerprint as u64, 0);
+        };
+
+        if *prev_featured_data == *featured_data {
+            return Fingerprint::from_pair(fingerprint as u64, 0);
+        }
+
+        let (fingerprint, featured_data) = s.finish_fingerprint();
+        let Some(prev_featured_data) = self.conflict_checker.get(&fingerprint) else {
+            self.conflict_checker.insert(fingerprint, featured_data);
+            return fingerprint;
+        };
+
+        if *prev_featured_data == *featured_data {
+            return fingerprint;
+        }
+
+        // todo: soft error
+        panic!("Fingerprint conflict detected!");
     }
 }
 
