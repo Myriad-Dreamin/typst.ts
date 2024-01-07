@@ -2,7 +2,7 @@
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
 
-// Test that last item is repeated.
+// Test that items are cycled.
 #set list(marker: ([--], [•]))
 - A
   - B

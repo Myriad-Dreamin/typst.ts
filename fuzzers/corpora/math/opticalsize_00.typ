@@ -8,4 +8,4 @@
 #set text(size:20pt)
 $  e^(e^(e^(e))) $
 ]
-A large number: $e^(e^(e^(e)))$. 
+A large number: $e^(e^(e^(e)))$.
