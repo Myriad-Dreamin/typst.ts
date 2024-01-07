@@ -1,7 +1,6 @@
 use std::{borrow::Cow, cell::RefCell, hash::Hash, ops::DerefMut, sync::Arc};
 
 use parking_lot::Mutex;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
     foundations::Smart,
@@ -25,7 +24,7 @@ use crate::{
         span_id_to_u64,
         utils::{AbsExt, ToCssExt},
     },
-    ImmutStr, TypstAbs,
+    Deferred, ImmutStr, TypstAbs,
 };
 
 use super::TGlyph2VecPass;
@@ -67,44 +66,46 @@ impl<const ENABLE_REF_CNT: bool> Default for ConvertImpl<ENABLE_REF_CNT> {
 }
 
 impl Typst2VecPass {
-    pub fn intern(&mut self, module: &Module, f: &Fingerprint) {
-        let item = module.get_item(f).unwrap();
-        match item {
-            VecItem::None
-            | VecItem::Link(_)
-            | VecItem::Image(_)
-            | VecItem::Path(_)
-            | VecItem::Gradient(_)
-            | VecItem::Pattern(_)
-            | VecItem::ContentHint(_) => {
-                self.insert(*f, Cow::Borrowed(item));
-            }
-            VecItem::Text(_t) => {
-                // self.glyphs.used_fonts.insert(t.shape.font.clone());
-                // self.glyphs
-                //     .used_glyphs
-                //     .extend(t.content.glyphs.iter().map(|(_, _, glyph)| glyph).cloned());
+    pub fn intern(&mut self, _module: &Module, _f: &Fingerprint) {
+        todo!();
+        // let item = module.get_item(f).unwrap();
+        // match item {
+        //     VecItem::None
+        //     | VecItem::Link(_)
+        //     | VecItem::Image(_)
+        //     | VecItem::Path(_)
+        //     | VecItem::Gradient(_)
+        //     | VecItem::Pattern(_)
+        //     | VecItem::ContentHint(_) => {
+        //         self.insert(*f, Cow::Borrowed(item));
+        //     }
+        //     VecItem::Text(_t) => {
+        //         // self.glyphs.used_fonts.insert(t.shape.font.clone());
+        //         // self.glyphs
+        //         //     .used_glyphs
+        //         //     .extend(t.content.glyphs.iter().map(|(_, _, glyph)|
+        // glyph).cloned());
 
-                // self.insert(*f, Cow::Borrowed(item));
-                todo!()
-            }
-            VecItem::Item(t) => {
-                self.insert(*f, Cow::Borrowed(item));
+        //         // self.insert(*f, Cow::Borrowed(item));
+        //         todo!()
+        //     }
+        //     VecItem::Item(t) => {
+        //         self.insert(*f, Cow::Borrowed(item));
 
-                if !self.items.contains_key(&t.1) {
-                    self.intern(module, &t.1);
-                }
-            }
-            VecItem::Group(g, _) => {
-                self.insert(*f, Cow::Borrowed(item));
+        //         if !self.items.contains_key(&t.1) {
+        //             self.intern(module, &t.1);
+        //         }
+        //     }
+        //     VecItem::Group(g, _) => {
+        //         self.insert(*f, Cow::Borrowed(item));
 
-                for (_, id) in g.0.iter() {
-                    if !self.items.contains_key(id) {
-                        self.intern(module, id);
-                    }
-                }
-            }
-        }
+        //         for (_, id) in g.0.iter() {
+        //             if !self.items.contains_key(id) {
+        //                 self.intern(module, id);
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
 
@@ -130,171 +131,27 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
     }
 
     pub fn doc(&self, introspector: &Introspector, doc: &TypstDocument) -> Vec<Page> {
-        doc.pages
-            .par_iter()
-            .map(|p| {
-                let abs_ref = self.frame(introspector, p);
-                Page {
-                    content: abs_ref,
-                    size: p.size().into(),
-                }
-            })
-            .collect()
+        rayon::scope(move |s| {
+            let scope = ConvertScope { c: self, scope: s };
+            doc.pages
+                .iter()
+                .map(|p| {
+                    let abs_ref = *scope.frame_inner(introspector, p).wait();
+                    Page {
+                        content: abs_ref,
+                        size: p.size().into(),
+                    }
+                })
+                .collect()
+        })
     }
 
     pub fn frame(&self, introspector: &Introspector, frame: &Frame) -> Fingerprint {
-        // let mut items = Vec::with_capacity(frame.items().len());
-
-        let mut items = frame
-            .par_items()
-            .flat_map(|(pos, item)| {
-                let mut is_link = false;
-                let item = match item {
-                    FrameItem::Group(group) => {
-                        let mut inner = self.frame(introspector, &group.frame);
-
-                        if let Some(p) = group.clip_path.as_ref() {
-                            // todo: merge
-                            let mut builder = SvgPath2DBuilder(String::new());
-
-                            // to ensure that our shape focus on the original point
-                            builder.move_to(0., 0.);
-                            for elem in &p.0 {
-                                match elem {
-                                    TypstPathItem::MoveTo(p) => {
-                                        builder.move_to(p.x.to_f32(), p.y.to_f32());
-                                    }
-                                    TypstPathItem::LineTo(p) => {
-                                        builder.line_to(p.x.to_f32(), p.y.to_f32());
-                                    }
-                                    TypstPathItem::CubicTo(p1, p2, p3) => {
-                                        builder.curve_to(
-                                            p1.x.to_f32(),
-                                            p1.y.to_f32(),
-                                            p2.x.to_f32(),
-                                            p2.y.to_f32(),
-                                            p3.x.to_f32(),
-                                            p3.y.to_f32(),
-                                        );
-                                    }
-                                    TypstPathItem::ClosePath => {
-                                        builder.close();
-                                    }
-                                };
-                            }
-                            let d = builder.0.into();
-
-                            inner = self.store(VecItem::Item(TransformedRef(
-                                TransformItem::Clip(Arc::new(PathItem {
-                                    d,
-                                    size: None,
-                                    styles: vec![],
-                                })),
-                                inner,
-                            )));
-                        };
-
-                        self.store(VecItem::Item(TransformedRef(
-                            TransformItem::Matrix(Arc::new(group.transform.into())),
-                            inner,
-                        )))
-                    }
-                    FrameItem::Text(text) => self.text(introspector, text),
-                    FrameItem::Shape(shape, s) => self.shape(introspector, shape, s),
-                    FrameItem::Image(image, size, s) => self.image(image, *size, s),
-                    FrameItem::Meta(meta, size) => match meta {
-                        Meta::Link(lnk) => {
-                            is_link = true;
-                            self.store(match lnk {
-                                Destination::Url(url) => self.link(url, *size),
-                                Destination::Position(dest) => self.position(*dest, *size),
-                                Destination::Location(loc) => {
-                                    // todo: process location before lowering
-                                    let dest = introspector.position(*loc);
-                                    self.position(dest, *size)
-                                }
-                            })
-                        }
-                        // Meta::Link(_) => Fingerprint::from_u128(0),
-                        Meta::Elem(elem) => {
-                            if !LINE_HINT_ELEMENTS.contains(elem.func().name()) {
-                                return None;
-                            }
-
-                            self.store(VecItem::ContentHint('\n'))
-                        }
-                        #[cfg(not(feature = "no-content-hint"))]
-                        Meta::ContentHint(c) => self.store(VecItem::ContentHint(*c)),
-                        // todo: support page label
-                        Meta::PdfPageLabel(..) | Meta::PageNumbering(..) | Meta::Hide => {
-                            return None
-                        }
-                    },
-                };
-
-                Some(((*pos).into(), is_link, item))
-            })
-            .collect::<Vec<_>>();
-
-        // swap link items
-        items.sort_by(|x, y| {
-            let x_is_link = x.1;
-            let y_is_link = y.1;
-            if x_is_link || y_is_link {
-                if x_is_link && y_is_link {
-                    return std::cmp::Ordering::Equal;
-                } else if x_is_link {
-                    return std::cmp::Ordering::Greater;
-                } else {
-                    return std::cmp::Ordering::Less;
-                }
-            }
-
-            std::cmp::Ordering::Equal
-        });
-
-        self.store(VecItem::Group(
-            GroupRef(items.into_iter().map(|(x, _, y)| (x, y)).collect()),
-            match frame.kind() {
-                FrameKind::Hard => Some(frame.size().into()),
-                FrameKind::Soft => None,
-            },
-        ))
-    }
-
-    fn store_cached<T: Hash>(&self, cond: &T, f: impl FnOnce() -> VecItem) -> Fingerprint {
-        let cond_fg = self.fingerprint_builder.resolve_unchecked(cond);
-        self.insert_if(cond_fg, f)
-    }
-
-    fn store(&self, item: VecItem) -> Fingerprint {
-        let fingerprint = self.fingerprint_builder.resolve(&item);
-        self.insert(fingerprint, Cow::Owned(item));
-        fingerprint
-    }
-
-    fn insert_if(&self, cond: Fingerprint, f: impl FnOnce() -> VecItem) -> Fingerprint {
-        if let Some(mut pos) = self.cache_items.get_mut(&cond) {
-            if ENABLE_REF_CNT && pos.0 != self.lifetime {
-                pos.0 = self.lifetime - 1;
-            }
-
-            self.insert(pos.1, Cow::Borrowed(&pos.2));
-            return pos.1;
-        }
-
-        let item = f();
-        let flat_fg = self.fingerprint_builder.resolve(&item);
-        self.insert(flat_fg, Cow::Borrowed(&item));
-
-        if ENABLE_REF_CNT {
-            self.cache_items
-                .insert(cond, (self.lifetime, flat_fg, item));
-        } else {
-            self.cache_items.insert(cond, (0, flat_fg, item));
-        }
-
-        flat_fg
+        rayon::scope(move |s| {
+            let scope = ConvertScope { c: self, scope: s };
+            let s = scope.frame_inner(introspector, frame);
+            *s.wait()
+        })
     }
 
     fn insert(&self, fg: Fingerprint, item: Cow<VecItem>) -> bool {
@@ -315,104 +172,322 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
         false
     }
 
-    /// Convert a text into vector item.
-    fn text(&self, introspector: &Introspector, text: &TypstTextItem) -> Fingerprint {
-        #[derive(Hash)]
-        struct TextHashKey<'i> {
-            stateful_fill: Option<Arc<str>>,
-            text: &'i TypstTextItem,
-        }
+    fn store_owned(&self, item: VecItem) -> Deferred<Fingerprint> {
+        let fingerprint = self.fingerprint_builder.resolve(&item);
+        self.insert(fingerprint, Cow::Owned(item));
+        Deferred::resolved(fingerprint)
+    }
+}
 
-        let stateful_fill = match text.fill {
-            Paint::Pattern(..) | Paint::Gradient(..) => Some(self.paint(introspector, &text.fill)),
-            _ => None,
-        };
+struct ConvertScope<'scope, 'a: 'scope, 'b, const ENABLE_REF_CNT: bool> {
+    c: &'a ConvertImpl<ENABLE_REF_CNT>,
 
-        let cond = TextHashKey {
-            stateful_fill: stateful_fill.clone(),
-            text,
-        };
+    scope: &'b rayon::Scope<'scope>,
+}
 
-        self.store_cached(&cond, || {
-            let fill = stateful_fill.unwrap_or_else(|| self.paint(introspector, &text.fill));
-            let font = self.glyphs.build_font(&text.font);
+impl<'scope, 'a: 'scope, 'b, const ENABLE_REF_CNT: bool>
+    ConvertScope<'scope, 'a, 'b, ENABLE_REF_CNT>
+{
+    fn frame_inner(
+        &self,
+        introspector: &'scope Introspector,
+        frame: &'scope Frame,
+    ) -> Deferred<Fingerprint> {
+        println!("frame_inner");
+        let items = frame
+            .items()
+            .flat_map(|(pos, item)| {
+                let mut is_link = false;
+                let item = match item {
+                    FrameItem::Group(group) => {
+                        let inner = self.frame_inner(introspector, &group.frame);
+                        let c = self.c;
+                        self.store(move || {
+                            let mut inner = *inner.wait();
+                            if let Some(p) = group.clip_path.as_ref() {
+                                // todo: merge
+                                let mut builder = SvgPath2DBuilder(String::new());
 
-            let mut glyphs = Vec::with_capacity(text.glyphs.len());
-            for glyph in &text.glyphs {
-                self.glyphs
-                    .build_glyph(font, GlyphItem::Raw(text.font.clone(), GlyphId(glyph.id)));
-                glyphs.push((
-                    glyph.x_offset.at(text.size).into(),
-                    glyph.x_advance.at(text.size).into(),
-                    glyph.id as u32,
-                ));
-            }
+                                // to ensure that our shape focus on the original point
+                                builder.move_to(0., 0.);
+                                for elem in &p.0 {
+                                    match elem {
+                                        TypstPathItem::MoveTo(p) => {
+                                            builder.move_to(p.x.to_f32(), p.y.to_f32());
+                                        }
+                                        TypstPathItem::LineTo(p) => {
+                                            builder.line_to(p.x.to_f32(), p.y.to_f32());
+                                        }
+                                        TypstPathItem::CubicTo(p1, p2, p3) => {
+                                            builder.curve_to(
+                                                p1.x.to_f32(),
+                                                p1.y.to_f32(),
+                                                p2.x.to_f32(),
+                                                p2.y.to_f32(),
+                                                p3.x.to_f32(),
+                                                p3.y.to_f32(),
+                                            );
+                                        }
+                                        TypstPathItem::ClosePath => {
+                                            builder.close();
+                                        }
+                                    };
+                                }
+                                let d = builder.0.into();
 
-            let glyph_chars: String = text.text.to_string();
-            // let mut extras = ExtraSvgItems::default();
+                                inner = *c
+                                    .store_owned(VecItem::Item(TransformedRef(
+                                        TransformItem::Clip(Arc::new(PathItem {
+                                            d,
+                                            size: None,
+                                            styles: vec![],
+                                        })),
+                                        inner,
+                                    )))
+                                    .wait();
+                            };
 
-            let _span_id = text
-                .glyphs
-                .iter()
-                .filter(|g| g.span.0 != Span::detached())
-                .map(|g| &g.span.0)
-                .map(span_id_to_u64)
-                .max()
-                .unwrap_or_else(|| span_id_to_u64(&Span::detached()));
-
-            VecItem::Text(TextItem {
-                content: Arc::new(TextItemContent {
-                    content: glyph_chars.into(),
-                    glyphs: glyphs.into(),
-                }),
-                shape: Arc::new(TextShape {
-                    font,
-                    size: Scalar(text.size.to_f32()),
-                    dir: match text.lang.dir() {
-                        Dir::LTR => "ltr",
-                        Dir::RTL => "rtl",
-                        Dir::TTB => "ttb",
-                        Dir::BTT => "btt",
+                            VecItem::Item(TransformedRef(
+                                TransformItem::Matrix(Arc::new(group.transform.into())),
+                                inner,
+                            ))
+                        })
                     }
-                    .into(),
-                    fill,
-                    stroke: None,
-                }),
+                    FrameItem::Text(text) => self.text(introspector, text),
+                    FrameItem::Shape(shape, s) => self.shape(introspector, shape, s),
+                    FrameItem::Image(image, size, s) => self.image(image, *size, s),
+                    FrameItem::Meta(meta, size) => match meta {
+                        Meta::Link(lnk) => {
+                            is_link = true;
+                            self.store_owned(match lnk {
+                                Destination::Url(url) => self.link(url, *size),
+                                Destination::Position(dest) => self.position(*dest, *size),
+                                Destination::Location(loc) => {
+                                    // todo: process location before lowering
+                                    let dest = introspector.position(*loc);
+                                    self.position(dest, *size)
+                                }
+                            })
+                        }
+                        // Meta::Link(_) => Fingerprint::from_u128(0),
+                        Meta::Elem(elem) => {
+                            if !LINE_HINT_ELEMENTS.contains(elem.func().name()) {
+                                return None;
+                            }
+
+                            self.store_owned(VecItem::ContentHint('\n'))
+                        }
+                        #[cfg(not(feature = "no-content-hint"))]
+                        Meta::ContentHint(c) => self.store_owned(VecItem::ContentHint(*c)),
+                        // todo: support page label
+                        Meta::PdfPageLabel(..) | Meta::PageNumbering(..) | Meta::Hide => {
+                            return None
+                        }
+                    },
+                };
+
+                Some(((*pos).into(), is_link, item))
             })
+            .collect::<Vec<_>>();
+
+        self.store(|| {
+            let mut items = items;
+
+            // swap link items
+            items.sort_by(|x, y| {
+                let x_is_link = x.1;
+                let y_is_link = y.1;
+                if x_is_link || y_is_link {
+                    if x_is_link && y_is_link {
+                        return std::cmp::Ordering::Equal;
+                    } else if x_is_link {
+                        return std::cmp::Ordering::Greater;
+                    } else {
+                        return std::cmp::Ordering::Less;
+                    }
+                }
+
+                std::cmp::Ordering::Equal
+            });
+
+            VecItem::Group(
+                GroupRef(items.into_iter().map(|(x, _, y)| (x, *y.wait())).collect()),
+                match frame.kind() {
+                    FrameKind::Hard => Some(frame.size().into()),
+                    FrameKind::Soft => None,
+                },
+            )
         })
     }
 
+    fn store_cached<T: Hash>(
+        &self,
+        cond: &T,
+        f: impl FnOnce() -> VecItem + Send + Sync + 'scope + 'a,
+    ) -> Deferred<Fingerprint> {
+        let cond_fg = self.c.fingerprint_builder.resolve_unchecked(cond);
+        self.insert_if(cond_fg, f)
+    }
+
+    fn store(
+        &self,
+        f: impl FnOnce() -> VecItem + Send + Sync + 'scope + 'a,
+    ) -> Deferred<Fingerprint> {
+        let c = self.c;
+        Deferred::new_in(self.scope, move || *c.store_owned(f()).wait())
+    }
+
+    fn store_owned(&self, item: VecItem) -> Deferred<Fingerprint> {
+        self.c.store_owned(item)
+    }
+
+    fn insert_if(
+        &self,
+        cond: Fingerprint,
+        f: impl FnOnce() -> VecItem + Send + Sync + 'scope + 'a,
+    ) -> Deferred<Fingerprint> {
+        let c = self.c;
+
+        if let Some(mut pos) = self.c.cache_items.get_mut(&cond) {
+            if ENABLE_REF_CNT && pos.0 != self.c.lifetime {
+                pos.0 = self.c.lifetime - 1;
+            }
+
+            self.c.insert(pos.1, Cow::Borrowed(&pos.2));
+            return Deferred::resolved(pos.1);
+        }
+
+        Deferred::new_in(self.scope, move || {
+            let item = f();
+            let flat_fg = c.fingerprint_builder.resolve(&item);
+            c.insert(flat_fg, Cow::Borrowed(&item));
+
+            if ENABLE_REF_CNT {
+                c.cache_items.insert(cond, (c.lifetime, flat_fg, item));
+            } else {
+                c.cache_items.insert(cond, (0, flat_fg, item));
+            }
+
+            flat_fg
+        })
+    }
+
+    /// Convert a text into vector item.
+    fn text(
+        &self,
+        introspector: &'scope Introspector,
+        text: &'scope TypstTextItem,
+    ) -> Deferred<Fingerprint> {
+        return Deferred::Resolved(Fingerprint::from_u128(0));
+        // println!("text");
+        // let c = self.c;
+
+        // #[derive(Hash)]
+        // struct TextHashKey<'i> {
+        //     stateful_fill: Arc<str>,
+        //     text: &'i TypstTextItem,
+        // }
+
+        // let fill = self.paint(introspector, &text.fill);
+
+        // let cond = TextHashKey {
+        //     stateful_fill: match text.fill {
+        //         Paint::Pattern(..) | Paint::Gradient(..) =>
+        // fill.wait().clone(),         _ => "".into(),
+        //     },
+        //     text,
+        // };
+
+        // self.store_cached(&cond, move || {
+        //     let font = c.glyphs.build_font(&text.font);
+
+        //     let mut glyphs = Vec::with_capacity(text.glyphs.len());
+        //     for glyph in &text.glyphs {
+        //         c.glyphs
+        //             .build_glyph(font, GlyphItem::Raw(text.font.clone(),
+        // GlyphId(glyph.id)));         glyphs.push((
+        //             glyph.x_offset.at(text.size).into(),
+        //             glyph.x_advance.at(text.size).into(),
+        //             glyph.id as u32,
+        //         ));
+        //     }
+
+        //     let glyph_chars: String = text.text.to_string();
+        //     // let mut extras = ExtraSvgItems::default();
+
+        //     let _span_id = text
+        //         .glyphs
+        //         .iter()
+        //         .filter(|g| g.span.0 != Span::detached())
+        //         .map(|g| &g.span.0)
+        //         .map(span_id_to_u64)
+        //         .max()
+        //         .unwrap_or_else(|| span_id_to_u64(&Span::detached()));
+
+        //     VecItem::Text(TextItem {
+        //         content: Arc::new(TextItemContent {
+        //             content: glyph_chars.into(),
+        //             glyphs: glyphs.into(),
+        //         }),
+        //         shape: Arc::new(TextShape {
+        //             font,
+        //             size: Scalar(text.size.to_f32()),
+        //             dir: match text.lang.dir() {
+        //                 Dir::LTR => "ltr",
+        //                 Dir::RTL => "rtl",
+        //                 Dir::TTB => "ttb",
+        //                 Dir::BTT => "btt",
+        //             }
+        //             .into(),
+        //             fill: fill.wait().clone(),
+        //             stroke: None,
+        //         }),
+        //     })
+        // })
+    }
+
     // /// Convert a geometrical shape into vector item.
-    fn shape(&self, introspector: &Introspector, shape: &Shape, _span_id: &Span) -> Fingerprint {
+    fn shape(
+        &self,
+        introspector: &'scope Introspector,
+        shape: &'scope Shape,
+        _span_id: &'scope Span,
+    ) -> Deferred<Fingerprint> {
         #[derive(Hash)]
         struct ShapeKey<'i> {
-            stateful_fill: Option<Arc<str>>,
-            stateful_stroke: Option<Arc<str>>,
+            stateful_fill: Arc<str>,
+            stateful_stroke: Arc<str>,
             shape: &'i Shape,
         }
 
-        let stateful_fill = match shape.fill {
-            Some(Paint::Pattern(..) | Paint::Gradient(..)) => {
-                Some(self.paint(introspector, shape.fill.as_ref().unwrap()))
-            }
-            _ => None,
-        };
+        let fill = shape
+            .fill
+            .as_ref()
+            .map(|fill| self.paint(introspector, fill));
 
-        let stateful_stroke = match shape.stroke {
-            Some(FixedStroke {
-                paint: Paint::Pattern(..) | Paint::Gradient(..),
-                ..
-            }) => Some(self.paint(introspector, &shape.stroke.as_ref().unwrap().paint)),
-            _ => None,
-        };
+        let stroke_paint = shape
+            .stroke
+            .as_ref()
+            .map(|stroke| self.paint(introspector, &stroke.paint));
 
-        let cond = &ShapeKey {
-            stateful_fill: stateful_fill.clone(),
-            stateful_stroke: stateful_stroke.clone(),
+        let cond = ShapeKey {
+            stateful_fill: match shape.fill {
+                Some(Paint::Pattern(..) | Paint::Gradient(..)) => {
+                    fill.as_ref().unwrap().wait().clone()
+                }
+                _ => "".into(),
+            },
+            stateful_stroke: match shape.stroke {
+                Some(FixedStroke {
+                    paint: Paint::Pattern(..) | Paint::Gradient(..),
+                    ..
+                }) => stroke_paint.as_ref().unwrap().wait().clone(),
+                _ => "".into(),
+            },
             shape,
         };
 
-        self.store_cached(cond, || {
+        self.store_cached(&cond, move || {
             let mut builder = SvgPath2DBuilder(String::new());
             // let mut extras = ExtraSvgItems::default();
 
@@ -461,15 +536,13 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
             let mut styles = Vec::new();
 
-            if let Some(paint_fill) = &shape.fill {
-                styles.push(PathStyle::Fill(
-                    stateful_fill.unwrap_or_else(|| self.paint(introspector, paint_fill)),
-                ));
+            if let Some(paint_fill) = fill {
+                styles.push(PathStyle::Fill(paint_fill.wait().clone()));
             }
 
             // todo: default miter_limit, thickness
             if let Some(FixedStroke {
-                paint,
+                paint: _paint,
                 thickness,
                 cap,
                 join,
@@ -497,9 +570,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                     LineJoin::Round => styles.push(PathStyle::StrokeLineJoin("round".into())),
                 }
 
-                styles.push(PathStyle::Stroke(
-                    stateful_stroke.unwrap_or_else(|| self.paint(introspector, paint)),
-                ));
+                styles.push(PathStyle::Stroke(stroke_paint.unwrap().wait().clone()));
             }
 
             let mut shape_size = shape.geometry.bbox_size();
@@ -522,7 +593,12 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
         })
     }
 
-    fn image(&self, image: &TypstImage, size: Axes<Abs>, _span_id: &Span) -> Fingerprint {
+    fn image(
+        &self,
+        image: &'scope TypstImage,
+        size: Axes<Abs>,
+        _span_id: &'scope Span,
+    ) -> Deferred<Fingerprint> {
         #[derive(Hash)]
         struct ImageKey<'i> {
             image: &'i TypstImage,
@@ -533,7 +609,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
         // SvgItem::Image((image(image, *size), span_id_to_u64(span_id)))
 
-        self.store_cached(&cond, || {
+        self.store_cached(&cond, move || {
             VecItem::Image(ImageItem {
                 image: Arc::new(image.clone().into()),
                 size: size.into(),
@@ -566,8 +642,8 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
         VecItem::Link(lnk)
     }
     #[inline]
-    fn paint(&self, introspector: &Introspector, g: &Paint) -> ImmutStr {
-        match g {
+    fn paint(&self, introspector: &Introspector, g: &Paint) -> Deferred<ImmutStr> {
+        Deferred::resolved(match g {
             Paint::Solid(c) => c.to_css().into(),
             Paint::Pattern(e) => {
                 let fingerprint = self.pattern(introspector, e);
@@ -577,7 +653,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                 let fingerprint = self.graident(g);
                 format!("@{}", fingerprint.as_svg_id("g")).into()
             }
-        }
+        })
     }
 
     fn graident(&self, g: &Gradient) -> Fingerprint {
@@ -624,18 +700,20 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             }
         };
 
-        self.store(VecItem::Gradient(Arc::new(GradientItem {
-            stops,
-            relative_to_self,
-            anti_alias,
-            space,
-            kind,
-            styles,
-        })))
+        *self
+            .store_owned(VecItem::Gradient(Arc::new(GradientItem {
+                stops,
+                relative_to_self,
+                anti_alias,
+                space,
+                kind,
+                styles,
+            })))
+            .wait()
     }
 
     fn pattern(&self, introspector: &Introspector, g: &Pattern) -> Fingerprint {
-        let frame = self.frame(introspector, g.frame());
+        let frame = self.c.frame(introspector, g.frame());
 
         let relative_to_self = match g.relative() {
             Smart::Auto => None,
@@ -649,7 +727,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             relative_to_self,
         }));
 
-        self.store(pattern)
+        *self.store_owned(pattern).wait()
     }
 }
 

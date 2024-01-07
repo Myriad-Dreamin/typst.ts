@@ -3,6 +3,9 @@ use std::{path::Path, sync::Arc};
 
 pub use takable::*;
 
+mod deferred;
+pub use deferred::*;
+
 mod hash;
 pub use hash::*;
 
