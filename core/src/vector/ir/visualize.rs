@@ -31,7 +31,7 @@ pub struct Image {
     pub hash: Fingerprint,
 }
 
-/// Collect image data from [`typst::image::Image`].
+/// Collect image data from [`typst::visualize::Image`].
 impl From<typst::visualize::Image> for Image {
     fn from(image: typst::visualize::Image) -> Self {
         let format = match image.format() {

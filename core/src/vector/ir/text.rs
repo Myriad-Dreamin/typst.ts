@@ -1,7 +1,7 @@
 use ttf_parser::GlyphId;
 use typst::text::Font;
 
-use super::{preludes::*, ImageItem};
+use super::{preludes::*, ImageItem, PathStyle};
 use crate::{
     hash::item_hash128,
     vector::vm::{GroupContext, TransformContext},
@@ -68,10 +68,11 @@ pub struct OutlineGlyphItem {
 pub struct FontItem {
     /// The hash of the font to avoid global collision.
     pub fingerprint: Fingerprint,
-    /// The inlined hash of the font to avoid local collision.
-    pub hash: u32,
 
     pub family: ImmutStr,
+
+    /// The inlined hash of the font to avoid local collision.
+    pub hash: u32,
     pub ascender: Abs,
     pub descender: Abs,
     pub unit_per_em: Abs,
@@ -120,10 +121,9 @@ pub struct TextShape {
     pub dir: ImmutStr,
     /// The size of text
     pub size: Scalar,
-    /// Fill font text with css color.
-    pub fill: ImmutStr,
-    /// Stroke font text with css color.
-    pub stroke: Option<ImmutStr>,
+    /// The path style.
+    /// See [`PathStyle`] for more information.
+    pub styles: Vec<PathStyle>,
 }
 
 impl TextShape {
@@ -199,7 +199,7 @@ impl TextItem {
     }
 }
 
-/// The content metadata of a [`FlatTextItem`].
+/// The content metadata of a [`TextItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]

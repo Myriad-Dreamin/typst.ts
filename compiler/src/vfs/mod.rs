@@ -339,7 +339,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     /// Get source content by path and assign the source with a given typst
     /// global file id.
     ///
-    /// See [`Vfs::resolve_with_f`] for more information.
+    /// See `Vfs::resolve_with_f` for more information.
     pub fn resolve(&self, path: &Path, source_id: TypstFileId) -> FileResult<Source> {
         self.resolve_with_f(path, source_id, || {
             // Return a new source if we don't have a reparse feature

@@ -11,8 +11,8 @@ use super::AccessModel;
 /// Provides dummy access model.
 ///
 /// Note: we can still perform compilation with dummy access model, since
-/// [`Vfs`] will make a overlay access model over the provided dummy access
-/// model.
+/// [`super::Vfs`] will make a overlay access model over the provided dummy
+/// access model.
 #[derive(Default, Debug, Clone, Copy)]
 pub struct DummyAccessModel;
 

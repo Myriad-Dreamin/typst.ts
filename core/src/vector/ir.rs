@@ -160,7 +160,7 @@ pub struct LinkItem {
     pub size: Size,
 }
 
-/// Item representing all the transform that is applicable to a [`SvgItem`].
+/// Item representing all the transform that is applicable to a [`VecItem`].
 /// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/transform>
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
@@ -201,6 +201,8 @@ impl From<TransformItem> for Transform {
 pub enum StyleNs {
     /// style that contains a single css rule: `fill: #color`.
     Fill,
+    /// style that contains a single css rule: `stroke: #color`.
+    Stroke,
 }
 
 /// A finished pack that stores all the font items.
