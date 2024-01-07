@@ -1,6 +1,4 @@
-use typst_ts_core::vector::ir;
-
-use crate::utils::ToCssExt;
+use typst_ts_core::vector::{ir, utils::ToCssExt};
 
 use super::render_image;
 

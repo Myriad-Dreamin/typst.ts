@@ -1,4 +1,3 @@
-use tiny_skia::Transform;
 use typst::layout::Abs;
 use typst::visualize::{Color, Paint};
 
@@ -57,20 +56,21 @@ impl ToCssExt for Paint {
     }
 }
 
-impl ToCssExt for Transform {
-    fn to_css(self) -> String {
-        format!(
-            r#"matrix({},{},{},{},{},{})"#,
-            self.sx, self.ky, self.kx, self.sy, self.tx, self.ty
-        )
-    }
-}
-
 impl ToCssExt for ir::Transform {
     fn to_css(self) -> String {
-        format!(
-            r#"matrix({},{},{},{},{},{})"#,
-            self.sx.0, self.ky.0, self.kx.0, self.sy.0, self.tx.0, self.ty.0
-        )
+        let regular_scale = self.sx.0 == 1.0 && self.sy.0 == 1.0;
+        let regular_skew = self.kx.0 == 0.0 && self.ky.0 == 0.0;
+        let regular_translate = self.tx.0 == 0.0 && self.ty.0 == 0.0;
+
+        match (regular_scale, regular_skew, regular_translate) {
+            (true, true, true) => String::default(),
+            (true, true, false) => format!(r#"translate({},{})"#, self.tx.0, self.ty.0),
+            (true, false, true) => format!(r#"skew({},{})"#, self.kx.0, self.ky.0),
+            (false, true, true) => format!(r#"scale({},{})"#, self.sx.0, self.sy.0),
+            _ => format!(
+                r#"matrix({},{},{},{},{},{})"#,
+                self.sx.0, self.ky.0, self.kx.0, self.sy.0, self.tx.0, self.ty.0
+            ),
+        }
     }
 }
