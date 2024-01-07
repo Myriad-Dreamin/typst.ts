@@ -6,7 +6,10 @@ use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
     foundations::Smart,
     introspection::{Introspector, Meta},
-    layout::{Abs, Axes, Dir, Frame, FrameItem, FrameKind, Position, Ratio as TypstRatio, Size},
+    layout::{
+        Abs, Axes, Dir, Frame, FrameItem, FrameKind, Position, Ratio as TypstRatio, Size,
+        Transform as TypstTransform,
+    },
     model::{Destination, Document as TypstDocument},
     syntax::Span,
     text::TextItem as TypstTextItem,
@@ -194,10 +197,14 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                             )));
                         };
 
-                        self.store(VecItem::Item(TransformedRef(
-                            TransformItem::Matrix(Arc::new(group.transform.into())),
-                            inner,
-                        )))
+                        if group.transform != TypstTransform::identity() {
+                            inner = self.store(VecItem::Item(TransformedRef(
+                                TransformItem::Matrix(Arc::new(group.transform.into())),
+                                inner,
+                            )));
+                        }
+
+                        inner
                     }
                     FrameItem::Text(text) => self.text(introspector, text),
                     FrameItem::Shape(shape, s) => self.shape(introspector, shape, s),
@@ -317,24 +324,36 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
     /// Convert a text into vector item.
     fn text(&self, introspector: &Introspector, text: &TypstTextItem) -> Fingerprint {
-        #[derive(Hash)]
-        struct TextHashKey<'i> {
-            stateful_fill: Option<Arc<str>>,
-            text: &'i TypstTextItem,
-        }
-
         let stateful_fill = match text.fill {
             Paint::Pattern(..) | Paint::Gradient(..) => Some(self.paint(introspector, &text.fill)),
             _ => None,
         };
 
+        #[cfg(feature = "text-stroke")]
+        let stateful_stroke = match &text.stroke {
+            Some(FixedStroke {
+                paint: Paint::Pattern(..) | Paint::Gradient(..),
+                ..
+            }) => Some(self.paint(introspector, &text.stroke.as_ref().unwrap().paint)),
+            _ => None,
+        };
+
+        #[derive(Hash)]
+        struct TextHashKey<'i> {
+            stateful_fill: Option<Arc<str>>,
+            #[cfg(feature = "text-stroke")]
+            stateful_stroke: Option<Arc<str>>,
+            text: &'i TypstTextItem,
+        }
+
         let cond = TextHashKey {
             stateful_fill: stateful_fill.clone(),
+            #[cfg(feature = "text-stroke")]
+            stateful_stroke: stateful_stroke.clone(),
             text,
         };
 
         self.store_cached(&cond, || {
-            let fill = stateful_fill.unwrap_or_else(|| self.paint(introspector, &text.fill));
             let font = self.glyphs.build_font(&text.font);
 
             let mut glyphs = Vec::with_capacity(text.glyphs.len());
@@ -360,6 +379,15 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                 .max()
                 .unwrap_or_else(|| span_id_to_u64(&Span::detached()));
 
+            let font = self.glyphs.build_font(&text.font);
+            let fill = stateful_fill.unwrap_or_else(|| self.paint(introspector, &text.fill));
+
+            let styles = vec![PathStyle::Fill(fill)];
+            #[cfg(feature = "text-stroke")]
+            if let Some(stroke) = text.stroke.as_ref() {
+                self.stroke(introspector, stateful_stroke, stroke, &mut styles);
+            }
+
             VecItem::Text(TextItem {
                 content: Arc::new(TextItemContent {
                     content: glyph_chars.into(),
@@ -375,11 +403,50 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                         Dir::BTT => "btt",
                     }
                     .into(),
-                    fill,
-                    stroke: None,
+                    styles,
                 }),
             })
         })
+    }
+
+    fn stroke(
+        &self,
+        introspector: &Introspector,
+        stateful_stroke: Option<Arc<str>>,
+        FixedStroke {
+            paint,
+            thickness,
+            line_cap,
+            line_join,
+            dash_pattern,
+            miter_limit,
+        }: &FixedStroke,
+        styles: &mut Vec<PathStyle>,
+    ) {
+        // todo: default miter_limit, thickness
+        if let Some(pattern) = dash_pattern.as_ref() {
+            styles.push(PathStyle::StrokeDashOffset(pattern.phase.into()));
+            let d = pattern.array.clone();
+            let d = d.into_iter().map(Scalar::from).collect();
+            styles.push(PathStyle::StrokeDashArray(d));
+        }
+
+        styles.push(PathStyle::StrokeWidth((*thickness).into()));
+        styles.push(PathStyle::StrokeMitterLimit((*miter_limit).into()));
+        match line_cap {
+            LineCap::Butt => {}
+            LineCap::Round => styles.push(PathStyle::StrokeLineCap("round".into())),
+            LineCap::Square => styles.push(PathStyle::StrokeLineCap("square".into())),
+        };
+        match line_join {
+            LineJoin::Miter => {}
+            LineJoin::Bevel => styles.push(PathStyle::StrokeLineJoin("bevel".into())),
+            LineJoin::Round => styles.push(PathStyle::StrokeLineJoin("round".into())),
+        }
+
+        styles.push(PathStyle::Stroke(
+            stateful_stroke.unwrap_or_else(|| self.paint(introspector, paint)),
+        ));
     }
 
     // /// Convert a geometrical shape into vector item.
@@ -467,39 +534,8 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                 ));
             }
 
-            // todo: default miter_limit, thickness
-            if let Some(FixedStroke {
-                paint,
-                thickness,
-                line_cap,
-                line_join,
-                dash_pattern,
-                miter_limit,
-            }) = &shape.stroke
-            {
-                if let Some(pattern) = dash_pattern.as_ref() {
-                    styles.push(PathStyle::StrokeDashOffset(pattern.phase.into()));
-                    let d = pattern.array.clone();
-                    let d = d.into_iter().map(Scalar::from).collect();
-                    styles.push(PathStyle::StrokeDashArray(d));
-                }
-
-                styles.push(PathStyle::StrokeWidth((*thickness).into()));
-                styles.push(PathStyle::StrokeMitterLimit((*miter_limit).into()));
-                match line_cap {
-                    LineCap::Butt => {}
-                    LineCap::Round => styles.push(PathStyle::StrokeLineCap("round".into())),
-                    LineCap::Square => styles.push(PathStyle::StrokeLineCap("square".into())),
-                };
-                match line_join {
-                    LineJoin::Miter => {}
-                    LineJoin::Bevel => styles.push(PathStyle::StrokeLineJoin("bevel".into())),
-                    LineJoin::Round => styles.push(PathStyle::StrokeLineJoin("round".into())),
-                }
-
-                styles.push(PathStyle::Stroke(
-                    stateful_stroke.unwrap_or_else(|| self.paint(introspector, paint)),
-                ));
+            if let Some(stroke) = &shape.stroke {
+                self.stroke(introspector, stateful_stroke, stroke, &mut styles);
             }
 
             let mut shape_size = shape.geometry.bbox_size();

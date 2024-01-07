@@ -457,7 +457,7 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
 
             fingerprint_builder: &mut self.fingerprint_builder,
 
-            style_defs: &mut self.style_defs,
+            _style_defs: &mut self.style_defs,
             gradients: &mut self.gradients,
             patterns: &mut self.patterns,
             stateful_fill_cache: &mut self.stateful_fill_cache,

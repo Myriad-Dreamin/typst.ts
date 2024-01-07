@@ -12,10 +12,7 @@ use typst_ts_core::{
 };
 
 use crate::{
-    backend::{
-        BuildClipPath, BuildFillStyleClass, DynExportFeature, NotifyPaint, SvgText, SvgTextBuilder,
-        SvgTextNode,
-    },
+    backend::{BuildClipPath, DynExportFeature, NotifyPaint, SvgText, SvgTextBuilder, SvgTextNode},
     ExportFeature,
 };
 
@@ -37,7 +34,7 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     pub(crate) fingerprint_builder: &'t mut FingerprintBuilder,
 
     /// Stores the style definitions used in the document.
-    pub(crate) style_defs: &'t mut StyleDefMap,
+    pub(crate) _style_defs: &'t mut StyleDefMap,
     /// Stores the graidents used in the document.
     pub(crate) gradients: &'t mut PaintFillMap,
     /// Stores the patterns used in the document.
@@ -102,19 +99,6 @@ impl<'m, 't, Feat: ExportFeature> FontIndice<'m> for RenderContext<'m, 't, Feat>
     }
 }
 
-impl<'m, 't, Feat: ExportFeature> BuildFillStyleClass for RenderContext<'m, 't, Feat> {
-    fn build_fill_style_class(&mut self, fill: ImmutStr) -> String {
-        // insert fill definition
-        let fill_id = format!(r#"f{}"#, fill.trim_start_matches('#'));
-        let fill_key = (StyleNs::Fill, fill.clone());
-        self.style_defs
-            .entry(fill_key)
-            .or_insert_with(|| format!(r#"g.{} {{ --glyph_fill: {}; }} "#, fill_id, fill));
-
-        fill_id
-    }
-}
-
 impl<'m, 't, Feat: ExportFeature> BuildClipPath for RenderContext<'m, 't, Feat> {
     fn build_clip_path(&mut self, path: &PathItem) -> Fingerprint {
         self.fingerprint_builder.resolve(path)
@@ -132,7 +116,6 @@ impl<'m, 't, Feat: ExportFeature> HasStatefulFill for RenderContext<'m, 't, Feat
         match item {
             Gradient(..) | Pattern(..) => return true,
             Image(..) | Link(..) | ContentHint(..) | None => return false,
-            Text(p) => return p.shape.fill.starts_with('@'),
             _ => {}
         };
 
@@ -140,18 +123,19 @@ impl<'m, 't, Feat: ExportFeature> HasStatefulFill for RenderContext<'m, 't, Feat
             return *v;
         }
 
+        fn stateful_style(style: &PathStyle) -> bool {
+            matches!(style, PathStyle::Fill(color) | PathStyle::Stroke(color) if color.starts_with('@'))
+        }
+
         use VecItem::*;
         let res = match item {
-            Gradient(..) | Pattern(..) | Image(..) | Link(..) | ContentHint(..) | None
-            | Text(..) => {
+            Gradient(..) | Pattern(..) | Image(..) | Link(..) | ContentHint(..) | None => {
                 panic!("Invalid item type for stateful fill: {:?}", fg)
             }
             Item(t) => self.has_stateful_fill(&t.1),
             Group(g, ..) => g.0.iter().any(|(_, x)| self.has_stateful_fill(x)),
-            Path(p) => p.styles.iter().any(|s| match s {
-                PathStyle::Fill(color) | PathStyle::Stroke(color) => color.starts_with('@'),
-                _ => false,
-            }),
+            Path(p) => p.styles.iter().any(stateful_style),
+            Text(p) => return p.shape.styles.iter().any(stateful_style),
         };
 
         self.stateful_fill_cache.insert(*fg, res);
@@ -231,6 +215,7 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, 't, Feat> {
         Self::Group {
             attributes: vec![("data-tid", v.as_svg_id("g"))],
             text_fill: None,
+            text_stroke: None,
             content: Vec::with_capacity(1),
         }
     }
@@ -360,59 +345,72 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
 
         group_ctx = text.shape.add_transform(self, group_ctx, upem);
 
-        let width = if let Some(fill) = &group_ctx.text_fill {
-            // clip path rect
-            let clip_id = fill.as_svg_id("tc");
-            let fill_id = fill.as_svg_id("tf");
-
-            // because the text is already scaled by the font size,
-            // we need to scale it back to the original size.
-            // todo: infinite multiplication
-            let descender = font.descender.0 * upem.0;
-
-            group_ctx.content.push(SvgText::Plain(format!(
-                r#"<clipPath id="{}" clipPathUnits="userSpaceOnUse">"#,
-                clip_id
-            )));
-
-            let mut width = 0f32;
-            for (x, g) in text.render_glyphs(upem, &mut width) {
-                group_ctx.render_glyph_ref(self, x, font, g);
-                group_ctx.content.push(SvgText::Plain("<path/>".into()));
-            }
-
-            group_ctx
-                .content
-                .push(SvgText::Plain(r#"</clipPath>"#.to_owned()));
-
-            // clip path rect
-            let scaled_width = width * upem.0 / text.shape.size.0;
-            group_ctx.content.push(SvgText::Plain(format!(
-                r##"<rect fill="url(#{})" width="{:.1}" height="{:.1}" y="{:.1}" clip-path="url(#{})"/>"##,
-                fill_id, scaled_width, upem.0, descender, clip_id
-            )));
-
-            // image glyphs
-            let mut _width = 0f32;
-            for (x, g) in text.render_glyphs(upem, &mut _width) {
-                let built = font.get_glyph(g);
-                if matches!(
-                    built.map(Deref::deref),
-                    Some(FlatGlyphItem::Outline(..)) | None
-                ) {
-                    continue;
+        let width = match (&group_ctx.text_fill, &group_ctx.text_stroke) {
+            (fill, Some(stroke)) => {
+                let mut width = 0f32;
+                let fill = fill.clone();
+                let stroke = stroke.clone();
+                for (x, g) in text.render_glyphs(upem, &mut width) {
+                    group_ctx.render_glyph_ref_slow(x, font, g, fill.clone(), stroke.clone());
                 }
-                group_ctx.render_glyph_ref(self, x, font, g);
-            }
 
-            width
-        } else {
-            let mut width = 0f32;
-            for (x, g) in text.render_glyphs(upem, &mut width) {
-                group_ctx.render_glyph_ref(self, x, font, g);
+                width
             }
+            (None, None) => {
+                let mut width = 0f32;
+                for (x, g) in text.render_glyphs(upem, &mut width) {
+                    group_ctx.render_glyph_ref(self, x, font, g);
+                }
 
-            width
+                width
+            }
+            (Some(fill), None) => {
+                // clip path rect
+                let clip_id = fill.id.as_svg_id("pc");
+                let fill_id = fill.id.as_svg_id("pf");
+
+                // because the text is already scaled by the font size,
+                // we need to scale it back to the original size.
+                // todo: infinite multiplication
+                let descender = font.descender.0 * upem.0;
+
+                group_ctx.content.push(SvgText::Plain(format!(
+                    r#"<clipPath id="{}" clipPathUnits="userSpaceOnUse">"#,
+                    clip_id
+                )));
+
+                let mut width = 0f32;
+                for (x, g) in text.render_glyphs(upem, &mut width) {
+                    group_ctx.render_glyph_ref(self, x, font, g);
+                    group_ctx.content.push(SvgText::Plain("<path/>".into()));
+                }
+
+                group_ctx
+                    .content
+                    .push(SvgText::Plain(r#"</clipPath>"#.to_owned()));
+
+                // clip path rect
+                let scaled_width = width * upem.0 / text.shape.size.0;
+                group_ctx.content.push(SvgText::Plain(format!(
+                    r##"<rect fill="url(#{fill_id})" stroke="none" width="{:.1}" height="{:.1}" y="{:.1}" clip-path="url(#{})"/>"##,
+                    scaled_width, upem.0, descender, clip_id
+                )));
+
+                // image glyphs
+                let mut _width = 0f32;
+                for (x, g) in text.render_glyphs(upem, &mut _width) {
+                    let built = font.get_glyph(g);
+                    if matches!(
+                        built.map(Deref::deref),
+                        Some(FlatGlyphItem::Outline(..)) | None
+                    ) {
+                        continue;
+                    }
+                    group_ctx.render_glyph_ref(self, x, font, g);
+                }
+
+                width
+            }
         };
 
         if self.should_render_text_element() {

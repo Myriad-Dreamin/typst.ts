@@ -398,7 +398,11 @@ impl From<CanvasStack> for CanvasNode {
 /// Internal methods for [`CanvasStack`].
 impl CanvasStack {
     pub fn with_text_shape(&mut self, shape: &ir::TextShape) {
-        self.fill = Some(shape.fill.clone())
+        for style in &shape.styles {
+            if let ir::PathStyle::Fill(fill) = style {
+                self.fill = Some(fill.clone());
+            }
+        }
     }
 }
 
