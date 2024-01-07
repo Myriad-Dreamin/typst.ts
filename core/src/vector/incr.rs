@@ -13,45 +13,39 @@ use crate::{error::prelude::*, TakeAs};
 /// maintains the data of the incremental rendering at server side
 #[derive(Default)]
 pub struct IncrDocServer {
-    /// Whether to attach debug info to the output.
-    should_attach_debug_info: bool,
-
     /// Expected exact state of the current Compiler.
     /// Initially it is None meaning no completed compilation.
     doc_view: Option<VecDocument>,
 
     /// Maintaining typst -> vector status
     typst2vec: IncrTypst2VecPass,
-
-    /// Optional page source mapping references.
-    page_source_mapping: Vec<SourceMappingNode>,
 }
 
 impl IncrDocServer {
     pub fn set_should_attach_debug_info(&mut self, should_attach_debug_info: bool) {
-        self.typst2vec.should_attach_debug_info = should_attach_debug_info;
-        self.should_attach_debug_info = should_attach_debug_info;
+        self.typst2vec
+            .spans
+            .set_should_attach_debug_info(should_attach_debug_info);
     }
 
     /// Pack the delta into a binary blob.
     pub fn pack_delta(&mut self, output: Arc<Document>) -> Vec<u8> {
-        self.page_source_mapping.clear();
+        self.typst2vec.spans.reset();
 
-        // let instant: std::time::Instant = std::time::Instant::now();
-
+        // Increment the lifetime of all items to touch.
         self.typst2vec.increment_lifetime();
 
         // it is important to call gc before building pages
         let gc_items = self.typst2vec.gc(5 * 2);
 
-        let builder = &mut self.typst2vec;
-        let pages = builder.doc(&output.introspector, &output);
+        // run typst2vec pass
+        let pages = self.typst2vec.doc(&output.introspector, &output);
 
         // let new_items = builder.new_items.get_mut().len();
         // let new_fonts = builder.glyphs.new_fonts.get_mut().len();
         // let new_glyphs = builder.glyphs.new_glyphs.get_mut().len();
 
-        let delta = builder.finalize_delta();
+        let delta = self.typst2vec.finalize_delta();
 
         // max, min lifetime current, gc_items
         #[cfg(feature = "debug-gc")]

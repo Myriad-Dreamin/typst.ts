@@ -1,7 +1,7 @@
 use std::{borrow::Cow, cell::RefCell, hash::Hash, ops::DerefMut, sync::Arc};
 
 use parking_lot::Mutex;
-use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
     foundations::Smart,
@@ -25,28 +25,24 @@ use crate::{
     vector::{
         ir::*,
         path2d::SvgPath2DBuilder,
-        span_id_to_u64,
         utils::{AbsExt, ToCssExt},
     },
     ImmutStr, TypstAbs,
 };
 
-use super::TGlyph2VecPass;
+use super::{SourceNodeKind, SourceRegion, Span2VecPass, TGlyph2VecPass};
 
 /// Intermediate representation of a flatten vector item.
 pub struct ConvertImpl<const ENABLE_REF_CNT: bool = false> {
     pub glyphs: TGlyph2VecPass<ENABLE_REF_CNT>,
+    pub spans: Span2VecPass,
     pub cache_items: crate::adt::CHashMap<Fingerprint, (u64, Fingerprint, VecItem)>,
     pub items: crate::adt::CHashMap<Fingerprint, (u64, VecItem)>,
     pub new_items: Mutex<Vec<(Fingerprint, VecItem)>>,
 
     fingerprint_builder: FingerprintBuilder,
 
-    /// See `typst_ts_svg_exporter::ExportFeature`.
-    pub should_attach_debug_info: bool,
-
     pub lifetime: u64,
-    pub incr_glyphs: Vec<u64>,
 }
 
 pub type Typst2VecPass = ConvertImpl</* ENABLE_REF_CNT */ false>;
@@ -55,16 +51,16 @@ pub type IncrTypst2VecPass = ConvertImpl</* ENABLE_REF_CNT */ true>;
 impl<const ENABLE_REF_CNT: bool> Default for ConvertImpl<ENABLE_REF_CNT> {
     fn default() -> Self {
         let glyphs = TGlyph2VecPass::new(GlyphProvider::default(), true);
+        let spans = Span2VecPass::default();
 
         Self {
             lifetime: 0,
             cache_items: Default::default(),
             glyphs,
+            spans,
             items: Default::default(),
             new_items: Default::default(),
             fingerprint_builder: Default::default(),
-            incr_glyphs: Default::default(),
-            should_attach_debug_info: false,
         }
     }
 }
@@ -135,8 +131,17 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
     pub fn doc(&self, introspector: &Introspector, doc: &TypstDocument) -> Vec<Page> {
         doc.pages
             .par_iter()
-            .map(|p| {
+            .enumerate()
+            .map(|(idx, p)| {
                 let abs_ref = self.frame(introspector, p);
+
+                self.spans.push_span(SourceRegion {
+                    region: 0,
+                    idx: idx as u32,
+                    kind: SourceNodeKind::Page,
+                    item: abs_ref,
+                });
+
                 Page {
                     content: abs_ref,
                     size: p.size().into(),
@@ -147,14 +152,23 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
     pub fn frame(&self, introspector: &Introspector, frame: &Frame) -> Fingerprint {
         // let mut items = Vec::with_capacity(frame.items().len());
+        let src_reg = self.spans.start();
 
         let mut items = frame
             .par_items()
-            .flat_map(|(pos, item)| {
+            .enumerate()
+            .flat_map(|(idx, (pos, item))| {
                 let mut is_link = false;
                 let item = match item {
                     FrameItem::Group(group) => {
                         let mut inner = self.frame(introspector, &group.frame);
+
+                        self.spans.push_span(SourceRegion {
+                            region: src_reg,
+                            idx: idx as u32,
+                            kind: SourceNodeKind::GroupRef,
+                            item: inner,
+                        });
 
                         if let Some(p) = group.clip_path.as_ref() {
                             // todo: merge
@@ -206,9 +220,48 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
                         inner
                     }
-                    FrameItem::Text(text) => self.text(introspector, text),
-                    FrameItem::Shape(shape, s) => self.shape(introspector, shape, s),
-                    FrameItem::Image(image, size, s) => self.image(image, *size, s),
+                    FrameItem::Text(text) => {
+                        let i = self.text(introspector, text);
+
+                        self.spans.push_span(SourceRegion {
+                            region: src_reg,
+                            idx: idx as u32,
+                            kind: if text.glyphs.len() == 1 {
+                                SourceNodeKind::Char(text.glyphs[0].span.0, text.glyphs[0].span.1)
+                            } else {
+                                SourceNodeKind::Text(
+                                    text.glyphs.iter().map(|g| (g.span.0, g.span.1)).collect(),
+                                )
+                            },
+                            item: i,
+                        });
+
+                        i
+                    }
+                    FrameItem::Shape(shape, s) => {
+                        let i = self.shape(introspector, shape, s);
+
+                        self.spans.push_span(SourceRegion {
+                            region: src_reg,
+                            idx: idx as u32,
+                            kind: SourceNodeKind::Shape(*s),
+                            item: i,
+                        });
+
+                        i
+                    }
+                    FrameItem::Image(image, size, s) => {
+                        let i = self.image(image, *size, s);
+
+                        self.spans.push_span(SourceRegion {
+                            region: src_reg,
+                            idx: idx as u32,
+                            kind: SourceNodeKind::Image(*s),
+                            item: i,
+                        });
+
+                        i
+                    }
                     FrameItem::Meta(meta, size) => match meta {
                         Meta::Link(lnk) => {
                             is_link = true;
@@ -260,13 +313,22 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             std::cmp::Ordering::Equal
         });
 
-        self.store(VecItem::Group(
+        let g = self.store(VecItem::Group(
             GroupRef(items.into_iter().map(|(x, _, y)| (x, y)).collect()),
             match frame.kind() {
                 FrameKind::Hard => Some(frame.size().into()),
                 FrameKind::Soft => None,
             },
-        ))
+        ));
+
+        self.spans.push_span(SourceRegion {
+            region: src_reg,
+            idx: 0u32,
+            kind: SourceNodeKind::Group,
+            item: g,
+        });
+
+        g
     }
 
     fn store_cached<T: Hash>(&self, cond: &T, f: impl FnOnce() -> VecItem) -> Fingerprint {
@@ -369,15 +431,6 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
             let glyph_chars: String = text.text.to_string();
             // let mut extras = ExtraSvgItems::default();
-
-            let _span_id = text
-                .glyphs
-                .iter()
-                .filter(|g| g.span.0 != Span::detached())
-                .map(|g| &g.span.0)
-                .map(span_id_to_u64)
-                .max()
-                .unwrap_or_else(|| span_id_to_u64(&Span::detached()));
 
             let font = self.glyphs.build_font(&text.font);
             let fill = stateful_fill.unwrap_or_else(|| self.paint(introspector, &text.fill));
@@ -742,6 +795,12 @@ impl IncrTypst2VecPass {
         }
     }
 }
+
+// impl<'m, const ENABLE_REF_CNT: bool> ItemIndice<'m> for
+// ConvertImpl<ENABLE_REF_CNT> {     fn get_item(&self, value: &Fingerprint) ->
+// Option<&'m VecItem> {         self.items.get(value).map(|item| &item.1)
+//     }
+// }
 
 static LINE_HINT_ELEMENTS: once_cell::sync::Lazy<std::collections::HashSet<&'static str>> =
     once_cell::sync::Lazy::new(|| {
