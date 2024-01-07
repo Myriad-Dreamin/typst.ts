@@ -22,11 +22,12 @@ fn get_driver(
     exporter: GroupExporter<Document>,
 ) -> CompileExporter<CompileDriver> {
     let project_base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let w = project_base.join("fonts");
     let font_path = project_base.join("assets/fonts");
     let world = TypstSystemWorld::new(CompileOpts {
         root_dir: workspace_dir.to_owned(),
         no_system_fonts: true,
-        font_paths: vec![font_path],
+        font_paths: vec![w, font_path],
         ..CompileOpts::default()
     })
     .unwrap();
@@ -76,7 +77,7 @@ pub fn test_compiler(
         println!("Iteration {}", i);
 
         // content = content.replace("@netwok2020", "@netwok2020 x");
-        content += " x\n";
+        content += "\n\nx";
 
         let doc = driver
             .with_shadow_file_by_id(main_id, content.as_bytes().into(), |driver| {
@@ -100,7 +101,9 @@ pub fn test_compiler(
 }
 
 pub fn main() {
+    // #[cfg(feature = "ieee")]
     let workspace_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../");
+    // #[cfg(feature = "ieee")]
     let entry_file_path = workspace_dir.join("fuzzers/corpora/typst-templates/ieee/main.typ");
 
     #[cfg(feature = "pku-thesis")]
@@ -108,6 +111,11 @@ pub fn main() {
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../ts/pkuthss-typst/");
     #[cfg(feature = "pku-thesis")]
     let entry_file_path = workspace_dir.join(r#"thesis.typ"#);
+
+    // let workspace_dir =
+    //     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../typst/
+    // masterproef/"); let entry_file_path =
+    // workspace_dir.join(r#"masterproef/main.typ"#);
 
     for i in 0..10 {
         println!("Over Iteration {}", i);

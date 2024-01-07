@@ -156,16 +156,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "archery"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "487955f60962765486ce000015a3492ca45c34a2ebbf12bc0aa2b5110ca6e7d2"
-dependencies = [
- "static_assertions",
- "triomphe",
-]
-
-[[package]]
 name = "arrayref"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2063,6 +2053,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c168f8615b12bc01f9c17e2eb0cc07dcae1940121185446edc3744920e8ef45"
 dependencies = [
  "autocfg",
+ "owning_ref",
  "scopeguard",
 ]
 
@@ -2401,6 +2392,15 @@ name = "overload"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
+
+[[package]]
+name = "owning_ref"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ff55baddef9e4ad00f88b6c743a2a8062d4c6ade126c2a528644b8e444d52ce"
+dependencies = [
+ "stable_deref_trait",
+]
 
 [[package]]
 name = "palette"
@@ -2973,15 +2973,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3cd14fd5e3b777a7422cca79358c57a8f6e3a703d9ac187448d0daf220c2407f"
 
 [[package]]
-name = "rpds"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0e15515d3ce3313324d842629ea4905c25a13f81953eadb88f85516f59290a4"
-dependencies = [
- "archery",
-]
-
-[[package]]
 name = "rustc-demangle"
 version = "0.1.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3472,12 +3463,6 @@ dependencies = [
  "psm",
  "winapi",
 ]
-
-[[package]]
-name = "static_assertions"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "str-buf"
@@ -4026,12 +4011,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "triomphe"
-version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "859eb650cfee7434994602c3a68b25d77ad9e68c8a6cd491616ef86661382eb3"
-
-[[package]]
 name = "try-lock"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4237,6 +4216,7 @@ dependencies = [
  "comemo",
  "divan",
  "once_cell",
+ "rayon",
  "typst",
  "typst-ts-cli",
  "typst-ts-compiler",
@@ -4352,6 +4332,7 @@ version = "0.4.2-rc4"
 dependencies = [
  "base64",
  "base64-serde",
+ "bitvec",
  "byteorder",
  "comemo",
  "ecow",
@@ -4362,9 +4343,11 @@ dependencies = [
  "js-sys",
  "log",
  "once_cell",
+ "owning_ref",
+ "parking_lot",
  "path-clean",
+ "rayon",
  "rkyv",
- "rpds",
  "rustc-hash",
  "serde",
  "serde_json",
@@ -4612,6 +4595,7 @@ dependencies = [
  "comemo",
  "log",
  "once_cell",
+ "rayon",
  "siphasher 1.0.0",
  "tiny-skia",
  "typst",
