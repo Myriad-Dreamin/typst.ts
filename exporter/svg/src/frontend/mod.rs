@@ -20,9 +20,12 @@ use typst::{
 use typst_ts_core::{
     cow_mut::CowMut,
     hash::{item_hash128, Fingerprint, FingerprintBuilder},
-    vector::ir::{
-        self, Axes, FlatGlyphItem, GlyphRef, GradientItem, GradientKind, GradientStyle, Module,
-        Page, Scalar, Size, VecItem,
+    vector::{
+        ir::{
+            self, Axes, FlatGlyphItem, GlyphRef, GradientItem, GradientKind, GradientStyle, Module,
+            Page, Scalar, Size, VecItem,
+        },
+        utils::ToCssExt,
     },
 };
 
@@ -228,7 +231,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
                 svg.push(SvgText::Plain(format!(
                     r##"<stop offset="{}" stop-color="{}"/>"##,
                     RatioRepr(start_t.0),
-                    start_c.clone().to_hex(),
+                    start_c.typst().to_css(),
                 )));
 
                 // Generate (256 / len) stops between the two stops.
@@ -250,14 +253,14 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
                     svg.push(SvgText::Plain(format!(
                         r##"<stop offset="{}" stop-color="{}"/>"##,
                         RatioRepr(t),
-                        c.to_hex(),
+                        c.to_css(),
                     )));
                 }
 
                 svg.push(SvgText::Plain(format!(
                     r##"<stop offset="{}" stop-color="{}"/>"##,
                     RatioRepr(end_t.0),
-                    end_c.clone().to_hex(),
+                    end_c.typst().to_css(),
                 )));
             }
 
@@ -282,12 +285,12 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
 
             svg.push(SvgText::Plain(format!(
                 r##"<stop offset="0" stop-color="{}"/>"##,
-                gradient.c0.to_hex(),
+                gradient.c0.to_css(),
             )));
 
             svg.push(SvgText::Plain(format!(
                 r##"<stop offset="1" stop-color="{}"/>"##,
-                gradient.c1.to_hex(),
+                gradient.c1.to_css(),
             )));
 
             svg.push(SvgText::Plain("</linearGradient>".to_owned()));

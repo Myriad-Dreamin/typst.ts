@@ -1,7 +1,9 @@
 use super::preludes::*;
 
 /// Item representing an 8-bit color item.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+///
+/// It is less precise than [`Color32Item`], but it is more widely supported.
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct Rgba8Item {
@@ -12,23 +14,29 @@ pub struct Rgba8Item {
 }
 
 impl Rgba8Item {
-    // todo: to_css
-    pub fn to_hex(self) -> String {
-        let Self { r, g, b, a } = self;
-        if a != 255 {
-            format!("#{:02x}{:02x}{:02x}{:02x}", r, g, b, a)
-        } else {
-            format!("#{:02x}{:02x}{:02x}", r, g, b)
-        }
-    }
-
+    /// Convert to [`typst::visualize::Color`].
     pub fn typst(&self) -> typst::visualize::Color {
-        typst::visualize::Color::from_u8(self.r, self.g, self.b, self.a)
+        (*self).into()
+    }
+}
+
+impl From<Rgba8Item> for typst::visualize::Color {
+    fn from(v: Rgba8Item) -> Self {
+        typst::visualize::Color::from_u8(v.r, v.g, v.b, v.a)
     }
 }
 
 /// A 32-bit color in a specific color space.
 /// Note: some backends may not support 32-bit colors.
+///
+/// See <https://developer.chrome.com/docs/css-ui/high-definition-css-color-guide>
+///
+/// Detection:
+///
+/// ```js
+/// const hasHighDynamicRange = window.matchMedia('(dynamic-range: high)').matches;
+/// const hasP3Color = window.matchMedia('(color-gamut: p3)').matches;
+/// ```
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
