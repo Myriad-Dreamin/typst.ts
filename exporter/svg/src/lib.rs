@@ -142,8 +142,6 @@ pub fn render_svg(output: &Document) -> String {
     generate_text(transform::minify(svg_text))
 }
 
-pub use frontend::flat::export_module;
-
 use crate::backend::SvgText;
 
 impl<Feat: ExportFeature> Exporter<Document, String> for SvgExporter<Feat> {
@@ -169,6 +167,6 @@ pub struct SvgModuleExporter {}
 impl Exporter<Document, Vec<u8>> for SvgModuleExporter {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<Vec<u8>> {
         type UsingExporter = SvgExporter<DefaultExportFeature>;
-        export_module(UsingExporter::svg_doc(&output))
+        Ok(UsingExporter::svg_doc(&output).to_bytes())
     }
 }

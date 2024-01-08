@@ -67,7 +67,7 @@ pub enum VecItem {
     ContentHint(char),
 }
 
-/// Module with page references of a [`typst::model::Document`].
+/// Module with page references, corresponding to a [`typst::model::Document`].
 pub struct VecDocument {
     /// module containing all of the data related to this document.
     pub module: Module,
@@ -76,7 +76,32 @@ pub struct VecDocument {
     pub pages: Vec<Page>,
 }
 
-/// Module with multiple documents in a module [`typst::model::Document`].
+impl VecDocument {
+    pub fn to_multi(self) -> MultiVecDocument {
+        let Self { pages, module } = self;
+
+        MultiVecDocument {
+            module,
+            layouts: vec![LayoutRegion::ByScalar(LayoutRegionRepr {
+                kind: "width".into(),
+                layouts: vec![(
+                    Default::default(),
+                    LayoutRegionNode::Pages(Arc::new((Default::default(), pages))),
+                )],
+            })],
+        }
+    }
+}
+
+#[cfg(feature = "rkyv")]
+impl VecDocument {
+    pub fn to_bytes(self) -> Vec<u8> {
+        self.to_multi().to_bytes()
+    }
+}
+
+/// Module with multiple documents, corresponding to multiple
+/// [`typst::model::Document`] rearranged by [`LayoutRegion`].
 pub struct MultiVecDocument {
     /// module containing all of the data related to this document.
     pub module: Module,
@@ -96,7 +121,14 @@ impl Default for MultiVecDocument {
 }
 
 impl MultiVecDocument {
-    #[cfg(feature = "rkyv")]
+    pub fn merge_delta(&mut self, v: impl ModuleStream) {
+        self.layouts = v.layouts().take();
+        self.module.merge_delta(v);
+    }
+}
+
+#[cfg(feature = "rkyv")]
+impl MultiVecDocument {
     pub fn from_slice(v: &[u8]) -> Self {
         type DocStream<'a> = super::stream::BytesModuleStream<'a>;
 
@@ -114,11 +146,6 @@ impl MultiVecDocument {
         ]);
 
         flatten_module.to_bytes()
-    }
-
-    pub fn merge_delta(&mut self, v: impl ModuleStream) {
-        self.layouts = v.layouts().take();
-        self.module.merge_delta(v);
     }
 }
 
