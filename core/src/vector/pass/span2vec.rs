@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 
+use once_cell::sync::OnceCell;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use typst::syntax::Span;
 
 use crate::debug_loc::{FileLocation, FlatSourceLocation};
@@ -18,10 +20,12 @@ pub struct Node {
 
 type SrcVec = Vec<(usize, SourceNodeKind, Fingerprint)>;
 
+#[derive(Debug)]
 struct LazyVec {
     is_sorted: bool,
     val: SrcVec,
 }
+
 impl LazyVec {
     fn get(&mut self, idx: usize) -> Option<&(usize, SourceNodeKind, Fingerprint)> {
         if !self.is_sorted {
@@ -32,14 +36,90 @@ impl LazyVec {
     }
 }
 
+const SPAN_ROUTING: usize = 63;
+
+struct LazySpanCollector {
+    clear_state: bool,
+    val: [crossbeam_queue::SegQueue<SourceRegion>; SPAN_ROUTING + 1],
+}
+
+impl Default for LazySpanCollector {
+    fn default() -> Self {
+        Self {
+            clear_state: true,
+            val: std::array::from_fn(|_| crossbeam_queue::SegQueue::new()),
+        }
+    }
+}
+
+impl LazySpanCollector {
+    fn push(&self, region: SourceRegion) {
+        // lower bits of region.idx is the index of the queue
+        let idx = region.region & SPAN_ROUTING;
+        self.val[idx].push(region);
+    }
+
+    fn reset(&mut self) {
+        if self.clear_state {
+            return;
+        }
+        *self = Self::default();
+    }
+}
+
+struct LazySpanTree {
+    val: [HashMap<usize, LazyVec>; SPAN_ROUTING + 1],
+}
+impl LazySpanTree {
+    fn get_mut(&mut self, doc_region: &usize) -> Option<&mut LazyVec> {
+        let idx = doc_region & SPAN_ROUTING;
+        self.val[idx].get_mut(doc_region)
+    }
+}
+
+impl Default for LazySpanTree {
+    fn default() -> Self {
+        Self {
+            val: std::array::from_fn(|_| HashMap::new()),
+        }
+    }
+}
+
+impl From<LazySpanCollector> for LazySpanTree {
+    fn from(collector: LazySpanCollector) -> Self {
+        let val = collector
+            .val
+            .into_par_iter()
+            .map(|e| {
+                let mut res = HashMap::new();
+                for region in e.into_iter() {
+                    res.entry(region.region)
+                        .or_insert_with(|| LazyVec {
+                            is_sorted: false,
+                            val: Vec::new(),
+                        })
+                        .val
+                        .push((region.idx as usize, region.kind, region.item));
+                }
+                res
+            })
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap();
+
+        LazySpanTree { val }
+    }
+}
+
 #[derive(Default)]
 pub struct Span2VecPass {
     pub should_attach_debug_info: bool,
 
     region_cnt: AtomicUsize,
-    span_to_collect: crossbeam_queue::SegQueue<SourceRegion>,
-    spans: once_cell::sync::OnceCell<HashMap<usize, LazyVec>>,
     pub doc_region: AtomicUsize,
+
+    span_tree: OnceCell<LazySpanTree>,
+    collector: LazySpanCollector,
 }
 
 #[derive(Debug, Clone)]
@@ -62,6 +142,10 @@ pub struct SourceRegion {
 
 impl Span2VecPass {
     pub fn set_should_attach_debug_info(&mut self, should_attach_debug_info: bool) {
+        assert!(
+            (SPAN_ROUTING + 1).is_power_of_two(),
+            "SPAN_ROUTING + 1 must be power of 2"
+        );
         self.should_attach_debug_info = should_attach_debug_info;
     }
 
@@ -69,8 +153,8 @@ impl Span2VecPass {
         // self.region_cnt = 0;
         self.region_cnt
             .store(1, std::sync::atomic::Ordering::SeqCst);
-        self.span_to_collect = crossbeam_queue::SegQueue::new();
-        self.spans = once_cell::sync::OnceCell::new();
+        self.collector.reset();
+        self.span_tree = once_cell::sync::OnceCell::new();
         self.doc_region
             .store(0, std::sync::atomic::Ordering::SeqCst);
     }
@@ -81,24 +165,13 @@ impl Span2VecPass {
     }
 
     pub fn push_span(&self, region: SourceRegion) {
-        self.span_to_collect.push(region);
+        self.collector.push(region);
     }
 
     pub fn query(&mut self, path: &[(u32, u32, String)]) -> ZResult<Option<(Span, Span)>> {
-        self.spans.get_or_init(|| {
-            let mut res = HashMap::new();
-            let span_to_collect = std::mem::take(&mut self.span_to_collect);
-            for region in span_to_collect.into_iter() {
-                res.entry(region.region)
-                    .or_insert_with(|| LazyVec {
-                        is_sorted: false,
-                        val: Vec::new(),
-                    })
-                    .val
-                    .push((region.idx as usize, region.kind, region.item));
-            }
-
-            res
+        self.span_tree.get_or_init(|| {
+            log::info!("lazy spans are initializing");
+            std::mem::take(&mut self.collector).into()
         });
 
         let doc_region = self.doc_region.load(std::sync::atomic::Ordering::SeqCst);
@@ -108,7 +181,7 @@ impl Span2VecPass {
         }
 
         let span_info = self
-            .spans
+            .span_tree
             .get_mut()
             .ok_or_else(|| error_once!("span info not initialized"))?;
 
