@@ -254,7 +254,10 @@ pub trait RenderVm<'m>: Sized + FontIndice<'m> {
                 g.render_content_hint(self, *c);
                 g.into()
             }
-            ir::VecItem::Gradient(..) | ir::VecItem::Pattern(..) | ir::VecItem::None => {
+            ir::VecItem::Color32(..)
+            | ir::VecItem::Gradient(..)
+            | ir::VecItem::Pattern(..)
+            | ir::VecItem::None => {
                 panic!("FlatRenderVm.RenderFrame.UnknownItem {:?}", item)
             }
         }
@@ -380,7 +383,10 @@ where
                 group_ctx.render_content_hint(self, *c);
                 group_ctx
             }
-            ir::VecItem::Gradient(..) | ir::VecItem::Pattern(..) | ir::VecItem::None => {
+            ir::VecItem::Color32(..)
+            | ir::VecItem::Gradient(..)
+            | ir::VecItem::Pattern(..)
+            | ir::VecItem::None => {
                 panic!("FlatRenderVm.RenderFrame.UnknownItem {:?}", next_item)
             }
         }

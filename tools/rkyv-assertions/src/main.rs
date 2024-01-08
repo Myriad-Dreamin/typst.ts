@@ -53,6 +53,16 @@ fn main() {
         ArchivedTransformItem,
         ArchivedIncrGlyphPack,
         ArchivedPage,
+        ArchivedBuildInfo,
+        // color
+        ArchivedRgba8Item,
+        ArchivedColor32Item,
+        ArchivedColorSpace,
+        ArchivedGradientItem,
+        ArchivedGradientKind,
+        ArchivedGradientStyle,
+        // layout
+        ArchivedLayoutRegionNode,
         ArchivedLayoutRegion,
         ArchivedBuildInfo,
         ArchivedColorItem,

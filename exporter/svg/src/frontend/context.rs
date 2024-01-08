@@ -126,7 +126,7 @@ impl<'m, 't, Feat: ExportFeature> HasStatefulFill for RenderContext<'m, 't, Feat
 
         match item {
             Gradient(..) | Pattern(..) => return true,
-            Image(..) | Link(..) | ContentHint(..) | None => return false,
+            Color32(..) | Image(..) | Link(..) | ContentHint(..) | None => return false,
             _ => {}
         };
 
@@ -140,7 +140,8 @@ impl<'m, 't, Feat: ExportFeature> HasStatefulFill for RenderContext<'m, 't, Feat
 
         use VecItem::*;
         let res = match item {
-            Gradient(..) | Pattern(..) | Image(..) | Link(..) | ContentHint(..) | None => {
+            Gradient(..) | Color32(..) | Pattern(..) | Image(..) | Link(..) | ContentHint(..)
+            | None => {
                 panic!("Invalid item type for stateful fill: {:?}", fg)
             }
             Item(t) => self.has_stateful_fill(&t.1),

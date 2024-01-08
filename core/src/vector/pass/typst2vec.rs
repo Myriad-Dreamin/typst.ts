@@ -73,6 +73,7 @@ impl Typst2VecPass {
             | VecItem::Link(_)
             | VecItem::Image(_)
             | VecItem::Path(_)
+            | VecItem::Color32(_)
             | VecItem::Gradient(_)
             | VecItem::Pattern(_)
             | VecItem::ContentHint(_) => {
@@ -681,7 +682,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
         let mut stops = Vec::with_capacity(g.stops_ref().len());
         for (c, step) in g.stops_ref() {
             let [r, g, b, a] = c.to_vec4_u8();
-            stops.push((ColorItem { r, g, b, a }, (*step).into()))
+            stops.push((Rgba8Item { r, g, b, a }, (*step).into()))
         }
 
         let relative_to_self = match g.relative() {

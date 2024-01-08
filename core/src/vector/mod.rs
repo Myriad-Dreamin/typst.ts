@@ -73,8 +73,10 @@ fn rkyv_assertions() {
     const _: () = assert!(core::mem::align_of::<ArchivedPage>() == 8);
     const _: () = assert!(core::mem::size_of::<ArchivedBuildInfo>() == 16);
     const _: () = assert!(core::mem::align_of::<ArchivedBuildInfo>() == 4);
-    const _: () = assert!(core::mem::size_of::<ArchivedColorItem>() == 4);
-    const _: () = assert!(core::mem::align_of::<ArchivedColorItem>() == 1);
+    const _: () = assert!(core::mem::size_of::<ArchivedRgba8Item>() == 4);
+    const _: () = assert!(core::mem::align_of::<ArchivedRgba8Item>() == 1);
+    const _: () = assert!(core::mem::size_of::<ArchivedColor32Item>() == 20);
+    const _: () = assert!(core::mem::align_of::<ArchivedColor32Item>() == 4);
     const _: () = assert!(core::mem::size_of::<ArchivedColorSpace>() == 1);
     const _: () = assert!(core::mem::align_of::<ArchivedColorSpace>() == 1);
     const _: () = assert!(core::mem::size_of::<ArchivedGradientItem>() == 28);

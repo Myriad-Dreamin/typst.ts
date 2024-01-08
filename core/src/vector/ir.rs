@@ -62,6 +62,7 @@ pub enum VecItem {
     Text(TextItem),
     Item(TransformedRef),
     Group(GroupRef, Option<Size>),
+    Color32(Color32Item),
     Gradient(Arc<GradientItem>),
     Pattern(Arc<PatternItem>),
     ContentHint(char),
