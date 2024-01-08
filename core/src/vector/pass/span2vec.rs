@@ -122,28 +122,35 @@ impl Span2VecPass {
             .get_mut(&doc_region)
             .ok_or_else(|| error_once!("not found"))?;
 
+        log::info!("pass check remote path({path:?})");
+
         let mut candidate = None;
         for (remote_kind, idx, fg) in path {
             let ch = d
                 .get(*idx as usize)
                 .ok_or_else(|| error_once!("not found"))?;
-            if !fg.as_str().contains(&ch.2.as_svg_id("")) {
-                return Err(error_once!("fg not match"));
+            if !fg.is_empty() && !fg.as_str().contains(&ch.2.as_svg_id("")) {
+                return Err(error_once!("fg not match", fg: fg, ch: ch.2.as_svg_id("")));
             }
+
+            log::info!("pass check remote({remote_kind}, {idx}) => {:?}", ch.1);
 
             match (*remote_kind, ch.1.clone()) {
                 (SOURCE_MAPPING_TYPE_PAGE, SourceNodeKind::Page { region }) => {
-                    d = span_info
-                        .get_mut(&region)
-                        .ok_or_else(|| error_once!("region not found"))?;
+                    d = span_info.get_mut(&region).ok_or_else(
+                        || error_once!("region not found", at: remote_kind, at_idx: idx),
+                    )?;
                 }
                 (SOURCE_MAPPING_TYPE_GROUP, SourceNodeKind::Group { region }) => {
-                    d = span_info
-                        .get_mut(&region)
-                        .ok_or_else(|| error_once!("region not found"))?;
+                    d = span_info.get_mut(&region).ok_or_else(
+                        || error_once!("region not found", at: remote_kind, at_idx: idx),
+                    )?;
                 }
                 (SOURCE_MAPPING_TYPE_TEXT, SourceNodeKind::Text(chars)) => {
-                    candidate = Some((chars[0].0, chars[chars.len() - 1].0));
+                    let is_attached = |x: &&(Span, u16)| x.0 != Span::detached();
+                    let st = chars.iter().find(is_attached).unwrap().0;
+                    let ed = chars.iter().rev().find(is_attached).unwrap().0;
+                    candidate = Some((st, ed));
                 }
                 (SOURCE_MAPPING_TYPE_IMAGE, SourceNodeKind::Image(s)) => {
                     candidate = Some((s, s));
