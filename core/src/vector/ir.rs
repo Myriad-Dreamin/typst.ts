@@ -49,9 +49,6 @@ use crate::{hash::Fingerprint, TakeAs};
 
 pub use crate::ImmutStr;
 
-use super::pass::IncrGlyph2VecPass;
-use super::Glyph2VecPass;
-
 /// A vector item that is specialized for representing
 /// [`typst::model::Document`] or its subtypes.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -108,96 +105,29 @@ impl MultiVecDocument {
         res
     }
 
+    pub fn to_bytes(self) -> Vec<u8> {
+        let flatten_module = FlatModule::new(vec![
+            ModuleMetadata::Item(ItemPack(self.module.items.into_iter().collect())),
+            ModuleMetadata::Font(Arc::new(self.module.fonts.into())),
+            ModuleMetadata::Glyph(Arc::new(self.module.glyphs.into())),
+            ModuleMetadata::Layout(Arc::new(self.layouts)),
+        ]);
+
+        flatten_module.to_bytes()
+    }
+
     pub fn merge_delta(&mut self, v: impl ModuleStream) {
         self.layouts = v.layouts().take();
         self.module.merge_delta(v);
     }
 }
 
-/// Describing reference to a page
-#[derive(Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct Page {
-    /// Unique hash to content
-    pub content: Fingerprint,
-    /// Page size for cropping content
-    pub size: Size,
-}
-
-impl fmt::Debug for Page {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Page({}, {:.3}x{:.3})",
-            self.content.as_svg_id(""),
-            self.size.x.0,
-            self.size.y.0
-        )
-    }
-}
-
-/// Flatten transform item.
-/// Item representing an `<g/>` element applied with a [`TransformItem`].
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct TransformedRef(pub TransformItem, pub Fingerprint);
-
-/// Flatten group item.
-/// Absolute positioning items at their corresponding points.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct GroupRef(pub Arc<[(Point, Fingerprint)]>);
-
-/// Global style namespace.
-#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
-#[repr(u32)]
-pub enum StyleNs {
-    /// style that contains a single css rule: `fill: #color`.
-    Fill,
-    /// style that contains a single css rule: `stroke: #color`.
-    Stroke,
-}
-
-/// A finished pack that stores all the font items.
-pub type FontPack = Vec<FontItem>;
-
-/// A finished pack that stores all the glyph items.
-pub type GlyphPack = Vec<(DefId, FlatGlyphItem)>;
-
-pub type GlyphPackBuilder = Glyph2VecPass;
-pub type IncrGlyphPackBuilder = IncrGlyph2VecPass;
-
 pub trait FontIndice<'m> {
     fn get_font(&self, value: &FontRef) -> Option<&'m FontItem>;
 }
+
 pub trait ItemIndice<'m> {
     fn get_item(&self, value: &Fingerprint) -> Option<&'m VecItem>;
-}
-
-/// Source mapping
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub enum SourceMappingNode {
-    Group(Arc<[u64]>),
-    Text(SpanId),
-    Image(SpanId),
-    Shape(SpanId),
-    Page(u64),
-}
-
-pub fn serialize_doc(doc: MultiVecDocument) -> Vec<u8> {
-    let flatten_module = FlatModule::new(vec![
-        ModuleMetadata::Item(ItemPack(doc.module.items.into_iter().collect())),
-        ModuleMetadata::Font(Arc::new(doc.module.fonts.into())),
-        ModuleMetadata::Glyph(Arc::new(doc.module.glyphs.into())),
-        ModuleMetadata::Layout(Arc::new(doc.layouts)),
-    ]);
-
-    flatten_module.to_bytes()
 }
 
 #[cfg(test)]

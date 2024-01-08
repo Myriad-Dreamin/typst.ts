@@ -5,7 +5,7 @@ use typst_ts_core::{
     vector::{
         ir::{
             self, FlatGlyphItem, FontIndice, FontRef, GroupRef, ImmutStr, Module, PathItem,
-            PathStyle, Scalar, StyleNs, TextItem, VecItem,
+            PathStyle, Scalar, TextItem, VecItem,
         },
         vm::{GroupContext, IncrRenderVm, RenderState, RenderVm},
     },
@@ -17,6 +17,17 @@ use crate::{
 };
 
 use super::HasStatefulFill;
+
+// unused
+/// Global style namespace.
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+// #[repr(u32)]
+pub enum StyleNs {
+    // style that contains a single css rule: `fill: #color`.
+    // Fill,
+    // style that contains a single css rule: `stroke: #color`.
+    // Stroke,
+}
 
 /// Maps the style name to the style definition.
 /// See [`StyleNs`].

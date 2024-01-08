@@ -630,8 +630,6 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
         let cond = ImageKey { image, size };
 
-        // SvgItem::Image((image(image, *size), span_id_to_u64(span_id)))
-
         self.store_cached(&cond, || {
             VecItem::Image(ImageItem {
                 image: Arc::new(image.clone().into()),

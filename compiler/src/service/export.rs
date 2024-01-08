@@ -321,9 +321,7 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
             syntax::{PackageSpec, Span, VirtualPath},
         };
         use typst_ts_core::TypstFileId;
-        use typst_ts_svg_exporter::{
-            ir::serialize_doc, DynamicLayoutSvgExporter, MultiVecDocument,
-        };
+        use typst_ts_svg_exporter::{DynamicLayoutSvgExporter, MultiVecDocument};
 
         let variable_file = TypstFileId::new(
             Some(PackageSpec::from_str("@preview/typst-ts-variables:0.1.0").at(Span::detached())?),
@@ -388,7 +386,7 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
         // finalize
         let module = svg_exporter.typst2vec.finalize();
         let doc = MultiVecDocument { module, layouts };
-        std::fs::write(self.module_dest_path(), serialize_doc(doc)).unwrap();
+        std::fs::write(self.module_dest_path(), doc.to_bytes()).unwrap();
 
         let instant = instant::Instant::now();
         log::trace!("multiple layouts finished at {:?}", instant - instant_begin);
