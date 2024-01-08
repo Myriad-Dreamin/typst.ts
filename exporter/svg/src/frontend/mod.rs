@@ -610,7 +610,7 @@ fn sample_color_stops(gradient: &GradientItem, t: f32) -> Color {
     let mut low = 0;
     let mut high = gradient.stops.len();
 
-    let mixing_space = gradient.space.into();
+    let mixing_space = gradient.space.try_into().unwrap();
     let stops = &gradient.stops;
 
     while low < high {

@@ -45,7 +45,8 @@ fn main() {
         ArchivedPage,
         ArchivedBuildInfo,
         // color
-        ArchivedColorItem,
+        ArchivedRgba8Item,
+        ArchivedColor32Item,
         ArchivedColorSpace,
         ArchivedGradientItem,
         ArchivedGradientKind,
