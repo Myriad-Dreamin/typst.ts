@@ -39,14 +39,12 @@ impl LazyVec {
 const SPAN_ROUTING: usize = 63;
 
 struct LazySpanCollector {
-    clear_state: bool,
     val: [crossbeam_queue::SegQueue<SourceRegion>; SPAN_ROUTING + 1],
 }
 
 impl Default for LazySpanCollector {
     fn default() -> Self {
         Self {
-            clear_state: true,
             val: std::array::from_fn(|_| crossbeam_queue::SegQueue::new()),
         }
     }
@@ -60,9 +58,6 @@ impl LazySpanCollector {
     }
 
     fn reset(&mut self) {
-        if self.clear_state {
-            return;
-        }
         *self = Self::default();
     }
 }
