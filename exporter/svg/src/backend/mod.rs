@@ -266,7 +266,7 @@ impl SvgTextBuilder {
         )
     }
 
-    pub fn render_glyph_ref_slow(
+    pub fn render_glyph_slow(
         &mut self,
         pos: Scalar,
         font: &FontItem,
@@ -534,7 +534,7 @@ impl<
                 .push(("data-span", format!("{:x}", span_id)));
         }
     }
-    fn render_item_ref_at(
+    fn render_item_at(
         &mut self,
         state: RenderState,
         ctx: &mut C,
@@ -543,7 +543,7 @@ impl<
     ) {
         let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
 
-        let sub_content = ctx.render_flat_item(state, item);
+        let sub_content = ctx.render_item(state, item);
 
         self.content.push(SvgText::Content(Arc::new(SvgTextNode {
             attributes: vec![
@@ -554,7 +554,7 @@ impl<
         })));
     }
 
-    fn render_glyph_ref(&mut self, _ctx: &mut C, pos: Scalar, font: &FontItem, glyph: u32) {
+    fn render_glyph(&mut self, _ctx: &mut C, pos: Scalar, font: &FontItem, glyph: u32) {
         let adjusted_offset = (pos.0 * 2.).round() / 2.;
 
         // A stable glyph id can help incremental font transfer (IFT).
@@ -572,7 +572,7 @@ impl<
         )));
     }
 
-    fn render_flat_text_semantics(&mut self, ctx: &mut C, text: &ir::TextItem, width: Scalar) {
+    fn render_text_semantics(&mut self, ctx: &mut C, text: &ir::TextItem, width: Scalar) {
         if !ctx.should_render_text_element() {
             return;
         }
@@ -620,7 +620,7 @@ impl<
         C: IncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBuilder> + HasStatefulFill,
     > IncrGroupContext<C> for SvgTextBuilder
 {
-    fn render_diff_item_ref_at(
+    fn render_diff_item_at(
         &mut self,
         state: RenderState,
         ctx: &mut C,

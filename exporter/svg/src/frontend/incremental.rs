@@ -119,7 +119,7 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
             } else {
                 // todo: find a bbox
                 // println!("rebuild page: {} {:?}", idx, entry);
-                render_task.render_flat_item(state, entry)
+                render_task.render_item(state, entry)
             };
 
             svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
