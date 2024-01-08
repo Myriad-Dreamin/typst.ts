@@ -41,7 +41,7 @@ pub struct ImageGlyphItem {
     pub ligature_len: u8,
 }
 
-/// A outline glyph item.
+/// An outline glyph item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
@@ -67,6 +67,7 @@ pub struct OutlineGlyphItem {
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct FontItem {
     /// The hash of the font to avoid global collision.
+    // todo: detect collision
     pub fingerprint: Fingerprint,
 
     pub family: ImmutStr,

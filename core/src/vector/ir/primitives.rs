@@ -110,9 +110,6 @@ impl GlyphRef {
     #[comemo::memoize]
     pub fn as_svg_id(&self, prefix: &'static str) -> String {
         let t = ((self.font_hash as u64) | ((self.glyph_idx as u64) << 32)).to_le_bytes();
-        let t = &t.as_slice()[..6];
-
-        let fingerprint_lo = base64::engine::general_purpose::STANDARD_NO_PAD.encode(t);
-        return [prefix, &fingerprint_lo].join("");
+        as_svg_id(&t.as_slice()[..6], prefix)
     }
 }
