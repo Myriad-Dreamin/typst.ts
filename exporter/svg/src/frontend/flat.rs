@@ -1,14 +1,11 @@
 use std::sync::Arc;
 
-use typst::{diag::SourceResult, model::Document};
+use typst::model::Document;
 use typst_ts_core::vector::pass::Typst2VecPass;
 use typst_ts_core::{
     hash::Fingerprint,
     vector::{
-        ir::{
-            FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, LayoutRegionRepr, Module,
-            ModuleMetadata, Page, Size, VecDocument, VecItem,
-        },
+        ir::{Module, Page, Size, VecDocument, VecItem},
         vm::{RenderState, RenderVm},
     },
 };
@@ -82,24 +79,4 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
     ) -> String {
         generate_text(Self::render(module, pages, parts))
     }
-}
-
-pub fn export_module(output: VecDocument) -> SourceResult<Vec<u8>> {
-    let VecDocument { pages, module } = output;
-
-    let module_data = FlatModule::new(vec![
-        ModuleMetadata::Item(ItemPack(module.items.into_iter().collect())),
-        ModuleMetadata::Font(Arc::new(module.fonts.into())),
-        ModuleMetadata::Glyph(Arc::new(module.glyphs.into())),
-        ModuleMetadata::Layout(Arc::new(vec![LayoutRegion::ByScalar(LayoutRegionRepr {
-            kind: "width".into(),
-            layouts: vec![(
-                Default::default(),
-                LayoutRegionNode::Pages(Arc::new((Default::default(), pages))),
-            )],
-        })])),
-    ])
-    .to_bytes();
-
-    Ok(module_data)
 }
