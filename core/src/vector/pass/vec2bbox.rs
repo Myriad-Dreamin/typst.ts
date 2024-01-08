@@ -141,7 +141,7 @@ impl From<BBoxBuilder> for BBox {
 
 /// Internal methods for [`BBoxBuilder`].
 impl BBoxBuilder {
-    pub fn render_glyph_ref_inner(&mut self, pos: Scalar, _id: &GlyphRef, glyph: &ir::GlyphItem) {
+    pub fn render_glyph_inner(&mut self, pos: Scalar, _id: &GlyphRef, glyph: &ir::GlyphItem) {
         let pos = ir::Point::new(pos, Scalar(0.));
         match glyph {
             ir::GlyphItem::Outline(outline) => {
@@ -208,7 +208,7 @@ impl<C> TransformContext<C> for BBoxBuilder {
 impl<C: RenderVm<Resultant = BBox>> GroupContext<C> for BBoxBuilder {
     fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &ir::GlyphItem) {
         let glyph_ref = ctx.build_glyph(glyph);
-        self.render_glyph_ref_inner(pos, &glyph_ref, glyph)
+        self.render_glyph_inner(pos, &glyph_ref, glyph)
     }
 
     fn render_path(
@@ -240,20 +240,20 @@ impl<C: RenderVm<Resultant = BBox>> GroupContext<C> for BBoxBuilder {
 impl<'m, C: FlatRenderVm<'m, Resultant = BBox> + GlyphIndice<'m>> FlatGroupContext<C>
     for BBoxBuilder
 {
-    fn render_item_ref_at(
+    fn render_item_at(
         &mut self,
         state: RenderState,
         ctx: &mut C,
         pos: ir::Point,
         item: &Fingerprint,
     ) {
-        let bbox = ctx.render_flat_item(state, item);
+        let bbox = ctx.render_item(state, item);
         self.inner.push((pos, bbox));
     }
 
-    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, glyph: &GlyphRef) {
+    fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &GlyphRef) {
         if let Some(glyph_data) = ctx.get_glyph(glyph) {
-            self.render_glyph_ref_inner(pos, glyph, glyph_data)
+            self.render_glyph_inner(pos, glyph, glyph_data)
         }
     }
 }
@@ -262,7 +262,7 @@ impl<'m, C: FlatRenderVm<'m, Resultant = BBox> + GlyphIndice<'m>> FlatGroupConte
 impl<'m, C: FlatIncrRenderVm<'m, Resultant = BBox, Group = BBoxBuilder> + BBoxIndice>
     FlatIncrGroupContext<C> for BBoxBuilder
 {
-    fn render_diff_item_ref_at(
+    fn render_diff_item_at(
         &mut self,
         state: RenderState,
         ctx: &mut C,
@@ -307,7 +307,7 @@ impl<'m, 't> FlatRenderVm<'m> for BBoxTask<'m, 't> {
         self.module.get_item(value)
     }
 
-    fn start_flat_group(&mut self, _v: &Fingerprint) -> Self::Group {
+    fn start_group(&mut self, _v: &Fingerprint) -> Self::Group {
         Self::Group {
             ts: sk::Transform::identity(),
             clipper: None,
@@ -315,12 +315,12 @@ impl<'m, 't> FlatRenderVm<'m> for BBoxTask<'m, 't> {
         }
     }
 
-    fn render_flat_item(&mut self, state: RenderState, abs_ref: &Fingerprint) -> Self::Resultant {
+    fn render_item(&mut self, state: RenderState, abs_ref: &Fingerprint) -> Self::Resultant {
         if let Some(bbox) = self.bbox_cache.get(abs_ref) {
             return bbox.clone();
         }
 
-        let bbox = self._render_flat_item(state, abs_ref);
+        let bbox = self._render_item(state, abs_ref);
         self.bbox_cache.insert(*abs_ref, bbox.clone());
         bbox
     }

@@ -472,17 +472,17 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode>> GroupContext<C> for CanvasStac
         ))
     }
 
-    fn render_item_ref_at(
+    fn render_item_at(
         &mut self,
         state: RenderState,
         ctx: &mut C,
         pos: crate::ir::Point,
         item: &Fingerprint,
     ) {
-        self.inner.push((pos, ctx.render_flat_item(state, item)));
+        self.inner.push((pos, ctx.render_item(state, item)));
     }
 
-    fn render_glyph_ref(&mut self, _ctx: &mut C, pos: Scalar, font: &FontItem, glyph: u32) {
+    fn render_glyph(&mut self, _ctx: &mut C, pos: Scalar, font: &FontItem, glyph: u32) {
         if let Some(glyph_data) = font.get_glyph(glyph) {
             self.inner.push((
                 ir::Point::new(pos, Scalar(0.)),
@@ -510,7 +510,7 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, 't, Feat
         self.module.get_item(value)
     }
 
-    fn start_flat_group(&mut self, _v: &Fingerprint) -> Self::Group {
+    fn start_group(&mut self, _v: &Fingerprint) -> Self::Group {
         Self::Group {
             ts: sk::Transform::identity(),
             clipper: None,
@@ -519,13 +519,13 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, 't, Feat
         }
     }
 
-    fn start_flat_text(
+    fn start_text(
         &mut self,
         _state: RenderState,
         value: &Fingerprint,
         text: &ir::TextItem,
     ) -> Self::Group {
-        let mut g = self.start_flat_group(value);
+        let mut g = self.start_group(value);
         g.with_text_shape(&text.shape);
         g
     }
@@ -612,7 +612,7 @@ impl IncrementalCanvasExporter {
                 let state = RenderState::new_size(*size);
                 CanvasPage {
                     content: *content,
-                    elem: ct.render_flat_item(state, content),
+                    elem: ct.render_item(state, content),
                     size: *size,
                 }
             })

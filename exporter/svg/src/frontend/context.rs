@@ -222,7 +222,7 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, 't, Feat> {
         self.module.get_item(value)
     }
 
-    fn start_flat_group(&mut self, v: &Fingerprint) -> Self::Group {
+    fn start_group(&mut self, v: &Fingerprint) -> Self::Group {
         Self::Group {
             attributes: vec![("data-tid", v.as_svg_id("g"))],
             text_fill: None,
@@ -231,19 +231,19 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, 't, Feat> {
         }
     }
 
-    fn start_flat_frame(&mut self, value: &Fingerprint, _group: &GroupRef) -> Self::Group {
-        let mut g = self.start_flat_group(value);
+    fn start_frame(&mut self, value: &Fingerprint, _group: &GroupRef) -> Self::Group {
+        let mut g = self.start_group(value);
         g.attributes.push(("class", "typst-group".to_owned()));
         g
     }
 
-    fn start_flat_text(
+    fn start_text(
         &mut self,
         state: RenderState,
         value: &Fingerprint,
         text: &TextItem,
     ) -> Self::Group {
-        let mut g = self.start_flat_group(value);
+        let mut g = self.start_group(value);
 
         let font = self.get_font(&text.shape.font).unwrap();
         let upem = font.unit_per_em;
@@ -253,7 +253,7 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, 't, Feat> {
     }
 
     /// Render a text into the underlying context.
-    fn render_flat_text(
+    fn render_text(
         &mut self,
         _state: RenderState,
         group_ctx: Self::Group,
@@ -263,7 +263,7 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, 't, Feat> {
         if self.should_rasterize_text() {
             self.rasterize_and_put_text(group_ctx, abs_ref, text)
         } else {
-            self.render_flat_text_inplace(group_ctx, text)
+            self.render_text_inplace(group_ctx, text)
         }
     }
 }
@@ -344,7 +344,7 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
 
 impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
     /// Render a text into the underlying context.
-    fn render_flat_text_inplace(
+    fn render_text_inplace(
         &mut self,
         mut group_ctx: SvgTextBuilder,
         text: &TextItem,
@@ -362,7 +362,7 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
                 let fill = fill.clone();
                 let stroke = stroke.clone();
                 for (x, g) in text.render_glyphs(upem, &mut width) {
-                    group_ctx.render_glyph_ref_slow(x, font, g, fill.clone(), stroke.clone());
+                    group_ctx.render_glyph_slow(x, font, g, fill.clone(), stroke.clone());
                 }
 
                 width
@@ -370,7 +370,7 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
             (None, None) => {
                 let mut width = 0f32;
                 for (x, g) in text.render_glyphs(upem, &mut width) {
-                    group_ctx.render_glyph_ref(self, x, font, g);
+                    group_ctx.render_glyph(self, x, font, g);
                 }
 
                 width
@@ -392,7 +392,7 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
 
                 let mut width = 0f32;
                 for (x, g) in text.render_glyphs(upem, &mut width) {
-                    group_ctx.render_glyph_ref(self, x, font, g);
+                    group_ctx.render_glyph(self, x, font, g);
                     group_ctx.content.push(SvgText::Plain("<path/>".into()));
                 }
 
@@ -417,7 +417,7 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
                     ) {
                         continue;
                     }
-                    group_ctx.render_glyph_ref(self, x, font, g);
+                    group_ctx.render_glyph(self, x, font, g);
                 }
 
                 width

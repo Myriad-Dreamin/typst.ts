@@ -34,7 +34,7 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
                     ("data-page-width", size.x.to_string()),
                     ("data-page-height", size.y.to_string()),
                 ],
-                content: vec![SvgText::Content(render_task.render_flat_item(state, entry))],
+                content: vec![SvgText::Content(render_task.render_item(state, entry))],
             })));
             acc_height += size.y;
         }
@@ -48,9 +48,7 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
             Some(VecItem::Pattern(g)) => {
                 let size = g.size + g.spacing;
                 let state = RenderState::new_size(size);
-                let content = t
-                    .get_render_context(module)
-                    .render_flat_item(state, &g.frame);
+                let content = t.get_render_context(module).render_item(state, &g.frame);
                 Some((*id, size, content))
             }
             _ => {

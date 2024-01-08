@@ -67,7 +67,7 @@ trait TranslateCtx {
 
 /// See [`FlatGroupContext`].
 impl<'m, C: TranslateCtx + RenderVm<'m, Resultant = ()>> GroupContext<C> for TextContentBuilder {
-    fn render_item_ref_at(
+    fn render_item_at(
         &mut self,
         state: RenderState,
         ctx: &mut C,
@@ -75,7 +75,7 @@ impl<'m, C: TranslateCtx + RenderVm<'m, Resultant = ()>> GroupContext<C> for Tex
         item: &Fingerprint,
     ) {
         ctx.translate(pos.x, pos.y);
-        ctx.render_flat_item(state, item);
+        ctx.render_item(state, item);
         ctx.translate(-pos.x, -pos.y);
     }
 }
@@ -337,7 +337,7 @@ impl<'m, 't> RenderVm<'m> for TextContentTask<'m, 't> {
         self.module.get_item(value)
     }
 
-    fn start_flat_group(&mut self, _v: &Fingerprint) -> Self::Group {
+    fn start_group(&mut self, _v: &Fingerprint) -> Self::Group {
         Self::Group { ts: self.ts }
     }
 }
