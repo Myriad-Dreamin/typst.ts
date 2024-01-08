@@ -37,6 +37,7 @@ pub struct TGlyph2VecPass<const ENABLE_REF_CNT: bool = false> {
 
     /// Intermediate representation of an incompleted font pack.
     font_mapping: crate::adt::CHashMap<Font, FontRef>,
+    font_conflict_checker: crate::adt::CHashMap<u32, Font>,
     font_write_lock: Mutex<()>,
 
     /// Intermediate representation of an incompleted glyph pack.
@@ -54,6 +55,7 @@ impl<const ENABLE_REF_CNT: bool> TGlyph2VecPass<ENABLE_REF_CNT> {
 
             lifetime: 0,
             font_mapping: Default::default(),
+            font_conflict_checker: Default::default(),
             font_write_lock: Default::default(),
             glyph_defs: Default::default(),
             new_fonts: Default::default(),
@@ -104,14 +106,36 @@ impl<const ENABLE_REF_CNT: bool> TGlyph2VecPass<ENABLE_REF_CNT> {
                 return e;
             }
 
-            let abs_ref = FontRef {
+            let mut abs_ref = FontRef {
                 hash: fxhash::hash32(font),
                 idx: self.font_mapping.len() as u32,
             };
+
+            // Detect font short hash conflict
+            'conflict_detection: loop {
+                if let Some(conflict) = self.font_conflict_checker.get(&abs_ref.hash) {
+                    if *conflict != *font {
+                        log::error!(
+                            "font conflict detected: {} {:?} {:?}",
+                            abs_ref.hash,
+                            font,
+                            conflict
+                        );
+                    }
+                    abs_ref.hash += 1;
+                    continue 'conflict_detection;
+                }
+
+                self.font_conflict_checker
+                    .insert(abs_ref.hash, font.clone());
+                break 'conflict_detection;
+            }
+
             *new_abs_ref.borrow_mut() = abs_ref;
             if ENABLE_REF_CNT {
                 self.new_fonts.lock().push(font.clone().into());
             }
+
             Some(abs_ref)
         });
 
