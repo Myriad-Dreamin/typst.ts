@@ -17,6 +17,23 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     />
+    <style>
+      #typst-app {
+        display: flex;
+
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .typst-dom-page {
+        width: var(--data-page-width, 100%);
+        height: var(--data-page-height);
+      }
+      /* 
+      body {
+        background: white;
+      } */
+    </style>
     <script src="/core/examples/typst.js"></script>
     <script>
       pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -32,18 +49,92 @@
           .then(async () => {
             const artifactData = await fetch(
               'http://localhost:20810/corpus/skyzh-cv/main.white.artifact.sir.in',
+              // 'http://localhost:20810/corpus/math/masterproef.artifact.sir.in',
             )
               .then(response => response.arrayBuffer())
               .then(buffer => new Uint8Array(buffer));
 
             const appContainer = document.getElementById('typst-app');
 
-            await plugin.render({
-              artifactContent: artifactData,
-              container: appContainer,
-              backgroundColor: '#343541', // '#ffffff', //
-              pixelPerPt: 4.5,
-            });
+            plugin.runWithSession(
+              ses =>
+                new Promise(async dispose => {
+                  plugin.manipulateData({ renderSession: ses, data: artifactData });
+
+                  const isWaitForRendering = () => {
+                    return appContainer.hasAttribute('data-wait-render');
+                  };
+
+                  const t = performance.now();
+                  await plugin.renderDom({
+                    renderSession: ses,
+                    container: appContainer,
+                    backgroundColor: '#343541', // '#ffffff', //
+                    pixelPerPt: 4.5,
+                  });
+                  console.log('render time!!!!!!!!!', performance.now() - t);
+
+                  const pullRender = () => {
+                    const basePos = {
+                      left: 0,
+                      top: 0,
+                      right: window.innerWidth,
+                      bottom: window.innerHeight,
+                    };
+                    const appPos = appContainer.getBoundingClientRect();
+                    const left = Math.max(basePos.left, appPos.left);
+                    const top = Math.max(basePos.top, appPos.top);
+                    const right = Math.min(basePos.right, appPos.right);
+                    const bottom = Math.min(basePos.bottom, appPos.bottom);
+                    const rect = {
+                      x: left,
+                      y: top,
+                      width: Math.max(right - left, 0),
+                      height: Math.max(bottom - top, 0),
+                    };
+                    if (rect.width <= 0 || rect.height <= 0) {
+                      rect.x = rect.y = rect.width = rect.height = 0;
+                    }
+                    console.log('ccc', basePos, appPos, rect);
+
+                    plugin.triggerDomRerender({
+                      renderSession: ses,
+                      ...rect,
+                    });
+                  };
+
+                  // if (isWaitForRendering()) {
+                  //   pullRender();
+                  //   let i = null;
+                  //   i = setInterval(() => {
+                  //     if (!isWaitForRendering()) {
+                  //       console.log('clear interval for pull render');
+                  //       clearInterval(i);
+                  //       return;
+                  //     }
+                  //     pullRender();
+                  //   }, 200);
+                  // } else {
+                  //   console.log('not wait for rendering');
+                  // }
+
+                  pullRender();
+                  const debouncedPullRender = () => {
+                    if (debounce) {
+                      clearTimeout(debounce);
+                    }
+                    debounce = setTimeout(pullRender, 50);
+                  };
+
+                  let debounce = null;
+                  window.onscroll = debouncedPullRender;
+                  window.onresize = debouncedPullRender;
+                  appContainer.addEventListener('scroll', debouncedPullRender);
+                  appContainer.addEventListener('resize', debouncedPullRender);
+
+                  void dispose;
+                }),
+            );
 
             console.log('render done');
           });

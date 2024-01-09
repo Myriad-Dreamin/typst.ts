@@ -247,7 +247,7 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, 't, Feat> {
         let mut g = self.start_group(value);
 
         let font = self.get_font(&text.shape.font).unwrap();
-        let upem = font.unit_per_em;
+        let upem = font.units_per_em;
 
         g.with_text_shape(self, upem, &text.shape, &state.at(value), state);
         g
@@ -353,7 +353,7 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
         let font = self.get_font(&text.shape.font).unwrap();
 
         // upem is the unit per em defined in the font.
-        let upem = font.unit_per_em;
+        let upem = font.units_per_em;
 
         group_ctx = text.shape.add_transform(self, group_ctx, upem);
 

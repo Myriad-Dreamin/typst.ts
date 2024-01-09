@@ -722,22 +722,30 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-epoch"
-version = "0.9.15"
+version = "0.9.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae211234986c545741a7dc064309f67ee1e5ad243d0e48335adc0484d960bcc7"
+checksum = "0e3681d554572a651dda4186cd47240627c3d0114d45a95f6ad27f2f22e7548d"
 dependencies = [
  "autocfg",
  "cfg-if",
  "crossbeam-utils",
- "memoffset",
- "scopeguard",
+]
+
+[[package]]
+name = "crossbeam-queue"
+version = "0.3.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "adc6598521bb5a83d491e8c1fe51db7296019d2ca3cb93cc6c2a20369a4d78a2"
+dependencies = [
+ "cfg-if",
+ "crossbeam-utils",
 ]
 
 [[package]]
 name = "crossbeam-utils"
-version = "0.8.16"
+version = "0.8.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a22b2d63d4d1dc0b7f1b6b2747dd0088008a9be28b6ddf0b1e7d335e3037294"
+checksum = "c3a430a770ebd84726f584a90ee7f020d28db52c6d02138900f22341f866d39c"
 dependencies = [
  "cfg-if",
 ]
@@ -2076,15 +2084,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43a5a03cefb0d953ec0be133036f14e109412fa594edc2f77227249db66cc3ed"
 dependencies = [
  "libc",
-]
-
-[[package]]
-name = "memoffset"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a634b1c61a95585bd15607c6ab0c4e5b226e695ff2800ba0cdccddf208c406c"
-dependencies = [
- "autocfg",
 ]
 
 [[package]]
@@ -4073,7 +4072,6 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 [[package]]
 name = "typst"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-content-hint#247e0c5353789584ec786e7d8ffaad62817a9d58"
 dependencies = [
  "az",
  "bitflags 2.4.1",
@@ -4127,7 +4125,6 @@ dependencies = [
 [[package]]
 name = "typst-ide"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-content-hint#247e0c5353789584ec786e7d8ffaad62817a9d58"
 dependencies = [
  "comemo",
  "ecow",
@@ -4141,7 +4138,6 @@ dependencies = [
 [[package]]
 name = "typst-macros"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-content-hint#247e0c5353789584ec786e7d8ffaad62817a9d58"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -4152,7 +4148,6 @@ dependencies = [
 [[package]]
 name = "typst-pdf"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-content-hint#247e0c5353789584ec786e7d8ffaad62817a9d58"
 dependencies = [
  "base64",
  "bytemuck",
@@ -4176,7 +4171,6 @@ dependencies = [
 [[package]]
 name = "typst-syntax"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-content-hint#247e0c5353789584ec786e7d8ffaad62817a9d58"
 dependencies = [
  "comemo",
  "ecow",
@@ -4192,7 +4186,6 @@ dependencies = [
 [[package]]
 name = "typst-timing"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-content-hint#247e0c5353789584ec786e7d8ffaad62817a9d58"
 dependencies = [
  "parking_lot",
  "serde",
@@ -4335,6 +4328,7 @@ dependencies = [
  "bitvec",
  "byteorder",
  "comemo",
+ "crossbeam-queue",
  "ecow",
  "elsa",
  "flate2",
@@ -4354,7 +4348,6 @@ dependencies = [
  "serde_with",
  "sha2",
  "siphasher 1.0.0",
- "svgtypes 0.12.0",
  "tiny-skia",
  "tiny-skia-path",
  "ttf-parser 0.20.0",
@@ -4379,6 +4372,26 @@ dependencies = [
  "typst-ts-compiler",
  "typst-ts-core",
  "warp",
+]
+
+[[package]]
+name = "typst-ts-dom-exporter"
+version = "0.4.2-rc4"
+dependencies = [
+ "base64",
+ "comemo",
+ "log",
+ "once_cell",
+ "rayon",
+ "siphasher 1.0.0",
+ "svgtypes 0.12.0",
+ "tiny-skia",
+ "tiny-skia-path",
+ "typst",
+ "typst-ts-canvas-exporter",
+ "typst-ts-core",
+ "typst-ts-svg-exporter",
+ "web-sys",
 ]
 
 [[package]]
@@ -4551,6 +4564,7 @@ dependencies = [
  "typst-ts-canvas-exporter",
  "typst-ts-compiler",
  "typst-ts-core",
+ "typst-ts-dom-exporter",
  "typst-ts-svg-exporter",
  "typst-ts-test-common",
  "vergen",

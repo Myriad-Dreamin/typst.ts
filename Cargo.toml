@@ -19,6 +19,7 @@ members = [
 
     "exporter/ast",
     "exporter/canvas",
+    "exporter/dom",
     "exporter/pdf",
     "exporter/serde",
     "exporter/svg",
@@ -202,6 +203,7 @@ typst-ts-test-common = { version = "0.4.2-rc4", path = "tests/common" }
 
 # project exporters
 typst-ts-ast-exporter = "0.4.2-rc4"
+typst-ts-dom-exporter = "0.4.2-rc4"
 typst-ts-pdf-exporter = "0.4.2-rc4"
 typst-ts-canvas-exporter = { version = "0.4.2-rc4", path = "exporter/canvas" }
 typst-ts-serde-exporter = "0.4.2-rc4"
@@ -216,6 +218,7 @@ typst-ts-cli = { version = "0.4.2-rc4", path = "cli" }
 typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }
 typst-ts-ast-exporter = { path = "exporter/ast" }
+typst-ts-dom-exporter = { path = "exporter/dom" }
 typst-ts-pdf-exporter = { path = "exporter/pdf" }
 typst-ts-serde-exporter = { path = "exporter/serde" }
 typst-ts-svg-exporter = { path = "exporter/svg" }
@@ -227,15 +230,15 @@ typst-ts-text-exporter = { path = "exporter/text" }
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
 # comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
-typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
-typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
+# typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
+# typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
+# typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
+# typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
 
 # comemo = { path = "../comemo" }
-# typst = { path = "../typst/crates/typst" }
-# typst-syntax = { path = "../typst/crates/typst-syntax" }
-# typst-ide = { path = "../typst/crates/typst-ide" }
-# typst-pdf = { path = "../typst/crates/typst-pdf" }
+typst = { path = "../typst/crates/typst" }
+typst-syntax = { path = "../typst/crates/typst-syntax" }
+typst-ide = { path = "../typst/crates/typst-ide" }
+typst-pdf = { path = "../typst/crates/typst-pdf" }
 
 # fontdb = { path = "../fontdb" }

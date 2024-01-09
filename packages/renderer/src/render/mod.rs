@@ -7,6 +7,9 @@ pub mod pdf;
 #[cfg(feature = "render_svg")]
 pub mod svg;
 
+#[cfg(feature = "render_dom")]
+pub mod dom;
+
 #[cfg(not(feature = "render_canvas"))]
 pub mod canvas_stub {
     #![allow(dead_code)]
