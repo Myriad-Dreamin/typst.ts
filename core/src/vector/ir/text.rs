@@ -24,6 +24,27 @@ pub enum GlyphItem {
     Outline(Arc<OutlineGlyphItem>),
 }
 
+/// The glyph item definition with all of variants of [`GlyphItem`] other than
+/// [`GlyphItem::Raw`], hence it is serializable.
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub enum FlatGlyphItem {
+    None,
+    Image(Arc<ImageGlyphItem>),
+    Outline(Arc<OutlineGlyphItem>),
+}
+
+impl From<FlatGlyphItem> for GlyphItem {
+    fn from(item: FlatGlyphItem) -> Self {
+        match item {
+            FlatGlyphItem::Image(item) => GlyphItem::Image(item),
+            FlatGlyphItem::Outline(item) => GlyphItem::Outline(item),
+            FlatGlyphItem::None => GlyphItem::None,
+        }
+    }
+}
+
 impl GlyphItem {
     #[comemo::memoize]
     pub fn get_fingerprint(&self) -> Fingerprint {
@@ -169,13 +190,15 @@ impl TextShape {
     }
 }
 
-/// Flatten text item.
+/// A text item.
 /// Item representing an `<g><text/><g/>` element.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct TextItem {
+    /// The shape metadata of the text item.
     pub shape: Arc<TextShape>,
+    /// The content metadata of the text item.
     pub content: Arc<TextItemContent>,
 }
 
@@ -211,27 +234,4 @@ pub struct TextItemContent {
     /// The glyphs in the text.
     /// (offset, advance, glyph): ([`Abs`], [`Abs`], [`GlyphItem`])
     pub glyphs: Arc<[(Abs, Abs, u32)]>,
-    // Source span for this text item.
-    // pub span_id: u64,
-}
-
-/// The glyph item definition with all of variants of [`GlyphItem`] other than
-/// [`GlyphItem::Raw`], hence it is serializable.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub enum FlatGlyphItem {
-    None,
-    Image(Arc<ImageGlyphItem>),
-    Outline(Arc<OutlineGlyphItem>),
-}
-
-impl From<FlatGlyphItem> for GlyphItem {
-    fn from(item: FlatGlyphItem) -> Self {
-        match item {
-            FlatGlyphItem::Image(item) => GlyphItem::Image(item),
-            FlatGlyphItem::Outline(item) => GlyphItem::Outline(item),
-            FlatGlyphItem::None => GlyphItem::None,
-        }
-    }
 }

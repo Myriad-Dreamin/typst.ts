@@ -21,6 +21,7 @@ pub type Glyph2VecPass = TGlyph2VecPass</* ENABLE_REF_CNT */ false>;
 pub type IncrGlyph2VecPass = TGlyph2VecPass</* ENABLE_REF_CNT */ true>;
 
 pub struct ConvertInnerImpl {
+    /// A glyph backend provider.
     pub gp: GlyphProvider,
 
     /// Whether to lower ligature information
@@ -31,13 +32,20 @@ pub struct ConvertInnerImpl {
 pub struct TGlyph2VecPass<const ENABLE_REF_CNT: bool = false> {
     pub inner: ConvertInnerImpl,
 
+    /// Incremental state
+    /// The lifetime of items, used to determine the lifetime of the new items.
     pub lifetime: u64,
+    /// The new font items produced in this lifecycle.
     pub new_fonts: Mutex<Vec<FontItem>>,
+    /// The new glyph items produced in this lifecycle.
     pub new_glyphs: Mutex<Vec<(GlyphRef, GlyphItem)>>,
 
     /// Intermediate representation of an incompleted font pack.
+    /// All font items are stored in this map, and then sorted by the index.
     font_mapping: crate::adt::CHashMap<Font, FontRef>,
+    /// Detect font short hash conflict
     font_conflict_checker: crate::adt::CHashMap<u32, Font>,
+    /// Lock to get a unique local index for each font.
     font_write_lock: Mutex<()>,
 
     /// Intermediate representation of an incompleted glyph pack.

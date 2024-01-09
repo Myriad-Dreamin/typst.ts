@@ -11,7 +11,6 @@ use typst::{
         Transform as TypstTransform,
     },
     model::{Destination, Document as TypstDocument},
-    syntax::Span,
     text::TextItem as TypstTextItem,
     visualize::{
         FixedStroke, Geometry, Gradient, Image as TypstImage, LineCap, LineJoin, Paint,
@@ -250,7 +249,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                         i
                     }
                     FrameItem::Shape(shape, s) => {
-                        let i = self.shape(introspector, shape, s);
+                        let i = self.shape(introspector, shape);
 
                         self.spans.push_span(SourceRegion {
                             region: src_reg,
@@ -262,7 +261,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                         i
                     }
                     FrameItem::Image(image, size, s) => {
-                        let i = self.image(image, *size, s);
+                        let i = self.image(image, *size);
 
                         self.spans.push_span(SourceRegion {
                             region: src_reg,
@@ -396,7 +395,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
     }
 
     /// Convert a text into vector item.
-    fn text(&self, introspector: &Introspector, text: &TypstTextItem) -> Fingerprint {
+    pub fn text(&self, introspector: &Introspector, text: &TypstTextItem) -> Fingerprint {
         let stateful_fill = match text.fill {
             Paint::Pattern(..) | Paint::Gradient(..) => Some(self.paint(introspector, &text.fill)),
             _ => None,
@@ -514,7 +513,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
     }
 
     // /// Convert a geometrical shape into vector item.
-    fn shape(&self, introspector: &Introspector, shape: &Shape, _span_id: &Span) -> Fingerprint {
+    pub fn shape(&self, introspector: &Introspector, shape: &Shape) -> Fingerprint {
         #[derive(Hash)]
         struct ShapeKey<'i> {
             stateful_fill: Option<Arc<str>>,
@@ -622,7 +621,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
         })
     }
 
-    fn image(&self, image: &TypstImage, size: Axes<Abs>, _span_id: &Span) -> Fingerprint {
+    pub fn image(&self, image: &TypstImage, size: Axes<Abs>) -> Fingerprint {
         #[derive(Hash)]
         struct ImageKey<'i> {
             image: &'i TypstImage,
