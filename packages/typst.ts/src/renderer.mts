@@ -767,6 +767,39 @@ class TypstRendererDriver {
     return this.renderToCanvas(options);
   }
 
+  async renderDom(options: RenderOptions<RenderToCanvasOptions>): Promise<void> {
+    if ('format' in options) {
+      if (options.format !== 'vector') {
+        const artifactFormats = ['serde_json', 'js', 'ir'] as const;
+        if (artifactFormats.includes(options.format as any)) {
+          // deprecated
+          throw new Error(`deprecated format ${options.format}, please use vector format`);
+        }
+      }
+    }
+
+    return this.withinOptionSession(options, async sessionRef => {
+      return this.renderer.mount_dom(sessionRef[kObject], options.container as HTMLDivElement);
+    });
+  }
+
+  async triggerDomRerender(
+    options: RenderInSessionOptions<{
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }>,
+  ): Promise<void> {
+    return this.renderer.trigger_dom_rerender(
+      options.renderSession[kObject],
+      options.x,
+      options.y,
+      options.width,
+      options.height,
+    );
+  }
+
   async renderToCanvas(options: RenderOptions<RenderToCanvasOptions>): Promise<void> {
     let session: RenderSession;
     let renderPageResults: RenderCanvasResult[];

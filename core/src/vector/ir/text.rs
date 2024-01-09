@@ -97,7 +97,7 @@ pub struct FontItem {
     pub hash: u32,
     pub ascender: Abs,
     pub descender: Abs,
-    pub unit_per_em: Abs,
+    pub units_per_em: Abs,
     pub vertical: bool,
 
     pub glyphs: Vec<Arc<FlatGlyphItem>>,
@@ -124,7 +124,7 @@ impl From<Font> for FontItem {
             family: font.info().family.clone().into(),
             ascender: Scalar(font.metrics().ascender.get() as f32),
             descender: Scalar(font.metrics().descender.get() as f32),
-            unit_per_em: Scalar(font.units_per_em() as f32),
+            units_per_em: Scalar(font.units_per_em() as f32),
             vertical: false, // todo: check vertical
             glyphs: Vec::new(),
             glyph_cov: bitvec::vec::BitVec::new(),
@@ -150,12 +150,12 @@ pub struct TextShape {
 
 impl TextShape {
     /// ppem is calcuated by the font size.
-    fn ppem(&self, upem: f32) -> Scalar {
+    pub fn ppem(&self, upem: f32) -> Scalar {
         Scalar(self.size.0 / upem)
     }
 
     /// inv_ppem is calcuated by the font size.
-    fn inv_ppem(&self, upem: f32) -> Scalar {
+    pub fn inv_ppem(&self, upem: f32) -> Scalar {
         Scalar(upem / self.size.0)
     }
 
