@@ -75,7 +75,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
     /// <svg> <style/> .. </svg>
     ///       ^^^^^^^^
     /// See [`StyleDefMap`].
-    fn style_defs(style_defs: StyleDefMap, svg: &mut Vec<SvgText>) {
+    pub fn style_defs(style_defs: StyleDefMap, svg: &mut Vec<SvgText>) {
         // style defs
         svg.push(r#"<style type="text/css">"#.into());
 
@@ -91,7 +91,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
     /// <svg> <defs> <gradient/> </defs> .. </svg>
     ///              ^^^^^^^^^^^
     /// See [`GradientMap`].
-    fn gradients<'a>(
+    pub fn gradients<'a>(
         gradients: impl Iterator<Item = (&'a Fingerprint, &'a GradientItem)>,
         svg: &mut Vec<SvgText>,
     ) {
@@ -297,7 +297,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         }
     }
 
-    fn patterns(
+    pub fn patterns(
         patterns: impl Iterator<Item = (Fingerprint, Size, Arc<SvgTextNode>)>,
         svg: &mut Vec<SvgText>,
     ) {
@@ -398,16 +398,16 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
 /// It is also as a namespace for all the functions used in the task.
 pub struct SvgTask<'a, Feat: ExportFeature> {
     /// A fingerprint builder for generating unique id.
-    pub(crate) fingerprint_builder: FingerprintBuilder,
+    pub fingerprint_builder: FingerprintBuilder,
 
     /// Stores the style definitions used in the document.
-    pub(crate) style_defs: StyleDefMap,
+    pub style_defs: StyleDefMap,
     /// Stores the gradient used in the document.
-    pub(crate) gradients: PaintFillMap,
+    pub gradients: PaintFillMap,
     /// Stores the patterns used in the document.
-    pub(crate) patterns: PaintFillMap,
+    pub patterns: PaintFillMap,
     /// Stores whether an item has stateful fill.
-    pub(crate) stateful_fill_cache: CowMut<'a, HashMap<Fingerprint, bool>>,
+    pub stateful_fill_cache: CowMut<'a, HashMap<Fingerprint, bool>>,
 
     _feat_phantom: std::marker::PhantomData<Feat>,
 }
@@ -475,7 +475,7 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
     }
 
     /// Render glyphs into the svg_body.
-    pub(crate) fn render_glyphs<'a, I: Iterator<Item = (GlyphRef, &'a FlatGlyphItem)>>(
+    pub fn render_glyphs<'a, I: Iterator<Item = (GlyphRef, &'a FlatGlyphItem)>>(
         &mut self,
         glyphs: I,
     ) -> Vec<SvgText> {

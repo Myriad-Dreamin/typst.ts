@@ -1,0 +1,56 @@
+[package]
+name = "typst-ts-dom-exporter"
+description = "Export a frame of Typst document into dom element."
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+once_cell.workspace = true
+
+typst.workspace = true
+comemo.workspace = true
+
+svgtypes.workspace = true
+tiny-skia.workspace = true
+tiny-skia-path.workspace = true
+base64.workspace = true
+
+typst-ts-core.workspace = true
+typst-ts-canvas-exporter = { workspace = true, optional = true }
+typst-ts-svg-exporter = { workspace = true }
+log.workspace = true
+siphasher.workspace = true
+rayon.workspace = true
+
+web-sys = { workspace = true, features = [
+    "console",
+    "Path2d",
+    "Blob",
+    "HtmlDivElement",
+    "HtmlTemplateElement",
+    "SvgElement",
+    "SvgGraphicsElement",
+    "SvgsvgElement",
+    "SvgMatrix",
+    "SvgRect",
+    "DomRect",
+    "HtmlElement",
+    "Url",
+    "BlobPropertyBag",
+    "SupportedType",
+    "HtmlCollection",
+    "Performance",
+    "DocumentFragment",
+    "Window",
+    "Document",
+    "CssStyleDeclaration",
+] }
+
+[features]
+experimental-ligature = ["typst-ts-core/experimental-ligature"]
+aggresive-browser-rasterization = ["typst-ts-canvas-exporter"]
+default = []
