@@ -37,6 +37,7 @@ web-sys = { workspace = true, features = [
     "SvgGraphicsElement",
     "SvgsvgElement",
     "SvgMatrix",
+    "TextMetrics",
     "SvgRect",
     "DomRect",
     "HtmlElement",
