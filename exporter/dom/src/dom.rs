@@ -13,7 +13,7 @@ use web_sys::{
 
 use crate::{
     factory::XmlFactory, semantics_backend::SemanticsBackend, svg_backend::FETCH_BBOX_TIMES,
-    DomContext,
+    CheckoutMode, DomContext,
 };
 
 pub struct DomPage {
@@ -45,6 +45,8 @@ pub struct DomPage {
     canvas_state: Option<(Page, f32)>,
     /// Whether the page is visible.
     is_visible: bool,
+    /// Whether the page is to full.
+    is_to_full: bool,
     /// The group element.
     g: Element,
     /// The stub element.
@@ -108,6 +110,7 @@ impl DomPage {
             realized_canvas: None,
             canvas_state: None,
             semantics_state: None,
+            is_to_full: false,
         }
     }
 
@@ -135,17 +138,30 @@ impl DomPage {
 
         let dirty_viewport = self.pull_viewport(viewport)?;
 
+        let is_to_full = self.is_to_full;
+
         // If there is no layout, skip the next stages.
         // If there is no paint needed, as well.
-        if self.layout_data.is_none() || !(dirty_viewport || dirty_layout) {
+        if self.layout_data.is_none() || (!(dirty_viewport || dirty_layout) && is_to_full) {
             return Ok(());
         }
 
-        // Repaint a page as svg.
-        self.repaint_svg(ctx)?;
+        if ctx.checkout_mode == CheckoutMode::Full {
+            // Repaint a page as svg.
+            self.repaint_svg(ctx)?;
 
-        // Repaint a page as semantics.
-        self.repaint_semantics(ctx)?;
+            // Repaint a page as semantics.
+            self.repaint_semantics(ctx)?;
+            web_sys::console::log_1(&"responsive mode to true".into());
+
+            self.is_to_full = true;
+        } else {
+            // Repaint a page as svg.
+            self.change_svg_visibility(false);
+            web_sys::console::log_1(&"responsive mode to false".into());
+
+            self.is_to_full = false;
+        }
 
         // Repaint a page as canvas.
         self.repaint_canvas(ctx).await?;
@@ -193,8 +209,21 @@ impl DomPage {
             self.canvas.set_height((h * ppp) as u32);
             self.canvas_state = None;
             style
-                .set_property("--data-canvas-scale", &format!("{:.3}", 1. / 3.))
+                .set_property(
+                    "--data-canvas-scale",
+                    &format!("{:.3}", 1. / ctx.canvas_backend.pixel_per_pt),
+                )
                 .unwrap();
+        }
+
+        // todo: cache
+        let prev_data = self.layout_data.clone();
+        if prev_data.map(|d| d != data).unwrap_or(true) {
+            self.change_svg_visibility(false);
+            self.realized = None;
+            self.semantics_state = None;
+            self.canvas_state = None;
+            self.realized_canvas = None;
         }
 
         self.layout_data = Some(data);
@@ -213,26 +242,44 @@ impl DomPage {
             ctm.e() - cr.left() as f32,
             ctm.f() - cr.top() as f32,
         );
-        let viewport = viewport.unwrap_or(self.bbox);
-        let Some(viewport) = viewport.transform(ts) else {
-            web_sys::console::warn_2(
-                &format!(
-                    "viewport is empty: {vp:?}, ts: {ts:?}, cr: {cr:?}",
-                    vp = viewport,
-                    ts = ts,
-                    cr = cr,
+        let viewport = viewport
+            .and_then(|e| e.transform(ts))
+            .and_then(|viewport| {
+                tiny_skia::Rect::from_ltrb(
+                    self.bbox.left() - 1.,
+                    viewport.top(),
+                    self.bbox.right(),
+                    viewport.bottom() + 1.,
                 )
-                .into(),
-                &self.elem,
-            );
-            return Ok(false);
-        };
+            })
+            .unwrap_or(self.bbox);
+        web_sys::console::log_2(
+            &format!(
+                "pull_viewport {idx} {vp:?}, bbox {bbox:?}",
+                idx = self.idx,
+                vp = viewport,
+                bbox = self.bbox,
+            )
+            .into(),
+            &self.elem,
+        );
 
         if self.viewport == viewport {
             Ok(false)
         } else {
             self.viewport = viewport;
             Ok(true)
+        }
+    }
+
+    fn change_svg_visibility(&mut self, should_visible: bool) {
+        if should_visible != self.is_visible {
+            self.is_visible = should_visible;
+            if should_visible {
+                self.stub.replace_with_with_node_1(&self.g).unwrap();
+            } else {
+                self.g.replace_with_with_node_1(&self.stub).unwrap();
+            }
         }
     }
 
@@ -250,15 +297,8 @@ impl DomPage {
             );
         }
 
-        if should_visible != self.is_visible {
-            self.is_visible = should_visible;
-            if should_visible {
-                self.stub.replace_with_with_node_1(&self.g).unwrap();
-            } else {
-                self.g.replace_with_with_node_1(&self.stub).unwrap();
-                return Ok(());
-            }
-        } else if !should_visible {
+        self.change_svg_visibility(should_visible);
+        if !self.is_visible {
             return Ok(());
         }
 

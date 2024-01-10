@@ -20,6 +20,7 @@ import {
   ManipulateDataOptions,
   RenderSvgOptions,
   RenderInSessionOptions,
+  MountDomOptions,
 } from './options.render.mjs';
 import { RenderView, renderTextLayer } from './render/canvas/view.mjs';
 import { LazyWasmModule } from './wasm.mjs';
@@ -433,6 +434,17 @@ export interface TypstRenderer extends TypstSvgRenderer {
     fn: (session: RenderSession) => Promise<T>,
   ): Promise<T>;
 
+  renderDom(options: RenderInSessionOptions<MountDomOptions>): Promise<void>;
+  triggerDomRerender(
+    options: RenderInSessionOptions<{
+      responsive: boolean;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }>,
+  ): Promise<void>;
+
   /**
    * alias to {@link TypstRenderer#renderToCanvas}, will remove in v0.5.0
    * @deprecated
@@ -767,7 +779,7 @@ class TypstRendererDriver {
     return this.renderToCanvas(options);
   }
 
-  async renderDom(options: RenderOptions<RenderToCanvasOptions>): Promise<void> {
+  async renderDom(options: RenderInSessionOptions<MountDomOptions>): Promise<void> {
     if ('format' in options) {
       if (options.format !== 'vector') {
         const artifactFormats = ['serde_json', 'js', 'ir'] as const;
@@ -785,14 +797,21 @@ class TypstRendererDriver {
 
   async triggerDomRerender(
     options: RenderInSessionOptions<{
+      responsive: boolean;
       x: number;
       y: number;
       width: number;
       height: number;
     }>,
   ): Promise<void> {
+    let feature: number = 0;
+    if (options.responsive) {
+      feature |= 1 << 0;
+    }
+
     return this.renderer.trigger_dom_rerender(
       options.renderSession[kObject],
+      feature,
       options.x,
       options.y,
       options.width,
