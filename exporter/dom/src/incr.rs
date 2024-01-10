@@ -24,6 +24,13 @@ enum TrackMode {
     Document,
 }
 
+#[derive(Default, PartialEq, Eq)]
+pub enum CheckoutMode {
+    #[default]
+    Full,
+    Responsive,
+}
+
 pub enum DOMChanges {
     /// Change the element to track.
     Unmount(HtmlElement),
@@ -31,6 +38,8 @@ pub enum DOMChanges {
     Mount(HtmlElement),
     /// Change viewport.
     Viewport(Option<tiny_skia::Rect>),
+    /// Recalculate in/out responsive loop
+    Recalc(bool),
 }
 
 #[derive(Debug, Clone)]
@@ -95,12 +104,46 @@ impl IncrDomDocClient {
         pages.as_slice().iter()
     }
 
+    // todo: move to js world
+    fn checkout_layout(&mut self, kern: &mut IncrDocClient, viewport: Option<tiny_skia::Rect>) {
+        let layouts = kern.doc.layouts[0].by_scalar().unwrap();
+        let mut layout = layouts.first().unwrap();
+
+        if let Some(viewport) = viewport {
+            // base scale = 2
+            let base_cw = viewport.width();
+
+            const EPS: f32 = 1e-2;
+
+            if layout.0 .0 >= base_cw + EPS {
+                let layout_alt = layouts.last().unwrap();
+
+                if layout_alt.0 .0 + EPS > base_cw {
+                    layout = layout_alt;
+                } else {
+                    for layout_alt in layouts {
+                        if layout_alt.0 .0 < base_cw + EPS {
+                            layout = layout_alt;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        let layout = layout.clone();
+        kern.set_layout(layout.1.clone());
+    }
+
     pub fn reset(&mut self) {}
 
     /// Render the document in the given window.
     pub async fn mount(&mut self, kern: &mut IncrDocClient, elem: HtmlElement) -> ZResult<()> {
-        self.batch_dom_events(kern, vec![DOMChanges::Mount(elem)])
-            .await
+        self.batch_dom_events(
+            kern,
+            vec![DOMChanges::Mount(elem), DOMChanges::Recalc(false)],
+        )
+        .await
     }
 
     /// Render the document in the given window.
@@ -108,9 +151,16 @@ impl IncrDomDocClient {
         &mut self,
         kern: &mut IncrDocClient,
         viewport: Option<tiny_skia::Rect>,
+        is_responsive: bool,
     ) -> ZResult<()> {
-        self.batch_dom_events(kern, vec![DOMChanges::Viewport(viewport)])
-            .await
+        self.batch_dom_events(
+            kern,
+            vec![
+                DOMChanges::Viewport(viewport),
+                DOMChanges::Recalc(is_responsive),
+            ],
+        )
+        .await
     }
 }
 
@@ -156,21 +206,31 @@ impl IncrDomDocClient {
                 }
                 DOMChanges::Viewport(viewport) => {
                     self.viewport = viewport;
+
+                    self.checkout_layout(kern, viewport);
+                }
+                DOMChanges::Recalc(is_responsive) => {
+                    if let Some(elem) = &self.elem {
+                        let checkout_mode = if is_responsive {
+                            CheckoutMode::Responsive
+                        } else {
+                            CheckoutMode::Full
+                        };
+
+                        self.recalculate(kern, elem.clone(), checkout_mode).await?;
+                    }
                 }
             }
-        }
-
-        if let Some(elem) = &self.elem {
-            self.recalculate(kern, elem.clone()).await?;
         }
 
         Ok(())
     }
 
-    pub async fn recalculate(
+    async fn recalculate(
         &mut self,
         kern: &mut IncrDocClient,
         elem: HookedElement,
+        checkout_mode: CheckoutMode,
     ) -> ZResult<()> {
         match self.track_mode {
             TrackMode::Document => {
@@ -184,6 +244,7 @@ impl IncrDomDocClient {
             module: kern.module(),
             svg_backend: &mut self.svg_backend,
             canvas_backend: &mut self.canvas_backend,
+            checkout_mode,
         };
 
         for page in self.doc_view.iter_mut() {
@@ -226,6 +287,7 @@ pub struct DomContext<'m, 'a> {
     pub svg_backend: &'a mut SvgBackend,
     pub canvas_backend: &'a mut CanvasBackend,
     pub module: &'m Module,
+    pub checkout_mode: CheckoutMode,
 }
 
 impl<'m, 'a> DomContext<'m, 'a> {

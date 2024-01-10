@@ -62,6 +62,22 @@ export interface RenderToCanvasOptions {
 }
 
 /**
+ * The options for mounting Typst document to specified container.
+ * @property {HTMLElement} [container] - The container to render the Typst document.
+ * @property {number} [pixelPerPt] - The pixel per point scale up the image, which is 2.5 by default and recommended.
+ */
+export interface MountDomOptions {
+  container: HTMLElement;
+
+  /**
+   * Set the pixel per point scale up the canvas panel.
+   *
+   * Note: Default to `3`.
+   */
+  pixelPerPt?: number;
+}
+
+/**
  * The options for rendering a svg string.
  */
 export interface RenderSvgOptions {
