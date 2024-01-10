@@ -180,6 +180,14 @@ const linkmove = (elem: ElementState) =>
 /// Process mouse leave event on pseudo-link elements
 const linkleave = (elem: ElementState) => gr(elem)?.forEach(e => e.classList.remove('hover'));
 
+const semaLinkEnter = (a: any, bound: any) => () => {
+  const href =
+    bound.parentElement?.getAttribute('href') || bound.parentElement?.getAttribute('xlink:href');
+  if (a.getAttribute('href') !== href) {
+    a.setAttribute('href', href || '');
+  }
+};
+
 interface ProcessOptions {
   layoutText?: boolean;
 }
@@ -721,3 +729,72 @@ if (scriptTag) {
     window.typstProcessSvg(docRoot);
   }
 }
+
+function findLinkInSvg(r: SVGSVGElement, xy: [number, number], target: any) {
+  // children
+  const bbox = r.getBoundingClientRect();
+  if (
+    xy[0] < bbox.left - 1 ||
+    xy[0] > bbox.right + 1 ||
+    xy[1] < bbox.top - 1 ||
+    xy[1] > bbox.bottom + 1
+  ) {
+    return;
+  }
+
+  // foreignObject
+  if (r.classList.contains('pseudo-link')) {
+    return r;
+  }
+
+  for (let i = 0; i < r.children.length; i++) {
+    const a = findLinkInSvg(r.children[i] as any as SVGSVGElement, xy, target) as SVGAElement;
+    if (a) {
+      return a;
+    }
+  }
+
+  return undefined;
+}
+
+(window as any).typstBindSemantics = function (
+  root: HTMLElement,
+  svg: SVGSVGElement,
+  semantics: HTMLDivElement,
+) {
+  semantics.addEventListener('mousemove', (event: MouseEvent) => {
+    ignoredEvent(
+      () => {
+        // a link
+        if ((event.target as any)?.tagName === 'A') {
+          const target = event.target as any as any;
+          if (target.cachedTarget) {
+            return;
+          }
+
+          // console.log('svg typstBindSemantics', event.clientX, event.clientY, svg);
+          const a = findLinkInSvg(svg, [event.clientX, event.clientY], event.target as any);
+          // console.log('svg typstBindSemantics', a);
+          if (a) {
+            a.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+            const sle = semaLinkEnter(a, target);
+            target.addEventListener('mouseenter', () => {
+              a.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+              sle();
+            });
+            target.addEventListener('mousemove', () => {
+              a.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+              linkmove(a);
+            });
+            target.addEventListener('mouseleave', () => {
+              a.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+              linkleave(a);
+            });
+          }
+        }
+      },
+      100,
+      'mouseenter',
+    );
+  });
+};

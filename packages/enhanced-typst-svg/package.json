@@ -25,6 +25,7 @@
   "scripts": {
     "build": "npx tsc",
     "debug": "node esbuild.debug.mjs",
+    "watch": "npx esbuild --watch ./src/index.ts --outfile=dist/index.min.js",
     "watch:min": "npx esbuild --watch ./src/index.ts --minify --outfile=dist/index.min.js",
     "build:min": "npx esbuild ./src/index.ts --minify --outfile=dist/index.min.js"
   },

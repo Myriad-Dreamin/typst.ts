@@ -23,6 +23,9 @@ pub async fn run_http(args: RunHttpArgs) {
         .and(warp::fs::dir("packages/typst.ts"))
         .boxed();
     let base = warp::path("base").and(warp::fs::dir("")).boxed();
+    let ets = warp::path("enhanced-typst-svg")
+        .and(warp::fs::dir("packages/enhanced-typst-svg"))
+        .boxed();
 
     // map these files to the root of the github-pages server
     let gh_pages = warp::path("typst.ts").and({
@@ -51,6 +54,7 @@ pub async fn run_http(args: RunHttpArgs) {
         .or(core)
         .or(base)
         .or(gh_pages)
+        .or(ets)
         .with(cors)
         .with(warp::compression::gzip());
 
