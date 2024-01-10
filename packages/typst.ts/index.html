@@ -29,6 +29,13 @@
         width: var(--data-page-width, 100%);
         height: var(--data-page-height);
       }
+
+      .typst-back-canvas {
+        position: absolute;
+        z-index: -1;
+        width: var(--data-page-width, 100%);
+        height: var(--data-page-height);
+      }
       /* 
       body {
         background: white;
@@ -95,7 +102,7 @@
                     if (rect.width <= 0 || rect.height <= 0) {
                       rect.x = rect.y = rect.width = rect.height = 0;
                     }
-                    console.log('ccc', basePos, appPos, rect);
+                    // console.log('ccc', basePos, appPos, rect);
 
                     plugin.triggerDomRerender({
                       renderSession: ses,
@@ -123,7 +130,7 @@
                     if (debounce) {
                       clearTimeout(debounce);
                     }
-                    debounce = setTimeout(pullRender, 50);
+                    debounce = setTimeout(pullRender, 20);
                   };
 
                   let debounce = null;

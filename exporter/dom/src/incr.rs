@@ -3,15 +3,16 @@ use std::ops::Deref;
 use typst_ts_core::{
     error::prelude::*,
     hash::Fingerprint,
-    vector::incr::{IncrDocClient, IncrDocServer},
-};
-use typst_ts_svg_exporter::{
-    ir::{FontItem, FontRef, LayoutRegionNode, Page, VecItem},
-    Module,
+    vector::{
+        incr::{IncrDocClient, IncrDocServer},
+        ir::{FontItem, FontRef, LayoutRegionNode, Module, Page, VecItem},
+    },
 };
 use web_sys::{wasm_bindgen::JsCast, Element, HtmlElement};
 
-use crate::{dom::DomPage, factory::XmlFactory, svg_backend::SvgBackend};
+use crate::{
+    canvas_backend::CanvasBackend, dom::DomPage, factory::XmlFactory, svg_backend::SvgBackend,
+};
 
 pub type IncrDOMDocServer = IncrDocServer;
 
@@ -55,6 +56,8 @@ pub struct IncrDomDocClient {
 
     /// Backend for rendering vector IR as SVG.
     svg_backend: SvgBackend,
+    /// Backend for rendering vector IR as Canvas.
+    canvas_backend: CanvasBackend,
 }
 
 impl IncrDomDocClient {
@@ -73,6 +76,23 @@ impl IncrDomDocClient {
                 .create_element("typst-stub")
                 .unwrap()
         })
+    }
+
+    fn checkout_pages<'b>(
+        &mut self,
+        kern: &'b mut IncrDocClient,
+    ) -> impl ExactSizeIterator<Item = &'b Page> + 'b {
+        // Check out the current document layout.
+        let Some(t) = &kern.layout else {
+            return [].iter();
+        };
+
+        let pages = match t {
+            LayoutRegionNode::Pages(a) => &a.deref().1,
+            _ => todo!(),
+        };
+
+        pages.as_slice().iter()
     }
 
     pub fn reset(&mut self) {}
@@ -132,6 +152,7 @@ impl IncrDomDocClient {
                             .unwrap(),
                     });
                     self.svg_backend.reset();
+                    self.canvas_backend.reset();
                 }
                 DOMChanges::Viewport(viewport) => {
                     self.viewport = viewport;
@@ -139,12 +160,18 @@ impl IncrDomDocClient {
             }
         }
 
-        self.recalculate(kern).await
+        if let Some(elem) = &self.elem {
+            self.recalculate(kern, elem.clone()).await?;
+        }
+
+        Ok(())
     }
 
-    pub async fn recalculate(&mut self, kern: &mut IncrDocClient) -> ZResult<()> {
-        let elem = self.elem.clone().unwrap();
-
+    pub async fn recalculate(
+        &mut self,
+        kern: &mut IncrDocClient,
+        elem: HookedElement,
+    ) -> ZResult<()> {
         match self.track_mode {
             TrackMode::Document => {
                 self.retrack_pages(kern, elem).await?;
@@ -156,29 +183,14 @@ impl IncrDomDocClient {
             stub: self.stub().clone(),
             module: kern.module(),
             svg_backend: &mut self.svg_backend,
+            canvas_backend: &mut self.canvas_backend,
         };
+
         for page in self.doc_view.iter_mut() {
             page.recalculate(&mut ctx, self.viewport).await?;
         }
 
         Ok(())
-    }
-
-    fn checkout_pages<'b>(
-        &mut self,
-        kern: &'b mut IncrDocClient,
-    ) -> impl ExactSizeIterator<Item = &'b Page> + 'b {
-        // Check out the current document layout.
-        let Some(t) = &kern.layout else {
-            return [].iter();
-        };
-
-        let pages = match t {
-            LayoutRegionNode::Pages(a) => &a.deref().1,
-            _ => todo!(),
-        };
-
-        pages.as_slice().iter()
     }
 
     async fn retrack_pages(
@@ -212,6 +224,7 @@ pub struct DomContext<'m, 'a> {
     tmpl: XmlFactory,
     stub: Element,
     pub svg_backend: &'a mut SvgBackend,
+    pub canvas_backend: &'a mut CanvasBackend,
     pub module: &'m Module,
 }
 
