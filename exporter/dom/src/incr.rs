@@ -489,7 +489,7 @@ impl DomPage {
 
         web_sys::console::log_1(
             &format!(
-                "reflow_root({should_visible}) bbox:{bbox:?} view:{viewport:?}",
+                "repaint_root({should_visible}) bbox:{bbox:?} view:{viewport:?}",
                 bbox = self.bbox,
                 viewport = self.viewport,
             )
@@ -504,6 +504,8 @@ impl DomPage {
                 self.g.replace_with_with_node_1(&self.stub).unwrap();
                 return Ok(());
             }
+        } else if !should_visible {
+            return Ok(());
         }
 
         if self.attached.is_none() {
@@ -805,9 +807,10 @@ impl TypstElem {
             };
 
             self.is_visible = should_visible;
-            if !should_visible {
-                return;
-            }
+        }
+
+        if !should_visible {
+            return;
         }
 
         match &mut self.extra {
