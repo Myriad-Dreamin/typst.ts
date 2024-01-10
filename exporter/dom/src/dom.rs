@@ -5,11 +5,16 @@ use typst_ts_core::{
     vector::ir::{Page, Point, Scalar, Size, TextItem, TransformItem},
 };
 use web_sys::{
-    wasm_bindgen::JsCast, Element, HtmlCanvasElement, HtmlElement, SvgGraphicsElement,
+    js_sys::{self, Reflect},
+    wasm_bindgen::{JsCast, JsValue},
+    window, Element, HtmlCanvasElement, HtmlDivElement, HtmlElement, SvgGraphicsElement,
     SvgsvgElement,
 };
 
-use crate::{factory::XmlFactory, svg_backend::FETCH_BBOX_TIMES, DomContext};
+use crate::{
+    factory::XmlFactory, semantics_backend::SemanticsBackend, svg_backend::FETCH_BBOX_TIMES,
+    DomContext,
+};
 
 pub struct DomPage {
     /// Index
@@ -20,6 +25,8 @@ pub struct DomPage {
     canvas: HtmlCanvasElement,
     /// The svg element to track.
     svg: SvgsvgElement,
+    /// The svg element to track.
+    semantics: HtmlDivElement,
     /// The layout data, currently there is only a page in layout.
     layout_data: Option<Page>,
     /// The next page data
@@ -32,6 +39,8 @@ pub struct DomPage {
     realized: Option<TypstPageElem>,
     /// The realized canvas element.
     realized_canvas: Option<CanvasNode>,
+    /// The flushed semantics state.
+    semantics_state: Option<(Page, bool)>,
     /// The flushed canvas state.
     canvas_state: Option<(Page, f32)>,
     /// Whether the page is visible.
@@ -51,12 +60,13 @@ impl Drop for DomPage {
 impl DomPage {
     pub fn new_at(elem: HtmlElement, tmpl: XmlFactory, idx: usize) -> Self {
         const TEMPLATE: &str = r#"<div class="typst-dom-page"><canvas class="typst-back-canvas"></canvas><svg class="typst-svg-page" viewBox="0 0 0 0" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">
-<g></g><stub></stub></svg></div>"#;
+<g></g><stub></stub></svg><div class="typst-html-semantics"><div/></div>"#;
 
         let me = tmpl.create_element(TEMPLATE);
         me.set_attribute("data-index", &idx.to_string()).unwrap();
         let canvas: HtmlCanvasElement = me.first_element_child().unwrap().dyn_into().unwrap();
         let svg: SvgsvgElement = canvas.next_element_sibling().unwrap().dyn_into().unwrap();
+        let semantics: HtmlDivElement = svg.next_element_sibling().unwrap().dyn_into().unwrap();
         let g = svg.first_element_child().unwrap();
         let stub = g.next_element_sibling().unwrap();
         g.remove();
@@ -76,6 +86,7 @@ impl DomPage {
             elem: me.dyn_into().unwrap(),
             canvas,
             svg,
+            semantics,
             viewport,
             bbox,
             layout_data: None,
@@ -83,6 +94,7 @@ impl DomPage {
             realized: None,
             realized_canvas: None,
             canvas_state: None,
+            semantics_state: None,
         }
     }
 
@@ -118,6 +130,9 @@ impl DomPage {
 
         // Repaint a page as svg.
         self.repaint_svg(ctx)?;
+
+        // Repaint a page as semantics.
+        self.repaint_semantics(ctx)?;
 
         // Repaint a page as canvas.
         self.repaint_canvas(ctx).await?;
@@ -276,6 +291,43 @@ impl DomPage {
         Ok(())
     }
 
+    fn repaint_semantics(&mut self, ctx: &mut DomContext<'_, '_>) -> ZResult<()> {
+        let init_semantics = self.semantics_state.as_ref().map_or(true, |e| {
+            let (data, _layouted) = e;
+            e.0.content != data.content
+        });
+
+        if init_semantics {
+            web_sys::console::log_1(&format!("init semantics: {}", self.idx).into());
+
+            let data = self.layout_data.clone().unwrap();
+            let mut output = vec![];
+            let mut t = SemanticsBackend::default();
+            let ts = tiny_skia::Transform::identity();
+            t.render_semantics(ctx.module, ts, data.content, &mut output);
+            self.semantics.set_inner_html(&output.concat());
+            // window render semantics set timeout 0
+            window().unwrap();
+            Reflect::get(&window().unwrap(), &"handleTypstSemantics".into())
+                .unwrap()
+                .dyn_into::<js_sys::Function>()
+                .unwrap()
+                .call2(&JsValue::UNDEFINED, &self.elem, &self.semantics)
+                .unwrap();
+
+            self.semantics_state = Some((data, false));
+        }
+
+        if !self.semantics_state.as_ref().map_or(true, |e| e.1) {
+            return Ok(());
+        }
+
+        web_sys::console::log_1(&format!("layout semantics: {}", self.idx).into());
+
+        self.semantics_state.as_mut().unwrap().1 = true;
+        Ok(())
+    }
+
     async fn repaint_canvas(&mut self, ctx: &mut DomContext<'_, '_>) -> ZResult<()> {
         let render_entire_page = self.realized.is_none() || !self.is_visible;
 
@@ -314,6 +366,7 @@ impl DomPage {
                 {
                     break 'render_canvas;
                 }
+                #[cfg(feature = "debug_repaint_canvas")]
                 web_sys::console::log_1(
                     &format!("canvas state changed, render all: {}", self.idx).into(),
                 );
@@ -331,6 +384,7 @@ impl DomPage {
 
                 canvas.realize(ts, &canvas_ctx).await;
             } else {
+                #[cfg(feature = "debug_repaint_canvas")]
                 web_sys::console::log_1(&format!("canvas partial render: {}", self.idx).into());
 
                 let Some(attached) = &mut self.realized else {

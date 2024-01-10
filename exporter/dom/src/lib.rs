@@ -1,7 +1,9 @@
 mod canvas_backend;
 mod dom;
+mod escape;
 mod factory;
 mod incr;
+mod semantics_backend;
 mod svg_backend;
 
 pub use incr::*;
