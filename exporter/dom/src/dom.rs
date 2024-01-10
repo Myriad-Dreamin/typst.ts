@@ -1,4 +1,4 @@
-use typst_ts_canvas_exporter::{CanvasAction, CanvasNode};
+use typst_ts_canvas_exporter::{CanvasAction, CanvasNode, CanvasStateGuard};
 use typst_ts_core::{
     error::prelude::*,
     hash::Fingerprint,
@@ -303,18 +303,20 @@ impl DomPage {
         let ts = tiny_skia::Transform::from_scale(ppp, ppp);
 
         'render_canvas: {
+            let _global_guard = CanvasStateGuard::new(&canvas_ctx);
+
             let state = self.layout_data.clone().unwrap();
             if render_entire_page {
                 if self
                     .canvas_state
-                    .take()
-                    .map_or(false, |s| s == (state.clone(), ppp))
+                    .as_ref()
+                    .map_or(false, |(x, y)| *x == state && *y == ppp)
                 {
-                    web_sys::console::log_1(
-                        &format!("canvas state not changed, skip render: {}", self.idx).into(),
-                    );
                     break 'render_canvas;
                 }
+                web_sys::console::log_1(
+                    &format!("canvas state changed, render all: {}", self.idx).into(),
+                );
 
                 let canvas = self.realized_canvas.as_ref().unwrap();
 
@@ -329,6 +331,8 @@ impl DomPage {
 
                 canvas.realize(ts, &canvas_ctx).await;
             } else {
+                web_sys::console::log_1(&format!("canvas partial render: {}", self.idx).into());
+
                 let Some(attached) = &mut self.realized else {
                     panic!("realized is none for partial canvas render");
                 };
