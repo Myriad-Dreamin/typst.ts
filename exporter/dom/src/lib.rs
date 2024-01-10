@@ -1,4 +1,7 @@
+mod dom;
+mod factory;
 mod incr;
+mod svg_backend;
 
 pub use incr::*;
 
