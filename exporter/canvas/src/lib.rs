@@ -50,11 +50,36 @@ impl ExportFeature for DefaultExportFeature {
 use async_trait::async_trait;
 
 #[async_trait(?Send)]
-pub trait CanvasElem: Debug {
+pub trait CanvasAction {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d);
 }
 
-pub type CanvasNode = Arc<Box<dyn CanvasElem + Send + Sync>>;
+#[derive(Debug)]
+pub enum CanvasElem {
+    Group(CanvasGroupElem),
+    Clip(CanvasClipElem),
+    Path(CanvasPathElem),
+    Image(CanvasImageElem),
+    Glyph(CanvasGlyphElem),
+}
+
+#[async_trait(?Send)]
+impl CanvasAction for CanvasElem {
+    async fn realize(&self, _ts: sk::Transform, _canvas: &web_sys::CanvasRenderingContext2d) {
+        match self {
+            CanvasElem::Group(g) => g.realize(_ts, _canvas).await,
+            CanvasElem::Clip(g) => g.realize(_ts, _canvas).await,
+            CanvasElem::Path(g) => g.realize(_ts, _canvas).await,
+            CanvasElem::Image(g) => g.realize(_ts, _canvas).await,
+            CanvasElem::Glyph(g) => g.realize(_ts, _canvas).await,
+        }
+    }
+}
+
+// async fn realize(&self, ts: sk::Transform, canvas:
+// &web_sys::CanvasRenderingContext2d);
+
+pub type CanvasNode = Arc<CanvasElem>;
 
 #[inline]
 fn set_transform(canvas: &web_sys::CanvasRenderingContext2d, transform: sk::Transform) {
@@ -93,7 +118,7 @@ pub struct CanvasGroupElem {
 }
 
 #[async_trait(?Send)]
-impl CanvasElem for CanvasGroupElem {
+impl CanvasAction for CanvasGroupElem {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         let ts = ts.pre_concat(self.ts);
         for (pos, sub_elem) in &self.inner {
@@ -110,13 +135,25 @@ pub struct CanvasClipElem {
     pub inner: CanvasNode,
 }
 
-#[async_trait(?Send)]
-impl CanvasElem for CanvasClipElem {
-    async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
-        let _guard = CanvasStateGuard::new(canvas);
+impl CanvasClipElem {
+    pub fn realize_with<'a>(
+        &self,
+        ts: sk::Transform,
+        canvas: &'a web_sys::CanvasRenderingContext2d,
+    ) -> CanvasStateGuard<'a> {
+        let guard = CanvasStateGuard::new(canvas);
 
         set_transform(canvas, ts);
         canvas.clip_with_path_2d(&Path2d::new_with_path_string(&self.d).unwrap());
+
+        guard
+    }
+}
+
+#[async_trait(?Send)]
+impl CanvasAction for CanvasClipElem {
+    async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
+        let _guard = self.realize_with(ts, canvas);
 
         self.inner.realize(ts, canvas).await
     }
@@ -128,7 +165,7 @@ pub struct CanvasPathElem {
 }
 
 #[async_trait(?Send)]
-impl CanvasElem for CanvasPathElem {
+impl CanvasAction for CanvasPathElem {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         let _guard = CanvasStateGuard::new(canvas);
         set_transform(canvas, ts);
@@ -317,7 +354,7 @@ impl CanvasImageElem {
 }
 
 #[async_trait(?Send)]
-impl CanvasElem for CanvasImageElem {
+impl CanvasAction for CanvasImageElem {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         Self::draw_image(ts, canvas, &self.image_data).await
     }
@@ -330,7 +367,7 @@ pub struct CanvasGlyphElem {
 }
 
 #[async_trait(?Send)]
-impl CanvasElem for CanvasGlyphElem {
+impl CanvasAction for CanvasGlyphElem {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         let _guard = CanvasStateGuard::new(canvas);
         set_transform(canvas, ts);
@@ -379,14 +416,14 @@ pub struct CanvasStack {
 
 impl From<CanvasStack> for CanvasNode {
     fn from(s: CanvasStack) -> Self {
-        let inner: CanvasNode = Arc::new(Box::new(CanvasGroupElem {
+        let inner: CanvasNode = Arc::new(CanvasElem::Group(CanvasGroupElem {
             ts: s.ts,
             inner: s.inner,
         }));
         if let Some(clipper) = s.clipper {
-            Arc::new(Box::new(CanvasClipElem {
+            Arc::new(CanvasElem::Clip(CanvasClipElem {
                 ts: s.ts,
-                d: clipper.d.clone(),
+                d: clipper.d,
                 inner,
             }))
         } else {
@@ -457,7 +494,7 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode>> GroupContext<C> for CanvasStac
     ) {
         self.inner.push((
             ir::Point::default(),
-            Arc::new(Box::new(CanvasPathElem {
+            Arc::new(CanvasElem::Path(CanvasPathElem {
                 path_data: path.clone(),
             })),
         ))
@@ -466,7 +503,7 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode>> GroupContext<C> for CanvasStac
     fn render_image(&mut self, _ctx: &mut C, image_item: &ir::ImageItem) {
         self.inner.push((
             ir::Point::default(),
-            Arc::new(Box::new(CanvasImageElem {
+            Arc::new(CanvasElem::Image(CanvasImageElem {
                 image_data: image_item.clone(),
             })),
         ))
@@ -486,7 +523,7 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode>> GroupContext<C> for CanvasStac
         if let Some(glyph_data) = font.get_glyph(glyph) {
             self.inner.push((
                 ir::Point::new(pos, Scalar(0.)),
-                Arc::new(Box::new(CanvasGlyphElem {
+                Arc::new(CanvasElem::Glyph(CanvasGlyphElem {
                     fill: self.fill.clone().unwrap(),
                     glyph_data: glyph_data.clone(),
                 })),
@@ -574,7 +611,7 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
 #[derive(Clone)]
 pub struct CanvasPage {
     pub content: Fingerprint,
-    pub elem: Arc<Box<dyn CanvasElem + Send + Sync>>,
+    pub elem: Arc<CanvasElem>,
     pub size: Size,
 }
 

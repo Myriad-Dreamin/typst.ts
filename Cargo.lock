@@ -4378,6 +4378,7 @@ dependencies = [
 name = "typst-ts-dom-exporter"
 version = "0.4.2-rc4"
 dependencies = [
+ "async-recursion",
  "base64",
  "comemo",
  "log",

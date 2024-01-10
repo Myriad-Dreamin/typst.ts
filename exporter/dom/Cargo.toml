@@ -20,11 +20,12 @@ tiny-skia-path.workspace = true
 base64.workspace = true
 
 typst-ts-core.workspace = true
-typst-ts-canvas-exporter = { workspace = true, optional = true }
-typst-ts-svg-exporter = { workspace = true }
+typst-ts-canvas-exporter.workspace = true
+typst-ts-svg-exporter.workspace = true
 log.workspace = true
 siphasher.workspace = true
 rayon.workspace = true
+async-recursion.workspace = true
 
 web-sys = { workspace = true, features = [
     "console",
@@ -52,5 +53,5 @@ web-sys = { workspace = true, features = [
 
 [features]
 experimental-ligature = ["typst-ts-core/experimental-ligature"]
-aggresive-browser-rasterization = ["typst-ts-canvas-exporter"]
+aggresive-browser-rasterization = []
 default = []
