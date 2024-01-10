@@ -81,7 +81,8 @@
                   });
                   console.log('render time!!!!!!!!!', performance.now() - t);
 
-                  const pullRender = () => {
+                  const pullRender = async () => {
+                    const t = performance.now();
                     const basePos = {
                       left: 0,
                       top: 0,
@@ -104,10 +105,11 @@
                     }
                     // console.log('ccc', basePos, appPos, rect);
 
-                    plugin.triggerDomRerender({
+                    await plugin.triggerDomRerender({
                       renderSession: ses,
                       ...rect,
                     });
+                    console.log('pull render time!!!!!!!!!', performance.now() - t);
                   };
 
                   // if (isWaitForRendering()) {
