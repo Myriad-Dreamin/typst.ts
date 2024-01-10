@@ -28,6 +28,9 @@
   cursor: pointer;
   pointer-events: all;
 }
+svg {
+  fill: none;
+}
 
 .outline_glyph path,
 path.outline_glyph {

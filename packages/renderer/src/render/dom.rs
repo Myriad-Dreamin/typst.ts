@@ -17,6 +17,7 @@ impl TypstRenderer {
     pub async fn trigger_dom_rerender(
         &mut self,
         ses: &mut RenderSession,
+        feature: u32,
         x: f32,
         y: f32,
         w: f32,
@@ -25,8 +26,14 @@ impl TypstRenderer {
         let mut kern = ses.client.lock().unwrap();
         let mut dom_kern = ses.dom_kern.lock().unwrap();
 
+        let is_responsive = (feature & (1 << 0)) != 0;
+
         dom_kern
-            .rerender(&mut kern, tiny_skia::Rect::from_xywh(x, y, w, h))
+            .rerender(
+                &mut kern,
+                tiny_skia::Rect::from_xywh(x, y, w, h),
+                is_responsive,
+            )
             .await
             .unwrap();
     }
