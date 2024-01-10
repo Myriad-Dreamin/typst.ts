@@ -69,7 +69,7 @@ struct HookedElement {
 /// maintains the state of the incremental rendering at client side
 #[derive(Default)]
 pub struct IncrDomDocClient {
-    tmpl: once_cell::sync::OnceCell<HtmlTemplateElement>,
+    tmpl: XmlFactory,
     stub: once_cell::sync::OnceCell<Element>,
     /// Expected exact state of the current DOM.
     /// Initially it is None meaning no any page is rendered.
@@ -93,18 +93,6 @@ impl IncrDomDocClient {
         }
     }
 
-    fn tmpl(&self) -> &HtmlTemplateElement {
-        self.tmpl.get_or_init(|| {
-            let tmpl = web_sys::window()
-                .unwrap()
-                .document()
-                .unwrap()
-                .create_element("template")
-                .unwrap();
-            tmpl.dyn_into().unwrap()
-        })
-    }
-
     fn stub(&self) -> &Element {
         self.stub.get_or_init(|| {
             web_sys::window()
@@ -117,9 +105,7 @@ impl IncrDomDocClient {
     }
 
     fn create_element(&self, html: &str) -> Element {
-        let tmpl = self.tmpl();
-        tmpl.set_inner_html(html);
-        tmpl.content().first_element_child().unwrap()
+        self.tmpl.create_element(html)
     }
 
     pub fn reset(&mut self) {}
@@ -200,7 +186,7 @@ impl IncrDomDocClient {
 
         let mut t = SvgBackendTask::default();
         let mut ctx = DomContext {
-            tmpl: self.tmpl().clone(),
+            tmpl: self.tmpl.clone(),
             stub: self.stub().clone(),
             module: kern.module(),
             t: &mut t,
@@ -247,7 +233,8 @@ impl IncrDomDocClient {
             self.doc_view.truncate(next_doc_view.len());
         }
         for i in self.doc_view.len()..next_doc_view.len() {
-            self.doc_view.push(DomPage::new_at(elem.hooked.clone(), i));
+            self.doc_view
+                .push(DomPage::new_at(elem.hooked.clone(), self.tmpl.clone(), i));
         }
         for (page, data) in self.doc_view.iter_mut().zip(next_doc_view.into_iter()) {
             page.track_data(data);
@@ -277,18 +264,46 @@ impl IncrDomDocClient {
     }
 }
 
+#[derive(Clone)]
+struct XmlFactory(HtmlTemplateElement);
+
+impl Default for XmlFactory {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl XmlFactory {
+    pub fn new() -> Self {
+        Self(
+            web_sys::window()
+                .unwrap()
+                .document()
+                .unwrap()
+                .create_element("template")
+                .unwrap()
+                .dyn_into()
+                .unwrap(),
+        )
+    }
+
+    pub fn create_element(&self, html: &str) -> Element {
+        let tmpl = &self.0;
+        tmpl.set_inner_html(html);
+        tmpl.content().first_element_child().unwrap()
+    }
+}
+
 pub struct DomContext<'m, 'a> {
-    tmpl: HtmlTemplateElement,
+    tmpl: XmlFactory,
     stub: Element,
     t: &'a mut SvgBackendTask,
     module: &'m Module,
 }
 
 impl<'m, 'a> DomContext<'m, 'a> {
-    pub fn create_element(&self, html: &str) -> Element {
-        let tmpl = &self.tmpl;
-        tmpl.set_inner_html(html);
-        tmpl.content().first_element_child().unwrap()
+    fn create_element(&self, html: &str) -> Element {
+        self.tmpl.create_element(html)
     }
 
     fn get_item(&self, id: &Fingerprint) -> Option<&'m VecItem> {
@@ -305,15 +320,23 @@ struct DomPage {
     idx: usize,
     /// The element to track.
     elem: HtmlElement,
-    /// The element to track.
-    svg: Option<SvgsvgElement>,
+    /// The svg element to track.
+    svg: SvgsvgElement,
     /// The page data
     data: Option<Page>,
     /// The page data
     next_data: Option<Page>,
     /// The viewport.
-    viewport: Option<tiny_skia::Rect>,
+    viewport: tiny_skia::Rect,
+    /// The BBox of the page.
+    bbox: tiny_skia::Rect,
     attached: Option<TypstPageElem>,
+    /// Whether the page is visible.
+    is_visible: bool,
+    /// The group element.
+    g: Element,
+    /// The stub element.
+    stub: Element,
 }
 
 impl Drop for DomPage {
@@ -323,21 +346,30 @@ impl Drop for DomPage {
 }
 
 impl DomPage {
-    pub fn new_at(elem: HtmlElement, idx: usize) -> Self {
-        let me = web_sys::window()
-            .unwrap()
-            .document()
-            .unwrap()
-            .create_element("div")
-            .unwrap();
-        elem.append_child(&me).unwrap();
-        me.set_class_name("typst-dom-page");
+    pub fn new_at(elem: HtmlElement, tmpl: XmlFactory, idx: usize) -> Self {
+        const TEMPLATE: &str = r#"<div class="typst-dom-page"><svg class="typst-svg-page" viewBox="0 0 0 0" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">
+<g></g><stub></stub></svg></div>"#;
+
+        let me = tmpl.create_element(TEMPLATE);
         me.set_attribute("data-index", &idx.to_string()).unwrap();
+        let svg: SvgsvgElement = me.first_element_child().unwrap().dyn_into().unwrap();
+        let g = svg.first_element_child().unwrap();
+        let stub = g.next_element_sibling().unwrap();
+        g.remove();
+
+        elem.append_child(&me).unwrap();
+
+        let viewport = tiny_skia::Rect::from_xywh(0., 0., 0., 0.).unwrap();
+        let bbox = viewport;
         Self {
+            is_visible: false,
+            g,
+            stub,
             idx,
             elem: me.dyn_into().unwrap(),
-            svg: None,
-            viewport: None,
+            svg,
+            viewport,
+            bbox,
             data: None,
             next_data: None,
             attached: None,
@@ -345,70 +377,47 @@ impl DomPage {
     }
 
     fn track_data(&mut self, data: Page) {
+        let prev_size = self.data.as_ref().map(|d| d.size);
+
+        if prev_size.map(|s| s != data.size).unwrap_or(true) {
+            // calculate the width and height of the svg
+            // todo: don't update if individual not changed
+            let w = data.size.x.0;
+            let h = data.size.y.0;
+
+            self.elem
+                .set_attribute("data-width", &w.to_string())
+                .unwrap();
+            self.elem
+                .set_attribute("data-height", &h.to_string())
+                .unwrap();
+            let style = self.elem.style();
+            style
+                .set_property("--data-page-width", &format!("{:.3}px", w))
+                .unwrap();
+            style
+                .set_property("--data-page-height", &format!("{:.3}px", h))
+                .unwrap();
+            self.svg
+                .set_attribute(
+                    "viewBox",
+                    &format!("0 0 {width} {height}", width = w, height = h),
+                )
+                .unwrap();
+            self.bbox = tiny_skia::Rect::from_xywh(0., 0., data.size.x.0, data.size.y.0).unwrap();
+        }
+
         self.next_data = Some(data);
     }
 
-    fn attach_dom(
-        &mut self,
-        ctx: &mut DomContext<'_, '_>,
-        elements: Element,
-        data: Page,
-    ) -> ZResult<()> {
+    fn attach_dom(&mut self, ctx: &mut DomContext<'_, '_>, g: Element, data: Page) -> ZResult<()> {
         web_sys::console::log_2(
             &format!("attach {idx} {a:?}", idx = self.idx, a = self.attached).into(),
-            &elements,
+            &g,
         );
-        self.attached = Some(TypstPageElem::from_elem(ctx, elements, data));
+        self.attached = Some(TypstPageElem::from_elem(ctx, g, data));
 
         Ok(())
-    }
-
-    fn instantiate(&mut self, ctx: &mut DomContext<'_, '_>, data: &Page) -> ZResult<SvgsvgElement> {
-        let mut svg = Vec::<SvgText>::new();
-
-        svg.push(SvgText::Plain( format!(
-            r#"<svg class="typst-svg-page" viewBox="0 0 {:.3} {:.3}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">"#,
-            data.size.x.0, data.size.y.0,
-        )));
-
-        let state = RenderState::new_size(data.size);
-        let mut render_task = ctx.t.get_render_context(ctx.module);
-        // render the document
-        let mut svg_body = vec![];
-        svg.push(SvgText::Content(
-            render_task.render_item(state, &data.content),
-        ));
-
-        // attach the clip paths, and style defs
-
-        svg.push(r#"<defs class="clip-path">"#.into());
-        let patterns = ctx.t.render_patterns(ctx.module);
-
-        let gradients = std::mem::take(&mut ctx.t.gradients);
-        let gradients = gradients
-            .values()
-            .filter_map(|(_, id, _)| match ctx.module.get_item(id) {
-                Some(VecItem::Gradient(g)) => Some((id, g.as_ref())),
-                _ => {
-                    // #[cfg(debug_assertions)]
-                    panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
-                    #[allow(unreachable_code)]
-                    None
-                }
-            });
-        SvgBackend::gradients(gradients, &mut svg);
-        SvgBackend::patterns(patterns.into_iter(), &mut svg);
-        svg.push("</defs>".into());
-
-        SvgBackend::style_defs(std::mem::take(&mut ctx.t.style_defs), &mut svg);
-
-        // body
-        svg.append(&mut svg_body);
-
-        svg.push("</svg>".into());
-
-        let svg = ctx.create_element(&SvgText::join(svg));
-        Ok(svg.dyn_into().unwrap())
     }
 
     async fn do_recalculate(
@@ -417,46 +426,10 @@ impl DomPage {
         data: Page,
         viewport: Option<tiny_skia::Rect>,
     ) -> ZResult<()> {
-        // calculate the width and height of the svg
-        let w = data.size.x.0;
-        let h = data.size.y.0;
+        self.reflow(ctx, data.clone()).await?;
 
-        self.elem
-            .set_attribute("data-width", &w.to_string())
-            .unwrap();
-        self.elem
-            .set_attribute("data-height", &h.to_string())
-            .unwrap();
-        let style = self.elem.style();
-        style
-            .set_property("--data-page-width", &format!("{:.3}px", w))
-            .unwrap();
-        style
-            .set_property("--data-page-height", &format!("{:.3}px", h))
-            .unwrap();
-
-        // update the state
-        // self.doc_view = Some(next_doc_view);
-        // self.glyph_window = kern.glyphs.len();
-
-        // return the svg
-        if self.elem.child_element_count() == 0 {
-            let svg = self.instantiate(ctx, &data)?;
-            self.elem.append_child(&svg).unwrap();
-            self.attach_dom(ctx, svg.clone().into(), data)?;
-            self.svg = Some(svg);
-        } else {
-            self.reflow(ctx, data).await?;
-        }
-
-        let svg = self.svg.clone().unwrap();
-        let ctm = svg.get_ctm().unwrap();
-        // self.elem.client_left()
-        // self.elem.client_top()
-        // let ts = tiny_skia::Transform::from_row(
-        //     ctm.a(), ctm.b(), ctm.c(), ctm.d(), ctm.e(), ctm.f(),
-        // );
-        // ts regards clientLeft and clientTop relative to the window
+        let ctm = self.svg.get_ctm().unwrap();
+        // todo: cause a real reflow
         let cr = self.elem.get_bounding_client_rect();
         let ts = tiny_skia::Transform::from_row(
             ctm.a(),
@@ -466,22 +439,24 @@ impl DomPage {
             ctm.e() - cr.left() as f32,
             ctm.f() - cr.top() as f32,
         );
-        // web_sys::console::log_3(&format!("ctop {ctop:?}", ctop =
-        // self.elem.client_top()).into(), &cr, &self.elem);
-        self.viewport = viewport.and_then(|v| v.transform(ts));
+        let viewport = viewport.unwrap_or_else(|| {
+            tiny_skia::Rect::from_xywh(0., 0., data.size.x.0, data.size.y.0).unwrap()
+        });
+        let Some(viewport) = viewport.transform(ts) else {
+            web_sys::console::warn_2(
+                &format!(
+                    "viewport is empty: {vp:?}, ts: {ts:?}, cr: {cr:?}",
+                    vp = viewport,
+                    ts = ts,
+                    cr = cr,
+                )
+                .into(),
+                &self.elem,
+            );
+            return Ok(());
+        };
+        self.viewport = viewport;
 
-        // const resolveCoord = (elem: SVGGElement, x: number, y: number) => {
-        //     var matrix = elem.getScreenCTM();
-
-        //     if (!matrix) {
-        //       return { x: 0, y: 0 };
-        //     }
-
-        //     return {
-        //       x: matrix.a * x + matrix.c * y + matrix.e - coordLeft,
-        //       y: matrix.b * x + matrix.d * y + matrix.f - coordTop,
-        //     };
-        //   };
         self.repaint(ctx).await?;
 
         Ok(())
@@ -504,15 +479,80 @@ impl DomPage {
     }
 
     async fn reflow(&self, _ctx: &mut DomContext<'_, '_>, _data: Page) -> ZResult<()> {
-        web_sys::console::log_2(
-            &format!("apply_diff {idx}", idx = self.idx).into(),
-            &self.elem,
-        );
+        web_sys::console::log_2(&format!("reflow {idx}", idx = self.idx).into(), &self.elem);
 
         Ok(())
     }
 
     async fn repaint(&mut self, ctx: &mut DomContext<'_, '_>) -> ZResult<()> {
+        let should_visible = self.bbox.intersect(&self.viewport).is_some();
+
+        web_sys::console::log_1(
+            &format!(
+                "reflow_root({should_visible}) bbox:{bbox:?} view:{viewport:?}",
+                bbox = self.bbox,
+                viewport = self.viewport,
+            )
+            .into(),
+        );
+
+        if should_visible != self.is_visible {
+            self.is_visible = should_visible;
+            if should_visible {
+                self.stub.replace_with_with_node_1(&self.g).unwrap();
+            } else {
+                self.g.replace_with_with_node_1(&self.stub).unwrap();
+                return Ok(());
+            }
+        }
+
+        if self.attached.is_none() {
+            let mut render_task = ctx.t.get_render_context(ctx.module);
+
+            let mut g = vec!["<g>".into()];
+            let data = self.data.clone().unwrap();
+
+            // render the document
+            let state = RenderState::new_size(data.size);
+            g.push(SvgText::Content(
+                render_task.render_item(state, &data.content),
+            ));
+
+            // attach the clip paths, and style defs
+
+            g.push(r#"<defs class="clip-path">"#.into());
+            let patterns = ctx.t.render_patterns(ctx.module);
+
+            let gradients = std::mem::take(&mut ctx.t.gradients);
+            let gradients =
+                gradients
+                    .values()
+                    .filter_map(|(_, id, _)| match ctx.module.get_item(id) {
+                        Some(VecItem::Gradient(g)) => Some((id, g.as_ref())),
+                        _ => {
+                            // #[cfg(debug_assertions)]
+                            panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
+                            #[allow(unreachable_code)]
+                            None
+                        }
+                    });
+            SvgBackend::gradients(gradients, &mut g);
+            SvgBackend::patterns(patterns.into_iter(), &mut g);
+            g.push("</defs>".into());
+
+            SvgBackend::style_defs(std::mem::take(&mut ctx.t.style_defs), &mut g);
+
+            g.push(r#"</g>"#.into());
+
+            //Note: create in svg namespace
+            self.g.set_inner_html(&SvgText::join(g));
+            let g = self.g.first_element_child().unwrap();
+
+            self.attach_dom(ctx, g, data)?;
+        }
+
+        let ts = tiny_skia::Transform::identity();
+
         web_sys::console::log_2(
             &format!(
                 "repaint {idx} {vp:?}, bbox_query {fetch_times:?}",
@@ -525,11 +565,7 @@ impl DomPage {
         );
 
         if let Some(attached) = &mut self.attached {
-            let ts = tiny_skia::Transform::identity();
-            let viewport = self.viewport.unwrap_or_else(|| {
-                tiny_skia::Rect::from_xywh(0., 0., attached.size.x.0, attached.size.y.0).unwrap()
-            });
-            attached.repaint(ctx, ts, viewport);
+            attached.repaint(ctx, ts, self.viewport);
         }
 
         web_sys::console::log_2(
@@ -548,33 +584,23 @@ impl DomPage {
 
 #[derive(Debug)]
 struct TypstPageElem {
-    show_visible: bool,
     stub: Element,
-    elem_ctx: Element,
     g: TypstElem,
-    size: Size,
-    bbox: tiny_skia::Rect,
     clip_paths: Element,
     style_defs: Element,
 }
 
 impl TypstPageElem {
-    fn from_elem(ctx: &mut DomContext<'_, '_>, elem_ctx: Element, data: Page) -> Self {
-        let g: SvgGraphicsElement = elem_ctx.first_element_child().unwrap().dyn_into().unwrap();
+    fn from_elem(ctx: &mut DomContext<'_, '_>, g: Element, data: Page) -> Self {
+        let g = g.first_element_child().unwrap();
         let stub: Element = ctx.stub.clone_node().unwrap().dyn_into().unwrap();
         let clip_paths = g.next_element_sibling().unwrap();
         let style_defs = clip_paths.next_element_sibling().unwrap();
-        let attached = Self::attach(ctx, g.clone(), data.content);
+        let attached = Self::attach(ctx, g.clone().dyn_into().unwrap(), data.content);
 
-        // do very lazy repaint/visibiliity on page elements
-        elem_ctx.replace_with_with_node_1(&stub).unwrap();
         Self {
-            show_visible: false,
-            elem_ctx,
             g: attached,
             stub,
-            size: data.size,
-            bbox: tiny_skia::Rect::from_xywh(0., 0., data.size.x.0, data.size.y.0).unwrap(),
             clip_paths,
             style_defs,
         }
@@ -638,7 +664,22 @@ impl TypstPageElem {
                 })
             }
             VecItem::Item(TransformedRef(trans, fg)) => {
-                let child = Self::attach(ctx, g.clone(), *fg);
+                let ch = g.last_element_child();
+
+                let child = Self::attach(
+                    ctx,
+                    ch.ok_or_else(|| {
+                        web_sys::console::log_2(
+                            &g,
+                            &format!("Invalid item reference: {:?}", item).into(),
+                        );
+                        panic!("Invalid item reference: {}", fg.as_svg_id("g"));
+                    })
+                    .unwrap()
+                    .dyn_into()
+                    .unwrap(),
+                    *fg,
+                );
 
                 TypstDomExtra::Item(TransformElem {
                     trans: trans.clone(),
@@ -696,29 +737,6 @@ impl TypstPageElem {
         ts: tiny_skia::Transform,
         viewport: tiny_skia::Rect,
     ) {
-        let estimated_bbox = self.bbox.transform(ts);
-
-        let should_visible = estimated_bbox
-            .map(|estimated_bbox| estimated_bbox.intersect(&viewport).is_some())
-            .unwrap_or(true);
-
-        web_sys::console::log_1(
-            &format!(
-            "reflow_root({should_visible}) ts:{ts:?} estimated:{estimated_bbox:?} view:{viewport:?}"
-        )
-            .into(),
-        );
-
-        if should_visible != self.show_visible {
-            self.show_visible = should_visible;
-            if should_visible {
-                self.stub.replace_with_with_node_1(&self.elem_ctx).unwrap();
-            } else {
-                self.elem_ctx.replace_with_with_node_1(&self.stub).unwrap();
-                return;
-            }
-        }
-
         self.g.repaint(ts, viewport);
     }
 }
