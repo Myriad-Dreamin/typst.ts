@@ -5,8 +5,10 @@ use typst_ts_core::{
     vector::ir::{Page, Point, Scalar, Size, TextItem, TransformItem},
 };
 use web_sys::{
-    wasm_bindgen::JsCast, Element, HtmlCanvasElement, HtmlDivElement, HtmlElement,
-    SvgGraphicsElement, SvgsvgElement,
+    js_sys::Reflect,
+    wasm_bindgen::{JsCast, JsValue},
+    window, Element, HtmlCanvasElement, HtmlDivElement, HtmlElement, SvgGraphicsElement,
+    SvgsvgElement,
 };
 
 use crate::{
@@ -70,6 +72,17 @@ impl DomPage {
         let g = svg.first_element_child().unwrap();
         let stub = g.next_element_sibling().unwrap();
         g.remove();
+
+        // window.bindSemantics
+        let bind_semantics_handler = window().unwrap();
+        let bind_semantics_handler =
+            Reflect::get(&bind_semantics_handler, &"typstBindSemantics".into())
+                .unwrap()
+                .dyn_into::<web_sys::js_sys::Function>()
+                .unwrap();
+        bind_semantics_handler
+            .call3(&JsValue::UNDEFINED, &me, &svg, &semantics)
+            .unwrap();
 
         // for debug canvas
         // svg.style().set_property("visibility", "hidden").unwrap();

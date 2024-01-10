@@ -258,7 +258,7 @@ impl SemanticsBackend {
                 if is_regular_scale && is_regular_skew {
                     output.push(Cow::Owned(format!(
                         r#" style="font-size: 0px; left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {});  width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});">"#,
-                        ts.tx,ts.ty, t.size.x.0, t.size.y.0,
+                        ts.tx - 1., ts.ty - 2., t.size.x.0 + 2., t.size.y.0 + 4.,
                     )));
                 } else {
                     output.push(Cow::Owned(format!(
