@@ -220,7 +220,7 @@ impl TypstPageElem {
         };
 
         let mut ret = TypstElem {
-            is_visible: true,
+            is_svg_visible: true,
             browser_bbox_unchecked: true,
             stub,
             g,
@@ -228,6 +228,7 @@ impl TypstPageElem {
             estimated_bbox: None,
             bbox: None,
             extra,
+            canvas: None,
         };
 
         match &ret.extra {
@@ -251,13 +252,13 @@ impl TypstPageElem {
         ret
     }
 
-    pub fn repaint(
+    pub fn repaint_svg(
         &mut self,
         _ctx: &mut DomContext<'_, '_>,
         ts: tiny_skia::Transform,
         viewport: tiny_skia::Rect,
     ) {
-        self.g.repaint(ts, viewport);
+        self.g.repaint_svg(ts, viewport);
     }
 }
 
@@ -266,7 +267,7 @@ pub static FETCH_BBOX_TIMES: std::sync::atomic::AtomicUsize =
 static BBOX_SANITIZER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
 impl TypstElem {
-    fn repaint(&mut self, ts: tiny_skia::Transform, viewport: tiny_skia::Rect) {
+    fn repaint_svg(&mut self, ts: tiny_skia::Transform, viewport: tiny_skia::Rect) {
         use TypstDomExtra::*;
         if matches!(self.extra, ContentHint(_)) {
             return; // always visible
@@ -288,13 +289,14 @@ impl TypstElem {
             }
         }
 
-        let new_rect = self.bbox.or(self.estimated_bbox).unwrap();
-        let should_visible = new_rect
+        let bbox = self.bbox.as_deref().cloned();
+        let bbox = bbox.or(self.estimated_bbox).unwrap();
+        let should_visible = bbox
             .transform(ts)
             .map(|new_rect| new_rect.intersect(&viewport).is_some())
             .unwrap_or(true);
 
-        if should_visible != self.is_visible {
+        if should_visible != self.is_svg_visible {
             let (x, y) = (&self.stub, &self.g);
             if should_visible {
                 x.replace_with_with_node_1(y).unwrap();
@@ -302,7 +304,7 @@ impl TypstElem {
                 y.replace_with_with_node_1(x).unwrap();
             };
 
-            self.is_visible = should_visible;
+            self.is_svg_visible = should_visible;
         }
 
         if !should_visible {
@@ -313,7 +315,7 @@ impl TypstElem {
             Group(g) => {
                 for (p, child) in g.children.iter_mut() {
                     let ts = ts.pre_translate(p.x.0, p.y.0);
-                    child.repaint(ts, viewport);
+                    child.repaint_svg(ts, viewport);
                 }
             }
             Item(g) => {
@@ -324,7 +326,7 @@ impl TypstElem {
                 // if let TransformItem::Clip(c) = g.trans {
 
                 // }
-                g.child.repaint(ts, viewport);
+                g.child.repaint_svg(ts, viewport);
             }
             _ => {}
         }
@@ -349,7 +351,7 @@ impl TypstElem {
         }
         // web_sys::console::log_2(&bbox, &format!("retrieved_bbox {a:?} {ccbbox:?}", a
         // = self.f.as_svg_id("")).into());
-        self.bbox = ccbbox;
+        self.bbox = ccbbox.map(Box::new);
         self.browser_bbox_unchecked = false;
 
         if let TypstDomExtra::Group(g) = &mut self.extra {
@@ -361,7 +363,7 @@ impl TypstElem {
 
     fn ensure_bbox_is_well_estimated(&self) {
         static WARN_ONCE: AtomicBool = AtomicBool::new(false);
-        let bbox = self.bbox.unwrap().round();
+        let bbox = self.bbox.as_ref().map(|b| b.round()).unwrap();
         let estmiated = self.estimated_bbox.unwrap().round_out();
         if estmiated
             .zip(bbox)

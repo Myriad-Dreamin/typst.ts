@@ -210,6 +210,7 @@ pub trait RenderVm<'m>: Sized + FontIndice<'m> {
         self.start_group(value)
     }
 
+    // todo: remove render state
     fn start_text(
         &mut self,
         _state: RenderState,

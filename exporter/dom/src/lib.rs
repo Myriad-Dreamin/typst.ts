@@ -1,3 +1,4 @@
+mod canvas_backend;
 mod dom;
 mod factory;
 mod incr;
