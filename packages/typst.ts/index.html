@@ -28,6 +28,8 @@
       .typst-dom-page {
         width: var(--data-page-width, 100%);
         height: var(--data-page-height);
+        --data-text-width: var(--data-page-width, 100%);
+        --data-text-height: var(--data-page-height, 100%);
       }
 
       .typst-back-canvas {
@@ -35,6 +37,63 @@
         z-index: -1;
         width: var(--data-page-width, 100%);
         height: var(--data-page-height);
+      }
+
+      .typst-svg-page {
+        position: absolute;
+        z-index: 0;
+        width: var(--data-page-width, 100%);
+        height: var(--data-page-height);
+      }
+
+      .typst-html-semantics {
+        z-index: 1;
+        width: var(--data-page-width, 100%);
+        height: var(--data-page-height);
+        font-family: monospace;
+      }
+
+      .typst-html-semantics span {
+        position: relative;
+        display: inline-block;
+      }
+
+      .typst-content-hint {
+        position: relative;
+        display: inline-block;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+      }
+
+      /* set transparent itself */
+      .typst-content-group {
+        pointer-events: visible;
+      }
+
+      .typst-html-semantics span::-moz-selection {
+        color: white;
+        background: #7db9dea0;
+      }
+
+      .typst-html-semantics span::selection {
+        color: white;
+        background: #7db9dea0;
+      }
+
+      .typst-html-semantics *::-moz-selection {
+        color: transparent;
+        background: transparent;
+      }
+
+      .typst-html-semantics *::selection {
+        color: transparent;
+        background: transparent;
+      }
+
+      .pseudo-link,
+      .typst-text {
+        pointer-events: none;
       }
       /* 
       body {
@@ -45,6 +104,77 @@
     <script>
       pdfjsLib.GlobalWorkerOptions.workerSrc =
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
+
+      window.handleTypstSemantics = (context, semantics) => {
+        setTimeout(() => {
+          const semanticsWidth = Number.parseFloat(context.getAttribute('data-width'));
+          const semanticsHeight = Number.parseFloat(context.getAttribute('data-height'));
+          console.log('handleTypstSemantics', semanticsWidth, semanticsHeight);
+          let f = false;
+          const ggg = context.getBoundingClientRect();
+          const w = ggg.width;
+          const h = ggg.height;
+
+          const textTranslateToHandle = [];
+
+          function handleTextTranslate(elem, dataTranslate, relativeTo) {
+            const eb = elem.getBoundingClientRect();
+            textTranslateToHandle.push([
+              elem,
+              dataTranslate,
+              [eb.left - relativeTo.left, eb.top - relativeTo.top],
+            ]);
+          }
+
+          function handleText(elem, dataMatrix, relativeTo) {
+            const data = dataMatrix.split(',').map(Number.parseFloat);
+            if (data.length === 2) {
+              handleTextTranslate(elem, data, relativeTo);
+            } else if (data.length === 6) {
+              console.log('dataMatrix', elem, data);
+              const [a, b, c, d, e, f] = data;
+              handleTextTranslate(elem, [e, f], relativeTo);
+            } else {
+              throw new Error('unknown data matrix');
+            }
+          }
+
+          function handleChildren(elem, relativeTo) {
+            for (const child of elem.children) {
+              const dataMatrix = child.getAttribute('data-matrix');
+              if (dataMatrix) {
+                handleText(child, dataMatrix, relativeTo);
+              }
+              handleChildren(child, child.getBoundingClientRect());
+            }
+          }
+
+          handleChildren(semantics, ggg);
+
+          for (const [elem, dataTranslate, selfRelative] of textTranslateToHandle) {
+            const sl = dataTranslate[0] / semanticsWidth;
+            const st = dataTranslate[1] / semanticsHeight;
+            const rl = selfRelative[0] / w;
+            const rt = selfRelative[1] / h;
+            const rrl = sl - rl;
+            const rrt = st - rt;
+            // console.log(
+            //   'dataTranslateRR',
+            //   dataTranslate[0],
+            //   dataTranslate[1],
+            //   selfRelative.left - relativeTo.left,
+            //   selfRelative.top - relativeTo.top,
+            //   w,
+            //   h,
+            //   rrl,
+            //   rrt,
+            //   elem,
+            // );
+            elem.style.top = `calc(var(--data-text-height) * ${rrt})`;
+            elem.style.left = `calc(var(--data-text-width) * ${rrl})`;
+          }
+        }, 0);
+      };
 
       document.ready(() => {
         let plugin = window.TypstRenderModule.createTypstRenderer(pdfjsLib);
@@ -109,7 +239,7 @@
                       renderSession: ses,
                       ...rect,
                     });
-                    console.log('pull render time!!!!!!!!!', performance.now() - t);
+                    // console.log('pull render time!!!!!!!!!', performance.now() - t);
                   };
 
                   // if (isWaitForRendering()) {
