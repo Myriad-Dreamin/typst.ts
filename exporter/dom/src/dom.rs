@@ -5,10 +5,8 @@ use typst_ts_core::{
     vector::ir::{Page, Point, Scalar, Size, TextItem, TransformItem},
 };
 use web_sys::{
-    js_sys::{self, Reflect},
-    wasm_bindgen::{JsCast, JsValue},
-    window, Element, HtmlCanvasElement, HtmlDivElement, HtmlElement, SvgGraphicsElement,
-    SvgsvgElement,
+    wasm_bindgen::JsCast, Element, HtmlCanvasElement, HtmlDivElement, HtmlElement,
+    SvgGraphicsElement, SvgsvgElement,
 };
 
 use crate::{
@@ -25,7 +23,7 @@ pub struct DomPage {
     canvas: HtmlCanvasElement,
     /// The svg element to track.
     svg: SvgsvgElement,
-    /// The svg element to track.
+    /// The semantics element to track.
     semantics: HtmlDivElement,
     /// The layout data, currently there is only a page in layout.
     layout_data: Option<Page>,
@@ -56,6 +54,8 @@ impl Drop for DomPage {
         self.elem.remove();
     }
 }
+
+static A_WIDTH: once_cell::sync::OnceCell<f32> = once_cell::sync::OnceCell::new();
 
 impl DomPage {
     pub fn new_at(elem: HtmlElement, tmpl: XmlFactory, idx: usize) -> Self {
@@ -293,36 +293,55 @@ impl DomPage {
 
     fn repaint_semantics(&mut self, ctx: &mut DomContext<'_, '_>) -> ZResult<()> {
         let init_semantics = self.semantics_state.as_ref().map_or(true, |e| {
-            let (data, _layouted) = e;
+            let (data, _layout_heavy) = e;
             e.0.content != data.content
         });
 
+        let a_width: f32 = *A_WIDTH.get_or_init(|| {
+            let ctx = self
+                .canvas
+                .get_context("2d")
+                .unwrap()
+                .unwrap()
+                .dyn_into::<web_sys::CanvasRenderingContext2d>()
+                .unwrap();
+            let _g = CanvasStateGuard::new(&ctx);
+            ctx.set_font("128px monospace");
+            let a_width = ctx.measure_text("A").unwrap().width();
+
+            (a_width / 128.) as f32
+        });
+
         if init_semantics {
-            web_sys::console::log_1(&format!("init semantics: {}", self.idx).into());
+            let do_heavy = self.is_visible;
+
+            web_sys::console::log_1(&format!("init semantics({do_heavy}): {}", self.idx).into());
 
             let data = self.layout_data.clone().unwrap();
             let mut output = vec![];
-            let mut t = SemanticsBackend::default();
+            let mut t = SemanticsBackend::new(do_heavy, a_width, data.size.x.0);
             let ts = tiny_skia::Transform::identity();
             t.render_semantics(ctx.module, ts, data.content, &mut output);
             self.semantics.set_inner_html(&output.concat());
-            // window render semantics set timeout 0
-            window().unwrap();
-            Reflect::get(&window().unwrap(), &"handleTypstSemantics".into())
-                .unwrap()
-                .dyn_into::<js_sys::Function>()
-                .unwrap()
-                .call2(&JsValue::UNDEFINED, &self.elem, &self.semantics)
-                .unwrap();
-
-            self.semantics_state = Some((data, false));
+            self.semantics_state = Some((data, do_heavy));
         }
 
-        if !self.semantics_state.as_ref().map_or(true, |e| e.1) {
+        if !self.is_visible {
             return Ok(());
         }
 
-        web_sys::console::log_1(&format!("layout semantics: {}", self.idx).into());
+        if self.semantics_state.as_ref().map_or(true, |e| e.1) {
+            return Ok(());
+        }
+
+        web_sys::console::log_1(&format!("layout heavy semantics: {}", self.idx).into());
+
+        let data = self.layout_data.clone().unwrap();
+        let mut output = vec![];
+        let mut t = SemanticsBackend::new(true, a_width, data.size.x.0);
+        let ts = tiny_skia::Transform::identity();
+        t.render_semantics(ctx.module, ts, data.content, &mut output);
+        self.semantics.set_inner_html(&output.concat());
 
         self.semantics_state.as_mut().unwrap().1 = true;
         Ok(())

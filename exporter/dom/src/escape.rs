@@ -84,6 +84,12 @@ escapes!(
 );
 
 escapes!(
+    AttributeEscapes,
+    b'&' => "&amp;",
+    b'"' => "&quot;",
+);
+
+escapes!(
     TextContentDataEscapes,
     b'<' => "&lt;",
     b'&' => "&amp;",
