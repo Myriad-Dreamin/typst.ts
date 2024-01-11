@@ -231,17 +231,28 @@ impl DomPage {
     }
 
     fn pull_viewport(&mut self, viewport: Option<tiny_skia::Rect>) -> ZResult<bool> {
-        let ctm = self.svg.get_ctm().unwrap();
+        let layout_size = self
+            .layout_data
+            .as_ref()
+            .map(|d| d.size)
+            .unwrap_or_default();
+
         // todo: cause a real reflow
         let cr = self.elem.get_bounding_client_rect();
-        let ts = tiny_skia::Transform::from_row(
-            ctm.a(),
-            ctm.b(),
-            ctm.c(),
-            ctm.d(),
-            ctm.e() - cr.left() as f32,
-            ctm.f() - cr.top() as f32,
-        );
+
+        let sx = if layout_size.x.0 < 1e-3 {
+            1.
+        } else {
+            cr.width() as f32 / layout_size.x.0
+        };
+
+        let sy = if layout_size.y.0 < 1e-3 {
+            1.
+        } else {
+            cr.height() as f32 / layout_size.y.0
+        };
+
+        let ts = tiny_skia::Transform::from_row(sx, 0., 0., sy, 0., 0.);
         let viewport = viewport
             .and_then(|e| e.transform(ts))
             .and_then(|viewport| {
@@ -255,9 +266,8 @@ impl DomPage {
             .unwrap_or(self.bbox);
         web_sys::console::log_2(
             &format!(
-                "pull_viewport {idx} {vp:?}, bbox {bbox:?}",
+                "pull_viewport {idx} ts:{ts:?}, bbox {bbox:?}",
                 idx = self.idx,
-                vp = viewport,
                 bbox = self.bbox,
             )
             .into(),
