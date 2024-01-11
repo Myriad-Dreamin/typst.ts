@@ -1,5 +1,5 @@
 
-#import "@preview/book:0.2.2": *
+#import "@preview/book:0.2.3": *
 #import "./templates/page.typ": main-color
 
 #show: book
