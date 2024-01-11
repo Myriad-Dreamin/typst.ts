@@ -438,10 +438,12 @@ export interface TypstRenderer extends TypstSvgRenderer {
   triggerDomRerender(
     options: RenderInSessionOptions<{
       responsive: boolean;
-      x: number;
-      y: number;
-      width: number;
-      height: number;
+      viewport: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      };
     }>,
   ): Promise<void>;
 
@@ -791,17 +793,26 @@ class TypstRendererDriver {
     }
 
     return this.withinOptionSession(options, async sessionRef => {
-      return this.renderer.mount_dom(sessionRef[kObject], options.container as HTMLDivElement);
+      return this.renderer.mount_dom(
+        sessionRef[kObject],
+        options.container as HTMLDivElement,
+        options.viewport.x,
+        options.viewport.y,
+        options.viewport.width,
+        options.viewport.height,
+      );
     });
   }
 
   async triggerDomRerender(
     options: RenderInSessionOptions<{
       responsive: boolean;
-      x: number;
-      y: number;
-      width: number;
-      height: number;
+      viewport: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+      };
     }>,
   ): Promise<void> {
     let feature: number = 0;
@@ -812,10 +823,10 @@ class TypstRendererDriver {
     return this.renderer.trigger_dom_rerender(
       options.renderSession[kObject],
       feature,
-      options.x,
-      options.y,
-      options.width,
-      options.height,
+      options.viewport.x,
+      options.viewport.y,
+      options.viewport.width,
+      options.viewport.height,
     );
   }
 
