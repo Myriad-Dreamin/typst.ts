@@ -202,6 +202,13 @@ impl DomPage {
                     &format!("0 0 {width} {height}", width = w, height = h),
                 )
                 .unwrap();
+
+            self.svg
+                .set_attribute("data-width", &w.to_string())
+                .unwrap();
+            self.svg
+                .set_attribute("data-height", &h.to_string())
+                .unwrap();
             self.bbox = tiny_skia::Rect::from_xywh(0., 0., data.size.x.0, data.size.y.0).unwrap();
 
             let ppp = ctx.canvas_backend.pixel_per_pt;
@@ -301,6 +308,16 @@ impl DomPage {
             // Realize svg
             let g = ctx.svg_backend.render_page(ctx.module, &data, &self.g);
             self.realized = Some(TypstPageElem::from_elem(ctx, g, data));
+
+            // window.bindSvgDom
+            let bind_dom_handler = window().unwrap();
+            let bind_dom_handler = Reflect::get(&bind_dom_handler, &"typstBindSvgDom".into())
+                .unwrap()
+                .dyn_into::<web_sys::js_sys::Function>()
+                .unwrap();
+            bind_dom_handler
+                .call2(&JsValue::UNDEFINED, &self.elem, &self.svg)
+                .unwrap();
         }
 
         let ts = tiny_skia::Transform::identity();

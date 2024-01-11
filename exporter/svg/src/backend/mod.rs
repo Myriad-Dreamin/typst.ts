@@ -460,7 +460,7 @@ impl<
         } else {
             format!(
                 r##"target="_blank" xlink:href="{}""##,
-                link.href.replace('&', "&amp;")
+                link.href.replace('&', "&amp;").replace('"', "&quot;")
             )
         };
 
