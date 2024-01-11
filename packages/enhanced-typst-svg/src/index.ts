@@ -629,10 +629,14 @@ window.handleTypstLocation = function (
       // todo: multiple documents
       location.hash = `loc-${u}x${x.toFixed(2)}x${y.toFixed(2)}`;
     });
-  const docRoot = findAncestor(elem, 'typst-doc');
+  // todo: abstraction
+  let docRoot = findAncestor(elem, 'typst-doc');
   if (!docRoot) {
-    console.warn('no typst-doc found', elem);
-    return;
+    docRoot = findAncestor(elem, 'typst-svg-page');
+    if (!docRoot) {
+      console.warn('no typst-doc or typst-svg-page found', elem);
+      return;
+    }
   }
   const children = docRoot.children;
   let nthPage = 0;
@@ -762,6 +766,10 @@ function findLinkInSvg(r: SVGSVGElement, xy: [number, number], target: any) {
   svg: SVGSVGElement,
   semantics: HTMLDivElement,
 ) {
+  if ('typstBindCustomSemantics' in window) {
+    (window as any).typstBindCustomSemantics(root, svg, semantics);
+  }
+
   semantics.addEventListener('mousemove', (event: MouseEvent) => {
     ignoredEvent(
       () => {

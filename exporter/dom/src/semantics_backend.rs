@@ -246,10 +246,23 @@ impl SemanticsBackend {
                 output.push(Cow::Borrowed("</span>"));
             }
             Link(t) => {
+                let href_handler = if t.href.starts_with("@typst:") {
+                    let href = t.href.trim_start_matches("@typst:");
+                    format!(r##" onclick="{href}; return false""##)
+                } else {
+                    String::new()
+                };
                 output.push(Cow::Owned(format!(
                     r#"<a class="typst-content-link" href="{}""#,
-                    escape::escape_str::<AttributeEscapes>(&t.href),
+                    if href_handler.is_empty() {
+                        escape::escape_str::<AttributeEscapes>(&t.href)
+                    } else {
+                        Cow::Borrowed("#")
+                    },
                 )));
+                if !href_handler.is_empty() {
+                    output.push(Cow::Owned(href_handler));
+                }
                 let is_regular_scale = ts.sx == 1.0 && ts.sy == 1.0;
                 let is_regular_skew = ts.kx == 0.0 && ts.ky == 0.0;
                 if is_regular_scale && is_regular_skew {
