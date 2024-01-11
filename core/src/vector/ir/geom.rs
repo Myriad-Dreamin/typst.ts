@@ -93,6 +93,14 @@ impl std::ops::Sub for Scalar {
     }
 }
 
+impl std::ops::Mul for Scalar {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self(self.0 * rhs.0)
+    }
+}
+
 impl Eq for Scalar {}
 
 impl PartialEq for Scalar {

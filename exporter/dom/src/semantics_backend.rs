@@ -60,17 +60,18 @@ impl SemanticsBackend {
                 // with data-translate
                 let is_regular_scale = ts.sx == 1.0 && ts.sy == 1.0;
                 let is_regular_skew = ts.kx == 0.0 && ts.ky == 0.0;
-                let size = t.shape.size.0;
+                let size = (t.shape.size) * Scalar(ts.sy);
 
                 let width = t.width();
                 let scale_x =
-                    width.0 / (self.a_width * size * t.content.content.chars().count() as f32);
+                    width.0 / (self.a_width * size.0 * t.content.content.chars().count() as f32);
+
+                let descender = ctx.get_font(&t.shape.font).unwrap().descender * size;
+                let tx = Scalar(ts.tx);
+                let ty2: Scalar = Scalar(ts.ty);
+                let ty = ty2 - size - descender;
 
                 if self.heavy {
-                    let tx = Scalar(ts.tx);
-                    let ty2 = Scalar(ts.ty);
-                    let ty = ty2 - Scalar(size);
-
                     let top_bound_y = *self
                         .previous_y2_text
                         .range(..ty)
@@ -139,10 +140,10 @@ impl SemanticsBackend {
 
                 if is_regular_scale && is_regular_skew {
                     output.push(Cow::Owned(format!(
-                        r#"<span class="typst-content-text" style="font-size: {}px; left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); transform: scaleX({})">"#,
-                        size,
-                        ts.tx,
-                        (ts.ty -size),
+                        r#"<span class="typst-content-text" style="font-size: calc(var(--data-text-height) * {}); left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); transform: scaleX({})">"#,
+                        size.0,
+                        tx.0,
+                        ty.0,
                         scale_x,
                     )));
                 } else {
@@ -152,9 +153,9 @@ impl SemanticsBackend {
                         ts.ky,
                         ts.kx,
                         ts.sy,
-                        size,
-                        ts.tx,
-                        (ts.ty - size * ts.sy),
+                        size.0,
+                        tx.0,
+                        ty.0,
                         scale_x,
                     )));
                 }
@@ -165,11 +166,7 @@ impl SemanticsBackend {
                 output.push(Cow::Borrowed("</span>"));
 
                 if self.heavy {
-                    let tx = Scalar(ts.tx);
                     let tx2 = tx + width;
-
-                    let ty2 = Scalar(ts.ty);
-                    let ty = ty2 - Scalar(size);
 
                     let top_bound_set = self.previous_y_text.range(ty..ty2);
                     let mut right_right = Scalar(1e33);

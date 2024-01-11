@@ -27,32 +27,33 @@
       }
 
       .typst-dom-page {
-        width: var(--data-page-width, 100%);
-        height: var(--data-page-height);
-        --data-text-width: 1px;
-        --data-text-height: 1px;
+        --typst-dom-scale: 1.5;
+        width: calc(var(--data-page-width, 100%) * var(--typst-dom-scale));
+        height: calc(var(--data-page-height) * var(--typst-dom-scale));
+        --data-text-width: calc(1px * var(--typst-dom-scale));
+        --data-text-height: calc(1px * var(--typst-dom-scale));
       }
 
       .typst-back-canvas {
         position: absolute;
         z-index: -1;
-        width: var(--data-page-width, 100%);
-        height: var(--data-page-height);
+        width: calc(var(--data-page-width, 100%) * var(--typst-dom-scale));
+        height: calc(var(--data-page-height) * var(--typst-dom-scale));
         pointer-events: none;
       }
 
       .typst-svg-page {
         position: absolute;
         z-index: 0;
-        width: var(--data-page-width, 100%);
-        height: var(--data-page-height);
+        width: calc(var(--data-page-width, 100%) * var(--typst-dom-scale));
+        height: calc(var(--data-page-height) * var(--typst-dom-scale));
       }
 
       .typst-html-semantics {
         position: absolute;
         z-index: 2;
-        width: var(--data-page-width, 100%);
-        height: var(--data-page-height);
+        width: calc(var(--data-page-width, 100%) * var(--typst-dom-scale));
+        height: calc(var(--data-page-height) * var(--typst-dom-scale));
         color: transparent;
         font-family: monospace;
         white-space: nowrap;
