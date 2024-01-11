@@ -20,18 +20,16 @@
     />
     <style>
       #typst-app {
-        display: flex;
-
-        flex-direction: column;
-        align-items: center;
+        --typst-dom-scale: 1.5;
+        margin: 5px;
       }
 
       .typst-dom-page {
-        --typst-dom-scale: 1.5;
         width: calc(var(--data-page-width, 100%) * var(--typst-dom-scale));
         height: calc(var(--data-page-height) * var(--typst-dom-scale));
         --data-text-width: calc(1px * var(--typst-dom-scale));
         --data-text-height: calc(1px * var(--typst-dom-scale));
+        margin: auto;
       }
 
       .typst-back-canvas {
@@ -135,8 +133,9 @@
           })
           .then(async () => {
             const artifactData = await fetch(
-              'http://localhost:20810/corpus/skyzh-cv/main.white.artifact.sir.in',
-              // 'http://localhost:20810/corpus/math/masterproef.artifact.sir.in',
+              // '/corpus/skyzh-cv/main.white.artifact.sir.in',
+              // '/corpus/math/masterproef.artifact.sir.in',
+              '/corpus/skyzh-cv/introduction.ayu.multi.sir.in',
             )
               .then(response => response.arrayBuffer())
               .then(buffer => new Uint8Array(buffer));
@@ -162,6 +161,7 @@
                   console.log('render time!!!!!!!!!', performance.now() - t);
 
                   const pullRender = async () => {
+                    const domScale = 1.5;
                     const t = performance.now();
                     const basePos = {
                       left: 0,
@@ -170,15 +170,15 @@
                       bottom: window.innerHeight,
                     };
                     const appPos = appContainer.getBoundingClientRect();
-                    const left = Math.max(basePos.left, appPos.left);
-                    const top = Math.max(basePos.top, appPos.top);
-                    const right = Math.min(basePos.right, appPos.right);
-                    const bottom = Math.min(basePos.bottom, appPos.bottom);
+                    const left = appPos.left;
+                    const top = basePos.top - appPos.top;
+                    const right = appPos.right;
+                    const bottom = basePos.bottom - appPos.top;
                     const rect = {
-                      x: left,
-                      y: top,
-                      width: Math.max(right - left, 0),
-                      height: Math.max(bottom - top, 0),
+                      x: 0,
+                      y: top / domScale,
+                      width: Math.max(right - left, 0) / domScale,
+                      height: Math.max(bottom - top, 0) / domScale,
                     };
                     if (rect.width <= 0 || rect.height <= 0) {
                       rect.x = rect.y = rect.width = rect.height = 0;

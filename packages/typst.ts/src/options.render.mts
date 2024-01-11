@@ -75,6 +75,13 @@ export interface MountDomOptions {
    * Note: Default to `3`.
    */
   pixelPerPt?: number;
+
+  viewport: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
 }
 
 /**
