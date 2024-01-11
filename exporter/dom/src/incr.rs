@@ -106,12 +106,21 @@ impl IncrDomDocClient {
 
     // todo: move to js world
     fn checkout_layout(&mut self, kern: &mut IncrDocClient, viewport: Option<tiny_skia::Rect>) {
-        let layouts = kern.doc.layouts[0].by_scalar().unwrap();
+        let layouts = kern.doc.layouts[0].by_scalar();
+        let Some(layouts) = layouts else {
+            return;
+        };
         let mut layout = layouts.first().unwrap();
+
+        // web_sys::console::log_1(&format!("layouts: {:?}", layouts).into());
 
         if let Some(viewport) = viewport {
             // base scale = 2
             let base_cw = viewport.width();
+
+            // web_sys::console::log_1(
+            //     &format!("layouts base_cw: {:?} {:?}", viewport, base_cw).into(),
+            // );
 
             const EPS: f32 = 1e-2;
 
@@ -138,10 +147,19 @@ impl IncrDomDocClient {
     pub fn reset(&mut self) {}
 
     /// Render the document in the given window.
-    pub async fn mount(&mut self, kern: &mut IncrDocClient, elem: HtmlElement) -> ZResult<()> {
+    pub async fn mount(
+        &mut self,
+        kern: &mut IncrDocClient,
+        elem: HtmlElement,
+        viewport: Option<tiny_skia::Rect>,
+    ) -> ZResult<()> {
         self.batch_dom_events(
             kern,
-            vec![DOMChanges::Mount(elem), DOMChanges::Recalc(false)],
+            vec![
+                DOMChanges::Mount(elem),
+                DOMChanges::Viewport(viewport),
+                DOMChanges::Recalc(false),
+            ],
         )
         .await
     }
@@ -247,8 +265,11 @@ impl IncrDomDocClient {
             checkout_mode,
         };
 
+        let mut wh = tiny_skia::Transform::identity();
         for page in self.doc_view.iter_mut() {
-            page.recalculate(&mut ctx, self.viewport).await?;
+            page.recalculate(&mut ctx, self.viewport.and_then(|e| e.transform(wh)))
+                .await?;
+            wh = wh.post_translate(0.0, page.uncommitted_height());
         }
 
         Ok(())

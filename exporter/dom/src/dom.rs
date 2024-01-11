@@ -152,13 +152,13 @@ impl DomPage {
 
             // Repaint a page as semantics.
             self.repaint_semantics(ctx)?;
-            web_sys::console::log_1(&"responsive mode to true".into());
+            web_sys::console::log_1(&"responsive mode to false".into());
 
             self.is_to_full = true;
         } else {
             // Repaint a page as svg.
             self.change_svg_visibility(false);
-            web_sys::console::log_1(&"responsive mode to false".into());
+            web_sys::console::log_1(&"responsive mode to true".into());
 
             self.is_to_full = false;
         }
@@ -171,7 +171,7 @@ impl DomPage {
 
     fn relayout(&mut self, ctx: &mut DomContext<'_, '_>, data: Page) -> ZResult<bool> {
         web_sys::console::log_2(
-            &format!("re-layout {idx}", idx = self.idx).into(),
+            &format!("re-layout {idx} {data:?}", idx = self.idx).into(),
             &self.elem,
         );
 
@@ -219,55 +219,38 @@ impl DomPage {
         // todo: cache
         let prev_data = self.layout_data.clone();
         if prev_data.map(|d| d != data).unwrap_or(true) {
+            web_sys::console::log_2(
+                &format!("dirty layout detected {idx}", idx = self.idx).into(),
+                &self.elem,
+            );
             self.change_svg_visibility(false);
             self.realized = None;
             self.semantics_state = None;
             self.canvas_state = None;
             self.realized_canvas = None;
+            self.layout_data = Some(data);
         }
 
-        self.layout_data = Some(data);
         Ok(true)
     }
 
     fn pull_viewport(&mut self, viewport: Option<tiny_skia::Rect>) -> ZResult<bool> {
-        let layout_size = self
-            .layout_data
-            .as_ref()
-            .map(|d| d.size)
-            .unwrap_or_default();
-
-        // todo: cause a real reflow
-        let cr = self.elem.get_bounding_client_rect();
-
-        let sx = if layout_size.x.0 < 1e-3 {
-            1.
-        } else {
-            cr.width() as f32 / layout_size.x.0
-        };
-
-        let sy = if layout_size.y.0 < 1e-3 {
-            1.
-        } else {
-            cr.height() as f32 / layout_size.y.0
-        };
-
-        let ts = tiny_skia::Transform::from_row(sx, 0., 0., sy, 0., 0.);
         let viewport = viewport
-            .and_then(|e| e.transform(ts))
             .and_then(|viewport| {
                 tiny_skia::Rect::from_ltrb(
                     self.bbox.left() - 1.,
                     viewport.top(),
-                    self.bbox.right(),
-                    viewport.bottom() + 1.,
+                    self.bbox.right() + 1.,
+                    viewport.bottom(),
                 )
             })
             .unwrap_or(self.bbox);
+        #[cfg(feature = "debug_repaint")]
         web_sys::console::log_2(
             &format!(
-                "pull_viewport {idx} ts:{ts:?}, bbox {bbox:?}",
+                "pull_viewport {idx} vp:{vp:?}, bbox {bbox:?}",
                 idx = self.idx,
+                vp = viewport,
                 bbox = self.bbox,
             )
             .into(),
@@ -378,9 +361,11 @@ impl DomPage {
         if init_semantics {
             let do_heavy = self.is_visible;
 
-            web_sys::console::log_1(&format!("init semantics({do_heavy}): {}", self.idx).into());
-
             let data = self.layout_data.clone().unwrap();
+            web_sys::console::log_1(
+                &format!("init semantics({do_heavy}): {} {:?}", self.idx, data).into(),
+            );
+
             let mut output = vec![];
             let mut t = SemanticsBackend::new(do_heavy, a_width, data.size.x.0);
             let ts = tiny_skia::Transform::identity();
@@ -397,9 +382,9 @@ impl DomPage {
             return Ok(());
         }
 
-        web_sys::console::log_1(&format!("layout heavy semantics: {}", self.idx).into());
-
         let data = self.layout_data.clone().unwrap();
+        web_sys::console::log_1(&format!("layout heavy semantics: {} {:?}", self.idx, data).into());
+
         let mut output = vec![];
         let mut t = SemanticsBackend::new(true, a_width, data.size.x.0);
         let ts = tiny_skia::Transform::identity();
@@ -486,6 +471,14 @@ impl DomPage {
         }
 
         Ok(())
+    }
+
+    pub fn uncommitted_height(&self) -> f32 {
+        if let Some(e) = self.dirty_layout.as_ref() {
+            e.size.y.0
+        } else {
+            self.bbox.height()
+        }
     }
 }
 
