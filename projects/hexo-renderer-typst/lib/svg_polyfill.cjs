@@ -25,22 +25,3 @@
       }, 0);
   };
 })();
-
-document.ready(() => {
-  let fromCtrlC = false;
-  let fromRightClick = false;
-  document.addEventListener(
-    'keydown',
-    evt => (fromCtrlC = evt.key.toUpperCase() == 'C' && evt.ctrlKey),
-  );
-  document.addEventListener('contextmenu', evt => (fromRightClick = true));
-  document.addEventListener('copy', evt => {
-    const originatorEvent = fromCtrlC ? 'CTRL-C' : fromRightClick ? 'right click' : 'toolbar menu';
-    console.log(`Copy event received from ${originatorEvent} within element`, evt.target);
-    fromCtrlC = false;
-    fromRightClick = false;
-
-    // evt.clipboardData.setData('text/plain', 'foo');
-    // evt.preventDefault(); // default behaviour is to copy any selected text
-  });
-});
