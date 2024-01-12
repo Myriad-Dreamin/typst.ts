@@ -3,6 +3,11 @@
 const fs = require('fs');
 const path = require('path');
 
+const trampoline_js = fs.readFileSync(
+  path.resolve(path.dirname(__filename), 'trampoline.cjs'),
+  'utf-8',
+);
+
 class Renderer {
   constructor(hexo, compiler) {
     this.hexo = hexo;
@@ -28,54 +33,9 @@ class Renderer {
     
     console.log('[typst] render   ', data.path, 'ok');
 
-    const compiled = `
-      <script>
-        let appContainer = document.currentScript && document.currentScript.parentElement;
-        document.ready(() => {
-          let plugin = window.TypstRenderModule.createTypstSvgRenderer();
-        console.log(plugin);
-        plugin
-          .init({
-            getModule: () =>
-              '${renderer_module}',
-          })
-          .then(async () => {
-            const artifactData = await fetch(
-              '/${relDataPath}',
-            )
-              .then(response => response.arrayBuffer())
-              .then(buffer => new Uint8Array(buffer));
-
-            const t0 = performance.now();
-
-            const svgModule = await plugin.createModule(artifactData);
-            let t1 = performance.now();
-
-            console.log(\`init took \${t1 - t0} milliseconds\`);
-            const appElem = document.createElement('div');
-            appElem.class = 'typst-app';
-            if (appContainer) {
-              appContainer.appendChild(appElem);
-            }
-
-            const runRender = async () => {
-              t1 = performance.now();
-              await plugin.renderToSvg({ renderSession: svgModule, container: appElem });
-
-              const t2 = performance.now();
-              console.log(
-                \`render took \${t2 - t1} milliseconds. total took \${t2 - t0} milliseconds.\`,
-              );
-            };
-
-            let base = runRender();
-
-            window.onresize = () => {
-              base = base.then(runRender());
-            };
-          });
-        });
-      </script>`;
+    const compiled = `<script>${trampoline_js}</script>`
+      .replace('{{renderer_module}}', renderer_module)
+      .replace('{{relDataPath}}', relDataPath);
     return compiled;
   }
 }
