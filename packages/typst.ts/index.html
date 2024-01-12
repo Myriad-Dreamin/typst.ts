@@ -8,16 +8,7 @@
     <title>Typst.ts</title>
     <script type="module" src="/core/dist/esm/main.bundle.js"></script>
     <script type="module" src="/enhanced-typst-svg/dist/index.min.js"></script>
-    <!-- pdf.js v3.5.141 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.min.js"></script>
     <link rel="stylesheet" href="/core/examples/typst.ts.css" />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf_viewer.min.css"
-      integrity="sha512-Jf9DLkegLgARLR151csVkPvcVt4cOUhslrSZwiTAe9mqFL/BbYRDmxCOioCtbHifEgjsBFbrVhOMQ3mYPDLrqQ=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    />
     <style>
       #typst-app {
         --typst-dom-scale: 1.5;
@@ -119,16 +110,13 @@
     </style>
     <script src="/core/examples/typst.js"></script>
     <script>
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
-
       window.typstBindSemantics = function () {};
       window.typstBindSvgDom = function () {};
 
       // elem.style.top = `calc(var(--data-text-height) * ${rrt})`;
       // elem.style.left = `calc(var(--data-text-width) * ${rrl})`;
       document.ready(() => {
-        let plugin = window.TypstRenderModule.createTypstRenderer(pdfjsLib);
+        let plugin = window.TypstRenderModule.createTypstRenderer();
         plugin
           .init({
             getModule: () =>
@@ -191,23 +179,7 @@
                       renderSession: ses,
                       viewport: getViewport(appContainer),
                     });
-                    // console.log('pull render time!!!!!!!!!', performance.now() - t);
                   };
-
-                  // if (isWaitForRendering()) {
-                  //   pullRender();
-                  //   let i = null;
-                  //   i = setInterval(() => {
-                  //     if (!isWaitForRendering()) {
-                  //       console.log('clear interval for pull render');
-                  //       clearInterval(i);
-                  //       return;
-                  //     }
-                  //     pullRender();
-                  //   }, 200);
-                  // } else {
-                  //   console.log('not wait for rendering');
-                  // }
 
                   pullRender();
                   const debouncedPullRender = () => {

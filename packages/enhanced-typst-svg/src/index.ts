@@ -610,6 +610,7 @@ window.layoutText = async function (svg: Element) {
 
 interface HandleOptions {
   behavior: ScrollBehavior;
+  isDom?: boolean;
 }
 window.handleTypstLocation = function (
   elem: Element,
@@ -630,76 +631,82 @@ window.handleTypstLocation = function (
       location.hash = `loc-${u}x${x.toFixed(2)}x${y.toFixed(2)}`;
     });
   // todo: abstraction
-  let docRoot = findAncestor(elem, 'typst-doc');
-  if (!docRoot) {
-    docRoot = findAncestor(elem, 'typst-svg-page');
-    if (!docRoot) {
-      console.warn('no typst-doc or typst-svg-page found', elem);
-      return;
+  let docRoot = elem;
+
+  const scrollToElem = (elem: SVGGElement) => {
+    // evaluate window viewport 1vw
+    const pw = window.innerWidth * 0.01;
+    const ph = window.innerHeight * 0.01;
+
+    const dataWidth =
+      Number.parseFloat(
+        docRoot.getAttribute('data-width') || docRoot.getAttribute('width') || '0',
+      ) || 0;
+    const dataHeight =
+      Number.parseFloat(
+        docRoot.getAttribute('data-height') || docRoot.getAttribute('height') || '0',
+      ) || 0;
+    // console.log(elem, vw, vh, x, y, dataWidth, dataHeight, docRoot);
+    const svgRectBase = docRoot.getBoundingClientRect();
+    const svgRect = {
+      left: svgRectBase.left,
+      top: svgRectBase.top,
+      width: svgRectBase.width,
+      height: svgRectBase.height,
+    };
+    const xOffsetInnerFix = 7 * pw;
+    const yOffsetInnerFix = 38.2 * ph;
+
+    const transform = elem.transform?.baseVal?.consolidate()?.matrix;
+    if (transform) {
+      // console.log(transform.e, transform.f);
+      svgRect.left += (transform.e / dataWidth) * svgRect.width;
+      svgRect.top += (transform.f / dataHeight) * svgRect.height;
     }
+
+    const windowRoot = document.body || document.firstElementChild;
+    const basePos = windowRoot.getBoundingClientRect();
+
+    const xOffset = svgRect.left - basePos.left + (x / dataWidth) * svgRect.width - xOffsetInnerFix;
+    const yOffset = svgRect.top - basePos.top + (y / dataHeight) * svgRect.height - yOffsetInnerFix;
+    const left = xOffset + xOffsetInnerFix;
+    const top = yOffset + yOffsetInnerFix;
+
+    window.scrollTo({ behavior, left: xOffset, top: yOffset });
+
+    if (behavior !== 'instant') {
+      triggerRipple(
+        windowRoot,
+        left,
+        top,
+        'typst-jump-ripple',
+        'typst-jump-ripple-effect .4s linear',
+      );
+    }
+
+    assignHashLoc(page, x, y);
+    return;
+  };
+
+  if (options?.isDom) {
+    scrollToElem(docRoot as SVGGElement);
+    return;
   }
+
+  docRoot = findAncestor(elem, 'typst-doc');
+  if (!docRoot) {
+    console.warn('no typst-doc or typst-svg-page found', elem);
+    return;
+  }
+
   const children = docRoot.children;
   let nthPage = 0;
   for (let i = 0; i < children.length; i++) {
-    if (children[i].tagName === 'g') {
+    if (children[i].tagName === 'g' || children[i].tagName === 'stub') {
       nthPage++;
     }
     if (nthPage == page) {
-      // evaluate window viewport 1vw
-      const pw = window.innerWidth * 0.01;
-      const ph = window.innerHeight * 0.01;
-
-      const page = children[i] as SVGGElement;
-      const dataWidth =
-        Number.parseFloat(
-          docRoot.getAttribute('data-width') || docRoot.getAttribute('width') || '0',
-        ) || 0;
-      const dataHeight =
-        Number.parseFloat(
-          docRoot.getAttribute('data-height') || docRoot.getAttribute('height') || '0',
-        ) || 0;
-      // console.log(page, vw, vh, x, y, dataWidth, dataHeight, docRoot);
-      const svgRectBase = docRoot.getBoundingClientRect();
-      const svgRect = {
-        left: svgRectBase.left,
-        top: svgRectBase.top,
-        width: svgRectBase.width,
-        height: svgRectBase.height,
-      };
-      const xOffsetInnerFix = 7 * pw;
-      const yOffsetInnerFix = 38.2 * ph;
-
-      const transform = page.transform.baseVal.consolidate()?.matrix;
-      if (transform) {
-        // console.log(transform.e, transform.f);
-        svgRect.left += (transform.e / dataWidth) * svgRect.width;
-        svgRect.top += (transform.f / dataHeight) * svgRect.height;
-      }
-
-      const windowRoot = document.body || document.firstElementChild;
-      const basePos = windowRoot.getBoundingClientRect();
-
-      const xOffset =
-        svgRect.left - basePos.left + (x / dataWidth) * svgRect.width - xOffsetInnerFix;
-      const yOffset =
-        svgRect.top - basePos.top + (y / dataHeight) * svgRect.height - yOffsetInnerFix;
-      const left = xOffset + xOffsetInnerFix;
-      const top = yOffset + yOffsetInnerFix;
-
-      window.scrollTo({ behavior, left: xOffset, top: yOffset });
-
-      if (behavior !== 'instant') {
-        triggerRipple(
-          windowRoot,
-          left,
-          top,
-          'typst-jump-ripple',
-          'typst-jump-ripple-effect .4s linear',
-        );
-      }
-
-      assignHashLoc(nthPage, x, y);
-      return;
+      scrollToElem(children[i] as SVGGElement);
     }
   }
 };
