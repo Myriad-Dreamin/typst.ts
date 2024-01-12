@@ -151,8 +151,23 @@ impl TypstPageElem {
 
                 let mut children = vec![];
                 for (p, fg) in gr.0.iter() {
+                    #[cfg(feature = "debug_attach")]
+                    web_sys::console::log_3(
+                        &format!(
+                            "attach {a:?} -> {b:?} {c:?}",
+                            a = data.as_svg_id("g"),
+                            b = fg.as_svg_id("g"),
+                            c = p
+                        )
+                        .into(),
+                        ch.as_ref()
+                            .map(|e| e.dyn_ref().unwrap())
+                            .unwrap_or(&JsValue::UNDEFINED),
+                        &g,
+                    );
+
                     let Some(should_ch) = ch else {
-                        web_sys::console::log_2(&g, &"Invalid group reference".into());
+                        web_sys::console::log_2(&"Invalid group reference".into(), &g);
                         // panic!("Invalid group reference: {}", fg.as_svg_id("g"));
                         continue;
                     };
@@ -184,20 +199,43 @@ impl TypstPageElem {
                 })
             }
             VecItem::Item(TransformedRef(trans, fg)) => {
-                let ch = g.last_element_child();
-
-                let child = Self::attach_svg(
-                    ctx,
-                    ch.ok_or_else(|| {
+                let ch = g
+                    .last_element_child()
+                    .ok_or_else(|| {
                         web_sys::console::log_2(
                             &g,
                             &format!("Invalid item reference: {:?}", item).into(),
                         );
                         panic!("Invalid item reference: {}", fg.as_svg_id("g"));
                     })
-                    .unwrap()
-                    .dyn_into()
-                    .unwrap(),
+                    .unwrap();
+
+                #[cfg(feature = "debug_attach")]
+                web_sys::console::log_3(
+                    &format!(
+                        "attach {a:?} -> {b:?} {c:?}",
+                        a = data.as_svg_id("g"),
+                        b = fg.as_svg_id("g"),
+                        c = trans
+                    )
+                    .into(),
+                    &ch,
+                    &g,
+                );
+
+                let child = Self::attach_svg(
+                    ctx,
+                    ch.first_element_child()
+                        .ok_or_else(|| {
+                            web_sys::console::log_2(
+                                &g,
+                                &format!("Invalid item translate: {:?}", item).into(),
+                            );
+                            panic!("Invalid item translate: {}", fg.as_svg_id("g"));
+                        })
+                        .unwrap()
+                        .dyn_into()
+                        .unwrap(),
                     *fg,
                 );
 
