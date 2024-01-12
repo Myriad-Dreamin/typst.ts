@@ -6,13 +6,16 @@ use typst_ts_svg_exporter::{
     ir::{self, Scalar, VecItem},
     Module,
 };
+use unicode_width::UnicodeWidthChar;
 use web_sys::{wasm_bindgen::JsCast, HtmlCanvasElement};
 
 use crate::escape::{self, AttributeEscapes, TextContentDataEscapes};
 
 #[derive(Clone, Copy)]
 pub struct BrowserFontMetric {
-    width: f32,
+    semi_char_width: f32,
+    full_char_width: f32,
+    emoji_width: f32,
     // height: f32,
 }
 
@@ -27,13 +30,19 @@ impl BrowserFontMetric {
         let _g = CanvasStateGuard::new(&ctx);
         ctx.set_font("128px monospace");
         let metrics = ctx.measure_text("A").unwrap();
-        let a_width = metrics.width();
+        let semi_char_width = metrics.width();
+        let metrics = ctx.measure_text("喵").unwrap();
+        let full_char_width = metrics.width();
+        let metrics = ctx.measure_text("🦄").unwrap();
+        let emoji_width = metrics.width();
         // let a_height =
         //     (metrics.font_bounding_box_descent() +
         // metrics.font_bounding_box_ascent()).abs();
 
         Self {
-            width: (a_width / 128.) as f32,
+            semi_char_width: (semi_char_width / 128.) as f32,
+            full_char_width: (full_char_width / 128.) as f32,
+            emoji_width: (emoji_width / 128.) as f32,
             // height: (a_height / 128.) as f32,
         }
     }
@@ -98,7 +107,17 @@ impl SemanticsBackend {
                 let cap_height = font.cap_height * size;
                 let width = t.width();
                 let scale_x = width.0
-                    / (self.font_metric.width * size.0 * t.content.content.chars().count() as f32);
+                    / (t.content
+                        .content
+                        .chars()
+                        .map(|e| match e.width().unwrap_or_default() {
+                            0 => 0.,
+                            1 => self.font_metric.semi_char_width,
+                            2 => self.font_metric.full_char_width,
+                            _ => self.font_metric.emoji_width,
+                        })
+                        .sum::<f32>()
+                        * size.0);
                 // let scale_y = (size.0 + descender.0) / (size.0 * self.font_metric.height);
                 // web_sys::console::log_1(
                 //     &format!(
