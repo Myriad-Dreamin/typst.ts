@@ -1,16 +1,47 @@
 use std::borrow::Cow;
 
+use typst_ts_canvas_exporter::CanvasStateGuard;
 use typst_ts_core::hash::Fingerprint;
 use typst_ts_svg_exporter::{
     ir::{self, Scalar, VecItem},
     Module,
 };
+use web_sys::{wasm_bindgen::JsCast, HtmlCanvasElement};
 
 use crate::escape::{self, AttributeEscapes, TextContentDataEscapes};
 
+#[derive(Clone, Copy)]
+pub struct BrowserFontMetric {
+    width: f32,
+    // height: f32,
+}
+
+impl BrowserFontMetric {
+    pub fn new(canvas: &HtmlCanvasElement) -> Self {
+        let ctx = canvas
+            .get_context("2d")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<web_sys::CanvasRenderingContext2d>()
+            .unwrap();
+        let _g = CanvasStateGuard::new(&ctx);
+        ctx.set_font("128px monospace");
+        let metrics = ctx.measure_text("A").unwrap();
+        let a_width = metrics.width();
+        // let a_height =
+        //     (metrics.font_bounding_box_descent() +
+        // metrics.font_bounding_box_ascent()).abs();
+
+        Self {
+            width: (a_width / 128.) as f32,
+            // height: (a_height / 128.) as f32,
+        }
+    }
+}
+
 pub struct SemanticsBackend {
     heavy: bool,
-    a_width: f32,
+    font_metric: BrowserFontMetric,
     width: f32,
     previous_x_text: std::collections::BTreeMap<Scalar, std::collections::BTreeSet<Scalar>>,
     previous_y_text: std::collections::BTreeMap<Scalar, std::collections::BTreeSet<Scalar>>,
@@ -18,10 +49,10 @@ pub struct SemanticsBackend {
 }
 
 impl SemanticsBackend {
-    pub fn new(heavy: bool, a_width: f32, width: f32) -> Self {
+    pub fn new(heavy: bool, font_metric: BrowserFontMetric, width: f32) -> Self {
         SemanticsBackend {
             heavy,
-            a_width,
+            font_metric,
             width,
             previous_x_text: std::collections::BTreeMap::new(),
             previous_y_text: std::collections::BTreeMap::new(),
@@ -63,14 +94,23 @@ impl SemanticsBackend {
                 let can_heavy = is_regular_skew && is_regular_scale && self.heavy;
                 let size = (t.shape.size) * Scalar(ts.sy);
 
+                let font = ctx.get_font(&t.shape.font).unwrap();
+                let cap_height = font.cap_height * size;
                 let width = t.width();
-                let scale_x =
-                    width.0 / (self.a_width * size.0 * t.content.content.chars().count() as f32);
+                let scale_x = width.0
+                    / (self.font_metric.width * size.0 * t.content.content.chars().count() as f32);
+                // let scale_y = (size.0 + descender.0) / (size.0 * self.font_metric.height);
+                // web_sys::console::log_1(
+                //     &format!(
+                //         "scale: {:?} {:?} {:?} {:?}",
+                //         cap_height, size, descender, ascender
+                //     )
+                //     .into(),
+                // );
 
-                let descender = ctx.get_font(&t.shape.font).unwrap().descender * size;
                 let tx = Scalar(ts.tx);
-                let ty2 = Scalar(ts.ty);
-                let ty = ty2 - size - descender;
+                let ty = Scalar(ts.ty) - cap_height;
+                let ty2 = ty + size;
                 let tx2 = tx + width;
 
                 if can_heavy {
@@ -142,23 +182,27 @@ impl SemanticsBackend {
 
                 if is_regular_scale && is_regular_skew {
                     output.push(Cow::Owned(format!(
-                        r#"<span class="typst-content-text" style="font-size: calc(var(--data-text-height) * {}); left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); transform: scaleX({})">"#,
+                        r#"<span class="typst-content-text" style="font-size: calc(var(--data-text-height) * {}); line-height: calc(var(--data-text-height) * {}); left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); transform: scaleX({})">"#,
+                        size.0,
                         size.0,
                         tx.0,
                         ty.0,
                         scale_x,
+                        // scale_y,
                     )));
                 } else {
                     output.push(Cow::Owned(format!(
-                        r#"<span class="typst-content-text" data-matrix="{},{},{},{}" style="font-size: {}px; left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); transform: scaleX({})">"#,
+                        r#"<span class="typst-content-text" data-matrix="{},{},{},{}" style="font-size: {}px; line-height: calc(var(--data-text-height) * {}); left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); transform: scaleX({})">"#,
                         ts.sx,
                         ts.ky,
                         ts.kx,
                         ts.sy,
                         size.0,
+                        size.0,
                         tx.0,
                         ty.0,
                         scale_x,
+                        // scale_y,
                     )));
                 }
 
@@ -169,7 +213,6 @@ impl SemanticsBackend {
 
                 if can_heavy {
                     if ty > ty2 {
-                        let font = ctx.get_font(&t.shape.font).unwrap();
                         web_sys::console::log_1(
                             &format!(
                                 "ty..ty2: {:?} {:?} {:?} {:?} {:?}",

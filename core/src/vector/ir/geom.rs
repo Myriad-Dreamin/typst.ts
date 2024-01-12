@@ -101,6 +101,14 @@ impl std::ops::Mul for Scalar {
     }
 }
 
+impl std::ops::Div for Scalar {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        Self(self.0 / rhs.0)
+    }
+}
+
 impl Eq for Scalar {}
 
 impl PartialEq for Scalar {
