@@ -12,7 +12,9 @@ use web_sys::{
 };
 
 use crate::{
-    factory::XmlFactory, semantics_backend::SemanticsBackend, svg_backend::FETCH_BBOX_TIMES,
+    factory::XmlFactory,
+    semantics_backend::{BrowserFontMetric, SemanticsBackend},
+    svg_backend::FETCH_BBOX_TIMES,
     CheckoutMode, DomContext,
 };
 
@@ -59,7 +61,8 @@ impl Drop for DomPage {
     }
 }
 
-static A_WIDTH: once_cell::sync::OnceCell<f32> = once_cell::sync::OnceCell::new();
+static FONT_METRICS: once_cell::sync::OnceCell<BrowserFontMetric> =
+    once_cell::sync::OnceCell::new();
 
 impl DomPage {
     pub fn new_at(elem: HtmlElement, tmpl: XmlFactory, idx: usize) -> Self {
@@ -360,20 +363,7 @@ impl DomPage {
             e.0.content != data.content
         });
 
-        let a_width: f32 = *A_WIDTH.get_or_init(|| {
-            let ctx = self
-                .canvas
-                .get_context("2d")
-                .unwrap()
-                .unwrap()
-                .dyn_into::<web_sys::CanvasRenderingContext2d>()
-                .unwrap();
-            let _g = CanvasStateGuard::new(&ctx);
-            ctx.set_font("128px monospace");
-            let a_width = ctx.measure_text("A").unwrap().width();
-
-            (a_width / 128.) as f32
-        });
+        let metric = FONT_METRICS.get_or_init(|| BrowserFontMetric::new(&self.canvas));
 
         if init_semantics {
             let do_heavy = self.is_visible;
@@ -384,7 +374,7 @@ impl DomPage {
             );
 
             let mut output = vec![];
-            let mut t = SemanticsBackend::new(do_heavy, a_width, data.size.x.0);
+            let mut t = SemanticsBackend::new(do_heavy, *metric, data.size.x.0);
             let ts = tiny_skia::Transform::identity();
             t.render_semantics(ctx.module, ts, data.content, &mut output);
             self.semantics.set_inner_html(&output.concat());
@@ -403,7 +393,7 @@ impl DomPage {
         web_sys::console::log_1(&format!("layout heavy semantics: {} {:?}", self.idx, data).into());
 
         let mut output = vec![];
-        let mut t = SemanticsBackend::new(true, a_width, data.size.x.0);
+        let mut t = SemanticsBackend::new(true, *metric, data.size.x.0);
         let ts = tiny_skia::Transform::identity();
         t.render_semantics(ctx.module, ts, data.content, &mut output);
         self.semantics.set_inner_html(&output.concat());
