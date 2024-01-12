@@ -60,6 +60,7 @@ impl SemanticsBackend {
                 // with data-translate
                 let is_regular_scale = ts.sx == 1.0 && ts.sy == 1.0;
                 let is_regular_skew = ts.kx == 0.0 && ts.ky == 0.0;
+                let can_heavy = is_regular_skew && is_regular_scale && self.heavy;
                 let size = (t.shape.size) * Scalar(ts.sy);
 
                 let width = t.width();
@@ -68,10 +69,11 @@ impl SemanticsBackend {
 
                 let descender = ctx.get_font(&t.shape.font).unwrap().descender * size;
                 let tx = Scalar(ts.tx);
-                let ty2: Scalar = Scalar(ts.ty);
+                let ty2 = Scalar(ts.ty);
                 let ty = ty2 - size - descender;
+                let tx2 = tx + width;
 
-                if self.heavy {
+                if can_heavy {
                     let top_bound_y = *self
                         .previous_y2_text
                         .range(..ty)
@@ -115,7 +117,7 @@ impl SemanticsBackend {
                     let top_bound_set = self.previous_y_text.range(..ty2);
                     let mut left_left = Scalar(-1e33);
                     for t in top_bound_set {
-                        let x_set = t.1.range(..tx).max();
+                        let x_set = t.1.range(..tx2).max();
                         if let Some(x) = x_set {
                             if x > &left_left {
                                 left_left = *x;
@@ -165,8 +167,21 @@ impl SemanticsBackend {
                 ));
                 output.push(Cow::Borrowed("</span>"));
 
-                if self.heavy {
-                    let tx2 = tx + width;
+                if can_heavy {
+                    if ty > ty2 {
+                        let font = ctx.get_font(&t.shape.font).unwrap();
+                        web_sys::console::log_1(
+                            &format!(
+                                "ty..ty2: {:?} {:?} {:?} {:?} {:?}",
+                                font.family,
+                                ty..ty2,
+                                size,
+                                font.descender,
+                                ts,
+                            )
+                            .into(),
+                        );
+                    }
 
                     let top_bound_set = self.previous_y_text.range(ty..ty2);
                     let mut right_right = Scalar(1e33);
@@ -186,12 +201,12 @@ impl SemanticsBackend {
 
                     // create right rect
                     output.push(Cow::Owned(format!(
-                    r#"<span class="typst-content-fallback" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
-                    right_left.0,
-                    right_top.0,
-                    right_right - right_left.0,
-                    right_bottom.0 - right_top.0,
-                )));
+                        r#"<span class="typst-content-fallback" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
+                        right_left.0,
+                        right_top.0,
+                        right_right - right_left.0,
+                        right_bottom.0 - right_top.0,
+                    )));
 
                     self.previous_x_text.entry(tx).or_default().insert(ty2);
                     self.previous_x_text.entry(tx2).or_default().insert(ty2);
@@ -203,6 +218,33 @@ impl SemanticsBackend {
                     tx_bucket.insert(tx);
                     tx_bucket.insert(tx2);
 
+                    self.previous_y2_text.insert(ty2);
+                } else {
+                    let mut u = [
+                        tiny_skia::Point::from_xy(tx.0, ty.0),
+                        tiny_skia::Point::from_xy(tx2.0, ty2.0),
+                    ];
+                    ts.map_points(&mut u);
+                    let tx = Scalar(u[0].x);
+                    let ty = Scalar(u[0].y);
+                    let tx2 = Scalar(u[1].x);
+                    let ty2 = Scalar(u[1].y);
+
+                    let ty_bucket = self.previous_x_text.entry(tx).or_default();
+                    ty_bucket.insert(ty);
+                    ty_bucket.insert(ty2);
+                    let ty_bucket = self.previous_x_text.entry(tx2).or_default();
+                    ty_bucket.insert(ty);
+                    ty_bucket.insert(ty2);
+
+                    let tx_bucket = self.previous_y_text.entry(ty).or_default();
+                    tx_bucket.insert(tx);
+                    tx_bucket.insert(tx2);
+                    let tx_bucket = self.previous_y_text.entry(ty2).or_default();
+                    tx_bucket.insert(tx);
+                    tx_bucket.insert(tx2);
+
+                    self.previous_y2_text.insert(ty);
                     self.previous_y2_text.insert(ty2);
                 }
             }
