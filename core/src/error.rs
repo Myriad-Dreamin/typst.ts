@@ -7,6 +7,8 @@ use crate::ImmutStr;
 
 pub use typst::diag::SourceDiagnostic as TypstSourceDiagnostic;
 
+pub use typst::diag::FileError as TypstFileError;
+
 #[derive(Debug, Clone)]
 pub struct DiagMessage {
     pub resource: ImmutStr,
@@ -222,6 +224,27 @@ pub mod prelude {
     use crate::Error;
 
     pub type ZResult<T> = Result<T, Error>;
+
+    pub trait WithContext<T>: Sized {
+        fn context(self, loc: &'static str) -> ZResult<T>;
+
+        fn with_context<F>(self, loc: &'static str, f: F) -> ZResult<T>
+        where
+            F: FnOnce() -> Box<[(&'static str, String)]>;
+    }
+
+    impl<T, E: ErrKindExt> WithContext<T> for Result<T, E> {
+        fn context(self, loc: &'static str) -> ZResult<T> {
+            self.map_err(|e| Error::new(loc, e.to_error_kind(), Box::new([])))
+        }
+
+        fn with_context<F>(self, loc: &'static str, f: F) -> ZResult<T>
+        where
+            F: FnOnce() -> Box<[(&'static str, String)]>,
+        {
+            self.map_err(|e| Error::new(loc, e.to_error_kind(), f()))
+        }
+    }
 
     pub fn map_string_err<T: ToString>(loc: &'static str) -> impl Fn(T) -> Error {
         move |e| Error::new(loc, e.to_string().to_error_kind(), Box::new([]))

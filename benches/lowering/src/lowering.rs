@@ -6,7 +6,7 @@ use typst::model::Document;
 use typst_ts_cli::CompileOnceArgs;
 use typst_ts_compiler::{
     service::{CompileDriverImpl, Compiler},
-    ShadowApi, TypstSystemWorld,
+    ShadowApiExt, TypstSystemWorld,
 };
 use typst_ts_core::vector::pass::{IncrTypst2VecPass, Typst2VecPass};
 
