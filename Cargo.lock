@@ -4478,6 +4478,7 @@ dependencies = [
  "typst-ts-canvas-exporter",
  "typst-ts-core",
  "typst-ts-svg-exporter",
+ "unicode-width",
  "web-sys",
 ]
 
