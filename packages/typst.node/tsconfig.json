@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2018",
+    "strict": true,
+    "moduleResolution": "node",
+    "module": "CommonJS",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["src/**/*.mts", "__test__/**/*.spec.ts"],
+  "exclude": ["node_modules"]
+}

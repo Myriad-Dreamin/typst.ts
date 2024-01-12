@@ -15,6 +15,7 @@
     "packages/parser",
     "packages/renderer",
     "packages/typst.ts",
+    "packages/typst.node",
     "packages/typst.react",
     "packages/typst.vue3",
     "packages/typst.angular",

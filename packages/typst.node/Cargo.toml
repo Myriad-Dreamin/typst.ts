@@ -1,0 +1,35 @@
+[package]
+name = "typst-ts-node-compiler"
+description = "Compile or Render Typst documents in Node environment."
+authors.workspace = true
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = "2"
+napi-derive = "2"
+
+typst-ts-cli.workspace = true
+typst-ts-core.workspace = true
+typst-ts-compiler.workspace = true
+typst-ts-svg-exporter = { workspace = true, optional = true }
+typst-ts-pdf-exporter = { workspace = true, optional = true }
+parking_lot.workspace = true
+serde.workspace = true
+
+[build-dependencies]
+napi-build = "2"
+
+[features]
+
+pdf = ["typst-ts-pdf-exporter"]
+svg = ["typst-ts-svg-exporter", "typst-ts-svg-exporter/experimental-ligature"]
+default = ["pdf", "svg"]

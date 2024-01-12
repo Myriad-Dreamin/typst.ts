@@ -29,6 +29,7 @@ members = [
     "packages/parser",
     "packages/compiler",
     "packages/renderer",
+    "packages/typst.node",
 
     "server/dev",
     "server/remote",
