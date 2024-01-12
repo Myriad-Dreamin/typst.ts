@@ -26,6 +26,7 @@ log.workspace = true
 siphasher.workspace = true
 rayon.workspace = true
 async-recursion.workspace = true
+unicode-width = "0.1.11"
 
 web-sys = { workspace = true, features = [
     "console",
