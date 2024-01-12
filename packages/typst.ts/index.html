@@ -122,6 +122,9 @@
       pdfjsLib.GlobalWorkerOptions.workerSrc =
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
 
+      window.typstBindSemantics = function () {};
+      window.typstBindSvgDom = function () {};
+
       // elem.style.top = `calc(var(--data-text-height) * ${rrt})`;
       // elem.style.left = `calc(var(--data-text-width) * ${rrl})`;
       document.ready(() => {
@@ -136,11 +139,32 @@
               // '/corpus/skyzh-cv/main.white.artifact.sir.in',
               // '/corpus/math/masterproef.artifact.sir.in',
               '/corpus/skyzh-cv/introduction.ayu.multi.sir.in',
+              // '/corpus/skyzh-cv/introduction-book.ayu.multi.sir.in',
             )
               .then(response => response.arrayBuffer())
               .then(buffer => new Uint8Array(buffer));
 
             const appContainer = document.getElementById('typst-app');
+
+            function getViewport(appElem) {
+              const domScale = 1.5;
+              const appPos = appElem.getBoundingClientRect();
+              const left = appPos.left;
+              const top = -appPos.top;
+              const right = window.innerWidth;
+              const bottom = window.innerHeight - appPos.top;
+              const rect = {
+                x: 0,
+                y: top / domScale,
+                width: Math.max(right - left, 0) / domScale,
+                height: Math.max(bottom - top, 0) / domScale,
+              };
+              if (rect.width <= 0 || rect.height <= 0) {
+                rect.x = rect.y = rect.width = rect.height = 0;
+              }
+              // console.log('ccc', basePos, appPos, rect);
+              return rect;
+            }
 
             plugin.runWithSession(
               ses =>
@@ -157,37 +181,15 @@
                     container: appContainer,
                     backgroundColor: '#343541', // '#ffffff', //
                     pixelPerPt: 4.5,
+                    viewport: getViewport(appContainer),
                   });
                   console.log('render time!!!!!!!!!', performance.now() - t);
 
                   const pullRender = async () => {
-                    const domScale = 1.5;
                     const t = performance.now();
-                    const basePos = {
-                      left: 0,
-                      top: 0,
-                      right: window.innerWidth,
-                      bottom: window.innerHeight,
-                    };
-                    const appPos = appContainer.getBoundingClientRect();
-                    const left = appPos.left;
-                    const top = basePos.top - appPos.top;
-                    const right = appPos.right;
-                    const bottom = basePos.bottom - appPos.top;
-                    const rect = {
-                      x: 0,
-                      y: top / domScale,
-                      width: Math.max(right - left, 0) / domScale,
-                      height: Math.max(bottom - top, 0) / domScale,
-                    };
-                    if (rect.width <= 0 || rect.height <= 0) {
-                      rect.x = rect.y = rect.width = rect.height = 0;
-                    }
-                    // console.log('ccc', basePos, appPos, rect);
-
                     await plugin.triggerDomRerender({
                       renderSession: ses,
-                      ...rect,
+                      viewport: getViewport(appContainer),
                     });
                     // console.log('pull render time!!!!!!!!!', performance.now() - t);
                   };
