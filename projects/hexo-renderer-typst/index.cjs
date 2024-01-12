@@ -5,11 +5,14 @@
 const path = require('path');
 const fs = require('fs');
 
+const Compiler = require('./lib/compiler.cjs');
+const compiler = new Compiler(hexo);
+
 const Renderer = require('./lib/renderer.cjs');
-const renderer = new Renderer(hexo);
+const renderer = new Renderer(hexo, compiler);
 
 const Processor = require('./lib/processor.cjs');
-const processor = new Processor(hexo);
+const processor = new Processor(hexo, compiler);
 
 function render(data, options) {
   return renderer.render(data, options);

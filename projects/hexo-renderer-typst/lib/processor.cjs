@@ -1,10 +1,9 @@
-const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 class Processor {
-  constructor(hexo) {
+  constructor(hexo, compiler) {
     this.hexo = hexo;
+    this.compiler = compiler;
     this.Post = hexo.model('Post');
     this.renderCli = 'typst-ts-cli';
 
@@ -21,19 +20,7 @@ class Processor {
     }
 
     const base_dir = this.hexo.base_dir;
-
-    const title = JSON.parse(execSync([
-      this.renderCli,
-      'query',
-      '--workspace',
-      base_dir,
-      '--entry',
-      `"source/${data.source}"`,
-      '--selector',
-      'document_title',
-    ].join(' '), {
-      encoding: 'utf-8',
-    }));
+    const title = this.compiler.title(path.resolve(base_dir, `source/${data.source}`));
 
     if ((!title) || title === null) {
       console.log('[typst]', `title not found in ${data.source}`);

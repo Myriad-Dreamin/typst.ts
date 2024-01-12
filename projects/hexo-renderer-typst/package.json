@@ -21,7 +21,8 @@
   "peerDependencies": {
     "hexo": "^6",
     "@myriaddreamin/typst.ts": "^0.4.2-rc4",
-    "@myriaddreamin/typst-ts-renderer": "^0.4.2-rc4"
+    "@myriaddreamin/typst-ts-renderer": "^0.4.2-rc4",
+    "@myriaddreamin/typst-ts-node-compiler": "^0.4.2-rc4"
   },
   "devDependencies": {},
   "scripts": {
