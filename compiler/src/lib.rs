@@ -108,19 +108,6 @@ pub trait ShadowApi {
     /// Add a shadow file to the driver.
     fn unmap_shadow(&self, path: &Path) -> FileResult<()>;
 
-    /// Wrap the driver with a given shadow file and run the inner function.
-    fn with_shadow_file<T>(
-        &mut self,
-        file_path: &Path,
-        content: Bytes,
-        f: impl FnOnce(&mut Self) -> SourceResult<T>,
-    ) -> SourceResult<T> {
-        self.map_shadow(file_path, content).at(Span::detached())?;
-        let res: Result<T, EcoVec<typst::diag::SourceDiagnostic>> = f(self);
-        self.unmap_shadow(file_path).at(Span::detached())?;
-        res
-    }
-
     /// Add a shadow file to the driver by file id.
     /// Note: to enable this function, `ShadowApi` must implement
     /// `_shadow_map_id`.
@@ -135,6 +122,42 @@ pub trait ShadowApi {
     fn unmap_shadow_by_id(&self, file_id: TypstFileId) -> FileResult<()> {
         let file_path = self._shadow_map_id(file_id)?;
         self.unmap_shadow(&file_path)
+    }
+}
+
+pub trait ShadowApiExt {
+    /// Wrap the driver with a given shadow file and run the inner function.
+    fn with_shadow_file<T>(
+        &mut self,
+        file_path: &Path,
+        content: Bytes,
+        f: impl FnOnce(&mut Self) -> SourceResult<T>,
+    ) -> SourceResult<T>;
+
+    /// Wrap the driver with a given shadow file and run the inner function by
+    /// file id.
+    /// Note: to enable this function, `ShadowApi` must implement
+    /// `_shadow_map_id`.
+    fn with_shadow_file_by_id<T>(
+        &mut self,
+        file_id: TypstFileId,
+        content: Bytes,
+        f: impl FnOnce(&mut Self) -> SourceResult<T>,
+    ) -> SourceResult<T>;
+}
+
+impl<C: ShadowApi> ShadowApiExt for C {
+    /// Wrap the driver with a given shadow file and run the inner function.
+    fn with_shadow_file<T>(
+        &mut self,
+        file_path: &Path,
+        content: Bytes,
+        f: impl FnOnce(&mut Self) -> SourceResult<T>,
+    ) -> SourceResult<T> {
+        self.map_shadow(file_path, content).at(Span::detached())?;
+        let res: Result<T, EcoVec<typst::diag::SourceDiagnostic>> = f(self);
+        self.unmap_shadow(file_path).at(Span::detached())?;
+        res
     }
 
     /// Wrap the driver with a given shadow file and run the inner function by

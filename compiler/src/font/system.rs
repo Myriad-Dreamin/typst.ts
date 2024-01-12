@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     collections::HashMap,
     fs::File,
     path::{Path, PathBuf},
@@ -14,6 +15,8 @@ use typst::{
 
 use typst_ts_core::{
     build_info,
+    config::CompileOpts,
+    error::prelude::ZResult,
     font::{
         BufferFontLoader, FontProfile, FontProfileItem, FontResolverImpl, LazyBufferFontLoader,
         PartialFontBook,
@@ -100,6 +103,46 @@ impl SystemFontSearcher {
             fonts: vec![],
             profile_rebuilder,
         }
+    }
+
+    /// Resolve fonts from given options.
+    pub fn resolve_opts(&mut self, opts: CompileOpts) -> ZResult<()> {
+        if opts
+            .font_profile_cache_path
+            .to_str()
+            .map(|e| !e.is_empty())
+            .unwrap_or_default()
+        {
+            self.set_can_profile(true);
+        }
+
+        // Note: the order of adding fonts is important.
+        // See: https://github.com/typst/typst/blob/9c7f31870b4e1bf37df79ebbe1df9a56df83d878/src/font/book.rs#L151-L154
+        // Source1: add the fonts specified by the user.
+        for path in opts.font_paths {
+            if path.is_dir() {
+                self.search_dir(&path);
+            } else {
+                let _ = self.search_file(&path);
+            }
+        }
+        // Source2: add the fonts from system paths.
+        if !opts.no_system_fonts {
+            self.search_system();
+        }
+
+        // flush source1 and source2 before adding source3
+        self.flush();
+
+        // Source3: add the fonts in memory.
+        for font_data in opts.with_embedded_fonts {
+            self.add_memory_font(match font_data {
+                Cow::Borrowed(data) => Bytes::from_static(data),
+                Cow::Owned(data) => Bytes::from(data),
+            });
+        }
+
+        Ok(())
     }
 
     pub fn set_can_profile(&mut self, can_profile: bool) {

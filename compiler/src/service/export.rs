@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
-use crate::ShadowApi;
+use crate::{ShadowApi, ShadowApiExt};
 use typst::{diag::SourceResult, World};
 use typst_ts_core::{
     exporter_builtins::GroupExporter,
@@ -12,6 +12,9 @@ use typst_ts_core::{
     DynExporter, DynGenericExporter, DynPolymorphicExporter, GenericExporter, TakeAs,
     TypstDocument,
 };
+
+#[cfg(feature = "dynamic-layout")]
+use typst_ts_svg_exporter::MultiVecDocument;
 
 use super::{
     features::{CompileFeature, FeatureSet, WITH_COMPILING_STATUS_FEATURE},
@@ -311,9 +314,9 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
 }
 
 #[cfg(feature = "dynamic-layout")]
-impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
+impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
-    fn export(&mut self, _output: Arc<typst::model::Document>) -> SourceResult<()> {
+    pub fn do_export(&mut self) -> SourceResult<MultiVecDocument> {
         use std::str::FromStr;
 
         use typst::{
@@ -321,7 +324,7 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
             syntax::{PackageSpec, Span, VirtualPath},
         };
         use typst_ts_core::TypstFileId;
-        use typst_ts_svg_exporter::{DynamicLayoutSvgExporter, MultiVecDocument};
+        use typst_ts_svg_exporter::DynamicLayoutSvgExporter;
 
         let variable_file = TypstFileId::new(
             Some(PackageSpec::from_str("@preview/typst-ts-variables:0.1.0").at(Span::detached())?),
@@ -386,11 +389,19 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
         // finalize
         let module = svg_exporter.typst2vec.finalize();
         let doc = MultiVecDocument { module, layouts };
-        std::fs::write(self.module_dest_path(), doc.to_bytes()).unwrap();
 
         let instant = instant::Instant::now();
         log::trace!("multiple layouts finished at {:?}", instant - instant_begin);
 
+        Ok(doc)
+    }
+}
+
+#[cfg(feature = "dynamic-layout")]
+impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
+    fn export(&mut self, _output: Arc<typst::model::Document>) -> SourceResult<()> {
+        let doc = self.do_export()?;
+        std::fs::write(self.module_dest_path(), doc.to_bytes()).unwrap();
         Ok(())
     }
 }
