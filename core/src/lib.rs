@@ -5,6 +5,7 @@
 
 pub(crate) mod concepts;
 pub use concepts::*;
+pub mod adt;
 pub mod error;
 pub use error::{ErrKind, Error};
 
