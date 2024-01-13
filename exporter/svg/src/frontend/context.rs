@@ -123,11 +123,9 @@ impl<'m, 't, Feat: ExportFeature> BuildGlyph for RenderContext<'m, 't, Feat> {
 }
 
 impl<'m, 't, Feat: ExportFeature> GlyphHashStablizer for RenderContext<'m, 't, Feat> {
-    // todo: this is slow
     fn stablize_hash(&mut self, glyph: &GlyphRef) -> Fingerprint {
-        Fingerprint::from_u128(item_hash128(
-            &self.module.glyphs[glyph.glyph_idx as usize].1,
-        ))
+        let glyph = &self.module.glyphs[glyph.glyph_idx as usize].1;
+        glyph.get_fingerprint()
     }
 }
 
