@@ -47,13 +47,6 @@ impl IncrDocServer {
         let builder = &mut self.typst2vec;
         let pages = builder.doc(&output.introspector, &output);
 
-        // todo
-        // if self.should_attach_debug_info {
-        // self.page_source_mapping.push(SourceMappingNode::Page(
-        //     (builder.source_mapping.len() - 1) as u64,
-        // ));
-        // }
-
         // let new_items = builder.new_items.get_mut().len();
         // let new_fonts = builder.glyphs.new_fonts.get_mut().len();
         // let new_glyphs = builder.glyphs.new_glyphs.get_mut().len();
