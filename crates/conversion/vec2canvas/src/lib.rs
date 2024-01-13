@@ -840,12 +840,12 @@ fn create_image() -> Option<HtmlImageElement> {
     doc.create_element("img").ok()?.dyn_into().ok()
 }
 
-#[comemo::memoize]
+#[comemo::memoize(local)]
 fn rasterize_image(_image: Arc<Image>) -> Option<HtmlImageElement> {
     create_image()
 }
 
-#[comemo::memoize]
+#[comemo::memoize(local)]
 fn rasterize_text(_fg: Fingerprint) -> Option<HtmlDivElement> {
     let doc = web_sys::window()?.document()?;
     doc.create_element("div").ok()?.dyn_into().ok()

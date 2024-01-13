@@ -91,7 +91,7 @@ impl IGlyphProvider for FontGlyphProvider {
     fn svg_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<[u8]>> {
         let font_face = font.ttf();
 
-        Some(font_face.glyph_svg_image(id)?.into())
+        Some(font_face.glyph_svg_image(id)?.data.into())
     }
 
     /// See [`IGlyphProvider::bitmap_glyph`] for more information.

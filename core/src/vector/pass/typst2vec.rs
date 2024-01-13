@@ -561,15 +561,15 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
         FixedStroke {
             paint,
             thickness,
-            line_cap,
-            line_join,
-            dash_pattern,
+            cap,
+            join,
+            dash,
             miter_limit,
         }: &FixedStroke,
         styles: &mut Vec<PathStyle>,
     ) {
         // todo: default miter_limit, thickness
-        if let Some(pattern) = dash_pattern.as_ref() {
+        if let Some(pattern) = dash.as_ref() {
             styles.push(PathStyle::StrokeDashOffset(pattern.phase.into_typst()));
             let d = pattern.array.clone();
             let d = d.into_iter().map(Scalar::from_typst).collect();
@@ -578,12 +578,12 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
         styles.push(PathStyle::StrokeWidth((*thickness).into_typst()));
         styles.push(PathStyle::StrokeMitterLimit((*miter_limit).into_typst()));
-        match line_cap {
+        match cap {
             LineCap::Butt => {}
             LineCap::Round => styles.push(PathStyle::StrokeLineCap("round".into())),
             LineCap::Square => styles.push(PathStyle::StrokeLineCap("square".into())),
         };
-        match line_join {
+        match join {
             LineJoin::Miter => {}
             LineJoin::Bevel => styles.push(PathStyle::StrokeLineJoin("bevel".into())),
             LineJoin::Round => styles.push(PathStyle::StrokeLineJoin("round".into())),
