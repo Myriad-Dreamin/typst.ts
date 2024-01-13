@@ -26,3 +26,6 @@ rayon.workspace = true
 name = "typst-ts-bench-lowering"
 path = "src/lowering.rs"
 harness = false
+
+[features]
+the-thesis = []

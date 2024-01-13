@@ -108,6 +108,8 @@ typst_ts_bench_lowering  fastest       │ slowest       │ median        │ m
 
 #[cfg(feature = "the-thesis")]
 static THE_THESIS_COMPILER: CompileDriver = once_cell::sync::Lazy::new(|| {
+    use std::path::Path;
+    use typst_ts_cli::FontArgs;
     let the_thesis_path =
         env!("CARGO_MANIFEST_DIR").to_owned() + "../../../../../typst/masterproef";
     Mutex::new(typst_ts_cli::compile::create_driver(CompileOnceArgs {
@@ -124,6 +126,8 @@ static THE_THESIS_COMPILER: CompileDriver = once_cell::sync::Lazy::new(|| {
 #[cfg(feature = "the-thesis")]
 #[divan::bench]
 fn lower_the_thesis(bencher: Bencher) {
+    use std::path::Path;
+
     if !cfg!(feature = "the-thesis") {
         return;
     }
