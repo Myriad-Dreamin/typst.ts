@@ -19,7 +19,7 @@ use typst::{
 };
 use typst_ts_core::{
     cow_mut::CowMut,
-    font::{DummyFontGlyphProvider, GlyphProvider},
+    font::GlyphProvider,
     hash::{item_hash128, Fingerprint, FingerprintBuilder},
     vector::ir::{
         self, Axes, DefId, GlyphItem, GlyphPackBuilder, GradientItem, GradientKind, GradientStyle,
