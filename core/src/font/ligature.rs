@@ -1,4 +1,6 @@
-use std::rc::Rc;
+use parking_lot::{RwLock, RwLockUpgradableReadGuard};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use ttf_parser::gsub::{Ligature, SubstitutionSubtable};
 use ttf_parser::GlyphId;
@@ -29,7 +31,8 @@ fn get_rev_cmap(face: &ttf_parser::Face<'_>) -> std::collections::HashMap<GlyphI
     rev_cmap
 }
 
-/// Some ttf fonts do not have well gdbf table, so we need to manually get ligature coverage
+/// Some ttf fonts do not have well gdbf table, so we need to manually get
+/// ligature coverage
 fn get_liga_cov(face: &ttf_parser::Face<'_>) -> std::collections::HashSet<GlyphId> {
     let mut res = std::collections::HashSet::new();
     let Some(gsub) = face.tables().gsub else {
@@ -53,7 +56,7 @@ fn get_liga_cov(face: &ttf_parser::Face<'_>) -> std::collections::HashSet<GlyphI
 pub struct LigatureResolver {
     rev_cmap: std::collections::HashMap<GlyphId, char>,
     ligature_cov: std::collections::HashSet<GlyphId>,
-    ligature_cmap: elsa::FrozenBTreeMap<GlyphId, Box<Option<ImmutStr>>>,
+    ligature_cmap: RwLock<HashMap<GlyphId, Option<ImmutStr>>>,
 }
 
 impl LigatureResolver {
@@ -61,43 +64,42 @@ impl LigatureResolver {
         Self {
             rev_cmap: get_rev_cmap(face),
             ligature_cov: get_liga_cov(face),
-            ligature_cmap: elsa::FrozenBTreeMap::new(),
+            ligature_cmap: RwLock::default(),
         }
     }
 
     /// resolve the correct unicode string of a ligature glyph
     pub fn resolve(&self, face: &ttf_parser::Face<'_>, id: GlyphId) -> Option<ImmutStr> {
-        if let Some(s) = self.ligature_cmap.get(&id) {
+        let cmap = self.ligature_cmap.upgradable_read();
+        if let Some(s) = cmap.get(&id) {
             return s.clone();
         }
 
-        if self.ligature_cov.contains(&id) {
-            return Some(self.get(face, id));
-        }
+        let mut cmap = RwLockUpgradableReadGuard::upgrade(cmap);
 
-        self.ligature_cmap.insert(id, Box::new(None));
-        None
-    }
+        let res = if self.ligature_cov.contains(&id) {
+            // Combines unicode string from ligature components
+            let ligature = LigatureResolver::lookup(face, id).unwrap();
 
-    /// return a combined unicode string from ligature components
-    fn get(&self, face: &ttf_parser::Face<'_>, id: GlyphId) -> ImmutStr {
-        let ligature = LigatureResolver::lookup(face, id).unwrap();
-
-        let c: ImmutStr = ligature
-            .components
-            .into_iter()
-            .map(|g| {
-                self.rev_cmap.get(&g).unwrap_or_else(|| {
-                    println!("ligature component not found: {:?} {:?}", g, face);
-                    &' '
+            let c: ImmutStr = ligature
+                .components
+                .into_iter()
+                .map(|g| {
+                    self.rev_cmap.get(&g).unwrap_or_else(|| {
+                        println!("ligature component not found: {:?} {:?}", g, face);
+                        &' '
+                    })
                 })
-            })
-            .collect::<String>()
-            .into();
+                .collect::<String>()
+                .into();
 
-        self.ligature_cmap.insert(id, Box::new(Some(c.clone())));
+            Some(c)
+        } else {
+            None
+        };
 
-        c
+        cmap.insert(id, res.clone());
+        res
     }
 
     /// lookup ligature without cache
@@ -122,8 +124,8 @@ impl LigatureResolver {
 }
 
 #[comemo::memoize]
-fn get_ligature_resolver(font: &Font) -> Rc<LigatureResolver> {
-    Rc::new(LigatureResolver::new(font.ttf()))
+fn get_ligature_resolver(font: &Font) -> Arc<LigatureResolver> {
+    Arc::new(LigatureResolver::new(font.ttf()))
 }
 
 pub(super) fn resolve_ligature(font: &Font, id: GlyphId) -> Option<ImmutStr> {

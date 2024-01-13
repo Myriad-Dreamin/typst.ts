@@ -42,7 +42,7 @@ use ttf_parser::GlyphId;
 
 static WARN_VIEW_BOX: OnceCell<()> = OnceCell::new();
 
-type ExtraSvgItems = rpds::RedBlackTreeMap<Fingerprint, Arc<SvgItem>>;
+type ExtraSvgItems = rpds::RedBlackTreeMapSync<Fingerprint, Arc<SvgItem>>;
 
 /// Lower a frame item into svg item.
 pub struct LowerBuilder<'a> {
