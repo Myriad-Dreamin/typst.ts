@@ -156,16 +156,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "archery"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "487955f60962765486ce000015a3492ca45c34a2ebbf12bc0aa2b5110ca6e7d2"
-dependencies = [
- "static_assertions",
- "triomphe",
-]
-
-[[package]]
 name = "arrayref"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -744,13 +734,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "crossbeam-utils"
-version = "0.8.16"
+name = "crossbeam-queue"
+version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a22b2d63d4d1dc0b7f1b6b2747dd0088008a9be28b6ddf0b1e7d335e3037294"
+checksum = "df0346b5d5e76ac2fe4e327c5fd1118d6be7c51dfb18f9b7922923f287471e35"
 dependencies = [
- "cfg-if",
+ "crossbeam-utils",
 ]
+
+[[package]]
+name = "crossbeam-utils"
+version = "0.8.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "248e3bacc7dc6baa3b21e405ee045c3047101a49145e7e9eca583ab4c2ca5345"
 
 [[package]]
 name = "crypto-common"
@@ -2051,6 +2047,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c168f8615b12bc01f9c17e2eb0cc07dcae1940121185446edc3744920e8ef45"
 dependencies = [
  "autocfg",
+ "owning_ref",
  "scopeguard",
 ]
 
@@ -2389,6 +2386,15 @@ name = "overload"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
+
+[[package]]
+name = "owning_ref"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ff55baddef9e4ad00f88b6c743a2a8062d4c6ade126c2a528644b8e444d52ce"
+dependencies = [
+ "stable_deref_trait",
+]
 
 [[package]]
 name = "palette"
@@ -2955,15 +2961,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rpds"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0e15515d3ce3313324d842629ea4905c25a13f81953eadb88f85516f59290a4"
-dependencies = [
- "archery",
-]
-
-[[package]]
 name = "rustc-demangle"
 version = "0.1.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3454,12 +3451,6 @@ dependencies = [
  "psm",
  "winapi",
 ]
-
-[[package]]
-name = "static_assertions"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "str-buf"
@@ -3999,12 +3990,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "triomphe"
-version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "859eb650cfee7434994602c3a68b25d77ad9e68c8a6cd491616ef86661382eb3"
-
-[[package]]
 name = "try-lock"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4050,7 +4035,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 [[package]]
 name = "typst"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.10.0-content-hint#02aff443c754545859bf3cb23a837e1ab71a172f"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.10.0-content-hint-half#e6f7c6dd9c88e3d0bce200bf541801a6623a6a79"
 dependencies = [
  "az",
  "bitflags 2.4.1",
@@ -4103,7 +4088,7 @@ dependencies = [
 [[package]]
 name = "typst-ide"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.10.0-content-hint#02aff443c754545859bf3cb23a837e1ab71a172f"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.10.0-content-hint-half#e6f7c6dd9c88e3d0bce200bf541801a6623a6a79"
 dependencies = [
  "comemo",
  "ecow",
@@ -4117,7 +4102,7 @@ dependencies = [
 [[package]]
 name = "typst-macros"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.10.0-content-hint#02aff443c754545859bf3cb23a837e1ab71a172f"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.10.0-content-hint-half#e6f7c6dd9c88e3d0bce200bf541801a6623a6a79"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -4128,7 +4113,7 @@ dependencies = [
 [[package]]
 name = "typst-pdf"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.10.0-content-hint#02aff443c754545859bf3cb23a837e1ab71a172f"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.10.0-content-hint-half#e6f7c6dd9c88e3d0bce200bf541801a6623a6a79"
 dependencies = [
  "base64",
  "bytemuck",
@@ -4151,7 +4136,7 @@ dependencies = [
 [[package]]
 name = "typst-syntax"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.10.0-content-hint#02aff443c754545859bf3cb23a837e1ab71a172f"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.10.0-content-hint-half#e6f7c6dd9c88e3d0bce200bf541801a6623a6a79"
 dependencies = [
  "comemo",
  "ecow",
@@ -4167,7 +4152,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-ast-exporter"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "ansi_term",
  "typst",
@@ -4176,11 +4161,12 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-bench-lowering"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "comemo",
  "divan",
  "once_cell",
+ "rayon",
  "typst",
  "typst-ts-cli",
  "typst-ts-compiler",
@@ -4189,7 +4175,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-canvas-exporter"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -4212,7 +4198,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-cli"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4248,7 +4234,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-compiler"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "append-only-vec",
  "base64",
@@ -4292,12 +4278,14 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-core"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "base64",
  "base64-serde",
+ "bitvec",
  "byteorder",
  "comemo",
+ "crossbeam-queue",
  "ecow",
  "elsa",
  "flate2",
@@ -4306,10 +4294,11 @@ dependencies = [
  "js-sys",
  "log",
  "once_cell",
+ "owning_ref",
  "parking_lot",
  "path-clean",
+ "rayon",
  "rkyv",
- "rpds",
  "rustc-hash",
  "serde",
  "serde_json",
@@ -4328,7 +4317,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-dev-server"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "clap",
  "clap_complete",
@@ -4345,7 +4334,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-fontctl"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "anyhow",
  "clap",
@@ -4359,7 +4348,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-heap-profile-test"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4375,7 +4364,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-fuzzer"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4395,7 +4384,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-test"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4413,7 +4402,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-integration-test"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "anyhow",
  "base64",
@@ -4438,7 +4427,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-parser"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "base64",
  "comemo",
@@ -4462,7 +4451,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-pdf-exporter"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "typst",
  "typst-pdf",
@@ -4471,7 +4460,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-remote-server"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "clap",
  "clap_complete",
@@ -4491,7 +4480,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-renderer"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -4524,14 +4513,14 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-rkyv-assertions"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "typst-ts-core",
 ]
 
 [[package]]
 name = "typst-ts-serde-exporter"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "rmp-serde",
  "serde",
@@ -4542,7 +4531,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-std-test"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "anyhow",
  "rayon",
@@ -4551,12 +4540,13 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-svg-exporter"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "base64",
  "comemo",
  "log",
  "once_cell",
+ "rayon",
  "siphasher 1.0.0",
  "tiny-skia",
  "typst",
@@ -4566,7 +4556,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-test-common"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -4577,7 +4567,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-text-exporter"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "typst",
  "typst-ts-core",
@@ -4585,7 +4575,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-web-compiler"
-version = "0.4.2-rc4"
+version = "0.4.2-rc5"
 dependencies = [
  "ansi-to-html",
  "base64",

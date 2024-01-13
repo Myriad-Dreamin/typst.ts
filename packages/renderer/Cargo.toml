@@ -39,7 +39,7 @@ serde-wasm-bindgen.workspace = true
 web-sys = { workspace = true, features = ["console", "Window"] }
 
 typst-ts-core.workspace = true
-typst-ts-compiler = { version = "0.4.2-rc4", default-features = false, features = [
+typst-ts-compiler = { version = "0.4.2-rc5", default-features = false, features = [
     "web-render",
 ] }
 typst-ts-canvas-exporter = { workspace = true, optional = true }
