@@ -1,9 +1,8 @@
 use siphasher::sip128::Hasher128;
 use std::{collections::HashMap, hash::Hash, sync::Arc};
-use typst_ts_canvas_exporter::CanvasRenderSnippets;
 
 use typst_ts_core::{
-    hash::{item_hash128, Fingerprint, FingerprintBuilder, FingerprintSipHasherBase},
+    hash::{Fingerprint, FingerprintBuilder, FingerprintSipHasherBase},
     vector::{
         flat_ir::{FlatSvgItem, FlatTextItem, GroupRef, Module},
         flat_vm::{FlatGroupContext, FlatIncrRenderVm, FlatRenderVm},
@@ -343,6 +342,20 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Fea
 
 impl<'m, 't, Feat: ExportFeature> FlatIncrRenderVm<'m> for RenderContext<'m, 't, Feat> {}
 
+#[cfg(not(feature = "aggresive-browser-rasterization"))]
+impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
+    /// Raseterize the text and put it into the group context.
+    fn rasterize_and_put_text(
+        &mut self,
+        _group_ctx: SvgTextBuilder,
+        _abs_ref: &Fingerprint,
+        _text: &FlatTextItem,
+    ) -> SvgTextBuilder {
+        panic!("Rasterization is not enabled.")
+    }
+}
+
+#[cfg(feature = "aggresive-browser-rasterization")]
 impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
     /// Raseterize the text and put it into the group context.
     fn rasterize_and_put_text(
@@ -351,6 +364,8 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
         abs_ref: &Fingerprint,
         text: &FlatTextItem,
     ) -> SvgTextBuilder {
+        use typst_ts_canvas_exporter::CanvasRenderSnippets;
+
         let font = self.get_font(&text.font).unwrap();
 
         // upem is the unit per em defined in the font.
@@ -397,7 +412,9 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
 
         group_ctx
     }
+}
 
+impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
     /// Render a text into the underlying context.
     fn render_flat_text_inplace(
         &mut self,
