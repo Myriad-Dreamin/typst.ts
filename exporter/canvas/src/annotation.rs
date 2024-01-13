@@ -8,7 +8,7 @@ use typst_ts_core::{
     hash::Fingerprint,
     vector::{
         flat_ir::{FlatSvgItem, GroupRef, Module},
-        ir::{self, SvgItem},
+        ir::{self},
     },
 };
 
@@ -28,29 +28,6 @@ impl<'m, 't> AnnotationListTask<'m, 't> {
             module,
             page_num: 0,
             annotations,
-        }
-    }
-
-    pub fn process_item(&mut self, ts: sk::Transform, item: &ir::SvgItem) {
-        match item {
-            SvgItem::Transformed(t) => self.process_item(
-                ts.pre_concat({
-                    let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
-                    t.into()
-                }),
-                &t.1,
-            ),
-            SvgItem::Group(group, _) => self.process_group(ts, group),
-            SvgItem::Link(link) => self.process_link(ts, link),
-            _ => {}
-        }
-    }
-
-    fn process_group(&mut self, ts: sk::Transform, group: &ir::GroupItem) {
-        for (pos, item) in &group.0 {
-            let ts = ts.pre_translate(pos.x.0, pos.y.0);
-
-            self.process_item(ts, item);
         }
     }
 

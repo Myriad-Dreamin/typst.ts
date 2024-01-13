@@ -277,11 +277,6 @@ impl<'m, 't, Feat: ExportFeature> RenderVm for RenderContext<'m, 't, Feat> {
 
         g
     }
-
-    /// Render a text into the underlying context.
-    fn render_text(&mut self, _state: RenderState, _text: &ir::TextItem) -> Self::Resultant {
-        unreachable!();
-    }
 }
 
 impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Feat> {

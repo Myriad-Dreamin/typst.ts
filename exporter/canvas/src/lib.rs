@@ -10,13 +10,13 @@ use typst_ts_core::{
     font::GlyphProvider,
     hash::Fingerprint,
     vector::{
-        flat_ir::{self, LayoutRegionNode, Module, ModuleBuilder, Page},
+        flat_ir::{self, FlatSvgItem, LayoutRegionNode, Module, ModuleBuilder, Page},
         flat_vm::{FlatGroupContext, FlatRenderVm},
         incr::IncrDocClient,
         ir::{
             self, Abs, Axes, BuildGlyph, FontIndice, FontRef, GlyphIndice, GlyphItem,
             GlyphPackBuilder, GlyphRef, Image, ImageItem, ImmutStr, PathStyle, Ratio, Rect, Scalar,
-            Size, SvgItem,
+            Size,
         },
         vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
@@ -468,16 +468,6 @@ impl<C> TransformContext<C> for CanvasStack {
 impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> GroupContext<C>
     for CanvasStack
 {
-    fn render_item_at(
-        &mut self,
-        state: RenderState,
-        ctx: &mut C,
-        pos: ir::Point,
-        item: &ir::SvgItem,
-    ) {
-        self.inner.push((pos, ctx.render_item(state, item)));
-    }
-
     fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &ir::GlyphItem) {
         let glyph_ref = ctx.build_glyph(glyph);
         if let Some(glyph_data) = ctx.get_glyph(&glyph_ref) {

@@ -10,7 +10,7 @@ use typst_ts_core::{
         flat_ir::{FlatSvgItem, LayoutRegionNode, Module, ModuleBuilder, Page},
         flat_vm::{FlatIncrRenderVm, FlatRenderVm},
         incr::{IncrDocClient, IncrDocServer},
-        ir::{Rect, SvgItem},
+        ir::Rect,
         vm::RenderState,
     },
 };
