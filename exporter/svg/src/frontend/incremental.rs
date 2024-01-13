@@ -163,6 +163,10 @@ impl IncrSvgDocClient {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.glyph_window = 0;
+    }
+
     /// Render the document in the given window.
     pub fn render_in_window(&mut self, kern: &mut IncrDocClient, rect: Rect) -> String {
         type IncrExporter = SvgExporter<IncrementalExportFeature>;
