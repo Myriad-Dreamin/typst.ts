@@ -64,8 +64,5 @@ fn main() {
         // layout
         ArchivedLayoutRegionNode,
         ArchivedLayoutRegion,
-        ArchivedBuildInfo,
-        ArchivedColorItem,
-        ArchivedGradientItem,
     );
 }
