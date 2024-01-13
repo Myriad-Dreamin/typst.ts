@@ -1,6 +1,7 @@
 use js_sys::Promise;
 use std::{fmt::Debug, ops::Deref, sync::Arc};
 use tiny_skia as sk;
+use typst::{introspection::Introspector, layout::Frame};
 
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, HtmlDivElement, HtmlImageElement, Path2d};
@@ -48,6 +49,22 @@ impl ExportFeature for DefaultExportFeature {
     const ENABLE_TRACING: bool = false;
     const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
 }
+
+static EMPTY_PAGE: once_cell::sync::Lazy<(Fingerprint, Vec<(Fingerprint, FlatSvgItem)>)> =
+    once_cell::sync::Lazy::new(|| {
+        // prepare an empty page for the pages that are not rendered
+        let mb = ModuleBuilder::default();
+        let i = Introspector::default();
+        let empty_page = mb.build(&i, &Frame::default());
+        (
+            empty_page,
+            mb.items
+                .clone()
+                .into_iter()
+                .map(|(f, (_, v))| (f, v))
+                .collect::<Vec<_>>(),
+        )
+    });
 
 use async_trait::async_trait;
 
@@ -748,11 +765,8 @@ impl IncrCanvasDocClient {
 
         // prepare an empty page for the pages that are not rendered
         // todo: better solution?
-        let empty_page = self.mb.build(SvgItem::Group(Default::default(), None));
-        kern.doc
-            .module
-            .items
-            .extend(self.mb.items.iter().map(|(f, (_, v))| (*f, v.clone())));
+        let (empty_page, resources) = EMPTY_PAGE.clone();
+        kern.module_mut().items.extend(resources);
 
         // get previous doc_view
         // it is exact state of the current DOM.

@@ -1,14 +1,10 @@
 use typst::model::Document;
-use typst_ts_core::{
-    vector::{
-        flat_ir::{
-            FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, ModuleBuilder, ModuleMetadata,
-            MultiSvgDocument, Page,
-        },
-        ir::Abs,
-        LowerBuilder,
+use typst_ts_core::vector::{
+    flat_ir::{
+        FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, ModuleBuilder, ModuleMetadata,
+        MultiSvgDocument,
     },
-    TakeAs,
+    ir::Abs,
 };
 
 #[derive(Default)]
@@ -22,26 +18,9 @@ impl DynamicLayoutSvgExporter {
         self.builder.reset();
         // let instant = std::time::Instant::now();
         // check the document
-        let mut t = LowerBuilder::new(output);
+        // let mut t = LowerBuilder::new(output);
 
-        let pages = output
-            .pages
-            .iter()
-            .map(|p| {
-                let abs_ref = self.builder.build(t.lower(p));
-                Page {
-                    content: abs_ref,
-                    size: p.size().into(),
-                }
-            })
-            .collect::<Vec<_>>();
-
-        // todo: merge lower and builder, avoid hacking
-        for (fg, ext) in t.extra_items {
-            let data_fg = self.builder.build(ext.take());
-            let item = self.builder.items.get(&data_fg).unwrap();
-            self.builder.items.insert(fg, item.clone());
-        }
+        let pages = self.builder.build_doc(&output.introspector, output);
 
         // log::trace!("svg dynamic layout render time: {:?}",
         // instant.elapsed());

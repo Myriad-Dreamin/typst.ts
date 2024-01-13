@@ -1,4 +1,4 @@
-use std::{any::Any, collections::HashMap, hash::Hash};
+use std::{any::Any, hash::Hash};
 
 use base64::Engine;
 use siphasher::sip128::{Hasher128, SipHasher13};
@@ -116,17 +116,24 @@ impl FingerprintHasher for FingerprintSipHasher {
 #[derive(Default)]
 pub struct FingerprintBuilder {
     /// The conflict checker mapping fingerprints to their underlying data.
-    conflict_checker: HashMap<Fingerprint, Vec<u8>>,
+    conflict_checker: crate::adt::CHashMap<Fingerprint, Vec<u8>>,
 }
 
 impl FingerprintBuilder {
-    pub fn resolve<T: Hash + 'static>(&mut self, item: &T) -> Fingerprint {
+    pub fn resolve_unchecked<T: Hash>(&self, item: &T) -> Fingerprint {
+        let mut s = FingerprintSipHasherBase::default();
+        item.hash(&mut s);
+        let hash = s.finish128();
+        Fingerprint(hash.h1, hash.h2)
+    }
+
+    pub fn resolve<T: Hash + 'static>(&self, item: &T) -> Fingerprint {
         let mut s = FingerprintSipHasher { data: Vec::new() };
         item.type_id().hash(&mut s);
         item.hash(&mut s);
         let (fingerprint, featured_data) = s.finish_fingerprint();
         if let Some(prev_featured_data) = self.conflict_checker.get(&fingerprint) {
-            if prev_featured_data != &featured_data {
+            if *prev_featured_data != featured_data {
                 // todo: soft error
                 panic!("Fingerprint conflict detected!");
             }

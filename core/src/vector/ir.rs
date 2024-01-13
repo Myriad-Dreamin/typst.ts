@@ -1,8 +1,11 @@
 use core::fmt;
-use std::collections::{HashMap, HashSet};
+use std::cell::RefCell;
+use std::collections::HashSet;
 use std::hash::Hash;
+use std::ops::DerefMut;
 use std::sync::Arc;
 
+use parking_lot::Mutex;
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 
@@ -675,17 +678,18 @@ pub type FontPack = Vec<FontItem>;
 /// A finished pack that stores all the glyph items.
 pub type GlyphPack = Vec<(DefId, GlyphItem)>;
 
-#[derive(Clone)]
 pub struct GlyphPackBuilderImpl<const ENABLE_REF_CNT: bool = false> {
     /// Intermediate representation of an incompleted font pack.
-    font_mapping: HashMap<Font, FontRef>,
+    font_mapping: crate::adt::CHashMap<Font, FontRef>,
+    font_write_lock: Mutex<()>,
 
     /// Intermediate representation of an incompleted glyph pack.
-    glyph_defs: HashMap<GlyphItem, (GlyphRef, FontRef)>,
+    glyph_defs: crate::adt::CHashMap<GlyphItem, (GlyphRef, FontRef)>,
+    glyph_write_lock: Mutex<()>,
 
     pub lifetime: u64,
-    pub incr_fonts: Vec<u64>,
-    pub incr_glyphs: Vec<u64>,
+    pub new_fonts: Mutex<Vec<FontItem>>,
+    pub new_glyphs: Mutex<Vec<(DefId, GlyphItem)>>,
 
     /// for interning
     pub used_fonts: HashSet<FontRef>,
@@ -700,9 +704,11 @@ impl<const ENABLE_REF_CNT: bool> Default for GlyphPackBuilderImpl<ENABLE_REF_CNT
         Self {
             lifetime: 0,
             font_mapping: Default::default(),
+            font_write_lock: Default::default(),
             glyph_defs: Default::default(),
-            incr_fonts: Default::default(),
-            incr_glyphs: Default::default(),
+            glyph_write_lock: Default::default(),
+            new_fonts: Default::default(),
+            new_glyphs: Default::default(),
             used_fonts: Default::default(),
             used_glyphs: Default::default(),
         }
@@ -725,68 +731,93 @@ impl<const ENABLE_REF_CNT: bool> GlyphPackBuilderImpl<ENABLE_REF_CNT> {
         (fonts, glyphs)
     }
 
-    pub fn build_font(&mut self, font: &Font) -> FontRef {
+    pub fn build_font(&self, font: &Font) -> FontRef {
         if let Some(id) = self.font_mapping.get(font) {
             return id.clone();
         }
+        let _write_lock = self.font_write_lock.lock();
 
-        let id = FontRef {
-            hash: fxhash::hash32(font),
-            idx: self.font_mapping.len() as u32,
-        };
-        self.font_mapping.insert(font.clone(), id.clone());
-        if ENABLE_REF_CNT {
-            self.incr_fonts.push(self.lifetime);
-        }
-        id
+        let new_abs_ref = RefCell::new(FontRef {
+            hash: 0xfffe,
+            idx: 0xfffe,
+        });
+
+        self.font_mapping.alter(font.clone(), |e| {
+            if e.is_some() {
+                *new_abs_ref.borrow_mut() = e.as_ref().unwrap().clone();
+                return e;
+            }
+
+            let abs_ref = FontRef {
+                hash: fxhash::hash32(font),
+                idx: self.font_mapping.len() as u32,
+            };
+            *new_abs_ref.borrow_mut() = abs_ref.clone();
+            if ENABLE_REF_CNT {
+                self.new_fonts.lock().push(font.clone().into());
+            }
+            Some(abs_ref)
+        });
+
+        new_abs_ref.into_inner()
     }
 
-    pub fn build_glyph(&mut self, glyph: &GlyphItem) -> GlyphRef {
+    pub fn build_glyph(&self, glyph: &GlyphItem) -> GlyphRef {
         if let Some(id) = self.glyph_defs.get(glyph) {
             return id.0.clone();
         }
+        let _write_lock = self.glyph_write_lock.lock();
 
-        let g = match glyph {
-            GlyphItem::Raw(g, _) => g,
-            _ => todo!(),
-        };
+        let new_abs_ref = RefCell::new(GlyphRef {
+            font_hash: 0xfffe,
+            glyph_idx: 0xfffe,
+        });
 
-        let font_ref = self.build_font(g);
+        self.glyph_defs.alter(glyph.clone(), |e| {
+            if e.is_some() {
+                *new_abs_ref.borrow_mut() = e.as_ref().unwrap().0.clone();
+                return e;
+            }
 
-        let glyph_idx = self.glyph_defs.len() as u32;
+            let g = match glyph {
+                GlyphItem::Raw(g, _) => g,
+                _ => todo!(),
+            };
 
-        let abs_ref = GlyphRef {
-            font_hash: font_ref.idx,
-            glyph_idx,
-        };
-        self.glyph_defs
-            .insert(glyph.clone(), (abs_ref.clone(), font_ref));
-        if ENABLE_REF_CNT {
-            self.incr_glyphs.push(self.lifetime);
+            let font_ref = self.build_font(g);
+
+            let glyph_idx = self.glyph_defs.len() as u32;
+
+            let abs_ref = GlyphRef {
+                font_hash: font_ref.hash,
+                glyph_idx,
+            };
+            *new_abs_ref.borrow_mut() = abs_ref.clone();
+            if ENABLE_REF_CNT {
+                self.new_glyphs
+                    .lock()
+                    .push((DefId(font_ref.idx as u64), glyph.clone()));
+            }
+            Some((abs_ref, font_ref))
+        });
+
+        new_abs_ref.into_inner()
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn verify_glyph(&self, id: GlyphRef, data: &GlyphItem) {
+        if let Some(glyph) = self.glyph_defs.get(data) {
+            assert_eq!(glyph.0, id);
+        } else {
+            panic!("glyph not found");
         }
-        abs_ref
     }
 }
 
 impl IncrGlyphPackBuilder {
     pub fn finalize_delta(&self) -> (FontPack, GlyphPack) {
-        let fonts = self.font_mapping.iter();
-        let fonts = fonts.filter(|e| self.incr_fonts[e.1.idx as usize] == self.lifetime);
-        let mut fonts = fonts.map(|(x, y)| (y.idx, x.clone())).collect::<Vec<_>>();
-        // order is important
-        fonts.sort_by(|(a, _), (b, _)| a.cmp(b));
-        let fonts = fonts.into_iter().map(|(_, a)| a.into()).collect();
-
-        let glyphs = self.glyph_defs.iter();
-        let glyphs =
-            glyphs.filter(|e| self.incr_glyphs[e.1 .0.glyph_idx as usize] == self.lifetime);
-        let mut glyphs = glyphs
-            .map(|(x, y)| (y.0.glyph_idx, (DefId(y.1.idx as u64), x.clone())))
-            .collect::<Vec<_>>();
-        // order is important
-        glyphs.sort_by(|(a, _), (b, _)| a.cmp(b));
-        let glyphs = glyphs.into_iter().map(|(_, a)| a).collect();
-
+        let fonts = std::mem::take(self.new_fonts.lock().deref_mut());
+        let glyphs = std::mem::take(self.new_glyphs.lock().deref_mut());
         (fonts, glyphs)
     }
 }
