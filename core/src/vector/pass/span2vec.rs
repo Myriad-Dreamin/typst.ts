@@ -216,9 +216,9 @@ impl Span2VecPass {
                 }
                 (SOURCE_MAPPING_TYPE_TEXT, SourceNodeKind::Text(chars)) => {
                     let is_attached = |x: &&(Span, u16)| x.0 != Span::detached();
-                    let st = chars.iter().find(is_attached).unwrap().0;
-                    let ed = chars.iter().rev().find(is_attached).unwrap().0;
-                    candidate = Some((st, ed));
+                    let st = chars.iter().find(is_attached).map(|e| e.0);
+                    let ed = chars.iter().rev().find(is_attached).map(|e| e.0);
+                    candidate = st.zip(ed);
                 }
                 (SOURCE_MAPPING_TYPE_IMAGE, SourceNodeKind::Image(s)) => {
                     candidate = Some((s, s));
