@@ -4306,6 +4306,7 @@ dependencies = [
  "js-sys",
  "log",
  "once_cell",
+ "parking_lot",
  "path-clean",
  "rkyv",
  "rpds",
