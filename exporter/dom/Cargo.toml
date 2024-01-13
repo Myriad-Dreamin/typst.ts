@@ -27,6 +27,7 @@ siphasher.workspace = true
 rayon.workspace = true
 async-recursion.workspace = true
 unicode-width = "0.1.11"
+wasm-bindgen-futures.workspace = true
 
 web-sys = { workspace = true, features = [
     "console",

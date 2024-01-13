@@ -43,6 +43,7 @@ impl TypstPageElem {
     pub fn attach_canvas(&mut self, g: CanvasNode) {
         self.g.attach_canvas(g)
     }
+
     pub async fn repaint_canvas(
         &mut self,
         _ctx: &mut DomContext<'_, '_>,
@@ -97,11 +98,9 @@ impl TypstElem {
         panel: &web_sys::CanvasRenderingContext2d,
     ) {
         use TypstDomExtra::*;
-        if matches!(self.extra, ContentHint(_)) {
-            return; // always visible
-        }
 
         match &mut self.extra {
+            ContentHint(_) => {}
             Group(i) => {
                 if !self.is_svg_visible {
                     self.canvas.as_ref().unwrap().realize(ts, panel).await;

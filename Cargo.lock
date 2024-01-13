@@ -4479,6 +4479,7 @@ dependencies = [
  "typst-ts-core",
  "typst-ts-svg-exporter",
  "unicode-width",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 

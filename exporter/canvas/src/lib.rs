@@ -1,5 +1,5 @@
 use js_sys::Promise;
-use std::{fmt::Debug, ops::Deref, sync::Arc};
+use std::{fmt::Debug, ops::Deref, pin::Pin, sync::Arc};
 use tiny_skia as sk;
 
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
@@ -51,6 +51,8 @@ use async_trait::async_trait;
 
 #[async_trait(?Send)]
 pub trait CanvasAction {
+    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static>;
+
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d);
 }
 
@@ -65,6 +67,33 @@ pub enum CanvasElem {
 
 #[async_trait(?Send)]
 impl CanvasAction for CanvasElem {
+    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
+        type DynFutureBox = Pin<Box<dyn core::future::Future<Output = ()>>>;
+
+        match self {
+            CanvasElem::Group(g) => g.prepare().map(|e| {
+                let e: DynFutureBox = Box::pin(e);
+                e
+            }),
+            CanvasElem::Clip(g) => g.prepare().map(|e| {
+                let e: DynFutureBox = Box::pin(e);
+                e
+            }),
+            CanvasElem::Path(g) => g.prepare().map(|e| {
+                let e: DynFutureBox = Box::pin(e);
+                e
+            }),
+            CanvasElem::Image(g) => g.prepare().map(|e| {
+                let e: DynFutureBox = Box::pin(e);
+                e
+            }),
+            CanvasElem::Glyph(g) => g.prepare().map(|e| {
+                let e: DynFutureBox = Box::pin(e);
+                e
+            }),
+        }
+    }
+
     async fn realize(&self, _ts: sk::Transform, _canvas: &web_sys::CanvasRenderingContext2d) {
         match self {
             CanvasElem::Group(g) => g.realize(_ts, _canvas).await,
@@ -119,6 +148,26 @@ pub struct CanvasGroupElem {
 
 #[async_trait(?Send)]
 impl CanvasAction for CanvasGroupElem {
+    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
+        let mut v = Vec::default();
+
+        for (_, sub_elem) in &self.inner {
+            if let Some(f) = sub_elem.prepare() {
+                v.push(f);
+            }
+        }
+
+        if v.is_empty() {
+            None
+        } else {
+            Some(async move {
+                for f in v {
+                    f.await;
+                }
+            })
+        }
+    }
+
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         let ts = ts.pre_concat(self.ts);
         for (pos, sub_elem) in &self.inner {
@@ -152,6 +201,10 @@ impl CanvasClipElem {
 
 #[async_trait(?Send)]
 impl CanvasAction for CanvasClipElem {
+    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
+        self.inner.prepare()
+    }
+
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         let _guard = self.realize_with(ts, canvas);
 
@@ -164,8 +217,24 @@ pub struct CanvasPathElem {
     pub path_data: ir::PathItem,
 }
 
+struct EmptyFuture;
+impl core::future::Future for EmptyFuture {
+    type Output = ();
+
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        _cx: &mut core::task::Context<'_>,
+    ) -> core::task::Poll<()> {
+        core::task::Poll::Ready(())
+    }
+}
+
 #[async_trait(?Send)]
 impl CanvasAction for CanvasPathElem {
+    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + 'static> {
+        None::<EmptyFuture>
+    }
+
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         let _guard = CanvasStateGuard::new(canvas);
         set_transform(canvas, ts);
@@ -239,16 +308,17 @@ pub struct CanvasImageElem {
 }
 
 impl CanvasImageElem {
-    async fn load_image_cached(image: &Image, image_elem: &HtmlImageElement) {
+    fn is_image_cached(image_elem: &HtmlImageElement) -> bool {
         let image_loaded = image_elem.get_attribute("data-typst-loaded-image");
-        match image_loaded {
-            Some(t) if t == "true" => {}
-            _ => {
-                Self::load_image_slow(image, image_elem).await;
-                image_elem
-                    .set_attribute("data-typst-loaded-image", "true")
-                    .unwrap();
-            }
+        matches!(image_loaded, Some(t) if t == "true")
+    }
+
+    async fn load_image_cached(image: &Image, image_elem: &HtmlImageElement) {
+        if !Self::is_image_cached(image_elem) {
+            Self::load_image_slow(image, image_elem).await;
+            image_elem
+                .set_attribute("data-typst-loaded-image", "true")
+                .unwrap();
         }
     }
 
@@ -313,6 +383,17 @@ impl CanvasImageElem {
             .unwrap();
     }
 
+    fn prepare_image(image: Arc<Image>) -> Option<impl core::future::Future<Output = ()>> {
+        let image_elem = rasterize_image(image.deref().clone()).unwrap();
+
+        if Self::is_image_cached(&image_elem) {
+            return None;
+        }
+
+        let image = image.clone();
+        Some(async move { Self::load_image_cached(&image, &image_elem).await })
+    }
+
     async fn draw_image(
         ts: sk::Transform,
         canvas: &web_sys::CanvasRenderingContext2d,
@@ -355,6 +436,10 @@ impl CanvasImageElem {
 
 #[async_trait(?Send)]
 impl CanvasAction for CanvasImageElem {
+    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + 'static> {
+        Self::prepare_image(self.image_data.image.clone())
+    }
+
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         Self::draw_image(ts, canvas, &self.image_data).await
     }
@@ -368,6 +453,15 @@ pub struct CanvasGlyphElem {
 
 #[async_trait(?Send)]
 impl CanvasAction for CanvasGlyphElem {
+    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + 'static> {
+        match self.glyph_data.as_ref() {
+            FlatGlyphItem::Image(glyph) => {
+                CanvasImageElem::prepare_image(glyph.image.image.clone())
+            }
+            FlatGlyphItem::Outline(..) | FlatGlyphItem::None => None,
+        }
+    }
+
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         let _guard = CanvasStateGuard::new(canvas);
         set_transform(canvas, ts);
