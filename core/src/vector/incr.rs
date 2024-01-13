@@ -101,8 +101,6 @@ impl IncrDocServer {
         let pages = Arc::new(vec![LayoutRegion::new_single(pages)]);
 
         let delta = FlatModule::new(vec![
-            // todo
-            // ModuleMetadata::SourceMappingData(delta.source_mapping),
             ModuleMetadata::PageSourceMapping(Arc::new(LayoutSourceMapping::new_single(
                 self.page_source_mapping.clone(),
             ))),
@@ -129,8 +127,6 @@ impl IncrDocServer {
         let pages = Arc::new(vec![LayoutRegion::new_single(pages)]);
 
         let delta = FlatModule::new(vec![
-            // todo
-            // ModuleMetadata::SourceMappingData(self.module_builder.source_mapping.clone()),
             ModuleMetadata::PageSourceMapping(Arc::new(LayoutSourceMapping::new_single(
                 self.page_source_mapping.clone(),
             ))),
