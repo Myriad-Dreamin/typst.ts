@@ -223,7 +223,7 @@ impl IncrSvgDocClient {
             &mut svg_body,
         );
         let module_ref = kern.module_mut();
-        let patterns = t.render_flat_patterns(module_ref);
+        let patterns = t.render_patterns(module_ref);
 
         let gradients = std::mem::take(&mut t.gradients);
         let gradients = gradients
