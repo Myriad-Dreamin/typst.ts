@@ -1,3 +1,5 @@
+use std::{cell::Cell, pin::Pin, rc::Rc};
+
 use typst_ts_canvas_exporter::{CanvasAction, CanvasNode, CanvasStateGuard};
 use typst_ts_core::{
     error::prelude::*,
@@ -44,7 +46,7 @@ pub struct DomPage {
     /// The flushed semantics state.
     semantics_state: Option<(Page, bool)>,
     /// The flushed canvas state.
-    canvas_state: Option<(Page, f32)>,
+    canvas_state: Option<(Page, Option<Rc<Cell<bool>>>, f32)>,
     /// Whether the page is visible.
     is_visible: bool,
     /// Whether the page is to full.
@@ -117,12 +119,25 @@ impl DomPage {
         }
     }
 
-    pub fn track_data(&mut self, data: &Page) {
+    pub fn track_data(&mut self, data: &Page) -> bool {
         if self.layout_data.as_ref().map_or(false, |d| d == data) {
-            return;
+            let canvas_waiting = self
+                .canvas_state
+                .as_ref()
+                .map(|(_, e, _)| e)
+                .cloned()
+                .flatten();
+            let canvas_ready = canvas_waiting.map_or(false, |e| e.get());
+            if canvas_ready {
+                web_sys::console::log_1(
+                    &format!("canvas state triggers track_data {i}", i = self.idx).into(),
+                );
+            }
+            return canvas_ready;
         }
 
         self.dirty_layout = Some(data.clone());
+        true
     }
 
     /// Triggle a recalculation.
@@ -130,7 +145,7 @@ impl DomPage {
         &mut self,
         ctx: &mut DomContext<'_, '_>,
         viewport: Option<tiny_skia::Rect>,
-    ) -> ZResult<()> {
+    ) -> ZResult<Option<Pin<Box<dyn core::future::Future<Output = ()>>>>> {
         // Update flow if needed.
         let dirty_layout = if let Some(data) = self.dirty_layout.take() {
             self.relayout(ctx, data)?
@@ -146,7 +161,25 @@ impl DomPage {
         // If there is no layout, skip the next stages.
         // If there is no paint needed, as well.
         if self.layout_data.is_none() || (!(dirty_viewport || dirty_layout) && is_to_full) {
-            return Ok(());
+            let canvas_state = self
+                .canvas_state
+                .as_ref()
+                .map(|(_, e, _)| e)
+                .cloned()
+                .flatten();
+            if let Some(canvas_state) = canvas_state {
+                if !canvas_state.get() {
+                    return Ok(None);
+                }
+
+                web_sys::console::log_1(
+                    &format!("canvas state prepare is ready {i}", i = self.idx).into(),
+                );
+
+                return self.repaint_canvas(ctx).await;
+            }
+
+            return Ok(None);
         }
 
         if ctx.checkout_mode == CheckoutMode::Full {
@@ -155,24 +188,25 @@ impl DomPage {
 
             // Repaint a page as semantics.
             self.repaint_semantics(ctx)?;
+            #[cfg(feature = "debug_responsive_mode")]
             web_sys::console::log_1(&"responsive mode to false".into());
 
             self.is_to_full = true;
         } else {
             // Repaint a page as svg.
             self.change_svg_visibility(false);
+            #[cfg(feature = "debug_responsive_mode")]
             web_sys::console::log_1(&"responsive mode to true".into());
 
             self.is_to_full = false;
         }
 
         // Repaint a page as canvas.
-        self.repaint_canvas(ctx).await?;
-
-        Ok(())
+        self.repaint_canvas(ctx).await
     }
 
     fn relayout(&mut self, ctx: &mut DomContext<'_, '_>, data: Page) -> ZResult<bool> {
+        #[cfg(feature = "debug_relayout")]
         web_sys::console::log_2(
             &format!("re-layout {idx} {data:?}", idx = self.idx).into(),
             &self.elem,
@@ -229,6 +263,7 @@ impl DomPage {
         // todo: cache
         let prev_data = self.layout_data.clone();
         if prev_data.map(|d| d != data).unwrap_or(true) {
+            #[cfg(feature = "debug_relayout")]
             web_sys::console::log_2(
                 &format!("dirty layout detected {idx}", idx = self.idx).into(),
                 &self.elem,
@@ -402,7 +437,10 @@ impl DomPage {
         Ok(())
     }
 
-    async fn repaint_canvas(&mut self, ctx: &mut DomContext<'_, '_>) -> ZResult<()> {
+    async fn repaint_canvas(
+        &mut self,
+        ctx: &mut DomContext<'_, '_>,
+    ) -> ZResult<Option<Pin<Box<dyn core::future::Future<Output = ()>>>>> {
         let render_entire_page = self.realized.is_none() || !self.is_visible;
 
         // todo incremental
@@ -417,6 +455,56 @@ impl DomPage {
             }
         };
 
+        let ppp = ctx.canvas_backend.pixel_per_pt;
+        let need_prepare = 'prepare_canvas: {
+            let state = self.layout_data.clone().unwrap();
+
+            if self.canvas_state.as_ref().map_or(false, |(_, waiting, _)| {
+                waiting.is_some() && !waiting.as_ref().unwrap().get()
+            }) {
+                return Ok(None);
+            }
+
+            if self.canvas_state.as_ref().map_or(false, |(_, waiting, _)| {
+                waiting.is_some() && waiting.as_ref().unwrap().get()
+            }) {
+                break 'prepare_canvas None;
+            }
+
+            let preparing_canvas = self.realized_canvas.as_ref().unwrap().prepare();
+            #[cfg(feature = "debug_repaint_canvas")]
+            web_sys::console::log_1(
+                &format!(
+                    "canvas state prepare, render all: {} {}",
+                    self.idx,
+                    canvas.is_some()
+                )
+                .into(),
+            );
+
+            let g = Rc::new(Cell::new(false));
+            let f = g.clone();
+            let i = self.idx;
+            let preparing_canvas = preparing_canvas.map(move |action| {
+                let f = f.clone();
+                async move {
+                    action.await;
+                    f.set(true);
+                    web_sys::console::log_1(&format!("canvas state prepare done {i}").into());
+                }
+            });
+
+            self.canvas_state = Some((state, preparing_canvas.as_ref().map(|_| g), ppp));
+
+            preparing_canvas
+        };
+
+        if let Some(action) = need_prepare {
+            type DynFutureBox = Pin<Box<dyn core::future::Future<Output = ()>>>;
+            let b: DynFutureBox = Box::pin(action);
+            return Ok(Some(b));
+        }
+
         let canvas_ctx = self
             .canvas
             .get_context("2d")
@@ -425,7 +513,6 @@ impl DomPage {
             .dyn_into::<web_sys::CanvasRenderingContext2d>()
             .unwrap();
 
-        let ppp = ctx.canvas_backend.pixel_per_pt;
         let ts = tiny_skia::Transform::from_scale(ppp, ppp);
 
         'render_canvas: {
@@ -433,14 +520,12 @@ impl DomPage {
 
             let state = self.layout_data.clone().unwrap();
             if render_entire_page {
-                if self
-                    .canvas_state
-                    .as_ref()
-                    .map_or(false, |(x, y)| *x == state && *y == ppp)
-                {
+                if self.canvas_state.as_ref().map_or(false, |(x, e, y)| {
+                    *x == state && e.as_ref().map_or(false, |e| !e.get()) && *y == ppp
+                }) {
                     break 'render_canvas;
                 }
-                #[cfg(feature = "debug_repaint_canvas")]
+                // #[cfg(feature = "debug_repaint_canvas")]
                 web_sys::console::log_1(
                     &format!("canvas state changed, render all: {}", self.idx).into(),
                 );
@@ -454,11 +539,11 @@ impl DomPage {
                     (state.size.y.0 * ppp) as f64,
                 );
 
-                self.canvas_state = Some((state, ppp));
+                self.canvas_state = Some((state, None, ppp));
 
                 canvas.realize(ts, &canvas_ctx).await;
             } else {
-                #[cfg(feature = "debug_repaint_canvas")]
+                // #[cfg(feature = "debug_repaint_canvas")]
                 web_sys::console::log_1(&format!("canvas partial render: {}", self.idx).into());
 
                 let Some(attached) = &mut self.realized else {
@@ -477,7 +562,7 @@ impl DomPage {
             }
         }
 
-        Ok(())
+        Ok(None)
     }
 
     pub fn uncommitted_height(&self) -> f32 {
