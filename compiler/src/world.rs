@@ -82,7 +82,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     ) -> Self {
         // Hook up the lang items.
         // todo: bad upstream changes
-        let library = Prehashed::new(typst::Library::build());
+        let library = Prehashed::new(typst::Library::default());
 
         Self {
             root: root_dir.into(),

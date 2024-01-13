@@ -17,7 +17,8 @@ use super::ligature::resolve_ligature;
 ///   it will block current thread and fetch the font data from the server.
 pub trait IGlyphProvider {
     /// With font with glyph id, return the raw ligature string.
-    /// See [`FontGlyphProvider::ligature_glyph`] for the default implementation.
+    /// See [`FontGlyphProvider::ligature_glyph`] for the default
+    /// implementation.
     fn ligature_glyph(&self, font: &Font, id: GlyphId) -> Option<ImmutStr>;
 
     /// With font with glyph id, return the svg document data.

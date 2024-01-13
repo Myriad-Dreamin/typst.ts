@@ -28,6 +28,7 @@ once_cell.workspace = true
 rustc-hash.workspace = true
 
 rpds.workspace = true
+parking_lot.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tiny-skia.workspace = true
