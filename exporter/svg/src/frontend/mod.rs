@@ -6,14 +6,20 @@ pub(crate) mod incremental;
 pub use dynamic_layout::DynamicLayoutSvgExporter;
 pub use incremental::{IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderContext};
 
-use std::{collections::HashSet, f32::consts::TAU, fmt::Write, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    f32::consts::TAU,
+    fmt::Write,
+    sync::Arc,
+};
 
 use typst::{
     layout::{Angle, Quadrant},
     visualize::{Color, ColorSpace, Hsl, Hsv, WeightedColor},
 };
 use typst_ts_core::{
-    font::GlyphProvider,
+    cow_mut::CowMut,
+    font::{DummyFontGlyphProvider, GlyphProvider},
     hash::{item_hash128, Fingerprint, FingerprintBuilder},
     vector::ir::{
         self, Axes, DefId, GlyphItem, GlyphPackBuilder, GradientItem, GradientKind, GradientStyle,
@@ -387,7 +393,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
 
 /// The task context for exporting svg.
 /// It is also as a namespace for all the functions used in the task.
-pub struct SvgTask<Feat: ExportFeature> {
+pub struct SvgTask<'a, Feat: ExportFeature> {
     /// Provides glyphs.
     /// See [`GlyphProvider`].
     pub(crate) glyph_provider: GlyphProvider,
@@ -403,12 +409,14 @@ pub struct SvgTask<Feat: ExportFeature> {
     pub(crate) gradients: PaintFillMap,
     /// Stores the patterns used in the document.
     pub(crate) patterns: PaintFillMap,
+    /// Stores whether an item has stateful fill.
+    pub(crate) stateful_fill_cache: CowMut<'a, HashMap<Fingerprint, bool>>,
 
     _feat_phantom: std::marker::PhantomData<Feat>,
 }
 
 /// Unfortunately, `Default` derive does not work for generic structs.
-impl<Feat: ExportFeature> Default for SvgTask<Feat> {
+impl<Feat: ExportFeature> Default for SvgTask<'_, Feat> {
     fn default() -> Self {
         Self {
             glyph_provider: GlyphProvider::default(),
@@ -419,13 +427,23 @@ impl<Feat: ExportFeature> Default for SvgTask<Feat> {
             style_defs: StyleDefMap::default(),
             gradients: PaintFillMap::default(),
             patterns: PaintFillMap::default(),
+            stateful_fill_cache: CowMut::Owned(Default::default()),
 
             _feat_phantom: std::marker::PhantomData,
         }
     }
 }
 
-impl<Feat: ExportFeature> SvgTask<Feat> {
+impl<'a, Feat: ExportFeature> SvgTask<'a, Feat> {
+    pub fn set_stateful_fill_cache(
+        &mut self,
+        stateful_fill_cache: &'a mut HashMap<Fingerprint, bool>,
+    ) {
+        self.stateful_fill_cache = CowMut::Borrowed(stateful_fill_cache);
+    }
+}
+
+impl<Feat: ExportFeature> SvgTask<'_, Feat> {
     /// Sets the glyph provider for task.
     pub fn set_glyph_provider(&mut self, glyph_provider: GlyphProvider) {
         self.glyph_provider = glyph_provider;
@@ -459,6 +477,7 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
             style_defs: &mut self.style_defs,
             gradients: &mut self.gradients,
             patterns: &mut self.patterns,
+            stateful_fill_cache: &mut self.stateful_fill_cache,
 
             should_attach_debug_info: Feat::SHOULD_ATTACH_DEBUG_INFO,
             should_render_text_element: true,
@@ -680,5 +699,5 @@ impl std::fmt::Display for RatioRepr {
 }
 
 pub trait HasStatefulFill {
-    fn has_stateful_fill(&self, f: &Fingerprint) -> bool;
+    fn has_stateful_fill(&mut self, f: &Fingerprint) -> bool;
 }

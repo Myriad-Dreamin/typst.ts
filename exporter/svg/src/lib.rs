@@ -80,7 +80,7 @@ pub trait ExportFeature {
 
 /// The default feature set which is used for exporting full-fledged svg.
 pub struct DefaultExportFeature;
-pub type DefaultSvgTask = SvgTask<DefaultExportFeature>;
+pub type DefaultSvgTask = SvgTask<'static, DefaultExportFeature>;
 
 impl ExportFeature for DefaultExportFeature {
     const ENABLE_INLINED_SVG: bool = false;
@@ -96,7 +96,7 @@ impl ExportFeature for DefaultExportFeature {
 
 /// The feature set which is used for exporting plain svg.
 pub struct SvgExportFeature;
-pub type PlainSvgTask = SvgTask<SvgExportFeature>;
+pub type PlainSvgTask = SvgTask<'static, SvgExportFeature>;
 
 impl ExportFeature for SvgExportFeature {
     const ENABLE_INLINED_SVG: bool = false;

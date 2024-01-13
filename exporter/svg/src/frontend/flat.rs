@@ -18,7 +18,7 @@ use crate::{
     ExportFeature, SvgDataSelection, SvgExporter, SvgTask,
 };
 
-impl<Feat: ExportFeature> SvgTask<Feat> {
+impl<Feat: ExportFeature> SvgTask<'_, Feat> {
     /// Render a document into the svg_body.
     pub fn render(&mut self, module: &Module, pages: &[Page], svg_body: &mut Vec<SvgText>) {
         let mut render_task = self.get_render_context(module);
