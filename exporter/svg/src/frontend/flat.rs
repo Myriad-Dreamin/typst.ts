@@ -1,19 +1,13 @@
 use std::sync::Arc;
 
-use typst::{diag::SourceResult, model::Document};
+use typst::model::Document;
+use typst_ts_core::vector::pass::Typst2VecPass;
 use typst_ts_core::{
     hash::Fingerprint,
     vector::{
-        flat_ir::{
-            flatten_glyphs, FlatModule, FlatSvgItem, ItemPack, LayoutRegion, LayoutRegionNode,
-            LayoutRegionRepr, Module, ModuleBuilder, ModuleMetadata, Page, SvgDocument,
-        },
-        flat_vm::FlatRenderVm,
-        ir::Size,
-        vm::RenderState,
-        LowerBuilder,
+        ir::{Module, Page, Size, VecDocument, VecItem},
+        vm::{RenderState, RenderVm},
     },
-    TakeAs,
 };
 
 use crate::{
@@ -21,7 +15,7 @@ use crate::{
     ExportFeature, SvgDataSelection, SvgExporter, SvgTask,
 };
 
-impl<Feat: ExportFeature> SvgTask<Feat> {
+impl<Feat: ExportFeature> SvgTask<'_, Feat> {
     /// Render a document into the svg_body.
     pub fn render(&mut self, module: &Module, pages: &[Page], svg_body: &mut Vec<SvgText>) {
         let mut render_task = self.get_render_context(module);
@@ -40,23 +34,21 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
                     ("data-page-width", size.x.to_string()),
                     ("data-page-height", size.y.to_string()),
                 ],
-                content: vec![SvgText::Content(render_task.render_flat_item(state, entry))],
+                content: vec![SvgText::Content(render_task.render_item(state, entry))],
             })));
             acc_height += size.y;
         }
     }
 
-    pub fn render_flat_patterns(
+    pub fn render_patterns(
         &mut self,
         module: &Module,
     ) -> Vec<(Fingerprint, Size, Arc<SvgTextNode>)> {
         self.collect_patterns(|t: &mut Self, id| match module.get_item(id) {
-            Some(FlatSvgItem::Pattern(g)) => {
+            Some(VecItem::Pattern(g)) => {
                 let size = g.size + g.spacing;
                 let state = RenderState::new_size(size);
-                let content = t
-                    .get_render_context(module)
-                    .render_flat_item(state, &g.frame);
+                let content = t.get_render_context(module).render_item(state, &g.frame);
                 Some((*id, size, content))
             }
             _ => {
@@ -70,30 +62,12 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
 }
 
 impl<Feat: ExportFeature> SvgExporter<Feat> {
-    pub fn svg_doc(output: &Document) -> SvgDocument {
-        let mut lower_builder = LowerBuilder::new(output);
-        let mut builder = ModuleBuilder::default();
-        let pages = output
-            .pages
-            .iter()
-            .map(|p| {
-                let abs_ref = builder.build(lower_builder.lower(p));
-                Page {
-                    content: abs_ref,
-                    size: p.size().into(),
-                }
-            })
-            .collect::<Vec<_>>();
+    pub fn svg_doc(output: &Document) -> VecDocument {
+        let typst2vec = Typst2VecPass::default();
+        let pages = typst2vec.doc(&output.introspector, output);
 
-        // todo: avoid hacking
-        for (fg, ext) in lower_builder.extra_items {
-            let data_fg = builder.build(ext.take());
-            let item = builder.items.get(&data_fg).unwrap();
-            builder.items.insert(fg, item.clone());
-        }
-
-        let module = builder.finalize();
-        SvgDocument { pages, module }
+        let module = typst2vec.finalize();
+        VecDocument { pages, module }
     }
 
     pub fn render_flat_svg(
@@ -103,25 +77,4 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
     ) -> String {
         generate_text(Self::render(module, pages, parts))
     }
-}
-
-pub fn export_module(output: SvgDocument) -> SourceResult<Vec<u8>> {
-    let SvgDocument { pages, module } = output;
-    let glyphs = flatten_glyphs(module.glyphs).into();
-
-    let module_data = FlatModule::new(vec![
-        ModuleMetadata::Item(ItemPack(module.items.into_iter().collect())),
-        ModuleMetadata::Font(Arc::new(module.fonts.into())),
-        ModuleMetadata::Glyph(Arc::new(glyphs)),
-        ModuleMetadata::Layout(Arc::new(vec![LayoutRegion::ByScalar(LayoutRegionRepr {
-            kind: "width".into(),
-            layouts: vec![(
-                Default::default(),
-                LayoutRegionNode::Pages(Arc::new((Default::default(), pages))),
-            )],
-        })])),
-    ])
-    .to_bytes();
-
-    Ok(module_data)
 }

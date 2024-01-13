@@ -23,7 +23,6 @@ use crate::{
 };
 use typst_ts_core::{
     error::prelude::{map_string_err, ZResult},
-    vector::span_id_from_u64,
     TypstDocument, TypstFileId,
 };
 
@@ -513,13 +512,12 @@ where
         .await
     }
 
-    pub async fn resolve_doc_to_src_jump(&mut self, id: u64) -> ZResult<Option<DocToSrcJumpInfo>> {
+    pub async fn resolve_span(&mut self, span: Span) -> ZResult<Option<DocToSrcJumpInfo>> {
         let resolve_off =
             |src: &Source, off: usize| src.byte_to_line(off).zip(src.byte_to_column(off));
 
         self.steal_async(move |this, _| {
             let world = this.compiler.world();
-            let span = span_id_from_u64(id)?;
             let src_id = span.id()?;
             let source = world.source(src_id).ok()?;
             let range = source.find(span)?.range();

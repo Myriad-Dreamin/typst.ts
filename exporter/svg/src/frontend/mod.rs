@@ -6,21 +6,26 @@ pub(crate) mod incremental;
 pub use dynamic_layout::DynamicLayoutSvgExporter;
 pub use incremental::{IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderContext};
 
-use std::{collections::HashSet, f32::consts::TAU, fmt::Write, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    f32::consts::TAU,
+    fmt::Write,
+    sync::Arc,
+};
 
 use typst::{
     layout::{Angle, Quadrant},
     visualize::{Color, ColorSpace, Hsl, Hsv, WeightedColor},
 };
 use typst_ts_core::{
-    font::GlyphProvider,
+    cow_mut::CowMut,
     hash::{item_hash128, Fingerprint, FingerprintBuilder},
     vector::{
-        flat_ir::{self, FlatSvgItem, Module, Page},
         ir::{
-            Axes, DefId, GlyphItem, GlyphPackBuilder, GradientItem, GradientKind, GradientStyle,
-            Scalar, Size,
+            self, Axes, FlatGlyphItem, GlyphRef, GradientItem, GradientKind, GradientStyle, Module,
+            Page, Scalar, Size, VecItem,
         },
+        utils::ToCssExt,
     },
 };
 
@@ -226,7 +231,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
                 svg.push(SvgText::Plain(format!(
                     r##"<stop offset="{}" stop-color="{}"/>"##,
                     RatioRepr(start_t.0),
-                    start_c.clone().to_hex(),
+                    start_c.typst().to_css(),
                 )));
 
                 // Generate (256 / len) stops between the two stops.
@@ -248,14 +253,14 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
                     svg.push(SvgText::Plain(format!(
                         r##"<stop offset="{}" stop-color="{}"/>"##,
                         RatioRepr(t),
-                        c.to_hex(),
+                        c.to_css(),
                     )));
                 }
 
                 svg.push(SvgText::Plain(format!(
                     r##"<stop offset="{}" stop-color="{}"/>"##,
                     RatioRepr(end_t.0),
-                    end_c.clone().to_hex(),
+                    end_c.typst().to_css(),
                 )));
             }
 
@@ -280,12 +285,12 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
 
             svg.push(SvgText::Plain(format!(
                 r##"<stop offset="0" stop-color="{}"/>"##,
-                gradient.c0.to_hex(),
+                gradient.c0.to_css(),
             )));
 
             svg.push(SvgText::Plain(format!(
                 r##"<stop offset="1" stop-color="{}"/>"##,
-                gradient.c1.to_hex(),
+                gradient.c1.to_css(),
             )));
 
             svg.push(SvgText::Plain("</linearGradient>".to_owned()));
@@ -316,22 +321,23 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         pages: &[Page],
         parts: Option<SvgDataSelection>,
     ) -> Vec<SvgText> {
+        if !module.glyphs.is_empty() {
+            panic!("Glyphs should be loaded before rendering.");
+        }
+
         let mut t = SvgTask::<Feat>::default();
         let mut svg_body = vec![];
         t.render(module, pages, &mut svg_body);
-        let patterns = t.render_flat_patterns(module);
+        let patterns = t.render_patterns(module);
 
         // note in order!: pattern may use glyphs
-        let glyphs = t.render_glyphs(
-            module.glyphs.iter().enumerate().map(|(x, (_, y))| (x, y)),
-            true,
-        );
+        let glyphs = t.render_glyphs(module.glyphs_all());
 
         let gradients = t
             .gradients
             .values()
             .filter_map(|(_, id, _)| match module.get_item(id) {
-                Some(FlatSvgItem::Gradient(g)) => Some((id, g.as_ref())),
+                Some(VecItem::Gradient(g)) => Some((id, g.as_ref())),
                 _ => {
                     // #[cfg(debug_assertions)]
                     panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
@@ -390,50 +396,48 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
 
 /// The task context for exporting svg.
 /// It is also as a namespace for all the functions used in the task.
-pub struct SvgTask<Feat: ExportFeature> {
-    /// Provides glyphs.
-    /// See [`GlyphProvider`].
-    pub(crate) glyph_provider: GlyphProvider,
-
+pub struct SvgTask<'a, Feat: ExportFeature> {
     /// A fingerprint builder for generating unique id.
     pub(crate) fingerprint_builder: FingerprintBuilder,
 
-    /// Stores the glyphs used in the document.
-    pub(crate) glyph_defs: GlyphPackBuilder,
     /// Stores the style definitions used in the document.
     pub(crate) style_defs: StyleDefMap,
     /// Stores the gradient used in the document.
     pub(crate) gradients: PaintFillMap,
     /// Stores the patterns used in the document.
     pub(crate) patterns: PaintFillMap,
+    /// Stores whether an item has stateful fill.
+    pub(crate) stateful_fill_cache: CowMut<'a, HashMap<Fingerprint, bool>>,
 
     _feat_phantom: std::marker::PhantomData<Feat>,
 }
 
 /// Unfortunately, `Default` derive does not work for generic structs.
-impl<Feat: ExportFeature> Default for SvgTask<Feat> {
+impl<Feat: ExportFeature> Default for SvgTask<'_, Feat> {
     fn default() -> Self {
         Self {
-            glyph_provider: GlyphProvider::default(),
-
             fingerprint_builder: FingerprintBuilder::default(),
 
-            glyph_defs: GlyphPackBuilder::default(),
             style_defs: StyleDefMap::default(),
             gradients: PaintFillMap::default(),
             patterns: PaintFillMap::default(),
+            stateful_fill_cache: CowMut::Owned(Default::default()),
 
             _feat_phantom: std::marker::PhantomData,
         }
     }
 }
 
-impl<Feat: ExportFeature> SvgTask<Feat> {
-    /// Sets the glyph provider for task.
-    pub fn set_glyph_provider(&mut self, glyph_provider: GlyphProvider) {
-        self.glyph_provider = glyph_provider;
+impl<'a, Feat: ExportFeature> SvgTask<'a, Feat> {
+    pub fn set_stateful_fill_cache(
+        &mut self,
+        stateful_fill_cache: &'a mut HashMap<Fingerprint, bool>,
+    ) {
+        self.stateful_fill_cache = CowMut::Borrowed(stateful_fill_cache);
     }
+}
 
+impl<Feat: ExportFeature> SvgTask<'_, Feat> {
     /// Return integral page size for showing document.
     pub(crate) fn page_size(sz: Size) -> Axes<u32> {
         let (width_px, height_px) = {
@@ -449,19 +453,17 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     /// fork a render task with module.
     pub fn get_render_context<'m, 't>(
         &'t mut self,
-        module: &'m flat_ir::Module,
+        module: &'m ir::Module,
     ) -> RenderContext<'m, 't, Feat> {
         RenderContext::<Feat> {
-            glyph_provider: self.glyph_provider.clone(),
-
             module,
 
             fingerprint_builder: &mut self.fingerprint_builder,
 
-            glyph_defs: &mut self.glyph_defs,
-            style_defs: &mut self.style_defs,
+            _style_defs: &mut self.style_defs,
             gradients: &mut self.gradients,
             patterns: &mut self.patterns,
+            stateful_fill_cache: &mut self.stateful_fill_cache,
 
             should_attach_debug_info: Feat::SHOULD_ATTACH_DEBUG_INFO,
             should_render_text_element: true,
@@ -473,26 +475,18 @@ impl<Feat: ExportFeature> SvgTask<Feat> {
     }
 
     /// Render glyphs into the svg_body.
-    pub(crate) fn render_glyphs<'a, I: Iterator<Item = (usize, &'a GlyphItem)>>(
+    pub(crate) fn render_glyphs<'a, I: Iterator<Item = (GlyphRef, &'a FlatGlyphItem)>>(
         &mut self,
         glyphs: I,
-        use_stable_glyph_id: bool,
     ) -> Vec<SvgText> {
-        let mut render_task = SvgGlyphBuilder {
-            glyph_provider: self.glyph_provider.clone(),
-        };
+        let mut render_task = SvgGlyphBuilder {};
 
         let mut svg_body = Vec::new();
 
         for (abs_ref, item) in glyphs {
-            let glyph_id = if Feat::USE_STABLE_GLYPH_ID && use_stable_glyph_id {
-                item.get_fingerprint().as_svg_id("g")
-            } else {
-                (DefId(abs_ref as u64)).as_svg_id("g")
-            };
             svg_body.push(SvgText::Plain(
                 render_task
-                    .render_glyph(&glyph_id, item)
+                    .render_glyph(&abs_ref.as_svg_id("g"), item)
                     .unwrap_or_default(),
             ))
         }
@@ -619,7 +613,7 @@ fn sample_color_stops(gradient: &GradientItem, t: f32) -> Color {
     let mut low = 0;
     let mut high = gradient.stops.len();
 
-    let mixing_space = gradient.space.into();
+    let mixing_space = gradient.space.try_into().unwrap();
     let stops = &gradient.stops;
 
     while low < high {
@@ -683,5 +677,5 @@ impl std::fmt::Display for RatioRepr {
 }
 
 pub trait HasStatefulFill {
-    fn has_stateful_fill(&self, f: &Fingerprint) -> bool;
+    fn has_stateful_fill(&mut self, f: &Fingerprint) -> bool;
 }

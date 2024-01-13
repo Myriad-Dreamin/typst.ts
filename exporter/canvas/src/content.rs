@@ -1,16 +1,14 @@
 use std::collections::HashMap;
 use tiny_skia as sk;
-use typst::{
-    layout::{Axis, Dir},
-    text::FontInfo,
-};
+use typst::layout::{Axis, Dir};
 
 use typst_ts_core::{
     hash::Fingerprint,
     vector::{
-        flat_ir::{self, FlatSvgItem, FlatTextItem, GroupRef, Module},
-        flat_vm::{FlatGroupContext, FlatRenderVm},
-        ir::{self, Abs, Axes, FontIndice, FontRef, Ratio, Scalar, SvgItem},
+        ir::{
+            self, Abs, Axes, FontIndice, FontRef, GroupRef, Module, Ratio, Scalar, TextItem,
+            VecItem,
+        },
         vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
     TextContent,
@@ -67,26 +65,9 @@ trait TranslateCtx {
     fn translate(&mut self, x: Scalar, y: Scalar);
 }
 
-/// See [`GroupContext`].
-impl<C: TranslateCtx + RenderVm<Resultant = ()>> GroupContext<C> for TextContentBuilder {
-    fn render_item_at(
-        &mut self,
-        state: RenderState,
-        ctx: &mut C,
-        pos: ir::Point,
-        item: &ir::SvgItem,
-    ) {
-        ctx.translate(pos.x, pos.y);
-        ctx.render_item(state, item);
-        ctx.translate(-pos.x, -pos.y);
-    }
-}
-
 /// See [`FlatGroupContext`].
-impl<'m, C: TranslateCtx + FlatRenderVm<'m, Resultant = ()>> FlatGroupContext<C>
-    for TextContentBuilder
-{
-    fn render_item_ref_at(
+impl<'m, C: TranslateCtx + RenderVm<'m, Resultant = ()>> GroupContext<C> for TextContentBuilder {
+    fn render_item_at(
         &mut self,
         state: RenderState,
         ctx: &mut C,
@@ -94,7 +75,7 @@ impl<'m, C: TranslateCtx + FlatRenderVm<'m, Resultant = ()>> FlatGroupContext<C>
         item: &Fingerprint,
     ) {
         ctx.translate(pos.x, pos.y);
-        ctx.render_flat_item(state, item);
+        ctx.render_item(state, item);
         ctx.translate(-pos.x, -pos.y);
     }
 }
@@ -108,7 +89,6 @@ pub struct TextContentTask<'m, 't> {
     pub text_content: &'t mut TextContent,
     pub page_height: f32,
 
-    font_map: HashMap<FontInfo, u32>,
     flat_font_map: HashMap<FontRef, u32>,
 }
 
@@ -120,86 +100,22 @@ impl<'m, 't> TextContentTask<'m, 't> {
             ts: sk::Transform::identity(),
             text_content,
             page_height: 0.,
-            font_map: HashMap::new(),
             flat_font_map: HashMap::new(),
         }
-    }
-
-    pub fn process_item(&mut self, ts: sk::Transform, item: &ir::SvgItem) {
-        match item {
-            SvgItem::Transformed(t) => self.process_item(
-                ts.pre_concat({
-                    let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
-                    t.into()
-                }),
-                &t.1,
-            ),
-            SvgItem::Group(group, _) => self.process_group(ts, group),
-            SvgItem::Text(text) => self.process_text(ts, text),
-            _ => {}
-        }
-    }
-
-    fn process_group(&mut self, ts: sk::Transform, group: &ir::GroupItem) {
-        let mut text_flow = TextFlow::new();
-
-        for (pos, item) in &group.0 {
-            let ts = ts.pre_translate(pos.x.0, pos.y.0);
-
-            match item {
-                SvgItem::Transformed(t) => self.process_item(
-                    ts.pre_concat({
-                        let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
-                        t.into()
-                    }),
-                    &t.1,
-                ),
-                SvgItem::Group(group, _) => {
-                    self.process_group(ts, group);
-                }
-                SvgItem::Text(text) => {
-                    let (next_text_flow, has_eol) = TextFlow::notify(text_flow, &ts, &text.shape);
-                    text_flow = next_text_flow;
-
-                    // has end of line (concept from pdf.js)
-                    if has_eol {
-                        let font_name = self.append_text_font(&text.font);
-                        self.append_text_break(ts, font_name, &text.shape)
-                    }
-
-                    self.process_text(ts, text);
-                }
-                _ => {}
-            }
-        }
-    }
-
-    fn process_text(&mut self, ts: sk::Transform, text: &ir::TextItem) {
-        let font_name = self.append_text_font(&text.font);
-        let width = text.content.glyphs.iter().map(|g| g.0 .0 + g.1 .0).sum();
-        self.append_text_content(
-            ts,
-            text.content.content.as_ref().to_string(),
-            font_name,
-            width,
-            text.shape.size.0,
-            &text.shape,
-            false,
-        )
     }
 
     pub fn process_flat_item(&mut self, ts: sk::Transform, item: &Fingerprint) {
         let item = self.module.get_item(item).unwrap();
         match item {
-            FlatSvgItem::Item(t) => self.process_flat_item(
+            VecItem::Item(t) => self.process_flat_item(
                 ts.pre_concat({
                     let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
                     t.into()
                 }),
                 &t.1,
             ),
-            FlatSvgItem::Group(group, _) => self.process_flat_group(ts, group),
-            FlatSvgItem::Text(text) => self.process_flat_text(ts, text),
+            VecItem::Group(group, _) => self.process_flat_group(ts, group),
+            VecItem::Text(text) => self.process_flat_text(ts, text),
             _ => {}
         }
     }
@@ -212,23 +128,23 @@ impl<'m, 't> TextContentTask<'m, 't> {
 
             let item = self.module.get_item(item).unwrap();
             match item {
-                FlatSvgItem::Item(t) => self.process_flat_item(
+                VecItem::Item(t) => self.process_flat_item(
                     ts.pre_concat({
                         let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
                         t.into()
                     }),
                     &t.1,
                 ),
-                FlatSvgItem::Group(group, _) => {
+                VecItem::Group(group, _) => {
                     self.process_flat_group(ts, group);
                 }
-                FlatSvgItem::Text(text) => {
+                VecItem::Text(text) => {
                     let (next_text_flow, has_eol) = TextFlow::notify(text_flow, &ts, &text.shape);
                     text_flow = next_text_flow;
 
                     // has end of line (concept from pdf.js)
                     if has_eol {
-                        let font_name = self.append_flat_text_font(text.font.clone());
+                        let font_name = self.append_flat_text_font(text.shape.font);
                         self.append_text_break(ts, font_name, &text.shape)
                     }
 
@@ -239,8 +155,8 @@ impl<'m, 't> TextContentTask<'m, 't> {
         }
     }
 
-    fn process_flat_text(&mut self, ts: sk::Transform, text: &FlatTextItem) {
-        let font_name = self.append_flat_text_font(text.font.clone());
+    fn process_flat_text(&mut self, ts: sk::Transform, text: &TextItem) {
+        let font_name = self.append_flat_text_font(text.shape.font);
         let width = text.content.glyphs.iter().map(|g| g.0 .0 + g.1 .0).sum();
         self.append_text_content(
             ts,
@@ -274,29 +190,6 @@ impl<'m, 't> TextContentTask<'m, 't> {
                 ascent: font_item.ascender.0,
                 descent: font_item.descender.0,
                 vertical: font_item.vertical,
-            });
-        font_ref
-    }
-
-    // todo: unify with append_flat_text_font
-    fn append_text_font(&mut self, font: &typst::text::Font) -> u32 {
-        if let Some(&font) = self.font_map.get(font.info()) {
-            return font;
-        }
-
-        if self.text_content.styles.len() >= u32::MAX as usize {
-            panic!("too many fonts");
-        }
-
-        let font_ref = self.text_content.styles.len() as u32;
-        self.font_map.insert(font.info().clone(), font_ref);
-        self.text_content
-            .styles
-            .push(typst_ts_core::content::TextStyle {
-                font_family: font.info().family.clone(),
-                ascent: font.metrics().ascender.get() as f32,
-                descent: font.metrics().descender.get() as f32,
-                vertical: false,
             });
         font_ref
     }
@@ -436,24 +329,15 @@ impl<'m, 't> FontIndice<'m> for TextContentTask<'m, 't> {
     }
 }
 
-impl<'m, 't> RenderVm for TextContentTask<'m, 't> {
+impl<'m, 't> RenderVm<'m> for TextContentTask<'m, 't> {
     type Resultant = ();
     type Group = TextContentBuilder;
 
-    fn start_group(&mut self) -> Self::Group {
-        Self::Group { ts: self.ts }
-    }
-}
-
-impl<'m, 't> FlatRenderVm<'m> for TextContentTask<'m, 't> {
-    type Resultant = ();
-    type Group = TextContentBuilder;
-
-    fn get_item(&self, value: &Fingerprint) -> Option<&'m flat_ir::FlatSvgItem> {
+    fn get_item(&self, value: &Fingerprint) -> Option<&'m ir::VecItem> {
         self.module.get_item(value)
     }
 
-    fn start_flat_group(&mut self, _v: &Fingerprint) -> Self::Group {
-        self.start_group()
+    fn start_group(&mut self, _v: &Fingerprint) -> Self::Group {
+        Self::Group { ts: self.ts }
     }
 }

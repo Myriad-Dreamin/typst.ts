@@ -1,82 +1,52 @@
 use std::sync::Arc;
 
 use typst::model::Document;
+use typst::syntax::Span;
 
-use crate::{
-    error::prelude::*,
-    vector::{
-        flat_ir::{flatten_glyphs, FontPack, GlyphPack, ItemPack, LayoutRegion},
-        LowerBuilder,
-    },
-    TakeAs,
+use super::ir::{
+    FlatGlyphItem, FlatModule, GlyphRef, IncrFontPack, IncrGlyphPack, ItemPack, LayoutRegion,
+    LayoutRegionNode, LayoutSourceMapping, Module, ModuleMetadata, MultiVecDocument, Page,
+    SourceMappingNode, VecDocument,
 };
-
-use super::flat_ir::{
-    FlatModule, IncrModuleBuilder, LayoutRegionNode, LayoutSourceMapping, Module, ModuleMetadata,
-    MultiSvgDocument, Page, SourceMappingNode, SvgDocument,
-};
+use super::pass::IncrTypst2VecPass;
+use crate::{error::prelude::*, TakeAs};
 
 /// maintains the data of the incremental rendering at server side
 #[derive(Default)]
 pub struct IncrDocServer {
-    /// Whether to attach debug info to the output.
-    should_attach_debug_info: bool,
-
     /// Expected exact state of the current Compiler.
     /// Initially it is None meaning no completed compilation.
-    doc_view: Option<SvgDocument>,
+    doc_view: Option<VecDocument>,
 
-    /// Maintaining document build status
-    module_builder: IncrModuleBuilder,
-
-    /// Optional page source mapping references.
-    page_source_mapping: Vec<SourceMappingNode>,
+    /// Maintaining typst -> vector status
+    typst2vec: IncrTypst2VecPass,
 }
 
 impl IncrDocServer {
     pub fn set_should_attach_debug_info(&mut self, should_attach_debug_info: bool) {
-        self.module_builder.should_attach_debug_info = should_attach_debug_info;
-        self.should_attach_debug_info = should_attach_debug_info;
+        self.typst2vec
+            .spans
+            .set_should_attach_debug_info(should_attach_debug_info);
     }
 
     /// Pack the delta into a binary blob.
     pub fn pack_delta(&mut self, output: Arc<Document>) -> Vec<u8> {
-        self.module_builder.reset();
-        self.page_source_mapping.clear();
+        self.typst2vec.spans.reset();
 
-        // let instant: std::time::Instant = std::time::Instant::now();
-
-        self.module_builder.increment_lifetime();
+        // Increment the lifetime of all items to touch.
+        self.typst2vec.increment_lifetime();
 
         // it is important to call gc before building pages
-        let gc_items = self.module_builder.gc(5 * 2);
+        let gc_items = self.typst2vec.gc(5 * 2);
 
-        let mut lower_builder = LowerBuilder::new(&output);
-        let builder = &mut self.module_builder;
-        let pages = output
-            .pages
-            .iter()
-            .map(|p| {
-                let abs_ref = builder.build(lower_builder.lower(p));
-                if self.should_attach_debug_info {
-                    self.page_source_mapping.push(SourceMappingNode::Page(
-                        (builder.source_mapping.len() - 1) as u64,
-                    ));
-                }
+        // run typst2vec pass
+        let pages = self.typst2vec.doc(&output.introspector, &output);
 
-                Page {
-                    content: abs_ref,
-                    size: p.size().into(),
-                }
-            })
-            .collect::<Vec<_>>();
+        // let new_items = builder.new_items.get_mut().len();
+        // let new_fonts = builder.glyphs.new_fonts.get_mut().len();
+        // let new_glyphs = builder.glyphs.new_glyphs.get_mut().len();
 
-        for (fg, ext) in lower_builder.extra_items {
-            let data_fg = builder.build(ext.take());
-            let item = builder.items.get(&data_fg).unwrap();
-            builder.items.insert(fg, item.clone());
-        }
-        let delta = builder.finalize_delta();
+        let delta = self.typst2vec.finalize_delta();
 
         // max, min lifetime current, gc_items
         #[cfg(feature = "debug-gc")]
@@ -84,35 +54,41 @@ impl IncrDocServer {
             let mi = self
                 .module_builder
                 .items
-                .values()
-                .map(|i| i.0)
+                .clone()
+                .into_iter()
+                .map(|i| i.1 .0)
                 .min()
                 .unwrap_or(0);
             println!(
-                "gc[{}]: max: {}, min: {}, remove: {}",
+                "gc[{}]: i/f/g: {}/{}/{} max: {}, min: {}, remove: {}",
                 self.module_builder.lifetime,
+                new_items,
+                new_fonts,
+                new_glyphs,
                 self.module_builder
                     .items
-                    .values()
-                    .map(|i| i.0)
+                    .clone()
+                    .into_iter()
+                    .map(|i| i.1 .0)
                     .max()
                     .unwrap_or(0xffffffff),
                 mi,
                 gc_items.len()
             );
 
-            for (fg, (_, item)) in self.module_builder.items.iter().filter(|(_, i)| i.0 == mi) {
-                println!("mi {fg:?} => {item:#?}");
-            }
+            // for (fg, (_, item)) in
+            //     self.module_builder.items.iter().filter(|(_, i)| i.0 == mi) {
+            //     println!("mi {fg:?} => {item:#?}");
+            // }
         }
 
-        let fonts = FontPack {
+        let fonts = IncrFontPack {
             items: delta.fonts,
             incremental_base: 0, // todo: correct incremental_base
         };
 
-        let glyphs = GlyphPack {
-            items: flatten_glyphs(delta.glyphs),
+        let glyphs = IncrGlyphPack {
+            items: delta.glyphs,
             incremental_base: 0, // todo: correct incremental_base
         };
 
@@ -120,10 +96,6 @@ impl IncrDocServer {
         let pages = Arc::new(vec![LayoutRegion::new_single(pages)]);
 
         let delta = FlatModule::new(vec![
-            ModuleMetadata::SourceMappingData(delta.source_mapping),
-            ModuleMetadata::PageSourceMapping(Arc::new(LayoutSourceMapping::new_single(
-                self.page_source_mapping.clone(),
-            ))),
             ModuleMetadata::GarbageCollection(gc_items),
             ModuleMetadata::Font(Arc::new(fonts)),
             ModuleMetadata::Glyph(Arc::new(glyphs)),
@@ -140,17 +112,12 @@ impl IncrDocServer {
     pub fn pack_current(&mut self) -> Option<Vec<u8>> {
         let doc = self.doc_view.as_ref()?;
 
-        let (fonts, glyphs) = self.module_builder.glyphs.finalize();
-        let glyphs = flatten_glyphs(glyphs);
+        let (fonts, glyphs) = self.typst2vec.glyphs.finalize();
 
         let pages = LayoutRegionNode::new_pages(doc.pages.clone());
         let pages = Arc::new(vec![LayoutRegion::new_single(pages)]);
 
         let delta = FlatModule::new(vec![
-            ModuleMetadata::SourceMappingData(self.module_builder.source_mapping.clone()),
-            ModuleMetadata::PageSourceMapping(Arc::new(LayoutSourceMapping::new_single(
-                self.page_source_mapping.clone(),
-            ))),
             // todo: correct incremental_base
             ModuleMetadata::Font(Arc::new(fonts.into())),
             ModuleMetadata::Glyph(Arc::new(glyphs.into())),
@@ -160,13 +127,20 @@ impl IncrDocServer {
         .to_bytes();
         Some([b"new,", delta.as_slice()].concat())
     }
+
+    /// Get the source location of the given path.
+    pub fn source_span(&mut self, path: &[(u32, u32, String)]) -> ZResult<Option<(Span, Span)>> {
+        self.typst2vec.spans.query(path)
+    }
 }
 
 /// maintains the data of the incremental rendering at client side
 #[derive(Default)]
 pub struct IncrDocClient {
     /// Full information of the current document from server.
-    pub doc: MultiSvgDocument,
+    pub doc: MultiVecDocument,
+    /// Hold glyphs.
+    pub glyphs: Vec<(GlyphRef, FlatGlyphItem)>,
 
     /// checkout of the current document.
     pub layout: Option<LayoutRegionNode>,
@@ -182,6 +156,9 @@ impl IncrDocClient {
         self.doc.merge_delta(&delta);
         for metadata in delta.metadata {
             match metadata {
+                ModuleMetadata::Glyph(data) => {
+                    self.glyphs.extend(data.take().items.into_iter());
+                }
                 ModuleMetadata::SourceMappingData(data) => {
                     self.source_mapping_data = data;
                 }

@@ -20,8 +20,12 @@ typst-ts-compiler = { workspace = true, default-features = false, features = [
     "dynamic-layout",
 ] }
 comemo.workspace = true
+rayon.workspace = true
 
 [[bench]]
 name = "typst-ts-bench-lowering"
 path = "src/lowering.rs"
 harness = false
+
+[features]
+the-thesis = []

@@ -7,16 +7,14 @@ use web_sys::{CanvasRenderingContext2d, HtmlDivElement, HtmlImageElement, Path2d
 
 use typst_ts_core::{
     error::prelude::*,
-    font::GlyphProvider,
+    font::{DummyFontGlyphProvider, GlyphProvider},
     hash::Fingerprint,
     vector::{
-        flat_ir::{self, LayoutRegionNode, Module, ModuleBuilder, Page},
-        flat_vm::{FlatGroupContext, FlatRenderVm},
         incr::IncrDocClient,
         ir::{
-            self, Abs, Axes, BuildGlyph, FontIndice, FontRef, GlyphIndice, GlyphItem,
-            GlyphPackBuilder, GlyphRef, Image, ImageItem, ImmutStr, PathStyle, Ratio, Rect, Scalar,
-            Size, SvgItem,
+            self, Abs, Axes, FlatGlyphItem, FontIndice, FontItem, FontRef, GlyphItem, Image,
+            ImageItem, ImmutStr, LayoutRegionNode, Module, Page, PathStyle, Ratio, Rect, Scalar,
+            Size,
         },
         vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
@@ -328,7 +326,7 @@ impl CanvasElem for CanvasImageElem {
 #[derive(Debug)]
 pub struct CanvasGlyphElem {
     pub fill: ImmutStr,
-    pub glyph_data: GlyphItem,
+    pub glyph_data: Arc<FlatGlyphItem>,
 }
 
 #[async_trait(?Send)]
@@ -336,18 +334,17 @@ impl CanvasElem for CanvasGlyphElem {
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         let _guard = CanvasStateGuard::new(canvas);
         set_transform(canvas, ts);
-        match &self.glyph_data {
-            GlyphItem::Raw(..) => unreachable!(),
-            GlyphItem::Outline(path) => {
+        match self.glyph_data.as_ref() {
+            FlatGlyphItem::Outline(path) => {
                 let fill: &str = &self.fill;
                 canvas.set_fill_style(&fill.into());
                 canvas.fill_with_path_2d(&Path2d::new_with_path_string(&path.d).unwrap());
             }
-            GlyphItem::Image(glyph) => {
+            FlatGlyphItem::Image(glyph) => {
                 CanvasImageElem::draw_image(ts.pre_concat(glyph.ts.into()), canvas, &glyph.image)
                     .await
             }
-            GlyphItem::None => {}
+            FlatGlyphItem::None => {}
         }
     }
 }
@@ -362,15 +359,12 @@ pub struct CanvasRenderTask<'m, 't, Feat: ExportFeature> {
 
     pub module: &'m Module,
 
-    /// Stores the glyphs used in the document.
-    pub(crate) glyph_defs: &'t mut GlyphPackBuilder,
-
     /// See [`ExportFeature`].
     pub should_render_text_element: bool,
     /// See [`ExportFeature`].
     pub use_stable_glyph_id: bool,
 
-    pub _feat_phantom: std::marker::PhantomData<Feat>,
+    pub _feat_phantom: std::marker::PhantomData<&'t Feat>,
 }
 
 /// A builder for [`CanvasNode`].
@@ -404,23 +398,11 @@ impl From<CanvasStack> for CanvasNode {
 /// Internal methods for [`CanvasStack`].
 impl CanvasStack {
     pub fn with_text_shape(&mut self, shape: &ir::TextShape) {
-        self.fill = Some(shape.fill.clone())
-    }
-
-    pub fn render_glyph_ref_inner(
-        &mut self,
-        pos: Scalar,
-        _glyph_ref: &GlyphRef,
-        glyph_data: &GlyphItem,
-    ) {
-        self.inner.push((
-            ir::Point::new(pos, Scalar(0.)),
-            Arc::new(Box::new(CanvasGlyphElem {
-                fill: self.fill.clone().unwrap(),
-                // todo: arc glyph item
-                glyph_data: glyph_data.clone(),
-            })),
-        ))
+        for style in &shape.styles {
+            if let ir::PathStyle::Fill(fill) = style {
+                self.fill = Some(fill.clone());
+            }
+        }
     }
 }
 
@@ -465,26 +447,7 @@ impl<C> TransformContext<C> for CanvasStack {
 }
 
 /// See [`GroupContext`].
-impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> GroupContext<C>
-    for CanvasStack
-{
-    fn render_item_at(
-        &mut self,
-        state: RenderState,
-        ctx: &mut C,
-        pos: ir::Point,
-        item: &ir::SvgItem,
-    ) {
-        self.inner.push((pos, ctx.render_item(state, item)));
-    }
-
-    fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &ir::GlyphItem) {
-        let glyph_ref = ctx.build_glyph(glyph);
-        if let Some(glyph_data) = ctx.get_glyph(&glyph_ref) {
-            self.render_glyph_ref_inner(pos, &glyph_ref, glyph_data)
-        }
-    }
-
+impl<'m, C: RenderVm<'m, Resultant = CanvasNode>> GroupContext<C> for CanvasStack {
     fn render_path(
         &mut self,
         _state: RenderState,
@@ -508,36 +471,27 @@ impl<'m, C: BuildGlyph + RenderVm<Resultant = CanvasNode> + GlyphIndice<'m>> Gro
             })),
         ))
     }
-}
 
-/// See [`FlatGroupContext`].
-impl<'m, C: FlatRenderVm<'m, Resultant = CanvasNode> + GlyphIndice<'m>> FlatGroupContext<C>
-    for CanvasStack
-{
-    fn render_item_ref_at(
+    fn render_item_at(
         &mut self,
         state: RenderState,
         ctx: &mut C,
         pos: crate::ir::Point,
         item: &Fingerprint,
     ) {
-        self.inner.push((pos, ctx.render_flat_item(state, item)));
+        self.inner.push((pos, ctx.render_item(state, item)));
     }
 
-    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, glyph: &GlyphRef) {
-        if let Some(glyph_data) = ctx.get_glyph(glyph) {
-            self.render_glyph_ref_inner(pos, glyph, glyph_data)
+    fn render_glyph(&mut self, _ctx: &mut C, pos: Scalar, font: &FontItem, glyph: u32) {
+        if let Some(glyph_data) = font.get_glyph(glyph) {
+            self.inner.push((
+                ir::Point::new(pos, Scalar(0.)),
+                Arc::new(Box::new(CanvasGlyphElem {
+                    fill: self.fill.clone().unwrap(),
+                    glyph_data: glyph_data.clone(),
+                })),
+            ))
         }
-    }
-}
-
-impl<'m, 't, Feat: ExportFeature> BuildGlyph for CanvasRenderTask<'m, 't, Feat> {
-    fn build_font(&mut self, font: &typst::text::Font) -> FontRef {
-        self.glyph_defs.build_font(font)
-    }
-
-    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
-        self.glyph_defs.build_glyph(glyph)
     }
 }
 
@@ -547,37 +501,16 @@ impl<'m, 't, Feat: ExportFeature> FontIndice<'m> for CanvasRenderTask<'m, 't, Fe
     }
 }
 
-impl<'m, 't, Feat: ExportFeature> GlyphIndice<'m> for CanvasRenderTask<'m, 't, Feat> {
-    fn get_glyph(&self, g: &GlyphRef) -> Option<&'m ir::GlyphItem> {
-        self.module.glyphs.get(g.glyph_idx as usize).map(|v| &v.1)
-    }
-}
-
-impl<'m, 't, Feat: ExportFeature> RenderVm for CanvasRenderTask<'m, 't, Feat> {
+impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, 't, Feat> {
     // type Resultant = String;
     type Resultant = CanvasNode;
     type Group = CanvasStack;
 
-    fn start_group(&mut self) -> Self::Group {
-        Self::Group {
-            ts: sk::Transform::identity(),
-            clipper: None,
-            fill: None,
-            inner: vec![],
-        }
-    }
-}
-
-impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for CanvasRenderTask<'m, 't, Feat> {
-    // type Resultant = String;
-    type Resultant = CanvasNode;
-    type Group = CanvasStack;
-
-    fn get_item(&self, value: &Fingerprint) -> Option<&'m flat_ir::FlatSvgItem> {
+    fn get_item(&self, value: &Fingerprint) -> Option<&'m ir::VecItem> {
         self.module.get_item(value)
     }
 
-    fn start_flat_group(&mut self, _v: &Fingerprint) -> Self::Group {
+    fn start_group(&mut self, _v: &Fingerprint) -> Self::Group {
         Self::Group {
             ts: sk::Transform::identity(),
             clipper: None,
@@ -586,13 +519,13 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for CanvasRenderTask<'m, 't, 
         }
     }
 
-    fn start_flat_text(
+    fn start_text(
         &mut self,
         _state: RenderState,
         value: &Fingerprint,
-        text: &flat_ir::FlatTextItem,
+        text: &ir::TextItem,
     ) -> Self::Group {
-        let mut g = self.start_flat_group(value);
+        let mut g = self.start_group(value);
         g.with_text_shape(&text.shape);
         g
     }
@@ -605,9 +538,6 @@ pub struct CanvasTask<Feat: ExportFeature> {
     /// See [`GlyphProvider`].
     glyph_provider: GlyphProvider,
 
-    /// Stores the glyphs used in the document.
-    pub(crate) glyph_defs: GlyphPackBuilder,
-
     _feat_phantom: std::marker::PhantomData<Feat>,
 }
 
@@ -615,9 +545,7 @@ pub struct CanvasTask<Feat: ExportFeature> {
 impl<Feat: ExportFeature> Default for CanvasTask<Feat> {
     fn default() -> Self {
         Self {
-            glyph_provider: GlyphProvider::default(),
-
-            glyph_defs: GlyphPackBuilder::default(),
+            glyph_provider: GlyphProvider::new(DummyFontGlyphProvider::default()),
 
             _feat_phantom: std::marker::PhantomData,
         }
@@ -628,14 +556,12 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
     /// fork a render task with module.
     pub fn fork_canvas_render_task<'m, 't>(
         &'t mut self,
-        module: &'m flat_ir::Module,
+        module: &'m ir::Module,
     ) -> CanvasRenderTask<'m, 't, Feat> {
         CanvasRenderTask::<Feat> {
             glyph_provider: self.glyph_provider.clone(),
 
             module,
-
-            glyph_defs: &mut self.glyph_defs,
 
             should_render_text_element: true,
             use_stable_glyph_id: true,
@@ -683,11 +609,10 @@ impl IncrementalCanvasExporter {
                     return self.pages[idx].clone();
                 }
 
-                // (ct.render_flat_item(content), *size, *content)
                 let state = RenderState::new_size(*size);
                 CanvasPage {
                     content: *content,
-                    elem: ct.render_flat_item(state, content),
+                    elem: ct.render_item(state, content),
                     size: *size,
                 }
             })
@@ -720,10 +645,6 @@ pub struct IncrCanvasDocClient {
     /// Expected exact state of the current DOM.
     /// Initially it is None meaning no any page is rendered.
     pub doc_view: Option<Vec<Page>>,
-
-    /// Don't use this
-    /// it is public to make Default happy
-    pub mb: ModuleBuilder,
 }
 
 impl IncrCanvasDocClient {
@@ -754,15 +675,11 @@ impl IncrCanvasDocClient {
         canvas: &web_sys::CanvasRenderingContext2d,
         rect: Rect,
     ) {
+        const NULL_PAGE: Fingerprint = Fingerprint::from_u128(1);
+
         self.patch_delta(kern);
 
         // prepare an empty page for the pages that are not rendered
-        // todo: better solution?
-        let empty_page = self.mb.build(SvgItem::Group(Default::default(), None));
-        kern.doc
-            .module
-            .items
-            .extend(self.mb.items.iter().map(|(f, (_, v))| (*f, v.clone())));
 
         // get previous doc_view
         // it is exact state of the current DOM.
@@ -785,7 +702,7 @@ impl IncrCanvasDocClient {
                 page_off += page.size.y.0;
                 if page_off < rect.lo.y.0 || page_off - page.size.y.0 > rect.hi.y.0 {
                     next_doc_view.push(Page {
-                        content: empty_page,
+                        content: NULL_PAGE,
                         size: page.size,
                     });
                     continue;
@@ -802,7 +719,7 @@ impl IncrCanvasDocClient {
         let mut offset_y = 0.;
         for (idx, y) in next_doc_view.iter().enumerate() {
             let x = prev_doc_view.get(idx);
-            if x.is_none() || (x.unwrap() != y && y.content != empty_page) {
+            if x.is_none() || (x.unwrap() != y && y.content != NULL_PAGE) {
                 let ts = ts.pre_translate(0., offset_y);
                 self.elements.flush_page(idx, canvas, ts).await;
             }

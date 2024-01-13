@@ -1,4 +1,3 @@
-use typst_ts_core::vector::flat_ir::*;
 use typst_ts_core::vector::ir::*;
 
 macro_rules! layout {
@@ -31,12 +30,12 @@ fn main() {
         f64,
         char,
         ArchivedSourceMappingNode,
-        ArchivedFlatSvgItem,
+        ArchivedVecItem,
         ArchivedFlatGlyphItem,
-        ArchivedFlatPatternItem,
+        ArchivedPatternItem,
         ArchivedModuleMetadata,
-        ArchivedFlatTextItem,
-        ArchivedFlatTextItemContent,
+        ArchivedTextItem,
+        ArchivedTextItemContent,
         ArchivedTransformedRef,
         ArchivedGroupRef,
         ArchivedItemPack,
@@ -52,11 +51,18 @@ fn main() {
         ArchivedTextShape,
         ArchivedPathStyle,
         ArchivedTransformItem,
-        ArchivedGlyphPack,
+        ArchivedIncrGlyphPack,
         ArchivedPage,
-        ArchivedLayoutRegion,
         ArchivedBuildInfo,
-        ArchivedColorItem,
+        // color
+        ArchivedRgba8Item,
+        ArchivedColor32Item,
+        ArchivedColorSpace,
         ArchivedGradientItem,
+        ArchivedGradientKind,
+        ArchivedGradientStyle,
+        // layout
+        ArchivedLayoutRegionNode,
+        ArchivedLayoutRegion,
     );
 }

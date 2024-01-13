@@ -21,6 +21,7 @@ typst-ts-core.workspace = true
 typst-ts-canvas-exporter = { workspace = true, optional = true }
 log.workspace = true
 siphasher.workspace = true
+rayon.workspace = true
 
 [features]
 experimental-ligature = ["typst-ts-core/experimental-ligature"]

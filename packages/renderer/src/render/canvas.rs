@@ -7,11 +7,8 @@ use typst_ts_core::{
     annotation::AnnotationList,
     error::prelude::*,
     hash::{Fingerprint, FingerprintHasher, FingerprintSipHasher},
+    vector::ir::{Axes, LayoutRegionNode, Rect, Scalar},
     TextContent,
-};
-use typst_ts_svg_exporter::{
-    flat_ir::LayoutRegionNode,
-    ir::{Axes, Rect, Scalar},
 };
 use wasm_bindgen::prelude::*;
 

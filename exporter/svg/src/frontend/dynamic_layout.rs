@@ -1,47 +1,23 @@
 use typst::model::Document;
-use typst_ts_core::{
-    vector::{
-        flat_ir::{
-            FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, ModuleBuilder, ModuleMetadata,
-            MultiSvgDocument, Page,
-        },
-        ir::Abs,
-        LowerBuilder,
-    },
-    TakeAs,
+use typst_ts_core::vector::ir::{
+    Abs, FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, ModuleMetadata, MultiVecDocument,
 };
+use typst_ts_core::vector::pass::Typst2VecPass;
 
 #[derive(Default)]
 pub struct DynamicLayoutSvgExporter {
-    pub builder: ModuleBuilder,
+    pub typst2vec: Typst2VecPass,
     pub layouts: Vec<(Abs, LayoutRegionNode)>,
 }
 
 impl DynamicLayoutSvgExporter {
     pub fn render(&mut self, output: &Document) -> LayoutRegionNode {
-        self.builder.reset();
+        self.typst2vec.reset();
         // let instant = std::time::Instant::now();
         // check the document
-        let mut t = LowerBuilder::new(output);
+        // let mut t = LowerBuilder::new(output);
 
-        let pages = output
-            .pages
-            .iter()
-            .map(|p| {
-                let abs_ref = self.builder.build(t.lower(p));
-                Page {
-                    content: abs_ref,
-                    size: p.size().into(),
-                }
-            })
-            .collect::<Vec<_>>();
-
-        // todo: merge lower and builder, avoid hacking
-        for (fg, ext) in t.extra_items {
-            let data_fg = self.builder.build(ext.take());
-            let item = self.builder.items.get(&data_fg).unwrap();
-            self.builder.items.insert(fg, item.clone());
-        }
+        let pages = self.typst2vec.doc(&output.introspector, output);
 
         // log::trace!("svg dynamic layout render time: {:?}",
         // instant.elapsed());
@@ -49,16 +25,16 @@ impl DynamicLayoutSvgExporter {
         LayoutRegionNode::new_pages(pages)
     }
 
-    pub fn finalize(self) -> MultiSvgDocument {
-        let module = self.builder.finalize();
-        MultiSvgDocument {
+    pub fn finalize(self) -> MultiVecDocument {
+        let module = self.typst2vec.finalize();
+        MultiVecDocument {
             module,
             layouts: vec![LayoutRegion::new_by_scalar("width".into(), self.layouts)],
         }
     }
 
     pub fn debug_stat(&self) -> String {
-        let v = self.builder.finalize_ref();
+        let v = self.typst2vec.finalize_ref();
         let item_cnt = v.items.len();
         let glyph_cnt = v.glyphs.len();
         // let glyphs = GlyphPack::from_iter(v.1);

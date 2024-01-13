@@ -1,30 +1,33 @@
-use siphasher::sip128::Hasher128;
-use std::{collections::HashMap, hash::Hash, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use typst_ts_core::{
-    hash::{Fingerprint, FingerprintBuilder, FingerprintSipHasherBase},
+    hash::{Fingerprint, FingerprintBuilder},
     vector::{
-        flat_ir::{FlatSvgItem, FlatTextItem, GroupRef, Module},
-        flat_vm::{FlatGroupContext, FlatIncrRenderVm, FlatRenderVm},
         ir::{
-            self, BuildGlyph, FontIndice, FontRef, GlyphHashStablizer, GlyphIndice, GlyphItem,
-            GlyphPackBuilder, GlyphRef, ImmutStr, PathItem, PathStyle, Scalar, StyleNs,
+            self, FlatGlyphItem, FontIndice, FontRef, GroupRef, ImmutStr, Module, PathItem,
+            PathStyle, Scalar, TextItem, VecItem,
         },
-        vm::GroupContext,
-        vm::{RenderState, RenderVm},
+        vm::{GroupContext, IncrRenderVm, RenderState, RenderVm},
     },
 };
 
 use crate::{
-    backend::{
-        BuildClipPath, BuildFillStyleClass, DynExportFeature, NotifyPaint, SvgText, SvgTextBuilder,
-        SvgTextNode,
-    },
-    utils::MemorizeFree,
-    ExportFeature, GlyphProvider,
+    backend::{BuildClipPath, DynExportFeature, NotifyPaint, SvgText, SvgTextBuilder, SvgTextNode},
+    ExportFeature,
 };
 
 use super::HasStatefulFill;
+
+// unused
+/// Global style namespace.
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+// #[repr(u32)]
+pub enum StyleNs {
+    // style that contains a single css rule: `fill: #color`.
+    // Fill,
+    // style that contains a single css rule: `stroke: #color`.
+    // Stroke,
+}
 
 /// Maps the style name to the style definition.
 /// See [`StyleNs`].
@@ -32,29 +35,23 @@ pub(crate) type StyleDefMap = HashMap<(StyleNs, ImmutStr), String>;
 /// Maps paint fill id to the paint fill's data.
 pub(crate) type PaintFillMap = HashMap<ImmutStr, (u8, Fingerprint, Option<bool>)>;
 
-/// The task context for rendering svg items
+/// The task context for rendering vector items
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
-/// The 't lifetime is the lifetime of SVG task.
+/// The 't lifetime is the lifetime of Vector task.
 pub struct RenderContext<'m, 't, Feat: ExportFeature> {
-    /// Provides glyphs.
-    /// See [`GlyphProvider`].
-    pub glyph_provider: GlyphProvider,
-
     pub module: &'m Module,
 
     /// A fingerprint builder for generating unique id.
     pub(crate) fingerprint_builder: &'t mut FingerprintBuilder,
 
-    /// Stores the glyphs used in the document.
-    // todo: used in SvgItem rendering, but
-    // unused in FlatSvgItem rendering, which is confusing.
-    pub(crate) glyph_defs: &'t mut GlyphPackBuilder,
     /// Stores the style definitions used in the document.
-    pub(crate) style_defs: &'t mut StyleDefMap,
+    pub(crate) _style_defs: &'t mut StyleDefMap,
     /// Stores the graidents used in the document.
     pub(crate) gradients: &'t mut PaintFillMap,
     /// Stores the patterns used in the document.
     pub(crate) patterns: &'t mut PaintFillMap,
+    /// Stores whether an item has stateful fill.
+    pub(crate) stateful_fill_cache: &'t mut HashMap<Fingerprint, bool>,
 
     /// See [`ExportFeature`].
     pub should_render_text_element: bool,
@@ -102,43 +99,14 @@ impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Fea
 
 impl<'m, 't, Feat: ExportFeature> FontIndice<'m> for RenderContext<'m, 't, Feat> {
     fn get_font(&self, value: &FontRef) -> Option<&'m ir::FontItem> {
-        self.module.fonts.get(value.idx as usize)
-    }
-}
+        self.module.fonts.get(value.idx as usize).map(|e| {
+            // canary check
+            if e.hash != value.hash {
+                panic!("Invalid font reference: {:?}", value);
+            }
 
-impl<'m, 't, Feat: ExportFeature> GlyphIndice<'m> for RenderContext<'m, 't, Feat> {
-    fn get_glyph(&self, g: &GlyphRef) -> Option<&'m ir::GlyphItem> {
-        self.module.glyphs.get(g.glyph_idx as usize).map(|v| &v.1)
-    }
-}
-
-impl<'m, 't, Feat: ExportFeature> BuildGlyph for RenderContext<'m, 't, Feat> {
-    fn build_font(&mut self, font: &typst::text::Font) -> FontRef {
-        self.glyph_defs.build_font(font)
-    }
-
-    fn build_glyph(&mut self, glyph: &ir::GlyphItem) -> GlyphRef {
-        self.glyph_defs.build_glyph(glyph)
-    }
-}
-
-impl<'m, 't, Feat: ExportFeature> GlyphHashStablizer for RenderContext<'m, 't, Feat> {
-    fn stablize_hash(&mut self, glyph: &GlyphRef) -> Fingerprint {
-        let glyph = &self.module.glyphs[glyph.glyph_idx as usize].1;
-        glyph.get_fingerprint()
-    }
-}
-
-impl<'m, 't, Feat: ExportFeature> BuildFillStyleClass for RenderContext<'m, 't, Feat> {
-    fn build_fill_style_class(&mut self, fill: ImmutStr) -> String {
-        // insert fill definition
-        let fill_id = format!(r#"f{}"#, fill.trim_start_matches('#'));
-        let fill_key = (StyleNs::Fill, fill.clone());
-        self.style_defs
-            .entry(fill_key)
-            .or_insert_with(|| format!(r#"g.{} {{ --glyph_fill: {}; }} "#, fill_id, fill));
-
-        fill_id
+            e
+        })
     }
 }
 
@@ -148,33 +116,43 @@ impl<'m, 't, Feat: ExportFeature> BuildClipPath for RenderContext<'m, 't, Feat> 
     }
 }
 
-#[comemo::memoize]
-fn has_stateful_fill<'m, 't, Feat: ExportFeature>(
-    ctx: &MemorizeFree<RenderContext<'m, 't, Feat>>,
-    x: &Fingerprint,
-) -> bool {
-    let Some(item) = ctx.0.get_item(x) else {
-        // overestimated
-        return true;
-    };
-
-    use FlatSvgItem::*;
-    match item {
-        Gradient(..) | Pattern(..) => true,
-        Image(..) | Link(..) | ContentHint(..) | None => false,
-        Item(t) => has_stateful_fill(ctx, &t.1),
-        Group(g, ..) => g.0.iter().any(|(_, x)| has_stateful_fill(ctx, x)),
-        Path(p) => p.styles.iter().any(|s| match s {
-            PathStyle::Fill(color) | PathStyle::Stroke(color) => color.starts_with('@'),
-            _ => false,
-        }),
-        Text(p) => p.shape.fill.starts_with('@'),
-    }
-}
-
 impl<'m, 't, Feat: ExportFeature> HasStatefulFill for RenderContext<'m, 't, Feat> {
-    fn has_stateful_fill(&self, a: &Fingerprint) -> bool {
-        has_stateful_fill(&MemorizeFree(self), a)
+    // todo: may it concurrent?
+    fn has_stateful_fill(&mut self, fg: &Fingerprint) -> bool {
+        let Some(item) = self.get_item(fg) else {
+            // overestimated
+            return true;
+        };
+
+        match item {
+            Gradient(..) | Pattern(..) => return true,
+            Color32(..) | Image(..) | Link(..) | ContentHint(..) | None => return false,
+            _ => {}
+        };
+
+        if let Some(v) = self.stateful_fill_cache.get(fg) {
+            return *v;
+        }
+
+        fn stateful_style(style: &PathStyle) -> bool {
+            matches!(style, PathStyle::Fill(color) | PathStyle::Stroke(color) if color.starts_with('@'))
+        }
+
+        use VecItem::*;
+        let res = match item {
+            Gradient(..) | Color32(..) | Pattern(..) | Image(..) | Link(..) | ContentHint(..)
+            | None => {
+                panic!("Invalid item type for stateful fill: {:?}", fg)
+            }
+            Item(t) => self.has_stateful_fill(&t.1),
+            Group(g, ..) => g.0.iter().any(|(_, x)| self.has_stateful_fill(x)),
+            Path(p) => p.styles.iter().any(stateful_style),
+            Text(p) => return p.shape.styles.iter().any(stateful_style),
+        };
+
+        self.stateful_fill_cache.insert(*fg, res);
+
+        res
     }
 }
 
@@ -198,7 +176,7 @@ impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
             let id = Fingerprint::try_from_str(id).unwrap();
 
             let (kind, relative_to_self) = match self.get_item(&id) {
-                Some(FlatSvgItem::Gradient(g)) => (&g.kind, g.relative_to_self),
+                Some(VecItem::Gradient(g)) => (&g.kind, g.relative_to_self),
                 _ => {
                     // #[cfg(debug_assertions)]
                     panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
@@ -218,7 +196,7 @@ impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
             let id = Fingerprint::try_from_str(id).unwrap();
 
             let relative_to_self = match self.get_item(&id) {
-                Some(FlatSvgItem::Pattern(g)) => g.relative_to_self,
+                Some(VecItem::Pattern(g)) => g.relative_to_self,
                 _ => {
                     // #[cfg(debug_assertions)]
                     panic!("Invalid pattern reference: {}", id.as_svg_id("p"));
@@ -235,87 +213,40 @@ impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
     }
 }
 
-/// Example of how to implement a RenderVm.
-impl<'m, 't, Feat: ExportFeature> RenderVm for RenderContext<'m, 't, Feat> {
+/// Example of how to implement a FlatRenderVm.
+impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, 't, Feat> {
     // type Resultant = String;
     type Resultant = Arc<SvgTextNode>;
     type Group = SvgTextBuilder;
 
-    fn start_group(&mut self) -> Self::Group {
-        Self::Group {
-            attributes: vec![],
-            text_fill: None,
-            content: Vec::with_capacity(1),
-        }
-    }
-
-    fn start_frame(&mut self, _group: &ir::GroupItem) -> Self::Group {
-        let mut g = self.start_group();
-        g.attributes.push(("class", "typst-group".to_owned()));
-        g
-    }
-
-    fn start_text(&mut self, state: RenderState, text: &ir::TextItem) -> Self::Group {
-        let mut g = self.start_group();
-
-        let mut k = FingerprintSipHasherBase::new();
-        text.font.hash(&mut k);
-        text.content.glyphs.hash(&mut k);
-        text.shape.hash(&mut k);
-        let k = k.finish128().as_u128();
-
-        let upem = Scalar(text.font.units_per_em() as f32);
-
-        g.with_text_shape(
-            self,
-            upem,
-            &text.shape,
-            &state.at(&Fingerprint::from_u128(k)),
-            state,
-        );
-        g.attach_debug_info(self, text.content.span_id);
-
-        g
-    }
-
-    /// Render a text into the underlying context.
-    fn render_text(&mut self, _state: RenderState, _text: &ir::TextItem) -> Self::Resultant {
-        unreachable!();
-    }
-}
-
-impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Feat> {
-    // type Resultant = String;
-    type Resultant = Arc<SvgTextNode>;
-    type Group = SvgTextBuilder;
-
-    fn get_item(&self, value: &Fingerprint) -> Option<&'m FlatSvgItem> {
+    fn get_item(&self, value: &Fingerprint) -> Option<&'m VecItem> {
         self.module.get_item(value)
     }
 
-    fn start_flat_group(&mut self, v: &Fingerprint) -> Self::Group {
+    fn start_group(&mut self, v: &Fingerprint) -> Self::Group {
         Self::Group {
             attributes: vec![("data-tid", v.as_svg_id("g"))],
             text_fill: None,
+            text_stroke: None,
             content: Vec::with_capacity(1),
         }
     }
 
-    fn start_flat_frame(&mut self, value: &Fingerprint, _group: &GroupRef) -> Self::Group {
-        let mut g = self.start_flat_group(value);
+    fn start_frame(&mut self, value: &Fingerprint, _group: &GroupRef) -> Self::Group {
+        let mut g = self.start_group(value);
         g.attributes.push(("class", "typst-group".to_owned()));
         g
     }
 
-    fn start_flat_text(
+    fn start_text(
         &mut self,
         state: RenderState,
         value: &Fingerprint,
-        text: &FlatTextItem,
+        text: &TextItem,
     ) -> Self::Group {
-        let mut g = self.start_flat_group(value);
+        let mut g = self.start_group(value);
 
-        let font = self.get_font(&text.font).unwrap();
+        let font = self.get_font(&text.shape.font).unwrap();
         let upem = font.unit_per_em;
 
         g.with_text_shape(self, upem, &text.shape, &state.at(value), state);
@@ -323,22 +254,22 @@ impl<'m, 't, Feat: ExportFeature> FlatRenderVm<'m> for RenderContext<'m, 't, Fea
     }
 
     /// Render a text into the underlying context.
-    fn render_flat_text(
+    fn render_text(
         &mut self,
         _state: RenderState,
         group_ctx: Self::Group,
         abs_ref: &Fingerprint,
-        text: &FlatTextItem,
+        text: &TextItem,
     ) -> Self::Group {
         if self.should_rasterize_text() {
             self.rasterize_and_put_text(group_ctx, abs_ref, text)
         } else {
-            self.render_flat_text_inplace(group_ctx, text)
+            self.render_text_inplace(group_ctx, text)
         }
     }
 }
 
-impl<'m, 't, Feat: ExportFeature> FlatIncrRenderVm<'m> for RenderContext<'m, 't, Feat> {}
+impl<'m, 't, Feat: ExportFeature> IncrRenderVm<'m> for RenderContext<'m, 't, Feat> {}
 
 #[cfg(not(feature = "aggresive-browser-rasterization"))]
 impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
@@ -347,7 +278,7 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
         &mut self,
         _group_ctx: SvgTextBuilder,
         _abs_ref: &Fingerprint,
-        _text: &FlatTextItem,
+        _text: &TextItem,
     ) -> SvgTextBuilder {
         panic!("Rasterization is not enabled.")
     }
@@ -360,7 +291,7 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
         &mut self,
         mut group_ctx: SvgTextBuilder,
         abs_ref: &Fingerprint,
-        text: &FlatTextItem,
+        text: &TextItem,
     ) -> SvgTextBuilder {
         use typst_ts_canvas_exporter::CanvasRenderSnippets;
 
@@ -414,71 +345,84 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
 
 impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
     /// Render a text into the underlying context.
-    fn render_flat_text_inplace(
+    fn render_text_inplace(
         &mut self,
         mut group_ctx: SvgTextBuilder,
-        text: &FlatTextItem,
+        text: &TextItem,
     ) -> SvgTextBuilder {
-        let font = self.get_font(&text.font).unwrap();
+        let font = self.get_font(&text.shape.font).unwrap();
 
         // upem is the unit per em defined in the font.
         let upem = font.unit_per_em;
 
         group_ctx = text.shape.add_transform(self, group_ctx, upem);
 
-        let width = if let Some(fill) = &group_ctx.text_fill {
-            // clip path rect
-            let clip_id = fill.as_svg_id("tc");
-            let fill_id = fill.as_svg_id("tf");
-
-            // because the text is already scaled by the font size,
-            // we need to scale it back to the original size.
-            // todo: infinite multiplication
-            let descender = font.descender.0 * upem.0;
-
-            group_ctx.content.push(SvgText::Plain(format!(
-                r#"<clipPath id="{}" clipPathUnits="userSpaceOnUse">"#,
-                clip_id
-            )));
-
-            let mut width = 0f32;
-            for (x, g) in text.render_glyphs(upem, &mut width) {
-                group_ctx.render_glyph_ref(self, x, g);
-                group_ctx.content.push(SvgText::Plain("<path/>".into()));
-            }
-
-            group_ctx
-                .content
-                .push(SvgText::Plain(r#"</clipPath>"#.to_owned()));
-
-            // clip path rect
-            let scaled_width = width * upem.0 / text.shape.size.0;
-            group_ctx.content.push(SvgText::Plain(format!(
-                r##"<rect fill="url(#{})" width="{:.1}" height="{:.1}" y="{:.1}" clip-path="url(#{})"/>"##,
-                fill_id, scaled_width, upem.0, descender, clip_id
-            )));
-
-            // image glyphs
-            let mut _width = 0f32;
-            for (x, g) in text.render_glyphs(upem, &mut _width) {
-                let built = self.get_glyph(g);
-                if matches!(
-                    built,
-                    Some(GlyphItem::Outline(..) | GlyphItem::Raw(..)) | None
-                ) {
-                    continue;
+        let width = match (&group_ctx.text_fill, &group_ctx.text_stroke) {
+            (fill, Some(stroke)) => {
+                let mut width = 0f32;
+                let fill = fill.clone();
+                let stroke = stroke.clone();
+                for (x, g) in text.render_glyphs(upem, &mut width) {
+                    group_ctx.render_glyph_slow(x, font, g, fill.clone(), stroke.clone());
                 }
-                group_ctx.render_glyph_ref(self, x, g);
-            }
 
-            width
-        } else {
-            let mut width = 0f32;
-            for (x, g) in text.render_glyphs(upem, &mut width) {
-                group_ctx.render_glyph_ref(self, x, g);
+                width
             }
+            (None, None) => {
+                let mut width = 0f32;
+                for (x, g) in text.render_glyphs(upem, &mut width) {
+                    group_ctx.render_glyph(self, x, font, g);
+                }
 
-            width
+                width
+            }
+            (Some(fill), None) => {
+                // clip path rect
+                let clip_id = fill.id.as_svg_id("pc");
+                let fill_id = fill.id.as_svg_id("pf");
+
+                // because the text is already scaled by the font size,
+                // we need to scale it back to the original size.
+                // todo: infinite multiplication
+                let descender = font.descender.0 * upem.0;
+
+                group_ctx.content.push(SvgText::Plain(format!(
+                    r#"<clipPath id="{}" clipPathUnits="userSpaceOnUse">"#,
+                    clip_id
+                )));
+
+                let mut width = 0f32;
+                for (x, g) in text.render_glyphs(upem, &mut width) {
+                    group_ctx.render_glyph(self, x, font, g);
+                    group_ctx.content.push(SvgText::Plain("<path/>".into()));
+                }
+
+                group_ctx
+                    .content
+                    .push(SvgText::Plain(r#"</clipPath>"#.to_owned()));
+
+                // clip path rect
+                let scaled_width = width * upem.0 / text.shape.size.0;
+                group_ctx.content.push(SvgText::Plain(format!(
+                    r##"<rect fill="url(#{fill_id})" stroke="none" width="{:.1}" height="{:.1}" y="{:.1}" clip-path="url(#{})"/>"##,
+                    scaled_width, upem.0, descender, clip_id
+                )));
+
+                // image glyphs
+                let mut _width = 0f32;
+                for (x, g) in text.render_glyphs(upem, &mut _width) {
+                    let built = font.get_glyph(g);
+                    if matches!(
+                        built.map(Deref::deref),
+                        Some(FlatGlyphItem::Outline(..)) | None
+                    ) {
+                        continue;
+                    }
+                    group_ctx.render_glyph(self, x, font, g);
+                }
+
+                width
+            }
         };
 
         if self.should_render_text_element() {

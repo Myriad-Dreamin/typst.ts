@@ -5,7 +5,10 @@ use typst::{diag::SourceResult, World};
 use typst_ts_core::{
     exporter_builtins::GroupExporter,
     typst::prelude::*,
-    vector::flat_ir::{LayoutRegion, LayoutRegionNode, ModuleBuilder},
+    vector::{
+        ir::{LayoutRegion, LayoutRegionNode},
+        pass::Typst2VecPass,
+    },
     DynExporter, DynGenericExporter, DynPolymorphicExporter, GenericExporter, TakeAs,
     TypstDocument,
 };
@@ -210,13 +213,13 @@ impl<C: Compiler> CompileMiddleware for CompileReporter<C> {
 pub type LayoutWidths = Vec<typst::layout::Abs>;
 
 pub type PostProcessLayoutFn = Box<
-    dyn Fn(&mut ModuleBuilder, Arc<TypstDocument>, LayoutRegionNode) -> LayoutRegionNode
+    dyn Fn(&mut Typst2VecPass, Arc<TypstDocument>, LayoutRegionNode) -> LayoutRegionNode
         + Send
         + Sync,
 >;
 
 pub type PostProcessLayoutsFn =
-    Box<dyn Fn(&mut ModuleBuilder, Vec<LayoutRegion>) -> Vec<LayoutRegion> + Send + Sync>;
+    Box<dyn Fn(&mut Typst2VecPass, Vec<LayoutRegion>) -> Vec<LayoutRegion> + Send + Sync>;
 
 pub struct DynamicLayoutCompiler<C: Compiler + ShadowApi, const ALWAYS_ENABLE: bool = false> {
     pub compiler: C,
@@ -278,7 +281,7 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
     /// Experimental
     pub fn set_post_process_layout(
         &mut self,
-        post_process_layout: impl Fn(&mut ModuleBuilder, Arc<TypstDocument>, LayoutRegionNode) -> LayoutRegionNode
+        post_process_layout: impl Fn(&mut Typst2VecPass, Arc<TypstDocument>, LayoutRegionNode) -> LayoutRegionNode
             + Send
             + Sync
             + 'static,
@@ -289,7 +292,7 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
     /// Experimental
     pub fn set_post_process_layouts(
         &mut self,
-        post_process_layouts: impl Fn(&mut ModuleBuilder, Vec<LayoutRegion>) -> Vec<LayoutRegion>
+        post_process_layouts: impl Fn(&mut Typst2VecPass, Vec<LayoutRegion>) -> Vec<LayoutRegion>
             + Send
             + Sync
             + 'static,
@@ -318,9 +321,7 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
             syntax::{PackageSpec, Span, VirtualPath},
         };
         use typst_ts_core::TypstFileId;
-        use typst_ts_svg_exporter::{
-            flat_ir::serialize_doc, DynamicLayoutSvgExporter, MultiSvgDocument,
-        };
+        use typst_ts_svg_exporter::{DynamicLayoutSvgExporter, MultiVecDocument};
 
         let variable_file = TypstFileId::new(
             Some(PackageSpec::from_str("@preview/typst-ts-variables:0.1.0").at(Span::detached())?),
@@ -359,7 +360,7 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
                 let mut layout = svg_exporter.render(&output);
 
                 if let Some(post_process_layout) = &this.post_process_layout {
-                    layout = post_process_layout(&mut svg_exporter.builder, output, layout);
+                    layout = post_process_layout(&mut svg_exporter.typst2vec, output, layout);
                 }
                 svg_exporter.layouts.push((current_width.into(), layout));
 
@@ -379,13 +380,13 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
             svg_exporter.layouts,
         )];
         if let Some(post_process_layouts) = &self.post_process_layouts {
-            layouts = post_process_layouts(&mut svg_exporter.builder, layouts);
+            layouts = post_process_layouts(&mut svg_exporter.typst2vec, layouts);
         }
 
         // finalize
-        let module = svg_exporter.builder.finalize();
-        let doc = MultiSvgDocument { module, layouts };
-        std::fs::write(self.module_dest_path(), serialize_doc(doc)).unwrap();
+        let module = svg_exporter.typst2vec.finalize();
+        let doc = MultiVecDocument { module, layouts };
+        std::fs::write(self.module_dest_path(), doc.to_bytes()).unwrap();
 
         let instant = instant::Instant::now();
         log::trace!("multiple layouts finished at {:?}", instant - instant_begin);

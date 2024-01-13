@@ -11,24 +11,21 @@ use escape::{PcDataEscapes, TextContentDataEscapes};
 use typst_ts_core::{
     hash::Fingerprint,
     vector::{
-        flat_ir,
-        flat_vm::{FlatGroupContext, FlatIncrGroupContext, FlatIncrRenderVm, FlatRenderVm},
         ir::{
-            self, Abs, Axes, BuildGlyph, FontIndice, GlyphHashStablizer, GlyphIndice, GlyphRef,
-            ImmutStr, PathStyle, Ratio, Scalar, Size, Transform,
+            self, Abs, Axes, FontIndice, FontItem, GlyphRef, ImmutStr, PathStyle, Ratio, Scalar,
+            Size, Transform,
         },
-        vm::{GroupContext, RenderState, RenderVm, TransformContext},
+        utils::ToCssExt,
+        vm::{
+            GroupContext, IncrGroupContext, IncrRenderVm, RenderState, RenderVm, TransformContext,
+        },
     },
 };
 
-use crate::{frontend::HasStatefulFill, utils::ToCssExt};
+use crate::frontend::HasStatefulFill;
 
 pub trait BuildClipPath {
     fn build_clip_path(&mut self, path: &ir::PathItem) -> Fingerprint;
-}
-
-pub trait BuildFillStyleClass {
-    fn build_fill_style_class(&mut self, fill: ImmutStr) -> String;
 }
 
 pub trait NotifyPaint {
@@ -128,12 +125,20 @@ impl SvgTextNode {
     }
 }
 
+#[derive(Clone, Copy)]
+pub struct PaintObj {
+    pub kind: u8,
+    pub id: Fingerprint,
+    pub transform: Transform,
+}
+
 /// A builder for [`SvgTextNode`].
 /// It holds a reference to [`SvgRenderTask`] and state of the building process.
 pub struct SvgTextBuilder {
     pub attributes: Vec<(&'static str, String)>,
     pub content: Vec<SvgText>,
-    pub text_fill: Option<Fingerprint>,
+    pub text_fill: Option<Arc<PaintObj>>,
+    pub text_stroke: Option<Arc<PaintObj>>,
 }
 
 impl From<SvgTextBuilder> for Arc<SvgTextNode> {
@@ -147,30 +152,6 @@ impl From<SvgTextBuilder> for Arc<SvgTextNode> {
 
 /// Internal methods for [`SvgTextBuilder`].
 impl SvgTextBuilder {
-    #[inline]
-    pub fn render_glyph_inner<C: DynExportFeature + GlyphHashStablizer>(
-        &mut self,
-        ctx: &mut C,
-        pos: Scalar,
-        glyph: &GlyphRef,
-    ) {
-        let adjusted_offset = (pos.0 * 2.).round() / 2.;
-
-        // A stable glyph id can help incremental font transfer (IFT).
-        // However, it is permitted unstable if you will not use IFT.
-        let glyph_id = if ctx.use_stable_glyph_id() {
-            ctx.stablize_hash(glyph).as_svg_id("g")
-        } else {
-            glyph.as_unstable_svg_id("g")
-        };
-
-        self.content.push(SvgText::Plain(format!(
-            // r##"<typst-glyph x="{}" href="#{}"/>"##,
-            r##"<use x="{}" href="#{}"/>"##,
-            adjusted_offset, glyph_id
-        )));
-    }
-
     #[inline]
     pub fn render_text_semantics_inner(
         &mut self,
@@ -219,6 +200,121 @@ impl SvgTextBuilder {
             ((upem + 1e-3) / 16.) as u32,
             text_content
         )))
+    }
+
+    fn render_paint<C: NotifyPaint>(
+        ctx: &mut C,
+        color: ImmutStr,
+        paint_id: &str,
+        transform_matrix: &impl Fn(bool, Option<bool>) -> Transform,
+    ) -> SvgText {
+        let is_gradient = color.starts_with("@g");
+        let (kind, cano_ref, relative_to_self) = ctx.notify_paint(color);
+
+        Self::transform_color(
+            kind,
+            paint_id,
+            &cano_ref.as_svg_id("g"),
+            transform_matrix(is_gradient, relative_to_self),
+        )
+    }
+
+    fn transform_color(
+        kind: u8,
+        paint_id: &str,
+        origin_id: &str,
+        transform_matrix: Transform,
+    ) -> SvgText {
+        let tag = match kind {
+            b'l' => "linearGradient",
+            b'r' => "radialGradient",
+            b'p' => "pattern",
+            _ => unreachable!(),
+        };
+
+        let transform = match kind {
+            b'p' => "patternTransform",
+            _ => "gradientTransform",
+        };
+
+        SvgText::Plain(format!(
+            r##"<{} id="{}" {}="{}" href="#{}" xlink:href="#{}"></{}>"##,
+            tag,
+            paint_id,
+            transform,
+            transform_matrix.to_css(),
+            origin_id,
+            origin_id,
+            tag
+        ))
+    }
+
+    fn render_paint_with_obj<C: NotifyPaint>(
+        ctx: &mut C,
+        color: ImmutStr,
+        paint_id: &str,
+        transform_matrix: &impl Fn(bool, Option<bool>) -> Transform,
+    ) -> (u8, Transform, SvgText) {
+        let is_gradient = color.starts_with("@g");
+        let (kind, cano_ref, relative_to_self) = ctx.notify_paint(color);
+
+        let mat = transform_matrix(is_gradient, relative_to_self);
+        (
+            kind,
+            mat,
+            Self::transform_color(kind, paint_id, &cano_ref.as_svg_id("g"), mat),
+        )
+    }
+
+    pub fn render_glyph_slow(
+        &mut self,
+        pos: Scalar,
+        font: &FontItem,
+        glyph: u32,
+        fill: Option<Arc<PaintObj>>,
+        stroke: Arc<PaintObj>,
+    ) {
+        let adjusted_offset = (pos.0 * 2.).round();
+
+        // A stable glyph id can help incremental font transfer (IFT).
+        // However, it is permitted unstable if you will not use IFT.
+        let glyph_id = (GlyphRef {
+            font_hash: font.hash,
+            glyph_idx: glyph,
+        })
+        .as_svg_id("g");
+        let mut do_trans = |obj: &PaintObj, pref: &'static str| -> String {
+            let og = obj.id.as_svg_id(pref);
+            let ng = format!("{}-{adjusted_offset}", og).replace('.', "-");
+
+            let new_color = Self::transform_color(
+                obj.kind,
+                &ng,
+                &og,
+                obj.transform.post_concat(Transform::from_translate(
+                    Scalar(-adjusted_offset / 2.),
+                    Scalar(0.),
+                )),
+            );
+
+            self.content.push(new_color);
+
+            ng
+        };
+
+        let fill_id = if let Some(fill) = fill {
+            format!(r#" fill="url(#{})" "#, do_trans(&fill, "pf"))
+        } else {
+            String::default()
+        };
+        let stroke_id = format!(r#" stroke="url(#{})" "#, do_trans(&stroke, "ps"));
+
+        self.content.push(SvgText::Plain(format!(
+            // r##"<typst-glyph x="{}" href="#{}"/>"##,
+            r##"<use x="{}" href="#{}"{fill_id}{stroke_id}/>"##,
+            adjusted_offset / 2.,
+            glyph_id
+        )));
     }
 }
 
@@ -275,15 +371,12 @@ impl<C: BuildClipPath> TransformContext<C> for SvgTextBuilder {
     }
 }
 
-/// See [`GroupContext`].
+/// See [`FlatGroupContext`].
 impl<
         'm,
-        C: RenderVm<Resultant = Arc<SvgTextNode>>
-            + BuildGlyph
-            + GlyphHashStablizer
-            + GlyphIndice<'m>
-            + BuildFillStyleClass
-            + NotifyPaint
+        C: NotifyPaint
+            + RenderVm<'m, Resultant = Arc<SvgTextNode>>
+            + FontIndice<'m>
             + DynExportFeature,
     > GroupContext<C> for SvgTextBuilder
 {
@@ -292,18 +385,27 @@ impl<
         ctx: &mut C,
         upem: Scalar,
         shape: &ir::TextShape,
-        fill_key: &Fingerprint,
+        context_key: &Fingerprint,
         state: RenderState,
     ) {
-        let color = &shape.fill;
-        let fill_id = if color.starts_with('@') {
-            let (kind, cano_ref, relative_to_self) = ctx.notify_paint(shape.fill.clone());
-            let text_scale = upem.0 / shape.size.0;
-            let text_scale = Transform::from_scale(Scalar(text_scale), Scalar(-text_scale));
+        self.attributes.push(("class", "typst-text".to_owned()));
 
+        if shape.styles.is_empty() {
+            return;
+        }
+
+        let text_scale = upem.0 / shape.size.0;
+
+        let (fill_id, stroke_id) =
+            attach_path_styles(&shape.styles, Some(text_scale), &mut |x, y| {
+                self.attributes.push((x, y));
+            });
+
+        let make_transform = |is_gradient: bool, relative_to_self: Option<bool>| {
+            let text_scale = Transform::from_scale(Scalar(text_scale), Scalar(-text_scale));
             let relative_to_self = relative_to_self.unwrap_or(false);
-            let is_gradient = color.starts_with("@g");
-            let mat = if is_gradient {
+
+            if is_gradient {
                 if relative_to_self {
                     text_scale
                 } else {
@@ -314,48 +416,37 @@ impl<
             } else {
                 // println!("state: {:?}", state.inv_transform());
                 state.inv_transform().post_concat(text_scale)
-            };
-            let mat = mat.to_css();
-
-            // abs_ref
-            let paint_id = fill_key.as_svg_id("tf");
-            self.text_fill = Some(*fill_key);
-
-            let decl = transform_paint_fill(kind, cano_ref, &paint_id, &mat);
-            self.content.push(decl);
-            "".to_owned()
-        } else {
-            ctx.build_fill_style_class(color.clone())
+            }
         };
 
-        self.attributes
-            .push(("class", format!("typst-text {}", fill_id)));
-    }
+        let mut render_color_attr = |color: &Arc<str>, is_fill: bool| {
+            let color = color.clone();
+            if color.starts_with('@') {
+                let paint_id = context_key.as_svg_id(if is_fill { "pf" } else { "ps" });
+                let (kind, mat, content) =
+                    Self::render_paint_with_obj(ctx, color, &paint_id, &make_transform);
+                (*(if is_fill {
+                    &mut self.text_fill
+                } else {
+                    &mut self.text_stroke
+                })) = Some(Arc::new(PaintObj {
+                    kind,
+                    id: *context_key,
+                    transform: mat,
+                }));
+                self.content.push(content);
+            } else {
+                self.attributes
+                    .push((if is_fill { "fill" } else { "stroke" }, color.to_string()));
+            }
+        };
 
-    fn render_item_at(
-        &mut self,
-        state: RenderState,
-        ctx: &mut C,
-        pos: ir::Point,
-        item: &ir::SvgItem,
-    ) {
-        let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
-
-        let sub_content = ctx.render_item(state, item);
-
-        self.content.push(SvgText::Content(Arc::new(SvgTextNode {
-            attributes: vec![("transform", translate_attr)],
-            content: vec![SvgText::Content(sub_content)],
-        })));
-    }
-
-    /// Assuming the glyphs has already been in the defs, render it by
-    /// reference.
-    #[inline]
-    fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &ir::GlyphItem) {
-        let glyph_ref = ctx.build_glyph(glyph);
-
-        self.render_glyph_inner(ctx, pos, &glyph_ref)
+        if let Some(color) = fill_id {
+            render_color_attr(color, true);
+        }
+        if let Some(color) = stroke_id {
+            render_color_attr(color, false);
+        }
     }
 
     fn render_link(&mut self, _ctx: &mut C, link: &ir::LinkItem) {
@@ -382,50 +473,46 @@ impl<
         path: &ir::PathItem,
         abs_ref: &Fingerprint,
     ) {
-        for s in &path.styles {
-            match s {
-                PathStyle::Fill(color) | PathStyle::Stroke(color) => {
-                    if color.starts_with('@') {
-                        // todo: whether we need to distinguish fill and stroke here?
-                        let is_fill = matches!(s, PathStyle::Fill(..));
-                        let is_gradient = color.starts_with("@g");
+        let (fill_id, stroke_id, content) = render_path(path, state, abs_ref);
 
-                        // todo
-                        let (kind, cano_ref, relative_to_self) = ctx.notify_paint(color.clone());
-
-                        let relative_to_self = relative_to_self.unwrap_or(true);
-
-                        let transform_matrix = if is_gradient {
-                            if relative_to_self {
-                                let self_bbox = path.size.unwrap();
-                                Transform::from_scale(self_bbox.x, self_bbox.y)
-                            } else {
-                                // println!("state: {:?}", state.inv_transform());
-                                state.body_inv_transform()
-                            }
-                        } else if relative_to_self {
-                            Transform::identity()
-                        } else {
-                            // println!("state: {:?}", state.inv_transform());
-                            state.inv_transform()
-                        };
-                        let transform_matrix = transform_matrix.to_css();
-
-                        let paint_id =
-                            state
-                                .at(abs_ref)
-                                .as_svg_id(if is_fill { "pf" } else { "ps" });
-
-                        let decl =
-                            transform_paint_fill(kind, cano_ref, &paint_id, &transform_matrix);
-
-                        self.content.push(decl);
-                    }
+        let make_transform = |is_gradient: bool, relative_to_self: Option<bool>| {
+            let relative_to_self = relative_to_self.unwrap_or(true);
+            if is_gradient {
+                if relative_to_self {
+                    let self_bbox = path.size.unwrap();
+                    Transform::from_scale(self_bbox.x, self_bbox.y)
+                } else {
+                    // println!("state: {:?}", state.inv_transform());
+                    state.body_inv_transform()
                 }
-                _ => {}
+            } else if relative_to_self {
+                Transform::identity()
+            } else {
+                // println!("state: {:?}", state.inv_transform());
+                state.inv_transform()
             }
+        };
+
+        let mut render_color_attr = |color: Arc<str>, is_fill: bool| {
+            if color.starts_with('@') {
+                let context_key = state.at(abs_ref);
+                self.content.push(Self::render_paint(
+                    ctx,
+                    color,
+                    &context_key.as_svg_id(if is_fill { "pf" } else { "ps" }),
+                    &make_transform,
+                ));
+            }
+        };
+
+        if let Some(color) = fill_id {
+            render_color_attr(color, true);
         }
-        self.content.push(render_path(path, state, abs_ref))
+        if let Some(color) = stroke_id {
+            render_color_attr(color, false);
+        }
+
+        self.content.push(content);
     }
 
     fn render_image(&mut self, ctx: &mut C, image_item: &ir::ImageItem) {
@@ -447,23 +534,7 @@ impl<
                 .push(("data-span", format!("{:x}", span_id)));
         }
     }
-}
-
-/// See [`FlatGroupContext`].
-impl<
-        'm,
-        C: RenderVm<Resultant = Arc<SvgTextNode>>
-            + FlatRenderVm<'m, Resultant = Arc<SvgTextNode>>
-            + BuildGlyph
-            + GlyphIndice<'m>
-            + FontIndice<'m>
-            + GlyphHashStablizer
-            + BuildFillStyleClass
-            + NotifyPaint
-            + DynExportFeature,
-    > FlatGroupContext<C> for SvgTextBuilder
-{
-    fn render_item_ref_at(
+    fn render_item_at(
         &mut self,
         state: RenderState,
         ctx: &mut C,
@@ -472,7 +543,7 @@ impl<
     ) {
         let translate_attr = format!("translate({:.3},{:.3})", pos.x.0, pos.y.0);
 
-        let sub_content = ctx.render_flat_item(state, item);
+        let sub_content = ctx.render_item(state, item);
 
         self.content.push(SvgText::Content(Arc::new(SvgTextNode {
             attributes: vec![
@@ -483,21 +554,30 @@ impl<
         })));
     }
 
-    fn render_glyph_ref(&mut self, ctx: &mut C, pos: Scalar, glyph: &GlyphRef) {
-        self.render_glyph_inner(ctx, pos, glyph)
+    fn render_glyph(&mut self, _ctx: &mut C, pos: Scalar, font: &FontItem, glyph: u32) {
+        let adjusted_offset = (pos.0 * 2.).round() / 2.;
+
+        // A stable glyph id can help incremental font transfer (IFT).
+        // However, it is permitted unstable if you will not use IFT.
+        let glyph_id = (GlyphRef {
+            font_hash: font.hash,
+            glyph_idx: glyph,
+        })
+        .as_svg_id("g");
+
+        self.content.push(SvgText::Plain(format!(
+            // r##"<typst-glyph x="{}" href="#{}"/>"##,
+            r##"<use x="{}" href="#{}"/>"##,
+            adjusted_offset, glyph_id
+        )));
     }
 
-    fn render_flat_text_semantics(
-        &mut self,
-        ctx: &mut C,
-        text: &flat_ir::FlatTextItem,
-        width: Scalar,
-    ) {
+    fn render_text_semantics(&mut self, ctx: &mut C, text: &ir::TextItem, width: Scalar) {
         if !ctx.should_render_text_element() {
             return;
         }
 
-        let font = ctx.get_font(&text.font).unwrap();
+        let font = ctx.get_font(&text.shape.font).unwrap();
 
         self.render_text_semantics_inner(
             &text.shape,
@@ -509,7 +589,7 @@ impl<
         )
     }
 
-    fn with_frame(mut self, _ctx: &mut C, _group: &flat_ir::GroupRef) -> Self {
+    fn with_frame(mut self, _ctx: &mut C, _group: &ir::GroupRef) -> Self {
         self.attributes.push(("class", "typst-group".to_owned()));
         self
     }
@@ -517,11 +597,11 @@ impl<
     fn with_text(
         mut self,
         ctx: &mut C,
-        text: &flat_ir::FlatTextItem,
+        text: &ir::TextItem,
         fill_key: &Fingerprint,
         state: RenderState,
     ) -> Self {
-        let font = ctx.get_font(&text.font).unwrap();
+        let font = ctx.get_font(&text.shape.font).unwrap();
         let upem = font.unit_per_em;
 
         self.with_text_shape(ctx, upem, &text.shape, &state.at(fill_key), state);
@@ -537,11 +617,10 @@ impl<
 /// See [`FlatGroupContext`].
 impl<
         'm,
-        C: FlatIncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBuilder>
-            + HasStatefulFill,
-    > FlatIncrGroupContext<C> for SvgTextBuilder
+        C: IncrRenderVm<'m, Resultant = Arc<SvgTextNode>, Group = SvgTextBuilder> + HasStatefulFill,
+    > IncrGroupContext<C> for SvgTextBuilder
 {
-    fn render_diff_item_ref_at(
+    fn render_diff_item_at(
         &mut self,
         state: RenderState,
         ctx: &mut C,
@@ -549,8 +628,8 @@ impl<
         item: &Fingerprint,
         prev_item: &Fingerprint,
     ) {
-        let has_gradient = ctx.has_stateful_fill(item);
-        let content = if item == prev_item && !has_gradient {
+        let has_stateful_fill = ctx.has_stateful_fill(item);
+        let content = if item == prev_item && !has_stateful_fill {
             // todo: update transform
             vec![]
         } else {
@@ -565,7 +644,7 @@ impl<
         };
         attributes.push(("data-tid", item.as_svg_id("p")));
         attributes.push(("data-reuse-from", prev_item.as_svg_id("p")));
-        if has_gradient {
+        if has_stateful_fill {
             attributes.push(("data-bad-equality", "1".to_owned()));
         }
 
@@ -576,63 +655,95 @@ impl<
     }
 }
 
-/// Render a [`ir::PathItem`] into svg text.
-#[comemo::memoize]
-fn render_path(path: &ir::PathItem, state: RenderState, abs_ref: &Fingerprint) -> SvgText {
-    let mut p = vec![r#"<path class="typst-shape" "#.to_owned()];
-    p.push(format!(r#"d="{}" "#, path.d));
-    #[allow(unused_assignments)]
-    let mut ft = String::new();
-    let mut fill_color = "none";
-    for style in &path.styles {
+fn attach_path_styles<'a>(
+    styles: &'a [PathStyle],
+    scale: Option<f32>,
+    p: &mut impl FnMut(&'static str, String),
+) -> (Option<&'a ImmutStr>, Option<&'a ImmutStr>) {
+    let mut fill_color = None;
+    let mut stroke_color = None;
+    for style in styles.iter() {
         match style {
             PathStyle::Fill(color) => {
-                fill_color = if color.starts_with('@') {
-                    ft = format!(r#"url(#{})"#, state.at(abs_ref).as_svg_id("pf"));
-                    &ft
-                } else {
-                    color
-                };
+                fill_color = Some(color);
             }
             PathStyle::Stroke(color) => {
-                // compress the stroke color
-                p.push(if color.starts_with('@') {
-                    let ps = state.at(abs_ref).as_svg_id("ps");
-                    format!(r##"stroke="url(#{})" "##, &ps)
-                } else {
-                    format!(r##"stroke="{}" "##, color)
-                });
+                stroke_color = Some(color);
             }
             PathStyle::StrokeWidth(width) => {
-                p.push(format!(r#"stroke-width="{}" "#, width.0));
+                p("stroke-width", (width.0 * scale.unwrap_or(1.)).to_string());
             }
             PathStyle::StrokeLineCap(cap) => {
-                p.push(format!(r#"stroke-linecap="{}" "#, cap));
+                p("stroke-linecap", cap.to_string());
             }
             PathStyle::StrokeLineJoin(join) => {
-                p.push(format!(r#"stroke-linejoin="{}" "#, join));
+                p("stroke-linejoin", join.to_string());
             }
             PathStyle::StrokeMitterLimit(limit) => {
-                p.push(format!(r#"stroke-miterlimit="{}" "#, limit.0));
+                p(
+                    "stroke-miterlimit",
+                    (limit.0 * scale.unwrap_or(1.)).to_string(),
+                );
             }
             PathStyle::StrokeDashArray(array) => {
-                p.push(r#"stroke-dasharray=""#.to_owned());
-                for (i, v) in array.iter().enumerate() {
-                    if i > 0 {
-                        p.push(" ".to_owned());
-                    }
-                    p.push(format!("{}", v.0));
-                }
-                p.push(r#"" "#.to_owned());
+                p(
+                    "stroke-dasharray",
+                    array
+                        .iter()
+                        .map(|e| (e.0 * scale.unwrap_or(1.)).to_string())
+                        .collect::<Vec<_>>()
+                        .join(" "),
+                );
             }
             PathStyle::StrokeDashOffset(offset) => {
-                p.push(format!(r#"stroke-dashoffset="{}" "#, offset.0));
+                p(
+                    "stroke-dashoffset",
+                    (offset.0 * scale.unwrap_or(1.)).to_string(),
+                );
             }
         }
     }
-    p.push(format!(r#"fill="{}" "#, fill_color));
+
+    (fill_color, stroke_color)
+}
+
+/// Render a [`ir::PathItem`] into svg text.
+#[comemo::memoize]
+fn render_path(
+    path: &ir::PathItem,
+    state: RenderState,
+    abs_ref: &Fingerprint,
+) -> (Option<ImmutStr>, Option<ImmutStr>, SvgText) {
+    let mut p = vec![r#"<path class="typst-shape" "#.to_owned()];
+    p.push(format!(r#"d="{}" "#, path.d));
+
+    let (fill_color, stroke_color) = attach_path_styles(&path.styles, None, &mut |x, y| {
+        p.push(format!(r#"{}="{}" "#, x, y))
+    });
+
+    let contextual_id = |id: &'static str| state.at(abs_ref).as_svg_id(id);
+    if let Some(fill_color) = fill_color {
+        if fill_color.starts_with('@') {
+            p.push(format!(r#"fill="url(#{})" "#, contextual_id("pf")));
+        } else {
+            p.push(format!(r#"fill="{}" "#, fill_color));
+        }
+    } else {
+        p.push(r#"fill="none" "#.to_string());
+    }
+    if let Some(stroke_color) = stroke_color {
+        if stroke_color.starts_with('@') {
+            p.push(format!(r#"stroke="url(#{})" "#, contextual_id("ps")));
+        } else {
+            p.push(format!(r#"stroke="{}" "#, stroke_color));
+        }
+    }
     p.push("/>".to_owned());
-    SvgText::Plain(p.join(""))
+    (
+        fill_color.cloned(),
+        stroke_color.cloned(),
+        SvgText::Plain(p.join("")),
+    )
 }
 
 /// Render a [`ir::ImageItem`] into svg text.
@@ -687,34 +798,4 @@ pub fn generate_text(text_list: Vec<SvgText>) -> String {
         s.write_string_io(&mut string_io);
     }
     string_io
-}
-
-fn transform_paint_fill(
-    kind: u8,
-    f: Fingerprint,
-    paint_id: &str,
-    transform_matrix: &str,
-) -> SvgText {
-    let tag = match kind {
-        b'l' => "linearGradient",
-        b'r' => "radialGradient",
-        b'p' => "pattern",
-        _ => unreachable!(),
-    };
-
-    let transform = match kind {
-        b'p' => "patternTransform",
-        _ => "gradientTransform",
-    };
-
-    SvgText::Plain(format!(
-        r##"<{} id="{}" {}="{}" href="#{}" xlink:href="#{}"></{}>"##,
-        tag,
-        paint_id,
-        transform,
-        transform_matrix,
-        f.as_svg_id("g"),
-        f.as_svg_id("g"),
-        tag
-    ))
 }

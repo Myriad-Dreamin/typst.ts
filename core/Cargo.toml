@@ -26,10 +26,11 @@ fxhash.workspace = true
 
 once_cell.workspace = true
 rustc-hash.workspace = true
+crossbeam-queue = "0.3.10"
 
-rpds.workspace = true
 parking_lot = { workspace = true, features = ["owning_ref"] }
 owning_ref = "0.4"
+bitvec = { version = "1" }
 serde.workspace = true
 serde_json.workspace = true
 tiny-skia.workspace = true
@@ -37,6 +38,7 @@ log.workspace = true
 flate2.workspace = true
 xmlparser.workspace = true
 serde_with.workspace = true
+rayon.workspace = true
 rkyv = { workspace = true, optional = true }
 svgtypes.workspace = true
 tiny-skia-path.workspace = true
@@ -53,8 +55,9 @@ vector-bbox = []
 debug-gc = []
 experimental-ligature = []
 no-content-hint = []
+glyph2vec = []
 
 __web = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
 web = ["__web"]
-full = ["web", "flat-vector", "vector-bbox"]
+full = ["web", "glyph2vec", "flat-vector", "vector-bbox"]
 default = ["full"]
