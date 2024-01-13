@@ -165,7 +165,6 @@ impl IncrSvgDocClient {
 
     pub fn reset(&mut self) {
         self.glyph_window = 0;
-        self.stateful_fill_cache.clear();
     }
 
     /// Render the document in the given window.
