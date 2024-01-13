@@ -2,7 +2,7 @@ use siphasher::sip128::Hasher128;
 use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use typst_ts_core::{
-    hash::{Fingerprint, FingerprintBuilder, FingerprintSipHasherBase},
+    hash::{item_hash128, Fingerprint, FingerprintBuilder, FingerprintSipHasherBase},
     vector::{
         flat_ir::{FlatSvgItem, FlatTextItem, GroupRef, Module},
         flat_vm::{FlatGroupContext, FlatIncrRenderVm, FlatRenderVm},
