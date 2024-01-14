@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
-use crate::{ShadowApi, ShadowApiExt};
+use crate::ShadowApi;
 use typst::{diag::SourceResult, World};
 use typst_ts_core::{
     exporter_builtins::GroupExporter,
@@ -319,6 +319,7 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
     pub fn do_export(&mut self) -> SourceResult<MultiVecDocument> {
         use std::str::FromStr;
 
+        use crate::ShadowApiExt;
         use typst::{
             diag::At,
             syntax::{PackageSpec, Span, VirtualPath},
