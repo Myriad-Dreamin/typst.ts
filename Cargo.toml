@@ -30,8 +30,6 @@ members = [
     "packages/renderer",
     "packages/typst.node",
 
-    "packages/typst.node",
-
     "server/dev",
     "server/remote",
 
