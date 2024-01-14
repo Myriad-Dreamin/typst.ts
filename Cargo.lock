@@ -2187,6 +2187,8 @@ dependencies = [
  "napi-derive",
  "napi-sys",
  "once_cell",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -3328,6 +3330,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_repr"
+version = "0.1.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3081f5ffbb02284dda55132aa26daecedd7372a42417bbbab6f14ab7d6bb9145"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.39",
+]
+
+[[package]]
 name = "serde_spanned"
 version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4220,6 +4233,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "typst-svg"
+version = "0.10.0"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.10.0-content-hint-half#e6f7c6dd9c88e3d0bce200bf541801a6623a6a79"
+dependencies = [
+ "base64",
+ "comemo",
+ "ecow",
+ "flate2",
+ "tracing",
+ "ttf-parser",
+ "typst",
+ "xmlparser",
+ "xmlwriter",
+]
+
+[[package]]
 name = "typst-syntax"
 version = "0.10.0"
 source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.10.0-content-hint-half#e6f7c6dd9c88e3d0bce200bf541801a6623a6a79"
@@ -4388,6 +4417,7 @@ dependencies = [
  "rustc-hash",
  "serde",
  "serde_json",
+ "serde_repr",
  "serde_with",
  "sha2",
  "siphasher 1.0.0",
@@ -4515,11 +4545,14 @@ dependencies = [
 name = "typst-ts-node-compiler"
 version = "0.4.2-rc4"
 dependencies = [
+ "chrono",
  "napi",
  "napi-build",
  "napi-derive",
  "parking_lot",
  "serde",
+ "serde_json",
+ "typst-svg",
  "typst-ts-cli",
  "typst-ts-compiler",
  "typst-ts-core",

@@ -281,9 +281,18 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`);
 }
 
-const { BoxedCompiler, NodeTypstDocument, NodeCompiler, DynLayoutCompiler } = nativeBinding;
+const {
+  BoxedCompiler,
+  NodeError,
+  NodeTypstCompileResult,
+  NodeTypstDocument,
+  NodeCompiler,
+  DynLayoutCompiler,
+} = nativeBinding;
 
 module.exports.BoxedCompiler = BoxedCompiler;
+module.exports.NodeError = NodeError;
+module.exports.NodeTypstCompileResult = NodeTypstCompileResult;
 module.exports.NodeTypstDocument = NodeTypstDocument;
 module.exports.NodeCompiler = NodeCompiler;
 module.exports.DynLayoutCompiler = DynLayoutCompiler;

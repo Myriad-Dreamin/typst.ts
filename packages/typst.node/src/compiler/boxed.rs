@@ -17,14 +17,14 @@ use typst_ts_core::{
     Bytes, ImmutPath, TypstDocument, TypstFileId,
 };
 
-use crate::{map_node_error, CompileBy, NodeError, NodeTypstDocument};
+use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocumentOptions, NodeError};
 
 pub trait NodeCompilerTrait:
     Compiler<World = TypstSystemWorld> + ShadowApi + EntryFileState
 {
     fn setup_compiler_by(
         &mut self,
-        compile_by: CompileBy,
+        compile_by: CompileDocumentOptions,
     ) -> napi::Result<Option<PathBuf>, NodeError> {
         let e;
         if let Some(main_file_content) = compile_by.main_file_content {
@@ -63,18 +63,19 @@ pub trait NodeCompilerTrait:
         Ok(e)
     }
 
-    fn compile_raw(&mut self, compile_by: CompileBy) -> napi::Result<NodeTypstDocument, NodeError> {
+    fn compile_raw(
+        &mut self,
+        compile_by: CompileDocumentOptions,
+    ) -> napi::Result<NodeTypstCompileResult, NodeError> {
         let e = self.setup_compiler_by(compile_by)?;
 
-        let res = self
-            .pure_compile(&mut CompileEnv::default())
-            .map_err(map_node_error);
+        let res = self.pure_compile(&mut CompileEnv::default()).into();
 
         if let Some(entry_file) = e {
             self.set_entry_file(entry_file).map_err(map_node_error)?;
         }
 
-        Ok(NodeTypstDocument(res?))
+        Ok(res)
     }
 }
 

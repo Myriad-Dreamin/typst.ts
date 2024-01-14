@@ -1,299 +1,281 @@
-use boxed::{BoxedCompiler, NodeCompilerTrait};
-use core::fmt;
+/// Compiler trait for NodeJS.
+pub mod compiler;
+
+/// Error handling for NodeJS.
+pub mod error;
+
+pub use compiler::*;
+use error::NodeTypstCompileResult;
+pub use error::{map_node_error, NodeError};
+
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
+
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
-use std::{
-    cell::OnceCell,
-    collections::HashMap,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
 use typst_ts_compiler::{
-    font::system::SystemFontSearcher,
-    package::http::HttpRegistry,
-    service::{CompileDriver, CompileMiddleware, Compiler, DynamicLayoutCompiler},
-    vfs::{system::SystemAccessModel, Vfs},
+    service::{CompileMiddleware, Compiler, DynamicLayoutCompiler},
     TypstSystemWorld,
 };
-use typst_ts_core::{
-    config::CompileOpts,
-    error::{prelude::*, TypstSourceDiagnostic},
-    typst::{foundations::IntoValue, prelude::*},
-    Bytes, Exporter, TypstDict,
-};
+use typst_ts_core::{error::prelude::*, Exporter, TypstAbs, TypstDatetime, TypstDocument};
 
-pub mod boxed;
-
-impl NodeCompilerTrait for CompileDriver {}
-
-// A complex struct which cannot be exposed to JavaScript directly.
-#[napi(js_name = "BoxedCompiler")]
-pub struct JsBoxedCompiler {
-    inner: Option<BoxedCompiler>,
-}
-
-impl JsBoxedCompiler {
-    fn grab(&mut self) -> BoxedCompiler {
-        self.inner.take().expect("moved box compiler")
-    }
-}
-
-pub enum NodeErrorStatus {
-    Error(typst_ts_core::error::Error),
-    Diagnostics(EcoVec<TypstSourceDiagnostic>),
-}
-
-impl fmt::Display for NodeErrorStatus {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            NodeErrorStatus::Error(e) => write!(f, "{}", e),
-            NodeErrorStatus::Diagnostics(diagnostics) => {
-                for diagnostic in diagnostics {
-                    writeln!(f, "{}\n", diagnostic.message)?;
-                }
-                Ok(())
-            }
-        }
-    }
-}
-
-pub struct NodeError(OnceCell<String>, NodeErrorStatus);
-
-impl From<typst_ts_core::error::Error> for NodeError {
-    fn from(e: typst_ts_core::error::Error) -> Self {
-        NodeError(OnceCell::new(), NodeErrorStatus::Error(e))
-    }
-}
-
-impl From<EcoVec<TypstSourceDiagnostic>> for NodeError {
-    fn from(e: EcoVec<TypstSourceDiagnostic>) -> Self {
-        NodeError(OnceCell::new(), NodeErrorStatus::Diagnostics(e))
-    }
-}
-
-impl AsRef<str> for NodeError {
-    fn as_ref(&self) -> &str {
-        self.0.get_or_init(|| self.1.to_string())
-    }
-}
-
-// |e| napi::Error::from_status(NodeError::new(e))
-fn map_node_error(e: impl Into<NodeError>) -> napi::Error<NodeError> {
-    napi::Error::from_status(e.into())
-}
-
+/// A shared typst document object.
 #[napi]
-pub struct NodeTypstDocument(Arc<typst_ts_core::typst::TypstDocument>);
+#[derive(Clone)]
+pub struct NodeTypstDocument(Arc<TypstDocument>);
 
 #[napi]
 impl NodeTypstDocument {
+    /// Gets the number of pages in the document.
     #[napi(getter)]
-    pub fn title(&self) -> napi::Result<Option<String>> {
-        Ok(self.0.title.as_ref().map(ToString::to_string))
+    pub fn num_of_pages(&self) -> u32 {
+        self.0.pages.len() as u32
+    }
+
+    /// Gets the title of the document.
+    #[napi(getter)]
+    pub fn title(&self) -> Option<String> {
+        self.0.title.as_ref().map(ToString::to_string)
+    }
+
+    /// Gets the authors of the document.
+    #[napi(getter)]
+    pub fn authors(&self) -> Option<Vec<String>> {
+        let authors = self.0.author.iter();
+        Some(authors.map(ToString::to_string).collect::<Vec<_>>())
+    }
+
+    /// Gets the keywords of the document.
+    #[napi(getter)]
+    pub fn keywords(&self) -> Option<Vec<String>> {
+        let keywords = self.0.keywords.iter();
+        Some(keywords.map(ToString::to_string).collect::<Vec<_>>())
+    }
+
+    /// Gets the unix timestamp (in nanoseconds) of the document.
+    ///
+    /// Note: currently typst doesn't specify the timezone of the date, and we
+    /// keep stupid and doesn't add timezone info to the date.
+    #[napi(getter)]
+    pub fn date(&self) -> Option<i64> {
+        self.0
+            .date
+            .as_custom()
+            .flatten()
+            .and_then(typst_datetime_to_unix_nanoseconds)
+    }
+
+    /// Determines whether the date should be automatically generated.
+    ///
+    /// This happens when user specifies `date: auto` in the document
+    /// explicitly.
+    #[napi(getter)]
+    pub fn enabled_auto_date(&self) -> bool {
+        self.0.date.is_auto()
     }
 }
 
-#[napi(object)]
-pub struct NodeAddFontPaths {
-    /// Add additional directories to search for fonts
-    pub font_paths: Vec<String>,
+/// Converts a typst datetime to unix nanoseconds.
+fn typst_datetime_to_unix_nanoseconds(datetime: TypstDatetime) -> Option<i64> {
+    let year = datetime.year().unwrap_or_default();
+    let month = datetime.month().unwrap_or_default() as u32;
+    let day = datetime.day().unwrap_or_default() as u32;
+    let hour = datetime.hour().unwrap_or_default() as u32;
+    let minute = datetime.minute().unwrap_or_default() as u32;
+    let second = datetime.second().unwrap_or_default() as u32;
+
+    let date = chrono::NaiveDate::from_ymd_opt(year, month, day)?;
+    let time = chrono::NaiveTime::from_hms_opt(hour, minute, second)?;
+
+    let datetime = chrono::NaiveDateTime::new(date, time);
+
+    datetime.timestamp_nanos_opt()
 }
 
-#[napi(object)]
-pub struct NodeAddFontBlobs {
-    /// Add additional memory fonts
-    pub font_blobs: Vec<Vec<u8>>,
-}
-
-#[napi(object, js_name = "CompileArgs")]
-#[derive(Default)]
-pub struct NodeCompileArgs {
-    /// Add additional directories to search for fonts
-    pub font_args: Vec<Either<NodeAddFontPaths, NodeAddFontBlobs>>,
-
-    /// Path to typst workspace.
-    pub workspace: String,
-
-    /// Entry file.
-    pub entry: String,
-
-    /// Add a string key-value pair visible through `sys.inputs`
-    pub inputs: HashMap<String, String>,
-}
-
-fn create_driver(args: NodeCompileArgs) -> ZResult<CompileDriver> {
-    use typst_ts_core::path::PathClean;
-    let workspace_dir = Path::new(args.workspace.as_str()).clean();
-    let entry_file_path = Path::new(args.entry.as_str()).clean();
-
-    let workspace_dir = if workspace_dir.is_absolute() {
-        workspace_dir
-    } else {
-        let cwd = std::env::current_dir().context("failed to get current dir")?;
-        cwd.join(workspace_dir)
-    };
-
-    let entry_file_path = if entry_file_path.is_absolute() {
-        entry_file_path
-    } else {
-        let cwd = std::env::current_dir().context("failed to get current dir")?;
-        cwd.join(entry_file_path)
-    };
-
-    let workspace_dir = workspace_dir.clean();
-    let entry_file_path = entry_file_path.clean();
-
-    if !entry_file_path.starts_with(&workspace_dir) {
-        return Err(error_once!(
-            "entry file path must be in workspace directory",
-            workspace_dir: workspace_dir.display()
-        ));
-    }
-
-    // Convert the input pairs to a dictionary.
-    let inputs: TypstDict = args
-        .inputs
-        .iter()
-        .map(|(k, v)| (k.as_str().into(), v.as_str().into_value()))
-        .collect();
-
-    let mut searcher = SystemFontSearcher::new();
-
-    for arg in args.font_args {
-        match arg {
-            Either::A(p) => {
-                for i in p.font_paths {
-                    let path = Path::new(&i);
-                    if path.is_dir() {
-                        searcher.search_dir(path);
-                    } else {
-                        let _ = searcher.search_file(path);
-                    }
-                }
-            }
-            Either::B(p) => {
-                for b in p.font_blobs {
-                    searcher.add_memory_font(Bytes::from(b));
-                }
-            }
-        }
-    }
-
-    searcher.resolve_opts(CompileOpts {
-        with_embedded_fonts: typst_ts_cli::font::EMBEDDED_FONT.to_owned(),
-        ..CompileOpts::default()
-    })?;
-
-    let world = TypstSystemWorld::new_raw(
-        workspace_dir.clone(),
-        Vfs::new(SystemAccessModel {}),
-        HttpRegistry::default(),
-        searcher.into(),
-    );
-    // world.set_inputs(Arc::new(Prehashed::new(inputs)));
-    let _ = inputs;
-
-    Ok(CompileDriver {
-        world,
-        entry_file: entry_file_path.to_owned(),
-    })
-}
-
-/// `constructor` option for `struct` requires all fields to be public,
-/// otherwise tag impl fn as constructor
-/// #[napi(constructor)]
-#[napi]
-pub struct NodeCompiler {
-    driver: Option<CompileDriver>,
-}
-
+/// Options to compile a document.
+///
+/// If no `mainFileContent` or `mainFilePath` is specified, the compiler will
+/// use the entry file specified in the constructor of `NodeCompiler`.
 #[napi(object)]
 #[derive(Serialize, Deserialize, Debug)]
-pub struct CompileBy {
+pub struct CompileDocumentOptions {
+    /// Directly specify the main file content.
+    /// Exclusive with `mainFilePath`.
     #[serde(rename = "mainFileContent")]
     pub main_file_content: Option<String>,
+
+    /// Path to the entry file.
+    /// Exclusive with `mainFileContent`.
     #[serde(rename = "mainFilePath")]
     pub main_file_path: Option<String>,
+
+    /// Add a string key-value pair visible through `sys.inputs`.
+    pub inputs: Option<HashMap<String, String>>,
+}
+
+/// Node wrapper to access compiler interfaces.
+#[napi]
+pub struct NodeCompiler {
+    /// Inner compiler.
+    driver: JsBoxedCompiler,
 }
 
 #[napi]
 impl NodeCompiler {
-    /// Get default compile arguments
+    /// Gets default compile arguments
     #[napi]
     pub fn default_compile_args() -> NodeCompileArgs {
         NodeCompileArgs::default()
     }
 
-    /// This is the constructor
+    /// Creates a new compiler based on the given arguments.
+    ///
+    /// == Example
+    ///
+    /// Creates a new compiler with default arguments:
+    /// ```ts
+    /// const compiler = NodeCompiler.create(NodeCompiler.defaultCompileArgs());
+    /// ```
+    ///
+    /// Creates a new compiler with custom arguments:
+    /// ```ts
+    /// const compiler = NodeCompiler.create({
+    ///   ...NodeCompiler.defaultCompileArgs(),
+    ///   workspace: '/path/to/workspace',
+    ///   entry: '/path/to/entry',
+    /// });
+    /// ```
     #[napi]
     pub fn create(args: NodeCompileArgs) -> Result<NodeCompiler, NodeError> {
         let driver = create_driver(args).map_err(map_node_error)?;
         Ok(NodeCompiler {
-            driver: Some(driver),
+            driver: driver.into(),
         })
     }
 
-    fn compile_raw(&mut self, compile_by: CompileBy) -> Result<NodeTypstDocument, NodeError> {
-        let t = self.driver.as_mut().expect("moved box compiler");
-        t.compile_raw(compile_by)
-    }
-
+    /// Casts the inner compiler.
     #[napi]
-    pub fn compile(&mut self, compile_by: CompileBy) -> Result<NodeTypstDocument, NodeError> {
-        self.compile_raw(compile_by)
+    pub fn from_boxed(b: &mut JsBoxedCompiler) -> Self {
+        NodeCompiler {
+            driver: b.grab().into(),
+        }
     }
 
-    fn world(&self) -> &TypstSystemWorld {
-        self.driver.as_ref().expect("moved compiler").world()
-    }
-
-    #[napi]
-    pub fn vector(&mut self, compile_by: CompileBy) -> Result<Buffer, NodeError> {
-        let res = self.compile_raw(compile_by)?;
-
-        let e = typst_ts_svg_exporter::SvgModuleExporter::default();
-        let res = e.export(self.world(), res.0).map_err(map_node_error)?;
-
-        Ok(res.into())
-    }
-
-    #[napi]
-    #[cfg(feature = "pdf")]
-    pub fn pdf(&mut self, compile_by: CompileBy) -> Result<Buffer, NodeError> {
-        let res = self.compile_raw(compile_by)?;
-
-        let e = typst_ts_pdf_exporter::PdfDocExporter::default();
-        let res = e.export(self.world(), res.0).map_err(map_node_error)?;
-
-        Ok(res.into())
-    }
-
-    #[napi]
-    #[cfg(feature = "svg")]
-    pub fn svg(&mut self, compile_by: CompileBy) -> Result<String, NodeError> {
-        let res = self.compile_raw(compile_by)?;
-
-        let e = typst_ts_svg_exporter::PureSvgExporter;
-        e.export(self.world(), res.0).map_err(map_node_error)
-    }
-
+    /// Takes ownership of the inner compiler.
     #[napi]
     pub fn into_boxed(&mut self) -> Result<JsBoxedCompiler, NodeError> {
-        let driver = self.driver.take().expect("moved compiler");
-        Ok(JsBoxedCompiler {
-            inner: Some(driver.into()),
-        })
+        Ok(self.driver.grab().into())
+    }
+
+    /// Gets the inner world.
+    fn world(&self) -> &TypstSystemWorld {
+        self.driver.assert_ref().world()
+    }
+
+    /// Compiles the document internally.
+    fn compile_raw(
+        &mut self,
+        opts: CompileDocumentOptions,
+    ) -> Result<NodeTypstCompileResult, NodeError> {
+        self.driver.assert_mut().compile_raw(opts)
+    }
+
+    /// Compiles the document as a specific type.
+    pub fn compile_as<T, O>(&mut self, compile_by: CompileDocumentOptions) -> Result<O, NodeError>
+    where
+        T: Exporter<TypstDocument, O> + Default,
+    {
+        let mut res = self.compile_raw(compile_by)?;
+        if let Some(diagnostics) = res.take_diagnostics() {
+            // todo: format diagnostics
+            return Err(Error::from_status(diagnostics));
+        }
+
+        let e = T::default();
+        e.export(self.world(), res.result().unwrap().0.clone())
+            .map_err(map_node_error)
+    }
+
+    /// Compiles the document.
+    #[napi]
+    pub fn compile(
+        &mut self,
+        opts: CompileDocumentOptions,
+    ) -> Result<NodeTypstCompileResult, NodeError> {
+        self.compile_raw(opts)
+    }
+
+    /// Fetches the diagnostics of the document.
+    #[napi]
+    pub fn fetch_diagnostics(
+        &mut self,
+        opts: &NodeError,
+    ) -> Result<Vec<serde_json::Value>, NodeError> {
+        opts.get_json_diagnostics(Some(self.world()))
+    }
+
+    /// Queries the data of the document.
+    #[napi]
+    pub fn query(
+        &mut self,
+        doc: &NodeTypstDocument,
+        selector: String,
+    ) -> Result<serde_json::Value, NodeError> {
+        let compiler = self.driver.assert_mut();
+        let res = compiler.query(selector, &doc.0).map_err(map_node_error)?;
+
+        serde_json::to_value(res)
+            .context("failed to serialize query result to JSON")
+            .map_err(map_node_error)
+    }
+
+    /// Simply compiles the document as a vector IR.
+    #[napi]
+    pub fn vector(&mut self, opts: CompileDocumentOptions) -> Result<Buffer, NodeError> {
+        self.compile_as::<typst_ts_svg_exporter::SvgModuleExporter, _>(opts)
+            .map(From::from)
+    }
+
+    /// Simply compiles the document as a PDF.
+    #[napi]
+    #[cfg(feature = "pdf")]
+    pub fn pdf(&mut self, opts: CompileDocumentOptions) -> Result<Buffer, NodeError> {
+        self.compile_as::<typst_ts_pdf_exporter::PdfDocExporter, _>(opts)
+            .map(From::from)
+    }
+
+    /// Simply compiles the document as a plain SVG.
+    #[napi]
+    #[cfg(feature = "svg")]
+    pub fn plain_svg(&mut self, opts: CompileDocumentOptions) -> Result<String, NodeError> {
+        let mut res = self.compile_raw(opts)?;
+        if let Some(diagnostics) = res.take_diagnostics() {
+            return Err(Error::from_status(diagnostics));
+        }
+
+        Ok(typst_svg::svg_merged(
+            &res.result().unwrap().0.pages,
+            Default::default(),
+        ))
+    }
+
+    /// Simply compiles the document as a rich-contented SVG (for browsers).
+    #[napi]
+    #[cfg(feature = "svg")]
+    pub fn svg(&mut self, opts: CompileDocumentOptions) -> Result<String, NodeError> {
+        self.compile_as::<typst_ts_svg_exporter::PureSvgExporter, _>(opts)
     }
 }
 
 #[napi]
 pub struct DynLayoutCompiler {
+    /// Inner compiler.
     driver: DynamicLayoutCompiler<BoxedCompiler>,
 }
 
 #[napi]
 impl DynLayoutCompiler {
+    /// Creates a new compiler based on the given arguments.
     #[napi]
     pub fn from_boxed(b: &mut JsBoxedCompiler) -> Self {
         DynLayoutCompiler {
@@ -301,8 +283,15 @@ impl DynLayoutCompiler {
         }
     }
 
+    /// Specifies width (in pts) of the layout.
+    pub fn set_layout_widths(&mut self, target: Vec<f64>) {
+        self.driver
+            .set_layout_widths(target.into_iter().map(TypstAbs::raw).collect());
+    }
+
+    /// Exports the document as a vector IR containing multiple layouts.
     #[napi]
-    pub fn vector(&mut self, compile_by: CompileBy) -> Result<Buffer, NodeError> {
+    pub fn vector(&mut self, compile_by: CompileDocumentOptions) -> Result<Buffer, NodeError> {
         let e = self.driver.inner_mut().setup_compiler_by(compile_by)?;
         let doc = self.driver.do_export().map_err(map_node_error);
 
