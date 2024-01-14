@@ -14,7 +14,7 @@
   "files": [
     "package-template.linux-arm64-musl.node"
   ],
-  "description": "Template project for writing node package with napi-rs",
+  "description": "Compile or Render Typst documents in Node environment.",
   "keywords": [
     "napi-rs",
     "NAPI",
@@ -23,13 +23,12 @@
     "node-addon",
     "node-addon-api"
   ],
-  "license": "MIT",
+  "license": "Apache-2.0",
   "engines": {
     "node": ">= 10"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public"
-  },
-  "repository": "git@github.com:napi-rs/package-template.git"
+  }
 }
