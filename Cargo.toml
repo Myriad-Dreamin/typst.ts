@@ -75,6 +75,7 @@ pixglyph = "0.2"
 typst = "0.10.0"
 typst-ide = "0.10.0"
 typst-pdf = "0.10.0"
+typst-svg = "0.10.0"
 typst-syntax = "0.10.0"
 ttf-parser = "0.19.2"
 
@@ -230,6 +231,7 @@ typst-ts-text-exporter = { path = "exporter/text" }
 typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint-half" }
 typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint-half" }
 typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint-half" }
+typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint-half" }
 typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint-half" }
 
 # typst = { path = "../typst/crates/typst" }

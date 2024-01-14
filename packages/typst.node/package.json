@@ -50,9 +50,9 @@
     "format:toml": "taplo format",
     "format:rs": "cargo fmt",
     "lint": "eslint . -c ./.eslintrc.yml",
-    "prepublishOnly": "napi prepublish -t npm",
-    "publish:dry": "npm publish --dry-run --access public",
-    "publish:lib": "npm publish --access public || exit 0",
+    "prepublish:napi": "napi prepublish -t npm",
+    "publish:dry": "yarn prepublish:napi && npm publish --dry-run --access public",
+    "publish:lib": "yarn prepublish:napi && npm publish --access public || exit 0",
     "test": "ava",
     "version": "napi version"
   },
@@ -99,5 +99,20 @@
     "environmentVariables": {
       "TS_NODE_PROJECT": "./tsconfig.json"
     }
+  },
+  "optionalDependencies": {
+    "@myriaddreamin/typst-ts-node-compiler-win32-x64-msvc": "0.4.2-rc4",
+    "@myriaddreamin/typst-ts-node-compiler-darwin-x64": "0.4.2-rc4",
+    "@myriaddreamin/typst-ts-node-compiler-linux-x64-gnu": "0.4.2-rc4",
+    "@myriaddreamin/typst-ts-node-compiler-linux-x64-musl": "0.4.2-rc4",
+    "@myriaddreamin/typst-ts-node-compiler-linux-arm64-gnu": "0.4.2-rc4",
+    "@myriaddreamin/typst-ts-node-compiler-win32-ia32-msvc": "0.4.2-rc4",
+    "@myriaddreamin/typst-ts-node-compiler-linux-arm-gnueabihf": "0.4.2-rc4",
+    "@myriaddreamin/typst-ts-node-compiler-darwin-arm64": "0.4.2-rc4",
+    "@myriaddreamin/typst-ts-node-compiler-android-arm64": "0.4.2-rc4",
+    "@myriaddreamin/typst-ts-node-compiler-freebsd-x64": "0.4.2-rc4",
+    "@myriaddreamin/typst-ts-node-compiler-linux-arm64-musl": "0.4.2-rc4",
+    "@myriaddreamin/typst-ts-node-compiler-win32-arm64-msvc": "0.4.2-rc4",
+    "@myriaddreamin/typst-ts-node-compiler-android-arm-eabi": "0.4.2-rc4"
   }
 }

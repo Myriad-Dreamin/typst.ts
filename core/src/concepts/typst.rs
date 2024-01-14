@@ -5,15 +5,17 @@ pub(crate) mod well_known {
     /// it as a part of typst-ts.
     pub use typst::syntax::FileId as TypstFileId;
 
+    pub use typst::World as TypstWorld;
+
     pub type TypstAbs = typst::layout::Abs;
 
     pub use typst::model::Document as TypstDocument;
 
     pub use typst::foundations::Dict as TypstDict;
 
-    pub mod foundations {
-        pub use typst::foundations::*;
-    }
+    pub use typst::foundations::Datetime as TypstDatetime;
+
+    pub use typst::{diag, foundations};
 }
 
 pub use well_known::*;

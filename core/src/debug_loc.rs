@@ -41,6 +41,7 @@ pub type RawSourceSpan = u64;
 /// A resolved source (text) location.
 ///
 /// See [`CharPosition`] for the definition of the position inside a file.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FileLocation {
     pub filepath: String,
 }
@@ -48,6 +49,7 @@ pub struct FileLocation {
 /// A char position represented in form of line and column.
 /// The position is encoded in Utf-8 or Utf-16, and the encoding is
 /// determined by usage.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CharPosition {
     /// The line number, starting at 0.
     pub line: usize,
@@ -55,9 +57,20 @@ pub struct CharPosition {
     pub column: usize,
 }
 
+impl From<Option<(usize, usize)>> for CharPosition {
+    fn from(loc: Option<(usize, usize)>) -> Self {
+        let (start, end) = loc.unwrap_or_default();
+        CharPosition {
+            line: start,
+            column: end,
+        }
+    }
+}
+
 /// A resolved source (text) location.
 ///
 /// See [`CharPosition`] for the definition of the position inside a file.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SourceLocation {
     pub filepath: String,
     pub pos: CharPosition,
@@ -78,16 +91,26 @@ impl SourceLocation {
 /// A flat resolved source (text) location.
 ///
 /// See [`CharPosition`] for the definition of the position inside a file.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FlatSourceLocation {
     pub filepath: u32,
     pub pos: CharPosition,
 }
 
+// /// A resolved file range.
+// ///
+// /// See [`CharPosition`] for the definition of the position inside a file.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CharRange {
+    pub start: CharPosition,
+    pub end: CharPosition,
+}
+
 // /// A resolved source (text) range.
 // ///
 // /// See [`CharPosition`] for the definition of the position inside a file.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SourceRange {
-    pub filepath: String,
-    pub start: CharPosition,
-    pub end: CharPosition,
+    pub path: String,
+    pub range: CharRange,
 }
