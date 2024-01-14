@@ -384,7 +384,7 @@ impl CanvasImageElem {
     }
 
     fn prepare_image(image: Arc<Image>) -> Option<impl core::future::Future<Output = ()>> {
-        let image_elem = rasterize_image(image.deref().clone()).unwrap();
+        let image_elem = rasterize_image(image.clone()).unwrap();
 
         if Self::is_image_cached(&image_elem) {
             return None;
@@ -403,7 +403,7 @@ impl CanvasImageElem {
 
         let image = &image_data.image;
 
-        let image_elem = rasterize_image(image).unwrap();
+        let image_elem = rasterize_image(image.clone()).unwrap();
         Self::load_image_cached(image, &image_elem).await;
 
         // resize image to fit the view
@@ -886,7 +886,7 @@ fn create_image() -> Option<HtmlImageElement> {
 }
 
 #[comemo::memoize]
-fn rasterize_image(_image: &Image) -> Option<HtmlImageElement> {
+fn rasterize_image(_image: Arc<Image>) -> Option<HtmlImageElement> {
     create_image()
 }
 

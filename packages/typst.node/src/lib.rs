@@ -191,7 +191,7 @@ fn create_driver(args: NodeCompileArgs) -> ZResult<CompileDriver> {
         HttpRegistry::default(),
         searcher.into(),
     );
-    world.set_inputs(Arc::new(Prehashed::new(inputs)));
+    // world.set_inputs(Arc::new(Prehashed::new(inputs)));
 
     Ok(CompileDriver {
         world,
