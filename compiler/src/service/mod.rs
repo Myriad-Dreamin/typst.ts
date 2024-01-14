@@ -13,7 +13,7 @@ use typst::{
     syntax::Span,
     World,
 };
-use typst_ts_core::{typst::prelude::*, Bytes, ImmutPath, TypstFileId};
+use typst_ts_core::{error::prelude::ZResult, typst::prelude::*, Bytes, ImmutPath, TypstFileId};
 
 pub(crate) mod diag;
 #[cfg(feature = "system-compile")]
@@ -383,4 +383,9 @@ impl From<AtFile> for EcoString {
     fn from(at: AtFile) -> Self {
         eco_format!("at file {:?}", at.0)
     }
+}
+
+pub trait EntryFileState {
+    fn set_entry_file(&mut self, path: PathBuf) -> ZResult<()>;
+    fn get_entry_file(&self) -> &PathBuf;
 }

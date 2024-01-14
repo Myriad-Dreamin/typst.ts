@@ -5,9 +5,9 @@ use std::{
 
 use crate::{NotifyApi, ShadowApi};
 use typst::{diag::SourceResult, syntax::VirtualPath, World};
-use typst_ts_core::{path::PathClean, Bytes, ImmutPath, TypstFileId};
+use typst_ts_core::{error::prelude::*, path::PathClean, Bytes, ImmutPath, TypstFileId};
 
-use super::{Compiler, WorkspaceProvider};
+use super::{Compiler, EntryFileState, WorkspaceProvider};
 
 /// CompileDriverImpl is a driver for typst compiler.
 /// It is responsible for operating the compiler without leaking implementation
@@ -130,6 +130,25 @@ impl<W: World + ShadowApi> ShadowApi for CompileDriverImpl<W> {
     #[inline]
     fn unmap_shadow(&self, path: &Path) -> typst::diag::FileResult<()> {
         self.world.unmap_shadow(path)
+    }
+}
+
+impl<W: World + ShadowApi + WorkspaceProvider> EntryFileState for CompileDriverImpl<W> {
+    fn set_entry_file(&mut self, path: PathBuf) -> ZResult<()> {
+        if !path.starts_with(&self.world.workspace_root()) {
+            return Err(error_once!(
+                "entry file path must be in workspace directory",
+                workspace_dir: self.world.workspace_root().display()
+            ));
+        }
+
+        self.entry_file = path;
+
+        Ok(())
+    }
+
+    fn get_entry_file(&self) -> &PathBuf {
+        &self.entry_file
     }
 }
 

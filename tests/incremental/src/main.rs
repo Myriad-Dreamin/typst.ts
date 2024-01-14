@@ -3,7 +3,7 @@ use std::path::Path;
 use typst::model::Document;
 use typst_ts_compiler::{
     service::{CompileDriver, CompileExporter, Compiler},
-    ShadowApi, TypstSystemWorld,
+    ShadowApiExt, TypstSystemWorld,
 };
 use typst_ts_core::{
     config::CompileOpts,

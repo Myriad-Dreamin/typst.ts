@@ -1,6 +1,6 @@
 [package]
 name = "typst-ts-web-compiler"
-description = "Compile Typst documents in JavaScript environment."
+description = "Compile Typst documents in Web environment."
 authors.workspace = true
 version.workspace = true
 license.workspace = true
