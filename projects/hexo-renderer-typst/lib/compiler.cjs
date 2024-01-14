@@ -19,9 +19,14 @@ class Compiler {
   }
 
   vector(path) {
-    return this.dyn.vector({
+    try {
+      return this.dyn.vector({
         mainFilePath: path
     });
+    } catch (e) {
+      console.log(e);
+      throw e;
+    }
   }
 }
 
