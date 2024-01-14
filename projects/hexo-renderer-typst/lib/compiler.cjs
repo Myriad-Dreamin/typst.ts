@@ -15,7 +15,7 @@ class Compiler {
   title(path) {
     return this.base.compile({
         mainFilePath: path
-    }).title;
+    }).result.title;
   }
 
   vector(path) {
