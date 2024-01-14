@@ -85,14 +85,35 @@ impl HttpRegistry {
         );
 
         self.notifier.lock().downloading(spec);
-        let client = reqwest::blocking::Client::builder().build().unwrap();
-        let reader = match client.get(url).send() {
-            Ok(response) => response,
-            Err(err) if matches!(err.status().map(|s| s.as_u16()), Some(404)) => {
-                return Err(PackageError::NotFound(spec.clone()))
+        let bytes = tokio::task::block_in_place(|| {
+            let client = reqwest::blocking::Client::builder().build().unwrap();
+            let reader = match client.get(url).send() {
+                Ok(response) => response,
+                Err(err) if matches!(err.status().map(|s| s.as_u16()), Some(404)) => {
+                    return Err(PackageError::NotFound(spec.clone()))
+                }
+                Err(err) => return Err(PackageError::NetworkFailed(Some(eco_format!("{err}")))),
+            };
+
+            let bytes = reader.bytes().map_err(|err| {
+                std::fs::remove_dir_all(package_dir).ok();
+                PackageError::NetworkFailed(Some(eco_format!("{err}")))
+            })?;
+
+            Ok(bytes)
+        })?;
+
+        if let Ok(content) = std::str::from_utf8(&bytes[..]) {
+            if content.contains("HttpStatusCode: 404") {
+                return Err(PackageError::NotFound(spec.clone()));
             }
-            Err(err) => return Err(PackageError::NetworkFailed(Some(eco_format!("{err}")))),
-        };
+            return Err(PackageError::Other(Some(eco_format!(
+                "unexpected text response: {}",
+                content
+            ))));
+        }
+
+        let reader = std::io::Cursor::new(bytes);
 
         let decompressed = flate2::read::GzDecoder::new(reader);
         tar::Archive::new(decompressed)
