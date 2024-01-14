@@ -185,13 +185,14 @@ fn create_driver(args: NodeCompileArgs) -> ZResult<CompileDriver> {
         ..CompileOpts::default()
     })?;
 
-    let mut world = TypstSystemWorld::new_raw(
+    let world = TypstSystemWorld::new_raw(
         workspace_dir.clone(),
         Vfs::new(SystemAccessModel {}),
         HttpRegistry::default(),
         searcher.into(),
     );
-    world.set_inputs(Arc::new(Prehashed::new(inputs)));
+    // world.set_inputs(Arc::new(Prehashed::new(inputs)));
+    let _ = inputs;
 
     Ok(CompileDriver {
         world,
