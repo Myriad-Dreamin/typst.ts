@@ -26,6 +26,7 @@
   "scripts": {
     "dev": "cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/",
     "install:pure": "yarn install --pure-lockfile",
+    "watch:core": "cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/",
     "build:core": "yarn workspace @myriaddreamin/typst.ts build",
     "build:pkg": "turbo build --filter=./packages/*",
     "build:proj": "turbo build --filter=./projects/*",

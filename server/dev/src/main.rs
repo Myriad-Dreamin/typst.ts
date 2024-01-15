@@ -1,6 +1,7 @@
 use clap::Parser;
 use log::info;
 use std::{path::PathBuf, process::exit};
+use tokio::io::AsyncBufReadExt;
 use typst_ts_compiler::service::features::WITH_COMPILING_STATUS_FEATURE;
 
 use typst_ts_compiler::service::{
@@ -10,7 +11,9 @@ use typst_ts_compiler::service::{
 use typst_ts_core::path::PathClean;
 use typst_ts_dev_server::{http::run_http, utils::async_continue, RunSubCommands};
 
-use typst_ts_dev_server::{CompileCorpusArgs, CompileSubCommands, Opts, Subcommands};
+use typst_ts_dev_server::{
+    CompileCorpusArgs, CompileSubCommands, Opts, Subcommands, WatchSubCommands,
+};
 
 fn main() {
     let _ = env_logger::builder()
@@ -32,6 +35,10 @@ fn main() {
                 exit(0);
             }),
         },
+        Subcommands::Watch(watch_sub) => async_continue(async move {
+            watch(watch_sub).await;
+            exit(0);
+        }),
     };
 
     #[allow(unreachable_code)]
@@ -104,4 +111,95 @@ fn compile_corpus(args: CompileCorpusArgs) {
         }
     }
     exit(0);
+}
+
+const fn yarn_cmd() -> &'static str {
+    if cfg!(windows) {
+        "yarn.cmd"
+    } else {
+        "yarn"
+    }
+}
+
+async fn watch(watch_sub: WatchSubCommands) {
+    let watch_renderer_cmd = "yarn workspace @myriaddreamin/typst-ts-renderer watch";
+    let watch_renderer_group = ("renderer", watch_renderer_cmd);
+    let watch_core_cmd = "yarn workspace @myriaddreamin/typst.ts build:dev";
+    let watch_core_group = ("core", watch_core_cmd);
+    let serve_http_cmd = "yarn dev";
+    let serve_http_group = ("http", serve_http_cmd);
+
+    let mut groups = vec![];
+
+    match watch_sub {
+        WatchSubCommands::Renderer => {
+            groups.push(watch_renderer_group);
+            groups.push(watch_core_group);
+            groups.push(serve_http_group);
+        }
+    }
+
+    let mut children = vec![];
+    // todo: color
+    for (grp, cmd) in groups {
+        log::info!("spawn group: {}", grp);
+        let args = cmd.split(' ').collect::<Vec<_>>();
+        let mut cmd = tokio::process::Command::new(if args[0] == "yarn" {
+            yarn_cmd()
+        } else {
+            args[0]
+        });
+
+        cmd.args(&args[1..])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true);
+
+        let child = cmd.spawn().unwrap();
+
+        // redirect stdout and stderr
+        // todo color missing
+        children.push(tokio::spawn(async move {
+            async fn watch_stream(
+                child: tokio::process::Child,
+                grp: &'static str,
+            ) -> std::io::Result<()> {
+                let stdout = child.stdout.unwrap();
+                let stderr = child.stderr.unwrap();
+
+                let mut stdout = tokio::io::BufReader::new(stdout).lines();
+                let mut stderr = tokio::io::BufReader::new(stderr).lines();
+
+                loop {
+                    tokio::select! {
+                        Ok(line) = stdout.next_line() => {
+                            let Some(line) = line else {
+                                continue;
+                            };
+
+                            println!("{}: {}", grp, line);
+                        }
+                        Ok(line) = stderr.next_line() => {
+                            let Some(line) = line else {
+                                continue;
+                            };
+
+                            println!("{}: {}", grp, line);
+                        }
+                        else => {
+                            return Ok(());
+                        }
+                    }
+                }
+            }
+
+            let _ = watch_stream(child, grp).await;
+            println!("{}: exited", grp);
+            std::process::exit(0);
+        }));
+    }
+
+    let _ = tokio::signal::ctrl_c().await;
+    info!("Ctrl-C received, exiting");
+    std::process::exit(0);
 }
