@@ -1,4 +1,4 @@
-import type { RenderSession } from '@myriaddreamin/typst.ts/dist/esm/renderer.mjs';
+import type { RenderSession } from '../../renderer.mjs';
 import { TypstCancellationToken } from './typst-cancel.mjs';
 
 export interface ContainerDOMState {

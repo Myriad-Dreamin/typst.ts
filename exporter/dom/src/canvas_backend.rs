@@ -49,7 +49,7 @@ impl TypstPageElem {
         ts: tiny_skia::Transform,
         panel: &web_sys::CanvasRenderingContext2d,
     ) {
-        self.g.repaint_canvas(ts, panel).await;
+        self.g.repaint_canvas(ts, panel, true).await;
     }
 }
 
@@ -95,13 +95,15 @@ impl TypstElem {
         &mut self,
         ts: tiny_skia::Transform,
         panel: &web_sys::CanvasRenderingContext2d,
+        visible: bool,
     ) {
         use TypstDomExtra::*;
 
         match &mut self.extra {
             ContentHint(_) => {}
             Group(i) => {
-                if !self.is_svg_visible {
+                let visible = visible && self.is_svg_visible;
+                if !visible {
                     self.canvas.as_ref().unwrap().realize(ts, panel).await;
                     return;
                 }
@@ -116,11 +118,12 @@ impl TypstElem {
 
                 for (p, child) in i.children.iter_mut() {
                     let ts = ts.pre_translate(p.x.0, p.y.0);
-                    child.repaint_canvas(ts, panel).await;
+                    child.repaint_canvas(ts, panel, visible).await;
                 }
             }
             Item(i) => {
-                if !self.is_svg_visible {
+                let visible = visible && self.is_svg_visible;
+                if !visible {
                     self.canvas.as_ref().unwrap().realize(ts, panel).await;
                     return;
                 }
@@ -143,19 +146,21 @@ impl TypstElem {
                 // if let TransformItem::Clip(c) = g.trans {
 
                 // }
-                i.child.repaint_canvas(ts, panel).await;
+                i.child.repaint_canvas(ts, panel, visible).await;
             }
             _ => {
-                // web_sys::console::log_1(
+                // web_sys::console::log_2(
                 //     &format!(
-                //         "repaint_canvas: {} {}",
+                //         "repaint_canvas_partial: {} {} {}",
                 //         self.f.as_svg_id("g"),
+                //         visible,
                 //         self.is_svg_visible
                 //     )
                 //     .into(),
+                //     &self.g,
                 // );
 
-                if self.is_svg_visible {
+                if visible || self.is_svg_visible {
                     return;
                 }
                 self.canvas.as_ref().unwrap().realize(ts, panel).await

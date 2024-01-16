@@ -381,8 +381,11 @@ impl TypstElem {
             ccbbox =
                 ccbbox.and_then(|r| r.transform(tiny_skia::Transform::from_scale(ppem, -ppem)));
         }
-        // web_sys::console::log_2(&bbox, &format!("retrieved_bbox {a:?} {ccbbox:?}", a
-        // = self.f.as_svg_id("")).into());
+        // web_sys::console::log_3(
+        //     &format!("retrieved_bbox {a:?} {ccbbox:?}", a =
+        // self.f.as_svg_id("")).into(),     &bbox,
+        //     &self.g,
+        // );
         self.bbox = ccbbox.map(Box::new);
         self.browser_bbox_unchecked = false;
 

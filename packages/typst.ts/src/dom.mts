@@ -177,49 +177,63 @@ export function provideDomDoc<TBase extends GConstructor<TypstDocumentContext<In
     }
 
     async doRender$dom(ctx: TypstCancellationToken) {
-      const frameOrExit = async () => {
+      const condOrExit = <T,>(needFrame: boolean, cb: () => Promise<T>) => {
+        if (needFrame && !ctx.isCancelRequested() && cb) {
+          return cb();
+        }
+      };
+      const pages = this.retrieveDOMPages().map(page => {
+        const { innerWidth, innerHeight } = window;
+        const browserBBox = page.getBoundingClientRect();
+        // any part of the page is in the window
+        return {
+          inWindow: !(
+            browserBBox.left > innerWidth ||
+            browserBBox.right < 0 ||
+            browserBBox.top > innerHeight ||
+            browserBBox.bottom < 0
+          ),
+          page,
+        };
+      });
+      const renderPage = async (i: number) => {
         await animationFrame();
-        const cancelled = ctx.isCancelRequested();
-        return cancelled;
-      };
-      const condFrameOrExit = async <T,>(needFrame: boolean, cb: () => Promise<T>) => {
-        if (!needFrame) {
-          return;
-        }
-
-        const cancelled = await frameOrExit();
-        if (!cancelled && cb) {
-          return await cb();
-        }
-      };
-
-      this.cancelAnyway$dom();
-      const pages = this.retrieveDOMPages();
-
-      for (let i = 0; i < pages.length; ++i) {
         if (ctx.isCancelRequested()) {
           console.log('cancel stage', RepaintStage.Layout, i);
           return undefined;
         }
-        const page = pages[i];
-        const v = this.getDomViewport(window, page.getBoundingClientRect());
-        const x = v.x;
-        const y = v.y;
-        const width = v.width;
-        const height = v.height;
+        const page = pages[i].page;
+        const browserBBox = page.getBoundingClientRect();
+        const v = this.getDomViewport(window, browserBBox);
 
         const needCalc = (stage: RepaintStage) =>
-          this.docKernel.need_repaint(i, x, y, width, height, stage);
+          this.docKernel.need_repaint(i, v.x, v.y, v.width, v.height, stage);
         const repaint = (stage: RepaintStage) =>
-          this.docKernel.repaint(i, x, y, width, height, stage);
+          this.docKernel.repaint(i, v.x, v.y, v.width, v.height, stage);
         const calc = (stage: RepaintStage) => {
           if (ctx.isCancelRequested()) {
             return undefined;
           }
-          return condFrameOrExit(needCalc(stage), () => repaint(stage));
+          return condOrExit(needCalc(stage), () => repaint(stage));
         };
 
         await calc(RepaintStage.Layout);
+
+        const wScale =
+          (browserBBox.width
+            ? Number.parseFloat(page.getAttribute('data-width')!) / browserBBox.width
+            : 1) * this.domScale;
+        const hScale =
+          (browserBBox.height
+            ? Number.parseFloat(page.getAttribute('data-height')!) / browserBBox.height
+            : 1) * this.domScale;
+        v.x *= wScale;
+        v.y *= hScale;
+        v.y -= 100;
+        v.width *= wScale;
+        v.height *= hScale;
+        v.height += 200;
+
         await calc(RepaintStage.Svg);
         await calc(RepaintStage.Semantics);
         if (ctx.isCancelRequested()) {
@@ -238,7 +252,27 @@ export function provideDomDoc<TBase extends GConstructor<TypstDocumentContext<In
         } else {
           await calc(RepaintStage.Canvas);
         }
+      };
+      const renderPages = async (inWindow: boolean) => {
+        for (let idx = 0; idx < pages.length; ++idx) {
+          if (ctx.isCancelRequested()) {
+            console.log('cancel page', RepaintStage.Layout, idx);
+            return;
+          }
+          if (pages[idx].inWindow === inWindow) {
+            await renderPage(idx);
+          }
+        }
+      };
+
+      this.cancelAnyway$dom();
+
+      await renderPages(true);
+      await renderPages(false);
+      if (ctx.isCancelRequested()) {
+        return;
       }
+      console.log('finished', RepaintStage.Layout);
     }
   };
 }

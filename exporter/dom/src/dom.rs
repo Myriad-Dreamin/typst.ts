@@ -159,6 +159,15 @@ impl DomPage {
 
     fn change_svg_visibility(&mut self, should_visible: bool) {
         if should_visible != self.is_visible {
+            web_sys::console::log_2(
+                &format!(
+                    "change_svg_visibility {idx} {should_visible}",
+                    idx = self.idx,
+                    should_visible = should_visible
+                )
+                .into(),
+                &self.elem,
+            );
             self.is_visible = should_visible;
             if should_visible {
                 self.stub.replace_with_with_node_1(&self.g).unwrap();
@@ -186,6 +195,11 @@ impl DomPage {
         let prev_size = self.layout_data.as_ref().map(|d| d.size);
 
         if prev_size.map(|s| s != data.size).unwrap_or(true) {
+            web_sys::console::log_2(
+                &format!("resize {idx} {data:?}", idx = self.idx).into(),
+                &self.elem,
+            );
+
             // calculate the width and height of the svg
             // todo: don't update if individual not changed
             let w = data.size.x.0;
@@ -266,6 +280,7 @@ impl DomPage {
             );
         }
 
+        self.change_svg_visibility(should_visible);
         should_visible
     }
 
@@ -452,6 +467,10 @@ impl DomPage {
         // already pulled
         // self.pull_viewport(viewport);
 
+        if self.is_visible {
+            return true;
+        }
+
         let state = self.layout_data.as_ref().unwrap();
         self.canvas_state
             .lock()
@@ -484,6 +503,10 @@ impl DomPage {
         let canvas_elem = self.realized_canvas.clone().unwrap();
         let elem = self.realized.clone();
 
+        web_sys::console::log_1(
+            &format!("canvas check: {} {}", idx, elem.lock().unwrap().is_some()).into(),
+        );
+
         #[allow(clippy::await_holding_lock)]
         return Ok(async move {
             let canvas_ctx = canvas
@@ -507,9 +530,14 @@ impl DomPage {
                     {
                         break 'render_canvas;
                     }
-                    #[cfg(feature = "debug_repaint_canvas")]
+                    // #[cfg(feature = "debug_repaint_canvas")]
                     web_sys::console::log_1(
-                        &format!("canvas state changed, render all: {}", idx).into(),
+                        &format!(
+                            "canvas state changed, render all: {} {}",
+                            idx,
+                            elem.is_none()
+                        )
+                        .into(),
                     );
 
                     canvas_ctx.clear_rect(
