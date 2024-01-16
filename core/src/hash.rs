@@ -40,6 +40,10 @@ impl Fingerprint {
         ((self.1 as u128) << 64) | self.0 as u128
     }
 
+    pub fn lower32(self) -> u32 {
+        self.0 as u32
+    }
+
     pub fn try_from_str(s: &str) -> StrResult<Self> {
         let bytes = base64::engine::general_purpose::STANDARD_NO_PAD
             .decode(&s.as_bytes()[..11])

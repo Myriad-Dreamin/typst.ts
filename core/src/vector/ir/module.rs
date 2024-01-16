@@ -3,7 +3,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     hash::Hash,
     ops::Deref,
-    sync::Arc,
+    sync::{atomic::AtomicU64, Arc},
 };
 
 use comemo::Prehashed;
@@ -15,7 +15,10 @@ use super::{preludes::*, *};
 pub type ItemMap = BTreeMap<Fingerprint, VecItem>;
 
 pub type RefItemMap = HashMap<Fingerprint, (u64, VecItem)>;
-pub type RefItemMapSync = crate::adt::CHashMap<Fingerprint, (u64, VecItem)>;
+#[cfg(feature = "item-dashmap")]
+pub type RefItemMapSync = crate::adt::CHashMap<Fingerprint, (AtomicU64, VecItem)>;
+pub type RefItemMapT<V> = crate::adt::FingerprintMap<V>;
+pub type RefItemMapSync = RefItemMapT<(AtomicU64, VecItem)>;
 
 pub trait ToItemMap {
     fn to_item_map(self) -> ItemMap;
@@ -29,7 +32,7 @@ impl ToItemMap for RefItemMap {
 
 impl ToItemMap for RefItemMapSync {
     fn to_item_map(self) -> ItemMap {
-        self.into_iter().map(|(k, (_, v))| (k, v)).collect::<_>()
+        self.into_items().map(|(k, (_, v))| (k, v)).collect::<_>()
     }
 }
 
