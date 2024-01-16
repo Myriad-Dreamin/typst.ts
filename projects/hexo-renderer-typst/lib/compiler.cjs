@@ -28,6 +28,14 @@ class Compiler {
       throw e;
     }
   }
+
+  watch(mainFilePath, callback) {
+    console.log('[typst] compiler start to notify', mainFilePath, callback);
+  }
+
+  unwatch(mainFilePath, callback) {
+    console.log('[typst] compiler stop to notify', mainFilePath, callback);
+  }
 }
 
 module.exports = Compiler;

@@ -30,7 +30,6 @@ class Renderer {
     const buf = this.compiler.vector(data.path);
     fs.mkdirSync(dataDir, { recursive: true });
     fs.writeFileSync(dataPath, buf);
-    
     console.log('[typst] render   ', data.path, 'ok');
 
     const compiled = `<script>${trampoline_js}</script>`
