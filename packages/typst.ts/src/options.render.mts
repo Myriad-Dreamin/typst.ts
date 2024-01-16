@@ -76,12 +76,12 @@ export interface MountDomOptions {
    */
   pixelPerPt?: number;
 
-  viewport: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
+  /**
+   * Set a virtual scale to the dom panel.
+   *
+   * Note: Default to `1`.
+   */
+  domScale?: number;
 }
 
 /**

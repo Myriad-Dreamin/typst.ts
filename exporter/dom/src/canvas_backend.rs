@@ -7,7 +7,7 @@ use typst_ts_core::{
     },
 };
 
-use crate::{dom::*, DomContext};
+use crate::dom::*;
 
 /// The default feature set which is used for exporting full-fledged svg.
 pub struct DefaultExportFeature;
@@ -46,7 +46,6 @@ impl TypstPageElem {
 
     pub async fn repaint_canvas(
         &mut self,
-        _ctx: &mut DomContext<'_, '_>,
         ts: tiny_skia::Transform,
         panel: &web_sys::CanvasRenderingContext2d,
     ) {

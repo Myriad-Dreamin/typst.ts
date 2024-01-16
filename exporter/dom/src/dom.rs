@@ -1,11 +1,16 @@
-use std::{cell::Cell, pin::Pin, rc::Rc};
+use std::{
+    future::Future,
+    rc::Rc,
+    sync::{Arc, Mutex},
+};
 
-use typst_ts_canvas_exporter::{CanvasAction, CanvasNode, CanvasStateGuard};
+use typst_ts_canvas_exporter::{CanvasAction, CanvasElem, CanvasNode, CanvasStateGuard};
 use typst_ts_core::{
     error::prelude::*,
     hash::Fingerprint,
     vector::ir::{Page, Point, Scalar, Size, TextItem, TransformItem},
 };
+use typst_ts_svg_exporter::Module;
 use web_sys::{
     js_sys::Reflect,
     wasm_bindgen::{JsCast, JsValue},
@@ -14,10 +19,11 @@ use web_sys::{
 };
 
 use crate::{
+    canvas_backend::CanvasBackend,
     factory::XmlFactory,
     semantics_backend::{BrowserFontMetric, SemanticsBackend},
     svg_backend::FETCH_BBOX_TIMES,
-    CheckoutMode, DomContext,
+    DomContext,
 };
 
 pub struct DomPage {
@@ -40,17 +46,15 @@ pub struct DomPage {
     /// The BBox of the page.
     bbox: tiny_skia::Rect,
     /// The realized element.
-    realized: Option<TypstPageElem>,
+    realized: Rc<Mutex<Option<TypstPageElem>>>,
     /// The realized canvas element.
     realized_canvas: Option<CanvasNode>,
     /// The flushed semantics state.
     semantics_state: Option<(Page, bool)>,
     /// The flushed canvas state.
-    canvas_state: Option<(Page, Option<Rc<Cell<bool>>>, f32)>,
+    canvas_state: Rc<Mutex<Option<(Page, f32)>>>,
     /// Whether the page is visible.
     is_visible: bool,
-    /// Whether the page is to full.
-    is_to_full: bool,
     /// The group element.
     g: Element,
     /// The stub element.
@@ -93,6 +97,8 @@ impl DomPage {
 
         // for debug canvas
         // svg.style().set_property("visibility", "hidden").unwrap();
+        // for debug svg
+        // canvas.style().set_property("visibility", "hidden").unwrap();
 
         elem.append_child(&me).unwrap();
 
@@ -111,101 +117,66 @@ impl DomPage {
             bbox,
             layout_data: None,
             dirty_layout: None,
-            realized: None,
+            realized: Rc::new(Mutex::new(None)),
             realized_canvas: None,
-            canvas_state: None,
+            canvas_state: Rc::new(Mutex::new(None)),
             semantics_state: None,
-            is_to_full: false,
         }
     }
 
     pub fn track_data(&mut self, data: &Page) -> bool {
         if self.layout_data.as_ref().map_or(false, |d| d == data) {
-            let canvas_waiting = self
-                .canvas_state
-                .as_ref()
-                .map(|(_, e, _)| e)
-                .cloned()
-                .flatten();
-            let canvas_ready = canvas_waiting.map_or(false, |e| e.get());
-            if canvas_ready {
-                web_sys::console::log_1(
-                    &format!("canvas state triggers track_data {i}", i = self.idx).into(),
-                );
-            }
-            return canvas_ready;
+            return false;
         }
 
         self.dirty_layout = Some(data.clone());
         true
     }
 
-    /// Triggle a recalculation.
-    pub async fn recalculate(
-        &mut self,
-        ctx: &mut DomContext<'_, '_>,
-        viewport: Option<tiny_skia::Rect>,
-    ) -> ZResult<Option<Pin<Box<dyn core::future::Future<Output = ()>>>>> {
-        // Update flow if needed.
-        let dirty_layout = if let Some(data) = self.dirty_layout.take() {
-            self.relayout(ctx, data)?
-        } else {
-            false
-        };
-        assert!(self.dirty_layout.is_none());
-
-        let dirty_viewport = self.pull_viewport(viewport)?;
-
-        let is_to_full = self.is_to_full;
-
-        // If there is no layout, skip the next stages.
-        // If there is no paint needed, as well.
-        if self.layout_data.is_none() || (!(dirty_viewport || dirty_layout) && is_to_full) {
-            let canvas_state = self
-                .canvas_state
-                .as_ref()
-                .map(|(_, e, _)| e)
-                .cloned()
-                .flatten();
-            if let Some(canvas_state) = canvas_state {
-                if !canvas_state.get() {
-                    return Ok(None);
-                }
-
-                web_sys::console::log_1(
-                    &format!("canvas state prepare is ready {i}", i = self.idx).into(),
-                );
-
-                return self.repaint_canvas(ctx).await;
-            }
-
-            return Ok(None);
-        }
-
-        if ctx.checkout_mode == CheckoutMode::Full {
-            // Repaint a page as svg.
-            self.repaint_svg(ctx)?;
-
-            // Repaint a page as semantics.
-            self.repaint_semantics(ctx)?;
-            #[cfg(feature = "debug_responsive_mode")]
-            web_sys::console::log_1(&"responsive mode to false".into());
-
-            self.is_to_full = true;
-        } else {
-            // Repaint a page as svg.
-            self.change_svg_visibility(false);
-            #[cfg(feature = "debug_responsive_mode")]
-            web_sys::console::log_1(&"responsive mode to true".into());
-
-            self.is_to_full = false;
-        }
-
-        // Repaint a page as canvas.
-        self.repaint_canvas(ctx).await
+    fn pull_viewport(&mut self, viewport: Option<tiny_skia::Rect>) {
+        self.viewport = viewport
+            .and_then(|viewport| {
+                tiny_skia::Rect::from_ltrb(
+                    self.bbox.left() - 1.,
+                    viewport.top(),
+                    self.bbox.right() + 1.,
+                    viewport.bottom(),
+                )
+            })
+            .unwrap_or(self.bbox);
+        #[cfg(feature = "debug_repaint")]
+        web_sys::console::log_2(
+            &format!(
+                "pull_viewport {idx} vp:{vp:?}, bbox {bbox:?}",
+                idx = self.idx,
+                vp = viewport,
+                bbox = self.bbox,
+            )
+            .into(),
+            &self.elem,
+        );
     }
 
-    fn relayout(&mut self, ctx: &mut DomContext<'_, '_>, data: Page) -> ZResult<bool> {
+    fn change_svg_visibility(&mut self, should_visible: bool) {
+        if should_visible != self.is_visible {
+            self.is_visible = should_visible;
+            if should_visible {
+                self.stub.replace_with_with_node_1(&self.g).unwrap();
+            } else {
+                self.g.replace_with_with_node_1(&self.stub).unwrap();
+            }
+        }
+    }
+
+    pub fn relayout(&mut self, ctx: &CanvasBackend) -> ZResult<()> {
+        if let Some(data) = self.dirty_layout.take() {
+            self.do_relayout(ctx, data)?
+        }
+
+        Ok(())
+    }
+
+    fn do_relayout(&mut self, ctx: &CanvasBackend, data: Page) -> ZResult<()> {
         #[cfg(feature = "debug_relayout")]
         web_sys::console::log_2(
             &format!("re-layout {idx} {data:?}", idx = self.idx).into(),
@@ -248,14 +219,14 @@ impl DomPage {
                 .unwrap();
             self.bbox = tiny_skia::Rect::from_xywh(0., 0., data.size.x.0, data.size.y.0).unwrap();
 
-            let ppp = ctx.canvas_backend.pixel_per_pt;
+            let ppp = ctx.pixel_per_pt;
             self.canvas.set_width((w * ppp) as u32);
             self.canvas.set_height((h * ppp) as u32);
-            self.canvas_state = None;
+            *self.canvas_state.lock().unwrap() = None;
             style
                 .set_property(
                     "--data-canvas-scale",
-                    &format!("{:.3}", 1. / ctx.canvas_backend.pixel_per_pt),
+                    &format!("{:.3}", 1. / ctx.pixel_per_pt),
                 )
                 .unwrap();
         }
@@ -268,60 +239,37 @@ impl DomPage {
                 &format!("dirty layout detected {idx}", idx = self.idx).into(),
                 &self.elem,
             );
-            self.change_svg_visibility(false);
-            self.realized = None;
+            // self.change_svg_visibility(false);
+            *self.realized.lock().unwrap() = None;
+            *self.canvas_state.lock().unwrap() = None;
             self.semantics_state = None;
-            self.canvas_state = None;
             self.realized_canvas = None;
             self.layout_data = Some(data);
         }
 
-        Ok(true)
+        Ok(())
     }
 
-    fn pull_viewport(&mut self, viewport: Option<tiny_skia::Rect>) -> ZResult<bool> {
-        let viewport = viewport
-            .and_then(|viewport| {
-                tiny_skia::Rect::from_ltrb(
-                    self.bbox.left() - 1.,
-                    viewport.top(),
-                    self.bbox.right() + 1.,
-                    viewport.bottom(),
+    pub fn need_repaint_svg(&mut self, viewport: Option<tiny_skia::Rect>) -> bool {
+        self.pull_viewport(viewport);
+
+        let should_visible = self.bbox.intersect(&self.viewport).is_some();
+
+        if cfg!(feature = "debug_repaint_svg") {
+            web_sys::console::log_1(
+                &format!(
+                    "need_repaint_svg({should_visible}) bbox:{bbox:?} view:{viewport:?}",
+                    bbox = self.bbox,
+                    viewport = self.viewport,
                 )
-            })
-            .unwrap_or(self.bbox);
-        #[cfg(feature = "debug_repaint")]
-        web_sys::console::log_2(
-            &format!(
-                "pull_viewport {idx} vp:{vp:?}, bbox {bbox:?}",
-                idx = self.idx,
-                vp = viewport,
-                bbox = self.bbox,
-            )
-            .into(),
-            &self.elem,
-        );
-
-        if self.viewport == viewport {
-            Ok(false)
-        } else {
-            self.viewport = viewport;
-            Ok(true)
+                .into(),
+            );
         }
+
+        should_visible
     }
 
-    fn change_svg_visibility(&mut self, should_visible: bool) {
-        if should_visible != self.is_visible {
-            self.is_visible = should_visible;
-            if should_visible {
-                self.stub.replace_with_with_node_1(&self.g).unwrap();
-            } else {
-                self.g.replace_with_with_node_1(&self.stub).unwrap();
-            }
-        }
-    }
-
-    fn repaint_svg(&mut self, ctx: &mut DomContext<'_, '_>) -> ZResult<()> {
+    pub fn repaint_svg(&mut self, ctx: &mut DomContext<'_, '_>) -> ZResult<()> {
         let should_visible = self.bbox.intersect(&self.viewport).is_some();
 
         if cfg!(feature = "debug_repaint") {
@@ -340,12 +288,14 @@ impl DomPage {
             return Ok(());
         }
 
-        if self.realized.is_none() {
+        let mut realized = self.realized.lock().unwrap();
+
+        if realized.is_none() {
             let data = self.layout_data.clone().unwrap();
 
             // Realize svg
             let g = ctx.svg_backend.render_page(ctx.module, &data, &self.g);
-            self.realized = Some(TypstPageElem::from_elem(ctx, g, data));
+            *realized = Some(TypstPageElem::from_elem(ctx, g, data));
 
             // window.bindSvgDom
             let bind_dom_handler = window().unwrap();
@@ -360,7 +310,7 @@ impl DomPage {
 
         let ts = tiny_skia::Transform::identity();
 
-        if let Some(attached) = &mut self.realized {
+        if let Some(attached) = realized.as_mut() {
             if cfg!(feature = "debug_repaint_svg") {
                 web_sys::console::log_2(
                     &format!(
@@ -392,7 +342,14 @@ impl DomPage {
         Ok(())
     }
 
-    fn repaint_semantics(&mut self, ctx: &mut DomContext<'_, '_>) -> ZResult<()> {
+    pub fn need_repaint_semantics(&mut self) -> bool {
+        self.semantics_state.as_ref().map_or(true, |e| {
+            let (data, layout_heavy) = e;
+            e.0.content != data.content || (self.is_visible && !*layout_heavy)
+        })
+    }
+
+    pub fn repaint_semantics(&mut self, ctx: &mut DomContext<'_, '_>) -> ZResult<()> {
         let init_semantics = self.semantics_state.as_ref().map_or(true, |e| {
             let (data, _layout_heavy) = e;
             e.0.content != data.content
@@ -404,6 +361,7 @@ impl DomPage {
             let do_heavy = self.is_visible;
 
             let data = self.layout_data.clone().unwrap();
+            #[cfg(feature = "debug_repaint_semantics")]
             web_sys::console::log_1(
                 &format!("init semantics({do_heavy}): {} {:?}", self.idx, data).into(),
             );
@@ -437,140 +395,154 @@ impl DomPage {
         Ok(())
     }
 
-    async fn repaint_canvas(
-        &mut self,
-        ctx: &mut DomContext<'_, '_>,
-    ) -> ZResult<Option<Pin<Box<dyn core::future::Future<Output = ()>>>>> {
-        let render_entire_page = self.realized.is_none() || !self.is_visible;
+    pub fn need_prepare_canvas(&mut self, module: &Module, b: &mut CanvasBackend) -> ZResult<bool> {
+        // already pulled
+        // self.pull_viewport(viewport);
 
-        // todo incremental
-        if self.realized_canvas.is_none() {
-            let data = self.layout_data.as_ref().unwrap();
-            self.realized_canvas = Some(ctx.canvas_backend.render_page(ctx.module, data)?);
+        let need_repaint = self.need_repaint_canvas(b);
+
+        if need_repaint {
+            let data = self.layout_data.clone().unwrap();
+
+            // todo incremental
+            if self.realized_canvas.is_none() {
+                self.realized_canvas = Some(b.render_page(module, &data)?);
+            }
+
+            let should_load_resource = self.realized_canvas.as_ref().unwrap().prepare().is_some();
+
+            #[cfg(feature = "debug_repaint_canvas")]
+            web_sys::console::log_1(
+                &format!(
+                    "canvas state prepare({}), should_load_resource:{}",
+                    self.idx, should_load_resource
+                )
+                .into(),
+            );
+
+            return Ok(should_load_resource);
         }
 
-        if let Some(attached) = &mut self.realized {
+        Ok(false)
+    }
+
+    pub fn prepare_canvas(
+        &mut self,
+        ctx: &mut DomContext<'_, '_>,
+    ) -> ZResult<Option<Arc<CanvasElem>>> {
+        let need_repaint = self.need_repaint_canvas(ctx.canvas_backend);
+
+        let res = if need_repaint {
+            let data = self.layout_data.clone().unwrap();
+
+            // todo incremental
+            if self.realized_canvas.is_none() {
+                self.realized_canvas = Some(ctx.canvas_backend.render_page(ctx.module, &data)?);
+            }
+
+            Some(self.realized_canvas.clone().unwrap())
+        } else {
+            None
+        };
+
+        Ok(res)
+    }
+
+    pub fn need_repaint_canvas(&mut self, b: &CanvasBackend) -> bool {
+        // already pulled
+        // self.pull_viewport(viewport);
+
+        let state = self.layout_data.as_ref().unwrap();
+        self.canvas_state
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map_or(true, |(x, y)| x != state || *y != b.pixel_per_pt)
+    }
+
+    pub fn repaint_canvas(&mut self, ppp: f32) -> ZResult<impl Future<Output = ()>> {
+        let render_entire_page = self.realized.lock().unwrap().is_none() || !self.is_visible;
+
+        // todo incremental
+        // if self.realized_canvas.is_none() {
+        //     let data = self.layout_data.as_ref().unwrap();
+        //     self.realized_canvas = Some(ctx.canvas_backend.render_page(ctx.module,
+        // data)?); }
+
+        if let Some(attached) = self.realized.lock().unwrap().as_mut() {
             if attached.g.canvas.is_none() {
                 attached.attach_canvas(self.realized_canvas.clone().unwrap());
             }
         };
 
-        let ppp = ctx.canvas_backend.pixel_per_pt;
-        let need_prepare = 'prepare_canvas: {
-            let state = self.layout_data.clone().unwrap();
+        let canvas = self.canvas.clone();
 
-            if self.canvas_state.as_ref().map_or(false, |(_, waiting, _)| {
-                waiting.is_some() && !waiting.as_ref().unwrap().get()
-            }) {
-                return Ok(None);
-            }
-
-            if self.canvas_state.as_ref().map_or(false, |(_, waiting, _)| {
-                waiting.is_some() && waiting.as_ref().unwrap().get()
-            }) {
-                break 'prepare_canvas None;
-            }
-
-            let preparing_canvas = self.realized_canvas.as_ref().unwrap().prepare();
-            #[cfg(feature = "debug_repaint_canvas")]
-            web_sys::console::log_1(
-                &format!(
-                    "canvas state prepare, render all: {} {}",
-                    self.idx,
-                    canvas.is_some()
-                )
-                .into(),
-            );
-
-            let g = Rc::new(Cell::new(false));
-            let f = g.clone();
-            let i = self.idx;
-            let preparing_canvas = preparing_canvas.map(move |action| {
-                let f = f.clone();
-                async move {
-                    action.await;
-                    f.set(true);
-                    web_sys::console::log_1(&format!("canvas state prepare done {i}").into());
-                }
-            });
-
-            self.canvas_state = Some((state, preparing_canvas.as_ref().map(|_| g), ppp));
-
-            preparing_canvas
-        };
-
-        if let Some(action) = need_prepare {
-            type DynFutureBox = Pin<Box<dyn core::future::Future<Output = ()>>>;
-            let b: DynFutureBox = Box::pin(action);
-            return Ok(Some(b));
-        }
-
-        let canvas_ctx = self
-            .canvas
-            .get_context("2d")
-            .unwrap()
-            .unwrap()
-            .dyn_into::<web_sys::CanvasRenderingContext2d>()
-            .unwrap();
-
+        let idx = self.idx;
         let ts = tiny_skia::Transform::from_scale(ppp, ppp);
+        let state = self.layout_data.clone().unwrap();
+        let canvas_state = self.canvas_state.clone();
+        let canvas_elem = self.realized_canvas.clone().unwrap();
+        let elem = self.realized.clone();
 
-        'render_canvas: {
-            let _global_guard = CanvasStateGuard::new(&canvas_ctx);
+        #[allow(clippy::await_holding_lock)]
+        return Ok(async move {
+            let canvas_ctx = canvas
+                .get_context("2d")
+                .unwrap()
+                .unwrap()
+                .dyn_into::<web_sys::CanvasRenderingContext2d>()
+                .unwrap();
 
-            let state = self.layout_data.clone().unwrap();
-            if render_entire_page {
-                if self.canvas_state.as_ref().map_or(false, |(x, e, y)| {
-                    *x == state && e.as_ref().map_or(false, |e| !e.get()) && *y == ppp
-                }) {
-                    break 'render_canvas;
+            let mut elem = elem.lock().unwrap();
+
+            'render_canvas: {
+                let _global_guard = CanvasStateGuard::new(&canvas_ctx);
+
+                if render_entire_page {
+                    if canvas_state
+                        .lock()
+                        .unwrap()
+                        .as_ref()
+                        .map_or(false, |(x, y)| *x == state && *y == ppp)
+                    {
+                        break 'render_canvas;
+                    }
+                    #[cfg(feature = "debug_repaint_canvas")]
+                    web_sys::console::log_1(
+                        &format!("canvas state changed, render all: {}", idx).into(),
+                    );
+
+                    canvas_ctx.clear_rect(
+                        0.,
+                        0.,
+                        (state.size.x.0 * ppp) as f64,
+                        (state.size.y.0 * ppp) as f64,
+                    );
+
+                    *canvas_state.lock().unwrap() = Some((state, ppp));
+
+                    canvas_elem.realize(ts, &canvas_ctx).await;
+                } else {
+                    // #[cfg(feature = "debug_repaint_canvas")]
+                    web_sys::console::log_1(&format!("canvas partial render: {}", idx).into());
+
+                    let Some(elem) = elem.as_mut() else {
+                        panic!("realized is none for partial canvas render");
+                    };
+
+                    // todo: memorize canvas fill
+                    canvas_ctx.clear_rect(
+                        0.,
+                        0.,
+                        (state.size.x.0 * ppp) as f64,
+                        (state.size.y.0 * ppp) as f64,
+                    );
+
+                    *canvas_state.lock().unwrap() = None;
+                    elem.repaint_canvas(ts, &canvas_ctx).await;
                 }
-                // #[cfg(feature = "debug_repaint_canvas")]
-                web_sys::console::log_1(
-                    &format!("canvas state changed, render all: {}", self.idx).into(),
-                );
-
-                let canvas = self.realized_canvas.as_ref().unwrap();
-
-                canvas_ctx.clear_rect(
-                    0.,
-                    0.,
-                    (state.size.x.0 * ppp) as f64,
-                    (state.size.y.0 * ppp) as f64,
-                );
-
-                self.canvas_state = Some((state, None, ppp));
-
-                canvas.realize(ts, &canvas_ctx).await;
-            } else {
-                // #[cfg(feature = "debug_repaint_canvas")]
-                web_sys::console::log_1(&format!("canvas partial render: {}", self.idx).into());
-
-                let Some(attached) = &mut self.realized else {
-                    panic!("realized is none for partial canvas render");
-                };
-
-                // todo: memorize canvas fill
-                canvas_ctx.clear_rect(
-                    0.,
-                    0.,
-                    (state.size.x.0 * ppp) as f64,
-                    (state.size.y.0 * ppp) as f64,
-                );
-                self.canvas_state = None;
-                attached.repaint_canvas(ctx, ts, &canvas_ctx).await;
             }
-        }
-
-        Ok(None)
-    }
-
-    pub fn uncommitted_height(&self) -> f32 {
-        if let Some(e) = self.dirty_layout.as_ref() {
-            e.size.y.0
-        } else {
-            self.bbox.height()
-        }
+        });
     }
 }
 

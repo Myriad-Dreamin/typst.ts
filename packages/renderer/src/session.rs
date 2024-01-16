@@ -9,8 +9,6 @@ use typst_ts_core::{
         ir::{Page, Scalar},
     },
 };
-#[cfg(feature = "render_dom")]
-use typst_ts_dom_exporter::IncrDomDocClient;
 #[cfg(feature = "render_svg")]
 use typst_ts_svg_exporter::IncrSvgDocClient;
 use wasm_bindgen::prelude::*;
@@ -181,9 +179,6 @@ pub struct RenderSession {
     /// underlying incremental state of svg rendering
     #[cfg(feature = "render_svg")]
     pub(crate) svg_kern: Arc<Mutex<IncrSvgDocClient>>,
-    /// underlying incremental state of dom rendering
-    #[cfg(feature = "render_dom")]
-    pub(crate) dom_kern: Arc<Mutex<IncrDomDocClient>>,
 }
 
 #[wasm_bindgen]
@@ -257,10 +252,6 @@ impl RenderSession {
         if cfg!(feature = "render_svg") {
             let mut svg_kern = self.svg_kern.lock().unwrap();
             svg_kern.reset();
-        }
-        if cfg!(feature = "render_dom") {
-            let mut dom_kern = self.dom_kern.lock().unwrap();
-            dom_kern.reset();
         }
         Self::merge_delta_inner(&mut self.pages_info, &mut client, delta)
     }

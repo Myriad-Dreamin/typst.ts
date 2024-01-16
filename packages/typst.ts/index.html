@@ -137,126 +137,24 @@
               .then(buffer => new Uint8Array(buffer));
 
             const appElem = document.getElementById('typst-app');
-            let rerenderOverhead = 0;
-            let isRendering = false;
-            let renderResponsive = undefined;
-
-            function getViewport(appElem) {
-              const domScale = 1.5;
-              const appPos = appElem.getBoundingClientRect();
-              const left = appPos.left;
-              const top = -appPos.top;
-              const right = window.innerWidth;
-              const bottom = window.innerHeight - appPos.top;
-              const rect = {
-                x: 0,
-                y: top / domScale,
-                width: Math.max(right - left, 0) / domScale,
-                height: Math.max(bottom - top, 0) / domScale,
-              };
-              if (rect.width <= 0 || rect.height <= 0) {
-                rect.x = rect.y = rect.width = rect.height = 0;
-              }
-              // console.log('ccc', basePos, appPos, rect);
-              return rect;
-            }
 
             plugin.runWithSession(
               ses =>
                 new Promise(async dispose => {
-                  plugin.manipulateData({ renderSession: ses, data: artifactData });
-                  let session = ses;
-
-                  const isWaitForRendering = () => {
-                    return appElem.hasAttribute('data-wait-render');
-                  };
-
                   const t = performance.now();
-                  await plugin.renderDom({
+                  const dom = await plugin.renderDom({
                     renderSession: ses,
                     container: appElem,
-                    backgroundColor: '#343541', // '#ffffff', //
                     pixelPerPt: 4.5,
-                    viewport: getViewport(appElem),
+                    domScale: 1.5,
                   });
                   console.log('render time!!!!!!!!!', performance.now() - t);
+                  console.log(dom);
 
-                  function queueRerender(stack) {
-                    if (renderResponsive === undefined) {
-                      if (stack) {
-                        console.log('skip', stack);
-                      }
-                      isRendering = false;
-                      return;
-                    }
-                    isRendering = true;
-                    let responsive = renderResponsive === false ? false : true;
-                    renderResponsive = undefined;
-                    const t = performance.now();
-                    console.log('rerender, overhead: ', rerenderOverhead);
+                  dom.addChangement(['new', artifactData]);
 
-                    plugin
-                      .triggerDomRerender({
-                        renderSession: session,
-                        responsive,
-                        viewport: getViewport(appElem),
-                      })
-                      .then(() => {
-                        const rTime = performance.now() - t;
-                        if (!responsive) {
-                          rerenderOverhead = rTime + rerenderOverhead * 0.5;
-                          window.rerenderOverhead = rerenderOverhead;
-                        }
-                        if (stack) {
-                          console.log('pull render', rTime, responsive, stack);
-                        }
-
-                        return queueRerender();
-                      });
-                  }
-
-                  const checkAndRerender = (r, stack) => {
-                    if (r !== true && r !== false) {
-                      throw new Error('invalid responsive');
-                    }
-                    if (r === false) {
-                      renderResponsive = false;
-                    } else if (renderResponsive !== false) {
-                      renderResponsive = true;
-                    }
-
-                    if (stack) {
-                      console.log('submit', stack);
-                    }
-
-                    if (!isRendering) {
-                      queueRerender(stack);
-                    }
-                  };
-
-                  let responsiveTimeout = undefined;
-                  let responsiveTimeout2 = undefined;
-                  const responsiveAction = stack => {
-                    stack ||= window.captureStack();
-                    clearTimeout(responsiveTimeout);
-                    clearTimeout(responsiveTimeout2);
-                    console.log('responsiveAction', rerenderOverhead, stack);
-                    responsiveTimeout = setTimeout(
-                      () => {
-                        clearTimeout(responsiveTimeout);
-                        clearTimeout(responsiveTimeout2);
-                        checkAndRerender(true, stack);
-                        responsiveTimeout2 = setTimeout(
-                          () => checkAndRerender(false, stack),
-                          Math.max(200, rerenderOverhead * 2.5),
-                        );
-                      },
-                      Math.max(10, rerenderOverhead * 1.1),
-                    );
-                  };
-
-                  window.addEventListener('resize', responsiveAction);
-                  window.addEventListener('scroll', responsiveAction);
+                  window.addEventListener('resize', () => dom.addViewportChange());
+                  window.addEventListener('scroll', () => dom.addViewportChange());
 
                   void dispose;
                 }),

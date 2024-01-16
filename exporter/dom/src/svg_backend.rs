@@ -15,7 +15,7 @@ use typst_ts_svg_exporter::{
 };
 use web_sys::{wasm_bindgen::JsCast, Element, SvgGraphicsElement};
 
-use crate::{dom::*, factory::XmlFactory, DomContext, HookedElement};
+use crate::{dom::*, factory::XmlFactory, DomContext};
 
 /// The feature set which is used for exporting incremental rendered svg.
 pub struct IncrementalSvgExportFeature;
@@ -56,11 +56,13 @@ impl SvgBackend {
         self.factory.create_element(html)
     }
 
-    pub(crate) fn populate_glyphs(&mut self, ctx: &mut IncrDocClient, elem: &HookedElement) {
+    pub(crate) fn populate_glyphs(&mut self, ctx: &mut IncrDocClient) -> Option<String> {
+        if ctx.glyphs.len() <= self.glyph_window {
+            return None;
+        }
+
         let mut svg = Vec::<SvgText>::new();
-        // var t = document.createElement('template');
-        // t.innerHTML = html;
-        // return t.content;
+
         svg.push(r#"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml"><defs class="glyph">"#.into());
         let glyphs = ctx.glyphs.iter();
         // skip the glyphs that are already rendered
@@ -70,11 +72,9 @@ impl SvgBackend {
         svg.extend(glyph_defs);
         svg.push("</defs></svg>".into());
 
-        let svg = self.create_element(&SvgText::join(svg));
-        let content = svg.first_element_child().unwrap();
-
-        elem.resource_header.append_child(&content).unwrap();
         self.glyph_window = ctx.glyphs.len();
+
+        Some(SvgText::join(svg))
     }
 
     pub(crate) fn render_page(
@@ -136,12 +136,6 @@ impl TypstPageElem {
         // web_sys::console::log_2(&g, &format!("attach {a:?}", a =
         // data.as_svg_id("")).into());
 
-        // let children = vec![];
-        // GroupDom {
-        //     g,
-        //     f,
-        //     children,
-        // }
         let stub = ctx.create_stub();
         // g.replace_with_with_node_1(&stub).unwrap();
 

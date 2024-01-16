@@ -1,10 +1,10 @@
-use core::fmt;
 use std::{
     ops::Deref,
-    sync::{Arc, Mutex, MutexGuard},
+    sync::{Arc, Mutex},
 };
 
-use tiny_skia::Transform;
+use js_sys::Reflect;
+use typst_ts_canvas_exporter::{CanvasAction, CanvasElem};
 use typst_ts_core::{
     error::prelude::*,
     hash::Fingerprint,
@@ -13,7 +13,7 @@ use typst_ts_core::{
         ir::{FontItem, FontRef, LayoutRegionNode, Module, Page, VecItem},
     },
 };
-use wasm_bindgen_futures::spawn_local;
+use wasm_bindgen::prelude::*;
 use web_sys::{wasm_bindgen::JsCast, Element, HtmlElement};
 
 use crate::{
@@ -22,120 +22,34 @@ use crate::{
 
 pub type IncrDOMDocServer = IncrDocServer;
 
-// const NULL_PAGE: Fingerprint = Fingerprint::from_u128(1);
-
-// struct DoRender ();
-
-pub struct RenderTaskThis<'a> {
-    pub cli_self: &'a mut IncrDomDocClient,
-    pub cli_kern: &'a mut IncrDocClient,
-}
-
-pub enum RenderFuture {
-    Generic(Box<dyn FnOnce(RenderTaskThis<'_>) -> RenderTask>),
-    RecalcPage(usize, Transform),
-}
-
-impl fmt::Debug for RenderFuture {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            RenderFuture::Generic(_) => f.debug_struct("Generic").finish(),
-            RenderFuture::RecalcPage(i, ts) => f
-                .debug_struct("RecalcPage")
-                .field("i", i)
-                .field("ts", ts)
-                .finish(),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct RenderMicroTask {
-    pub then: RenderFuture,
-    pub cancel: Option<RenderFuture>,
-}
-
-#[derive(Default, Clone)]
-pub struct RenderTask(Arc<Mutex<Vec<RenderMicroTask>>>);
-
-impl RenderTask {
-    pub fn is_finished(&self) -> bool {
-        self.0.lock().unwrap().is_empty()
-    }
-
-    pub fn transact(&self) -> MutexGuard<'_, Vec<RenderMicroTask>> {
-        self.0.lock().unwrap()
-    }
-}
-
 #[derive(Default)]
 enum TrackMode {
     #[default]
     Document,
 }
 
-#[derive(Default, PartialEq, Eq)]
-pub struct RecalcMode {
-    is_responsive: bool,
-    is_reschedule: bool,
-}
-
-impl RecalcMode {
-    fn resp(r: bool) -> Self {
-        Self {
-            is_responsive: r,
-            ..Default::default()
-        }
-    }
-
-    fn sche(r: bool) -> Self {
-        Self {
-            is_reschedule: true,
-            is_responsive: r,
-        }
-    }
-}
-
-#[derive(Default, PartialEq, Eq)]
-pub enum CheckoutMode {
-    #[default]
-    Full,
-    Responsive,
-}
-
-pub enum DOMChanges {
-    /// Change the element to track.
-    Unmount(HtmlElement),
-    /// Change the element to track.
-    Mount(HtmlElement),
-    /// Change viewport.
-    Viewport(Option<tiny_skia::Rect>),
-    /// Recalculate in/out responsive loop
-    Recalc(RecalcMode, RenderTask),
-}
-
 #[derive(Debug, Clone)]
 pub struct HookedElement {
     pub hooked: HtmlElement,
-    pub resource_header: Element,
 }
 
 /// maintains the state of the incremental rendering at client side
 #[derive(Default)]
+#[wasm_bindgen]
 pub struct IncrDomDocClient {
+    /// underlying communication client model
+    client: Option<Arc<Mutex<IncrDocClient>>>,
     tmpl: XmlFactory,
     stub: once_cell::sync::OnceCell<Element>,
     /// Expected exact state of the current DOM.
     /// Initially it is None meaning no any page is rendered.
     doc_view: Vec<DomPage>,
-    /// Track mode.
-    track_mode: TrackMode,
     /// The element to track.
     elem: Option<HookedElement>,
     /// The viewport.
     viewport: Option<tiny_skia::Rect>,
-    /// Shared render task
-    task: RenderTask,
+    /// populate glyphs callback
+    populate_glyphs: Option<js_sys::Function>,
 
     /// Backend for rendering vector IR as SVG.
     svg_backend: SvgBackend,
@@ -143,11 +57,178 @@ pub struct IncrDomDocClient {
     canvas_backend: CanvasBackend,
 }
 
+const STAGE_LAYOUT: u8 = 0;
+const STAGE_SVG: u8 = 1;
+const STAGE_SEMANTICS: u8 = 2;
+const STAGE_PREPARE_CANVAS: u8 = 3;
+const STAGE_CANVAS: u8 = 4;
+
+#[wasm_bindgen]
+impl IncrDomDocClient {
+    pub fn bind_functions(&mut self, functions: JsValue) {
+        // let populate_glyphs = functions.get("populateGlyphs").unwrap();
+        let populate_glyphs = Reflect::get(&functions, &"populateGlyphs".into()).unwrap();
+        self.populate_glyphs = Some(populate_glyphs.dyn_into().unwrap());
+    }
+
+    /// Relayout the document in the given window.
+    pub async fn relayout(&mut self, x: f32, y: f32, w: f32, h: f32) -> ZResult<bool> {
+        // todo: overflow
+        let viewport = Some(tiny_skia::Rect::from_xywh(x, y, w, h).unwrap());
+
+        let kern = self.client.clone().unwrap();
+        let mut kern = kern.lock().unwrap();
+
+        self.checkout_layout(&mut kern, viewport);
+        let viewport_dirty = self.viewport != viewport;
+        self.viewport = viewport;
+
+        let page_dirty = self.retrack_pages(&mut kern, self.elem.clone().unwrap())?;
+
+        Ok(viewport_dirty || page_dirty)
+    }
+
+    pub fn need_repaint(
+        &mut self,
+        page_num: u32,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        stage: u8,
+    ) -> ZResult<bool> {
+        // todo: overflow
+        let viewport = Some(tiny_skia::Rect::from_xywh(x, y, w, h).unwrap());
+        #[cfg(feature = "debug_recalc_stage")]
+        web_sys::console::log_1(
+            &format!("need_repaint page:{page_num} stage:{stage} {viewport:?}").into(),
+        );
+
+        let kern = self.client.clone().unwrap();
+        let kern = kern.lock().unwrap();
+        let page = &mut self.doc_view[page_num as usize];
+
+        match stage {
+            STAGE_LAYOUT => Ok({
+                page.relayout(&self.canvas_backend)?;
+                false
+            }),
+            STAGE_SVG => Ok(page.need_repaint_svg(viewport)),
+            STAGE_SEMANTICS => Ok(page.need_repaint_semantics()),
+            STAGE_PREPARE_CANVAS => {
+                page.need_prepare_canvas(kern.module(), &mut self.canvas_backend)
+            }
+            STAGE_CANVAS => Ok(page.need_repaint_canvas(&self.canvas_backend)),
+            _ => todo!(),
+        }
+    }
+
+    // rust produces false positive on repaint
+    fn repaint_false_positive(
+        &mut self,
+        page_num: u32,
+        stage: u8,
+    ) -> ZResult<Option<Arc<CanvasElem>>> {
+        let kern = self.client.clone().unwrap();
+        let kern_lock = kern.lock().unwrap();
+
+        let mut ctx = DomContext {
+            tmpl: self.tmpl.clone(),
+            stub: self.stub().clone(),
+            module: kern_lock.module(),
+            svg_backend: &mut self.svg_backend,
+            canvas_backend: &mut self.canvas_backend,
+        };
+
+        let page = &mut self.doc_view[page_num as usize];
+
+        match stage {
+            STAGE_SVG => {
+                page.repaint_svg(&mut ctx)?;
+                Ok(None)
+            }
+            STAGE_SEMANTICS => {
+                page.repaint_semantics(&mut ctx)?;
+
+                Ok(None)
+            }
+            STAGE_PREPARE_CANVAS => {
+                let elem = page.prepare_canvas(&mut ctx)?;
+
+                Ok(elem)
+            }
+            STAGE_CANVAS => Ok(None),
+            _ => todo!(),
+        }
+    }
+
+    pub fn repaint(
+        &mut self,
+        page_num: u32,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
+        stage: u8,
+    ) -> ZResult<JsValue> {
+        // todo: overflow
+        let _viewport = Some(tiny_skia::Rect::from_xywh(x, y, w, h).unwrap());
+        #[cfg(feature = "debug_recalc_stage")]
+        web_sys::console::log_1(
+            &format!("repaint page:{page_num} stage:{stage} {_viewport:?}").into(),
+        );
+
+        let elem = self.repaint_false_positive(page_num, stage)?;
+
+        match stage {
+            STAGE_SVG => Ok(()),
+            STAGE_SEMANTICS => Ok(()),
+            STAGE_PREPARE_CANVAS => {
+                if let Some(elem) = elem {
+                    #[cfg(feature = "debug_repaint_canvas")]
+                    web_sys::console::log_1(&format!("canvas state prepare: {}", page_num).into());
+                    if let Some(fut) = elem.prepare() {
+                        return Ok(wasm_bindgen_futures::future_to_promise(async move {
+                            fut.await;
+
+                            Ok(JsValue::UNDEFINED)
+                        })
+                        .into());
+                    }
+                    web_sys::console::log_1(
+                        &format!("canvas state prepare done: {}", page_num).into(),
+                    );
+                }
+
+                Ok(())
+            }
+            STAGE_CANVAS => {
+                let ppp = self.canvas_backend.pixel_per_pt;
+                let page = &mut self.doc_view[page_num as usize];
+                let fut = page.repaint_canvas(ppp)?;
+                return Ok(wasm_bindgen_futures::future_to_promise(async move {
+                    fut.await;
+
+                    Ok(JsValue::UNDEFINED)
+                })
+                .into());
+            }
+            _ => todo!(),
+        }?;
+
+        Ok(JsValue::UNDEFINED)
+    }
+}
+
 impl IncrDomDocClient {
     pub fn new() -> Self {
         Self {
             ..Default::default()
         }
+    }
+
+    pub fn set_client(&mut self, client: Arc<Mutex<IncrDocClient>>) {
+        self.client = Some(client);
     }
 
     fn stub(&self) -> &Element {
@@ -218,254 +299,7 @@ impl IncrDomDocClient {
         kern.set_layout(layout.1.clone());
     }
 
-    pub fn reset(&mut self) {}
-
-    /// Render the document in the given window.
-    pub async fn mount(
-        &mut self,
-        kern: &mut IncrDocClient,
-        elem: HtmlElement,
-        viewport: Option<tiny_skia::Rect>,
-    ) -> ZResult<RenderTask> {
-        self.batch_dom_events(
-            kern,
-            vec![
-                DOMChanges::Mount(elem),
-                DOMChanges::Viewport(viewport),
-                DOMChanges::Recalc(RecalcMode::resp(false), self.task.clone()),
-            ],
-        )
-        .await
-    }
-
-    /// Render the document in the given window.
-    pub async fn rerender(
-        &mut self,
-        kern: &mut IncrDocClient,
-        viewport: Option<tiny_skia::Rect>,
-        is_responsive: bool,
-    ) -> ZResult<RenderTask> {
-        self.batch_dom_events(
-            kern,
-            vec![
-                DOMChanges::Viewport(viewport),
-                DOMChanges::Recalc(RecalcMode::resp(is_responsive), self.task.clone()),
-            ],
-        )
-        .await
-    }
-
-    /// Render the document in the given window.
-    pub async fn reschedule(
-        &mut self,
-        kern: &mut IncrDocClient,
-        render_task: RenderTask,
-        is_responsive: bool,
-    ) -> ZResult<RenderTask> {
-        self.batch_dom_events(
-            kern,
-            vec![DOMChanges::Recalc(
-                RecalcMode::sche(is_responsive),
-                render_task,
-            )],
-        )
-        .await
-    }
-
-    fn cancel_rendering(&self, _kern: &mut IncrDocClient) {
-        let mut tasks = self.task.transact();
-        if !tasks.is_empty() {
-            // todo: call cancel
-            tasks.clear();
-        }
-    }
-}
-
-impl IncrDomDocClient {
-    /// Emit a batch of changes.
-    async fn batch_dom_events(
-        &mut self,
-        kern: &mut IncrDocClient,
-        changes: impl IntoIterator<Item = DOMChanges>,
-    ) -> ZResult<RenderTask> {
-        for change in changes {
-            match change {
-                DOMChanges::Unmount(elem) => {
-                    self.cancel_rendering(kern);
-
-                    if !matches!(self.elem, Some(ref e) if e.hooked == elem) {
-                        return Err(error_once!("not mounted or mismatched"));
-                    }
-
-                    self.elem = None;
-                }
-                DOMChanges::Mount(elem) => {
-                    if let Some(old_elem) = self.elem.as_ref() {
-                        return Err(error_once!(
-                            "already mounted to",
-                            old_elem: format!("{:?}", old_elem.hooked)
-                        ));
-                    }
-
-                    // create typst-svg-resources by string
-                    elem.set_inner_html(
-                        r#"<svg class="typst-svg-resources" viewBox="0 0 0 0" width="0" height="0" style="opacity: 0; position: absolute;"></svg>"#,
-                    );
-                    self.elem = Some(HookedElement {
-                        hooked: elem.clone(),
-                        resource_header: elem
-                            .get_elements_by_tag_name("svg")
-                            .item(0)
-                            .unwrap()
-                            .dyn_into()
-                            .unwrap(),
-                    });
-                    self.svg_backend.reset();
-                    self.canvas_backend.reset();
-                }
-                DOMChanges::Viewport(viewport) => {
-                    self.viewport = viewport;
-
-                    self.checkout_layout(kern, viewport);
-                }
-                DOMChanges::Recalc(mode, task) => {
-                    if let Some(elem) = &self.elem {
-                        return self.recalculate(kern, elem.clone(), mode, task).await;
-                    } else {
-                        self.cancel_rendering(kern);
-                    }
-                }
-            }
-        }
-
-        Ok(self.task.clone())
-    }
-
-    #[allow(clippy::await_holding_lock)]
-    async fn recalculate(
-        &mut self,
-        kern: &mut IncrDocClient,
-        elem: HookedElement,
-        checkout_mode: RecalcMode,
-        task: RenderTask,
-    ) -> ZResult<RenderTask> {
-        let mut tasks = task.transact();
-
-        let RecalcMode {
-            is_responsive,
-            is_reschedule,
-        } = checkout_mode;
-
-        web_sys::console::log_1(
-            &format!(
-                "dom task({is_responsive},{is_reschedule}) recalculate: {:?}",
-                tasks
-            )
-            .into(),
-        );
-
-        if is_reschedule && tasks.is_empty() {
-            web_sys::console::log_1(&format!("bad dom task: {:?}", tasks).into());
-
-            drop(tasks);
-            return Ok(task);
-        }
-
-        if tasks.len() > 1 {
-            todo!()
-        }
-
-        let checkout_mode = if is_responsive {
-            CheckoutMode::Responsive
-        } else {
-            CheckoutMode::Full
-        };
-
-        let ret = if !tasks.is_empty() {
-            let micro_task = tasks.pop().unwrap();
-            web_sys::console::log_1(&format!("exec dom micro_task: {:?}", micro_task).into());
-            match micro_task.then {
-                RenderFuture::Generic(f) => {
-                    return Ok(f(RenderTaskThis {
-                        cli_self: self,
-                        cli_kern: kern,
-                    }))
-                }
-                RenderFuture::RecalcPage(i, ts) => {
-                    let mut ctx = DomContext {
-                        tmpl: self.tmpl.clone(),
-                        stub: self.stub().clone(),
-                        module: kern.module(),
-                        svg_backend: &mut self.svg_backend,
-                        canvas_backend: &mut self.canvas_backend,
-                        checkout_mode,
-                    };
-
-                    let page = &mut self.doc_view[i];
-
-                    let unfinished = page
-                        .recalculate(
-                            &mut ctx,
-                            self.viewport
-                                .and_then(|e: tiny_skia_path::Rect| e.transform(ts)),
-                        )
-                        .await?;
-
-                    if let Some(unfinished) = unfinished {
-                        let idx = i;
-                        spawn_local(async move {
-                            web_sys::console::log_1(&format!("dom task unfinished: {idx}").into());
-                            unfinished.await;
-                            web_sys::console::log_1(
-                                &format!("dom task post ready, todo reschedule: {idx}").into(),
-                            );
-                        });
-                    }
-
-                    let i = i + 1;
-
-                    let ts = ts.post_translate(0.0, page.uncommitted_height());
-                    if i < self.doc_view.len() {
-                        vec![RenderMicroTask {
-                            then: RenderFuture::RecalcPage(i, ts),
-                            cancel: None,
-                        }]
-                    } else {
-                        Vec::default()
-                    }
-                }
-            }
-        } else {
-            let dirty = match self.track_mode {
-                TrackMode::Document => self.retrack_pages(kern, elem).await?,
-                /* TrackMode::Pages => todo!(), */
-            };
-
-            if dirty && !self.doc_view.is_empty() {
-                vec![RenderMicroTask {
-                    then: RenderFuture::RecalcPage(0, Transform::identity()),
-                    cancel: None,
-                }]
-            } else {
-                Vec::default()
-            }
-        };
-
-        if ret.is_empty() {
-            tasks.clear();
-        } else {
-            *tasks = ret;
-        }
-
-        drop(tasks);
-        Ok(task)
-    }
-
-    async fn retrack_pages(
-        &mut self,
-        kern: &mut IncrDocClient,
-        elem: HookedElement,
-    ) -> ZResult<bool> {
+    fn retrack_pages(&mut self, kern: &mut IncrDocClient, elem: HookedElement) -> ZResult<bool> {
         // Checks out the current document layout.
         let pages = self.checkout_pages(kern);
 
@@ -485,9 +319,41 @@ impl IncrDomDocClient {
         }
 
         // Populates the glyphs to dom so that they get rendered
-        self.svg_backend.populate_glyphs(kern, &elem);
+        let glyphs = self.svg_backend.populate_glyphs(kern);
+        if let Some(glyphs) = glyphs {
+            self.populate_glyphs
+                .as_ref()
+                .unwrap()
+                .call1(&JsValue::NULL, &glyphs.into())
+                .unwrap();
+        }
 
         Ok(dirty)
+    }
+
+    pub fn reset(&mut self) {}
+
+    pub fn create_element(&self, html: &str) -> Element {
+        self.tmpl.create_element(html)
+    }
+
+    /// Render the document in the given window.
+    pub async fn mount(&mut self, elem: HtmlElement) -> ZResult<()> {
+        if let Some(old_elem) = self.elem.as_ref() {
+            return Err(error_once!(
+                "already mounted to",
+                old_elem: format!("{:?}", old_elem.hooked)
+            ));
+        }
+
+        // create typst-svg-resources by string
+        self.elem = Some(HookedElement {
+            hooked: elem.clone(),
+        });
+        self.svg_backend.reset();
+        self.canvas_backend.reset();
+
+        Ok(())
     }
 }
 
@@ -497,7 +363,6 @@ pub struct DomContext<'m, 'a> {
     pub svg_backend: &'a mut SvgBackend,
     pub canvas_backend: &'a mut CanvasBackend,
     pub module: &'m Module,
-    pub checkout_mode: CheckoutMode,
 }
 
 impl<'m, 'a> DomContext<'m, 'a> {

@@ -25,6 +25,7 @@ import {
 import { RenderView, renderTextLayer } from './render/canvas/view.mjs';
 import { LazyWasmModule } from './wasm.mjs';
 import { buildComponent } from './init.mjs';
+import { TypstDomDocument } from './dom.mjs';
 
 /**
  * The result of rendering a Typst document.
@@ -434,18 +435,7 @@ export interface TypstRenderer extends TypstSvgRenderer {
     fn: (session: RenderSession) => Promise<T>,
   ): Promise<T>;
 
-  renderDom(options: RenderInSessionOptions<MountDomOptions>): Promise<void>;
-  triggerDomRerender(
-    options: RenderInSessionOptions<{
-      responsive: boolean;
-      viewport: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-      };
-    }>,
-  ): Promise<void>;
+  renderDom(options: RenderInSessionOptions<MountDomOptions>): Promise<TypstDomDocument>;
 
   /**
    * alias to {@link TypstRenderer#renderToCanvas}, will remove in v0.5.0
@@ -529,7 +519,8 @@ function randstr(prefix?: string): string {
 
 let warnOnceCanvasSet = true;
 
-class TypstRendererDriver {
+/** @internal */
+export class TypstRendererDriver {
   renderer: typst.TypstRenderer;
   rendererJs: typeof typst;
 
@@ -781,7 +772,7 @@ class TypstRendererDriver {
     return this.renderToCanvas(options);
   }
 
-  async renderDom(options: RenderInSessionOptions<MountDomOptions>): Promise<void> {
+  async renderDom(options: RenderInSessionOptions<MountDomOptions>): Promise<TypstDomDocument> {
     if ('format' in options) {
       if (options.format !== 'vector') {
         const artifactFormats = ['serde_json', 'js', 'ir'] as const;
@@ -793,41 +784,17 @@ class TypstRendererDriver {
     }
 
     return this.withinOptionSession(options, async sessionRef => {
-      return this.renderer.mount_dom(
-        sessionRef[kObject],
-        options.container as HTMLDivElement,
-        options.viewport.x,
-        options.viewport.y,
-        options.viewport.width,
-        options.viewport.height,
-      );
+      const t = new TypstDomDocument({
+        ...options,
+        renderMode: 'dom',
+        hookedElem: options.container,
+        kModule: sessionRef,
+        renderer: this,
+      });
+      t;
+      await t.impl.mountDom(options.pixelPerPt);
+      return t;
     });
-  }
-
-  async triggerDomRerender(
-    options: RenderInSessionOptions<{
-      responsive: boolean;
-      viewport: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-      };
-    }>,
-  ): Promise<void> {
-    let feature: number = 0;
-    if (options.responsive) {
-      feature |= 1 << 0;
-    }
-
-    return this.renderer.trigger_dom_rerender(
-      options.renderSession[kObject],
-      feature,
-      options.viewport.x,
-      options.viewport.y,
-      options.viewport.width,
-      options.viewport.height,
-    );
   }
 
   async renderToCanvas(options: RenderOptions<RenderToCanvasOptions>): Promise<void> {
