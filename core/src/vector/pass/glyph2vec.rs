@@ -1,6 +1,5 @@
 //! Lowering Typst Document into SvgItem.
 
-use std::cell::RefCell;
 use std::collections::HashSet;
 use std::ops::DerefMut;
 use std::sync::Arc;
@@ -46,7 +45,7 @@ pub struct TGlyph2VecPass<const ENABLE_REF_CNT: bool = false> {
     /// Detect font short hash conflict
     font_conflict_checker: crate::adt::CHashMap<u32, Font>,
     /// Lock to get a unique local index for each font.
-    font_write_lock: Mutex<()>,
+    font_index: Mutex<usize>,
 
     /// Intermediate representation of an incompleted glyph pack.
     glyph_defs: crate::adt::CHashMap<GlyphItem, (GlyphRef, FontRef)>,
@@ -64,7 +63,7 @@ impl<const ENABLE_REF_CNT: bool> TGlyph2VecPass<ENABLE_REF_CNT> {
             lifetime: 0,
             font_mapping: Default::default(),
             font_conflict_checker: Default::default(),
-            font_write_lock: Default::default(),
+            font_index: Default::default(),
             glyph_defs: Default::default(),
             new_fonts: Default::default(),
             new_glyphs: Default::default(),
@@ -101,23 +100,18 @@ impl<const ENABLE_REF_CNT: bool> TGlyph2VecPass<ENABLE_REF_CNT> {
         if let Some(id) = self.font_mapping.get(font) {
             return *id;
         }
-        let _write_lock = self.font_write_lock.lock();
 
-        let new_abs_ref = RefCell::new(FontRef {
-            hash: 0xfffe,
-            idx: 0xfffe,
-        });
+        // Lock before insertion checking to ensure atomicity
+        let mut font_index_lock = self.font_index.lock();
 
-        self.font_mapping.alter(font.clone(), |e| {
-            if e.is_some() {
-                *new_abs_ref.borrow_mut() = *e.as_ref().unwrap();
-                return e;
-            }
-
+        let entry = self.font_mapping.entry(font.clone());
+        let entry = entry.or_insert_with(|| {
+            let font_index = font_index_lock.deref_mut();
             let mut abs_ref = FontRef {
                 hash: fxhash::hash32(font),
-                idx: self.font_mapping.len() as u32,
+                idx: (*font_index) as u32,
             };
+            *font_index += 1;
 
             // Detect font short hash conflict
             'conflict_detection: loop {
@@ -139,15 +133,14 @@ impl<const ENABLE_REF_CNT: bool> TGlyph2VecPass<ENABLE_REF_CNT> {
                 break 'conflict_detection;
             }
 
-            *new_abs_ref.borrow_mut() = abs_ref;
             if ENABLE_REF_CNT {
                 self.new_fonts.lock().push(font.clone().into());
             }
 
-            Some(abs_ref)
+            abs_ref
         });
 
-        new_abs_ref.into_inner()
+        *entry.value()
     }
 
     pub fn build_glyph(&self, font_ref: FontRef, glyph: GlyphItem) -> GlyphRef {

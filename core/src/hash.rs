@@ -1,3 +1,4 @@
+use core::fmt;
 use std::{
     any::Any,
     hash::{Hash, Hasher},
@@ -22,24 +23,48 @@ use typst::diag::StrResult;
 /// > collision occurring. For a big crate graph with 1000 crates in it, there
 /// > is a probability of 1 in 36,890,000,000,000 of a `StableCrateId`
 /// > collision.
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct Fingerprint(u64, u64);
+pub struct Fingerprint {
+    lo: u64,
+    hi: u64,
+}
+
+impl fmt::Debug for Fingerprint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.as_svg_id("fg"))
+    }
+}
 
 impl Fingerprint {
+    /// Create a new fingerprint from the given pair of 64-bit integers.
     pub fn from_pair(lo: u64, hi: u64) -> Self {
-        Self(lo, hi)
+        Self { lo, hi }
     }
 
+    /// Create a new fingerprint from the given 128-bit integer.
     pub const fn from_u128(hash: u128) -> Self {
-        Self(hash as u64, (hash >> 64) as u64)
+        // Self(hash as u64, (hash >> 64) as u64)
+        Self {
+            lo: hash as u64,
+            hi: (hash >> 64) as u64,
+        }
     }
 
+    /// Get the fingerprint as a 128-bit integer.
     pub fn to_u128(self) -> u128 {
-        ((self.1 as u128) << 64) | self.0 as u128
+        ((self.hi as u128) << 64) | self.lo as u128
     }
 
+    /// Cut the fingerprint into a 32-bit integer.
+    /// It could be used as a hash value if the fingerprint is calculated from a
+    /// stable hash function.
+    pub fn lower32(self) -> u32 {
+        self.lo as u32
+    }
+
+    /// Creates a new `Fingerprint` from a svg id that **doesn't have prefix**.
     pub fn try_from_str(s: &str) -> StrResult<Self> {
         let bytes = base64::engine::general_purpose::STANDARD_NO_PAD
             .decode(&s.as_bytes()[..11])
@@ -59,14 +84,14 @@ impl Fingerprint {
     #[comemo::memoize]
     pub fn as_svg_id(self, prefix: &'static str) -> String {
         let fingerprint_lo =
-            base64::engine::general_purpose::STANDARD_NO_PAD.encode(self.0.to_le_bytes());
-        if self.1 == 0 {
+            base64::engine::general_purpose::STANDARD_NO_PAD.encode(self.lo.to_le_bytes());
+        if self.hi == 0 {
             return [prefix, &fingerprint_lo].join("");
         }
 
         // possible the id in the lower 64 bits.
         let fingerprint_hi = {
-            let id = self.1.to_le_bytes();
+            let id = self.hi.to_le_bytes();
             // truncate zero
             let rev_zero = id.iter().rev().skip_while(|&&b| b == 0).count();
             let id = &id[..rev_zero];
@@ -118,7 +143,7 @@ impl FingerprintHasher for FingerprintSipHasher {
         let mut inner = FingerprintSipHasherBase::default();
         buffer.hash(&mut inner);
         let hash = inner.finish();
-        (Fingerprint(hash, 0), buffer)
+        (Fingerprint { lo: hash, hi: 0 }, buffer)
     }
 }
 

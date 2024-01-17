@@ -1,7 +1,5 @@
 use typst::model::Document;
-use typst_ts_core::vector::ir::{
-    Abs, FlatModule, ItemPack, LayoutRegion, LayoutRegionNode, ModuleMetadata, MultiVecDocument,
-};
+use typst_ts_core::vector::ir::{Abs, LayoutRegion, LayoutRegionNode, MultiVecDocument};
 use typst_ts_core::vector::pass::Typst2VecPass;
 
 #[derive(Default)]
@@ -31,25 +29,5 @@ impl DynamicLayoutSvgExporter {
             module,
             layouts: vec![LayoutRegion::new_by_scalar("width".into(), self.layouts)],
         }
-    }
-
-    pub fn debug_stat(&self) -> String {
-        let v = self.typst2vec.finalize_ref();
-        let item_cnt = v.items.len();
-        let glyph_cnt = v.glyphs.len();
-        // let glyphs = GlyphPack::from_iter(v.1);
-
-        let module_data = FlatModule::new(vec![
-            // ModuleMetadata::Font(Arc::new(fonts)),
-            // ModuleMetadata::Glyph(Arc::new(glyphs)),
-            ModuleMetadata::Item(ItemPack(v.items.into_iter().collect())),
-        ])
-        .to_bytes();
-        format!(
-            "module size: {} bytes, items count: {}, glyph count: {}",
-            module_data.len(),
-            item_cnt,
-            glyph_cnt
-        )
     }
 }
