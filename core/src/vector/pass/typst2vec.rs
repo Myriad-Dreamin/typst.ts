@@ -1,7 +1,14 @@
-use std::{borrow::Cow, cell::RefCell, hash::Hash, ops::DerefMut, sync::Arc};
+use std::{
+    borrow::Cow,
+    hash::Hash,
+    ops::DerefMut,
+    sync::{atomic::AtomicU64, Arc},
+};
 
 use parking_lot::Mutex;
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::iter::{
+    IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+};
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
     foundations::Smart,
@@ -35,8 +42,8 @@ use super::{SourceNodeKind, SourceRegion, Span2VecPass, TGlyph2VecPass};
 pub struct ConvertImpl<const ENABLE_REF_CNT: bool = false> {
     pub glyphs: TGlyph2VecPass<ENABLE_REF_CNT>,
     pub spans: Span2VecPass,
-    pub cache_items: crate::adt::CHashMap<Fingerprint, (u64, Fingerprint, VecItem)>,
-    pub items: crate::adt::CHashMap<Fingerprint, (u64, VecItem)>,
+    pub cache_items: RefItemMapT<(AtomicU64, Fingerprint, VecItem)>,
+    pub items: RefItemMapSync,
     pub new_items: Mutex<Vec<(Fingerprint, VecItem)>>,
 
     fingerprint_builder: FingerprintBuilder,
@@ -54,9 +61,9 @@ impl<const ENABLE_REF_CNT: bool> Default for ConvertImpl<ENABLE_REF_CNT> {
 
         Self {
             lifetime: 0,
-            cache_items: Default::default(),
             glyphs,
             spans,
+            cache_items: Default::default(),
             items: Default::default(),
             new_items: Default::default(),
             fingerprint_builder: Default::default(),
@@ -65,59 +72,52 @@ impl<const ENABLE_REF_CNT: bool> Default for ConvertImpl<ENABLE_REF_CNT> {
 }
 
 impl Typst2VecPass {
-    pub fn intern(&mut self, module: &Module, f: &Fingerprint) {
-        let item = module.get_item(f).unwrap();
-        match item {
-            VecItem::None
-            | VecItem::Link(_)
-            | VecItem::Image(_)
-            | VecItem::Path(_)
-            | VecItem::Color32(_)
-            | VecItem::Gradient(_)
-            | VecItem::Pattern(_)
-            | VecItem::ContentHint(_) => {
-                self.insert(*f, Cow::Borrowed(item));
-            }
-            VecItem::Text(_t) => {
-                // self.glyphs.used_fonts.insert(t.shape.font.clone());
-                // self.glyphs
-                //     .used_glyphs
-                //     .extend(t.content.glyphs.iter().map(|(_, _, glyph)| glyph).cloned());
+    pub fn intern(&mut self, _module: &Module, _f: &Fingerprint) {
+        // let item = module.get_item(f).unwrap();
+        // match item {
+        //     VecItem::None
+        //     | VecItem::Link(_)
+        //     | VecItem::Image(_)
+        //     | VecItem::Path(_)
+        //     | VecItem::Color32(_)
+        //     | VecItem::Gradient(_)
+        //     | VecItem::Pattern(_)
+        //     | VecItem::ContentHint(_) => {
+        //         self.insert(*f, Cow::Borrowed(item));
+        //     }
+        //     VecItem::Text(_t) => {
+        //         // self.glyphs.used_fonts.insert(t.shape.font.clone());
+        //         // self.glyphs
+        //         //     .used_glyphs
+        //         //     .extend(t.content.glyphs.iter().map(|(_, _, glyph)|
+        // glyph).cloned());
 
-                // self.insert(*f, Cow::Borrowed(item));
-                todo!()
-            }
-            VecItem::Item(t) => {
-                self.insert(*f, Cow::Borrowed(item));
+        //         // self.insert(*f, Cow::Borrowed(item));
+        //         todo!()
+        //     }
+        //     VecItem::Item(t) => {
+        //         self.insert(*f, Cow::Borrowed(item));
 
-                if !self.items.contains_key(&t.1) {
-                    self.intern(module, &t.1);
-                }
-            }
-            VecItem::Group(g, _) => {
-                self.insert(*f, Cow::Borrowed(item));
+        //         if !self.items.contains_key(&t.1) {
+        //             self.intern(module, &t.1);
+        //         }
+        //     }
+        //     VecItem::Group(g, _) => {
+        //         self.insert(*f, Cow::Borrowed(item));
 
-                for (_, id) in g.0.iter() {
-                    if !self.items.contains_key(id) {
-                        self.intern(module, id);
-                    }
-                }
-            }
-        }
+        //         for (_, id) in g.0.iter() {
+        //             if !self.items.contains_key(id) {
+        //                 self.intern(module, id);
+        //             }
+        //         }
+        //     }
+        // }
+        todo!()
     }
 }
 
 impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
     pub fn reset(&mut self) {}
-
-    pub fn finalize_ref(&self) -> Module {
-        let (fonts, glyphs) = self.glyphs.finalize();
-        Module {
-            fonts,
-            glyphs,
-            items: self.items.clone().to_item_map(),
-        }
-    }
 
     pub fn finalize(self) -> Module {
         let (fonts, glyphs) = self.glyphs.finalize();
@@ -352,46 +352,128 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
         fingerprint
     }
 
-    fn insert_if(&self, cond: Fingerprint, f: impl FnOnce() -> VecItem) -> Fingerprint {
-        if let Some(mut pos) = self.cache_items.get_mut(&cond) {
-            if ENABLE_REF_CNT && pos.0 != self.lifetime {
-                pos.0 = self.lifetime - 1;
-            }
+    /// Increases the lifetime of an item.
+    ///
+    /// Note: See [`Self::increment_lifetime`], the `self.lifetime` increases by
+    /// 2 each time.
+    fn increase_lifetime_for_item(&self, pos: &AtomicU64) {
+        let c = pos.load(std::sync::atomic::Ordering::Relaxed);
+        if ENABLE_REF_CNT && c < self.lifetime - 1 {
+            // Note that the Vec2Item is locked by mutable reference. And during update,
+            // lifetime will be updated to either self.lifetime or self.lifetime
+            // - 1. This indicates that it is fine to ignore the result of compare_exchange.
+            //
+            // If compare_exchange fails, it means that it is updated to self.lifetime
+            // Otherwise, it is updated to self.lifetime - 1
+            //
+            // Both cases are fine, as we renew the lifetime of the item.
+            let _ = pos.compare_exchange(
+                c,
+                self.lifetime - 1,
+                std::sync::atomic::Ordering::SeqCst,
+                std::sync::atomic::Ordering::SeqCst,
+            );
+        }
+    }
 
+    fn insert_if(&self, cond: Fingerprint, f: impl FnOnce() -> VecItem) -> Fingerprint {
+        let shard = &self.cache_items.shard(cond);
+        let shard_read = shard.read();
+        if let Some(pos) = shard_read.get(&cond) {
+            self.increase_lifetime_for_item(&pos.0);
             self.insert(pos.1, Cow::Borrowed(&pos.2));
             return pos.1;
         }
+
+        drop(shard_read);
 
         let item = f();
         let flat_fg = self.fingerprint_builder.resolve(&item);
         self.insert(flat_fg, Cow::Borrowed(&item));
 
-        if ENABLE_REF_CNT {
-            self.cache_items
-                .insert(cond, (self.lifetime, flat_fg, item));
-        } else {
-            self.cache_items.insert(cond, (0, flat_fg, item));
+        {
+            let mut shard_write = shard.write();
+            shard_write.insert(
+                cond,
+                if ENABLE_REF_CNT {
+                    (AtomicU64::new(self.lifetime), flat_fg, item)
+                } else {
+                    (AtomicU64::new(0), flat_fg, item)
+                },
+            );
         }
 
         flat_fg
     }
 
     fn insert(&self, fg: Fingerprint, item: Cow<VecItem>) -> bool {
-        if let Some(mut pos) = self.items.get_mut(&fg) {
-            if ENABLE_REF_CNT && pos.0 != self.lifetime {
-                pos.0 = self.lifetime - 1;
-            }
+        let shard = self.items.shard(fg);
+        let shard_read = shard.read();
+        if let Some(pos) = shard_read.get(&fg) {
+            self.increase_lifetime_for_item(&pos.0);
             return true;
         }
 
-        if ENABLE_REF_CNT {
-            self.items.insert(fg, (self.lifetime, VecItem::None));
+        let item_resolution = if ENABLE_REF_CNT {
             self.new_items.lock().push((fg, item.into_owned()));
+            (AtomicU64::new(self.lifetime), VecItem::None)
         } else {
-            self.items.insert(fg, (0, item.into_owned()));
-        }
+            (AtomicU64::new(0), item.into_owned())
+        };
 
+        drop(shard_read);
+        let mut shard_write = shard.write();
+        shard_write.insert(fg, item_resolution);
         false
+    }
+
+    #[cfg(feature = "item-dashmap")]
+    fn insert_if(&self, cond: Fingerprint, f: impl FnOnce() -> VecItem) -> Fingerprint {
+        use dashmap::mapref::entry::Entry::*;
+        match self.cache_items.entry(cond) {
+            Occupied(pos) => {
+                let pos = pos.into_ref();
+                self.increase_lifetime(&pos.0);
+                self.insert(pos.1, Cow::Borrowed(&pos.2));
+                pos.1
+            }
+            Vacant(pos) => {
+                let item = f();
+                let flat_fg = self.fingerprint_builder.resolve(&item);
+                self.insert(flat_fg, Cow::Borrowed(&item));
+
+                pos.insert(if ENABLE_REF_CNT {
+                    (AtomicU64::new(self.lifetime), flat_fg, item)
+                } else {
+                    (AtomicU64::new(0), flat_fg, item)
+                });
+
+                flat_fg
+            }
+        }
+    }
+
+    #[cfg(feature = "item-dashmap")]
+    fn insert(&self, fg: Fingerprint, item: Cow<VecItem>) -> bool {
+        use dashmap::mapref::entry::Entry::*;
+        match self.items.entry(fg) {
+            Occupied(pos) => {
+                let pos = pos.into_ref();
+                self.increase_lifetime(&pos.0);
+                true
+            }
+            Vacant(pos) => {
+                let item_resolution = if ENABLE_REF_CNT {
+                    self.new_items.lock().push((fg, item.into_owned()));
+                    (AtomicU64::new(self.lifetime), VecItem::None)
+                } else {
+                    (AtomicU64::new(0), item.into_owned())
+                };
+
+                pos.insert(item_resolution);
+                false
+            }
+        }
     }
 
     /// Convert a text into vector item.
@@ -766,26 +848,35 @@ impl IncrTypst2VecPass {
 
     /// Perform garbage collection with given threshold.
     pub fn gc(&mut self, threshold: u64) -> Vec<Fingerprint> {
-        let gc_items = RefCell::new(vec![]);
+        let gc_items = Arc::new(Mutex::new(vec![]));
 
         // a threshold is set by current lifetime subtracted by the given threshold.
         // It uses saturating_sub to prevent underflow (u64).
         let gc_threshold = self.lifetime.saturating_sub(threshold);
 
-        self.items.retain(|k, v| {
-            if v.0 < gc_threshold {
-                gc_items.borrow_mut().push(*k);
-                false
-            } else {
-                true
-            }
+        self.items.as_mut_slice().par_iter_mut().for_each(|e| {
+            e.get_mut().retain(|k, v| {
+                if v.0.load(std::sync::atomic::Ordering::Relaxed) < gc_threshold {
+                    gc_items.lock().push(*k);
+                    false
+                } else {
+                    true
+                }
+            });
         });
 
         // Same as above
         let cache_threshold = self.lifetime.saturating_sub(threshold);
-        self.cache_items.retain(|_, v| v.0 >= cache_threshold);
+        self.cache_items
+            .as_mut_slice()
+            .par_iter_mut()
+            .for_each(|e| {
+                e.get_mut().retain(|_, v| {
+                    v.0.load(std::sync::atomic::Ordering::Relaxed) >= cache_threshold
+                });
+            });
 
-        gc_items.into_inner()
+        Arc::try_unwrap(gc_items).unwrap().into_inner()
     }
 
     /// Finalize modules containing new vector items.

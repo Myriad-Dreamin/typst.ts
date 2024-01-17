@@ -364,12 +364,7 @@ impl<C: Compiler + ShadowApi> WorldExporter for DynamicLayoutCompiler<C> {
                 }
                 svg_exporter.layouts.push((current_width.into(), layout));
 
-                log::trace!(
-                    "rerendered {} at {:?}, {}",
-                    i,
-                    instant - instant_begin,
-                    svg_exporter.debug_stat()
-                );
+                log::trace!("rerendered {} at {:?}", i, instant - instant_begin);
                 Ok(())
             })?;
         }
