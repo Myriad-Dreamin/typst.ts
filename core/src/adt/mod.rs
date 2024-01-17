@@ -1,6 +1,3 @@
-// pub mod chashmap;
-// pub use chashmap::CHashMap;
-
 pub mod fmap;
 pub use fmap::FingerprintMap;
 

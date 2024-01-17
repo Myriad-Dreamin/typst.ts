@@ -88,7 +88,7 @@ impl<V> FingerprintMap<V> {
         unsafe { shards.get_unchecked(route_idx) }
     }
 
-    /// Usefull for parallel iteration
+    /// Useful for parallel iteration
     pub fn as_mut_slice(&mut self) -> &mut [FMapBase<V>] {
         &mut self.shards
     }
@@ -97,7 +97,7 @@ impl<V> FingerprintMap<V> {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn test_default_shard_mask() {
+    fn test_default_shard_size() {
         let size = super::default_shard_size().get();
 
         println!("size = {}", size);
