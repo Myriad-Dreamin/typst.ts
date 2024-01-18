@@ -1,3 +1,4 @@
+use core::fmt;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
@@ -27,11 +28,15 @@ struct LazyVec {
 }
 
 impl LazyVec {
-    fn get(&mut self, idx: usize) -> Option<&(usize, SourceNodeKind, Fingerprint)> {
+    fn ensure_sorted(&mut self) {
         if !self.is_sorted {
             self.val.sort_by_key(|x| x.0);
             self.is_sorted = true;
         }
+    }
+
+    fn get(&mut self, idx: usize) -> Option<&(usize, SourceNodeKind, Fingerprint)> {
+        self.ensure_sorted();
         self.val.get(idx)
     }
 }
@@ -62,33 +67,95 @@ impl LazySpanCollector {
     }
 }
 
-struct LazySpanTree {
-    val: [HashMap<usize, LazyVec>; SPAN_ROUTING + 1],
+#[derive(Default)]
+struct LazyRegionInfo {
+    /// A map from parent region id to a list of children.
+    children: HashMap<usize, LazyVec>,
+    /// A map from child region id to its parent.
+    parents: HashMap<usize, usize>,
+    /// A map from span to belonging region ids.
+    span_indice: HashMap<Span, Vec<usize>>,
 }
-impl LazySpanTree {
-    fn get_mut(&mut self, doc_region: &usize) -> Option<&mut LazyVec> {
-        let idx = doc_region & SPAN_ROUTING;
-        self.val[idx].get_mut(doc_region)
+
+impl fmt::Debug for LazyRegionInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("LazyRegionInfo")
+            .field("children_cnt", &self.children.len())
+            .field("parents_cnt", &self.parents.len())
+            .field("span_indice_cnt", &self.span_indice.len())
+            .finish()
     }
 }
 
-impl Default for LazySpanTree {
+struct LazySpanInfo {
+    /// A lazy ordered tree indexed by a region id.
+    ///
+    /// When one accesses it with a region id, it will
+    /// lazily sort the elements in the region.
+    elem_tree: [LazyRegionInfo; SPAN_ROUTING + 1],
+}
+impl LazySpanInfo {
+    fn get_mut(&mut self, doc_region: &usize) -> Option<&mut LazyVec> {
+        let idx = doc_region & SPAN_ROUTING;
+        self.elem_tree[idx].children.get_mut(doc_region)
+    }
+
+    fn get_parent(&self, doc_region: &usize) -> Option<usize> {
+        let idx = doc_region & SPAN_ROUTING;
+        self.elem_tree[idx].parents.get(doc_region).copied()
+    }
+}
+
+impl Default for LazySpanInfo {
     fn default() -> Self {
         Self {
-            val: std::array::from_fn(|_| HashMap::new()),
+            elem_tree: std::array::from_fn(|_| LazyRegionInfo::default()),
         }
     }
 }
 
-impl From<LazySpanCollector> for LazySpanTree {
+impl From<LazySpanCollector> for LazySpanInfo {
     fn from(collector: LazySpanCollector) -> Self {
         let val = collector
             .val
             .into_par_iter()
             .map(|e| {
-                let mut res = HashMap::new();
+                let mut children = HashMap::new();
+                let mut parents = HashMap::new();
+                let mut span_indice = HashMap::new();
+                let mut insert_span = |span: Span, region: usize| {
+                    span_indice
+                        .entry(span)
+                        .or_insert_with(Vec::new)
+                        .push(region);
+                };
                 for region in e.into_iter() {
-                    res.entry(region.region)
+                    match &region.kind {
+                        SourceNodeKind::Page { region: ch } => {
+                            parents.insert(*ch, region.region);
+                        }
+                        SourceNodeKind::Group { region: ch } => {
+                            parents.insert(*ch, region.region);
+                        }
+                        SourceNodeKind::Char((s, _)) => {
+                            insert_span(*s, region.region);
+                        }
+                        SourceNodeKind::Text(chars) => {
+                            for s in chars.iter() {
+                                insert_span(s.0, region.region);
+                            }
+                        }
+                        SourceNodeKind::Image(s) => {
+                            insert_span(*s, region.region);
+                        }
+                        SourceNodeKind::Shape(s) => {
+                            insert_span(*s, region.region);
+                        }
+                        SourceNodeKind::Doc => {}
+                    }
+
+                    children
+                        .entry(region.region)
                         .or_insert_with(|| LazyVec {
                             is_sorted: false,
                             val: Vec::new(),
@@ -96,13 +163,18 @@ impl From<LazySpanCollector> for LazySpanTree {
                         .val
                         .push((region.idx as usize, region.kind, region.item));
                 }
-                res
+
+                LazyRegionInfo {
+                    children,
+                    parents,
+                    span_indice,
+                }
             })
             .collect::<Vec<_>>()
             .try_into()
             .unwrap();
 
-        LazySpanTree { val }
+        LazySpanInfo { elem_tree: val }
     }
 }
 
@@ -113,7 +185,7 @@ pub struct Span2VecPass {
     region_cnt: AtomicUsize,
     pub doc_region: AtomicUsize,
 
-    span_tree: OnceCell<LazySpanTree>,
+    span_tree: OnceCell<LazySpanInfo>,
     collector: LazySpanCollector,
 }
 
