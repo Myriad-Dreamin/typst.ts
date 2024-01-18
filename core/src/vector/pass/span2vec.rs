@@ -235,6 +235,118 @@ impl Span2VecPass {
         self.collector.push(region);
     }
 
+    pub fn query_cursors(
+        &mut self,
+        span_offset: SourceSpanOffset,
+    ) -> ZResult<Vec<Vec<(u32, u32, String)>>> {
+        self.span_tree.get_or_init(|| {
+            log::info!("lazy spans are initializing");
+            std::mem::take(&mut self.collector).into()
+        });
+
+        let span_info = self
+            .span_tree
+            .get_mut()
+            .ok_or_else(|| error_once!("span info not initialized"))?;
+
+        let span = span_offset.span;
+
+        let related_regions: Vec<usize> = span_info
+            .elem_tree
+            .iter_mut()
+            .flat_map(|s| s.span_indice.get(&span))
+            .flatten()
+            .copied()
+            .collect();
+
+        let doc_region = self.doc_region.load(std::sync::atomic::Ordering::SeqCst);
+
+        let mut res = vec![];
+        for reg in related_regions {
+            let ch = span_info
+                .get_mut(&reg)
+                .ok_or_else(|| error_once!("not found"))?;
+            ch.ensure_sorted();
+
+            for (idx, ch) in ch.val.iter().enumerate() {
+                match &ch.1 {
+                    SourceNodeKind::Char((s, _)) => {
+                        if *s == span {
+                            res.push(vec![(reg as u32, idx as u32, "".to_owned())]);
+                        }
+                    }
+                    SourceNodeKind::Text(chars) => {
+                        for (s, _) in chars.iter() {
+                            if *s == span {
+                                res.push(vec![(reg as u32, idx as u32, "".to_owned())]);
+                            }
+                        }
+                    }
+                    SourceNodeKind::Image(s) => {
+                        if *s == span {
+                            res.push(vec![(reg as u32, idx as u32, "".to_owned())]);
+                        }
+                    }
+                    SourceNodeKind::Shape(s) => {
+                        if *s == span {
+                            res.push(vec![(reg as u32, idx as u32, "".to_owned())]);
+                        }
+                    }
+                    SourceNodeKind::Page { .. }
+                    | SourceNodeKind::Group { .. }
+                    | SourceNodeKind::Doc => {}
+                }
+            }
+        }
+
+        for r in res.iter_mut() {
+            let reg = r.last().unwrap().0 as usize;
+            let mut cur = reg;
+            while cur != doc_region {
+                let par = span_info
+                    .get_parent(&doc_region)
+                    .ok_or_else(|| error_once!("not found"))?;
+
+                let ch = span_info
+                    .get_mut(&reg)
+                    .ok_or_else(|| error_once!("not found"))?;
+                ch.ensure_sorted();
+
+                let mut found = false;
+                for (idx, ch) in ch.val.iter().enumerate() {
+                    match &ch.1 {
+                        SourceNodeKind::Page { region } | SourceNodeKind::Group { region } => {
+                            if *region == cur {
+                                r.push((par as u32, idx as u32, ch.2.as_svg_id("")));
+                                found = true;
+                                break;
+                            }
+                        }
+                        SourceNodeKind::Char(..)
+                        | SourceNodeKind::Text(..)
+                        | SourceNodeKind::Image(..)
+                        | SourceNodeKind::Shape(..)
+                        | SourceNodeKind::Doc => {}
+                    }
+                }
+
+                if !found {
+                    break;
+                }
+                cur = par;
+            }
+
+            if cur != doc_region {
+                r.clear();
+            } else {
+                r.reverse();
+            }
+        }
+
+        res.retain(|x| !x.is_empty());
+        Ok(res)
+    }
+
     pub fn query(
         &mut self,
         path: &[(u32, u32, String)],
