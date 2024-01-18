@@ -237,11 +237,9 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                             region: src_reg,
                             idx: idx as u32,
                             kind: if text.glyphs.len() == 1 {
-                                SourceNodeKind::Char(text.glyphs[0].span.0, text.glyphs[0].span.1)
+                                SourceNodeKind::Char(text.glyphs[0].span)
                             } else {
-                                SourceNodeKind::Text(
-                                    text.glyphs.iter().map(|g| (g.span.0, g.span.1)).collect(),
-                                )
+                                SourceNodeKind::Text(text.glyphs.iter().map(|g| g.span).collect())
                             },
                             item: i,
                         });

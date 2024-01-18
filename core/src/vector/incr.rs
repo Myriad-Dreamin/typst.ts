@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use typst::model::Document;
-use typst::syntax::Span;
 
 use super::ir::{
     FlatGlyphItem, FlatModule, GlyphRef, IncrFontPack, IncrGlyphPack, ItemPack, LayoutRegion,
@@ -9,7 +8,7 @@ use super::ir::{
     SourceMappingNode, VecDocument,
 };
 use super::pass::IncrTypst2VecPass;
-use crate::{error::prelude::*, TakeAs};
+use crate::{debug_loc::SourceSpanOffset, error::prelude::*, TakeAs};
 
 /// maintains the data of the incremental rendering at server side
 #[derive(Default)]
@@ -129,7 +128,10 @@ impl IncrDocServer {
     }
 
     /// Get the source location of the given path.
-    pub fn source_span(&mut self, path: &[(u32, u32, String)]) -> ZResult<Option<(Span, Span)>> {
+    pub fn source_span(
+        &mut self,
+        path: &[(u32, u32, String)],
+    ) -> ZResult<Option<(SourceSpanOffset, SourceSpanOffset)>> {
         self.typst2vec.spans.query(path)
     }
 }

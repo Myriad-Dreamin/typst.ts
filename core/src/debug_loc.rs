@@ -35,6 +35,35 @@ impl From<TypstPosition> for DocumentPosition {
 /// the compiled document.
 pub type SourceSpan = typst::syntax::Span;
 
+/// Unevaluated source span with offset.
+///
+/// It adds an additional offset relative to the start of the span.
+///
+/// The offset is usually generated when the location is inside of some
+/// text or string content.
+#[derive(Debug, Clone, Copy)]
+pub struct SourceSpanOffset {
+    pub span: SourceSpan,
+    pub offset: usize,
+}
+
+/// Lifts a [`SourceSpan`] to [`SourceSpanOffset`].
+impl From<SourceSpan> for SourceSpanOffset {
+    fn from(span: SourceSpan) -> Self {
+        Self { span, offset: 0 }
+    }
+}
+
+/// Converts a [`SourceSpan`] and an in-text offset to [`SourceSpanOffset`].
+impl From<(SourceSpan, u16)> for SourceSpanOffset {
+    fn from((span, offset): (SourceSpan, u16)) -> Self {
+        Self {
+            span,
+            offset: offset as usize,
+        }
+    }
+}
+
 /// Raw representation of a source span.
 pub type RawSourceSpan = u64;
 

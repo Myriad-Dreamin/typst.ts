@@ -6,7 +6,7 @@ use once_cell::sync::OnceCell;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use typst::syntax::Span;
 
-use crate::debug_loc::{FileLocation, FlatSourceLocation};
+use crate::debug_loc::{FileLocation, FlatSourceLocation, SourceSpanOffset};
 use crate::error::prelude::ZResult;
 use crate::error::prelude::*;
 use crate::hash::Fingerprint;
@@ -122,7 +122,7 @@ pub enum SourceNodeKind {
     Doc,
     Page { region: usize },
     Group { region: usize },
-    Char(Span, u16),
+    Char((Span, u16)),
     Text(Arc<[(Span, u16)]>),
     Image(Span),
     Shape(Span),
@@ -163,7 +163,10 @@ impl Span2VecPass {
         self.collector.push(region);
     }
 
-    pub fn query(&mut self, path: &[(u32, u32, String)]) -> ZResult<Option<(Span, Span)>> {
+    pub fn query(
+        &mut self,
+        path: &[(u32, u32, String)],
+    ) -> ZResult<Option<(SourceSpanOffset, SourceSpanOffset)>> {
         self.span_tree.get_or_init(|| {
             log::info!("lazy spans are initializing");
             std::mem::take(&mut self.collector).into()
@@ -185,6 +188,7 @@ impl Span2VecPass {
         const SOURCE_MAPPING_TYPE_IMAGE: u32 = 2;
         const SOURCE_MAPPING_TYPE_SHAPE: u32 = 3;
         const SOURCE_MAPPING_TYPE_PAGE: u32 = 4;
+        const SOURCE_MAPPING_TYPE_CHAR_INDEX: u32 = 5;
 
         let mut d = span_info
             .get_mut(&doc_region)
@@ -192,8 +196,31 @@ impl Span2VecPass {
 
         log::info!("pass check remote path({path:?})");
 
-        let mut candidate = None;
+        let mut candidate: Option<(SourceSpanOffset, SourceSpanOffset)> = None;
+        let mut in_text_indice: Option<Arc<[(Span, u16)]>> = None;
         for (remote_kind, idx, fg) in path {
+            // Special case for char index
+            if SOURCE_MAPPING_TYPE_CHAR_INDEX == *remote_kind {
+                log::info!(
+                    "pass check remote_char_index({remote_kind}, {idx}) => {:?}",
+                    in_text_indice
+                );
+                let char_idx = *idx as usize;
+                if let Some(chars) = in_text_indice.as_ref() {
+                    let ch = chars.as_ref().get(char_idx);
+                    let Some(ch) = ch else {
+                        continue;
+                    };
+                    if !ch.0.is_detached() {
+                        candidate = Some(((*ch).into(), (*ch).into()));
+                    }
+                }
+                continue;
+            }
+
+            // Overwrite the previous text indice
+            in_text_indice = None;
+            // Find the child node
             let ch = d
                 .get(*idx as usize)
                 .ok_or_else(|| error_once!("not found"))?;
@@ -214,17 +241,32 @@ impl Span2VecPass {
                         || error_once!("region not found", at: remote_kind, at_idx: idx),
                     )?;
                 }
+                (SOURCE_MAPPING_TYPE_TEXT, SourceNodeKind::Char(ch)) => {
+                    let is_attached = |x: (Span, u16)| x.0 != Span::detached();
+                    let st = is_attached(ch).then_some(ch);
+                    candidate = st.map(From::from).zip(st.map(From::from));
+
+                    // Generates a dynamic text indice here.
+                    //
+                    // We don't wrap it as creating `SourceNodeKind::Char`, because
+                    // it will be used rarely.
+                    //
+                    // This strategy would help us to reduce the time and memory
+                    // usage.
+                    in_text_indice = Some(Arc::new([ch]));
+                }
                 (SOURCE_MAPPING_TYPE_TEXT, SourceNodeKind::Text(chars)) => {
                     let is_attached = |x: &&(Span, u16)| x.0 != Span::detached();
-                    let st = chars.iter().find(is_attached).map(|e| e.0);
-                    let ed = chars.iter().rev().find(is_attached).map(|e| e.0);
-                    candidate = st.zip(ed);
+                    let st = chars.iter().find(is_attached).copied();
+                    let ed = chars.iter().rev().find(is_attached).copied();
+                    candidate = st.map(From::from).zip(ed.map(From::from));
+                    in_text_indice = Some(chars.clone());
                 }
                 (SOURCE_MAPPING_TYPE_IMAGE, SourceNodeKind::Image(s)) => {
-                    candidate = Some((s, s));
+                    candidate = Some((s.into(), s.into()));
                 }
                 (SOURCE_MAPPING_TYPE_SHAPE, SourceNodeKind::Shape(s)) => {
-                    candidate = Some((s, s));
+                    candidate = Some((s.into(), s.into()));
                 }
                 _ => {
                     return Err(error_once!(

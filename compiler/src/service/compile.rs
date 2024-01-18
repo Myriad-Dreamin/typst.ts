@@ -476,9 +476,9 @@ impl<Ctx> CompileClient<Ctx> {
 
 #[derive(Debug, Serialize)]
 pub struct DocToSrcJumpInfo {
-    filepath: String,
-    start: Option<(usize, usize)>, // row, column
-    end: Option<(usize, usize)>,
+    pub filepath: String,
+    pub start: Option<(usize, usize)>, // row, column
+    pub end: Option<(usize, usize)>,
 }
 
 // todo: remove constraint to CompilerWorld
@@ -513,6 +513,14 @@ where
     }
 
     pub async fn resolve_span(&mut self, span: Span) -> ZResult<Option<DocToSrcJumpInfo>> {
+        self.resolve_span_and_offset(span, None).await
+    }
+
+    pub async fn resolve_span_and_offset(
+        &mut self,
+        span: Span,
+        offset: Option<usize>,
+    ) -> ZResult<Option<DocToSrcJumpInfo>> {
         let resolve_off =
             |src: &Source, off: usize| src.byte_to_line(off).zip(src.byte_to_column(off));
 
@@ -520,7 +528,12 @@ where
             let world = this.compiler.world();
             let src_id = span.id()?;
             let source = world.source(src_id).ok()?;
-            let range = source.find(span)?.range();
+            let mut range = source.find(span)?.range();
+            if let Some(off) = offset {
+                if off < range.len() {
+                    range.start += off;
+                }
+            }
             let filepath = world.path_for_id(src_id).ok()?;
             Some(DocToSrcJumpInfo {
                 filepath: filepath.to_string_lossy().to_string(),
