@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 
+use crossbeam_queue::SegQueue;
 use once_cell::sync::OnceCell;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use typst::syntax::Span;
@@ -27,6 +28,13 @@ struct LazyVec {
     val: SrcVec,
 }
 
+const SOURCE_MAPPING_TYPE_TEXT: u32 = 0;
+const SOURCE_MAPPING_TYPE_GROUP: u32 = 1;
+const SOURCE_MAPPING_TYPE_IMAGE: u32 = 2;
+const SOURCE_MAPPING_TYPE_SHAPE: u32 = 3;
+const SOURCE_MAPPING_TYPE_PAGE: u32 = 4;
+const SOURCE_MAPPING_TYPE_CHAR_INDEX: u32 = 5;
+
 impl LazyVec {
     fn ensure_sorted(&mut self) {
         if !self.is_sorted {
@@ -43,8 +51,13 @@ impl LazyVec {
 
 const SPAN_ROUTING: usize = 63;
 
+enum RawSpanInfo {
+    Region(SourceRegion),
+    XContainsY { x: usize, y: usize },
+}
+
 struct LazySpanCollector {
-    val: [crossbeam_queue::SegQueue<SourceRegion>; SPAN_ROUTING + 1],
+    val: [crossbeam_queue::SegQueue<RawSpanInfo>; SPAN_ROUTING + 1],
 }
 
 impl Default for LazySpanCollector {
@@ -57,9 +70,27 @@ impl Default for LazySpanCollector {
 
 impl LazySpanCollector {
     fn push(&self, region: SourceRegion) {
+        match &region.kind {
+            SourceNodeKind::Page { region: ch } | SourceNodeKind::Group { region: ch } => {
+                // lower bits of region.idx is the index of the queue
+                let idx = ch & SPAN_ROUTING;
+                let t = &self.val[idx];
+                t.push(RawSpanInfo::XContainsY {
+                    x: region.region,
+                    y: *ch,
+                });
+            }
+            SourceNodeKind::Char(..)
+            | SourceNodeKind::Text(..)
+            | SourceNodeKind::Image(..)
+            | SourceNodeKind::Shape(..)
+            | SourceNodeKind::Doc => {}
+        }
+
         // lower bits of region.idx is the index of the queue
         let idx = region.region & SPAN_ROUTING;
-        self.val[idx].push(region);
+        let t = &self.val[idx];
+        t.push(RawSpanInfo::Region(region));
     }
 
     fn reset(&mut self) {
@@ -87,6 +118,63 @@ impl fmt::Debug for LazyRegionInfo {
     }
 }
 
+impl From<SegQueue<RawSpanInfo>> for LazyRegionInfo {
+    fn from(value: SegQueue<RawSpanInfo>) -> Self {
+        let mut children = HashMap::new();
+        let mut parents = HashMap::new();
+        let mut span_indice = HashMap::new();
+        let mut insert_span = |span: Span, region: usize| {
+            span_indice
+                .entry(span)
+                .or_insert_with(Vec::new)
+                .push(region);
+        };
+        for i in value.into_iter() {
+            match i {
+                RawSpanInfo::XContainsY { x, y } => {
+                    parents.insert(y, x);
+                }
+                RawSpanInfo::Region(region) => {
+                    match &region.kind {
+                        SourceNodeKind::Char((s, _)) => {
+                            insert_span(*s, region.region);
+                        }
+                        SourceNodeKind::Text(chars) => {
+                            for s in chars.iter() {
+                                insert_span(s.0, region.region);
+                            }
+                        }
+                        SourceNodeKind::Image(s) => {
+                            insert_span(*s, region.region);
+                        }
+                        SourceNodeKind::Shape(s) => {
+                            insert_span(*s, region.region);
+                        }
+                        SourceNodeKind::Page { .. }
+                        | SourceNodeKind::Group { .. }
+                        | SourceNodeKind::Doc => {}
+                    }
+
+                    children
+                        .entry(region.region)
+                        .or_insert_with(|| LazyVec {
+                            is_sorted: false,
+                            val: Vec::new(),
+                        })
+                        .val
+                        .push((region.idx as usize, region.kind, region.item));
+                }
+            }
+        }
+
+        Self {
+            children,
+            parents,
+            span_indice,
+        }
+    }
+}
+
 struct LazySpanInfo {
     /// A lazy ordered tree indexed by a region id.
     ///
@@ -94,6 +182,7 @@ struct LazySpanInfo {
     /// lazily sort the elements in the region.
     elem_tree: [LazyRegionInfo; SPAN_ROUTING + 1],
 }
+
 impl LazySpanInfo {
     fn get_mut(&mut self, doc_region: &usize) -> Option<&mut LazyVec> {
         let idx = doc_region & SPAN_ROUTING;
@@ -119,57 +208,7 @@ impl From<LazySpanCollector> for LazySpanInfo {
         let val = collector
             .val
             .into_par_iter()
-            .map(|e| {
-                let mut children = HashMap::new();
-                let mut parents = HashMap::new();
-                let mut span_indice = HashMap::new();
-                let mut insert_span = |span: Span, region: usize| {
-                    span_indice
-                        .entry(span)
-                        .or_insert_with(Vec::new)
-                        .push(region);
-                };
-                for region in e.into_iter() {
-                    match &region.kind {
-                        SourceNodeKind::Page { region: ch } => {
-                            parents.insert(*ch, region.region);
-                        }
-                        SourceNodeKind::Group { region: ch } => {
-                            parents.insert(*ch, region.region);
-                        }
-                        SourceNodeKind::Char((s, _)) => {
-                            insert_span(*s, region.region);
-                        }
-                        SourceNodeKind::Text(chars) => {
-                            for s in chars.iter() {
-                                insert_span(s.0, region.region);
-                            }
-                        }
-                        SourceNodeKind::Image(s) => {
-                            insert_span(*s, region.region);
-                        }
-                        SourceNodeKind::Shape(s) => {
-                            insert_span(*s, region.region);
-                        }
-                        SourceNodeKind::Doc => {}
-                    }
-
-                    children
-                        .entry(region.region)
-                        .or_insert_with(|| LazyVec {
-                            is_sorted: false,
-                            val: Vec::new(),
-                        })
-                        .val
-                        .push((region.idx as usize, region.kind, region.item));
-                }
-
-                LazyRegionInfo {
-                    children,
-                    parents,
-                    span_indice,
-                }
-            })
+            .map(From::from)
             .collect::<Vec<_>>()
             .try_into()
             .unwrap();
@@ -251,13 +290,17 @@ impl Span2VecPass {
 
         let span = span_offset.span;
 
-        let related_regions: Vec<usize> = span_info
+        let mut related_regions: Vec<usize> = span_info
             .elem_tree
             .iter_mut()
             .flat_map(|s| s.span_indice.get(&span))
             .flatten()
             .copied()
             .collect();
+        related_regions.sort();
+        related_regions.dedup();
+
+        log::info!("pass check related_regions({related_regions:?}");
 
         let doc_region = self.doc_region.load(std::sync::atomic::Ordering::SeqCst);
 
@@ -265,31 +308,72 @@ impl Span2VecPass {
         for reg in related_regions {
             let ch = span_info
                 .get_mut(&reg)
-                .ok_or_else(|| error_once!("not found"))?;
+                .ok_or_else(|| error_once!("related region not found", reg: reg))?;
             ch.ensure_sorted();
 
             for (idx, ch) in ch.val.iter().enumerate() {
                 match &ch.1 {
                     SourceNodeKind::Char((s, _)) => {
+                        // todo: check upper bound
                         if *s == span {
-                            res.push(vec![(reg as u32, idx as u32, "".to_owned())]);
+                            log::info!("pass cursor char({s:?})");
+                            res.push(vec![(
+                                reg as u32,
+                                SOURCE_MAPPING_TYPE_TEXT,
+                                idx as u32,
+                                "".to_owned(),
+                            )]);
                         }
                     }
                     SourceNodeKind::Text(chars) => {
-                        for (s, _) in chars.iter() {
-                            if *s == span {
-                                res.push(vec![(reg as u32, idx as u32, "".to_owned())]);
+                        log::info!("pass cursor check text({chars:?})");
+                        for (ch_idx, (s, byte_offset)) in chars.iter().enumerate() {
+                            // todo: it may not be monotonic
+                            let next = chars.get(ch_idx + 1);
+                            let byte_range = if matches!(next, Some((next, _)) if next == s) {
+                                (*byte_offset as usize)..(next.unwrap().1 as usize)
+                            } else {
+                                (*byte_offset as usize)..(std::usize::MAX)
+                            };
+                            if *s == span && byte_range.contains(&span_offset.offset) {
+                                log::info!("pass cursor text({s:?})");
+                                res.push(vec![
+                                    (
+                                        0u32,
+                                        SOURCE_MAPPING_TYPE_CHAR_INDEX,
+                                        ch_idx as u32,
+                                        "".to_owned(),
+                                    ),
+                                    (
+                                        reg as u32,
+                                        SOURCE_MAPPING_TYPE_TEXT,
+                                        idx as u32,
+                                        "".to_owned(),
+                                    ),
+                                ]);
                             }
                         }
                     }
                     SourceNodeKind::Image(s) => {
                         if *s == span {
-                            res.push(vec![(reg as u32, idx as u32, "".to_owned())]);
+                            log::info!("pass cursor image({s:?})");
+                            res.push(vec![(
+                                reg as u32,
+                                SOURCE_MAPPING_TYPE_IMAGE,
+                                idx as u32,
+                                "".to_owned(),
+                            )]);
                         }
                     }
                     SourceNodeKind::Shape(s) => {
                         if *s == span {
-                            res.push(vec![(reg as u32, idx as u32, "".to_owned())]);
+                            log::info!("pass cursor shape({s:?})");
+                            res.push(vec![(
+                                reg as u32,
+                                SOURCE_MAPPING_TYPE_SHAPE,
+                                idx as u32,
+                                "".to_owned(),
+                            )]);
                         }
                     }
                     SourceNodeKind::Page { .. }
@@ -299,25 +383,47 @@ impl Span2VecPass {
             }
         }
 
+        log::info!("pass found candidates({res:?}), with root: {doc_region}");
         for r in res.iter_mut() {
             let reg = r.last().unwrap().0 as usize;
             let mut cur = reg;
             while cur != doc_region {
                 let par = span_info
-                    .get_parent(&doc_region)
-                    .ok_or_else(|| error_once!("not found"))?;
+                    .get_parent(&cur)
+                    .ok_or_else(|| error_once!("parent not found", cur: cur))?;
 
                 let ch = span_info
-                    .get_mut(&reg)
-                    .ok_or_else(|| error_once!("not found"))?;
+                    .get_mut(&par)
+                    .ok_or_else(|| error_once!("region children not found", reg: par))?;
                 ch.ensure_sorted();
+
+                log::info!("found parent({cur:?}) -> ({par:?})");
 
                 let mut found = false;
                 for (idx, ch) in ch.val.iter().enumerate() {
                     match &ch.1 {
-                        SourceNodeKind::Page { region } | SourceNodeKind::Group { region } => {
+                        SourceNodeKind::Page { region } => {
+                            log::info!("pass find check page({region:?})");
                             if *region == cur {
-                                r.push((par as u32, idx as u32, ch.2.as_svg_id("")));
+                                r.push((
+                                    par as u32,
+                                    SOURCE_MAPPING_TYPE_PAGE,
+                                    idx as u32,
+                                    ch.2.as_svg_id(""),
+                                ));
+                                found = true;
+                                break;
+                            }
+                        }
+                        SourceNodeKind::Group { region } => {
+                            log::info!("pass find check group({region:?})");
+                            if *region == cur {
+                                r.push((
+                                    par as u32,
+                                    SOURCE_MAPPING_TYPE_GROUP,
+                                    idx as u32,
+                                    ch.2.as_svg_id(""),
+                                ));
                                 found = true;
                                 break;
                             }
@@ -337,6 +443,7 @@ impl Span2VecPass {
             }
 
             if cur != doc_region {
+                log::info!("drop candidate({reg:?})");
                 r.clear();
             } else {
                 r.reverse();
@@ -344,7 +451,10 @@ impl Span2VecPass {
         }
 
         res.retain(|x| !x.is_empty());
-        Ok(res)
+        Ok(res
+            .into_iter()
+            .map(|x| x.into_iter().map(|y| (y.1, y.2, y.3)).collect())
+            .collect())
     }
 
     pub fn query(
@@ -366,13 +476,6 @@ impl Span2VecPass {
             .span_tree
             .get_mut()
             .ok_or_else(|| error_once!("span info not initialized"))?;
-
-        const SOURCE_MAPPING_TYPE_TEXT: u32 = 0;
-        const SOURCE_MAPPING_TYPE_GROUP: u32 = 1;
-        const SOURCE_MAPPING_TYPE_IMAGE: u32 = 2;
-        const SOURCE_MAPPING_TYPE_SHAPE: u32 = 3;
-        const SOURCE_MAPPING_TYPE_PAGE: u32 = 4;
-        const SOURCE_MAPPING_TYPE_CHAR_INDEX: u32 = 5;
 
         let mut d = span_info
             .get_mut(&doc_region)

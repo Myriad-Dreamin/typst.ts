@@ -127,8 +127,16 @@ impl IncrDocServer {
         Some([b"new,", delta.as_slice()].concat())
     }
 
-    /// Get the source location of the given path.
-    pub fn source_span(
+    /// Get element paths by the given span.
+    pub fn resolve_element_paths_by_span(
+        &mut self,
+        span_offset: SourceSpanOffset,
+    ) -> ZResult<Vec<Vec<(u32, u32, String)>>> {
+        self.typst2vec.spans.query_cursors(span_offset)
+    }
+
+    /// Get the span range of the given element path.
+    pub fn resolve_span_by_element_path(
         &mut self,
         path: &[(u32, u32, String)],
     ) -> ZResult<Option<(SourceSpanOffset, SourceSpanOffset)>> {
