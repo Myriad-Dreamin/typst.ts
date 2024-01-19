@@ -302,7 +302,10 @@ impl Span2VecPass {
 
         log::info!("pass check related_regions({related_regions:?}");
 
-        let doc_region = self.doc_region.load(std::sync::atomic::Ordering::SeqCst);
+        let doc_region = *self.doc_region.get_mut();
+        if doc_region == 0 {
+            return Err(error_once!("doc not initialized"));
+        }
 
         let mut res = vec![];
         for reg in related_regions {
@@ -466,8 +469,7 @@ impl Span2VecPass {
             std::mem::take(&mut self.collector).into()
         });
 
-        let doc_region = self.doc_region.load(std::sync::atomic::Ordering::SeqCst);
-
+        let doc_region = *self.doc_region.get_mut();
         if doc_region == 0 {
             return Err(error_once!("doc not initialized"));
         }
