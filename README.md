@@ -280,6 +280,18 @@ core library (`@myriaddreamin/typst.ts`) and avoid building the WASM modules fro
 
 - Generate documentation by `typst-ts-cli package doc --manifest ./contrib/templates/typst-ts-templates/typst.toml`. -->
 
+##### Hot Reload
+
+To develop typst.ts with its Wasm renderer, you can run the following command:
+
+```bash
+cargo run --bin typst-ts-dev-server -- watch renderer
+# or run with yarn script
+yarn watch:renderer
+```
+
+And open your browser to `http://localhost:20810/`.
+
 ### Concept: Precompiler
 
 The precompiler is capable of producing artifact outputs from a Typst project. Thet artifact outputs can be easily distributed to remote endpoints.
