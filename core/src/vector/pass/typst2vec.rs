@@ -172,7 +172,9 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
         let src_reg = self.spans.start();
 
         let mut items = frame
-            .par_items()
+            .items()
+            .as_slice()
+            .par_iter()
             .enumerate()
             .flat_map(|(idx, (pos, item))| {
                 let mut is_link = false;
