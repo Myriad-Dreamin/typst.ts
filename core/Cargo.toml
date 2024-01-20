@@ -29,8 +29,7 @@ rustc-hash.workspace = true
 crossbeam-queue = "0.3.10"
 dashmap = { version = "5" }
 
-parking_lot = { workspace = true, features = ["owning_ref"] }
-owning_ref = "0.4"
+parking_lot = { workspace = true }
 bitvec = { version = "1" }
 serde.workspace = true
 serde_json.workspace = true
