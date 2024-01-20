@@ -1,6 +1,6 @@
 use typst::text::Font;
 
-use crate::{Bytes, ReadAllOnce};
+use crate::ReadAllOnce;
 
 /// A FontLoader would help load a font from somewhere.
 pub trait FontLoader {
@@ -9,7 +9,7 @@ pub trait FontLoader {
 
 /// Load font from a buffer.
 pub struct BufferFontLoader {
-    pub buffer: Option<Bytes>,
+    pub buffer: Option<typst::foundations::Bytes>,
     pub index: u32,
 }
 

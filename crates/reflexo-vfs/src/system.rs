@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use typst::diag::{FileError, FileResult};
+use reflexo::error::{FileError, FileResult};
 
 use typst_ts_core::{Bytes, ReadAllOnce};
 

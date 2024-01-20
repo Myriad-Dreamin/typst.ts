@@ -12,8 +12,8 @@
 use std::{collections::HashMap, fs};
 
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
+use reflexo::error::{FileError, FileResult};
 use tokio::sync::mpsc;
-use typst::diag::{FileError, FileResult};
 
 use typst_ts_core::{Bytes, ImmutPath};
 

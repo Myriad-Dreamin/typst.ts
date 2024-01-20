@@ -3,7 +3,8 @@ mod semantic_tokens;
 // mod token_encode;
 mod typst_tokens;
 
-use typst::{diag::FileResult, syntax::Source};
+use reflexo::error::FileResult;
+use typst::syntax::Source;
 
 use typst_ts_core::TypstFileId;
 

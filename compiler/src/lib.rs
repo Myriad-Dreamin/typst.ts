@@ -47,7 +47,7 @@ pub mod dependency;
 /// package things about compiler.
 pub mod package;
 /// time things about compiler.
-pub mod time;
+pub use reflexo_vfs::time;
 /// A vfs implementation for compiler.
 pub mod vfs;
 /// A common implementation of [`typst::World`]

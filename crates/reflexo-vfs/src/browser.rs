@@ -1,9 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use typst::diag::{FileError, FileResult};
+use reflexo::error::{FileError, FileResult};
+use reflexo::Bytes;
 use wasm_bindgen::prelude::*;
-
-use typst_ts_core::Bytes;
 
 use crate::Time;
 

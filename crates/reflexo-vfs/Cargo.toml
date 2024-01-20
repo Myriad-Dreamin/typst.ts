@@ -1,6 +1,6 @@
 [package]
-name = "typst-ts-compiler"
-description = "Compile Typst documents."
+name = "reflexo-vfs"
+description = "An editor-aware vfs for compilers."
 authors.workspace = true
 version.workspace = true
 license.workspace = true
@@ -10,11 +10,8 @@ repository.workspace = true
 
 [dependencies]
 
-typst.workspace = true
-comemo.workspace = true
-
 reflexo.workspace = true
-reflexo-vfs.workspace = true
+comemo.workspace = true
 
 once_cell.workspace = true
 append-only-vec.workspace = true
@@ -108,12 +105,7 @@ __web = [
     "typst-ts-core/web",
 ]
 web-render = ["__web"]
-browser-compile = [
-    "__web",
-    "web-render",
-    "typst-ts-core/glyph2vec",
-    "reflexo-vfs/browser-compile",
-]
+browser-compile = ["__web", "web-render", "typst-ts-core/glyph2vec"]
 browser-embedded-fonts = ["__web"]
 web = ["__web", "web-render", "browser-compile"]
 default = ["system", "dynamic-layout", "cjk", "emoji"]

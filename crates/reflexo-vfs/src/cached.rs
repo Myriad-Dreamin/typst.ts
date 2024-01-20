@@ -1,11 +1,11 @@
 use std::{collections::HashMap, ffi::OsStr, path::Path, sync::Arc};
 
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
-use typst::diag::{FileError, FileResult};
+use reflexo::error::{FileError, FileResult};
 
 use typst_ts_core::{Bytes, QueryRef};
 
-use crate::{vfs::from_utf8_or_bom, Time};
+use crate::{from_utf8_or_bom, Time};
 
 use super::AccessModel;
 

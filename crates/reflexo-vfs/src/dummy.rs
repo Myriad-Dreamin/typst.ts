@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use typst::diag::{FileError, FileResult};
+use reflexo::error::{FileError, FileResult};
 
 use typst_ts_core::Bytes;
 

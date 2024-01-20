@@ -1,6 +1,12 @@
 use core::fmt;
+use std::{
+    io,
+    path::{Path, PathBuf},
+    str::Utf8Error,
+    string::FromUtf8Error,
+};
 
-use ecow::EcoString;
+use ecow::{eco_format, EcoString};
 use serde::{Deserialize, Serialize};
 
 use crate::debug_loc::CharRange;
@@ -40,12 +46,83 @@ pub struct DiagMessage {
 
 impl DiagMessage {}
 
+/// A result type with a file-related error.
+pub type FileResult<T> = Result<T, FileError>;
+
+/// An error that occurred while trying to load of a file.
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub enum FileError {
+    /// A file was not found at this path.
+    NotFound(PathBuf),
+    /// A file could not be accessed.
+    AccessDenied,
+    /// A directory was found, but a file was expected.
+    IsDirectory,
+    /// The file is not a Typst source file, but should have been.
+    NotSource,
+    /// The file was not valid UTF-8, but should have been.
+    InvalidUtf8,
+    /// Another error.
+    ///
+    /// The optional string can give more details, if available.
+    Other(Option<EcoString>),
+}
+
+impl FileError {
+    /// Create a file error from an I/O error.
+    pub fn from_io(err: io::Error, path: &Path) -> Self {
+        match err.kind() {
+            io::ErrorKind::NotFound => Self::NotFound(path.into()),
+            io::ErrorKind::PermissionDenied => Self::AccessDenied,
+            io::ErrorKind::InvalidData
+                if err
+                    .to_string()
+                    .contains("stream did not contain valid UTF-8") =>
+            {
+                Self::InvalidUtf8
+            }
+            _ => Self::Other(Some(eco_format!("{err}"))),
+        }
+    }
+}
+
+impl std::error::Error for FileError {}
+
+impl fmt::Display for FileError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::NotFound(path) => {
+                write!(f, "file not found (searched at {})", path.display())
+            }
+            Self::AccessDenied => f.pad("failed to load file (access denied)"),
+            Self::IsDirectory => f.pad("failed to load file (is a directory)"),
+            Self::NotSource => f.pad("not a typst source file"),
+            Self::InvalidUtf8 => f.pad("file is not valid utf-8"),
+            Self::Other(Some(err)) => write!(f, "failed to load file ({err})"),
+            Self::Other(None) => f.pad("failed to load file"),
+        }
+    }
+}
+
+impl From<Utf8Error> for FileError {
+    fn from(_: Utf8Error) -> Self {
+        Self::InvalidUtf8
+    }
+}
+
+impl From<FromUtf8Error> for FileError {
+    fn from(_: FromUtf8Error) -> Self {
+        Self::InvalidUtf8
+    }
+}
+
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub enum ErrKind {
     None,
     Msg(String),
     Diag(DiagMessage),
+    File(FileError),
     Inner(Error),
 }
 
@@ -59,9 +136,15 @@ impl ErrKindExt for ErrKind {
     }
 }
 
+impl ErrKindExt for FileError {
+    fn to_error_kind(self) -> ErrKind {
+        ErrKind::File(self)
+    }
+}
+
 impl ErrKindExt for std::io::Error {
     fn to_error_kind(self) -> ErrKind {
-        ErrKind::Msg(self.to_string())
+        ErrKind::File(FileError::from_io(self, std::path::Path::new("")))
     }
 }
 
@@ -145,6 +228,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let err = &self.err;
         match &err.kind {
+            ErrKind::File(e) => write!(f, "{}: {} with {:?}", err.loc, e, err.arguments),
             ErrKind::Msg(msg) => write!(f, "{}: {} with {:?}", err.loc, msg, err.arguments),
             ErrKind::Diag(diag) => {
                 write!(f, "{}: {} with {:?}", err.loc, diag.message, err.arguments)

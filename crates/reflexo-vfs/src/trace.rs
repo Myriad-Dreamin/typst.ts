@@ -1,8 +1,7 @@
 use std::{path::Path, sync::atomic::AtomicU64};
 
-use typst::diag::FileResult;
-
-use typst_ts_core::Bytes;
+use reflexo::error::FileResult;
+use reflexo::Bytes;
 
 use super::{cached::CachedAccessModel, AccessModel};
 

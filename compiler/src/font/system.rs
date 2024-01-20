@@ -21,7 +21,7 @@ use typst_ts_core::{
         BufferFontLoader, FontProfile, FontProfileItem, FontResolverImpl, LazyBufferFontLoader,
         PartialFontBook,
     },
-    Bytes, FontSlot,
+    Bytes, FontSlot, IntoTypst,
 };
 
 use crate::vfs::system::LazyFile;
@@ -310,7 +310,7 @@ impl SystemFontSearcher {
         for (index, info) in FontInfo::iter(&data).enumerate() {
             self.book.push(info.clone());
             self.fonts.push(FontSlot::new_boxed(BufferFontLoader {
-                buffer: Some(data.clone()),
+                buffer: Some(data.clone().into_typst()),
                 index: index as u32,
             }));
         }

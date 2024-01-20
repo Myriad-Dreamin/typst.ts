@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::{collections::HashMap, path::Path};
 
 use parking_lot::RwLock;
-use typst::diag::FileResult;
+use reflexo::error::FileResult;
 
 use typst_ts_core::Bytes;
 

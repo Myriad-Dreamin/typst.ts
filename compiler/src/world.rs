@@ -17,7 +17,7 @@ use typst::{
 
 use typst_ts_core::{
     font::{FontProfile, FontResolverImpl},
-    Bytes, FontResolver, ImmutPath, TypstFileId as FileId,
+    Bytes, FontResolver, FromTypst, ImmutPath, TypstFileId as FileId,
 };
 
 use crate::{
@@ -126,12 +126,16 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
     /// same on-disk file. Implementors can deduplicate and return the same
     /// `Source` if they want to, but do not have to.
     fn source(&self, id: FileId) -> FileResult<Source> {
-        self.vfs.resolve(&self.path_for_id(id)?, id)
+        self.vfs
+            .resolve(&self.path_for_id(id)?, id)
+            .map_err(FromTypst::from_typst)
     }
 
     /// Try to access the specified file.
     fn file(&self, id: FileId) -> FileResult<Bytes> {
-        self.vfs.file(&self.path_for_id(id)?)
+        self.vfs
+            .file(&self.path_for_id(id)?)
+            .map_err(FromTypst::from_typst)
     }
 
     /// Get the current date.
@@ -172,7 +176,10 @@ impl<F: CompilerFeat> CompilerWorld<F> {
 
     /// Get source id by path with filesystem content.
     pub fn resolve(&self, path: &Path, source_id: FileId) -> FileResult<()> {
-        self.vfs.resolve(path, source_id).map(|_| ())
+        self.vfs
+            .resolve(path, source_id)
+            .map(|_| ())
+            .map_err(FromTypst::from_typst)
     }
 
     /// Resolve the real path for a file id.
@@ -192,10 +199,13 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     /// Get found dependencies in current state of vfs.
     pub fn get_dependencies(&self) -> DependencyTree {
         let t = self.vfs.iter_dependencies();
-        let vfs_dependencies = t.map(|(path, mtime)| DependentFileInfo {
-            path: path.as_ref().to_owned(),
-            mtime: mtime.duration_since(Time::UNIX_EPOCH).unwrap().as_micros() as u64,
-        });
+        let vfs_dependencies =
+            t.map(
+                |(path, mtime): (&Arc<Path>, reflexo_vfs::Time)| DependentFileInfo {
+                    path: path.as_ref().to_owned(),
+                    mtime: mtime.duration_since(Time::UNIX_EPOCH).unwrap().as_micros() as u64,
+                },
+            );
 
         DependencyTree::from_iter(&self.root, vfs_dependencies)
     }
@@ -259,7 +269,9 @@ impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
 
     #[inline]
     fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()> {
-        self.vfs.map_shadow(path, content)
+        self.vfs
+            .map_shadow(path, content)
+            .map_err(FromTypst::from_typst)
     }
 
     #[inline]

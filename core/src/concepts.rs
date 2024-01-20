@@ -13,7 +13,6 @@ pub struct AsOwnedString;
 /// Re-export of the typst crate.
 pub mod typst {
     pub(crate) mod well_known {
-        pub type Bytes = typst::foundations::Bytes;
 
         /// Although this is not good to expose this, we make an alias here to
         /// let it as a part of typst-ts.

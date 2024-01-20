@@ -7,7 +7,7 @@ use std::{
 use comemo::Prehashed;
 use typst::text::{Font, FontBook, FontInfo};
 
-use crate::{Bytes, FontSlot};
+use crate::FontSlot;
 
 use super::{BufferFontLoader, FontProfile, PartialFontBook};
 
@@ -85,7 +85,7 @@ impl FontResolverImpl {
         })
     }
 
-    pub fn modify_font_data(&mut self, idx: usize, buffer: Bytes) {
+    pub fn modify_font_data(&mut self, idx: usize, buffer: typst::foundations::Bytes) {
         let mut font_book = self.partial_book.lock().unwrap();
         for (i, info) in FontInfo::iter(buffer.as_slice()).enumerate() {
             let buffer = buffer.clone();

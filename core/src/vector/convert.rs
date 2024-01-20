@@ -1,3 +1,5 @@
+use ecow::eco_format;
+use reflexo::error::FileError;
 use reflexo::hash::{item_hash128, Fingerprint};
 pub use reflexo::vector::ir::*;
 
@@ -12,6 +14,46 @@ use typst::visualize::{ImageFormat, RasterFormat, VectorFormat};
 
 use crate::hash::typst_affinite_hash;
 use crate::{FromTypst, IntoTypst, TryFromTypst};
+
+impl FromTypst<reflexo::Bytes> for typst::foundations::Bytes {
+    fn from_typst(value: reflexo::Bytes) -> Self {
+        match value {
+            FileError::NotFound(path) => Self::NotFound(path),
+            FileError::AccessDenied => Self::AccessDenied,
+            FileError::IsDirectory => Self::IsDirectory,
+            FileError::NotSource => Self::NotSource,
+            FileError::InvalidUtf8 => Self::InvalidUtf8,
+            FileError::Other(s) => Self::Other(s),
+        }
+    }
+}
+
+impl FromTypst<FileError> for typst::diag::FileError {
+    fn from_typst(value: FileError) -> Self {
+        match value {
+            FileError::NotFound(path) => Self::NotFound(path),
+            FileError::AccessDenied => Self::AccessDenied,
+            FileError::IsDirectory => Self::IsDirectory,
+            FileError::NotSource => Self::NotSource,
+            FileError::InvalidUtf8 => Self::InvalidUtf8,
+            FileError::Other(s) => Self::Other(s),
+        }
+    }
+}
+
+impl FromTypst<typst::diag::FileError> for FileError {
+    fn from_typst(value: typst::diag::FileError) -> Self {
+        match value {
+            typst::diag::FileError::NotFound(path) => Self::NotFound(path),
+            typst::diag::FileError::AccessDenied => Self::AccessDenied,
+            typst::diag::FileError::IsDirectory => Self::IsDirectory,
+            typst::diag::FileError::NotSource => Self::NotSource,
+            typst::diag::FileError::InvalidUtf8 => Self::InvalidUtf8,
+            typst::diag::FileError::Package(e) => Self::Other(Some(eco_format!("{e}"))),
+            typst::diag::FileError::Other(s) => Self::Other(s),
+        }
+    }
+}
 
 impl FromTypst<Rgba8Item> for typst::visualize::Color {
     fn from_typst(v: Rgba8Item) -> Self {

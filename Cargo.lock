@@ -2869,6 +2869,50 @@ dependencies = [
 ]
 
 [[package]]
+name = "reflexo-vfs"
+version = "0.4.2-rc6"
+dependencies = [
+ "append-only-vec",
+ "base64",
+ "chrono",
+ "codespan-reporting",
+ "comemo",
+ "dirs",
+ "dissimilar",
+ "flate2",
+ "fontdb",
+ "fst",
+ "hex",
+ "indexmap 2.1.0",
+ "instant",
+ "js-sys",
+ "log",
+ "nohash-hasher",
+ "notify",
+ "once_cell",
+ "parking_lot",
+ "pathdiff",
+ "pollster",
+ "rayon",
+ "reflexo",
+ "reqwest",
+ "rustc-hash",
+ "serde",
+ "serde-wasm-bindgen",
+ "serde_json",
+ "sha2",
+ "strum",
+ "tar",
+ "tokio",
+ "typst-ts-core",
+ "typst-ts-svg-exporter",
+ "walkdir",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "regex"
 version = "1.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4350,6 +4394,8 @@ dependencies = [
  "pathdiff",
  "pollster",
  "rayon",
+ "reflexo",
+ "reflexo-vfs",
  "reqwest",
  "rustc-hash",
  "serde",

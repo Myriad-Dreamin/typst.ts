@@ -28,6 +28,9 @@ pub mod overlay;
 /// Provides trace access model which traces the underlying access model.
 pub mod trace;
 
+pub mod time;
+pub mod utils;
+
 mod path_interner;
 
 pub(crate) use path_interner::PathInterner;
@@ -37,14 +40,10 @@ use std::{collections::HashMap, ffi::OsStr, hash::Hash, path::Path, sync::Arc};
 
 use append_only_vec::AppendOnlyVec;
 use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
-use typst::{
-    diag::{FileError, FileResult},
-    syntax::Source,
-};
+use reflexo::error::{FileError, FileResult};
+use reflexo::{path::PathClean, Bytes, ImmutPath, QueryRef};
 
-use typst_ts_core::{path::PathClean, Bytes, ImmutPath, QueryRef, TypstFileId};
-
-use crate::{parser::reparse, Time};
+pub use time::Time;
 
 use self::{
     cached::CachedAccessModel,
@@ -99,15 +98,15 @@ type FileQuery<T> = QueryRef<T, FileError>;
 
 /// Holds canonical data for all paths pointing to the same entity.
 #[derive(Debug)]
-pub struct PathSlot {
-    idx: FileId,
+pub struct PathSlot<S> {
+    pub idx: FileId,
     sampled_path: once_cell::sync::OnceCell<ImmutPath>,
     mtime: FileQuery<Time>,
-    source: FileQuery<Source>,
+    pub source: FileQuery<S>,
     buffer: FileQuery<Bytes>,
 }
 
-impl PathSlot {
+impl<S> PathSlot<S> {
     /// Create a new slot with a given local file id from [`PathInterner`].
     fn new(idx: FileId) -> Self {
         PathSlot {
@@ -122,12 +121,12 @@ impl PathSlot {
 
 /// we add notify access model here since notify access model doesn't introduce
 /// overheads by our observation
-type VfsAccessModel<M> = CachedAccessModel<OverlayAccessModel<NotifyAccessModel<M>>, Source>;
+type VfsAccessModel<S, M> = CachedAccessModel<OverlayAccessModel<NotifyAccessModel<M>>, S>;
 
 /// Create a new `Vfs` harnessing over the given `access_model` specific for
 /// [`crate::world::CompilerWorld`]. With vfs, we can minimize the
 /// implementation overhead for [`AccessModel`] trait.
-pub struct Vfs<M: AccessModel + Sized> {
+pub struct Vfs<S, M: AccessModel + Sized> {
     /// The number of lifecycles since the creation of the `Vfs`.
     ///
     /// Note: The lifetime counter is incremented on resetting vfs.
@@ -135,7 +134,7 @@ pub struct Vfs<M: AccessModel + Sized> {
 
     // access_model: TraceAccessModel<VfsAccessModel<M>>,
     /// The wrapped access model.
-    access_model: VfsAccessModel<M>,
+    pub access_model: VfsAccessModel<S, M>,
     /// The path interner for canonical paths.
     path_interner: Mutex<PathInterner<<M as AccessModel>::RealPath, u64>>,
 
@@ -144,28 +143,25 @@ pub struct Vfs<M: AccessModel + Sized> {
     /// Note: we use a owned [`FileId`] here, which is resultant from
     /// [`PathInterner`]
     path2slot: RwLock<HashMap<Arc<OsStr>, FileId>>,
-    /// Map from typst global file id to a local file id.
-    src2file_id: RwLock<HashMap<TypstFileId, FileId>>,
     /// The slots for all the files during a single lifecycle.
-    pub slots: AppendOnlyVec<PathSlot>,
+    pub slots: AppendOnlyVec<PathSlot<S>>,
     /// Whether to reparse the file when it is changed.
     /// Default to `true`.
     pub do_reparse: bool,
 }
 
-impl<M: AccessModel + Sized> fmt::Debug for Vfs<M> {
+impl<S, M: AccessModel + Sized> fmt::Debug for Vfs<S, M> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Vfs")
             .field("lifetime_cnt", &self.lifetime_cnt)
             .field("path2slot", &self.path2slot)
-            .field("src2file_id", &self.src2file_id)
-            .field("slots", &self.slots)
+            .field("slots", &self.slots.len())
             .field("do_reparse", &self.do_reparse)
             .finish()
     }
 }
 
-impl<M: AccessModel + Sized> Vfs<M> {
+impl<S: Clone, M: AccessModel + Sized> Vfs<S, M> {
     /// Create a new `Vfs` with a given `access_model`.
     ///
     /// Retrieving an [`AccessModel`], it will further wrap the access model
@@ -193,7 +189,6 @@ impl<M: AccessModel + Sized> Vfs<M> {
             access_model,
             path_interner: Mutex::new(PathInterner::default()),
             slots: AppendOnlyVec::new(),
-            src2file_id: RwLock::new(HashMap::new()),
             path2slot: RwLock::new(HashMap::new()),
             do_reparse: true,
         }
@@ -212,7 +207,6 @@ impl<M: AccessModel + Sized> Vfs<M> {
 
         self.slots = AppendOnlyVec::new();
         self.path2slot.get_mut().clear();
-        self.src2file_id.get_mut().clear();
 
         self.path_interner
             .get_mut()
@@ -264,7 +258,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
 
     /// Returns the overall memory usage for the stored files.
     pub fn memory_usage(&self) -> usize {
-        self.slots.len() * core::mem::size_of::<PathSlot>()
+        self.slots.len() * core::mem::size_of::<PathSlot<S>>()
     }
 
     /// Id of the given path if it exists in the `Vfs` and is not deleted.
@@ -320,7 +314,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// Read a file.
-    fn read(&self, path: &Path) -> FileResult<Bytes> {
+    pub fn read(&self, path: &Path) -> FileResult<Bytes> {
         if self.access_model.is_file(path)? {
             self.access_model.content(path)
         } else {
@@ -336,32 +330,6 @@ impl<M: AccessModel + Sized> Vfs<M> {
         Ok(buffer.clone())
     }
 
-    /// Get source content by path and assign the source with a given typst
-    /// global file id.
-    ///
-    /// See `Vfs::resolve_with_f` for more information.
-    pub fn resolve(&self, path: &Path, source_id: TypstFileId) -> FileResult<Source> {
-        self.resolve_with_f(path, source_id, || {
-            // Return a new source if we don't have a reparse feature
-            if !self.do_reparse {
-                let content = self.read(path)?;
-                let content = from_utf8_or_bom(&content)?.to_owned();
-                let res = Ok(Source::new(source_id, content));
-
-                return res;
-            }
-
-            // otherwise reparse the source
-            if self.access_model.is_file(path)? {
-                Ok(self
-                    .access_model
-                    .read_all_diff(path, |x, y| reparse(source_id, x, y))?)
-            } else {
-                Err(FileError::IsDirectory)
-            }
-        })
-    }
-
     /// Get or insert a slot for a path. All paths pointing to the same entity
     /// will share the same slot.
     ///
@@ -370,7 +338,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     /// - Else, returns `path`'s id.
     ///
     /// Does not record a change.
-    fn get_real_slot(&self, origin_path: &Path) -> FileResult<&PathSlot> {
+    pub fn get_real_slot(&self, origin_path: &Path) -> FileResult<&PathSlot<S>> {
         let real_path = self.access_model.real_path(origin_path)?;
 
         let mut path_interner = self.path_interner.lock();
@@ -386,7 +354,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// Insert a new slot into the vfs.
-    fn slot(&self, origin_path: &Path) -> FileResult<&PathSlot> {
+    pub fn slot(&self, origin_path: &Path) -> FileResult<&PathSlot<S>> {
         // fast path for already inserted paths
         let path2slot = self.path2slot.upgradable_read();
         if let Some(slot) = path2slot.get(origin_path.as_os_str()) {
@@ -413,27 +381,6 @@ impl<M: AccessModel + Sized> Vfs<M> {
             .compute(|| self.access_model.mtime(origin_path))?;
 
         Ok(slot)
-    }
-
-    /// Get source content by path with a read content implmentation.
-    ///
-    /// Note: This function will also do eager check that whether the path
-    /// exists in the underlying access model. So the read content function
-    /// won't be triggered if the path doesn't exist.
-    fn resolve_with_f<ReadContent: FnOnce() -> FileResult<Source>>(
-        &self,
-        path: &Path,
-        source_id: TypstFileId,
-        read: ReadContent,
-    ) -> FileResult<Source> {
-        let slot = self.slot(path)?;
-
-        slot.source
-            .compute(|| {
-                self.src2file_id.write().insert(source_id, slot.idx);
-                read()
-            })
-            .map(|e| e.clone())
     }
 }
 

@@ -8,6 +8,7 @@ pub(crate) mod concepts;
 
 pub use concepts::*;
 
+pub use adt::bytes::Bytes;
 pub use error::{ErrKind, Error};
 
 pub mod vector {
