@@ -28,6 +28,7 @@
     "install:pure": "yarn install --pure-lockfile",
     "build:core": "yarn workspace @myriaddreamin/typst.ts build",
     "build:pkg": "turbo build --filter=./packages/*",
+    "build:renderer": "turbo build --filter=!./packages/{compiler} --filter=./packages/{renderer,typst.ts}",
     "build:proj": "turbo build --filter=./projects/*",
     "start:react": "yarn workspace @myriaddreamin/typst.react start",
     "start:angular": "yarn workspace typst.angular start",

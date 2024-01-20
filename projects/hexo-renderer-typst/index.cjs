@@ -5,11 +5,17 @@
 const path = require('path');
 const fs = require('fs');
 
+const Compiler = require('./lib/compiler.cjs');
+const compiler = new Compiler(hexo);
+
 const Renderer = require('./lib/renderer.cjs');
-const renderer = new Renderer(hexo);
+const renderer = new Renderer(hexo, compiler);
 
 const Processor = require('./lib/processor.cjs');
-const processor = new Processor(hexo);
+const processor = new Processor(hexo, compiler);
+
+const Watcher = require('./lib/watcher.cjs');
+const watcher = new Watcher(hexo, compiler);
 
 function render(data, options) {
   return renderer.render(data, options);
@@ -19,13 +25,18 @@ function process(data) {
   return processor.process(data);
 }
 
+function startWatch(data) {
+  return watcher.startWatch(data);
+}
+
 render.disableNunjucks = true;
 
 hexo.extend.injector.register('head_end', require('./lib/injector.typst.cjs'), 'default');
 hexo.extend.injector.register('head_end', require('./lib/injector.svg.cjs'), 'default');
 hexo.extend.renderer.register('typst', 'html', render);
 hexo.extend.renderer.register('typ', 'html', render);
-
+    
+hexo.extend.filter.register('before_generate', startWatch);
 hexo.extend.filter.register('after_post_render', process);
 
 hexo.extend.generator.register('typst_assets', function (locals) {

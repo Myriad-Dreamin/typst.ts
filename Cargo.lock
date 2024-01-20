@@ -4435,7 +4435,6 @@ dependencies = [
  "serde_with",
  "sha2",
  "siphasher 1.0.0",
- "svgtypes",
  "tiny-skia",
  "tiny-skia-path",
  "ttf-parser",
@@ -4460,6 +4459,29 @@ dependencies = [
  "typst-ts-compiler",
  "typst-ts-core",
  "warp",
+]
+
+[[package]]
+name = "typst-ts-dom-exporter"
+version = "0.4.2-rc5"
+dependencies = [
+ "async-recursion",
+ "base64",
+ "comemo",
+ "log",
+ "once_cell",
+ "rayon",
+ "siphasher 1.0.0",
+ "svgtypes",
+ "tiny-skia",
+ "tiny-skia-path",
+ "typst",
+ "typst-ts-canvas-exporter",
+ "typst-ts-core",
+ "typst-ts-svg-exporter",
+ "unicode-width",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]
@@ -4651,6 +4673,7 @@ dependencies = [
  "typst-ts-canvas-exporter",
  "typst-ts-compiler",
  "typst-ts-core",
+ "typst-ts-dom-exporter",
  "typst-ts-svg-exporter",
  "typst-ts-test-common",
  "vergen",

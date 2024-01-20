@@ -141,7 +141,9 @@ impl AsRef<str> for NodeError {
 
 // |e| napi::Error::from_status(NodeError::new(e))
 pub fn map_node_error(e: impl Into<NodeError>) -> napi::Error<NodeError> {
-    napi::Error::from_status(e.into())
+    let e = e.into();
+    let reason = e.as_ref().to_owned();
+    napi::Error::new(e, reason)
 }
 
 /// Result of single typst compilation.
