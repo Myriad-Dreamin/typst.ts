@@ -21,11 +21,14 @@ pub struct Opts {
 )]
 #[allow(clippy::large_enum_variant)]
 pub enum Subcommands {
-    /// Compile Commands
+    /// Compiles Commands
     Compile(CompileOpts),
-    /// Run server
+    /// Runs server
     #[clap(subcommand)]
     Run(RunSubCommands),
+    /// Watches codebase for debugging
+    #[clap(subcommand)]
+    Watch(WatchSubCommands),
 }
 
 #[derive(Debug, Parser)]
@@ -78,6 +81,20 @@ pub struct CompileCorpusArgs {
 pub enum RunSubCommands {
     /// Run HTTP server
     Http(RunHttpArgs),
+}
+
+#[derive(Debug, Subcommand)]
+#[clap(
+    about = "Commands about watch for typst.",
+    after_help = "",
+    next_display_order = None
+)]
+#[allow(clippy::large_enum_variant)]
+pub enum WatchSubCommands {
+    /// Watches codebase for debugging wasm renderer
+    /// - packages/renderer
+    /// - packages/typst.ts
+    Renderer,
 }
 
 #[derive(Debug, Clone, Parser)]

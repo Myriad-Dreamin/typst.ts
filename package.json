@@ -30,6 +30,7 @@
     "build:pkg": "turbo build --filter=./packages/*",
     "build:renderer": "turbo build --filter=!./packages/{compiler} --filter=./packages/{renderer,typst.ts}",
     "build:proj": "turbo build --filter=./projects/*",
+    "watch:renderer": "cargo run --bin typst-ts-dev-server -- watch renderer",
     "start:react": "yarn workspace @myriaddreamin/typst.react start",
     "start:angular": "yarn workspace typst.angular start",
     "book": "typst-book serve --font-path assets/fonts -w . docs/cookery",
