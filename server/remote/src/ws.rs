@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use futures::{
+use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
@@ -146,8 +146,8 @@ impl Session {
 
         drop(session);
 
-        // Garbage collect incremental cache. This evicts all memoized results that haven't been
-        // used in the last 30 compilations.
+        // Garbage collect incremental cache. This evicts all memoized results that
+        // haven't been used in the last 30 compilations.
         comemo::evict(30);
 
         self.send_world_snapshot(WorldSnapshotResponse {
