@@ -127,11 +127,11 @@
           })
           .then(async () => {
             const artifactData = await fetch(
-              // '/corpus/skyzh-cv/main.white.artifact.sir.in',
+              '/corpus/skyzh-cv/main.white.artifact.sir.in',
               // '/corpus/skyzh-cv/masterproef.artifact.sir.in',
               // '/corpus/skyzh-cv/introduction.ayu.multi.sir.in',
               // '/corpus/skyzh-cv/introduction-book.ayu.multi.sir.in',
-              '/corpus/skyzh-cv/stlc.multi.sir.in',
+              // '/corpus/skyzh-cv/stlc.multi.sir.in',
             )
               .then(response => response.arrayBuffer())
               .then(buffer => new Uint8Array(buffer));
