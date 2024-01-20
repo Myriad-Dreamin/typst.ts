@@ -16,16 +16,7 @@ use crate::hash::typst_affinite_hash;
 use crate::{FromTypst, IntoTypst, TryFromTypst};
 
 impl FromTypst<reflexo::Bytes> for typst::foundations::Bytes {
-    fn from_typst(value: reflexo::Bytes) -> Self {
-        match value {
-            FileError::NotFound(path) => Self::NotFound(path),
-            FileError::AccessDenied => Self::AccessDenied,
-            FileError::IsDirectory => Self::IsDirectory,
-            FileError::NotSource => Self::NotSource,
-            FileError::InvalidUtf8 => Self::InvalidUtf8,
-            FileError::Other(s) => Self::Other(s),
-        }
-    }
+    fn from_typst(value: reflexo::Bytes) -> Self {}
 }
 
 impl FromTypst<FileError> for typst::diag::FileError {
