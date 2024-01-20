@@ -1,4 +1,3 @@
-window.typstBindSemantics = function () {};
 window.typstBindSvgDom = function () {};
 window.captureStack = function () {
   return undefined;
@@ -47,13 +46,10 @@ function updateHovers(elems) {
 let globalSemaLabels = [];
 
 document.ready(() => {
-  let plugin = window.TypstRenderModule.createTypstSvgRenderer();
+  let plugin = window.TypstRenderModule.createTypstRenderer();
   console.log(plugin);
 
-  let isRendering = false;
-  let renderResponsive = undefined;
   let session = undefined;
-  let rerenderOverhead = 0;
 
   let initialRender = true;
   const typstBindCustomSemantics = async (root, svg, semantics) => {
@@ -71,7 +67,7 @@ document.ready(() => {
       });
     }
 
-    postProcessCrossLinks(semantics);
+    // postProcessCrossLinks(semantics);
 
     // todo: out of page
     if (window.location.hash) {
@@ -179,104 +175,25 @@ document.ready(() => {
             void dispose;
 
             session = ses;
-            plugin.manipulateData({ renderSession: ses, data: artifactData });
 
             const t = performance.now();
-            const p = plugin.renderDom({
+            const dom = plugin.renderDom({
               renderSession: ses,
               container: appElem,
-              pixelPerPt: 3,
-              viewport: getViewport(appElem),
+              pixelPerPt: 4.5,
+              domScale: 1.5,
             });
-            resolve(
-              p.then(() => {
-                const rTime = performance.now() - t;
-                console.log('plugin.renderDom', performance.now() - t);
-                rerenderOverhead = rTime + rerenderOverhead * 0.5;
-                window.rerenderOverhead = rerenderOverhead;
-              }),
-            );
+
+            dom.then((dom) => {
+              console.log(dom);
+              dom.addChangement(['new', artifactData]);
+              console.log('render time!!!!!!!!!', performance.now() - t);
+
+              window.addEventListener('resize', () => dom.addViewportChange());
+              window.addEventListener('scroll', () => dom.addViewportChange());
+            })
           }),
       );
     });
-  });
-
-  function queueRerender(stack) {
-    if (renderResponsive === undefined) {
-      if (stack) {
-        console.log('skip', stack);
-      }
-      isRendering = false;
-      return;
-    }
-    isRendering = true;
-    let responsive = renderResponsive === false ? false : true;
-    renderResponsive = undefined;
-    const t = performance.now();
-    console.log('rerender, overhead: ', rerenderOverhead);
-
-    plugin
-      .triggerDomRerender({
-        renderSession: session,
-        responsive,
-        viewport: getViewport(appElem),
-      })
-      .then(() => {
-        const rTime = performance.now() - t;
-        if (!responsive) {
-          rerenderOverhead = rTime + rerenderOverhead * 0.5;
-          window.rerenderOverhead = rerenderOverhead;
-        }
-        if (stack) {
-          console.log('pull render', rTime, responsive, stack);
-        }
-
-        return queueRerender();
-      });
-  }
-
-  const checkAndRerender = (r, stack) => {
-    if (r !== true && r !== false) {
-      throw new Error('invalid responsive');
-    }
-    if (r === false) {
-      renderResponsive = false;
-    } else if (renderResponsive !== false) {
-      renderResponsive = true;
-    }
-
-    if (stack) {
-      console.log('submit', stack);
-    }
-
-    if (!isRendering) {
-      queueRerender(stack);
-    }
-  };
-
-  let responsiveTimeout = undefined;
-  let responsiveTimeout2 = undefined;
-  const responsiveAction = stack => {
-    stack ||= window.captureStack();
-    clearTimeout(responsiveTimeout);
-    clearTimeout(responsiveTimeout2);
-    console.log('responsiveAction', rerenderOverhead, stack);
-    responsiveTimeout = setTimeout(
-      () => {
-        clearTimeout(responsiveTimeout);
-        clearTimeout(responsiveTimeout2);
-        checkAndRerender(true, stack);
-        responsiveTimeout2 = setTimeout(
-          () => checkAndRerender(false, stack),
-          Math.max(200, rerenderOverhead * 2.5),
-        );
-      },
-      Math.max(10, rerenderOverhead * 1.1),
-    );
-  };
-
-  initialized.then(() => {
-    window.addEventListener('resize', () => responsiveAction());
-    window.addEventListener('scroll', () => responsiveAction());
   });
 });
