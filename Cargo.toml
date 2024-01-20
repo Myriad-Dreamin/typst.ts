@@ -13,6 +13,8 @@ resolver = "2"
 members = [
     "benches/lowering",
 
+    "crates/reflexo",
+
     "cli",
     "core",
     "compiler",
@@ -199,6 +201,7 @@ vergen = { version = "8.2.5", features = [
 ] }
 
 # project core
+reflexo = { version = "0.4.2-rc6", default-features = false }
 typst-ts-core = { version = "0.4.2-rc6", default-features = false }
 typst-ts-compiler = { version = "0.4.2-rc6", default-features = false }
 typst-ts-test-common = { version = "0.4.2-rc6", path = "tests/common" }
@@ -217,6 +220,7 @@ typst-ts-dev-server = { version = "0.4.2-rc6", path = "server/dev" }
 typst-ts-cli = { version = "0.4.2-rc6", path = "cli" }
 
 [patch.crates-io]
+reflexo = { path = "crates/reflexo" }
 typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }
 typst-ts-ast-exporter = { path = "exporter/ast" }
