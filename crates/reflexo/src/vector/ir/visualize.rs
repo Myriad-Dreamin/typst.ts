@@ -1,7 +1,7 @@
 use typst::visualize::{ImageFormat, RasterFormat, VectorFormat};
 
 use super::preludes::*;
-use crate::{typst_affinite_hash, StaticHash128};
+use crate::{hash::typst_affinite_hash, StaticHash128};
 
 /// Item representing an `<image/>` element.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]

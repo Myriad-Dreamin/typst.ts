@@ -3,15 +3,25 @@
 // #![warn(missing_debug_implementations)]
 // #![warn(missing_copy_implementations)]
 
-pub(crate) mod concepts;
-pub use concepts::*;
-pub mod adt;
-pub mod error;
-pub use error::{ErrKind, Error};
+pub use reflexo::*;
 
-pub mod hash;
 pub use hash::typst_affinite_hash;
-pub mod path;
+
+mod concepts2 {
+
+    /// This is an implementation for `Write + !AsRef<AnyBytes>`.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct AsWritable;
+
+    /// This is an implementation for `Vec<u8>`.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct AsOwnedBytes;
+
+    /// This is an implementation for `String`.
+    #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct AsOwnedString;
+}
+pub use concepts2::*;
 
 // Core data structures of typst-ts.
 pub mod annotation;
@@ -20,7 +30,6 @@ pub use content::TextContent;
 // todo: move me to compiler
 pub mod cache;
 pub mod config;
-pub mod debug_loc;
 
 // Core mechanism of typst-ts.
 pub(crate) mod exporter;

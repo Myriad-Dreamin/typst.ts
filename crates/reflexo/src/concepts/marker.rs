@@ -20,18 +20,6 @@ impl<X> Default for PhantomParamData<X> {
     }
 }
 
-/// This is an implementation for `Write + !AsRef<AnyBytes>`.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct AsWritable;
-
-/// This is an implementation for `Vec<u8>`.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct AsOwnedBytes;
-
-/// This is an implementation for `String`.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct AsOwnedString;
-
 pub struct AsCowBytes;
 
 type StdBase64 = Base64<Standard, Padded>;
