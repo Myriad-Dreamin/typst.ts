@@ -39,6 +39,7 @@ pub trait NodeCompilerTrait:
                 &generated_file_path,
                 Bytes::from(main_file_content.into_bytes()),
             )
+            .map_err(|e| e.to_string())
             .context("failed to map shadow file")
             .map_err(map_node_error)?;
 

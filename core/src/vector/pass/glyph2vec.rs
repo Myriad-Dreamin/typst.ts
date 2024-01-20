@@ -19,6 +19,8 @@ use crate::vector::ir::{self, FlatGlyphItem, FontItem, FontPack, FontRef, GlyphI
 pub type Glyph2VecPass = TGlyph2VecPass</* ENABLE_REF_CNT */ false>;
 pub type IncrGlyph2VecPass = TGlyph2VecPass</* ENABLE_REF_CNT */ true>;
 
+use crate::IntoTypst;
+
 pub struct ConvertInnerImpl {
     /// A glyph backend provider.
     pub gp: GlyphProvider,
@@ -75,7 +77,7 @@ impl<const ENABLE_REF_CNT: bool> TGlyph2VecPass<ENABLE_REF_CNT> {
     pub fn finalize(&self) -> (FontPack, Vec<(GlyphRef, FlatGlyphItem)>) {
         let mut fonts = self.font_mapping.clone().into_iter().collect::<Vec<_>>();
         fonts.sort_by(|(_, a), (_, b)| a.idx.cmp(&b.idx));
-        let fonts = fonts.into_iter().map(|(a, _)| a.into()).collect();
+        let fonts = fonts.into_iter().map(|(a, _)| a.into_typst()).collect();
 
         let glyphs = self.glyph_defs.clone().into_iter().collect::<Vec<_>>();
         let glyphs = glyphs
@@ -134,7 +136,7 @@ impl<const ENABLE_REF_CNT: bool> TGlyph2VecPass<ENABLE_REF_CNT> {
             }
 
             if ENABLE_REF_CNT {
-                self.new_fonts.lock().push(font.clone().into());
+                self.new_fonts.lock().push(font.clone().into_typst());
             }
 
             abs_ref
@@ -296,8 +298,8 @@ impl ConvertInnerImpl {
         let sz = Size::new(typst::layout::Abs::raw(w), typst::layout::Abs::raw(h));
 
         let image = ir::ImageItem {
-            image: Arc::new(glyph_image.into()),
-            size: sz.into(),
+            image: Arc::new(glyph_image.into_typst()),
+            size: sz.into_typst(),
         };
 
         // position our image
@@ -463,8 +465,8 @@ impl ConvertInnerImpl {
         );
 
         Some(ir::ImageItem {
-            image: Arc::new(glyph_image.into()),
-            size: sz.into(),
+            image: Arc::new(glyph_image.into_typst()),
+            size: sz.into_typst(),
         })
     }
 }
@@ -473,7 +475,7 @@ impl ConvertInnerImpl {
 #[comemo::memoize]
 fn lower_image(image: &Image, size: Size) -> ir::ImageItem {
     ir::ImageItem {
-        image: Arc::new(image.clone().into()),
-        size: size.into(),
+        image: Arc::new(image.clone().into_typst()),
+        size: size.into_typst(),
     }
 }

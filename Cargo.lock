@@ -2864,10 +2864,7 @@ dependencies = [
  "serde_repr",
  "serde_with",
  "siphasher 1.0.0",
- "tiny-skia",
  "tiny-skia-path",
- "ttf-parser",
- "typst",
  "wasm-bindgen",
 ]
 

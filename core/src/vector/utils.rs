@@ -1,3 +1,4 @@
+use reflexo::vector::ir::Rgba8Item;
 use typst::layout::Abs;
 use typst::visualize::{Color, Paint};
 
@@ -20,9 +21,9 @@ pub trait ToCssExt {
     fn to_css(self) -> String;
 }
 
-impl ToCssExt for Color {
+impl ToCssExt for Rgba8Item {
     fn to_css(self) -> String {
-        let [r, g, b, a] = self.to_vec4_u8();
+        let Rgba8Item { r, g, b, a } = self;
         if a == 255 {
             let shorter = format!("#{:02x}{:02x}{:02x}", r, g, b);
             if shorter.chars().nth(1) == shorter.chars().nth(2)
@@ -40,6 +41,19 @@ impl ToCssExt for Color {
         }
 
         format!("#{:02x}{:02x}{:02x}{:02x}", r, g, b, a)
+    }
+}
+
+impl ToCssExt for Color {
+    fn to_css(self) -> String {
+        let v = self.to_vec4_u8();
+        Rgba8Item {
+            r: v[0],
+            g: v[1],
+            b: v[2],
+            a: v[3],
+        }
+        .to_css()
     }
 }
 

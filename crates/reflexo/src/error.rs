@@ -2,14 +2,8 @@ use core::fmt;
 
 use ecow::EcoString;
 use serde::{Deserialize, Serialize};
-use typst::{diag::FileError, syntax::Source};
-
-pub use typst::diag::SourceDiagnostic as TypstSourceDiagnostic;
-
-pub use typst::diag::FileError as TypstFileError;
 
 use crate::debug_loc::CharRange;
-use crate::path::unix_slash;
 
 #[derive(serde_repr::Serialize_repr, serde_repr::Deserialize_repr, Debug, Clone)]
 #[repr(u8)]
@@ -31,23 +25,6 @@ impl ToString for DiagSeverity {
     }
 }
 
-struct DiagMsgFmt<'a>(&'a TypstSourceDiagnostic);
-
-impl<'a> fmt::Display for DiagMsgFmt<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0.message)?;
-        if !self.0.hints.is_empty() {
-            f.write_str(", hints: ")?;
-            f.write_str(&self.0.hints.join(", "))?;
-        }
-        if !self.0.trace.is_empty() {
-            write!(f, "{:?}", self.0.trace)?;
-        }
-
-        Ok(())
-    }
-}
-
 /// <https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnostic>
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiagMessage {
@@ -61,73 +38,6 @@ pub struct DiagMessage {
     // source: ImmutStr,
 }
 
-impl DiagMessage {
-    pub fn from_std(diag: TypstSourceDiagnostic, world: Option<&dyn typst::World>) -> Self {
-        // arguments.push(("code", diag.code.to_string()));
-
-        let mut package = String::new();
-        let mut path = String::new();
-        let mut range = None;
-
-        if let Some(id) = diag.span.id() {
-            if let Some(pkg) = id.package() {
-                package = pkg.to_string();
-            };
-            path = unix_slash(id.vpath().as_rooted_path());
-
-            if let Some((rng, src)) = world
-                .and_then(|world| world.source(id).ok())
-                .and_then(|src| Some((src.find(diag.span)?.range(), src)))
-            {
-                let resolve_off =
-                    |src: &Source, off: usize| src.byte_to_line(off).zip(src.byte_to_column(off));
-                range = Some(CharRange {
-                    start: resolve_off(&src, rng.start).into(),
-                    end: resolve_off(&src, rng.end).into(),
-                });
-            }
-        }
-
-        Self {
-            package,
-            path,
-            message: format!("{}", DiagMsgFmt(&diag)),
-            severity: match diag.severity {
-                typst::diag::Severity::Error => DiagSeverity::Error,
-                typst::diag::Severity::Warning => DiagSeverity::Warning,
-            },
-            range,
-        }
-    }
-}
-
-pub trait ErrorConverter {
-    // todo: file_id to path
-    /// Convert typst.ts diagnostic to error
-    /// It has a simple implementation.
-    /// If you want to customize it, you can implement it yourself.
-    fn convert_typst(&self, world: &dyn typst::World, diag: TypstSourceDiagnostic) -> Error {
-        let mut arguments = Vec::new();
-
-        let msg = DiagMessage::from_std(diag, Some(world));
-        arguments.push(("severity", msg.severity.to_string()));
-        arguments.push(("package", msg.package));
-        arguments.push(("path", msg.path));
-        if let Some(range) = msg.range {
-            arguments.push(("start_line", range.start.line.to_string()));
-            arguments.push(("start_column", range.start.column.to_string()));
-            arguments.push(("end_line", range.end.line.to_string()));
-            arguments.push(("end_column", range.end.column.to_string()));
-        }
-
-        Error::new(
-            "typst",
-            ErrKind::Msg(msg.message),
-            arguments.into_boxed_slice(),
-        )
-    }
-}
-
 impl DiagMessage {}
 
 #[derive(Debug, Clone)]
@@ -136,7 +46,6 @@ pub enum ErrKind {
     None,
     Msg(String),
     Diag(DiagMessage),
-    File(FileError),
     Inner(Error),
 }
 
@@ -150,15 +59,9 @@ impl ErrKindExt for ErrKind {
     }
 }
 
-impl ErrKindExt for FileError {
-    fn to_error_kind(self) -> ErrKind {
-        ErrKind::File(self)
-    }
-}
-
 impl ErrKindExt for std::io::Error {
     fn to_error_kind(self) -> ErrKind {
-        ErrKind::File(FileError::from_io(self, std::path::Path::new("")))
+        ErrKind::Msg(self.to_string())
     }
 }
 
@@ -242,7 +145,6 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let err = &self.err;
         match &err.kind {
-            ErrKind::File(e) => write!(f, "{}: {} with {:?}", err.loc, e, err.arguments),
             ErrKind::Msg(msg) => write!(f, "{}: {} with {:?}", err.loc, msg, err.arguments),
             ErrKind::Diag(diag) => {
                 write!(f, "{}: {} with {:?}", err.loc, diag.message, err.arguments)
