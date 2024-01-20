@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "types": ["web"],
+    "types": ["web", "./src/global.d.mts"],
     "baseUrl": ".",
     "target": "ES2020",
     "allowJs": true,
@@ -11,6 +11,6 @@
     "declaration": false,
     "stripInternal": true,
 
-    "lib": ["ES5", "ES6", "ES7", "ES2018"]
+    "lib": ["ES5", "ES6", "ES7", "ES2018", "ES2022"]
   }
 }

@@ -22,6 +22,7 @@ pub(crate) mod utils;
 pub(crate) mod backend;
 use backend::generate_text;
 pub use backend::SvgGlyphBuilder;
+pub use backend::SvgText;
 
 /// frontend of SVG export, which provides a bunch of approaches to rendering
 /// the document.
@@ -141,8 +142,6 @@ pub fn render_svg(output: &Document) -> String {
     let svg_text = UsingExporter::render(&doc.module, &doc.pages, None);
     generate_text(transform::minify(svg_text))
 }
-
-use crate::backend::SvgText;
 
 impl<Feat: ExportFeature> Exporter<Document, String> for SvgExporter<Feat> {
     fn export(&self, _world: &dyn World, output: Arc<Document>) -> SourceResult<String> {

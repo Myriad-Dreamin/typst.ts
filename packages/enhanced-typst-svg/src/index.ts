@@ -180,6 +180,14 @@ const linkmove = (elem: ElementState) =>
 /// Process mouse leave event on pseudo-link elements
 const linkleave = (elem: ElementState) => gr(elem)?.forEach(e => e.classList.remove('hover'));
 
+const semaLinkEnter = (a: any, bound: any) => () => {
+  const href =
+    bound.parentElement?.getAttribute('href') || bound.parentElement?.getAttribute('xlink:href');
+  if (a.getAttribute('href') !== href) {
+    a.setAttribute('href', href || '');
+  }
+};
+
 interface ProcessOptions {
   layoutText?: boolean;
 }
@@ -602,6 +610,7 @@ window.layoutText = async function (svg: Element) {
 
 interface HandleOptions {
   behavior: ScrollBehavior;
+  isDom?: boolean;
 }
 window.handleTypstLocation = function (
   elem: Element,
@@ -621,73 +630,83 @@ window.handleTypstLocation = function (
       // todo: multiple documents
       location.hash = `loc-${u}x${x.toFixed(2)}x${y.toFixed(2)}`;
     });
-  const docRoot = findAncestor(elem, 'typst-doc');
-  if (!docRoot) {
-    console.warn('no typst-doc found', elem);
+  // todo: abstraction
+  let docRoot = elem;
+
+  const scrollToElem = (elem: SVGGElement) => {
+    // evaluate window viewport 1vw
+    const pw = window.innerWidth * 0.01;
+    const ph = window.innerHeight * 0.01;
+
+    const dataWidth =
+      Number.parseFloat(
+        docRoot.getAttribute('data-width') || docRoot.getAttribute('width') || '0',
+      ) || 0;
+    const dataHeight =
+      Number.parseFloat(
+        docRoot.getAttribute('data-height') || docRoot.getAttribute('height') || '0',
+      ) || 0;
+    // console.log(elem, vw, vh, x, y, dataWidth, dataHeight, docRoot);
+    const svgRectBase = docRoot.getBoundingClientRect();
+    const svgRect = {
+      left: svgRectBase.left,
+      top: svgRectBase.top,
+      width: svgRectBase.width,
+      height: svgRectBase.height,
+    };
+    const xOffsetInnerFix = 7 * pw;
+    const yOffsetInnerFix = 38.2 * ph;
+
+    const transform = elem.transform?.baseVal?.consolidate()?.matrix;
+    if (transform) {
+      // console.log(transform.e, transform.f);
+      svgRect.left += (transform.e / dataWidth) * svgRect.width;
+      svgRect.top += (transform.f / dataHeight) * svgRect.height;
+    }
+
+    const windowRoot = document.body || document.firstElementChild;
+    const basePos = windowRoot.getBoundingClientRect();
+
+    const xOffset = svgRect.left - basePos.left + (x / dataWidth) * svgRect.width - xOffsetInnerFix;
+    const yOffset = svgRect.top - basePos.top + (y / dataHeight) * svgRect.height - yOffsetInnerFix;
+    const left = xOffset + xOffsetInnerFix;
+    const top = yOffset + yOffsetInnerFix;
+
+    window.scrollTo({ behavior, left: xOffset, top: yOffset });
+
+    if (behavior !== 'instant') {
+      triggerRipple(
+        windowRoot,
+        left,
+        top,
+        'typst-jump-ripple',
+        'typst-jump-ripple-effect .4s linear',
+      );
+    }
+
+    assignHashLoc(page, x, y);
+    return;
+  };
+
+  if (options?.isDom) {
+    scrollToElem(docRoot as SVGGElement);
     return;
   }
+
+  docRoot = findAncestor(elem, 'typst-doc');
+  if (!docRoot) {
+    console.warn('no typst-doc or typst-svg-page found', elem);
+    return;
+  }
+
   const children = docRoot.children;
   let nthPage = 0;
   for (let i = 0; i < children.length; i++) {
-    if (children[i].tagName === 'g') {
+    if (children[i].tagName === 'g' || children[i].tagName === 'stub') {
       nthPage++;
     }
     if (nthPage == page) {
-      // evaluate window viewport 1vw
-      const pw = window.innerWidth * 0.01;
-      const ph = window.innerHeight * 0.01;
-
-      const page = children[i] as SVGGElement;
-      const dataWidth =
-        Number.parseFloat(
-          docRoot.getAttribute('data-width') || docRoot.getAttribute('width') || '0',
-        ) || 0;
-      const dataHeight =
-        Number.parseFloat(
-          docRoot.getAttribute('data-height') || docRoot.getAttribute('height') || '0',
-        ) || 0;
-      // console.log(page, vw, vh, x, y, dataWidth, dataHeight, docRoot);
-      const svgRectBase = docRoot.getBoundingClientRect();
-      const svgRect = {
-        left: svgRectBase.left,
-        top: svgRectBase.top,
-        width: svgRectBase.width,
-        height: svgRectBase.height,
-      };
-      const xOffsetInnerFix = 7 * pw;
-      const yOffsetInnerFix = 38.2 * ph;
-
-      const transform = page.transform.baseVal.consolidate()?.matrix;
-      if (transform) {
-        // console.log(transform.e, transform.f);
-        svgRect.left += (transform.e / dataWidth) * svgRect.width;
-        svgRect.top += (transform.f / dataHeight) * svgRect.height;
-      }
-
-      const windowRoot = document.body || document.firstElementChild;
-      const basePos = windowRoot.getBoundingClientRect();
-
-      const xOffset =
-        svgRect.left - basePos.left + (x / dataWidth) * svgRect.width - xOffsetInnerFix;
-      const yOffset =
-        svgRect.top - basePos.top + (y / dataHeight) * svgRect.height - yOffsetInnerFix;
-      const left = xOffset + xOffsetInnerFix;
-      const top = yOffset + yOffsetInnerFix;
-
-      window.scrollTo({ behavior, left: xOffset, top: yOffset });
-
-      if (behavior !== 'instant') {
-        triggerRipple(
-          windowRoot,
-          left,
-          top,
-          'typst-jump-ripple',
-          'typst-jump-ripple-effect .4s linear',
-        );
-      }
-
-      assignHashLoc(nthPage, x, y);
-      return;
+      scrollToElem(children[i] as SVGGElement);
     }
   }
 };
@@ -721,3 +740,76 @@ if (scriptTag) {
     window.typstProcessSvg(docRoot);
   }
 }
+
+function findLinkInSvg(r: SVGSVGElement, xy: [number, number], target: any) {
+  // children
+  const bbox = r.getBoundingClientRect();
+  if (
+    xy[0] < bbox.left - 1 ||
+    xy[0] > bbox.right + 1 ||
+    xy[1] < bbox.top - 1 ||
+    xy[1] > bbox.bottom + 1
+  ) {
+    return;
+  }
+
+  // foreignObject
+  if (r.classList.contains('pseudo-link')) {
+    return r;
+  }
+
+  for (let i = 0; i < r.children.length; i++) {
+    const a = findLinkInSvg(r.children[i] as any as SVGSVGElement, xy, target) as SVGAElement;
+    if (a) {
+      return a;
+    }
+  }
+
+  return undefined;
+}
+
+(window as any).typstBindSemantics = function (
+  root: HTMLElement,
+  svg: SVGSVGElement,
+  semantics: HTMLDivElement,
+) {
+  if ('typstBindCustomSemantics' in window) {
+    (window as any).typstBindCustomSemantics(root, svg, semantics);
+  }
+
+  semantics.addEventListener('mousemove', (event: MouseEvent) => {
+    ignoredEvent(
+      () => {
+        // a link
+        if ((event.target as any)?.tagName === 'A') {
+          const target = event.target as any as any;
+          if (target.cachedTarget) {
+            return;
+          }
+
+          // console.log('svg typstBindSemantics', event.clientX, event.clientY, svg);
+          const a = findLinkInSvg(svg, [event.clientX, event.clientY], event.target as any);
+          // console.log('svg typstBindSemantics', a);
+          if (a) {
+            a.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+            const sle = semaLinkEnter(a, target);
+            target.addEventListener('mouseenter', () => {
+              a.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+              sle();
+            });
+            target.addEventListener('mousemove', () => {
+              a.dispatchEvent(new MouseEvent('mousemove', { bubbles: true }));
+              linkmove(a);
+            });
+            target.addEventListener('mouseleave', () => {
+              a.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+              linkleave(a);
+            });
+          }
+        }
+      },
+      100,
+      'mouseenter',
+    );
+  });
+};

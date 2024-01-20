@@ -95,9 +95,10 @@ pub struct FontItem {
 
     /// The inlined hash of the font to avoid local collision.
     pub hash: u32,
+    pub cap_height: Abs,
     pub ascender: Abs,
     pub descender: Abs,
-    pub unit_per_em: Abs,
+    pub units_per_em: Abs,
     pub vertical: bool,
 
     pub glyphs: Vec<Arc<FlatGlyphItem>>,
@@ -118,13 +119,15 @@ impl From<Font> for FontItem {
         let hash = fxhash::hash32(&font);
         let fingerprint = Fingerprint::from_u128(item_hash128(&font));
 
+        let metrics = font.metrics();
         Self {
             fingerprint,
             hash,
             family: font.info().family.clone().into(),
-            ascender: Scalar(font.metrics().ascender.get() as f32),
-            descender: Scalar(font.metrics().descender.get() as f32),
-            unit_per_em: Scalar(font.units_per_em() as f32),
+            cap_height: Scalar(metrics.cap_height.get() as f32),
+            ascender: Scalar(metrics.ascender.get() as f32),
+            descender: Scalar(metrics.descender.get() as f32),
+            units_per_em: Scalar(font.units_per_em() as f32),
             vertical: false, // todo: check vertical
             glyphs: Vec::new(),
             glyph_cov: bitvec::vec::BitVec::new(),
@@ -150,12 +153,12 @@ pub struct TextShape {
 
 impl TextShape {
     /// ppem is calcuated by the font size.
-    fn ppem(&self, upem: f32) -> Scalar {
+    pub fn ppem(&self, upem: f32) -> Scalar {
         Scalar(self.size.0 / upem)
     }
 
     /// inv_ppem is calcuated by the font size.
-    fn inv_ppem(&self, upem: f32) -> Scalar {
+    pub fn inv_ppem(&self, upem: f32) -> Scalar {
         Scalar(upem / self.size.0)
     }
 

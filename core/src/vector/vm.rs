@@ -210,6 +210,7 @@ pub trait RenderVm<'m>: Sized + FontIndice<'m> {
         self.start_group(value)
     }
 
+    // todo: remove render state
     fn start_text(
         &mut self,
         _state: RenderState,
@@ -315,7 +316,7 @@ pub trait RenderVm<'m>: Sized + FontIndice<'m> {
     ) -> Self::Group {
         // upem is the unit per em defined in the font.
         let font = self.get_font(&text.shape.font).unwrap();
-        let upem = Scalar(font.unit_per_em.0);
+        let upem = Scalar(font.units_per_em.0);
 
         // Rescale the font size and put glyphs into the group.
         group_ctx = text.shape.add_transform(self, group_ctx, upem);

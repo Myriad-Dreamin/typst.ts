@@ -44,6 +44,7 @@ typst-ts-compiler = { version = "0.4.2-rc5", default-features = false, features 
 ] }
 typst-ts-canvas-exporter = { workspace = true, optional = true }
 typst-ts-svg-exporter = { workspace = true, optional = true }
+typst-ts-dom-exporter = { workspace = true } # , optional = true
 console_error_panic_hook.workspace = true
 
 [dev-dependencies]
@@ -84,11 +85,13 @@ render_canvas = [
     "web-sys/HtmlCanvasElement",
     "web-sys/CanvasRenderingContext2d",
 ]
+# render_dom = ["dep:typst-ts-dom-exporter", "render_svg"]
+render_dom = ["render_svg"]
 render_pdf = []
 render_svg = ["dep:typst-ts-svg-exporter", "web-sys/HtmlDivElement"]
-render_full = ["render_canvas", "render_pdf", "render_svg"]
+render_full = ["render_canvas", "render_pdf", "render_svg", "render_dom"]
 
 full = ["serde_json", "serde_rmp", "render_full", "web_test"]
 
 default = ["full"]
-web = ["render_canvas", "render_svg"]
+web = ["render_canvas", "render_svg", "render_dom"]

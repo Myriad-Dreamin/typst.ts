@@ -42,7 +42,6 @@ xmlparser.workspace = true
 serde_with.workspace = true
 rayon.workspace = true
 rkyv = { workspace = true, optional = true }
-svgtypes.workspace = true
 tiny-skia-path.workspace = true
 
 wasm-bindgen = { workspace = true, optional = true }

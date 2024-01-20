@@ -23,26 +23,30 @@
   color: transparent;
   background: #7db9dea0;
 }
-svg {
-  --glyph_fill: black;
-  user-select: text;
-}
 .pseudo-link {
   fill: transparent;
   cursor: pointer;
   pointer-events: all;
 }
+svg {
+  fill: none;
+}
+
 .outline_glyph path,
 path.outline_glyph {
   fill: var(--glyph_fill);
+  stroke: var(--glyph_stroke);
 }
+
 .outline_glyph path,
 path.outline_glyph {
-  transition: 0.2s fill;
+  transition: 0.2s fill stroke;
 }
 .hover .typst-text {
   --glyph_fill: #66bab7;
+  --glyph_stroke: #66bab7;
 }
+
 .typst-jump-ripple,
 .typst-debug-react-ripple {
   width: 0;

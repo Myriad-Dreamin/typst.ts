@@ -1,5 +1,5 @@
 use js_sys::Promise;
-use std::{fmt::Debug, ops::Deref, sync::Arc};
+use std::{fmt::Debug, ops::Deref, pin::Pin, sync::Arc};
 use tiny_skia as sk;
 
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
@@ -50,11 +50,65 @@ impl ExportFeature for DefaultExportFeature {
 use async_trait::async_trait;
 
 #[async_trait(?Send)]
-pub trait CanvasElem: Debug {
+pub trait CanvasAction {
+    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static>;
+
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d);
 }
 
-pub type CanvasNode = Arc<Box<dyn CanvasElem + Send + Sync>>;
+#[derive(Debug)]
+pub enum CanvasElem {
+    Group(CanvasGroupElem),
+    Clip(CanvasClipElem),
+    Path(CanvasPathElem),
+    Image(CanvasImageElem),
+    Glyph(CanvasGlyphElem),
+}
+
+#[async_trait(?Send)]
+impl CanvasAction for CanvasElem {
+    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
+        type DynFutureBox = Pin<Box<dyn core::future::Future<Output = ()>>>;
+
+        match self {
+            CanvasElem::Group(g) => g.prepare().map(|e| {
+                let e: DynFutureBox = Box::pin(e);
+                e
+            }),
+            CanvasElem::Clip(g) => g.prepare().map(|e| {
+                let e: DynFutureBox = Box::pin(e);
+                e
+            }),
+            CanvasElem::Path(g) => g.prepare().map(|e| {
+                let e: DynFutureBox = Box::pin(e);
+                e
+            }),
+            CanvasElem::Image(g) => g.prepare().map(|e| {
+                let e: DynFutureBox = Box::pin(e);
+                e
+            }),
+            CanvasElem::Glyph(g) => g.prepare().map(|e| {
+                let e: DynFutureBox = Box::pin(e);
+                e
+            }),
+        }
+    }
+
+    async fn realize(&self, _ts: sk::Transform, _canvas: &web_sys::CanvasRenderingContext2d) {
+        match self {
+            CanvasElem::Group(g) => g.realize(_ts, _canvas).await,
+            CanvasElem::Clip(g) => g.realize(_ts, _canvas).await,
+            CanvasElem::Path(g) => g.realize(_ts, _canvas).await,
+            CanvasElem::Image(g) => g.realize(_ts, _canvas).await,
+            CanvasElem::Glyph(g) => g.realize(_ts, _canvas).await,
+        }
+    }
+}
+
+// async fn realize(&self, ts: sk::Transform, canvas:
+// &web_sys::CanvasRenderingContext2d);
+
+pub type CanvasNode = Arc<CanvasElem>;
 
 #[inline]
 fn set_transform(canvas: &web_sys::CanvasRenderingContext2d, transform: sk::Transform) {
@@ -93,7 +147,27 @@ pub struct CanvasGroupElem {
 }
 
 #[async_trait(?Send)]
-impl CanvasElem for CanvasGroupElem {
+impl CanvasAction for CanvasGroupElem {
+    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
+        let mut v = Vec::default();
+
+        for (_, sub_elem) in &self.inner {
+            if let Some(f) = sub_elem.prepare() {
+                v.push(f);
+            }
+        }
+
+        if v.is_empty() {
+            None
+        } else {
+            Some(async move {
+                for f in v {
+                    f.await;
+                }
+            })
+        }
+    }
+
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         let ts = ts.pre_concat(self.ts);
         for (pos, sub_elem) in &self.inner {
@@ -110,13 +184,29 @@ pub struct CanvasClipElem {
     pub inner: CanvasNode,
 }
 
-#[async_trait(?Send)]
-impl CanvasElem for CanvasClipElem {
-    async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
-        let _guard = CanvasStateGuard::new(canvas);
+impl CanvasClipElem {
+    pub fn realize_with<'a>(
+        &self,
+        ts: sk::Transform,
+        canvas: &'a web_sys::CanvasRenderingContext2d,
+    ) -> CanvasStateGuard<'a> {
+        let guard = CanvasStateGuard::new(canvas);
 
         set_transform(canvas, ts);
         canvas.clip_with_path_2d(&Path2d::new_with_path_string(&self.d).unwrap());
+
+        guard
+    }
+}
+
+#[async_trait(?Send)]
+impl CanvasAction for CanvasClipElem {
+    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
+        self.inner.prepare()
+    }
+
+    async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
+        let _guard = self.realize_with(ts, canvas);
 
         self.inner.realize(ts, canvas).await
     }
@@ -127,8 +217,24 @@ pub struct CanvasPathElem {
     pub path_data: ir::PathItem,
 }
 
+struct EmptyFuture;
+impl core::future::Future for EmptyFuture {
+    type Output = ();
+
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        _cx: &mut core::task::Context<'_>,
+    ) -> core::task::Poll<()> {
+        core::task::Poll::Ready(())
+    }
+}
+
 #[async_trait(?Send)]
-impl CanvasElem for CanvasPathElem {
+impl CanvasAction for CanvasPathElem {
+    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + 'static> {
+        None::<EmptyFuture>
+    }
+
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         let _guard = CanvasStateGuard::new(canvas);
         set_transform(canvas, ts);
@@ -202,16 +308,17 @@ pub struct CanvasImageElem {
 }
 
 impl CanvasImageElem {
-    async fn load_image_cached(image: &Image, image_elem: &HtmlImageElement) {
+    fn is_image_cached(image_elem: &HtmlImageElement) -> bool {
         let image_loaded = image_elem.get_attribute("data-typst-loaded-image");
-        match image_loaded {
-            Some(t) if t == "true" => {}
-            _ => {
-                Self::load_image_slow(image, image_elem).await;
-                image_elem
-                    .set_attribute("data-typst-loaded-image", "true")
-                    .unwrap();
-            }
+        matches!(image_loaded, Some(t) if t == "true")
+    }
+
+    async fn load_image_cached(image: &Image, image_elem: &HtmlImageElement) {
+        if !Self::is_image_cached(image_elem) {
+            Self::load_image_slow(image, image_elem).await;
+            image_elem
+                .set_attribute("data-typst-loaded-image", "true")
+                .unwrap();
         }
     }
 
@@ -276,6 +383,17 @@ impl CanvasImageElem {
             .unwrap();
     }
 
+    fn prepare_image(image: Arc<Image>) -> Option<impl core::future::Future<Output = ()>> {
+        let image_elem = rasterize_image(image.clone()).unwrap();
+
+        if Self::is_image_cached(&image_elem) {
+            return None;
+        }
+
+        let image = image.clone();
+        Some(async move { Self::load_image_cached(&image, &image_elem).await })
+    }
+
     async fn draw_image(
         ts: sk::Transform,
         canvas: &web_sys::CanvasRenderingContext2d,
@@ -285,7 +403,7 @@ impl CanvasImageElem {
 
         let image = &image_data.image;
 
-        let image_elem = rasterize_image(image).unwrap();
+        let image_elem = rasterize_image(image.clone()).unwrap();
         Self::load_image_cached(image, &image_elem).await;
 
         // resize image to fit the view
@@ -317,7 +435,11 @@ impl CanvasImageElem {
 }
 
 #[async_trait(?Send)]
-impl CanvasElem for CanvasImageElem {
+impl CanvasAction for CanvasImageElem {
+    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + 'static> {
+        Self::prepare_image(self.image_data.image.clone())
+    }
+
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         Self::draw_image(ts, canvas, &self.image_data).await
     }
@@ -330,7 +452,16 @@ pub struct CanvasGlyphElem {
 }
 
 #[async_trait(?Send)]
-impl CanvasElem for CanvasGlyphElem {
+impl CanvasAction for CanvasGlyphElem {
+    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + 'static> {
+        match self.glyph_data.as_ref() {
+            FlatGlyphItem::Image(glyph) => {
+                CanvasImageElem::prepare_image(glyph.image.image.clone())
+            }
+            FlatGlyphItem::Outline(..) | FlatGlyphItem::None => None,
+        }
+    }
+
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         let _guard = CanvasStateGuard::new(canvas);
         set_transform(canvas, ts);
@@ -379,14 +510,14 @@ pub struct CanvasStack {
 
 impl From<CanvasStack> for CanvasNode {
     fn from(s: CanvasStack) -> Self {
-        let inner: CanvasNode = Arc::new(Box::new(CanvasGroupElem {
+        let inner: CanvasNode = Arc::new(CanvasElem::Group(CanvasGroupElem {
             ts: s.ts,
             inner: s.inner,
         }));
         if let Some(clipper) = s.clipper {
-            Arc::new(Box::new(CanvasClipElem {
+            Arc::new(CanvasElem::Clip(CanvasClipElem {
                 ts: s.ts,
-                d: clipper.d.clone(),
+                d: clipper.d,
                 inner,
             }))
         } else {
@@ -457,7 +588,7 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode>> GroupContext<C> for CanvasStac
     ) {
         self.inner.push((
             ir::Point::default(),
-            Arc::new(Box::new(CanvasPathElem {
+            Arc::new(CanvasElem::Path(CanvasPathElem {
                 path_data: path.clone(),
             })),
         ))
@@ -466,7 +597,7 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode>> GroupContext<C> for CanvasStac
     fn render_image(&mut self, _ctx: &mut C, image_item: &ir::ImageItem) {
         self.inner.push((
             ir::Point::default(),
-            Arc::new(Box::new(CanvasImageElem {
+            Arc::new(CanvasElem::Image(CanvasImageElem {
                 image_data: image_item.clone(),
             })),
         ))
@@ -486,7 +617,7 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode>> GroupContext<C> for CanvasStac
         if let Some(glyph_data) = font.get_glyph(glyph) {
             self.inner.push((
                 ir::Point::new(pos, Scalar(0.)),
-                Arc::new(Box::new(CanvasGlyphElem {
+                Arc::new(CanvasElem::Glyph(CanvasGlyphElem {
                     fill: self.fill.clone().unwrap(),
                     glyph_data: glyph_data.clone(),
                 })),
@@ -574,7 +705,7 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
 #[derive(Clone)]
 pub struct CanvasPage {
     pub content: Fingerprint,
-    pub elem: Arc<Box<dyn CanvasElem + Send + Sync>>,
+    pub elem: Arc<CanvasElem>,
     pub size: Size,
 }
 
@@ -755,7 +886,7 @@ fn create_image() -> Option<HtmlImageElement> {
 }
 
 #[comemo::memoize]
-fn rasterize_image(_image: &Image) -> Option<HtmlImageElement> {
+fn rasterize_image(_image: Arc<Image>) -> Option<HtmlImageElement> {
     create_image()
 }
 

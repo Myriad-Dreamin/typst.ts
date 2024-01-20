@@ -72,6 +72,10 @@ impl SvgText {
             SvgText::Content(c) => c.write_string_io(string_io),
         }
     }
+
+    pub fn join(data: Vec<SvgText>) -> String {
+        generate_text(data)
+    }
 }
 
 impl From<&str> for SvgText {
@@ -456,7 +460,7 @@ impl<
         } else {
             format!(
                 r##"target="_blank" xlink:href="{}""##,
-                link.href.replace('&', "&amp;")
+                link.href.replace('&', "&amp;").replace('"', "&quot;")
             )
         };
 
@@ -584,7 +588,7 @@ impl<
             &text.content.content,
             width,
             font.ascender,
-            font.unit_per_em,
+            font.units_per_em,
             ctx.should_aware_html_entity(),
         )
     }
@@ -602,7 +606,7 @@ impl<
         state: RenderState,
     ) -> Self {
         let font = ctx.get_font(&text.shape.font).unwrap();
-        let upem = font.unit_per_em;
+        let upem = font.units_per_em;
 
         self.with_text_shape(ctx, upem, &text.shape, &state.at(fill_key), state);
         self

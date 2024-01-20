@@ -20,10 +20,12 @@ import {
   ManipulateDataOptions,
   RenderSvgOptions,
   RenderInSessionOptions,
+  MountDomOptions,
 } from './options.render.mjs';
 import { RenderView, renderTextLayer } from './render/canvas/view.mjs';
 import { LazyWasmModule } from './wasm.mjs';
 import { buildComponent } from './init.mjs';
+import { TypstDomDocument } from './dom.mjs';
 
 /**
  * The result of rendering a Typst document.
@@ -433,6 +435,8 @@ export interface TypstRenderer extends TypstSvgRenderer {
     fn: (session: RenderSession) => Promise<T>,
   ): Promise<T>;
 
+  renderDom(options: RenderInSessionOptions<MountDomOptions>): Promise<TypstDomDocument>;
+
   /**
    * alias to {@link TypstRenderer#renderToCanvas}, will remove in v0.5.0
    * @deprecated
@@ -515,7 +519,8 @@ function randstr(prefix?: string): string {
 
 let warnOnceCanvasSet = true;
 
-class TypstRendererDriver {
+/** @internal */
+export class TypstRendererDriver {
   renderer: typst.TypstRenderer;
   rendererJs: typeof typst;
 
@@ -765,6 +770,31 @@ class TypstRendererDriver {
     }
 
     return this.renderToCanvas(options);
+  }
+
+  async renderDom(options: RenderInSessionOptions<MountDomOptions>): Promise<TypstDomDocument> {
+    if ('format' in options) {
+      if (options.format !== 'vector') {
+        const artifactFormats = ['serde_json', 'js', 'ir'] as const;
+        if (artifactFormats.includes(options.format as any)) {
+          // deprecated
+          throw new Error(`deprecated format ${options.format}, please use vector format`);
+        }
+      }
+    }
+
+    return this.withinOptionSession(options, async sessionRef => {
+      const t = new TypstDomDocument({
+        ...options,
+        renderMode: 'dom',
+        hookedElem: options.container,
+        kModule: sessionRef,
+        renderer: this,
+      });
+      t;
+      await t.impl.mountDom(options.pixelPerPt);
+      return t;
+    });
   }
 
   async renderToCanvas(options: RenderOptions<RenderToCanvasOptions>): Promise<void> {
