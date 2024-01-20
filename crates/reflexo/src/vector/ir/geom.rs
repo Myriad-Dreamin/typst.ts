@@ -5,12 +5,6 @@ use std::{
     sync::Arc,
 };
 
-use typst::layout::{
-    Abs as TypstAbs, Angle as TypstAngle, Axes as TypstAxes, Point as TypstPoint,
-    Ratio as TypstRatio, Transform as TypstTransform,
-};
-use typst::util::Scalar as TypstScalar;
-
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 
@@ -38,36 +32,6 @@ impl From<f32> for Scalar {
 impl From<Scalar> for f32 {
     fn from(scalar: Scalar) -> Self {
         scalar.0
-    }
-}
-
-impl From<TypstScalar> for Scalar {
-    fn from(scalar: TypstScalar) -> Self {
-        Self(scalar.get() as f32)
-    }
-}
-
-impl From<Scalar> for TypstScalar {
-    fn from(scalar: Scalar) -> Self {
-        Self::from(scalar.0 as f64)
-    }
-}
-
-impl From<TypstRatio> for Scalar {
-    fn from(ratio: TypstRatio) -> Self {
-        Self(ratio.get() as f32)
-    }
-}
-
-impl From<TypstAbs> for Scalar {
-    fn from(ratio: TypstAbs) -> Self {
-        Self(ratio.to_pt() as f32)
-    }
-}
-
-impl From<TypstAngle> for Scalar {
-    fn from(scalar: TypstAngle) -> Self {
-        Self(scalar.to_rad() as f32)
     }
 }
 
@@ -196,30 +160,6 @@ impl<T> Axes<T> {
     }
 }
 
-impl<U, T> From<TypstAxes<U>> for Axes<T>
-where
-    T: From<U>,
-{
-    fn from(typst_axes: TypstAxes<U>) -> Self {
-        Self {
-            x: typst_axes.x.into(),
-            y: typst_axes.y.into(),
-        }
-    }
-}
-
-impl<T, U> From<Axes<T>> for TypstAxes<U>
-where
-    T: Into<U>,
-{
-    fn from(axes: Axes<T>) -> Self {
-        Self {
-            x: axes.x.into(),
-            y: axes.y.into(),
-        }
-    }
-}
-
 // impl Add for Axes
 impl<T> std::ops::Add for Axes<T>
 where
@@ -249,15 +189,6 @@ impl From<Point> for tiny_skia_path::Point {
         Self {
             x: axes.x.into(),
             y: axes.y.into(),
-        }
-    }
-}
-
-impl From<TypstPoint> for Point {
-    fn from(p: TypstPoint) -> Self {
-        Self {
-            x: p.x.into(),
-            y: p.y.into(),
         }
     }
 }
@@ -316,8 +247,8 @@ impl Transform {
 
     #[inline]
     pub fn pre_concat(self, other: Self) -> Self {
-        let ts: tiny_skia::Transform = self.into();
-        let other: tiny_skia::Transform = other.into();
+        let ts: tiny_skia_path::Transform = self.into();
+        let other: tiny_skia_path::Transform = other.into();
         let ts = ts.pre_concat(other);
         ts.into()
     }
@@ -329,7 +260,7 @@ impl Transform {
 
     #[inline]
     pub fn pre_translate(self, tx: f32, ty: f32) -> Self {
-        let ts: tiny_skia::Transform = self.into();
+        let ts: tiny_skia_path::Transform = self.into();
         let ts = ts.pre_translate(tx, ty);
         ts.into()
     }
@@ -383,21 +314,8 @@ impl Transform {
     }
 }
 
-impl From<TypstTransform> for Transform {
-    fn from(typst_transform: TypstTransform) -> Self {
-        Self {
-            sx: typst_transform.sx.into(),
-            ky: typst_transform.ky.into(),
-            kx: typst_transform.kx.into(),
-            sy: typst_transform.sy.into(),
-            tx: typst_transform.tx.into(),
-            ty: typst_transform.ty.into(),
-        }
-    }
-}
-
-impl From<tiny_skia::Transform> for Transform {
-    fn from(skia_transform: tiny_skia::Transform) -> Self {
+impl From<tiny_skia_path::Transform> for Transform {
+    fn from(skia_transform: tiny_skia_path::Transform) -> Self {
         Self {
             sx: skia_transform.sx.into(),
             ky: skia_transform.ky.into(),
@@ -409,7 +327,7 @@ impl From<tiny_skia::Transform> for Transform {
     }
 }
 
-impl From<Transform> for tiny_skia::Transform {
+impl From<Transform> for tiny_skia_path::Transform {
     fn from(ir_transform: Transform) -> Self {
         Self {
             sx: ir_transform.sx.into(),

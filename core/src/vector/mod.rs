@@ -1,5 +1,6 @@
 // #[cfg(feature = "vector-bbox")]
 // pub mod bbox;
+pub mod convert;
 pub mod incr;
 pub mod ir;
 pub mod pass;

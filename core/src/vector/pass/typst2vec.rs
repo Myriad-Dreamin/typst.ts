@@ -33,7 +33,7 @@ use crate::{
         path2d::SvgPath2DBuilder,
         utils::{AbsExt, ToCssExt},
     },
-    ImmutStr, TypstAbs,
+    FromTypst, ImmutStr, IntoTypst, TypstAbs,
 };
 
 use super::{SourceNodeKind, SourceRegion, Span2VecPass, TGlyph2VecPass};
@@ -149,7 +149,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
                 Page {
                     content: abs_ref,
-                    size: p.size().into(),
+                    size: p.size().into_typst(),
                 }
             })
             .collect();
@@ -225,7 +225,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
                         if group.transform != TypstTransform::identity() {
                             inner = self.store(VecItem::Item(TransformedRef(
-                                TransformItem::Matrix(Arc::new(group.transform.into())),
+                                TransformItem::Matrix(Arc::new(group.transform.into_typst())),
                                 inner,
                             )));
                         }
@@ -302,7 +302,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                     },
                 };
 
-                Some(((*pos).into(), is_link, item))
+                Some(((*pos).into_typst(), is_link, item))
             })
             .collect::<Vec<_>>();
 
@@ -326,7 +326,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
         let g = self.store(VecItem::Group(
             GroupRef(items.into_iter().map(|(x, _, y)| (x, y)).collect()),
             match frame.kind() {
-                FrameKind::Hard => Some(frame.size().into()),
+                FrameKind::Hard => Some(frame.size().into_typst()),
                 FrameKind::Soft => None,
             },
         ));
@@ -515,8 +515,8 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                 self.glyphs
                     .build_glyph(font, GlyphItem::Raw(text.font.clone(), GlyphId(glyph.id)));
                 glyphs.push((
-                    glyph.x_offset.at(text.size).into(),
-                    glyph.x_advance.at(text.size).into(),
+                    glyph.x_offset.at(text.size).into_typst(),
+                    glyph.x_advance.at(text.size).into_typst(),
                     glyph.id as u32,
                 ));
             }
@@ -570,14 +570,14 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
     ) {
         // todo: default miter_limit, thickness
         if let Some(pattern) = dash_pattern.as_ref() {
-            styles.push(PathStyle::StrokeDashOffset(pattern.phase.into()));
+            styles.push(PathStyle::StrokeDashOffset(pattern.phase.into_typst()));
             let d = pattern.array.clone();
-            let d = d.into_iter().map(Scalar::from).collect();
+            let d = d.into_iter().map(Scalar::from_typst).collect();
             styles.push(PathStyle::StrokeDashArray(d));
         }
 
-        styles.push(PathStyle::StrokeWidth((*thickness).into()));
-        styles.push(PathStyle::StrokeMitterLimit((*miter_limit).into()));
+        styles.push(PathStyle::StrokeWidth((*thickness).into_typst()));
+        styles.push(PathStyle::StrokeMitterLimit((*miter_limit).into_typst()));
         match line_cap {
             LineCap::Butt => {}
             LineCap::Round => styles.push(PathStyle::StrokeLineCap("round".into())),
@@ -695,7 +695,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
             let item = PathItem {
                 d,
-                size: Some(shape_size.into()),
+                size: Some(shape_size.into_typst()),
                 styles,
             };
 
@@ -714,8 +714,8 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
         self.store_cached(&cond, || {
             VecItem::Image(ImageItem {
-                image: Arc::new(image.clone().into()),
-                size: size.into(),
+                image: Arc::new(image.clone().into_typst()),
+                size: size.into_typst(),
             })
         })
     }
@@ -724,7 +724,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
     fn link(&self, url: &str, size: Size) -> VecItem {
         VecItem::Link(LinkItem {
             href: url.into(),
-            size: size.into(),
+            size: size.into_typst(),
         })
     }
 
@@ -739,7 +739,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                 pos.point.y.to_f32()
             )
             .into(),
-            size: size.into(),
+            size: size.into_typst(),
         };
 
         VecItem::Link(lnk)
@@ -763,7 +763,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
         let mut stops = Vec::with_capacity(g.stops_ref().len());
         for (c, step) in g.stops_ref() {
             let [r, g, b, a] = c.to_vec4_u8();
-            stops.push((Rgba8Item { r, g, b, a }, (*step).into()))
+            stops.push((Rgba8Item { r, g, b, a }, (*step).into_typst()))
         }
 
         let relative_to_self = match g.relative() {
@@ -772,34 +772,34 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
         };
 
         let anti_alias = g.anti_alias();
-        let space = g.space().into();
+        let space = g.space().into_typst();
 
         let mut styles = Vec::new();
         let kind = match g {
-            Gradient::Linear(l) => GradientKind::Linear(l.angle.into()),
+            Gradient::Linear(l) => GradientKind::Linear(l.angle.into_typst()),
             Gradient::Radial(l) => {
                 if l.center.x != TypstRatio::new(0.5) || l.center.y != TypstRatio::new(0.5) {
-                    styles.push(GradientStyle::Center(l.center.into()));
+                    styles.push(GradientStyle::Center(l.center.into_typst()));
                 }
 
                 if l.focal_center.x != TypstRatio::new(0.5)
                     || l.focal_center.y != TypstRatio::new(0.5)
                 {
-                    styles.push(GradientStyle::FocalCenter(l.focal_center.into()));
+                    styles.push(GradientStyle::FocalCenter(l.focal_center.into_typst()));
                 }
 
                 if l.focal_radius != TypstRatio::zero() {
-                    styles.push(GradientStyle::FocalRadius(l.focal_radius.into()));
+                    styles.push(GradientStyle::FocalRadius(l.focal_radius.into_typst()));
                 }
 
-                GradientKind::Radial(l.radius.into())
+                GradientKind::Radial(l.radius.into_typst())
             }
             Gradient::Conic(l) => {
                 if l.center.x != TypstRatio::new(0.5) || l.center.y != TypstRatio::new(0.5) {
-                    styles.push(GradientStyle::Center(l.center.into()));
+                    styles.push(GradientStyle::Center(l.center.into_typst()));
                 }
 
-                GradientKind::Conic(l.angle.into())
+                GradientKind::Conic(l.angle.into_typst())
             }
         };
 
@@ -823,8 +823,8 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
         let pattern = VecItem::Pattern(Arc::new(PatternItem {
             frame,
-            size: g.size().into(),
-            spacing: g.spacing().into(),
+            size: g.size().into_typst(),
+            spacing: g.spacing().into_typst(),
             relative_to_self,
         }));
 

@@ -2,7 +2,7 @@ use core::fmt;
 use napi_derive::napi;
 use std::{cell::OnceCell, fmt::Write, sync::Arc};
 use typst_ts_core::{
-    error::{prelude::WithContext, DiagMessage, TypstSourceDiagnostic},
+    error::{diag_from_std, prelude::WithContext, TypstSourceDiagnostic},
     typst::prelude::*,
     TypstDocument, TypstWorld,
 };
@@ -104,7 +104,7 @@ impl NodeError {
         world: Option<&dyn TypstWorld>,
     ) -> napi::Result<Vec<serde_json::Value>, NodeError> {
         self.get_diagnostics()
-            .map(move |e| DiagMessage::from_std(e, world))
+            .map(move |e| diag_from_std(e, world))
             .map(serde_json::to_value)
             .collect::<Result<_, _>>()
             .context("failed to serialize diagnostics")

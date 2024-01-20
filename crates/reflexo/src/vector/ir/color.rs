@@ -13,19 +13,6 @@ pub struct Rgba8Item {
     pub a: u8,
 }
 
-impl Rgba8Item {
-    /// Convert to [`typst::visualize::Color`].
-    pub fn typst(&self) -> typst::visualize::Color {
-        (*self).into()
-    }
-}
-
-impl From<Rgba8Item> for typst::visualize::Color {
-    fn from(v: Rgba8Item) -> Self {
-        typst::visualize::Color::from_u8(v.r, v.g, v.b, v.a)
-    }
-}
-
 /// A 32-bit color in a specific color space.
 /// Note: some backends may not support 32-bit colors.
 ///
@@ -99,41 +86,6 @@ impl ColorSpace {
 impl ToString for ColorSpace {
     fn to_string(&self) -> String {
         self.to_str().to_owned()
-    }
-}
-
-impl From<typst::visualize::ColorSpace> for ColorSpace {
-    fn from(value: typst::visualize::ColorSpace) -> Self {
-        use typst::visualize::ColorSpace::*;
-        match value {
-            Oklab => Self::Oklab,
-            Oklch => Self::Oklch,
-            Srgb => Self::Srgb,
-            D65Gray => Self::D65Gray,
-            LinearRgb => Self::LinearRgb,
-            Hsl => Self::Hsl,
-            Hsv => Self::Hsv,
-            Cmyk => Self::Cmyk,
-        }
-    }
-}
-
-impl TryFrom<ColorSpace> for typst::visualize::ColorSpace {
-    type Error = ();
-
-    fn try_from(value: ColorSpace) -> Result<Self, ()> {
-        use typst::visualize::ColorSpace::*;
-        Ok(match value {
-            ColorSpace::Luma => return Err(()),
-            ColorSpace::Oklab => Oklab,
-            ColorSpace::Oklch => Oklch,
-            ColorSpace::Srgb => Srgb,
-            ColorSpace::D65Gray => D65Gray,
-            ColorSpace::LinearRgb => LinearRgb,
-            ColorSpace::Hsl => Hsl,
-            ColorSpace::Hsv => Hsv,
-            ColorSpace::Cmyk => Cmyk,
-        })
     }
 }
 

@@ -1,28 +1,5 @@
-use ttf_parser::GlyphId;
-use typst::text::Font;
-
 use super::{preludes::*, ImageItem, PathStyle};
-use crate::{
-    hash::item_hash128,
-    vector::vm::{GroupContext, TransformContext},
-};
-
-/// A glyph item.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub enum GlyphItem {
-    None,
-
-    /// Raw glyph representation.
-    /// The raw glyphs is generated in lowering stage.
-    Raw(Font, GlyphId),
-
-    /// Glyphs in SVG or Bitmap format.
-    Image(Arc<ImageGlyphItem>),
-
-    /// Glyphs in path instructions, known as the "d" attribute of a
-    /// `<path/>` element.
-    Outline(Arc<OutlineGlyphItem>),
-}
+use crate::vector::vm::{GroupContext, TransformContext};
 
 /// The glyph item definition with all of variants of [`GlyphItem`] other than
 /// [`GlyphItem::Raw`], hence it is serializable.
@@ -33,23 +10,6 @@ pub enum FlatGlyphItem {
     None,
     Image(Arc<ImageGlyphItem>),
     Outline(Arc<OutlineGlyphItem>),
-}
-
-impl From<FlatGlyphItem> for GlyphItem {
-    fn from(item: FlatGlyphItem) -> Self {
-        match item {
-            FlatGlyphItem::Image(item) => GlyphItem::Image(item),
-            FlatGlyphItem::Outline(item) => GlyphItem::Outline(item),
-            FlatGlyphItem::None => GlyphItem::None,
-        }
-    }
-}
-
-impl GlyphItem {
-    #[comemo::memoize]
-    pub fn get_fingerprint(&self) -> Fingerprint {
-        Fingerprint::from_u128(item_hash128(self))
-    }
 }
 
 /// A image glyph item.
@@ -111,27 +71,6 @@ impl FontItem {
     /// Get a glyph item by its index
     pub fn get_glyph(&self, glyph_id: u32) -> Option<&Arc<FlatGlyphItem>> {
         self.glyphs.get(glyph_id as usize)
-    }
-}
-
-impl From<Font> for FontItem {
-    fn from(font: Font) -> Self {
-        let hash = fxhash::hash32(&font);
-        let fingerprint = Fingerprint::from_u128(item_hash128(&font));
-
-        let metrics = font.metrics();
-        Self {
-            fingerprint,
-            hash,
-            family: font.info().family.clone().into(),
-            cap_height: Scalar(metrics.cap_height.get() as f32),
-            ascender: Scalar(metrics.ascender.get() as f32),
-            descender: Scalar(metrics.descender.get() as f32),
-            units_per_em: Scalar(font.units_per_em() as f32),
-            vertical: false, // todo: check vertical
-            glyphs: Vec::new(),
-            glyph_cov: bitvec::vec::BitVec::new(),
-        }
     }
 }
 

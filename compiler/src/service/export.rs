@@ -9,7 +9,7 @@ use typst_ts_core::{
         ir::{LayoutRegion, LayoutRegionNode},
         pass::Typst2VecPass,
     },
-    DynExporter, DynGenericExporter, DynPolymorphicExporter, GenericExporter, TakeAs,
+    DynExporter, DynGenericExporter, DynPolymorphicExporter, GenericExporter, IntoTypst, TakeAs,
     TypstDocument,
 };
 
@@ -366,7 +366,9 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
                 if let Some(post_process_layout) = &this.post_process_layout {
                     layout = post_process_layout(&mut svg_exporter.typst2vec, output, layout);
                 }
-                svg_exporter.layouts.push((current_width.into(), layout));
+                svg_exporter
+                    .layouts
+                    .push((current_width.into_typst(), layout));
 
                 log::trace!("rerendered {} at {:?}", i, instant - instant_begin);
                 Ok(())

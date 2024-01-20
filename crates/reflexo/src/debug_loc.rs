@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use typst::layout::Position as TypstPosition;
 
 /// A serializable physical position in a document.
 ///
@@ -19,50 +18,15 @@ pub struct DocumentPosition {
     pub y: f32,
 }
 
-impl From<TypstPosition> for DocumentPosition {
-    fn from(position: TypstPosition) -> Self {
-        Self {
-            page_no: position.page.into(),
-            x: position.point.x.to_pt() as f32,
-            y: position.point.y.to_pt() as f32,
-        }
-    }
-}
-
-/// Unevaluated source span.
-/// The raw source span is unsafe to serialize and deserialize.
-/// Because the real source location is only known during liveness of
-/// the compiled document.
-pub type SourceSpan = typst::syntax::Span;
-
-/// Unevaluated source span with offset.
-///
-/// It adds an additional offset relative to the start of the span.
-///
-/// The offset is usually generated when the location is inside of some
-/// text or string content.
-#[derive(Debug, Clone, Copy)]
-pub struct SourceSpanOffset {
-    pub span: SourceSpan,
-    pub offset: usize,
-}
-
-/// Lifts a [`SourceSpan`] to [`SourceSpanOffset`].
-impl From<SourceSpan> for SourceSpanOffset {
-    fn from(span: SourceSpan) -> Self {
-        Self { span, offset: 0 }
-    }
-}
-
-/// Converts a [`SourceSpan`] and an in-text offset to [`SourceSpanOffset`].
-impl From<(SourceSpan, u16)> for SourceSpanOffset {
-    fn from((span, offset): (SourceSpan, u16)) -> Self {
-        Self {
-            span,
-            offset: offset as usize,
-        }
-    }
-}
+// impl From<TypstPosition> for DocumentPosition {
+//     fn from(position: TypstPosition) -> Self {
+//         Self {
+//             page_no: position.page.into(),
+//             x: position.point.x.to_pt() as f32,
+//             y: position.point.y.to_pt() as f32,
+//         }
+//     }
+// }
 
 /// Raw representation of a source span.
 pub type RawSourceSpan = u64;
