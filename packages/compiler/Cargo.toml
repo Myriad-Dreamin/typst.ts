@@ -16,7 +16,6 @@ crate-type = ["cdylib"]
 
 ansi-to-html.workspace = true
 
-typst.workspace = true
 comemo.workspace = true
 base64.workspace = true
 

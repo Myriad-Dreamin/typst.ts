@@ -7,9 +7,11 @@ pub(crate) mod well_known {
 
     pub use typst::World as TypstWorld;
 
-    pub type TypstAbs = typst::layout::Abs;
+    pub use typst::layout::Abs as TypstAbs;
 
     pub use typst::model::Document as TypstDocument;
+
+    pub use typst::text::Font as TypstFont;
 
     pub use typst::foundations::Dict as TypstDict;
 

@@ -1,6 +1,6 @@
-use typst::model::Document;
 use typst_ts_core::vector::ir::{Abs, LayoutRegion, LayoutRegionNode, MultiVecDocument};
 use typst_ts_core::vector::pass::Typst2VecPass;
+use typst_ts_core::TypstDocument;
 
 #[derive(Default)]
 pub struct DynamicLayoutSvgExporter {
@@ -9,7 +9,7 @@ pub struct DynamicLayoutSvgExporter {
 }
 
 impl DynamicLayoutSvgExporter {
-    pub fn render(&mut self, output: &Document) -> LayoutRegionNode {
+    pub fn render(&mut self, output: &TypstDocument) -> LayoutRegionNode {
         self.typst2vec.reset();
         // let instant = std::time::Instant::now();
         // check the document
