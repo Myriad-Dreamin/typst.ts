@@ -1,6 +1,5 @@
 use std::path::Path;
 
-use typst::model::Document;
 use typst_ts_compiler::{
     service::{CompileDriver, CompileExporter, Compiler},
     ShadowApiExt, TypstSystemWorld,
@@ -13,13 +12,14 @@ use typst_ts_core::{
         ir::{Abs, Point, Rect},
         stream::BytesModuleStream,
     },
+    TypstDocument,
 };
 use typst_ts_svg_exporter::IncrSvgDocClient;
 
 fn get_driver(
     workspace_dir: &Path,
     entry_file_path: &Path,
-    exporter: GroupExporter<Document>,
+    exporter: GroupExporter<TypstDocument>,
 ) -> CompileExporter<CompileDriver> {
     let project_base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let w = project_base.join("fonts");
@@ -43,7 +43,7 @@ fn get_driver(
 pub fn test_compiler(
     workspace_dir: &Path,
     entry_file_path: &Path,
-    exporter: GroupExporter<Document>,
+    exporter: GroupExporter<TypstDocument>,
 ) {
     let mut driver = get_driver(workspace_dir, entry_file_path, exporter);
     let mut content = { std::fs::read_to_string(entry_file_path).expect("Could not read file") };

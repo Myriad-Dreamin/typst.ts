@@ -344,7 +344,6 @@ mod tests {
             //     .expect("failed to deserialize json artifact");
 
             // let doc = json_artifact.to_document(&bundle.driver.world().font_resolver);
-            // let pdf_doc = typst::export::pdf(&doc);
 
             // let pdf_path = bundle.pdf.with_extension("artifact.pdf");
             // std::fs::write(pdf_path, &pdf_doc).unwrap();

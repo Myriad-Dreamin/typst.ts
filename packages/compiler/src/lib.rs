@@ -2,7 +2,6 @@ use std::path::Path;
 
 use base64::Engine;
 use js_sys::{JsString, Uint32Array, Uint8Array};
-use typst::{foundations::IntoValue, text::Font};
 pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
     font::web::BrowserFontSearcher,
@@ -13,8 +12,8 @@ use typst_ts_compiler::{
     world::WorldSnapshot,
 };
 use typst_ts_core::{
-    cache::FontInfoCache, error::prelude::*, DynExporter, Exporter, FontLoader, FontSlot,
-    TypstDocument,
+    cache::FontInfoCache, error::prelude::*, typst, typst::foundations::IntoValue, DynExporter,
+    Exporter, FontLoader, FontSlot, TypstDocument, TypstFont,
 };
 use wasm_bindgen::prelude::*;
 
@@ -59,14 +58,14 @@ struct SnapshotFontLoader {
 }
 
 impl FontLoader for SnapshotFontLoader {
-    fn load(&mut self) -> Option<Font> {
+    fn load(&mut self) -> Option<TypstFont> {
         let buf = self
             .font_cb
             .call1(&self.font_cb, &self.path.clone().into())
             .unwrap();
         let buf = buf.dyn_ref::<Uint8Array>()?;
         let buf = buf.to_vec();
-        Font::new(buf.into(), self.index)
+        TypstFont::new(buf.into(), self.index)
     }
 }
 

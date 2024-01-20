@@ -2,7 +2,6 @@ pub mod wasm;
 
 use std::path::Path;
 
-use typst::model::Document;
 use typst_ts_compiler::{
     service::{CompileDriver, CompileExporter, Compiler},
     TypstSystemWorld,
@@ -11,6 +10,7 @@ use typst_ts_core::{
     config::CompileOpts,
     exporter_builtins::{FsPathExporter, GroupExporter},
     path::PathClean,
+    TypstDocument,
 };
 use typst_ts_pdf_exporter::PdfDocExporter;
 use typst_ts_svg_exporter::SvgModuleExporter;
@@ -18,7 +18,7 @@ use typst_ts_svg_exporter::SvgModuleExporter;
 fn get_driver(
     workspace_dir: &Path,
     entry_file_path: &Path,
-    exporter: GroupExporter<Document>,
+    exporter: GroupExporter<TypstDocument>,
 ) -> CompileExporter<CompileDriver> {
     let world = TypstSystemWorld::new(CompileOpts {
         root_dir: workspace_dir.to_owned(),
@@ -38,7 +38,7 @@ fn get_driver(
 macro_rules! document_exporters {
     ($($exporters:expr),*) => {
         {
-            let document_exporters: Vec<Box<dyn typst_ts_core::Exporter<typst::model::Document> + Send>> = vec![
+            let document_exporters: Vec<Box<dyn typst_ts_core::Exporter<TypstDocument> + Send>> = vec![
                 $(Box::new($exporters)),*
             ];
             GroupExporter::new(document_exporters)

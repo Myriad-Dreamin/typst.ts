@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use typst::model::Document;
-use typst_ts_core::vector::pass::Typst2VecPass;
 use typst_ts_core::{
     hash::Fingerprint,
     vector::{
         ir::{Module, Page, Size, VecDocument, VecItem},
+        pass::Typst2VecPass,
         vm::{RenderState, RenderVm},
     },
+    TypstDocument,
 };
 
 use crate::{
@@ -62,7 +62,7 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
 }
 
 impl<Feat: ExportFeature> SvgExporter<Feat> {
-    pub fn svg_doc(output: &Document) -> VecDocument {
+    pub fn svg_doc(output: &TypstDocument) -> VecDocument {
         let typst2vec = Typst2VecPass::default();
         let pages = typst2vec.doc(&output.introspector, output);
 
