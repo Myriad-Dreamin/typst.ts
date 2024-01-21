@@ -127,15 +127,18 @@ impl IncrDocServer {
         Some([b"new,", delta.as_slice()].concat())
     }
 
-    /// Get element paths by the given span.
+    /// Gets element paths by the given span.
+    ///
+    /// See [`crate::vector::pass::Span2VecPass::query_element_paths`] for more
+    /// information.
     pub fn resolve_element_paths_by_span(
         &mut self,
         span_offset: SourceSpanOffset,
     ) -> ZResult<Vec<Vec<(u32, u32, String)>>> {
-        self.typst2vec.spans.query_cursors(span_offset)
+        self.typst2vec.spans.query_element_paths(span_offset)
     }
 
-    /// Get the span range of the given element path.
+    /// Gets the span range of the given element path.
     pub fn resolve_span_by_element_path(
         &mut self,
         path: &[(u32, u32, String)],

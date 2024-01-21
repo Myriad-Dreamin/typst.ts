@@ -28,14 +28,33 @@ struct LazyVec {
     val: SrcVec,
 }
 
+impl Default for LazyVec {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// A Enum representing [`SourceNodeKind::Text`] or [`SourceNodeKind::Char`].
 const SOURCE_MAPPING_TYPE_TEXT: u32 = 0;
+/// A Enum representing [`SourceNodeKind::Group`].
 const SOURCE_MAPPING_TYPE_GROUP: u32 = 1;
+/// A Enum representing [`SourceNodeKind::Image`].
 const SOURCE_MAPPING_TYPE_IMAGE: u32 = 2;
+/// A Enum representing [`SourceNodeKind::Shape`].
 const SOURCE_MAPPING_TYPE_SHAPE: u32 = 3;
+/// A Enum representing [`SourceNodeKind::Page`].
 const SOURCE_MAPPING_TYPE_PAGE: u32 = 4;
+/// A Enum representing internal glyph offset of [`SOURCE_MAPPING_TYPE_TEXT`].
 const SOURCE_MAPPING_TYPE_CHAR_INDEX: u32 = 5;
 
 impl LazyVec {
+    fn new() -> Self {
+        Self {
+            is_sorted: false,
+            val: Vec::new(),
+        }
+    }
+
     fn ensure_sorted(&mut self) {
         if !self.is_sorted {
             self.val.sort_by_key(|x| x.0);
@@ -51,13 +70,18 @@ impl LazyVec {
 
 const SPAN_ROUTING: usize = 63;
 
+/// The unevaluated span info.
 enum RawSpanInfo {
+    /// A region to be inserted into the tree.
     Region(SourceRegion),
+    /// A belonging relation to children queue to calculate the parents.
     XContainsY { x: usize, y: usize },
 }
 
+type RawSpanInfoQueue = crossbeam_queue::SegQueue<RawSpanInfo>;
+
 struct LazySpanCollector {
-    val: [crossbeam_queue::SegQueue<RawSpanInfo>; SPAN_ROUTING + 1],
+    val: [RawSpanInfoQueue; SPAN_ROUTING + 1],
 }
 
 impl Default for LazySpanCollector {
@@ -69,13 +93,21 @@ impl Default for LazySpanCollector {
 }
 
 impl LazySpanCollector {
+    fn reset(&mut self) {
+        *self = Self::default();
+    }
+
+    fn shard(&self, region: usize) -> &RawSpanInfoQueue {
+        // lower bits of region.idx is the index of the queue
+        let idx = region & SPAN_ROUTING;
+        &self.val[idx]
+    }
+
     fn push(&self, region: SourceRegion) {
+        // Inserts XContainsY relation into Y's queue to calculate the parents.
         match &region.kind {
             SourceNodeKind::Page { region: ch } | SourceNodeKind::Group { region: ch } => {
-                // lower bits of region.idx is the index of the queue
-                let idx = ch & SPAN_ROUTING;
-                let t = &self.val[idx];
-                t.push(RawSpanInfo::XContainsY {
+                self.shard(*ch).push(RawSpanInfo::XContainsY {
                     x: region.region,
                     y: *ch,
                 });
@@ -87,14 +119,8 @@ impl LazySpanCollector {
             | SourceNodeKind::Doc => {}
         }
 
-        // lower bits of region.idx is the index of the queue
-        let idx = region.region & SPAN_ROUTING;
-        let t = &self.val[idx];
-        t.push(RawSpanInfo::Region(region));
-    }
-
-    fn reset(&mut self) {
-        *self = Self::default();
+        // Inserts the region into its own queue.
+        self.shard(region.region).push(RawSpanInfo::Region(region));
     }
 }
 
@@ -122,6 +148,7 @@ impl From<SegQueue<RawSpanInfo>> for LazyRegionInfo {
     fn from(value: SegQueue<RawSpanInfo>) -> Self {
         let mut children = HashMap::new();
         let mut parents = HashMap::new();
+
         let mut span_indice = HashMap::new();
         let mut insert_span = |span: Span, region: usize| {
             span_indice
@@ -129,6 +156,7 @@ impl From<SegQueue<RawSpanInfo>> for LazyRegionInfo {
                 .or_insert_with(Vec::new)
                 .push(region);
         };
+
         for i in value.into_iter() {
             match i {
                 RawSpanInfo::XContainsY { x, y } => {
@@ -157,10 +185,7 @@ impl From<SegQueue<RawSpanInfo>> for LazyRegionInfo {
 
                     children
                         .entry(region.region)
-                        .or_insert_with(|| LazyVec {
-                            is_sorted: false,
-                            val: Vec::new(),
-                        })
+                        .or_insert_with(LazyVec::new)
                         .val
                         .push((region.idx as usize, region.kind, region.item));
                 }
@@ -208,7 +233,7 @@ impl From<LazySpanCollector> for LazySpanInfo {
         let val = collector
             .val
             .into_par_iter()
-            .map(From::from)
+            .map(LazyRegionInfo::from)
             .collect::<Vec<_>>()
             .try_into()
             .unwrap();
@@ -274,7 +299,14 @@ impl Span2VecPass {
         self.collector.push(region);
     }
 
-    pub fn query_cursors(
+    /// Queries the element paths from the given span offset.
+    ///
+    /// Returns a list of paths, each path is a list of (kind, offset,
+    /// fingerprint)
+    /// + kind: the type of the element
+    /// + offset: the index of the element in its parent
+    /// + fingerprint: the fingerprint of the element
+    pub fn query_element_paths(
         &mut self,
         span_offset: SourceSpanOffset,
     ) -> ZResult<Vec<Vec<(u32, u32, String)>>> {
@@ -290,6 +322,7 @@ impl Span2VecPass {
 
         let span = span_offset.span;
 
+        // Finds all the regions that contains the span.
         let mut related_regions: Vec<usize> = span_info
             .elem_tree
             .iter_mut()
@@ -300,7 +333,7 @@ impl Span2VecPass {
         related_regions.sort();
         related_regions.dedup();
 
-        log::info!("pass check related_regions({related_regions:?}");
+        // log::info!("pass check related_regions({related_regions:?}");
 
         let doc_region = *self.doc_region.get_mut();
         if doc_region == 0 {
@@ -329,7 +362,7 @@ impl Span2VecPass {
                         }
                     }
                     SourceNodeKind::Text(chars) => {
-                        log::info!("pass cursor check text({chars:?})");
+                        // log::info!("pass cursor check text({chars:?})");
                         for (ch_idx, (s, byte_offset)) in chars.iter().enumerate() {
                             // todo: it may not be monotonic
                             let next = chars.get(ch_idx + 1);
@@ -400,13 +433,13 @@ impl Span2VecPass {
                     .ok_or_else(|| error_once!("region children not found", reg: par))?;
                 ch.ensure_sorted();
 
-                log::info!("found parent({cur:?}) -> ({par:?})");
+                // log::info!("found parent({cur:?}) -> ({par:?})");
 
                 let mut found = false;
                 for (idx, ch) in ch.val.iter().enumerate() {
                     match &ch.1 {
                         SourceNodeKind::Page { region } => {
-                            log::info!("pass find check page({region:?})");
+                            // log::info!("pass find check page({region:?})");
                             if *region == cur {
                                 r.push((
                                     par as u32,
@@ -419,7 +452,7 @@ impl Span2VecPass {
                             }
                         }
                         SourceNodeKind::Group { region } => {
-                            log::info!("pass find check group({region:?})");
+                            // log::info!("pass find check group({region:?})");
                             if *region == cur {
                                 r.push((
                                     par as u32,
