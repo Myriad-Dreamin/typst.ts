@@ -1,4 +1,6 @@
 pub mod adt;
+pub mod annotation;
+pub mod content;
 pub mod debug_loc;
 pub mod error;
 pub mod hash;
@@ -11,9 +13,11 @@ pub use concepts::*;
 pub use error::{ErrKind, Error};
 
 pub mod vector {
+    pub mod incr;
     pub mod ir;
     pub mod stream;
     pub mod vm;
+
     pub use ir::geom;
 
     #[cfg(feature = "rkyv")]

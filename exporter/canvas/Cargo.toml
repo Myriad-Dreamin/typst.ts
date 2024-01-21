@@ -10,7 +10,7 @@ repository.workspace = true
 [dependencies]
 
 comemo.workspace = true
-typst-ts-core.workspace = true
+reflexo.workspace = true
 
 tiny-skia.workspace = true
 async-recursion.workspace = true

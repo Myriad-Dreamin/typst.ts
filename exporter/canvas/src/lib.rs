@@ -5,15 +5,14 @@ use tiny_skia as sk;
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, HtmlDivElement, HtmlImageElement, Path2d};
 
-use typst_ts_core::{
+use reflexo::{
     error::prelude::*,
     hash::Fingerprint,
     vector::{
         incr::IncrDocClient,
         ir::{
-            self, Abs, Axes, FlatGlyphItem, FontIndice, FontItem, FontRef, GlyphItem, Image,
-            ImageItem, ImmutStr, LayoutRegionNode, Module, Page, PathStyle, Ratio, Rect, Scalar,
-            Size,
+            self, Abs, Axes, FlatGlyphItem, FontIndice, FontItem, FontRef, Image, ImageItem,
+            ImmutStr, LayoutRegionNode, Module, Page, PathStyle, Ratio, Rect, Scalar, Size,
         },
         vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
@@ -889,28 +888,27 @@ impl CanvasRenderSnippets {
     fn put_glyph(
         canvas: &web_sys::CanvasRenderingContext2d,
         fill: &str,
-        glyph_item: &GlyphItem,
+        glyph_item: &FlatGlyphItem,
         ts: sk::Transform,
     ) {
         let _guard = CanvasStateGuard::new(canvas);
         set_transform(canvas, ts);
         match &glyph_item {
-            GlyphItem::Raw(..) => unreachable!(),
-            GlyphItem::Outline(path) => {
+            FlatGlyphItem::Outline(path) => {
                 canvas.set_fill_style(&fill.into());
                 canvas.fill_with_path_2d(&Path2d::new_with_path_string(&path.d).unwrap());
             }
-            GlyphItem::Image(_glyph) => {
+            FlatGlyphItem::Image(_glyph) => {
                 unimplemented!();
             }
-            GlyphItem::None => {}
+            FlatGlyphItem::None => {}
         }
     }
 
     // note we need
     pub fn rasterize_text<'a>(
         fg: &Fingerprint,
-        glyphs: impl Iterator<Item = (Scalar, &'a GlyphItem)>,
+        glyphs: impl Iterator<Item = (Scalar, &'a FlatGlyphItem)>,
         width: f32,
         height: f32,
         decender: f32,
@@ -975,7 +973,7 @@ impl CanvasRenderSnippets {
     fn rasterize_text_slow<'a>(
         elem: HtmlDivElement,
         random_token: String,
-        glyphs: impl Iterator<Item = (Scalar, &'a GlyphItem)>,
+        glyphs: impl Iterator<Item = (Scalar, &'a FlatGlyphItem)>,
         width: f32,
         height: f32,
         decender: f32,

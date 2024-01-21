@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 use tiny_skia as sk;
 
-use typst_ts_core::{
+use reflexo::{
+    content::{self, TextContent},
     hash::Fingerprint,
     vector::{
         ir::{
             self, Abs, Axes, FontIndice, FontRef, GroupRef, Module, Ratio, Scalar, TextItem,
-            VecItem,
+            Transform, VecItem,
         },
         vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
-    TextContent,
 };
 
 pub struct TextContentBuilder {
@@ -108,7 +108,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
         match item {
             VecItem::Item(t) => self.process_flat_item(
                 ts.pre_concat({
-                    let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
+                    let t: Transform = t.0.clone().into();
                     t.into()
                 }),
                 &t.1,
@@ -129,7 +129,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
             match item {
                 VecItem::Item(t) => self.process_flat_item(
                     ts.pre_concat({
-                        let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
+                        let t: Transform = t.0.clone().into();
                         t.into()
                     }),
                     &t.1,
@@ -182,14 +182,12 @@ impl<'m, 't> TextContentTask<'m, 't> {
         let font_ref = self.text_content.styles.len() as u32;
         self.flat_font_map.insert(font, font_ref);
 
-        self.text_content
-            .styles
-            .push(typst_ts_core::content::TextStyle {
-                font_family: font_item.family.as_ref().to_owned(),
-                ascent: font_item.ascender.0,
-                descent: font_item.descender.0,
-                vertical: font_item.vertical,
-            });
+        self.text_content.styles.push(content::TextStyle {
+            font_family: font_item.family.as_ref().to_owned(),
+            ascent: font_item.ascender.0,
+            descent: font_item.descender.0,
+            vertical: font_item.vertical,
+        });
         font_ref
     }
 
@@ -206,26 +204,24 @@ impl<'m, 't> TextContentTask<'m, 't> {
     ) {
         // adapt scale for pdf.js
 
-        self.text_content
-            .items
-            .push(typst_ts_core::content::TextItem {
-                str: text_content,
-                // todo: real direction of the text
-                dir: shape.dir.as_ref().to_owned(),
-                // todo: we should set the original height, not specially for pdf.js
-                width,
-                height,
-                transform: [
-                    shape.size.0,
-                    ts.ky,
-                    ts.kx,
-                    shape.size.0,
-                    ts.tx,
-                    self.page_height - ts.ty,
-                ],
-                font_name,
-                has_eol,
-            });
+        self.text_content.items.push(content::TextItem {
+            str: text_content,
+            // todo: real direction of the text
+            dir: shape.dir.as_ref().to_owned(),
+            // todo: we should set the original height, not specially for pdf.js
+            width,
+            height,
+            transform: [
+                shape.size.0,
+                ts.ky,
+                ts.kx,
+                shape.size.0,
+                ts.tx,
+                self.page_height - ts.ty,
+            ],
+            font_name,
+            has_eol,
+        });
     }
 
     pub(crate) fn append_text_break(

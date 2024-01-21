@@ -1,12 +1,12 @@
 use tiny_skia as sk;
 
-use typst_ts_core::{
+use reflexo::{
     annotation::{
         link::{AnnotationBox, LinkAction, UrlOpenAction},
         AnnotationList, LinkAnnotation,
     },
     hash::Fingerprint,
-    vector::ir::{self, GroupRef, Module, VecItem},
+    vector::ir::{self, GroupRef, Module, Transform, VecItem},
 };
 
 /// Task to create annotation list with vector IR
@@ -33,7 +33,7 @@ impl<'m, 't> AnnotationListTask<'m, 't> {
         match item {
             VecItem::Item(t) => self.process_flat_item(
                 ts.pre_concat({
-                    let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
+                    let t: Transform = t.0.clone().into();
                     t.into()
                 }),
                 &t.1,
