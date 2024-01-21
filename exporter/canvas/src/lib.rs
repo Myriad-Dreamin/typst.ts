@@ -7,7 +7,6 @@ use web_sys::{CanvasRenderingContext2d, HtmlDivElement, HtmlImageElement, Path2d
 
 use typst_ts_core::{
     error::prelude::*,
-    font::{DummyFontGlyphProvider, GlyphProvider},
     hash::Fingerprint,
     vector::{
         incr::IncrDocClient,
@@ -484,10 +483,6 @@ impl CanvasAction for CanvasGlyphElem {
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
 /// The 't lifetime is the lifetime of SVG task.
 pub struct CanvasRenderTask<'m, 't, Feat: ExportFeature> {
-    /// Provides glyphs.
-    /// See [`GlyphProvider`].
-    pub glyph_provider: GlyphProvider,
-
     pub module: &'m Module,
 
     /// See [`ExportFeature`].
@@ -665,10 +660,6 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, 't, Feat
 /// The task context for exporting canvas.
 /// It is also as a namespace for all the functions used in the task.
 pub struct CanvasTask<Feat: ExportFeature> {
-    /// Provides glyphs.
-    /// See [`GlyphProvider`].
-    glyph_provider: GlyphProvider,
-
     _feat_phantom: std::marker::PhantomData<Feat>,
 }
 
@@ -676,8 +667,6 @@ pub struct CanvasTask<Feat: ExportFeature> {
 impl<Feat: ExportFeature> Default for CanvasTask<Feat> {
     fn default() -> Self {
         Self {
-            glyph_provider: GlyphProvider::new(DummyFontGlyphProvider::default()),
-
             _feat_phantom: std::marker::PhantomData,
         }
     }
@@ -690,8 +679,6 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
         module: &'m ir::Module,
     ) -> CanvasRenderTask<'m, 't, Feat> {
         CanvasRenderTask::<Feat> {
-            glyph_provider: self.glyph_provider.clone(),
-
             module,
 
             should_render_text_element: true,

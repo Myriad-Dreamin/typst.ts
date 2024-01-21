@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use tiny_skia as sk;
-use typst::layout::{Axis, Dir};
 
 use typst_ts_core::{
     hash::Fingerprint,
@@ -245,8 +244,14 @@ impl<'m, 't> TranslateCtx for TextContentTask<'m, 't> {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Axis {
+    X,
+    Y,
+}
+
 pub struct TextFlow {
-    dir: Dir,
+    dir: Axis,
     tx: f32,
     ty: f32,
     last_diff: Option<f32>,
@@ -263,10 +268,8 @@ impl TextFlow {
         shape: &ir::TextShape,
     ) -> (Option<Self>, bool) {
         let dir = match shape.dir.as_ref() {
-            "ltr" => Dir::LTR,
-            "rtl" => Dir::RTL,
-            "ttb" => Dir::TTB,
-            "btt" => Dir::BTT,
+            "ltr" | "rtl" => Axis::X,
+            "ttb" | "btt" => Axis::Y,
             _ => unreachable!(),
         };
         let advance_flow = |last_diff: Option<f32>| {
@@ -290,7 +293,7 @@ impl TextFlow {
                 this = advance_flow(None);
                 has_eol = true;
             } else {
-                match dir.axis() {
+                match dir {
                     Axis::X => {
                         if ts.ty != ty {
                             let diff = ts.ty - ty;
