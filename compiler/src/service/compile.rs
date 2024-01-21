@@ -22,6 +22,7 @@ use crate::{
     ShadowApi,
 };
 use typst_ts_core::{
+    debug_loc::{SourceLocation, SourceSpanOffset},
     error::prelude::{map_string_err, ZResult},
     TypstDocument, TypstFileId,
 };
@@ -508,6 +509,37 @@ where
             let cursor = source.line_column_to_byte(line, character)?;
 
             jump_from_cursor(&doc.pages, &source, cursor)
+        })
+        .await
+    }
+
+    /// fixme: character is 0-based, UTF-16 code unit.
+    /// We treat it as UTF-8 now.
+    pub async fn resolve_src_location(
+        &mut self,
+        loc: SourceLocation,
+    ) -> ZResult<Option<SourceSpanOffset>> {
+        self.steal_async(move |this, _| {
+            let world = this.compiler.world();
+
+            let filepath = Path::new(&loc.filepath);
+            let relative_path = filepath
+                .strip_prefix(&this.compiler.world().workspace_root())
+                .ok()?;
+
+            let source_id = TypstFileId::new(None, VirtualPath::new(relative_path));
+            let source = world.source(source_id).ok()?;
+            let cursor = source.line_column_to_byte(loc.pos.line, loc.pos.column)?;
+
+            let node = LinkedNode::new(source.root()).leaf_at(cursor)?;
+            if node.kind() != SyntaxKind::Text {
+                return None;
+            }
+            let span = node.span();
+            // todo: unicode char
+            let offset = cursor.saturating_sub(node.offset());
+
+            Some(SourceSpanOffset { span, offset })
         })
         .await
     }

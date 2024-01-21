@@ -8,6 +8,7 @@ use super::ir::{
     SourceMappingNode, VecDocument,
 };
 use super::pass::IncrTypst2VecPass;
+use crate::debug_loc::ElementPoint;
 use crate::{debug_loc::SourceSpanOffset, error::prelude::*, TakeAs};
 
 /// maintains the data of the incremental rendering at server side
@@ -127,10 +128,21 @@ impl IncrDocServer {
         Some([b"new,", delta.as_slice()].concat())
     }
 
-    /// Get the source location of the given path.
-    pub fn source_span(
+    /// Gets element paths by the given span.
+    ///
+    /// See [`crate::vector::pass::Span2VecPass::query_element_paths`] for more
+    /// information.
+    pub fn resolve_element_paths_by_span(
         &mut self,
-        path: &[(u32, u32, String)],
+        span_offset: SourceSpanOffset,
+    ) -> ZResult<Vec<Vec<ElementPoint>>> {
+        self.typst2vec.spans.query_element_paths(span_offset)
+    }
+
+    /// Gets the span range of the given element path.
+    pub fn resolve_span_by_element_path(
+        &mut self,
+        path: &[ElementPoint],
     ) -> ZResult<Option<(SourceSpanOffset, SourceSpanOffset)>> {
         self.typst2vec.spans.query(path)
     }

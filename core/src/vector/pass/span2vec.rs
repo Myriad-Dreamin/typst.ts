@@ -1,12 +1,14 @@
+use core::fmt;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 
+use crossbeam_queue::SegQueue;
 use once_cell::sync::OnceCell;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use typst::syntax::Span;
 
-use crate::debug_loc::{FileLocation, FlatSourceLocation, SourceSpanOffset};
+use crate::debug_loc::{ElementPoint, FileLocation, FlatSourceLocation, SourceSpanOffset};
 use crate::error::prelude::ZResult;
 use crate::error::prelude::*;
 use crate::hash::Fingerprint;
@@ -26,20 +28,60 @@ struct LazyVec {
     val: SrcVec,
 }
 
+impl Default for LazyVec {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// A Enum representing [`SourceNodeKind::Text`] or [`SourceNodeKind::Char`].
+const SOURCE_MAPPING_TYPE_TEXT: u32 = 0;
+/// A Enum representing [`SourceNodeKind::Group`].
+const SOURCE_MAPPING_TYPE_GROUP: u32 = 1;
+/// A Enum representing [`SourceNodeKind::Image`].
+const SOURCE_MAPPING_TYPE_IMAGE: u32 = 2;
+/// A Enum representing [`SourceNodeKind::Shape`].
+const SOURCE_MAPPING_TYPE_SHAPE: u32 = 3;
+/// A Enum representing [`SourceNodeKind::Page`].
+const SOURCE_MAPPING_TYPE_PAGE: u32 = 4;
+/// A Enum representing internal glyph offset of [`SOURCE_MAPPING_TYPE_TEXT`].
+const SOURCE_MAPPING_TYPE_CHAR_INDEX: u32 = 5;
+
 impl LazyVec {
-    fn get(&mut self, idx: usize) -> Option<&(usize, SourceNodeKind, Fingerprint)> {
+    fn new() -> Self {
+        Self {
+            is_sorted: false,
+            val: Vec::new(),
+        }
+    }
+
+    fn ensure_sorted(&mut self) {
         if !self.is_sorted {
             self.val.sort_by_key(|x| x.0);
             self.is_sorted = true;
         }
+    }
+
+    fn get(&mut self, idx: usize) -> Option<&(usize, SourceNodeKind, Fingerprint)> {
+        self.ensure_sorted();
         self.val.get(idx)
     }
 }
 
 const SPAN_ROUTING: usize = 63;
 
+/// The unevaluated span info.
+enum RawSpanInfo {
+    /// A region to be inserted into the tree.
+    Region(SourceRegion),
+    /// A belonging relation to children queue to calculate the parents.
+    XContainsY { x: usize, y: usize },
+}
+
+type RawSpanInfoQueue = crossbeam_queue::SegQueue<RawSpanInfo>;
+
 struct LazySpanCollector {
-    val: [crossbeam_queue::SegQueue<SourceRegion>; SPAN_ROUTING + 1],
+    val: [RawSpanInfoQueue; SPAN_ROUTING + 1],
 }
 
 impl Default for LazySpanCollector {
@@ -51,58 +93,152 @@ impl Default for LazySpanCollector {
 }
 
 impl LazySpanCollector {
-    fn push(&self, region: SourceRegion) {
-        // lower bits of region.idx is the index of the queue
-        let idx = region.region & SPAN_ROUTING;
-        self.val[idx].push(region);
-    }
-
     fn reset(&mut self) {
         *self = Self::default();
     }
-}
 
-struct LazySpanTree {
-    val: [HashMap<usize, LazyVec>; SPAN_ROUTING + 1],
-}
-impl LazySpanTree {
-    fn get_mut(&mut self, doc_region: &usize) -> Option<&mut LazyVec> {
-        let idx = doc_region & SPAN_ROUTING;
-        self.val[idx].get_mut(doc_region)
+    fn shard(&self, region: usize) -> &RawSpanInfoQueue {
+        // lower bits of region.idx is the index of the queue
+        let idx = region & SPAN_ROUTING;
+        &self.val[idx]
+    }
+
+    fn push(&self, region: SourceRegion) {
+        // Inserts XContainsY relation into Y's queue to calculate the parents.
+        match &region.kind {
+            SourceNodeKind::Page { region: ch } | SourceNodeKind::Group { region: ch } => {
+                self.shard(*ch).push(RawSpanInfo::XContainsY {
+                    x: region.region,
+                    y: *ch,
+                });
+            }
+            SourceNodeKind::Char(..)
+            | SourceNodeKind::Text(..)
+            | SourceNodeKind::Image(..)
+            | SourceNodeKind::Shape(..)
+            | SourceNodeKind::Doc => {}
+        }
+
+        // Inserts the region into its own queue.
+        self.shard(region.region).push(RawSpanInfo::Region(region));
     }
 }
 
-impl Default for LazySpanTree {
-    fn default() -> Self {
+#[derive(Default)]
+struct LazyRegionInfo {
+    /// A map from parent region id to a list of children.
+    children: HashMap<usize, LazyVec>,
+    /// A map from child region id to its parent.
+    parents: HashMap<usize, usize>,
+    /// A map from span to belonging region ids.
+    span_indice: HashMap<Span, Vec<usize>>,
+}
+
+impl fmt::Debug for LazyRegionInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("LazyRegionInfo")
+            .field("children_cnt", &self.children.len())
+            .field("parents_cnt", &self.parents.len())
+            .field("span_indice_cnt", &self.span_indice.len())
+            .finish()
+    }
+}
+
+impl From<SegQueue<RawSpanInfo>> for LazyRegionInfo {
+    fn from(value: SegQueue<RawSpanInfo>) -> Self {
+        let mut children = HashMap::new();
+        let mut parents = HashMap::new();
+
+        let mut span_indice = HashMap::new();
+        let mut insert_span = |span: Span, region: usize| {
+            span_indice
+                .entry(span)
+                .or_insert_with(Vec::new)
+                .push(region);
+        };
+
+        for i in value.into_iter() {
+            match i {
+                RawSpanInfo::XContainsY { x, y } => {
+                    parents.insert(y, x);
+                }
+                RawSpanInfo::Region(region) => {
+                    match &region.kind {
+                        SourceNodeKind::Char((s, _)) => {
+                            insert_span(*s, region.region);
+                        }
+                        SourceNodeKind::Text(chars) => {
+                            for s in chars.iter() {
+                                insert_span(s.0, region.region);
+                            }
+                        }
+                        SourceNodeKind::Image(s) => {
+                            insert_span(*s, region.region);
+                        }
+                        SourceNodeKind::Shape(s) => {
+                            insert_span(*s, region.region);
+                        }
+                        SourceNodeKind::Page { .. }
+                        | SourceNodeKind::Group { .. }
+                        | SourceNodeKind::Doc => {}
+                    }
+
+                    children
+                        .entry(region.region)
+                        .or_insert_with(LazyVec::new)
+                        .val
+                        .push((region.idx as usize, region.kind, region.item));
+                }
+            }
+        }
+
         Self {
-            val: std::array::from_fn(|_| HashMap::new()),
+            children,
+            parents,
+            span_indice,
         }
     }
 }
 
-impl From<LazySpanCollector> for LazySpanTree {
+struct LazySpanInfo {
+    /// A lazy ordered tree indexed by a region id.
+    ///
+    /// When one accesses it with a region id, it will
+    /// lazily sort the elements in the region.
+    elem_tree: [LazyRegionInfo; SPAN_ROUTING + 1],
+}
+
+impl LazySpanInfo {
+    fn get_mut(&mut self, doc_region: &usize) -> Option<&mut LazyVec> {
+        let idx = doc_region & SPAN_ROUTING;
+        self.elem_tree[idx].children.get_mut(doc_region)
+    }
+
+    fn get_parent(&self, doc_region: &usize) -> Option<usize> {
+        let idx = doc_region & SPAN_ROUTING;
+        self.elem_tree[idx].parents.get(doc_region).copied()
+    }
+}
+
+impl Default for LazySpanInfo {
+    fn default() -> Self {
+        Self {
+            elem_tree: std::array::from_fn(|_| LazyRegionInfo::default()),
+        }
+    }
+}
+
+impl From<LazySpanCollector> for LazySpanInfo {
     fn from(collector: LazySpanCollector) -> Self {
         let val = collector
             .val
             .into_par_iter()
-            .map(|e| {
-                let mut res = HashMap::new();
-                for region in e.into_iter() {
-                    res.entry(region.region)
-                        .or_insert_with(|| LazyVec {
-                            is_sorted: false,
-                            val: Vec::new(),
-                        })
-                        .val
-                        .push((region.idx as usize, region.kind, region.item));
-                }
-                res
-            })
+            .map(LazyRegionInfo::from)
             .collect::<Vec<_>>()
             .try_into()
             .unwrap();
 
-        LazySpanTree { val }
+        LazySpanInfo { elem_tree: val }
     }
 }
 
@@ -113,7 +249,7 @@ pub struct Span2VecPass {
     region_cnt: AtomicUsize,
     pub doc_region: AtomicUsize,
 
-    span_tree: OnceCell<LazySpanTree>,
+    span_tree: OnceCell<LazySpanInfo>,
     collector: LazySpanCollector,
 }
 
@@ -163,17 +299,224 @@ impl Span2VecPass {
         self.collector.push(region);
     }
 
+    /// Queries the element paths from the given span offset.
+    ///
+    /// Returns a list of paths, each path is a list of (kind, offset,
+    /// fingerprint)
+    /// + kind: the type of the element
+    /// + offset: the index of the element in its parent
+    /// + fingerprint: the fingerprint of the element
+    pub fn query_element_paths(
+        &mut self,
+        span_offset: SourceSpanOffset,
+    ) -> ZResult<Vec<Vec<ElementPoint>>> {
+        self.span_tree.get_or_init(|| {
+            log::info!("lazy spans are initializing");
+            std::mem::take(&mut self.collector).into()
+        });
+
+        let span_info = self
+            .span_tree
+            .get_mut()
+            .ok_or_else(|| error_once!("span info not initialized"))?;
+
+        let span = span_offset.span;
+
+        // Finds all the regions that contains the span.
+        let mut related_regions: Vec<usize> = span_info
+            .elem_tree
+            .iter_mut()
+            .flat_map(|s| s.span_indice.get(&span))
+            .flatten()
+            .copied()
+            .collect();
+        related_regions.sort();
+        related_regions.dedup();
+
+        // log::info!("pass check related_regions({related_regions:?}");
+
+        let doc_region = *self.doc_region.get_mut();
+        if doc_region == 0 {
+            return Err(error_once!("doc not initialized"));
+        }
+
+        let mut res = vec![];
+        for reg in related_regions {
+            let ch = span_info
+                .get_mut(&reg)
+                .ok_or_else(|| error_once!("related region not found", reg: reg))?;
+            ch.ensure_sorted();
+
+            for (idx, ch) in ch.val.iter().enumerate() {
+                match &ch.1 {
+                    SourceNodeKind::Char((s, _)) => {
+                        // todo: check upper bound
+                        if *s == span {
+                            log::info!("pass cursor char({s:?})");
+                            res.push(vec![(
+                                reg as u32,
+                                ElementPoint {
+                                    kind: SOURCE_MAPPING_TYPE_TEXT,
+                                    index: idx as u32,
+                                    fingerprint: "".to_owned(),
+                                },
+                            )]);
+                        }
+                    }
+                    SourceNodeKind::Text(chars) => {
+                        // log::info!("pass cursor check text({chars:?})");
+                        for (ch_idx, (s, byte_offset)) in chars.iter().enumerate() {
+                            // todo: it may not be monotonic
+                            let next = chars.get(ch_idx + 1);
+                            let byte_range = if matches!(next, Some((next, _)) if next == s) {
+                                (*byte_offset as usize)..(next.unwrap().1 as usize)
+                            } else {
+                                (*byte_offset as usize)..(std::usize::MAX)
+                            };
+                            if *s == span && byte_range.contains(&span_offset.offset) {
+                                log::info!("pass cursor text({s:?})");
+                                res.push(vec![
+                                    (
+                                        0u32,
+                                        ElementPoint {
+                                            kind: SOURCE_MAPPING_TYPE_CHAR_INDEX,
+                                            index: ch_idx as u32,
+                                            fingerprint: "".to_owned(),
+                                        },
+                                    ),
+                                    (
+                                        reg as u32,
+                                        ElementPoint {
+                                            kind: SOURCE_MAPPING_TYPE_TEXT,
+                                            index: idx as u32,
+                                            fingerprint: "".to_owned(),
+                                        },
+                                    ),
+                                ]);
+                            }
+                        }
+                    }
+                    SourceNodeKind::Image(s) => {
+                        if *s == span {
+                            log::info!("pass cursor image({s:?})");
+                            res.push(vec![(
+                                reg as u32,
+                                ElementPoint {
+                                    kind: SOURCE_MAPPING_TYPE_IMAGE,
+                                    index: idx as u32,
+                                    fingerprint: "".to_owned(),
+                                },
+                            )]);
+                        }
+                    }
+                    SourceNodeKind::Shape(s) => {
+                        if *s == span {
+                            log::info!("pass cursor shape({s:?})");
+                            res.push(vec![(
+                                reg as u32,
+                                ElementPoint {
+                                    kind: SOURCE_MAPPING_TYPE_SHAPE,
+                                    index: idx as u32,
+                                    fingerprint: "".to_owned(),
+                                },
+                            )]);
+                        }
+                    }
+                    SourceNodeKind::Page { .. }
+                    | SourceNodeKind::Group { .. }
+                    | SourceNodeKind::Doc => {}
+                }
+            }
+        }
+
+        log::info!("pass found candidates({res:?}), with root: {doc_region}");
+        for r in res.iter_mut() {
+            let reg = r.last().unwrap().0 as usize;
+            let mut cur = reg;
+            while cur != doc_region {
+                let par = span_info
+                    .get_parent(&cur)
+                    .ok_or_else(|| error_once!("parent not found", cur: cur))?;
+
+                let ch = span_info
+                    .get_mut(&par)
+                    .ok_or_else(|| error_once!("region children not found", reg: par))?;
+                ch.ensure_sorted();
+
+                // log::info!("found parent({cur:?}) -> ({par:?})");
+
+                let mut found = false;
+                for (idx, ch) in ch.val.iter().enumerate() {
+                    match &ch.1 {
+                        SourceNodeKind::Page { region } => {
+                            // log::info!("pass find check page({region:?})");
+                            if *region == cur {
+                                r.push((
+                                    par as u32,
+                                    ElementPoint {
+                                        kind: SOURCE_MAPPING_TYPE_PAGE,
+                                        index: idx as u32,
+                                        fingerprint: "".to_owned(),
+                                    },
+                                ));
+                                found = true;
+                                break;
+                            }
+                        }
+                        SourceNodeKind::Group { region } => {
+                            // log::info!("pass find check group({region:?})");
+                            if *region == cur {
+                                r.push((
+                                    par as u32,
+                                    ElementPoint {
+                                        kind: SOURCE_MAPPING_TYPE_GROUP,
+                                        index: idx as u32,
+                                        fingerprint: "".to_owned(),
+                                    },
+                                ));
+                                found = true;
+                                break;
+                            }
+                        }
+                        SourceNodeKind::Char(..)
+                        | SourceNodeKind::Text(..)
+                        | SourceNodeKind::Image(..)
+                        | SourceNodeKind::Shape(..)
+                        | SourceNodeKind::Doc => {}
+                    }
+                }
+
+                if !found {
+                    break;
+                }
+                cur = par;
+            }
+
+            if cur != doc_region {
+                log::info!("drop candidate({reg:?})");
+                r.clear();
+            } else {
+                r.reverse();
+            }
+        }
+
+        res.retain(|x| !x.is_empty());
+        Ok(res
+            .into_iter()
+            .map(|x| x.into_iter().map(|y| y.1).collect())
+            .collect())
+    }
+
     pub fn query(
         &mut self,
-        path: &[(u32, u32, String)],
+        path: &[ElementPoint],
     ) -> ZResult<Option<(SourceSpanOffset, SourceSpanOffset)>> {
         self.span_tree.get_or_init(|| {
             log::info!("lazy spans are initializing");
             std::mem::take(&mut self.collector).into()
         });
 
-        let doc_region = self.doc_region.load(std::sync::atomic::Ordering::SeqCst);
-
+        let doc_region = *self.doc_region.get_mut();
         if doc_region == 0 {
             return Err(error_once!("doc not initialized"));
         }
@@ -183,13 +526,6 @@ impl Span2VecPass {
             .get_mut()
             .ok_or_else(|| error_once!("span info not initialized"))?;
 
-        const SOURCE_MAPPING_TYPE_TEXT: u32 = 0;
-        const SOURCE_MAPPING_TYPE_GROUP: u32 = 1;
-        const SOURCE_MAPPING_TYPE_IMAGE: u32 = 2;
-        const SOURCE_MAPPING_TYPE_SHAPE: u32 = 3;
-        const SOURCE_MAPPING_TYPE_PAGE: u32 = 4;
-        const SOURCE_MAPPING_TYPE_CHAR_INDEX: u32 = 5;
-
         let mut d = span_info
             .get_mut(&doc_region)
             .ok_or_else(|| error_once!("not found"))?;
@@ -198,7 +534,12 @@ impl Span2VecPass {
 
         let mut candidate: Option<(SourceSpanOffset, SourceSpanOffset)> = None;
         let mut in_text_indice: Option<Arc<[(Span, u16)]>> = None;
-        for (remote_kind, idx, fg) in path {
+        for ElementPoint {
+            kind: remote_kind,
+            index: idx,
+            fingerprint: fg,
+        } in path
+        {
             // Special case for char index
             if SOURCE_MAPPING_TYPE_CHAR_INDEX == *remote_kind {
                 log::info!(
