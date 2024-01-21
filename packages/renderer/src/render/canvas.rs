@@ -199,10 +199,10 @@ mod tests {
 
     use std::{collections::HashMap, sync::Mutex};
 
+    use reflexo_vec2canvas::ExportFeature;
     use send_wrapper::SendWrapper;
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
-    use reflexo_vec2canvas::ExportFeature;
     // use typst_ts_test_common::std_artifact::STD_TEST_FILES;
     use typst_ts_test_common::web_artifact::get_corpus;
     use wasm_bindgen::JsCast;
