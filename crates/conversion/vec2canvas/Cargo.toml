@@ -10,7 +10,7 @@ repository.workspace = true
 [dependencies]
 
 comemo.workspace = true
-reflexo.workspace = true
+reflexo = { workspace = true, features = ["web"] }
 
 tiny-skia.workspace = true
 async-recursion.workspace = true
@@ -32,3 +32,7 @@ web-sys = { workspace = true, features = [
     "Window",
     "Document",
 ] }
+
+[features]
+incremental = ["reflexo/flat-vector"]
+default = ["incremental"]
