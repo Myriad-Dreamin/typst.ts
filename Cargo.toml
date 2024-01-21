@@ -1,7 +1,7 @@
 [workspace.package]
 description = "Run Typst in JavaScriptWorld."
 authors = ["Typst.ts Developers", "The Typst Project Developers"]
-version = "0.4.2-rc6.2"
+version = "0.4.2-rc6"
 edition = "2021"
 readme = "README.md"
 license = "Apache-2.0"
@@ -199,26 +199,26 @@ vergen = { version = "8.2.5", features = [
 ] }
 
 # project core
-reflexo = { version = "0.4.2-rc6.2", default-features = false }
+reflexo = { version = "0.4.2-rc6", default-features = false }
 
 # conversions
-reflexo-vec2canvas = "0.4.2-rc6.2"
+reflexo-vec2canvas = "0.4.2-rc6"
 
-typst-ts-core = { version = "0.4.2-rc6.2", default-features = false }
-typst-ts-compiler = { version = "0.4.2-rc6.2", default-features = false }
-typst-ts-test-common = { version = "0.4.2-rc6.2", path = "tests/common" }
+typst-ts-core = { version = "0.4.2-rc6", default-features = false }
+typst-ts-compiler = { version = "0.4.2-rc6", default-features = false }
+typst-ts-test-common = { version = "0.4.2-rc6", path = "tests/common" }
 
 # project exporters
-typst-ts-ast-exporter = "0.4.2-rc6.2"
-typst-ts-dom-exporter = "0.4.2-rc6.2"
-typst-ts-pdf-exporter = "0.4.2-rc6.2"
-typst-ts-serde-exporter = "0.4.2-rc6.2"
-typst-ts-svg-exporter = "0.4.2-rc6.2"
-typst-ts-text-exporter = "0.4.2-rc6.2"
+typst-ts-ast-exporter = "0.4.2-rc6"
+typst-ts-dom-exporter = "0.4.2-rc6"
+typst-ts-pdf-exporter = "0.4.2-rc6"
+typst-ts-serde-exporter = "0.4.2-rc6"
+typst-ts-svg-exporter = "0.4.2-rc6"
+typst-ts-text-exporter = "0.4.2-rc6"
 
 # project common components
-typst-ts-dev-server = { version = "0.4.2-rc6.2", path = "server/dev" }
-typst-ts-cli = { version = "0.4.2-rc6.2", path = "cli" }
+typst-ts-dev-server = { version = "0.4.2-rc6", path = "server/dev" }
+typst-ts-cli = { version = "0.4.2-rc6", path = "cli" }
 
 [patch.crates-io]
 reflexo = { path = "crates/reflexo" }
