@@ -1,19 +1,19 @@
 use std::collections::HashMap;
 use tiny_skia as sk;
-use typst::layout::{Axis, Dir};
 
-use typst_ts_core::{
+use reflexo::{
+    content::{self, TextContent},
     hash::Fingerprint,
     vector::{
         ir::{
             self, Abs, Axes, FontIndice, FontRef, GroupRef, Module, Ratio, Scalar, TextItem,
-            VecItem,
+            Transform, VecItem,
         },
         vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
-    TextContent,
 };
 
+/// Builds text content with vector IR
 pub struct TextContentBuilder {
     ts: sk::Transform,
 }
@@ -83,17 +83,21 @@ impl<'m, C: TranslateCtx + RenderVm<'m, Resultant = ()>> GroupContext<C> for Tex
 /// Task to create text content with vector IR
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
 pub struct TextContentTask<'m, 't> {
+    /// The module which stores the item data
     pub module: &'m Module,
+    /// Sets a page height so that we can calculate the position of the text
+    pub page_height: f32,
+    /// The resultant, a list of text content
+    pub text_content: &'t mut TextContent,
 
     ts: sk::Transform,
-    pub text_content: &'t mut TextContent,
-    pub page_height: f32,
 
     flat_font_map: HashMap<FontRef, u32>,
 }
 
 // todo: ugly implementation
 impl<'m, 't> TextContentTask<'m, 't> {
+    /// Creates a new task
     pub fn new(module: &'m Module, text_content: &'t mut TextContent) -> Self {
         Self {
             module,
@@ -104,12 +108,13 @@ impl<'m, 't> TextContentTask<'m, 't> {
         }
     }
 
+    /// Collects text content in a vector item
     pub fn process_flat_item(&mut self, ts: sk::Transform, item: &Fingerprint) {
         let item = self.module.get_item(item).unwrap();
         match item {
             VecItem::Item(t) => self.process_flat_item(
                 ts.pre_concat({
-                    let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
+                    let t: Transform = t.0.clone().into();
                     t.into()
                 }),
                 &t.1,
@@ -130,7 +135,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
             match item {
                 VecItem::Item(t) => self.process_flat_item(
                     ts.pre_concat({
-                        let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
+                        let t: Transform = t.0.clone().into();
                         t.into()
                     }),
                     &t.1,
@@ -178,24 +183,22 @@ impl<'m, 't> TextContentTask<'m, 't> {
             panic!("too many fonts");
         }
 
-        let font_item = &self.module.fonts[font.idx as usize];
+        let font_item = self.module.get_font(&font).unwrap();
 
         let font_ref = self.text_content.styles.len() as u32;
         self.flat_font_map.insert(font, font_ref);
 
-        self.text_content
-            .styles
-            .push(typst_ts_core::content::TextStyle {
-                font_family: font_item.family.as_ref().to_owned(),
-                ascent: font_item.ascender.0,
-                descent: font_item.descender.0,
-                vertical: font_item.vertical,
-            });
+        self.text_content.styles.push(content::TextStyle {
+            font_family: font_item.family.as_ref().to_owned(),
+            ascent: font_item.ascender.0,
+            descent: font_item.descender.0,
+            vertical: font_item.vertical,
+        });
         font_ref
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn append_text_content(
+    fn append_text_content(
         &mut self,
         ts: sk::Transform,
         text_content: String,
@@ -207,34 +210,27 @@ impl<'m, 't> TextContentTask<'m, 't> {
     ) {
         // adapt scale for pdf.js
 
-        self.text_content
-            .items
-            .push(typst_ts_core::content::TextItem {
-                str: text_content,
-                // todo: real direction of the text
-                dir: shape.dir.as_ref().to_owned(),
-                // todo: we should set the original height, not specially for pdf.js
-                width,
-                height,
-                transform: [
-                    shape.size.0,
-                    ts.ky,
-                    ts.kx,
-                    shape.size.0,
-                    ts.tx,
-                    self.page_height - ts.ty,
-                ],
-                font_name,
-                has_eol,
-            });
+        self.text_content.items.push(content::TextItem {
+            str: text_content,
+            // todo: real direction of the text
+            dir: shape.dir.as_ref().to_owned(),
+            // todo: we should set the original height, not specially for pdf.js
+            width,
+            height,
+            transform: [
+                shape.size.0,
+                ts.ky,
+                ts.kx,
+                shape.size.0,
+                ts.tx,
+                self.page_height - ts.ty,
+            ],
+            font_name,
+            has_eol,
+        });
     }
 
-    pub(crate) fn append_text_break(
-        &mut self,
-        ts: sk::Transform,
-        font_name: u32,
-        shape: &ir::TextShape,
-    ) {
+    fn append_text_break(&mut self, ts: sk::Transform, font_name: u32, shape: &ir::TextShape) {
         self.append_text_content(ts, "".to_string(), font_name, 0., 0., shape, true)
     }
 }
@@ -245,28 +241,32 @@ impl<'m, 't> TranslateCtx for TextContentTask<'m, 't> {
     }
 }
 
-pub struct TextFlow {
-    dir: Dir,
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Axis {
+    X,
+    Y,
+}
+
+struct TextFlow {
+    dir: Axis,
     tx: f32,
     ty: f32,
     last_diff: Option<f32>,
 }
 
 impl TextFlow {
-    pub fn new() -> Option<Self> {
+    fn new() -> Option<Self> {
         None
     }
 
-    pub fn notify(
+    fn notify(
         mut this: Option<Self>,
         ts: &sk::Transform,
         shape: &ir::TextShape,
     ) -> (Option<Self>, bool) {
         let dir = match shape.dir.as_ref() {
-            "ltr" => Dir::LTR,
-            "rtl" => Dir::RTL,
-            "ttb" => Dir::TTB,
-            "btt" => Dir::BTT,
+            "ltr" | "rtl" => Axis::X,
+            "ttb" | "btt" => Axis::Y,
             _ => unreachable!(),
         };
         let advance_flow = |last_diff: Option<f32>| {
@@ -290,7 +290,7 @@ impl TextFlow {
                 this = advance_flow(None);
                 has_eol = true;
             } else {
-                match dir.axis() {
+                match dir {
                     Axis::X => {
                         if ts.ty != ty {
                             let diff = ts.ty - ty;

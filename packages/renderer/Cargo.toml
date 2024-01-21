@@ -42,7 +42,7 @@ typst-ts-core.workspace = true
 typst-ts-compiler = { version = "0.4.2-rc6", default-features = false, features = [
     "web-render",
 ] }
-typst-ts-canvas-exporter = { workspace = true, optional = true }
+reflexo-vec2canvas = { workspace = true, optional = true }
 typst-ts-svg-exporter = { workspace = true, optional = true }
 typst-ts-dom-exporter = { workspace = true } # , optional = true
 console_error_panic_hook.workspace = true
@@ -81,7 +81,7 @@ build_web_font = []
 build_full = ["build_glyph_pack", "build_raw_font", "build_web_font"]
 
 render_canvas = [
-    "dep:typst-ts-canvas-exporter",
+    "dep:reflexo-vec2canvas",
     "web-sys/HtmlCanvasElement",
     "web-sys/CanvasRenderingContext2d",
 ]

@@ -293,12 +293,12 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
         abs_ref: &Fingerprint,
         text: &TextItem,
     ) -> SvgTextBuilder {
-        use typst_ts_canvas_exporter::CanvasRenderSnippets;
+        use reflexo_vec2canvas::CanvasRenderSnippets;
 
-        let font = self.get_font(&text.font).unwrap();
+        let font = self.get_font(&text.shape.font).unwrap();
 
         // upem is the unit per em defined in the font.
-        let upem = font.unit_per_em;
+        let upem = font.units_per_em;
 
         group_ctx = text.shape.add_transform(self, group_ctx, upem);
 
@@ -308,7 +308,7 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
         let mut _width = 0f32;
         let iter = text
             .render_glyphs(upem, &mut _width)
-            .flat_map(|(pos, g)| self.get_glyph(g).map(|g| (pos, g)));
+            .flat_map(|(pos, g)| font.get_glyph(g).map(|g| (pos, g.as_ref())));
         let scaled_width = width.0 * upem.0 / text.shape.size.0;
         let decender_adjust = (font.descender.0 * upem.0).abs();
         // .max(0.)

@@ -1,6 +1,6 @@
 [package]
-name = "typst-ts-canvas-exporter"
-description = "Export a frame of Typst document into canvas element."
+name = "reflexo-vec2canvas"
+description = "Render vector items into canvas element."
 version.workspace = true
 license.workspace = true
 edition.workspace = true
@@ -9,21 +9,13 @@ repository.workspace = true
 
 [dependencies]
 
-typst.workspace = true
 comemo.workspace = true
+reflexo = { workspace = true, features = ["web"] }
 
 tiny-skia.workspace = true
-ttf-parser.workspace = true
-flate2.workspace = true
-once_cell.workspace = true
-data-url.workspace = true
 async-recursion.workspace = true
 async-trait.workspace = true
 wasm-bindgen-futures.workspace = true
-elsa.workspace = true
-base64.workspace = true
-
-log.workspace = true
 
 wasm-bindgen.workspace = true
 js-sys.workspace = true
@@ -32,19 +24,15 @@ web-sys = { workspace = true, features = [
     "CanvasRenderingContext2d",
     "Path2d",
     "Blob",
-    "ImageData",
     "HtmlImageElement",
     "HtmlDivElement",
     "HtmlCanvasElement",
-    "HtmlElement",
     "Url",
     "BlobPropertyBag",
-    "DomParser",
-    "SupportedType",
-    "HtmlCollection",
-    "Performance",
     "Window",
     "Document",
 ] }
 
-typst-ts-core.workspace = true
+[features]
+incremental = ["reflexo/flat-vector"]
+default = ["incremental"]

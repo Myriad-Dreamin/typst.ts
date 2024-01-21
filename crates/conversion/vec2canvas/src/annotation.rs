@@ -1,25 +1,28 @@
 use tiny_skia as sk;
 
-use typst_ts_core::{
+use reflexo::{
     annotation::{
         link::{AnnotationBox, LinkAction, UrlOpenAction},
         AnnotationList, LinkAnnotation,
     },
     hash::Fingerprint,
-    vector::ir::{self, GroupRef, Module, VecItem},
+    vector::ir::{self, GroupRef, Module, Transform, VecItem},
 };
 
 /// Task to create annotation list with vector IR
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
 pub struct AnnotationListTask<'m, 't> {
+    /// The module which stores the item data
     pub module: &'m Module,
-
+    /// Sets a logic page number
     pub page_num: u32,
+    /// The resultant, a list of annotations
     pub annotations: &'t mut AnnotationList,
 }
 
 // todo: ugly implementation
 impl<'m, 't> AnnotationListTask<'m, 't> {
+    /// Creates a new task
     pub fn new(module: &'m Module, annotations: &'t mut AnnotationList) -> Self {
         Self {
             module,
@@ -28,12 +31,13 @@ impl<'m, 't> AnnotationListTask<'m, 't> {
         }
     }
 
+    /// Collects annotations in a vector item
     pub fn process_flat_item(&mut self, ts: sk::Transform, item: &Fingerprint) {
         let item = self.module.get_item(item).unwrap();
         match item {
             VecItem::Item(t) => self.process_flat_item(
                 ts.pre_concat({
-                    let t: typst_ts_core::vector::geom::Transform = t.0.clone().into();
+                    let t: Transform = t.0.clone().into();
                     t.into()
                 }),
                 &t.1,

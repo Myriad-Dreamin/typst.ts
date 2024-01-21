@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use typst_ts_canvas_exporter::CanvasStateGuard;
+use reflexo_vec2canvas::CanvasStateGuard;
 use typst_ts_core::hash::Fingerprint;
 use typst_ts_svg_exporter::{
     ir::{self, Scalar, VecItem},

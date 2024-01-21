@@ -20,3 +20,15 @@ macro_rules! console_log {
 
 #[allow(unused_imports)]
 pub(crate) use console_log;
+
+pub(crate) struct EmptyFuture;
+impl core::future::Future for EmptyFuture {
+    type Output = ();
+
+    fn poll(
+        self: std::pin::Pin<&mut Self>,
+        _cx: &mut core::task::Context<'_>,
+    ) -> core::task::Poll<()> {
+        core::task::Poll::Ready(())
+    }
+}

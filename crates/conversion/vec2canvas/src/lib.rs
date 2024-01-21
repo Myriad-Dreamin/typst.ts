@@ -1,32 +1,33 @@
+mod annotation;
+mod content;
+#[cfg(feature = "incremental")]
+mod incr;
+mod utils;
+
+pub use annotation::AnnotationListTask;
+pub use content::TextContentTask;
+#[cfg(feature = "incremental")]
+pub use incr::*;
+use utils::EmptyFuture;
+
+use std::{fmt::Debug, pin::Pin, sync::Arc};
+
 use js_sys::Promise;
-use std::{fmt::Debug, ops::Deref, pin::Pin, sync::Arc};
 use tiny_skia as sk;
 
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{CanvasRenderingContext2d, HtmlDivElement, HtmlImageElement, Path2d};
 
-use typst_ts_core::{
-    error::prelude::*,
-    font::{DummyFontGlyphProvider, GlyphProvider},
+use reflexo::{
     hash::Fingerprint,
     vector::{
-        incr::IncrDocClient,
         ir::{
-            self, Abs, Axes, FlatGlyphItem, FontIndice, FontItem, FontRef, GlyphItem, Image,
-            ImageItem, ImmutStr, LayoutRegionNode, Module, Page, PathStyle, Ratio, Rect, Scalar,
-            Size,
+            self, Abs, Axes, FlatGlyphItem, FontIndice, FontItem, FontRef, Image, ImageItem,
+            ImmutStr, Module, PathStyle, Ratio, Scalar, Size,
         },
         vm::{GroupContext, RenderState, RenderVm, TransformContext},
     },
 };
-
-mod utils;
-
-mod content;
-pub use content::TextContentTask;
-
-mod annotation;
-pub use annotation::AnnotationListTask;
 
 /// All the features that can be enabled or disabled.
 pub trait ExportFeature {
@@ -40,6 +41,7 @@ pub trait ExportFeature {
 
 /// The default feature set which is used for exporting full-fledged svg.
 pub struct DefaultExportFeature;
+/// The default feature set which is used for exporting svg for printing.
 pub type DefaultSvgTask = CanvasTask<DefaultExportFeature>;
 
 impl ExportFeature for DefaultExportFeature {
@@ -49,24 +51,33 @@ impl ExportFeature for DefaultExportFeature {
 
 use async_trait::async_trait;
 
+/// The trait for all the operations that can be performed on some canvas
+/// element.
 #[async_trait(?Send)]
-pub trait CanvasAction {
+pub trait CanvasOp {
+    /// Prepares the resource (recursively) for the action.
     fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static>;
-
+    /// Realizes the action on the canvas.
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d);
 }
 
+/// A static enum for all the canvas elements.
 #[derive(Debug)]
 pub enum CanvasElem {
+    /// A group of canvas elements.
     Group(CanvasGroupElem),
+    /// references a canvas element with a clip path.
     Clip(CanvasClipElem),
+    /// A path element.
     Path(CanvasPathElem),
+    /// An image element.
     Image(CanvasImageElem),
+    /// A glyph element.
     Glyph(CanvasGlyphElem),
 }
 
 #[async_trait(?Send)]
-impl CanvasAction for CanvasElem {
+impl CanvasOp for CanvasElem {
     fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
         type DynFutureBox = Pin<Box<dyn core::future::Future<Output = ()>>>;
 
@@ -108,6 +119,7 @@ impl CanvasAction for CanvasElem {
 // async fn realize(&self, ts: sk::Transform, canvas:
 // &web_sys::CanvasRenderingContext2d);
 
+/// A reference to a canvas element.
 pub type CanvasNode = Arc<CanvasElem>;
 
 #[inline]
@@ -125,6 +137,10 @@ fn set_transform(canvas: &web_sys::CanvasRenderingContext2d, transform: sk::Tran
     maybe_err.unwrap();
 }
 
+/// A guard for saving and restoring the canvas state.
+///
+/// When the guard is created, a cheap checkpoint of the canvas state is saved.
+/// When the guard is dropped, the canvas state is restored.
 pub struct CanvasStateGuard<'a>(&'a CanvasRenderingContext2d);
 
 impl<'a> CanvasStateGuard<'a> {
@@ -140,6 +156,7 @@ impl<'a> Drop for CanvasStateGuard<'a> {
     }
 }
 
+/// A group of canvas elements.
 #[derive(Debug)]
 pub struct CanvasGroupElem {
     pub ts: sk::Transform,
@@ -147,7 +164,7 @@ pub struct CanvasGroupElem {
 }
 
 #[async_trait(?Send)]
-impl CanvasAction for CanvasGroupElem {
+impl CanvasOp for CanvasGroupElem {
     fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
         let mut v = Vec::default();
 
@@ -177,6 +194,7 @@ impl CanvasAction for CanvasGroupElem {
     }
 }
 
+/// A reference to a canvas element with a clip path.
 #[derive(Debug)]
 pub struct CanvasClipElem {
     pub ts: sk::Transform,
@@ -200,7 +218,7 @@ impl CanvasClipElem {
 }
 
 #[async_trait(?Send)]
-impl CanvasAction for CanvasClipElem {
+impl CanvasOp for CanvasClipElem {
     fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
         self.inner.prepare()
     }
@@ -212,25 +230,14 @@ impl CanvasAction for CanvasClipElem {
     }
 }
 
+/// A path element.
 #[derive(Debug)]
 pub struct CanvasPathElem {
     pub path_data: ir::PathItem,
 }
 
-struct EmptyFuture;
-impl core::future::Future for EmptyFuture {
-    type Output = ();
-
-    fn poll(
-        self: std::pin::Pin<&mut Self>,
-        _cx: &mut core::task::Context<'_>,
-    ) -> core::task::Poll<()> {
-        core::task::Poll::Ready(())
-    }
-}
-
 #[async_trait(?Send)]
-impl CanvasAction for CanvasPathElem {
+impl CanvasOp for CanvasPathElem {
     fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + 'static> {
         None::<EmptyFuture>
     }
@@ -302,6 +309,7 @@ impl CanvasAction for CanvasPathElem {
     }
 }
 
+/// An image element.
 #[derive(Debug)]
 pub struct CanvasImageElem {
     pub image_data: ImageItem,
@@ -435,7 +443,7 @@ impl CanvasImageElem {
 }
 
 #[async_trait(?Send)]
-impl CanvasAction for CanvasImageElem {
+impl CanvasOp for CanvasImageElem {
     fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + 'static> {
         Self::prepare_image(self.image_data.image.clone())
     }
@@ -445,6 +453,7 @@ impl CanvasAction for CanvasImageElem {
     }
 }
 
+/// A glyph element.
 #[derive(Debug)]
 pub struct CanvasGlyphElem {
     pub fill: ImmutStr,
@@ -452,7 +461,7 @@ pub struct CanvasGlyphElem {
 }
 
 #[async_trait(?Send)]
-impl CanvasAction for CanvasGlyphElem {
+impl CanvasOp for CanvasGlyphElem {
     fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + 'static> {
         match self.glyph_data.as_ref() {
             FlatGlyphItem::Image(glyph) => {
@@ -480,14 +489,12 @@ impl CanvasAction for CanvasGlyphElem {
     }
 }
 
-/// Rework canvas render task with SVG's vector IR
+/// Holds the data for rendering canvas.
+///
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
 /// The 't lifetime is the lifetime of SVG task.
 pub struct CanvasRenderTask<'m, 't, Feat: ExportFeature> {
-    /// Provides glyphs.
-    /// See [`GlyphProvider`].
-    pub glyph_provider: GlyphProvider,
-
+    /// The module which stores the frame data.
     pub module: &'m Module,
 
     /// See [`ExportFeature`].
@@ -495,16 +502,20 @@ pub struct CanvasRenderTask<'m, 't, Feat: ExportFeature> {
     /// See [`ExportFeature`].
     pub use_stable_glyph_id: bool,
 
-    pub _feat_phantom: std::marker::PhantomData<&'t Feat>,
+    _feat_phantom: std::marker::PhantomData<&'t Feat>,
 }
 
-/// A builder for [`CanvasNode`].
-/// It holds a reference to [`CanvasRenderTask`] and state of the building
-/// process.
+/// A stacked builder for [`CanvasNode`].
+///
+/// It holds state of the building process.
 pub struct CanvasStack {
+    /// The transform matrix.
     pub ts: sk::Transform,
+    /// A unique clip path on stack
     pub clipper: Option<ir::PathItem>,
+    /// The fill color.
     pub fill: Option<ImmutStr>,
+    /// The inner elements.
     pub inner: Vec<(ir::Point, CanvasNode)>,
 }
 
@@ -522,17 +533,6 @@ impl From<CanvasStack> for CanvasNode {
             }))
         } else {
             inner
-        }
-    }
-}
-
-/// Internal methods for [`CanvasStack`].
-impl CanvasStack {
-    pub fn with_text_shape(&mut self, shape: &ir::TextShape) {
-        for style in &shape.styles {
-            if let ir::PathStyle::Fill(fill) = style {
-                self.fill = Some(fill.clone());
-            }
         }
     }
 }
@@ -657,7 +657,11 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, 't, Feat
         text: &ir::TextItem,
     ) -> Self::Group {
         let mut g = self.start_group(value);
-        g.with_text_shape(&text.shape);
+        for style in &text.shape.styles {
+            if let ir::PathStyle::Fill(fill) = style {
+                g.fill = Some(fill.clone());
+            }
+        }
         g
     }
 }
@@ -665,10 +669,6 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, 't, Feat
 /// The task context for exporting canvas.
 /// It is also as a namespace for all the functions used in the task.
 pub struct CanvasTask<Feat: ExportFeature> {
-    /// Provides glyphs.
-    /// See [`GlyphProvider`].
-    glyph_provider: GlyphProvider,
-
     _feat_phantom: std::marker::PhantomData<Feat>,
 }
 
@@ -676,8 +676,6 @@ pub struct CanvasTask<Feat: ExportFeature> {
 impl<Feat: ExportFeature> Default for CanvasTask<Feat> {
     fn default() -> Self {
         Self {
-            glyph_provider: GlyphProvider::new(DummyFontGlyphProvider::default()),
-
             _feat_phantom: std::marker::PhantomData,
         }
     }
@@ -690,8 +688,6 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
         module: &'m ir::Module,
     ) -> CanvasRenderTask<'m, 't, Feat> {
         CanvasRenderTask::<Feat> {
-            glyph_provider: self.glyph_provider.clone(),
-
             module,
 
             should_render_text_element: true,
@@ -702,228 +698,45 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
     }
 }
 
+/// A rendered page of canvas.
 #[derive(Clone)]
 pub struct CanvasPage {
+    /// A rendered canvas element.
+    pub elem: CanvasNode,
+    /// The fingerprint of the content for identifying page difference.
     pub content: Fingerprint,
-    pub elem: Arc<CanvasElem>,
+    /// The size of the page.
     pub size: Size,
 }
 
-pub struct IncrementalCanvasExporter {
-    pub pixel_per_pt: f32,
-    pub fill: ImmutStr,
-    pub pages: Vec<CanvasPage>,
-}
-
-impl Default for IncrementalCanvasExporter {
-    fn default() -> Self {
-        Self {
-            pixel_per_pt: 3.,
-            fill: "#ffffff".into(),
-            pages: vec![],
-        }
-    }
-}
-
-impl IncrementalCanvasExporter {
-    pub fn interpret_changes(&mut self, module: &Module, pages: &[Page]) {
-        // render the document
-        let mut t = CanvasTask::<DefaultExportFeature>::default();
-
-        let mut ct = t.fork_canvas_render_task(module);
-
-        let pages = pages
-            .iter()
-            .enumerate()
-            .map(|(idx, Page { content, size })| {
-                if idx < self.pages.len() && self.pages[idx].content == *content {
-                    return self.pages[idx].clone();
-                }
-
-                let state = RenderState::new_size(*size);
-                CanvasPage {
-                    content: *content,
-                    elem: ct.render_item(state, content),
-                    size: *size,
-                }
-            })
-            .collect();
-        self.pages = pages;
-    }
-
-    pub async fn flush_page(
-        &mut self,
-        idx: usize,
-        canvas: &web_sys::CanvasRenderingContext2d,
-        ts: sk::Transform,
-    ) {
-        let pg = &self.pages[idx];
-
-        set_transform(canvas, ts);
-        canvas.set_fill_style(&self.fill.as_ref().into());
-        canvas.fill_rect(0., 0., pg.size.x.0 as f64, pg.size.y.0 as f64);
-
-        pg.elem.realize(ts, canvas).await;
-    }
-}
-
-/// maintains the state of the incremental rendering at client side
-#[derive(Default)]
-pub struct IncrCanvasDocClient {
-    /// canvas state
-    pub elements: IncrementalCanvasExporter,
-
-    /// Expected exact state of the current DOM.
-    /// Initially it is None meaning no any page is rendered.
-    pub doc_view: Option<Vec<Page>>,
-}
-
-impl IncrCanvasDocClient {
-    pub fn reset(&mut self) {}
-
-    pub fn set_pixel_per_pt(&mut self, pixel_per_pt: f32) {
-        self.elements.pixel_per_pt = pixel_per_pt;
-    }
-
-    pub fn set_fill(&mut self, fill: ImmutStr) {
-        self.elements.fill = fill;
-    }
-
-    fn patch_delta(&mut self, kern: &IncrDocClient) {
-        if let Some(layout) = &kern.layout {
-            let pages = layout.pages(&kern.doc.module);
-            if let Some(pages) = pages {
-                self.elements
-                    .interpret_changes(pages.module(), pages.pages());
-            }
-        }
-    }
-
-    /// Render the document in the given window.
-    pub async fn render_in_window(
-        &mut self,
-        kern: &mut IncrDocClient,
-        canvas: &web_sys::CanvasRenderingContext2d,
-        rect: Rect,
-    ) {
-        const NULL_PAGE: Fingerprint = Fingerprint::from_u128(1);
-
-        self.patch_delta(kern);
-
-        // prepare an empty page for the pages that are not rendered
-
-        // get previous doc_view
-        // it is exact state of the current DOM.
-        let prev_doc_view = self.doc_view.take().unwrap_or_default();
-
-        // render next doc_view
-        // for pages that is not in the view, we use empty_page
-        // otherwise, we keep document layout
-        let mut page_off: f32 = 0.;
-        let mut next_doc_view = vec![];
-        if let Some(t) = &kern.layout {
-            let pages = match t {
-                LayoutRegionNode::Pages(a) => {
-                    let (_, pages) = a.deref();
-                    pages
-                }
-                _ => todo!(),
-            };
-            for page in pages.iter() {
-                page_off += page.size.y.0;
-                if page_off < rect.lo.y.0 || page_off - page.size.y.0 > rect.hi.y.0 {
-                    next_doc_view.push(Page {
-                        content: NULL_PAGE,
-                        size: page.size,
-                    });
-                    continue;
-                }
-
-                next_doc_view.push(page.clone());
-            }
-        }
-
-        let s = self.elements.pixel_per_pt;
-        let ts = sk::Transform::from_scale(s, s);
-
-        // accumulate offset_y
-        let mut offset_y = 0.;
-        for (idx, y) in next_doc_view.iter().enumerate() {
-            let x = prev_doc_view.get(idx);
-            if x.is_none() || (x.unwrap() != y && y.content != NULL_PAGE) {
-                let ts = ts.pre_translate(0., offset_y);
-                self.elements.flush_page(idx, canvas, ts).await;
-            }
-            offset_y += y.size.y.0;
-        }
-    }
-
-    /// Render the document in the given window.
-    pub async fn render_page_in_window(
-        &mut self,
-        kern: &mut IncrDocClient,
-        canvas: &web_sys::CanvasRenderingContext2d,
-        idx: usize,
-        _rect: Rect,
-    ) -> ZResult<()> {
-        self.patch_delta(kern);
-
-        if idx >= self.elements.pages.len() {
-            Err(error_once!("Renderer.OutofPageRange", idx: idx))?;
-        }
-
-        let s = self.elements.pixel_per_pt;
-        let ts = sk::Transform::from_scale(s, s);
-        self.elements.flush_page(idx, canvas, ts).await;
-
-        Ok(())
-    }
-}
-
-fn create_image() -> Option<HtmlImageElement> {
-    let doc = web_sys::window()?.document()?;
-    doc.create_element("img").ok()?.dyn_into().ok()
-}
-
-#[comemo::memoize]
-fn rasterize_image(_image: Arc<Image>) -> Option<HtmlImageElement> {
-    create_image()
-}
-
-#[comemo::memoize]
-fn rasterize_text(_fg: Fingerprint) -> Option<HtmlDivElement> {
-    let doc = web_sys::window()?.document()?;
-    doc.create_element("div").ok()?.dyn_into().ok()
-}
-
+/// Useful snippets for rendering parts of vector items to canvas.
 pub struct CanvasRenderSnippets;
 
 impl CanvasRenderSnippets {
     fn put_glyph(
         canvas: &web_sys::CanvasRenderingContext2d,
         fill: &str,
-        glyph_item: &GlyphItem,
+        glyph_item: &FlatGlyphItem,
         ts: sk::Transform,
     ) {
         let _guard = CanvasStateGuard::new(canvas);
         set_transform(canvas, ts);
         match &glyph_item {
-            GlyphItem::Raw(..) => unreachable!(),
-            GlyphItem::Outline(path) => {
+            FlatGlyphItem::Outline(path) => {
                 canvas.set_fill_style(&fill.into());
                 canvas.fill_with_path_2d(&Path2d::new_with_path_string(&path.d).unwrap());
             }
-            GlyphItem::Image(_glyph) => {
+            FlatGlyphItem::Image(_glyph) => {
                 unimplemented!();
             }
-            GlyphItem::None => {}
+            FlatGlyphItem::None => {}
         }
     }
 
-    // note we need
+    /// Rasterize a text element to a image based on canvas.
     pub fn rasterize_text<'a>(
         fg: &Fingerprint,
-        glyphs: impl Iterator<Item = (Scalar, &'a GlyphItem)>,
+        glyphs: impl Iterator<Item = (Scalar, &'a FlatGlyphItem)>,
         width: f32,
         height: f32,
         decender: f32,
@@ -956,11 +769,6 @@ impl CanvasRenderSnippets {
             decender
         );
 
-        // style.set_property("width", "100%").unwrap();
-        // style.set_property("height", "100%").unwrap();
-        // style
-        //     .set_property("background", "var(--glyph_fill)")
-        //     .unwrap();
         elem.set_attribute(
             "style",
             "width: 100%; height: 100%; background: transparent;",
@@ -977,18 +785,13 @@ impl CanvasRenderSnippets {
             fill,
         );
 
-        // console_log!("rasterize_text done {}", elem.outer_html());
-        // let _guard = CanvasStateGuard::new(canvas);
-        // set_transform(canvas, ts);
-        // canvas.set_fill_style(&fill.into());
-        // canvas.fill_text(&text.text, 0., 0.).unwrap();
         elem.outer_html()
     }
 
     fn rasterize_text_slow<'a>(
         elem: HtmlDivElement,
         random_token: String,
-        glyphs: impl Iterator<Item = (Scalar, &'a GlyphItem)>,
+        glyphs: impl Iterator<Item = (Scalar, &'a FlatGlyphItem)>,
         width: f32,
         height: f32,
         decender: f32,
@@ -1031,3 +834,19 @@ impl CanvasRenderSnippets {
 }
 
 // pub use backend::canvas::IncrCanvasDocClient;
+
+fn create_image() -> Option<HtmlImageElement> {
+    let doc = web_sys::window()?.document()?;
+    doc.create_element("img").ok()?.dyn_into().ok()
+}
+
+#[comemo::memoize]
+fn rasterize_image(_image: Arc<Image>) -> Option<HtmlImageElement> {
+    create_image()
+}
+
+#[comemo::memoize]
+fn rasterize_text(_fg: Fingerprint) -> Option<HtmlDivElement> {
+    let doc = web_sys::window()?.document()?;
+    doc.create_element("div").ok()?.dyn_into().ok()
+}
