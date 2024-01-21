@@ -9,7 +9,7 @@ use typst_ts_core::{
         ir::{LayoutRegion, LayoutRegionNode},
         pass::Typst2VecPass,
     },
-    DynExporter, DynGenericExporter, DynPolymorphicExporter, GenericExporter, IntoTypst, TakeAs,
+    DynExporter, DynGenericExporter, DynPolymorphicExporter, GenericExporter, TakeAs,
     TypstDocument,
 };
 
@@ -324,7 +324,7 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
             diag::At,
             syntax::{PackageSpec, Span, VirtualPath},
         };
-        use typst_ts_core::TypstFileId;
+        use typst_ts_core::{IntoTypst, TypstFileId};
         use typst_ts_svg_exporter::DynamicLayoutSvgExporter;
 
         let variable_file = TypstFileId::new(
