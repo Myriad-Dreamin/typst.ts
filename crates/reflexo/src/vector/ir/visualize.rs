@@ -1,7 +1,5 @@
-use typst::visualize::{ImageFormat, RasterFormat, VectorFormat};
-
 use super::preludes::*;
-use crate::{typst_affinite_hash, StaticHash128};
+use crate::StaticHash128;
 
 /// Item representing an `<image/>` element.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -29,33 +27,6 @@ pub struct Image {
     pub alt: Option<ImmutStr>,
     /// prehashed image content.
     pub hash: Fingerprint,
-}
-
-/// Collect image data from [`typst::visualize::Image`].
-impl From<typst::visualize::Image> for Image {
-    fn from(image: typst::visualize::Image) -> Self {
-        let format = match image.format() {
-            ImageFormat::Raster(e) => match e {
-                RasterFormat::Jpg => "jpeg",
-                RasterFormat::Png => "png",
-                RasterFormat::Gif => "gif",
-            },
-            ImageFormat::Vector(e) => match e {
-                VectorFormat::Svg => "svg+xml",
-            },
-        };
-
-        // steal prehash from [`typst::image::Image`]
-        let hash = typst_affinite_hash(&image);
-
-        Image {
-            data: image.data().to_vec(),
-            format: format.into(),
-            size: Axes::new(image.width(), image.height()),
-            alt: image.alt().map(|s| s.into()),
-            hash: Fingerprint::from_u128(hash),
-        }
-    }
 }
 
 impl Image {

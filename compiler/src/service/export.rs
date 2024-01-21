@@ -324,7 +324,7 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
             diag::At,
             syntax::{PackageSpec, Span, VirtualPath},
         };
-        use typst_ts_core::TypstFileId;
+        use typst_ts_core::{IntoTypst, TypstFileId};
         use typst_ts_svg_exporter::DynamicLayoutSvgExporter;
 
         let variable_file = TypstFileId::new(
@@ -366,7 +366,9 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
                 if let Some(post_process_layout) = &this.post_process_layout {
                     layout = post_process_layout(&mut svg_exporter.typst2vec, output, layout);
                 }
-                svg_exporter.layouts.push((current_width.into(), layout));
+                svg_exporter
+                    .layouts
+                    .push((current_width.into_typst(), layout));
 
                 log::trace!("rerendered {} at {:?}", i, instant - instant_begin);
                 Ok(())

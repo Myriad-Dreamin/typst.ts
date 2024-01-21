@@ -10,7 +10,8 @@ use siphasher::sip128::{Hasher128, SipHasher13};
 
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
-use typst::diag::StrResult;
+
+use crate::error::prelude::ZResult;
 
 /// See <https://github.com/rust-lang/rust/blob/master/compiler/rustc_hir/src/stable_hash_impls.rs#L22>
 /// The fingerprint conflicts should be very rare and should be handled by the
@@ -65,7 +66,7 @@ impl Fingerprint {
     }
 
     /// Creates a new `Fingerprint` from a svg id that **doesn't have prefix**.
-    pub fn try_from_str(s: &str) -> StrResult<Self> {
+    pub fn try_from_str(s: &str) -> ZResult<Self> {
         let bytes = base64::engine::general_purpose::STANDARD_NO_PAD
             .decode(&s.as_bytes()[..11])
             .expect("invalid base64 string");
@@ -236,20 +237,6 @@ impl FingerprintBuilder {
     }
 }
 
-/// This function maintain hash function corresponding to Typst
-/// Typst changed the hash function from [`siphasher::sip128::SipHasher`] to
-///   [`SipHasher13`] since commit
-///   <https://github.com/typst/typst/commit/d0afba959d18d1c2c646b99e6ddd864b1a91deb2>
-/// Commit log:
-/// This seems to significantly improves performance. Inspired by
-/// rust-lang/rust#107925
-///
-/// Update: Use Typst's new util function `typst::util::hash128`
-#[inline]
-pub fn typst_affinite_hash<T: std::hash::Hash>(t: &T) -> u128 {
-    typst::util::hash128(t)
-}
-
 /// This function provides a hash function for items, which also includes a type
 /// id as part of the hash. Note: This function is not stable across different
 /// versions of typst-ts, so it is preferred to be always used in memory.
@@ -268,8 +255,10 @@ pub fn item_hash128<T: Hash + 'static>(item: &T) -> u128 {
 /// Currently, this function use [`SipHasher13`] as the underlying hash
 /// algorithm.
 #[inline]
-pub fn hash128<T: std::hash::Hash>(t: &T) -> u128 {
-    typst::util::hash128(t)
+pub fn hash128<T: std::hash::Hash>(value: &T) -> u128 {
+    let mut state = SipHasher13::new();
+    value.hash(&mut state);
+    state.finish128().as_u128()
 }
 
 #[test]

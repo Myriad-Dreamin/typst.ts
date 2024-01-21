@@ -1,16 +1,15 @@
 use std::path::Path;
 
-use typst::model::Document;
 use typst_ts_compiler::{
     service::{CompileDriver, CompileExporter, Compiler},
     ShadowApiExt, TypstSystemWorld,
 };
-use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter};
+use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, TypstDocument};
 
 fn get_driver(
     workspace_dir: &Path,
     entry_file_path: &Path,
-    exporter: GroupExporter<Document>,
+    exporter: GroupExporter<TypstDocument>,
 ) -> CompileExporter<CompileDriver> {
     let world = TypstSystemWorld::new(CompileOpts {
         root_dir: workspace_dir.to_owned(),
@@ -30,7 +29,7 @@ fn get_driver(
 pub fn test_compiler(
     workspace_dir: &Path,
     entry_file_path: &Path,
-    exporter: GroupExporter<Document>,
+    exporter: GroupExporter<TypstDocument>,
 ) {
     let mut driver = get_driver(workspace_dir, entry_file_path, exporter);
     let mut content = { std::fs::read_to_string(entry_file_path).expect("Could not read file") };

@@ -27,6 +27,7 @@ use typst_ts_core::{
         },
         utils::ToCssExt,
     },
+    IntoTypst, TryIntoTypst,
 };
 
 use crate::{
@@ -231,7 +232,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
                 svg.push(SvgText::Plain(format!(
                     r##"<stop offset="{}" stop-color="{}"/>"##,
                     RatioRepr(start_t.0),
-                    start_c.typst().to_css(),
+                    start_c.to_css(),
                 )));
 
                 // Generate (256 / len) stops between the two stops.
@@ -260,7 +261,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
                 svg.push(SvgText::Plain(format!(
                     r##"<stop offset="{}" stop-color="{}"/>"##,
                     RatioRepr(end_t.0),
-                    end_c.typst().to_css(),
+                    end_c.to_css(),
                 )));
             }
 
@@ -613,7 +614,7 @@ fn sample_color_stops(gradient: &GradientItem, t: f32) -> Color {
     let mut low = 0;
     let mut high = gradient.stops.len();
 
-    let mixing_space = gradient.space.try_into().unwrap();
+    let mixing_space = gradient.space.try_into_typst().unwrap();
     let stops = &gradient.stops;
 
     while low < high {
@@ -631,8 +632,8 @@ fn sample_color_stops(gradient: &GradientItem, t: f32) -> Color {
     let (col_0, pos_0) = &stops[low - 1];
     let (col_1, pos_1) = &stops[low];
     let t = (t - pos_0.0) / (pos_1.0 - pos_0.0);
-    let col_0 = col_0.typst();
-    let col_1 = col_1.typst();
+    let col_0 = (*col_0).into_typst();
+    let col_1 = (*col_1).into_typst();
 
     let out = Color::mix_iter(
         [

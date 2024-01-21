@@ -2844,6 +2844,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "reflexo"
+version = "0.4.2-rc6"
+dependencies = [
+ "base64",
+ "bitvec",
+ "comemo",
+ "dashmap",
+ "ecow",
+ "fxhash",
+ "hex",
+ "js-sys",
+ "once_cell",
+ "parking_lot",
+ "path-clean",
+ "rkyv",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "serde_with",
+ "siphasher 1.0.0",
+ "tiny-skia-path",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "regex"
 version = "1.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4365,6 +4390,7 @@ dependencies = [
  "parking_lot",
  "path-clean",
  "rayon",
+ "reflexo",
  "rkyv",
  "rustc-hash",
  "serde",
@@ -4447,7 +4473,6 @@ dependencies = [
  "dhat",
  "sha2",
  "tokio",
- "typst",
  "typst-ts-compiler",
  "typst-ts-core",
  "typst-ts-dev-server",
@@ -4483,8 +4508,6 @@ dependencies = [
  "hex",
  "sha2",
  "tokio",
- "typst",
- "typst-syntax",
  "typst-ts-compiler",
  "typst-ts-core",
  "typst-ts-dev-server",
@@ -4507,7 +4530,6 @@ dependencies = [
  "serde_json",
  "sha2",
  "tokio",
- "typst",
  "typst-ts-compiler",
  "typst-ts-core",
  "typst-ts-dev-server",
@@ -4700,7 +4722,6 @@ dependencies = [
  "serde-wasm-bindgen",
  "serde_json",
  "sha2",
- "typst",
  "typst-ts-ast-exporter",
  "typst-ts-canvas-exporter",
  "typst-ts-compiler",

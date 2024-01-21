@@ -2,13 +2,15 @@ use std::sync::{Arc, Mutex};
 
 use divan::Bencher;
 use once_cell::sync::Lazy;
-use typst::model::Document;
 use typst_ts_cli::CompileOnceArgs;
 use typst_ts_compiler::{
     service::{CompileDriverImpl, Compiler},
     ShadowApiExt, TypstSystemWorld,
 };
-use typst_ts_core::vector::pass::{IncrTypst2VecPass, Typst2VecPass};
+use typst_ts_core::{
+    vector::pass::{IncrTypst2VecPass, Typst2VecPass},
+    TypstDocument,
+};
 
 type CompileDriver = Lazy<Mutex<CompileDriverImpl<TypstSystemWorld>>>;
 
@@ -22,10 +24,10 @@ static TEST_COMPILER: CompileDriver = once_cell::sync::Lazy::new(|| {
 
 const TEST_FILE: &str = include_str!("../../../fuzzers/corpora/math/undergradmath.typ");
 
-static TEST_DOC: Lazy<Arc<Document>> =
+static TEST_DOC: Lazy<Arc<TypstDocument>> =
     once_cell::sync::Lazy::new(|| compile(&TEST_COMPILER, TEST_FILE));
 
-fn compile(driver: &CompileDriver, src: &str) -> Arc<Document> {
+fn compile(driver: &CompileDriver, src: &str) -> Arc<TypstDocument> {
     let mut driver = driver.lock().unwrap();
     let e = driver.entry_file.clone();
     driver
@@ -45,14 +47,14 @@ fn main() {
     divan::main();
 }
 
-fn lower_impl(doc: &Document) {
+fn lower_impl(doc: &TypstDocument) {
     // use rayon::iter::ParallelIterator;
 
     let pass = Typst2VecPass::default();
     let _ = pass.doc(&doc.introspector, doc);
 }
 
-fn lower_incr_impl<'a>(docs: impl Iterator<Item = &'a Arc<Document>>) {
+fn lower_incr_impl<'a>(docs: impl Iterator<Item = &'a Arc<TypstDocument>>) {
     let mut pass = IncrTypst2VecPass::default();
     for doc in docs {
         pass.increment_lifetime();

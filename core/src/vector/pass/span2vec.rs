@@ -6,9 +6,10 @@ use std::sync::Arc;
 use crossbeam_queue::SegQueue;
 use once_cell::sync::OnceCell;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
-use typst::syntax::Span;
 
-use crate::debug_loc::{ElementPoint, FileLocation, FlatSourceLocation, SourceSpanOffset};
+use crate::debug_loc::{
+    ElementPoint, FileLocation, FlatSourceLocation, SourceSpan, SourceSpanOffset,
+};
 use crate::error::prelude::ZResult;
 use crate::error::prelude::*;
 use crate::hash::Fingerprint;
@@ -131,7 +132,7 @@ struct LazyRegionInfo {
     /// A map from child region id to its parent.
     parents: HashMap<usize, usize>,
     /// A map from span to belonging region ids.
-    span_indice: HashMap<Span, Vec<usize>>,
+    span_indice: HashMap<SourceSpan, Vec<usize>>,
 }
 
 impl fmt::Debug for LazyRegionInfo {
@@ -150,7 +151,7 @@ impl From<SegQueue<RawSpanInfo>> for LazyRegionInfo {
         let mut parents = HashMap::new();
 
         let mut span_indice = HashMap::new();
-        let mut insert_span = |span: Span, region: usize| {
+        let mut insert_span = |span: SourceSpan, region: usize| {
             span_indice
                 .entry(span)
                 .or_insert_with(Vec::new)
@@ -258,10 +259,10 @@ pub enum SourceNodeKind {
     Doc,
     Page { region: usize },
     Group { region: usize },
-    Char((Span, u16)),
-    Text(Arc<[(Span, u16)]>),
-    Image(Span),
-    Shape(Span),
+    Char((SourceSpan, u16)),
+    Text(Arc<[(SourceSpan, u16)]>),
+    Image(SourceSpan),
+    Shape(SourceSpan),
 }
 
 pub struct SourceRegion {
@@ -533,7 +534,7 @@ impl Span2VecPass {
         log::info!("pass check remote path({path:?})");
 
         let mut candidate: Option<(SourceSpanOffset, SourceSpanOffset)> = None;
-        let mut in_text_indice: Option<Arc<[(Span, u16)]>> = None;
+        let mut in_text_indice: Option<Arc<[(SourceSpan, u16)]>> = None;
         for ElementPoint {
             kind: remote_kind,
             index: idx,
@@ -583,7 +584,7 @@ impl Span2VecPass {
                     )?;
                 }
                 (SOURCE_MAPPING_TYPE_TEXT, SourceNodeKind::Char(ch)) => {
-                    let is_attached = |x: (Span, u16)| x.0 != Span::detached();
+                    let is_attached = |x: (SourceSpan, u16)| x.0 != SourceSpan::detached();
                     let st = is_attached(ch).then_some(ch);
                     candidate = st.map(From::from).zip(st.map(From::from));
 
@@ -597,7 +598,7 @@ impl Span2VecPass {
                     in_text_indice = Some(Arc::new([ch]));
                 }
                 (SOURCE_MAPPING_TYPE_TEXT, SourceNodeKind::Text(chars)) => {
-                    let is_attached = |x: &&(Span, u16)| x.0 != Span::detached();
+                    let is_attached = |x: &&(SourceSpan, u16)| x.0 != SourceSpan::detached();
                     let st = chars.iter().find(is_attached).copied();
                     let ed = chars.iter().rev().find(is_attached).copied();
                     candidate = st.map(From::from).zip(ed.map(From::from));
