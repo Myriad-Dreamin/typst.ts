@@ -293,7 +293,7 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
         abs_ref: &Fingerprint,
         text: &TextItem,
     ) -> SvgTextBuilder {
-        use typst_ts_canvas_exporter::CanvasRenderSnippets;
+        use reflexo_vec2canvas::CanvasRenderSnippets;
 
         let font = self.get_font(&text.shape.font).unwrap();
 

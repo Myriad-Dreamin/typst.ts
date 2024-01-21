@@ -1,6 +1,6 @@
 use std::{collections::HashMap, hash::Hash, ops::Deref};
 
-use typst_ts_canvas_exporter::{
+use reflexo_vec2canvas::{
     AnnotationListTask, DefaultExportFeature, ExportFeature, TextContentTask,
 };
 use typst_ts_core::{
@@ -202,7 +202,7 @@ mod tests {
     use send_wrapper::SendWrapper;
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
-    use typst_ts_canvas_exporter::ExportFeature;
+    use reflexo_vec2canvas::ExportFeature;
     // use typst_ts_test_common::std_artifact::STD_TEST_FILES;
     use typst_ts_test_common::web_artifact::get_corpus;
     use wasm_bindgen::JsCast;

@@ -1,4 +1,4 @@
-use typst_ts_canvas_exporter::{CanvasAction, CanvasElem, CanvasNode, CanvasTask, ExportFeature};
+use reflexo_vec2canvas::{CanvasAction, CanvasElem, CanvasNode, CanvasTask, ExportFeature};
 use typst_ts_core::{
     error::prelude::ZResult,
     vector::{

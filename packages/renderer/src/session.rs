@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 #[cfg(feature = "render_canvas")]
-use typst_ts_canvas_exporter::IncrCanvasDocClient;
+use reflexo_vec2canvas::IncrCanvasDocClient;
 use typst_ts_core::{
     error::prelude::*,
     vector::{

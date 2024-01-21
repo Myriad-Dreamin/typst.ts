@@ -2869,6 +2869,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "reflexo-vec2canvas"
+version = "0.4.2-rc6"
+dependencies = [
+ "async-recursion",
+ "async-trait",
+ "comemo",
+ "js-sys",
+ "reflexo",
+ "tiny-skia",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "regex"
 version = "1.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4266,21 +4281,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "typst-ts-canvas-exporter"
-version = "0.4.2-rc6"
-dependencies = [
- "async-recursion",
- "async-trait",
- "comemo",
- "js-sys",
- "reflexo",
- "tiny-skia",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
 name = "typst-ts-cli"
 version = "0.4.2-rc6"
 dependencies = [
@@ -4428,12 +4428,12 @@ dependencies = [
  "log",
  "once_cell",
  "rayon",
+ "reflexo-vec2canvas",
  "siphasher 1.0.0",
  "svgtypes",
  "tiny-skia",
  "tiny-skia-path",
  "typst",
- "typst-ts-canvas-exporter",
  "typst-ts-core",
  "typst-ts-svg-exporter",
  "unicode-width",
@@ -4616,6 +4616,7 @@ dependencies = [
  "js-sys",
  "once_cell",
  "pollster",
+ "reflexo-vec2canvas",
  "rmp-serde",
  "send_wrapper",
  "serde",
@@ -4624,7 +4625,6 @@ dependencies = [
  "sha2",
  "tiny-skia",
  "typst",
- "typst-ts-canvas-exporter",
  "typst-ts-compiler",
  "typst-ts-core",
  "typst-ts-dom-exporter",
@@ -4673,10 +4673,10 @@ dependencies = [
  "log",
  "once_cell",
  "rayon",
+ "reflexo-vec2canvas",
  "siphasher 1.0.0",
  "tiny-skia",
  "typst",
- "typst-ts-canvas-exporter",
  "typst-ts-core",
 ]
 
@@ -4711,11 +4711,11 @@ dependencies = [
  "hex",
  "js-sys",
  "once_cell",
+ "reflexo-vec2canvas",
  "serde-wasm-bindgen",
  "serde_json",
  "sha2",
  "typst-ts-ast-exporter",
- "typst-ts-canvas-exporter",
  "typst-ts-compiler",
  "typst-ts-core",
  "typst-ts-pdf-exporter",

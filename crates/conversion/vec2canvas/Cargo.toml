@@ -1,6 +1,6 @@
 [package]
-name = "typst-ts-canvas-exporter"
-description = "Export a frame of Typst document into canvas element."
+name = "reflexo-vec2canvas"
+description = "Render vector items into canvas element."
 version.workspace = true
 license.workspace = true
 edition.workspace = true

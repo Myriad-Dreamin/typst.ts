@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use typst_ts_canvas_exporter::{CanvasAction, CanvasElem, CanvasNode, CanvasStateGuard};
+use reflexo_vec2canvas::{CanvasAction, CanvasElem, CanvasNode, CanvasStateGuard};
 use typst_ts_core::{
     error::prelude::*,
     hash::Fingerprint,

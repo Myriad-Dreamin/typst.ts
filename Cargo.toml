@@ -14,13 +14,13 @@ members = [
     "benches/lowering",
 
     "crates/reflexo",
+    "crates/conversion/vec2canvas",
 
     "cli",
     "core",
     "compiler",
 
     "exporter/ast",
-    "exporter/canvas",
     "exporter/dom",
     "exporter/pdf",
     "exporter/serde",
@@ -200,6 +200,10 @@ vergen = { version = "8.2.5", features = [
 
 # project core
 reflexo = { version = "0.4.2-rc6", default-features = false }
+
+# conversions
+reflexo-vec2canvas = "0.4.2-rc6"
+
 typst-ts-core = { version = "0.4.2-rc6", default-features = false }
 typst-ts-compiler = { version = "0.4.2-rc6", default-features = false }
 typst-ts-test-common = { version = "0.4.2-rc6", path = "tests/common" }
@@ -208,7 +212,6 @@ typst-ts-test-common = { version = "0.4.2-rc6", path = "tests/common" }
 typst-ts-ast-exporter = "0.4.2-rc6"
 typst-ts-dom-exporter = "0.4.2-rc6"
 typst-ts-pdf-exporter = "0.4.2-rc6"
-typst-ts-canvas-exporter = { version = "0.4.2-rc6", path = "exporter/canvas" }
 typst-ts-serde-exporter = "0.4.2-rc6"
 typst-ts-svg-exporter = "0.4.2-rc6"
 typst-ts-text-exporter = "0.4.2-rc6"
@@ -219,6 +222,7 @@ typst-ts-cli = { version = "0.4.2-rc6", path = "cli" }
 
 [patch.crates-io]
 reflexo = { path = "crates/reflexo" }
+reflexo-vec2canvas = { path = "crates/conversion/vec2canvas" }
 typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }
 typst-ts-ast-exporter = { path = "exporter/ast" }
