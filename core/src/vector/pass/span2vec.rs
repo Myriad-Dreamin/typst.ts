@@ -8,7 +8,7 @@ use once_cell::sync::OnceCell;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use typst::syntax::Span;
 
-use crate::debug_loc::{FileLocation, FlatSourceLocation, SourceSpanOffset};
+use crate::debug_loc::{ElementPoint, FileLocation, FlatSourceLocation, SourceSpanOffset};
 use crate::error::prelude::ZResult;
 use crate::error::prelude::*;
 use crate::hash::Fingerprint;
@@ -309,7 +309,7 @@ impl Span2VecPass {
     pub fn query_element_paths(
         &mut self,
         span_offset: SourceSpanOffset,
-    ) -> ZResult<Vec<Vec<(u32, u32, String)>>> {
+    ) -> ZResult<Vec<Vec<ElementPoint>>> {
         self.span_tree.get_or_init(|| {
             log::info!("lazy spans are initializing");
             std::mem::take(&mut self.collector).into()
@@ -355,9 +355,11 @@ impl Span2VecPass {
                             log::info!("pass cursor char({s:?})");
                             res.push(vec![(
                                 reg as u32,
-                                SOURCE_MAPPING_TYPE_TEXT,
-                                idx as u32,
-                                "".to_owned(),
+                                ElementPoint {
+                                    kind: SOURCE_MAPPING_TYPE_TEXT,
+                                    index: idx as u32,
+                                    fingerprint: "".to_owned(),
+                                },
                             )]);
                         }
                     }
@@ -376,15 +378,19 @@ impl Span2VecPass {
                                 res.push(vec![
                                     (
                                         0u32,
-                                        SOURCE_MAPPING_TYPE_CHAR_INDEX,
-                                        ch_idx as u32,
-                                        "".to_owned(),
+                                        ElementPoint {
+                                            kind: SOURCE_MAPPING_TYPE_CHAR_INDEX,
+                                            index: ch_idx as u32,
+                                            fingerprint: "".to_owned(),
+                                        },
                                     ),
                                     (
                                         reg as u32,
-                                        SOURCE_MAPPING_TYPE_TEXT,
-                                        idx as u32,
-                                        "".to_owned(),
+                                        ElementPoint {
+                                            kind: SOURCE_MAPPING_TYPE_TEXT,
+                                            index: idx as u32,
+                                            fingerprint: "".to_owned(),
+                                        },
                                     ),
                                 ]);
                             }
@@ -395,9 +401,11 @@ impl Span2VecPass {
                             log::info!("pass cursor image({s:?})");
                             res.push(vec![(
                                 reg as u32,
-                                SOURCE_MAPPING_TYPE_IMAGE,
-                                idx as u32,
-                                "".to_owned(),
+                                ElementPoint {
+                                    kind: SOURCE_MAPPING_TYPE_IMAGE,
+                                    index: idx as u32,
+                                    fingerprint: "".to_owned(),
+                                },
                             )]);
                         }
                     }
@@ -406,9 +414,11 @@ impl Span2VecPass {
                             log::info!("pass cursor shape({s:?})");
                             res.push(vec![(
                                 reg as u32,
-                                SOURCE_MAPPING_TYPE_SHAPE,
-                                idx as u32,
-                                "".to_owned(),
+                                ElementPoint {
+                                    kind: SOURCE_MAPPING_TYPE_SHAPE,
+                                    index: idx as u32,
+                                    fingerprint: "".to_owned(),
+                                },
                             )]);
                         }
                     }
@@ -443,9 +453,11 @@ impl Span2VecPass {
                             if *region == cur {
                                 r.push((
                                     par as u32,
-                                    SOURCE_MAPPING_TYPE_PAGE,
-                                    idx as u32,
-                                    ch.2.as_svg_id(""),
+                                    ElementPoint {
+                                        kind: SOURCE_MAPPING_TYPE_PAGE,
+                                        index: idx as u32,
+                                        fingerprint: "".to_owned(),
+                                    },
                                 ));
                                 found = true;
                                 break;
@@ -456,9 +468,11 @@ impl Span2VecPass {
                             if *region == cur {
                                 r.push((
                                     par as u32,
-                                    SOURCE_MAPPING_TYPE_GROUP,
-                                    idx as u32,
-                                    ch.2.as_svg_id(""),
+                                    ElementPoint {
+                                        kind: SOURCE_MAPPING_TYPE_GROUP,
+                                        index: idx as u32,
+                                        fingerprint: "".to_owned(),
+                                    },
                                 ));
                                 found = true;
                                 break;
@@ -489,13 +503,13 @@ impl Span2VecPass {
         res.retain(|x| !x.is_empty());
         Ok(res
             .into_iter()
-            .map(|x| x.into_iter().map(|y| (y.1, y.2, y.3)).collect())
+            .map(|x| x.into_iter().map(|y| y.1).collect())
             .collect())
     }
 
     pub fn query(
         &mut self,
-        path: &[(u32, u32, String)],
+        path: &[ElementPoint],
     ) -> ZResult<Option<(SourceSpanOffset, SourceSpanOffset)>> {
         self.span_tree.get_or_init(|| {
             log::info!("lazy spans are initializing");
@@ -520,7 +534,12 @@ impl Span2VecPass {
 
         let mut candidate: Option<(SourceSpanOffset, SourceSpanOffset)> = None;
         let mut in_text_indice: Option<Arc<[(Span, u16)]>> = None;
-        for (remote_kind, idx, fg) in path {
+        for ElementPoint {
+            kind: remote_kind,
+            index: idx,
+            fingerprint: fg,
+        } in path
+        {
             // Special case for char index
             if SOURCE_MAPPING_TYPE_CHAR_INDEX == *remote_kind {
                 log::info!(

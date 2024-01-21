@@ -143,3 +143,24 @@ pub struct SourceRange {
     pub path: String,
     pub range: CharRange,
 }
+
+/// A point on the element tree.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ElementPoint {
+    /// The element kind.
+    pub kind: u32,
+    /// The index of the element.
+    pub index: u32,
+    /// The fingerprint of the element.
+    pub fingerprint: String,
+}
+
+impl From<(u32, u32, String)> for ElementPoint {
+    fn from((kind, index, fingerprint): (u32, u32, String)) -> Self {
+        Self {
+            kind,
+            index,
+            fingerprint,
+        }
+    }
+}
