@@ -4,7 +4,7 @@ use std::{
 };
 
 use js_sys::Reflect;
-use reflexo_vec2canvas::{CanvasAction, CanvasElem};
+use reflexo_vec2canvas::{CanvasElem, CanvasOp};
 use typst_ts_core::{
     error::prelude::*,
     hash::Fingerprint,

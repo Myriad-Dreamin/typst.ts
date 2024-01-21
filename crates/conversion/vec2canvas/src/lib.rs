@@ -8,6 +8,7 @@ pub use annotation::AnnotationListTask;
 pub use content::TextContentTask;
 #[cfg(feature = "incremental")]
 pub use incr::*;
+use utils::EmptyFuture;
 
 use std::{fmt::Debug, pin::Pin, sync::Arc};
 
@@ -40,6 +41,7 @@ pub trait ExportFeature {
 
 /// The default feature set which is used for exporting full-fledged svg.
 pub struct DefaultExportFeature;
+/// The default feature set which is used for exporting svg for printing.
 pub type DefaultSvgTask = CanvasTask<DefaultExportFeature>;
 
 impl ExportFeature for DefaultExportFeature {
@@ -49,24 +51,33 @@ impl ExportFeature for DefaultExportFeature {
 
 use async_trait::async_trait;
 
+/// The trait for all the operations that can be performed on some canvas
+/// element.
 #[async_trait(?Send)]
-pub trait CanvasAction {
+pub trait CanvasOp {
+    /// Prepares the resource (recursively) for the action.
     fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static>;
-
+    /// Realizes the action on the canvas.
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d);
 }
 
+/// A static enum for all the canvas elements.
 #[derive(Debug)]
 pub enum CanvasElem {
+    /// A group of canvas elements.
     Group(CanvasGroupElem),
+    /// references a canvas element with a clip path.
     Clip(CanvasClipElem),
+    /// A path element.
     Path(CanvasPathElem),
+    /// An image element.
     Image(CanvasImageElem),
+    /// A glyph element.
     Glyph(CanvasGlyphElem),
 }
 
 #[async_trait(?Send)]
-impl CanvasAction for CanvasElem {
+impl CanvasOp for CanvasElem {
     fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
         type DynFutureBox = Pin<Box<dyn core::future::Future<Output = ()>>>;
 
@@ -108,6 +119,7 @@ impl CanvasAction for CanvasElem {
 // async fn realize(&self, ts: sk::Transform, canvas:
 // &web_sys::CanvasRenderingContext2d);
 
+/// A reference to a canvas element.
 pub type CanvasNode = Arc<CanvasElem>;
 
 #[inline]
@@ -125,6 +137,10 @@ fn set_transform(canvas: &web_sys::CanvasRenderingContext2d, transform: sk::Tran
     maybe_err.unwrap();
 }
 
+/// A guard for saving and restoring the canvas state.
+///
+/// When the guard is created, a cheap checkpoint of the canvas state is saved.
+/// When the guard is dropped, the canvas state is restored.
 pub struct CanvasStateGuard<'a>(&'a CanvasRenderingContext2d);
 
 impl<'a> CanvasStateGuard<'a> {
@@ -140,6 +156,7 @@ impl<'a> Drop for CanvasStateGuard<'a> {
     }
 }
 
+/// A group of canvas elements.
 #[derive(Debug)]
 pub struct CanvasGroupElem {
     pub ts: sk::Transform,
@@ -147,7 +164,7 @@ pub struct CanvasGroupElem {
 }
 
 #[async_trait(?Send)]
-impl CanvasAction for CanvasGroupElem {
+impl CanvasOp for CanvasGroupElem {
     fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
         let mut v = Vec::default();
 
@@ -177,6 +194,7 @@ impl CanvasAction for CanvasGroupElem {
     }
 }
 
+/// A reference to a canvas element with a clip path.
 #[derive(Debug)]
 pub struct CanvasClipElem {
     pub ts: sk::Transform,
@@ -200,7 +218,7 @@ impl CanvasClipElem {
 }
 
 #[async_trait(?Send)]
-impl CanvasAction for CanvasClipElem {
+impl CanvasOp for CanvasClipElem {
     fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
         self.inner.prepare()
     }
@@ -212,25 +230,14 @@ impl CanvasAction for CanvasClipElem {
     }
 }
 
+/// A path element.
 #[derive(Debug)]
 pub struct CanvasPathElem {
     pub path_data: ir::PathItem,
 }
 
-struct EmptyFuture;
-impl core::future::Future for EmptyFuture {
-    type Output = ();
-
-    fn poll(
-        self: std::pin::Pin<&mut Self>,
-        _cx: &mut core::task::Context<'_>,
-    ) -> core::task::Poll<()> {
-        core::task::Poll::Ready(())
-    }
-}
-
 #[async_trait(?Send)]
-impl CanvasAction for CanvasPathElem {
+impl CanvasOp for CanvasPathElem {
     fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + 'static> {
         None::<EmptyFuture>
     }
@@ -302,6 +309,7 @@ impl CanvasAction for CanvasPathElem {
     }
 }
 
+/// An image element.
 #[derive(Debug)]
 pub struct CanvasImageElem {
     pub image_data: ImageItem,
@@ -435,7 +443,7 @@ impl CanvasImageElem {
 }
 
 #[async_trait(?Send)]
-impl CanvasAction for CanvasImageElem {
+impl CanvasOp for CanvasImageElem {
     fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + 'static> {
         Self::prepare_image(self.image_data.image.clone())
     }
@@ -445,6 +453,7 @@ impl CanvasAction for CanvasImageElem {
     }
 }
 
+/// A glyph element.
 #[derive(Debug)]
 pub struct CanvasGlyphElem {
     pub fill: ImmutStr,
@@ -452,7 +461,7 @@ pub struct CanvasGlyphElem {
 }
 
 #[async_trait(?Send)]
-impl CanvasAction for CanvasGlyphElem {
+impl CanvasOp for CanvasGlyphElem {
     fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + 'static> {
         match self.glyph_data.as_ref() {
             FlatGlyphItem::Image(glyph) => {
@@ -480,10 +489,12 @@ impl CanvasAction for CanvasGlyphElem {
     }
 }
 
-/// Rework canvas render task with SVG's vector IR
+/// Holds the data for rendering canvas.
+///
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
 /// The 't lifetime is the lifetime of SVG task.
 pub struct CanvasRenderTask<'m, 't, Feat: ExportFeature> {
+    /// The module which stores the frame data.
     pub module: &'m Module,
 
     /// See [`ExportFeature`].
@@ -491,16 +502,20 @@ pub struct CanvasRenderTask<'m, 't, Feat: ExportFeature> {
     /// See [`ExportFeature`].
     pub use_stable_glyph_id: bool,
 
-    pub _feat_phantom: std::marker::PhantomData<&'t Feat>,
+    _feat_phantom: std::marker::PhantomData<&'t Feat>,
 }
 
-/// A builder for [`CanvasNode`].
-/// It holds a reference to [`CanvasRenderTask`] and state of the building
-/// process.
+/// A stacked builder for [`CanvasNode`].
+///
+/// It holds state of the building process.
 pub struct CanvasStack {
+    /// The transform matrix.
     pub ts: sk::Transform,
+    /// A unique clip path on stack
     pub clipper: Option<ir::PathItem>,
+    /// The fill color.
     pub fill: Option<ImmutStr>,
+    /// The inner elements.
     pub inner: Vec<(ir::Point, CanvasNode)>,
 }
 
@@ -518,17 +533,6 @@ impl From<CanvasStack> for CanvasNode {
             }))
         } else {
             inner
-        }
-    }
-}
-
-/// Internal methods for [`CanvasStack`].
-impl CanvasStack {
-    pub fn with_text_shape(&mut self, shape: &ir::TextShape) {
-        for style in &shape.styles {
-            if let ir::PathStyle::Fill(fill) = style {
-                self.fill = Some(fill.clone());
-            }
         }
     }
 }
@@ -653,7 +657,11 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, 't, Feat
         text: &ir::TextItem,
     ) -> Self::Group {
         let mut g = self.start_group(value);
-        g.with_text_shape(&text.shape);
+        for style in &text.shape.styles {
+            if let ir::PathStyle::Fill(fill) = style {
+                g.fill = Some(fill.clone());
+            }
+        }
         g
     }
 }
@@ -690,29 +698,18 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
     }
 }
 
+/// A rendered page of canvas.
 #[derive(Clone)]
 pub struct CanvasPage {
+    /// A rendered canvas element.
+    pub elem: CanvasNode,
+    /// The fingerprint of the content for identifying page difference.
     pub content: Fingerprint,
-    pub elem: Arc<CanvasElem>,
+    /// The size of the page.
     pub size: Size,
 }
 
-fn create_image() -> Option<HtmlImageElement> {
-    let doc = web_sys::window()?.document()?;
-    doc.create_element("img").ok()?.dyn_into().ok()
-}
-
-#[comemo::memoize]
-fn rasterize_image(_image: Arc<Image>) -> Option<HtmlImageElement> {
-    create_image()
-}
-
-#[comemo::memoize]
-fn rasterize_text(_fg: Fingerprint) -> Option<HtmlDivElement> {
-    let doc = web_sys::window()?.document()?;
-    doc.create_element("div").ok()?.dyn_into().ok()
-}
-
+/// Useful snippets for rendering parts of vector items to canvas.
 pub struct CanvasRenderSnippets;
 
 impl CanvasRenderSnippets {
@@ -736,7 +733,7 @@ impl CanvasRenderSnippets {
         }
     }
 
-    // note we need
+    /// Rasterize a text element to a image based on canvas.
     pub fn rasterize_text<'a>(
         fg: &Fingerprint,
         glyphs: impl Iterator<Item = (Scalar, &'a FlatGlyphItem)>,
@@ -772,11 +769,6 @@ impl CanvasRenderSnippets {
             decender
         );
 
-        // style.set_property("width", "100%").unwrap();
-        // style.set_property("height", "100%").unwrap();
-        // style
-        //     .set_property("background", "var(--glyph_fill)")
-        //     .unwrap();
         elem.set_attribute(
             "style",
             "width: 100%; height: 100%; background: transparent;",
@@ -793,11 +785,6 @@ impl CanvasRenderSnippets {
             fill,
         );
 
-        // console_log!("rasterize_text done {}", elem.outer_html());
-        // let _guard = CanvasStateGuard::new(canvas);
-        // set_transform(canvas, ts);
-        // canvas.set_fill_style(&fill.into());
-        // canvas.fill_text(&text.text, 0., 0.).unwrap();
         elem.outer_html()
     }
 
@@ -847,3 +834,19 @@ impl CanvasRenderSnippets {
 }
 
 // pub use backend::canvas::IncrCanvasDocClient;
+
+fn create_image() -> Option<HtmlImageElement> {
+    let doc = web_sys::window()?.document()?;
+    doc.create_element("img").ok()?.dyn_into().ok()
+}
+
+#[comemo::memoize]
+fn rasterize_image(_image: Arc<Image>) -> Option<HtmlImageElement> {
+    create_image()
+}
+
+#[comemo::memoize]
+fn rasterize_text(_fg: Fingerprint) -> Option<HtmlDivElement> {
+    let doc = web_sys::window()?.document()?;
+    doc.create_element("div").ok()?.dyn_into().ok()
+}

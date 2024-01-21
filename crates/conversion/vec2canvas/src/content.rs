@@ -13,6 +13,7 @@ use reflexo::{
     },
 };
 
+/// Builds text content with vector IR
 pub struct TextContentBuilder {
     ts: sk::Transform,
 }
@@ -82,17 +83,21 @@ impl<'m, C: TranslateCtx + RenderVm<'m, Resultant = ()>> GroupContext<C> for Tex
 /// Task to create text content with vector IR
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
 pub struct TextContentTask<'m, 't> {
+    /// The module which stores the item data
     pub module: &'m Module,
+    /// Sets a page height so that we can calculate the position of the text
+    pub page_height: f32,
+    /// The resultant, a list of text content
+    pub text_content: &'t mut TextContent,
 
     ts: sk::Transform,
-    pub text_content: &'t mut TextContent,
-    pub page_height: f32,
 
     flat_font_map: HashMap<FontRef, u32>,
 }
 
 // todo: ugly implementation
 impl<'m, 't> TextContentTask<'m, 't> {
+    /// Creates a new task
     pub fn new(module: &'m Module, text_content: &'t mut TextContent) -> Self {
         Self {
             module,
@@ -103,6 +108,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
         }
     }
 
+    /// Collects text content in a vector item
     pub fn process_flat_item(&mut self, ts: sk::Transform, item: &Fingerprint) {
         let item = self.module.get_item(item).unwrap();
         match item {
@@ -177,7 +183,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
             panic!("too many fonts");
         }
 
-        let font_item = &self.module.fonts[font.idx as usize];
+        let font_item = self.module.get_font(&font).unwrap();
 
         let font_ref = self.text_content.styles.len() as u32;
         self.flat_font_map.insert(font, font_ref);
@@ -192,7 +198,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn append_text_content(
+    fn append_text_content(
         &mut self,
         ts: sk::Transform,
         text_content: String,
@@ -224,12 +230,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
         });
     }
 
-    pub(crate) fn append_text_break(
-        &mut self,
-        ts: sk::Transform,
-        font_name: u32,
-        shape: &ir::TextShape,
-    ) {
+    fn append_text_break(&mut self, ts: sk::Transform, font_name: u32, shape: &ir::TextShape) {
         self.append_text_content(ts, "".to_string(), font_name, 0., 0., shape, true)
     }
 }
@@ -246,7 +247,7 @@ enum Axis {
     Y,
 }
 
-pub struct TextFlow {
+struct TextFlow {
     dir: Axis,
     tx: f32,
     ty: f32,
@@ -254,11 +255,11 @@ pub struct TextFlow {
 }
 
 impl TextFlow {
-    pub fn new() -> Option<Self> {
+    fn new() -> Option<Self> {
         None
     }
 
-    pub fn notify(
+    fn notify(
         mut this: Option<Self>,
         ts: &sk::Transform,
         shape: &ir::TextShape,

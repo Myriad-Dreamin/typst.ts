@@ -12,14 +12,17 @@ use reflexo::{
 /// Task to create annotation list with vector IR
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
 pub struct AnnotationListTask<'m, 't> {
+    /// The module which stores the item data
     pub module: &'m Module,
-
+    /// Sets a logic page number
     pub page_num: u32,
+    /// The resultant, a list of annotations
     pub annotations: &'t mut AnnotationList,
 }
 
 // todo: ugly implementation
 impl<'m, 't> AnnotationListTask<'m, 't> {
+    /// Creates a new task
     pub fn new(module: &'m Module, annotations: &'t mut AnnotationList) -> Self {
         Self {
             module,
@@ -28,6 +31,7 @@ impl<'m, 't> AnnotationListTask<'m, 't> {
         }
     }
 
+    /// Collects annotations in a vector item
     pub fn process_flat_item(&mut self, ts: sk::Transform, item: &Fingerprint) {
         let item = self.module.get_item(item).unwrap();
         match item {

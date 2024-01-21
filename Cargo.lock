@@ -2845,7 +2845,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "base64",
  "bitvec",
@@ -2870,7 +2870,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2canvas"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -4259,7 +4259,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-ast-exporter"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "ansi_term",
  "typst",
@@ -4268,7 +4268,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-bench-lowering"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "comemo",
  "divan",
@@ -4282,7 +4282,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-cli"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4318,7 +4318,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-compiler"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "append-only-vec",
  "base64",
@@ -4362,7 +4362,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-core"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "base64",
  "base64-serde",
@@ -4402,7 +4402,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-dev-server"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "clap",
  "clap_complete",
@@ -4419,7 +4419,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-dom-exporter"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "async-recursion",
  "base64",
@@ -4444,7 +4444,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-fontctl"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -4458,7 +4458,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-heap-profile-test"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4473,7 +4473,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-fuzzer"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4493,7 +4493,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-test"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4509,7 +4509,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-integration-test"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "anyhow",
  "base64",
@@ -4533,7 +4533,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-node-compiler"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "chrono",
  "napi",
@@ -4552,7 +4552,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-parser"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "base64",
  "comemo",
@@ -4576,7 +4576,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-pdf-exporter"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "typst",
  "typst-pdf",
@@ -4585,7 +4585,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-remote-server"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "clap",
  "clap_complete",
@@ -4605,7 +4605,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-renderer"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -4639,14 +4639,14 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-rkyv-assertions"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "typst-ts-core",
 ]
 
 [[package]]
 name = "typst-ts-serde-exporter"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "rmp-serde",
  "serde",
@@ -4657,7 +4657,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-std-test"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "anyhow",
  "rayon",
@@ -4666,7 +4666,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-svg-exporter"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "base64",
  "comemo",
@@ -4682,7 +4682,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-test-common"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -4693,7 +4693,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-text-exporter"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "typst",
  "typst-ts-core",
@@ -4701,7 +4701,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-web-compiler"
-version = "0.4.2-rc6"
+version = "0.4.2-rc6.2"
 dependencies = [
  "ansi-to-html",
  "base64",

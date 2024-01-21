@@ -12,15 +12,22 @@ use reflexo::{
     },
 };
 
-use crate::{set_transform, CanvasAction, CanvasPage, CanvasTask, DefaultExportFeature};
+use crate::{set_transform, CanvasOp, CanvasPage, CanvasTask, DefaultExportFeature};
 
-pub struct IncrementalCanvasExporter {
+/// Incremental pass from vector to canvas
+pub struct IncrVec2CanvasPass {
+    /// Canvas's pixel per point
     pub pixel_per_pt: f32,
+    /// Fills background color with a css color string
+    /// Default is white.
+    ///
+    /// Note: If the string is empty, the background is transparent.
     pub fill: ImmutStr,
+    /// Holds a sequence of canvas pages that are rendered
     pub pages: Vec<CanvasPage>,
 }
 
-impl Default for IncrementalCanvasExporter {
+impl Default for IncrVec2CanvasPass {
     fn default() -> Self {
         Self {
             pixel_per_pt: 3.,
@@ -30,7 +37,8 @@ impl Default for IncrementalCanvasExporter {
     }
 }
 
-impl IncrementalCanvasExporter {
+impl IncrVec2CanvasPass {
+    /// Interprets the changes in the given module and pages.
     pub fn interpret_changes(&mut self, module: &Module, pages: &[Page]) {
         // render the document
         let mut t = CanvasTask::<DefaultExportFeature>::default();
@@ -56,6 +64,7 @@ impl IncrementalCanvasExporter {
         self.pages = pages;
     }
 
+    /// Flushes a page to the canvas with the given transform.
     pub async fn flush_page(
         &mut self,
         idx: usize,
@@ -72,11 +81,11 @@ impl IncrementalCanvasExporter {
     }
 }
 
-/// maintains the state of the incremental rendering at client side
+/// Maintains the state of the incremental rendering a canvas at client side
 #[derive(Default)]
 pub struct IncrCanvasDocClient {
-    /// canvas state
-    pub elements: IncrementalCanvasExporter,
+    /// State of converting vector to canvas
+    pub vec2canvas: IncrVec2CanvasPass,
 
     /// Expected exact state of the current DOM.
     /// Initially it is None meaning no any page is rendered.
@@ -84,21 +93,24 @@ pub struct IncrCanvasDocClient {
 }
 
 impl IncrCanvasDocClient {
+    /// Reset the state of the incremental rendering.
     pub fn reset(&mut self) {}
 
+    /// Set canvas's pixel per point
     pub fn set_pixel_per_pt(&mut self, pixel_per_pt: f32) {
-        self.elements.pixel_per_pt = pixel_per_pt;
+        self.vec2canvas.pixel_per_pt = pixel_per_pt;
     }
 
+    /// Set canvas's background color
     pub fn set_fill(&mut self, fill: ImmutStr) {
-        self.elements.fill = fill;
+        self.vec2canvas.fill = fill;
     }
 
     fn patch_delta(&mut self, kern: &IncrDocClient) {
         if let Some(layout) = &kern.layout {
             let pages = layout.pages(&kern.doc.module);
             if let Some(pages) = pages {
-                self.elements
+                self.vec2canvas
                     .interpret_changes(pages.module(), pages.pages());
             }
         }
@@ -148,7 +160,7 @@ impl IncrCanvasDocClient {
             }
         }
 
-        let s = self.elements.pixel_per_pt;
+        let s = self.vec2canvas.pixel_per_pt;
         let ts = sk::Transform::from_scale(s, s);
 
         // accumulate offset_y
@@ -157,13 +169,13 @@ impl IncrCanvasDocClient {
             let x = prev_doc_view.get(idx);
             if x.is_none() || (x.unwrap() != y && y.content != NULL_PAGE) {
                 let ts = ts.pre_translate(0., offset_y);
-                self.elements.flush_page(idx, canvas, ts).await;
+                self.vec2canvas.flush_page(idx, canvas, ts).await;
             }
             offset_y += y.size.y.0;
         }
     }
 
-    /// Render the document in the given window.
+    /// Render a specific page of the document in the given window.
     pub async fn render_page_in_window(
         &mut self,
         kern: &mut IncrDocClient,
@@ -173,13 +185,13 @@ impl IncrCanvasDocClient {
     ) -> ZResult<()> {
         self.patch_delta(kern);
 
-        if idx >= self.elements.pages.len() {
+        if idx >= self.vec2canvas.pages.len() {
             Err(error_once!("Renderer.OutofPageRange", idx: idx))?;
         }
 
-        let s = self.elements.pixel_per_pt;
+        let s = self.vec2canvas.pixel_per_pt;
         let ts = sk::Transform::from_scale(s, s);
-        self.elements.flush_page(idx, canvas, ts).await;
+        self.vec2canvas.flush_page(idx, canvas, ts).await;
 
         Ok(())
     }
