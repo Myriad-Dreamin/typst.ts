@@ -159,7 +159,8 @@ impl SemanticsBackend {
         let mut state = Option::<DiscreteState>::None;
 
         fn approx_eq(a: f32, b: f32) -> bool {
-            const EPS: f32 = 1e-3;
+            // todo: use transform-aware epsilon
+            const EPS: f32 = 0.5;
             (a - b).abs() < EPS
         }
 
