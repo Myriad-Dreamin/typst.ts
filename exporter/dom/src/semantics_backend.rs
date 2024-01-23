@@ -209,7 +209,13 @@ impl SemanticsBackend {
         for (idx, (_, rect)) in self.text_rects.iter().enumerate() {
             let (left, top, right, bottom) = self.get_discrete_labels_for_text_item(*rect);
 
-            row_items.range_mut(top..bottom).for_each(|(_, v)| {
+            let rng = if top <= bottom {
+                top..bottom
+            } else {
+                bottom..top
+            };
+
+            row_items.range_mut(rng).for_each(|(_, v)| {
                 v.push((left, right, idx));
             });
         }
