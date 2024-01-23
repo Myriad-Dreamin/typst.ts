@@ -1,9 +1,12 @@
-use std::borrow::Cow;
+use std::{
+    borrow::Cow,
+    collections::{BTreeMap, VecDeque},
+};
 
 use reflexo_vec2canvas::CanvasStateGuard;
 use typst_ts_core::hash::Fingerprint;
 use typst_ts_svg_exporter::{
-    ir::{self, Scalar, VecItem},
+    ir::{self, Point, Rect, Scalar, VecItem},
     Module,
 };
 use unicode_width::UnicodeWidthChar;
@@ -51,10 +54,11 @@ impl BrowserFontMetric {
 pub struct SemanticsBackend {
     heavy: bool,
     font_metric: BrowserFontMetric,
-    width: f32,
-    previous_x_text: std::collections::BTreeMap<Scalar, std::collections::BTreeSet<Scalar>>,
-    previous_y_text: std::collections::BTreeMap<Scalar, std::collections::BTreeSet<Scalar>>,
-    previous_y2_text: std::collections::BTreeSet<Scalar>,
+    page_width: f32,
+    dfn_count: usize,
+    text_rects: Vec<(Fingerprint, Rect)>,
+    discrete_label_map: BTreeMap<Scalar, usize>,
+    discrete_value_map: Vec<Scalar>,
 }
 
 impl SemanticsBackend {
@@ -62,10 +66,11 @@ impl SemanticsBackend {
         SemanticsBackend {
             heavy,
             font_metric,
-            width,
-            previous_x_text: std::collections::BTreeMap::new(),
-            previous_y_text: std::collections::BTreeMap::new(),
-            previous_y2_text: std::collections::BTreeSet::new(),
+            page_width: width,
+            dfn_count: 0,
+            text_rects: vec![],
+            discrete_label_map: BTreeMap::new(),
+            discrete_value_map: vec![],
         }
     }
 
@@ -76,14 +81,269 @@ impl SemanticsBackend {
         fg: Fingerprint,
         output: &mut Vec<Cow<'a, str>>,
     ) {
+        self.prepare_text_rects(ctx, ts, fg);
+        self.prepare_discrete_map();
+        let mut fallbacks = self.calc_text_item_fallbacks(ctx);
+        self.dfn_count = 0;
+        self.render_semantics_walk(ctx, ts, fg, &mut fallbacks, output);
+    }
+
+    fn prepare_text_rects<'a>(
+        &mut self,
+        ctx: &'a Module,
+        ts: tiny_skia::Transform,
+        fg: Fingerprint,
+    ) {
         let item = ctx.get_item(&fg).unwrap();
+        use VecItem::*;
+        match item {
+            Group(t, _) => {
+                for (pos, child) in t.0.iter() {
+                    let ts = ts.pre_translate(pos.x.0, pos.y.0);
+                    self.prepare_text_rects(ctx, ts, *child);
+                }
+            }
+            Item(t) => {
+                let trans = t.0.clone();
+                let trans: ir::Transform = trans.into();
+                let ts = ts.pre_concat(trans.into());
+                self.prepare_text_rects(ctx, ts, t.1);
+            }
+            Text(t) => {
+                // main logic
+                let size = (t.shape.size) * Scalar(ts.sy);
+
+                let font = ctx.get_font(&t.shape.font).unwrap();
+                let cap_height = font.cap_height * size;
+                let width = t.width();
+
+                let tx = Scalar(ts.tx);
+                let ty = Scalar(ts.ty) - cap_height;
+                let ty2 = ty + size;
+                let tx2 = tx + width;
+
+                self.text_rects.push((
+                    fg,
+                    Rect {
+                        lo: Point { x: tx, y: ty },
+                        hi: Point { x: tx2, y: ty2 },
+                    },
+                ));
+            }
+            _ => {}
+        }
+    }
+
+    fn prepare_discrete_map<'a>(&mut self) {
+        let nums = &mut self.discrete_value_map;
+
+        for (_, rect) in self.text_rects.iter() {
+            nums.push(rect.lo.x);
+            nums.push(rect.lo.y);
+            nums.push(rect.hi.x);
+            nums.push(rect.hi.y);
+        }
+
+        // page borders
+        nums.push(0.0.into());
+        nums.push(self.page_width.into());
+        // todo: page height
+
+        nums.sort();
+
+        // unique label for f32 pairs
+        struct DiscreteState {
+            label: usize,
+            last: Scalar,
+        }
+        let mut state = Option::<DiscreteState>::None;
+
+        fn approx_eq(a: f32, b: f32) -> bool {
+            const EPS: f32 = 1e-3;
+            (a - b).abs() < EPS
+        }
+
+        for (idx, &mut num) in nums.iter_mut().enumerate() {
+            if let Some(state) = state.as_mut() {
+                if !approx_eq(state.last.0, num.0) {
+                    state.label = idx;
+                }
+            } else {
+                state = Some(DiscreteState {
+                    label: idx,
+                    last: num,
+                });
+            }
+            let state = state.as_mut().unwrap();
+            self.discrete_label_map.insert(num, state.label);
+            state.last = num;
+        }
+    }
+
+    // Vec<(prepend: String, append: String)>
+    fn calc_text_item_fallbacks<'a>(&mut self, ctx: &'a Module) -> VecDeque<(String, String)> {
+        let mut res = VecDeque::new();
+        res.resize(self.text_rects.len(), (String::new(), String::new()));
+
+        // Map<row, Vec<(left, right, idx)>>
+        let mut row_idxs = vec![self.discrete_label_map[&Scalar(0.0)]];
+        let mut row_items: BTreeMap<usize, Vec<(usize, usize, usize)>> = Default::default();
+
+        // init all row indexes
+        for (_, rect) in self.text_rects.iter() {
+            let (_, top, _, bottom) = self.get_discrete_labels_for_text_item(*rect);
+
+            row_idxs.push(top);
+            row_idxs.push(bottom);
+        }
+
+        row_idxs.sort();
+        row_idxs.dedup();
+
+        for idx in &row_idxs {
+            row_items.entry(*idx).or_insert(Default::default());
+        }
+
+        // todo: lazy tag 2d segment tree for optimization
+        for (idx, (_, rect)) in self.text_rects.iter().enumerate() {
+            let (left, top, right, bottom) = self.get_discrete_labels_for_text_item(*rect);
+
+            row_items.range_mut(top..bottom).for_each(|(_, v)| {
+                v.push((left, right, idx));
+            });
+        }
+
+        // zip iter for pairwise
+        let it = row_items.iter_mut().zip(row_idxs.iter().skip(1));
+        let mut last_blank = Option::<Scalar>::None;
+
+        for ((row, items), nrow) in it {
+            let top = self.discrete_value_map[*row];
+            let bottom = self.discrete_value_map[*nrow];
+
+            items.sort();
+
+            web_sys::console::log_1(
+                &format!("processing row: {} ~ {} with {:?}", top.0, bottom.0, items).into(),
+            );
+
+            if items.is_empty() {
+                // insert a whole page width bar
+                // but delay to the next row with at least one item
+                last_blank.get_or_insert(top);
+            } else {
+                // process last blank
+                if let Some(blank_top) = last_blank {
+                    let blank_left = Scalar(0.0);
+                    let blank_height = top - blank_top;
+
+                    res[items[0].2].0.push_str(&format!(
+                        r#"<span class="typst-content-fallback" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
+                        blank_left.0,
+                        blank_top.0,
+                        self.page_width,
+                        blank_height.0,
+                    ));
+
+                    last_blank = None;
+                }
+
+                // merge overlap items: (left, right, first_idx, last_idx)
+                let mut merged_items: Vec<(usize, usize, usize, usize)> = vec![];
+                let mut last_item = (items[0].0, items[0].1, items[0].2, items[0].2);
+                for item in items.iter().skip(1) {
+                    if last_item.1 >= item.0 {
+                        last_item.1 = item.1.max(last_item.1);
+                        last_item.3 = item.2.max(last_item.3);
+                    } else {
+                        merged_items.push(last_item);
+                        last_item = (item.0, item.1, item.2, item.2);
+                    }
+                }
+                merged_items.push(last_item);
+
+                // insert fallbacks for last right
+                if let Some((_, d_right, _, last_idx)) = merged_items.last() {
+                    let right = self.discrete_value_map[*d_right];
+                    res[*last_idx].1.push_str(&format!(
+                        r#"<span class="typst-content-fallback" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
+                        right.0,
+                        top.0,
+                        self.page_width - right.0,
+                        bottom.0 - top.0,
+                    ));
+                }
+
+                // insert fallbacks for left
+                if let Some((d_left, _, first_idx, _)) = merged_items.first() {
+                    let left = self.discrete_value_map[*d_left];
+                    res[*first_idx].0.push_str(&format!(
+                        r#"<span class="typst-content-fallback" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
+                        0.0,
+                        top.0,
+                        left.0,
+                        bottom.0 - top.0,
+                    ));
+                }
+
+                // insert fallbacks for middle
+                for wind in merged_items.windows(2) {
+                    let prior = wind[0];
+                    let post = wind[1];
+                    let (_, d_prior_right, _, piror_idx) = prior;
+                    let (d_post_left, _, post_idx, _) = post;
+
+                    let prior_end = self.discrete_value_map[d_prior_right];
+                    let post_begin = self.discrete_value_map[d_post_left];
+                    let width = (post_begin - prior_end) / Scalar(2.0);
+
+                    res[piror_idx].1.push_str(&format!(
+                        r#"<span class="typst-content-fallback" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
+                        prior_end.0,
+                        top.0,
+                        width.0,
+                        bottom.0 - top.0,
+                    ));
+
+                    res[post_idx].0.push_str(&format!(
+                        r#"<span class="typst-content-fallback" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
+                        prior_end.0 + width.0,
+                        top.0,
+                        width.0,
+                        bottom.0 - top.0,
+                    ));
+                }
+            }
+        }
+
+        res
+    }
+
+    fn get_discrete_labels_for_text_item(&self, rect: Rect) -> (usize, usize, usize, usize) {
+        let left = self.discrete_label_map.get(&rect.lo.x).unwrap();
+        let top = self.discrete_label_map.get(&rect.lo.y).unwrap();
+        let right = self.discrete_label_map.get(&rect.hi.x).unwrap();
+        let bottom = self.discrete_label_map.get(&rect.hi.y).unwrap();
+        (*left, *top, *right, *bottom)
+    }
+
+    fn render_semantics_walk<'a>(
+        &mut self,
+        ctx: &'a Module,
+        ts: tiny_skia::Transform,
+        fg: Fingerprint,
+        fallbacks: &mut VecDeque<(String, String)>,
+        output: &mut Vec<Cow<'a, str>>,
+    ) {
+        let item = ctx.get_item(&fg).unwrap();
+
         use VecItem::*;
         match item {
             Group(t, _) => {
                 output.push(Cow::Borrowed(r#"<span class="typst-content-group">"#));
                 for (pos, child) in t.0.iter() {
                     let ts = ts.pre_translate(pos.x.0, pos.y.0);
-                    self.render_semantics(ctx, ts, *child, output);
+                    self.render_semantics_walk(ctx, ts, *child, fallbacks, output);
                 }
                 output.push(Cow::Borrowed("</span>"));
             }
@@ -92,21 +352,19 @@ impl SemanticsBackend {
                 let trans = t.0.clone();
                 let trans: ir::Transform = trans.into();
                 let ts = ts.pre_concat(trans.into());
-                self.render_semantics(ctx, ts, t.1, output);
+                self.render_semantics_walk(ctx, ts, t.1, fallbacks, output);
                 output.push(Cow::Borrowed("</span>"));
             }
             Text(t) => {
-                // output.push(Cow::Borrowed(r#"<span>"#));
-                // with data-translate
+                let text_id = self.dfn_count;
+                self.dfn_count += 1;
+
                 let is_regular_scale = ts.sx == 1.0 && ts.sy == 1.0;
                 let is_regular_skew = ts.kx == 0.0 && ts.ky == 0.0;
                 let can_heavy = is_regular_skew && is_regular_scale && self.heavy;
                 let size = (t.shape.size) * Scalar(ts.sy);
 
-                let font = ctx.get_font(&t.shape.font).unwrap();
-                let cap_height = font.cap_height * size;
-                let width = t.width();
-                let scale_x = width.0
+                let scale_x = t.width().0
                     / (t.content
                         .content
                         .chars()
@@ -118,85 +376,15 @@ impl SemanticsBackend {
                         })
                         .sum::<f32>()
                         * size.0);
-                // let scale_y = (size.0 + descender.0) / (size.0 * self.font_metric.height);
-                // web_sys::console::log_1(
-                //     &format!(
-                //         "scale: {:?} {:?} {:?} {:?}",
-                //         cap_height, size, descender, ascender
-                //     )
-                //     .into(),
-                // );
 
-                let tx = Scalar(ts.tx);
-                let ty = Scalar(ts.ty) - cap_height;
-                let ty2 = ty + size;
-                let tx2 = tx + width;
+                let (_, rect) = self.text_rects[text_id];
+
+                let (prepend, append) = fallbacks.pop_front().unwrap();
 
                 if can_heavy {
-                    let top_bound_y = *self
-                        .previous_y2_text
-                        .range(..ty)
-                        .last()
-                        .unwrap_or(&Scalar(0.));
-
-                    let top_bound_set = self.previous_y_text.range(..ty);
-                    let mut any_x = Scalar(-1e33);
-                    let mut top_bound_y2: Option<Scalar> = Option::None;
-                    for t in top_bound_set {
-                        let x_set = t.1.range(..tx).last();
-                        if let Some(x) = x_set {
-                            if x > &any_x {
-                                any_x = *x;
-                                top_bound_y2 = Some(*t.0);
-                            }
-                        }
-                    }
-
-                    let up_top = top_bound_y
-                        .max(top_bound_y2.unwrap_or_default())
-                        .max(Scalar(0.));
-                    let up_left = if top_bound_y2.is_some() {
-                        any_x
-                    } else {
-                        Scalar(0.)
-                    };
-
-                    let up_right = self.width;
-                    let up_bottom = ty;
-
-                    // create up rect
-                    output.push(Cow::Owned(format!(
-                        r#"<span class="typst-content-fallback" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
-                        up_left.0,
-                        up_top.0,
-                        up_right - up_left.0,
-                        up_bottom.0 - up_top.0,
-                    )));
-
-                    let top_bound_set = self.previous_y_text.range(..ty2);
-                    let mut left_left = Scalar(-1e33);
-                    for t in top_bound_set {
-                        let x_set = t.1.range(..tx2).max();
-                        if let Some(x) = x_set {
-                            if x > &left_left {
-                                left_left = *x;
-                            }
-                        }
-                    }
-
-                    let left_left = left_left.max(Scalar(0.));
-                    let left_right = tx;
-                    let left_top = ty;
-                    let left_bottom = ty2;
-
-                    // create left rect
-                    output.push(Cow::Owned(format!(
-                        r#"<span class="typst-content-fallback" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
-                        left_left.0,
-                        left_top.0,
-                        left_right.0 - left_left.0,
-                        left_bottom.0 - left_top.0,
-                    )));
+                    output.push(Cow::Borrowed(r#"<!-- This is prepend -->"#));
+                    output.push(Cow::Owned(prepend));
+                    output.push(Cow::Borrowed(r#"<!-- Prepend end -->"#));
                 }
 
                 if is_regular_scale && is_regular_skew {
@@ -204,8 +392,8 @@ impl SemanticsBackend {
                         r#"<span class="typst-content-text" style="font-size: calc(var(--data-text-height) * {}); line-height: calc(var(--data-text-height) * {}); left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); transform: scaleX({})">"#,
                         size.0,
                         size.0,
-                        tx.0,
-                        ty.0,
+                        rect.lo.x.0,
+                        rect.lo.y.0,
                         scale_x,
                         // scale_y,
                     )));
@@ -218,8 +406,8 @@ impl SemanticsBackend {
                         ts.sy,
                         size.0,
                         size.0,
-                        tx.0,
-                        ty.0,
+                        rect.lo.x.0,
+                        rect.lo.y.0,
                         scale_x,
                         // scale_y,
                     )));
@@ -231,83 +419,9 @@ impl SemanticsBackend {
                 output.push(Cow::Borrowed("</span>"));
 
                 if can_heavy {
-                    if ty > ty2 {
-                        web_sys::console::log_1(
-                            &format!(
-                                "ty..ty2: {:?} {:?} {:?} {:?} {:?}",
-                                font.family,
-                                ty..ty2,
-                                size,
-                                font.descender,
-                                ts,
-                            )
-                            .into(),
-                        );
-                    }
-
-                    let top_bound_set = self.previous_y_text.range(ty..ty2);
-                    let mut right_right = Scalar(1e33);
-                    for t in top_bound_set {
-                        let x_set = t.1.range(tx2..).min();
-                        if let Some(x) = x_set {
-                            if x < &right_right {
-                                right_right = *x;
-                            }
-                        }
-                    }
-
-                    let right_right = right_right.0.min(self.width);
-                    let right_left = tx2;
-                    let right_top = ty;
-                    let right_bottom = ty2;
-
-                    // create right rect
-                    output.push(Cow::Owned(format!(
-                        r#"<span class="typst-content-fallback" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
-                        right_left.0,
-                        right_top.0,
-                        right_right - right_left.0,
-                        right_bottom.0 - right_top.0,
-                    )));
-
-                    self.previous_x_text.entry(tx).or_default().insert(ty2);
-                    self.previous_x_text.entry(tx2).or_default().insert(ty2);
-
-                    let tx_bucket = self.previous_y_text.entry(ty).or_default();
-                    tx_bucket.insert(tx);
-                    tx_bucket.insert(tx2);
-                    let tx_bucket = self.previous_y_text.entry(ty2).or_default();
-                    tx_bucket.insert(tx);
-                    tx_bucket.insert(tx2);
-
-                    self.previous_y2_text.insert(ty2);
-                } else {
-                    let mut u = [
-                        tiny_skia::Point::from_xy(tx.0, ty.0),
-                        tiny_skia::Point::from_xy(tx2.0, ty2.0),
-                    ];
-                    ts.map_points(&mut u);
-                    let tx = Scalar(u[0].x);
-                    let ty = Scalar(u[0].y);
-                    let tx2 = Scalar(u[1].x);
-                    let ty2 = Scalar(u[1].y);
-
-                    let ty_bucket = self.previous_x_text.entry(tx).or_default();
-                    ty_bucket.insert(ty);
-                    ty_bucket.insert(ty2);
-                    let ty_bucket = self.previous_x_text.entry(tx2).or_default();
-                    ty_bucket.insert(ty);
-                    ty_bucket.insert(ty2);
-
-                    let tx_bucket = self.previous_y_text.entry(ty).or_default();
-                    tx_bucket.insert(tx);
-                    tx_bucket.insert(tx2);
-                    let tx_bucket = self.previous_y_text.entry(ty2).or_default();
-                    tx_bucket.insert(tx);
-                    tx_bucket.insert(tx2);
-
-                    self.previous_y2_text.insert(ty);
-                    self.previous_y2_text.insert(ty2);
+                    output.push(Cow::Borrowed(r#"<!-- This is append -->"#));
+                    output.push(Cow::Owned(append));
+                    output.push(Cow::Borrowed(r#"<!-- Append end -->"#));
                 }
             }
             ContentHint(c) => {
