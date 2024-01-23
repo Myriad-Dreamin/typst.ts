@@ -368,7 +368,7 @@ impl SemanticsBackend {
 
                 let is_regular_scale = ts.sx == 1.0 && ts.sy == 1.0;
                 let is_regular_skew = ts.kx == 0.0 && ts.ky == 0.0;
-                let can_heavy = is_regular_skew && is_regular_scale && self.heavy;
+                let can_heavy = self.heavy;
                 let size = (t.shape.size) * Scalar(ts.sy);
 
                 let scale_x = t.width().0
