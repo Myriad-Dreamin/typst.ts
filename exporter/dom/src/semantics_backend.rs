@@ -83,7 +83,7 @@ impl SemanticsBackend {
     ) {
         self.prepare_text_rects(ctx, ts, fg);
         self.prepare_discrete_map();
-        let mut fallbacks = self.calc_text_item_fallbacks(ctx);
+        let mut fallbacks = self.calc_text_item_fallbacks();
         self.dfn_count = 0;
         self.render_semantics_walk(ctx, ts, fg, &mut fallbacks, output);
     }
@@ -182,7 +182,7 @@ impl SemanticsBackend {
     }
 
     // Vec<(prepend: String, append: String)>
-    fn calc_text_item_fallbacks<'a>(&mut self, ctx: &'a Module) -> VecDeque<(String, String)> {
+    fn calc_text_item_fallbacks<'a>(&mut self) -> VecDeque<(String, String)> {
         let mut res = VecDeque::new();
         res.resize(self.text_rects.len(), (String::new(), String::new()));
 
@@ -229,10 +229,6 @@ impl SemanticsBackend {
             let bottom = self.discrete_value_map[*nrow];
 
             items.sort();
-
-            web_sys::console::log_1(
-                &format!("processing row: {} ~ {} with {:?}", top.0, bottom.0, items).into(),
-            );
 
             if items.is_empty() {
                 // insert a whole page width bar
@@ -389,14 +385,13 @@ impl SemanticsBackend {
                 let (prepend, append) = fallbacks.pop_front().unwrap();
 
                 if can_heavy {
-                    output.push(Cow::Borrowed(r#"<!-- This is prepend -->"#));
                     output.push(Cow::Owned(prepend));
-                    output.push(Cow::Borrowed(r#"<!-- Prepend end -->"#));
                 }
 
                 if is_regular_scale && is_regular_skew {
                     output.push(Cow::Owned(format!(
-                        r#"<span class="typst-content-text" style="font-size: calc(var(--data-text-height) * {}); line-height: calc(var(--data-text-height) * {}); left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); transform: scaleX({})">"#,
+                        r#"<span class="typst-content-text" data-text-id="{}" style="font-size: calc(var(--data-text-height) * {}); line-height: calc(var(--data-text-height) * {}); left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); transform: scaleX({})">"#,
+                        text_id,
                         size.0,
                         size.0,
                         rect.lo.x.0,
@@ -406,7 +401,8 @@ impl SemanticsBackend {
                     )));
                 } else {
                     output.push(Cow::Owned(format!(
-                        r#"<span class="typst-content-text" data-matrix="{},{},{},{}" style="font-size: {}px; line-height: calc(var(--data-text-height) * {}); left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); transform: scaleX({})">"#,
+                        r#"<span class="typst-content-text" data-text-id="{}" data-matrix="{},{},{},{}" style="font-size: {}px; line-height: calc(var(--data-text-height) * {}); left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); transform: scaleX({})">"#,
+                        text_id,
                         ts.sx,
                         ts.ky,
                         ts.kx,
@@ -426,9 +422,7 @@ impl SemanticsBackend {
                 output.push(Cow::Borrowed("</span>"));
 
                 if can_heavy {
-                    output.push(Cow::Borrowed(r#"<!-- This is append -->"#));
                     output.push(Cow::Owned(append));
-                    output.push(Cow::Borrowed(r#"<!-- Append end -->"#));
                 }
             }
             ContentHint(c) => {
