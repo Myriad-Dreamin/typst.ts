@@ -55,18 +55,22 @@ pub struct SemanticsBackend {
     heavy: bool,
     font_metric: BrowserFontMetric,
     page_width: f32,
+    page_height: f32,
     dfn_count: usize,
     text_rects: Vec<(Fingerprint, Rect)>,
     discrete_label_map: BTreeMap<Scalar, usize>,
     discrete_value_map: Vec<Scalar>,
 }
 
+const EPS: f32 = 1e-3;
+
 impl SemanticsBackend {
-    pub fn new(heavy: bool, font_metric: BrowserFontMetric, width: f32) -> Self {
+    pub fn new(heavy: bool, font_metric: BrowserFontMetric, width: f32, height: f32) -> Self {
         SemanticsBackend {
             heavy,
             font_metric,
             page_width: width,
+            page_height: height,
             dfn_count: 0,
             text_rects: vec![],
             discrete_label_map: BTreeMap::new(),
@@ -155,7 +159,6 @@ impl SemanticsBackend {
 
         fn approx_eq(a: f32, b: f32) -> bool {
             // todo: use transform-aware epsilon
-            const EPS: f32 = 0.5;
             (a - b).abs() < EPS
         }
 
@@ -181,135 +184,113 @@ impl SemanticsBackend {
         let mut res = VecDeque::new();
         res.resize(self.text_rects.len(), (String::new(), String::new()));
 
-        // Map<row, Vec<(left, right, idx)>>
-        let mut row_idxs = vec![self.discrete_label_map[&Scalar(0.0)]];
-        let mut row_items: BTreeMap<usize, Vec<(usize, usize, usize)>> = Default::default();
-
-        // init all row indexes
-        for (_, rect) in self.text_rects.iter() {
-            let (_, top, _, bottom) = self.get_discrete_labels_for_text_item(*rect);
-
-            row_idxs.push(top);
-            row_idxs.push(bottom);
-        }
-
-        row_idxs.sort();
-        row_idxs.dedup();
-
-        for idx in &row_idxs {
-            row_items.entry(*idx).or_default();
-        }
-
-        // todo: lazy tag 2d segment tree for optimization
+        // Append right and bottom fallbacks
         for (idx, (_, rect)) in self.text_rects.iter().enumerate() {
-            let (left, top, right, bottom) = self.get_discrete_labels_for_text_item(*rect);
+            let left = rect.lo.x;
+            let top = rect.lo.y;
+            let right = rect.hi.x;
+            let bottom = rect.hi.y;
 
-            let rng = if top <= bottom {
-                top..bottom
-            } else {
-                bottom..top
-            };
+            res[idx].1.push_str(&format!(
+                r#"<span class="typst-content-fallback typst-content-fallback-rb1" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
+                left.0,
+                bottom.0,
+                self.page_width - left.0,
+                self.page_height - bottom.0,
+            ));
 
-            row_items.range_mut(rng).for_each(|(_, v)| {
-                v.push((left, right, idx));
-            });
+            res[idx].1.push_str(&format!(
+                r#"<span class="typst-content-fallback typst-content-fallback-rb2" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
+                right.0,
+                top.0,
+                self.page_width - right.0,
+                self.page_height - top.0,
+            ));
         }
 
-        // zip iter for pairwise
-        let it = row_items.iter_mut().zip(row_idxs.iter().skip(1));
-        let mut last_blank = Option::<Scalar>::None;
+        let zero_label = *self.discrete_label_map.get(&Scalar(0.0)).unwrap();
+        let mut last_bottom = zero_label;
 
-        for ((row, items), nrow) in it {
-            let top = self.discrete_value_map[*row];
-            let bottom = self.discrete_value_map[*nrow];
+        // todo: optimize using ds
+        let mut max_right_for_row = Vec::<Option<usize>>::new();
+        max_right_for_row.resize(self.discrete_value_map.len(), None);
+        let mut max_bottom_for_col = Vec::<Option<usize>>::new();
+        max_bottom_for_col.resize(self.discrete_value_map.len(), None);
 
-            items.sort();
+        // Prepend left and top fallbacks
+        for post_idx in 1..self.text_rects.len() {
+            let pre_idx = post_idx - 1;
+            let (_, rect) = self.text_rects[pre_idx];
 
-            if items.is_empty() {
-                // insert a whole page width bar
-                // but delay to the next row with at least one item
-                last_blank.get_or_insert(top);
-            } else {
-                // process last blank
-                if let Some(blank_top) = last_blank {
-                    let blank_left = Scalar(0.0);
-                    let blank_height = top - blank_top;
+            let (left, top, right, bottom) = self.get_discrete_labels_for_text_item(rect);
 
-                    res[items[0].2].0.push_str(&format!(
-                        r#"<span class="typst-content-fallback" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
-                        blank_left.0,
-                        blank_top.0,
-                        self.page_width,
-                        blank_height.0,
-                    ));
+            // Prepend whole width blanks
+            if top > last_bottom {
+                let from = self.discrete_value_map[last_bottom];
+                let height = rect.lo.y - from;
+                res[pre_idx].0.push_str(&format!(
+                    r#"<span class="typst-content-fallback typst-content-fallback-whole" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
+                    0.0,
+                    from.0,
+                    self.page_width,
+                    height.0,
+                ));
+            }
+            last_bottom = last_bottom.max(bottom);
 
-                    last_blank = None;
-                }
+            // Process current item left
+            {
+                let lefty = &max_right_for_row[top..bottom];
+                let mut begin = 0;
+                let mut end = 0;
 
-                // merge overlap items: (left, right, first_idx, last_idx)
-                let mut merged_items: Vec<(usize, usize, usize, usize)> = vec![];
-                let mut last_item = (items[0].0, items[0].1, items[0].2, items[0].2);
-                for item in items.iter().skip(1) {
-                    if last_item.1 >= item.0 {
-                        last_item.1 = item.1.max(last_item.1);
-                        last_item.3 = item.2.max(last_item.3);
-                    } else {
-                        merged_items.push(last_item);
-                        last_item = (item.0, item.1, item.2, item.2);
+                // group by contiguous same value
+                while begin < lefty.len() {
+                    while end < lefty.len() && lefty[begin] == lefty[end] {
+                        end += 1;
                     }
+
+                    let last_right =
+                        lefty[begin].and_then(|v| if v > left { None } else { Some(v) });
+
+                    // if last_right.is_none() && begin+top <=
+
+                    // expand to page border 0.0 if no last right
+                    let from = match last_right {
+                        Some(last_right) => {
+                            (self.discrete_value_map[last_right] + rect.lo.x) / Scalar(2.0)
+                        }
+                        None => Scalar(0.0),
+                    };
+                    let width = rect.lo.x - from;
+
+                    let ptop = if last_right.is_none() {
+                        (begin + top).max(last_bottom)
+                    } else {
+                        begin + top
+                    };
+                    let pbottom = (end + top).min(bottom);
+
+                    if ptop < pbottom {
+                        let ptop = self.discrete_value_map[ptop];
+                        let pbottom = self.discrete_value_map[pbottom];
+
+                        res[pre_idx].0.push_str(&format!(
+                            r#"<span class="typst-content-fallback typst-content-fallback-left" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
+                            from.0,
+                            ptop.0,
+                            width.0,
+                            pbottom.0 - ptop.0,
+                        ));
+                    }
+
+                    begin = end;
                 }
-                merged_items.push(last_item);
 
-                // insert fallbacks for last right
-                if let Some((_, d_right, _, last_idx)) = merged_items.last() {
-                    let right = self.discrete_value_map[*d_right];
-                    res[*last_idx].1.push_str(&format!(
-                        r#"<span class="typst-content-fallback" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
-                        right.0,
-                        top.0,
-                        self.page_width - right.0,
-                        bottom.0 - top.0,
-                    ));
-                }
-
-                // insert fallbacks for left
-                if let Some((d_left, _, first_idx, _)) = merged_items.first() {
-                    let left = self.discrete_value_map[*d_left];
-                    res[*first_idx].0.push_str(&format!(
-                        r#"<span class="typst-content-fallback" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
-                        0.0,
-                        top.0,
-                        left.0,
-                        bottom.0 - top.0,
-                    ));
-                }
-
-                // insert fallbacks for middle
-                for wind in merged_items.windows(2) {
-                    let prior = wind[0];
-                    let post = wind[1];
-                    let (_, d_prior_right, _, piror_idx) = prior;
-                    let (d_post_left, _, post_idx, _) = post;
-
-                    let prior_end = self.discrete_value_map[d_prior_right];
-                    let post_begin = self.discrete_value_map[d_post_left];
-                    let width = (post_begin - prior_end) / Scalar(2.0);
-
-                    res[piror_idx].1.push_str(&format!(
-                        r#"<span class="typst-content-fallback" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
-                        prior_end.0,
-                        top.0,
-                        width.0,
-                        bottom.0 - top.0,
-                    ));
-
-                    res[post_idx].0.push_str(&format!(
-                        r#"<span class="typst-content-fallback" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
-                        prior_end.0 + width.0,
-                        top.0,
-                        width.0,
-                        bottom.0 - top.0,
-                    ));
+                // maintain max_right_for_row
+                for elem in &mut max_right_for_row[top..bottom] {
+                    let val = elem.get_or_insert(right);
+                    *val = right.max(*val);
                 }
             }
         }
