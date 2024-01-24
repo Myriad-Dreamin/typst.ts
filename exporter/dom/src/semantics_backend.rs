@@ -88,12 +88,7 @@ impl SemanticsBackend {
         self.render_semantics_walk(ctx, ts, fg, &mut fallbacks, output);
     }
 
-    fn prepare_text_rects<'a>(
-        &mut self,
-        ctx: &'a Module,
-        ts: tiny_skia::Transform,
-        fg: Fingerprint,
-    ) {
+    fn prepare_text_rects(&mut self, ctx: &Module, ts: tiny_skia::Transform, fg: Fingerprint) {
         let item = ctx.get_item(&fg).unwrap();
         use VecItem::*;
         match item {
@@ -134,7 +129,7 @@ impl SemanticsBackend {
         }
     }
 
-    fn prepare_discrete_map<'a>(&mut self) {
+    fn prepare_discrete_map(&mut self) {
         let nums = &mut self.discrete_value_map;
 
         for (_, rect) in self.text_rects.iter() {
@@ -182,7 +177,7 @@ impl SemanticsBackend {
     }
 
     // Vec<(prepend: String, append: String)>
-    fn calc_text_item_fallbacks<'a>(&mut self) -> VecDeque<(String, String)> {
+    fn calc_text_item_fallbacks(&mut self) -> VecDeque<(String, String)> {
         let mut res = VecDeque::new();
         res.resize(self.text_rects.len(), (String::new(), String::new()));
 
@@ -202,7 +197,7 @@ impl SemanticsBackend {
         row_idxs.dedup();
 
         for idx in &row_idxs {
-            row_items.entry(*idx).or_insert(Default::default());
+            row_items.entry(*idx).or_default();
         }
 
         // todo: lazy tag 2d segment tree for optimization
