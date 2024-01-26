@@ -12,6 +12,7 @@
   height: 100%;
   text-align-last: justify;
   color: transparent;
+  white-space: pre;
 }
 .tsel span::-moz-selection,
 .tsel::-moz-selection {

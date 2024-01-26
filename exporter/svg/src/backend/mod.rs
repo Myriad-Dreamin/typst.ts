@@ -7,7 +7,7 @@ pub use glyph::SvgGlyphBuilder;
 use std::sync::Arc;
 
 use base64::Engine;
-use escape::{PcDataEscapes, TextContentDataEscapes};
+use escape::PcDataEscapes;
 use typst_ts_core::{
     hash::Fingerprint,
     vector::{
@@ -164,7 +164,6 @@ impl SvgTextBuilder {
         width: Scalar,
         ascender: Scalar,
         upem: Scalar,
-        aware_html_entity: bool,
     ) {
         // upem is the unit per em defined in the font.
         // ppem is calcuated by the font size.
@@ -177,11 +176,7 @@ impl SvgTextBuilder {
         let ascender = ascender.0 * upem;
         let width = width.0 * upem / shape.size.0;
 
-        let text_content = if aware_html_entity {
-            escape::escape_str::<TextContentDataEscapes>(content)
-        } else {
-            escape::escape_str::<PcDataEscapes>(content)
-        };
+        let text_content = escape::escape_str::<PcDataEscapes>(content);
 
         // todo: investigate &nbsp;
 
@@ -589,7 +584,6 @@ impl<
             width,
             font.ascender,
             font.units_per_em,
-            ctx.should_aware_html_entity(),
         )
     }
 
