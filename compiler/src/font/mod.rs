@@ -7,3 +7,5 @@ pub mod system;
 pub mod web;
 
 pub(crate) mod info;
+
+pub mod pure;
