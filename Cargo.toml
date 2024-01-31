@@ -128,7 +128,7 @@ notify = "6"
 path-clean = "1.0.1"
 pathdiff = "0.2"
 walkdir = "2"
-instant = { version = "0.1", features = ["wasm-bindgen"] }
+instant = { version = "0.1" }
 
 # web
 js-sys = "^0.3"
