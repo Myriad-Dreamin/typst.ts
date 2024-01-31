@@ -1,8 +1,9 @@
+use reflexo::debug_loc::DocumentPosition;
 use reflexo::hash::{item_hash128, Fingerprint};
 pub use reflexo::vector::ir::*;
 
 use typst::layout::{
-    Abs as TypstAbs, Angle as TypstAngle, Axes as TypstAxes, Point as TypstPoint,
+    Abs as TypstAbs, Angle as TypstAngle, Axes as TypstAxes, Point as TypstPoint, Position,
     Ratio as TypstRatio, Transform as TypstTransform,
 };
 use typst::text::Font;
@@ -12,6 +13,18 @@ use typst::visualize::{ImageFormat, RasterFormat, VectorFormat};
 
 use crate::hash::typst_affinite_hash;
 use crate::{FromTypst, IntoTypst, TryFromTypst};
+
+use super::utils::AbsExt;
+
+impl FromTypst<Position> for DocumentPosition {
+    fn from_typst(value: Position) -> Self {
+        Self {
+            page_no: value.page.get(),
+            x: value.point.x.to_f32(),
+            y: value.point.y.to_f32(),
+        }
+    }
+}
 
 impl FromTypst<Rgba8Item> for typst::visualize::Color {
     fn from_typst(v: Rgba8Item) -> Self {

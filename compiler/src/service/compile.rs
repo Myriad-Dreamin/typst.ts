@@ -1,16 +1,14 @@
 use std::{
     collections::HashSet,
-    num::NonZeroUsize,
     ops::Deref,
     path::{Path, PathBuf},
     sync::Arc,
     thread::JoinHandle,
 };
 
-use serde::Serialize;
 use tokio::sync::{mpsc, oneshot};
 use typst::{
-    layout::{Frame, FrameItem, Point, Position},
+    layout::{Frame, FrameItem, Point},
     syntax::{LinkedNode, Source, Span, SyntaxKind, VirtualPath},
     World,
 };
@@ -22,8 +20,9 @@ use crate::{
     ShadowApi,
 };
 use typst_ts_core::{
-    debug_loc::{SourceLocation, SourceSpanOffset},
+    debug_loc::{DocumentPosition, SourceLocation, SourceSpanOffset},
     error::prelude::{map_string_err, ZResult},
+    vector::utils::AbsExt,
     TypstDocument, TypstFileId,
 };
 
@@ -475,12 +474,7 @@ impl<Ctx> CompileClient<Ctx> {
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct DocToSrcJumpInfo {
-    pub filepath: String,
-    pub start: Option<(usize, usize)>, // row, column
-    pub end: Option<(usize, usize)>,
-}
+pub use typst_ts_core::debug_loc::DocToSrcJumpInfo;
 
 // todo: remove constraint to CompilerWorld
 impl<F: CompilerFeat, Ctx: Compiler<World = CompilerWorld<F>>> CompileClient<CompileActor<Ctx>>
@@ -494,7 +488,7 @@ where
         filepath: PathBuf,
         line: usize,
         character: usize,
-    ) -> ZResult<Option<Position>> {
+    ) -> ZResult<Option<DocumentPosition>> {
         self.steal_async(move |this, _| {
             let doc = this.document()?;
 
@@ -594,23 +588,52 @@ fn ensure_single_thread<F: std::future::Future<Output = ()> + Send + 'static>(
 }
 
 /// Find the output location in the document for a cursor position.
-pub fn jump_from_cursor(frames: &[Frame], source: &Source, cursor: usize) -> Option<Position> {
+pub fn jump_from_cursor(
+    frames: &[Frame],
+    source: &Source,
+    cursor: usize,
+) -> Option<DocumentPosition> {
     let node = LinkedNode::new(source.root()).leaf_at(cursor)?;
-    if node.kind() != SyntaxKind::Text {
+    if !matches!(node.kind(), SyntaxKind::Text | SyntaxKind::RawLine) {
         return None;
     }
+    let span_offset = cursor.saturating_sub(node.offset());
 
     let mut min_dis = u64::MAX;
+    let mut min_dis2 = usize::MAX;
     let mut p = Point::default();
     let mut ppage = 0usize;
 
     let span = node.span();
-    for (i, frame) in frames.iter().enumerate() {
+    for (mut i, frame) in frames.iter().enumerate() {
         let t_dis = min_dis;
-        if let Some(pos) = find_in_frame(frame, span, &mut min_dis, &mut p) {
-            return Some(Position {
-                page: NonZeroUsize::new(i + 1)?,
-                point: pos,
+        if let Some(mut pos) = find_in_frame(
+            frame,
+            span,
+            span_offset,
+            &mut min_dis,
+            &mut min_dis2,
+            &mut p,
+        ) {
+            let next_frame = frames.get(i + 1);
+            if let Some(next_frame) = next_frame {
+                let next_pos = find_in_frame(
+                    next_frame,
+                    span,
+                    span_offset,
+                    &mut min_dis,
+                    &mut min_dis2,
+                    &mut p,
+                );
+                if let Some(next_pos) = next_pos {
+                    pos = next_pos;
+                    i += 1;
+                }
+            }
+            return Some(DocumentPosition {
+                page_no: i + 1,
+                x: pos.x.to_f32(),
+                y: pos.y.to_f32(),
             });
         }
         if t_dis != min_dis {
@@ -622,26 +645,42 @@ pub fn jump_from_cursor(frames: &[Frame], source: &Source, cursor: usize) -> Opt
         return None;
     }
 
-    Some(Position {
-        page: NonZeroUsize::new(ppage + 1)?,
-        point: p,
+    Some(DocumentPosition {
+        page_no: ppage + 1,
+        x: p.x.to_f32(),
+        y: p.y.to_f32(),
     })
 }
 
 /// Find the position of a span in a frame.
-fn find_in_frame(frame: &Frame, span: Span, min_dis: &mut u64, p: &mut Point) -> Option<Point> {
+fn find_in_frame(
+    frame: &Frame,
+    span: Span,
+    cursor: usize,
+    min_dis: &mut u64,
+    min_dis2: &mut usize,
+    p: &mut Point,
+) -> Option<Point> {
+    let mut found = false;
     for (mut pos, item) in frame.items() {
         if let FrameItem::Group(group) = item {
             // TODO: Handle transformation.
-            if let Some(point) = find_in_frame(&group.frame, span, min_dis, p) {
-                return Some(point + pos);
+            if let Some(point) = find_in_frame(&group.frame, span, cursor, min_dis, min_dis2, p) {
+                found = true;
+                *p = point + pos;
             }
         }
 
         if let FrameItem::Text(text) = item {
             for glyph in &text.glyphs {
                 if glyph.span.0 == span {
-                    return Some(pos);
+                    *min_dis = 0;
+                    let dis2 = (glyph.span.1 as usize).abs_diff(cursor);
+                    if dis2 < *min_dis2 {
+                        found = true;
+                        *min_dis2 = dis2;
+                        *p = pos;
+                    }
                 }
                 if glyph.span.0.id() == span.id() {
                     let dis = glyph.span.0.number().abs_diff(span.number());
@@ -653,6 +692,10 @@ fn find_in_frame(frame: &Frame, span: Span, min_dis: &mut u64, p: &mut Point) ->
                 pos.x += glyph.x_advance.at(text.size);
             }
         }
+    }
+
+    if found {
+        return Some(*p);
     }
 
     None

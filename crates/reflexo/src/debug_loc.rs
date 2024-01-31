@@ -128,3 +128,11 @@ impl From<(u32, u32, String)> for ElementPoint {
         }
     }
 }
+
+/// Compatible with [`SourceRange`].
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DocToSrcJumpInfo {
+    pub filepath: String,
+    pub start: Option<(usize, usize)>, // row, column
+    pub end: Option<(usize, usize)>,
+}
