@@ -2,6 +2,7 @@
 #[allow(unused_macros)]
 macro_rules! console_log {
     ($($arg:tt)*) => {
+        #[cfg(feature = "web")]
         web_sys::console::info_1(&format!(
             $($arg)*
         ).into());
