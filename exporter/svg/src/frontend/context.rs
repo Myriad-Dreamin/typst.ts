@@ -432,7 +432,6 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
                 Scalar(width),
                 font.ascender,
                 upem,
-                self.should_aware_html_entity(),
             )
         }
 
