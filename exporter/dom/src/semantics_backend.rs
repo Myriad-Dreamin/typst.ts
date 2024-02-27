@@ -9,7 +9,7 @@ use typst_ts_svg_exporter::{
 use unicode_width::UnicodeWidthChar;
 use web_sys::{wasm_bindgen::JsCast, HtmlCanvasElement};
 
-use crate::escape::{self, AttributeEscapes, TextContentDataEscapes};
+use crate::escape::{self, AttributeEscapes, PcDataEscapes};
 
 #[derive(Clone, Copy)]
 pub struct BrowserFontMetric {
@@ -225,7 +225,7 @@ impl SemanticsBackend {
                     )));
                 }
 
-                output.push(escape::escape_str::<TextContentDataEscapes>(
+                output.push(escape::escape_str::<PcDataEscapes>(
                     t.content.content.as_ref(),
                 ));
                 output.push(Cow::Borrowed("</span>"));
@@ -345,7 +345,7 @@ impl SemanticsBackend {
                     )));
                 }
                 let c = c.to_string();
-                let c = escape::escape_str::<TextContentDataEscapes>(&c).into_owned();
+                let c = escape::escape_str::<PcDataEscapes>(&c).into_owned();
                 output.push(Cow::Owned(c));
                 output.push(Cow::Borrowed("</span>"));
             }
