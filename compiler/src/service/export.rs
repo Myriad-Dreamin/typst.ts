@@ -164,7 +164,7 @@ impl<C: Compiler> CompileMiddleware for CompileReporter<C> {
     }
 
     fn wrap_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<typst::model::Document>> {
-        let start = crate::Time::now();
+        let start = crate::time::now();
         let id = self.main_id();
         if WITH_COMPILING_STATUS_FEATURE.retrieve(&env.features) {
             let rep = CompileReport::Stage(id, "compiling", start);

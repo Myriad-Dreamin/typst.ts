@@ -59,7 +59,7 @@ impl<M: AccessModel> OverlayAccessModel<M> {
         // we change mt every time, since content almost changes every time
         // Note: we can still benefit from cache, since we incrementally parse source
 
-        let mt = Time::now();
+        let mt = crate::time::now();
         let meta = OverlayFileMeta { mt, content };
         self.files
             .write()

@@ -103,6 +103,7 @@ __web = [
     "dep:serde-wasm-bindgen",
     "dep:pollster",
     "typst-ts-core/web",
+    "instant/wasm-bindgen",
 ]
 web-render = ["__web"]
 browser-compile = ["__web", "web-render", "typst-ts-core/glyph2vec"]
