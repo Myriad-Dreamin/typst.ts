@@ -93,7 +93,4 @@ escapes!(
     TextContentDataEscapes,
     b'<' => "&lt;",
     b'&' => "&amp;",
-    // also excaple space
-    b' ' => "&nbsp;",
-    b'\n' => "&#10;",
 );

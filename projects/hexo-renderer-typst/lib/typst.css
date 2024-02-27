@@ -35,7 +35,7 @@
   height: calc(var(--data-page-height) * var(--typst-dom-scale));
   color: transparent;
   font-family: monospace;
-  white-space: nowrap;
+  white-space: pre;
   opacity: 0.62;
 }
 
@@ -100,7 +100,7 @@
   left: 0;
   position: fixed;
   text-align: justify;
-  white-space: nowrap;
+  white-space: pre;
   width: 100%;
   height: 100%;
   text-align-last: justify;
