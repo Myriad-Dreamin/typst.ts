@@ -26,6 +26,7 @@ import { RenderView, renderTextLayer } from './render/canvas/view.mjs';
 import { LazyWasmModule } from './wasm.mjs';
 import { buildComponent } from './init.mjs';
 import { TypstDomDocument } from './dom.mjs';
+import { randstr } from './utils.mjs';
 
 /**
  * The result of rendering a Typst document.
@@ -509,12 +510,6 @@ export function createTypstSvgRenderer(): TypstSvgRenderer {
 export async function rendererBuildInfo(): Promise<any> {
   const renderModule = await import('@myriaddreamin/typst-ts-renderer/pkg/wasm-pack-shim.mjs');
   return renderModule.renderer_build_info();
-}
-
-function randstr(prefix?: string): string {
-  return Math.random()
-    .toString(36)
-    .replace('0.', prefix || '');
 }
 
 let warnOnceCanvasSet = true;
