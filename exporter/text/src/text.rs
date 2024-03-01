@@ -45,17 +45,15 @@ impl FullTextDigest {
             Group(g) => Self::export_frame(f, &g.frame),
             Text(t) => f.write_str(t.text.as_str()),
             Meta(ContentHint(c), _) => f.write_char(*c),
-            Meta(Link(..) | Elem(..) | PageNumbering(..) | PdfPageLabel(..) | Hide, _)
-            | Shape(..)
-            | Image(..) => Ok(()),
+            Meta(Link(..) | Elem(..) | Hide, _) | Shape(..) | Image(..) => Ok(()),
         }
     }
 }
 
 impl fmt::Display for FullTextDigest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for frame in self.0.pages.iter() {
-            Self::export_frame(f, &frame)?;
+        for page in self.0.pages.iter() {
+            Self::export_frame(f, &page.frame)?;
         }
         Ok(())
     }

@@ -293,8 +293,8 @@ impl ConvertInnerImpl {
         // and maybe also for Noto Color Emoji. And: Is the size calculation
         // correct?
 
-        let w = glyph_image.width() as f64;
-        let h = glyph_image.height() as f64;
+        let w = glyph_image.width();
+        let h = glyph_image.height();
         let sz = Size::new(typst::layout::Abs::raw(w), typst::layout::Abs::raw(h));
 
         let image = ir::ImageItem {

@@ -392,7 +392,7 @@ impl CanvasImageElem {
     }
 
     fn prepare_image(image: Arc<Image>) -> Option<impl core::future::Future<Output = ()>> {
-        let image_elem = rasterize_image(image.clone()).unwrap();
+        let image_elem = rasterize_image(image.clone()).unwrap().0;
 
         if Self::is_image_cached(&image_elem) {
             return None;
@@ -411,7 +411,7 @@ impl CanvasImageElem {
 
         let image = &image_data.image;
 
-        let image_elem = rasterize_image(image.clone()).unwrap();
+        let image_elem = rasterize_image(image.clone()).unwrap().0;
         Self::load_image_cached(image, &image_elem).await;
 
         // resize image to fit the view
@@ -745,6 +745,8 @@ impl CanvasRenderSnippets {
         let Some(elem) = rasterize_text(*fg) else {
             return Default::default();
         };
+        let elem = elem.0;
+
         let image_loaded = elem.get_attribute("data-typst-loaded-image");
         if matches!(image_loaded, Some(t) if t == "true") {
             return elem.outer_html();
@@ -840,13 +842,23 @@ fn create_image() -> Option<HtmlImageElement> {
     doc.create_element("img").ok()?.dyn_into().ok()
 }
 
-#[comemo::memoize(local)]
-fn rasterize_image(_image: Arc<Image>) -> Option<HtmlImageElement> {
-    create_image()
+#[derive(Debug, Clone)]
+struct UnsafeMemorize<T>(T);
+
+unsafe impl<T> Send for UnsafeMemorize<T> {}
+unsafe impl<T> Sync for UnsafeMemorize<T> {}
+
+#[comemo::memoize]
+fn rasterize_image(_image: Arc<Image>) -> Option<UnsafeMemorize<HtmlImageElement>> {
+    create_image().map(UnsafeMemorize)
 }
 
-#[comemo::memoize(local)]
-fn rasterize_text(_fg: Fingerprint) -> Option<HtmlDivElement> {
+#[comemo::memoize]
+fn rasterize_text(_fg: Fingerprint) -> Option<UnsafeMemorize<HtmlDivElement>> {
     let doc = web_sys::window()?.document()?;
-    doc.create_element("div").ok()?.dyn_into().ok()
+    doc.create_element("div")
+        .ok()?
+        .dyn_into()
+        .ok()
+        .map(UnsafeMemorize)
 }

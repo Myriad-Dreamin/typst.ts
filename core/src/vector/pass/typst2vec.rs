@@ -138,7 +138,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             .map(|(idx, p)| {
                 let page_reg = self.spans.start();
 
-                let abs_ref = self.frame(introspector, p, page_reg, idx);
+                let abs_ref = self.frame(introspector, &p.frame, page_reg, idx);
 
                 self.spans.push_span(SourceRegion {
                     region: doc_reg,
@@ -149,7 +149,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
                 Page {
                     content: abs_ref,
-                    size: p.size().into_typst(),
+                    size: p.frame.size().into_typst(),
                 }
             })
             .collect();
@@ -296,9 +296,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                         #[cfg(not(feature = "no-content-hint"))]
                         Meta::ContentHint(c) => self.store(VecItem::ContentHint(*c)),
                         // todo: support page label
-                        Meta::PdfPageLabel(..) | Meta::PageNumbering(..) | Meta::Hide => {
-                            return None
-                        }
+                        Meta::Hide => return None,
                     },
                 };
 
