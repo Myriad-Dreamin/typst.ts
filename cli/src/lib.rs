@@ -1,5 +1,5 @@
 use core::fmt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub mod compile;
 pub mod export;
@@ -13,12 +13,17 @@ pub mod utils;
 pub mod version;
 
 use clap::{builder::ValueParser, ArgAction, Args, Command, Parser, Subcommand, ValueEnum};
-use typst_ts_core::build_info::VERSION;
+use typst_ts_core::{build_info::VERSION, path::PathClean};
 use version::VersionFormat;
 
 /// The character typically used to separate path components
 /// in environment variables.
 const ENV_PATH_SEP: char = if cfg!(windows) { ';' } else { ':' };
+
+pub(crate) fn stdin_path() -> &'static Path {
+    static STDIN_PATH: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    STDIN_PATH.get_or_init(|| Path::new("-").clean())
+}
 
 #[derive(Debug, Parser)]
 #[clap(name = "typst-ts-cli", version = VERSION)]
@@ -128,7 +133,7 @@ pub struct CompileOnceArgs {
     #[clap(long, short, default_value = ".")]
     pub workspace: String,
 
-    /// Entry file.
+    /// Path to input Typst file, use `-` to read input from stdin
     #[clap(long, short, required = true)]
     pub entry: String,
 
