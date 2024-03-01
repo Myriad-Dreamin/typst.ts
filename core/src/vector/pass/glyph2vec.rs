@@ -460,8 +460,8 @@ impl ConvertInnerImpl {
         .ok()?;
 
         let sz = Size::new(
-            typst::layout::Abs::raw(glyph_image.width() as f64),
-            typst::layout::Abs::raw(glyph_image.height() as f64),
+            typst::layout::Abs::raw(glyph_image.width()),
+            typst::layout::Abs::raw(glyph_image.height()),
         );
 
         Some(ir::ImageItem {
