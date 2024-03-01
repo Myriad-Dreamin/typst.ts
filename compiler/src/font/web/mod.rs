@@ -432,12 +432,6 @@ impl BrowserFontSearcher {
         embed_font!("../../../../assets/fonts/DejaVuSansMono.ttf");
         embed_font!("../../../../assets/fonts/DejaVuSansMono-Bold.ttf");
         embed_font!("../../../../assets/fonts/Roboto-Regular.ttf");
-        #[cfg(feature = "cjk")]
-        embed_font!("../../../../assets/fonts/NotoSerifCJKsc-Regular.otf");
-        #[cfg(feature = "emoji")]
-        embed_font!("../../../../assets/fonts/TwitterColorEmoji.ttf");
-        #[cfg(feature = "emoji")]
-        embed_font!("../../../../assets/fonts/NotoColorEmoji.ttf");
     }
 
     pub async fn add_web_fonts(&mut self, fonts: js_sys::Array) -> ZResult<()> {

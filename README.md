@@ -259,8 +259,6 @@ Note: see [Troubleshooting WASM Build](docs/troubleshooting-wasm-build.md) for (
 Note: Since we use turborepo for `>=v0.4.0` development, if you are the earlier developer of `typst.ts`, please clean up all of your node_modules and dist folders before running the commands.
 
 ```shell
-# Optional: download the font assets if you haven't done so.
-$ git submodule update --init --recursive .
 # build all of typescript packages
 $ yarn install && yarn run build:pkg
 # compile typst document for demo

@@ -11,6 +11,7 @@ repository.workspace = true
 [dependencies]
 typst.workspace = true
 typst-ide.workspace = true
+typst-assets = { workspace = true, features = ["fonts"] }
 
 clap.workspace = true
 clap_complete.workspace = true
@@ -58,8 +59,6 @@ vergen.workspace = true
 [features]
 gen-manual = ["dep:clap_mangen"]
 embedded-fonts = []
-embedded-cjk-fonts = []
-embedded-emoji-fonts = []
 pdf = ["typst-ts-pdf-exporter"]
 serde-json = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/json"]
 serde-rmp = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/rmp"]
@@ -77,6 +76,4 @@ default = [
     "text",
     "gen-manual",
     "embedded-fonts",
-    "embedded-cjk-fonts",
-    "embedded-emoji-fonts",
 ]

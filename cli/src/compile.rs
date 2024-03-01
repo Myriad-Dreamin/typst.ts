@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io::{self, Read};
 use std::path::Path;
 
@@ -14,10 +15,10 @@ use typst_ts_compiler::{
 };
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
 
+use crate::font::fonts;
 use crate::stdin_path;
 use crate::utils::current_dir;
 use crate::{
-    font::EMBEDDED_FONT,
     tracing::TraceGuard,
     utils::{self, UnwrapOrExit},
     CompileArgs, CompileOnceArgs,
@@ -63,7 +64,10 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
         root_dir: workspace_dir.clone(),
         inputs,
         font_paths: args.font.paths.clone(),
-        with_embedded_fonts: EMBEDDED_FONT.to_owned(),
+        with_embedded_fonts: fonts()
+            .map(Cow::Borrowed)
+            .chain(args.extra_embedded_fonts)
+            .collect(),
         ..CompileOpts::default()
     })
     .unwrap_or_exit();

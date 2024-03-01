@@ -29,8 +29,3 @@ There are several ways to downloading the font files:
   ```
 
 - Download font files from our [Release Page](https://github.com/Myriad-Dreamin/typst.ts/releases/tag/v0.1.0).
-
-- Download font files using `tools/fontctl`
-  ```shell
-  $ cargo run --bin typst-ts-fontctl
-  ```

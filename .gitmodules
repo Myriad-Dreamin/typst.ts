@@ -1,11 +1,10 @@
-[submodule "TypstFontAssets"]
-	path = assets/fonts
-	url = https://github.com/Myriad-Dreamin/typst.git
-	branch = assets-fonts
 [submodule "TypstFileAssets"]
 	path = assets/files
 	url = https://github.com/Myriad-Dreamin/typst.git
 	branch = assets-files
+	fetchRecurseSubmodules = false
+	update=none
+	ignore=all
 
 [submodule "projects/typst-preview"]
 	path = projects/typst-preview

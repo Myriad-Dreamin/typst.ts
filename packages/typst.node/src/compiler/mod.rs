@@ -3,7 +3,7 @@ pub mod boxed;
 
 pub use boxed::{BoxedCompiler, NodeCompilerTrait};
 
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc};
 
 use napi::Either;
 use napi_derive::napi;
@@ -147,7 +147,7 @@ pub fn create_driver(args: NodeCompileArgs) -> ZResult<CompileDriver> {
     }
 
     searcher.resolve_opts(CompileOpts {
-        with_embedded_fonts: typst_ts_cli::font::EMBEDDED_FONT.to_owned(),
+        with_embedded_fonts: typst_ts_cli::font::fonts().map(Cow::Borrowed).collect(),
         ..CompileOpts::default()
     })?;
 

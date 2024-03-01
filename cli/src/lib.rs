@@ -1,5 +1,8 @@
 use core::fmt;
-use std::path::{Path, PathBuf};
+use std::{
+    borrow::Cow,
+    path::{Path, PathBuf},
+};
 
 pub mod compile;
 pub mod export;
@@ -149,6 +152,9 @@ pub struct CompileOnceArgs {
     /// Output to directory, default in the same directory as the entry file.
     #[clap(long, short, default_value = "")]
     pub output: String,
+
+    #[clap(skip)]
+    pub extra_embedded_fonts: Vec<Cow<'static, [u8]>>,
 }
 
 /// Parses key/value pairs split by the first equal sign.

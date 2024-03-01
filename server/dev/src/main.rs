@@ -1,5 +1,6 @@
 use clap::Parser;
 use log::info;
+use std::borrow::Cow;
 use std::{path::PathBuf, process::exit};
 use tokio::io::AsyncBufReadExt;
 use typst_ts_compiler::service::features::WITH_COMPILING_STATUS_FEATURE;
@@ -61,6 +62,7 @@ fn compile_corpus(args: CompileCorpusArgs) {
             font: typst_ts_cli::FontArgs { paths: vec![] },
             workspace: ".".to_owned(),
             entry: "".to_owned(),
+            extra_embedded_fonts: typst_dev_assets::fonts().map(Cow::Borrowed).collect(),
             ..Default::default()
         },
         format: compile_formats.clone(),

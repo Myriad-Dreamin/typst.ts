@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     path::{Path, PathBuf},
     process::exit,
     sync::Arc,
@@ -7,9 +8,9 @@ use std::{
 use clap::FromArgMatches;
 use typst::{model::Document, text::FontVariant, World};
 
+use typst_assets::fonts;
 use typst_ts_cli::{
     compile::compile_export,
-    font::EMBEDDED_FONT,
     get_cli,
     manual::generate_manual,
     query::serialize,
@@ -173,7 +174,7 @@ fn list_fonts(command: ListFontsArgs) -> ! {
     let world = TypstSystemWorld::new(CompileOpts {
         root_dir: root_path,
         font_paths: command.font.paths,
-        with_embedded_fonts: EMBEDDED_FONT.to_owned(),
+        with_embedded_fonts: fonts().map(Cow::Borrowed).collect(),
         ..CompileOpts::default()
     })
     .unwrap_or_exit();
