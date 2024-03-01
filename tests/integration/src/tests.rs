@@ -590,8 +590,8 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         ---
         name: math_undergradmath_artifact_ir
-        data_content_phash: "phash-gradient:YM7N5Kz17Cb3MM92MMdmmEbkmMzmSA5jzI7YsIf3ZI5k5Iz8qI7ceIbpNI98qG/WwAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        text_content_hash: "sha256:52e81cb8f1f1bbe0a587e01c74467d1105101d8490f6060fc8199ced72f4e982"
+        data_content_phash: "phash-gradient:YMrt5IztbCb1OIf2MMdmmEbmmEzkUIjjcI7JsK/edMYnZIzoqI7ceIfJNI94LIs2BBgAAAAAAAAAAAAAAAAAAAAAAAAAgBgA"
+        text_content_hash: "sha256:f171fe5c31efece4159215ee0f7984fa9d36cab8c9c4ab3d6035c251a9099c14"
         "###);
         // todo: the size of cjk font file is quite big
         // check_canvas_render_test_point!(@r###"
