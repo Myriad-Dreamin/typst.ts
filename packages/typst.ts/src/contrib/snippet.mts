@@ -16,6 +16,7 @@ import {
   SemanticTokens,
   SemanticTokensLegend,
 } from '../internal.types.mjs';
+import { randstr } from '../utils.mjs';
 
 /**
  * Some function that returns a promise of value or just that value.
@@ -332,6 +333,14 @@ export class TypstSnippet {
     return this.mainFilePath;
   }
 
+  removeTmp(opts: CompileOptions): Promise<void> {
+    if (opts.mainFilePath.startsWith('/tmp/')) {
+      return this.unmapShadow(opts.mainFilePath);
+    }
+
+    return Promise.resolve();
+  }
+
   /**
    * Add a source file to the compiler.
    * See {@link TypstCompiler#addSource}.
@@ -371,7 +380,7 @@ export class TypstSnippet {
    */
   async vector(o?: SweetCompileOptions) {
     const opts = await this.getCompileOptions(o);
-    return (await this.getCompiler()).compile(opts);
+    return (await this.getCompiler()).compile(opts).finally(() => this.removeTmp(opts));
   }
 
   /**
@@ -381,7 +390,7 @@ export class TypstSnippet {
   async pdf(o?: SweetCompileOptions) {
     const opts = await this.getCompileOptions(o);
     opts.format = 'pdf';
-    return (await this.getCompiler()).compile(opts);
+    return (await this.getCompiler()).compile(opts).finally(() => this.removeTmp(opts));
   }
 
   /**
@@ -417,12 +426,14 @@ export class TypstSnippet {
   /**
    * Get semantic tokens for the document.
    */
-  async query<T>(opts: SweetCompileOptions & { selector: string; field?: string }): Promise<T> {
-    const options = await this.getCompileOptions(opts);
-    return (await this.getCompiler()).query({
-      ...opts,
-      ...options,
-    });
+  async query<T>(o: SweetCompileOptions & { selector: string; field?: string }): Promise<T> {
+    const opts = await this.getCompileOptions(o);
+    return (await this.getCompiler())
+      .query<T>({
+        ...o,
+        ...opts,
+      })
+      .finally(() => this.removeTmp(opts));
   }
 
   /**
@@ -437,14 +448,14 @@ export class TypstSnippet {
    * See {@link SweetCompileOptions}.
    * See {@link TypstCompiler#getSemanticTokens}.
    */
-  async getSemanticTokens(
-    opts: SweetCompileOptions & { resultId?: string },
-  ): Promise<SemanticTokens> {
-    const options = await this.getCompileOptions(opts);
-    return (await this.getCompiler()).getSemanticTokens({
-      mainFilePath: options.mainFilePath,
-      resultId: opts.resultId,
-    });
+  async getSemanticTokens(o: SweetCompileOptions & { resultId?: string }): Promise<SemanticTokens> {
+    const opts = await this.getCompileOptions(o);
+    return (await this.getCompiler())
+      .getSemanticTokens({
+        mainFilePath: opts.mainFilePath,
+        resultId: o.resultId,
+      })
+      .finally(() => this.removeTmp(opts));
   }
 
   private async getCompileOptions(opts?: SweetCompileOptions): Promise<CompileOptions> {
@@ -455,18 +466,19 @@ export class TypstSnippet {
     } else if ('mainFilePath' in opts) {
       return { ...opts };
     } else {
-      await this.addSource(this.mainFilePath, opts.mainContent);
-      return { mainFilePath: this.mainFilePath };
+      const destFile = `/tmp/${randstr()}.typ`;
+      await this.addSource(destFile, opts.mainContent);
+      return { mainFilePath: destFile };
     }
   }
 
-  private async getVector(opts?: SweetRenderOptions): Promise<Uint8Array> {
-    if (opts && 'vectorData' in opts) {
-      return opts.vectorData;
+  private async getVector(o?: SweetRenderOptions): Promise<Uint8Array> {
+    if (o && 'vectorData' in o) {
+      return o.vectorData;
     }
 
-    const options = await this.getCompileOptions(opts);
-    return (await this.getCompiler()).compile(options);
+    const opts = await this.getCompileOptions(o);
+    return (await this.getCompiler()).compile(opts).finally(() => this.removeTmp(opts));
   }
 
   private async transientRender<T>(
