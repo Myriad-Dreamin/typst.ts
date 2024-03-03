@@ -44,27 +44,70 @@ async function main(coordinate: { x: number; y: number }) {
     ],
   });
 
-  compiler.addSource('/main.typ', typstCode);
-  let artifact: Uint8Array = await compiler.compile({
-    mainFilePath: '/main.typ',
-    format: 'vector',
-  });
-
-  const renderer = createTypstRenderer();
-  await renderer.init();
-
-  const svg = await renderer.runWithSession(async session => {
-    renderer.manipulateData({
-      renderSession: session,
-      action: 'reset',
-      data: artifact,
+  {
+    compiler.addSource(
+      '/main.typ',
+      `
+#import "@preview/example:0.1.0"
+#example.add(1, left)`,
+    );
+    let artifact = await compiler.compile({
+      mainFilePath: '/main.typ',
+      format: 'vector',
+      diagnostics: 'unix',
     });
-    return renderer.renderSvg({
-      renderSession: session,
-    });
-  });
 
-  return svg;
+    if (!artifact.diagnostics?.length) {
+      throw new Error("Renderer doesn't produce diags exactly..");
+    }
+
+    console.log(
+      'Renderer produces diags exactly! The diagnostics is in unix',
+      artifact.diagnostics,
+    );
+
+    let artifact2 = await compiler.compile({
+      mainFilePath: '/main.typ',
+      format: 'vector',
+      diagnostics: 'full',
+    });
+
+    if (!artifact2.diagnostics?.length) {
+      throw new Error("Renderer doesn't produce diags exactly..");
+    }
+
+    console.log(
+      'Renderer produces diags exactly! The diagnostics is in full',
+      artifact2.diagnostics,
+    );
+  }
+
+  {
+    compiler.addSource('/main.typ', typstCode);
+    let artifact: Uint8Array = (
+      await compiler.compile({
+        mainFilePath: '/main.typ',
+        format: 'vector',
+        diagnostics: 'unix',
+      })
+    ).result!;
+
+    const renderer = createTypstRenderer();
+    await renderer.init();
+
+    const svg = await renderer.runWithSession(async session => {
+      renderer.manipulateData({
+        renderSession: session,
+        action: 'reset',
+        data: artifact,
+      });
+      return renderer.renderSvg({
+        renderSession: session,
+      });
+    });
+
+    return svg;
+  }
 }
 
 main({ x: 15, y: 15 }).then(svg => {

@@ -1,3 +1,5 @@
+use core::fmt;
+
 use serde::{Deserialize, Serialize};
 
 /// A serializable physical position in a document.
@@ -42,12 +44,18 @@ pub struct FileLocation {
 /// A char position represented in form of line and column.
 /// The position is encoded in Utf-8 or Utf-16, and the encoding is
 /// determined by usage.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq, Hash)]
 pub struct CharPosition {
     /// The line number, starting at 0.
     pub line: usize,
     /// The column number, starting at 0.
     pub column: usize,
+}
+
+impl fmt::Display for CharPosition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.line, self.column)
+    }
 }
 
 impl From<Option<(usize, usize)>> for CharPosition {
@@ -93,10 +101,20 @@ pub struct FlatSourceLocation {
 // /// A resolved file range.
 // ///
 // /// See [`CharPosition`] for the definition of the position inside a file.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CharRange {
     pub start: CharPosition,
     pub end: CharPosition,
+}
+
+impl fmt::Display for CharRange {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.start == self.end {
+            write!(f, "{}", self.start)
+        } else {
+            write!(f, "{}-{}", self.start, self.end)
+        }
+    }
 }
 
 // /// A resolved source (text) range.

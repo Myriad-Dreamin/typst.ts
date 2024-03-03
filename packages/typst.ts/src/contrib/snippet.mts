@@ -380,7 +380,10 @@ export class TypstSnippet {
    */
   async vector(o?: SweetCompileOptions) {
     const opts = await this.getCompileOptions(o);
-    return (await this.getCompiler()).compile(opts).finally(() => this.removeTmp(opts));
+    return (await this.getCompiler())
+      .compile(opts)
+      .then(res => res.result)
+      .finally(() => this.removeTmp(opts));
   }
 
   /**
@@ -390,7 +393,10 @@ export class TypstSnippet {
   async pdf(o?: SweetCompileOptions) {
     const opts = await this.getCompileOptions(o);
     opts.format = 'pdf';
-    return (await this.getCompiler()).compile(opts).finally(() => this.removeTmp(opts));
+    return (await this.getCompiler())
+      .compile(opts)
+      .then(res => res.result)
+      .finally(() => this.removeTmp(opts));
   }
 
   /**
@@ -458,17 +464,19 @@ export class TypstSnippet {
       .finally(() => this.removeTmp(opts));
   }
 
-  private async getCompileOptions(opts?: SweetCompileOptions): Promise<CompileOptions> {
+  private async getCompileOptions(
+    opts?: SweetCompileOptions,
+  ): Promise<CompileOptions<any, 'none'>> {
     if (opts === undefined) {
-      return { mainFilePath: this.mainFilePath };
+      return { mainFilePath: this.mainFilePath, diagnostics: 'none' };
     } else if (typeof opts === 'string') {
       throw new Error(`please specify opts as {mainContent: '...'} or {mainFilePath: '...'}`);
     } else if ('mainFilePath' in opts) {
-      return { ...opts };
+      return { ...opts, diagnostics: 'none' };
     } else {
       const destFile = `/tmp/${randstr()}.typ`;
       await this.addSource(destFile, opts.mainContent);
-      return { mainFilePath: destFile };
+      return { mainFilePath: destFile, diagnostics: 'none' };
     }
   }
 
@@ -478,7 +486,10 @@ export class TypstSnippet {
     }
 
     const opts = await this.getCompileOptions(o);
-    return (await this.getCompiler()).compile(opts).finally(() => this.removeTmp(opts));
+    return (await this.getCompiler())
+      .compile(opts)
+      .then(res => res.result!)
+      .finally(() => this.removeTmp(opts));
   }
 
   private async transientRender<T>(

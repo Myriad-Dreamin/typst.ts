@@ -14,13 +14,13 @@ pub enum DiagSeverity {
     Hint = 4,
 }
 
-impl ToString for DiagSeverity {
-    fn to_string(&self) -> String {
+impl fmt::Display for DiagSeverity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DiagSeverity::Error => "error".to_string(),
-            DiagSeverity::Warning => "warning".to_string(),
-            DiagSeverity::Information => "information".to_string(),
-            DiagSeverity::Hint => "hint".to_string(),
+            DiagSeverity::Error => write!(f, "error"),
+            DiagSeverity::Warning => write!(f, "warning"),
+            DiagSeverity::Information => write!(f, "information"),
+            DiagSeverity::Hint => write!(f, "hint"),
         }
     }
 }
