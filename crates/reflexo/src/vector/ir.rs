@@ -50,7 +50,7 @@ use crate::{hash::Fingerprint, TakeAs};
 pub use crate::ImmutStr;
 
 /// A vector item that is specialized for representing
-/// [`typst::model::Document`] or its subtypes.
+/// `typst::model::Document` or its subtypes.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
@@ -68,7 +68,7 @@ pub enum VecItem {
     ContentHint(char),
 }
 
-/// Module with page references, corresponding to a [`typst::model::Document`].
+/// Module with page references, corresponding to a `typst::model::Document`.
 pub struct VecDocument {
     /// module containing all of the data related to this document.
     pub module: Module,
@@ -102,7 +102,7 @@ impl VecDocument {
 }
 
 /// Module with multiple documents, corresponding to multiple
-/// [`typst::model::Document`] rearranged by [`LayoutRegion`].
+/// `typst::model::Document` rearranged by [`LayoutRegion`].
 pub struct MultiVecDocument {
     /// module containing all of the data related to this document.
     pub module: Module,

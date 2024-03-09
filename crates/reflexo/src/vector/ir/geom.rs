@@ -8,7 +8,7 @@ use std::{
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 
-use super::PathItem;
+use super::{PathItem, VecItem};
 
 /// Scalar value of Vector representation.
 /// Note: Unlike Typst's Scalar, all lengths with Scalar type are in pt.

@@ -18,7 +18,7 @@ use typst_ts_core::{
     config::CompileOpts, error::prelude::*, typst::foundations::IntoValue, Bytes, TypstDict,
 };
 
-/// let [`CompilerDriver`] boxable.
+/// let [`CompileDriver`] boxable.
 impl NodeCompilerTrait for CompileDriver {}
 
 /// A nullable boxed compiler wrapping.

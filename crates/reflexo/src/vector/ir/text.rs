@@ -1,8 +1,8 @@
 use super::{preludes::*, ImageItem, PathStyle};
 use crate::vector::vm::{GroupContext, TransformContext};
 
-/// The glyph item definition with all of variants of [`GlyphItem`] other than
-/// [`GlyphItem::Raw`], hence it is serializable.
+/// The glyph item definition with all of variants of `GlyphItem` other than
+/// `GlyphItem::Raw`, hence it is serializable.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]

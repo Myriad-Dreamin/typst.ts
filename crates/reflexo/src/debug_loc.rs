@@ -5,11 +5,11 @@ use serde::{Deserialize, Serialize};
 /// A serializable physical position in a document.
 ///
 /// Note that it uses [`f32`] instead of [`f64`] as same as
-/// [`TypstPosition`] for the coordinates to improve both performance
+/// `TypstPosition` for the coordinates to improve both performance
 /// of serialization and calculation. It does sacrifice the floating
 /// precision, but it is enough in our use cases.
 ///
-/// Also see [`TypstPosition`].
+/// Also see `TypstPosition`.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct DocumentPosition {
     /// The page, starting at 1.
