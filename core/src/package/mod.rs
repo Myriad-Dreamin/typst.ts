@@ -1,7 +1,7 @@
 use std::{path::Path, sync::Arc};
 
 pub use typst::diag::PackageError;
-pub use typst::syntax::PackageSpec;
+pub use typst::syntax::package::PackageSpec;
 
 pub mod dummy;
 

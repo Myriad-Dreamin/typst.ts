@@ -89,7 +89,7 @@ fn typst_datetime_to_unix_nanoseconds(datetime: TypstDatetime) -> Option<i64> {
 
     let datetime = chrono::NaiveDateTime::new(date, time);
 
-    datetime.timestamp_nanos_opt()
+    datetime.and_utc().timestamp_nanos_opt()
 }
 
 /// Options to compile a document.

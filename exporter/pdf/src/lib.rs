@@ -3,7 +3,7 @@ use std::sync::Arc;
 pub use typst_pdf::pdf;
 use typst_ts_core::Exporter;
 
-use typst::{diag::SourceResult, World};
+use typst::{diag::SourceResult, foundations::Smart, World};
 
 #[derive(Debug, Clone, Default)]
 pub struct PdfDocExporter {
@@ -26,6 +26,6 @@ impl Exporter<typst::model::Document, Vec<u8>> for PdfDocExporter {
         // todo: ident option
 
         let timestamp = self.with_timestamp.then(|| world.today(None)).flatten();
-        Ok(typst_pdf::pdf(output.as_ref(), None, timestamp))
+        Ok(typst_pdf::pdf(output.as_ref(), Smart::Auto, timestamp))
     }
 }
