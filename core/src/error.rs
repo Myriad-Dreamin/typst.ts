@@ -9,6 +9,7 @@ use typst::syntax::Source;
 pub use typst::diag::SourceDiagnostic as TypstSourceDiagnostic;
 
 pub use typst::diag::FileError as TypstFileError;
+use typst::syntax::Span;
 
 struct DiagMsgFmt<'a>(&'a TypstSourceDiagnostic);
 
@@ -19,22 +20,33 @@ impl<'a> fmt::Display for DiagMsgFmt<'a> {
             f.write_str(", hints: ")?;
             f.write_str(&self.0.hints.join(", "))?;
         }
-        if !self.0.trace.is_empty() {
-            write!(f, "{:?}", self.0.trace)?;
-        }
 
         Ok(())
     }
 }
 
-pub fn diag_from_std(diag: TypstSourceDiagnostic, world: Option<&dyn typst::World>) -> DiagMessage {
-    // arguments.push(("code", diag.code.to_string()));
+struct PosFmt<'a>(&'a typst::diag::Tracepoint);
 
+impl<'a> fmt::Display for PosFmt<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self.0 {
+            typst::diag::Tracepoint::Call(Some(name)) => write!(f, "while calling {}", name),
+            typst::diag::Tracepoint::Call(None) => write!(f, "while calling closure"),
+            typst::diag::Tracepoint::Show(name) => write!(f, "while showing {}", name),
+            typst::diag::Tracepoint::Import => write!(f, "import"),
+        }
+    }
+}
+
+fn resolve_source_span(
+    s: Span,
+    world: Option<&dyn typst::World>,
+) -> (String, String, Option<CharRange>) {
     let mut package = String::new();
     let mut path = String::new();
     let mut range = None;
 
-    if let Some(id) = diag.span.id() {
+    if let Some(id) = s.id() {
         if let Some(pkg) = id.package() {
             package = pkg.to_string();
         };
@@ -42,7 +54,7 @@ pub fn diag_from_std(diag: TypstSourceDiagnostic, world: Option<&dyn typst::Worl
 
         if let Some((rng, src)) = world
             .and_then(|world| world.source(id).ok())
-            .and_then(|src| Some((src.find(diag.span)?.range(), src)))
+            .and_then(|src| Some((src.find(s)?.range(), src)))
         {
             let resolve_off =
                 |src: &Source, off: usize| src.byte_to_line(off).zip(src.byte_to_column(off));
@@ -53,16 +65,44 @@ pub fn diag_from_std(diag: TypstSourceDiagnostic, world: Option<&dyn typst::Worl
         }
     }
 
+    (package, path, range)
+}
+
+pub fn diag_from_std(diag: TypstSourceDiagnostic, world: Option<&dyn typst::World>) -> DiagMessage {
+    // arguments.push(("code", diag.code.to_string()));
+
+    let (package, path, range) = resolve_source_span(diag.span, world);
+
     DiagMessage {
         package,
         path,
-        message: format!("{}", DiagMsgFmt(&diag)),
+        message: DiagMsgFmt(&diag).to_string(),
         severity: match diag.severity {
             typst::diag::Severity::Error => DiagSeverity::Error,
             typst::diag::Severity::Warning => DiagSeverity::Warning,
         },
         range,
     }
+}
+
+/// Convert typst.ts diagnostic message with trace messages
+pub fn long_diag_from_std(
+    mut diag: TypstSourceDiagnostic,
+    world: Option<&dyn typst::World>,
+) -> impl Iterator<Item = DiagMessage> + '_ {
+    let traces = std::mem::take(&mut diag.trace);
+    let base = Some(diag_from_std(diag, world));
+
+    base.into_iter().chain(traces.into_iter().map(move |trace| {
+        let (package, path, range) = resolve_source_span(trace.span, world);
+        DiagMessage {
+            package,
+            path,
+            message: PosFmt(&trace.v).to_string(),
+            severity: DiagSeverity::Hint,
+            range,
+        }
+    }))
 }
 
 pub trait ErrorConverter {

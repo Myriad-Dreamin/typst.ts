@@ -1,7 +1,8 @@
-use std::path::Path;
+use core::fmt;
+use std::{fmt::Write, path::Path};
 
 use base64::Engine;
-use js_sys::{JsString, Uint32Array, Uint8Array};
+use js_sys::{Array, JsString, Uint32Array, Uint8Array};
 pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
     font::web::BrowserFontSearcher,
@@ -12,8 +13,11 @@ use typst_ts_compiler::{
     world::WorldSnapshot,
 };
 use typst_ts_core::{
-    cache::FontInfoCache, error::prelude::*, typst, typst::foundations::IntoValue, DynExporter,
-    Exporter, FontLoader, FontSlot, TypstDocument, TypstFont,
+    cache::FontInfoCache,
+    diag::SourceDiagnostic,
+    error::{long_diag_from_std, prelude::*, DiagMessage},
+    typst::{self, foundations::IntoValue, prelude::EcoVec},
+    DynExporter, Exporter, FontLoader, FontSlot, TypstDocument, TypstFont, TypstWorld,
 };
 use wasm_bindgen::prelude::*;
 
@@ -23,6 +27,89 @@ pub mod builder;
 
 mod incr;
 pub(crate) mod utils;
+
+macro_rules! take_diag {
+    ($diagnostics_format:expr, $world:expr, $e:expr) => {
+        match $e {
+            Ok(v) => v,
+            Err(e) => {
+                if $diagnostics_format >= 2 {
+                    return Ok(convert_diag(e, Some($world), $diagnostics_format));
+                } else {
+                    return Err(format!("{e:?}").into());
+                }
+            }
+        }
+    };
+}
+
+/// In format of
+///
+/// ```log
+/// // with package
+/// cetz:0.2.0@lib.typ:2:9-3:15: error: unexpected type in `+` application
+/// // without package
+/// main.typ:2:9-3:15: error: unexpected type in `+` application
+/// ```
+struct UnixFmt(DiagMessage);
+
+impl fmt::Display for UnixFmt {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.0.package.is_empty() {
+        } else {
+            f.write_str(&self.0.package)?;
+            f.write_char('@')?;
+        }
+        f.write_str(&self.0.path)?;
+        f.write_char(':')?;
+
+        if let Some(r) = self.0.range.as_ref() {
+            let mut r = r.clone();
+            r.start.line += 1;
+            r.start.column += 1;
+            write!(f, "{}:", r.start)?;
+        }
+
+        write!(f, " {}: {}", self.0.severity, self.0.message)
+    }
+}
+
+fn convert_diag(
+    e: EcoVec<SourceDiagnostic>,
+    world: Option<&dyn TypstWorld>,
+    diagnostics_format: u8,
+) -> JsValue {
+    fn convert_diag_object(e: DiagMessage) -> JsValue {
+        let obj = js_sys::Object::new();
+        js_sys::Reflect::set(&obj, &"package".into(), &e.package.into()).unwrap();
+        js_sys::Reflect::set(&obj, &"path".into(), &e.path.into()).unwrap();
+        if let Some(range) = e.range {
+            js_sys::Reflect::set(&obj, &"range".into(), &range.to_string().into()).unwrap();
+        } else {
+            js_sys::Reflect::set(&obj, &"range".into(), &"".into()).unwrap();
+        }
+        js_sys::Reflect::set(&obj, &"severity".into(), &e.severity.to_string().into()).unwrap();
+        js_sys::Reflect::set(&obj, &"message".into(), &e.message.into()).unwrap();
+        obj.into()
+    }
+
+    let res = e
+        .into_iter()
+        .flat_map(move |e| long_diag_from_std(e, world))
+        .map(|e| {
+            if diagnostics_format == 3 {
+                convert_diag_object(e)
+            } else {
+                format!("{}", UnixFmt(e)).into()
+            }
+        });
+
+    let diag = Array::from_iter(res).into();
+
+    let res = js_sys::Object::new();
+    js_sys::Reflect::set(&res, &"diagnostics".into(), &diag).unwrap();
+    res.into()
+}
 
 #[wasm_bindgen]
 pub struct TypstCompiler {
@@ -255,7 +342,11 @@ impl TypstCompiler {
         Ok(semantic_tokens)
     }
 
-    pub fn get_artifact(&mut self, fmt: String) -> Result<Vec<u8>, JsValue> {
+    pub fn get_artifact(
+        &mut self,
+        fmt: String,
+        diagnostics_format: u8,
+    ) -> Result<JsValue, JsValue> {
         let vec_exporter: DynExporter<TypstDocument, Vec<u8>> = match fmt.as_str() {
             "vector" => Box::new(typst_ts_core::exporter_builtins::VecExporter::new(
                 typst_ts_svg_exporter::SvgModuleExporter::default(),
@@ -266,14 +357,26 @@ impl TypstCompiler {
             }
         };
 
-        let doc = self
-            .compiler
-            .compile(&mut Default::default())
-            .map_err(|e| format!("{e:?}"))?;
-        let artifact_bytes = vec_exporter
-            .export(self.compiler.world(), doc)
-            .map_err(|e| format!("{e:?}"))?;
-        Ok(artifact_bytes)
+        let doc = take_diag!(
+            diagnostics_format,
+            self.compiler.world(),
+            self.compiler.compile(&mut Default::default())
+        );
+        let artifact_bytes = take_diag!(
+            diagnostics_format,
+            self.compiler.world(),
+            vec_exporter.export(self.compiler.world(), doc)
+        );
+
+        let v: JsValue = Uint8Array::from(artifact_bytes.as_slice()).into();
+
+        Ok(if diagnostics_format != 0 {
+            let result = js_sys::Object::new();
+            js_sys::Reflect::set(&result, &"result".into(), &v)?;
+            result.into()
+        } else {
+            v
+        })
     }
 
     pub fn query(
@@ -305,11 +408,16 @@ impl TypstCompiler {
         Ok(serde_json::to_string_pretty(&mapped).map_err(|e| format!("{e:?}"))?)
     }
 
-    pub fn compile(&mut self, main_file_path: String, fmt: String) -> Result<Vec<u8>, JsValue> {
+    pub fn compile(
+        &mut self,
+        main_file_path: String,
+        fmt: String,
+        diagnostics_format: u8,
+    ) -> Result<JsValue, JsValue> {
         self.compiler
             .set_entry_file(Path::new(&main_file_path).to_owned());
 
-        self.get_artifact(fmt)
+        self.get_artifact(fmt, diagnostics_format)
     }
 
     pub fn create_incr_server(&mut self) -> Result<IncrServer, JsValue> {
@@ -320,15 +428,25 @@ impl TypstCompiler {
         &mut self,
         main_file_path: String,
         state: &mut IncrServer,
-    ) -> Result<Vec<u8>, JsValue> {
+        diagnostics_format: u8,
+    ) -> Result<JsValue, JsValue> {
         self.compiler
             .set_entry_file(Path::new(&main_file_path).to_owned());
 
-        let doc = self
-            .compiler
-            .compile(&mut Default::default())
-            .map_err(|e| format!("{e:?}"))?;
-        Ok(state.update(doc))
+        let doc = take_diag!(
+            diagnostics_format,
+            self.compiler.world(),
+            self.compiler.compile(&mut Default::default())
+        );
+
+        let v = Uint8Array::from(state.update(doc).as_slice()).into();
+        Ok(if diagnostics_format != 0 {
+            let result = js_sys::Object::new();
+            js_sys::Reflect::set(&result, &"result".into(), &v)?;
+            result.into()
+        } else {
+            v
+        })
     }
 }
 

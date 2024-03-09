@@ -11,7 +11,55 @@ import { LazyWasmModule } from './wasm.mjs';
  */
 export type CompileFormat = 'vector' | 'pdf';
 
-interface TransientCompileOptions<F extends CompileFormat = any> {
+/**
+ * The diagnostic message partially following the LSP specification.
+ */
+interface DiagnosticMessage {
+  // The package owning the path.
+  // If the package is empty, the path is a relative path to the *workspace root*.
+  package: string;
+  // The path of the file.
+  path: string;
+  // Severity of the diagnostic message.
+  severity: string;
+  // Zero-based line number and one-based character offset.
+  // The range of the diagnostic message.
+  // If the diagnostic message is a range, the range is in the format of `startLine:startCharacter-endLine:endCharacter`.
+  // If the diagnostic message is a point, the range is in the format of `line:character`.
+  // Otherwise, the range is empty.
+  range: string;
+  // The message of the diagnostic message.
+  message: string;
+}
+
+/**
+ * Available formats for compiling the document.
+ *
+ * If set to unix, a diagnostics is in format of
+ *
+ * ```log
+ * // with package
+ * cetz:0.2.0@lib.typ:2:9-3:15: error: unexpected type in `+` application
+ * // without package
+ * main.typ:2:9-3:15: error: unexpected type in `+` application
+ * ```
+ *
+ * If set to long, a diagnostics is in format of {@link DiagnosticMessage}.
+ *
+ * If set to full, a diagnostics is in format of {@link DiagnosticMessage}, but also with trace messages.
+ */
+export type DiagnosticsFormat = 'none' | 'unix' | 'full';
+
+export type DiagnosticsData = {
+  none: never;
+  unix: string;
+  full: DiagnosticMessage;
+};
+
+interface TransientCompileOptions<
+  F extends CompileFormat = any,
+  Diagnostics extends DiagnosticsFormat = DiagnosticsFormat,
+> {
   /**
    * The path of the main file.
    */
@@ -23,9 +71,15 @@ interface TransientCompileOptions<F extends CompileFormat = any> {
    * @default 'vector'
    */
   format?: F;
+  /**
+   * Whether to include diagnostic information in the result.
+   * Note: it will be set to true by default in v0.6.0
+   * @default undefined
+   */
+  diagnostics: Diagnostics;
 }
 
-interface IncrementalCompileOptions {
+interface IncrementalCompileOptions<Diagnostics extends DiagnosticsFormat = DiagnosticsFormat> {
   /**
    * The path of the main file.
    */
@@ -39,14 +93,22 @@ interface IncrementalCompileOptions {
    * The incremental server for the document.
    */
   incrementalServer: IncrementalServer;
+  /**
+   * Whether to include diagnostic information in the result.
+   * Note: Before v0.6.0, when diagnostics is not set, the result will be a Uint8Array.
+   * After v0.6.0, when diagnostics is not set, the result will be a CompileResult<Uint8Array> without diagnostics.
+   * @default false
+   */
+  diagnostics: Diagnostics;
 }
 
 /**
  * The options for compiling the document.
  */
-export type CompileOptions<F extends CompileFormat = any> =
-  | TransientCompileOptions<F>
-  | IncrementalCompileOptions;
+export type CompileOptions<
+  Format extends CompileFormat = any,
+  Diagnostics extends DiagnosticsFormat = DiagnosticsFormat,
+> = TransientCompileOptions<Format, Diagnostics> | IncrementalCompileOptions;
 
 export class IncrementalServer {
   /**
@@ -54,6 +116,9 @@ export class IncrementalServer {
    */
   [kObject]: typst.IncrServer;
 
+  /**
+   * @internal
+   */
   constructor(s: typst.IncrServer) {
     this[kObject] = s;
   }
@@ -78,6 +143,11 @@ export class IncrementalServer {
   setAttachDebugInfo(enable: boolean): void {
     this[kObject].set_attach_debug_info(enable);
   }
+}
+
+interface CompileResult<T, D extends DiagnosticsFormat> {
+  result?: T;
+  diagnostics?: DiagnosticsData[D][];
 }
 
 /**
@@ -109,9 +179,15 @@ export interface TypstCompiler {
    * @returns {Promise<Uint8Array>} - artifact in vector format.
    * You can then load the artifact to the renderer to render the document.
    */
-  compile(options: CompileOptions<'vector'>): Promise<Uint8Array>;
-  compile(options: CompileOptions<'pdf'>): Promise<Uint8Array>;
-  compile(options: CompileOptions): Promise<Uint8Array>;
+  compile<D extends DiagnosticsFormat>(
+    options: CompileOptions<'vector', D>,
+  ): Promise<CompileResult<Uint8Array, D>>;
+  compile<D extends DiagnosticsFormat>(
+    options: CompileOptions<'pdf', D>,
+  ): Promise<CompileResult<Uint8Array, D>>;
+  compile<D extends DiagnosticsFormat>(
+    options: CompileOptions<any, D>,
+  ): Promise<CompileResult<Uint8Array, D>>;
 
   /**
    * experimental
@@ -248,15 +324,25 @@ class TypstCompilerDriver {
     this.compiler = await buildComponent(options, gCompilerModule, TypstCompilerBuilder, {});
   }
 
-  compile(options: CompileOptions): Promise<Uint8Array> {
-    return new Promise<Uint8Array>(resolve => {
+  compile(options: CompileOptions): Promise<any> {
+    return new Promise(resolve => {
       if ('incrementalServer' in options) {
         resolve(
-          this.compiler.incr_compile(options.mainFilePath, options.incrementalServer[kObject]),
+          this.compiler.incr_compile(
+            options.mainFilePath,
+            options.incrementalServer[kObject],
+            getDiagnosticsArg(options.diagnostics),
+          ),
         );
         return;
       }
-      resolve(this.compiler.compile(options.mainFilePath, options.format || 'vector'));
+      resolve(
+        this.compiler.compile(
+          options.mainFilePath,
+          options.format || 'vector',
+          getDiagnosticsArg(options.diagnostics),
+        ),
+      );
     });
   }
 
@@ -362,5 +448,17 @@ class TypstCompilerDriver {
 
   renderPageToCanvas(): Promise<any> {
     throw new Error('Please use the api TypstRenderer.renderToCanvas in v0.4.0');
+  }
+}
+function getDiagnosticsArg(diagnostics: string | undefined): number {
+  switch (diagnostics) {
+    case 'none':
+      return 1;
+    case 'unix':
+      return 2;
+    case 'full':
+      return 3;
+    default:
+      return 0;
   }
 }

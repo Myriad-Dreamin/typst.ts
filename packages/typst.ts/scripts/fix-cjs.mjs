@@ -31,8 +31,9 @@ walk('./dist/cjs', (path) => {
         // only replace (require("*.mjs")) to (require("*.cjs"))
         // and  replace (from "*.mjs") to (from "*.cjs")
         const newContent = content
-            .replace(/Promise\s*\.\s*resolve\s*\(\s*\)\s*\.\s*then\s*\(\s*\(\s*\)\s*=>\s*require\(['"](.*)['"]\)\s*\)/g, 'import("$1")')
-        .replace(/require\(\s*['"](.*)\.mjs['"]\s*\)/g, 'require("$1.cjs")').replace(/from\s*['"](.*)\.mjs['"]/g, 'from "$1.cjs"');
+        .replace(/Promise\s*\.\s*resolve\s*\(\s*\)\s*\.\s*then\s*\(\s*\(\s*\)\s*=>\s*require\(['"](.*?)['"]\)\s*\)/g, 'import("$1")')
+        .replace(/import\(\s*['"].\/(.*?)\.mjs['"]\s*\)/g, 'import(".\/$1.cjs")')
+        .replace(/require\(\s*['"](.*?)\.mjs['"]\s*\)/g, 'require("$1.cjs")').replace(/from\s*['"](.*?)\.mjs['"]/g, 'from "$1.cjs"');
         writeFileSync(newPath, newContent);
     }
 });
