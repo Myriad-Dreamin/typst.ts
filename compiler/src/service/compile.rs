@@ -85,7 +85,7 @@ pub struct CompileActor<C: Compiler> {
     /// The latest compiled document.
     latest_doc: Option<Arc<TypstDocument>>,
     /// feature set for compile_once mode.
-    once_feature_set: FeatureSet,
+    once_feature_set: Arc<FeatureSet>,
     /// Shared feature set for watch mode.
     watch_feature_set: Arc<FeatureSet>,
 
@@ -123,7 +123,7 @@ where
 
             estimated_shadow_files: Default::default(),
             latest_doc: None,
-            once_feature_set: feature_set,
+            once_feature_set: Arc::new(feature_set),
             watch_feature_set,
 
             steal_send,
@@ -137,6 +137,10 @@ where
     /// Create a new compiler thread.
     pub fn new(compiler: C, root: PathBuf) -> Self {
         Self::new_with_features(compiler, root, FeatureSet::default())
+    }
+
+    fn make_env(&self, feature_set: Arc<FeatureSet>) -> CompileEnv {
+        CompileEnv::default().configure_shared(feature_set)
     }
 
     /// Run the compiler thread synchronously.
@@ -155,9 +159,8 @@ where
     /// until it exits.
     async fn block_run_inner(mut self) -> bool {
         if !self.enable_watch {
-            let compiled = self
-                .compiler
-                .compile(&mut CompileEnv::default().configure(self.once_feature_set));
+            let mut env = self.make_env(self.once_feature_set.clone());
+            let compiled = self.compiler.compile(&mut env);
             return compiled.is_ok();
         }
 
@@ -173,9 +176,8 @@ where
     /// Spawn the compiler thread.
     pub async fn spawn(mut self) -> Option<JoinHandle<()>> {
         if !self.enable_watch {
-            self.compiler
-                .compile(&mut CompileEnv::default().configure(self.once_feature_set))
-                .ok();
+            let mut env = self.make_env(self.once_feature_set.clone());
+            self.compiler.compile(&mut env).ok();
             return None;
         }
 

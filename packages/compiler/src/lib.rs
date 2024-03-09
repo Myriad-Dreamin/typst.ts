@@ -1,7 +1,8 @@
 use core::fmt;
-use std::{fmt::Write, path::Path};
+use std::{fmt::Write, path::Path, sync::Arc};
 
 use base64::Engine;
+use comemo::Prehashed;
 use js_sys::{Array, JsString, Uint32Array, Uint8Array};
 pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
@@ -168,6 +169,19 @@ impl TypstCompiler {
         // reset the world caches
         self.compiler.reset().map_err(|e| format!("{e:?}"))?;
 
+        Ok(())
+    }
+
+    pub fn set_inputs(&mut self, inputs: JsValue) -> Result<(), JsValue> {
+        let inputs: std::collections::HashMap<String, String> =
+            serde_wasm_bindgen::from_value(inputs).map_err(|e| format!("{e:?}"))?;
+        let inputs = inputs
+            .into_iter()
+            .map(|(k, v)| (k.into(), v.into_value()))
+            .collect();
+        self.compiler
+            .world_mut()
+            .set_inputs(Arc::new(Prehashed::new(inputs)));
         Ok(())
     }
 

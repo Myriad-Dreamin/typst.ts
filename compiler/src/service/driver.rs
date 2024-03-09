@@ -7,7 +7,7 @@ use crate::{NotifyApi, ShadowApi};
 use typst::{diag::SourceResult, syntax::VirtualPath, World};
 use typst_ts_core::{error::prelude::*, path::PathClean, Bytes, ImmutPath, TypstFileId};
 
-use super::{Compiler, EntryFileState, WorkspaceProvider};
+use super::{Compiler, EntryFileState, EnvWorld, WorkspaceProvider};
 
 /// CompileDriverImpl is a driver for typst compiler.
 /// It is responsible for operating the compiler without leaking implementation
@@ -56,7 +56,7 @@ impl<W: World + WorkspaceProvider> CompileDriverImpl<W> {
     }
 }
 
-impl<W: World + WorkspaceProvider + NotifyApi> Compiler for CompileDriverImpl<W> {
+impl<W: World + EnvWorld + WorkspaceProvider + NotifyApi> Compiler for CompileDriverImpl<W> {
     type World = W;
 
     fn world(&self) -> &Self::World {
