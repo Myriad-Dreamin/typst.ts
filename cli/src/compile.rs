@@ -1,7 +1,10 @@
+use std::io::{self, Read};
 use std::path::Path;
 
-use typst::foundations::{Dict, IntoValue};
+use typst::diag::{FileError, FileResult};
+use typst::foundations::{Bytes, Dict, IntoValue};
 use typst::model::Document;
+use typst_ts_compiler::ShadowApi;
 use typst_ts_compiler::{
     service::{
         features::{FeatureSet, DIAG_FMT_FEATURE},
@@ -11,6 +14,8 @@ use typst_ts_compiler::{
 };
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
 
+use crate::stdin_path;
+use crate::utils::current_dir;
 use crate::{
     font::EMBEDDED_FONT,
     tracing::TraceGuard,
@@ -29,14 +34,14 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
         cwd.join(workspace_dir)
     };
 
-    let entry_file_path = if entry_file_path.is_absolute() {
+    let entry_file_path = if Path::new("-") == entry_file_path || entry_file_path.is_absolute() {
         entry_file_path
     } else {
         let cwd = std::env::current_dir().unwrap_or_exit();
         cwd.join(entry_file_path)
     };
 
-    if !entry_file_path.starts_with(&workspace_dir) {
+    if Path::new("-") != entry_file_path && !entry_file_path.starts_with(&workspace_dir) {
         clap::Error::raw(
             clap::error::ErrorKind::InvalidValue,
             format!(
@@ -92,23 +97,59 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
         guard.unwrap()
     };
 
+    if driver.entry_file == stdin_path() {
+        if args.watch {
+            clap::Error::raw(
+                clap::error::ErrorKind::ArgumentConflict,
+                "cannot watch on stdin\n",
+            )
+            .exit()
+        }
+
+        driver
+            .map_shadow(
+                stdin_path(),
+                Bytes::from(
+                    read_from_stdin()
+                        .map_err(|err| {
+                            clap::Error::raw(
+                                clap::error::ErrorKind::Io,
+                                format!("read from stdin failed: {err}\n"),
+                            )
+                            .exit()
+                        })
+                        .unwrap(),
+                ),
+            )
+            .unwrap();
+    }
+
     // todo: make dynamic layout exporter
     let output_dir = {
         // If output is specified, use it.
         let dir = (!args.compile.output.is_empty()).then(|| Path::new(&args.compile.output));
         // Otherwise, use the parent directory of the entry file.
-        let dir = dir.unwrap_or_else(|| {
-            driver
-                .entry_file
-                .parent()
-                .expect("entry_file has no parent")
+        let dir = dir.map(Path::to_owned).unwrap_or_else(|| {
+            if driver.entry_file == stdin_path() {
+                current_dir()
+            } else {
+                driver
+                    .entry_file
+                    .parent()
+                    .expect("entry_file has no parent")
+                    .to_owned()
+            }
         });
-        dir.join(
-            driver
-                .entry_file
-                .file_name()
-                .expect("entry_file has no file name"),
-        )
+        if driver.entry_file == stdin_path() {
+            dir.join("main")
+        } else {
+            dir.join(
+                driver
+                    .entry_file
+                    .file_name()
+                    .expect("entry_file has no file name"),
+            )
+        }
     };
 
     let watch_root = driver.world().root.as_ref().to_owned();
@@ -125,4 +166,16 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
     utils::async_continue(async move {
         utils::logical_exit(actor.run());
     })
+}
+
+/// Read from stdin.
+fn read_from_stdin() -> FileResult<Vec<u8>> {
+    let mut buf = Vec::new();
+    let result = io::stdin().read_to_end(&mut buf);
+    match result {
+        Ok(_) => (),
+        Err(err) if err.kind() == io::ErrorKind::BrokenPipe => (),
+        Err(err) => return Err(FileError::from_io(err, Path::new("<stdin>"))),
+    }
+    Ok(buf)
 }

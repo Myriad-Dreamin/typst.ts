@@ -210,6 +210,10 @@ impl<F: CompilerFeat> CompilerWorld<F> {
 
     /// Resolve the real path for a file id.
     pub fn path_for_id(&self, id: FileId) -> Result<PathBuf, FileError> {
+        if id.vpath().as_rootless_path() == Path::new("-") {
+            return Ok(PathBuf::from("-"));
+        }
+
         // Determine the root path relative to which the file path
         // will be resolved.
         let root = match id.package() {
