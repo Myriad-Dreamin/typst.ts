@@ -4,7 +4,6 @@ use crate::ShadowApi;
 use typst::{diag::SourceResult, World};
 use typst_ts_core::{
     exporter_builtins::GroupExporter,
-    package::PackageSpec,
     typst::prelude::*,
     vector::{
         ir::{LayoutRegion, LayoutRegionNode},
@@ -325,7 +324,7 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
             diag::At,
             syntax::{Span, VirtualPath},
         };
-        use typst_ts_core::{IntoTypst, TypstFileId};
+        use typst_ts_core::{package::PackageSpec, IntoTypst, TypstFileId};
         use typst_ts_svg_exporter::DynamicLayoutSvgExporter;
 
         let variable_file = TypstFileId::new(
