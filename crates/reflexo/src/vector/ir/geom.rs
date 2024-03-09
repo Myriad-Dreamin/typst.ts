@@ -8,7 +8,7 @@ use std::{
 #[cfg(feature = "rkyv")]
 use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 
-use super::{PathItem, VecItem};
+use super::PathItem;
 
 /// Scalar value of Vector representation.
 /// Note: Unlike Typst's Scalar, all lengths with Scalar type are in pt.
@@ -417,8 +417,8 @@ impl EuclidMinMax for Point {
     }
 }
 
-/// Item representing all the transform that is applicable to a [`VecItem`].
-/// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/transform>
+/// Item representing all the transform that is applicable to a
+/// [`super::VecItem`]. See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/transform>
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
