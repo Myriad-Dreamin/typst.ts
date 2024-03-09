@@ -592,32 +592,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cmd_lib"
-version = "1.9.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5f4cbdcab51ca635c5b19c85ece4072ea42e0d2360242826a6fc96fb11f0d40"
-dependencies = [
- "cmd_lib_macros",
- "env_logger",
- "faccess",
- "lazy_static",
- "log",
- "os_pipe",
-]
-
-[[package]]
-name = "cmd_lib_macros"
-version = "1.9.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae881960f7e2a409f91ef0b1c09558cf293031a1d6e8b45f908311f2a43f5fdf"
-dependencies = [
- "proc-macro-error",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "cobs"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1111,17 +1085,6 @@ checksum = "64f18991e7bf11e7ffee451b5318b5c1a73c52d0d0ada6e5a3017c8c1ced6a21"
 dependencies = [
  "libc",
  "str-buf",
-]
-
-[[package]]
-name = "faccess"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59ae66425802d6a903e268ae1a08b8c38ba143520f227a205edf4e9c7e3e26d5"
-dependencies = [
- "bitflags 1.3.2",
- "libc",
- "winapi",
 ]
 
 [[package]]
@@ -2494,16 +2457,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "os_pipe"
-version = "1.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57119c3b893986491ec9aa85056780d3a0f3cf4da7cc09dd3650dbd6c6738fb9"
-dependencies = [
- "libc",
- "windows-sys 0.52.0",
-]
-
-[[package]]
 name = "overload"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2746,30 +2699,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9df7f93fd637f083201473dab4fee2db4c429d32e55e3299980ab3957ab916a0"
 dependencies = [
  "num-integer",
-]
-
-[[package]]
-name = "proc-macro-error"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da25490ff9892aab3fcf7c36f08cfb902dd3e71ca0f9f9517bea02a73a5ce38c"
-dependencies = [
- "proc-macro-error-attr",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
- "version_check",
-]
-
-[[package]]
-name = "proc-macro-error-attr"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1be40180e52ecc98ad80b184934baf3d0d29f979574e439af5a55274b35f869"
-dependencies = [
- "proc-macro2",
- "quote",
- "version_check",
 ]
 
 [[package]]
@@ -4345,6 +4274,11 @@ version = "0.10.0"
 source = "git+https://github.com/typst/typst-assets?rev=4d1211a#4d1211ab5ba8a02992a7362000e6dd422d44dd68"
 
 [[package]]
+name = "typst-dev-assets"
+version = "0.10.0"
+source = "git+https://github.com/typst/typst-dev-assets?rev=c63ab46#c63ab467b6d2242b7993b81c1156b915486bcf02"
+
+[[package]]
 name = "typst-ide"
 version = "0.10.0"
 source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-content-hint#eba115da35fae22d4525018b0cb66316ced6c3f0"
@@ -4486,6 +4420,7 @@ dependencies = [
  "tracing-error",
  "tracing-subscriber",
  "typst",
+ "typst-assets",
  "typst-ide",
  "typst-ts-ast-exporter",
  "typst-ts-compiler",
@@ -4592,6 +4527,7 @@ dependencies = [
  "log",
  "once_cell",
  "tokio",
+ "typst-dev-assets",
  "typst-ts-cli",
  "typst-ts-compiler",
  "typst-ts-core",
@@ -4621,20 +4557,6 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
-]
-
-[[package]]
-name = "typst-ts-fontctl"
-version = "0.4.2-rc6"
-dependencies = [
- "anyhow",
- "clap",
- "clap_complete",
- "clap_complete_fig",
- "cmd_lib",
- "hex",
- "sha2",
- "tempfile",
 ]
 
 [[package]]
