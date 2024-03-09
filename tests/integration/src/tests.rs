@@ -535,8 +535,8 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         ---
         name: layout_list-marker_01_artifact_ir
-        data_content_phash: "phash-gradient:AAAAAAAAIAAASAAAoAAApAAApAAAIAAARAAAIAAAwAAA0AIA1AIAwAAAAAEAQAAAAAMAAAEAQAUAAAMAQAAAAAEAAAAAAAAA"
-        text_content_hash: "sha256:30fde40ad5a6fe509629f74ca21e6fbbe79420974db548ef8f2af5c3fbb09358"
+        data_content_phash: "phash-gradient:AAAAAAAAIAAASAAAoAAApAAApAAAIAAARAAAIAAAwAAA0AIA1AIAwAAAAAIAwAAAAAoAQAMAQAMAAAsAgAQAAAIAAAAAAAAA"
+        text_content_hash: "sha256:e08bd70a2784f7c70902f732793745962ce97e7cbcd09f5c13f9f57350b97809"
         "###);
         check_canvas_render_test_point!(@r###"
         ---
@@ -590,8 +590,8 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         ---
         name: math_undergradmath_artifact_ir
-        data_content_phash: "phash-gradient:YM7N5Kz17Cb3MM92MMdmmEbkmMzmSA5jzI7YsIf3ZI5k5Iz8qI7ceIbpNI98qG/WwAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-        text_content_hash: "sha256:ebad9f56d2173cc7f5d74b7e5d844b4e1698b32a80ef7f1feb09195788ff66a1"
+        data_content_phash: "phash-gradient:YMrt5IztbCb1OIf2MMdmmEbmmEzkUIjjcI7JsK/edMYnZIzoqI7ceIfJNI94LIs2BBgAAAAAAAAAAAAAAAAAAAAAAAAAgBgA"
+        text_content_hash: "sha256:f171fe5c31efece4159215ee0f7984fa9d36cab8c9c4ab3d6035c251a9099c14"
         "###);
         // todo: the size of cjk font file is quite big
         // check_canvas_render_test_point!(@r###"

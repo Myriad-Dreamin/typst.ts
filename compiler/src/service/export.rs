@@ -322,9 +322,9 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
         use crate::ShadowApiExt;
         use typst::{
             diag::At,
-            syntax::{PackageSpec, Span, VirtualPath},
+            syntax::{Span, VirtualPath},
         };
-        use typst_ts_core::{IntoTypst, TypstFileId};
+        use typst_ts_core::{package::PackageSpec, IntoTypst, TypstFileId};
         use typst_ts_svg_exporter::DynamicLayoutSvgExporter;
 
         let variable_file = TypstFileId::new(

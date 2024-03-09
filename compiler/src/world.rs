@@ -146,7 +146,7 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
 
         let naive = match offset {
             None => now.naive_local(),
-            Some(o) => now.naive_utc() + chrono::Duration::hours(o),
+            Some(o) => now.naive_utc() + chrono::Duration::try_hours(o)?,
         };
 
         Datetime::from_ymd(

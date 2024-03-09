@@ -74,13 +74,16 @@ strip = true
 [workspace.dependencies]
 
 # typesetting
-pixglyph = "0.2"
+pixglyph = "0.3"
 typst = "0.10.0"
 typst-ide = "0.10.0"
 typst-pdf = "0.10.0"
 typst-svg = "0.10.0"
 typst-syntax = "0.10.0"
-ttf-parser = "0.19.2"
+ttf-parser = "0.20.0"
+
+typst-assets = { git = "https://github.com/typst/typst-assets", rev = "4d1211a" }
+typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", rev = "c63ab46" }
 
 # general
 anyhow = "1"
@@ -91,7 +94,7 @@ chrono = { version = "0.4.24", default-features = false, features = [
     "std",
 ] }
 futures-util = "0.3.30"
-once_cell = "1.17.1"
+once_cell = "1"
 parking_lot = "0.12.1"
 pollster = "0.3.0"
 rayon = "1.7.0"
@@ -101,7 +104,8 @@ tokio = { version = "1.28.1", features = ["full"] }
 # data structure and algorithm
 append-only-vec = "0.1.2"
 bytemuck = "1"
-comemo = "0.3.1"
+# comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
+comemo = "0.4"
 dissimilar = "1.0"
 elsa = "1.8.1"
 ecow = "0.2"
@@ -122,8 +126,7 @@ tokio-tungstenite = "0.20.0"
 
 # system
 dirs = "5"
-fontdb = "0.15.0"
-memmap2 = "0.9"
+fontdb = "0.16"
 notify = "6"
 path-clean = "1.0.1"
 pathdiff = "0.2"
@@ -148,16 +151,16 @@ image = { version = "0.24", default-features = false, features = [
     "jpeg",
     "gif",
 ] }
-resvg = { version = "0.36", default-features = false, features = [
+resvg = { version = "0.38", default-features = false, features = [
     "raster-images",
 ] }
-svgtypes = "0.12"
+svgtypes = "0.13"
 tiny-skia = "0.11"
 tiny-skia-path = "0.11"
 
 # cryptography and processing
 ansi-to-html = "0.1.3"
-base64 = "0.21.2"
+base64 = "0.22"
 base64-serde = "0.7.0"
 byteorder = "1.4.3"
 hex = "0.4.3"
@@ -166,11 +169,11 @@ fxhash = "0.2.1"
 nohash-hasher = "0.2.0"
 rkyv = "0.7.42"
 rmp-serde = "1.1.2"
-roxmltree = "0.18"
+roxmltree = "0.19"
 rustc-hash = "1.1.0"
-serde = { version = "1.0.188" }
-serde_json = "1.0.106"
-serde_with = { version = "3.3", features = ["base64"] }
+serde = { version = "1.0.197" }
+serde_json = "1.0.114"
+serde_with = { version = "3.6", features = ["base64"] }
 serde-wasm-bindgen = "^0.6"
 sha2 = "0.10.6"
 siphasher = "1"
@@ -190,7 +193,7 @@ insta = "1.29.0"
 
 # misc
 codespan-reporting = "0.11"
-vergen = { version = "8.2.5", features = [
+vergen = { version = "8.3.1", features = [
     "build",
     "cargo",
     "git",
@@ -235,15 +238,18 @@ typst-ts-text-exporter = { path = "exporter/text" }
 # typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
-typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint-half" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint-half" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint-half" }
-typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint-half" }
-typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0-content-hint-half" }
+# comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
+typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
+typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
+typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
+typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-content-hint" }
 
+# comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }
 # typst-syntax = { path = "../typst/crates/typst-syntax" }
 # typst-ide = { path = "../typst/crates/typst-ide" }
+# typst-svg = { path = "../typst/crates/typst-svg" }
 # typst-pdf = { path = "../typst/crates/typst-pdf" }
 
 # fontdb = { path = "../fontdb" }

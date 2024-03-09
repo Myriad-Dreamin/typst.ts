@@ -417,8 +417,8 @@ impl EuclidMinMax for Point {
     }
 }
 
-/// Item representing all the transform that is applicable to a [`VecItem`].
-/// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/transform>
+/// Item representing all the transform that is applicable to a
+/// [`super::VecItem`]. See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/transform>
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]

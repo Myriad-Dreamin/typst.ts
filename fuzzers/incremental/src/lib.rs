@@ -82,8 +82,8 @@ impl Mutator {
                     .strip_suffix(backticks)
                     .unwrap();
                 if let Some(lang) = raw.lang() {
-                    text = text.strip_prefix(lang).unwrap();
-                    write!(self.output, "{lang}")?;
+                    text = text.strip_prefix(lang.get().as_str()).unwrap();
+                    write!(self.output, "{lang}", lang = lang.get())?;
                 }
 
                 // will not translate text inside raw blocks

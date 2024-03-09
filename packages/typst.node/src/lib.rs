@@ -60,7 +60,7 @@ impl NodeTypstDocument {
     pub fn date(&self) -> Option<i64> {
         self.0
             .date
-            .as_custom()
+            .custom()
             .flatten()
             .and_then(typst_datetime_to_unix_nanoseconds)
     }
@@ -89,7 +89,7 @@ fn typst_datetime_to_unix_nanoseconds(datetime: TypstDatetime) -> Option<i64> {
 
     let datetime = chrono::NaiveDateTime::new(date, time);
 
-    datetime.timestamp_nanos_opt()
+    datetime.and_utc().timestamp_nanos_opt()
 }
 
 /// Options to compile a document.
@@ -254,7 +254,7 @@ impl NodeCompiler {
         }
 
         Ok(typst_svg::svg_merged(
-            &res.result().unwrap().0.pages,
+            &res.result().unwrap().0,
             Default::default(),
         ))
     }

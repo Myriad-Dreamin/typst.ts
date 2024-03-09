@@ -91,7 +91,6 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
     /// Render the gradients for SVG
     /// <svg> <defs> <gradient/> </defs> .. </svg>
     ///              ^^^^^^^^^^^
-    /// See [`GradientMap`].
     pub fn gradients<'a>(
         gradients: impl Iterator<Item = (&'a Fingerprint, &'a GradientItem)>,
         svg: &mut Vec<SvgText>,

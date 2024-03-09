@@ -508,7 +508,7 @@ where
             let source = world.source(source_id).ok()?;
             let cursor = source.line_column_to_byte(line, character)?;
 
-            jump_from_cursor(&doc.pages, &source, cursor)
+            jump_from_cursor(&doc, &source, cursor)
         })
         .await
     }
@@ -594,7 +594,11 @@ fn ensure_single_thread<F: std::future::Future<Output = ()> + Send + 'static>(
 }
 
 /// Find the output location in the document for a cursor position.
-pub fn jump_from_cursor(frames: &[Frame], source: &Source, cursor: usize) -> Option<Position> {
+pub fn jump_from_cursor(
+    document: &TypstDocument,
+    source: &Source,
+    cursor: usize,
+) -> Option<Position> {
     let node = LinkedNode::new(source.root()).leaf_at(cursor)?;
     if node.kind() != SyntaxKind::Text {
         return None;
@@ -605,9 +609,9 @@ pub fn jump_from_cursor(frames: &[Frame], source: &Source, cursor: usize) -> Opt
     let mut ppage = 0usize;
 
     let span = node.span();
-    for (i, frame) in frames.iter().enumerate() {
+    for (i, page) in document.pages.iter().enumerate() {
         let t_dis = min_dis;
-        if let Some(pos) = find_in_frame(frame, span, &mut min_dis, &mut p) {
+        if let Some(pos) = find_in_frame(&page.frame, span, &mut min_dis, &mut p) {
             return Some(Position {
                 page: NonZeroUsize::new(i + 1)?,
                 point: pos,

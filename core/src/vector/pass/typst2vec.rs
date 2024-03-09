@@ -138,7 +138,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             .map(|(idx, p)| {
                 let page_reg = self.spans.start();
 
-                let abs_ref = self.frame(introspector, p, page_reg, idx);
+                let abs_ref = self.frame(introspector, &p.frame, page_reg, idx);
 
                 self.spans.push_span(SourceRegion {
                     region: doc_reg,
@@ -149,7 +149,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
                 Page {
                     content: abs_ref,
-                    size: p.size().into_typst(),
+                    size: p.frame.size().into_typst(),
                 }
             })
             .collect();
@@ -296,9 +296,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                         #[cfg(not(feature = "no-content-hint"))]
                         Meta::ContentHint(c) => self.store(VecItem::ContentHint(*c)),
                         // todo: support page label
-                        Meta::PdfPageLabel(..) | Meta::PageNumbering(..) | Meta::Hide => {
-                            return None
-                        }
+                        Meta::Hide => return None,
                     },
                 };
 
@@ -561,15 +559,15 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
         FixedStroke {
             paint,
             thickness,
-            line_cap,
-            line_join,
-            dash_pattern,
+            cap,
+            join,
+            dash,
             miter_limit,
         }: &FixedStroke,
         styles: &mut Vec<PathStyle>,
     ) {
         // todo: default miter_limit, thickness
-        if let Some(pattern) = dash_pattern.as_ref() {
+        if let Some(pattern) = dash.as_ref() {
             styles.push(PathStyle::StrokeDashOffset(pattern.phase.into_typst()));
             let d = pattern.array.clone();
             let d = d.into_iter().map(Scalar::from_typst).collect();
@@ -578,12 +576,12 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
         styles.push(PathStyle::StrokeWidth((*thickness).into_typst()));
         styles.push(PathStyle::StrokeMitterLimit((*miter_limit).into_typst()));
-        match line_cap {
+        match cap {
             LineCap::Butt => {}
             LineCap::Round => styles.push(PathStyle::StrokeLineCap("round".into())),
             LineCap::Square => styles.push(PathStyle::StrokeLineCap("square".into())),
         };
-        match line_join {
+        match join {
             LineJoin::Miter => {}
             LineJoin::Bevel => styles.push(PathStyle::StrokeLineJoin("bevel".into())),
             LineJoin::Round => styles.push(PathStyle::StrokeLineJoin("round".into())),
