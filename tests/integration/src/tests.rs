@@ -637,12 +637,16 @@ mod tests {
         // text_content_hash:
         // "sha256:e96d18327a60513e2375c2dfa12d17872c97304df451630781965a6ae8031b45"
         // "###);
-        check_canvas_render_test_point!(@r###"
-        ---
-        name: text_emoji_01_artifact_ir
-        data_content_phash: "phash-gradient:AAAAAAAAAAAAAAAAAAAAAAAAKAAAAAAAKAAAeAAAuAAAuAAAqQAAKQAAbAEAZAEAYAEAYAAAAAAAIAAAAAAAAAAAAAAAAAAA"
-        text_content_hash: "sha256:4317f46900063f5e598a07d44c10a38d2947205168be6442ca451daa186371a2"
-        "###);
+        // todo: we don't compile it with emoji fonts
+        // check_canvas_render_test_point!(@r###"
+        // ---
+        // name: text_emoji_01_artifact_ir
+        // data_content_phash:
+        // "phash-gradient:
+        // AAAAAAAAAAAAAAAAAAAAAAAAKAAAAAAAKAAAeAAAuAAAuAAAqQAAKQAAbAEAZAEAYAEAYAAAAAAAIAAAAAAAAAAAAAAAAAAA"
+        // text_content_hash:
+        // "sha256:4317f46900063f5e598a07d44c10a38d2947205168be6442ca451daa186371a2"
+        // "###);
         check_canvas_render_test_point!(@r###"
         ---
         name: visualize_line_00_artifact_ir

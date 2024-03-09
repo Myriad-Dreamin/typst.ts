@@ -497,9 +497,9 @@ mod tests {
         "text/deco_02"
     );
 
-    make_test_point!(
-        test_render_text_emoji,
-        // "text/emoji_00",
-        "text/emoji_01"
-    );
+    // make_test_point!(
+    //     test_render_text_emoji,
+    //     // "text/emoji_00",
+    //     "text/emoji_01"
+    // );
 }
