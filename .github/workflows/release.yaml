@@ -77,10 +77,7 @@ jobs:
       - name: Run Native Build
         shell: pwsh
         run: |
-          cargo run --bin typst-ts-fontctl
-          cargo build --release -p typst-ts-fontctl --target ${{ matrix.rust-target }}
           cargo build --release --manifest-path cli/Cargo.toml --target ${{ matrix.rust-target }} --bin typst-ts-cli
-          cargo build --profile release-stripped -p typst-ts-fontctl --target ${{ matrix.rust-target }}
           cargo build --profile release-stripped --manifest-path cli/Cargo.toml --target ${{ matrix.rust-target }} --bin typst-ts-cli
       - uses: actions/upload-artifact@v3
         with:
@@ -121,10 +118,7 @@ jobs:
           CROSS_DOCKER_IN_DOCKER: true
       - name: Run Cross Build
         run: |
-          docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo run --bin typst-ts-fontctl
-          docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo build -p typst-ts-fontctl --release --target ${CARGO_TARGET}
           docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo build --manifest-path cli/Cargo.toml --release --target ${CARGO_TARGET} --bin typst-ts-cli
-          docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo build -p typst-ts-fontctl --profile release-stripped --target ${CARGO_TARGET}
           docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GITHUB_WORKSPACE}:/project -w /project typst-ts/riscv64:latest cargo build --manifest-path cli/Cargo.toml --profile release-stripped --target ${CARGO_TARGET} --bin typst-ts-cli
         env:
           CROSS_DOCKER_IN_DOCKER: true
@@ -165,10 +159,7 @@ jobs:
           git config --global --add safe.directory $PWD
       - name: build binaries
         run: |
-          cargo run --bin typst-ts-fontctl
-          cargo build --release -p typst-ts-fontctl --target $RUST_TARGET
           cargo build --release --manifest-path cli/Cargo.toml --target $RUST_TARGET --bin typst-ts-cli
-          cargo build --profile release-stripped -p typst-ts-fontctl --target $RUST_TARGET
           cargo build --profile release-stripped --manifest-path cli/Cargo.toml --target $RUST_TARGET --bin typst-ts-cli
       - uses: actions/upload-artifact@v3
         with:
