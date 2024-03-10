@@ -481,7 +481,6 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             _ => None,
         };
 
-        #[cfg(feature = "text-stroke")]
         let stateful_stroke = match &text.stroke {
             Some(FixedStroke {
                 paint: Paint::Pattern(..) | Paint::Gradient(..),
@@ -493,14 +492,12 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
         #[derive(Hash)]
         struct TextHashKey<'i> {
             stateful_fill: Option<Arc<str>>,
-            #[cfg(feature = "text-stroke")]
             stateful_stroke: Option<Arc<str>>,
             text: &'i TypstTextItem,
         }
 
         let cond = TextHashKey {
             stateful_fill: stateful_fill.clone(),
-            #[cfg(feature = "text-stroke")]
             stateful_stroke: stateful_stroke.clone(),
             text,
         };
@@ -525,8 +522,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             let font = self.glyphs.build_font(&text.font);
             let fill = stateful_fill.unwrap_or_else(|| self.paint(introspector, &text.fill));
 
-            let styles = vec![PathStyle::Fill(fill)];
-            #[cfg(feature = "text-stroke")]
+            let mut styles = vec![PathStyle::Fill(fill)];
             if let Some(stroke) = text.stroke.as_ref() {
                 self.stroke(introspector, stateful_stroke, stroke, &mut styles);
             }
