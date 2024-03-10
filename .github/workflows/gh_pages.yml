@@ -57,6 +57,7 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: Download font assets
         run: |
+          mkdir -p assets/fonts
           curl -L https://github.com/Myriad-Dreamin/typst-book/releases/download/v0.1.0/charter-font-assets.tar.gz | tar -xvz -C assets/fonts
       - name: Build
         run: |
