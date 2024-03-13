@@ -8,8 +8,8 @@
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
   "dependencies": {
-    "@myriaddreamin/typst-ts-renderer": "^0.4.2-rc7",
-    "@myriaddreamin/typst.ts": "^0.4.2-rc7"
+    "@myriaddreamin/typst-ts-renderer": "^0.4.2-rc8",
+    "@myriaddreamin/typst.ts": "^0.4.2-rc8"
   },
   "devDependencies": {
     "@types/web": "^0.0.99",
