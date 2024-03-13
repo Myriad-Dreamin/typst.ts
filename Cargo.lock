@@ -2861,7 +2861,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "base64 0.22.0",
  "bitvec",
@@ -2886,7 +2886,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2canvas"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -4210,7 +4210,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 [[package]]
 name = "typst"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-content-hint#eba115da35fae22d4525018b0cb66316ced6c3f0"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-2-content-hint#e5a81af2fac79a6f08492fe30978544b44c24a11"
 dependencies = [
  "az",
  "bitflags 2.4.2",
@@ -4281,7 +4281,7 @@ source = "git+https://github.com/typst/typst-dev-assets?rev=c63ab46#c63ab467b6d2
 [[package]]
 name = "typst-ide"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-content-hint#eba115da35fae22d4525018b0cb66316ced6c3f0"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-2-content-hint#e5a81af2fac79a6f08492fe30978544b44c24a11"
 dependencies = [
  "comemo",
  "ecow",
@@ -4295,7 +4295,7 @@ dependencies = [
 [[package]]
 name = "typst-macros"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-content-hint#eba115da35fae22d4525018b0cb66316ced6c3f0"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-2-content-hint#e5a81af2fac79a6f08492fe30978544b44c24a11"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -4306,7 +4306,7 @@ dependencies = [
 [[package]]
 name = "typst-pdf"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-content-hint#eba115da35fae22d4525018b0cb66316ced6c3f0"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-2-content-hint#e5a81af2fac79a6f08492fe30978544b44c24a11"
 dependencies = [
  "base64 0.22.0",
  "bytemuck",
@@ -4331,7 +4331,7 @@ dependencies = [
 [[package]]
 name = "typst-svg"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-content-hint#eba115da35fae22d4525018b0cb66316ced6c3f0"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-2-content-hint#e5a81af2fac79a6f08492fe30978544b44c24a11"
 dependencies = [
  "base64 0.22.0",
  "comemo",
@@ -4348,7 +4348,7 @@ dependencies = [
 [[package]]
 name = "typst-syntax"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-content-hint#eba115da35fae22d4525018b0cb66316ced6c3f0"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-2-content-hint#e5a81af2fac79a6f08492fe30978544b44c24a11"
 dependencies = [
  "comemo",
  "ecow",
@@ -4364,7 +4364,7 @@ dependencies = [
 [[package]]
 name = "typst-timing"
 version = "0.10.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-content-hint#eba115da35fae22d4525018b0cb66316ced6c3f0"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.0-2-content-hint#e5a81af2fac79a6f08492fe30978544b44c24a11"
 dependencies = [
  "parking_lot",
  "serde",
@@ -4374,7 +4374,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-ast-exporter"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "ansi_term",
  "typst",
@@ -4383,7 +4383,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-bench-lowering"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "comemo",
  "divan",
@@ -4397,7 +4397,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-cli"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4434,7 +4434,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-compiler"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "append-only-vec",
  "base64 0.22.0",
@@ -4478,7 +4478,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-core"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "base64 0.22.0",
  "base64-serde",
@@ -4518,7 +4518,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-dev-server"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "clap",
  "clap_complete",
@@ -4536,7 +4536,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-dom-exporter"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "async-recursion",
  "base64 0.22.0",
@@ -4561,7 +4561,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-heap-profile-test"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4576,7 +4576,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-fuzzer"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4596,7 +4596,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-test"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4612,7 +4612,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-integration-test"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "anyhow",
  "base64 0.22.0",
@@ -4636,7 +4636,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-node-compiler"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "chrono",
  "napi",
@@ -4655,7 +4655,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-parser"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "base64 0.22.0",
  "comemo",
@@ -4679,7 +4679,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-pdf-exporter"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "typst",
  "typst-pdf",
@@ -4688,7 +4688,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-remote-server"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "clap",
  "clap_complete",
@@ -4708,7 +4708,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-renderer"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -4742,14 +4742,14 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-rkyv-assertions"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "typst-ts-core",
 ]
 
 [[package]]
 name = "typst-ts-serde-exporter"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "rmp-serde",
  "serde",
@@ -4760,7 +4760,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-std-test"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "anyhow",
  "rayon",
@@ -4769,7 +4769,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-svg-exporter"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "base64 0.22.0",
  "comemo",
@@ -4785,7 +4785,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-test-common"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -4796,7 +4796,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-text-exporter"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "typst",
  "typst-ts-core",
@@ -4804,7 +4804,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-web-compiler"
-version = "0.4.2-rc7"
+version = "0.4.2-rc8"
 dependencies = [
  "ansi-to-html",
  "base64 0.22.0",
