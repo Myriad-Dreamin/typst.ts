@@ -185,6 +185,14 @@ where
         let (dep_tx, dep_rx) = tokio::sync::mpsc::unbounded_channel();
         let (fs_tx, mut fs_rx) = tokio::sync::mpsc::unbounded_channel();
 
+        let settle_notify_tx = dep_tx.clone();
+        let settle_notify = move || {
+            log_send_error(
+                "settle_notify",
+                settle_notify_tx.send(NotifyMessage::Settle),
+            )
+        };
+
         // Wrap sender to send compiler response.
         let compiler_ack = move |res: CompilerResponse| match res {
             CompilerResponse::Notify(msg) => {
@@ -193,8 +201,9 @@ where
         };
 
         // Spawn file system watcher.
+        log_send_error("fs_event", fs_tx.send(None));
         tokio::spawn(super::watch_deps(dep_rx, move |event| {
-            log_send_error("fs_event", fs_tx.send(event));
+            log_send_error("fs_event", fs_tx.send(Some(event)));
         }));
 
         // Spawn compiler thread.
@@ -234,6 +243,7 @@ where
                 }
             }
 
+            settle_notify();
             log::debug!("CompileActor: exited");
         })
         .unwrap();

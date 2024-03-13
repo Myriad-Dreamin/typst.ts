@@ -164,7 +164,7 @@ impl NotifyActor {
             NotifyEvent(NotifyEvent),
         }
 
-        loop {
+        'event_loop: loop {
             // Get the event from the inbox or the watcher.
             let event = tokio::select! {
                 Some(it) = inbox.recv() => Some(ActorEvent::Message(it)),
@@ -184,6 +184,10 @@ impl NotifyActor {
             // log::info!("vfs-notify event {event:?}");
             // function entries to handle some event
             match event {
+                ActorEvent::Message(NotifyMessage::Settle) => {
+                    log::info!("NotifyActor: settle event received");
+                    break 'event_loop;
+                }
                 ActorEvent::Message(NotifyMessage::UpstreamUpdate(event)) => {
                     self.invalidate_upstream(event);
                 }
@@ -203,6 +207,8 @@ impl NotifyActor {
                 }
             }
         }
+
+        log::info!("NotifyActor: exited");
     }
 
     /// Update the watches of corresponding invalidation
@@ -534,7 +540,7 @@ fn log_send_error<T>(chan: &'static str, res: Result<(), mpsc::error::SendError<
 
 pub async fn watch_deps(
     inbox: mpsc::UnboundedReceiver<NotifyMessage>,
-    mut interrupted_by_events: impl FnMut(Option<FilesystemEvent>),
+    mut interrupted_by_events: impl FnMut(FilesystemEvent),
 ) {
     // Setup file watching.
     let (tx, mut rx) = mpsc::unbounded_channel();
@@ -545,8 +551,8 @@ pub async fn watch_deps(
 
     // Handle events.
     log::debug!("start watching files...");
-    interrupted_by_events(None);
     while let Some(event) = rx.recv().await {
-        interrupted_by_events(Some(event));
+        interrupted_by_events(event);
     }
+    log::debug!("stop watching files...");
 }

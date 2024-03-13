@@ -170,7 +170,9 @@ pub enum FilesystemEvent {
 /// A message that is sent to some file watcher
 #[derive(Debug)]
 pub enum NotifyMessage {
-    /// override all dependencies
+    /// Oettle the watching
+    Settle,
+    /// Overrides all dependencies
     SyncDependency(Vec<ImmutPath>),
     /// upstream invalidation This is very important to make some atomic changes
     ///
