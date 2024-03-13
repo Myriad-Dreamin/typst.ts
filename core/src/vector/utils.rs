@@ -46,7 +46,7 @@ impl ToCssExt for Rgba8Item {
 
 impl ToCssExt for Color {
     fn to_css(self) -> String {
-        let [r, g, b, a] = self.to_vec4_u8();
+        let [r, g, b, a] = self.to_rgb().to_vec4_u8();
         Rgba8Item { r, g, b, a }.to_css()
     }
 }
