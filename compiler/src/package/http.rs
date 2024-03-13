@@ -2,6 +2,7 @@ use std::{cell::OnceCell, path::Path, sync::Arc};
 
 use log::error;
 use parking_lot::Mutex;
+use reqwest::blocking::Response;
 use typst::{
     diag::{eco_format, EcoString},
     syntax::package::PackageVersion,
@@ -94,22 +95,24 @@ impl HttpRegistry {
         );
 
         self.notifier.lock().downloading(spec);
-        let client = reqwest::blocking::Client::builder().build().unwrap();
-        let reader = match client.get(url).send().and_then(|r| r.error_for_status()) {
-            Ok(response) => response,
-            Err(err) if matches!(err.status().map(|s| s.as_u16()), Some(404)) => {
-                return Err(PackageError::NotFound(spec.clone()))
-            }
-            Err(err) => return Err(PackageError::NetworkFailed(Some(eco_format!("{err}")))),
-        };
+        threaded_http(&url, |resp| {
+            let reader = match resp.and_then(|r| r.error_for_status()) {
+                Ok(response) => response,
+                Err(err) if matches!(err.status().map(|s| s.as_u16()), Some(404)) => {
+                    return Err(PackageError::NotFound(spec.clone()))
+                }
+                Err(err) => return Err(PackageError::NetworkFailed(Some(eco_format!("{err}")))),
+            };
 
-        let decompressed = flate2::read::GzDecoder::new(reader);
-        tar::Archive::new(decompressed)
-            .unpack(package_dir)
-            .map_err(|err| {
-                std::fs::remove_dir_all(package_dir).ok();
-                PackageError::MalformedArchive(Some(eco_format!("{err}")))
-            })
+            let decompressed = flate2::read::GzDecoder::new(reader);
+            tar::Archive::new(decompressed)
+                .unpack(package_dir)
+                .map_err(|err| {
+                    std::fs::remove_dir_all(package_dir).ok();
+                    PackageError::MalformedArchive(Some(eco_format!("{err}")))
+                })
+        })
+        .ok_or_else(|| PackageError::Other(Some(eco_format!("cannot spawn http thread"))))?
     }
 }
 
@@ -122,44 +125,60 @@ impl Registry for HttpRegistry {
         self.packages.get_or_init(|| {
             let url = "https://packages.typst.org/preview/index.json";
 
-            let client = reqwest::blocking::Client::builder().build().unwrap();
-            let reader = match client.get(url).send().and_then(|r| r.error_for_status()) {
-                Ok(response) => response,
-                Err(err) => {
-                    // todo: silent error
-                    error!("Failed to fetch package index: {} from {}", err, url);
-                    return vec![];
+            threaded_http(url, |resp| {
+                let reader = match resp.and_then(|r| r.error_for_status()) {
+                    Ok(response) => response,
+                    Err(err) => {
+                        // todo: silent error
+                        error!("Failed to fetch package index: {} from {}", err, url);
+                        return vec![];
+                    }
+                };
+
+                #[derive(serde::Deserialize)]
+                struct RemotePackageIndex {
+                    name: EcoString,
+                    version: PackageVersion,
+                    description: Option<EcoString>,
                 }
-            };
 
-            #[derive(serde::Deserialize)]
-            struct RemotePackageIndex {
-                name: EcoString,
-                version: PackageVersion,
-                description: Option<EcoString>,
-            }
+                let index: Vec<RemotePackageIndex> = match serde_json::from_reader(reader) {
+                    Ok(index) => index,
+                    Err(err) => {
+                        error!("Failed to parse package index: {} from {}", err, url);
+                        return vec![];
+                    }
+                };
 
-            let index: Vec<RemotePackageIndex> = match serde_json::from_reader(reader) {
-                Ok(index) => index,
-                Err(err) => {
-                    error!("Failed to parse package index: {} from {}", err, url);
-                    return vec![];
-                }
-            };
-
-            index
-                .into_iter()
-                .map(|e| {
-                    (
-                        PackageSpec {
-                            namespace: "preview".into(),
-                            name: e.name,
-                            version: e.version,
-                        },
-                        e.description,
-                    )
-                })
-                .collect::<Vec<_>>()
+                index
+                    .into_iter()
+                    .map(|e| {
+                        (
+                            PackageSpec {
+                                namespace: "preview".into(),
+                                name: e.name,
+                                version: e.version,
+                            },
+                            e.description,
+                        )
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default()
         })
     }
+}
+
+fn threaded_http<T: Send + Sync>(
+    url: &str,
+    f: impl FnOnce(Result<Response, reqwest::Error>) -> T + Send + Sync,
+) -> Option<T> {
+    std::thread::scope(|s| {
+        s.spawn(|| {
+            let client = reqwest::blocking::Client::builder().build().unwrap();
+            f(client.get(url).send())
+        })
+        .join()
+        .ok()
+    })
 }
