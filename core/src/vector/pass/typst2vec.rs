@@ -756,7 +756,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
     fn graident(&self, g: &Gradient) -> Fingerprint {
         let mut stops = Vec::with_capacity(g.stops_ref().len());
         for (c, step) in g.stops_ref() {
-            let [r, g, b, a] = c.to_vec4_u8();
+            let [r, g, b, a] = c.to_rgb().to_vec4_u8();
             stops.push((Rgba8Item { r, g, b, a }, (*step).into_typst()))
         }
 
