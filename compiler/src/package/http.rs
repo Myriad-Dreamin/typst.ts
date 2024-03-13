@@ -1,18 +1,27 @@
-use std::{path::Path, sync::Arc};
+use std::{cell::OnceCell, path::Path, sync::Arc};
 
+use log::error;
 use parking_lot::Mutex;
-use typst::diag::eco_format;
+use typst::{
+    diag::{eco_format, EcoString},
+    syntax::package::PackageVersion,
+};
 
 use super::{DummyNotifier, Notifier, PackageError, PackageSpec, Registry};
 
 pub struct HttpRegistry {
     notifier: Arc<Mutex<dyn Notifier + Send>>,
+
+    packages: OnceCell<Vec<(PackageSpec, Option<EcoString>)>>,
 }
 
 impl Default for HttpRegistry {
     fn default() -> Self {
         Self {
             notifier: Arc::new(Mutex::<DummyNotifier>::default()),
+
+            // todo: reset cache
+            packages: OnceCell::new(),
         }
     }
 }
@@ -86,7 +95,7 @@ impl HttpRegistry {
 
         self.notifier.lock().downloading(spec);
         let client = reqwest::blocking::Client::builder().build().unwrap();
-        let reader = match client.get(url).send() {
+        let reader = match client.get(url).send().and_then(|r| r.error_for_status()) {
             Ok(response) => response,
             Err(err) if matches!(err.status().map(|s| s.as_u16()), Some(404)) => {
                 return Err(PackageError::NotFound(spec.clone()))
@@ -107,5 +116,50 @@ impl HttpRegistry {
 impl Registry for HttpRegistry {
     fn resolve(&self, spec: &PackageSpec) -> Result<std::sync::Arc<Path>, PackageError> {
         self.prepare_package(spec)
+    }
+
+    fn packages(&self) -> &[(PackageSpec, Option<EcoString>)] {
+        self.packages.get_or_init(|| {
+            let url = "https://packages.typst.org/preview/index.json";
+
+            let client = reqwest::blocking::Client::builder().build().unwrap();
+            let reader = match client.get(url).send().and_then(|r| r.error_for_status()) {
+                Ok(response) => response,
+                Err(err) => {
+                    // todo: silent error
+                    error!("Failed to fetch package index: {} from {}", err, url);
+                    return vec![];
+                }
+            };
+
+            #[derive(serde::Deserialize)]
+            struct RemotePackageIndex {
+                name: EcoString,
+                version: PackageVersion,
+                description: Option<EcoString>,
+            }
+
+            let index: Vec<RemotePackageIndex> = match serde_json::from_reader(reader) {
+                Ok(index) => index,
+                Err(err) => {
+                    error!("Failed to parse package index: {} from {}", err, url);
+                    return vec![];
+                }
+            };
+
+            index
+                .into_iter()
+                .map(|e| {
+                    (
+                        PackageSpec {
+                            namespace: "preview".into(),
+                            name: e.name,
+                            version: e.version,
+                        },
+                        e.description,
+                    )
+                })
+                .collect::<Vec<_>>()
+        })
     }
 }

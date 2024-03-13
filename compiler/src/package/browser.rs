@@ -1,7 +1,7 @@
 use std::{io::Read, path::Path};
 
 use js_sys::Uint8Array;
-use typst::diag::eco_format;
+use typst::diag::{eco_format, EcoString};
 use wasm_bindgen::{prelude::*, JsValue};
 
 use super::{PackageError, PackageSpec, Registry};
@@ -104,5 +104,10 @@ impl Registry for ProxyRegistry {
                     Ok(Path::new(&v.as_string().unwrap()).into())
                 }
             })
+    }
+
+    // todo: provide package list for browser
+    fn packages(&self) -> &[(PackageSpec, Option<EcoString>)] {
+        &[]
     }
 }
