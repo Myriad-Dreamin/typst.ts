@@ -9,7 +9,7 @@ use comemo::Prehashed;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use typst::{
-    diag::{eco_format, At, FileError, FileResult, Hint, SourceResult},
+    diag::{eco_format, At, EcoString, FileError, FileResult, Hint, SourceResult},
     foundations::{Datetime, Dict},
     syntax::{Source, Span, VirtualPath},
     text::{Font, FontBook},
@@ -18,6 +18,7 @@ use typst::{
 
 use typst_ts_core::{
     font::{FontProfile, FontResolverImpl},
+    package::PackageSpec,
     Bytes, FontResolver, ImmutPath, TypstFileId as FileId,
 };
 
@@ -187,6 +188,16 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
             naive.month().try_into().ok()?,
             naive.day().try_into().ok()?,
         )
+    }
+
+    /// A list of all available packages and optionally descriptions for them.
+    ///
+    /// This function is optional to implement. It enhances the user experience
+    /// by enabling autocompletion for packages. Details about packages from the
+    /// `@preview` namespace are available from
+    /// `https://packages.typst.org/preview/index.json`.
+    fn packages(&self) -> &[(PackageSpec, Option<EcoString>)] {
+        self.registry.packages()
     }
 }
 
