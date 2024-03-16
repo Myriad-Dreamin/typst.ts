@@ -74,15 +74,15 @@ strip = true
 
 # typesetting
 pixglyph = "0.3"
-typst = "0.10.0"
-typst-ide = "0.10.0"
-typst-pdf = "0.10.0"
-typst-svg = "0.10.0"
-typst-syntax = "0.10.0"
+typst = "0.11.0"
+typst-ide = "0.11.0"
+typst-pdf = "0.11.0"
+typst-svg = "0.11.0"
+typst-syntax = "0.11.0"
 ttf-parser = "0.20.0"
 
-typst-assets = { git = "https://github.com/typst/typst-assets", rev = "4d1211a" }
-typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", rev = "c63ab46" }
+typst-assets = "0.11.0"
+typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", rev = "e0ef7ad" }
 
 # general
 anyhow = "1"
@@ -237,11 +237,11 @@ typst-ts-text-exporter = { path = "exporter/text" }
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
 # comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
-typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-2-content-hint" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-2-content-hint" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-2-content-hint" }
-typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-2-content-hint" }
-typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-2-content-hint" }
+typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-3-content-hint" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-3-content-hint" }
+typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-3-content-hint" }
+typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-3-content-hint" }
+typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.0-3-content-hint" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }
