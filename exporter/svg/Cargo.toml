@@ -18,6 +18,7 @@ tiny-skia.workspace = true
 base64.workspace = true
 
 typst-ts-core.workspace = true
+reflexo = { workspace = true, features = ["flat-vector"] }
 reflexo-vec2canvas = { workspace = true, optional = true }
 log.workspace = true
 siphasher.workspace = true
@@ -26,4 +27,5 @@ rayon.workspace = true
 [features]
 experimental-ligature = ["typst-ts-core/experimental-ligature"]
 aggresive-browser-rasterization = ["reflexo-vec2canvas"]
+no-content-hint = ["typst-ts-core/no-content-hint"]
 default = []

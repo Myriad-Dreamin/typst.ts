@@ -84,6 +84,7 @@ serde.workspace = true
 cjk = []
 emoji = []
 lazy-fontdb = ["dep:rayon"]
+no-content-hint = ["typst-ts-core/no-content-hint"]
 system-compile = [
     "dep:dirs",
     "dep:walkdir",

@@ -4777,6 +4777,7 @@ dependencies = [
  "log",
  "once_cell",
  "rayon",
+ "reflexo",
  "reflexo-vec2canvas",
  "siphasher 1.0.0",
  "tiny-skia",
