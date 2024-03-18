@@ -17,9 +17,7 @@ use typst::{
 };
 
 use typst_ts_core::{
-    font::{FontProfile, FontResolverImpl},
-    package::PackageSpec,
-    Bytes, FontResolver, ImmutPath, TypstFileId as FileId,
+    font::FontProfile, package::PackageSpec, Bytes, FontResolver, ImmutPath, TypstFileId as FileId,
 };
 
 use crate::{
@@ -29,8 +27,8 @@ use crate::{
         get_semantic_tokens_full, get_semantic_tokens_legend, OffsetEncoding, SemanticToken,
         SemanticTokensLegend,
     },
-    service::{EnvWorld, WorkspaceProvider},
-    vfs::{AccessModel as VfsAccessModel, Vfs},
+    service::{CompileEnv, EnvWorld, WorkspaceProvider},
+    vfs::{notify::FilesystemEvent, AccessModel as VfsAccessModel, Vfs},
     NotifyApi, ShadowApi, Time,
 };
 
@@ -39,6 +37,8 @@ type CodespanError = codespan_reporting::files::Error;
 
 /// type trait interface of [`CompilerWorld`].
 pub trait CompilerFeat {
+    /// Specify the font resolver for typst compiler.
+    type FontResolver: FontResolver + Sized;
     /// Specify the access model for VFS.
     type AccessModel: VfsAccessModel + Sized;
     /// Specify the package registry.
@@ -60,7 +60,7 @@ pub struct CompilerWorld<F: CompilerFeat> {
     /// Provides library for typst compiler.
     library: Option<Arc<Prehashed<Library>>>,
     /// Provides font management for typst compiler.
-    pub font_resolver: FontResolverImpl,
+    pub font_resolver: F::FontResolver,
     /// Provides package management for typst compiler.
     pub registry: F::Registry,
     /// Provides path-based data access for typst compiler.
@@ -82,7 +82,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         root_dir: PathBuf,
         vfs: Vfs<F::AccessModel>,
         registry: F::Registry,
-        font_resolver: FontResolverImpl,
+        font_resolver: F::FontResolver,
     ) -> Self {
         Self {
             root: root_dir.into(),
@@ -123,7 +123,7 @@ impl<F: CompilerFeat> EnvWorld for CompilerWorld<F> {
         Ok(())
     }
 
-    fn prepare_env(&mut self, _env: &mut crate::service::CompileEnv) -> SourceResult<()> {
+    fn prepare_env(&mut self, _env: &mut CompileEnv) -> SourceResult<()> {
         // Hook up the lang items.
         // todo: bad upstream changes
         self.library = Some(create_library(self.inputs.clone()));
@@ -325,7 +325,7 @@ impl<F: CompilerFeat> NotifyApi for CompilerWorld<F> {
     }
 
     #[inline]
-    fn notify_fs_event(&mut self, event: crate::vfs::notify::FilesystemEvent) {
+    fn notify_fs_event(&mut self, event: FilesystemEvent) {
         self.vfs.notify_fs_event(event)
     }
 }

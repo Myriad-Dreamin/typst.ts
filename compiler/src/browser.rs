@@ -12,6 +12,8 @@ pub type TypstBrowserWorld = crate::world::CompilerWorld<BrowserCompilerFeat>;
 pub struct BrowserCompilerFeat;
 
 impl crate::world::CompilerFeat for BrowserCompilerFeat {
+    /// Uses [`FontResolverImpl`] directly.
+    type FontResolver = FontResolverImpl;
     type AccessModel = ProxyAccessModel;
     type Registry = ProxyRegistry;
 
