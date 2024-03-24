@@ -6,7 +6,7 @@ use typst_ts_compiler::{
     ShadowApiExt, TypstSystemWorld,
 };
 use typst_ts_core::{
-    config::CompileOpts,
+    config::{compiler::EntryOpts, CompileOpts},
     exporter_builtins::GroupExporter,
     vector::{
         incr::{IncrDocClient, IncrDocServer},
@@ -25,7 +25,7 @@ fn get_driver(
     let project_base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let font_path = project_base.join("assets/fonts");
     let world = TypstSystemWorld::new(CompileOpts {
-        root_dir: workspace_dir.to_owned(),
+        entry: EntryOpts::new_workspace(workspace_dir.into()),
         no_system_fonts: true,
         font_paths: vec![font_path],
         ..CompileOpts::default()

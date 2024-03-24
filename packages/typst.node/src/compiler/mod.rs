@@ -15,7 +15,7 @@ use typst_ts_compiler::{
     TypstSystemWorld,
 };
 use typst_ts_core::{
-    config::CompileFontOpts,
+    config::{compiler::EntryState, CompileFontOpts},
     error::prelude::*,
     typst::{foundations::IntoValue, prelude::Prehashed},
     Bytes, TypstDict,
@@ -152,7 +152,7 @@ pub fn create_driver(args: NodeCompileArgs) -> ZResult<CompileDriver> {
     })?;
 
     let mut world = TypstSystemWorld::new_raw(
-        workspace_dir.clone(),
+        EntryState::new_rooted(workspace_dir.into(), None),
         Vfs::new(SystemAccessModel {}),
         HttpRegistry::default(),
         searcher.into(),

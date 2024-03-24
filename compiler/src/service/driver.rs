@@ -9,7 +9,7 @@ use typst::{
     syntax::Span,
     World,
 };
-use typst_ts_core::{config::compiler::EntryState, Bytes, ImmutPath, TypstFileId};
+use typst_ts_core::{config::compiler::DETACHED_ENTRY, Bytes, ImmutPath, TypstFileId};
 
 use super::{Compiler, EntryManager, EnvWorld};
 
@@ -43,28 +43,14 @@ impl<W: World + EntryManager> CompileDriverImpl<W> {
     /// set an entry file.
     pub fn set_entry_file(&mut self, entry_file: Arc<Path>) -> SourceResult<()> {
         let state = self.world.entry_state();
-        let root = matches!(state, EntryState::Workspace { .. })
-            .then(|| self.world.workspace_root())
-            .flatten();
+        let state = state
+            .try_select_path_in_workspace(&entry_file, true)
+            .map_err(|e| eco_format!("cannot select entry file out of workspace: {e}"))
+            .at(Span::detached())?
+            .ok_or_else(|| eco_format!("failed to determine root"))
+            .at(Span::detached())?;
 
-        self.world
-            .mutate_entry(match root {
-                Some(root) => match entry_file.strip_prefix(&root) {
-                    Ok(p) => EntryState::new_with_root(
-                        root.clone(),
-                        Some(TypstFileId::new(
-                            None,
-                            typst_ts_core::typst::syntax::VirtualPath::new(p),
-                        )),
-                    ),
-                    Err(e) => {
-                        return Err(eco_format!("entry file is not in workspace: {}", e))
-                            .at(Span::detached())
-                    }
-                },
-                None => EntryState::new_rootless(self.entry_file.clone()).unwrap(),
-            })
-            .map(|_| ())?;
+        self.world.mutate_entry(state).map(|_| ())?;
         self.entry_file = entry_file;
         Ok(())
     }
@@ -86,7 +72,7 @@ impl<W: World + EnvWorld + EntryManager + NotifyApi> Compiler for CompileDriverI
     }
 
     fn main_id(&self) -> TypstFileId {
-        self.world.main_id().unwrap()
+        self.world.main_id().unwrap_or_else(|| *DETACHED_ENTRY)
     }
 
     /// reset the compilation state

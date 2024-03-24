@@ -7,7 +7,7 @@ use typst_ts_compiler::{
     TypstSystemWorld,
 };
 use typst_ts_core::{
-    config::CompileOpts,
+    config::{compiler::EntryOpts, CompileOpts},
     exporter_builtins::{FsPathExporter, GroupExporter},
     path::PathClean,
     TypstDocument,
@@ -21,7 +21,7 @@ fn get_driver(
     exporter: GroupExporter<TypstDocument>,
 ) -> CompileExporter<CompileDriver> {
     let world = TypstSystemWorld::new(CompileOpts {
-        root_dir: workspace_dir.to_owned(),
+        entry: EntryOpts::new_workspace(workspace_dir.into()),
         no_system_fonts: true,
         ..CompileOpts::default()
     })

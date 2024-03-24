@@ -79,13 +79,13 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     /// + See [`crate::TypstSystemWorld::new`] for system environment.
     /// + See [`crate::TypstBrowserWorld::new`] for browser environment.
     pub fn new_raw(
-        root_dir: PathBuf,
+        entry: EntryState,
         vfs: Vfs<F::AccessModel>,
         registry: F::Registry,
         font_resolver: F::FontResolver,
     ) -> Self {
         Self {
-            entry: EntryState::new_with_root(root_dir.into(), None),
+            entry,
             inputs: Arc::new(Prehashed::new(Dict::new())),
 
             library: None,
@@ -139,12 +139,8 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
 
     /// Access the main source file.
     fn main(&self) -> Source {
-        match &self.entry {
-            EntryState::Workspace { .. } | EntryState::PreparedEntry { .. } => {
-                self.source(self.entry.main().unwrap()).unwrap()
-            }
-            EntryState::Detached { source, .. } => source.clone(),
-        }
+        self.source(self.entry.main().unwrap_or_else(|| *DETACHED_ENTRY))
+            .unwrap()
     }
 
     /// Metadata about all known fonts.
@@ -164,10 +160,11 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
     /// same on-disk file. Implementors can deduplicate and return the same
     /// `Source` if they want to, but do not have to.
     fn source(&self, id: FileId) -> FileResult<Source> {
-        if let EntryState::Detached { source, .. } = &self.entry {
-            if source.id() == id {
-                return Ok(source.clone());
-            }
+        static DETACH_SOURCE: once_cell::sync::Lazy<Source> =
+            once_cell::sync::Lazy::new(|| Source::new(*DETACHED_ENTRY, String::new()));
+
+        if id == *DETACHED_ENTRY {
+            return Ok(DETACH_SOURCE.clone());
         }
 
         self.vfs.resolve(&self.path_for_id(id)?, id)

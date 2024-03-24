@@ -21,7 +21,7 @@ use typst_ts_cli::{
     QueryArgs, QueryReplArgs, Subcommands,
 };
 use typst_ts_compiler::TypstSystemWorld;
-use typst_ts_core::exporter_builtins::GroupExporter;
+use typst_ts_core::{config::compiler::EntryOpts, exporter_builtins::GroupExporter};
 use typst_ts_core::{
     config::CompileOpts,
     error::prelude::*,
@@ -173,7 +173,7 @@ fn list_fonts(command: ListFontsArgs) -> ! {
     root_path.push("-");
 
     let world = TypstSystemWorld::new(CompileOpts {
-        root_dir: root_path,
+        entry: EntryOpts::new_workspace(root_path.as_path().into()),
         font_paths: command.font.paths,
         with_embedded_fonts: fonts().map(Cow::Borrowed).collect(),
         ..CompileOpts::default()
@@ -208,7 +208,7 @@ fn measure_fonts(args: MeasureFontsArgs) -> ! {
     }
 
     let world = TypstSystemWorld::new(CompileOpts {
-        root_dir: root_path,
+        entry: EntryOpts::new_workspace(root_path.as_path().into()),
         font_paths: args.font.paths,
         font_profile_cache_path: args.output.clone(),
         no_system_fonts: args.no_system_fonts,

@@ -4,7 +4,11 @@ use typst_ts_compiler::{
     service::{CompileDriver, CompileExporter, Compiler},
     ShadowApiExt, TypstSystemWorld,
 };
-use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, TypstDocument};
+use typst_ts_core::{
+    config::{compiler::EntryOpts, CompileOpts},
+    exporter_builtins::GroupExporter,
+    TypstDocument,
+};
 
 fn get_driver(
     workspace_dir: &Path,
@@ -12,7 +16,7 @@ fn get_driver(
     exporter: GroupExporter<TypstDocument>,
 ) -> CompileExporter<CompileDriver> {
     let world = TypstSystemWorld::new(CompileOpts {
-        root_dir: workspace_dir.to_owned(),
+        entry: EntryOpts::new_workspace(workspace_dir.into()),
         no_system_fonts: true,
         ..CompileOpts::default()
     })

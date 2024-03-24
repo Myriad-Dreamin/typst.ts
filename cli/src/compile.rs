@@ -3,9 +3,10 @@ use std::io::{self, Read};
 use std::path::Path;
 
 use typst::diag::{FileError, FileResult};
-use typst::foundations::{Dict, IntoValue};
+use typst::foundations::{Bytes, Dict, IntoValue};
 use typst::model::Document;
 use typst_ts_compiler::service::EntryManager;
+use typst_ts_compiler::ShadowApi;
 use typst_ts_compiler::{
     service::{
         features::{FeatureSet, DIAG_FMT_FEATURE},
@@ -13,7 +14,7 @@ use typst_ts_compiler::{
     },
     TypstSystemWorld,
 };
-use typst_ts_core::config::compiler::EntryState;
+use typst_ts_core::config::compiler::{EntryOpts, MEMORY_MAIN_ENTRY};
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
 
 use crate::font::fonts;
@@ -36,6 +37,8 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
         cwd.join(workspace_dir)
     };
 
+    let workspace_dir = workspace_dir.clean();
+
     let is_stdin = entry == "-";
     let entry_file_path = if is_stdin || entry_file_path.is_absolute() {
         entry_file_path
@@ -43,6 +46,8 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
         let cwd = std::env::current_dir().unwrap_or_exit();
         cwd.join(entry_file_path)
     };
+
+    let entry_file_path = entry_file_path.clean();
 
     if !is_stdin && !entry_file_path.starts_with(&workspace_dir) {
         clap::Error::raw(
@@ -63,7 +68,7 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
         .collect();
 
     let world = TypstSystemWorld::new(CompileOpts {
-        root_dir: workspace_dir.clone(),
+        entry: EntryOpts::new_workspace(workspace_dir.clone()),
         inputs,
         font_paths: args.font.paths.clone(),
         with_embedded_fonts: fonts()
@@ -76,6 +81,10 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
 
     if is_stdin {
         let mut driver = CompileDriver::new(world);
+
+        let entry = driver.world.entry.select_in_workspace(*MEMORY_MAIN_ENTRY);
+        driver.world.mutate_entry(entry).unwrap();
+
         let src = read_from_stdin()
             .map_err(|err| {
                 clap::Error::raw(
@@ -85,12 +94,16 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
                 .exit()
             })
             .unwrap();
+
         driver
-            .world
-            .mutate_entry(EntryState::new_detached(
-                src,
-                std::env::current_dir().ok().map(|e| e.as_path().into()),
-            ))
+            .map_shadow_by_id(*MEMORY_MAIN_ENTRY, Bytes::from(src))
+            .map_err(|err| {
+                clap::Error::raw(
+                    clap::error::ErrorKind::Io,
+                    format!("map stdin failed: {err}\n"),
+                )
+                .exit()
+            })
             .unwrap();
 
         driver
@@ -165,7 +178,7 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
 }
 
 /// Read from stdin.
-fn read_from_stdin() -> FileResult<String> {
+fn read_from_stdin() -> FileResult<Vec<u8>> {
     let mut buf = Vec::new();
     let result = io::stdin().read_to_end(&mut buf);
     match result {
@@ -174,16 +187,5 @@ fn read_from_stdin() -> FileResult<String> {
         Err(err) => return Err(FileError::from_io(err, Path::new("<stdin>"))),
     }
 
-    from_utf8_or_bom(buf)
-}
-
-/// Convert a byte slice to a string, removing UTF-8 BOM if present.
-fn from_utf8_or_bom(buf: Vec<u8>) -> FileResult<String> {
-    Ok(String::from_utf8(if buf.starts_with(b"\xef\xbb\xbf") {
-        // remove UTF-8 BOM
-        buf[3..].to_vec()
-    } else {
-        // Assume UTF-8
-        buf
-    })?)
+    Ok(buf)
 }

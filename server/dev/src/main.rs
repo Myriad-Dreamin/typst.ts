@@ -1,7 +1,8 @@
 use clap::Parser;
 use log::info;
 use std::borrow::Cow;
-use std::{path::PathBuf, process::exit};
+use std::env::current_dir;
+use std::process::exit;
 use tokio::io::AsyncBufReadExt;
 use typst_ts_compiler::service::features::WITH_COMPILING_STATUS_FEATURE;
 
@@ -50,6 +51,7 @@ fn main() {
 
 fn compile_corpus(args: CompileCorpusArgs) {
     let corpus_path = "fuzzers/corpora";
+    let corpus_path = current_dir().unwrap().join(corpus_path);
 
     let mut compile_formats = args.format.clone();
     if compile_formats.is_empty() {
@@ -81,7 +83,7 @@ fn compile_corpus(args: CompileCorpusArgs) {
     let feat_set = std::sync::Arc::new(feat_set);
 
     let mut compile = |cat: String, name: String| {
-        let entry = PathBuf::from(corpus_path).join(cat).join(name).clean();
+        let entry = corpus_path.join(cat).join(name).clean();
 
         let exporter = typst_ts_cli::export::prepare_exporters(&compile_args, Some(&entry));
 
@@ -101,7 +103,7 @@ fn compile_corpus(args: CompileCorpusArgs) {
     for cat in args.catergories.clone() {
         info!("compile corpus in {cat}...");
 
-        let cat_dir = PathBuf::from(corpus_path).join(&cat);
+        let cat_dir = corpus_path.join(&cat);
 
         let corpora = std::fs::read_dir(&cat_dir).unwrap();
 

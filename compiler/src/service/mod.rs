@@ -39,11 +39,6 @@ pub use export::*;
 pub mod features;
 pub mod query;
 
-#[cfg(feature = "system-compile")]
-pub(crate) mod session;
-#[cfg(feature = "system-compile")]
-pub use session::*;
-
 pub use self::{diag::DiagnosticFormat, features::FeatureSet};
 
 #[cfg(feature = "system-compile")]

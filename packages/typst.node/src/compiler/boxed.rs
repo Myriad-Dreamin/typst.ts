@@ -10,7 +10,7 @@ use typst_ts_compiler::{
     ShadowApi, TypstSystemWorld,
 };
 use typst_ts_core::{
-    config::compiler::EntryState,
+    config::compiler::{EntryState, MEMORY_MAIN_ENTRY},
     error::{prelude::*, TypstFileError, TypstSourceDiagnostic},
     error_once,
     foundations::Content,
@@ -33,8 +33,14 @@ pub trait NodeCompilerTrait: Compiler<World = TypstSystemWorld> + ShadowApi {
                     )));
                 }
 
-                // todo: cwd
-                Some(EntryState::new_detached(main_file_content, None))
+                let new_entry = self.world().entry.select_in_workspace(*MEMORY_MAIN_ENTRY);
+
+                let content = Bytes::from(main_file_content.as_bytes());
+                if let Err(err) = self.world().map_shadow_by_id(*MEMORY_MAIN_ENTRY, content) {
+                    return Err(map_node_error(error_once!("cannot map shadow", err: err)));
+                }
+
+                Some(new_entry)
             } else if let Some(main_file_path) = compile_by.main_file_path {
                 if compile_by.main_file_content.is_some() {
                     return Err(map_node_error(error_once!(
@@ -46,7 +52,7 @@ pub trait NodeCompilerTrait: Compiler<World = TypstSystemWorld> + ShadowApi {
                 Some(match self.world().workspace_root() {
                     Some(root) => {
                         if let Ok(p) = root.strip_prefix(fp) {
-                            EntryState::new_with_root(
+                            EntryState::new_rooted(
                                 root.clone(),
                                 Some(TypstFileId::new(
                                     None,
