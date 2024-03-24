@@ -14,6 +14,8 @@ use crate::{
 pub struct SystemCompilerFeat;
 
 impl crate::world::CompilerFeat for SystemCompilerFeat {
+    /// Uses [`FontResolverImpl`] directly.
+    type FontResolver = FontResolverImpl;
     /// It accesses a physical file system.
     type AccessModel = SystemAccessModel;
     /// It performs native HTTP requests for fetching package data.
