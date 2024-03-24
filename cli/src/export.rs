@@ -80,9 +80,10 @@ fn prepare_exporters_impl(
         }};
         (|| $exporter:tt as $ser:ty as $exporters:ident, $output_dir:ident @@ $extension:literal) => {{
             let output_path = $output_dir.with_extension($extension);
+            let exporter = $exporter;
             $exporters.push(Box::new(FsPathExporter::<$ser, _>::new(
                 output_path,
-                $exporter,
+                exporter,
             )));
         }};
     }
