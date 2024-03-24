@@ -117,8 +117,9 @@ fn compile(args: CompileArgs) -> ! {
         args
     };
 
-    let entry_file_path = Path::new(args.compile.entry.as_str()).clean();
-    let exporter = typst_ts_cli::export::prepare_exporters(&args, &entry_file_path);
+    let is_stdin = args.compile.entry == "-";
+    let entry_file_path = (!is_stdin).then(|| Path::new(args.compile.entry.as_str()).clean());
+    let exporter = typst_ts_cli::export::prepare_exporters(&args, entry_file_path.as_deref());
 
     compile_export(args, exporter)
 }

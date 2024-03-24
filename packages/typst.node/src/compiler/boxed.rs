@@ -6,10 +6,11 @@ use std::{
     sync::Arc,
 };
 use typst_ts_compiler::{
-    service::{CompileEnv, Compiler, EntryFileState, WorkspaceProvider},
+    service::{CompileEnv, Compiler, EntryManager},
     ShadowApi, TypstSystemWorld,
 };
 use typst_ts_core::{
+    config::compiler::EntryState,
     error::{prelude::*, TypstFileError, TypstSourceDiagnostic},
     error_once,
     foundations::Content,
@@ -19,49 +20,62 @@ use typst_ts_core::{
 
 use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocumentOptions, NodeError};
 
-pub trait NodeCompilerTrait:
-    Compiler<World = TypstSystemWorld> + ShadowApi + EntryFileState
-{
+pub trait NodeCompilerTrait: Compiler<World = TypstSystemWorld> + ShadowApi {
     fn setup_compiler_by(
         &mut self,
         compile_by: CompileDocumentOptions,
-    ) -> napi::Result<Option<PathBuf>, NodeError> {
-        let e;
-        if let Some(main_file_content) = compile_by.main_file_content {
-            if compile_by.main_file_path.is_some() {
-                return Err(map_node_error(error_once!(
-                    "main file content and path cannot be specified at the same time"
-                )));
+    ) -> napi::Result<Option<EntryState>, NodeError> {
+        let new_state = {
+            if let Some(main_file_content) = compile_by.main_file_content {
+                if compile_by.main_file_path.is_some() {
+                    return Err(map_node_error(error_once!(
+                        "main file content and path cannot be specified at the same time"
+                    )));
+                }
+
+                // todo: cwd
+                Some(EntryState::new_detached(main_file_content, None))
+            } else if let Some(main_file_path) = compile_by.main_file_path {
+                if compile_by.main_file_content.is_some() {
+                    return Err(map_node_error(error_once!(
+                        "main file content and path cannot be specified at the same time"
+                    )));
+                }
+
+                let fp = std::path::Path::new(main_file_path.as_str());
+                Some(match self.world().workspace_root() {
+                    Some(root) => {
+                        if let Ok(p) = root.strip_prefix(fp) {
+                            EntryState::new_with_root(
+                                root.clone(),
+                                Some(TypstFileId::new(
+                                    None,
+                                    typst_ts_core::typst::syntax::VirtualPath::new(p),
+                                )),
+                            )
+                        } else {
+                            EntryState::new_rootless(fp.into()).unwrap()
+                        }
+                    }
+                    None => {
+                        return Err(map_node_error(error_once!(
+                            "workspace root is not set, cannot set entry file"
+                        )))
+                    }
+                })
+            } else {
+                None
             }
+        };
 
-            let generated_file_path = self.world().workspace_root().join("__memory_file__.typ");
-            self.map_shadow(
-                &generated_file_path,
-                Bytes::from(main_file_content.into_bytes()),
-            )
-            .map_err(|e| e.to_string())
-            .context("failed to map shadow file")
-            .map_err(map_node_error)?;
+        let Some(new_state) = new_state else {
+            return Ok(None);
+        };
 
-            e = Some(self.get_entry_file().clone());
-            self.set_entry_file(generated_file_path.to_owned())
-                .map_err(map_node_error)?;
-        } else if let Some(main_file_path) = compile_by.main_file_path {
-            if compile_by.main_file_content.is_some() {
-                return Err(map_node_error(error_once!(
-                    "main file content and path cannot be specified at the same time"
-                )));
-            }
-
-            e = Some(self.get_entry_file().clone());
-            let main_file_path = std::path::Path::new(main_file_path.as_str());
-            self.set_entry_file(main_file_path.to_owned())
-                .map_err(map_node_error)?;
-        } else {
-            e = None;
-        }
-
-        Ok(e)
+        self.world_mut()
+            .mutate_entry(new_state)
+            .map(Some)
+            .map_err(map_node_error)
     }
 
     fn compile_raw(
@@ -73,7 +87,9 @@ pub trait NodeCompilerTrait:
         let res = self.pure_compile(&mut CompileEnv::default()).into();
 
         if let Some(entry_file) = e {
-            self.set_entry_file(entry_file).map_err(map_node_error)?;
+            self.world_mut()
+                .mutate_entry(entry_file)
+                .map_err(map_node_error)?;
         }
 
         Ok(res)

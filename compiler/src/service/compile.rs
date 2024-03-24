@@ -23,13 +23,13 @@ use crate::{
 };
 use typst_ts_core::{
     debug_loc::{SourceLocation, SourceSpanOffset},
-    error::prelude::{map_string_err, ZResult},
+    error::prelude::*,
     TypstDocument, TypstFileId,
 };
 
 use super::{
-    features::FeatureSet, CompileEnv, CompileReporter, Compiler, ConsoleDiagReporter,
-    WorkspaceProvider, WorldExporter,
+    features::FeatureSet, CompileEnv, CompileReporter, Compiler, ConsoleDiagReporter, EntryManager,
+    WorldExporter,
 };
 
 /// A task that can be sent to the context (compiler thread)
@@ -70,8 +70,6 @@ struct TaggedMemoryEvent {
 pub struct CompileActor<C: Compiler> {
     /// The underlying compiler.
     pub compiler: CompileReporter<C>,
-    /// The root path of the workspace.
-    pub root: PathBuf,
     /// Whether to enable file system watching.
     pub enable_watch: bool,
 
@@ -102,7 +100,7 @@ impl<C: Compiler + ShadowApi + WorldExporter + Send + 'static> CompileActor<C>
 where
     C::World: for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>,
 {
-    pub fn new_with_features(compiler: C, root: PathBuf, feature_set: FeatureSet) -> Self {
+    pub fn new_with_features(compiler: C, feature_set: FeatureSet) -> Self {
         let (steal_send, steal_recv) = mpsc::unbounded_channel();
         let (memory_send, memory_recv) = mpsc::unbounded_channel();
 
@@ -115,7 +113,6 @@ where
         Self {
             compiler: CompileReporter::new(compiler)
                 .with_generic_reporter(ConsoleDiagReporter::default()),
-            root,
 
             logical_tick: 1,
             enable_watch: false,
@@ -135,8 +132,8 @@ where
     }
 
     /// Create a new compiler thread.
-    pub fn new(compiler: C, root: PathBuf) -> Self {
-        Self::new_with_features(compiler, root, FeatureSet::default())
+    pub fn new(compiler: C) -> Self {
+        Self::new_with_features(compiler, FeatureSet::default())
     }
 
     fn make_env(&self, feature_set: Arc<FeatureSet>) -> CompileEnv {
@@ -497,7 +494,7 @@ pub struct DocToSrcJumpInfo {
 // todo: remove constraint to CompilerWorld
 impl<F: CompilerFeat, Ctx: Compiler<World = CompilerWorld<F>>> CompileClient<CompileActor<Ctx>>
 where
-    Ctx::World: WorkspaceProvider,
+    Ctx::World: EntryManager,
 {
     /// fixme: character is 0-based, UTF-16 code unit.
     /// We treat it as UTF-8 now.
@@ -512,9 +509,8 @@ where
 
             let world = this.compiler.world();
 
-            let relative_path = filepath
-                .strip_prefix(&this.compiler.world().workspace_root())
-                .ok()?;
+            let root = this.compiler.world().workspace_root()?;
+            let relative_path = filepath.strip_prefix(&root).ok()?;
 
             let source_id = TypstFileId::new(None, VirtualPath::new(relative_path));
             let source = world.source(source_id).ok()?;
@@ -535,9 +531,9 @@ where
             let world = this.compiler.world();
 
             let filepath = Path::new(&loc.filepath);
-            let relative_path = filepath
-                .strip_prefix(&this.compiler.world().workspace_root())
-                .ok()?;
+
+            let root = this.compiler.world().workspace_root()?;
+            let relative_path = filepath.strip_prefix(&root).ok()?;
 
             let source_id = TypstFileId::new(None, VirtualPath::new(relative_path));
             let source = world.source(source_id).ok()?;

@@ -159,8 +159,5 @@ pub fn create_driver(args: NodeCompileArgs) -> ZResult<CompileDriver> {
     );
     world.set_inputs(Arc::new(Prehashed::new(inputs)));
 
-    Ok(CompileDriver {
-        world,
-        entry_file: entry_file_path.to_owned(),
-    })
+    Ok(CompileDriver::new(world).with_entry_file(entry_file_path.to_owned()))
 }

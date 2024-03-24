@@ -4,10 +4,14 @@ use std::{
 };
 
 use crate::{NotifyApi, ShadowApi};
-use typst::{diag::SourceResult, syntax::VirtualPath, World};
-use typst_ts_core::{error::prelude::*, path::PathClean, Bytes, ImmutPath, TypstFileId};
+use typst::{
+    diag::{eco_format, At, SourceResult},
+    syntax::Span,
+    World,
+};
+use typst_ts_core::{config::compiler::EntryState, Bytes, ImmutPath, TypstFileId};
 
-use super::{Compiler, EntryFileState, EnvWorld, WorkspaceProvider};
+use super::{Compiler, EntryManager, EnvWorld};
 
 /// CompileDriverImpl is a driver for typst compiler.
 /// It is responsible for operating the compiler without leaking implementation
@@ -16,7 +20,7 @@ pub struct CompileDriverImpl<W: World> {
     /// World that has access to the file system.
     pub world: W,
     /// Path to the entry file.
-    pub entry_file: PathBuf,
+    entry_file: Arc<Path>,
 }
 
 impl<W: World> CompileDriverImpl<W> {
@@ -24,39 +28,53 @@ impl<W: World> CompileDriverImpl<W> {
     pub fn new(world: W) -> Self {
         Self {
             world,
-            entry_file: PathBuf::default(),
+            entry_file: Path::new("").into(),
         }
     }
+}
 
+impl<W: World + EntryManager> CompileDriverImpl<W> {
     /// Wrap driver with a given entry file.
     pub fn with_entry_file(mut self, entry_file: PathBuf) -> Self {
-        self.entry_file = entry_file;
+        self.set_entry_file(entry_file.as_path().into()).unwrap();
         self
     }
 
     /// set an entry file.
-    pub fn set_entry_file(&mut self, entry_file: PathBuf) {
+    pub fn set_entry_file(&mut self, entry_file: Arc<Path>) -> SourceResult<()> {
+        let state = self.world.entry_state();
+        let root = matches!(state, EntryState::Workspace { .. })
+            .then(|| self.world.workspace_root())
+            .flatten();
+
+        self.world
+            .mutate_entry(match root {
+                Some(root) => match entry_file.strip_prefix(&root) {
+                    Ok(p) => EntryState::new_with_root(
+                        root.clone(),
+                        Some(TypstFileId::new(
+                            None,
+                            typst_ts_core::typst::syntax::VirtualPath::new(p),
+                        )),
+                    ),
+                    Err(e) => {
+                        return Err(eco_format!("entry file is not in workspace: {}", e))
+                            .at(Span::detached())
+                    }
+                },
+                None => EntryState::new_rootless(self.entry_file.clone()).unwrap(),
+            })
+            .map(|_| ())?;
         self.entry_file = entry_file;
+        Ok(())
+    }
+
+    pub fn entry_file(&self) -> &Path {
+        &self.entry_file
     }
 }
 
-impl<W: World + WorkspaceProvider> CompileDriverImpl<W> {
-    /// Get the file id for a given path.
-    /// Note: only works for files in the workspace instead of external
-    /// packages.
-    pub fn id_for_path(&self, pb: PathBuf) -> TypstFileId {
-        let pb = if pb.is_absolute() {
-            let pb = pb.clean();
-            let root = self.world.workspace_root().clean();
-            pb.strip_prefix(root).unwrap().to_owned()
-        } else {
-            pb
-        };
-        TypstFileId::new(None, VirtualPath::new(pb))
-    }
-}
-
-impl<W: World + EnvWorld + WorkspaceProvider + NotifyApi> Compiler for CompileDriverImpl<W> {
+impl<W: World + EnvWorld + EntryManager + NotifyApi> Compiler for CompileDriverImpl<W> {
     type World = W;
 
     fn world(&self) -> &Self::World {
@@ -68,15 +86,13 @@ impl<W: World + EnvWorld + WorkspaceProvider + NotifyApi> Compiler for CompileDr
     }
 
     fn main_id(&self) -> TypstFileId {
-        self.id_for_path(self.entry_file.clone())
+        self.world.main_id().unwrap()
     }
 
     /// reset the compilation state
     fn reset(&mut self) -> SourceResult<()> {
         // reset the world caches
         self.world.reset()?;
-        // checkout the entry file
-        self.world.set_main_id(self.main_id());
 
         Ok(())
     }
@@ -130,25 +146,6 @@ impl<W: World + ShadowApi> ShadowApi for CompileDriverImpl<W> {
     #[inline]
     fn unmap_shadow(&self, path: &Path) -> typst::diag::FileResult<()> {
         self.world.unmap_shadow(path)
-    }
-}
-
-impl<W: World + ShadowApi + WorkspaceProvider> EntryFileState for CompileDriverImpl<W> {
-    fn set_entry_file(&mut self, path: PathBuf) -> ZResult<()> {
-        if !path.starts_with(&self.world.workspace_root()) {
-            return Err(error_once!(
-                "entry file path must be in workspace directory",
-                workspace_dir: self.world.workspace_root().display()
-            ));
-        }
-
-        self.entry_file = path;
-
-        Ok(())
-    }
-
-    fn get_entry_file(&self) -> &PathBuf {
-        &self.entry_file
     }
 }
 

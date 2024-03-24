@@ -13,7 +13,9 @@ use typst::{
     syntax::Span,
     World,
 };
-use typst_ts_core::{error::prelude::ZResult, typst::prelude::*, Bytes, ImmutPath, TypstFileId};
+use typst_ts_core::{
+    config::compiler::EntryState, typst::prelude::*, Bytes, ImmutPath, TypstFileId,
+};
 
 pub(crate) mod diag;
 #[cfg(feature = "system-compile")]
@@ -47,14 +49,18 @@ pub use self::{diag::DiagnosticFormat, features::FeatureSet};
 #[cfg(feature = "system-compile")]
 pub type CompileDriver = CompileDriverImpl<crate::TypstSystemWorld>;
 
-pub trait WorkspaceProvider {
+pub trait EntryManager {
     fn reset(&mut self) -> SourceResult<()> {
         Ok(())
     }
 
-    fn workspace_root(&self) -> Arc<Path>;
+    fn workspace_root(&self) -> Option<Arc<Path>>;
 
-    fn set_main_id(&mut self, id: TypstFileId);
+    fn main_id(&self) -> Option<TypstFileId>;
+
+    fn entry_state(&self) -> EntryState;
+
+    fn mutate_entry(&mut self, state: EntryState) -> SourceResult<EntryState>;
 }
 
 #[derive(Clone, Default)]
@@ -395,9 +401,4 @@ impl From<AtFile> for EcoString {
     fn from(at: AtFile) -> Self {
         eco_format!("at file {:?}", at.0)
     }
-}
-
-pub trait EntryFileState {
-    fn set_entry_file(&mut self, path: PathBuf) -> ZResult<()>;
-    fn get_entry_file(&self) -> &PathBuf;
 }

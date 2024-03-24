@@ -18,11 +18,7 @@ fn get_driver(
     })
     .unwrap();
 
-    let driver = CompileDriver {
-        world,
-        entry_file: entry_file_path.to_owned(),
-    };
-
+    let driver = CompileDriver::new(world).with_entry_file(entry_file_path.to_owned());
     CompileExporter::new(driver).with_exporter(exporter)
 }
 

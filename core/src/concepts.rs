@@ -31,7 +31,7 @@ pub mod typst {
 
         pub use typst::foundations::Datetime as TypstDatetime;
 
-        pub use typst::{diag, foundations};
+        pub use typst::{diag, foundations, syntax};
 
         pub trait FromTypst<T>: Sized {
             fn from_typst(value: T) -> Self;

@@ -83,12 +83,15 @@ fn compile_corpus(args: CompileCorpusArgs) {
     let mut compile = |cat: String, name: String| {
         let entry = PathBuf::from(corpus_path).join(cat).join(name).clean();
 
-        let exporter = typst_ts_cli::export::prepare_exporters(&compile_args, &entry);
+        let exporter = typst_ts_cli::export::prepare_exporters(&compile_args, Some(&entry));
 
         let exporter_layer = driver.inner_mut();
 
         exporter_layer.set_exporter(exporter);
-        exporter_layer.inner_mut().set_entry_file(entry);
+        exporter_layer
+            .inner_mut()
+            .set_entry_file(entry.as_path().into())
+            .unwrap();
 
         let _ = driver.compile(&mut CompileEnv::default().configure_shared(feat_set.clone()));
     };

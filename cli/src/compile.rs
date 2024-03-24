@@ -3,20 +3,20 @@ use std::io::{self, Read};
 use std::path::Path;
 
 use typst::diag::{FileError, FileResult};
-use typst::foundations::{Bytes, Dict, IntoValue};
+use typst::foundations::{Dict, IntoValue};
 use typst::model::Document;
-use typst_ts_compiler::ShadowApi;
+use typst_ts_compiler::service::EntryManager;
 use typst_ts_compiler::{
     service::{
         features::{FeatureSet, DIAG_FMT_FEATURE},
-        CompileActor, CompileDriver, CompileExporter, Compiler, DynamicLayoutCompiler,
+        CompileActor, CompileDriver, CompileExporter, DynamicLayoutCompiler,
     },
     TypstSystemWorld,
 };
+use typst_ts_core::config::compiler::EntryState;
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
 
 use crate::font::fonts;
-use crate::stdin_path;
 use crate::utils::current_dir;
 use crate::{
     tracing::TraceGuard,
@@ -26,7 +26,8 @@ use crate::{
 
 pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
     let workspace_dir = Path::new(args.workspace.as_str()).clean();
-    let entry_file_path = Path::new(args.entry.as_str()).clean();
+    let entry = args.entry;
+    let entry_file_path = Path::new(entry.as_str()).clean();
 
     let workspace_dir = if workspace_dir.is_absolute() {
         workspace_dir
@@ -35,14 +36,15 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
         cwd.join(workspace_dir)
     };
 
-    let entry_file_path = if Path::new("-") == entry_file_path || entry_file_path.is_absolute() {
+    let is_stdin = entry == "-";
+    let entry_file_path = if is_stdin || entry_file_path.is_absolute() {
         entry_file_path
     } else {
         let cwd = std::env::current_dir().unwrap_or_exit();
         cwd.join(entry_file_path)
     };
 
-    if Path::new("-") != entry_file_path && !entry_file_path.starts_with(&workspace_dir) {
+    if !is_stdin && !entry_file_path.starts_with(&workspace_dir) {
         clap::Error::raw(
             clap::error::ErrorKind::InvalidValue,
             format!(
@@ -72,9 +74,28 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
     })
     .unwrap_or_exit();
 
-    CompileDriver {
-        world,
-        entry_file: entry_file_path.to_owned(),
+    if is_stdin {
+        let mut driver = CompileDriver::new(world);
+        let src = read_from_stdin()
+            .map_err(|err| {
+                clap::Error::raw(
+                    clap::error::ErrorKind::Io,
+                    format!("read from stdin failed: {err}\n"),
+                )
+                .exit()
+            })
+            .unwrap();
+        driver
+            .world
+            .mutate_entry(EntryState::new_detached(
+                src,
+                std::env::current_dir().ok().map(|e| e.as_path().into()),
+            ))
+            .unwrap();
+
+        driver
+    } else {
+        CompileDriver::new(world).with_entry_file(entry_file_path)
     }
 }
 
@@ -87,6 +108,7 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
         .exit()
     }
 
+    let is_stdin = args.compile.entry == "-";
     let driver = create_driver(args.compile.clone());
 
     let _trace_guard = {
@@ -101,62 +123,33 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
         guard.unwrap()
     };
 
-    if driver.entry_file == stdin_path() {
-        if args.watch {
-            clap::Error::raw(
-                clap::error::ErrorKind::ArgumentConflict,
-                "cannot watch on stdin\n",
-            )
-            .exit()
-        }
-
-        driver
-            .map_shadow(
-                stdin_path(),
-                Bytes::from(
-                    read_from_stdin()
-                        .map_err(|err| {
-                            clap::Error::raw(
-                                clap::error::ErrorKind::Io,
-                                format!("read from stdin failed: {err}\n"),
-                            )
-                            .exit()
-                        })
-                        .unwrap(),
-                ),
-            )
-            .unwrap();
-    }
-
     // todo: make dynamic layout exporter
     let output_dir = {
         // If output is specified, use it.
         let dir = (!args.compile.output.is_empty()).then(|| Path::new(&args.compile.output));
         // Otherwise, use the parent directory of the entry file.
         let dir = dir.map(Path::to_owned).unwrap_or_else(|| {
-            if driver.entry_file == stdin_path() {
+            if is_stdin {
                 current_dir()
             } else {
                 driver
-                    .entry_file
+                    .entry_file()
                     .parent()
                     .expect("entry_file has no parent")
                     .to_owned()
             }
         });
-        if driver.entry_file == stdin_path() {
+        if is_stdin {
             dir.join("main")
         } else {
             dir.join(
                 driver
-                    .entry_file
+                    .entry_file()
                     .file_name()
                     .expect("entry_file has no file name"),
             )
         }
     };
-
-    let watch_root = driver.world().root.as_ref().to_owned();
 
     let feature_set =
         FeatureSet::default().configure(&DIAG_FMT_FEATURE, args.diagnostic_format.into());
@@ -164,8 +157,7 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
     // CompileExporter + DynamicLayoutCompiler + WatchDriver
     let driver = CompileExporter::new(driver).with_exporter(exporter);
     let driver = DynamicLayoutCompiler::new(driver, output_dir).with_enable(args.dynamic_layout);
-    let actor =
-        CompileActor::new_with_features(driver, watch_root, feature_set).with_watch(args.watch);
+    let actor = CompileActor::new_with_features(driver, feature_set).with_watch(args.watch);
 
     utils::async_continue(async move {
         utils::logical_exit(actor.run());
@@ -173,7 +165,7 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
 }
 
 /// Read from stdin.
-fn read_from_stdin() -> FileResult<Vec<u8>> {
+fn read_from_stdin() -> FileResult<String> {
     let mut buf = Vec::new();
     let result = io::stdin().read_to_end(&mut buf);
     match result {
@@ -181,5 +173,17 @@ fn read_from_stdin() -> FileResult<Vec<u8>> {
         Err(err) if err.kind() == io::ErrorKind::BrokenPipe => (),
         Err(err) => return Err(FileError::from_io(err, Path::new("<stdin>"))),
     }
-    Ok(buf)
+
+    from_utf8_or_bom(buf)
+}
+
+/// Convert a byte slice to a string, removing UTF-8 BOM if present.
+fn from_utf8_or_bom(buf: Vec<u8>) -> FileResult<String> {
+    Ok(String::from_utf8(if buf.starts_with(b"\xef\xbb\xbf") {
+        // remove UTF-8 BOM
+        buf[3..].to_vec()
+    } else {
+        // Assume UTF-8
+        buf
+    })?)
 }
