@@ -153,10 +153,7 @@ impl<Inner: AccessModel, C: Clone> AccessModel for CachedAccessModel<Inner, C> {
 
     fn is_file(&self, src: &Path) -> FileResult<bool> {
         self.cache_entry(src, |entry| {
-            entry
-                .is_file
-                .compute(|| self.inner.is_file(src))
-                .map(|q| *q)
+            entry.is_file.compute(|| self.inner.is_file(src)).copied()
         })
     }
 
