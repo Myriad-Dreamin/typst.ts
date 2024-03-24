@@ -36,3 +36,35 @@ pub struct CompileOpts {
     #[serde_as(as = "Vec<AsCowBytes>")]
     pub with_embedded_fonts: Vec<Cow<'static, [u8]>>,
 }
+
+#[serde_as]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct CompileFontOpts {
+    /// Path to font profile for cache
+    #[serde(rename = "fontProfileCachePath")]
+    pub font_profile_cache_path: PathBuf,
+
+    /// will remove later
+    #[serde(rename = "fontPaths")]
+    pub font_paths: Vec<PathBuf>,
+
+    /// Exclude system font paths
+    #[serde(rename = "noSystemFonts")]
+    pub no_system_fonts: bool,
+
+    /// Include embedded fonts
+    #[serde(rename = "withEmbeddedFonts")]
+    #[serde_as(as = "Vec<AsCowBytes>")]
+    pub with_embedded_fonts: Vec<Cow<'static, [u8]>>,
+}
+
+impl From<CompileOpts> for CompileFontOpts {
+    fn from(opts: CompileOpts) -> Self {
+        Self {
+            font_profile_cache_path: opts.font_profile_cache_path,
+            font_paths: opts.font_paths,
+            no_system_fonts: opts.no_system_fonts,
+            with_embedded_fonts: opts.with_embedded_fonts,
+        }
+    }
+}

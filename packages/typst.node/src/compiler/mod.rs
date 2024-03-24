@@ -15,7 +15,7 @@ use typst_ts_compiler::{
     TypstSystemWorld,
 };
 use typst_ts_core::{
-    config::CompileOpts,
+    config::CompileFontOpts,
     error::prelude::*,
     typst::{foundations::IntoValue, prelude::Prehashed},
     Bytes, TypstDict,
@@ -146,9 +146,9 @@ pub fn create_driver(args: NodeCompileArgs) -> ZResult<CompileDriver> {
         }
     }
 
-    searcher.resolve_opts(CompileOpts {
+    searcher.resolve_opts(CompileFontOpts {
         with_embedded_fonts: typst_ts_cli::font::fonts().map(Cow::Borrowed).collect(),
-        ..CompileOpts::default()
+        ..CompileFontOpts::default()
     })?;
 
     let mut world = TypstSystemWorld::new_raw(

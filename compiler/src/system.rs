@@ -44,7 +44,7 @@ impl TypstSystemWorld {
     /// Resolve fonts from given options.
     fn resolve_fonts(opts: CompileOpts) -> ZResult<FontResolverImpl> {
         let mut searcher = SystemFontSearcher::new();
-        searcher.resolve_opts(opts)?;
+        searcher.resolve_opts(opts.into())?;
         Ok(searcher.into())
     }
 }

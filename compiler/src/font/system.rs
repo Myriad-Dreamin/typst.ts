@@ -15,7 +15,7 @@ use typst::{
 
 use typst_ts_core::{
     build_info,
-    config::CompileOpts,
+    config::CompileFontOpts,
     error::prelude::ZResult,
     font::{
         BufferFontLoader, FontProfile, FontProfileItem, FontResolverImpl, LazyBufferFontLoader,
@@ -106,7 +106,7 @@ impl SystemFontSearcher {
     }
 
     /// Resolve fonts from given options.
-    pub fn resolve_opts(&mut self, opts: CompileOpts) -> ZResult<()> {
+    pub fn resolve_opts(&mut self, opts: CompileFontOpts) -> ZResult<()> {
         if opts
             .font_profile_cache_path
             .to_str()
