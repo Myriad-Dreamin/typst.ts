@@ -5,6 +5,7 @@ use tracing::dispatcher;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{fmt, prelude::*, Layer};
 
+#[allow(unused)]
 pub struct TraceGuard(dispatcher::DefaultGuard);
 
 /// A guard for the tracing subscriber.
