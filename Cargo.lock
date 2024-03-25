@@ -2849,7 +2849,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "base64 0.22.0",
  "bitvec",
@@ -2874,7 +2874,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2canvas"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -4363,7 +4363,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-ast-exporter"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "ansi_term",
  "typst",
@@ -4372,7 +4372,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-bench-lowering"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "comemo",
  "divan",
@@ -4386,7 +4386,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-cli"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4423,7 +4423,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-compiler"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "append-only-vec",
  "base64 0.22.0",
@@ -4467,7 +4467,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-core"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "base64 0.22.0",
  "base64-serde",
@@ -4507,7 +4507,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-dev-server"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "clap",
  "clap_complete",
@@ -4525,7 +4525,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-dom-exporter"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "async-recursion",
  "base64 0.22.0",
@@ -4550,7 +4550,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-heap-profile-test"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4565,7 +4565,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-fuzzer"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4585,7 +4585,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-test"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4601,7 +4601,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-integration-test"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "anyhow",
  "base64 0.22.0",
@@ -4625,7 +4625,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-node-compiler"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "chrono",
  "napi",
@@ -4644,7 +4644,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-parser"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "base64 0.22.0",
  "comemo",
@@ -4668,7 +4668,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-pdf-exporter"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "typst",
  "typst-pdf",
@@ -4677,7 +4677,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-renderer"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -4711,14 +4711,14 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-rkyv-assertions"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "typst-ts-core",
 ]
 
 [[package]]
 name = "typst-ts-serde-exporter"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "rmp-serde",
  "serde",
@@ -4729,7 +4729,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-std-test"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "anyhow",
  "rayon",
@@ -4738,7 +4738,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-svg-exporter"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "base64 0.22.0",
  "comemo",
@@ -4755,7 +4755,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-test-common"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -4766,7 +4766,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-text-exporter"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "typst",
  "typst-ts-core",
@@ -4774,7 +4774,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-web-compiler"
-version = "0.4.2-rc9"
+version = "0.4.2-rc10"
 dependencies = [
  "ansi-to-html",
  "base64 0.22.0",
