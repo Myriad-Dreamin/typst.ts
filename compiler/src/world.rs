@@ -17,7 +17,10 @@ use typst::{
 };
 
 use typst_ts_core::{
-    font::FontProfile, package::PackageSpec, Bytes, FontResolver, ImmutPath, TypstFileId as FileId,
+    config::compiler::{EntryState, DETACHED_ENTRY},
+    font::FontProfile,
+    package::PackageSpec,
+    Bytes, FontResolver, ImmutPath, TypstFileId as FileId,
 };
 
 use crate::{
@@ -27,7 +30,7 @@ use crate::{
         get_semantic_tokens_full, get_semantic_tokens_legend, OffsetEncoding, SemanticToken,
         SemanticTokensLegend,
     },
-    service::{CompileEnv, EnvWorld, WorkspaceProvider},
+    service::{CompileEnv, EntryManager, EnvWorld},
     vfs::{notify::FilesystemEvent, AccessModel as VfsAccessModel, Vfs},
     NotifyApi, ShadowApi, Time,
 };
@@ -48,23 +51,20 @@ pub trait CompilerFeat {
 /// A world that provides access to the operating system.
 #[derive(Debug)]
 pub struct CompilerWorld<F: CompilerFeat> {
-    /// Path to the root directory of compilation.
+    /// State for the *root & entry* of compilation.
     /// The world forbids direct access to files outside this directory.
-    pub root: Arc<Path>,
-    /// Identifier of the main file.
-    /// After resetting the world, this is set to a detached file.
-    pub main: Option<FileId>,
+    pub entry: EntryState,
     /// Additional input arguments to compile the entry file.
     pub inputs: Arc<Prehashed<Dict>>,
 
     /// Provides library for typst compiler.
-    library: Option<Arc<Prehashed<Library>>>,
+    pub library: Option<Arc<Prehashed<Library>>>,
     /// Provides font management for typst compiler.
     pub font_resolver: F::FontResolver,
     /// Provides package management for typst compiler.
     pub registry: F::Registry,
     /// Provides path-based data access for typst compiler.
-    vfs: Vfs<F::AccessModel>,
+    pub vfs: Vfs<F::AccessModel>,
 
     /// The current datetime if requested. This is stored here to ensure it is
     /// always the same within one compilation. Reset between compilations.
@@ -79,14 +79,13 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     /// + See [`crate::TypstSystemWorld::new`] for system environment.
     /// + See [`crate::TypstBrowserWorld::new`] for browser environment.
     pub fn new_raw(
-        root_dir: PathBuf,
+        entry: EntryState,
         vfs: Vfs<F::AccessModel>,
         registry: F::Registry,
         font_resolver: F::FontResolver,
     ) -> Self {
         Self {
-            root: root_dir.into(),
-            main: None,
+            entry,
             inputs: Arc::new(Prehashed::new(Dict::new())),
 
             library: None,
@@ -140,7 +139,8 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
 
     /// Access the main source file.
     fn main(&self) -> Source {
-        self.source(self.main.unwrap()).unwrap()
+        self.source(self.entry.main().unwrap_or_else(|| *DETACHED_ENTRY))
+            .unwrap()
     }
 
     /// Metadata about all known fonts.
@@ -160,6 +160,13 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
     /// same on-disk file. Implementors can deduplicate and return the same
     /// `Source` if they want to, but do not have to.
     fn source(&self, id: FileId) -> FileResult<Source> {
+        static DETACH_SOURCE: once_cell::sync::Lazy<Source> =
+            once_cell::sync::Lazy::new(|| Source::new(*DETACHED_ENTRY, String::new()));
+
+        if id == *DETACHED_ENTRY {
+            return Ok(DETACH_SOURCE.clone());
+        }
+
         self.vfs.resolve(&self.path_for_id(id)?, id)
     }
 
@@ -221,15 +228,18 @@ impl<F: CompilerFeat> CompilerWorld<F> {
 
     /// Resolve the real path for a file id.
     pub fn path_for_id(&self, id: FileId) -> Result<PathBuf, FileError> {
-        if id.vpath().as_rootless_path() == Path::new("-") {
-            return Ok(PathBuf::from("-"));
+        if id == *DETACHED_ENTRY {
+            return Ok(DETACHED_ENTRY.vpath().as_rooted_path().to_owned());
         }
 
         // Determine the root path relative to which the file path
         // will be resolved.
         let root = match id.package() {
             Some(spec) => self.registry.resolve(spec)?,
-            None => self.root.clone(),
+            None => self.entry.root().ok_or(FileError::Other(Some(eco_format!(
+                "cannot access directory without root: state: {:?}",
+                self.entry
+            ))))?,
         };
 
         // Join the path to the root. If it tries to escape, deny
@@ -238,14 +248,16 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     }
 
     /// Get found dependencies in current state of vfs.
-    pub fn get_dependencies(&self) -> DependencyTree {
+    pub fn get_dependencies(&self) -> Option<DependencyTree> {
+        let root = self.entry.root()?;
+
         let t = self.vfs.iter_dependencies();
         let vfs_dependencies = t.map(|(path, mtime)| DependentFileInfo {
             path: path.as_ref().to_owned(),
             mtime: mtime.duration_since(Time::UNIX_EPOCH).unwrap().as_micros() as u64,
         });
 
-        DependencyTree::from_iter(&self.root, vfs_dependencies)
+        Some(DependencyTree::from_iter(&root, vfs_dependencies))
     }
 
     pub fn get_semantic_token_legend(&self) -> Arc<SemanticTokensLegend> {
@@ -259,7 +271,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     ) -> Arc<Vec<SemanticToken>> {
         let src = &file_path
             .and_then(|e| {
-                let relative_path = Path::new(&e).strip_prefix(&self.workspace_root()).ok()?;
+                let relative_path = Path::new(&e).strip_prefix(&self.workspace_root()?).ok()?;
 
                 let source_id = FileId::new(None, VirtualPath::new(relative_path));
                 self.source(source_id).ok()
@@ -284,6 +296,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     /// Lookup a source file by id.
     #[track_caller]
     fn lookup(&self, id: FileId) -> Source {
+        println!("lookup: {:?}", id);
         self.source(id)
             .expect("file id does not point to any source file")
     }
@@ -330,18 +343,28 @@ impl<F: CompilerFeat> NotifyApi for CompilerWorld<F> {
     }
 }
 
-impl<F: CompilerFeat> WorkspaceProvider for CompilerWorld<F> {
+impl<F: CompilerFeat> EntryManager for CompilerWorld<F> {
     fn reset(&mut self) -> SourceResult<()> {
         self.reset();
         Ok(())
     }
 
-    fn workspace_root(&self) -> Arc<Path> {
-        self.root.clone()
+    fn workspace_root(&self) -> Option<Arc<Path>> {
+        self.entry.root().clone()
     }
 
-    fn set_main_id(&mut self, id: FileId) {
-        self.main = Some(id)
+    fn main_id(&self) -> Option<FileId> {
+        self.entry.main()
+    }
+
+    fn entry_state(&self) -> EntryState {
+        self.entry.clone()
+    }
+
+    fn mutate_entry(&mut self, mut state: EntryState) -> SourceResult<EntryState> {
+        self.reset();
+        std::mem::swap(&mut self.entry, &mut state);
+        Ok(state)
     }
 }
 
@@ -362,15 +385,20 @@ impl<'a, F: CompilerFeat> codespan_reporting::files::Files<'a> for CompilerWorld
         Ok(if let Some(package) = id.package() {
             format!("{package}{}", vpath.as_rooted_path().display())
         } else {
-            // Try to express the path relative to the working directory.
-            vpath
-                .resolve(&self.root)
-                // differ from typst
-                // .and_then(|abs| pathdiff::diff_paths(&abs, self.workdir()))
-                .as_deref()
-                .unwrap_or_else(|| vpath.as_rootless_path())
-                .to_string_lossy()
-                .into()
+            match self.entry.root() {
+                Some(root) => {
+                    // Try to express the path relative to the working directory.
+                    vpath
+                        .resolve(&root)
+                        // differ from typst
+                        // .and_then(|abs| pathdiff::diff_paths(&abs, self.workdir()))
+                        .as_deref()
+                        .unwrap_or_else(|| vpath.as_rootless_path())
+                        .to_string_lossy()
+                        .into()
+                }
+                None => vpath.as_rooted_path().display().to_string(),
+            }
         })
     }
 

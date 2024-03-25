@@ -32,7 +32,7 @@ impl TypstSystemWorld {
     pub fn new(mut opts: CompileOpts) -> ZResult<Self> {
         let inputs = std::mem::take(&mut opts.inputs);
         let mut w = Self::new_raw(
-            opts.root_dir.clone(),
+            opts.entry.clone().try_into()?,
             Vfs::new(SystemAccessModel {}),
             HttpRegistry::default(),
             Self::resolve_fonts(opts)?,

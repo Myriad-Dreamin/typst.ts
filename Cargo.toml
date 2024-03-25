@@ -34,7 +34,6 @@ members = [
     "packages/typst.node",
 
     "server/dev",
-    "server/remote",
 
     "tools/rkyv-assertions",
 

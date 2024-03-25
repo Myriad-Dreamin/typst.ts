@@ -29,7 +29,7 @@ static TEST_DOC: Lazy<Arc<TypstDocument>> =
 
 fn compile(driver: &CompileDriver, src: &str) -> Arc<TypstDocument> {
     let mut driver = driver.lock().unwrap();
-    let e = driver.entry_file.clone();
+    let e = driver.entry_file().to_owned();
     driver
         .with_shadow_file(&e, src.as_bytes().into(), |this| {
             this.pure_compile(&mut Default::default())

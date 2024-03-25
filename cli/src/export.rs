@@ -6,7 +6,7 @@ use typst_ts_core::{
 };
 use typst_ts_svg_exporter::DefaultExportFeature;
 
-use crate::{stdin_path, utils::current_dir, CompileArgs, ExportArgs};
+use crate::{utils::current_dir, CompileArgs, ExportArgs};
 
 type GroupDocExporter = GroupExporter<typst::model::Document>;
 
@@ -130,25 +130,23 @@ fn prepare_exporters_impl(
 }
 
 /// Prepare exporters from command line arguments.
-pub fn prepare_exporters(args: &CompileArgs, entry_file: &Path) -> GroupDocExporter {
+pub fn prepare_exporters(args: &CompileArgs, entry_file: Option<&Path>) -> GroupDocExporter {
     let output_dir = {
         // If output is specified, use it.
         let dir = (!args.compile.output.is_empty()).then(|| Path::new(&args.compile.output));
         // Otherwise, use the parent directory of the entry file.
-        let dir = dir.map(Path::to_owned).unwrap_or_else(|| {
-            if entry_file == stdin_path() {
-                current_dir()
-            } else {
-                entry_file
-                    .parent()
-                    .expect("entry_file has no parent")
-                    .to_owned()
-            }
+        let dir = dir.map(Path::to_owned).unwrap_or_else(|| match entry_file {
+            Some(entry_file) => entry_file
+                .parent()
+                .expect("entry_file has no parent")
+                .to_owned(),
+            None => current_dir(),
         });
-        if entry_file == stdin_path() {
-            dir.join("main")
-        } else {
-            dir.join(entry_file.file_name().expect("entry_file has no file name"))
+        match entry_file {
+            Some(entry_file) => {
+                dir.join(entry_file.file_name().expect("entry_file has no file name"))
+            }
+            None => dir.join("main"),
         }
     };
 
