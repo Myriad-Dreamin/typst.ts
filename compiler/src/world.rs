@@ -296,7 +296,6 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     /// Lookup a source file by id.
     #[track_caller]
     fn lookup(&self, id: FileId) -> Source {
-        println!("lookup: {:?}", id);
         self.source(id)
             .expect("file id does not point to any source file")
     }
