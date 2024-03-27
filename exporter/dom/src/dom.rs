@@ -382,7 +382,7 @@ impl DomPage {
             );
 
             let mut output = vec![];
-            let mut t = SemanticsBackend::new(do_heavy, *metric, data.size.x.0);
+            let mut t = SemanticsBackend::new(do_heavy, *metric, data.size.x.0, data.size.y.0);
             let ts = tiny_skia::Transform::identity();
             t.render_semantics(ctx.module, ts, data.content, &mut output);
             self.semantics.set_inner_html(&output.concat());
@@ -401,7 +401,7 @@ impl DomPage {
         web_sys::console::log_1(&format!("layout heavy semantics: {} {:?}", self.idx, data).into());
 
         let mut output = vec![];
-        let mut t = SemanticsBackend::new(true, *metric, data.size.x.0);
+        let mut t = SemanticsBackend::new(true, *metric, data.size.x.0, data.size.y.0);
         let ts = tiny_skia::Transform::identity();
         t.render_semantics(ctx.module, ts, data.content, &mut output);
         self.semantics.set_inner_html(&output.concat());

@@ -15,6 +15,7 @@ export interface ContainerDOMState {
   boundingRect: {
     left: number;
     top: number;
+    right: number;
   };
 }
 
@@ -119,6 +120,7 @@ export class TypstDocumentContext<O = any> {
     boundingRect: {
       left: 0,
       top: 0,
+      right: 0,
     },
   };
 
