@@ -14,6 +14,8 @@ use crate::{
 pub struct SystemCompilerFeat;
 
 impl crate::world::CompilerFeat for SystemCompilerFeat {
+    /// Uses [`FontResolverImpl`] directly.
+    type FontResolver = FontResolverImpl;
     /// It accesses a physical file system.
     type AccessModel = SystemAccessModel;
     /// It performs native HTTP requests for fetching package data.
@@ -30,7 +32,7 @@ impl TypstSystemWorld {
     pub fn new(mut opts: CompileOpts) -> ZResult<Self> {
         let inputs = std::mem::take(&mut opts.inputs);
         let mut w = Self::new_raw(
-            opts.root_dir.clone(),
+            opts.entry.clone().try_into()?,
             Vfs::new(SystemAccessModel {}),
             HttpRegistry::default(),
             Self::resolve_fonts(opts)?,
@@ -42,7 +44,7 @@ impl TypstSystemWorld {
     /// Resolve fonts from given options.
     fn resolve_fonts(opts: CompileOpts) -> ZResult<FontResolverImpl> {
         let mut searcher = SystemFontSearcher::new();
-        searcher.resolve_opts(opts)?;
+        searcher.resolve_opts(opts.into())?;
         Ok(searcher.into())
     }
 }

@@ -15,7 +15,7 @@ use typst_ts_compiler::{
     TypstSystemWorld,
 };
 use typst_ts_core::{
-    config::CompileOpts,
+    config::{compiler::EntryState, CompileFontOpts},
     error::prelude::*,
     typst::{foundations::IntoValue, prelude::Prehashed},
     Bytes, TypstDict,
@@ -146,21 +146,18 @@ pub fn create_driver(args: NodeCompileArgs) -> ZResult<CompileDriver> {
         }
     }
 
-    searcher.resolve_opts(CompileOpts {
+    searcher.resolve_opts(CompileFontOpts {
         with_embedded_fonts: typst_ts_cli::font::fonts().map(Cow::Borrowed).collect(),
-        ..CompileOpts::default()
+        ..CompileFontOpts::default()
     })?;
 
     let mut world = TypstSystemWorld::new_raw(
-        workspace_dir.clone(),
+        EntryState::new_rooted(workspace_dir.into(), None),
         Vfs::new(SystemAccessModel {}),
         HttpRegistry::default(),
         searcher.into(),
     );
     world.set_inputs(Arc::new(Prehashed::new(inputs)));
 
-    Ok(CompileDriver {
-        world,
-        entry_file: entry_file_path.to_owned(),
-    })
+    Ok(CompileDriver::new(world).with_entry_file(entry_file_path.to_owned()))
 }

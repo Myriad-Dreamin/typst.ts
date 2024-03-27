@@ -114,10 +114,8 @@ impl Completer for ReplContext {
         let mut driver = self.driver.borrow_mut();
 
         // commit line changes
-        let main_id = driver.main_id();
-        driver.world.main = Some(main_id);
 
-        let content = std::fs::read_to_string(&driver.entry_file).map_err(ReadlineError::Io)?;
+        let content = std::fs::read_to_string(driver.entry_file()).map_err(ReadlineError::Io)?;
         let static_prefix = content + "\n#show ";
         let static_prefix_len = static_prefix.len();
         let cursor = static_prefix_len + pos;
@@ -127,8 +125,10 @@ impl Completer for ReplContext {
         println!("slen: {}, dlen: {}", static_prefix_len, dyn_content.len());
 
         driver.world.reset();
+
+        let entry = driver.entry_file().to_owned();
         let typst_completions = driver
-            .with_shadow_file_by_id(main_id, dyn_content.as_bytes().into(), |driver| {
+            .with_shadow_file(&entry, dyn_content.as_bytes().into(), |driver| {
                 let doc = driver.compile(&mut Default::default()).ok();
                 let source = driver.world.main();
                 Ok(autocomplete(

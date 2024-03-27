@@ -14,7 +14,7 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 use typst_ts_compiler::{
-    service::{CompileMiddleware, Compiler, DynamicLayoutCompiler},
+    service::{CompileMiddleware, Compiler, DynamicLayoutCompiler, EntryManager},
     TypstSystemWorld,
 };
 use typst_ts_core::{error::prelude::*, Exporter, TypstAbs, TypstDatetime, TypstDocument};
@@ -297,8 +297,8 @@ impl DynLayoutCompiler {
 
         if let Some(e) = e {
             self.driver
-                .inner_mut()
-                .set_entry_file(e)
+                .world_mut()
+                .mutate_entry(e)
                 .map_err(map_node_error)?;
         }
 

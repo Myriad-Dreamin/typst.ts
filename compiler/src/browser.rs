@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use typst_ts_core::font::FontResolverImpl;
+use typst_ts_core::{config::compiler::EntryState, font::FontResolverImpl};
 
 use crate::{package::browser::ProxyRegistry, vfs::browser::ProxyAccessModel};
 
@@ -12,6 +12,8 @@ pub type TypstBrowserWorld = crate::world::CompilerWorld<BrowserCompilerFeat>;
 pub struct BrowserCompilerFeat;
 
 impl crate::world::CompilerFeat for BrowserCompilerFeat {
+    /// Uses [`FontResolverImpl`] directly.
+    type FontResolver = FontResolverImpl;
     type AccessModel = ProxyAccessModel;
     type Registry = ProxyRegistry;
 
@@ -31,6 +33,11 @@ impl TypstBrowserWorld {
     ) -> Self {
         let vfs = crate::vfs::Vfs::new(access_model);
 
-        Self::new_raw(root_dir, vfs, registry, font_resolver)
+        Self::new_raw(
+            EntryState::new_rooted(root_dir.into(), None),
+            vfs,
+            registry,
+            font_resolver,
+        )
     }
 }

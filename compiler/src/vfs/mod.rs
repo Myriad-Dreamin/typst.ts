@@ -433,7 +433,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
                 self.src2file_id.write().insert(source_id, slot.idx);
                 read()
             })
-            .map(|e| e.clone())
+            .cloned()
     }
 }
 

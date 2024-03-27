@@ -90,7 +90,6 @@ impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {
                 entry
                     .source_state
                     .get_uninitialized()
-                    .as_ref()
                     .and_then(|e| e.clone().ok()),
             )
         } else {
@@ -125,13 +124,11 @@ impl<Inner: AccessModel, C: Clone> CachedAccessModel<Inner, C> {
         compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
     ) -> FileResult<C> {
         self.cache_entry(src, |entry| {
-            let data = entry
-                .source_state
-                .compute_with_context_ref(|prev_to_diff| {
-                    let data = entry.read_all.compute(|| self.inner.content(src))?;
-                    let text = from_utf8_or_bom(&data)?.to_owned();
-                    compute(prev_to_diff, text)
-                })?;
+            let data = entry.source_state.compute_with_context(|prev_to_diff| {
+                let data = entry.read_all.compute(|| self.inner.content(src))?;
+                let text = from_utf8_or_bom(data)?.to_owned();
+                compute(prev_to_diff, text)
+            })?;
 
             let t = data.clone();
             Ok(t)
@@ -156,10 +153,7 @@ impl<Inner: AccessModel, C: Clone> AccessModel for CachedAccessModel<Inner, C> {
 
     fn is_file(&self, src: &Path) -> FileResult<bool> {
         self.cache_entry(src, |entry| {
-            entry
-                .is_file
-                .compute(|| self.inner.is_file(src))
-                .map(|q| *q)
+            entry.is_file.compute(|| self.inner.is_file(src)).copied()
         })
     }
 

@@ -27,8 +27,10 @@ impl FontSlot {
     /// Returns `None` if the cell is empty, or being initialized. This
     /// method never blocks.
     pub fn get_uninitialized(&self) -> Option<Option<Font>> {
-        let query_res = self.0.get_uninitialized().clone();
-        query_res.map(|res| unsafe { res.unwrap_unchecked() })
+        self.0
+            .get_uninitialized()
+            .cloned()
+            .map(|e| e.ok().flatten())
     }
 
     /// Gets or make the font load result.

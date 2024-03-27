@@ -281,7 +281,8 @@ impl TypstCompiler {
 
     pub fn get_ast(&mut self, main_file_path: String) -> Result<String, JsValue> {
         self.compiler
-            .set_entry_file(Path::new(&main_file_path).to_owned());
+            .set_entry_file(Path::new(&main_file_path).into())
+            .map_err(|e| format!("{e:?}"))?;
 
         let ast_exporter = typst_ts_core::exporter_builtins::VecExporter::new(
             typst_ts_ast_exporter::AstExporter::default(),
@@ -400,7 +401,8 @@ impl TypstCompiler {
         field: Option<String>,
     ) -> Result<String, JsValue> {
         self.compiler
-            .set_entry_file(Path::new(&main_file_path).to_owned());
+            .set_entry_file(Path::new(&main_file_path).into())
+            .map_err(|e| format!("{e:?}"))?;
 
         let doc = self
             .compiler
@@ -429,7 +431,8 @@ impl TypstCompiler {
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
         self.compiler
-            .set_entry_file(Path::new(&main_file_path).to_owned());
+            .set_entry_file(Path::new(&main_file_path).into())
+            .map_err(|e| format!("{e:?}"))?;
 
         self.get_artifact(fmt, diagnostics_format)
     }
@@ -445,7 +448,8 @@ impl TypstCompiler {
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
         self.compiler
-            .set_entry_file(Path::new(&main_file_path).to_owned());
+            .set_entry_file(Path::new(&main_file_path).into())
+            .map_err(|e| format!("{e:?}"))?;
 
         let doc = take_diag!(
             diagnostics_format,
