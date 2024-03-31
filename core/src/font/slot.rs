@@ -1,5 +1,7 @@
 use core::fmt;
+use std::sync::Arc;
 
+use reflexo::debug_loc::DataSource;
 use typst::text::Font;
 
 use crate::{FontLoader, QueryRef};
@@ -7,19 +9,35 @@ use crate::{FontLoader, QueryRef};
 type FontSlotInner = QueryRef<Option<Font>, (), Box<dyn FontLoader + Send>>;
 
 /// Lazy Font Reference, load as needed.
-pub struct FontSlot(FontSlotInner);
+pub struct FontSlot {
+    inner: FontSlotInner,
+    pub description: Option<Arc<DataSource>>,
+}
 
 impl FontSlot {
     pub fn with_value(f: Option<Font>) -> Self {
-        Self(FontSlotInner::with_value(f))
+        Self {
+            inner: FontSlotInner::with_value(f),
+            description: None,
+        }
     }
 
     pub fn new(f: Box<dyn FontLoader + Send>) -> Self {
-        Self(FontSlotInner::with_context(f))
+        Self {
+            inner: FontSlotInner::with_context(f),
+            description: None,
+        }
     }
 
     pub fn new_boxed<F: FontLoader + Send + 'static>(f: F) -> Self {
         Self::new(Box::new(f))
+    }
+
+    pub fn describe(self, desc: DataSource) -> Self {
+        Self {
+            inner: self.inner,
+            description: Some(Arc::new(desc)),
+        }
     }
 
     /// Gets the reference to the font load result (possible uninitialized).
@@ -27,7 +45,7 @@ impl FontSlot {
     /// Returns `None` if the cell is empty, or being initialized. This
     /// method never blocks.
     pub fn get_uninitialized(&self) -> Option<Option<Font>> {
-        self.0
+        self.inner
             .get_uninitialized()
             .cloned()
             .map(|e| e.ok().flatten())
@@ -35,7 +53,7 @@ impl FontSlot {
 
     /// Gets or make the font load result.
     pub fn get_or_init(&self) -> Option<Font> {
-        let res = self.0.compute_with_context(|mut c| Ok(c.load()));
+        let res = self.inner.compute_with_context(|mut c| Ok(c.load()));
         { unsafe { res.unwrap_unchecked() } }.clone()
     }
 }

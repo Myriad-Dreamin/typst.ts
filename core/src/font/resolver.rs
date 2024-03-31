@@ -5,6 +5,7 @@ use std::{
 };
 
 use comemo::Prehashed;
+use reflexo::debug_loc::DataSource;
 use typst::text::{Font, FontBook, FontInfo};
 
 use crate::{Bytes, FontSlot};
@@ -83,6 +84,16 @@ impl FontResolverImpl {
             let maybe_font = slot.get_uninitialized().flatten();
             maybe_font.map(|font| (idx, font))
         })
+    }
+
+    pub fn describe_font(&self, font: &Font) -> Option<Arc<DataSource>> {
+        let f = Some(Some(font.clone()));
+        for slot in &self.fonts {
+            if slot.get_uninitialized() == f {
+                return slot.description.clone();
+            }
+        }
+        None
     }
 
     pub fn modify_font_data(&mut self, idx: usize, buffer: Bytes) {
