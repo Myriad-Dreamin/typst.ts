@@ -16,6 +16,7 @@ use typst::{
 use typst_ts_core::{
     build_info,
     config::CompileFontOpts,
+    debug_loc::{DataSource, MemoryDataSource},
     error::prelude::ZResult,
     font::{
         BufferFontLoader, FontProfile, FontProfileItem, FontResolverImpl, LazyBufferFontLoader,
@@ -272,6 +273,7 @@ impl SystemFontSearcher {
     #[cfg(not(feature = "lazy-fontdb"))]
     pub fn flush(&mut self) {
         use fontdb::Source;
+        use typst_ts_core::debug_loc::FsDataSource;
 
         for face in self.db.faces() {
             let path = match &face.source {
@@ -290,11 +292,15 @@ impl SystemFontSearcher {
 
             if let Some(info) = info {
                 self.book.push(info);
-                self.fonts
-                    .push(FontSlot::new_boxed(LazyBufferFontLoader::new(
+                self.fonts.push(
+                    FontSlot::new_boxed(LazyBufferFontLoader::new(
                         LazyFile::new(path.clone()),
                         face.index,
-                    )));
+                    ))
+                    .describe(DataSource::Fs(FsDataSource {
+                        path: path.to_str().unwrap_or_default().to_owned(),
+                    })),
+                );
             }
         }
 
@@ -309,10 +315,15 @@ impl SystemFontSearcher {
 
         for (index, info) in FontInfo::iter(&data).enumerate() {
             self.book.push(info.clone());
-            self.fonts.push(FontSlot::new_boxed(BufferFontLoader {
-                buffer: Some(data.clone()),
-                index: index as u32,
-            }));
+            self.fonts.push(
+                FontSlot::new_boxed(BufferFontLoader {
+                    buffer: Some(data.clone()),
+                    index: index as u32,
+                })
+                .describe(DataSource::Memory(MemoryDataSource {
+                    name: "<memory>".to_owned(),
+                })),
+            );
         }
     }
 

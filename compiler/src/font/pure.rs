@@ -1,5 +1,6 @@
 use typst::text::{FontBook, FontInfo};
 use typst_ts_core::{
+    debug_loc::{DataSource, MemoryDataSource},
     font::{BufferFontLoader, FontResolverImpl},
     Bytes, FontSlot,
 };
@@ -41,10 +42,15 @@ impl MemoryFontBuilder {
     pub fn add_memory_font(&mut self, data: Bytes) {
         for (index, info) in FontInfo::iter(&data).enumerate() {
             self.book.push(info.clone());
-            self.fonts.push(FontSlot::new_boxed(BufferFontLoader {
-                buffer: Some(data.clone()),
-                index: index as u32,
-            }));
+            self.fonts.push(
+                FontSlot::new_boxed(BufferFontLoader {
+                    buffer: Some(data.clone()),
+                    index: index as u32,
+                })
+                .describe(DataSource::Memory(MemoryDataSource {
+                    name: "<memory>".to_owned(),
+                })),
+            );
         }
     }
 }

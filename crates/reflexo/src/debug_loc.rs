@@ -146,3 +146,29 @@ impl From<(u32, u32, String)> for ElementPoint {
         }
     }
 }
+
+/// A file system data source.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct FsDataSource {
+    /// The name of the data source.
+    pub path: String,
+}
+
+/// A in-memory data source.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct MemoryDataSource {
+    /// The name of the data source.
+    pub name: String,
+}
+
+/// Data source for a document.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(tag = "kind")]
+pub enum DataSource {
+    /// File system data source.
+    #[serde(rename = "fs")]
+    Fs(FsDataSource),
+    /// Memory data source.
+    #[serde(rename = "memory")]
+    Memory(MemoryDataSource),
+}
