@@ -38,6 +38,19 @@ impl fmt::Debug for Fingerprint {
     }
 }
 
+impl serde::Serialize for Fingerprint {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.as_svg_id(""))
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Fingerprint {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = <std::string::String as serde::Deserialize>::deserialize(deserializer)?;
+        Fingerprint::try_from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
 impl Fingerprint {
     /// Create a new fingerprint from the given pair of 64-bit integers.
     pub fn from_pair(lo: u64, hi: u64) -> Self {
@@ -143,8 +156,14 @@ impl FingerprintHasher for FingerprintSipHasher {
         let buffer = self.data.clone();
         let mut inner = FingerprintSipHasherBase::default();
         buffer.hash(&mut inner);
-        let hash = inner.finish();
-        (Fingerprint { lo: hash, hi: 0 }, buffer)
+        let hash = inner.finish128();
+        (
+            Fingerprint {
+                lo: hash.h1,
+                hi: hash.h2,
+            },
+            buffer,
+        )
     }
 }
 
