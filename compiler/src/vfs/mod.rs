@@ -264,7 +264,26 @@ impl<M: AccessModel + Sized> Vfs<M> {
 
     /// Returns the overall memory usage for the stored files.
     pub fn memory_usage(&self) -> usize {
-        self.slots.len() * core::mem::size_of::<PathSlot>()
+        let mut w = self.slots.len() * core::mem::size_of::<PathSlot>();
+        w += self.path2slot.read().capacity() * 256;
+        w += self.src2file_id.read().capacity() * 16;
+        w += self
+            .slots
+            .iter()
+            .map(|slot| {
+                slot.source
+                    .get_uninitialized()
+                    .and_then(|e| e.as_ref().ok())
+                    .map_or(16, |e| e.text().len() * 8)
+                    + slot
+                        .buffer
+                        .get_uninitialized()
+                        .and_then(|e| e.as_ref().ok())
+                        .map_or(16, |e| e.len())
+            })
+            .sum::<usize>();
+
+        w
     }
 
     /// Id of the given path if it exists in the `Vfs` and is not deleted.
