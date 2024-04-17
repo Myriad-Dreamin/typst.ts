@@ -4375,6 +4375,7 @@ name = "typst-ts-bench-lowering"
 version = "0.5.0-rc3"
 dependencies = [
  "comemo",
+ "dissimilar",
  "divan",
  "once_cell",
  "rayon",
@@ -4431,7 +4432,6 @@ dependencies = [
  "codespan-reporting",
  "comemo",
  "dirs",
- "dissimilar",
  "flate2",
  "fontdb",
  "fst",

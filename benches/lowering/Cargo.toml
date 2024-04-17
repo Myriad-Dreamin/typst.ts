@@ -21,10 +21,16 @@ typst-ts-compiler = { workspace = true, default-features = false, features = [
 ] }
 comemo.workspace = true
 rayon.workspace = true
+dissimilar.workspace = true
 
 [[bench]]
 name = "typst-ts-bench-lowering"
 path = "src/lowering.rs"
+harness = false
+
+[[bench]]
+name = "typst-ts-bench-reparsing"
+path = "src/reparsing.rs"
 harness = false
 
 [features]
