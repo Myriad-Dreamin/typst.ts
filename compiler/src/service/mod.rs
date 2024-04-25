@@ -130,12 +130,12 @@ impl<'a> fmt::Display for CompileReportMsg<'a> {
 
         let input = self.0.compiling_id();
         match self.0 {
-            Stage(_, stage, ..) => writeln!(f, "{:?}: {} ...", input, stage),
+            Stage(_, stage, ..) => write!(f, "{:?}: {} ...", input, stage),
             CompileSuccess(_, _, duration) | CompileWarning(_, _, duration) => {
-                writeln!(f, "{:?}: Compilation succeeded in {:?}", input, duration)
+                write!(f, "{:?}: Compilation succeeded in {:?}", input, duration)
             }
             CompileError(_, _, duration) | ExportError(_, _, duration) => {
-                writeln!(f, "{:?}: Compilation failed after {:?}", input, duration)
+                write!(f, "{:?}: Compilation failed after {:?}", input, duration)
             }
         }
     }
