@@ -61,6 +61,7 @@ fn lower_incr_impl<'a>(docs: impl Iterator<Item = &'a Arc<TypstDocument>>) {
         // lower_builder.gc(5 * 2);
         let _ = pass.doc(&doc.introspector, doc);
         // comemo::evict(30);
+        pass.spans.reset();
     }
     // comemo::evict(0);
 }
@@ -106,6 +107,13 @@ typst_ts_bench_lowering  fastest       │ slowest       │ median        │ m
 ├─ lower_incr            8.488 ms      │ 13.19 ms      │ 9.048 ms      │ 9.191 ms      │ 100     │ 100
 ├─ lower_the_thesis      972.7 ms      │ 1.555 s       │ 1.315 s       │ 1.29 s        │ 100     │ 100
 ╰─ lower_uncached        1.055 ms      │ 1.837 ms      │ 1.12 ms       │ 1.191 ms      │ 100     │ 100
+
+v0.5.0-rc3, there is no comemo cache set anymore, so lower_cached is same as lower_uncached
+typst_ts_bench_lowering  fastest       │ slowest       │ median        │ mean          │ samples │ iters
+├─ lower_cached          1.192 ms      │ 3.315 ms      │ 1.352 ms      │ 1.448 ms      │ 100     │ 100
+├─ lower_incr            12.01 ms      │ 20.55 ms      │ 13.94 ms      │ 14.43 ms      │ 100     │ 100
+├─ lower_the_thesis      421.5 ms      │ 568.7 ms      │ 500 ms        │ 495.5 ms      │ 100     │ 100
+╰─ lower_uncached        1.156 ms      │ 2.839 ms      │ 1.398 ms      │ 1.479 ms      │ 100     │ 100
  */
 
 #[cfg(feature = "the-thesis")]
@@ -128,16 +136,13 @@ static THE_THESIS_COMPILER: CompileDriver = once_cell::sync::Lazy::new(|| {
 #[cfg(feature = "the-thesis")]
 #[divan::bench]
 fn lower_the_thesis(bencher: Bencher) {
-    use std::path::Path;
-
     if !cfg!(feature = "the-thesis") {
         return;
     }
 
     let test_file = {
         let compiler = THE_THESIS_COMPILER.lock().unwrap();
-        let e = compiler.entry_file.clone();
-        std::fs::read_to_string(Path::new(&e)).unwrap()
+        std::fs::read_to_string(compiler.entry_file()).unwrap()
     };
 
     let file_contents = (0..32)
