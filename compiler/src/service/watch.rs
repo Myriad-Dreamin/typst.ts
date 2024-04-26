@@ -270,11 +270,13 @@ impl NotifyActor {
             let meta = path.metadata().map_err(|e| FileError::from_io(e, path));
 
             if let Some((watcher, _)) = &mut self.watcher {
-                // Case1. meta = Ok(..) We cannot get the metadata successfully, so we
+                // Case1. meta = Err(..) We cannot get the metadata successfully, so we
                 // are okay to ignore this file for watching.
                 //
-                // Case2. meta = Err(..) Watch the file if it's not watched.
-                if meta.as_ref().is_ok_and(|meta| !meta.is_dir()) && (!contained || !entry.watching)
+                // Case2. meta = Ok(..) Watch the file if it's not watched.
+                if meta
+                    .as_ref()
+                    .is_ok_and(|meta| !meta.is_dir() && (!contained || !entry.watching))
                 {
                     log::debug!("watching {path:?}");
                     entry.watching = log_notify_error(
