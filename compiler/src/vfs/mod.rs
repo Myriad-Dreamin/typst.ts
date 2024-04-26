@@ -409,7 +409,6 @@ impl<M: AccessModel + Sized> Vfs<M> {
 
     /// Insert a new slot into the vfs.
     fn slot(&self, origin_path: &Path) -> FileResult<&PathSlot> {
-        log::info!("slot {:?}", origin_path);
         // fast path for already inserted paths
         let path2slot = self.path2slot.upgradable_read();
         if let Some(slot) = path2slot.get(origin_path.as_os_str()) {
