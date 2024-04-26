@@ -54,6 +54,13 @@ impl Default for WatchState {
 /// The data entry of a watched file.
 #[derive(Debug)]
 struct WatchedEntry {
+    /// The lifetime of the entry.
+    ///
+    /// The entry will be removed if the entry is too old.
+    // todo: generalize lifetime
+    lifetime: usize,
+    /// A flag for whether it is really watching.
+    watching: bool,
     /// A flag for watch update.
     seen: bool,
     /// The state of the entry.
@@ -84,6 +91,8 @@ pub struct NotifyActor {
     /// We concrete the access model to `SystemAccessModel` for now.
     inner: SystemAccessModel,
 
+    /// The lifetime of the watched files.
+    lifetime: usize,
     /// The logical tick of the actor.
     logical_tick: usize,
 
@@ -123,6 +132,7 @@ impl NotifyActor {
         NotifyActor {
             inner: SystemAccessModel,
             // we start from 1 to distinguish from 0 (default value)
+            lifetime: 1,
             logical_tick: 1,
 
             sender,
@@ -222,6 +232,9 @@ impl NotifyActor {
 
     /// Update the watches of corresponding files.
     fn update_watches(&mut self, paths: &[ImmutPath]) -> Option<FileChangeSet> {
+        // Increase the lifetime per external message.
+        self.lifetime += 1;
+
         let mut changeset = FileChangeSet::default();
 
         // Mark the old entries as unseen.
@@ -241,9 +254,12 @@ impl NotifyActor {
                 .entry(path.clone())
                 .and_modify(|watch_entry| {
                     contained = true;
+                    watch_entry.lifetime = self.lifetime;
                     watch_entry.seen = true;
                 })
                 .or_insert_with(|| WatchedEntry {
+                    lifetime: self.lifetime,
+                    watching: false,
                     seen: true,
                     state: WatchState::Stable,
                     prev: None,
@@ -261,12 +277,13 @@ impl NotifyActor {
             if let Some((watcher, _)) = &mut self.watcher {
                 // Watch the file again if it's not a directory.
                 if !meta.is_dir() {
-                    if !contained {
+                    if !contained || !entry.watching {
                         log::debug!("watching {path:?}");
-                        log_notify_error(
+                        entry.watching = log_notify_error(
                             watcher.watch(path.as_ref(), RecursiveMode::NonRecursive),
                             "failed to watch",
-                        );
+                        )
+                        .is_some();
                     }
 
                     changeset.may_insert(self.notify_entry_update(path.clone(), Some(meta)));
@@ -284,15 +301,19 @@ impl NotifyActor {
         // Note: since we have increased the lifetime, it is safe to remove the
         // old entries after updating the watched entries.
         self.watched_entries.retain(|path, entry| {
-            let seen = entry.seen;
-            if !seen {
+            if !entry.seen && entry.watching {
                 log::debug!("unwatch {path:?}");
                 if let Some(watcher) = &mut self.watcher {
                     log_notify_error(watcher.0.unwatch(path), "failed to unwatch");
+                    entry.watching = false;
                 }
+            }
+
+            let fresh = self.lifetime - entry.lifetime < 30;
+            if !fresh {
                 changeset.removes.push(path.clone());
             }
-            seen
+            fresh
         });
 
         (!changeset.is_empty()).then_some(changeset)
@@ -320,12 +341,18 @@ impl NotifyActor {
                 ))
         ) {
             for path in &event.paths {
+                let Some(entry) = self.watched_entries.get_mut(path.as_path()) else {
+                    continue;
+                };
+                if !entry.watching {
+                    continue;
+                }
                 // Remove affected path from the watched map to restart
                 // watching on it later again.
                 if let Some(watcher) = &mut self.watcher {
                     log_notify_error(watcher.0.unwatch(path), "failed to unwatch");
                 }
-                self.watched_entries.remove(path.as_path());
+                entry.watching = false;
             }
         }
 
