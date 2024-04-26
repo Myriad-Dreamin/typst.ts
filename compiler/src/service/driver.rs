@@ -5,7 +5,7 @@ use std::{
 
 use crate::{NotifyApi, ShadowApi};
 use typst::{
-    diag::{eco_format, At, SourceResult},
+    diag::{eco_format, At, FileResult, SourceResult},
     syntax::Span,
     World,
 };
@@ -99,7 +99,7 @@ impl<W: World + EnvWorld + EntryManager + NotifyApi> Compiler for CompileDriverI
         self._relevant(event).unwrap_or(true)
     }
 
-    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, crate::Time)) {
+    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, FileResult<&crate::Time>)) {
         self.world.iter_dependencies(f)
     }
 

@@ -202,7 +202,11 @@ pub trait Compiler {
 
     /// Iterate over the dependencies of found by the compiler.
     /// Note: reset the compiler will clear the dependencies cache.
-    fn iter_dependencies<'a>(&'a self, _f: &mut dyn FnMut(&'a ImmutPath, crate::Time)) {}
+    fn iter_dependencies<'a>(
+        &'a self,
+        _f: &mut dyn FnMut(&'a ImmutPath, FileResult<&crate::Time>),
+    ) {
+    }
 
     fn notify_fs_event(&mut self, _event: FilesystemEvent) {}
 
@@ -350,7 +354,7 @@ impl<T: CompileMiddleware> Compiler for T {
     }
 
     #[inline]
-    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, crate::Time)) {
+    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, FileResult<&crate::Time>)) {
         self.inner().iter_dependencies(f)
     }
 
