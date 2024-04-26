@@ -390,7 +390,11 @@ impl<M: AccessModel + Sized> Vfs<M> {
     ///
     /// Does not record a change.
     fn get_real_slot(&self, origin_path: &Path) -> FileResult<&PathSlot> {
-        let real_path = self.access_model.real_path(origin_path)?;
+        // If we cannot get the real path, keep the origin path syntactically.
+        let real_path = self
+            .access_model
+            .real_path(origin_path)
+            .unwrap_or_else(|_| origin_path.into());
 
         let mut path_interner = self.path_interner.lock();
         let (file_id, _) = path_interner.intern(real_path, self.lifetime_cnt);
