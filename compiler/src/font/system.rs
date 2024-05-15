@@ -94,7 +94,7 @@ impl SystemFontSearcher {
     /// Create a new, empty system searcher.
     pub fn new() -> Self {
         let mut profile_rebuilder = FontProfileRebuilder::default();
-        profile_rebuilder.profile.version = "v1beta".to_owned();
+        "v1beta".clone_into(&mut profile_rebuilder.profile.version);
         profile_rebuilder.profile.build_info = build_info::VERSION.to_string();
         let db = Database::new();
 

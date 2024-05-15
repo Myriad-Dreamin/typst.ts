@@ -41,7 +41,8 @@ pub mod hash {
 
 pub use exporter::{builtins as exporter_builtins, utils as exporter_utils};
 pub use exporter::{
-    DynExporter, DynGenericExporter, DynPolymorphicExporter, Exporter, GenericExporter, Transformer,
+    DynExporter, DynGenericExporter, DynPolymorphicExporter, Exporter, GenericExporter,
+    GenericTransformer, Transformer,
 };
 pub use font::{FontLoader, FontResolver, FontSlot};
 pub use reflexo::content::TextContent;
