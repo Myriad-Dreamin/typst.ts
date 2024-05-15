@@ -140,11 +140,11 @@ export function provideDomDoc<TBase extends GConstructor<TypstDocumentContext<In
 
     getDomViewport(
       cachedWindow: Pick<Window, 'innerHeight' | 'innerWidth'>,
-      cachedBoundingRect: Pick<DOMRect, 'left' | 'top'>,
+      cachedBoundingRect: Pick<DOMRect, 'left' | 'top' | 'right'>,
     ) {
       const left = cachedBoundingRect.left;
       const top = -cachedBoundingRect.top;
-      const right = cachedWindow.innerWidth;
+      const right = cachedBoundingRect.right;
       const bottom = cachedWindow.innerHeight - cachedBoundingRect.top;
       const rect = {
         x: 0,
