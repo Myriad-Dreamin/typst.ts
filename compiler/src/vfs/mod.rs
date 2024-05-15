@@ -58,7 +58,7 @@ use self::{
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct FileId(pub u32);
 
-/// safe because `FileId` is a newtype of `u32`
+/// safe because `FileId` is a new type of `u32`
 impl nohash_hasher::IsEnabled for FileId {}
 
 /// A trait for accessing underlying file system.
@@ -434,7 +434,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
         Ok(slot)
     }
 
-    /// Get source content by path with a read content implmentation.
+    /// Get source content by path with a read content implementation.
     ///
     /// Note: This function will also do eager check that whether the path
     /// exists in the underlying access model. So the read content function
@@ -470,4 +470,16 @@ fn from_utf8_or_bom(buf: &[u8]) -> FileResult<&str> {
 /// Create a [`FileError`] with a given error message.
 fn other_reason(err: &str) -> FileError {
     FileError::Other(Some(err.into()))
+}
+
+#[cfg(test)]
+mod tests {
+    fn is_send<T: Send>() {}
+    fn is_sync<T: Sync>() {}
+
+    #[test]
+    fn test_vfs_send_sync() {
+        is_send::<super::Vfs<super::dummy::DummyAccessModel>>();
+        is_sync::<super::Vfs<super::dummy::DummyAccessModel>>();
+    }
 }

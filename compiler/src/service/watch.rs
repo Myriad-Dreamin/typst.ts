@@ -30,10 +30,10 @@ type NotifyFilePair = FileResult<(/* mtime */ crate::Time, /* content */ Bytes)>
 
 /// The state of a watched file.
 ///
-/// It is used to determine some dirty editiors' implementation.
+/// It is used to determine some dirty editors' implementation.
 #[derive(Debug)]
 enum WatchState {
-    /// The file is stable, which means we believe that it keeps syncthronized
+    /// The file is stable, which means we believe that it keeps synchronized
     /// as expected.
     Stable,
     /// The file is empty or removed, but there is a chance that the file is not
@@ -59,13 +59,15 @@ struct WatchedEntry {
     /// The entry will be removed if the entry is too old.
     // todo: generalize lifetime
     lifetime: usize,
-
+    /// A flag for whether it is really watching.
+    watching: bool,
+    /// A flag for watch update.
+    seen: bool,
     /// The state of the entry.
     state: WatchState,
-
     /// Previous content of the file.
     prev: Option<NotifyFilePair>,
-
+    /// Previous metadata of the file.
     prev_meta: Option<std::fs::Metadata>,
 }
 
@@ -89,17 +91,10 @@ pub struct NotifyActor {
     /// We concrete the access model to `SystemAccessModel` for now.
     inner: SystemAccessModel,
 
-    /// The lifetime tick of the actor.
+    /// The lifetime of the watched files.
     lifetime: usize,
-
     /// The logical tick of the actor.
     logical_tick: usize,
-
-    /// Whether the actor is using builtin watcher.
-    ///
-    /// If it is [`None`], the actor need a upstream event to trigger the
-    /// updates
-    watch: Option<()>,
 
     /// Output of the actor.
     /// See [`FilesystemEvent`] for more information.
@@ -109,7 +104,7 @@ pub struct NotifyActor {
     undetermined_send: mpsc::UnboundedSender<UndeterminedNotifyEvent>,
     undetermined_recv: mpsc::UnboundedReceiver<UndeterminedNotifyEvent>,
 
-    /// The holded entries for watching, one entry for per file.
+    /// The hold entries for watching, one entry for per file.
     watched_entries: HashMap<ImmutPath, WatchedEntry>,
 
     /// The builtin watcher object.
@@ -120,6 +115,19 @@ impl NotifyActor {
     /// Create a new actor.
     fn new(sender: mpsc::UnboundedSender<FilesystemEvent>) -> NotifyActor {
         let (undetermined_send, undetermined_recv) = mpsc::unbounded_channel();
+        let (watcher_sender, watcher_receiver) = mpsc::unbounded_channel();
+        let watcher = log_notify_error(
+            RecommendedWatcher::new(
+                move |event| {
+                    let res = watcher_sender.send(event);
+                    if let Err(err) = res {
+                        log::warn!("error to send event: {err}");
+                    }
+                },
+                Config::default(),
+            ),
+            "failed to create watcher",
+        );
 
         NotifyActor {
             inner: SystemAccessModel,
@@ -127,14 +135,13 @@ impl NotifyActor {
             lifetime: 1,
             logical_tick: 1,
 
-            watch: Some(()),
             sender,
 
             undetermined_send,
             undetermined_recv,
 
             watched_entries: HashMap::new(),
-            watcher: None,
+            watcher: watcher.map(|it| (it, watcher_receiver)),
         }
     }
 
@@ -158,7 +165,7 @@ impl NotifyActor {
         enum ActorEvent {
             /// Recheck the notify event.
             ReCheck(UndeterminedNotifyEvent),
-            /// external message to change notifer's state
+            /// external message to change notifier's state
             Message(NotifyMessage),
             /// notify event from builtin watcher
             NotifyEvent(NotifyEvent),
@@ -230,39 +237,9 @@ impl NotifyActor {
 
         let mut changeset = FileChangeSet::default();
 
-        // Remove old watches, if any.
-        self.watcher = None;
-        if self.watch.is_some() {
-            match &mut self.watcher {
-                // Clear the old watches.
-                Some((old_watcher, _)) => {
-                    for path in self.watched_entries.keys() {
-                        // Remove the watch if it still exists.
-                        if let Err(err) = old_watcher.unwatch(path) {
-                            if !matches!(err.kind, notify::ErrorKind::WatchNotFound) {
-                                log::warn!("failed to unwatch: {err}");
-                            }
-                        }
-                    }
-                }
-                // Create a new builtin watcher.
-                None => {
-                    let (watcher_sender, watcher_receiver) = mpsc::unbounded_channel();
-                    let watcher = log_notify_error(
-                        RecommendedWatcher::new(
-                            move |event| {
-                                let res = watcher_sender.send(event);
-                                if let Err(err) = res {
-                                    log::warn!("error to send event: {err}");
-                                }
-                            },
-                            Config::default(),
-                        ),
-                        "failed to create watcher",
-                    );
-                    self.watcher = watcher.map(|it| (it, watcher_receiver));
-                }
-            }
+        // Mark the old entries as unseen.
+        for path in self.watched_entries.values_mut() {
+            path.seen = false;
         }
 
         // Update watched entries.
@@ -270,15 +247,20 @@ impl NotifyActor {
         // Also check whether the file is updated since there is a window
         // between unwatch the file and watch the file again.
         for path in paths.iter() {
+            let mut contained = false;
             // Update or insert the entry with the new lifetime.
             let entry = self
                 .watched_entries
                 .entry(path.clone())
                 .and_modify(|watch_entry| {
+                    contained = true;
                     watch_entry.lifetime = self.lifetime;
+                    watch_entry.seen = true;
                 })
                 .or_insert_with(|| WatchedEntry {
                     lifetime: self.lifetime,
+                    watching: false,
+                    seen: true,
                     state: WatchState::Stable,
                     prev: None,
                     prev_meta: None,
@@ -292,20 +274,19 @@ impl NotifyActor {
             };
             entry.prev_meta = Some(meta.clone());
 
-            let watch = self.watch.is_some();
-            if watch {
+            if let Some((watcher, _)) = &mut self.watcher {
                 // Watch the file again if it's not a directory.
                 if !meta.is_dir() {
-                    if let Some((watcher, _)) = &mut self.watcher {
-                        log_notify_error(
+                    if !contained || !entry.watching {
+                        log::debug!("watching {path:?}");
+                        entry.watching = log_notify_error(
                             watcher.watch(path.as_ref(), RecursiveMode::NonRecursive),
                             "failed to watch",
-                        );
-
-                        changeset.may_insert(self.notify_entry_update(path.clone(), Some(meta)));
-                    } else {
-                        unreachable!()
+                        )
+                        .is_some();
                     }
+
+                    changeset.may_insert(self.notify_entry_update(path.clone(), Some(meta)));
                 }
             } else {
                 let watched = self
@@ -320,12 +301,19 @@ impl NotifyActor {
         // Note: since we have increased the lifetime, it is safe to remove the
         // old entries after updating the watched entries.
         self.watched_entries.retain(|path, entry| {
-            if self.lifetime - entry.lifetime < 30 {
-                true
-            } else {
-                changeset.removes.push(path.clone());
-                false
+            if !entry.seen && entry.watching {
+                log::debug!("unwatch {path:?}");
+                if let Some(watcher) = &mut self.watcher {
+                    log_notify_error(watcher.0.unwatch(path), "failed to unwatch");
+                    entry.watching = false;
+                }
             }
+
+            let fresh = self.lifetime - entry.lifetime < 30;
+            if !fresh {
+                changeset.removes.push(path.clone());
+            }
+            fresh
         });
 
         (!changeset.is_empty()).then_some(changeset)
@@ -335,9 +323,37 @@ impl NotifyActor {
     fn notify_event(&mut self, event: notify::Event) {
         // Account file updates.
         let mut changeset = FileChangeSet::default();
-        for path in event.paths.into_iter() {
+        for path in event.paths.iter() {
             // todo: remove this clone: path.into()
-            changeset.may_insert(self.notify_entry_update(path.into(), None));
+            changeset.may_insert(self.notify_entry_update(path.as_path().into(), None));
+        }
+
+        // Workaround for notify-rs' implicit unwatch on remove/rename
+        // (triggered by some editors when saving files) with the
+        // inotify backend. By keeping track of the potentially
+        // unwatched files, we can allow those we still depend on to be
+        // watched again later on.
+        if matches!(
+            event.kind,
+            notify::EventKind::Remove(notify::event::RemoveKind::File)
+                | notify::EventKind::Modify(notify::event::ModifyKind::Name(
+                    notify::event::RenameMode::From
+                ))
+        ) {
+            for path in &event.paths {
+                let Some(entry) = self.watched_entries.get_mut(path.as_path()) else {
+                    continue;
+                };
+                if !entry.watching {
+                    continue;
+                }
+                // Remove affected path from the watched map to restart
+                // watching on it later again.
+                if let Some(watcher) = &mut self.watcher {
+                    log_notify_error(watcher.0.unwatch(path), "failed to unwatch");
+                }
+                entry.watching = false;
+            }
         }
 
         // Send file updates.
@@ -357,7 +373,7 @@ impl NotifyActor {
         // The following code in rust-analyzer is commented out
         // todo: check whether we need this
         // if meta.file_type().is_dir() && self
-        //   .watched_entriesiter().any(|entry| entry.contains_dir(&path))
+        //   .watched_entries.iter().any(|entry| entry.contains_dir(&path))
         // {
         //     self.watch(path);
         //     return None;
@@ -416,9 +432,9 @@ impl NotifyActor {
                     return None;
                 }
             },
-            // Compare content for transitinal the state
+            // Compare content for transitional the state
             (Some(Ok((prev_tick, prev_content))), Ok((next_tick, next_content))) => {
-                // So far it is acurately no change for the file, skip it
+                // So far it is accurately no change for the file, skip it
                 if prev_content == next_content {
                     return None;
                 }
@@ -487,7 +503,7 @@ impl NotifyActor {
         let now = instant::Instant::now();
         log::debug!("recheck event {event:?} at {now:?}");
 
-        // The aysnc scheduler is not accurate, so we need to ensure a window here
+        // The async scheduler is not accurate, so we need to ensure a window here
         let reserved = now - event.at_realtime;
         if reserved < std::time::Duration::from_millis(50) {
             let send = self.undetermined_send.clone();
