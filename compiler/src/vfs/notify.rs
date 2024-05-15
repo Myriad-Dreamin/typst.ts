@@ -258,7 +258,7 @@ impl<M: AccessModel> AccessModel for NotifyAccessModel<M> {
     }
 
     fn real_path(&self, src: &Path) -> FileResult<Self::RealPath> {
-        if self.files.get(src).is_some() {
+        if self.files.contains_key(src) {
             return Ok(src.into());
         }
 

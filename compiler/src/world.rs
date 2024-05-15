@@ -251,11 +251,13 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     pub fn get_dependencies(&self) -> Option<DependencyTree> {
         let root = self.entry.root()?;
 
-        let t = self.vfs.iter_dependencies();
-        let vfs_dependencies = t.map(|(path, mtime)| DependentFileInfo {
-            path: path.as_ref().to_owned(),
-            mtime: mtime.duration_since(Time::UNIX_EPOCH).unwrap().as_micros() as u64,
-        });
+        let deps = self.vfs.iter_dependencies();
+        let vfs_dependencies = deps
+            .filter_map(|(x, maybe_time)| Some((x, maybe_time.ok()?)))
+            .map(|(path, mtime)| DependentFileInfo {
+                path: path.as_ref().to_owned(),
+                mtime: mtime.duration_since(Time::UNIX_EPOCH).unwrap().as_micros() as u64,
+            });
 
         Some(DependencyTree::from_iter(&root, vfs_dependencies))
     }
@@ -332,7 +334,7 @@ impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
 
 impl<F: CompilerFeat> NotifyApi for CompilerWorld<F> {
     #[inline]
-    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, Time)) {
+    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, FileResult<&Time>)) {
         self.vfs.iter_dependencies_dyn(f)
     }
 

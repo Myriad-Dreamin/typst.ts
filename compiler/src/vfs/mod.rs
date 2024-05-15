@@ -308,33 +308,32 @@ impl<M: AccessModel + Sized> Vfs<M> {
     ///
     /// When you don't reset the vfs for each compilation, this function will
     /// still return remaining files from the previous compilation.
-    pub fn iter_dependencies(&self) -> impl Iterator<Item = (&ImmutPath, Time)> {
+    pub fn iter_dependencies(&self) -> impl Iterator<Item = (&ImmutPath, FileResult<&Time>)> {
         self.slots.iter().map(|slot| {
             let dep_path = slot.sampled_path.get().unwrap();
             let dep_mtime = slot
                 .mtime
-                .compute(|| Err(other_reason("vfs: uninitialized")))
-                .unwrap();
+                .compute(|| Err(other_reason("vfs: uninitialized")));
 
-            (dep_path, *dep_mtime)
+            (dep_path, dep_mtime)
         })
     }
 
     /// Get all the files that are currently in the VFS. This function is
     /// similar to [`Vfs::iter_dependencies`], but it is for trait objects.
-    pub fn iter_dependencies_dyn<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, Time)) {
+    pub fn iter_dependencies_dyn<'a>(
+        &'a self,
+        f: &mut dyn FnMut(&'a ImmutPath, FileResult<&Time>),
+    ) {
         for slot in self.slots.iter() {
             let Some(dep_path) = slot.sampled_path.get() else {
                 continue;
             };
-            let Ok(dep_mtime) = slot
+            let dep_mtime = slot
                 .mtime
-                .compute(|| Err(other_reason("vfs: uninitialized")))
-            else {
-                continue;
-            };
+                .compute(|| Err(other_reason("vfs: uninitialized")));
 
-            f(dep_path, *dep_mtime)
+            f(dep_path, dep_mtime)
         }
     }
 
@@ -390,7 +389,11 @@ impl<M: AccessModel + Sized> Vfs<M> {
     ///
     /// Does not record a change.
     fn get_real_slot(&self, origin_path: &Path) -> FileResult<&PathSlot> {
-        let real_path = self.access_model.real_path(origin_path)?;
+        // If we cannot get the real path, keep the origin path syntactically.
+        let real_path = self
+            .access_model
+            .real_path(origin_path)
+            .unwrap_or_else(|_| origin_path.into());
 
         let mut path_interner = self.path_interner.lock();
         let (file_id, _) = path_interner.intern(real_path, self.lifetime_cnt);

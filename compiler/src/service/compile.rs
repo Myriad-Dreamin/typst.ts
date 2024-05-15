@@ -294,7 +294,7 @@ where
                 // Emulate memory changes.
                 let mut files = HashSet::new();
                 if matches!(event, MemoryEvent::Sync(..)) {
-                    files = self.estimated_shadow_files.clone();
+                    files.clone_from(&self.estimated_shadow_files);
                     self.estimated_shadow_files.clear();
                 }
                 match &event {

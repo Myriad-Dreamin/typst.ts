@@ -9,11 +9,11 @@
 //! Hopefully, one day a reliable file watching/walking crate appears on
 //! crates.io, and we can reduce this to trivial glue code.
 
-use std::{collections::HashMap, fs};
+use std::collections::HashMap;
 
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::mpsc;
-use typst::diag::{FileError, FileResult};
+use typst::diag::{EcoString, FileError, FileResult};
 
 use typst_ts_core::{Bytes, ImmutPath};
 
@@ -68,7 +68,7 @@ struct WatchedEntry {
     /// Previous content of the file.
     prev: Option<NotifyFilePair>,
     /// Previous metadata of the file.
-    prev_meta: Option<std::fs::Metadata>,
+    prev_meta: FileResult<std::fs::Metadata>,
 }
 
 /// Self produced event that check whether the file is stable after a while.
@@ -263,36 +263,35 @@ impl NotifyActor {
                     seen: true,
                     state: WatchState::Stable,
                     prev: None,
-                    prev_meta: None,
+                    prev_meta: Err(FileError::Other(Some(EcoString::from("_not-init_")))),
                 });
 
             // Update in-memory metadata for now.
-            let Some(meta) = path.metadata().ok().or(entry.prev_meta.clone()) else {
-                // We cannot get the metadata even at the first time, so we are
-                // okay to ignore this file for watching.
-                continue;
-            };
-            entry.prev_meta = Some(meta.clone());
+            let meta = path.metadata().map_err(|e| FileError::from_io(e, path));
 
             if let Some((watcher, _)) = &mut self.watcher {
-                // Watch the file again if it's not a directory.
-                if !meta.is_dir() {
-                    if !contained || !entry.watching {
-                        log::debug!("watching {path:?}");
-                        entry.watching = log_notify_error(
-                            watcher.watch(path.as_ref(), RecursiveMode::NonRecursive),
-                            "failed to watch",
-                        )
-                        .is_some();
-                    }
-
-                    changeset.may_insert(self.notify_entry_update(path.clone(), Some(meta)));
+                // Case1. meta = Err(..) We cannot get the metadata successfully, so we
+                // are okay to ignore this file for watching.
+                //
+                // Case2. meta = Ok(..) Watch the file if it's not watched.
+                if meta
+                    .as_ref()
+                    .is_ok_and(|meta| !meta.is_dir() && (!contained || !entry.watching))
+                {
+                    log::debug!("watching {path:?}");
+                    entry.watching = log_notify_error(
+                        watcher.watch(path.as_ref(), RecursiveMode::NonRecursive),
+                        "failed to watch",
+                    )
+                    .is_some();
                 }
+
+                changeset.may_insert(self.notify_entry_update(path.clone(), Some(meta)));
             } else {
-                let watched = self
-                    .inner
-                    .content(path)
-                    .map(|e| (meta.modified().unwrap(), e));
+                let watched = meta.and_then(|meta| {
+                    let content = self.inner.content(path)?;
+                    Ok((meta.modified().unwrap(), content))
+                });
                 changeset.inserts.push((path.clone(), watched.into()));
             }
         }
@@ -366,9 +365,10 @@ impl NotifyActor {
     fn notify_entry_update(
         &mut self,
         path: ImmutPath,
-        meta: Option<std::fs::Metadata>,
+        meta: Option<FileResult<std::fs::Metadata>>,
     ) -> Option<FileEntry> {
-        let meta = meta.or_else(|| fs::metadata(&path).ok())?;
+        let mut meta =
+            meta.unwrap_or_else(|| path.metadata().map_err(|e| FileError::from_io(e, &path)));
 
         // The following code in rust-analyzer is commented out
         // todo: check whether we need this
@@ -379,6 +379,30 @@ impl NotifyActor {
         //     return None;
         // }
 
+        // Find entry and continue
+        let entry = self.watched_entries.get_mut(&path)?;
+
+        std::mem::swap(&mut entry.prev_meta, &mut meta);
+        let prev_meta = meta;
+        let next_meta = &entry.prev_meta;
+
+        let meta = match (prev_meta, next_meta) {
+            (Err(prev), Err(next)) => {
+                if prev != *next {
+                    return Some((path.clone(), FileSnapshot::from(Err(next.clone()))));
+                }
+                return None;
+            }
+            // todo: check correctness
+            (Ok(..), Err(next)) => {
+                // Invalidate the entry content
+                entry.prev = None;
+
+                return Some((path.clone(), FileSnapshot::from(Err(next.clone()))));
+            }
+            (_, Ok(meta)) => meta,
+        };
+
         if !meta.file_type().is_file() {
             return None;
         }
@@ -387,9 +411,6 @@ impl NotifyActor {
 
         // Get meta, real path and ignore errors
         let mtime = meta.modified().ok()?;
-
-        // Find entry and continue
-        let entry = self.watched_entries.get_mut(&path)?;
 
         let mut file = self.inner.content(&path).map(|it| (mtime, it));
 

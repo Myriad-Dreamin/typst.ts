@@ -83,9 +83,9 @@ impl ColorSpace {
     }
 }
 
-impl ToString for ColorSpace {
-    fn to_string(&self) -> String {
-        self.to_str().to_owned()
+impl fmt::Display for ColorSpace {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_str())
     }
 }
 

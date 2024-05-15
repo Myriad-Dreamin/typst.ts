@@ -179,7 +179,10 @@ impl Compiler for BoxedCompiler {
     }
 
     #[inline]
-    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, typst_ts_compiler::Time)) {
+    fn iter_dependencies<'a>(
+        &'a self,
+        f: &mut dyn FnMut(&'a ImmutPath, FileResult<&typst_ts_compiler::Time>),
+    ) {
         self.0.iter_dependencies(f)
     }
 

@@ -10,7 +10,7 @@ pub async fn run_http(args: RunHttpArgs) {
 
     let mut http_addr = args.http.clone();
     if http_addr.is_empty() {
-        http_addr = "127.0.0.1:20810".to_owned();
+        "127.0.0.1:20810".clone_into(&mut http_addr);
     }
     let http_addr: SocketAddr = http_addr.parse().unwrap();
 
