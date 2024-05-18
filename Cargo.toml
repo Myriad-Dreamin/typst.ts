@@ -1,7 +1,7 @@
 [workspace.package]
 description = "Run Typst in JavaScriptWorld."
 authors = ["Typst.ts Developers", "The Typst Project Developers"]
-version = "0.5.0-rc3"
+version = "0.5.0-rc4"
 edition = "2021"
 readme = "README.md"
 license = "Apache-2.0"
@@ -197,26 +197,26 @@ vergen = { version = "8.3.1", features = [
 ] }
 
 # project core
-reflexo = { version = "0.5.0-rc3", default-features = false, path = "crates/reflexo" }
+reflexo = { version = "0.5.0-rc4", default-features = false, path = "crates/reflexo" }
 
 # conversions
-reflexo-vec2canvas = { version = "0.5.0-rc3", path = "crates/conversion/vec2canvas" }
+reflexo-vec2canvas = { version = "0.5.0-rc4", path = "crates/conversion/vec2canvas" }
 
-typst-ts-core = { version = "0.5.0-rc3", default-features = false }
-typst-ts-compiler = { version = "0.5.0-rc3", default-features = false }
-typst-ts-test-common = { version = "0.5.0-rc3", path = "tests/common" }
+typst-ts-core = { version = "0.5.0-rc4", default-features = false }
+typst-ts-compiler = { version = "0.5.0-rc4", default-features = false }
+typst-ts-test-common = { version = "0.5.0-rc4", path = "tests/common" }
 
 # project exporters
-typst-ts-ast-exporter = "0.5.0-rc3"
+typst-ts-ast-exporter = "0.5.0-rc4"
 typst-ts-dom-exporter = { path = "exporter/dom" }
-typst-ts-pdf-exporter = "0.5.0-rc3"
-typst-ts-serde-exporter = "0.5.0-rc3"
-typst-ts-svg-exporter = "0.5.0-rc3"
-typst-ts-text-exporter = "0.5.0-rc3"
+typst-ts-pdf-exporter = "0.5.0-rc4"
+typst-ts-serde-exporter = "0.5.0-rc4"
+typst-ts-svg-exporter = "0.5.0-rc4"
+typst-ts-text-exporter = "0.5.0-rc4"
 
 # project common components
-typst-ts-dev-server = { version = "0.5.0-rc3", path = "server/dev" }
-typst-ts-cli = { version = "0.5.0-rc3", path = "cli" }
+typst-ts-dev-server = { version = "0.5.0-rc4", path = "server/dev" }
+typst-ts-cli = { version = "0.5.0-rc4", path = "cli" }
 
 [patch.crates-io]
 typst-ts-core = { path = "core" }
