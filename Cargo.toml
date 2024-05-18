@@ -119,9 +119,6 @@ clap_mangen = { version = "0.2.15" }
 human-panic = "1.1.4"
 rustyline = { version = "12.0.0", features = ["derive"] }
 
-# net
-tokio-tungstenite = "0.20.0"
-
 # system
 dirs = "5"
 fontdb = "0.16"
