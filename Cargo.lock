@@ -4209,8 +4209,7 @@ checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 [[package]]
 name = "typst"
 version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12492297d20937494f0143ae50ef339e5fd3d927b4096af1c52fe73fb9c5fa9a"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.1-content-hint#f064851c3e45d8f230f1c2d5a37489801aa49d57"
 dependencies = [
  "az",
  "bitflags 2.5.0",
@@ -4282,8 +4281,7 @@ source = "git+https://github.com/typst/typst-dev-assets?rev=e0ef7ad#e0ef7ad46f28
 [[package]]
 name = "typst-ide"
 version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3921e77003924e164f75a166a8d78a8f708479f43fa7e7cc7152f6bdf9558016"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.1-content-hint#f064851c3e45d8f230f1c2d5a37489801aa49d57"
 dependencies = [
  "comemo",
  "ecow",
@@ -4297,8 +4295,7 @@ dependencies = [
 [[package]]
 name = "typst-macros"
 version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5a0fdfd46b4920b0f8e4215e5b8438c737e8bc3498a681ea59b0130228363fc"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.1-content-hint#f064851c3e45d8f230f1c2d5a37489801aa49d57"
 dependencies = [
  "heck 0.4.1",
  "proc-macro2",
@@ -4309,8 +4306,7 @@ dependencies = [
 [[package]]
 name = "typst-pdf"
 version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54f743b64330e576d31b2108626490ae1fbd7fb4bb28307536ceff3227a4e0d5"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.1-content-hint#f064851c3e45d8f230f1c2d5a37489801aa49d57"
 dependencies = [
  "base64 0.22.1",
  "bytemuck",
@@ -4335,8 +4331,7 @@ dependencies = [
 [[package]]
 name = "typst-svg"
 version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cef4e3640269c81ceafb09e0afe8374b2c25890e82c013550a1d25a2b9aae23b"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.1-content-hint#f064851c3e45d8f230f1c2d5a37489801aa49d57"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4353,8 +4348,7 @@ dependencies = [
 [[package]]
 name = "typst-syntax"
 version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3db69f2f41613b1ff6edbec44fd7dc524137f099ee36c46f560cedeaadb40c4"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.1-content-hint#f064851c3e45d8f230f1c2d5a37489801aa49d57"
 dependencies = [
  "comemo",
  "ecow",
@@ -4370,8 +4364,7 @@ dependencies = [
 [[package]]
 name = "typst-timing"
 version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b58e17192bcacb2a39aace6d3eece70f008b2949ce384ac501a58357fafee67"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.1-content-hint#f064851c3e45d8f230f1c2d5a37489801aa49d57"
 dependencies = [
  "parking_lot",
  "serde",
@@ -5604,28 +5597,3 @@ dependencies = [
  "quote",
  "syn 2.0.64",
 ]
-
-[[patch.unused]]
-name = "typst"
-version = "0.11.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.1-content-hint#76c567156723338e12e5c40d9a4c417ecff02b1b"
-
-[[patch.unused]]
-name = "typst-ide"
-version = "0.11.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.1-content-hint#76c567156723338e12e5c40d9a4c417ecff02b1b"
-
-[[patch.unused]]
-name = "typst-pdf"
-version = "0.11.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.1-content-hint#76c567156723338e12e5c40d9a4c417ecff02b1b"
-
-[[patch.unused]]
-name = "typst-svg"
-version = "0.11.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.1-content-hint#76c567156723338e12e5c40d9a4c417ecff02b1b"
-
-[[patch.unused]]
-name = "typst-syntax"
-version = "0.11.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.11.1-content-hint#76c567156723338e12e5c40d9a4c417ecff02b1b"
