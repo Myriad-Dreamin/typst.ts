@@ -115,19 +115,18 @@ impl ExportFeature for SvgExportFeature {
 pub fn render_svg_html(output: &TypstDocument) -> String {
     type UsingExporter = SvgExporter<DefaultExportFeature>;
     let mut doc = UsingExporter::svg_doc(output);
-    doc.module.prepare_glyphs();
+    render_vector_svg_html(&mut doc, output.title.as_ref().map(|s| s.as_str()))
+}
+
+pub fn render_vector_svg_html(doc: &mut VecDocument, title: Option<&str>) -> String {
+    type UsingExporter = SvgExporter<DefaultExportFeature>;
     let mut svg = UsingExporter::render(&doc.module, &doc.pages, None);
+    doc.module.prepare_glyphs();
 
     // wrap SVG with html
     let mut html: Vec<SvgText> = Vec::with_capacity(svg.len() + 3);
     html.push(r#"<!DOCTYPE html><html><head><meta charset="utf-8" /><title>"#.into());
-    html.push(SvgText::Plain(
-        output
-            .title
-            .clone()
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| "Typst TypstDocument".into()),
-    ));
+    html.push(SvgText::Plain(title.unwrap_or("Typst Document").into()));
     html.push(r#"</title></head><body>"#.into());
     html.append(&mut svg);
     html.push(r#"</body></html>"#.into());

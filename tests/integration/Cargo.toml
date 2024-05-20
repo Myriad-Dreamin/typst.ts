@@ -13,6 +13,9 @@ insta = { workspace = true, features = ["yaml"] }
 
 hex.workspace = true
 base64.workspace = true
+ecow.workspace = true
+reflexo.workspace = true
+typst.workspace = true
 image.workspace = true
 image_hasher = "1.1.0"
 sha2.workspace = true

@@ -207,6 +207,12 @@ pub struct Transform {
     pub ty: Abs,
 }
 
+impl Default for Transform {
+    fn default() -> Self {
+        Self::identity()
+    }
+}
+
 impl Transform {
     pub fn from_scale(sx: Ratio, sy: Ratio) -> Self {
         Self {

@@ -1,3 +1,5 @@
+#[cfg(test)]
+mod isolate_tests;
 pub mod wasm;
 
 use std::path::Path;
