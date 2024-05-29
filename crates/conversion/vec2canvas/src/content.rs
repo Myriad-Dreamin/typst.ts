@@ -9,7 +9,7 @@ use reflexo::{
             self, Abs, Axes, FontIndice, FontRef, GroupRef, Module, Ratio, Scalar, TextItem,
             Transform, VecItem,
         },
-        vm::{GroupContext, RenderState, RenderVm, TransformContext},
+        vm::{GroupContext, RenderVm, TransformContext},
     },
 };
 
@@ -67,15 +67,9 @@ trait TranslateCtx {
 
 /// See [`FlatGroupContext`].
 impl<'m, C: TranslateCtx + RenderVm<'m, Resultant = ()>> GroupContext<C> for TextContentBuilder {
-    fn render_item_at(
-        &mut self,
-        state: RenderState,
-        ctx: &mut C,
-        pos: ir::Point,
-        item: &Fingerprint,
-    ) {
+    fn render_item_at(&mut self, ctx: &mut C, pos: ir::Point, item: &Fingerprint) {
         ctx.translate(pos.x, pos.y);
-        ctx.render_item(state, item);
+        ctx.render_item(item);
         ctx.translate(-pos.x, -pos.y);
     }
 }
@@ -119,7 +113,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
                 }),
                 &t.1,
             ),
-            VecItem::Group(group, _) => self.process_flat_group(ts, group),
+            VecItem::Group(group) => self.process_flat_group(ts, group),
             VecItem::Text(text) => self.process_flat_text(ts, text),
             _ => {}
         }
@@ -140,7 +134,7 @@ impl<'m, 't> TextContentTask<'m, 't> {
                     }),
                     &t.1,
                 ),
-                VecItem::Group(group, _) => {
+                VecItem::Group(group) => {
                     self.process_flat_group(ts, group);
                 }
                 VecItem::Text(text) => {

@@ -655,5 +655,4 @@ pub struct TransformElem {
 #[derive(Debug)]
 pub struct GroupElem {
     pub children: Vec<(Point, TypstElem)>,
-    pub size: Option<Size>,
 }

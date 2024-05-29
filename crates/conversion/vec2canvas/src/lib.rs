@@ -25,7 +25,7 @@ use reflexo::{
             self, Abs, Axes, FlatGlyphItem, FontIndice, FontItem, FontRef, Image, ImageItem,
             ImmutStr, Module, PathStyle, Ratio, Scalar, Size,
         },
-        vm::{GroupContext, RenderState, RenderVm, TransformContext},
+        vm::{GroupContext, RenderVm, TransformContext},
     },
 };
 
@@ -579,13 +579,7 @@ impl<C> TransformContext<C> for CanvasStack {
 
 /// See [`GroupContext`].
 impl<'m, C: RenderVm<'m, Resultant = CanvasNode>> GroupContext<C> for CanvasStack {
-    fn render_path(
-        &mut self,
-        _state: RenderState,
-        _ctx: &mut C,
-        path: &ir::PathItem,
-        _abs_ref: &Fingerprint,
-    ) {
+    fn render_path(&mut self, _ctx: &mut C, path: &ir::PathItem, _abs_ref: &Fingerprint) {
         self.inner.push((
             ir::Point::default(),
             Arc::new(CanvasElem::Path(CanvasPathElem {
@@ -603,14 +597,8 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode>> GroupContext<C> for CanvasStac
         ))
     }
 
-    fn render_item_at(
-        &mut self,
-        state: RenderState,
-        ctx: &mut C,
-        pos: crate::ir::Point,
-        item: &Fingerprint,
-    ) {
-        self.inner.push((pos, ctx.render_item(state, item)));
+    fn render_item_at(&mut self, ctx: &mut C, pos: crate::ir::Point, item: &Fingerprint) {
+        self.inner.push((pos, ctx.render_item(item)));
     }
 
     fn render_glyph(&mut self, _ctx: &mut C, pos: Scalar, font: &FontItem, glyph: u32) {
@@ -650,12 +638,7 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, 't, Feat
         }
     }
 
-    fn start_text(
-        &mut self,
-        _state: RenderState,
-        value: &Fingerprint,
-        text: &ir::TextItem,
-    ) -> Self::Group {
+    fn start_text(&mut self, value: &Fingerprint, text: &ir::TextItem) -> Self::Group {
         let mut g = self.start_group(value);
         for style in &text.shape.styles {
             if let ir::PathStyle::Fill(fill) = style {

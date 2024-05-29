@@ -96,9 +96,6 @@ impl fmt::Display for ColorSpace {
 pub struct GradientItem {
     /// The path instruction.
     pub stops: Vec<(Rgba8Item, Scalar)>,
-    /// Whether the gradient is relative to itself (its own bounding box).
-    /// Otherwise, the gradient is relative to the parent bounding box.
-    pub relative_to_self: Option<bool>,
     /// Whether to anti-alias the gradient (used for sharp gradients).
     pub anti_alias: bool,
     /// A color space for mixing.
@@ -135,4 +132,14 @@ pub enum GradientStyle {
     FocalCenter(Point),
     /// Focal radius of a radial gradient.
     FocalRadius(Scalar),
+}
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub struct ColorTransform {
+    /// The transformation applied to space-sensitive color.
+    pub transform: Transform,
+    /// The gradient item.
+    pub item: Fingerprint,
 }

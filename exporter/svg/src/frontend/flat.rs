@@ -5,7 +5,7 @@ use typst_ts_core::{
     vector::{
         ir::{Module, Page, Size, VecDocument, VecItem},
         pass::Typst2VecPass,
-        vm::{RenderState, RenderVm},
+        vm::RenderVm,
     },
     TypstDocument,
 };
@@ -25,7 +25,6 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
             let entry = &page.content;
             let size = Self::page_size(page.size);
 
-            let state = RenderState::new_size(page.size);
             svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
                 attributes: vec![
                     ("class", "typst-page".into()),
@@ -34,7 +33,7 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
                     ("data-page-width", size.x.to_string()),
                     ("data-page-height", size.y.to_string()),
                 ],
-                content: vec![SvgText::Content(render_task.render_item(state, entry))],
+                content: vec![SvgText::Content(render_task.render_item(entry))],
             })));
             acc_height += size.y;
         }
@@ -47,8 +46,7 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
         self.collect_patterns(|t: &mut Self, id| match module.get_item(id) {
             Some(VecItem::Pattern(g)) => {
                 let size = g.size + g.spacing;
-                let state = RenderState::new_size(size);
-                let content = t.get_render_context(module).render_item(state, &g.frame);
+                let content = t.get_render_context(module).render_item(&g.frame);
                 Some((*id, size, content))
             }
             _ => {

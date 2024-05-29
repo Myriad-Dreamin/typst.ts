@@ -29,7 +29,7 @@ use crate::{
     font::GlyphProvider,
     hash::{Fingerprint, FingerprintBuilder},
     vector::{
-        ir::*,
+        ir::{self, *},
         path2d::SvgPath2DBuilder,
         utils::{AbsExt, ToCssExt},
     },
@@ -38,8 +38,59 @@ use crate::{
 
 use super::{SourceNodeKind, SourceRegion, Span2VecPass, TGlyph2VecPass};
 
+#[derive(Clone, Copy)]
+struct State<'a> {
+    introspector: &'a Introspector,
+    /// The transform of the current item.
+    pub transform: Transform,
+    /// The size of the first hard frame in the hierarchy.
+    pub size: ir::Size,
+}
+
+impl<'a> State<'a> {
+    fn new(introspector: &Introspector, size: ir::Size) -> State {
+        State {
+            introspector,
+            transform: Transform::identity(),
+            size,
+        }
+    }
+
+    /// Pre translate the current item's transform.
+    pub fn pre_translate(self, pos: Point) -> Self {
+        self.pre_concat(Transform::from_translate(pos.x, pos.y))
+    }
+
+    /// Pre concat the current item's transform.
+    pub fn pre_concat(self, transform: ir::Transform) -> Self {
+        Self {
+            transform: self.transform.pre_concat(transform),
+            ..self
+        }
+    }
+
+    /// Sets the size of the first hard frame in the hierarchy.
+    pub fn with_size(self, size: ir::Size) -> Self {
+        Self { size, ..self }
+    }
+
+    /// Sets the current item's transform.
+    pub fn with_transform(self, transform: ir::Transform) -> Self {
+        Self { transform, ..self }
+    }
+
+    pub fn inv_transform(&self) -> ir::Transform {
+        self.transform.invert().unwrap()
+    }
+
+    pub fn body_inv_transform(&self) -> ir::Transform {
+        ir::Transform::from_scale(self.size.x, self.size.y)
+            .post_concat(self.transform.invert().unwrap())
+    }
+}
+
 /// Intermediate representation of a flatten vector item.
-pub struct ConvertImpl<const ENABLE_REF_CNT: bool = false> {
+pub struct Typst2VecPassImpl<const ENABLE_REF_CNT: bool = false> {
     pub glyphs: TGlyph2VecPass<ENABLE_REF_CNT>,
     pub spans: Span2VecPass,
     pub cache_items: RefItemMapT<(AtomicU64, Fingerprint, VecItem)>,
@@ -51,10 +102,10 @@ pub struct ConvertImpl<const ENABLE_REF_CNT: bool = false> {
     pub lifetime: u64,
 }
 
-pub type Typst2VecPass = ConvertImpl</* ENABLE_REF_CNT */ false>;
-pub type IncrTypst2VecPass = ConvertImpl</* ENABLE_REF_CNT */ true>;
+pub type Typst2VecPass = Typst2VecPassImpl</* ENABLE_REF_CNT */ false>;
+pub type IncrTypst2VecPass = Typst2VecPassImpl</* ENABLE_REF_CNT */ true>;
 
-impl<const ENABLE_REF_CNT: bool> Default for ConvertImpl<ENABLE_REF_CNT> {
+impl<const ENABLE_REF_CNT: bool> Default for Typst2VecPassImpl<ENABLE_REF_CNT> {
     fn default() -> Self {
         let glyphs = TGlyph2VecPass::new(GlyphProvider::default(), true);
         let spans = Span2VecPass::default();
@@ -116,7 +167,7 @@ impl Typst2VecPass {
     }
 }
 
-impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
+impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
     pub fn reset(&mut self) {}
 
     pub fn finalize(self) -> Module {
@@ -138,7 +189,8 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             .map(|(idx, p)| {
                 let page_reg = self.spans.start();
 
-                let abs_ref = self.frame(introspector, &p.frame, page_reg, idx);
+                let state = State::new(introspector, p.frame.size().into_typst());
+                let abs_ref = self.frame(state, &p.frame, page_reg, idx);
 
                 self.spans.push_span(SourceRegion {
                     region: doc_reg,
@@ -161,15 +213,17 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
         pages
     }
 
-    pub fn frame(
-        &self,
-        introspector: &Introspector,
-        frame: &Frame,
-        parent_reg: usize,
-        index: usize,
-    ) -> Fingerprint {
-        // let mut items = Vec::with_capacity(frame.items().len());
+    fn frame(&self, mut state: State, frame: &Frame, parent: usize, index: usize) -> Fingerprint {
         let src_reg = self.spans.start();
+
+        let frame_size = match frame.kind() {
+            FrameKind::Hard => Some(frame.size().into_typst()),
+            FrameKind::Soft => None,
+        };
+        if let Some(sz) = &frame_size {
+            state = state.with_transform(Transform::identity()).with_size(*sz);
+        }
+        let state = state;
 
         let mut items = frame
             .items()
@@ -178,9 +232,12 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             .enumerate()
             .flat_map(|(idx, (pos, item))| {
                 let mut is_link = false;
+                let state = state.pre_translate((*pos).into_typst());
                 let item = match item {
                     FrameItem::Group(group) => {
-                        let mut inner = self.frame(introspector, &group.frame, src_reg, idx);
+                        let state = state.pre_concat(group.transform.into_typst());
+
+                        let mut inner = self.frame(state, &group.frame, src_reg, idx);
 
                         if let Some(p) = group.clip_path.as_ref() {
                             // todo: merge
@@ -233,7 +290,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                         inner
                     }
                     FrameItem::Text(text) => {
-                        let i = self.text(introspector, text);
+                        let i = self.text(state, text);
 
                         self.spans.push_span(SourceRegion {
                             region: src_reg,
@@ -249,7 +306,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                         i
                     }
                     FrameItem::Shape(shape, s) => {
-                        let i = self.shape(introspector, shape);
+                        let i = self.shape(state, shape);
 
                         self.spans.push_span(SourceRegion {
                             region: src_reg,
@@ -280,7 +337,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
                                 Destination::Position(dest) => self.position(*dest, *size),
                                 Destination::Location(loc) => {
                                     // todo: process location before lowering
-                                    let dest = introspector.position(*loc);
+                                    let dest = state.introspector.position(*loc);
                                     self.position(dest, *size)
                                 }
                             })
@@ -321,16 +378,12 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             std::cmp::Ordering::Equal
         });
 
-        let g = self.store(VecItem::Group(
-            GroupRef(items.into_iter().map(|(x, _, y)| (x, y)).collect()),
-            match frame.kind() {
-                FrameKind::Hard => Some(frame.size().into_typst()),
-                FrameKind::Soft => None,
-            },
-        ));
+        let g = self.store(VecItem::Group(GroupRef(
+            items.into_iter().map(|(x, _, y)| (x, y)).collect(),
+        )));
 
         self.spans.push_span(SourceRegion {
-            region: parent_reg,
+            region: parent,
             idx: index as u32,
             kind: SourceNodeKind::Group { region: src_reg },
             item: g,
@@ -475,9 +528,11 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
     }
 
     /// Convert a text into vector item.
-    pub fn text(&self, introspector: &Introspector, text: &TypstTextItem) -> Fingerprint {
+    fn text(&self, state: State, text: &TypstTextItem) -> Fingerprint {
         let stateful_fill = match text.fill {
-            Paint::Pattern(..) | Paint::Gradient(..) => Some(self.paint(introspector, &text.fill)),
+            Paint::Pattern(..) | Paint::Gradient(..) => {
+                Some(self.paint_text(state, text, &text.fill))
+            }
             _ => None,
         };
 
@@ -485,7 +540,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             Some(FixedStroke {
                 paint: Paint::Pattern(..) | Paint::Gradient(..),
                 ..
-            }) => Some(self.paint(introspector, &text.stroke.as_ref().unwrap().paint)),
+            }) => Some(self.paint_text(state, text, &text.stroke.as_ref().unwrap().paint)),
             _ => None,
         };
 
@@ -500,6 +555,15 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             stateful_fill: stateful_fill.clone(),
             stateful_stroke: stateful_stroke.clone(),
             text,
+        };
+
+        let stateful_fill =
+            || stateful_fill.unwrap_or_else(|| self.paint_text(state, text, &text.fill));
+
+        let stateful_stroke = || {
+            stateful_stroke.unwrap_or_else(|| {
+                self.paint_text(state, text, &text.stroke.as_ref().unwrap().paint)
+            })
         };
 
         self.store_cached(&cond, || {
@@ -520,11 +584,10 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             // let mut extras = ExtraSvgItems::default();
 
             let font = self.glyphs.build_font(&text.font);
-            let fill = stateful_fill.unwrap_or_else(|| self.paint(introspector, &text.fill));
 
-            let mut styles = vec![PathStyle::Fill(fill)];
+            let mut styles = vec![PathStyle::Fill(stateful_fill())];
             if let Some(stroke) = text.stroke.as_ref() {
-                self.stroke(introspector, stateful_stroke, stroke, &mut styles);
+                self.stroke(stateful_stroke, stroke, &mut styles);
             }
 
             VecItem::Text(TextItem {
@@ -550,10 +613,9 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
     fn stroke(
         &self,
-        introspector: &Introspector,
-        stateful_stroke: Option<Arc<str>>,
+        stateful_stroke: impl FnOnce() -> ImmutStr,
         FixedStroke {
-            paint,
+            paint: _,
             thickness,
             cap,
             join,
@@ -583,13 +645,11 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             LineJoin::Round => styles.push(PathStyle::StrokeLineJoin("round".into())),
         }
 
-        styles.push(PathStyle::Stroke(
-            stateful_stroke.unwrap_or_else(|| self.paint(introspector, paint)),
-        ));
+        styles.push(PathStyle::Stroke(stateful_stroke()));
     }
 
     // /// Convert a geometrical shape into vector item.
-    pub fn shape(&self, introspector: &Introspector, shape: &Shape) -> Fingerprint {
+    fn shape(&self, state: State, shape: &Shape) -> Fingerprint {
         #[derive(Hash)]
         struct ShapeKey<'i> {
             stateful_fill: Option<Arc<str>>,
@@ -599,7 +659,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
         let stateful_fill = match shape.fill {
             Some(Paint::Pattern(..) | Paint::Gradient(..)) => {
-                Some(self.paint(introspector, shape.fill.as_ref().unwrap()))
+                Some(self.paint_shape(state, shape, shape.fill.as_ref().unwrap()))
             }
             _ => None,
         };
@@ -608,7 +668,7 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             Some(FixedStroke {
                 paint: Paint::Pattern(..) | Paint::Gradient(..),
                 ..
-            }) => Some(self.paint(introspector, &shape.stroke.as_ref().unwrap().paint)),
+            }) => Some(self.paint_shape(state, shape, &shape.stroke.as_ref().unwrap().paint)),
             _ => None,
         };
 
@@ -616,6 +676,12 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             stateful_fill: stateful_fill.clone(),
             stateful_stroke: stateful_stroke.clone(),
             shape,
+        };
+
+        let stateful_stroke = || {
+            stateful_stroke.unwrap_or_else(|| {
+                self.paint_shape(state, shape, &shape.stroke.as_ref().unwrap().paint)
+            })
         };
 
         self.store_cached(cond, || {
@@ -669,12 +735,12 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
             if let Some(paint_fill) = &shape.fill {
                 styles.push(PathStyle::Fill(
-                    stateful_fill.unwrap_or_else(|| self.paint(introspector, paint_fill)),
+                    stateful_fill.unwrap_or_else(|| self.paint_shape(state, shape, paint_fill)),
                 ));
             }
 
             if let Some(stroke) = &shape.stroke {
-                self.stroke(introspector, stateful_stroke, stroke, &mut styles);
+                self.stroke(stateful_stroke, stroke, &mut styles);
             }
 
             let mut shape_size = shape.geometry.bbox_size();
@@ -738,32 +804,99 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
 
         VecItem::Link(lnk)
     }
+
     #[inline]
-    fn paint(&self, introspector: &Introspector, g: &Paint) -> ImmutStr {
+    fn paint_shape(&self, state: State, shape: &Shape, g: &Paint) -> ImmutStr {
+        self.paint(state, g, |relative_to_self, is_gradient| {
+            self.paint_transform(
+                state,
+                relative_to_self,
+                || {
+                    let bbox = shape.geometry.bbox_size();
+                    ir::Transform::from_scale(
+                        ir::Scalar(bbox.x.to_f32()),
+                        ir::Scalar(bbox.y.to_f32()),
+                    )
+                },
+                false,
+                is_gradient,
+            )
+        })
+    }
+
+    #[inline]
+    fn paint_text(&self, state: State, text: &TypstTextItem, g: &Paint) -> ImmutStr {
+        self.paint(state, g, |relative_to_self, is_gradient| {
+            self.paint_transform(
+                state,
+                relative_to_self,
+                || {
+                    let upem = text.font.units_per_em() as f32;
+                    let text_size = text.size.to_f32();
+                    let text_scale = upem / text_size;
+                    ir::Transform::from_scale(ir::Scalar(text_scale), ir::Scalar(-text_scale))
+                },
+                true,
+                is_gradient,
+            )
+        })
+    }
+
+    #[inline]
+    fn paint(
+        &self,
+        state: State,
+        g: &Paint,
+        mk_transform: impl FnOnce(Smart<RelativeTo>, bool) -> Transform,
+    ) -> ImmutStr {
         match g {
             Paint::Solid(c) => c.to_css().into(),
             Paint::Pattern(e) => {
-                let fingerprint = self.pattern(introspector, e);
+                let fingerprint = self.pattern(state, e, mk_transform(e.relative(), false));
                 format!("@{}", fingerprint.as_svg_id("p")).into()
             }
             Paint::Gradient(g) => {
-                let fingerprint = self.graident(g);
+                let fingerprint = self.graident(g, mk_transform(g.relative(), true));
                 format!("@{}", fingerprint.as_svg_id("g")).into()
             }
         }
     }
 
-    fn graident(&self, g: &Gradient) -> Fingerprint {
+    #[inline]
+    fn paint_transform(
+        &self,
+        state: State,
+        relative_to_self: Smart<RelativeTo>,
+        scale_ts: impl FnOnce() -> ir::Transform,
+        is_text: bool,
+        is_gradient: bool,
+    ) -> ir::Transform {
+        let relative_to_self = match relative_to_self {
+            Smart::Auto => !is_text,
+            Smart::Custom(t) => t == RelativeTo::Self_,
+        };
+
+        let transform = match (is_gradient, relative_to_self) {
+            (true, true) => return scale_ts(),
+            (false, true) if is_text => return scale_ts(),
+            (false, true) => return ir::Transform::identity(),
+            (true, false) => state.body_inv_transform(),
+            (false, false) => state.inv_transform(),
+        };
+
+        if is_text {
+            transform.post_concat(scale_ts())
+        } else {
+            transform
+        }
+    }
+
+    fn graident(&self, g: &Gradient, transform: ir::Transform) -> Fingerprint {
         let mut stops = Vec::with_capacity(g.stops_ref().len());
         for (c, step) in g.stops_ref() {
             let [r, g, b, a] = c.to_rgb().to_vec4_u8();
             stops.push((Rgba8Item { r, g, b, a }, (*step).into_typst()))
         }
-
-        let relative_to_self = match g.relative() {
-            Smart::Auto => None,
-            Smart::Custom(t) => Some(t == RelativeTo::Self_),
-        };
 
         let anti_alias = g.anti_alias();
         let space = g.space().into_typst();
@@ -797,32 +930,33 @@ impl<const ENABLE_REF_CNT: bool> ConvertImpl<ENABLE_REF_CNT> {
             }
         };
 
-        self.store(VecItem::Gradient(Arc::new(GradientItem {
+        let item = self.store(VecItem::Gradient(Arc::new(GradientItem {
             stops,
-            relative_to_self,
             anti_alias,
             space,
             kind,
             styles,
+        })));
+
+        self.store(VecItem::ColorTransform(Arc::new(ColorTransform {
+            transform,
+            item,
         })))
     }
 
-    fn pattern(&self, introspector: &Introspector, g: &Pattern) -> Fingerprint {
-        let frame = self.frame(introspector, g.frame(), 0, 0);
+    fn pattern(&self, state: State, g: &Pattern, transform: ir::Transform) -> Fingerprint {
+        let frame = self.frame(state, g.frame(), 0, 0);
 
-        let relative_to_self = match g.relative() {
-            Smart::Auto => None,
-            Smart::Custom(t) => Some(t == RelativeTo::Self_),
-        };
-
-        let pattern = VecItem::Pattern(Arc::new(PatternItem {
+        let item = self.store(VecItem::Pattern(Arc::new(PatternItem {
             frame,
             size: g.size().into_typst(),
             spacing: g.spacing().into_typst(),
-            relative_to_self,
-        }));
+        })));
 
-        self.store(pattern)
+        self.store(VecItem::ColorTransform(Arc::new(ColorTransform {
+            transform,
+            item,
+        })))
     }
 }
 

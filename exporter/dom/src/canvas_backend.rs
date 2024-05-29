@@ -3,7 +3,7 @@ use typst_ts_core::{
     error::prelude::ZResult,
     vector::{
         ir::{Module, Page},
-        vm::{RenderState, RenderVm},
+        vm::RenderVm,
     },
 };
 
@@ -34,8 +34,7 @@ impl CanvasBackend {
     pub fn render_page(&mut self, module: &Module, page: &Page) -> ZResult<CanvasNode> {
         let mut ct = self.vec2canvas.fork_canvas_render_task(module);
 
-        let state = RenderState::new_size(page.size);
-        Ok(ct.render_item(state, &page.content))
+        Ok(ct.render_item(&page.content))
     }
 }
 
