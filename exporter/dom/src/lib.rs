@@ -19,7 +19,7 @@ use typst_ts_core::vector::{
         self, Abs, Axes, FontIndice, FontItem, FontRef, GlyphRef, Module, Ratio, Rect, Scalar,
         Transform,
     },
-    vm::{GroupContext, RenderState, RenderVm, TransformContext},
+    vm::{GroupContext, RenderVm, TransformContext},
 };
 
 /// Use types from `tiny-skia` crate.
@@ -215,13 +215,7 @@ impl<'m, C: RenderVm<'m, Resultant = BBox>> GroupContext<C> for BBoxBuilder {
         unreachable!();
     }
 
-    fn render_path(
-        &mut self,
-        _state: RenderState,
-        _ctx: &mut C,
-        path: &ir::PathItem,
-        _abs_ref: &Fingerprint,
-    ) {
+    fn render_path(&mut self, _ctx: &mut C, path: &ir::PathItem, _abs_ref: &Fingerprint) {
         let path = PathRepr::from_item(path).unwrap();
         self.inner.push((
             ir::Point::default(),
@@ -239,22 +233,10 @@ impl<'m, C: RenderVm<'m, Resultant = BBox>> GroupContext<C> for BBoxBuilder {
         ))
     }
 
-    fn render_item_at(
-        &mut self,
-        state: RenderState,
-        ctx: &mut C,
-        pos: ir::Point,
-        item: &Fingerprint,
-    ) {
-        let bbox = ctx.render_item(state, item);
+    fn render_item_at(&mut self, ctx: &mut C, pos: ir::Point, item: &Fingerprint) {
+        let bbox = ctx.render_item(item);
         self.inner.push((pos, bbox));
     }
-
-    // fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, glyph: &GlyphRef) {
-    //     if let Some(glyph_data) = ctx.get_glyph(glyph) {
-    //         self.render_glyph_inner(pos, glyph, glyph_data)
-    //     }
-    // }
 }
 
 /// Task to create bbox with vector IR
@@ -283,19 +265,18 @@ impl<'m, 't> RenderVm<'m> for BBoxTask<'m, 't> {
         }
     }
 
-    fn render_item(&mut self, state: RenderState, abs_ref: &Fingerprint) -> Self::Resultant {
+    fn render_item(&mut self, abs_ref: &Fingerprint) -> Self::Resultant {
         if let Some(bbox) = self.bbox_cache.get(abs_ref) {
             return bbox.clone();
         }
 
-        let bbox = self._render_item(state, abs_ref);
+        let bbox = self._render_item(abs_ref);
         self.bbox_cache.insert(*abs_ref, bbox.clone());
         bbox
     }
 
     fn render_text(
         &mut self,
-        _state: RenderState,
         mut group_ctx: Self::Group,
         _abs_ref: &Fingerprint,
         text: &ir::TextItem,
@@ -320,12 +301,6 @@ impl<'m> FontIndice<'m> for BBoxTask<'m, '_> {
         self.module.fonts.get(value.idx as usize)
     }
 }
-
-// impl<'m> GlyphIndice<'m> for BBoxTask<'m, '_> {
-//     fn get_glyph(&self, g: &GlyphRef) -> Option<&'m ir::GlyphItem> {
-//         self.module.glyphs.get(g.glyph_idx as usize).map(|v| &v.1)
-//     }
-// }
 
 impl<'m> BBoxIndice for BBoxTask<'m, '_> {
     fn get_bbox(&self, value: &Fingerprint) -> Option<BBox> {
@@ -370,75 +345,4 @@ fn convert_path(path_data: &str) -> Option<tiny_skia_path::Path> {
     }
 
     builder.finish()
-}
-
-#[allow(dead_code)]
-#[cfg(test)]
-mod tests {
-
-    use typst::introspection::Introspector;
-    use typst_ts_core::vector::ir::Size;
-
-    use typst_ts_core::vector::pass::Typst2VecPass;
-
-    pub use super::*;
-
-    #[derive(Default)]
-    struct BBoxRenderer {
-        module: Module,
-        bbox_cache: HashMap<Fingerprint, BBox>,
-    }
-
-    impl BBoxRenderer {
-        fn new(module: Module) -> Self {
-            Self {
-                module,
-                ..Default::default()
-            }
-        }
-    }
-
-    impl BBoxRenderer {
-        fn get(&mut self) -> BBoxTask<'_, '_> {
-            BBoxTask {
-                module: &self.module,
-                bbox_cache: &mut self.bbox_cache,
-            }
-        }
-    }
-
-    #[test]
-    fn test_transformed_rect_bbox() {
-        let t2v = Typst2VecPass::default();
-        let i = Introspector::default();
-
-        let rect = t2v.shape(
-            &i,
-            &typst::visualize::Shape {
-                geometry: typst::visualize::Geometry::Rect(typst::layout::Axes {
-                    x: typst::layout::Abs::pt(1.),
-                    y: typst::layout::Abs::pt(2.),
-                }),
-                fill: None,
-                stroke: None,
-            },
-        );
-
-        let mut t = BBoxRenderer::new(t2v.finalize());
-        let mut task = t.get();
-
-        let bbox = task.render_item(
-            RenderState::new_size(Size::new(Scalar(10.), Scalar(20.))),
-            &rect,
-        );
-
-        let ts = sk::Transform::from_translate(10., 20.);
-        println!("{:?}", bbox.realize(ts.into()));
-
-        let ts = sk::Transform::from_scale(2., 5.);
-        println!("{:?}", bbox.realize(ts.into()));
-
-        let ts = sk::Transform::from_skew(1.1, 1.7);
-        println!("{:?}", bbox.realize(ts.into()));
-    }
 }

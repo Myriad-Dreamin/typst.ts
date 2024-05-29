@@ -117,7 +117,4 @@ pub struct PatternItem {
     pub size: Size,
     /// The pattern's tile spacing.
     pub spacing: Size,
-    /// Whether the pattern is relative to itself (its own bounding box).
-    /// Otherwise, the pattern is relative to the parent bounding box.
-    pub relative_to_self: Option<bool>,
 }

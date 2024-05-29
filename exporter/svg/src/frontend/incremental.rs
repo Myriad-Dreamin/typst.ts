@@ -1,5 +1,5 @@
 use std::{
-    collections::{hash_map::RandomState, HashMap, HashSet},
+    collections::{hash_map::RandomState, HashSet},
     ops::Deref,
     sync::Arc,
 };
@@ -9,7 +9,7 @@ use typst_ts_core::{
     vector::{
         incr::{IncrDocClient, IncrDocServer},
         ir::{LayoutRegionNode, Module, Page, Rect, VecItem},
-        vm::{IncrRenderVm, RenderState, RenderVm},
+        vm::{IncrRenderVm, RenderVm},
     },
 };
 
@@ -110,16 +110,15 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
             }
 
             // todo: evaluate simlarity
-            let state = RenderState::new_size(*size_f32);
             let item = if let Some(prev_entry) = unused_prev.pop_first().map(|(_, v)| v) {
                 // println!("diff page: {} {:?} {:?}", idx, entry, prev_entry);
                 attributes.push(("data-reuse-from", prev_entry.as_svg_id("p")));
 
-                render_task.render_diff_item(state, entry, &prev_entry)
+                render_task.render_diff_item(entry, &prev_entry)
             } else {
                 // todo: find a bbox
                 // println!("rebuild page: {} {:?}", idx, entry);
-                render_task.render_item(state, entry)
+                render_task.render_item(entry)
             };
 
             svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
@@ -143,8 +142,6 @@ pub struct IncrSvgDocClient {
     /// Assmuing glyph_window = N, then `self.doc.module.glyphs[..N]` are
     /// committed.
     pub glyph_window: usize,
-    /// Stateful fill cache for rendering items
-    stateful_fill_cache: HashMap<Fingerprint, bool>,
 }
 
 impl IncrSvgDocClient {
@@ -156,7 +153,6 @@ impl IncrSvgDocClient {
 
     pub fn reset(&mut self) {
         self.glyph_window = 0;
-        self.stateful_fill_cache.clear();
     }
 
     /// Render the document in the given window.
@@ -196,7 +192,6 @@ impl IncrSvgDocClient {
         // todo: fix this
 
         let mut t = SvgTask::<IncrementalExportFeature>::default();
-        t.set_stateful_fill_cache(&mut self.stateful_fill_cache);
 
         // start to render document difference
         let mut svg = Vec::<SvgText>::new();
@@ -231,8 +226,8 @@ impl IncrSvgDocClient {
 
         let gradients = std::mem::take(&mut t.gradients);
         let gradients = gradients
-            .values()
-            .filter_map(|(_, id, _)| match module_ref.get_item(id) {
+            .iter()
+            .filter_map(|id| match module_ref.get_item(id) {
                 Some(VecItem::Gradient(g)) => Some((id, g.as_ref())),
                 _ => {
                     // #[cfg(debug_assertions)]

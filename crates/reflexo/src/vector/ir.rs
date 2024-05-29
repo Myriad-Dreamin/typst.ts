@@ -61,11 +61,12 @@ pub enum VecItem {
     Path(PathItem),
     Text(TextItem),
     Item(TransformedRef),
-    Group(GroupRef, Option<Size>),
+    Group(GroupRef),
     Color32(Color32Item),
     Gradient(Arc<GradientItem>),
     Pattern(Arc<PatternItem>),
     ContentHint(char),
+    ColorTransform(Arc<ColorTransform>),
 }
 
 /// Module with page references, corresponding to a `typst::model::Document`.

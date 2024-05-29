@@ -6,19 +6,13 @@ pub(crate) mod incremental;
 pub use dynamic_layout::DynamicLayoutSvgExporter;
 pub use incremental::{IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderContext};
 
-use std::{
-    collections::{HashMap, HashSet},
-    f32::consts::TAU,
-    fmt::Write,
-    sync::Arc,
-};
+use std::{collections::HashSet, f32::consts::TAU, fmt::Write, sync::Arc};
 
 use typst::{
     layout::{Angle, Quadrant},
     visualize::{Color, ColorSpace, Hsl, Hsv, WeightedColor},
 };
 use typst_ts_core::{
-    cow_mut::CowMut,
     hash::{item_hash128, Fingerprint, FingerprintBuilder},
     vector::{
         ir::{
@@ -335,8 +329,8 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
 
         let gradients = t
             .gradients
-            .values()
-            .filter_map(|(_, id, _)| match module.get_item(id) {
+            .iter()
+            .filter_map(|id| match module.get_item(id) {
                 Some(VecItem::Gradient(g)) => Some((id, g.as_ref())),
                 _ => {
                     // #[cfg(debug_assertions)]
@@ -406,10 +400,8 @@ pub struct SvgTask<'a, Feat: ExportFeature> {
     pub gradients: PaintFillMap,
     /// Stores the patterns used in the document.
     pub patterns: PaintFillMap,
-    /// Stores whether an item has stateful fill.
-    pub stateful_fill_cache: CowMut<'a, HashMap<Fingerprint, bool>>,
 
-    _feat_phantom: std::marker::PhantomData<Feat>,
+    _feat_phantom: std::marker::PhantomData<&'a Feat>,
 }
 
 /// Unfortunately, `Default` derive does not work for generic structs.
@@ -421,19 +413,9 @@ impl<Feat: ExportFeature> Default for SvgTask<'_, Feat> {
             style_defs: StyleDefMap::default(),
             gradients: PaintFillMap::default(),
             patterns: PaintFillMap::default(),
-            stateful_fill_cache: CowMut::Owned(Default::default()),
 
             _feat_phantom: std::marker::PhantomData,
         }
-    }
-}
-
-impl<'a, Feat: ExportFeature> SvgTask<'a, Feat> {
-    pub fn set_stateful_fill_cache(
-        &mut self,
-        stateful_fill_cache: &'a mut HashMap<Fingerprint, bool>,
-    ) {
-        self.stateful_fill_cache = CowMut::Borrowed(stateful_fill_cache);
     }
 }
 
@@ -463,7 +445,6 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
             _style_defs: &mut self.style_defs,
             gradients: &mut self.gradients,
             patterns: &mut self.patterns,
-            stateful_fill_cache: &mut self.stateful_fill_cache,
 
             should_attach_debug_info: Feat::SHOULD_ATTACH_DEBUG_INFO,
             should_render_text_element: true,
@@ -501,19 +482,18 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
         let mut used = std::mem::take(&mut self.patterns);
         let mut patterns = vec![];
 
-        patterns.extend(used.values().filter_map(|(_, id, _)| render(self, id)));
+        patterns.extend(used.iter().filter_map(|id| render(self, id)));
         if self.patterns.is_empty() {
             return patterns;
         }
 
         loop {
             let mut updated = false;
-            for (k, v) in std::mem::take(&mut self.patterns) {
-                if let std::collections::hash_map::Entry::Vacant(e) = used.entry(k) {
-                    if let Some(res) = render(self, &v.1) {
+            for k in std::mem::take(&mut self.patterns) {
+                if used.insert(k) {
+                    if let Some(res) = render(self, &k) {
                         patterns.push(res);
                     }
-                    e.insert(v);
                     updated = true;
                 }
             }
@@ -674,8 +654,4 @@ impl std::fmt::Display for RatioRepr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:.3}%", self.0 * 100.0)
     }
-}
-
-pub trait HasStatefulFill {
-    fn has_stateful_fill(&mut self, f: &Fingerprint) -> bool;
 }

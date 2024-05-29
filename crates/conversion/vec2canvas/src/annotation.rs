@@ -42,7 +42,7 @@ impl<'m, 't> AnnotationListTask<'m, 't> {
                 }),
                 &t.1,
             ),
-            VecItem::Group(group, _) => self.process_flat_group(ts, group),
+            VecItem::Group(group) => self.process_flat_group(ts, group),
             VecItem::Link(link) => self.process_link(ts, link),
             _ => {}
         }

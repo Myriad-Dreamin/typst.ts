@@ -121,7 +121,7 @@ pub mod vector {
         const _: () = assert!(core::mem::align_of::<ArchivedPathItem>() == 4);
         const _: () = assert!(core::mem::size_of::<ArchivedPathStyle>() == 12);
         const _: () = assert!(core::mem::align_of::<ArchivedPathStyle>() == 4);
-        const _: () = assert!(core::mem::size_of::<ArchivedPatternItem>() == 40);
+        const _: () = assert!(core::mem::size_of::<ArchivedPatternItem>() == 32);
         const _: () = assert!(core::mem::align_of::<ArchivedPatternItem>() == 8);
     }
 }

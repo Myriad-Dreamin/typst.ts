@@ -1,8 +1,8 @@
-use crate::hash::{item_hash128, Fingerprint};
+use crate::hash::Fingerprint;
 use std::collections::hash_map::RandomState;
 use std::collections::{BTreeMap, HashSet};
 
-use super::ir::{self, Abs, Axes, FontIndice, FontItem, Point, Ratio, Scalar, Size, Transform};
+use super::ir::{self, Abs, Axes, FontIndice, FontItem, Point, Ratio, Scalar};
 
 /// A build pattern for applying transforms to the group of items.
 /// See [`ir::Transform`].
@@ -33,13 +33,7 @@ pub trait GroupContext<C>: Sized {
     fn with_frame(self, _ctx: &mut C, _group: &ir::GroupRef) -> Self {
         self
     }
-    fn with_text(
-        self,
-        _ctx: &mut C,
-        _text: &ir::TextItem,
-        _fill_key: &Fingerprint,
-        _state: RenderState,
-    ) -> Self {
+    fn with_text(self, _ctx: &mut C, _text: &ir::TextItem, _fill_key: &Fingerprint) -> Self {
         self
     }
 
@@ -54,19 +48,11 @@ pub trait GroupContext<C>: Sized {
         _upem: Scalar,
         _shape: &ir::TextShape,
         _fill_key: &Fingerprint,
-        _state: RenderState,
     ) {
     }
 
     /// Render a geometrical shape into underlying context.
-    fn render_path(
-        &mut self,
-        _state: RenderState,
-        _ctx: &mut C,
-        _path: &ir::PathItem,
-        _abs_ref: &Fingerprint,
-    ) {
-    }
+    fn render_path(&mut self, _ctx: &mut C, _path: &ir::PathItem, _abs_ref: &Fingerprint) {}
 
     /// Render a semantic link into underlying context.
     fn render_link(&mut self, _ctx: &mut C, _link: &ir::LinkItem) {}
@@ -79,9 +65,9 @@ pub trait GroupContext<C>: Sized {
     /// Render a semantic link into underlying context.
     fn render_content_hint(&mut self, _ctx: &mut C, _ch: char) {}
 
-    fn render_item_at(&mut self, state: RenderState, ctx: &mut C, pos: Point, item: &Fingerprint);
-    fn render_item(&mut self, state: RenderState, ctx: &mut C, item: &Fingerprint) {
-        self.render_item_at(state, ctx, Point::default(), item);
+    fn render_item_at(&mut self, ctx: &mut C, pos: Point, item: &Fingerprint);
+    fn render_item(&mut self, ctx: &mut C, item: &Fingerprint) {
+        self.render_item_at(ctx, Point::default(), item);
     }
 
     fn render_glyph(&mut self, _ctx: &mut C, _pos: Scalar, _font: &FontItem, _glyph_id: u32) {}
@@ -93,105 +79,14 @@ pub trait GroupContext<C>: Sized {
 pub trait IncrGroupContext<C>: Sized {
     fn render_diff_item_at(
         &mut self,
-        state: RenderState,
         ctx: &mut C,
 
         pos: Point,
         item: &Fingerprint,
         prev_item: &Fingerprint,
     );
-    fn render_diff_item(
-        &mut self,
-        state: RenderState,
-        ctx: &mut C,
-        item: &Fingerprint,
-        prev_item: &Fingerprint,
-    ) {
-        self.render_diff_item_at(state, ctx, Point::default(), item, prev_item);
-    }
-}
-
-/// Contextual information for rendering.
-#[derive(Clone, Copy, Hash)]
-pub struct RenderState {
-    /// The transform of the current item.
-    pub transform: Transform,
-    /// The size of the first hard frame in the hierarchy.
-    pub size: Size,
-}
-
-impl Default for RenderState {
-    fn default() -> Self {
-        Self {
-            transform: Transform::identity(),
-            size: Size::default(),
-        }
-    }
-}
-
-impl RenderState {
-    pub fn new_size(size: Size) -> Self {
-        Self {
-            transform: Transform::identity(),
-            size,
-        }
-    }
-
-    /// Pre translate the current item's transform.
-    pub fn pre_translate(self, pos: Point) -> Self {
-        self.pre_concat(Transform::from_translate(pos.x, pos.y))
-    }
-
-    /// Pre concat the current item's transform.
-    pub fn pre_concat(self, transform: Transform) -> Self {
-        Self {
-            transform: self.transform.pre_concat(transform),
-            ..self
-        }
-    }
-
-    /// Sets the size of the first hard frame in the hierarchy.
-    pub fn with_size(self, size: Size) -> Self {
-        Self { size, ..self }
-    }
-
-    /// Sets the current item's transform.
-    pub fn with_transform(self, transform: Transform) -> Self {
-        Self { transform, ..self }
-    }
-
-    pub fn pre_apply(self, transform: &ir::TransformItem) -> RenderState {
-        match transform {
-            ir::TransformItem::Matrix(transform) => self.pre_concat(**transform),
-            ir::TransformItem::Translate(transform) => {
-                self.pre_concat(Transform::from_translate(transform.x, transform.y))
-            }
-            ir::TransformItem::Scale(transform) => {
-                self.pre_concat(Transform::from_scale(transform.0, transform.1))
-            }
-            ir::TransformItem::Rotate(_transform) => {
-                todo!()
-            }
-            ir::TransformItem::Skew(transform) => {
-                self.pre_concat(Transform::from_skew(transform.0, transform.1))
-            }
-            ir::TransformItem::Clip(_transform) => self,
-        }
-    }
-
-    pub fn inv_transform(&self) -> Transform {
-        self.transform.invert().unwrap()
-    }
-
-    pub fn body_inv_transform(&self) -> Transform {
-        Transform::from_scale(self.size.x, self.size.y)
-            .post_concat(self.transform.invert().unwrap())
-    }
-
-    pub fn at(&self, pos: &Fingerprint) -> Fingerprint {
-        // todo: performance
-        let item = (*self, *pos);
-        Fingerprint::from_u128(item_hash128(&item))
+    fn render_diff_item(&mut self, ctx: &mut C, item: &Fingerprint, prev_item: &Fingerprint) {
+        self.render_diff_item_at(ctx, Point::default(), item, prev_item);
     }
 }
 
@@ -211,33 +106,26 @@ pub trait RenderVm<'m>: Sized + FontIndice<'m> {
     }
 
     // todo: remove render state
-    fn start_text(
-        &mut self,
-        _state: RenderState,
-        value: &Fingerprint,
-        _text: &ir::TextItem,
-    ) -> Self::Group {
+    fn start_text(&mut self, value: &Fingerprint, _text: &ir::TextItem) -> Self::Group {
         self.start_group(value)
     }
 
     #[doc(hidden)]
     /// Default implemenetion to render an item into the a `<g/>` element.
-    fn _render_item(&mut self, state: RenderState, abs_ref: &Fingerprint) -> Self::Resultant {
+    fn _render_item(&mut self, abs_ref: &Fingerprint) -> Self::Resultant {
         let item: &'m ir::VecItem = self.get_item(abs_ref).unwrap();
         match &item {
-            ir::VecItem::Group(group, sz) => self.render_group(state, abs_ref, group, sz),
-            ir::VecItem::Item(transformed) => {
-                self.render_transformed_item(state, abs_ref, transformed)
-            }
+            ir::VecItem::Group(group) => self.render_group(abs_ref, group),
+            ir::VecItem::Item(transformed) => self.render_transformed_item(abs_ref, transformed),
             ir::VecItem::Text(text) => {
-                let mut g = self.start_text(state, abs_ref, text);
-                g = self.render_text(state, g, abs_ref, text);
+                let mut g = self.start_text(abs_ref, text);
+                g = self.render_text(g, abs_ref, text);
 
                 g.into()
             }
             ir::VecItem::Path(path) => {
                 let mut g = self.start_group(abs_ref);
-                g.render_path(state, self, path, abs_ref);
+                g.render_path(self, path, abs_ref);
                 g.into()
             }
             ir::VecItem::Link(link) => {
@@ -256,6 +144,7 @@ pub trait RenderVm<'m>: Sized + FontIndice<'m> {
                 g.into()
             }
             ir::VecItem::Color32(..)
+            | ir::VecItem::ColorTransform(..)
             | ir::VecItem::Gradient(..)
             | ir::VecItem::Pattern(..)
             | ir::VecItem::None => {
@@ -265,27 +154,17 @@ pub trait RenderVm<'m>: Sized + FontIndice<'m> {
     }
 
     /// Render an item into the a `<g/>` element.
-    fn render_item(&mut self, state: RenderState, abs_ref: &Fingerprint) -> Self::Resultant {
-        self._render_item(state, abs_ref)
+    fn render_item(&mut self, abs_ref: &Fingerprint) -> Self::Resultant {
+        self._render_item(abs_ref)
     }
 
     /// Render a frame group into underlying context.
-    fn render_group(
-        &mut self,
-        mut state: RenderState,
-        abs_ref: &Fingerprint,
-        group: &ir::GroupRef,
-        sz: &Option<Size>,
-    ) -> Self::Resultant {
+    fn render_group(&mut self, abs_ref: &Fingerprint, group: &ir::GroupRef) -> Self::Resultant {
         let mut group_ctx = self.start_frame(abs_ref, group);
-
-        if let Some(sz) = sz {
-            state = state.with_transform(Transform::identity()).with_size(*sz);
-        }
 
         for (pos, item_ref) in group.0.iter() {
             // let item = self.get_item(&item_ref).unwrap();
-            group_ctx.render_item_at(state.pre_translate(*pos), self, *pos, item_ref);
+            group_ctx.render_item_at(self, *pos, item_ref);
         }
 
         group_ctx.into()
@@ -294,7 +173,6 @@ pub trait RenderVm<'m>: Sized + FontIndice<'m> {
     /// Render a transformed frame into underlying context.
     fn render_transformed_item(
         &mut self,
-        state: RenderState,
         abs_ref: &Fingerprint,
         transformed: &ir::TransformedRef,
     ) -> Self::Resultant {
@@ -302,14 +180,13 @@ pub trait RenderVm<'m>: Sized + FontIndice<'m> {
 
         let item_ref = &transformed.1;
         // let item = self.get_item(&item_ref).unwrap();
-        ts.render_item(state.pre_apply(&transformed.0), self, item_ref);
+        ts.render_item(self, item_ref);
         ts.into()
     }
 
     /// Render a text into the underlying context.
     fn render_text(
         &mut self,
-        _state: RenderState,
         mut group_ctx: Self::Group,
         _abs_ref: &Fingerprint,
         text: &ir::TextItem,
@@ -340,7 +217,6 @@ where
     /// Default implemenetion to Render an item into the a `<g/>` element.
     fn _render_diff_item(
         &mut self,
-        state: RenderState,
         next_abs_ref: &Fingerprint,
         prev_abs_ref: &Fingerprint,
     ) -> Self::Resultant {
@@ -350,26 +226,26 @@ where
         let mut group_ctx = self.start_group(next_abs_ref);
 
         match &next_item {
-            ir::VecItem::Group(group, sz) => {
+            ir::VecItem::Group(group) => {
                 let mut group_ctx = group_ctx
                     .with_reuse(self, prev_abs_ref)
                     .with_frame(self, group);
-                self.render_diff_group(state, &mut group_ctx, prev_item, group, sz);
+                self.render_diff_group(&mut group_ctx, prev_item, group);
                 group_ctx
             }
             ir::VecItem::Item(transformed) => {
                 let mut group_ctx = group_ctx
                     .with_reuse(self, prev_abs_ref)
                     .transform(self, &transformed.0);
-                self.render_diff_transformed_item(state, &mut group_ctx, prev_item, transformed);
+                self.render_diff_transformed_item(&mut group_ctx, prev_item, transformed);
                 group_ctx
             }
             ir::VecItem::Text(text) => {
-                let group_ctx = group_ctx.with_text(self, text, next_abs_ref, state);
-                self.render_diff_text(state, group_ctx, next_abs_ref, prev_abs_ref, text)
+                let group_ctx = group_ctx.with_text(self, text, next_abs_ref);
+                self.render_diff_text(group_ctx, next_abs_ref, prev_abs_ref, text)
             }
             ir::VecItem::Path(path) => {
-                group_ctx.render_path(state, self, path, next_abs_ref);
+                group_ctx.render_path(self, path, next_abs_ref);
                 group_ctx
             }
             ir::VecItem::Link(link) => {
@@ -385,6 +261,7 @@ where
                 group_ctx
             }
             ir::VecItem::Color32(..)
+            | ir::VecItem::ColorTransform(..)
             | ir::VecItem::Gradient(..)
             | ir::VecItem::Pattern(..)
             | ir::VecItem::None => {
@@ -397,27 +274,20 @@ where
     /// Render an item into the a `<g/>` element.
     fn render_diff_item(
         &mut self,
-        state: RenderState,
         next_abs_ref: &Fingerprint,
         prev_abs_ref: &Fingerprint,
     ) -> Self::Resultant {
-        self._render_diff_item(state, next_abs_ref, prev_abs_ref)
+        self._render_diff_item(next_abs_ref, prev_abs_ref)
     }
 
     /// Render a frame group into underlying context.
     fn render_diff_group(
         &mut self,
-        mut state: RenderState,
         group_ctx: &mut Self::Group,
         prev_item_: Option<&ir::VecItem>,
         next: &ir::GroupRef,
-        sz: &Option<Size>,
     ) {
-        if let Some(sz) = sz {
-            state = state.with_transform(Transform::identity()).with_size(*sz);
-        }
-
-        if let Some(ir::VecItem::Group(prev_group, _)) = prev_item_ {
+        if let Some(ir::VecItem::Group(prev_group)) = prev_item_ {
             let mut unused_prev: BTreeMap<usize, Fingerprint> =
                 prev_group.0.iter().map(|v| v.1).enumerate().collect();
             let reusable: HashSet<Fingerprint, RandomState> =
@@ -434,18 +304,17 @@ where
             }
 
             for (pos, item_ref) in next.0.iter() {
-                let state = state.pre_translate(*pos);
                 if reusable.contains(item_ref) {
-                    group_ctx.render_diff_item_at(state, self, *pos, item_ref, item_ref);
+                    group_ctx.render_diff_item_at(self, *pos, item_ref, item_ref);
                 } else if let Some((_, prev_item_re_)) = &unused_prev.pop_first() {
-                    group_ctx.render_diff_item_at(state, self, *pos, item_ref, prev_item_re_)
+                    group_ctx.render_diff_item_at(self, *pos, item_ref, prev_item_re_)
                 } else {
-                    group_ctx.render_item_at(state, self, *pos, item_ref)
+                    group_ctx.render_item_at(self, *pos, item_ref)
                 }
             }
         } else {
             for (pos, item_ref) in next.0.iter() {
-                group_ctx.render_item_at(state.pre_translate(*pos), self, *pos, item_ref);
+                group_ctx.render_item_at(self, *pos, item_ref);
             }
         }
     }
@@ -453,20 +322,18 @@ where
     /// Render a transformed frame into underlying context.
     fn render_diff_transformed_item(
         &mut self,
-        state: RenderState,
         ts: &mut Self::Group,
         prev_item_: Option<&ir::VecItem>,
         transformed: &ir::TransformedRef,
     ) {
         let child_ref = &transformed.1;
-        let state = state.pre_apply(&transformed.0);
         match prev_item_ {
             // if both items are transformed, we can reuse the internal item with transforming it a
             // bit.
             Some(ir::VecItem::Item(ir::TransformedRef(_item, prev_ref))) => {
-                ts.render_diff_item_at(state, self, Point::default(), child_ref, prev_ref);
+                ts.render_diff_item_at(self, Point::default(), child_ref, prev_ref);
             }
-            _ => ts.render_item(state, self, child_ref),
+            _ => ts.render_item(self, child_ref),
         }
         // failed to reuse
     }
@@ -474,12 +341,11 @@ where
     /// Render a diff text into the underlying context.
     fn render_diff_text(
         &mut self,
-        state: RenderState,
         group_ctx: Self::Group,
         next_abs_ref: &Fingerprint,
         _prev_abs_ref: &Fingerprint,
         text: &ir::TextItem,
     ) -> Self::Group {
-        self.render_text(state, group_ctx, next_abs_ref, text)
+        self.render_text(group_ctx, next_abs_ref, text)
     }
 }

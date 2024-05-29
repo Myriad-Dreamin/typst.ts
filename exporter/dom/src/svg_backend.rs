@@ -4,10 +4,7 @@ use std::sync::atomic::AtomicBool;
 
 use typst_ts_core::{
     hash::Fingerprint,
-    vector::{
-        incr::IncrDocClient,
-        vm::{RenderState, RenderVm},
-    },
+    vector::{incr::IncrDocClient, vm::RenderVm},
 };
 use typst_ts_svg_exporter::{
     ir::{self, Page, TransformedRef, VecItem},
@@ -88,10 +85,7 @@ impl SvgBackend {
         let mut g = vec!["<g>".into()];
 
         // render the document
-        let state = RenderState::new_size(page.size);
-        g.push(SvgText::Content(
-            render_task.render_item(state, &page.content),
-        ));
+        g.push(SvgText::Content(render_task.render_item(&page.content)));
 
         // attach the clip paths, and style defs
 
@@ -99,17 +93,15 @@ impl SvgBackend {
         let patterns = self.vec2svg.render_patterns(module);
 
         let gradients = std::mem::take(&mut self.vec2svg.gradients);
-        let gradients = gradients
-            .values()
-            .filter_map(|(_, id, _)| match module.get_item(id) {
-                Some(VecItem::Gradient(g)) => Some((id, g.as_ref())),
-                _ => {
-                    // #[cfg(debug_assertions)]
-                    panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
-                    #[allow(unreachable_code)]
-                    None
-                }
-            });
+        let gradients = gradients.iter().filter_map(|id| match module.get_item(id) {
+            Some(VecItem::Gradient(g)) => Some((id, g.as_ref())),
+            _ => {
+                // #[cfg(debug_assertions)]
+                panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
+                #[allow(unreachable_code)]
+                None
+            }
+        });
         // todo: remove Exporter usages
         Exporter::gradients(gradients, &mut g);
         Exporter::patterns(patterns.into_iter(), &mut g);
@@ -140,7 +132,7 @@ impl TypstPageElem {
         // g.replace_with_with_node_1(&stub).unwrap();
 
         let extra = match item {
-            VecItem::Group(gr, size) => {
+            VecItem::Group(gr) => {
                 let mut ch = g.first_element_child();
 
                 let mut children = vec![];
@@ -187,10 +179,7 @@ impl TypstPageElem {
 
                     ch = should_ch.next_element_sibling();
                 }
-                TypstDomExtra::Group(GroupElem {
-                    children,
-                    size: *size,
-                })
+                TypstDomExtra::Group(GroupElem { children })
             }
             VecItem::Item(TransformedRef(trans, fg)) => {
                 let ch = g
@@ -246,7 +235,11 @@ impl TypstPageElem {
             VecItem::ContentHint(_) => TypstDomExtra::ContentHint(ContentHintElem { hint: ' ' }),
             VecItem::Link(_) => TypstDomExtra::Link(LinkElem {}),
             VecItem::Path(_) => TypstDomExtra::Path(PathElem {}),
-            VecItem::None | VecItem::Color32(_) | VecItem::Gradient(_) | VecItem::Pattern(_) => {
+            VecItem::None
+            | VecItem::ColorTransform(_)
+            | VecItem::Color32(_)
+            | VecItem::Gradient(_)
+            | VecItem::Pattern(_) => {
                 todo!()
             }
         };

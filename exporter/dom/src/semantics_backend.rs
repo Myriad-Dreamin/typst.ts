@@ -96,7 +96,7 @@ impl SemanticsBackend {
         let item = ctx.get_item(&fg).unwrap();
         use VecItem::*;
         match item {
-            Group(t, _) => {
+            Group(t) => {
                 for (pos, child) in t.0.iter() {
                     let ts = ts.pre_translate(pos.x.0, pos.y.0);
                     self.prepare_text_rects(ctx, ts, *child);
@@ -318,7 +318,7 @@ impl SemanticsBackend {
 
         use VecItem::*;
         match item {
-            Group(t, _) => {
+            Group(t) => {
                 output.push(Cow::Borrowed(r#"<span class="typst-content-group">"#));
                 for (pos, child) in t.0.iter() {
                     let ts = ts.pre_translate(pos.x.0, pos.y.0);
@@ -474,7 +474,7 @@ impl SemanticsBackend {
                 output.push(Cow::Borrowed("</a>"));
             }
             Image(..) | Path(..) => {}
-            None | Gradient(..) | Color32(..) | Pattern(..) => {}
+            None | ColorTransform(..) | Gradient(..) | Color32(..) | Pattern(..) => {}
         }
     }
 }

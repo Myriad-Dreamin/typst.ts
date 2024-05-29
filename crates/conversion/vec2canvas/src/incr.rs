@@ -8,7 +8,7 @@ use reflexo::{
     vector::{
         incr::IncrDocClient,
         ir::{ImmutStr, LayoutRegionNode, Module, Page, Rect},
-        vm::{RenderState, RenderVm},
+        vm::RenderVm,
     },
 };
 
@@ -53,10 +53,9 @@ impl IncrVec2CanvasPass {
                     return self.pages[idx].clone();
                 }
 
-                let state = RenderState::new_size(*size);
                 CanvasPage {
                     content: *content,
-                    elem: ct.render_item(state, content),
+                    elem: ct.render_item(content),
                     size: *size,
                 }
             })

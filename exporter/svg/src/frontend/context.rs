@@ -1,13 +1,18 @@
-use std::{collections::HashMap, ops::Deref, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Deref,
+    sync::Arc,
+};
 
+use reflexo::vector::ir::Transform;
 use typst_ts_core::{
     hash::{Fingerprint, FingerprintBuilder},
     vector::{
         ir::{
-            self, FlatGlyphItem, FontIndice, FontRef, GroupRef, ImmutStr, Module, PathItem,
-            PathStyle, Scalar, TextItem, VecItem,
+            self, FlatGlyphItem, FontIndice, FontRef, GroupRef, ImmutStr, Module, PathItem, Scalar,
+            TextItem, VecItem,
         },
-        vm::{GroupContext, IncrRenderVm, RenderState, RenderVm},
+        vm::{GroupContext, IncrRenderVm, RenderVm},
     },
 };
 
@@ -15,8 +20,6 @@ use crate::{
     backend::{BuildClipPath, DynExportFeature, NotifyPaint, SvgText, SvgTextBuilder, SvgTextNode},
     ExportFeature,
 };
-
-use super::HasStatefulFill;
 
 // unused
 /// Global style namespace.
@@ -33,7 +36,7 @@ pub enum StyleNs {
 /// See [`StyleNs`].
 pub(crate) type StyleDefMap = HashMap<(StyleNs, ImmutStr), String>;
 /// Maps paint fill id to the paint fill's data.
-pub(crate) type PaintFillMap = HashMap<ImmutStr, (u8, Fingerprint, Option<bool>)>;
+pub(crate) type PaintFillMap = HashSet<Fingerprint>;
 
 /// The task context for rendering vector items
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
@@ -50,8 +53,6 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     pub(crate) gradients: &'t mut PaintFillMap,
     /// Stores the patterns used in the document.
     pub(crate) patterns: &'t mut PaintFillMap,
-    /// Stores whether an item has stateful fill.
-    pub(crate) stateful_fill_cache: &'t mut HashMap<Fingerprint, bool>,
 
     /// See [`ExportFeature`].
     pub should_render_text_element: bool,
@@ -116,67 +117,22 @@ impl<'m, 't, Feat: ExportFeature> BuildClipPath for RenderContext<'m, 't, Feat> 
     }
 }
 
-impl<'m, 't, Feat: ExportFeature> HasStatefulFill for RenderContext<'m, 't, Feat> {
-    // todo: may it concurrent?
-    fn has_stateful_fill(&mut self, fg: &Fingerprint) -> bool {
-        let Some(item) = self.get_item(fg) else {
-            // overestimated
-            return true;
-        };
-
-        match item {
-            Gradient(..) | Pattern(..) => return true,
-            Color32(..) | Image(..) | Link(..) | ContentHint(..) | None => return false,
-            _ => {}
-        };
-
-        if let Some(v) = self.stateful_fill_cache.get(fg) {
-            return *v;
-        }
-
-        fn stateful_style(style: &PathStyle) -> bool {
-            matches!(style, PathStyle::Fill(color) | PathStyle::Stroke(color) if color.starts_with('@'))
-        }
-
-        use VecItem::*;
-        let res = match item {
-            Gradient(..) | Color32(..) | Pattern(..) | Image(..) | Link(..) | ContentHint(..)
-            | None => {
-                panic!("Invalid item type for stateful fill: {:?}", fg)
-            }
-            Item(t) => self.has_stateful_fill(&t.1),
-            Group(g, ..) => g.0.iter().any(|(_, x)| self.has_stateful_fill(x)),
-            Path(p) => p.styles.iter().any(stateful_style),
-            Text(p) => return p.shape.styles.iter().any(stateful_style),
-        };
-
-        self.stateful_fill_cache.insert(*fg, res);
-
-        res
-    }
-}
-
 impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
-    fn notify_paint(&mut self, url_ref: ImmutStr) -> (u8, Fingerprint, Option<bool>) {
-        let mp = if url_ref.starts_with("@g") {
-            &mut self.gradients
-        } else if url_ref.starts_with("@p") {
-            &mut self.patterns
-        } else {
-            panic!("Invalid url reference: {}", url_ref);
-        };
-
-        if let Some(f) = mp.get(&url_ref) {
-            return *f;
-        }
-
-        // url(#ghash)
+    fn notify_paint(&mut self, url_ref: ImmutStr) -> (u8, Fingerprint, Option<Transform>) {
         if url_ref.starts_with("@g") {
             let id = url_ref.trim_start_matches("@g");
-            let id = Fingerprint::try_from_str(id).unwrap();
+            let mut id = Fingerprint::try_from_str(id).unwrap();
 
-            let (kind, relative_to_self) = match self.get_item(&id) {
-                Some(VecItem::Gradient(g)) => (&g.kind, g.relative_to_self),
+            let transform = match self.get_item(&id) {
+                Some(VecItem::ColorTransform(g)) => {
+                    id = g.item;
+                    Some(g.transform)
+                }
+                _ => None,
+            };
+
+            let kind = match self.get_item(&id) {
+                Some(VecItem::Gradient(g)) => &g.kind,
                 _ => {
                     // #[cfg(debug_assertions)]
                     panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
@@ -189,24 +145,24 @@ impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
                 ir::GradientKind::Conic(..) => b'p',
             };
 
-            self.gradients.insert(url_ref, (kind, id, relative_to_self));
-            (kind, id, relative_to_self)
+            self.gradients.insert(id);
+            (kind, id, transform)
         } else if url_ref.starts_with("@p") {
             let id = url_ref.trim_start_matches("@p");
-            let id = Fingerprint::try_from_str(id).unwrap();
+            let mut id = Fingerprint::try_from_str(id).unwrap();
 
-            let relative_to_self = match self.get_item(&id) {
-                Some(VecItem::Pattern(g)) => g.relative_to_self,
-                _ => {
-                    // #[cfg(debug_assertions)]
-                    panic!("Invalid pattern reference: {}", id.as_svg_id("p"));
+            let transform = match self.get_item(&id) {
+                Some(VecItem::ColorTransform(g)) => {
+                    id = g.item;
+                    Some(g.transform)
                 }
+                _ => None,
             };
 
             let kind = b'p';
 
-            self.patterns.insert(url_ref, (kind, id, relative_to_self));
-            (kind, id, relative_to_self)
+            self.patterns.insert(id);
+            (kind, id, transform)
         } else {
             panic!("Invalid url reference: {}", url_ref);
         }
@@ -238,25 +194,19 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, 't, Feat> {
         g
     }
 
-    fn start_text(
-        &mut self,
-        state: RenderState,
-        value: &Fingerprint,
-        text: &TextItem,
-    ) -> Self::Group {
+    fn start_text(&mut self, value: &Fingerprint, text: &TextItem) -> Self::Group {
         let mut g = self.start_group(value);
 
         let font = self.get_font(&text.shape.font).unwrap();
         let upem = font.units_per_em;
 
-        g.with_text_shape(self, upem, &text.shape, &state.at(value), state);
+        g.with_text_shape(self, upem, &text.shape, value);
         g
     }
 
     /// Render a text into the underlying context.
     fn render_text(
         &mut self,
-        _state: RenderState,
         group_ctx: Self::Group,
         abs_ref: &Fingerprint,
         text: &TextItem,
