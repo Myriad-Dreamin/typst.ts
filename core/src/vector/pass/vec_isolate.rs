@@ -165,6 +165,24 @@ impl<'a> VecIsolatePassWorker<'a> {
     fn analyze2(&self, groups: Vec<GroupBox>) {
         let _ = groups;
         let _ = self.remapped;
+
+        if groups.is_empty() {
+            return;
+        }
+
+        // The cursor maintains the upper side of the convex hull of the page
+        let mut cursors = Vec::default();
+        let mut yline = f32::MIN;
+        cursors.push((0, groups.first().unwrap()));
+        for (i, c) in groups.iter().enumerate() {
+            let y = c.bbox.lo.y.0;
+            if y < yline {
+                cursors.push((i, c));
+            }
+            yline = y;
+        }
+
+        // Advance the cursor to the lower side
     }
 
     pub fn convert(&mut self, v: Fingerprint, ts: Transform) -> Fingerprint {
