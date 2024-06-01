@@ -63,9 +63,15 @@ impl<'a> VecIsolatePassWorker<'a> {
 
     fn schedule1(&mut self) {
         while let Some(v) = self.worklist.pop() {
-            self.current_bbox = None;
             self.analyze1(v, Transform::identity());
+
+            // Take state
+            let last_bbox = self.current_bbox.take();
+            if let Some(last_group) = self.groups.last_mut() {
+                last_group.bbox = last_bbox.unwrap_or_default();
+            }
             let group = std::mem::take(&mut self.groups);
+
             self.analyze2(group);
         }
     }
@@ -96,7 +102,7 @@ impl<'a> VecIsolatePassWorker<'a> {
                         None
                     };
 
-                    self.analyze1_leaf(it.1, ts, clip_box);
+                    self.analyze1_leaf(it.1, ts, clip_box.as_ref());
                 }
             }
             VecItem::None
@@ -115,31 +121,50 @@ impl<'a> VecIsolatePassWorker<'a> {
         }
     }
 
-    fn analyze1_leaf(&mut self, it: Fingerprint, ts: Transform, clip_box: Option<Rect>) {
-        // 这里要一个state
-        // State(current_bbox)
-        let _ = self.remapped;
+    fn analyze1_leaf(&mut self, itv: Fingerprint, ts: Transform, clip_box: Option<&Rect>) {
+        let it = self.input.get_item(&itv).unwrap().clone();
+        self.output.items.insert(itv, it);
 
-        let bbox = self.bbox.bbox_of(self.input, it, ts);
-        let _ = bbox;
+        let bbox = self.bbox.bbox_of(self.input, itv, ts);
 
-        let _ = clip_box;
-        // self.output
-        //     .items
-        //     .insert(v, self.input.get_item(&v).unwrap().clone());
+        let Some(bbox) = bbox.map(|bbox| {
+            if let Some(clip_box) = clip_box {
+                return bbox.intersect(clip_box);
+            }
 
-        //   if bbox.intersect(current_bbox).is_empty() { current_bbox =
-        // bbox }     else { current_bbox =
-        // current_bbox.union(bbox); }
+            bbox
+        }) else {
+            log::warn!("Failed to calculate bbox for {itv:?}");
+            return;
+        };
 
-        // let _ = groups;
-
-        // })
+        match &mut self.current_bbox {
+            Some(current_bbox) => {
+                if bbox.intersect(current_bbox).is_empty() {
+                    let bbox = std::mem::replace(current_bbox, bbox);
+                    self.groups.last_mut().unwrap().bbox = bbox;
+                    self.groups.push(GroupBox {
+                        bbox,
+                        items: vec![itv],
+                    });
+                } else {
+                    *current_bbox = bbox.union(current_bbox);
+                }
+            }
+            current_bbox => {
+                self.groups.push(GroupBox {
+                    bbox,
+                    items: vec![itv],
+                });
+                *current_bbox = Some(bbox);
+            }
+        }
     }
 
     // Algorithm L_{1,2}
     fn analyze2(&self, groups: Vec<GroupBox>) {
         let _ = groups;
+        let _ = self.remapped;
     }
 
     pub fn convert(&mut self, v: Fingerprint, ts: Transform) -> Fingerprint {
