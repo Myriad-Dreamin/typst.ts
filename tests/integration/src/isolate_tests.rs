@@ -284,7 +284,7 @@ impl Evaluator {
         }
 
         Some(Node::Content(
-            self.store(VecItem::Group(GroupRef(group.into()), None)),
+            self.store(VecItem::Group(GroupRef(group.into()))),
         ))
     }
 
