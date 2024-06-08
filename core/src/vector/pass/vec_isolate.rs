@@ -1,4 +1,5 @@
 //! Private discussion: https://typst.app/project/pl4GDUVJT4_yVhEhiYrwle
+//! Note: this is a work in progress and not yet finished.
 
 #![allow(dead_code)]
 
