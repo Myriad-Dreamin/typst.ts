@@ -2,19 +2,23 @@
 
 #![allow(dead_code)]
 
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use reflexo::{
-    hash::Fingerprint,
-    vector::ir::{Module, Page, Rect, Transform, TransformItem, VecItem},
+    hash::{Fingerprint, FingerprintBuilder},
+    vector::ir::{GroupRef, Module, Page, Point, Rect, Transform, TransformItem, VecItem},
 };
 
 use super::Vec2BBoxPass;
+
+pub enum IsolatedVecItem {}
 
 #[derive(Default)]
 pub struct VecIsolatePass {
     bbox: Vec2BBoxPass,
     output: Module,
+
+    fingerprint_builder: FingerprintBuilder,
 }
 
 impl VecIsolatePass {
@@ -23,6 +27,7 @@ impl VecIsolatePass {
             bbox: &mut self.bbox,
             input,
             output: &mut self.output,
+            fingerprint_builder: &mut self.fingerprint_builder,
             worklist: Vec::default(),
             remapped: HashMap::default(),
 
@@ -35,13 +40,14 @@ impl VecIsolatePass {
 
 struct GroupBox {
     bbox: Rect,
-    items: Vec<Fingerprint>,
+    items: Vec<(Point, Fingerprint)>,
 }
 
 pub struct VecIsolatePassWorker<'a> {
     bbox: &'a mut Vec2BBoxPass,
     input: &'a Module,
     output: &'a mut Module,
+    fingerprint_builder: &'a mut FingerprintBuilder,
     worklist: Vec<Fingerprint>,
     remapped: HashMap<Fingerprint, Fingerprint>,
 
@@ -63,7 +69,7 @@ impl<'a> VecIsolatePassWorker<'a> {
 
     fn schedule1(&mut self) {
         while let Some(v) = self.worklist.pop() {
-            self.analyze1(v, Transform::identity());
+            self.analyze1(v, Point::default(), Transform::identity());
 
             // Take state
             let last_bbox = self.current_bbox.take();
@@ -72,24 +78,24 @@ impl<'a> VecIsolatePassWorker<'a> {
             }
             let group = std::mem::take(&mut self.groups);
 
+            let _ = self.remapped;
             self.analyze2(group);
         }
     }
 
     // Algorithm L_{1,1}
-    fn analyze1(&mut self, v: Fingerprint, ts: Transform) {
+    fn analyze1(&mut self, v: Fingerprint, pt: Point, ts: Transform) {
         let item = self.input.get_item(&v).unwrap();
         match item {
             VecItem::Group(g) => {
                 for (p, v) in g.0.iter() {
-                    let ts = ts.pre_translate(p.x.0, p.y.0);
-                    self.analyze1(*v, ts);
+                    self.analyze1(*v, pt + *p, ts);
                 }
             }
             VecItem::Item(it) => {
                 // Either ignore the transform,
                 if it.0.is_identity() {
-                    self.analyze1(it.1, ts);
+                    self.analyze1(it.1, pt, ts);
                 // or view a transformed item as the leaf
                 } else {
                     // Add to the worklist first
@@ -102,7 +108,7 @@ impl<'a> VecIsolatePassWorker<'a> {
                         None
                     };
 
-                    self.analyze1_leaf(it.1, ts, clip_box.as_ref());
+                    self.analyze1_leaf(it.1, pt, ts, clip_box.as_ref());
                 }
             }
             VecItem::None
@@ -116,15 +122,22 @@ impl<'a> VecIsolatePassWorker<'a> {
             | VecItem::ContentHint(_)
             | VecItem::ColorTransform(_) => {
                 // todo: page bbox
-                self.analyze1_leaf(v, ts, None);
+                self.analyze1_leaf(v, pt, ts, None);
             }
         }
     }
 
-    fn analyze1_leaf(&mut self, itv: Fingerprint, ts: Transform, clip_box: Option<&Rect>) {
+    fn analyze1_leaf(
+        &mut self,
+        itv: Fingerprint,
+        pt: Point,
+        ts: Transform,
+        clip_box: Option<&Rect>,
+    ) {
         let it = self.input.get_item(&itv).unwrap().clone();
         self.output.items.insert(itv, it);
 
+        let ts = ts.pre_translate(pt.x.0, pt.y.0);
         let bbox = self.bbox.bbox_of(self.input, itv, ts);
 
         let Some(bbox) = bbox.map(|bbox| {
@@ -145,7 +158,7 @@ impl<'a> VecIsolatePassWorker<'a> {
                     self.groups.last_mut().unwrap().bbox = bbox;
                     self.groups.push(GroupBox {
                         bbox,
-                        items: vec![itv],
+                        items: vec![(pt, itv)],
                     });
                 } else {
                     *current_bbox = bbox.union(current_bbox);
@@ -154,7 +167,7 @@ impl<'a> VecIsolatePassWorker<'a> {
             current_bbox => {
                 self.groups.push(GroupBox {
                     bbox,
-                    items: vec![itv],
+                    items: vec![(pt, itv)],
                 });
                 *current_bbox = Some(bbox);
             }
@@ -162,19 +175,16 @@ impl<'a> VecIsolatePassWorker<'a> {
     }
 
     // Algorithm L_{1,2}
-    fn analyze2(&self, groups: Vec<GroupBox>) {
-        let _ = groups;
-        let _ = self.remapped;
-
-        if groups.is_empty() {
+    fn analyze2(&mut self, inputs: Vec<GroupBox>) {
+        if inputs.is_empty() {
             return;
         }
 
         // The cursor maintains the upper side of the convex hull of the page
         let mut cursors = Vec::default();
         let mut yline = f32::MIN;
-        cursors.push((0, groups.first().unwrap()));
-        for (i, c) in groups.iter().enumerate() {
+        cursors.push((0, inputs.first().unwrap()));
+        for (i, c) in inputs.iter().enumerate() {
             let y = c.bbox.lo.y.0;
             if y < yline {
                 cursors.push((i, c));
@@ -183,6 +193,9 @@ impl<'a> VecIsolatePassWorker<'a> {
         }
 
         // Advance the cursor to the lower side
+        // let items = Vec::default();
+
+        // self.store(VecItem::Group(GroupRef(items.into())))
     }
 
     pub fn convert(&mut self, v: Fingerprint, ts: Transform) -> Fingerprint {
