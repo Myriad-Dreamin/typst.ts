@@ -479,3 +479,16 @@ impl From<TransformItem> for Transform {
         }
     }
 }
+
+impl TransformItem {
+    pub fn is_identity(&self) -> bool {
+        match self {
+            Self::Matrix(m) => m.is_identity(),
+            Self::Scale(m) => m.0 == 1.0 && m.1 == 1.0,
+            Self::Translate(m) => m.x == 0.0 && m.y == 0.0,
+            Self::Rotate(m) => m.0 == 0.0,
+            Self::Skew(m) => m.0 == 0.0 && m.1 == 0.0,
+            Self::Clip(_m) => false,
+        }
+    }
+}
