@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
+use anyhow::Context;
 use ecow::{eco_format, EcoString};
 use reflexo::{
     hash::{Fingerprint, FingerprintBuilder},
@@ -206,14 +207,13 @@ impl Evaluator {
                 return Some(Node::Dict(dict));
             }
             FuncCall => {
-                // println!("FuncCall {:?}", node);
+                log::debug!("FuncCall {:?}", node);
                 let fc: ast::FuncCall = node.cast()?;
                 let callee = match fc.callee() {
                     ast::Expr::Ident(i) => i.get().clone(),
                     _ => unimplemented!(),
                 };
-                let args = fc.args();
-                let args = self.args(node.find(args.span())?).at(&node).unwrap();
+                let args = self.args(node.find(fc.args().span())?).at(&node).unwrap();
                 return Some(self.call(callee, args).at(&node).unwrap());
             }
             Named => {}
@@ -266,8 +266,12 @@ impl Evaluator {
         let mut group = vec![];
 
         for child in node.children() {
+            // println!("{:?} -> {:?}", child, node);
             let node = self.node(child);
             if let Some(Node::Content(node)) = node {
+                if node == ZERO {
+                    continue;
+                }
                 group.push((self.at, node));
             }
         }
@@ -304,7 +308,7 @@ impl Evaluator {
     }
 
     fn call(&mut self, callee: EcoString, args: Arguments) -> Option<Node> {
-        println!("call {callee:?} with {args:?}");
+        log::debug!("call {callee:?} with {args:?}");
 
         match callee.as_str() {
             "group" => {
@@ -335,7 +339,7 @@ impl Evaluator {
                     self.number(args.positional.get(1).unwrap()),
                 );
 
-                None
+                Some(Node::Content(ZERO))
             }
             "rect" => {
                 let Node::Dict(d) = args.positional.first().unwrap() else {
@@ -412,30 +416,57 @@ impl<T> At<T> for Option<T> {
 
 #[test]
 fn test() {
-    let refl_file = include_str!("../../../fuzzers/fixtures/isolate/base.refl");
-    let world = Source::detached(refl_file);
-    let mut evaluator = Evaluator::default();
-    let page = evaluator.eval(LinkedNode::new(world.root()));
-    // dump items
+    snapshot_testing("playground", |mut doc, path| {
+        let mut pass = typst_ts_core::vector::pass::VecIsolatePass::default();
+        for page in &doc.pages {
+            let result = pass.page(&doc.module, page);
+            println!("{page:?} -> {result:?}");
+        }
 
-    println!("{:?} where", page);
-    for (fg, item) in evaluator.items.iter() {
-        println!("  {:?} = {:?}", fg, item);
-    }
+        let debug_output = typst_ts_svg_exporter::render_vector_svg_html(&mut doc, None);
+        let target_dir = typst_ts_test_common::artifact_dir().join("isolate");
+        std::fs::create_dir_all(&target_dir).unwrap();
+        std::fs::write(
+            target_dir
+                .join(path.file_name().unwrap_or_default())
+                .with_extension("html"),
+            debug_output,
+        )
+        .unwrap();
+    });
+}
 
-    let mut doc = VecDocument {
-        module: Module {
-            fonts: Default::default(),
-            glyphs: Default::default(),
-            items: evaluator.items.into_iter().collect(),
-        },
-        pages: vec![page.unwrap()],
-    };
+fn snapshot_testing(name: &str, f: impl Fn(VecDocument, &Path)) {
+    let mut settings = insta::Settings::new();
+    settings.set_prepend_module_to_snapshot(false);
+    settings.set_snapshot_path(format!("fixtures/{name}/snaps"));
+    settings.bind(|| {
+        let glob_path = format!("fuzzers/fixtures/{name}/*.refl");
+        insta::glob!(
+            insta::_macro_support::get_cargo_workspace(env!("CARGO_MANIFEST_DIR")).as_path(),
+            &glob_path,
+            |path| {
+                let contents = std::fs::read_to_string(path).unwrap();
+                #[cfg(windows)]
+                let contents = contents.replace("\r\n", "\n");
+                let world = Source::detached(contents);
+                let mut evaluator = Evaluator::default();
+                let page = evaluator
+                    .eval(LinkedNode::new(world.root()))
+                    .with_context(|| format!("Failed to evaluate document {path:?}"))
+                    .unwrap();
 
-    let debug_output = typst_ts_svg_exporter::render_vector_svg_html(&mut doc, None);
-    println!("{:?}", debug_output);
-    // output to target/test.html
-    let target_dir = typst_ts_test_common::artifact_dir().join("isolate");
-    std::fs::create_dir_all(&target_dir).unwrap();
-    std::fs::write(target_dir.join("test.html"), debug_output).unwrap();
+                let doc = VecDocument {
+                    module: Module {
+                        fonts: Default::default(),
+                        glyphs: Default::default(),
+                        items: evaluator.items.into_iter().collect(),
+                    },
+                    pages: vec![page],
+                };
+
+                f(doc, path);
+            }
+        );
+    });
 }

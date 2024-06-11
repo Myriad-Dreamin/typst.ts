@@ -49,7 +49,7 @@ impl<'a> VecIsolatePassWorker<'a> {
 
     pub fn item(&mut self, v: Fingerprint, ts: Transform) -> Fingerprint {
         let bbox = self.bbox.bbox_of(self.input, v, ts);
-        let _ = bbox;
+        println!("Isolating {v:?} with bbox {bbox:?}");
         self.output
             .items
             .insert(v, self.input.get_item(&v).unwrap().clone());

@@ -17,6 +17,7 @@ ecow.workspace = true
 reflexo.workspace = true
 typst.workspace = true
 image.workspace = true
+log.workspace = true
 image_hasher = "1.1.0"
 sha2.workspace = true
 anyhow.workspace = true

@@ -1,9 +1,0 @@
-#{
-
-let a = rect((x: 0pt, y: 0pt, w: 10pt, h: 10pt));
-
-page((w: 100pt, h: 100pt), {
-  a
-});
-
-}

@@ -371,6 +371,13 @@ impl Rect {
         }
     }
 
+    pub fn translate(&self, v: Point) -> Self {
+        Self {
+            lo: self.lo + v,
+            hi: self.hi + v,
+        }
+    }
+
     pub fn union(&self, other: &Self) -> Self {
         if self.is_empty() {
             return *other;

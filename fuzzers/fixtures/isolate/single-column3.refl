@@ -1,0 +1,9 @@
+#{
+let a = rect((x: 5pt, y: 5pt, w: 30pt, h: 4pt));
+
+page((w: 100pt, h: 100pt), {
+  a;
+  at(0pt, 10pt); a; at(6pt, 12pt); a; at(35pt, 9pt); a;
+  at(0pt, 20pt); a;
+});
+}
