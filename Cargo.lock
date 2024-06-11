@@ -4507,6 +4507,7 @@ dependencies = [
  "serde_with",
  "sha2",
  "siphasher 1.0.1",
+ "svgtypes",
  "tiny-skia",
  "tiny-skia-path",
  "ttf-parser",
