@@ -43,6 +43,7 @@ serde_with.workspace = true
 rayon.workspace = true
 rkyv = { workspace = true, optional = true }
 tiny-skia-path.workspace = true
+svgtypes.workspace = true
 
 wasm-bindgen = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true }
