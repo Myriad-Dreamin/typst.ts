@@ -301,11 +301,18 @@ impl SemaTask {
     }
 
     fn get_discrete_labels_for_text_item(&self, rect: Rect) -> (usize, usize, usize, usize) {
-        let left = self.discrete_label_map.get(&rect.lo.x).unwrap();
-        let top = self.discrete_label_map.get(&rect.lo.y).unwrap();
-        let right = self.discrete_label_map.get(&rect.hi.x).unwrap();
-        let bottom = self.discrete_label_map.get(&rect.hi.y).unwrap();
-        (*left, *top, *right, *bottom)
+        let mut left = *self.discrete_label_map.get(&rect.lo.x).unwrap();
+        let mut top = *self.discrete_label_map.get(&rect.lo.y).unwrap();
+        let mut right = *self.discrete_label_map.get(&rect.hi.x).unwrap();
+        let mut bottom = *self.discrete_label_map.get(&rect.hi.y).unwrap();
+        if left > right {
+            std::mem::swap(&mut left, &mut right);
+        }
+        if top > bottom {
+            std::mem::swap(&mut top, &mut bottom);
+        }
+
+        (left, top, right, bottom)
     }
 
     fn render_semantics_walk<'a>(
