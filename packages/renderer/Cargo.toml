@@ -49,6 +49,7 @@ typst-ts-dom-exporter = { workspace = true } # , optional = true
 console_error_panic_hook.workspace = true
 
 [dev-dependencies]
+reflexo.workspace = true
 wasm-bindgen-test.workspace = true
 typst-ts-test-common.workspace = true
 web-sys = { workspace = true, features = [

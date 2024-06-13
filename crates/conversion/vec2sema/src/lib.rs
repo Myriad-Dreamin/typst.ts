@@ -51,6 +51,17 @@ impl BrowserFontMetric {
             // height: (a_height / 128.) as f32,
         }
     }
+
+    /// Create a new instance for testing.
+    /// The width are prime numbers for helping test.
+    pub fn new_test() -> Self {
+        Self {
+            semi_char_width: 2.0,
+            full_char_width: 3.0,
+            emoji_width: 5.0,
+            // height: 7.0,
+        }
+    }
 }
 
 pub struct SemaTask {
@@ -194,7 +205,7 @@ impl SemaTask {
             let bottom = rect.hi.y;
 
             res[idx].1.push_str(&format!(
-                r#"<span class="typst-content-fallback typst-content-fallback-rb1" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
+                r#"<span class="typst-content-fallback typst-content-fallback-rb1" style="left: calc(var(--data-text-width) * {:.5}); top: calc(var(--data-text-height) * {:.5}); width: calc(var(--data-text-width) * {:.5}); height: calc(var(--data-text-height) * {:.5});"></span>"#,
                 left.0,
                 bottom.0,
                 self.page_width - left.0,
@@ -202,7 +213,7 @@ impl SemaTask {
             ));
 
             res[idx].1.push_str(&format!(
-                r#"<span class="typst-content-fallback typst-content-fallback-rb2" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
+                r#"<span class="typst-content-fallback typst-content-fallback-rb2" style="left: calc(var(--data-text-width) * {:.5}); top: calc(var(--data-text-height) * {:.5}); width: calc(var(--data-text-width) * {:.5}); height: calc(var(--data-text-height) * {:.5});"></span>"#,
                 right.0,
                 top.0,
                 self.page_width - right.0,
@@ -231,7 +242,7 @@ impl SemaTask {
                 let from = self.discrete_value_map[last_bottom];
                 let height = rect.lo.y - from;
                 res[pre_idx].0.push_str(&format!(
-                    r#"<span class="typst-content-fallback typst-content-fallback-whole" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
+                    r#"<span class="typst-content-fallback typst-content-fallback-whole" style="left: calc(var(--data-text-width) * {:.5}); top: calc(var(--data-text-height) * {:.5}); width: calc(var(--data-text-width) * {:.5}); height: calc(var(--data-text-height) * {:.5});"></span>"#,
                     0.0,
                     from.0,
                     self.page_width,
@@ -278,7 +289,7 @@ impl SemaTask {
                         let pbottom = self.discrete_value_map[pbottom];
 
                         res[pre_idx].0.push_str(&format!(
-                            r#"<span class="typst-content-fallback typst-content-fallback-left" style="left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});"></span>"#,
+                            r#"<span class="typst-content-fallback typst-content-fallback-left" style="left: calc(var(--data-text-width) * {:.5}); top: calc(var(--data-text-height) * {:.5}); width: calc(var(--data-text-width) * {:.5}); height: calc(var(--data-text-height) * {:.5});"></span>"#,
                             from.0,
                             ptop.0,
                             width.0,
@@ -375,7 +386,7 @@ impl SemaTask {
 
                 if is_regular_scale && is_regular_skew {
                     output.push(Cow::Owned(format!(
-                        r#"<span class="typst-content-text" data-text-id="{}" style="font-size: calc(var(--data-text-height) * {}); line-height: calc(var(--data-text-height) * {}); left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); transform: scaleX({})">"#,
+                        r#"<span class="typst-content-text" data-text-id="{}" style="font-size: calc(var(--data-text-height) * {:.5}); line-height: calc(var(--data-text-height) * {:.5}); left: calc(var(--data-text-width) * {:.5}); top: calc(var(--data-text-height) * {:.5}); transform: scaleX({:.5})">"#,
                         text_id,
                         size.0,
                         size.0,
@@ -386,7 +397,7 @@ impl SemaTask {
                     )));
                 } else {
                     output.push(Cow::Owned(format!(
-                        r#"<span class="typst-content-text" data-text-id="{}" data-matrix="{},{},{},{}" style="font-size: {}px; line-height: calc(var(--data-text-height) * {}); left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {}); transform: scaleX({})">"#,
+                        r#"<span class="typst-content-text" data-text-id="{}" data-matrix="{:.5},{:.5},{:.5},{:.5}" style="font-size: {:.5}px; line-height: calc(var(--data-text-height) * {:.5}); left: calc(var(--data-text-width) * {:.5}); top: calc(var(--data-text-height) * {:.5}); transform: scaleX({:.5})">"#,
                         text_id,
                         ts.sx,
                         ts.ky,
@@ -419,12 +430,12 @@ impl SemaTask {
                     let is_regular_skew = ts.kx == 0.0 && ts.ky == 0.0;
                     if is_regular_scale && is_regular_skew {
                         output.push(Cow::Owned(format!(
-                            r#" style="font-size: 0px; left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {});">"#,
+                            r#" style="font-size: 0px; left: calc(var(--data-text-width) * {:.5}); top: calc(var(--data-text-height) * {:.5});">"#,
                             ts.tx,ts.ty,
                         )));
                     } else {
                         output.push(Cow::Owned(format!(
-                            r#" data-matrix="{},{},{},{}" style="font-size: 0px; left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {});">"#,
+                            r#" data-matrix="{:.5},{:.5},{:.5},{:.5}" style="font-size: 0px; left: calc(var(--data-text-width) * {:.5}); top: calc(var(--data-text-height) * {:.5});">"#,
                             ts.sx, ts.ky, ts.kx, ts.sy,   ts.tx,ts.ty,
                         )));
                     }
@@ -435,12 +446,12 @@ impl SemaTask {
                 let is_regular_skew = ts.kx == 0.0 && ts.ky == 0.0;
                 if is_regular_scale && is_regular_skew {
                     output.push(Cow::Owned(format!(
-                        r#" style="font-size: 0px; left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {});">"#,
+                        r#" style="font-size: 0px; left: calc(var(--data-text-width) * {:.5}); top: calc(var(--data-text-height) * {:.5});">"#,
                         ts.tx,ts.ty,
                     )));
                 } else {
                     output.push(Cow::Owned(format!(
-                        r#" data-matrix="{},{},{},{}" style="font-size: 0px; left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {});">"#,
+                        r#" data-matrix="{:.5},{:.5},{:.5},{:.5}" style="font-size: 0px; left: calc(var(--data-text-width) * {:.5}); top: calc(var(--data-text-height) * {:.5});">"#,
                         ts.sx, ts.ky, ts.kx, ts.sy,   ts.tx,ts.ty,
                     )));
                 }
@@ -471,12 +482,12 @@ impl SemaTask {
                 let is_regular_skew = ts.kx == 0.0 && ts.ky == 0.0;
                 if is_regular_scale && is_regular_skew {
                     output.push(Cow::Owned(format!(
-                        r#" style="font-size: 0px; left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {});  width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});">"#,
+                        r#" style="font-size: 0px; left: calc(var(--data-text-width) * {:.5}); top: calc(var(--data-text-height) * {:.5});  width: calc(var(--data-text-width) * {:.5}); height: calc(var(--data-text-height) * {:.5});">"#,
                         ts.tx - 1., ts.ty - 2., t.size.x.0 + 2., t.size.y.0 + 4.,
                     )));
                 } else {
                     output.push(Cow::Owned(format!(
-                        r#" data-matrix="{},{},{},{}" style="font-size: 0px; left: calc(var(--data-text-width) * {}); top: calc(var(--data-text-height) * {});  width: calc(var(--data-text-width) * {}); height: calc(var(--data-text-height) * {});">"#,
+                        r#" data-matrix="{:.5},{:.5},{:.5},{:.5}" style="font-size: 0px; left: calc(var(--data-text-width) * {:.5}); top: calc(var(--data-text-height) * {:.5});  width: calc(var(--data-text-width) * {:.5}); height: calc(var(--data-text-height) * {:.5});">"#,
                         ts.sx, ts.ky, ts.kx, ts.sy, ts.tx,ts.ty, t.size.x.0, t.size.y.0,
                     )));
                 }

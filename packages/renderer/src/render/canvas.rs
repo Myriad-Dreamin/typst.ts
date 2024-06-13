@@ -231,6 +231,8 @@ mod tests {
         Mutex::new(once_cell::sync::OnceCell::new());
 
     async fn render_test_template(point: &str, artifact: &[u8], format: &str) {
+        super::FONT_METRICS.get_or_init(super::BrowserFontMetric::new_test);
+
         let window = web_sys::window().expect("should have a window in this context");
         let performance = window
             .performance()
