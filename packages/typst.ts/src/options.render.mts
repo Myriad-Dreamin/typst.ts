@@ -154,11 +154,21 @@ export class RenderCanvasOptions {
    * @description `body`: render the body of the document.
    * @description `text`: render the text repr of the document.
    * @description `annnotation`: render the annnotation of the document.
+   * @description `semantics`: render the semantics as HTML elements of the document.
    * @default: all of fields set to `true`
    */
   dataSelection?: {
     body?: boolean;
+    /**
+     * @internal
+     * @deprecated use semantics instead
+     */
     text?: boolean;
+    /**
+     * @internal
+     * @deprecated use semantics instead
+     */
     annotation?: boolean;
+    semantics?: boolean;
   };
 }

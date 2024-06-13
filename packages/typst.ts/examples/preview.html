@@ -10,15 +10,6 @@
       type="module"
       src="${resource-root}/node_modules/@myriaddreamin/typst.ts/dist/esm/main.bundle.js"
     ></script>
-    <!-- pdf.js v3.5.141 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.min.js"></script>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf_viewer.min.css"
-      integrity="sha512-Jf9DLkegLgARLR151csVkPvcVt4cOUhslrSZwiTAe9mqFL/BbYRDmxCOioCtbHifEgjsBFbrVhOMQ3mYPDLrqQ=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    />
 
     <script>
       /// https://segmentfault.com/a/1190000016574288
@@ -49,9 +40,6 @@
             }, 0);
         };
       })();
-
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
 
       const scriptStart = performance.now();
 

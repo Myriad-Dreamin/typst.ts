@@ -81,13 +81,7 @@ export const TypstDocument = ({ fill, artifact, format }: TypstDocumentProps) =>
     }
 
     /// render after init
-    withGlobalRenderer(
-      typst.createTypstRenderer,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as unknown as any).pdfjsLib,
-      moduleInitOptions,
-      doRender,
-    );
+    withGlobalRenderer(typst.createTypstRenderer, moduleInitOptions, doRender);
   }, [permission, displayDivRef, fill, artifact, format]);
 
   /// --- end: update document --- ///

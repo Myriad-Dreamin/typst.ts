@@ -10,7 +10,6 @@ export class RenderView {
   container: HTMLElement;
   canvasList: HTMLCanvasElement[];
   textLayerList: HTMLDivElement[];
-  annotationLayerList: HTMLDivElement[];
   commonList: HTMLDivElement[];
   textLayerParentList: HTMLDivElement[];
   semanticLayerList: HTMLDivElement[];
@@ -33,15 +32,16 @@ export class RenderView {
     this.textLayerList = new Array(this.loadPageCount);
     this.commonList = new Array(this.loadPageCount);
     this.textLayerParentList = new Array(this.loadPageCount);
-    this.annotationLayerList = new Array(this.loadPageCount);
     this.semanticLayerList = new Array(this.loadPageCount);
 
-    const createOver = (i: number, width: number, height: number, commonDiv: HTMLDivElement) => {
+    const createOver = (i: number, pageAst: PageInfo, commonDiv: HTMLDivElement) => {
+      const width = Math.ceil(pageAst.width) * this.imageScaleFactor;
+      const height = Math.ceil(pageAst.height) * this.imageScaleFactor;
+
       const canvas = (this.canvasList[i] = document.createElement('canvas'));
       const semanticLayer = (this.semanticLayerList[i] = document.createElement('div'));
       const textLayer = (this.textLayerList[i] = document.createElement('div'));
       const textLayerParent = (this.textLayerParentList[i] = document.createElement('div'));
-      const annotationLayer = (this.annotationLayerList[i] = document.createElement('div'));
 
       const ctx = canvas.getContext('2d');
       if (ctx) {
@@ -60,17 +60,17 @@ export class RenderView {
       {
         textLayerParent.appendChild(textLayer);
 
-        textLayerParent.className = 'text-layer textLayer';
+        textLayerParent.className = 'typst-html-semantics';
 
         /// on width change
         const containerWidth = container.offsetWidth;
-        const orignalScale = containerWidth / width;
+        const orignalScale = containerWidth / pageAst.width;
         textLayerParent.style.width = `${containerWidth}px`;
-        textLayerParent.style.height = `${height * orignalScale}px`;
-        textLayerParent.style.position = 'absolute';
-        annotationLayer.style.width = `${containerWidth}px`;
-        annotationLayer.style.height = `${height * orignalScale}px`;
-        annotationLayer.style.position = 'absolute';
+        textLayerParent.style.height = `${pageAst.height * orignalScale}px`;
+        // --data-text-width
+        textLayerParent.style.setProperty('--data-text-width', `${orignalScale}px`);
+        textLayerParent.style.setProperty('--data-text-height', `${orignalScale}px`);
+        // textLayerParent.style.position = 'absolute';
         commonDiv.classList.add('typst-page');
         commonDiv.classList.add('canvas');
         commonDiv.style.width = `${containerWidth}px`;
@@ -79,22 +79,19 @@ export class RenderView {
 
         // textLayerParent.style.zIndex = '1';
         semanticLayer.appendChild(textLayerParent);
-        semanticLayer.appendChild(annotationLayer);
         commonDiv.appendChild(semanticLayer);
       }
     };
 
     for (let i = 0; i < this.pageInfos.length; i++) {
       const pageAst = this.pageInfos[i];
-      const width = Math.ceil(pageAst.width) * this.imageScaleFactor;
-      const height = Math.ceil(pageAst.height) * this.imageScaleFactor;
 
       // const commonDiv = document.createElement('div');
       let commonDiv: HTMLDivElement | undefined = undefined;
 
       commonDiv = this.commonList[i] = document.createElement('div');
       container.appendChild(commonDiv);
-      createOver(i, width, height, commonDiv);
+      createOver(i, pageAst, commonDiv);
     }
   }
 
@@ -113,15 +110,12 @@ export class RenderView {
       }
       const commonDiv = this.commonList[i];
       const textLayerParent = this.textLayerParentList[i];
-      const annotationLayer = this.annotationLayerList[i];
 
       /// on width change
       const containerWidth = this.container.offsetWidth;
       const orignalScale = containerWidth / width;
       textLayerParent.style.width = `${containerWidth}px`;
       textLayerParent.style.height = `${height * orignalScale}px`;
-      annotationLayer.style.width = `${containerWidth}px`;
-      annotationLayer.style.height = `${height * orignalScale}px`;
       commonDiv.style.width = `${containerWidth}px`;
       commonDiv.style.height = `${height * orignalScale}px`;
 
@@ -131,48 +125,4 @@ export class RenderView {
       canvasDiv.style.transform = `scale(${currentScale})`;
     }
   }
-}
-
-export function renderTextLayer(
-  pdfjsLib: any,
-  container: HTMLElement,
-  pageInfos: PageInfo[],
-  layerList: HTMLDivElement[],
-  textSourceList: any[],
-) {
-  const containerWidth = container.offsetWidth;
-  const t2 = performance.now();
-
-  const renderOne = (layer: HTMLDivElement, i: number) => {
-    const page_info = pageInfos[i];
-    if (!page_info) {
-      console.error('page not found for', i);
-      return;
-    }
-    const width_pt = page_info.width;
-    const height_pt = page_info.height;
-    const orignalScale = containerWidth / width_pt;
-    // the --scale-factor will truncate our scale, we do it first
-    const scale = Number.parseFloat(orignalScale.toFixed(4));
-    layer.parentElement?.style.setProperty('--scale-factor', scale.toString());
-    // console.log('orignalScale', orignalScale, scale);
-    const viewport = new PageViewport({
-      viewBox: [0, 0, width_pt, height_pt],
-      scale: scale,
-      offsetX: 0,
-      offsetY: 0,
-      rotation: 0,
-      dontFlip: false,
-    });
-
-    pdfjsLib.renderTextLayer({
-      textContentSource: textSourceList[i],
-      container: layer,
-      viewport,
-    });
-  };
-
-  layerList.forEach(renderOne);
-  const t3 = performance.now();
-  console.log(`text layer used: render = ${(t3 - t2).toFixed(1)}ms`);
 }

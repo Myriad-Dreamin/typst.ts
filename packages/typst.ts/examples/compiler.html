@@ -7,21 +7,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Typst.ts</title>
     <script type="module" src="/core/dist/esm/main.bundle.js"></script>
-    <!-- pdf.js v3.5.141 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.min.js"></script>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf_viewer.min.css"
-      integrity="sha512-Jf9DLkegLgARLR151csVkPvcVt4cOUhslrSZwiTAe9mqFL/BbYRDmxCOioCtbHifEgjsBFbrVhOMQ3mYPDLrqQ=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    />
 
     <script src="/core/examples/typst.js"></script>
     <script>
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.5.141/pdf.worker.min.js';
-
       document.ready(() => {
         const terminalContent = document.getElementById('terminal-content');
         terminalContent.innerHTML = 'Downloading font assets...';

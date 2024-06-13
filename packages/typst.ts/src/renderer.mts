@@ -2,15 +2,7 @@
 import type * as typst from '@myriaddreamin/typst-ts-renderer/pkg/wasm-pack-shim.mjs';
 
 import type { InitOptions } from './options.init.mjs';
-import { PageViewport } from './render/canvas/viewport.mjs';
-import {
-  AnnotationList,
-  PageInfo,
-  RenderCanvasResult,
-  TransformMatrix,
-  TypstDefaultParams,
-  kObject,
-} from './internal.types.mjs';
+import { PageInfo, RenderCanvasResult, TypstDefaultParams, kObject } from './internal.types.mjs';
 import {
   CreateSessionOptions,
   RenderToCanvasOptions,
@@ -22,7 +14,7 @@ import {
   RenderInSessionOptions,
   MountDomOptions,
 } from './options.render.mjs';
-import { RenderView, renderTextLayer } from './render/canvas/view.mjs';
+import { RenderView } from './render/canvas/view.mjs';
 import { LazyWasmModule } from './wasm.mjs';
 import { buildComponent } from './init.mjs';
 import { TypstDomDocument } from './dom.mjs';
@@ -453,13 +445,11 @@ const gRendererModule = new LazyWasmModule(async (bin?: any) => {
 
 /**
  * create a Typst renderer.
- * @param {typeof pdfjsModule} pdf - The pdfjs module.
  * @returns {TypstRenderer} - The Typst renderer.
  * @example
  * ```typescript
  * import { createTypstRenderer } from 'typst';
- * import * as pdfjs from 'pdfjs-dist';
- * const renderer = createTypstRenderer(pdfjs);
+ * const renderer = createTypstRenderer();
  * await renderer.init();
  * await renderer.render({
  *   container: document.getElementById('container'),
@@ -467,8 +457,8 @@ const gRendererModule = new LazyWasmModule(async (bin?: any) => {
  * });
  * ```
  */
-export function createTypstRenderer(pdf?: any): TypstRenderer {
-  return new TypstRendererDriver(pdf || undefined);
+export function createTypstRenderer(): TypstRenderer {
+  return new TypstRendererDriver();
 }
 
 export interface TypstSvgRenderer {
@@ -504,7 +494,7 @@ export interface TypstSvgRenderer {
  * use {@link createTypstRenderer} instead
  */
 export function createTypstSvgRenderer(): TypstSvgRenderer {
-  return new TypstRendererDriver(undefined);
+  return new TypstRendererDriver();
 }
 
 export async function rendererBuildInfo(): Promise<any> {
@@ -519,7 +509,7 @@ export class TypstRendererDriver {
   renderer: typst.TypstRenderer;
   rendererJs: typeof typst;
 
-  constructor(private pdf: any) {}
+  constructor() {}
 
   async init(options?: Partial<InitOptions>): Promise<void> {
     this.rendererJs = await import('@myriaddreamin/typst-ts-renderer/pkg/wasm-pack-shim.mjs');
@@ -570,11 +560,11 @@ export class TypstRendererDriver {
           warnOnceCanvasSet = false;
           console.warn('dataSelection.body is not set but providing canvas for body');
         }
-        if (options.dataSelection.text) {
-          encoded |= 1 << 1;
+        if (options.dataSelection.text || options.dataSelection.annotation) {
+          console.error('dataSelection.text and dataSelection.annotation are deprecated');
         }
-        if (options.dataSelection.annotation) {
-          encoded |= 1 << 2;
+        if (options.dataSelection.semantics) {
+          encoded |= 1 << 3;
         }
         rustOptions.data_selection = encoded;
       }
@@ -668,89 +658,13 @@ export class TypstRendererDriver {
     });
   }
 
-  private renderTextLayer(
-    session: RenderSession,
-    view: RenderView,
-    container: HTMLElement,
-    layerList: HTMLDivElement[],
-    textSourceList: any[],
-  ) {
-    renderTextLayer(this.pdf, container, view.pageInfos, layerList, textSourceList);
-  }
-
-  private renderAnnotationLayer(
-    _session: RenderSession,
-    view: RenderView,
-    _container: HTMLElement,
-    layerList: HTMLDivElement[],
-    annotationSourceList: AnnotationList[],
-  ) {
-    const pageInfos = view.pageInfos;
-
+  private renderTextLayer(layerList: HTMLDivElement[], textSourceList: RenderCanvasResult[]) {
     const t2 = performance.now();
-
-    const renderOne = (layer: HTMLDivElement, i: number) => {
-      const page_info = pageInfos[i];
-      if (!page_info) {
-        console.error('page not found for', i);
-        return;
-      }
-      const width_pt = page_info.width;
-      const height_pt = page_info.height;
-
-      layer.innerHTML = '';
-      for (const lnk of annotationSourceList[i].links) {
-        const annotationBox = document.createElement('div');
-        const x = (lnk.annotation_box.transform[4] / width_pt) * 100;
-        const y = (lnk.annotation_box.transform[5] / height_pt) * 100;
-        const skewY = lnk.annotation_box.transform[1];
-        const skewX = lnk.annotation_box.transform[2];
-        annotationBox.className = 'typst-annotation';
-        annotationBox.style.width = `${(lnk.annotation_box.width / width_pt) * 100}%`;
-        annotationBox.style.height = `${(lnk.annotation_box.height / height_pt) * 100}%`;
-        annotationBox.style.left = `${x}%`;
-        annotationBox.style.top = `${y}%`;
-        annotationBox.style.transform = `matrix(1, ${skewY}, ${skewX}, 1, 0, 0)`;
-
-        switch (lnk.action.t) {
-          case 'Url': {
-            const a = document.createElement('a');
-            a.href = lnk.action.v.url;
-            a.target = '_blank';
-            a.appendChild(annotationBox);
-            layer.appendChild(a);
-            break;
-          }
-          case 'GoTo': {
-            const destPoint = document.createElement('div');
-            destPoint.className = 'typst-annotation';
-            const destX = (lnk.action.v.x / width_pt) * 100;
-            const destY = (lnk.action.v.y / height_pt) * 100;
-            destPoint.style.left = `${destX}%`;
-            destPoint.style.top = `${destY}%`;
-            const destId = randstr('lnk-');
-            destPoint.id = destId;
-
-            // todo: imcomplete rendering should load these pages before appendChild
-            const destLayer = layerList[lnk.action.v.page_ref - 1];
-            destLayer.appendChild(destPoint);
-
-            const a = document.createElement('a');
-            a.href = `#${destId}`;
-            a.appendChild(annotationBox);
-            layer.appendChild(a);
-            break;
-          }
-          default:
-            console.warn('unknown action', lnk);
-            break;
-        }
-      }
-    };
-
-    layerList.forEach(renderOne);
+    layerList.forEach((layer, i) => {
+      layer.innerHTML = textSourceList[i].htmlSemantics[0];
+    });
     const t3 = performance.now();
-    console.log(`annotation layer used: render = ${(t3 - t2).toFixed(1)}ms`);
+    console.log(`text layer used: render = ${(t3 - t2).toFixed(1)}ms`);
   }
 
   async render(options: RenderOptions<RenderToCanvasOptions>): Promise<void> {
@@ -852,20 +766,7 @@ export class TypstRendererDriver {
       console.log(`layer used: retieve = ${(t2 - t).toFixed(1)}ms`);
 
       await doRenderDisplayLayer(pageView.canvasList, () => pageView.resetLayout());
-      this.renderTextLayer(
-        session,
-        pageView,
-        mountContainer,
-        pageView.textLayerList,
-        renderPageResults.map(r => r.textContent),
-      );
-      this.renderAnnotationLayer(
-        session,
-        pageView,
-        mountContainer,
-        pageView.annotationLayerList,
-        renderPageResults.map(r => r.annotationList),
-      );
+      this.renderTextLayer(pageView.textLayerList, renderPageResults);
 
       return;
     });

@@ -1,6 +1,6 @@
 (function () {
   document.ready(() => {
-    let plugin = window.TypstRenderModule.createTypstRenderer(pdfjsLib);
+    let plugin = window.TypstRenderModule.createTypstRenderer();
     plugin
       .init({
         getModule: () => '/typst.ts/renderer/typst_ts_renderer_bg.wasm',

@@ -1,14 +1,11 @@
 use std::{collections::HashMap, hash::Hash, ops::Deref};
 
-use reflexo_vec2canvas::{
-    AnnotationListTask, DefaultExportFeature, ExportFeature, TextContentTask,
-};
+use reflexo_vec2canvas::{DefaultExportFeature, ExportFeature};
+use reflexo_vec2sema::{BrowserFontMetric, SemaTask};
 use typst_ts_core::{
-    annotation::AnnotationList,
     error::prelude::*,
     hash::{Fingerprint, FingerprintHasher, FingerprintSipHasher},
     vector::ir::{Axes, LayoutRegionNode, Rect, Scalar},
-    TextContent,
 };
 use wasm_bindgen::prelude::*;
 
@@ -29,7 +26,7 @@ impl TypstRenderer {
         canvas: Option<web_sys::CanvasRenderingContext2d>,
         options: Option<RenderPageImageOptions>,
     ) -> ZResult<JsValue> {
-        let (fingerprint, text_content, annotation_list, ..) = self
+        let (fingerprint, html_semantics, ..) = self
             .render_page_to_canvas_internal::<DefaultExportFeature>(ses, canvas, options)
             .await?;
 
@@ -37,13 +34,14 @@ impl TypstRenderer {
         let err =
             js_sys::Reflect::set(&res, &"cacheKey".into(), &fingerprint.as_svg_id("c").into());
         err.map_err(map_into_err::<JsValue, _>("Renderer.SetCacheKey"))?;
-        let err = js_sys::Reflect::set(&res, &"textContent".into(), &text_content);
-        err.map_err(map_into_err::<JsValue, _>("Renderer.SetTextContent"))?;
-        let err = js_sys::Reflect::set(&res, &"annotationList".into(), &annotation_list);
-        err.map_err(map_into_err::<JsValue, _>("Renderer.SetAnnotationContent"))?;
+        let err = js_sys::Reflect::set(&res, &"htmlSemantics".into(), &html_semantics);
+        err.map_err(map_into_err::<JsValue, _>("Renderer.SetHtmlSemantics"))?;
         Ok(res.into())
     }
 }
+
+static FONT_METRICS: once_cell::sync::OnceCell<BrowserFontMetric> =
+    once_cell::sync::OnceCell::new();
 
 impl TypstRenderer {
     #[allow(clippy::await_holding_lock)]
@@ -52,7 +50,7 @@ impl TypstRenderer {
         ses: &RenderSession,
         canvas: Option<web_sys::CanvasRenderingContext2d>,
         options: Option<RenderPageImageOptions>,
-    ) -> ZResult<(Fingerprint, JsValue, JsValue, Option<HashMap<String, f64>>)> {
+    ) -> ZResult<(Fingerprint, JsValue, Option<HashMap<String, f64>>)> {
         let rect_lo_x: f32 = -1.;
         let rect_lo_y: f32 = -1.;
         let rect_hi_x: f32 = 1e30;
@@ -73,8 +71,8 @@ impl TypstRenderer {
             .unwrap_or(u32::MAX);
 
         let should_render_body = (data_selection & (1 << 0)) != 0;
-        let mut tc = ((data_selection & (1 << 1)) != 0).then(TextContent::default);
-        let mut annotations = ((data_selection & (1 << 2)) != 0).then(AnnotationList::default);
+        // semantics layer
+        let mut tc = ((data_selection & (1 << 3)) != 0).then(Vec::new);
 
         // let def_provider = GlyphProvider::new(FontGlyphProvider::default());
         // let partial_providier =
@@ -134,12 +132,6 @@ impl TypstRenderer {
         }
 
         // todo: leaking abstraction
-        let mut worker = tc
-            .as_mut()
-            .map(|tc| TextContentTask::new(&kern.doc.module, tc));
-        let mut annotation_list_worker = annotations
-            .as_mut()
-            .map(|annotations| AnnotationListTask::new(&kern.doc.module, annotations));
         // todo: reuse
         if let Some(t) = &kern.layout {
             let pages = match t {
@@ -149,38 +141,36 @@ impl TypstRenderer {
                 }
                 _ => todo!(),
             };
-            let mut page_off = 0.;
             for (idx, page) in pages.iter().enumerate() {
                 if page_num.map_or(false, |p| p != idx) {
-                    page_off += page.size.y.0;
                     continue;
                 }
-                let partial_page_off = if page_num.is_some() { 0. } else { page_off };
-                if let Some(worker) = worker.as_mut() {
-                    worker.page_height = partial_page_off + page.size.y.0;
-                    worker.process_flat_item(
-                        tiny_skia::Transform::from_translate(partial_page_off, 0.),
-                        &page.content,
-                    );
+                if let Some(worker) = tc.as_mut() {
+                    let metric = FONT_METRICS.get_or_init(|| {
+                        let canvas = web_sys::window()
+                            .unwrap()
+                            .document()
+                            .unwrap()
+                            .create_element("canvas")
+                            .unwrap()
+                            .dyn_into::<web_sys::HtmlCanvasElement>()
+                            .unwrap();
+                        BrowserFontMetric::new(&canvas)
+                    });
+
+                    let mut output = vec![];
+                    let mut t = SemaTask::new(true, *metric, page.size.x.0, page.size.y.0);
+                    let ts = tiny_skia::Transform::identity();
+                    t.render_semantics(&kern.doc.module, ts, page.content, &mut output);
+                    worker.push(output.concat());
                 }
-                if let Some(worker) = annotation_list_worker.as_mut() {
-                    worker.page_num = idx as u32;
-                    worker.process_flat_item(
-                        tiny_skia::Transform::from_translate(partial_page_off, 0.),
-                        &page.content,
-                    );
-                }
-                page_off += page.size.y.0;
             }
         }
 
         Ok((
             fingerprint,
             serde_wasm_bindgen::to_value(&tc)
-                .map_err(map_into_err::<JsValue, _>("Renderer.EncodeTextContent"))?,
-            serde_wasm_bindgen::to_value(&annotations).map_err(map_into_err::<JsValue, _>(
-                "Renderer.EncodeAnnotationContent",
-            ))?,
+                .map_err(map_into_err::<JsValue, _>("Renderer.EncodeHtmlSemantics"))?,
             perf_events.map(|perf_events| {
                 perf_events
                     .into_map()
@@ -241,6 +231,8 @@ mod tests {
         Mutex::new(once_cell::sync::OnceCell::new());
 
     async fn render_test_template(point: &str, artifact: &[u8], format: &str) {
+        super::FONT_METRICS.get_or_init(super::BrowserFontMetric::new_test);
+
         let window = web_sys::window().expect("should have a window in this context");
         let performance = window
             .performance()
@@ -285,7 +277,7 @@ mod tests {
 
             let prepare = performance.now();
 
-            let (_fingerprint, res, _, perf_events) = renderer
+            let (_fingerprint, res, perf_events) = renderer
                 .render_page_to_canvas_internal::<CIRenderFeature>(&session, Some(context), None)
                 .await
                 .unwrap();
