@@ -12,29 +12,68 @@ body {
   margin: 0;
 }
 
-.text-layer {
-  position: relative;
+.typst-html-semantics {
+  position: absolute;
+  z-index: 2;
+  color: transparent;
+  font-family: monospace;
+  white-space: pre;
+}
+
+.typst-html-semantics span {
+  transform-origin: left top;
+  position: absolute;
+  display: inline-block;
   left: 0;
   top: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-  opacity: 0.2;
-  line-height: 1;
 }
 
-.text-layer > div {
-  color: transparent;
-  /* position: absolute; */
-  white-space: pre;
-  cursor: text;
-  transform-origin: 0% 0%;
-}
-
-.typst-annotation {
-  margin: 0;
+.typst-content-hint {
   position: absolute;
-  z-index: 10;
+  display: inline-block;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.typst-html-semantics a {
+  position: absolute;
+  display: inline-block;
+}
+
+/* set transparent itself */
+.typst-content-group {
+  pointer-events: visible;
+}
+
+.typst-html-semantics span::-moz-selection {
+  color: transparent;
+  background: #7db9dea0;
+}
+
+.typst-html-semantics span::selection {
+  color: transparent;
+  background: #7db9dea0;
+}
+
+.typst-html-semantics *::-moz-selection {
+  color: transparent;
+  background: transparent;
+}
+
+.typst-html-semantics *::selection {
+  color: transparent;
+  background: transparent;
+}
+
+.typst-content-fallback {
+  color: transparent;
+  background: transparent;
+}
+
+.pseudo-link,
+.typst-text {
+  pointer-events: none;
 }
 
 .navigator {
