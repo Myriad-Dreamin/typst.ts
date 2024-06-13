@@ -32,6 +32,7 @@ impl CanvasBackend {
     }
 
     pub fn render_page(&mut self, module: &Module, page: &Page) -> ZResult<CanvasNode> {
+        // todo: incremental
         let mut ct = self.vec2canvas.fork_canvas_render_task(module);
 
         Ok(ct.render_item(&page.content))

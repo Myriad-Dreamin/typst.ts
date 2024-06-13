@@ -3,6 +3,7 @@ pub mod annotation;
 pub mod content;
 pub mod debug_loc;
 pub mod error;
+pub mod escape;
 pub mod hash;
 pub mod path;
 

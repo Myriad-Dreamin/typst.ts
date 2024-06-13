@@ -15,6 +15,7 @@ members = [
 
     "crates/reflexo",
     "crates/conversion/vec2canvas",
+    "crates/conversion/vec2sema",
 
     "cli",
     "core",
@@ -109,6 +110,7 @@ elsa = "1.8.1"
 ecow = "0.2"
 fst = "0.4.7"
 indexmap = "2"
+unicode-width = "0.1.11"
 
 # cli, terminal and tui
 ansi_term = "0.12.1"
@@ -201,6 +203,7 @@ reflexo = { version = "0.5.0-rc4", default-features = false, path = "crates/refl
 
 # conversions
 reflexo-vec2canvas = { version = "0.5.0-rc4", path = "crates/conversion/vec2canvas" }
+reflexo-vec2sema = { version = "0.5.0-rc4", path = "crates/conversion/vec2sema" }
 
 typst-ts-core = { version = "0.5.0-rc4", default-features = false }
 typst-ts-compiler = { version = "0.5.0-rc4", default-features = false }

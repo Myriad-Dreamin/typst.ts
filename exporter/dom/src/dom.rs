@@ -19,11 +19,7 @@ use web_sys::{
 };
 
 use crate::{
-    canvas_backend::CanvasBackend,
-    factory::XmlFactory,
-    semantics_backend::{BrowserFontMetric, SemanticsBackend},
-    svg_backend::FETCH_BBOX_TIMES,
-    DomContext,
+    canvas_backend::CanvasBackend, factory::XmlFactory, svg_backend::FETCH_BBOX_TIMES, DomContext,
 };
 
 pub struct DomPage {
@@ -66,9 +62,6 @@ impl Drop for DomPage {
         self.elem.remove();
     }
 }
-
-static FONT_METRICS: once_cell::sync::OnceCell<BrowserFontMetric> =
-    once_cell::sync::OnceCell::new();
 
 impl DomPage {
     pub fn new_at(elem: HtmlElement, tmpl: XmlFactory, idx: usize) -> Self {
@@ -370,8 +363,6 @@ impl DomPage {
             e.0.content != data.content
         });
 
-        let metric = FONT_METRICS.get_or_init(|| BrowserFontMetric::new(&self.canvas));
-
         if init_semantics {
             let do_heavy = self.is_visible;
 
@@ -381,11 +372,8 @@ impl DomPage {
                 &format!("init semantics({do_heavy}): {} {:?}", self.idx, data).into(),
             );
 
-            let mut output = vec![];
-            let mut t = SemanticsBackend::new(do_heavy, *metric, data.size.x.0, data.size.y.0);
-            let ts = tiny_skia::Transform::identity();
-            t.render_semantics(ctx.module, ts, data.content, &mut output);
-            self.semantics.set_inner_html(&output.concat());
+            let output = ctx.semantics_backend.render(ctx.module, &data, do_heavy);
+            self.semantics.set_inner_html(&output);
             self.semantics_state = Some((data, do_heavy));
         }
 
@@ -400,11 +388,8 @@ impl DomPage {
         let data = self.layout_data.clone().unwrap();
         web_sys::console::log_1(&format!("layout heavy semantics: {} {:?}", self.idx, data).into());
 
-        let mut output = vec![];
-        let mut t = SemanticsBackend::new(true, *metric, data.size.x.0, data.size.y.0);
-        let ts = tiny_skia::Transform::identity();
-        t.render_semantics(ctx.module, ts, data.content, &mut output);
-        self.semantics.set_inner_html(&output.concat());
+        let output = ctx.semantics_backend.render(ctx.module, &data, true);
+        self.semantics.set_inner_html(&output);
 
         self.semantics_state.as_mut().unwrap().1 = true;
         Ok(())

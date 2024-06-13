@@ -3,7 +3,7 @@
 use core::fmt;
 use std::{borrow::Cow, marker::PhantomData};
 
-pub(crate) trait Escapes {
+pub trait Escapes {
     fn escape(c: u8) -> Option<&'static str>;
 
     fn byte_needs_escaping(c: u8) -> bool {
@@ -51,7 +51,7 @@ impl<'a, E: Escapes> fmt::Display for Escaped<'a, E> {
     }
 }
 
-pub(crate) fn escape_str<E: Escapes>(s: &str) -> Cow<'_, str> {
+pub fn escape_str<E: Escapes>(s: &str) -> Cow<'_, str> {
     if E::str_needs_escaping(s) {
         Cow::Owned(format!("{}", Escaped::<E>::new(s)))
     } else {
@@ -64,7 +64,7 @@ macro_rules! escapes {
         $name: ident,
         $($k: expr => $v: expr),* $(,)?
     } => {
-        pub(crate) struct $name;
+        pub struct $name;
 
         impl Escapes for $name {
             fn escape(c: u8) -> Option<&'static str> {
