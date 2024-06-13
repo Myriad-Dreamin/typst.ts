@@ -2923,6 +2923,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "reflexo-vec2sema"
+version = "0.5.0-rc4"
+dependencies = [
+ "comemo",
+ "js-sys",
+ "reflexo",
+ "reflexo-vec2canvas",
+ "tiny-skia",
+ "unicode-width",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "regex"
 version = "1.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4547,6 +4561,7 @@ dependencies = [
  "once_cell",
  "rayon",
  "reflexo-vec2canvas",
+ "reflexo-vec2sema",
  "siphasher 1.0.1",
  "svgtypes",
  "tiny-skia",
@@ -4554,7 +4569,6 @@ dependencies = [
  "typst",
  "typst-ts-core",
  "typst-ts-svg-exporter",
- "unicode-width",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

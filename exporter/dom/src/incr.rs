@@ -17,7 +17,8 @@ use wasm_bindgen::prelude::*;
 use web_sys::{wasm_bindgen::JsCast, Element, HtmlElement};
 
 use crate::{
-    canvas_backend::CanvasBackend, dom::DomPage, factory::XmlFactory, svg_backend::SvgBackend,
+    canvas_backend::CanvasBackend, dom::DomPage, factory::XmlFactory,
+    semantics_backend::SemanticsBackend, svg_backend::SvgBackend,
 };
 
 pub type IncrDOMDocServer = IncrDocServer;
@@ -55,6 +56,8 @@ pub struct IncrDomDocClient {
     svg_backend: SvgBackend,
     /// Backend for rendering vector IR as Canvas.
     canvas_backend: CanvasBackend,
+    /// Backend for rendering vector IR as HTML Semantics.
+    semantics_backend: SemanticsBackend,
 }
 
 const STAGE_LAYOUT: u8 = 0;
@@ -138,6 +141,7 @@ impl IncrDomDocClient {
             module: kern_lock.module(),
             svg_backend: &mut self.svg_backend,
             canvas_backend: &mut self.canvas_backend,
+            semantics_backend: &mut self.semantics_backend,
         };
 
         let page = &mut self.doc_view[page_num as usize];
@@ -149,14 +153,9 @@ impl IncrDomDocClient {
             }
             STAGE_SEMANTICS => {
                 page.repaint_semantics(&mut ctx)?;
-
                 Ok(None)
             }
-            STAGE_PREPARE_CANVAS => {
-                let elem = page.prepare_canvas(&mut ctx)?;
-
-                Ok(elem)
-            }
+            STAGE_PREPARE_CANVAS => Ok(page.prepare_canvas(&mut ctx)?),
             STAGE_CANVAS => Ok(None),
             _ => todo!(),
         }
@@ -362,6 +361,7 @@ pub struct DomContext<'m, 'a> {
     stub: Element,
     pub svg_backend: &'a mut SvgBackend,
     pub canvas_backend: &'a mut CanvasBackend,
+    pub semantics_backend: &'a mut SemanticsBackend,
     pub module: &'m Module,
 }
 

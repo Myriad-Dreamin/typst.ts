@@ -1,0 +1,30 @@
+[package]
+name = "reflexo-vec2sema"
+description = "Render vector items into HTML semantics."
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+comemo.workspace = true
+reflexo = { workspace = true, features = ["web"] }
+reflexo-vec2canvas.workspace = true
+
+tiny-skia.workspace = true
+
+unicode-width.workspace = true
+
+wasm-bindgen.workspace = true
+js-sys.workspace = true
+web-sys = { workspace = true, features = [
+    "HtmlDivElement",
+    "Window",
+    "Document",
+] }
+
+[features]
+incremental = ["reflexo/flat-vector"]
+default = ["incremental"]
