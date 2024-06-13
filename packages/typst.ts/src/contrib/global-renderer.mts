@@ -10,13 +10,12 @@ export function getGlobalRenderer(): TypstRenderer | undefined {
 }
 
 export function createGlobalRenderer(
-  creator: (pdf: /* typeof pdfjsModule */ any) => TypstRenderer,
-  pdf: /* typeof pdfjsModule */ any,
+  creator: () => TypstRenderer,
   initOptions?: Partial<InitOptions>,
 ): Promise<TypstRenderer> {
   // todo: determine renderer thread-safety
   // todo: check inconsistent initOptions
-  const renderer = globalRenderer || creator(pdf);
+  const renderer = globalRenderer || creator();
 
   if (globalRendererInitReady !== undefined) {
     return globalRendererInitReady;
@@ -30,8 +29,7 @@ export function createGlobalRenderer(
 }
 
 export function withGlobalRenderer(
-  creator: (pdf: /* typeof pdfjsModule */ any) => TypstRenderer,
-  pdf: /* typeof pdfjsModule */ any,
+  creator: () => TypstRenderer,
   initOptions: Partial<InitOptions> | undefined,
   resolve: (renderer: TypstRenderer) => void,
   reject?: (err: any) => void,
@@ -42,5 +40,5 @@ export function withGlobalRenderer(
     return;
   }
 
-  createGlobalRenderer(creator, pdf, initOptions).then(resolve).catch(reject);
+  createGlobalRenderer(creator, initOptions).then(resolve).catch(reject);
 }

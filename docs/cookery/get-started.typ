@@ -42,7 +42,7 @@ There are several ways to setup typst.ts. The difficulty of each approach is eva
   Use a bundled javascript file along with wasm modules.
 
 - #box(link(<approach-node-lib>)[Approach 3])
-  Use typst.ts as a library in Node.js. 
+  Use typst.ts as a library in Node.js.
 
 - #box(link(<approach-ts-lib>)[Approach 4])
   Use typst.ts as a library in browser (for TypeScript users).
@@ -85,8 +85,8 @@ You can include a single bundle file of `@myriaddreamin/typst.ts` in your html f
   src="/core/dist/esm/main.bundle.js"></script>
 <script>
 let renderModule = window.TypstRenderModule;
-let renderPlugin = 
-  renderModule.createTypstRenderer(pdfjsLib);
+let renderPlugin =
+  renderModule.createTypstRenderer();
 renderPlugin
   .init({
    getModule: () => fetch(

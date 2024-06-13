@@ -62,48 +62,12 @@ export interface SemanticTokens {
 }
 //#endregion
 
-export interface AnnotationBox {
-  height: number;
-  width: number;
-  page_ref: number;
-  transform: TransformMatrix;
-}
-
-export interface UrlLinkAction {
-  t: 'Url';
-  v: {
-    url: string;
-  };
-}
-
-export interface GoToLinkAction {
-  t: 'GoTo';
-  v: {
-    page_ref: number;
-    x: number;
-    y: number;
-  };
-}
-
-export type LinkAction = UrlLinkAction | GoToLinkAction;
-
-export interface LinkAnnotation {
-  annotation_box: AnnotationBox;
-  action: LinkAction;
-}
-
-export interface AnnotationList {
-  links: LinkAnnotation[];
-}
-
 /**
  * The result of rendering a Typst document to a canvas.
  */
 export interface RenderCanvasResult {
   cacheKey: string;
-  textContent: any;
-  // still unstable type
-  annotationList: AnnotationList;
+  htmlSemantics: string[];
 }
 
 export const enum TypstDefaultParams {

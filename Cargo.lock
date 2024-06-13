@@ -4715,6 +4715,7 @@ dependencies = [
  "once_cell",
  "pollster",
  "reflexo-vec2canvas",
+ "reflexo-vec2sema",
  "rmp-serde",
  "send_wrapper",
  "serde",

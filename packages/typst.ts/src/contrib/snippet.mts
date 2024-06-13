@@ -309,16 +309,6 @@ export class TypstSnippet {
     this.exOptions = options;
   }
 
-  /** @internal */
-  pdfjsModule: unknown | undefined = undefined;
-  /**
-   * Set pdf.js module for initializing global instance {@link $typst}.
-   */
-  setPdfjsModule(module: unknown) {
-    this.requireIsUninitialized('renderer', this.ex, TypstSnippet.$buildR);
-    this.pdfjsModule = module;
-  }
-
   /**
    * Set shared main file path.
    */
@@ -605,9 +595,8 @@ export class TypstSnippet {
       '@myriaddreamin/typst.ts/dist/esm/renderer.mjs'
     )) as any as typeof import('../renderer.mjs');
 
-    const pdfjs = this.pdfjsModule || (typeof window !== 'undefined' && (window as any)?.pdfjsLib);
     await this.prepareUse();
-    return createGlobalRenderer(createTypstRenderer, pdfjs, this.exOptions);
+    return createGlobalRenderer(createTypstRenderer, this.exOptions);
   }
 }
 

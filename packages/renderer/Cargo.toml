@@ -43,6 +43,7 @@ typst-ts-compiler = { version = "0.5.0-rc4", default-features = false, features 
     "web-render",
 ] }
 reflexo-vec2canvas = { workspace = true, optional = true }
+reflexo-vec2sema = { workspace = true }
 typst-ts-svg-exporter = { workspace = true, optional = true }
 typst-ts-dom-exporter = { workspace = true } # , optional = true
 console_error_panic_hook.workspace = true

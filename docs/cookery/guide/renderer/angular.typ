@@ -55,8 +55,6 @@ The artifact can be only in #term.vector-format to this time.
 
 To get `artifact` data, please refer to #term.ts-cli.
 
-#include "pdfjs.typ"
-
 === Set renderer initialization option for `typst-document`
 
 Retrieve a #term.init-option for initializating the renderer for `typst-document`

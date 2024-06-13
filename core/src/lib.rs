@@ -45,7 +45,6 @@ pub use exporter::{
     GenericTransformer, Transformer,
 };
 pub use font::{FontLoader, FontResolver, FontSlot};
-pub use reflexo::content::TextContent;
 pub use reflexo::*;
 
 pub mod build_info {

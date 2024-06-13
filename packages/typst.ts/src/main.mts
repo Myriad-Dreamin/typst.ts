@@ -10,7 +10,7 @@ export { preloadRemoteFonts, preloadSystemFonts } from './options.init.mjs';
 import * as renderer from './renderer.mjs';
 export type { RenderSession, TypstRenderer } from './renderer.mjs';
 export { rendererBuildInfo, createTypstRenderer, createTypstSvgRenderer } from './renderer.mjs';
-import { RenderView, renderTextLayer } from './render/canvas/view.mjs';
+import { RenderView } from './render/canvas/view.mjs';
 import * as compiler from './compiler.mjs';
 import { FetchAccessModel, MemoryAccessModel } from './fs/index.mjs';
 import { FetchPackageRegistry } from './fs/package.mjs';
@@ -24,7 +24,6 @@ export { createTypstCompiler } from './compiler.mjs';
 if (window) {
   (window as any).TypstRenderModule = {
     RenderView,
-    renderTextLayer,
 
     createTypstRenderer: renderer.createTypstRenderer,
     createTypstSvgRenderer: renderer.createTypstRenderer,

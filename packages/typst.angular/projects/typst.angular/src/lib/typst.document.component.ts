@@ -48,12 +48,7 @@ export class TypstDocumentComponent {
         };
 
         /// render after init
-        withGlobalRenderer(
-          typst.createTypstRenderer,
-          (window as unknown as any).pdfjsLib,
-          moduleInitOptions,
-          doRender,
-        );
+        withGlobalRenderer(typst.createTypstRenderer, moduleInitOptions, doRender);
       } else {
         displayDiv.innerHTML = '';
       }

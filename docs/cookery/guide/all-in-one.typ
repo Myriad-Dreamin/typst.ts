@@ -44,8 +44,8 @@ because the compilation process may change the state of that.
 const $typst = new TypstSnippet({
   // optional renderer instance
   renderer: enableRendering ?? (() => {
-    return createGlobalRenderer(createTypstRenderer,
-      undefined /* pdfJsLib */, initOptions);
+    return createGlobalRenderer(
+      createTypstRenderer, initOptions);
   }),
   compiler() => {
     return createGlobalCompiler(createTypstCompiler,
@@ -142,8 +142,6 @@ Ideally, you don't have to specify any options. But if necessary, the extra init
 $typst.setCompilerInitOptions(await cachedFontInitOptoins());
 // specify init options to renderer
 $typst.setRendererInitOptions(rendererInitOptions);
-// wire other `pdfJsLib` instance for renderer
-$typst.setPdfjsModule(pdfJsLib);
 
 // The compiler instance is initialized in this call.
 await $typst.svg({ mainContent });
@@ -187,12 +185,6 @@ $typst.use(
 == Specify extra render options
 
 See #link(snippet-source)[comments on source] for more details.
-
-== Configure dependencies of canvas export
-
-To display text layer of canvas, it needs pdf.js.
-
-#include "renderer/pdfjs.typ"
 
 === Sample application: real-time preview document
 
