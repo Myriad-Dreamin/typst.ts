@@ -131,7 +131,7 @@ impl CanvasOp for CanvasGroupElem {
 
         let _ = self.rect;
         let _ = Self::bbox_at;
-        // #[cfg(feature = "report_group")]
+        #[cfg(feature = "report_group")]
         web_sys::console::log_1(
             &format!("realize group {:?}({} elems)", self.kind, self.inner.len()).into(),
         );
