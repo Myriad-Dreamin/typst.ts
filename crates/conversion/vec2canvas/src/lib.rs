@@ -9,6 +9,7 @@ use ecow::EcoVec;
 use elsa::FrozenMap;
 #[cfg(feature = "incremental")]
 pub use incr::*;
+use sk::Transform;
 use utils::EmptyFuture;
 
 use core::fmt;
@@ -134,53 +135,28 @@ impl BBoxAt for CanvasGroupElem {
     fn bbox_at(&self, ts: sk::Transform) -> Option<Rect> {
         let ts = ts.pre_concat(*self.ts.as_ref());
 
-        match &self.rect {
-            CanvasBBox::Static(r) => {
-                if ts.is_identity() {
-                    return Some(**r);
-                }
+        self.rect.bbox_at(ts, || {
+            self.inner
+                .iter()
+                .fold(None, |acc: Option<Rect>, (pos, elem)| {
+                    // we try to move the bbox instead of concat the translate to ts
+                    let Some(r) = elem.bbox_at(ts) else {
+                        return acc;
+                    };
 
-                let r = sk::Rect::from_xywh(r.lo.x.0, r.lo.y.0, r.width().0, r.height().0)
-                    .and_then(|e| e.transform(ts));
-                r.map(From::from)
-            }
-            CanvasBBox::Dynamic(map) => {
-                let map = map.get_or_init(FrozenMap::new);
-                let ts_key: ir::Transform = ts.into();
-                if let Some(r) = map.get(&ts_key) {
-                    return *r;
-                }
+                    // scale the movement
+                    let pos = ir::Point::new(
+                        Scalar(pos.x.0 * ts.sx + pos.y.0 * ts.kx),
+                        Scalar(pos.y.0 * ts.sy + pos.x.0 * ts.ky),
+                    );
 
-                let r = self
-                    .inner
-                    .iter()
-                    .fold(None, |acc: Option<Rect>, (pos, elem)| {
-                        // we try to move the bbox instead of concat the translate to ts
-                        let Some(r) = elem.bbox_at(ts) else {
-                            return acc;
-                        };
-
-                        // scale the movement
-                        let pos = ir::Point::new(
-                            Scalar(pos.x.0 * ts.sx + pos.y.0 * ts.kx),
-                            Scalar(pos.y.0 * ts.sy + pos.x.0 * ts.ky),
-                        );
-
-                        web_sys::console::log_1(
-                            &format!("group bbox at {:?} {:?} {:?}", pos, ts, r).into(),
-                        );
-
-                        let r = r.move_by(pos);
-                        match acc {
-                            Some(acc) => Some(acc.union(&r)),
-                            None => Some(r),
-                        }
-                    });
-                map.insert(ts_key, Box::new(r));
-
-                r
-            }
-        }
+                    let r = r.translate(pos);
+                    match acc {
+                        Some(acc) => Some(acc.union(&r)),
+                        None => Some(r),
+                    }
+                })
+        })
     }
 }
 
@@ -192,8 +168,10 @@ impl BBoxAt for CanvasClipElem {
 }
 
 impl BBoxAt for CanvasPathElem {
-    fn bbox_at(&self, _ts: sk::Transform) -> Option<Rect> {
-        None
+    fn bbox_at(&self, ts: sk::Transform) -> Option<Rect> {
+        self.rect.bbox_at(ts, || {
+            reflexo_vec2bbox::Vec2BBoxPass::path_bbox(&self.path_data, ts)
+        })
     }
 }
 
@@ -208,7 +186,7 @@ impl BBoxAt for CanvasImageElem {
 
 impl BBoxAt for CanvasGlyphElem {
     fn bbox_at(&self, _ts: sk::Transform) -> Option<Rect> {
-        Default::default()
+        None
     }
 }
 
@@ -266,6 +244,34 @@ impl fmt::Debug for CanvasBBox {
     }
 }
 
+impl CanvasBBox {
+    fn bbox_at(&self, ts: sk::Transform, compute: impl FnOnce() -> Option<Rect>) -> Option<Rect> {
+        match self {
+            CanvasBBox::Static(r) => {
+                if ts.is_identity() {
+                    return Some(**r);
+                }
+
+                let r = sk::Rect::from_xywh(r.lo.x.0, r.lo.y.0, r.width().0, r.height().0)
+                    .and_then(|e| e.transform(ts));
+                r.map(From::from)
+            }
+            CanvasBBox::Dynamic(map) => {
+                let map = map.get_or_init(FrozenMap::new);
+                let ts_key: ir::Transform = ts.into();
+                if let Some(r) = map.get(&ts_key) {
+                    return *r;
+                }
+
+                let r = compute();
+                map.insert(ts_key, Box::new(r));
+
+                r
+            }
+        }
+    }
+}
+
 trait BBoxAt {
     fn bbox_at(&self, ts: sk::Transform) -> Option<Rect>;
 }
@@ -317,39 +323,24 @@ impl CanvasOp for CanvasGroupElem {
 
         let _ = self.rect;
         let _ = Self::bbox_at;
+        // #[cfg(feature = "report_group")]
+        web_sys::console::log_1(
+            &format!("realize group {:?}({} elems)", self.kind, self.inner.len()).into(),
+        );
+
         #[cfg(feature = "render_bbox")]
         {
-            #[cfg(feature = "false")]
-            web_sys::console::log_1(
-                &format!("realize group {:?}({} elems)", self.kind, self.inner.len()).into(),
-            );
-
             // realize bbox
             let bbox = self.bbox_at(rts);
+            let color = if matches!(self.kind, GroupKind::Text) {
+                "red"
+            } else {
+                "green"
+            };
 
-            if let Some(bbox) = bbox {
-                let _guard = CanvasStateGuard::new(canvas);
-                set_transform(canvas, sk::Transform::identity());
-                canvas.set_line_width(
-                    2.,
-                    // ts scale
-                    // 2. / ts.sx.max(ts.sy) as f64,
-                );
+            render_bbox(canvas, bbox, color);
 
-                if matches!(self.kind, GroupKind::Text) {
-                    canvas.set_stroke_style(&"red".into());
-                } else {
-                    canvas.set_stroke_style(&"green".into());
-                }
-                canvas.stroke_rect(
-                    bbox.lo.x.0 as f64,
-                    bbox.lo.y.0 as f64,
-                    bbox.width().0 as f64,
-                    bbox.height().0 as f64,
-                );
-            }
-
-            #[cfg(feature = "false")]
+            #[cfg(feature = "report_bbox")]
             web_sys::console::log_1(&format!("realize group bbox {:?} {:?}", ts, bbox).into());
         }
     }
@@ -394,7 +385,8 @@ impl CanvasOp for CanvasClipElem {
 /// A path element.
 #[derive(Debug)]
 pub struct CanvasPathElem {
-    pub path_data: ir::PathItem,
+    pub path_data: Box<ir::PathItem>,
+    pub rect: CanvasBBox,
 }
 
 #[async_trait(?Send)]
@@ -466,6 +458,18 @@ impl CanvasOp for CanvasPathElem {
 
             canvas.set_stroke_style(&stroke_color.as_ref().into());
             canvas.stroke_with_path(&Path2d::new_with_path_string(&self.path_data.d).unwrap());
+        }
+
+        #[cfg(feature = "render_bbox")]
+        {
+            // realize bbox
+            let bbox = self.bbox_at(ts);
+            render_bbox(canvas, bbox, "blue");
+
+            #[cfg(feature = "report_bbox")]
+            web_sys::console::log_1(
+                &format!("bbox_at path {:?} {:?} {:?}", self.path_data, ts, bbox).into(),
+            );
         }
     }
 }
@@ -754,7 +758,8 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode> + GlyphFactory> GroupContext<C>
         self.inner.push((
             ir::Point::default(),
             Arc::new(CanvasElem::Path(CanvasPathElem {
-                path_data: path.clone(),
+                path_data: Box::new(path.clone()),
+                rect: CanvasBBox::Dynamic(Box::new(OnceCell::new())),
             })),
         ))
     }
@@ -1035,4 +1040,22 @@ fn rasterize_text(_fg: Fingerprint) -> Option<UnsafeMemorize<HtmlDivElement>> {
         .dyn_into()
         .ok()
         .map(UnsafeMemorize)
+}
+
+#[allow(dead_code)]
+fn render_bbox(canvas: &web_sys::CanvasRenderingContext2d, bbox: Option<Rect>, color: &str) {
+    let Some(bbox) = bbox else {
+        return;
+    };
+
+    let _guard = CanvasStateGuard::new(canvas);
+    set_transform(canvas, Transform::identity());
+    canvas.set_line_width(2.);
+    canvas.set_stroke_style(&color.into());
+    canvas.stroke_rect(
+        bbox.lo.x.0 as f64,
+        bbox.lo.y.0 as f64,
+        bbox.width().0 as f64,
+        bbox.height().0 as f64,
+    );
 }

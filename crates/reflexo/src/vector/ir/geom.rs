@@ -376,7 +376,7 @@ impl Rect {
         }
     }
 
-    pub fn move_by(&self, dp: Point) -> Self {
+    pub fn translate(&self, dp: Point) -> Self {
         Self {
             lo: self.lo + dp,
             hi: self.hi + dp,
