@@ -72,7 +72,8 @@ struct CanvasRenderState {
 
 impl DomPage {
     pub fn new_at(elem: HtmlElement, tmpl: XmlFactory, idx: usize) -> Self {
-        const TEMPLATE: &str = r#"<div class="typst-dom-page"><canvas class="typst-back-canvas"></canvas><svg class="typst-svg-page" viewBox="0 0 0 0" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">
+        // https://stackoverflow.com/questions/20242806/hole-in-overlay-with-css
+        const TEMPLATE: &str = r#"<div class="typst-dom-page"><canvas class="typst-back-canvas" style="--reflexo-clip-lo-x: 100px; --reflexo-clip-lo-y: 100px; --reflexo-clip-hi-x: 600px; --reflexo-clip-hi-y: 1000px; clip-path: polygon( evenodd, 0 0, 100% 0, 100% 100%, 0% 100%, 0 0, var(--reflexo-clip-lo-x) var(--reflexo-clip-lo-y), var(--reflexo-clip-hi-x) var(--reflexo-clip-lo-y), var(--reflexo-clip-hi-x) var(--reflexo-clip-hi-y), var(--reflexo-clip-lo-x) var(--reflexo-clip-hi-y), var(--reflexo-clip-lo-x) var(--reflexo-clip-lo-y))"></canvas><svg class="typst-svg-page" viewBox="0 0 0 0" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">
 <g></g><stub></stub></svg><div class="typst-html-semantics"><div/></div>"#;
 
         let me = tmpl.create_element(TEMPLATE);
@@ -510,7 +511,6 @@ impl DomPage {
         let canvas = self.canvas.clone();
 
         let idx = self.idx;
-        let ts = tiny_skia::Transform::from_scale(ppp, ppp);
         let state = self.layout_data.clone().unwrap();
         let canvas_state = self.canvas_state.clone();
         let canvas_elem = self.realized_canvas.clone().unwrap();
@@ -536,40 +536,46 @@ impl DomPage {
             'render_canvas: {
                 let _global_guard = CanvasStateGuard::new(&canvas_ctx);
 
+                if canvas_state
+                    .lock()
+                    .unwrap()
+                    .as_ref()
+                    .map_or(false, |s| s.rendered == state && s.ppp == ppp)
+                {
+                    break 'render_canvas;
+                }
+                // #[cfg(feature = "debug_repaint_canvas")]
+                web_sys::console::log_1(
+                    &format!(
+                        "canvas state changed, render all: {} {}",
+                        idx,
+                        elem.is_none()
+                    )
+                    .into(),
+                );
+
+                // todo: memorize canvas fill
+                canvas_ctx.clear_rect(
+                    0.,
+                    0.,
+                    (state.size.x.0 * ppp) as f64,
+                    (state.size.y.0 * ppp) as f64,
+                );
+
+                *canvas_state.lock().unwrap() = Some(CanvasRenderState {
+                    rendered: state.clone(),
+                    ppp,
+                    render_entire_page: true,
+                });
+
+                let ts = tiny_skia::Transform::from_scale(ppp, ppp);
+                canvas_elem.realize(ts, &canvas_ctx).await;
+            }
+
+            let mut clip_rect = None;
+            'clip_canvas: {
                 if render_entire_page {
-                    if canvas_state
-                        .lock()
-                        .unwrap()
-                        .as_ref()
-                        .map_or(false, |s| s.rendered == state && s.ppp == ppp)
-                    {
-                        break 'render_canvas;
-                    }
-                    // #[cfg(feature = "debug_repaint_canvas")]
-                    web_sys::console::log_1(
-                        &format!(
-                            "canvas state changed, render all: {} {}",
-                            idx,
-                            elem.is_none()
-                        )
-                        .into(),
-                    );
-
-                    // todo: memorize canvas fill
-                    canvas_ctx.clear_rect(
-                        0.,
-                        0.,
-                        (state.size.x.0 * ppp) as f64,
-                        (state.size.y.0 * ppp) as f64,
-                    );
-
-                    *canvas_state.lock().unwrap() = Some(CanvasRenderState {
-                        rendered: state,
-                        ppp,
-                        render_entire_page: true,
-                    });
-
-                    canvas_elem.realize(ts, &canvas_ctx).await;
+                    break 'clip_canvas;
                 } else {
                     let all_painted = canvas_state
                         .clone()
@@ -586,8 +592,9 @@ impl DomPage {
                         elem.mark_painted();
                     }
 
+                    let ts = tiny_skia::Transform::identity();
                     let Some(damage_rect) = elem.get_damage_rect(ts) else {
-                        break 'render_canvas;
+                        break 'clip_canvas;
                     };
 
                     // #[cfg(feature = "debug_repaint_canvas")]
@@ -595,19 +602,53 @@ impl DomPage {
                         &format!("canvas partial render: {idx} {damage_rect:?}").into(),
                     );
 
-                    let x = damage_rect.lo.x.0;
-                    let y = damage_rect.lo.y.0;
-                    let w = damage_rect.width().0;
-                    let h = damage_rect.height().0;
-                    canvas_ctx.clear_rect(x as f64, y as f64, w as f64, h as f64);
+                    // set style
+                    // canvas
 
-                    *canvas_state.lock().unwrap() = Some(CanvasRenderState {
-                        rendered: state,
-                        ppp,
-                        render_entire_page: false,
-                    });
-                    elem.repaint_canvas(ts, &canvas_ctx).await;
+                    // let x = damage_rect.lo.x.0;
+                    let y = damage_rect.lo.y.0;
+                    // let w = damage_rect.width().0;
+                    let h = damage_rect.height().0;
+
+                    let data_size = state.size;
+                    // let dx = data_size.x.0.max(1.);
+                    let dy = data_size.y.0.max(1.);
+
+                    let x_ratio = 0.;
+                    let y_ratio = y / dy * 100.;
+                    let w_ratio = 100.;
+                    let h_ratio = h / dy * 100.;
+
+                    clip_rect = Some((x_ratio, y_ratio, w_ratio, h_ratio));
+
+                    // canvas_ctx.clear_rect(x as f64, y as f64, w as f64, h as
+                    // f64);
+
+                    // *canvas_state.lock().unwrap() = Some(CanvasRenderState {
+                    //     rendered: state,
+                    //     ppp,
+                    //     render_entire_page: false,
+                    // });
+                    // elem.repaint_canvas(ts, &canvas_ctx).await;
                 }
+            }
+
+            // --reflexo-clip-lo-x: 100px; --reflexo-clip-lo-y: 100px; --reflexo-clip-hi-x:
+            // 600px; --reflexo-clip-hi-y: 1000px; canvas.style().set_property(,
+            // value)
+
+            if let Some((x, y, w, h)) = clip_rect {
+                let modify = |p, x| canvas.style().set_property(p, &format!("{:.3}%", x));
+                let _ = modify("--reflexo-clip-lo-x", x);
+                let _ = modify("--reflexo-clip-lo-y", y);
+                let _ = modify("--reflexo-clip-hi-x", x + w);
+                let _ = modify("--reflexo-clip-hi-y", y + h);
+            } else {
+                let modify = |p| canvas.style().remove_property(p);
+                let _ = modify("--reflexo-clip-lo-x");
+                let _ = modify("--reflexo-clip-lo-y");
+                let _ = modify("--reflexo-clip-hi-x");
+                let _ = modify("--reflexo-clip-hi-y");
             }
         });
     }

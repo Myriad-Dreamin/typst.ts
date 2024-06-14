@@ -174,7 +174,8 @@ impl TypstElem {
                 }
             }
             _ => {
-                let damaged = visible == self.is_canvas_painted;
+                // let damaged = visible == self.is_canvas_painted;
+                let damaged = visible;
                 if !damaged {
                     return None;
                 }
