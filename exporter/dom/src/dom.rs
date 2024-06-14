@@ -42,7 +42,7 @@ pub struct DomPage {
     /// The BBox of the page.
     bbox: tiny_skia::Rect,
     /// The realized element.
-    realized: Rc<Mutex<Option<TypstPageElem>>>,
+    pub realized: Rc<Mutex<Option<TypstPageElem>>>,
     /// The realized canvas element.
     realized_canvas: Option<CanvasNode>,
     /// The flushed semantics state.
@@ -596,7 +596,7 @@ pub enum TypstDomExtra {
 }
 
 #[derive(Debug)]
-pub(crate) struct TypstElem {
+pub struct TypstElem {
     pub is_svg_visible: bool,
     pub browser_bbox_unchecked: bool,
     pub estimated_bbox: Option<tiny_skia::Rect>,

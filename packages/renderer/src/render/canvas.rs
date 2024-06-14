@@ -11,13 +11,6 @@ use wasm_bindgen::prelude::*;
 
 use crate::{RenderPageImageOptions, RenderSession, TypstRenderer};
 
-#[derive(Default)]
-pub struct CanvasDataSelection {
-    pub body: bool,
-    pub text_content: bool,
-    pub annotation_list: bool,
-}
-
 #[wasm_bindgen]
 impl TypstRenderer {
     pub async fn render_page_to_canvas(
