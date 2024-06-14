@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use reflexo_vec2bbox::Vec2BBoxPass;
 
 use crate::utils::EmptyFuture;
 use ecow::EcoVec;
@@ -11,7 +12,7 @@ use tiny_skia as sk;
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{HtmlImageElement, Path2d};
 
-use reflexo::vector::ir::{self, FlatGlyphItem, Image, ImageItem, ImmutStr, PathStyle};
+use reflexo::vector::ir::{self, FlatGlyphItem, Image, ImageItem, ImmutStr, PathStyle, Rect};
 
 use super::{rasterize_image, set_transform, BBoxAt, CanvasBBox, CanvasStateGuard};
 
@@ -156,12 +157,17 @@ impl CanvasOp for CanvasGroupElem {
 /// A reference to a canvas element with a clip path.
 #[derive(Debug)]
 pub struct CanvasClipElem {
-    pub ts: sk::Transform,
     pub d: ImmutStr,
     pub inner: CanvasNode,
+    pub clip_bbox: CanvasBBox,
 }
 
 impl CanvasClipElem {
+    pub fn clip_bbox_at(&self, ts: sk::Transform) -> Option<Rect> {
+        self.clip_bbox
+            .bbox_at(ts, || Vec2BBoxPass::simple_path_bbox(&self.d, ts))
+    }
+
     pub fn realize_with<'a>(
         &self,
         ts: sk::Transform,
@@ -459,4 +465,22 @@ impl CanvasOp for CanvasGlyphElem {
             FlatGlyphItem::None => {}
         }
     }
+}
+
+#[allow(dead_code)]
+fn render_bbox(canvas: &web_sys::CanvasRenderingContext2d, bbox: Option<Rect>, color: &str) {
+    let Some(bbox) = bbox else {
+        return;
+    };
+
+    let _guard = CanvasStateGuard::new(canvas);
+    set_transform(canvas, sk::Transform::identity());
+    canvas.set_line_width(2.);
+    canvas.set_stroke_style(&color.into());
+    canvas.stroke_rect(
+        bbox.lo.x.0 as f64,
+        bbox.lo.y.0 as f64,
+        bbox.width().0 as f64,
+        bbox.height().0 as f64,
+    );
 }

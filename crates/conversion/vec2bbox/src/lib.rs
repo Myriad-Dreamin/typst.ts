@@ -66,6 +66,13 @@ impl Vec2BBoxPass {
         r.and_then(|e| e.transform(ts.into())).map(|e| e.into())
     }
 
+    pub fn simple_path_bbox(p: &str, ts: sk::Transform) -> Option<Rect> {
+        let d = convert_path(p);
+        d.and_then(|e| e.transform(ts))
+            .and_then(|e| e.compute_tight_bounds())
+            .map(|e| e.into())
+    }
+
     pub fn path_bbox(p: &PathItem, ts: sk::Transform) -> Option<Rect> {
         let d = convert_path(&p.d);
         d.and_then(|e| e.transform(ts))

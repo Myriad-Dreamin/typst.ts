@@ -1,4 +1,4 @@
-use reflexo_vec2canvas::{CanvasElem, CanvasNode, CanvasOp, CanvasTask, ExportFeature};
+use reflexo_vec2canvas::{BBoxAt, CanvasElem, CanvasNode, CanvasOp, CanvasTask, ExportFeature};
 use typst_ts_core::{
     error::prelude::ZResult,
     vector::{
@@ -6,6 +6,7 @@ use typst_ts_core::{
         vm::RenderVm,
     },
 };
+use typst_ts_svg_exporter::ir::{self, Point, Scalar};
 
 use crate::dom::*;
 
@@ -42,6 +43,14 @@ impl CanvasBackend {
 impl TypstPageElem {
     pub fn attach_canvas(&mut self, g: CanvasNode) {
         self.g.attach_canvas(g)
+    }
+
+    pub fn mark_painted(&mut self) {
+        self.g.mark_painted();
+    }
+
+    pub fn get_damage_rect(&mut self, ts: tiny_skia::Transform) -> Option<ir::Rect> {
+        self.g.get_damage_rect(ts, true)
     }
 
     pub async fn repaint_canvas(
@@ -90,23 +99,117 @@ impl TypstElem {
         };
     }
 
+    fn mark_painted(&mut self) {
+        use TypstDomExtra::*;
+
+        match &mut self.extra {
+            Group(gr) => {
+                for (_, child) in gr.children.iter_mut() {
+                    child.mark_painted();
+                }
+            }
+            Item(ch) => {
+                ch.child.mark_painted();
+            }
+            _ => {
+                self.is_canvas_painted = true;
+            }
+        }
+    }
+
+    fn get_damage_rect(&mut self, ts: tiny_skia::Transform, visible: bool) -> Option<ir::Rect> {
+        use TypstDomExtra::*;
+
+        let visible = visible && self.is_svg_visible;
+        match &mut self.extra {
+            ContentHint(_) => None,
+            Group(i) => {
+                let g = self.canvas.as_deref().unwrap();
+
+                let CanvasElem::Group(c) = g else {
+                    panic!("Invalid group canvas: {}", self.f.as_svg_id("g"));
+                };
+
+                let ts = ts.pre_concat(*c.ts.as_ref());
+
+                i.children
+                    .iter_mut()
+                    .map(|t| {
+                        t.1.get_damage_rect(ts, visible).map(|r| {
+                            let dp = t.0;
+                            let dp = Point::new(
+                                Scalar(dp.x.0 * ts.sx + dp.y.0 * ts.kx),
+                                Scalar(dp.y.0 * ts.sy + dp.x.0 * ts.ky),
+                            );
+                            r.translate(dp)
+                        })
+                    })
+                    .fold(None, |acc, r| match (acc, r) {
+                        (Some(a), Some(b)) => Some(a.union(&b)),
+                        (a, b) => a.or(b),
+                    })
+            }
+            Item(i) => {
+                let g = self.canvas.as_deref().unwrap();
+
+                let (g, clip) = if let CanvasElem::Clip(clip) = g {
+                    (clip.inner.as_ref(), Some(clip))
+                } else {
+                    (g, None)
+                };
+
+                let CanvasElem::Group(c) = g else {
+                    panic!("Invalid group canvas: {}", self.f.as_svg_id("g"));
+                };
+
+                let ts = ts.pre_concat(*c.ts.as_ref());
+
+                let child_bbox = i.child.get_damage_rect(ts, visible);
+
+                let clip = clip.and_then(|c| c.clip_bbox_at(ts));
+                match (clip, child_bbox) {
+                    (Some(clip), Some(child_bbox)) => Some(clip.intersect(&child_bbox)),
+                    (None, Some(child_bbox)) => Some(child_bbox),
+                    _ => None,
+                }
+            }
+            _ => {
+                let damaged = visible == self.is_canvas_painted;
+                if !damaged {
+                    return None;
+                }
+
+                // web_sys::console::log_1(
+                //     &format!(
+                //         "get_damage_rect_partial: {} vis:{visible} cvs:{} {ret:?}",
+                //         self.f.as_svg_id("g"),
+                //         self.is_canvas_painted,
+                //     )
+                //     .into(),
+                // );
+
+                self.canvas.as_ref().unwrap().bbox_at(ts)
+            }
+        }
+    }
+
     #[async_recursion::async_recursion(?Send)]
     async fn repaint_canvas(
         &mut self,
         ts: tiny_skia::Transform,
         panel: &web_sys::CanvasRenderingContext2d,
-        visible: bool,
+        svg_visible: bool,
     ) {
         use TypstDomExtra::*;
 
+        let svg_visible = svg_visible && self.is_svg_visible;
         match &mut self.extra {
             ContentHint(_) => {}
             Group(i) => {
-                let visible = visible && self.is_svg_visible;
-                if !visible {
-                    self.canvas.as_ref().unwrap().realize(ts, panel).await;
-                    return;
-                }
+                // if !visible {
+                //     self.canvas.as_ref().unwrap().realize(ts, panel).await;
+                //     return;
+                // }
 
                 let g = self.canvas.as_deref().unwrap();
 
@@ -118,15 +221,14 @@ impl TypstElem {
 
                 for (p, child) in i.children.iter_mut() {
                     let ts = ts.pre_translate(p.x.0, p.y.0);
-                    child.repaint_canvas(ts, panel, visible).await;
+                    child.repaint_canvas(ts, panel, svg_visible).await;
                 }
             }
             Item(i) => {
-                let visible = visible && self.is_svg_visible;
-                if !visible {
-                    self.canvas.as_ref().unwrap().realize(ts, panel).await;
-                    return;
-                }
+                // if !visible {
+                //     self.canvas.as_ref().unwrap().realize(ts, panel).await;
+                //     return;
+                // }
 
                 let g = self.canvas.as_deref().unwrap();
 
@@ -146,7 +248,7 @@ impl TypstElem {
                 // if let TransformItem::Clip(c) = g.trans {
 
                 // }
-                i.child.repaint_canvas(ts, panel, visible).await;
+                i.child.repaint_canvas(ts, panel, svg_visible).await;
             }
             _ => {
                 // web_sys::console::log_2(
@@ -160,10 +262,17 @@ impl TypstElem {
                 //     &self.g,
                 // );
 
-                if visible || self.is_svg_visible {
-                    return;
+                match (svg_visible, self.is_canvas_painted) {
+                    (true, false) | (false, true) => {}
+                    (true, true) => {
+                        self.is_canvas_painted = false;
+                    }
+                    (false, false) => {
+                        self.canvas.as_ref().unwrap().realize(ts, panel).await;
+                        self.is_canvas_painted = true;
+                        return;
+                    }
                 }
-                self.canvas.as_ref().unwrap().realize(ts, panel).await
             }
         }
     }

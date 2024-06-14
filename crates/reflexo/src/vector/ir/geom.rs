@@ -401,6 +401,14 @@ impl From<tiny_skia_path::Rect> for Rect {
     }
 }
 
+impl TryFrom<Rect> for tiny_skia_path::Rect {
+    type Error = ();
+
+    fn try_from(rect: Rect) -> Result<Self, Self::Error> {
+        Self::from_ltrb(rect.lo.x.0, rect.lo.y.0, rect.hi.x.0, rect.hi.y.0).ok_or(())
+    }
+}
+
 pub trait EuclidMinMax {
     fn min(&self, other: &Self) -> Self;
     fn max(&self, other: &Self) -> Self;

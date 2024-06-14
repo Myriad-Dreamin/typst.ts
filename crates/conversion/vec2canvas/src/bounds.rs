@@ -26,7 +26,11 @@ impl fmt::Debug for CanvasBBox {
 }
 
 impl CanvasBBox {
-    fn bbox_at(&self, ts: sk::Transform, compute: impl FnOnce() -> Option<Rect>) -> Option<Rect> {
+    pub fn bbox_at(
+        &self,
+        ts: sk::Transform,
+        compute: impl FnOnce() -> Option<Rect>,
+    ) -> Option<Rect> {
         match self {
             CanvasBBox::Static(r) => {
                 if ts.is_identity() {
@@ -96,7 +100,7 @@ impl BBoxAt for CanvasGroupElem {
 
 impl BBoxAt for CanvasClipElem {
     fn bbox_at(&self, ts: sk::Transform) -> Option<Rect> {
-        let ts = ts.pre_concat(self.ts);
+        // todo: clip path
         self.inner.bbox_at(ts)
     }
 }

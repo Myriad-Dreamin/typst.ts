@@ -7,13 +7,13 @@ mod incr;
 mod ops;
 mod utils;
 
+pub use bounds::BBoxAt;
 use bounds::*;
 pub use ops::*;
 
 use ecow::EcoVec;
 #[cfg(feature = "incremental")]
 pub use incr::*;
-use sk::Transform;
 
 use std::{cell::OnceCell, fmt::Debug, sync::Arc};
 
@@ -205,9 +205,9 @@ impl From<CanvasStack> for CanvasNode {
         }));
         if let Some(clipper) = s.clipper {
             Arc::new(CanvasElem::Clip(CanvasClipElem {
-                ts: s.ts,
                 d: clipper.d,
                 inner,
+                clip_bbox: CanvasBBox::Dynamic(Box::new(OnceCell::new())),
             }))
         } else {
             inner
@@ -473,22 +473,4 @@ fn create_image() -> Option<HtmlImageElement> {
 #[comemo::memoize]
 fn rasterize_image(_image: Arc<Image>) -> Option<UnsafeMemorize<HtmlImageElement>> {
     create_image().map(UnsafeMemorize)
-}
-
-#[allow(dead_code)]
-fn render_bbox(canvas: &web_sys::CanvasRenderingContext2d, bbox: Option<Rect>, color: &str) {
-    let Some(bbox) = bbox else {
-        return;
-    };
-
-    let _guard = CanvasStateGuard::new(canvas);
-    set_transform(canvas, Transform::identity());
-    canvas.set_line_width(2.);
-    canvas.set_stroke_style(&color.into());
-    canvas.stroke_rect(
-        bbox.lo.x.0 as f64,
-        bbox.lo.y.0 as f64,
-        bbox.width().0 as f64,
-        bbox.height().0 as f64,
-    );
 }

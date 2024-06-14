@@ -10,7 +10,7 @@ use typst_ts_core::{
     hash::Fingerprint,
     vector::ir::{Page, Point, Scalar, Size, TextItem, TransformItem},
 };
-use typst_ts_svg_exporter::Module;
+use typst_ts_svg_exporter::{ir, Module};
 use web_sys::{
     js_sys::Reflect,
     wasm_bindgen::{JsCast, JsValue},
@@ -38,9 +38,9 @@ pub struct DomPage {
     /// The next page data
     dirty_layout: Option<Page>,
     /// The viewport.
-    viewport: tiny_skia::Rect,
+    viewport: ir::Rect,
     /// The BBox of the page.
-    bbox: tiny_skia::Rect,
+    bbox: ir::Rect,
     /// The realized element.
     pub realized: Rc<Mutex<Option<TypstPageElem>>>,
     /// The realized canvas element.
@@ -48,7 +48,7 @@ pub struct DomPage {
     /// The flushed semantics state.
     semantics_state: Option<(Page, bool)>,
     /// The flushed canvas state.
-    canvas_state: Rc<Mutex<Option<(Page, f32)>>>,
+    canvas_state: Rc<Mutex<Option<CanvasRenderState>>>,
     /// Whether the page is visible.
     is_visible: bool,
     /// The group element.
@@ -61,6 +61,13 @@ impl Drop for DomPage {
     fn drop(&mut self) {
         self.elem.remove();
     }
+}
+
+struct CanvasRenderState {
+    // (Page, f32)
+    rendered: Page,
+    ppp: f32,
+    render_entire_page: bool,
 }
 
 impl DomPage {
@@ -95,7 +102,8 @@ impl DomPage {
 
         elem.append_child(&me).unwrap();
 
-        let viewport = tiny_skia::Rect::from_xywh(0., 0., 0., 0.).unwrap();
+        // todo: default or none?
+        let viewport = ir::Rect::default();
         let bbox = viewport;
         Self {
             is_visible: false,
@@ -130,12 +138,13 @@ impl DomPage {
         self.viewport = viewport
             .and_then(|viewport| {
                 tiny_skia::Rect::from_ltrb(
-                    self.bbox.left() - 1.,
+                    self.bbox.lo.x.0 - 1.,
                     viewport.top(),
-                    self.bbox.right() + 1.,
+                    self.bbox.hi.x.0 + 1.,
                     viewport.bottom(),
                 )
             })
+            .map(From::from)
             .unwrap_or(self.bbox);
         #[cfg(feature = "debug_repaint")]
         web_sys::console::log_2(
@@ -224,7 +233,10 @@ impl DomPage {
             self.svg
                 .set_attribute("data-height", &h.to_string())
                 .unwrap();
-            self.bbox = tiny_skia::Rect::from_xywh(0., 0., data.size.x.0, data.size.y.0).unwrap();
+            self.bbox = ir::Rect {
+                lo: Point::default(),
+                hi: data.size,
+            };
 
             let ppp = ctx.pixel_per_pt;
             self.canvas.set_width((w * ppp) as u32);
@@ -260,7 +272,7 @@ impl DomPage {
     pub fn need_repaint_svg(&mut self, viewport: Option<tiny_skia::Rect>) -> bool {
         self.pull_viewport(viewport);
 
-        let should_visible = self.bbox.intersect(&self.viewport).is_some();
+        let should_visible = !self.bbox.intersect(&self.viewport).is_empty();
 
         if cfg!(feature = "debug_repaint_svg") {
             web_sys::console::log_1(
@@ -278,7 +290,7 @@ impl DomPage {
     }
 
     pub fn repaint_svg(&mut self, ctx: &mut DomContext<'_, '_>) -> ZResult<()> {
-        let should_visible = self.bbox.intersect(&self.viewport).is_some();
+        let should_visible = !self.bbox.intersect(&self.viewport).is_empty();
 
         if cfg!(feature = "debug_repaint") {
             web_sys::console::log_1(
@@ -301,9 +313,19 @@ impl DomPage {
         if realized.is_none() {
             let data = self.layout_data.clone().unwrap();
 
+            // todo incremental
+            if self.realized_canvas.is_none() {
+                self.realized_canvas = Some(ctx.canvas_backend.render_page(ctx.module, &data)?);
+            }
+
             // Realize svg
             let g = ctx.svg_backend.render_page(ctx.module, &data, &self.g);
-            *realized = Some(TypstPageElem::from_elem(ctx, g, data));
+            let mut elem = TypstPageElem::from_elem(ctx, g, data);
+            if elem.g.canvas.is_none() {
+                elem.g.attach_canvas(self.realized_canvas.clone().unwrap());
+            }
+
+            *realized = Some(elem);
 
             // window.bindSvgDom
             let bind_dom_handler = window().unwrap();
@@ -461,10 +483,16 @@ impl DomPage {
             .lock()
             .unwrap()
             .as_ref()
-            .map_or(true, |(x, y)| x != state || *y != b.pixel_per_pt)
+            .map_or(true, |s| {
+                !s.render_entire_page || s.rendered != *state || s.ppp != b.pixel_per_pt
+            })
     }
 
-    pub fn repaint_canvas(&mut self, ppp: f32) -> ZResult<impl Future<Output = ()>> {
+    pub fn repaint_canvas(
+        &mut self,
+        viewport: Option<tiny_skia::Rect>,
+        ppp: f32,
+    ) -> ZResult<impl Future<Output = ()>> {
         let render_entire_page = self.realized.lock().unwrap().is_none() || !self.is_visible;
 
         // todo incremental
@@ -503,6 +531,8 @@ impl DomPage {
 
             let mut elem = elem.lock().unwrap();
 
+            web_sys::console::log_1(&format!("canvas render: {idx} {:?}", viewport).into());
+
             'render_canvas: {
                 let _global_guard = CanvasStateGuard::new(&canvas_ctx);
 
@@ -511,7 +541,7 @@ impl DomPage {
                         .lock()
                         .unwrap()
                         .as_ref()
-                        .map_or(false, |(x, y)| *x == state && *y == ppp)
+                        .map_or(false, |s| s.rendered == state && s.ppp == ppp)
                     {
                         break 'render_canvas;
                     }
@@ -525,24 +555,6 @@ impl DomPage {
                         .into(),
                     );
 
-                    canvas_ctx.clear_rect(
-                        0.,
-                        0.,
-                        (state.size.x.0 * ppp) as f64,
-                        (state.size.y.0 * ppp) as f64,
-                    );
-
-                    *canvas_state.lock().unwrap() = Some((state, ppp));
-
-                    canvas_elem.realize(ts, &canvas_ctx).await;
-                } else {
-                    // #[cfg(feature = "debug_repaint_canvas")]
-                    web_sys::console::log_1(&format!("canvas partial render: {}", idx).into());
-
-                    let Some(elem) = elem.as_mut() else {
-                        panic!("realized is none for partial canvas render");
-                    };
-
                     // todo: memorize canvas fill
                     canvas_ctx.clear_rect(
                         0.,
@@ -551,7 +563,49 @@ impl DomPage {
                         (state.size.y.0 * ppp) as f64,
                     );
 
-                    *canvas_state.lock().unwrap() = None;
+                    *canvas_state.lock().unwrap() = Some(CanvasRenderState {
+                        rendered: state,
+                        ppp,
+                        render_entire_page: true,
+                    });
+
+                    canvas_elem.realize(ts, &canvas_ctx).await;
+                } else {
+                    let all_painted = canvas_state
+                        .clone()
+                        .lock()
+                        .unwrap()
+                        .as_ref()
+                        .map_or(false, |e| e.render_entire_page);
+
+                    let Some(elem) = elem.as_mut() else {
+                        panic!("realized is none for partial canvas render");
+                    };
+
+                    if all_painted {
+                        elem.mark_painted();
+                    }
+
+                    let Some(damage_rect) = elem.get_damage_rect(ts) else {
+                        break 'render_canvas;
+                    };
+
+                    // #[cfg(feature = "debug_repaint_canvas")]
+                    web_sys::console::log_1(
+                        &format!("canvas partial render: {idx} {damage_rect:?}").into(),
+                    );
+
+                    let x = damage_rect.lo.x.0;
+                    let y = damage_rect.lo.y.0;
+                    let w = damage_rect.width().0;
+                    let h = damage_rect.height().0;
+                    canvas_ctx.clear_rect(x as f64, y as f64, w as f64, h as f64);
+
+                    *canvas_state.lock().unwrap() = Some(CanvasRenderState {
+                        rendered: state,
+                        ppp,
+                        render_entire_page: false,
+                    });
                     elem.repaint_canvas(ts, &canvas_ctx).await;
                 }
             }
@@ -598,9 +652,7 @@ pub enum TypstDomExtra {
 #[derive(Debug)]
 pub struct TypstElem {
     pub is_svg_visible: bool,
-    pub browser_bbox_unchecked: bool,
-    pub estimated_bbox: Option<tiny_skia::Rect>,
-    pub bbox: Option<Box<tiny_skia::Rect>>,
+    pub is_canvas_painted: bool,
     pub f: Fingerprint,
     pub extra: TypstDomExtra,
 
