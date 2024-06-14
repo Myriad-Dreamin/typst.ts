@@ -496,14 +496,9 @@ impl DomPage {
     ) -> ZResult<impl Future<Output = ()>> {
         let render_entire_page = self.realized.lock().unwrap().is_none() || !self.is_visible;
 
-        // todo incremental
-        // if self.realized_canvas.is_none() {
-        //     let data = self.layout_data.as_ref().unwrap();
-        //     self.realized_canvas = Some(ctx.canvas_backend.render_page(ctx.module,
-        // data)?); }
-
         if let Some(attached) = self.realized.lock().unwrap().as_mut() {
             if attached.g.canvas.is_none() {
+                // todo incremental
                 attached.attach_canvas(self.realized_canvas.clone().unwrap());
             }
         };
@@ -602,9 +597,6 @@ impl DomPage {
                         &format!("canvas partial render: {idx} {damage_rect:?}").into(),
                     );
 
-                    // set style
-                    // canvas
-
                     // let x = damage_rect.lo.x.0;
                     let y = damage_rect.lo.y.0;
                     // let w = damage_rect.width().0;
@@ -621,34 +613,32 @@ impl DomPage {
 
                     clip_rect = Some((x_ratio, y_ratio, w_ratio, h_ratio));
 
-                    // canvas_ctx.clear_rect(x as f64, y as f64, w as f64, h as
-                    // f64);
-
-                    // *canvas_state.lock().unwrap() = Some(CanvasRenderState {
-                    //     rendered: state,
-                    //     ppp,
-                    //     render_entire_page: false,
-                    // });
-                    // elem.repaint_canvas(ts, &canvas_ctx).await;
+                    let _ = DomPage::repaint_canvas;
                 }
             }
 
-            // --reflexo-clip-lo-x: 100px; --reflexo-clip-lo-y: 100px; --reflexo-clip-hi-x:
-            // 600px; --reflexo-clip-hi-y: 1000px; canvas.style().set_property(,
-            // value)
+            let clip_key = format!("{:?}", clip_rect);
 
-            if let Some((x, y, w, h)) = clip_rect {
-                let modify = |p, x| canvas.style().set_property(p, &format!("{:.3}%", x));
-                let _ = modify("--reflexo-clip-lo-x", x);
-                let _ = modify("--reflexo-clip-lo-y", y);
-                let _ = modify("--reflexo-clip-hi-x", x + w);
-                let _ = modify("--reflexo-clip-hi-y", y + h);
-            } else {
-                let modify = |p| canvas.style().remove_property(p);
-                let _ = modify("--reflexo-clip-lo-x");
-                let _ = modify("--reflexo-clip-lo-y");
-                let _ = modify("--reflexo-clip-hi-x");
-                let _ = modify("--reflexo-clip-hi-y");
+            // data-clip-rect-state
+            const CLIP_KEY: &str = "data-clip-rect-state";
+            let clip_state = canvas.get_attribute(CLIP_KEY).unwrap_or_default();
+
+            if clip_state != clip_key {
+                let _ = canvas.set_attribute(CLIP_KEY, &clip_key);
+
+                if let Some((x, y, w, h)) = clip_rect {
+                    let modify = |p, x| canvas.style().set_property(p, &format!("{:.3}%", x));
+                    let _ = modify("--reflexo-clip-lo-x", x);
+                    let _ = modify("--reflexo-clip-lo-y", y);
+                    let _ = modify("--reflexo-clip-hi-x", x + w);
+                    let _ = modify("--reflexo-clip-hi-y", y + h);
+                } else {
+                    let modify = |p| canvas.style().remove_property(p);
+                    let _ = modify("--reflexo-clip-lo-x");
+                    let _ = modify("--reflexo-clip-lo-y");
+                    let _ = modify("--reflexo-clip-hi-x");
+                    let _ = modify("--reflexo-clip-hi-y");
+                }
             }
         });
     }
