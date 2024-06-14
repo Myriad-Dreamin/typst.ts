@@ -5,7 +5,8 @@ mod incr;
 mod semantics_backend;
 mod svg_backend;
 
-pub use incr::*;
+/// Use types from `tiny-skia` crate.
+use tiny_skia as sk;
 
 use std::sync::Arc;
 use std::{collections::HashMap, ops::Deref};
@@ -21,8 +22,8 @@ use typst_ts_core::vector::{
     vm::{GroupContext, RenderVm, TransformContext},
 };
 
-/// Use types from `tiny-skia` crate.
-use tiny_skia as sk;
+pub use crate::dom::DomPage;
+pub use incr::*;
 
 pub trait BBoxIndice {
     fn get_bbox(&self, value: &Fingerprint) -> Option<BBox>;

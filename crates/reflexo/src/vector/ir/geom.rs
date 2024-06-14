@@ -375,6 +375,21 @@ impl Rect {
             hi: self.hi.max(&other.hi),
         }
     }
+
+    pub fn move_by(&self, dp: Point) -> Self {
+        Self {
+            lo: self.lo + dp,
+            hi: self.hi + dp,
+        }
+    }
+
+    pub fn width(&self) -> Scalar {
+        self.hi.x - self.lo.x
+    }
+
+    pub fn height(&self) -> Scalar {
+        self.hi.y - self.lo.y
+    }
 }
 
 impl From<tiny_skia_path::Rect> for Rect {

@@ -114,7 +114,7 @@ impl TypstElem {
                     panic!("Invalid group canvas: {}", self.f.as_svg_id("g"));
                 };
 
-                let ts = ts.pre_concat(c.ts);
+                let ts = ts.pre_concat(*c.ts.as_ref());
 
                 for (p, child) in i.children.iter_mut() {
                     let ts = ts.pre_translate(p.x.0, p.y.0);
@@ -140,7 +140,7 @@ impl TypstElem {
                     panic!("Invalid group canvas: {}", self.f.as_svg_id("g"));
                 };
 
-                let ts = ts.pre_concat(c.ts);
+                let ts = ts.pre_concat(*c.ts.as_ref());
 
                 // todo: intersect viewport
                 // if let TransformItem::Clip(c) = g.trans {

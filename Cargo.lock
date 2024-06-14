@@ -2914,6 +2914,8 @@ dependencies = [
  "async-recursion",
  "async-trait",
  "comemo",
+ "ecow",
+ "elsa",
  "js-sys",
  "reflexo",
  "tiny-skia",
