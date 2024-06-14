@@ -123,47 +123,46 @@ impl<const ENABLE_REF_CNT: bool> Default for Typst2VecPassImpl<ENABLE_REF_CNT> {
 }
 
 impl Typst2VecPass {
-    pub fn intern(&mut self, _module: &Module, _f: &Fingerprint) {
-        // let item = module.get_item(f).unwrap();
-        // match item {
-        //     VecItem::None
-        //     | VecItem::Link(_)
-        //     | VecItem::Image(_)
-        //     | VecItem::Path(_)
-        //     | VecItem::Color32(_)
-        //     | VecItem::Gradient(_)
-        //     | VecItem::Pattern(_)
-        //     | VecItem::ContentHint(_) => {
-        //         self.insert(*f, Cow::Borrowed(item));
-        //     }
-        //     VecItem::Text(_t) => {
-        //         // self.glyphs.used_fonts.insert(t.shape.font.clone());
-        //         // self.glyphs
-        //         //     .used_glyphs
-        //         //     .extend(t.content.glyphs.iter().map(|(_, _, glyph)|
-        // glyph).cloned());
-
-        //         // self.insert(*f, Cow::Borrowed(item));
-        //         todo!()
-        //     }
-        //     VecItem::Item(t) => {
-        //         self.insert(*f, Cow::Borrowed(item));
-
-        //         if !self.items.contains_key(&t.1) {
-        //             self.intern(module, &t.1);
-        //         }
-        //     }
-        //     VecItem::Group(g, _) => {
-        //         self.insert(*f, Cow::Borrowed(item));
-
-        //         for (_, id) in g.0.iter() {
-        //             if !self.items.contains_key(id) {
-        //                 self.intern(module, id);
-        //             }
-        //         }
-        //     }
-        // }
-        todo!()
+    pub fn intern(&mut self, m: &Module, f: &Fingerprint) {
+        let item = m.get_item(f).unwrap();
+        self.insert(*f, Cow::Borrowed(item));
+        match item {
+            VecItem::None
+            | VecItem::Link(_)
+            | VecItem::Image(_)
+            | VecItem::Path(_)
+            | VecItem::Color32(_)
+            | VecItem::Gradient(_)
+            | VecItem::ContentHint(_)
+            | VecItem::ColorTransform(_) => {}
+            VecItem::Text(t) => {
+                // todo: here introduces risk to font collision
+                self.glyphs.used_fonts.insert(t.shape.font);
+                self.glyphs
+                    .used_glyphs
+                    .extend(t.content.glyphs.iter().map(|(_, _, glyph_idx)| GlyphRef {
+                        font_hash: t.shape.font.hash,
+                        glyph_idx: *glyph_idx,
+                    }));
+            }
+            VecItem::Pattern(p) => {
+                if !self.items.contains_key(&p.frame) {
+                    self.intern(m, &p.frame);
+                }
+            }
+            VecItem::Item(t) => {
+                if !self.items.contains_key(&t.1) {
+                    self.intern(m, &t.1);
+                }
+            }
+            VecItem::Group(g) => {
+                for (_, id) in g.0.iter() {
+                    if !self.items.contains_key(id) {
+                        self.intern(m, id);
+                    }
+                }
+            }
+        }
     }
 }
 
