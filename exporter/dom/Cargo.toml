@@ -22,6 +22,7 @@ base64.workspace = true
 typst-ts-core.workspace = true
 reflexo-vec2canvas.workspace = true
 reflexo-vec2sema.workspace = true
+reflexo-vec2bbox.workspace = true
 typst-ts-svg-exporter.workspace = true
 log.workspace = true
 siphasher.workspace = true

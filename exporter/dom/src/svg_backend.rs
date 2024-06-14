@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
-use std::sync::atomic::AtomicBool;
-
+use reflexo_vec2canvas::BBoxAt;
 use typst_ts_core::{
     hash::Fingerprint,
     vector::{incr::IncrDocClient, vm::RenderVm},
@@ -244,44 +243,22 @@ impl TypstPageElem {
             }
         };
 
-        let mut ret = TypstElem {
+        TypstElem {
             is_svg_visible: true,
-            browser_bbox_unchecked: true,
+            is_canvas_painted: false,
             stub,
             g,
             f: data,
-            estimated_bbox: None,
-            bbox: None,
             extra,
             canvas: None,
-        };
-
-        match &ret.extra {
-            TypstDomExtra::ContentHint(_) => {
-                ret.browser_bbox_unchecked = false;
-            }
-            TypstDomExtra::Text(g) => {
-                ret.browser_bbox_unchecked = false;
-                let shape = &g.meta.shape;
-                let descender = ctx.get_font(&shape.font).unwrap().descender.0 * shape.size.0;
-                let bbox = tiny_skia::Rect::from_xywh(
-                    0.,
-                    -shape.size.0 - descender,
-                    g.meta.width().0,
-                    shape.size.0,
-                );
-                ret.estimated_bbox = bbox;
-            }
-            _ => {}
         }
-        ret
     }
 
     pub fn repaint_svg(
         &mut self,
         _ctx: &mut DomContext<'_, '_>,
         ts: tiny_skia::Transform,
-        viewport: tiny_skia::Rect,
+        viewport: ir::Rect,
     ) {
         self.g.repaint_svg(ts, viewport);
     }
@@ -292,33 +269,28 @@ pub static FETCH_BBOX_TIMES: std::sync::atomic::AtomicUsize =
 static BBOX_SANITIZER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
 impl TypstElem {
-    fn repaint_svg(&mut self, ts: tiny_skia::Transform, viewport: tiny_skia::Rect) {
+    /// Repaint svg API will retrun a new viewport if it is updated.
+    ///
+    /// The idea is that: the element visible before will be overrided by the
+    /// latter ones, so we should update the viewport to the union of all
+    /// previous ones and repaint the latter elements accordingly.
+    fn repaint_svg(
+        &mut self,
+        ts: tiny_skia::Transform,
+        mut viewport: ir::Rect,
+    ) -> Option<ir::Rect> {
         use TypstDomExtra::*;
         if matches!(self.extra, ContentHint(_)) {
-            return; // always visible
+            return None; // always visible
         }
 
-        if self.browser_bbox_unchecked {
-            let cnt_check = BBOX_SANITIZER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-            let fetch_for_sanitizing = (cnt_check & 511) == 0;
-
-            if self.estimated_bbox.is_none() || fetch_for_sanitizing {
-                self.retrieve_bbox_from_browser();
-                if self.browser_bbox_unchecked {
-                    return;
-                }
-
-                if fetch_for_sanitizing && self.estimated_bbox.is_some() {
-                    self.ensure_bbox_is_well_estimated();
-                }
-            }
-        }
-
-        let bbox = self.bbox.as_deref().cloned();
-        let bbox = bbox.or(self.estimated_bbox).unwrap();
+        let bbox = self.canvas.as_ref().unwrap().bbox_at(ts);
+        // web_sys::console::log_2(
+        //     &"bbox".into(),
+        //     &format!("{:?} -> {:?} & {:?}", self.f.as_svg_id("g"), bbox,
+        // viewport).into(), );
         let should_visible = bbox
-            .transform(ts)
-            .map(|new_rect| new_rect.intersect(&viewport).is_some())
+            .map(|new_rect| !new_rect.intersect(&viewport).is_empty())
             .unwrap_or(true);
 
         if should_visible != self.is_svg_visible {
@@ -333,15 +305,19 @@ impl TypstElem {
         }
 
         if !should_visible {
-            return;
+            return None;
         }
 
         match &mut self.extra {
             Group(g) => {
                 for (p, child) in g.children.iter_mut() {
                     let ts = ts.pre_translate(p.x.0, p.y.0);
-                    child.repaint_svg(ts, viewport);
+                    if let Some(updated) = child.repaint_svg(ts, viewport) {
+                        viewport = updated;
+                    }
                 }
+
+                Some(viewport)
             }
             Item(g) => {
                 let trans = g.trans.clone();
@@ -351,67 +327,9 @@ impl TypstElem {
                 // if let TransformItem::Clip(c) = g.trans {
 
                 // }
-                g.child.repaint_svg(ts, viewport);
+                g.child.repaint_svg(ts, viewport)
             }
-            _ => {}
-        }
-    }
-
-    pub fn retrieve_bbox_from_browser(&mut self) {
-        if !self.browser_bbox_unchecked {
-            return;
-        }
-
-        let bbox = self.g.get_b_box().unwrap();
-        FETCH_BBOX_TIMES.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        if bbox.width() == 0. && bbox.height() == 0. {
-            return; // wait for next browser tick to retrieve
-        }
-        let mut ccbbox =
-            tiny_skia::Rect::from_xywh(bbox.x(), bbox.y(), bbox.width(), bbox.height());
-        if let TypstDomExtra::Text(t) = &self.extra {
-            let ppem = t.meta.shape.ppem(t.upem.0).0;
-            ccbbox =
-                ccbbox.and_then(|r| r.transform(tiny_skia::Transform::from_scale(ppem, -ppem)));
-        }
-        // web_sys::console::log_3(
-        //     &format!("retrieved_bbox {a:?} {ccbbox:?}", a =
-        // self.f.as_svg_id("")).into(),     &bbox,
-        //     &self.g,
-        // );
-        self.bbox = ccbbox.map(Box::new);
-        self.browser_bbox_unchecked = false;
-
-        if let TypstDomExtra::Group(g) = &mut self.extra {
-            for (_, child) in g.children.iter_mut() {
-                child.retrieve_bbox_from_browser();
-            }
-        }
-    }
-
-    fn ensure_bbox_is_well_estimated(&self) {
-        static WARN_ONCE: AtomicBool = AtomicBool::new(false);
-        let bbox = self.bbox.as_ref().map(|b| b.round()).unwrap();
-        let estmiated = self.estimated_bbox.unwrap().round_out();
-        if estmiated
-            .zip(bbox)
-            .map(|(a, b)| a.contains(&b))
-            .unwrap_or(false)
-        {
-            return;
-        }
-
-        if !WARN_ONCE.swap(true, std::sync::atomic::Ordering::SeqCst) {
-            web_sys::console::warn_2(
-                &format!(
-                    "bbox may not be well estimated: estimated_bbox:{:?} bbox:{:?}, item: {:?}, kind: {:?}, elem:",
-                    estmiated, bbox,
-                    self.f.as_svg_id(""),
-                    self.extra,
-                )
-                .into(),
-                &self.g,
-            );
+            _ => bbox.map(|bbox| viewport.union(&bbox)),
         }
     }
 }

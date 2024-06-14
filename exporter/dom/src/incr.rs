@@ -171,10 +171,10 @@ impl IncrDomDocClient {
         stage: u8,
     ) -> ZResult<JsValue> {
         // todo: overflow
-        let _viewport = Some(tiny_skia::Rect::from_xywh(x, y, w, h).unwrap());
+        let viewport = Some(tiny_skia::Rect::from_xywh(x, y, w, h).unwrap());
         #[cfg(feature = "debug_recalc_stage")]
         web_sys::console::log_1(
-            &format!("repaint page:{page_num} stage:{stage} {_viewport:?}").into(),
+            &format!("repaint page:{page_num} stage:{stage} {viewport:?}").into(),
         );
 
         let elem = self.repaint_false_positive(page_num, stage)?;
@@ -204,7 +204,7 @@ impl IncrDomDocClient {
             STAGE_CANVAS => {
                 let ppp = self.canvas_backend.pixel_per_pt;
                 let page = &mut self.doc_view[page_num as usize];
-                let fut = page.repaint_canvas(ppp)?;
+                let fut = page.repaint_canvas(viewport, ppp)?;
                 return Ok(wasm_bindgen_futures::future_to_promise(async move {
                     fut.await;
 

@@ -4574,6 +4574,7 @@ dependencies = [
  "log",
  "once_cell",
  "rayon",
+ "reflexo-vec2bbox",
  "reflexo-vec2canvas",
  "reflexo-vec2sema",
  "siphasher 1.0.1",
