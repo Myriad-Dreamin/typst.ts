@@ -372,7 +372,7 @@ impl Span2VecPass {
                             let byte_range = if matches!(next, Some((next, _)) if next == s) {
                                 (*byte_offset as usize)..(next.unwrap().1 as usize)
                             } else {
-                                (*byte_offset as usize)..(std::usize::MAX)
+                                (*byte_offset as usize)..(usize::MAX)
                             };
                             if *s == span && byte_range.contains(&span_offset.offset) {
                                 log::info!("pass cursor text({s:?})");
