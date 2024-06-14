@@ -1,4 +1,4 @@
-#import "@preview/book:0.2.3": *
+#import "@preview/book:0.2.5": *
 #import "/docs/cookery/templates/page.typ": project, part-style
 
 #let _page-project = project

@@ -1,5 +1,5 @@
 
-#import "@preview/book:0.2.3": *
+#import "@preview/book:0.2.5": *
 #import "./templates/page.typ": main-color
 
 #show: book
@@ -96,7 +96,7 @@
       - #chapter(none, section: "16.1")[npm install/link]
     = References
     - #chapter(none, section: "17")[Routing to Renferences]
-  ]
+  ],
 )
 
 #get-book-meta()

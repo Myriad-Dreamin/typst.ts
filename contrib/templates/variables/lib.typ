@@ -1,5 +1,5 @@
 //! This is a stub package for typst.ts's dyn-svg controlling the layout
-//! Here is a good example of dynamic layout template: <https://github.com/Myriad-Dreamin/typst-book/blob/308e0aacc2578e9a0c424d20332c6711d1df8d1c/contrib/typst/gh-pages.typ>
+//! Here is a good example of dynamic layout template: <https://github.com/Myriad-Dreamin/shiroa/blob/308e0aacc2578e9a0c424d20332c6711d1df8d1c/contrib/typst/gh-pages.typ>
 
 /// default target is "pdf", typst.ts will set it to "web" when rendering to a
 /// dynamic layout
