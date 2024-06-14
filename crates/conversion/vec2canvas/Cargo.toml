@@ -10,6 +10,8 @@ repository.workspace = true
 [dependencies]
 
 comemo.workspace = true
+elsa.workspace = true
+ecow.workspace = true
 reflexo = { workspace = true, features = ["web"] }
 
 tiny-skia.workspace = true

@@ -1,12 +1,18 @@
+// todo
+#![allow(clippy::arc_with_non_send_sync)]
+
 #[cfg(feature = "incremental")]
 mod incr;
 mod utils;
 
+use ecow::EcoVec;
+use elsa::FrozenMap;
 #[cfg(feature = "incremental")]
 pub use incr::*;
 use utils::EmptyFuture;
 
-use std::{fmt::Debug, pin::Pin, sync::Arc};
+use core::fmt;
+use std::{cell::OnceCell, fmt::Debug, pin::Pin, sync::Arc};
 
 use js_sys::Promise;
 use tiny_skia as sk;
@@ -19,7 +25,7 @@ use reflexo::{
     vector::{
         ir::{
             self, Abs, Axes, FlatGlyphItem, FontIndice, FontItem, FontRef, Image, ImageItem,
-            ImmutStr, Module, PathStyle, Ratio, Scalar, Size,
+            ImmutStr, Module, PathStyle, Point, Ratio, Rect, Scalar, Size,
         },
         vm::{GroupContext, RenderVm, TransformContext},
     },
@@ -112,6 +118,100 @@ impl CanvasOp for CanvasElem {
     }
 }
 
+impl BBoxAt for CanvasElem {
+    fn bbox_at(&self, ts: sk::Transform) -> Option<Rect> {
+        match self {
+            CanvasElem::Group(g) => g.bbox_at(ts),
+            CanvasElem::Clip(g) => g.bbox_at(ts),
+            CanvasElem::Path(g) => g.bbox_at(ts),
+            CanvasElem::Image(g) => g.bbox_at(ts),
+            CanvasElem::Glyph(g) => g.bbox_at(ts),
+        }
+    }
+}
+
+impl BBoxAt for CanvasGroupElem {
+    fn bbox_at(&self, ts: sk::Transform) -> Option<Rect> {
+        let ts = ts.pre_concat(*self.ts.as_ref());
+
+        match &self.rect {
+            CanvasBBox::Static(r) => {
+                if ts.is_identity() {
+                    return Some(**r);
+                }
+
+                let r = sk::Rect::from_xywh(r.lo.x.0, r.lo.y.0, r.width().0, r.height().0)
+                    .and_then(|e| e.transform(ts));
+                r.map(From::from)
+            }
+            CanvasBBox::Dynamic(map) => {
+                let map = map.get_or_init(FrozenMap::new);
+                let ts_key: ir::Transform = ts.into();
+                if let Some(r) = map.get(&ts_key) {
+                    return *r;
+                }
+
+                let r = self
+                    .inner
+                    .iter()
+                    .fold(None, |acc: Option<Rect>, (pos, elem)| {
+                        // we try to move the bbox instead of concat the translate to ts
+                        let Some(r) = elem.bbox_at(ts) else {
+                            return acc;
+                        };
+
+                        // scale the movement
+                        let pos = ir::Point::new(
+                            Scalar(pos.x.0 * ts.sx + pos.y.0 * ts.kx),
+                            Scalar(pos.y.0 * ts.sy + pos.x.0 * ts.ky),
+                        );
+
+                        web_sys::console::log_1(
+                            &format!("group bbox at {:?} {:?} {:?}", pos, ts, r).into(),
+                        );
+
+                        let r = r.move_by(pos);
+                        match acc {
+                            Some(acc) => Some(acc.union(&r)),
+                            None => Some(r),
+                        }
+                    });
+                map.insert(ts_key, Box::new(r));
+
+                r
+            }
+        }
+    }
+}
+
+impl BBoxAt for CanvasClipElem {
+    fn bbox_at(&self, ts: sk::Transform) -> Option<Rect> {
+        let ts = ts.pre_concat(self.ts);
+        self.inner.bbox_at(ts)
+    }
+}
+
+impl BBoxAt for CanvasPathElem {
+    fn bbox_at(&self, _ts: sk::Transform) -> Option<Rect> {
+        None
+    }
+}
+
+impl BBoxAt for CanvasImageElem {
+    fn bbox_at(&self, ts: sk::Transform) -> Option<Rect> {
+        let bbox = sk::Rect::from_xywh(0., 0., self.image_data.size.x.0, self.image_data.size.y.0)
+            .and_then(|e| e.transform(ts));
+
+        bbox.map(From::from)
+    }
+}
+
+impl BBoxAt for CanvasGlyphElem {
+    fn bbox_at(&self, _ts: sk::Transform) -> Option<Rect> {
+        Default::default()
+    }
+}
+
 // async fn realize(&self, ts: sk::Transform, canvas:
 // &web_sys::CanvasRenderingContext2d);
 
@@ -152,11 +252,37 @@ impl<'a> Drop for CanvasStateGuard<'a> {
     }
 }
 
+pub enum CanvasBBox {
+    Static(Box<Rect>),
+    Dynamic(Box<OnceCell<elsa::FrozenMap<ir::Transform, Box<Option<Rect>>>>>),
+}
+
+impl fmt::Debug for CanvasBBox {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CanvasBBox::Static(r) => write!(f, "Static({:?})", r),
+            CanvasBBox::Dynamic(..) => write!(f, "Dynamic(..)"),
+        }
+    }
+}
+
+trait BBoxAt {
+    fn bbox_at(&self, ts: sk::Transform) -> Option<Rect>;
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum GroupKind {
+    General,
+    Text,
+}
+
 /// A group of canvas elements.
 #[derive(Debug)]
 pub struct CanvasGroupElem {
-    pub ts: sk::Transform,
-    pub inner: Vec<(ir::Point, CanvasNode)>,
+    pub ts: Box<sk::Transform>,
+    pub inner: EcoVec<(ir::Point, CanvasNode)>,
+    pub kind: GroupKind,
+    rect: CanvasBBox,
 }
 
 #[async_trait(?Send)]
@@ -181,11 +307,50 @@ impl CanvasOp for CanvasGroupElem {
         }
     }
 
-    async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
-        let ts = ts.pre_concat(self.ts);
+    async fn realize(&self, rts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
+        let ts = rts.pre_concat(*self.ts.as_ref());
+
         for (pos, sub_elem) in &self.inner {
             let ts = ts.pre_translate(pos.x.0, pos.y.0);
             sub_elem.realize(ts, canvas).await;
+        }
+
+        let _ = self.rect;
+        let _ = Self::bbox_at;
+        #[cfg(feature = "render_bbox")]
+        {
+            #[cfg(feature = "false")]
+            web_sys::console::log_1(
+                &format!("realize group {:?}({} elems)", self.kind, self.inner.len()).into(),
+            );
+
+            // realize bbox
+            let bbox = self.bbox_at(rts);
+
+            if let Some(bbox) = bbox {
+                let _guard = CanvasStateGuard::new(canvas);
+                set_transform(canvas, sk::Transform::identity());
+                canvas.set_line_width(
+                    2.,
+                    // ts scale
+                    // 2. / ts.sx.max(ts.sy) as f64,
+                );
+
+                if matches!(self.kind, GroupKind::Text) {
+                    canvas.set_stroke_style(&"red".into());
+                } else {
+                    canvas.set_stroke_style(&"green".into());
+                }
+                canvas.stroke_rect(
+                    bbox.lo.x.0 as f64,
+                    bbox.lo.y.0 as f64,
+                    bbox.width().0 as f64,
+                    bbox.height().0 as f64,
+                );
+            }
+
+            #[cfg(feature = "false")]
+            web_sys::console::log_1(&format!("realize group bbox {:?} {:?}", ts, bbox).into());
         }
     }
 }
@@ -485,6 +650,10 @@ impl CanvasOp for CanvasGlyphElem {
     }
 }
 
+trait GlyphFactory {
+    fn get_glyph(&mut self, font: &FontItem, glyph: u32, fill: ImmutStr) -> Option<CanvasNode>;
+}
+
 /// Holds the data for rendering canvas.
 ///
 /// The 'm lifetime is the lifetime of the module which stores the frame data.
@@ -505,6 +674,8 @@ pub struct CanvasRenderTask<'m, 't, Feat: ExportFeature> {
 ///
 /// It holds state of the building process.
 pub struct CanvasStack {
+    /// The kind of the group.
+    pub kind: GroupKind,
     /// The transform matrix.
     pub ts: sk::Transform,
     /// A unique clip path on stack
@@ -512,14 +683,18 @@ pub struct CanvasStack {
     /// The fill color.
     pub fill: Option<ImmutStr>,
     /// The inner elements.
-    pub inner: Vec<(ir::Point, CanvasNode)>,
+    pub inner: EcoVec<(ir::Point, CanvasNode)>,
+    /// The bounding box of the group.
+    pub rect: CanvasBBox,
 }
 
 impl From<CanvasStack> for CanvasNode {
     fn from(s: CanvasStack) -> Self {
         let inner: CanvasNode = Arc::new(CanvasElem::Group(CanvasGroupElem {
-            ts: s.ts,
+            ts: Box::new(s.ts),
             inner: s.inner,
+            kind: s.kind,
+            rect: s.rect,
         }));
         if let Some(clipper) = s.clipper {
             Arc::new(CanvasElem::Clip(CanvasClipElem {
@@ -574,7 +749,7 @@ impl<C> TransformContext<C> for CanvasStack {
 }
 
 /// See [`GroupContext`].
-impl<'m, C: RenderVm<'m, Resultant = CanvasNode>> GroupContext<C> for CanvasStack {
+impl<'m, C: RenderVm<'m, Resultant = CanvasNode> + GlyphFactory> GroupContext<C> for CanvasStack {
     fn render_path(&mut self, _ctx: &mut C, path: &ir::PathItem, _abs_ref: &Fingerprint) {
         self.inner.push((
             ir::Point::default(),
@@ -597,15 +772,9 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode>> GroupContext<C> for CanvasStac
         self.inner.push((pos, ctx.render_item(item)));
     }
 
-    fn render_glyph(&mut self, _ctx: &mut C, pos: Scalar, font: &FontItem, glyph: u32) {
-        if let Some(glyph_data) = font.get_glyph(glyph) {
-            self.inner.push((
-                ir::Point::new(pos, Scalar(0.)),
-                Arc::new(CanvasElem::Glyph(CanvasGlyphElem {
-                    fill: self.fill.clone().unwrap(),
-                    glyph_data: glyph_data.clone(),
-                })),
-            ))
+    fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, font: &FontItem, glyph: u32) {
+        if let Some(glyph) = ctx.get_glyph(font, glyph, self.fill.clone().unwrap()) {
+            self.inner.push((ir::Point::new(pos, Scalar(0.)), glyph));
         }
     }
 }
@@ -613,6 +782,16 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode>> GroupContext<C> for CanvasStac
 impl<'m, 't, Feat: ExportFeature> FontIndice<'m> for CanvasRenderTask<'m, 't, Feat> {
     fn get_font(&self, value: &FontRef) -> Option<&'m ir::FontItem> {
         self.module.fonts.get(value.idx as usize)
+    }
+}
+
+impl<'m, 't, Feat: ExportFeature> GlyphFactory for CanvasRenderTask<'m, 't, Feat> {
+    fn get_glyph(&mut self, font: &FontItem, glyph: u32, fill: ImmutStr) -> Option<CanvasNode> {
+        let glyph_data = font.get_glyph(glyph)?;
+        Some(Arc::new(CanvasElem::Glyph(CanvasGlyphElem {
+            fill,
+            glyph_data: glyph_data.clone(),
+        })))
     }
 }
 
@@ -627,15 +806,31 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, 't, Feat
 
     fn start_group(&mut self, _v: &Fingerprint) -> Self::Group {
         Self::Group {
+            kind: GroupKind::General,
             ts: sk::Transform::identity(),
             clipper: None,
             fill: None,
-            inner: vec![],
+            inner: EcoVec::new(),
+            rect: CanvasBBox::Dynamic(Box::new(OnceCell::new())),
         }
     }
 
     fn start_text(&mut self, value: &Fingerprint, text: &ir::TextItem) -> Self::Group {
         let mut g = self.start_group(value);
+        g.kind = GroupKind::Text;
+        g.rect = {
+            // upem is the unit per em defined in the font.
+            let font = self.get_font(&text.shape.font).unwrap();
+            let upem = Scalar(font.units_per_em.0);
+            let accender = Scalar(font.ascender.0) * upem;
+
+            let w = text.width();
+
+            CanvasBBox::Static(Box::new(Rect {
+                lo: Point::new(Scalar(0.), accender - upem),
+                hi: Point::new(w * upem / text.shape.size, accender),
+            }))
+        };
         for style in &text.shape.styles {
             if let ir::PathStyle::Fill(fill) = style {
                 g.fill = Some(fill.clone());
