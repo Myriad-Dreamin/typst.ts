@@ -92,6 +92,10 @@ impl<V> FingerprintMap<V> {
     pub fn as_mut_slice(&mut self) -> &mut [FMapBase<V>] {
         &mut self.shards
     }
+
+    pub fn contains_key(&self, fg: &Fingerprint) -> bool {
+        self.shard(*fg).read().contains_key(fg)
+    }
 }
 
 #[cfg(test)]
