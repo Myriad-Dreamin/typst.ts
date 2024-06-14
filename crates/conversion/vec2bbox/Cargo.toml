@@ -1,0 +1,21 @@
+[package]
+name = "reflexo-vec2bbox"
+description = "Render vector items BBox."
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+comemo.workspace = true
+reflexo = { workspace = true }
+
+svgtypes.workspace = true
+tiny-skia.workspace = true
+tiny-skia-path.workspace = true
+
+[features]
+incremental = ["reflexo/flat-vector"]
+default = ["incremental"]

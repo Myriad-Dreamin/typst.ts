@@ -16,6 +16,7 @@ members = [
     "crates/reflexo",
     "crates/conversion/vec2canvas",
     "crates/conversion/vec2sema",
+    "crates/conversion/vec2bbox",
 
     "cli",
     "core",
@@ -204,6 +205,7 @@ reflexo = { version = "0.5.0-rc4", default-features = false, path = "crates/refl
 # conversions
 reflexo-vec2canvas = { version = "0.5.0-rc4", path = "crates/conversion/vec2canvas" }
 reflexo-vec2sema = { version = "0.5.0-rc4", path = "crates/conversion/vec2sema" }
+reflexo-vec2bbox = { version = "0.5.0-rc4", path = "crates/conversion/vec2bbox" }
 
 typst-ts-core = { version = "0.5.0-rc4", default-features = false }
 typst-ts-compiler = { version = "0.5.0-rc4", default-features = false }

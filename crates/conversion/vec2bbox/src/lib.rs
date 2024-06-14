@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use tiny_skia as sk;
+
 use reflexo::{hash::Fingerprint, vector::ir::*};
 
 #[derive(Default)]
@@ -45,7 +47,7 @@ impl Vec2BBoxPass {
                 let height = t.shape.size.0;
                 tiny_skia_path::Rect::from_xywh(0.0, 0.0, width.0, height).map(|e| e.into())
             }
-            VecItem::Path(p) => self.path_bbox(p, ts),
+            VecItem::Path(p) => self.path(p, ts),
             VecItem::ContentHint(..)
             | VecItem::ColorTransform(..)
             | VecItem::Pattern(..)
@@ -55,27 +57,37 @@ impl Vec2BBoxPass {
         }
     }
 
-    pub fn path_bbox(&mut self, p: &PathItem, ts: Transform) -> Option<Rect> {
-        let d = convert_path(&p.d);
-        d.and_then(|e| e.transform(ts.into()))
-            .and_then(|e| e.compute_tight_bounds())
-            .and_then(|e| {
-                let stroke = p.styles.iter().find_map(|s| match s {
-                    PathStyle::StrokeWidth(w) => Some(w.0),
-                    _ => None,
-                })?;
-                // extend the bounding box by the stroke width
-                let x = e.x() - stroke;
-                let y = e.y() - stroke;
-                let w = e.width() + stroke * 2.0;
-                let h = e.height() + stroke * 2.0;
-                tiny_skia_path::Rect::from_xywh(x, y, w, h).map(|e| e.into())
-            })
+    pub fn path(&mut self, p: &PathItem, ts: Transform) -> Option<Rect> {
+        Self::path_bbox(p, ts.into())
     }
 
     fn rect(&self, size: Axes<Scalar>, ts: Transform) -> Option<Rect> {
         let r = tiny_skia_path::Rect::from_xywh(0.0, 0.0, size.x.0, size.y.0);
         r.and_then(|e| e.transform(ts.into())).map(|e| e.into())
+    }
+
+    pub fn path_bbox(p: &PathItem, ts: sk::Transform) -> Option<Rect> {
+        let d = convert_path(&p.d);
+        d.and_then(|e| e.transform(ts))
+            .and_then(|e| e.compute_tight_bounds())
+            .and_then(|e| {
+                let Some(stroke) = p.styles.iter().find_map(|s| match s {
+                    PathStyle::StrokeWidth(w) => Some(w.0),
+                    _ => None,
+                }) else {
+                    return Some(e);
+                };
+                let sk::Transform { sx, sy, kx, ky, .. } = ts;
+                let stroke_x = (stroke * (sx + ky)).abs();
+                let stroke_y = (stroke * (sy + kx)).abs();
+                // extend the bounding box by the stroke width
+                let x = e.x() - stroke_x;
+                let y = e.y() - stroke_y;
+                let w = e.width() + stroke_x * 2.0;
+                let h = e.height() + stroke_y * 2.0;
+                tiny_skia_path::Rect::from_xywh(x, y, w, h)
+            })
+            .map(|e| e.into())
     }
 }
 
@@ -120,4 +132,24 @@ fn convert_path(path_data: &str) -> Option<tiny_skia_path::Path> {
     }
 
     builder.finish()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_path_bbox() {
+        let data = "M 0 0 M 0 4.8 C 0 2.1490333 2.1490333 0 4.8 0 L 975.2 0 C 977.85095 0 980 2.1490333 980 4.8 L 980 122.256 C 980 124.90697 977.85095 127.056 975.2 127.056 L 4.8 127.056 C 2.1490333 127.056 0 124.90697 0 122.256 Z ";
+
+        let p = PathItem {
+            d: data.into(),
+            size: None,
+            styles: vec![],
+        };
+
+        let ts = sk::Transform::from_scale(4.5, 4.5);
+
+        assert!(Vec2BBoxPass::path_bbox(&p, ts).is_some());
+    }
 }
