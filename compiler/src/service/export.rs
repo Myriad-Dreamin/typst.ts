@@ -317,20 +317,9 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
 impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
     pub fn do_export(&mut self) -> SourceResult<MultiVecDocument> {
-        use std::str::FromStr;
-
-        use crate::ShadowApiExt;
-        use typst::{
-            diag::At,
-            syntax::{Span, VirtualPath},
-        };
-        use typst_ts_core::{package::PackageSpec, IntoTypst, TypstFileId};
+        use typst::foundations::IntoValue;
+        use typst_ts_core::{IntoTypst, TypstDict};
         use typst_ts_svg_exporter::DynamicLayoutSvgExporter;
-
-        let variable_file = TypstFileId::new(
-            Some(PackageSpec::from_str("@preview/typst-ts-variables:0.1.0").at(Span::detached())?),
-            VirtualPath::new("lib.typ"),
-        );
 
         // self.export(doc.clone())?;
         // checkout the entry file
@@ -343,36 +332,35 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
             let instant = instant::Instant::now();
             // replace layout
 
-            let variables: String = format!(
-                r##"
-#let page-width = {:2}pt
-#let target = "{}""##,
-                current_width.to_pt(),
-                self.target,
-            );
+            let mut e = CompileEnv {
+                args: Some({
+                    let mut dict = TypstDict::new();
+                    dict.insert("x-page-width".into(), current_width.into_value());
+                    dict.insert("x-target".into(), self.target.clone().into_value());
+
+                    Arc::new(Prehashed::new(dict))
+                }),
+                ..Default::default()
+            };
 
             log::trace!(
-                "rerendering {} at {:?}, width={current_width:?} target={}",
-                i,
+                "rerendering {i} at {:?}, width={current_width:?} target={}",
                 instant - instant_begin,
                 self.target,
             );
 
-            self.with_shadow_file_by_id(variable_file, variables.as_bytes().into(), |this| {
-                // compile and export document
-                let output = this.inner_mut().compile(&mut Default::default())?;
-                let mut layout = svg_exporter.render(&output);
+            // compile and export document
+            let output = self.inner_mut().compile(&mut e)?;
+            let mut layout = svg_exporter.render(&output);
 
-                if let Some(post_process_layout) = &this.post_process_layout {
-                    layout = post_process_layout(&mut svg_exporter.typst2vec, output, layout);
-                }
-                svg_exporter
-                    .layouts
-                    .push((current_width.into_typst(), layout));
+            if let Some(post_process_layout) = &self.post_process_layout {
+                layout = post_process_layout(&mut svg_exporter.typst2vec, output, layout);
+            }
+            svg_exporter
+                .layouts
+                .push((current_width.into_typst(), layout));
 
-                log::trace!("rerendered {} at {:?}", i, instant - instant_begin);
-                Ok(())
-            })?;
+            log::trace!("rerendered {i} at {:?}", instant - instant_begin);
         }
 
         // post process

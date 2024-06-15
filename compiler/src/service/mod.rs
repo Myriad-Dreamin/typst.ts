@@ -14,7 +14,7 @@ use typst::{
     World,
 };
 use typst_ts_core::{
-    config::compiler::EntryState, typst::prelude::*, Bytes, ImmutPath, TypstFileId,
+    config::compiler::EntryState, typst::prelude::*, Bytes, ImmutPath, TypstDict, TypstFileId,
 };
 
 pub(crate) mod diag;
@@ -61,6 +61,7 @@ pub trait EntryManager {
 #[derive(Clone, Default)]
 pub struct CompileEnv {
     pub tracer: Option<Tracer>,
+    pub args: Option<Arc<Prehashed<TypstDict>>>,
     pub features: Arc<FeatureSet>,
 }
 
