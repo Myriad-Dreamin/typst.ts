@@ -7,7 +7,7 @@ use typst_ts_core::{
     typst::prelude::*,
     vector::{
         ir::{LayoutRegion, LayoutRegionNode},
-        pass::Typst2VecPass,
+        pass::{CommandExecutor, Typst2VecPass},
     },
     DynExporter, DynGenericExporter, DynPolymorphicExporter, GenericExporter, TakeAs,
     TypstDocument,
@@ -235,6 +235,8 @@ pub struct DynamicLayoutCompiler<C: Compiler + ShadowApi, const ALWAYS_ENABLE: b
 
     pub layout_widths: LayoutWidths,
 
+    pub command_executor: Box<dyn CommandExecutor + Send + Sync>,
+
     post_process_layout: Option<PostProcessLayoutFn>,
     post_process_layouts: Option<PostProcessLayoutsFn>,
 
@@ -259,6 +261,7 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
                     typst::layout::Abs::pt(750.0) - typst::layout::Abs::pt(i as f64 * 10.0)
                 }),
             ),
+            command_executor: Box::new(()),
             post_process_layout: None,
             post_process_layouts: None,
             target: "web".to_owned(),
@@ -279,6 +282,14 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
 
     pub fn set_target(&mut self, target: String) {
         self.target = target;
+    }
+
+    /// Experimental
+    pub fn set_command_executor(
+        &mut self,
+        command_sanitizer: Box<dyn CommandExecutor + Send + Sync>,
+    ) {
+        self.command_executor = command_sanitizer;
     }
 
     /// Experimental
@@ -317,14 +328,30 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
 impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
     pub fn do_export(&mut self) -> SourceResult<MultiVecDocument> {
+        use typst_ts_svg_exporter::DynamicLayoutSvgExporter;
+
+        let mut svg_exporter = DynamicLayoutSvgExporter::default();
+        std::mem::swap(
+            &mut self.command_executor,
+            &mut svg_exporter.typst2vec.command_executor,
+        );
+        let res = self.do_export_with(svg_exporter);
+
+        res.map(|(doc, s)| {
+            self.command_executor = s;
+            doc
+        })
+    }
+    /// Export a typst document using `typst_ts_core::DocumentExporter`.
+    pub fn do_export_with(
+        &mut self,
+        mut svg_exporter: typst_ts_svg_exporter::DynamicLayoutSvgExporter,
+    ) -> SourceResult<(MultiVecDocument, Box<dyn CommandExecutor + Send + Sync>)> {
         use typst::foundations::IntoValue;
         use typst_ts_core::{IntoTypst, TypstDict};
-        use typst_ts_svg_exporter::DynamicLayoutSvgExporter;
 
         // self.export(doc.clone())?;
         // checkout the entry file
-
-        let mut svg_exporter = DynamicLayoutSvgExporter::default();
 
         // for each 10pt we rerender once
         let instant_begin = instant::Instant::now();
@@ -372,6 +399,9 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
             layouts = post_process_layouts(&mut svg_exporter.typst2vec, layouts);
         }
 
+        let sanitizer =
+            std::mem::replace(&mut svg_exporter.typst2vec.command_executor, Box::new(()));
+
         // finalize
         let module = svg_exporter.typst2vec.finalize();
         let doc = MultiVecDocument { module, layouts };
@@ -379,7 +409,7 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
         let instant = instant::Instant::now();
         log::trace!("multiple layouts finished at {:?}", instant - instant_begin);
 
-        Ok(doc)
+        Ok((doc, sanitizer))
     }
 }
 
