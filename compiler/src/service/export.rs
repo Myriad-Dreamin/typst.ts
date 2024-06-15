@@ -1,7 +1,7 @@
 use std::{path::PathBuf, sync::Arc};
 
 use crate::ShadowApi;
-use typst::{diag::SourceResult, foundations::IntoValue, World};
+use typst::{diag::SourceResult, World};
 use typst_ts_core::{
     exporter_builtins::GroupExporter,
     typst::prelude::*,
@@ -9,7 +9,7 @@ use typst_ts_core::{
         ir::{LayoutRegion, LayoutRegionNode},
         pass::Typst2VecPass,
     },
-    DynExporter, DynGenericExporter, DynPolymorphicExporter, GenericExporter, TakeAs, TypstDict,
+    DynExporter, DynGenericExporter, DynPolymorphicExporter, GenericExporter, TakeAs,
     TypstDocument,
 };
 
@@ -317,7 +317,8 @@ impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
 impl<C: Compiler + ShadowApi> DynamicLayoutCompiler<C> {
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
     pub fn do_export(&mut self) -> SourceResult<MultiVecDocument> {
-        use typst_ts_core::IntoTypst;
+        use typst::foundations::IntoValue;
+        use typst_ts_core::{IntoTypst, TypstDict};
         use typst_ts_svg_exporter::DynamicLayoutSvgExporter;
 
         // self.export(doc.clone())?;
