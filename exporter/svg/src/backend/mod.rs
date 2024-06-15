@@ -29,8 +29,6 @@ pub trait NotifyPaint {
 }
 
 pub trait DynExportFeature {
-    fn enable_inlined_svg(&self) -> bool;
-
     fn should_render_text_element(&self) -> bool;
 
     fn use_stable_glyph_id(&self) -> bool;
@@ -468,9 +466,8 @@ impl<
         self.content.push(content);
     }
 
-    fn render_image(&mut self, ctx: &mut C, image_item: &ir::ImageItem) {
-        self.content
-            .push(render_image_item(image_item, ctx.enable_inlined_svg()))
+    fn render_image(&mut self, _ctx: &mut C, image_item: &ir::ImageItem) {
+        self.content.push(render_image_item(image_item))
     }
 
     fn render_content_hint(&mut self, _ctx: &mut C, ch: char) {
@@ -680,16 +677,7 @@ fn render_path(
 
 /// Render a [`ir::ImageItem`] into svg text.
 #[comemo::memoize]
-fn render_image_item(img: &ir::ImageItem, enable_inlined: bool) -> SvgText {
-    if enable_inlined {
-        match &img.image.alt {
-            Some(t) if t.as_ref() == "!typst-inlined-svg" => {
-                return SvgText::Plain(String::from_utf8(img.image.data.clone()).unwrap())
-            }
-            _ => {}
-        }
-    }
-
+fn render_image_item(img: &ir::ImageItem) -> SvgText {
     SvgText::Plain(render_image(&img.image, img.size, true, ""))
 }
 

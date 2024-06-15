@@ -70,7 +70,7 @@ pub struct SemaTask {
     page_width: f32,
     page_height: f32,
     dfn_count: usize,
-    text_rects: Vec<(Fingerprint, Rect)>,
+    rects: Vec<(Fingerprint, Rect)>,
     discrete_label_map: BTreeMap<Scalar, usize>,
     discrete_value_map: Vec<Scalar>,
 }
@@ -85,7 +85,7 @@ impl SemaTask {
             page_width: width,
             page_height: height,
             dfn_count: 0,
-            text_rects: vec![],
+            rects: vec![],
             discrete_label_map: BTreeMap::new(),
             discrete_value_map: vec![],
         }
@@ -134,7 +134,7 @@ impl SemaTask {
                 let ty2 = ty + size;
                 let tx2 = tx + width;
 
-                self.text_rects.push((
+                self.rects.push((
                     fg,
                     Rect {
                         lo: Point { x: tx, y: ty },
@@ -142,6 +142,24 @@ impl SemaTask {
                     },
                 ));
             }
+            // todo
+            // Html(t) => {
+            //     // t.size
+
+            //     let tx = Scalar(ts.tx);
+            //     let ty = Scalar(ts.ty);
+
+            //     let tx2 = tx + Scalar(t.size.x.0 * ts.sx + t.size.y.0 * ts.kx);
+            //     let ty2 = ty + Scalar(t.size.x.0 * ts.ky + t.size.y.0 * ts.sy);
+
+            //     self.rects.push((
+            //         fg,
+            //         Rect {
+            //             lo: Point { x: tx, y: ty },
+            //             hi: Point { x: tx2, y: ty2 },
+            //         },
+            //     ));
+            // }
             _ => {}
         }
     }
@@ -149,7 +167,7 @@ impl SemaTask {
     fn prepare_discrete_map(&mut self) {
         let nums = &mut self.discrete_value_map;
 
-        for (_, rect) in self.text_rects.iter() {
+        for (_, rect) in self.rects.iter() {
             nums.push(rect.lo.x);
             nums.push(rect.lo.y);
             nums.push(rect.hi.x);
@@ -195,10 +213,10 @@ impl SemaTask {
     // Vec<(prepend: String, append: String)>
     fn calc_text_item_fallbacks(&mut self) -> VecDeque<(String, String)> {
         let mut res = VecDeque::new();
-        res.resize(self.text_rects.len(), (String::new(), String::new()));
+        res.resize(self.rects.len(), (String::new(), String::new()));
 
         // Append right and bottom fallbacks
-        for (idx, (_, rect)) in self.text_rects.iter().enumerate() {
+        for (idx, (_, rect)) in self.rects.iter().enumerate() {
             let left = rect.lo.x;
             let top = rect.lo.y;
             let right = rect.hi.x;
@@ -231,9 +249,9 @@ impl SemaTask {
         max_bottom_for_col.resize(self.discrete_value_map.len(), None);
 
         // Prepend left and top fallbacks
-        for post_idx in 1..self.text_rects.len() {
+        for post_idx in 1..self.rects.len() {
             let pre_idx = post_idx - 1;
-            let (_, rect) = self.text_rects[pre_idx];
+            let (_, rect) = self.rects[pre_idx];
 
             let (left, top, right, bottom) = self.get_discrete_labels_for_text_item(rect);
 
@@ -355,6 +373,7 @@ impl SemaTask {
                 output.push(Cow::Borrowed("</span>"));
             }
             Text(t) => {
+                web_sys::console::log_1(&format!("Text: {}", t.content.content).into());
                 let text_id = self.dfn_count;
                 self.dfn_count += 1;
 
@@ -376,7 +395,7 @@ impl SemaTask {
                         .sum::<f32>()
                         * size.0);
 
-                let (_, rect) = self.text_rects[text_id];
+                let (_, rect) = self.rects[text_id];
 
                 let (prepend, append) = fallbacks.pop_front().unwrap();
 
@@ -492,6 +511,27 @@ impl SemaTask {
                     )));
                 }
                 output.push(Cow::Borrowed("</a>"));
+            }
+            // todo: implement in svg
+            Html(h) => {
+                web_sys::console::log_1(&format!("Html: {}", h.html).into());
+                output.push(Cow::Borrowed(r#"<span class="typst-content-html""#));
+                let is_regular_scale = ts.sx == 1.0 && ts.sy == 1.0;
+                let is_regular_skew = ts.kx == 0.0 && ts.ky == 0.0;
+                // todo: correct zindex
+                if is_regular_scale && is_regular_skew {
+                    output.push(Cow::Owned(format!(
+                        r#" style="zindex: 3; left: calc(var(--data-text-width) * {:.5}); top: calc(var(--data-text-height) * {:.5});  width: calc(var(--data-text-width) * {:.5}); height: calc(var(--data-text-height) * {:.5});">"#,
+                        ts.tx, ts.ty, h.size.x.0, h.size.y.0,
+                    )));
+                } else {
+                    output.push(Cow::Owned(format!(
+                        r#" data-matrix="{:.5},{:.5},{:.5},{:.5}" style="zindex: 3; left: calc(var(--data-text-width) * {:.5}); top: calc(var(--data-text-height) * {:.5});  width: calc(var(--data-text-width) * {:.5}); height: calc(var(--data-text-height) * {:.5});">"#,
+                        ts.sx, ts.ky, ts.kx, ts.sy, ts.tx, ts.ty, h.size.x.0, h.size.y.0,
+                    )));
+                }
+                output.push(Cow::Owned(h.html.to_string()));
+                output.push(Cow::Borrowed("</span>"));
             }
             Image(..) | Path(..) => {}
             None | ColorTransform(..) | Gradient(..) | Color32(..) | Pattern(..) => {}

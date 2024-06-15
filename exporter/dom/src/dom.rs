@@ -676,6 +676,7 @@ pub enum TypstDomExtra {
     Image(ImageElem),
     Text(TextElem),
     Path(PathElem),
+    Html(HtmlElem),
     Link(LinkElem),
     ContentHint(ContentHintElem),
 }
@@ -705,6 +706,8 @@ pub struct TextElem {
     pub upem: Scalar,
     pub meta: TextItem,
 }
+#[derive(Debug)]
+pub struct HtmlElem {}
 #[derive(Debug)]
 pub struct PathElem {}
 #[derive(Debug)]

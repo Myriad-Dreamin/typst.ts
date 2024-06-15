@@ -14,11 +14,11 @@
     inner-width
   }
 
-    let inner-height = if inner-height == none {
-        outer-height
-    } else {
-        inner-height
-    }
+  let inner-height = if inner-height == none {
+    outer-height
+  } else {
+    inner-height
+  }
 
   let html-embed = {
     "<svg viewBox=\"0 0 "
@@ -41,5 +41,5 @@
     "</svg>"
   }
 
-  image.decode(html-embed, alt: "!typst-inlined-svg")
+  image.decode(html-embed, alt: "!typst-embed-command")
 }

@@ -38,9 +38,9 @@ impl Vec2BBoxPass {
                 }
                 Some(r)
             }
-            VecItem::Image(ImageItem { size, .. }) | VecItem::Link(LinkItem { size, .. }) => {
-                self.rect(*size, ts)
-            }
+            VecItem::Image(ImageItem { size, .. })
+            | VecItem::Link(LinkItem { size, .. })
+            | VecItem::Html(HtmlItem { size, .. }) => self.rect(*size, ts),
             // todo: I'm writing this in my leg
             VecItem::Text(t) => {
                 let width = t.width();

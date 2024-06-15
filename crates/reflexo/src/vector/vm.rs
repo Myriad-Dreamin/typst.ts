@@ -65,6 +65,9 @@ pub trait GroupContext<C>: Sized {
     /// Render a semantic link into underlying context.
     fn render_content_hint(&mut self, _ctx: &mut C, _ch: char) {}
 
+    /// Render a semantic link into underlying context.
+    fn render_html(&mut self, _ctx: &mut C, _html: &ir::HtmlItem) {}
+
     fn render_item_at(&mut self, ctx: &mut C, pos: Point, item: &Fingerprint);
     fn render_item(&mut self, ctx: &mut C, item: &Fingerprint) {
         self.render_item_at(ctx, Point::default(), item);
@@ -141,6 +144,11 @@ pub trait RenderVm<'m>: Sized + FontIndice<'m> {
             ir::VecItem::ContentHint(c) => {
                 let mut g = self.start_group(abs_ref);
                 g.render_content_hint(self, *c);
+                g.into()
+            }
+            ir::VecItem::Html(h) => {
+                let mut g = self.start_group(abs_ref);
+                g.render_html(self, h);
                 g.into()
             }
             ir::VecItem::Color32(..)
@@ -258,6 +266,10 @@ where
             }
             ir::VecItem::ContentHint(c) => {
                 group_ctx.render_content_hint(self, *c);
+                group_ctx
+            }
+            ir::VecItem::Html(h) => {
+                group_ctx.render_html(self, h);
                 group_ctx
             }
             ir::VecItem::Color32(..)

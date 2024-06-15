@@ -11,7 +11,7 @@ use rayon::iter::{
 };
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
-    foundations::Smart,
+    foundations::{Bytes, Smart},
     introspection::{Introspector, Meta},
     layout::{
         Abs, Axes, Dir, Frame, FrameItem, FrameKind, Position, Ratio as TypstRatio, Size,
@@ -89,6 +89,16 @@ impl<'a> State<'a> {
     }
 }
 
+pub trait CommandExecutor {
+    fn execute(&self, cmd: Bytes, size: Option<Size>) -> Option<VecItem>;
+}
+
+impl CommandExecutor for () {
+    fn execute(&self, _: Bytes, _: Option<Size>) -> Option<VecItem> {
+        None
+    }
+}
+
 /// Intermediate representation of a flatten vector item.
 pub struct Typst2VecPassImpl<const ENABLE_REF_CNT: bool = false> {
     pub glyphs: TGlyph2VecPass<ENABLE_REF_CNT>,
@@ -96,6 +106,8 @@ pub struct Typst2VecPassImpl<const ENABLE_REF_CNT: bool = false> {
     pub cache_items: RefItemMapT<(AtomicU64, Fingerprint, VecItem)>,
     pub items: RefItemMapSync,
     pub new_items: Mutex<Vec<(Fingerprint, VecItem)>>,
+
+    pub command_executor: Box<dyn CommandExecutor + Send + Sync>,
 
     fingerprint_builder: FingerprintBuilder,
 
@@ -118,6 +130,7 @@ impl<const ENABLE_REF_CNT: bool> Default for Typst2VecPassImpl<ENABLE_REF_CNT> {
             items: Default::default(),
             new_items: Default::default(),
             fingerprint_builder: Default::default(),
+            command_executor: Box::new(()),
         }
     }
 }
@@ -134,7 +147,8 @@ impl Typst2VecPass {
             | VecItem::Color32(_)
             | VecItem::Gradient(_)
             | VecItem::ContentHint(_)
-            | VecItem::ColorTransform(_) => {}
+            | VecItem::ColorTransform(_)
+            | VecItem::Html(..) => {}
             VecItem::Text(t) => {
                 // todo: here introduces risk to font collision
                 self.glyphs.used_fonts.insert(t.shape.font);
@@ -772,6 +786,15 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         let cond = ImageKey { image, size };
 
         self.store_cached(&cond, || {
+            if matches!(image.alt(), Some("!typst-embed-command")) {
+                if let Some(item) = self
+                    .command_executor
+                    .execute(image.data().clone(), Some(size))
+                {
+                    return item;
+                }
+            }
+
             VecItem::Image(ImageItem {
                 image: Arc::new(image.clone().into_typst()),
                 size: size.into_typst(),

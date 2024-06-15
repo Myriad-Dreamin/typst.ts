@@ -67,6 +67,7 @@ pub enum VecItem {
     Pattern(Arc<PatternItem>),
     ContentHint(char),
     ColorTransform(Arc<ColorTransform>),
+    Html(HtmlItem),
 }
 
 /// Module with page references, corresponding to a `typst::model::Document`.

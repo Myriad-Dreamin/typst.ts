@@ -234,6 +234,7 @@ impl TypstPageElem {
             VecItem::ContentHint(_) => TypstDomExtra::ContentHint(ContentHintElem { hint: ' ' }),
             VecItem::Link(_) => TypstDomExtra::Link(LinkElem {}),
             VecItem::Path(_) => TypstDomExtra::Path(PathElem {}),
+            VecItem::Html(_) => TypstDomExtra::Html(HtmlElem {}),
             VecItem::None
             | VecItem::ColorTransform(_)
             | VecItem::Color32(_)
