@@ -1,13 +1,17 @@
 // This is important for typst-book to produce a responsive layout
 // and multiple targets.
-#import "@preview/book:0.2.3": get-page-width, target, is-web-target, is-pdf-target, plain-text
+#import "@preview/book:0.2.5": get-page-width, target, is-web-target, is-pdf-target, plain-text
 
 #let page-width = get-page-width()
 #let is-pdf-target = is-pdf-target()
 #let is-web-target = is-web-target()
 
 // todo: move theme style parser to another lib file
-#let theme-target = if target.contains("-") { target.split("-").at(1) } else { "light" }
+#let theme-target = if target.contains("-") {
+  target.split("-").at(1)
+} else {
+  "light"
+}
 #let theme-style = toml("theme-style.toml").at(theme-target)
 
 #let is-dark-theme = theme-style.at("color-scheme") == "dark"
@@ -84,7 +88,7 @@
 
   // set web/pdf page properties
   set page(
-    numbering: none, 
+    numbering: none,
     number-align: center,
     width: page-width,
   )
@@ -104,40 +108,45 @@
     ),
     // for a website, we don't need pagination.
     height: auto,
-  ) if is-web-target;
+  ) if is-web-target
 
   // set text style
   set text(font: main-font, size: 16pt, fill: main-color, lang: "en")
 
   let ld = state("label-disambiguator", (:))
   let update-ld(k) = ld.update(it => {
-    it.insert(k, it.at(k, default: 0) + 1);
+    it.insert(k, it.at(k, default: 0) + 1)
     it
   })
   let get-ld(loc, k) = make-unique-label(k, disambiguator: ld.at(loc).at(k))
 
   // render a dash to hint headings instead of bolding it.
-  show heading : set text(weight: "regular") if is-web-target
-  show heading : it => {
+  show heading: set text(weight: "regular") if is-web-target
+  show heading: it => {
     it
     if is-web-target {
-      let title = plain-text(it.body).trim();
+      let title = plain-text(it.body).trim()
       update-ld(title)
       locate(loc => {
-        let dest = get-ld(loc, title);
+        let dest = get-ld(loc, title)
         style(styles => {
-          let h = measure(it.body, styles).height;
-          place(left, dx: -20pt, dy: -h - 12pt, [
-            #set text(fill: dash-color)
-            #link(loc)[\#] #dest
-          ])
+          let h = measure(it.body, styles).height
+          place(
+            left,
+            dx: -20pt,
+            dy: -h - 12pt,
+            [
+              #set text(fill: dash-color)
+              #link(loc)[\#] #dest
+            ],
+          )
         })
-      });
+      })
     }
   }
 
   // link setting
-  show link : set text(fill: dash-color)
+  show link: set text(fill: dash-color)
 
   // math setting
   show math.equation: set text(weight: 400)
