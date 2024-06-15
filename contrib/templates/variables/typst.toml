@@ -1,7 +1,0 @@
-[package]
-name = "typst-ts-variables"
-version = "0.1.0"
-entrypoint = "lib.typ"
-authors = ["Myriad-Dreamin"]
-license = "Apache-2.0"
-description = "variable stub for typst.ts."

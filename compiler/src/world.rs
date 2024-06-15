@@ -122,10 +122,12 @@ impl<F: CompilerFeat> EnvWorld for CompilerWorld<F> {
         Ok(())
     }
 
-    fn prepare_env(&mut self, _env: &mut CompileEnv) -> SourceResult<()> {
+    fn prepare_env(&mut self, env: &mut CompileEnv) -> SourceResult<()> {
         // Hook up the lang items.
         // todo: bad upstream changes
-        self.library = Some(create_library(self.inputs.clone()));
+        self.library = Some(create_library(
+            env.args.clone().unwrap_or_else(|| self.inputs.clone()),
+        ));
 
         Ok(())
     }
