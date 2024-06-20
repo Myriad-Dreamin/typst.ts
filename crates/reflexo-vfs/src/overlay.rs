@@ -4,11 +4,7 @@ use std::{collections::HashMap, path::Path};
 use parking_lot::RwLock;
 use typst::diag::FileResult;
 
-use typst_ts_core::Bytes;
-
-use crate::Time;
-
-use super::AccessModel;
+use crate::{AccessModel, Bytes, Time};
 
 #[derive(Debug, Clone)]
 struct OverlayFileMeta {
@@ -59,7 +55,7 @@ impl<M: AccessModel> OverlayAccessModel<M> {
         // we change mt every time, since content almost changes every time
         // Note: we can still benefit from cache, since we incrementally parse source
 
-        let mt = crate::time::now();
+        let mt = reflexo::time::now();
         let meta = OverlayFileMeta { mt, content };
         self.files
             .write()

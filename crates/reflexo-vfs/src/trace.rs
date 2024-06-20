@@ -2,9 +2,8 @@ use std::{path::Path, sync::atomic::AtomicU64};
 
 use typst::diag::FileResult;
 
-use typst_ts_core::Bytes;
-
-use super::{cached::CachedAccessModel, AccessModel};
+use crate::cached::CachedAccessModel;
+use crate::{AccessModel, Bytes};
 
 /// Provides trace access model which traces the underlying access model.
 ///
@@ -42,7 +41,7 @@ impl<M: AccessModel + Sized, C: Clone> TraceAccessModel<CachedAccessModel<M, C>>
         src: &Path,
         compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
     ) -> FileResult<C> {
-        let instant = instant::Instant::now();
+        let instant = reflexo::time::Instant::now();
         let res = self.inner.read_all_diff(src, compute);
         let elapsed = instant.elapsed();
         self.trace[4].fetch_add(
@@ -60,7 +59,7 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
     }
 
     fn mtime(&self, src: &Path) -> FileResult<crate::Time> {
-        let instant = instant::Instant::now();
+        let instant = reflexo::time::Instant::now();
         let res = self.inner.mtime(src);
         let elapsed = instant.elapsed();
         // self.trace[0] += elapsed.as_nanos() as u64;
@@ -73,7 +72,7 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
     }
 
     fn is_file(&self, src: &Path) -> FileResult<bool> {
-        let instant = instant::Instant::now();
+        let instant = reflexo::time::Instant::now();
         let res = self.inner.is_file(src);
         let elapsed = instant.elapsed();
         self.trace[1].fetch_add(
@@ -85,7 +84,7 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
     }
 
     fn real_path(&self, src: &Path) -> FileResult<Self::RealPath> {
-        let instant = instant::Instant::now();
+        let instant = reflexo::time::Instant::now();
         let res = self.inner.real_path(src);
         let elapsed = instant.elapsed();
         self.trace[2].fetch_add(
@@ -97,7 +96,7 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
     }
 
     fn content(&self, src: &Path) -> FileResult<Bytes> {
-        let instant = instant::Instant::now();
+        let instant = reflexo::time::Instant::now();
         let res = self.inner.content(src);
         let elapsed = instant.elapsed();
         self.trace[3].fetch_add(

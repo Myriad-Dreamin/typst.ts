@@ -2,9 +2,8 @@ use core::fmt;
 use std::{collections::HashMap, path::Path};
 
 use typst::diag::{FileError, FileResult};
-use typst_ts_core::{Bytes, ImmutPath};
 
-use crate::vfs::AccessModel;
+use crate::{AccessModel, Bytes, ImmutPath};
 
 /// internal representation of [`NotifyFile`]
 #[derive(Debug, Clone)]

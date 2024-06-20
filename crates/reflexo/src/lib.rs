@@ -4,6 +4,7 @@ pub mod error;
 pub mod escape;
 pub mod hash;
 pub mod path;
+pub mod time;
 
 pub(crate) mod concepts;
 

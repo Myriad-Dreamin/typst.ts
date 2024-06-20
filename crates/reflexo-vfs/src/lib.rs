@@ -3,12 +3,12 @@
 
 /// Provides ProxyAccessModel that makes access to JavaScript objects for
 /// browser compilation.
-#[cfg(feature = "browser-compile")]
+#[cfg(feature = "browser")]
 pub mod browser;
 
 /// Provides SystemAccessModel that makes access to the local file system for
 /// system compilation.
-#[cfg(feature = "system-compile")]
+#[cfg(feature = "system")]
 pub mod system;
 
 /// Provides general cache to file access.
@@ -27,8 +27,15 @@ pub mod notify;
 pub mod overlay;
 /// Provides trace access model which traces the underlying access model.
 pub mod trace;
+mod utils;
 
 mod path_interner;
+
+pub use typst::foundations::Bytes;
+pub use typst::syntax::FileId as TypstFileId;
+
+pub use reflexo::time::Time;
+pub use reflexo::ImmutPath;
 
 pub(crate) use path_interner::PathInterner;
 
@@ -37,14 +44,13 @@ use std::{collections::HashMap, ffi::OsStr, hash::Hash, path::Path, sync::Arc};
 
 use append_only_vec::AppendOnlyVec;
 use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
+use reflexo::{path::PathClean, QueryRef};
 use typst::{
     diag::{FileError, FileResult},
     syntax::Source,
 };
 
-use typst_ts_core::{path::PathClean, Bytes, ImmutPath, QueryRef, TypstFileId};
-
-use crate::{parser::reparse, Time};
+// use crate::{parser::reparse, };
 
 use self::{
     cached::CachedAccessModel,
@@ -371,9 +377,12 @@ impl<M: AccessModel + Sized> Vfs<M> {
 
             // otherwise reparse the source
             if self.access_model.is_file(path)? {
-                Ok(self
-                    .access_model
-                    .read_all_diff(path, |x, y| reparse(source_id, x, y))?)
+                Ok(self.access_model.read_all_diff(path, |x, y| {
+                    let _ = x;
+                    let _ = y;
+                    // reparse(source_id, x, y)
+                    todo!()
+                })?)
             } else {
                 Err(FileError::IsDirectory)
             }

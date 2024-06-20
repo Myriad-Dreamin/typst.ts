@@ -3,11 +3,7 @@ use std::path::{Path, PathBuf};
 use typst::diag::{FileError, FileResult};
 use wasm_bindgen::prelude::*;
 
-use typst_ts_core::Bytes;
-
-use crate::Time;
-
-use super::AccessModel;
+use crate::{AccessModel, Bytes, Time};
 
 /// Provides proxy access model from typst compiler to some JavaScript
 /// implementation.

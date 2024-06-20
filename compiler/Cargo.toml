@@ -12,6 +12,7 @@ repository.workspace = true
 
 typst.workspace = true
 comemo.workspace = true
+reflexo-vfs.workspace = true
 
 once_cell.workspace = true
 append-only-vec.workspace = true
@@ -91,6 +92,7 @@ system-compile = [
     "dep:log",
     "dep:fontdb",
     "typst-ts-core/glyph2vec",
+    "reflexo-vfs/system",
 ]
 system-watch = ["dep:notify", "dep:tokio"]
 system = ["system-compile", "system-watch"]
@@ -104,9 +106,10 @@ __web = [
     "dep:pollster",
     "typst-ts-core/web",
     "instant/wasm-bindgen",
+    "reflexo-vfs/web",
 ]
 web-render = ["__web"]
-browser-compile = ["__web", "web-render", "typst-ts-core/glyph2vec"]
+browser-compile = ["__web", "web-render", "typst-ts-core/glyph2vec", "reflexo-vfs/browser"]
 browser-embedded-fonts = ["__web"]
 web = ["__web", "web-render", "browser-compile"]
 default = ["system", "dynamic-layout"]

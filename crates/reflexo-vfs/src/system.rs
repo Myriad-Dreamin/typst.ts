@@ -6,10 +6,8 @@ use std::{
 
 use typst::diag::{FileError, FileResult};
 
-use typst_ts_core::{Bytes, ReadAllOnce};
-
-use super::AccessModel;
-use crate::Time;
+use crate::{AccessModel, Bytes, Time};
+use reflexo::ReadAllOnce;
 
 /// Provides SystemAccessModel that makes access to the local file system for
 /// system compilation.

@@ -2,11 +2,8 @@ use std::path::Path;
 
 use typst::diag::{FileError, FileResult};
 
-use typst_ts_core::Bytes;
-
-use crate::Time;
-
 use super::AccessModel;
+use crate::{Bytes, Time};
 
 /// Provides dummy access model.
 ///

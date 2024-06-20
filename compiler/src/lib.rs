@@ -49,7 +49,7 @@ pub mod package;
 /// time things about compiler.
 pub mod time;
 /// A vfs implementation for compiler.
-pub mod vfs;
+pub use reflexo_vfs as vfs;
 /// A common implementation of [`typst::World`]
 pub mod world;
 

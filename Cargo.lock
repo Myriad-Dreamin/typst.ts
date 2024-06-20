@@ -2893,6 +2893,7 @@ dependencies = [
  "ecow",
  "fxhash",
  "hex",
+ "instant",
  "js-sys",
  "once_cell",
  "parking_lot",
@@ -2946,6 +2947,23 @@ dependencies = [
  "reflexo-vec2canvas",
  "tiny-skia",
  "unicode-width",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "reflexo-vfs"
+version = "0.5.0-rc4"
+dependencies = [
+ "append-only-vec",
+ "indexmap 2.2.6",
+ "js-sys",
+ "nohash-hasher",
+ "once_cell",
+ "parking_lot",
+ "reflexo",
+ "rustc-hash",
+ "typst",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -4486,6 +4504,7 @@ dependencies = [
  "pathdiff",
  "pollster",
  "rayon",
+ "reflexo-vfs",
  "reqwest",
  "rustc-hash",
  "serde",
