@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use reflexo::ImmutPath;
 use typst::diag::{FileError, FileResult};
 
 use super::AccessModel;
@@ -14,8 +15,6 @@ use crate::{Bytes, Time};
 pub struct DummyAccessModel;
 
 impl AccessModel for DummyAccessModel {
-    type RealPath = std::path::PathBuf;
-
     fn mtime(&self, _src: &Path) -> FileResult<Time> {
         Ok(Time::UNIX_EPOCH)
     }
@@ -24,8 +23,8 @@ impl AccessModel for DummyAccessModel {
         Ok(true)
     }
 
-    fn real_path(&self, src: &Path) -> FileResult<Self::RealPath> {
-        Ok(src.to_owned())
+    fn real_path(&self, src: &Path) -> FileResult<ImmutPath> {
+        Ok(src.into())
     }
 
     fn content(&self, _src: &Path) -> FileResult<Bytes> {

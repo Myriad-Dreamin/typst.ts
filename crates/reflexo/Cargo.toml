@@ -25,6 +25,7 @@ tiny-skia-path.workspace = true
 path-clean.workspace = true
 base64.workspace = true
 fxhash.workspace = true
+rustc-hash.workspace = true
 siphasher.workspace = true
 
 serde = { workspace = true, features = ["derive"] }

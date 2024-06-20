@@ -238,8 +238,6 @@ impl<M: AccessModel> NotifyAccessModel<M> {
 }
 
 impl<M: AccessModel> AccessModel for NotifyAccessModel<M> {
-    type RealPath = M::RealPath;
-
     fn mtime(&self, src: &Path) -> FileResult<crate::Time> {
         if let Some(entry) = self.files.get(src) {
             return entry.mtime().cloned();
@@ -256,7 +254,7 @@ impl<M: AccessModel> AccessModel for NotifyAccessModel<M> {
         self.inner.is_file(src)
     }
 
-    fn real_path(&self, src: &Path) -> FileResult<Self::RealPath> {
+    fn real_path(&self, src: &Path) -> FileResult<ImmutPath> {
         if self.files.contains_key(src) {
             return Ok(src.into());
         }

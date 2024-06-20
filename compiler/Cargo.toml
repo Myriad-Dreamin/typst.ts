@@ -13,6 +13,7 @@ repository.workspace = true
 typst.workspace = true
 comemo.workspace = true
 reflexo-vfs.workspace = true
+reflexo-world.workspace = true
 
 once_cell.workspace = true
 append-only-vec.workspace = true

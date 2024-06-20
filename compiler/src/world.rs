@@ -16,6 +16,7 @@ use typst::{
     Library, World,
 };
 
+use reflexo_world::SourceDb;
 use typst_ts_core::{
     config::compiler::{EntryState, DETACHED_ENTRY},
     font::FontProfile,
@@ -24,7 +25,7 @@ use typst_ts_core::{
 };
 
 use crate::{
-    dependency::{DependencyTree, DependentFileInfo},
+    dependency::DependencyTree,
     package::Registry as PackageRegistry,
     parser::{
         get_semantic_tokens_full, get_semantic_tokens_legend, OffsetEncoding, SemanticToken,
@@ -32,7 +33,7 @@ use crate::{
     },
     service::{CompileEnv, EntryManager, EnvWorld},
     vfs::{notify::FilesystemEvent, AccessModel as VfsAccessModel, Vfs},
-    NotifyApi, ShadowApi, Time,
+    NotifyApi, ShadowApi,
 };
 
 type CodespanResult<T> = Result<T, CodespanError>;
@@ -65,6 +66,8 @@ pub struct CompilerWorld<F: CompilerFeat> {
     pub registry: F::Registry,
     /// Provides path-based data access for typst compiler.
     pub vfs: Vfs<F::AccessModel>,
+    /// Provides source database for typst compiler.
+    pub source_db: SourceDb,
 
     /// The current datetime if requested. This is stored here to ensure it is
     /// always the same within one compilation. Reset between compilations.
@@ -92,6 +95,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             font_resolver,
             registry,
             vfs,
+            source_db: SourceDb::default(),
 
             now: OnceCell::new(),
         }
@@ -169,12 +173,14 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
             return Ok(DETACH_SOURCE.clone());
         }
 
-        self.vfs.resolve(&self.path_for_id(id)?, id)
+        let fid = self.vfs.file_id(&self.path_for_id(id)?);
+        self.source_db.source(id, fid, &self.vfs)
     }
 
     /// Try to access the specified file.
     fn file(&self, id: FileId) -> FileResult<Bytes> {
-        self.vfs.file(&self.path_for_id(id)?)
+        let fid = self.vfs.file_id(&self.path_for_id(id)?);
+        self.source_db.file(id, fid, &self.vfs)
     }
 
     /// Get the current date.
@@ -214,18 +220,14 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     /// Reset the world for a new lifecycle (of garbage collection).
     pub fn reset(&mut self) {
         self.vfs.reset();
+        self.source_db.reset();
 
         self.now.take();
     }
 
     /// Set the `do_reparse` flag.
     pub fn set_do_reparse(&mut self, do_reparse: bool) {
-        self.vfs.do_reparse = do_reparse;
-    }
-
-    /// Get source id by path with filesystem content.
-    pub fn resolve(&self, path: &Path, source_id: FileId) -> FileResult<()> {
-        self.vfs.resolve(path, source_id).map(|_| ())
+        self.source_db.do_reparse = do_reparse;
     }
 
     /// Resolve the real path for a file id.
@@ -247,21 +249,6 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         // Join the path to the root. If it tries to escape, deny
         // access. Note: It can still escape via symlinks.
         id.vpath().resolve(&root).ok_or(FileError::AccessDenied)
-    }
-
-    /// Get found dependencies in current state of vfs.
-    pub fn get_dependencies(&self) -> Option<DependencyTree> {
-        let root = self.entry.root()?;
-
-        let deps = self.vfs.iter_dependencies();
-        let vfs_dependencies = deps
-            .filter_map(|(x, maybe_time)| Some((x, maybe_time.ok()?)))
-            .map(|(path, mtime)| DependentFileInfo {
-                path: path.as_ref().to_owned(),
-                mtime: mtime.duration_since(Time::UNIX_EPOCH).unwrap().as_micros() as u64,
-            });
-
-        Some(DependencyTree::from_iter(&root, vfs_dependencies))
     }
 
     pub fn get_semantic_token_legend(&self) -> Arc<SemanticTokensLegend> {
@@ -336,8 +323,8 @@ impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
 
 impl<F: CompilerFeat> NotifyApi for CompilerWorld<F> {
     #[inline]
-    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, FileResult<&Time>)) {
-        self.vfs.iter_dependencies_dyn(f)
+    fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath)) {
+        self.source_db.iter_dependencies_dyn(&self.vfs, f)
     }
 
     #[inline]

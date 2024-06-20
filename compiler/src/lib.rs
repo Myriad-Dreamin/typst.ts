@@ -177,7 +177,7 @@ impl<C: ShadowApi> ShadowApiExt for C {
 
 /// Latest version of the notify api, which is in beta.
 pub trait NotifyApi {
-    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, FileResult<&crate::Time>));
+    fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath));
 
     fn notify_fs_event(&mut self, event: FilesystemEvent);
 }

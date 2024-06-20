@@ -265,7 +265,7 @@ where
         // Notify the new file dependencies.
         let mut deps = vec![];
         self.compiler
-            .iter_dependencies(&mut |dep, _| deps.push(dep.clone()));
+            .iter_dependencies(&mut |dep| deps.push(dep.clone()));
         send(Notify(NotifyMessage::SyncDependency(deps)));
     }
 

@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::{collections::HashMap, path::Path};
 
 use parking_lot::RwLock;
+use reflexo::ImmutPath;
 use typst::diag::FileResult;
 
 use crate::{AccessModel, Bytes, Time};
@@ -87,8 +88,6 @@ impl<M: AccessModel> OverlayAccessModel<M> {
 }
 
 impl<M: AccessModel> AccessModel for OverlayAccessModel<M> {
-    type RealPath = M::RealPath;
-
     fn mtime(&self, src: &Path) -> FileResult<Time> {
         if let Some(meta) = self.files.read().get(src) {
             return Ok(meta.mt);
@@ -105,7 +104,7 @@ impl<M: AccessModel> AccessModel for OverlayAccessModel<M> {
         self.inner.is_file(src)
     }
 
-    fn real_path(&self, src: &Path) -> FileResult<Self::RealPath> {
+    fn real_path(&self, src: &Path) -> FileResult<ImmutPath> {
         if self.files.read().get(src).is_some() {
             return Ok(src.into());
         }

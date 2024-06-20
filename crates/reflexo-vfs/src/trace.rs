@@ -1,8 +1,8 @@
 use std::{path::Path, sync::atomic::AtomicU64};
 
+use reflexo::ImmutPath;
 use typst::diag::FileResult;
 
-use crate::cached::CachedAccessModel;
 use crate::{AccessModel, Bytes};
 
 /// Provides trace access model which traces the underlying access model.
@@ -11,45 +11,17 @@ use crate::{AccessModel, Bytes};
 /// stdout or the browser console.
 #[derive(Debug)]
 pub struct TraceAccessModel<M: AccessModel + Sized> {
-    inner: M,
+    pub inner: M,
     trace: [AtomicU64; 6],
 }
 
-impl<M: AccessModel + Sized, C: Clone> TraceAccessModel<CachedAccessModel<M, C>> {
+impl<M: AccessModel + Sized> TraceAccessModel<M> {
     /// Create a new [`TraceAccessModel`] with the given inner access model
-    pub fn new(inner: CachedAccessModel<M, C>) -> Self {
+    pub fn new(inner: M) -> Self {
         Self {
             inner,
             trace: Default::default(),
         }
-    }
-
-    /// Get the inner access model
-    pub fn inner(&self) -> &M {
-        self.inner.inner()
-    }
-
-    /// Get the mutable reference to the inner access model
-    pub fn inner_mut(&mut self) -> &mut M {
-        self.inner.inner_mut()
-    }
-
-    /// This is not a common interface for access model, but it is used for vfs
-    /// incremental parsing.
-    pub fn read_all_diff(
-        &self,
-        src: &Path,
-        compute: impl FnOnce(Option<C>, String) -> FileResult<C>,
-    ) -> FileResult<C> {
-        let instant = reflexo::time::Instant::now();
-        let res = self.inner.read_all_diff(src, compute);
-        let elapsed = instant.elapsed();
-        self.trace[4].fetch_add(
-            elapsed.as_nanos() as u64,
-            std::sync::atomic::Ordering::Relaxed,
-        );
-        crate::utils::console_log!("read_all_diff: {:?} {:?}", src, elapsed);
-        res
     }
 }
 
@@ -83,7 +55,7 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
         res
     }
 
-    fn real_path(&self, src: &Path) -> FileResult<Self::RealPath> {
+    fn real_path(&self, src: &Path) -> FileResult<ImmutPath> {
         let instant = reflexo::time::Instant::now();
         let res = self.inner.real_path(src);
         let elapsed = instant.elapsed();
@@ -106,6 +78,4 @@ impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
         crate::utils::console_log!("read_all: {:?} {:?}", src, elapsed);
         res
     }
-
-    type RealPath = M::RealPath;
 }
