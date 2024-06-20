@@ -11,8 +11,6 @@ pub mod browser;
 #[cfg(feature = "system")]
 pub mod system;
 
-/// Provides general cache to file access.
-pub mod cached;
 /// Provides dummy access model.
 ///
 /// Note: we can still perform compilation with dummy access model, since
@@ -46,10 +44,7 @@ use parking_lot::{Mutex, RwLock};
 use reflexo::path::PathClean;
 use typst::diag::{FileError, FileResult};
 
-// use crate::{parser::reparse, };
-
 use self::{
-    // cached::CachedAccessModel,
     notify::{FilesystemEvent, NotifyAccessModel},
     overlay::OverlayAccessModel,
 };
@@ -247,7 +242,6 @@ impl<M: AccessModel + Sized> Vfs<M> {
     ///
     /// Panics if the id is not present in the `Vfs`.
     pub fn file_path(&self, file_id: FileId) -> ImmutPath {
-        // self.slots[file_id.0 as usize].sampled_path.get().unwrap()
         let path_interner = self.path_interner.lock();
         path_interner.lookup(file_id).clone()
     }
