@@ -18,6 +18,7 @@ nohash-hasher.workspace = true
 once_cell.workspace = true
 rustc-hash.workspace = true
 indexmap.workspace = true
+log.workspace = true
 
 wasm-bindgen = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true }
@@ -25,12 +26,6 @@ js-sys = { workspace = true, optional = true }
 
 [features]
 
-web = [
-    "wasm-bindgen",
-    "web-sys",
-    "js-sys"
-]
-browser = [
-    "web"
-]
+web = ["wasm-bindgen", "web-sys", "js-sys"]
+browser = ["web"]
 system = []

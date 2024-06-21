@@ -2,7 +2,7 @@ use core::fmt;
 use std::{path::Path, sync::Arc};
 
 use typst::{
-    diag::{At, SourceDiagnostic, SourceResult},
+    diag::{At, Hint, SourceDiagnostic, SourceResult},
     eval::Tracer,
     foundations::Content,
     model::Document,
@@ -157,6 +157,23 @@ pub trait Compiler {
     /// reset the compilation state
     fn reset(&mut self) -> SourceResult<()>;
 
+    fn ensure_main(&self, world: &Self::W) -> SourceResult<()>
+    where
+        Self::W: EntryReader,
+    {
+        let main_id = world
+            .main_id()
+            .ok_or_else(|| eco_format!("no entry file"))
+            .at(Span::detached())?;
+
+        world
+            .source(main_id)
+            .hint(AtFile(main_id))
+            .at(Span::detached())?;
+
+        Ok(())
+    }
+
     /// Compile once from scratch.
     fn pure_compile(
         &mut self,
@@ -286,5 +303,13 @@ impl<T: CompileMiddleware> Compiler for T {
         document: &Document,
     ) -> SourceResult<Vec<Content>> {
         self.wrap_query(world, selector, document)
+    }
+}
+
+struct AtFile(TypstFileId);
+
+impl From<AtFile> for EcoString {
+    fn from(at: AtFile) -> Self {
+        eco_format!("at file {:?}", at.0)
     }
 }

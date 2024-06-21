@@ -137,7 +137,8 @@ impl<M: AccessModel + Sized> Vfs<M> {
     /// Create a new `Vfs` with a given `access_model`.
     ///
     /// Retrieving an [`AccessModel`], it will further wrap the access model
-    /// with [`OverlayAccessModel`] and [`NotifyAccessModel`]. This means that you don't need to implement:
+    /// with [`OverlayAccessModel`] and [`NotifyAccessModel`]. This means that
+    /// you don't need to implement:
     /// + overlay: allowing to shadow the underlying access model with memory
     ///   contents, which is useful for a limited execution environment and
     ///   instrumenting or overriding source files or packages.
@@ -260,15 +261,15 @@ impl<M: AccessModel> FsProvider for Vfs<M> {
     }
 
     fn mtime(&self, src: FileId) -> FileResult<Time> {
-        self.access_model.inner.mtime(&self.file_path(src))
+        self.access_model.mtime(&self.file_path(src))
     }
 
     fn read(&self, src: FileId) -> FileResult<Bytes> {
-        self.access_model.inner.content(&self.file_path(src))
+        self.access_model.content(&self.file_path(src))
     }
 
     fn is_file(&self, src: FileId) -> FileResult<bool> {
-        self.access_model.inner.is_file(&self.file_path(src))
+        self.access_model.is_file(&self.file_path(src))
     }
 }
 

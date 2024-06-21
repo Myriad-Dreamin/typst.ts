@@ -8,10 +8,8 @@ use crate::{
     ShadowApi,
 };
 use typst::{
-    diag::{eco_format, At, EcoString, Hint, SourceResult},
+    diag::{eco_format, EcoString, SourceResult},
     foundations::Content,
-    syntax::Span,
-    World,
 };
 use typst_ts_core::{config::compiler::DETACHED_ENTRY, Bytes, TypstDocument, TypstFileId};
 
@@ -49,17 +47,7 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> CompileDriverImpl<C, F>
 
     pub fn compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<TypstDocument>> {
         let world = self.spawn();
-
-        let main_id = world
-            .main_id()
-            .ok_or_else(|| eco_format!("no entry file"))
-            .at(Span::detached())?;
-
-        world
-            .source(main_id)
-            .hint(AtFile(main_id))
-            .at(Span::detached())?;
-
+        self.compiler.ensure_main(&world)?;
         self.compiler.compile(&world, env)
     }
 }
