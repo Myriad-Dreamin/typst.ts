@@ -152,13 +152,16 @@ pub fn create_driver(args: NodeCompileArgs) -> ZResult<CompileDriver> {
         ..CompileFontOpts::default()
     })?;
 
-    let mut world = TypstSystemWorld::new_raw(
+    let world = TypstSystemWorld::new_raw(
         EntryState::new_rooted(workspace_dir.into(), None),
+        Some(Arc::new(Prehashed::new(inputs))),
         Arc::new(RwLock::new(Vfs::new(SystemAccessModel {}))),
         HttpRegistry::default(),
         searcher.into(),
     );
-    world.set_inputs(Arc::new(Prehashed::new(inputs)));
 
-    Ok(CompileDriver::new(world).with_entry_file(entry_file_path.to_owned()))
+    Ok(CompileDriver::new(
+        (),
+        world.with_entry_file(entry_file_path.to_owned()),
+    ))
 }

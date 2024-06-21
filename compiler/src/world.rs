@@ -9,7 +9,7 @@ use comemo::Prehashed;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use typst::{
-    diag::{eco_format, At, EcoString, FileError, FileResult, Hint, SourceResult},
+    diag::{eco_format, At, EcoString, FileError, FileResult, SourceResult},
     foundations::{Datetime, Dict},
     syntax::{Source, Span, VirtualPath},
     text::{Font, FontBook},
@@ -57,7 +57,7 @@ pub struct CompilerWorld<F: CompilerFeat> {
     pub inputs: Arc<Prehashed<Dict>>,
 
     /// Provides library for typst compiler.
-    pub library: Option<Arc<Prehashed<Library>>>,
+    pub library: Arc<Prehashed<Library>>,
     /// Provides font management for typst compiler.
     pub font_resolver: Arc<F::FontResolver>,
     /// Provides package management for typst compiler.
@@ -81,6 +81,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     /// + See [`crate::TypstBrowserWorld::new`] for browser environment.
     pub fn new_raw(
         entry: EntryState,
+        inputs: Option<Arc<Prehashed<Dict>>>,
         vfs: Arc<RwLock<Vfs<F::AccessModel>>>,
         registry: F::Registry,
         font_resolver: F::FontResolver,
@@ -89,7 +90,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             entry,
             inputs: Arc::new(Prehashed::new(Dict::new())),
 
-            library: None,
+            library: create_library(inputs.unwrap_or_default()),
             font_resolver: Arc::new(font_resolver),
             registry: Arc::new(registry),
             vfs,
@@ -134,22 +135,10 @@ fn create_library(inputs: Arc<Prehashed<Dict>>) -> Arc<Prehashed<Library>> {
 }
 
 impl<F: CompilerFeat> EnvWorld for CompilerWorld<F> {
-    fn ensure_env(&mut self) -> SourceResult<()> {
-        if self.library.is_none() {
-            return Err(eco_format!("library not initialized"))
-                .hint(eco_format!("do you forget to run compilation?"))
-                .at(Span::detached());
-        }
-
-        Ok(())
-    }
-
     fn prepare_env(&mut self, env: &mut CompileEnv) -> SourceResult<()> {
         // Hook up the lang items.
         // todo: bad upstream changes
-        self.library = Some(create_library(
-            env.args.clone().unwrap_or_else(|| self.inputs.clone()),
-        ));
+        self.library = create_library(env.args.clone().unwrap_or_else(|| self.inputs.clone()));
 
         Ok(())
     }
@@ -158,7 +147,7 @@ impl<F: CompilerFeat> EnvWorld for CompilerWorld<F> {
 impl<F: CompilerFeat> World for CompilerWorld<F> {
     /// The standard library.
     fn library(&self) -> &Prehashed<Library> {
-        self.library.as_ref().unwrap()
+        self.library.as_ref()
     }
 
     /// Access the main source file.

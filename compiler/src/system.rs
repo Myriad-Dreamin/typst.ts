@@ -34,6 +34,7 @@ impl TypstSystemWorld {
         let inputs = std::mem::take(&mut opts.inputs);
         let mut w = Self::new_raw(
             opts.entry.clone().try_into()?,
+            Some(Arc::new(Prehashed::new(opts.inputs.clone()))),
             Arc::new(RwLock::new(Vfs::new(SystemAccessModel {}))),
             HttpRegistry::default(),
             Self::resolve_fonts(opts)?,

@@ -123,6 +123,7 @@ impl TypstCompiler {
                 (),
                 TypstBrowserWorld::new(
                     std::path::Path::new("/").to_owned(),
+                    None,
                     access_model,
                     registry,
                     searcher.into(),

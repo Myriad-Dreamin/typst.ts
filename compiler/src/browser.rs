@@ -1,7 +1,8 @@
 use std::{path::PathBuf, sync::Arc};
 
+use comemo::Prehashed;
 use parking_lot::RwLock;
-use typst_ts_core::{config::compiler::EntryState, font::FontResolverImpl};
+use typst_ts_core::{config::compiler::EntryState, font::FontResolverImpl, TypstDict};
 
 use crate::{package::browser::ProxyRegistry, vfs::browser::ProxyAccessModel};
 
@@ -28,6 +29,7 @@ impl crate::world::CompilerFeat for BrowserCompilerFeat {
 impl TypstBrowserWorld {
     pub fn new(
         root_dir: PathBuf,
+        inputs: Option<Arc<Prehashed<TypstDict>>>,
         access_model: ProxyAccessModel,
         registry: ProxyRegistry,
         font_resolver: FontResolverImpl,
@@ -36,6 +38,7 @@ impl TypstBrowserWorld {
 
         Self::new_raw(
             EntryState::new_rooted(root_dir.into(), None),
+            inputs,
             Arc::new(RwLock::new(vfs)),
             registry,
             font_resolver,
