@@ -14,7 +14,7 @@ use rustyline::validate::MatchingBracketValidator;
 use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, KeyEvent};
 use rustyline::{Helper, Validator};
 
-use typst_ts_compiler::service::{CompileDriver, CompileReport, ConsoleDiagReporter};
+use typst_ts_compiler::service::{CompileDriver, CompileReport, ConsoleDiagReporter, PureCompiler};
 use typst_ts_compiler::{ShadowApiExt, TypstSystemWorld};
 use typst_ts_core::{typst::prelude::*, GenericExporter};
 
@@ -30,12 +30,12 @@ struct ReplContext {
     hinter: HistoryHinter,
 
     // typst world state
-    driver: RefCell<CompileDriver<()>>,
+    driver: RefCell<CompileDriver<PureCompiler<TypstSystemWorld>>>,
     reporter: ConsoleDiagReporter<TypstSystemWorld>,
 }
 
 impl ReplContext {
-    fn new(driver: CompileDriver<()>) -> Self {
+    fn new(driver: CompileDriver<PureCompiler<TypstSystemWorld>>) -> Self {
         ReplContext {
             highlighter: MatchingBracketHighlighter::new(),
             hinter: HistoryHinter {},
@@ -239,7 +239,7 @@ pub fn start_repl_test(args: CompileOnceArgs) -> rustyline::Result<()> {
 impl ReplContext {
     fn process_err(
         &self,
-        driver: &RefMut<CompileDriver<()>>,
+        driver: &RefMut<CompileDriver<PureCompiler<TypstSystemWorld>>>,
         err: EcoVec<SourceDiagnostic>,
     ) -> Result<(), ()> {
         let rep = CompileReport::CompileError(driver.main_id(), err, Default::default());

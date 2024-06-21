@@ -73,7 +73,7 @@ fn compile_corpus(args: CompileCorpusArgs) {
 
     let world = typst_ts_cli::compile::create_driver(compile_args.compile.clone()).universe;
 
-    let driver = CompileExporter::new(());
+    let driver = CompileExporter::new(std::marker::PhantomData);
 
     let mut driver = CompileReporter::<_, TypstSystemWorld>::new(driver);
     driver.set_generic_reporter(ConsoleDiagReporter::default());

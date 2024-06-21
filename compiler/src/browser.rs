@@ -8,7 +8,8 @@ use crate::{package::browser::ProxyRegistry, vfs::browser::ProxyAccessModel};
 
 /// A world that provides access to the browser.
 /// It is under development.
-pub type TypstBrowserWorld = crate::world::CompilerUniverse<BrowserCompilerFeat>;
+pub type TypstBrowserUniverse = crate::world::CompilerUniverse<BrowserCompilerFeat>;
+pub type TypstBrowserWorld = crate::world::CompilerWorld<BrowserCompilerFeat>;
 
 #[derive(Debug, Clone, Copy)]
 pub struct BrowserCompilerFeat;
@@ -30,7 +31,7 @@ impl crate::world::CompilerFeat for BrowserCompilerFeat {
 unsafe impl Send for ProxyRegistry {}
 unsafe impl Sync for ProxyRegistry {}
 
-impl TypstBrowserWorld {
+impl TypstBrowserUniverse {
     pub fn new(
         root_dir: PathBuf,
         inputs: Option<Arc<Prehashed<TypstDict>>>,

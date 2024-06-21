@@ -5,8 +5,11 @@ use comemo::Prehashed;
 use js_sys::{Array, JsString, Uint32Array, Uint8Array};
 pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
-    font::web::BrowserFontSearcher, package::browser::ProxyRegistry, parser::OffsetEncoding,
-    service::CompileDriverImpl, vfs::browser::ProxyAccessModel,
+    font::web::BrowserFontSearcher,
+    package::browser::ProxyRegistry,
+    parser::OffsetEncoding,
+    service::{CompileDriverImpl, PureCompiler},
+    vfs::browser::ProxyAccessModel,
 };
 use typst_ts_core::{
     cache::FontInfoCache,
@@ -109,7 +112,7 @@ fn convert_diag(
 
 #[wasm_bindgen]
 pub struct TypstCompiler {
-    pub(crate) driver: CompileDriverImpl<(), BrowserCompilerFeat>,
+    pub(crate) driver: CompileDriverImpl<PureCompiler<TypstBrowserWorld>, BrowserCompilerFeat>,
 }
 
 impl TypstCompiler {
@@ -120,8 +123,8 @@ impl TypstCompiler {
     ) -> Result<Self, JsValue> {
         Ok(Self {
             driver: CompileDriverImpl::new(
-                (),
-                TypstBrowserWorld::new(
+                std::marker::PhantomData,
+                TypstBrowserUniverse::new(
                     std::path::Path::new("/").to_owned(),
                     None,
                     access_model,

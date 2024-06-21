@@ -8,7 +8,7 @@ pub use compiler::*;
 use error::NodeTypstCompileResult;
 pub use error::{map_node_error, NodeError};
 
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, ops::Deref, path::PathBuf, sync::Arc};
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
@@ -168,8 +168,8 @@ impl NodeCompiler {
     }
 
     /// Gets the inner world.
-    fn world(&self) -> &TypstSystemWorld {
-        self.driver.assert_ref().world()
+    fn spawn_world(&self) -> TypstSystemWorld {
+        self.driver.assert_ref().deref().spawn()
     }
 
     /// Compiles the document internally.
@@ -192,7 +192,7 @@ impl NodeCompiler {
         }
 
         let e = T::default();
-        e.export(self.world(), res.result().unwrap().0.clone())
+        e.export(&self.spawn_world(), res.result().unwrap().0.clone())
             .map_err(map_node_error)
     }
 
@@ -211,7 +211,7 @@ impl NodeCompiler {
         &mut self,
         opts: &NodeError,
     ) -> Result<Vec<serde_json::Value>, NodeError> {
-        opts.get_json_diagnostics(Some(self.world()))
+        opts.get_json_diagnostics(Some(&self.spawn_world()))
     }
 
     /// Queries the data of the document.
@@ -222,7 +222,10 @@ impl NodeCompiler {
         selector: String,
     ) -> Result<serde_json::Value, NodeError> {
         let compiler = self.driver.assert_mut();
-        let res = compiler.query(selector, &doc.0).map_err(map_node_error)?;
+        let world = compiler.spawn();
+        let res = compiler
+            .query(&world, selector, &doc.0)
+            .map_err(map_node_error)?;
 
         serde_json::to_value(res)
             .context("failed to serialize query result to JSON")
@@ -292,12 +295,15 @@ impl DynLayoutCompiler {
     /// Exports the document as a vector IR containing multiple layouts.
     #[napi]
     pub fn vector(&mut self, compile_by: CompileDocumentOptions) -> Result<Buffer, NodeError> {
-        let e = self.driver.inner_mut().setup_compiler_by(compile_by)?;
-        let doc = self.driver.do_export().map_err(map_node_error);
+        let compiler = self.driver.inner_mut();
+        let world = compiler.spawn();
+        let e = compiler.setup_compiler_by(compile_by)?;
+        let doc = self.driver.do_export(&world).map_err(map_node_error);
 
         if let Some(e) = e {
             self.driver
-                .world_mut()
+                .inner_mut()
+                .universe_mut()
                 .mutate_entry(e)
                 .map_err(map_node_error)?;
         }

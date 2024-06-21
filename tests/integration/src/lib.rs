@@ -3,8 +3,8 @@ pub mod wasm;
 use std::path::Path;
 
 use typst_ts_compiler::{
-    service::{CompileDriver, CompileExporter},
-    TypstSystemUniverse,
+    service::{CompileDriver, CompileExporter, PureCompiler},
+    TypstSystemUniverse, TypstSystemWorld,
 };
 use typst_ts_core::{
     config::{compiler::EntryOpts, CompileOpts},
@@ -19,7 +19,7 @@ fn get_driver(
     workspace_dir: &Path,
     entry_file_path: &Path,
     exporter: GroupExporter<TypstDocument>,
-) -> CompileDriver<CompileExporter<()>> {
+) -> CompileDriver<CompileExporter<PureCompiler<TypstSystemWorld>>> {
     let world = TypstSystemUniverse::new(CompileOpts {
         entry: EntryOpts::new_workspace(workspace_dir.into()),
         no_system_fonts: true,
@@ -28,7 +28,7 @@ fn get_driver(
     .unwrap();
 
     let world = world.with_entry_file(entry_file_path.to_owned());
-    CompileDriver::new(CompileExporter::new(()).with_exporter(exporter), world)
+    CompileDriver::new(CompileExporter::default().with_exporter(exporter), world)
 }
 
 macro_rules! document_exporters {
@@ -51,7 +51,7 @@ fn doc_pdf_to_path<P: AsRef<Path>>(path: P) -> FsPathExporter<Vec<u8>, PdfDocExp
 }
 
 pub struct ArtifactBundle {
-    pub driver: CompileDriver<CompileExporter<()>>,
+    pub driver: CompileDriver<CompileExporter<PureCompiler<TypstSystemWorld>>>,
     pub tir: std::path::PathBuf,
     pub pdf: std::path::PathBuf,
 }

@@ -26,7 +26,13 @@ pub struct GlobalSourceCache {
     pub buffer: FileQuery<Bytes>,
 }
 
-struct LocalSourceCache {
+impl fmt::Debug for GlobalSourceCache {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("GlobalSourceCache").finish()
+    }
+}
+
+pub struct LocalSourceCache {
     last_access_lifetime: usize,
     fid: FileId,
     source: IncrFileQuery<Source>,
@@ -44,25 +50,15 @@ impl Default for LocalSourceCache {
     }
 }
 
+#[derive(Default)]
 pub struct SourceDb {
-    lifetime_cnt: usize,
+    pub revision: usize,
     pub shared: Arc<RwLock<SharedState<GlobalSourceCache>>>,
     /// The slots for all the files during a single lifecycle.
-    slots: Mutex<FxHashMap<TypstFileId, LocalSourceCache>>,
+    pub slots: Mutex<FxHashMap<TypstFileId, LocalSourceCache>>,
     /// Whether to reparse the file when it is changed.
     /// Default to `true`.
     pub do_reparse: bool,
-}
-
-impl Default for SourceDb {
-    fn default() -> Self {
-        SourceDb {
-            lifetime_cnt: 1,
-            shared: Arc::new(RwLock::new(SharedState::default())),
-            slots: Mutex::new(FxHashMap::default()),
-            do_reparse: true,
-        }
-    }
 }
 
 impl fmt::Debug for SourceDb {
@@ -160,18 +156,18 @@ impl SourceDb {
     fn slot<T>(&self, id: TypstFileId, fid: FileId, f: impl FnOnce(&LocalSourceCache) -> T) -> T {
         let mut slot = self.slots.lock();
         let slot = slot.entry(id).or_insert_with(|| LocalSourceCache {
-            last_access_lifetime: self.lifetime_cnt,
+            last_access_lifetime: self.revision,
             fid,
             source: IncrFileQuery::with_context(None),
             buffer: FileQuery::default(),
         });
 
-        if slot.last_access_lifetime != self.lifetime_cnt {
+        if slot.last_access_lifetime != self.revision {
             let prev_source = slot.source.get_uninitialized().cloned();
             let source = prev_source.transpose().ok().flatten();
 
             *slot = LocalSourceCache {
-                last_access_lifetime: self.lifetime_cnt,
+                last_access_lifetime: self.revision,
                 fid,
                 source: IncrFileQuery::with_context(source),
                 ..Default::default()
@@ -207,6 +203,14 @@ pub struct SharedState<T> {
     pub committed_revision: usize,
     // The cache entries for each paths
     cache_entries: RwLock<FxDashMap<FileId, T>>,
+}
+
+impl fmt::Debug for SharedState<GlobalSourceCache> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SharedState")
+            .field("committed_revision", &self.committed_revision)
+            .finish()
+    }
 }
 
 impl<T> Default for SharedState<T> {

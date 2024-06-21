@@ -1,55 +1,59 @@
-use std::{
-    collections::HashSet,
-    num::NonZeroUsize,
-    ops::Deref,
-    path::{Path, PathBuf},
-    sync::Arc,
-    thread::JoinHandle,
-};
+//! The [`CompileActor`] implementation borrowed from typst.ts.
+//!
+//! Please check `tinymist::actor::typ_client` for architecture details.
 
-use serde::Serialize;
+use std::{collections::HashSet, path::Path, sync::Arc, thread::JoinHandle};
+
 use tokio::sync::{mpsc, oneshot};
-use typst::{
-    layout::{Frame, FrameItem, Point, Position},
-    syntax::{LinkedNode, Source, Span, SyntaxKind, VirtualPath},
-    World,
-};
 
 use crate::{
-    service::features::WITH_COMPILING_STATUS_FEATURE,
+    service::{
+        features::{FeatureSet, WITH_COMPILING_STATUS_FEATURE},
+        watch_deps, CompileEnv, CompileReporter, Compiler, ConsoleDiagReporter,
+    },
     vfs::notify::{FilesystemEvent, MemoryEvent, NotifyMessage},
-    world::{CompilerFeat, CompilerWorld},
+    world::{CompilerFeat, CompilerUniverse, CompilerWorld},
     ShadowApi,
 };
 use typst_ts_core::{
-    debug_loc::{SourceLocation, SourceSpanOffset},
-    error::prelude::*,
-    TypstDocument, TypstFileId,
+    config::compiler::EntryState,
+    error::prelude::{map_string_err, ZResult},
+    TypstDocument,
 };
 
-use super::{
-    features::FeatureSet, CompileEnv, CompileReporter, Compiler, ConsoleDiagReporter, EntryManager,
-    WorldExporter,
-};
+use super::WorldExporter;
 
 /// A task that can be sent to the context (compiler thread)
 ///
 /// The internal function will be dereferenced and called on the context.
 type BorrowTask<Ctx> = Box<dyn FnOnce(&mut Ctx) + Send + 'static>;
 
-/// Interrupts for the compiler thread.
-enum CompilerInterrupt<Ctx> {
-    /// Interrupted by task.
+pub trait EntryStateExt {
+    fn is_inactive(&self) -> bool;
+}
+
+impl EntryStateExt for EntryState {
+    fn is_inactive(&self) -> bool {
+        matches!(
+            self,
+            EntryState::Detached | EntryState::Workspace { main: None, .. }
+        )
+    }
+}
+
+pub enum Interrupt<Ctx> {
+    /// Compile anyway.
+    Compile,
+    /// Borrow the compiler thread and run the task.
     ///
     /// See [`CompileClient<Ctx>::steal`] for more information.
     Task(BorrowTask<Ctx>),
-    /// Interrupted by memory file changes.
+    /// Memory file changes.
     Memory(MemoryEvent),
-    /// Interrupted by file system event.
-    ///
-    /// If the event is `None`, it means the initial file system scan is done.
-    /// Otherwise, it means a file system event is received.
-    Fs(Option<FilesystemEvent>),
+    /// File system event.
+    Fs(FilesystemEvent),
+    /// Request compiler to stop.
+    Settle(oneshot::Sender<()>),
 }
 
 /// Responses from the compiler thread.
@@ -66,12 +70,26 @@ struct TaggedMemoryEvent {
     event: MemoryEvent,
 }
 
+struct SuspendState {
+    suspended: bool,
+    dirty: bool,
+}
+
+/// A compiled document with an self-incremented logical version.
+#[derive(Debug, Clone)]
+pub struct VersionedDocument {
+    /// The version of the document.
+    pub version: usize,
+    /// The compiled document.
+    pub document: Arc<TypstDocument>,
+}
+
 /// The compiler thread.
-pub struct CompileActor<C: Compiler, W: World> {
+pub struct CompileActor<C: Compiler, F: CompilerFeat> {
     /// The underlying world.
-    pub world: W,
+    pub world: CompilerUniverse<F>,
     /// The underlying compiler.
-    pub compiler: CompileReporter<C, W>,
+    pub compiler: CompileReporter<C, CompilerWorld<F>>,
     /// Whether to enable file system watching.
     pub enable_watch: bool,
 
@@ -84,38 +102,32 @@ pub struct CompileActor<C: Compiler, W: World> {
     estimated_shadow_files: HashSet<Arc<Path>>,
     /// The latest compiled document.
     latest_doc: Option<Arc<TypstDocument>>,
+    /// The latest successly compiled document.
+    latest_success_doc: Option<Arc<TypstDocument>>,
     /// feature set for compile_once mode.
     once_feature_set: Arc<FeatureSet>,
     /// Shared feature set for watch mode.
     watch_feature_set: Arc<FeatureSet>,
 
     /// Internal channel for stealing the compiler thread.
-    steal_send: mpsc::UnboundedSender<BorrowTask<Self>>,
-    steal_recv: mpsc::UnboundedReceiver<BorrowTask<Self>>,
+    steal_tx: mpsc::UnboundedSender<Interrupt<Self>>,
+    steal_rx: mpsc::UnboundedReceiver<Interrupt<Self>>,
 
-    /// Internal channel for memory events.
-    memory_send: mpsc::UnboundedSender<MemoryEvent>,
-    memory_recv: mpsc::UnboundedReceiver<MemoryEvent>,
+    suspend_state: SuspendState,
 }
 
 impl<
-        C: Compiler + WorldExporter + Send + 'static,
-        W: World
-            + ShadowApi
-            + for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>
-            + Send
-            + 'static,
-    > CompileActor<C, W>
+        F: CompilerFeat + Send + 'static,
+        C: Compiler<W = CompilerWorld<F>> + WorldExporter<CompilerWorld<F>> + Send + 'static,
+    > CompileActor<C, F>
 {
-    pub fn new_with_features(compiler: C, world: W, feature_set: FeatureSet) -> Self {
-        let (steal_send, steal_recv) = mpsc::unbounded_channel();
-        let (memory_send, memory_recv) = mpsc::unbounded_channel();
-
-        let watch_feature_set = Arc::new(
-            feature_set
-                .clone()
-                .configure(&WITH_COMPILING_STATUS_FEATURE, true),
-        );
+    pub fn new_with_features(
+        compiler: C,
+        world: CompilerUniverse<F>,
+        entry: EntryState,
+        feature_set: FeatureSet,
+    ) -> Self {
+        let (steal_tx, steal_rx) = mpsc::unbounded_channel();
 
         Self {
             compiler: CompileReporter::new(compiler)
@@ -128,20 +140,41 @@ impl<
 
             estimated_shadow_files: Default::default(),
             latest_doc: None,
-            once_feature_set: Arc::new(feature_set),
-            watch_feature_set,
+            latest_success_doc: None,
+            once_feature_set: Arc::new(feature_set.clone()),
+            watch_feature_set: Arc::new(
+                feature_set.configure(&WITH_COMPILING_STATUS_FEATURE, true),
+            ),
 
-            steal_send,
-            steal_recv,
+            steal_tx,
+            steal_rx,
 
-            memory_send,
-            memory_recv,
+            suspend_state: SuspendState {
+                suspended: entry.is_inactive(),
+                dirty: false,
+            },
         }
     }
 
     /// Create a new compiler thread.
-    pub fn new(compiler: C, world: W) -> Self {
-        Self::new_with_features(compiler, world, FeatureSet::default())
+    pub fn new(compiler: C, world: CompilerUniverse<F>, entry: EntryState) -> Self {
+        Self::new_with_features(compiler, world, entry, FeatureSet::default())
+    }
+
+    pub fn success_doc(&self) -> Option<VersionedDocument> {
+        self.latest_success_doc
+            .clone()
+            .map(|doc| VersionedDocument {
+                version: self.logical_tick,
+                document: doc,
+            })
+    }
+
+    pub fn doc(&self) -> Option<VersionedDocument> {
+        self.latest_doc.clone().map(|doc| VersionedDocument {
+            version: self.logical_tick,
+            document: doc,
+        })
     }
 
     fn make_env(&self, feature_set: Arc<FeatureSet>) -> CompileEnv {
@@ -165,7 +198,8 @@ impl<
     async fn block_run_inner(mut self) -> bool {
         if !self.enable_watch {
             let mut env = self.make_env(self.once_feature_set.clone());
-            let compiled = self.compiler.compile(&self.world, &mut env);
+            let w = self.world.spawn();
+            let compiled = self.compiler.compile(&w, &mut env);
             return compiled.is_ok();
         }
 
@@ -182,13 +216,13 @@ impl<
     pub async fn spawn(mut self) -> Option<JoinHandle<()>> {
         if !self.enable_watch {
             let mut env = self.make_env(self.once_feature_set.clone());
-            self.compiler.compile(&self.world, &mut env).ok();
+            let w = self.world.spawn();
+            self.compiler.compile(&w, &mut env).ok();
             return None;
         }
 
-        // Setup internal channels.
+        // Setup internal channel.
         let (dep_tx, dep_rx) = tokio::sync::mpsc::unbounded_channel();
-        let (fs_tx, mut fs_rx) = tokio::sync::mpsc::unbounded_channel();
 
         let settle_notify_tx = dep_tx.clone();
         let settle_notify = move || {
@@ -206,74 +240,94 @@ impl<
         };
 
         // Spawn file system watcher.
-        log_send_error("fs_event", fs_tx.send(None));
-        tokio::spawn(super::watch_deps(dep_rx, move |event| {
-            log_send_error("fs_event", fs_tx.send(Some(event)));
+        // todo: don't compile if no entry
+        let fs_tx = self.steal_tx.clone();
+        tokio::spawn(watch_deps(dep_rx, move |event| {
+            log_send_error("fs_event", fs_tx.send(Interrupt::Fs(event)));
         }));
 
         // Spawn compiler thread.
-        let compile_thread = ensure_single_thread("typst-compiler", async move {
+        let thread_builder = std::thread::Builder::new().name("typst-compiler".to_owned());
+        let compile_thread = thread_builder.spawn(move || {
             log::debug!("CompileActor: initialized");
 
             // Wait for first events.
-            while let Some(event) = tokio::select! {
-                Some(it) = fs_rx.recv() => Some(CompilerInterrupt::Fs(it)),
-                Some(it) = self.memory_recv.recv() => Some(CompilerInterrupt::Memory(it)),
-                Some(it) = self.steal_recv.recv() => Some(CompilerInterrupt::Task(it)),
-            } {
-                // Small step to warp the logical clock.
-                self.logical_tick += 1;
+            'event_loop: while let Some(mut event) = self.steal_rx.blocking_recv() {
+                let mut need_compile = false;
 
-                // Accumulate events.
-                let mut need_recompile = false;
-                need_recompile = self.process(event, &compiler_ack) || need_recompile;
-                while let Some(event) = fs_rx
-                    .try_recv()
-                    .ok()
-                    .map(CompilerInterrupt::Fs)
-                    .or_else(|| {
-                        self.memory_recv
-                            .try_recv()
-                            .ok()
-                            .map(CompilerInterrupt::Memory)
-                    })
-                    .or_else(|| self.steal_recv.try_recv().ok().map(CompilerInterrupt::Task))
-                {
-                    need_recompile = self.process(event, &compiler_ack) || need_recompile;
+                'accumulate: loop {
+                    // Warp the logical clock by one.
+                    self.logical_tick += 1;
+
+                    // If settle, stop the actor.
+                    if let Interrupt::Settle(e) = event {
+                        log::info!("CompileActor: requested stop");
+                        e.send(()).ok();
+                        break 'event_loop;
+                    }
+
+                    // Ensure complied before executing tasks.
+                    if matches!(event, Interrupt::Task(_)) && need_compile {
+                        self.compile(&compiler_ack);
+                        need_compile = false;
+                    }
+
+                    need_compile |= self.process(event, &compiler_ack);
+
+                    // Try to accumulate more events.
+                    match self.steal_rx.try_recv() {
+                        Ok(new_event) => event = new_event,
+                        _ => break 'accumulate,
+                    }
                 }
 
-                // Compile if needed.
-                if need_recompile {
+                if need_compile {
                     self.compile(&compiler_ack);
                 }
             }
 
             settle_notify();
-            log::debug!("CompileActor: exited");
-        })
-        .unwrap();
+            log::info!("CompileActor: exited");
+        });
 
         // Return the thread handle.
-        Some(compile_thread)
+        Some(compile_thread.unwrap())
+    }
+
+    pub fn change_entry(&mut self, entry: EntryState) {
+        self.suspend_state.suspended = entry.is_inactive();
+        if !self.suspend_state.suspended && self.suspend_state.dirty {
+            self.steal_tx.send(Interrupt::Compile).ok();
+        }
+
+        // Reset the document state.
+        self.latest_doc = None;
+        self.latest_success_doc = None;
     }
 
     /// Compile the document.
     fn compile(&mut self, send: impl Fn(CompilerResponse)) {
         use CompilerResponse::*;
 
-        // todo: apply env changes
+        if self.suspend_state.suspended {
+            self.suspend_state.dirty = true;
+            return;
+        }
+
+        let w = self.world.spawn();
 
         // Compile the document.
-        self.latest_doc = self
-            .compiler
-            .compile(
-                &self.world,
-                &mut CompileEnv::default().configure_shared(self.watch_feature_set.clone()),
-            )
-            .ok();
+        let mut env = self.make_env(self.watch_feature_set.clone());
+        self.latest_doc = self.compiler.compile(&w, &mut env).ok();
+        if self.latest_doc.is_some() {
+            self.latest_success_doc.clone_from(&self.latest_doc);
+        }
 
         // Evict compilation cache.
+        let evict_start = std::time::Instant::now();
         comemo::evict(30);
+        let elapsed = evict_start.elapsed();
+        log::info!("CompileActor: evict compilation cache in {elapsed:?}",);
 
         // Notify the new file dependencies.
         let mut deps = vec![];
@@ -282,52 +336,39 @@ impl<
         send(Notify(NotifyMessage::SyncDependency(deps)));
     }
 
-    /// Process some interrupt.
-    fn process(&mut self, event: CompilerInterrupt<Self>, send: impl Fn(CompilerResponse)) -> bool {
+    /// Process some interrupt. Return whether it needs compilation.
+    fn process(&mut self, event: Interrupt<Self>, send: impl Fn(CompilerResponse)) -> bool {
         use CompilerResponse::*;
-        // warp the logical clock by one.
-        self.logical_tick += 1;
 
         match event {
-            // Borrow the compiler thread and run the task.
-            //
-            // See [`CompileClient::steal`] for more information.
-            CompilerInterrupt::Task(task) => {
+            Interrupt::Compile => true,
+            Interrupt::Task(task) => {
                 log::debug!("CompileActor: execute task");
-
                 task(self);
-
-                // Will never trigger compilation
                 false
             }
-            // Handle memory events.
-            CompilerInterrupt::Memory(event) => {
+            Interrupt::Memory(event) => {
                 log::debug!("CompileActor: memory event incoming");
 
                 // Emulate memory changes.
                 let mut files = HashSet::new();
                 if matches!(event, MemoryEvent::Sync(..)) {
-                    files.clone_from(&self.estimated_shadow_files);
-                    self.estimated_shadow_files.clear();
+                    std::mem::swap(&mut files, &mut self.estimated_shadow_files);
                 }
-                match &event {
-                    MemoryEvent::Sync(event) | MemoryEvent::Update(event) => {
-                        for path in event.removes.iter().map(Deref::deref) {
-                            self.estimated_shadow_files.remove(path);
-                            files.insert(path.into());
-                        }
-                        for path in event.inserts.iter().map(|e| e.0.deref()) {
-                            self.estimated_shadow_files.insert(path.into());
-                            files.remove(path);
-                        }
-                    }
+
+                let (MemoryEvent::Sync(e) | MemoryEvent::Update(e)) = &event;
+                for path in &e.removes {
+                    self.estimated_shadow_files.remove(path);
+                    files.insert(Arc::clone(path));
+                }
+                for (path, _) in &e.inserts {
+                    self.estimated_shadow_files.insert(Arc::clone(path));
+                    files.remove(path);
                 }
 
                 // If there is no invalidation happening, apply memory changes directly.
                 if files.is_empty() && self.dirty_shadow_logical_tick == 0 {
                     self.apply_memory_changes(event);
-
-                    // Will trigger compilation
                     return true;
                 }
 
@@ -344,27 +385,22 @@ impl<
                     },
                 )));
 
-                // Delayed trigger compilation
                 false
             }
-            // Handle file system events.
-            CompilerInterrupt::Fs(event) => {
-                log::debug!("CompileActor: fs event incoming {:?}", event);
+            Interrupt::Fs(mut event) => {
+                log::debug!("CompileActor: fs event incoming {event:?}");
 
-                // Handle file system event if any.
-                if let Some(mut event) = event {
-                    // Handle delayed upstream update event before applying file system changes
-                    if self.apply_delayed_memory_changes(&mut event).is_none() {
-                        log::warn!("CompileActor: unknown upstream update event");
-                    }
-
-                    // Apply file system changes.
-                    self.compiler.notify_fs_event(event);
+                // Handle delayed upstream update event before applying file system changes
+                if self.apply_delayed_memory_changes(&mut event).is_none() {
+                    log::warn!("CompileActor: unknown upstream update event");
                 }
 
-                // Will trigger compilation
+                // Apply file system changes.
+                self.compiler.notify_fs_event(event);
+
                 true
             }
+            Interrupt::Settle(_) => unreachable!(),
         }
     }
 
@@ -419,40 +455,35 @@ impl<
     }
 }
 
-impl<C: Compiler, W: World> CompileActor<C, W> {
+impl<C: Compiler, F: CompilerFeat> CompileActor<C, F> {
     pub fn with_watch(mut self, enable_watch: bool) -> Self {
         self.enable_watch = enable_watch;
         self
     }
 
-    pub fn split(self) -> (Self, CompileClient<Self>) {
-        let steal_send = self.steal_send.clone();
-        let memory_send = self.memory_send.clone();
-        (
-            self,
-            CompileClient {
-                steal_send,
-                memory_send,
-                _ctx: std::marker::PhantomData,
-            },
-        )
+    pub fn client(&self) -> CompileClient<Self> {
+        let intr_tx = self.steal_tx.clone();
+        CompileClient { intr_tx }
     }
 
     pub fn document(&self) -> Option<Arc<TypstDocument>> {
         self.latest_doc.clone()
     }
 }
+
 #[derive(Debug, Clone)]
 pub struct CompileClient<Ctx> {
-    steal_send: mpsc::UnboundedSender<BorrowTask<Ctx>>,
-    memory_send: mpsc::UnboundedSender<MemoryEvent>,
-
-    _ctx: std::marker::PhantomData<Ctx>,
+    intr_tx: mpsc::UnboundedSender<Interrupt<Ctx>>,
 }
 
 impl<Ctx> CompileClient<Ctx> {
+    pub fn faked() -> Self {
+        let (intr_tx, _) = mpsc::unbounded_channel();
+        Self { intr_tx }
+    }
+
     fn steal_inner<Ret: Send + 'static>(
-        &mut self,
+        &self,
         f: impl FnOnce(&mut Ctx) -> Ret + Send + 'static,
     ) -> ZResult<oneshot::Receiver<Ret>> {
         let (tx, rx) = oneshot::channel();
@@ -465,223 +496,25 @@ impl<Ctx> CompileClient<Ctx> {
             }
         });
 
-        self.steal_send
-            .send(task)
-            .map_err(map_string_err("failed to send to steal"))?;
+        self.intr_tx
+            .send(Interrupt::Task(task))
+            .map_err(map_string_err("failed to send steal request"))?;
         Ok(rx)
-    }
-
-    pub fn steal<Ret: Send + 'static>(
-        &mut self,
-        f: impl FnOnce(&mut Ctx) -> Ret + Send + 'static,
-    ) -> ZResult<Ret> {
-        self.steal_inner(f)?
-            .blocking_recv()
-            .map_err(map_string_err("failed to recv from steal"))
     }
 
     /// Steal the compiler thread and run the given function.
     pub async fn steal_async<Ret: Send + 'static>(
-        &mut self,
-        f: impl FnOnce(&mut Ctx, tokio::runtime::Handle) -> Ret + Send + 'static,
+        &self,
+        f: impl FnOnce(&mut Ctx) -> Ret + Send + 'static,
     ) -> ZResult<Ret> {
-        // get current async handle
-        let handle = tokio::runtime::Handle::current();
-        self.steal_inner(move |this: &mut Ctx| f(this, handle.clone()))?
+        self.steal_inner(f)?
             .await
             .map_err(map_string_err("failed to call steal_async"))
     }
 
     pub fn add_memory_changes(&self, event: MemoryEvent) {
-        log_send_error("mem_event", self.memory_send.send(event));
+        log_send_error("mem_event", self.intr_tx.send(Interrupt::Memory(event)));
     }
-}
-
-#[derive(Debug, Serialize)]
-pub struct DocToSrcJumpInfo {
-    pub filepath: String,
-    pub start: Option<(usize, usize)>, // row, column
-    pub end: Option<(usize, usize)>,
-}
-
-// todo: remove constraint to CompilerWorld
-impl<F: CompilerFeat, Ctx: Compiler> CompileClient<CompileActor<Ctx, CompilerWorld<F>>>
-// CompilerWorld<F>
-// where
-//     Ctx::World: EntryManager,
-{
-    /// fixme: character is 0-based, UTF-16 code unit.
-    /// We treat it as UTF-8 now.
-    pub async fn resolve_src_to_doc_jump(
-        &mut self,
-        filepath: PathBuf,
-        line: usize,
-        character: usize,
-    ) -> ZResult<Option<Position>> {
-        self.steal_async(move |this, _| {
-            let doc = this.document()?;
-
-            let world = &this.world;
-
-            let root = world.workspace_root()?;
-            let relative_path = filepath.strip_prefix(&root).ok()?;
-
-            let source_id = TypstFileId::new(None, VirtualPath::new(relative_path));
-            let source = world.source(source_id).ok()?;
-            let cursor = source.line_column_to_byte(line, character)?;
-
-            jump_from_cursor(&doc, &source, cursor)
-        })
-        .await
-    }
-
-    /// fixme: character is 0-based, UTF-16 code unit.
-    /// We treat it as UTF-8 now.
-    pub async fn resolve_src_location(
-        &mut self,
-        loc: SourceLocation,
-    ) -> ZResult<Option<SourceSpanOffset>> {
-        self.steal_async(move |this, _| {
-            let world = &this.world;
-
-            let filepath = Path::new(&loc.filepath);
-
-            let root = world.workspace_root()?;
-            let relative_path = filepath.strip_prefix(&root).ok()?;
-
-            let source_id = TypstFileId::new(None, VirtualPath::new(relative_path));
-            let source = world.source(source_id).ok()?;
-            let cursor = source.line_column_to_byte(loc.pos.line, loc.pos.column)?;
-
-            let node = LinkedNode::new(source.root()).leaf_at(cursor)?;
-            if node.kind() != SyntaxKind::Text {
-                return None;
-            }
-            let span = node.span();
-            // todo: unicode char
-            let offset = cursor.saturating_sub(node.offset());
-
-            Some(SourceSpanOffset { span, offset })
-        })
-        .await
-    }
-
-    pub async fn resolve_span(&mut self, span: Span) -> ZResult<Option<DocToSrcJumpInfo>> {
-        self.resolve_span_and_offset(span, None).await
-    }
-
-    pub async fn resolve_span_and_offset(
-        &mut self,
-        span: Span,
-        offset: Option<usize>,
-    ) -> ZResult<Option<DocToSrcJumpInfo>> {
-        let resolve_off =
-            |src: &Source, off: usize| src.byte_to_line(off).zip(src.byte_to_column(off));
-
-        self.steal_async(move |this, _| {
-            let world = &this.world;
-            let src_id = span.id()?;
-            let source = world.source(src_id).ok()?;
-            let mut range = source.find(span)?.range();
-            if let Some(off) = offset {
-                if off < range.len() {
-                    range.start += off;
-                }
-            }
-            let filepath = world.path_for_id(src_id).ok()?;
-            Some(DocToSrcJumpInfo {
-                filepath: filepath.to_string_lossy().to_string(),
-                start: resolve_off(&source, range.start),
-                end: resolve_off(&source, range.end),
-            })
-        })
-        .await
-    }
-}
-
-/// Spawn a thread and run the given future on it.
-///
-/// Note: the future is run on a single-threaded tokio runtime.
-fn ensure_single_thread<F: std::future::Future<Output = ()> + Send + 'static>(
-    name: &str,
-    f: F,
-) -> std::io::Result<std::thread::JoinHandle<()>> {
-    std::thread::Builder::new().name(name.to_owned()).spawn(|| {
-        tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap()
-            .block_on(f);
-    })
-}
-
-/// Find the output location in the document for a cursor position.
-pub fn jump_from_cursor(
-    document: &TypstDocument,
-    source: &Source,
-    cursor: usize,
-) -> Option<Position> {
-    let node = LinkedNode::new(source.root()).leaf_at(cursor)?;
-    if node.kind() != SyntaxKind::Text {
-        return None;
-    }
-
-    let mut min_dis = u64::MAX;
-    let mut p = Point::default();
-    let mut ppage = 0usize;
-
-    let span = node.span();
-    for (i, page) in document.pages.iter().enumerate() {
-        let t_dis = min_dis;
-        if let Some(pos) = find_in_frame(&page.frame, span, &mut min_dis, &mut p) {
-            return Some(Position {
-                page: NonZeroUsize::new(i + 1)?,
-                point: pos,
-            });
-        }
-        if t_dis != min_dis {
-            ppage = i;
-        }
-    }
-
-    if min_dis == u64::MAX {
-        return None;
-    }
-
-    Some(Position {
-        page: NonZeroUsize::new(ppage + 1)?,
-        point: p,
-    })
-}
-
-/// Find the position of a span in a frame.
-fn find_in_frame(frame: &Frame, span: Span, min_dis: &mut u64, p: &mut Point) -> Option<Point> {
-    for (mut pos, item) in frame.items() {
-        if let FrameItem::Group(group) = item {
-            // TODO: Handle transformation.
-            if let Some(point) = find_in_frame(&group.frame, span, min_dis, p) {
-                return Some(point + pos);
-            }
-        }
-
-        if let FrameItem::Text(text) = item {
-            for glyph in &text.glyphs {
-                if glyph.span.0 == span {
-                    return Some(pos);
-                }
-                if glyph.span.0.id() == span.id() {
-                    let dis = glyph.span.0.number().abs_diff(span.number());
-                    if dis < *min_dis {
-                        *min_dis = dis;
-                        *p = pos;
-                    }
-                }
-                pos.x += glyph.x_advance.at(text.size);
-            }
-        }
-    }
-
-    None
 }
 
 #[inline]

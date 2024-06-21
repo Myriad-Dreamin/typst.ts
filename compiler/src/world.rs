@@ -16,7 +16,7 @@ use typst::{
     Library, World,
 };
 
-use reflexo_world::SourceDb;
+use reflexo_world::{GlobalSourceCache, SharedState, SourceDb};
 use typst_ts_core::{
     config::compiler::{EntryState, DETACHED_ENTRY},
     package::PackageSpec,
@@ -58,6 +58,11 @@ pub struct CompilerUniverse<F: CompilerFeat> {
     /// Whether to reparse the source files.
     pub do_reparse: bool,
 
+    /// The current revision of the source database.
+    revision: std::sync::atomic::AtomicUsize,
+    /// Shared state for source cache.
+    shared: Arc<RwLock<SharedState<GlobalSourceCache>>>,
+
     /// Provides font management for typst compiler.
     pub font_resolver: Arc<F::FontResolver>,
     /// Provides package management for typst compiler.
@@ -84,6 +89,9 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
             entry,
             inputs: inputs.unwrap_or_default(),
             do_reparse: true,
+
+            revision: std::sync::atomic::AtomicUsize::new(1),
+            shared: Arc::new(RwLock::new(SharedState::default())),
 
             // library: create_library(inputs.unwrap_or_default()),
             font_resolver: Arc::new(font_resolver),
@@ -124,9 +132,19 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
             font_resolver: self.font_resolver.clone(),
             registry: self.registry.clone(),
             vfs: self.vfs.clone(),
-            source_db: SourceDb::default(),
+            source_db: SourceDb {
+                revision: self.increment_revision(),
+                do_reparse: self.do_reparse,
+                shared: self.shared.clone(),
+                slots: Default::default(),
+            },
             now: OnceCell::new(),
         }
+    }
+
+    fn increment_revision(&self) -> usize {
+        self.revision
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     }
 }
 
@@ -390,6 +408,35 @@ impl<F: CompilerFeat> ShadowApi for CompilerUniverse<F> {
     }
 }
 
+impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
+    #[inline]
+    fn _shadow_map_id(&self, file_id: FileId) -> FileResult<PathBuf> {
+        self.path_for_id(file_id)
+    }
+
+    #[inline]
+    fn shadow_paths(&self) -> Vec<Arc<Path>> {
+        self.vfs.read().shadow_paths()
+    }
+
+    #[inline]
+    fn reset_shadow(&mut self) {
+        self.vfs.write().reset_shadow()
+    }
+
+    #[inline]
+    fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()> {
+        self.vfs.read().map_shadow(path, content)
+    }
+
+    #[inline]
+    fn unmap_shadow(&self, path: &Path) -> FileResult<()> {
+        self.vfs.read().remove_shadow(path);
+
+        Ok(())
+    }
+}
+
 impl<F: CompilerFeat> NotifyApi for CompilerUniverse<F> {
     #[inline]
     fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath)) {
@@ -404,6 +451,31 @@ impl<F: CompilerFeat> NotifyApi for CompilerUniverse<F> {
 }
 
 impl<F: CompilerFeat> EntryManager for CompilerUniverse<F> {
+    fn reset(&mut self) -> SourceResult<()> {
+        self.reset();
+        Ok(())
+    }
+
+    fn workspace_root(&self) -> Option<Arc<Path>> {
+        self.entry.root().clone()
+    }
+
+    fn main_id(&self) -> Option<FileId> {
+        self.entry.main()
+    }
+
+    fn entry_state(&self) -> EntryState {
+        self.entry.clone()
+    }
+
+    fn mutate_entry(&mut self, mut state: EntryState) -> SourceResult<EntryState> {
+        self.reset();
+        std::mem::swap(&mut self.entry, &mut state);
+        Ok(state)
+    }
+}
+
+impl<F: CompilerFeat> EntryManager for CompilerWorld<F> {
     fn reset(&mut self) -> SourceResult<()> {
         self.reset();
         Ok(())

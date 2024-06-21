@@ -153,13 +153,15 @@ pub trait EnvWorld {
 }
 
 pub trait Compiler {
+    type W: World;
+
     /// reset the compilation state
     fn reset(&mut self) -> SourceResult<()>;
 
     /// Compile once from scratch.
     fn pure_compile(
         &mut self,
-        world: &dyn World,
+        world: &Self::W,
         env: &mut CompileEnv,
     ) -> SourceResult<Arc<Document>> {
         self.reset()?;
@@ -176,7 +178,7 @@ pub trait Compiler {
     /// With **the compilation state**, query the matches for the selector.
     fn pure_query(
         &mut self,
-        world: &dyn World,
+        world: &Self::W,
         selector: String,
         document: &Document,
     ) -> SourceResult<Vec<Content>> {
@@ -184,14 +186,14 @@ pub trait Compiler {
     }
 
     /// Compile once from scratch.
-    fn compile(&mut self, world: &dyn World, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
+    fn compile(&mut self, world: &Self::W, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
         self.pure_compile(world, env)
     }
 
     /// With **the compilation state**, query the matches for the selector.
     fn query(
         &mut self,
-        world: &dyn World,
+        world: &Self::W,
         selector: String,
         document: &Document,
     ) -> SourceResult<Vec<Content>> {
@@ -205,7 +207,11 @@ pub trait Compiler {
     fn notify_fs_event(&mut self, _event: FilesystemEvent) {}
 }
 
-impl Compiler for () {
+pub type PureCompiler<W> = std::marker::PhantomData<fn(W)>;
+
+impl<W: World> Compiler for PureCompiler<W> {
+    type W = W;
+
     fn reset(&mut self) -> SourceResult<()> {
         Ok(())
     }
@@ -226,7 +232,7 @@ pub trait CompileMiddleware {
     /// Hooked compile once from scratch.
     fn wrap_compile(
         &mut self,
-        world: &dyn World,
+        world: &<<Self as CompileMiddleware>::Compiler as Compiler>::W,
         env: &mut CompileEnv,
     ) -> SourceResult<Arc<Document>> {
         self.inner_mut().compile(world, env)
@@ -236,7 +242,7 @@ pub trait CompileMiddleware {
     /// selector.
     fn wrap_query(
         &mut self,
-        world: &dyn World,
+        world: &<<Self as CompileMiddleware>::Compiler as Compiler>::W,
         selector: String,
         document: &Document,
     ) -> SourceResult<Vec<Content>> {
@@ -248,6 +254,8 @@ pub trait CompileMiddleware {
 /// If you want to wrap a compiler, you should override methods in
 /// `CompileMiddleware`.
 impl<T: CompileMiddleware> Compiler for T {
+    type W = <<T as CompileMiddleware>::Compiler as Compiler>::W;
+
     #[inline]
     fn reset(&mut self) -> SourceResult<()> {
         self.wrap_reset()
@@ -256,7 +264,7 @@ impl<T: CompileMiddleware> Compiler for T {
     #[inline]
     fn pure_compile(
         &mut self,
-        world: &dyn World,
+        world: &Self::W,
         env: &mut CompileEnv,
     ) -> SourceResult<Arc<Document>> {
         self.inner_mut().pure_compile(world, env)
@@ -265,7 +273,7 @@ impl<T: CompileMiddleware> Compiler for T {
     #[inline]
     fn pure_query(
         &mut self,
-        world: &dyn World,
+        world: &Self::W,
         selector: String,
         document: &Document,
     ) -> SourceResult<Vec<Content>> {
@@ -273,14 +281,14 @@ impl<T: CompileMiddleware> Compiler for T {
     }
 
     #[inline]
-    fn compile(&mut self, world: &dyn World, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
+    fn compile(&mut self, world: &Self::W, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
         self.wrap_compile(world, env)
     }
 
     #[inline]
     fn query(
         &mut self,
-        world: &dyn World,
+        world: &Self::W,
         selector: String,
         document: &Document,
     ) -> SourceResult<Vec<Content>> {

@@ -72,7 +72,7 @@ pub use system::{TypstSystemUniverse, TypstSystemWorld};
 #[cfg(feature = "browser-compile")]
 pub(crate) mod browser;
 #[cfg(feature = "browser-compile")]
-pub use browser::{BrowserCompilerFeat, TypstBrowserWorld};
+pub use browser::{BrowserCompilerFeat, TypstBrowserUniverse, TypstBrowserWorld};
 use typst::{
     diag::{At, FileResult, SourceResult},
     syntax::Span,

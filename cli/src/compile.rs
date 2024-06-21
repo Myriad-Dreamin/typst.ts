@@ -5,8 +5,7 @@ use std::path::Path;
 use typst::diag::{FileError, FileResult};
 use typst::foundations::{Bytes, Dict, IntoValue};
 use typst::model::Document;
-use typst_ts_compiler::service::EntryManager;
-use typst_ts_compiler::ShadowApi;
+use typst_ts_compiler::service::{EntryManager, PureCompiler};
 use typst_ts_compiler::{
     service::{
         features::{FeatureSet, DIAG_FMT_FEATURE},
@@ -14,7 +13,8 @@ use typst_ts_compiler::{
     },
     TypstSystemUniverse,
 };
-use typst_ts_core::config::compiler::{EntryOpts, MEMORY_MAIN_ENTRY};
+use typst_ts_compiler::{ShadowApi, TypstSystemWorld};
+use typst_ts_core::config::compiler::{EntryOpts, EntryState, MEMORY_MAIN_ENTRY};
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
 
 use crate::font::fonts;
@@ -25,7 +25,7 @@ use crate::{
     CompileArgs, CompileOnceArgs,
 };
 
-pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<()> {
+pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstSystemWorld>> {
     let workspace_dir = Path::new(args.workspace.as_str()).clean();
     let entry = args.entry;
     let entry_file_path = Path::new(entry.as_str()).clean();
@@ -110,7 +110,7 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<()> {
         universe.with_entry_file(entry_file_path)
     };
 
-    CompileDriver::new((), world)
+    CompileDriver::new(std::marker::PhantomData, world)
 }
 
 pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> ! {
@@ -162,9 +162,11 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
 
     // CompileExporter + DynamicLayoutCompiler + WatchDriver
     let verse = driver.universe;
-    let driver = CompileExporter::new(()).with_exporter(exporter);
+    let driver = CompileExporter::new(std::marker::PhantomData).with_exporter(exporter);
     let driver = DynamicLayoutCompiler::new(driver, output_dir).with_enable(args.dynamic_layout);
-    let actor = CompileActor::new_with_features(driver, verse, feature_set).with_watch(args.watch);
+    let actor =
+        CompileActor::new_with_features(driver, verse, EntryState::new_detached(), feature_set)
+            .with_watch(args.watch);
 
     utils::async_continue(async move {
         utils::logical_exit(actor.run());

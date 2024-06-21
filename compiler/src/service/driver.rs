@@ -29,6 +29,13 @@ pub struct CompileDriverImpl<C, F: CompilerFeat> {
 }
 
 impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
+    pub fn entry_file(&self) -> Option<PathBuf> {
+        let main = self.universe.entry.main()?;
+        self.universe.path_for_id(main).ok()
+    }
+}
+
+impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> CompileDriverImpl<C, F> {
     /// Create a new driver.
     pub fn new(compiler: C, universe: CompilerUniverse<F>) -> Self {
         Self { compiler, universe }
@@ -40,6 +47,52 @@ impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
         document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
         self.compiler.query(&self.spawn(), selector, document)
+    }
+
+    pub fn compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<TypstDocument>> {
+        let universe = self.universe_mut();
+
+        let main_id = universe
+            .main_id()
+            .ok_or_else(|| eco_format!("no entry file"))
+            .at(Span::detached())?;
+
+        let mut world = self.spawn();
+
+        world.prepare_env(env)?;
+
+        world
+            .source(main_id)
+            .hint(AtFile(main_id))
+            .at(Span::detached())?;
+
+        self.compiler.compile(&world, env)
+    }
+}
+
+impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
+    pub fn universe(&self) -> &CompilerUniverse<F> {
+        &self.universe
+    }
+
+    pub fn universe_mut(&mut self) -> &mut CompilerUniverse<F> {
+        &mut self.universe
+    }
+
+    pub fn spawn(&self) -> CompilerWorld<F> {
+        self.universe.spawn()
+    }
+
+    pub fn main_id(&self) -> TypstFileId {
+        self.universe.main_id().unwrap_or_else(|| *DETACHED_ENTRY)
+    }
+
+    /// reset the compilation state
+    pub fn reset(&mut self) -> SourceResult<()> {
+        // reset the world caches
+        self.universe.reset();
+
+        Ok(())
     }
 
     /// The default implementation of `relevant` method, which performs a
@@ -90,62 +143,6 @@ impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
             fs_event_must_relevant!() | fs_event_may_relevant!() | fs_event_never_relevant!() => {}
         };
     }
-}
-
-impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
-    pub fn entry_file(&self) -> Option<PathBuf> {
-        let main = self.universe.entry.main()?;
-        self.universe.path_for_id(main).ok()
-    }
-}
-
-impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
-    pub fn compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<TypstDocument>> {
-        let universe = self.universe_mut();
-
-        let main_id = universe
-            .main_id()
-            .ok_or_else(|| eco_format!("no entry file"))
-            .at(Span::detached())?;
-
-        let mut world = self.spawn();
-
-        world.prepare_env(env)?;
-
-        world
-            .source(main_id)
-            .hint(AtFile(main_id))
-            .at(Span::detached())?;
-
-        self.compiler.compile(&world, env)
-    }
-}
-
-impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
-    pub fn universe(&self) -> &CompilerUniverse<F> {
-        &self.universe
-    }
-
-    pub fn universe_mut(&mut self) -> &mut CompilerUniverse<F> {
-        &mut self.universe
-    }
-
-    pub fn spawn(&self) -> CompilerWorld<F> {
-        self.universe.spawn()
-    }
-
-    pub fn main_id(&self) -> TypstFileId {
-        self.universe.main_id().unwrap_or_else(|| *DETACHED_ENTRY)
-    }
-
-    /// reset the compilation state
-    pub fn reset(&mut self) -> SourceResult<()> {
-        // reset the world caches
-        self.universe.reset();
-
-        Ok(())
-    }
-
     /// Check whether a file system event is relevant to the world.
     // todo: remove cfg feature here
     #[cfg(feature = "system-watch")]

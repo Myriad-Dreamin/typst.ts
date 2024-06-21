@@ -11,9 +11,9 @@ use napi_derive::napi;
 use typst_ts_compiler::{
     font::system::SystemFontSearcher,
     package::http::HttpRegistry,
-    service::CompileDriver,
+    service::{CompileDriver, PureCompiler},
     vfs::{system::SystemAccessModel, Vfs},
-    TypstSystemWorld,
+    TypstSystemUniverse, TypstSystemWorld,
 };
 use typst_ts_core::{
     config::{compiler::EntryState, CompileFontOpts},
@@ -21,9 +21,6 @@ use typst_ts_core::{
     typst::{foundations::IntoValue, prelude::Prehashed},
     Bytes, TypstDict,
 };
-
-/// let [`CompileDriver`] boxable.
-impl NodeCompilerTrait for CompileDriver {}
 
 /// A nullable boxed compiler wrapping.
 ///
@@ -89,7 +86,9 @@ pub struct NodeCompileArgs {
     pub inputs: HashMap<String, String>,
 }
 
-pub fn create_driver(args: NodeCompileArgs) -> ZResult<CompileDriver> {
+pub fn create_driver(
+    args: NodeCompileArgs,
+) -> ZResult<CompileDriver<PureCompiler<TypstSystemWorld>>> {
     use typst_ts_core::path::PathClean;
     let workspace_dir = Path::new(args.workspace.as_str()).clean();
     let entry_file_path = Path::new(args.entry.as_str()).clean();
@@ -152,7 +151,7 @@ pub fn create_driver(args: NodeCompileArgs) -> ZResult<CompileDriver> {
         ..CompileFontOpts::default()
     })?;
 
-    let world = TypstSystemWorld::new_raw(
+    let world = TypstSystemUniverse::new_raw(
         EntryState::new_rooted(workspace_dir.into(), None),
         Some(Arc::new(Prehashed::new(inputs))),
         Arc::new(RwLock::new(Vfs::new(SystemAccessModel {}))),
@@ -161,7 +160,7 @@ pub fn create_driver(args: NodeCompileArgs) -> ZResult<CompileDriver> {
     );
 
     Ok(CompileDriver::new(
-        (),
+        std::marker::PhantomData,
         world.with_entry_file(entry_file_path.to_owned()),
     ))
 }
