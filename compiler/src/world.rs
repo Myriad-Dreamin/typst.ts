@@ -275,6 +275,15 @@ pub struct CompilerWorld<F: CompilerFeat> {
     now: OnceCell<DateTime<Local>>,
 }
 
+impl<F: CompilerFeat> Drop for CompilerWorld<F> {
+    fn drop(&mut self) {
+        let state = self.source_db.shared.clone();
+        let mut state = state.write();
+        let source_db = std::mem::take(&mut self.source_db);
+        source_db.commit_impl(&mut state);
+    }
+}
+
 impl<F: CompilerFeat> CompilerWorld<F> {
     pub fn task(&self, inputs: Option<Arc<Prehashed<Dict>>>) -> CompilerWorld<F> {
         // Fetch to avoid inconsistent state.

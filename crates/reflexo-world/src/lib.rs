@@ -3,9 +3,8 @@
 use core::fmt;
 use std::sync::Arc;
 
-use nohash_hasher::IntMap;
 use parking_lot::{Mutex, RwLock};
-use reflexo::{hash::FxDashMap, ImmutPath, QueryRef};
+use reflexo::{ImmutPath, QueryRef};
 use reflexo_vfs::{Bytes, FileId, FsProvider, TypstFileId};
 use rustc_hash::FxHashMap;
 use typst::{
@@ -19,7 +18,44 @@ type IncrQueryRef<S, E> = QueryRef<S, E, Option<S>>;
 type FileQuery<T> = QueryRef<T, FileError>;
 type IncrFileQuery<T> = IncrQueryRef<T, FileError>;
 
+pub trait Revised {
+    fn last_accessed_rev(&self) -> usize;
+}
+
+pub struct SharedState<T> {
+    pub committed_revision: Option<usize>,
+    // todo: fine-grained lock
+    /// The cache entries for each paths
+    cache_entries: FxHashMap<TypstFileId, T>,
+}
+
+impl<T> fmt::Debug for SharedState<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SharedState")
+            .field("committed_revision", &self.committed_revision)
+            .finish()
+    }
+}
+
+impl<T> Default for SharedState<T> {
+    fn default() -> Self {
+        SharedState {
+            committed_revision: None,
+            cache_entries: FxHashMap::default(),
+        }
+    }
+}
+
+impl<T: Revised> SharedState<T> {
+    fn gc(&mut self) {
+        let commited = self.committed_revision.unwrap_or(0);
+        self.cache_entries
+            .retain(|_, v| commited.saturating_sub(v.last_accessed_rev()) <= 30);
+    }
+}
+
 pub struct SourceCache {
+    last_accessed_rev: usize,
     fid: FileId,
     source: IncrFileQuery<Source>,
     buffer: FileQuery<Bytes>,
@@ -28,6 +64,12 @@ pub struct SourceCache {
 impl fmt::Debug for SourceCache {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SourceCache").finish()
+    }
+}
+
+impl Revised for SourceCache {
+    fn last_accessed_rev(&self) -> usize {
+        self.last_accessed_rev
     }
 }
 
@@ -136,80 +178,55 @@ impl SourceDb {
     /// Insert a new slot into the vfs.
     fn slot<T>(&self, id: TypstFileId, fid: FileId, f: impl FnOnce(&SourceCache) -> T) -> T {
         let mut slots = self.slots.lock();
-        f(slots.entry(id).or_insert_with(|| SourceCache {
-            fid,
-            source: IncrFileQuery::with_context(None),
-            buffer: FileQuery::default(),
+        f(slots.entry(id).or_insert_with(|| {
+            let state = self.shared.read();
+            let cache_entry = state.cache_entries.get(&id);
+
+            cache_entry
+                .map(|e| SourceCache {
+                    last_accessed_rev: self.revision.max(e.last_accessed_rev),
+                    fid,
+                    source: IncrFileQuery::with_context(
+                        e.source
+                            .get_uninitialized()
+                            .cloned()
+                            .transpose()
+                            .ok()
+                            .flatten(),
+                    ),
+                    buffer: FileQuery::default(),
+                })
+                .unwrap_or_else(|| SourceCache {
+                    last_accessed_rev: self.revision,
+                    fid,
+                    source: IncrFileQuery::with_context(None),
+                    buffer: FileQuery::default(),
+                })
         }))
+    }
+
+    pub fn commit_impl(self, state: &mut SharedState<SourceCache>) {
+        log::info!("drop source db revision {}", self.revision);
+
+        if let Ok(slots) = Arc::try_unwrap(self.slots) {
+            if state
+                .committed_revision
+                .map_or(false, |commited| commited >= self.revision)
+            {
+                return;
+            }
+
+            log::info!("committing source db revision {}", self.revision);
+            state.committed_revision = Some(self.revision);
+            state.cache_entries = slots.into_inner();
+            state.gc();
+        }
     }
 }
 
 pub trait MergeCache: Sized {
     fn merge(self, _other: Self) -> Self {
         self
-    }
-}
-
-/// Holds canonical data for all paths pointing to the same entity.
-#[derive(Debug)]
-pub struct FileSlot<T> {
-    pub idx: FileId,
-    pub cache: T,
-}
-
-pub struct SharedState<T> {
-    pub committed_revision: usize,
-    // The cache entries for each paths
-    cache_entries: RwLock<FxDashMap<FileId, T>>,
-}
-
-impl<T> fmt::Debug for SharedState<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SharedState")
-            .field("committed_revision", &self.committed_revision)
-            .finish()
-    }
-}
-
-impl<T> Default for SharedState<T> {
-    fn default() -> Self {
-        SharedState {
-            committed_revision: 0,
-            cache_entries: RwLock::new(FxDashMap::default()),
-        }
-    }
-}
-
-impl<T> SharedState<T> {
-    fn gc(&mut self) {}
-
-    pub fn collect(state: &State<T>)
-    where
-        T: MergeCache,
-    {
-        let mut s = state.shared.write();
-        state.commit_impl(&mut s);
-        let _ = s.cache_entries;
-        s.gc();
-    }
-}
-
-pub struct State<T> {
-    pub revision: usize,
-    pub slots: Mutex<IntMap<TypstFileId, FileSlot<T>>>,
-    shared: Arc<RwLock<SharedState<T>>>,
-}
-
-impl<T> State<T> {
-    pub fn commit_impl(&self, state: &mut SharedState<T>)
-    where
-        T: MergeCache,
-    {
-        if self.revision < state.committed_revision {
-            return;
-        }
-
-        state.gc();
     }
 }
 

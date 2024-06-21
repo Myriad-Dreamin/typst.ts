@@ -20,6 +20,7 @@ once_cell.workspace = true
 rustc-hash.workspace = true
 indexmap.workspace = true
 dashmap.workspace = true
+log.workspace = true
 
 wasm-bindgen = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true }

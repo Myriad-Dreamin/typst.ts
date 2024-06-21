@@ -2977,6 +2977,7 @@ dependencies = [
  "dashmap",
  "indexmap 2.2.6",
  "js-sys",
+ "log",
  "nohash-hasher",
  "once_cell",
  "parking_lot",
