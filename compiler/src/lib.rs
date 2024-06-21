@@ -78,7 +78,6 @@ use typst::{
     syntax::Span,
 };
 use typst_ts_core::{typst::prelude::*, Bytes, ImmutPath, TypstFileId};
-use vfs::notify::FilesystemEvent;
 
 pub use time::Time;
 
@@ -171,9 +170,7 @@ impl<C: ShadowApi> ShadowApiExt for C {
     }
 }
 
-/// Latest version of the notify api, which is in beta.
-pub trait NotifyApi {
+/// Latest version of the world dependencies api, which is in beta.
+pub trait WorldDeps {
     fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath));
-
-    fn notify_fs_event(&mut self, event: FilesystemEvent);
 }

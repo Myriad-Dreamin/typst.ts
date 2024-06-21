@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     world::{CompilerFeat, CompilerUniverse, CompilerWorld},
-    NotifyApi, ShadowApi,
+    ShadowApi,
 };
 use typst::{
     diag::{eco_format, At, EcoString, Hint, SourceResult},
@@ -13,9 +13,7 @@ use typst::{
     syntax::Span,
     World,
 };
-use typst_ts_core::{
-    config::compiler::DETACHED_ENTRY, Bytes, ImmutPath, TypstDocument, TypstFileId,
-};
+use typst_ts_core::{config::compiler::DETACHED_ENTRY, Bytes, TypstDocument, TypstFileId};
 
 use super::{CompileEnv, Compiler, EntryManager};
 
@@ -50,16 +48,12 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> CompileDriverImpl<C, F>
     }
 
     pub fn compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<TypstDocument>> {
-        let universe = self.universe_mut();
+        let world = self.spawn();
 
-        let main_id = universe
+        let main_id = world
             .main_id()
             .ok_or_else(|| eco_format!("no entry file"))
             .at(Span::detached())?;
-
-        let mut world = self.spawn();
-
-        world.prepare_env(env)?;
 
         world
             .source(main_id)
@@ -157,14 +151,6 @@ impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
         }
 
         self._relevant(event).unwrap_or(true)
-    }
-
-    pub fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath)) {
-        self.universe.iter_dependencies(f)
-    }
-
-    pub fn notify_fs_event(&mut self, event: crate::vfs::notify::FilesystemEvent) {
-        self.universe.notify_fs_event(event)
     }
 }
 

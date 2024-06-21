@@ -1,21 +1,15 @@
 use core::fmt;
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{path::Path, sync::Arc};
 
-use crate::{vfs::notify::FilesystemEvent, ShadowApi};
 use typst::{
-    diag::{At, FileResult, SourceDiagnostic, SourceResult},
+    diag::{At, SourceDiagnostic, SourceResult},
     eval::Tracer,
     foundations::Content,
     model::Document,
     syntax::Span,
     World,
 };
-use typst_ts_core::{
-    config::compiler::EntryState, typst::prelude::*, Bytes, ImmutPath, TypstDict, TypstFileId,
-};
+use typst_ts_core::{config::compiler::EntryState, typst::prelude::*, TypstFileId};
 
 pub(crate) mod diag;
 #[cfg(feature = "system-compile")]
@@ -61,7 +55,6 @@ pub trait EntryManager {
 #[derive(Clone, Default)]
 pub struct CompileEnv {
     pub tracer: Option<Tracer>,
-    pub args: Option<Arc<Prehashed<TypstDict>>>,
     pub features: Arc<FeatureSet>,
 }
 
@@ -199,12 +192,6 @@ pub trait Compiler {
     ) -> SourceResult<Vec<Content>> {
         self.pure_query(world, selector, document)
     }
-
-    /// Iterate over the dependencies of found by the compiler.
-    /// Note: reset the compiler will clear the dependencies cache.
-    fn iter_dependencies(&self, _f: &mut dyn FnMut(ImmutPath)) {}
-
-    fn notify_fs_event(&mut self, _event: FilesystemEvent) {}
 }
 
 pub type PureCompiler<W> = std::marker::PhantomData<fn(W)>;
@@ -293,45 +280,5 @@ impl<T: CompileMiddleware> Compiler for T {
         document: &Document,
     ) -> SourceResult<Vec<Content>> {
         self.wrap_query(world, selector, document)
-    }
-
-    #[inline]
-    fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath)) {
-        self.inner().iter_dependencies(f)
-    }
-
-    #[inline]
-    fn notify_fs_event(&mut self, event: crate::vfs::notify::FilesystemEvent) {
-        self.inner_mut().notify_fs_event(event)
-    }
-}
-
-impl<T: CompileMiddleware> ShadowApi for T
-where
-    T::Compiler: ShadowApi,
-{
-    #[inline]
-    fn _shadow_map_id(&self, _file_id: TypstFileId) -> FileResult<PathBuf> {
-        self.inner()._shadow_map_id(_file_id)
-    }
-
-    #[inline]
-    fn shadow_paths(&self) -> Vec<Arc<Path>> {
-        self.inner().shadow_paths()
-    }
-
-    #[inline]
-    fn reset_shadow(&mut self) {
-        self.inner_mut().reset_shadow()
-    }
-
-    #[inline]
-    fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()> {
-        self.inner().map_shadow(path, content)
-    }
-
-    #[inline]
-    fn unmap_shadow(&self, path: &Path) -> FileResult<()> {
-        self.inner().unmap_shadow(path)
     }
 }

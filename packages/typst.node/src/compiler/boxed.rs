@@ -14,7 +14,7 @@ use typst_ts_core::{
     error_once,
     foundations::Content,
     typst::prelude::*,
-    Bytes, ImmutPath, TypstDocument, TypstFileId,
+    Bytes, TypstDocument, TypstFileId,
 };
 
 use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocumentOptions, NodeError};
@@ -184,15 +184,5 @@ impl Compiler for BoxedCompiler {
         document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
         self.0.compiler.query(world, selector, document)
-    }
-
-    #[inline]
-    fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath)) {
-        self.0.iter_dependencies(f)
-    }
-
-    #[inline]
-    fn notify_fs_event(&mut self, event: typst_ts_compiler::vfs::notify::FilesystemEvent) {
-        self.0.notify_fs_event(event)
     }
 }

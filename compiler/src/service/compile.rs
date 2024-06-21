@@ -13,7 +13,7 @@ use crate::{
     },
     vfs::notify::{FilesystemEvent, MemoryEvent, NotifyMessage},
     world::{CompilerFeat, CompilerUniverse, CompilerWorld},
-    ShadowApi,
+    ShadowApi, WorldDeps,
 };
 use typst_ts_core::{
     config::compiler::EntryState,
@@ -331,8 +331,7 @@ impl<
 
         // Notify the new file dependencies.
         let mut deps = vec![];
-        self.compiler
-            .iter_dependencies(&mut |dep| deps.push(dep.clone()));
+        w.iter_dependencies(&mut |dep| deps.push(dep.clone()));
         send(Notify(NotifyMessage::SyncDependency(deps)));
     }
 
@@ -396,7 +395,7 @@ impl<
                 }
 
                 // Apply file system changes.
-                self.compiler.notify_fs_event(event);
+                self.world.notify_fs_event(event);
 
                 true
             }

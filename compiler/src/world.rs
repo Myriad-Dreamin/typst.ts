@@ -29,9 +29,9 @@ use crate::{
         get_semantic_tokens_full, get_semantic_tokens_legend, OffsetEncoding, SemanticToken,
         SemanticTokensLegend,
     },
-    service::{CompileEnv, EntryManager},
+    service::EntryManager,
     vfs::{notify::FilesystemEvent, AccessModel as VfsAccessModel, Vfs},
-    NotifyApi, ShadowApi,
+    ShadowApi, WorldDeps,
 };
 
 type CodespanResult<T> = Result<T, CodespanError>;
@@ -59,9 +59,9 @@ pub struct CompilerUniverse<F: CompilerFeat> {
     pub do_reparse: bool,
 
     /// The current revision of the source database.
-    revision: std::sync::atomic::AtomicUsize,
+    pub revision: std::sync::atomic::AtomicUsize,
     /// Shared state for source cache.
-    shared: Arc<RwLock<SharedState<GlobalSourceCache>>>,
+    pub shared: Arc<RwLock<SharedState<GlobalSourceCache>>>,
 
     /// Provides font management for typst compiler.
     pub font_resolver: Arc<F::FontResolver>,
@@ -124,10 +124,14 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
         Ok(())
     }
 
+    #[inline]
+    pub fn notify_fs_event(&mut self, event: FilesystemEvent) {
+        self.vfs.write().notify_fs_event(event)
+    }
+
     pub fn spawn(&self) -> CompilerWorld<F> {
         CompilerWorld {
             entry: self.entry.clone(),
-            inputs: self.inputs.clone(),
             library: create_library(self.inputs.clone()),
             font_resolver: self.font_resolver.clone(),
             registry: self.registry.clone(),
@@ -161,8 +165,6 @@ pub struct CompilerWorld<F: CompilerFeat> {
     /// State for the *root & entry* of compilation.
     /// The world forbids direct access to files outside this directory.
     pub entry: EntryState,
-    /// Additional input arguments to compile the entry file.
-    pub inputs: Arc<Prehashed<Dict>>,
 
     /// Provides library for typst compiler.
     pub library: Arc<Prehashed<Library>>,
@@ -178,6 +180,74 @@ pub struct CompilerWorld<F: CompilerFeat> {
     /// The current datetime if requested. This is stored here to ensure it is
     /// always the same within one compilation. Reset between compilations.
     now: OnceCell<DateTime<Local>>,
+}
+
+impl<F: CompilerFeat> CompilerWorld<F> {
+    /// Reset the world for a new lifecycle (of garbage collection).
+    pub fn reset(&mut self) {
+        self.vfs.write().reset();
+        self.source_db.reset();
+
+        self.now.take();
+    }
+
+    pub fn task(&self, inputs: Option<Arc<Prehashed<Dict>>>) -> CompilerWorld<F> {
+        CompilerWorld {
+            library: inputs
+                .map(create_library)
+                .unwrap_or_else(|| self.library.clone()),
+            entry: self.entry.clone(),
+            font_resolver: self.font_resolver.clone(),
+            registry: self.registry.clone(),
+            vfs: self.vfs.clone(),
+            source_db: self.source_db.clone(),
+            now: OnceCell::new(),
+        }
+    }
+
+    /// Set the `do_reparse` flag.
+    pub fn set_do_reparse(&mut self, do_reparse: bool) {
+        self.source_db.do_reparse = do_reparse;
+    }
+
+    /// Resolve the real path for a file id.
+    pub fn path_for_id(&self, id: FileId) -> Result<PathBuf, FileError> {
+        if id == *DETACHED_ENTRY {
+            return Ok(DETACHED_ENTRY.vpath().as_rooted_path().to_owned());
+        }
+
+        // Determine the root path relative to which the file path
+        // will be resolved.
+        let root = match id.package() {
+            Some(spec) => self.registry.resolve(spec)?,
+            None => self.entry.root().ok_or(FileError::Other(Some(eco_format!(
+                "cannot access directory without root: state: {:?}",
+                self.entry
+            ))))?,
+        };
+
+        // Join the path to the root. If it tries to escape, deny
+        // access. Note: It can still escape via symlinks.
+        id.vpath().resolve(&root).ok_or(FileError::AccessDenied)
+    }
+    /// Lookup a source file by id.
+    #[track_caller]
+    fn lookup(&self, id: FileId) -> Source {
+        self.source(id)
+            .expect("file id does not point to any source file")
+    }
+
+    fn map_source_or_default<T>(
+        &self,
+        id: FileId,
+        default_v: T,
+        f: impl FnOnce(Source) -> CodespanResult<T>,
+    ) -> CodespanResult<T> {
+        match World::source(self, id).ok() {
+            Some(source) => f(source),
+            None => Ok(default_v),
+        }
+    }
 }
 
 impl<F: CompilerFeat> World for CompilerWorld<F> {
@@ -258,68 +328,6 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
     /// `https://packages.typst.org/preview/index.json`.
     fn packages(&self) -> &[(PackageSpec, Option<EcoString>)] {
         self.registry.packages()
-    }
-}
-
-impl<F: CompilerFeat> CompilerWorld<F> {
-    /// Reset the world for a new lifecycle (of garbage collection).
-    pub fn reset(&mut self) {
-        self.vfs.write().reset();
-        self.source_db.reset();
-
-        self.now.take();
-    }
-
-    /// Set the `do_reparse` flag.
-    pub fn set_do_reparse(&mut self, do_reparse: bool) {
-        self.source_db.do_reparse = do_reparse;
-    }
-
-    pub fn prepare_env(&mut self, env: &mut CompileEnv) -> SourceResult<()> {
-        // Hook up the lang items.
-        // todo: bad upstream changes
-        self.library = create_library(env.args.clone().unwrap_or_else(|| self.inputs.clone()));
-
-        Ok(())
-    }
-
-    /// Resolve the real path for a file id.
-    pub fn path_for_id(&self, id: FileId) -> Result<PathBuf, FileError> {
-        if id == *DETACHED_ENTRY {
-            return Ok(DETACHED_ENTRY.vpath().as_rooted_path().to_owned());
-        }
-
-        // Determine the root path relative to which the file path
-        // will be resolved.
-        let root = match id.package() {
-            Some(spec) => self.registry.resolve(spec)?,
-            None => self.entry.root().ok_or(FileError::Other(Some(eco_format!(
-                "cannot access directory without root: state: {:?}",
-                self.entry
-            ))))?,
-        };
-
-        // Join the path to the root. If it tries to escape, deny
-        // access. Note: It can still escape via symlinks.
-        id.vpath().resolve(&root).ok_or(FileError::AccessDenied)
-    }
-    /// Lookup a source file by id.
-    #[track_caller]
-    fn lookup(&self, id: FileId) -> Source {
-        self.source(id)
-            .expect("file id does not point to any source file")
-    }
-
-    fn map_source_or_default<T>(
-        &self,
-        id: FileId,
-        default_v: T,
-        f: impl FnOnce(Source) -> CodespanResult<T>,
-    ) -> CodespanResult<T> {
-        match World::source(self, id).ok() {
-            Some(source) => f(source),
-            None => Ok(default_v),
-        }
     }
 }
 
@@ -408,45 +416,11 @@ impl<F: CompilerFeat> ShadowApi for CompilerUniverse<F> {
     }
 }
 
-impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
-    #[inline]
-    fn _shadow_map_id(&self, file_id: FileId) -> FileResult<PathBuf> {
-        self.path_for_id(file_id)
-    }
-
-    #[inline]
-    fn shadow_paths(&self) -> Vec<Arc<Path>> {
-        self.vfs.read().shadow_paths()
-    }
-
-    #[inline]
-    fn reset_shadow(&mut self) {
-        self.vfs.write().reset_shadow()
-    }
-
-    #[inline]
-    fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()> {
-        self.vfs.read().map_shadow(path, content)
-    }
-
-    #[inline]
-    fn unmap_shadow(&self, path: &Path) -> FileResult<()> {
-        self.vfs.read().remove_shadow(path);
-
-        Ok(())
-    }
-}
-
-impl<F: CompilerFeat> NotifyApi for CompilerUniverse<F> {
+impl<F: CompilerFeat> WorldDeps for CompilerWorld<F> {
     #[inline]
     fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath)) {
         self.source_db
             .iter_dependencies_dyn(self.vfs.read().deref(), f)
-    }
-
-    #[inline]
-    fn notify_fs_event(&mut self, event: FilesystemEvent) {
-        self.vfs.write().notify_fs_event(event)
     }
 }
 

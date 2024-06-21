@@ -9,11 +9,13 @@ use typst_ts_core::{
         pass::{CommandExecutor, Typst2VecPass},
     },
     DynExporter, DynGenericExporter, DynPolymorphicExporter, GenericExporter, TakeAs,
-    TypstDocument,
+    TypstDocument as Document,
 };
 
 #[cfg(feature = "dynamic-layout")]
 use typst_ts_svg_exporter::MultiVecDocument;
+
+use crate::world::{CompilerFeat, CompilerWorld};
 
 use super::{
     features::{CompileFeature, FeatureSet, WITH_COMPILING_STATUS_FEATURE},
@@ -21,12 +23,12 @@ use super::{
 };
 
 pub trait WorldExporter<W> {
-    fn export(&mut self, world: &W, output: Arc<typst::model::Document>) -> SourceResult<()>;
+    fn export(&mut self, world: &W, output: Arc<Document>) -> SourceResult<()>;
 }
 
 pub struct CompileExporter<C: Compiler> {
     pub compiler: C,
-    pub exporter: DynExporter<TypstDocument>,
+    pub exporter: DynExporter<Document>,
 }
 
 impl<C: Compiler + Default> Default for CompileExporter<C> {
@@ -44,20 +46,20 @@ impl<C: Compiler> CompileExporter<C> {
     }
 
     /// Wrap driver with a given exporter.
-    pub fn with_exporter(mut self, exporter: impl Into<DynExporter<TypstDocument>>) -> Self {
+    pub fn with_exporter(mut self, exporter: impl Into<DynExporter<Document>>) -> Self {
         self.set_exporter(exporter);
         self
     }
 
     /// set an exporter.
-    pub fn set_exporter(&mut self, exporter: impl Into<DynExporter<TypstDocument>>) {
+    pub fn set_exporter(&mut self, exporter: impl Into<DynExporter<Document>>) {
         self.exporter = exporter.into();
     }
 }
 
 impl<W: World, C: Compiler> WorldExporter<W> for CompileExporter<C> {
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
-    fn export(&mut self, world: &W, output: Arc<typst::model::Document>) -> SourceResult<()> {
+    fn export(&mut self, world: &W, output: Arc<Document>) -> SourceResult<()> {
         self.exporter.export(world, output)
     }
 }
@@ -73,11 +75,7 @@ impl<C: Compiler> CompileMiddleware for CompileExporter<C> {
         &mut self.compiler
     }
 
-    fn wrap_compile(
-        &mut self,
-        world: &C::W,
-        env: &mut CompileEnv,
-    ) -> SourceResult<Arc<typst::model::Document>> {
+    fn wrap_compile(&mut self, world: &C::W, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
         let doc = self.inner_mut().compile(world, env)?;
         self.export(world, doc.clone())?;
 
@@ -151,7 +149,7 @@ impl<C: Compiler, W: World + 'static> CompileReporter<C, W> {
 
 impl<W: World, C: Compiler + WorldExporter<W>> WorldExporter<W> for CompileReporter<C, W> {
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
-    fn export(&mut self, world: &W, output: Arc<typst::model::Document>) -> SourceResult<()> {
+    fn export(&mut self, world: &W, output: Arc<Document>) -> SourceResult<()> {
         self.compiler.export(world, output)
     }
 }
@@ -170,11 +168,7 @@ where
         &mut self.compiler
     }
 
-    fn wrap_compile(
-        &mut self,
-        world: &C::W,
-        env: &mut CompileEnv,
-    ) -> SourceResult<Arc<typst::model::Document>> {
+    fn wrap_compile(&mut self, world: &C::W, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
         let start = crate::time::now();
         // todo unwrap main id
         let id = world.main_id().unwrap();
@@ -228,9 +222,7 @@ where
 pub type LayoutWidths = Vec<typst::layout::Abs>;
 
 pub type PostProcessLayoutFn = Box<
-    dyn Fn(&mut Typst2VecPass, Arc<TypstDocument>, LayoutRegionNode) -> LayoutRegionNode
-        + Send
-        + Sync,
+    dyn Fn(&mut Typst2VecPass, Arc<Document>, LayoutRegionNode) -> LayoutRegionNode + Send + Sync,
 >;
 
 pub type PostProcessLayoutsFn =
@@ -307,7 +299,7 @@ impl<C: Compiler> DynamicLayoutCompiler<C> {
     /// Experimental
     pub fn set_post_process_layout(
         &mut self,
-        post_process_layout: impl Fn(&mut Typst2VecPass, Arc<TypstDocument>, LayoutRegionNode) -> LayoutRegionNode
+        post_process_layout: impl Fn(&mut Typst2VecPass, Arc<Document>, LayoutRegionNode) -> LayoutRegionNode
             + Send
             + Sync
             + 'static,
@@ -337,9 +329,9 @@ impl<C: Compiler> DynamicLayoutCompiler<C> {
 }
 
 #[cfg(feature = "dynamic-layout")]
-impl<W: World, C: Compiler<W = W>> DynamicLayoutCompiler<C> {
+impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<C> {
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
-    pub fn do_export(&mut self, world: &W) -> SourceResult<MultiVecDocument> {
+    pub fn do_export(&mut self, world: &CompilerWorld<F>) -> SourceResult<MultiVecDocument> {
         use typst_ts_svg_exporter::DynamicLayoutSvgExporter;
 
         let mut svg_exporter = DynamicLayoutSvgExporter::default();
@@ -357,7 +349,7 @@ impl<W: World, C: Compiler<W = W>> DynamicLayoutCompiler<C> {
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
     pub fn do_export_with(
         &mut self,
-        world: &W,
+        world: &CompilerWorld<F>,
         mut svg_exporter: typst_ts_svg_exporter::DynamicLayoutSvgExporter,
     ) -> SourceResult<(MultiVecDocument, Box<dyn CommandExecutor + Send + Sync>)> {
         use typst::foundations::IntoValue;
@@ -372,16 +364,14 @@ impl<W: World, C: Compiler<W = W>> DynamicLayoutCompiler<C> {
             let instant = instant::Instant::now();
             // replace layout
 
-            let mut e = CompileEnv {
-                args: Some({
-                    let mut dict = TypstDict::new();
-                    dict.insert("x-page-width".into(), current_width.into_value());
-                    dict.insert("x-target".into(), self.target.clone().into_value());
+            // todo: generalize me
+            let world = world.task(Some({
+                let mut dict = TypstDict::new();
+                dict.insert("x-page-width".into(), current_width.into_value());
+                dict.insert("x-target".into(), self.target.clone().into_value());
 
-                    Arc::new(Prehashed::new(dict))
-                }),
-                ..Default::default()
-            };
+                Arc::new(Prehashed::new(dict))
+            }));
 
             log::trace!(
                 "rerendering {i} at {:?}, width={current_width:?} target={}",
@@ -390,7 +380,9 @@ impl<W: World, C: Compiler<W = W>> DynamicLayoutCompiler<C> {
             );
 
             // compile and export document
-            let output = self.inner_mut().compile(world, &mut e)?;
+            let output = self
+                .inner_mut()
+                .compile(&world, &mut CompileEnv::default())?;
             let mut layout = svg_exporter.render(&output);
 
             if let Some(post_process_layout) = &self.post_process_layout {
@@ -427,8 +419,10 @@ impl<W: World, C: Compiler<W = W>> DynamicLayoutCompiler<C> {
 }
 
 #[cfg(feature = "dynamic-layout")]
-impl<W: World, C: Compiler<W = W>> WorldExporter<W> for DynamicLayoutCompiler<C> {
-    fn export(&mut self, world: &W, _output: Arc<typst::model::Document>) -> SourceResult<()> {
+impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> WorldExporter<CompilerWorld<F>>
+    for DynamicLayoutCompiler<C>
+{
+    fn export(&mut self, world: &CompilerWorld<F>, _output: Arc<Document>) -> SourceResult<()> {
         let doc = self.do_export(world)?;
         std::fs::write(self.module_dest_path(), doc.to_bytes()).unwrap();
         Ok(())
@@ -436,7 +430,9 @@ impl<W: World, C: Compiler<W = W>> WorldExporter<W> for DynamicLayoutCompiler<C>
 }
 
 #[cfg(feature = "dynamic-layout")]
-impl<W: World, C: Compiler<W = W>> CompileMiddleware for DynamicLayoutCompiler<C> {
+impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> CompileMiddleware
+    for DynamicLayoutCompiler<C>
+{
     type Compiler = C;
 
     fn inner(&self) -> &Self::Compiler {
@@ -449,9 +445,9 @@ impl<W: World, C: Compiler<W = W>> CompileMiddleware for DynamicLayoutCompiler<C
 
     fn wrap_compile(
         &mut self,
-        world: &W,
+        world: &CompilerWorld<F>,
         env: &mut CompileEnv,
-    ) -> SourceResult<Arc<TypstDocument>> {
+    ) -> SourceResult<Arc<Document>> {
         if !self.enable_dynamic_layout {
             return self.inner_mut().compile(world, env);
         }

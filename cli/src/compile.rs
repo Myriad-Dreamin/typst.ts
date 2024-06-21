@@ -14,7 +14,7 @@ use typst_ts_compiler::{
     TypstSystemUniverse,
 };
 use typst_ts_compiler::{ShadowApi, TypstSystemWorld};
-use typst_ts_core::config::compiler::{EntryOpts, EntryState, MEMORY_MAIN_ENTRY};
+use typst_ts_core::config::compiler::{EntryOpts, MEMORY_MAIN_ENTRY};
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
 
 use crate::font::fonts;
@@ -162,11 +162,11 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
 
     // CompileExporter + DynamicLayoutCompiler + WatchDriver
     let verse = driver.universe;
+    let entry = verse.entry.clone();
     let driver = CompileExporter::new(std::marker::PhantomData).with_exporter(exporter);
     let driver = DynamicLayoutCompiler::new(driver, output_dir).with_enable(args.dynamic_layout);
     let actor =
-        CompileActor::new_with_features(driver, verse, EntryState::new_detached(), feature_set)
-            .with_watch(args.watch);
+        CompileActor::new_with_features(driver, verse, entry, feature_set).with_watch(args.watch);
 
     utils::async_continue(async move {
         utils::logical_exit(actor.run());
