@@ -16,7 +16,7 @@ use typst_ts_core::{
     diag::SourceDiagnostic,
     error::{long_diag_from_std, prelude::*, DiagMessage},
     typst::{self, foundations::IntoValue, prelude::EcoVec},
-    DynExporter, Exporter, FontLoader, TypstDocument, TypstFont, TypstWorld,
+    DynExporter, Exporter, TypstDocument, TypstWorld,
 };
 use wasm_bindgen::prelude::*;
 
@@ -140,27 +140,6 @@ impl TypstCompiler {
 pub fn get_font_info(buffer: Uint8Array) -> JsValue {
     serde_wasm_bindgen::to_value(&FontInfoCache::from_data(buffer.to_vec().as_slice())).unwrap()
 }
-
-struct SnapshotFontLoader {
-    font_cb: js_sys::Function,
-    index: u32,
-    path: String,
-}
-
-impl FontLoader for SnapshotFontLoader {
-    fn load(&mut self) -> Option<TypstFont> {
-        let buf = self
-            .font_cb
-            .call1(&self.font_cb, &self.path.clone().into())
-            .unwrap();
-        let buf = buf.dyn_ref::<Uint8Array>()?;
-        let buf = buf.to_vec();
-        TypstFont::new(buf.into(), self.index)
-    }
-}
-
-// todo: remove this
-unsafe impl Send for SnapshotFontLoader {}
 
 // todo: design error handling
 // todo: we return a string for now which is better than nothing
