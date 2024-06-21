@@ -21,25 +21,10 @@ use typst_ts_core::{
     TypstDocument,
 };
 
-use super::WorldExporter;
-
 /// A task that can be sent to the context (compiler thread)
 ///
 /// The internal function will be dereferenced and called on the context.
 type BorrowTask<Ctx> = Box<dyn FnOnce(&mut Ctx) + Send + 'static>;
-
-pub trait EntryStateExt {
-    fn is_inactive(&self) -> bool;
-}
-
-impl EntryStateExt for EntryState {
-    fn is_inactive(&self) -> bool {
-        matches!(
-            self,
-            EntryState::Detached | EntryState::Workspace { main: None, .. }
-        )
-    }
-}
 
 pub enum Interrupt<Ctx> {
     /// Compile anyway.
@@ -86,8 +71,8 @@ pub struct VersionedDocument {
 
 /// The compiler thread.
 pub struct CompileActor<C: Compiler, F: CompilerFeat> {
-    /// The underlying world.
-    pub world: CompilerUniverse<F>,
+    /// The underlying universe.
+    pub verse: CompilerUniverse<F>,
     /// The underlying compiler.
     pub compiler: CompileReporter<C, CompilerWorld<F>>,
     /// Whether to enable file system watching.
@@ -101,7 +86,7 @@ pub struct CompileActor<C: Compiler, F: CompilerFeat> {
     /// Estimated latest set of shadow files.
     estimated_shadow_files: HashSet<Arc<Path>>,
     /// The latest compiled document.
-    latest_doc: Option<Arc<TypstDocument>>,
+    pub(crate) latest_doc: Option<Arc<TypstDocument>>,
     /// The latest successly compiled document.
     latest_success_doc: Option<Arc<TypstDocument>>,
     /// feature set for compile_once mode.
@@ -109,30 +94,29 @@ pub struct CompileActor<C: Compiler, F: CompilerFeat> {
     /// Shared feature set for watch mode.
     watch_feature_set: Arc<FeatureSet>,
 
-    /// Internal channel for stealing the compiler thread.
-    steal_tx: mpsc::UnboundedSender<Interrupt<Self>>,
-    steal_rx: mpsc::UnboundedReceiver<Interrupt<Self>>,
+    /// Channel for sending interrupts to the compiler thread.
+    intr_tx: mpsc::UnboundedSender<Interrupt<Self>>,
+    /// Channel for receiving interrupts from the compiler thread.
+    intr_rx: mpsc::UnboundedReceiver<Interrupt<Self>>,
 
     suspend_state: SuspendState,
 }
 
-impl<
-        F: CompilerFeat + Send + 'static,
-        C: Compiler<W = CompilerWorld<F>> + WorldExporter<CompilerWorld<F>> + Send + 'static,
-    > CompileActor<C, F>
+impl<F: CompilerFeat + Send + 'static, C: Compiler<W = CompilerWorld<F>> + Send + 'static>
+    CompileActor<C, F>
 {
     pub fn new_with_features(
         compiler: C,
-        world: CompilerUniverse<F>,
+        verse: CompilerUniverse<F>,
         entry: EntryState,
         feature_set: FeatureSet,
     ) -> Self {
-        let (steal_tx, steal_rx) = mpsc::unbounded_channel();
+        let (intr_tx, intr_rx) = mpsc::unbounded_channel();
 
         Self {
             compiler: CompileReporter::new(compiler)
                 .with_generic_reporter(ConsoleDiagReporter::default()),
-            world,
+            verse,
 
             logical_tick: 1,
             enable_watch: false,
@@ -146,8 +130,8 @@ impl<
                 feature_set.configure(&WITH_COMPILING_STATUS_FEATURE, true),
             ),
 
-            steal_tx,
-            steal_rx,
+            intr_tx,
+            intr_rx,
 
             suspend_state: SuspendState {
                 suspended: entry.is_inactive(),
@@ -198,7 +182,7 @@ impl<
     async fn block_run_inner(mut self) -> bool {
         if !self.enable_watch {
             let mut env = self.make_env(self.once_feature_set.clone());
-            let w = self.world.spawn();
+            let w = self.verse.spawn();
             let compiled = self.compiler.compile(&w, &mut env);
             return compiled.is_ok();
         }
@@ -216,7 +200,7 @@ impl<
     pub async fn spawn(mut self) -> Option<JoinHandle<()>> {
         if !self.enable_watch {
             let mut env = self.make_env(self.once_feature_set.clone());
-            let w = self.world.spawn();
+            let w = self.verse.spawn();
             self.compiler.compile(&w, &mut env).ok();
             return None;
         }
@@ -241,7 +225,7 @@ impl<
 
         // Spawn file system watcher.
         // todo: don't compile if no entry
-        let fs_tx = self.steal_tx.clone();
+        let fs_tx = self.intr_tx.clone();
         tokio::spawn(watch_deps(dep_rx, move |event| {
             log_send_error("fs_event", fs_tx.send(Interrupt::Fs(event)));
         }));
@@ -252,7 +236,7 @@ impl<
             log::debug!("CompileActor: initialized");
 
             // Wait for first events.
-            'event_loop: while let Some(mut event) = self.steal_rx.blocking_recv() {
+            'event_loop: while let Some(mut event) = self.intr_rx.blocking_recv() {
                 let mut need_compile = false;
 
                 'accumulate: loop {
@@ -275,7 +259,7 @@ impl<
                     need_compile |= self.process(event, &compiler_ack);
 
                     // Try to accumulate more events.
-                    match self.steal_rx.try_recv() {
+                    match self.intr_rx.try_recv() {
                         Ok(new_event) => event = new_event,
                         _ => break 'accumulate,
                     }
@@ -297,7 +281,7 @@ impl<
     pub fn change_entry(&mut self, entry: EntryState) {
         self.suspend_state.suspended = entry.is_inactive();
         if !self.suspend_state.suspended && self.suspend_state.dirty {
-            self.steal_tx.send(Interrupt::Compile).ok();
+            self.intr_tx.send(Interrupt::Compile).ok();
         }
 
         // Reset the document state.
@@ -314,7 +298,7 @@ impl<
             return;
         }
 
-        let w = self.world.spawn();
+        let w = self.verse.spawn();
 
         // Compile the document.
         let mut env = self.make_env(self.watch_feature_set.clone());
@@ -395,7 +379,7 @@ impl<
                 }
 
                 // Apply file system changes.
-                self.world.notify_fs_event(event);
+                self.verse.notify_fs_event(event);
 
                 true
             }
@@ -427,12 +411,12 @@ impl<
     /// Apply memory changes to underlying compiler.
     fn apply_memory_changes(&mut self, event: MemoryEvent) {
         if matches!(event, MemoryEvent::Sync(..)) {
-            self.world.reset_shadow();
+            self.verse.reset_shadow();
         }
         match event {
             MemoryEvent::Update(event) | MemoryEvent::Sync(event) => {
                 for removes in event.removes {
-                    let _ = self.world.unmap_shadow(&removes);
+                    let _ = self.verse.unmap_shadow(&removes);
                 }
                 for (p, t) in event.inserts {
                     let insert_file = match t.content().cloned() {
@@ -447,7 +431,7 @@ impl<
                         }
                     };
 
-                    let _ = self.world.map_shadow(&p, insert_file);
+                    let _ = self.verse.map_shadow(&p, insert_file);
                 }
             }
         }
@@ -461,7 +445,7 @@ impl<C: Compiler, F: CompilerFeat> CompileActor<C, F> {
     }
 
     pub fn client(&self) -> CompileClient<Self> {
-        let intr_tx = self.steal_tx.clone();
+        let intr_tx = self.intr_tx.clone();
         CompileClient { intr_tx }
     }
 

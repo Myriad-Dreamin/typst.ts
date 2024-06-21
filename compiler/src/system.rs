@@ -34,15 +34,13 @@ impl TypstSystemUniverse {
     /// See [`CompileOpts`] for available options.
     pub fn new(mut opts: CompileOpts) -> ZResult<Self> {
         let inputs = std::mem::take(&mut opts.inputs);
-        let mut w = Self::new_raw(
+        Ok(Self::new_raw(
             opts.entry.clone().try_into()?,
-            Some(Arc::new(Prehashed::new(opts.inputs.clone()))),
+            Some(Arc::new(Prehashed::new(inputs))),
             Arc::new(RwLock::new(Vfs::new(SystemAccessModel {}))),
             HttpRegistry::default(),
-            Self::resolve_fonts(opts)?,
-        );
-        w.set_inputs(Arc::new(Prehashed::new(inputs)));
-        Ok(w)
+            Arc::new(Self::resolve_fonts(opts)?),
+        ))
     }
 
     /// Resolve fonts from given options.
