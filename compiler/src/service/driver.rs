@@ -15,7 +15,7 @@ use typst::{
 };
 use typst_ts_core::{config::compiler::DETACHED_ENTRY, Bytes, TypstDocument, TypstFileId};
 
-use super::{CompileEnv, Compiler, EntryManager};
+use super::{CompileEnv, Compiler, EntryReader};
 
 /// CompileDriverImpl is a driver for typst compiler.
 /// It is responsible for operating the compiler without leaking implementation

@@ -19,7 +19,7 @@ use crate::world::{CompilerFeat, CompilerWorld};
 
 use super::{
     features::{CompileFeature, FeatureSet, WITH_COMPILING_STATUS_FEATURE},
-    CompileEnv, CompileMiddleware, CompileReport, Compiler, EntryManager,
+    CompileEnv, CompileMiddleware, CompileReport, Compiler, EntryReader,
 };
 
 pub trait WorldExporter<W> {
@@ -156,7 +156,7 @@ impl<W: World, C: Compiler + WorldExporter<W>> WorldExporter<W> for CompileRepor
 
 impl<W: World, C: Compiler<W = W>> CompileMiddleware for CompileReporter<C, W>
 where
-    W: EntryManager,
+    W: EntryReader,
 {
     type Compiler = C;
 

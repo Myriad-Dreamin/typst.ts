@@ -7,7 +7,7 @@ use std::{
 use chrono::{DateTime, Datelike, Local};
 use comemo::Prehashed;
 use once_cell::sync::OnceCell;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use typst::{
     diag::{eco_format, At, EcoString, FileError, FileResult, SourceResult},
     foundations::{Datetime, Dict},
@@ -16,7 +16,7 @@ use typst::{
     Library, World,
 };
 
-use reflexo_world::{GlobalSourceCache, SharedState, SourceDb};
+use reflexo_world::{SharedState, SourceCache, SourceDb};
 use typst_ts_core::{
     config::compiler::{EntryState, DETACHED_ENTRY},
     package::PackageSpec,
@@ -29,7 +29,7 @@ use crate::{
         get_semantic_tokens_full, get_semantic_tokens_legend, OffsetEncoding, SemanticToken,
         SemanticTokensLegend,
     },
-    service::EntryManager,
+    service::{EntryManager, EntryReader},
     vfs::{notify::FilesystemEvent, AccessModel as VfsAccessModel, Vfs},
     ShadowApi, WorldDeps,
 };
@@ -58,17 +58,17 @@ pub struct CompilerUniverse<F: CompilerFeat> {
     /// Whether to reparse the source files.
     pub do_reparse: bool,
 
-    /// The current revision of the source database.
-    pub revision: std::sync::atomic::AtomicUsize,
-    /// Shared state for source cache.
-    pub shared: Arc<RwLock<SharedState<GlobalSourceCache>>>,
-
     /// Provides font management for typst compiler.
     pub font_resolver: Arc<F::FontResolver>,
     /// Provides package management for typst compiler.
     pub registry: Arc<F::Registry>,
     /// Provides path-based data access for typst compiler.
     pub vfs: Arc<RwLock<Vfs<F::AccessModel>>>,
+
+    /// The current revision of the source database.
+    pub revision: Mutex<usize>,
+    /// Shared state for source cache.
+    pub shared: Arc<RwLock<SharedState<SourceCache>>>,
 }
 
 impl<F: CompilerFeat> CompilerUniverse<F> {
@@ -90,7 +90,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
             inputs: inputs.unwrap_or_default(),
             do_reparse: true,
 
-            revision: std::sync::atomic::AtomicUsize::new(1),
+            revision: Mutex::new(0),
             shared: Arc::new(RwLock::new(SharedState::default())),
 
             // library: create_library(inputs.unwrap_or_default()),
@@ -130,6 +130,9 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
     }
 
     pub fn spawn(&self) -> CompilerWorld<F> {
+        let mut rev_lock = self.revision.lock();
+        *rev_lock += 1;
+
         CompilerWorld {
             entry: self.entry.clone(),
             library: create_library(self.inputs.clone()),
@@ -137,7 +140,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
             registry: self.registry.clone(),
             vfs: self.vfs.clone(),
             source_db: SourceDb {
-                revision: self.increment_revision(),
+                revision: *rev_lock,
                 do_reparse: self.do_reparse,
                 shared: self.shared.clone(),
                 slots: Default::default(),
@@ -145,20 +148,110 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
             now: OnceCell::new(),
         }
     }
+}
 
-    fn increment_revision(&self) -> usize {
-        self.revision
-            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+impl<F: CompilerFeat> CompilerUniverse<F> {
+    /// Reset the world for a new lifecycle (of garbage collection).
+    pub fn reset(&mut self) {
+        self.vfs.write().reset();
+        // todo: shared state
+    }
+
+    /// Set the `do_reparse` flag.
+    pub fn set_do_reparse(&mut self, do_reparse: bool) {
+        self.do_reparse = do_reparse;
+    }
+
+    /// Resolve the real path for a file id.
+    pub fn path_for_id(&self, id: FileId) -> Result<PathBuf, FileError> {
+        if id == *DETACHED_ENTRY {
+            return Ok(DETACHED_ENTRY.vpath().as_rooted_path().to_owned());
+        }
+
+        // Determine the root path relative to which the file path
+        // will be resolved.
+        let root = match id.package() {
+            Some(spec) => self.registry.resolve(spec)?,
+            None => self.entry.root().ok_or(FileError::Other(Some(eco_format!(
+                "cannot access directory without root: state: {:?}",
+                self.entry
+            ))))?,
+        };
+
+        // Join the path to the root. If it tries to escape, deny
+        // access. Note: It can still escape via symlinks.
+        id.vpath().resolve(&root).ok_or(FileError::AccessDenied)
+    }
+
+    pub fn get_semantic_token_legend(&self) -> Arc<SemanticTokensLegend> {
+        Arc::new(get_semantic_tokens_legend())
+    }
+
+    pub fn get_semantic_tokens(
+        &self,
+        file_path: Option<String>,
+        encoding: OffsetEncoding,
+    ) -> Arc<Vec<SemanticToken>> {
+        let world = self.spawn();
+        let src = &file_path
+            .and_then(|e| {
+                let relative_path = Path::new(&e).strip_prefix(&self.workspace_root()?).ok()?;
+
+                let source_id = FileId::new(None, VirtualPath::new(relative_path));
+                world.source(source_id).ok()
+            })
+            .unwrap_or_else(|| world.main());
+
+        Arc::new(get_semantic_tokens_full(src, encoding))
     }
 }
 
-#[comemo::memoize]
-fn create_library(inputs: Arc<Prehashed<Dict>>) -> Arc<Prehashed<Library>> {
-    let lib = typst::Library::builder()
-        .with_inputs(inputs.deref().deref().clone())
-        .build();
+impl<F: CompilerFeat> ShadowApi for CompilerUniverse<F> {
+    #[inline]
+    fn _shadow_map_id(&self, file_id: FileId) -> FileResult<PathBuf> {
+        self.path_for_id(file_id)
+    }
 
-    Arc::new(Prehashed::new(lib))
+    #[inline]
+    fn shadow_paths(&self) -> Vec<Arc<Path>> {
+        self.vfs.read().shadow_paths()
+    }
+
+    #[inline]
+    fn reset_shadow(&mut self) {
+        self.vfs.write().reset_shadow()
+    }
+
+    #[inline]
+    fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()> {
+        self.vfs.read().map_shadow(path, content)
+    }
+
+    #[inline]
+    fn unmap_shadow(&self, path: &Path) -> FileResult<()> {
+        self.vfs.read().remove_shadow(path);
+
+        Ok(())
+    }
+}
+
+impl<F: CompilerFeat> EntryReader for CompilerUniverse<F> {
+    fn entry_state(&self) -> EntryState {
+        self.entry.clone()
+    }
+}
+
+impl<F: CompilerFeat> EntryManager for CompilerUniverse<F> {
+    fn reset(&mut self) -> SourceResult<()> {
+        self.reset();
+        Ok(())
+    }
+
+    fn mutate_entry(&mut self, mut state: EntryState) -> SourceResult<EntryState> {
+        self.reset();
+        std::mem::swap(&mut self.entry, &mut state);
+        Ok(state)
+    }
 }
 
 pub struct CompilerWorld<F: CompilerFeat> {
@@ -183,15 +276,10 @@ pub struct CompilerWorld<F: CompilerFeat> {
 }
 
 impl<F: CompilerFeat> CompilerWorld<F> {
-    /// Reset the world for a new lifecycle (of garbage collection).
-    pub fn reset(&mut self) {
-        self.vfs.write().reset();
-        self.source_db.reset();
-
-        self.now.take();
-    }
-
     pub fn task(&self, inputs: Option<Arc<Prehashed<Dict>>>) -> CompilerWorld<F> {
+        // Fetch to avoid inconsistent state.
+        let _ = self.today(None);
+
         CompilerWorld {
             library: inputs
                 .map(create_library)
@@ -201,7 +289,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             registry: self.registry.clone(),
             vfs: self.vfs.clone(),
             source_db: self.source_db.clone(),
-            now: OnceCell::new(),
+            now: self.now.clone(),
         }
     }
 
@@ -331,91 +419,6 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
     }
 }
 
-impl<F: CompilerFeat> CompilerUniverse<F> {
-    /// Reset the world for a new lifecycle (of garbage collection).
-    pub fn reset(&mut self) {
-        self.vfs.write().reset();
-        // todo: shared state
-    }
-
-    /// Set the `do_reparse` flag.
-    pub fn set_do_reparse(&mut self, do_reparse: bool) {
-        self.do_reparse = do_reparse;
-    }
-
-    /// Resolve the real path for a file id.
-    pub fn path_for_id(&self, id: FileId) -> Result<PathBuf, FileError> {
-        if id == *DETACHED_ENTRY {
-            return Ok(DETACHED_ENTRY.vpath().as_rooted_path().to_owned());
-        }
-
-        // Determine the root path relative to which the file path
-        // will be resolved.
-        let root = match id.package() {
-            Some(spec) => self.registry.resolve(spec)?,
-            None => self.entry.root().ok_or(FileError::Other(Some(eco_format!(
-                "cannot access directory without root: state: {:?}",
-                self.entry
-            ))))?,
-        };
-
-        // Join the path to the root. If it tries to escape, deny
-        // access. Note: It can still escape via symlinks.
-        id.vpath().resolve(&root).ok_or(FileError::AccessDenied)
-    }
-
-    pub fn get_semantic_token_legend(&self) -> Arc<SemanticTokensLegend> {
-        Arc::new(get_semantic_tokens_legend())
-    }
-
-    pub fn get_semantic_tokens(
-        &self,
-        file_path: Option<String>,
-        encoding: OffsetEncoding,
-    ) -> Arc<Vec<SemanticToken>> {
-        let world = self.spawn();
-        let src = &file_path
-            .and_then(|e| {
-                let relative_path = Path::new(&e).strip_prefix(&self.workspace_root()?).ok()?;
-
-                let source_id = FileId::new(None, VirtualPath::new(relative_path));
-                world.source(source_id).ok()
-            })
-            .unwrap_or_else(|| world.main());
-
-        Arc::new(get_semantic_tokens_full(src, encoding))
-    }
-}
-
-impl<F: CompilerFeat> ShadowApi for CompilerUniverse<F> {
-    #[inline]
-    fn _shadow_map_id(&self, file_id: FileId) -> FileResult<PathBuf> {
-        self.path_for_id(file_id)
-    }
-
-    #[inline]
-    fn shadow_paths(&self) -> Vec<Arc<Path>> {
-        self.vfs.read().shadow_paths()
-    }
-
-    #[inline]
-    fn reset_shadow(&mut self) {
-        self.vfs.write().reset_shadow()
-    }
-
-    #[inline]
-    fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()> {
-        self.vfs.read().map_shadow(path, content)
-    }
-
-    #[inline]
-    fn unmap_shadow(&self, path: &Path) -> FileResult<()> {
-        self.vfs.read().remove_shadow(path);
-
-        Ok(())
-    }
-}
-
 impl<F: CompilerFeat> WorldDeps for CompilerWorld<F> {
     #[inline]
     fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath)) {
@@ -424,53 +427,9 @@ impl<F: CompilerFeat> WorldDeps for CompilerWorld<F> {
     }
 }
 
-impl<F: CompilerFeat> EntryManager for CompilerUniverse<F> {
-    fn reset(&mut self) -> SourceResult<()> {
-        self.reset();
-        Ok(())
-    }
-
-    fn workspace_root(&self) -> Option<Arc<Path>> {
-        self.entry.root().clone()
-    }
-
-    fn main_id(&self) -> Option<FileId> {
-        self.entry.main()
-    }
-
+impl<F: CompilerFeat> EntryReader for CompilerWorld<F> {
     fn entry_state(&self) -> EntryState {
         self.entry.clone()
-    }
-
-    fn mutate_entry(&mut self, mut state: EntryState) -> SourceResult<EntryState> {
-        self.reset();
-        std::mem::swap(&mut self.entry, &mut state);
-        Ok(state)
-    }
-}
-
-impl<F: CompilerFeat> EntryManager for CompilerWorld<F> {
-    fn reset(&mut self) -> SourceResult<()> {
-        self.reset();
-        Ok(())
-    }
-
-    fn workspace_root(&self) -> Option<Arc<Path>> {
-        self.entry.root().clone()
-    }
-
-    fn main_id(&self) -> Option<FileId> {
-        self.entry.main()
-    }
-
-    fn entry_state(&self) -> EntryState {
-        self.entry.clone()
-    }
-
-    fn mutate_entry(&mut self, mut state: EntryState) -> SourceResult<EntryState> {
-        self.reset();
-        std::mem::swap(&mut self.entry, &mut state);
-        Ok(state)
     }
 }
 
@@ -548,4 +507,13 @@ impl<'a, F: CompilerFeat> codespan_reporting::files::Files<'a> for CompilerWorld
                 })
         })
     }
+}
+
+#[comemo::memoize]
+fn create_library(inputs: Arc<Prehashed<Dict>>) -> Arc<Prehashed<Library>> {
+    let lib = typst::Library::builder()
+        .with_inputs(inputs.deref().deref().clone())
+        .build();
+
+    Arc::new(Prehashed::new(lib))
 }

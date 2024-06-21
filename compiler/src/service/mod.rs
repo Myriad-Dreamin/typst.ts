@@ -38,16 +38,22 @@ pub use self::{diag::DiagnosticFormat, features::FeatureSet};
 #[cfg(feature = "system-compile")]
 pub type CompileDriver<C> = CompileDriverImpl<C, crate::system::SystemCompilerFeat>;
 
-pub trait EntryManager {
+pub trait EntryReader {
+    fn entry_state(&self) -> EntryState;
+
+    fn workspace_root(&self) -> Option<Arc<Path>> {
+        self.entry_state().root().clone()
+    }
+
+    fn main_id(&self) -> Option<TypstFileId> {
+        self.entry_state().main()
+    }
+}
+
+pub trait EntryManager: EntryReader {
     fn reset(&mut self) -> SourceResult<()> {
         Ok(())
     }
-
-    fn workspace_root(&self) -> Option<Arc<Path>>;
-
-    fn main_id(&self) -> Option<TypstFileId>;
-
-    fn entry_state(&self) -> EntryState;
 
     fn mutate_entry(&mut self, state: EntryState) -> SourceResult<EntryState>;
 }

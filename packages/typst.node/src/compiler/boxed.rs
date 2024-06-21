@@ -5,7 +5,7 @@ use std::{
     sync::Arc,
 };
 use typst_ts_compiler::{
-    service::{CompileDriver, CompileEnv, Compiler, EntryManager, PureCompiler},
+    service::{CompileDriver, CompileEnv, Compiler, EntryManager, EntryReader, PureCompiler},
     ShadowApi, TypstSystemWorld,
 };
 use typst_ts_core::{

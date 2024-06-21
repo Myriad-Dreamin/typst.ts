@@ -6,7 +6,7 @@ use std::sync::Arc;
 use nohash_hasher::IntMap;
 use parking_lot::{Mutex, RwLock};
 use reflexo::{hash::FxDashMap, ImmutPath, QueryRef};
-use reflexo_vfs::{Bytes, FileId, FsProvider, Time, TypstFileId};
+use reflexo_vfs::{Bytes, FileId, FsProvider, TypstFileId};
 use rustc_hash::FxHashMap;
 use typst::{
     diag::{FileError, FileResult},
@@ -19,43 +19,24 @@ type IncrQueryRef<S, E> = QueryRef<S, E, Option<S>>;
 type FileQuery<T> = QueryRef<T, FileError>;
 type IncrFileQuery<T> = IncrQueryRef<T, FileError>;
 
-#[derive(Default)]
-pub struct GlobalSourceCache {
-    pub mtime: FileQuery<Time>,
-    pub source: FileQuery<Source>,
-    pub buffer: FileQuery<Bytes>,
-}
-
-impl fmt::Debug for GlobalSourceCache {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("GlobalSourceCache").finish()
-    }
-}
-
-pub struct LocalSourceCache {
-    last_access_lifetime: usize,
+pub struct SourceCache {
     fid: FileId,
     source: IncrFileQuery<Source>,
     buffer: FileQuery<Bytes>,
 }
 
-impl Default for LocalSourceCache {
-    fn default() -> Self {
-        LocalSourceCache {
-            last_access_lifetime: 0,
-            fid: FileId(0),
-            source: IncrFileQuery::with_context(None),
-            buffer: FileQuery::default(),
-        }
+impl fmt::Debug for SourceCache {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SourceCache").finish()
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct SourceDb {
     pub revision: usize,
-    pub shared: Arc<RwLock<SharedState<GlobalSourceCache>>>,
+    pub shared: Arc<RwLock<SharedState<SourceCache>>>,
     /// The slots for all the files during a single lifecycle.
-    pub slots: Mutex<FxHashMap<TypstFileId, LocalSourceCache>>,
+    pub slots: Arc<Mutex<FxHashMap<TypstFileId, SourceCache>>>,
     /// Whether to reparse the file when it is changed.
     /// Default to `true`.
     pub do_reparse: bool,
@@ -80,7 +61,7 @@ impl SourceDb {
 
     /// Returns the overall memory usage for the stored files.
     pub fn memory_usage(&self) -> usize {
-        let mut w = self.slots.lock().len() * core::mem::size_of::<LocalSourceCache>();
+        let mut w = self.slots.lock().len() * core::mem::size_of::<SourceCache>();
         w += self
             .slots
             .lock()
@@ -153,36 +134,13 @@ impl SourceDb {
     }
 
     /// Insert a new slot into the vfs.
-    fn slot<T>(&self, id: TypstFileId, fid: FileId, f: impl FnOnce(&LocalSourceCache) -> T) -> T {
-        let mut slot = self.slots.lock();
-        let slot = slot.entry(id).or_insert_with(|| LocalSourceCache {
-            last_access_lifetime: self.revision,
+    fn slot<T>(&self, id: TypstFileId, fid: FileId, f: impl FnOnce(&SourceCache) -> T) -> T {
+        let mut slots = self.slots.lock();
+        f(slots.entry(id).or_insert_with(|| SourceCache {
             fid,
             source: IncrFileQuery::with_context(None),
             buffer: FileQuery::default(),
-        });
-
-        if slot.last_access_lifetime != self.revision {
-            let prev_source = slot.source.get_uninitialized().cloned();
-            let source = prev_source.transpose().ok().flatten();
-
-            *slot = LocalSourceCache {
-                last_access_lifetime: self.revision,
-                fid,
-                source: IncrFileQuery::with_context(source),
-                ..Default::default()
-            }
-        }
-
-        f(slot)
-    }
-
-    pub fn reset(&mut self) {
-        self.lifetime_cnt += 1;
-        let new_lifetime = self.lifetime_cnt;
-        self.slots
-            .get_mut()
-            .retain(|_, v| new_lifetime - v.last_access_lifetime <= 30);
+        }))
     }
 }
 
@@ -205,7 +163,7 @@ pub struct SharedState<T> {
     cache_entries: RwLock<FxDashMap<FileId, T>>,
 }
 
-impl fmt::Debug for SharedState<GlobalSourceCache> {
+impl<T> fmt::Debug for SharedState<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SharedState")
             .field("committed_revision", &self.committed_revision)
