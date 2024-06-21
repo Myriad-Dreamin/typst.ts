@@ -46,7 +46,7 @@ impl TypstBrowserUniverse {
             inputs,
             Arc::new(RwLock::new(vfs)),
             registry,
-            font_resolver,
+            Arc::new(font_resolver),
         )
     }
 }

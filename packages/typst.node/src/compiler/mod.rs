@@ -156,7 +156,7 @@ pub fn create_driver(
         Some(Arc::new(Prehashed::new(inputs))),
         Arc::new(RwLock::new(Vfs::new(SystemAccessModel {}))),
         HttpRegistry::default(),
-        searcher.into(),
+        Arc::new(searcher.into()),
     );
 
     Ok(CompileDriver::new(

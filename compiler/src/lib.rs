@@ -66,7 +66,7 @@ use std::{
 };
 
 #[cfg(feature = "system-compile")]
-pub use system::{TypstSystemUniverse, TypstSystemWorld};
+pub use system::{SystemCompilerFeat, TypstSystemUniverse, TypstSystemWorld};
 
 /// Run the compiler in the browser environment.
 #[cfg(feature = "browser-compile")]

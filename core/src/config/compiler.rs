@@ -126,6 +126,13 @@ impl EntryState {
     pub fn is_detached(&self) -> bool {
         matches!(self, Self::Detached)
     }
+
+    pub fn is_inactive(&self) -> bool {
+        matches!(
+            self,
+            EntryState::Detached | EntryState::Workspace { main: None, .. }
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

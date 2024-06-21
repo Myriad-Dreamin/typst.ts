@@ -1,6 +1,7 @@
 use core::fmt;
 use std::{
     collections::HashMap,
+    path::PathBuf,
     sync::{Arc, Mutex},
 };
 
@@ -40,6 +41,7 @@ pub trait FontResolver {
 #[derive(Debug)]
 /// The default FontResolver implementation.
 pub struct FontResolverImpl {
+    font_paths: Vec<PathBuf>,
     book: Prehashed<FontBook>,
     partial_book: Arc<Mutex<PartialFontBook>>,
     fonts: Vec<FontSlot>,
@@ -48,12 +50,14 @@ pub struct FontResolverImpl {
 
 impl FontResolverImpl {
     pub fn new(
+        font_paths: Vec<PathBuf>,
         book: FontBook,
         partial_book: Arc<Mutex<PartialFontBook>>,
         fonts: Vec<FontSlot>,
         profile: FontProfile,
     ) -> Self {
         Self {
+            font_paths,
             book: Prehashed::new(book),
             partial_book,
             fonts,
@@ -71,6 +75,10 @@ impl FontResolverImpl {
 
     pub fn profile(&self) -> &FontProfile {
         &self.profile
+    }
+
+    pub fn font_paths(&self) -> &[PathBuf] {
+        &self.font_paths
     }
 
     pub fn partial_resolved(&self) -> bool {

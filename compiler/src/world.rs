@@ -83,7 +83,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
         inputs: Option<Arc<Prehashed<Dict>>>,
         vfs: Arc<RwLock<Vfs<F::AccessModel>>>,
         registry: F::Registry,
-        font_resolver: F::FontResolver,
+        font_resolver: Arc<F::FontResolver>,
     ) -> Self {
         Self {
             entry,
@@ -94,7 +94,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
             shared: Arc::new(RwLock::new(SharedState::default())),
 
             // library: create_library(inputs.unwrap_or_default()),
-            font_resolver: Arc::new(font_resolver),
+            font_resolver,
             registry: Arc::new(registry),
             vfs,
         }

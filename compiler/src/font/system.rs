@@ -87,6 +87,7 @@ pub struct SystemFontSearcher {
 
     pub book: FontBook,
     pub fonts: Vec<FontSlot>,
+    pub font_paths: Vec<PathBuf>,
     profile_rebuilder: FontProfileRebuilder,
 }
 
@@ -99,6 +100,7 @@ impl SystemFontSearcher {
         let db = Database::new();
 
         Self {
+            font_paths: vec![],
             db,
             book: FontBook::new(),
             fonts: vec![],
@@ -331,13 +333,27 @@ impl SystemFontSearcher {
         self.db.load_system_fonts();
     }
 
+    fn record_path(&mut self, path: &Path) {
+        self.font_paths.push(if !path.is_relative() {
+            path.to_owned()
+        } else {
+            let current_dir = std::env::current_dir();
+            match current_dir {
+                Ok(current_dir) => current_dir.join(path),
+                Err(_) => path.to_owned(),
+            }
+        });
+    }
+
     /// Search for all fonts in a directory recursively.
     pub fn search_dir(&mut self, path: impl AsRef<Path>) {
+        self.record_path(path.as_ref());
         self.db.load_fonts_dir(path);
     }
 
     /// Index the fonts in the file at the given path.
     pub fn search_file(&mut self, path: impl AsRef<Path>) -> FileResult<()> {
+        self.record_path(path.as_ref());
         self.db
             .load_font_file(path.as_ref())
             .map_err(|e| FileError::from_io(e, path.as_ref()))
@@ -367,6 +383,7 @@ impl From<SystemFontSearcher> for FontResolverImpl {
         //         )));
         // }
         FontResolverImpl::new(
+            searcher.font_paths,
             searcher.book,
             Arc::new(Mutex::new(PartialFontBook::default())),
             searcher.fonts,
