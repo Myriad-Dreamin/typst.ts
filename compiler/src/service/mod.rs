@@ -42,7 +42,7 @@ pub mod query;
 pub use self::{diag::DiagnosticFormat, features::FeatureSet};
 
 #[cfg(feature = "system-compile")]
-pub type CompileDriver<C> = CompileDriverImpl<C, crate::TypstSystemWorld>;
+pub type CompileDriver<C> = CompileDriverImpl<C, crate::system::SystemCompilerFeat>;
 
 pub trait EntryManager {
     fn reset(&mut self) -> SourceResult<()> {

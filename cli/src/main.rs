@@ -20,7 +20,7 @@ use typst_ts_cli::{
     LinkPackagesArgs, ListFontsArgs, ListPackagesArgs, MeasureFontsArgs, Opts, PackageSubCommands,
     QueryArgs, QueryReplArgs, Subcommands,
 };
-use typst_ts_compiler::TypstSystemWorld;
+use typst_ts_compiler::TypstSystemUniverse;
 use typst_ts_core::{config::compiler::EntryOpts, exporter_builtins::GroupExporter};
 use typst_ts_core::{
     config::CompileOpts,
@@ -172,7 +172,7 @@ fn list_fonts(command: ListFontsArgs) -> ! {
     // todo: should cover default workspace path
     root_path.push("-");
 
-    let world = TypstSystemWorld::new(CompileOpts {
+    let world = TypstSystemUniverse::new(CompileOpts {
         entry: EntryOpts::new_workspace(root_path.as_path().into()),
         font_paths: command.font.paths,
         with_embedded_fonts: fonts().map(Cow::Borrowed).collect(),
@@ -180,7 +180,7 @@ fn list_fonts(command: ListFontsArgs) -> ! {
     })
     .unwrap_or_exit();
 
-    for (name, infos) in world.book().families() {
+    for (name, infos) in world.world().book().families() {
         println!("{name}");
         if command.variants {
             for info in infos {
@@ -207,7 +207,7 @@ fn measure_fonts(args: MeasureFontsArgs) -> ! {
         font_profile_paths.push(args.output.clone());
     }
 
-    let world = TypstSystemWorld::new(CompileOpts {
+    let world = TypstSystemUniverse::new(CompileOpts {
         entry: EntryOpts::new_workspace(root_path.as_path().into()),
         font_paths: args.font.paths,
         font_profile_cache_path: args.output.clone(),
@@ -243,7 +243,7 @@ fn list_packages(args: ListPackagesArgs) -> ! {
         }
     }
 
-    let world = TypstSystemWorld::new(CompileOpts::default()).unwrap_or_exit();
+    let world = TypstSystemUniverse::new(CompileOpts::default()).unwrap_or_exit();
 
     let paths = world.registry.paths();
 
@@ -300,7 +300,7 @@ fn link_packages(args: LinkPackagesArgs, should_delete: bool) -> ! {
         }
     }
 
-    let world = TypstSystemWorld::new(CompileOpts::default()).unwrap_or_exit();
+    let world = TypstSystemUniverse::new(CompileOpts::default()).unwrap_or_exit();
 
     let manifest = std::fs::read_to_string(&args.manifest).unwrap();
     let manifest: toml::Table = toml::from_str(&manifest).unwrap();

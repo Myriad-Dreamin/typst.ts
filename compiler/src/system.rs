@@ -23,10 +23,12 @@ impl crate::world::CompilerFeat for SystemCompilerFeat {
     type Registry = HttpRegistry;
 }
 
+/// The compiler universe in system environment.
+pub type TypstSystemUniverse = crate::world::CompilerUniverse<SystemCompilerFeat>;
 /// The compiler world in system environment.
 pub type TypstSystemWorld = crate::world::CompilerWorld<SystemCompilerFeat>;
 
-impl TypstSystemWorld {
+impl TypstSystemUniverse {
     /// Create [`TypstSystemWorld`] with the given options.
     /// See SystemCompilerFeat for instantiation details.
     /// See [`CompileOpts`] for available options.

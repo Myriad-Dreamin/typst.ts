@@ -66,13 +66,13 @@ use std::{
 };
 
 #[cfg(feature = "system-compile")]
-pub use system::TypstSystemWorld;
+pub use system::{TypstSystemUniverse, TypstSystemWorld};
 
 /// Run the compiler in the browser environment.
 #[cfg(feature = "browser-compile")]
 pub(crate) mod browser;
 #[cfg(feature = "browser-compile")]
-pub use browser::TypstBrowserWorld;
+pub use browser::{BrowserCompilerFeat, TypstBrowserWorld};
 use typst::{
     diag::{At, FileResult, SourceResult},
     syntax::Span,

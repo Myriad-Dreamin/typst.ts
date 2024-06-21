@@ -12,7 +12,7 @@ use typst_ts_compiler::{
         features::{FeatureSet, DIAG_FMT_FEATURE},
         CompileActor, CompileDriver, CompileExporter, DynamicLayoutCompiler,
     },
-    TypstSystemWorld,
+    TypstSystemUniverse,
 };
 use typst_ts_core::config::compiler::{EntryOpts, MEMORY_MAIN_ENTRY};
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
@@ -67,7 +67,7 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<()> {
         .map(|(k, v)| (k.as_str().into(), v.as_str().into_value()))
         .collect();
 
-    let world = TypstSystemWorld::new(CompileOpts {
+    let universe = TypstSystemUniverse::new(CompileOpts {
         entry: EntryOpts::new_workspace(workspace_dir.clone()),
         inputs,
         font_paths: args.font.paths.clone(),
@@ -80,10 +80,10 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<()> {
     .unwrap_or_exit();
 
     let world = if is_stdin {
-        let mut world = world;
+        let mut u = universe;
 
-        let entry = world.entry.select_in_workspace(*MEMORY_MAIN_ENTRY);
-        world.mutate_entry(entry).unwrap();
+        let entry = u.entry.select_in_workspace(*MEMORY_MAIN_ENTRY);
+        u.mutate_entry(entry).unwrap();
 
         let src = read_from_stdin()
             .map_err(|err| {
@@ -95,8 +95,7 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<()> {
             })
             .unwrap();
 
-        world
-            .map_shadow_by_id(*MEMORY_MAIN_ENTRY, Bytes::from(src))
+        u.map_shadow_by_id(*MEMORY_MAIN_ENTRY, Bytes::from(src))
             .map_err(|err| {
                 clap::Error::raw(
                     clap::error::ErrorKind::Io,
@@ -106,9 +105,9 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<()> {
             })
             .unwrap();
 
-        world
+        u
     } else {
-        world.with_entry_file(entry_file_path)
+        universe.with_entry_file(entry_file_path)
     };
 
     CompileDriver::new((), world)

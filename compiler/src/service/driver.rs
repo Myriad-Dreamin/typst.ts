@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    world::{CompilerFeat, CompilerWorld},
+    world::{CompilerFeat, CompilerUniverse, CompilerWorld},
     NotifyApi, ShadowApi,
 };
 use typst::{
@@ -17,20 +17,20 @@ use typst_ts_core::{
     config::compiler::DETACHED_ENTRY, Bytes, ImmutPath, TypstDocument, TypstFileId,
 };
 
-use super::{CompileEnv, Compiler, EntryManager, EnvWorld};
+use super::{CompileEnv, Compiler, EntryManager};
 
 /// CompileDriverImpl is a driver for typst compiler.
 /// It is responsible for operating the compiler without leaking implementation
 /// details of the compiler.
-pub struct CompileDriverImpl<C, W> {
+pub struct CompileDriverImpl<C, F: CompilerFeat> {
     pub compiler: C,
     /// World that has access to the file system.
-    pub world: W,
+    pub world: CompilerUniverse<F>,
 }
 
-impl<C: Compiler, W: World> CompileDriverImpl<C, W> {
+impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
     /// Create a new driver.
-    pub fn new(compiler: C, world: W) -> Self {
+    pub fn new(compiler: C, world: CompilerUniverse<F>) -> Self {
         Self { compiler, world }
     }
 
@@ -39,7 +39,7 @@ impl<C: Compiler, W: World> CompileDriverImpl<C, W> {
         selector: String,
         document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
-        self.compiler.query(&self.world, selector, document)
+        self.compiler.query(&self.world(), selector, document)
     }
 
     /// The default implementation of `relevant` method, which performs a
@@ -92,39 +92,46 @@ impl<C: Compiler, W: World> CompileDriverImpl<C, W> {
     }
 }
 
-impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, CompilerWorld<F>> {
+impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
     pub fn entry_file(&self) -> Option<PathBuf> {
         let main = self.world.entry.main()?;
         self.world.path_for_id(main).ok()
     }
 }
 
-impl<C: Compiler, W: World + EnvWorld + EntryManager> CompileDriverImpl<C, W> {
+impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
     pub fn compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<TypstDocument>> {
-        let world = &mut self.world;
+        let universe = self.universe_mut();
 
-        world.prepare_env(env)?;
-
-        let main_id = world
+        let main_id = universe
             .main_id()
             .ok_or_else(|| eco_format!("no entry file"))
             .at(Span::detached())?;
+
+        let mut world = self.world();
+
+        world.prepare_env(env)?;
+
         world
             .source(main_id)
             .hint(AtFile(main_id))
             .at(Span::detached())?;
 
-        self.compiler.compile(world, env)
+        self.compiler.compile(&world, env)
     }
 }
 
-impl<C: Compiler, W: World + EnvWorld + EntryManager + NotifyApi> CompileDriverImpl<C, W> {
-    pub fn world(&self) -> &W {
+impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
+    pub fn universe(&self) -> &CompilerUniverse<F> {
         &self.world
     }
 
-    pub fn world_mut(&mut self) -> &mut W {
+    pub fn universe_mut(&mut self) -> &mut CompilerUniverse<F> {
         &mut self.world
+    }
+
+    pub fn world(&self) -> CompilerWorld<F> {
+        self.world.world()
     }
 
     pub fn main_id(&self) -> TypstFileId {
@@ -134,7 +141,7 @@ impl<C: Compiler, W: World + EnvWorld + EntryManager + NotifyApi> CompileDriverI
     /// reset the compilation state
     pub fn reset(&mut self) -> SourceResult<()> {
         // reset the world caches
-        self.world.reset()?;
+        self.world.reset();
 
         Ok(())
     }
@@ -164,7 +171,7 @@ impl<C: Compiler, W: World + EnvWorld + EntryManager + NotifyApi> CompileDriverI
     }
 }
 
-impl<C: Compiler, W: World + ShadowApi> ShadowApi for CompileDriverImpl<C, W> {
+impl<C: Compiler, F: CompilerFeat> ShadowApi for CompileDriverImpl<C, F> {
     #[inline]
     fn _shadow_map_id(&self, file_id: TypstFileId) -> typst::diag::FileResult<PathBuf> {
         self.world._shadow_map_id(file_id)

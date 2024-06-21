@@ -4,15 +4,15 @@ use divan::Bencher;
 use once_cell::sync::Lazy;
 use typst_ts_cli::CompileOnceArgs;
 use typst_ts_compiler::{
-    service::{CompileDriverImpl, Compiler},
-    ShadowApiExt, TypstSystemWorld,
+    service::{CompileDriver as CompileDriverT, Compiler},
+    ShadowApiExt,
 };
 use typst_ts_core::{
     vector::pass::{IncrTypst2VecPass, Typst2VecPass},
     TypstDocument,
 };
 
-type CompileDriver = Lazy<Mutex<CompileDriverImpl<(), TypstSystemWorld>>>;
+type CompileDriver = Lazy<Mutex<CompileDriverT<()>>>;
 
 static TEST_COMPILER: CompileDriver = once_cell::sync::Lazy::new(|| {
     Mutex::new(typst_ts_cli::compile::create_driver(CompileOnceArgs {
@@ -32,7 +32,7 @@ fn compile(driver: &CompileDriver, src: &str) -> Arc<TypstDocument> {
     let e = driver.entry_file().to_owned().unwrap();
     driver
         .with_shadow_file(&e, src.as_bytes().into(), |this| {
-            ().compile(&this.world, &mut Default::default())
+            ().compile(&this.world(), &mut Default::default())
         })
         .unwrap()
 }

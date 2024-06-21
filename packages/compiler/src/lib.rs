@@ -109,7 +109,7 @@ fn convert_diag(
 
 #[wasm_bindgen]
 pub struct TypstCompiler {
-    pub(crate) driver: CompileDriverImpl<(), TypstBrowserWorld>,
+    pub(crate) driver: CompileDriverImpl<(), BrowserCompilerFeat>,
 }
 
 impl TypstCompiler {
@@ -179,7 +179,7 @@ impl TypstCompiler {
             .map(|(k, v)| (k.into(), v.into_value()))
             .collect();
         self.driver
-            .world_mut()
+            .universe_mut()
             .set_inputs(Arc::new(Prehashed::new(inputs)));
         Ok(())
     }
@@ -227,7 +227,7 @@ impl TypstCompiler {
 
     pub fn get_loaded_fonts(&mut self) -> Vec<JsString> {
         self.driver
-            .world_mut()
+            .universe_mut()
             .font_resolver
             .loaded_fonts()
             .map(|s| format!("<{}, {:?}>", s.0, s.1).into())
@@ -250,7 +250,7 @@ impl TypstCompiler {
             .compile(&mut Default::default())
             .map_err(|e| format!("{e:?}"))?;
         let data = ast_exporter
-            .export(self.driver.world(), doc)
+            .export(&self.driver.world(), doc)
             .map_err(|e| format!("{e:?}"))?;
 
         let converted = ansi_to_html::convert_escaped(
@@ -263,7 +263,7 @@ impl TypstCompiler {
     }
 
     pub fn get_semantic_token_legend(&mut self) -> Result<JsValue, JsValue> {
-        let tokens = self.driver.world_mut().get_semantic_token_legend();
+        let tokens = self.driver.universe_mut().get_semantic_token_legend();
         serde_wasm_bindgen::to_value(tokens.as_ref()).map_err(|e| format!("{e:?}").into())
     }
 
@@ -279,7 +279,7 @@ impl TypstCompiler {
             );
         }
 
-        let tokens = self.driver.world_mut().get_semantic_tokens(
+        let tokens = self.driver.universe_mut().get_semantic_tokens(
             file_path,
             match offset_encoding.as_str() {
                "utf-16" => OffsetEncoding::Utf16,
@@ -330,13 +330,13 @@ impl TypstCompiler {
 
         let doc = take_diag!(
             diagnostics_format,
-            self.driver.world(),
+            &self.driver.world(),
             self.driver.compile(&mut Default::default())
         );
         let artifact_bytes = take_diag!(
             diagnostics_format,
-            self.driver.world(),
-            vec_exporter.export(self.driver.world(), doc)
+            &self.driver.world(),
+            vec_exporter.export(&self.driver.world(), doc)
         );
 
         let v: JsValue = Uint8Array::from(artifact_bytes.as_slice()).into();
@@ -412,7 +412,7 @@ impl TypstCompiler {
 
         let doc = take_diag!(
             diagnostics_format,
-            self.driver.world(),
+            &self.driver.world(),
             self.driver.compile(&mut Default::default())
         );
 

@@ -29,7 +29,7 @@ use crate::{
         get_semantic_tokens_full, get_semantic_tokens_legend, OffsetEncoding, SemanticToken,
         SemanticTokensLegend,
     },
-    service::{CompileEnv, EntryManager, EnvWorld},
+    service::{CompileEnv, EntryManager},
     vfs::{notify::FilesystemEvent, AccessModel as VfsAccessModel, Vfs},
     NotifyApi, ShadowApi,
 };
@@ -40,39 +40,33 @@ type CodespanError = codespan_reporting::files::Error;
 /// type trait interface of [`CompilerWorld`].
 pub trait CompilerFeat {
     /// Specify the font resolver for typst compiler.
-    type FontResolver: FontResolver + Sized;
+    type FontResolver: FontResolver + Send + Sync + Sized;
     /// Specify the access model for VFS.
-    type AccessModel: VfsAccessModel + Sized;
+    type AccessModel: VfsAccessModel + Send + Sync + Sized;
     /// Specify the package registry.
-    type Registry: PackageRegistry + Sized;
+    type Registry: PackageRegistry + Send + Sync + Sized;
 }
 
 /// A world that provides access to the operating system.
 #[derive(Debug)]
-pub struct CompilerWorld<F: CompilerFeat> {
+pub struct CompilerUniverse<F: CompilerFeat> {
     /// State for the *root & entry* of compilation.
     /// The world forbids direct access to files outside this directory.
     pub entry: EntryState,
     /// Additional input arguments to compile the entry file.
     pub inputs: Arc<Prehashed<Dict>>,
+    /// Whether to reparse the source files.
+    pub do_reparse: bool,
 
-    /// Provides library for typst compiler.
-    pub library: Arc<Prehashed<Library>>,
     /// Provides font management for typst compiler.
     pub font_resolver: Arc<F::FontResolver>,
     /// Provides package management for typst compiler.
     pub registry: Arc<F::Registry>,
     /// Provides path-based data access for typst compiler.
     pub vfs: Arc<RwLock<Vfs<F::AccessModel>>>,
-    /// Provides source database for typst compiler.
-    pub source_db: SourceDb,
-
-    /// The current datetime if requested. This is stored here to ensure it is
-    /// always the same within one compilation. Reset between compilations.
-    now: OnceCell<DateTime<Local>>,
 }
 
-impl<F: CompilerFeat> CompilerWorld<F> {
+impl<F: CompilerFeat> CompilerUniverse<F> {
     /// Create a [`CompilerWorld`] with feature implementation.
     ///
     /// Although this function is public, it is always unstable and not intended
@@ -88,15 +82,13 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     ) -> Self {
         Self {
             entry,
-            inputs: Arc::new(Prehashed::new(Dict::new())),
+            inputs: inputs.unwrap_or_default(),
+            do_reparse: true,
 
-            library: create_library(inputs.unwrap_or_default()),
+            // library: create_library(inputs.unwrap_or_default()),
             font_resolver: Arc::new(font_resolver),
             registry: Arc::new(registry),
             vfs,
-            source_db: SourceDb::default(),
-
-            now: OnceCell::new(),
         }
     }
 
@@ -123,6 +115,19 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         self.mutate_entry(state).map(|_| ())?;
         Ok(())
     }
+
+    pub fn world(&self) -> CompilerWorld<F> {
+        CompilerWorld {
+            entry: self.entry.clone(),
+            inputs: self.inputs.clone(),
+            library: create_library(self.inputs.clone()),
+            font_resolver: self.font_resolver.clone(),
+            registry: self.registry.clone(),
+            vfs: self.vfs.clone(),
+            source_db: SourceDb::default(),
+            now: OnceCell::new(),
+        }
+    }
 }
 
 #[comemo::memoize]
@@ -134,14 +139,27 @@ fn create_library(inputs: Arc<Prehashed<Dict>>) -> Arc<Prehashed<Library>> {
     Arc::new(Prehashed::new(lib))
 }
 
-impl<F: CompilerFeat> EnvWorld for CompilerWorld<F> {
-    fn prepare_env(&mut self, env: &mut CompileEnv) -> SourceResult<()> {
-        // Hook up the lang items.
-        // todo: bad upstream changes
-        self.library = create_library(env.args.clone().unwrap_or_else(|| self.inputs.clone()));
+pub struct CompilerWorld<F: CompilerFeat> {
+    /// State for the *root & entry* of compilation.
+    /// The world forbids direct access to files outside this directory.
+    pub entry: EntryState,
+    /// Additional input arguments to compile the entry file.
+    pub inputs: Arc<Prehashed<Dict>>,
 
-        Ok(())
-    }
+    /// Provides library for typst compiler.
+    pub library: Arc<Prehashed<Library>>,
+    /// Provides font management for typst compiler.
+    pub font_resolver: Arc<F::FontResolver>,
+    /// Provides package management for typst compiler.
+    pub registry: Arc<F::Registry>,
+    /// Provides path-based data access for typst compiler.
+    pub vfs: Arc<RwLock<Vfs<F::AccessModel>>>,
+
+    /// Provides source database for typst compiler.
+    pub source_db: SourceDb,
+    /// The current datetime if requested. This is stored here to ensure it is
+    /// always the same within one compilation. Reset between compilations.
+    now: OnceCell<DateTime<Local>>,
 }
 
 impl<F: CompilerFeat> World for CompilerWorld<F> {
@@ -239,6 +257,66 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         self.source_db.do_reparse = do_reparse;
     }
 
+    pub fn prepare_env(&mut self, env: &mut CompileEnv) -> SourceResult<()> {
+        // Hook up the lang items.
+        // todo: bad upstream changes
+        self.library = create_library(env.args.clone().unwrap_or_else(|| self.inputs.clone()));
+
+        Ok(())
+    }
+
+    /// Resolve the real path for a file id.
+    pub fn path_for_id(&self, id: FileId) -> Result<PathBuf, FileError> {
+        if id == *DETACHED_ENTRY {
+            return Ok(DETACHED_ENTRY.vpath().as_rooted_path().to_owned());
+        }
+
+        // Determine the root path relative to which the file path
+        // will be resolved.
+        let root = match id.package() {
+            Some(spec) => self.registry.resolve(spec)?,
+            None => self.entry.root().ok_or(FileError::Other(Some(eco_format!(
+                "cannot access directory without root: state: {:?}",
+                self.entry
+            ))))?,
+        };
+
+        // Join the path to the root. If it tries to escape, deny
+        // access. Note: It can still escape via symlinks.
+        id.vpath().resolve(&root).ok_or(FileError::AccessDenied)
+    }
+    /// Lookup a source file by id.
+    #[track_caller]
+    fn lookup(&self, id: FileId) -> Source {
+        self.source(id)
+            .expect("file id does not point to any source file")
+    }
+
+    fn map_source_or_default<T>(
+        &self,
+        id: FileId,
+        default_v: T,
+        f: impl FnOnce(Source) -> CodespanResult<T>,
+    ) -> CodespanResult<T> {
+        match World::source(self, id).ok() {
+            Some(source) => f(source),
+            None => Ok(default_v),
+        }
+    }
+}
+
+impl<F: CompilerFeat> CompilerUniverse<F> {
+    /// Reset the world for a new lifecycle (of garbage collection).
+    pub fn reset(&mut self) {
+        self.vfs.write().reset();
+        // todo: shared state
+    }
+
+    /// Set the `do_reparse` flag.
+    pub fn set_do_reparse(&mut self, do_reparse: bool) {
+        self.do_reparse = do_reparse;
+    }
+
     /// Resolve the real path for a file id.
     pub fn path_for_id(&self, id: FileId) -> Result<PathBuf, FileError> {
         if id == *DETACHED_ENTRY {
@@ -269,39 +347,21 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         file_path: Option<String>,
         encoding: OffsetEncoding,
     ) -> Arc<Vec<SemanticToken>> {
+        let world = self.world();
         let src = &file_path
             .and_then(|e| {
                 let relative_path = Path::new(&e).strip_prefix(&self.workspace_root()?).ok()?;
 
                 let source_id = FileId::new(None, VirtualPath::new(relative_path));
-                self.source(source_id).ok()
+                world.source(source_id).ok()
             })
-            .unwrap_or_else(|| self.main());
+            .unwrap_or_else(|| world.main());
 
         Arc::new(get_semantic_tokens_full(src, encoding))
     }
-
-    fn map_source_or_default<T>(
-        &self,
-        id: FileId,
-        default_v: T,
-        f: impl FnOnce(Source) -> CodespanResult<T>,
-    ) -> CodespanResult<T> {
-        match World::source(self, id).ok() {
-            Some(source) => f(source),
-            None => Ok(default_v),
-        }
-    }
-
-    /// Lookup a source file by id.
-    #[track_caller]
-    fn lookup(&self, id: FileId) -> Source {
-        self.source(id)
-            .expect("file id does not point to any source file")
-    }
 }
 
-impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
+impl<F: CompilerFeat> ShadowApi for CompilerUniverse<F> {
     #[inline]
     fn _shadow_map_id(&self, file_id: FileId) -> FileResult<PathBuf> {
         self.path_for_id(file_id)
@@ -330,7 +390,7 @@ impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
     }
 }
 
-impl<F: CompilerFeat> NotifyApi for CompilerWorld<F> {
+impl<F: CompilerFeat> NotifyApi for CompilerUniverse<F> {
     #[inline]
     fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath)) {
         self.source_db
@@ -343,7 +403,7 @@ impl<F: CompilerFeat> NotifyApi for CompilerWorld<F> {
     }
 }
 
-impl<F: CompilerFeat> EntryManager for CompilerWorld<F> {
+impl<F: CompilerFeat> EntryManager for CompilerUniverse<F> {
     fn reset(&mut self) -> SourceResult<()> {
         self.reset();
         Ok(())

@@ -3,7 +3,7 @@ use std::path::Path;
 use typst::model::Document;
 use typst_ts_compiler::{
     service::{CompileDriver, CompileExporter},
-    ShadowApiExt, TypstSystemWorld,
+    ShadowApiExt, TypstSystemUniverse,
 };
 use typst_ts_core::{
     config::{compiler::EntryOpts, CompileOpts},
@@ -24,7 +24,7 @@ fn get_driver(
 ) -> CompileDriver<CompileExporter<()>> {
     let project_base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let font_path = project_base.join("assets/fonts");
-    let world = TypstSystemWorld::new(CompileOpts {
+    let world = TypstSystemUniverse::new(CompileOpts {
         entry: EntryOpts::new_workspace(workspace_dir.into()),
         no_system_fonts: true,
         font_paths: vec![font_path],

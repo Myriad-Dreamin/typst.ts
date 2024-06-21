@@ -91,3 +91,7 @@ impl AccessModel for ProxyAccessModel {
         Ok(data)
     }
 }
+
+// todo
+unsafe impl Send for ProxyAccessModel {}
+unsafe impl Sync for ProxyAccessModel {}

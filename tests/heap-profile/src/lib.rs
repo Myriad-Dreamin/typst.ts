@@ -2,7 +2,7 @@ use std::path::Path;
 
 use typst_ts_compiler::{
     service::{CompileDriver, CompileExporter},
-    ShadowApiExt, TypstSystemWorld,
+    ShadowApiExt, TypstSystemUniverse,
 };
 use typst_ts_core::{
     config::{compiler::EntryOpts, CompileOpts},
@@ -15,7 +15,7 @@ fn get_driver(
     entry_file_path: &Path,
     exporter: GroupExporter<TypstDocument>,
 ) -> CompileDriver<CompileExporter<()>> {
-    let world = TypstSystemWorld::new(CompileOpts {
+    let world = TypstSystemUniverse::new(CompileOpts {
         entry: EntryOpts::new_workspace(workspace_dir.into()),
         no_system_fonts: true,
         ..CompileOpts::default()
