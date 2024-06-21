@@ -174,6 +174,6 @@ pub struct TextItemContent {
     /// Note: witout XML escaping.
     pub content: ImmutStr,
     /// The glyphs in the text.
-    /// (offset, advance, glyph): ([`Abs`], [`Abs`], [`GlyphItem`])
+    /// (offset, advance, glyph): ([`Abs`], [`Abs`], [`FlatGlyphItem`])
     pub glyphs: Arc<[(Abs, Abs, u32)]>,
 }

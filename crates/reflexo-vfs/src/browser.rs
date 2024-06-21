@@ -1,13 +1,10 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
+use reflexo::ImmutPath;
 use typst::diag::{FileError, FileResult};
 use wasm_bindgen::prelude::*;
 
-use typst_ts_core::Bytes;
-
-use crate::Time;
-
-use super::AccessModel;
+use crate::{AccessModel, Bytes, Time};
 
 /// Provides proxy access model from typst compiler to some JavaScript
 /// implementation.
@@ -27,8 +24,6 @@ pub struct ProxyAccessModel {
 }
 
 impl AccessModel for ProxyAccessModel {
-    type RealPath = PathBuf;
-
     fn mtime(&self, src: &Path) -> FileResult<Time> {
         self.mtime_fn
             .call1(&self.context, &src.to_string_lossy().as_ref().into())
@@ -60,10 +55,10 @@ impl AccessModel for ProxyAccessModel {
             })
     }
 
-    fn real_path(&self, src: &Path) -> FileResult<Self::RealPath> {
+    fn real_path(&self, src: &Path) -> FileResult<ImmutPath> {
         self.real_path_fn
             .call1(&self.context, &src.to_string_lossy().as_ref().into())
-            .map(|v| Path::new(&v.as_string().unwrap()).to_owned())
+            .map(|v| Path::new(&v.as_string().unwrap()).into())
             .map_err(|e| {
                 web_sys::console::error_3(
                     &"typst_ts::compiler::ProxyAccessModel::real_path failure".into(),
@@ -96,3 +91,7 @@ impl AccessModel for ProxyAccessModel {
         Ok(data)
     }
 }
+
+// todo
+unsafe impl Send for ProxyAccessModel {}
+unsafe impl Sync for ProxyAccessModel {}

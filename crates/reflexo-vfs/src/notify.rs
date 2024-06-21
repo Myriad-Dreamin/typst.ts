@@ -2,9 +2,8 @@ use core::fmt;
 use std::{collections::HashMap, path::Path};
 
 use typst::diag::{FileError, FileResult};
-use typst_ts_core::{Bytes, ImmutPath};
 
-use crate::vfs::AccessModel;
+use crate::{AccessModel, Bytes, ImmutPath};
 
 /// internal representation of [`NotifyFile`]
 #[derive(Debug, Clone)]
@@ -204,7 +203,7 @@ pub enum NotifyMessage {
 ///
 /// It simply hold notified filesystem data in memory, but still have a fallback
 /// access model, whose the typical underlying access model is
-/// [`crate::vfs::system::SystemAccessModel`]
+/// [`crate::system::SystemAccessModel`]
 #[derive(Debug)]
 pub struct NotifyAccessModel<M: AccessModel> {
     files: HashMap<ImmutPath, FileSnapshot>,
@@ -239,8 +238,6 @@ impl<M: AccessModel> NotifyAccessModel<M> {
 }
 
 impl<M: AccessModel> AccessModel for NotifyAccessModel<M> {
-    type RealPath = M::RealPath;
-
     fn mtime(&self, src: &Path) -> FileResult<crate::Time> {
         if let Some(entry) = self.files.get(src) {
             return entry.mtime().cloned();
@@ -257,7 +254,7 @@ impl<M: AccessModel> AccessModel for NotifyAccessModel<M> {
         self.inner.is_file(src)
     }
 
-    fn real_path(&self, src: &Path) -> FileResult<Self::RealPath> {
+    fn real_path(&self, src: &Path) -> FileResult<ImmutPath> {
         if self.files.contains_key(src) {
             return Ok(src.into());
         }

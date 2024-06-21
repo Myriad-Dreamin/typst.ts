@@ -28,7 +28,7 @@ fxhash.workspace = true
 once_cell.workspace = true
 rustc-hash.workspace = true
 crossbeam-queue = "0.3.10"
-dashmap = { version = "5" }
+dashmap.workspace = true
 
 parking_lot = { workspace = true }
 bitvec = { version = "1" }

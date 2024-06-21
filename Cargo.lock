@@ -2893,11 +2893,13 @@ dependencies = [
  "ecow",
  "fxhash",
  "hex",
+ "instant",
  "js-sys",
  "once_cell",
  "parking_lot",
  "path-clean",
  "rkyv",
+ "rustc-hash",
  "serde",
  "serde_json",
  "serde_repr",
@@ -2946,6 +2948,43 @@ dependencies = [
  "reflexo-vec2canvas",
  "tiny-skia",
  "unicode-width",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "reflexo-vfs"
+version = "0.5.0-rc4"
+dependencies = [
+ "append-only-vec",
+ "indexmap 2.2.6",
+ "js-sys",
+ "nohash-hasher",
+ "once_cell",
+ "parking_lot",
+ "reflexo",
+ "rustc-hash",
+ "typst",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "reflexo-world"
+version = "0.5.0-rc4"
+dependencies = [
+ "append-only-vec",
+ "dashmap",
+ "indexmap 2.2.6",
+ "js-sys",
+ "log",
+ "nohash-hasher",
+ "once_cell",
+ "parking_lot",
+ "reflexo",
+ "reflexo-vfs",
+ "rustc-hash",
+ "typst",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -4486,6 +4525,8 @@ dependencies = [
  "pathdiff",
  "pollster",
  "rayon",
+ "reflexo-vfs",
+ "reflexo-world",
  "reqwest",
  "rustc-hash",
  "serde",

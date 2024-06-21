@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use comemo::Prehashed;
+use parking_lot::RwLock;
 use typst_ts_core::{config::CompileOpts, error::prelude::*, font::FontResolverImpl};
 
 use crate::{
@@ -22,10 +23,12 @@ impl crate::world::CompilerFeat for SystemCompilerFeat {
     type Registry = HttpRegistry;
 }
 
+/// The compiler universe in system environment.
+pub type TypstSystemUniverse = crate::world::CompilerUniverse<SystemCompilerFeat>;
 /// The compiler world in system environment.
 pub type TypstSystemWorld = crate::world::CompilerWorld<SystemCompilerFeat>;
 
-impl TypstSystemWorld {
+impl TypstSystemUniverse {
     /// Create [`TypstSystemWorld`] with the given options.
     /// See SystemCompilerFeat for instantiation details.
     /// See [`CompileOpts`] for available options.
@@ -33,7 +36,8 @@ impl TypstSystemWorld {
         let inputs = std::mem::take(&mut opts.inputs);
         let mut w = Self::new_raw(
             opts.entry.clone().try_into()?,
-            Vfs::new(SystemAccessModel {}),
+            Some(Arc::new(Prehashed::new(opts.inputs.clone()))),
+            Arc::new(RwLock::new(Vfs::new(SystemAccessModel {}))),
             HttpRegistry::default(),
             Self::resolve_fonts(opts)?,
         );

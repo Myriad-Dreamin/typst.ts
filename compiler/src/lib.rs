@@ -37,19 +37,15 @@
 // todo: why does typst#2771 not work
 // #![warn(clippy::uninlined_format_args)]
 
-pub(crate) mod macros;
-
 /// font things about compiler.
 pub mod font;
 
-/// Dependency things about compiler
-pub mod dependency;
 /// package things about compiler.
 pub mod package;
 /// time things about compiler.
 pub mod time;
 /// A vfs implementation for compiler.
-pub mod vfs;
+pub use reflexo_vfs as vfs;
 /// A common implementation of [`typst::World`]
 pub mod world;
 
@@ -70,19 +66,18 @@ use std::{
 };
 
 #[cfg(feature = "system-compile")]
-pub use system::TypstSystemWorld;
+pub use system::{TypstSystemUniverse, TypstSystemWorld};
 
 /// Run the compiler in the browser environment.
 #[cfg(feature = "browser-compile")]
 pub(crate) mod browser;
 #[cfg(feature = "browser-compile")]
-pub use browser::TypstBrowserWorld;
+pub use browser::{BrowserCompilerFeat, TypstBrowserUniverse, TypstBrowserWorld};
 use typst::{
     diag::{At, FileResult, SourceResult},
     syntax::Span,
 };
 use typst_ts_core::{typst::prelude::*, Bytes, ImmutPath, TypstFileId};
-use vfs::notify::FilesystemEvent;
 
 pub use time::Time;
 
@@ -175,9 +170,7 @@ impl<C: ShadowApi> ShadowApiExt for C {
     }
 }
 
-/// Latest version of the notify api, which is in beta.
-pub trait NotifyApi {
-    fn iter_dependencies<'a>(&'a self, f: &mut dyn FnMut(&'a ImmutPath, FileResult<&crate::Time>));
-
-    fn notify_fs_event(&mut self, event: FilesystemEvent);
+/// Latest version of the world dependencies api, which is in beta.
+pub trait WorldDeps {
+    fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath));
 }

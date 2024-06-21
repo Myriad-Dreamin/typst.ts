@@ -14,6 +14,8 @@ members = [
     "benches/lowering",
 
     "crates/reflexo",
+    "crates/reflexo-vfs",
+    "crates/reflexo-world",
     "crates/conversion/vec2canvas",
     "crates/conversion/vec2sema",
     "crates/conversion/vec2bbox",
@@ -112,6 +114,7 @@ ecow = "0.2"
 fst = "0.4.7"
 indexmap = "2"
 unicode-width = "0.1.11"
+dashmap = "5"
 
 # cli, terminal and tui
 ansi_term = "0.12.1"
@@ -201,6 +204,8 @@ vergen = { version = "8.3.1", features = [
 
 # project core
 reflexo = { version = "0.5.0-rc4", default-features = false, path = "crates/reflexo" }
+reflexo-vfs = { version = "0.5.0-rc4", path = "crates/reflexo-vfs" }
+reflexo-world = { version = "0.5.0-rc4", path = "crates/reflexo-world" }
 
 # conversions
 reflexo-vec2canvas = { version = "0.5.0-rc4", path = "crates/conversion/vec2canvas" }

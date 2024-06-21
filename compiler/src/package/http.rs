@@ -1,4 +1,7 @@
-use std::{cell::OnceCell, path::Path, sync::Arc};
+use std::{
+    path::Path,
+    sync::{Arc, OnceLock},
+};
 
 use log::error;
 use parking_lot::Mutex;
@@ -13,7 +16,7 @@ use super::{DummyNotifier, Notifier, PackageError, PackageSpec, Registry};
 pub struct HttpRegistry {
     notifier: Arc<Mutex<dyn Notifier + Send>>,
 
-    packages: OnceCell<Vec<(PackageSpec, Option<EcoString>)>>,
+    packages: OnceLock<Vec<(PackageSpec, Option<EcoString>)>>,
 }
 
 impl Default for HttpRegistry {
@@ -22,7 +25,7 @@ impl Default for HttpRegistry {
             notifier: Arc::new(Mutex::<DummyNotifier>::default()),
 
             // todo: reset cache
-            packages: OnceCell::new(),
+            packages: OnceLock::new(),
         }
     }
 }

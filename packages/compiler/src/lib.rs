@@ -1,7 +1,6 @@
 use core::fmt;
 use std::{fmt::Write, path::Path, sync::Arc};
 
-use base64::Engine;
 use comemo::Prehashed;
 use js_sys::{Array, JsString, Uint32Array, Uint8Array};
 pub use typst_ts_compiler::*;
@@ -9,16 +8,15 @@ use typst_ts_compiler::{
     font::web::BrowserFontSearcher,
     package::browser::ProxyRegistry,
     parser::OffsetEncoding,
-    service::{CompileDriverImpl, Compiler},
+    service::{CompileDriverImpl, PureCompiler},
     vfs::browser::ProxyAccessModel,
-    world::WorldSnapshot,
 };
 use typst_ts_core::{
     cache::FontInfoCache,
     diag::SourceDiagnostic,
     error::{long_diag_from_std, prelude::*, DiagMessage},
     typst::{self, foundations::IntoValue, prelude::EcoVec},
-    DynExporter, Exporter, FontLoader, FontSlot, TypstDocument, TypstFont, TypstWorld,
+    DynExporter, Exporter, TypstDocument, TypstWorld,
 };
 use wasm_bindgen::prelude::*;
 
@@ -114,7 +112,7 @@ fn convert_diag(
 
 #[wasm_bindgen]
 pub struct TypstCompiler {
-    pub(crate) compiler: CompileDriverImpl<TypstBrowserWorld>,
+    pub(crate) driver: CompileDriverImpl<PureCompiler<TypstBrowserWorld>, BrowserCompilerFeat>,
 }
 
 impl TypstCompiler {
@@ -124,12 +122,16 @@ impl TypstCompiler {
         searcher: BrowserFontSearcher,
     ) -> Result<Self, JsValue> {
         Ok(Self {
-            compiler: CompileDriverImpl::new(TypstBrowserWorld::new(
-                std::path::Path::new("/").to_owned(),
-                access_model,
-                registry,
-                searcher.into(),
-            )),
+            driver: CompileDriverImpl::new(
+                std::marker::PhantomData,
+                TypstBrowserUniverse::new(
+                    std::path::Path::new("/").to_owned(),
+                    None,
+                    access_model,
+                    registry,
+                    searcher.into(),
+                ),
+            ),
         })
     }
 }
@@ -139,27 +141,6 @@ pub fn get_font_info(buffer: Uint8Array) -> JsValue {
     serde_wasm_bindgen::to_value(&FontInfoCache::from_data(buffer.to_vec().as_slice())).unwrap()
 }
 
-struct SnapshotFontLoader {
-    font_cb: js_sys::Function,
-    index: u32,
-    path: String,
-}
-
-impl FontLoader for SnapshotFontLoader {
-    fn load(&mut self) -> Option<TypstFont> {
-        let buf = self
-            .font_cb
-            .call1(&self.font_cb, &self.path.clone().into())
-            .unwrap();
-        let buf = buf.dyn_ref::<Uint8Array>()?;
-        let buf = buf.to_vec();
-        TypstFont::new(buf.into(), self.index)
-    }
-}
-
-// todo: remove this
-unsafe impl Send for SnapshotFontLoader {}
-
 // todo: design error handling
 // todo: we return a string for now which is better than nothing
 #[wasm_bindgen]
@@ -167,7 +148,7 @@ unsafe impl Send for SnapshotFontLoader {}
 impl TypstCompiler {
     pub fn reset(&mut self) -> Result<(), JsValue> {
         // reset the world caches
-        self.compiler.reset().map_err(|e| format!("{e:?}"))?;
+        self.driver.reset().map_err(|e| format!("{e:?}"))?;
 
         Ok(())
     }
@@ -179,15 +160,15 @@ impl TypstCompiler {
             .into_iter()
             .map(|(k, v)| (k.into(), v.into_value()))
             .collect();
-        self.compiler
-            .world_mut()
+        self.driver
+            .universe_mut()
             .set_inputs(Arc::new(Prehashed::new(inputs)));
         Ok(())
     }
 
     pub fn add_source(&mut self, path: &str, content: &str) -> bool {
         let path = Path::new(path).to_owned();
-        match self.compiler.map_shadow(&path, content.as_bytes().into()) {
+        match self.driver.map_shadow(&path, content.as_bytes().into()) {
             Ok(_) => true,
             Err(e) => {
                 console_log!("Error: {:?}", e);
@@ -198,7 +179,7 @@ impl TypstCompiler {
 
     pub fn map_shadow(&mut self, path: &str, content: &[u8]) -> bool {
         let path = Path::new(path).to_owned();
-        match self.compiler.map_shadow(&path, content.into()) {
+        match self.driver.map_shadow(&path, content.into()) {
             Ok(_) => true,
             Err(e) => {
                 console_log!("Error: {:?}", e);
@@ -209,7 +190,7 @@ impl TypstCompiler {
 
     pub fn unmap_shadow(&mut self, path: &str) -> bool {
         let path = Path::new(path).to_owned();
-        match self.compiler.unmap_shadow(&path) {
+        match self.driver.unmap_shadow(&path) {
             Ok(_) => true,
             Err(e) => {
                 console_log!("Error: {:?}", e);
@@ -219,60 +200,16 @@ impl TypstCompiler {
     }
 
     pub fn reset_shadow(&mut self) {
-        self.compiler.reset_shadow()
+        self.driver.reset_shadow()
     }
 
-    pub fn load_snapshot(
-        &mut self,
-        snapshot: JsValue,
-        font_cb: js_sys::Function,
-    ) -> Result<Vec<u8>, JsValue> {
-        let mut snapshot: WorldSnapshot = serde_wasm_bindgen::from_value(snapshot).unwrap();
-        if let Some(font_profile) = snapshot.font_profile.take() {
-            for item in font_profile.items {
-                let path = if let Some(path) = item.path() {
-                    path.clone()
-                } else {
-                    continue;
-                };
-                // item.info
-                for (idx, info) in item.info.into_iter().enumerate() {
-                    let font_idx = info.index().unwrap_or(idx as u32);
-                    self.compiler.world_mut().font_resolver.append_font(
-                        info.info,
-                        FontSlot::new_boxed(SnapshotFontLoader {
-                            font_cb: font_cb.clone(),
-                            index: font_idx,
-                            path: path.clone(),
-                        }),
-                    );
-                }
-            }
-        };
-        self.rebuild();
-
-        let artifact = base64::engine::general_purpose::STANDARD
-            .decode(snapshot.artifact_data)
-            .unwrap();
-        Ok(artifact)
-    }
-
-    pub fn modify_font_data(&mut self, idx: usize, buffer: Uint8Array) {
-        self.compiler
-            .world_mut()
-            .font_resolver
-            .modify_font_data(idx, buffer.to_vec().into());
-    }
-
-    pub fn rebuild(&mut self) {
-        if self.compiler.world_mut().font_resolver.partial_resolved() {
-            self.compiler.world_mut().font_resolver.rebuild();
-        }
-    }
+    // todo: font manipulation
+    // pub fn modify_font_data(&mut self, idx: usize, buffer: Uint8Array) {}
+    // pub fn rebuild(&mut self) {}
 
     pub fn get_loaded_fonts(&mut self) -> Vec<JsString> {
-        self.compiler
-            .world_mut()
+        self.driver
+            .universe_mut()
             .font_resolver
             .loaded_fonts()
             .map(|s| format!("<{}, {:?}>", s.0, s.1).into())
@@ -280,9 +217,11 @@ impl TypstCompiler {
     }
 
     pub fn get_ast(&mut self, main_file_path: String) -> Result<String, JsValue> {
-        self.compiler
+        self.driver
+            .universe_mut()
             .set_entry_file(Path::new(&main_file_path).into())
             .map_err(|e| format!("{e:?}"))?;
+        let world = self.driver.spawn();
 
         let ast_exporter = typst_ts_core::exporter_builtins::VecExporter::new(
             typst_ts_ast_exporter::AstExporter::default(),
@@ -290,11 +229,11 @@ impl TypstCompiler {
 
         // compile and export document
         let doc = self
-            .compiler
+            .driver
             .compile(&mut Default::default())
             .map_err(|e| format!("{e:?}"))?;
         let data = ast_exporter
-            .export(self.compiler.world(), doc)
+            .export(&world, doc)
             .map_err(|e| format!("{e:?}"))?;
 
         let converted = ansi_to_html::convert_escaped(
@@ -307,7 +246,7 @@ impl TypstCompiler {
     }
 
     pub fn get_semantic_token_legend(&mut self) -> Result<JsValue, JsValue> {
-        let tokens = self.compiler.world_mut().get_semantic_token_legend();
+        let tokens = self.driver.universe_mut().get_semantic_token_legend();
         serde_wasm_bindgen::to_value(tokens.as_ref()).map_err(|e| format!("{e:?}").into())
     }
 
@@ -323,7 +262,7 @@ impl TypstCompiler {
             );
         }
 
-        let tokens = self.compiler.world_mut().get_semantic_tokens(
+        let tokens = self.driver.universe_mut().get_semantic_tokens(
             file_path,
             match offset_encoding.as_str() {
                "utf-16" => OffsetEncoding::Utf16,
@@ -372,16 +311,15 @@ impl TypstCompiler {
             }
         };
 
+        let world = self.driver.spawn();
+
         let doc = take_diag!(
             diagnostics_format,
-            self.compiler.world(),
-            self.compiler.compile(&mut Default::default())
+            &world,
+            self.driver.compile(&mut Default::default())
         );
-        let artifact_bytes = take_diag!(
-            diagnostics_format,
-            self.compiler.world(),
-            vec_exporter.export(self.compiler.world(), doc)
-        );
+        let artifact_bytes =
+            take_diag!(diagnostics_format, &world, vec_exporter.export(&world, doc));
 
         let v: JsValue = Uint8Array::from(artifact_bytes.as_slice()).into();
 
@@ -400,16 +338,17 @@ impl TypstCompiler {
         selector: String,
         field: Option<String>,
     ) -> Result<String, JsValue> {
-        self.compiler
+        self.driver
+            .universe_mut()
             .set_entry_file(Path::new(&main_file_path).into())
             .map_err(|e| format!("{e:?}"))?;
 
         let doc = self
-            .compiler
+            .driver
             .compile(&mut Default::default())
             .map_err(|e| format!("{e:?}"))?;
         let elements: Vec<typst::foundations::Content> = self
-            .compiler
+            .driver
             .query(selector, &doc)
             .map_err(|e| format!("{e:?}"))?;
 
@@ -430,7 +369,8 @@ impl TypstCompiler {
         fmt: String,
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
-        self.compiler
+        self.driver
+            .universe
             .set_entry_file(Path::new(&main_file_path).into())
             .map_err(|e| format!("{e:?}"))?;
 
@@ -447,14 +387,16 @@ impl TypstCompiler {
         state: &mut IncrServer,
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
-        self.compiler
+        self.driver
+            .universe
             .set_entry_file(Path::new(&main_file_path).into())
             .map_err(|e| format!("{e:?}"))?;
 
+        let world = self.driver.spawn();
         let doc = take_diag!(
             diagnostics_format,
-            self.compiler.world(),
-            self.compiler.compile(&mut Default::default())
+            &world,
+            self.driver.compile(&mut Default::default())
         );
 
         let v = Uint8Array::from(state.update(doc).as_slice()).into();

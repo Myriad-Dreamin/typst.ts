@@ -5,10 +5,10 @@ use std::env::current_dir;
 use std::process::exit;
 use tokio::io::AsyncBufReadExt;
 use typst_ts_compiler::service::features::WITH_COMPILING_STATUS_FEATURE;
+use typst_ts_compiler::TypstSystemWorld;
 
 use typst_ts_compiler::service::{
-    CompileEnv, CompileExporter, CompileMiddleware, CompileReporter, Compiler, ConsoleDiagReporter,
-    FeatureSet,
+    CompileDriver, CompileEnv, CompileExporter, CompileReporter, ConsoleDiagReporter, FeatureSet,
 };
 use typst_ts_core::path::PathClean;
 use typst_ts_dev_server::{http::run_http, utils::async_continue, RunSubCommands};
@@ -71,12 +71,14 @@ fn compile_corpus(args: CompileCorpusArgs) {
         ..Default::default()
     };
 
-    let driver = typst_ts_cli::compile::create_driver(compile_args.compile.clone());
+    let world = typst_ts_cli::compile::create_driver(compile_args.compile.clone()).universe;
 
-    let driver = CompileExporter::new(driver);
+    let driver = CompileExporter::new(std::marker::PhantomData);
 
-    let mut driver = CompileReporter::new(driver);
+    let mut driver = CompileReporter::<_, TypstSystemWorld>::new(driver);
     driver.set_generic_reporter(ConsoleDiagReporter::default());
+
+    let mut driver = CompileDriver::new(driver, world);
 
     // enable compiling status
     let feat_set = FeatureSet::default().configure(&WITH_COMPILING_STATUS_FEATURE, true);
@@ -87,11 +89,11 @@ fn compile_corpus(args: CompileCorpusArgs) {
 
         let exporter = typst_ts_cli::export::prepare_exporters(&compile_args, Some(&entry));
 
-        let exporter_layer = driver.inner_mut();
+        let exporter_layer = &mut driver.compiler.compiler;
 
         exporter_layer.set_exporter(exporter);
-        exporter_layer
-            .inner_mut()
+        driver
+            .universe
             .set_entry_file(entry.as_path().into())
             .unwrap();
 

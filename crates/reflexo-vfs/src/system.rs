@@ -1,15 +1,9 @@
-use std::{
-    fs::File,
-    io::Read,
-    path::{Path, PathBuf},
-};
+use std::{fs::File, io::Read, path::Path};
 
 use typst::diag::{FileError, FileResult};
 
-use typst_ts_core::{Bytes, ReadAllOnce};
-
-use super::AccessModel;
-use crate::Time;
+use crate::{AccessModel, Bytes, Time};
+use reflexo::{ImmutPath, ReadAllOnce};
 
 /// Provides SystemAccessModel that makes access to the local file system for
 /// system compilation.
@@ -27,8 +21,6 @@ impl SystemAccessModel {
 }
 
 impl AccessModel for SystemAccessModel {
-    type RealPath = PathBuf;
-
     fn mtime(&self, src: &Path) -> FileResult<Time> {
         let f = |e| FileError::from_io(e, src);
         Ok(self.stat(src).map_err(f)?.mt)
@@ -39,8 +31,8 @@ impl AccessModel for SystemAccessModel {
         Ok(self.stat(src).map_err(f)?.is_file)
     }
 
-    fn real_path(&self, src: &Path) -> FileResult<Self::RealPath> {
-        Ok(src.to_path_buf())
+    fn real_path(&self, src: &Path) -> FileResult<ImmutPath> {
+        Ok(src.into())
     }
 
     fn content(&self, src: &Path) -> FileResult<Bytes> {

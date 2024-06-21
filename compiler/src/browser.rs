@@ -1,11 +1,14 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
-use typst_ts_core::{config::compiler::EntryState, font::FontResolverImpl};
+use comemo::Prehashed;
+use parking_lot::RwLock;
+use typst_ts_core::{config::compiler::EntryState, font::FontResolverImpl, TypstDict};
 
 use crate::{package::browser::ProxyRegistry, vfs::browser::ProxyAccessModel};
 
 /// A world that provides access to the browser.
 /// It is under development.
+pub type TypstBrowserUniverse = crate::world::CompilerUniverse<BrowserCompilerFeat>;
 pub type TypstBrowserWorld = crate::world::CompilerWorld<BrowserCompilerFeat>;
 
 #[derive(Debug, Clone, Copy)]
@@ -24,9 +27,14 @@ impl crate::world::CompilerFeat for BrowserCompilerFeat {
     // typst::eval::set_lang_items(dummy_library);
 }
 
-impl TypstBrowserWorld {
+// todo
+unsafe impl Send for ProxyRegistry {}
+unsafe impl Sync for ProxyRegistry {}
+
+impl TypstBrowserUniverse {
     pub fn new(
         root_dir: PathBuf,
+        inputs: Option<Arc<Prehashed<TypstDict>>>,
         access_model: ProxyAccessModel,
         registry: ProxyRegistry,
         font_resolver: FontResolverImpl,
@@ -35,7 +43,8 @@ impl TypstBrowserWorld {
 
         Self::new_raw(
             EntryState::new_rooted(root_dir.into(), None),
-            vfs,
+            inputs,
+            Arc::new(RwLock::new(vfs)),
             registry,
             font_resolver,
         )

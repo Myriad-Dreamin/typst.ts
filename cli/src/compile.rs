@@ -5,15 +5,15 @@ use std::path::Path;
 use typst::diag::{FileError, FileResult};
 use typst::foundations::{Bytes, Dict, IntoValue};
 use typst::model::Document;
-use typst_ts_compiler::service::EntryManager;
-use typst_ts_compiler::ShadowApi;
+use typst_ts_compiler::service::{EntryManager, PureCompiler};
 use typst_ts_compiler::{
     service::{
         features::{FeatureSet, DIAG_FMT_FEATURE},
         CompileActor, CompileDriver, CompileExporter, DynamicLayoutCompiler,
     },
-    TypstSystemWorld,
+    TypstSystemUniverse,
 };
+use typst_ts_compiler::{ShadowApi, TypstSystemWorld};
 use typst_ts_core::config::compiler::{EntryOpts, MEMORY_MAIN_ENTRY};
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
 
@@ -25,7 +25,7 @@ use crate::{
     CompileArgs, CompileOnceArgs,
 };
 
-pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
+pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstSystemWorld>> {
     let workspace_dir = Path::new(args.workspace.as_str()).clean();
     let entry = args.entry;
     let entry_file_path = Path::new(entry.as_str()).clean();
@@ -67,7 +67,7 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
         .map(|(k, v)| (k.as_str().into(), v.as_str().into_value()))
         .collect();
 
-    let world = TypstSystemWorld::new(CompileOpts {
+    let universe = TypstSystemUniverse::new(CompileOpts {
         entry: EntryOpts::new_workspace(workspace_dir.clone()),
         inputs,
         font_paths: args.font.paths.clone(),
@@ -79,11 +79,11 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
     })
     .unwrap_or_exit();
 
-    if is_stdin {
-        let mut driver = CompileDriver::new(world);
+    let world = if is_stdin {
+        let mut u = universe;
 
-        let entry = driver.world.entry.select_in_workspace(*MEMORY_MAIN_ENTRY);
-        driver.world.mutate_entry(entry).unwrap();
+        let entry = u.entry.select_in_workspace(*MEMORY_MAIN_ENTRY);
+        u.mutate_entry(entry).unwrap();
 
         let src = read_from_stdin()
             .map_err(|err| {
@@ -95,8 +95,7 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
             })
             .unwrap();
 
-        driver
-            .map_shadow_by_id(*MEMORY_MAIN_ENTRY, Bytes::from(src))
+        u.map_shadow_by_id(*MEMORY_MAIN_ENTRY, Bytes::from(src))
             .map_err(|err| {
                 clap::Error::raw(
                     clap::error::ErrorKind::Io,
@@ -106,10 +105,12 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver {
             })
             .unwrap();
 
-        driver
+        u
     } else {
-        CompileDriver::new(world).with_entry_file(entry_file_path)
-    }
+        universe.with_entry_file(entry_file_path)
+    };
+
+    CompileDriver::new(std::marker::PhantomData, world)
 }
 
 pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> ! {
@@ -141,26 +142,18 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
         // If output is specified, use it.
         let dir = (!args.compile.output.is_empty()).then(|| Path::new(&args.compile.output));
         // Otherwise, use the parent directory of the entry file.
+        let entry = driver.entry_file().expect("entry_file is not set");
         let dir = dir.map(Path::to_owned).unwrap_or_else(|| {
             if is_stdin {
                 current_dir()
             } else {
-                driver
-                    .entry_file()
-                    .parent()
-                    .expect("entry_file has no parent")
-                    .to_owned()
+                entry.parent().expect("entry_file has no parent").to_owned()
             }
         });
         if is_stdin {
             dir.join("main")
         } else {
-            dir.join(
-                driver
-                    .entry_file()
-                    .file_name()
-                    .expect("entry_file has no file name"),
-            )
+            dir.join(entry.file_name().expect("entry_file has no file name"))
         }
     };
 
@@ -168,9 +161,12 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
         FeatureSet::default().configure(&DIAG_FMT_FEATURE, args.diagnostic_format.into());
 
     // CompileExporter + DynamicLayoutCompiler + WatchDriver
-    let driver = CompileExporter::new(driver).with_exporter(exporter);
+    let verse = driver.universe;
+    let entry = verse.entry.clone();
+    let driver = CompileExporter::new(std::marker::PhantomData).with_exporter(exporter);
     let driver = DynamicLayoutCompiler::new(driver, output_dir).with_enable(args.dynamic_layout);
-    let actor = CompileActor::new_with_features(driver, feature_set).with_watch(args.watch);
+    let actor =
+        CompileActor::new_with_features(driver, verse, entry, feature_set).with_watch(args.watch);
 
     utils::async_continue(async move {
         utils::logical_exit(actor.run());
