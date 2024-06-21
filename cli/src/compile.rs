@@ -161,10 +161,10 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
         FeatureSet::default().configure(&DIAG_FMT_FEATURE, args.diagnostic_format.into());
 
     // CompileExporter + DynamicLayoutCompiler + WatchDriver
-    let world = driver.world;
+    let verse = driver.universe;
     let driver = CompileExporter::new(()).with_exporter(exporter);
     let driver = DynamicLayoutCompiler::new(driver, output_dir).with_enable(args.dynamic_layout);
-    let actor = CompileActor::new_with_features(driver, world, feature_set).with_watch(args.watch);
+    let actor = CompileActor::new_with_features(driver, verse, feature_set).with_watch(args.watch);
 
     utils::async_continue(async move {
         utils::logical_exit(actor.run());

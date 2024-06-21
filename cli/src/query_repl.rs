@@ -125,12 +125,12 @@ impl Completer for ReplContext {
         #[cfg(feature = "debug-repl")]
         println!("slen: {}, dlen: {}", static_prefix_len, dyn_content.len());
 
-        driver.world.reset();
+        driver.universe.reset();
 
         let typst_completions = driver
             .with_shadow_file(&entry, dyn_content.as_bytes().into(), |driver| {
                 let doc = driver.compile(&mut Default::default()).ok();
-                let world = driver.world();
+                let world = driver.spawn();
                 let source = world.main();
                 Ok(autocomplete(
                     &world,
@@ -243,7 +243,7 @@ impl ReplContext {
         err: EcoVec<SourceDiagnostic>,
     ) -> Result<(), ()> {
         let rep = CompileReport::CompileError(driver.main_id(), err, Default::default());
-        let _ = self.reporter.export(&driver.world(), Arc::new(rep));
+        let _ = self.reporter.export(&driver.spawn(), Arc::new(rep));
         Ok(())
     }
 

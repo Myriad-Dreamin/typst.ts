@@ -172,15 +172,16 @@ fn list_fonts(command: ListFontsArgs) -> ! {
     // todo: should cover default workspace path
     root_path.push("-");
 
-    let world = TypstSystemUniverse::new(CompileOpts {
+    let verse = TypstSystemUniverse::new(CompileOpts {
         entry: EntryOpts::new_workspace(root_path.as_path().into()),
         font_paths: command.font.paths,
         with_embedded_fonts: fonts().map(Cow::Borrowed).collect(),
         ..CompileOpts::default()
     })
     .unwrap_or_exit();
+    let world = verse.spawn();
 
-    for (name, infos) in world.world().book().families() {
+    for (name, infos) in world.book().families() {
         println!("{name}");
         if command.variants {
             for info in infos {

@@ -71,7 +71,7 @@ fn compile_corpus(args: CompileCorpusArgs) {
         ..Default::default()
     };
 
-    let world = typst_ts_cli::compile::create_driver(compile_args.compile.clone()).world;
+    let world = typst_ts_cli::compile::create_driver(compile_args.compile.clone()).universe;
 
     let driver = CompileExporter::new(());
 
@@ -92,7 +92,10 @@ fn compile_corpus(args: CompileCorpusArgs) {
         let exporter_layer = &mut driver.compiler.compiler;
 
         exporter_layer.set_exporter(exporter);
-        driver.world.set_entry_file(entry.as_path().into()).unwrap();
+        driver
+            .universe
+            .set_entry_file(entry.as_path().into())
+            .unwrap();
 
         let _ = driver.compile(&mut CompileEnv::default().configure_shared(feat_set.clone()));
     };

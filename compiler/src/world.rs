@@ -116,7 +116,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
         Ok(())
     }
 
-    pub fn world(&self) -> CompilerWorld<F> {
+    pub fn spawn(&self) -> CompilerWorld<F> {
         CompilerWorld {
             entry: self.entry.clone(),
             inputs: self.inputs.clone(),
@@ -347,7 +347,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
         file_path: Option<String>,
         encoding: OffsetEncoding,
     ) -> Arc<Vec<SemanticToken>> {
-        let world = self.world();
+        let world = self.spawn();
         let src = &file_path
             .and_then(|e| {
                 let relative_path = Path::new(&e).strip_prefix(&self.workspace_root()?).ok()?;

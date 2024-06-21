@@ -25,13 +25,13 @@ use super::{CompileEnv, Compiler, EntryManager};
 pub struct CompileDriverImpl<C, F: CompilerFeat> {
     pub compiler: C,
     /// World that has access to the file system.
-    pub world: CompilerUniverse<F>,
+    pub universe: CompilerUniverse<F>,
 }
 
 impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
     /// Create a new driver.
-    pub fn new(compiler: C, world: CompilerUniverse<F>) -> Self {
-        Self { compiler, world }
+    pub fn new(compiler: C, universe: CompilerUniverse<F>) -> Self {
+        Self { compiler, universe }
     }
 
     pub fn query(
@@ -39,7 +39,7 @@ impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
         selector: String,
         document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
-        self.compiler.query(&self.world(), selector, document)
+        self.compiler.query(&self.spawn(), selector, document)
     }
 
     /// The default implementation of `relevant` method, which performs a
@@ -94,8 +94,8 @@ impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
 
 impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
     pub fn entry_file(&self) -> Option<PathBuf> {
-        let main = self.world.entry.main()?;
-        self.world.path_for_id(main).ok()
+        let main = self.universe.entry.main()?;
+        self.universe.path_for_id(main).ok()
     }
 }
 
@@ -108,7 +108,7 @@ impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
             .ok_or_else(|| eco_format!("no entry file"))
             .at(Span::detached())?;
 
-        let mut world = self.world();
+        let mut world = self.spawn();
 
         world.prepare_env(env)?;
 
@@ -123,25 +123,25 @@ impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
 
 impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
     pub fn universe(&self) -> &CompilerUniverse<F> {
-        &self.world
+        &self.universe
     }
 
     pub fn universe_mut(&mut self) -> &mut CompilerUniverse<F> {
-        &mut self.world
+        &mut self.universe
     }
 
-    pub fn world(&self) -> CompilerWorld<F> {
-        self.world.world()
+    pub fn spawn(&self) -> CompilerWorld<F> {
+        self.universe.spawn()
     }
 
     pub fn main_id(&self) -> TypstFileId {
-        self.world.main_id().unwrap_or_else(|| *DETACHED_ENTRY)
+        self.universe.main_id().unwrap_or_else(|| *DETACHED_ENTRY)
     }
 
     /// reset the compilation state
     pub fn reset(&mut self) -> SourceResult<()> {
         // reset the world caches
-        self.world.reset();
+        self.universe.reset();
 
         Ok(())
     }
@@ -163,38 +163,38 @@ impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
     }
 
     pub fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath)) {
-        self.world.iter_dependencies(f)
+        self.universe.iter_dependencies(f)
     }
 
     pub fn notify_fs_event(&mut self, event: crate::vfs::notify::FilesystemEvent) {
-        self.world.notify_fs_event(event)
+        self.universe.notify_fs_event(event)
     }
 }
 
 impl<C: Compiler, F: CompilerFeat> ShadowApi for CompileDriverImpl<C, F> {
     #[inline]
     fn _shadow_map_id(&self, file_id: TypstFileId) -> typst::diag::FileResult<PathBuf> {
-        self.world._shadow_map_id(file_id)
+        self.universe._shadow_map_id(file_id)
     }
 
     #[inline]
     fn shadow_paths(&self) -> Vec<Arc<Path>> {
-        self.world.shadow_paths()
+        self.universe.shadow_paths()
     }
 
     #[inline]
     fn reset_shadow(&mut self) {
-        self.world.reset_shadow()
+        self.universe.reset_shadow()
     }
 
     #[inline]
     fn map_shadow(&self, path: &Path, content: Bytes) -> typst::diag::FileResult<()> {
-        self.world.map_shadow(path, content)
+        self.universe.map_shadow(path, content)
     }
 
     #[inline]
     fn unmap_shadow(&self, path: &Path) -> typst::diag::FileResult<()> {
-        self.world.unmap_shadow(path)
+        self.universe.unmap_shadow(path)
     }
 }
 

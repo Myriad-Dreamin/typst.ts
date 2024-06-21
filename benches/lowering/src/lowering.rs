@@ -32,7 +32,7 @@ fn compile(driver: &CompileDriver, src: &str) -> Arc<TypstDocument> {
     let e = driver.entry_file().to_owned().unwrap();
     driver
         .with_shadow_file(&e, src.as_bytes().into(), |this| {
-            ().compile(&this.world(), &mut Default::default())
+            ().compile(&this.spawn(), &mut Default::default())
         })
         .unwrap()
 }
