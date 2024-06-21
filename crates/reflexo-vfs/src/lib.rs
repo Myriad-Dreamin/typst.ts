@@ -103,7 +103,7 @@ pub trait FsProvider {
 }
 
 /// Create a new `Vfs` harnessing over the given `access_model` specific for
-/// [`crate::world::CompilerWorld`]. With vfs, we can minimize the
+/// `reflexo_world::CompilerWorld`. With vfs, we can minimize the
 /// implementation overhead for [`AccessModel`] trait.
 pub struct Vfs<M: AccessModel + Sized> {
     /// The number of lifecycles since the creation of the `Vfs`.
@@ -137,10 +137,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     /// Create a new `Vfs` with a given `access_model`.
     ///
     /// Retrieving an [`AccessModel`], it will further wrap the access model
-    /// with [`CachedAccessModel`], [`OverlayAccessModel`], and
-    /// [`NotifyAccessModel`]. This means that you don't need to implement:
-    /// + cache: caches underlying access result for a single vfs lifecycle,
-    ///   typically also corresponds to a single compilation.
+    /// with [`OverlayAccessModel`] and [`NotifyAccessModel`]. This means that you don't need to implement:
     /// + overlay: allowing to shadow the underlying access model with memory
     ///   contents, which is useful for a limited execution environment and
     ///   instrumenting or overriding source files or packages.

@@ -203,7 +203,7 @@ pub enum NotifyMessage {
 ///
 /// It simply hold notified filesystem data in memory, but still have a fallback
 /// access model, whose the typical underlying access model is
-/// [`crate::vfs::system::SystemAccessModel`]
+/// [`crate::system::SystemAccessModel`]
 #[derive(Debug)]
 pub struct NotifyAccessModel<M: AccessModel> {
     files: HashMap<ImmutPath, FileSnapshot>,

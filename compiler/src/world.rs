@@ -72,12 +72,12 @@ pub struct CompilerUniverse<F: CompilerFeat> {
 }
 
 impl<F: CompilerFeat> CompilerUniverse<F> {
-    /// Create a [`CompilerWorld`] with feature implementation.
+    /// Create a [`CompilerUniverse`] with feature implementation.
     ///
     /// Although this function is public, it is always unstable and not intended
     /// to be used directly.
-    /// + See [`crate::TypstSystemWorld::new`] for system environment.
-    /// + See [`crate::TypstBrowserWorld::new`] for browser environment.
+    /// + See [`crate::TypstSystemUniverse::new`] for system environment.
+    /// + See [`crate::TypstBrowserUniverse::new`] for browser environment.
     pub fn new_raw(
         entry: EntryState,
         inputs: Option<Arc<Prehashed<Dict>>>,

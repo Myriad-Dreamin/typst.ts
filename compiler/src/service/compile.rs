@@ -46,7 +46,7 @@ pub enum Interrupt<Ctx> {
     Compile,
     /// Borrow the compiler thread and run the task.
     ///
-    /// See [`CompileClient<Ctx>::steal`] for more information.
+    /// See [`CompileClient<Ctx>::steal_async`] for more information.
     Task(BorrowTask<Ctx>),
     /// Memory file changes.
     Memory(MemoryEvent),

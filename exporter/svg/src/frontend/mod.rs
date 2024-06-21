@@ -69,7 +69,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
     /// Render the style for SVG
     /// <svg> <style/> .. </svg>
     ///       ^^^^^^^^
-    /// See [`StyleDefMap`].
+    /// See `StyleDefMap`.
     pub fn style_defs(style_defs: StyleDefMap, svg: &mut Vec<SvgText>) {
         // style defs
         svg.push(r#"<style type="text/css">"#.into());
