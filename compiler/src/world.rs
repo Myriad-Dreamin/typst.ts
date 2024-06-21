@@ -102,6 +102,26 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     pub fn set_inputs(&mut self, inputs: Arc<Prehashed<Dict>>) {
         self.inputs = inputs;
     }
+
+    /// Wrap driver with a given entry file.
+    pub fn with_entry_file(mut self, entry_file: PathBuf) -> Self {
+        self.set_entry_file(entry_file.as_path().into()).unwrap();
+        self
+    }
+
+    /// set an entry file.
+    pub fn set_entry_file(&mut self, entry_file: Arc<Path>) -> SourceResult<()> {
+        let state = self.entry_state();
+        let state = state
+            .try_select_path_in_workspace(&entry_file, true)
+            .map_err(|e| eco_format!("cannot select entry file out of workspace: {e}"))
+            .at(Span::detached())?
+            .ok_or_else(|| eco_format!("failed to determine root"))
+            .at(Span::detached())?;
+
+        self.mutate_entry(state).map(|_| ())?;
+        Ok(())
+    }
 }
 
 #[comemo::memoize]

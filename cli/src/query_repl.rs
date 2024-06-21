@@ -14,7 +14,7 @@ use rustyline::validate::MatchingBracketValidator;
 use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, KeyEvent};
 use rustyline::{Helper, Validator};
 
-use typst_ts_compiler::service::{CompileDriver, CompileReport, Compiler, ConsoleDiagReporter};
+use typst_ts_compiler::service::{CompileDriver, CompileReport, ConsoleDiagReporter};
 use typst_ts_compiler::{ShadowApiExt, TypstSystemWorld};
 use typst_ts_core::{typst::prelude::*, GenericExporter};
 
@@ -30,12 +30,12 @@ struct ReplContext {
     hinter: HistoryHinter,
 
     // typst world state
-    driver: RefCell<CompileDriver>,
+    driver: RefCell<CompileDriver<()>>,
     reporter: ConsoleDiagReporter<TypstSystemWorld>,
 }
 
 impl ReplContext {
-    fn new(driver: CompileDriver) -> Self {
+    fn new(driver: CompileDriver<()>) -> Self {
         ReplContext {
             highlighter: MatchingBracketHighlighter::new(),
             hinter: HistoryHinter {},
@@ -115,7 +115,8 @@ impl Completer for ReplContext {
 
         // commit line changes
 
-        let content = std::fs::read_to_string(driver.entry_file()).map_err(ReadlineError::Io)?;
+        let entry = driver.entry_file().unwrap();
+        let content = std::fs::read_to_string(&entry).map_err(ReadlineError::Io)?;
         let static_prefix = content + "\n#show ";
         let static_prefix_len = static_prefix.len();
         let cursor = static_prefix_len + pos;
@@ -126,7 +127,6 @@ impl Completer for ReplContext {
 
         driver.world.reset();
 
-        let entry = driver.entry_file().to_owned();
         let typst_completions = driver
             .with_shadow_file(&entry, dyn_content.as_bytes().into(), |driver| {
                 let doc = driver.compile(&mut Default::default()).ok();
@@ -238,7 +238,7 @@ pub fn start_repl_test(args: CompileOnceArgs) -> rustyline::Result<()> {
 impl ReplContext {
     fn process_err(
         &self,
-        driver: &RefMut<CompileDriver>,
+        driver: &RefMut<CompileDriver<()>>,
         err: EcoVec<SourceDiagnostic>,
     ) -> Result<(), ()> {
         let rep = CompileReport::CompileError(driver.main_id(), err, Default::default());

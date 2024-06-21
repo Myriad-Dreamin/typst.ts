@@ -2,7 +2,7 @@ use std::path::Path;
 
 use typst::model::Document;
 use typst_ts_compiler::{
-    service::{CompileDriver, CompileExporter, Compiler},
+    service::{CompileDriver, CompileExporter},
     ShadowApiExt, TypstSystemWorld,
 };
 use typst_ts_core::{
@@ -21,7 +21,7 @@ fn get_driver(
     workspace_dir: &Path,
     entry_file_path: &Path,
     exporter: GroupExporter<Document>,
-) -> CompileExporter<CompileDriver> {
+) -> CompileDriver<CompileExporter<()>> {
     let project_base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let font_path = project_base.join("assets/fonts");
     let world = TypstSystemWorld::new(CompileOpts {
@@ -32,9 +32,8 @@ fn get_driver(
     })
     .unwrap();
 
-    let driver = CompileDriver::new(world).with_entry_file(entry_file_path.to_owned());
-
-    CompileExporter::new(driver).with_exporter(exporter)
+    let world = world.with_entry_file(entry_file_path.to_owned());
+    CompileDriver::new(CompileExporter::new(()).with_exporter(exporter), world)
 }
 
 pub fn test_compiler(

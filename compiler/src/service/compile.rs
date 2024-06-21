@@ -67,9 +67,11 @@ struct TaggedMemoryEvent {
 }
 
 /// The compiler thread.
-pub struct CompileActor<C: Compiler> {
+pub struct CompileActor<C: Compiler, W: World> {
+    /// The underlying world.
+    pub world: W,
     /// The underlying compiler.
-    pub compiler: CompileReporter<C>,
+    pub compiler: CompileReporter<C, W>,
     /// Whether to enable file system watching.
     pub enable_watch: bool,
 
@@ -96,11 +98,16 @@ pub struct CompileActor<C: Compiler> {
     memory_recv: mpsc::UnboundedReceiver<MemoryEvent>,
 }
 
-impl<C: Compiler + ShadowApi + WorldExporter + Send + 'static> CompileActor<C>
-where
-    C::World: for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>,
+impl<
+        C: Compiler + WorldExporter + Send + 'static,
+        W: World
+            + ShadowApi
+            + for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>
+            + Send
+            + 'static,
+    > CompileActor<C, W>
 {
-    pub fn new_with_features(compiler: C, feature_set: FeatureSet) -> Self {
+    pub fn new_with_features(compiler: C, world: W, feature_set: FeatureSet) -> Self {
         let (steal_send, steal_recv) = mpsc::unbounded_channel();
         let (memory_send, memory_recv) = mpsc::unbounded_channel();
 
@@ -113,6 +120,7 @@ where
         Self {
             compiler: CompileReporter::new(compiler)
                 .with_generic_reporter(ConsoleDiagReporter::default()),
+            world,
 
             logical_tick: 1,
             enable_watch: false,
@@ -132,8 +140,8 @@ where
     }
 
     /// Create a new compiler thread.
-    pub fn new(compiler: C) -> Self {
-        Self::new_with_features(compiler, FeatureSet::default())
+    pub fn new(compiler: C, world: W) -> Self {
+        Self::new_with_features(compiler, world, FeatureSet::default())
     }
 
     fn make_env(&self, feature_set: Arc<FeatureSet>) -> CompileEnv {
@@ -157,7 +165,7 @@ where
     async fn block_run_inner(mut self) -> bool {
         if !self.enable_watch {
             let mut env = self.make_env(self.once_feature_set.clone());
-            let compiled = self.compiler.compile(&mut env);
+            let compiled = self.compiler.compile(&self.world, &mut env);
             return compiled.is_ok();
         }
 
@@ -174,7 +182,7 @@ where
     pub async fn spawn(mut self) -> Option<JoinHandle<()>> {
         if !self.enable_watch {
             let mut env = self.make_env(self.once_feature_set.clone());
-            self.compiler.compile(&mut env).ok();
+            self.compiler.compile(&self.world, &mut env).ok();
             return None;
         }
 
@@ -253,10 +261,15 @@ where
     fn compile(&mut self, send: impl Fn(CompilerResponse)) {
         use CompilerResponse::*;
 
+        // todo: apply env changes
+
         // Compile the document.
         self.latest_doc = self
             .compiler
-            .compile(&mut CompileEnv::default().configure_shared(self.watch_feature_set.clone()))
+            .compile(
+                &self.world,
+                &mut CompileEnv::default().configure_shared(self.watch_feature_set.clone()),
+            )
             .ok();
 
         // Evict compilation cache.
@@ -379,12 +392,12 @@ where
     /// Apply memory changes to underlying compiler.
     fn apply_memory_changes(&mut self, event: MemoryEvent) {
         if matches!(event, MemoryEvent::Sync(..)) {
-            self.compiler.reset_shadow();
+            self.world.reset_shadow();
         }
         match event {
             MemoryEvent::Update(event) | MemoryEvent::Sync(event) => {
                 for removes in event.removes {
-                    let _ = self.compiler.unmap_shadow(&removes);
+                    let _ = self.world.unmap_shadow(&removes);
                 }
                 for (p, t) in event.inserts {
                     let insert_file = match t.content().cloned() {
@@ -399,14 +412,14 @@ where
                         }
                     };
 
-                    let _ = self.compiler.map_shadow(&p, insert_file);
+                    let _ = self.world.map_shadow(&p, insert_file);
                 }
             }
         }
     }
 }
 
-impl<C: Compiler> CompileActor<C> {
+impl<C: Compiler, W: World> CompileActor<C, W> {
     pub fn with_watch(mut self, enable_watch: bool) -> Self {
         self.enable_watch = enable_watch;
         self
@@ -492,9 +505,10 @@ pub struct DocToSrcJumpInfo {
 }
 
 // todo: remove constraint to CompilerWorld
-impl<F: CompilerFeat, Ctx: Compiler<World = CompilerWorld<F>>> CompileClient<CompileActor<Ctx>>
-where
-    Ctx::World: EntryManager,
+impl<F: CompilerFeat, Ctx: Compiler> CompileClient<CompileActor<Ctx, CompilerWorld<F>>>
+// CompilerWorld<F>
+// where
+//     Ctx::World: EntryManager,
 {
     /// fixme: character is 0-based, UTF-16 code unit.
     /// We treat it as UTF-8 now.
@@ -507,9 +521,9 @@ where
         self.steal_async(move |this, _| {
             let doc = this.document()?;
 
-            let world = this.compiler.world();
+            let world = &this.world;
 
-            let root = this.compiler.world().workspace_root()?;
+            let root = world.workspace_root()?;
             let relative_path = filepath.strip_prefix(&root).ok()?;
 
             let source_id = TypstFileId::new(None, VirtualPath::new(relative_path));
@@ -528,11 +542,11 @@ where
         loc: SourceLocation,
     ) -> ZResult<Option<SourceSpanOffset>> {
         self.steal_async(move |this, _| {
-            let world = this.compiler.world();
+            let world = &this.world;
 
             let filepath = Path::new(&loc.filepath);
 
-            let root = this.compiler.world().workspace_root()?;
+            let root = world.workspace_root()?;
             let relative_path = filepath.strip_prefix(&root).ok()?;
 
             let source_id = TypstFileId::new(None, VirtualPath::new(relative_path));
@@ -565,7 +579,7 @@ where
             |src: &Source, off: usize| src.byte_to_line(off).zip(src.byte_to_column(off));
 
         self.steal_async(move |this, _| {
-            let world = this.compiler.world();
+            let world = &this.world;
             let src_id = span.id()?;
             let source = world.source(src_id).ok()?;
             let mut range = source.find(span)?.range();

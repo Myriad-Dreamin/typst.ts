@@ -3,80 +3,136 @@ use std::{
     sync::Arc,
 };
 
-use crate::{NotifyApi, ShadowApi};
+use crate::{
+    world::{CompilerFeat, CompilerWorld},
+    NotifyApi, ShadowApi,
+};
 use typst::{
-    diag::{eco_format, At, SourceResult},
+    diag::{eco_format, At, EcoString, Hint, SourceResult},
+    foundations::Content,
     syntax::Span,
     World,
 };
-use typst_ts_core::{config::compiler::DETACHED_ENTRY, Bytes, ImmutPath, TypstFileId};
+use typst_ts_core::{
+    config::compiler::DETACHED_ENTRY, Bytes, ImmutPath, TypstDocument, TypstFileId,
+};
 
-use super::{Compiler, EntryManager, EnvWorld};
+use super::{CompileEnv, Compiler, EntryManager, EnvWorld};
 
 /// CompileDriverImpl is a driver for typst compiler.
 /// It is responsible for operating the compiler without leaking implementation
 /// details of the compiler.
-pub struct CompileDriverImpl<W: World> {
+pub struct CompileDriverImpl<C, W> {
+    pub compiler: C,
     /// World that has access to the file system.
     pub world: W,
-    /// Path to the entry file.
-    entry_file: Arc<Path>,
 }
 
-impl<W: World> CompileDriverImpl<W> {
+impl<C: Compiler, W: World> CompileDriverImpl<C, W> {
     /// Create a new driver.
-    pub fn new(world: W) -> Self {
-        Self {
-            world,
-            entry_file: Path::new("").into(),
+    pub fn new(compiler: C, world: W) -> Self {
+        Self { compiler, world }
+    }
+
+    pub fn query(
+        &mut self,
+        selector: String,
+        document: &TypstDocument,
+    ) -> SourceResult<Vec<Content>> {
+        self.compiler.query(&self.world, selector, document)
+    }
+
+    /// The default implementation of `relevant` method, which performs a
+    /// simple check on the event kind.
+    /// It returns following values:
+    /// - `Some(true)`: the event must be relevant to the compiler.
+    /// - `Some(false)`: the event must not be relevant to the compiler.
+    /// - `None`: the event may be relevant to the compiler.
+    // todo: remove cfg feature here
+    #[cfg(feature = "system-watch")]
+    fn _relevant(&self, event: &notify::Event) -> Option<bool> {
+        use notify::event::ModifyKind;
+        use notify::EventKind;
+
+        macro_rules! fs_event_must_relevant {
+            () => {
+                // create a file in workspace
+                EventKind::Create(_) |
+                // rename a file in workspace
+                EventKind::Modify(ModifyKind::Name(_))
+            };
         }
+        macro_rules! fs_event_may_relevant {
+            () => {
+                // remove/modify file in workspace
+                EventKind::Remove(_) | EventKind::Modify(ModifyKind::Data(_)) |
+                // unknown manipulation in workspace
+                EventKind::Any | EventKind::Modify(ModifyKind::Any)
+            };
+        }
+        macro_rules! fs_event_never_relevant {
+            () => {
+                // read/write meta event
+                EventKind::Access(_) | EventKind::Modify(ModifyKind::Metadata(_)) |
+                // `::notify` internal events other event that we cannot identify
+                EventKind::Other | EventKind::Modify(ModifyKind::Other)
+            };
+        }
+
+        return match &event.kind {
+            fs_event_must_relevant!() => Some(true),
+            fs_event_may_relevant!() => None,
+            fs_event_never_relevant!() => Some(false),
+        };
+
+        // assert that all cases are covered
+        const _: () = match EventKind::Any {
+            fs_event_must_relevant!() | fs_event_may_relevant!() | fs_event_never_relevant!() => {}
+        };
     }
 }
 
-impl<W: World + EntryManager> CompileDriverImpl<W> {
-    /// Wrap driver with a given entry file.
-    pub fn with_entry_file(mut self, entry_file: PathBuf) -> Self {
-        self.set_entry_file(entry_file.as_path().into()).unwrap();
-        self
+impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, CompilerWorld<F>> {
+    pub fn entry_file(&self) -> Option<PathBuf> {
+        let main = self.world.entry.main()?;
+        self.world.path_for_id(main).ok()
     }
+}
 
-    /// set an entry file.
-    pub fn set_entry_file(&mut self, entry_file: Arc<Path>) -> SourceResult<()> {
-        let state = self.world.entry_state();
-        let state = state
-            .try_select_path_in_workspace(&entry_file, true)
-            .map_err(|e| eco_format!("cannot select entry file out of workspace: {e}"))
-            .at(Span::detached())?
-            .ok_or_else(|| eco_format!("failed to determine root"))
+impl<C: Compiler, W: World + EnvWorld + EntryManager> CompileDriverImpl<C, W> {
+    pub fn compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<TypstDocument>> {
+        let world = &mut self.world;
+
+        world.prepare_env(env)?;
+
+        let main_id = world
+            .main_id()
+            .ok_or_else(|| eco_format!("no entry file"))
+            .at(Span::detached())?;
+        world
+            .source(main_id)
+            .hint(AtFile(main_id))
             .at(Span::detached())?;
 
-        self.world.mutate_entry(state).map(|_| ())?;
-        self.entry_file = entry_file;
-        Ok(())
-    }
-
-    pub fn entry_file(&self) -> &Path {
-        &self.entry_file
+        self.compiler.compile(world, env)
     }
 }
 
-impl<W: World + EnvWorld + EntryManager + NotifyApi> Compiler for CompileDriverImpl<W> {
-    type World = W;
-
-    fn world(&self) -> &Self::World {
+impl<C: Compiler, W: World + EnvWorld + EntryManager + NotifyApi> CompileDriverImpl<C, W> {
+    pub fn world(&self) -> &W {
         &self.world
     }
 
-    fn world_mut(&mut self) -> &mut Self::World {
+    pub fn world_mut(&mut self) -> &mut W {
         &mut self.world
     }
 
-    fn main_id(&self) -> TypstFileId {
+    pub fn main_id(&self) -> TypstFileId {
         self.world.main_id().unwrap_or_else(|| *DETACHED_ENTRY)
     }
 
     /// reset the compilation state
-    fn reset(&mut self) -> SourceResult<()> {
+    pub fn reset(&mut self) -> SourceResult<()> {
         // reset the world caches
         self.world.reset()?;
 
@@ -86,7 +142,7 @@ impl<W: World + EnvWorld + EntryManager + NotifyApi> Compiler for CompileDriverI
     /// Check whether a file system event is relevant to the world.
     // todo: remove cfg feature here
     #[cfg(feature = "system-watch")]
-    fn relevant(&self, event: &notify::Event) -> bool {
+    pub fn relevant(&self, event: &notify::Event) -> bool {
         // todo: remove this check
         if event
             .paths
@@ -99,16 +155,16 @@ impl<W: World + EnvWorld + EntryManager + NotifyApi> Compiler for CompileDriverI
         self._relevant(event).unwrap_or(true)
     }
 
-    fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath)) {
+    pub fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath)) {
         self.world.iter_dependencies(f)
     }
 
-    fn notify_fs_event(&mut self, event: crate::vfs::notify::FilesystemEvent) {
+    pub fn notify_fs_event(&mut self, event: crate::vfs::notify::FilesystemEvent) {
         self.world.notify_fs_event(event)
     }
 }
 
-impl<W: World + ShadowApi> ShadowApi for CompileDriverImpl<W> {
+impl<C: Compiler, W: World + ShadowApi> ShadowApi for CompileDriverImpl<C, W> {
     #[inline]
     fn _shadow_map_id(&self, file_id: TypstFileId) -> typst::diag::FileResult<PathBuf> {
         self.world._shadow_map_id(file_id)
@@ -132,6 +188,14 @@ impl<W: World + ShadowApi> ShadowApi for CompileDriverImpl<W> {
     #[inline]
     fn unmap_shadow(&self, path: &Path) -> typst::diag::FileResult<()> {
         self.world.unmap_shadow(path)
+    }
+}
+
+struct AtFile(TypstFileId);
+
+impl From<AtFile> for EcoString {
+    fn from(at: AtFile) -> Self {
+        eco_format!("at file {:?}", at.0)
     }
 }
 

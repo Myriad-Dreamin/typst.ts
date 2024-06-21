@@ -6,7 +6,7 @@ use std::{
 
 use crate::{vfs::notify::FilesystemEvent, ShadowApi};
 use typst::{
-    diag::{At, FileResult, Hint, SourceDiagnostic, SourceResult},
+    diag::{At, FileResult, SourceDiagnostic, SourceResult},
     eval::Tracer,
     foundations::Content,
     model::Document,
@@ -42,7 +42,7 @@ pub mod query;
 pub use self::{diag::DiagnosticFormat, features::FeatureSet};
 
 #[cfg(feature = "system-compile")]
-pub type CompileDriver = CompileDriverImpl<crate::TypstSystemWorld>;
+pub type CompileDriver<C> = CompileDriverImpl<C, crate::TypstSystemWorld>;
 
 pub trait EntryManager {
     fn reset(&mut self) -> SourceResult<()> {
@@ -153,33 +153,20 @@ pub trait EnvWorld {
 }
 
 pub trait Compiler {
-    type World: World + EnvWorld;
-
-    fn world(&self) -> &Self::World;
-
-    fn world_mut(&mut self) -> &mut Self::World;
-
-    fn main_id(&self) -> TypstFileId;
-
     /// reset the compilation state
     fn reset(&mut self) -> SourceResult<()>;
 
     /// Compile once from scratch.
-    fn pure_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
+    fn pure_compile(
+        &mut self,
+        world: &dyn World,
+        env: &mut CompileEnv,
+    ) -> SourceResult<Arc<Document>> {
         self.reset()?;
 
-        self.world_mut().prepare_env(env)?;
-
-        let main_id = self.main_id();
-
-        self.world_mut()
-            .source(main_id)
-            .hint(AtFile(main_id))
-            .at(Span::detached())?;
-
         let res = match env.tracer.as_mut() {
-            Some(tracer) => typst::compile(self.world(), tracer),
-            None => typst::compile(self.world(), &mut Tracer::default()),
+            Some(tracer) => typst::compile(world, tracer),
+            None => typst::compile(world, &mut Tracer::default()),
         };
 
         // compile document
@@ -187,18 +174,28 @@ pub trait Compiler {
     }
 
     /// With **the compilation state**, query the matches for the selector.
-    fn pure_query(&mut self, selector: String, document: &Document) -> SourceResult<Vec<Content>> {
-        self::query::retrieve(self.world(), &selector, document).at(Span::detached())
+    fn pure_query(
+        &mut self,
+        world: &dyn World,
+        selector: String,
+        document: &Document,
+    ) -> SourceResult<Vec<Content>> {
+        self::query::retrieve(world, &selector, document).at(Span::detached())
     }
 
     /// Compile once from scratch.
-    fn compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
-        self.pure_compile(env)
+    fn compile(&mut self, world: &dyn World, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
+        self.pure_compile(world, env)
     }
 
     /// With **the compilation state**, query the matches for the selector.
-    fn query(&mut self, selector: String, document: &Document) -> SourceResult<Vec<Content>> {
-        self.pure_query(selector, document)
+    fn query(
+        &mut self,
+        world: &dyn World,
+        selector: String,
+        document: &Document,
+    ) -> SourceResult<Vec<Content>> {
+        self.pure_query(world, selector, document)
     }
 
     /// Iterate over the dependencies of found by the compiler.
@@ -206,63 +203,11 @@ pub trait Compiler {
     fn iter_dependencies(&self, _f: &mut dyn FnMut(ImmutPath)) {}
 
     fn notify_fs_event(&mut self, _event: FilesystemEvent) {}
+}
 
-    /// Determine whether the event is relevant to the compiler.
-    /// The default implementation is conservative, which means that
-    /// `MaybeRelevant` implies `MustRelevant`.
-    // todo: remove cfg feature here
-    #[cfg(feature = "system-watch")]
-    fn relevant(&self, event: &notify::Event) -> bool {
-        self._relevant(event).unwrap_or(true)
-    }
-
-    /// The default implementation of `relevant` method, which performs a
-    /// simple check on the event kind.
-    /// It returns following values:
-    /// - `Some(true)`: the event must be relevant to the compiler.
-    /// - `Some(false)`: the event must not be relevant to the compiler.
-    /// - `None`: the event may be relevant to the compiler.
-    // todo: remove cfg feature here
-    #[cfg(feature = "system-watch")]
-    fn _relevant(&self, event: &notify::Event) -> Option<bool> {
-        use notify::event::ModifyKind;
-        use notify::EventKind;
-
-        macro_rules! fs_event_must_relevant {
-            () => {
-                // create a file in workspace
-                EventKind::Create(_) |
-                // rename a file in workspace
-                EventKind::Modify(ModifyKind::Name(_))
-            };
-        }
-        macro_rules! fs_event_may_relevant {
-            () => {
-                // remove/modify file in workspace
-                EventKind::Remove(_) | EventKind::Modify(ModifyKind::Data(_)) |
-                // unknown manipulation in workspace
-                EventKind::Any | EventKind::Modify(ModifyKind::Any)
-            };
-        }
-        macro_rules! fs_event_never_relevant {
-            () => {
-                // read/write meta event
-                EventKind::Access(_) | EventKind::Modify(ModifyKind::Metadata(_)) |
-                // `::notify` internal events other event that we cannot identify
-                EventKind::Other | EventKind::Modify(ModifyKind::Other)
-            };
-        }
-
-        return match &event.kind {
-            fs_event_must_relevant!() => Some(true),
-            fs_event_may_relevant!() => None,
-            fs_event_never_relevant!() => Some(false),
-        };
-
-        // assert that all cases are covered
-        const _: () = match EventKind::Any {
-            fs_event_must_relevant!() | fs_event_may_relevant!() | fs_event_never_relevant!() => {}
-        };
+impl Compiler for () {
+    fn reset(&mut self) -> SourceResult<()> {
+        Ok(())
     }
 }
 
@@ -273,34 +218,29 @@ pub trait CompileMiddleware {
 
     fn inner_mut(&mut self) -> &mut Self::Compiler;
 
-    fn wrap_main_id(&self) -> TypstFileId {
-        self.inner().main_id()
-    }
-
-    /// Hooked world access
-    fn wrap_world(&self) -> &<Self::Compiler as Compiler>::World {
-        self.inner().world()
-    }
-
-    /// Hooked world mut access
-    fn wrap_world_mut(&mut self) -> &mut <Self::Compiler as Compiler>::World {
-        self.inner_mut().world_mut()
-    }
-
     /// Hooked reset the compilation state
     fn wrap_reset(&mut self) -> SourceResult<()> {
         self.inner_mut().reset()
     }
 
     /// Hooked compile once from scratch.
-    fn wrap_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
-        self.inner_mut().compile(env)
+    fn wrap_compile(
+        &mut self,
+        world: &dyn World,
+        env: &mut CompileEnv,
+    ) -> SourceResult<Arc<Document>> {
+        self.inner_mut().compile(world, env)
     }
 
     /// With **the compilation state**, hooked query the matches for the
     /// selector.
-    fn wrap_query(&mut self, selector: String, document: &Document) -> SourceResult<Vec<Content>> {
-        self.inner_mut().query(selector, document)
+    fn wrap_query(
+        &mut self,
+        world: &dyn World,
+        selector: String,
+        document: &Document,
+    ) -> SourceResult<Vec<Content>> {
+        self.inner_mut().query(world, selector, document)
     }
 }
 
@@ -308,46 +248,43 @@ pub trait CompileMiddleware {
 /// If you want to wrap a compiler, you should override methods in
 /// `CompileMiddleware`.
 impl<T: CompileMiddleware> Compiler for T {
-    type World = <T::Compiler as Compiler>::World;
-
-    #[inline]
-    fn world(&self) -> &Self::World {
-        self.wrap_world()
-    }
-
-    #[inline]
-    fn world_mut(&mut self) -> &mut Self::World {
-        self.wrap_world_mut()
-    }
-
-    #[inline]
-    fn main_id(&self) -> TypstFileId {
-        self.wrap_main_id()
-    }
-
     #[inline]
     fn reset(&mut self) -> SourceResult<()> {
         self.wrap_reset()
     }
 
     #[inline]
-    fn pure_compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
-        self.inner_mut().pure_compile(env)
+    fn pure_compile(
+        &mut self,
+        world: &dyn World,
+        env: &mut CompileEnv,
+    ) -> SourceResult<Arc<Document>> {
+        self.inner_mut().pure_compile(world, env)
     }
 
     #[inline]
-    fn pure_query(&mut self, selector: String, document: &Document) -> SourceResult<Vec<Content>> {
-        self.inner_mut().pure_query(selector, document)
+    fn pure_query(
+        &mut self,
+        world: &dyn World,
+        selector: String,
+        document: &Document,
+    ) -> SourceResult<Vec<Content>> {
+        self.inner_mut().pure_query(world, selector, document)
     }
 
     #[inline]
-    fn compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
-        self.wrap_compile(env)
+    fn compile(&mut self, world: &dyn World, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
+        self.wrap_compile(world, env)
     }
 
     #[inline]
-    fn query(&mut self, selector: String, document: &Document) -> SourceResult<Vec<Content>> {
-        self.wrap_query(selector, document)
+    fn query(
+        &mut self,
+        world: &dyn World,
+        selector: String,
+        document: &Document,
+    ) -> SourceResult<Vec<Content>> {
+        self.wrap_query(world, selector, document)
     }
 
     #[inline]
@@ -388,13 +325,5 @@ where
     #[inline]
     fn unmap_shadow(&self, path: &Path) -> FileResult<()> {
         self.inner().unmap_shadow(path)
-    }
-}
-
-struct AtFile(TypstFileId);
-
-impl From<AtFile> for EcoString {
-    fn from(at: AtFile) -> Self {
-        eco_format!("at file {:?}", at.0)
     }
 }
