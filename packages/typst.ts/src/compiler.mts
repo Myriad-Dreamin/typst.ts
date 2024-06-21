@@ -232,11 +232,6 @@ export interface TypstCompiler {
 
   /**
    * experimental
-   */
-  loadSnapshot(snapshot: unknown, fontServer: FsAccessModel): Promise<any>;
-
-  /**
-   * experimental
    * See Semantic tokens: https://github.com/microsoft/vscode/issues/86415
    */
   getSemanticTokenLegend(): Promise<SemanticTokensLegend>;
@@ -394,12 +389,6 @@ class TypstCompilerDriver {
     await new Promise<void>(resolve => {
       this.compiler.reset();
       resolve(undefined);
-    });
-  }
-
-  loadSnapshot(snapshot: unknown, fontServer: FsAccessModel): Promise<void> {
-    return new Promise<any>(resolve => {
-      resolve(this.compiler.load_snapshot(snapshot, (p: string) => fontServer.readAll(p)));
     });
   }
 
