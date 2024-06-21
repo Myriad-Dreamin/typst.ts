@@ -387,28 +387,7 @@ class TypstCompilerDriver {
   }
 
   async getAst(mainFilePath: string): Promise<string> {
-    return this.runSyncCodeUntilStable(() => this.compiler.get_ast(mainFilePath));
-  }
-
-  async runSyncCodeUntilStable<T>(execute: () => T): Promise<T> {
-    for (;;) {
-      console.log(this.compiler.get_loaded_fonts());
-      const result = execute();
-      console.log(this.compiler.get_loaded_fonts());
-      if (globalFontPromises.length > 0) {
-        const promises = Promise.all(globalFontPromises.splice(0, globalFontPromises.length));
-        const callbacks: {
-          buffer: ArrayBuffer;
-          idx: number;
-        }[] = await promises;
-        for (const callback of callbacks) {
-          this.compiler.modify_font_data(callback.idx, new Uint8Array(callback.buffer));
-        }
-        this.compiler.rebuild();
-        continue;
-      }
-      return result;
-    }
+    return this.compiler.get_ast(mainFilePath);
   }
 
   async reset(): Promise<void> {

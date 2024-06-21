@@ -31,6 +31,7 @@ impl<P: Hash + Eq, Ext> PathInterner<P, Ext> {
     /// order.
     ///
     /// Computes in **O(n)** time (average).
+    #[allow(dead_code)]
     pub fn retain(&mut self, keep: impl FnMut(&P, &mut Ext) -> bool) {
         self.map.retain(keep)
     }

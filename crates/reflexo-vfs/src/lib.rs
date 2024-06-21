@@ -171,13 +171,14 @@ impl<M: AccessModel + Sized> Vfs<M> {
     /// Note: The lifetime counter is incremented every time this function is
     /// called.
     pub fn reset(&mut self) {
-        self.lifetime_cnt += 1;
-        let new_lifetime_cnt = self.lifetime_cnt;
+        // todo: clean path interner.
+        // self.lifetime_cnt += 1;
+        // let new_lifetime_cnt = self.lifetime_cnt;
 
-        self.path2slot.get_mut().clear();
-        self.path_interner
-            .get_mut()
-            .retain(|_, lifetime| new_lifetime_cnt - *lifetime <= 30);
+        // self.path2slot.get_mut().clear();
+        // self.path_interner
+        //     .get_mut()
+        //     .retain(|_, lifetime| new_lifetime_cnt - *lifetime <= 30);
 
         self.access_model.clear();
     }

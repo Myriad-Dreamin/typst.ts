@@ -2,6 +2,7 @@
 pub mod boxed;
 
 pub use boxed::{BoxedCompiler, NodeCompilerTrait};
+use parking_lot::RwLock;
 
 use std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc};
 
@@ -153,7 +154,7 @@ pub fn create_driver(args: NodeCompileArgs) -> ZResult<CompileDriver> {
 
     let mut world = TypstSystemWorld::new_raw(
         EntryState::new_rooted(workspace_dir.into(), None),
-        Vfs::new(SystemAccessModel {}),
+        Arc::new(RwLock::new(Vfs::new(SystemAccessModel {}))),
         HttpRegistry::default(),
         searcher.into(),
     );

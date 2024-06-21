@@ -7,7 +7,7 @@ use std::{
 use chrono::{DateTime, Datelike, Local};
 use comemo::Prehashed;
 use once_cell::sync::OnceCell;
-use serde::{Deserialize, Serialize};
+use parking_lot::RwLock;
 use typst::{
     diag::{eco_format, At, EcoString, FileError, FileResult, Hint, SourceResult},
     foundations::{Datetime, Dict},
@@ -19,13 +19,11 @@ use typst::{
 use reflexo_world::SourceDb;
 use typst_ts_core::{
     config::compiler::{EntryState, DETACHED_ENTRY},
-    font::FontProfile,
     package::PackageSpec,
     Bytes, FontResolver, ImmutPath, TypstFileId as FileId,
 };
 
 use crate::{
-    dependency::DependencyTree,
     package::Registry as PackageRegistry,
     parser::{
         get_semantic_tokens_full, get_semantic_tokens_legend, OffsetEncoding, SemanticToken,
@@ -61,11 +59,11 @@ pub struct CompilerWorld<F: CompilerFeat> {
     /// Provides library for typst compiler.
     pub library: Option<Arc<Prehashed<Library>>>,
     /// Provides font management for typst compiler.
-    pub font_resolver: F::FontResolver,
+    pub font_resolver: Arc<F::FontResolver>,
     /// Provides package management for typst compiler.
-    pub registry: F::Registry,
+    pub registry: Arc<F::Registry>,
     /// Provides path-based data access for typst compiler.
-    pub vfs: Vfs<F::AccessModel>,
+    pub vfs: Arc<RwLock<Vfs<F::AccessModel>>>,
     /// Provides source database for typst compiler.
     pub source_db: SourceDb,
 
@@ -83,7 +81,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
     /// + See [`crate::TypstBrowserWorld::new`] for browser environment.
     pub fn new_raw(
         entry: EntryState,
-        vfs: Vfs<F::AccessModel>,
+        vfs: Arc<RwLock<Vfs<F::AccessModel>>>,
         registry: F::Registry,
         font_resolver: F::FontResolver,
     ) -> Self {
@@ -92,8 +90,8 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             inputs: Arc::new(Prehashed::new(Dict::new())),
 
             library: None,
-            font_resolver,
-            registry,
+            font_resolver: Arc::new(font_resolver),
+            registry: Arc::new(registry),
             vfs,
             source_db: SourceDb::default(),
 
@@ -173,14 +171,16 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
             return Ok(DETACH_SOURCE.clone());
         }
 
-        let fid = self.vfs.file_id(&self.path_for_id(id)?);
-        self.source_db.source(id, fid, &self.vfs)
+        let vfs = self.vfs.read();
+        let fid = vfs.file_id(&self.path_for_id(id)?);
+        self.source_db.source(id, fid, vfs.deref())
     }
 
     /// Try to access the specified file.
     fn file(&self, id: FileId) -> FileResult<Bytes> {
-        let fid = self.vfs.file_id(&self.path_for_id(id)?);
-        self.source_db.file(id, fid, &self.vfs)
+        let vfs = self.vfs.read();
+        let fid = vfs.file_id(&self.path_for_id(id)?);
+        self.source_db.file(id, fid, vfs.deref())
     }
 
     /// Get the current date.
@@ -219,7 +219,7 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
 impl<F: CompilerFeat> CompilerWorld<F> {
     /// Reset the world for a new lifecycle (of garbage collection).
     pub fn reset(&mut self) {
-        self.vfs.reset();
+        self.vfs.write().reset();
         self.source_db.reset();
 
         self.now.take();
@@ -300,22 +300,22 @@ impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
 
     #[inline]
     fn shadow_paths(&self) -> Vec<Arc<Path>> {
-        self.vfs.shadow_paths()
+        self.vfs.read().shadow_paths()
     }
 
     #[inline]
     fn reset_shadow(&mut self) {
-        self.vfs.reset_shadow()
+        self.vfs.write().reset_shadow()
     }
 
     #[inline]
     fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()> {
-        self.vfs.map_shadow(path, content)
+        self.vfs.read().map_shadow(path, content)
     }
 
     #[inline]
     fn unmap_shadow(&self, path: &Path) -> FileResult<()> {
-        self.vfs.remove_shadow(path);
+        self.vfs.read().remove_shadow(path);
 
         Ok(())
     }
@@ -324,12 +324,13 @@ impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
 impl<F: CompilerFeat> NotifyApi for CompilerWorld<F> {
     #[inline]
     fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath)) {
-        self.source_db.iter_dependencies_dyn(&self.vfs, f)
+        self.source_db
+            .iter_dependencies_dyn(self.vfs.read().deref(), f)
     }
 
     #[inline]
     fn notify_fs_event(&mut self, event: FilesystemEvent) {
-        self.vfs.notify_fs_event(event)
+        self.vfs.write().notify_fs_event(event)
     }
 }
 
@@ -432,13 +433,4 @@ impl<'a, F: CompilerFeat> codespan_reporting::files::Files<'a> for CompilerWorld
                 })
         })
     }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct WorldSnapshot {
-    pub font_profile: Option<FontProfile>,
-    pub dependencies: DependencyTree,
-
-    /// document specific data
-    pub artifact_data: String,
 }

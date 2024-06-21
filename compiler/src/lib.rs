@@ -37,13 +37,9 @@
 // todo: why does typst#2771 not work
 // #![warn(clippy::uninlined_format_args)]
 
-pub(crate) mod macros;
-
 /// font things about compiler.
 pub mod font;
 
-/// Dependency things about compiler
-pub mod dependency;
 /// package things about compiler.
 pub mod package;
 /// time things about compiler.

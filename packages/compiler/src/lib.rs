@@ -1,7 +1,6 @@
 use core::fmt;
 use std::{fmt::Write, path::Path, sync::Arc};
 
-use base64::Engine;
 use comemo::Prehashed;
 use js_sys::{Array, JsString, Uint32Array, Uint8Array};
 pub use typst_ts_compiler::*;
@@ -11,14 +10,13 @@ use typst_ts_compiler::{
     parser::OffsetEncoding,
     service::{CompileDriverImpl, Compiler},
     vfs::browser::ProxyAccessModel,
-    world::WorldSnapshot,
 };
 use typst_ts_core::{
     cache::FontInfoCache,
     diag::SourceDiagnostic,
     error::{long_diag_from_std, prelude::*, DiagMessage},
     typst::{self, foundations::IntoValue, prelude::EcoVec},
-    DynExporter, Exporter, FontLoader, FontSlot, TypstDocument, TypstFont, TypstWorld,
+    DynExporter, Exporter, FontLoader, TypstDocument, TypstFont, TypstWorld,
 };
 use wasm_bindgen::prelude::*;
 
@@ -222,53 +220,9 @@ impl TypstCompiler {
         self.compiler.reset_shadow()
     }
 
-    pub fn load_snapshot(
-        &mut self,
-        snapshot: JsValue,
-        font_cb: js_sys::Function,
-    ) -> Result<Vec<u8>, JsValue> {
-        let mut snapshot: WorldSnapshot = serde_wasm_bindgen::from_value(snapshot).unwrap();
-        if let Some(font_profile) = snapshot.font_profile.take() {
-            for item in font_profile.items {
-                let path = if let Some(path) = item.path() {
-                    path.clone()
-                } else {
-                    continue;
-                };
-                // item.info
-                for (idx, info) in item.info.into_iter().enumerate() {
-                    let font_idx = info.index().unwrap_or(idx as u32);
-                    self.compiler.world_mut().font_resolver.append_font(
-                        info.info,
-                        FontSlot::new_boxed(SnapshotFontLoader {
-                            font_cb: font_cb.clone(),
-                            index: font_idx,
-                            path: path.clone(),
-                        }),
-                    );
-                }
-            }
-        };
-        self.rebuild();
-
-        let artifact = base64::engine::general_purpose::STANDARD
-            .decode(snapshot.artifact_data)
-            .unwrap();
-        Ok(artifact)
-    }
-
-    pub fn modify_font_data(&mut self, idx: usize, buffer: Uint8Array) {
-        self.compiler
-            .world_mut()
-            .font_resolver
-            .modify_font_data(idx, buffer.to_vec().into());
-    }
-
-    pub fn rebuild(&mut self) {
-        if self.compiler.world_mut().font_resolver.partial_resolved() {
-            self.compiler.world_mut().font_resolver.rebuild();
-        }
-    }
+    // todo: font manipulation
+    // pub fn modify_font_data(&mut self, idx: usize, buffer: Uint8Array) {}
+    // pub fn rebuild(&mut self) {}
 
     pub fn get_loaded_fonts(&mut self) -> Vec<JsString> {
         self.compiler

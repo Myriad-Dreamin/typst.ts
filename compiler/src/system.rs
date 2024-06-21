@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use comemo::Prehashed;
+use parking_lot::RwLock;
 use typst_ts_core::{config::CompileOpts, error::prelude::*, font::FontResolverImpl};
 
 use crate::{
@@ -33,7 +34,7 @@ impl TypstSystemWorld {
         let inputs = std::mem::take(&mut opts.inputs);
         let mut w = Self::new_raw(
             opts.entry.clone().try_into()?,
-            Vfs::new(SystemAccessModel {}),
+            Arc::new(RwLock::new(Vfs::new(SystemAccessModel {}))),
             HttpRegistry::default(),
             Self::resolve_fonts(opts)?,
         );
