@@ -77,6 +77,22 @@ impl<'a, F: CompilerFeat> Revising<'a, CompilerUniverse<F>> {
     pub fn mutate_entry(&mut self, state: EntryState) -> SourceResult<EntryState> {
         self.inner.mutate_entry_(state)
     }
+
+    #[inline]
+    pub fn reset_shadow(&mut self) {
+        self.inner.vfs.reset_shadow()
+    }
+
+    #[inline]
+    pub fn map_shadow(&mut self, path: &Path, content: Bytes) -> FileResult<()> {
+        self.inner.vfs.map_shadow(path, content)
+    }
+
+    #[inline]
+    pub fn unmap_shadow(&mut self, path: &Path) -> FileResult<()> {
+        self.inner.vfs.remove_shadow(path);
+        Ok(())
+    }
 }
 
 /// A universe that provides access to the operating system.
@@ -136,8 +152,8 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
         }
     }
 
-    /// A incremental revision for the universe.
-    pub fn incremental_revision<T>(&mut self, f: impl FnOnce(&mut Revising<Self>) -> T) -> T {
+    /// Increment revision with actions.
+    pub fn increment_revision<T>(&mut self, f: impl FnOnce(&mut Revising<Self>) -> T) -> T {
         let rev_lock = self.revision.get_mut();
         *rev_lock += 1;
         let revision = *rev_lock;
@@ -176,7 +192,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
 
     /// Wrap driver with a given entry file.
     pub fn with_entry_file(mut self, entry_file: PathBuf) -> Self {
-        let _ = self.incremental_revision(|this| this.set_entry_file_(entry_file.as_path().into()));
+        let _ = self.increment_revision(|this| this.set_entry_file_(entry_file.as_path().into()));
         self
     }
 
@@ -282,19 +298,20 @@ impl<F: CompilerFeat> ShadowApi for CompilerUniverse<F> {
 
     #[inline]
     fn reset_shadow(&mut self) {
-        self.vfs.reset_shadow()
+        self.increment_revision(|this| this.vfs.reset_shadow())
     }
 
     #[inline]
     fn map_shadow(&mut self, path: &Path, content: Bytes) -> FileResult<()> {
-        self.vfs.map_shadow(path, content)
+        self.increment_revision(|this| this.vfs().map_shadow(path, content))
     }
 
     #[inline]
     fn unmap_shadow(&mut self, path: &Path) -> FileResult<()> {
-        self.vfs.remove_shadow(path);
-
-        Ok(())
+        self.increment_revision(|this| {
+            this.vfs().remove_shadow(path);
+            Ok(())
+        })
     }
 }
 
@@ -311,7 +328,7 @@ impl<F: CompilerFeat> EntryManager for CompilerUniverse<F> {
     }
 
     fn mutate_entry(&mut self, state: EntryState) -> SourceResult<EntryState> {
-        self.incremental_revision(|this| this.mutate_entry_(state))
+        self.increment_revision(|this| this.mutate_entry_(state))
     }
 }
 

@@ -14,7 +14,7 @@ use crate::{
     },
     vfs::notify::{FilesystemEvent, MemoryEvent, NotifyMessage},
     world::{CompilerFeat, CompilerUniverse, CompilerWorld},
-    ShadowApi, WorldDeps,
+    WorldDeps,
 };
 use typst_ts_core::{
     config::compiler::EntryState,
@@ -353,7 +353,7 @@ impl<F: CompilerFeat + Send + 'static, C: Compiler<W = CompilerWorld<F>> + Send 
                 // If there is no invalidation happening, apply memory changes directly.
                 if files.is_empty() && self.dirty_shadow_logical_tick == 0 {
                     self.verse
-                        .incremental_revision(|verse| Self::apply_memory_changes(verse, event));
+                        .increment_revision(|verse| Self::apply_memory_changes(verse, event));
                     return true;
                 }
 
@@ -377,7 +377,7 @@ impl<F: CompilerFeat + Send + 'static, C: Compiler<W = CompilerWorld<F>> + Send 
 
                 // Apply file system changes.
                 let dirty_tick = &mut self.dirty_shadow_logical_tick;
-                self.verse.incremental_revision(|verse| {
+                self.verse.increment_revision(|verse| {
                     // Handle delayed upstream update event before applying file system changes
                     if Self::apply_delayed_memory_changes(verse, dirty_tick, &mut event).is_none() {
                         log::warn!("CompileActor: unknown upstream update event");

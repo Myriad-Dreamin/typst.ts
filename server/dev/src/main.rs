@@ -94,7 +94,7 @@ fn compile_corpus(args: CompileCorpusArgs) {
         exporter_layer.set_exporter(exporter);
         driver
             .universe
-            .incremental_revision(|verse| verse.set_entry_file(entry.as_path().into()))
+            .increment_revision(|verse| verse.set_entry_file(entry.as_path().into()))
             .unwrap();
 
         let _ = driver.compile(&mut CompileEnv::default().configure_shared(feat_set.clone()));

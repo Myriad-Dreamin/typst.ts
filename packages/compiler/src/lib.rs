@@ -162,7 +162,7 @@ impl TypstCompiler {
             .collect();
         self.driver
             .universe_mut()
-            .incremental_revision(|verse| verse.set_inputs(Arc::new(Prehashed::new(inputs))));
+            .increment_revision(|verse| verse.set_inputs(Arc::new(Prehashed::new(inputs))));
         Ok(())
     }
 
@@ -219,7 +219,7 @@ impl TypstCompiler {
     pub fn get_ast(&mut self, main_file_path: String) -> Result<String, JsValue> {
         self.driver
             .universe_mut()
-            .incremental_revision(|verse| verse.set_entry_file(Path::new(&main_file_path).into()))
+            .increment_revision(|verse| verse.set_entry_file(Path::new(&main_file_path).into()))
             .map_err(|e| format!("{e:?}"))?;
         let world = self.driver.spawn();
 
@@ -340,7 +340,7 @@ impl TypstCompiler {
     ) -> Result<String, JsValue> {
         self.driver
             .universe_mut()
-            .incremental_revision(|verse| verse.set_entry_file(Path::new(&main_file_path).into()))
+            .increment_revision(|verse| verse.set_entry_file(Path::new(&main_file_path).into()))
             .map_err(|e| format!("{e:?}"))?;
 
         let doc = self
@@ -371,7 +371,7 @@ impl TypstCompiler {
     ) -> Result<JsValue, JsValue> {
         self.driver
             .universe
-            .incremental_revision(|verse| verse.set_entry_file(Path::new(&main_file_path).into()))
+            .increment_revision(|verse| verse.set_entry_file(Path::new(&main_file_path).into()))
             .map_err(|e| format!("{e:?}"))?;
 
         self.get_artifact(fmt, diagnostics_format)
@@ -389,7 +389,7 @@ impl TypstCompiler {
     ) -> Result<JsValue, JsValue> {
         self.driver
             .universe
-            .incremental_revision(|verse| verse.set_entry_file(Path::new(&main_file_path).into()))
+            .increment_revision(|verse| verse.set_entry_file(Path::new(&main_file_path).into()))
             .map_err(|e| format!("{e:?}"))?;
 
         let world = self.driver.spawn();
