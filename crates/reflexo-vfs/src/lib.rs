@@ -38,7 +38,15 @@ pub use reflexo::ImmutPath;
 pub(crate) use path_interner::PathInterner;
 
 use core::fmt;
-use std::{collections::HashMap, hash::Hash, path::Path, sync::Arc};
+use std::{
+    collections::HashMap,
+    hash::Hash,
+    path::Path,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+};
 
 use parking_lot::{Mutex, RwLock};
 use reflexo::path::PathClean;
@@ -68,7 +76,6 @@ pub trait AccessModel {
     /// This is called when the vfs is reset. See [`Vfs`]'s reset method for
     /// more information.
     fn clear(&mut self) {}
-
     /// Return a mtime corresponding to the path.
     ///
     /// Note: vfs won't touch the file entry if mtime is same between vfs reset
@@ -88,48 +95,142 @@ pub trait AccessModel {
     fn content(&self, src: &Path) -> FileResult<Bytes>;
 }
 
+#[derive(Clone)]
+pub struct SharedAccessModel<M> {
+    pub inner: Arc<RwLock<M>>,
+}
+
+impl<M> SharedAccessModel<M> {
+    pub fn new(inner: M) -> Self {
+        Self {
+            inner: Arc::new(RwLock::new(inner)),
+        }
+    }
+}
+
+impl<M> AccessModel for SharedAccessModel<M>
+where
+    M: AccessModel,
+{
+    fn clear(&mut self) {
+        self.inner.write().clear();
+    }
+
+    fn mtime(&self, src: &Path) -> FileResult<Time> {
+        self.inner.read().mtime(src)
+    }
+
+    fn is_file(&self, src: &Path) -> FileResult<bool> {
+        self.inner.read().is_file(src)
+    }
+
+    fn real_path(&self, src: &Path) -> FileResult<ImmutPath> {
+        self.inner.read().real_path(src)
+    }
+
+    fn content(&self, src: &Path) -> FileResult<Bytes> {
+        self.inner.read().content(src)
+    }
+}
+
 /// we add notify access model here since notify access model doesn't introduce
 /// overheads by our observation
-type VfsAccessModel<M> = OverlayAccessModel<NotifyAccessModel<M>>;
+type VfsAccessModel<M> = OverlayAccessModel<NotifyAccessModel<SharedAccessModel<M>>>;
 
 pub trait FsProvider {
-    fn file_path(&self, src: FileId) -> ImmutPath;
+    /// Arbitrary one of file path corresponding to the given `id`.
+    fn file_path(&self, id: FileId) -> ImmutPath;
 
-    fn mtime(&self, src: FileId) -> FileResult<Time>;
+    fn mtime(&self, id: FileId) -> FileResult<Time>;
 
-    fn read(&self, src: FileId) -> FileResult<Bytes>;
+    fn read(&self, id: FileId) -> FileResult<Bytes>;
 
-    fn is_file(&self, src: FileId) -> FileResult<bool>;
+    fn is_file(&self, id: FileId) -> FileResult<bool>;
+}
+
+#[derive(Default)]
+struct PathMapper {
+    /// The number of lifecycles since the creation of the `Vfs`.
+    ///
+    /// Note: The lifetime counter is incremented on resetting vfs.
+    lifetime_cnt: AtomicU64,
+    /// Map from path to slot index.
+    ///
+    /// Note: we use a owned [`FileId`] here, which is resultant from
+    /// [`PathInterner`]
+    path2slot: RwLock<HashMap<ImmutPath, FileId>>,
+    /// The path interner for canonical paths.
+    path_interner: Mutex<PathInterner<ImmutPath, u64>>,
+}
+
+impl PathMapper {
+    /// Reset the path references.
+    ///
+    /// It performs a rolling reset, with discard some cache file entry when it
+    /// is unused in recent 30 lifecycles.
+    ///
+    /// Note: The lifetime counter is incremented every time this function is
+    /// called.
+    pub fn reset(&self) {
+        self.lifetime_cnt.fetch_add(1, Ordering::SeqCst);
+
+        // todo: clean path interner.
+        // let new_lifetime_cnt = self.lifetime_cnt;
+        // self.path2slot.get_mut().clear();
+        // self.path_interner
+        //     .get_mut()
+        //     .retain(|_, lifetime| new_lifetime_cnt - *lifetime <= 30);
+    }
+
+    /// Id of the given path if it exists in the `Vfs` and is not deleted.
+    pub fn file_id(&self, path: &Path) -> FileId {
+        let quick_id = self.path2slot.read().get(path).copied();
+        if let Some(id) = quick_id {
+            return id;
+        }
+
+        let path: ImmutPath = path.clean().as_path().into();
+
+        let mut path_interner = self.path_interner.lock();
+        let lifetime_cnt = self.lifetime_cnt.load(Ordering::SeqCst);
+        let id = path_interner.intern(path.clone(), lifetime_cnt).0;
+
+        let mut path2slot = self.path2slot.write();
+        path2slot.insert(path.clone(), id);
+
+        id
+    }
+
+    /// File path corresponding to the given `file_id`.
+    pub fn file_path(&self, file_id: FileId) -> ImmutPath {
+        let path_interner = self.path_interner.lock();
+        path_interner.lookup(file_id).clone()
+    }
 }
 
 /// Create a new `Vfs` harnessing over the given `access_model` specific for
 /// `reflexo_world::CompilerWorld`. With vfs, we can minimize the
 /// implementation overhead for [`AccessModel`] trait.
 pub struct Vfs<M: AccessModel + Sized> {
-    /// The number of lifecycles since the creation of the `Vfs`.
-    ///
-    /// Note: The lifetime counter is incremented on resetting vfs.
-    lifetime_cnt: u64,
+    paths: Arc<PathMapper>,
 
     // access_model: TraceAccessModel<VfsAccessModel<M>>,
     /// The wrapped access model.
     access_model: VfsAccessModel<M>,
-    /// The path interner for canonical paths.
-    path_interner: Mutex<PathInterner<ImmutPath, u64>>,
-
-    /// Map from path to slot index.
-    ///
-    /// Note: we use a owned [`FileId`] here, which is resultant from
-    /// [`PathInterner`]
-    path2slot: RwLock<HashMap<ImmutPath, FileId>>,
 }
 
 impl<M: AccessModel + Sized> fmt::Debug for Vfs<M> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Vfs")
-            .field("lifetime_cnt", &self.lifetime_cnt)
-            .field("path2slot", &self.path2slot)
-            .finish()
+        f.debug_struct("Vfs").finish()
+    }
+}
+
+impl<M: AccessModel + Clone + Sized> Vfs<M> {
+    pub fn snapshot(&self) -> Self {
+        Self {
+            paths: self.paths.clone(),
+            access_model: self.access_model.clone(),
+        }
     }
 }
 
@@ -147,6 +248,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     ///
     /// See [`AccessModel`] for more information.
     pub fn new(access_model: M) -> Self {
+        let access_model = SharedAccessModel::new(access_model);
         let access_model = NotifyAccessModel::new(access_model);
         let access_model = OverlayAccessModel::new(access_model);
 
@@ -154,10 +256,8 @@ impl<M: AccessModel + Sized> Vfs<M> {
         // let access_model = TraceAccessModel::new(access_model);
 
         Self {
-            lifetime_cnt: 0,
+            paths: Default::default(),
             access_model,
-            path_interner: Mutex::new(PathInterner::default()),
-            path2slot: RwLock::new(HashMap::new()),
         }
     }
 
@@ -169,15 +269,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
     /// Note: The lifetime counter is incremented every time this function is
     /// called.
     pub fn reset(&mut self) {
-        // todo: clean path interner.
-        // self.lifetime_cnt += 1;
-        // let new_lifetime_cnt = self.lifetime_cnt;
-
-        // self.path2slot.get_mut().clear();
-        // self.path_interner
-        //     .get_mut()
-        //     .retain(|_, lifetime| new_lifetime_cnt - *lifetime <= 30);
-
+        self.paths.reset();
         self.access_model.clear();
     }
 
@@ -194,14 +286,14 @@ impl<M: AccessModel + Sized> Vfs<M> {
     }
 
     /// Add a shadowing file to the [`OverlayAccessModel`].
-    pub fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()> {
+    pub fn map_shadow(&mut self, path: &Path, content: Bytes) -> FileResult<()> {
         self.access_model.add_file(path.into(), content);
 
         Ok(())
     }
 
     /// Remove a shadowing file from the [`OverlayAccessModel`].
-    pub fn remove_shadow(&self, path: &Path) {
+    pub fn remove_shadow(&mut self, path: &Path) {
         self.access_model.remove_file(path);
     }
 
@@ -219,30 +311,7 @@ impl<M: AccessModel + Sized> Vfs<M> {
 
     /// Id of the given path if it exists in the `Vfs` and is not deleted.
     pub fn file_id(&self, path: &Path) -> FileId {
-        let quick_id = self.path2slot.read().get(path).copied();
-        if let Some(id) = quick_id {
-            return id;
-        }
-
-        let path: ImmutPath = path.clean().as_path().into();
-
-        let mut path_interner = self.path_interner.lock();
-        let id = path_interner.intern(path.clone(), self.lifetime_cnt).0;
-
-        let mut path2slot = self.path2slot.write();
-        path2slot.insert(path.clone(), id);
-
-        id
-    }
-
-    /// File path corresponding to the given `file_id`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the id is not present in the `Vfs`.
-    pub fn file_path(&self, file_id: FileId) -> ImmutPath {
-        let path_interner = self.path_interner.lock();
-        path_interner.lookup(file_id).clone()
+        self.paths.file_id(path)
     }
 
     /// Read a file.
@@ -256,8 +325,8 @@ impl<M: AccessModel + Sized> Vfs<M> {
 }
 
 impl<M: AccessModel> FsProvider for Vfs<M> {
-    fn file_path(&self, src: FileId) -> ImmutPath {
-        self.file_path(src)
+    fn file_path(&self, id: FileId) -> ImmutPath {
+        self.paths.file_path(id)
     }
 
     fn mtime(&self, src: FileId) -> FileResult<Time> {

@@ -13,7 +13,7 @@ use typst_ts_compiler::{
     },
     TypstSystemUniverse,
 };
-use typst_ts_compiler::{EntryManager, ShadowApi, TypstSystemWorld};
+use typst_ts_compiler::{EntryManager, EntryReader, ShadowApi, TypstSystemWorld};
 use typst_ts_core::config::compiler::{EntryOpts, MEMORY_MAIN_ENTRY};
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
 
@@ -82,7 +82,7 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstS
     let world = if is_stdin {
         let mut u = universe;
 
-        let entry = u.entry.select_in_workspace(*MEMORY_MAIN_ENTRY);
+        let entry = u.entry_state().select_in_workspace(*MEMORY_MAIN_ENTRY);
         u.mutate_entry(entry).unwrap();
 
         let src = read_from_stdin()
@@ -162,7 +162,7 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
 
     // CompileExporter + DynamicLayoutCompiler + WatchDriver
     let verse = driver.universe;
-    let entry = verse.entry.clone();
+    let entry = verse.entry_state().clone();
     let driver = CompileExporter::new(std::marker::PhantomData).with_exporter(exporter);
     let driver = DynamicLayoutCompiler::new(driver, output_dir).with_enable(args.dynamic_layout);
     let actor =

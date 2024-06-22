@@ -2,7 +2,6 @@
 pub mod boxed;
 
 pub use boxed::{BoxedCompiler, NodeCompilerTrait};
-use parking_lot::RwLock;
 
 use std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc};
 
@@ -154,7 +153,7 @@ pub fn create_driver(
     let world = TypstSystemUniverse::new_raw(
         EntryState::new_rooted(workspace_dir.into(), None),
         Some(Arc::new(Prehashed::new(inputs))),
-        Arc::new(RwLock::new(Vfs::new(SystemAccessModel {}))),
+        Vfs::new(SystemAccessModel {}),
         HttpRegistry::default(),
         Arc::new(searcher.into()),
     );

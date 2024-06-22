@@ -1,8 +1,8 @@
+use std::path::Path;
 use std::sync::Arc;
-use std::{collections::HashMap, path::Path};
 
-use parking_lot::RwLock;
 use reflexo::ImmutPath;
+use rpds::RedBlackTreeMapSync;
 use typst::diag::FileResult;
 
 use crate::{AccessModel, Bytes, Time};
@@ -15,9 +15,9 @@ struct OverlayFileMeta {
 
 /// Provides overlay access model which allows to shadow the underlying access
 /// model with memory contents.
-#[derive(Default, Debug)]
-pub struct OverlayAccessModel<M: AccessModel> {
-    files: RwLock<HashMap<Arc<Path>, OverlayFileMeta>>,
+#[derive(Default, Debug, Clone)]
+pub struct OverlayAccessModel<M> {
+    files: RedBlackTreeMapSync<Arc<Path>, OverlayFileMeta>,
     /// The underlying access model
     pub inner: M,
 }
@@ -26,7 +26,7 @@ impl<M: AccessModel> OverlayAccessModel<M> {
     /// Create a new [`OverlayAccessModel`] with the given inner access model
     pub fn new(inner: M) -> Self {
         Self {
-            files: RwLock::new(HashMap::new()),
+            files: RedBlackTreeMapSync::default(),
             inner,
         }
     }
@@ -42,29 +42,25 @@ impl<M: AccessModel> OverlayAccessModel<M> {
     }
 
     /// Clear the shadowed files
-    pub fn clear_shadow(&self) {
-        self.files.write().clear();
+    pub fn clear_shadow(&mut self) {
+        self.files = RedBlackTreeMapSync::default();
     }
 
     /// Get the shadowed file paths
     pub fn file_paths(&self) -> Vec<Arc<Path>> {
-        self.files.read().keys().cloned().collect()
+        self.files.keys().cloned().collect()
     }
 
     /// Add a shadow file to the [`OverlayAccessModel`]
-    pub fn add_file(&self, path: Arc<Path>, content: Bytes) {
+    pub fn add_file(&mut self, path: Arc<Path>, content: Bytes) {
         // we change mt every time, since content almost changes every time
         // Note: we can still benefit from cache, since we incrementally parse source
 
         let mt = reflexo::time::now();
         let meta = OverlayFileMeta { mt, content };
-        self.files
-            .write()
-            .entry(path)
-            .and_modify(|e| {
-                // unlikely to happen but still possible in concurrent
-                // environment
-                // The case is found in browser test
+
+        match self.files.get_mut(&path) {
+            Some(e) => {
                 if e.mt == meta.mt && e.content != meta.content {
                     e.mt = meta
                         .mt
@@ -77,19 +73,22 @@ impl<M: AccessModel> OverlayAccessModel<M> {
                 } else {
                     *e = meta.clone();
                 }
-            })
-            .or_insert(meta);
+            }
+            None => {
+                self.files.insert_mut(path, meta);
+            }
+        }
     }
 
     /// Remove a shadow file from the [`OverlayAccessModel`]
-    pub fn remove_file(&self, path: &Path) {
-        self.files.write().remove(path);
+    pub fn remove_file(&mut self, path: &Path) {
+        self.files.remove_mut(path);
     }
 }
 
 impl<M: AccessModel> AccessModel for OverlayAccessModel<M> {
     fn mtime(&self, src: &Path) -> FileResult<Time> {
-        if let Some(meta) = self.files.read().get(src) {
+        if let Some(meta) = self.files.get(src) {
             return Ok(meta.mt);
         }
 
@@ -97,7 +96,7 @@ impl<M: AccessModel> AccessModel for OverlayAccessModel<M> {
     }
 
     fn is_file(&self, src: &Path) -> FileResult<bool> {
-        if self.files.read().get(src).is_some() {
+        if self.files.get(src).is_some() {
             return Ok(true);
         }
 
@@ -105,7 +104,7 @@ impl<M: AccessModel> AccessModel for OverlayAccessModel<M> {
     }
 
     fn real_path(&self, src: &Path) -> FileResult<ImmutPath> {
-        if self.files.read().get(src).is_some() {
+        if self.files.get(src).is_some() {
             return Ok(src.into());
         }
 
@@ -113,7 +112,7 @@ impl<M: AccessModel> AccessModel for OverlayAccessModel<M> {
     }
 
     fn content(&self, src: &Path) -> FileResult<Bytes> {
-        if let Some(meta) = self.files.read().get(src) {
+        if let Some(meta) = self.files.get(src) {
             return Ok(meta.content.clone());
         }
 

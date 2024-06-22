@@ -379,7 +379,8 @@ impl<F: CompilerFeat + Send + 'static, C: Compiler<W = CompilerWorld<F>> + Send 
                 }
 
                 // Apply file system changes.
-                self.verse.notify_fs_event(event);
+                self.verse
+                    .incremental_revision(|verse| verse.notify_fs_event(event));
 
                 true
             }
@@ -410,31 +411,33 @@ impl<F: CompilerFeat + Send + 'static, C: Compiler<W = CompilerWorld<F>> + Send 
 
     /// Apply memory changes to underlying compiler.
     fn apply_memory_changes(&mut self, event: MemoryEvent) {
-        if matches!(event, MemoryEvent::Sync(..)) {
-            self.verse.reset_shadow();
-        }
-        match event {
-            MemoryEvent::Update(event) | MemoryEvent::Sync(event) => {
-                for removes in event.removes {
-                    let _ = self.verse.unmap_shadow(&removes);
-                }
-                for (p, t) in event.inserts {
-                    let insert_file = match t.content().cloned() {
-                        Ok(content) => content,
-                        Err(err) => {
-                            log::error!(
-                                "CompileActor: read memory file at {}: {}",
-                                p.display(),
-                                err,
-                            );
-                            continue;
-                        }
-                    };
+        self.verse.incremental_revision(|verse| {
+            if matches!(event, MemoryEvent::Sync(..)) {
+                verse.reset_shadow();
+            }
+            match event {
+                MemoryEvent::Update(event) | MemoryEvent::Sync(event) => {
+                    for removes in event.removes {
+                        let _ = verse.unmap_shadow(&removes);
+                    }
+                    for (p, t) in event.inserts {
+                        let insert_file = match t.content().cloned() {
+                            Ok(content) => content,
+                            Err(err) => {
+                                log::error!(
+                                    "CompileActor: read memory file at {}: {}",
+                                    p.display(),
+                                    err,
+                                );
+                                continue;
+                            }
+                        };
 
-                    let _ = self.verse.map_shadow(&p, insert_file);
+                        let _ = verse.map_shadow(&p, insert_file);
+                    }
                 }
             }
-        }
+        });
     }
 }
 
