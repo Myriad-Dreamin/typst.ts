@@ -4,6 +4,7 @@
 
 use std::{collections::HashSet, path::Path, sync::Arc, thread::JoinHandle};
 
+use reflexo_world::Revising;
 use tokio::sync::{mpsc, oneshot};
 
 use crate::{
@@ -351,7 +352,8 @@ impl<F: CompilerFeat + Send + 'static, C: Compiler<W = CompilerWorld<F>> + Send 
 
                 // If there is no invalidation happening, apply memory changes directly.
                 if files.is_empty() && self.dirty_shadow_logical_tick == 0 {
-                    self.apply_memory_changes(event);
+                    self.verse
+                        .incremental_revision(|verse| Self::apply_memory_changes(verse, event));
                     return true;
                 }
 
@@ -373,14 +375,15 @@ impl<F: CompilerFeat + Send + 'static, C: Compiler<W = CompilerWorld<F>> + Send 
             Interrupt::Fs(mut event) => {
                 log::debug!("CompileActor: fs event incoming {event:?}");
 
-                // Handle delayed upstream update event before applying file system changes
-                if self.apply_delayed_memory_changes(&mut event).is_none() {
-                    log::warn!("CompileActor: unknown upstream update event");
-                }
-
                 // Apply file system changes.
-                self.verse
-                    .incremental_revision(|verse| verse.notify_fs_event(event));
+                let dirty_tick = &mut self.dirty_shadow_logical_tick;
+                self.verse.incremental_revision(|verse| {
+                    // Handle delayed upstream update event before applying file system changes
+                    if Self::apply_delayed_memory_changes(verse, dirty_tick, &mut event).is_none() {
+                        log::warn!("CompileActor: unknown upstream update event");
+                    }
+                    verse.notify_fs_event(event)
+                });
 
                 true
             }
@@ -389,7 +392,11 @@ impl<F: CompilerFeat + Send + 'static, C: Compiler<W = CompilerWorld<F>> + Send 
     }
 
     /// Apply delayed memory changes to underlying compiler.
-    fn apply_delayed_memory_changes(&mut self, event: &mut FilesystemEvent) -> Option<()> {
+    fn apply_delayed_memory_changes(
+        verse: &mut Revising<CompilerUniverse<F>>,
+        dirty_shadow_logical_tick: &mut usize,
+        event: &mut FilesystemEvent,
+    ) -> Option<()> {
         // Handle delayed upstream update event before applying file system changes
         if let FilesystemEvent::UpstreamUpdate { upstream_event, .. } = event {
             let event = upstream_event.take()?.opaque;
@@ -399,45 +406,43 @@ impl<F: CompilerFeat + Send + 'static, C: Compiler<W = CompilerWorld<F>> + Send 
             } = *event.downcast().ok()?;
 
             // Recovery from dirty shadow state.
-            if logical_tick == self.dirty_shadow_logical_tick {
-                self.dirty_shadow_logical_tick = 0;
+            if logical_tick == *dirty_shadow_logical_tick {
+                *dirty_shadow_logical_tick = 0;
             }
 
-            self.apply_memory_changes(event);
+            Self::apply_memory_changes(verse, event);
         }
 
         Some(())
     }
 
     /// Apply memory changes to underlying compiler.
-    fn apply_memory_changes(&mut self, event: MemoryEvent) {
-        self.verse.incremental_revision(|verse| {
-            if matches!(event, MemoryEvent::Sync(..)) {
-                verse.reset_shadow();
-            }
-            match event {
-                MemoryEvent::Update(event) | MemoryEvent::Sync(event) => {
-                    for removes in event.removes {
-                        let _ = verse.unmap_shadow(&removes);
-                    }
-                    for (p, t) in event.inserts {
-                        let insert_file = match t.content().cloned() {
-                            Ok(content) => content,
-                            Err(err) => {
-                                log::error!(
-                                    "CompileActor: read memory file at {}: {}",
-                                    p.display(),
-                                    err,
-                                );
-                                continue;
-                            }
-                        };
+    fn apply_memory_changes(verse: &mut Revising<CompilerUniverse<F>>, event: MemoryEvent) {
+        if matches!(event, MemoryEvent::Sync(..)) {
+            verse.reset_shadow();
+        }
+        match event {
+            MemoryEvent::Update(event) | MemoryEvent::Sync(event) => {
+                for removes in event.removes {
+                    let _ = verse.unmap_shadow(&removes);
+                }
+                for (p, t) in event.inserts {
+                    let insert_file = match t.content().cloned() {
+                        Ok(content) => content,
+                        Err(err) => {
+                            log::error!(
+                                "CompileActor: read memory file at {}: {}",
+                                p.display(),
+                                err,
+                            );
+                            continue;
+                        }
+                    };
 
-                        let _ = verse.map_shadow(&p, insert_file);
-                    }
+                    let _ = verse.map_shadow(&p, insert_file);
                 }
             }
-        });
+        }
     }
 }
 

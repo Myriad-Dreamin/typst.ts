@@ -63,8 +63,6 @@ typst-ts-core = { workspace = true, default-features = false, features = [
     "vector-bbox",
 ] }
 
-[target.'cfg(not(any(target_arch = "riscv64", target_arch = "wasm32", all(target_os = "windows", target_arch = "aarch64"))))'.dependencies]
-
 [dev-dependencies]
 serde.workspace = true
 
