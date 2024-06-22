@@ -153,14 +153,14 @@ struct PathMapper {
     /// The number of lifecycles since the creation of the `Vfs`.
     ///
     /// Note: The lifetime counter is incremented on resetting vfs.
-    lifetime_cnt: AtomicU64,
+    clock: AtomicU64,
     /// Map from path to slot index.
     ///
     /// Note: we use a owned [`FileId`] here, which is resultant from
     /// [`PathInterner`]
-    path2slot: RwLock<HashMap<ImmutPath, FileId>>,
+    id_cache: RwLock<HashMap<ImmutPath, FileId>>,
     /// The path interner for canonical paths.
-    path_interner: Mutex<PathInterner<ImmutPath, u64>>,
+    intern: Mutex<PathInterner<ImmutPath, u64>>,
 }
 
 impl PathMapper {
@@ -172,7 +172,7 @@ impl PathMapper {
     /// Note: The lifetime counter is incremented every time this function is
     /// called.
     pub fn reset(&self) {
-        self.lifetime_cnt.fetch_add(1, Ordering::SeqCst);
+        self.clock.fetch_add(1, Ordering::SeqCst);
 
         // todo: clean path interner.
         // let new_lifetime_cnt = self.lifetime_cnt;
@@ -184,18 +184,18 @@ impl PathMapper {
 
     /// Id of the given path if it exists in the `Vfs` and is not deleted.
     pub fn file_id(&self, path: &Path) -> FileId {
-        let quick_id = self.path2slot.read().get(path).copied();
+        let quick_id = self.id_cache.read().get(path).copied();
         if let Some(id) = quick_id {
             return id;
         }
 
         let path: ImmutPath = path.clean().as_path().into();
 
-        let mut path_interner = self.path_interner.lock();
-        let lifetime_cnt = self.lifetime_cnt.load(Ordering::SeqCst);
+        let mut path_interner = self.intern.lock();
+        let lifetime_cnt = self.clock.load(Ordering::SeqCst);
         let id = path_interner.intern(path.clone(), lifetime_cnt).0;
 
-        let mut path2slot = self.path2slot.write();
+        let mut path2slot = self.id_cache.write();
         path2slot.insert(path.clone(), id);
 
         id
@@ -203,7 +203,7 @@ impl PathMapper {
 
     /// File path corresponding to the given `file_id`.
     pub fn file_path(&self, file_id: FileId) -> ImmutPath {
-        let path_interner = self.path_interner.lock();
+        let path_interner = self.intern.lock();
         path_interner.lookup(file_id).clone()
     }
 }
