@@ -34,23 +34,87 @@ use crate::{
     CodespanError, CodespanResult, CompilerFeat, ShadowApi, WorldDeps,
 };
 
-/// A world that provides access to the operating system.
+pub struct Revising<'a, T> {
+    pub revision: usize,
+    pub inner: &'a mut T,
+}
+
+impl<'a, T> std::ops::Deref for Revising<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner
+    }
+}
+
+impl<'a, T> std::ops::DerefMut for Revising<'a, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.inner
+    }
+}
+
+impl<'a, F: CompilerFeat> Revising<'a, CompilerUniverse<F>> {
+    pub fn vfs(&mut self) -> &mut Vfs<F::AccessModel> {
+        &mut self.inner.vfs
+    }
+
+    pub fn notify_fs_event(&mut self, event: FilesystemEvent) {
+        self.inner.notify_fs_event_(event);
+    }
+
+    pub fn set_do_reparse(&mut self, do_reparse: bool) {
+        self.inner.set_do_reparse_(do_reparse);
+    }
+
+    pub fn set_inputs(&mut self, inputs: Arc<Prehashed<Dict>>) {
+        self.inner.set_inputs_(inputs);
+    }
+
+    pub fn set_entry_file(&mut self, entry_file: Arc<Path>) -> SourceResult<()> {
+        self.inner.set_entry_file_(entry_file)
+    }
+
+    pub fn mutate_entry(&mut self, state: EntryState) -> SourceResult<EntryState> {
+        self.inner.mutate_entry_(state)
+    }
+
+    #[inline]
+    pub fn reset_shadow(&mut self) {
+        self.inner.vfs.reset_shadow()
+    }
+
+    #[inline]
+    pub fn map_shadow(&mut self, path: &Path, content: Bytes) -> FileResult<()> {
+        self.inner.vfs.map_shadow(path, content)
+    }
+
+    #[inline]
+    pub fn unmap_shadow(&mut self, path: &Path) -> FileResult<()> {
+        self.inner.vfs.remove_shadow(path);
+        Ok(())
+    }
+}
+
+/// A universe that provides access to the operating system.
+///
+/// Use [`CompilerUniverse::new`] to create a new universe.
+/// Use [`CompilerUniverse::spawn`] to create a new world.
 #[derive(Debug)]
 pub struct CompilerUniverse<F: CompilerFeat> {
     /// State for the *root & entry* of compilation.
     /// The world forbids direct access to files outside this directory.
-    pub entry: EntryState,
+    entry: EntryState,
     /// Additional input arguments to compile the entry file.
-    pub inputs: Arc<Prehashed<Dict>>,
+    inputs: Arc<Prehashed<Dict>>,
     /// Whether to reparse the source files.
-    pub do_reparse: bool,
+    do_reparse: bool,
 
     /// Provides font management for typst compiler.
     pub font_resolver: Arc<F::FontResolver>,
     /// Provides package management for typst compiler.
     pub registry: Arc<F::Registry>,
     /// Provides path-based data access for typst compiler.
-    pub vfs: Arc<RwLock<Vfs<F::AccessModel>>>,
+    vfs: Vfs<F::AccessModel>,
 
     /// The current revision of the source database.
     pub revision: RwLock<usize>,
@@ -58,6 +122,7 @@ pub struct CompilerUniverse<F: CompilerFeat> {
     pub shared: Arc<RwLock<SharedState<SourceCache>>>,
 }
 
+/// Creates, snapshots, and manages the compiler universe.
 impl<F: CompilerFeat> CompilerUniverse<F> {
     /// Create a [`CompilerUniverse`] with feature implementation.
     ///
@@ -68,7 +133,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
     pub fn new_raw(
         entry: EntryState,
         inputs: Option<Arc<Prehashed<Dict>>>,
-        vfs: Arc<RwLock<Vfs<F::AccessModel>>>,
+        vfs: Vfs<F::AccessModel>,
         registry: F::Registry,
         font_resolver: Arc<F::FontResolver>,
     ) -> Self {
@@ -87,18 +152,32 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
         }
     }
 
-    pub fn set_inputs(&mut self, inputs: Arc<Prehashed<Dict>>) {
-        self.inputs = inputs;
+    /// Increment revision with actions.
+    pub fn increment_revision<T>(&mut self, f: impl FnOnce(&mut Revising<Self>) -> T) -> T {
+        let rev_lock = self.revision.get_mut();
+        *rev_lock += 1;
+        let revision = *rev_lock;
+        f(&mut Revising {
+            inner: self,
+            revision,
+        })
     }
 
-    /// Wrap driver with a given entry file.
-    pub fn with_entry_file(mut self, entry_file: PathBuf) -> Self {
-        self.set_entry_file(entry_file.as_path().into()).unwrap();
-        self
+    /// Notify the universe of a filesystem event.
+    #[inline]
+    fn notify_fs_event_(&mut self, event: FilesystemEvent) {
+        self.vfs.notify_fs_event(event);
+    }
+
+    /// Mutate the entry state.
+    fn mutate_entry_(&mut self, mut state: EntryState) -> SourceResult<EntryState> {
+        self.reset();
+        std::mem::swap(&mut self.entry, &mut state);
+        Ok(state)
     }
 
     /// set an entry file.
-    pub fn set_entry_file(&mut self, entry_file: Arc<Path>) -> SourceResult<()> {
+    fn set_entry_file_(&mut self, entry_file: Arc<Path>) -> SourceResult<()> {
         let state = self.entry_state();
         let state = state
             .try_select_path_in_workspace(&entry_file, true)
@@ -107,32 +186,35 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
             .ok_or_else(|| eco_format!("failed to determine root"))
             .at(Span::detached())?;
 
-        self.mutate_entry(state).map(|_| ())?;
+        self.mutate_entry_(state).map(|_| ())?;
         Ok(())
     }
 
-    #[inline]
-    pub fn notify_fs_event(&mut self, event: FilesystemEvent) {
-        self.vfs.write().notify_fs_event(event)
+    /// Wrap driver with a given entry file.
+    pub fn with_entry_file(mut self, entry_file: PathBuf) -> Self {
+        let _ = self.increment_revision(|this| this.set_entry_file_(entry_file.as_path().into()));
+        self
     }
 
-    pub fn incremental_revision(&mut self, f: impl FnOnce(&mut Self, usize)) {
-        let rev_lock = self.revision.get_mut();
-        *rev_lock += 1;
-        let rev = *rev_lock;
-        f(self, rev);
+    /// Set the `do_reparse` flag.
+    fn set_do_reparse_(&mut self, do_reparse: bool) {
+        self.do_reparse = do_reparse;
+    }
+
+    /// Set the inputs for the compiler.
+    fn set_inputs_(&mut self, inputs: Arc<Prehashed<Dict>>) {
+        self.inputs = inputs;
     }
 
     pub fn spawn(&self) -> CompilerWorld<F> {
-        let mut rev_lock = self.revision.write();
-        *rev_lock += 1;
+        let rev_lock = self.revision.read();
 
         CompilerWorld {
             entry: self.entry.clone(),
             library: create_library(self.inputs.clone()),
             font_resolver: self.font_resolver.clone(),
             registry: self.registry.clone(),
-            vfs: self.vfs.clone(),
+            vfs: self.vfs.snapshot(),
             source_db: SourceDb {
                 revision: *rev_lock,
                 do_reparse: self.do_reparse,
@@ -142,18 +224,21 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
             now: OnceCell::new(),
         }
     }
+
+    pub fn do_reparse(&self) -> bool {
+        self.do_reparse
+    }
+
+    pub fn inputs(&self) -> Arc<Prehashed<Dict>> {
+        self.inputs.clone()
+    }
 }
 
 impl<F: CompilerFeat> CompilerUniverse<F> {
     /// Reset the world for a new lifecycle (of garbage collection).
     pub fn reset(&mut self) {
-        self.vfs.write().reset();
+        self.vfs.reset();
         // todo: shared state
-    }
-
-    /// Set the `do_reparse` flag.
-    pub fn set_do_reparse(&mut self, do_reparse: bool) {
-        self.do_reparse = do_reparse;
     }
 
     /// Resolve the real path for a file id.
@@ -208,24 +293,25 @@ impl<F: CompilerFeat> ShadowApi for CompilerUniverse<F> {
 
     #[inline]
     fn shadow_paths(&self) -> Vec<Arc<Path>> {
-        self.vfs.read().shadow_paths()
+        self.vfs.shadow_paths()
     }
 
     #[inline]
     fn reset_shadow(&mut self) {
-        self.vfs.write().reset_shadow()
+        self.increment_revision(|this| this.vfs.reset_shadow())
     }
 
     #[inline]
-    fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()> {
-        self.vfs.read().map_shadow(path, content)
+    fn map_shadow(&mut self, path: &Path, content: Bytes) -> FileResult<()> {
+        self.increment_revision(|this| this.vfs().map_shadow(path, content))
     }
 
     #[inline]
-    fn unmap_shadow(&self, path: &Path) -> FileResult<()> {
-        self.vfs.read().remove_shadow(path);
-
-        Ok(())
+    fn unmap_shadow(&mut self, path: &Path) -> FileResult<()> {
+        self.increment_revision(|this| {
+            this.vfs().remove_shadow(path);
+            Ok(())
+        })
     }
 }
 
@@ -241,17 +327,15 @@ impl<F: CompilerFeat> EntryManager for CompilerUniverse<F> {
         Ok(())
     }
 
-    fn mutate_entry(&mut self, mut state: EntryState) -> SourceResult<EntryState> {
-        self.reset();
-        std::mem::swap(&mut self.entry, &mut state);
-        Ok(state)
+    fn mutate_entry(&mut self, state: EntryState) -> SourceResult<EntryState> {
+        self.increment_revision(|this| this.mutate_entry_(state))
     }
 }
 
 pub struct CompilerWorld<F: CompilerFeat> {
     /// State for the *root & entry* of compilation.
     /// The world forbids direct access to files outside this directory.
-    pub entry: EntryState,
+    entry: EntryState,
 
     /// Provides library for typst compiler.
     pub library: Arc<Prehashed<Library>>,
@@ -260,7 +344,7 @@ pub struct CompilerWorld<F: CompilerFeat> {
     /// Provides package management for typst compiler.
     pub registry: Arc<F::Registry>,
     /// Provides path-based data access for typst compiler.
-    pub vfs: Arc<RwLock<Vfs<F::AccessModel>>>,
+    vfs: Vfs<F::AccessModel>,
 
     /// Provides source database for typst compiler.
     pub source_db: SourceDb,
@@ -290,15 +374,10 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             entry: self.entry.clone(),
             font_resolver: self.font_resolver.clone(),
             registry: self.registry.clone(),
-            vfs: self.vfs.clone(),
+            vfs: self.vfs.snapshot(),
             source_db: self.source_db.clone(),
             now: self.now.clone(),
         }
-    }
-
-    /// Set the `do_reparse` flag.
-    pub fn set_do_reparse(&mut self, do_reparse: bool) {
-        self.source_db.do_reparse = do_reparse;
     }
 
     /// Resolve the real path for a file id.
@@ -377,16 +456,14 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
             return Ok(DETACH_SOURCE.clone());
         }
 
-        let vfs = self.vfs.read();
-        let fid = vfs.file_id(&self.path_for_id(id)?);
-        self.source_db.source(id, fid, vfs.deref())
+        let fid = self.vfs.file_id(&self.path_for_id(id)?);
+        self.source_db.source(id, fid, &self.vfs)
     }
 
     /// Try to access the specified file.
     fn file(&self, id: FileId) -> FileResult<Bytes> {
-        let vfs = self.vfs.read();
-        let fid = vfs.file_id(&self.path_for_id(id)?);
-        self.source_db.file(id, fid, vfs.deref())
+        let fid = self.vfs.file_id(&self.path_for_id(id)?);
+        self.source_db.file(id, fid, &self.vfs)
     }
 
     /// Get the current date.
@@ -422,17 +499,16 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
     }
 }
 
-impl<F: CompilerFeat> WorldDeps for CompilerWorld<F> {
-    #[inline]
-    fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath)) {
-        self.source_db
-            .iter_dependencies_dyn(self.vfs.read().deref(), f)
-    }
-}
-
 impl<F: CompilerFeat> EntryReader for CompilerWorld<F> {
     fn entry_state(&self) -> EntryState {
         self.entry.clone()
+    }
+}
+
+impl<F: CompilerFeat> WorldDeps for CompilerWorld<F> {
+    #[inline]
+    fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath)) {
+        self.source_db.iter_dependencies_dyn(&self.vfs, f)
     }
 }
 

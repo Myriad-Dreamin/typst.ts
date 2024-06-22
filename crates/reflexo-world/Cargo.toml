@@ -40,6 +40,7 @@ web-sys = { workspace = true, optional = true }
 js-sys = { workspace = true, optional = true }
 serde-wasm-bindgen = { workspace = true, optional = true }
 
+[target.'cfg(not(any(target_arch = "riscv64", target_arch = "wasm32", all(target_os = "windows", target_arch = "aarch64"))))'.dependencies]
 reqwest = { version = "^0.11", default-features = false, features = [
     "rustls-tls",
     "blocking",

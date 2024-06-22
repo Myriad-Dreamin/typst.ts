@@ -27,7 +27,7 @@ pub struct CompileDriverImpl<C, F: CompilerFeat> {
 
 impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
     pub fn entry_file(&self) -> Option<PathBuf> {
-        let main = self.universe.entry.main()?;
+        let main = self.universe.entry_state().main()?;
         self.universe.path_for_id(main).ok()
     }
 }
@@ -160,12 +160,12 @@ impl<C: Compiler, F: CompilerFeat> ShadowApi for CompileDriverImpl<C, F> {
     }
 
     #[inline]
-    fn map_shadow(&self, path: &Path, content: Bytes) -> typst::diag::FileResult<()> {
+    fn map_shadow(&mut self, path: &Path, content: Bytes) -> typst::diag::FileResult<()> {
         self.universe.map_shadow(path, content)
     }
 
     #[inline]
-    fn unmap_shadow(&self, path: &Path) -> typst::diag::FileResult<()> {
+    fn unmap_shadow(&mut self, path: &Path) -> typst::diag::FileResult<()> {
         self.universe.unmap_shadow(path)
     }
 }

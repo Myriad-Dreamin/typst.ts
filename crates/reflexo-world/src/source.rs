@@ -154,10 +154,6 @@ impl SourceDb {
         self.slot(id, fid, |slot| {
             slot.source
                 .compute_with_context(|prev| {
-                    if !p.is_file(fid)? {
-                        return Err(FileError::IsDirectory);
-                    }
-
                     let content = p.read(fid)?;
                     let next = from_utf8_or_bom(&content)?.to_owned();
 

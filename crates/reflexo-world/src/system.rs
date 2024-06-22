@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use comemo::Prehashed;
-use parking_lot::RwLock;
 use reflexo_vfs::{system::SystemAccessModel, Vfs};
 use typst_ts_core::{config::CompileOpts, error::prelude::*, font::FontResolverImpl};
 
@@ -34,7 +33,7 @@ impl TypstSystemUniverse {
         Ok(Self::new_raw(
             opts.entry.clone().try_into()?,
             Some(Arc::new(Prehashed::new(inputs))),
-            Arc::new(RwLock::new(Vfs::new(SystemAccessModel {}))),
+            Vfs::new(SystemAccessModel {}),
             HttpRegistry::default(),
             Arc::new(Self::resolve_fonts(opts)?),
         ))

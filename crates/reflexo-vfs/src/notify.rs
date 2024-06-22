@@ -1,6 +1,7 @@
 use core::fmt;
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 
+use rpds::RedBlackTreeMapSync;
 use typst::diag::{FileError, FileResult};
 
 use crate::{AccessModel, Bytes, ImmutPath};
@@ -204,9 +205,9 @@ pub enum NotifyMessage {
 /// It simply hold notified filesystem data in memory, but still have a fallback
 /// access model, whose the typical underlying access model is
 /// [`crate::system::SystemAccessModel`]
-#[derive(Debug)]
-pub struct NotifyAccessModel<M: AccessModel> {
-    files: HashMap<ImmutPath, FileSnapshot>,
+#[derive(Debug, Clone)]
+pub struct NotifyAccessModel<M> {
+    files: RedBlackTreeMapSync<ImmutPath, FileSnapshot>,
     /// The fallback access model when the file is not notified ever.
     pub inner: M,
 }
@@ -215,7 +216,7 @@ impl<M: AccessModel> NotifyAccessModel<M> {
     /// Create a new notify access model
     pub fn new(inner: M) -> Self {
         Self {
-            files: HashMap::new(),
+            files: RedBlackTreeMapSync::default(),
             inner,
         }
     }
@@ -226,11 +227,11 @@ impl<M: AccessModel> NotifyAccessModel<M> {
             FilesystemEvent::UpstreamUpdate { changeset, .. }
             | FilesystemEvent::Update(changeset) => {
                 for path in changeset.removes {
-                    self.files.remove(&path);
+                    self.files.remove_mut(&path);
                 }
 
                 for (path, contents) in changeset.inserts {
-                    self.files.insert(path, contents);
+                    self.files.insert_mut(path, contents);
                 }
             }
         }

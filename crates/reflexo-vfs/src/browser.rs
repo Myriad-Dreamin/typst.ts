@@ -8,7 +8,7 @@ use crate::{AccessModel, Bytes, Time};
 
 /// Provides proxy access model from typst compiler to some JavaScript
 /// implementation.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ProxyAccessModel {
     /// The `this` value when calling the JavaScript functions
     pub context: JsValue,

@@ -56,15 +56,15 @@ pub trait ShadowApi {
     }
 
     /// Add a shadow file to the driver.
-    fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()>;
+    fn map_shadow(&mut self, path: &Path, content: Bytes) -> FileResult<()>;
 
     /// Add a shadow file to the driver.
-    fn unmap_shadow(&self, path: &Path) -> FileResult<()>;
+    fn unmap_shadow(&mut self, path: &Path) -> FileResult<()>;
 
     /// Add a shadow file to the driver by file id.
     /// Note: to enable this function, `ShadowApi` must implement
     /// `_shadow_map_id`.
-    fn map_shadow_by_id(&self, file_id: FileId, content: Bytes) -> FileResult<()> {
+    fn map_shadow_by_id(&mut self, file_id: FileId, content: Bytes) -> FileResult<()> {
         let file_path = self._shadow_map_id(file_id)?;
         self.map_shadow(&file_path, content)
     }
@@ -72,7 +72,7 @@ pub trait ShadowApi {
     /// Add a shadow file to the driver by file id.
     /// Note: to enable this function, `ShadowApi` must implement
     /// `_shadow_map_id`.
-    fn unmap_shadow_by_id(&self, file_id: FileId) -> FileResult<()> {
+    fn unmap_shadow_by_id(&mut self, file_id: FileId) -> FileResult<()> {
         let file_path = self._shadow_map_id(file_id)?;
         self.unmap_shadow(&file_path)
     }
@@ -141,7 +141,7 @@ pub trait CompilerFeat {
     /// Specify the font resolver for typst compiler.
     type FontResolver: FontResolver + Send + Sync + Sized;
     /// Specify the access model for VFS.
-    type AccessModel: VfsAccessModel + Send + Sync + Sized;
+    type AccessModel: VfsAccessModel + Clone + Send + Sync + Sized;
     /// Specify the package registry.
     type Registry: PackageRegistry + Send + Sync + Sized;
 }

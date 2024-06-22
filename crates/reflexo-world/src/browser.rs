@@ -2,7 +2,6 @@ use std::{path::PathBuf, sync::Arc};
 
 use crate::entry::EntryState;
 use comemo::Prehashed;
-use parking_lot::RwLock;
 use reflexo_vfs::browser::ProxyAccessModel;
 use typst_ts_core::{font::FontResolverImpl, TypstDict};
 
@@ -40,7 +39,7 @@ impl TypstBrowserUniverse {
         Self::new_raw(
             EntryState::new_rooted(root_dir.into(), None),
             inputs,
-            Arc::new(RwLock::new(vfs)),
+            vfs,
             registry,
             Arc::new(font_resolver),
         )
