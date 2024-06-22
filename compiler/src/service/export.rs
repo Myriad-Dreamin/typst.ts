@@ -19,8 +19,9 @@ pub use dynamic_layout::*;
 
 use super::{
     features::{CompileFeature, FeatureSet, WITH_COMPILING_STATUS_FEATURE},
-    CompileEnv, CompileMiddleware, CompileReport, Compiler, EntryReader,
+    CompileEnv, CompileMiddleware, CompileReport, Compiler,
 };
+use crate::EntryReader;
 
 pub trait WorldExporter<W> {
     fn export(&mut self, world: &W, output: Arc<Document>) -> SourceResult<()>;

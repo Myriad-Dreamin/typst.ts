@@ -38,7 +38,6 @@ pollster = { workspace = true, optional = true }
 log = { workspace = true, optional = true }
 fontdb = { workspace = true, optional = true }
 
-chrono = { workspace = true }
 base64.workspace = true
 rustc-hash.workspace = true
 indexmap.workspace = true
@@ -65,18 +64,6 @@ typst-ts-core = { workspace = true, default-features = false, features = [
 ] }
 
 [target.'cfg(not(any(target_arch = "riscv64", target_arch = "wasm32", all(target_os = "windows", target_arch = "aarch64"))))'.dependencies]
-reqwest = { version = "^0.11", default-features = false, features = [
-    "rustls-tls",
-    "blocking",
-    "multipart",
-] }
-
-[target.'cfg(any(target_arch = "riscv64", all(target_os = "windows", target_arch = "aarch64")))'.dependencies]
-reqwest = { version = "^0.11", default-features = false, features = [
-    "native-tls",
-    "blocking",
-    "multipart",
-] }
 
 [dev-dependencies]
 serde.workspace = true
@@ -94,6 +81,7 @@ system-compile = [
     "dep:fontdb",
     "typst-ts-core/glyph2vec",
     "reflexo-vfs/system",
+    "reflexo-world/system",
 ]
 system-watch = ["dep:notify", "dep:tokio"]
 system = ["system-compile", "system-watch"]
@@ -108,9 +96,16 @@ __web = [
     "typst-ts-core/web",
     "instant/wasm-bindgen",
     "reflexo-vfs/web",
+    "reflexo-world/web",
 ]
 web-render = ["__web"]
-browser-compile = ["__web", "web-render", "typst-ts-core/glyph2vec", "reflexo-vfs/browser"]
+browser-compile = [
+    "__web",
+    "web-render",
+    "typst-ts-core/glyph2vec",
+    "reflexo-vfs/browser",
+    "reflexo-world/browser",
+]
 browser-embedded-fonts = ["__web"]
 web = ["__web", "web-render", "browser-compile"]
 default = ["system", "dynamic-layout"]

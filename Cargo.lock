@@ -157,6 +157,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "archery"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8967cd1cc9e9e1954f644e14fbd6042fe9a37da96c52a67e44a2ac18261f8561"
+dependencies = [
+ "static_assertions",
+ "triomphe",
+]
+
+[[package]]
 name = "arrayref"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2254,11 +2264,10 @@ dependencies = [
 
 [[package]]
 name = "native-tls"
-version = "0.2.11"
+version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07226173c32f2926027b63cce4bcd8076c3552846cbe7925f3aaffeac0a3b92e"
+checksum = "a8614eb2c83d59d1c8cc974dd3f920198647674a0a035e1af1fa58707e317466"
 dependencies = [
- "lazy_static",
  "libc",
  "log",
  "openssl",
@@ -2964,6 +2973,7 @@ dependencies = [
  "once_cell",
  "parking_lot",
  "reflexo",
+ "rpds",
  "rustc-hash",
  "typst",
  "wasm-bindgen",
@@ -2975,7 +2985,14 @@ name = "reflexo-world"
 version = "0.5.0-rc4"
 dependencies = [
  "append-only-vec",
+ "chrono",
+ "codespan-reporting",
+ "comemo",
  "dashmap",
+ "dirs",
+ "flate2",
+ "fontdb",
+ "hex",
  "indexmap 2.2.6",
  "js-sys",
  "log",
@@ -2984,8 +3001,16 @@ dependencies = [
  "parking_lot",
  "reflexo",
  "reflexo-vfs",
+ "reqwest",
  "rustc-hash",
+ "serde",
+ "serde-wasm-bindgen",
+ "serde_json",
+ "sha2",
+ "strum 0.25.0",
+ "tar",
  "typst",
+ "typst-ts-core",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -3182,6 +3207,15 @@ name = "roxmltree"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3cd14fd5e3b777a7422cca79358c57a8f6e3a703d9ac187448d0daf220c2407f"
+
+[[package]]
+name = "rpds"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0e15515d3ce3313324d842629ea4905c25a13f81953eadb88f85516f59290a4"
+dependencies = [
+ "archery",
+]
 
 [[package]]
 name = "rustc-demangle"
@@ -3673,6 +3707,12 @@ dependencies = [
  "psm",
  "winapi",
 ]
+
+[[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "str-buf"
@@ -4221,6 +4261,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "triomphe"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6631e42e10b40c0690bf92f404ebcfe6e1fdb480391d15f17cc8e96eeed5369"
+
+[[package]]
 name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4507,7 +4553,6 @@ version = "0.5.0-rc4"
 dependencies = [
  "append-only-vec",
  "base64 0.22.1",
- "chrono",
  "codespan-reporting",
  "comemo",
  "dirs",
@@ -4528,7 +4573,6 @@ dependencies = [
  "rayon",
  "reflexo-vfs",
  "reflexo-world",
- "reqwest",
  "rustc-hash",
  "serde",
  "serde-wasm-bindgen",

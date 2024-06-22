@@ -2,19 +2,16 @@ use std::sync::Arc;
 
 use comemo::Prehashed;
 use parking_lot::RwLock;
+use reflexo_vfs::{system::SystemAccessModel, Vfs};
 use typst_ts_core::{config::CompileOpts, error::prelude::*, font::FontResolverImpl};
 
-use crate::{
-    font::system::SystemFontSearcher,
-    package::http::HttpRegistry,
-    vfs::{system::SystemAccessModel, Vfs},
-};
+use crate::{font::system::SystemFontSearcher, package::http::HttpRegistry};
 
 /// type trait of [`TypstSystemWorld`].
 #[derive(Debug, Clone, Copy)]
 pub struct SystemCompilerFeat;
 
-impl crate::world::CompilerFeat for SystemCompilerFeat {
+impl crate::CompilerFeat for SystemCompilerFeat {
     /// Uses [`FontResolverImpl`] directly.
     type FontResolver = FontResolverImpl;
     /// It accesses a physical file system.

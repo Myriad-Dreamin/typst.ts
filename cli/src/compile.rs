@@ -5,7 +5,7 @@ use std::path::Path;
 use typst::diag::{FileError, FileResult};
 use typst::foundations::{Bytes, Dict, IntoValue};
 use typst::model::Document;
-use typst_ts_compiler::service::{EntryManager, PureCompiler};
+use typst_ts_compiler::service::PureCompiler;
 use typst_ts_compiler::{
     service::{
         features::{FeatureSet, DIAG_FMT_FEATURE},
@@ -13,7 +13,7 @@ use typst_ts_compiler::{
     },
     TypstSystemUniverse,
 };
-use typst_ts_compiler::{ShadowApi, TypstSystemWorld};
+use typst_ts_compiler::{EntryManager, ShadowApi, TypstSystemWorld};
 use typst_ts_core::config::compiler::{EntryOpts, MEMORY_MAIN_ENTRY};
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
 
