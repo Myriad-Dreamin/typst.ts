@@ -19,6 +19,7 @@ once_cell.workspace = true
 rustc-hash.workspace = true
 indexmap.workspace = true
 log.workspace = true
+rpds = "1"
 
 wasm-bindgen = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true }

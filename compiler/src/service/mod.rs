@@ -1,6 +1,7 @@
 use core::fmt;
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 
+use reflexo_world::EntryReader;
 use typst::{
     diag::{At, Hint, SourceDiagnostic, SourceResult},
     eval::Tracer,
@@ -9,7 +10,7 @@ use typst::{
     syntax::Span,
     World,
 };
-use typst_ts_core::{config::compiler::EntryState, typst::prelude::*, TypstFileId};
+use typst_ts_core::{typst::prelude::*, TypstFileId};
 
 pub(crate) mod diag;
 #[cfg(feature = "system-compile")]
@@ -36,27 +37,7 @@ pub mod query;
 pub use self::{diag::DiagnosticFormat, features::FeatureSet};
 
 #[cfg(feature = "system-compile")]
-pub type CompileDriver<C> = CompileDriverImpl<C, crate::system::SystemCompilerFeat>;
-
-pub trait EntryReader {
-    fn entry_state(&self) -> EntryState;
-
-    fn workspace_root(&self) -> Option<Arc<Path>> {
-        self.entry_state().root().clone()
-    }
-
-    fn main_id(&self) -> Option<TypstFileId> {
-        self.entry_state().main()
-    }
-}
-
-pub trait EntryManager: EntryReader {
-    fn reset(&mut self) -> SourceResult<()> {
-        Ok(())
-    }
-
-    fn mutate_entry(&mut self, state: EntryState) -> SourceResult<EntryState>;
-}
+pub type CompileDriver<C> = CompileDriverImpl<C, reflexo_world::system::SystemCompilerFeat>;
 
 #[derive(Clone, Default)]
 pub struct CompileEnv {

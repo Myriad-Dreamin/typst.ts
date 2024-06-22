@@ -1,245 +1,147 @@
-// use std::sync::Arc;
+pub mod source;
 
-use core::fmt;
-use std::sync::Arc;
+pub mod entry;
+pub use entry::*;
 
-use parking_lot::{Mutex, RwLock};
-use reflexo::{ImmutPath, QueryRef};
-use reflexo_vfs::{Bytes, FileId, FsProvider, TypstFileId};
-use rustc_hash::FxHashMap;
-use typst::{
-    diag::{FileError, FileResult},
-    syntax::Source,
+pub mod world;
+pub use world::*;
+
+pub mod font;
+pub mod package;
+pub mod parser;
+
+/// Run the compiler in the system environment.
+#[cfg(feature = "system")]
+pub mod system;
+#[cfg(feature = "system")]
+pub use system::{SystemCompilerFeat, TypstSystemUniverse, TypstSystemWorld};
+
+/// Run the compiler in the browser environment.
+#[cfg(feature = "browser")]
+pub(crate) mod browser;
+#[cfg(feature = "browser")]
+pub use browser::{BrowserCompilerFeat, TypstBrowserUniverse, TypstBrowserWorld};
+
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
 };
 
-/// incrementally query a value from a self holding state
-type IncrQueryRef<S, E> = QueryRef<S, E, Option<S>>;
+use typst::{
+    diag::{At, FileResult, SourceResult},
+    foundations::Bytes,
+    syntax::Span,
+};
 
-type FileQuery<T> = QueryRef<T, FileError>;
-type IncrFileQuery<T> = IncrQueryRef<T, FileError>;
+use reflexo_vfs::AccessModel as VfsAccessModel;
+use typst_ts_core::{
+    package::Registry as PackageRegistry, typst::prelude::EcoVec, FontResolver, ImmutPath,
+    TypstFileId as FileId,
+};
 
-pub trait Revised {
-    fn last_accessed_rev(&self) -> usize;
-}
-
-pub struct SharedState<T> {
-    pub committed_revision: Option<usize>,
-    // todo: fine-grained lock
-    /// The cache entries for each paths
-    cache_entries: FxHashMap<TypstFileId, T>,
-}
-
-impl<T> fmt::Debug for SharedState<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SharedState")
-            .field("committed_revision", &self.committed_revision)
-            .finish()
-    }
-}
-
-impl<T> Default for SharedState<T> {
-    fn default() -> Self {
-        SharedState {
-            committed_revision: None,
-            cache_entries: FxHashMap::default(),
-        }
-    }
-}
-
-impl<T: Revised> SharedState<T> {
-    fn gc(&mut self) {
-        let commited = self.committed_revision.unwrap_or(0);
-        self.cache_entries
-            .retain(|_, v| commited.saturating_sub(v.last_accessed_rev()) <= 30);
-    }
-}
-
-pub struct SourceCache {
-    last_accessed_rev: usize,
-    fid: FileId,
-    source: IncrFileQuery<Source>,
-    buffer: FileQuery<Bytes>,
-}
-
-impl fmt::Debug for SourceCache {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SourceCache").finish()
-    }
-}
-
-impl Revised for SourceCache {
-    fn last_accessed_rev(&self) -> usize {
-        self.last_accessed_rev
-    }
-}
-
-#[derive(Default, Clone)]
-pub struct SourceDb {
-    pub revision: usize,
-    pub shared: Arc<RwLock<SharedState<SourceCache>>>,
-    /// The slots for all the files during a single lifecycle.
-    pub slots: Arc<Mutex<FxHashMap<TypstFileId, SourceCache>>>,
-    /// Whether to reparse the file when it is changed.
-    /// Default to `true`.
-    pub do_reparse: bool,
-}
-
-impl fmt::Debug for SourceDb {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("SourceDb").finish()
-    }
-}
-
-impl SourceDb {
-    /// Set the `do_reparse` flag that indicates whether to reparsing the file
-    /// instead of creating a new [`Source`] when the file is changed.
-    /// Default to `true`.
-    ///
-    /// You usually want to set this flag to `true` for better performance.
-    /// However, one could disable this flag for debugging purpose.
-    pub fn set_do_reparse(&mut self, do_reparse: bool) {
-        self.do_reparse = do_reparse;
+/// Latest version of the shadow api, which is in beta.
+pub trait ShadowApi {
+    fn _shadow_map_id(&self, _file_id: FileId) -> FileResult<PathBuf> {
+        unimplemented!()
     }
 
-    /// Returns the overall memory usage for the stored files.
-    pub fn memory_usage(&self) -> usize {
-        let mut w = self.slots.lock().len() * core::mem::size_of::<SourceCache>();
-        w += self
-            .slots
-            .lock()
-            .iter()
-            .map(|(_, slot)| {
-                slot.source
-                    .get_uninitialized()
-                    .and_then(|e| e.as_ref().ok())
-                    .map_or(16, |e| e.text().len() * 8)
-                    + slot
-                        .buffer
-                        .get_uninitialized()
-                        .and_then(|e| e.as_ref().ok())
-                        .map_or(16, |e| e.len())
-            })
-            .sum::<usize>();
+    /// Get the shadow files.
+    fn shadow_paths(&self) -> Vec<Arc<Path>>;
 
-        w
-    }
-
-    /// Get all the files that are currently in the VFS.
-    ///
-    /// This is typically corresponds to the file dependencies of a single
-    /// compilation.
-    ///
-    /// When you don't reset the vfs for each compilation, this function will
-    /// still return remaining files from the previous compilation.
-    pub fn iter_dependencies_dyn<'a>(
-        &'a self,
-        p: &'a impl FsProvider,
-        f: &mut dyn FnMut(ImmutPath),
-    ) {
-        for slot in self.slots.lock().iter() {
-            f(p.file_path(slot.1.fid));
+    /// Reset the shadow files.
+    fn reset_shadow(&mut self) {
+        for path in self.shadow_paths() {
+            self.unmap_shadow(&path).unwrap();
         }
     }
 
-    /// Get file content by path.
-    pub fn file(&self, id: TypstFileId, fid: FileId, p: &impl FsProvider) -> FileResult<Bytes> {
-        self.slot(id, fid, |slot| slot.buffer.compute(|| p.read(fid)).cloned())
+    /// Add a shadow file to the driver.
+    fn map_shadow(&self, path: &Path, content: Bytes) -> FileResult<()>;
+
+    /// Add a shadow file to the driver.
+    fn unmap_shadow(&self, path: &Path) -> FileResult<()>;
+
+    /// Add a shadow file to the driver by file id.
+    /// Note: to enable this function, `ShadowApi` must implement
+    /// `_shadow_map_id`.
+    fn map_shadow_by_id(&self, file_id: FileId, content: Bytes) -> FileResult<()> {
+        let file_path = self._shadow_map_id(file_id)?;
+        self.map_shadow(&file_path, content)
     }
 
-    /// Get source content by path and assign the source with a given typst
-    /// global file id.
-    ///
-    /// See `Vfs::resolve_with_f` for more information.
-    pub fn source(&self, id: TypstFileId, fid: FileId, p: &impl FsProvider) -> FileResult<Source> {
-        self.slot(id, fid, |slot| {
-            slot.source
-                .compute_with_context(|prev| {
-                    if !p.is_file(fid)? {
-                        return Err(FileError::IsDirectory);
-                    }
-
-                    let content = p.read(fid)?;
-                    let next = from_utf8_or_bom(&content)?.to_owned();
-
-                    // otherwise reparse the source
-                    match prev {
-                        Some(mut source) if self.do_reparse => {
-                            source.replace(&next);
-                            Ok(source)
-                        }
-                        // Return a new source if we don't have a reparse feature or no prev
-                        _ => Ok(Source::new(id, next)),
-                    }
-                })
-                .cloned()
-        })
-    }
-
-    /// Insert a new slot into the vfs.
-    fn slot<T>(&self, id: TypstFileId, fid: FileId, f: impl FnOnce(&SourceCache) -> T) -> T {
-        let mut slots = self.slots.lock();
-        f(slots.entry(id).or_insert_with(|| {
-            let state = self.shared.read();
-            let cache_entry = state.cache_entries.get(&id);
-
-            cache_entry
-                .map(|e| SourceCache {
-                    last_accessed_rev: self.revision.max(e.last_accessed_rev),
-                    fid,
-                    source: IncrFileQuery::with_context(
-                        e.source
-                            .get_uninitialized()
-                            .cloned()
-                            .transpose()
-                            .ok()
-                            .flatten(),
-                    ),
-                    buffer: FileQuery::default(),
-                })
-                .unwrap_or_else(|| SourceCache {
-                    last_accessed_rev: self.revision,
-                    fid,
-                    source: IncrFileQuery::with_context(None),
-                    buffer: FileQuery::default(),
-                })
-        }))
-    }
-
-    pub fn commit_impl(self, state: &mut SharedState<SourceCache>) {
-        log::info!("drop source db revision {}", self.revision);
-
-        if let Ok(slots) = Arc::try_unwrap(self.slots) {
-            if state
-                .committed_revision
-                .map_or(false, |commited| commited >= self.revision)
-            {
-                return;
-            }
-
-            log::info!("committing source db revision {}", self.revision);
-            state.committed_revision = Some(self.revision);
-            state.cache_entries = slots.into_inner();
-            state.gc();
-        }
+    /// Add a shadow file to the driver by file id.
+    /// Note: to enable this function, `ShadowApi` must implement
+    /// `_shadow_map_id`.
+    fn unmap_shadow_by_id(&self, file_id: FileId) -> FileResult<()> {
+        let file_path = self._shadow_map_id(file_id)?;
+        self.unmap_shadow(&file_path)
     }
 }
 
-pub trait MergeCache: Sized {
-    fn merge(self, _other: Self) -> Self {
-        self
+pub trait ShadowApiExt {
+    /// Wrap the driver with a given shadow file and run the inner function.
+    fn with_shadow_file<T>(
+        &mut self,
+        file_path: &Path,
+        content: Bytes,
+        f: impl FnOnce(&mut Self) -> SourceResult<T>,
+    ) -> SourceResult<T>;
+
+    /// Wrap the driver with a given shadow file and run the inner function by
+    /// file id.
+    /// Note: to enable this function, `ShadowApi` must implement
+    /// `_shadow_map_id`.
+    fn with_shadow_file_by_id<T>(
+        &mut self,
+        file_id: FileId,
+        content: Bytes,
+        f: impl FnOnce(&mut Self) -> SourceResult<T>,
+    ) -> SourceResult<T>;
+}
+
+impl<C: ShadowApi> ShadowApiExt for C {
+    /// Wrap the driver with a given shadow file and run the inner function.
+    fn with_shadow_file<T>(
+        &mut self,
+        file_path: &Path,
+        content: Bytes,
+        f: impl FnOnce(&mut Self) -> SourceResult<T>,
+    ) -> SourceResult<T> {
+        self.map_shadow(file_path, content).at(Span::detached())?;
+        let res: Result<T, EcoVec<typst::diag::SourceDiagnostic>> = f(self);
+        self.unmap_shadow(file_path).at(Span::detached())?;
+        res
+    }
+
+    /// Wrap the driver with a given shadow file and run the inner function by
+    /// file id.
+    /// Note: to enable this function, `ShadowApi` must implement
+    /// `_shadow_map_id`.
+    fn with_shadow_file_by_id<T>(
+        &mut self,
+        file_id: FileId,
+        content: Bytes,
+        f: impl FnOnce(&mut Self) -> SourceResult<T>,
+    ) -> SourceResult<T> {
+        let file_path = self._shadow_map_id(file_id).at(Span::detached())?;
+        self.with_shadow_file(&file_path, content, f)
     }
 }
 
-pub struct FontDb {}
-pub struct PackageDb {}
+/// Latest version of the world dependencies api, which is in beta.
+pub trait WorldDeps {
+    fn iter_dependencies(&self, f: &mut dyn FnMut(ImmutPath));
+}
 
-/// Convert a byte slice to a string, removing UTF-8 BOM if present.
-fn from_utf8_or_bom(buf: &[u8]) -> FileResult<&str> {
-    Ok(std::str::from_utf8(if buf.starts_with(b"\xef\xbb\xbf") {
-        // remove UTF-8 BOM
-        &buf[3..]
-    } else {
-        // Assume UTF-8
-        buf
-    })?)
+type CodespanResult<T> = Result<T, CodespanError>;
+type CodespanError = codespan_reporting::files::Error;
+
+/// type trait interface of [`CompilerWorld`].
+pub trait CompilerFeat {
+    /// Specify the font resolver for typst compiler.
+    type FontResolver: FontResolver + Send + Sync + Sized;
+    /// Specify the access model for VFS.
+    type AccessModel: VfsAccessModel + Send + Sync + Sized;
+    /// Specify the package registry.
+    type Registry: PackageRegistry + Send + Sync + Sized;
 }

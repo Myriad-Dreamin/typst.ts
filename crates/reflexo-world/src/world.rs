@@ -7,45 +7,32 @@ use std::{
 use chrono::{DateTime, Datelike, Local};
 use comemo::Prehashed;
 use once_cell::sync::OnceCell;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::RwLock;
 use typst::{
     diag::{eco_format, At, EcoString, FileError, FileResult, SourceResult},
-    foundations::{Datetime, Dict},
+    foundations::{Bytes, Datetime, Dict},
     syntax::{Source, Span, VirtualPath},
     text::{Font, FontBook},
     Library, World,
 };
 
-use reflexo_world::{SharedState, SourceCache, SourceDb};
+use reflexo_vfs::{notify::FilesystemEvent, Vfs};
 use typst_ts_core::{
-    config::compiler::{EntryState, DETACHED_ENTRY},
-    package::PackageSpec,
-    Bytes, FontResolver, ImmutPath, TypstFileId as FileId,
+    package::{PackageSpec, Registry as PackageRegistry},
+    FontResolver, ImmutPath, TypstFileId as FileId,
 };
 
 use crate::{
-    package::Registry as PackageRegistry,
+    entry::{EntryManager, EntryReader, EntryState, DETACHED_ENTRY},
     parser::{
         get_semantic_tokens_full, get_semantic_tokens_legend, OffsetEncoding, SemanticToken,
         SemanticTokensLegend,
     },
-    service::{EntryManager, EntryReader},
-    vfs::{notify::FilesystemEvent, AccessModel as VfsAccessModel, Vfs},
-    ShadowApi, WorldDeps,
 };
-
-type CodespanResult<T> = Result<T, CodespanError>;
-type CodespanError = codespan_reporting::files::Error;
-
-/// type trait interface of [`CompilerWorld`].
-pub trait CompilerFeat {
-    /// Specify the font resolver for typst compiler.
-    type FontResolver: FontResolver + Send + Sync + Sized;
-    /// Specify the access model for VFS.
-    type AccessModel: VfsAccessModel + Send + Sync + Sized;
-    /// Specify the package registry.
-    type Registry: PackageRegistry + Send + Sync + Sized;
-}
+use crate::{
+    source::{SharedState, SourceCache, SourceDb},
+    CodespanError, CodespanResult, CompilerFeat, ShadowApi, WorldDeps,
+};
 
 /// A world that provides access to the operating system.
 #[derive(Debug)]
@@ -66,7 +53,7 @@ pub struct CompilerUniverse<F: CompilerFeat> {
     pub vfs: Arc<RwLock<Vfs<F::AccessModel>>>,
 
     /// The current revision of the source database.
-    pub revision: Mutex<usize>,
+    pub revision: RwLock<usize>,
     /// Shared state for source cache.
     pub shared: Arc<RwLock<SharedState<SourceCache>>>,
 }
@@ -90,7 +77,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
             inputs: inputs.unwrap_or_default(),
             do_reparse: true,
 
-            revision: Mutex::new(0),
+            revision: RwLock::new(1),
             shared: Arc::new(RwLock::new(SharedState::default())),
 
             // library: create_library(inputs.unwrap_or_default()),
@@ -129,8 +116,15 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
         self.vfs.write().notify_fs_event(event)
     }
 
+    pub fn incremental_revision(&mut self, f: impl FnOnce(&mut Self, usize)) {
+        let rev_lock = self.revision.get_mut();
+        *rev_lock += 1;
+        let rev = *rev_lock;
+        f(self, rev);
+    }
+
     pub fn spawn(&self) -> CompilerWorld<F> {
-        let mut rev_lock = self.revision.lock();
+        let mut rev_lock = self.revision.write();
         *rev_lock += 1;
 
         CompilerWorld {

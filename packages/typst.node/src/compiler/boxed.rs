@@ -5,8 +5,8 @@ use std::{
     sync::Arc,
 };
 use typst_ts_compiler::{
-    service::{CompileDriver, CompileEnv, Compiler, EntryManager, EntryReader, PureCompiler},
-    ShadowApi, TypstSystemWorld,
+    service::{CompileDriver, CompileEnv, Compiler, PureCompiler},
+    EntryManager, EntryReader, ShadowApi, TypstSystemWorld,
 };
 use typst_ts_core::{
     config::compiler::{EntryState, MEMORY_MAIN_ENTRY},

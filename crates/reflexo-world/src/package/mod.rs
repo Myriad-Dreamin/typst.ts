@@ -1,9 +1,9 @@
 pub use typst_ts_core::package::{PackageError, PackageSpec, Registry};
 
-#[cfg(feature = "browser-compile")]
+#[cfg(feature = "browser")]
 pub mod browser;
 
-#[cfg(feature = "system-compile")]
+#[cfg(feature = "system")]
 pub mod http;
 
 pub trait Notifier {

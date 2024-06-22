@@ -13,6 +13,7 @@ use typst::{
     text::{FontBook, FontInfo},
 };
 
+use reflexo_vfs::system::LazyFile;
 use typst_ts_core::{
     build_info,
     config::CompileFontOpts,
@@ -24,8 +25,6 @@ use typst_ts_core::{
     },
     Bytes, FontSlot,
 };
-
-use crate::vfs::system::LazyFile;
 
 #[derive(Debug, Default)]
 struct FontProfileRebuilder {

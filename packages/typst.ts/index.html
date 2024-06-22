@@ -10,6 +10,12 @@
     <script type="module" src="/enhanced-typst-svg/dist/index.min.js"></script>
     <link rel="stylesheet" href="/core/examples/typst.ts.css" />
     <style>
+      #typst-app-container {
+        padding: 10px;
+        display: flex;
+        justify-content: center;
+      }
+
       #typst-app {
         --typst-dom-scale: 1.5;
         margin: 5px;
@@ -103,8 +109,8 @@
       .typst-text {
         pointer-events: none;
       }
-      /* 
-      body {
+
+      /* body {
         background: white;
       } */
     </style>
@@ -127,34 +133,55 @@
           })
           .then(async () => {
             const artifactData = await fetch(
-              '/corpus/skyzh-cv/main.white.artifact.sir.in',
+              // '/corpus/skyzh-cv/main.white.artifact.sir.in',
               // '/corpus/skyzh-cv/masterproef.artifact.sir.in',
               // '/corpus/skyzh-cv/introduction.ayu.multi.sir.in',
               // '/corpus/skyzh-cv/introduction-book.ayu.multi.sir.in',
               // '/corpus/skyzh-cv/stlc.multi.sir.in',
+              // ice1000's lnl-model report
+              // '/corpus/skyzh-cv/report.artifact.sir.in',
+              // '/corpus/skyzh-cv/assemble.artifact.sir.in',
+              '/corpus/skyzh-cv/multimedia.ayu.multi.sir.in',
             )
               .then(response => response.arrayBuffer())
               .then(buffer => new Uint8Array(buffer));
 
             const appElem = document.getElementById('typst-app');
 
+            let renderStart = undefined;
+            const canvasRender = async ses => {
+              await plugin.renderToCanvas({
+                // renderSession: ses,
+                artifactContent: artifactData,
+                container: appElem,
+                backgroundColor: '#343541',
+                // backgroundColor: '#ffffff',
+                pixelPerPt: 4.5,
+              });
+              console.log('render time!!!!!!!!!', performance.now() - renderStart);
+            };
+            const domRender = async ses => {
+              const dom = await plugin.renderDom({
+                renderSession: ses,
+                container: appElem,
+                pixelPerPt: 4.5,
+                domScale: 1.5,
+              });
+              console.log('render time!!!!!!!!!', performance.now() - renderStart);
+              console.log(dom);
+
+              dom.addChangement(['new', artifactData]);
+
+              window.addEventListener('resize', () => dom.addViewportChange());
+              window.addEventListener('scroll', () => dom.addViewportChange());
+            };
+
             plugin.runWithSession(
               ses =>
                 new Promise(async dispose => {
-                  const t = performance.now();
-                  const dom = await plugin.renderDom({
-                    renderSession: ses,
-                    container: appElem,
-                    pixelPerPt: 4.5,
-                    domScale: 1.5,
-                  });
-                  console.log('render time!!!!!!!!!', performance.now() - t);
-                  console.log(dom);
-
-                  dom.addChangement(['new', artifactData]);
-
-                  window.addEventListener('resize', () => dom.addViewportChange());
-                  window.addEventListener('scroll', () => dom.addViewportChange());
+                  renderStart = performance.now();
+                  // await canvasRender(ses);
+                  await domRender(ses);
 
                   void dispose;
                 }),
@@ -188,7 +215,9 @@
         </ul>
         <div class="clear"></div>
       </div>
-      <div id="typst-app"></div>
+      <div id="typst-app-container">
+        <div id="typst-app"></div>
+      </div>
     </body>
   </body>
 </html>
