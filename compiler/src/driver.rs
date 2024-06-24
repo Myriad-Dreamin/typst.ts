@@ -43,11 +43,11 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> CompileDriverImpl<C, F>
         selector: String,
         document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
-        self.compiler.query(&self.spawn(), selector, document)
+        self.compiler.query(&self.snapshot(), selector, document)
     }
 
     pub fn compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<TypstDocument>> {
-        let world = self.spawn();
+        let world = self.snapshot();
         self.compiler.ensure_main(&world)?;
         self.compiler.compile(&world, env)
     }
@@ -62,8 +62,8 @@ impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
         &mut self.universe
     }
 
-    pub fn spawn(&self) -> CompilerWorld<F> {
-        self.universe.spawn()
+    pub fn snapshot(&self) -> CompilerWorld<F> {
+        self.universe.snapshot()
     }
 
     pub fn main_id(&self) -> TypstFileId {

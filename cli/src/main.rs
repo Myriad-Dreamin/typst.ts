@@ -179,7 +179,7 @@ fn list_fonts(command: ListFontsArgs) -> ! {
         ..CompileOpts::default()
     })
     .unwrap_or_exit();
-    let world = verse.spawn();
+    let world = verse.snapshot();
 
     for (name, infos) in world.book().families() {
         println!("{name}");

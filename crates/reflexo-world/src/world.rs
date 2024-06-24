@@ -1,4 +1,5 @@
 use std::{
+    num::NonZeroUsize,
     ops::Deref,
     path::{Path, PathBuf},
     sync::Arc,
@@ -35,7 +36,7 @@ use crate::{
 };
 
 pub struct Revising<'a, T> {
-    pub revision: usize,
+    pub revision: NonZeroUsize,
     pub inner: &'a mut T,
 }
 
@@ -119,7 +120,7 @@ pub struct CompilerUniverse<F: CompilerFeat> {
     vfs: Vfs<F::AccessModel>,
 
     /// The current revision of the source database.
-    pub revision: RwLock<usize>,
+    pub revision: RwLock<NonZeroUsize>,
     /// Shared state for source cache.
     pub shared: Arc<RwLock<SharedState<SourceCache>>>,
 }
@@ -144,7 +145,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
             inputs: inputs.unwrap_or_default(),
             do_reparse: true,
 
-            revision: RwLock::new(1),
+            revision: RwLock::new(NonZeroUsize::new(1).expect("initial revision is 1")),
             shared: Arc::new(RwLock::new(SharedState::default())),
 
             font_resolver,
@@ -167,15 +168,16 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
         self.inputs.clone()
     }
 
-    pub fn spawn(&self) -> CompilerWorld<F> {
-        self.spawn_with(None)
+    pub fn snapshot(&self) -> CompilerWorld<F> {
+        self.snapshot_with(None)
     }
 
-    pub fn spawn_with(&self, mutant: Option<TaskInputs>) -> CompilerWorld<F> {
+    pub fn snapshot_with(&self, mutant: Option<TaskInputs>) -> CompilerWorld<F> {
         let rev_lock = self.revision.read();
 
         let w = CompilerWorld {
             entry: self.entry.clone(),
+            inputs: self.inputs.clone(),
             library: create_library(self.inputs.clone()),
             font_resolver: self.font_resolver.clone(),
             registry: self.registry.clone(),
@@ -195,7 +197,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
     /// Increment revision with actions.
     pub fn increment_revision<T>(&mut self, f: impl FnOnce(&mut Revising<Self>) -> T) -> T {
         let rev_lock = self.revision.get_mut();
-        *rev_lock += 1;
+        *rev_lock = rev_lock.checked_add(1).unwrap();
         let revision = *rev_lock;
         f(&mut Revising {
             inner: self,
@@ -262,7 +264,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
         file_path: Option<String>,
         encoding: OffsetEncoding,
     ) -> Arc<Vec<SemanticToken>> {
-        let world = self.spawn();
+        let world = self.snapshot();
         let src = &file_path
             .and_then(|e| {
                 let relative_path = Path::new(&e).strip_prefix(&self.workspace_root()?).ok()?;
@@ -327,6 +329,8 @@ pub struct CompilerWorld<F: CompilerFeat> {
     /// State for the *root & entry* of compilation.
     /// The world forbids direct access to files outside this directory.
     entry: EntryState,
+    /// Additional input arguments to compile the entry file.
+    inputs: Arc<Prehashed<Dict>>,
 
     /// Provides library for typst compiler.
     pub library: Arc<Prehashed<Library>>,
@@ -344,12 +348,18 @@ pub struct CompilerWorld<F: CompilerFeat> {
     now: OnceCell<DateTime<Local>>,
 }
 
+impl<F: CompilerFeat> Clone for CompilerWorld<F> {
+    fn clone(&self) -> Self {
+        self.task(TaskInputs::default())
+    }
+}
+
 impl<F: CompilerFeat> Drop for CompilerWorld<F> {
     fn drop(&mut self) {
         let state = self.source_db.shared.clone();
+        let source_state = self.source_db.take_state();
         let mut state = state.write();
-        let source_db = std::mem::take(&mut self.source_db);
-        source_db.commit_impl(&mut state);
+        source_state.commit_impl(&mut state);
     }
 }
 
@@ -364,9 +374,10 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         // Fetch to avoid inconsistent state.
         let _ = self.today(None);
 
-        let library = mutant.inputs.map(create_library);
+        let library = mutant.inputs.clone().map(create_library);
 
         CompilerWorld {
+            inputs: mutant.inputs.unwrap_or_else(|| self.inputs.clone()),
             library: library.unwrap_or_else(|| self.library.clone()),
             entry: mutant.entry.unwrap_or_else(|| self.entry.clone()),
             font_resolver: self.font_resolver.clone(),
@@ -375,6 +386,10 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             source_db: self.source_db.clone(),
             now: self.now.clone(),
         }
+    }
+
+    pub fn inputs(&self) -> Arc<Prehashed<Dict>> {
+        self.inputs.clone()
     }
 
     /// Resolve the real path for a file id.
@@ -414,6 +429,38 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             Some(source) => f(source),
             None => Ok(default_v),
         }
+    }
+
+    pub fn revision(&self) -> NonZeroUsize {
+        self.source_db.revision
+    }
+}
+
+impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
+    #[inline]
+    fn _shadow_map_id(&self, file_id: FileId) -> FileResult<PathBuf> {
+        self.path_for_id(file_id)
+    }
+
+    #[inline]
+    fn shadow_paths(&self) -> Vec<Arc<Path>> {
+        self.vfs.shadow_paths()
+    }
+
+    #[inline]
+    fn reset_shadow(&mut self) {
+        self.vfs.reset_shadow()
+    }
+
+    #[inline]
+    fn map_shadow(&mut self, path: &Path, content: Bytes) -> FileResult<()> {
+        self.vfs.map_shadow(path, content)
+    }
+
+    #[inline]
+    fn unmap_shadow(&mut self, path: &Path) -> FileResult<()> {
+        self.vfs.remove_shadow(path);
+        Ok(())
     }
 }
 

@@ -14,7 +14,7 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 use typst_ts_compiler::{
-    CompileMiddleware, Compiler, DynamicLayoutCompiler, EntryManager, TypstSystemWorld,
+    Compiler, DynamicLayoutCompiler, EntryManager, SystemCompilerFeat, TypstSystemWorld,
 };
 use typst_ts_core::{error::prelude::*, Exporter, TypstAbs, TypstDatetime, TypstDocument};
 
@@ -168,7 +168,7 @@ impl NodeCompiler {
 
     /// Gets the inner world.
     fn spawn_world(&self) -> TypstSystemWorld {
-        self.driver.assert_ref().deref().spawn()
+        self.driver.assert_ref().deref().snapshot()
     }
 
     /// Compiles the document internally.
@@ -221,7 +221,7 @@ impl NodeCompiler {
         selector: String,
     ) -> Result<serde_json::Value, NodeError> {
         let compiler = self.driver.assert_mut();
-        let world = compiler.spawn();
+        let world = compiler.snapshot();
         let res = compiler
             .query(&world, selector, &doc.0)
             .map_err(map_node_error)?;
@@ -272,7 +272,7 @@ impl NodeCompiler {
 #[napi]
 pub struct DynLayoutCompiler {
     /// Inner compiler.
-    driver: DynamicLayoutCompiler<BoxedCompiler>,
+    driver: DynamicLayoutCompiler<SystemCompilerFeat, BoxedCompiler>,
 }
 
 #[napi]
@@ -295,9 +295,12 @@ impl DynLayoutCompiler {
     #[napi]
     pub fn vector(&mut self, compile_by: CompileDocumentOptions) -> Result<Buffer, NodeError> {
         let compiler = self.driver.inner_mut();
-        let world = compiler.spawn();
+        let world = compiler.snapshot();
         let e = compiler.setup_compiler_by(compile_by)?;
-        let doc = self.driver.do_export(&world).map_err(map_node_error);
+        let doc = self
+            .driver
+            .do_export(&world, &mut Default::default())
+            .map_err(map_node_error);
 
         if let Some(e) = e {
             self.driver
@@ -307,6 +310,6 @@ impl DynLayoutCompiler {
                 .map_err(map_node_error)?;
         }
 
-        Ok(doc?.to_bytes().into())
+        Ok(doc?.1.to_bytes().into())
     }
 }

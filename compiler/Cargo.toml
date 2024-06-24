@@ -67,6 +67,7 @@ emoji = []
 lazy-fontdb = ["dep:rayon"]
 no-content-hint = ["typst-ts-core/no-content-hint"]
 system-compile = [
+    "dep:rayon",
     "typst-ts-core/glyph2vec",
     "reflexo-vfs/system",
     "reflexo-world/system",

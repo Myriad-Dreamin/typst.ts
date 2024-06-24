@@ -123,6 +123,10 @@ pub mod builtins {
         pub fn push(&mut self, exporter: DynExporter<I>) {
             self.exporters.push(exporter)
         }
+
+        pub fn is_empty(&self) -> bool {
+            self.exporters.is_empty()
+        }
     }
 
     impl<I> Exporter<I> for GroupExporter<I> {
