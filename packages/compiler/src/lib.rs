@@ -5,10 +5,7 @@ use comemo::Prehashed;
 use js_sys::{Array, JsString, Uint32Array, Uint8Array};
 pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
-    font::web::BrowserFontSearcher,
-    package::browser::ProxyRegistry,
-    parser::OffsetEncoding,
-    service::{CompileDriverImpl, PureCompiler},
+    font::web::BrowserFontSearcher, package::browser::ProxyRegistry, parser::OffsetEncoding,
     vfs::browser::ProxyAccessModel,
 };
 use typst_ts_core::{

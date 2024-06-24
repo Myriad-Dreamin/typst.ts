@@ -1,3 +1,4 @@
+pub use instant::Duration;
 pub use instant::Instant;
 pub use instant::SystemTime as Time;
 

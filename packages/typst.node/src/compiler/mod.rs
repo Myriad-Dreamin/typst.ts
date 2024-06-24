@@ -10,9 +10,8 @@ use napi_derive::napi;
 use typst_ts_compiler::{
     font::system::SystemFontSearcher,
     package::http::HttpRegistry,
-    service::{CompileDriver, PureCompiler},
     vfs::{system::SystemAccessModel, Vfs},
-    TypstSystemUniverse, TypstSystemWorld,
+    CompileDriver, PureCompiler, TypstSystemUniverse, TypstSystemWorld,
 };
 use typst_ts_core::{
     config::{compiler::EntryState, CompileFontOpts},

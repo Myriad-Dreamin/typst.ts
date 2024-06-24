@@ -126,7 +126,7 @@ fn prepare_exporters_impl(
     type WithSIR = typst_ts_svg_exporter::SvgModuleExporter;
     type WithText = typst_ts_text_exporter::TextExporter;
 
-    type ExporterVec<T> = Vec<Box<dyn typst_ts_core::Exporter<T> + Send>>;
+    type ExporterVec<T> = Vec<Box<dyn typst_ts_core::Exporter<T> + Send + Sync>>;
 }
 
 /// Prepare exporters from command line arguments.

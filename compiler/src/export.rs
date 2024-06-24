@@ -92,12 +92,21 @@ pub struct CompileReporter<C: Compiler, W: World> {
     pub reporter: DynGenericExporter<W, (Arc<FeatureSet>, CompileReport)>,
 }
 
+impl<C: Compiler + Clone, W: World> Clone for CompileReporter<C, W> {
+    fn clone(&self) -> Self {
+        Self {
+            compiler: self.compiler.clone(),
+            reporter: self.reporter.clone(),
+        }
+    }
+}
+
 impl<C: Compiler, W: World + 'static> CompileReporter<C, W> {
     pub fn new(compiler: C) -> Self {
         let x: FeaturedReportExporter = GroupExporter::new(vec![]).into();
         Self {
             compiler,
-            reporter: Box::new(DynPolymorphicExporter::<W, _, _>::new(x)),
+            reporter: Arc::new(DynPolymorphicExporter::<W, _, _>::new(x)),
         }
     }
 
@@ -116,7 +125,7 @@ impl<C: Compiler, W: World + 'static> CompileReporter<C, W> {
                 reporter.export(world, Arc::new(inp.take().1))
             },
         );
-        self.reporter = Box::new(DynPolymorphicExporter::<W, _, _>::new(reporter));
+        self.reporter = Arc::new(DynPolymorphicExporter::<W, _, _>::new(reporter));
     }
 
     /// Wrap driver with a given featured reporter.
@@ -127,24 +136,24 @@ impl<C: Compiler, W: World + 'static> CompileReporter<C, W> {
 
     /// set an featured reporter.
     pub fn set_featured_reporter(&mut self, reporter: impl Into<FeaturedReportExporter>) {
-        self.reporter = Box::new(DynPolymorphicExporter::<W, _, _>::new(reporter.into()));
+        self.reporter = Arc::new(DynPolymorphicExporter::<W, _, _>::new(reporter.into()));
     }
 
     /// Wrap driver with a given generic reporter.
     pub fn with_generic_reporter(
         mut self,
-        reporter: impl GenericExporter<(Arc<FeatureSet>, CompileReport), W = W> + Send + 'static,
+        reporter: impl GenericExporter<(Arc<FeatureSet>, CompileReport), W = W> + Send + Sync + 'static,
     ) -> Self {
-        self.reporter = Box::new(reporter);
+        self.reporter = Arc::new(reporter);
         self
     }
 
     /// set an generic reporter.
     pub fn set_generic_reporter(
         &mut self,
-        reporter: impl GenericExporter<(Arc<FeatureSet>, CompileReport), W = W> + Send + 'static,
+        reporter: impl GenericExporter<(Arc<FeatureSet>, CompileReport), W = W> + Send + Sync + 'static,
     ) {
-        self.reporter = Box::new(reporter);
+        self.reporter = Arc::new(reporter);
     }
 }
 
@@ -170,7 +179,7 @@ where
     }
 
     fn wrap_compile(&mut self, world: &C::W, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
-        let start = crate::time::now();
+        let start = reflexo::time::now();
         // todo unwrap main id
         let id = world.main_id().unwrap();
         if WITH_COMPILING_STATUS_FEATURE.retrieve(&env.features) {

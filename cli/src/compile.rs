@@ -6,12 +6,9 @@ use tokio::sync::mpsc;
 use typst::diag::{FileError, FileResult};
 use typst::foundations::{Bytes, Dict, IntoValue};
 use typst::model::Document;
-use typst_ts_compiler::service::PureCompiler;
 use typst_ts_compiler::{
-    service::{
-        features::{FeatureSet, DIAG_FMT_FEATURE},
-        CompileActor, CompileDriver, CompileExporter, DynamicLayoutCompiler,
-    },
+    features::{FeatureSet, DIAG_FMT_FEATURE},
+    CompileActor, CompileDriver, CompileExporter, DynamicLayoutCompiler, PureCompiler,
     TypstSystemUniverse,
 };
 use typst_ts_compiler::{EntryManager, EntryReader, ShadowApi, TypstSystemWorld};

@@ -13,8 +13,8 @@ use typst_ts_core::{
 };
 use typst_ts_svg_exporter::{DynamicLayoutSvgExporter, MultiVecDocument};
 
-use crate::service::{CompileEnv, CompileMiddleware, Compiler};
 use crate::world::{CompilerFeat, CompilerWorld};
+use crate::{CompileEnv, CompileMiddleware, Compiler};
 
 use super::WorldExporter;
 
@@ -152,9 +152,9 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<C
         // checkout the entry file
 
         // for each 10pt we rerender once
-        let instant_begin = instant::Instant::now();
+        let instant_begin = reflexo::time::Instant::now();
         for (i, current_width) in self.layout_widths.clone().into_iter().enumerate() {
-            let instant = instant::Instant::now();
+            let instant = reflexo::time::Instant::now();
             // replace layout
 
             let world = world.task(TaskInputs {
@@ -206,7 +206,7 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<C
         let module = svg_exporter.typst2vec.finalize();
         let doc = MultiVecDocument { module, layouts };
 
-        let instant = instant::Instant::now();
+        let instant = reflexo::time::Instant::now();
         log::trace!("multiple layouts finished at {:?}", instant - instant_begin);
 
         Ok((doc, sanitizer))

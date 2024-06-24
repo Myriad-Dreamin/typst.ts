@@ -6,15 +6,14 @@ use std::{collections::HashSet, path::Path, sync::Arc, thread::JoinHandle};
 
 use reflexo_world::Revising;
 use tokio::sync::{mpsc, oneshot};
+use typst::{diag::SourceResult, util::Deferred};
 
 use crate::{
-    service::{
-        features::{FeatureSet, WITH_COMPILING_STATUS_FEATURE},
-        watch_deps, CompileEnv, CompileReporter, Compiler, ConsoleDiagReporter,
-    },
+    features::{FeatureSet, WITH_COMPILING_STATUS_FEATURE},
     vfs::notify::{FilesystemEvent, MemoryEvent, NotifyMessage},
+    watch_deps,
     world::{CompilerFeat, CompilerUniverse, CompilerWorld},
-    WorldDeps,
+    CompileEnv, CompileReporter, Compiler, ConsoleDiagReporter, WorldDeps,
 };
 use typst_ts_core::{
     config::compiler::EntryState,
@@ -96,9 +95,7 @@ pub struct CompileActor<C: Compiler, F: CompilerFeat> {
     watch_feature_set: Arc<FeatureSet>,
 
     /// Channel for sending interrupts to the compiler thread.
-    intr_tx: mpsc::UnboundedSender<Interrupt<Self>>,
     /// Channel for receiving interrupts from the compiler thread.
-    intr_rx: mpsc::UnboundedReceiver<Interrupt<Self>>,
 
     suspend_state: SuspendState,
 }
@@ -112,8 +109,8 @@ impl<F: CompilerFeat + Send + 'static, C: Compiler<W = CompilerWorld<F>> + Send 
         verse: CompilerUniverse<F>,
         entry: EntryState,
         feature_set: FeatureSet,
-        intr_tx: mpsc::UnboundedSender<Interrupt<Self>>,
-        intr_rx: mpsc::UnboundedReceiver<Interrupt<Self>>,
+        intr_tx: mpsc::UnboundedSender<Interrupt<Ctx>>,
+        intr_rx: mpsc::UnboundedReceiver<Interrupt<Ctx>>,
     ) -> Self {
         Self {
             compiler: CompileReporter::new(compiler)
@@ -147,8 +144,8 @@ impl<F: CompilerFeat + Send + 'static, C: Compiler<W = CompilerWorld<F>> + Send 
         compiler: C,
         world: CompilerUniverse<F>,
         entry: EntryState,
-        intr_tx: mpsc::UnboundedSender<Interrupt<Self>>,
-        intr_rx: mpsc::UnboundedReceiver<Interrupt<Self>>,
+        intr_tx: mpsc::UnboundedSender<Interrupt<Ctx>>,
+        intr_rx: mpsc::UnboundedReceiver<Interrupt<Ctx>>,
     ) -> Self {
         Self::new_with_features(
             compiler,
@@ -466,7 +463,7 @@ impl<C: Compiler, F: CompilerFeat> CompileActor<C, F> {
         self
     }
 
-    pub fn client(&self) -> CompileClient<Self> {
+    pub fn client(&self) -> CompileClient<Ctx> {
         let intr_tx = self.intr_tx.clone();
         CompileClient { intr_tx }
     }
@@ -515,12 +512,13 @@ impl<Ctx> CompileClient<Ctx> {
         self.steal_inner(f)?
             .await
             .map_err(map_string_err("failed to call steal_async"))
+            .await
+        }
+    
+        pub fn add_memory_changes(&self, event: MemoryEvent) {
+            log_send_error("mem_event", self.intr_tx.send(Interrupt::Memory(event)));
+        }
     }
-
-    pub fn add_memory_changes(&self, event: MemoryEvent) {
-        log_send_error("mem_event", self.intr_tx.send(Interrupt::Memory(event)));
-    }
-}
 
 #[inline]
 fn log_send_error<T>(chan: &'static str, res: Result<(), mpsc::error::SendError<T>>) -> bool {

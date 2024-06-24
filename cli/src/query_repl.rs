@@ -14,7 +14,7 @@ use rustyline::validate::MatchingBracketValidator;
 use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, KeyEvent};
 use rustyline::{Helper, Validator};
 
-use typst_ts_compiler::service::{CompileDriver, CompileReport, ConsoleDiagReporter, PureCompiler};
+use typst_ts_compiler::{CompileDriver, CompileReport, ConsoleDiagReporter, PureCompiler};
 use typst_ts_compiler::{ShadowApiExt, TypstSystemWorld};
 use typst_ts_core::{typst::prelude::*, GenericExporter};
 

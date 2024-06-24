@@ -14,8 +14,7 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 use typst_ts_compiler::{
-    service::{CompileMiddleware, Compiler, DynamicLayoutCompiler},
-    EntryManager, TypstSystemWorld,
+    CompileMiddleware, Compiler, DynamicLayoutCompiler, EntryManager, TypstSystemWorld,
 };
 use typst_ts_core::{error::prelude::*, Exporter, TypstAbs, TypstDatetime, TypstDocument};
 

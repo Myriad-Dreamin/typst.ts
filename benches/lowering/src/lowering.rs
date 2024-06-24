@@ -4,8 +4,7 @@ use divan::Bencher;
 use once_cell::sync::Lazy;
 use typst_ts_cli::CompileOnceArgs;
 use typst_ts_compiler::{
-    service::{CompileDriver as CompileDriverT, Compiler, PureCompiler},
-    ShadowApiExt, TypstSystemWorld,
+    CompileDriver as CompileDriverT, Compiler, PureCompiler, ShadowApiExt, TypstSystemWorld,
 };
 use typst_ts_core::{
     vector::pass::{IncrTypst2VecPass, Typst2VecPass},
