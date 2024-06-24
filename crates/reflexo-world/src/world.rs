@@ -58,16 +58,34 @@ impl<'a, F: CompilerFeat> Revising<'a, CompilerUniverse<F>> {
         &mut self.inner.vfs
     }
 
+    /// Let the vfs notify the access model with a filesystem event.
+    ///
+    /// See [`NotifyAccessModel`] for more information.
     pub fn notify_fs_event(&mut self, event: FilesystemEvent) {
-        self.inner.notify_fs_event_(event);
+        self.inner.vfs.notify_fs_event(event);
     }
 
+    pub fn reset_shadow(&mut self) {
+        self.inner.vfs.reset_shadow()
+    }
+
+    pub fn map_shadow(&mut self, path: &Path, content: Bytes) -> FileResult<()> {
+        self.inner.vfs.map_shadow(path, content)
+    }
+
+    pub fn unmap_shadow(&mut self, path: &Path) -> FileResult<()> {
+        self.inner.vfs.remove_shadow(path);
+        Ok(())
+    }
+
+    /// Set the `do_reparse` flag.
     pub fn set_do_reparse(&mut self, do_reparse: bool) {
-        self.inner.set_do_reparse_(do_reparse);
+        self.inner.do_reparse = do_reparse;
     }
 
+    /// Set the inputs for the compiler.
     pub fn set_inputs(&mut self, inputs: Arc<Prehashed<Dict>>) {
-        self.inner.set_inputs_(inputs);
+        self.inner.inputs = inputs;
     }
 
     pub fn set_entry_file(&mut self, entry_file: Arc<Path>) -> SourceResult<()> {
@@ -76,22 +94,6 @@ impl<'a, F: CompilerFeat> Revising<'a, CompilerUniverse<F>> {
 
     pub fn mutate_entry(&mut self, state: EntryState) -> SourceResult<EntryState> {
         self.inner.mutate_entry_(state)
-    }
-
-    #[inline]
-    pub fn reset_shadow(&mut self) {
-        self.inner.vfs.reset_shadow()
-    }
-
-    #[inline]
-    pub fn map_shadow(&mut self, path: &Path, content: Bytes) -> FileResult<()> {
-        self.inner.vfs.map_shadow(path, content)
-    }
-
-    #[inline]
-    pub fn unmap_shadow(&mut self, path: &Path) -> FileResult<()> {
-        self.inner.vfs.remove_shadow(path);
-        Ok(())
     }
 }
 
@@ -145,11 +147,49 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
             revision: RwLock::new(1),
             shared: Arc::new(RwLock::new(SharedState::default())),
 
-            // library: create_library(inputs.unwrap_or_default()),
             font_resolver,
             registry: Arc::new(registry),
             vfs,
         }
+    }
+
+    /// Wrap driver with a given entry file.
+    pub fn with_entry_file(mut self, entry_file: PathBuf) -> Self {
+        let _ = self.increment_revision(|this| this.set_entry_file_(entry_file.as_path().into()));
+        self
+    }
+
+    pub fn do_reparse(&self) -> bool {
+        self.do_reparse
+    }
+
+    pub fn inputs(&self) -> Arc<Prehashed<Dict>> {
+        self.inputs.clone()
+    }
+
+    pub fn spawn(&self) -> CompilerWorld<F> {
+        self.spawn_with(None)
+    }
+
+    pub fn spawn_with(&self, mutant: Option<TaskInputs>) -> CompilerWorld<F> {
+        let rev_lock = self.revision.read();
+
+        let w = CompilerWorld {
+            entry: self.entry.clone(),
+            library: create_library(self.inputs.clone()),
+            font_resolver: self.font_resolver.clone(),
+            registry: self.registry.clone(),
+            vfs: self.vfs.snapshot(),
+            source_db: SourceDb {
+                revision: *rev_lock,
+                do_reparse: self.do_reparse,
+                shared: self.shared.clone(),
+                slots: Default::default(),
+            },
+            now: OnceCell::new(),
+        };
+
+        mutant.map(|m| w.task(m)).unwrap_or(w)
     }
 
     /// Increment revision with actions.
@@ -161,12 +201,6 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
             inner: self,
             revision,
         })
-    }
-
-    /// Notify the universe of a filesystem event.
-    #[inline]
-    fn notify_fs_event_(&mut self, event: FilesystemEvent) {
-        self.vfs.notify_fs_event(event);
     }
 
     /// Mutate the entry state.
@@ -188,49 +222,6 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
 
         self.mutate_entry_(state).map(|_| ())?;
         Ok(())
-    }
-
-    /// Wrap driver with a given entry file.
-    pub fn with_entry_file(mut self, entry_file: PathBuf) -> Self {
-        let _ = self.increment_revision(|this| this.set_entry_file_(entry_file.as_path().into()));
-        self
-    }
-
-    /// Set the `do_reparse` flag.
-    fn set_do_reparse_(&mut self, do_reparse: bool) {
-        self.do_reparse = do_reparse;
-    }
-
-    /// Set the inputs for the compiler.
-    fn set_inputs_(&mut self, inputs: Arc<Prehashed<Dict>>) {
-        self.inputs = inputs;
-    }
-
-    pub fn spawn(&self) -> CompilerWorld<F> {
-        let rev_lock = self.revision.read();
-
-        CompilerWorld {
-            entry: self.entry.clone(),
-            library: create_library(self.inputs.clone()),
-            font_resolver: self.font_resolver.clone(),
-            registry: self.registry.clone(),
-            vfs: self.vfs.snapshot(),
-            source_db: SourceDb {
-                revision: *rev_lock,
-                do_reparse: self.do_reparse,
-                shared: self.shared.clone(),
-                slots: Default::default(),
-            },
-            now: OnceCell::new(),
-        }
-    }
-
-    pub fn do_reparse(&self) -> bool {
-        self.do_reparse
-    }
-
-    pub fn inputs(&self) -> Arc<Prehashed<Dict>> {
-        self.inputs.clone()
     }
 }
 
@@ -362,16 +353,22 @@ impl<F: CompilerFeat> Drop for CompilerWorld<F> {
     }
 }
 
+#[derive(Default)]
+pub struct TaskInputs {
+    pub entry: Option<EntryState>,
+    pub inputs: Option<Arc<Prehashed<Dict>>>,
+}
+
 impl<F: CompilerFeat> CompilerWorld<F> {
-    pub fn task(&self, inputs: Option<Arc<Prehashed<Dict>>>) -> CompilerWorld<F> {
+    pub fn task(&self, mutant: TaskInputs) -> CompilerWorld<F> {
         // Fetch to avoid inconsistent state.
         let _ = self.today(None);
 
+        let library = mutant.inputs.map(create_library);
+
         CompilerWorld {
-            library: inputs
-                .map(create_library)
-                .unwrap_or_else(|| self.library.clone()),
-            entry: self.entry.clone(),
+            library: library.unwrap_or_else(|| self.library.clone()),
+            entry: mutant.entry.unwrap_or_else(|| self.entry.clone()),
             font_resolver: self.font_resolver.clone(),
             registry: self.registry.clone(),
             vfs: self.vfs.snapshot(),

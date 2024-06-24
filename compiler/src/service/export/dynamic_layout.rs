@@ -1,5 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
+use reflexo_world::TaskInputs;
 use typst::diag::SourceResult;
 use typst::foundations::IntoValue;
 use typst_ts_core::{
@@ -156,14 +157,16 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<C
             let instant = instant::Instant::now();
             // replace layout
 
-            // todo: generalize me
-            let world = world.task(Some({
-                let mut dict = TypstDict::new();
-                dict.insert("x-page-width".into(), current_width.into_value());
-                dict.insert("x-target".into(), self.target.clone().into_value());
+            let world = world.task(TaskInputs {
+                inputs: Some({
+                    let mut dict = TypstDict::new();
+                    dict.insert("x-page-width".into(), current_width.into_value());
+                    dict.insert("x-target".into(), self.target.clone().into_value());
 
-                Arc::new(Prehashed::new(dict))
-            }));
+                    Arc::new(Prehashed::new(dict))
+                }),
+                ..Default::default()
+            });
 
             log::trace!(
                 "rerendering {i} at {:?}, width={current_width:?} target={}",

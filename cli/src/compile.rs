@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::io::{self, Read};
 use std::path::Path;
 
+use tokio::sync::mpsc;
 use typst::diag::{FileError, FileResult};
 use typst::foundations::{Bytes, Dict, IntoValue};
 use typst::model::Document;
@@ -123,6 +124,8 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
     }
 
     let is_stdin = args.compile.entry == "-";
+    let (intr_tx, intr_rx) = mpsc::unbounded_channel();
+
     let driver = create_driver(args.compile.clone());
 
     let _trace_guard = {
@@ -166,7 +169,8 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
     let driver = CompileExporter::new(std::marker::PhantomData).with_exporter(exporter);
     let driver = DynamicLayoutCompiler::new(driver, output_dir).with_enable(args.dynamic_layout);
     let actor =
-        CompileActor::new_with_features(driver, verse, entry, feature_set).with_watch(args.watch);
+        CompileActor::new_with_features(driver, verse, entry, feature_set, intr_tx, intr_rx)
+            .with_watch(args.watch);
 
     utils::async_continue(async move {
         utils::logical_exit(actor.run());

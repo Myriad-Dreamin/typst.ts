@@ -70,7 +70,7 @@ pub struct VersionedDocument {
     pub document: Arc<TypstDocument>,
 }
 
-/// The compiler thread.
+/// The compiler actor.
 pub struct CompileActor<C: Compiler, F: CompilerFeat> {
     /// The underlying universe.
     pub verse: CompilerUniverse<F>,
@@ -106,14 +106,15 @@ pub struct CompileActor<C: Compiler, F: CompilerFeat> {
 impl<F: CompilerFeat + Send + 'static, C: Compiler<W = CompilerWorld<F>> + Send + 'static>
     CompileActor<C, F>
 {
+    /// Create a new compiler actor with features.
     pub fn new_with_features(
         compiler: C,
         verse: CompilerUniverse<F>,
         entry: EntryState,
         feature_set: FeatureSet,
+        intr_tx: mpsc::UnboundedSender<Interrupt<Self>>,
+        intr_rx: mpsc::UnboundedReceiver<Interrupt<Self>>,
     ) -> Self {
-        let (intr_tx, intr_rx) = mpsc::unbounded_channel();
-
         Self {
             compiler: CompileReporter::new(compiler)
                 .with_generic_reporter(ConsoleDiagReporter::default()),
@@ -141,9 +142,22 @@ impl<F: CompilerFeat + Send + 'static, C: Compiler<W = CompilerWorld<F>> + Send 
         }
     }
 
-    /// Create a new compiler thread.
-    pub fn new(compiler: C, world: CompilerUniverse<F>, entry: EntryState) -> Self {
-        Self::new_with_features(compiler, world, entry, FeatureSet::default())
+    /// Create a new compiler actor.
+    pub fn new(
+        compiler: C,
+        world: CompilerUniverse<F>,
+        entry: EntryState,
+        intr_tx: mpsc::UnboundedSender<Interrupt<Self>>,
+        intr_rx: mpsc::UnboundedReceiver<Interrupt<Self>>,
+    ) -> Self {
+        Self::new_with_features(
+            compiler,
+            world,
+            entry,
+            FeatureSet::default(),
+            intr_tx,
+            intr_rx,
+        )
     }
 
     pub fn success_doc(&self) -> Option<VersionedDocument> {
