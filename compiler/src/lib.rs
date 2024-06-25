@@ -99,6 +99,7 @@ impl CompileEnv {
 
 #[derive(Clone, Debug)]
 pub enum CompileReport {
+    Suspend,
     Stage(TypstFileId, &'static str, crate::Time),
     CompileError(
         TypstFileId,
@@ -123,19 +124,20 @@ pub enum CompileReport {
 }
 
 impl CompileReport {
-    pub fn compiling_id(&self) -> TypstFileId {
-        match self {
+    pub fn compiling_id(&self) -> Option<TypstFileId> {
+        Some(match self {
+            Self::Suspend => return None,
             Self::Stage(id, ..)
             | Self::CompileError(id, ..)
             | Self::ExportError(id, ..)
             | Self::CompileWarning(id, ..)
             | Self::CompileSuccess(id, ..) => *id,
-        }
+        })
     }
 
     pub fn duration(&self) -> Option<std::time::Duration> {
         match self {
-            Self::Stage(..) => None,
+            Self::Suspend | Self::Stage(..) => None,
             Self::CompileError(_, _, dur)
             | Self::ExportError(_, _, dur)
             | Self::CompileWarning(_, _, dur)
@@ -145,7 +147,7 @@ impl CompileReport {
 
     pub fn diagnostics(self) -> Option<EcoVec<SourceDiagnostic>> {
         match self {
-            Self::Stage(..) => None,
+            Self::Suspend | Self::Stage(..) => None,
             Self::CompileError(_, diagnostics, ..)
             | Self::ExportError(_, diagnostics, ..)
             | Self::CompileWarning(_, diagnostics, ..)
@@ -167,12 +169,13 @@ impl<'a> fmt::Display for CompileReportMsg<'a> {
 
         let input = self.0.compiling_id();
         match self.0 {
+            Suspend => write!(f, "suspended"),
             Stage(_, stage, ..) => write!(f, "{:?}: {} ...", input, stage),
             CompileSuccess(_, _, duration) | CompileWarning(_, _, duration) => {
-                write!(f, "{:?}: Compilation succeeded in {:?}", input, duration)
+                write!(f, "{:?}: compilation succeeded in {:?}", input, duration)
             }
             CompileError(_, _, duration) | ExportError(_, _, duration) => {
-                write!(f, "{:?}: Compilation failed after {:?}", input, duration)
+                write!(f, "{:?}: compilation failed after {:?}", input, duration)
             }
         }
     }

@@ -12,8 +12,8 @@ use typst_ts_compiler::{
     TypstSystemUniverse,
 };
 use typst_ts_compiler::{
-    CompileSnapshot, CompileStarter, EntryManager, EntryReader, ShadowApi, SystemCompilerFeat,
-    TypstSystemWorld,
+    CompileServerOpts, CompileSnapshot, CompileStarter, EntryManager, EntryReader, ShadowApi,
+    SystemCompilerFeat, TypstSystemWorld,
 };
 use typst_ts_core::config::compiler::{EntryOpts, MEMORY_MAIN_ENTRY};
 use typst_ts_core::DynExporter;
@@ -166,7 +166,6 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
 
     // CompileExporter + DynamicLayoutCompiler + WatchDriver
     let verse = driver.universe;
-    let entry = verse.entry_state().clone();
     // todo: when there is only dynamic export, it is not need to compile first.
 
     let mut exporters: Vec<DynExporter<CompileSnapshot<SystemCompilerFeat>>> = vec![];
@@ -181,18 +180,20 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
         exporters.push(Box::new(CompileStarter::new(driver)));
     }
 
-    let actor = CompileActor::new_with_features(
-        GroupExporter::new(exporters),
+    let actor = CompileActor::new_with(
         verse,
-        entry,
-        feature_set,
         intr_tx,
         intr_rx,
+        CompileServerOpts {
+            exporter: GroupExporter::new(exporters),
+            feature_set,
+            ..Default::default()
+        },
     )
-    .with_watch(args.watch);
+    .with_enable_watch(args.watch);
 
     utils::async_continue(async move {
-        utils::logical_exit(actor.run());
+        utils::logical_exit(actor.run_and_wait().await);
     })
 }
 

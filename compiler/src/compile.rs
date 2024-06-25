@@ -2,10 +2,17 @@
 //!
 //! Please check `tinymist::actor::typ_client` for architecture details.
 
-use std::{collections::HashSet, ops::Deref, path::Path, sync::Arc, thread::JoinHandle};
+use std::{
+    collections::HashSet,
+    ops::Deref,
+    path::Path,
+    sync::{Arc, OnceLock},
+    thread::JoinHandle,
+};
 
 use reflexo::QueryRef;
-use reflexo_world::Revising;
+use reflexo_vfs::notify::UpstreamUpdateEvent;
+use reflexo_world::{EntryReader, Revising, TaskInputs};
 use tokio::sync::{mpsc, oneshot};
 use typst::{diag::SourceResult, util::Deferred};
 
@@ -14,18 +21,16 @@ use crate::{
     vfs::notify::{FilesystemEvent, MemoryEvent, NotifyMessage},
     watch_deps,
     world::{CompilerFeat, CompilerUniverse, CompilerWorld},
-    CompileEnv, CompileReporter, Compiler, ConsoleDiagReporter, PureCompiler, WorldDeps,
+    CompileEnv, CompileReport, CompileReporter, Compiler, ConsoleDiagReporter, PureCompiler,
+    WorldDeps,
 };
 use typst_ts_core::{
-    config::compiler::EntryState,
-    error::prelude::{map_string_err, ZResult},
-    exporter_builtins::GroupExporter,
-    Exporter, TypstDocument,
+    config::compiler::EntryState, exporter_builtins::GroupExporter, Exporter, TypstDocument,
 };
 
 type UsingCompiler<F> = CompileReporter<PureCompiler<CompilerWorld<F>>, CompilerWorld<F>>;
-type DocState<F> =
-    QueryRef<Deferred<SourceResult<Arc<TypstDocument>>>, (), (UsingCompiler<F>, CompileEnv)>;
+type CompileRawResult = Deferred<(SourceResult<Arc<TypstDocument>>, CompileEnv)>;
+type DocState<F> = QueryRef<CompileRawResult, (), (UsingCompiler<F>, CompileEnv)>;
 
 pub struct CompileSnapshot<F: CompilerFeat> {
     /// The compiler-thread local logical tick when the snapshot is taken.
@@ -41,40 +46,74 @@ pub struct CompileSnapshot<F: CompilerFeat> {
 }
 
 impl<F: CompilerFeat + 'static> CompileSnapshot<F> {
-    pub fn start(&self) -> &Deferred<SourceResult<Arc<TypstDocument>>> {
+    pub fn start(&self) -> &CompileRawResult {
         let res = self.doc_state.compute_with_context(|(mut c, mut env)| {
             let w = self.world.clone();
-            Ok(Deferred::new(move || c.compile(&w, &mut env)))
+            Ok(Deferred::new(move || {
+                let res = c.compile(&w, &mut env);
+                (res, env)
+            }))
         });
         res.ok().unwrap()
     }
 
     pub fn doc(&self) -> SourceResult<Arc<TypstDocument>> {
-        self.start().wait().clone()
+        self.start().wait().0.clone()
     }
 
     pub fn compile(&self) -> CompiledArtifact<F> {
+        let (doc, env) = self.start().wait().clone();
         CompiledArtifact {
             world: self.world.clone(),
             compile_tick: self.compile_tick,
-            doc: self.start().wait().clone(),
+            doc,
+            env,
             success_doc: self.success_doc.clone(),
         }
     }
 }
 
+impl<F: CompilerFeat> Clone for CompileSnapshot<F> {
+    fn clone(&self) -> Self {
+        Self {
+            compile_tick: self.compile_tick,
+            env: self.env.clone(),
+            world: self.world.clone(),
+            doc_state: self.doc_state.clone(),
+            success_doc: self.success_doc.clone(),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct CompiledArtifact<F: CompilerFeat> {
     pub world: Arc<CompilerWorld<F>>,
     pub compile_tick: usize,
     pub doc: SourceResult<Arc<TypstDocument>>,
+    /// Used env
+    pub env: CompileEnv,
     pub success_doc: Option<Arc<TypstDocument>>,
 }
 
+// pub type NopCompilationHandle<T> = std::marker::PhantomData<fn(T)>;
+
+pub trait CompilationHandle<F: CompilerFeat>: Send + Sync + 'static {
+    fn status(&self, rep: CompileReport);
+    fn notify_compile(&self, res: &CompiledArtifact<F>, rep: CompileReport);
+}
+
+impl<F: CompilerFeat + Send + Sync + 'static> CompilationHandle<F>
+    for std::marker::PhantomData<fn(F)>
+{
+    fn status(&self, _: CompileReport) {}
+    fn notify_compile(&self, _: &CompiledArtifact<F>, _: CompileReport) {}
+}
+
 pub enum Interrupt<F: CompilerFeat> {
-    /// Compile anyway.
-    Compile,
     /// Compiled from computing thread.
     Compiled(CompiledArtifact<F>),
+    /// Change the watching entry.
+    ChangeTask(TaskInputs),
     /// Request compiler to snapshot the current state.
     Snapshot(oneshot::Sender<CompileSnapshot<F>>),
     /// Memory file changes.
@@ -99,18 +138,20 @@ struct TaggedMemoryEvent {
     event: MemoryEvent,
 }
 
-struct SuspendState {
-    suspended: bool,
-    dirty: bool,
+pub struct CompileServerOpts<F: CompilerFeat> {
+    pub exporter: GroupExporter<CompileSnapshot<F>>,
+    pub feature_set: FeatureSet,
+    pub compile_concurrency: usize,
 }
 
-/// A compiled document with an self-incremented logical version.
-#[derive(Debug, Clone)]
-pub struct VersionedDocument {
-    /// The version of the document.
-    pub version: usize,
-    /// The compiled document.
-    pub document: Arc<TypstDocument>,
+impl<F: CompilerFeat + Send + Sync + 'static> Default for CompileServerOpts<F> {
+    fn default() -> Self {
+        Self {
+            exporter: GroupExporter::new(vec![]),
+            feature_set: FeatureSet::default(),
+            compile_concurrency: 0,
+        }
+    }
 }
 
 /// The compiler actor.
@@ -121,6 +162,8 @@ pub struct CompileActor<F: CompilerFeat> {
     pub compiler: CompileReporter<PureCompiler<CompilerWorld<F>>, CompilerWorld<F>>,
     /// The exporter for the compiled document.
     pub exporter: GroupExporter<CompileSnapshot<F>>,
+    /// The compilation handle.
+    pub watch_handle: Arc<dyn CompilationHandle<F>>,
     /// Whether to enable file system watching.
     pub enable_watch: bool,
 
@@ -140,25 +183,32 @@ pub struct CompileActor<F: CompilerFeat> {
     /// Shared feature set for watch mode.
     watch_feature_set: Arc<FeatureSet>,
 
+    // todo: private me
     /// Channel for sending interrupts to the compiler thread.
-    intr_tx: mpsc::UnboundedSender<Interrupt<F>>,
+    pub intr_tx: mpsc::UnboundedSender<Interrupt<F>>,
     /// Channel for receiving interrupts from the compiler thread.
     intr_rx: mpsc::UnboundedReceiver<Interrupt<F>>,
 
-    suspend_state: SuspendState,
+    watch_snap: OnceLock<CompileSnapshot<F>>,
+    suspended: bool,
     committed_revision: usize,
+    compile_concurrency: usize,
 }
 
-impl<F: CompilerFeat + Send + 'static> CompileActor<F> {
-    /// Create a new compiler actor with features.
-    pub fn new_with_features(
-        exporter: GroupExporter<CompileSnapshot<F>>,
+impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
+    /// Create a new compiler actor with options
+    pub fn new_with(
         verse: CompilerUniverse<F>,
-        entry: EntryState,
-        feature_set: FeatureSet,
         intr_tx: mpsc::UnboundedSender<Interrupt<F>>,
         intr_rx: mpsc::UnboundedReceiver<Interrupt<F>>,
+        CompileServerOpts {
+            exporter,
+            feature_set,
+            compile_concurrency,
+        }: CompileServerOpts<F>,
     ) -> Self {
+        let entry = verse.entry_state();
+
         Self {
             compiler: CompileReporter::new(std::marker::PhantomData)
                 .with_generic_reporter(ConsoleDiagReporter::default()),
@@ -166,6 +216,7 @@ impl<F: CompilerFeat + Send + 'static> CompileActor<F> {
             verse,
 
             logical_tick: 1,
+            watch_handle: Arc::new(std::marker::PhantomData),
             enable_watch: false,
             dirty_shadow_logical_tick: 0,
 
@@ -180,67 +231,44 @@ impl<F: CompilerFeat + Send + 'static> CompileActor<F> {
             intr_tx,
             intr_rx,
 
-            suspend_state: SuspendState {
-                suspended: entry.is_inactive(),
-                dirty: false,
-            },
+            watch_snap: OnceLock::new(),
+            suspended: entry.is_inactive(),
             committed_revision: 0,
+            compile_concurrency,
         }
     }
 
     /// Create a new compiler actor.
     pub fn new(
-        exporter: GroupExporter<CompileSnapshot<F>>,
         verse: CompilerUniverse<F>,
-        entry: EntryState,
         intr_tx: mpsc::UnboundedSender<Interrupt<F>>,
         intr_rx: mpsc::UnboundedReceiver<Interrupt<F>>,
     ) -> Self {
-        Self::new_with_features(
-            exporter,
-            verse,
-            entry,
-            FeatureSet::default(),
-            intr_tx,
-            intr_rx,
-        )
+        Self::new_with(verse, intr_tx, intr_rx, CompileServerOpts::default())
     }
 
-    pub fn success_doc(&self) -> Option<VersionedDocument> {
-        self.latest_success_doc
-            .clone()
-            .map(|doc| VersionedDocument {
-                version: self.logical_tick,
-                document: doc,
-            })
+    pub fn with_enable_watch(mut self, watch: bool) -> Self {
+        self.enable_watch = watch;
+        self.watch_handle = Arc::new(std::marker::PhantomData);
+        self
     }
 
-    pub fn doc(&self) -> Option<VersionedDocument> {
-        self.latest_doc.clone().map(|doc| VersionedDocument {
-            version: self.logical_tick,
-            document: doc,
-        })
+    pub fn with_watch(mut self, watch: Option<Arc<dyn CompilationHandle<F>>>) -> Self {
+        self.enable_watch = watch.is_some();
+        match watch {
+            Some(watch) => self.watch_handle = watch,
+            None => self.watch_handle = Arc::new(std::marker::PhantomData),
+        }
+        self
     }
 
     fn make_env(&self, feature_set: Arc<FeatureSet>) -> CompileEnv {
         CompileEnv::default().configure_shared(feature_set)
     }
 
-    /// Run the compiler thread synchronously.
-    pub fn run(self) -> bool {
-        use tokio::runtime::Handle;
-
-        if Handle::try_current().is_err() && self.enable_watch {
-            log::error!("Typst compiler thread with watch enabled must be run in a tokio runtime");
-            return false;
-        }
-
-        tokio::task::block_in_place(move || Handle::current().block_on(self.block_run_inner()))
-    }
-
-    /// Inner function for `run`, it launches the compiler thread and blocks
-    /// until it exits.
-    async fn block_run_inner(mut self) -> bool {
+    /// Launches the compiler thread and blocks until it exits.
+    #[allow(unused)]
+    pub async fn run_and_wait(mut self) -> bool {
         if !self.enable_watch {
             let artifact = self.compile_once();
             return artifact.doc.is_ok();
@@ -280,8 +308,10 @@ impl<F: CompilerFeat + Send + 'static> CompileActor<F> {
             }
         };
 
+        // Trigger the first compilation (if active)
+        self.watch_compile();
+
         // Spawn file system watcher.
-        // todo: don't compile if no entry
         let fs_tx = self.intr_tx.clone();
         tokio::spawn(watch_deps(dep_rx, move |event| {
             log_send_error("fs_event", fs_tx.send(Interrupt::Fs(event)));
@@ -308,10 +338,10 @@ impl<F: CompilerFeat + Send + 'static> CompileActor<F> {
                     }
 
                     // Ensure complied before executing tasks.
-                    // if matches!(event, Interrupt::Task(_)) && need_compile {
-                    //     self.compile(&compiler_ack);
-                    //     need_compile = false;
-                    // }
+                    if matches!(event, Interrupt::Snapshot(_)) && need_compile {
+                        self.watch_compile();
+                        need_compile = false;
+                    }
 
                     need_compile |= self.process(event, &compiler_ack);
 
@@ -335,26 +365,17 @@ impl<F: CompilerFeat + Send + 'static> CompileActor<F> {
         Some(compile_thread.unwrap())
     }
 
-    pub fn change_entry(&mut self, entry: EntryState) {
-        self.suspend_state.suspended = entry.is_inactive();
-        if !self.suspend_state.suspended && self.suspend_state.dirty {
-            self.intr_tx.send(Interrupt::Compile).ok();
-            self.suspend_state.dirty = false;
-        }
-
-        // Reset the document state.
-        self.latest_doc = None;
-        self.latest_success_doc = None;
-    }
-
     fn snapshot(&self, is_once: bool) -> CompileSnapshot<F> {
         let world = self.verse.snapshot();
         let c = self.compiler.clone();
-        let env = self.make_env(if is_once {
+        let mut env = self.make_env(if is_once {
             self.once_feature_set.clone()
         } else {
             self.watch_feature_set.clone()
         });
+        if env.tracer.is_none() {
+            env.tracer = Some(Default::default());
+        }
         CompileSnapshot {
             world: Arc::new(world.clone()),
             env: env.clone(),
@@ -378,17 +399,52 @@ impl<F: CompilerFeat + Send + 'static> CompileActor<F> {
 
     /// Watch and compile the document once.
     fn watch_compile(&mut self) {
-        if self.suspend_state.suspended {
-            self.suspend_state.dirty = true;
+        if self.suspended {
             return;
         }
 
+        let start = reflexo::time::now();
+
         let compiling = self.snapshot(false);
+        self.watch_snap = OnceLock::new();
+        self.watch_snap.get_or_init(|| compiling.clone());
+
+        let h = self.watch_handle.clone();
         let intr_tx = self.intr_tx.clone();
-        rayon::spawn(move || {
+
+        // todo unwrap main id
+        let id = compiling.world.main_id().unwrap();
+        self.watch_handle
+            .status(CompileReport::Stage(id, "compiling", start));
+
+        let compile = move || {
             let compiled = compiling.compile();
+            let elapsed = start.elapsed().unwrap_or_default();
+            let rep;
+            match &compiled.doc {
+                Ok(..) => {
+                    let warnings = compiled.env.tracer.as_ref().unwrap().clone().warnings();
+                    if warnings.is_empty() {
+                        rep = CompileReport::CompileSuccess(id, warnings, elapsed);
+                    } else {
+                        rep = CompileReport::CompileWarning(id, warnings, elapsed);
+                    }
+                }
+                Err(err) => {
+                    rep = CompileReport::CompileError(id, err.clone(), elapsed);
+                }
+            };
+
+            h.notify_compile(&compiled, rep);
+
             log_send_error("compiled", intr_tx.send(Interrupt::Compiled(compiled)));
-        });
+        };
+
+        if self.compile_concurrency == 0 {
+            compile();
+        } else {
+            rayon::spawn(compile);
+        }
     }
 
     fn process_may_laggy_compile(&mut self) -> bool {
@@ -401,7 +457,31 @@ impl<F: CompilerFeat + Send + 'static> CompileActor<F> {
         use CompilerResponse::*;
 
         match event {
-            Interrupt::Compile => true,
+            Interrupt::Snapshot(task) => {
+                log::debug!("CompileActor: take snapshot");
+                let _ = task.send(self.watch_snap.get_or_init(|| self.snapshot(false)).clone());
+                false
+            }
+            Interrupt::ChangeTask(change) => {
+                if let Some(entry) = change.entry.clone() {
+                    self.change_entry(entry.clone());
+                }
+
+                self.verse.increment_revision(|verse| {
+                    if let Some(inputs) = change.inputs {
+                        verse.set_inputs(inputs);
+                    }
+
+                    if let Some(entry) = change.entry {
+                        let res = verse.mutate_entry(entry);
+                        if let Err(err) = res {
+                            log::error!("CompileActor: change entry error: {err:?}");
+                        }
+                    }
+                });
+
+                true
+            }
             Interrupt::Compiled(artifact) => {
                 let w = &artifact.world;
 
@@ -437,12 +517,6 @@ impl<F: CompilerFeat + Send + 'static> CompileActor<F> {
 
                 self.process_may_laggy_compile()
             }
-            Interrupt::Snapshot(task) => {
-                log::debug!("CompileActor: take snapshot");
-                // todo: share the snapshot with compile one
-                let _ = task.send(self.snapshot(true));
-                false
-            }
             Interrupt::Memory(event) => {
                 log::debug!("CompileActor: memory event incoming");
 
@@ -472,15 +546,13 @@ impl<F: CompilerFeat + Send + 'static> CompileActor<F> {
                 // Otherwise, send upstream update event.
                 // Also, record the logical tick when shadow is dirty.
                 self.dirty_shadow_logical_tick = self.logical_tick;
-                send(Notify(NotifyMessage::UpstreamUpdate(
-                    crate::vfs::notify::UpstreamUpdateEvent {
-                        invalidates: files.into_iter().collect(),
-                        opaque: Box::new(TaggedMemoryEvent {
-                            logical_tick: self.logical_tick,
-                            event,
-                        }),
-                    },
-                )));
+                send(Notify(NotifyMessage::UpstreamUpdate(UpstreamUpdateEvent {
+                    invalidates: files.into_iter().collect(),
+                    opaque: Box::new(TaggedMemoryEvent {
+                        logical_tick: self.logical_tick,
+                        event,
+                    }),
+                })));
 
                 false
             }
@@ -501,6 +573,20 @@ impl<F: CompilerFeat + Send + 'static> CompileActor<F> {
             }
             Interrupt::Settle(_) => unreachable!(),
         }
+    }
+
+    fn change_entry(&mut self, entry: EntryState) -> bool {
+        self.suspended = entry.is_inactive();
+        if self.suspended {
+            log::info!("CompileActor: removing diag");
+            self.watch_handle.status(CompileReport::Suspend);
+        }
+
+        // Reset the document state.
+        self.latest_doc = None;
+        self.latest_success_doc = None;
+
+        !self.suspended
     }
 
     /// Apply delayed memory changes to underlying compiler.
@@ -555,55 +641,6 @@ impl<F: CompilerFeat + Send + 'static> CompileActor<F> {
                 }
             }
         }
-    }
-}
-
-impl<F: CompilerFeat> CompileActor<F> {
-    pub fn with_watch(mut self, enable_watch: bool) -> Self {
-        self.enable_watch = enable_watch;
-        self
-    }
-
-    pub fn client(&self) -> CompileClient<F> {
-        let intr_tx = self.intr_tx.clone();
-        CompileClient { intr_tx }
-    }
-
-    pub fn document(&self) -> Option<Arc<TypstDocument>> {
-        self.latest_doc.clone()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct CompileClient<F: CompilerFeat> {
-    intr_tx: mpsc::UnboundedSender<Interrupt<F>>,
-}
-
-impl<F: CompilerFeat> CompileClient<F> {
-    pub fn faked() -> Self {
-        let (intr_tx, _) = mpsc::unbounded_channel();
-        Self { intr_tx }
-    }
-
-    /// Steal the compiler thread and run the given function.
-    pub async fn steal_async<Ret: Send + 'static>(
-        &self,
-        f: impl FnOnce(CompileSnapshot<F>) -> Ret + Send + 'static,
-    ) -> ZResult<Ret> {
-        let (tx, rx) = oneshot::channel();
-
-        self.intr_tx
-            .send(Interrupt::Snapshot(tx))
-            .map_err(map_string_err("failed to send steal request"))?;
-        let snapshot = rx
-            .await
-            .map_err(map_string_err("failed to call steal_async"))?;
-
-        Ok(f(snapshot))
-    }
-
-    pub fn add_memory_changes(&self, event: MemoryEvent) {
-        log_send_error("mem_event", self.intr_tx.send(Interrupt::Memory(event)));
     }
 }
 
