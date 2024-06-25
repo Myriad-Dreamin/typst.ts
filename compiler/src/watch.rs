@@ -75,7 +75,7 @@ struct WatchedEntry {
 #[derive(Debug)]
 struct UndeterminedNotifyEvent {
     /// The time when the event is produced.
-    at_realtime: instant::Instant,
+    at_realtime: reflexo::time::Instant,
     /// The logical tick when the event is produced.
     at_logical_tick: usize,
     /// The path of the file.
@@ -435,7 +435,7 @@ impl NotifyActor {
                         };
                         entry.prev = Some(file);
                         let event = UndeterminedNotifyEvent {
-                            at_realtime: instant::Instant::now(),
+                            at_realtime: reflexo::time::Instant::now(),
                             at_logical_tick: self.logical_tick,
                             path: path.clone(),
                         };
@@ -472,7 +472,7 @@ impl NotifyActor {
                             };
                             entry.prev = Some(file);
                             let event = UndeterminedNotifyEvent {
-                                at_realtime: instant::Instant::now(),
+                                at_realtime: reflexo::time::Instant::now(),
                                 at_logical_tick: self.logical_tick,
                                 path,
                             };
@@ -521,7 +521,7 @@ impl NotifyActor {
 
     /// Recheck the notify event after a while.
     async fn recheck_notify_event(&mut self, event: UndeterminedNotifyEvent) -> Option<()> {
-        let now = instant::Instant::now();
+        let now = reflexo::time::Instant::now();
         log::debug!("recheck event {event:?} at {now:?}");
 
         // The async scheduler is not accurate, so we need to ensure a window here

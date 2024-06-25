@@ -2,19 +2,21 @@ use std::borrow::Cow;
 use std::io::{self, Read};
 use std::path::Path;
 
+use tokio::sync::mpsc;
 use typst::diag::{FileError, FileResult};
 use typst::foundations::{Bytes, Dict, IntoValue};
 use typst::model::Document;
-use typst_ts_compiler::service::PureCompiler;
 use typst_ts_compiler::{
-    service::{
-        features::{FeatureSet, DIAG_FMT_FEATURE},
-        CompileActor, CompileDriver, CompileExporter, DynamicLayoutCompiler,
-    },
+    features::{FeatureSet, DIAG_FMT_FEATURE},
+    CompileActor, CompileDriver, CompileExporter, DynamicLayoutCompiler, PureCompiler,
     TypstSystemUniverse,
 };
-use typst_ts_compiler::{EntryManager, EntryReader, ShadowApi, TypstSystemWorld};
+use typst_ts_compiler::{
+    CompileServerOpts, CompileSnapshot, CompileStarter, EntryManager, EntryReader, ShadowApi,
+    SystemCompilerFeat, TypstSystemWorld,
+};
 use typst_ts_core::config::compiler::{EntryOpts, MEMORY_MAIN_ENTRY};
+use typst_ts_core::DynExporter;
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
 
 use crate::font::fonts;
@@ -123,6 +125,8 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
     }
 
     let is_stdin = args.compile.entry == "-";
+    let (intr_tx, intr_rx) = mpsc::unbounded_channel();
+
     let driver = create_driver(args.compile.clone());
 
     let _trace_guard = {
@@ -162,14 +166,34 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
 
     // CompileExporter + DynamicLayoutCompiler + WatchDriver
     let verse = driver.universe;
-    let entry = verse.entry_state().clone();
-    let driver = CompileExporter::new(std::marker::PhantomData).with_exporter(exporter);
-    let driver = DynamicLayoutCompiler::new(driver, output_dir).with_enable(args.dynamic_layout);
-    let actor =
-        CompileActor::new_with_features(driver, verse, entry, feature_set).with_watch(args.watch);
+    // todo: when there is only dynamic export, it is not need to compile first.
+
+    let mut exporters: Vec<DynExporter<CompileSnapshot<SystemCompilerFeat>>> = vec![];
+
+    if !exporter.is_empty() {
+        let driver = CompileExporter::new(std::marker::PhantomData).with_exporter(exporter);
+        exporters.push(Box::new(CompileStarter::new(driver)));
+    }
+
+    if args.dynamic_layout {
+        let driver = DynamicLayoutCompiler::new(std::marker::PhantomData, output_dir);
+        exporters.push(Box::new(CompileStarter::new(driver)));
+    }
+
+    let actor = CompileActor::new_with(
+        verse,
+        intr_tx,
+        intr_rx,
+        CompileServerOpts {
+            exporter: GroupExporter::new(exporters),
+            feature_set,
+            ..Default::default()
+        },
+    )
+    .with_enable_watch(args.watch);
 
     utils::async_continue(async move {
-        utils::logical_exit(actor.run());
+        utils::logical_exit(actor.run_and_wait().await);
     })
 }
 

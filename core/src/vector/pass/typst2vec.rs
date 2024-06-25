@@ -107,7 +107,7 @@ pub struct Typst2VecPassImpl<const ENABLE_REF_CNT: bool = false> {
     pub items: RefItemMapSync,
     pub new_items: Mutex<Vec<(Fingerprint, VecItem)>>,
 
-    pub command_executor: Box<dyn CommandExecutor + Send + Sync>,
+    pub command_executor: Arc<dyn CommandExecutor + Send + Sync>,
 
     fingerprint_builder: FingerprintBuilder,
 
@@ -130,7 +130,7 @@ impl<const ENABLE_REF_CNT: bool> Default for Typst2VecPassImpl<ENABLE_REF_CNT> {
             items: Default::default(),
             new_items: Default::default(),
             fingerprint_builder: Default::default(),
-            command_executor: Box::new(()),
+            command_executor: Arc::new(()),
         }
     }
 }

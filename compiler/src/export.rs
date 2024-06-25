@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use reflexo_world::{CompilerFeat, CompilerWorld};
 use typst::{diag::SourceResult, World};
 use typst_ts_core::{
     exporter_builtins::GroupExporter,
@@ -8,7 +9,7 @@ use typst_ts_core::{
         ir::{LayoutRegion, LayoutRegionNode},
         pass::Typst2VecPass,
     },
-    DynExporter, DynGenericExporter, DynPolymorphicExporter, GenericExporter, TakeAs,
+    DynExporter, DynGenericExporter, DynPolymorphicExporter, Exporter, GenericExporter, TakeAs,
     TypstDocument as Document,
 };
 
@@ -21,15 +22,37 @@ use super::{
     features::{CompileFeature, FeatureSet, WITH_COMPILING_STATUS_FEATURE},
     CompileEnv, CompileMiddleware, CompileReport, Compiler,
 };
-use crate::EntryReader;
+use crate::{CompileSnapshot, EntryReader};
 
-pub trait WorldExporter<W> {
-    fn export(&mut self, world: &W, output: Arc<Document>) -> SourceResult<()>;
+pub struct CompileStarter<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> {
+    pub compiler: C,
+    f: std::marker::PhantomData<F>,
 }
 
+impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> CompileStarter<F, C> {
+    pub fn new(compiler: C) -> Self {
+        Self {
+            compiler,
+            f: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>> + Clone> Exporter<CompileSnapshot<F>>
+    for CompileStarter<F, C>
+{
+    fn export(&self, _world: &dyn World, output: Arc<CompileSnapshot<F>>) -> SourceResult<()> {
+        self.compiler
+            .clone()
+            .compile(&output.world, &mut output.env.clone())
+            .map(|_| ())
+    }
+}
+
+#[derive(Clone)]
 pub struct CompileExporter<C: Compiler> {
     pub compiler: C,
-    pub exporter: DynExporter<Document>,
+    pub exporter: Arc<DynExporter<Document>>,
 }
 
 impl<C: Compiler + Default> Default for CompileExporter<C> {
@@ -42,7 +65,7 @@ impl<C: Compiler> CompileExporter<C> {
     pub fn new(compiler: C) -> Self {
         Self {
             compiler,
-            exporter: GroupExporter::new(vec![]).into(),
+            exporter: Arc::new(GroupExporter::new(vec![]).into()),
         }
     }
 
@@ -54,14 +77,18 @@ impl<C: Compiler> CompileExporter<C> {
 
     /// set an exporter.
     pub fn set_exporter(&mut self, exporter: impl Into<DynExporter<Document>>) {
-        self.exporter = exporter.into();
+        self.exporter = Arc::new(exporter.into());
     }
 }
 
-impl<W: World, C: Compiler> WorldExporter<W> for CompileExporter<C> {
+impl<F: CompilerFeat + 'static, C: Compiler> Exporter<CompileSnapshot<F>> for CompileExporter<C> {
     /// Export a typst document using `typst_ts_core::DocumentExporter`.
-    fn export(&mut self, world: &W, output: Arc<Document>) -> SourceResult<()> {
-        self.exporter.export(world, output)
+    fn export(&self, world: &dyn World, output: Arc<CompileSnapshot<F>>) -> SourceResult<()> {
+        if let Ok(doc) = output.doc() {
+            self.exporter.export(world, doc)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -78,7 +105,7 @@ impl<C: Compiler> CompileMiddleware for CompileExporter<C> {
 
     fn wrap_compile(&mut self, world: &C::W, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
         let doc = self.inner_mut().compile(world, env)?;
-        self.export(world, doc.clone())?;
+        self.exporter.export(world, doc.clone())?;
 
         Ok(doc)
     }
@@ -92,12 +119,21 @@ pub struct CompileReporter<C: Compiler, W: World> {
     pub reporter: DynGenericExporter<W, (Arc<FeatureSet>, CompileReport)>,
 }
 
+impl<C: Compiler + Clone, W: World> Clone for CompileReporter<C, W> {
+    fn clone(&self) -> Self {
+        Self {
+            compiler: self.compiler.clone(),
+            reporter: self.reporter.clone(),
+        }
+    }
+}
+
 impl<C: Compiler, W: World + 'static> CompileReporter<C, W> {
     pub fn new(compiler: C) -> Self {
         let x: FeaturedReportExporter = GroupExporter::new(vec![]).into();
         Self {
             compiler,
-            reporter: Box::new(DynPolymorphicExporter::<W, _, _>::new(x)),
+            reporter: Arc::new(DynPolymorphicExporter::<W, _, _>::new(x)),
         }
     }
 
@@ -116,7 +152,7 @@ impl<C: Compiler, W: World + 'static> CompileReporter<C, W> {
                 reporter.export(world, Arc::new(inp.take().1))
             },
         );
-        self.reporter = Box::new(DynPolymorphicExporter::<W, _, _>::new(reporter));
+        self.reporter = Arc::new(DynPolymorphicExporter::<W, _, _>::new(reporter));
     }
 
     /// Wrap driver with a given featured reporter.
@@ -127,31 +163,24 @@ impl<C: Compiler, W: World + 'static> CompileReporter<C, W> {
 
     /// set an featured reporter.
     pub fn set_featured_reporter(&mut self, reporter: impl Into<FeaturedReportExporter>) {
-        self.reporter = Box::new(DynPolymorphicExporter::<W, _, _>::new(reporter.into()));
+        self.reporter = Arc::new(DynPolymorphicExporter::<W, _, _>::new(reporter.into()));
     }
 
     /// Wrap driver with a given generic reporter.
     pub fn with_generic_reporter(
         mut self,
-        reporter: impl GenericExporter<(Arc<FeatureSet>, CompileReport), W = W> + Send + 'static,
+        reporter: impl GenericExporter<(Arc<FeatureSet>, CompileReport), W = W> + Send + Sync + 'static,
     ) -> Self {
-        self.reporter = Box::new(reporter);
+        self.reporter = Arc::new(reporter);
         self
     }
 
     /// set an generic reporter.
     pub fn set_generic_reporter(
         &mut self,
-        reporter: impl GenericExporter<(Arc<FeatureSet>, CompileReport), W = W> + Send + 'static,
+        reporter: impl GenericExporter<(Arc<FeatureSet>, CompileReport), W = W> + Send + Sync + 'static,
     ) {
-        self.reporter = Box::new(reporter);
-    }
-}
-
-impl<W: World, C: Compiler + WorldExporter<W>> WorldExporter<W> for CompileReporter<C, W> {
-    /// Export a typst document using `typst_ts_core::DocumentExporter`.
-    fn export(&mut self, world: &W, output: Arc<Document>) -> SourceResult<()> {
-        self.compiler.export(world, output)
+        self.reporter = Arc::new(reporter);
     }
 }
 
@@ -170,7 +199,7 @@ where
     }
 
     fn wrap_compile(&mut self, world: &C::W, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
-        let start = crate::time::now();
+        let start = reflexo::time::now();
         // todo unwrap main id
         let id = world.main_id().unwrap();
         if WITH_COMPILING_STATUS_FEATURE.retrieve(&env.features) {

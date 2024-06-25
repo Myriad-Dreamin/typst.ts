@@ -1,7 +1,7 @@
 // use std::sync::Arc;
 
 use core::fmt;
-use std::sync::Arc;
+use std::{num::NonZeroUsize, sync::Arc};
 
 use parking_lot::{Mutex, RwLock};
 use reflexo::{ImmutPath, QueryRef};
@@ -19,7 +19,7 @@ type FileQuery<T> = QueryRef<T, FileError>;
 type IncrFileQuery<T> = IncrQueryRef<T, FileError>;
 
 pub trait Revised {
-    fn last_accessed_rev(&self) -> usize;
+    fn last_accessed_rev(&self) -> NonZeroUsize;
 }
 
 pub struct SharedState<T> {
@@ -50,12 +50,12 @@ impl<T: Revised> SharedState<T> {
     fn gc(&mut self) {
         let commited = self.committed_revision.unwrap_or(0);
         self.cache_entries
-            .retain(|_, v| commited.saturating_sub(v.last_accessed_rev()) <= 30);
+            .retain(|_, v| commited.saturating_sub(v.last_accessed_rev().get()) <= 30);
     }
 }
 
 pub struct SourceCache {
-    last_accessed_rev: usize,
+    last_accessed_rev: NonZeroUsize,
     fid: FileId,
     source: IncrFileQuery<Source>,
     buffer: FileQuery<Bytes>,
@@ -68,14 +68,40 @@ impl fmt::Debug for SourceCache {
 }
 
 impl Revised for SourceCache {
-    fn last_accessed_rev(&self) -> usize {
+    fn last_accessed_rev(&self) -> NonZeroUsize {
         self.last_accessed_rev
     }
 }
 
-#[derive(Default, Clone)]
+pub struct SourceState {
+    pub revision: NonZeroUsize,
+    pub slots: Arc<Mutex<FxHashMap<TypstFileId, SourceCache>>>,
+}
+
+impl SourceState {
+    pub fn commit_impl(self, state: &mut SharedState<SourceCache>) {
+        log::info!("drop source db revision {}", self.revision);
+
+        if let Ok(slots) = Arc::try_unwrap(self.slots) {
+            // todo: utilize the committed revision is not zero
+            if state
+                .committed_revision
+                .map_or(false, |commited| commited >= self.revision.get())
+            {
+                return;
+            }
+
+            log::info!("committing source db revision {}", self.revision);
+            state.committed_revision = Some(self.revision.get());
+            state.cache_entries = slots.into_inner();
+            state.gc();
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct SourceDb {
-    pub revision: usize,
+    pub revision: NonZeroUsize,
     pub shared: Arc<RwLock<SharedState<SourceCache>>>,
     /// The slots for all the files during a single lifecycle.
     pub slots: Arc<Mutex<FxHashMap<TypstFileId, SourceCache>>>,
@@ -91,6 +117,13 @@ impl fmt::Debug for SourceDb {
 }
 
 impl SourceDb {
+    pub fn take_state(&mut self) -> SourceState {
+        SourceState {
+            revision: self.revision,
+            slots: std::mem::take(&mut self.slots),
+        }
+    }
+
     /// Set the `do_reparse` flag that indicates whether to reparsing the file
     /// instead of creating a new [`Source`] when the file is changed.
     /// Default to `true`.
@@ -199,24 +232,6 @@ impl SourceDb {
                     buffer: FileQuery::default(),
                 })
         }))
-    }
-
-    pub fn commit_impl(self, state: &mut SharedState<SourceCache>) {
-        log::info!("drop source db revision {}", self.revision);
-
-        if let Ok(slots) = Arc::try_unwrap(self.slots) {
-            if state
-                .committed_revision
-                .map_or(false, |commited| commited >= self.revision)
-            {
-                return;
-            }
-
-            log::info!("committing source db revision {}", self.revision);
-            state.committed_revision = Some(self.revision);
-            state.cache_entries = slots.into_inner();
-            state.gc();
-        }
     }
 }
 

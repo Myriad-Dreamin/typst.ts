@@ -4,8 +4,7 @@ use divan::Bencher;
 use once_cell::sync::Lazy;
 use typst_ts_cli::CompileOnceArgs;
 use typst_ts_compiler::{
-    service::{CompileDriver as CompileDriverT, Compiler, PureCompiler},
-    ShadowApiExt, TypstSystemWorld,
+    CompileDriver as CompileDriverT, Compiler, PureCompiler, ShadowApiExt, TypstSystemWorld,
 };
 use typst_ts_core::{
     vector::pass::{IncrTypst2VecPass, Typst2VecPass},
@@ -32,7 +31,7 @@ fn compile(driver: &CompileDriver, src: &str) -> Arc<TypstDocument> {
     let e = driver.entry_file().to_owned().unwrap();
     driver
         .with_shadow_file(&e, src.as_bytes().into(), |this| {
-            std::marker::PhantomData.compile(&this.spawn(), &mut Default::default())
+            std::marker::PhantomData.compile(&this.snapshot(), &mut Default::default())
         })
         .unwrap()
 }

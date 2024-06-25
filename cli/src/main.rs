@@ -127,7 +127,7 @@ fn compile(args: CompileArgs) -> ! {
 /// Execute a query command.
 pub fn query(args: QueryArgs) -> ! {
     use typst_ts_cli::query::format;
-    use typst_ts_compiler::service::query::retrieve;
+    use typst_ts_compiler::query::retrieve;
     let compile_args = args.compile.clone();
 
     let mut exporter = GroupExporter::<Document>::new(vec![]);
@@ -179,7 +179,7 @@ fn list_fonts(command: ListFontsArgs) -> ! {
         ..CompileOpts::default()
     })
     .unwrap_or_exit();
-    let world = verse.spawn();
+    let world = verse.snapshot();
 
     for (name, infos) in world.book().families() {
         println!("{name}");

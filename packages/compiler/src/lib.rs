@@ -5,10 +5,7 @@ use comemo::Prehashed;
 use js_sys::{Array, JsString, Uint32Array, Uint8Array};
 pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
-    font::web::BrowserFontSearcher,
-    package::browser::ProxyRegistry,
-    parser::OffsetEncoding,
-    service::{CompileDriverImpl, PureCompiler},
+    font::web::BrowserFontSearcher, package::browser::ProxyRegistry, parser::OffsetEncoding,
     vfs::browser::ProxyAccessModel,
 };
 use typst_ts_core::{
@@ -221,7 +218,7 @@ impl TypstCompiler {
             .universe_mut()
             .increment_revision(|verse| verse.set_entry_file(Path::new(&main_file_path).into()))
             .map_err(|e| format!("{e:?}"))?;
-        let world = self.driver.spawn();
+        let world = self.driver.snapshot();
 
         let ast_exporter = typst_ts_core::exporter_builtins::VecExporter::new(
             typst_ts_ast_exporter::AstExporter::default(),
@@ -311,7 +308,7 @@ impl TypstCompiler {
             }
         };
 
-        let world = self.driver.spawn();
+        let world = self.driver.snapshot();
 
         let doc = take_diag!(
             diagnostics_format,
@@ -392,7 +389,7 @@ impl TypstCompiler {
             .increment_revision(|verse| verse.set_entry_file(Path::new(&main_file_path).into()))
             .map_err(|e| format!("{e:?}"))?;
 
-        let world = self.driver.spawn();
+        let world = self.driver.snapshot();
         let doc = take_diag!(
             diagnostics_format,
             &world,

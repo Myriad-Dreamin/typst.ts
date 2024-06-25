@@ -3,8 +3,7 @@ pub mod wasm;
 use std::path::Path;
 
 use typst_ts_compiler::{
-    service::{CompileDriver, CompileExporter, PureCompiler},
-    TypstSystemUniverse, TypstSystemWorld,
+    CompileDriver, CompileExporter, PureCompiler, TypstSystemUniverse, TypstSystemWorld,
 };
 use typst_ts_core::{
     config::{compiler::EntryOpts, CompileOpts},
@@ -34,7 +33,7 @@ fn get_driver(
 macro_rules! document_exporters {
     ($($exporters:expr),*) => {
         {
-            let document_exporters: Vec<Box<dyn typst_ts_core::Exporter<TypstDocument> + Send>> = vec![
+            let document_exporters: Vec<Box<dyn typst_ts_core::Exporter<TypstDocument> + Send + Sync>> = vec![
                 $(Box::new($exporters)),*
             ];
             GroupExporter::new(document_exporters)

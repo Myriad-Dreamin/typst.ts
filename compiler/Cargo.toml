@@ -12,18 +12,14 @@ repository.workspace = true
 
 typst.workspace = true
 comemo.workspace = true
+reflexo.workspace = true
 reflexo-vfs.workspace = true
 reflexo-world.workspace = true
 
 once_cell.workspace = true
-append-only-vec.workspace = true
 codespan-reporting.workspace = true
 parking_lot.workspace = true
-hex.workspace = true
-sha2.workspace = true
 flate2.workspace = true
-instant.workspace = true
-strum.workspace = true
 rayon = { workspace = true, optional = true }
 
 serde.workspace = true
@@ -32,11 +28,11 @@ serde-wasm-bindgen = { workspace = true, optional = true }
 
 dirs = { workspace = true, optional = true }
 walkdir = { workspace = true, optional = true }
-notify = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 pollster = { workspace = true, optional = true }
-log = { workspace = true, optional = true }
+log.workspace = true
 fontdb = { workspace = true, optional = true }
+notify = { workspace = true, optional = true }
 
 base64.workspace = true
 rustc-hash.workspace = true
@@ -55,7 +51,6 @@ web-sys = { workspace = true, optional = true, features = [
     "ImageData",
 ] }
 
-
 typst-ts-svg-exporter = { workspace = true, optional = true }
 
 typst-ts-core = { workspace = true, default-features = false, features = [
@@ -72,11 +67,7 @@ emoji = []
 lazy-fontdb = ["dep:rayon"]
 no-content-hint = ["typst-ts-core/no-content-hint"]
 system-compile = [
-    "dep:dirs",
-    "dep:walkdir",
-    "dep:notify",
-    "dep:log",
-    "dep:fontdb",
+    "dep:rayon",
     "typst-ts-core/glyph2vec",
     "reflexo-vfs/system",
     "reflexo-world/system",
@@ -92,7 +83,6 @@ __web = [
     "dep:serde-wasm-bindgen",
     "dep:pollster",
     "typst-ts-core/web",
-    "instant/wasm-bindgen",
     "reflexo-vfs/web",
     "reflexo-world/web",
 ]

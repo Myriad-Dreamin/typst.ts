@@ -27,6 +27,6 @@ js-sys = { workspace = true, optional = true }
 
 [features]
 
-web = ["wasm-bindgen", "web-sys", "js-sys"]
+web = ["wasm-bindgen", "web-sys", "js-sys", "reflexo/web"]
 browser = ["web"]
-system = []
+system = ["reflexo/system"]

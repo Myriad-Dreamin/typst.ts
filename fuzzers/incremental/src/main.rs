@@ -2,8 +2,8 @@ use std::path::Path;
 
 use typst::model::Document;
 use typst_ts_compiler::{
-    service::{CompileDriver, CompileExporter, PureCompiler},
-    ShadowApiExt, TypstSystemUniverse, TypstSystemWorld,
+    CompileDriver, CompileExporter, PureCompiler, ShadowApiExt, TypstSystemUniverse,
+    TypstSystemWorld,
 };
 use typst_ts_core::{
     config::{compiler::EntryOpts, CompileOpts},

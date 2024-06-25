@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use typst::{diag::SourceResult, World};
 
-pub type DynExporter<Input, Output = ()> = Box<dyn Exporter<Input, Output> + Send>;
+pub type DynExporter<Input, Output = ()> = Box<dyn Exporter<Input, Output> + Send + Sync>;
 
 pub trait Transformer<Input, Output = ()> {
     /// Export the given input with given world. the writable world is hiden by
@@ -38,7 +38,11 @@ where
 
 impl<I, O, F> From<F> for DynExporter<I, O>
 where
-    F: (for<'a> Fn(&'a (dyn World + 'a), Arc<I>) -> SourceResult<O>) + Sized + Send + 'static,
+    F: (for<'a> Fn(&'a (dyn World + 'a), Arc<I>) -> SourceResult<O>)
+        + Sized
+        + Send
+        + Sync
+        + 'static,
 {
     fn from(f: F) -> Self {
         Box::new(f)
@@ -46,7 +50,7 @@ where
 }
 
 pub type DynGenericExporter<X, Input, Output = ()> =
-    Box<dyn GenericExporter<Input, Output, W = X> + Send>;
+    Arc<dyn GenericExporter<Input, Output, W = X> + Send + Sync>;
 
 pub trait GenericTransformer<Input, Output = ()> {
     type W;
@@ -119,6 +123,10 @@ pub mod builtins {
         pub fn push(&mut self, exporter: DynExporter<I>) {
             self.exporters.push(exporter)
         }
+
+        pub fn is_empty(&self) -> bool {
+            self.exporters.is_empty()
+        }
     }
 
     impl<I> Exporter<I> for GroupExporter<I> {
@@ -169,7 +177,7 @@ pub mod builtins {
         }
     }
 
-    impl<I: 'static + Send, A: 'static> From<FromExporter<I, A>> for DynExporter<I>
+    impl<I: 'static + Send + Sync, A: 'static> From<FromExporter<I, A>> for DynExporter<I>
     where
         A: for<'a> From<&'a I>,
     {
@@ -219,7 +227,8 @@ pub mod builtins {
         }
     }
 
-    impl<I, Bytes: 'static + Send, E: 'static + Send> From<FsPathExporter<Bytes, E>> for DynExporter<I>
+    impl<I, Bytes: 'static + Send + Sync, E: 'static + Send + Sync> From<FsPathExporter<Bytes, E>>
+        for DynExporter<I>
     where
         E: Exporter<I, Bytes>,
         Bytes: AsRef<[u8]>,
@@ -229,7 +238,7 @@ pub mod builtins {
         }
     }
 
-    impl<I, E: 'static + Send> From<FsPathExporter<AsWritable, E>> for DynExporter<I>
+    impl<I, E: 'static + Send + Sync> From<FsPathExporter<AsWritable, E>> for DynExporter<I>
     where
         E: Transformer<(Arc<I>, File)>,
     {

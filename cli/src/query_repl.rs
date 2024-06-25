@@ -14,7 +14,7 @@ use rustyline::validate::MatchingBracketValidator;
 use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, KeyEvent};
 use rustyline::{Helper, Validator};
 
-use typst_ts_compiler::service::{CompileDriver, CompileReport, ConsoleDiagReporter, PureCompiler};
+use typst_ts_compiler::{CompileDriver, CompileReport, ConsoleDiagReporter, PureCompiler};
 use typst_ts_compiler::{ShadowApiExt, TypstSystemWorld};
 use typst_ts_core::{typst::prelude::*, GenericExporter};
 
@@ -130,7 +130,7 @@ impl Completer for ReplContext {
         let typst_completions = driver
             .with_shadow_file(&entry, dyn_content.as_bytes().into(), |driver| {
                 let doc = driver.compile(&mut Default::default()).ok();
-                let world = driver.spawn();
+                let world = driver.snapshot();
                 let source = world.main();
                 Ok(autocomplete(
                     &world,
@@ -243,7 +243,7 @@ impl ReplContext {
         err: EcoVec<SourceDiagnostic>,
     ) -> Result<(), ()> {
         let rep = CompileReport::CompileError(driver.main_id(), err, Default::default());
-        let _ = self.reporter.export(&driver.spawn(), Arc::new(rep));
+        let _ = self.reporter.export(&driver.snapshot(), Arc::new(rep));
         Ok(())
     }
 
