@@ -60,6 +60,12 @@ reqwest = { version = "^0.11", default-features = false, features = [
 [features]
 
 default = []
-web = ["wasm-bindgen", "web-sys", "js-sys", "serde-wasm-bindgen"]
+web = ["wasm-bindgen", "web-sys", "js-sys", "serde-wasm-bindgen", "reflexo/web"]
 browser = ["web"]
-system = ["dep:dirs", "dep:walkdir", "dep:notify", "dep:fontdb"]
+system = [
+    "dep:dirs",
+    "dep:walkdir",
+    "dep:notify",
+    "dep:fontdb",
+    "reflexo/system",
+]
