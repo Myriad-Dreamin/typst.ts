@@ -183,6 +183,16 @@ impl<'a> fmt::Display for CompileReportMsg<'a> {
     }
 }
 
+#[derive(Clone)]
+pub struct CompiledArtifact<F: CompilerFeat> {
+    pub world: Arc<CompilerWorld<F>>,
+    pub compile_tick: usize,
+    pub doc: SourceResult<Arc<Document>>,
+    /// Used env
+    pub env: CompileEnv,
+    pub success_doc: Option<Arc<Document>>,
+}
+
 type UsingCompiler<F> = CompileReporter<PureCompiler<CompilerWorld<F>>, CompilerWorld<F>>;
 type CompileRawResult = Deferred<(SourceResult<Arc<Document>>, CompileEnv)>;
 type DocState<F> = QueryRef<CompileRawResult, (), (UsingCompiler<F>, CompileEnv)>;

@@ -14,29 +14,18 @@ use reflexo::QueryRef;
 use reflexo_vfs::notify::UpstreamUpdateEvent;
 use reflexo_world::{EntryReader, Revising, TaskInputs};
 use tokio::sync::{mpsc, oneshot};
-use typst::diag::SourceResult;
 
 use crate::{
     features::{FeatureSet, WITH_COMPILING_STATUS_FEATURE},
     vfs::notify::{FilesystemEvent, MemoryEvent, NotifyMessage},
     watch_deps,
     world::{CompilerFeat, CompilerUniverse, CompilerWorld},
-    CompileEnv, CompileReport, CompileReporter, CompileSnapshot, ConsoleDiagReporter, PureCompiler,
-    WorldDeps,
+    CompileEnv, CompileReport, CompileReporter, CompileSnapshot, CompiledArtifact,
+    ConsoleDiagReporter, PureCompiler, WorldDeps,
 };
 use typst_ts_core::{
     config::compiler::EntryState, exporter_builtins::GroupExporter, Exporter, TypstDocument,
 };
-
-#[derive(Clone)]
-pub struct CompiledArtifact<F: CompilerFeat> {
-    pub world: Arc<CompilerWorld<F>>,
-    pub compile_tick: usize,
-    pub doc: SourceResult<Arc<TypstDocument>>,
-    /// Used env
-    pub env: CompileEnv,
-    pub success_doc: Option<Arc<TypstDocument>>,
-}
 
 // pub type NopCompilationHandle<T> = std::marker::PhantomData<fn(T)>;
 
