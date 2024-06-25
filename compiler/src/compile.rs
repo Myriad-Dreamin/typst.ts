@@ -14,76 +14,19 @@ use reflexo::QueryRef;
 use reflexo_vfs::notify::UpstreamUpdateEvent;
 use reflexo_world::{EntryReader, Revising, TaskInputs};
 use tokio::sync::{mpsc, oneshot};
-use typst::{diag::SourceResult, util::Deferred};
+use typst::diag::SourceResult;
 
 use crate::{
     features::{FeatureSet, WITH_COMPILING_STATUS_FEATURE},
     vfs::notify::{FilesystemEvent, MemoryEvent, NotifyMessage},
     watch_deps,
     world::{CompilerFeat, CompilerUniverse, CompilerWorld},
-    CompileEnv, CompileReport, CompileReporter, Compiler, ConsoleDiagReporter, PureCompiler,
+    CompileEnv, CompileReport, CompileReporter, CompileSnapshot, ConsoleDiagReporter, PureCompiler,
     WorldDeps,
 };
 use typst_ts_core::{
     config::compiler::EntryState, exporter_builtins::GroupExporter, Exporter, TypstDocument,
 };
-
-type UsingCompiler<F> = CompileReporter<PureCompiler<CompilerWorld<F>>, CompilerWorld<F>>;
-type CompileRawResult = Deferred<(SourceResult<Arc<TypstDocument>>, CompileEnv)>;
-type DocState<F> = QueryRef<CompileRawResult, (), (UsingCompiler<F>, CompileEnv)>;
-
-pub struct CompileSnapshot<F: CompilerFeat> {
-    /// The compiler-thread local logical tick when the snapshot is taken.
-    pub compile_tick: usize,
-    /// Using env
-    pub env: CompileEnv,
-    /// Using world
-    pub world: Arc<CompilerWorld<F>>,
-    /// Compiling the document.
-    doc_state: Arc<DocState<F>>,
-    /// The last successfully compiled document.
-    pub success_doc: Option<Arc<TypstDocument>>,
-}
-
-impl<F: CompilerFeat + 'static> CompileSnapshot<F> {
-    pub fn start(&self) -> &CompileRawResult {
-        let res = self.doc_state.compute_with_context(|(mut c, mut env)| {
-            let w = self.world.clone();
-            Ok(Deferred::new(move || {
-                let res = c.compile(&w, &mut env);
-                (res, env)
-            }))
-        });
-        res.ok().unwrap()
-    }
-
-    pub fn doc(&self) -> SourceResult<Arc<TypstDocument>> {
-        self.start().wait().0.clone()
-    }
-
-    pub fn compile(&self) -> CompiledArtifact<F> {
-        let (doc, env) = self.start().wait().clone();
-        CompiledArtifact {
-            world: self.world.clone(),
-            compile_tick: self.compile_tick,
-            doc,
-            env,
-            success_doc: self.success_doc.clone(),
-        }
-    }
-}
-
-impl<F: CompilerFeat> Clone for CompileSnapshot<F> {
-    fn clone(&self) -> Self {
-        Self {
-            compile_tick: self.compile_tick,
-            env: self.env.clone(),
-            world: self.world.clone(),
-            doc_state: self.doc_state.clone(),
-            success_doc: self.success_doc.clone(),
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct CompiledArtifact<F: CompilerFeat> {

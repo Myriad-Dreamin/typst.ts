@@ -65,12 +65,14 @@ pub type CompileDriver<C> = CompileDriverImpl<C, reflexo_world::system::SystemCo
 use core::fmt;
 use std::sync::Arc;
 
+use reflexo::QueryRef;
 use typst::{
     diag::{At, Hint, SourceDiagnostic, SourceResult},
     eval::Tracer,
     foundations::Content,
     model::Document,
     syntax::Span,
+    util::Deferred,
     World,
 };
 use typst_ts_core::{typst::prelude::*, TypstFileId};
@@ -177,6 +179,63 @@ impl<'a> fmt::Display for CompileReportMsg<'a> {
             CompileError(_, _, duration) | ExportError(_, _, duration) => {
                 write!(f, "{:?}: compilation failed after {:?}", input, duration)
             }
+        }
+    }
+}
+
+type UsingCompiler<F> = CompileReporter<PureCompiler<CompilerWorld<F>>, CompilerWorld<F>>;
+type CompileRawResult = Deferred<(SourceResult<Arc<Document>>, CompileEnv)>;
+type DocState<F> = QueryRef<CompileRawResult, (), (UsingCompiler<F>, CompileEnv)>;
+
+pub struct CompileSnapshot<F: CompilerFeat> {
+    /// The compiler-thread local logical tick when the snapshot is taken.
+    pub compile_tick: usize,
+    /// Using env
+    pub env: CompileEnv,
+    /// Using world
+    pub world: Arc<CompilerWorld<F>>,
+    /// Compiling the document.
+    doc_state: Arc<DocState<F>>,
+    /// The last successfully compiled document.
+    pub success_doc: Option<Arc<Document>>,
+}
+
+impl<F: CompilerFeat + 'static> CompileSnapshot<F> {
+    pub fn start(&self) -> &CompileRawResult {
+        let res = self.doc_state.compute_with_context(|(mut c, mut env)| {
+            let w = self.world.clone();
+            Ok(Deferred::new(move || {
+                let res = c.compile(&w, &mut env);
+                (res, env)
+            }))
+        });
+        res.ok().unwrap()
+    }
+
+    pub fn doc(&self) -> SourceResult<Arc<Document>> {
+        self.start().wait().0.clone()
+    }
+
+    pub fn compile(&self) -> CompiledArtifact<F> {
+        let (doc, env) = self.start().wait().clone();
+        CompiledArtifact {
+            world: self.world.clone(),
+            compile_tick: self.compile_tick,
+            doc,
+            env,
+            success_doc: self.success_doc.clone(),
+        }
+    }
+}
+
+impl<F: CompilerFeat> Clone for CompileSnapshot<F> {
+    fn clone(&self) -> Self {
+        Self {
+            compile_tick: self.compile_tick,
+            env: self.env.clone(),
+            world: self.world.clone(),
+            doc_state: self.doc_state.clone(),
+            success_doc: self.success_doc.clone(),
         }
     }
 }
