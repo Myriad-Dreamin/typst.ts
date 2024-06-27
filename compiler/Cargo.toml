@@ -65,7 +65,10 @@ serde.workspace = true
 cjk = []
 emoji = []
 lazy-fontdb = ["dep:rayon"]
-no-content-hint = ["typst-ts-core/no-content-hint"]
+no-content-hint = [
+    "typst-ts-core/no-content-hint",
+    "reflexo-world/no-content-hint",
+]
 system-compile = [
     "dep:rayon",
     "typst-ts-core/glyph2vec",

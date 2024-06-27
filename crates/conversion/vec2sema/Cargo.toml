@@ -23,6 +23,7 @@ web-sys = { workspace = true, features = [
     "HtmlDivElement",
     "Window",
     "Document",
+    "TextMetrics",
 ] }
 
 [features]

@@ -5,7 +5,11 @@ import subprocess
 pub = ["cargo", "publish", "-p"]
 feats = ["--features", "no-content-hint"]
 subprocess.run([*pub, "reflexo"])
+subprocess.run([*pub, "reflexo-vfs"])
+subprocess.run([*pub, "reflexo-vec2bbox"])
 subprocess.run([*pub, "reflexo-vec2canvas"])
+subprocess.run([*pub, "reflexo-vec2sema"])
 subprocess.run([*pub, "typst-ts-core", *feats])
+subprocess.run([*pub, "reflexo-world", *feats])
 subprocess.run([*pub, "typst-ts-svg-exporter", *feats])
 subprocess.run([*pub, "typst-ts-compiler", *feats])

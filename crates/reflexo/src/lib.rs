@@ -13,8 +13,10 @@ pub use concepts::*;
 pub use error::{ErrKind, Error};
 
 pub mod vector {
+    #[cfg(feature = "rkyv")]
     pub mod incr;
     pub mod ir;
+    #[cfg(feature = "rkyv")]
     pub mod stream;
     pub mod vm;
 

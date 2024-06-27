@@ -17,8 +17,8 @@ members = [
     "crates/reflexo-vfs",
     "crates/reflexo-world",
     "crates/conversion/vec2canvas",
-    "crates/conversion/vec2sema",
     "crates/conversion/vec2bbox",
+    "crates/conversion/vec2sema",
 
     "cli",
     "core",

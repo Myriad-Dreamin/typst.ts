@@ -62,6 +62,7 @@ reqwest = { version = "^0.11", default-features = false, features = [
 default = []
 web = ["wasm-bindgen", "web-sys", "js-sys", "serde-wasm-bindgen", "reflexo/web"]
 browser = ["web"]
+no-content-hint = ["typst-ts-core/no-content-hint"]
 system = [
     "dep:dirs",
     "dep:walkdir",

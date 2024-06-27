@@ -63,7 +63,7 @@ pub struct FontItem {
 
     pub glyphs: Vec<Arc<FlatGlyphItem>>,
 
-    #[with(rkyv::with::Skip)]
+    #[cfg_attr(feature = "rkyv", with(rkyv::with::Skip))]
     pub glyph_cov: bitvec::vec::BitVec<u32>,
 }
 
