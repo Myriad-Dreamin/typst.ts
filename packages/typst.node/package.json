@@ -20,7 +20,7 @@
     "index.js"
   ],
   "napi": {
-    "name": "typst-ts-node-compiler",
+    "binaryName": "typst-ts-node-compiler",
     "// todo triple": "x86_64-unknown-freebsd",
     "triples": {
       "defaults": true,
@@ -38,6 +38,10 @@
   },
   "engines": {
     "node": ">= 10"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
   },
   "scripts": {
     "artifacts": "napi artifacts",
