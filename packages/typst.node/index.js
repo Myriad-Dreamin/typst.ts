@@ -77,20 +77,20 @@ switch (platform) {
           loadError = e;
         }
         break;
-      case 'ia32':
-        localFileExisted = existsSync(
-          join(__dirname, 'typst-ts-node-compiler.win32-ia32-msvc.node'),
-        );
-        try {
-          if (localFileExisted) {
-            nativeBinding = require('./typst-ts-node-compiler.win32-ia32-msvc.node');
-          } else {
-            nativeBinding = require('@myriaddreamin/typst-ts-node-compiler-win32-ia32-msvc');
-          }
-        } catch (e) {
-          loadError = e;
-        }
-        break;
+      // case 'ia32':
+      //   localFileExisted = existsSync(
+      //     join(__dirname, 'typst-ts-node-compiler.win32-ia32-msvc.node'),
+      //   );
+      //   try {
+      //     if (localFileExisted) {
+      //       nativeBinding = require('./typst-ts-node-compiler.win32-ia32-msvc.node');
+      //     } else {
+      //       nativeBinding = require('@myriaddreamin/typst-ts-node-compiler-win32-ia32-msvc');
+      //     }
+      //   } catch (e) {
+      //     loadError = e;
+      //   }
+      //   break;
       case 'arm64':
         localFileExisted = existsSync(
           join(__dirname, 'typst-ts-node-compiler.win32-arm64-msvc.node'),

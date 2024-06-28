@@ -7,9 +7,9 @@
   "cpu": [
     "arm"
   ],
-  "main": "package-template.linux-arm-gnueabihf.node",
+  "main": "typst-ts-node-compiler.linux-arm-gnueabihf.node",
   "files": [
-    "package-template.linux-arm-gnueabihf.node"
+    "typst-ts-node-compiler.linux-arm-gnueabihf.node"
   ],
   "description": "Compile or Render Typst documents in Node environment.",
   "keywords": [

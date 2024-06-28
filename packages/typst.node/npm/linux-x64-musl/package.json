@@ -10,9 +10,9 @@
   "libc": [
     "musl"
   ],
-  "main": "package-template.linux-x64-musl.node",
+  "main": "typst-ts-node-compiler.linux-x64-musl.node",
   "files": [
-    "package-template.linux-x64-musl.node"
+    "typst-ts-node-compiler.linux-x64-musl.node"
   ],
   "description": "Compile or Render Typst documents in Node environment.",
   "keywords": [

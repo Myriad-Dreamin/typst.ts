@@ -7,9 +7,9 @@
   "cpu": [
     "x64"
   ],
-  "main": "package-template.freebsd-x64.node",
+  "main": "typst-ts-node-compiler.freebsd-x64.node",
   "files": [
-    "package-template.freebsd-x64.node"
+    "typst-ts-node-compiler.freebsd-x64.node"
   ],
   "description": "Compile or Render Typst documents in Node environment.",
   "keywords": [

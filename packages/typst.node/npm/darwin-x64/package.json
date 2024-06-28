@@ -7,9 +7,9 @@
   "cpu": [
     "x64"
   ],
-  "main": "package-template.darwin-x64.node",
+  "main": "typst-ts-node-compiler.darwin-x64.node",
   "files": [
-    "package-template.darwin-x64.node"
+    "typst-ts-node-compiler.darwin-x64.node"
   ],
   "description": "Compile or Render Typst documents in Node environment.",
   "keywords": [

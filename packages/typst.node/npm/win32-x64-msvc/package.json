@@ -7,9 +7,9 @@
   "cpu": [
     "x64"
   ],
-  "main": "package-template.win32-x64-msvc.node",
+  "main": "typst-ts-node-compiler.win32-x64-msvc.node",
   "files": [
-    "package-template.win32-x64-msvc.node"
+    "typst-ts-node-compiler.win32-x64-msvc.node"
   ],
   "description": "Compile or Render Typst documents in Node environment.",
   "keywords": [

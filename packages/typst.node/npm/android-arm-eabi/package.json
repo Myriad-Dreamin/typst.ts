@@ -7,9 +7,9 @@
   "cpu": [
     "arm"
   ],
-  "main": "package-template.android-arm-eabi.node",
+  "main": "typst-ts-node-compiler.android-arm-eabi.node",
   "files": [
-    "package-template.android-arm-eabi.node"
+    "typst-ts-node-compiler.android-arm-eabi.node"
   ],
   "description": "Compile or Render Typst documents in Node environment.",
   "keywords": [

@@ -10,9 +10,9 @@
   "libc": [
     "glibc"
   ],
-  "main": "package-template.linux-x64-gnu.node",
+  "main": "typst-ts-node-compiler.linux-x64-gnu.node",
   "files": [
-    "package-template.linux-x64-gnu.node"
+    "typst-ts-node-compiler.linux-x64-gnu.node"
   ],
   "description": "Compile or Render Typst documents in Node environment.",
   "keywords": [
