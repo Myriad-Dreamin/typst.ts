@@ -21,6 +21,7 @@
   ],
   "napi": {
     "name": "typst-ts-node-compiler",
+    "// todo triple": "x86_64-unknown-freebsd",
     "triples": {
       "defaults": true,
       "additional": [
@@ -28,7 +29,6 @@
         "aarch64-unknown-linux-gnu",
         "aarch64-apple-darwin",
         "aarch64-linux-android",
-        "x86_64-unknown-freebsd",
         "armv7-unknown-linux-gnueabihf",
         "aarch64-unknown-linux-musl",
         "aarch64-pc-windows-msvc",
