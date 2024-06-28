@@ -5,6 +5,7 @@
   "description": "Compile or Render Typst documents in Node environment.",
   "main": "index.js",
   "license": "Apache-2.0",
+  "repository": "https://github.com/Myriad-Dreamin/typst.ts",
   "keywords": [
     "typst",
     "compiler",

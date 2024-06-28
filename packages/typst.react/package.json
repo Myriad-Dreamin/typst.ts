@@ -13,6 +13,7 @@
     "url": "https://github.com/Myriad-Dreamin/typst.ts/issues"
   },
   "homepage": "https://myriad-dreamin.github.io/typst.ts/",
+  "repository": "https://github.com/Myriad-Dreamin/typst.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

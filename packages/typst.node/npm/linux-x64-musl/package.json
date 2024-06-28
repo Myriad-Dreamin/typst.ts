@@ -10,6 +10,7 @@
   "libc": [
     "musl"
   ],
+  "repository": "https://github.com/Myriad-Dreamin/typst.ts",
   "main": "typst-ts-node-compiler.linux-x64-musl.node",
   "files": [
     "typst-ts-node-compiler.linux-x64-musl.node"

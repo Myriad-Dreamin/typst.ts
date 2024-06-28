@@ -7,6 +7,7 @@
   "cpu": [
     "x64"
   ],
+  "repository": "https://github.com/Myriad-Dreamin/typst.ts",
   "main": "typst-ts-node-compiler.win32-x64-msvc.node",
   "files": [
     "typst-ts-node-compiler.win32-x64-msvc.node"
