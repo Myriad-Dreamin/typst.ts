@@ -2,7 +2,7 @@
   "name": "@myriaddreamin/typst-template-ts-node-next",
   "private": true,
   "version": "1.0.0",
-  "description": "Template for Typescript+ts-node using @myriaddremain/typst.ts",
+  "description": "Template for Typescript+ts-node using @myriaddreamin/typst.ts",
   "type": "module",
   "module": "src/main.ts",
   "author": "Myriad-Dreamin",

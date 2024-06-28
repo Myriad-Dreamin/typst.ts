@@ -2,7 +2,7 @@
   "name": "@myriaddreamin/typst-template-node-js-next",
   "private": true,
   "version": "1.0.0",
-  "description": "Template for Typescript+node.js using @myriaddremain/typst.ts",
+  "description": "Template for Typescript+node.js using @myriaddreamin/typst.ts",
   "module": "dist/esm/main.js",
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
