@@ -34,7 +34,28 @@ test('it queries label in `Hello, Typst! <my-label>`', t => {
 Hello, Typst! <my-label>
 `,
   }).result;
-  t.snapshot(doc && compiler.query(doc, `<my-label>`));
+  t.snapshot(doc && compiler.query(doc, { selector: `<my-label>` }));
+});
+
+test('it vec by arguments', t => {
+  const compiler = defaultCompiler();
+  t.truthy(
+    compiler.vector({
+      mainFileContent: `
+Hello, Typst! <my-label>
+`,
+    }),
+  );
+});
+
+test('it vec by compiled artifact', t => {
+  const compiler = defaultCompiler();
+  const doc = compiler.compile({
+    mainFileContent: `
+Hello, Typst! <my-label>
+`,
+  }).result;
+  t.truthy(doc && compiler.vector(doc));
 });
 
 test('it throws error`', t => {

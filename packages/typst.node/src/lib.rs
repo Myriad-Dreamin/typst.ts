@@ -8,15 +8,26 @@ pub use compiler::*;
 use error::NodeTypstCompileResult;
 pub use error::{map_node_error, NodeError};
 
-use std::{collections::HashMap, ops::Deref, path::PathBuf, sync::Arc};
+use std::{
+    collections::HashMap,
+    ops::Deref,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 use typst_ts_compiler::{
-    Compiler, DynamicLayoutCompiler, EntryManager, SystemCompilerFeat, TypstSystemWorld,
+    Compiler, DynamicLayoutCompiler, EntryManager, ShadowApi, SystemCompilerFeat, TypstSystemWorld,
 };
-use typst_ts_core::{error::prelude::*, Exporter, TypstAbs, TypstDatetime, TypstDocument};
+use typst_ts_core::{
+    diag::{At, SourceResult},
+    error::prelude::*,
+    foundations::IntoValue,
+    syntax::Span,
+    Bytes, Exporter, TypstAbs, TypstDatetime, TypstDocument, TypstWorld,
+};
 
 /// A shared typst document object.
 #[napi]
@@ -91,13 +102,13 @@ fn typst_datetime_to_unix_nanoseconds(datetime: TypstDatetime) -> Option<i64> {
     datetime.and_utc().timestamp_nanos_opt()
 }
 
-/// Options to compile a document.
+/// Arguments to compile a document.
 ///
 /// If no `mainFileContent` or `mainFilePath` is specified, the compiler will
 /// use the entry file specified in the constructor of `NodeCompiler`.
 #[napi(object)]
 #[derive(Serialize, Deserialize, Debug)]
-pub struct CompileDocumentOptions {
+pub struct CompileDocArgs {
     /// Directly specify the main file content.
     /// Exclusive with `mainFilePath`.
     #[serde(rename = "mainFileContent")]
@@ -111,6 +122,19 @@ pub struct CompileDocumentOptions {
     /// Add a string key-value pair visible through `sys.inputs`.
     pub inputs: Option<HashMap<String, String>>,
 }
+
+/// Arguments to query the document.
+#[napi(object)]
+#[derive(Serialize, Deserialize, Debug)]
+pub struct QueryDocArgs {
+    /// The query selector.
+    pub selector: String,
+    /// An optional field to select on the element of the resultants.
+    pub field: Option<String>,
+}
+
+/// Either a compiled document or compile arguments.
+type MayCompileOpts<'a> = Either<&'a NodeTypstDocument, CompileDocArgs>;
 
 /// Node wrapper to access compiler interfaces.
 #[napi]
@@ -171,37 +195,67 @@ impl NodeCompiler {
         self.driver.assert_ref().deref().snapshot()
     }
 
-    /// Compiles the document internally.
-    fn compile_raw(
-        &mut self,
-        opts: CompileDocumentOptions,
-    ) -> Result<NodeTypstCompileResult, NodeError> {
-        self.driver.assert_mut().compile_raw(opts)
+    /// Evict the **global** cache.
+    ///
+    /// This removes all memoized results from the cache whose age is larger
+    /// than or equal to `max_age`. The age of a result grows by one during
+    /// each eviction and is reset to zero when the result produces a cache
+    /// hit. Set `max_age` to zero to completely clear the cache.
+    ///
+    /// A suggested `max_age` value for regular non-watch tools is `10`.
+    /// A suggested `max_age` value for regular watch tools is `30`.
+    #[napi]
+    pub fn evict_cache(&self, max_age: u32) {
+        comemo::evict(usize::try_from(max_age).unwrap())
     }
 
-    /// Compiles the document as a specific type.
-    pub fn compile_as<T, O>(&mut self, compile_by: CompileDocumentOptions) -> Result<O, NodeError>
-    where
-        T: Exporter<TypstDocument, O> + Default,
-    {
-        let mut res = self.compile_raw(compile_by)?;
-        if let Some(diagnostics) = res.take_diagnostics() {
-            // todo: format diagnostics
-            return Err(Error::from_status(diagnostics));
-        }
+    /// Adds a source file to the compiler.
+    /// @param path - The path of the source file.
+    /// @param source - The source code of the source file.
+    #[napi]
+    pub fn add_source(&mut self, path: String, source: String) -> Result<(), NodeError> {
+        let content = Bytes::from(source.into_bytes());
+        let verse = self.driver.assert_mut().universe_mut();
+        let res = verse.map_shadow(Path::new(&path), content);
+        res.at(Span::detached()).map_err(map_node_error)
+    }
 
-        let e = T::default();
-        e.export(&self.spawn_world(), res.result().unwrap().0.clone())
-            .map_err(map_node_error)
+    /// Adds a shadow file to the compiler.
+    /// @param path - The path to the shadow file.
+    /// @param content - The content of the shadow file.
+    #[napi]
+    pub fn map_shadow(&mut self, path: String, content: Buffer) -> Result<(), NodeError> {
+        let content = Bytes::from(content.as_ref());
+        let verse = self.driver.assert_mut().universe_mut();
+        let res = verse.map_shadow(Path::new(&path), content);
+        res.at(Span::detached()).map_err(map_node_error)
+    }
+
+    /// Removes a shadow file from the compiler.
+    /// @param path - The path to the shadow file.
+    #[napi]
+    pub fn unmap_shadow(&mut self, path: String) -> Result<(), NodeError> {
+        let verse = self.driver.assert_mut().universe_mut();
+        let res = verse.unmap_shadow(Path::new(&path));
+        res.at(Span::detached()).map_err(map_node_error)
+    }
+
+    /// Resets the shadow files.
+    /// Note: this function is independent to the {@link reset} function.
+    #[napi]
+    pub fn reset_shadow(&mut self) {
+        self.driver.assert_mut().universe_mut().reset_shadow();
     }
 
     /// Compiles the document.
     #[napi]
-    pub fn compile(
-        &mut self,
-        opts: CompileDocumentOptions,
-    ) -> Result<NodeTypstCompileResult, NodeError> {
+    pub fn compile(&mut self, opts: CompileDocArgs) -> Result<NodeTypstCompileResult, NodeError> {
         self.compile_raw(opts)
+    }
+
+    /// Compiles the document internally.
+    fn compile_raw(&mut self, opts: CompileDocArgs) -> Result<NodeTypstCompileResult, NodeError> {
+        self.driver.assert_mut().compile_raw(opts)
     }
 
     /// Fetches the diagnostics of the document.
@@ -214,58 +268,87 @@ impl NodeCompiler {
     }
 
     /// Queries the data of the document.
-    #[napi]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs, args: QueryDocArgs")]
     pub fn query(
         &mut self,
-        doc: &NodeTypstDocument,
-        selector: String,
+        opts: MayCompileOpts,
+        args: QueryDocArgs,
     ) -> Result<serde_json::Value, NodeError> {
+        let doc = self.may_compile(opts)?;
+
         let compiler = self.driver.assert_mut();
         let world = compiler.snapshot();
-        let res = compiler
-            .query(&world, selector, &doc.0)
+        let elements = compiler
+            .query(&world, args.selector, &doc.0)
             .map_err(map_node_error)?;
 
-        serde_json::to_value(res)
+        let mapped: Vec<_> = elements
+            .into_iter()
+            .filter_map(|c| match &args.field {
+                Some(field) => c.get_by_name(field),
+                _ => Some(c.into_value()),
+            })
+            .collect();
+
+        serde_json::to_value(mapped)
             .context("failed to serialize query result to JSON")
             .map_err(map_node_error)
     }
 
-    /// Simply compiles the document as a vector IR.
-    #[napi]
-    pub fn vector(&mut self, opts: CompileDocumentOptions) -> Result<Buffer, NodeError> {
-        self.compile_as::<typst_ts_svg_exporter::SvgModuleExporter, _>(opts)
+    /// Compiles the document as a specific type.
+    pub fn may_compile(&mut self, opts: MayCompileOpts) -> Result<NodeTypstDocument, NodeError> {
+        Ok(match opts {
+            MayCompileOpts::A(doc) => doc.clone(),
+            MayCompileOpts::B(compile_by) => {
+                let mut res = self.compile_raw(compile_by)?;
+                if let Some(diagnostics) = res.take_diagnostics() {
+                    // todo: format diagnostics
+                    return Err(Error::from_status(diagnostics));
+                }
+
+                res.result().unwrap()
+            }
+        })
+    }
+
+    /// Compiles the document as a specific type.
+    pub fn compile_as<T, O, RO: From<O>>(&mut self, opts: MayCompileOpts) -> Result<RO, NodeError>
+    where
+        T: Exporter<TypstDocument, O> + Default,
+    {
+        let doc = self.may_compile(opts)?;
+
+        let e = T::default();
+        e.export(&self.spawn_world(), doc.0.clone())
+            .map_err(map_node_error)
             .map(From::from)
+    }
+
+    /// Simply compiles the document as a vector IR.
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
+    pub fn vector(&mut self, compiled_or_by: MayCompileOpts) -> Result<Buffer, NodeError> {
+        self.compile_as::<typst_ts_svg_exporter::SvgModuleExporter, _, _>(compiled_or_by)
     }
 
     /// Simply compiles the document as a PDF.
-    #[napi]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     #[cfg(feature = "pdf")]
-    pub fn pdf(&mut self, opts: CompileDocumentOptions) -> Result<Buffer, NodeError> {
-        self.compile_as::<typst_ts_pdf_exporter::PdfDocExporter, _>(opts)
-            .map(From::from)
+    pub fn pdf(&mut self, compiled_or_by: MayCompileOpts) -> Result<Buffer, NodeError> {
+        self.compile_as::<typst_ts_pdf_exporter::PdfDocExporter, _, _>(compiled_or_by)
     }
 
     /// Simply compiles the document as a plain SVG.
-    #[napi]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     #[cfg(feature = "svg")]
-    pub fn plain_svg(&mut self, opts: CompileDocumentOptions) -> Result<String, NodeError> {
-        let mut res = self.compile_raw(opts)?;
-        if let Some(diagnostics) = res.take_diagnostics() {
-            return Err(Error::from_status(diagnostics));
-        }
-
-        Ok(typst_svg::svg_merged(
-            &res.result().unwrap().0,
-            Default::default(),
-        ))
+    pub fn plain_svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
+        self.compile_as::<PlainSvgExporter, _, _>(compiled_or_by)
     }
 
     /// Simply compiles the document as a rich-contented SVG (for browsers).
-    #[napi]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     #[cfg(feature = "svg")]
-    pub fn svg(&mut self, opts: CompileDocumentOptions) -> Result<String, NodeError> {
-        self.compile_as::<typst_ts_svg_exporter::PureSvgExporter, _>(opts)
+    pub fn svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
+        self.compile_as::<typst_ts_svg_exporter::PureSvgExporter, _, _>(compiled_or_by)
     }
 }
 
@@ -293,7 +376,7 @@ impl DynLayoutCompiler {
 
     /// Exports the document as a vector IR containing multiple layouts.
     #[napi]
-    pub fn vector(&mut self, compile_by: CompileDocumentOptions) -> Result<Buffer, NodeError> {
+    pub fn vector(&mut self, compile_by: CompileDocArgs) -> Result<Buffer, NodeError> {
         let compiler = self.driver.inner_mut();
         let world = compiler.snapshot();
         let e = compiler.setup_compiler_by(compile_by)?;
@@ -311,5 +394,14 @@ impl DynLayoutCompiler {
         }
 
         Ok(doc?.1.to_bytes().into())
+    }
+}
+
+#[derive(Default)]
+struct PlainSvgExporter {}
+
+impl Exporter<TypstDocument, String> for PlainSvgExporter {
+    fn export(&self, _world: &dyn TypstWorld, output: Arc<TypstDocument>) -> SourceResult<String> {
+        Ok(typst_svg::svg_merged(&output, Default::default()))
     }
 }

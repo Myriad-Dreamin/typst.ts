@@ -17,7 +17,7 @@ use typst_ts_core::{
     Bytes, TypstDocument, TypstFileId,
 };
 
-use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocumentOptions, NodeError};
+use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocArgs, NodeError};
 
 // <World = TypstSystemWorld>
 pub trait NodeCompilerTrait: Compiler
@@ -56,7 +56,7 @@ type SourceResult<T> = Result<T, EcoVec<TypstSourceDiagnostic>>;
 impl BoxedCompiler {
     pub fn setup_compiler_by(
         &mut self,
-        compile_by: CompileDocumentOptions,
+        compile_by: CompileDocArgs,
     ) -> napi::Result<Option<EntryState>, NodeError> {
         let world = self.0.universe_mut();
         let new_state = {
@@ -120,11 +120,15 @@ impl BoxedCompiler {
 
     pub fn compile_raw(
         &mut self,
-        compile_by: CompileDocumentOptions,
+        compile_by: CompileDocArgs,
     ) -> napi::Result<NodeTypstCompileResult, NodeError> {
         let e = self.setup_compiler_by(compile_by)?;
 
-        let res = self.0.compile(&mut CompileEnv::default()).into();
+        let res = if self.0.universe().entry_state().is_inactive() {
+            Err(map_node_error(error_once!("entry file is not set")))
+        } else {
+            Ok(self.0.compile(&mut CompileEnv::default()).into())
+        };
 
         if let Some(entry_file) = e {
             self.0
@@ -133,7 +137,7 @@ impl BoxedCompiler {
                 .map_err(map_node_error)?;
         }
 
-        Ok(res)
+        res
     }
 }
 

@@ -23,19 +23,16 @@
   "napi": {
     "binaryName": "typst-ts-node-compiler",
     "// todo triple": "x86_64-unknown-freebsd",
-    "triples": {
-      "defaults": true,
-      "additional": [
-        "x86_64-unknown-linux-musl",
-        "aarch64-unknown-linux-gnu",
-        "aarch64-apple-darwin",
-        "aarch64-linux-android",
-        "armv7-unknown-linux-gnueabihf",
-        "aarch64-unknown-linux-musl",
-        "aarch64-pc-windows-msvc",
-        "armv7-linux-androideabi"
-      ]
-    }
+    "targets": [
+      "x86_64-unknown-linux-musl",
+      "aarch64-unknown-linux-gnu",
+      "aarch64-apple-darwin",
+      "aarch64-linux-android",
+      "armv7-unknown-linux-gnueabihf",
+      "aarch64-unknown-linux-musl",
+      "aarch64-pc-windows-msvc",
+      "armv7-linux-androideabi"
+    ]
   },
   "engines": {
     "node": ">= 10"

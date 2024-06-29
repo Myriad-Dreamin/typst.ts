@@ -11,6 +11,7 @@ use crate::NodeTypstDocument;
 
 /// The error status of a node error.
 pub enum NodeErrorStatus {
+    Raw(napi::Error),
     Error(typst_ts_core::error::Error),
     Diagnostics(EcoVec<TypstSourceDiagnostic>),
 }
@@ -18,7 +19,8 @@ pub enum NodeErrorStatus {
 impl fmt::Display for NodeErrorStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            NodeErrorStatus::Error(e) => write!(f, "{}", e),
+            NodeErrorStatus::Raw(e) => write!(f, "{e}"),
+            NodeErrorStatus::Error(e) => write!(f, "{e}"),
             NodeErrorStatus::Diagnostics(diagnostics) => {
                 let mut linefeed = false;
                 for (idx, diagnostic) in diagnostics.iter().enumerate() {
@@ -45,6 +47,7 @@ impl NodeError {
     #[napi(getter)]
     pub fn kind(&self) -> String {
         match &self.1 {
+            NodeErrorStatus::Raw(_) => "raw".to_string(),
             NodeErrorStatus::Error(_) => "error".to_string(),
             NodeErrorStatus::Diagnostics(_) => "diagnostics".to_string(),
         }
@@ -72,7 +75,7 @@ impl NodeError {
     #[napi(getter)]
     pub fn compilation_status(&self) -> String {
         let stat = match &self.1 {
-            NodeErrorStatus::Error(_) => "internal_error",
+            NodeErrorStatus::Raw(_) | NodeErrorStatus::Error(_) => "internal_error",
             NodeErrorStatus::Diagnostics(_) => {
                 let (has_error, has_warning) = self.get_diagnostics().fold(
                     (false, false),
@@ -113,11 +116,17 @@ impl NodeError {
 
     pub fn get_diagnostics<'a>(&self) -> impl Iterator<Item = TypstSourceDiagnostic> + 'a {
         let iter = match &self.1 {
-            NodeErrorStatus::Error(_) => None,
+            NodeErrorStatus::Raw(_) | NodeErrorStatus::Error(_) => None,
             NodeErrorStatus::Diagnostics(diagnostics) => Some(diagnostics.clone().into_iter()),
         };
 
         iter.into_iter().flatten()
+    }
+}
+
+impl From<napi::Error> for NodeError {
+    fn from(e: napi::Error) -> Self {
+        NodeError(OnceCell::new(), NodeErrorStatus::Raw(e))
     }
 }
 
