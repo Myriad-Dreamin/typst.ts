@@ -16,7 +16,10 @@ use serde::{Deserialize, Serialize};
 use typst_ts_compiler::{
     Compiler, DynamicLayoutCompiler, EntryManager, SystemCompilerFeat, TypstSystemWorld,
 };
-use typst_ts_core::{error::prelude::*, Exporter, TypstAbs, TypstDatetime, TypstDocument};
+use typst_ts_core::{
+    diag::SourceResult, error::prelude::*, Exporter, TypstAbs, TypstDatetime, TypstDocument,
+    TypstWorld,
+};
 
 /// A shared typst document object.
 #[napi]
@@ -112,6 +115,8 @@ pub struct CompileDocumentOptions {
     pub inputs: Option<HashMap<String, String>>,
 }
 
+type MayCompileOpts<'a> = Either<&'a NodeTypstDocument, CompileDocumentOptions>;
+
 /// Node wrapper to access compiler interfaces.
 #[napi]
 pub struct NodeCompiler {
@@ -179,20 +184,49 @@ impl NodeCompiler {
         self.driver.assert_mut().compile_raw(opts)
     }
 
-    /// Compiles the document as a specific type.
-    pub fn compile_as<T, O>(&mut self, compile_by: CompileDocumentOptions) -> Result<O, NodeError>
+    /// Exports the document as a specific type.
+    pub fn export_as<T, O>(&mut self, doc: NodeTypstDocument) -> Result<O, NodeError>
     where
         T: Exporter<TypstDocument, O> + Default,
     {
-        let mut res = self.compile_raw(compile_by)?;
-        if let Some(diagnostics) = res.take_diagnostics() {
-            // todo: format diagnostics
-            return Err(Error::from_status(diagnostics));
-        }
-
         let e = T::default();
-        e.export(&self.spawn_world(), res.result().unwrap().0.clone())
+        e.export(&self.spawn_world(), doc.0.clone())
             .map_err(map_node_error)
+    }
+
+    /// Compiles the document as a specific type.
+    pub fn compile_as<T, O>(&mut self, opts: MayCompileOpts) -> Result<O, NodeError>
+    where
+        T: Exporter<TypstDocument, O> + Default,
+    {
+        let doc = match opts {
+            MayCompileOpts::A(doc) => doc.clone(),
+            MayCompileOpts::B(compile_by) => {
+                let mut res = self.compile_raw(compile_by)?;
+                if let Some(diagnostics) = res.take_diagnostics() {
+                    // todo: format diagnostics
+                    return Err(Error::from_status(diagnostics));
+                }
+
+                res.result().unwrap()
+            }
+        };
+
+        self.export_as::<T, O>(doc)
+    }
+
+    /// Evict the **global** cache.
+    ///
+    /// This removes all memoized results from the cache whose age is larger
+    /// than or equal to `max_age`. The age of a result grows by one during
+    /// each eviction and is reset to zero when the result produces a cache
+    /// hit. Set `max_age` to zero to completely clear the cache.
+    ///
+    /// A suggested `max_age` value for regular non-watch tools is `10`.
+    /// A suggested `max_age` value for regular watch tools is `30`.
+    #[napi]
+    pub fn clear_cache(&self, max_age: u32) {
+        comemo::evict(usize::try_from(max_age).unwrap())
     }
 
     /// Compiles the document.
@@ -232,40 +266,32 @@ impl NodeCompiler {
     }
 
     /// Simply compiles the document as a vector IR.
-    #[napi]
-    pub fn vector(&mut self, opts: CompileDocumentOptions) -> Result<Buffer, NodeError> {
-        self.compile_as::<typst_ts_svg_exporter::SvgModuleExporter, _>(opts)
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocumentOptions")]
+    pub fn vector(&mut self, compiled_or_by: MayCompileOpts) -> Result<Buffer, NodeError> {
+        self.compile_as::<typst_ts_svg_exporter::SvgModuleExporter, _>(compiled_or_by)
             .map(From::from)
     }
 
     /// Simply compiles the document as a PDF.
-    #[napi]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocumentOptions")]
     #[cfg(feature = "pdf")]
-    pub fn pdf(&mut self, opts: CompileDocumentOptions) -> Result<Buffer, NodeError> {
-        self.compile_as::<typst_ts_pdf_exporter::PdfDocExporter, _>(opts)
+    pub fn pdf(&mut self, compiled_or_by: MayCompileOpts) -> Result<Buffer, NodeError> {
+        self.compile_as::<typst_ts_pdf_exporter::PdfDocExporter, _>(compiled_or_by)
             .map(From::from)
     }
 
     /// Simply compiles the document as a plain SVG.
-    #[napi]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocumentOptions")]
     #[cfg(feature = "svg")]
-    pub fn plain_svg(&mut self, opts: CompileDocumentOptions) -> Result<String, NodeError> {
-        let mut res = self.compile_raw(opts)?;
-        if let Some(diagnostics) = res.take_diagnostics() {
-            return Err(Error::from_status(diagnostics));
-        }
-
-        Ok(typst_svg::svg_merged(
-            &res.result().unwrap().0,
-            Default::default(),
-        ))
+    pub fn plain_svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
+        self.compile_as::<PlainSvgExporter, _>(compiled_or_by)
     }
 
     /// Simply compiles the document as a rich-contented SVG (for browsers).
-    #[napi]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocumentOptions")]
     #[cfg(feature = "svg")]
-    pub fn svg(&mut self, opts: CompileDocumentOptions) -> Result<String, NodeError> {
-        self.compile_as::<typst_ts_svg_exporter::PureSvgExporter, _>(opts)
+    pub fn svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
+        self.compile_as::<typst_ts_svg_exporter::PureSvgExporter, _>(compiled_or_by)
     }
 }
 
@@ -311,5 +337,14 @@ impl DynLayoutCompiler {
         }
 
         Ok(doc?.1.to_bytes().into())
+    }
+}
+
+#[derive(Default)]
+struct PlainSvgExporter {}
+
+impl Exporter<TypstDocument, String> for PlainSvgExporter {
+    fn export(&self, _world: &dyn TypstWorld, output: Arc<TypstDocument>) -> SourceResult<String> {
+        Ok(typst_svg::svg_merged(&output, Default::default()))
     }
 }
