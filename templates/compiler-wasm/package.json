@@ -2,7 +2,7 @@
   "name": "@myriaddreamin/typst-template-compiler-wasm",
   "private": true,
   "version": "1.0.0",
-  "description": "Template for run wasm compiler using @myriaddreamin/typst.ts",
+  "description": "Template for run typst compiler using @myriaddreamin/typst.ts and @myriaddreamin/typst-ts-web-compiler",
   "module": "dist/esm/main.js",
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
