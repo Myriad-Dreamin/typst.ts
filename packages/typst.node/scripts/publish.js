@@ -17,9 +17,12 @@ const dirs = [
 
 for (const dir of dirs) {
   console.log(`Publish ${dir}`);
-  const result = execSync('npm publish --verbose --provenance --access public', {
-    stdio: 'inherit',
-    cwd: `./npm/${dir}`,
-  });
-  console.log(result.toString());
+  try {
+    execSync('npm publish --verbose --provenance --access public', {
+      stdio: 'inherit',
+      cwd: `./npm/${dir}`,
+    })
+  } catch (error) {
+    console.error(`Publishing ${dir}`, error);
+  }
 }
