@@ -7,17 +7,13 @@
 
 import { fromHtmlIsomorphic } from 'hast-util-from-html-isomorphic'
 import { toText } from 'hast-util-to-text'
-import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs'
+import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler'
 import { SKIP, visitParents } from 'unist-util-visit-parents'
-import { cachedFontInitOptions } from './cached-font-middleware.js'
 /** @type {Readonly<Options>} */
 const emptyOptions = {}
 /** @type {ReadonlyArray<unknown>} */
 const emptyClasses = []
-$typst.setCompilerInitOptions(await cachedFontInitOptions());
-await $typst.svg({
-  mainContent: ''
-})
+
 /**
  * Render elements with a `language-math` (or `math-display`, `math-inline`)
  * class with KaTeX.
@@ -143,7 +139,25 @@ export default function rehypeTypst(options) {
   }
 }
 
+/**
+ * @type {NodeCompiler}
+ */
+let compilerIns;
+
 async function renderToSVGString(code, displayMode) {
+  const $typst = (compilerIns ||= NodeCompiler.create(NodeCompiler.defaultCompileArgs()))
+  const res = renderToSVGString_($typst, code, displayMode);
+  $typst.clearCache(10);
+  return res;
+}
+
+/**
+ * 
+ * @param {NodeCompiler} $typst 
+ * @returns 
+ */
+async function renderToSVGString_($typst, code, displayMode) {
+
   const inlineMathTemplate = `
 #set page(height: auto, width: auto, margin: 0pt)
 
@@ -168,17 +182,23 @@ $pin("l1")${code}$
 
 $ ${code} $
 `
-  const mainFilePath = `/main-${Math.random().toString(36).substring(2, 15)}.typ`
-  const mainContent = displayMode ? displayMathTemplate : inlineMathTemplate
-  $typst.addSource(mainFilePath, mainContent)
-  const svg = await $typst.svg({ mainFilePath })
+const mainFileContent = displayMode ? displayMathTemplate : inlineMathTemplate
+  const docRes = $typst.compile({ mainFileContent });
+  if (!docRes.result) {
+    const diags = $typst.fetchDiagnostics(docRes.takeDiagnostics());
+    console.error(diags);
+    return;
+  }
+  const doc = docRes.result;
+
+  const svg = $typst.svg(doc)
   const res = {
     svg,
   }
   if (!displayMode) {
-    const query = await $typst.query({ mainFilePath, selector: '<label>', field: 'value' })
+    const query = $typst.query(doc, '<label>');
     // parse baselinePosition from query ignore last 2 chars
-    res.baselinePosition = parseFloat(query[0].slice(0, -2))
+    res.baselinePosition = parseFloat(query[0].value.slice(0, -2))
   }
 
   return res
