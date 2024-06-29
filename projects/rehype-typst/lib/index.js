@@ -187,7 +187,7 @@ const mainFileContent = displayMode ? displayMathTemplate : inlineMathTemplate
   if (!docRes.result) {
     const diags = $typst.fetchDiagnostics(docRes.takeDiagnostics());
     console.error(diags);
-    return;
+    return {};
   }
   const doc = docRes.result;
 
