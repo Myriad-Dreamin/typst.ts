@@ -14,7 +14,7 @@ export class DynLayoutCompiler {
   /** Creates a new compiler based on the given arguments. */
   static fromBoxed(b: BoxedCompiler): DynLayoutCompiler;
   /** Exports the document as a vector IR containing multiple layouts. */
-  vector(compileBy: CompileDocumentOptions): Buffer;
+  vector(compileBy: CompileDocArgs): Buffer;
 }
 
 /** Node wrapper to access compiler interfaces. */
@@ -56,21 +56,43 @@ export class NodeCompiler {
    * A suggested `max_age` value for regular non-watch tools is `10`.
    * A suggested `max_age` value for regular watch tools is `30`.
    */
-  clearCache(maxAge: number): void;
+  evictCache(maxAge: number): void;
+  /**
+   * Adds a source file to the compiler.
+   * @param path - The path of the source file.
+   * @param source - The source code of the source file.
+   */
+  addSource(path: string, source: string): void;
+  /**
+   * Adds a shadow file to the compiler.
+   * @param path - The path to the shadow file.
+   * @param content - The content of the shadow file.
+   */
+  mapShadow(path: string, content: Buffer): void;
+  /**
+   * Removes a shadow file from the compiler.
+   * @param path - The path to the shadow file.
+   */
+  unmapShadow(path: string): void;
+  /**
+   * Resets the shadow files.
+   * Note: this function is independent to the {@link reset} function.
+   */
+  resetShadow(): void;
   /** Compiles the document. */
-  compile(opts: CompileDocumentOptions): NodeTypstCompileResult;
+  compile(opts: CompileDocArgs): NodeTypstCompileResult;
   /** Fetches the diagnostics of the document. */
   fetchDiagnostics(opts: NodeError): Array<any>;
   /** Queries the data of the document. */
-  query(doc: NodeTypstDocument, selector: string): any;
+  query(compiledOrBy: NodeTypstDocument | CompileDocArgs, args: QueryDocArgs): any;
   /** Simply compiles the document as a vector IR. */
-  vector(compiledOrBy: NodeTypstDocument | CompileDocumentOptions): Buffer;
+  vector(compiledOrBy: NodeTypstDocument | CompileDocArgs): Buffer;
   /** Simply compiles the document as a PDF. */
-  pdf(compiledOrBy: NodeTypstDocument | CompileDocumentOptions): Buffer;
+  pdf(compiledOrBy: NodeTypstDocument | CompileDocArgs): Buffer;
   /** Simply compiles the document as a plain SVG. */
-  plainSvg(compiledOrBy: NodeTypstDocument | CompileDocumentOptions): string;
+  plainSvg(compiledOrBy: NodeTypstDocument | CompileDocArgs): string;
   /** Simply compiles the document as a rich-contented SVG (for browsers). */
-  svg(compiledOrBy: NodeTypstDocument | CompileDocumentOptions): string;
+  svg(compiledOrBy: NodeTypstDocument | CompileDocArgs): string;
 }
 
 /** A node error. */
@@ -145,12 +167,12 @@ export interface CompileArgs {
 }
 
 /**
- * Options to compile a document.
+ * Arguments to compile a document.
  *
  * If no `mainFileContent` or `mainFilePath` is specified, the compiler will
  * use the entry file specified in the constructor of `NodeCompiler`.
  */
-export interface CompileDocumentOptions {
+export interface CompileDocArgs {
   /**
    * Directly specify the main file content.
    * Exclusive with `mainFilePath`.
@@ -173,4 +195,12 @@ export interface NodeAddFontBlobs {
 export interface NodeAddFontPaths {
   /** Adds additional directories to search for fonts */
   fontPaths: Array<string>;
+}
+
+/** Arguments to query the document. */
+export interface QueryDocArgs {
+  /** The query selector. */
+  selector: string;
+  /** An optional field to select on the element of the resultants. */
+  field?: string;
 }

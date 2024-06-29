@@ -34,7 +34,7 @@ test('it queries label in `Hello, Typst! <my-label>`', t => {
 Hello, Typst! <my-label>
 `,
   }).result;
-  t.snapshot(doc && compiler.query(doc, `<my-label>`));
+  t.snapshot(doc && compiler.query(doc, { selector: `<my-label>` }));
 });
 
 test('it vec by arguments', t => {

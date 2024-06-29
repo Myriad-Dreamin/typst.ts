@@ -17,7 +17,7 @@ use typst_ts_core::{
     Bytes, TypstDocument, TypstFileId,
 };
 
-use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocumentOptions, NodeError};
+use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocArgs, NodeError};
 
 // <World = TypstSystemWorld>
 pub trait NodeCompilerTrait: Compiler
@@ -56,7 +56,7 @@ type SourceResult<T> = Result<T, EcoVec<TypstSourceDiagnostic>>;
 impl BoxedCompiler {
     pub fn setup_compiler_by(
         &mut self,
-        compile_by: CompileDocumentOptions,
+        compile_by: CompileDocArgs,
     ) -> napi::Result<Option<EntryState>, NodeError> {
         let world = self.0.universe_mut();
         let new_state = {
@@ -120,7 +120,7 @@ impl BoxedCompiler {
 
     pub fn compile_raw(
         &mut self,
-        compile_by: CompileDocumentOptions,
+        compile_by: CompileDocArgs,
     ) -> napi::Result<NodeTypstCompileResult, NodeError> {
         let e = self.setup_compiler_by(compile_by)?;
 
