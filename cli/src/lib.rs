@@ -12,6 +12,7 @@ pub mod tracing;
 pub mod utils;
 pub mod version;
 
+use chrono::{DateTime, Utc};
 use clap::{builder::ValueParser, ArgAction, Args, Command, Parser, Subcommand, ValueEnum};
 use typst_ts_core::build_info::VERSION;
 use version::VersionFormat;
@@ -168,9 +169,16 @@ fn parse_input_pair(raw: &str) -> Result<(String, String), String> {
 #[derive(Default, Debug, Clone, Parser)]
 #[clap(next_help_heading = "Export options")]
 pub struct ExportArgs {
-    /// Export pdf with timestamp.
-    #[clap(long, default_value_t = false)]
-    pub pdf_timestamp: bool,
+    /// The document's creation date formatted as a UNIX timestamp.
+    ///
+    /// For more information, see <https://reproducible-builds.org/specs/source-date-epoch/>.
+    #[clap(
+        long = "creation-timestamp",
+        env = "SOURCE_DATE_EPOCH",
+        value_name = "UNIX_TIMESTAMP",
+        value_parser = parse_source_date_epoch,
+    )]
+    pub creation_timestamp: Option<DateTime<Utc>>,
 }
 
 #[derive(Default, Debug, Clone, Parser)]
@@ -372,4 +380,12 @@ impl fmt::Display for DiagnosticFormat {
 pub fn get_cli(sub_command_required: bool) -> Command {
     let cli = Command::new("$").disable_version_flag(true);
     Opts::augment_args(cli).subcommand_required(sub_command_required)
+}
+
+/// Parses a UNIX timestamp according to <https://reproducible-builds.org/specs/source-date-epoch/>
+fn parse_source_date_epoch(raw: &str) -> Result<DateTime<Utc>, String> {
+    let timestamp: i64 = raw
+        .parse()
+        .map_err(|err| format!("timestamp must be decimal integer ({err})"))?;
+    DateTime::from_timestamp(timestamp, 0).ok_or_else(|| "timestamp out of range".to_string())
 }

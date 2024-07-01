@@ -48,14 +48,24 @@ Hello, Typst! <my-label>
   );
 });
 
-test('it vec by compiled artifact', t => {
+test('it pdf by compiled artifact', t => {
   const compiler = defaultCompiler();
   const doc = compiler.compile({
     mainFileContent: `
 Hello, Typst! <my-label>
 `,
   }).result;
-  t.truthy(doc && compiler.vector(doc));
+  t.truthy(doc && compiler.pdf(doc));
+});
+
+test('it pdf by compiled artifact and timestamp', t => {
+  const compiler = defaultCompiler();
+  const doc = compiler.compile({
+    mainFileContent: `
+Hello, Typst! <my-label>
+`,
+  }).result;
+  t.truthy(doc && compiler.pdf(doc, { creationTimestamp: Date.now() }));
 });
 
 test('it throws error`', t => {
