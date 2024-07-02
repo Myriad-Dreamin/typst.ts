@@ -6,7 +6,7 @@ use std::{
 };
 use typst_ts_compiler::{
     CompileDriver, CompileEnv, Compiler, EntryManager, EntryReader, PureCompiler, ShadowApi,
-    TypstSystemWorld,
+    TaskInputs, TypstSystemWorld,
 };
 use typst_ts_core::{
     config::compiler::{EntryState, MEMORY_MAIN_ENTRY},
@@ -54,11 +54,13 @@ impl From<CompileDriver<PureCompiler<TypstSystemWorld>>> for BoxedCompiler {
 type SourceResult<T> = Result<T, EcoVec<TypstSourceDiagnostic>>;
 
 impl BoxedCompiler {
+    /// Create a temporary world for compiling once.
+    /// Should be pure and not affect the current world.
     pub fn setup_compiler_by(
         &mut self,
         compile_by: CompileDocArgs,
-    ) -> napi::Result<Option<EntryState>, NodeError> {
-        let world = self.0.universe_mut();
+    ) -> napi::Result<TypstSystemWorld, NodeError> {
+        let universe = self.universe();
         let new_state = {
             if let Some(main_file_content) = compile_by.main_file_content {
                 if compile_by.main_file_path.is_some() {
@@ -67,10 +69,16 @@ impl BoxedCompiler {
                     )));
                 }
 
-                let new_entry = world.entry_state().select_in_workspace(*MEMORY_MAIN_ENTRY);
+                let new_entry = universe
+                    .entry_state()
+                    .select_in_workspace(*MEMORY_MAIN_ENTRY);
 
                 let content = Bytes::from(main_file_content.as_bytes());
-                if let Err(err) = world.map_shadow_by_id(*MEMORY_MAIN_ENTRY, content) {
+                // TODO: eliminate the side effect of shadow mapping safely
+                if let Err(err) = self
+                    .universe_mut()
+                    .map_shadow_by_id(*MEMORY_MAIN_ENTRY, content)
+                {
                     return Err(map_node_error(error_once!("cannot map shadow", err: err)));
                 }
 
@@ -83,16 +91,12 @@ impl BoxedCompiler {
                 }
 
                 let fp = std::path::Path::new(main_file_path.as_str());
-                Some(match world.workspace_root() {
+                Some(match universe.workspace_root() {
                     Some(root) => {
-                        if let Ok(p) = root.strip_prefix(fp) {
-                            EntryState::new_rooted(
-                                root.clone(),
-                                Some(TypstFileId::new(
-                                    None,
-                                    typst_ts_core::typst::syntax::VirtualPath::new(p),
-                                )),
-                            )
+                        if let Some(vp) =
+                            typst_ts_core::typst::syntax::VirtualPath::within_root(fp, &root)
+                        {
+                            EntryState::new_rooted(root, Some(TypstFileId::new(None, vp)))
                         } else {
                             EntryState::new_rootless(fp.into()).unwrap()
                         }
@@ -108,34 +112,27 @@ impl BoxedCompiler {
             }
         };
 
-        let Some(new_state) = new_state else {
-            return Ok(None);
-        };
-
-        world
-            .mutate_entry(new_state)
-            .map(Some)
-            .map_err(map_node_error)
+        Ok(self.universe.snapshot_with(Some(TaskInputs {
+            entry: new_state,
+            ..Default::default()
+        })))
     }
 
     pub fn compile_raw(
         &mut self,
         compile_by: CompileDocArgs,
     ) -> napi::Result<NodeTypstCompileResult, NodeError> {
-        let e = self.setup_compiler_by(compile_by)?;
+        let world = self.setup_compiler_by(compile_by)?;
 
         let res = if self.0.universe().entry_state().is_inactive() {
             Err(map_node_error(error_once!("entry file is not set")))
         } else {
-            Ok(self.0.compile(&mut CompileEnv::default()).into())
+            Ok(self
+                .0
+                .compiler
+                .compile(&world, &mut CompileEnv::default())
+                .into())
         };
-
-        if let Some(entry_file) = e {
-            self.0
-                .universe_mut()
-                .mutate_entry(entry_file)
-                .map_err(map_node_error)?;
-        }
 
         res
     }

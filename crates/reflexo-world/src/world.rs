@@ -205,7 +205,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
         })
     }
 
-    /// Mutate the entry state.
+    /// Mutate the entry state and return the old state.
     fn mutate_entry_(&mut self, mut state: EntryState) -> SourceResult<EntryState> {
         self.reset();
         std::mem::swap(&mut self.entry, &mut state);

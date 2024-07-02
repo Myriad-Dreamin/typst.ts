@@ -19,7 +19,7 @@ use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 use typst_ts_compiler::{
-    Compiler, DynamicLayoutCompiler, EntryManager, ShadowApi, SystemCompilerFeat, TypstSystemWorld,
+    Compiler, DynamicLayoutCompiler, ShadowApi, SystemCompilerFeat, TypstSystemWorld,
 };
 use typst_ts_core::{
     diag::{At, SourceResult},
@@ -378,20 +378,11 @@ impl DynLayoutCompiler {
     #[napi]
     pub fn vector(&mut self, compile_by: CompileDocArgs) -> Result<Buffer, NodeError> {
         let compiler = self.driver.inner_mut();
-        let world = compiler.snapshot();
-        let e = compiler.setup_compiler_by(compile_by)?;
+        let world = compiler.setup_compiler_by(compile_by)?;
         let doc = self
             .driver
             .do_export(&world, &mut Default::default())
             .map_err(map_node_error);
-
-        if let Some(e) = e {
-            self.driver
-                .inner_mut()
-                .universe_mut()
-                .mutate_entry(e)
-                .map_err(map_node_error)?;
-        }
 
         Ok(doc?.1.to_bytes().into())
     }
