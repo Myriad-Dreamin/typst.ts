@@ -124,7 +124,7 @@ impl BoxedCompiler {
     ) -> napi::Result<NodeTypstCompileResult, NodeError> {
         let world = self.setup_compiler_by(compile_by)?;
 
-        let res = if self.0.universe().entry_state().is_inactive() {
+        if self.0.universe().entry_state().is_inactive() {
             Err(map_node_error(error_once!("entry file is not set")))
         } else {
             Ok(self
@@ -132,9 +132,7 @@ impl BoxedCompiler {
                 .compiler
                 .compile(&world, &mut CompileEnv::default())
                 .into())
-        };
-
-        res
+        }
     }
 }
 
