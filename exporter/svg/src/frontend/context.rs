@@ -295,6 +295,10 @@ impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
         mut group_ctx: SvgTextBuilder,
         text: &TextItem,
     ) -> SvgTextBuilder {
+        if text.shape.size.0 == 0. {
+            return group_ctx;
+        }
+
         let font = self.get_font(&text.shape.font).unwrap();
 
         // upem is the unit per em defined in the font.

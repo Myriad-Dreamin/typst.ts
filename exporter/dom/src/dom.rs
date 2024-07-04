@@ -73,7 +73,7 @@ struct CanvasRenderState {
 impl DomPage {
     pub fn new_at(elem: HtmlElement, tmpl: XmlFactory, idx: usize) -> Self {
         // https://stackoverflow.com/questions/20242806/hole-in-overlay-with-css
-        const TEMPLATE: &str = r#"<div class="typst-dom-page"><canvas class="typst-back-canvas" style="--reflexo-clip-lo-x: 100px; --reflexo-clip-lo-y: 100px; --reflexo-clip-hi-x: 600px; --reflexo-clip-hi-y: 1000px; clip-path: polygon( evenodd, 0 0, 100% 0, 100% 100%, 0% 100%, 0 0, var(--reflexo-clip-lo-x) var(--reflexo-clip-lo-y), var(--reflexo-clip-hi-x) var(--reflexo-clip-lo-y), var(--reflexo-clip-hi-x) var(--reflexo-clip-hi-y), var(--reflexo-clip-lo-x) var(--reflexo-clip-hi-y), var(--reflexo-clip-lo-x) var(--reflexo-clip-lo-y))"></canvas><svg class="typst-svg-page" viewBox="0 0 0 0" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">
+        const TEMPLATE: &str = r#"<div class="typst-dom-page"><canvas class="typst-back-canvas" style="--reflexo-clip-lo-x: 0px; --reflexo-clip-lo-y: 0px; --reflexo-clip-hi-x: 0px; --reflexo-clip-hi-y: 0px; clip-path: polygon( evenodd, 0 0, 100% 0, 100% 100%, 0% 100%, 0 0, var(--reflexo-clip-lo-x) var(--reflexo-clip-lo-y), var(--reflexo-clip-hi-x) var(--reflexo-clip-lo-y), var(--reflexo-clip-hi-x) var(--reflexo-clip-hi-y), var(--reflexo-clip-lo-x) var(--reflexo-clip-hi-y), var(--reflexo-clip-lo-x) var(--reflexo-clip-lo-y))"></canvas><svg class="typst-svg-page" viewBox="0 0 0 0" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">
 <g></g><stub></stub></svg><div class="typst-html-semantics"><div/></div>"#;
 
         let me = tmpl.create_element(TEMPLATE);
