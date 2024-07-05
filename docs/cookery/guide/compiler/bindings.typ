@@ -1,13 +1,11 @@
-#import "/docs/cookery/book.typ": book-page
+#import "/docs/cookery/book.typ": *
 
-#show: book-page.with(title: "Serverless Compiler")
-
-= Serverless Compiler
+#show: book-page.with(title: "Compiler in Wasm (Web)")
 
 #let snippet-source = "https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/src/contrib/snippet.mts"
 #let snippet-lib = link(snippet-source)[`snippet`]
 
-The most simple examples always work with #snippet-lib utility library, an all-in-one JavaScript Library with simplified API interfaces:
+The most simple examples always work with #snippet-lib utility library, an all-in-one library with simplified API interfaces:
 
 ```ts
 import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs';
@@ -16,7 +14,7 @@ console.log((await $typst.svg({
 // :-> 7317
 ```
 
-Please check #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/all-in-one.html")[All-in-one (Simplified) JavaScript Library] for more details.
+Please check #cross-link("/guide/all-in-one.typ")[All-in-one (Simplified) Library for Browsers] for more details.
 
 Quick example for the harder way to serverless compiler:
 
@@ -75,5 +73,16 @@ const artifactData = await compiler.compile({
   mainFilePath: '/main.typ',
   // the default value of format field:
   // format: 'vector',
+});
+```
+
+== Specify extra initialization options
+
+You must specify the extra init options when calling the `init` function. For example, to load the wasm module from a custom path:
+
+```js
+await cc.init({
+  getModule: () =>
+    '/path/to/typst_ts_web_compiler_bg.wasm',
 });
 ```

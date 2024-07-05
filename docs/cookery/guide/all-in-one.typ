@@ -1,13 +1,13 @@
-#import "/docs/cookery/book.typ": book-page
+#import "/docs/cookery/book.typ": *
 
-#show: book-page.with(title: "All-in-one (Simplified) JavaScript Library")
+#show: book-page.with(title: "All-in-one (Simplified) Library for Browsers")
 
-= All-in-one (Simplified) JavaScript Library
+Note: This is suitable for running in browser. If you want to run the compiler in Node.js, please see #cross-link("/guide/compiler/bindings.typ")[Compiler in Wasm/Node.js].
 
 #let snippet-source = "https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/src/contrib/snippet.mts"
 #let snippet-lib = link(snippet-source)[`snippet.mts`]
 
-The most simple examples always work with #snippet-lib utility library, an all-in-one JavaScript Library with simplified API interfaces:
+The most simple examples always work with #snippet-lib utility library, an all-in-one library with simplified API interfaces:
 
 ```ts
 import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs';
@@ -35,9 +35,6 @@ Here are some examples for the #snippet-lib utility library.
 import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs';
 ```
 
-Note: if you want to compile multiple documents, you should create a new instance for each compilation work or maintain the shared state on the utility instance `$typst` carefully,
-because the compilation process may change the state of that.
-
 === Example: Create an instance of the utility class:
 
 ```typescript
@@ -54,65 +51,7 @@ const $typst = new TypstSnippet({
 });
 ```
 
-=== Example: get output from input
-
-get output with *single input file*:
-
-```ts
-const mainContent = 'Hello, typst!';
-// into vector format
-await $typst.vector({ mainContent });
-// into svg format
-await $typst.svg({ mainContent });
-// into pdf format
-await $typst.pdf({ mainContent });
-// into canvas operations
-await $typst.canvas(div, { mainContent });
-```
-
-get output with *multiple input files*:
-
-```ts
-// the default value of main path is '/main.typ'
-await $typst.addSource('/main.typ', mainContent);
-
-// set path to main file
-const mainFilePath = '/tasks/1/main.typ';
-await $typst.setMainFilePath(mainFilePath)
-await $typst.addSource(mainFilePath, mainContent);
-```
-
-What is quite important is that, when you are running multiple tasks asynchronously or in parallel, the call pattern `await $typst.xxx({ mainContent });` is unsafe (introduces undefined behavior). Insteadly you should call compilation by specifying path to the main file:
-
-```ts
-const mainFilePath = '/tasks/1/main.typ';
-await $typst.addSource(mainFilePath, mainContent);
-
-// compile source of path
-await $typst.svg({ mainFilePath });
-```
-
-get output with *binary input files*:
-
-```ts
-const encoder = new TextEncoder();
-// add a json file (utf8)
-compiler.mapShadow('/assets/data.json', encoder.encode(jsonData));
-// remove a json file
-compiler.unmapShadow('/assets/data.json');
-
-// add an image file
-const pngData = await fetch(...).arrayBuffer();
-compiler.mapShadow('/assets/tiger.png', new Uint8Array(pngData));
-```
-
-clean up shadow files for underlying access model:
-
-```ts
-compiler.resetShadow();
-```
-
-Note: this function will also clean all files added by `addSource`.
+#include "all-in-one-inputs.typ"
 
 === Example: reuse compilation result
 

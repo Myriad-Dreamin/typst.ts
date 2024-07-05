@@ -3,8 +3,6 @@
 
 #show: book-page.with(title: "Command Line Interface")
 
-= Command Line Interface
-
 The unique feature of `typst-ts-cli` is that it precompiles typst documents into #term.vector-format files. It internally runs #link("https://github.com/typst/typst")[Typst compiler] with `typst.ts`'s exporters.
 
 ```ts

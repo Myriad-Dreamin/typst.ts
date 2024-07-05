@@ -1,23 +1,20 @@
 #import "/docs/cookery/book.typ": book-page
 #import "/docs/cookery/term.typ" as term
 
-#show: book-page.with(title: "Compiler Service")
-
-= Compiler Service
+#show: book-page.with(title: "Compiler in Rust")
 
 #let compile-middleware = ```rs trait CompileMiddleware```
 #let compiler-trait = ```rs trait Compiler```
-#let world-exporter = ```rs trait WorldExporter```
 
 The compiler services help you build a precompiler CLI or an incremental compilation server Program for #term.vector-format.
 
-== Create and use a `TypstSystemWorld` instance
-Note: The ```rs struct TypstSystemWorld``` implements ```rs trait typst::World```.
+== Create and use a `TypstSystemUniverse` instance
+Note: The ```rs struct TypstSystemUniverse``` can create multiple snapshots at the same time, ```rs struct TypstSystemWorld```, implementing ```rs trait typst::World```.
 
-Example: #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/cli/src/compile.rs#L17")[fn create_driver in compile.rs]
+Example: #link("https://github.com/Myriad-Dreamin/typst.ts/blob/9a4f0537f7d8443b3920a27cabc51bb5ea64ee0a/cli/src/compile.rs#L30")[fn create_driver in compile.rs]
 
 ```rs
-let world = TypstSystemWorld::new(CompileOpts {
+let verse = TypstSystemUniverse::new(CompileOpts {
   root_dir: workspace_dir.clone(),
   font_paths: args.font.paths.clone(),
   with_embedded_fonts: EMBEDDED_FONT.to_owned(),
@@ -27,58 +24,35 @@ let world = TypstSystemWorld::new(CompileOpts {
 
 // usage
 let mut tracer = Tracer::default();
-typst::compile(&world, tracer);
+typst::compile(&verse.snapshot(), tracer);
 ```
 
-== Create and use a `CompileDriver` instance
+== Create and use a `PureCompiler` instance
 
 #[
   #set par(justify: false)
-  Note: The ```rs struct CompileDriver``` implements #compiler-trait.
+  Note: The ```rs struct PureCompiler``` implements #compiler-trait. #linebreak()
 ]
 
-The compile driver holds more state for convenient usage.
+Example:
 
 ```rs
-let compile_driver = CompileDriver {
-  world,
-  entry_file: entry_file_path.to_owned(),
-}
-```
-
-=== Example: get main id of the current entry file
-
-```rs
-let main_id = compile_driver.main_id();
-```
-
-=== Example: compile document
-
-```rs
-let document = compile_driver.compile().unwrap();
-```
-
-=== Example: query document
-
-```rs
-let selector = "figure".into_owned();
-let contents = compile_driver.query(
-  selector, document).unwrap();
+std::marker::PhantomData.compile(
+  &verse.snapshot(), &mut Default::default());
 ```
 
 == Create and use a `CompileExporter` instance
 
 #[
   #set par(justify: false)
-  Note: The ```rs struct CompileExporter``` implements #compiler-trait. #linebreak()
   Note: The ```rs struct CompileExporter``` implements #compile-middleware. #linebreak()
-  Note: The ```rs struct CompileExporter``` implements #world-exporter.
+  Note: The ```rs struct CompileExporter``` derives #compiler-trait. #linebreak()
 ]
 
 Retrieve an exporter instance that is executed on each sucessful compilation (more useful for incremental compilation).
 
 ```ts
-let driver = CompileExporter::new(compiler_driver)
+let driver = CompileExporter::default()
   .with_exporter(exporter)
 ```
 
@@ -87,75 +61,52 @@ See #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/cli/src/export.r
 Glance at current available exporters:
 
 ```rs
-type Ast = typst_ts_ast_exporter::AstExporter;
-type Json<T> = typst_ts_serde_exporter::JsonExporter<T>;
-type Pdf = typst_ts_pdf_exporter::PdfDocExporter;
-type Rmp<T> = typst_ts_serde_exporter::RmpExporter<T>;
-type Svg = typst_ts_svg_exporter::PureSvgExporter;
-type SvgHtml = typst_ts_svg_exporter::SvgExporter<DefaultExportFeature>;
-type SIR = typst_ts_svg_exporter::SvgModuleExporter;
-```
-
-=== Example: use a lambda (closure) exporter
-
-Example: #link("https://github.com/Enter-tainer/typst-preview/blob/main/src/actor/typst.rs")[fn create_driver in compile.rs]
-
-```rs
-let driver = CompileExporter::new(compiler_driver).with_exporter(
-  move |_world: &dyn World, doc: Arc<Document>| {
-    let _ = doc_sender.send(Some(doc)); // it is ok to ignore the error here
-    let _ = renderer_sender.send(RenderActorRequest::RenderIncremental);
-    Ok(())
-  },
-);
+type WithAst = typst_ts_ast_exporter::AstExporter;
+type WithPdf = typst_ts_pdf_exporter::PdfDocExporter;
+type WithSvg = typst_ts_svg_exporter::PureSvgExporter;
+type WithSvgHtml = typst_ts_svg_exporter::SvgExporter<DefaultExportFeature>;
+type WithSIR = typst_ts_svg_exporter::SvgModuleExporter;
+type WithText = typst_ts_text_exporter::TextExporter;
 ```
 
 == Create and use a `DynamicLayoutCompiler` instance
 
 #[
   #set par(justify: false)
-  Note: The ```rs struct CompileExporter``` implements #compiler-trait. #linebreak()
   Note: The ```rs struct DynamicLayoutCompiler``` implements #compile-middleware. #linebreak()
-  Note: The ```rs struct DynamicLayoutCompiler``` implements #world-exporter.
+  Note: The ```rs struct DynamicLayoutCompiler``` derives #compiler-trait. #linebreak()
 ]
 
 Enable dynamic layout based on a #compiler-trait.
 
 ```rs
-let driver = DynamicLayoutCompiler::new(
-  driver, output_dir)
-  .with_enable(true /* whether enabled dynamic layout */);
+let driver = DynamicLayoutCompiler::new(driver, output_dir);
 ```
 
 == Create and use a `CompileActor` instance
 
-Specifical for incremental compilation based on some #world-exporter instance.
+Specifical for incremental compilation based on some universe instance.
+
+Example: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/server/preview_compiler.rs")[struct CompileServer in preview_compiler.rs in typst-preview]
 
 ```rs
-let driver = DynamicLayoutCompiler::new(
-  driver, output_dir).with_enable(true /* whether enabled */);
+let (intr_tx, intr_rx) = mpsc::unbounded_channel();
+let actor = CompileServerActor::new(verse,
+  intr_tx, intr_rx).with_watch(Some(handle.clone()));
 ```
 
-Example: #link("https://github.com/Enter-tainer/typst-preview/blob/main/src/actor/typst.rs")[struct TypstActor in typst.rs in typst-preview]
-
-```rs
-let actor = CompileActor::new(driver, 
-  root.as_ref().to_owned()).with_watch(true);
-```
-
-Example #link("https://github.com/Enter-tainer/typst-preview/blob/main/src/actor/typst.rs")[fn TypstActor::run in typst.rs in typst-preview]
+Example: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/server/preview_compiler.rs")[fn CompileServer::spawn in preview_compiler.rs in typst-preview]
 
 Watch input, compile incrementally, and response message:
 
 ```rs
 pub async fn run(self) {
-  let (server, client) = self.inner.split();
-
+  let intr_tx = self.inner.intr_tx.clone();
   // spawn a watch compile thread
-  server.spawn().await;
+  tokio::spawn(self.inner.spawn());
 
   debug!("TypstActor: waiting for message");
-  let mut client = wrap_client(self.client);
+  let mut client = wrap_client(intr_tx);
   while let Some(mail) = client.mailbox.recv().await {
     client.process_mail(mail).await;
   }
@@ -164,34 +115,41 @@ pub async fn run(self) {
 }
 ```
 
-== Create your owned compile middleware
+// todo: reporter option
+// === Example: use a lambda (closure) exporter
 
-Example #link("https://github.com/Enter-tainer/typst-preview/blob/main/src/actor/typst.rs")[struct Reporter in typst.rs in typst-preview]
+// Example: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/server/preview_compiler.rs")[fn create_driver in compile.rs]
+
+// ```rs
+// let driver = CompileExporter::new(compiler_driver).with_exporter(
+//   move |_world: &dyn World, doc: Arc<Document>| {
+//     let _ = doc_sender.send(Some(doc)); // it is ok to ignore the error here
+//     let _ = renderer_sender.send(RenderActorRequest::RenderIncremental);
+//     Ok(())
+//   },
+// );
+// ```
+
+=== Adds exporters to a `CompileActor` instance
+
+Example #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/cli/src/compile.rs")[fn compile_export in compile.rs in typst-ts-cli]
 
 ```rs
-impl<C: Compiler> CompileMiddleware for Reporter<C> {
-  fn wrap_compile(&mut self) -> SourceResult<Arc<Document>> {
-    
-    // do someting before each compilation
-    // ...
+let mut exporters: Vec<DynExporter<CompileSnapshot<_>>> = vec![];
 
-    // trigger real compilation
-    let doc = self.inner_mut().compile();
-    
-    // do someting after each compilation
-    // report compilation status
-    if let Err(err) = &doc {
-      let _ = self.sender.send(EditorActorRequest::CompileStatus(
-        CompileStatus::CompileError,
-      ));
-      log::error!("TypstActor: compile error: {:?}", err);
-    } else {
-      let _ = self.sender.send(EditorActorRequest::CompileStatus(
-        CompileStatus::CompileSuccess,
-      ));
-    }
-
-    doc
-  }
+if args.dynamic_layout {
+    let driver = DynamicLayoutCompiler::new(
+      std::marker::PhantomData, output_dir);
+    exporters.push(Box::new(CompileStarter::new(driver)));
 }
+
+let actor = CompileActor::new_with(
+    verse, intr_tx, intr_rx,
+    CompileServerOpts {
+        exporter: GroupExporter::new(exporters),
+        ..Default::default()
+    },
+)
+.with_enable_watch(args.watch);
+
 ```
