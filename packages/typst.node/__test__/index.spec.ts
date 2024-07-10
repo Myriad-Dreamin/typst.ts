@@ -2,6 +2,9 @@ import test from 'ava';
 
 import { NodeCompiler } from '../index';
 
+// Switch to the current directory for the tests interacting with FS
+process.chdir(__dirname);
+
 function defaultCompiler() {
   return NodeCompiler.create(NodeCompiler.defaultCompileArgs());
 }
@@ -74,4 +77,65 @@ Hello, Typst! <my-
   t.is(diag.compilationStatus, 'error');
   t.snapshot(diag.shortDiagnostics);
   t.snapshot(compiler.fetchDiagnostics(diag));
+});
+
+test('it takes in the workspace and entry file in compiler ctor', t => {
+  const compiler = NodeCompiler.create({
+    ...NodeCompiler.defaultCompileArgs(),
+    workspace: '.',
+    entry: 'inputs/post1.typ',
+  });
+  // No mutation taken place on the entry state
+  const doc = compiler.compile({}).result;
+  // Should be main.typ
+  t.snapshot(doc?.title);
+});
+
+test('it modifys the entry file to another when call `compile`', t => {
+  const compiler = NodeCompiler.create({
+    ...NodeCompiler.defaultCompileArgs(),
+    workspace: '.',
+    entry: 'inputs/post1.typ',
+  });
+  // No mutation taken place on the entry state
+  const doc = compiler.compile({
+    mainFilePath: 'inputs/post2.typ'
+  }).result;
+  // Should be main.typ
+  t.snapshot(doc?.title);
+});
+
+test('it throws error when entry file does not exist', t => {
+  const compiler = NodeCompiler.create({
+    ...NodeCompiler.defaultCompileArgs(),
+    workspace: '.',
+    entry: 'inputs/post1.typ',
+  });
+  try {
+    compiler.compile({
+      mainFilePath: 'inputs/fake.typ'
+    });
+    t.fail('it should throw error');
+  } catch (err: any) {
+    t.assert(
+      err.message.startsWith("0: file not found"),
+      `error message does not match the expectation: ${err.message}`
+    );
+  }
+});
+
+test('it throws error when entry file does not reside in the workspace', t => {
+  try {
+    NodeCompiler.create({
+      ...NodeCompiler.defaultCompileArgs(),
+      workspace: '.',
+      entry: '../../fake.typ',
+    });
+    t.fail('it should throw error');
+  } catch (err: any) {
+    t.assert(err.message.startsWith(
+      "entry file path must be in workspace directory"),
+      `error message does not match the expectation: ${err.message}`
+    );
+  }
 });

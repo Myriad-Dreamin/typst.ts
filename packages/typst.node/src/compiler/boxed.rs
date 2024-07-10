@@ -90,7 +90,13 @@ impl BoxedCompiler {
                     )));
                 }
 
-                let fp = std::path::Path::new(main_file_path.as_str());
+                let abs_fp = std::path::absolute(main_file_path.as_str());
+                let fp = abs_fp
+                    .as_ref()
+                    .map(|p| std::path::Path::new(p))
+                    .map_err(|e| {
+                        map_node_error(error_once!("cannot absolutize the main file path", err: e))
+                    })?;
                 universe
                     .entry_state()
                     .try_select_path_in_workspace(fp, true)
@@ -115,7 +121,10 @@ impl BoxedCompiler {
         if self.0.universe().entry_state().is_inactive() {
             Err(map_node_error(error_once!("entry file is not set")))
         } else {
+            // FIXME: This is implementation detail, use a better way from
+            // the compiler driver.
             let c = &mut self.0.compiler;
+            c.ensure_main(&world).map_err(map_node_error)?;
             Ok(c.compile(&world, &mut CompileEnv::default()).into())
         }
     }
