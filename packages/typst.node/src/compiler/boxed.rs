@@ -91,22 +91,10 @@ impl BoxedCompiler {
                 }
 
                 let fp = std::path::Path::new(main_file_path.as_str());
-                Some(match universe.workspace_root() {
-                    Some(root) => {
-                        if let Some(vp) =
-                            typst_ts_core::typst::syntax::VirtualPath::within_root(fp, &root)
-                        {
-                            EntryState::new_rooted(root, Some(TypstFileId::new(None, vp)))
-                        } else {
-                            EntryState::new_rootless(fp.into()).unwrap()
-                        }
-                    }
-                    None => {
-                        return Err(map_node_error(error_once!(
-                            "workspace root is not set, cannot set entry file"
-                        )))
-                    }
-                })
+                universe
+                    .entry_state()
+                    .try_select_path_in_workspace(fp, true)
+                    .map_err(map_node_error)?
             } else {
                 None
             }
@@ -127,11 +115,8 @@ impl BoxedCompiler {
         if self.0.universe().entry_state().is_inactive() {
             Err(map_node_error(error_once!("entry file is not set")))
         } else {
-            Ok(self
-                .0
-                .compiler
-                .compile(&world, &mut CompileEnv::default())
-                .into())
+            let c = &mut self.0.compiler;
+            Ok(c.compile(&world, &mut CompileEnv::default()).into())
         }
     }
 }
