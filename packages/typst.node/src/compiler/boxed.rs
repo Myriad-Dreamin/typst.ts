@@ -9,12 +9,12 @@ use typst_ts_compiler::{
     TaskInputs, TypstSystemWorld,
 };
 use typst_ts_core::{
-    config::compiler::{EntryState, MEMORY_MAIN_ENTRY},
+    config::compiler::MEMORY_MAIN_ENTRY,
     error::{prelude::*, TypstSourceDiagnostic},
     error_once,
     foundations::Content,
     typst::prelude::*,
-    Bytes, TypstDocument, TypstFileId,
+    Bytes, TypstDocument,
 };
 
 use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocArgs, NodeError};
@@ -91,12 +91,9 @@ impl BoxedCompiler {
                 }
 
                 let abs_fp = std::path::absolute(main_file_path.as_str());
-                let fp = abs_fp
-                    .as_ref()
-                    .map(|p| std::path::Path::new(p))
-                    .map_err(|e| {
-                        map_node_error(error_once!("cannot absolutize the main file path", err: e))
-                    })?;
+                let fp = abs_fp.as_ref().map(std::path::Path::new).map_err(|e| {
+                    map_node_error(error_once!("cannot absolutize the main file path", err: e))
+                })?;
                 universe
                     .entry_state()
                     .try_select_path_in_workspace(fp, true)
