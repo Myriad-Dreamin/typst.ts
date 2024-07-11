@@ -4,6 +4,7 @@ pub mod compiler;
 /// Error handling for NodeJS.
 pub mod error;
 
+use chrono::{DateTime, Datelike, Timelike, Utc};
 pub use compiler::*;
 use error::NodeTypstCompileResult;
 pub use error::{map_node_error, NodeError};
@@ -131,6 +132,17 @@ pub struct QueryDocArgs {
     pub selector: String,
     /// An optional field to select on the element of the resultants.
     pub field: Option<String>,
+}
+
+/// Arguments to render a PDF.
+#[napi(object)]
+#[derive(Serialize, Deserialize, Debug)]
+#[cfg(feature = "pdf")]
+pub struct RenderPdfOpts {
+    /// An optional (creation) timestamp to be used in the PDF.
+    ///
+    /// This is used when you *enable auto timestamp* in the document.
+    pub creation_timestamp: Option<i64>,
 }
 
 /// Either a compiled document or compile arguments.
@@ -312,13 +324,15 @@ impl NodeCompiler {
     }
 
     /// Compiles the document as a specific type.
-    pub fn compile_as<T, O, RO: From<O>>(&mut self, opts: MayCompileOpts) -> Result<RO, NodeError>
+    pub fn compile_as<T, O, RO: From<O>>(
+        &mut self,
+        e: T,
+        opts: MayCompileOpts,
+    ) -> Result<RO, NodeError>
     where
         T: Exporter<TypstDocument, O> + Default,
     {
         let doc = self.may_compile(opts)?;
-
-        let e = T::default();
         e.export(&self.spawn_world(), doc.0.clone())
             .map_err(map_node_error)
             .map(From::from)
@@ -327,28 +341,46 @@ impl NodeCompiler {
     /// Simply compiles the document as a vector IR.
     #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     pub fn vector(&mut self, compiled_or_by: MayCompileOpts) -> Result<Buffer, NodeError> {
-        self.compile_as::<typst_ts_svg_exporter::SvgModuleExporter, _, _>(compiled_or_by)
+        type Exporter = typst_ts_svg_exporter::SvgModuleExporter;
+        self.compile_as(Exporter::default(), compiled_or_by)
     }
 
     /// Simply compiles the document as a PDF.
-    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs, opts?: RenderPdfOpts")]
     #[cfg(feature = "pdf")]
-    pub fn pdf(&mut self, compiled_or_by: MayCompileOpts) -> Result<Buffer, NodeError> {
-        self.compile_as::<typst_ts_pdf_exporter::PdfDocExporter, _, _>(compiled_or_by)
+    pub fn pdf(
+        &mut self,
+        compiled_or_by: MayCompileOpts,
+        opts: Option<RenderPdfOpts>,
+    ) -> Result<Buffer, NodeError> {
+        type Exporter = typst_ts_pdf_exporter::PdfDocExporter;
+        let e = if let Some(opts) = opts {
+            Exporter::default().with_ctime(
+                opts.creation_timestamp
+                    .map(parse_source_date_epoch)
+                    .transpose()?
+                    .and_then(convert_datetime),
+            )
+        } else {
+            Exporter::default()
+        };
+        self.compile_as(e, compiled_or_by)
     }
 
     /// Simply compiles the document as a plain SVG.
     #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     #[cfg(feature = "svg")]
     pub fn plain_svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
-        self.compile_as::<PlainSvgExporter, _, _>(compiled_or_by)
+        type Exporter = PlainSvgExporter;
+        self.compile_as(Exporter::default(), compiled_or_by)
     }
 
     /// Simply compiles the document as a rich-contented SVG (for browsers).
     #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     #[cfg(feature = "svg")]
     pub fn svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
-        self.compile_as::<typst_ts_svg_exporter::PureSvgExporter, _, _>(compiled_or_by)
+        type Exporter = typst_ts_svg_exporter::PureSvgExporter;
+        self.compile_as(Exporter::default(), compiled_or_by)
     }
 }
 
@@ -386,6 +418,24 @@ impl DynLayoutCompiler {
 
         Ok(doc?.1.to_bytes().into())
     }
+}
+
+/// Parses a UNIX timestamp according to <https://reproducible-builds.org/specs/source-date-epoch/>
+fn parse_source_date_epoch(timestamp: i64) -> Result<DateTime<Utc>, NodeError> {
+    DateTime::from_timestamp(timestamp, 0)
+        .ok_or_else(|| map_node_error(error_once!("timestamp out of range")))
+}
+
+/// Convert [`chrono::DateTime`] to [`TypstDatetime`]
+fn convert_datetime(date_time: chrono::DateTime<chrono::Utc>) -> Option<TypstDatetime> {
+    TypstDatetime::from_ymd_hms(
+        date_time.year(),
+        date_time.month().try_into().ok()?,
+        date_time.day().try_into().ok()?,
+        date_time.hour().try_into().ok()?,
+        date_time.minute().try_into().ok()?,
+        date_time.second().try_into().ok()?,
+    )
 }
 
 #[derive(Default)]

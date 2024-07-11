@@ -1,8 +1,10 @@
 use std::path::{Path, PathBuf};
 
+use chrono::{Datelike, Timelike};
 use typst_ts_core::{
     exporter_builtins::{FsPathExporter, GroupExporter},
     program_meta::REPORT_BUG_MESSAGE,
+    TypstDatetime,
 };
 use typst_ts_svg_exporter::DefaultExportFeature;
 
@@ -98,7 +100,7 @@ fn prepare_exporters_impl(
             "ast"         => sink_path!(WithAst as _ as doc, out @@ "ast.ansi.text"),
             #[cfg(feature = "pdf")]
             "pdf"         => sink_path!(|| {
-                WithPdf::default().with_timestamp(args.pdf_timestamp)
+                WithPdf::default().with_ctime(args.creation_timestamp.and_then(convert_datetime))
             } as _ as doc, out @@ "pdf"),
             #[cfg(feature = "svg")]
             "svg"         => sink_path!(WithSvg as _ as doc, out @@ "artifact.svg"),
@@ -161,4 +163,16 @@ pub fn prepare_exporters(args: &CompileArgs, entry_file: Option<&Path>) -> Group
     };
 
     prepare_exporters_impl(args.export.clone(), output_dir, formats)
+}
+
+/// Convert [`chrono::DateTime`] to [`TypstDatetime`]
+fn convert_datetime(date_time: chrono::DateTime<chrono::Utc>) -> Option<TypstDatetime> {
+    TypstDatetime::from_ymd_hms(
+        date_time.year(),
+        date_time.month().try_into().ok()?,
+        date_time.day().try_into().ok()?,
+        date_time.hour().try_into().ok()?,
+        date_time.minute().try_into().ok()?,
+        date_time.second().try_into().ok()?,
+    )
 }

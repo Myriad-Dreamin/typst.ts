@@ -88,7 +88,7 @@ export class NodeCompiler {
   /** Simply compiles the document as a vector IR. */
   vector(compiledOrBy: NodeTypstDocument | CompileDocArgs): Buffer;
   /** Simply compiles the document as a PDF. */
-  pdf(compiledOrBy: NodeTypstDocument | CompileDocArgs): Buffer;
+  pdf(compiledOrBy: NodeTypstDocument | CompileDocArgs, opts?: RenderPdfOpts): Buffer;
   /** Simply compiles the document as a plain SVG. */
   plainSvg(compiledOrBy: NodeTypstDocument | CompileDocArgs): string;
   /** Simply compiles the document as a rich-contented SVG (for browsers). */
@@ -203,4 +203,14 @@ export interface QueryDocArgs {
   selector: string;
   /** An optional field to select on the element of the resultants. */
   field?: string;
+}
+
+/** Arguments to render a PDF. */
+export interface RenderPdfOpts {
+  /**
+   * An optional (creation) timestamp to be used in the PDF.
+   *
+   * This is used when you *enable auto timestamp* in the document.
+   */
+  creationTimestamp?: number;
 }
