@@ -54,9 +54,9 @@ impl From<CompileDriver<PureCompiler<TypstSystemWorld>>> for BoxedCompiler {
 type SourceResult<T> = Result<T, EcoVec<TypstSourceDiagnostic>>;
 
 impl BoxedCompiler {
-    /// Create a temporary world for compiling once.
-    /// Should be pure and not affect the current world.
-    pub fn setup_compiler_by(
+    /// Create a snapshoted world by typst.node's [`CompileDocArgs`].
+    /// Should not affect the current universe (global state).
+    pub fn create_world(
         &mut self,
         compile_by: CompileDocArgs,
     ) -> napi::Result<TypstSystemWorld, NodeError> {
@@ -113,7 +113,7 @@ impl BoxedCompiler {
         &mut self,
         compile_by: CompileDocArgs,
     ) -> napi::Result<NodeTypstCompileResult, NodeError> {
-        let world = self.setup_compiler_by(compile_by)?;
+        let world = self.create_world(compile_by)?;
 
         if world.entry_state().is_inactive() {
             return Err(map_node_error(error_once!("entry file is not set")));

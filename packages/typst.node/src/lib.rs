@@ -378,7 +378,7 @@ impl DynLayoutCompiler {
     #[napi]
     pub fn vector(&mut self, compile_by: CompileDocArgs) -> Result<Buffer, NodeError> {
         let compiler = self.driver.inner_mut();
-        let world = compiler.setup_compiler_by(compile_by)?;
+        let world = compiler.create_world(compile_by)?;
         let doc = self
             .driver
             .do_export(&world, &mut Default::default())
