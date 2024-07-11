@@ -6,15 +6,15 @@ use std::{
 };
 use typst_ts_compiler::{
     CompileDriver, CompileEnv, Compiler, EntryManager, EntryReader, PureCompiler, ShadowApi,
-    TypstSystemWorld,
+    TaskInputs, TypstSystemWorld,
 };
 use typst_ts_core::{
-    config::compiler::{EntryState, MEMORY_MAIN_ENTRY},
+    config::compiler::MEMORY_MAIN_ENTRY,
     error::{prelude::*, TypstSourceDiagnostic},
     error_once,
     foundations::Content,
     typst::prelude::*,
-    Bytes, TypstDocument, TypstFileId,
+    Bytes, TypstDocument,
 };
 
 use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocArgs, NodeError};
@@ -54,11 +54,13 @@ impl From<CompileDriver<PureCompiler<TypstSystemWorld>>> for BoxedCompiler {
 type SourceResult<T> = Result<T, EcoVec<TypstSourceDiagnostic>>;
 
 impl BoxedCompiler {
-    pub fn setup_compiler_by(
+    /// Create a snapshoted world by typst.node's [`CompileDocArgs`].
+    /// Should not affect the current universe (global state).
+    pub fn create_world(
         &mut self,
         compile_by: CompileDocArgs,
-    ) -> napi::Result<Option<EntryState>, NodeError> {
-        let world = self.0.universe_mut();
+    ) -> napi::Result<TypstSystemWorld, NodeError> {
+        let universe = self.universe();
         let new_state = {
             if let Some(main_file_content) = compile_by.main_file_content {
                 if compile_by.main_file_path.is_some() {
@@ -67,10 +69,16 @@ impl BoxedCompiler {
                     )));
                 }
 
-                let new_entry = world.entry_state().select_in_workspace(*MEMORY_MAIN_ENTRY);
+                let new_entry = universe
+                    .entry_state()
+                    .select_in_workspace(*MEMORY_MAIN_ENTRY);
 
                 let content = Bytes::from(main_file_content.as_bytes());
-                if let Err(err) = world.map_shadow_by_id(*MEMORY_MAIN_ENTRY, content) {
+                // TODO: eliminate the side effect of shadow mapping safely
+                if let Err(err) = self
+                    .universe_mut()
+                    .map_shadow_by_id(*MEMORY_MAIN_ENTRY, content)
+                {
                     return Err(map_node_error(error_once!("cannot map shadow", err: err)));
                 }
 
@@ -82,62 +90,40 @@ impl BoxedCompiler {
                     )));
                 }
 
-                let fp = std::path::Path::new(main_file_path.as_str());
-                Some(match world.workspace_root() {
-                    Some(root) => {
-                        if let Ok(p) = root.strip_prefix(fp) {
-                            EntryState::new_rooted(
-                                root.clone(),
-                                Some(TypstFileId::new(
-                                    None,
-                                    typst_ts_core::typst::syntax::VirtualPath::new(p),
-                                )),
-                            )
-                        } else {
-                            EntryState::new_rootless(fp.into()).unwrap()
-                        }
-                    }
-                    None => {
-                        return Err(map_node_error(error_once!(
-                            "workspace root is not set, cannot set entry file"
-                        )))
-                    }
-                })
+                let abs_fp = std::path::absolute(main_file_path.as_str());
+                let fp = abs_fp.as_ref().map(std::path::Path::new).map_err(|e| {
+                    map_node_error(error_once!("cannot absolutize the main file path", err: e))
+                })?;
+                universe
+                    .entry_state()
+                    .try_select_path_in_workspace(fp, true)
+                    .map_err(map_node_error)?
             } else {
                 None
             }
         };
 
-        let Some(new_state) = new_state else {
-            return Ok(None);
-        };
-
-        world
-            .mutate_entry(new_state)
-            .map(Some)
-            .map_err(map_node_error)
+        Ok(self.universe.snapshot_with(Some(TaskInputs {
+            entry: new_state,
+            ..Default::default()
+        })))
     }
 
     pub fn compile_raw(
         &mut self,
         compile_by: CompileDocArgs,
     ) -> napi::Result<NodeTypstCompileResult, NodeError> {
-        let e = self.setup_compiler_by(compile_by)?;
+        let world = self.create_world(compile_by)?;
 
-        let res = if self.0.universe().entry_state().is_inactive() {
-            Err(map_node_error(error_once!("entry file is not set")))
-        } else {
-            Ok(self.0.compile(&mut CompileEnv::default()).into())
-        };
-
-        if let Some(entry_file) = e {
-            self.0
-                .universe_mut()
-                .mutate_entry(entry_file)
-                .map_err(map_node_error)?;
+        if world.entry_state().is_inactive() {
+            return Err(map_node_error(error_once!("entry file is not set")));
         }
 
-        res
+        // FIXME: This is implementation detail, use a better way from
+        // the compiler driver.
+        let c = &mut self.0.compiler;
+        c.ensure_main(&world).map_err(map_node_error)?;
+        Ok(c.compile(&world, &mut CompileEnv::default()).into())
     }
 }
 
