@@ -35,7 +35,7 @@
     "watch:renderer": "cargo run --bin typst-ts-dev-server -- watch renderer",
     "start:react": "yarn workspace @myriaddreamin/typst.react start",
     "start:angular": "yarn workspace typst.angular start",
-    "book": "typst-book serve --font-path assets/fonts -w . docs/cookery",
+    "book": "shiroa serve --font-path assets/fonts -w . docs/cookery",
     "bump-packages": "python scripts/bump_version.py",
     "prepublish-packages": "turbo run prepublish --filter=./packages/*",
     "publish:dry": "turbo run prepublish publish:dry --filter=./packages/*",

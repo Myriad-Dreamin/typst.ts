@@ -9,7 +9,7 @@
   layout(page => {
     let width_scale = 0.8 * page.width / width
     block(width: width_scale * width, height: width_scale * height)[
-      #scale(x: width_scale * 100%, y: width_scale * 100%, origin: center+top)[#img]
+      #scale(x: width_scale * 100%, y: width_scale * 100%, origin: center + top)[#img]
     ]
   })
 })
@@ -35,15 +35,18 @@ Specifically, it first presents a typst document in three typical forms:
 
 - #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/serverless.html")[Form3]: Manipulate a canvas element directly.
 
-The #emph("Form2: Vector Format") is developed specially for typst documents, and it has several fancy features: 
+The #emph("Form2: Vector Format") is developed specially for typst documents, and it has several fancy features:
 
 #figure(
-  scale(120%, {
-    set text(size: 12pt)
-    v(0.5em)
-    natural-image(ir-feature-graph())
-    v(0.5em)
-  }),
+  scale(
+    120%,
+    {
+      set text(size: 12pt)
+      v(0.5em)
+      natural-image(ir-feature-graph())
+      v(0.5em)
+    },
+  ),
   caption: [Figure: Features of the #emph("Vector Format"). ],
   numbering: none,
 )
@@ -54,7 +57,7 @@ So with *Form2*, you can continue rendering the document in different ways:
 
 === Static but #underline("responsive") rendering
 
-Example Application: #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/index.html")[single-file], #link("https://github.com/Myriad-Dreamin/typst-book")[typst-book] and #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/hexo-renderer-typst")[hexo-renderer-typst]
+Example Application: #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/index.html")[single-file], #link("https://github.com/Myriad-Dreamin/shiroa")[shiroa] and #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/hexo-renderer-typst")[hexo-renderer-typst]
 
 A compressed artifact containing data for different theme and screen settings. The bundle size of artifacts is optimized for typst documents.
 
