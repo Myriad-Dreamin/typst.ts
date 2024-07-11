@@ -1,18 +1,18 @@
 use std::sync::Arc;
 
 pub use typst_pdf::pdf;
-use typst_ts_core::Exporter;
+use typst_ts_core::{Exporter, TypstDatetime};
 
 use typst::{diag::SourceResult, foundations::Smart, World};
 
 #[derive(Debug, Clone, Default)]
 pub struct PdfDocExporter {
-    with_timestamp: bool,
+    ctime: Option<TypstDatetime>,
 }
 
 impl PdfDocExporter {
-    pub fn with_timestamp(mut self, enable: bool) -> Self {
-        self.with_timestamp = enable;
+    pub fn with_ctime(mut self, v: Option<TypstDatetime>) -> Self {
+        self.ctime = v;
         self
     }
 }
@@ -20,12 +20,11 @@ impl PdfDocExporter {
 impl Exporter<typst::model::Document, Vec<u8>> for PdfDocExporter {
     fn export(
         &self,
-        world: &dyn World,
+        _world: &dyn World,
         output: Arc<typst::model::Document>,
     ) -> SourceResult<Vec<u8>> {
         // todo: ident option
 
-        let timestamp = self.with_timestamp.then(|| world.today(None)).flatten();
-        Ok(typst_pdf::pdf(output.as_ref(), Smart::Auto, timestamp))
+        Ok(typst_pdf::pdf(output.as_ref(), Smart::Auto, self.ctime))
     }
 }
