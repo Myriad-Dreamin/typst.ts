@@ -48,11 +48,11 @@ jobs:
           node-version: 18.x
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
-      - name: Download & install typst-book
+      - name: Download & install shiroa
         run: |
-          curl -L https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.1.5/typst-book-x86_64-unknown-linux-gnu.tar.gz | tar -xvz
-          chmod +x typst-book-x86_64-unknown-linux-gnu/bin/typst-book
-          sudo cp typst-book-x86_64-unknown-linux-gnu/bin/typst-book /usr/bin/typst-book
+          curl -L https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.2.0-nightly1/shiroa-x86_64-unknown-linux-gnu.tar.gz | tar -xvz
+          chmod +x shiroa-x86_64-unknown-linux-gnu/bin/shiroa
+          sudo cp shiroa-x86_64-unknown-linux-gnu/bin/shiroa /usr/bin/shiroa
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: Download font assets
@@ -71,7 +71,7 @@ jobs:
           yarn run build:pkg
       - name: Prepare artifacts
         run: |
-          typst-book build --font-path assets/fonts --path-to-root /typst.ts/cookery/ -w . -d ../../github-pages/cookery/ docs/cookery
+          shiroa build --font-path assets/fonts --path-to-root /typst.ts/cookery/ -w . -d ../../github-pages/cookery/ docs/cookery
           cargo run --profile release-ci --bin typst-ts-cli -- compile --workspace ./github-pages/docs/ --entry ./github-pages/docs/readme.typ --format=pdf --format=vector
       - name: Copy assets
         run: |

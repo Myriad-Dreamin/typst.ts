@@ -1,5 +1,5 @@
 
-#import "@preview/book:0.2.5": *
+#import "@preview/shiroa:0.1.0": *
 #import "./templates/page.typ": main-color
 
 #show: book
@@ -83,7 +83,7 @@
       - #chapter(none, section: "11.5")[Compile Driver]
       - #chapter(none, section: "11.6")[Editor Workspace]
     = Project samples
-    - #chapter(none, section: "12")[typst-book]
+    - #chapter(none, section: "12")[shiroa]
     - #chapter(none, section: "13")[typst-preview]
     - #chapter(none, section: "14")[hexo-renderer-typst]
     = Trouble Shooting
