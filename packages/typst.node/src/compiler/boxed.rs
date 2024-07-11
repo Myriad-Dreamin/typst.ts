@@ -115,15 +115,15 @@ impl BoxedCompiler {
     ) -> napi::Result<NodeTypstCompileResult, NodeError> {
         let world = self.setup_compiler_by(compile_by)?;
 
-        if self.0.universe().entry_state().is_inactive() {
-            Err(map_node_error(error_once!("entry file is not set")))
-        } else {
-            // FIXME: This is implementation detail, use a better way from
-            // the compiler driver.
-            let c = &mut self.0.compiler;
-            c.ensure_main(&world).map_err(map_node_error)?;
-            Ok(c.compile(&world, &mut CompileEnv::default()).into())
+        if world.entry_state().is_inactive() {
+            return Err(map_node_error(error_once!("entry file is not set")));
         }
+
+        // FIXME: This is implementation detail, use a better way from
+        // the compiler driver.
+        let c = &mut self.0.compiler;
+        c.ensure_main(&world).map_err(map_node_error)?;
+        Ok(c.compile(&world, &mut CompileEnv::default()).into())
     }
 }
 
