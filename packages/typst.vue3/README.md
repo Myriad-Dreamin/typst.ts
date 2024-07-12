@@ -1,3 +1,3 @@
 # Typst.vue3
 
-This project was generated with [create-vite](https://github.com/vitejs/vite/tree/main/packages/create-vite) version 4.3.1.
+This is a basic vue component for rendering typst documents.
