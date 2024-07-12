@@ -1,5 +1,5 @@
+use std::borrow::Cow;
 use std::path::{Path, PathBuf};
-use std::{borrow::Cow, sync::Arc};
 
 use crate::AsCowBytes;
 use reflexo::{error::prelude::*, ImmutPath};
@@ -10,30 +10,14 @@ use typst::{
     syntax::{FileId, VirtualPath},
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum EntryState {
-    Workspace {
-        /// Path to the root directory of compilation.
-        /// The world forbids direct access to files outside this directory.
-        root: Arc<Path>,
-        /// Identifier of the main file in the workspace
-        main: Option<FileId>,
-    },
-    PreparedEntry {
-        /// Path to the entry file of compilation.
-        entry: Arc<Path>,
-        /// Parent directory of the entry file.
-        root: Option<Arc<Path>>,
-        /// Identifier of the main file.
-        main: FileId,
-    },
-    Detached,
-}
-
-impl Default for EntryState {
-    fn default() -> Self {
-        Self::new_detached()
-    }
+#[derive(Debug, Clone, Hash, PartialEq, Eq, Default)]
+pub struct EntryState {
+    is_workspace: bool,
+    /// Path to the root directory of compilation.
+    /// The world forbids direct access to files outside this directory.
+    root: Option<ImmutPath>,
+    /// Identifier of the main file in the workspace
+    main: Option<FileId>,
 }
 
 pub static DETACHED_ENTRY: once_cell::sync::Lazy<FileId> = once_cell::sync::Lazy::new(|| {
@@ -45,59 +29,58 @@ pub static MEMORY_MAIN_ENTRY: once_cell::sync::Lazy<FileId> =
 
 impl EntryState {
     pub fn new_detached() -> Self {
-        Self::Detached
+        Self {
+            is_workspace: false,
+            root: None,
+            main: None,
+        }
     }
 
     pub fn new_workspace(root: ImmutPath) -> Self {
-        Self::Workspace { root, main: None }
+        Self {
+            is_workspace: true,
+            root: Some(root),
+            main: None,
+        }
     }
 
     pub fn new_rooted(root: ImmutPath, main: Option<FileId>) -> Self {
-        Self::Workspace { root, main }
+        Self {
+            is_workspace: true,
+            root: Some(root),
+            main,
+        }
     }
 
     pub fn new_rootless(entry: ImmutPath) -> Option<Self> {
-        Some(Self::PreparedEntry {
-            entry: entry.clone(),
+        Some(Self {
+            is_workspace: true,
             root: entry.parent().map(From::from),
-            main: FileId::new(None, VirtualPath::new(entry.file_name()?)),
+            main: Some(FileId::new(None, VirtualPath::new(entry.file_name()?))),
         })
     }
 
     pub fn main(&self) -> Option<FileId> {
-        match self {
-            Self::Workspace { main, .. } => *main,
-            Self::PreparedEntry { main, .. } => Some(*main),
-            Self::Detached => None,
-        }
+        self.main
     }
 
-    pub fn root(&self) -> Option<Arc<Path>> {
-        match self {
-            Self::Detached => None,
-            Self::PreparedEntry { root, .. } => root.clone(),
-            Self::Workspace { root, .. } => Some(root.clone()),
-        }
+    pub fn root(&self) -> Option<ImmutPath> {
+        self.root.clone()
     }
 
-    pub fn workspace_root(&self) -> Option<Arc<Path>> {
-        match self {
-            Self::Detached | Self::PreparedEntry { .. } => None,
-            Self::Workspace { root, .. } => Some(root.clone()),
+    pub fn workspace_root(&self) -> Option<ImmutPath> {
+        if self.is_workspace {
+            return None;
         }
+
+        self.root.clone()
     }
 
     pub fn select_in_workspace(&self, id: FileId) -> EntryState {
-        match self {
-            Self::Detached | Self::PreparedEntry { .. } => Self::PreparedEntry {
-                entry: id.vpath().as_rooted_path().into(),
-                root: None,
-                main: id,
-            },
-            Self::Workspace { root, .. } => Self::Workspace {
-                root: root.clone(),
-                main: Some(id),
-            },
+        Self {
+            is_workspace: self.is_workspace,
+            root: self.root.clone(),
+            main: Some(id),
         }
     }
 
@@ -124,14 +107,11 @@ impl EntryState {
     }
 
     pub fn is_detached(&self) -> bool {
-        matches!(self, Self::Detached)
+        self.root.is_none() && self.main.is_none()
     }
 
     pub fn is_inactive(&self) -> bool {
-        matches!(
-            self,
-            EntryState::Detached | EntryState::Workspace { main: None, .. }
-        )
+        self.main.is_none()
     }
 }
 
@@ -144,7 +124,7 @@ pub enum EntryOpts {
         /// Relative path to the main file in the workspace.
         entry: Option<PathBuf>,
     },
-    PreparedEntry {
+    RootlessEntry {
         /// Path to the entry file of compilation.
         entry: PathBuf,
         /// Parent directory of the entry file.
@@ -177,7 +157,7 @@ impl EntryOpts {
             return None;
         }
 
-        Some(Self::PreparedEntry {
+        Some(Self::RootlessEntry {
             entry: entry.clone(),
             root: entry.parent().map(From::from),
         })
@@ -193,7 +173,7 @@ impl TryFrom<EntryOpts> for EntryState {
                 root.as_path().into(),
                 entry.map(|e| FileId::new(None, VirtualPath::new(e))),
             )),
-            EntryOpts::PreparedEntry { entry, root } => {
+            EntryOpts::RootlessEntry { entry, root } => {
                 if entry.is_relative() {
                     return Err(error_once!("entry path must be absolute", path: entry.display()));
                 }
@@ -213,10 +193,10 @@ impl TryFrom<EntryOpts> for EntryState {
                     }
                 };
 
-                Ok(EntryState::PreparedEntry {
-                    entry: entry.as_path().into(),
+                Ok(EntryState {
+                    is_workspace: false,
                     root: Some(root.into()),
-                    main: FileId::new(None, VirtualPath::new(relative_entry)),
+                    main: Some(FileId::new(None, VirtualPath::new(relative_entry))),
                 })
             }
             EntryOpts::Detached => Ok(EntryState::new_detached()),
