@@ -1,20 +1,23 @@
 {
   "name": "typst.vue3",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.5.0-rc5",
   "type": "module",
+  "main": "src/Typst.vue",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc && vite build",
-    "preview": "vite preview"
+    "build": "vite build",
+    "publish:dry": "npm publish --dry-run --access public",
+    "publish:lib": "exit 0"
   },
-  "dependencies": {
-    "vue": "^3.2.47"
+  "peerDependencies": {
+    "vue": "^3.4.31"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.1.0",
     "typescript": "^5.0.2",
     "vite": "^4.3.2",
     "vue-tsc": "^1.4.2"
-  }
+  },
+  "license": "Apache-2.0"
 }
