@@ -1,4 +1,4 @@
-#import "/docs/cookery/book.typ": book-page
+#import "/docs/cookery/book.typ": *
 
 #show: book-page.with(title: "Renderers")
 
@@ -6,8 +6,9 @@
 
 See:
 
-+ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/renderer/ts-lib.html")[JavaScript/TypeScript Library]
-+ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/renderer/react.html")[React Library]
-+ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/renderer/angular.html")[Angular Library]
-+ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/renderer/vue3.html")[Vue3 Library]
-+ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/renderer/hexo.html")[Hexo Plugin]
++ #cross-link("/guide/renderer/ts-lib.typ")[JavaScript/TypeScript Library]
++ #cross-link("/guide/renderer/node.typ")[Node.js Library]
++ #cross-link("/guide/renderer/react.typ")[React Library]
++ #cross-link("/guide/renderer/angular.typ")[Angular Library]
++ #cross-link("/guide/renderer/vue3.typ")[Vue3 Library]
++ #cross-link("/guide/renderer/hexo.typ")[Hexo Plugin]

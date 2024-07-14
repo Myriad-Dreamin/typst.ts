@@ -1,4 +1,4 @@
-#import "/docs/cookery/book.typ": book-page
+#import "/docs/cookery/book.typ": *
 
 #show: book-page.with(title: "Compilers")
 
@@ -6,7 +6,7 @@
 
 See:
 
-+ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/ts-cli.html")[Command Line Interface]
-+ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/service.html")[Compiler Service Library]
-+ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/serverless.html")[Serverless (In-browser) Compiler]
-+ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/node.html")[Compiler for Node.js]
++ #cross-link("/guide/compiler/ts-cli.typ")[Command Line Interface]
++ #cross-link("/guide/compiler/service.typ")[Compiler in Rust]
++ #cross-link("/guide/compiler/node.typ")[Compiler in Node.js]
++ #cross-link("/guide/compiler/bindings.typ")[Compiler in Wasm (Web)]
