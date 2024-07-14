@@ -5,9 +5,12 @@
   "type": "module",
   "main": "src/Typst.vue",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "publish:dry": "npm publish --dry-run --access public",
+    "publish:lib": "exit 0"
   },
   "peerDependencies": {
-
     "vue": "^3.4.31"
   },
   "devDependencies": {
@@ -16,5 +19,5 @@
     "vite": "^4.3.2",
     "vue-tsc": "^1.4.2"
   },
-  "license":"Apache-2.0"
+  "license": "Apache-2.0"
 }

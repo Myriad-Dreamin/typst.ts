@@ -1,29 +1,30 @@
 <template>
-  <div ref="typst" />
+  <div v-html="typst.compiled" />
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, onMounted, watch } from 'vue';
+import { reactive, onMounted, watch } from 'vue';
 import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs';
 
 interface prop {
   content: string;
 }
 
-const typst = ref(null)
+const typst = reactive({
+  compiled: '',
+});
 
 const props = withDefaults(defineProps<prop>(), {
-  content: ''
+  content: '',
 });
 
 onMounted(async () => {
-  typst.value =  await $typst.svg({mainContent: props.content})
-})
+  typst.compiled = await $typst.svg({ mainContent: props.content });
+});
 
-watch(props, async(newVal, oldVal) => {
-  typst.value =  await $typst.svg({mainContent: newVal})
-})
-
+watch(props, async (newVal, oldVal) => {
+  typst.compiled = await $typst.svg({ mainContent: newVal });
+});
 </script>
 
 <style lang="css"></style>
