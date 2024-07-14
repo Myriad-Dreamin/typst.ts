@@ -2,11 +2,7 @@ async function bench() {
   const b = await import('benny');
   const { NodeCompiler } = await import('../index.js');
 
-  function defaultCompiler() {
-    return NodeCompiler.create(NodeCompiler.defaultCompileArgs());
-  }
-
-  const compiler = defaultCompiler();
+  const compiler = NodeCompiler.create();
   await b.suite(
     'Export',
 

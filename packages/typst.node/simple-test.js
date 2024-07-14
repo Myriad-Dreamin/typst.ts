@@ -1,7 +1,7 @@
 // @ts-ignore
 const { NodeCompiler } = require('./index')
 
-const cc = NodeCompiler.create(NodeCompiler.defaultCompileArgs());
+const cc = NodeCompiler.create();
 
 console.assert(!!cc.svg({
   mainFileContent: 'Hello, Typst!',

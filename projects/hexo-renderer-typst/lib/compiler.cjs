@@ -4,11 +4,9 @@ class Compiler {
   constructor(hexo) {
     this.hexo = hexo;
     this.baseDir = this.hexo.base_dir;
-    const compileArgs = {
-      ...NodeCompiler.defaultCompileArgs(),
+    this.base = NodeCompiler.create({
       workspace: this.baseDir,
-    };
-    this.base = NodeCompiler.create(compileArgs);
+    });
     this.dyn = DynLayoutCompiler.fromBoxed(NodeCompiler.create(compileArgs).intoBoxed());
   }
 
