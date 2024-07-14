@@ -73,13 +73,13 @@ impl CanvasOp for CanvasElem {
         }
     }
 
-    async fn realize(&self, _ts: sk::Transform, _canvas: &web_sys::CanvasRenderingContext2d) {
+    async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         match self {
-            CanvasElem::Group(g) => g.realize(_ts, _canvas).await,
-            CanvasElem::Clip(g) => g.realize(_ts, _canvas).await,
-            CanvasElem::Path(g) => g.realize(_ts, _canvas).await,
-            CanvasElem::Image(g) => g.realize(_ts, _canvas).await,
-            CanvasElem::Glyph(g) => g.realize(_ts, _canvas).await,
+            CanvasElem::Group(g) => g.realize(ts, canvas).await,
+            CanvasElem::Clip(g) => g.realize(ts, canvas).await,
+            CanvasElem::Path(g) => g.realize(ts, canvas).await,
+            CanvasElem::Image(g) => g.realize(ts, canvas).await,
+            CanvasElem::Glyph(g) => g.realize(ts, canvas).await,
         }
     }
 }
@@ -175,7 +175,9 @@ impl CanvasClipElem {
     ) -> CanvasStateGuard<'a> {
         let guard = CanvasStateGuard::new(canvas);
 
-        set_transform(canvas, ts);
+        if !set_transform(canvas, ts) {
+            return guard;
+        }
         canvas.clip_with_path_2d(&Path2d::new_with_path_string(&self.d).unwrap());
 
         guard
@@ -210,7 +212,10 @@ impl CanvasOp for CanvasPathElem {
 
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
         let _guard = CanvasStateGuard::new(canvas);
-        set_transform(canvas, ts);
+
+        if !set_transform(canvas, ts) {
+            return;
+        }
         // map_err(map_err("CanvasRenderTask.BuildPath2d")
 
         let mut fill_color = "none".into();
@@ -385,7 +390,9 @@ impl CanvasImageElem {
         canvas: &web_sys::CanvasRenderingContext2d,
         image_data: &ImageItem,
     ) {
-        set_transform(canvas, ts);
+        if !set_transform(canvas, ts) {
+            return;
+        }
 
         let image = &image_data.image;
 
@@ -406,7 +413,9 @@ impl CanvasImageElem {
         };
 
         let state = CanvasStateGuard::new(canvas);
-        set_transform(canvas, ts);
+        if !set_transform(canvas, ts) {
+            return;
+        }
         canvas
             .draw_image_with_html_image_element_and_dw_and_dh(
                 &image_elem,
@@ -450,8 +459,14 @@ impl CanvasOp for CanvasGlyphElem {
     }
 
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
+        if ts.sx == 0. || ts.sy == 0. {
+            return;
+        }
+
         let _guard = CanvasStateGuard::new(canvas);
-        set_transform(canvas, ts);
+        if !set_transform(canvas, ts) {
+            return;
+        }
         match self.glyph_data.as_ref() {
             FlatGlyphItem::Outline(path) => {
                 let fill: &str = &self.fill;
@@ -474,7 +489,9 @@ fn render_bbox(canvas: &web_sys::CanvasRenderingContext2d, bbox: Option<Rect>, c
     };
 
     let _guard = CanvasStateGuard::new(canvas);
-    set_transform(canvas, sk::Transform::identity());
+    if !set_transform(canvas, sk::Transform::identity()) {
+        return;
+    }
     canvas.set_line_width(2.);
     canvas.set_stroke_style(&color.into());
     canvas.stroke_rect(

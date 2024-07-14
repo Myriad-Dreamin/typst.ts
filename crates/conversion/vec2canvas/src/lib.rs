@@ -288,7 +288,12 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode> + GlyphFactory> GroupContext<C>
 }
 
 #[inline]
-fn set_transform(canvas: &web_sys::CanvasRenderingContext2d, transform: sk::Transform) {
+#[must_use]
+fn set_transform(canvas: &web_sys::CanvasRenderingContext2d, transform: sk::Transform) -> bool {
+    if transform.sx == 0. || transform.sy == 0. {
+        return false;
+    }
+
     // see sync_transform
     let a = transform.sx as f64;
     let b = transform.ky as f64;
@@ -300,6 +305,7 @@ fn set_transform(canvas: &web_sys::CanvasRenderingContext2d, transform: sk::Tran
     let maybe_err = canvas.set_transform(a, b, c, d, e, f);
     // .map_err(map_err("CanvasRenderTask.SetTransform"))
     maybe_err.unwrap();
+    true
 }
 
 /// A guard for saving and restoring the canvas state.
@@ -332,7 +338,9 @@ impl CanvasRenderSnippets {
         ts: sk::Transform,
     ) {
         let _guard = CanvasStateGuard::new(canvas);
-        set_transform(canvas, ts);
+        if !set_transform(canvas, ts) {
+            return;
+        }
         match &glyph_item {
             FlatGlyphItem::Outline(path) => {
                 canvas.set_fill_style(&fill.into());

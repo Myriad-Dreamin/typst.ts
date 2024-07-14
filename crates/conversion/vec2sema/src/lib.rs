@@ -373,7 +373,6 @@ impl SemaTask {
                 output.push(Cow::Borrowed("</span>"));
             }
             Text(t) => {
-                web_sys::console::log_1(&format!("Text: {}", t.content.content).into());
                 let text_id = self.dfn_count;
                 self.dfn_count += 1;
 
