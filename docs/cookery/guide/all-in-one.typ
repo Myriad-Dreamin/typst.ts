@@ -2,7 +2,17 @@
 
 #show: book-page.with(title: "All-in-one (Simplified) Library for Browsers")
 
-Note: This is suitable for running in browser. If you want to run the compiler in Node.js, please see #cross-link("/guide/compiler/bindings.typ")[Compiler in Wasm/Node.js].
+Note: This is suitable for running in browser, but not very fit in node.js applications. This is because:
+- The compiler for browsers is in wasm module and slower than running compiler as native code.
+- You must carefully maintain the bundle size of your browser applications, there for the components are split for better tree-shaking.
+- The default fonts to load in browser are for network.
+
+In other words:
+- The node.js library runs compiler as native code, thus native performance.
+- The compiler and renderer are integrated into a same library for simpler and cleaner APIs.
+- You can uses system fonts lazily with the compiler for web.
+
+If you want to run the compiler or renderer in Node.js, please see #cross-link("/guide/all-in-one-node.typ")[All-in-one Library for Node.js].
 
 #let snippet-source = "https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/src/contrib/snippet.mts"
 #let snippet-lib = link(snippet-source)[`snippet.mts`]

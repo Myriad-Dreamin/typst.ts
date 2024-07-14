@@ -3,9 +3,6 @@ import { resolve } from 'path';
 
 async function main() {
   const compileArgs = {
-    // It is crucial set default values to each field, otherwise the compiler will throw an error.
-    ...NodeCompiler.defaultCompileArgs(),
-
     // Set a workspace to resolve the relative paths in the main file.
     // This is same as `--root` option in the CLI.
     workspace: resolve(__dirname, '../../'),
