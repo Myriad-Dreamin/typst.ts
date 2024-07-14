@@ -12,7 +12,10 @@ use typst::{
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default)]
 pub struct EntryState {
-    is_workspace: bool,
+    /// The differents is that: if the entry is rooted, the workspace root is
+    /// the parent of the entry file and cannot be used by workspace functions
+    /// like [`EntryState::try_select_path_in_workspace`].
+    rooted: bool,
     /// Path to the root directory of compilation.
     /// The world forbids direct access to files outside this directory.
     root: Option<ImmutPath>,
@@ -28,33 +31,33 @@ pub static MEMORY_MAIN_ENTRY: once_cell::sync::Lazy<FileId> =
     once_cell::sync::Lazy::new(|| FileId::new(None, VirtualPath::new(Path::new("/__main__.typ"))));
 
 impl EntryState {
+    /// Create an entry state with no workspace root and no main file.
     pub fn new_detached() -> Self {
         Self {
-            is_workspace: false,
+            rooted: false,
             root: None,
             main: None,
         }
     }
 
+    /// Create an entry state with a workspace root and no main file.
     pub fn new_workspace(root: ImmutPath) -> Self {
-        Self {
-            is_workspace: true,
-            root: Some(root),
-            main: None,
-        }
+        Self::new_rooted(root, None)
     }
 
+    /// Create an entry state with a workspace root and an optional main file.
     pub fn new_rooted(root: ImmutPath, main: Option<FileId>) -> Self {
         Self {
-            is_workspace: true,
+            rooted: true,
             root: Some(root),
             main,
         }
     }
 
+    /// Create an entry state with only a main file given.
     pub fn new_rootless(entry: ImmutPath) -> Option<Self> {
         Some(Self {
-            is_workspace: true,
+            rooted: false,
             root: entry.parent().map(From::from),
             main: Some(FileId::new(None, VirtualPath::new(entry.file_name()?))),
         })
@@ -69,16 +72,12 @@ impl EntryState {
     }
 
     pub fn workspace_root(&self) -> Option<ImmutPath> {
-        if self.is_workspace {
-            return None;
-        }
-
-        self.root.clone()
+        self.rooted.then(|| self.root.clone()).flatten()
     }
 
     pub fn select_in_workspace(&self, id: FileId) -> EntryState {
         Self {
-            is_workspace: self.is_workspace,
+            rooted: self.rooted,
             root: self.root.clone(),
             main: Some(id),
         }
@@ -194,7 +193,7 @@ impl TryFrom<EntryOpts> for EntryState {
                 };
 
                 Ok(EntryState {
-                    is_workspace: false,
+                    rooted: false,
                     root: Some(root.into()),
                     main: Some(FileId::new(None, VirtualPath::new(relative_entry))),
                 })
