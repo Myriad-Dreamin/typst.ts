@@ -14,30 +14,13 @@ await $typst.pdf({ mainContent });
 await $typst.canvas(div, { mainContent });
 ```
 
-get output with *multiple input files*:
-0
+With some extra *input file*:
 
 ```ts
-// the default value of main path is '/main.typ'
-await $typst.addSource('/main.typ', mainContent);
-
-// set path to main file
-const mainFilePath = '/tasks/1/main.typ';
-await $typst.setMainFilePath(mainFilePath)
-await $typst.addSource(mainFilePath, mainContent);
+await $typst.addSource('/template.typ', templateContent);
 ```
 
-What is quite important is that, when you are running multiple tasks asynchronously or in parallel, the call pattern `await $typst.xxx({ mainContent });` is unsafe (introduces undefined behavior). Insteadly you should call compilation by specifying path to the main file:
-
-```ts
-const mainFilePath = '/tasks/1/main.typ';
-await $typst.addSource(mainFilePath, mainContent);
-
-// compile source of path
-await $typst.svg({ mainFilePath });
-```
-
-get output with *binary input files*:
+With extra *binary input files*:
 
 ```ts
 const encoder = new TextEncoder();
