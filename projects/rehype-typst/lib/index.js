@@ -145,7 +145,7 @@ export default function rehypeTypst(options) {
 let compilerIns;
 
 async function renderToSVGString(code, displayMode) {
-  const $typst = (compilerIns ||= NodeCompiler.create(NodeCompiler.defaultCompileArgs()));
+  const $typst = (compilerIns ||= NodeCompiler.create());
   const res = renderToSVGString_($typst, code, displayMode);
   $typst.evictCache(10);
   return res;

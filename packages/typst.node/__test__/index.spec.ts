@@ -5,12 +5,8 @@ import { NodeCompiler } from '../index';
 // Switch to the current directory for the tests interacting with FS
 process.chdir(__dirname);
 
-function defaultCompiler() {
-  return NodeCompiler.create(NodeCompiler.defaultCompileArgs());
-}
-
 test('it creates compiler', t => {
-  const compiler = defaultCompiler();
+  const compiler = NodeCompiler.create();
   t.truthy(
     compiler.svg({
       mainFileContent: 'Hello, Typst!',
@@ -19,7 +15,7 @@ test('it creates compiler', t => {
 });
 
 test('it queries document title', t => {
-  const compiler = defaultCompiler();
+  const compiler = NodeCompiler.create();
   const doc = compiler.compile({
     mainFileContent: `
 #set document(title: "My Typst Document for Node testing")
@@ -31,7 +27,7 @@ Hello, Typst!
 });
 
 test('it queries label in `Hello, Typst! <my-label>`', t => {
-  const compiler = defaultCompiler();
+  const compiler = NodeCompiler.create();
   const doc = compiler.compile({
     mainFileContent: `
 Hello, Typst! <my-label>
@@ -41,7 +37,7 @@ Hello, Typst! <my-label>
 });
 
 test('it vec by arguments', t => {
-  const compiler = defaultCompiler();
+  const compiler = NodeCompiler.create();
   t.truthy(
     compiler.vector({
       mainFileContent: `
@@ -52,7 +48,7 @@ Hello, Typst! <my-label>
 });
 
 test('it pdf by compiled artifact', t => {
-  const compiler = defaultCompiler();
+  const compiler = NodeCompiler.create();
   const doc = compiler.compile({
     mainFileContent: `
 Hello, Typst! <my-label>
@@ -62,7 +58,7 @@ Hello, Typst! <my-label>
 });
 
 test('it pdf by compiled artifact and timestamp', t => {
-  const compiler = defaultCompiler();
+  const compiler = NodeCompiler.create();
   const doc = compiler.compile({
     mainFileContent: `
 Hello, Typst! <my-label>
@@ -72,7 +68,7 @@ Hello, Typst! <my-label>
 });
 
 test('it throws error`', t => {
-  const compiler = defaultCompiler();
+  const compiler = NodeCompiler.create();
   let doc = compiler.compile({
     mainFileContent: `
 Hello, Typst! <my-
@@ -91,25 +87,23 @@ Hello, Typst! <my-
 
 test('it takes in the workspace and entry file in compiler ctor', t => {
   const compiler = NodeCompiler.create({
-    ...NodeCompiler.defaultCompileArgs(),
     workspace: '.',
-    entry: 'inputs/post1.typ',
   });
   // No mutation taken place on the entry state
-  const doc = compiler.compile({}).result;
+  const doc = compiler.compile({
+    mainFilePath: 'inputs/post1.typ',
+  }).result;
   // Should be main.typ
   t.snapshot(doc?.title);
 });
 
 test('it modifys the entry file to another when call `compile`', t => {
   const compiler = NodeCompiler.create({
-    ...NodeCompiler.defaultCompileArgs(),
     workspace: '.',
-    entry: 'inputs/post1.typ',
   });
   // No mutation taken place on the entry state
   const doc = compiler.compile({
-    mainFilePath: 'inputs/post2.typ'
+    mainFilePath: 'inputs/post2.typ',
   }).result;
   // Should be main.typ
   t.snapshot(doc?.title);
@@ -117,35 +111,17 @@ test('it modifys the entry file to another when call `compile`', t => {
 
 test('it throws error when entry file does not exist', t => {
   const compiler = NodeCompiler.create({
-    ...NodeCompiler.defaultCompileArgs(),
     workspace: '.',
-    entry: 'inputs/post1.typ',
   });
   try {
     compiler.compile({
-      mainFilePath: 'inputs/fake.typ'
+      mainFilePath: 'inputs/fake.typ',
     });
     t.fail('it should throw error');
   } catch (err: any) {
     t.assert(
-      err.message.startsWith("0: file not found"),
-      `error message does not match the expectation: ${err.message}`
-    );
-  }
-});
-
-test('it throws error when entry file does not reside in the workspace', t => {
-  try {
-    NodeCompiler.create({
-      ...NodeCompiler.defaultCompileArgs(),
-      workspace: '.',
-      entry: '../../fake.typ',
-    });
-    t.fail('it should throw error');
-  } catch (err: any) {
-    t.assert(err.message.startsWith(
-      "entry file path must be in workspace directory"),
-      `error message does not match the expectation: ${err.message}`
+      err.message.startsWith('0: file not found'),
+      `error message does not match the expectation: ${err.message}`,
     );
   }
 });

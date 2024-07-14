@@ -5,7 +5,7 @@ pub use boxed::{BoxedCompiler, NodeCompilerTrait};
 
 use std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc};
 
-use napi::Either;
+use napi::{bindgen_prelude::*, Either};
 use napi_derive::napi;
 use typst_ts_compiler::{
     font::system::SystemFontSearcher,
@@ -17,7 +17,7 @@ use typst_ts_core::{
     config::{compiler::EntryState, CompileFontOpts},
     error::prelude::*,
     typst::{foundations::IntoValue, prelude::Prehashed},
-    Bytes, TypstDict,
+    Bytes,
 };
 
 /// A nullable boxed compiler wrapping.
@@ -65,31 +65,28 @@ pub struct NodeAddFontPaths {
 #[napi(object)]
 pub struct NodeAddFontBlobs {
     /// Adds additional memory fonts
-    pub font_blobs: Vec<Vec<u8>>,
+    pub font_blobs: Vec<Buffer>,
 }
 
 #[napi(object, js_name = "CompileArgs")]
 #[derive(Default)]
 pub struct NodeCompileArgs {
     /// Adds additional directories to search for fonts
-    pub font_args: Vec<Either<NodeAddFontPaths, NodeAddFontBlobs>>,
+    pub font_args: Option<Vec<Either<NodeAddFontPaths, NodeAddFontBlobs>>>,
 
     /// Path to typst workspace.
-    pub workspace: String,
-
-    /// Entry file.
-    pub entry: String,
+    pub workspace: Option<String>,
 
     /// Adds a string key-value pair visible through `sys.inputs`
-    pub inputs: HashMap<String, String>,
+    pub inputs: Option<HashMap<String, String>>,
 }
 
 pub fn create_driver(
-    args: NodeCompileArgs,
+    args: Option<NodeCompileArgs>,
 ) -> ZResult<CompileDriver<PureCompiler<TypstSystemWorld>>> {
     use typst_ts_core::path::PathClean;
-    let workspace_dir = Path::new(args.workspace.as_str()).clean();
-    let entry_file_path = Path::new(args.entry.as_str()).clean();
+    let args = args.unwrap_or_default();
+    let workspace_dir = Path::new(args.workspace.unwrap_or_default().as_str()).clean();
 
     let workspace_dir = if workspace_dir.is_absolute() {
         workspace_dir
@@ -98,33 +95,21 @@ pub fn create_driver(
         cwd.join(workspace_dir)
     };
 
-    let entry_file_path = if entry_file_path.is_absolute() {
-        entry_file_path
-    } else {
-        let cwd = std::env::current_dir().context("failed to get current dir")?;
-        cwd.join(entry_file_path)
-    };
-
     let workspace_dir = workspace_dir.clean();
-    let entry_file_path = entry_file_path.clean();
-
-    if !entry_file_path.starts_with(&workspace_dir) {
-        return Err(error_once!(
-            "entry file path must be in workspace directory",
-            workspace_dir: workspace_dir.display()
-        ));
-    }
 
     // Convert the input pairs to a dictionary.
-    let inputs: TypstDict = args
-        .inputs
-        .iter()
-        .map(|(k, v)| (k.as_str().into(), v.as_str().into_value()))
-        .collect();
+    let inputs = args.inputs.map(|inputs| {
+        Arc::new(Prehashed::new(
+            inputs
+                .iter()
+                .map(|(k, v)| (k.as_str().into(), v.as_str().into_value()))
+                .collect(),
+        ))
+    });
 
     let mut searcher = SystemFontSearcher::new();
 
-    for arg in args.font_args {
+    for arg in args.font_args.into_iter().flatten() {
         match arg {
             Either::A(p) => {
                 for i in p.font_paths {
@@ -138,7 +123,7 @@ pub fn create_driver(
             }
             Either::B(p) => {
                 for b in p.font_blobs {
-                    searcher.add_memory_font(Bytes::from(b));
+                    searcher.add_memory_font(Bytes::from(b.to_vec()));
                 }
             }
         }
@@ -151,14 +136,11 @@ pub fn create_driver(
 
     let world = TypstSystemUniverse::new_raw(
         EntryState::new_rooted(workspace_dir.into(), None),
-        Some(Arc::new(Prehashed::new(inputs))),
+        inputs,
         Vfs::new(SystemAccessModel {}),
         HttpRegistry::default(),
         Arc::new(searcher.into()),
     );
 
-    Ok(CompileDriver::new(
-        std::marker::PhantomData,
-        world.with_entry_file(entry_file_path.to_owned()),
-    ))
+    Ok(CompileDriver::new(std::marker::PhantomData, world))
 }

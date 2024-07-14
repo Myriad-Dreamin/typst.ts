@@ -157,31 +157,23 @@ pub struct NodeCompiler {
 
 #[napi]
 impl NodeCompiler {
-    /// Gets default compile arguments
-    #[napi]
-    pub fn default_compile_args() -> NodeCompileArgs {
-        NodeCompileArgs::default()
-    }
-
     /// Creates a new compiler based on the given arguments.
     ///
     /// == Example
     ///
     /// Creates a new compiler with default arguments:
     /// ```ts
-    /// const compiler = NodeCompiler.create(NodeCompiler.defaultCompileArgs());
+    /// const compiler = NodeCompiler.create();
     /// ```
     ///
     /// Creates a new compiler with custom arguments:
     /// ```ts
     /// const compiler = NodeCompiler.create({
-    ///   ...NodeCompiler.defaultCompileArgs(),
     ///   workspace: '/path/to/workspace',
-    ///   entry: '/path/to/entry',
     /// });
     /// ```
     #[napi]
-    pub fn create(args: NodeCompileArgs) -> Result<NodeCompiler, NodeError> {
+    pub fn create(args: Option<NodeCompileArgs>) -> Result<NodeCompiler, NodeError> {
         let driver = create_driver(args).map_err(map_node_error)?;
         Ok(NodeCompiler {
             driver: driver.into(),

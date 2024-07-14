@@ -19,8 +19,6 @@ export class DynLayoutCompiler {
 
 /** Node wrapper to access compiler interfaces. */
 export class NodeCompiler {
-  /** Gets default compile arguments */
-  static defaultCompileArgs(): CompileArgs;
   /**
    * Creates a new compiler based on the given arguments.
    *
@@ -28,19 +26,17 @@ export class NodeCompiler {
    *
    * Creates a new compiler with default arguments:
    * ```ts
-   * const compiler = NodeCompiler.create(NodeCompiler.defaultCompileArgs());
+   * const compiler = NodeCompiler.create();
    * ```
    *
    * Creates a new compiler with custom arguments:
    * ```ts
    * const compiler = NodeCompiler.create({
-   *   ...NodeCompiler.defaultCompileArgs(),
    *   workspace: '/path/to/workspace',
-   *   entry: '/path/to/entry',
    * });
    * ```
    */
-  static create(args: CompileArgs): NodeCompiler;
+  static create(args?: CompileArgs | undefined | null): NodeCompiler;
   /** Casts the inner compiler. */
   static fromBoxed(b: BoxedCompiler): NodeCompiler;
   /** Takes ownership of the inner compiler. */
@@ -157,13 +153,11 @@ export class NodeTypstDocument {
 
 export interface CompileArgs {
   /** Adds additional directories to search for fonts */
-  fontArgs: Array<NodeAddFontPaths | NodeAddFontBlobs>;
+  fontArgs?: Array<NodeAddFontPaths | NodeAddFontBlobs>;
   /** Path to typst workspace. */
-  workspace: string;
-  /** Entry file. */
-  entry: string;
+  workspace?: string;
   /** Adds a string key-value pair visible through `sys.inputs` */
-  inputs: Record<string, string>;
+  inputs?: Record<string, string>;
 }
 
 /**
@@ -189,7 +183,7 @@ export interface CompileDocArgs {
 
 export interface NodeAddFontBlobs {
   /** Adds additional memory fonts */
-  fontBlobs: Array<Array<number>>;
+  fontBlobs: Array<Buffer>;
 }
 
 export interface NodeAddFontPaths {
