@@ -9,8 +9,8 @@ Note: This is suitable for running in browser, but not very fit in node.js appli
 
 In other words:
 - The node.js library runs compiler as native code, thus native performance.
-- The compiler and renderer are integrated into a same library for simpler and cleaner APIs.
-- You can uses system fonts lazily with the compiler for web.
+- The compiler and renderer are integrated into a same node library for simpler and cleaner APIs.
+- You can simply use system fonts lazily with the compiler for node but not that for web.
 
 If you want to run the compiler or renderer in Node.js, please see #cross-link("/guide/all-in-one-node.typ")[All-in-one Library for Node.js].
 
