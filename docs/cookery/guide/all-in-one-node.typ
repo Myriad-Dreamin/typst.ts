@@ -40,7 +40,7 @@ const docs = await compiler.compile({
 
 With a file path:
 
-```
+```ts
 const docs = await compiler.compile({
   mainFilePath: '/path/to/main-file.typ',
 });
@@ -78,7 +78,7 @@ compiler.svg({ mainFileContent });
 
 Query the document instance by some selector, such as a typst label:
 
-```
+```ts
 compiler.query({ mainFileContent }, { selector: '<some-label>' });
 ```
 
