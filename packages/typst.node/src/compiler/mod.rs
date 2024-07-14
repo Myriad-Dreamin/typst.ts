@@ -5,7 +5,7 @@ pub use boxed::{BoxedCompiler, NodeCompilerTrait};
 
 use std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc};
 
-use napi::Either;
+use napi::{bindgen_prelude::*, Either};
 use napi_derive::napi;
 use typst_ts_compiler::{
     font::system::SystemFontSearcher,
@@ -65,7 +65,7 @@ pub struct NodeAddFontPaths {
 #[napi(object)]
 pub struct NodeAddFontBlobs {
     /// Adds additional memory fonts
-    pub font_blobs: Vec<Vec<u8>>,
+    pub font_blobs: Vec<Buffer>,
 }
 
 #[napi(object, js_name = "CompileArgs")]
@@ -123,7 +123,7 @@ pub fn create_driver(
             }
             Either::B(p) => {
                 for b in p.font_blobs {
-                    searcher.add_memory_font(Bytes::from(b));
+                    searcher.add_memory_font(Bytes::from(b.to_vec()));
                 }
             }
         }

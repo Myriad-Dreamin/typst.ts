@@ -183,7 +183,7 @@ export interface CompileDocArgs {
 
 export interface NodeAddFontBlobs {
   /** Adds additional memory fonts */
-  fontBlobs: Array<Array<number>>;
+  fontBlobs: Array<Buffer>;
 }
 
 export interface NodeAddFontPaths {
