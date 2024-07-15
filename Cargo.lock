@@ -2842,7 +2842,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "base64 0.22.1",
  "bitvec",
@@ -2869,7 +2869,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2bbox"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "comemo",
  "reflexo",
@@ -2880,7 +2880,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2canvas"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -2898,7 +2898,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2sema"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "comemo",
  "js-sys",
@@ -2912,7 +2912,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vfs"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "append-only-vec",
  "indexmap 2.2.6",
@@ -2931,7 +2931,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-world"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "append-only-vec",
  "chrono",
@@ -4439,7 +4439,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-ast-exporter"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "ansi_term",
  "typst",
@@ -4448,7 +4448,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-bench-lowering"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "comemo",
  "dissimilar",
@@ -4463,7 +4463,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-cli"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4500,7 +4500,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-compiler"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "base64 0.22.1",
  "codespan-reporting",
@@ -4539,7 +4539,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-core"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "base64 0.22.1",
  "base64-serde",
@@ -4580,7 +4580,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-dev-server"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "clap",
  "clap_complete",
@@ -4598,7 +4598,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-dom-exporter"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "async-recursion",
  "base64 0.22.1",
@@ -4624,7 +4624,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-heap-profile-test"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4639,7 +4639,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-fuzzer"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4659,7 +4659,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-test"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4675,7 +4675,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-integration-test"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4699,7 +4699,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-node-compiler"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "chrono",
  "comemo",
@@ -4719,7 +4719,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-parser"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4743,7 +4743,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-pdf-exporter"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "typst",
  "typst-pdf",
@@ -4752,7 +4752,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-renderer"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "anyhow",
  "byteorder",
@@ -4788,14 +4788,14 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-rkyv-assertions"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "typst-ts-core",
 ]
 
 [[package]]
 name = "typst-ts-serde-exporter"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "rmp-serde",
  "serde",
@@ -4806,7 +4806,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-std-test"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "anyhow",
  "rayon",
@@ -4815,7 +4815,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-svg-exporter"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4832,7 +4832,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-test-common"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -4843,7 +4843,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-text-exporter"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "typst",
  "typst-ts-core",
@@ -4851,7 +4851,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-web-compiler"
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 dependencies = [
  "ansi-to-html",
  "base64 0.22.1",

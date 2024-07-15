@@ -1,7 +1,7 @@
 [workspace.package]
 description = "Run Typst in JavaScriptWorld."
 authors = ["Typst.ts Developers", "The Typst Project Developers"]
-version = "0.5.0-rc5"
+version = "0.5.0-rc6"
 edition = "2021"
 readme = "README.md"
 license = "Apache-2.0"
@@ -203,30 +203,30 @@ vergen = { version = "8.3.1", features = [
 ] }
 
 # project core
-reflexo = { version = "0.5.0-rc5", default-features = false, path = "crates/reflexo" }
-reflexo-vfs = { version = "0.5.0-rc5", path = "crates/reflexo-vfs" }
-reflexo-world = { version = "0.5.0-rc5", path = "crates/reflexo-world" }
+reflexo = { version = "0.5.0-rc6", default-features = false, path = "crates/reflexo" }
+reflexo-vfs = { version = "0.5.0-rc6", path = "crates/reflexo-vfs" }
+reflexo-world = { version = "0.5.0-rc6", path = "crates/reflexo-world" }
 
 # conversions
-reflexo-vec2canvas = { version = "0.5.0-rc5", path = "crates/conversion/vec2canvas" }
-reflexo-vec2sema = { version = "0.5.0-rc5", path = "crates/conversion/vec2sema" }
-reflexo-vec2bbox = { version = "0.5.0-rc5", path = "crates/conversion/vec2bbox" }
+reflexo-vec2canvas = { version = "0.5.0-rc6", path = "crates/conversion/vec2canvas" }
+reflexo-vec2sema = { version = "0.5.0-rc6", path = "crates/conversion/vec2sema" }
+reflexo-vec2bbox = { version = "0.5.0-rc6", path = "crates/conversion/vec2bbox" }
 
-typst-ts-core = { version = "0.5.0-rc5", default-features = false }
-typst-ts-compiler = { version = "0.5.0-rc5", default-features = false }
-typst-ts-test-common = { version = "0.5.0-rc5", path = "tests/common" }
+typst-ts-core = { version = "0.5.0-rc6", default-features = false }
+typst-ts-compiler = { version = "0.5.0-rc6", default-features = false }
+typst-ts-test-common = { version = "0.5.0-rc6", path = "tests/common" }
 
 # project exporters
-typst-ts-ast-exporter = "0.5.0-rc5"
+typst-ts-ast-exporter = "0.5.0-rc6"
 typst-ts-dom-exporter = { path = "exporter/dom" }
-typst-ts-pdf-exporter = "0.5.0-rc5"
-typst-ts-serde-exporter = "0.5.0-rc5"
-typst-ts-svg-exporter = "0.5.0-rc5"
-typst-ts-text-exporter = "0.5.0-rc5"
+typst-ts-pdf-exporter = "0.5.0-rc6"
+typst-ts-serde-exporter = "0.5.0-rc6"
+typst-ts-svg-exporter = "0.5.0-rc6"
+typst-ts-text-exporter = "0.5.0-rc6"
 
 # project common components
-typst-ts-dev-server = { version = "0.5.0-rc5", path = "server/dev" }
-typst-ts-cli = { version = "0.5.0-rc5", path = "cli" }
+typst-ts-dev-server = { version = "0.5.0-rc6", path = "server/dev" }
+typst-ts-cli = { version = "0.5.0-rc6", path = "cli" }
 
 [patch.crates-io]
 typst-ts-core = { path = "core" }

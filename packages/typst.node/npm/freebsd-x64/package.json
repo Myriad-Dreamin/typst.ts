@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst-ts-node-compiler-freebsd-x64",
-  "version": "0.5.0-rc5",
+  "version": "0.5.0-rc6",
   "os": [
     "freebsd"
   ],
