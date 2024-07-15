@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { withGlobalRenderer } from '@myriaddreamin/typst.ts/dist/esm/contrib/global-renderer.mjs';
 import * as typst from '@myriaddreamin/typst.ts';
 
@@ -6,6 +6,71 @@ import * as typst from '@myriaddreamin/typst.ts';
 //   void(args);
 //   return undefined;
 // };
+
+const htmlLayerCss = `
+.typst-html-semantics {
+  position: absolute;
+  z-index: 2;
+  color: transparent;
+  font-family: monospace;
+  white-space: pre;
+}
+
+.typst-html-semantics span {
+  transform-origin: left top;
+  position: absolute;
+  display: inline-block;
+  left: 0;
+  top: 0;
+}
+
+.typst-content-hint {
+  position: absolute;
+  display: inline-block;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.typst-html-semantics a {
+  position: absolute;
+  display: inline-block;
+}
+
+/* set transparent itself */
+.typst-content-group {
+  pointer-events: visible;
+}
+
+.typst-html-semantics span::-moz-selection {
+  color: transparent;
+  background: #7db9dea0;
+}
+
+.typst-html-semantics span::selection {
+  color: transparent;
+  background: #7db9dea0;
+}
+
+.typst-html-semantics *::-moz-selection {
+  color: transparent;
+  background: transparent;
+}
+
+.typst-html-semantics *::selection {
+  color: transparent;
+  background: transparent;
+}
+
+.typst-content-fallback {
+  color: transparent;
+  background: transparent;
+}
+
+.pseudo-link,
+.typst-text {
+  pointer-events: none;
+}`;
 
 export interface TypstDocumentProps {
   fill?: string;
@@ -88,6 +153,8 @@ export const TypstDocument = ({ fill, artifact, format }: TypstDocumentProps) =>
 
   return (
     <div>
+      {/* todo: remove this embedded css */}
+      <style>{htmlLayerCss}</style>
       <div className="typst-app" style={{ height: '0' }} ref={displayDivRef}></div>
     </div>
   );

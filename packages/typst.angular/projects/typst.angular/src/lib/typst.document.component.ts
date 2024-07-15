@@ -10,7 +10,7 @@ let moduleInitOptions: typst.InitOptions = {
 @Component({
   selector: 'typst-document',
   templateUrl: `./typst.document.component.html`,
-  styles: [],
+  styleUrls: [`./typst.document.component.css`],
 })
 export class TypstDocumentComponent {
   _artifact: Uint8Array = new Uint8Array(0);

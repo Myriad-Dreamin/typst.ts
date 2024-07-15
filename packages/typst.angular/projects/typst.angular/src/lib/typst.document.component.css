@@ -1,0 +1,63 @@
+:host ::ng-deep .typst-html-semantics {
+  position: absolute;
+  z-index: 2;
+  color: transparent;
+  font-family: monospace;
+  white-space: pre;
+}
+
+:host ::ng-deep .typst-html-semantics span {
+  transform-origin: left top;
+  position: absolute;
+  display: inline-block;
+  left: 0;
+  top: 0;
+}
+
+:host ::ng-deep .typst-content-hint {
+  position: absolute;
+  display: inline-block;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+:host ::ng-deep .typst-html-semantics a {
+  position: absolute;
+  display: inline-block;
+}
+
+/* set transparent itself */
+:host ::ng-deep .typst-content-group {
+  pointer-events: visible;
+}
+
+:host ::ng-deep .typst-html-semantics span::-moz-selection {
+  color: transparent;
+  background: #7db9dea0;
+}
+
+:host ::ng-deep .typst-html-semantics span::selection {
+  color: transparent;
+  background: #7db9dea0;
+}
+
+:host ::ng-deep .typst-html-semantics *::-moz-selection {
+  color: transparent;
+  background: transparent;
+}
+
+:host ::ng-deep .typst-html-semantics *::selection {
+  color: transparent;
+  background: transparent;
+}
+
+:host ::ng-deep .typst-content-fallback {
+  color: transparent;
+  background: transparent;
+}
+
+:host ::ng-deep .pseudo-link,
+:host ::ng-deep .typst-text {
+  pointer-events: none;
+}
