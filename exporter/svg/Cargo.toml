@@ -17,8 +17,8 @@ comemo.workspace = true
 tiny-skia.workspace = true
 base64.workspace = true
 
-typst-ts-core.workspace = true
-reflexo = { workspace = true, features = ["flat-vector"] }
+typst-ts-core = { workspace = true, features = ["flat-vector"] }
+reflexo.workspace = true
 reflexo-vec2canvas = { workspace = true, optional = true }
 log.workspace = true
 siphasher.workspace = true

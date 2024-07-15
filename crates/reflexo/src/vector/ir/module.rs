@@ -290,6 +290,7 @@ pub struct FlatModule {
     pub metadata: Vec<ModuleMetadata>,
 
     #[cfg_attr(feature = "rkyv", with(rkyv::with::Skip))]
+    #[allow(unused)]
     meta_indices: [once_cell::sync::OnceCell<usize>; META_INDICES_MAX],
 }
 

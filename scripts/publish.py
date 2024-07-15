@@ -1,8 +1,9 @@
 
 
 import subprocess
+import sys
 
-pub = ["cargo", "publish", "-p"]
+pub = ["cargo", "publish", *sys.argv[1:], "-p"]
 feats = ["--features", "no-content-hint"]
 subprocess.run([*pub, "reflexo"])
 subprocess.run([*pub, "reflexo-vfs"])

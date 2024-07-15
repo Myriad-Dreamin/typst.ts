@@ -1,4 +1,5 @@
 pub mod convert;
+#[cfg(feature = "flat-vector")]
 pub mod incr;
 pub mod ir;
 pub mod pass;
