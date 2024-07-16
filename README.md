@@ -360,9 +360,30 @@ Import `typst.ts` in your project:
 
 - Using [@myriaddreamin/typst.vue3][npm::typst.vue3]
 
-  Coming soon.
+  ```vue
+  <template>
+    <Typst v-bind:content="sourceCode" />
+  </template>
+  ```
+
+- Using typst math equations in Markdown with [@myriaddreamin/rehype-typst][npm::rehype-typst]
+
+  Inline style math equations:
+
+  ```html
+  <p><code class="language-math">C_L</code> like the following equation.</p>
+  ```
+
+  Block style math equations:
+
+  ```html
+  <pre><code class="language-math">
+    L = 1/2 rho v^2 S C_L
+  </code></pre>
+  ```
 
 [npm::typst.ts]: https://www.npmjs.com/package/@myriaddreamin/typst.ts
 [npm::typst.react]: https://www.npmjs.com/package/@myriaddreamin/typst.react
 [npm::typst.angular]: https://www.npmjs.com/package/@myriaddreamin/typst.angular
 [npm::typst.vue3]: ./packages/typst.vue3/README.md
+[npm::rehype-typst]: https://www.npmjs.com/package/@myriaddreamin/rehype-typst
