@@ -19,6 +19,8 @@ use typst_ts_core::{
 
 use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocArgs, NodeError};
 
+use super::create_inputs;
+
 // <World = TypstSystemWorld>
 pub trait NodeCompilerTrait: Compiler
 where
@@ -103,9 +105,12 @@ impl BoxedCompiler {
             }
         };
 
+        // Convert the input pairs to a dictionary.
+        let inputs = compile_by.inputs.map(create_inputs);
+
         Ok(self.universe.snapshot_with(Some(TaskInputs {
             entry: new_state,
-            ..Default::default()
+            inputs,
         })))
     }
 

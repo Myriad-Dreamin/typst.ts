@@ -17,7 +17,7 @@ use typst_ts_core::{
     config::{compiler::EntryState, CompileFontOpts},
     error::prelude::*,
     typst::{foundations::IntoValue, prelude::Prehashed},
-    Bytes,
+    Bytes, TypstDict,
 };
 
 /// A nullable boxed compiler wrapping.
@@ -97,16 +97,6 @@ pub fn create_driver(
 
     let workspace_dir = workspace_dir.clean();
 
-    // Convert the input pairs to a dictionary.
-    let inputs = args.inputs.map(|inputs| {
-        Arc::new(Prehashed::new(
-            inputs
-                .iter()
-                .map(|(k, v)| (k.as_str().into(), v.as_str().into_value()))
-                .collect(),
-        ))
-    });
-
     let mut searcher = SystemFontSearcher::new();
 
     for arg in args.font_args.into_iter().flatten() {
@@ -136,11 +126,21 @@ pub fn create_driver(
 
     let world = TypstSystemUniverse::new_raw(
         EntryState::new_rooted(workspace_dir.into(), None),
-        inputs,
+        args.inputs.map(create_inputs),
         Vfs::new(SystemAccessModel {}),
         HttpRegistry::default(),
         Arc::new(searcher.into()),
     );
 
     Ok(CompileDriver::new(std::marker::PhantomData, world))
+}
+
+/// Convert the input pairs to a dictionary.
+fn create_inputs(inputs: HashMap<String, String>) -> Arc<Prehashed<TypstDict>> {
+    Arc::new(Prehashed::new(
+        inputs
+            .iter()
+            .map(|(k, v)| (k.as_str().into(), v.as_str().into_value()))
+            .collect(),
+    ))
 }
