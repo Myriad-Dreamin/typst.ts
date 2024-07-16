@@ -10,7 +10,6 @@
   height: calc(var(--data-page-height) * var(--typst-dom-scale));
   --data-text-width: calc(1px * var(--typst-dom-scale));
   --data-text-height: calc(1px * var(--typst-dom-scale));
-  margin: auto;
 }
 
 .typst-back-canvas {

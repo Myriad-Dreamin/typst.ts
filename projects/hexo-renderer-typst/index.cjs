@@ -52,6 +52,15 @@ hexo.extend.generator.register('typst_assets', function (locals) {
     base_dir,
     'node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
   );
+
+  if (!fs.existsSync(typst_main_path)) {
+    throw new Error('typst.ts not found, please install `@myriaddreamin/typst.ts` first');
+  }
+
+  if (!fs.existsSync(renderer_path)) {
+    throw new Error('typst-ts-renderer not found, please install `@myriaddreamin/typst-ts-renderer` first');
+  }
+
   return [
     {
       path: 'typst/typst-main.js',

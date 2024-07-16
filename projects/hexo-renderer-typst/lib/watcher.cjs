@@ -24,7 +24,7 @@ class Watcher {
   }
 
   watch(state) {
-    console.log('[typst] watcher watch post', state.title);
+    // console.log('[typst] watcher watch post', state.title);
     if (state.callback !== undefined) {
       console.error('watcher callback is not undefined', state.title);
       this.unwatch(state);
@@ -43,7 +43,7 @@ class Watcher {
   }
 
   unwatch(state) {
-    console.log('[typst] watcher unwatch post', state.title);
+    // console.log('[typst] watcher unwatch post', state.title);
     if (state.callback === undefined) {
       console.error('watcher callback is not registered', state.title);
       return;
@@ -52,8 +52,8 @@ class Watcher {
   }
 
   processPost(event, state) {
-    // console.log('[typst] watcher process post', post.title, post.date, post.updated, post.path, post.source);
-    console.log('[typst] watcher process post', event, state.lifetime, state.title, state.updated, state.full_source);
+    // console.log('[typst] watcher process post', event, state.lifetime, state.title, state.updated, state.full_source);
+    console.log('[typst] watching', `<${state.title}>`, 'of', state.full_source, 'updated at', state.updated.format('YYYY-MM-DD HH:mm:ss.SSS'));
 
     switch (event) {
     case WATCH_EVENT.CREATED:

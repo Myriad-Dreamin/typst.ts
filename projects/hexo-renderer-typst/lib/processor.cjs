@@ -20,15 +20,15 @@ class Processor {
     }
 
     const base_dir = this.hexo.base_dir;
-    const title = this.compiler.title(path.resolve(base_dir, `source/${data.source}`));
+    let title = this.compiler.title(path.resolve(base_dir, `source/${data.source}`));
 
     if ((!title) || title === null) {
-      console.log('[typst]', `title not found in ${data.source}`);
-    } else {
-      data.title = title;
-      data.published = true;
+      console.error('[typst]', `title not found in ${data.source}`);
+      title = 'Untitled Typst';
     }
 
+    data.title = title;
+    data.published = true;
     return data;
   }
 }
