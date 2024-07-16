@@ -13,6 +13,10 @@ export type JsBoxedCompiler = BoxedCompiler;
 export class DynLayoutCompiler {
   /** Creates a new compiler based on the given arguments. */
   static fromBoxed(b: BoxedCompiler): DynLayoutCompiler;
+  /** Sets the target of the compiler. */
+  setTarget(target: string): void;
+  /** Specifies width (in pts) of the layout. */
+  setLayoutWidths(layoutWidths: Array<number>): void;
   /** Exports the document as a vector IR containing multiple layouts. */
   vector(compileBy: CompileDocArgs): Buffer;
 }

@@ -392,10 +392,17 @@ impl DynLayoutCompiler {
         }
     }
 
+    /// Sets the target of the compiler.
+    #[napi]
+    pub fn set_target(&mut self, target: String) {
+        self.driver.set_target(target);
+    }
+
     /// Specifies width (in pts) of the layout.
-    pub fn set_layout_widths(&mut self, target: Vec<f64>) {
+    #[napi]
+    pub fn set_layout_widths(&mut self, layout_widths: Vec<f64>) {
         self.driver
-            .set_layout_widths(target.into_iter().map(TypstAbs::raw).collect());
+            .set_layout_widths(layout_widths.into_iter().map(TypstAbs::raw).collect());
     }
 
     /// Exports the document as a vector IR containing multiple layouts.
