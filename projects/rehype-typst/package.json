@@ -12,6 +12,10 @@
     "index.d.ts",
     "index.js"
   ],
+  "scripts": {
+    "publish:dry": "npm pack --dry-run",
+    "publish:lib": "npm publish --access public"
+  },
   "dependencies": {
     "@myriaddreamin/typst-ts-node-compiler": "^0.5.0-rc6",
     "@types/hast": "^3.0.0",
