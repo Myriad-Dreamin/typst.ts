@@ -124,3 +124,7 @@ The content of any element with a `language-math`, `math-inline`, or
 The elements are replaced by what Typst renders.
 Either a `math-display` class or using `<pre><code class="language-math">` will
 result in “display” math: math that is a centered block on its own line.
+
+<!-- Definitions -->
+
+[unified-transformer]: https://github.com/unifiedjs/unified#transformer
