@@ -5,6 +5,8 @@
 #let snippet-source = "https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/src/contrib/snippet.mts"
 #let snippet-lib = link(snippet-source)[`snippet`]
 
+#include "../claim.typ"
+
 The most simple examples always work with #snippet-lib utility library, an all-in-one library with simplified API interfaces:
 
 ```ts

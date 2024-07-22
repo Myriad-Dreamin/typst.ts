@@ -35,28 +35,48 @@ There are several ways to setup typst.ts. The difficulty of each approach is eva
 #let difficult-medium = text(fill: orange.darken(25%), "medium")
 #let difficult-hard = text(fill: hard_color, "hard")
 
-- #box(link(<approach-all-in-one>)[Approach 1]) (Recommended)
+- #box(link(<approach-all-in-one-node>)[Approach 1]) (Recommended in Node.js)
+  start with the all-in-one Node.js Library.
+
+- #box(link(<approach-all-in-one>)[Approach 2]) (Recommended in Browser)
   start with the all-in-one JavaScript Library.
 
-- #box(link(<approach-bundle>)[Approach 2])
+- #box(link(<approach-bundle>)[Approach 3])
   Use a bundled javascript file along with wasm modules.
 
-- #box(link(<approach-node-lib>)[Approach 3])
+- #box(link(<approach-node-lib>)[Approach 4])
   Use typst.ts as a library in Node.js.
 
-- #box(link(<approach-ts-lib>)[Approach 4])
+- #box(link(<approach-ts-lib>)[Approach 5])
   Use typst.ts as a library in browser (for TypeScript users).
 
-- #box(link(<approach-js-lib>)[Approach 5])
+- #box(link(<approach-js-lib>)[Approach 6])
   Use typst.ts as a library in browser (for JavaScript users).
 
-- #box(link(<approach-ts-lib-from-source>)[Approach 6])
+- #box(link(<approach-ts-lib-from-source>)[Approach 7])
   Use typst.ts with customized renderer/compiler modules.
 
 #line(length: 100%)
 
+=== Simple compiler and renderer bindings to Node.js <approach-all-in-one-node>
+#let easy-compiler-example = link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/projects/hexo-renderer-typst/lib/compiler.cjs")[Compiler]
+#let easy-renderer-example = link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/projects/hexo-renderer-typst/lib/renderer.cjs")[Renderer]
+
+Difficulty: #difficult-easy, Example: #easy-compiler-example and #easy-renderer-example for #link("https://hexo.io/")[Hexo]
+
+The compiler and renderer are integrated into a same node library for simpler and cleaner APIs, since there is no urgent need to tree-shake the components in node.js applications.
+
+```ts
+const compiler = NodeCompiler.create();
+await compiler.pdf({
+  mainFileContent: 'Hello, typst!',
+}); // :-> PDF Buffer
+```
+
+See #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/all-in-one-node.html")[All-in-one Node.js Library] for more example usage.
+
 === Run the compiler or renderer with simplified APIs <approach-all-in-one>
-#let easy-preview-example = link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/examples/all-in-one.html")[Single HTML file for real-time previewing typst document]
+#let easy-preview-example = link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/preview.html")[Single HTML file for real-time previewing typst document]
 
 Difficulty: #difficult-easy, Example: #easy-preview-example
 
@@ -129,7 +149,10 @@ There are several templates for developing typst.ts with Node.js:
 - #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/templates/ts-node-next")[Use ts-node, with and typescript configured with:]
   ```json { "moduleResolution": "Node16" }``` or #linebreak()
   ```json { "moduleResolution": "NodeNext" }```
-- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/templates/node.js-compiler-next")[Use compiler, with typescript configured with:]
+- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/templates/compiler-wasm")[Use compiler in browser, with typescript configured with:]
+  ```json { "moduleResolution": "Node16" }``` or #linebreak()
+  ```json { "moduleResolution": "NodeNext" }```
+- #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/templates/compiler-node")[Use compiler in node.js, with typescript configured with:]
   ```json { "moduleResolution": "Node16" }``` or #linebreak()
   ```json { "moduleResolution": "NodeNext" }```
 
@@ -223,6 +246,7 @@ See #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.t
 
 == Further reading
 
++ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/all-in-one-node.html")[All-in-one Node.js Library]
 + #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/all-in-one.html")[All-in-one (Simplified) JavaScript Library]
 + #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compilers.html")[Compilers]
 + #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/renderers.html")[Renderers]
