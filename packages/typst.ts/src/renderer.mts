@@ -18,7 +18,6 @@ import { RenderView } from './render/canvas/view.mjs';
 import { LazyWasmModule } from './wasm.mjs';
 import { buildComponent } from './init.mjs';
 import { TypstDomDocument } from './dom.mjs';
-import { randstr } from './utils.mjs';
 
 /**
  * The result of rendering a Typst document.
