@@ -2,6 +2,8 @@
 
 #show: book-page.with(title: "All-in-one (Simplified) Library for Browsers")
 
+#include "claim.typ"
+
 Note: This is suitable for running in browser, but not very fit in node.js applications. This is because:
 - The compiler for browsers is in wasm module and slower than running compiler as native code.
 - You must carefully maintain the bundle size of your browser applications, there for the components are split for better tree-shaking.

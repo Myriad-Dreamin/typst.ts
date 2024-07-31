@@ -2,7 +2,11 @@
 
 #show: book-page.with(title: "All-in-one Library for Node.js")
 
-== Create a Compiler
+#include "claim.typ"
+
+The compiler and renderer are integrated into a same node library for simpler and cleaner APIs, since there is no urgent need to tree-shake the components in node.js applications.
+
+== Creating a Compiler
 
 Creates a new compiler with default arguments:
 ```ts
@@ -16,7 +20,7 @@ const compiler = NodeCompiler.create({
 });
 ```
 
-== Caution: Clean Global Cache
+== Caution: Cleaning Global Cache
 
 Please evict the global compilation cache periodically to avoid memory leak:
 
@@ -28,7 +32,7 @@ NodeCompiler.evictCache(10);
 
 If you have some ideas about how to improve the cache eviction strategy, please let us know.
 
-== Compile out a document instance by compile arguments
+== Compiling out a document instance by compile arguments
 
 With an intermediate document content:
 
@@ -74,7 +78,7 @@ compiler.plainSvg({ mainFileContent });
 compiler.svg({ mainFileContent });
 ```
 
-== Query
+== Querying
 
 Query the document instance by some selector, such as a typst label:
 
@@ -82,7 +86,7 @@ Query the document instance by some selector, such as a typst label:
 compiler.query({ mainFileContent }, { selector: '<some-label>' });
 ```
 
-== Add/Remove in-memory shadow files
+== Adding/Removing in-memory shadow files
 
 Add extra *binary input files*:
 
@@ -118,7 +122,7 @@ compiler.resetShadow();
 
 Note: this function will also clean all files added by `addSource`.
 
-== Settings: Configure fonts.
+== Settings: Configuring fonts.
 
 Order of `fontArgs` is important. The precedence is:
 - The former elements of `fontArgs` have higher precedence.

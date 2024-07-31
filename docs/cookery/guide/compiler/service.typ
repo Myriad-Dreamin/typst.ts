@@ -6,9 +6,11 @@
 #let compile-middleware = ```rs trait CompileMiddleware```
 #let compiler-trait = ```rs trait Compiler```
 
+#include "../claim.typ"
+
 The compiler services help you build a precompiler CLI or an incremental compilation server Program for #term.vector-format.
 
-== Create and use a `TypstSystemUniverse` instance
+== Creating and Using a `TypstSystemUniverse` Instance
 Note: The ```rs struct TypstSystemUniverse``` can create multiple snapshots at the same time, ```rs struct TypstSystemWorld```, implementing ```rs trait typst::World```.
 
 Example: #link("https://github.com/Myriad-Dreamin/typst.ts/blob/9a4f0537f7d8443b3920a27cabc51bb5ea64ee0a/cli/src/compile.rs#L30")[fn create_driver in compile.rs]
@@ -27,7 +29,7 @@ let mut tracer = Tracer::default();
 typst::compile(&verse.snapshot(), tracer);
 ```
 
-== Create and use a `PureCompiler` instance
+== Creating and Using a `PureCompiler` Instance
 
 #[
   #set par(justify: false)
@@ -41,7 +43,7 @@ std::marker::PhantomData.compile(
   &verse.snapshot(), &mut Default::default());
 ```
 
-== Create and use a `CompileExporter` instance
+== Creating and Using a `CompileExporter` Instance
 
 #[
   #set par(justify: false)
@@ -69,7 +71,7 @@ type WithSIR = typst_ts_svg_exporter::SvgModuleExporter;
 type WithText = typst_ts_text_exporter::TextExporter;
 ```
 
-== Create and use a `DynamicLayoutCompiler` instance
+== Creating and Using a `DynamicLayoutCompiler` Instance
 
 #[
   #set par(justify: false)
@@ -83,42 +85,35 @@ Enable dynamic layout based on a #compiler-trait.
 let driver = DynamicLayoutCompiler::new(driver, output_dir);
 ```
 
-== Create and use a `CompileActor` instance
+== Creating and Using a `CompileActor` Instance
 
-Specifical for incremental compilation based on some universe instance.
+Specifical for incremental compilation (Specifically, it watches files and compiles on demand) based on some universe instance.
 
-Example: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/server/preview_compiler.rs")[struct CompileServer in preview_compiler.rs in typst-preview]
+Example: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/tool/preview.rs")[use of struct CompileActor in tool/preview.rs in tinymist]
 
 ```rs
 let (intr_tx, intr_rx) = mpsc::unbounded_channel();
-let actor = CompileServerActor::new(verse,
+let actor = CompileActor::new(verse,
   intr_tx, intr_rx).with_watch(Some(handle.clone()));
 ```
 
-Example: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/server/preview_compiler.rs")[fn CompileServer::spawn in preview_compiler.rs in typst-preview]
+Example: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/actor/typ_client.rs")[use of `intr_tx` in actor/typ_client.rs in tinymist]
 
-Watch input, compile incrementally, and response message:
+Access the service of the `CompileActor` instance.
 
 ```rs
-pub async fn run(self) {
-  let intr_tx = self.inner.intr_tx.clone();
-  // spawn a watch compile thread
-  tokio::spawn(self.inner.spawn());
-
-  debug!("TypstActor: waiting for message");
-  let mut client = wrap_client(intr_tx);
-  while let Some(mail) = client.mailbox.recv().await {
-    client.process_mail(mail).await;
-  }
-
-  info!("TypstActor: exiting");
-}
+/// Updates the overlay layer of VFS (Virtual File System)
+let _ = self.intr_tx.send(Interrupt::Memory(event));
+/// Reads the snapshot of the current compilation
+let (tx, rx) = oneshot::channel();
+self.intr_tx.send(Interrupt::SnapshotRead(tx))?;
+let snapshot = rx.await
 ```
 
 // todo: reporter option
 // === Example: use a lambda (closure) exporter
 
-// Example: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/server/preview_compiler.rs")[fn create_driver in compile.rs]
+// Example: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/tool/preview.rs")[fn create_driver in compile.rs]
 
 // ```rs
 // let driver = CompileExporter::new(compiler_driver).with_exporter(
@@ -130,7 +125,7 @@ pub async fn run(self) {
 // );
 // ```
 
-=== Adds exporters to a `CompileActor` instance
+=== Adding Exporters to a `CompileActor` Instance
 
 Example #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/cli/src/compile.rs")[fn compile_export in compile.rs in typst-ts-cli]
 
@@ -151,5 +146,4 @@ let actor = CompileActor::new_with(
     },
 )
 .with_enable_watch(args.watch);
-
 ```
