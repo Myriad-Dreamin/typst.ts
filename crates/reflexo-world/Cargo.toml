@@ -11,7 +11,6 @@ repository.workspace = true
 [dependencies]
 
 typst.workspace = true
-typst-ts-core.workspace = true
 reflexo.workspace = true
 reflexo-vfs.workspace = true
 append-only-vec.workspace = true
@@ -21,6 +20,7 @@ once_cell.workspace = true
 rustc-hash.workspace = true
 indexmap.workspace = true
 dashmap.workspace = true
+ecow.workspace = true
 log.workspace = true
 chrono.workspace = true
 serde.workspace = true
@@ -32,6 +32,7 @@ serde_json.workspace = true
 sha2.workspace = true
 hex.workspace = true
 strum.workspace = true
+serde_with.workspace = true
 
 wasm-bindgen = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true }
@@ -64,7 +65,6 @@ lazy-fontdb = []
 browser-embedded-fonts = []
 web = ["wasm-bindgen", "web-sys", "js-sys", "serde-wasm-bindgen", "reflexo/web"]
 browser = ["web"]
-no-content-hint = ["typst-ts-core/no-content-hint"]
 system = [
     "dep:dirs",
     "dep:walkdir",

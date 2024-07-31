@@ -1,10 +1,14 @@
 use std::sync::Arc;
 
 use comemo::Prehashed;
+use reflexo::error::prelude::*;
 use reflexo_vfs::{system::SystemAccessModel, Vfs};
-use typst_ts_core::{config::CompileOpts, error::prelude::*, font::FontResolverImpl};
 
-use crate::{font::system::SystemFontSearcher, package::http::HttpRegistry};
+use crate::{
+    config::CompileOpts,
+    font::{system::SystemFontSearcher, FontResolverImpl},
+    package::http::HttpRegistry,
+};
 
 /// type trait of [`TypstSystemWorld`].
 #[derive(Debug, Clone, Copy)]

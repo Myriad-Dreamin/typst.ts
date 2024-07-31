@@ -1,6 +1,7 @@
 use typst::text::Font;
 
-use crate::{Bytes, ReadAllOnce};
+use crate::Bytes;
+use reflexo::ReadAllOnce;
 
 /// A FontLoader would help load a font from somewhere.
 pub trait FontLoader {

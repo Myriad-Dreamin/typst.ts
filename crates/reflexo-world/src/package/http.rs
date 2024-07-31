@@ -11,7 +11,7 @@ use typst::{
     syntax::package::PackageVersion,
 };
 
-use super::{DummyNotifier, Notifier, PackageError, PackageSpec, Registry};
+use super::{DummyNotifier, Notifier, PackageError, PackageSpec, PackageRegistry};
 
 pub struct HttpRegistry {
     notifier: Arc<Mutex<dyn Notifier + Send>>,
@@ -119,7 +119,7 @@ impl HttpRegistry {
     }
 }
 
-impl Registry for HttpRegistry {
+impl PackageRegistry for HttpRegistry {
     fn resolve(&self, spec: &PackageSpec) -> Result<std::sync::Arc<Path>, PackageError> {
         self.prepare_package(spec)
     }

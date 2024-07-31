@@ -4,7 +4,7 @@ use js_sys::Uint8Array;
 use typst::diag::{eco_format, EcoString};
 use wasm_bindgen::{prelude::*, JsValue};
 
-use super::{PackageError, PackageSpec, Registry};
+use super::{PackageError, PackageSpec, PackageRegistry};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
@@ -76,7 +76,7 @@ pub struct ProxyRegistry {
     pub real_resolve_fn: js_sys::Function,
 }
 
-impl Registry for ProxyRegistry {
+impl PackageRegistry for ProxyRegistry {
     fn resolve(&self, spec: &PackageSpec) -> Result<std::sync::Arc<Path>, PackageError> {
         // prepare js_spec
         let js_spec = js_sys::Object::new();

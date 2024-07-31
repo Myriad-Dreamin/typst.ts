@@ -1,11 +1,11 @@
 use std::{path::Path, sync::Arc};
 
-use super::{PackageError, PackageSpec, Registry};
+use super::{PackageError, PackageRegistry, PackageSpec};
 
 #[derive(Default, Debug)]
 pub struct DummyRegistry;
 
-impl Registry for DummyRegistry {
+impl PackageRegistry for DummyRegistry {
     fn resolve(&self, spec: &PackageSpec) -> Result<Arc<Path>, PackageError> {
         Err(PackageError::NotFound(spec.clone()))
     }

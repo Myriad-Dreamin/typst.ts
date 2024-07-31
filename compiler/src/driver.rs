@@ -3,18 +3,19 @@ use std::{
     sync::Arc,
 };
 
-use crate::{
-    world::{CompilerFeat, CompilerUniverse, CompilerWorld},
-    ShadowApi,
-};
+use reflexo_world::DETACHED_ENTRY;
 use typst::{
     diag::{eco_format, EcoString, SourceResult},
     foundations::Content,
 };
-use typst_ts_core::{config::compiler::DETACHED_ENTRY, Bytes, TypstDocument, TypstFileId};
+use typst_ts_core::{Bytes, TypstDocument, TypstFileId};
 
 use super::{CompileEnv, Compiler};
 use crate::EntryReader;
+use crate::{
+    world::{CompilerFeat, CompilerUniverse, CompilerWorld},
+    ShadowApi,
+};
 
 /// CompileDriverImpl is a driver for typst compiler.
 /// It is responsible for operating the compiler without leaking implementation

@@ -9,28 +9,24 @@ use chrono::{DateTime, Datelike, Local};
 use comemo::Prehashed;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
+use reflexo::ImmutPath;
+use reflexo_vfs::{notify::FilesystemEvent, Vfs};
 use typst::{
     diag::{eco_format, At, EcoString, FileError, FileResult, SourceResult},
     foundations::{Bytes, Datetime, Dict},
-    syntax::{Source, Span, VirtualPath},
+    syntax::{FileId, Source, Span, VirtualPath},
     text::{Font, FontBook},
     Library, World,
 };
 
-use reflexo_vfs::{notify::FilesystemEvent, Vfs};
-use typst_ts_core::{
-    package::{PackageSpec, Registry as PackageRegistry},
-    FontResolver, ImmutPath, TypstFileId as FileId,
-};
-
 use crate::{
     entry::{EntryManager, EntryReader, EntryState, DETACHED_ENTRY},
+    font::FontResolver,
+    package::{PackageRegistry, PackageSpec},
     parser::{
         get_semantic_tokens_full, get_semantic_tokens_legend, OffsetEncoding, SemanticToken,
         SemanticTokensLegend,
     },
-};
-use crate::{
     source::{SharedState, SourceCache, SourceDb},
     CodespanError, CodespanResult, CompilerFeat, ShadowApi, WorldDeps,
 };

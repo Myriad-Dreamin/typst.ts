@@ -14,7 +14,7 @@ use typst_ts_compiler::{
     CompileDriver, PureCompiler, TypstSystemUniverse, TypstSystemWorld,
 };
 use typst_ts_core::{
-    config::{compiler::EntryState, CompileFontOpts},
+    config::{entry::EntryState, CompileFontOpts},
     error::prelude::*,
     typst::{foundations::IntoValue, prelude::Prehashed},
     Bytes, TypstDict,

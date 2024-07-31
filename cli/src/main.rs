@@ -21,7 +21,7 @@ use typst_ts_cli::{
     QueryArgs, QueryReplArgs, Subcommands,
 };
 use typst_ts_compiler::TypstSystemUniverse;
-use typst_ts_core::{config::compiler::EntryOpts, exporter_builtins::GroupExporter};
+use typst_ts_core::{config::entry::EntryOpts, exporter_builtins::GroupExporter};
 use typst_ts_core::{
     config::CompileOpts,
     error::prelude::*,

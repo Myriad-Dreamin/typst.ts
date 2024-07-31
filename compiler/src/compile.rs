@@ -12,7 +12,7 @@ use std::{
 
 use reflexo::QueryRef;
 use reflexo_vfs::notify::UpstreamUpdateEvent;
-use reflexo_world::{EntryReader, Revising, TaskInputs};
+use reflexo_world::{EntryReader, EntryState, Revising, TaskInputs};
 use tokio::sync::{mpsc, oneshot};
 
 use crate::{
@@ -23,9 +23,7 @@ use crate::{
     CompileEnv, CompileReport, CompileReporter, CompileSnapshot, CompiledArtifact,
     ConsoleDiagReporter, PureCompiler, WorldDeps,
 };
-use typst_ts_core::{
-    config::compiler::EntryState, exporter_builtins::GroupExporter, Exporter, TypstDocument,
-};
+use typst_ts_core::{exporter_builtins::GroupExporter, Exporter, TypstDocument};
 
 // pub type NopCompilationHandle<T> = std::marker::PhantomData<fn(T)>;
 
