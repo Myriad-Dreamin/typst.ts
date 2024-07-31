@@ -36,7 +36,7 @@ jobs:
           google-chrome --version
       - name: Set up Chrome driver
         run: |
-          curl -O https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/117.0.5938.62/linux64/chromedriver-linux64.zip
+          wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/117.0.5938.62/linux64/chromedriver-linux64.zip
           unzip chromedriver-linux64.zip
           sudo mv ./chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
           chromedriver --version
