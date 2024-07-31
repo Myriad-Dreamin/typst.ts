@@ -223,7 +223,7 @@ mod tests {
 
     // todo: export svg image
     #[test]
-    #[cfg(feature = "disabled")]
+    #[cfg(feature = "test_render_document")]
     fn test_render_document() {
         fn artifact_path() -> PathBuf {
             PathBuf::from(env!("CARGO_MANIFEST_DIR"))
