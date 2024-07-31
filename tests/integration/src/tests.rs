@@ -44,7 +44,7 @@ mod tests {
 
     // not valid anymore
     #[test]
-    #[cfg(feature = "disabled")]
+    #[cfg(feature = "test_local_consistency")]
     fn test_local_consistency() {
         fn hash_bytes<T: AsRef<[u8]>>(bytes: T) -> String {
             format!("sha256:{}", hex::encode(sha2::Sha256::digest(bytes)))

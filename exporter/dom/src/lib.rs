@@ -8,17 +8,14 @@ mod svg_backend;
 /// Use types from `tiny-skia` crate.
 use tiny_skia as sk;
 
+use std::ops::Deref;
 use std::sync::Arc;
-use std::{collections::HashMap, ops::Deref};
 
 use comemo::Prehashed;
 
 use typst_ts_core::hash::Fingerprint;
 use typst_ts_core::vector::{
-    ir::{
-        self, Abs, Axes, FontIndice, FontItem, FontRef, GlyphRef, Module, Ratio, Rect, Scalar,
-        Transform,
-    },
+    ir::{self, Abs, Axes, FontItem, GlyphRef, Ratio, Rect, Scalar, Transform},
     vm::{GroupContext, RenderVm, TransformContext},
 };
 
@@ -236,75 +233,6 @@ impl<'m, C: RenderVm<'m, Resultant = BBox>> GroupContext<C> for BBoxBuilder {
     fn render_item_at(&mut self, ctx: &mut C, pos: ir::Point, item: &Fingerprint) {
         let bbox = ctx.render_item(item);
         self.inner.push((pos, bbox));
-    }
-}
-
-/// Task to create bbox with vector IR
-/// The 'm lifetime is the lifetime of the module which stores the frame data.
-/// The 't lifetime is the lifetime of task.
-pub struct BBoxTask<'m, 't> {
-    pub module: &'m Module,
-
-    /// Stores the bboxes used in the document.
-    pub(crate) bbox_cache: &'t mut HashMap<Fingerprint, BBox>,
-}
-
-impl<'m, 't> RenderVm<'m> for BBoxTask<'m, 't> {
-    type Resultant = BBox;
-    type Group = BBoxBuilder;
-
-    fn get_item(&self, value: &Fingerprint) -> Option<&'m ir::VecItem> {
-        self.module.get_item(value)
-    }
-
-    fn start_group(&mut self, _v: &Fingerprint) -> Self::Group {
-        Self::Group {
-            ts: sk::Transform::identity(),
-            clipper: None,
-            inner: vec![],
-        }
-    }
-
-    fn render_item(&mut self, abs_ref: &Fingerprint) -> Self::Resultant {
-        if let Some(bbox) = self.bbox_cache.get(abs_ref) {
-            return bbox.clone();
-        }
-
-        let bbox = self._render_item(abs_ref);
-        self.bbox_cache.insert(*abs_ref, bbox.clone());
-        bbox
-    }
-
-    fn render_text(
-        &mut self,
-        mut group_ctx: Self::Group,
-        _abs_ref: &Fingerprint,
-        text: &ir::TextItem,
-    ) -> Self::Group {
-        let font = self.get_font(&text.shape.font).unwrap();
-        let upem = Scalar(font.units_per_em.0);
-
-        group_ctx.inner.push((
-            ir::Point::default(),
-            BBox::new(BBoxRepr::Rect(Rect {
-                lo: ir::Point::default(),
-                hi: ir::Point::new(text.width(), upem),
-            })),
-        ));
-
-        group_ctx
-    }
-}
-
-impl<'m> FontIndice<'m> for BBoxTask<'m, '_> {
-    fn get_font(&self, value: &FontRef) -> Option<&'m ir::FontItem> {
-        self.module.fonts.get(value.idx as usize)
-    }
-}
-
-impl<'m> BBoxIndice for BBoxTask<'m, '_> {
-    fn get_bbox(&self, value: &Fingerprint) -> Option<BBox> {
-        self.bbox_cache.get(value).cloned()
     }
 }
 

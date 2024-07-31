@@ -70,7 +70,8 @@ vergen.workspace = true
 
 [features]
 
-debug_delta_update = []
+default = ["full"]
+full = ["serde_json", "serde_rmp", "render_full", "web_test"]
 
 web_test = ["typst-ts-test-common/web_artifacts"]
 web_verbose = ["web_test"]                        # for test debug
@@ -93,7 +94,7 @@ render_pdf = []
 render_svg = ["dep:typst-ts-svg-exporter", "web-sys/HtmlDivElement"]
 render_full = ["render_canvas", "render_pdf", "render_svg", "render_dom"]
 
-full = ["serde_json", "serde_rmp", "render_full", "web_test"]
-
-default = ["full"]
 web = ["render_canvas", "render_svg", "render_dom"]
+
+debug_delta_update = []
+test_render_document = []

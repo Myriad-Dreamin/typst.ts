@@ -38,12 +38,16 @@ rkyv = { workspace = true, optional = true }
 hex.workspace = true
 
 [features]
+
+default = ["full"]
+full = ["web", "flat-vector"]
+
 rkyv = ["dep:rkyv", "rkyv/alloc", "rkyv/archive_le"]
 rkyv-validation = ["dep:rkyv", "rkyv/validation"]
 flat-vector = ["rkyv", "rkyv-validation"]
 
 __web = ["instant/wasm-bindgen", "dep:wasm-bindgen", "dep:js-sys"]
 web = ["__web"]
-full = ["web", "flat-vector"]
 system = []
-default = ["full"]
+bi-hash = []
+item-dashmap = []

@@ -34,3 +34,6 @@ typst-ts-serde-exporter = { workspace = true, features = ["json"] }
 [[test]]
 name = "tests"
 path = "src/tests.rs"
+
+[features]
+test_local_consistency = []
