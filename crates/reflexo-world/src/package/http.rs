@@ -11,7 +11,7 @@ use typst::{
     syntax::package::PackageVersion,
 };
 
-use super::{DummyNotifier, Notifier, PackageError, PackageSpec, PackageRegistry};
+use super::{DummyNotifier, Notifier, PackageError, PackageRegistry, PackageSpec};
 
 pub struct HttpRegistry {
     notifier: Arc<Mutex<dyn Notifier + Send>>,

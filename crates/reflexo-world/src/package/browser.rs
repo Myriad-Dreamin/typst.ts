@@ -4,7 +4,7 @@ use js_sys::Uint8Array;
 use typst::diag::{eco_format, EcoString};
 use wasm_bindgen::{prelude::*, JsValue};
 
-use super::{PackageError, PackageSpec, PackageRegistry};
+use super::{PackageError, PackageRegistry, PackageSpec};
 
 #[wasm_bindgen]
 #[derive(Debug, Clone)]
