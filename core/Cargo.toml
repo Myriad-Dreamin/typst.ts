@@ -50,14 +50,17 @@ web-sys = { workspace = true, optional = true }
 js-sys = { workspace = true, optional = true }
 
 [features]
+
+default = ["full"]
+full = ["web", "glyph2vec", "flat-vector"]
 flat-vector = ["reflexo/flat-vector"]
-debug-gc = []
+
 experimental-ligature = []
 no-content-hint = []
 glyph2vec = []
 vector-bbox = []
+debug-gc = []
+item-dashmap = []
 
 __web = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
 web = ["__web", "reflexo/web"]
-full = ["web", "glyph2vec", "flat-vector"]
-default = ["full"]

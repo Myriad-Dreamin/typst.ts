@@ -57,17 +57,7 @@ anyhow.workspace = true
 vergen.workspace = true
 
 [features]
-gen-manual = ["dep:clap_mangen"]
-embedded-fonts = []
-pdf = ["typst-ts-pdf-exporter"]
-serde-json = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/json"]
-serde-rmp = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/rmp"]
-svg = [
-    #
-    "typst-ts-svg-exporter",
-    "typst-ts-svg-exporter/experimental-ligature",
-]
-text = ["typst-ts-text-exporter"]
+
 default = [
     "pdf",
     "serde-json",
@@ -77,3 +67,15 @@ default = [
     "gen-manual",
     "embedded-fonts",
 ]
+gen-manual = ["dep:clap_mangen"]
+embedded-fonts = []
+debug-repl = []
+pdf = ["typst-ts-pdf-exporter"]
+serde-json = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/json"]
+serde-rmp = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/rmp"]
+svg = [
+    #
+    "typst-ts-svg-exporter",
+    "typst-ts-svg-exporter/experimental-ligature",
+]
+text = ["typst-ts-text-exporter"]

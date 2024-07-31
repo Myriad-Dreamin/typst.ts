@@ -37,5 +37,7 @@ web-sys = { workspace = true, features = [
 ] }
 
 [features]
-incremental = ["reflexo/flat-vector"]
 default = ["incremental"]
+incremental = ["reflexo/flat-vector"]
+report_group = []
+render_bbox = []

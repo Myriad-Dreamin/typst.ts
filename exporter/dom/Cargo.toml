@@ -57,10 +57,14 @@ web-sys = { workspace = true, features = [
 ] }
 
 [features]
+default = []
+# "debug_repaint", "debug_repaint_svg", "debug_repaint_canvas"
 experimental-ligature = ["typst-ts-core/experimental-ligature"]
 aggresive-browser-rasterization = []
 debug_repaint = []
 debug_repaint_svg = []
 debug_repaint_canvas = []
-# "debug_repaint", "debug_repaint_svg", "debug_repaint_canvas"
-default = []
+debug_repaint_semantics = []
+debug_recalc_stage = []
+debug_attach = []
+debug_relayout = []

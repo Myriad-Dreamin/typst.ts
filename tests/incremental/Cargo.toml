@@ -23,3 +23,4 @@ typst-ts-svg-exporter.workspace = true
 
 [features]
 generate = []
+pku-thesis = []
