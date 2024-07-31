@@ -35,7 +35,7 @@ strum.workspace = true
 serde_with.workspace = true
 
 wasm-bindgen = { workspace = true, optional = true }
-web-sys = { workspace = true, optional = true }
+web-sys = { workspace = true, optional = true, features = ["console"] }
 js-sys = { workspace = true, optional = true }
 serde-wasm-bindgen = { workspace = true, optional = true }
 
