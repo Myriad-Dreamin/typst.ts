@@ -11,6 +11,5 @@ repository.workspace = true
 [dependencies]
 
 typst.workspace = true
-typst-ts-core.workspace = true
 
 ansi_term.workspace = true

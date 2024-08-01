@@ -13,7 +13,7 @@ use typst_ts_core::{
     diag::SourceDiagnostic,
     error::{long_diag_from_std, prelude::*, DiagMessage},
     typst::{self, foundations::IntoValue, prelude::EcoVec},
-    DynExporter, Exporter, TypstDocument, TypstWorld,
+    DynExporter, TypstDocument, TypstWorld,
 };
 use wasm_bindgen::prelude::*;
 
@@ -220,18 +220,16 @@ impl TypstCompiler {
             .map_err(|e| format!("{e:?}"))?;
         let world = self.driver.snapshot();
 
-        let ast_exporter = typst_ts_core::exporter_builtins::VecExporter::new(
-            typst_ts_ast_exporter::AstExporter::default(),
-        );
-
-        // compile and export document
-        let doc = self
-            .driver
-            .compile(&mut Default::default())
-            .map_err(|e| format!("{e:?}"))?;
-        let data = ast_exporter
-            .export(&world, doc)
-            .map_err(|e| format!("{e:?}"))?;
+        // export ast
+        let src = world.main();
+        let mut cursor = std::io::Cursor::new(Vec::new());
+        typst_ts_ast_exporter::dump_ast(
+            &src.id().vpath().as_rootless_path().display().to_string(),
+            &src,
+            &mut cursor,
+        )
+        .map_err(|e| format!("{e:?}"))?;
+        let data = cursor.into_inner();
 
         let converted = ansi_to_html::convert_escaped(
             String::from_utf8(data)

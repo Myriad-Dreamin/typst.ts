@@ -4444,7 +4444,6 @@ version = "0.5.0-rc6"
 dependencies = [
  "ansi_term",
  "typst",
- "typst-ts-core",
 ]
 
 [[package]]
