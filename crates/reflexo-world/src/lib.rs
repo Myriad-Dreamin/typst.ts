@@ -1,5 +1,7 @@
 pub mod source;
 
+pub mod config;
+
 pub mod entry;
 pub use entry::*;
 
@@ -27,17 +29,18 @@ use std::{
     sync::Arc,
 };
 
+use ecow::EcoVec;
+use reflexo::ImmutPath;
+use reflexo_vfs::AccessModel as VfsAccessModel;
 use typst::{
     diag::{At, FileResult, SourceResult},
     foundations::Bytes,
+    syntax::FileId,
     syntax::Span,
 };
 
-use reflexo_vfs::AccessModel as VfsAccessModel;
-use typst_ts_core::{
-    package::Registry as PackageRegistry, typst::prelude::EcoVec, FontResolver, ImmutPath,
-    TypstFileId as FileId,
-};
+use font::FontResolver;
+use package::PackageRegistry;
 
 /// Latest version of the shadow api, which is in beta.
 pub trait ShadowApi {
@@ -144,4 +147,9 @@ pub trait CompilerFeat {
     type AccessModel: VfsAccessModel + Clone + Send + Sync + Sized;
     /// Specify the package registry.
     type Registry: PackageRegistry + Send + Sync + Sized;
+}
+
+pub mod build_info {
+    /// The version of the reflexo-world crate.
+    pub static VERSION: &str = env!("CARGO_PKG_VERSION");
 }

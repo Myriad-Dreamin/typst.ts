@@ -15,7 +15,7 @@ use typst_ts_compiler::{
     CompileServerOpts, CompileSnapshot, CompileStarter, EntryManager, EntryReader, ShadowApi,
     SystemCompilerFeat, TypstSystemWorld,
 };
-use typst_ts_core::config::compiler::{EntryOpts, MEMORY_MAIN_ENTRY};
+use typst_ts_core::config::entry::{EntryOpts, MEMORY_MAIN_ENTRY};
 use typst_ts_core::DynExporter;
 use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
 

@@ -1,9 +1,8 @@
+use reflexo::debug_loc::{DataSource, MemoryDataSource};
+use typst::foundations::Bytes;
 use typst::text::{FontBook, FontInfo};
-use typst_ts_core::{
-    debug_loc::{DataSource, MemoryDataSource},
-    font::{BufferFontLoader, FontResolverImpl},
-    Bytes, FontSlot,
-};
+
+use crate::font::{BufferFontLoader, FontResolverImpl, FontSlot};
 
 /// memory font builder.
 #[derive(Debug)]

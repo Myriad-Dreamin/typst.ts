@@ -7,13 +7,10 @@ mod concepts;
 pub use concepts::*;
 
 // Core data structures of typst-ts.
-// todo: move me to compiler
-pub mod cache;
 pub mod config;
 pub mod debug_loc;
 pub mod error;
 pub mod font;
-pub mod package;
 
 // Core mechanism of typst-ts.
 pub(crate) mod exporter;
@@ -44,7 +41,7 @@ pub use exporter::{
     DynExporter, DynGenericExporter, DynPolymorphicExporter, Exporter, GenericExporter,
     GenericTransformer, Transformer,
 };
-pub use font::{FontLoader, FontResolver, FontSlot};
+// pub use font::{FontLoader, FontResolver, FontSlot};
 pub use reflexo::*;
 
 pub mod build_info {

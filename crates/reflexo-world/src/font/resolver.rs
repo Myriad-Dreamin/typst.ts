@@ -9,9 +9,8 @@ use comemo::Prehashed;
 use reflexo::debug_loc::DataSource;
 use typst::text::{Font, FontBook, FontInfo};
 
-use crate::{Bytes, FontSlot};
-
-use super::{BufferFontLoader, FontProfile, PartialFontBook};
+use super::{BufferFontLoader, FontProfile, FontSlot, PartialFontBook};
+use crate::Bytes;
 
 /// A FontResolver can resolve a font by index.
 /// It also reuse FontBook for font-related query.

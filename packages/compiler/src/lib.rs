@@ -2,6 +2,7 @@ use core::fmt;
 use std::{fmt::Write, path::Path, sync::Arc};
 
 use comemo::Prehashed;
+use font::cache::FontInfoCache;
 use js_sys::{Array, JsString, Uint32Array, Uint8Array};
 pub use typst_ts_compiler::*;
 use typst_ts_compiler::{
@@ -9,7 +10,6 @@ use typst_ts_compiler::{
     vfs::browser::ProxyAccessModel,
 };
 use typst_ts_core::{
-    cache::FontInfoCache,
     diag::SourceDiagnostic,
     error::{long_diag_from_std, prelude::*, DiagMessage},
     typst::{self, foundations::IntoValue, prelude::EcoVec},

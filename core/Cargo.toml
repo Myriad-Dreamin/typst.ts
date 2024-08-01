@@ -11,6 +11,7 @@ repository.workspace = true
 [dependencies]
 typst.workspace = true
 reflexo.workspace = true
+reflexo-world.workspace = true
 comemo.workspace = true
 elsa.workspace = true
 ttf-parser.workspace = true
@@ -39,7 +40,6 @@ tiny-skia.workspace = true
 log.workspace = true
 flate2.workspace = true
 xmlparser.workspace = true
-serde_with.workspace = true
 rayon.workspace = true
 rkyv = { workspace = true, optional = true }
 tiny-skia-path.workspace = true
@@ -63,4 +63,4 @@ debug-gc = []
 item-dashmap = []
 
 __web = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
-web = ["__web", "reflexo/web"]
+web = ["__web", "reflexo/web", "reflexo-world/web"]

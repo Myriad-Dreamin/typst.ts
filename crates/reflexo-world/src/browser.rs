@@ -1,10 +1,11 @@
 use std::{path::PathBuf, sync::Arc};
 
-use crate::entry::EntryState;
 use comemo::Prehashed;
 use reflexo_vfs::browser::ProxyAccessModel;
-use typst_ts_core::{font::FontResolverImpl, TypstDict};
+use typst::foundations::Dict as TypstDict;
 
+use crate::entry::EntryState;
+use crate::font::FontResolverImpl;
 use crate::package::browser::ProxyRegistry;
 
 /// A world that provides access to the browser.

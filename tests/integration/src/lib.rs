@@ -6,7 +6,7 @@ use typst_ts_compiler::{
     CompileDriver, CompileExporter, PureCompiler, TypstSystemUniverse, TypstSystemWorld,
 };
 use typst_ts_core::{
-    config::{compiler::EntryOpts, CompileOpts},
+    config::{entry::EntryOpts, CompileOpts},
     exporter_builtins::{FsPathExporter, GroupExporter},
     path::PathClean,
     TypstDocument,

@@ -1,18 +1,17 @@
 use std::sync::{Arc, Mutex};
 
 use js_sys::ArrayBuffer;
+use reflexo::error::prelude::*;
+use typst::foundations::Bytes;
 use typst::text::{
     Coverage, Font, FontBook, FontFlags, FontInfo, FontStretch, FontStyle, FontVariant, FontWeight,
 };
 use wasm_bindgen::prelude::*;
 
-use typst_ts_core::{
-    cache::FontInfoCache,
-    error::prelude::*,
-    font::{BufferFontLoader, FontProfile, FontResolverImpl, PartialFontBook},
-    Bytes, FontLoader, FontSlot,
+use super::{
+    BufferFontLoader, FontLoader, FontProfile, FontResolverImpl, FontSlot, PartialFontBook,
 };
-
+use crate::font::cache::FontInfoCache;
 use crate::font::info::typst_typographic_family;
 
 /// Destructures a JS `[key, value]` pair into a tuple of [`Deserializer`]s.

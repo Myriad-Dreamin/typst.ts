@@ -2,9 +2,10 @@ use core::fmt;
 use std::sync::Arc;
 
 use reflexo::debug_loc::DataSource;
+use reflexo::QueryRef;
 use typst::text::Font;
 
-use crate::{FontLoader, QueryRef};
+use crate::font::FontLoader;
 
 type FontSlotInner = QueryRef<Option<Font>, (), Box<dyn FontLoader + Send>>;
 

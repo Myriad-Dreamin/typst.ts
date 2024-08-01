@@ -7,24 +7,21 @@ use std::{
 };
 
 use fontdb::Database;
+use reflexo::debug_loc::{DataSource, MemoryDataSource};
+use reflexo::error::prelude::*;
+use reflexo_vfs::system::LazyFile;
 use sha2::{Digest, Sha256};
 use typst::{
     diag::{FileError, FileResult},
+    foundations::Bytes,
     text::{FontBook, FontInfo},
 };
 
-use reflexo_vfs::system::LazyFile;
-use typst_ts_core::{
-    build_info,
-    config::CompileFontOpts,
-    debug_loc::{DataSource, MemoryDataSource},
-    error::prelude::ZResult,
-    font::{
-        BufferFontLoader, FontProfile, FontProfileItem, FontResolverImpl, LazyBufferFontLoader,
-        PartialFontBook,
-    },
-    Bytes, FontSlot,
+use super::{
+    BufferFontLoader, FontProfile, FontProfileItem, FontResolverImpl, FontSlot,
+    LazyBufferFontLoader, PartialFontBook,
 };
+use crate::{build_info, config::CompileFontOpts};
 
 #[derive(Debug, Default)]
 struct FontProfileRebuilder {
@@ -214,7 +211,7 @@ impl SystemFontSearcher {
                     path: path.to_owned(),
                     index: face.index(),
                 };
-                let cache_state_key = typst_ts_core::hash::hash128(&cache_state_key);
+                let cache_state_key = reflexo::hash::hash128(&cache_state_key);
                 let cache_state_path = dirs::cache_dir()
                     .unwrap_or_else(std::env::temp_dir)
                     .join("typst")
@@ -274,7 +271,7 @@ impl SystemFontSearcher {
     #[cfg(not(feature = "lazy-fontdb"))]
     pub fn flush(&mut self) {
         use fontdb::Source;
-        use typst_ts_core::debug_loc::FsDataSource;
+        use reflexo::debug_loc::FsDataSource;
 
         for face in self.db.faces() {
             let path = match &face.source {

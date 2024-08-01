@@ -9,7 +9,7 @@ use typst_ts_compiler::{
     TaskInputs, TypstSystemWorld,
 };
 use typst_ts_core::{
-    config::compiler::MEMORY_MAIN_ENTRY,
+    config::entry::MEMORY_MAIN_ENTRY,
     error::{prelude::*, TypstSourceDiagnostic},
     error_once,
     foundations::Content,

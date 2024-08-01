@@ -2,7 +2,7 @@ use core::fmt;
 
 use typst::text::{FontFlags, FontInfo, FontVariant};
 
-use crate::FontSlot;
+use crate::font::FontSlot;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct FontInfoKey {
