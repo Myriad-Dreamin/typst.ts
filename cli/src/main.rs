@@ -20,7 +20,7 @@ use typst_ts_cli::{
     LinkPackagesArgs, ListFontsArgs, ListPackagesArgs, MeasureFontsArgs, Opts, PackageSubCommands,
     QueryArgs, QueryReplArgs, Subcommands,
 };
-use typst_ts_compiler::TypstSystemUniverse;
+use typst_ts_core::TypstSystemUniverse;
 use typst_ts_core::{config::entry::EntryOpts, exporter_builtins::GroupExporter};
 use typst_ts_core::{
     config::CompileOpts,
@@ -127,7 +127,7 @@ fn compile(args: CompileArgs) -> ! {
 /// Execute a query command.
 pub fn query(args: QueryArgs) -> ! {
     use typst_ts_cli::query::format;
-    use typst_ts_compiler::query::retrieve;
+    use typst_ts_core::query::retrieve;
     let compile_args = args.compile.clone();
 
     let mut exporter = GroupExporter::<Document>::new(vec![]);

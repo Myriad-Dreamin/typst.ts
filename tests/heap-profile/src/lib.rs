@@ -1,13 +1,10 @@
 use std::path::Path;
 
-use typst_ts_compiler::{
-    CompileDriver, CompileExporter, PureCompiler, ShadowApiExt, TypstSystemUniverse,
-    TypstSystemWorld,
-};
 use typst_ts_core::{
     config::{entry::EntryOpts, CompileOpts},
     exporter_builtins::GroupExporter,
-    TypstDocument,
+    CompileDriver, CompileExporter, PureCompiler, ShadowApiExt, TypstDocument, TypstSystemUniverse,
+    TypstSystemWorld,
 };
 
 fn get_driver(

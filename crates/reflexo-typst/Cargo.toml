@@ -1,0 +1,130 @@
+[package]
+name = "typst-ts-core"
+description = "Core function of Typst.ts."
+authors.workspace = true
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+typst.workspace = true
+typst-pdf = { workspace = true, optional = true }
+
+reflexo-typst2vec.workspace = true
+reflexo.workspace = true
+reflexo-vfs.workspace = true
+reflexo-world.workspace = true
+comemo.workspace = true
+elsa.workspace = true
+ttf-parser.workspace = true
+path-clean.workspace = true
+
+ecow.workspace = true
+base64.workspace = true
+hex.workspace = true
+siphasher.workspace = true
+sha2.workspace = true
+byteorder.workspace = true
+base64-serde.workspace = true
+fxhash.workspace = true
+
+once_cell.workspace = true
+rustc-hash.workspace = true
+crossbeam-queue = "0.3.10"
+dashmap.workspace = true
+
+parking_lot = { workspace = true }
+bitvec = { version = "1" }
+serde.workspace = true
+serde_json.workspace = true
+serde_repr = "0.1"
+tiny-skia.workspace = true
+log.workspace = true
+flate2.workspace = true
+xmlparser.workspace = true
+rayon.workspace = true
+rkyv = { workspace = true, optional = true }
+tiny-skia-path.workspace = true
+svgtypes.workspace = true
+ansi_term = { workspace = true, optional = true }
+
+wasm-bindgen = { workspace = true, optional = true }
+js-sys = { workspace = true, optional = true }
+web-sys = { workspace = true, optional = true, features = [
+    "console",
+    "Window",
+    "Blob",
+    "ImageData",
+] }
+wasm-bindgen-futures = { workspace = true, optional = true }
+serde-wasm-bindgen = { workspace = true, optional = true }
+
+codespan-reporting.workspace = true
+
+
+dirs = { workspace = true, optional = true }
+walkdir = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+pollster = { workspace = true, optional = true }
+fontdb = { workspace = true, optional = true }
+notify = { workspace = true, optional = true }
+
+indexmap.workspace = true
+fst.workspace = true
+nohash-hasher.workspace = true
+pathdiff.workspace = true
+tar.workspace = true
+
+typst-ts-svg-exporter = { workspace = true, optional = true }
+
+[features]
+
+default = ["full"]
+full = ["system", "dynamic-layout", "web", "glyph2vec", "flat-vector"]
+flat-vector = ["reflexo/flat-vector"]
+
+cjk = []
+emoji = []
+lazy-fontdb = []
+experimental-ligature = ["typst-ts-svg-exporter/experimental-ligature"]
+no-content-hint = ["reflexo-typst2vec/no-content-hint"]
+glyph2vec = ["reflexo-typst2vec/glyph2vec"]
+dynamic-layout = ["dep:typst-ts-svg-exporter"]
+
+system-compile = ["glyph2vec", "reflexo-vfs/system", "reflexo-world/system"]
+system-watch = ["dep:notify", "dep:tokio"]
+system = ["system-compile", "system-watch"]
+browser-compile = [
+    "__web",
+    "web-render",
+    "glyph2vec",
+    "reflexo-vfs/browser",
+    "reflexo-world/browser",
+]
+browser-embedded-fonts = ["__web"]
+__web = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
+__web_render = [
+    "dep:wasm-bindgen",
+    "dep:wasm-bindgen-futures",
+    "dep:js-sys",
+    "dep:web-sys",
+    "dep:serde-wasm-bindgen",
+    "dep:pollster",
+    "reflexo-vfs/web",
+    "reflexo-world/web",
+]
+web-render = ["__web_render"]
+web = [
+    "__web",
+    "reflexo/web",
+    "reflexo-world/web",
+    "reflexo-typst2vec/web",
+    "web-render",
+    "browser-compile",
+]
+
+ast = ["ansi_term"]
+pdf = ["typst-pdf"]
+svg = ["dep:typst-ts-svg-exporter"]

@@ -353,7 +353,7 @@ pub enum DiagnosticFormat {
     Short,
 }
 
-impl From<DiagnosticFormat> for typst_ts_compiler::DiagnosticFormat {
+impl From<DiagnosticFormat> for typst_ts_core::DiagnosticFormat {
     fn from(fmt: DiagnosticFormat) -> Self {
         match fmt {
             DiagnosticFormat::Human => Self::Human,

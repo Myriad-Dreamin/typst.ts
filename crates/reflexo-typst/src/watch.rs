@@ -15,13 +15,12 @@ use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use tokio::sync::mpsc;
 use typst::diag::{EcoString, FileError, FileResult};
 
-use typst_ts_core::{Bytes, ImmutPath};
-
 use crate::vfs::{
     notify::{FileChangeSet, FileSnapshot, FilesystemEvent, NotifyMessage, UpstreamUpdateEvent},
     system::SystemAccessModel,
     AccessModel,
 };
+use crate::{Bytes, ImmutPath};
 
 type WatcherPair = (RecommendedWatcher, mpsc::UnboundedReceiver<NotifyEvent>);
 type NotifyEvent = notify::Result<notify::Event>;

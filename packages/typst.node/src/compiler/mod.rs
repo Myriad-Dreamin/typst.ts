@@ -7,17 +7,17 @@ use std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc};
 
 use napi::{bindgen_prelude::*, Either};
 use napi_derive::napi;
-use typst_ts_compiler::{
-    font::system::SystemFontSearcher,
-    package::http::HttpRegistry,
-    vfs::{system::SystemAccessModel, Vfs},
-    CompileDriver, PureCompiler, TypstSystemUniverse, TypstSystemWorld,
-};
 use typst_ts_core::{
     config::{entry::EntryState, CompileFontOpts},
     error::prelude::*,
     typst::{foundations::IntoValue, prelude::Prehashed},
     Bytes, TypstDict,
+};
+use typst_ts_core::{
+    font::system::SystemFontSearcher,
+    package::http::HttpRegistry,
+    vfs::{system::SystemAccessModel, Vfs},
+    CompileDriver, PureCompiler, TypstSystemUniverse, TypstSystemWorld,
 };
 
 /// A nullable boxed compiler wrapping.

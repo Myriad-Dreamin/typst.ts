@@ -4,10 +4,6 @@ use std::{
     ops::{Deref, DerefMut},
     sync::Arc,
 };
-use typst_ts_compiler::{
-    CompileDriver, CompileEnv, Compiler, EntryManager, EntryReader, PureCompiler, ShadowApi,
-    TaskInputs, TypstSystemWorld,
-};
 use typst_ts_core::{
     config::entry::MEMORY_MAIN_ENTRY,
     error::{prelude::*, TypstSourceDiagnostic},
@@ -15,6 +11,10 @@ use typst_ts_core::{
     foundations::Content,
     typst::prelude::*,
     Bytes, TypstDocument,
+};
+use typst_ts_core::{
+    CompileDriver, CompileEnv, Compiler, EntryManager, EntryReader, PureCompiler, ShadowApi,
+    TaskInputs, TypstSystemWorld,
 };
 
 use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocArgs, NodeError};

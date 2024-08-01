@@ -16,6 +16,7 @@ members = [
     "crates/reflexo",
     "crates/reflexo-vfs",
     "crates/reflexo-world",
+    "crates/reflexo-typst",
     "crates/conversion/typst2vec",
     "crates/conversion/vec2canvas",
     "crates/conversion/vec2bbox",
@@ -24,7 +25,6 @@ members = [
     "crates/conversion/vec2svg",
 
     "cli",
-    "core",
     "compiler",
 
     "fuzzers/incremental",
@@ -223,7 +223,7 @@ typst-ts-dev-server = { version = "0.5.0-rc6", path = "server/dev" }
 typst-ts-cli = { version = "0.5.0-rc6", path = "cli" }
 
 [patch.crates-io]
-typst-ts-core = { path = "core" }
+typst-ts-core = { path = "crates/reflexo-typst" }
 typst-ts-compiler = { path = "compiler" }
 typst-ts-svg-exporter = { path = "crates/conversion/vec2svg" }
 

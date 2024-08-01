@@ -15,6 +15,7 @@ use reflexo_vfs::notify::UpstreamUpdateEvent;
 use reflexo_world::{EntryReader, EntryState, Revising, TaskInputs};
 use tokio::sync::{mpsc, oneshot};
 
+use crate::{exporter_builtins::GroupExporter, Exporter, TypstDocument};
 use crate::{
     features::{FeatureSet, WITH_COMPILING_STATUS_FEATURE},
     vfs::notify::{FilesystemEvent, MemoryEvent, NotifyMessage},
@@ -23,7 +24,6 @@ use crate::{
     CompileEnv, CompileReport, CompileReporter, CompileSnapshot, CompiledArtifact,
     ConsoleDiagReporter, PureCompiler, WorldDeps,
 };
-use typst_ts_core::{exporter_builtins::GroupExporter, Exporter, TypstDocument};
 
 // pub type NopCompilationHandle<T> = std::marker::PhantomData<fn(T)>;
 
