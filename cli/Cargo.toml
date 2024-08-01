@@ -46,9 +46,6 @@ typst-ts-compiler = { workspace = true, default-features = false, features = [
     "dynamic-layout",
 ] }
 
-typst-ts-ast-exporter.workspace = true
-typst-ts-pdf-exporter = { workspace = true, optional = true }
-typst-ts-serde-exporter = { workspace = true, optional = true }
 typst-ts-svg-exporter = { workspace = true, optional = true }
 typst-ts-text-exporter = { workspace = true, optional = true }
 
@@ -58,21 +55,12 @@ vergen.workspace = true
 
 [features]
 
-default = [
-    "pdf",
-    "serde-json",
-    "serde-rmp",
-    "svg",
-    "text",
-    "gen-manual",
-    "embedded-fonts",
-]
+default = ["ast", "pdf", "svg", "text", "gen-manual", "embedded-fonts"]
 gen-manual = ["dep:clap_mangen"]
 embedded-fonts = []
 debug-repl = []
-pdf = ["typst-ts-pdf-exporter"]
-serde-json = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/json"]
-serde-rmp = ["typst-ts-serde-exporter", "typst-ts-serde-exporter/rmp"]
+ast = ["typst-ts-core/ast"]
+pdf = ["typst-ts-core/pdf"]
 svg = [
     #
     "typst-ts-svg-exporter",

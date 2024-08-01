@@ -2,6 +2,14 @@ use std::sync::Arc;
 
 use typst::{diag::SourceResult, World};
 
+#[cfg(feature = "ast")]
+pub mod ast;
+
+#[cfg(feature = "pdf")]
+pub mod pdf;
+
+pub mod json;
+
 pub type DynExporter<Input, Output = ()> = Box<dyn Exporter<Input, Output> + Send + Sync>;
 
 pub trait Transformer<Input, Output = ()> {

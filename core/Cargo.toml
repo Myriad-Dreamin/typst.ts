@@ -10,12 +10,16 @@ repository.workspace = true
 
 [dependencies]
 typst.workspace = true
+typst-pdf = { workspace = true, optional = true }
+
 reflexo.workspace = true
 reflexo-world.workspace = true
 comemo.workspace = true
 elsa.workspace = true
 ttf-parser.workspace = true
 path-clean.workspace = true
+
+typst-ts-ast-exporter = { workspace = true, optional = true }
 
 ecow.workspace = true
 base64.workspace = true
@@ -64,3 +68,6 @@ item-dashmap = []
 
 __web = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
 web = ["__web", "reflexo/web", "reflexo-world/web"]
+
+ast = ["typst-ts-ast-exporter"]
+pdf = ["typst-pdf"]

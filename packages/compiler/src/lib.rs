@@ -300,7 +300,7 @@ impl TypstCompiler {
             "vector" => Box::new(typst_ts_core::exporter_builtins::VecExporter::new(
                 typst_ts_svg_exporter::SvgModuleExporter::default(),
             )),
-            "pdf" => Box::<typst_ts_pdf_exporter::PdfDocExporter>::default(),
+            "pdf" => Box::<typst_ts_core::PdfDocExporter>::default(),
             _ => {
                 return Err(error_once!("Unsupported fmt", format: fmt).into());
             }

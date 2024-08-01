@@ -15,6 +15,18 @@ pub mod font;
 // Core mechanism of typst-ts.
 pub(crate) mod exporter;
 
+#[cfg(feature = "ast")]
+pub use exporter::ast::AstExporter;
+#[cfg(feature = "ast")]
+pub use typst_ts_ast_exporter::dump_ast;
+
+pub use exporter::json::JsonExporter;
+
+#[cfg(feature = "pdf")]
+pub use exporter::pdf::PdfDocExporter;
+#[cfg(feature = "pdf")]
+pub use typst_pdf::pdf;
+
 // Intermediate representation of typst-ts.
 pub mod vector;
 

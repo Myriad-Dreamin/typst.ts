@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
-pub use typst_pdf::pdf;
-use typst_ts_core::{Exporter, TypstDatetime};
-
 use typst::{diag::SourceResult, foundations::Smart, World};
+
+use crate::{Exporter, TypstDatetime};
 
 #[derive(Debug, Clone, Default)]
 pub struct PdfDocExporter {

@@ -345,7 +345,7 @@ impl NodeCompiler {
         compiled_or_by: MayCompileOpts,
         opts: Option<RenderPdfOpts>,
     ) -> Result<Buffer, NodeError> {
-        type Exporter = typst_ts_pdf_exporter::PdfDocExporter;
+        type Exporter = typst_ts_core::PdfDocExporter;
         let e = if let Some(opts) = opts {
             Exporter::default().with_ctime(
                 opts.creation_timestamp

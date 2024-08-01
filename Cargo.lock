@@ -4488,11 +4488,8 @@ dependencies = [
  "typst",
  "typst-assets",
  "typst-ide",
- "typst-ts-ast-exporter",
  "typst-ts-compiler",
  "typst-ts-core",
- "typst-ts-pdf-exporter",
- "typst-ts-serde-exporter",
  "typst-ts-svg-exporter",
  "typst-ts-text-exporter",
  "vergen",
@@ -4573,6 +4570,8 @@ dependencies = [
  "tiny-skia-path",
  "ttf-parser",
  "typst",
+ "typst-pdf",
+ "typst-ts-ast-exporter",
  "wasm-bindgen",
  "web-sys",
  "xmlparser",
@@ -4691,8 +4690,6 @@ dependencies = [
  "typst-ts-compiler",
  "typst-ts-core",
  "typst-ts-dev-server",
- "typst-ts-pdf-exporter",
- "typst-ts-serde-exporter",
  "typst-ts-svg-exporter",
  "typst-ts-test-common",
 ]
@@ -4713,7 +4710,6 @@ dependencies = [
  "typst-ts-cli",
  "typst-ts-compiler",
  "typst-ts-core",
- "typst-ts-pdf-exporter",
  "typst-ts-svg-exporter",
 ]
 
@@ -4739,15 +4735,6 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
  "web-sys",
-]
-
-[[package]]
-name = "typst-ts-pdf-exporter"
-version = "0.5.0-rc6"
-dependencies = [
- "typst",
- "typst-pdf",
- "typst-ts-core",
 ]
 
 [[package]]
@@ -4790,17 +4777,6 @@ dependencies = [
 name = "typst-ts-rkyv-assertions"
 version = "0.5.0-rc6"
 dependencies = [
- "typst-ts-core",
-]
-
-[[package]]
-name = "typst-ts-serde-exporter"
-version = "0.5.0-rc6"
-dependencies = [
- "rmp-serde",
- "serde",
- "serde_json",
- "typst",
  "typst-ts-core",
 ]
 
@@ -4868,7 +4844,6 @@ dependencies = [
  "typst-ts-ast-exporter",
  "typst-ts-compiler",
  "typst-ts-core",
- "typst-ts-pdf-exporter",
  "typst-ts-svg-exporter",
  "typst-ts-test-common",
  "wasm-bindgen",

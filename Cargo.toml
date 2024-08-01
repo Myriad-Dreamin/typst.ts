@@ -26,9 +26,8 @@ members = [
 
     "exporter/ast",
     "exporter/dom",
-    "exporter/pdf",
-    "exporter/serde",
     "exporter/svg",
+    "exporter/text",
 
     "fuzzers/incremental",
 
@@ -219,8 +218,6 @@ typst-ts-test-common = { version = "0.5.0-rc6", path = "tests/common" }
 # project exporters
 typst-ts-ast-exporter = "0.5.0-rc6"
 typst-ts-dom-exporter = { path = "exporter/dom" }
-typst-ts-pdf-exporter = "0.5.0-rc6"
-typst-ts-serde-exporter = "0.5.0-rc6"
 typst-ts-svg-exporter = "0.5.0-rc6"
 typst-ts-text-exporter = "0.5.0-rc6"
 
@@ -232,8 +229,6 @@ typst-ts-cli = { version = "0.5.0-rc6", path = "cli" }
 typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }
 typst-ts-ast-exporter = { path = "exporter/ast" }
-typst-ts-pdf-exporter = { path = "exporter/pdf" }
-typst-ts-serde-exporter = { path = "exporter/serde" }
 typst-ts-svg-exporter = { path = "exporter/svg" }
 typst-ts-text-exporter = { path = "exporter/text" }
 

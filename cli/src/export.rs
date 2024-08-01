@@ -1,19 +1,10 @@
-use std::{
-    io::Write,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::path::{Path, PathBuf};
 
 use chrono::{Datelike, Timelike};
-use typst::{
-    diag::{At, FileError},
-    syntax::Span,
-};
-use typst_ts_ast_exporter::dump_ast;
 use typst_ts_core::{
     exporter_builtins::{FsPathExporter, GroupExporter},
     program_meta::REPORT_BUG_MESSAGE,
-    Transformer, TypstDatetime,
+    TypstDatetime,
 };
 use typst_ts_svg_exporter::DefaultExportFeature;
 
@@ -128,9 +119,9 @@ fn prepare_exporters_impl(
 
     type Doc = typst::model::Document;
 
-    type WithAst = AstExporter;
+    type WithAst = typst_ts_core::AstExporter;
     // type WithJson<T> = typst_ts_serde_exporter::JsonExporter<T>;
-    type WithPdf = typst_ts_pdf_exporter::PdfDocExporter;
+    type WithPdf = typst_ts_core::PdfDocExporter;
     // type WithRmp<T> = typst_ts_serde_exporter::RmpExporter<T>;
     type WithSvg = typst_ts_svg_exporter::PureSvgExporter;
     type WithSvgHtml = typst_ts_svg_exporter::SvgExporter<DefaultExportFeature>;
@@ -184,30 +175,4 @@ fn convert_datetime(date_time: chrono::DateTime<chrono::Utc>) -> Option<TypstDat
         date_time.minute().try_into().ok()?,
         date_time.second().try_into().ok()?,
     )
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct AstExporter {}
-
-impl<W> Transformer<(Arc<typst::model::Document>, W)> for AstExporter
-where
-    W: std::io::Write,
-{
-    fn export(
-        &self,
-        world: &dyn typst::World,
-        (_output, writer): (Arc<typst::model::Document>, W),
-    ) -> typst::diag::SourceResult<()> {
-        let mut writer = std::io::BufWriter::new(writer);
-
-        let src = world.main();
-        let path = src.id().vpath().as_rootless_path();
-        dump_ast(&path.display().to_string(), &src, &mut writer)
-            .map_err(|e| FileError::from_io(e, path))
-            .at(Span::detached())?;
-
-        writer.flush().unwrap();
-
-        Ok(())
-    }
 }

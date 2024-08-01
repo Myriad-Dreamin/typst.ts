@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use serde::Serialize;
 use typst::{diag::SourceResult, World};
-use typst_ts_core::{Exporter, Transformer};
 
-use crate::map_err;
+use crate::exporter_utils::map_err;
+use crate::{Exporter, Transformer};
 
 #[derive(Debug, Clone)]
 pub struct JsonExporter<T> {
