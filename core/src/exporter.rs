@@ -9,6 +9,7 @@ pub mod ast;
 pub mod pdf;
 
 pub mod json;
+pub mod text;
 
 pub type DynExporter<Input, Output = ()> = Box<dyn Exporter<Input, Output> + Send + Sync>;
 

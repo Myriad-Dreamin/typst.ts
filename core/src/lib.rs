@@ -27,6 +27,8 @@ pub use exporter::pdf::PdfDocExporter;
 #[cfg(feature = "pdf")]
 pub use typst_pdf::pdf;
 
+pub use exporter::text::TextExporter;
+
 // Intermediate representation of typst-ts.
 pub mod vector;
 

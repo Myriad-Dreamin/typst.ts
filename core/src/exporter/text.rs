@@ -2,8 +2,8 @@ use core::fmt;
 use std::io::Write;
 use std::sync::Arc;
 
-use typst_ts_core::exporter_utils::map_err;
-use typst_ts_core::{Transformer, TypstDocument};
+use crate::exporter_utils::map_err;
+use crate::{Transformer, TypstDocument};
 
 #[derive(Debug, Clone, Default)]
 pub struct TextExporter {}

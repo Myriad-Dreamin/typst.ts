@@ -4491,7 +4491,6 @@ dependencies = [
  "typst-ts-compiler",
  "typst-ts-core",
  "typst-ts-svg-exporter",
- "typst-ts-text-exporter",
  "vergen",
 ]
 
@@ -4815,14 +4814,6 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
  "web-sys",
-]
-
-[[package]]
-name = "typst-ts-text-exporter"
-version = "0.5.0-rc6"
-dependencies = [
- "typst",
- "typst-ts-core",
 ]
 
 [[package]]

@@ -27,7 +27,6 @@ members = [
     "exporter/ast",
     "exporter/dom",
     "exporter/svg",
-    "exporter/text",
 
     "fuzzers/incremental",
 
@@ -219,7 +218,6 @@ typst-ts-test-common = { version = "0.5.0-rc6", path = "tests/common" }
 typst-ts-ast-exporter = "0.5.0-rc6"
 typst-ts-dom-exporter = { path = "exporter/dom" }
 typst-ts-svg-exporter = "0.5.0-rc6"
-typst-ts-text-exporter = "0.5.0-rc6"
 
 # project common components
 typst-ts-dev-server = { version = "0.5.0-rc6", path = "server/dev" }
@@ -230,7 +228,6 @@ typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }
 typst-ts-ast-exporter = { path = "exporter/ast" }
 typst-ts-svg-exporter = { path = "exporter/svg" }
-typst-ts-text-exporter = { path = "exporter/text" }
 
 # typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }
 # typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }
