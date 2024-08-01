@@ -13,13 +13,11 @@ use typst::text::Font;
 use typst::visualize::Image;
 
 use crate::font::GlyphProvider;
-
-use crate::vector::ir::{self, FlatGlyphItem, FontItem, FontPack, FontRef, GlyphItem, GlyphRef};
+use crate::ir::{self, FlatGlyphItem, FontItem, FontPack, FontRef, GlyphItem, GlyphRef};
+use crate::IntoTypst;
 
 pub type Glyph2VecPass = TGlyph2VecPass</* ENABLE_REF_CNT */ false>;
 pub type IncrGlyph2VecPass = TGlyph2VecPass</* ENABLE_REF_CNT */ true>;
-
-use crate::IntoTypst;
 
 pub struct ConvertInnerImpl {
     /// A glyph backend provider.
@@ -43,14 +41,14 @@ pub struct TGlyph2VecPass<const ENABLE_REF_CNT: bool = false> {
 
     /// Intermediate representation of an incompleted font pack.
     /// All font items are stored in this map, and then sorted by the index.
-    font_mapping: crate::adt::CHashMap<Font, FontRef>,
+    font_mapping: reflexo::adt::CHashMap<Font, FontRef>,
     /// Detect font short hash conflict
-    font_conflict_checker: crate::adt::CHashMap<u32, Font>,
+    font_conflict_checker: reflexo::adt::CHashMap<u32, Font>,
     /// Lock to get a unique local index for each font.
     font_index: Mutex<usize>,
 
     /// Intermediate representation of an incompleted glyph pack.
-    glyph_defs: crate::adt::CHashMap<GlyphItem, (GlyphRef, FontRef)>,
+    glyph_defs: reflexo::adt::CHashMap<GlyphItem, (GlyphRef, FontRef)>,
 
     /// for interning
     pub used_fonts: HashSet<FontRef>,
@@ -252,8 +250,8 @@ impl ConvertInnerImpl {
     /// Lower an SVG glyph into svg item.
     /// More information: https://learn.microsoft.com/zh-cn/typography/opentype/spec/svg
     fn svg_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ir::ImageGlyphItem>> {
-        use crate::vector::ir::Scalar;
-        use crate::vector::utils::AbsExt;
+        use crate::ir::Scalar;
+        use crate::utils::AbsExt;
 
         let image = Self::extract_svg_glyph(&self.gp, font, id)?;
 
@@ -280,7 +278,7 @@ impl ConvertInnerImpl {
 
     /// Lower a bitmap glyph into the svg text.
     fn bitmap_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ir::ImageGlyphItem>> {
-        use crate::vector::utils::AbsExt;
+        use crate::utils::AbsExt;
         /// Use types from `tiny-skia` crate.
         use tiny_skia as sk;
 
@@ -377,7 +375,7 @@ impl ConvertInnerImpl {
                 first_viewbox,
             }
         }
-        use crate::vector::utils::AbsExt;
+        use crate::utils::AbsExt;
         use std::io::Read;
 
         use once_cell::sync::OnceCell;

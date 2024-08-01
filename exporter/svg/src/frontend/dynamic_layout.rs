@@ -1,6 +1,6 @@
-use typst_ts_core::vector::ir::{Abs, LayoutRegion, LayoutRegionNode, MultiVecDocument};
-use typst_ts_core::vector::pass::Typst2VecPass;
-use typst_ts_core::TypstDocument;
+use reflexo_typst2vec::ir::{Abs, LayoutRegion, LayoutRegionNode, MultiVecDocument};
+use reflexo_typst2vec::pass::Typst2VecPass;
+use typst::model::Document as TypstDocument;
 
 #[derive(Default)]
 pub struct DynamicLayoutSvgExporter {

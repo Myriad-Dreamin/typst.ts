@@ -2868,6 +2868,46 @@ dependencies = [
 ]
 
 [[package]]
+name = "reflexo-typst2vec"
+version = "0.5.0-rc6"
+dependencies = [
+ "base64 0.22.1",
+ "base64-serde",
+ "bitvec",
+ "byteorder",
+ "comemo",
+ "crossbeam-queue",
+ "dashmap",
+ "ecow",
+ "elsa",
+ "flate2",
+ "fxhash",
+ "hex",
+ "js-sys",
+ "log",
+ "once_cell",
+ "parking_lot",
+ "path-clean",
+ "rayon",
+ "reflexo",
+ "rkyv",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "sha2",
+ "siphasher 1.0.1",
+ "svgtypes",
+ "tiny-skia",
+ "tiny-skia-path",
+ "ttf-parser",
+ "typst",
+ "wasm-bindgen",
+ "web-sys",
+ "xmlparser",
+]
+
+[[package]]
 name = "reflexo-vec2bbox"
 version = "0.5.0-rc6"
 dependencies = [
@@ -4455,6 +4495,7 @@ dependencies = [
  "divan",
  "once_cell",
  "rayon",
+ "reflexo-typst2vec",
  "typst",
  "typst-ts-cli",
  "typst-ts-compiler",
@@ -4490,7 +4531,6 @@ dependencies = [
  "typst-ide",
  "typst-ts-compiler",
  "typst-ts-core",
- "typst-ts-svg-exporter",
  "vergen",
 ]
 
@@ -4516,6 +4556,7 @@ dependencies = [
  "pollster",
  "rayon",
  "reflexo",
+ "reflexo-typst2vec",
  "reflexo-vfs",
  "reflexo-world",
  "rustc-hash",
@@ -4556,6 +4597,7 @@ dependencies = [
  "path-clean",
  "rayon",
  "reflexo",
+ "reflexo-typst2vec",
  "reflexo-world",
  "rkyv",
  "rustc-hash",
@@ -4571,6 +4613,7 @@ dependencies = [
  "typst",
  "typst-pdf",
  "typst-ts-ast-exporter",
+ "typst-ts-svg-exporter",
  "wasm-bindgen",
  "web-sys",
  "xmlparser",
@@ -4605,6 +4648,8 @@ dependencies = [
  "log",
  "once_cell",
  "rayon",
+ "reflexo",
+ "reflexo-typst2vec",
  "reflexo-vec2bbox",
  "reflexo-vec2canvas",
  "reflexo-vec2sema",
@@ -4644,6 +4689,7 @@ dependencies = [
  "hex",
  "rand",
  "rand_xoshiro",
+ "reflexo-typst2vec",
  "sha2",
  "tokio",
  "typst",
@@ -4662,6 +4708,7 @@ dependencies = [
  "anyhow",
  "comemo",
  "hex",
+ "reflexo-typst2vec",
  "sha2",
  "tokio",
  "typst-ts-compiler",
@@ -4750,6 +4797,7 @@ dependencies = [
  "once_cell",
  "pollster",
  "reflexo",
+ "reflexo-typst2vec",
  "reflexo-vec2canvas",
  "reflexo-vec2sema",
  "rmp-serde",
@@ -4776,7 +4824,7 @@ dependencies = [
 name = "typst-ts-rkyv-assertions"
 version = "0.5.0-rc6"
 dependencies = [
- "typst-ts-core",
+ "reflexo-typst2vec",
 ]
 
 [[package]]
@@ -4798,11 +4846,11 @@ dependencies = [
  "once_cell",
  "rayon",
  "reflexo",
+ "reflexo-typst2vec",
  "reflexo-vec2canvas",
  "siphasher 1.0.1",
  "tiny-skia",
  "typst",
- "typst-ts-core",
 ]
 
 [[package]]
@@ -4828,6 +4876,7 @@ dependencies = [
  "hex",
  "js-sys",
  "once_cell",
+ "reflexo-typst2vec",
  "reflexo-vec2canvas",
  "serde-wasm-bindgen",
  "serde_json",

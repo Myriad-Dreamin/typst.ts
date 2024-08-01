@@ -7,8 +7,8 @@ use typst::text::Font;
 // use typst::geom::Axes;
 use typst::visualize::{Image as TypstImage, RasterFormat};
 
-use crate::hash::item_hash128;
-use crate::{HashedTrait, ImmutStr, StaticHash128};
+use reflexo::hash::item_hash128;
+use reflexo::{HashedTrait, ImmutStr, StaticHash128};
 
 use super::ligature::resolve_ligature;
 

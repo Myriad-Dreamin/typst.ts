@@ -9,13 +9,14 @@ use parking_lot::Mutex;
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
 };
+use reflexo::ImmutStr;
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
     foundations::{Bytes, Smart},
     introspection::{Introspector, Meta},
     layout::{
-        Abs, Axes, Dir, Frame, FrameItem, FrameKind, Position, Ratio as TypstRatio, Size,
-        Transform as TypstTransform,
+        Abs as TypstAbs, Axes, Dir, Frame, FrameItem, FrameKind, Position, Ratio as TypstRatio,
+        Size, Transform as TypstTransform,
     },
     model::{Destination, Document as TypstDocument},
     text::TextItem as TypstTextItem,
@@ -28,12 +29,10 @@ use typst::{
 use crate::{
     font::GlyphProvider,
     hash::{Fingerprint, FingerprintBuilder},
-    vector::{
-        ir::{self, *},
-        path2d::SvgPath2DBuilder,
-        utils::{AbsExt, ToCssExt},
-    },
-    FromTypst, ImmutStr, IntoTypst, TypstAbs,
+    ir::{self, *},
+    path2d::SvgPath2DBuilder,
+    utils::{AbsExt, ToCssExt},
+    FromTypst, IntoTypst,
 };
 
 use super::{SourceNodeKind, SourceRegion, Span2VecPass, TGlyph2VecPass};
@@ -776,11 +775,11 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         })
     }
 
-    pub fn image(&self, image: &TypstImage, size: Axes<Abs>) -> Fingerprint {
+    pub fn image(&self, image: &TypstImage, size: Axes<TypstAbs>) -> Fingerprint {
         #[derive(Hash)]
         struct ImageKey<'i> {
             image: &'i TypstImage,
-            size: Axes<Abs>,
+            size: Axes<TypstAbs>,
         }
 
         let cond = ImageKey { image, size };

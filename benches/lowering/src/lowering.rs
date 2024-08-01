@@ -2,14 +2,12 @@ use std::sync::{Arc, Mutex};
 
 use divan::Bencher;
 use once_cell::sync::Lazy;
+use reflexo_typst2vec::pass::{IncrTypst2VecPass, Typst2VecPass};
 use typst_ts_cli::CompileOnceArgs;
 use typst_ts_compiler::{
     CompileDriver as CompileDriverT, Compiler, PureCompiler, ShadowApiExt, TypstSystemWorld,
 };
-use typst_ts_core::{
-    vector::pass::{IncrTypst2VecPass, Typst2VecPass},
-    TypstDocument,
-};
+use typst_ts_core::TypstDocument;
 
 type CompileDriver = Lazy<Mutex<CompileDriverT<PureCompiler<TypstSystemWorld>>>>;
 

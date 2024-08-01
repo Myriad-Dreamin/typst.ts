@@ -1,4 +1,4 @@
-use typst_ts_core::vector::ir::*;
+use reflexo_typst2vec::ir::*;
 
 macro_rules! layout {
     ($($prim:ty),* $(,)?) => {

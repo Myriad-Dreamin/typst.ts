@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use reflexo::error::prelude::*;
 use typst::model::Document;
 
 use super::ir::{
@@ -7,8 +8,7 @@ use super::ir::{
     ModuleMetadata, VecDocument,
 };
 use super::pass::IncrTypst2VecPass;
-use crate::debug_loc::ElementPoint;
-use crate::{debug_loc::SourceSpanOffset, error::prelude::*};
+use crate::debug_loc::{ElementPoint, SourceSpanOffset};
 
 /// Client side implementation is free from typst details.
 pub use reflexo::vector::incr::{IncrDocClient, IncrDocClientKern};

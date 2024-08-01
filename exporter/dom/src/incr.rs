@@ -4,15 +4,13 @@ use std::{
 };
 
 use js_sys::Reflect;
-use reflexo_vec2canvas::{CanvasElem, CanvasOp};
-use typst_ts_core::{
+use reflexo::{
     error::prelude::*,
     hash::Fingerprint,
-    vector::{
-        incr::{IncrDocClient, IncrDocServer},
-        ir::{FontItem, FontRef, LayoutRegionNode, Module, Page, VecItem},
-    },
+    vector::ir::{FontItem, FontRef, LayoutRegionNode, Module, Page, VecItem},
 };
+use reflexo_typst2vec::incr::{IncrDocClient, IncrDocServer};
+use reflexo_vec2canvas::{CanvasElem, CanvasOp};
 use wasm_bindgen::prelude::*;
 use web_sys::{wasm_bindgen::JsCast, Element, HtmlElement};
 

@@ -1,4 +1,4 @@
-use typst_ts_core::vector::{ir, utils::ToCssExt};
+use reflexo_typst2vec::{ir, utils::ToCssExt};
 
 use super::render_image;
 

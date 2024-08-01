@@ -3,18 +3,11 @@
 // todo: https://github.com/typst/typst/pull/2610
 // color export
 
-use std::sync::Arc;
-
-use typst::{diag::SourceResult, World};
-
-use typst_ts_core::Exporter;
-use typst_ts_core::TypstDocument;
+use typst::model::Document as TypstDocument;
 
 /// re-export the core types.
-pub use typst_ts_core::font::{FontGlyphProvider, GlyphProvider, IGlyphProvider};
-pub use typst_ts_core::vector::ir::{
-    self, geom, FlatModule, Module, MultiVecDocument, VecDocument,
-};
+pub use reflexo_typst2vec::font::{FontGlyphProvider, GlyphProvider, IGlyphProvider};
+pub use reflexo_typst2vec::ir::{self, geom, FlatModule, Module, MultiVecDocument, VecDocument};
 
 pub(crate) mod utils;
 
@@ -112,11 +105,10 @@ impl ExportFeature for SvgExportFeature {
 }
 
 /// Render SVG wrapped with html for [`TypstDocument`].
-pub fn render_svg_html(output: &TypstDocument) -> String {
-    type UsingExporter = SvgExporter<DefaultExportFeature>;
-    let mut doc = UsingExporter::svg_doc(output);
+pub fn render_svg_html<Feat: ExportFeature>(output: &TypstDocument) -> String {
+    let mut doc = SvgExporter::<Feat>::svg_doc(output);
     doc.module.prepare_glyphs();
-    let mut svg = UsingExporter::render(&doc.module, &doc.pages, None);
+    let mut svg = SvgExporter::<Feat>::render(&doc.module, &doc.pages, None);
 
     // wrap SVG with html
     let mut html: Vec<SvgText> = Vec::with_capacity(svg.len() + 3);
@@ -141,31 +133,4 @@ pub fn render_svg(output: &TypstDocument) -> String {
     doc.module.prepare_glyphs();
     let svg_text = UsingExporter::render(&doc.module, &doc.pages, None);
     generate_text(transform::minify(svg_text))
-}
-
-impl<Feat: ExportFeature> Exporter<TypstDocument, String> for SvgExporter<Feat> {
-    fn export(&self, _world: &dyn World, output: Arc<TypstDocument>) -> SourceResult<String> {
-        // html wrap
-        Ok(render_svg_html(&output))
-    }
-}
-
-#[derive(Default)]
-pub struct PureSvgExporter;
-
-impl Exporter<TypstDocument, String> for PureSvgExporter {
-    fn export(&self, _world: &dyn World, output: Arc<TypstDocument>) -> SourceResult<String> {
-        // html wrap
-        Ok(render_svg(&output))
-    }
-}
-
-#[derive(Default)]
-pub struct SvgModuleExporter {}
-
-impl Exporter<TypstDocument, Vec<u8>> for SvgModuleExporter {
-    fn export(&self, _world: &dyn World, output: Arc<TypstDocument>) -> SourceResult<Vec<u8>> {
-        type UsingExporter = SvgExporter<DefaultExportFeature>;
-        Ok(UsingExporter::svg_doc(&output).to_bytes())
-    }
 }

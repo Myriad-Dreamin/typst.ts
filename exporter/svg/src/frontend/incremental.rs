@@ -4,13 +4,11 @@ use std::{
     sync::Arc,
 };
 
-use typst_ts_core::{
-    hash::Fingerprint,
-    vector::{
-        incr::{IncrDocClient, IncrDocServer},
-        ir::{LayoutRegionNode, Module, Page, Rect, VecItem},
-        vm::{IncrRenderVm, RenderVm},
-    },
+use reflexo::hash::Fingerprint;
+use reflexo_typst2vec::{
+    incr::{IncrDocClient, IncrDocServer},
+    ir::{LayoutRegionNode, Module, Page, Rect, VecItem},
+    vm::{IncrRenderVm, RenderVm},
 };
 
 use crate::{

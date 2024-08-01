@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use typst_ts_core::TakeAs;
+use reflexo::TakeAs;
 
 use crate::backend::{SvgText, SvgTextNode};
 

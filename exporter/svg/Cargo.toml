@@ -17,15 +17,15 @@ comemo.workspace = true
 tiny-skia.workspace = true
 base64.workspace = true
 
-typst-ts-core = { workspace = true, features = ["flat-vector"] }
 reflexo.workspace = true
+reflexo-typst2vec = { workspace = true, features = ["flat-vector"] }
 reflexo-vec2canvas = { workspace = true, optional = true }
 log.workspace = true
 siphasher.workspace = true
 rayon.workspace = true
 
 [features]
-experimental-ligature = ["typst-ts-core/experimental-ligature"]
+experimental-ligature = ["reflexo-typst2vec/experimental-ligature"]
 aggresive-browser-rasterization = ["reflexo-vec2canvas"]
-no-content-hint = ["typst-ts-core/no-content-hint"]
+no-content-hint = ["reflexo-typst2vec/no-content-hint"]
 default = []

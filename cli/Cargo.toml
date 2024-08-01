@@ -46,8 +46,6 @@ typst-ts-compiler = { workspace = true, default-features = false, features = [
     "dynamic-layout",
 ] }
 
-typst-ts-svg-exporter = { workspace = true, optional = true }
-
 [build-dependencies]
 anyhow.workspace = true
 vergen.workspace = true
@@ -62,7 +60,7 @@ ast = ["typst-ts-core/ast"]
 pdf = ["typst-ts-core/pdf"]
 svg = [
     #
-    "typst-ts-svg-exporter",
-    "typst-ts-svg-exporter/experimental-ligature",
+    "typst-ts-core/svg",
+    "typst-ts-core/experimental-ligature",
 ]
 text = []

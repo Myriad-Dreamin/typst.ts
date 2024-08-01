@@ -298,7 +298,7 @@ impl TypstCompiler {
     ) -> Result<JsValue, JsValue> {
         let vec_exporter: DynExporter<TypstDocument, Vec<u8>> = match fmt.as_str() {
             "vector" => Box::new(typst_ts_core::exporter_builtins::VecExporter::new(
-                typst_ts_svg_exporter::SvgModuleExporter::default(),
+                typst_ts_core::SvgModuleExporter::default(),
             )),
             "pdf" => Box::<typst_ts_core::PdfDocExporter>::default(),
             _ => {

@@ -1,11 +1,10 @@
 use crate::RenderSession;
 use crate::TypstRenderer;
 use js_sys::Uint8Array;
+use reflexo_typst2vec::geom::{Axes, Scalar};
 use typst_ts_core::error::prelude::*;
-use typst_ts_core::vector::geom::Axes;
-use typst_ts_core::vector::geom::Scalar;
-use typst_ts_svg_exporter::SvgDataSelection;
-use typst_ts_svg_exporter::{DefaultExportFeature, SvgExporter};
+use typst_ts_core::svg::SvgDataSelection;
+use typst_ts_core::svg::{DefaultExportFeature, SvgExporter};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -17,7 +16,7 @@ impl RenderSession {
         rect_hi_x: f32,
         rect_hi_y: f32,
     ) -> String {
-        use typst_ts_core::vector::geom::Rect;
+        use reflexo_typst2vec::geom::Rect;
 
         let mut client = self.client.lock().unwrap();
         let mut svg_kern = self.svg_kern.lock().unwrap();

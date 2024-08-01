@@ -4,13 +4,12 @@ use std::{
     sync::Arc,
 };
 
-use reflexo::vector::ir::Transform;
-use typst_ts_core::{
+use reflexo::{
     hash::{Fingerprint, FingerprintBuilder},
     vector::{
         ir::{
             self, FlatGlyphItem, FontIndice, FontRef, GroupRef, ImmutStr, Module, PathItem, Scalar,
-            TextItem, VecItem,
+            TextItem, Transform, VecItem,
         },
         vm::{GroupContext, IncrRenderVm, RenderVm},
     },

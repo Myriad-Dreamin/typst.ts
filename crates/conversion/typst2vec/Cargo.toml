@@ -1,7 +1,6 @@
 [package]
-name = "typst-ts-core"
-description = "Core function of Typst.ts."
-authors.workspace = true
+name = "reflexo-typst2vec"
+description = "The vector-format intermediate representation."
 version.workspace = true
 license.workspace = true
 edition.workspace = true
@@ -10,18 +9,13 @@ repository.workspace = true
 
 [dependencies]
 typst.workspace = true
-typst-pdf = { workspace = true, optional = true }
 
-reflexo-typst2vec.workspace = true
 reflexo.workspace = true
-reflexo-world.workspace = true
 comemo.workspace = true
 elsa.workspace = true
 ttf-parser.workspace = true
 path-clean.workspace = true
 
-typst-ts-ast-exporter = { workspace = true, optional = true }
-typst-ts-svg-exporter = { workspace = true, optional = true }
 
 ecow.workspace = true
 base64.workspace = true
@@ -61,13 +55,11 @@ default = ["full"]
 full = ["web", "glyph2vec", "flat-vector"]
 flat-vector = ["reflexo/flat-vector"]
 
-experimental-ligature = ["typst-ts-svg-exporter/experimental-ligature"]
-no-content-hint = ["reflexo-typst2vec/no-content-hint"]
-glyph2vec = ["reflexo-typst2vec/glyph2vec"]
+experimental-ligature = []
+no-content-hint = []
+glyph2vec = []
+debug-gc = []
+item-dashmap = ["reflexo/item-dashmap"]
 
 __web = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
-web = ["__web", "reflexo/web", "reflexo-world/web", "reflexo-typst2vec/web"]
-
-ast = ["typst-ts-ast-exporter"]
-pdf = ["typst-pdf"]
-svg = ["typst-ts-svg-exporter"]
+web = ["__web", "reflexo/web"]

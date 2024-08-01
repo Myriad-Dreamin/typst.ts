@@ -6,7 +6,7 @@ use ttf_parser::gsub::{Ligature, SubstitutionSubtable};
 use ttf_parser::GlyphId;
 use typst::text::Font;
 
-use crate::ImmutStr;
+use reflexo::ImmutStr;
 
 /// get reverse cmap
 fn get_rev_cmap(face: &ttf_parser::Face<'_>) -> std::collections::HashMap<GlyphId, char> {

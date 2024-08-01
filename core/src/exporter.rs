@@ -5,10 +5,14 @@ use typst::{diag::SourceResult, World};
 #[cfg(feature = "ast")]
 pub mod ast;
 
+pub mod json;
+
 #[cfg(feature = "pdf")]
 pub mod pdf;
 
-pub mod json;
+#[cfg(feature = "svg")]
+pub mod svg;
+
 pub mod text;
 
 pub type DynExporter<Input, Output = ()> = Box<dyn Exporter<Input, Output> + Send + Sync>;

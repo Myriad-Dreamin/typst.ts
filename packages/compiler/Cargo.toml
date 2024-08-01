@@ -41,7 +41,8 @@ web-sys = { workspace = true, features = [
 ] }
 console_error_panic_hook.workspace = true
 
-typst-ts-core = { workspace = true, features = ["pdf"] }
+reflexo-typst2vec.workspace = true
+typst-ts-core = { workspace = true, features = ["pdf", "svg"] }
 typst-ts-compiler = { version = "0.5.0-rc6", default-features = false, features = [
     "web",
 ] }

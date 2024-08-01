@@ -13,11 +13,11 @@ use std::sync::Arc;
 
 use comemo::Prehashed;
 
-use typst_ts_core::hash::Fingerprint;
-use typst_ts_core::vector::{
+use reflexo_typst2vec::{
     ir::{self, Abs, Axes, FontItem, GlyphRef, Ratio, Rect, Scalar, Transform},
     vm::{GroupContext, RenderVm, TransformContext},
 };
+use typst_ts_core::hash::Fingerprint;
 
 pub use crate::dom::DomPage;
 pub use incr::*;

@@ -8,17 +8,15 @@ use std::sync::Arc;
 
 use base64::Engine;
 use escape::PcDataEscapes;
-use typst_ts_core::{
-    hash::Fingerprint,
-    vector::{
-        ir::{
-            self, Abs, Axes, FontIndice, FontItem, GlyphRef, ImmutStr, PathStyle, Ratio, Scalar,
-            Size, Transform,
-        },
-        utils::ToCssExt,
-        vm::{GroupContext, IncrGroupContext, IncrRenderVm, RenderVm, TransformContext},
+use reflexo::hash::Fingerprint;
+use reflexo::vector::{
+    ir::{
+        self, Abs, Axes, FontIndice, FontItem, GlyphRef, ImmutStr, PathStyle, Ratio, Scalar, Size,
+        Transform,
     },
+    vm::{GroupContext, IncrGroupContext, IncrRenderVm, RenderVm, TransformContext},
 };
+use reflexo_typst2vec::utils::ToCssExt;
 
 pub trait BuildClipPath {
     fn build_clip_path(&mut self, path: &ir::PathItem) -> Fingerprint;

@@ -8,20 +8,18 @@ pub use incremental::{IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderConte
 
 use std::{collections::HashSet, f32::consts::TAU, fmt::Write, sync::Arc};
 
+use reflexo::hash::{item_hash128, Fingerprint, FingerprintBuilder};
+use reflexo_typst2vec::{
+    ir::{
+        self, Axes, FlatGlyphItem, GlyphRef, GradientItem, GradientKind, GradientStyle, Module,
+        Page, Scalar, Size, VecItem,
+    },
+    utils::ToCssExt,
+    IntoTypst, TryIntoTypst,
+};
 use typst::{
     layout::{Angle, Quadrant},
     visualize::{Color, ColorSpace, Hsl, Hsv, WeightedColor},
-};
-use typst_ts_core::{
-    hash::{item_hash128, Fingerprint, FingerprintBuilder},
-    vector::{
-        ir::{
-            self, Axes, FlatGlyphItem, GlyphRef, GradientItem, GradientKind, GradientStyle, Module,
-            Page, Scalar, Size, VecItem,
-        },
-        utils::ToCssExt,
-    },
-    IntoTypst, TryIntoTypst,
 };
 
 use crate::{

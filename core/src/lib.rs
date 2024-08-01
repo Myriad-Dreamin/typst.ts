@@ -8,9 +8,7 @@ pub use concepts::*;
 
 // Core data structures of typst-ts.
 pub mod config;
-pub mod debug_loc;
 pub mod error;
-pub mod font;
 
 // Core mechanism of typst-ts.
 pub(crate) mod exporter;
@@ -27,28 +25,16 @@ pub use exporter::pdf::PdfDocExporter;
 #[cfg(feature = "pdf")]
 pub use typst_pdf::pdf;
 
+#[cfg(feature = "svg")]
+pub use exporter::svg::*;
+#[cfg(feature = "svg")]
+pub use typst_ts_svg_exporter as svg;
+
 pub use exporter::text::TextExporter;
 
-// Intermediate representation of typst-ts.
-pub mod vector;
-
-pub mod hash {
-    pub use reflexo::hash::*;
-
-    /// This function maintain hash function corresponding to Typst
-    /// Typst changed the hash function from [`siphasher::sip128::SipHasher`] to
-    ///   [`siphasher::sip128::SipHasher13`] since commit
-    ///   <https://github.com/typst/typst/commit/d0afba959d18d1c2c646b99e6ddd864b1a91deb2>
-    /// Commit log:
-    /// This seems to significantly improves performance. Inspired by
-    /// rust-lang/rust#107925
-    ///
-    /// Update: Use Typst's new util function `typst::util::hash128`
-    #[inline]
-    pub fn typst_affinite_hash<T: std::hash::Hash>(t: &T) -> u128 {
-        typst::util::hash128(t)
-    }
-}
+pub use reflexo_typst2vec as vector;
+pub use reflexo_typst2vec::debug_loc;
+pub use reflexo_typst2vec::hash;
 
 pub use exporter::{builtins as exporter_builtins, utils as exporter_utils};
 pub use exporter::{

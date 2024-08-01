@@ -6,13 +6,12 @@ use std::sync::Arc;
 use crossbeam_queue::SegQueue;
 use once_cell::sync::OnceCell;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use reflexo::error::prelude::*;
+use reflexo::hash::Fingerprint;
 
 use crate::debug_loc::{
     ElementPoint, FileLocation, FlatSourceLocation, SourceSpan, SourceSpanOffset,
 };
-use crate::error::prelude::ZResult;
-use crate::error::prelude::*;
-use crate::hash::Fingerprint;
 
 /// Represents a node in the source mapping tree.
 pub struct Node {
