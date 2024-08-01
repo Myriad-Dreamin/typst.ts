@@ -38,8 +38,7 @@ wasm-bindgen-futures.workspace = true
 serde-wasm-bindgen.workspace = true
 web-sys = { workspace = true, features = ["console", "Window"] }
 
-typst-ts-core.workspace = true
-typst-ts-compiler = { version = "0.5.0-rc6", default-features = false, features = [
+typst-ts-core = { workspace = true, default-features = false, features = [
     "web-render",
 ] }
 reflexo-typst2vec = { workspace = true }

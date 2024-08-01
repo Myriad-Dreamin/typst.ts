@@ -24,8 +24,7 @@ tokio.workspace = true
 
 typst-ts-dev-server.workspace = true
 typst-ts-test-common.workspace = true
-typst-ts-core = { workspace = true, features = ["pdf"] }
-typst-ts-compiler = { workspace = true, features = ["system"] }
+typst-ts-core = { workspace = true, features = ["pdf", "system"] }
 
 typst-ts-svg-exporter = { workspace = true }
 

@@ -78,7 +78,7 @@ Run the entire typst directly in browser, like #link("https://typst.app")[typst.
 // You can:
 
 // - locally run the compilation via `typst-ts-cli` to get a precompiled document,
-//   - or use `typst-ts-compiler` to build your backend programmatically.
+//   - or use `reflexo-typst` to build your backend programmatically.
 // - build your frontend using the lightweight TypeScript library `typst.ts`.
 // - send the precompiled document to your readers' browsers and render it as HTML elements.
 

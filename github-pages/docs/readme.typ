@@ -7,13 +7,13 @@
   let style_color = rgb("#ffffff")
   set document(author: authors, title: title)
   set page(
-    numbering: none, 
+    numbering: none,
     number-align: center,
     height: auto,
-    background: rect(fill: rgb("#343541"), height: 100%, width: 100%)
+    background: rect(fill: rgb("#343541"), height: 100%, width: 100%),
   )
   set text(font: "Linux Libertine", lang: "en", fill: style_color)
-  
+
   // math setting
   show math.equation: set text(weight: 400)
 
@@ -49,7 +49,7 @@ Typst.ts allows you to independently run the Typst compiler and exporter (render
 You can:
 
 - locally run the compilation via `typst-ts-cli` to get a precompiled document,
-  - or use `typst-ts-compiler` to build your backend programmatically.
+  - or use `reflexo-typst` to build your backend programmatically.
 - build your frontend using the lightweight TypeScript library `typst.ts`.
 - send the precompiled document to your readers' browsers and render it as HTML elements.
 
