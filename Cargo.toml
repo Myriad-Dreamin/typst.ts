@@ -20,14 +20,12 @@ members = [
     "crates/conversion/vec2canvas",
     "crates/conversion/vec2bbox",
     "crates/conversion/vec2sema",
+    "crates/conversion/vec2dom",
+    "crates/conversion/vec2svg",
 
     "cli",
     "core",
     "compiler",
-
-    "exporter/ast",
-    "exporter/dom",
-    "exporter/svg",
 
     "fuzzers/incremental",
 
@@ -217,8 +215,7 @@ typst-ts-compiler = { version = "0.5.0-rc6", default-features = false }
 typst-ts-test-common = { version = "0.5.0-rc6", path = "tests/common" }
 
 # project exporters
-typst-ts-ast-exporter = "0.5.0-rc6"
-typst-ts-dom-exporter = { path = "exporter/dom" }
+typst-ts-dom-exporter = { path = "crates/conversion/vec2dom" }
 typst-ts-svg-exporter = "0.5.0-rc6"
 
 # project common components
@@ -228,8 +225,7 @@ typst-ts-cli = { version = "0.5.0-rc6", path = "cli" }
 [patch.crates-io]
 typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }
-typst-ts-ast-exporter = { path = "exporter/ast" }
-typst-ts-svg-exporter = { path = "exporter/svg" }
+typst-ts-svg-exporter = { path = "crates/conversion/vec2svg" }
 
 # typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }
 # typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }

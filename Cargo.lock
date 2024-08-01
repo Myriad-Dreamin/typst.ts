@@ -4479,14 +4479,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "typst-ts-ast-exporter"
-version = "0.5.0-rc6"
-dependencies = [
- "ansi_term",
- "typst",
-]
-
-[[package]]
 name = "typst-ts-bench-lowering"
 version = "0.5.0-rc6"
 dependencies = [
@@ -4578,6 +4570,7 @@ dependencies = [
 name = "typst-ts-core"
 version = "0.5.0-rc6"
 dependencies = [
+ "ansi_term",
  "base64 0.22.1",
  "base64-serde",
  "bitvec",
@@ -4612,7 +4605,6 @@ dependencies = [
  "ttf-parser",
  "typst",
  "typst-pdf",
- "typst-ts-ast-exporter",
  "typst-ts-svg-exporter",
  "wasm-bindgen",
  "web-sys",
@@ -4881,7 +4873,6 @@ dependencies = [
  "serde-wasm-bindgen",
  "serde_json",
  "sha2",
- "typst-ts-ast-exporter",
  "typst-ts-compiler",
  "typst-ts-core",
  "typst-ts-svg-exporter",

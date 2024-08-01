@@ -223,7 +223,7 @@ impl TypstCompiler {
         // export ast
         let src = world.main();
         let mut cursor = std::io::Cursor::new(Vec::new());
-        typst_ts_ast_exporter::dump_ast(
+        typst_ts_core::dump_ast(
             &src.id().vpath().as_rootless_path().display().to_string(),
             &src,
             &mut cursor,

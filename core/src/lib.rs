@@ -14,9 +14,7 @@ pub mod error;
 pub(crate) mod exporter;
 
 #[cfg(feature = "ast")]
-pub use exporter::ast::AstExporter;
-#[cfg(feature = "ast")]
-pub use typst_ts_ast_exporter::dump_ast;
+pub use exporter::ast::{dump_ast, AstExporter};
 
 pub use exporter::json::JsonExporter;
 

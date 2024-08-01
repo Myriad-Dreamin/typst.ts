@@ -20,7 +20,6 @@ elsa.workspace = true
 ttf-parser.workspace = true
 path-clean.workspace = true
 
-typst-ts-ast-exporter = { workspace = true, optional = true }
 typst-ts-svg-exporter = { workspace = true, optional = true }
 
 ecow.workspace = true
@@ -50,6 +49,7 @@ rayon.workspace = true
 rkyv = { workspace = true, optional = true }
 tiny-skia-path.workspace = true
 svgtypes.workspace = true
+ansi_term = { workspace = true, optional = true }
 
 wasm-bindgen = { workspace = true, optional = true }
 web-sys = { workspace = true, optional = true }
@@ -68,6 +68,6 @@ glyph2vec = ["reflexo-typst2vec/glyph2vec"]
 __web = ["dep:wasm-bindgen", "dep:js-sys", "dep:web-sys"]
 web = ["__web", "reflexo/web", "reflexo-world/web", "reflexo-typst2vec/web"]
 
-ast = ["typst-ts-ast-exporter"]
+ast = ["ansi_term"]
 pdf = ["typst-pdf"]
 svg = ["typst-ts-svg-exporter"]

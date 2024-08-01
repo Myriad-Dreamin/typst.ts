@@ -8,7 +8,7 @@ const src = path.resolve(projectRoot, 'packages/enhanced-typst-svg/dist/index.mi
 const srcData = readFileSync(src, 'utf8');
 
 for (const inp of [
-  'exporter/svg/src/frontend/typst.svg.js',
+  'crates/conversion/vec2svg/src/frontend/typst.svg.js',
   'projects/hexo-renderer-typst/lib/svg_utils.cjs',
   'projects/typst-book/frontend/src/svg_utils.cjs',
 ]) {
