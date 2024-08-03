@@ -42,7 +42,7 @@ web-sys = { workspace = true, features = [
 console_error_panic_hook.workspace = true
 
 reflexo-typst2vec.workspace = true
-typst-ts-core = { workspace = true, features = ["pdf", "svg", "web"] }
+typst-ts-core = { workspace = true, features = ["ast", "pdf", "svg", "web"] }
 reflexo-vec2canvas.workspace = true
 typst-ts-svg-exporter.workspace = true
 
