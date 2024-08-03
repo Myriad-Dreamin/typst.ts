@@ -1,4 +1,4 @@
-//! Typst.ts compiler library.
+//! reflexo-typst library.
 //!
 //! This library is used to compile Typst code into a document and export it
 //! into various artifacts.
@@ -24,7 +24,62 @@
 //!     - Single thread (Sync): <https://github.com/Myriad-Dreamin/typst.ts/blob/main/cli/src/main.rs>
 //!     - Multiple thread (Async): <https://github.com/Enter-tainer/typst-preview-vscode/blob/main/src/main.rs>
 
-mod diag;
+// Core type system/concepts of typst-ts.
+// #![warn(missing_docs)]
+// #![warn(missing_debug_implementations)]
+// #![warn(missing_copy_implementations)]
+
+mod concepts;
+pub use concepts::*;
+
+// Core data structures of typst-ts.
+pub mod config;
+pub mod error;
+
+// Core mechanism of typst-ts.
+pub(crate) mod exporter;
+
+#[cfg(feature = "ast")]
+pub use exporter::ast::{dump_ast, AstExporter};
+
+pub use exporter::json::JsonExporter;
+
+#[cfg(feature = "pdf")]
+pub use exporter::pdf::PdfDocExporter;
+#[cfg(feature = "pdf")]
+pub use typst_pdf::pdf;
+
+#[cfg(feature = "svg")]
+pub use exporter::svg::*;
+#[cfg(feature = "svg")]
+pub use typst_ts_svg_exporter as svg;
+
+pub use exporter::text::TextExporter;
+
+pub use reflexo_typst2vec as vector;
+pub use reflexo_typst2vec::debug_loc;
+pub use reflexo_typst2vec::hash;
+
+pub use exporter::{builtins as exporter_builtins, utils as exporter_utils};
+pub use exporter::{
+    DynExporter, DynGenericExporter, DynPolymorphicExporter, Exporter, GenericExporter,
+    GenericTransformer, Transformer,
+};
+// pub use font::{FontLoader, FontResolver, FontSlot};
+pub use reflexo::*;
+
+pub mod build_info {
+    /// The version of the typst-ts-core crate.
+    pub static VERSION: &str = env!("CARGO_PKG_VERSION");
+}
+
+pub mod program_meta {
+    /// inform the user that this is a bug.
+    pub const REPORT_BUG_MESSAGE: &str =
+        "This is a bug, please report to https://github.com/Myriad-Dreamin/typst.ts/issues/new";
+}
+
+pub mod diag;
 mod driver;
 pub mod eval;
 mod export;
@@ -62,11 +117,15 @@ pub use diag::ConsoleDiagReporter;
 #[cfg(feature = "system-compile")]
 pub type CompileDriver<C> = CompileDriverImpl<C, reflexo_world::system::SystemCompilerFeat>;
 
+pub use self::{diag::DiagnosticFormat, features::FeatureSet};
+pub use driver::*;
+pub use export::*;
+
 use core::fmt;
 use std::sync::Arc;
 
-use reflexo::QueryRef;
-use typst::{
+use crate::typst::prelude::*;
+use ::typst::{
     diag::{At, Hint, SourceDiagnostic, SourceResult},
     eval::Tracer,
     foundations::Content,
@@ -75,11 +134,6 @@ use typst::{
     util::Deferred,
     World,
 };
-use typst_ts_core::{typst::prelude::*, TypstFileId};
-
-pub use self::{diag::DiagnosticFormat, features::FeatureSet};
-pub use driver::*;
-pub use export::*;
 
 #[derive(Clone, Default)]
 pub struct CompileEnv {
@@ -292,8 +346,8 @@ pub trait Compiler {
         self.reset()?;
 
         let res = match env.tracer.as_mut() {
-            Some(tracer) => typst::compile(world, tracer),
-            None => typst::compile(world, &mut Tracer::default()),
+            Some(tracer) => ::typst::compile(world, tracer),
+            None => ::typst::compile(world, &mut Tracer::default()),
         };
 
         // compile document
@@ -420,5 +474,13 @@ struct AtFile(TypstFileId);
 impl From<AtFile> for EcoString {
     fn from(at: AtFile) -> Self {
         eco_format!("at file {:?}", at.0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    pub fn test_hash128() {
+        assert_eq!(typst::util::hash128(&0u32), reflexo::hash::hash128(&0u32));
     }
 }

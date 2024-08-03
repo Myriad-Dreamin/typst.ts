@@ -16,12 +16,12 @@ use typst::WorldExt;
 use typst::{diag::SourceDiagnostic, World};
 
 use typst::diag::eco_format;
-use typst_ts_core::{typst::prelude::*, GenericExporter, PhantomParamData, TakeAs, TypstFileId};
 
 use crate::features::{
     CompileFeature, FeatureSet, DIAG_FMT_FEATURE, WITH_COMPILING_STATUS_FEATURE,
 };
 use crate::CompileReport;
+use crate::{typst::prelude::*, GenericExporter, PhantomParamData, TakeAs, TypstFileId};
 
 use super::DiagnosticFormat;
 

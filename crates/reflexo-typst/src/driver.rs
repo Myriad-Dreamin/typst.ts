@@ -8,7 +8,6 @@ use typst::{
     diag::{eco_format, EcoString, SourceResult},
     foundations::Content,
 };
-use typst_ts_core::{Bytes, TypstDocument, TypstFileId};
 
 use super::{CompileEnv, Compiler};
 use crate::EntryReader;
@@ -16,6 +15,7 @@ use crate::{
     world::{CompilerFeat, CompilerUniverse, CompilerWorld},
     ShadowApi,
 };
+use crate::{Bytes, TypstDocument, TypstFileId};
 
 /// CompileDriverImpl is a driver for typst compiler.
 /// It is responsible for operating the compiler without leaking implementation

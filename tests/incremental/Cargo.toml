@@ -19,7 +19,6 @@ typst-ts-dev-server.workspace = true
 typst-ts-test-common.workspace = true
 typst-ts-core.workspace = true
 hex.workspace = true
-typst-ts-compiler.workspace = true
 typst-ts-svg-exporter.workspace = true
 
 [features]

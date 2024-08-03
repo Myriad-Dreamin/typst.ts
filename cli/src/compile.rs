@@ -6,18 +6,18 @@ use tokio::sync::mpsc;
 use typst::diag::{FileError, FileResult};
 use typst::foundations::{Bytes, Dict, IntoValue};
 use typst::model::Document;
-use typst_ts_compiler::{
+use typst_ts_core::config::entry::{EntryOpts, MEMORY_MAIN_ENTRY};
+use typst_ts_core::DynExporter;
+use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
+use typst_ts_core::{
     features::{FeatureSet, DIAG_FMT_FEATURE},
     CompileActor, CompileDriver, CompileExporter, DynamicLayoutCompiler, PureCompiler,
     TypstSystemUniverse,
 };
-use typst_ts_compiler::{
+use typst_ts_core::{
     CompileServerOpts, CompileSnapshot, CompileStarter, EntryManager, EntryReader, ShadowApi,
     SystemCompilerFeat, TypstSystemWorld,
 };
-use typst_ts_core::config::entry::{EntryOpts, MEMORY_MAIN_ENTRY};
-use typst_ts_core::DynExporter;
-use typst_ts_core::{config::CompileOpts, exporter_builtins::GroupExporter, path::PathClean};
 
 use crate::font::fonts;
 use crate::utils::current_dir;

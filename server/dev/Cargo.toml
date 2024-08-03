@@ -11,7 +11,6 @@ repository.workspace = true
 [dependencies]
 typst-ts-core.workspace = true
 typst-ts-cli.workspace = true
-typst-ts-compiler.workspace = true
 typst-dev-assets = { workspace = true }
 
 once_cell.workspace = true

@@ -105,9 +105,7 @@ The JavaScript packages are published on [npm](https://www.npmjs.com/).
 The rust crates are not published on [crates.io](https://crates.io/) yet, since
 it has the git dependency on [typst](https://github.com/typst/typst).
 
-- Core Library: [typst-ts-core](./core/)
-
-- Compiler Library: [typst-ts-compiler](./compiler/)
+- Compiler Library: [reflexo-typst](./crates/reflexo-typst/)
 
 - CLI as a Library: [typst-ts-cli](./cli/)
 

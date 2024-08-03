@@ -8,9 +8,9 @@ use reflexo_typst2vec::{
 use reflexo_world::TaskInputs;
 use typst::foundations::IntoValue;
 use typst::{diag::SourceResult, World};
-use typst_ts_core::{typst::prelude::*, Exporter, TypstDict, TypstDocument as Document};
 use typst_ts_svg_exporter::{DynamicLayoutSvgExporter, MultiVecDocument};
 
+use crate::{typst::prelude::*, Exporter, TypstDict, TypstDocument as Document};
 use crate::{
     world::{CompilerFeat, CompilerWorld},
     CompileSnapshot,

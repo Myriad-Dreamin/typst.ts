@@ -5,11 +5,11 @@ use std::process::exit;
 use clap::Parser;
 use log::info;
 use tokio::io::AsyncBufReadExt;
-use typst_ts_compiler::{
+use typst_ts_core::path::PathClean;
+use typst_ts_core::{
     features::WITH_COMPILING_STATUS_FEATURE, CompileDriver, CompileEnv, CompileExporter,
     CompileReporter, ConsoleDiagReporter, FeatureSet, TypstSystemWorld,
 };
-use typst_ts_core::path::PathClean;
 use typst_ts_dev_server::{http::run_http, utils::async_continue, RunSubCommands};
 
 use typst_ts_dev_server::{

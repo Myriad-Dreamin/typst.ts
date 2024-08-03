@@ -6,10 +6,6 @@ use reflexo_typst2vec::{
 };
 use reflexo_world::{CompilerFeat, CompilerWorld};
 use typst::{diag::SourceResult, World};
-use typst_ts_core::{
-    exporter_builtins::GroupExporter, typst::prelude::*, DynExporter, DynGenericExporter,
-    DynPolymorphicExporter, Exporter, GenericExporter, TakeAs, TypstDocument as Document,
-};
 
 #[cfg(feature = "dynamic-layout")]
 mod dynamic_layout;
@@ -19,6 +15,10 @@ pub use dynamic_layout::*;
 use super::{
     features::{CompileFeature, FeatureSet, WITH_COMPILING_STATUS_FEATURE},
     CompileEnv, CompileMiddleware, CompileReport, Compiler,
+};
+use crate::{
+    exporter_builtins::GroupExporter, typst::prelude::*, DynExporter, DynGenericExporter,
+    DynPolymorphicExporter, Exporter, GenericExporter, TakeAs, TypstDocument as Document,
 };
 use crate::{CompileSnapshot, EntryReader};
 

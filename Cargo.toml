@@ -16,6 +16,7 @@ members = [
     "crates/reflexo",
     "crates/reflexo-vfs",
     "crates/reflexo-world",
+    "crates/reflexo-typst",
     "crates/conversion/typst2vec",
     "crates/conversion/vec2canvas",
     "crates/conversion/vec2bbox",
@@ -24,8 +25,6 @@ members = [
     "crates/conversion/vec2svg",
 
     "cli",
-    "core",
-    "compiler",
 
     "fuzzers/incremental",
 
@@ -211,7 +210,6 @@ reflexo-vec2sema = { version = "0.5.0-rc6", path = "crates/conversion/vec2sema" 
 reflexo-vec2bbox = { version = "0.5.0-rc6", path = "crates/conversion/vec2bbox" }
 
 typst-ts-core = { version = "0.5.0-rc6", default-features = false }
-typst-ts-compiler = { version = "0.5.0-rc6", default-features = false }
 typst-ts-test-common = { version = "0.5.0-rc6", path = "tests/common" }
 
 # project exporters
@@ -223,8 +221,7 @@ typst-ts-dev-server = { version = "0.5.0-rc6", path = "server/dev" }
 typst-ts-cli = { version = "0.5.0-rc6", path = "cli" }
 
 [patch.crates-io]
-typst-ts-core = { path = "core" }
-typst-ts-compiler = { path = "compiler" }
+typst-ts-core = { path = "crates/reflexo-typst" }
 typst-ts-svg-exporter = { path = "crates/conversion/vec2svg" }
 
 # typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }

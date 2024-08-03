@@ -20,7 +20,6 @@ napi-derive = "2"
 typst-svg.workspace = true
 typst-ts-cli.workspace = true
 typst-ts-core = { workspace = true }
-typst-ts-compiler.workspace = true
 typst-ts-svg-exporter = { workspace = true, optional = true }
 comemo.workspace = true
 parking_lot.workspace = true

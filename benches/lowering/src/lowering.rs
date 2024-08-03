@@ -4,10 +4,10 @@ use divan::Bencher;
 use once_cell::sync::Lazy;
 use reflexo_typst2vec::pass::{IncrTypst2VecPass, Typst2VecPass};
 use typst_ts_cli::CompileOnceArgs;
-use typst_ts_compiler::{
+use typst_ts_core::TypstDocument;
+use typst_ts_core::{
     CompileDriver as CompileDriverT, Compiler, PureCompiler, ShadowApiExt, TypstSystemWorld,
 };
-use typst_ts_core::TypstDocument;
 
 type CompileDriver = Lazy<Mutex<CompileDriverT<PureCompiler<TypstSystemWorld>>>>;
 

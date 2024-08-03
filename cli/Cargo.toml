@@ -39,8 +39,7 @@ tracing-subscriber.workspace = true
 codespan-reporting.workspace = true
 human-panic.workspace = true
 
-typst-ts-core = { workspace = true }
-typst-ts-compiler = { workspace = true, default-features = false, features = [
+typst-ts-core = { workspace = true, default-features = false, features = [
     "system",
     # "lazy-fontdb",
     "dynamic-layout",

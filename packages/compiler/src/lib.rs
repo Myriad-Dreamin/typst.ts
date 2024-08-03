@@ -2,18 +2,17 @@ use core::fmt;
 use std::{fmt::Write, path::Path, sync::Arc};
 
 use comemo::Prehashed;
+use error::TypstSourceDiagnostic;
 use font::cache::FontInfoCache;
 use js_sys::{Array, JsString, Uint32Array, Uint8Array};
-pub use typst_ts_compiler::*;
-use typst_ts_compiler::{
-    font::web::BrowserFontSearcher, package::browser::ProxyRegistry, parser::OffsetEncoding,
-    vfs::browser::ProxyAccessModel,
+pub use typst_ts_core::*;
+use typst_ts_core::{
+    error::{long_diag_from_std, prelude::*, DiagMessage},
+    typst::{foundations::IntoValue, prelude::EcoVec},
 };
 use typst_ts_core::{
-    diag::SourceDiagnostic,
-    error::{long_diag_from_std, prelude::*, DiagMessage},
-    typst::{self, foundations::IntoValue, prelude::EcoVec},
-    DynExporter, TypstDocument, TypstWorld,
+    font::web::BrowserFontSearcher, package::browser::ProxyRegistry, parser::OffsetEncoding,
+    vfs::browser::ProxyAccessModel,
 };
 use wasm_bindgen::prelude::*;
 
@@ -71,7 +70,7 @@ impl fmt::Display for UnixFmt {
 }
 
 fn convert_diag(
-    e: EcoVec<SourceDiagnostic>,
+    e: EcoVec<TypstSourceDiagnostic>,
     world: Option<&dyn TypstWorld>,
     diagnostics_format: u8,
 ) -> JsValue {

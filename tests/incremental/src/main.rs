@@ -1,10 +1,6 @@
 use std::path::Path;
 
 use reflexo_typst2vec::incr::{IncrDocClient, IncrDocServer};
-use typst_ts_compiler::{
-    CompileDriver, CompileExporter, PureCompiler, ShadowApiExt, TypstSystemUniverse,
-    TypstSystemWorld,
-};
 use typst_ts_core::{
     config::{entry::EntryOpts, CompileOpts},
     exporter_builtins::GroupExporter,
@@ -12,7 +8,8 @@ use typst_ts_core::{
         ir::{Abs, Point, Rect},
         stream::BytesModuleStream,
     },
-    TypstDocument,
+    CompileDriver, CompileExporter, PureCompiler, ShadowApiExt, TypstDocument, TypstSystemUniverse,
+    TypstSystemWorld,
 };
 use typst_ts_svg_exporter::IncrSvgDocClient;
 

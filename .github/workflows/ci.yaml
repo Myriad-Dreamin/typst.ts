@@ -61,7 +61,7 @@ jobs:
       - name: Test
         run: |
           cargo test --profile release-ci --no-fail-fast \
-            -p typst-ts-core -p typst-ts-compiler \
+            -p typst-ts-core \
             -p typst-ts-cli  -p typst-ts-integration-test
       - name: Archive Test Results (WebAssembly Renderer in Chrome)
         if: always()

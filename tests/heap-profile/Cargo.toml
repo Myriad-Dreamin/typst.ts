@@ -18,7 +18,6 @@ dhat = "0.3.2"
 typst-ts-dev-server.workspace = true
 typst-ts-test-common.workspace = true
 typst-ts-core.workspace = true
-typst-ts-compiler.workspace = true
 
 [features]
 dhat-heap = []

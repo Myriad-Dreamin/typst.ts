@@ -19,15 +19,13 @@ use std::{
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
-use typst_ts_compiler::{
-    Compiler, DynamicLayoutCompiler, ShadowApi, SystemCompilerFeat, TypstSystemWorld,
+use typst_ts_core::typst::diag::{At, SourceResult};
+use typst_ts_core::{
+    error::prelude::*, foundations::IntoValue, syntax::Span, Bytes, Exporter, TypstAbs,
+    TypstDatetime, TypstDocument, TypstWorld,
 };
 use typst_ts_core::{
-    diag::{At, SourceResult},
-    error::prelude::*,
-    foundations::IntoValue,
-    syntax::Span,
-    Bytes, Exporter, TypstAbs, TypstDatetime, TypstDocument, TypstWorld,
+    Compiler, DynamicLayoutCompiler, ShadowApi, SystemCompilerFeat, TypstSystemWorld,
 };
 
 /// A shared typst document object.

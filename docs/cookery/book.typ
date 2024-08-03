@@ -92,8 +92,9 @@
     - #chapter(none, section: "11")[Targeting Browser]
       - #chapter(none, section: "11.1")[Build Wasm Modules]
       - #chapter(none, section: "11.2")[typst.ts]
-      - #chapter(none, section: "11.3")[typst-ts-renderer]
-      - #chapter(none, section: "11.4")[typst-ts-compiler]
+      - #chapter(none, section: "11.3")[tpyst.node]
+      - #chapter(none, section: "11.4")[typst-ts-renderer]
+      - #chapter(none, section: "11.5")[typst-ts-web-compiler]
     - #chapter(none, section: "12")[Installation]
       - #chapter(none, section: "12.1")[npm install/link]
     = References
