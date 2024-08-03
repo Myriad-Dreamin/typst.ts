@@ -65,7 +65,7 @@ full = ["serde_json", "render_full", "web_test"]
 
 web_test = ["typst-ts-test-common/web_artifacts"]
 web_verbose = ["web_test"]                        # for test debug
-serde_json = ["dep:serde_json"]
+serde_json = ["dep:serde", "dep:serde_json"]
 
 build_glyph_pack = []
 build_raw_font = []
