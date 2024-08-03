@@ -1,16 +1,14 @@
 use std::sync::Arc;
 
+use reflexo_typst2vec::{
+    ir::{LayoutRegion, LayoutRegionNode},
+    pass::Typst2VecPass,
+};
 use reflexo_world::{CompilerFeat, CompilerWorld};
 use typst::{diag::SourceResult, World};
 use typst_ts_core::{
-    exporter_builtins::GroupExporter,
-    typst::prelude::*,
-    vector::{
-        ir::{LayoutRegion, LayoutRegionNode},
-        pass::Typst2VecPass,
-    },
-    DynExporter, DynGenericExporter, DynPolymorphicExporter, Exporter, GenericExporter, TakeAs,
-    TypstDocument as Document,
+    exporter_builtins::GroupExporter, typst::prelude::*, DynExporter, DynGenericExporter,
+    DynPolymorphicExporter, Exporter, GenericExporter, TakeAs, TypstDocument as Document,
 };
 
 #[cfg(feature = "dynamic-layout")]

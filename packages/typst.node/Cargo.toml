@@ -19,10 +19,9 @@ napi-derive = "2"
 
 typst-svg.workspace = true
 typst-ts-cli.workspace = true
-typst-ts-core.workspace = true
+typst-ts-core = { workspace = true }
 typst-ts-compiler.workspace = true
 typst-ts-svg-exporter = { workspace = true, optional = true }
-typst-ts-pdf-exporter = { workspace = true, optional = true }
 comemo.workspace = true
 parking_lot.workspace = true
 serde.workspace = true
@@ -34,6 +33,6 @@ napi-build = "2"
 
 [features]
 
-pdf = ["typst-ts-pdf-exporter"]
+pdf = ["typst-ts-core/pdf"]
 svg = ["typst-ts-svg-exporter", "typst-ts-svg-exporter/experimental-ligature"]
 default = ["pdf", "svg"]

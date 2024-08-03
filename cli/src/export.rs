@@ -1,12 +1,12 @@
 use std::path::{Path, PathBuf};
 
 use chrono::{Datelike, Timelike};
+use typst_ts_core::svg::DefaultExportFeature;
 use typst_ts_core::{
     exporter_builtins::{FsPathExporter, GroupExporter},
     program_meta::REPORT_BUG_MESSAGE,
     TypstDatetime,
 };
-use typst_ts_svg_exporter::DefaultExportFeature;
 
 use crate::{utils::current_dir, CompileArgs, ExportArgs};
 
@@ -119,14 +119,14 @@ fn prepare_exporters_impl(
 
     type Doc = typst::model::Document;
 
-    type WithAst = typst_ts_ast_exporter::AstExporter;
+    type WithAst = typst_ts_core::AstExporter;
     // type WithJson<T> = typst_ts_serde_exporter::JsonExporter<T>;
-    type WithPdf = typst_ts_pdf_exporter::PdfDocExporter;
+    type WithPdf = typst_ts_core::PdfDocExporter;
     // type WithRmp<T> = typst_ts_serde_exporter::RmpExporter<T>;
-    type WithSvg = typst_ts_svg_exporter::PureSvgExporter;
-    type WithSvgHtml = typst_ts_svg_exporter::SvgExporter<DefaultExportFeature>;
-    type WithSIR = typst_ts_svg_exporter::SvgModuleExporter;
-    type WithText = typst_ts_text_exporter::TextExporter;
+    type WithSvg = typst_ts_core::PureSvgExporter;
+    type WithSvgHtml = typst_ts_core::SvgHtmlExporter<DefaultExportFeature>;
+    type WithSIR = typst_ts_core::SvgModuleExporter;
+    type WithText = typst_ts_core::TextExporter;
 
     type ExporterVec<T> = Vec<Box<dyn typst_ts_core::Exporter<T> + Send + Sync>>;
 }

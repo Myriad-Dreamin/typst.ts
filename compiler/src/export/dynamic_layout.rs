@@ -1,16 +1,14 @@
 use std::{path::PathBuf, sync::Arc};
 
+use reflexo_typst2vec::{
+    ir::{LayoutRegion, LayoutRegionNode},
+    pass::{CommandExecutor, Typst2VecPass},
+    IntoTypst,
+};
 use reflexo_world::TaskInputs;
 use typst::foundations::IntoValue;
 use typst::{diag::SourceResult, World};
-use typst_ts_core::{
-    typst::prelude::*,
-    vector::{
-        ir::{LayoutRegion, LayoutRegionNode},
-        pass::{CommandExecutor, Typst2VecPass},
-    },
-    Exporter, IntoTypst, TypstDict, TypstDocument as Document,
-};
+use typst_ts_core::{typst::prelude::*, Exporter, TypstDict, TypstDocument as Document};
 use typst_ts_svg_exporter::{DynamicLayoutSvgExporter, MultiVecDocument};
 
 use crate::{

@@ -333,7 +333,7 @@ impl NodeCompiler {
     /// Simply compiles the document as a vector IR.
     #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     pub fn vector(&mut self, compiled_or_by: MayCompileOpts) -> Result<Buffer, NodeError> {
-        type Exporter = typst_ts_svg_exporter::SvgModuleExporter;
+        type Exporter = typst_ts_core::SvgModuleExporter;
         self.compile_as(Exporter::default(), compiled_or_by)
     }
 
@@ -345,7 +345,7 @@ impl NodeCompiler {
         compiled_or_by: MayCompileOpts,
         opts: Option<RenderPdfOpts>,
     ) -> Result<Buffer, NodeError> {
-        type Exporter = typst_ts_pdf_exporter::PdfDocExporter;
+        type Exporter = typst_ts_core::PdfDocExporter;
         let e = if let Some(opts) = opts {
             Exporter::default().with_ctime(
                 opts.creation_timestamp
@@ -371,7 +371,7 @@ impl NodeCompiler {
     #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     #[cfg(feature = "svg")]
     pub fn svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
-        type Exporter = typst_ts_svg_exporter::PureSvgExporter;
+        type Exporter = typst_ts_core::PureSvgExporter;
         self.compile_as(Exporter::default(), compiled_or_by)
     }
 }

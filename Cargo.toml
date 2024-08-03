@@ -16,19 +16,16 @@ members = [
     "crates/reflexo",
     "crates/reflexo-vfs",
     "crates/reflexo-world",
+    "crates/conversion/typst2vec",
     "crates/conversion/vec2canvas",
     "crates/conversion/vec2bbox",
     "crates/conversion/vec2sema",
+    "crates/conversion/vec2dom",
+    "crates/conversion/vec2svg",
 
     "cli",
     "core",
     "compiler",
-
-    "exporter/ast",
-    "exporter/dom",
-    "exporter/pdf",
-    "exporter/serde",
-    "exporter/svg",
 
     "fuzzers/incremental",
 
@@ -208,6 +205,7 @@ reflexo-vfs = { version = "0.5.0-rc6", path = "crates/reflexo-vfs" }
 reflexo-world = { version = "0.5.0-rc6", path = "crates/reflexo-world" }
 
 # conversions
+reflexo-typst2vec = { version = "0.5.0-rc6", path = "crates/conversion/typst2vec" }
 reflexo-vec2canvas = { version = "0.5.0-rc6", path = "crates/conversion/vec2canvas" }
 reflexo-vec2sema = { version = "0.5.0-rc6", path = "crates/conversion/vec2sema" }
 reflexo-vec2bbox = { version = "0.5.0-rc6", path = "crates/conversion/vec2bbox" }
@@ -217,12 +215,8 @@ typst-ts-compiler = { version = "0.5.0-rc6", default-features = false }
 typst-ts-test-common = { version = "0.5.0-rc6", path = "tests/common" }
 
 # project exporters
-typst-ts-ast-exporter = "0.5.0-rc6"
-typst-ts-dom-exporter = { path = "exporter/dom" }
-typst-ts-pdf-exporter = "0.5.0-rc6"
-typst-ts-serde-exporter = "0.5.0-rc6"
+typst-ts-dom-exporter = { path = "crates/conversion/vec2dom" }
 typst-ts-svg-exporter = "0.5.0-rc6"
-typst-ts-text-exporter = "0.5.0-rc6"
 
 # project common components
 typst-ts-dev-server = { version = "0.5.0-rc6", path = "server/dev" }
@@ -231,11 +225,7 @@ typst-ts-cli = { version = "0.5.0-rc6", path = "cli" }
 [patch.crates-io]
 typst-ts-core = { path = "core" }
 typst-ts-compiler = { path = "compiler" }
-typst-ts-ast-exporter = { path = "exporter/ast" }
-typst-ts-pdf-exporter = { path = "exporter/pdf" }
-typst-ts-serde-exporter = { path = "exporter/serde" }
-typst-ts-svg-exporter = { path = "exporter/svg" }
-typst-ts-text-exporter = { path = "exporter/text" }
+typst-ts-svg-exporter = { path = "crates/conversion/vec2svg" }
 
 # typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }
 # typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }

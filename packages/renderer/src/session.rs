@@ -1,16 +1,14 @@
 use std::sync::{Arc, Mutex};
 
+use reflexo_typst2vec::{
+    incr::IncrDocClient,
+    ir::{Page, Scalar},
+};
 #[cfg(feature = "render_canvas")]
 use reflexo_vec2canvas::IncrCanvasDocClient;
-use typst_ts_core::{
-    error::prelude::*,
-    vector::{
-        incr::IncrDocClient,
-        ir::{Page, Scalar},
-    },
-};
+use typst_ts_core::error::prelude::*;
 #[cfg(feature = "render_svg")]
-use typst_ts_svg_exporter::IncrSvgDocClient;
+use typst_ts_core::svg::IncrSvgDocClient;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -266,13 +264,13 @@ impl RenderSession {
         client: &mut IncrDocClient,
         delta: &[u8],
     ) -> ZResult<()> {
-        use typst_ts_core::vector::stream::BytesModuleStream;
+        use reflexo_typst2vec::stream::BytesModuleStream;
 
         let delta = BytesModuleStream::from_slice(delta).checkout_owned();
         let _delta_ref = &delta;
 
         #[cfg(feature = "debug_delta_update")]
-        use typst_ts_core::vector::ir::ModuleStream;
+        use reflexo_typst2vec::ir::ModuleStream;
 
         #[cfg(feature = "debug_delta_update")]
         crate::utils::console_log!(

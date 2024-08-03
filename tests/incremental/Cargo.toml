@@ -14,6 +14,7 @@ sha2.workspace = true
 anyhow.workspace = true
 tokio.workspace = true
 
+reflexo-typst2vec.workspace = true
 typst-ts-dev-server.workspace = true
 typst-ts-test-common.workspace = true
 typst-ts-core.workspace = true

@@ -5,14 +5,14 @@ use std::path::Path;
 use typst_ts_compiler::{
     CompileDriver, CompileExporter, PureCompiler, TypstSystemUniverse, TypstSystemWorld,
 };
+use typst_ts_core::PdfDocExporter;
+use typst_ts_core::SvgModuleExporter;
 use typst_ts_core::{
     config::{entry::EntryOpts, CompileOpts},
     exporter_builtins::{FsPathExporter, GroupExporter},
     path::PathClean,
     TypstDocument,
 };
-use typst_ts_pdf_exporter::PdfDocExporter;
-use typst_ts_svg_exporter::SvgModuleExporter;
 
 fn get_driver(
     workspace_dir: &Path,

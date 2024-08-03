@@ -1,0 +1,31 @@
+[package]
+name = "typst-ts-svg-exporter"
+description = "Export a frame of Typst document into svg element."
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+once_cell.workspace = true
+
+typst.workspace = true
+comemo.workspace = true
+
+tiny-skia.workspace = true
+base64.workspace = true
+
+reflexo.workspace = true
+reflexo-typst2vec = { workspace = true, features = ["flat-vector"] }
+reflexo-vec2canvas = { workspace = true, optional = true }
+log.workspace = true
+siphasher.workspace = true
+rayon.workspace = true
+
+[features]
+experimental-ligature = ["reflexo-typst2vec/experimental-ligature"]
+aggresive-browser-rasterization = ["reflexo-vec2canvas"]
+no-content-hint = ["reflexo-typst2vec/no-content-hint"]
+default = []

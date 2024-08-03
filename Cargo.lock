@@ -2868,6 +2868,46 @@ dependencies = [
 ]
 
 [[package]]
+name = "reflexo-typst2vec"
+version = "0.5.0-rc6"
+dependencies = [
+ "base64 0.22.1",
+ "base64-serde",
+ "bitvec",
+ "byteorder",
+ "comemo",
+ "crossbeam-queue",
+ "dashmap",
+ "ecow",
+ "elsa",
+ "flate2",
+ "fxhash",
+ "hex",
+ "js-sys",
+ "log",
+ "once_cell",
+ "parking_lot",
+ "path-clean",
+ "rayon",
+ "reflexo",
+ "rkyv",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "sha2",
+ "siphasher 1.0.1",
+ "svgtypes",
+ "tiny-skia",
+ "tiny-skia-path",
+ "ttf-parser",
+ "typst",
+ "wasm-bindgen",
+ "web-sys",
+ "xmlparser",
+]
+
+[[package]]
 name = "reflexo-vec2bbox"
 version = "0.5.0-rc6"
 dependencies = [
@@ -4439,15 +4479,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "typst-ts-ast-exporter"
-version = "0.5.0-rc6"
-dependencies = [
- "ansi_term",
- "typst",
- "typst-ts-core",
-]
-
-[[package]]
 name = "typst-ts-bench-lowering"
 version = "0.5.0-rc6"
 dependencies = [
@@ -4456,6 +4487,7 @@ dependencies = [
  "divan",
  "once_cell",
  "rayon",
+ "reflexo-typst2vec",
  "typst",
  "typst-ts-cli",
  "typst-ts-compiler",
@@ -4489,13 +4521,8 @@ dependencies = [
  "typst",
  "typst-assets",
  "typst-ide",
- "typst-ts-ast-exporter",
  "typst-ts-compiler",
  "typst-ts-core",
- "typst-ts-pdf-exporter",
- "typst-ts-serde-exporter",
- "typst-ts-svg-exporter",
- "typst-ts-text-exporter",
  "vergen",
 ]
 
@@ -4521,6 +4548,7 @@ dependencies = [
  "pollster",
  "rayon",
  "reflexo",
+ "reflexo-typst2vec",
  "reflexo-vfs",
  "reflexo-world",
  "rustc-hash",
@@ -4542,6 +4570,7 @@ dependencies = [
 name = "typst-ts-core"
 version = "0.5.0-rc6"
 dependencies = [
+ "ansi_term",
  "base64 0.22.1",
  "base64-serde",
  "bitvec",
@@ -4561,6 +4590,7 @@ dependencies = [
  "path-clean",
  "rayon",
  "reflexo",
+ "reflexo-typst2vec",
  "reflexo-world",
  "rkyv",
  "rustc-hash",
@@ -4574,6 +4604,8 @@ dependencies = [
  "tiny-skia-path",
  "ttf-parser",
  "typst",
+ "typst-pdf",
+ "typst-ts-svg-exporter",
  "wasm-bindgen",
  "web-sys",
  "xmlparser",
@@ -4608,6 +4640,8 @@ dependencies = [
  "log",
  "once_cell",
  "rayon",
+ "reflexo",
+ "reflexo-typst2vec",
  "reflexo-vec2bbox",
  "reflexo-vec2canvas",
  "reflexo-vec2sema",
@@ -4647,6 +4681,7 @@ dependencies = [
  "hex",
  "rand",
  "rand_xoshiro",
+ "reflexo-typst2vec",
  "sha2",
  "tokio",
  "typst",
@@ -4665,6 +4700,7 @@ dependencies = [
  "anyhow",
  "comemo",
  "hex",
+ "reflexo-typst2vec",
  "sha2",
  "tokio",
  "typst-ts-compiler",
@@ -4692,8 +4728,6 @@ dependencies = [
  "typst-ts-compiler",
  "typst-ts-core",
  "typst-ts-dev-server",
- "typst-ts-pdf-exporter",
- "typst-ts-serde-exporter",
  "typst-ts-svg-exporter",
  "typst-ts-test-common",
 ]
@@ -4714,7 +4748,6 @@ dependencies = [
  "typst-ts-cli",
  "typst-ts-compiler",
  "typst-ts-core",
- "typst-ts-pdf-exporter",
  "typst-ts-svg-exporter",
 ]
 
@@ -4743,15 +4776,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "typst-ts-pdf-exporter"
-version = "0.5.0-rc6"
-dependencies = [
- "typst",
- "typst-pdf",
- "typst-ts-core",
-]
-
-[[package]]
 name = "typst-ts-renderer"
 version = "0.5.0-rc6"
 dependencies = [
@@ -4765,6 +4789,7 @@ dependencies = [
  "once_cell",
  "pollster",
  "reflexo",
+ "reflexo-typst2vec",
  "reflexo-vec2canvas",
  "reflexo-vec2sema",
  "rmp-serde",
@@ -4791,18 +4816,7 @@ dependencies = [
 name = "typst-ts-rkyv-assertions"
 version = "0.5.0-rc6"
 dependencies = [
- "typst-ts-core",
-]
-
-[[package]]
-name = "typst-ts-serde-exporter"
-version = "0.5.0-rc6"
-dependencies = [
- "rmp-serde",
- "serde",
- "serde_json",
- "typst",
- "typst-ts-core",
+ "reflexo-typst2vec",
 ]
 
 [[package]]
@@ -4824,11 +4838,11 @@ dependencies = [
  "once_cell",
  "rayon",
  "reflexo",
+ "reflexo-typst2vec",
  "reflexo-vec2canvas",
  "siphasher 1.0.1",
  "tiny-skia",
  "typst",
- "typst-ts-core",
 ]
 
 [[package]]
@@ -4843,14 +4857,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "typst-ts-text-exporter"
-version = "0.5.0-rc6"
-dependencies = [
- "typst",
- "typst-ts-core",
-]
-
-[[package]]
 name = "typst-ts-web-compiler"
 version = "0.5.0-rc6"
 dependencies = [
@@ -4862,14 +4868,13 @@ dependencies = [
  "hex",
  "js-sys",
  "once_cell",
+ "reflexo-typst2vec",
  "reflexo-vec2canvas",
  "serde-wasm-bindgen",
  "serde_json",
  "sha2",
- "typst-ts-ast-exporter",
  "typst-ts-compiler",
  "typst-ts-core",
- "typst-ts-pdf-exporter",
  "typst-ts-svg-exporter",
  "typst-ts-test-common",
  "wasm-bindgen",

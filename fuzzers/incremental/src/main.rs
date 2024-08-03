@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use reflexo_typst2vec::incr::{IncrDocClient, IncrDocServer};
 use typst::model::Document;
 use typst_ts_compiler::{
     CompileDriver, CompileExporter, PureCompiler, ShadowApiExt, TypstSystemUniverse,
@@ -9,7 +10,6 @@ use typst_ts_core::{
     config::{entry::EntryOpts, CompileOpts},
     exporter_builtins::GroupExporter,
     vector::{
-        incr::{IncrDocClient, IncrDocServer},
         ir::{Abs, Point, Rect},
         stream::BytesModuleStream,
     },

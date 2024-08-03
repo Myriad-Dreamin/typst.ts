@@ -19,6 +19,7 @@ tokio.workspace = true
 rand = "0.8.5"
 rand_xoshiro = "0.6.0"
 
+reflexo-typst2vec.workspace = true
 typst-ts-dev-server.workspace = true
 typst-ts-test-common.workspace = true
 typst-ts-core.workspace = true
