@@ -1,4 +1,4 @@
-name: typst_ts::lint_pr_title
+name: reflexo::lint_pr_title
 on:
   pull_request:
     types: [opened, edited, synchronize]

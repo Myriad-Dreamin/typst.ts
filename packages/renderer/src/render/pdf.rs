@@ -1,5 +1,5 @@
 use js_sys::Uint8Array;
-use typst_ts_core::error::prelude::*;
+use reflexo_typst::error::prelude::*;
 use wasm_bindgen::prelude::*;
 
 use crate::{RenderSession, TypstRenderer};

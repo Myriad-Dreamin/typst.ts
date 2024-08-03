@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use reflexo_typst::TypstDocument;
 use reflexo_typst2vec::incr::IncrDocServer;
-use typst_ts_core::TypstDocument;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

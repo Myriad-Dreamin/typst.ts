@@ -1,4 +1,4 @@
-name: typst_ts::ci
+name: reflexo::ci
 on: [push, pull_request]
 
 env:
@@ -61,7 +61,7 @@ jobs:
       - name: Test
         run: |
           cargo test --profile release-ci --no-fail-fast \
-            -p typst-ts-core \
+            -p reflexo-typst \
             -p typst-ts-cli  -p typst-ts-integration-test
       - name: Archive Test Results (WebAssembly Renderer in Chrome)
         if: always()

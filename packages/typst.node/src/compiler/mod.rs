@@ -7,17 +7,14 @@ use std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc};
 
 use napi::{bindgen_prelude::*, Either};
 use napi_derive::napi;
-use typst_ts_core::{
-    config::{entry::EntryState, CompileFontOpts},
-    error::prelude::*,
-    typst::{foundations::IntoValue, prelude::Prehashed},
-    Bytes, TypstDict,
-};
-use typst_ts_core::{
-    font::system::SystemFontSearcher,
-    package::http::HttpRegistry,
-    vfs::{system::SystemAccessModel, Vfs},
-    CompileDriver, PureCompiler, TypstSystemUniverse, TypstSystemWorld,
+use reflexo_typst::config::{entry::EntryState, CompileFontOpts};
+use reflexo_typst::error::prelude::*;
+use reflexo_typst::font::system::SystemFontSearcher;
+use reflexo_typst::package::http::HttpRegistry;
+use reflexo_typst::typst::{foundations::IntoValue, prelude::Prehashed};
+use reflexo_typst::vfs::{system::SystemAccessModel, Vfs};
+use reflexo_typst::{
+    Bytes, CompileDriver, PureCompiler, TypstDict, TypstSystemUniverse, TypstSystemWorld,
 };
 
 /// A nullable boxed compiler wrapping.
@@ -84,7 +81,7 @@ pub struct NodeCompileArgs {
 pub fn create_driver(
     args: Option<NodeCompileArgs>,
 ) -> ZResult<CompileDriver<PureCompiler<TypstSystemWorld>>> {
-    use typst_ts_core::path::PathClean;
+    use reflexo_typst::path::PathClean;
     let args = args.unwrap_or_default();
     let workspace_dir = Path::new(args.workspace.unwrap_or_default().as_str()).clean();
 

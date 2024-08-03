@@ -15,7 +15,7 @@ pub mod canvas_stub {
     #![allow(dead_code)]
     #![allow(unused_imports)]
 
-    use typst_ts_core::error::prelude::*;
+    use reflexo_typst::error::prelude::*;
     use wasm_bindgen::prelude::*;
 
     use crate::{RenderPageImageOptions, RenderSession, TypstRenderer};

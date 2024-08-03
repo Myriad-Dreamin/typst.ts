@@ -1,12 +1,10 @@
 use std::{collections::HashMap, hash::Hash, ops::Deref};
 
+use reflexo_typst::error::prelude::*;
+use reflexo_typst::hash::{Fingerprint, FingerprintHasher, FingerprintSipHasher};
+use reflexo_typst::vector::ir::{Axes, LayoutRegionNode, Rect, Scalar};
 use reflexo_vec2canvas::{DefaultExportFeature, ExportFeature};
 use reflexo_vec2sema::{BrowserFontMetric, SemaTask};
-use typst_ts_core::{
-    error::prelude::*,
-    hash::{Fingerprint, FingerprintHasher, FingerprintSipHasher},
-    vector::ir::{Axes, LayoutRegionNode, Rect, Scalar},
-};
 use wasm_bindgen::prelude::*;
 
 use crate::{RenderPageImageOptions, RenderSession, TypstRenderer};

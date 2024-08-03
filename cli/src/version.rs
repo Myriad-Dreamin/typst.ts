@@ -1,7 +1,7 @@
 use std::{fmt::Display, process::exit};
 
 use clap::ValueEnum;
-use typst_ts_core::build_info::VERSION;
+use reflexo_typst::build_info::VERSION;
 
 /// Available version formats for `$program -VV`
 #[derive(ValueEnum, Debug, Clone)]

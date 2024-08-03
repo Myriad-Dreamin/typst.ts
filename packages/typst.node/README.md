@@ -1,19 +1,8 @@
 # `@myriaddreamin/typst-ts-node-compiler`
 
-See [index.d.ts](./index.d.ts) for usage.
-
 # Usage
 
-1. Click **Use this template**.
-2. **Clone** your project.
-3. Run `yarn install` to install dependencies.
-4. Run `npx napi rename -n [name]` command under the project folder to rename your package.
-
-## Install this test package
-
-```
-yarn add @myriaddreamin/typst-ts-node-compiler
-```
+See [Node Library Docs](https://myriad-dreamin.github.io/typst.ts/cookery/guide/all-in-one-node.html).
 
 ## Support matrix
 

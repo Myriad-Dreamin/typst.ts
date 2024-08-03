@@ -1,11 +1,10 @@
-use crate::RenderSession;
-use crate::TypstRenderer;
 use js_sys::Uint8Array;
+use reflexo_typst::error::prelude::*;
+use reflexo_typst::svg::{DefaultExportFeature, SvgDataSelection, SvgExporter};
 use reflexo_typst2vec::geom::{Axes, Scalar};
-use typst_ts_core::error::prelude::*;
-use typst_ts_core::svg::SvgDataSelection;
-use typst_ts_core::svg::{DefaultExportFeature, SvgExporter};
 use wasm_bindgen::prelude::*;
+
+use crate::{RenderSession, TypstRenderer};
 
 #[wasm_bindgen]
 impl RenderSession {

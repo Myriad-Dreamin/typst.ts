@@ -26,7 +26,7 @@ js-sys.workspace = true
 web-sys.workspace = true
 console_error_panic_hook.workspace = true
 
-typst-ts-core = { workspace = true, default-features = false, features = [
+reflexo-typst = { workspace = true, default-features = false, features = [
     "web",
 ] }
 

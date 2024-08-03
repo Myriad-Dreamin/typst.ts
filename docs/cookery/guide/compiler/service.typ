@@ -63,12 +63,12 @@ See #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/cli/src/export.r
 Glance at current available exporters:
 
 ```rs
-type WithAst = typst_ts_ast_exporter::AstExporter;
-type WithPdf = typst_ts_pdf_exporter::PdfDocExporter;
-type WithSvg = typst_ts_svg_exporter::PureSvgExporter;
-type WithSvgHtml = typst_ts_svg_exporter::SvgExporter<DefaultExportFeature>;
-type WithSIR = typst_ts_svg_exporter::SvgModuleExporter;
-type WithText = typst_ts_text_exporter::TextExporter;
+type WithAst = reflexo_typst::AstExporter;
+type WithPdf = reflexo_typst::PdfDocExporter;
+type WithSvg = reflexo_typst::PureSvgExporter;
+type WithSvgHtml = reflexo_typst::SvgHtmlExporter<DefaultExportFeature>;
+type WithSIR = reflexo_typst::SvgModuleExporter;
+type WithText = reflexo_typst::TextExporter;
 ```
 
 == Creating and Using a `DynamicLayoutCompiler` Instance

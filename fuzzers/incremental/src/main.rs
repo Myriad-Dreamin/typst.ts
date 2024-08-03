@@ -1,21 +1,19 @@
 use std::path::Path;
 
-use reflexo_typst2vec::incr::{IncrDocClient, IncrDocServer};
-use typst::model::Document;
-use typst_ts_core::{
-    config::{entry::EntryOpts, CompileOpts},
-    exporter_builtins::GroupExporter,
-    vector::{
-        ir::{Abs, Point, Rect},
-        stream::BytesModuleStream,
-    },
+use reflexo_typst::config::{entry::EntryOpts, CompileOpts};
+use reflexo_typst::exporter_builtins::GroupExporter;
+use reflexo_typst::vector::{
+    ir::{Abs, Point, Rect},
+    stream::BytesModuleStream,
 };
-use typst_ts_core::{
+use reflexo_typst::{
     CompileDriver, CompileExporter, PureCompiler, ShadowApiExt, TypstSystemUniverse,
     TypstSystemWorld,
 };
+use reflexo_typst2vec::incr::{IncrDocClient, IncrDocServer};
+use reflexo_vec2svg::IncrSvgDocClient;
+use typst::model::Document;
 use typst_ts_incremental_fuzzer::mutate;
-use typst_ts_svg_exporter::IncrSvgDocClient;
 
 fn get_driver(
     workspace_dir: &Path,

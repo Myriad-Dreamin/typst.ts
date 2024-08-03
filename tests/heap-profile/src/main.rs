@@ -1,4 +1,4 @@
-use typst_ts_core::exporter_builtins::GroupExporter;
+use reflexo_typst::exporter_builtins::GroupExporter;
 
 #[cfg(feature = "dhat-heap")]
 #[global_allocator]

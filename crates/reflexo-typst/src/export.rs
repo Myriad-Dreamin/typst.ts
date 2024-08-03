@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
-use reflexo_typst2vec::{
-    ir::{LayoutRegion, LayoutRegionNode},
-    pass::Typst2VecPass,
-};
+use reflexo_typst2vec::pass::Typst2VecPass;
 use reflexo_world::{CompilerFeat, CompilerWorld};
 use typst::{diag::SourceResult, World};
+
+use crate::vector::ir::{LayoutRegion, LayoutRegionNode};
 
 #[cfg(feature = "dynamic-layout")]
 mod dynamic_layout;
@@ -80,7 +79,7 @@ impl<C: Compiler> CompileExporter<C> {
 }
 
 impl<F: CompilerFeat + 'static, C: Compiler> Exporter<CompileSnapshot<F>> for CompileExporter<C> {
-    /// Export a typst document using `typst_ts_core::DocumentExporter`.
+    /// Export a typst document using `reflexo_typst::DocumentExporter`.
     fn export(&self, world: &dyn World, output: Arc<CompileSnapshot<F>>) -> SourceResult<()> {
         if let Ok(doc) = output.doc() {
             self.exporter.export(world, doc)?;

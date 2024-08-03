@@ -1,4 +1,4 @@
-use typst_ts_dom_exporter::IncrDomDocClient;
+use reflexo_vec2dom::IncrDomDocClient;
 use wasm_bindgen::prelude::*;
 use web_sys::HtmlElement;
 

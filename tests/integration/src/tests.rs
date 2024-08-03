@@ -340,7 +340,7 @@ mod tests {
             // todo: pdf export by svg?
             // let json_artifact = std::fs::read(&bundle.json).unwrap();
             // let json_artifact =
-            // serde_json::from_slice::<typst_ts_core::Artifact>(&json_artifact)
+            // serde_json::from_slice::<reflexo_typst::Artifact>(&json_artifact)
             //     .expect("failed to deserialize json artifact");
 
             // let doc = json_artifact.to_document(&bundle.driver.world().font_resolver);

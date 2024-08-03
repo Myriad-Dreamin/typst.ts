@@ -1,8 +1,7 @@
-use crate::TypstRenderer;
-use typst_ts_core::error::prelude::*;
+use reflexo_typst::error::prelude::*;
 use wasm_bindgen::prelude::*;
 
-use crate::TypstRendererBuilder;
+use crate::{TypstRenderer, TypstRendererBuilder};
 
 #[wasm_bindgen]
 impl TypstRendererBuilder {

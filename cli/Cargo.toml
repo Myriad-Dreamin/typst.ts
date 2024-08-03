@@ -38,7 +38,7 @@ tracing-subscriber.workspace = true
 
 human-panic.workspace = true
 
-typst-ts-core = { workspace = true, default-features = false, features = [
+reflexo-typst = { workspace = true, default-features = false, features = [
     "system",
     "dynamic-layout",
 ] }
@@ -53,7 +53,7 @@ default = ["ast", "pdf", "svg", "text", "gen-manual", "embedded-fonts"]
 gen-manual = ["dep:clap_mangen"]
 embedded-fonts = []
 debug-repl = []
-ast = ["typst-ts-core/ast"]
-pdf = ["typst-ts-core/pdf"]
-svg = ["typst-ts-core/svg", "typst-ts-core/experimental-ligature"]
+ast = ["reflexo-typst/ast"]
+pdf = ["reflexo-typst/pdf"]
+svg = ["reflexo-typst/svg", "reflexo-typst/experimental-ligature"]
 text = []

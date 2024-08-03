@@ -6,28 +6,20 @@ use std::{
 };
 
 use clap::FromArgMatches;
+use reflexo_typst::config::{entry::EntryOpts, CompileOpts};
+use reflexo_typst::error::prelude::*;
+use reflexo_typst::exporter_builtins::GroupExporter;
+use reflexo_typst::exporter_utils::map_err;
+use reflexo_typst::path::{unix_slash, PathClean};
+use reflexo_typst::TypstSystemUniverse;
 use typst::{model::Document, text::FontVariant, World};
-
 use typst_assets::fonts;
-use typst_ts_cli::{
-    compile::compile_export,
-    get_cli,
-    manual::generate_manual,
-    query::serialize,
-    utils::{self, make_absolute, UnwrapOrExit},
-    version::intercept_version,
-    CompileArgs, CompileOnceArgs, CompletionArgs, EnvKey, FontSubCommands, GenPackagesDocArgs,
-    LinkPackagesArgs, ListFontsArgs, ListPackagesArgs, MeasureFontsArgs, Opts, PackageSubCommands,
-    QueryArgs, QueryReplArgs, Subcommands,
-};
-use typst_ts_core::TypstSystemUniverse;
-use typst_ts_core::{config::entry::EntryOpts, exporter_builtins::GroupExporter};
-use typst_ts_core::{
-    config::CompileOpts,
-    error::prelude::*,
-    exporter_utils::map_err,
-    path::{unix_slash, PathClean},
-};
+use typst_ts_cli::compile::compile_export;
+use typst_ts_cli::manual::generate_manual;
+use typst_ts_cli::query::serialize;
+use typst_ts_cli::utils::*;
+use typst_ts_cli::version::*;
+use typst_ts_cli::*;
 
 fn help_sub_command() {
     Opts::from_arg_matches(&get_cli(true).get_matches()).unwrap();
@@ -69,7 +61,7 @@ fn main() {
         #[cfg(feature = "gen-manual")]
         Some(Subcommands::Manual(args)) => {
             generate_manual(get_cli(true), &args.dest)
-                .map_err(typst_ts_core::error_once_map_string!("generation failed"))
+                .map_err(reflexo_typst::error_once_map_string!("generation failed"))
                 .unwrap_or_exit();
 
             exit(0);
@@ -126,8 +118,8 @@ fn compile(args: CompileArgs) -> ! {
 
 /// Execute a query command.
 pub fn query(args: QueryArgs) -> ! {
+    use reflexo_typst::query::retrieve;
     use typst_ts_cli::query::format;
-    use typst_ts_core::query::retrieve;
     let compile_args = args.compile.clone();
 
     let mut exporter = GroupExporter::<Document>::new(vec![]);

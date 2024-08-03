@@ -1,8 +1,8 @@
 use std::path::Path;
 
-use typst_ts_core::{
-    config::{entry::EntryOpts, CompileOpts},
-    exporter_builtins::GroupExporter,
+use reflexo_typst::config::{entry::EntryOpts, CompileOpts};
+use reflexo_typst::exporter_builtins::GroupExporter;
+use reflexo_typst::{
     CompileDriver, CompileExporter, PureCompiler, ShadowApiExt, TypstDocument, TypstSystemUniverse,
     TypstSystemWorld,
 };

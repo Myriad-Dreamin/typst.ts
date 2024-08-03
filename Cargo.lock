@@ -2840,6 +2840,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "reflexo-typst"
+version = "0.5.0-rc6"
+dependencies = [
+ "ansi_term",
+ "codespan-reporting",
+ "comemo",
+ "dirs",
+ "ecow",
+ "fontdb",
+ "fxhash",
+ "indexmap 2.2.6",
+ "js-sys",
+ "log",
+ "nohash-hasher",
+ "notify",
+ "once_cell",
+ "pathdiff",
+ "rayon",
+ "reflexo",
+ "reflexo-typst2vec",
+ "reflexo-vec2svg",
+ "reflexo-vfs",
+ "reflexo-world",
+ "rkyv",
+ "serde",
+ "serde_json",
+ "tar",
+ "tokio",
+ "typst",
+ "typst-pdf",
+ "walkdir",
+ "web-sys",
+]
+
+[[package]]
 name = "reflexo-typst2vec"
 version = "0.5.0-rc6"
 dependencies = [
@@ -2894,6 +2929,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "reflexo-vec2dom"
+version = "0.5.0-rc6"
+dependencies = [
+ "async-recursion",
+ "comemo",
+ "js-sys",
+ "log",
+ "once_cell",
+ "reflexo",
+ "reflexo-typst",
+ "reflexo-typst2vec",
+ "reflexo-vec2bbox",
+ "reflexo-vec2canvas",
+ "reflexo-vec2sema",
+ "reflexo-vec2svg",
+ "svgtypes",
+ "tiny-skia",
+ "tiny-skia-path",
+ "typst",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
 name = "reflexo-vec2sema"
 version = "0.5.0-rc6"
 dependencies = [
@@ -2905,6 +2965,20 @@ dependencies = [
  "unicode-width",
  "wasm-bindgen",
  "web-sys",
+]
+
+[[package]]
+name = "reflexo-vec2svg"
+version = "0.5.0-rc6"
+dependencies = [
+ "base64 0.22.1",
+ "comemo",
+ "log",
+ "once_cell",
+ "reflexo",
+ "reflexo-typst2vec",
+ "reflexo-vec2canvas",
+ "typst",
 ]
 
 [[package]]
@@ -4417,10 +4491,10 @@ dependencies = [
  "comemo",
  "divan",
  "once_cell",
+ "reflexo-typst",
  "reflexo-typst2vec",
  "typst",
  "typst-ts-cli",
- "typst-ts-core",
 ]
 
 [[package]]
@@ -4438,6 +4512,7 @@ dependencies = [
  "flate2",
  "human-panic",
  "log",
+ "reflexo-typst",
  "rustyline",
  "serde",
  "serde_json",
@@ -4449,43 +4524,7 @@ dependencies = [
  "typst",
  "typst-assets",
  "typst-ide",
- "typst-ts-core",
  "vergen",
-]
-
-[[package]]
-name = "typst-ts-core"
-version = "0.5.0-rc6"
-dependencies = [
- "ansi_term",
- "codespan-reporting",
- "comemo",
- "dirs",
- "ecow",
- "fontdb",
- "fxhash",
- "indexmap 2.2.6",
- "js-sys",
- "log",
- "nohash-hasher",
- "notify",
- "once_cell",
- "pathdiff",
- "rayon",
- "reflexo",
- "reflexo-typst2vec",
- "reflexo-vfs",
- "reflexo-world",
- "rkyv",
- "serde",
- "serde_json",
- "tar",
- "tokio",
- "typst",
- "typst-pdf",
- "typst-ts-svg-exporter",
- "walkdir",
- "web-sys",
 ]
 
 [[package]]
@@ -4498,36 +4537,11 @@ dependencies = [
  "env_logger",
  "log",
  "once_cell",
+ "reflexo-typst",
  "tokio",
  "typst-dev-assets",
  "typst-ts-cli",
- "typst-ts-core",
  "warp",
-]
-
-[[package]]
-name = "typst-ts-dom-exporter"
-version = "0.5.0-rc6"
-dependencies = [
- "async-recursion",
- "comemo",
- "js-sys",
- "log",
- "once_cell",
- "reflexo",
- "reflexo-typst2vec",
- "reflexo-vec2bbox",
- "reflexo-vec2canvas",
- "reflexo-vec2sema",
- "svgtypes",
- "tiny-skia",
- "tiny-skia-path",
- "typst",
- "typst-ts-core",
- "typst-ts-svg-exporter",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
 ]
 
 [[package]]
@@ -4537,9 +4551,9 @@ dependencies = [
  "anyhow",
  "comemo",
  "dhat",
+ "reflexo-typst",
  "sha2",
  "tokio",
- "typst-ts-core",
  "typst-ts-dev-server",
  "typst-ts-test-common",
 ]
@@ -4553,14 +4567,14 @@ dependencies = [
  "hex",
  "rand",
  "rand_xoshiro",
+ "reflexo-typst",
  "reflexo-typst2vec",
+ "reflexo-vec2svg",
  "sha2",
  "tokio",
  "typst",
  "typst-syntax",
- "typst-ts-core",
  "typst-ts-dev-server",
- "typst-ts-svg-exporter",
  "typst-ts-test-common",
 ]
 
@@ -4571,12 +4585,12 @@ dependencies = [
  "anyhow",
  "comemo",
  "hex",
+ "reflexo-typst",
  "reflexo-typst2vec",
+ "reflexo-vec2svg",
  "sha2",
  "tokio",
- "typst-ts-core",
  "typst-ts-dev-server",
- "typst-ts-svg-exporter",
  "typst-ts-test-common",
 ]
 
@@ -4591,13 +4605,13 @@ dependencies = [
  "image",
  "image_hasher",
  "insta",
+ "reflexo-typst",
+ "reflexo-vec2svg",
  "serde",
  "serde_json",
  "sha2",
  "tokio",
- "typst-ts-core",
  "typst-ts-dev-server",
- "typst-ts-svg-exporter",
  "typst-ts-test-common",
 ]
 
@@ -4610,12 +4624,12 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
+ "reflexo-typst",
+ "reflexo-vec2svg",
  "serde",
  "serde_json",
  "typst-svg",
  "typst-ts-cli",
- "typst-ts-core",
- "typst-ts-svg-exporter",
 ]
 
 [[package]]
@@ -4625,9 +4639,9 @@ dependencies = [
  "console_error_panic_hook",
  "js-sys",
  "once_cell",
+ "reflexo-typst",
  "serde-wasm-bindgen",
  "typst",
- "typst-ts-core",
  "typst-ts-test-common",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -4647,9 +4661,12 @@ dependencies = [
  "once_cell",
  "pollster",
  "reflexo",
+ "reflexo-typst",
  "reflexo-typst2vec",
  "reflexo-vec2canvas",
+ "reflexo-vec2dom",
  "reflexo-vec2sema",
+ "reflexo-vec2svg",
  "send_wrapper",
  "serde",
  "serde-wasm-bindgen",
@@ -4657,9 +4674,6 @@ dependencies = [
  "sha2",
  "tiny-skia",
  "typst",
- "typst-ts-core",
- "typst-ts-dom-exporter",
- "typst-ts-svg-exporter",
  "typst-ts-test-common",
  "vergen",
  "wasm-bindgen",
@@ -4685,20 +4699,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "typst-ts-svg-exporter"
-version = "0.5.0-rc6"
-dependencies = [
- "base64 0.22.1",
- "comemo",
- "log",
- "once_cell",
- "reflexo",
- "reflexo-typst2vec",
- "reflexo-vec2canvas",
- "typst",
-]
-
-[[package]]
 name = "typst-ts-test-common"
 version = "0.5.0-rc6"
 dependencies = [
@@ -4720,12 +4720,12 @@ dependencies = [
  "hex",
  "js-sys",
  "once_cell",
+ "reflexo-typst",
  "reflexo-typst2vec",
+ "reflexo-vec2svg",
  "serde-wasm-bindgen",
  "serde_json",
  "sha2",
- "typst-ts-core",
- "typst-ts-svg-exporter",
  "typst-ts-test-common",
  "wasm-bindgen",
  "wasm-bindgen-futures",

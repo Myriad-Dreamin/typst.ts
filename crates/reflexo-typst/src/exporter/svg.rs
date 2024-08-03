@@ -1,9 +1,10 @@
 use std::sync::Arc;
-use typst::model::Document as TypstDocument;
-use typst::{diag::SourceResult, World};
-use typst_ts_svg_exporter::{
+
+use reflexo_vec2svg::{
     render_svg, render_svg_html, DefaultExportFeature, ExportFeature, SvgExporter,
 };
+use typst::model::Document as TypstDocument;
+use typst::{diag::SourceResult, World};
 
 use super::Exporter;
 

@@ -4,13 +4,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use reflexo_typst::error::prelude::*;
+use reflexo_typst::hash::Fingerprint;
+use reflexo_typst::vector::ir::{Page, Point, Scalar, Size, TextItem, TransformItem};
 use reflexo_vec2canvas::{CanvasElem, CanvasNode, CanvasOp, CanvasStateGuard};
-use typst_ts_core::{
-    error::prelude::*,
-    hash::Fingerprint,
-    vector::ir::{Page, Point, Scalar, Size, TextItem, TransformItem},
-};
-use typst_ts_svg_exporter::{ir, Module};
+use reflexo_vec2svg::{ir, Module};
 use web_sys::{
     js_sys::Reflect,
     wasm_bindgen::{JsCast, JsValue},

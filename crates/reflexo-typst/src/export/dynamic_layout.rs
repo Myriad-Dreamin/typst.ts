@@ -1,21 +1,18 @@
 use std::{path::PathBuf, sync::Arc};
 
-use reflexo_typst2vec::{
-    ir::{LayoutRegion, LayoutRegionNode},
-    pass::{CommandExecutor, Typst2VecPass},
-    IntoTypst,
-};
+use reflexo_typst2vec::pass::{CommandExecutor, Typst2VecPass};
+use reflexo_typst2vec::IntoTypst;
+use reflexo_vec2svg::{DynamicLayoutSvgExporter, MultiVecDocument};
 use reflexo_world::TaskInputs;
 use typst::foundations::IntoValue;
 use typst::{diag::SourceResult, World};
-use typst_ts_svg_exporter::{DynamicLayoutSvgExporter, MultiVecDocument};
 
-use crate::{typst::prelude::*, Exporter, TypstDict, TypstDocument as Document};
+use crate::typst::prelude::*;
+use crate::vector::ir::{LayoutRegion, LayoutRegionNode};
+use crate::world::{CompilerFeat, CompilerWorld};
 use crate::{
-    world::{CompilerFeat, CompilerWorld},
-    CompileSnapshot,
+    CompileEnv, CompileSnapshot, Compiler, Exporter, TypstDict, TypstDocument as Document,
 };
-use crate::{CompileEnv, Compiler};
 
 pub type LayoutWidths = EcoVec<typst::layout::Abs>;
 
@@ -145,7 +142,7 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<F
 
 // F: CompilerFeat, CompilerWorld<F>
 impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<F, C> {
-    /// Export a typst document using `typst_ts_core::DocumentExporter`.
+    /// Export a typst document using `reflexo_typst::DocumentExporter`.
     pub fn do_export(
         &mut self,
         world: &CompilerWorld<F>,
@@ -156,12 +153,12 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<F
         self.do_export_with(world, env, svg_exporter)
     }
 
-    /// Export a typst document using `typst_ts_core::DocumentExporter`.
+    /// Export a typst document using `reflexo_typst::DocumentExporter`.
     pub fn do_export_with(
         &mut self,
         world: &CompilerWorld<F>,
         env: &mut CompileEnv,
-        mut svg_exporter: typst_ts_svg_exporter::DynamicLayoutSvgExporter,
+        mut svg_exporter: reflexo_vec2svg::DynamicLayoutSvgExporter,
     ) -> SourceResult<(Arc<Document>, MultiVecDocument)> {
         // self.export(doc.clone())?;
         // checkout the entry file

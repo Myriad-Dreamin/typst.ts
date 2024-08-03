@@ -1,7 +1,6 @@
 use js_sys::Uint8Array;
+use reflexo_typst::{error::prelude::*, Bytes};
 use wasm_bindgen::prelude::*;
-
-use typst_ts_core::{error::prelude::*, Bytes};
 
 use crate::TypstRendererBuilder;
 

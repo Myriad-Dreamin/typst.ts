@@ -1,6 +1,6 @@
 [package]
-name = "typst-ts-core"
-description = "Core function of Typst.ts."
+name = "reflexo-typst"
+description = "Bridge Typst to Web Rendering, with power of typst."
 authors.workspace = true
 version.workspace = true
 license.workspace = true
@@ -47,7 +47,7 @@ nohash-hasher.workspace = true
 pathdiff.workspace = true
 tar.workspace = true
 
-typst-ts-svg-exporter = { workspace = true, optional = true }
+reflexo-vec2svg = { workspace = true, optional = true }
 
 [features]
 
@@ -59,10 +59,10 @@ web = ["web-render", "browser-compile"]
 flat-vector = ["reflexo/flat-vector"]
 
 lazy-fontdb = []
-experimental-ligature = ["typst-ts-svg-exporter/experimental-ligature"]
+experimental-ligature = ["reflexo-vec2svg/experimental-ligature"]
 no-content-hint = ["reflexo-typst2vec/no-content-hint"]
 glyph2vec = ["reflexo-typst2vec/glyph2vec"]
-dynamic-layout = ["dep:typst-ts-svg-exporter"]
+dynamic-layout = ["dep:reflexo-vec2svg"]
 
 system-compile = ["glyph2vec", "reflexo-vfs/system", "reflexo-world/system"]
 system-watch = ["dep:notify", "dep:tokio"]
@@ -80,4 +80,4 @@ web-render = ["__web_render"]
 
 ast = ["ansi_term"]
 pdf = ["typst-pdf"]
-svg = ["dep:typst-ts-svg-exporter"]
+svg = ["dep:reflexo-vec2svg"]

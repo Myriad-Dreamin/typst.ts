@@ -19,8 +19,8 @@ napi-derive = "2"
 
 typst-svg.workspace = true
 typst-ts-cli.workspace = true
-typst-ts-core = { workspace = true }
-typst-ts-svg-exporter = { workspace = true, optional = true }
+reflexo-typst = { workspace = true }
+reflexo-vec2svg = { workspace = true, optional = true }
 comemo.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -31,6 +31,6 @@ napi-build = "2"
 
 [features]
 
-pdf = ["typst-ts-core/pdf"]
-svg = ["typst-ts-svg-exporter", "typst-ts-svg-exporter/experimental-ligature"]
+pdf = ["reflexo-typst/pdf"]
+svg = ["reflexo-vec2svg", "reflexo-vec2svg/experimental-ligature"]
 default = ["pdf", "svg"]

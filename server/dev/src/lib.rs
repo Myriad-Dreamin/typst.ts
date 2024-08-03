@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{ArgAction, Parser, Subcommand};
-use typst_ts_core::build_info::VERSION;
+use reflexo_typst::build_info::VERSION;
 
 pub mod http;
 pub mod utils;

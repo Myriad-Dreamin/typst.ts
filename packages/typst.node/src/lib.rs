@@ -4,9 +4,7 @@ pub mod compiler;
 /// Error handling for NodeJS.
 pub mod error;
 
-use chrono::{DateTime, Datelike, Timelike, Utc};
 pub use compiler::*;
-use error::NodeTypstCompileResult;
 pub use error::{map_node_error, NodeError};
 
 use std::{
@@ -16,17 +14,20 @@ use std::{
     sync::Arc,
 };
 
+use chrono::{DateTime, Datelike, Timelike, Utc};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
+use reflexo_typst::error::prelude::*;
+use reflexo_typst::foundations::IntoValue;
+use reflexo_typst::syntax::Span;
+use reflexo_typst::typst::diag::{At, SourceResult};
+use reflexo_typst::{
+    Bytes, Compiler, DynamicLayoutCompiler, Exporter, ShadowApi, SystemCompilerFeat, TypstAbs,
+    TypstDatetime, TypstDocument, TypstSystemWorld, TypstWorld,
+};
 use serde::{Deserialize, Serialize};
-use typst_ts_core::typst::diag::{At, SourceResult};
-use typst_ts_core::{
-    error::prelude::*, foundations::IntoValue, syntax::Span, Bytes, Exporter, TypstAbs,
-    TypstDatetime, TypstDocument, TypstWorld,
-};
-use typst_ts_core::{
-    Compiler, DynamicLayoutCompiler, ShadowApi, SystemCompilerFeat, TypstSystemWorld,
-};
+
+use error::NodeTypstCompileResult;
 
 /// A shared typst document object.
 #[napi]
@@ -331,7 +332,7 @@ impl NodeCompiler {
     /// Simply compiles the document as a vector IR.
     #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     pub fn vector(&mut self, compiled_or_by: MayCompileOpts) -> Result<Buffer, NodeError> {
-        type Exporter = typst_ts_core::SvgModuleExporter;
+        type Exporter = reflexo_typst::SvgModuleExporter;
         self.compile_as(Exporter::default(), compiled_or_by)
     }
 
@@ -343,7 +344,7 @@ impl NodeCompiler {
         compiled_or_by: MayCompileOpts,
         opts: Option<RenderPdfOpts>,
     ) -> Result<Buffer, NodeError> {
-        type Exporter = typst_ts_core::PdfDocExporter;
+        type Exporter = reflexo_typst::PdfDocExporter;
         let e = if let Some(opts) = opts {
             Exporter::default().with_ctime(
                 opts.creation_timestamp
@@ -369,7 +370,7 @@ impl NodeCompiler {
     #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     #[cfg(feature = "svg")]
     pub fn svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
-        type Exporter = typst_ts_core::PureSvgExporter;
+        type Exporter = reflexo_typst::PureSvgExporter;
         self.compile_as(Exporter::default(), compiled_or_by)
     }
 }

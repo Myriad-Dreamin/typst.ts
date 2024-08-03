@@ -9,7 +9,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-typst-ts-core.workspace = true
+reflexo-typst.workspace = true
 typst-ts-cli.workspace = true
 typst-dev-assets = { workspace = true }
 

@@ -5,19 +5,15 @@ mod incr;
 mod semantics_backend;
 mod svg_backend;
 
-/// Use types from `tiny-skia` crate.
-use tiny_skia as sk;
-
+use comemo::Prehashed;
+use reflexo_typst::hash::Fingerprint;
+use reflexo_typst::vector::ir::{
+    self, Abs, Axes, FontItem, GlyphRef, Ratio, Rect, Scalar, Transform,
+};
+use reflexo_typst::vector::vm::{GroupContext, RenderVm, TransformContext};
 use std::ops::Deref;
 use std::sync::Arc;
-
-use comemo::Prehashed;
-
-use reflexo_typst2vec::{
-    ir::{self, Abs, Axes, FontItem, GlyphRef, Ratio, Rect, Scalar, Transform},
-    vm::{GroupContext, RenderVm, TransformContext},
-};
-use typst_ts_core::hash::Fingerprint;
+use tiny_skia as sk;
 
 pub use crate::dom::DomPage;
 pub use incr::*;

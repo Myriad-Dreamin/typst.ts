@@ -1,12 +1,10 @@
 use js_sys::Uint8Array;
 use wasm_bindgen::prelude::*;
 
-use typst_ts_core::{error::prelude::*, Bytes};
-use typst_ts_core::{
-    font::web::BrowserFontSearcher,
-    package::browser::{ProxyContext, ProxyRegistry},
-    vfs::browser::ProxyAccessModel,
-};
+use reflexo_typst::font::web::BrowserFontSearcher;
+use reflexo_typst::package::browser::{ProxyContext, ProxyRegistry};
+use reflexo_typst::vfs::browser::ProxyAccessModel;
+use reflexo_typst::{error::prelude::*, Bytes};
 
 use crate::TypstCompiler;
 

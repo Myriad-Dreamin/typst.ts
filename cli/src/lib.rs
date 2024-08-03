@@ -1,6 +1,3 @@
-use core::fmt;
-use std::{borrow::Cow, path::PathBuf};
-
 pub mod compile;
 pub mod export;
 pub mod font;
@@ -12,9 +9,12 @@ pub mod tracing;
 pub mod utils;
 pub mod version;
 
+use core::fmt;
+use std::{borrow::Cow, path::PathBuf};
+
 use chrono::{DateTime, Utc};
 use clap::{builder::ValueParser, ArgAction, Args, Command, Parser, Subcommand, ValueEnum};
-use typst_ts_core::build_info::VERSION;
+use reflexo_typst::build_info::VERSION;
 use version::VersionFormat;
 
 /// The character typically used to separate path components
@@ -353,7 +353,7 @@ pub enum DiagnosticFormat {
     Short,
 }
 
-impl From<DiagnosticFormat> for typst_ts_core::DiagnosticFormat {
+impl From<DiagnosticFormat> for reflexo_typst::DiagnosticFormat {
     fn from(fmt: DiagnosticFormat) -> Self {
         match fmt {
             DiagnosticFormat::Human => Self::Human,

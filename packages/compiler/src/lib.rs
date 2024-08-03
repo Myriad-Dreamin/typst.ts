@@ -1,3 +1,10 @@
+pub mod builder;
+
+mod incr;
+pub(crate) mod utils;
+
+pub use reflexo_typst::*;
+
 use core::fmt;
 use std::{fmt::Write, path::Path, sync::Arc};
 
@@ -5,23 +12,15 @@ use comemo::Prehashed;
 use error::TypstSourceDiagnostic;
 use font::cache::FontInfoCache;
 use js_sys::{Array, JsString, Uint32Array, Uint8Array};
-pub use typst_ts_core::*;
-use typst_ts_core::{
-    error::{long_diag_from_std, prelude::*, DiagMessage},
-    typst::{foundations::IntoValue, prelude::EcoVec},
-};
-use typst_ts_core::{
-    font::web::BrowserFontSearcher, package::browser::ProxyRegistry, parser::OffsetEncoding,
-    vfs::browser::ProxyAccessModel,
-};
+use reflexo_typst::error::{long_diag_from_std, prelude::*, DiagMessage};
+use reflexo_typst::font::web::BrowserFontSearcher;
+use reflexo_typst::package::browser::ProxyRegistry;
+use reflexo_typst::parser::OffsetEncoding;
+use reflexo_typst::typst::{foundations::IntoValue, prelude::EcoVec};
+use reflexo_typst::vfs::browser::ProxyAccessModel;
 use wasm_bindgen::prelude::*;
 
 use crate::{incr::IncrServer, utils::console_log};
-
-pub mod builder;
-
-mod incr;
-pub(crate) mod utils;
 
 macro_rules! take_diag {
     ($diagnostics_format:expr, $world:expr, $e:expr) => {
@@ -222,7 +221,7 @@ impl TypstCompiler {
         // export ast
         let src = world.main();
         let mut cursor = std::io::Cursor::new(Vec::new());
-        typst_ts_core::dump_ast(
+        reflexo_typst::dump_ast(
             &src.id().vpath().as_rootless_path().display().to_string(),
             &src,
             &mut cursor,
@@ -296,10 +295,10 @@ impl TypstCompiler {
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
         let vec_exporter: DynExporter<TypstDocument, Vec<u8>> = match fmt.as_str() {
-            "vector" => Box::new(typst_ts_core::exporter_builtins::VecExporter::new(
-                typst_ts_core::SvgModuleExporter::default(),
+            "vector" => Box::new(reflexo_typst::exporter_builtins::VecExporter::new(
+                reflexo_typst::SvgModuleExporter::default(),
             )),
-            "pdf" => Box::<typst_ts_core::PdfDocExporter>::default(),
+            "pdf" => Box::<reflexo_typst::PdfDocExporter>::default(),
             _ => {
                 return Err(error_once!("Unsupported fmt", format: fmt).into());
             }
@@ -409,8 +408,8 @@ impl TypstCompiler {
 mod tests {
     #![allow(clippy::await_holding_lock)]
 
+    use reflexo_vec2svg::MultiVecDocument;
     use sha2::Digest;
-    use typst_ts_svg_exporter::MultiVecDocument;
     use typst_ts_test_common::web_artifact::get_corpus;
     use wasm_bindgen::JsCast;
     use wasm_bindgen_test::*;
@@ -436,8 +435,7 @@ mod tests {
 
     fn render_svg(artifact: &[u8]) -> String {
         let doc = MultiSvgDocument::from_slice(artifact);
-        type UsingExporter =
-            typst_ts_svg_exporter::SvgExporter<typst_ts_svg_exporter::SvgExportFeature>;
+        type UsingExporter = reflexo_vec2svg::SvgExporter<reflexo_vec2svg::SvgExportFeature>;
 
         let node = doc.layouts[0].unwrap_single();
         let view = node.pages(&doc.module).unwrap();
