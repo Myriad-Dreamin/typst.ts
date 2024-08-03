@@ -8,8 +8,7 @@ const MAX_SHARD_SIZE: u32 = 512;
 
 /// Return a read-only default shard size.
 fn default_shard_size() -> NonZeroU32 {
-    static ITEM_SHARD_SIZE: once_cell::sync::OnceCell<NonZeroU32> =
-        once_cell::sync::OnceCell::new();
+    static ITEM_SHARD_SIZE: std::sync::OnceLock<NonZeroU32> = std::sync::OnceLock::new();
 
     /// By testing, we found that the optimal shard size is 2 * number of
     /// threads.

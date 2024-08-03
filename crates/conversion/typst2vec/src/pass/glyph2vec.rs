@@ -378,9 +378,9 @@ impl ConvertInnerImpl {
         use crate::utils::AbsExt;
         use std::io::Read;
 
-        use once_cell::sync::OnceCell;
+        use std::sync::OnceLock;
 
-        static WARN_VIEW_BOX: OnceCell<()> = OnceCell::new();
+        static WARN_VIEW_BOX: OnceLock<()> = OnceLock::new();
 
         let data = g.svg_glyph(font, id)?;
         let mut data = data.as_ref();

@@ -1,6 +1,6 @@
 use core::fmt;
+use std::sync::OnceLock;
 
-use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 
 /// Represent the result of an immutable query reference.
@@ -11,21 +11,23 @@ use parking_lot::Mutex;
 pub struct QueryRef<Res, Err, QueryContext = ()> {
     ctx: Mutex<Option<QueryContext>>,
     /// `None` means no value has been computed yet.
-    cell: once_cell::sync::OnceCell<Result<Res, Err>>,
+    cell: OnceLock<Result<Res, Err>>,
 }
 
 impl<T, E, QC> QueryRef<T, E, QC> {
     pub fn with_value(value: T) -> Self {
+        let cell = OnceLock::new();
+        cell.get_or_init(|| Ok(value));
         Self {
             ctx: Mutex::new(None),
-            cell: OnceCell::with_value(Ok(value)),
+            cell,
         }
     }
 
     pub fn with_context(ctx: QC) -> Self {
         Self {
             ctx: Mutex::new(Some(ctx)),
-            cell: OnceCell::new(),
+            cell: OnceLock::new(),
         }
     }
 }
@@ -59,7 +61,7 @@ impl<T, E> Default for QueryRef<T, E> {
     fn default() -> Self {
         QueryRef {
             ctx: Mutex::new(Some(())),
-            cell: OnceCell::new(),
+            cell: OnceLock::new(),
         }
     }
 }

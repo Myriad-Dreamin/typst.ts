@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use reflexo::{error::prelude::*, ImmutPath};
 use serde::{Deserialize, Serialize};
@@ -39,12 +39,11 @@ pub struct EntryState {
     main: Option<FileId>,
 }
 
-pub static DETACHED_ENTRY: once_cell::sync::Lazy<FileId> = once_cell::sync::Lazy::new(|| {
-    FileId::new(None, VirtualPath::new(Path::new("/__detached.typ")))
-});
+pub static DETACHED_ENTRY: LazyLock<FileId> =
+    LazyLock::new(|| FileId::new(None, VirtualPath::new(Path::new("/__detached.typ"))));
 
-pub static MEMORY_MAIN_ENTRY: once_cell::sync::Lazy<FileId> =
-    once_cell::sync::Lazy::new(|| FileId::new(None, VirtualPath::new(Path::new("/__main__.typ"))));
+pub static MEMORY_MAIN_ENTRY: LazyLock<FileId> =
+    LazyLock::new(|| FileId::new(None, VirtualPath::new(Path::new("/__main__.typ"))));
 
 impl EntryState {
     /// Create an entry state with no workspace root and no main file.

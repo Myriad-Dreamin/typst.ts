@@ -42,17 +42,15 @@ impl TypstRendererBuilder {
 #[cfg(not(feature = "build_glyph_pack"))]
 pub mod glyph_pack_stub {
 
-    use std::sync::Mutex;
+    use std::sync::{Mutex, OnceLock};
 
     use reflexo_typst::error::prelude::*;
     use wasm_bindgen::prelude::*;
 
     use crate::{TypstRenderer, TypstRendererBuilder};
 
-    static WARN_ONCE1: Mutex<once_cell::sync::OnceCell<()>> =
-        Mutex::new(once_cell::sync::OnceCell::new());
-    static WARN_ONCE2: Mutex<once_cell::sync::OnceCell<()>> =
-        Mutex::new(once_cell::sync::OnceCell::new());
+    static WARN_ONCE1: Mutex<OnceLock<()>> = Mutex::new(OnceLock::new());
+    static WARN_ONCE2: Mutex<OnceLock<()>> = Mutex::new(OnceLock::new());
 
     #[wasm_bindgen]
     impl TypstRendererBuilder {
@@ -86,15 +84,14 @@ pub use glyph_pack_stub::*;
 #[cfg(not(feature = "build_raw_font"))]
 pub mod raw_font_stub {
 
-    use std::sync::Mutex;
+    use std::sync::{Mutex, OnceLock};
 
     use reflexo_typst::error::prelude::*;
     use wasm_bindgen::prelude::*;
 
     use crate::TypstRendererBuilder;
 
-    static WARN_ONCE: Mutex<once_cell::sync::OnceCell<()>> =
-        Mutex::new(once_cell::sync::OnceCell::new());
+    static WARN_ONCE: Mutex<OnceLock<()>> = Mutex::new(OnceLock::new());
 
     #[wasm_bindgen]
     impl TypstRendererBuilder {
@@ -115,15 +112,14 @@ pub use raw_font_stub::*;
 #[cfg(not(feature = "build_web_font"))]
 pub mod web_font_stub {
 
-    use std::sync::Mutex;
+    use std::sync::{Mutex, OnceLock};
 
     use reflexo_typst::error::prelude::*;
     use wasm_bindgen::prelude::*;
 
     use crate::TypstRendererBuilder;
 
-    static WARN_ONCE: Mutex<once_cell::sync::OnceCell<()>> =
-        Mutex::new(once_cell::sync::OnceCell::new());
+    static WARN_ONCE: Mutex<OnceLock<()>> = Mutex::new(OnceLock::new());
 
     #[wasm_bindgen]
     impl TypstRendererBuilder {

@@ -32,24 +32,12 @@ fn main() {
         .map_err(|err| err.exit())
         .unwrap();
 
-    {
-        let mut builder = env_logger::builder();
-        builder.filter_level(log::LevelFilter::Info);
-        // Better?
-        if !matches!(
-            &opts.sub,
-            Some(Subcommands::Compile(CompileArgs {
-                trace: _trace @ Some(_),
-                ..
-            }))
-        ) {
-            builder
-                .filter_module("typst", log::LevelFilter::Warn)
-                .filter_module("typst_ts", log::LevelFilter::Info)
-                .filter_module("tracing::", log::LevelFilter::Off);
-        }
-        builder.init();
-    }
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .filter_module("typst", log::LevelFilter::Warn)
+        .filter_module("typst_ts", log::LevelFilter::Info)
+        .filter_module("tracing::", log::LevelFilter::Off)
+        .init();
 
     intercept_version(opts.version, opts.vv);
 

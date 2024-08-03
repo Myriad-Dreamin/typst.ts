@@ -1050,8 +1050,8 @@ impl IncrTypst2VecPass {
 //     }
 // }
 
-static LINE_HINT_ELEMENTS: once_cell::sync::Lazy<std::collections::HashSet<&'static str>> =
-    once_cell::sync::Lazy::new(|| {
+static LINE_HINT_ELEMENTS: std::sync::LazyLock<std::collections::HashSet<&'static str>> =
+    std::sync::LazyLock::new(|| {
         let mut set = std::collections::HashSet::new();
         set.insert("heading");
         set

@@ -5,8 +5,7 @@ use web_sys::wasm_bindgen::JsCast;
 #[derive(Default)]
 pub struct SemanticsBackend {}
 
-static FONT_METRICS: once_cell::sync::OnceCell<BrowserFontMetric> =
-    once_cell::sync::OnceCell::new();
+static FONT_METRICS: std::sync::OnceLock<BrowserFontMetric> = std::sync::OnceLock::new();
 
 impl SemanticsBackend {
     pub(crate) fn render(&self, module: &Module, page: &Page, heavy: bool) -> String {

@@ -291,7 +291,7 @@ pub struct FlatModule {
 
     #[cfg_attr(feature = "rkyv", with(rkyv::with::Skip))]
     #[allow(unused)]
-    meta_indices: [once_cell::sync::OnceCell<usize>; META_INDICES_MAX],
+    meta_indices: [std::sync::OnceLock<usize>; META_INDICES_MAX],
 }
 
 impl Default for FlatModule {

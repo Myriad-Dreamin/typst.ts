@@ -5,7 +5,6 @@ pub mod font;
 pub mod manual;
 pub mod query;
 pub mod query_repl;
-pub mod tracing;
 pub mod utils;
 pub mod version;
 
@@ -213,12 +212,6 @@ pub struct CompileArgs {
         value_parser = clap::value_parser!(DiagnosticFormat)
     )]
     pub diagnostic_format: DiagnosticFormat,
-
-    /// Enable tracing.
-    /// Possible usage: --trace=verbosity={0..3}
-    ///   where verbosity: {0..3} -> {warning, info, debug, trace}
-    #[clap(long)]
-    pub trace: Option<String>,
 }
 
 /// Processes an input file to extract provided metadata

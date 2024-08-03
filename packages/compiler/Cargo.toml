@@ -19,7 +19,6 @@ ansi-to-html.workspace = true
 comemo.workspace = true
 base64.workspace = true
 
-once_cell.workspace = true
 serde-wasm-bindgen.workspace = true
 serde_json.workspace = true
 

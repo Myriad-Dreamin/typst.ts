@@ -2,12 +2,11 @@ use std::{
     num::NonZeroUsize,
     ops::Deref,
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, LazyLock, OnceLock},
 };
 
 use chrono::{DateTime, Datelike, Local};
 use comemo::Prehashed;
-use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use reflexo::ImmutPath;
 use reflexo_vfs::{notify::FilesystemEvent, Vfs};
@@ -184,7 +183,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
                 shared: self.shared.clone(),
                 slots: Default::default(),
             },
-            now: OnceCell::new(),
+            now: OnceLock::new(),
         };
 
         mutant.map(|m| w.task(m)).unwrap_or(w)
@@ -341,7 +340,7 @@ pub struct CompilerWorld<F: CompilerFeat> {
     pub source_db: SourceDb,
     /// The current datetime if requested. This is stored here to ensure it is
     /// always the same within one compilation. Reset between compilations.
-    now: OnceCell<DateTime<Local>>,
+    now: OnceLock<DateTime<Local>>,
 }
 
 impl<F: CompilerFeat> Clone for CompilerWorld<F> {
@@ -489,8 +488,8 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
     /// same on-disk file. Implementors can deduplicate and return the same
     /// `Source` if they want to, but do not have to.
     fn source(&self, id: FileId) -> FileResult<Source> {
-        static DETACH_SOURCE: once_cell::sync::Lazy<Source> =
-            once_cell::sync::Lazy::new(|| Source::new(*DETACHED_ENTRY, String::new()));
+        static DETACH_SOURCE: LazyLock<Source> =
+            LazyLock::new(|| Source::new(*DETACHED_ENTRY, String::new()));
 
         if id == *DETACHED_ENTRY {
             return Ok(DETACH_SOURCE.clone());

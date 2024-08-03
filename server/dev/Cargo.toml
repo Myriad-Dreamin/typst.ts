@@ -13,7 +13,6 @@ reflexo-typst.workspace = true
 typst-ts-cli.workspace = true
 typst-dev-assets = { workspace = true }
 
-once_cell.workspace = true
 env_logger.workspace = true
 log.workspace = true
 

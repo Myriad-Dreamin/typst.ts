@@ -4,10 +4,10 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 
 use crossbeam_queue::SegQueue;
-use once_cell::sync::OnceCell;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use reflexo::error::prelude::*;
 use reflexo::hash::Fingerprint;
+use std::sync::OnceLock;
 
 use crate::debug_loc::{
     ElementPoint, FileLocation, FlatSourceLocation, SourceSpan, SourceSpanOffset,
@@ -249,7 +249,7 @@ pub struct Span2VecPass {
     region_cnt: AtomicUsize,
     pub doc_region: AtomicUsize,
 
-    span_tree: OnceCell<LazySpanInfo>,
+    span_tree: OnceLock<LazySpanInfo>,
     collector: LazySpanCollector,
 }
 
@@ -285,7 +285,7 @@ impl Span2VecPass {
         self.region_cnt
             .store(1, std::sync::atomic::Ordering::SeqCst);
         self.collector.reset();
-        self.span_tree = once_cell::sync::OnceCell::new();
+        self.span_tree = OnceLock::new();
         self.doc_region
             .store(0, std::sync::atomic::Ordering::SeqCst);
     }

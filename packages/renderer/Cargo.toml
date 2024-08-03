@@ -20,7 +20,6 @@ crate-type = ["cdylib"]
 
 typst.workspace = true
 
-once_cell.workspace = true
 elsa.workspace = true
 
 pollster.workspace = true
