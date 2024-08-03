@@ -142,12 +142,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "27a4bd113ab6da4cd0f521068a6e2ee1065eab54107266a11835d02c8ec86a37"
 
 [[package]]
-name = "append-only-vec"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3cb8f874ecf419dd8165d0279746de966cb8966636d028845e3bd65d519812a"
-
-[[package]]
 name = "approx"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -252,16 +246,6 @@ name = "base64"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
-
-[[package]]
-name = "base64-serde"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba368df5de76a5bea49aaf0cf1b39ccfbbef176924d1ba5db3e4135216cbe3c7"
-dependencies = [
- "base64 0.21.7",
- "serde",
-]
 
 [[package]]
 name = "biblatex"
@@ -905,7 +889,7 @@ dependencies = [
  "lazy_static",
  "mintex",
  "parking_lot",
- "rustc-hash",
+ "rustc-hash 1.1.0",
  "serde",
  "serde_json",
  "thousands",
@@ -952,12 +936,6 @@ dependencies = [
  "quote",
  "syn 2.0.64",
 ]
-
-[[package]]
-name = "dissimilar"
-version = "1.0.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59f8e79d1fbf76bdfbde321e902714bf6c49df88a7dda6fc682fc2979226962d"
 
 [[package]]
 name = "divan"
@@ -1231,12 +1209,6 @@ checksum = "76ee7a02da4d231650c7cea31349b889be2f45ddb3ef3032d2ec8185f6313fd2"
 dependencies = [
  "libc",
 ]
-
-[[package]]
-name = "fst"
-version = "0.4.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ab85b9b05e3978cc9a9cf8fea7f01b494e1a09ed3037e16ba39edc7a29eb61a"
 
 [[package]]
 name = "funty"
@@ -2857,7 +2829,7 @@ dependencies = [
  "parking_lot",
  "path-clean",
  "rkyv",
- "rustc-hash",
+ "rustc-hash 2.0.0",
  "serde",
  "serde_json",
  "serde_repr",
@@ -2871,39 +2843,25 @@ dependencies = [
 name = "reflexo-typst2vec"
 version = "0.5.0-rc6"
 dependencies = [
- "base64 0.22.1",
- "base64-serde",
  "bitvec",
- "byteorder",
  "comemo",
  "crossbeam-queue",
  "dashmap",
- "ecow",
- "elsa",
  "flate2",
- "fxhash",
- "hex",
- "js-sys",
  "log",
  "once_cell",
  "parking_lot",
- "path-clean",
  "rayon",
  "reflexo",
  "rkyv",
- "rustc-hash",
+ "rustc-hash 2.0.0",
  "serde",
  "serde_json",
- "serde_repr",
- "sha2",
- "siphasher 1.0.1",
  "svgtypes",
  "tiny-skia",
  "tiny-skia-path",
  "ttf-parser",
  "typst",
- "wasm-bindgen",
- "web-sys",
  "xmlparser",
 ]
 
@@ -2922,7 +2880,6 @@ dependencies = [
 name = "reflexo-vec2canvas"
 version = "0.5.0-rc6"
 dependencies = [
- "async-recursion",
  "async-trait",
  "comemo",
  "ecow",
@@ -2954,7 +2911,6 @@ dependencies = [
 name = "reflexo-vfs"
 version = "0.5.0-rc6"
 dependencies = [
- "append-only-vec",
  "indexmap 2.2.6",
  "js-sys",
  "log",
@@ -2963,7 +2919,6 @@ dependencies = [
  "parking_lot",
  "reflexo",
  "rpds",
- "rustc-hash",
  "typst",
  "wasm-bindgen",
  "web-sys",
@@ -2973,27 +2928,21 @@ dependencies = [
 name = "reflexo-world"
 version = "0.5.0-rc6"
 dependencies = [
- "append-only-vec",
  "chrono",
  "codespan-reporting",
  "comemo",
- "dashmap",
  "dirs",
  "ecow",
  "flate2",
  "fontdb",
  "hex",
- "indexmap 2.2.6",
  "js-sys",
  "log",
- "nohash-hasher",
- "notify",
  "once_cell",
  "parking_lot",
  "reflexo",
  "reflexo-vfs",
  "reqwest",
- "rustc-hash",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
@@ -3002,7 +2951,6 @@ dependencies = [
  "strum 0.25.0",
  "tar",
  "typst",
- "walkdir",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -3167,28 +3115,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rmp"
-version = "0.8.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "228ed7c16fa39782c3b3468e974aec2795e9089153cd08ee2e9aefb3613334c4"
-dependencies = [
- "byteorder",
- "num-traits",
- "paste",
-]
-
-[[package]]
-name = "rmp-serde"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52e599a477cf9840e92f2cde9a7189e67b42c57532749bf90aea6ec10facd4db"
-dependencies = [
- "byteorder",
- "rmp",
- "serde",
-]
-
-[[package]]
 name = "roff"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3220,6 +3146,12 @@ name = "rustc-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
+
+[[package]]
+name = "rustc-hash"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "583034fd73374156e66797ed8e5b0d5690409c9226b22d87cb7f19821c05d152"
 
 [[package]]
 name = "rustc_version"
@@ -4483,10 +4415,8 @@ name = "typst-ts-bench-lowering"
 version = "0.5.0-rc6"
 dependencies = [
  "comemo",
- "dissimilar",
  "divan",
  "once_cell",
- "rayon",
  "reflexo-typst2vec",
  "typst",
  "typst-ts-cli",
@@ -4503,7 +4433,6 @@ dependencies = [
  "clap_complete",
  "clap_complete_fig",
  "clap_mangen",
- "codespan-reporting",
  "comemo",
  "env_logger",
  "flate2",
@@ -4529,59 +4458,34 @@ name = "typst-ts-core"
 version = "0.5.0-rc6"
 dependencies = [
  "ansi_term",
- "base64 0.22.1",
- "base64-serde",
- "bitvec",
- "byteorder",
  "codespan-reporting",
  "comemo",
- "crossbeam-queue",
- "dashmap",
  "dirs",
  "ecow",
- "elsa",
- "flate2",
  "fontdb",
- "fst",
  "fxhash",
- "hex",
  "indexmap 2.2.6",
  "js-sys",
  "log",
  "nohash-hasher",
  "notify",
  "once_cell",
- "parking_lot",
- "path-clean",
  "pathdiff",
- "pollster",
  "rayon",
  "reflexo",
  "reflexo-typst2vec",
  "reflexo-vfs",
  "reflexo-world",
  "rkyv",
- "rustc-hash",
  "serde",
- "serde-wasm-bindgen",
  "serde_json",
- "serde_repr",
- "sha2",
- "siphasher 1.0.1",
- "svgtypes",
  "tar",
- "tiny-skia",
- "tiny-skia-path",
  "tokio",
- "ttf-parser",
  "typst",
  "typst-pdf",
  "typst-ts-svg-exporter",
  "walkdir",
- "wasm-bindgen",
- "wasm-bindgen-futures",
  "web-sys",
- "xmlparser",
 ]
 
 [[package]]
@@ -4606,18 +4510,15 @@ name = "typst-ts-dom-exporter"
 version = "0.5.0-rc6"
 dependencies = [
  "async-recursion",
- "base64 0.22.1",
  "comemo",
  "js-sys",
  "log",
  "once_cell",
- "rayon",
  "reflexo",
  "reflexo-typst2vec",
  "reflexo-vec2bbox",
  "reflexo-vec2canvas",
  "reflexo-vec2sema",
- "siphasher 1.0.1",
  "svgtypes",
  "tiny-skia",
  "tiny-skia-path",
@@ -4709,7 +4610,6 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
- "parking_lot",
  "serde",
  "serde_json",
  "typst-svg",
@@ -4722,16 +4622,10 @@ dependencies = [
 name = "typst-ts-parser"
 version = "0.5.0-rc6"
 dependencies = [
- "base64 0.22.1",
- "comemo",
  "console_error_panic_hook",
- "elsa",
- "hex",
  "js-sys",
  "once_cell",
  "serde-wasm-bindgen",
- "serde_json",
- "sha2",
  "typst",
  "typst-ts-core",
  "typst-ts-test-common",
@@ -4746,8 +4640,6 @@ name = "typst-ts-renderer"
 version = "0.5.0-rc6"
 dependencies = [
  "anyhow",
- "byteorder",
- "comemo",
  "console_error_panic_hook",
  "elsa",
  "hex",
@@ -4758,7 +4650,6 @@ dependencies = [
  "reflexo-typst2vec",
  "reflexo-vec2canvas",
  "reflexo-vec2sema",
- "rmp-serde",
  "send_wrapper",
  "serde",
  "serde-wasm-bindgen",
@@ -4801,12 +4692,9 @@ dependencies = [
  "comemo",
  "log",
  "once_cell",
- "rayon",
  "reflexo",
  "reflexo-typst2vec",
  "reflexo-vec2canvas",
- "siphasher 1.0.1",
- "tiny-skia",
  "typst",
 ]
 
@@ -4829,12 +4717,10 @@ dependencies = [
  "base64 0.22.1",
  "comemo",
  "console_error_panic_hook",
- "elsa",
  "hex",
  "js-sys",
  "once_cell",
  "reflexo-typst2vec",
- "reflexo-vec2canvas",
  "serde-wasm-bindgen",
  "serde_json",
  "sha2",

@@ -19,12 +19,7 @@ unicode-width.workspace = true
 
 wasm-bindgen.workspace = true
 js-sys.workspace = true
-web-sys = { workspace = true, features = [
-    "HtmlDivElement",
-    "Window",
-    "Document",
-    "TextMetrics",
-] }
+web-sys = { workspace = true, features = ["Window", "Document", "TextMetrics"] }
 
 [features]
 incremental = ["reflexo/flat-vector"]

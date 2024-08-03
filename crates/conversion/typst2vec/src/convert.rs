@@ -132,7 +132,7 @@ impl FromTypst<TypstTransform> for Transform {
 
 impl FromTypst<Font> for FontItem {
     fn from_typst(font: Font) -> Self {
-        let hash = fxhash::hash32(&font);
+        let hash = reflexo::hash::hash32(&font);
         let fingerprint = Fingerprint::from_u128(item_hash128(&font));
 
         let metrics = font.metrics();

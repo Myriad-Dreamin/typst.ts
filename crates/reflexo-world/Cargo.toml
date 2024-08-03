@@ -13,13 +13,8 @@ repository.workspace = true
 typst.workspace = true
 reflexo.workspace = true
 reflexo-vfs.workspace = true
-append-only-vec.workspace = true
 parking_lot.workspace = true
-nohash-hasher.workspace = true
 once_cell.workspace = true
-rustc-hash.workspace = true
-indexmap.workspace = true
-dashmap.workspace = true
 ecow.workspace = true
 log.workspace = true
 chrono.workspace = true
@@ -40,8 +35,6 @@ js-sys = { workspace = true, optional = true }
 serde-wasm-bindgen = { workspace = true, optional = true }
 
 dirs = { workspace = true, optional = true }
-walkdir = { workspace = true, optional = true }
-notify = { workspace = true, optional = true }
 fontdb = { workspace = true, optional = true }
 
 [target.'cfg(not(any(target_arch = "riscv64", target_arch = "wasm32", all(target_os = "windows", target_arch = "aarch64"))))'.dependencies]
@@ -65,10 +58,4 @@ lazy-fontdb = []
 browser-embedded-fonts = []
 web = ["wasm-bindgen", "web-sys", "js-sys", "serde-wasm-bindgen", "reflexo/web"]
 browser = ["web"]
-system = [
-    "dep:dirs",
-    "dep:walkdir",
-    "dep:notify",
-    "dep:fontdb",
-    "reflexo/system",
-]
+system = ["dep:dirs", "dep:fontdb", "reflexo/system"]

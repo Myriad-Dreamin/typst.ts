@@ -108,7 +108,7 @@ impl<const ENABLE_REF_CNT: bool> TGlyph2VecPass<ENABLE_REF_CNT> {
         let entry = entry.or_insert_with(|| {
             let font_index = font_index_lock.deref_mut();
             let mut abs_ref = FontRef {
-                hash: fxhash::hash32(font),
+                hash: reflexo::hash::hash32(font),
                 idx: (*font_index) as u32,
             };
             *font_index += 1;

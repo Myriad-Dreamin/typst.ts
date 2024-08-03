@@ -16,7 +16,6 @@ reflexo = { workspace = true, features = ["web"] }
 reflexo-vec2bbox.workspace = true
 
 tiny-skia.workspace = true
-async-recursion.workspace = true
 async-trait.workspace = true
 wasm-bindgen-futures.workspace = true
 

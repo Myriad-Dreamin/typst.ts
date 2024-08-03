@@ -36,12 +36,10 @@ tracing-error.workspace = true
 flate2.workspace = true
 tracing-subscriber.workspace = true
 
-codespan-reporting.workspace = true
 human-panic.workspace = true
 
 typst-ts-core = { workspace = true, default-features = false, features = [
     "system",
-    # "lazy-fontdb",
     "dynamic-layout",
 ] }
 
@@ -57,9 +55,5 @@ embedded-fonts = []
 debug-repl = []
 ast = ["typst-ts-core/ast"]
 pdf = ["typst-ts-core/pdf"]
-svg = [
-    #
-    "typst-ts-core/svg",
-    "typst-ts-core/experimental-ligature",
-]
+svg = ["typst-ts-core/svg", "typst-ts-core/experimental-ligature"]
 text = []

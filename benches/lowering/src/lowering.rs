@@ -45,8 +45,6 @@ fn main() {
 }
 
 fn lower_impl(doc: &TypstDocument) {
-    // use rayon::iter::ParallelIterator;
-
     let pass = Typst2VecPass::default();
     let _ = pass.doc(&doc.introspector, doc);
 }

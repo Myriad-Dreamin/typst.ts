@@ -4,9 +4,9 @@ use core::fmt;
 use std::{num::NonZeroUsize, sync::Arc};
 
 use parking_lot::{Mutex, RwLock};
+use reflexo::hash::FxHashMap;
 use reflexo::{ImmutPath, QueryRef};
 use reflexo_vfs::{Bytes, FileId, FsProvider, TypstFileId};
-use rustc_hash::FxHashMap;
 use typst::{
     diag::{FileError, FileResult},
     syntax::Source,
