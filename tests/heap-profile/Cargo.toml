@@ -17,7 +17,7 @@ tokio.workspace = true
 dhat = "0.3.2"
 typst-ts-dev-server.workspace = true
 typst-ts-test-common.workspace = true
-typst-ts-core.workspace = true
+reflexo-typst.workspace = true
 
 [features]
 dhat-heap = []

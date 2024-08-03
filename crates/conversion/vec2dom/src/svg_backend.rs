@@ -1,14 +1,10 @@
 #![allow(dead_code)]
 
+use reflexo_typst::hash::Fingerprint;
+use reflexo_typst::vector::ir::{self, Module, Page, TransformedRef, VecItem};
+use reflexo_typst::vector::{incr::IncrDocClient, vm::RenderVm};
 use reflexo_vec2canvas::BBoxAt;
-use typst_ts_core::{
-    hash::Fingerprint,
-    vector::{incr::IncrDocClient, vm::RenderVm},
-};
-use typst_ts_svg_exporter::{
-    ir::{self, Page, TransformedRef, VecItem},
-    Module, SvgExporter, SvgTask, SvgText,
-};
+use reflexo_vec2svg::{SvgExporter, SvgTask, SvgText};
 use web_sys::{wasm_bindgen::JsCast, Element, SvgGraphicsElement};
 
 use crate::{dom::*, factory::XmlFactory, DomContext};
@@ -16,7 +12,7 @@ use crate::{dom::*, factory::XmlFactory, DomContext};
 /// The feature set which is used for exporting incremental rendered svg.
 pub struct IncrementalSvgExportFeature;
 
-impl typst_ts_svg_exporter::ExportFeature for IncrementalSvgExportFeature {
+impl reflexo_vec2svg::ExportFeature for IncrementalSvgExportFeature {
     const ENABLE_INLINED_SVG: bool = false;
     const ENABLE_TRACING: bool = false;
     const SHOULD_ATTACH_DEBUG_INFO: bool = false;

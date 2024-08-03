@@ -1,14 +1,12 @@
 use std::sync::{Arc, Mutex};
 
-use reflexo_typst2vec::{
-    incr::IncrDocClient,
-    ir::{Page, Scalar},
-};
+use reflexo_typst::error::prelude::*;
+#[cfg(feature = "render_svg")]
+use reflexo_typst::svg::IncrSvgDocClient;
+use reflexo_typst::vector::ir::{Page, Scalar};
+use reflexo_typst2vec::incr::IncrDocClient;
 #[cfg(feature = "render_canvas")]
 use reflexo_vec2canvas::IncrCanvasDocClient;
-use typst_ts_core::error::prelude::*;
-#[cfg(feature = "render_svg")]
-use typst_ts_core::svg::IncrSvgDocClient;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

@@ -1,12 +1,10 @@
 use std::path::{Path, PathBuf};
 
 use chrono::{Datelike, Timelike};
-use typst_ts_core::svg::DefaultExportFeature;
-use typst_ts_core::{
-    exporter_builtins::{FsPathExporter, GroupExporter},
-    program_meta::REPORT_BUG_MESSAGE,
-    TypstDatetime,
-};
+use reflexo_typst::exporter_builtins::{FsPathExporter, GroupExporter};
+use reflexo_typst::program_meta::REPORT_BUG_MESSAGE;
+use reflexo_typst::svg::DefaultExportFeature;
+use reflexo_typst::TypstDatetime;
 
 use crate::{utils::current_dir, CompileArgs, ExportArgs};
 
@@ -119,16 +117,14 @@ fn prepare_exporters_impl(
 
     type Doc = typst::model::Document;
 
-    type WithAst = typst_ts_core::AstExporter;
-    // type WithJson<T> = typst_ts_serde_exporter::JsonExporter<T>;
-    type WithPdf = typst_ts_core::PdfDocExporter;
-    // type WithRmp<T> = typst_ts_serde_exporter::RmpExporter<T>;
-    type WithSvg = typst_ts_core::PureSvgExporter;
-    type WithSvgHtml = typst_ts_core::SvgHtmlExporter<DefaultExportFeature>;
-    type WithSIR = typst_ts_core::SvgModuleExporter;
-    type WithText = typst_ts_core::TextExporter;
+    type WithAst = reflexo_typst::AstExporter;
+    type WithPdf = reflexo_typst::PdfDocExporter;
+    type WithSvg = reflexo_typst::PureSvgExporter;
+    type WithSvgHtml = reflexo_typst::SvgHtmlExporter<DefaultExportFeature>;
+    type WithSIR = reflexo_typst::SvgModuleExporter;
+    type WithText = reflexo_typst::TextExporter;
 
-    type ExporterVec<T> = Vec<Box<dyn typst_ts_core::Exporter<T> + Send + Sync>>;
+    type ExporterVec<T> = Vec<Box<dyn reflexo_typst::Exporter<T> + Send + Sync>>;
 }
 
 /// Prepare exporters from command line arguments.

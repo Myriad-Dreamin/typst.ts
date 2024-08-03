@@ -1,4 +1,4 @@
-name: typst_ts::release::gh_pages
+name: reflexo::release::gh_pages
 
 env:
   SCCACHE_GHA_ENABLED: 'true'

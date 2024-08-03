@@ -1,5 +1,5 @@
-# reflexo-vec2sema
+# reflexo-world
 
-Render vector items into HTML semantics.
+Typst's World implementation for reflexo.
 
 See [Typst.ts](https://github.com/Myriad-Dreamin/typst.ts)

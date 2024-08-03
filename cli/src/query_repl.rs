@@ -2,10 +2,9 @@ use std::borrow::Cow::{self, Owned};
 use std::cell::{RefCell, RefMut};
 use std::sync::Arc;
 
-use typst::diag::SourceDiagnostic;
-use typst::World;
-use typst_ide::autocomplete;
-
+use reflexo_typst::typst::prelude::*;
+use reflexo_typst::{CompileDriver, CompileReport, ConsoleDiagReporter, PureCompiler};
+use reflexo_typst::{GenericExporter, ShadowApiExt, TypstSystemWorld};
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
 use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
@@ -13,10 +12,9 @@ use rustyline::hint::{Hinter, HistoryHinter};
 use rustyline::validate::MatchingBracketValidator;
 use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, KeyEvent};
 use rustyline::{Helper, Validator};
-
-use typst_ts_core::{typst::prelude::*, GenericExporter};
-use typst_ts_core::{CompileDriver, CompileReport, ConsoleDiagReporter, PureCompiler};
-use typst_ts_core::{ShadowApiExt, TypstSystemWorld};
+use typst::diag::SourceDiagnostic;
+use typst::World;
+use typst_ide::autocomplete;
 
 use crate::query::serialize;
 use crate::CompileOnceArgs;

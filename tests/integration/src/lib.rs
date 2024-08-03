@@ -2,14 +2,12 @@ pub mod wasm;
 
 use std::path::Path;
 
-use typst_ts_core::PdfDocExporter;
-use typst_ts_core::SvgModuleExporter;
-use typst_ts_core::{
-    config::{entry::EntryOpts, CompileOpts},
-    exporter_builtins::{FsPathExporter, GroupExporter},
-    path::PathClean,
-    CompileDriver, CompileExporter, PureCompiler, TypstDocument, TypstSystemUniverse,
-    TypstSystemWorld,
+use reflexo_typst::config::{entry::EntryOpts, CompileOpts};
+use reflexo_typst::exporter_builtins::{FsPathExporter, GroupExporter};
+use reflexo_typst::path::PathClean;
+use reflexo_typst::{
+    CompileDriver, CompileExporter, PdfDocExporter, PureCompiler, SvgModuleExporter, TypstDocument,
+    TypstSystemUniverse, TypstSystemWorld,
 };
 
 fn get_driver(
@@ -31,7 +29,7 @@ fn get_driver(
 macro_rules! document_exporters {
     ($($exporters:expr),*) => {
         {
-            let document_exporters: Vec<Box<dyn typst_ts_core::Exporter<TypstDocument> + Send + Sync>> = vec![
+            let document_exporters: Vec<Box<dyn reflexo_typst::Exporter<TypstDocument> + Send + Sync>> = vec![
                 $(Box::new($exporters)),*
             ];
             GroupExporter::new(document_exporters)

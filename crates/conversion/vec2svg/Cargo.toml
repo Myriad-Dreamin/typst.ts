@@ -1,5 +1,5 @@
 [package]
-name = "typst-ts-svg-exporter"
+name = "reflexo-vec2svg"
 description = "Export a frame of Typst document into svg element."
 version.workspace = true
 license.workspace = true

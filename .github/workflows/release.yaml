@@ -1,4 +1,4 @@
-name: typst_ts::release
+name: reflexo::release
 on:
   release:
     types: [created]

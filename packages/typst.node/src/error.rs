@@ -1,18 +1,17 @@
 use core::fmt;
-use napi_derive::napi;
 use std::{cell::OnceCell, fmt::Write, sync::Arc};
-use typst_ts_core::{
-    error::{long_diag_from_std, prelude::WithContext, TypstSourceDiagnostic},
-    typst::prelude::*,
-    TypstDocument, TypstWorld,
-};
+
+use napi_derive::napi;
+use reflexo_typst::error::{long_diag_from_std, prelude::WithContext, TypstSourceDiagnostic};
+use reflexo_typst::typst::prelude::*;
+use reflexo_typst::{TypstDocument, TypstWorld};
 
 use crate::NodeTypstDocument;
 
 /// The error status of a node error.
 pub enum NodeErrorStatus {
     Raw(napi::Error),
-    Error(typst_ts_core::error::Error),
+    Error(reflexo_typst::error::Error),
     Diagnostics(EcoVec<TypstSourceDiagnostic>),
 }
 
@@ -82,9 +81,9 @@ impl NodeError {
                     |(has_error, has_warning), diag| {
                         (
                             has_error
-                                || diag.severity == typst_ts_core::typst::diag::Severity::Error,
+                                || diag.severity == reflexo_typst::typst::diag::Severity::Error,
                             has_warning
-                                || diag.severity == typst_ts_core::typst::diag::Severity::Warning,
+                                || diag.severity == reflexo_typst::typst::diag::Severity::Warning,
                         )
                     },
                 );
@@ -130,8 +129,8 @@ impl From<napi::Error> for NodeError {
     }
 }
 
-impl From<typst_ts_core::error::Error> for NodeError {
-    fn from(e: typst_ts_core::error::Error) -> Self {
+impl From<reflexo_typst::error::Error> for NodeError {
+    fn from(e: reflexo_typst::error::Error) -> Self {
         NodeError(OnceCell::new(), NodeErrorStatus::Error(e))
     }
 }

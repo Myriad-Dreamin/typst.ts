@@ -1,8 +1,3 @@
-use crate::TypstRenderer;
-
-use typst_ts_core::error::prelude::*;
-use wasm_bindgen::prelude::*;
-
 #[cfg(feature = "build_glyph_pack")]
 pub mod glyph_pack;
 
@@ -11,6 +6,11 @@ pub mod raw_font;
 
 #[cfg(feature = "build_web_font")]
 pub mod web_font;
+
+use crate::TypstRenderer;
+
+use reflexo_typst::error::prelude::*;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct TypstRendererBuilder {}
@@ -44,7 +44,7 @@ pub mod glyph_pack_stub {
 
     use std::sync::Mutex;
 
-    use typst_ts_core::error::prelude::*;
+    use reflexo_typst::error::prelude::*;
     use wasm_bindgen::prelude::*;
 
     use crate::{TypstRenderer, TypstRendererBuilder};
@@ -88,7 +88,7 @@ pub mod raw_font_stub {
 
     use std::sync::Mutex;
 
-    use typst_ts_core::error::prelude::*;
+    use reflexo_typst::error::prelude::*;
     use wasm_bindgen::prelude::*;
 
     use crate::TypstRendererBuilder;
@@ -117,7 +117,7 @@ pub mod web_font_stub {
 
     use std::sync::Mutex;
 
-    use typst_ts_core::error::prelude::*;
+    use reflexo_typst::error::prelude::*;
     use wasm_bindgen::prelude::*;
 
     use crate::TypstRendererBuilder;

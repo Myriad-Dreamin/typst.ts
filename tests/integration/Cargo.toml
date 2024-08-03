@@ -24,9 +24,8 @@ tokio.workspace = true
 
 typst-ts-dev-server.workspace = true
 typst-ts-test-common.workspace = true
-typst-ts-core = { workspace = true, features = ["pdf", "system"] }
-
-typst-ts-svg-exporter = { workspace = true }
+reflexo-typst = { workspace = true, features = ["pdf", "system"] }
+reflexo-vec2svg = { workspace = true }
 
 [[test]]
 name = "tests"

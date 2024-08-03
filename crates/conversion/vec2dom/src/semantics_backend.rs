@@ -1,5 +1,5 @@
 use reflexo_vec2sema::{BrowserFontMetric, SemaTask};
-use typst_ts_svg_exporter::{ir::Page, Module};
+use reflexo_vec2svg::{ir::Page, Module};
 use web_sys::wasm_bindgen::JsCast;
 
 #[derive(Default)]

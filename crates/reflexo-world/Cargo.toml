@@ -1,6 +1,6 @@
 [package]
 name = "reflexo-world"
-description = "World for reflexo."
+description = "Typst's World implementation for reflexo."
 authors.workspace = true
 version.workspace = true
 license.workspace = true

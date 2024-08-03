@@ -1,5 +1,5 @@
-# reflexo-vec2sema
+# reflexo-vfs
 
-Render vector items into HTML semantics.
+Vfs for reflexo.
 
 See [Typst.ts](https://github.com/Myriad-Dreamin/typst.ts)

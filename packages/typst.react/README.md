@@ -1,4 +1,4 @@
-# Typst.react
+# `@myriaddreamin/typst.react`
 
 ## Usage
 
@@ -15,6 +15,10 @@ export const App = (artifact: Uint8Array) => {
 };
 
 ```
+
+## Documentation
+
+See [React Library Docs](https://myriad-dreamin.github.io/typst.ts/cookery/guide/renderer/react.html).
 
 ## Acknowledgement
 

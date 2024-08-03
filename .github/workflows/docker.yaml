@@ -1,4 +1,4 @@
-name: typst_ts::release::docker
+name: reflexo::release::docker
 on:
   release:
     types: [created]

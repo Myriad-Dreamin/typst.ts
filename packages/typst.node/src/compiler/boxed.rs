@@ -4,22 +4,18 @@ use std::{
     ops::{Deref, DerefMut},
     sync::Arc,
 };
-use typst_ts_core::{
-    config::entry::MEMORY_MAIN_ENTRY,
-    error::{prelude::*, TypstSourceDiagnostic},
-    error_once,
-    foundations::Content,
-    typst::prelude::*,
-    Bytes, TypstDocument,
-};
-use typst_ts_core::{
-    CompileDriver, CompileEnv, Compiler, EntryManager, EntryReader, PureCompiler, ShadowApi,
-    TaskInputs, TypstSystemWorld,
-};
 
-use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocArgs, NodeError};
+use reflexo_typst::config::entry::MEMORY_MAIN_ENTRY;
+use reflexo_typst::error::{prelude::*, TypstSourceDiagnostic};
+use reflexo_typst::foundations::Content;
+use reflexo_typst::typst::prelude::*;
+use reflexo_typst::{
+    error_once, Bytes, CompileDriver, CompileEnv, Compiler, EntryManager, EntryReader,
+    PureCompiler, ShadowApi, TaskInputs, TypstDocument, TypstSystemWorld,
+};
 
 use super::create_inputs;
+use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocArgs, NodeError};
 
 // <World = TypstSystemWorld>
 pub trait NodeCompilerTrait: Compiler

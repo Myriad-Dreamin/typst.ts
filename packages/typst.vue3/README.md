@@ -37,6 +37,10 @@ Next, use the component:
 </template>
 ```
 
+## Documentation
+
+See [Vue3 Library Docs](https://myriad-dreamin.github.io/typst.ts/cookery/guide/renderer/vue3.html).
+
 ## Development
 
 Run the example project:

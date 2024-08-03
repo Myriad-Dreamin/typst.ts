@@ -1,11 +1,11 @@
 use std::{path::Path, sync::Arc};
 
 use js_sys::Uint32Array;
-use typst::syntax::{FileId, VirtualPath};
-use typst_ts_core::error::prelude::*;
-use typst_ts_core::parser::{
+use reflexo_typst::error::prelude::*;
+use reflexo_typst::parser::{
     get_semantic_tokens_full, get_semantic_tokens_legend, OffsetEncoding, SemanticToken,
 };
+use typst::syntax::{FileId, VirtualPath};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]

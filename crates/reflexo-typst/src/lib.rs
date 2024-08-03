@@ -52,7 +52,7 @@ pub use typst_pdf::pdf;
 #[cfg(feature = "svg")]
 pub use exporter::svg::*;
 #[cfg(feature = "svg")]
-pub use typst_ts_svg_exporter as svg;
+pub use reflexo_vec2svg as svg;
 
 pub use exporter::text::TextExporter;
 
@@ -69,7 +69,7 @@ pub use exporter::{
 pub use reflexo::*;
 
 pub mod build_info {
-    /// The version of the typst-ts-core crate.
+    /// The version of the reflexo-typst crate.
     pub static VERSION: &str = env!("CARGO_PKG_VERSION");
 }
 
