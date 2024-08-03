@@ -43,7 +43,6 @@ fontdb = { workspace = true, optional = true }
 notify = { workspace = true, optional = true }
 
 indexmap.workspace = true
-fst.workspace = true
 nohash-hasher.workspace = true
 pathdiff.workspace = true
 tar.workspace = true
