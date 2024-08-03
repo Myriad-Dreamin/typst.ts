@@ -19,7 +19,6 @@ use typst::model::Document;
 use crate::font::fonts;
 use crate::utils::current_dir;
 use crate::{
-    tracing::TraceGuard,
     utils::{self, UnwrapOrExit},
     CompileArgs, CompileOnceArgs,
 };
@@ -113,30 +112,10 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstS
 }
 
 pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> ! {
-    if args.trace.is_some() && args.watch {
-        clap::Error::raw(
-            clap::error::ErrorKind::ArgumentConflict,
-            "cannot use option \"--trace\" and \"--watch\" at the same time\n",
-        )
-        .exit()
-    }
-
     let is_stdin = args.compile.entry == "-";
     let (intr_tx, intr_rx) = mpsc::unbounded_channel();
 
     let driver = create_driver(args.compile.clone());
-
-    let _trace_guard = {
-        let guard = args.trace.clone().map(TraceGuard::new);
-        let guard = guard.transpose().map_err(|err| {
-            clap::Error::raw(
-                clap::error::ErrorKind::InvalidValue,
-                format!("init trace failed: {err}\n"),
-            )
-            .exit()
-        });
-        guard.unwrap()
-    };
 
     // todo: make dynamic layout exporter
     let output_dir = {
