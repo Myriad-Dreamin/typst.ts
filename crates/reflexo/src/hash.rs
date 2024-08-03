@@ -13,10 +13,11 @@ use rkyv::{Archive, Deserialize as rDeser, Serialize as rSer};
 
 use crate::error::prelude::ZResult;
 
-pub(crate) type FxHasher = std::hash::BuildHasherDefault<rustc_hash::FxHasher>;
+pub(crate) type FxBuildHasher = std::hash::BuildHasherDefault<FxHasher>;
+pub use rustc_hash::{FxHashMap, FxHashSet, FxHasher};
 // pub type FxIndexSet<K> = indexmap::IndexSet<K, FxHasher>;
 // pub type FxIndexMap<K, V> = indexmap::IndexMap<K, V, FxHasher>;
-pub type FxDashMap<K, V> = dashmap::DashMap<K, V, FxHasher>;
+pub type FxDashMap<K, V> = dashmap::DashMap<K, V, FxBuildHasher>;
 
 /// See <https://github.com/rust-lang/rust/blob/master/compiler/rustc_hir/src/stable_hash_impls.rs#L22>
 /// The fingerprint conflicts should be very rare and should be handled by the
@@ -284,6 +285,17 @@ pub fn hash128<T: std::hash::Hash>(value: &T) -> u128 {
     value.hash(&mut state);
     state.finish128().as_u128()
 }
+
+/// A convenience function for when you need a quick 64-bit hash.
+#[inline]
+pub fn hash64<T: Hash + ?Sized>(v: &T) -> u64 {
+    let mut state = FxHasher::default();
+    v.hash(&mut state);
+    state.finish()
+}
+
+// todo: rustc hash doesn't have 32-bit hash
+pub use fxhash::hash32;
 
 #[test]
 fn test_fingerprint() {

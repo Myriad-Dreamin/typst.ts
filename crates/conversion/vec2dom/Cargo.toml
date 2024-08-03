@@ -17,7 +17,6 @@ comemo.workspace = true
 svgtypes.workspace = true
 tiny-skia.workspace = true
 tiny-skia-path.workspace = true
-base64.workspace = true
 
 typst-ts-core.workspace = true
 reflexo.workspace = true
@@ -27,8 +26,6 @@ reflexo-vec2sema.workspace = true
 reflexo-vec2bbox.workspace = true
 typst-ts-svg-exporter.workspace = true
 log.workspace = true
-siphasher.workspace = true
-rayon.workspace = true
 async-recursion.workspace = true
 wasm-bindgen.workspace = true
 wasm-bindgen-futures.workspace = true
@@ -36,25 +33,15 @@ wasm-bindgen-futures.workspace = true
 js-sys.workspace = true
 web-sys = { workspace = true, features = [
     "console",
-    "Path2d",
-    "Blob",
     "HtmlDivElement",
     "HtmlTemplateElement",
     "SvgElement",
     "SvgGraphicsElement",
     "SvgsvgElement",
-    "SvgMatrix",
-    "SvgRect",
-    "DomRect",
     "HtmlElement",
-    "Url",
-    "BlobPropertyBag",
-    "SupportedType",
-    "HtmlCollection",
-    "Performance",
-    "DocumentFragment",
     "Window",
     "Document",
+    "DocumentFragment",
     "CssStyleDeclaration",
 ] }
 

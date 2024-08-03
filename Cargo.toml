@@ -167,7 +167,7 @@ nohash-hasher = "0.2.0"
 rkyv = "0.7.42"
 rmp-serde = "1.1.2"
 roxmltree = "0.19"
-rustc-hash = "1.1.0"
+rustc-hash = "2"
 serde = { version = "1.0.197" }
 serde_json = "1.0.114"
 serde_with = { version = "3.6", features = ["base64"] }

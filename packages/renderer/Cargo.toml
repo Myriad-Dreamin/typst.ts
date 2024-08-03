@@ -19,7 +19,6 @@ crate-type = ["cdylib"]
 [dependencies]
 
 typst.workspace = true
-comemo.workspace = true
 
 once_cell.workspace = true
 elsa.workspace = true
@@ -29,14 +28,12 @@ tiny-skia.workspace = true
 
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
-rmp-serde = { workspace = true, optional = true }
-byteorder.workspace = true
 
 wasm-bindgen.workspace = true
-js-sys.workspace = true
 wasm-bindgen-futures.workspace = true
 serde-wasm-bindgen.workspace = true
-web-sys = { workspace = true, features = ["console", "Window"] }
+js-sys.workspace = true
+web-sys = { workspace = true, features = ["console", "Window", "Document"] }
 
 typst-ts-core = { workspace = true, default-features = false, features = [
     "web-render",
@@ -45,23 +42,16 @@ reflexo-typst2vec = { workspace = true }
 reflexo-vec2canvas = { workspace = true, optional = true }
 reflexo-vec2sema = { workspace = true }
 typst-ts-svg-exporter = { workspace = true, optional = true }
-typst-ts-dom-exporter = { workspace = true } # , optional = true
+typst-ts-dom-exporter = { workspace = true, optional = true }
 console_error_panic_hook.workspace = true
 
 [dev-dependencies]
 reflexo.workspace = true
 wasm-bindgen-test.workspace = true
 typst-ts-test-common.workspace = true
-web-sys = { workspace = true, features = [
-    "console",
-    "Performance",
-    "PerformanceTiming",
-    "Window",
-    "Document",
-] }
+web-sys = { workspace = true, features = ["Performance", "PerformanceTiming"] }
 hex.workspace = true
 sha2.workspace = true
-elsa.workspace = true
 send_wrapper = "0.5.0"
 
 [build-dependencies]
@@ -71,12 +61,11 @@ vergen.workspace = true
 [features]
 
 default = ["full"]
-full = ["serde_json", "serde_rmp", "render_full", "web_test"]
+full = ["serde_json", "render_full", "web_test"]
 
 web_test = ["typst-ts-test-common/web_artifacts"]
 web_verbose = ["web_test"]                        # for test debug
 serde_json = ["dep:serde_json"]
-serde_rmp = ["dep:serde", "dep:rmp-serde"]
 
 build_glyph_pack = []
 build_raw_font = []
@@ -88,8 +77,7 @@ render_canvas = [
     "web-sys/HtmlCanvasElement",
     "web-sys/CanvasRenderingContext2d",
 ]
-# render_dom = ["dep:typst-ts-dom-exporter", "render_svg"]
-render_dom = ["render_svg"]
+render_dom = ["dep:typst-ts-dom-exporter", "render_svg"]
 render_pdf = []
 render_svg = ["typst-ts-core/svg", "web-sys/HtmlDivElement"]
 render_full = ["render_canvas", "render_pdf", "render_svg", "render_dom"]

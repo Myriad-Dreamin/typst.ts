@@ -12,11 +12,9 @@ repository.workspace = true
 
 typst.workspace = true
 reflexo.workspace = true
-append-only-vec.workspace = true
 parking_lot.workspace = true
 nohash-hasher.workspace = true
 once_cell.workspace = true
-rustc-hash.workspace = true
 indexmap.workspace = true
 log.workspace = true
 rpds = "1"

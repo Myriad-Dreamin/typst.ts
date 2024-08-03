@@ -1,11 +1,10 @@
 //! Maps paths to compact integer ids. We don't care about clearings paths which
 //! no longer exist -- the assumption is total size of paths we ever look at is
 //! not too big.
-use std::hash::BuildHasherDefault;
-use std::hash::Hash;
+use std::hash::{BuildHasherDefault, Hash};
 
 use indexmap::IndexMap;
-use rustc_hash::FxHasher;
+use reflexo::hash::FxHasher;
 
 use super::FileId;
 
