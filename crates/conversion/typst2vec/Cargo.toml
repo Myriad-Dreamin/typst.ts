@@ -14,7 +14,6 @@ reflexo.workspace = true
 comemo.workspace = true
 ttf-parser.workspace = true
 crossbeam-queue = "0.3.10"
-once_cell.workspace = true
 rustc-hash.workspace = true
 dashmap.workspace = true
 parking_lot = { workspace = true }

@@ -16,7 +16,6 @@ crate-type = ["cdylib"]
 
 typst.workspace = true
 
-once_cell.workspace = true
 serde-wasm-bindgen.workspace = true
 
 # Everything to do with wasm

@@ -1,3 +1,4 @@
+use std::sync::OnceLock;
 use std::{collections::HashMap, hash::Hash, ops::Deref};
 
 use reflexo_typst::error::prelude::*;
@@ -31,8 +32,7 @@ impl TypstRenderer {
     }
 }
 
-static FONT_METRICS: once_cell::sync::OnceCell<BrowserFontMetric> =
-    once_cell::sync::OnceCell::new();
+static FONT_METRICS: OnceLock<BrowserFontMetric> = OnceLock::new();
 
 impl TypstRenderer {
     #[allow(clippy::await_holding_lock)]
@@ -178,7 +178,10 @@ impl TypstRenderer {
 mod tests {
     #![allow(clippy::await_holding_lock)]
 
-    use std::{collections::HashMap, sync::Mutex};
+    use std::{
+        collections::HashMap,
+        sync::{Mutex, OnceLock},
+    };
 
     use reflexo_vec2canvas::ExportFeature;
     use send_wrapper::SendWrapper;
@@ -218,8 +221,8 @@ mod tests {
         const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
     }
 
-    static RENDERER: Mutex<once_cell::sync::OnceCell<SendWrapper<Mutex<TypstRenderer>>>> =
-        Mutex::new(once_cell::sync::OnceCell::new());
+    static RENDERER: Mutex<OnceLock<SendWrapper<Mutex<TypstRenderer>>>> =
+        Mutex::new(OnceLock::new());
 
     async fn render_test_template(point: &str, artifact: &[u8], format: &str) {
         super::FONT_METRICS.get_or_init(super::BrowserFontMetric::new_test);

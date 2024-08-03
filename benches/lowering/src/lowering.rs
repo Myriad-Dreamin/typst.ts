@@ -1,17 +1,17 @@
 use std::sync::{Arc, Mutex};
 
 use divan::Bencher;
-use once_cell::sync::Lazy;
 use reflexo_typst::{
     CompileDriver as CompileDriverT, Compiler, PureCompiler, ShadowApiExt, TypstDocument,
     TypstSystemWorld,
 };
 use reflexo_typst2vec::pass::{IncrTypst2VecPass, Typst2VecPass};
+use std::sync::LazyLock;
 use typst_ts_cli::CompileOnceArgs;
 
-type CompileDriver = Lazy<Mutex<CompileDriverT<PureCompiler<TypstSystemWorld>>>>;
+type CompileDriver = LazyLock<Mutex<CompileDriverT<PureCompiler<TypstSystemWorld>>>>;
 
-static TEST_COMPILER: CompileDriver = once_cell::sync::Lazy::new(|| {
+static TEST_COMPILER: CompileDriver = LazyLock::new(|| {
     Mutex::new(typst_ts_cli::compile::create_driver(CompileOnceArgs {
         workspace: "/".to_owned(),
         entry: "/main.typ".to_owned(),
@@ -21,8 +21,8 @@ static TEST_COMPILER: CompileDriver = once_cell::sync::Lazy::new(|| {
 
 const TEST_FILE: &str = include_str!("../../../fuzzers/corpora/math/undergradmath.typ");
 
-static TEST_DOC: Lazy<Arc<TypstDocument>> =
-    once_cell::sync::Lazy::new(|| compile(&TEST_COMPILER, TEST_FILE));
+static TEST_DOC: LazyLock<Arc<TypstDocument>> =
+    LazyLock::new(|| compile(&TEST_COMPILER, TEST_FILE));
 
 fn compile(driver: &CompileDriver, src: &str) -> Arc<TypstDocument> {
     let mut driver = driver.lock().unwrap();
@@ -112,7 +112,7 @@ typst_ts_bench_lowering  fastest       │ slowest       │ median        │ m
  */
 
 #[cfg(feature = "the-thesis")]
-static THE_THESIS_COMPILER: CompileDriver = once_cell::sync::Lazy::new(|| {
+static THE_THESIS_COMPILER: CompileDriver = std::sync::LazyLock::new(|| {
     use std::path::Path;
     use typst_ts_cli::FontArgs;
     let the_thesis_path =

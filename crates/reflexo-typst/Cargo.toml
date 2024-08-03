@@ -21,8 +21,6 @@ comemo.workspace = true
 ecow.workspace = true
 fxhash.workspace = true
 
-once_cell.workspace = true
-
 serde.workspace = true
 serde_json.workspace = true
 log.workspace = true

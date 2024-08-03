@@ -39,7 +39,7 @@ pub struct IncrDomDocClient {
     /// underlying communication client model
     client: Option<Arc<Mutex<IncrDocClient>>>,
     tmpl: XmlFactory,
-    stub: once_cell::sync::OnceCell<Element>,
+    stub: std::sync::OnceLock<Element>,
     /// Expected exact state of the current DOM.
     /// Initially it is None meaning no any page is rendered.
     doc_view: Vec<DomPage>,

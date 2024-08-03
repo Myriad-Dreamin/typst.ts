@@ -12,7 +12,6 @@ repository.workspace = true
 
 comemo.workspace = true
 ecow.workspace = true
-once_cell.workspace = true
 parking_lot.workspace = true
 instant.workspace = true
 wasm-bindgen = { workspace = true, optional = true }

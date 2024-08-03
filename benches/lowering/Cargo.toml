@@ -11,7 +11,6 @@ repository.workspace = true
 [dependencies]
 divan = "0.1.3"
 typst.workspace = true
-once_cell.workspace = true
 reflexo-typst2vec.workspace = true
 reflexo-typst = { workspace = true, features = [
     "flat-vector",

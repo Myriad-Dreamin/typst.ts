@@ -14,7 +14,6 @@ typst.workspace = true
 reflexo.workspace = true
 reflexo-vfs.workspace = true
 parking_lot.workspace = true
-once_cell.workspace = true
 ecow.workspace = true
 log.workspace = true
 chrono.workspace = true

@@ -1,4 +1,4 @@
-use once_cell::sync::Lazy;
+use std::sync::LazyLock;
 
 use super::diag::DiagnosticFormat;
 use crate::typst::prelude::*;
@@ -8,11 +8,11 @@ pub struct FeatureSlot(u16);
 
 /// The global feature allocator.
 /// already used: 1
-static ALLOCATOR: Lazy<std::sync::atomic::AtomicU16> =
-    Lazy::new(|| std::sync::atomic::AtomicU16::new(1));
+static ALLOCATOR: LazyLock<std::sync::atomic::AtomicU16> =
+    LazyLock::new(|| std::sync::atomic::AtomicU16::new(1));
 
 #[derive(Debug, Default)]
-pub struct LazyFeatureSlot(once_cell::sync::OnceCell<FeatureSlot>);
+pub struct LazyFeatureSlot(std::sync::OnceLock<FeatureSlot>);
 
 impl From<&LazyFeatureSlot> for FeatureSlot {
     fn from(slot: &LazyFeatureSlot) -> Self {
@@ -85,7 +85,7 @@ pub struct BuiltinFeature<T>(LazyFeatureSlot, std::marker::PhantomData<T>);
 impl<T> BuiltinFeature<T> {
     pub const fn new() -> Self {
         Self(
-            LazyFeatureSlot(once_cell::sync::OnceCell::new()),
+            LazyFeatureSlot(std::sync::OnceLock::new()),
             std::marker::PhantomData,
         )
     }
