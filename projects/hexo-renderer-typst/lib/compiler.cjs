@@ -8,12 +8,13 @@ class Compiler {
     const fonts = path.resolve(this.baseDir, 'fonts');
     const assetsFonts = path.resolve(this.baseDir, 'assets/fonts');
     const assetFonts = path.resolve(this.baseDir, 'asset/fonts');
-    console.log('[typst] using fonts in', path.resolve(this.baseDir, '{fonts,assets/fonts,asset/fonts}'));
+    console.log(
+      '[typst] using fonts in',
+      path.resolve(this.baseDir, '{fonts,assets/fonts,asset/fonts}'),
+    );
     const compileArgs = {
       workspace: this.baseDir,
-      fontArgs: [
-        { fontPaths: [fonts, assetsFonts, assetFonts] }
-      ],
+      fontArgs: [{ fontPaths: [fonts, assetsFonts, assetFonts] }],
       // todo: move this to session after we fixed the bug
       inputs: { 'x-target': 'web' },
     };
@@ -23,7 +24,7 @@ class Compiler {
 
   title(path) {
     return this.base.compile({
-        mainFilePath: path,
+      mainFilePath: path,
     }).result.title;
   }
 
@@ -31,7 +32,24 @@ class Compiler {
     try {
       return this.dyn.vector({
         mainFilePath: path,
-    });
+      });
+    } catch (e) {
+      console.log(e);
+      throw e;
+    }
+  }
+
+  query(path, selector, field = undefined) {
+    try {
+      return this.base.query(
+        {
+          mainFilePath: path,
+        },
+        {
+          selector,
+          field,
+        },
+      );
     } catch (e) {
       console.log(e);
       throw e;
