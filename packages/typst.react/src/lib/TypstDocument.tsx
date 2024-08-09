@@ -17,6 +17,8 @@ const htmlLayerCss = `
 }
 
 .typst-html-semantics span {
+  color: transparent;
+  font-family: monospace;
   transform-origin: left top;
   position: absolute;
   display: inline-block;
