@@ -6,16 +6,16 @@ const path = require('path');
 const fs = require('fs');
 
 const Compiler = require('./lib/compiler.cjs');
-const compiler = new Compiler(hexo);
+export const compiler = new Compiler(hexo);
 
 const Renderer = require('./lib/renderer.cjs');
-const renderer = new Renderer(hexo, compiler);
+export const renderer = new Renderer(hexo, compiler);
 
 const Processor = require('./lib/processor.cjs');
-const processor = new Processor(hexo, compiler);
+export const processor = new Processor(hexo, compiler);
 
 const Watcher = require('./lib/watcher.cjs');
-const watcher = new Watcher(hexo, compiler);
+export const watcher = new Watcher(hexo, compiler);
 
 function render(data, options) {
   return renderer.render(data, options);
