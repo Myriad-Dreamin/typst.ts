@@ -47,19 +47,20 @@ exclude = ["projects"]
 
 [profile.release]
 opt-level = 3
-debug = true
-incremental = true
-lto = "thin"
-
-[profile.release-stripped]
-inherits = "release"
 lto = "fat"
 debug = false
 strip = true
 
+[profile.relwithdebinfo]
+inherits = "release"
+lto = "thin"
+debug = true
+strip = false
+
 [profile.release-ci]
 inherits = "release"
 opt-level = 1
+incremental = true
 debug = false
 strip = true
 
