@@ -250,4 +250,4 @@ See #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.t
 + #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/all-in-one.html")[All-in-one (Simplified) JavaScript Library]
 + #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compilers.html")[Compilers]
 + #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/renderers.html")[Renderers]
-+ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/trouble-shooting.html")[Troble shooting]
++ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/trouble-shooting.html")[Trouble shooting]
