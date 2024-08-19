@@ -85,6 +85,7 @@ pub mod eval;
 mod export;
 pub mod features;
 pub mod query;
+pub mod task;
 mod utils;
 
 /// font things about compiler.
@@ -123,6 +124,7 @@ pub use export::*;
 
 use core::fmt;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use crate::typst::prelude::*;
 use ::typst::{
@@ -237,56 +239,79 @@ impl<'a> fmt::Display for CompileReportMsg<'a> {
     }
 }
 
-#[derive(Clone)]
-pub struct CompiledArtifact<F: CompilerFeat> {
-    pub world: Arc<CompilerWorld<F>>,
-    pub compile_tick: usize,
-    pub doc: SourceResult<Arc<Document>>,
-    /// Used env
-    pub env: CompileEnv,
-    pub success_doc: Option<Arc<Document>>,
+type CompileRawResult = Deferred<(SourceResult<Arc<TypstDocument>>, CompileEnv)>;
+type DocState = std::sync::OnceLock<CompileRawResult>;
+
+/// A signal that possibly triggers an export.
+///
+/// Whether to export depends on the current state of the document and the user
+/// settings.
+#[derive(Debug, Clone, Copy)]
+pub struct ExportSignal {
+    /// Whether the revision is annotated by memory events.
+    pub by_mem_events: bool,
+    /// Whether the revision is annotated by file system events.
+    pub by_fs_events: bool,
+    /// Whether the revision is annotated by entry update.
+    pub by_entry_update: bool,
 }
 
-type UsingCompiler<F> = CompileReporter<PureCompiler<CompilerWorld<F>>, CompilerWorld<F>>;
-type CompileRawResult = Deferred<(SourceResult<Arc<Document>>, CompileEnv)>;
-type DocState<F> = QueryRef<CompileRawResult, (), (UsingCompiler<F>, CompileEnv)>;
-
 pub struct CompileSnapshot<F: CompilerFeat> {
-    /// The compiler-thread local logical tick when the snapshot is taken.
-    pub compile_tick: usize,
+    /// The export signal for the document.
+    pub flags: ExportSignal,
     /// Using env
     pub env: CompileEnv,
     /// Using world
     pub world: Arc<CompilerWorld<F>>,
     /// Compiling the document.
-    doc_state: Arc<DocState<F>>,
+    doc_state: Arc<DocState>,
     /// The last successfully compiled document.
-    pub success_doc: Option<Arc<Document>>,
+    pub success_doc: Option<Arc<TypstDocument>>,
 }
 
 impl<F: CompilerFeat + 'static> CompileSnapshot<F> {
-    pub fn start(&self) -> &CompileRawResult {
-        let res = self.doc_state.compute_with_context(|(mut c, mut env)| {
+    fn start(&self) -> &CompileRawResult {
+        self.doc_state.get_or_init(|| {
             let w = self.world.clone();
-            Ok(Deferred::new(move || {
-                let res = c.compile(&w, &mut env);
+            let mut env = self.env.clone();
+            Deferred::new(move || {
+                let w = w.as_ref();
+                let mut c = std::marker::PhantomData;
+                let res = c.ensure_main(w).and_then(|_| c.compile(w, &mut env));
                 (res, env)
-            }))
-        });
-        res.ok().unwrap()
+            })
+        })
     }
 
-    pub fn doc(&self) -> SourceResult<Arc<Document>> {
-        self.start().wait().0.clone()
+    pub fn task(mut self, inputs: TaskInputs) -> Self {
+        'check_changed: {
+            if let Some(entry) = &inputs.entry {
+                if *entry != self.world.entry_state() {
+                    break 'check_changed;
+                }
+            }
+            if let Some(inputs) = &inputs.inputs {
+                if inputs.clone() != self.world.inputs() {
+                    break 'check_changed;
+                }
+            }
+
+            return self;
+        };
+
+        self.world = Arc::new(self.world.task(inputs));
+        self.doc_state = Arc::new(OnceLock::new());
+
+        self
     }
 
     pub fn compile(&self) -> CompiledArtifact<F> {
         let (doc, env) = self.start().wait().clone();
         CompiledArtifact {
+            signal: self.flags,
             world: self.world.clone(),
-            compile_tick: self.compile_tick,
-            doc,
             env,
+            doc,
             success_doc: self.success_doc.clone(),
         }
     }
@@ -295,12 +320,45 @@ impl<F: CompilerFeat + 'static> CompileSnapshot<F> {
 impl<F: CompilerFeat> Clone for CompileSnapshot<F> {
     fn clone(&self) -> Self {
         Self {
-            compile_tick: self.compile_tick,
+            flags: self.flags,
             env: self.env.clone(),
             world: self.world.clone(),
             doc_state: self.doc_state.clone(),
             success_doc: self.success_doc.clone(),
         }
+    }
+}
+
+pub struct CompiledArtifact<F: CompilerFeat> {
+    /// All the export signal for the document.
+    pub signal: ExportSignal,
+    /// Used world
+    pub world: Arc<CompilerWorld<F>>,
+    /// Used env
+    pub env: CompileEnv,
+    pub doc: SourceResult<Arc<TypstDocument>>,
+    success_doc: Option<Arc<TypstDocument>>,
+}
+
+impl<F: CompilerFeat> Clone for CompiledArtifact<F> {
+    fn clone(&self) -> Self {
+        Self {
+            signal: self.signal,
+            world: self.world.clone(),
+            env: self.env.clone(),
+            doc: self.doc.clone(),
+            success_doc: self.success_doc.clone(),
+        }
+    }
+}
+
+impl<F: CompilerFeat> CompiledArtifact<F> {
+    pub fn success_doc(&self) -> Option<Arc<TypstDocument>> {
+        self.doc
+            .as_ref()
+            .ok()
+            .cloned()
+            .or_else(|| self.success_doc.clone())
     }
 }
 

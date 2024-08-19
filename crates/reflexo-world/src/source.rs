@@ -80,7 +80,7 @@ pub struct SourceState {
 
 impl SourceState {
     pub fn commit_impl(self, state: &mut SharedState<SourceCache>) {
-        log::info!("drop source db revision {}", self.revision);
+        log::debug!("drop source db revision {}", self.revision);
 
         if let Ok(slots) = Arc::try_unwrap(self.slots) {
             // todo: utilize the committed revision is not zero
@@ -91,7 +91,7 @@ impl SourceState {
                 return;
             }
 
-            log::info!("committing source db revision {}", self.revision);
+            log::debug!("committing source db revision {}", self.revision);
             state.committed_revision = Some(self.revision.get());
             state.cache_entries = slots.into_inner();
             state.gc();
