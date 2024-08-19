@@ -834,10 +834,17 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                 relative_to_self,
                 || {
                     let bbox = shape.geometry.bbox_size();
-                    ir::Transform::from_scale(
-                        ir::Scalar(bbox.x.to_f32()),
-                        ir::Scalar(bbox.y.to_f32()),
-                    )
+
+                    // Edge cases for strokes.
+                    let (mut x, mut y) = (bbox.x.to_f32(), bbox.y.to_f32());
+                    if x == 0.0 {
+                        x = 1.0;
+                    }
+                    if y == 0.0 {
+                        y = 1.0;
+                    }
+
+                    ir::Transform::from_scale(ir::Scalar(x), ir::Scalar(y))
                 },
                 false,
                 is_gradient,
