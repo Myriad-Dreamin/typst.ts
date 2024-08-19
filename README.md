@@ -60,7 +60,7 @@ Build a server for compilation with [Compiler Service](https://myriad-dreamin.gi
 
 ##### <ins>Serverless</ins> client-side rendering
 
-Example Application: [single-file](https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/examples/compiler.html)
+Example Application: [single-file](https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/preview.html)
 
 Run the entire typst directly in browser, like [typst.app](https://typst.app).
 

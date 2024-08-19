@@ -1,0 +1,1 @@
+*Claim: the Typst compiling functions is provided by official #link("https://github.com/typst/typst")[typst]*
