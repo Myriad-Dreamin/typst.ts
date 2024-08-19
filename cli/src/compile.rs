@@ -1,15 +1,17 @@
 use std::borrow::Cow;
 use std::io::{self, Read};
 use std::path::Path;
+use std::sync::Arc;
 
 use reflexo_typst::config::entry::{EntryOpts, MEMORY_MAIN_ENTRY};
 use reflexo_typst::config::CompileOpts;
 use reflexo_typst::features::{FeatureSet, DIAG_FMT_FEATURE};
 use reflexo_typst::{exporter_builtins::GroupExporter, path::PathClean};
 use reflexo_typst::{
-    CompileActor, CompileDriver, CompileExporter, CompileServerOpts, CompileSnapshot,
-    CompileStarter, DynExporter, DynamicLayoutCompiler, EntryManager, EntryReader, PureCompiler,
-    ShadowApi, SystemCompilerFeat, TypstSystemUniverse, TypstSystemWorld,
+    CompilationHandle, CompileActor, CompileDriver, CompileExporter, CompileServerOpts,
+    CompileStarter, CompiledArtifact, CompilerFeat, ConsoleDiagReporter, DynExporter,
+    DynamicLayoutCompiler, EntryManager, EntryReader, GenericExporter, PureCompiler, ShadowApi,
+    SystemCompilerFeat, TypstSystemUniverse, TypstSystemWorld,
 };
 use tokio::sync::mpsc;
 use typst::diag::{FileError, FileResult};
@@ -144,7 +146,7 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
     let verse = driver.universe;
     // todo: when there is only dynamic export, it is not need to compile first.
 
-    let mut exporters: Vec<DynExporter<CompileSnapshot<SystemCompilerFeat>>> = vec![];
+    let mut exporters: Vec<DynExporter<CompiledArtifact<SystemCompilerFeat>>> = vec![];
 
     if !exporter.is_empty() {
         let driver = CompileExporter::new(std::marker::PhantomData).with_exporter(exporter);
@@ -156,20 +158,24 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> !
         exporters.push(Box::new(CompileStarter::new(driver)));
     }
 
+    let handle = Arc::new(CompileHandler {
+        exporter: GroupExporter::new(exporters),
+    });
+
     let actor = CompileActor::new_with(
         verse,
         intr_tx,
         intr_rx,
         CompileServerOpts {
-            exporter: GroupExporter::new(exporters),
+            compile_handle: handle,
             feature_set,
             ..Default::default()
         },
     )
-    .with_enable_watch(args.watch);
+    .with_watch(args.watch);
 
     utils::async_continue(async move {
-        utils::logical_exit(actor.run_and_wait().await);
+        utils::logical_exit(actor.run().await);
     })
 }
 
@@ -184,4 +190,34 @@ fn read_from_stdin() -> FileResult<Vec<u8>> {
     }
 
     Ok(buf)
+}
+
+pub struct CompileHandler<F: CompilerFeat> {
+    exporter: GroupExporter<CompiledArtifact<F>>,
+}
+
+impl<F: CompilerFeat + 'static> CompilationHandle<F> for CompileHandler<F> {
+    fn status(&self, _revision: usize, _rep: reflexo_typst::CompileReport) {}
+
+    fn notify_compile(
+        &self,
+        compiled: &reflexo_typst::CompiledArtifact<F>,
+        rep: reflexo_typst::CompileReport,
+    ) {
+        use reflexo_typst::Exporter;
+        if let reflexo_typst::CompileReport::CompileSuccess(t, ..) = rep {
+            let curr = reflexo_typst::time::now();
+            let errs = self
+                .exporter
+                .export(compiled.world.as_ref(), Arc::new(compiled.clone()));
+            if let Err(errs) = errs {
+                let elapsed = curr.elapsed().unwrap_or_default();
+                let rep = reflexo_typst::CompileReport::ExportError(t, errs, elapsed);
+                let _ = ConsoleDiagReporter::default().export(
+                    compiled.world.as_ref(),
+                    Arc::new((compiled.env.features.clone(), rep.clone())),
+                );
+            }
+        }
+    }
 }

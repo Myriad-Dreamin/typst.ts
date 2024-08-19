@@ -4,7 +4,10 @@ use reflexo_typst2vec::pass::Typst2VecPass;
 use reflexo_world::{CompilerFeat, CompilerWorld};
 use typst::{diag::SourceResult, World};
 
-use crate::vector::ir::{LayoutRegion, LayoutRegionNode};
+use crate::{
+    vector::ir::{LayoutRegion, LayoutRegionNode},
+    CompiledArtifact,
+};
 
 #[cfg(feature = "dynamic-layout")]
 mod dynamic_layout;
@@ -35,10 +38,10 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> CompileStarter<F, C> {
     }
 }
 
-impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>> + Clone> Exporter<CompileSnapshot<F>>
+impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>> + Clone> Exporter<CompiledArtifact<F>>
     for CompileStarter<F, C>
 {
-    fn export(&self, _world: &dyn World, output: Arc<CompileSnapshot<F>>) -> SourceResult<()> {
+    fn export(&self, _world: &dyn World, output: Arc<CompiledArtifact<F>>) -> SourceResult<()> {
         self.compiler
             .clone()
             .compile(&output.world, &mut output.env.clone())
@@ -81,7 +84,7 @@ impl<C: Compiler> CompileExporter<C> {
 impl<F: CompilerFeat + 'static, C: Compiler> Exporter<CompileSnapshot<F>> for CompileExporter<C> {
     /// Export a typst document using `reflexo_typst::DocumentExporter`.
     fn export(&self, world: &dyn World, output: Arc<CompileSnapshot<F>>) -> SourceResult<()> {
-        if let Ok(doc) = output.doc() {
+        if let Ok(doc) = output.compile().doc {
             self.exporter.export(world, doc)?;
         }
 
