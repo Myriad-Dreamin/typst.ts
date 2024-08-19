@@ -85,7 +85,6 @@ pub mod eval;
 mod export;
 pub mod features;
 pub mod query;
-pub mod task;
 mod utils;
 
 /// font things about compiler.
@@ -113,6 +112,8 @@ pub use watch::*;
 
 #[cfg(feature = "system-watch")]
 mod compile;
+#[cfg(feature = "system-compile")]
+pub mod task;
 #[cfg(feature = "system-compile")]
 pub use diag::ConsoleDiagReporter;
 #[cfg(feature = "system-compile")]
