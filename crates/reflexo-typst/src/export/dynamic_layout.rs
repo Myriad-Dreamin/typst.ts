@@ -5,6 +5,7 @@ use reflexo_typst2vec::IntoTypst;
 use reflexo_vec2svg::{DynamicLayoutSvgExporter, MultiVecDocument};
 use reflexo_world::TaskInputs;
 use typst::foundations::IntoValue;
+use typst::utils::LazyHash;
 use typst::{diag::SourceResult, World};
 
 use crate::typst::prelude::*;
@@ -177,7 +178,7 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<F
                     dict.insert("x-page-width".into(), current_width.into_value());
                     dict.insert("x-target".into(), self.target.clone().into_value());
 
-                    Arc::new(Prehashed::new(dict))
+                    Arc::new(LazyHash::new(dict))
                 }),
                 ..Default::default()
             });
