@@ -2985,7 +2985,7 @@ dependencies = [
  "svgtypes 0.13.0",
  "tiny-skia",
  "tiny-skia-path",
- "ttf-parser 0.20.0",
+ "ttf-parser 0.21.1",
  "typst",
  "xmlparser",
 ]
