@@ -8,7 +8,7 @@ pub use reflexo_typst::*;
 use core::fmt;
 use std::{fmt::Write, path::Path, sync::Arc};
 
-use comemo::Prehashed;
+use ::typst::utils::LazyHash;
 use error::TypstSourceDiagnostic;
 use font::cache::FontInfoCache;
 use js_sys::{Array, JsString, Uint32Array, Uint8Array};
@@ -157,7 +157,7 @@ impl TypstCompiler {
             .collect();
         self.driver
             .universe_mut()
-            .increment_revision(|verse| verse.set_inputs(Arc::new(Prehashed::new(inputs))));
+            .increment_revision(|verse| verse.set_inputs(Arc::new(LazyHash::new(inputs))));
         Ok(())
     }
 
@@ -220,6 +220,8 @@ impl TypstCompiler {
 
         // export ast
         let src = world.main();
+        let src = world.source(src).unwrap();
+
         let mut cursor = std::io::Cursor::new(Vec::new());
         reflexo_typst::dump_ast(
             &src.id().vpath().as_rootless_path().display().to_string(),
@@ -348,7 +350,7 @@ impl TypstCompiler {
         let mapped: Vec<_> = elements
             .into_iter()
             .filter_map(|c| match &field {
-                Some(field) => c.get_by_name(field),
+                Some(field) => c.get_by_name(field).ok(),
                 _ => Some(c.into_value()),
             })
             .collect();
