@@ -1,6 +1,6 @@
 use comemo::Track;
 use typst::{
-    diag::{EcoString, StrResult},
+    diag::{EcoString, HintedString, StrResult},
     eval::{eval_string, EvalMode},
     foundations::{Content, LocatableSelector, Scope},
     model::Document,
@@ -26,7 +26,8 @@ pub fn retrieve(world: &dyn World, selector: &str, document: &Document) -> StrRe
         }
         message
     })?
-    .cast::<LocatableSelector>()?;
+    .cast::<LocatableSelector>()
+    .map_err(|e| EcoString::from(format!("failed to cast: {}", e.message())))?;
 
     Ok(document
         .introspector
