@@ -45,6 +45,7 @@ pub use exporter::ast::{dump_ast, AstExporter};
 
 pub use exporter::json::JsonExporter;
 
+use ::typst::engine::Sink;
 #[cfg(feature = "pdf")]
 pub use exporter::pdf::PdfDocExporter;
 #[cfg(feature = "pdf")]
@@ -131,7 +132,6 @@ use std::sync::OnceLock;
 use crate::typst::prelude::*;
 use ::typst::{
     diag::{At, Hint, SourceDiagnostic, SourceResult},
-    eval::Tracer,
     foundations::Content,
     model::Document,
     syntax::Span,
@@ -141,7 +141,7 @@ use ::typst::{
 
 #[derive(Clone, Default)]
 pub struct CompileEnv {
-    pub tracer: Option<Tracer>,
+    pub sink: Option<Sink>,
     pub features: Arc<FeatureSet>,
 }
 
@@ -405,8 +405,8 @@ pub trait Compiler {
     ) -> SourceResult<Arc<Document>> {
         self.reset()?;
 
-        let res = match env.tracer.as_mut() {
-            Some(tracer) => ::typst::compile(world),
+        let res = match env.sink.as_mut() {
+            Some(sink) => ::typst::compile(world),
             None => ::typst::compile(world),
         };
 
