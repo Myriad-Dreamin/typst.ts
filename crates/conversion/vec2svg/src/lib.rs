@@ -115,6 +115,7 @@ pub fn render_svg_html<Feat: ExportFeature>(output: &TypstDocument) -> String {
     html.push(r#"<!DOCTYPE html><html><head><meta charset="utf-8" /><title>"#.into());
     html.push(SvgText::Plain(
         output
+            .info
             .title
             .clone()
             .map(|s| s.to_string())
