@@ -410,7 +410,7 @@ pub trait Compiler {
         };
 
         // compile document
-        res.map(Arc::new)
+        res.output.map(Arc::new)
     }
 
     /// With **the compilation state**, query the matches for the selector.
