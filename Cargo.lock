@@ -2959,7 +2959,6 @@ dependencies = [
  "js-sys",
  "log",
  "reflexo",
- "reflexo-typst",
  "reflexo-typst2vec",
  "reflexo-vec2bbox",
  "reflexo-vec2canvas",
@@ -4338,8 +4337,8 @@ checksum = "2b3061f8d268e8eec7481c9ab24540455cb4912983c49aae38fa6e8bf8ef4d9c"
 
 [[package]]
 name = "typst-dev-assets"
-version = "0.11.0"
-source = "git+https://github.com/typst/typst-dev-assets?rev=e0ef7ad#e0ef7ad46f28a440c41bc8e78563ace86cc02678"
+version = "0.11.1"
+source = "git+https://github.com/typst/typst-dev-assets?tag=v0.11.1#35caed3a870d46e827cffaa9dc450e38bede2a37"
 
 [[package]]
 name = "typst-ide"
