@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
-use reflexo_typst::hash::Fingerprint;
-use reflexo_typst::vector::ir::{self, Module, Page, TransformedRef, VecItem};
-use reflexo_typst::vector::{incr::IncrDocClient, vm::RenderVm};
+use reflexo::hash::Fingerprint;
+use reflexo::vector::ir::{self, Module, Page, TransformedRef, VecItem};
+use reflexo::vector::{incr::IncrDocClient, vm::RenderVm};
 use reflexo_vec2canvas::BBoxAt;
 use reflexo_vec2svg::{SvgExporter, SvgTask, SvgText};
 use web_sys::{wasm_bindgen::JsCast, Element, SvgGraphicsElement};

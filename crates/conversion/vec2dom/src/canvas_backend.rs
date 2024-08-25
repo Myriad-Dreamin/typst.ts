@@ -1,8 +1,7 @@
-use reflexo_typst::error::prelude::ZResult;
-use reflexo_typst::vector::ir::{Module, Page};
-use reflexo_typst::vector::vm::RenderVm;
+use reflexo::error::prelude::*;
+use reflexo::vector::ir::{self, Module, Page, Point, Scalar};
+use reflexo::vector::vm::RenderVm;
 use reflexo_vec2canvas::{BBoxAt, CanvasElem, CanvasNode, CanvasOp, CanvasTask, ExportFeature};
-use reflexo_vec2svg::ir::{self, Point, Scalar};
 
 use crate::dom::*;
 

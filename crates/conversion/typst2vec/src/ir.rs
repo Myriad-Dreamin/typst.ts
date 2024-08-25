@@ -1,16 +1,9 @@
 use std::sync::Arc;
 
-use reflexo::hash::Fingerprint;
+use reflexo::hash::{item_hash128, Fingerprint};
 pub use reflexo::vector::ir::*;
-
 use ttf_parser::GlyphId;
 use typst::text::Font;
-
-// use super::{preludes::*, ImageItem, PathStyle};
-use crate::{
-    hash::item_hash128,
-    // vector::vm::{GroupContext, TransformContext},
-};
 
 /// A glyph item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]

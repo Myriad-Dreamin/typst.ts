@@ -4,11 +4,9 @@ use std::{
 };
 
 use js_sys::Reflect;
-use reflexo::{
-    error::prelude::*,
-    hash::Fingerprint,
-    vector::ir::{FontItem, FontRef, LayoutRegionNode, Module, Page, VecItem},
-};
+use reflexo::error::prelude::*;
+use reflexo::hash::Fingerprint;
+use reflexo::vector::ir::{FontItem, FontRef, LayoutRegionNode, Module, Page, VecItem};
 use reflexo_typst2vec::incr::{IncrDocClient, IncrDocServer};
 use reflexo_vec2canvas::{CanvasElem, CanvasOp};
 use wasm_bindgen::prelude::*;

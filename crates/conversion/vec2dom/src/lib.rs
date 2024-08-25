@@ -5,14 +5,14 @@ mod incr;
 mod semantics_backend;
 mod svg_backend;
 
-use comemo::Prehashed;
-use reflexo_typst::hash::Fingerprint;
-use reflexo_typst::vector::ir::{
-    self, Abs, Axes, FontItem, GlyphRef, Ratio, Rect, Scalar, Transform,
-};
-use reflexo_typst::vector::vm::{GroupContext, RenderVm, TransformContext};
 use std::ops::Deref;
 use std::sync::Arc;
+
+use comemo::Prehashed;
+use reflexo::hash::Fingerprint;
+use reflexo::vector::ir::{self, Abs, Axes, FontItem, GlyphRef, Ratio, Rect, Scalar, Transform};
+use reflexo::vector::vm::{GroupContext, RenderVm, TransformContext};
+use reflexo_typst2vec::ir::GlyphItem;
 use tiny_skia as sk;
 
 pub use crate::dom::DomPage;
@@ -139,15 +139,15 @@ impl From<BBoxBuilder> for BBox {
 
 /// Internal methods for [`BBoxBuilder`].
 impl BBoxBuilder {
-    pub fn render_glyph_inner(&mut self, pos: Scalar, _id: &GlyphRef, glyph: &ir::GlyphItem) {
+    pub fn render_glyph_inner(&mut self, pos: Scalar, _id: &GlyphRef, glyph: &GlyphItem) {
         let pos = ir::Point::new(pos, Scalar(0.));
         match glyph {
-            ir::GlyphItem::Outline(outline) => {
+            GlyphItem::Outline(outline) => {
                 let path = PathRepr::from_path_data(&outline.d).unwrap();
                 self.inner
                     .push((pos, BBox::new(BBoxRepr::Node(Box::new(path)))))
             }
-            ir::GlyphItem::Image(image_item) => self.inner.push((
+            GlyphItem::Image(image_item) => self.inner.push((
                 pos,
                 BBox::new(BBoxRepr::Transform((
                     image_item.ts,
