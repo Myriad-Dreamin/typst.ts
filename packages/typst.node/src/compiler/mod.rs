@@ -16,6 +16,7 @@ use reflexo_typst::vfs::{system::SystemAccessModel, Vfs};
 use reflexo_typst::{
     Bytes, CompileDriver, PureCompiler, TypstDict, TypstSystemUniverse, TypstSystemWorld,
 };
+use typst::utils::LazyHash;
 
 /// A nullable boxed compiler wrapping.
 ///
@@ -133,8 +134,8 @@ pub fn create_driver(
 }
 
 /// Convert the input pairs to a dictionary.
-fn create_inputs(inputs: HashMap<String, String>) -> Arc<Prehashed<TypstDict>> {
-    Arc::new(Prehashed::new(
+fn create_inputs(inputs: HashMap<String, String>) -> Arc<LazyHash<TypstDict>> {
+    Arc::new(LazyHash::new(
         inputs
             .iter()
             .map(|(k, v)| (k.as_str().into(), v.as_str().into_value()))
