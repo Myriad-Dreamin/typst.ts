@@ -1,7 +1,7 @@
 [workspace.package]
 description = "Run Typst in JavaScriptWorld."
 authors = ["Typst.ts Developers", "The Typst Project Developers"]
-version = "0.5.0-rc6"
+version = "0.5.0-rc7"
 edition = "2021"
 readme = "README.md"
 license = "Apache-2.0"
@@ -187,23 +187,23 @@ vergen = { version = "8.3.1", features = [
 ] }
 
 # project core
-reflexo = { version = "0.5.0-rc6", default-features = false, path = "crates/reflexo" }
-reflexo-vfs = { version = "0.5.0-rc6", path = "crates/reflexo-vfs" }
-reflexo-world = { version = "0.5.0-rc6", path = "crates/reflexo-world" }
-reflexo-typst = { version = "0.5.0-rc6", default-features = false }
+reflexo = { version = "0.5.0-rc7", default-features = false, path = "crates/reflexo" }
+reflexo-vfs = { version = "0.5.0-rc7", path = "crates/reflexo-vfs" }
+reflexo-world = { version = "0.5.0-rc7", path = "crates/reflexo-world" }
+reflexo-typst = { version = "0.5.0-rc7", default-features = false }
 
 # conversions
-reflexo-typst2vec = { version = "0.5.0-rc6", path = "crates/conversion/typst2vec" }
-reflexo-vec2canvas = { version = "0.5.0-rc6", path = "crates/conversion/vec2canvas" }
-reflexo-vec2sema = { version = "0.5.0-rc6", path = "crates/conversion/vec2sema" }
-reflexo-vec2bbox = { version = "0.5.0-rc6", path = "crates/conversion/vec2bbox" }
+reflexo-typst2vec = { version = "0.5.0-rc7", path = "crates/conversion/typst2vec" }
+reflexo-vec2canvas = { version = "0.5.0-rc7", path = "crates/conversion/vec2canvas" }
+reflexo-vec2sema = { version = "0.5.0-rc7", path = "crates/conversion/vec2sema" }
+reflexo-vec2bbox = { version = "0.5.0-rc7", path = "crates/conversion/vec2bbox" }
 reflexo-vec2dom = { path = "crates/conversion/vec2dom" }
-reflexo-vec2svg = "0.5.0-rc6"
+reflexo-vec2svg = "0.5.0-rc7"
 
 # project components
-typst-ts-test-common = { version = "0.5.0-rc6", path = "tests/common" }
-typst-ts-dev-server = { version = "0.5.0-rc6", path = "server/dev" }
-typst-ts-cli = { version = "0.5.0-rc6", path = "cli" }
+typst-ts-test-common = { version = "0.5.0-rc7", path = "tests/common" }
+typst-ts-dev-server = { version = "0.5.0-rc7", path = "server/dev" }
+typst-ts-cli = { version = "0.5.0-rc7", path = "cli" }
 
 [patch.crates-io]
 reflexo-typst = { path = "crates/reflexo-typst" }
