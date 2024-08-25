@@ -24,6 +24,11 @@ impl Exporter<typst::model::Document, Vec<u8>> for PdfDocExporter {
     ) -> SourceResult<Vec<u8>> {
         // todo: ident option
 
-        Ok(typst_pdf::pdf(output.as_ref(), Smart::Auto, self.ctime))
+        Ok(typst_pdf::pdf(
+            output.as_ref(),
+            Smart::Auto,
+            self.ctime,
+            None,
+        ))
     }
 }
