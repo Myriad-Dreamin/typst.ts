@@ -46,6 +46,7 @@ web-sys = { workspace = true, features = [
 [features]
 default = []
 # "debug_repaint", "debug_repaint_svg", "debug_repaint_canvas"
+no-content-hint = ["reflexo-typst2vec/no-content-hint"]
 experimental-ligature = ["reflexo-typst/experimental-ligature"]
 aggresive-browser-rasterization = []
 debug_repaint = []

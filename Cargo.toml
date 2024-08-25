@@ -81,7 +81,7 @@ typst-syntax = "0.11.1"
 ttf-parser = "0.20.0"
 
 typst-assets = "0.11.1"
-typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", rev = "e0ef7ad" }
+typst-dev-assets = "0.11.1"
 
 # general
 anyhow = "1"
@@ -187,18 +187,18 @@ vergen = { version = "8.3.1", features = [
 ] }
 
 # project core
-reflexo = { version = "0.5.0-rc7", default-features = false, path = "crates/reflexo" }
+reflexo = { version = "0.5.0-rc7", path = "crates/reflexo", default-features = false }
 reflexo-vfs = { version = "0.5.0-rc7", path = "crates/reflexo-vfs" }
 reflexo-world = { version = "0.5.0-rc7", path = "crates/reflexo-world" }
-reflexo-typst = { version = "0.5.0-rc7", default-features = false }
+reflexo-typst = { version = "0.5.0-rc7", path = "crates/reflexo-typst", default-features = false }
 
 # conversions
 reflexo-typst2vec = { version = "0.5.0-rc7", path = "crates/conversion/typst2vec" }
 reflexo-vec2canvas = { version = "0.5.0-rc7", path = "crates/conversion/vec2canvas" }
 reflexo-vec2sema = { version = "0.5.0-rc7", path = "crates/conversion/vec2sema" }
 reflexo-vec2bbox = { version = "0.5.0-rc7", path = "crates/conversion/vec2bbox" }
-reflexo-vec2dom = { path = "crates/conversion/vec2dom" }
-reflexo-vec2svg = "0.5.0-rc7"
+reflexo-vec2dom = { version = "0.5.0-rc7", path = "crates/conversion/vec2dom" }
+reflexo-vec2svg = { version = "0.5.0-rc7", path = "crates/conversion/vec2svg" }
 
 # project components
 typst-ts-test-common = { version = "0.5.0-rc7", path = "tests/common" }
@@ -206,8 +206,6 @@ typst-ts-dev-server = { version = "0.5.0-rc7", path = "server/dev" }
 typst-ts-cli = { version = "0.5.0-rc7", path = "cli" }
 
 [patch.crates-io]
-reflexo-typst = { path = "crates/reflexo-typst" }
-reflexo-vec2svg = { path = "crates/conversion/vec2svg" }
 
 # typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }
 # typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }
