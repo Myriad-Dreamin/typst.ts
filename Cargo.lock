@@ -3243,6 +3243,7 @@ dependencies = [
  "log",
  "parking_lot",
  "reflexo",
+ "reflexo-typst-shim",
  "reflexo-vfs",
  "reqwest",
  "serde",

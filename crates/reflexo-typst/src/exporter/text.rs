@@ -40,7 +40,6 @@ impl FullTextDigest {
     fn export_item(f: &mut fmt::Formatter<'_>, item: &typst::layout::FrameItem) -> fmt::Result {
         #[cfg(not(feature = "no-content-hint"))]
         use std::fmt::Write;
-        use typst::introspection::Meta::*;
         use typst::layout::FrameItem::*;
         match item {
             Group(g) => Self::export_frame(f, &g.frame),

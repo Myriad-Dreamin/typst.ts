@@ -135,7 +135,7 @@ use ::typst::{
     foundations::Content,
     model::Document,
     syntax::Span,
-    util::Deferred,
+    utils::Deferred,
     World,
 };
 
@@ -406,8 +406,8 @@ pub trait Compiler {
         self.reset()?;
 
         let res = match env.tracer.as_mut() {
-            Some(tracer) => ::typst::compile(world, tracer),
-            None => ::typst::compile(world, &mut Tracer::default()),
+            Some(tracer) => ::typst::compile(world),
+            None => ::typst::compile(world),
         };
 
         // compile document
@@ -541,6 +541,6 @@ impl From<AtFile> for EcoString {
 mod tests {
     #[test]
     pub fn test_hash128() {
-        assert_eq!(typst::util::hash128(&0u32), reflexo::hash::hash128(&0u32));
+        assert_eq!(typst::utils::hash128(&0u32), reflexo::hash::hash128(&0u32));
     }
 }

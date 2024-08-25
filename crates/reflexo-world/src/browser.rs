@@ -30,7 +30,7 @@ unsafe impl Sync for ProxyRegistry {}
 impl TypstBrowserUniverse {
     pub fn new(
         root_dir: PathBuf,
-        inputs: Option<Arc<Prehashed<TypstDict>>>,
+        inputs: Option<Arc<LazyHash<TypstDict>>>,
         access_model: ProxyAccessModel,
         registry: ProxyRegistry,
         font_resolver: FontResolverImpl,

@@ -13,6 +13,7 @@ repository.workspace = true
 typst.workspace = true
 reflexo.workspace = true
 reflexo-vfs.workspace = true
+reflexo-typst-shim.workspace = true
 parking_lot.workspace = true
 ecow.workspace = true
 log.workspace = true

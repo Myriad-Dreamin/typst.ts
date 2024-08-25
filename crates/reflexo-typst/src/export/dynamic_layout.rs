@@ -178,7 +178,7 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<F
                     dict.insert("x-page-width".into(), current_width.into_value());
                     dict.insert("x-target".into(), self.target.clone().into_value());
 
-                    Arc::new(Prehashed::new(dict))
+                    Arc::new(LazyHash::new(dict))
                 }),
                 ..Default::default()
             });
