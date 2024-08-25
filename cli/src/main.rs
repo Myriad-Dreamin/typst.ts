@@ -114,7 +114,7 @@ pub fn query(args: QueryArgs) -> ! {
 
     exporter.push_front(Box::new(move |world: &dyn World, output: Arc<Document>| {
         if args.selector == "document_title" {
-            let title = output.title.clone().unwrap_or("null".into());
+            let title = output.info.title.clone().unwrap_or("null".into());
             let serialized = serialize(&title, "json").map_err(map_err)?;
             println!("{}", serialized);
             return Ok(());
@@ -137,7 +137,7 @@ fn query_repl(args: QueryReplArgs) -> ! {
     exit(0)
 }
 
-fn generate_completion(CompletionArgs { shell }: CompletionArgs) -> ! {
+fn generate_completion(CompletionArgs { shell }: CompletionArgs) {
     clap_complete::generate(
         shell,
         &mut get_cli(true),
