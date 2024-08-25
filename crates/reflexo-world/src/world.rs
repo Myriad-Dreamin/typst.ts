@@ -6,7 +6,6 @@ use std::{
 };
 
 use chrono::{DateTime, Datelike, Local};
-use comemo::Prehashed;
 use parking_lot::RwLock;
 use reflexo::ImmutPath;
 use reflexo_vfs::{notify::FilesystemEvent, Vfs};
@@ -15,6 +14,7 @@ use typst::{
     foundations::{Bytes, Datetime, Dict},
     syntax::{FileId, Source, Span, VirtualPath},
     text::{Font, FontBook},
+    utils::LazyHash,
     Library, World,
 };
 
@@ -80,7 +80,7 @@ impl<'a, F: CompilerFeat> Revising<'a, CompilerUniverse<F>> {
     }
 
     /// Set the inputs for the compiler.
-    pub fn set_inputs(&mut self, inputs: Arc<Prehashed<Dict>>) {
+    pub fn set_inputs(&mut self, inputs: Arc<LazyHash<Dict>>) {
         self.inner.inputs = inputs;
     }
 
@@ -103,7 +103,7 @@ pub struct CompilerUniverse<F: CompilerFeat> {
     /// The world forbids direct access to files outside this directory.
     entry: EntryState,
     /// Additional input arguments to compile the entry file.
-    inputs: Arc<Prehashed<Dict>>,
+    inputs: Arc<LazyHash<Dict>>,
     /// Whether to reparse the source files.
     do_reparse: bool,
 
@@ -130,7 +130,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
     /// + See [`crate::TypstBrowserUniverse::new`] for browser environment.
     pub fn new_raw(
         entry: EntryState,
-        inputs: Option<Arc<Prehashed<Dict>>>,
+        inputs: Option<Arc<LazyHash<Dict>>>,
         vfs: Vfs<F::AccessModel>,
         registry: F::Registry,
         font_resolver: Arc<F::FontResolver>,
@@ -159,7 +159,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
         self.do_reparse
     }
 
-    pub fn inputs(&self) -> Arc<Prehashed<Dict>> {
+    pub fn inputs(&self) -> Arc<LazyHash<Dict>> {
         self.inputs.clone()
     }
 
@@ -325,10 +325,10 @@ pub struct CompilerWorld<F: CompilerFeat> {
     /// The world forbids direct access to files outside this directory.
     entry: EntryState,
     /// Additional input arguments to compile the entry file.
-    inputs: Arc<Prehashed<Dict>>,
+    inputs: Arc<LazyHash<Dict>>,
 
     /// Provides library for typst compiler.
-    pub library: Arc<Prehashed<Library>>,
+    pub library: Arc<LazyHash<Library>>,
     /// Provides font management for typst compiler.
     pub font_resolver: Arc<F::FontResolver>,
     /// Provides package management for typst compiler.
@@ -361,7 +361,7 @@ impl<F: CompilerFeat> Drop for CompilerWorld<F> {
 #[derive(Default)]
 pub struct TaskInputs {
     pub entry: Option<EntryState>,
-    pub inputs: Option<Arc<Prehashed<Dict>>>,
+    pub inputs: Option<Arc<LazyHash<Dict>>>,
 }
 
 impl<F: CompilerFeat> CompilerWorld<F> {
@@ -383,7 +383,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         }
     }
 
-    pub fn inputs(&self) -> Arc<Prehashed<Dict>> {
+    pub fn inputs(&self) -> Arc<LazyHash<Dict>> {
         self.inputs.clone()
     }
 
@@ -461,7 +461,7 @@ impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
 
 impl<F: CompilerFeat> World for CompilerWorld<F> {
     /// The standard library.
-    fn library(&self) -> &Prehashed<Library> {
+    fn library(&self) -> &LazyHash<Library> {
         self.library.as_ref()
     }
 
@@ -477,7 +477,7 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
     }
 
     /// Try to access the specified file.
-    fn book(&self) -> &Prehashed<FontBook> {
+    fn book(&self) -> &LazyHash<FontBook> {
         self.font_resolver.font_book()
     }
 
@@ -628,10 +628,10 @@ impl<'a, F: CompilerFeat> codespan_reporting::files::Files<'a> for CompilerWorld
 }
 
 #[comemo::memoize]
-fn create_library(inputs: Arc<Prehashed<Dict>>) -> Arc<Prehashed<Library>> {
+fn create_library(inputs: Arc<LazyHash<Dict>>) -> Arc<LazyHash<Library>> {
     let lib = typst::Library::builder()
         .with_inputs(inputs.deref().deref().clone())
         .build();
 
-    Arc::new(Prehashed::new(lib))
+    Arc::new(LazyHash::new(lib))
 }

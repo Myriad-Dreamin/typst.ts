@@ -5,9 +5,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use comemo::Prehashed;
 use reflexo::debug_loc::DataSource;
-use typst::text::{Font, FontBook, FontInfo};
+use typst::{
+    text::{Font, FontBook, FontInfo},
+    utils::LazyHash,
+};
 
 use super::{BufferFontLoader, FontProfile, FontSlot, PartialFontBook};
 use crate::Bytes;
@@ -16,7 +18,7 @@ use crate::Bytes;
 /// It also reuse FontBook for font-related query.
 /// The index is the index of the font in the `FontBook.infos`.
 pub trait FontResolver {
-    fn font_book(&self) -> &Prehashed<FontBook>;
+    fn font_book(&self) -> &LazyHash<FontBook>;
     fn font(&self, idx: usize) -> Option<Font>;
 
     fn default_get_by_info(&self, info: &FontInfo) -> Option<Font> {
@@ -41,7 +43,7 @@ pub trait FontResolver {
 /// The default FontResolver implementation.
 pub struct FontResolverImpl {
     font_paths: Vec<PathBuf>,
-    book: Prehashed<FontBook>,
+    book: LazyHash<FontBook>,
     partial_book: Arc<Mutex<PartialFontBook>>,
     fonts: Vec<FontSlot>,
     profile: FontProfile,
@@ -57,7 +59,7 @@ impl FontResolverImpl {
     ) -> Self {
         Self {
             font_paths,
-            book: Prehashed::new(book),
+            book: LazyHash::new(book),
             partial_book,
             fonts,
             profile,
@@ -167,7 +169,7 @@ impl FontResolverImpl {
             font_slots.push(slot);
         }
 
-        self.book = Prehashed::new(book);
+        self.book = LazyHash::new(book);
         self.fonts = font_slots;
     }
 
@@ -177,7 +179,7 @@ impl FontResolverImpl {
 }
 
 impl FontResolver for FontResolverImpl {
-    fn font_book(&self) -> &Prehashed<FontBook> {
+    fn font_book(&self) -> &LazyHash<FontBook> {
         &self.book
     }
 
