@@ -1,9 +1,12 @@
+use comemo::{Track, TrackedMut};
 use std::borrow::Cow::{self, Owned};
 use std::cell::{RefCell, RefMut};
 use std::sync::Arc;
 
 use reflexo_typst::typst::prelude::*;
-use reflexo_typst::{CompileDriver, CompileReport, ConsoleDiagReporter, PureCompiler};
+use reflexo_typst::{
+    CompileDriver, CompileReport, CompilerWorld, ConsoleDiagReporter, PureCompiler,
+};
 use reflexo_typst::{GenericExporter, ShadowApiExt, TypstSystemWorld};
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
@@ -13,7 +16,7 @@ use rustyline::validate::MatchingBracketValidator;
 use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, KeyEvent};
 use rustyline::{Helper, Validator};
 use typst::diag::SourceDiagnostic;
-use typst::World;
+use typst::{hint_invalid_main_file, World};
 use typst_ide::autocomplete;
 
 use crate::query::serialize;
@@ -129,11 +132,13 @@ impl Completer for ReplContext {
             .with_shadow_file(&entry, dyn_content.as_bytes().into(), |driver| {
                 let doc = driver.compile(&mut Default::default()).ok();
                 let world = driver.snapshot();
-                let source = world.main();
+                let main = world.main();
+                let main = world.source(main).unwrap();
+
                 Ok(autocomplete(
                     &world,
                     doc.as_ref().map(|f| f.as_ref()),
-                    &source,
+                    &main,
                     cursor,
                     true,
                 ))
