@@ -73,15 +73,15 @@ strip = true
 [workspace.dependencies]
 
 # typesetting
-typst = "0.11.1"
-typst-ide = "0.11.1"
-typst-pdf = "0.11.1"
-typst-svg = "0.11.1"
-typst-syntax = "0.11.1"
+typst = { git = "https://github.com/paran3xus/typst.git", branch = "tinymist-nightly" }
+typst-ide = { git = "https://github.com/paran3xus/typst.git", branch = "tinymist-nightly" }
+typst-pdf = { git = "https://github.com/paran3xus/typst.git", branch = "tinymist-nightly" }
+typst-svg = { git = "https://github.com/paran3xus/typst.git", branch = "tinymist-nightly" }
+typst-syntax = { git = "https://github.com/paran3xus/typst.git", branch = "tinymist-nightly" }
 ttf-parser = "0.20.0"
 
-typst-assets = "0.11.1"
-typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", tag = "v0.11.1" }
+typst-assets = { git = "https://github.com/typst/typst-assets", branch = "main" }
+typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", branch = "main" }
 
 # general
 anyhow = "1"
