@@ -1,9 +1,11 @@
 use std::fmt::Display;
 use std::{io, io::Write, sync::Arc};
 
+use comemo::{Track, TrackedMut};
 use typst::syntax::{LinkedNode, Source, SyntaxKind, Tag};
 use typst::{
     diag::{At, FileError},
+    hint_invalid_main_file,
     syntax::Span,
 };
 
@@ -24,6 +26,9 @@ where
         let mut writer = std::io::BufWriter::new(writer);
 
         let src = world.main();
+        let src = world
+            .source(src)
+            .map_err(|err| hint_invalid_main_file(world.track(), err, src))?;
         let path = src.id().vpath().as_rootless_path();
         dump_ast(&path.display().to_string(), &src, &mut writer)
             .map_err(|e| FileError::from_io(e, path))
