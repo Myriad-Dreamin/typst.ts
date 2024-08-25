@@ -267,7 +267,7 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
                 let source_id = FileId::new(None, VirtualPath::new(relative_path));
                 world.source(source_id).ok()
             })
-            .unwrap_or_else(|| world.main());
+            .unwrap_or_else(|| Source::new(world.main(), "main.typ".to_string()));
 
         Arc::new(get_semantic_tokens_full(src, encoding))
     }
@@ -466,9 +466,13 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
     }
 
     /// Access the main source file.
-    fn main(&self) -> Source {
-        self.source(self.entry.main().unwrap_or_else(|| *DETACHED_ENTRY))
-            .unwrap()
+    fn main(&self) -> FileId {
+        match self.main_id() {
+            Some(file_id) => file_id,
+            None => {
+                panic!("Expected a TypstFileId, but found None");
+            }
+        }
     }
 
     /// Metadata about all known fonts.
