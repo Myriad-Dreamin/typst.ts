@@ -1,8 +1,8 @@
 use std::{path::PathBuf, sync::Arc};
 
-use comemo::Prehashed;
 use reflexo_vfs::browser::ProxyAccessModel;
 use typst::foundations::Dict as TypstDict;
+use typst::utils::LazyHash;
 
 use crate::entry::EntryState;
 use crate::font::FontResolverImpl;
@@ -30,7 +30,7 @@ unsafe impl Sync for ProxyRegistry {}
 impl TypstBrowserUniverse {
     pub fn new(
         root_dir: PathBuf,
-        inputs: Option<Arc<Prehashed<TypstDict>>>,
+        inputs: Option<Arc<LazyHash<TypstDict>>>,
         access_model: ProxyAccessModel,
         registry: ProxyRegistry,
         font_resolver: FontResolverImpl,
