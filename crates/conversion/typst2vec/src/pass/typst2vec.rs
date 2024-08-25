@@ -13,7 +13,7 @@ use reflexo::ImmutStr;
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
     foundations::{Bytes, Smart},
-    introspection::{Introspector, Meta},
+    introspection::Introspector,
     layout::{
         Abs as TypstAbs, Axes, Dir, Frame, FrameItem, FrameKind, Position, Ratio as TypstRatio,
         Size, Transform as TypstTransform,
@@ -302,7 +302,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         inner
                     }
                     FrameItem::Text(text) => {
-                        let i = self.text(state, text);
+                        let i = self.text(state, &text);
 
                         self.spans.push_span(SourceRegion {
                             region: src_reg,
@@ -318,7 +318,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         i
                     }
                     FrameItem::Shape(shape, s) => {
-                        let i = self.shape(state, shape);
+                        let i = self.shape(state, &shape);
 
                         self.spans.push_span(SourceRegion {
                             region: src_reg,
@@ -330,7 +330,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         i
                     }
                     FrameItem::Image(image, size, s) => {
-                        let i = self.image(image, *size);
+                        let i = self.image(&image, *size);
 
                         self.spans.push_span(SourceRegion {
                             region: src_reg,
@@ -341,32 +341,29 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
 
                         i
                     }
-                    FrameItem::Meta(meta, size) => match meta {
-                        Meta::Link(lnk) => {
-                            is_link = true;
-                            self.store(match lnk {
-                                Destination::Url(url) => self.link(url, *size),
-                                Destination::Position(dest) => self.position(*dest, *size),
-                                Destination::Location(loc) => {
-                                    // todo: process location before lowering
-                                    let dest = state.introspector.position(*loc);
-                                    self.position(dest, *size)
-                                }
-                            })
-                        }
-                        // Meta::Link(_) => Fingerprint::from_u128(0),
-                        Meta::Elem(elem) => {
-                            if !LINE_HINT_ELEMENTS.contains(elem.func().name()) {
-                                return None;
+                    // Meta::Link(_) => Fingerprint::from_u128(0),
+                    FrameItem::Link(lnk, size) => {
+                        is_link = true;
+                        self.store(match lnk {
+                            Destination::Url(url) => self.link(url, *size),
+                            Destination::Position(dest) => self.position(*dest, *size),
+                            Destination::Location(loc) => {
+                                // todo: process location before lowering
+                                let dest = state.introspector.position(*loc);
+                                self.position(dest, *size)
                             }
-
-                            self.store(VecItem::ContentHint('\n'))
+                        })
+                    }
+                    FrameItem::Tag(tag) => {
+                        if !LINE_HINT_ELEMENTS.contains(tag.elem.func().name()) {
+                            return None;
                         }
-                        #[cfg(not(feature = "no-content-hint"))]
-                        Meta::ContentHint(c) => self.store(VecItem::ContentHint(*c)),
-                        // todo: support page label
-                        Meta::Hide => return None,
-                    },
+
+                        self.store(VecItem::ContentHint('\n'))
+                    }
+                    #[cfg(not(feature = "no-content-hint"))]
+                    FrameItem::ContentHint(c) => self.store(VecItem::ContentHint(*c)),
+                    // todo: support page label
                 };
 
                 Some(((*pos).into_typst(), is_link, item))
