@@ -6,7 +6,7 @@ use typst::layout::{
     Ratio as TypstRatio, Transform as TypstTransform,
 };
 use typst::text::Font;
-use typst::util::Scalar as TypstScalar;
+use typst::utils::Scalar as TypstScalar;
 
 use typst::visualize::{ImageFormat, RasterFormat, VectorFormat};
 

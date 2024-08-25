@@ -10,5 +10,5 @@ pub use reflexo::hash::*;
 /// Update: Use Typst's new util function `typst::util::hash128`
 #[inline]
 pub fn typst_affinite_hash<T: std::hash::Hash>(t: &T) -> u128 {
-    typst::util::hash128(t)
+    typst::utils::hash128(t)
 }
