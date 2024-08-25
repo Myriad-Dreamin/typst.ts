@@ -40,6 +40,8 @@ reflexo-typst2vec.workspace = true
 reflexo-typst = { workspace = true, features = ["ast", "pdf", "svg", "web"] }
 reflexo-vec2svg.workspace = true
 
+typst.workspace = true
+
 [dev-dependencies]
 wasm-bindgen-test.workspace = true
 typst-ts-test-common.workspace = true

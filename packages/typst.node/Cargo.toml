@@ -17,6 +17,7 @@ crate-type = ["cdylib"]
 napi = { version = "2", features = ["serde-json"] }
 napi-derive = "2"
 
+typst.workspace = true
 typst-svg.workspace = true
 typst-ts-cli.workspace = true
 reflexo-typst = { workspace = true }
