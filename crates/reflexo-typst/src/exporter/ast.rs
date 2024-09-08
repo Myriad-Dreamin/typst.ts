@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::{io, io::Write, sync::Arc};
 
-use comemo::{Track, TrackedMut};
+use comemo::Track;
 use typst::syntax::{LinkedNode, Source, SyntaxKind, Tag};
 use typst::{
     diag::{At, FileError},

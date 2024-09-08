@@ -1,4 +1,4 @@
-use comemo::{Track, TrackedMut};
+use comemo::Track;
 use typst::{
     diag::SourceResult,
     engine::{Route, Sink, Traced},

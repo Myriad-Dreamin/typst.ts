@@ -355,7 +355,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         })
                     }
                     FrameItem::Tag(tag) => {
-                        if !LINE_HINT_ELEMENTS.contains(tag.elem.func().name()) {
+                        if !LINE_HINT_ELEMENTS.contains(tag.elem().func().name()) {
                             return None;
                         }
 

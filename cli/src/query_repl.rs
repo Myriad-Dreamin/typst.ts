@@ -1,12 +1,9 @@
-use comemo::{Track, TrackedMut};
 use std::borrow::Cow::{self, Owned};
 use std::cell::{RefCell, RefMut};
 use std::sync::Arc;
 
 use reflexo_typst::typst::prelude::*;
-use reflexo_typst::{
-    CompileDriver, CompileReport, CompilerWorld, ConsoleDiagReporter, PureCompiler,
-};
+use reflexo_typst::{CompileDriver, CompileReport, ConsoleDiagReporter, PureCompiler};
 use reflexo_typst::{GenericExporter, ShadowApiExt, TypstSystemWorld};
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;

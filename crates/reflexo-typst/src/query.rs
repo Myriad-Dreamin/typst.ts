@@ -1,6 +1,6 @@
 use comemo::Track;
 use typst::{
-    diag::{EcoString, HintedString, StrResult},
+    diag::{EcoString, StrResult},
     eval::{eval_string, EvalMode},
     foundations::{Content, LocatableSelector, Scope},
     model::Document,
