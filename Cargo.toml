@@ -78,7 +78,7 @@ typst-ide = { git = "https://github.com/paran3xus/typst.git", branch = "tinymist
 typst-pdf = { git = "https://github.com/paran3xus/typst.git", branch = "tinymist-typst-mainline" }
 typst-svg = { git = "https://github.com/paran3xus/typst.git", branch = "tinymist-typst-mainline" }
 typst-syntax = { git = "https://github.com/paran3xus/typst.git", branch = "tinymist-typst-mainline" }
-ttf-parser = "0.21.0"
+ttf-parser = "0.24.1"
 
 typst-assets = { git = "https://github.com/typst/typst-assets", branch = "main" }
 typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", branch = "main" }
