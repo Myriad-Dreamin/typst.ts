@@ -162,9 +162,9 @@ impl<'a, W: io::Write> AstWriter<'a, W> {
     }
 
     fn write_ident(&mut self) {
-        self.w.write_all(&[b'\n']).unwrap();
+        self.w.write_all(b"\n").unwrap();
         for _i in 0..self.ident {
-            self.w.write_all(&[b' ']).unwrap();
+            self.w.write_all(b" ").unwrap();
         }
     }
 
