@@ -9,18 +9,19 @@
 //! - `model`: low-level abstraction specific to the compiler, which defines:
 //!   - [`font::FontSlot`]: the way to load a font.
 //!   - [`vfs::AccessModel`]: how the compiler accesses a storage.
-//!   - [`package::Registry`]: how the compiler obtains data about a package.
+//!   - [`package::PackageRegistry`]: how the compiler obtains data about a
+//!     package.
 //!
 //! - [`world`]: The world is the core part of the library, which maintains all
 //!   the data for typst compilation.
 //!   - [`vfs::Vfs`]: retrieving [`vfs::AccessModel`], provides a virtual file
 //!     system for the [`world::CompilerWorld`]
 //!   - [`world::CompilerWorld`]: retrieving [`world::CompilerFeat`], provides a
-//!     common implementation of [`typst::World`].
+//!     common implementation of [`::typst::World`].
 //!
-//! - [`service`]: Convenient services over [`world::CompilerWorld`], which also
+//! - [`compile`]: Convenient services over [`world::CompilerWorld`], which also
 //!   shows how to use the [`world::CompilerWorld`].
-//!   - [`service::CompileDriver`]: A driver for the compiler. Examples:
+//!   - [`CompileDriver`]: A driver for the compiler. Examples:
 //!     - Single thread (Sync): <https://github.com/Myriad-Dreamin/typst.ts/blob/main/cli/src/main.rs>
 //!     - Multiple thread (Async): <https://github.com/Enter-tainer/typst-preview-vscode/blob/main/src/main.rs>
 
@@ -94,7 +95,7 @@ pub use world::font;
 pub use reflexo::time;
 /// A vfs implementation for compiler.
 pub use reflexo_vfs as vfs;
-/// A common implementation of [`typst::World`]
+/// A common implementation of [`::typst::World`]
 pub use reflexo_world as world;
 pub use time::Time;
 /// package things about compiler.

@@ -94,13 +94,11 @@ impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Fea
 
 impl<'m, 't, Feat: ExportFeature> FontIndice<'m> for RenderContext<'m, 't, Feat> {
     fn get_font(&self, value: &FontRef) -> Option<&'m ir::FontItem> {
-        self.module.fonts.get(value.idx as usize).map(|e| {
+        self.module.fonts.get(value.idx as usize).inspect(|e| {
             // canary check
             if e.hash != value.hash {
                 panic!("Invalid font reference: {:?}", value);
             }
-
-            e
         })
     }
 }
