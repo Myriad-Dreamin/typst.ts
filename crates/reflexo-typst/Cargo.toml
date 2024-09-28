@@ -51,7 +51,7 @@ reflexo-vec2svg = { workspace = true, optional = true }
 
 [features]
 
-default = ["full"]
+default = ["full", "no-content-hint"]
 full = ["system", "web", "dynamic-layout", "glyph2vec", "flat-vector"]
 system = ["system-compile", "system-watch"]
 web = ["web-render", "browser-compile"]

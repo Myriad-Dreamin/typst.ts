@@ -483,7 +483,7 @@ mod tests {
                 let value = insta::_macro_support::serialize_value(
                     &filtered_value,
                     insta::_macro_support::SerializationFormat::Yaml,
-                    insta::_macro_support::SnapshotLocation::Inline,
+                    // insta::_macro_support::SnapshotLocation::Inline,
                 );
                 let data_content = &test_point.verbose["data_content"];
                 let text_content = &test_point.verbose["text_content"];

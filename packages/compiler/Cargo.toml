@@ -52,6 +52,12 @@ web-sys = { workspace = true, features = ["console"] }
 [features]
 web_test = ["typst-ts-test-common/web_artifacts"]
 
+no-content-hint = [
+    "reflexo-typst2vec/no-content-hint",
+    "reflexo-typst/no-content-hint",
+    "reflexo-vec2svg/no-content-hint",
+]
+
 full = ["web", "web_test"]
 web = ["reflexo-typst/web"]
-default = ["full"]
+default = ["full", "no-content-hint"]
