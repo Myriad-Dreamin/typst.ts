@@ -79,12 +79,12 @@ jobs:
         run: |
           cargo build --release --manifest-path cli/Cargo.toml --target ${{ matrix.rust-target }} --bin typst-ts-cli
           cargo build --profile relwithdebinfo --manifest-path cli/Cargo.toml --target ${{ matrix.rust-target }} --bin typst-ts-cli
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: typst-ts-${{ env.target }}
           path: target/${{ matrix.rust-target }}/release/typst-ts-*
           if-no-files-found: error
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: typst-ts-${{ env.target }}-relwithdebuginfo
           path: target/${{ matrix.rust-target }}/relwithdebinfo/typst-ts-*
@@ -125,12 +125,12 @@ jobs:
           CARGO_TARGET: ${{ matrix.rust-target }}
           PKG_CONFIG_PATH: /usr/lib/riscv64-linux-gnu/pkgconfig
           PKG_CONFIG_ALLOW_CROSS: true
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: typst-ts-${{ env.target }}
           path: target/${{ matrix.rust-target }}/release/typst-ts-*
           if-no-files-found: error
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: typst-ts-${{ env.target }}-relwithdebuginfo
           path: target/${{ matrix.rust-target }}/relwithdebinfo/typst-ts-*
@@ -161,17 +161,17 @@ jobs:
         run: |
           cargo build --release --manifest-path cli/Cargo.toml --target $RUST_TARGET --bin typst-ts-cli
           cargo build --profile relwithdebinfo --manifest-path cli/Cargo.toml --target $RUST_TARGET --bin typst-ts-cli
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: typst-ts-font-assets
           path: assets
           if-no-files-found: error
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: typst-ts-${{ env.target }}
           path: target/${{ env.RUST_TARGET }}/release/typst-ts-*
           if-no-files-found: error
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: typst-ts-${{ env.target }}-relwithdebuginfo
           path: target/${{ env.RUST_TARGET }}/relwithdebinfo/typst-ts-*
@@ -244,7 +244,7 @@ jobs:
           tar czvf gh-release/font-assets.tar.gz -C release font-assets
       - name: Display structure of releasing files
         run: find gh-release
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: gh-release
           path: gh-release

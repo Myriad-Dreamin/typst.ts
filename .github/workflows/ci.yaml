@@ -65,7 +65,7 @@ jobs:
             -p typst-ts-cli  -p typst-ts-integration-test
       - name: Archive Test Results (WebAssembly Renderer in Chrome)
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: wasm-renderer-chrome.test_points.json.gz
           path: target/typst-artifacts/integrations/renderer/test_points.chrome.json.gz
