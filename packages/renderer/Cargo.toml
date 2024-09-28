@@ -85,3 +85,10 @@ web = ["render_canvas", "render_svg", "render_dom"]
 
 debug_delta_update = []
 test_render_document = []
+
+no-content-hint = [
+    "reflexo-typst2vec/no-content-hint",
+    "reflexo-typst/no-content-hint",
+    "reflexo-vec2dom/no-content-hint",
+    "reflexo-vec2svg/no-content-hint",
+]

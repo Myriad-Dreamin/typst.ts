@@ -53,3 +53,9 @@ web_test = ["typst-ts-test-common/web_artifacts"]
 full = ["web", "web_test"]
 web = ["reflexo-typst/web"]
 default = ["full"]
+
+no-content-hint = [
+    "reflexo-typst2vec/no-content-hint",
+    "reflexo-typst/no-content-hint",
+    "reflexo-vec2svg/no-content-hint",
+]
