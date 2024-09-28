@@ -113,7 +113,7 @@ pub use watch::*;
 
 #[cfg(feature = "system-watch")]
 mod compile;
-#[cfg(feature = "system-compile")]
+#[cfg(feature = "system-watch")]
 pub mod task;
 #[cfg(feature = "system-compile")]
 pub use diag::ConsoleDiagReporter;
