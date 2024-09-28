@@ -405,7 +405,7 @@ pub trait Compiler {
         self.reset()?;
 
         let res = match env.sink.as_mut() {
-            Some(sink) => ::typst::compile(world),
+            Some(_) => ::typst::compile(world),
             None => ::typst::compile(world),
         };
 

@@ -319,12 +319,14 @@ impl CanvasImageElem {
 
         let parts = js_sys::Array::new();
         parts.push(&u);
+        let tag = web_sys::BlobPropertyBag::new();
+        tag.set_type(&format!("image/{}", image.format));
         let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(
             &parts,
             // todo: security check
             // https://security.stackexchange.com/questions/148507/how-to-prevent-xss-in-svg-file-upload
             // todo: use our custom font
-            web_sys::BlobPropertyBag::new().type_(&format!("image/{}", image.format)),
+            &tag,
         )
         .unwrap();
 
