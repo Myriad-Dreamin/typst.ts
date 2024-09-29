@@ -2,9 +2,11 @@
 #![allow(clippy::arc_with_non_send_sync)]
 
 mod bounds;
+mod device;
 #[cfg(feature = "incremental")]
 mod incr;
 mod ops;
+mod pixglyph_canvas;
 mod utils;
 
 pub use bounds::BBoxAt;
@@ -127,6 +129,7 @@ impl<'m, 't, Feat: ExportFeature> GlyphFactory for CanvasRenderTask<'m, 't, Feat
         let glyph_data = font.get_glyph(glyph)?;
         Some(Arc::new(CanvasElem::Glyph(CanvasGlyphElem {
             fill,
+            upem: font.units_per_em,
             glyph_data: glyph_data.clone(),
         })))
     }

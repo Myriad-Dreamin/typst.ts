@@ -437,10 +437,10 @@ export interface TypstRenderer extends TypstSvgRenderer {
   render(options: RenderOptions<RenderToCanvasOptions>): Promise<void>;
 }
 
-const gRendererModule = new LazyWasmModule(async (bin?: any) => {
-  const module = await import('@myriaddreamin/typst-ts-renderer/pkg/wasm-pack-shim.mjs');
-  return await module.default(bin);
-});
+const gRendererModule = (module: typeof typst) =>
+  new LazyWasmModule(async (bin?: any) => {
+    return await module.default(bin);
+  });
 
 /**
  * create a Typst renderer.
@@ -511,9 +511,15 @@ export class TypstRendererDriver {
   constructor() {}
 
   async init(options?: Partial<InitOptions>): Promise<void> {
-    this.rendererJs = await import('@myriaddreamin/typst-ts-renderer/pkg/wasm-pack-shim.mjs');
+    this.rendererJs = await (options?.getWrapper?.() ||
+      import('@myriaddreamin/typst-ts-renderer/pkg/wasm-pack-shim.mjs'));
     const TypstRendererBuilder = this.rendererJs.TypstRendererBuilder;
-    this.renderer = await buildComponent(options, gRendererModule, TypstRendererBuilder, {});
+    this.renderer = await buildComponent(
+      options,
+      gRendererModule(this.rendererJs),
+      TypstRendererBuilder,
+      {},
+    );
   }
 
   loadGlyphPack(_pack: unknown): Promise<void> {

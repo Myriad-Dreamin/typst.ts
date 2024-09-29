@@ -4,9 +4,9 @@ use web_sys::{Request, RequestInit, RequestMode, Response};
 
 #[wasm_bindgen]
 pub async fn get_corpus(corpus: String) -> Result<js_sys::ArrayBuffer, JsValue> {
-    let mut opts = RequestInit::new();
-    opts.method("GET");
-    opts.mode(RequestMode::Cors);
+    let opts = RequestInit::new();
+    opts.set_method("GET");
+    opts.set_mode(RequestMode::Cors);
 
     let url = format!("http://127.0.0.1:20810/corpus/{}", corpus);
 

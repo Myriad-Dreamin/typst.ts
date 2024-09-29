@@ -1,3 +1,4 @@
+use std::sync::atomic::AtomicI32;
 use std::sync::OnceLock;
 use std::{collections::HashMap, ops::Deref};
 
@@ -7,11 +8,50 @@ use reflexo_typst::vector::ir::{Axes, LayoutRegionNode, Rect, Scalar};
 use reflexo_vec2canvas::{DefaultExportFeature, ExportFeature};
 use reflexo_vec2sema::{BrowserFontMetric, SemaTask};
 use wasm_bindgen::prelude::*;
+use web_sys::{OffscreenCanvas, Path2d};
 
 use crate::{RenderPageImageOptions, RenderSession, TypstRenderer};
 
+static TIMES: AtomicI32 = AtomicI32::new(0);
+
 #[wasm_bindgen]
 impl TypstRenderer {
+    pub fn canvas_render_glyph(&self, o: &OffscreenCanvas, glyph: &str) -> ZResult<()> {
+        let t = TIMES.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let ctx = o.get_context("2d").unwrap().unwrap();
+        // web_sys::console::log_2(&"canvas_render_glyph".into(), &(&ctx).into());
+        let ctx: web_sys::OffscreenCanvasRenderingContext2d = ctx.dyn_into().unwrap();
+
+        const FONT_SIZE: f64 = 8.;
+
+        if t < 9 {
+            let x = 4. + (t % 3) as f64;
+            let y = 4. + (t / 3) as f64;
+
+            ctx.set_transform(
+                FONT_SIZE / 1024.,
+                0.,
+                0.,
+                -FONT_SIZE / 1024.,
+                0. + x / 3.,
+                FONT_SIZE + 0.24 * FONT_SIZE + y / 3.,
+            )
+            .unwrap();
+            let glyph = Path2d::new_with_path_string(glyph).unwrap();
+            ctx.fill_with_path_2d(&glyph);
+        } else {
+            // let x = 4. + ((t - 9) % 3) as f32;
+            // let y = 4. - ((t - 9) / 3) as f32;
+
+            // let g = crate::render::pixglyph_canvas::Glyph::new(glyph);
+            // let t = g.rasterize(x / 3., y / 3., FONT_SIZE as f32);
+
+            // crate::render::pixglyph_canvas::blend_glyph(&ctx, &t);
+        }
+
+        Ok(())
+    }
+
     pub async fn render_page_to_canvas(
         &mut self,
         ses: &RenderSession,
@@ -173,6 +213,8 @@ mod tests {
 
     use crate::{session::CreateSessionOptions, TypstRenderer};
 
+    const SHOW_RESULT: bool = false;
+
     fn hash_bytes<T: AsRef<[u8]>>(bytes: T) -> String {
         format!("sha256:{}", hex::encode(sha2::Sha256::digest(bytes)))
     }
@@ -182,6 +224,7 @@ mod tests {
         time_used: String,
         data_content_hash: String,
         text_content_hash: String,
+        artifact_hash: String,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -209,6 +252,31 @@ mod tests {
         let performance = window
             .performance()
             .expect("performance should be available");
+
+        // static INIT_WORKER: OnceLock<()> = OnceLock::new();
+
+        // INIT_WORKER.get_or_init(|| {
+        //     //
+        //     let s = &window
+        //         .document()
+        //         .unwrap()
+        //         .create_element("script")
+        //         .unwrap()
+        //         .dyn_into::<web_sys::HtmlElement>()
+        //         .unwrap();
+        //     s.set_attribute("src", "http://127.0.0.1:20810/core/dist/main2.mjs")
+        //         .unwrap();
+        //     s.set_attribute("type", "module").unwrap();
+        //     s.set_attribute("crossorigin", "anonymous").unwrap();
+
+        //     window
+        //         .document()
+        //         .unwrap()
+        //         .body()
+        //         .unwrap()
+        //         .append_child(s)
+        //         .unwrap();
+        // });
 
         let canvas = window
             .document()
@@ -272,7 +340,7 @@ mod tests {
             });
 
             web_sys::console::log_3(
-                &">>> typst_ts_test_capture".into(),
+                &">>> reflexo_test_capture".into(),
                 &serde_json::to_string(&CanvasRenderTestPoint {
                     kind: "canvas_render_test".into(),
                     name: point.to_string(),
@@ -280,6 +348,7 @@ mod tests {
                         time_used: format!("{:.3}", end - start),
                         data_content_hash: data_content_hash.clone(),
                         text_content_hash: hash_bytes(&text_content),
+                        artifact_hash: hash_bytes(&artifact),
                     },
                     verbose: {
                         let mut verbose_data = HashMap::new();
@@ -296,47 +365,49 @@ mod tests {
                 })
                 .unwrap()
                 .into(),
-                &"<<< typst_ts_test_capture".into(),
+                &"<<< reflexo_test_capture".into(),
             );
             (end - start, perf_events, data_content_hash, artifact)
         };
 
-        let div = window
-            .document()
-            .unwrap()
-            .create_element("div")
-            .unwrap()
-            .dyn_into::<web_sys::HtmlElement>()
-            .unwrap();
+        if SHOW_RESULT {
+            let div = window
+                .document()
+                .unwrap()
+                .create_element("div")
+                .unwrap()
+                .dyn_into::<web_sys::HtmlElement>()
+                .unwrap();
 
-        div.set_attribute("style", "display block; border: 1px solid #000;")
-            .unwrap();
+            div.set_attribute("style", "display block; border: 1px solid #000;")
+                .unwrap();
 
-        let title = window
-            .document()
-            .unwrap()
-            .create_element("div")
-            .unwrap()
-            .dyn_into::<web_sys::HtmlElement>()
-            .unwrap();
+            let title = window
+                .document()
+                .unwrap()
+                .create_element("div")
+                .unwrap()
+                .dyn_into::<web_sys::HtmlElement>()
+                .unwrap();
 
-        title.set_inner_html(&format!(
-            "{point} => {data_content_hash} {time_used:.3}ms",
-            point = point,
-            data_content_hash = data_content_hash,
-            time_used = time_used,
-        ));
+            title.set_inner_html(&format!(
+                "{point} => {data_content_hash} {time_used:.3}ms",
+                point = point,
+                data_content_hash = data_content_hash,
+                time_used = time_used,
+            ));
 
-        div.append_child(&title).unwrap();
-        div.append_child(&canvas).unwrap();
+            div.append_child(&title).unwrap();
+            div.append_child(&canvas).unwrap();
 
-        window
-            .document()
-            .unwrap()
-            .body()
-            .unwrap()
-            .append_child(&div)
-            .unwrap();
+            window
+                .document()
+                .unwrap()
+                .body()
+                .unwrap()
+                .append_child(&div)
+                .unwrap();
+        }
 
         let perf_events = perf_events
             .as_ref()
