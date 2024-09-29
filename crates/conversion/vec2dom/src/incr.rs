@@ -8,7 +8,7 @@ use reflexo::error::prelude::*;
 use reflexo::hash::Fingerprint;
 use reflexo::vector::ir::{FontItem, FontRef, LayoutRegionNode, Module, Page, VecItem};
 use reflexo_typst2vec::incr::{IncrDocClient, IncrDocServer};
-use reflexo_vec2canvas::{CanvasElem, CanvasOp};
+use reflexo_vec2canvas::CanvasOp;
 use wasm_bindgen::prelude::*;
 use web_sys::{wasm_bindgen::JsCast, Element, HtmlElement};
 
@@ -122,12 +122,22 @@ impl IncrDomDocClient {
         }
     }
 
-    // rust produces false positive on repaint
-    fn repaint_false_positive(
+    pub fn repaint(
         &mut self,
         page_num: u32,
+        x: f32,
+        y: f32,
+        w: f32,
+        h: f32,
         stage: u8,
-    ) -> ZResult<Option<Arc<CanvasElem>>> {
+    ) -> ZResult<JsValue> {
+        // todo: overflow
+        let viewport = Some(tiny_skia::Rect::from_xywh(x, y, w, h).unwrap());
+        #[cfg(feature = "debug_recalc_stage")]
+        web_sys::console::log_1(
+            &format!("repaint page:{page_num} stage:{stage} {viewport:?}").into(),
+        );
+
         let kern = self.client.clone().unwrap();
         let kern_lock = kern.lock().unwrap();
 
@@ -145,44 +155,21 @@ impl IncrDomDocClient {
         match stage {
             STAGE_SVG => {
                 page.repaint_svg(&mut ctx)?;
-                Ok(None)
             }
             STAGE_SEMANTICS => {
                 page.repaint_semantics(&mut ctx)?;
-                Ok(None)
             }
-            STAGE_PREPARE_CANVAS => Ok(page.prepare_canvas(&mut ctx)?),
-            STAGE_CANVAS => Ok(None),
-            _ => todo!(),
-        }
-    }
-
-    pub fn repaint(
-        &mut self,
-        page_num: u32,
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
-        stage: u8,
-    ) -> ZResult<JsValue> {
-        // todo: overflow
-        let viewport = Some(tiny_skia::Rect::from_xywh(x, y, w, h).unwrap());
-        #[cfg(feature = "debug_recalc_stage")]
-        web_sys::console::log_1(
-            &format!("repaint page:{page_num} stage:{stage} {viewport:?}").into(),
-        );
-
-        let elem = self.repaint_false_positive(page_num, stage)?;
-
-        match stage {
-            STAGE_SVG => Ok(()),
-            STAGE_SEMANTICS => Ok(()),
             STAGE_PREPARE_CANVAS => {
-                if let Some(elem) = elem {
+                if let Some(elem) = page.prepare_canvas(&mut ctx)? {
+                    // explicit drop ctx to avoid async promise cature these variables
+                    drop(ctx);
                     #[cfg(feature = "debug_repaint_canvas")]
-                    web_sys::console::log_1(&format!("canvas state prepare: {}", page_num).into());
-                    if let Some(fut) = elem.prepare() {
+                    web_sys::console::log_1(&format!("canvas state prepare: {page_num}").into());
+                    let ppp = self.canvas_backend.pixel_per_pt;
+                    let ts = tiny_skia::Transform::from_scale(ppp, ppp);
+                    if let Some(fut) = elem.prepare(ts) {
+                        #[allow(dropping_references)]
+                        drop(self);
                         return Ok(wasm_bindgen_futures::future_to_promise(async move {
                             fut.await;
 
@@ -194,13 +181,15 @@ impl IncrDomDocClient {
                         &format!("canvas state prepare done: {}", page_num).into(),
                     );
                 }
-
-                Ok(())
             }
             STAGE_CANVAS => {
+                // explicit drop ctx to avoid async promise cature these variables
+                drop(ctx);
                 let ppp = self.canvas_backend.pixel_per_pt;
                 let page = &mut self.doc_view[page_num as usize];
                 let fut = page.repaint_canvas(viewport, ppp)?;
+                #[allow(dropping_references)]
+                drop(self);
                 return Ok(wasm_bindgen_futures::future_to_promise(async move {
                     fut.await;
 
@@ -209,8 +198,7 @@ impl IncrDomDocClient {
                 .into());
             }
             _ => todo!(),
-        }?;
-
+        }
         Ok(JsValue::UNDEFINED)
     }
 }
