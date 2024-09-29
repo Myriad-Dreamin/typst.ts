@@ -1,8 +1,8 @@
 use std::sync::OnceLock;
-use std::{collections::HashMap, hash::Hash, ops::Deref};
+use std::{collections::HashMap, ops::Deref};
 
 use reflexo_typst::error::prelude::*;
-use reflexo_typst::hash::{Fingerprint, FingerprintHasher, FingerprintSipHasher};
+use reflexo_typst::hash::Fingerprint;
 use reflexo_typst::vector::ir::{Axes, LayoutRegionNode, Rect, Scalar};
 use reflexo_vec2canvas::{DefaultExportFeature, ExportFeature};
 use reflexo_vec2sema::{BrowserFontMetric, SemaTask};
@@ -42,6 +42,7 @@ impl TypstRenderer {
         canvas: Option<web_sys::CanvasRenderingContext2d>,
         options: Option<RenderPageImageOptions>,
     ) -> ZResult<(Fingerprint, JsValue, Option<HashMap<String, f64>>)> {
+        let options = options.unwrap_or_default();
         let rect_lo_x: f32 = -1.;
         let rect_lo_y: f32 = -1.;
         let rect_hi_x: f32 = 1e30;
@@ -56,23 +57,11 @@ impl TypstRenderer {
         client.set_pixel_per_pt(ses.pixel_per_pt.unwrap_or(3.));
         client.set_fill(ses.background_color.as_deref().unwrap_or("ffffff").into());
 
-        let data_selection = options
-            .as_ref()
-            .and_then(|o| o.data_selection)
-            .unwrap_or(u32::MAX);
+        let data_selection = options.data_selection.unwrap_or(u32::MAX);
 
         let should_render_body = (data_selection & (1 << 0)) != 0;
         // semantics layer
         let mut tc = ((data_selection & (1 << 3)) != 0).then(Vec::new);
-
-        // let def_provider = GlyphProvider::new(FontGlyphProvider::default());
-        // let partial_providier =
-        //     PartialFontGlyphProvider::new(def_provider,
-        // self.session_mgr.font_resolver.clone());
-
-        // worker.set_glyph_provider(GlyphProvider::new(partial_providier));
-
-        // crate::utils::console_log!("use partial font glyph provider");
 
         let perf_events = if Feat::ENABLE_TRACING {
             Some(elsa::FrozenMap::<&'static str, Box<f64>>::default())
@@ -89,36 +78,25 @@ impl TypstRenderer {
         };
         let pages = t.pages(kern.module()).unwrap().pages();
 
-        let (page_num, fingerprint) = if let Some(RenderPageImageOptions {
-            page_off: Some(c),
-            ..
-        }) = options
-        {
-            (Some(c), pages[c].content)
+        let page_num = options.page_off;
+        let fingerprint = if let Some(page) = pages.get(page_num) {
+            page.content
         } else {
-            let mut f = FingerprintSipHasher::default();
-            for page in pages.iter() {
-                page.content.hash(&mut f);
-            }
-            (None, f.finish_fingerprint().0)
+            return Err(error_once!("Renderer.MissingPage", idx: page_num));
         };
 
         if should_render_body {
             let cached = options
-                .and_then(|o| o.cache_key)
+                .cache_key
                 .map(|c| c == fingerprint.as_svg_id("c"))
                 .unwrap_or(false);
 
             let canvas = &canvas.ok_or_else(|| error_once!("Renderer.MissingCanvasForBody"))?;
 
             if !cached {
-                if let Some(page_num) = page_num {
-                    client
-                        .render_page_in_window(&mut kern, canvas, page_num, rect)
-                        .await?;
-                } else {
-                    client.render_in_window(&mut kern, canvas, rect).await;
-                }
+                client
+                    .render_page_in_window(&mut kern, canvas, page_num, rect)
+                    .await?;
             }
         }
 
@@ -133,7 +111,7 @@ impl TypstRenderer {
                 _ => todo!(),
             };
             for (idx, page) in pages.iter().enumerate() {
-                if page_num.map_or(false, |p| p != idx) {
+                if page_num != idx {
                     continue;
                 }
                 if let Some(worker) = tc.as_mut() {

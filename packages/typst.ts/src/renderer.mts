@@ -545,7 +545,9 @@ export class TypstRendererDriver {
   renderCanvas(options: RenderOptions<RenderCanvasOptions>): Promise<RenderCanvasResult> {
     return this.withinOptionSession(options, async sessionRef => {
       const rustOptions = new this.rendererJs.RenderPageImageOptions();
-      if (options.pageOffset !== undefined) {
+      if (options.pageOffset === undefined) {
+        throw new Error('pageOffset is required in reflexo v0.5.0');
+      } else {
         rustOptions.page_off = options.pageOffset;
       }
       if (options.cacheKey !== undefined) {

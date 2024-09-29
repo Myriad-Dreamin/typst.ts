@@ -143,7 +143,7 @@ export class RenderCanvasOptions {
   /**
    * The page offset to render.
    */
-  pageOffset?: number;
+  pageOffset: number;
   /**
    * The previous render state.
    */
