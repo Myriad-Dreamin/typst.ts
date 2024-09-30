@@ -25,6 +25,7 @@ pub struct IncrDocServer {
 }
 
 impl IncrDocServer {
+    /// Set whether to attach debug info to the spans.
     pub fn set_should_attach_debug_info(&mut self, should_attach_debug_info: bool) {
         self.typst2vec
             .spans
