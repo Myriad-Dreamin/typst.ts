@@ -4709,6 +4709,7 @@ dependencies = [
  "reflexo-vec2dom",
  "reflexo-vec2sema",
  "reflexo-vec2svg",
+ "rkyv",
  "send_wrapper",
  "serde",
  "serde-wasm-bindgen",

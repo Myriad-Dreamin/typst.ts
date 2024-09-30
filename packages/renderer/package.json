@@ -28,7 +28,7 @@
     "publish:lib": "npm publish --access public || exit 0",
     "test:chrome:verbose": "wasm-pack test --chrome --headless --release --features web_verbose",
     "test:firefox:verbose": "wasm-pack test --firefox --headless --release --features web_verbose",
-    "test:chrome": "cross-env WASM_BINDGEN_TEST_NO_ORIGIN_ISOLATION=1 wasm-pack test --chrome --headless --release",
+    "test:chrome": "cross-env WASM_BINDGEN_TEST_NO_ORIGIN_ISOLATION=1 wasm-pack test --chrome --release",
     "test:firefox": "cross-env WASM_BINDGEN_TEST_NO_ORIGIN_ISOLATION=1 wasm-pack test --firefox --headless --release"
   }
 }

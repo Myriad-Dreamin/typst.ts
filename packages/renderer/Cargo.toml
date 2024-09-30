@@ -43,6 +43,7 @@ reflexo-vec2sema = { workspace = true }
 reflexo-vec2bbox = { workspace = true }
 reflexo-vec2svg = { workspace = true, optional = true }
 reflexo-vec2dom = { workspace = true, optional = true }
+rkyv = { workspace = true, optional = true }
 console_error_panic_hook.workspace = true
 
 [dev-dependencies]
@@ -61,7 +62,7 @@ vergen.workspace = true
 [features]
 
 default = ["full"]
-full = ["serde_json", "render_full", "web_test"]
+full = ["serde_json", "render_full", "worker", "web_test"]
 
 web_test = ["typst-ts-test-common/web_artifacts"]
 web_verbose = ["web_test"]                        # for test debug
@@ -75,6 +76,7 @@ build_full = ["build_glyph_pack", "build_raw_font", "build_web_font"]
 render_canvas = [
     "dep:reflexo-vec2canvas",
     "web-sys/HtmlCanvasElement",
+    "web-sys/HtmlImageElement",
     "web-sys/CanvasRenderingContext2d",
 ]
 render_dom = ["dep:reflexo-vec2dom", "render_svg"]
@@ -82,7 +84,16 @@ render_pdf = []
 render_svg = ["reflexo-typst/svg", "web-sys/HtmlDivElement"]
 render_full = ["render_canvas", "render_pdf", "render_svg", "render_dom"]
 
-web = ["render_canvas", "render_svg", "render_dom"]
+rkyv = ["dep:rkyv"]
+worker = [
+    "rkyv",
+    "web-sys/Worker",
+    "web-sys/WorkerOptions",
+    "web-sys/WorkerType",
+    "web-sys/DedicatedWorkerGlobalScope",
+]
+
+web = ["render_canvas", "render_svg", "render_dom", "worker"]
 
 debug_delta_update = []
 test_render_document = []

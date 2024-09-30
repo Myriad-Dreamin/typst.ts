@@ -794,6 +794,10 @@ export class TypstRendererDriver {
     );
   }
 
+  workerBridge() {
+    return this.renderer.create_worker_bridge();
+  }
+
   renderSvg(options: RenderOptions<RenderSvgOptions>, container?: any): Promise<string> {
     if (options instanceof RenderSession || container) {
       throw new Error('removed api, please use renderToSvg({ renderSession, container }) instead');
@@ -899,21 +903,14 @@ export class TypstRendererDriver {
       fn = arg1;
     }
 
-    // const t = performance.now();
     const session = this.renderer.create_session(
       /* moved */ options && this.createOptionsToRust(options),
     );
-    // const t3 = performance.now();
-
-    // console.log(`create session used: render = ${(t3 - t).toFixed(1)}ms`);
     try {
-      // console.log(`session`, JSON.stringify(session), `activated`);
       const res = await fn(new RenderSession(this, session));
-      // console.log(`session`, JSON.stringify(session), `deactivated`);
       session.free();
       return res;
     } catch (e) {
-      // console.log(`session`, JSON.stringify(session), `deactivated by error`, e);
       session.free();
       throw e;
     }

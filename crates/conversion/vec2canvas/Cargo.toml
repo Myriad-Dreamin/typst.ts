@@ -27,7 +27,7 @@ web-sys = { workspace = true, features = [
     "CanvasRenderingContext2d",
     "Path2d",
     "Blob",
-    "HtmlImageElement",
+    "ImageBitmap",
     "HtmlCanvasElement",
     "Url",
     "ImageData",

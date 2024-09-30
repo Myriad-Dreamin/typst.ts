@@ -3,14 +3,20 @@ pub(crate) mod utils;
 pub(crate) mod builder;
 pub(crate) mod render;
 pub(crate) mod session;
+#[cfg(feature = "worker")]
+pub(crate) mod worker;
 
 pub use builder::TypstRendererBuilder;
 pub use session::RenderSession;
 pub use session::RenderSessionOptions;
 
 use reflexo_typst::error::prelude::*;
-use session::CreateSessionOptions;
+#[cfg(feature = "rkyv")]
+use rkyv::{Archive, Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
+
+use session::CreateSessionOptions;
+use worker::WorkerBridge;
 
 pub mod build_info {
     /// The version of the typst-ts-renderer crate.
@@ -75,6 +81,7 @@ pub fn renderer_build_info() -> JsValue {
 
 #[wasm_bindgen]
 #[derive(Debug, Default)]
+#[cfg_attr(feature = "rkyv", derive(Archive, Serialize, Deserialize))]
 pub struct RenderPageImageOptions {
     pub(crate) page_off: usize,
     pub(crate) cache_key: Option<String>,
@@ -137,6 +144,13 @@ impl TypstRenderer {
     #[wasm_bindgen(constructor)]
     pub fn new() -> TypstRenderer {
         Self {}
+    }
+
+    pub fn create_worker_bridge(self) -> ZResult<WorkerBridge> {
+        Ok(WorkerBridge {
+            plugin: self,
+            ..Default::default()
+        })
     }
 
     pub fn create_session(&self, options: Option<CreateSessionOptions>) -> ZResult<RenderSession> {
