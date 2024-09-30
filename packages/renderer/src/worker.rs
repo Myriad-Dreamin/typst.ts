@@ -10,10 +10,9 @@ use reflexo_vec2canvas::DefaultExportFeature;
 use rkyv::de::deserializers::SharedDeserializeMap;
 use rkyv::ser::serializers::AllocSerializer;
 use rkyv::{AlignedVec, Archive, Deserialize, Serialize};
-use wasm_bindgen::convert::IntoWasmAbi;
 use wasm_bindgen::{prelude::*, JsValue};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{window, Blob, HtmlCanvasElement, HtmlImageElement, OffscreenCanvas};
+use web_sys::{Blob, HtmlImageElement, OffscreenCanvas};
 
 use crate::TypstRenderer;
 use crate::{

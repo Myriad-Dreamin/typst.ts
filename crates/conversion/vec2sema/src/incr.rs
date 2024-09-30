@@ -7,9 +7,9 @@ use reflexo::{
         ir::{Module, Page},
     },
 };
-use web_sys::wasm_bindgen::JsCast;
+use reflexo_vec2canvas::BrowserFontMetric;
 
-use crate::{BrowserFontMetric, SemaTask};
+use crate::SemaTask;
 
 #[derive(Clone)]
 pub struct SemaPage {
@@ -35,17 +35,7 @@ impl IncrVec2SemaPass {
                     return self.pages[idx].clone();
                 }
 
-                let metric = self.metric.get_or_init(|| {
-                    let canvas = web_sys::window()
-                        .unwrap()
-                        .document()
-                        .unwrap()
-                        .create_element("canvas")
-                        .unwrap()
-                        .dyn_into::<web_sys::HtmlCanvasElement>()
-                        .unwrap();
-                    BrowserFontMetric::new(&canvas)
-                });
+                let metric = self.metric.get_or_init(BrowserFontMetric::from_env);
 
                 let mut t = SemaTask::new(true, *metric, size.x.0, size.y.0);
                 let mut output = vec![];

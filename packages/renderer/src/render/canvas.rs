@@ -4,8 +4,8 @@ use std::{collections::HashMap, ops::Deref};
 use reflexo_typst::error::prelude::*;
 use reflexo_typst::hash::Fingerprint;
 use reflexo_typst::vector::ir::{Axes, LayoutRegionNode, Rect, Scalar};
-use reflexo_vec2canvas::{CanvasDevice, DefaultExportFeature, ExportFeature};
-use reflexo_vec2sema::{BrowserFontMetric, SemaTask};
+use reflexo_vec2canvas::{BrowserFontMetric, CanvasDevice, DefaultExportFeature, ExportFeature};
+use reflexo_vec2sema::SemaTask;
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, OffscreenCanvasRenderingContext2d};
 
@@ -128,26 +128,13 @@ impl TypstRenderer {
                     continue;
                 }
                 if let Some(worker) = tc.as_mut() {
-                    let _ = SemaTask::new;
-                    let _ = page;
-                    // let metric = FONT_METRICS.get_or_init(|| {
-                    //     let canvas = web_sys::window()
-                    //         .unwrap()
-                    //         .document()
-                    //         .unwrap()
-                    //         .create_element("canvas")
-                    //         .unwrap()
-                    //         .dyn_into::<web_sys::HtmlCanvasElement>()
-                    //         .unwrap();
-                    //     BrowserFontMetric::new(&canvas)
-                    // });
+                    let metric = FONT_METRICS.get_or_init(BrowserFontMetric::from_env);
 
-                    // let mut output = vec![];
-                    // let mut t = SemaTask::new(true, *metric, page.size.x.0, page.size.y.0);
-                    // let ts = tiny_skia::Transform::identity();
-                    // t.render_semantics(&kern.doc.module, ts, page.content, &mut output);
-                    // worker.push(output.concat());
-                    worker.push(String::new());
+                    let mut output = vec![];
+                    let mut t = SemaTask::new(true, *metric, page.size.x.0, page.size.y.0);
+                    let ts = tiny_skia::Transform::identity();
+                    t.render_semantics(&kern.doc.module, ts, page.content, &mut output);
+                    worker.push(output.concat());
                 }
             }
         }

@@ -36,6 +36,7 @@ web-sys = { workspace = true, features = [
     "BlobPropertyBag",
     "Window",
     "Document",
+    "TextMetrics",
 ] }
 
 [features]

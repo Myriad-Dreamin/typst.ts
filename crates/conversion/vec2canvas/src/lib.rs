@@ -15,6 +15,7 @@ pub use device::CanvasDevice;
 pub use incr::*;
 use js_sys::Promise;
 pub use ops::*;
+use web_sys::{OffscreenCanvas, OffscreenCanvasRenderingContext2d};
 
 use std::{
     cell::OnceCell,
@@ -51,11 +52,61 @@ pub trait ExportFeature {
 /// The default feature set which is used for exporting full-fledged svg.
 pub struct DefaultExportFeature;
 /// The default feature set which is used for exporting svg for printing.
-pub type DefaultSvgTask = CanvasTask<DefaultExportFeature>;
+pub type DefaultCanvasTask = CanvasTask<DefaultExportFeature>;
 
 impl ExportFeature for DefaultExportFeature {
     const ENABLE_TRACING: bool = false;
     const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
+}
+
+#[derive(Clone, Copy)]
+pub struct BrowserFontMetric {
+    pub semi_char_width: f32,
+    pub full_char_width: f32,
+    pub emoji_width: f32,
+    // height: f32,
+}
+
+impl BrowserFontMetric {
+    pub fn from_env() -> Self {
+        let v = OffscreenCanvas::new(0, 0).expect("offscreen canvas is not supported");
+        let ctx = v
+            .get_context("2d")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<OffscreenCanvasRenderingContext2d>()
+            .unwrap();
+
+        let _g = CanvasStateGuard::new(&ctx);
+        ctx.set_font("128px monospace");
+        let metrics = ctx.measure_text("A").unwrap();
+        let semi_char_width = metrics.width();
+        let metrics = ctx.measure_text("喵").unwrap();
+        let full_char_width = metrics.width();
+        let metrics = ctx.measure_text("🦄").unwrap();
+        let emoji_width = metrics.width();
+        // let a_height =
+        //     (metrics.font_bounding_box_descent() +
+        // metrics.font_bounding_box_ascent()).abs();
+
+        Self {
+            semi_char_width: (semi_char_width / 128.) as f32,
+            full_char_width: (full_char_width / 128.) as f32,
+            emoji_width: (emoji_width / 128.) as f32,
+            // height: (a_height / 128.) as f32,
+        }
+    }
+
+    /// Create a new instance for testing.
+    /// The width are prime numbers for helping test.
+    pub fn new_test() -> Self {
+        Self {
+            semi_char_width: 2.0,
+            full_char_width: 3.0,
+            emoji_width: 5.0,
+            // height: 7.0,
+        }
+    }
 }
 
 /// A rendered page of canvas.

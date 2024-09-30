@@ -10,59 +10,10 @@ use reflexo::{
     hash::Fingerprint,
     vector::ir::{self, Module, Point, Rect, Scalar, VecItem},
 };
-use reflexo_vec2canvas::CanvasStateGuard;
+use reflexo_vec2canvas::BrowserFontMetric;
 use unicode_width::UnicodeWidthChar;
-use web_sys::{wasm_bindgen::JsCast, HtmlCanvasElement};
 
 pub use incr::*;
-
-#[derive(Clone, Copy)]
-pub struct BrowserFontMetric {
-    semi_char_width: f32,
-    full_char_width: f32,
-    emoji_width: f32,
-    // height: f32,
-}
-
-impl BrowserFontMetric {
-    pub fn new(canvas: &HtmlCanvasElement) -> Self {
-        let ctx = canvas
-            .get_context("2d")
-            .unwrap()
-            .unwrap()
-            .dyn_into::<web_sys::CanvasRenderingContext2d>()
-            .unwrap();
-        let _g = CanvasStateGuard::new(&ctx);
-        ctx.set_font("128px monospace");
-        let metrics = ctx.measure_text("A").unwrap();
-        let semi_char_width = metrics.width();
-        let metrics = ctx.measure_text("喵").unwrap();
-        let full_char_width = metrics.width();
-        let metrics = ctx.measure_text("🦄").unwrap();
-        let emoji_width = metrics.width();
-        // let a_height =
-        //     (metrics.font_bounding_box_descent() +
-        // metrics.font_bounding_box_ascent()).abs();
-
-        Self {
-            semi_char_width: (semi_char_width / 128.) as f32,
-            full_char_width: (full_char_width / 128.) as f32,
-            emoji_width: (emoji_width / 128.) as f32,
-            // height: (a_height / 128.) as f32,
-        }
-    }
-
-    /// Create a new instance for testing.
-    /// The width are prime numbers for helping test.
-    pub fn new_test() -> Self {
-        Self {
-            semi_char_width: 2.0,
-            full_char_width: 3.0,
-            emoji_width: 5.0,
-            // height: 7.0,
-        }
-    }
-}
 
 pub struct SemaTask {
     heavy: bool,
