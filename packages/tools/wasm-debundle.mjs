@@ -17,7 +17,7 @@ const pkgStats = readdirSync('pkg').map((fileName) => {
     // input = new URL('typst_ts_renderer_bg.wasm', import.meta.url)
 
     let replaced = [];
-    const reg = /input = new URL\('(.+?)', import\.meta\.url\)/mg;
+    const reg = /module_or_path = new URL\('(.+?)', import\.meta\.url\)/mg;
     let exp;
     while ((exp = reg.exec(bundleJs))) {
         console.log(`Found wasm file name: ${exp[1]}`);
@@ -40,7 +40,7 @@ const pkgStats = readdirSync('pkg').map((fileName) => {
 
     for (let i = replaced.length - 1; i >= 0; i--) {
         const [index, length, wasmFN] = replaced[i];
-        bundleJs = bundleJs.substring(0, index) + `input = importWasmModule('${wasmFN}', import.meta.url)` + bundleJs.substring(index + length);
+        bundleJs = bundleJs.substring(0, index) + `module_or_path = importWasmModule('${wasmFN}', import.meta.url)` + bundleJs.substring(index + length);
     }
 
     bundleJs = `/// Processed by wasm-debundle.mjs

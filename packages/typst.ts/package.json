@@ -31,12 +31,11 @@
     "!dist/**/all-in-one.bundle.js"
   ],
   "scripts": {
-    "build-template": "npx vite build --watch -c vite.config.mjs --",
+    "build-template": "npx vite build -c vite.config.mjs --",
     "build:main": "yarn build-template --component=main",
-    "build:main2": "yarn build-template --component=main2",
-    "build:canvas-worker": "yarn build-template --component=canvas-worker",
-    "build": "node scripts/mkdir.mjs && tsc -p ./tsconfig.lib.json && tsc -p ./tsconfig.cjs.json && node scripts/fix-cjs.mjs && node esbuild.config.mjs commonjs production && node esbuild.config.mjs production",
-    "build:dev": "node scripts/mkdir.mjs && tsc -p ./tsconfig.lib.json && node esbuild.config.mjs",
+    "build:bundle": "yarn build:main && yarn build-template --component=global-compiler && yarn build-template --component=global-renderer && yarn build-template --component=all-in-one && yarn build-template --component=all-in-one-lite",
+    "build": "node scripts/mkdir.mjs && tsc -p ./tsconfig.lib.json && tsc -p ./tsconfig.cjs.json && node scripts/fix-cjs.mjs && yarn build:bundle",
+    "build:dev": "node scripts/mkdir.mjs && tsc -p ./tsconfig.lib.json && npx vite build --watch -c vite.config.mjs -- --component=main",
     "prepublish": "turbo build",
     "publish:dry": "npm publish --dry-run --access public",
     "publish:lib": "npm publish --access public || exit 0"
@@ -61,8 +60,6 @@
     "@myriaddreamin/typst-ts-web-compiler": "*",
     "@types/web": "^0.0.99",
     "builtin-modules": "3.3.0",
-    "esbuild": "0.17.19",
-    "esbuild-plugin-wasm": "^1.1.0",
     "tslib": "2.5.2"
   }
 }

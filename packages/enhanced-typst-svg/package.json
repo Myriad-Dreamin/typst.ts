@@ -10,24 +10,16 @@
     "renderer"
   ],
   "repository": "https://github.com/Myriad-Dreamin/typst.ts",
-  "main": "dist/index.cjs",
+  "main": "dist/index.js",
   "files": [
-    "index.cjs",
-    "lib/"
+    "dist/index.js",
+    "dist/index.min.js"
   ],
-  "directories": {
-    "lib": "./lib"
-  },
   "peerDependencies": {},
-  "devDependencies": {
-    "esbuild": "0.17.19"
-  },
   "scripts": {
-    "build": "npx tsc",
-    "debug": "node esbuild.debug.mjs",
-    "watch": "npx esbuild --watch ./src/index.ts --outfile=dist/index.min.js",
-    "watch:min": "npx esbuild --watch ./src/index.ts --minify --outfile=dist/index.min.js",
-    "build:min": "npx esbuild ./src/index.ts --minify --outfile=dist/index.min.js"
+    "build": "npx tsc && yarn build:max --minify",
+    "watch": "yarn build:max --watch",
+    "build:max": "npx vite build"
   },
   "engines": {
     "node": ">=12"

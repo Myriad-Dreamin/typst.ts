@@ -13,5 +13,7 @@
     "stripInternal": true,
 
     "lib": ["ES5", "ES6", "ES7", "ES2018"]
-  }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["scripts", "vite.config.js"]
 }

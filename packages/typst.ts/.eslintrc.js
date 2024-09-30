@@ -1,6 +1,6 @@
 const tsRule = {
   files: ['*.ts'],
-  ignorePatterns: ['esbuild.config.mjs'],
+  ignorePatterns: ['vite.config.mjs'],
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/eslint-recommended',
