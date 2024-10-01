@@ -16,7 +16,6 @@ use rkyv::{Archive, Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 use session::CreateSessionOptions;
-use worker::WorkerBridge;
 
 pub mod build_info {
     /// The version of the typst-ts-renderer crate.
@@ -83,6 +82,11 @@ pub fn renderer_build_info() -> JsValue {
 #[derive(Debug, Default)]
 #[cfg_attr(feature = "rkyv", derive(Archive, Serialize, Deserialize))]
 pub struct RenderPageImageOptions {
+    /// pixel per point
+    pub(crate) pixel_per_pt: Option<f32>,
+    /// background color
+    pub(crate) background_color: Option<String>,
+
     pub(crate) page_off: usize,
     pub(crate) cache_key: Option<String>,
     pub(crate) data_selection: Option<u32>,
@@ -93,10 +97,32 @@ impl RenderPageImageOptions {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
         Self {
+            pixel_per_pt: None,
+            background_color: None,
             page_off: 0,
             cache_key: None,
             data_selection: None,
         }
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn pixel_per_pt(&self) -> Option<f32> {
+        self.pixel_per_pt
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_pixel_per_pt(&mut self, pixel_per_pt: Option<f32>) {
+        self.pixel_per_pt = pixel_per_pt;
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn background_color(&self) -> Option<String> {
+        self.background_color.clone()
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_background_color(&mut self, background_color: Option<String>) {
+        self.background_color = background_color;
     }
 
     #[wasm_bindgen(getter)]
@@ -131,6 +157,7 @@ impl RenderPageImageOptions {
 }
 
 #[wasm_bindgen]
+#[derive(Clone)]
 pub struct TypstRenderer {}
 
 impl Default for TypstRenderer {
@@ -144,13 +171,6 @@ impl TypstRenderer {
     #[wasm_bindgen(constructor)]
     pub fn new() -> TypstRenderer {
         Self {}
-    }
-
-    pub fn create_worker_bridge(self) -> ZResult<WorkerBridge> {
-        Ok(WorkerBridge {
-            plugin: self,
-            ..Default::default()
-        })
     }
 
     pub fn create_session(&self, options: Option<CreateSessionOptions>) -> ZResult<RenderSession> {

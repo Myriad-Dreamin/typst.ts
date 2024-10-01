@@ -15,7 +15,7 @@ pub use device::CanvasDevice;
 pub use incr::*;
 use js_sys::Promise;
 pub use ops::*;
-use web_sys::{OffscreenCanvas, OffscreenCanvasRenderingContext2d};
+use web_sys::{Blob, HtmlImageElement, OffscreenCanvas, OffscreenCanvasRenderingContext2d};
 
 use std::{
     cell::OnceCell,
@@ -35,7 +35,7 @@ use reflexo::{
     },
 };
 use tiny_skia as sk;
-use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 
 use bounds::*;
 
@@ -421,7 +421,19 @@ fn create_image(image: Arc<Image>) -> Option<LazyImage> {
     };
 
     let res = match web_sys::window() {
-        Some(e) => e.create_image_bitmap_with_blob(&blob()).ok(),
+        Some(e) => {
+            if is_svg {
+                let blob = blob();
+                Some(wasm_bindgen_futures::future_to_promise(async move {
+                    let img = HtmlImageElement::new().unwrap();
+                    let p = exception_create_image_blob(&blob, &img);
+                    p.await;
+                    Ok(html_image_to_bitmap(&img).into())
+                }))
+            } else {
+                e.create_image_bitmap_with_blob(&blob()).ok()
+            }
+        }
         None => {
             let this = js_sys::global()
                 .dyn_into::<web_sys::WorkerGlobalScope>()
@@ -453,6 +465,71 @@ fn create_image(image: Arc<Image>) -> Option<LazyImage> {
     });
 
     elem.map(|elem| LazyImage { elem, loaded })
+}
+
+pub fn html_image_to_bitmap(img: &HtmlImageElement) -> web_sys::ImageBitmap {
+    let canvas = web_sys::OffscreenCanvas::new(img.width(), img.height()).unwrap();
+
+    let ctx = canvas
+        .get_context("2d")
+        .expect("get context 2d")
+        .expect("get context 2d");
+    let ctx = ctx
+        .dyn_into::<web_sys::OffscreenCanvasRenderingContext2d>()
+        .expect("must be OffscreenCanvasRenderingContext2d");
+    ctx.draw_image_with_html_image_element(img, 0., 0.)
+        .expect("must draw_image_with_html_image_element");
+
+    canvas
+        .transfer_to_image_bitmap()
+        .expect("transfer_to_image_bitmap")
+}
+
+pub async fn exception_create_image_blob(blob: &Blob, image_elem: &HtmlImageElement) {
+    let data_url = web_sys::Url::create_object_url_with_blob(blob).unwrap();
+
+    let img_load_promise = Promise::new(
+        &mut move |complete: js_sys::Function, _reject: js_sys::Function| {
+            let data_url = data_url.clone();
+            let data_url2 = data_url.clone();
+            let complete2 = complete.clone();
+
+            image_elem.set_src(&data_url);
+
+            // simulate async callback from another thread
+            let a = Closure::<dyn Fn()>::new(move || {
+                web_sys::Url::revoke_object_url(&data_url).unwrap();
+                complete.call0(&complete).unwrap();
+            });
+
+            image_elem.set_onload(Some(a.as_ref().unchecked_ref()));
+            a.forget();
+
+            let a = Closure::<dyn Fn(JsValue)>::new(move |e: JsValue| {
+                web_sys::Url::revoke_object_url(&data_url2).unwrap();
+                complete2.call0(&complete2).unwrap();
+                // let end = std::time::Instant::now();
+                web_sys::console::log_1(
+                    &format!(
+                        "err image loading in {:?} {:?} {:?} {}",
+                        // end - begin,
+                        0,
+                        js_sys::Reflect::get(&e, &"type".into()).unwrap(),
+                        js_sys::JSON::stringify(&e).unwrap(),
+                        data_url2,
+                    )
+                    .into(),
+                );
+            });
+
+            image_elem.set_onerror(Some(a.as_ref().unchecked_ref()));
+            a.forget();
+        },
+    );
+
+    wasm_bindgen_futures::JsFuture::from(img_load_promise)
+        .await
+        .unwrap();
 }
 
 #[comemo::memoize]

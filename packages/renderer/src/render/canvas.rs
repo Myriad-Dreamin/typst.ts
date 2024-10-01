@@ -55,7 +55,7 @@ impl TypstRenderer {
         canvas: Option<&dyn CanvasDevice>,
         options: Option<RenderPageImageOptions>,
     ) -> ZResult<(Fingerprint, JsValue, Option<HashMap<String, f64>>)> {
-        let options = options.unwrap_or_default();
+        let opts = options.unwrap_or_default();
         let rect_lo_x: f32 = -1.;
         let rect_lo_y: f32 = -1.;
         let rect_hi_x: f32 = 1e30;
@@ -67,10 +67,14 @@ impl TypstRenderer {
 
         let mut kern = ses.client.lock().unwrap();
         let mut client = ses.canvas_kern.lock().unwrap();
-        client.set_pixel_per_pt(ses.pixel_per_pt.unwrap_or(3.));
-        client.set_fill(ses.background_color.as_deref().unwrap_or("ffffff").into());
 
-        let data_selection = options.data_selection.unwrap_or(u32::MAX);
+        let pixel_per_pt = opts.pixel_per_pt.or(ses.pixel_per_pt);
+        client.set_pixel_per_pt(pixel_per_pt.unwrap_or(3.));
+        let background_color = opts.background_color.as_deref();
+        let background_color = background_color.or(ses.background_color.as_deref());
+        client.set_fill(background_color.unwrap_or("ffffff").into());
+
+        let data_selection = opts.data_selection.unwrap_or(u32::MAX);
 
         let should_render_body = (data_selection & (1 << 0)) != 0;
         // semantics layer
@@ -91,7 +95,7 @@ impl TypstRenderer {
         };
         let pages = t.pages(kern.module()).unwrap().pages();
 
-        let page_num = options.page_off;
+        let page_num = opts.page_off;
         let fingerprint = if let Some(page) = pages.get(page_num) {
             page.content
         } else {
@@ -99,7 +103,7 @@ impl TypstRenderer {
         };
 
         if should_render_body {
-            let cached = options
+            let cached = opts
                 .cache_key
                 .map(|c| c == fingerprint.as_svg_id("c"))
                 .unwrap_or(false);
@@ -164,6 +168,7 @@ mod tests {
         sync::{Arc, Mutex, OnceLock},
     };
 
+    use js_sys::Uint8Array;
     use reflexo_vec2canvas::ExportFeature;
     use send_wrapper::SendWrapper;
     use serde::{Deserialize, Serialize};
@@ -174,7 +179,7 @@ mod tests {
 
     use crate::{
         session::CreateSessionOptions,
-        worker::{create_worker, Worker},
+        worker::{create_worker, WorkerCore},
         TypstRenderer,
     };
 
@@ -213,7 +218,8 @@ mod tests {
     static RENDERER: Mutex<OnceLock<SendWrapper<Mutex<TypstRenderer>>>> =
         Mutex::new(OnceLock::new());
 
-    static WORKER: Mutex<OnceLock<SendWrapper<Mutex<Arc<Worker>>>>> = Mutex::new(OnceLock::new());
+    static WORKER: Mutex<OnceLock<SendWrapper<Mutex<Arc<WorkerCore>>>>> =
+        Mutex::new(OnceLock::new());
 
     type PerfMap = Option<HashMap<String, f64>>;
 
@@ -280,6 +286,24 @@ mod tests {
         format: &str,
         canvas: &web_sys::HtmlCanvasElement,
     ) -> (String, PerfMap) {
+        let repo = "http://localhost:20810/base/node_modules/@myriaddreamin/typst-ts-renderer";
+        let renderer_wrapper = format!("{repo}/pkg/typst_ts_renderer.mjs");
+        let renderer_wasm = format!("{repo}/pkg/typst_ts_renderer_bg.wasm");
+
+        let worker_script = r#"let renderer = null; let blobIdx = 0; let blobs = new Map();
+function recvMsgOrLoadSvg({data}) { 
+    if (data[0] && data[0].blobIdx) { console.log(data); let blobResolve = blobs.get(data[0].blobIdx); if (blobResolve) { blobResolve(data[1]); } return; }
+    renderer.then(r => r.send(data)); }
+self.loadSvg = function (data, format, w, h) { return new Promise(resolve => {
+    blobIdx += 1; blobs.set(blobIdx, resolve); postMessage({ exception: 'loadSvg', token: { blobIdx }, data, format, w, h }, { transfer: [ data.buffer ] });
+}); }
+
+onmessage = recvMsgOrLoadSvg; const m = import("http://localhost:20810/core/dist/esm/main.bundle.mjs"); const s = import({{renderer_wrapper}}); const w = fetch({{renderer_wasm}});
+renderer = m
+    .then((m) => { const r = m.createTypstRenderer(); return r.init({ beforeBuild: [], getWrapper: () => s, getModule: () => w }).then(_ => r.workerBridge()); })"#.replace("{{renderer_wrapper}}",
+renderer_wrapper.as_str()
+).replace("{{renderer_wasm}}", renderer_wasm.as_str());
+
         let window = web_sys::window().expect("should have a window in this context");
         let performance = window
             .performance()
@@ -288,7 +312,22 @@ mod tests {
         let create = performance.now();
 
         let renderer = WORKER.lock().unwrap();
-        let renderer = renderer.get_or_init(|| SendWrapper::new(Mutex::new(create_worker())));
+        let renderer = renderer.get_or_init(|| {
+            let tag = web_sys::BlobPropertyBag::new();
+            tag.set_type("application/javascript");
+
+            let parts = js_sys::Array::new();
+            parts.push(&Uint8Array::from(worker_script.as_bytes()).into());
+            let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(&parts, &tag).unwrap();
+
+            let worker_url = web_sys::Url::create_object_url_with_blob(&blob).unwrap();
+
+            let opts = web_sys::WorkerOptions::new();
+            opts.set_type(web_sys::WorkerType::Module);
+            let worker = web_sys::Worker::new_with_options(worker_url, &opts).unwrap();
+
+            SendWrapper::new(Mutex::new(create_worker(worker)))
+        });
         let renderer = &mut renderer.lock().unwrap();
 
         let start = performance.now();

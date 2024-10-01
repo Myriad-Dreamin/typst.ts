@@ -1,3 +1,5 @@
+#![allow(clippy::await_holding_lock)]
+
 use std::cell::OnceCell;
 use std::sync::{Arc, Mutex};
 use std::{collections::HashMap, sync::atomic::AtomicI32};
@@ -12,7 +14,7 @@ use rkyv::ser::serializers::AllocSerializer;
 use rkyv::{AlignedVec, Archive, Deserialize, Serialize};
 use wasm_bindgen::{prelude::*, JsValue};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{Blob, HtmlImageElement, OffscreenCanvas};
+use web_sys::{HtmlCanvasElement, HtmlImageElement, OffscreenCanvas};
 
 use crate::TypstRenderer;
 use crate::{
@@ -20,56 +22,124 @@ use crate::{
     RenderPageImageOptions, RenderSession,
 };
 
+#[wasm_bindgen]
+impl TypstRenderer {
+    pub async fn create_worker(&mut self, w: web_sys::Worker) -> ZResult<TypstWorker> {
+        let core = create_worker(w);
+        let rs = core.create_session(None).await?;
+        Ok(TypstWorker { core, rs })
+    }
+
+    pub fn create_worker_bridge(self) -> ZResult<WorkerBridge> {
+        Ok(WorkerBridge {
+            plugin: self,
+            ..Default::default()
+        })
+    }
+}
+
+#[repr(u8)]
+enum CanvasAction {
+    Delete,
+    New,
+    Update,
+}
+
+impl TryFrom<u8> for CanvasAction {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            x if x == CanvasAction::Delete as u8 => Ok(CanvasAction::Delete),
+            x if x == CanvasAction::New as u8 => Ok(CanvasAction::New),
+            x if x == CanvasAction::Update as u8 => Ok(CanvasAction::Update),
+            _ => Err(()),
+        }
+    }
+}
+
+#[wasm_bindgen]
+pub struct TypstWorker {
+    core: Arc<WorkerCore>,
+    // todo: multiple sessions
+    rs: RRenderSession,
+}
+
+#[wasm_bindgen]
+impl TypstWorker {
+    pub fn manipulate_data(&mut self, action: &str, data: Uint8Array) -> ZResult<Promise> {
+        let resp = self.core.send_with(
+            Request::ManipulateData(self.rs.session_info, action.to_string()),
+            data.into(),
+        );
+
+        Ok(resp)
+    }
+
+    pub fn render_canvas(
+        &mut self,
+        actions: Vec<u8>,
+        canvas_list: Vec<HtmlCanvasElement>,
+        data: Vec<RenderPageImageOptions>,
+    ) -> ZResult<Promise> {
+        if actions.len() != data.len() || canvas_list.len() != data.len() {
+            return Err(error_once!("Renderer.InvalidActionDataLength"));
+        }
+
+        web_sys::console::log_1(&format!("render_canvas {data:?}").into());
+
+        let mut promises = Vec::new();
+        let inp = actions.into_iter().zip(canvas_list).zip(data);
+        for ((action, canvas), data) in inp {
+            let action = CanvasAction::try_from(action)
+                .map_err(|_| error_once!("Renderer.InvalidAction", action: action as u32))?;
+
+            match action {
+                CanvasAction::Delete => {
+                    promises.push(wasm_bindgen_futures::future_to_promise(async move {
+                        Ok(JsValue::NULL)
+                    }));
+                }
+                CanvasAction::New => {
+                    let canvas = canvas.transfer_control_to_offscreen().unwrap();
+                    let w = self.rs.worker.clone();
+                    let p =
+                        w.render_page_to_canvas_internal(self.rs.clone(), Some(canvas), Some(data));
+                    promises.push(wasm_bindgen_futures::future_to_promise(async move {
+                        let (fingerprint, html_semantics, ..) = p.await?;
+
+                        let res = js_sys::Object::new();
+                        let err = js_sys::Reflect::set(
+                            &res,
+                            &"cacheKey".into(),
+                            &fingerprint.as_svg_id("c").into(),
+                        );
+                        err.map_err(map_into_err::<JsValue, _>("Renderer.SetCacheKey"))?;
+                        let err =
+                            js_sys::Reflect::set(&res, &"htmlSemantics".into(), &html_semantics);
+                        err.map_err(map_into_err::<JsValue, _>("Renderer.SetHtmlSemantics"))?;
+                        Ok(res.into())
+                    }));
+                }
+                CanvasAction::Update => {
+                    promises.push(wasm_bindgen_futures::future_to_promise(async move {
+                        Ok(JsValue::NULL)
+                    }));
+                }
+            }
+        }
+
+        Ok(Promise::all(&js_sys::Array::from_iter(promises).into()))
+    }
+}
+
 type JsWorker = web_sys::Worker;
 type RRenderSession = RemoteRenderSession;
 
-const WORKER_SCRIPT: &str = r#"let renderer = null; let blobIdx = 0; let blobs = new Map();
-function recvMsgOrLoadSvg({data}) { 
-  if (data[0] && data[0].blobIdx) { console.log(data); let blobResolve = blobs.get(data[0].blobIdx); if (blobResolve) { blobResolve(data[1]); } return; }
-  renderer.then(r => r.send(data)); }
-self.loadSvg = function (data, format, w, h) { return new Promise(resolve => {
-  blobIdx += 1; blobs.set(blobIdx, resolve); postMessage({ exception: 'loadSvg', token: { blobIdx }, data, format, w, h }, { transfer: [ data.buffer ] });
-}); }
-onmessage = function ({data}) { 
-    onmessage = recvMsgOrLoadSvg; const m = import(data[2]); const s = import(data[4]); const w = fetch(data[6]);
-    renderer = m
-     .then((m) => { const r = m.createTypstRenderer(); return r.init({ beforeBuild: [], getWrapper: () => s, getModule: () => w }).then(_ => r.workerBridge()); })
-}"#;
-
-pub(crate) fn create_worker() -> Arc<Worker> {
-    let tag = web_sys::BlobPropertyBag::new();
-    tag.set_type("application/javascript");
-
-    let parts = js_sys::Array::new();
-    parts.push(&Uint8Array::from(WORKER_SCRIPT.as_bytes()).into());
-    let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(&parts, &tag).unwrap();
-
-    let worker_url = web_sys::Url::create_object_url_with_blob(&blob).unwrap();
-    // todo: we need to revoke it at appropriate time
-
-    let opts = web_sys::WorkerOptions::new();
-    opts.set_type(web_sys::WorkerType::Module);
-    let worker = web_sys::Worker::new_with_options(&worker_url, &opts).unwrap();
-
-    let repo = "http://localhost:20810/base/node_modules/@myriaddreamin/typst-ts-renderer";
-    let renderer_wrapper = format!("{repo}/pkg/typst_ts_renderer.mjs");
-    let renderer_wasm = format!("{repo}/pkg/typst_ts_renderer_bg.wasm");
-    let init_opts = [
-        "init",
-        "mainScript",
-        "http://localhost:20810/core/dist/main.mjs",
-        "rendererWrapper",
-        renderer_wrapper.as_str(),
-        "rendererWasm",
-        renderer_wasm.as_str(),
-    ];
-    let msg = js_sys::Array::from_iter(init_opts.into_iter().map(JsValue::from_str));
-
-    worker.post_message(&msg.into()).unwrap();
-
+pub(crate) fn create_worker(js: JsWorker) -> Arc<WorkerCore> {
     #[allow(clippy::arc_with_non_send_sync)]
-    let this = Arc::new(Worker {
-        js: worker,
+    let this = Arc::new(WorkerCore {
+        js,
         request_idx: AtomicI32::new(0),
         requests: Mutex::new(HashMap::new()),
         _handler: OnceCell::new(),
@@ -123,28 +193,11 @@ pub(crate) fn create_worker() -> Arc<Worker> {
 
                             let img = HtmlImageElement::new().unwrap();
                             wasm_bindgen_futures::spawn_local(async move {
-                                let p = Worker::exception_create_image_blob(&blob, &img);
+                                let p =
+                                    reflexo_vec2canvas::exception_create_image_blob(&blob, &img);
                                 p.await;
-                                let canvas =
-                                    web_sys::OffscreenCanvas::new(img.width(), img.height())
-                                        .unwrap();
-
-                                let ctx = canvas
-                                    .get_context("2d")
-                                    .expect("get context 2d")
-                                    .expect("get context 2d");
-                                let ctx = ctx
-                                    .dyn_into::<web_sys::OffscreenCanvasRenderingContext2d>()
-                                    .expect("must be OffscreenCanvasRenderingContext2d");
-                                ctx.draw_image_with_html_image_element(&img, 0., 0.)
-                                    .expect("must draw_image_with_html_image_element");
-                                web_sys::console::log_1(&"owo6".into());
-
-                                let image_data: JsValue = canvas
-                                    .transfer_to_image_bitmap()
-                                    .expect("transfer_to_image_bitmap")
-                                    .into();
-                                web_sys::console::log_1(&"owo7".into());
+                                let image_data: JsValue =
+                                    reflexo_vec2canvas::html_image_to_bitmap(&img).into();
 
                                 let res = js_sys::Array::from_iter([token, image_data.clone()]);
                                 let transfer = js_sys::Array::from_iter([image_data]);
@@ -152,7 +205,6 @@ pub(crate) fn create_worker() -> Arc<Worker> {
                                 that.js
                                     .post_message_with_transfer(&res.into(), &transfer)
                                     .unwrap();
-                                web_sys::console::log_1(&"owo5".into());
                             });
 
                             return;
@@ -186,7 +238,8 @@ pub(crate) fn create_worker() -> Arc<Worker> {
     this
 }
 
-pub struct Worker {
+#[wasm_bindgen]
+pub struct WorkerCore {
     js: JsWorker,
     request_idx: AtomicI32,
     requests: Mutex<HashMap<i32, js_sys::Function>>,
@@ -194,7 +247,7 @@ pub struct Worker {
     _handler: OnceCell<Closure<dyn FnMut(JsValue)>>,
 }
 
-impl Worker {
+impl WorkerCore {
     fn pack(self: &Arc<Self>, req: Request) -> Msg {
         let idx = self
             .request_idx
@@ -205,14 +258,13 @@ impl Worker {
         }
     }
 
-    fn send(self: &Arc<Self>, req: Request) -> Promise {
+    fn send(self: Arc<Self>, req: Request) -> Promise {
         let msg = self.pack(req);
         let idx = msg.id;
         self.js.post_message(&msg.to_bytes().into()).unwrap();
 
-        let this = Arc::clone(self);
         let promise = Promise::new(&mut move |resolve, _reject| {
-            this.requests.lock().unwrap().insert(idx, resolve);
+            self.requests.lock().unwrap().insert(idx, resolve);
         });
 
         promise
@@ -221,8 +273,15 @@ impl Worker {
     fn send_with(self: &Arc<Self>, req: Request, transfers: JsValue) -> Promise {
         let msg = self.pack(req);
         let idx = msg.id;
-        let req = js_sys::Array::from_iter([msg.to_bytes().into(), transfers.clone()]);
-        let transfers = js_sys::Array::from_iter([transfers]);
+        let body = Uint8Array::from(msg.to_bytes().as_slice());
+        let buf = body.buffer().into();
+        let req = js_sys::Array::from_iter([body.into(), transfers.clone()]);
+        let transfers = if let Some(t) = transfers.dyn_ref::<js_sys::Uint8Array>() {
+            t.buffer().into()
+        } else {
+            transfers
+        };
+        let transfers = js_sys::Array::from_iter([buf, transfers]);
         self.js
             .post_message_with_transfer(&req.into(), &transfers.into())
             .unwrap();
@@ -236,7 +295,7 @@ impl Worker {
     }
 
     async fn request(self: &Arc<Self>, req: Request) -> JsValue {
-        JsFuture::from(self.send(req)).await.unwrap()
+        JsFuture::from(self.clone().send(req)).await.unwrap()
     }
 
     async fn request_with(self: &Arc<Self>, req: Request, transfers: JsValue) -> JsValue {
@@ -245,8 +304,6 @@ impl Worker {
             .unwrap()
     }
 
-    // session.set_background_color("#ffffff".to_string());
-    // session.set_pixel_per_pt(3.);
     pub async fn create_session(
         self: &Arc<Self>,
         opts: Option<CreateSessionOptions>,
@@ -267,7 +324,18 @@ impl Worker {
         canvas: Option<&web_sys::HtmlCanvasElement>,
         options: Option<RenderPageImageOptions>,
     ) -> ZResult<(Fingerprint, JsValue, Option<HashMap<String, f64>>)> {
-        let canvas = canvas.unwrap().transfer_control_to_offscreen().unwrap();
+        let canvas = canvas.map(|x| x.transfer_control_to_offscreen().unwrap());
+        self.clone()
+            .render_page_to_canvas_internal(ses.clone(), canvas, options)
+            .await
+    }
+
+    pub async fn render_page_to_canvas_internal(
+        self: Arc<Self>,
+        ses: RemoteRenderSession,
+        canvas: Option<web_sys::OffscreenCanvas>,
+        options: Option<RenderPageImageOptions>,
+    ) -> ZResult<(Fingerprint, JsValue, Option<HashMap<String, f64>>)> {
         let res = self
             .request_with(
                 Request::RenderPageToCanvas(ses.session_info, options),
@@ -291,58 +359,12 @@ impl Worker {
         // let text_content =
         // js_sys::JSON::stringify(&res).unwrap().as_string().unwrap();
     }
-
-    async fn exception_create_image_blob(blob: &Blob, image_elem: &HtmlImageElement) {
-        let data_url = web_sys::Url::create_object_url_with_blob(blob).unwrap();
-
-        let img_load_promise = Promise::new(
-            &mut move |complete: js_sys::Function, _reject: js_sys::Function| {
-                let data_url = data_url.clone();
-                let data_url2 = data_url.clone();
-                let complete2 = complete.clone();
-
-                image_elem.set_src(&data_url);
-
-                // simulate async callback from another thread
-                let a = Closure::<dyn Fn()>::new(move || {
-                    web_sys::Url::revoke_object_url(&data_url).unwrap();
-                    complete.call0(&complete).unwrap();
-                });
-
-                image_elem.set_onload(Some(a.as_ref().unchecked_ref()));
-                a.forget();
-
-                let a = Closure::<dyn Fn(JsValue)>::new(move |e: JsValue| {
-                    web_sys::Url::revoke_object_url(&data_url2).unwrap();
-                    complete2.call0(&complete2).unwrap();
-                    // let end = std::time::Instant::now();
-                    web_sys::console::log_1(
-                        &format!(
-                            "err image loading in {:?} {:?} {:?} {}",
-                            // end - begin,
-                            0,
-                            js_sys::Reflect::get(&e, &"type".into()).unwrap(),
-                            js_sys::JSON::stringify(&e).unwrap(),
-                            data_url2,
-                        )
-                        .into(),
-                    );
-                });
-
-                image_elem.set_onerror(Some(a.as_ref().unchecked_ref()));
-                a.forget();
-            },
-        );
-
-        wasm_bindgen_futures::JsFuture::from(img_load_promise)
-            .await
-            .unwrap();
-    }
 }
 
 #[derive(Debug, Archive, Serialize, Deserialize)]
 enum Request {
     CreateSession(Option<CreateSessionOptions>),
+    ManipulateData(i32, String),
     RenderPageToCanvas(i32, Option<RenderPageImageOptions>),
     RemoveSession(i32),
     SetBackgroundColor(i32, String),
@@ -407,13 +429,15 @@ fn from_result<P: rkyv::Archive + Sized, T>(
 #[wasm_bindgen]
 pub struct WorkerBridge {
     pub(crate) plugin: TypstRenderer,
-    pub(crate) sessions: HashMap<i32, RenderSession>,
+    // todo: desync
+    pub(crate) sessions: HashMap<i32, Arc<Mutex<RenderSession>>>,
+    pub(crate) previous_promise: Option<Promise>,
     pub(crate) sesions: i32,
 }
 
 #[wasm_bindgen]
 impl WorkerBridge {
-    pub async fn send(&mut self, msg: JsValue) {
+    pub fn send(&mut self, msg: JsValue) {
         let (x, y) = from_result::<Msg, _>(&msg, |x, y| {
             let mut dmap = SharedDeserializeMap::default();
             let x = x
@@ -430,72 +454,115 @@ impl WorkerBridge {
                 let session = self.plugin.create_session(opts).unwrap();
                 let idx = self.sesions;
                 self.sesions += 1;
-                self.sessions.insert(idx, session);
-                JsValue::from_f64(idx as f64)
+                #[allow(clippy::arc_with_non_send_sync)]
+                self.sessions.insert(idx, Arc::new(Mutex::new(session)));
+                Ok(JsValue::from_f64(idx as f64))
+            }
+            Request::ManipulateData(ses, action) => {
+                let session = self.sessions.get_mut(&ses).unwrap();
+                let data = y.unwrap();
+                let data = data.get(1).dyn_into::<Uint8Array>().unwrap().to_vec();
+                let res = match action.as_str() {
+                    "reset" => session.lock().unwrap().reset_current(&data),
+                    "merge" => session.lock().unwrap().merge_delta(&data),
+                    _ => Err(error_once!("Renderer.UnsupportedAction", action: action)),
+                };
+                if let Err(e) = res {
+                    web_sys::console::log_1(&format!("manipulate error: {e}").into());
+                }
+                Ok(JsValue::NULL)
             }
             Request::RenderPageToCanvas(ses, opts) => {
                 let y = y.unwrap();
-                let session = self.sessions.get(&ses).unwrap();
+                let session = self.sessions.get(&ses).unwrap().clone();
                 let canvas = y.get(1).dyn_into::<OffscreenCanvas>().unwrap();
                 let ctx = canvas.get_context("2d").unwrap().unwrap();
                 let ctx = ctx
                     .dyn_into::<web_sys::OffscreenCanvasRenderingContext2d>()
                     .unwrap();
-                let (fg, content, res) = self
-                    .plugin
-                    .render_page_to_canvas_internal::<DefaultExportFeature>(
-                        session,
-                        Some(&ctx),
-                        opts,
-                    )
-                    .await
-                    .unwrap();
-                let content = js_sys::JSON::stringify(&content)
-                    .unwrap()
-                    .as_string()
-                    .unwrap();
-                let p = (fg, content, res);
-                let b = to_bytes(&p);
-                JsValue::from(Uint8Array::from(&b[..]))
+                let mut plugin = self.plugin.clone();
+                let previous_promise = self.previous_promise.take();
+                let p = wasm_bindgen_futures::future_to_promise(async move {
+                    if let Some(p) = previous_promise {
+                        web_sys::console::log_1(&"wait for previous promise".into());
+                        let _ = wasm_bindgen_futures::JsFuture::from(p).await;
+                    }
+                    let ses = session.lock().unwrap();
+                    let (fg, content, res) = plugin
+                        .render_page_to_canvas_internal::<DefaultExportFeature>(
+                            &ses,
+                            Some(&ctx),
+                            opts,
+                        )
+                        .await
+                        .unwrap();
+                    let content = if content == JsValue::UNDEFINED {
+                        JsValue::NULL
+                    } else {
+                        content
+                    };
+                    let t = js_sys::JSON::stringify(&content).unwrap();
+                    web_sys::console::log_3(
+                        &"js_sys::JSON::stringify".into(),
+                        &content,
+                        &(&t).into(),
+                    );
+                    let content: String = t.into();
+                    let p = (fg, content, res);
+                    let b = to_bytes(&p);
+                    Ok(JsValue::from(Uint8Array::from(&b[..])))
+                });
+                self.previous_promise = Some(p.clone());
+                Err(p)
             }
 
             Request::RemoveSession(ses) => {
                 self.sessions.remove(&ses);
-                JsValue::NULL
+                Ok(JsValue::NULL)
             }
 
             Request::SetBackgroundColor(ses, color) => {
                 let session = self.sessions.get_mut(&ses).unwrap();
-                session.set_background_color(color);
-                JsValue::NULL
+                session.lock().unwrap().set_background_color(color);
+                Ok(JsValue::NULL)
             }
 
             Request::SetPixelPerPt(ses, f) => {
                 let session = self.sessions.get_mut(&ses).unwrap();
-                session.set_pixel_per_pt(f);
-                JsValue::NULL
+                session.lock().unwrap().set_pixel_per_pt(f);
+                Ok(JsValue::NULL)
             }
 
             Request::GetPagesInfo(ses) => {
                 let session = self.sessions.get_mut(&ses).unwrap();
-                let info = session.pages_info();
+                let info = session.lock().unwrap().pages_info();
                 let b = to_bytes(&info);
-                JsValue::from(Uint8Array::from(&b[..]))
+                Ok(JsValue::from(Uint8Array::from(&b[..])))
             }
         };
 
-        let resp = js_sys::Array::from_iter([JsValue::from_f64(id as f64), res]);
+        wasm_bindgen_futures::spawn_local(async move {
+            let res = res;
+            let id = id;
+            let res = match res {
+                Ok(res) => res,
+                Err(e) => wasm_bindgen_futures::JsFuture::from(e).await.unwrap(),
+            };
 
-        let global = js_sys::global();
-        let ws = global
-            .dyn_into::<web_sys::DedicatedWorkerGlobalScope>()
-            .unwrap();
-        ws.post_message(&resp).unwrap();
+            let resp = js_sys::Array::from_iter([JsValue::from_f64(id as f64), res]);
+
+            let global = js_sys::global();
+            let ws = global
+                .dyn_into::<web_sys::DedicatedWorkerGlobalScope>()
+                .unwrap();
+            ws.post_message(&resp).unwrap();
+        });
     }
 }
 
+#[derive(Clone)]
 pub struct RemoteRenderSession {
-    worker: Arc<Worker>,
+    worker: Arc<WorkerCore>,
     session_info: i32,
 }
 
