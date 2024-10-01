@@ -34,6 +34,7 @@ export default defineConfig({
     lib: {
       ...lib,
       formats: ['es', 'cjs'],
+      fileName: (f, id) => `${f === 'es' ? 'esm' : 'cjs'}/${id}.bundle.js`,
     },
     emptyOutDir: false,
     rollupOptions: {

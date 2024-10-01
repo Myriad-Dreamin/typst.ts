@@ -36,6 +36,8 @@
     "build:bundle": "yarn build:main && yarn build-template --component=global-compiler && yarn build-template --component=global-renderer && yarn build-template --component=all-in-one && yarn build-template --component=all-in-one-lite",
     "build": "node scripts/mkdir.mjs && tsc -p ./tsconfig.lib.json && tsc -p ./tsconfig.cjs.json && node scripts/fix-cjs.mjs && yarn build:bundle",
     "build:dev": "node scripts/mkdir.mjs && tsc -p ./tsconfig.lib.json && npx vite build --watch -c vite.config.mjs -- --component=main",
+    "dev:tsc": "node scripts/mkdir.mjs && tsc -w -p ./tsconfig.lib.json",
+    "dev:main": "node scripts/mkdir.mjs && npx vite build --watch -c vite.config.mjs -- --component=main",
     "prepublish": "turbo build",
     "publish:dry": "npm publish --dry-run --access public",
     "publish:lib": "npm publish --access public || exit 0"
