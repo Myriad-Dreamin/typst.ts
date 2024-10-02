@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { TypstDocument } from '../lib';
+import { TypstDocument } from '../src/lib';
 
 TypstDocument.setWasmModuleInitOptions({
   beforeBuild: [],
