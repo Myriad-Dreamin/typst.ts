@@ -355,14 +355,14 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         })
                     }
                     FrameItem::Tag(tag) => {
-                        if !LINE_HINT_ELEMENTS.contains(tag.elem.func().name()) {
+                        if !LINE_HINT_ELEMENTS.contains(tag.elem().func().name()) {
                             return None;
                         }
 
                         self.store(VecItem::ContentHint('\n'))
                     }
-                    #[cfg(not(feature = "no-content-hint"))]
-                    FrameItem::ContentHint(c) => self.store(VecItem::ContentHint(*c)),
+                    // #[cfg(not(feature = "no-content-hint"))]
+                    // FrameItem::ContentHint(c) => self.store(VecItem::ContentHint(*c)),
                     // todo: support page label
                 };
 

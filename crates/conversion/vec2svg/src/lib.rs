@@ -3,6 +3,7 @@
 // todo: https://github.com/typst/typst/pull/2610
 // color export
 
+use reflexo::typst_shim::model::TypstDocumentExt;
 use typst::model::Document as TypstDocument;
 
 /// re-export the core types.
@@ -115,8 +116,7 @@ pub fn render_svg_html<Feat: ExportFeature>(output: &TypstDocument) -> String {
     html.push(r#"<!DOCTYPE html><html><head><meta charset="utf-8" /><title>"#.into());
     html.push(SvgText::Plain(
         output
-            .title
-            .clone()
+            .title()
             .map(|s| s.to_string())
             .unwrap_or_else(|| "Typst TypstDocument".into()),
     ));

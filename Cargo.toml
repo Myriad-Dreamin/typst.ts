@@ -73,20 +73,30 @@ strip = true
 [workspace.dependencies]
 
 # typesetting
-typst = "0.11.1"
-typst-ide = "0.11.1"
-typst-pdf = "0.11.1"
-typst-svg = "0.11.1"
-typst-syntax = "0.11.1"
-ttf-parser = "0.20.0"
+typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.11.23-2" }
+typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.11.23-2" }
+typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.11.23-2" }
+typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.11.23-2" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.11.23-2" }
+ttf-parser = "0.24.1"
+# typst = "0.11.1"
+# typst-ide = "0.11.1"
+# typst-pdf = "0.11.1"
+# typst-svg = "0.11.1"
+# typst-syntax = "0.11.1"
+# ttf-parser = "0.20.0"
 
-typst-assets = "0.11.1"
-typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", tag = "v0.11.1" }
+typst-assets = { git = "https://github.com/typst/typst-assets", rev = "4ee794c" }
+typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", rev = "e9f8127" }
+
+# typst-assets = "0.11.1"
+# typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", tag = "v0.11.1" }
 
 # general
 anyhow = "1"
 async-recursion = "1.0.4"
 async-trait = "0.1.68"
+cfg-if = "1.0"
 chrono = { version = "0.4.24", default-features = false, features = [
     "clock",
     "std",
@@ -191,6 +201,9 @@ reflexo = { version = "0.5.0-rc7", path = "crates/reflexo", default-features = f
 reflexo-vfs = { version = "0.5.0-rc7", path = "crates/reflexo-vfs" }
 reflexo-world = { version = "0.5.0-rc7", path = "crates/reflexo-world" }
 reflexo-typst = { version = "0.5.0-rc7", path = "crates/reflexo-typst", default-features = false }
+reflexo-typst-shim = { version = "0.5.0-rc7", path = "crates/reflexo-typst-shim", features = [
+    "nightly",
+] }
 
 # conversions
 reflexo-typst2vec = { version = "0.5.0-rc7", path = "crates/conversion/typst2vec" }
@@ -204,6 +217,16 @@ reflexo-vec2svg = { version = "0.5.0-rc7", path = "crates/conversion/vec2svg" }
 typst-ts-test-common = { version = "0.5.0-rc7", path = "tests/common" }
 typst-ts-dev-server = { version = "0.5.0-rc7", path = "server/dev" }
 typst-ts-cli = { version = "0.5.0-rc7", path = "cli" }
+
+[workspace.lints.rust]
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+uninlined_format_args = "warn"
+# missing_errors_doc = "warn"
+# missing_panics_doc = "warn"
+missing_safety_doc = "warn"
+undocumented_unsafe_blocks = "warn"
 
 [patch.crates-io]
 

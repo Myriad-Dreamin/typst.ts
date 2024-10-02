@@ -9,11 +9,12 @@ use chrono::{DateTime, Datelike, Local};
 use comemo::Prehashed;
 use parking_lot::RwLock;
 use reflexo::ImmutPath;
+use reflexo::{error::prelude::*, typst_shim::LazyHash};
 use reflexo_vfs::{notify::FilesystemEvent, Vfs};
 use typst::{
     diag::{eco_format, At, EcoString, FileError, FileResult, SourceResult},
     foundations::{Bytes, Datetime, Dict},
-    syntax::{FileId, Source, Span, VirtualPath},
+    syntax::{FileId, Source, Span},
     text::{Font, FontBook},
     Library, World,
 };
@@ -258,18 +259,27 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
         &self,
         file_path: Option<String>,
         encoding: OffsetEncoding,
-    ) -> Arc<Vec<SemanticToken>> {
-        let world = self.snapshot();
-        let src = &file_path
-            .and_then(|e| {
-                let relative_path = Path::new(&e).strip_prefix(&self.workspace_root()?).ok()?;
+    ) -> ZResult<Arc<Vec<SemanticToken>>> {
+        let world = match file_path {
+            Some(e) => {
+                let path = Path::new(&e);
+                let s = self
+                    .entry_state()
+                    .try_select_path_in_workspace(path, true)?
+                    .ok_or_else(|| error_once!("cannot select file", path: e))?;
 
-                let source_id = FileId::new(None, VirtualPath::new(relative_path));
-                world.source(source_id).ok()
-            })
-            .unwrap_or_else(|| world.main());
+                self.snapshot_with(Some(TaskInputs {
+                    entry: Some(s),
+                    inputs: None,
+                }))
+            }
+            None => self.snapshot(),
+        };
 
-        Arc::new(get_semantic_tokens_full(src, encoding))
+        let src = world
+            .source(world.main())
+            .map_err(|e| error_once!("cannot access source file", err: e))?;
+        Ok(Arc::new(get_semantic_tokens_full(&src, encoding)))
     }
 }
 
@@ -466,9 +476,8 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
     }
 
     /// Access the main source file.
-    fn main(&self) -> Source {
-        self.source(self.entry.main().unwrap_or_else(|| *DETACHED_ENTRY))
-            .unwrap()
+    fn main(&self) -> FileId {
+        self.entry.main().unwrap_or_else(|| *DETACHED_ENTRY)
     }
 
     /// Metadata about all known fonts.

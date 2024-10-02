@@ -12,7 +12,7 @@ repository.workspace = true
 comemo.workspace = true
 elsa.workspace = true
 ecow.workspace = true
-reflexo = { workspace = true, features = ["web"] }
+reflexo = { workspace = true, features = ["typst", "web"] }
 reflexo-vec2bbox.workspace = true
 
 tiny-skia.workspace = true

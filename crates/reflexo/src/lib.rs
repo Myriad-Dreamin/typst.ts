@@ -12,6 +12,9 @@ pub use concepts::*;
 
 pub use error::{ErrKind, Error};
 
+#[cfg(feature = "typst")]
+pub use reflexo_typst_shim as typst_shim;
+
 pub mod vector {
     #[cfg(feature = "rkyv")]
     pub mod incr;

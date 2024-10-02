@@ -1,5 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
+use reflexo::typst_shim::LazyHash;
 use reflexo_typst2vec::pass::{CommandExecutor, Typst2VecPass};
 use reflexo_typst2vec::IntoTypst;
 use reflexo_vec2svg::{DynamicLayoutSvgExporter, MultiVecDocument};

@@ -1,13 +1,12 @@
-use reflexo::hash::{item_hash128, Fingerprint};
 pub use reflexo::vector::ir::*;
 
+use reflexo::hash::{item_hash128, Fingerprint};
+use reflexo::typst_shim::utils::Scalar as TypstScalar;
 use typst::layout::{
     Abs as TypstAbs, Angle as TypstAngle, Axes as TypstAxes, Point as TypstPoint,
     Ratio as TypstRatio, Transform as TypstTransform,
 };
 use typst::text::Font;
-use typst::util::Scalar as TypstScalar;
-
 use typst::visualize::{ImageFormat, RasterFormat, VectorFormat};
 
 use crate::hash::typst_affinite_hash;

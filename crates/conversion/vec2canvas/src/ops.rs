@@ -364,9 +364,9 @@ impl CanvasImageElem {
 
             let aspect = (image.width() as f32) / (image.height() as f32);
 
-            let w = view_width.max(aspect * view_height);
-            let h = w / aspect;
-            (w, h)
+            let w: f32 = view_width.max(aspect * view_height);
+            let h: f32 = w / aspect;
+            (w as f64, h as f64)
         };
 
         let state = CanvasStateGuard::new(canvas);
@@ -376,19 +376,11 @@ impl CanvasImageElem {
 
         match elem.dyn_into::<ImageBitmap>() {
             Ok(image_elem) => {
-                canvas.draw_image_with_image_bitmap_and_dw_and_dh(
-                    &image_elem,
-                    0.,
-                    0.,
-                    w as f64,
-                    h as f64,
-                );
+                canvas.draw_image_with_image_bitmap_and_dw_and_dh(&image_elem, 0., 0., w, h);
             }
             Err(elem) => {
                 let img = elem.dyn_into::<OffscreenCanvas>().expect("OffscreenCanvas");
-                canvas.draw_image_with_offscreen_canvas_and_dw_and_dh(
-                    &img, 0., 0., w as f64, h as f64,
-                );
+                canvas.draw_image_with_offscreen_canvas_and_dw_and_dh(&img, 0., 0., w, h);
             }
         }
         drop(state);
