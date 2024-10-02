@@ -183,6 +183,7 @@ mod tests {
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
     const SHOW_RESULT: bool = true;
+    #[cfg(feature = "worker")]
     const IN_WORKER: bool = false;
 
     fn hash_bytes<T: AsRef<[u8]>>(bytes: T) -> String {
