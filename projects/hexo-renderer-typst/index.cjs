@@ -5,17 +5,22 @@
 const path = require('path');
 const fs = require('fs');
 
+/**
+ * Theses global objects could help for hexo scripting:
+ * For example, you can retrieve more information from typst documents and update article tags with a script/tag.js.
+ */
+
 const Compiler = require('./lib/compiler.cjs');
-export const compiler = new Compiler(hexo);
+const compiler = new Compiler(hexo);
 
 const Renderer = require('./lib/renderer.cjs');
-export const renderer = new Renderer(hexo, compiler);
+const renderer = new Renderer(hexo, compiler);
 
 const Processor = require('./lib/processor.cjs');
-export const processor = new Processor(hexo, compiler);
+const processor = new Processor(hexo, compiler);
 
 const Watcher = require('./lib/watcher.cjs');
-export const watcher = new Watcher(hexo, compiler);
+const watcher = new Watcher(hexo, compiler);
 
 function render(data, options) {
   return renderer.render(data, options);
@@ -35,7 +40,7 @@ hexo.extend.injector.register('head_end', require('./lib/injector.typst.cjs'), '
 hexo.extend.injector.register('head_end', require('./lib/injector.svg.cjs'), 'default');
 hexo.extend.renderer.register('typst', 'html', render);
 hexo.extend.renderer.register('typ', 'html', render);
-    
+
 hexo.extend.filter.register('before_generate', startWatch);
 hexo.extend.filter.register('after_post_render', process);
 
@@ -58,7 +63,9 @@ hexo.extend.generator.register('typst_assets', function (locals) {
   }
 
   if (!fs.existsSync(renderer_path)) {
-    throw new Error('typst-ts-renderer not found, please install `@myriaddreamin/typst-ts-renderer` first');
+    throw new Error(
+      'typst-ts-renderer not found, please install `@myriaddreamin/typst-ts-renderer` first',
+    );
   }
 
   return [
@@ -82,3 +89,10 @@ hexo.extend.generator.register('typst_assets', function (locals) {
     },
   ];
 });
+
+module.exports = {
+  compiler,
+  renderer,
+  processor,
+  watcher,
+};
