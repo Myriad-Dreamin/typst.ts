@@ -1,63 +1,36 @@
-use std::sync::atomic::AtomicI32;
 use std::sync::OnceLock;
 use std::{collections::HashMap, ops::Deref};
 
 use reflexo_typst::error::prelude::*;
 use reflexo_typst::hash::Fingerprint;
 use reflexo_typst::vector::ir::{Axes, LayoutRegionNode, Rect, Scalar};
-use reflexo_vec2canvas::{DefaultExportFeature, ExportFeature};
-use reflexo_vec2sema::{BrowserFontMetric, SemaTask};
+use reflexo_vec2canvas::{BrowserFontMetric, CanvasDevice, DefaultExportFeature, ExportFeature};
+use reflexo_vec2sema::SemaTask;
 use wasm_bindgen::prelude::*;
-use web_sys::{OffscreenCanvas, Path2d};
+use web_sys::{CanvasRenderingContext2d, OffscreenCanvasRenderingContext2d};
 
 use crate::{RenderPageImageOptions, RenderSession, TypstRenderer};
 
-static TIMES: AtomicI32 = AtomicI32::new(0);
-
 #[wasm_bindgen]
 impl TypstRenderer {
-    pub fn canvas_render_glyph(&self, o: &OffscreenCanvas, glyph: &str) -> ZResult<()> {
-        let t = TIMES.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        let ctx = o.get_context("2d").unwrap().unwrap();
-        // web_sys::console::log_2(&"canvas_render_glyph".into(), &(&ctx).into());
-        let ctx: web_sys::OffscreenCanvasRenderingContext2d = ctx.dyn_into().unwrap();
-
-        const FONT_SIZE: f64 = 8.;
-
-        if t < 9 {
-            let x = 4. + (t % 3) as f64;
-            let y = 4. + (t / 3) as f64;
-
-            ctx.set_transform(
-                FONT_SIZE / 1024.,
-                0.,
-                0.,
-                -FONT_SIZE / 1024.,
-                0. + x / 3.,
-                FONT_SIZE + 0.24 * FONT_SIZE + y / 3.,
-            )
-            .unwrap();
-            let glyph = Path2d::new_with_path_string(glyph).unwrap();
-            ctx.fill_with_path_2d(&glyph);
-        } else {
-            // let x = 4. + ((t - 9) % 3) as f32;
-            // let y = 4. - ((t - 9) / 3) as f32;
-
-            // let g = crate::render::pixglyph_canvas::Glyph::new(glyph);
-            // let t = g.rasterize(x / 3., y / 3., FONT_SIZE as f32);
-
-            // crate::render::pixglyph_canvas::blend_glyph(&ctx, &t);
-        }
-
-        Ok(())
-    }
-
     pub async fn render_page_to_canvas(
         &mut self,
         ses: &RenderSession,
-        canvas: Option<web_sys::CanvasRenderingContext2d>,
+        canvas: JsValue,
         options: Option<RenderPageImageOptions>,
     ) -> ZResult<JsValue> {
+        let canvas = canvas.as_ref();
+        let canvas = if canvas == &JsValue::NULL {
+            None
+        } else {
+            Some(match canvas.dyn_ref::<CanvasRenderingContext2d>() {
+                Some(t) => t as &dyn CanvasDevice,
+                None => canvas
+                    .dyn_ref::<OffscreenCanvasRenderingContext2d>()
+                    .unwrap() as &dyn CanvasDevice,
+            })
+        };
+
         let (fingerprint, html_semantics, ..) = self
             .render_page_to_canvas_internal::<DefaultExportFeature>(ses, canvas, options)
             .await?;
@@ -79,10 +52,10 @@ impl TypstRenderer {
     pub async fn render_page_to_canvas_internal<Feat: ExportFeature>(
         &mut self,
         ses: &RenderSession,
-        canvas: Option<web_sys::CanvasRenderingContext2d>,
+        canvas: Option<&dyn CanvasDevice>,
         options: Option<RenderPageImageOptions>,
     ) -> ZResult<(Fingerprint, JsValue, Option<HashMap<String, f64>>)> {
-        let options = options.unwrap_or_default();
+        let opts = options.unwrap_or_default();
         let rect_lo_x: f32 = -1.;
         let rect_lo_y: f32 = -1.;
         let rect_hi_x: f32 = 1e30;
@@ -94,10 +67,14 @@ impl TypstRenderer {
 
         let mut kern = ses.client.lock().unwrap();
         let mut client = ses.canvas_kern.lock().unwrap();
-        client.set_pixel_per_pt(ses.pixel_per_pt.unwrap_or(3.));
-        client.set_fill(ses.background_color.as_deref().unwrap_or("ffffff").into());
 
-        let data_selection = options.data_selection.unwrap_or(u32::MAX);
+        let pixel_per_pt = opts.pixel_per_pt.or(ses.pixel_per_pt);
+        client.set_pixel_per_pt(pixel_per_pt.unwrap_or(3.));
+        let background_color = opts.background_color.as_deref();
+        let background_color = background_color.or(ses.background_color.as_deref());
+        client.set_fill(background_color.unwrap_or("ffffff").into());
+
+        let data_selection = opts.data_selection.unwrap_or(u32::MAX);
 
         let should_render_body = (data_selection & (1 << 0)) != 0;
         // semantics layer
@@ -118,7 +95,7 @@ impl TypstRenderer {
         };
         let pages = t.pages(kern.module()).unwrap().pages();
 
-        let page_num = options.page_off;
+        let page_num = opts.page_off;
         let fingerprint = if let Some(page) = pages.get(page_num) {
             page.content
         } else {
@@ -126,12 +103,12 @@ impl TypstRenderer {
         };
 
         if should_render_body {
-            let cached = options
+            let cached = opts
                 .cache_key
                 .map(|c| c == fingerprint.as_svg_id("c"))
                 .unwrap_or(false);
 
-            let canvas = &canvas.ok_or_else(|| error_once!("Renderer.MissingCanvasForBody"))?;
+            let canvas = canvas.ok_or_else(|| error_once!("Renderer.MissingCanvasForBody"))?;
 
             if !cached {
                 client
@@ -155,17 +132,7 @@ impl TypstRenderer {
                     continue;
                 }
                 if let Some(worker) = tc.as_mut() {
-                    let metric = FONT_METRICS.get_or_init(|| {
-                        let canvas = web_sys::window()
-                            .unwrap()
-                            .document()
-                            .unwrap()
-                            .create_element("canvas")
-                            .unwrap()
-                            .dyn_into::<web_sys::HtmlCanvasElement>()
-                            .unwrap();
-                        BrowserFontMetric::new(&canvas)
-                    });
+                    let metric = FONT_METRICS.get_or_init(BrowserFontMetric::from_env);
 
                     let mut output = vec![];
                     let mut t = SemaTask::new(true, *metric, page.size.x.0, page.size.y.0);
@@ -205,15 +172,19 @@ mod tests {
     use send_wrapper::SendWrapper;
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
-    // use typst_ts_test_common::std_artifact::STD_TEST_FILES;
     use typst_ts_test_common::web_artifact::get_corpus;
     use wasm_bindgen::JsCast;
     use wasm_bindgen_test::*;
-    wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
+    #[cfg(feature = "worker")]
+    use crate::worker::{create_worker, WorkerCore};
     use crate::{session::CreateSessionOptions, TypstRenderer};
 
-    const SHOW_RESULT: bool = false;
+    wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
+    const SHOW_RESULT: bool = true;
+    #[cfg(feature = "worker")]
+    const IN_WORKER: bool = false;
 
     fn hash_bytes<T: AsRef<[u8]>>(bytes: T) -> String {
         format!("sha256:{}", hex::encode(sha2::Sha256::digest(bytes)))
@@ -245,6 +216,160 @@ mod tests {
     static RENDERER: Mutex<OnceLock<SendWrapper<Mutex<TypstRenderer>>>> =
         Mutex::new(OnceLock::new());
 
+    #[cfg(feature = "worker")]
+    static WORKER: Mutex<OnceLock<SendWrapper<Mutex<std::sync::Arc<WorkerCore>>>>> =
+        Mutex::new(OnceLock::new());
+
+    type PerfMap = Option<HashMap<String, f64>>;
+
+    async fn render_in_main_thread(
+        artifact: &[u8],
+        format: &str,
+        canvas: &web_sys::HtmlCanvasElement,
+    ) -> (String, PerfMap) {
+        let window = web_sys::window().expect("should have a window in this context");
+        let performance = window
+            .performance()
+            .expect("performance should be available");
+
+        let create = performance.now();
+
+        let renderer = RENDERER.lock().unwrap();
+        let renderer =
+            renderer.get_or_init(|| SendWrapper::new(Mutex::new(crate::tests::get_renderer())));
+        let renderer = &mut renderer.lock().unwrap();
+
+        let start = performance.now();
+        let mut session = renderer
+            .create_session(Some(CreateSessionOptions {
+                format: Some(format.to_string()),
+                artifact_content: Some(artifact.to_owned()),
+            }))
+            .unwrap();
+        session.set_background_color("#ffffff".to_string());
+        session.set_pixel_per_pt(3.);
+
+        let sizes = &session.pages_info;
+        canvas.set_width((sizes.width() * 3.).ceil() as u32);
+        canvas.set_height((sizes.height() * 3.).ceil() as u32);
+
+        let context: web_sys::CanvasRenderingContext2d = canvas
+            .get_context("2d")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<web_sys::CanvasRenderingContext2d>()
+            .unwrap();
+
+        let prepare = performance.now();
+
+        let (_fingerprint, res, perf_events) = renderer
+            .render_page_to_canvas_internal::<CIRenderFeature>(&session, Some(&context), None)
+            .await
+            .unwrap();
+        let end = performance.now();
+
+        let text_content = js_sys::JSON::stringify(&res).unwrap().as_string().unwrap();
+
+        let perf_events = perf_events.map(|mut p| {
+            p.insert("create_renderer".to_string(), start - create);
+            p.insert("session_prepare".to_string(), prepare - start);
+            p.insert("rendering".to_string(), end - start);
+            p
+        });
+
+        (text_content, perf_events)
+    }
+
+    #[cfg(feature = "worker")]
+    async fn render_in_worker_thread(
+        artifact: &[u8],
+        format: &str,
+        canvas: &web_sys::HtmlCanvasElement,
+    ) -> (String, PerfMap) {
+        use std::sync::Arc;
+
+        use js_sys::Uint8Array;
+
+        let repo = "http://localhost:20810/base/node_modules/@myriaddreamin/typst-ts-renderer";
+        let renderer_wrapper = format!("{repo}/pkg/typst_ts_renderer.mjs");
+        let renderer_wasm = format!("{repo}/pkg/typst_ts_renderer_bg.wasm");
+
+        let worker_script = r#"let renderer = null; let blobIdx = 0; let blobs = new Map();
+function recvMsgOrLoadSvg({data}) { 
+    if (data[0] && data[0].blobIdx) { console.log(data); let blobResolve = blobs.get(data[0].blobIdx); if (blobResolve) { blobResolve(data[1]); } return; }
+    renderer.then(r => r.send(data)); }
+self.loadSvg = function (data, format, w, h) { return new Promise(resolve => {
+    blobIdx += 1; blobs.set(blobIdx, resolve); postMessage({ exception: 'loadSvg', token: { blobIdx }, data, format, w, h }, { transfer: [ data.buffer ] });
+}); }
+
+onmessage = recvMsgOrLoadSvg; const m = import("http://localhost:20810/core/dist/esm/main.bundle.mjs"); const s = import({{renderer_wrapper}}); const w = fetch({{renderer_wasm}});
+renderer = m
+    .then((m) => { const r = m.createTypstRenderer(); return r.init({ beforeBuild: [], getWrapper: () => s, getModule: () => w }).then(_ => r.workerBridge()); })"#.replace("{{renderer_wrapper}}",
+renderer_wrapper.as_str()
+).replace("{{renderer_wasm}}", renderer_wasm.as_str());
+
+        let window = web_sys::window().expect("should have a window in this context");
+        let performance = window
+            .performance()
+            .expect("performance should be available");
+
+        let create = performance.now();
+
+        let renderer = WORKER.lock().unwrap();
+        let renderer = renderer.get_or_init(|| {
+            let tag = web_sys::BlobPropertyBag::new();
+            tag.set_type("application/javascript");
+
+            let parts = js_sys::Array::new();
+            parts.push(&Uint8Array::from(worker_script.as_bytes()).into());
+            let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(&parts, &tag).unwrap();
+
+            let worker_url = web_sys::Url::create_object_url_with_blob(&blob).unwrap();
+
+            let opts = web_sys::WorkerOptions::new();
+            opts.set_type(web_sys::WorkerType::Module);
+            let worker = web_sys::Worker::new_with_options(&worker_url, &opts).unwrap();
+
+            SendWrapper::new(Mutex::new(create_worker(worker)))
+        });
+        let renderer = &mut renderer.lock().unwrap();
+
+        let start = performance.now();
+        let session = renderer
+            .create_session(Some(CreateSessionOptions {
+                format: Some(format.to_string()),
+                artifact_content: Some(artifact.to_owned()),
+            }))
+            .await
+            .unwrap();
+        web_sys::console::log_1(&"session created".into());
+        session.set_background_color("#ffffff".to_string()).await;
+        session.set_pixel_per_pt(3.).await;
+
+        let sizes = &session.get_pages_info().await;
+        canvas.set_width((sizes.width() * 3.).ceil() as u32);
+        canvas.set_height((sizes.height() * 3.).ceil() as u32);
+
+        let prepare = performance.now();
+
+        let (_fingerprint, res, perf_events) = renderer
+            .render_page_to_canvas(Arc::new(session), Some(canvas), None)
+            .await
+            .unwrap();
+        let end = performance.now();
+
+        let text_content = js_sys::JSON::stringify(&res).unwrap().as_string().unwrap();
+
+        let perf_events = perf_events.map(|mut p: HashMap<String, f64>| {
+            p.insert("create_renderer".to_string(), start - create);
+            p.insert("session_prepare".to_string(), prepare - start);
+            p.insert("rendering".to_string(), end - start);
+            p
+        });
+
+        (text_content, perf_events)
+    }
+
     async fn render_test_template(point: &str, artifact: &[u8], format: &str) {
         super::FONT_METRICS.get_or_init(super::BrowserFontMetric::new_test);
 
@@ -252,31 +377,6 @@ mod tests {
         let performance = window
             .performance()
             .expect("performance should be available");
-
-        // static INIT_WORKER: OnceLock<()> = OnceLock::new();
-
-        // INIT_WORKER.get_or_init(|| {
-        //     //
-        //     let s = &window
-        //         .document()
-        //         .unwrap()
-        //         .create_element("script")
-        //         .unwrap()
-        //         .dyn_into::<web_sys::HtmlElement>()
-        //         .unwrap();
-        //     s.set_attribute("src", "http://127.0.0.1:20810/core/dist/main2.mjs")
-        //         .unwrap();
-        //     s.set_attribute("type", "module").unwrap();
-        //     s.set_attribute("crossorigin", "anonymous").unwrap();
-
-        //     window
-        //         .document()
-        //         .unwrap()
-        //         .body()
-        //         .unwrap()
-        //         .append_child(s)
-        //         .unwrap();
-        // });
 
         let canvas = window
             .document()
@@ -287,57 +387,23 @@ mod tests {
             .unwrap();
 
         let (time_used, perf_events, data_content_hash, ..) = {
-            let create = performance.now();
-
-            let renderer = RENDERER.lock().unwrap();
-            let renderer =
-                renderer.get_or_init(|| SendWrapper::new(Mutex::new(crate::tests::get_renderer())));
-            let renderer = &mut renderer.lock().unwrap();
-
             let start = performance.now();
-            let mut session = renderer
-                .create_session(Some(CreateSessionOptions {
-                    format: Some(format.to_string()),
-                    artifact_content: Some(artifact.to_owned()),
-                }))
-                .unwrap();
-            session.set_background_color("#ffffff".to_string());
-            session.set_pixel_per_pt(3.);
 
-            let sizes = &session.pages_info;
-            canvas.set_width((sizes.width() * 3.).ceil() as u32);
-            canvas.set_height((sizes.height() * 3.).ceil() as u32);
+            #[cfg(feature = "worker")]
+            let (text_content, perf_events) = if IN_WORKER {
+                render_in_worker_thread(artifact, format, &canvas).await
+            } else {
+                render_in_main_thread(artifact, format, &canvas).await
+            };
+            #[cfg(not(feature = "worker"))]
+            let (text_content, perf_events) =
+                render_in_main_thread(artifact, format, &canvas).await;
 
-            let context: web_sys::CanvasRenderingContext2d = canvas
-                .get_context("2d")
-                .unwrap()
-                .unwrap()
-                .dyn_into::<web_sys::CanvasRenderingContext2d>()
-                .unwrap();
-
-            let prepare = performance.now();
-
-            let (_fingerprint, res, perf_events) = renderer
-                .render_page_to_canvas_internal::<CIRenderFeature>(&session, Some(context), None)
-                .await
-                .unwrap();
             let end = performance.now();
 
             let data_content = canvas.to_data_url_with_type("image/png").unwrap();
 
-            let text_content = js_sys::JSON::stringify(&res).unwrap().as_string().unwrap();
-
             let data_content_hash = hash_bytes(&data_content);
-
-            let settle = performance.now();
-
-            let perf_events = perf_events.map(|mut p| {
-                p.insert("create_renderer".to_string(), start - create);
-                p.insert("session_prepare".to_string(), prepare - start);
-                p.insert("rendering".to_string(), end - start);
-                p.insert("serialize_result".to_string(), settle - end);
-                p
-            });
 
             web_sys::console::log_3(
                 &">>> reflexo_test_capture".into(),
@@ -348,7 +414,7 @@ mod tests {
                         time_used: format!("{:.3}", end - start),
                         data_content_hash: data_content_hash.clone(),
                         text_content_hash: hash_bytes(&text_content),
-                        artifact_hash: hash_bytes(&artifact),
+                        artifact_hash: hash_bytes(artifact),
                     },
                     verbose: {
                         let mut verbose_data = HashMap::new();
@@ -429,7 +495,8 @@ mod tests {
         let point = path.replace('/', "_");
         let ir_point = format!("{}_artifact_ir", point);
 
-        render_test_template(&ir_point, &get_ir_artifact(path).await, "vector").await;
+        let artifact = get_ir_artifact(path).await;
+        render_test_template(&ir_point, &artifact, "vector").await;
     }
 
     macro_rules! make_test_point {

@@ -9,7 +9,7 @@ use reflexo::{
     },
 };
 
-use crate::{set_transform, CanvasOp, CanvasPage, CanvasTask, DefaultExportFeature};
+use crate::{set_transform, CanvasDevice, CanvasOp, CanvasPage, CanvasTask, DefaultExportFeature};
 
 /// Incremental pass from vector to canvas
 pub struct IncrVec2CanvasPass {
@@ -58,22 +58,11 @@ impl IncrVec2CanvasPass {
             })
             .collect();
 
-        let ts = sk::Transform::from_scale(self.pixel_per_pt, self.pixel_per_pt);
-        for page in pages.iter() {
-            page.elem.prepare(ts);
-        }
-
-        web_sys::console::log_1(&"interpret_changes".into());
         self.pages = pages;
     }
 
     /// Flushes a page to the canvas with the given transform.
-    pub async fn flush_page(
-        &mut self,
-        idx: usize,
-        canvas: &web_sys::CanvasRenderingContext2d,
-        ts: sk::Transform,
-    ) {
+    pub async fn flush_page(&mut self, idx: usize, canvas: &dyn CanvasDevice, ts: sk::Transform) {
         let pg = &self.pages[idx];
 
         if !set_transform(canvas, ts) {
@@ -125,7 +114,7 @@ impl IncrCanvasDocClient {
     pub async fn render_page_in_window(
         &mut self,
         kern: &mut IncrDocClient,
-        canvas: &web_sys::CanvasRenderingContext2d,
+        canvas: &dyn CanvasDevice,
         idx: usize,
         _rect: Rect,
     ) -> ZResult<()> {

@@ -10,20 +10,20 @@ mod pixglyph_canvas;
 mod utils;
 
 pub use bounds::BBoxAt;
-use bounds::*;
-pub use ops::*;
-
-use ecow::EcoVec;
+pub use device::CanvasDevice;
 #[cfg(feature = "incremental")]
 pub use incr::*;
+use js_sys::Promise;
+pub use ops::*;
+use web_sys::{Blob, HtmlImageElement, OffscreenCanvas, OffscreenCanvasRenderingContext2d};
 
-use std::{cell::OnceCell, fmt::Debug, sync::Arc};
+use std::{
+    cell::OnceCell,
+    fmt::Debug,
+    sync::{Arc, Mutex},
+};
 
-use tiny_skia as sk;
-
-use wasm_bindgen::JsCast;
-use web_sys::{CanvasRenderingContext2d, HtmlImageElement};
-
+use ecow::EcoVec;
 use reflexo::{
     hash::Fingerprint,
     vector::{
@@ -34,6 +34,10 @@ use reflexo::{
         vm::{GroupContext, RenderVm, TransformContext},
     },
 };
+use tiny_skia as sk;
+use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
+
+use bounds::*;
 
 /// All the features that can be enabled or disabled.
 pub trait ExportFeature {
@@ -48,11 +52,61 @@ pub trait ExportFeature {
 /// The default feature set which is used for exporting full-fledged svg.
 pub struct DefaultExportFeature;
 /// The default feature set which is used for exporting svg for printing.
-pub type DefaultSvgTask = CanvasTask<DefaultExportFeature>;
+pub type DefaultCanvasTask = CanvasTask<DefaultExportFeature>;
 
 impl ExportFeature for DefaultExportFeature {
     const ENABLE_TRACING: bool = false;
     const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
+}
+
+#[derive(Clone, Copy)]
+pub struct BrowserFontMetric {
+    pub semi_char_width: f32,
+    pub full_char_width: f32,
+    pub emoji_width: f32,
+    // height: f32,
+}
+
+impl BrowserFontMetric {
+    pub fn from_env() -> Self {
+        let v = OffscreenCanvas::new(0, 0).expect("offscreen canvas is not supported");
+        let ctx = v
+            .get_context("2d")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<OffscreenCanvasRenderingContext2d>()
+            .unwrap();
+
+        let _g = CanvasStateGuard::new(&ctx);
+        ctx.set_font("128px monospace");
+        let metrics = ctx.measure_text("A").unwrap();
+        let semi_char_width = metrics.width();
+        let metrics = ctx.measure_text("喵").unwrap();
+        let full_char_width = metrics.width();
+        let metrics = ctx.measure_text("🦄").unwrap();
+        let emoji_width = metrics.width();
+        // let a_height =
+        //     (metrics.font_bounding_box_descent() +
+        // metrics.font_bounding_box_ascent()).abs();
+
+        Self {
+            semi_char_width: (semi_char_width / 128.) as f32,
+            full_char_width: (full_char_width / 128.) as f32,
+            emoji_width: (emoji_width / 128.) as f32,
+            // height: (a_height / 128.) as f32,
+        }
+    }
+
+    /// Create a new instance for testing.
+    /// The width are prime numbers for helping test.
+    pub fn new_test() -> Self {
+        Self {
+            semi_char_width: 2.0,
+            full_char_width: 3.0,
+            emoji_width: 5.0,
+            // height: 7.0,
+        }
+    }
 }
 
 /// A rendered page of canvas.
@@ -292,7 +346,7 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode> + GlyphFactory> GroupContext<C>
 
 #[inline]
 #[must_use]
-fn set_transform(canvas: &web_sys::CanvasRenderingContext2d, transform: sk::Transform) -> bool {
+fn set_transform(canvas: &dyn CanvasDevice, transform: sk::Transform) -> bool {
     if transform.sx == 0. || transform.sy == 0. {
         return false;
     }
@@ -305,9 +359,7 @@ fn set_transform(canvas: &web_sys::CanvasRenderingContext2d, transform: sk::Tran
     let e = transform.tx as f64;
     let f = transform.ty as f64;
 
-    let maybe_err = canvas.set_transform(a, b, c, d, e, f);
-    // .map_err(map_err("CanvasRenderTask.SetTransform"))
-    maybe_err.unwrap();
+    canvas.set_transform(a, b, c, d, e, f);
     true
 }
 
@@ -315,10 +367,10 @@ fn set_transform(canvas: &web_sys::CanvasRenderingContext2d, transform: sk::Tran
 ///
 /// When the guard is created, a cheap checkpoint of the canvas state is saved.
 /// When the guard is dropped, the canvas state is restored.
-pub struct CanvasStateGuard<'a>(&'a CanvasRenderingContext2d);
+pub struct CanvasStateGuard<'a>(&'a dyn CanvasDevice);
 
 impl<'a> CanvasStateGuard<'a> {
-    pub fn new(context: &'a CanvasRenderingContext2d) -> Self {
+    pub fn new(context: &'a dyn CanvasDevice) -> Self {
         context.save();
         Self(context)
     }
@@ -336,12 +388,151 @@ struct UnsafeMemorize<T>(T);
 unsafe impl<T> Send for UnsafeMemorize<T> {}
 unsafe impl<T> Sync for UnsafeMemorize<T> {}
 
-fn create_image() -> Option<HtmlImageElement> {
-    let doc = web_sys::window()?.document()?;
-    doc.create_element("img").ok()?.dyn_into().ok()
+#[derive(Debug, Clone)]
+struct LazyImage {
+    elem: Promise,
+    loaded: Arc<Mutex<Option<JsValue>>>,
+}
+
+fn create_image(image: Arc<Image>) -> Option<LazyImage> {
+    let is_svg = image.format.contains("svg");
+
+    web_sys::console::log_1(&format!("image format: {:?}", image.format).into());
+
+    let u = js_sys::Uint8Array::new_with_length(image.data.len() as u32);
+    u.copy_from(&image.data);
+
+    let f = format!("image/{}", image.format);
+
+    let blob = || {
+        let parts = js_sys::Array::new();
+        parts.push(&u);
+
+        let tag = web_sys::BlobPropertyBag::new();
+        tag.set_type(&f);
+        web_sys::Blob::new_with_u8_array_sequence_and_options(
+            &parts,
+            // todo: security check
+            // https://security.stackexchange.com/questions/148507/how-to-prevent-xss-in-svg-file-upload
+            // todo: use our custom font
+            &tag,
+        )
+        .unwrap()
+    };
+
+    let res = match web_sys::window() {
+        Some(e) => {
+            if is_svg {
+                let blob = blob();
+                Some(wasm_bindgen_futures::future_to_promise(async move {
+                    let img = HtmlImageElement::new().unwrap();
+                    let p = exception_create_image_blob(&blob, &img);
+                    p.await;
+                    Ok(html_image_to_bitmap(&img).into())
+                }))
+            } else {
+                e.create_image_bitmap_with_blob(&blob()).ok()
+            }
+        }
+        None => {
+            let this = js_sys::global()
+                .dyn_into::<web_sys::WorkerGlobalScope>()
+                .unwrap();
+            if is_svg {
+                js_sys::Reflect::get(&this, &JsValue::from_str("loadSvg"))
+                    .unwrap()
+                    .dyn_into::<js_sys::Function>()
+                    .unwrap()
+                    .call2(&JsValue::NULL, &u, &f.into())
+                    .unwrap()
+                    .dyn_into::<Promise>()
+                    .ok()
+            } else {
+                this.create_image_bitmap_with_blob(&blob()).ok()
+            }
+        }
+    };
+
+    let loaded = Arc::new(Mutex::new(None));
+
+    let elem = res.map(|elem| {
+        let loaded_that = loaded.clone();
+        wasm_bindgen_futures::future_to_promise(async move {
+            let elem = wasm_bindgen_futures::JsFuture::from(elem).await?;
+            *loaded_that.lock().unwrap() = Some(elem.clone());
+            Ok(elem)
+        })
+    });
+
+    elem.map(|elem| LazyImage { elem, loaded })
+}
+
+pub fn html_image_to_bitmap(img: &HtmlImageElement) -> web_sys::ImageBitmap {
+    let canvas = web_sys::OffscreenCanvas::new(img.width(), img.height()).unwrap();
+
+    let ctx = canvas
+        .get_context("2d")
+        .expect("get context 2d")
+        .expect("get context 2d");
+    let ctx = ctx
+        .dyn_into::<web_sys::OffscreenCanvasRenderingContext2d>()
+        .expect("must be OffscreenCanvasRenderingContext2d");
+    ctx.draw_image_with_html_image_element(img, 0., 0.)
+        .expect("must draw_image_with_html_image_element");
+
+    canvas
+        .transfer_to_image_bitmap()
+        .expect("transfer_to_image_bitmap")
+}
+
+pub async fn exception_create_image_blob(blob: &Blob, image_elem: &HtmlImageElement) {
+    let data_url = web_sys::Url::create_object_url_with_blob(blob).unwrap();
+
+    let img_load_promise = Promise::new(
+        &mut move |complete: js_sys::Function, _reject: js_sys::Function| {
+            let data_url = data_url.clone();
+            let data_url2 = data_url.clone();
+            let complete2 = complete.clone();
+
+            image_elem.set_src(&data_url);
+
+            // simulate async callback from another thread
+            let a = Closure::<dyn Fn()>::new(move || {
+                web_sys::Url::revoke_object_url(&data_url).unwrap();
+                complete.call0(&complete).unwrap();
+            });
+
+            image_elem.set_onload(Some(a.as_ref().unchecked_ref()));
+            a.forget();
+
+            let a = Closure::<dyn Fn(JsValue)>::new(move |e: JsValue| {
+                web_sys::Url::revoke_object_url(&data_url2).unwrap();
+                complete2.call0(&complete2).unwrap();
+                // let end = std::time::Instant::now();
+                web_sys::console::log_1(
+                    &format!(
+                        "err image loading in {:?} {:?} {:?} {}",
+                        // end - begin,
+                        0,
+                        js_sys::Reflect::get(&e, &"type".into()).unwrap(),
+                        js_sys::JSON::stringify(&e).unwrap(),
+                        data_url2,
+                    )
+                    .into(),
+                );
+            });
+
+            image_elem.set_onerror(Some(a.as_ref().unchecked_ref()));
+            a.forget();
+        },
+    );
+
+    wasm_bindgen_futures::JsFuture::from(img_load_promise)
+        .await
+        .unwrap();
 }
 
 #[comemo::memoize]
-fn rasterize_image(_image: Arc<Image>) -> Option<UnsafeMemorize<HtmlImageElement>> {
-    create_image().map(UnsafeMemorize)
+fn rasterize_image(e: Arc<Image>) -> Option<UnsafeMemorize<LazyImage>> {
+    create_image(e).map(UnsafeMemorize)
 }

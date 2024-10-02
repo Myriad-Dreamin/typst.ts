@@ -13,6 +13,7 @@ import {
   RenderSvgOptions,
   RenderInSessionOptions,
   MountDomOptions,
+  OffscreenRenderCanvasOptions,
 } from './options.render.mjs';
 import { RenderView } from './render/canvas/view.mjs';
 import { LazyWasmModule } from './wasm.mjs';
@@ -59,6 +60,8 @@ export class RenderSession {
   }
 
   /**
+   * @deprecated set in {@link RenderToCanvasOptions} instead
+   *
    * Set the background color of the Typst document.
    * @param {string} t - The background color in format of `^#?[0-9a-f]{6}$`
    *
@@ -97,6 +100,8 @@ export class RenderSession {
   }
 
   /**
+   * @deprecated set in {@link RenderToCanvasOptions} instead
+   *
    * Get the pixel per point scale up the canvas panel.
    *
    * Note: Default to `3`.
@@ -234,6 +239,113 @@ export class RenderSession {
       action: 'merge',
       data,
     });
+  }
+}
+
+/**
+ * @internal
+ */
+const enum ManageStatus {
+  Delete,
+  New,
+  Update,
+}
+
+export class TypstWorker {
+  /**
+   * @internal
+   */
+  public [kObject]: typst.TypstWorker;
+
+  /**
+   * @internal
+   */
+  constructor(
+    /**
+     * @internal
+     */
+    private plugin: TypstRendererDriver,
+    o: typst.TypstWorker,
+  ) {
+    this[kObject] = o;
+  }
+
+  /**
+   * See {@link TypstRenderer#manipulateData} for more details.
+   */
+  manipulateData(action: string, data: Uint8Array): Promise<void> {
+    return this[kObject].manipulate_data(action, data);
+  }
+
+  /**
+   * @internal
+   */
+  managedCanvasElemList = new Map<string, [ManageStatus, OffscreenRenderCanvasOptions]>();
+  /**
+   * @internal
+   */
+  canvasCounter = Math.random();
+  /**
+   * You must submit all canvas in pages to ensure synchronization with the background worker
+   *
+   * See {@link TypstRenderer#renderCanvas} for more details.
+   */
+  renderCanvas(canvasElemList: OffscreenRenderCanvasOptions[]): Promise<RenderCanvasResult[]> {
+    const m = this.managedCanvasElemList;
+    for (const [_, elem] of m) {
+      elem[0] = ManageStatus.Delete;
+    }
+
+    for (const elem of canvasElemList) {
+      const canvas = elem.canvas;
+      let elemId = canvas.dataset.manageId;
+      let action = ManageStatus.Update;
+      if (!elemId) {
+        elemId = this.canvasCounter.toFixed(5);
+        this.canvasCounter += 1;
+        canvas.dataset.manageId = elemId;
+        action = ManageStatus.New;
+      }
+
+      let prev = m.get(elemId);
+      if (prev && prev[0] !== ManageStatus.Delete) {
+        throw new Error('cannot update a canvas for two times in batch');
+      }
+
+      m.set(elemId, [action, { ...elem }]);
+    }
+
+    const entries = Array.from(m.entries());
+    const actions = new Uint8Array(entries.length);
+    const elements = new Array(entries.length);
+    const options = entries.map(([key, [action, elem]], index) => {
+      if (!action) {
+        m.delete(key);
+      }
+
+      actions[index] = action;
+      elements[index] = elem.canvas;
+      return this.plugin.canvasOptionsToRust(elem);
+    });
+
+    return this[kObject].render_canvas(actions, elements, options);
+  }
+
+  async retrievePagesInfo(): Promise<PageInfo[]> {
+    const pages_info = await this[kObject].get_pages_info();
+    console.log(pages_info);
+    const pageInfos: PageInfo[] = [];
+    const pageCount = pages_info.page_count;
+    for (let i = 0; i < pageCount; i++) {
+      const pageAst = pages_info.page(i);
+      pageInfos.push({
+        pageOffset: pageAst.page_off,
+        width: pageAst.width_pt,
+        height: pageAst.height_pt,
+      });
+    }
+
+    return pageInfos;
   }
 }
 
@@ -427,6 +539,8 @@ export interface TypstRenderer extends TypstSvgRenderer {
     fn: (session: RenderSession) => Promise<T>,
   ): Promise<T>;
 
+  createWorkerV0(worker: Worker): Promise<TypstWorker>;
+
   renderDom(options: RenderInSessionOptions<MountDomOptions>): Promise<TypstDomDocument>;
 
   /**
@@ -541,6 +655,41 @@ export class TypstRendererDriver {
     return rustOptions;
   }
 
+  canvasOptionsToRust(options: RenderCanvasOptions): typst.RenderPageImageOptions {
+    const rustOptions = new this.rendererJs.RenderPageImageOptions();
+    if (options.pageOffset === undefined) {
+      throw new Error('pageOffset is required in reflexo v0.5.0');
+    } else {
+      rustOptions.page_off = options.pageOffset;
+    }
+    if (options.cacheKey !== undefined) {
+      rustOptions.cache_key = options.cacheKey;
+    }
+    if (options.backgroundColor !== undefined) {
+      rustOptions.background_color = options.backgroundColor;
+    }
+    if (options.pixelPerPt !== undefined) {
+      rustOptions.pixel_per_pt = options.pixelPerPt;
+    }
+    if (options.dataSelection !== undefined) {
+      let encoded = 0;
+      if (options.dataSelection.body) {
+        encoded |= 1 << 0;
+      } else if (options.canvas && warnOnceCanvasSet) {
+        warnOnceCanvasSet = false;
+        console.warn('dataSelection.body is not set but providing canvas for body');
+      }
+      if (options.dataSelection.text || options.dataSelection.annotation) {
+        console.error('dataSelection.text and dataSelection.annotation are deprecated');
+      }
+      if (options.dataSelection.semantics) {
+        encoded |= 1 << 3;
+      }
+      rustOptions.data_selection = encoded;
+    }
+    return rustOptions;
+  }
+
   retrievePagesInfoFromSession(session: RenderSession): PageInfo[] {
     return session.retrievePagesInfo();
   }
@@ -550,35 +699,10 @@ export class TypstRendererDriver {
    */
   renderCanvas(options: RenderOptions<RenderCanvasOptions>): Promise<RenderCanvasResult> {
     return this.withinOptionSession(options, async sessionRef => {
-      const rustOptions = new this.rendererJs.RenderPageImageOptions();
-      if (options.pageOffset === undefined) {
-        throw new Error('pageOffset is required in reflexo v0.5.0');
-      } else {
-        rustOptions.page_off = options.pageOffset;
-      }
-      if (options.cacheKey !== undefined) {
-        rustOptions.cache_key = options.cacheKey;
-      }
-      if (options.dataSelection !== undefined) {
-        let encoded = 0;
-        if (options.dataSelection.body) {
-          encoded |= 1 << 0;
-        } else if (options.canvas && warnOnceCanvasSet) {
-          warnOnceCanvasSet = false;
-          console.warn('dataSelection.body is not set but providing canvas for body');
-        }
-        if (options.dataSelection.text || options.dataSelection.annotation) {
-          console.error('dataSelection.text and dataSelection.annotation are deprecated');
-        }
-        if (options.dataSelection.semantics) {
-          encoded |= 1 << 3;
-        }
-        rustOptions.data_selection = encoded;
-      }
       return this.renderer.render_page_to_canvas(
         sessionRef[kObject],
         options.canvas || undefined,
-        rustOptions,
+        this.canvasOptionsToRust(options),
       );
     });
   }
@@ -794,6 +918,14 @@ export class TypstRendererDriver {
     );
   }
 
+  async createWorkerV0(worker: Worker) {
+    return new TypstWorker(this, await this.renderer.create_worker(worker));
+  }
+
+  workerBridge() {
+    return this.renderer.create_worker_bridge();
+  }
+
   renderSvg(options: RenderOptions<RenderSvgOptions>, container?: any): Promise<string> {
     if (options instanceof RenderSession || container) {
       throw new Error('removed api, please use renderToSvg({ renderSession, container }) instead');
@@ -899,21 +1031,14 @@ export class TypstRendererDriver {
       fn = arg1;
     }
 
-    // const t = performance.now();
     const session = this.renderer.create_session(
       /* moved */ options && this.createOptionsToRust(options),
     );
-    // const t3 = performance.now();
-
-    // console.log(`create session used: render = ${(t3 - t).toFixed(1)}ms`);
     try {
-      // console.log(`session`, JSON.stringify(session), `activated`);
       const res = await fn(new RenderSession(this, session));
-      // console.log(`session`, JSON.stringify(session), `deactivated`);
       session.free();
       return res;
     } catch (e) {
-      // console.log(`session`, JSON.stringify(session), `deactivated by error`, e);
       session.free();
       throw e;
     }

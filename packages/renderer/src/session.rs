@@ -7,6 +7,8 @@ use reflexo_typst::vector::ir::{Page, Scalar};
 use reflexo_typst2vec::incr::IncrDocClient;
 #[cfg(feature = "render_canvas")]
 use reflexo_vec2canvas::IncrCanvasDocClient;
+#[cfg(feature = "rkyv")]
+use rkyv::{Archive, Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -60,6 +62,7 @@ impl RenderSessionOptions {
 }
 
 #[wasm_bindgen]
+#[cfg_attr(feature = "rkyv", derive(Archive, Serialize, Deserialize))]
 #[derive(Default, Debug)]
 pub struct CreateSessionOptions {
     pub(crate) format: Option<String>,
@@ -89,6 +92,7 @@ impl CreateSessionOptions {
 
 #[wasm_bindgen]
 #[derive(Clone)]
+#[cfg_attr(feature = "rkyv", derive(Archive, Serialize, Deserialize))]
 pub struct PageInfo {
     pub(crate) page_off: usize,
     pub(crate) width: f64,
@@ -115,6 +119,7 @@ impl PageInfo {
 
 #[wasm_bindgen]
 #[derive(Clone, Default)]
+#[cfg_attr(feature = "rkyv", derive(Archive, Serialize, Deserialize))]
 pub struct PagesInfo {
     pub(crate) pages: Vec<PageInfo>,
 }

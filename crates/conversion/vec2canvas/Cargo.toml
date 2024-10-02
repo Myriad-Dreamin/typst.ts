@@ -27,7 +27,7 @@ web-sys = { workspace = true, features = [
     "CanvasRenderingContext2d",
     "Path2d",
     "Blob",
-    "HtmlImageElement",
+    "ImageBitmap",
     "HtmlCanvasElement",
     "Url",
     "ImageData",
@@ -36,6 +36,8 @@ web-sys = { workspace = true, features = [
     "BlobPropertyBag",
     "Window",
     "Document",
+    "TextMetrics",
+    "DedicatedWorkerGlobalScope",
 ] }
 
 [features]

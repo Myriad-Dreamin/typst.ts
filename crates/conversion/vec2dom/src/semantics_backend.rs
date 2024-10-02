@@ -1,6 +1,6 @@
-use reflexo_vec2sema::{BrowserFontMetric, SemaTask};
+use reflexo_vec2canvas::BrowserFontMetric;
+use reflexo_vec2sema::SemaTask;
 use reflexo_vec2svg::{ir::Page, Module};
-use web_sys::wasm_bindgen::JsCast;
 
 #[derive(Default)]
 pub struct SemanticsBackend {}
@@ -9,17 +9,7 @@ static FONT_METRICS: std::sync::OnceLock<BrowserFontMetric> = std::sync::OnceLoc
 
 impl SemanticsBackend {
     pub(crate) fn render(&self, module: &Module, page: &Page, heavy: bool) -> String {
-        let metric = FONT_METRICS.get_or_init(|| {
-            let canvas = web_sys::window()
-                .unwrap()
-                .document()
-                .unwrap()
-                .create_element("canvas")
-                .unwrap()
-                .dyn_into::<web_sys::HtmlCanvasElement>()
-                .unwrap();
-            BrowserFontMetric::new(&canvas)
-        });
+        let metric = FONT_METRICS.get_or_init(BrowserFontMetric::from_env);
 
         let mut output = vec![];
         let mut t = SemaTask::new(heavy, *metric, page.size.x.0, page.size.y.0);
