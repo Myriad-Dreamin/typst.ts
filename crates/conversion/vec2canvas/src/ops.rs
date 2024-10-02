@@ -1,10 +1,19 @@
+#![allow(unused)]
+
 use async_trait::async_trait;
 use reflexo_vec2bbox::Vec2BBoxPass;
 
 use crate::utils::EmptyFuture;
 use ecow::EcoVec;
 
-use std::{fmt::Debug, pin::Pin, sync::Arc};
+use std::{
+    fmt::Debug,
+    pin::Pin,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
+};
 
 use js_sys::Promise;
 use tiny_skia as sk;
@@ -12,19 +21,92 @@ use tiny_skia as sk;
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
 use web_sys::{HtmlImageElement, Path2d};
 
-use reflexo::vector::ir::{self, FlatGlyphItem, Image, ImageItem, ImmutStr, PathStyle, Rect};
+use reflexo::vector::ir::{
+    self, FlatGlyphItem, Image, ImageItem, ImmutStr, PathStyle, Rect, Scalar,
+};
 
 use super::{rasterize_image, set_transform, BBoxAt, CanvasBBox, CanvasStateGuard};
 
 /// A reference to a canvas element.
 pub type CanvasNode = Arc<CanvasElem>;
+/// 2d Context
+type Context2d = web_sys::CanvasRenderingContext2d;
+
+type CancelToken = Arc<AtomicBool>;
+
+fn cancel(token: &CancelToken) {
+    token.store(true, Ordering::SeqCst)
+}
+
+// , kern: &IncrDocClient
+
+#[wasm_bindgen::prelude::wasm_bindgen]
+struct Result {
+    cancelled: bool,
+    rendered: bool,
+}
+
+type ResultFuture = js_sys::Promise;
+
+struct Kern {}
+
+struct CoreState {}
+
+struct ResourceState {}
+
+pub struct ManagedCanvasOps {
+    core: Mutex<CoreState>,
+    resources: Mutex<ResourceState>,
+    offscreens: Mutex<Vec<web_sys::OffscreenCanvas>>,
+}
+
+impl ManagedCanvasOps {
+    fn render(self: &Arc<Self>, kern: &Kern, page: usize) -> ResultFuture {
+        let mut core = self.core.lock().unwrap();
+        // if cancel {
+        //     let tok = core.currentCancel.clone();
+        //     tok.store(true, Ordering::Relaxed);
+        // }
+
+        let task = RenderTask {
+            cancel: CancelToken::default(),
+        };
+
+        let resp = task.run_checkout();
+
+        drop(core);
+
+        resp
+    }
+
+    fn realize(self: &Arc<Self>) {}
+}
+
+pub struct RenderTask {
+    cancel: CancelToken,
+}
+
+impl RenderTask {
+    fn run_checkout(self) -> ResultFuture {
+        wasm_bindgen_futures::future_to_promise(async move {
+            Ok(Result {
+                cancelled: false,
+                rendered: true,
+            }
+            .into())
+        })
+    }
+}
 
 /// The trait for all the operations that can be performed on some canvas
 /// element.
 #[async_trait(?Send)]
 pub trait CanvasOp {
     /// Prepares the resource (recursively) for the action.
-    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static>;
+    fn prepare(
+        &self,
+        ts: sk::Transform,
+    ) -> Option<impl core::future::Future<Output = ()> + Sized + 'static>;
     /// Realizes the action on the canvas.
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d);
 }
@@ -46,27 +128,30 @@ pub enum CanvasElem {
 
 #[async_trait(?Send)]
 impl CanvasOp for CanvasElem {
-    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
+    fn prepare(
+        &self,
+        ts: sk::Transform,
+    ) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
         type DynFutureBox = Pin<Box<dyn core::future::Future<Output = ()>>>;
 
         match self {
-            CanvasElem::Group(g) => g.prepare().map(|e| {
+            CanvasElem::Group(g) => g.prepare(ts).map(|e| {
                 let e: DynFutureBox = Box::pin(e);
                 e
             }),
-            CanvasElem::Clip(g) => g.prepare().map(|e| {
+            CanvasElem::Clip(g) => g.prepare(ts).map(|e| {
                 let e: DynFutureBox = Box::pin(e);
                 e
             }),
-            CanvasElem::Path(g) => g.prepare().map(|e| {
+            CanvasElem::Path(g) => g.prepare(ts).map(|e| {
                 let e: DynFutureBox = Box::pin(e);
                 e
             }),
-            CanvasElem::Image(g) => g.prepare().map(|e| {
+            CanvasElem::Image(g) => g.prepare(ts).map(|e| {
                 let e: DynFutureBox = Box::pin(e);
                 e
             }),
-            CanvasElem::Glyph(g) => g.prepare().map(|e| {
+            CanvasElem::Glyph(g) => g.prepare(ts).map(|e| {
                 let e: DynFutureBox = Box::pin(e);
                 e
             }),
@@ -101,11 +186,18 @@ pub struct CanvasGroupElem {
 
 #[async_trait(?Send)]
 impl CanvasOp for CanvasGroupElem {
-    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
+    fn prepare(
+        &self,
+        rts: sk::Transform,
+    ) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
         let mut v = Vec::default();
 
+        // if matches!(self.kind, GroupKind::Text) {
+        //     web_sys::console::log_1(&format!("prepare text group {:?}",
+        // self.inner).into()); }
+
         for (_, sub_elem) in &self.inner {
-            if let Some(f) = sub_elem.prepare() {
+            if let Some(f) = sub_elem.prepare(rts) {
                 v.push(f);
             }
         }
@@ -186,8 +278,11 @@ impl CanvasClipElem {
 
 #[async_trait(?Send)]
 impl CanvasOp for CanvasClipElem {
-    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
-        self.inner.prepare()
+    fn prepare(
+        &self,
+        ts: sk::Transform,
+    ) -> Option<impl core::future::Future<Output = ()> + Sized + 'static> {
+        self.inner.prepare(ts)
     }
 
     async fn realize(&self, ts: sk::Transform, canvas: &web_sys::CanvasRenderingContext2d) {
@@ -206,7 +301,11 @@ pub struct CanvasPathElem {
 
 #[async_trait(?Send)]
 impl CanvasOp for CanvasPathElem {
-    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + 'static> {
+    fn prepare(
+        &self,
+        ts: sk::Transform,
+    ) -> Option<impl core::future::Future<Output = ()> + 'static> {
+        let _ = ts;
         None::<EmptyFuture>
     }
 
@@ -317,6 +416,9 @@ impl CanvasImageElem {
         let u = js_sys::Uint8Array::new_with_length(image.data.len() as u32);
         u.copy_from(&image.data);
 
+        let tag = web_sys::BlobPropertyBag::new();
+        tag.set_type(&format!("image/{}", image.format));
+
         let parts = js_sys::Array::new();
         parts.push(&u);
         let blob = web_sys::Blob::new_with_u8_array_sequence_and_options(
@@ -324,7 +426,7 @@ impl CanvasImageElem {
             // todo: security check
             // https://security.stackexchange.com/questions/148507/how-to-prevent-xss-in-svg-file-upload
             // todo: use our custom font
-            web_sys::BlobPropertyBag::new().type_(&format!("image/{}", image.format)),
+            &tag,
         )
         .unwrap();
 
@@ -431,7 +533,10 @@ impl CanvasImageElem {
 
 #[async_trait(?Send)]
 impl CanvasOp for CanvasImageElem {
-    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + 'static> {
+    fn prepare(
+        &self,
+        _ts: sk::Transform,
+    ) -> Option<impl core::future::Future<Output = ()> + 'static> {
         Self::prepare_image(self.image_data.image.clone())
     }
 
@@ -444,12 +549,17 @@ impl CanvasOp for CanvasImageElem {
 #[derive(Debug)]
 pub struct CanvasGlyphElem {
     pub fill: ImmutStr,
+    pub upem: Scalar,
     pub glyph_data: Arc<FlatGlyphItem>,
 }
 
 #[async_trait(?Send)]
 impl CanvasOp for CanvasGlyphElem {
-    fn prepare(&self) -> Option<impl core::future::Future<Output = ()> + 'static> {
+    fn prepare(
+        &self,
+        ts: sk::Transform,
+    ) -> Option<impl core::future::Future<Output = ()> + 'static> {
+        let _ = ts;
         match self.glyph_data.as_ref() {
             FlatGlyphItem::Image(glyph) => {
                 CanvasImageElem::prepare_image(glyph.image.image.clone())
@@ -463,17 +573,44 @@ impl CanvasOp for CanvasGlyphElem {
             return;
         }
 
+        // web_sys::console::log_1(&format!("realize glyph {ts:?}").into());
+
         let _guard = CanvasStateGuard::new(canvas);
-        if !set_transform(canvas, ts) {
-            return;
-        }
         match self.glyph_data.as_ref() {
             FlatGlyphItem::Outline(path) => {
-                let fill: &str = &self.fill;
-                canvas.set_fill_style(&fill.into());
-                canvas.fill_with_path_2d(&Path2d::new_with_path_string(&path.d).unwrap());
+                if ts.sx.abs() > 100. || ts.sy.abs() > 100. || ts.kx != 0. || ts.ky != 0. {
+                    if !set_transform(canvas, ts) {
+                        return;
+                    }
+                    canvas.set_fill_style(&self.fill.as_ref().into());
+                    canvas.fill_with_path_2d(&Path2d::new_with_path_string(&path.d).unwrap());
+                    return;
+                }
+
+                let x = ts.tx;
+                let y = ts.ty;
+
+                let g = crate::pixglyph_canvas::Glyph::new(&path.d);
+
+                let floor_x = x.floor() as i32;
+                let floor_y = y.floor() as i32;
+                let dx = x - floor_x as f32;
+                let dy = y - floor_y as f32;
+
+                let t = g.rasterize(dx, dy, ts.sx, ts.sy);
+
+                crate::pixglyph_canvas::blend_glyph(
+                    canvas,
+                    &t,
+                    &self.fill.as_ref().into(),
+                    floor_x,
+                    floor_y,
+                );
             }
             FlatGlyphItem::Image(glyph) => {
+                if !set_transform(canvas, ts) {
+                    return;
+                }
                 CanvasImageElem::draw_image(ts.pre_concat(glyph.ts.into()), canvas, &glyph.image)
                     .await
             }
@@ -482,7 +619,7 @@ impl CanvasOp for CanvasGlyphElem {
     }
 }
 
-#[allow(dead_code)]
+#[cfg(feature = "render_bbox")]
 fn render_bbox(canvas: &web_sys::CanvasRenderingContext2d, bbox: Option<Rect>, color: &str) {
     let Some(bbox) = bbox else {
         return;

@@ -40,6 +40,7 @@ reflexo-typst = { workspace = true, default-features = false, features = [
 reflexo-typst2vec = { workspace = true }
 reflexo-vec2canvas = { workspace = true, optional = true }
 reflexo-vec2sema = { workspace = true }
+reflexo-vec2bbox = { workspace = true }
 reflexo-vec2svg = { workspace = true, optional = true }
 reflexo-vec2dom = { workspace = true, optional = true }
 console_error_panic_hook.workspace = true

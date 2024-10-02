@@ -17,7 +17,7 @@ env_logger.workspace = true
 log.workspace = true
 
 tokio.workspace = true
-warp = { version = "0.3", features = ["compression"] }
+warp = { version = "0.3", default-features = false, features = ["compression"] }
 
 clap = { workspace = true, features = [
     "derive",

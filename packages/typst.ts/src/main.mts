@@ -21,7 +21,7 @@ export type { TypstCompiler } from './compiler.mjs';
 export { createTypstCompiler } from './compiler.mjs';
 
 // Export module on window.
-if (window) {
+if (typeof window !== 'undefined') {
   (window as any).TypstRenderModule = {
     RenderView,
 

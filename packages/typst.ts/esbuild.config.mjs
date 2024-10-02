@@ -63,7 +63,6 @@ const context = await esbuild.context({
     'src/contrib/global-renderer.mts',
     'src/contrib/all-in-one-lite.mts',
     'src/contrib/all-in-one.mts',
-    'src/contrib/sync-worker.mts',
   ],
   bundle: true,
   format: IS_COMMON_JS ? 'cjs' : 'esm',

@@ -1,5 +1,5 @@
 {
-  "extends": "./tsconfig.base.json",
+  "extends": "./tsconfig.json",
   "compilerOptions": {
     "rootDir": "src",
     "module": "NodeNext",
@@ -9,6 +9,5 @@
     "declarationMap": true,
     "inlineSources": true,
     "inlineSourceMap": true
-  },
-  "include": ["src/**/*.mts"]
+  }
 }
