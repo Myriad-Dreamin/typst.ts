@@ -58,12 +58,6 @@ impl IncrVec2CanvasPass {
             })
             .collect();
 
-        // let ts = sk::Transform::from_scale(self.pixel_per_pt, self.pixel_per_pt);
-        // for page in pages.iter() {
-        //     page.elem.prepare(ts);
-        // }
-
-        // web_sys::console::log_1(&"interpret_changes".into());
         self.pages = pages;
     }
 

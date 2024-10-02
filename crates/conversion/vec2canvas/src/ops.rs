@@ -345,11 +345,6 @@ impl CanvasImageElem {
     }
 
     async fn draw_image(ts: sk::Transform, canvas: &dyn CanvasDevice, image_data: &ImageItem) {
-        // ImageBitmap
-        // wasm_bindgen_futures::JsFuture::from(img_load_promise)
-        //     .await
-        //     .unwrap();
-
         if !set_transform(canvas, ts) {
             return;
         }

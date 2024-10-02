@@ -165,10 +165,9 @@ mod tests {
 
     use std::{
         collections::HashMap,
-        sync::{Arc, Mutex, OnceLock},
+        sync::{Mutex, OnceLock},
     };
 
-    use js_sys::Uint8Array;
     use reflexo_vec2canvas::ExportFeature;
     use send_wrapper::SendWrapper;
     use serde::{Deserialize, Serialize};
@@ -177,16 +176,14 @@ mod tests {
     use wasm_bindgen::JsCast;
     use wasm_bindgen_test::*;
 
-    use crate::{
-        session::CreateSessionOptions,
-        worker::{create_worker, WorkerCore},
-        TypstRenderer,
-    };
+    #[cfg(feature = "worker")]
+    use crate::worker::{create_worker, WorkerCore};
+    use crate::{session::CreateSessionOptions, TypstRenderer};
 
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
     const SHOW_RESULT: bool = true;
-    const IN_WORKER: bool = true;
+    const IN_WORKER: bool = false;
 
     fn hash_bytes<T: AsRef<[u8]>>(bytes: T) -> String {
         format!("sha256:{}", hex::encode(sha2::Sha256::digest(bytes)))
@@ -218,7 +215,8 @@ mod tests {
     static RENDERER: Mutex<OnceLock<SendWrapper<Mutex<TypstRenderer>>>> =
         Mutex::new(OnceLock::new());
 
-    static WORKER: Mutex<OnceLock<SendWrapper<Mutex<Arc<WorkerCore>>>>> =
+    #[cfg(feature = "worker")]
+    static WORKER: Mutex<OnceLock<SendWrapper<Mutex<std::sync::Arc<WorkerCore>>>>> =
         Mutex::new(OnceLock::new());
 
     type PerfMap = Option<HashMap<String, f64>>;
@@ -281,11 +279,16 @@ mod tests {
         (text_content, perf_events)
     }
 
+    #[cfg(feature = "worker")]
     async fn render_in_worker_thread(
         artifact: &[u8],
         format: &str,
         canvas: &web_sys::HtmlCanvasElement,
     ) -> (String, PerfMap) {
+        use std::sync::Arc;
+
+        use js_sys::Uint8Array;
+
         let repo = "http://localhost:20810/base/node_modules/@myriaddreamin/typst-ts-renderer";
         let renderer_wrapper = format!("{repo}/pkg/typst_ts_renderer.mjs");
         let renderer_wasm = format!("{repo}/pkg/typst_ts_renderer_bg.wasm");
@@ -324,7 +327,7 @@ renderer_wrapper.as_str()
 
             let opts = web_sys::WorkerOptions::new();
             opts.set_type(web_sys::WorkerType::Module);
-            let worker = web_sys::Worker::new_with_options(worker_url, &opts).unwrap();
+            let worker = web_sys::Worker::new_with_options(&worker_url, &opts).unwrap();
 
             SendWrapper::new(Mutex::new(create_worker(worker)))
         });
@@ -349,7 +352,7 @@ renderer_wrapper.as_str()
         let prepare = performance.now();
 
         let (_fingerprint, res, perf_events) = renderer
-            .render_page_to_canvas(&session, Some(canvas), None)
+            .render_page_to_canvas(Arc::new(session), Some(canvas), None)
             .await
             .unwrap();
         let end = performance.now();
@@ -385,11 +388,15 @@ renderer_wrapper.as_str()
         let (time_used, perf_events, data_content_hash, ..) = {
             let start = performance.now();
 
+            #[cfg(feature = "worker")]
             let (text_content, perf_events) = if IN_WORKER {
                 render_in_worker_thread(artifact, format, &canvas).await
             } else {
                 render_in_main_thread(artifact, format, &canvas).await
             };
+            #[cfg(not(feature = "worker"))]
+            let (text_content, perf_events) =
+                render_in_main_thread(artifact, format, &canvas).await;
 
             let end = performance.now();
 

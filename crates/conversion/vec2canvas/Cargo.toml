@@ -37,6 +37,7 @@ web-sys = { workspace = true, features = [
     "Window",
     "Document",
     "TextMetrics",
+    "DedicatedWorkerGlobalScope",
 ] }
 
 [features]

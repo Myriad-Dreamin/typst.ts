@@ -62,7 +62,7 @@ vergen.workspace = true
 [features]
 
 default = ["full"]
-full = ["serde_json", "render_full", "worker", "web_test"]
+full = ["serde_json", "render_full", "web_test"]
 
 web_test = ["typst-ts-test-common/web_artifacts"]
 web_verbose = ["web_test"]                        # for test debug
@@ -90,7 +90,6 @@ worker = [
     "web-sys/Worker",
     "web-sys/WorkerOptions",
     "web-sys/WorkerType",
-    "web-sys/DedicatedWorkerGlobalScope",
 ]
 
 web = ["render_canvas", "render_svg", "render_dom", "worker"]
