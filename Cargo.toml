@@ -73,24 +73,15 @@ strip = true
 [workspace.dependencies]
 
 # typesetting
-typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.11.29" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.11.29" }
-typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.11.29" }
-typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.11.29" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.11.29" }
+typst = "0.11.1"
+typst-ide = "0.11.1"
+typst-pdf = "0.11.1"
+typst-svg = "0.11.1"
+typst-syntax = "0.11.1"
 ttf-parser = "0.24.1"
-# typst = "0.11.1"
-# typst-ide = "0.11.1"
-# typst-pdf = "0.11.1"
-# typst-svg = "0.11.1"
-# typst-syntax = "0.11.1"
-# ttf-parser = "0.20.0"
 
 typst-assets = { git = "https://github.com/typst/typst-assets", rev = "4afd428" }
 typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", rev = "e9f8127" }
-
-# typst-assets = "0.11.1"
-# typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", tag = "v0.11.1" }
 
 # general
 anyhow = "1"
@@ -236,11 +227,11 @@ undocumented_unsafe_blocks = "warn"
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
 # comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
-typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.11.29" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.11.29" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.11.29" }
-typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.11.29" }
-typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.11.29" }
+typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.12.0-rc1-content-hint" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.12.0-rc1-content-hint" }
+typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.12.0-rc1-content-hint" }
+typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.12.0-rc1-content-hint" }
+typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.12.0-rc1-content-hint" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }
