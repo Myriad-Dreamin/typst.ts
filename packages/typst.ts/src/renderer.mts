@@ -330,6 +330,23 @@ export class TypstWorker {
 
     return this[kObject].render_canvas(actions, elements, options);
   }
+
+  async retrievePagesInfo(): Promise<PageInfo[]> {
+    const pages_info = await this[kObject].get_pages_info();
+    console.log(pages_info);
+    const pageInfos: PageInfo[] = [];
+    const pageCount = pages_info.page_count;
+    for (let i = 0; i < pageCount; i++) {
+      const pageAst = pages_info.page(i);
+      pageInfos.push({
+        pageOffset: pageAst.page_off,
+        width: pageAst.width_pt,
+        height: pageAst.height_pt,
+      });
+    }
+
+    return pageInfos;
+  }
 }
 
 /**

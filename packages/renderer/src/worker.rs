@@ -26,7 +26,8 @@ use crate::{
 impl TypstRenderer {
     pub async fn create_worker(&mut self, w: web_sys::Worker) -> ZResult<TypstWorker> {
         let core = create_worker(w);
-        let rs = core.create_session(None).await?;
+        #[allow(clippy::arc_with_non_send_sync)]
+        let rs = Arc::new(core.create_session(None).await?);
         Ok(TypstWorker { core, rs })
     }
 
@@ -62,7 +63,7 @@ impl TryFrom<u8> for CanvasAction {
 pub struct TypstWorker {
     core: Arc<WorkerCore>,
     // todo: multiple sessions
-    rs: RRenderSession,
+    rs: Arc<RemoteRenderSession>,
 }
 
 #[wasm_bindgen]
@@ -74,6 +75,11 @@ impl TypstWorker {
         );
 
         Ok(resp)
+    }
+
+    pub fn get_pages_info(&self) -> Promise {
+        let rs = self.rs.clone();
+        wasm_bindgen_futures::future_to_promise(async move { Ok(rs.get_pages_info().await.into()) })
     }
 
     pub fn render_canvas(
@@ -122,8 +128,22 @@ impl TypstWorker {
                     }));
                 }
                 CanvasAction::Update => {
+                    let w = self.rs.worker.clone();
+                    let p = w.render_page_to_canvas_internal(self.rs.clone(), None, Some(data));
                     promises.push(wasm_bindgen_futures::future_to_promise(async move {
-                        Ok(JsValue::NULL)
+                        let (fingerprint, html_semantics, ..) = p.await?;
+
+                        let res = js_sys::Object::new();
+                        let err = js_sys::Reflect::set(
+                            &res,
+                            &"cacheKey".into(),
+                            &fingerprint.as_svg_id("c").into(),
+                        );
+                        err.map_err(map_into_err::<JsValue, _>("Renderer.SetCacheKey"))?;
+                        let err =
+                            js_sys::Reflect::set(&res, &"htmlSemantics".into(), &html_semantics);
+                        err.map_err(map_into_err::<JsValue, _>("Renderer.SetHtmlSemantics"))?;
+                        Ok(res.into())
                     }));
                 }
             }
@@ -227,6 +247,7 @@ pub(crate) fn create_worker(js: JsWorker) -> Arc<WorkerCore> {
                 web_sys::console::log_1(&format!("no request found for {idx}").into());
                 return;
             };
+            drop(requests);
             resolve.call1(&JsValue::NULL, &resp).unwrap();
         }) as Box<dyn FnMut(_)>);
 
@@ -281,7 +302,12 @@ impl WorkerCore {
         } else {
             transfers
         };
-        let transfers = js_sys::Array::from_iter([buf, transfers]);
+        web_sys::console::log_2(&"send_with".into(), &transfers);
+        let transfers = if transfers == JsValue::UNDEFINED {
+            js_sys::Array::from_iter([buf])
+        } else {
+            js_sys::Array::from_iter([buf, transfers])
+        };
         self.js
             .post_message_with_transfer(&req.into(), &transfers.into())
             .unwrap();
@@ -320,7 +346,7 @@ impl WorkerCore {
 
     pub async fn render_page_to_canvas(
         self: &Arc<Self>,
-        ses: &RemoteRenderSession,
+        ses: Arc<RemoteRenderSession>,
         canvas: Option<&web_sys::HtmlCanvasElement>,
         options: Option<RenderPageImageOptions>,
     ) -> ZResult<(Fingerprint, JsValue, Option<HashMap<String, f64>>)> {
@@ -332,7 +358,7 @@ impl WorkerCore {
 
     pub async fn render_page_to_canvas_internal(
         self: Arc<Self>,
-        ses: RemoteRenderSession,
+        ses: Arc<RemoteRenderSession>,
         canvas: Option<web_sys::OffscreenCanvas>,
         options: Option<RenderPageImageOptions>,
     ) -> ZResult<(Fingerprint, JsValue, Option<HashMap<String, f64>>)> {
@@ -431,6 +457,7 @@ pub struct WorkerBridge {
     pub(crate) plugin: TypstRenderer,
     // todo: desync
     pub(crate) sessions: HashMap<i32, Arc<Mutex<RenderSession>>>,
+    pub(crate) canvases: HashMap<i32, HashMap<usize, OffscreenCanvas>>,
     pub(crate) previous_promise: Option<Promise>,
     pub(crate) sesions: i32,
 }
@@ -449,6 +476,7 @@ impl WorkerBridge {
         web_sys::console::log_1(&format!("msg: {x:?}").into());
         let Msg { request: x, id } = x;
 
+        let previous_promise = self.previous_promise.take();
         let res = match x {
             Request::CreateSession(opts) => {
                 let session = self.plugin.create_session(opts).unwrap();
@@ -459,35 +487,56 @@ impl WorkerBridge {
                 Ok(JsValue::from_f64(idx as f64))
             }
             Request::ManipulateData(ses, action) => {
-                let session = self.sessions.get_mut(&ses).unwrap();
+                let session = self.sessions.get_mut(&ses).unwrap().clone();
                 let data = y.unwrap();
                 let data = data.get(1).dyn_into::<Uint8Array>().unwrap().to_vec();
-                let res = match action.as_str() {
-                    "reset" => session.lock().unwrap().reset_current(&data),
-                    "merge" => session.lock().unwrap().merge_delta(&data),
-                    _ => Err(error_once!("Renderer.UnsupportedAction", action: action)),
-                };
-                if let Err(e) = res {
-                    web_sys::console::log_1(&format!("manipulate error: {e}").into());
-                }
-                Ok(JsValue::NULL)
+                let p = wasm_bindgen_futures::future_to_promise(async move {
+                    let res = match action.as_str() {
+                        "reset" => session.lock().unwrap().reset_current(&data),
+                        "merge" => session.lock().unwrap().merge_delta(&data),
+                        _ => Err(error_once!("Renderer.UnsupportedAction", action: action)),
+                    };
+                    if let Err(e) = res {
+                        web_sys::console::log_1(&format!("manipulate error: {e}").into());
+                    }
+                    Ok(JsValue::NULL)
+                });
+                Err(p)
             }
             Request::RenderPageToCanvas(ses, opts) => {
                 let y = y.unwrap();
                 let session = self.sessions.get(&ses).unwrap().clone();
-                let canvas = y.get(1).dyn_into::<OffscreenCanvas>().unwrap();
+                let canvas = y.get(1);
+                let canvases = self.canvases.entry(ses).or_default();
+                let canvas = match canvas {
+                    _ if canvas == JsValue::UNDEFINED => canvases
+                        .get(&opts.as_ref().unwrap().page_off)
+                        .unwrap()
+                        .clone(),
+                    canvas => {
+                        let canvas = canvas.dyn_into::<OffscreenCanvas>().unwrap();
+                        canvases.insert(opts.as_ref().unwrap().page_off, canvas.clone());
+                        canvas
+                    }
+                };
+                // canvases
+
                 let ctx = canvas.get_context("2d").unwrap().unwrap();
                 let ctx = ctx
                     .dyn_into::<web_sys::OffscreenCanvasRenderingContext2d>()
                     .unwrap();
                 let mut plugin = self.plugin.clone();
-                let previous_promise = self.previous_promise.take();
+                let magic = js_sys::Math::random();
+                let previous_promise = previous_promise.clone();
                 let p = wasm_bindgen_futures::future_to_promise(async move {
                     if let Some(p) = previous_promise {
-                        web_sys::console::log_1(&"wait for previous promise".into());
+                        web_sys::console::log_1(&"wait for previous promise 2".into());
                         let _ = wasm_bindgen_futures::JsFuture::from(p).await;
+                        web_sys::console::log_1(&"wait for previous promise 2 end".into());
                     }
+                    web_sys::console::log_1(&format!("render_page_to_canvas lock {magic}").into());
                     let ses = session.lock().unwrap();
+                    web_sys::console::log_1(&"render_page_to_canvas lock 2".into());
                     let (fg, content, res) = plugin
                         .render_page_to_canvas_internal::<DefaultExportFeature>(
                             &ses,
@@ -496,6 +545,8 @@ impl WorkerBridge {
                         )
                         .await
                         .unwrap();
+                    drop(ses);
+                    web_sys::console::log_1(&"render_page_to_canvas lock end".into());
                     let content = if content == JsValue::UNDEFINED {
                         JsValue::NULL
                     } else {
@@ -512,7 +563,6 @@ impl WorkerBridge {
                     let b = to_bytes(&p);
                     Ok(JsValue::from(Uint8Array::from(&b[..])))
                 });
-                self.previous_promise = Some(p.clone());
                 Err(p)
             }
 
@@ -522,26 +572,41 @@ impl WorkerBridge {
             }
 
             Request::SetBackgroundColor(ses, color) => {
-                let session = self.sessions.get_mut(&ses).unwrap();
-                session.lock().unwrap().set_background_color(color);
-                Ok(JsValue::NULL)
+                let session = self.sessions.get(&ses).unwrap().clone();
+                let p = wasm_bindgen_futures::future_to_promise(async move {
+                    session.lock().unwrap().set_background_color(color);
+                    Ok(JsValue::NULL)
+                });
+                Err(p)
             }
 
             Request::SetPixelPerPt(ses, f) => {
-                let session = self.sessions.get_mut(&ses).unwrap();
-                session.lock().unwrap().set_pixel_per_pt(f);
-                Ok(JsValue::NULL)
+                let session = self.sessions.get(&ses).unwrap().clone();
+                let p = wasm_bindgen_futures::future_to_promise(async move {
+                    session.lock().unwrap().set_pixel_per_pt(f);
+                    Ok(JsValue::NULL)
+                });
+                Err(p)
             }
 
             Request::GetPagesInfo(ses) => {
-                let session = self.sessions.get_mut(&ses).unwrap();
-                let info = session.lock().unwrap().pages_info();
-                let b = to_bytes(&info);
-                Ok(JsValue::from(Uint8Array::from(&b[..])))
+                let session = self.sessions.get(&ses).unwrap().clone();
+                let p = wasm_bindgen_futures::future_to_promise(async move {
+                    let info = session.lock().unwrap().pages_info();
+                    let b = to_bytes(&info);
+                    Ok(JsValue::from(Uint8Array::from(&b[..])))
+                });
+                Err(p)
             }
         };
 
-        wasm_bindgen_futures::spawn_local(async move {
+        let p = wasm_bindgen_futures::future_to_promise(async move {
+            if let Some(p) = previous_promise {
+                web_sys::console::log_1(&"wait for previous promise".into());
+                let _ = wasm_bindgen_futures::JsFuture::from(p).await;
+                web_sys::console::log_1(&"wait for previous promise end".into());
+            }
+
             let res = res;
             let id = id;
             let res = match res {
@@ -556,11 +621,17 @@ impl WorkerBridge {
                 .dyn_into::<web_sys::DedicatedWorkerGlobalScope>()
                 .unwrap();
             ws.post_message(&resp).unwrap();
+            web_sys::console::log_1(&"post_message end".into());
+            Ok(JsValue::NULL)
+        });
+        self.previous_promise = Some(p.clone());
+
+        wasm_bindgen_futures::spawn_local(async move {
+            let _ = wasm_bindgen_futures::JsFuture::from(p).await;
         });
     }
 }
 
-#[derive(Clone)]
 pub struct RemoteRenderSession {
     worker: Arc<WorkerCore>,
     session_info: i32,
