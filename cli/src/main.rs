@@ -6,12 +6,15 @@ use std::{
 };
 
 use clap::FromArgMatches;
-use reflexo_typst::config::{entry::EntryOpts, CompileOpts};
 use reflexo_typst::error::prelude::*;
 use reflexo_typst::exporter_builtins::GroupExporter;
 use reflexo_typst::exporter_utils::map_err;
 use reflexo_typst::path::{unix_slash, PathClean};
 use reflexo_typst::TypstSystemUniverse;
+use reflexo_typst::{
+    config::{entry::EntryOpts, CompileOpts},
+    typst_shim::model::TypstDocumentExt,
+};
 use typst::{model::Document, text::FontVariant, World};
 use typst_assets::fonts;
 use typst_ts_cli::compile::compile_export;
@@ -114,7 +117,7 @@ pub fn query(args: QueryArgs) -> ! {
 
     exporter.push_front(Box::new(move |world: &dyn World, output: Arc<Document>| {
         if args.selector == "document_title" {
-            let title = output.title.clone().unwrap_or("null".into());
+            let title = output.title().map(|e| e.as_str()).unwrap_or("null");
             let serialized = serialize(&title, "json").map_err(map_err)?;
             println!("{}", serialized);
             return Ok(());

@@ -68,6 +68,7 @@ pub use exporter::{
     GenericTransformer, Transformer,
 };
 // pub use font::{FontLoader, FontResolver, FontSlot};
+pub use reflexo::typst_shim as compat;
 pub use reflexo::*;
 
 pub mod build_info {
@@ -406,7 +407,7 @@ pub trait Compiler {
         self.reset()?;
 
         let res = match env.sink.as_mut() {
-            Some(sink) => ::typst::compile(world),
+            Some(_sink) => ::typst::compile(world),
             None => ::typst::compile(world),
         };
 

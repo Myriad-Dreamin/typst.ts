@@ -8,10 +8,10 @@ pub use reflexo_typst::*;
 use core::fmt;
 use std::{fmt::Write, path::Path, sync::Arc};
 
-use ::typst::utils::LazyHash;
 use error::TypstSourceDiagnostic;
 use font::cache::FontInfoCache;
 use js_sys::{Array, JsString, Uint32Array, Uint8Array};
+use reflexo_typst::compat::utils::LazyHash;
 use reflexo_typst::error::{long_diag_from_std, prelude::*, DiagMessage};
 use reflexo_typst::font::web::BrowserFontSearcher;
 use reflexo_typst::package::browser::ProxyRegistry;
@@ -266,7 +266,7 @@ impl TypstCompiler {
                     return Err(error_once!("Unsupported offset encoding", offset_encoding: offset_encoding).into());
                 }
             },
-        );
+        )?;
         let mut result = Vec::new();
         for token in tokens.iter() {
             result.push(token.delta_line);

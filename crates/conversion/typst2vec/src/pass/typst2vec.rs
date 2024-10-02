@@ -302,7 +302,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         inner
                     }
                     FrameItem::Text(text) => {
-                        let i = self.text(state, &text);
+                        let i = self.text(state, text);
 
                         self.spans.push_span(SourceRegion {
                             region: src_reg,
@@ -318,7 +318,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         i
                     }
                     FrameItem::Shape(shape, s) => {
-                        let i = self.shape(state, &shape);
+                        let i = self.shape(state, shape);
 
                         self.spans.push_span(SourceRegion {
                             region: src_reg,
@@ -330,7 +330,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         i
                     }
                     FrameItem::Image(image, size, s) => {
-                        let i = self.image(&image, *size);
+                        let i = self.image(image, *size);
 
                         self.spans.push_span(SourceRegion {
                             region: src_reg,
@@ -361,8 +361,8 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
 
                         self.store(VecItem::ContentHint('\n'))
                     }
-                    // #[cfg(not(feature = "no-content-hint"))]
-                    // FrameItem::ContentHint(c) => self.store(VecItem::ContentHint(*c)),
+                    #[cfg(not(feature = "no-content-hint"))]
+                    FrameItem::ContentHint(c) => self.store(VecItem::ContentHint(*c)),
                     // todo: support page label
                 };
 

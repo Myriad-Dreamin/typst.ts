@@ -1,12 +1,9 @@
-use comemo::{Track, TrackedMut};
 use std::borrow::Cow::{self, Owned};
 use std::cell::{RefCell, RefMut};
 use std::sync::Arc;
 
 use reflexo_typst::typst::prelude::*;
-use reflexo_typst::{
-    CompileDriver, CompileReport, CompilerWorld, ConsoleDiagReporter, PureCompiler,
-};
+use reflexo_typst::{CompileDriver, CompileReport, ConsoleDiagReporter, PureCompiler};
 use reflexo_typst::{GenericExporter, ShadowApiExt, TypstSystemWorld};
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
@@ -16,7 +13,7 @@ use rustyline::validate::MatchingBracketValidator;
 use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, KeyEvent};
 use rustyline::{Helper, Validator};
 use typst::diag::SourceDiagnostic;
-use typst::{hint_invalid_main_file, World};
+use typst::World;
 use typst_ide::autocomplete;
 
 use crate::query::serialize;
