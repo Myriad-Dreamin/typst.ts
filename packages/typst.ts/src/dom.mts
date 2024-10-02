@@ -72,7 +72,7 @@ export function provideDomDoc<TBase extends GConstructor<TypstDocumentContext<In
       this.disposeList.push(() => {
         this.dispose();
       });
-      this.plugin = this.opts.renderer as TypstRendererDriver;
+      this.plugin = this.opts.renderer as any as TypstRendererDriver;
       if (this.opts.domScale !== undefined) {
         if (this.opts.domScale <= 0) {
           throw new Error('domScale must be positive');
