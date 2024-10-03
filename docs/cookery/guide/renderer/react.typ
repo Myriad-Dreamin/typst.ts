@@ -38,9 +38,7 @@ Render the document with artifact from precompiler.
 <TypstDocument artifact={artifact}/>
 ```
 
-The artifact can be only in #term.vector-format to this time.
-
-To get `artifact` data, please refer to #term.ts-cli.
+#include "get-artifact.typ"
 
 === Set renderer initialization option for `TypstDocument`
 

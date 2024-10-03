@@ -47,9 +47,7 @@ Render the document with artifact from precompiler.
 <TypstDocument artifact={artifact}/>
 ```
 
-The artifact can be only in #term.vector-format to this time.
-
-To get `artifact` data, please refer to #term.ts-cli.
+#include "get-artifact.typ"
 
 === Set renderer initialization option for `TypstDocument`
 
@@ -67,7 +65,7 @@ The default value is:
 ```ts
 {
   beforeBuild: [],
-  getModule: () => '/node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
+  getModule: () => 'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
 }
 ```
 

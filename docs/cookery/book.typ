@@ -46,9 +46,10 @@
       - #chapter("guide/renderer/ts-lib.typ", section: "4.1")[JavaScript/TypeScript Library]
       - #chapter("guide/renderer/node.typ", section: "4.2")[Node.js Library]
       - #chapter("guide/renderer/react.typ", section: "4.3")[React Library]
-      - #chapter("guide/renderer/angular.typ", section: "4.4")[Angular Library]
-      - #chapter("guide/renderer/vue3.typ", section: "4.5")[Vue3 Library]
-      - #chapter("guide/renderer/hexo.typ", section: "4.6")[Hexo Plugin]
+      - #chapter("guide/renderer/solid.typ", section: "4.4")[Solid Library]
+      - #chapter("guide/renderer/angular.typ", section: "4.5")[Angular Library]
+      - #chapter("guide/renderer/vue3.typ", section: "4.6")[Vue3 Library]
+      - #chapter("guide/renderer/hexo.typ", section: "4.7")[Hexo Plugin]
     - #chapter("guide/trouble-shooting.typ", section: "5")[Trouble Shooting]
     // = Advanced development
     // - #chapter("guide/env-setup.typ", section: "5")[Environment Setup]
