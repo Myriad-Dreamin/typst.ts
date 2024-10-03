@@ -8,7 +8,9 @@
     "jsxImportSource": "solid-js",
     "jsx": "preserve",
     "target": "ESNext",
-    "module": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["vite/client"],
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "strict": true
   },

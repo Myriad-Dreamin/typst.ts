@@ -1,6 +1,7 @@
 import { withGlobalRenderer } from "@myriaddreamin/typst.ts/dist/esm/contrib/global-renderer.mjs";
 import * as typst from "@myriaddreamin/typst.ts";
 import { createEffect, createSignal } from "solid-js";
+import injectedCss from  "./html-export.css?raw";
 
 export interface TypstDocumentProps {
 	fill?: string;
@@ -86,7 +87,11 @@ export const TypstDocument = ({
 
 	/// --- end: update document --- ///
 
-	return <div ref={setDisplayDivRef}></div>;
+	return <div>
+		{/* todo: remove this embedded css */}
+		<style>{injectedCss}</style>
+		<div ref={setDisplayDivRef}></div>
+	</div>;
 };
 
 TypstDocument.setWasmModuleInitOptions = (opts: typst.InitOptions) => {
