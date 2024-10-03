@@ -4,14 +4,6 @@ class Processor {
   constructor(hexo, compiler) {
     this.hexo = hexo;
     this.compiler = compiler;
-    this.Post = hexo.model('Post');
-    this.renderCli = 'typst-ts-cli';
-
-    const postProcessor = require(path.resolve(
-      hexo.base_dir,
-      `node_modules/hexo/lib/plugins/processor/post`,
-    ));
-    this.pp = postProcessor(hexo);
   }
 
   process(data) {
