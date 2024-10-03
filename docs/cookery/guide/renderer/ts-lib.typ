@@ -56,7 +56,7 @@ plugin
 
 Please ensure that `/path/to/typst_ts_renderer_bg.wasm` is accessible to your frontend.
 
-Next, load the artifact in #term.vector-format from somewhere. For example, precompile your doucment by #term.ts-cli and load it by the `fetch` api:
+Next, load the artifact in #term.vector-format from somewhere. For example, load it by the `fetch` api:
 
 ```ts
 const artifactContent: Uint8Array =
@@ -64,6 +64,8 @@ const artifactContent: Uint8Array =
     .then(response => response.arrayBuffer())
     .then(buffer => new Uint8Array(buffer));
 ```
+
+#include "get-artifact.typ"
 
 Finally, call the `render` api to trigger rendering:
 

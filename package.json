@@ -18,6 +18,8 @@
     "packages/typst.ts",
     "packages/typst.node",
     "packages/typst.react",
+    "packages/typst.solid",
+    "packages/typst.solid/demo",
     "packages/typst.vue3",
     "packages/typst.angular",
     "templates/*",

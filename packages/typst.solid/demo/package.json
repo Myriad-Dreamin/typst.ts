@@ -1,0 +1,23 @@
+{
+  "name": "typst-ts-solid-demo",
+  "version": "0.0.0",
+  "description": "",
+  "scripts": {
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "devDependencies": {
+    "@myriaddreamin/typst-ts-renderer": "0.5.0-rc7",
+    "@myriaddreamin/typst.ts": "0.5.0-rc7",
+    "solid-devtools": "^0.29.3",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8",
+    "vite-plugin-solid": "^2.10.2"
+  },
+  "dependencies": {
+    "solid-js": "^1.9.1",
+    "typst-ts-solid": "link:.."
+  }
+}

@@ -1,22 +1,31 @@
 #import "/docs/cookery/book.typ": book-page
 #import "/docs/cookery/term.typ" as term
 
-#show: book-page.with(title: "React Library")
+#show: book-page.with(title: "Solid Library")
 
-= React Library
+= Solid Library
 
-Use #link("https://www.npmjs.com/package/@myriaddreamin/typst.react")[`@myriaddreamin/typst.react`].
 
 ```typescript
-import { TypstDocument } from '@myriaddreamin/typst.react';
+import { TypstDocument } from "@myriaddreamin/typst.solid";
+import { createResource } from "solid-js";
 
 export const App = (artifact: Uint8Array) => {
-return (
-  <div>
-  <h1>Demo: Embed Your Typst Document in React</h1>
-  <TypstDocument fill="#343541" artifact={artifact} />
-  </div>
-);
+  const getArtifactData = async () => {
+    const response = await fetch(
+      "http://localhost:3000/readme.artifact.sir.in"
+    ).then((response) => response.arrayBuffer());
+
+    return new Uint8Array(response);
+  };
+  const [vec] = createResource(getArtifactData);
+
+  return (
+    <div>
+      <h1>Demo: Embed Your Typst Document in Solid</h1>
+      <TypstDocument fill="#343541" artifact={vec()} />
+    </div>
+  );
 };
 ```
 
@@ -56,10 +65,10 @@ The default value is:
 ```ts
 {
   beforeBuild: [],
-  getModule: () => '/node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
+  getModule: () => 'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
 }
 ```
 
 === Example: show document
 
-See #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/typst.react/src/demo")[typst.react demo] for more details.
+See #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/typst.solid/demo")[typst.solid demo] for more details.
