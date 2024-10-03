@@ -38,27 +38,14 @@ export type RenderInSessionOptions<Base = RenderToCanvasOptions> = Base & {
 export type RenderByContentOptions<Base = RenderToCanvasOptions> = Base & CreateSessionOptions;
 
 /**
- * The options for rendering a preprocessed Typst document to specified container.
- * @property {HTMLElement} [container] - The container to render the Typst document.
- * @property {string} [backgroundColor] - The background color will replace the default one by typst document.
- * @property {number} [pixelPerPt] - The pixel per point scale up the image, which is 2.5 by default and recommended.
+ * The options for rendering an entire preprocessed Typst document to specified container.
  */
-export interface RenderToCanvasOptions {
+export interface RenderToCanvasOptions
+  extends Pick<RenderCanvasOptions, 'backgroundColor' | 'pixelPerPt'> {
+  /**
+   * The container to render the Typst document.
+   */
   container: HTMLElement;
-
-  /**
-   * Set the background color in format of `^#?[0-9a-f]{6}$`
-   *
-   * Note: Default to `#ffffff`.
-   */
-  backgroundColor?: string;
-
-  /**
-   * Set the pixel per point scale up the canvas panel.
-   *
-   * Note: Default to `3`.
-   */
-  pixelPerPt?: number;
 }
 
 /**
@@ -135,19 +122,35 @@ export interface ManipulateDataOptions {
 
 /**
  * The options for rendering a page to a canvas.
- * @property {number} page_off - The page offset to render.
  */
 export class RenderCanvasOptions {
-  canvas?: CanvasRenderingContext2D;
+  /**
+   * The canvas to render the Typst document.
+   */
+  canvas?: HTMLCanvasElement | CanvasRenderingContext2D;
 
   /**
    * The page offset to render.
    */
-  pageOffset?: number;
+  pageOffset: number;
   /**
    * The previous render state.
    */
   cacheKey?: string;
+
+  /**
+   * Set the background color in format of `^#?[0-9a-f]{6}$`
+   *
+   * Note: Default to `#ffffff`.
+   */
+  backgroundColor?: string;
+
+  /**
+   * Set the pixel per point scale up the canvas panel.
+   *
+   * Note: Default to `3`.
+   */
+  pixelPerPt?: number;
 
   /**
    * The selection of the data to render.
@@ -171,4 +174,16 @@ export class RenderCanvasOptions {
     annotation?: boolean;
     semantics?: boolean;
   };
+}
+
+/**
+ * The options for rendering a page to a canvas in background.
+ */
+export const OffscreenRenderCanvasOptions = RenderCanvasOptions;
+export interface OffscreenRenderCanvasOptions
+  extends Omit<RenderCanvasOptions, 'canvas' | 'cacheKey'> {
+  /**
+   * The canvas to render the Typst document.
+   */
+  canvas: HTMLCanvasElement;
 }

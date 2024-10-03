@@ -9,8 +9,11 @@ pub use session::RenderSession;
 pub use session::RenderSessionOptions;
 
 use reflexo_typst::error::prelude::*;
-use session::CreateSessionOptions;
+#[cfg(feature = "rkyv")]
+use rkyv::{Archive, Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
+
+use session::CreateSessionOptions;
 
 pub mod build_info {
     /// The version of the typst-ts-renderer crate.
@@ -75,8 +78,14 @@ pub fn renderer_build_info() -> JsValue {
 
 #[wasm_bindgen]
 #[derive(Debug, Default)]
+#[cfg_attr(feature = "rkyv", derive(Archive, Serialize, Deserialize))]
 pub struct RenderPageImageOptions {
-    pub(crate) page_off: Option<usize>,
+    /// pixel per point
+    pub(crate) pixel_per_pt: Option<f32>,
+    /// background color
+    pub(crate) background_color: Option<String>,
+
+    pub(crate) page_off: usize,
     pub(crate) cache_key: Option<String>,
     pub(crate) data_selection: Option<u32>,
 }
@@ -86,19 +95,41 @@ impl RenderPageImageOptions {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
         Self {
-            page_off: None,
+            pixel_per_pt: None,
+            background_color: None,
+            page_off: 0,
             cache_key: None,
             data_selection: None,
         }
     }
 
     #[wasm_bindgen(getter)]
-    pub fn page_off(&self) -> Option<usize> {
+    pub fn pixel_per_pt(&self) -> Option<f32> {
+        self.pixel_per_pt
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_pixel_per_pt(&mut self, pixel_per_pt: Option<f32>) {
+        self.pixel_per_pt = pixel_per_pt;
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn background_color(&self) -> Option<String> {
+        self.background_color.clone()
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_background_color(&mut self, background_color: Option<String>) {
+        self.background_color = background_color;
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn page_off(&self) -> usize {
         self.page_off
     }
 
     #[wasm_bindgen(setter)]
-    pub fn set_page_off(&mut self, page_off: Option<usize>) {
+    pub fn set_page_off(&mut self, page_off: usize) {
         self.page_off = page_off;
     }
 
@@ -124,6 +155,7 @@ impl RenderPageImageOptions {
 }
 
 #[wasm_bindgen]
+#[derive(Clone)]
 pub struct TypstRenderer {}
 
 impl Default for TypstRenderer {
@@ -194,14 +226,58 @@ impl TypstRenderer {
         session.reset_current(artifact_content)?;
         Ok(session)
     }
+}
 
-    // ses.pixel_per_pt = options.as_ref().and_then(|o|
-    // o.pixel_per_pt).unwrap_or(2.);
+#[cfg(feature = "worker")]
+pub(crate) mod worker;
+#[cfg(not(feature = "worker"))]
+pub mod canvas_stub {
+    #![allow(dead_code)]
+    #![allow(unused_imports)]
 
-    // ses.background_color = options
-    //     .as_ref()
-    //     .and_then(|o| o.background_color.clone())
-    //     .unwrap_or("ffffff".to_string());
+    use js_sys::{Promise, Uint8Array};
+    use reflexo_typst::error::prelude::*;
+    use wasm_bindgen::prelude::*;
+    use web_sys::HtmlCanvasElement;
+
+    use crate::{RenderPageImageOptions, RenderSession, TypstRenderer};
+
+    #[wasm_bindgen]
+    impl TypstRenderer {
+        pub async fn create_worker(&mut self, _w: JsValue) -> ZResult<TypstWorker> {
+            Err(error_once!("Renderer.WorkerFeatureNotEnabled"))
+        }
+
+        pub fn create_worker_bridge(self) -> ZResult<WorkerBridge> {
+            Err(error_once!("Renderer.WorkerFeatureNotEnabled"))
+        }
+    }
+
+    #[wasm_bindgen]
+    pub struct WorkerBridge {}
+
+    #[wasm_bindgen]
+    pub struct TypstWorker {}
+
+    #[wasm_bindgen]
+    impl TypstWorker {
+        pub fn manipulate_data(&mut self, _action: &str, _data: Uint8Array) -> ZResult<Promise> {
+            Err(error_once!("Renderer.WorkerFeatureNotEnabled"))
+        }
+
+        pub fn get_pages_info(&self) -> Promise {
+            panic!("Renderer.WorkerFeatureNotEnabled")
+        }
+
+        pub fn render_canvas(
+            &mut self,
+            _actions: Vec<u8>,
+            _canvas_list: Vec<HtmlCanvasElement>,
+            _data: Vec<RenderPageImageOptions>,
+        ) -> ZResult<Promise> {
+            Err(error_once!("Renderer.WorkerFeatureNotEnabled"))
+        }
+    }
 }
 
 #[cfg(test)]

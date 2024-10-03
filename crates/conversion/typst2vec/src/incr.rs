@@ -25,6 +25,7 @@ pub struct IncrDocServer {
 }
 
 impl IncrDocServer {
+    /// Set whether to attach debug info to the spans.
     pub fn set_should_attach_debug_info(&mut self, should_attach_debug_info: bool) {
         self.typst2vec
             .spans
@@ -129,7 +130,7 @@ impl IncrDocServer {
 
     /// Gets element paths by the given span.
     ///
-    /// See [`crate::vector::pass::Span2VecPass::query_element_paths`] for more
+    /// See [`crate::pass::Span2VecPass::query_element_paths`] for more
     /// information.
     pub fn resolve_element_paths_by_span(
         &mut self,

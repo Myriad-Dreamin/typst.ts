@@ -354,6 +354,14 @@ impl Rect {
         }
     }
 
+    pub fn cano(&self) -> Self {
+        let Rect { lo, hi } = self;
+        Self {
+            lo: Point::new(lo.x.min(hi.x), lo.y.min(hi.y)),
+            hi: Point::new(lo.x.max(hi.x), lo.y.max(hi.y)),
+        }
+    }
+
     pub fn is_empty(&self) -> bool {
         self.lo.x >= self.hi.x || self.lo.y >= self.hi.y
     }
@@ -389,6 +397,22 @@ impl Rect {
 
     pub fn height(&self) -> Scalar {
         self.hi.y - self.lo.y
+    }
+
+    pub fn left(&self) -> Scalar {
+        self.lo.x
+    }
+
+    pub fn right(&self) -> Scalar {
+        self.hi.x
+    }
+
+    pub fn top(&self) -> Scalar {
+        self.lo.y
+    }
+
+    pub fn bottom(&self) -> Scalar {
+        self.hi.y
     }
 }
 

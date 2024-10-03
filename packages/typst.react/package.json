@@ -30,8 +30,8 @@
     "dist/**/*.{mts,mjs,js,ts}"
   ],
   "scripts": {
-    "start": "webpack serve --config webpack/webpack.config.js --env env=dev",
-    "build": "tsc --outDir dist && webpack --config webpack/webpack.config.js --env env=prod",
+    "dev": "cd demo && vite dev -c vite.config.mjs",
+    "build": "tsc --outDir dist && vite build",
     "lint": "eslint --fix \"./src/**/*.{js,jsx,ts,tsx,json}\"",
     "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
     "test": "exit 0",
@@ -45,27 +45,11 @@
     "react-dom": "^17.0.1 || ^18.x"
   },
   "devDependencies": {
-    "@babel/core": "^7.21.8",
-    "@babel/plugin-transform-runtime": "^7.21.4",
-    "@babel/preset-env": "^7.21.5",
-    "@babel/preset-react": "^7.18.6",
-    "@babel/preset-typescript": "^7.21.5",
-    "@eslint-community/eslint-plugin-eslint-comments": "^3.2.1",
     "@myriaddreamin/typst-ts-renderer": "*",
     "@myriaddreamin/typst.ts": "*",
-    "@pmmmwh/react-refresh-webpack-plugin": "^0.5.10",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "babel-loader": "^9.1.2",
-    "css-loader": "^6.7.4",
-    "html-webpack-plugin": "^5.5.1",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-refresh": "^0.14.0",
-    "style-loader": "^3.3.3",
-    "webpack": "^5.83.1",
-    "webpack-cli": "^5.1.1",
-    "webpack-dev-server": "^4.15.0",
-    "webpack-merge": "^5.8.0"
+    "react-dom": "^18.2.0"
   }
 }

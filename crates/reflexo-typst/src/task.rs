@@ -1,5 +1,5 @@
 //! Task are stateless actors that staring computing tasks.
-//! [`SyncTaskFactory`] can hold *mutable* configuration but the mutations don't
+//! `SyncTaskFactory` can hold *mutable* configuration but the mutations don't
 //! blocking the computation, i.e. the mutations are non-blocking.
 
 mod cache;

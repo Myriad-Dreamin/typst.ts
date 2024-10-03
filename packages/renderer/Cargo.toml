@@ -40,8 +40,10 @@ reflexo-typst = { workspace = true, default-features = false, features = [
 reflexo-typst2vec = { workspace = true }
 reflexo-vec2canvas = { workspace = true, optional = true }
 reflexo-vec2sema = { workspace = true }
+reflexo-vec2bbox = { workspace = true }
 reflexo-vec2svg = { workspace = true, optional = true }
 reflexo-vec2dom = { workspace = true, optional = true }
+rkyv = { workspace = true, optional = true }
 console_error_panic_hook.workspace = true
 
 [dev-dependencies]
@@ -74,6 +76,7 @@ build_full = ["build_glyph_pack", "build_raw_font", "build_web_font"]
 render_canvas = [
     "dep:reflexo-vec2canvas",
     "web-sys/HtmlCanvasElement",
+    "web-sys/HtmlImageElement",
     "web-sys/CanvasRenderingContext2d",
 ]
 render_dom = ["dep:reflexo-vec2dom", "render_svg"]
@@ -81,7 +84,22 @@ render_pdf = []
 render_svg = ["reflexo-typst/svg", "web-sys/HtmlDivElement"]
 render_full = ["render_canvas", "render_pdf", "render_svg", "render_dom"]
 
+rkyv = ["dep:rkyv"]
+worker = [
+    "rkyv",
+    "web-sys/Worker",
+    "web-sys/WorkerOptions",
+    "web-sys/WorkerType",
+]
+
 web = ["render_canvas", "render_svg", "render_dom"]
 
 debug_delta_update = []
 test_render_document = []
+
+no-content-hint = [
+    "reflexo-typst2vec/no-content-hint",
+    "reflexo-typst/no-content-hint",
+    "reflexo-vec2dom/no-content-hint",
+    "reflexo-vec2svg/no-content-hint",
+]

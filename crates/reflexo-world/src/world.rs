@@ -56,7 +56,7 @@ impl<'a, F: CompilerFeat> Revising<'a, CompilerUniverse<F>> {
 
     /// Let the vfs notify the access model with a filesystem event.
     ///
-    /// See [`NotifyAccessModel`] for more information.
+    /// See [`reflexo_vfs::NotifyAccessModel`] for more information.
     pub fn notify_fs_event(&mut self, event: FilesystemEvent) {
         self.inner.vfs.notify_fs_event(event);
     }
@@ -96,7 +96,7 @@ impl<'a, F: CompilerFeat> Revising<'a, CompilerUniverse<F>> {
 /// A universe that provides access to the operating system.
 ///
 /// Use [`CompilerUniverse::new`] to create a new universe.
-/// Use [`CompilerUniverse::spawn`] to create a new world.
+/// Use [`CompilerUniverse::snapshot`] to create a new world.
 #[derive(Debug)]
 pub struct CompilerUniverse<F: CompilerFeat> {
     /// State for the *root & entry* of compilation.

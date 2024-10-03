@@ -9,5 +9,5 @@ index.html
 *.pdf
 *.tsbuildinfo
 *.ts.map
-esbuild.*
+vite.*
 .eslint*

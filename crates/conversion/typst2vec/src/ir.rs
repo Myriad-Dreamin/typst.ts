@@ -8,6 +8,7 @@ use typst::text::Font;
 /// A glyph item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum GlyphItem {
+    /// A missing glyph.
     None,
 
     /// Raw glyph representation.

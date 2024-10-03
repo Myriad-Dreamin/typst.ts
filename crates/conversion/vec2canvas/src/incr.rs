@@ -1,18 +1,15 @@
-use std::ops::Deref;
-
 use tiny_skia as sk;
 
 use reflexo::{
     error::prelude::*,
-    hash::Fingerprint,
     vector::{
         incr::IncrDocClient,
-        ir::{ImmutStr, LayoutRegionNode, Module, Page, Rect},
+        ir::{ImmutStr, Module, Page, Rect},
         vm::RenderVm,
     },
 };
 
-use crate::{set_transform, CanvasOp, CanvasPage, CanvasTask, DefaultExportFeature};
+use crate::{set_transform, CanvasDevice, CanvasOp, CanvasPage, CanvasTask, DefaultExportFeature};
 
 /// Incremental pass from vector to canvas
 pub struct IncrVec2CanvasPass {
@@ -45,7 +42,7 @@ impl IncrVec2CanvasPass {
 
         let mut ct = t.fork_canvas_render_task(module);
 
-        let pages = pages
+        let pages: Vec<CanvasPage> = pages
             .iter()
             .enumerate()
             .map(|(idx, Page { content, size })| {
@@ -60,16 +57,12 @@ impl IncrVec2CanvasPass {
                 }
             })
             .collect();
+
         self.pages = pages;
     }
 
     /// Flushes a page to the canvas with the given transform.
-    pub async fn flush_page(
-        &mut self,
-        idx: usize,
-        canvas: &web_sys::CanvasRenderingContext2d,
-        ts: sk::Transform,
-    ) {
+    pub async fn flush_page(&mut self, idx: usize, canvas: &dyn CanvasDevice, ts: sk::Transform) {
         let pg = &self.pages[idx];
 
         if !set_transform(canvas, ts) {
@@ -117,70 +110,11 @@ impl IncrCanvasDocClient {
         }
     }
 
-    /// Render the document in the given window.
-    pub async fn render_in_window(
-        &mut self,
-        kern: &mut IncrDocClient,
-        canvas: &web_sys::CanvasRenderingContext2d,
-        rect: Rect,
-    ) {
-        const NULL_PAGE: Fingerprint = Fingerprint::from_u128(1);
-
-        self.patch_delta(kern);
-
-        // prepare an empty page for the pages that are not rendered
-
-        // get previous doc_view
-        // it is exact state of the current DOM.
-        let prev_doc_view = self.doc_view.take().unwrap_or_default();
-
-        // render next doc_view
-        // for pages that is not in the view, we use empty_page
-        // otherwise, we keep document layout
-        let mut page_off: f32 = 0.;
-        let mut next_doc_view = vec![];
-        if let Some(t) = &kern.layout {
-            let pages = match t {
-                LayoutRegionNode::Pages(a) => {
-                    let (_, pages) = a.deref();
-                    pages
-                }
-                _ => todo!(),
-            };
-            for page in pages.iter() {
-                page_off += page.size.y.0;
-                if page_off < rect.lo.y.0 || page_off - page.size.y.0 > rect.hi.y.0 {
-                    next_doc_view.push(Page {
-                        content: NULL_PAGE,
-                        size: page.size,
-                    });
-                    continue;
-                }
-
-                next_doc_view.push(page.clone());
-            }
-        }
-
-        let s = self.vec2canvas.pixel_per_pt;
-        let ts = sk::Transform::from_scale(s, s);
-
-        // accumulate offset_y
-        let mut offset_y = 0.;
-        for (idx, y) in next_doc_view.iter().enumerate() {
-            let x = prev_doc_view.get(idx);
-            if x.is_none() || (x.unwrap() != y && y.content != NULL_PAGE) {
-                let ts = ts.pre_translate(0., offset_y);
-                self.vec2canvas.flush_page(idx, canvas, ts).await;
-            }
-            offset_y += y.size.y.0;
-        }
-    }
-
     /// Render a specific page of the document in the given window.
     pub async fn render_page_in_window(
         &mut self,
         kern: &mut IncrDocClient,
-        canvas: &web_sys::CanvasRenderingContext2d,
+        canvas: &dyn CanvasDevice,
         idx: usize,
         _rect: Rect,
     ) -> ZResult<()> {

@@ -94,13 +94,11 @@ impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Fea
 
 impl<'m, 't, Feat: ExportFeature> FontIndice<'m> for RenderContext<'m, 't, Feat> {
     fn get_font(&self, value: &FontRef) -> Option<&'m ir::FontItem> {
-        self.module.fonts.get(value.idx as usize).map(|e| {
+        self.module.fonts.get(value.idx as usize).inspect(|e| {
             // canary check
             if e.hash != value.hash {
                 panic!("Invalid font reference: {:?}", value);
             }
-
-            e
         })
     }
 }
@@ -202,90 +200,14 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, 't, Feat> {
     fn render_text(
         &mut self,
         group_ctx: Self::Group,
-        abs_ref: &Fingerprint,
+        _abs_ref: &Fingerprint,
         text: &TextItem,
     ) -> Self::Group {
-        if self.should_rasterize_text() {
-            self.rasterize_and_put_text(group_ctx, abs_ref, text)
-        } else {
-            self.render_text_inplace(group_ctx, text)
-        }
+        self.render_text_inplace(group_ctx, text)
     }
 }
 
 impl<'m, 't, Feat: ExportFeature> IncrRenderVm<'m> for RenderContext<'m, 't, Feat> {}
-
-#[cfg(not(feature = "aggresive-browser-rasterization"))]
-impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
-    /// Raseterize the text and put it into the group context.
-    fn rasterize_and_put_text(
-        &mut self,
-        _group_ctx: SvgTextBuilder,
-        _abs_ref: &Fingerprint,
-        _text: &TextItem,
-    ) -> SvgTextBuilder {
-        panic!("Rasterization is not enabled.")
-    }
-}
-
-#[cfg(feature = "aggresive-browser-rasterization")]
-impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
-    /// Raseterize the text and put it into the group context.
-    fn rasterize_and_put_text(
-        &mut self,
-        mut group_ctx: SvgTextBuilder,
-        abs_ref: &Fingerprint,
-        text: &TextItem,
-    ) -> SvgTextBuilder {
-        use reflexo_vec2canvas::CanvasRenderSnippets;
-
-        let font = self.get_font(&text.shape.font).unwrap();
-
-        // upem is the unit per em defined in the font.
-        let upem = font.units_per_em;
-
-        group_ctx = text.shape.add_transform(self, group_ctx, upem);
-
-        //
-
-        let width = text.width();
-        let mut _width = 0f32;
-        let iter = text
-            .render_glyphs(upem, &mut _width)
-            .flat_map(|(pos, g)| font.get_glyph(g).map(|g| (pos, g.as_ref())));
-        let scaled_width = width.0 * upem.0 / text.shape.size.0;
-        let decender_adjust = (font.descender.0 * upem.0).abs();
-        // .max(0.)
-        let div_text = CanvasRenderSnippets::rasterize_text(
-            abs_ref,
-            iter,
-            scaled_width,
-            upem.0,
-            decender_adjust,
-            "#000",
-        );
-
-        group_ctx.content.push(SvgText::Plain(format!(
-            r#"<foreignObject width="{:.1}" height="{:.1}" x="0" y="{:.1}">{div_text}</foreignObject>"#,
-            scaled_width,
-            upem.0 + decender_adjust,
-            -decender_adjust,
-        )));
-
-        if self.should_render_text_element() {
-            group_ctx.render_text_semantics_inner(
-                &text.shape,
-                &text.content.content,
-                width,
-                font.ascender,
-                upem,
-                self.should_aware_html_entity(),
-            )
-        }
-
-        group_ctx
-    }
-}
 
 impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
     /// Render a text into the underlying context.

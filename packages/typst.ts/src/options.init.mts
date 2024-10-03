@@ -50,6 +50,11 @@ export interface InitOptions {
   beforeBuild: BeforeBuildFn[];
 
   /**
+   * callbacks to fetch the wasm module wrapper
+   */
+  getWrapper?(): Promise<any>;
+
+  /**
    * callbacks to fetch the wasm module
    *
    * There are many ways to provide a wasm module, see

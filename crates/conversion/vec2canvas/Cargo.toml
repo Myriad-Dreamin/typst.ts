@@ -18,6 +18,7 @@ reflexo-vec2bbox.workspace = true
 tiny-skia.workspace = true
 async-trait.workspace = true
 wasm-bindgen-futures.workspace = true
+svgtypes.workspace = true
 
 wasm-bindgen.workspace = true
 js-sys.workspace = true
@@ -26,13 +27,17 @@ web-sys = { workspace = true, features = [
     "CanvasRenderingContext2d",
     "Path2d",
     "Blob",
-    "HtmlImageElement",
-    "HtmlDivElement",
+    "ImageBitmap",
     "HtmlCanvasElement",
     "Url",
+    "ImageData",
+    "OffscreenCanvas",
+    "OffscreenCanvasRenderingContext2d",
     "BlobPropertyBag",
     "Window",
     "Document",
+    "TextMetrics",
+    "DedicatedWorkerGlobalScope",
 ] }
 
 [features]

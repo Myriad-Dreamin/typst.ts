@@ -18,6 +18,7 @@ impl AbsExt for Abs {
 
 /// Additional methods for types that can be converted to CSS.
 pub trait ToCssExt {
+    /// Convert to a CSS string.
     fn to_css(self) -> String;
 }
 

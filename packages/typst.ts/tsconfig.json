@@ -1,8 +1,10 @@
 {
   "compilerOptions": {
-    "types": ["web", "./src/global.d.mts"],
+    "types": ["web", "vite/client", "./src/global.d.mts"],
     "baseUrl": ".",
-    "target": "ES2020",
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "allowJs": true,
     "noImplicitAny": true,
     "importHelpers": true,
@@ -12,5 +14,7 @@
     "stripInternal": true,
 
     "lib": ["ES5", "ES6", "ES7", "ES2018", "ES2022"]
-  }
+  },
+  "include": ["src/**/*.mts"],
+  "exclude": ["src/contrib/canvas-worker.mts"]
 }

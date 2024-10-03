@@ -429,7 +429,9 @@ impl DomPage {
                 self.realized_canvas = Some(b.render_page(module, &data)?);
             }
 
-            let should_load_resource = self.realized_canvas.as_ref().unwrap().prepare().is_some();
+            let ppp = b.pixel_per_pt;
+            let ts = tiny_skia::Transform::from_scale(ppp, ppp);
+            let should_load_resource = self.realized_canvas.as_ref().unwrap().prepare(ts).is_some();
 
             #[cfg(feature = "debug_repaint_canvas")]
             web_sys::console::log_1(
@@ -536,7 +538,7 @@ impl DomPage {
                 {
                     break 'render_canvas;
                 }
-                // #[cfg(feature = "debug_repaint_canvas")]
+                #[cfg(feature = "debug_repaint_canvas")]
                 web_sys::console::log_1(
                     &format!(
                         "canvas state changed, render all: {} {}",
@@ -589,7 +591,7 @@ impl DomPage {
                         break 'clip_canvas;
                     };
 
-                    // #[cfg(feature = "debug_repaint_canvas")]
+                    #[cfg(feature = "debug_repaint_canvas")]
                     web_sys::console::log_1(
                         &format!("canvas partial render: {idx} {damage_rect:?}").into(),
                     );
