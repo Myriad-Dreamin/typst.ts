@@ -19,7 +19,7 @@ use js_sys::Promise;
 use tiny_skia as sk;
 
 use wasm_bindgen::{prelude::Closure, JsCast, JsValue};
-use web_sys::{ImageBitmap, OffscreenCanvas, Path2d};
+use web_sys::{CanvasWindingRule, ImageBitmap, OffscreenCanvas, Path2d};
 
 use reflexo::vector::ir::{
     self, FlatGlyphItem, Image, ImageItem, ImmutStr, PathStyle, Rect, Scalar,
@@ -249,6 +249,7 @@ impl CanvasOp for CanvasPathElem {
 
         let mut fill_color = "none".into();
         let mut fill = false;
+        let mut fill_rule = None;
         let mut stroke_color = "none".into();
         let mut stroke = false;
         let mut stroke_width = 0.;
@@ -285,6 +286,13 @@ impl CanvasOp for CanvasPathElem {
                 PathStyle::StrokeDashOffset(offset) => {
                     canvas.set_line_dash_offset(offset.0 as f64);
                 }
+                PathStyle::FillRule(rule) => {
+                    fill_rule = match rule.as_ref() {
+                        "nonzero" => Some(CanvasWindingRule::Nonzero),
+                        "evenodd" => Some(CanvasWindingRule::Evenodd),
+                        _ => None,
+                    };
+                }
             }
         }
 
@@ -294,7 +302,14 @@ impl CanvasOp for CanvasPathElem {
                 fill_color = "black".into()
             }
             canvas.set_fill_style(&fill_color.as_ref().into());
-            canvas.fill_with_path_2d(&Path2d::new_with_path_string(&self.path_data.d).unwrap());
+            if let Some(rule) = fill_rule {
+                canvas.fill_with_path_2d_and_winding(
+                    &Path2d::new_with_path_string(&self.path_data.d).unwrap(),
+                    rule,
+                );
+            } else {
+                canvas.fill_with_path_2d(&Path2d::new_with_path_string(&self.path_data.d).unwrap());
+            }
         }
 
         if stroke && stroke_width.abs() > 1e-5 {

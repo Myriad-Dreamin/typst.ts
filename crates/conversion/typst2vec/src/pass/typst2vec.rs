@@ -774,6 +774,11 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                 self.stroke(stateful_stroke, stroke, &mut styles);
             }
 
+            match shape.fill_rule {
+                FillRule::NonZero => styles.push(PathStyle::FillRule("nonzero".into())),
+                FillRule::EvenOdd => styles.push(PathStyle::FillRule("evenodd".into())),
+            }
+
             let mut shape_size = shape.geometry.bbox_size();
             // Edge cases for strokes.
             if shape_size.x.to_pt() == 0.0 {
