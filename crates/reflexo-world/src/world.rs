@@ -15,7 +15,6 @@ use typst::{
     foundations::{Bytes, Datetime, Dict},
     syntax::{FileId, Source, Span},
     text::{Font, FontBook},
-    utils::LazyHash,
     Library, World,
 };
 
