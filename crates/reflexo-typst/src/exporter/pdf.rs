@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use typst::{diag::SourceResult, foundations::Smart, World};
+use typst::{diag::SourceResult, World};
+use typst_pdf::PdfOptions;
 
 use crate::{Exporter, TypstDatetime};
 
@@ -24,11 +25,12 @@ impl Exporter<typst::model::Document, Vec<u8>> for PdfDocExporter {
     ) -> SourceResult<Vec<u8>> {
         // todo: ident option
 
-        Ok(typst_pdf::pdf(
+        typst_pdf::pdf(
             output.as_ref(),
-            Smart::Auto,
-            self.ctime,
-            None,
-        ))
+            &PdfOptions {
+                timestamp: self.ctime,
+                ..Default::default()
+            },
+        )
     }
 }
