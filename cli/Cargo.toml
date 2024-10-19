@@ -43,6 +43,7 @@ reflexo-typst = { workspace = true, default-features = false, features = [
 [build-dependencies]
 anyhow.workspace = true
 vergen.workspace = true
+vergen-gitcl.workspace = true
 
 [features]
 

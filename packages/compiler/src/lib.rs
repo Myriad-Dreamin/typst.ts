@@ -231,7 +231,7 @@ impl TypstCompiler {
         .map_err(|e| format!("{e:?}"))?;
         let data = cursor.into_inner();
 
-        let converted = ansi_to_html::convert_escaped(
+        let converted = ansi_to_html::convert(
             String::from_utf8(data)
                 .map_err(|e| format!("{e:?}"))?
                 .as_str(),

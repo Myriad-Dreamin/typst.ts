@@ -14,7 +14,7 @@ use reflexo::ImmutStr;
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
     foundations::{Bytes, Smart},
-    introspection::Introspector,
+    introspection::{Introspector, Tag},
     layout::{
         Abs as TypstAbs, Axes, Dir, Frame, FrameItem, FrameKind, Position, Ratio as TypstRatio,
         Size, Transform as TypstTransform,
@@ -376,13 +376,14 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         }
                     })
                 }
-                FrameItem::Tag(tag) => {
-                    if !LINE_HINT_ELEMENTS.contains(tag.elem().func().name()) {
+                FrameItem::Tag(Tag::Start(elem)) => {
+                    if !LINE_HINT_ELEMENTS.contains(elem.func().name()) {
                         return None;
                     }
 
                     self.store(VecItem::ContentHint('\n'))
                 }
+                FrameItem::Tag(Tag::End(..)) => return None,
                 #[cfg(not(feature = "no-content-hint"))]
                 FrameItem::ContentHint(c) => self.store(VecItem::ContentHint(*c)),
                 // todo: support page label

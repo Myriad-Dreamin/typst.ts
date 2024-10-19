@@ -12,7 +12,7 @@ mod tests {
 
     use flate2::write::GzEncoder;
     use flate2::Compression;
-    use std::io::Write;
+    use std::io::{Cursor, Write};
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     struct TestPoint {
@@ -29,8 +29,9 @@ mod tests {
         let data = base64::engine::general_purpose::STANDARD
             .decode(data_url)
             .unwrap();
+        let data = Cursor::new(data);
 
-        let image = PngDecoder::new(&data[..]).unwrap();
+        let image = PngDecoder::new(data).unwrap();
         let image = image::DynamicImage::from_decoder(image).unwrap();
 
         let hasher = HasherConfig::new().hash_size(4, 4);
