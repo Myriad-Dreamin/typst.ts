@@ -5,6 +5,7 @@ import sys
 
 pub = ["cargo", "publish", *sys.argv[1:], "-p"]
 feats = ["--features", "no-content-hint"]
+subprocess.run([*pub, "reflexo-typst-shim"])
 subprocess.run([*pub, "reflexo"])
 subprocess.run([*pub, "reflexo-vfs"])
 subprocess.run([*pub, "reflexo-world"])
