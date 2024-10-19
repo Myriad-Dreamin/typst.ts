@@ -725,7 +725,6 @@ export class TypstRendererDriver {
 
   private async renderDisplayLayer(
     session: RenderSession,
-    container: HTMLElement,
     canvasList: HTMLCanvasElement[],
     options: RenderToCanvasOptions,
   ): Promise<RenderCanvasResult[]> {
@@ -739,54 +738,27 @@ export class TypstRendererDriver {
         throw new Error('canvas context is null');
       }
       return await this.renderCanvas({
+        ...options,
         canvas: ctx,
         renderSession: session,
         pageOffset: page_off,
       });
     };
 
-    return this.inAnimationFrame(async () => {
-      const t = performance.now();
+    const t = performance.now();
+    const textContentList = await (async () => {
+      const results: RenderCanvasResult[] = [];
+      for (let i = 0; i < page_count; i++) {
+        results.push(await this.inAnimationFrame(() => doRender(i, i)));
+      }
 
-      const textContentList = (
-        await Promise.all(
-          //   canvasList.map(async (canvas, i) => {
-          //     await this.renderImageInSession(session, {
-          //       page_off: i,
-          //     });
-          //     console.log(cyrb53(renderResult.data));
-          //     let ctx = canvas.getContext('2d');
-          //     if (ctx) {
-          //       ctx.putImageData(renderResult, 0, 0);
-          //     }
+      return results;
+    })();
+    const t2 = performance.now();
 
-          //     return {
-          //       width: renderResult.width,
-          //       height: renderResult.height,
-          //     };
-          //   }),
-          // )
+    console.log(`display layer used: render = ${(t2 - t).toFixed(1)}ms`);
 
-          /// seq
-          [
-            (async () => {
-              const results: RenderCanvasResult[] = [];
-              for (let i = 0; i < page_count; i++) {
-                results.push(await doRender(i, i));
-              }
-
-              return results;
-            })(),
-          ],
-        )
-      )[0];
-
-      const t3 = performance.now();
-
-      console.log(`display layer used: render = ${(t3 - t).toFixed(1)}ms`);
-
-      return textContentList;
-    });
+    return textContentList;
   }
 
   private renderTextLayer(layerList: HTMLDivElement[], textSourceList: RenderCanvasResult[]) {
@@ -848,12 +820,7 @@ export class TypstRendererDriver {
       resetLayout: () => void,
     ) => {
       try {
-        renderPageResults = await this.renderDisplayLayer(
-          session,
-          mountContainer,
-          canvasList,
-          options,
-        );
+        renderPageResults = await this.renderDisplayLayer(session, canvasList, options);
         resetLayout();
       } finally {
         mountContainer.style.visibility = 'visible';
