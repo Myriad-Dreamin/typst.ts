@@ -1,2 +1,2 @@
 //! Typst utils
-pub use typst::util::*;
+pub use typst::utils::*;

@@ -198,9 +198,7 @@ reflexo = { version = "0.5.0-rc7-2", path = "crates/reflexo", default-features =
 reflexo-vfs = { version = "0.5.0-rc7-2", path = "crates/reflexo-vfs" }
 reflexo-world = { version = "0.5.0-rc7-2", path = "crates/reflexo-world" }
 reflexo-typst = { version = "0.5.0-rc7-2", path = "crates/reflexo-typst", default-features = false }
-reflexo-typst-shim = { version = "0.5.0-rc7-2", path = "crates/reflexo-typst-shim", features = [
-    "nightly",
-] }
+reflexo-typst-shim = { version = "0.5.0-rc7-2", path = "crates/reflexo-typst-shim" }
 
 # conversions
 reflexo-typst2vec = { version = "0.5.0-rc7-2", path = "crates/conversion/typst2vec" }

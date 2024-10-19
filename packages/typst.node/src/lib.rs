@@ -17,10 +17,10 @@ use std::{
 use chrono::{DateTime, Datelike, Timelike, Utc};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
+use reflexo_typst::error::prelude::*;
 use reflexo_typst::foundations::IntoValue;
 use reflexo_typst::syntax::Span;
 use reflexo_typst::typst::diag::{At, SourceResult};
-use reflexo_typst::{compat::model::TypstDocumentExt, error::prelude::*};
 use reflexo_typst::{
     Bytes, Compiler, DynamicLayoutCompiler, Exporter, ShadowApi, SystemCompilerFeat, TypstAbs,
     TypstDatetime, TypstDocument, TypstSystemWorld, TypstWorld,
@@ -45,20 +45,20 @@ impl NodeTypstDocument {
     /// Gets the title of the document.
     #[napi(getter)]
     pub fn title(&self) -> Option<String> {
-        self.0.title().as_ref().map(ToString::to_string)
+        self.0.info.title.as_ref().map(ToString::to_string)
     }
 
     /// Gets the authors of the document.
     #[napi(getter)]
     pub fn authors(&self) -> Option<Vec<String>> {
-        let authors = self.0.author().iter();
+        let authors = self.0.info.author.iter();
         Some(authors.map(ToString::to_string).collect::<Vec<_>>())
     }
 
     /// Gets the keywords of the document.
     #[napi(getter)]
     pub fn keywords(&self) -> Option<Vec<String>> {
-        let keywords = self.0.keywords().iter();
+        let keywords = self.0.info.keywords.iter();
         Some(keywords.map(ToString::to_string).collect::<Vec<_>>())
     }
 
@@ -69,7 +69,8 @@ impl NodeTypstDocument {
     #[napi(getter)]
     pub fn date(&self) -> Option<i64> {
         self.0
-            .date()
+            .info
+            .date
             .custom()
             .flatten()
             .and_then(typst_datetime_to_unix_nanoseconds)
@@ -81,7 +82,7 @@ impl NodeTypstDocument {
     /// explicitly.
     #[napi(getter)]
     pub fn enabled_auto_date(&self) -> bool {
-        self.0.date().is_auto()
+        self.0.info.date.is_auto()
     }
 }
 
