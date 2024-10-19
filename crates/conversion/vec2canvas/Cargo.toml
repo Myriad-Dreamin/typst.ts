@@ -32,6 +32,7 @@ web-sys = { workspace = true, features = [
     "Url",
     "ImageData",
     "OffscreenCanvas",
+    "HtmlImageElement",
     "OffscreenCanvasRenderingContext2d",
     "BlobPropertyBag",
     "Window",
