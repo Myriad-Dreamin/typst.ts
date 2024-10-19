@@ -448,6 +448,15 @@ impl CanvasOp for CanvasGlyphElem {
 
         let _guard = CanvasStateGuard::new(canvas);
         match self.glyph_data.as_ref() {
+            #[cfg(not(feature = "rasterize_glyph"))]
+            FlatGlyphItem::Outline(path) => {
+                if !set_transform(canvas, ts) {
+                    return;
+                }
+                canvas.set_fill_style_str(self.fill.as_ref());
+                canvas.fill_with_path_2d(&Path2d::new_with_path_string(&path.d).unwrap());
+            }
+            #[cfg(feature = "rasterize_glyph")]
             FlatGlyphItem::Outline(path) => {
                 if ts.sx.abs() > 100. || ts.sy.abs() > 100. || ts.kx != 0. || ts.ky != 0. {
                     if !set_transform(canvas, ts) {

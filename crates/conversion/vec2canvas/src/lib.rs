@@ -6,6 +6,7 @@ mod device;
 #[cfg(feature = "incremental")]
 mod incr;
 mod ops;
+#[cfg(feature = "rasterize_glyph")]
 mod pixglyph_canvas;
 mod utils;
 
