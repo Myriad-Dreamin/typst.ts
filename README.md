@@ -257,15 +257,15 @@ Note: see [Troubleshooting WASM Build](docs/troubleshooting-wasm-build.md) for (
 Note: Since we use turborepo for `>=v0.4.0` development, if you are the earlier developer of `typst.ts`, please clean up all of your node_modules and dist folders before running the commands.
 
 ```shell
-# build all of typescript packages
-$ yarn install && yarn run build:pkg
-# compile typst document for demo
-$ cargo run --bin typst-ts-dev-server -- compile --compiler debug corpus --cat skyzh-cv
-# start a local server
-$ cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/
+# Install and build the renderer
+$ yarn install && yarn build:pkg
+# Build the example artifacts
+$ yarn corpus
+# Run development server
+$ yarn dev
 ```
 
-And open your browser to `http://localhost:20810/`.
+And open `http://127.0.0.1:20810` in your browser.
 
 You can also run `yarn run build:core` instead of `yarn run build:pkg` to build
 core library (`@myriaddreamin/typst.ts`) and avoid building the WASM modules from source.
