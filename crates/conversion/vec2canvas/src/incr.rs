@@ -68,7 +68,7 @@ impl IncrVec2CanvasPass {
         if !set_transform(canvas, ts) {
             return;
         }
-        canvas.set_fill_style(&self.fill.as_ref().into());
+        canvas.set_fill_style_str(self.fill.as_ref());
         canvas.fill_rect(0., 0., pg.size.x.0 as f64, pg.size.y.0 as f64);
 
         pg.elem.realize(ts, canvas).await;

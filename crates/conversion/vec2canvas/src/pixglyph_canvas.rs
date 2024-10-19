@@ -29,7 +29,7 @@ use std::ops::{Add, Div, Mul, Sub};
 use reflexo::vector::ir::Rect;
 use svgtypes::SimplePathSegment;
 use tiny_skia::Transform;
-use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::JsCast;
 use web_sys::{ImageData, OffscreenCanvas, OffscreenCanvasRenderingContext2d};
 
 use crate::device::CanvasDevice;
@@ -586,7 +586,7 @@ impl Div<f32> for Point {
 pub(crate) fn blend_glyph(
     canvas: &dyn CanvasDevice,
     bitmap: &Bitmap,
-    fill: &JsValue,
+    fill: &str,
     x: i32,
     y: i32,
     // sampler: S,
@@ -610,7 +610,7 @@ pub(crate) fn blend_glyph(
     ctx.put_image_data(&bitmap.coverage, 1., 1.);
     let gco = ctx.global_composite_operation();
     ctx.set_global_composite_operation("source-in");
-    ctx.set_fill_style(fill);
+    ctx.set_fill_style_str(fill);
     ctx.fill_rect(0.0, 0.0, cw as f64, ch as f64);
     ctx.set_global_composite_operation(&gco);
     // left - 1,

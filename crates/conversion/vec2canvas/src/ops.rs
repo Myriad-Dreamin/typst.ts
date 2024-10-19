@@ -301,7 +301,7 @@ impl CanvasOp for CanvasPathElem {
             if fill_color.starts_with('@') {
                 fill_color = "black".into()
             }
-            canvas.set_fill_style(&fill_color.as_ref().into());
+            canvas.set_fill_style_str(fill_color.as_ref());
             if let Some(rule) = fill_rule {
                 canvas.fill_with_path_2d_and_winding(
                     &Path2d::new_with_path_string(&self.path_data.d).unwrap(),
@@ -318,7 +318,7 @@ impl CanvasOp for CanvasPathElem {
                 stroke_color = "black".into()
             }
 
-            canvas.set_stroke_style(&stroke_color.as_ref().into());
+            canvas.set_stroke_style_str(stroke_color.as_ref());
             canvas.stroke_with_path(&Path2d::new_with_path_string(&self.path_data.d).unwrap());
         }
 
@@ -453,7 +453,7 @@ impl CanvasOp for CanvasGlyphElem {
                     if !set_transform(canvas, ts) {
                         return;
                     }
-                    canvas.set_fill_style(&self.fill.as_ref().into());
+                    canvas.set_fill_style_str(self.fill.as_ref());
                     canvas.fill_with_path_2d(&Path2d::new_with_path_string(&path.d).unwrap());
                     return;
                 }
@@ -473,7 +473,7 @@ impl CanvasOp for CanvasGlyphElem {
                 crate::pixglyph_canvas::blend_glyph(
                     canvas,
                     &t,
-                    &self.fill.as_ref().into(),
+                    self.fill.as_ref(),
                     floor_x,
                     floor_y,
                 );

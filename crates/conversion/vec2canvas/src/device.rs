@@ -17,7 +17,7 @@ pub trait CanvasDevice {
     #[doc = "Setter for the `fillStyle` field of this object."]
     #[doc = ""]
     #[doc = "[MDN Documentation](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/fillStyle)"]
-    fn set_fill_style(&self, value: &::wasm_bindgen::JsValue);
+    fn set_fill_style_str(&self, value: &str);
 
     #[doc = "The `fillRect()` method."]
     #[doc = ""]
@@ -48,7 +48,7 @@ pub trait CanvasDevice {
     #[doc = "Setter for the `strokeStyle` field of this object."]
     #[doc = ""]
     #[doc = "[MDN Documentation](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/strokeStyle)"]
-    fn set_stroke_style(&self, value: &::wasm_bindgen::JsValue);
+    fn set_stroke_style_str(&self, value: &str);
     #[doc = "The `stroke()` method."]
     #[doc = ""]
     #[doc = "[MDN Documentation](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/stroke)"]
@@ -128,8 +128,8 @@ impl CanvasDevice for web_sys::CanvasRenderingContext2d {
         self.set_global_composite_operation(value).unwrap();
     }
 
-    fn set_fill_style(&self, value: &::wasm_bindgen::JsValue) {
-        self.set_fill_style(value);
+    fn set_fill_style_str(&self, value: &str) {
+        self.set_fill_style_str(value);
     }
 
     fn fill_rect(&self, x: f64, y: f64, w: f64, h: f64) {
@@ -145,8 +145,8 @@ impl CanvasDevice for web_sys::CanvasRenderingContext2d {
         self.clip_with_path_2d(path);
     }
 
-    fn set_stroke_style(&self, value: &::wasm_bindgen::JsValue) {
-        self.set_stroke_style(value);
+    fn set_stroke_style_str(&self, value: &str) {
+        self.set_stroke_style_str(value);
     }
 
     fn stroke_with_path(&self, path: &Path2d) {
@@ -235,8 +235,8 @@ impl CanvasDevice for web_sys::OffscreenCanvasRenderingContext2d {
         self.set_global_composite_operation(value).unwrap();
     }
 
-    fn set_fill_style(&self, value: &::wasm_bindgen::JsValue) {
-        self.set_fill_style(value);
+    fn set_fill_style_str(&self, value: &str) {
+        self.set_fill_style_str(value);
     }
 
     fn fill_rect(&self, x: f64, y: f64, w: f64, h: f64) {
@@ -252,8 +252,8 @@ impl CanvasDevice for web_sys::OffscreenCanvasRenderingContext2d {
         self.clip_with_path_2d(path);
     }
 
-    fn set_stroke_style(&self, value: &::wasm_bindgen::JsValue) {
-        self.set_stroke_style(value);
+    fn set_stroke_style_str(&self, value: &str) {
+        self.set_stroke_style_str(value);
     }
 
     fn stroke_with_path(&self, path: &Path2d) {
