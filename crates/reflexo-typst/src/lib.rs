@@ -19,7 +19,7 @@
 //!   - [`world::CompilerWorld`]: retrieving [`world::CompilerFeat`], provides a
 //!     common implementation of [`::typst::World`].
 //!
-//! - [`compile`]: Convenient services over [`world::CompilerWorld`], which also
+//! - `compile`: Convenient services over [`world::CompilerWorld`], which also
 //!   shows how to use the [`world::CompilerWorld`].
 //!   - [`CompileDriver`]: A driver for the compiler. Examples:
 //!     - Single thread (Sync): <https://github.com/Myriad-Dreamin/typst.ts/blob/main/cli/src/main.rs>

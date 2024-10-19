@@ -56,7 +56,7 @@ impl<'a, F: CompilerFeat> Revising<'a, CompilerUniverse<F>> {
 
     /// Let the vfs notify the access model with a filesystem event.
     ///
-    /// See [`reflexo_vfs::NotifyAccessModel`] for more information.
+    /// See `reflexo_vfs::NotifyAccessModel` for more information.
     pub fn notify_fs_event(&mut self, event: FilesystemEvent) {
         self.inner.vfs.notify_fs_event(event);
     }
