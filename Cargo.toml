@@ -231,11 +231,11 @@ undocumented_unsafe_blocks = "warn"
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
 # comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
-typst = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.0" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.0" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.0" }
-typst-svg = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.0" }
-typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.0" }
+typst = { git = "https://github.com/Myriad-Dreamin/typst", tag = "typst.ts-v0.5.0-rc8" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst", tag = "typst.ts-v0.5.0-rc8" }
+typst-ide = { git = "https://github.com/Myriad-Dreamin/typst", tag = "typst.ts-v0.5.0-rc8" }
+typst-svg = { git = "https://github.com/Myriad-Dreamin/typst", tag = "typst.ts-v0.5.0-rc8" }
+typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst", tag = "typst.ts-v0.5.0-rc8" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }
