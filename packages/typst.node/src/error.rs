@@ -159,6 +159,8 @@ pub fn map_node_error(e: impl Into<NodeError>) -> napi::Error<NodeError> {
 #[napi]
 pub struct NodeTypstCompileResult {
     result: Option<NodeTypstDocument>,
+    // todo: better warning structure
+    warnings: Option<NodeError>,
     error: Option<NodeError>,
 }
 
@@ -168,6 +170,12 @@ impl NodeTypstCompileResult {
     #[napi(getter)]
     pub fn result(&self) -> Option<NodeTypstDocument> {
         self.result.clone()
+    }
+
+    /// Takes the result of compilation.
+    #[napi]
+    pub fn take_warnings(&mut self) -> Option<NodeError> {
+        self.warnings.take()
     }
 
     /// Takes the diagnostics of compilation.
@@ -185,14 +193,16 @@ where
         match res {
             Ok(result) => NodeTypstCompileResult {
                 result: Some(NodeTypstDocument(result.output)),
-                error: if result.warnings.is_empty() {
+                warnings: if result.warnings.is_empty() {
                     None
                 } else {
                     Some(result.warnings.into())
                 },
+                error: None,
             },
             Err(e) => NodeTypstCompileResult {
                 result: None,
+                warnings: None,
                 error: Some(e.into()),
             },
         }

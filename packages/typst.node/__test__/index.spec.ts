@@ -113,15 +113,11 @@ test('it throws error when entry file does not exist', t => {
   const compiler = NodeCompiler.create({
     workspace: '.',
   });
-  try {
-    compiler.compile({
-      mainFilePath: 'inputs/fake.typ',
-    });
-    t.fail('it should throw error');
-  } catch (err: any) {
-    t.assert(
-      err.message.startsWith('0: file not found'),
-      `error message does not match the expectation: ${err.message}`,
-    );
-  }
+  const res = compiler.compile({
+    mainFilePath: 'inputs/fake.typ',
+  });
+  const diags = res.takeDiagnostics()?.shortDiagnostics;
+  t.assert(diags && diags.length > 0);
+  const fileNotFound = diags!.find(d => d.message.includes('file not found'));
+  t.truthy(fileNotFound);
 });

@@ -125,6 +125,8 @@ export class NodeError {
 export class NodeTypstCompileResult {
   /** Gets the result of compilation. */
   get result(): NodeTypstDocument | null;
+  /** Takes the result of compilation. */
+  takeWarnings(): NodeError | null;
   /** Takes the diagnostics of compilation. */
   takeDiagnostics(): NodeError | null;
 }
