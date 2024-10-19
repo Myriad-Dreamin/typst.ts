@@ -16,6 +16,8 @@
   ],
   "scripts": {
     "build": "vite build",
+    "publish:dry": "npm publish --dry-run --access public",
+    "publish:lib": "npm publish --access public || exit 0",
     "prepublishOnly": "pnpm build"
   },
   "devDependencies": {
