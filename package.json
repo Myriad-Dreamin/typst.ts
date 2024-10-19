@@ -36,7 +36,7 @@
     "build:renderer": "turbo build --filter=!./packages/{compiler} --filter=./packages/{renderer,typst.ts}",
     "build:proj": "turbo build --filter=./projects/*",
     "watch:renderer": "cargo run --bin typst-ts-dev-server -- watch renderer",
-    "start:react": "yarn workspace @myriaddreamin/typst.react start",
+    "start:react": "yarn workspace @myriaddreamin/typst.react dev",
     "start:angular": "yarn workspace typst.angular start",
     "docs": "shiroa serve --font-path assets/fonts -w . docs/cookery",
     "bump-packages": "python scripts/bump_version.py",

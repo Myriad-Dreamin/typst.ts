@@ -9,7 +9,7 @@
         "Cargo.toml",
         "build.rs",
         "{public,src,projects,webpack}/**/*",
-        "../../{core,compiler,exporter}/**/*.{rs,toml}"
+        "../../crates/**/*.{rs,toml}"
       ]
     }
   }
