@@ -45,7 +45,7 @@ pub use exporter::ast::{dump_ast, AstExporter};
 
 pub use exporter::json::JsonExporter;
 
-use ::typst::engine::Sink;
+use ::typst::diag::Warned;
 #[cfg(feature = "pdf")]
 pub use exporter::pdf::PdfDocExporter;
 #[cfg(feature = "pdf")]
@@ -131,7 +131,7 @@ use std::sync::OnceLock;
 
 use crate::typst::prelude::*;
 use ::typst::{
-    diag::{At, Hint, SourceDiagnostic, SourceResult},
+    diag::{At, SourceDiagnostic, SourceResult},
     foundations::Content,
     model::Document,
     syntax::Span,
@@ -141,7 +141,6 @@ use ::typst::{
 
 #[derive(Clone, Default)]
 pub struct CompileEnv {
-    pub sink: Option<Sink>,
     pub features: Arc<FeatureSet>,
 }
 
@@ -171,13 +170,9 @@ pub enum CompileReport {
         EcoVec<SourceDiagnostic>,
         reflexo::time::Duration,
     ),
-    CompileWarning(
-        TypstFileId,
-        EcoVec<SourceDiagnostic>,
-        reflexo::time::Duration,
-    ),
     CompileSuccess(
         TypstFileId,
+        // warnings, if not empty
         EcoVec<SourceDiagnostic>,
         reflexo::time::Duration,
     ),
@@ -190,7 +185,6 @@ impl CompileReport {
             Self::Stage(id, ..)
             | Self::CompileError(id, ..)
             | Self::ExportError(id, ..)
-            | Self::CompileWarning(id, ..)
             | Self::CompileSuccess(id, ..) => *id,
         })
     }
@@ -200,7 +194,6 @@ impl CompileReport {
             Self::Suspend | Self::Stage(..) => None,
             Self::CompileError(_, _, dur)
             | Self::ExportError(_, _, dur)
-            | Self::CompileWarning(_, _, dur)
             | Self::CompileSuccess(_, _, dur) => Some(*dur),
         }
     }
@@ -210,7 +203,6 @@ impl CompileReport {
             Self::Suspend | Self::Stage(..) => None,
             Self::CompileError(_, diagnostics, ..)
             | Self::ExportError(_, diagnostics, ..)
-            | Self::CompileWarning(_, diagnostics, ..)
             | Self::CompileSuccess(_, diagnostics, ..) => Some(diagnostics),
         }
     }
@@ -231,8 +223,16 @@ impl<'a> fmt::Display for CompileReportMsg<'a> {
         match self.0 {
             Suspend => write!(f, "suspended"),
             Stage(_, stage, ..) => write!(f, "{:?}: {} ...", input, stage),
-            CompileSuccess(_, _, duration) | CompileWarning(_, _, duration) => {
-                write!(f, "{:?}: compilation succeeded in {:?}", input, duration)
+            CompileSuccess(_, warnings, duration) => {
+                if warnings.is_empty() {
+                    write!(f, "{input:?}: compilation succeeded in {duration:?}")
+                } else {
+                    write!(
+                        f,
+                        "{input:?}: compilation succeeded with {} warnings in {duration:?}",
+                        warnings.len()
+                    )
+                }
             }
             CompileError(_, _, duration) | ExportError(_, _, duration) => {
                 write!(f, "{:?}: compilation failed after {:?}", input, duration)
@@ -241,7 +241,7 @@ impl<'a> fmt::Display for CompileReportMsg<'a> {
     }
 }
 
-type CompileRawResult = Deferred<(SourceResult<Arc<TypstDocument>>, CompileEnv)>;
+type CompileRawResult = Deferred<(SourceResult<Warned<Arc<TypstDocument>>>, CompileEnv)>;
 type DocState = std::sync::OnceLock<CompileRawResult>;
 
 /// A signal that possibly triggers an export.
@@ -279,7 +279,7 @@ impl<F: CompilerFeat + 'static> CompileSnapshot<F> {
             Deferred::new(move || {
                 let w = w.as_ref();
                 let mut c = std::marker::PhantomData;
-                let res = c.ensure_main(w).and_then(|_| c.compile(w, &mut env));
+                let res = c.compile(w, &mut env);
                 (res, env)
             })
         })
@@ -309,11 +309,16 @@ impl<F: CompilerFeat + 'static> CompileSnapshot<F> {
 
     pub fn compile(&self) -> CompiledArtifact<F> {
         let (doc, env) = self.start().wait().clone();
+        let (doc, warnings) = match doc {
+            Ok(doc) => (Ok(doc.output), doc.warnings),
+            Err(err) => (Err(err), EcoVec::default()),
+        };
         CompiledArtifact {
             signal: self.flags,
             world: self.world.clone(),
             env,
             doc,
+            warnings,
             success_doc: self.success_doc.clone(),
         }
     }
@@ -338,7 +343,11 @@ pub struct CompiledArtifact<F: CompilerFeat> {
     pub world: Arc<CompilerWorld<F>>,
     /// Used env
     pub env: CompileEnv,
+    /// The diagnostics of the document.
+    pub warnings: EcoVec<SourceDiagnostic>,
+    /// The compiled document.
     pub doc: SourceResult<Arc<TypstDocument>>,
+    /// The last successfully compiled document.
     success_doc: Option<Arc<TypstDocument>>,
 }
 
@@ -349,6 +358,7 @@ impl<F: CompilerFeat> Clone for CompiledArtifact<F> {
             world: self.world.clone(),
             env: self.env.clone(),
             doc: self.doc.clone(),
+            warnings: self.warnings.clone(),
             success_doc: self.success_doc.clone(),
         }
     }
@@ -384,34 +394,37 @@ pub trait Compiler {
     where
         Self::W: EntryReader,
     {
-        let main_id = world
-            .main_id()
-            .ok_or_else(|| eco_format!("no entry file"))
-            .at(Span::detached())?;
-
-        world
-            .source(main_id)
-            .hint(AtFile(main_id))
-            .at(Span::detached())?;
-
-        Ok(())
+        let check_main = world.main_id().ok_or_else(|| eco_format!("no entry file"));
+        check_main.at(Span::detached()).map(|_| ())
     }
 
     /// Compile once from scratch.
     fn pure_compile(
         &mut self,
         world: &Self::W,
-        env: &mut CompileEnv,
-    ) -> SourceResult<Arc<Document>> {
+        _env: &mut CompileEnv,
+    ) -> SourceResult<Warned<Arc<Document>>> {
         self.reset()?;
 
-        let res = match env.sink.as_mut() {
-            Some(_sink) => ::typst::compile(world),
-            None => ::typst::compile(world),
-        };
-
+        let res = ::typst::compile(world);
         // compile document
-        res.output.map(Arc::new)
+        // res.output.map(Arc::new)
+        match res.output {
+            Ok(doc) => Ok(Warned {
+                output: Arc::new(doc),
+                warnings: res.warnings,
+            }),
+            Err(diags) => match (res.warnings.is_empty(), diags.is_empty()) {
+                (true, true) => Err(diags),
+                (true, false) => Err(diags),
+                (false, true) => Err(res.warnings),
+                (false, false) => {
+                    let mut warnings = res.warnings;
+                    warnings.extend(diags);
+                    Err(warnings)
+                }
+            },
+        }
     }
 
     /// With **the compilation state**, query the matches for the selector.
@@ -425,7 +438,11 @@ pub trait Compiler {
     }
 
     /// Compile once from scratch.
-    fn compile(&mut self, world: &Self::W, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
+    fn compile(
+        &mut self,
+        world: &Self::W,
+        env: &mut CompileEnv,
+    ) -> SourceResult<Warned<Arc<Document>>> {
         self.pure_compile(world, env)
     }
 
@@ -467,7 +484,7 @@ pub trait CompileMiddleware {
         &mut self,
         world: &<<Self as CompileMiddleware>::Compiler as Compiler>::W,
         env: &mut CompileEnv,
-    ) -> SourceResult<Arc<Document>> {
+    ) -> SourceResult<Warned<Arc<Document>>> {
         self.inner_mut().compile(world, env)
     }
 
@@ -499,7 +516,7 @@ impl<T: CompileMiddleware> Compiler for T {
         &mut self,
         world: &Self::W,
         env: &mut CompileEnv,
-    ) -> SourceResult<Arc<Document>> {
+    ) -> SourceResult<Warned<Arc<Document>>> {
         self.inner_mut().pure_compile(world, env)
     }
 
@@ -514,7 +531,11 @@ impl<T: CompileMiddleware> Compiler for T {
     }
 
     #[inline]
-    fn compile(&mut self, world: &Self::W, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
+    fn compile(
+        &mut self,
+        world: &Self::W,
+        env: &mut CompileEnv,
+    ) -> SourceResult<Warned<Arc<Document>>> {
         self.wrap_compile(world, env)
     }
 

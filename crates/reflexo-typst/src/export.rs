@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use reflexo_typst2vec::pass::Typst2VecPass;
 use reflexo_world::{CompilerFeat, CompilerWorld};
-use typst::{diag::SourceResult, World};
+use typst::{
+    diag::{SourceResult, Warned},
+    World,
+};
 
 use crate::{
     vector::ir::{LayoutRegion, LayoutRegionNode},
@@ -103,9 +106,13 @@ impl<C: Compiler> CompileMiddleware for CompileExporter<C> {
         &mut self.compiler
     }
 
-    fn wrap_compile(&mut self, world: &C::W, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
+    fn wrap_compile(
+        &mut self,
+        world: &C::W,
+        env: &mut CompileEnv,
+    ) -> SourceResult<Warned<Arc<Document>>> {
         let doc = self.inner_mut().compile(world, env)?;
-        self.exporter.export(world, doc.clone())?;
+        self.exporter.export(world, doc.output.clone())?;
 
         Ok(doc)
     }
@@ -198,7 +205,11 @@ where
         &mut self.compiler
     }
 
-    fn wrap_compile(&mut self, world: &C::W, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
+    fn wrap_compile(
+        &mut self,
+        world: &C::W,
+        env: &mut CompileEnv,
+    ) -> SourceResult<Warned<Arc<Document>>> {
         let start = reflexo::time::now();
         // todo unwrap main id
         let id = world.main_id().unwrap();
@@ -209,11 +220,6 @@ where
             let _ = self.reporter.export(world, rep);
         }
 
-        let sink = env.sink.take();
-        let origin = sink.is_some();
-
-        env.sink = Some(sink.unwrap_or_default());
-
         let doc = self.inner_mut().compile(world, env);
 
         let elapsed = start.elapsed().unwrap_or_default();
@@ -222,12 +228,7 @@ where
 
         let doc = match doc {
             Ok(doc) => {
-                let warnings = env.sink.as_ref().unwrap().clone().warnings();
-                if warnings.is_empty() {
-                    rep = CompileReport::CompileSuccess(id, warnings, elapsed);
-                } else {
-                    rep = CompileReport::CompileWarning(id, warnings, elapsed);
-                }
+                rep = CompileReport::CompileSuccess(id, doc.warnings.clone(), elapsed);
 
                 Ok(doc)
             }
@@ -236,10 +237,6 @@ where
                 Err(eco_vec![])
             }
         };
-
-        if !origin {
-            env.sink = None;
-        }
 
         let rep = Arc::new((env.features.clone(), rep));
         // we currently ignore export error here

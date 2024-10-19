@@ -4,6 +4,7 @@ use reflexo_typst2vec::pass::{CommandExecutor, Typst2VecPass};
 use reflexo_typst2vec::IntoTypst;
 use reflexo_vec2svg::{DynamicLayoutSvgExporter, MultiVecDocument};
 use reflexo_world::TaskInputs;
+use typst::diag::Warned;
 use typst::foundations::IntoValue;
 use typst::utils::LazyHash;
 use typst::{diag::SourceResult, World};
@@ -148,7 +149,7 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<F
         &mut self,
         world: &CompilerWorld<F>,
         env: &mut CompileEnv,
-    ) -> SourceResult<(Arc<Document>, MultiVecDocument)> {
+    ) -> SourceResult<(Warned<Arc<Document>>, MultiVecDocument)> {
         let mut svg_exporter = DynamicLayoutSvgExporter::default();
         svg_exporter.typst2vec.command_executor = self.command_executor.clone();
         self.do_export_with(world, env, svg_exporter)
@@ -160,7 +161,7 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<F
         world: &CompilerWorld<F>,
         env: &mut CompileEnv,
         mut svg_exporter: reflexo_vec2svg::DynamicLayoutSvgExporter,
-    ) -> SourceResult<(Arc<Document>, MultiVecDocument)> {
+    ) -> SourceResult<(Warned<Arc<Document>>, MultiVecDocument)> {
         // self.export(doc.clone())?;
         // checkout the entry file
 
@@ -191,10 +192,11 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<F
 
             // compile and export document
             let output = self.compiler.compile(&world, env)?;
-            let mut layout = svg_exporter.render(&output);
+            let mut layout = svg_exporter.render(&output.output);
 
             if let Some(post_process_layout) = &self.post_process_layout {
-                layout = post_process_layout(&mut svg_exporter.typst2vec, output.clone(), layout);
+                layout =
+                    post_process_layout(&mut svg_exporter.typst2vec, output.output.clone(), layout);
             }
             svg_exporter
                 .layouts
@@ -242,7 +244,11 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> Compiler for DynamicLay
         Ok(())
     }
 
-    fn compile(&mut self, world: &Self::W, env: &mut CompileEnv) -> SourceResult<Arc<Document>> {
+    fn compile(
+        &mut self,
+        world: &Self::W,
+        env: &mut CompileEnv,
+    ) -> SourceResult<Warned<Arc<Document>>> {
         let (res, doc) = self.do_export(world, env)?;
         std::fs::write(self.module_dest_path(), doc.to_bytes()).unwrap();
         Ok(res)

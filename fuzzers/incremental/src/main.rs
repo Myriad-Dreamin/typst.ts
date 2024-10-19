@@ -92,7 +92,7 @@ pub fn test_compiler(
             })
             .unwrap();
 
-        let delta = incr_server.pack_delta(doc);
+        let delta = incr_server.pack_delta(doc.output);
         let delta = BytesModuleStream::from_slice(&delta).checkout_owned();
         incr_client.merge_delta(delta);
         incr_client.set_layout(incr_client.doc.layouts[0].unwrap_single());

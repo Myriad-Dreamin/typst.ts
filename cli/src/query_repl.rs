@@ -134,7 +134,7 @@ impl Completer for ReplContext {
 
                 Ok(autocomplete(
                     &world,
-                    doc.as_ref().map(|f| f.as_ref()),
+                    doc.as_ref().map(|f| f.output.as_ref()),
                     &main,
                     cursor,
                     true,
@@ -256,7 +256,7 @@ impl ReplContext {
                 .ok();
             doc.and_then(|doc| {
                 driver
-                    .query(line, &doc)
+                    .query(line, &doc.output)
                     .map_err(|err| self.process_err(&driver, err))
                     .ok()
             })
