@@ -1,11 +1,11 @@
 use std::{path::PathBuf, sync::Arc};
 
-use reflexo::typst_shim::LazyHash;
 use reflexo_typst2vec::pass::{CommandExecutor, Typst2VecPass};
 use reflexo_typst2vec::IntoTypst;
 use reflexo_vec2svg::{DynamicLayoutSvgExporter, MultiVecDocument};
 use reflexo_world::TaskInputs;
 use typst::foundations::IntoValue;
+use typst::utils::LazyHash;
 use typst::{diag::SourceResult, World};
 
 use crate::typst::prelude::*;

@@ -15,6 +15,8 @@ pub mod typst {
     pub(crate) mod well_known {
         pub type Bytes = typst::foundations::Bytes;
 
+        pub use typst::utils::LazyHash;
+
         /// Although this is not good to expose this, we make an alias here to
         /// let it as a part of typst-ts.
         pub use typst::syntax::FileId as TypstFileId;

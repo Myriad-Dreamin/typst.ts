@@ -1,8 +1,8 @@
 use std::{path::PathBuf, sync::Arc};
 
-use reflexo::typst_shim::LazyHash;
 use reflexo_vfs::browser::ProxyAccessModel;
 use typst::foundations::Dict as TypstDict;
+use typst::utils::LazyHash;
 
 use crate::entry::EntryState;
 use crate::font::FontResolverImpl;

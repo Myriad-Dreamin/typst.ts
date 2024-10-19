@@ -11,8 +11,8 @@ use reflexo_typst::config::{entry::EntryState, CompileFontOpts};
 use reflexo_typst::error::prelude::*;
 use reflexo_typst::font::system::SystemFontSearcher;
 use reflexo_typst::package::http::HttpRegistry;
+use reflexo_typst::typst::{foundations::IntoValue, LazyHash};
 use reflexo_typst::vfs::{system::SystemAccessModel, Vfs};
-use reflexo_typst::{compat::LazyHash, typst::foundations::IntoValue};
 use reflexo_typst::{
     Bytes, CompileDriver, PureCompiler, TypstDict, TypstSystemUniverse, TypstSystemWorld,
 };

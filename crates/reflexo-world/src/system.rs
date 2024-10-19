@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use reflexo::error::prelude::*;
-use reflexo_typst_shim::LazyHash;
 use reflexo_vfs::{system::SystemAccessModel, Vfs};
+use typst::utils::LazyHash;
 
 use crate::{
     config::CompileOpts,

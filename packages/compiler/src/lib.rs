@@ -11,7 +11,6 @@ use std::{fmt::Write, path::Path, sync::Arc};
 use error::TypstSourceDiagnostic;
 use font::cache::FontInfoCache;
 use js_sys::{Array, JsString, Uint32Array, Uint8Array};
-use reflexo_typst::compat::utils::LazyHash;
 use reflexo_typst::error::{long_diag_from_std, prelude::*, DiagMessage};
 use reflexo_typst::font::web::BrowserFontSearcher;
 use reflexo_typst::package::browser::ProxyRegistry;

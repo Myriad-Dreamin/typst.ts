@@ -6,8 +6,8 @@ use std::{
 };
 
 use reflexo::debug_loc::DataSource;
-use reflexo_typst_shim::LazyHash;
 use typst::text::{Font, FontBook, FontInfo};
+use typst::utils::LazyHash;
 
 use super::{BufferFontLoader, FontProfile, FontSlot, PartialFontBook};
 use crate::Bytes;

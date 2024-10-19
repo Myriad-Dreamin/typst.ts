@@ -7,14 +7,15 @@ use std::{
 
 use chrono::{DateTime, Datelike, Local};
 use parking_lot::RwLock;
+use reflexo::error::prelude::*;
 use reflexo::ImmutPath;
-use reflexo::{error::prelude::*, typst_shim::LazyHash};
 use reflexo_vfs::{notify::FilesystemEvent, Vfs};
 use typst::{
     diag::{eco_format, At, EcoString, FileError, FileResult, SourceResult},
     foundations::{Bytes, Datetime, Dict},
     syntax::{FileId, Source, Span},
     text::{Font, FontBook},
+    utils::LazyHash,
     Library, World,
 };
 

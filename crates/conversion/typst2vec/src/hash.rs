@@ -7,8 +7,8 @@ pub use reflexo::hash::*;
 /// This seems to significantly improves performance. Inspired by
 /// rust-lang/rust#107925
 ///
-/// Update: Use Typst's new util function `reflexo::typst_shim::utils::hash128`
+/// Update: Use Typst's new util function `typst::utils::hash128`
 #[inline]
 pub fn typst_affinite_hash<T: std::hash::Hash>(t: &T) -> u128 {
-    reflexo::typst_shim::utils::hash128(t)
+    typst::utils::hash128(t)
 }
