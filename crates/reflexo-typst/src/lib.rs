@@ -84,7 +84,6 @@ pub mod program_meta {
 
 pub mod diag;
 mod driver;
-pub mod eval;
 mod export;
 pub mod features;
 pub mod query;
