@@ -56,14 +56,27 @@ export type DiagnosticsData = {
   full: DiagnosticMessage;
 };
 
-interface TransientCompileOptions<
-  F extends CompileFormat = any,
-  Diagnostics extends DiagnosticsFormat = DiagnosticsFormat,
-> {
+interface CompileOptionsCommon {
   /**
    * The path of the main file.
    */
   mainFilePath: string;
+  /**
+   * Adds a string key-value pair visible through `sys.inputs`
+   *
+   * Note: pass `{}` to clear `sys.inputs`
+   *
+   * Note: When passing `undefined`, compiler will use last set `sys.inputs`.
+   *
+   * Note: This means you should always specify inputs when using compiler for concurrent tasks.
+   */
+  inputs?: Record<string, string>;
+}
+
+interface TransientCompileOptions<
+  F extends CompileFormat = any,
+  Diagnostics extends DiagnosticsFormat = DiagnosticsFormat,
+> extends CompileOptionsCommon {
   /**
    * The format of the artifact.
    * - 'vector': can then load to the renderer to render the document.
@@ -79,11 +92,8 @@ interface TransientCompileOptions<
   diagnostics: Diagnostics;
 }
 
-interface IncrementalCompileOptions<Diagnostics extends DiagnosticsFormat = DiagnosticsFormat> {
-  /**
-   * The path of the main file.
-   */
-  mainFilePath: string;
+interface IncrementalCompileOptions<Diagnostics extends DiagnosticsFormat = DiagnosticsFormat>
+  extends CompileOptionsCommon {
   /**
    * The format of the incrementally exported artifact.
    * @default 'vector'
@@ -100,6 +110,17 @@ interface IncrementalCompileOptions<Diagnostics extends DiagnosticsFormat = Diag
    * @default false
    */
   diagnostics: Diagnostics;
+}
+
+export interface QueryOptions extends CompileOptionsCommon {
+  /**
+   * select part of document for query.
+   */
+  selector: string;
+  /**
+   * cast result by accessing single field.
+   */
+  field?: string;
 }
 
 /**
@@ -193,7 +214,7 @@ export interface TypstCompiler {
    * experimental
    * Query the result with document
    */
-  query<T>(options: { mainFilePath: string; selector: string; field?: string }): Promise<T>;
+  query<T>(options: QueryOptions): Promise<T>;
 
   /**
    * Print the AST of the main file.
@@ -325,6 +346,7 @@ class TypstCompilerDriver {
         resolve(
           this.compiler.incr_compile(
             options.mainFilePath,
+            convertInputs(options.inputs),
             options.incrementalServer[kObject],
             getDiagnosticsArg(options.diagnostics),
           ),
@@ -334,6 +356,7 @@ class TypstCompilerDriver {
       resolve(
         this.compiler.compile(
           options.mainFilePath,
+          convertInputs(options.inputs),
           options.format || 'vector',
           getDiagnosticsArg(options.diagnostics),
         ),
@@ -341,10 +364,17 @@ class TypstCompilerDriver {
     });
   }
 
-  query(options: { mainFilePath: string; selector: string; field?: string }): Promise<any> {
+  query(options: QueryOptions): Promise<any> {
     return new Promise<any>(resolve => {
       resolve(
-        JSON.parse(this.compiler.query(options.mainFilePath, options.selector, options.field)),
+        JSON.parse(
+          this.compiler.query(
+            options.mainFilePath,
+            convertInputs(options.inputs),
+            options.selector,
+            options.field,
+          ),
+        ),
       );
     });
   }
@@ -418,6 +448,12 @@ class TypstCompilerDriver {
     throw new Error('Please use the api TypstRenderer.renderToCanvas in v0.4.0');
   }
 }
+
+// todo: caching inputs
+function convertInputs(inputs?: Record<string, string>): [string, string][] | undefined {
+  return inputs ? Object.entries(inputs) : undefined;
+}
+
 function getDiagnosticsArg(diagnostics: string | undefined): number {
   switch (diagnostics) {
     case 'none':
