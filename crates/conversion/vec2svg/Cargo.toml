@@ -14,7 +14,7 @@ comemo.workspace = true
 
 base64.workspace = true
 
-reflexo.workspace = true
+reflexo = { workspace = true, features = ["typst"] }
 reflexo-typst2vec = { workspace = true, features = ["flat-vector"] }
 reflexo-vec2canvas = { workspace = true, optional = true }
 log.workspace = true

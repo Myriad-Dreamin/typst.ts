@@ -114,7 +114,12 @@ pub fn query(args: QueryArgs) -> ! {
 
     exporter.push_front(Box::new(move |world: &dyn World, output: Arc<Document>| {
         if args.selector == "document_title" {
-            let title = output.title.clone().unwrap_or("null".into());
+            let title = output
+                .info
+                .title
+                .as_ref()
+                .map(|e| e.as_str())
+                .unwrap_or("null");
             let serialized = serialize(&title, "json").map_err(map_err)?;
             println!("{}", serialized);
             return Ok(());

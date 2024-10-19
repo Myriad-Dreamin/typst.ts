@@ -1,7 +1,7 @@
 [workspace.package]
 description = "Run Typst in JavaScriptWorld."
 authors = ["Typst.ts Developers", "The Typst Project Developers"]
-version = "0.5.0-rc7"
+version = "0.5.0-rc7-2"
 edition = "2021"
 readme = "README.md"
 license = "Apache-2.0"
@@ -73,54 +73,60 @@ strip = true
 [workspace.dependencies]
 
 # typesetting
-typst = "0.11.1"
-typst-ide = "0.11.1"
-typst-pdf = "0.11.1"
-typst-svg = "0.11.1"
-typst-syntax = "0.11.1"
-ttf-parser = "0.20.0"
+typst = "0.12.0"
+typst-ide = "0.12.0"
+typst-pdf = "0.12.0"
+typst-svg = "0.12.0"
+typst-syntax = "0.12.0"
+ttf-parser = "0.24.1"
 
-typst-assets = "0.11.1"
-typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", tag = "v0.11.1" }
+typst-assets = "0.12.0"
+typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", tag = "v0.12.0" }
 
 # general
 anyhow = "1"
-async-recursion = "1.0.4"
-async-trait = "0.1.68"
-chrono = { version = "0.4.24", default-features = false, features = [
+async-recursion = "1.1"
+async-trait = "0.1.83"
+cfg-if = "1.0"
+chrono = { version = "0.4.38", default-features = false, features = [
     "clock",
     "std",
 ] }
-futures-util = "0.3.30"
-parking_lot = "0.12.1"
+futures-util = "0.3.31"
+parking_lot = "0.12.3"
 pollster = "0.3.0"
-rayon = "1.7.0"
-strum = { version = "0.25.0", features = ["derive"] }
-tokio = { version = "1.28.1", features = ["full"] }
+rayon = "1.10.0"
+strum = { version = "0.26.3", features = ["derive"] }
+tokio = { version = "1.40.0", features = ["full"] }
 
 # data structure and algorithm
 comemo = "0.4"
-elsa = "1.8.1"
-ecow = "0.2"
+elsa = "1.10.0"
+ecow = "0.2.2"
 indexmap = "2"
-unicode-width = "0.1.11"
+unicode-width = "0.2.0"
 dashmap = "5"
 
 # cli, terminal and tui
 ansi_term = "0.12.1"
-clap = { version = "4.4", features = ["derive", "env", "unicode", "wrap_help"] }
-clap_complete = "4.4"
-clap_complete_fig = "4.4"
-clap_mangen = { version = "0.2.15" }
-human-panic = "1.1.4"
-rustyline = { version = "12.0.0", features = ["derive"] }
+clap = { version = "4.5.20", features = [
+    "derive",
+    "env",
+    "unicode",
+    "wrap_help",
+] }
+clap_complete = "4.5.20"
+clap_complete_fig = "4.5.2"
+clap_mangen = { version = "0.2.24" }
+human-panic = "2.0.2"
+rustyline = { version = "14.0.0", features = ["derive"] }
 
 # system
 dirs = "5"
-fontdb = "0.16"
+fontdb = "0.21"
 notify = "6"
 path-clean = "1.0.1"
-pathdiff = "0.2"
+pathdiff = "0.2.2"
 walkdir = "2"
 instant = { version = "0.1" }
 
@@ -128,29 +134,29 @@ instant = { version = "0.1" }
 js-sys = "^0.3"
 wasm-bindgen = "^0.2"
 wasm-bindgen-futures = "^0.4"
-wasm-bindgen-test = "0.3.36"
+wasm-bindgen-test = "0.3.45"
 web-sys = "^0.3"
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
 # code size when deploying.
-console_error_panic_hook = { version = "0.1.1" }
+console_error_panic_hook = { version = "0.1.7" }
 
 # image processing
-image = { version = "0.24", default-features = false, features = [
+image = { version = "0.25.2", default-features = false, features = [
     "png",
     "jpeg",
     "gif",
 ] }
-resvg = { version = "0.38", default-features = false, features = [
+resvg = { version = "0.43", default-features = false, features = [
     "raster-images",
 ] }
-svgtypes = "0.13"
-tiny-skia = "0.11"
-tiny-skia-path = "0.11"
+svgtypes = "0.15.2"
+tiny-skia = "0.11.4"
+tiny-skia-path = "0.11.4"
 
 # cryptography and processing
-ansi-to-html = "0.1.3"
+ansi-to-html = "0.2.1"
 base64 = "0.22"
 base64-serde = "0.7.0"
 hex = "0.4.3"
@@ -159,51 +165,63 @@ fxhash = "0.2.1"
 nohash-hasher = "0.2.0"
 rkyv = "0.7.42"
 rustc-hash = "2"
-serde = { version = "1.0.197" }
-serde_json = "1.0.114"
+serde = { version = "1.0.210" }
+serde_json = "1.0.131"
 serde_with = { version = "3.6", features = ["base64"] }
 serde-wasm-bindgen = "^0.6"
 sha2 = "0.10.6"
 siphasher = "1"
 tar = "0.4"
 toml = "0.8"
-xmlparser = "0.13.5"
+xmlparser = "0.13.6"
 
 # logging and tracing
-env_logger = "0.10.0"
-log = "0.4.17"
+env_logger = "0.11.5"
+log = "0.4.22"
 
 # test
-insta = "1.29.0"
+insta = "1.40.0"
 
 # misc
 codespan-reporting = "0.11"
-vergen = { version = "8.3.1", features = [
+vergen = { version = "9.0.1", features = [
     "build",
     "cargo",
-    "git",
-    "gitcl",
+    # "git",
+    # "gitcl",
     "rustc",
 ] }
+vergen-gitcl = { version = "1.0.1" }
 
 # project core
-reflexo = { version = "0.5.0-rc7", path = "crates/reflexo", default-features = false }
-reflexo-vfs = { version = "0.5.0-rc7", path = "crates/reflexo-vfs" }
-reflexo-world = { version = "0.5.0-rc7", path = "crates/reflexo-world" }
-reflexo-typst = { version = "0.5.0-rc7", path = "crates/reflexo-typst", default-features = false }
+reflexo = { version = "0.5.0-rc7-2", path = "crates/reflexo", default-features = false }
+reflexo-vfs = { version = "0.5.0-rc7-2", path = "crates/reflexo-vfs" }
+reflexo-world = { version = "0.5.0-rc7-2", path = "crates/reflexo-world" }
+reflexo-typst = { version = "0.5.0-rc7-2", path = "crates/reflexo-typst", default-features = false }
+reflexo-typst-shim = { version = "0.5.0-rc7-2", path = "crates/reflexo-typst-shim" }
 
 # conversions
-reflexo-typst2vec = { version = "0.5.0-rc7", path = "crates/conversion/typst2vec" }
-reflexo-vec2canvas = { version = "0.5.0-rc7", path = "crates/conversion/vec2canvas" }
-reflexo-vec2sema = { version = "0.5.0-rc7", path = "crates/conversion/vec2sema" }
-reflexo-vec2bbox = { version = "0.5.0-rc7", path = "crates/conversion/vec2bbox" }
-reflexo-vec2dom = { version = "0.5.0-rc7", path = "crates/conversion/vec2dom" }
-reflexo-vec2svg = { version = "0.5.0-rc7", path = "crates/conversion/vec2svg" }
+reflexo-typst2vec = { version = "0.5.0-rc7-2", path = "crates/conversion/typst2vec" }
+reflexo-vec2canvas = { version = "0.5.0-rc7-2", path = "crates/conversion/vec2canvas" }
+reflexo-vec2sema = { version = "0.5.0-rc7-2", path = "crates/conversion/vec2sema" }
+reflexo-vec2bbox = { version = "0.5.0-rc7-2", path = "crates/conversion/vec2bbox" }
+reflexo-vec2dom = { version = "0.5.0-rc7-2", path = "crates/conversion/vec2dom" }
+reflexo-vec2svg = { version = "0.5.0-rc7-2", path = "crates/conversion/vec2svg" }
 
 # project components
-typst-ts-test-common = { version = "0.5.0-rc7", path = "tests/common" }
-typst-ts-dev-server = { version = "0.5.0-rc7", path = "server/dev" }
-typst-ts-cli = { version = "0.5.0-rc7", path = "cli" }
+typst-ts-test-common = { version = "0.5.0-rc7-2", path = "tests/common" }
+typst-ts-dev-server = { version = "0.5.0-rc7-2", path = "server/dev" }
+typst-ts-cli = { version = "0.5.0-rc7-2", path = "cli" }
+
+[workspace.lints.rust]
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+uninlined_format_args = "warn"
+# missing_errors_doc = "warn"
+# missing_panics_doc = "warn"
+missing_safety_doc = "warn"
+undocumented_unsafe_blocks = "warn"
 
 [patch.crates-io]
 
@@ -213,11 +231,11 @@ typst-ts-cli = { version = "0.5.0-rc7", path = "cli" }
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
 # comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
-typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.1-content-hint" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.1-content-hint" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.1-content-hint" }
-typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.1-content-hint" }
-typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.11.1-content-hint" }
+typst = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.0" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.0" }
+typst-ide = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.0" }
+typst-svg = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.0" }
+typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.0" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }

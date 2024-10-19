@@ -1,4 +1,4 @@
-use web_sys::{ImageBitmap, ImageData, OffscreenCanvas, Path2d};
+use web_sys::{CanvasWindingRule, ImageBitmap, ImageData, OffscreenCanvas, Path2d};
 
 pub trait CanvasDevice {
     #[doc = "The `restore()` method."]
@@ -104,6 +104,10 @@ pub trait CanvasDevice {
     #[doc = ""]
     #[doc = "[MDN Documentation](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/fill)"]
     fn fill_with_path_2d(&self, path: &Path2d);
+    #[doc = "The `fill()` method."]
+    #[doc = ""]
+    #[doc = "[MDN Documentation](https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvasRenderingContext2D/fill)"]
+    fn fill_with_path_2d_and_winding(&self, path: &Path2d, winding: CanvasWindingRule);
 }
 
 impl CanvasDevice for web_sys::CanvasRenderingContext2d {
@@ -208,6 +212,10 @@ impl CanvasDevice for web_sys::CanvasRenderingContext2d {
     fn fill_with_path_2d(&self, path: &Path2d) {
         self.fill_with_path_2d(path);
     }
+
+    fn fill_with_path_2d_and_winding(&self, path: &Path2d, winding: CanvasWindingRule) {
+        self.fill_with_path_2d_and_winding(path, winding);
+    }
 }
 
 impl CanvasDevice for web_sys::OffscreenCanvasRenderingContext2d {
@@ -310,5 +318,9 @@ impl CanvasDevice for web_sys::OffscreenCanvasRenderingContext2d {
 
     fn fill_with_path_2d(&self, path: &Path2d) {
         self.fill_with_path_2d(path);
+    }
+
+    fn fill_with_path_2d_and_winding(&self, path: &Path2d, winding: CanvasWindingRule) {
+        self.fill_with_path_2d_and_winding(path, winding);
     }
 }

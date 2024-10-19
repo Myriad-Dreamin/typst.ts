@@ -1,7 +1,7 @@
 {
   "name": "@myriaddreamin/typst.vue3",
   "private": true,
-  "version": "0.5.0-rc7",
+  "version": "0.5.0-rc7-2",
   "type": "module",
   "main": "src/Typst.vue",
   "scripts": {

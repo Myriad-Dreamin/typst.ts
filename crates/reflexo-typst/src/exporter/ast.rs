@@ -23,7 +23,7 @@ where
     ) -> typst::diag::SourceResult<()> {
         let mut writer = std::io::BufWriter::new(writer);
 
-        let src = world.main();
+        let src = world.source(world.main()).at(Span::detached())?;
         let path = src.id().vpath().as_rootless_path();
         dump_ast(&path.display().to_string(), &src, &mut writer)
             .map_err(|e| FileError::from_io(e, path))

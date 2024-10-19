@@ -12,7 +12,7 @@ mod tests {
 
     use flate2::write::GzEncoder;
     use flate2::Compression;
-    use std::io::Write;
+    use std::io::{Cursor, Write};
 
     #[derive(Debug, Clone, Serialize, Deserialize)]
     struct TestPoint {
@@ -29,8 +29,9 @@ mod tests {
         let data = base64::engine::general_purpose::STANDARD
             .decode(data_url)
             .unwrap();
+        let data = Cursor::new(data);
 
-        let image = PngDecoder::new(&data[..]).unwrap();
+        let image = PngDecoder::new(data).unwrap();
         let image = image::DynamicImage::from_decoder(image).unwrap();
 
         let hasher = HasherConfig::new().hash_size(4, 4);
@@ -504,42 +505,42 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         name: layout_clip_00_artifact_ir
         data_content_phash: "phash-gradient:ROY="
-        text_content_hash: "sha256:76808cf8c41bd86329766e35346c3a987df61dabd5036ce2e8871b6bf014c1a7"
+        text_content_hash: "sha256:1067ceed709dbc90a8f4b09c69adeb4e2061e6b72936e7382d94984672d0704d"
         "###);
         check_canvas_render_test_point!(@r###"
         name: layout_clip_01_artifact_ir
         data_content_phash: "phash-gradient:ZmY="
-        text_content_hash: "sha256:93cc86f5b4466bef3b400ed07a9fd183972793729ccd319a361869163f77c37c"
+        text_content_hash: "sha256:240f6da9d9db6e5cb311a5ea67375bb2148ec3fae132adf0535db62ed3d0136f"
         "###);
         check_canvas_render_test_point!(@r###"
         name: layout_clip_02_artifact_ir
         data_content_phash: "phash-gradient:zMw="
-        text_content_hash: "sha256:92325a7e28f6b65691ffe3f066601855ace6258c2db55423c37ab54bb8af33d0"
+        text_content_hash: "sha256:939c176eee95423247da1790dd4ae97f92f99d52828225713a96d731a437a8b0"
         "###);
         check_canvas_render_test_point!(@r###"
         name: layout_clip_03_artifact_ir
         data_content_phash: "phash-gradient:qwA="
-        text_content_hash: "sha256:7accdeabe02ec169203c0790e28f7ab4227e204548d9328c3f850e0e0f598fa5"
+        text_content_hash: "sha256:58b397241ad48e60d799491377c3b9a1114eca1e9c1b48f6b042b165d9b6c1e5"
         "###);
         check_canvas_render_test_point!(@r###"
         name: layout_list-marker_00_artifact_ir
         data_content_phash: "phash-gradient:MjM="
-        text_content_hash: "sha256:e8bc97ec7d047e00f51b485d8f9eaf83e254be1e2a5886ca3a43192ba7dd4e70"
+        text_content_hash: "sha256:0a2dd6762dc52cc279171a5d625ad483cd95562b92c23a81ef50c7a9d46699e0"
         "###);
         check_canvas_render_test_point!(@r###"
         name: layout_list-marker_01_artifact_ir
         data_content_phash: "phash-gradient:I2I="
-        text_content_hash: "sha256:733cbf09c606be8205623391a75cae77b53089ddcdb79e1ddc7520b0aebfdf03"
+        text_content_hash: "sha256:c885720358773559a7664c20b3981868fedbd05b774dd2d094fbb5afd849996a"
         "###);
         check_canvas_render_test_point!(@r###"
         name: layout_list-marker_02_artifact_ir
         data_content_phash: "phash-gradient:MzI="
-        text_content_hash: "sha256:e304f11bb3c774bcd260c028beab517f7b383299c1f4d9520f03343c2d70b464"
+        text_content_hash: "sha256:749ec946ae15f08b45c8a914238d084eb9d2cf1ac5dd43bfbbd7895c6ae09a50"
         "###);
         check_canvas_render_test_point!(@r###"
         name: layout_list-marker_03_artifact_ir
         data_content_phash: "phash-gradient:zM4="
-        text_content_hash: "sha256:87e6e1cd2b4ad9e48ac686ebc22c9362f7770ff274d49702c13b15d072e9fbbb"
+        text_content_hash: "sha256:8c265d95d87d6d04bbf44746e6346daa141ea57fdd1baee100d184212e554bee"
         "###);
         // ok empty page, compile error
         check_canvas_render_test_point!(@r###"
@@ -550,7 +551,7 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         name: layout_transform_00_artifact_ir
         data_content_phash: "phash-gradient:xGY="
-        text_content_hash: "sha256:f1b9f63c42525a7552deae670ee0fb0aedc4781c1208cf04988c6009d7a11007"
+        text_content_hash: "sha256:ea2330702e4c9d836ecf40cebe200b2d9e0ec7e26168a3aad9e0bc4695d5e16c"
         "###);
         check_canvas_render_test_point!(@r###"
         name: layout_transform_01_artifact_ir
@@ -565,12 +566,12 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         name: layout_transform_03_artifact_ir
         data_content_phash: "phash-gradient:5pg="
-        text_content_hash: "sha256:8c226be77aa543c70f8b572e14ad16777fcfda2c6bada29c5b099a82817a9f77"
+        text_content_hash: "sha256:e78cfe36efc4e8c5ae481f5fb4b8ee998663972fc45ce7f4a3f3e6825a9f8161"
         "###);
         check_canvas_render_test_point!(@r###"
         name: math_main_artifact_ir
         data_content_phash: "phash-gradient:LAA="
-        text_content_hash: "sha256:bba6398b530a028e28ad963843562356b21105ce598af1a07c60495e56928acb"
+        text_content_hash: "sha256:1da95b4a6130f0abb08f4c360ebe78f36d71b924ea7ab86e5c73f3ee3a8889f5"
         "###);
         // todo: emoji change
         // check_canvas_render_test_point!(@r###"
@@ -596,17 +597,17 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         name: text_deco_00_artifact_ir
         data_content_phash: "phash-gradient:6q4="
-        text_content_hash: "sha256:7fa19142cc94829430e2cf433cd94204da0d640ab6f0a6c032b47eb6761e5c8d"
+        text_content_hash: "sha256:928bf124b9df1b4f233fefda5861138e84306cad1fdf321a056603bf65484263"
         "###);
         check_canvas_render_test_point!(@r###"
         name: text_deco_01_artifact_ir
         data_content_phash: "phash-gradient:sE8="
-        text_content_hash: "sha256:f3297a47cfe8c258fdc15e330f1f6100f37274e5de19ed85e1cf442c63964f9f"
+        text_content_hash: "sha256:6d36d88fce4f30e1c6d1581f81e0119ebbbe546d56d2950a99db06b8c4ac2392"
         "###);
         check_canvas_render_test_point!(@r###"
         name: text_deco_02_artifact_ir
         data_content_phash: "phash-gradient:YGY="
-        text_content_hash: "sha256:102a67f29820229d33203cba9598ab5007b3ce0a80ea5774722a70531dd6545c"
+        text_content_hash: "sha256:6d59e0340fd5dab57b85db157a2fdfd935e2f5729774d8599f1103a24255d2c0"
         "###);
         // still inconsisistent
         // check_canvas_render_test_point!(@r###"
@@ -632,13 +633,13 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         name: visualize_line_00_artifact_ir
         data_content_phash: "phash-gradient:7s4="
-        text_content_hash: "sha256:7a7127a2ee0463c8ca6a429f6d8e04bfb7db288f69f9329cd3e6bf94a36ea1a8"
+        text_content_hash: "sha256:4bb73e8671544a2770b0744a46a45dc8fa9ed7f1cb96568558e95b4bc2bd0a02"
         "###);
         // ok empty page, compile error
         check_canvas_render_test_point!(@r###"
         name: visualize_line_01_artifact_ir
         data_content_phash: "phash-gradient:VVU="
-        text_content_hash: "sha256:0adb47d06ff5feb21ec0f42160dc35593affcde6a79680c5b14528b16d6251ef"
+        text_content_hash: "sha256:5202abe689e2df25c506638cd4d9d2d4d88726b79640415e30a2568a279c8cd7"
         "###);
         // ok empty page, compile error
         check_canvas_render_test_point!(@r###"
@@ -685,16 +686,16 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         name: visualize_shape-aspect_00_artifact_ir
         data_content_phash: "phash-gradient:lok="
-        text_content_hash: "sha256:796d70163b44634c3948e96fee2fe1d3b712f4eeb6b1061129489ec0ff47adbe"
+        text_content_hash: "sha256:8f623fb0c86c1245b24c7dca1d736349ef43560bf28be74a6350a84d030ca5de"
         "###);
         check_canvas_render_test_point!(@r###"
         name: visualize_shape-aspect_01_artifact_ir
         data_content_phash: "phash-gradient:3uw="
-        text_content_hash: "sha256:c251d63de7b61c52f0d01160f10ee1622e550afe29ed4510f0907e779f75ba84"
+        text_content_hash: "sha256:f2a560a3967543d0d2ba1b5ea7a813fdf827e7fd753efba8b0138988073f8d6a"
         "###);
         check_canvas_render_test_point!(@r###"
         name: visualize_shape-aspect_02_artifact_ir
-        data_content_phash: "phash-gradient:ZmY="
+        data_content_phash: "phash-gradient:ZgA="
         text_content_hash: "sha256:9a77a41dcb9d094bd5f8835090e1fff669f88ad82df3c46b1becd580a4626e1a"
         "###);
         check_canvas_render_test_point!(@r###"
@@ -721,12 +722,12 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         name: visualize_shape-circle_00_artifact_ir
         data_content_phash: "phash-gradient:zM4="
-        text_content_hash: "sha256:767003fd533a51edac086f265dd179363a7590ddcb0638ce20b1e6607b5b52af"
+        text_content_hash: "sha256:b1dde1270dec3a11083328cc3cbe48c3a8c69b4fe25f018f43da8f17b7c4a324"
         "###);
         check_canvas_render_test_point!(@r###"
         name: visualize_shape-circle_01_artifact_ir
         data_content_phash: "phash-gradient:5uw="
-        text_content_hash: "sha256:7755eebfec95303db7912c8e2a8de7681b777624e920a0d1b33fb1712f4e00a5"
+        text_content_hash: "sha256:1589df65fec0099a22af5935d8ee46ca79d6731114b40398b2591d359bb9dc76"
         "###);
         check_canvas_render_test_point!(@r###"
         name: visualize_shape-circle_02_artifact_ir
@@ -736,7 +737,7 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         name: visualize_shape-circle_03_artifact_ir
         data_content_phash: "phash-gradient:qqo="
-        text_content_hash: "sha256:785cae5ddc3bd458b0ba93329145e75afaecff8eb5e61395ab33fe6da3705dc8"
+        text_content_hash: "sha256:a556f943427bf2c6426e71e6f69916901fcd40bc92ce1ea86e9a8df47209871a"
         "###);
         check_canvas_render_test_point!(@r###"
         name: visualize_shape-circle_04_artifact_ir
@@ -783,7 +784,7 @@ mod tests {
         check_canvas_render_test_point!(@r###"
         name: visualize_stroke_07_artifact_ir
         data_content_phash: "phash-gradient:MyI="
-        text_content_hash: "sha256:e51ffb4d7aa2ed1e98d8a3222d8648eabffabb21e11769aa0a0a35ca667bf767"
+        text_content_hash: "sha256:e350989edd5dcb302b6f17358d40811e6e2ed4422d228490d4991a8e3d35f038"
         "###);
 
         let done = test_point_iter.next();

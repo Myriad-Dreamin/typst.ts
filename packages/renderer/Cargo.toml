@@ -58,6 +58,7 @@ send_wrapper = "0.5.0"
 [build-dependencies]
 anyhow.workspace = true
 vergen.workspace = true
+vergen-gitcl.workspace = true
 
 [features]
 

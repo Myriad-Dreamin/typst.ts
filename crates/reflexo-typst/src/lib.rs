@@ -19,7 +19,7 @@
 //!   - [`world::CompilerWorld`]: retrieving [`world::CompilerFeat`], provides a
 //!     common implementation of [`::typst::World`].
 //!
-//! - [`compile`]: Convenient services over [`world::CompilerWorld`], which also
+//! - `compile`: Convenient services over [`world::CompilerWorld`], which also
 //!   shows how to use the [`world::CompilerWorld`].
 //!   - [`CompileDriver`]: A driver for the compiler. Examples:
 //!     - Single thread (Sync): <https://github.com/Myriad-Dreamin/typst.ts/blob/main/cli/src/main.rs>
@@ -45,6 +45,7 @@ pub use exporter::ast::{dump_ast, AstExporter};
 
 pub use exporter::json::JsonExporter;
 
+use ::typst::engine::Sink;
 #[cfg(feature = "pdf")]
 pub use exporter::pdf::PdfDocExporter;
 #[cfg(feature = "pdf")]
@@ -67,6 +68,7 @@ pub use exporter::{
     GenericTransformer, Transformer,
 };
 // pub use font::{FontLoader, FontResolver, FontSlot};
+pub use reflexo::typst_shim as compat;
 pub use reflexo::*;
 
 pub mod build_info {
@@ -131,17 +133,16 @@ use std::sync::OnceLock;
 use crate::typst::prelude::*;
 use ::typst::{
     diag::{At, Hint, SourceDiagnostic, SourceResult},
-    eval::Tracer,
     foundations::Content,
     model::Document,
     syntax::Span,
-    util::Deferred,
+    utils::Deferred,
     World,
 };
 
 #[derive(Clone, Default)]
 pub struct CompileEnv {
-    pub tracer: Option<Tracer>,
+    pub sink: Option<Sink>,
     pub features: Arc<FeatureSet>,
 }
 
@@ -405,13 +406,13 @@ pub trait Compiler {
     ) -> SourceResult<Arc<Document>> {
         self.reset()?;
 
-        let res = match env.tracer.as_mut() {
-            Some(tracer) => ::typst::compile(world, tracer),
-            None => ::typst::compile(world, &mut Tracer::default()),
+        let res = match env.sink.as_mut() {
+            Some(_sink) => ::typst::compile(world),
+            None => ::typst::compile(world),
         };
 
         // compile document
-        res.map(Arc::new)
+        res.output.map(Arc::new)
     }
 
     /// With **the compilation state**, query the matches for the selector.
@@ -541,6 +542,6 @@ impl From<AtFile> for EcoString {
 mod tests {
     #[test]
     pub fn test_hash128() {
-        assert_eq!(typst::util::hash128(&0u32), reflexo::hash::hash128(&0u32));
+        assert_eq!(typst::utils::hash128(&0u32), reflexo::hash::hash128(&0u32));
     }
 }

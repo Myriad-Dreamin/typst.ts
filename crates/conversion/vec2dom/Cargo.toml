@@ -16,7 +16,7 @@ svgtypes.workspace = true
 tiny-skia.workspace = true
 tiny-skia-path.workspace = true
 
-reflexo.workspace = true
+reflexo = { workspace = true, features = ["typst"] }
 reflexo-typst2vec.workspace = true
 reflexo-vec2canvas.workspace = true
 reflexo-vec2sema.workspace = true

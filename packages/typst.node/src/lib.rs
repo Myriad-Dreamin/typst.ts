@@ -45,20 +45,20 @@ impl NodeTypstDocument {
     /// Gets the title of the document.
     #[napi(getter)]
     pub fn title(&self) -> Option<String> {
-        self.0.title.as_ref().map(ToString::to_string)
+        self.0.info.title.as_ref().map(ToString::to_string)
     }
 
     /// Gets the authors of the document.
     #[napi(getter)]
     pub fn authors(&self) -> Option<Vec<String>> {
-        let authors = self.0.author.iter();
+        let authors = self.0.info.author.iter();
         Some(authors.map(ToString::to_string).collect::<Vec<_>>())
     }
 
     /// Gets the keywords of the document.
     #[napi(getter)]
     pub fn keywords(&self) -> Option<Vec<String>> {
-        let keywords = self.0.keywords.iter();
+        let keywords = self.0.info.keywords.iter();
         Some(keywords.map(ToString::to_string).collect::<Vec<_>>())
     }
 
@@ -69,6 +69,7 @@ impl NodeTypstDocument {
     #[napi(getter)]
     pub fn date(&self) -> Option<i64> {
         self.0
+            .info
             .date
             .custom()
             .flatten()
@@ -81,7 +82,7 @@ impl NodeTypstDocument {
     /// explicitly.
     #[napi(getter)]
     pub fn enabled_auto_date(&self) -> bool {
-        self.0.date.is_auto()
+        self.0.info.date.is_auto()
     }
 }
 
@@ -288,7 +289,7 @@ impl NodeCompiler {
         let mapped: Vec<_> = elements
             .into_iter()
             .filter_map(|c| match &args.field {
-                Some(field) => c.get_by_name(field),
+                Some(field) => c.get_by_name(field).ok(),
                 _ => Some(c.into_value()),
             })
             .collect();

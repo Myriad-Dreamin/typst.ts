@@ -14,9 +14,9 @@ It may be caused by a version mismatch between `chromedriver` and `google-chrome
 ```
 # Output of wasm test
 driver stdout:
-    Starting ChromeDriver 114.0.5735.90
+    Starting ChromeDriver 129.0.6668.70
 # Output of open chrome://version in browser
-Google Chrome: 114.0.5735.90
+Google Chrome: 129.0.6668.70
 ```
 
 If there is a version mismatch between the two, update `chromedriver` or `google-chrome` accordingly.

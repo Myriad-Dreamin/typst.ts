@@ -629,6 +629,9 @@ fn attach_path_styles<'a>(
                     (offset.0 * scale.unwrap_or(1.)).to_string(),
                 );
             }
+            PathStyle::FillRule(rule) => {
+                p("fill-rule", rule.to_string());
+            }
         }
     }
 

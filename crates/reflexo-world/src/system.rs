@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use comemo::Prehashed;
 use reflexo::error::prelude::*;
 use reflexo_vfs::{system::SystemAccessModel, Vfs};
+use typst::utils::LazyHash;
 
 use crate::{
     config::CompileOpts,
@@ -36,7 +36,7 @@ impl TypstSystemUniverse {
         let inputs = std::mem::take(&mut opts.inputs);
         Ok(Self::new_raw(
             opts.entry.clone().try_into()?,
-            Some(Arc::new(Prehashed::new(inputs))),
+            Some(Arc::new(LazyHash::new(inputs))),
             Vfs::new(SystemAccessModel {}),
             HttpRegistry::default(),
             Arc::new(Self::resolve_fonts(opts)?),

@@ -85,8 +85,8 @@ impl Highlighter for ReplContext {
         self.highlighter.highlight(line, pos)
     }
 
-    fn highlight_char(&self, line: &str, pos: usize) -> bool {
-        self.highlighter.highlight_char(line, pos)
+    fn highlight_char(&self, line: &str, pos: usize, forced: bool) -> bool {
+        self.highlighter.highlight_char(line, pos, forced)
     }
 }
 
@@ -129,11 +129,13 @@ impl Completer for ReplContext {
             .with_shadow_file(&entry, dyn_content.as_bytes().into(), |driver| {
                 let doc = driver.compile(&mut Default::default()).ok();
                 let world = driver.snapshot();
-                let source = world.main();
+                let main = world.main();
+                let main = world.source(main).unwrap();
+
                 Ok(autocomplete(
                     &world,
                     doc.as_ref().map(|f| f.as_ref()),
-                    &source,
+                    &main,
                     cursor,
                     true,
                 ))

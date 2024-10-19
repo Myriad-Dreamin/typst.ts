@@ -10,7 +10,7 @@ repository.workspace = true
 [dependencies]
 
 comemo.workspace = true
-reflexo = { workspace = true }
+reflexo = { workspace = true, features = ["typst"] }
 
 svgtypes.workspace = true
 tiny-skia.workspace = true

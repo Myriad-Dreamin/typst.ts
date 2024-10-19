@@ -7,13 +7,14 @@ use std::{
 
 use parking_lot::Mutex;
 use rayon::iter::{
-    IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelIterator,
+    IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelExtend,
+    ParallelIterator,
 };
 use reflexo::ImmutStr;
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
     foundations::{Bytes, Smart},
-    introspection::{Introspector, Meta},
+    introspection::{Introspector, Tag},
     layout::{
         Abs as TypstAbs, Axes, Dir, Frame, FrameItem, FrameKind, Position, Ratio as TypstRatio,
         Size, Transform as TypstTransform,
@@ -21,7 +22,7 @@ use typst::{
     model::{Destination, Document as TypstDocument},
     text::TextItem as TypstTextItem,
     visualize::{
-        FixedStroke, Geometry, Gradient, Image as TypstImage, LineCap, LineJoin, Paint,
+        FillRule, FixedStroke, Geometry, Gradient, Image as TypstImage, LineCap, LineJoin, Paint,
         PathItem as TypstPathItem, Pattern, RelativeTo, Shape,
     },
 };
@@ -202,7 +203,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                 let page_reg = self.spans.start();
 
                 let state = State::new(introspector, p.frame.size().into_typst());
-                let abs_ref = self.frame(state, &p.frame, page_reg, idx);
+                let abs_ref = self.frame_(state, &p.frame, page_reg, idx, p.fill_or_transparent());
 
                 self.spans.push_span(SourceRegion {
                     region: doc_reg,
@@ -225,7 +226,18 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         pages
     }
 
-    fn frame(&self, mut state: State, frame: &Frame, parent: usize, index: usize) -> Fingerprint {
+    fn frame(&self, state: State, frame: &Frame, parent: usize, index: usize) -> Fingerprint {
+        self.frame_(state, frame, parent, index, None)
+    }
+
+    fn frame_(
+        &self,
+        mut state: State,
+        frame: &Frame,
+        parent: usize,
+        index: usize,
+        fill: Option<Paint>,
+    ) -> Fingerprint {
         let src_reg = self.spans.start();
 
         let frame_size = match frame.kind() {
@@ -237,141 +249,149 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         }
         let state = state;
 
-        let mut items = frame
-            .items()
-            .as_slice()
-            .par_iter()
-            .enumerate()
-            .flat_map(|(idx, (pos, item))| {
-                let mut is_link = false;
-                let state = state.pre_translate((*pos).into_typst());
-                let item = match item {
-                    FrameItem::Group(group) => {
-                        let state = state.pre_concat(group.transform.into_typst());
+        let mut items =
+            Vec::with_capacity(frame.items().len() + if fill.is_some() { 1 } else { 0 });
+        if let Some(fill) = fill {
+            let shape = Shape {
+                geometry: Geometry::Rect(frame.size()),
+                fill: Some(fill),
+                fill_rule: FillRule::default(),
+                stroke: None,
+            };
 
-                        let mut inner = self.frame(state, &group.frame, src_reg, idx);
+            items.push((Point::default(), false, self.shape(state, &shape)));
+        }
 
-                        if let Some(p) = group.clip_path.as_ref() {
-                            // todo: merge
-                            let mut builder = SvgPath2DBuilder(String::new());
+        let items_iter = frame.items().as_slice().par_iter().enumerate();
+        let items_iter = items_iter.flat_map(|(idx, (pos, item))| {
+            let mut is_link = false;
+            let state = state.pre_translate((*pos).into_typst());
+            let item = match item {
+                FrameItem::Group(group) => {
+                    let state = state.pre_concat(group.transform.into_typst());
 
-                            // to ensure that our shape focus on the original point
-                            builder.move_to(0., 0.);
-                            for elem in &p.0 {
-                                match elem {
-                                    TypstPathItem::MoveTo(p) => {
-                                        builder.move_to(p.x.to_f32(), p.y.to_f32());
-                                    }
-                                    TypstPathItem::LineTo(p) => {
-                                        builder.line_to(p.x.to_f32(), p.y.to_f32());
-                                    }
-                                    TypstPathItem::CubicTo(p1, p2, p3) => {
-                                        builder.curve_to(
-                                            p1.x.to_f32(),
-                                            p1.y.to_f32(),
-                                            p2.x.to_f32(),
-                                            p2.y.to_f32(),
-                                            p3.x.to_f32(),
-                                            p3.y.to_f32(),
-                                        );
-                                    }
-                                    TypstPathItem::ClosePath => {
-                                        builder.close();
-                                    }
-                                };
-                            }
-                            let d = builder.0.into();
+                    let mut inner = self.frame(state, &group.frame, src_reg, idx);
 
-                            inner = self.store(VecItem::Item(TransformedRef(
-                                TransformItem::Clip(Arc::new(PathItem {
-                                    d,
-                                    size: None,
-                                    styles: vec![],
-                                })),
-                                inner,
-                            )));
-                        };
+                    if let Some(p) = group.clip_path.as_ref() {
+                        // todo: merge
+                        let mut builder = SvgPath2DBuilder(String::new());
 
-                        if group.transform != TypstTransform::identity() {
-                            inner = self.store(VecItem::Item(TransformedRef(
-                                TransformItem::Matrix(Arc::new(group.transform.into_typst())),
-                                inner,
-                            )));
-                        }
-
-                        inner
-                    }
-                    FrameItem::Text(text) => {
-                        let i = self.text(state, text);
-
-                        self.spans.push_span(SourceRegion {
-                            region: src_reg,
-                            idx: idx as u32,
-                            kind: if text.glyphs.len() == 1 {
-                                SourceNodeKind::Char(text.glyphs[0].span)
-                            } else {
-                                SourceNodeKind::Text(text.glyphs.iter().map(|g| g.span).collect())
-                            },
-                            item: i,
-                        });
-
-                        i
-                    }
-                    FrameItem::Shape(shape, s) => {
-                        let i = self.shape(state, shape);
-
-                        self.spans.push_span(SourceRegion {
-                            region: src_reg,
-                            idx: idx as u32,
-                            kind: SourceNodeKind::Shape(*s),
-                            item: i,
-                        });
-
-                        i
-                    }
-                    FrameItem::Image(image, size, s) => {
-                        let i = self.image(image, *size);
-
-                        self.spans.push_span(SourceRegion {
-                            region: src_reg,
-                            idx: idx as u32,
-                            kind: SourceNodeKind::Image(*s),
-                            item: i,
-                        });
-
-                        i
-                    }
-                    FrameItem::Meta(meta, size) => match meta {
-                        Meta::Link(lnk) => {
-                            is_link = true;
-                            self.store(match lnk {
-                                Destination::Url(url) => self.link(url, *size),
-                                Destination::Position(dest) => self.position(*dest, *size),
-                                Destination::Location(loc) => {
-                                    // todo: process location before lowering
-                                    let dest = state.introspector.position(*loc);
-                                    self.position(dest, *size)
+                        // to ensure that our shape focus on the original point
+                        builder.move_to(0., 0.);
+                        for elem in &p.0 {
+                            match elem {
+                                TypstPathItem::MoveTo(p) => {
+                                    builder.move_to(p.x.to_f32(), p.y.to_f32());
                                 }
-                            })
+                                TypstPathItem::LineTo(p) => {
+                                    builder.line_to(p.x.to_f32(), p.y.to_f32());
+                                }
+                                TypstPathItem::CubicTo(p1, p2, p3) => {
+                                    builder.curve_to(
+                                        p1.x.to_f32(),
+                                        p1.y.to_f32(),
+                                        p2.x.to_f32(),
+                                        p2.y.to_f32(),
+                                        p3.x.to_f32(),
+                                        p3.y.to_f32(),
+                                    );
+                                }
+                                TypstPathItem::ClosePath => {
+                                    builder.close();
+                                }
+                            };
                         }
-                        // Meta::Link(_) => Fingerprint::from_u128(0),
-                        Meta::Elem(elem) => {
-                            if !LINE_HINT_ELEMENTS.contains(elem.func().name()) {
-                                return None;
-                            }
+                        let d = builder.0.into();
 
-                            self.store(VecItem::ContentHint('\n'))
+                        inner = self.store(VecItem::Item(TransformedRef(
+                            TransformItem::Clip(Arc::new(PathItem {
+                                d,
+                                size: None,
+                                styles: vec![],
+                            })),
+                            inner,
+                        )));
+                    };
+
+                    if group.transform != TypstTransform::identity() {
+                        inner = self.store(VecItem::Item(TransformedRef(
+                            TransformItem::Matrix(Arc::new(group.transform.into_typst())),
+                            inner,
+                        )));
+                    }
+
+                    inner
+                }
+                FrameItem::Text(text) => {
+                    let i = self.text(state, text);
+
+                    self.spans.push_span(SourceRegion {
+                        region: src_reg,
+                        idx: idx as u32,
+                        kind: if text.glyphs.len() == 1 {
+                            SourceNodeKind::Char(text.glyphs[0].span)
+                        } else {
+                            SourceNodeKind::Text(text.glyphs.iter().map(|g| g.span).collect())
+                        },
+                        item: i,
+                    });
+
+                    i
+                }
+                FrameItem::Shape(shape, s) => {
+                    let i = self.shape(state, shape);
+
+                    // todo: fill rule
+                    self.spans.push_span(SourceRegion {
+                        region: src_reg,
+                        idx: idx as u32,
+                        kind: SourceNodeKind::Shape(*s),
+                        item: i,
+                    });
+
+                    i
+                }
+                FrameItem::Image(image, size, s) => {
+                    let i = self.image(image, *size);
+
+                    self.spans.push_span(SourceRegion {
+                        region: src_reg,
+                        idx: idx as u32,
+                        kind: SourceNodeKind::Image(*s),
+                        item: i,
+                    });
+
+                    i
+                }
+                // Meta::Link(_) => Fingerprint::from_u128(0),
+                FrameItem::Link(lnk, size) => {
+                    is_link = true;
+                    self.store(match lnk {
+                        Destination::Url(url) => self.link(url, *size),
+                        Destination::Position(dest) => self.position(*dest, *size),
+                        Destination::Location(loc) => {
+                            // todo: process location before lowering
+                            let dest = state.introspector.position(*loc);
+                            self.position(dest, *size)
                         }
-                        #[cfg(not(feature = "no-content-hint"))]
-                        Meta::ContentHint(c) => self.store(VecItem::ContentHint(*c)),
-                        // todo: support page label
-                        Meta::Hide => return None,
-                    },
-                };
+                    })
+                }
+                FrameItem::Tag(Tag::Start(elem)) => {
+                    if !LINE_HINT_ELEMENTS.contains(elem.func().name()) {
+                        return None;
+                    }
 
-                Some(((*pos).into_typst(), is_link, item))
-            })
-            .collect::<Vec<_>>();
+                    self.store(VecItem::ContentHint('\n'))
+                }
+                FrameItem::Tag(Tag::End(..)) => return None,
+                #[cfg(not(feature = "no-content-hint"))]
+                FrameItem::ContentHint(c) => self.store(VecItem::ContentHint(*c)),
+                // todo: support page label
+            };
+
+            Some(((*pos).into_typst(), is_link, item))
+        });
+        items.par_extend(items_iter);
 
         // swap link items
         items.sort_by(|x, y| {
@@ -753,6 +773,11 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
 
             if let Some(stroke) = &shape.stroke {
                 self.stroke(stateful_stroke, stroke, &mut styles);
+            }
+
+            match shape.fill_rule {
+                FillRule::NonZero => styles.push(PathStyle::FillRule("nonzero".into())),
+                FillRule::EvenOdd => styles.push(PathStyle::FillRule("evenodd".into())),
             }
 
             let mut shape_size = shape.geometry.bbox_size();

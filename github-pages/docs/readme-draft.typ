@@ -218,17 +218,24 @@ Import Typst.ts in your project:
 
 == Development (Build from source)
 
-==== Prerequisite
-
-- The font assets for Typst.ts are not included in this repository. See [Download Font Assets](./docs/download-font-assets.md) for more information.
-
 === Renderer Example
 
+Note: you could build from source with/without wasm-pack.
+
+Note: see [Troubleshooting WASM Build](docs/troubleshooting-wasm-build.md) for (especially) *Arch Linux* users.
+
+Note: Since we use turborepo for `>=v0.4.0` development, if you are the earlier developer of `typst.ts`, please clean up all of your node_modules and dist folders before running the commands.
+
 ```shell
-$ cd packages/typst.ts && yarn install && yarn run build && yarn run link:local; cd ../..
-$ cargo run --bin typst-ts-dev-server -- run http --corpus ./fuzzers/corpora/
+# Install and build the renderer
+$ yarn install && yarn build:pkg
+# Build the example artifacts
+$ yarn corpus
+# Run development server
+$ yarn dev
 ```
 
-And open `http://localhost:8075` in your browser.
+And open `http://127.0.0.1:20810` in your browser.
 
-You can also run `yarn run build-wrapper` instead of `yarn run build && yarn run link:local` to avoid building the WASM modules from source..
+You can also run `yarn run build:core` instead of `yarn run build:pkg` to build
+core library (`@myriaddreamin/typst.ts`) and avoid building the WASM modules from source.

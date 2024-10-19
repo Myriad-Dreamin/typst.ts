@@ -209,10 +209,10 @@ where
             let _ = self.reporter.export(world, rep);
         }
 
-        let tracer = env.tracer.take();
-        let origin = tracer.is_some();
+        let sink = env.sink.take();
+        let origin = sink.is_some();
 
-        env.tracer = Some(tracer.unwrap_or_default());
+        env.sink = Some(sink.unwrap_or_default());
 
         let doc = self.inner_mut().compile(world, env);
 
@@ -222,7 +222,7 @@ where
 
         let doc = match doc {
             Ok(doc) => {
-                let warnings = env.tracer.as_ref().unwrap().clone().warnings();
+                let warnings = env.sink.as_ref().unwrap().clone().warnings();
                 if warnings.is_empty() {
                     rep = CompileReport::CompileSuccess(id, warnings, elapsed);
                 } else {
@@ -238,7 +238,7 @@ where
         };
 
         if !origin {
-            env.tracer = None;
+            env.sink = None;
         }
 
         let rep = Arc::new((env.features.clone(), rep));

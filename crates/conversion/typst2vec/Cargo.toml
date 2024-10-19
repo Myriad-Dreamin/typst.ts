@@ -10,7 +10,7 @@ repository.workspace = true
 [dependencies]
 typst.workspace = true
 
-reflexo.workspace = true
+reflexo = { workspace = true, features = ["typst"] }
 comemo.workspace = true
 ttf-parser.workspace = true
 crossbeam-queue = "0.3.10"

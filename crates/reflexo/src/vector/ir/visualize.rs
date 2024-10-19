@@ -115,6 +115,10 @@ pub enum PathStyle {
     /// `stroke-width` attribute.
     /// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/stroke-width>
     StrokeWidth(Abs),
+
+    /// `fill-rule` attribute.
+    /// See <https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/fill-rule>
+    FillRule(ImmutStr),
 }
 
 /// Item representing an `<pattern/>` element.

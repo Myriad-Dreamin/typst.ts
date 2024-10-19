@@ -8,7 +8,6 @@ pub use reflexo_typst::*;
 use core::fmt;
 use std::{fmt::Write, path::Path, sync::Arc};
 
-use comemo::Prehashed;
 use error::TypstSourceDiagnostic;
 use font::cache::FontInfoCache;
 use js_sys::{Array, JsString, Uint32Array, Uint8Array};
@@ -157,7 +156,7 @@ impl TypstCompiler {
             .collect();
         self.driver
             .universe_mut()
-            .increment_revision(|verse| verse.set_inputs(Arc::new(Prehashed::new(inputs))));
+            .increment_revision(|verse| verse.set_inputs(Arc::new(LazyHash::new(inputs))));
         Ok(())
     }
 
@@ -220,6 +219,8 @@ impl TypstCompiler {
 
         // export ast
         let src = world.main();
+        let src = world.source(src).unwrap();
+
         let mut cursor = std::io::Cursor::new(Vec::new());
         reflexo_typst::dump_ast(
             &src.id().vpath().as_rootless_path().display().to_string(),
@@ -229,7 +230,7 @@ impl TypstCompiler {
         .map_err(|e| format!("{e:?}"))?;
         let data = cursor.into_inner();
 
-        let converted = ansi_to_html::convert_escaped(
+        let converted = ansi_to_html::convert(
             String::from_utf8(data)
                 .map_err(|e| format!("{e:?}"))?
                 .as_str(),
@@ -264,7 +265,7 @@ impl TypstCompiler {
                     return Err(error_once!("Unsupported offset encoding", offset_encoding: offset_encoding).into());
                 }
             },
-        );
+        )?;
         let mut result = Vec::new();
         for token in tokens.iter() {
             result.push(token.delta_line);
@@ -348,7 +349,7 @@ impl TypstCompiler {
         let mapped: Vec<_> = elements
             .into_iter()
             .filter_map(|c| match &field {
-                Some(field) => c.get_by_name(field),
+                Some(field) => c.get_by_name(field).ok(),
                 _ => Some(c.into_value()),
             })
             .collect();

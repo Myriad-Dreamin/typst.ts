@@ -40,14 +40,13 @@ impl FullTextDigest {
     fn export_item(f: &mut fmt::Formatter<'_>, item: &typst::layout::FrameItem) -> fmt::Result {
         #[cfg(not(feature = "no-content-hint"))]
         use std::fmt::Write;
-        use typst::introspection::Meta::*;
         use typst::layout::FrameItem::*;
         match item {
             Group(g) => Self::export_frame(f, &g.frame),
             Text(t) => f.write_str(t.text.as_str()),
             #[cfg(not(feature = "no-content-hint"))]
-            Meta(ContentHint(c), _) => f.write_char(*c),
-            Meta(Link(..) | Elem(..) | Hide, _) | Shape(..) | Image(..) => Ok(()),
+            ContentHint(c) => f.write_char(*c),
+            Link(..) | Tag(..) | Shape(..) | Image(..) => Ok(()),
         }
     }
 }

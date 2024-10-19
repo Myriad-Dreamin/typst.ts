@@ -26,7 +26,8 @@ pub fn retrieve(world: &dyn World, selector: &str, document: &Document) -> StrRe
         }
         message
     })?
-    .cast::<LocatableSelector>()?;
+    .cast::<LocatableSelector>()
+    .map_err(|e| EcoString::from(format!("failed to cast: {}", e.message())))?;
 
     Ok(document
         .introspector
