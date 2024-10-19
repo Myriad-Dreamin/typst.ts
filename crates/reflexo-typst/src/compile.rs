@@ -320,14 +320,11 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
 
     fn snapshot(&self, is_once: bool, reason: CompileReasons) -> CompileSnapshot<F> {
         let world = self.verse.snapshot();
-        let mut env = self.make_env(if is_once {
+        let env = self.make_env(if is_once {
             self.once_feature_set.clone()
         } else {
             self.watch_feature_set.clone()
         });
-        if env.sink.is_none() {
-            env.sink = Some(Default::default());
-        }
         CompileSnapshot {
             world: Arc::new(world.clone()),
             env: env.clone(),
@@ -397,19 +394,9 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
             }
 
             let elapsed = start.elapsed().unwrap_or_default();
-            let rep;
-            match &compiled.doc {
-                Ok(..) => {
-                    let warnings = compiled.env.sink.as_ref().unwrap().clone().warnings();
-                    if warnings.is_empty() {
-                        rep = CompileReport::CompileSuccess(id, warnings, elapsed);
-                    } else {
-                        rep = CompileReport::CompileWarning(id, warnings, elapsed);
-                    }
-                }
-                Err(err) => {
-                    rep = CompileReport::CompileError(id, err.clone(), elapsed);
-                }
+            let rep = match &compiled.doc {
+                Ok(..) => CompileReport::CompileSuccess(id, compiled.warnings.clone(), elapsed),
+                Err(err) => CompileReport::CompileError(id, err.clone(), elapsed),
             };
 
             let _ = ConsoleDiagReporter::default().export(

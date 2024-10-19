@@ -137,7 +137,7 @@ where
             // todo: log in browser compiler
             #[cfg(feature = "system-compile")]
             if _err.is_err() {
-                log::error!("failed to print diagnostics: {:?}", _err);
+                log::error!("failed to print diagnostics: {_err:?}");
             }
         }
 

@@ -61,7 +61,7 @@ pub fn test_compiler(
             driver.compile(&mut Default::default())
         })
         .unwrap();
-    let server_delta = incr_server.pack_delta(doc);
+    let server_delta = incr_server.pack_delta(doc.output);
     let server_delta = BytesModuleStream::from_slice(&server_delta).checkout_owned();
     incr_client.merge_delta(server_delta);
     let _ = incr_svg_client.render_in_window(&mut incr_client, window);
@@ -78,7 +78,7 @@ pub fn test_compiler(
             })
             .unwrap();
 
-        let server_delta = incr_server.pack_delta(doc);
+        let server_delta = incr_server.pack_delta(doc.output);
         let sd = server_delta.len();
         let server_delta = BytesModuleStream::from_slice(&server_delta).checkout_owned();
         incr_client.merge_delta(server_delta);

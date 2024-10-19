@@ -32,6 +32,7 @@ fn compile(driver: &CompileDriver, src: &str) -> Arc<TypstDocument> {
             std::marker::PhantomData.compile(&this.snapshot(), &mut Default::default())
         })
         .unwrap()
+        .output
 }
 
 fn main() {

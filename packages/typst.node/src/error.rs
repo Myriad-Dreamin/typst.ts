@@ -3,6 +3,7 @@ use std::{cell::OnceCell, fmt::Write, sync::Arc};
 
 use napi_derive::napi;
 use reflexo_typst::error::{long_diag_from_std, prelude::WithContext, TypstSourceDiagnostic};
+use reflexo_typst::typst::diag::Warned;
 use reflexo_typst::typst::prelude::*;
 use reflexo_typst::{TypstDocument, TypstWorld};
 
@@ -176,15 +177,19 @@ impl NodeTypstCompileResult {
     }
 }
 
-impl<E> From<Result<Arc<TypstDocument>, E>> for NodeTypstCompileResult
+impl<E> From<Result<Warned<Arc<TypstDocument>>, E>> for NodeTypstCompileResult
 where
     E: Into<NodeError>,
 {
-    fn from(res: Result<Arc<TypstDocument>, E>) -> Self {
+    fn from(res: Result<Warned<Arc<TypstDocument>>, E>) -> Self {
         match res {
             Ok(result) => NodeTypstCompileResult {
-                result: Some(NodeTypstDocument(result)),
-                error: None,
+                result: Some(NodeTypstDocument(result.output)),
+                error: if result.warnings.is_empty() {
+                    None
+                } else {
+                    Some(result.warnings.into())
+                },
             },
             Err(e) => NodeTypstCompileResult {
                 result: None,

@@ -5,7 +5,7 @@ use std::{
 
 use reflexo_world::DETACHED_ENTRY;
 use typst::{
-    diag::{eco_format, EcoString, SourceResult},
+    diag::{eco_format, EcoString, SourceResult, Warned},
     foundations::Content,
 };
 
@@ -47,7 +47,7 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> CompileDriverImpl<C, F>
         self.compiler.query(&self.snapshot(), selector, document)
     }
 
-    pub fn compile(&mut self, env: &mut CompileEnv) -> SourceResult<Arc<TypstDocument>> {
+    pub fn compile(&mut self, env: &mut CompileEnv) -> SourceResult<Warned<Arc<TypstDocument>>> {
         let world = self.snapshot();
         self.compiler.ensure_main(&world)?;
         self.compiler.compile(&world, env)

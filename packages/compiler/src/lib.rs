@@ -312,8 +312,11 @@ impl TypstCompiler {
             &world,
             self.driver.compile(&mut Default::default())
         );
-        let artifact_bytes =
-            take_diag!(diagnostics_format, &world, vec_exporter.export(&world, doc));
+        let artifact_bytes = take_diag!(
+            diagnostics_format,
+            &world,
+            vec_exporter.export(&world, doc.output)
+        );
 
         let v: JsValue = Uint8Array::from(artifact_bytes.as_slice()).into();
 
@@ -343,7 +346,7 @@ impl TypstCompiler {
             .map_err(|e| format!("{e:?}"))?;
         let elements: Vec<typst::foundations::Content> = self
             .driver
-            .query(selector, &doc)
+            .query(selector, &doc.output)
             .map_err(|e| format!("{e:?}"))?;
 
         let mapped: Vec<_> = elements
@@ -393,7 +396,7 @@ impl TypstCompiler {
             self.driver.compile(&mut Default::default())
         );
 
-        let v = Uint8Array::from(state.update(doc).as_slice()).into();
+        let v = Uint8Array::from(state.update(doc.output).as_slice()).into();
         Ok(if diagnostics_format != 0 {
             let result = js_sys::Object::new();
             js_sys::Reflect::set(&result, &"result".into(), &v)?;

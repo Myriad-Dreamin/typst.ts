@@ -5,10 +5,10 @@ use std::{
     sync::Arc,
 };
 
-use reflexo_typst::config::entry::MEMORY_MAIN_ENTRY;
 use reflexo_typst::error::{prelude::*, TypstSourceDiagnostic};
 use reflexo_typst::foundations::Content;
 use reflexo_typst::typst::prelude::*;
+use reflexo_typst::{config::entry::MEMORY_MAIN_ENTRY, typst::diag::Warned};
 use reflexo_typst::{
     error_once, Bytes, CompileDriver, CompileEnv, Compiler, EntryManager, EntryReader,
     PureCompiler, ShadowApi, TaskInputs, TypstDocument, TypstSystemWorld,
@@ -144,7 +144,7 @@ impl Compiler for BoxedCompiler {
         &mut self,
         world: &TypstSystemWorld,
         env: &mut CompileEnv,
-    ) -> SourceResult<Arc<TypstDocument>> {
+    ) -> SourceResult<Warned<Arc<TypstDocument>>> {
         self.0.compiler.pure_compile(world, env)
     }
 
@@ -163,7 +163,7 @@ impl Compiler for BoxedCompiler {
         &mut self,
         world: &TypstSystemWorld,
         env: &mut CompileEnv,
-    ) -> SourceResult<Arc<TypstDocument>> {
+    ) -> SourceResult<Warned<Arc<TypstDocument>>> {
         self.0.compiler.compile(world, env)
     }
 
