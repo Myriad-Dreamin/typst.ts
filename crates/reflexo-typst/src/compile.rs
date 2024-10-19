@@ -340,8 +340,6 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
 
     /// Compile the document once.
     pub async fn compile_once(&mut self) -> CompiledArtifact<F> {
-        // let e = Arc::new(self.snapshot(true, reason_by_fs()));
-        // e.compile()
         self.run_compile(reason_by_entry_change(), &mut vec![], true)
             .unwrap()
     }

@@ -64,7 +64,7 @@ export const TypstDocument = ({
 				format: "vector",
 				backgroundColor: fill || "#ffffff",
 				container: divElem,
-				pixelPerPt: 8,
+				pixelPerPt: 3,
 			});
 		};
 

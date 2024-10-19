@@ -131,7 +131,7 @@ export const TypstDocument = ({ fill, artifact, format }: TypstDocumentProps) =>
         format: 'vector',
         backgroundColor: fill,
         container: divElem,
-        pixelPerPt: 8,
+        pixelPerPt: 3,
       });
     };
 

@@ -42,7 +42,7 @@ export class TypstDocumentComponent {
             format: 'vector',
             backgroundColor: this.fill,
             container: displayDiv,
-            pixelPerPt: 8,
+            pixelPerPt: 3,
           });
           return;
         };
