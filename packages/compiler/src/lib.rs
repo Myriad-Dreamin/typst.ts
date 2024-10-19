@@ -17,6 +17,7 @@ use reflexo_typst::package::browser::ProxyRegistry;
 use reflexo_typst::parser::OffsetEncoding;
 use reflexo_typst::typst::{foundations::IntoValue, prelude::EcoVec};
 use reflexo_typst::vfs::browser::ProxyAccessModel;
+use typst::diag::SourceResult;
 use wasm_bindgen::prelude::*;
 
 use crate::{incr::IncrServer, utils::console_log};
@@ -329,16 +330,34 @@ impl TypstCompiler {
         })
     }
 
+    pub fn set_compiler_options(
+        &mut self,
+        main_file_path: String,
+        inputs: Option<Vec<js_sys::Array>>,
+    ) -> Result<(), JsValue> {
+        self.driver
+            .universe
+            .increment_revision(|verse| -> SourceResult<()> {
+                verse.set_entry_file(Path::new(&main_file_path).into())?;
+
+                if let Some(inputs) = inputs {
+                    verse.set_inputs(Arc::new(LazyHash::new(convert_inputs(&inputs))));
+                }
+
+                Ok(())
+            })
+            .map_err(|e| format!("{e:?}"))?;
+        Ok(())
+    }
+
     pub fn query(
         &mut self,
         main_file_path: String,
+        inputs: Option<Vec<js_sys::Array>>,
         selector: String,
         field: Option<String>,
     ) -> Result<String, JsValue> {
-        self.driver
-            .universe_mut()
-            .increment_revision(|verse| verse.set_entry_file(Path::new(&main_file_path).into()))
-            .map_err(|e| format!("{e:?}"))?;
+        self.set_compiler_options(main_file_path, inputs)?;
 
         let doc = self
             .driver
@@ -363,14 +382,11 @@ impl TypstCompiler {
     pub fn compile(
         &mut self,
         main_file_path: String,
+        inputs: Option<Vec<js_sys::Array>>,
         fmt: String,
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
-        self.driver
-            .universe
-            .increment_revision(|verse| verse.set_entry_file(Path::new(&main_file_path).into()))
-            .map_err(|e| format!("{e:?}"))?;
-
+        self.set_compiler_options(main_file_path, inputs)?;
         self.get_artifact(fmt, diagnostics_format)
     }
 
@@ -381,14 +397,11 @@ impl TypstCompiler {
     pub fn incr_compile(
         &mut self,
         main_file_path: String,
+        inputs: Option<Vec<js_sys::Array>>,
         state: &mut IncrServer,
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
-        self.driver
-            .universe
-            .increment_revision(|verse| verse.set_entry_file(Path::new(&main_file_path).into()))
-            .map_err(|e| format!("{e:?}"))?;
-
+        self.set_compiler_options(main_file_path, inputs)?;
         let world = self.driver.snapshot();
         let doc = take_diag!(
             diagnostics_format,
@@ -405,6 +418,19 @@ impl TypstCompiler {
             v
         })
     }
+}
+
+// Convert the input pairs to a dictionary.
+fn convert_inputs(inputs: &[js_sys::Array]) -> typst::foundations::Dict {
+    inputs
+        .iter()
+        .map(|j| {
+            (
+                j.get(0).as_string().unwrap_or_default().into(),
+                j.get(1).as_string().into_value(),
+            )
+        })
+        .collect()
 }
 
 #[cfg(test)]

@@ -23,10 +23,23 @@ import { randstr } from '../utils.mjs';
  */
 type PromiseJust<T> = (() => Promise<T>) | T;
 
+interface CompileOptionsCommon {
+  /**
+   * Adds a string key-value pair visible through `sys.inputs`
+   *
+   * Note: pass `{}` to clear `sys.inputs`
+   *
+   * Note: When passing `undefined`, compiler will use last set `sys.inputs`.
+   *
+   * Note: This means you should always specify inputs when using compiler for concurrent tasks.
+   */
+  inputs?: Record<string, string>;
+}
+
 /**
  * The sweet options for compiling and rendering the document.
  */
-export type SweetCompileOptions =
+export type SweetCompileOptions = (
   | {
       /**
        * The path of the main file.
@@ -38,7 +51,9 @@ export type SweetCompileOptions =
        * The source content of the main file.
        */
       mainContent: string;
-    };
+    }
+) &
+  CompileOptionsCommon;
 
 /**
  * The sweet options for compiling and rendering the document.
@@ -466,7 +481,7 @@ export class TypstSnippet {
     } else {
       const destFile = `/tmp/${randstr()}.typ`;
       await this.addSource(destFile, opts.mainContent);
-      return { mainFilePath: destFile, diagnostics: 'none' };
+      return { mainFilePath: destFile, inputs: opts.inputs, diagnostics: 'none' };
     }
   }
 
