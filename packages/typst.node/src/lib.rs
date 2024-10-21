@@ -402,7 +402,7 @@ impl DynLayoutCompiler {
     #[napi]
     pub fn set_layout_widths(&mut self, layout_widths: Vec<f64>) {
         self.driver
-            .set_layout_widths(layout_widths.into_iter().map(TypstAbs::raw).collect());
+            .set_layout_widths(layout_widths.into_iter().map(TypstAbs::pt).collect());
     }
 
     /// Exports the document as a vector IR containing multiple layouts.
