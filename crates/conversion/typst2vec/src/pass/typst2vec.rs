@@ -384,8 +384,6 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                     self.store(VecItem::ContentHint('\n'))
                 }
                 FrameItem::Tag(Tag::End(..)) => return None,
-                #[cfg(not(feature = "no-content-hint"))]
-                FrameItem::ContentHint(c) => self.store(VecItem::ContentHint(*c)),
                 // todo: support page label
             };
 
@@ -409,6 +407,15 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
 
             std::cmp::Ordering::Equal
         });
+
+        #[cfg(not(feature = "no-content-hint"))]
+        {
+            let c = frame.content_hint();
+            if c != '\0' {
+                // todo: cache content hint
+                items.push((Point::default(), false, self.store(VecItem::ContentHint(c))));
+            }
+        }
 
         let g = self.store(VecItem::Group(GroupRef(
             items.into_iter().map(|(x, _, y)| (x, y)).collect(),

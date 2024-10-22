@@ -33,19 +33,23 @@ impl FullTextDigest {
         for (_, item) in doc.items() {
             Self::export_item(f, item)?;
         }
+        #[cfg(not(feature = "no-content-hint"))]
+        {
+            use std::fmt::Write;
+            let c = doc.content_hint();
+            if c != '\0' {
+                f.write_char(c)?;
+            }
+        }
 
         Ok(())
     }
 
     fn export_item(f: &mut fmt::Formatter<'_>, item: &typst::layout::FrameItem) -> fmt::Result {
-        #[cfg(not(feature = "no-content-hint"))]
-        use std::fmt::Write;
         use typst::layout::FrameItem::*;
         match item {
             Group(g) => Self::export_frame(f, &g.frame),
             Text(t) => f.write_str(t.text.as_str()),
-            #[cfg(not(feature = "no-content-hint"))]
-            ContentHint(c) => f.write_char(*c),
             Link(..) | Tag(..) | Shape(..) | Image(..) => Ok(()),
         }
     }
