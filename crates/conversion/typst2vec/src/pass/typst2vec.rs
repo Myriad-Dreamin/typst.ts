@@ -20,6 +20,7 @@ use typst::{
         Size, Transform as TypstTransform,
     },
     model::{Destination, Document as TypstDocument},
+    syntax::Span,
     text::TextItem as TypstTextItem,
     visualize::{
         FillRule, FixedStroke, Geometry, Gradient, Image as TypstImage, LineCap, LineJoin, Paint,
@@ -249,8 +250,8 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         }
         let state = state;
 
-        let mut items =
-            Vec::with_capacity(frame.items().len() + if fill.is_some() { 1 } else { 0 });
+        let fill_adjust = if fill.is_some() { 1 } else { 0 };
+        let mut items = Vec::with_capacity(frame.items().len() + fill_adjust);
         if let Some(fill) = fill {
             let shape = Shape {
                 geometry: Geometry::Rect(frame.size()),
@@ -259,11 +260,20 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                 stroke: None,
             };
 
-            items.push((Point::default(), false, self.shape(state, &shape)));
+            let fg = self.shape(state, &shape);
+            items.push((Point::default(), false, fg));
+
+            self.spans.push_span(SourceRegion {
+                region: src_reg,
+                idx: 0,
+                kind: SourceNodeKind::Shape(Span::detached()),
+                item: fg,
+            });
         }
 
         let items_iter = frame.items().as_slice().par_iter().enumerate();
         let items_iter = items_iter.flat_map(|(idx, (pos, item))| {
+            let idx = fill_adjust + idx;
             let mut is_link = false;
             let state = state.pre_translate((*pos).into_typst());
             let item = match item {
