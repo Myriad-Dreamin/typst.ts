@@ -86,7 +86,7 @@ impl LigatureResolver {
                 .into_iter()
                 .map(|g| {
                     self.rev_cmap.get(&g).unwrap_or_else(|| {
-                        println!("ligature component not found: {:?} {:?}", g, face);
+                        log::debug!("ligature component not found: {:?} {:?}", g, face);
                         &' '
                     })
                 })

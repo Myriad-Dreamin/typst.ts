@@ -293,7 +293,7 @@ impl<F: CompilerFeat + 'static> CompileSnapshot<F> {
                 }
             }
             if let Some(inputs) = &inputs.inputs {
-                if inputs.clone() != self.world.inputs() {
+                if inputs != self.world.inputs() {
                     break 'check_changed;
                 }
             }
@@ -301,7 +301,7 @@ impl<F: CompilerFeat + 'static> CompileSnapshot<F> {
             return self;
         };
 
-        self.world = Arc::new(self.world.task(inputs));
+        self.world = Arc::new(self.world.snapshot_with(inputs));
         self.doc_state = Arc::new(OnceLock::new());
 
         self

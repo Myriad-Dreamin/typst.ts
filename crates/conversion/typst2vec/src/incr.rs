@@ -62,7 +62,7 @@ impl IncrDocServer {
                 .map(|i| i.1 .0)
                 .min()
                 .unwrap_or(0);
-            println!(
+            log::info!(
                 "gc[{}]: max: {}, min: {}, remove: {}",
                 self.typst2vec.lifetime,
                 self.typst2vec

@@ -225,6 +225,12 @@ impl<M: AccessModel + Sized> fmt::Debug for Vfs<M> {
     }
 }
 
+impl<M: AccessModel + Clone + Sized> Clone for Vfs<M> {
+    fn clone(&self) -> Self {
+        self.snapshot()
+    }
+}
+
 impl<M: AccessModel + Clone + Sized> Vfs<M> {
     pub fn snapshot(&self) -> Self {
         Self {

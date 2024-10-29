@@ -13,7 +13,7 @@ use crate::package::browser::ProxyRegistry;
 pub type TypstBrowserUniverse = crate::world::CompilerUniverse<BrowserCompilerFeat>;
 pub type TypstBrowserWorld = crate::world::CompilerWorld<BrowserCompilerFeat>;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct BrowserCompilerFeat;
 
 impl crate::CompilerFeat for BrowserCompilerFeat {

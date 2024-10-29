@@ -3109,6 +3109,7 @@ name = "reflexo-vec2bbox"
 version = "0.5.0-rc8"
 dependencies = [
  "comemo",
+ "log",
  "reflexo",
  "svgtypes",
  "tiny-skia",
@@ -4828,6 +4829,7 @@ dependencies = [
  "console_error_panic_hook",
  "hex",
  "js-sys",
+ "log",
  "reflexo-typst",
  "reflexo-typst2vec",
  "reflexo-vec2svg",

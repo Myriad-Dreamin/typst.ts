@@ -10,7 +10,7 @@ use std::{
 };
 
 use reflexo_vfs::notify::UpstreamUpdateEvent;
-use reflexo_world::{EntryReader, Revising, TaskInputs};
+use reflexo_world::{EntryManager, EntryReader, Revising, TaskInputs};
 use tokio::sync::{mpsc, oneshot};
 
 use crate::{exporter::GenericExporter, ExportSignal, TypstDocument};
@@ -326,7 +326,7 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
             self.watch_feature_set.clone()
         });
         CompileSnapshot {
-            world: Arc::new(world.clone()),
+            world: Arc::new(world.snapshot()),
             env: env.clone(),
             flags: ExportSignal {
                 by_entry_update: reason.by_entry_update,
@@ -468,7 +468,7 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
                 if self
                     .watch_snap
                     .get()
-                    .is_some_and(|e| e.world.revision() < *self.verse.revision.read())
+                    .is_some_and(|e| e.world.revision() < self.verse.revision())
                 {
                     self.watch_snap = OnceLock::new();
                 }
@@ -484,18 +484,16 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
                 unreachable!()
             }
             Interrupt::ChangeTask(change) => {
-                self.verse.increment_revision(|verse| {
-                    if let Some(inputs) = change.inputs {
-                        verse.set_inputs(inputs);
-                    }
+                if let Some(inputs) = change.inputs {
+                    self.verse.set_inputs(inputs);
+                }
 
-                    if let Some(entry) = change.entry.clone() {
-                        let res = verse.mutate_entry(entry);
-                        if let Err(err) = res {
-                            log::error!("CompileActor: change entry error: {err:?}");
-                        }
+                if let Some(entry) = change.entry.clone() {
+                    let res = self.verse.mutate_entry(entry);
+                    if let Err(err) = res {
+                        log::error!("CompileActor: change entry error: {err:?}");
                     }
-                });
+                }
 
                 // After incrementing the revision
                 if let Some(entry) = change.entry {
@@ -503,7 +501,7 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
                     if self.suspended {
                         log::info!("CompileActor: removing diag");
                         self.compile_handle
-                            .status(self.verse.revision.get_mut().get(), CompileReport::Suspend);
+                            .status(self.verse.revision().get(), CompileReport::Suspend);
                     }
 
                     // Reset the watch state and document state.

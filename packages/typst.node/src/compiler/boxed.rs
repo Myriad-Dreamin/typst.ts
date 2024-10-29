@@ -104,10 +104,10 @@ impl BoxedCompiler {
         // Convert the input pairs to a dictionary.
         let inputs = compile_by.inputs.map(create_inputs);
 
-        Ok(self.universe.snapshot_with(Some(TaskInputs {
+        Ok(self.universe.snapshot_with(TaskInputs {
             entry: new_state,
             inputs,
-        })))
+        }))
     }
 
     pub fn compile_raw(

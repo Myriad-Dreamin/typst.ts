@@ -173,7 +173,7 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<F
             let instant = reflexo::time::Instant::now();
             // replace layout
 
-            let world = world.task(TaskInputs {
+            let world = world.snapshot_with(TaskInputs {
                 inputs: Some({
                     let mut dict = TypstDict::new();
                     dict.insert("x-page-width".into(), current_width.into_value());

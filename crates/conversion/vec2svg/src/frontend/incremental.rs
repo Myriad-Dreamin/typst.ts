@@ -65,9 +65,6 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
             }
         }
 
-        // println!("reusable: {:?}", reusable);
-        // println!("unused_prev: {:?}", unused_prev);
-
         for Page {
             content: entry,
             size: size_f32,
@@ -84,7 +81,6 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
 
             if *entry == NULL_PAGE {
                 attributes.push(("data-dummy", "1".into()));
-                // println!("reuse page: {} {:?}", idx, entry);
                 svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
                     attributes,
                     content: vec![],
@@ -93,11 +89,9 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
                 acc_height += size.y;
                 continue;
             }
-            // println!("page: {} {:?} {:?}", acc_height, entry, EMPTY_PAGE);
 
             if reusable.contains(entry) {
                 attributes.push(("data-reuse-from", entry.as_svg_id("p")));
-                // println!("reuse page: {} {:?}", idx, entry);
                 svg_body.push(SvgText::Content(Arc::new(SvgTextNode {
                     attributes,
                     content: vec![],
@@ -109,13 +103,11 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
 
             // todo: evaluate simlarity
             let item = if let Some(prev_entry) = unused_prev.pop_first().map(|(_, v)| v) {
-                // println!("diff page: {} {:?} {:?}", idx, entry, prev_entry);
                 attributes.push(("data-reuse-from", prev_entry.as_svg_id("p")));
 
                 render_task.render_diff_item(entry, &prev_entry)
             } else {
                 // todo: find a bbox
-                // println!("rebuild page: {} {:?}", idx, entry);
                 render_task.render_item(entry)
             };
 

@@ -20,7 +20,6 @@ impl SvgGlyphBuilder {
     }
 
     fn render_ligature_attr(ll: u8) -> String {
-        // println!("ligature len: {}", ll);
         if ll > 0 {
             format!(r#" data-liga-len="{}""#, ll)
         } else {

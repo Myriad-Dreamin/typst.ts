@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 
 comemo.workspace = true
+log.workspace = true
 reflexo = { workspace = true, features = ["typst"] }
 
 svgtypes.workspace = true

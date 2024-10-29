@@ -23,6 +23,7 @@ pub trait EntryManager: EntryReader {
         Ok(())
     }
 
+    /// Mutate the entry state and return the old state.
     fn mutate_entry(&mut self, state: EntryState) -> SourceResult<EntryState>;
 }
 

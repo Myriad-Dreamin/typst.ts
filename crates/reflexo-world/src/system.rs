@@ -11,7 +11,7 @@ use crate::{
 };
 
 /// type trait of [`TypstSystemWorld`].
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct SystemCompilerFeat;
 
 impl crate::CompilerFeat for SystemCompilerFeat {

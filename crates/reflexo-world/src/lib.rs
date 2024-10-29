@@ -1,5 +1,3 @@
-pub mod source;
-
 pub mod config;
 
 pub mod entry;
@@ -140,7 +138,7 @@ type CodespanResult<T> = Result<T, CodespanError>;
 type CodespanError = codespan_reporting::files::Error;
 
 /// type trait interface of [`CompilerWorld`].
-pub trait CompilerFeat {
+pub trait CompilerFeat: Clone + Default {
     /// Specify the font resolver for typst compiler.
     type FontResolver: FontResolver + Send + Sync + Sized;
     /// Specify the access model for VFS.
