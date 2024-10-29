@@ -259,7 +259,7 @@ impl ConvertInnerImpl {
         let ascender = font
             .metrics()
             .ascender
-            .at(typst::layout::Abs::raw(font.metrics().units_per_em))
+            .at(typst::layout::Abs::pt(font.metrics().units_per_em))
             .to_f32();
 
         Some(Arc::new(ir::ImageGlyphItem {
@@ -293,7 +293,7 @@ impl ConvertInnerImpl {
 
         let w = glyph_image.width();
         let h = glyph_image.height();
-        let sz = Size::new(typst::layout::Abs::raw(w), typst::layout::Abs::raw(h));
+        let sz = Size::new(typst::layout::Abs::pt(w), typst::layout::Abs::pt(h));
 
         let image = ir::ImageItem {
             image: Arc::new(glyph_image.into_typst()),
@@ -307,7 +307,7 @@ impl ConvertInnerImpl {
         // let adjusted = font.metrics().ascender;
 
         let adjusted = adjusted
-            .at(typst::layout::Abs::raw(font.metrics().units_per_em))
+            .at(typst::layout::Abs::pt(font.metrics().units_per_em))
             .to_f32();
 
         let ts = sk::Transform::from_scale(upem / w as f32, -upem / h as f32);
@@ -404,7 +404,7 @@ impl ConvertInnerImpl {
         // > `  <svg> <defs> <use #glyph{id}> </svg>`
         // See: <https://learn.microsoft.com/en-us/typography/opentype/spec/svg#glyph-identifiers>
 
-        let upem = typst::layout::Abs::raw(font.units_per_em());
+        let upem = typst::layout::Abs::pt(font.units_per_em());
         let (width, height) = (upem.to_f32(), upem.to_f32());
         let origin_ascender = font_metrics.ascender.at(upem).to_f32();
 
@@ -458,8 +458,8 @@ impl ConvertInnerImpl {
         .ok()?;
 
         let sz = Size::new(
-            typst::layout::Abs::raw(glyph_image.width()),
-            typst::layout::Abs::raw(glyph_image.height()),
+            typst::layout::Abs::pt(glyph_image.width()),
+            typst::layout::Abs::pt(glyph_image.height()),
         );
 
         Some(ir::ImageItem {
