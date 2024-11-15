@@ -1,6 +1,6 @@
 {
-  "name": "typst-ts-solid",
-  "version": "1.0.0",
+  "name": "@myriaddreamin/typst.solid",
+  "version": "0.5.0-rc9",
   "description": "A SolidJS package for Typst integration.",
   "type": "module",
   "exports": {
