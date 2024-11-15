@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/rehype-typst",
-  "version": "0.5.0-rc8",
+  "version": "0.5.0-rc9",
   "description": "rehype plugin for rendering typst math equations",
   "main": "index.js",
   "license": "MIT",
@@ -17,7 +17,7 @@
     "publish:lib": "npm publish --access public"
   },
   "dependencies": {
-    "@myriaddreamin/typst-ts-node-compiler": "^0.5.0-rc8",
+    "@myriaddreamin/typst-ts-node-compiler": "^0.5.0-rc9",
     "@types/hast": "^3.0.0",
     "@types/katex": "^0.16.0",
     "hast-util-from-html-isomorphic": "^2.0.0",

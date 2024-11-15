@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst-ts-node-compiler-linux-arm-gnueabihf",
-  "version": "0.5.0-rc8",
+  "version": "0.5.0-rc9",
   "os": [
     "linux"
   ],
