@@ -50,7 +50,7 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
       - name: Download & install shiroa
         run: |
-          curl -L https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.2.0-nightly4/shiroa-x86_64-unknown-linux-gnu.tar.gz | tar -xvz
+          curl -L https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.2.0-nightly5/shiroa-x86_64-unknown-linux-gnu.tar.gz | tar -xvz
           chmod +x shiroa-x86_64-unknown-linux-gnu/bin/shiroa
           sudo cp shiroa-x86_64-unknown-linux-gnu/bin/shiroa /usr/bin/shiroa
       - name: Run sccache-cache
