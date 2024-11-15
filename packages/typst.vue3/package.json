@@ -8,7 +8,7 @@
     "dev": "vite -c vite.config.dev.ts",
     "build": "vite build",
     "publish:dry": "npm publish --dry-run --access public",
-    "publish:lib": "exit 0"
+    "publish:lib": "npm publish --access public || exit 0"
   },
   "peerDependencies": {
     "vue": "^3.4.31"
