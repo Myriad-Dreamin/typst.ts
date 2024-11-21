@@ -113,7 +113,7 @@ export default function rehypeTypst(options) {
         const defaultEm = 11;
         const height = parseFloat(root.children[0].properties['dataHeight']);
         const width = parseFloat(root.children[0].properties['dataWidth']);
-        const shift = height - result.baselinePosition;
+        const shift = height - result.baselinePosition + 2.8; /* line up baselines */
         const shiftEm = shift / defaultEm;
         root.children[0].properties.style = `vertical-align: -${shiftEm}em;`;
         root.children[0].properties.height = `${height / defaultEm}em`;
