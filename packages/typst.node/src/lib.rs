@@ -134,11 +134,23 @@ pub struct QueryDocArgs {
     pub field: Option<String>,
 }
 
+#[napi(string_enum)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq, Eq)]
+pub enum NodePdfStandard {
+    #[allow(non_camel_case_types)]
+    V_1_7,
+    #[allow(non_camel_case_types)]
+    A_2b,
+}
+
 /// Arguments to render a PDF.
 #[napi(object)]
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg(feature = "pdf")]
 pub struct RenderPdfOpts {
+    /// An optional PdfStandard to be used in the PDF.
+    pub pdf_standard: Option<NodePdfStandard>,
+
     /// An optional (creation) timestamp to be used in the PDF.
     ///
     /// This is used when you *enable auto timestamp* in the document.
@@ -345,14 +357,25 @@ impl NodeCompiler {
         compiled_or_by: MayCompileOpts,
         opts: Option<RenderPdfOpts>,
     ) -> Result<Buffer, NodeError> {
+        type PdfStandard = reflexo_typst::PdfStandard;
         type Exporter = reflexo_typst::PdfDocExporter;
+
         let e = if let Some(opts) = opts {
-            Exporter::default().with_ctime(
-                opts.creation_timestamp
-                    .map(parse_source_date_epoch)
-                    .transpose()?
-                    .and_then(convert_datetime),
-            )
+            let standard = match opts.pdf_standard {
+                Some(standard) if standard == NodePdfStandard::A_2b => PdfStandard::A_2b,
+                Some(standard) if standard == NodePdfStandard::V_1_7 => PdfStandard::V_1_7,
+                Some(_) => PdfStandard::V_1_7,
+                None => PdfStandard::V_1_7,
+            };
+
+            Exporter::default()
+                .with_ctime(
+                    opts.creation_timestamp
+                        .map(parse_source_date_epoch)
+                        .transpose()?
+                        .and_then(convert_datetime),
+                )
+                .with_standard(standard)
         } else {
             Exporter::default()
         };

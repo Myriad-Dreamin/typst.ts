@@ -1,6 +1,6 @@
 import test from 'ava';
 
-import { NodeCompiler } from '../index';
+import { NodeCompiler, NodePdfStandard } from '../index';
 
 // Switch to the current directory for the tests interacting with FS
 process.chdir(__dirname);
@@ -65,6 +65,26 @@ Hello, Typst! <my-label>
 `,
   }).result;
   t.truthy(doc && compiler.pdf(doc, { creationTimestamp: Date.now() }));
+});
+
+test('it pdf by compiled artifact and Pdf Standard 1.7', t => {
+  const compiler = NodeCompiler.create();
+  const doc = compiler.compile({
+    mainFileContent: `
+Hello, Typst! <my-label>
+`,
+  }).result;
+  t.truthy(doc && compiler.pdf(doc, { pdfStandard: NodePdfStandard.V_1_7 }));
+});
+
+test('it pdf by compiled artifact and Pdf Standard A2b', t => {
+  const compiler = NodeCompiler.create();
+  const doc = compiler.compile({
+    mainFileContent: `
+Hello, Typst! <my-label>
+`,
+  }).result;
+  t.truthy(doc && compiler.pdf(doc, { pdfStandard: NodePdfStandard.A_2b }));
 });
 
 test('it throws error`', t => {

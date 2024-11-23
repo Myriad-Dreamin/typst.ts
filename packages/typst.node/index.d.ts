@@ -197,6 +197,11 @@ export interface NodeAddFontPaths {
   fontPaths: Array<string>;
 }
 
+export const enum NodePdfStandard {
+  V_1_7 = 'V_1_7',
+  A_2b = 'A_2b',
+}
+
 /** Arguments to query the document. */
 export interface QueryDocArgs {
   /** The query selector. */
@@ -207,6 +212,8 @@ export interface QueryDocArgs {
 
 /** Arguments to render a PDF. */
 export interface RenderPdfOpts {
+  /** An optional PdfStandard to be used in the PDF. */
+  pdfStandard?: NodePdfStandard;
   /**
    * An optional (creation) timestamp to be used in the PDF.
    *
