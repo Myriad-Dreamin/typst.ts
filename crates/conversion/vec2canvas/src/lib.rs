@@ -219,12 +219,20 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, 't, Feat
             let upem = Scalar(font.units_per_em.0);
             let accender = Scalar(font.ascender.0) * upem;
 
+            // todo: glyphs like macron has zero width... why?
             let w = text.width();
 
-            CanvasBBox::Static(Box::new(Rect {
-                lo: Point::new(Scalar(0.), accender - upem),
-                hi: Point::new(w * upem / text.shape.size, accender),
-            }))
+            if text.shape.size.0 == 0. {
+                CanvasBBox::Static(Box::new(Rect {
+                    lo: Point::new(Scalar(0.), accender - upem),
+                    hi: Point::new(Scalar(0.), accender),
+                }))
+            } else {
+                CanvasBBox::Static(Box::new(Rect {
+                    lo: Point::new(Scalar(0.), accender - upem),
+                    hi: Point::new(w * upem / text.shape.size, accender),
+                }))
+            }
         };
         for style in &text.shape.styles {
             if let ir::PathStyle::Fill(fill) = style {
