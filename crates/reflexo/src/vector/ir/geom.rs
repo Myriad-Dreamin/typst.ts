@@ -362,8 +362,16 @@ impl Rect {
         }
     }
 
+    /// Returns whether the rectangle has no area.
     pub fn is_empty(&self) -> bool {
         self.lo.x >= self.hi.x || self.lo.y >= self.hi.y
+    }
+
+    /// Returns whether the rectangle is not well constructed.
+    ///
+    /// Note: This is not the same as `is_empty`.
+    pub fn is_intersected(&self) -> bool {
+        self.lo.x <= self.hi.x || self.lo.y <= self.hi.y
     }
 
     pub fn intersect(&self, other: &Self) -> Self {

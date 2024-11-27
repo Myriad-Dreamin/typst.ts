@@ -282,13 +282,17 @@ impl TypstElem {
         }
 
         let bbox = self.canvas.as_ref().unwrap().bbox_at(ts);
+        let should_visible = bbox
+            .map(|new_rect| new_rect.intersect(&viewport).is_intersected())
+            .unwrap_or(true);
         // web_sys::console::log_2(
         //     &"bbox".into(),
-        //     &format!("{:?} -> {:?} & {:?}", self.f.as_svg_id("g"), bbox,
-        // viewport).into(), );
-        let should_visible = bbox
-            .map(|new_rect| !new_rect.intersect(&viewport).is_empty())
-            .unwrap_or(true);
+        //     &format!(
+        //         "{:?} -> ({bbox:?} & {viewport:?}) = {should_visible}",
+        //         self.f.as_svg_id("g")
+        //     )
+        //     .into(),
+        // );
 
         if should_visible != self.is_svg_visible {
             let (x, y) = (&self.stub, &self.g);
