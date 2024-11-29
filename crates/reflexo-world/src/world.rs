@@ -36,7 +36,7 @@ pub struct Revising<'a, T> {
     pub inner: &'a mut T,
 }
 
-impl<'a, T> std::ops::Deref for Revising<'a, T> {
+impl<T> std::ops::Deref for Revising<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -44,13 +44,13 @@ impl<'a, T> std::ops::Deref for Revising<'a, T> {
     }
 }
 
-impl<'a, T> std::ops::DerefMut for Revising<'a, T> {
+impl<T> std::ops::DerefMut for Revising<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.inner
     }
 }
 
-impl<'a, F: CompilerFeat> Revising<'a, CompilerUniverse<F>> {
+impl<F: CompilerFeat> Revising<'_, CompilerUniverse<F>> {
     pub fn vfs(&mut self) -> &mut Vfs<F::AccessModel> {
         &mut self.inner.vfs
     }

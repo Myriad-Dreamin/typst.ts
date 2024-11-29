@@ -349,7 +349,7 @@ pub struct DomContext<'m, 'a> {
     pub module: &'m Module,
 }
 
-impl<'m, 'a> DomContext<'m, 'a> {
+impl<'m> DomContext<'m, '_> {
     pub fn create_stub(&self) -> Element {
         self.stub.clone_node().unwrap().dyn_into().unwrap()
     }

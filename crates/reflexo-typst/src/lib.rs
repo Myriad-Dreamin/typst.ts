@@ -215,7 +215,7 @@ impl CompileReport {
 
 pub struct CompileReportMsg<'a>(&'a CompileReport);
 
-impl<'a> fmt::Display for CompileReportMsg<'a> {
+impl fmt::Display for CompileReportMsg<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use CompileReport::*;
 

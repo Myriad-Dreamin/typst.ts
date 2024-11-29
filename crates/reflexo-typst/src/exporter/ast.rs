@@ -50,7 +50,7 @@ const VARIABLE: ansi_term::Color = ansi_term::Color::RGB(0x0f, 0x4b, 0x6e);
 const FUNCTION: ansi_term::Color = ansi_term::Color::RGB(0x7a, 0xa2, 0xf7);
 const MARKED: ansi_term::Color = ansi_term::Color::RGB(0x7d, 0xcf, 0xff);
 
-impl<'a, W: io::Write> AstWriter<'a, W> {
+impl<W: io::Write> AstWriter<'_, W> {
     fn write_num_repr<T: Display>(&mut self, sk: SyntaxKind, ast: T) -> Option<()> {
         self.painted(NUMBER, format!("Num({:?}, {})", sk, ast));
         Some(())
