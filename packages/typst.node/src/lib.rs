@@ -134,22 +134,15 @@ pub struct QueryDocArgs {
     pub field: Option<String>,
 }
 
-#[napi(string_enum)]
-#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq, Eq)]
-pub enum NodePdfStandard {
-    #[allow(non_camel_case_types)]
-    V_1_7,
-    #[allow(non_camel_case_types)]
-    A_2b,
-}
-
 /// Arguments to render a PDF.
 #[napi(object)]
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg(feature = "pdf")]
 pub struct RenderPdfOpts {
     /// An optional PdfStandard to be used in the PDF.
-    pub pdf_standard: Option<NodePdfStandard>,
+    ///
+    /// possible values are: 1.7, a-2b
+    pub pdf_standard: Option<String>,
 
     /// An optional (creation) timestamp to be used in the PDF.
     ///
@@ -357,15 +350,16 @@ impl NodeCompiler {
         compiled_or_by: MayCompileOpts,
         opts: Option<RenderPdfOpts>,
     ) -> Result<Buffer, NodeError> {
-        type PdfStandard = reflexo_typst::PdfStandard;
+        use reflexo_typst::PdfStandard;
+        use serde_json::json;
         type Exporter = reflexo_typst::PdfDocExporter;
 
         let e = if let Some(opts) = opts {
-            let standard = match opts.pdf_standard {
-                Some(standard) if standard == NodePdfStandard::A_2b => PdfStandard::A_2b,
-                Some(standard) if standard == NodePdfStandard::V_1_7 => PdfStandard::V_1_7,
-                Some(_) => PdfStandard::V_1_7,
-                None => PdfStandard::V_1_7,
+            let standard: PdfStandard = match opts.pdf_standard {
+                Some(pdf_standard_js_string) => {
+                    serde_json::from_value::<PdfStandard>(json!(pdf_standard_js_string)).unwrap()
+                }
+                None => serde_json::from_value::<PdfStandard>(json!("1.7")).unwrap(),
             };
 
             Exporter::default()

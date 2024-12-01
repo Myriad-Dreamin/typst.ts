@@ -329,4 +329,3 @@ module.exports.NodeCompiler = nativeBinding.NodeCompiler;
 module.exports.NodeError = nativeBinding.NodeError;
 module.exports.NodeTypstCompileResult = nativeBinding.NodeTypstCompileResult;
 module.exports.NodeTypstDocument = nativeBinding.NodeTypstDocument;
-module.exports.NodePdfStandard = nativeBinding.NodePdfStandard;
