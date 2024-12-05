@@ -11,8 +11,9 @@ use reflexo_typst::error::prelude::*;
 use reflexo_typst::exporter_builtins::GroupExporter;
 use reflexo_typst::exporter_utils::map_err;
 use reflexo_typst::path::{unix_slash, PathClean};
+use reflexo_typst::TypstDocument;
 use reflexo_typst::TypstSystemUniverse;
-use typst::{model::Document, text::FontVariant, World};
+use typst::{text::FontVariant, World};
 use typst_assets::fonts;
 use typst_ts_cli::compile::compile_export;
 use typst_ts_cli::manual::generate_manual;
@@ -110,26 +111,28 @@ pub fn query(args: QueryArgs) -> ! {
     use typst_ts_cli::query::format;
     let compile_args = args.compile.clone();
 
-    let mut exporter = GroupExporter::<Document>::new(vec![]);
+    let mut exporter = GroupExporter::<TypstDocument>::new(vec![]);
 
-    exporter.push_front(Box::new(move |world: &dyn World, output: Arc<Document>| {
-        if args.selector == "document_title" {
-            let title = output
-                .info
-                .title
-                .as_ref()
-                .map(|e| e.as_str())
-                .unwrap_or("null");
-            let serialized = serialize(&title, "json").map_err(map_err)?;
-            println!("{}", serialized);
-            return Ok(());
-        }
+    exporter.push_front(Box::new(
+        move |world: &dyn World, output: Arc<TypstDocument>| {
+            if args.selector == "document_title" {
+                let title = output
+                    .info
+                    .title
+                    .as_ref()
+                    .map(|e| e.as_str())
+                    .unwrap_or("null");
+                let serialized = serialize(&title, "json").map_err(map_err)?;
+                println!("{}", serialized);
+                return Ok(());
+            }
 
-        let data = retrieve(world, &args.selector, &output).map_err(map_err)?;
-        let serialized = format(data, &args).map_err(map_err)?;
-        println!("{serialized}");
-        Ok(())
-    }));
+            let data = retrieve(world, &args.selector, &output).map_err(map_err)?;
+            let serialized = format(data, &args).map_err(map_err)?;
+            println!("{serialized}");
+            Ok(())
+        },
+    ));
 
     compile_export(compile_args, exporter)
 }

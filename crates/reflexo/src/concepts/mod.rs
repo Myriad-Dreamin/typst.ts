@@ -17,6 +17,9 @@ pub use read::*;
 mod marker;
 pub use marker::*;
 
+#[cfg(feature = "typst")]
+pub mod typst;
+
 pub type ImmutStr = Arc<str>;
 pub type ImmutBytes = Arc<[u8]>;
 pub type ImmutPath = Arc<Path>;

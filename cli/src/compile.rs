@@ -6,6 +6,7 @@ use std::sync::Arc;
 use reflexo_typst::config::entry::{EntryOpts, MEMORY_MAIN_ENTRY};
 use reflexo_typst::config::CompileOpts;
 use reflexo_typst::features::{FeatureSet, DIAG_FMT_FEATURE};
+use reflexo_typst::TypstDocument;
 use reflexo_typst::{exporter_builtins::GroupExporter, path::PathClean};
 use reflexo_typst::{
     CompilationHandle, CompileActor, CompileDriver, CompileExporter, CompileServerOpts,
@@ -16,7 +17,6 @@ use reflexo_typst::{
 use tokio::sync::mpsc;
 use typst::diag::{FileError, FileResult};
 use typst::foundations::{Bytes, Dict, IntoValue};
-use typst::model::Document;
 
 use crate::font::fonts;
 use crate::utils::current_dir;
@@ -113,7 +113,7 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstS
     CompileDriver::new(std::marker::PhantomData, world)
 }
 
-pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> ! {
+pub fn compile_export(args: CompileArgs, exporter: GroupExporter<TypstDocument>) -> ! {
     let is_stdin = args.compile.entry == "-";
     let (intr_tx, intr_rx) = mpsc::unbounded_channel();
 

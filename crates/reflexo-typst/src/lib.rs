@@ -129,15 +129,15 @@ use core::fmt;
 use std::sync::Arc;
 use std::sync::OnceLock;
 
-use crate::typst::prelude::*;
 use ::typst::{
     diag::{At, SourceDiagnostic, SourceResult},
     foundations::Content,
-    model::Document,
     syntax::Span,
     utils::Deferred,
     World,
 };
+
+use crate::typst::prelude::*;
 
 #[derive(Clone, Default)]
 pub struct CompileEnv {
@@ -403,7 +403,7 @@ pub trait Compiler {
         &mut self,
         world: &Self::W,
         _env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<Document>>> {
+    ) -> SourceResult<Warned<Arc<TypstDocument>>> {
         self.reset()?;
 
         let res = ::typst::compile(world);
@@ -432,7 +432,7 @@ pub trait Compiler {
         &mut self,
         world: &Self::W,
         selector: String,
-        document: &Document,
+        document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
         self::query::retrieve(world, &selector, document).at(Span::detached())
     }
@@ -442,7 +442,7 @@ pub trait Compiler {
         &mut self,
         world: &Self::W,
         env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<Document>>> {
+    ) -> SourceResult<Warned<Arc<TypstDocument>>> {
         self.pure_compile(world, env)
     }
 
@@ -451,7 +451,7 @@ pub trait Compiler {
         &mut self,
         world: &Self::W,
         selector: String,
-        document: &Document,
+        document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
         self.pure_query(world, selector, document)
     }
@@ -484,7 +484,7 @@ pub trait CompileMiddleware {
         &mut self,
         world: &<<Self as CompileMiddleware>::Compiler as Compiler>::W,
         env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<Document>>> {
+    ) -> SourceResult<Warned<Arc<TypstDocument>>> {
         self.inner_mut().compile(world, env)
     }
 
@@ -494,7 +494,7 @@ pub trait CompileMiddleware {
         &mut self,
         world: &<<Self as CompileMiddleware>::Compiler as Compiler>::W,
         selector: String,
-        document: &Document,
+        document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
         self.inner_mut().query(world, selector, document)
     }
@@ -516,7 +516,7 @@ impl<T: CompileMiddleware> Compiler for T {
         &mut self,
         world: &Self::W,
         env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<Document>>> {
+    ) -> SourceResult<Warned<Arc<TypstDocument>>> {
         self.inner_mut().pure_compile(world, env)
     }
 
@@ -525,7 +525,7 @@ impl<T: CompileMiddleware> Compiler for T {
         &mut self,
         world: &Self::W,
         selector: String,
-        document: &Document,
+        document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
         self.inner_mut().pure_query(world, selector, document)
     }
@@ -535,7 +535,7 @@ impl<T: CompileMiddleware> Compiler for T {
         &mut self,
         world: &Self::W,
         env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<Document>>> {
+    ) -> SourceResult<Warned<Arc<TypstDocument>>> {
         self.wrap_compile(world, env)
     }
 
@@ -544,7 +544,7 @@ impl<T: CompileMiddleware> Compiler for T {
         &mut self,
         world: &Self::W,
         selector: String,
-        document: &Document,
+        document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
         self.wrap_query(world, selector, document)
     }

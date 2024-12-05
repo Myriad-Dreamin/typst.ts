@@ -48,6 +48,7 @@ pathdiff.workspace = true
 tar.workspace = true
 
 reflexo-vec2svg = { workspace = true, optional = true }
+typst-eval = { workspace = true }
 
 [features]
 

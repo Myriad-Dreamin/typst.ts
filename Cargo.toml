@@ -74,6 +74,7 @@ strip = true
 
 # typesetting
 typst = "0.12.0"
+typst-eval = "0.12.0"
 typst-ide = "0.12.0"
 typst-pdf = "0.12.0"
 typst-svg = "0.12.0"
@@ -231,11 +232,12 @@ undocumented_unsafe_blocks = "warn"
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
 # comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
-typst = { git = "https://github.com/Myriad-Dreamin/typst", tag = "typst.ts/v0.5.0-rc9" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst", tag = "typst.ts/v0.5.0-rc9" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst", tag = "typst.ts/v0.5.0-rc9" }
-typst-svg = { git = "https://github.com/Myriad-Dreamin/typst", tag = "typst.ts/v0.5.0-rc9" }
-typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst", tag = "typst.ts/v0.5.0-rc9" }
+typst = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.1-nightly" }
+typst-eval = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.1-nightly" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.1-nightly" }
+typst-ide = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.1-nightly" }
+typst-svg = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.1-nightly" }
+typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.1-nightly" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }

@@ -397,6 +397,16 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         self.inputs.clone()
     }
 
+    /// A list of all available packages and optionally descriptions for them.
+    ///
+    /// This function is optional to implement. It enhances the user experience
+    /// by enabling autocompletion for packages. Details about packages from the
+    /// `@preview` namespace are available from
+    /// `https://packages.typst.org/preview/index.json`.
+    pub fn packages(&self) -> &[(PackageSpec, Option<EcoString>)] {
+        self.registry.packages()
+    }
+
     /// Resolve the real path for a file id.
     pub fn path_for_id(&self, id: FileId) -> Result<PathBuf, FileError> {
         if id == *DETACHED_ENTRY {
@@ -417,6 +427,7 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         // access. Note: It can still escape via symlinks.
         id.vpath().resolve(&root).ok_or(FileError::AccessDenied)
     }
+
     /// Lookup a source file by id.
     #[track_caller]
     fn lookup(&self, id: FileId) -> Source {
@@ -534,16 +545,6 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
             naive.month().try_into().ok()?,
             naive.day().try_into().ok()?,
         )
-    }
-
-    /// A list of all available packages and optionally descriptions for them.
-    ///
-    /// This function is optional to implement. It enhances the user experience
-    /// by enabling autocompletion for packages. Details about packages from the
-    /// `@preview` namespace are available from
-    /// `https://packages.typst.org/preview/index.json`.
-    fn packages(&self) -> &[(PackageSpec, Option<EcoString>)] {
-        self.registry.packages()
     }
 }
 

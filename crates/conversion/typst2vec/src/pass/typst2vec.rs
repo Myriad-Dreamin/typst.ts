@@ -10,6 +10,7 @@ use rayon::iter::{
     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelExtend,
     ParallelIterator,
 };
+use reflexo::typst::TypstDocument;
 use reflexo::ImmutStr;
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
@@ -19,7 +20,7 @@ use typst::{
         Abs as TypstAbs, Axes, Dir, Frame, FrameItem, FrameKind, Position, Ratio as TypstRatio,
         Size, Transform as TypstTransform,
     },
-    model::{Destination, Document as TypstDocument},
+    model::Destination,
     syntax::Span,
     text::TextItem as TypstTextItem,
     visualize::{

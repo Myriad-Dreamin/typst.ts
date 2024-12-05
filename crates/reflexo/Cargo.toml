@@ -33,6 +33,7 @@ serde_json.workspace = true
 serde_with.workspace = true
 rkyv = { workspace = true, optional = true }
 
+typst = { workspace = true, optional = true }
 reflexo-typst-shim = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -47,7 +48,7 @@ rkyv = ["dep:rkyv", "rkyv/alloc", "rkyv/archive_le"]
 rkyv-validation = ["dep:rkyv", "rkyv/validation"]
 flat-vector = ["rkyv", "rkyv-validation"]
 
-typst = ["dep:reflexo-typst-shim"]
+typst = ["dep:reflexo-typst-shim", "dep:typst"]
 
 __web = ["instant/wasm-bindgen", "dep:wasm-bindgen", "dep:js-sys"]
 web = ["__web"]
