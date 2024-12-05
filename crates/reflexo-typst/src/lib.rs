@@ -399,14 +399,14 @@ pub trait Compiler {
     }
 
     /// Compile once from scratch.
-    fn pure_compile(
+    fn pure_compile_<D: ::typst::Document>(
         &mut self,
         world: &Self::W,
         _env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<TypstDocument>>> {
+    ) -> SourceResult<Warned<Arc<D>>> {
         self.reset()?;
 
-        let res = ::typst::compile(world);
+        let res = ::typst::compile::<D>(world);
         // compile document
         // res.output.map(Arc::new)
         match res.output {
@@ -427,6 +427,15 @@ pub trait Compiler {
         }
     }
 
+    /// Compile once from scratch.
+    fn pure_compile(
+        &mut self,
+        world: &Self::W,
+        env: &mut CompileEnv,
+    ) -> SourceResult<Warned<Arc<TypstDocument>>> {
+        self.pure_compile_(world, env)
+    }
+
     /// With **the compilation state**, query the matches for the selector.
     fn pure_query(
         &mut self,
@@ -444,6 +453,15 @@ pub trait Compiler {
         env: &mut CompileEnv,
     ) -> SourceResult<Warned<Arc<TypstDocument>>> {
         self.pure_compile(world, env)
+    }
+
+    /// Compile to html once from scratch.
+    fn compile_html(
+        &mut self,
+        world: &Self::W,
+        env: &mut CompileEnv,
+    ) -> SourceResult<Warned<Arc<::typst::html::HtmlDocument>>> {
+        self.pure_compile_(world, env)
     }
 
     /// With **the compilation state**, query the matches for the selector.
