@@ -113,7 +113,7 @@ export default function rehypeTypst(options) {
         const defaultEm = 11;
         const height = parseFloat(root.children[0].properties['dataHeight']);
         const width = parseFloat(root.children[0].properties['dataWidth']);
-        const shift = height - result.baselinePosition + 2.8; /* line up baselines */
+        const shift = height - result.baselinePosition;
         const shiftEm = shift / defaultEm;
         root.children[0].properties.style = `vertical-align: -${shiftEm}em;`;
         root.children[0].properties.height = `${height / defaultEm}em`;
@@ -163,7 +163,7 @@ async function renderToSVGString_($typst, code, displayMode) {
 #let s = state("t", (:))
 
 #let pin(t) = context {
-  let width = measure(line(length: here().position().y + 0.25em)).width
+  let width = measure(line(length: here().position().y)).width
   s.update(it => it.insert(t, width) + it)
 }
 
