@@ -139,6 +139,11 @@ pub struct QueryDocArgs {
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg(feature = "pdf")]
 pub struct RenderPdfOpts {
+    /// An optional PdfStandard to be used in the PDF.
+    ///
+    /// possible values are: 1.7, a-2b
+    pub pdf_standard: Option<String>,
+
     /// An optional (creation) timestamp to be used in the PDF.
     ///
     /// This is used when you *enable auto timestamp* in the document.
@@ -345,14 +350,26 @@ impl NodeCompiler {
         compiled_or_by: MayCompileOpts,
         opts: Option<RenderPdfOpts>,
     ) -> Result<Buffer, NodeError> {
+        use reflexo_typst::PdfStandard;
+        use serde_json::json;
         type Exporter = reflexo_typst::PdfDocExporter;
+
         let e = if let Some(opts) = opts {
-            Exporter::default().with_ctime(
-                opts.creation_timestamp
-                    .map(parse_source_date_epoch)
-                    .transpose()?
-                    .and_then(convert_datetime),
-            )
+            let standard: PdfStandard = match opts.pdf_standard {
+                Some(pdf_standard_js_string) => {
+                    serde_json::from_value::<PdfStandard>(json!(pdf_standard_js_string)).unwrap()
+                }
+                None => serde_json::from_value::<PdfStandard>(json!("1.7")).unwrap(),
+            };
+
+            Exporter::default()
+                .with_ctime(
+                    opts.creation_timestamp
+                        .map(parse_source_date_epoch)
+                        .transpose()?
+                        .and_then(convert_datetime),
+                )
+                .with_standard(standard)
         } else {
             Exporter::default()
         };

@@ -208,6 +208,12 @@ export interface QueryDocArgs {
 /** Arguments to render a PDF. */
 export interface RenderPdfOpts {
   /**
+   * An optional PdfStandard to be used in the PDF.
+   *
+   * possible values are: 1.7, a-2b
+   */
+  pdfStandard?: string;
+  /**
    * An optional (creation) timestamp to be used in the PDF.
    *
    * This is used when you *enable auto timestamp* in the document.
