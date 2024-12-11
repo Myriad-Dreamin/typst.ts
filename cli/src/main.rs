@@ -11,7 +11,7 @@ use reflexo_typst::error::prelude::*;
 use reflexo_typst::exporter_builtins::GroupExporter;
 use reflexo_typst::exporter_utils::map_err;
 use reflexo_typst::path::{unix_slash, PathClean};
-use reflexo_typst::TypstDocument;
+use reflexo_typst::TypstPagedDocument;
 use reflexo_typst::TypstSystemUniverse;
 use typst::{text::FontVariant, World};
 use typst_assets::fonts;
@@ -111,10 +111,10 @@ pub fn query(args: QueryArgs) -> ! {
     use typst_ts_cli::query::format;
     let compile_args = args.compile.clone();
 
-    let mut exporter = GroupExporter::<TypstDocument>::new(vec![]);
+    let mut exporter = GroupExporter::<TypstPagedDocument>::new(vec![]);
 
     exporter.push_front(Box::new(
-        move |world: &dyn World, output: Arc<TypstDocument>| {
+        move |world: &dyn World, output: Arc<TypstPagedDocument>| {
             if args.selector == "document_title" {
                 let title = output
                     .info

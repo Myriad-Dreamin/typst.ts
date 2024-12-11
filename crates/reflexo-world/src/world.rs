@@ -16,7 +16,7 @@ use typst::{
     syntax::{FileId, Source, Span},
     text::{Font, FontBook},
     utils::LazyHash,
-    Library, World,
+    Feature, Features, Library, World,
 };
 
 use crate::{
@@ -175,6 +175,8 @@ impl<F: CompilerFeat> CompilerUniverse<F> {
             entry: self.entry.clone(),
             inputs: self.inputs.clone(),
             library: create_library(self.inputs.clone()),
+            html_library: create_html_library(self.inputs.clone()),
+            is_html: false,
             font_resolver: self.font_resolver.clone(),
             registry: self.registry.clone(),
             vfs: self.vfs.snapshot(),
@@ -339,6 +341,10 @@ pub struct CompilerWorld<F: CompilerFeat> {
 
     /// Provides library for typst compiler.
     pub library: Arc<LazyHash<Library>>,
+    /// Provides library for typst compiler.
+    pub html_library: Arc<LazyHash<Library>>,
+    /// Whether the current compilation is for HTML.
+    pub is_html: bool,
     /// Provides font management for typst compiler.
     pub font_resolver: Arc<F::FontResolver>,
     /// Provides package management for typst compiler.
@@ -380,10 +386,13 @@ impl<F: CompilerFeat> CompilerWorld<F> {
         let _ = self.today(None);
 
         let library = mutant.inputs.clone().map(create_library);
+        let html_library = mutant.inputs.clone().map(create_html_library);
 
         CompilerWorld {
             inputs: mutant.inputs.unwrap_or_else(|| self.inputs.clone()),
             library: library.unwrap_or_else(|| self.library.clone()),
+            html_library: html_library.unwrap_or_else(|| self.html_library.clone()),
+            is_html: self.is_html,
             entry: mutant.entry.unwrap_or_else(|| self.entry.clone()),
             font_resolver: self.font_resolver.clone(),
             registry: self.registry.clone(),
@@ -391,6 +400,12 @@ impl<F: CompilerFeat> CompilerWorld<F> {
             source_db: self.source_db.clone(),
             now: self.now.clone(),
         }
+    }
+
+    pub fn html_variant(&self, is_html: bool) -> CompilerWorld<F> {
+        let mut w = self.clone();
+        w.is_html = is_html;
+        w
     }
 
     pub fn inputs(&self) -> Arc<LazyHash<Dict>> {
@@ -483,7 +498,11 @@ impl<F: CompilerFeat> ShadowApi for CompilerWorld<F> {
 impl<F: CompilerFeat> World for CompilerWorld<F> {
     /// The standard library.
     fn library(&self) -> &LazyHash<Library> {
-        self.library.as_ref()
+        if self.is_html {
+            &self.html_library
+        } else {
+            &self.library
+        }
     }
 
     /// Access the main source file.
@@ -641,6 +660,16 @@ impl<'a, F: CompilerFeat> codespan_reporting::files::Files<'a> for CompilerWorld
 fn create_library(inputs: Arc<LazyHash<Dict>>) -> Arc<LazyHash<Library>> {
     let lib = typst::Library::builder()
         .with_inputs(inputs.deref().deref().clone())
+        .build();
+
+    Arc::new(LazyHash::new(lib))
+}
+
+#[comemo::memoize]
+fn create_html_library(inputs: Arc<LazyHash<Dict>>) -> Arc<LazyHash<Library>> {
+    let lib = typst::Library::builder()
+        .with_inputs(inputs.deref().deref().clone())
+        .with_features(Features::from_iter([Feature::Html]))
         .build();
 
     Arc::new(LazyHash::new(lib))

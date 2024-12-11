@@ -463,7 +463,7 @@ impl SemaTask {
                 output.push(Cow::Borrowed("</a>"));
             }
             // todo: implement in svg
-            Html(h) => {
+            SizedRawHtml(h) => {
                 web_sys::console::log_1(&format!("Html: {}", h.html).into());
                 output.push(Cow::Borrowed(r#"<span class="typst-content-html""#));
                 let is_regular_scale = ts.sx == 1.0 && ts.sy == 1.0;
@@ -484,7 +484,7 @@ impl SemaTask {
                 output.push(Cow::Borrowed("</span>"));
             }
             Image(..) | Path(..) => {}
-            None | ColorTransform(..) | Gradient(..) | Color32(..) | Pattern(..) => {}
+            None | ColorTransform(..) | Gradient(..) | Color32(..) | Pattern(..) | Html(..) => {}
         }
     }
 }

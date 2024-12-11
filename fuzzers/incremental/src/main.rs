@@ -6,11 +6,11 @@ use reflexo_typst::vector::{
     ir::{Abs, Point, Rect},
     stream::BytesModuleStream,
 };
-use reflexo_typst::TypstDocument;
 use reflexo_typst::{
     CompileDriver, CompileExporter, PureCompiler, ShadowApiExt, TypstSystemUniverse,
     TypstSystemWorld,
 };
+use reflexo_typst::{TypstDocument, TypstPagedDocument};
 use reflexo_typst2vec::incr::{IncrDocClient, IncrDocServer};
 use reflexo_vec2svg::IncrSvgDocClient;
 use typst_ts_incremental_fuzzer::mutate;
@@ -18,7 +18,7 @@ use typst_ts_incremental_fuzzer::mutate;
 fn get_driver(
     workspace_dir: &Path,
     entry_file_path: &Path,
-    exporter: GroupExporter<TypstDocument>,
+    exporter: GroupExporter<TypstPagedDocument>,
 ) -> CompileDriver<CompileExporter<PureCompiler<TypstSystemWorld>>> {
     let project_base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let font_path = project_base.join("assets/fonts");
@@ -37,7 +37,7 @@ fn get_driver(
 pub fn test_compiler(
     workspace_dir: &Path,
     entry_file_path: &Path,
-    exporter: GroupExporter<TypstDocument>,
+    exporter: GroupExporter<TypstPagedDocument>,
 ) {
     let mut driver = get_driver(workspace_dir, entry_file_path, exporter);
     let mut content = { std::fs::read_to_string(entry_file_path).expect("Could not read file") };
@@ -92,7 +92,7 @@ pub fn test_compiler(
             })
             .unwrap();
 
-        let delta = incr_server.pack_delta(doc.output);
+        let delta = incr_server.pack_delta(TypstDocument::Paged(doc.output));
         let delta = BytesModuleStream::from_slice(&delta).checkout_owned();
         incr_client.merge_delta(delta);
         incr_client.set_layout(incr_client.doc.layouts[0].unwrap_single());

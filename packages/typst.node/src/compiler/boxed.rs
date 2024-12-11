@@ -11,7 +11,7 @@ use reflexo_typst::typst::prelude::*;
 use reflexo_typst::{config::entry::MEMORY_MAIN_ENTRY, typst::diag::Warned};
 use reflexo_typst::{
     error_once, Bytes, CompileDriver, CompileEnv, Compiler, EntryManager, EntryReader,
-    PureCompiler, ShadowApi, TaskInputs, TypstDocument, TypstSystemWorld,
+    PureCompiler, ShadowApi, TaskInputs, TypstPagedDocument, TypstSystemWorld,
 };
 
 use super::create_inputs;
@@ -144,7 +144,7 @@ impl Compiler for BoxedCompiler {
         &mut self,
         world: &TypstSystemWorld,
         env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<TypstDocument>>> {
+    ) -> SourceResult<Warned<Arc<TypstPagedDocument>>> {
         self.0.compiler.pure_compile(world, env)
     }
 
@@ -153,7 +153,7 @@ impl Compiler for BoxedCompiler {
         &mut self,
         world: &TypstSystemWorld,
         selector: String,
-        document: &TypstDocument,
+        document: &TypstPagedDocument,
     ) -> SourceResult<Vec<Content>> {
         self.0.compiler.pure_query(world, selector, document)
     }
@@ -163,7 +163,7 @@ impl Compiler for BoxedCompiler {
         &mut self,
         world: &TypstSystemWorld,
         env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<TypstDocument>>> {
+    ) -> SourceResult<Warned<Arc<TypstPagedDocument>>> {
         self.0.compiler.compile(world, env)
     }
 
@@ -172,7 +172,7 @@ impl Compiler for BoxedCompiler {
         &mut self,
         world: &TypstSystemWorld,
         selector: String,
-        document: &TypstDocument,
+        document: &TypstPagedDocument,
     ) -> SourceResult<Vec<Content>> {
         self.0.compiler.query(world, selector, document)
     }

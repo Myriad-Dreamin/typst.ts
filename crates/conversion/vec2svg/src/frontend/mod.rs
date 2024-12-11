@@ -59,7 +59,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
     /// ^^^^^
     fn header_inner(w: f32, h: f32) -> String {
         format!(
-            r#"<svg class="typst-doc" viewBox="0 0 {:.3} {:.3}" width="{:.3}" height="{:.3}" data-width="{:.3}" data-height="{:.3}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">"#,
+            r#"<svg style="overflow: visible;" class="typst-doc" viewBox="0 0 {:.3} {:.3}" width="{:.3}" height="{:.3}" data-width="{:.3}" data-height="{:.3}" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">"#,
             w, h, w, h, w, h,
         )
     }

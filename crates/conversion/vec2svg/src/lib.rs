@@ -3,7 +3,7 @@
 // todo: https://github.com/typst/typst/pull/2610
 // color export
 
-use reflexo::typst::TypstDocument;
+use reflexo::typst::TypstPagedDocument;
 
 /// re-export the core types.
 pub use reflexo_typst2vec::font::{FontGlyphProvider, GlyphProvider, IGlyphProvider};
@@ -104,8 +104,8 @@ impl ExportFeature for SvgExportFeature {
     const AWARE_HTML_ENTITY: bool = false;
 }
 
-/// Render SVG wrapped with html for [`TypstDocument`].
-pub fn render_svg_html<Feat: ExportFeature>(output: &TypstDocument) -> String {
+/// Render SVG wrapped with html for [`TypstPagedDocument`].
+pub fn render_svg_html<Feat: ExportFeature>(output: &TypstPagedDocument) -> String {
     let mut doc = SvgExporter::<Feat>::svg_doc(output);
     doc.module.prepare_glyphs();
     let mut svg = SvgExporter::<Feat>::render(&doc.module, &doc.pages, None);
@@ -119,7 +119,7 @@ pub fn render_svg_html<Feat: ExportFeature>(output: &TypstDocument) -> String {
             .title
             .as_ref()
             .map(|s| s.to_string())
-            .unwrap_or_else(|| "Typst TypstDocument".into()),
+            .unwrap_or_else(|| "Typst TypstPagedDocument".into()),
     ));
     html.push(r#"</title></head><body>"#.into());
     html.append(&mut svg);
@@ -127,8 +127,8 @@ pub fn render_svg_html<Feat: ExportFeature>(output: &TypstDocument) -> String {
     generate_text(transform::minify(html))
 }
 
-/// Render SVG for [`TypstDocument`].
-pub fn render_svg(output: &TypstDocument) -> String {
+/// Render SVG for [`TypstPagedDocument`].
+pub fn render_svg(output: &TypstPagedDocument) -> String {
     type UsingExporter = SvgExporter<SvgExportFeature>;
     let mut doc = UsingExporter::svg_doc(output);
     doc.module.prepare_glyphs();

@@ -5,9 +5,9 @@ use napi_derive::napi;
 use reflexo_typst::error::{long_diag_from_std, prelude::WithContext, TypstSourceDiagnostic};
 use reflexo_typst::typst::diag::Warned;
 use reflexo_typst::typst::prelude::*;
-use reflexo_typst::{TypstDocument, TypstWorld};
+use reflexo_typst::{TypstPagedDocument, TypstWorld};
 
-use crate::NodeTypstDocument;
+use crate::NodeTypstPagedDocument;
 
 /// The error status of a node error.
 pub enum NodeErrorStatus {
@@ -158,7 +158,7 @@ pub fn map_node_error(e: impl Into<NodeError>) -> napi::Error<NodeError> {
 /// Result of single typst compilation.
 #[napi]
 pub struct NodeTypstCompileResult {
-    result: Option<NodeTypstDocument>,
+    result: Option<NodeTypstPagedDocument>,
     // todo: better warning structure
     warnings: Option<NodeError>,
     error: Option<NodeError>,
@@ -168,7 +168,7 @@ pub struct NodeTypstCompileResult {
 impl NodeTypstCompileResult {
     /// Gets the result of compilation.
     #[napi(getter)]
-    pub fn result(&self) -> Option<NodeTypstDocument> {
+    pub fn result(&self) -> Option<NodeTypstPagedDocument> {
         self.result.clone()
     }
 
@@ -185,14 +185,14 @@ impl NodeTypstCompileResult {
     }
 }
 
-impl<E> From<Result<Warned<Arc<TypstDocument>>, E>> for NodeTypstCompileResult
+impl<E> From<Result<Warned<Arc<TypstPagedDocument>>, E>> for NodeTypstCompileResult
 where
     E: Into<NodeError>,
 {
-    fn from(res: Result<Warned<Arc<TypstDocument>>, E>) -> Self {
+    fn from(res: Result<Warned<Arc<TypstPagedDocument>>, E>) -> Self {
         match res {
             Ok(result) => NodeTypstCompileResult {
-                result: Some(NodeTypstDocument(result.output)),
+                result: Some(NodeTypstPagedDocument(result.output)),
                 warnings: if result.warnings.is_empty() {
                     None
                 } else {

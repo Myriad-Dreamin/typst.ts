@@ -12,7 +12,9 @@ pub(crate) mod well_known {
 
     pub use typst::layout::Abs as TypstAbs;
 
-    pub use typst::layout::PagedDocument as TypstDocument;
+    pub use typst::layout::PagedDocument as TypstPagedDocument;
+
+    pub use typst::html::HtmlDocument as TypstHtmlDocument;
 
     pub use typst::text::Font as TypstFont;
 
@@ -22,6 +24,33 @@ pub(crate) mod well_known {
 
     pub use typst::{diag, foundations, syntax};
 }
+
+/// The enum of all well-known Typst documents.
+#[derive(Debug, Clone)]
+pub enum TypstDocument {
+    /// The document compiled with `paged` target.
+    Paged(Arc<well_known::TypstPagedDocument>),
+    /// The document compiled with `html` target.
+    Html(Arc<well_known::TypstHtmlDocument>),
+}
+
+impl TypstDocument {
+    pub fn info(&self) -> &typst::model::DocumentInfo {
+        match self {
+            Self::Paged(doc) => &doc.info,
+            Self::Html(doc) => &doc.info,
+        }
+    }
+
+    pub fn introspector(&self) -> &typst::introspection::Introspector {
+        match self {
+            Self::Paged(doc) => &doc.introspector,
+            Self::Html(doc) => &doc.introspector,
+        }
+    }
+}
+
+use std::sync::Arc;
 
 pub use well_known::*;
 

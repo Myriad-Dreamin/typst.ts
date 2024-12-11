@@ -475,6 +475,10 @@ impl<
             .push(("data-hint", format!("{:x}", ch as u32)));
     }
 
+    fn render_html(&mut self, _ctx: &mut C, html: &ir::HtmlItem) {
+        self.content.push(SvgText::Plain(html.html.as_ref().into()))
+    }
+
     #[inline]
     fn attach_debug_info(&mut self, ctx: &mut C, span_id: u64) {
         if ctx.should_attach_debug_info() {

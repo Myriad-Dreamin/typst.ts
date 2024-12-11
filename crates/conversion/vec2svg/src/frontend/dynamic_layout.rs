@@ -1,4 +1,4 @@
-use reflexo::typst::TypstDocument;
+use reflexo::typst::TypstPagedDocument;
 use reflexo_typst2vec::ir::{Abs, LayoutRegion, LayoutRegionNode, MultiVecDocument};
 use reflexo_typst2vec::pass::Typst2VecPass;
 
@@ -9,7 +9,7 @@ pub struct DynamicLayoutSvgExporter {
 }
 
 impl DynamicLayoutSvgExporter {
-    pub fn render(&mut self, output: &TypstDocument) -> LayoutRegionNode {
+    pub fn render(&mut self, output: &TypstPagedDocument) -> LayoutRegionNode {
         self.typst2vec.reset();
         // let instant = std::time::Instant::now();
         // check the document

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use reflexo::typst::TypstDocument;
+use reflexo::typst::TypstPagedDocument;
 use typst::{diag::SourceResult, World};
 use typst_pdf::PdfOptions;
 
@@ -18,8 +18,8 @@ impl PdfDocExporter {
     }
 }
 
-impl Exporter<TypstDocument, Vec<u8>> for PdfDocExporter {
-    fn export(&self, _world: &dyn World, output: Arc<TypstDocument>) -> SourceResult<Vec<u8>> {
+impl Exporter<TypstPagedDocument, Vec<u8>> for PdfDocExporter {
+    fn export(&self, _world: &dyn World, output: Arc<TypstPagedDocument>) -> SourceResult<Vec<u8>> {
         // todo: ident option
 
         typst_pdf::pdf(

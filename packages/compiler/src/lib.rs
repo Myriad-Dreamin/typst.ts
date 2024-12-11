@@ -296,7 +296,7 @@ impl TypstCompiler {
         fmt: String,
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
-        let vec_exporter: DynExporter<TypstDocument, Vec<u8>> = match fmt.as_str() {
+        let vec_exporter: DynExporter<TypstPagedDocument, Vec<u8>> = match fmt.as_str() {
             "vector" => Box::new(reflexo_typst::exporter_builtins::VecExporter::new(
                 reflexo_typst::SvgModuleExporter::default(),
             )),

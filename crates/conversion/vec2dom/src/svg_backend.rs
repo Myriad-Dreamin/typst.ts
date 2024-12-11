@@ -230,12 +230,13 @@ impl TypstPageElem {
             VecItem::ContentHint(_) => TypstDomExtra::ContentHint(ContentHintElem { hint: ' ' }),
             VecItem::Link(_) => TypstDomExtra::Link(LinkElem {}),
             VecItem::Path(_) => TypstDomExtra::Path(PathElem {}),
-            VecItem::Html(_) => TypstDomExtra::Html(HtmlElem {}),
+            VecItem::SizedRawHtml(_) => TypstDomExtra::RawHtml(HtmlElem {}),
             VecItem::None
             | VecItem::ColorTransform(_)
             | VecItem::Color32(_)
             | VecItem::Gradient(_)
-            | VecItem::Pattern(_) => {
+            | VecItem::Pattern(_)
+            | VecItem::Html(_) => {
                 todo!()
             }
         };

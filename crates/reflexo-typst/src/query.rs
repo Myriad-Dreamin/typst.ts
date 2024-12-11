@@ -1,5 +1,5 @@
 use comemo::Track;
-use reflexo::typst::TypstDocument;
+use reflexo::typst::TypstPagedDocument;
 use typst::{
     diag::{EcoString, StrResult},
     foundations::{Content, LocatableSelector, Scope},
@@ -13,7 +13,7 @@ use typst_eval::{eval_string, EvalMode};
 pub fn retrieve(
     world: &dyn World,
     selector: &str,
-    document: &TypstDocument,
+    document: &TypstPagedDocument,
 ) -> StrResult<Vec<Content>> {
     let selector = eval_string(
         &typst::ROUTINES,

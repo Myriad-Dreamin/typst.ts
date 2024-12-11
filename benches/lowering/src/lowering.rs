@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use divan::Bencher;
 use reflexo_typst::{
-    CompileDriver as CompileDriverT, Compiler, PureCompiler, ShadowApiExt, TypstDocument,
+    CompileDriver as CompileDriverT, Compiler, PureCompiler, ShadowApiExt, TypstPagedDocument,
     TypstSystemWorld,
 };
 use reflexo_typst2vec::pass::{IncrTypst2VecPass, Typst2VecPass};
@@ -21,10 +21,10 @@ static TEST_COMPILER: CompileDriver = LazyLock::new(|| {
 
 const TEST_FILE: &str = include_str!("../../../fuzzers/corpora/math/undergradmath.typ");
 
-static TEST_DOC: LazyLock<Arc<TypstDocument>> =
+static TEST_DOC: LazyLock<Arc<TypstPagedDocument>> =
     LazyLock::new(|| compile(&TEST_COMPILER, TEST_FILE));
 
-fn compile(driver: &CompileDriver, src: &str) -> Arc<TypstDocument> {
+fn compile(driver: &CompileDriver, src: &str) -> Arc<TypstPagedDocument> {
     let mut driver = driver.lock().unwrap();
     let e = driver.entry_file().to_owned().unwrap();
     driver
@@ -45,12 +45,12 @@ fn main() {
     divan::main();
 }
 
-fn lower_impl(doc: &TypstDocument) {
+fn lower_impl(doc: &TypstPagedDocument) {
     let pass = Typst2VecPass::default();
     let _ = pass.doc(&doc.introspector, doc);
 }
 
-fn lower_incr_impl<'a>(docs: impl Iterator<Item = &'a Arc<TypstDocument>>) {
+fn lower_incr_impl<'a>(docs: impl Iterator<Item = &'a Arc<TypstPagedDocument>>) {
     let mut pass = IncrTypst2VecPass::default();
     for doc in docs {
         pass.increment_lifetime();

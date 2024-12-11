@@ -23,7 +23,7 @@ use super::{
 };
 use crate::{
     exporter_builtins::GroupExporter, typst::prelude::*, DynExporter, DynGenericExporter,
-    DynPolymorphicExporter, Exporter, GenericExporter, TakeAs, TypstDocument as Document,
+    DynPolymorphicExporter, Exporter, GenericExporter, TakeAs, TypstPagedDocument as Document,
 };
 use crate::{CompileSnapshot, EntryReader};
 
