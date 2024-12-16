@@ -37,16 +37,8 @@ serde-wasm-bindgen = { workspace = true, optional = true }
 dirs = { workspace = true, optional = true }
 fontdb = { workspace = true, optional = true }
 
-[target.'cfg(not(any(target_arch = "riscv64", target_arch = "wasm32", all(target_os = "windows", target_arch = "aarch64"))))'.dependencies]
 reqwest = { version = "^0.12", default-features = false, features = [
     "rustls-tls",
-    "blocking",
-    "multipart",
-] }
-
-[target.'cfg(any(target_arch = "riscv64", all(target_os = "windows", target_arch = "aarch64")))'.dependencies]
-reqwest = { version = "^0.12", default-features = false, features = [
-    "native-tls",
     "blocking",
     "multipart",
 ] }
