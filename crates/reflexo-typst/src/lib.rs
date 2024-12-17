@@ -50,6 +50,7 @@ use ::typst::diag::Warned;
 pub use exporter::pdf::PdfDocExporter;
 #[cfg(feature = "pdf")]
 pub use typst_pdf::pdf;
+pub use typst_pdf::PdfStandard;
 
 #[cfg(feature = "svg")]
 pub use exporter::svg::*;
