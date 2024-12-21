@@ -30,10 +30,7 @@ impl Exporter<typst::model::Document, Vec<u8>> for PdfDocExporter {
         output: Arc<typst::model::Document>,
     ) -> SourceResult<Vec<u8>> {
         // todo: ident option
-        let standards: PdfStandards = match self.standards.clone() {
-            None => PdfStandards::default(),
-            Some(standards) => standards,
-        };
+        let standards: PdfStandards = self.standards.clone().unwrap_or_default();
 
         typst_pdf::pdf(
             output.as_ref(),
