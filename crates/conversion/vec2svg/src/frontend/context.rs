@@ -65,7 +65,7 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     pub _feat_phantom: std::marker::PhantomData<Feat>,
 }
 
-impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Feat> {
+impl<Feat: ExportFeature> DynExportFeature for RenderContext<'_, '_, Feat> {
     #[inline]
     fn should_render_text_element(&self) -> bool {
         Feat::SHOULD_RENDER_TEXT_ELEMENT && self.should_render_text_element
@@ -92,7 +92,7 @@ impl<'m, 't, Feat: ExportFeature> DynExportFeature for RenderContext<'m, 't, Fea
     }
 }
 
-impl<'m, 't, Feat: ExportFeature> FontIndice<'m> for RenderContext<'m, 't, Feat> {
+impl<'m, Feat: ExportFeature> FontIndice<'m> for RenderContext<'m, '_, Feat> {
     fn get_font(&self, value: &FontRef) -> Option<&'m ir::FontItem> {
         self.module.fonts.get(value.idx as usize).inspect(|e| {
             // canary check
@@ -103,13 +103,13 @@ impl<'m, 't, Feat: ExportFeature> FontIndice<'m> for RenderContext<'m, 't, Feat>
     }
 }
 
-impl<'m, 't, Feat: ExportFeature> BuildClipPath for RenderContext<'m, 't, Feat> {
+impl<Feat: ExportFeature> BuildClipPath for RenderContext<'_, '_, Feat> {
     fn build_clip_path(&mut self, path: &PathItem) -> Fingerprint {
         self.fingerprint_builder.resolve(path)
     }
 }
 
-impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
+impl<Feat: ExportFeature> NotifyPaint for RenderContext<'_, '_, Feat> {
     fn notify_paint(&mut self, url_ref: ImmutStr) -> (u8, Fingerprint, Option<Transform>) {
         if url_ref.starts_with("@g") {
             let id = url_ref.trim_start_matches("@g");
@@ -162,7 +162,7 @@ impl<'m, 't, Feat: ExportFeature> NotifyPaint for RenderContext<'m, 't, Feat> {
 }
 
 /// Example of how to implement a FlatRenderVm.
-impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, 't, Feat> {
+impl<'m, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, '_, Feat> {
     // type Resultant = String;
     type Resultant = Arc<SvgTextNode>;
     type Group = SvgTextBuilder;
@@ -207,9 +207,9 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, 't, Feat> {
     }
 }
 
-impl<'m, 't, Feat: ExportFeature> IncrRenderVm<'m> for RenderContext<'m, 't, Feat> {}
+impl<'m, Feat: ExportFeature> IncrRenderVm<'m> for RenderContext<'m, '_, Feat> {}
 
-impl<'m, 't, Feat: ExportFeature> RenderContext<'m, 't, Feat> {
+impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
     /// Render a text into the underlying context.
     fn render_text_inplace(
         &mut self,

@@ -13,7 +13,7 @@ use typst::syntax::Span;
 
 struct DiagMsgFmt<'a>(&'a TypstSourceDiagnostic);
 
-impl<'a> fmt::Display for DiagMsgFmt<'a> {
+impl fmt::Display for DiagMsgFmt<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.0.message)?;
         if !self.0.hints.is_empty() {
@@ -27,7 +27,7 @@ impl<'a> fmt::Display for DiagMsgFmt<'a> {
 
 struct PosFmt<'a>(&'a typst::diag::Tracepoint);
 
-impl<'a> fmt::Display for PosFmt<'a> {
+impl fmt::Display for PosFmt<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.0 {
             typst::diag::Tracepoint::Call(Some(name)) => write!(f, "while calling {}", name),

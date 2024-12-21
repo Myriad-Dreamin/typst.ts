@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst-ts-renderer",
-  "version": "0.5.0-rc9",
+  "version": "0.5.1",
   "description": "WASM module for rendering Typst documents in browser.",
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",

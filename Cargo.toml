@@ -1,7 +1,7 @@
 [workspace.package]
 description = "Run Typst in JavaScriptWorld."
 authors = ["Typst.ts Developers", "The Typst Project Developers"]
-version = "0.5.0-rc9"
+version = "0.5.1"
 edition = "2021"
 readme = "README.md"
 license = "Apache-2.0"
@@ -194,24 +194,24 @@ vergen = { version = "9.0.1", features = [
 vergen-gitcl = { version = "1.0.1" }
 
 # project core
-reflexo = { version = "0.5.0-rc9", path = "crates/reflexo", default-features = false }
-reflexo-vfs = { version = "0.5.0-rc9", path = "crates/reflexo-vfs" }
-reflexo-world = { version = "0.5.0-rc9", path = "crates/reflexo-world" }
-reflexo-typst = { version = "0.5.0-rc9", path = "crates/reflexo-typst", default-features = false }
-reflexo-typst-shim = { version = "0.5.0-rc9", path = "crates/reflexo-typst-shim" }
+reflexo = { version = "0.5.1", path = "crates/reflexo", default-features = false }
+reflexo-vfs = { version = "0.5.1", path = "crates/reflexo-vfs" }
+reflexo-world = { version = "0.5.1", path = "crates/reflexo-world" }
+reflexo-typst = { version = "0.5.1", path = "crates/reflexo-typst", default-features = false }
+reflexo-typst-shim = { version = "0.5.1", path = "crates/reflexo-typst-shim" }
 
 # conversions
-reflexo-typst2vec = { version = "0.5.0-rc9", path = "crates/conversion/typst2vec" }
-reflexo-vec2canvas = { version = "0.5.0-rc9", path = "crates/conversion/vec2canvas" }
-reflexo-vec2sema = { version = "0.5.0-rc9", path = "crates/conversion/vec2sema" }
-reflexo-vec2bbox = { version = "0.5.0-rc9", path = "crates/conversion/vec2bbox" }
-reflexo-vec2dom = { version = "0.5.0-rc9", path = "crates/conversion/vec2dom" }
-reflexo-vec2svg = { version = "0.5.0-rc9", path = "crates/conversion/vec2svg" }
+reflexo-typst2vec = { version = "0.5.1", path = "crates/conversion/typst2vec" }
+reflexo-vec2canvas = { version = "0.5.1", path = "crates/conversion/vec2canvas" }
+reflexo-vec2sema = { version = "0.5.1", path = "crates/conversion/vec2sema" }
+reflexo-vec2bbox = { version = "0.5.1", path = "crates/conversion/vec2bbox" }
+reflexo-vec2dom = { version = "0.5.1", path = "crates/conversion/vec2dom" }
+reflexo-vec2svg = { version = "0.5.1", path = "crates/conversion/vec2svg" }
 
 # project components
-typst-ts-test-common = { version = "0.5.0-rc9", path = "tests/common" }
-typst-ts-dev-server = { version = "0.5.0-rc9", path = "server/dev" }
-typst-ts-cli = { version = "0.5.0-rc9", path = "cli" }
+typst-ts-test-common = { version = "0.5.1", path = "tests/common" }
+typst-ts-dev-server = { version = "0.5.1", path = "server/dev" }
+typst-ts-cli = { version = "0.5.1", path = "cli" }
 
 [workspace.lints.rust]
 missing_docs = "warn"

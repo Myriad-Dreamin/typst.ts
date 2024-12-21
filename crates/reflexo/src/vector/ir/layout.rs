@@ -49,11 +49,11 @@ impl LayoutRegionNode {
             return None;
         };
 
-        return Some(LayoutRegionPagesRAII {
+        Some(LayoutRegionPagesRAII {
             module: Cow::Borrowed(ModuleView::new(module)),
             meta: &v.0,
             pages: &v.1,
-        });
+        })
     }
 
     pub fn source_mapping<'a>(
@@ -445,7 +445,7 @@ pub struct LayoutNestSelector<'l, T> {
     pub inner: T,
 }
 
-impl<'l, T: LayoutSelector> LayoutSelector for LayoutNestSelector<'l, T> {
+impl<T: LayoutSelector> LayoutSelector for LayoutNestSelector<'_, T> {
     fn select_by_scalar(
         &self,
         kind: &str,

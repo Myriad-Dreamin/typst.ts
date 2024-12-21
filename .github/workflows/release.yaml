@@ -40,11 +40,11 @@ jobs:
             rust-target: arm-unknown-linux-gnueabihf
             platform: linux
             arch: armhf
-          - os: macos-11
+          - os: macos-13
             rust-target: x86_64-apple-darwin
             platform: darwin
             arch: x64
-          - os: macos-11
+          - os: macos-13
             rust-target: aarch64-apple-darwin
             platform: darwin
             arch: arm64
@@ -163,11 +163,6 @@ jobs:
           cargo build --profile relwithdebinfo --manifest-path cli/Cargo.toml --target $RUST_TARGET --bin typst-ts-cli
       - uses: actions/upload-artifact@v4
         with:
-          name: typst-ts-font-assets
-          path: assets
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        with:
           name: typst-ts-${{ env.target }}
           path: target/${{ env.RUST_TARGET }}/release/typst-ts-*
           if-no-files-found: error
@@ -188,7 +183,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           path: artifacts
       - name: Display structure of downloaded files
@@ -237,11 +232,6 @@ jobs:
           pack_release darwin-arm64  aarch64-apple-darwin
           pack_release alpine-x64    alpine-x64
           pack_release alpine-x64    x86_64-unknown-linux-musl
-
-          # typst-ts-font-assets
-          mkdir -p release/font-assets
-          cp -r artifacts/typst-ts-font-assets/* release/font-assets/
-          tar czvf gh-release/font-assets.tar.gz -C release font-assets
       - name: Display structure of releasing files
         run: find gh-release
       - uses: actions/upload-artifact@v4

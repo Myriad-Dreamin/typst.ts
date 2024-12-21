@@ -173,13 +173,13 @@ pub struct CanvasRenderTask<'m, 't, Feat: ExportFeature> {
     _feat_phantom: std::marker::PhantomData<&'t Feat>,
 }
 
-impl<'m, 't, Feat: ExportFeature> FontIndice<'m> for CanvasRenderTask<'m, 't, Feat> {
+impl<'m, Feat: ExportFeature> FontIndice<'m> for CanvasRenderTask<'m, '_, Feat> {
     fn get_font(&self, value: &FontRef) -> Option<&'m ir::FontItem> {
         self.module.fonts.get(value.idx as usize)
     }
 }
 
-impl<'m, 't, Feat: ExportFeature> GlyphFactory for CanvasRenderTask<'m, 't, Feat> {
+impl<Feat: ExportFeature> GlyphFactory for CanvasRenderTask<'_, '_, Feat> {
     fn get_glyph(&mut self, font: &FontItem, glyph: u32, fill: ImmutStr) -> Option<CanvasNode> {
         let glyph_data = font.get_glyph(glyph)?;
         Some(Arc::new(CanvasElem::Glyph(CanvasGlyphElem {
@@ -190,7 +190,7 @@ impl<'m, 't, Feat: ExportFeature> GlyphFactory for CanvasRenderTask<'m, 't, Feat
     }
 }
 
-impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, 't, Feat> {
+impl<'m, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, '_, Feat> {
     // type Resultant = String;
     type Resultant = CanvasNode;
     type Group = CanvasStack;
@@ -219,12 +219,20 @@ impl<'m, 't, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, 't, Feat
             let upem = Scalar(font.units_per_em.0);
             let accender = Scalar(font.ascender.0) * upem;
 
+            // todo: glyphs like macron has zero width... why?
             let w = text.width();
 
-            CanvasBBox::Static(Box::new(Rect {
-                lo: Point::new(Scalar(0.), accender - upem),
-                hi: Point::new(w * upem / text.shape.size, accender),
-            }))
+            if text.shape.size.0 == 0. {
+                CanvasBBox::Static(Box::new(Rect {
+                    lo: Point::new(Scalar(0.), accender - upem),
+                    hi: Point::new(Scalar(0.), accender),
+                }))
+            } else {
+                CanvasBBox::Static(Box::new(Rect {
+                    lo: Point::new(Scalar(0.), accender - upem),
+                    hi: Point::new(w * upem / text.shape.size, accender),
+                }))
+            }
         };
         for style in &text.shape.styles {
             if let ir::PathStyle::Fill(fill) = style {
@@ -377,7 +385,7 @@ impl<'a> CanvasStateGuard<'a> {
     }
 }
 
-impl<'a> Drop for CanvasStateGuard<'a> {
+impl Drop for CanvasStateGuard<'_> {
     fn drop(&mut self) {
         self.0.restore();
     }

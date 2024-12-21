@@ -1,5 +1,18 @@
 # v0.5.0
 
+## Changelog since v0.5.1
+
+### Security Notes
+
+No new security note.
+
+### Misc
+
+The release script failed because of following reasons:
+
+- (Fix) font assets is not managed by typst.ts anymore
+- (Fix) broken package.json of typst.node
+
 ## Changelog since v0.5.0
 
 **Full Changelog**: https://github.com/Myriad-Dreamin/typst.ts/compare/v0.4.1...v0.5.0

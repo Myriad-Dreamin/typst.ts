@@ -48,7 +48,7 @@ struct State<'a> {
     pub size: ir::Size,
 }
 
-impl<'a> State<'a> {
+impl State<'_> {
     fn new(introspector: &Introspector, size: ir::Size) -> State {
         State {
             introspector,

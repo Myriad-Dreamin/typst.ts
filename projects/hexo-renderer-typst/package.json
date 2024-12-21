@@ -1,6 +1,6 @@
 {
   "name": "hexo-renderer-typst",
-  "version": "0.5.0-rc9",
+  "version": "0.5.1",
   "description": "Typst renderer plugin for Hexo",
   "author": "Myriad Dreamin <camiyoru@gmail.com>",
   "license": "Apache-2.0",
@@ -20,9 +20,9 @@
   },
   "peerDependencies": {
     "hexo": "^6",
-    "@myriaddreamin/typst.ts": "^0.5.0-rc9",
-    "@myriaddreamin/typst-ts-renderer": "^0.5.0-rc9",
-    "@myriaddreamin/typst-ts-node-compiler": "^0.5.0-rc9"
+    "@myriaddreamin/typst.ts": "^0.5.1",
+    "@myriaddreamin/typst-ts-renderer": "^0.5.1",
+    "@myriaddreamin/typst-ts-node-compiler": "^0.5.1"
   },
   "devDependencies": {},
   "scripts": {

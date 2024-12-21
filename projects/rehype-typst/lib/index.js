@@ -162,9 +162,10 @@ async function renderToSVGString_($typst, code, displayMode) {
 
 #let s = state("t", (:))
 
-#let pin(t) = locate(loc => {
-  style(styles => s.update(it => it.insert(t, measure(line(length: loc.position().y + 0.25em), styles).width) + it))
-})
+#let pin(t) = context {
+  let width = measure(line(length: here().position().y)).width
+  s.update(it => it.insert(t, width) + it)
+}
 
 #show math.equation: it => {
   box(it, inset: (top: 0.5em, bottom: 0.5em))
@@ -172,9 +173,9 @@ async function renderToSVGString_($typst, code, displayMode) {
 
 $pin("l1")${code}$
 
-#locate(loc => [
-  #metadata(s.final(loc).at("l1")) <label>
-])
+#context [
+  #metadata(s.final().at("l1")) <label>
+]
 `;
   const displayMathTemplate = `
 #set page(height: auto, width: auto, margin: 0pt)
