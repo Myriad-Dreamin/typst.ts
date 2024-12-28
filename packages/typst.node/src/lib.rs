@@ -139,7 +139,7 @@ pub struct QueryDocArgs {
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg(feature = "pdf")]
 pub struct RenderPdfOpts {
-    /// An optional PDF standard to be used to export PDF.
+    /// (Experimental) An optional PDF standard to be used to export PDF.
     ///
     /// Please check {@link types.PdfStandard} for a non-exhaustive list of
     /// standards.
