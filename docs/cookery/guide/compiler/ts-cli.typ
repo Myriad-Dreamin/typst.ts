@@ -100,7 +100,7 @@ typst-ts-cli compile ... -o dist
 
 === `--trace` option
 
-Comma seperated options to trace execution of typst compiler when compiling documents:
+Comma separated options to trace execution of typst compiler when compiling documents:
 
 ```bash
 # trace events at warning level

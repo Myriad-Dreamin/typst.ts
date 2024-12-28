@@ -158,7 +158,7 @@ impl SvgTextBuilder {
         upem: Scalar,
     ) {
         // upem is the unit per em defined in the font.
-        // ppem is calcuated by the font size.
+        // ppem is calculated by the font size.
         // > ppem = text_size / upem
         let upem = upem.0;
 

@@ -55,7 +55,7 @@ Render the document with artifact from precompiler.
 
 === Set renderer initialization option for `typst-document`
 
-Retrieve a #term.init-option for initializating the renderer for `typst-document`
+Retrieve a #term.init-option for initializing the renderer for `typst-document`
 
 ```ts
 typst-document.setWasmModuleInitOptions({

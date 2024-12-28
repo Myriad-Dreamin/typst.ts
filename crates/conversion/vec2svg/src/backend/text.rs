@@ -1,4 +1,4 @@
-// #[cfg(feature = "aggresive-browser-optimization")]
+// #[cfg(feature = "aggressive-browser-optimization")]
 // fn f() {}
-// #[cfg(not(feature = "aggresive-browser-optimization"))]
+// #[cfg(not(feature = "aggressive-browser-optimization"))]
 // fn f() {}

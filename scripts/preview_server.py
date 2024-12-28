@@ -5,7 +5,7 @@ from http import HTTPStatus
 import re
 
 def server_main():
-  class FrontEndHanlder(http.server.SimpleHTTPRequestHandler):
+  class FrontEndHandler(http.server.SimpleHTTPRequestHandler):
 
     def __init__(self, *args, **kwargs):
       kwargs['directory'] = '.'
@@ -37,7 +37,7 @@ def server_main():
 
       super().do_GET()
 
-  http.server.ThreadingHTTPServer(('127.0.0.1', 20812), FrontEndHanlder).serve_forever()
+  http.server.ThreadingHTTPServer(('127.0.0.1', 20812), FrontEndHandler).serve_forever()
 
 
 if __name__ == '__main__':

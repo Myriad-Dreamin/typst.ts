@@ -450,15 +450,15 @@ function reuseOrPatchElem(prev: SVGGElement, next: SVGGElement) {
   return false /* reused */;
 
   function replaceNonSVGElements(prev: Element, next: Element) {
-    const removedIndecies: number[] = [];
+    const removedIndices: number[] = [];
     for (let i = 0; i < prev.children.length; i++) {
       const prevChild = prev.children[i];
       if (!isGElem(prevChild)) {
-        removedIndecies.push(i);
+        removedIndices.push(i);
       }
     }
 
-    for (const index of removedIndecies.reverse()) {
+    for (const index of removedIndices.reverse()) {
       prev.children[index].remove();
     }
 

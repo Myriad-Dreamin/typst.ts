@@ -18,7 +18,7 @@ pub mod text;
 pub type DynExporter<Input, Output = ()> = Box<dyn Exporter<Input, Output> + Send + Sync>;
 
 pub trait Transformer<Input, Output = ()> {
-    /// Export the given input with given world. the writable world is hiden by
+    /// Export the given input with given world. the writable world is hidden by
     /// trait itself.
     fn export(&self, world: &dyn World, output: Input) -> SourceResult<Output>;
 }
@@ -34,7 +34,7 @@ where
 }
 
 pub trait Exporter<Input, Output = ()> {
-    /// Export the given input with given world. the writable world is hiden by
+    /// Export the given input with given world. the writable world is hidden by
     /// trait itself.
     fn export(&self, world: &dyn World, output: Arc<Input>) -> SourceResult<Output>;
 }
@@ -68,7 +68,7 @@ pub type DynGenericExporter<X, Input, Output = ()> =
 pub trait GenericTransformer<Input, Output = ()> {
     type W;
 
-    /// Export the given input with given world. the writable world is hiden by
+    /// Export the given input with given world. the writable world is hidden by
     /// trait itself.
     fn export(&self, world: &Self::W, output: Input) -> SourceResult<Output>;
 }
@@ -76,7 +76,7 @@ pub trait GenericTransformer<Input, Output = ()> {
 pub trait GenericExporter<Input, Output = ()> {
     type W;
 
-    /// Export the given input with given world. the writable world is hiden by
+    /// Export the given input with given world. the writable world is hidden by
     /// trait itself.
     fn export(&self, world: &Self::W, output: Arc<Input>) -> SourceResult<Output>;
 }

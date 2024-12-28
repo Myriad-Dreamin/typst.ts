@@ -91,12 +91,12 @@ pub struct TextShape {
 }
 
 impl TextShape {
-    /// ppem is calcuated by the font size.
+    /// ppem is calculated by the font size.
     pub fn ppem(&self, upem: f32) -> Scalar {
         Scalar(self.size.0 / upem)
     }
 
-    /// inv_ppem is calcuated by the font size.
+    /// inv_ppem is calculated by the font size.
     pub fn inv_ppem(&self, upem: f32) -> Scalar {
         Scalar(upem / self.size.0)
     }
@@ -171,7 +171,7 @@ impl TextItem {
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct TextItemContent {
     /// The plain utf-8 content of the text item.
-    /// Note: witout XML escaping.
+    /// Note: without XML escaping.
     pub content: ImmutStr,
     /// The glyphs in the text.
     /// (offset, advance, glyph): ([`Abs`], [`Abs`], [`FlatGlyphItem`])

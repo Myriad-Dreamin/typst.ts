@@ -33,7 +33,7 @@ impl<E: Escapes> fmt::Display for Escaped<'_, E> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut total_remaining = self.to_escape;
 
-        // find the next occurence
+        // find the next occurrence
         while let Some(n) = total_remaining.bytes().position(E::byte_needs_escaping) {
             let (start, remaining) = total_remaining.split_at(n);
 

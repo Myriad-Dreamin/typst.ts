@@ -266,9 +266,9 @@ pub static FETCH_BBOX_TIMES: std::sync::atomic::AtomicUsize =
 static BBOX_SANITIZER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
 impl TypstElem {
-    /// Repaint svg API will retrun a new viewport if it is updated.
+    /// Repaint svg API will return a new viewport if it is updated.
     ///
-    /// The idea is that: the element visible before will be overrided by the
+    /// The idea is that: the element visible before will be overridden by the
     /// latter ones, so we should update the viewport to the union of all
     /// previous ones and repaint the latter elements accordingly.
     fn repaint_svg(

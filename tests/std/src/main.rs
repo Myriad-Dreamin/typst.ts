@@ -9,10 +9,10 @@ static PRESET_HEADER: &str = r#"
 "#;
 
 fn main() -> anyhow::Result<()> {
-    let mainfest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let test_dir = &mainfest_dir.join("../../../typst/tests/typ");
-    let rewrite_dir = mainfest_dir.join("../../fuzzers/corpora");
-    let std_artifact_path = mainfest_dir.join("../../tests/common/src/std_artifact.rs");
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let test_dir = &manifest_dir.join("../../../typst/tests/typ");
+    let rewrite_dir = manifest_dir.join("../../fuzzers/corpora");
+    let std_artifact_path = manifest_dir.join("../../tests/common/src/std_artifact.rs");
 
     let mut test_files = WalkDir::new(test_dir)
         .into_iter()

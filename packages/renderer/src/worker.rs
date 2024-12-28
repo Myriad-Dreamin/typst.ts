@@ -459,7 +459,7 @@ pub struct WorkerBridge {
     pub(crate) sessions: HashMap<i32, Arc<Mutex<RenderSession>>>,
     pub(crate) canvases: HashMap<i32, HashMap<usize, OffscreenCanvas>>,
     pub(crate) previous_promise: Option<Promise>,
-    pub(crate) sesions: i32,
+    pub(crate) sessions: i32,
 }
 
 #[wasm_bindgen]
@@ -480,8 +480,8 @@ impl WorkerBridge {
         let res = match x {
             Request::CreateSession(opts) => {
                 let session = self.plugin.create_session(opts).unwrap();
-                let idx = self.sesions;
-                self.sesions += 1;
+                let idx = self.sessions;
+                self.sessions += 1;
                 #[allow(clippy::arc_with_non_send_sync)]
                 self.sessions.insert(idx, Arc::new(Mutex::new(session)));
                 Ok(JsValue::from_f64(idx as f64))

@@ -61,7 +61,7 @@ impl FileSnapshot {
     }
 }
 
-/// Convenent function to create a [`FileSnapshot`] from tuple
+/// Convenient function to create a [`FileSnapshot`] from tuple
 impl From<FileResult<(crate::Time, Bytes)>> for FileSnapshot {
     fn from(result: FileResult<(crate::Time, Bytes)>) -> Self {
         Self(

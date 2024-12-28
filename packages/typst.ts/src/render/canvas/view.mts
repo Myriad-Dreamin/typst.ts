@@ -64,17 +64,17 @@ export class RenderView {
 
         /// on width change
         const containerWidth = container.offsetWidth;
-        const orignalScale = containerWidth / pageAst.width;
+        const originalScale = containerWidth / pageAst.width;
         textLayerParent.style.width = `${containerWidth}px`;
-        textLayerParent.style.height = `${pageAst.height * orignalScale}px`;
+        textLayerParent.style.height = `${pageAst.height * originalScale}px`;
         // --data-text-width
-        textLayerParent.style.setProperty('--data-text-width', `${orignalScale}px`);
-        textLayerParent.style.setProperty('--data-text-height', `${orignalScale}px`);
+        textLayerParent.style.setProperty('--data-text-width', `${originalScale}px`);
+        textLayerParent.style.setProperty('--data-text-height', `${originalScale}px`);
         // textLayerParent.style.position = 'absolute';
         commonDiv.classList.add('typst-page');
         commonDiv.classList.add('canvas');
         commonDiv.style.width = `${containerWidth}px`;
-        commonDiv.style.height = `${height * orignalScale}px`;
+        commonDiv.style.height = `${height * originalScale}px`;
         commonDiv.style.position = 'relative';
 
         // textLayerParent.style.zIndex = '1';
@@ -113,11 +113,11 @@ export class RenderView {
 
       /// on width change
       const containerWidth = this.container.offsetWidth;
-      const orignalScale = containerWidth / width;
+      const originalScale = containerWidth / width;
       textLayerParent.style.width = `${containerWidth}px`;
-      textLayerParent.style.height = `${height * orignalScale}px`;
+      textLayerParent.style.height = `${height * originalScale}px`;
       commonDiv.style.width = `${containerWidth}px`;
-      commonDiv.style.height = `${height * orignalScale}px`;
+      commonDiv.style.height = `${height * originalScale}px`;
 
       // compute scaling factor according to the paper size
       const currentScale = this.container.offsetWidth / width;

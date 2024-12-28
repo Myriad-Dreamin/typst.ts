@@ -28,7 +28,7 @@ console.log((await $typst.svg({
 // :-> 7317
 ```
 
-However, it is less flexible and stable than the underlying interfaces, the `TypstCompiler` and `TypstRenderer`. If you've become more familar with typst.ts, we recommend you rewrite your library with underlying interfaces according to example usage shown by the #snippet-lib library.
+However, it is less flexible and stable than the underlying interfaces, the `TypstCompiler` and `TypstRenderer`. If you've become more familiar with typst.ts, we recommend you rewrite your library with underlying interfaces according to example usage shown by the #snippet-lib library.
 
 Note: If your script targets to *CommonJS*, you should import it in *CommonJS* path instead of In *ES Module* path:
 
@@ -90,7 +90,7 @@ Ideally, you don't have to specify any options. But if necessary, the extra init
 
 ```ts
 // Example: cache default fonts to file system
-$typst.setCompilerInitOptions(await cachedFontInitOptoins());
+$typst.setCompilerInitOptions(await cachedFontInitOptions());
 // specify init options to renderer
 $typst.setRendererInitOptions(rendererInitOptions);
 
@@ -126,7 +126,7 @@ $typst.use(
 Fetch package from remote registry:
 
 ```js
-const acessModel = cm.FetchAccessModel() or
+const accessModel = cm.FetchAccessModel() or
   cm.MemoryAccessModel() or others;
 $typst.use(
   TypstSnippet.fetchPackageRegistry(fetchBackend),
@@ -141,7 +141,7 @@ See #link(snippet-source)[comments on source] for more details.
 
 See #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/examples/all-in-one.html")[Preview by all-in-one Library] by a single included file (`all-in-one.bundle.js`).
 
-See #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/examples/all-in-one-lite.html")[Preview by all-in-one-lite Library] by the more pratical single included file (`all-in-one-lite.bundle.js`), which needs configure your frontend to have access to wasm module files:
+See #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/examples/all-in-one-lite.html")[Preview by all-in-one-lite Library] by the more practical single included file (`all-in-one-lite.bundle.js`), which needs configure your frontend to have access to wasm module files:
 
 ```js
 $typst.setCompilerInitOptions({

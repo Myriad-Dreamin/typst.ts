@@ -101,7 +101,7 @@ fn compile_corpus(args: CompileCorpusArgs) {
 
     // get all corpus in workspace_path
 
-    for cat in args.catergories.clone() {
+    for cat in args.categories.clone() {
         info!("compile corpus in {cat}...");
 
         let cat_dir = corpus_path.join(&cat);
