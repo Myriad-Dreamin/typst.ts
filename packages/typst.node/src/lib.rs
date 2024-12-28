@@ -362,7 +362,7 @@ impl NodeCompiler {
 
             let standard = opts
                 .pdf_standard
-                .map(|single| serde_json::from_value(serde_json::json!(single)))
+                .map(|single| serde_json::from_value(serde_json::Value::String(single)))
                 .transpose()
                 .context("failed to deserialize PdfStandard for typst")
                 .map_err(map_node_error)?;
