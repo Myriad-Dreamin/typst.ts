@@ -139,7 +139,13 @@ pub struct QueryDocArgs {
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg(feature = "pdf")]
 pub struct RenderPdfOpts {
-    /// An optional (creation) timestamp to be used in the PDF.
+    /// (Experimental) An optional PDF standard to be used to export PDF.
+    ///
+    /// Please check {@link types.PdfStandard} for a non-exhaustive list of
+    /// standards.
+    pub pdf_standard: Option<String>,
+
+    /// An optional (creation) timestamp to be used to export PDF.
     ///
     /// This is used when you *enable auto timestamp* in the document.
     pub creation_timestamp: Option<i64>,
@@ -346,13 +352,24 @@ impl NodeCompiler {
         opts: Option<RenderPdfOpts>,
     ) -> Result<Buffer, NodeError> {
         type Exporter = reflexo_typst::PdfDocExporter;
+
         let e = if let Some(opts) = opts {
-            Exporter::default().with_ctime(
-                opts.creation_timestamp
-                    .map(parse_source_date_epoch)
-                    .transpose()?
-                    .and_then(convert_datetime),
-            )
+            let creation_time = opts
+                .creation_timestamp
+                .map(parse_source_date_epoch)
+                .transpose()?
+                .and_then(convert_datetime);
+
+            let standard = opts
+                .pdf_standard
+                .map(|single| serde_json::from_value(serde_json::Value::String(single)))
+                .transpose()
+                .context("failed to deserialize PdfStandard for typst")
+                .map_err(map_node_error)?;
+
+            Exporter::default()
+                .with_ctime(creation_time)
+                .with_standard(standard)
         } else {
             Exporter::default()
         };

@@ -1,18 +1,24 @@
 use std::sync::Arc;
 
 use typst::{diag::SourceResult, World};
-use typst_pdf::PdfOptions;
+use typst_pdf::{PdfOptions, PdfStandard, PdfStandards};
 
 use crate::{Exporter, TypstDatetime};
 
 #[derive(Debug, Clone, Default)]
 pub struct PdfDocExporter {
     ctime: Option<TypstDatetime>,
+    standards: Option<PdfStandards>,
 }
 
 impl PdfDocExporter {
     pub fn with_ctime(mut self, v: Option<TypstDatetime>) -> Self {
         self.ctime = v;
+        self
+    }
+
+    pub fn with_standard(mut self, v: Option<PdfStandard>) -> Self {
+        self.standards = v.map(|v| PdfStandards::new(&[v]).unwrap());
         self
     }
 }
@@ -29,6 +35,7 @@ impl Exporter<typst::model::Document, Vec<u8>> for PdfDocExporter {
             output.as_ref(),
             &PdfOptions {
                 timestamp: self.ctime,
+                standards: self.standards.clone().unwrap_or_default(),
                 ..Default::default()
             },
         )
