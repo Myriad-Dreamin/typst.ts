@@ -139,12 +139,13 @@ pub struct QueryDocArgs {
 #[derive(Serialize, Deserialize, Debug)]
 #[cfg(feature = "pdf")]
 pub struct RenderPdfOpts {
-    /// An optional PdfStandard to be used in the PDF.
+    /// An optional PDF standard to be used to export PDF.
     ///
-    /// possible values are: 1.7, a-2b
+    /// Please check {@link types.PdfStandard} for a non-exhaustive list of
+    /// standards.
     pub pdf_standard: Option<String>,
 
-    /// An optional (creation) timestamp to be used in the PDF.
+    /// An optional (creation) timestamp to be used to export PDF.
     ///
     /// This is used when you *enable auto timestamp* in the document.
     pub creation_timestamp: Option<i64>,
@@ -350,25 +351,24 @@ impl NodeCompiler {
         compiled_or_by: MayCompileOpts,
         opts: Option<RenderPdfOpts>,
     ) -> Result<Buffer, NodeError> {
-        use reflexo_typst::PdfStandard;
-        use serde_json::json;
         type Exporter = reflexo_typst::PdfDocExporter;
 
         let e = if let Some(opts) = opts {
-            let standard: PdfStandard = match opts.pdf_standard {
-                Some(pdf_standard_js_string) => {
-                    serde_json::from_value::<PdfStandard>(json!(pdf_standard_js_string)).unwrap()
-                }
-                None => serde_json::from_value::<PdfStandard>(json!("1.7")).unwrap(),
-            };
+            let creation_time = opts
+                .creation_timestamp
+                .map(parse_source_date_epoch)
+                .transpose()?
+                .and_then(convert_datetime);
+
+            let standard = opts
+                .pdf_standard
+                .map(|single| serde_json::from_value(serde_json::json!(single)))
+                .transpose()
+                .context("failed to deserialize PdfStandard for typst")
+                .map_err(map_node_error)?;
 
             Exporter::default()
-                .with_ctime(
-                    opts.creation_timestamp
-                        .map(parse_source_date_epoch)
-                        .transpose()?
-                        .and_then(convert_datetime),
-                )
+                .with_ctime(creation_time)
                 .with_standard(standard)
         } else {
             Exporter::default()

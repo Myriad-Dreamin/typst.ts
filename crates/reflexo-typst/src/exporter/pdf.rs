@@ -17,8 +17,8 @@ impl PdfDocExporter {
         self
     }
 
-    pub fn with_standard(mut self, v: PdfStandard) -> Self {
-        self.standards = Some(PdfStandards::new(&[v]).unwrap());
+    pub fn with_standard(mut self, v: Option<PdfStandard>) -> Self {
+        self.standards = v.map(|v| PdfStandards::new(&[v]).unwrap());
         self
     }
 }
@@ -30,13 +30,12 @@ impl Exporter<typst::model::Document, Vec<u8>> for PdfDocExporter {
         output: Arc<typst::model::Document>,
     ) -> SourceResult<Vec<u8>> {
         // todo: ident option
-        let standards: PdfStandards = self.standards.clone().unwrap_or_default();
 
         typst_pdf::pdf(
             output.as_ref(),
             &PdfOptions {
                 timestamp: self.ctime,
-                standards,
+                standards: self.standards.clone().unwrap_or_default(),
                 ..Default::default()
             },
         )
