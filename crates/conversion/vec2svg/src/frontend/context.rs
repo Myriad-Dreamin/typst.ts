@@ -48,7 +48,7 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
 
     /// Stores the style definitions used in the document.
     pub(crate) _style_defs: &'t mut StyleDefMap,
-    /// Stores the graidents used in the document.
+    /// Stores the gradients used in the document.
     pub(crate) gradients: &'t mut PaintFillMap,
     /// Stores the patterns used in the document.
     pub(crate) patterns: &'t mut PaintFillMap,

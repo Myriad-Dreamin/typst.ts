@@ -44,7 +44,7 @@ async function addPartialFonts<T>({ builder, hooks }: InitContext<T>): Promise<v
       },
     });
 
-    const informations = await Promise.all(
+    const information = await Promise.all(
       fonts.map(async font => {
         const postscriptName = font.postscriptName;
 
@@ -61,7 +61,7 @@ async function addPartialFonts<T>({ builder, hooks }: InitContext<T>): Promise<v
         const fullName = font.fullName;
         const postscriptName = font.postscriptName;
 
-        const prev = informations[font_idx];
+        const prev = information[font_idx];
         if (prev) {
           console.log('prev', postscriptName, prev);
         }
@@ -71,7 +71,7 @@ async function addPartialFonts<T>({ builder, hooks }: InitContext<T>): Promise<v
           fullName: fullName,
           postscriptName: postscriptName,
           ref: font,
-          info: informations[font_idx],
+          info: information[font_idx],
           blob: (idx: number) => {
             console.log(this, font, idx);
             if (readyBuffer) {

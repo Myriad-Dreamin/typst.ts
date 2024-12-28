@@ -25,7 +25,7 @@ in social media. Though it is not implemented, HTML elements is considered for r
 
 == Prepare Artifacts: Precompiler Part
 
-As an example, #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/projects/hexo-renderer-typst/lib/compiler.cjs")[hexo-renderer-typst] utilizes #cross-link("/guide/all-in-one-node.typ")[All-in-one Library for Node.js] to build its functions. First, it creates a dyn layout compiler for precompiling docuemnts:
+As an example, #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/projects/hexo-renderer-typst/lib/compiler.cjs")[hexo-renderer-typst] utilizes #cross-link("/guide/all-in-one-node.typ")[All-in-one Library for Node.js] to build its functions. First, it creates a dyn layout compiler for precompiling documents:
 
 ```js
 this.dyn = DynLayoutCompiler.fromBoxed(NodeCompiler.create(compileArgs).intoBoxed());
@@ -41,7 +41,7 @@ return this.dyn.vector({ mainFilePath: path });
 
 === `x-page-width` (stable)
 
-Retreiving the sys arguments specified by the dynamic layout compiler:
+Retrieving the sys arguments specified by the dynamic layout compiler:
 
 ```typ
 /// It is in default A4 paper size (21cm)
@@ -63,7 +63,7 @@ Templating Example:
 
 *Note: Official typst may introduce their owned method to specify target, therefore this feature may move to the native approach in future.*
 
-Retreiving the sys arguments specified by SSG Tools:
+Retrieving the sys arguments specified by SSG Tools:
 
 ```typ
 /// The default target is _pdf_.

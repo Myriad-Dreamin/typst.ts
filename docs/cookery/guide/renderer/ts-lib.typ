@@ -88,6 +88,6 @@ See the sample application #link("https://github.com/Myriad-Dreamin/typst.ts/blo
 
 == Use `RenderSession` APIs
 
-Full exmaple: #link("https://github.com/Enter-tainer/typst-preview/tree/110c031d21e74f747f78fbf78934140d23fec267/addons/frontend")[typst-preview-frontend]
+Full example: #link("https://github.com/Enter-tainer/typst-preview/tree/110c031d21e74f747f78fbf78934140d23fec267/addons/frontend")[typst-preview-frontend]
 
 See #renderer-lib for more details.

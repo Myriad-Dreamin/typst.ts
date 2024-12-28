@@ -161,7 +161,7 @@ impl IncrDomDocClient {
             }
             STAGE_PREPARE_CANVAS => {
                 if let Some(elem) = page.prepare_canvas(&mut ctx)? {
-                    // explicit drop ctx to avoid async promise cature these variables
+                    // explicit drop ctx to avoid async promise capture these variables
                     drop(ctx);
                     #[cfg(feature = "debug_repaint_canvas")]
                     web_sys::console::log_1(&format!("canvas state prepare: {page_num}").into());
@@ -183,7 +183,7 @@ impl IncrDomDocClient {
                 }
             }
             STAGE_CANVAS => {
-                // explicit drop ctx to avoid async promise cature these variables
+                // explicit drop ctx to avoid async promise capture these variables
                 drop(ctx);
                 let ppp = self.canvas_backend.pixel_per_pt;
                 let page = &mut self.doc_view[page_num as usize];

@@ -108,7 +108,7 @@ pub struct GradientItem {
     pub styles: Vec<GradientStyle>,
 }
 
-/// Kind of graidents for [`GradientItem`].
+/// Kind of gradients for [`GradientItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]

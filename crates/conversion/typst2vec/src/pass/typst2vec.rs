@@ -926,7 +926,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                 format!("@{}", fingerprint.as_svg_id("p")).into()
             }
             Paint::Gradient(g) => {
-                let fingerprint = self.graident(g, mk_transform(g.relative(), true));
+                let fingerprint = self.gradient(g, mk_transform(g.relative(), true));
                 format!("@{}", fingerprint.as_svg_id("g")).into()
             }
         }
@@ -961,7 +961,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         }
     }
 
-    fn graident(&self, g: &Gradient, transform: ir::Transform) -> Fingerprint {
+    fn gradient(&self, g: &Gradient, transform: ir::Transform) -> Fingerprint {
         let mut stops = Vec::with_capacity(g.stops_ref().len());
         for (c, step) in g.stops_ref() {
             let [r, g, b, a] = c.to_rgb().to_vec4_u8();

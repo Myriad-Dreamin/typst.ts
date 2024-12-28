@@ -28,7 +28,7 @@ pub trait EntryManager: EntryReader {
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq, Default)]
 pub struct EntryState {
-    /// The differents is that: if the entry is rooted, the workspace root is
+    /// The differences is that: if the entry is rooted, the workspace root is
     /// the parent of the entry file and cannot be used by workspace functions
     /// like [`EntryState::try_select_path_in_workspace`].
     rooted: bool,

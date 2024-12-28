@@ -48,9 +48,9 @@ impl<T> Default for SharedState<T> {
 
 impl<T: Revised> SharedState<T> {
     fn gc(&mut self) {
-        let commited = self.committed_revision.unwrap_or(0);
+        let committed = self.committed_revision.unwrap_or(0);
         self.cache_entries
-            .retain(|_, v| commited.saturating_sub(v.last_accessed_rev().get()) <= 30);
+            .retain(|_, v| committed.saturating_sub(v.last_accessed_rev().get()) <= 30);
     }
 }
 
@@ -86,7 +86,7 @@ impl SourceState {
             // todo: utilize the committed revision is not zero
             if state
                 .committed_revision
-                .map_or(false, |commited| commited >= self.revision.get())
+                .map_or(false, |committed| committed >= self.revision.get())
             {
                 return;
             }

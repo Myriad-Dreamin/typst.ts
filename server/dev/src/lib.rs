@@ -64,7 +64,7 @@ pub enum CompileSubCommands {
 pub struct CompileCorpusArgs {
     /// The name of Corpus.
     #[clap(long = "cat", value_name = "CAT", value_delimiter = ',', action = ArgAction::Append)]
-    pub catergories: Vec<String>,
+    pub categories: Vec<String>,
 
     /// Output formats.
     #[clap(long)]

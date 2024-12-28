@@ -51,7 +51,7 @@ std::marker::PhantomData.compile(
   Note: The ```rs struct CompileExporter``` derives #compiler-trait. #linebreak()
 ]
 
-Retrieve an exporter instance that is executed on each sucessful compilation (more useful for incremental compilation).
+Retrieve an exporter instance that is executed on each successful compilation (more useful for incremental compilation).
 
 ```ts
 let driver = CompileExporter::default()

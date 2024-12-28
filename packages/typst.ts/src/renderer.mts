@@ -373,7 +373,7 @@ export interface TypstRenderer extends TypstSvgRenderer {
   resetSession(session: RenderSession): void;
 
   /**
-   * Retreive page information of current selected document
+   * Retrieve page information of current selected document
    */
   retrievePagesInfoFromSession(session: RenderSession): PageInfo[];
 
@@ -475,7 +475,7 @@ export interface TypstRenderer extends TypstSvgRenderer {
   manipulateData(opts: RenderInSessionOptions<ManipulateDataOptions>): void;
 
   /**
-   * Run a function with a session, and the sesssion is only available during
+   * Run a function with a session, and the session is only available during
    * the function call.
    *
    * the lifetime of session is quite bug-prone, so we current does not make it
@@ -861,7 +861,7 @@ export class TypstRendererDriver {
       );
       const t2 = performance.now();
 
-      console.log(`layer used: retieve = ${(t2 - t).toFixed(1)}ms`);
+      console.log(`layer used: retrieve = ${(t2 - t).toFixed(1)}ms`);
 
       await doRenderDisplayLayer(pageView.canvasList, () => pageView.resetLayout());
       this.renderTextLayer(pageView.textLayerList, renderPageResults);
