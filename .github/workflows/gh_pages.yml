@@ -50,9 +50,7 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
       - name: Download & install shiroa
         run: |
-          curl -L https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.2.0-rc1/shiroa-x86_64-unknown-linux-gnu.tar.gz | tar -xvz
-          chmod +x shiroa-x86_64-unknown-linux-gnu/bin/shiroa
-          sudo cp shiroa-x86_64-unknown-linux-gnu/bin/shiroa /usr/bin/shiroa
+          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.2.0-rc1/shiroa-installer.sh | sh
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: Download font assets
