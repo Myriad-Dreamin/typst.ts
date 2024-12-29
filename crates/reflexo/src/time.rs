@@ -1,11 +1,19 @@
+pub use std::time::SystemTime as Time;
 pub use web_time::Duration;
 pub use web_time::Instant;
-pub use web_time::SystemTime as Time;
 
 /// Returns the current time (UTC+0).
 #[cfg(any(feature = "system", feature = "web"))]
 pub fn now() -> Time {
-    Time::now()
+    #[cfg(not(all(target_family = "wasm", target_os = "unknown")))]
+    {
+        Time::now()
+    }
+    #[cfg(all(target_family = "wasm", target_os = "unknown"))]
+    {
+        use web_time::SystemTimeExt;
+        web_time::SystemTime::now().to_std()
+    }
 }
 
 /// Returns a dummy time on environments that do not support time.
