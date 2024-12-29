@@ -13,7 +13,7 @@ repository.workspace = true
 comemo.workspace = true
 ecow.workspace = true
 parking_lot.workspace = true
-instant.workspace = true
+web-time.workspace = true
 wasm-bindgen = { workspace = true, optional = true }
 js-sys = { workspace = true, optional = true }
 
@@ -49,7 +49,7 @@ flat-vector = ["rkyv", "rkyv-validation"]
 
 typst = ["dep:reflexo-typst-shim"]
 
-__web = ["instant/wasm-bindgen", "dep:wasm-bindgen", "dep:js-sys"]
+__web = ["dep:wasm-bindgen", "dep:js-sys"]
 web = ["__web"]
 system = []
 bi-hash = []

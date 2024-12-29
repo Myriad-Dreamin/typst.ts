@@ -1,6 +1,6 @@
-pub use instant::Duration;
-pub use instant::Instant;
-pub use instant::SystemTime as Time;
+pub use web_time::Duration;
+pub use web_time::Instant;
+pub use web_time::SystemTime as Time;
 
 /// Returns the current time (UTC+0).
 #[cfg(any(feature = "system", feature = "web"))]
