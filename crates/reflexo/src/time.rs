@@ -2,7 +2,7 @@ pub use instant::Duration;
 pub use instant::Instant;
 pub use instant::SystemTime as Time;
 
-/// Returns the UTC+0 time.
+/// Returns the current time (UTC+0).
 #[cfg(any(feature = "system", feature = "web"))]
 pub fn now() -> Time {
     Time::now()
