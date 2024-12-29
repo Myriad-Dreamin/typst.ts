@@ -522,7 +522,7 @@ impl<F: CompilerFeat> World for CompilerWorld<F> {
     /// If this function returns `None`, Typst's `datetime` function will
     /// return an error.
     fn today(&self, offset: Option<i64>) -> Option<Datetime> {
-        let now = self.now.get_or_init(chrono::Local::now);
+        let now = self.now.get_or_init(|| reflexo::time::now().into());
 
         let naive = match offset {
             None => now.naive_local(),
