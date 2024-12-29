@@ -1,6 +1,36 @@
-# v0.5.0
+# Change Log
 
-## Changelog since v0.5.1
+All notable changes to the "tinymist" extension will be documented in this file.
+
+Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
+
+## v0.5.2 - [2024-12-29]
+
+### Package: rehype-typst (New)
+
+- (Fix) Updated inline math template, which is broken since typst v0.12.0, by @Enter-tainer in https://github.com/Myriad-Dreamin/typst.ts/pull/615
+
+### Package: @myriaddreamin/typst.node (New)
+
+- Added pdf standard options by @prog-r-amer and @Myriad-Dreamin in https://github.com/Myriad-Dreamin/typst.ts/pull/606
+
+### Compiler, Rust Part
+
+- Added pdf standard options by @prog-r-amer and @Myriad-Dreamin in https://github.com/Myriad-Dreamin/typst.ts/pull/606
+- Using `reflexo::time::now` to get current time in browser in https://github.com/Myriad-Dreamin/typst.ts/pull/624
+
+### Misc
+
+- Removed `native-tls` crate dependency in https://github.com/Myriad-Dreamin/typst.ts/pull/617
+- (Fix) Corrected output path to bundle files in `vite.config` in https://github.com/Myriad-Dreamin/typst.ts/pull/623
+
+## New Contributors
+
+- @prog-r-amer made their first contribution in https://github.com/Myriad-Dreamin/typst.ts/pull/606
+
+**Full Changelog**: https://github.com/Myriad-Dreamin/typst.ts/compare/v0.5.1...v0.5.2
+
+## v0.5.1 - [2024-12-04]
 
 ### Security Notes
 
