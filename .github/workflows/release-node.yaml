@@ -116,12 +116,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bindings-${{ matrix.settings.target }}
-          path:
-          - packages/typst.node/${{ env.APP_NAME }}.*.node
-          - packages/typst.node/index-napi.d.ts
-          - packages/typst.node/index-napi.js
-          - packages/typst.node/index.d.ts
-          - packages/typst.node/index.js
+          path: packages/typst.node/{${{ env.APP_NAME }}.*.node,index-napi.{d.ts,js},index.{d.ts,js}}
           if-no-files-found: error
   # build-freebsd:
   #   runs-on: macos-13
