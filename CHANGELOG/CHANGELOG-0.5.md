@@ -6,11 +6,11 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## v0.5.2 - [2024-12-29]
 
-### Package: rehype-typst (New)
+### Package: rehype-typst
 
 - (Fix) Updated inline math template, which is broken since typst v0.12.0, by @Enter-tainer in https://github.com/Myriad-Dreamin/typst.ts/pull/615
 
-### Package: @myriaddreamin/typst.node (New)
+### Package: @myriaddreamin/typst.node
 
 - Added pdf standard options by @prog-r-amer and @Myriad-Dreamin in https://github.com/Myriad-Dreamin/typst.ts/pull/606
 
