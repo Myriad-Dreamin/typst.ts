@@ -36,20 +36,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Make directories
-        run: |
-          if [ ! -d "${XDG_DATA_HOME:-$HOME/.local/share}" ]; then
-            echo "Creating data directory: ${XDG_DATA_HOME:-$HOME/.local/share}"
-            mkdir -p ${XDG_DATA_HOME:-$HOME/.local/share}
-          else
-            echo "Data directory already exists: ${XDG_DATA_HOME:-$HOME/.local/share}"
-          fi
-          if [ ! -d "${XDG_CACHE_HOME:-$HOME/.cache}" ]; then
-            echo "Creating cache directory: ${XDG_CACHE_HOME:-$HOME/.cache}"
-            mkdir -p ${XDG_CACHE_HOME:-$HOME/.cache}
-          else
-            echo "Cache directory already exists: ${XDG_CACHE_HOME:-$HOME/.cache}"
-          fi
       - name: Install Mold
         uses: rui314/setup-mold@v1
       - name: Install Rust
@@ -64,7 +50,7 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
       - name: Download & install shiroa
         run: |
-          curl -L https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.2.0-nightly5/shiroa-x86_64-unknown-linux-gnu.tar.gz | tar -xvz
+          curl -L https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.2.0-rc1/shiroa-x86_64-unknown-linux-gnu.tar.gz | tar -xvz
           chmod +x shiroa-x86_64-unknown-linux-gnu/bin/shiroa
           sudo cp shiroa-x86_64-unknown-linux-gnu/bin/shiroa /usr/bin/shiroa
       - name: Run sccache-cache
