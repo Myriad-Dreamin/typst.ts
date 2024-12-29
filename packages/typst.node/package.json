@@ -70,7 +70,7 @@
     "@napi-rs/cli": "3.0.0-alpha.43",
     "@swc-node/register": "^1.10.0",
     "@swc/core": "^1.6.5",
-    "@taplo/cli": "^0.5.3",
+    "@taplo/cli": "^0.5.2",
     "ava": "^6.0.0",
     "benny": "^3.7.1",
     "chalk": "^5.3.0",
