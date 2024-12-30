@@ -411,9 +411,24 @@ jobs:
           path: packages/typst.node/artifacts
       - name: Move artifacts
         run: yarn artifacts
+      - name: Move transpiled files
+        run: |
+          cp artifacts/bindings-x86_64-unknown-linux-gnu/index.js index.js
+          cp artifacts/bindings-x86_64-unknown-linux-gnu/index.d.ts index.d.ts
+          cp artifacts/bindings-x86_64-unknown-linux-gnu/index-napi.js index-napi.js
+          cp artifacts/bindings-x86_64-unknown-linux-gnu/index-napi.d.ts index-napi.d.ts
       - name: List packages
         run: ls -R ./npm
         shell: bash
+      - name: NPM Pack
+        run: |
+          npm pack > package-name
+          mv `cat package-name` myriaddreamin-typst-ts-node-compiler.tar.gz
+      - name: Upload packed package
+        uses: actions/upload-artifact@v4
+        with:
+          name: myriaddreamin-typst-ts-node-compiler
+          path: myriaddreamin-typst-ts-node-compiler.tar.gz
       - name: Publish
         run: |
           echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
