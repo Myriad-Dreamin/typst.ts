@@ -428,7 +428,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: myriaddreamin-typst-ts-node-compiler
-          path: myriaddreamin-typst-ts-node-compiler.tar.gz
+          path: packages/typst.node/myriaddreamin-typst-ts-node-compiler.tar.gz
       - name: Publish
         run: |
           echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
