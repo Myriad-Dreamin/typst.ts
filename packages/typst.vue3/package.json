@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst.vue3",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "type": "module",
   "main": "src/Typst.vue",
   "scripts": {
