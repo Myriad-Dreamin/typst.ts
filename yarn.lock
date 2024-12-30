@@ -2394,28 +2394,6 @@
     semver "^7.3.5"
     tar "^6.1.11"
 
-"@myriaddreamin/typst-ts-parser@*":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@myriaddreamin/typst-ts-parser/-/typst-ts-parser-0.4.1.tgz#3605eac6b05e8ecbe4af0bca71ac90249e0925e6"
-  integrity sha512-BV58P1+u5ORV8Lbn0sw1QScuAX7kH7xLeWFGplxsdFWwyrvGkhUB3kDn8aP7DPFvv9zZx6dQFxTlIssd61YN2Q==
-
-"@myriaddreamin/typst-ts-renderer@*":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@myriaddreamin/typst-ts-renderer/-/typst-ts-renderer-0.4.1.tgz#45f3c09ffb4363c844cbb7efe37da95fc4e4099e"
-  integrity sha512-5NXDwK0K00o+ZoMaxBlBdSsmVKY5aalolgUyTO9KNFRG3d1itsWRpRqrc1XC1dEyskGMuIqDkgwOY8vN/7T/Fw==
-
-"@myriaddreamin/typst-ts-web-compiler@*":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@myriaddreamin/typst-ts-web-compiler/-/typst-ts-web-compiler-0.4.1.tgz#02c0e5cae68d918207a830ea82f6b99d14682dab"
-  integrity sha512-k446Y7+JEUaOtHWSwgDt799NFMJJnqw8Rg+H44roT5qI9gLHp31+Up86FpGDKNm21d7sFxqEw2xWwLlclf2tvw==
-
-"@myriaddreamin/typst.ts@*":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@myriaddreamin/typst.ts/-/typst.ts-0.4.1.tgz#7462be15631137ba3770dd42432006bb7bd2f172"
-  integrity sha512-hNkVeQaqYEt6xSuTxbDzvm0f3KkymbTGpQv6QsYyCUsa/xBzijyDN9pspW+TA+H5f9u+x1GmmGgn3bZojrHttg==
-  dependencies:
-    idb "^7.1.1"
-
 "@napi-rs/cli@3.0.0-alpha.43":
   version "3.0.0-alpha.43"
   resolved "https://registry.yarnpkg.com/@napi-rs/cli/-/cli-3.0.0-alpha.43.tgz#1c04d939093beb131dde3a753edea126bbf0290a"
@@ -12906,7 +12884,8 @@ typescript@^5.6.2:
   integrity sha512-NW8ByodCSNCwZeghjN3o+JX5OFH0Ojg6sadjEKY4huZ52TqbJTJnDo5+Tw98lSy63NZvi4n+ez5m2u5d4PkZyw==
 
 "typst-ts-solid@link:packages/typst.solid":
-  version "1.0.0"
+  version "0.0.0"
+  uid ""
 
 ua-parser-js@^0.7.30:
   version "0.7.36"
