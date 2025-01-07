@@ -10,10 +10,9 @@
     "renderer"
   ],
   "repository": "https://github.com/Myriad-Dreamin/typst.ts",
-  "main": "dist/index.js",
   "files": [
-    "dist/index.js",
-    "dist/index.min.js"
+    "dist/index.min.js",
+    "dist/style.css"
   ],
   "peerDependencies": {},
   "scripts": {
