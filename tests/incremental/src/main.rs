@@ -7,8 +7,8 @@ use reflexo_typst::vector::{
     stream::BytesModuleStream,
 };
 use reflexo_typst::{
-    CompileDriver, CompileExporter, PureCompiler, ShadowApiExt, TypstDocument, TypstSystemUniverse,
-    TypstSystemWorld,
+    Bytes, CompileDriver, CompileExporter, PureCompiler, ShadowApiExt, TypstDocument,
+    TypstPagedDocument, TypstSystemUniverse, TypstSystemWorld,
 };
 use reflexo_typst2vec::incr::{IncrDocClient, IncrDocServer};
 use reflexo_vec2svg::IncrSvgDocClient;
@@ -16,7 +16,7 @@ use reflexo_vec2svg::IncrSvgDocClient;
 fn get_driver(
     workspace_dir: &Path,
     entry_file_path: &Path,
-    exporter: GroupExporter<TypstDocument>,
+    exporter: GroupExporter<TypstPagedDocument>,
 ) -> CompileDriver<CompileExporter<PureCompiler<TypstSystemWorld>>> {
     let project_base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let w = project_base.join("fonts");
@@ -36,7 +36,7 @@ fn get_driver(
 pub fn test_compiler(
     workspace_dir: &Path,
     entry_file_path: &Path,
-    exporter: GroupExporter<TypstDocument>,
+    exporter: GroupExporter<TypstPagedDocument>,
 ) {
     let mut driver = get_driver(workspace_dir, entry_file_path, exporter);
     let mut content = { std::fs::read_to_string(entry_file_path).expect("Could not read file") };
@@ -57,11 +57,11 @@ pub fn test_compiler(
     let main_id = driver.main_id();
 
     let doc = driver
-        .with_shadow_file_by_id(main_id, content.as_bytes().into(), |driver| {
+        .with_shadow_file_by_id(main_id, Bytes::from_string(content.clone()), |driver| {
             driver.compile(&mut Default::default())
         })
         .unwrap();
-    let server_delta = incr_server.pack_delta(doc.output);
+    let server_delta = incr_server.pack_delta(TypstDocument::Paged(doc.output));
     let server_delta = BytesModuleStream::from_slice(&server_delta).checkout_owned();
     incr_client.merge_delta(server_delta);
     let _ = incr_svg_client.render_in_window(&mut incr_client, window);
@@ -73,12 +73,12 @@ pub fn test_compiler(
         content += "\n\nx";
 
         let doc = driver
-            .with_shadow_file_by_id(main_id, content.as_bytes().into(), |driver| {
+            .with_shadow_file_by_id(main_id, Bytes::from_string(content.clone()), |driver| {
                 driver.compile(&mut Default::default())
             })
             .unwrap();
 
-        let server_delta = incr_server.pack_delta(doc.output);
+        let server_delta = incr_server.pack_delta(TypstDocument::Paged(doc.output));
         let sd = server_delta.len();
         let server_delta = BytesModuleStream::from_slice(&server_delta).checkout_owned();
         incr_client.merge_delta(server_delta);

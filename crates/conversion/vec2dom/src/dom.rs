@@ -672,7 +672,7 @@ pub enum TypstDomExtra {
     Image(ImageElem),
     Text(TextElem),
     Path(PathElem),
-    Html(HtmlElem),
+    RawHtml(HtmlElem),
     Link(LinkElem),
     ContentHint(ContentHintElem),
 }

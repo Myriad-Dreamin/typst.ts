@@ -13,7 +13,7 @@ use crate::typst::prelude::*;
 use crate::vector::ir::{LayoutRegion, LayoutRegionNode};
 use crate::world::{CompilerFeat, CompilerWorld};
 use crate::{
-    CompileEnv, CompileSnapshot, Compiler, Exporter, TypstDict, TypstDocument as Document,
+    CompileEnv, CompileSnapshot, Compiler, Exporter, TypstDict, TypstPagedDocument as Document,
 };
 
 pub type LayoutWidths = EcoVec<typst::layout::Abs>;

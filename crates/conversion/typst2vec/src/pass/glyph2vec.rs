@@ -8,6 +8,7 @@ use parking_lot::Mutex;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use ttf_parser::GlyphId;
+use typst::foundations::Bytes;
 use typst::layout::Size;
 use typst::text::Font;
 use typst::visualize::Image;
@@ -450,7 +451,7 @@ impl ConvertInnerImpl {
         }
 
         let glyph_image = typst::visualize::Image::new(
-            svg_str.as_bytes().to_vec().into(),
+            Bytes::new(svg_str.as_bytes().to_vec()),
             typst::visualize::ImageFormat::Vector(typst::visualize::VectorFormat::Svg),
             // typst::geom::Axes::new(width as u32, height as u32),
             None,

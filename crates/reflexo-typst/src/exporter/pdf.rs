@@ -1,19 +1,19 @@
 use std::sync::Arc;
 
-use reflexo::typst::TypstDocument;
+use reflexo::typst::TypstPagedDocument;
 use typst::{diag::SourceResult, World};
-use typst_pdf::{PdfOptions, PdfStandard, PdfStandards};
+use typst_pdf::{PdfOptions, PdfStandard, PdfStandards, Timestamp};
 
-use crate::{Exporter, TypstDatetime};
+use crate::Exporter;
 
 #[derive(Debug, Clone, Default)]
 pub struct PdfDocExporter {
-    ctime: Option<TypstDatetime>,
+    ctime: Option<Timestamp>,
     standards: Option<PdfStandards>,
 }
 
 impl PdfDocExporter {
-    pub fn with_ctime(mut self, v: Option<TypstDatetime>) -> Self {
+    pub fn with_ctime(mut self, v: Option<Timestamp>) -> Self {
         self.ctime = v;
         self
     }
@@ -24,8 +24,8 @@ impl PdfDocExporter {
     }
 }
 
-impl Exporter<TypstDocument, Vec<u8>> for PdfDocExporter {
-    fn export(&self, _world: &dyn World, output: Arc<TypstDocument>) -> SourceResult<Vec<u8>> {
+impl Exporter<TypstPagedDocument, Vec<u8>> for PdfDocExporter {
+    fn export(&self, _world: &dyn World, output: Arc<TypstPagedDocument>) -> SourceResult<Vec<u8>> {
         // todo: ident option
 
         typst_pdf::pdf(

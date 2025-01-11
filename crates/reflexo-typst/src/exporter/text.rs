@@ -3,19 +3,19 @@ use std::io::Write;
 use std::sync::Arc;
 
 use crate::exporter_utils::map_err;
-use crate::{Transformer, TypstDocument};
+use crate::{Transformer, TypstPagedDocument};
 
 #[derive(Debug, Clone, Default)]
 pub struct TextExporter {}
 
-impl<W> Transformer<(Arc<TypstDocument>, W)> for TextExporter
+impl<W> Transformer<(Arc<TypstPagedDocument>, W)> for TextExporter
 where
     W: std::io::Write,
 {
     fn export(
         &self,
         _world: &dyn typst::World,
-        (output, writer): (Arc<TypstDocument>, W),
+        (output, writer): (Arc<TypstPagedDocument>, W),
     ) -> typst::diag::SourceResult<()> {
         let mut w = std::io::BufWriter::new(writer);
 
@@ -26,7 +26,7 @@ where
     }
 }
 
-struct FullTextDigest(Arc<TypstDocument>);
+struct FullTextDigest(Arc<TypstPagedDocument>);
 
 impl FullTextDigest {
     fn export_frame(f: &mut fmt::Formatter<'_>, doc: &typst::layout::Frame) -> fmt::Result {

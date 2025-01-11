@@ -77,6 +77,7 @@ typst-ide = "0.13.0"
 typst-pdf = "0.13.0"
 typst-svg = "0.13.0"
 typst-syntax = "0.13.0"
+
 ttf-parser = "0.24.1"
 
 typst-assets = "0.12.0"
@@ -238,12 +239,12 @@ undocumented_unsafe_blocks = "warn"
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
 # comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
-typst = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.1-nightly" }
-typst-eval = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.1-nightly" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.1-nightly" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.1-nightly" }
-typst-svg = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.1-nightly" }
-typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst", branch = "typst.ts-v0.5.1-nightly" }
+typst = { git = "https://github.com/ParaN3xus/typst", branch = "nightly-content-hint" }
+typst-syntax = { git = "https://github.com/ParaN3xus/typst", branch = "nightly-content-hint" }
+typst-ide = { git = "https://github.com/ParaN3xus/typst", branch = "nightly-content-hint" }
+typst-svg = { git = "https://github.com/ParaN3xus/typst", branch = "nightly-content-hint" }
+typst-pdf = { git = "https://github.com/ParaN3xus/typst", branch = "nightly-content-hint" }
+typst-eval = { git = "https://github.com/ParaN3xus/typst", branch = "nightly-content-hint" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }

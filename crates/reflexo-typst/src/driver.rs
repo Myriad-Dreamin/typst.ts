@@ -10,7 +10,7 @@ use crate::vfs::{FileId, PathResolution};
 use crate::world::{
     CompilerFeat, CompilerUniverse, CompilerWorld, EntryReader, ShadowApi, DETACHED_ENTRY,
 };
-use crate::{Bytes, TypstDocument, TypstFileId};
+use crate::{Bytes, TypstFileId, TypstPagedDocument};
 
 /// CompileDriverImpl is a driver for typst compiler.
 /// It is responsible for operating the compiler without leaking implementation
@@ -36,12 +36,15 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> CompileDriverImpl<C, F>
     pub fn query(
         &mut self,
         selector: String,
-        document: &TypstDocument,
+        document: &TypstPagedDocument,
     ) -> SourceResult<Vec<Content>> {
         self.compiler.query(&self.snapshot(), selector, document)
     }
 
-    pub fn compile(&mut self, env: &mut CompileEnv) -> SourceResult<Warned<Arc<TypstDocument>>> {
+    pub fn compile(
+        &mut self,
+        env: &mut CompileEnv,
+    ) -> SourceResult<Warned<Arc<TypstPagedDocument>>> {
         let world = self.snapshot();
         self.compiler.ensure_main(&world)?;
         self.compiler.compile(&world, env)

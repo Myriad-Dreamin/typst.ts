@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use reflexo::typst::TypstDocument;
+use reflexo::typst::TypstPagedDocument;
 use reflexo_vec2svg::{
     render_svg, render_svg_html, DefaultExportFeature, ExportFeature, SvgExporter,
 };
@@ -20,8 +20,8 @@ impl<Feat> Default for SvgHtmlExporter<Feat> {
     }
 }
 
-impl<Feat: ExportFeature> Exporter<TypstDocument, String> for SvgHtmlExporter<Feat> {
-    fn export(&self, _world: &dyn World, output: Arc<TypstDocument>) -> SourceResult<String> {
+impl<Feat: ExportFeature> Exporter<TypstPagedDocument, String> for SvgHtmlExporter<Feat> {
+    fn export(&self, _world: &dyn World, output: Arc<TypstPagedDocument>) -> SourceResult<String> {
         // html wrap
         Ok(render_svg_html::<Feat>(&output))
     }
@@ -30,8 +30,8 @@ impl<Feat: ExportFeature> Exporter<TypstDocument, String> for SvgHtmlExporter<Fe
 #[derive(Default)]
 pub struct PureSvgExporter;
 
-impl Exporter<TypstDocument, String> for PureSvgExporter {
-    fn export(&self, _world: &dyn World, output: Arc<TypstDocument>) -> SourceResult<String> {
+impl Exporter<TypstPagedDocument, String> for PureSvgExporter {
+    fn export(&self, _world: &dyn World, output: Arc<TypstPagedDocument>) -> SourceResult<String> {
         // html wrap
         Ok(render_svg(&output))
     }
@@ -40,8 +40,8 @@ impl Exporter<TypstDocument, String> for PureSvgExporter {
 #[derive(Default)]
 pub struct SvgModuleExporter {}
 
-impl Exporter<TypstDocument, Vec<u8>> for SvgModuleExporter {
-    fn export(&self, _world: &dyn World, output: Arc<TypstDocument>) -> SourceResult<Vec<u8>> {
+impl Exporter<TypstPagedDocument, Vec<u8>> for SvgModuleExporter {
+    fn export(&self, _world: &dyn World, output: Arc<TypstPagedDocument>) -> SourceResult<Vec<u8>> {
         type UsingExporter = SvgExporter<DefaultExportFeature>;
         Ok(UsingExporter::svg_doc(&output).to_bytes())
     }

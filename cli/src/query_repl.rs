@@ -13,6 +13,7 @@ use rustyline::validate::MatchingBracketValidator;
 use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, KeyEvent};
 use rustyline::{Helper, Validator};
 use typst::diag::SourceDiagnostic;
+use typst::foundations::Bytes;
 use typst::World;
 use typst_ide::{autocomplete, IdeWorld};
 
@@ -126,20 +127,24 @@ impl Completer for ReplContext {
         driver.universe.reset();
 
         let typst_completions = driver
-            .with_shadow_file(&entry, dyn_content.as_bytes().into(), |driver| {
-                let doc = driver.compile(&mut Default::default()).ok();
-                let world = driver.snapshot();
-                let main = world.main();
-                let main = world.source(main).unwrap();
+            .with_shadow_file(
+                &entry,
+                Bytes::new(dyn_content.as_bytes().to_vec()),
+                |driver| {
+                    let doc = driver.compile(&mut Default::default()).ok();
+                    let world = driver.snapshot();
+                    let main = world.main();
+                    let main = world.source(main).unwrap();
 
-                Ok(autocomplete(
-                    &IdeWrapper(&world),
-                    doc.as_ref().map(|f| f.output.as_ref()),
-                    &main,
-                    cursor,
-                    true,
-                ))
-            })
+                    Ok(autocomplete(
+                        &IdeWrapper(&world),
+                        doc.as_ref().map(|f| f.output.as_ref()),
+                        &main,
+                        cursor,
+                        true,
+                    ))
+                },
+            )
             .ok()
             .flatten();
 

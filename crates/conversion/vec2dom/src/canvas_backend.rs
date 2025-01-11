@@ -90,7 +90,7 @@ impl TypstElem {
 
                 ch.child.attach_canvas(c.inner[0].1.clone());
             }
-            Html(..) | Link(..) | Image(..) | Text(..) | Path(..) | ContentHint(..) => {}
+            RawHtml(..) | Link(..) | Image(..) | Text(..) | Path(..) | ContentHint(..) => {}
         };
     }
 

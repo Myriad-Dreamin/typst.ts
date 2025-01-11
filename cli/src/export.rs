@@ -4,12 +4,12 @@ use chrono::{Datelike, Timelike};
 use reflexo_typst::exporter_builtins::{FsPathExporter, GroupExporter};
 use reflexo_typst::program_meta::REPORT_BUG_MESSAGE;
 use reflexo_typst::svg::DefaultExportFeature;
-use reflexo_typst::TypstDatetime;
-use reflexo_typst::TypstDocument;
+use reflexo_typst::TypstPagedDocument;
+use reflexo_typst::{TypstDatetime, TypstTimestamp};
 
 use crate::{utils::current_dir, CompileArgs, ExportArgs};
 
-type GroupDocExporter = GroupExporter<TypstDocument>;
+type GroupDocExporter = GroupExporter<TypstPagedDocument>;
 
 /// builtin formats should be enabled by default, and non-builtin formats should
 /// be
@@ -116,7 +116,7 @@ fn prepare_exporters_impl(
     }
     return GroupExporter::new(doc);
 
-    type Doc = TypstDocument;
+    type Doc = TypstPagedDocument;
 
     type WithAst = reflexo_typst::AstExporter;
     type WithPdf = reflexo_typst::PdfDocExporter;
@@ -162,14 +162,16 @@ pub fn prepare_exporters(args: &CompileArgs, entry_file: Option<&Path>) -> Group
     prepare_exporters_impl(args.export.clone(), output_dir, formats)
 }
 
-/// Convert [`chrono::DateTime`] to [`TypstDatetime`]
-fn convert_datetime(date_time: chrono::DateTime<chrono::Utc>) -> Option<TypstDatetime> {
-    TypstDatetime::from_ymd_hms(
+/// Convert [`chrono::DateTime`] to [`TypstTimestamp`]
+fn convert_datetime(date_time: chrono::DateTime<chrono::Utc>) -> Option<TypstTimestamp> {
+    let typst_datetime = TypstDatetime::from_ymd_hms(
         date_time.year(),
         date_time.month().try_into().ok()?,
         date_time.day().try_into().ok()?,
         date_time.hour().try_into().ok()?,
         date_time.minute().try_into().ok()?,
         date_time.second().try_into().ok()?,
-    )
+    )?;
+
+    Some(TypstTimestamp::new_utc(typst_datetime))
 }

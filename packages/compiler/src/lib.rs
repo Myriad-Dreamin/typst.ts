@@ -165,7 +165,10 @@ impl TypstCompiler {
 
     pub fn add_source(&mut self, path: &str, content: &str) -> bool {
         let path = Path::new(path).to_owned();
-        match self.driver.map_shadow(&path, content.as_bytes().into()) {
+        match self
+            .driver
+            .map_shadow(&path, Bytes::from_string(content.to_owned()))
+        {
             Ok(_) => true,
             Err(e) => {
                 console_log!("Error: {:?}", e);
@@ -176,7 +179,10 @@ impl TypstCompiler {
 
     pub fn map_shadow(&mut self, path: &str, content: &[u8]) -> bool {
         let path = Path::new(path).to_owned();
-        match self.driver.map_shadow(&path, content.into()) {
+        match self
+            .driver
+            .map_shadow(&path, Bytes::new(content.to_owned()))
+        {
             Ok(_) => true,
             Err(e) => {
                 console_log!("Error: {:?}", e);
@@ -298,7 +304,7 @@ impl TypstCompiler {
         fmt: String,
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
-        let vec_exporter: DynExporter<TypstDocument, Vec<u8>> = match fmt.as_str() {
+        let vec_exporter: DynExporter<TypstPagedDocument, Vec<u8>> = match fmt.as_str() {
             "vector" => Box::new(reflexo_typst::exporter_builtins::VecExporter::new(
                 reflexo_typst::SvgModuleExporter::default(),
             )),

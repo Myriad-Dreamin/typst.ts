@@ -1,7 +1,7 @@
 use std::fmt::Display;
 use std::{io, io::Write, sync::Arc};
 
-use reflexo::typst::TypstDocument;
+use reflexo::typst::TypstPagedDocument;
 use typst::syntax::{LinkedNode, Source, SyntaxKind, Tag};
 use typst::{
     diag::{At, FileError},
@@ -13,14 +13,14 @@ use crate::Transformer;
 #[derive(Debug, Clone, Default)]
 pub struct AstExporter {}
 
-impl<W> Transformer<(Arc<TypstDocument>, W)> for AstExporter
+impl<W> Transformer<(Arc<TypstPagedDocument>, W)> for AstExporter
 where
     W: std::io::Write,
 {
     fn export(
         &self,
         world: &dyn typst::World,
-        (_output, writer): (Arc<TypstDocument>, W),
+        (_output, writer): (Arc<TypstPagedDocument>, W),
     ) -> typst::diag::SourceResult<()> {
         let mut writer = std::io::BufWriter::new(writer);
 

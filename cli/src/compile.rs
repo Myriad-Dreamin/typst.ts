@@ -6,7 +6,7 @@ use std::sync::Arc;
 use reflexo_typst::config::entry::{EntryOpts, MEMORY_MAIN_ENTRY};
 use reflexo_typst::config::CompileOpts;
 use reflexo_typst::features::{FeatureSet, DIAG_FMT_FEATURE};
-use reflexo_typst::TypstDocument;
+use reflexo_typst::TypstPagedDocument;
 use reflexo_typst::{exporter_builtins::GroupExporter, path::PathClean};
 use reflexo_typst::{
     CompilationHandle, CompileActor, CompileDriver, CompileExporter, CompileServerOpts,
@@ -96,7 +96,7 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstS
             })
             .unwrap();
 
-        u.map_shadow_by_id(*MEMORY_MAIN_ENTRY, Bytes::from(src))
+        u.map_shadow_by_id(*MEMORY_MAIN_ENTRY, Bytes::new(src))
             .map_err(|err| {
                 clap::Error::raw(
                     clap::error::ErrorKind::Io,
@@ -114,7 +114,7 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstS
     CompileDriver::new(std::marker::PhantomData, world)
 }
 
-pub fn compile_export(args: CompileArgs, exporter: GroupExporter<TypstDocument>) -> ! {
+pub fn compile_export(args: CompileArgs, exporter: GroupExporter<TypstPagedDocument>) -> ! {
     let (intr_tx, intr_rx) = mpsc::unbounded_channel();
 
     // todo: make dynamic layout exporter

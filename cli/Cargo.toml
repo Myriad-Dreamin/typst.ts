@@ -11,6 +11,7 @@ repository.workspace = true
 [dependencies]
 typst.workspace = true
 typst-ide.workspace = true
+typst-pdf.workspace = true
 typst-assets = { workspace = true, features = ["fonts"] }
 
 clap.workspace = true

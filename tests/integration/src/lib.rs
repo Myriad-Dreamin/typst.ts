@@ -6,14 +6,14 @@ use reflexo_typst::config::{entry::EntryOpts, CompileOpts};
 use reflexo_typst::exporter_builtins::{FsPathExporter, GroupExporter};
 use reflexo_typst::path::PathClean;
 use reflexo_typst::{
-    CompileDriver, CompileExporter, PdfDocExporter, PureCompiler, SvgModuleExporter, TypstDocument,
+    CompileDriver, CompileExporter, PdfDocExporter, PureCompiler, SvgModuleExporter, TypstPagedDocument,
     TypstSystemUniverse, TypstSystemWorld,
 };
 
 fn get_driver(
     workspace_dir: &Path,
     entry_file_path: &Path,
-    exporter: GroupExporter<TypstDocument>,
+    exporter: GroupExporter<TypstPagedDocument>,
 ) -> CompileDriver<CompileExporter<PureCompiler<TypstSystemWorld>>> {
     let world = TypstSystemUniverse::new(CompileOpts {
         entry: EntryOpts::new_workspace(workspace_dir.into()),
@@ -29,7 +29,7 @@ fn get_driver(
 macro_rules! document_exporters {
     ($($exporters:expr),*) => {
         {
-            let document_exporters: Vec<Box<dyn reflexo_typst::Exporter<TypstDocument> + Send + Sync>> = vec![
+            let document_exporters: Vec<Box<dyn reflexo_typst::Exporter<TypstPagedDocument> + Send + Sync>> = vec![
                 $(Box::new($exporters)),*
             ];
             GroupExporter::new(document_exporters)

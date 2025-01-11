@@ -111,7 +111,7 @@ pub fn create_driver(
             }
             Either::B(p) => {
                 for b in p.font_blobs {
-                    searcher.add_memory_font(Bytes::from(b.to_vec()));
+                    searcher.add_memory_font(Bytes::new(b.to_vec()));
                 }
             }
         }

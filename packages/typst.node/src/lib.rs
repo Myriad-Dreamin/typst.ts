@@ -23,7 +23,7 @@ use reflexo_typst::{error::WithContext, foundations::IntoValue};
 use reflexo_typst::{error_once, syntax::Span};
 use reflexo_typst::{
     Bytes, Compiler, DynamicLayoutCompiler, Exporter, ShadowApi, SystemCompilerFeat, TypstAbs,
-    TypstDatetime, TypstDocument, TypstSystemWorld, TypstWorld,
+    TypstDatetime, TypstPagedDocument, TypstSystemWorld, TypstWorld,
 };
 use serde::{Deserialize, Serialize};
 
@@ -32,10 +32,10 @@ use error::NodeTypstCompileResult;
 /// A shared typst document object.
 #[napi]
 #[derive(Clone)]
-pub struct NodeTypstDocument(Arc<TypstDocument>);
+pub struct NodeTypstPagedDocument(Arc<TypstPagedDocument>);
 
 #[napi]
-impl NodeTypstDocument {
+impl NodeTypstPagedDocument {
     /// Gets the number of pages in the document.
     #[napi(getter)]
     pub fn num_of_pages(&self) -> u32 {
@@ -152,7 +152,7 @@ pub struct RenderPdfOpts {
 }
 
 /// Either a compiled document or compile arguments.
-type MayCompileOpts<'a> = Either<&'a NodeTypstDocument, CompileDocArgs>;
+type MayCompileOpts<'a> = Either<&'a NodeTypstPagedDocument, CompileDocArgs>;
 
 /// Node wrapper to access compiler interfaces.
 #[napi]
@@ -226,7 +226,7 @@ impl NodeCompiler {
     /// @param source - The source code of the source file.
     #[napi]
     pub fn add_source(&mut self, path: String, source: String) -> Result<(), NodeError> {
-        let content = Bytes::from(source.into_bytes());
+        let content = Bytes::new(source.into_bytes());
         let verse = self.driver.assert_mut().universe_mut();
         let res = verse.map_shadow(Path::new(&path), content);
         res.at(Span::detached()).map_err(map_node_error)
@@ -237,7 +237,7 @@ impl NodeCompiler {
     /// @param content - The content of the shadow file.
     #[napi]
     pub fn map_shadow(&mut self, path: String, content: Buffer) -> Result<(), NodeError> {
-        let content = Bytes::from(content.as_ref());
+        let content = Bytes::new(content.as_ref().to_vec());
         let verse = self.driver.assert_mut().universe_mut();
         let res = verse.map_shadow(Path::new(&path), content);
         res.at(Span::detached()).map_err(map_node_error)
@@ -280,7 +280,9 @@ impl NodeCompiler {
     }
 
     /// Queries the data of the document.
-    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs, args: QueryDocArgs")]
+    #[napi(
+        ts_args_type = "compiledOrBy: NodeTypstPagedDocument | CompileDocArgs, args: QueryDocArgs"
+    )]
     pub fn query(
         &mut self,
         opts: MayCompileOpts,
@@ -308,7 +310,10 @@ impl NodeCompiler {
     }
 
     /// Compiles the document as a specific type.
-    pub fn may_compile(&mut self, opts: MayCompileOpts) -> Result<NodeTypstDocument, NodeError> {
+    pub fn may_compile(
+        &mut self,
+        opts: MayCompileOpts,
+    ) -> Result<NodeTypstPagedDocument, NodeError> {
         Ok(match opts {
             MayCompileOpts::A(doc) => doc.clone(),
             MayCompileOpts::B(compile_by) => {
@@ -330,7 +335,7 @@ impl NodeCompiler {
         opts: MayCompileOpts,
     ) -> Result<RO, NodeError>
     where
-        T: Exporter<TypstDocument, O> + Default,
+        T: Exporter<TypstPagedDocument, O> + Default,
     {
         let doc = self.may_compile(opts)?;
         e.export(&self.spawn_world(), doc.0.clone())
@@ -339,14 +344,16 @@ impl NodeCompiler {
     }
 
     /// Simply compiles the document as a vector IR.
-    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstPagedDocument | CompileDocArgs")]
     pub fn vector(&mut self, compiled_or_by: MayCompileOpts) -> Result<Buffer, NodeError> {
         type Exporter = reflexo_typst::SvgModuleExporter;
         self.compile_as(Exporter::default(), compiled_or_by)
     }
 
     /// Simply compiles the document as a PDF.
-    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs, opts?: RenderPdfOpts")]
+    #[napi(
+        ts_args_type = "compiledOrBy: NodeTypstPagedDocument | CompileDocArgs, opts?: RenderPdfOpts"
+    )]
     #[cfg(feature = "pdf")]
     pub fn pdf(
         &mut self,
@@ -379,7 +386,7 @@ impl NodeCompiler {
     }
 
     /// Simply compiles the document as a plain SVG.
-    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstPagedDocument | CompileDocArgs")]
     #[cfg(feature = "svg")]
     pub fn plain_svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
         type Exporter = PlainSvgExporter;
@@ -387,7 +394,7 @@ impl NodeCompiler {
     }
 
     /// Simply compiles the document as a rich-contented SVG (for browsers).
-    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstPagedDocument | CompileDocArgs")]
     #[cfg(feature = "svg")]
     pub fn svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
         type Exporter = reflexo_typst::PureSvgExporter;
@@ -444,23 +451,29 @@ fn parse_source_date_epoch(timestamp: i64) -> Result<DateTime<Utc>, NodeError> {
         .ok_or_else(|| map_node_error(error_once!("timestamp out of range")))
 }
 
-/// Convert [`chrono::DateTime`] to [`TypstDatetime`]
-fn convert_datetime(date_time: chrono::DateTime<chrono::Utc>) -> Option<TypstDatetime> {
-    TypstDatetime::from_ymd_hms(
+/// Convert [`chrono::DateTime`] to [`TypstTimestamp`]
+fn convert_datetime(date_time: chrono::DateTime<chrono::Utc>) -> Option<TypstTimestamp> {
+    let typst_datetime = TypstDatetime::from_ymd_hms(
         date_time.year(),
         date_time.month().try_into().ok()?,
         date_time.day().try_into().ok()?,
         date_time.hour().try_into().ok()?,
         date_time.minute().try_into().ok()?,
         date_time.second().try_into().ok()?,
-    )
+    )?;
+
+    Some(TypstTimestamp::new_utc(typst_datetime))
 }
 
 #[derive(Default)]
 struct PlainSvgExporter {}
 
-impl Exporter<TypstDocument, String> for PlainSvgExporter {
-    fn export(&self, _world: &dyn TypstWorld, output: Arc<TypstDocument>) -> SourceResult<String> {
+impl Exporter<TypstPagedDocument, String> for PlainSvgExporter {
+    fn export(
+        &self,
+        _world: &dyn TypstWorld,
+        output: Arc<TypstPagedDocument>,
+    ) -> SourceResult<String> {
         Ok(typst_svg::svg_merged(&output, Default::default()))
     }
 }
