@@ -1069,10 +1069,10 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
 
     fn html_element(
         &self,
-        mut state: State,
-        elem: &HtmlElement,
-        parent: usize,
-        index: usize,
+        _state: State,
+        _elem: &HtmlElement,
+        _parent: usize,
+        _index: usize,
     ) -> Fingerprint {
         // let src_reg = self.spans.start();
 
