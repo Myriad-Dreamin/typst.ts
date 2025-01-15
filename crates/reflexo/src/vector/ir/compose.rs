@@ -32,6 +32,13 @@ impl fmt::Debug for Page {
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct TransformedRef(pub TransformItem, pub Fingerprint);
 
+/// References to a vec item with transform.
+/// Item representing an `<g/>` element applied with a [`TransformItem`].
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub struct LabelledRef(pub ImmutStr, pub Fingerprint);
+
 /// References to a group of items with translates.
 /// Absolute positioning items at their corresponding points.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]

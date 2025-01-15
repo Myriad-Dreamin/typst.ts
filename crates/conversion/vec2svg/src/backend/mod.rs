@@ -545,6 +545,11 @@ impl<
         self.attributes.push(("data-reuse-from", v.as_svg_id("g")));
         self
     }
+
+    fn with_label(mut self, _ctx: &mut C, label: &str) -> Self {
+        self.attributes.push(("data-typst-label", label.into()));
+        self
+    }
 }
 
 /// See [`FlatGroupContext`].

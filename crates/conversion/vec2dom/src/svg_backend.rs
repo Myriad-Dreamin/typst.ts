@@ -4,6 +4,7 @@ use reflexo::hash::Fingerprint;
 use reflexo::vector::ir::{self, Module, Page, TransformedRef, VecItem};
 use reflexo::vector::{incr::IncrDocClient, vm::RenderVm};
 use reflexo_vec2canvas::BBoxAt;
+use reflexo_vec2svg::ir::LabelledRef;
 use reflexo_vec2svg::{SvgExporter, SvgTask, SvgText};
 use web_sys::{wasm_bindgen::JsCast, Element, SvgGraphicsElement};
 
@@ -175,6 +176,52 @@ impl TypstPageElem {
                     ch = should_ch.next_element_sibling();
                 }
                 TypstDomExtra::Group(GroupElem { children })
+            }
+            VecItem::Labelled(LabelledRef(label, fg)) => {
+                let ch = g
+                    .last_element_child()
+                    .ok_or_else(|| {
+                        web_sys::console::log_2(
+                            &g,
+                            &format!("Invalid item reference: {item:?}").into(),
+                        );
+                        panic!("Invalid item reference: {}", fg.as_svg_id("g"));
+                    })
+                    .unwrap();
+
+                #[cfg(feature = "debug_attach")]
+                web_sys::console::log_3(
+                    &format!(
+                        "attach {a:?} -> {b:?} {c:?}",
+                        a = data.as_svg_id("g"),
+                        b = fg.as_svg_id("g"),
+                        c = label
+                    )
+                    .into(),
+                    &ch,
+                    &g,
+                );
+
+                let child = Self::attach_svg(
+                    ctx,
+                    ch.first_element_child()
+                        .ok_or_else(|| {
+                            web_sys::console::log_2(
+                                &g,
+                                &format!("Invalid item translate: {:?}", item).into(),
+                            );
+                            panic!("Invalid item translate: {}", fg.as_svg_id("g"));
+                        })
+                        .unwrap()
+                        .dyn_into()
+                        .unwrap(),
+                    *fg,
+                );
+
+                TypstDomExtra::Label(LabelElem {
+                    label: label.clone(),
+                    child: Box::new(child),
+                })
             }
             VecItem::Item(TransformedRef(trans, fg)) => {
                 let ch = g
