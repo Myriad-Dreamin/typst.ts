@@ -27,7 +27,7 @@ pub mod canvas_stub {
             _ses: &RenderSession,
             _canvas: &JsValue,
             _options: Option<RenderPageImageOptions>,
-        ) -> ZResult<JsValue> {
+        ) -> Result<JsValue> {
             Err(error_once!("Renderer.CanvasFeatureNotEnabled"))
         }
     }

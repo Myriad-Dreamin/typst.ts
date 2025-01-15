@@ -1,10 +1,9 @@
 use std::path::Path;
 
-use reflexo::ImmutPath;
 use typst::diag::{FileError, FileResult};
 use wasm_bindgen::prelude::*;
 
-use crate::{AccessModel, Bytes, Time};
+use crate::{Bytes, PathAccessModel};
 
 /// Provides proxy access model from typst compiler to some JavaScript
 /// implementation.
@@ -23,26 +22,10 @@ pub struct ProxyAccessModel {
     pub read_all_fn: js_sys::Function,
 }
 
-impl AccessModel for ProxyAccessModel {
-    fn mtime(&self, src: &Path) -> FileResult<Time> {
-        self.mtime_fn
-            .call1(&self.context, &src.to_string_lossy().as_ref().into())
-            .map(|v| {
-                let v = v.as_f64().unwrap();
-                Time::UNIX_EPOCH + std::time::Duration::from_secs_f64(v)
-            })
-            .map_err(|e| {
-                web_sys::console::error_3(
-                    &"typst_ts::compiler::ProxyAccessModel::mtime failure".into(),
-                    &src.to_string_lossy().as_ref().into(),
-                    &e,
-                );
-                FileError::AccessDenied
-            })
-    }
-
-    fn is_file(&self, src: &Path) -> FileResult<bool> {
-        self.is_file_fn
+impl PathAccessModel for ProxyAccessModel {
+    fn content(&self, src: &Path) -> FileResult<Bytes> {
+        let is_file = self
+            .is_file_fn
             .call1(&self.context, &src.to_string_lossy().as_ref().into())
             .map(|v| v.as_bool().unwrap())
             .map_err(|e| {
@@ -52,24 +35,13 @@ impl AccessModel for ProxyAccessModel {
                     &e,
                 );
                 FileError::AccessDenied
-            })
-    }
+            });
 
-    fn real_path(&self, src: &Path) -> FileResult<ImmutPath> {
-        self.real_path_fn
-            .call1(&self.context, &src.to_string_lossy().as_ref().into())
-            .map(|v| Path::new(&v.as_string().unwrap()).into())
-            .map_err(|e| {
-                web_sys::console::error_3(
-                    &"typst_ts::compiler::ProxyAccessModel::real_path failure".into(),
-                    &src.to_string_lossy().as_ref().into(),
-                    &e,
-                );
-                FileError::AccessDenied
-            })
-    }
+        // todo: remove this compatibility code
+        if !is_file? {
+            return Err(FileError::IsDirectory);
+        }
 
-    fn content(&self, src: &Path) -> FileResult<Bytes> {
         let data = self
             .read_all_fn
             .call1(&self.context, &src.to_string_lossy().as_ref().into())

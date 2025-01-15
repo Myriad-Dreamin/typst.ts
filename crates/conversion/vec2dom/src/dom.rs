@@ -177,7 +177,7 @@ impl DomPage {
         }
     }
 
-    pub fn relayout(&mut self, ctx: &CanvasBackend) -> ZResult<()> {
+    pub fn relayout(&mut self, ctx: &CanvasBackend) -> Result<()> {
         if let Some(data) = self.dirty_layout.take() {
             self.do_relayout(ctx, data)?
         }
@@ -185,7 +185,7 @@ impl DomPage {
         Ok(())
     }
 
-    fn do_relayout(&mut self, ctx: &CanvasBackend, data: Page) -> ZResult<()> {
+    fn do_relayout(&mut self, ctx: &CanvasBackend, data: Page) -> Result<()> {
         #[cfg(feature = "debug_relayout")]
         web_sys::console::log_2(
             &format!("re-layout {idx} {data:?}", idx = self.idx).into(),
@@ -284,7 +284,7 @@ impl DomPage {
         should_visible
     }
 
-    pub fn repaint_svg(&mut self, ctx: &mut DomContext<'_, '_>) -> ZResult<()> {
+    pub fn repaint_svg(&mut self, ctx: &mut DomContext<'_, '_>) -> Result<()> {
         let should_visible = !self.bbox.intersect(&self.viewport).is_empty();
 
         if cfg!(feature = "debug_repaint") {
@@ -374,7 +374,7 @@ impl DomPage {
         })
     }
 
-    pub fn repaint_semantics(&mut self, ctx: &mut DomContext<'_, '_>) -> ZResult<()> {
+    pub fn repaint_semantics(&mut self, ctx: &mut DomContext<'_, '_>) -> Result<()> {
         let init_semantics = self.semantics_state.as_ref().map_or(true, |e| {
             let (data, _layout_heavy) = e;
             e.0.content != data.content
@@ -412,7 +412,7 @@ impl DomPage {
         Ok(())
     }
 
-    pub fn need_prepare_canvas(&mut self, module: &Module, b: &mut CanvasBackend) -> ZResult<bool> {
+    pub fn need_prepare_canvas(&mut self, module: &Module, b: &mut CanvasBackend) -> Result<bool> {
         // already pulled
         // self.pull_viewport(viewport);
 
@@ -448,7 +448,7 @@ impl DomPage {
     pub fn prepare_canvas(
         &mut self,
         ctx: &mut DomContext<'_, '_>,
-    ) -> ZResult<Option<Arc<CanvasElem>>> {
+    ) -> Result<Option<Arc<CanvasElem>>> {
         let need_repaint = self.need_repaint_canvas(ctx.canvas_backend);
 
         let res = if need_repaint {
@@ -489,7 +489,7 @@ impl DomPage {
         &mut self,
         viewport: Option<tiny_skia::Rect>,
         ppp: f32,
-    ) -> ZResult<impl Future<Output = ()>> {
+    ) -> Result<impl Future<Output = ()>> {
         let render_entire_page = self.realized.lock().unwrap().is_none() || !self.is_visible;
 
         if let Some(attached) = self.realized.lock().unwrap().as_mut() {

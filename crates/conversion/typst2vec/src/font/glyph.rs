@@ -1,14 +1,13 @@
+pub use ttf_parser::GlyphId;
+
 use std::fmt::Write;
 use std::hash::{Hash, Hasher};
 use std::{ops::Deref, sync::Arc};
 
-pub use ttf_parser::GlyphId;
+use reflexo::hash::{item_hash128, HashedTrait, StaticHash128};
+use reflexo::ImmutStr;
 use typst::text::Font;
-// use typst::geom::Axes;
 use typst::visualize::{Image as TypstImage, RasterFormat};
-
-use reflexo::hash::item_hash128;
-use reflexo::{HashedTrait, ImmutStr, StaticHash128};
 
 use super::ligature::resolve_ligature;
 

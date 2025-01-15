@@ -14,7 +14,7 @@ pub struct TypstParserBuilder {}
 #[wasm_bindgen]
 impl TypstParserBuilder {
     #[wasm_bindgen(constructor)]
-    pub fn new() -> ZResult<TypstParserBuilder> {
+    pub fn new() -> Result<TypstParserBuilder> {
         console_error_panic_hook::set_once();
         Ok(Self {})
     }
@@ -53,7 +53,7 @@ impl TypstParser {
         &self,
         src: String,
         offset_encoding: String,
-    ) -> ZResult<Uint32Array> {
+    ) -> Result<Uint32Array> {
         let tokens = self.get_semantic_tokens_inner(src, match offset_encoding.as_str() {
             "utf-16" => OffsetEncoding::Utf16,
            "utf-8" => OffsetEncoding::Utf8,

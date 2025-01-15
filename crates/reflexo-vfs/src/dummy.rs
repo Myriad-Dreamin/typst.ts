@@ -3,8 +3,7 @@ use std::path::Path;
 use reflexo::ImmutPath;
 use typst::diag::{FileError, FileResult};
 
-use super::AccessModel;
-use crate::{Bytes, Time};
+use crate::{AccessModel, Bytes, PathAccessModel, TypstFileId};
 
 /// Provides dummy access model.
 ///
@@ -15,18 +14,12 @@ use crate::{Bytes, Time};
 pub struct DummyAccessModel;
 
 impl AccessModel for DummyAccessModel {
-    fn mtime(&self, _src: &Path) -> FileResult<Time> {
-        Ok(Time::UNIX_EPOCH)
+    fn content(&self, _src: TypstFileId) -> (Option<ImmutPath>, FileResult<Bytes>) {
+        (None, Err(FileError::AccessDenied))
     }
+}
 
-    fn is_file(&self, _src: &Path) -> FileResult<bool> {
-        Ok(true)
-    }
-
-    fn real_path(&self, src: &Path) -> FileResult<ImmutPath> {
-        Ok(src.into())
-    }
-
+impl PathAccessModel for DummyAccessModel {
     fn content(&self, _src: &Path) -> FileResult<Bytes> {
         Err(FileError::AccessDenied)
     }

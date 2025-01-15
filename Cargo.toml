@@ -14,8 +14,6 @@ members = [
     "benches/lowering",
 
     "crates/reflexo",
-    "crates/reflexo-vfs",
-    "crates/reflexo-world",
     "crates/reflexo-typst",
     "crates/conversion/typst2vec",
     "crates/conversion/vec2canvas",
@@ -193,12 +191,15 @@ vergen = { version = "9.0.1", features = [
 ] }
 vergen-gitcl = { version = "1.0.1" }
 
+# tinymist's world implementation
+typst-shim = { path = "../tinymist/crates/typst-shim" }
+tinymist-analysis = { path = "../tinymist/crates/tinymist-analysis" }
+tinymist-std = { path = "../tinymist/crates/tinymist-std" }
+tinymist-world = { path = "../tinymist/crates/tinymist-world" }
+
 # project core
 reflexo = { version = "0.5.4", path = "crates/reflexo", default-features = false }
-reflexo-vfs = { version = "0.5.4", path = "crates/reflexo-vfs" }
-reflexo-world = { version = "0.5.4", path = "crates/reflexo-world" }
 reflexo-typst = { version = "0.5.4", path = "crates/reflexo-typst", default-features = false }
-reflexo-typst-shim = { version = "0.5.4", path = "crates/reflexo-typst-shim" }
 
 # conversions
 reflexo-typst2vec = { version = "0.5.4", path = "crates/conversion/typst2vec" }
@@ -241,6 +242,11 @@ typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst", tag = "typst.t
 typst-ide = { git = "https://github.com/Myriad-Dreamin/typst", tag = "typst.ts/v0.5.0-rc9" }
 typst-svg = { git = "https://github.com/Myriad-Dreamin/typst", tag = "typst.ts/v0.5.0-rc9" }
 typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst", tag = "typst.ts/v0.5.0-rc9" }
+
+typst-shim = { path = "../tinymist/crates/typst-shim" }
+tinymist-analysis = { path = "../tinymist/crates/tinymist-analysis" }
+tinymist-std = { path = "../tinymist/crates/tinymist-std" }
+tinymist-world = { path = "../tinymist/crates/tinymist-world" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }

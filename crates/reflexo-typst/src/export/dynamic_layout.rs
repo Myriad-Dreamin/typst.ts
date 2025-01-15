@@ -3,7 +3,7 @@ use std::{path::PathBuf, sync::Arc};
 use reflexo_typst2vec::pass::{CommandExecutor, Typst2VecPass};
 use reflexo_typst2vec::IntoTypst;
 use reflexo_vec2svg::{DynamicLayoutSvgExporter, MultiVecDocument};
-use reflexo_world::TaskInputs;
+use tinymist_world::TaskInputs;
 use typst::diag::Warned;
 use typst::foundations::IntoValue;
 use typst::utils::LazyHash;
@@ -239,10 +239,6 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>> + Clone> Exporter<Compil
 
 impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> Compiler for DynamicLayoutCompiler<F, C> {
     type W = CompilerWorld<F>;
-
-    fn reset(&mut self) -> SourceResult<()> {
-        Ok(())
-    }
 
     fn compile(
         &mut self,

@@ -1,19 +1,14 @@
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{path::Path, sync::Arc};
 
-use reflexo_world::DETACHED_ENTRY;
 use typst::{
-    diag::{eco_format, EcoString, SourceResult, Warned},
+    diag::{eco_format, EcoString, FileResult, SourceResult, Warned},
     foundations::Content,
 };
 
 use super::{CompileEnv, Compiler};
-use crate::EntryReader;
-use crate::{
-    world::{CompilerFeat, CompilerUniverse, CompilerWorld},
-    ShadowApi,
+use crate::vfs::{FileId, PathResolution};
+use crate::world::{
+    CompilerFeat, CompilerUniverse, CompilerWorld, EntryReader, ShadowApi, DETACHED_ENTRY,
 };
 use crate::{Bytes, TypstDocument, TypstFileId};
 
@@ -27,9 +22,8 @@ pub struct CompileDriverImpl<C, F: CompilerFeat> {
 }
 
 impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
-    pub fn entry_file(&self) -> Option<PathBuf> {
-        let main = self.universe.entry_state().main()?;
-        self.universe.path_for_id(main).ok()
+    pub fn entry_file(&self) -> Option<PathResolution> {
+        self.universe.path_for_id(self.main_id()).ok()
     }
 }
 
@@ -73,8 +67,14 @@ impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
 
     /// reset the compilation state
     pub fn reset(&mut self) -> SourceResult<()> {
-        // reset the world caches
         self.universe.reset();
+        Ok(())
+    }
+
+    /// evict the compilation state
+    pub fn evict(&mut self, vfs_threshold: usize) -> SourceResult<()> {
+        // evict the world caches
+        self.universe.evict(vfs_threshold);
 
         Ok(())
     }
@@ -146,13 +146,13 @@ impl<C: Compiler, F: CompilerFeat> CompileDriverImpl<C, F> {
 
 impl<C: Compiler, F: CompilerFeat> ShadowApi for CompileDriverImpl<C, F> {
     #[inline]
-    fn _shadow_map_id(&self, file_id: TypstFileId) -> typst::diag::FileResult<PathBuf> {
-        self.universe._shadow_map_id(file_id)
+    fn shadow_paths(&self) -> Vec<Arc<Path>> {
+        self.universe.shadow_paths()
     }
 
     #[inline]
-    fn shadow_paths(&self) -> Vec<Arc<Path>> {
-        self.universe.shadow_paths()
+    fn shadow_ids(&self) -> Vec<TypstFileId> {
+        self.universe.shadow_ids()
     }
 
     #[inline]
@@ -161,13 +161,23 @@ impl<C: Compiler, F: CompilerFeat> ShadowApi for CompileDriverImpl<C, F> {
     }
 
     #[inline]
-    fn map_shadow(&mut self, path: &Path, content: Bytes) -> typst::diag::FileResult<()> {
+    fn map_shadow(&mut self, path: &Path, content: Bytes) -> FileResult<()> {
         self.universe.map_shadow(path, content)
     }
 
     #[inline]
-    fn unmap_shadow(&mut self, path: &Path) -> typst::diag::FileResult<()> {
+    fn unmap_shadow(&mut self, path: &Path) -> FileResult<()> {
         self.universe.unmap_shadow(path)
+    }
+
+    #[inline]
+    fn map_shadow_by_id(&mut self, file_id: FileId, content: Bytes) -> FileResult<()> {
+        self.universe.map_shadow_by_id(file_id, content)
+    }
+
+    #[inline]
+    fn unmap_shadow_by_id(&mut self, file_id: FileId) -> FileResult<()> {
+        self.universe.unmap_shadow_by_id(file_id)
     }
 }
 

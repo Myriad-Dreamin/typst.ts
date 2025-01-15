@@ -26,9 +26,9 @@ static TEST_DOC: LazyLock<Arc<TypstDocument>> =
 
 fn compile(driver: &CompileDriver, src: &str) -> Arc<TypstDocument> {
     let mut driver = driver.lock().unwrap();
-    let e = driver.entry_file().to_owned().unwrap();
+    let e = driver.main_id();
     driver
-        .with_shadow_file(&e, src.as_bytes().into(), |this| {
+        .with_shadow_file_by_id(e, src.as_bytes().into(), |this| {
             std::marker::PhantomData.compile(&this.snapshot(), &mut Default::default())
         })
         .unwrap()

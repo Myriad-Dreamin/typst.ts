@@ -71,7 +71,7 @@ impl IncrDomDocClient {
     }
 
     /// Relayout the document in the given window.
-    pub async fn relayout(&mut self, x: f32, y: f32, w: f32, h: f32) -> ZResult<bool> {
+    pub async fn relayout(&mut self, x: f32, y: f32, w: f32, h: f32) -> Result<bool> {
         // todo: overflow
         let viewport = Some(tiny_skia::Rect::from_xywh(x, y, w, h).unwrap());
 
@@ -95,7 +95,7 @@ impl IncrDomDocClient {
         w: f32,
         h: f32,
         stage: u8,
-    ) -> ZResult<bool> {
+    ) -> Result<bool> {
         // todo: overflow
         let viewport = Some(tiny_skia::Rect::from_xywh(x, y, w, h).unwrap());
         #[cfg(feature = "debug_recalc_stage")]
@@ -130,7 +130,7 @@ impl IncrDomDocClient {
         w: f32,
         h: f32,
         stage: u8,
-    ) -> ZResult<JsValue> {
+    ) -> Result<JsValue> {
         // todo: overflow
         let viewport = Some(tiny_skia::Rect::from_xywh(x, y, w, h).unwrap());
         #[cfg(feature = "debug_recalc_stage")]
@@ -282,7 +282,7 @@ impl IncrDomDocClient {
         kern.set_layout(layout.1.clone());
     }
 
-    fn retrack_pages(&mut self, kern: &mut IncrDocClient, elem: HookedElement) -> ZResult<bool> {
+    fn retrack_pages(&mut self, kern: &mut IncrDocClient, elem: HookedElement) -> Result<bool> {
         // Checks out the current document layout.
         let pages = self.checkout_pages(kern);
 
@@ -321,7 +321,7 @@ impl IncrDomDocClient {
     }
 
     /// Render the document in the given window.
-    pub async fn mount(&mut self, elem: HtmlElement) -> ZResult<()> {
+    pub async fn mount(&mut self, elem: HtmlElement) -> Result<()> {
         if let Some(old_elem) = self.elem.as_ref() {
             return Err(error_once!(
                 "already mounted to",

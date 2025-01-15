@@ -19,7 +19,6 @@ use typst::foundations::{Bytes, Dict, IntoValue};
 use typst::model::Document;
 
 use crate::font::fonts;
-use crate::utils::current_dir;
 use crate::{
     utils::{self, UnwrapOrExit},
     CompileArgs, CompileOnceArgs,
@@ -82,7 +81,9 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstS
     let world = if is_stdin {
         let mut u = universe;
 
-        let entry = u.entry_state().select_in_workspace(*MEMORY_MAIN_ENTRY);
+        let entry = u
+            .entry_state()
+            .select_in_workspace(MEMORY_MAIN_ENTRY.vpath().as_rooted_path());
         u.mutate_entry(entry).unwrap();
 
         let src = read_from_stdin()
@@ -114,30 +115,26 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstS
 }
 
 pub fn compile_export(args: CompileArgs, exporter: GroupExporter<Document>) -> ! {
-    let is_stdin = args.compile.entry == "-";
     let (intr_tx, intr_rx) = mpsc::unbounded_channel();
-
-    let driver = create_driver(args.compile.clone());
 
     // todo: make dynamic layout exporter
     let output_dir = {
-        // If output is specified, use it.
-        let dir = (!args.compile.output.is_empty()).then(|| Path::new(&args.compile.output));
-        // Otherwise, use the parent directory of the entry file.
-        let entry = driver.entry_file().expect("entry_file is not set");
-        let dir = dir.map(Path::to_owned).unwrap_or_else(|| {
-            if is_stdin {
-                current_dir()
-            } else {
-                entry.parent().expect("entry_file has no parent").to_owned()
-            }
-        });
-        if is_stdin {
+        let dir = args.compile.output_dir();
+        if args.compile.is_stdin() {
             dir.join("main")
         } else {
-            dir.join(entry.file_name().expect("entry_file has no file name"))
+            dir.join(
+                args.compile
+                    .main_id()
+                    .vpath()
+                    .as_rooted_path()
+                    .file_name()
+                    .expect("entry_file has no file name"),
+            )
         }
     };
+
+    let driver = create_driver(args.compile);
 
     let feature_set =
         FeatureSet::default().configure(&DIAG_FMT_FEATURE, args.diagnostic_format.into());

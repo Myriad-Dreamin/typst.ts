@@ -7,7 +7,6 @@ use std::{
 
 use clap::FromArgMatches;
 use reflexo_typst::config::{entry::EntryOpts, CompileOpts};
-use reflexo_typst::error::prelude::*;
 use reflexo_typst::exporter_builtins::GroupExporter;
 use reflexo_typst::exporter_utils::map_err;
 use reflexo_typst::path::{unix_slash, PathClean};

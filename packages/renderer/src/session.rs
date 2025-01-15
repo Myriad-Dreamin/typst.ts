@@ -226,7 +226,7 @@ impl RenderSession {
         self.client().kern().doc_height().unwrap_or_default()
     }
 
-    pub fn source_span(&self, path: &[u32]) -> ZResult<Option<String>> {
+    pub fn source_span(&self, path: &[u32]) -> Result<Option<String>> {
         self.client().kern().source_span(path)
     }
 
@@ -243,7 +243,7 @@ impl RenderSession {
         }
     }
 
-    pub(crate) fn reset_current(&mut self, delta: &[u8]) -> ZResult<()> {
+    pub(crate) fn reset_current(&mut self, delta: &[u8]) -> Result<()> {
         let mut client = self.client.lock().unwrap();
         *client = IncrDocClient::default();
         if cfg!(feature = "render_canvas") {
@@ -257,7 +257,7 @@ impl RenderSession {
         Self::merge_delta_inner(&mut self.pages_info, &mut client, delta)
     }
 
-    pub(crate) fn merge_delta(&mut self, delta: &[u8]) -> ZResult<()> {
+    pub(crate) fn merge_delta(&mut self, delta: &[u8]) -> Result<()> {
         let mut client = self.client.lock().unwrap();
         Self::merge_delta_inner(&mut self.pages_info, &mut client, delta)
     }
@@ -266,7 +266,7 @@ impl RenderSession {
         pages_info: &mut PagesInfo,
         client: &mut IncrDocClient,
         delta: &[u8],
-    ) -> ZResult<()> {
+    ) -> Result<()> {
         use reflexo_typst2vec::stream::BytesModuleStream;
 
         let delta = BytesModuleStream::from_slice(delta).checkout_owned();

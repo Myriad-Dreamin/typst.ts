@@ -2,8 +2,8 @@ use std::{fs::File, io::Read, path::Path};
 
 use typst::diag::{FileError, FileResult};
 
-use crate::{AccessModel, Bytes, Time};
-use reflexo::{ImmutPath, ReadAllOnce};
+use crate::{Bytes, PathAccessModel};
+use reflexo::ReadAllOnce;
 
 /// Provides SystemAccessModel that makes access to the local file system for
 /// system compilation.
@@ -14,30 +14,22 @@ impl SystemAccessModel {
     fn stat(&self, src: &Path) -> std::io::Result<SystemFileMeta> {
         let meta = std::fs::metadata(src)?;
         Ok(SystemFileMeta {
-            mt: meta.modified()?,
-            is_file: meta.is_file(),
+            is_dir: meta.is_dir(),
         })
     }
 }
 
-impl AccessModel for SystemAccessModel {
-    fn mtime(&self, src: &Path) -> FileResult<Time> {
-        let f = |e| FileError::from_io(e, src);
-        Ok(self.stat(src).map_err(f)?.mt)
-    }
-
-    fn is_file(&self, src: &Path) -> FileResult<bool> {
-        let f = |e| FileError::from_io(e, src);
-        Ok(self.stat(src).map_err(f)?.is_file)
-    }
-
-    fn real_path(&self, src: &Path) -> FileResult<ImmutPath> {
-        Ok(src.into())
-    }
-
+impl PathAccessModel for SystemAccessModel {
     fn content(&self, src: &Path) -> FileResult<Bytes> {
         let f = |e| FileError::from_io(e, src);
         let mut buf = Vec::<u8>::new();
+
+        let meta = self.stat(src).map_err(f)?;
+
+        if meta.is_dir {
+            return Err(FileError::IsDirectory);
+        }
+
         std::fs::File::open(src)
             .map_err(f)?
             .read_to_end(&mut buf)
@@ -78,6 +70,5 @@ impl ReadAllOnce for LazyFile {
 /// Meta data of a file in the local file system.
 #[derive(Debug, Clone, Copy)]
 pub struct SystemFileMeta {
-    mt: std::time::SystemTime,
-    is_file: bool,
+    is_dir: bool,
 }

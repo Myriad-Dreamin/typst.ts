@@ -24,14 +24,14 @@ use crate::{
 
 #[wasm_bindgen]
 impl TypstRenderer {
-    pub async fn create_worker(&mut self, w: web_sys::Worker) -> ZResult<TypstWorker> {
+    pub async fn create_worker(&mut self, w: web_sys::Worker) -> Result<TypstWorker> {
         let core = create_worker(w);
         #[allow(clippy::arc_with_non_send_sync)]
         let rs = Arc::new(core.create_session(None).await?);
         Ok(TypstWorker { core, rs })
     }
 
-    pub fn create_worker_bridge(self) -> ZResult<WorkerBridge> {
+    pub fn create_worker_bridge(self) -> Result<WorkerBridge> {
         Ok(WorkerBridge {
             plugin: self,
             ..Default::default()
@@ -68,7 +68,7 @@ pub struct TypstWorker {
 
 #[wasm_bindgen]
 impl TypstWorker {
-    pub fn manipulate_data(&mut self, action: &str, data: Uint8Array) -> ZResult<Promise> {
+    pub fn manipulate_data(&mut self, action: &str, data: Uint8Array) -> Result<Promise> {
         let resp = self.core.send_with(
             Request::ManipulateData(self.rs.session_info, action.to_string()),
             data.into(),
@@ -87,7 +87,7 @@ impl TypstWorker {
         actions: Vec<u8>,
         canvas_list: Vec<HtmlCanvasElement>,
         data: Vec<RenderPageImageOptions>,
-    ) -> ZResult<Promise> {
+    ) -> Result<Promise> {
         if actions.len() != data.len() || canvas_list.len() != data.len() {
             return Err(error_once!("Renderer.InvalidActionDataLength"));
         }
@@ -333,7 +333,7 @@ impl WorkerCore {
     pub async fn create_session(
         self: &Arc<Self>,
         opts: Option<CreateSessionOptions>,
-    ) -> ZResult<RRenderSession> {
+    ) -> Result<RRenderSession> {
         let req = Request::CreateSession(opts);
         let res = self.request(req).await;
 
@@ -349,7 +349,7 @@ impl WorkerCore {
         ses: Arc<RemoteRenderSession>,
         canvas: Option<&web_sys::HtmlCanvasElement>,
         options: Option<RenderPageImageOptions>,
-    ) -> ZResult<(Fingerprint, JsValue, Option<HashMap<String, f64>>)> {
+    ) -> Result<(Fingerprint, JsValue, Option<HashMap<String, f64>>)> {
         let canvas = canvas.map(|x| x.transfer_control_to_offscreen().unwrap());
         self.clone()
             .render_page_to_canvas_internal(ses.clone(), canvas, options)
@@ -361,7 +361,7 @@ impl WorkerCore {
         ses: Arc<RemoteRenderSession>,
         canvas: Option<web_sys::OffscreenCanvas>,
         options: Option<RenderPageImageOptions>,
-    ) -> ZResult<(Fingerprint, JsValue, Option<HashMap<String, f64>>)> {
+    ) -> Result<(Fingerprint, JsValue, Option<HashMap<String, f64>>)> {
         let res = self
             .request_with(
                 Request::RenderPageToCanvas(ses.session_info, options),

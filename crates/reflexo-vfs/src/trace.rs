@@ -1,9 +1,9 @@
-use std::{path::Path, sync::atomic::AtomicU64};
+use std::sync::atomic::AtomicU64;
 
 use reflexo::ImmutPath;
 use typst::diag::FileResult;
 
-use crate::{AccessModel, Bytes};
+use crate::{AccessModel, Bytes, TypstFileId};
 
 /// Provides trace access model which traces the underlying access model.
 ///
@@ -26,48 +26,12 @@ impl<M: AccessModel + Sized> TraceAccessModel<M> {
 }
 
 impl<M: AccessModel + Sized> AccessModel for TraceAccessModel<M> {
-    fn clear(&mut self) {
-        self.inner.clear();
+    #[inline]
+    fn reset(&mut self) {
+        self.inner.reset();
     }
 
-    fn mtime(&self, src: &Path) -> FileResult<crate::Time> {
-        let instant = reflexo::time::Instant::now();
-        let res = self.inner.mtime(src);
-        let elapsed = instant.elapsed();
-        // self.trace[0] += elapsed.as_nanos() as u64;
-        self.trace[0].fetch_add(
-            elapsed.as_nanos() as u64,
-            std::sync::atomic::Ordering::Relaxed,
-        );
-        crate::utils::console_log!("mtime: {:?} {:?} => {:?}", src, elapsed, res);
-        res
-    }
-
-    fn is_file(&self, src: &Path) -> FileResult<bool> {
-        let instant = reflexo::time::Instant::now();
-        let res = self.inner.is_file(src);
-        let elapsed = instant.elapsed();
-        self.trace[1].fetch_add(
-            elapsed.as_nanos() as u64,
-            std::sync::atomic::Ordering::Relaxed,
-        );
-        crate::utils::console_log!("is_file: {:?} {:?}", src, elapsed);
-        res
-    }
-
-    fn real_path(&self, src: &Path) -> FileResult<ImmutPath> {
-        let instant = reflexo::time::Instant::now();
-        let res = self.inner.real_path(src);
-        let elapsed = instant.elapsed();
-        self.trace[2].fetch_add(
-            elapsed.as_nanos() as u64,
-            std::sync::atomic::Ordering::Relaxed,
-        );
-        crate::utils::console_log!("real_path: {:?} {:?}", src, elapsed);
-        res
-    }
-
-    fn content(&self, src: &Path) -> FileResult<Bytes> {
+    fn content(&self, src: TypstFileId) -> (Option<ImmutPath>, FileResult<Bytes>) {
         let instant = reflexo::time::Instant::now();
         let res = self.inner.content(src);
         let elapsed = instant.elapsed();

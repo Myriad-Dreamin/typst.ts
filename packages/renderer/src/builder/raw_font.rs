@@ -6,7 +6,7 @@ use crate::TypstRendererBuilder;
 
 #[wasm_bindgen]
 impl TypstRendererBuilder {
-    pub async fn add_raw_font(&mut self, font_buffer: Uint8Array) -> ZResult<()> {
+    pub async fn add_raw_font(&mut self, font_buffer: Uint8Array) -> Result<()> {
         self.add_raw_font_internal(font_buffer.to_vec().into());
         Ok(())
     }

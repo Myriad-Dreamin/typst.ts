@@ -1,16 +1,14 @@
 use std::sync::Arc;
 
 use reflexo_typst2vec::pass::Typst2VecPass;
-use reflexo_world::{CompilerFeat, CompilerWorld};
 use typst::{
     diag::{SourceResult, Warned},
     World,
 };
 
-use crate::{
-    vector::ir::{LayoutRegion, LayoutRegionNode},
-    CompiledArtifact,
-};
+use crate::vector::ir::{LayoutRegion, LayoutRegionNode};
+use crate::world::{CompilerFeat, CompilerWorld};
+use crate::CompiledArtifact;
 
 #[cfg(feature = "dynamic-layout")]
 mod dynamic_layout;

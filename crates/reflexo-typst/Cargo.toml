@@ -14,8 +14,7 @@ typst-pdf = { workspace = true, optional = true }
 
 reflexo-typst2vec.workspace = true
 reflexo.workspace = true
-reflexo-vfs.workspace = true
-reflexo-world.workspace = true
+tinymist-world.workspace = true
 comemo.workspace = true
 
 ecow.workspace = true
@@ -64,18 +63,12 @@ no-content-hint = ["reflexo-typst2vec/no-content-hint"]
 glyph2vec = ["reflexo-typst2vec/glyph2vec"]
 dynamic-layout = ["dep:reflexo-vec2svg"]
 
-system-compile = ["glyph2vec", "reflexo-vfs/system", "reflexo-world/system"]
+system-compile = ["glyph2vec", "tinymist-world/system"]
 system-watch = ["dep:notify", "dep:tokio"]
-browser-compile = [
-    "__web",
-    "web-render",
-    "glyph2vec",
-    "reflexo-vfs/browser",
-    "reflexo-world/browser",
-]
+browser-compile = ["__web", "web-render", "glyph2vec", "tinymist-world/browser"]
 browser-embedded-fonts = ["__web"]
 __web = ["dep:js-sys", "dep:web-sys"]
-__web_render = ["__web", "reflexo-vfs/web", "reflexo-world/web"]
+__web_render = ["__web", "tinymist-world/web"]
 web-render = ["__web_render"]
 
 ast = ["ansi_term"]

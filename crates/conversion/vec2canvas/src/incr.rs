@@ -117,7 +117,7 @@ impl IncrCanvasDocClient {
         canvas: &dyn CanvasDevice,
         idx: usize,
         _rect: Rect,
-    ) -> ZResult<()> {
+    ) -> Result<()> {
         self.patch_delta(kern);
 
         if idx >= self.vec2canvas.pages.len() {

@@ -1,28 +1,21 @@
-use std::path::Path;
-use std::sync::Arc;
+use std::{borrow::Borrow, cmp::Ord, path::Path};
 
 use reflexo::ImmutPath;
 use rpds::RedBlackTreeMapSync;
 use typst::diag::FileResult;
 
-use crate::{AccessModel, Bytes, Time};
-
-#[derive(Debug, Clone)]
-struct OverlayFileMeta {
-    mt: Time,
-    content: Bytes,
-}
+use crate::{AccessModel, Bytes, FileSnapshot, PathAccessModel, TypstFileId};
 
 /// Provides overlay access model which allows to shadow the underlying access
 /// model with memory contents.
 #[derive(Default, Debug, Clone)]
-pub struct OverlayAccessModel<M> {
-    files: RedBlackTreeMapSync<Arc<Path>, OverlayFileMeta>,
+pub struct OverlayAccessModel<K: Ord, M> {
+    files: RedBlackTreeMapSync<K, FileSnapshot>,
     /// The underlying access model
     pub inner: M,
 }
 
-impl<M: AccessModel> OverlayAccessModel<M> {
+impl<K: Ord + Clone, M> OverlayAccessModel<K, M> {
     /// Create a new [`OverlayAccessModel`] with the given inner access model
     pub fn new(inner: M) -> Self {
         Self {
@@ -47,73 +40,56 @@ impl<M: AccessModel> OverlayAccessModel<M> {
     }
 
     /// Get the shadowed file paths
-    pub fn file_paths(&self) -> Vec<Arc<Path>> {
+    pub fn file_paths(&self) -> Vec<K> {
         self.files.keys().cloned().collect()
     }
 
     /// Add a shadow file to the [`OverlayAccessModel`]
-    pub fn add_file(&mut self, path: Arc<Path>, content: Bytes) {
-        // we change mt every time, since content almost changes every time
-        // Note: we can still benefit from cache, since we incrementally parse source
-
-        let mt = reflexo::time::now();
-        let meta = OverlayFileMeta { mt, content };
-
-        match self.files.get_mut(&path) {
+    pub fn add_file<Q: Ord + ?Sized>(
+        &mut self,
+        path: &Q,
+        snap: FileSnapshot,
+        cast: impl Fn(&Q) -> K,
+    ) where
+        K: Borrow<Q>,
+    {
+        match self.files.get_mut(path) {
             Some(e) => {
-                if e.mt == meta.mt && e.content != meta.content {
-                    e.mt = meta
-                        .mt
-                        // [`crate::Time`] has a minimum resolution of 1ms
-                        // we negate the time by 1ms so that the time is always
-                        // invalidated
-                        .checked_sub(std::time::Duration::from_millis(1))
-                        .unwrap();
-                    e.content = meta.content.clone();
-                } else {
-                    *e = meta.clone();
-                }
+                *e = snap;
             }
             None => {
-                self.files.insert_mut(path, meta);
+                self.files.insert_mut(cast(path), snap);
             }
         }
     }
 
     /// Remove a shadow file from the [`OverlayAccessModel`]
-    pub fn remove_file(&mut self, path: &Path) {
+    pub fn remove_file<Q: Ord + ?Sized>(&mut self, path: &Q)
+    where
+        K: Borrow<Q>,
+    {
         self.files.remove_mut(path);
     }
 }
 
-impl<M: AccessModel> AccessModel for OverlayAccessModel<M> {
-    fn mtime(&self, src: &Path) -> FileResult<Time> {
-        if let Some(meta) = self.files.get(src) {
-            return Ok(meta.mt);
-        }
-
-        self.inner.mtime(src)
-    }
-
-    fn is_file(&self, src: &Path) -> FileResult<bool> {
-        if self.files.get(src).is_some() {
-            return Ok(true);
-        }
-
-        self.inner.is_file(src)
-    }
-
-    fn real_path(&self, src: &Path) -> FileResult<ImmutPath> {
-        if self.files.get(src).is_some() {
-            return Ok(src.into());
-        }
-
-        self.inner.real_path(src)
-    }
-
+impl<M: PathAccessModel> PathAccessModel for OverlayAccessModel<ImmutPath, M> {
     fn content(&self, src: &Path) -> FileResult<Bytes> {
-        if let Some(meta) = self.files.get(src) {
-            return Ok(meta.content.clone());
+        if let Some(content) = self.files.get(src) {
+            return content.content().cloned();
+        }
+
+        self.inner.content(src)
+    }
+}
+
+impl<M: AccessModel> AccessModel for OverlayAccessModel<TypstFileId, M> {
+    fn reset(&mut self) {
+        self.inner.reset();
+    }
+
+    fn content(&self, src: TypstFileId) -> (Option<ImmutPath>, FileResult<Bytes>) {
+        if let Some(content) = self.files.get(&src) {
+            return (None, content.content().cloned());
         }
 
         self.inner.content(src)

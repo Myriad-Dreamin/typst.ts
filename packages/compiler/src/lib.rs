@@ -11,7 +11,7 @@ use std::{fmt::Write, path::Path, sync::Arc};
 use error::TypstSourceDiagnostic;
 use font::cache::FontInfoCache;
 use js_sys::{Array, JsString, Uint32Array, Uint8Array};
-use reflexo_typst::error::{long_diag_from_std, prelude::*, DiagMessage};
+use reflexo_typst::error::{long_diag_from_std, DiagMessage};
 use reflexo_typst::font::web::BrowserFontSearcher;
 use reflexo_typst::package::browser::ProxyRegistry;
 use reflexo_typst::parser::OffsetEncoding;
@@ -58,10 +58,7 @@ impl fmt::Display for UnixFmt {
         f.write_char(':')?;
 
         if let Some(r) = self.0.range.as_ref() {
-            let mut r = r.clone();
-            r.start.line += 1;
-            r.start.column += 1;
-            write!(f, "{}:", r.start)?;
+            write!(f, "{}:{}:", r.start.line + 1, r.start.character + 1)?;
         }
 
         write!(f, " {}: {}", self.0.severity, self.0.message)
@@ -78,12 +75,17 @@ fn convert_diag(
         js_sys::Reflect::set(&obj, &"package".into(), &e.package.into()).unwrap();
         js_sys::Reflect::set(&obj, &"path".into(), &e.path.into()).unwrap();
         if let Some(range) = e.range {
-            js_sys::Reflect::set(&obj, &"range".into(), &range.to_string().into()).unwrap();
+            let rng = format!(
+                "{}:{}-{}:{}",
+                range.start.line, range.start.character, range.end.line, range.end.character
+            )
+            .into();
+            js_sys::Reflect::set(&obj, &"range".into(), &rng).unwrap();
         } else {
             js_sys::Reflect::set(&obj, &"range".into(), &"".into()).unwrap();
         }
         js_sys::Reflect::set(&obj, &"severity".into(), &e.severity.to_string().into()).unwrap();
-        js_sys::Reflect::set(&obj, &"message".into(), &e.message.into()).unwrap();
+        js_sys::Reflect::set(&obj, &"message".into(), &e.message.as_str().into()).unwrap();
         obj.into()
     }
 
@@ -143,7 +145,7 @@ pub fn get_font_info(buffer: Uint8Array) -> JsValue {
 impl TypstCompiler {
     pub fn reset(&mut self) -> Result<(), JsValue> {
         // reset the world caches
-        self.driver.reset().map_err(|e| format!("{e:?}"))?;
+        self.driver.evict(30).map_err(|e| format!("{e:?}"))?;
 
         Ok(())
     }

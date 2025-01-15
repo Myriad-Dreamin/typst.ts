@@ -43,7 +43,7 @@ impl TypstRenderer {
         session.render_in_window(rect_lo_x, rect_lo_y, rect_hi_x, rect_hi_y)
     }
 
-    pub fn svg_data(&mut self, session: &mut RenderSession, parts: Option<u32>) -> ZResult<String> {
+    pub fn svg_data(&mut self, session: &mut RenderSession, parts: Option<u32>) -> Result<String> {
         type UsingExporter = SvgExporter<DefaultExportFeature>;
 
         let client = session.client.lock().unwrap();
@@ -81,7 +81,7 @@ impl TypstRenderer {
         })
     }
 
-    pub fn render_svg(&self, session: &RenderSession, root: web_sys::HtmlElement) -> ZResult<bool> {
+    pub fn render_svg(&self, session: &RenderSession, root: web_sys::HtmlElement) -> Result<bool> {
         type UsingExporter = SvgExporter<DefaultExportFeature>;
         // todo: leaking abstraction
         let mut client = session.client.lock().unwrap();

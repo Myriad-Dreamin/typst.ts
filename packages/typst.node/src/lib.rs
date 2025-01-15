@@ -17,10 +17,10 @@ use std::{
 use chrono::{DateTime, Datelike, Timelike, Utc};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use reflexo_typst::error::prelude::*;
-use reflexo_typst::foundations::IntoValue;
-use reflexo_typst::syntax::Span;
+// use reflexo_typst::error::prelude::*;
 use reflexo_typst::typst::diag::{At, SourceResult};
+use reflexo_typst::{error::WithContext, foundations::IntoValue};
+use reflexo_typst::{error_once, syntax::Span};
 use reflexo_typst::{
     Bytes, Compiler, DynamicLayoutCompiler, Exporter, ShadowApi, SystemCompilerFeat, TypstAbs,
     TypstDatetime, TypstDocument, TypstSystemWorld, TypstWorld,
@@ -215,8 +215,10 @@ impl NodeCompiler {
     /// A suggested `max_age` value for regular non-watch tools is `10`.
     /// A suggested `max_age` value for regular watch tools is `30`.
     #[napi]
-    pub fn evict_cache(&self, max_age: u32) {
-        comemo::evict(usize::try_from(max_age).unwrap())
+    pub fn evict_cache(&mut self, max_age: u32) {
+        let max_age = usize::try_from(max_age).unwrap();
+        comemo::evict(max_age);
+        let _ = self.driver.assert_mut().evict(max_age);
     }
 
     /// Adds a source file to the compiler.
