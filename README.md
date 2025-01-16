@@ -290,7 +290,7 @@ And open your browser to `http://localhost:20810/`.
 
 ### Concept: Precompiler
 
-The precompiler is capable of producing artifact outputs from a Typst project. Thet artifact outputs can be easily distributed to remote endpoints.
+The precompiler is capable of producing artifact outputs from a Typst project. The artifact outputs can be easily distributed to remote endpoints.
 
 Install latest precompiler via cargo:
 
