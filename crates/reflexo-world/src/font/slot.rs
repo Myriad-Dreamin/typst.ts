@@ -55,7 +55,7 @@ impl FontSlot {
     /// Gets or make the font load result.
     pub fn get_or_init(&self) -> Option<Font> {
         let res = self.inner.compute_with_context(|mut c| Ok(c.load()));
-        { unsafe { res.unwrap_unchecked() } }.clone()
+        res.unwrap().clone()
     }
 }
 

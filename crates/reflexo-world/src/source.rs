@@ -86,7 +86,7 @@ impl SourceState {
             // todo: utilize the committed revision is not zero
             if state
                 .committed_revision
-                .map_or(false, |committed| committed >= self.revision.get())
+                .is_some_and(|committed| committed >= self.revision.get())
             {
                 return;
             }

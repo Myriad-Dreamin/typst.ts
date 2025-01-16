@@ -104,3 +104,6 @@ no-content-hint = [
     "reflexo-vec2dom/no-content-hint",
     "reflexo-vec2svg/no-content-hint",
 ]
+
+[lints]
+workspace = true

@@ -7,19 +7,6 @@ use serde_with::{
 };
 use serde_with::{DeserializeAs, SerializeAs};
 
-/// Generic marker for type that only occurs in parameter position.
-///
-/// Safety: The signature is type checked by the compiler.
-#[derive(Debug, Clone, Copy)]
-pub struct PhantomParamData<X>(std::marker::PhantomData<X>);
-unsafe impl<X> Send for PhantomParamData<X> {}
-
-impl<X> Default for PhantomParamData<X> {
-    fn default() -> Self {
-        Self(Default::default())
-    }
-}
-
 pub struct AsCowBytes;
 
 type StdBase64 = Base64<Standard, Padded>;

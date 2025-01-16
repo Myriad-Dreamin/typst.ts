@@ -32,3 +32,6 @@ web_artifacts = [
     "dep:web-sys",
 ]
 default = []
+
+[lints]
+workspace = true

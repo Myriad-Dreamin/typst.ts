@@ -103,7 +103,7 @@ mod tests {
     fn test_default_shard_size() {
         let size = super::default_shard_size().get();
 
-        println!("size = {}", size);
+        eprintln!("size = {size}");
 
         assert!(size > 0);
         assert_eq!(size & (size - 1), 0);

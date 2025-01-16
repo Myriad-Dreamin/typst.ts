@@ -224,7 +224,7 @@ impl fmt::Display for CompileReportMsg<'_> {
         let input = self.0.compiling_id();
         match self.0 {
             Suspend => write!(f, "suspended"),
-            Stage(_, stage, ..) => write!(f, "{:?}: {} ...", input, stage),
+            Stage(_, stage, ..) => write!(f, "{input:?}: {stage} ..."),
             CompileSuccess(_, warnings, duration) => {
                 if warnings.is_empty() {
                     write!(f, "{input:?}: compilation succeeded in {duration:?}")
@@ -237,7 +237,7 @@ impl fmt::Display for CompileReportMsg<'_> {
                 }
             }
             CompileError(_, _, duration) | ExportError(_, _, duration) => {
-                write!(f, "{:?}: compilation failed after {:?}", input, duration)
+                write!(f, "{input:?}: compilation failed after {duration:?}")
             }
         }
     }

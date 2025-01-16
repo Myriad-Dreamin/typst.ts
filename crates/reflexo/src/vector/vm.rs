@@ -156,7 +156,7 @@ pub trait RenderVm<'m>: Sized + FontIndice<'m> {
             | ir::VecItem::Gradient(..)
             | ir::VecItem::Pattern(..)
             | ir::VecItem::None => {
-                panic!("FlatRenderVm.RenderFrame.UnknownItem {:?}", item)
+                panic!("FlatRenderVm.RenderFrame.UnknownItem {item:?}")
             }
         }
     }
@@ -277,7 +277,7 @@ where
             | ir::VecItem::Gradient(..)
             | ir::VecItem::Pattern(..)
             | ir::VecItem::None => {
-                panic!("FlatRenderVm.RenderFrame.UnknownItem {:?}", next_item)
+                panic!("FlatRenderVm.RenderFrame.UnknownItem {next_item:?}")
             }
         }
         .into()

@@ -27,3 +27,6 @@ js-sys = { workspace = true, optional = true }
 web = ["wasm-bindgen", "web-sys", "js-sys", "reflexo/web"]
 browser = ["web"]
 system = ["reflexo/system"]
+
+[lints]
+workspace = true

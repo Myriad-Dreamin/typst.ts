@@ -93,5 +93,9 @@ impl AccessModel for ProxyAccessModel {
 }
 
 // todo
+/// Safety: `ProxyAccessModel` is only used in the browser environment, and we
+/// cannot share data between workers.
 unsafe impl Send for ProxyAccessModel {}
+/// Safety: `ProxyAccessModel` is only used in the browser environment, and we
+/// cannot share data between workers.
 unsafe impl Sync for ProxyAccessModel {}

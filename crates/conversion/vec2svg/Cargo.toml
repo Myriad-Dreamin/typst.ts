@@ -24,3 +24,6 @@ experimental-ligature = ["reflexo-typst2vec/experimental-ligature"]
 aggresive-browser-rasterization = ["reflexo-vec2canvas"]
 no-content-hint = ["reflexo-typst2vec/no-content-hint"]
 default = []
+
+[lints]
+workspace = true

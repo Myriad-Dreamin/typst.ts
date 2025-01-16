@@ -196,7 +196,7 @@ fn token_from_ident(ident: &LinkedNode) -> TokenType {
 fn get_expr_following_hashtag<'a>(hashtag: &LinkedNode<'a>) -> Option<LinkedNode<'a>> {
     hashtag
         .next_sibling()
-        .filter(|next| next.cast::<ast::Expr>().map_or(false, |expr| expr.hash()))
+        .filter(|next| next.cast::<ast::Expr>().is_some_and(|expr| expr.hash()))
         .and_then(|node| node.leftmost_leaf())
 }
 

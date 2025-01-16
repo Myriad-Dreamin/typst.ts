@@ -24,7 +24,11 @@ impl crate::CompilerFeat for BrowserCompilerFeat {
 }
 
 // todo
+/// Safety: `ProxyRegistry` is only used in the browser environment, and we
+/// cannot share data between workers.
 unsafe impl Send for ProxyRegistry {}
+/// Safety: `ProxyRegistry` is only used in the browser environment, and we
+/// cannot share data between workers.
 unsafe impl Sync for ProxyRegistry {}
 
 impl TypstBrowserUniverse {

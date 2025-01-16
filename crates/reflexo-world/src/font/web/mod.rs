@@ -240,9 +240,7 @@ impl FontBuilder {
     fn to_string(&self, field: &str, val: &JsValue) -> ZResult<String> {
         Ok(val
             .as_string()
-            .ok_or_else(|| {
-                JsValue::from_str(&format!("expected string for {}, got {:?}", field, val))
-            })
+            .ok_or_else(|| JsValue::from_str(&format!("expected string for {field}, got {val:?}")))
             .unwrap())
     }
 
@@ -344,6 +342,8 @@ impl WebFont {
     }
 }
 
+/// Safety: `WebFont` is only used in the browser environment, and we
+/// cannot share data between workers.
 unsafe impl Send for WebFont {}
 
 #[derive(Debug)]

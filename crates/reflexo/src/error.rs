@@ -160,7 +160,7 @@ impl std::error::Error for Error {}
 #[cfg(feature = "web")]
 impl ErrKindExt for wasm_bindgen::JsValue {
     fn to_error_kind(self) -> ErrKind {
-        ErrKind::Msg(format!("{:?}", self))
+        ErrKind::Msg(format!("{self:?}"))
     }
 }
 

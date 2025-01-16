@@ -19,7 +19,7 @@ impl Vec2BBoxPass {
         }
 
         let bbox = self.bbox_of_(module, v, ts);
-        println!("bbox_of({v:?}, {ts:?}) = {bbox:?}");
+        eprintln!("bbox_of({v:?}, {ts:?}) = {bbox:?}");
         self.bbox_caches.insert((v, ts), bbox);
         bbox
     }

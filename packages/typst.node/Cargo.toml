@@ -34,3 +34,6 @@ napi-build = "2"
 pdf = ["reflexo-typst/pdf"]
 svg = ["reflexo-vec2svg", "reflexo-vec2svg/experimental-ligature"]
 default = ["pdf", "svg"]
+
+[lints]
+workspace = true

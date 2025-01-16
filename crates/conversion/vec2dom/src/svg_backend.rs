@@ -161,7 +161,7 @@ impl TypstPageElem {
                             .ok_or_else(|| {
                                 web_sys::console::log_2(
                                     &should_ch,
-                                    &format!("Invalid group translate: {:?}", item).into(),
+                                    &format!("Invalid group translate: {item:?}").into(),
                                 );
                                 panic!("Invalid group translate: {}", fg.as_svg_id("g"));
                             })
@@ -182,7 +182,7 @@ impl TypstPageElem {
                     .ok_or_else(|| {
                         web_sys::console::log_2(
                             &g,
-                            &format!("Invalid item reference: {:?}", item).into(),
+                            &format!("Invalid item reference: {item:?}").into(),
                         );
                         panic!("Invalid item reference: {}", fg.as_svg_id("g"));
                     })
@@ -207,7 +207,7 @@ impl TypstPageElem {
                         .ok_or_else(|| {
                             web_sys::console::log_2(
                                 &g,
-                                &format!("Invalid item translate: {:?}", item).into(),
+                                &format!("Invalid item translate: {item:?}").into(),
                             );
                             panic!("Invalid item translate: {}", fg.as_svg_id("g"));
                         })

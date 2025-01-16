@@ -30,9 +30,9 @@ struct PosFmt<'a>(&'a typst::diag::Tracepoint);
 impl fmt::Display for PosFmt<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.0 {
-            typst::diag::Tracepoint::Call(Some(name)) => write!(f, "while calling {}", name),
+            typst::diag::Tracepoint::Call(Some(name)) => write!(f, "while calling {name}"),
             typst::diag::Tracepoint::Call(None) => write!(f, "while calling closure"),
-            typst::diag::Tracepoint::Show(name) => write!(f, "while showing {}", name),
+            typst::diag::Tracepoint::Show(name) => write!(f, "while showing {name}"),
             typst::diag::Tracepoint::Import => write!(f, "import"),
         }
     }

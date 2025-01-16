@@ -424,7 +424,7 @@ impl ConvertInnerImpl {
             .as_ref()
             .map(|s| {
                 WARN_VIEW_BOX.get_or_init(|| {
-                    println!(
+                    eprintln!(
                         "render_svg_glyph with viewBox, This should be helpful if you can help us verify the result: {:?} {:?}",
                         font.info().family,
                         doc_string

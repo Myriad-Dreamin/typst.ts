@@ -81,3 +81,6 @@ web-render = ["__web_render"]
 ast = ["ansi_term"]
 pdf = ["typst-pdf"]
 svg = ["dep:reflexo-vec2svg"]
+
+[lints]
+workspace = true

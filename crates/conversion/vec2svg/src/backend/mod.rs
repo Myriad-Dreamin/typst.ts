@@ -273,7 +273,7 @@ impl SvgTextBuilder {
         .as_svg_id("g");
         let mut do_trans = |obj: &PaintObj, pref: &'static str| -> String {
             let og = obj.id.as_svg_id(pref);
-            let ng = format!("{}-{adjusted_offset}", og).replace('.', "-");
+            let ng = format!("{og}-{adjusted_offset}").replace('.', "-");
 
             let new_color = Self::transform_color(
                 obj.kind,
@@ -356,7 +356,7 @@ impl<C: BuildClipPath> TransformContext<C> for SvgTextBuilder {
             clip_id, path.d
         )));
         self.attributes
-            .push(("clip-path", format!(r"url(#{})", clip_id)));
+            .push(("clip-path", format!(r"url(#{clip_id})")));
         self
     }
 }
@@ -479,7 +479,7 @@ impl<
     fn attach_debug_info(&mut self, ctx: &mut C, span_id: u64) {
         if ctx.should_attach_debug_info() {
             self.attributes
-                .push(("data-span", format!("{:x}", span_id)));
+                .push(("data-span", format!("{span_id:x}")));
         }
     }
     fn render_item_at(&mut self, ctx: &mut C, pos: crate::ir::Point, item: &Fingerprint) {
@@ -509,8 +509,7 @@ impl<
 
         self.content.push(SvgText::Plain(format!(
             // r##"<typst-glyph x="{}" href="#{}"/>"##,
-            r##"<use x="{}" href="#{}"/>"##,
-            adjusted_offset, glyph_id
+            r##"<use x="{adjusted_offset}" href="#{glyph_id}"/>"##
         )));
     }
 
@@ -648,7 +647,7 @@ fn render_path(
     p.push(format!(r#"d="{}" "#, path.d));
 
     let (fill_color, stroke_color) = attach_path_styles(&path.styles, None, &mut |x, y| {
-        p.push(format!(r#"{}="{}" "#, x, y))
+        p.push(format!(r#"{x}="{y}" "#))
     });
 
     let contextual_id = |id: &'static str| abs_ref.as_svg_id(id);
@@ -656,7 +655,7 @@ fn render_path(
         if fill_color.starts_with('@') {
             p.push(format!(r#"fill="url(#{})" "#, contextual_id("pf")));
         } else {
-            p.push(format!(r#"fill="{}" "#, fill_color));
+            p.push(format!(r#"fill="{fill_color}" "#));
         }
     } else {
         p.push(r#"fill="none" "#.to_string());
@@ -665,7 +664,7 @@ fn render_path(
         if stroke_color.starts_with('@') {
             p.push(format!(r#"stroke="url(#{})" "#, contextual_id("ps")));
         } else {
-            p.push(format!(r#"stroke="{}" "#, stroke_color));
+            p.push(format!(r#"stroke="{stroke_color}" "#));
         }
     }
     p.push("/>".to_owned());

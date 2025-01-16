@@ -178,7 +178,7 @@ impl IncrDomDocClient {
                         .into());
                     }
                     web_sys::console::log_1(
-                        &format!("canvas state prepare done: {}", page_num).into(),
+                        &format!("canvas state prepare done: {page_num}").into(),
                     );
                 }
             }

@@ -54,3 +54,6 @@ web = ["__web"]
 system = []
 bi-hash = []
 item-dashmap = []
+
+[lints]
+workspace = true

@@ -59,3 +59,6 @@ no-content-hint = [
     "reflexo-typst/no-content-hint",
     "reflexo-vec2svg/no-content-hint",
 ]
+
+[lints]
+workspace = true

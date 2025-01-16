@@ -405,9 +405,9 @@ mod tests {
             }
         }
 
-        println!("::group::Output of wasm-pack test");
-        println!("{}", rest_contents.join("\n"));
-        println!("::endgroup::");
+        eprintln!("::group::Output of wasm-pack test");
+        eprintln!("{}", rest_contents.join("\n"));
+        eprintln!("::endgroup::");
 
         let mut grouped_test_points = {
             let mut grouped_test_points = HashMap::new();
@@ -449,7 +449,7 @@ mod tests {
         // check canvas_render_test_points
 
         let canvas_render_test_points = grouped_test_points.remove("canvas_render_test").unwrap();
-        println!(
+        eprintln!(
             "canvas_render_test_points: {:?}",
             canvas_render_test_points.len()
         );

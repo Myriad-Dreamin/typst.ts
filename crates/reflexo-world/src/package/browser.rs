@@ -37,13 +37,13 @@ impl ProxyContext {
         let entries = reader.entries();
         let entries = entries.map_err(|err| {
             let t = PackageError::MalformedArchive(Some(eco_format!("{err}")));
-            JsValue::from_str(&format!("{:?}", t))
+            JsValue::from_str(&format!("{t:?}"))
         })?;
 
         let mut buf = Vec::with_capacity(1024);
         for entry in entries {
             // Read single entry
-            let mut entry = entry.map_err(|e| format!("{:?}", e))?;
+            let mut entry = entry.map_err(|e| format!("{e:?}"))?;
             let header = entry.header();
 
             let is_file = header.entry_type().is_file();
@@ -53,15 +53,15 @@ impl ProxyContext {
 
             let mtime = header.mtime().unwrap_or(0);
 
-            let path = header.path().map_err(|e| format!("{:?}", e))?;
+            let path = header.path().map_err(|e| format!("{e:?}"))?;
             let path = path.to_string_lossy().as_ref().to_owned();
 
-            let size = header.size().map_err(|e| format!("{:?}", e))?;
+            let size = header.size().map_err(|e| format!("{e:?}"))?;
             buf.clear();
             buf.reserve(size as usize);
             entry
                 .read_to_end(&mut buf)
-                .map_err(|e| format!("{:?}", e))?;
+                .map_err(|e| format!("{e:?}"))?;
 
             cb(path, &buf, mtime)?
         }

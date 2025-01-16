@@ -51,3 +51,6 @@ browser-embedded-fonts = []
 web = ["wasm-bindgen", "web-sys", "js-sys", "serde-wasm-bindgen", "reflexo/web"]
 browser = ["web"]
 system = ["dep:dirs", "dep:fontdb", "reflexo/system"]
+
+[lints]
+workspace = true

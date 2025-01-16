@@ -134,5 +134,5 @@ pub fn get_font_coverage_hash(coverage: &Coverage) -> String {
         .iter()
         .for_each(|c| coverage_hash.update(c.to_le_bytes()));
     let coverage_hash = coverage_hash.finalize();
-    format!("sha256:{:x}", coverage_hash)
+    format!("sha256:{coverage_hash:x}")
 }

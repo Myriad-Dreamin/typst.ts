@@ -394,7 +394,9 @@ impl Drop for CanvasStateGuard<'_> {
 #[derive(Debug, Clone)]
 struct UnsafeMemorize<T>(T);
 
+// Safety: `UnsafeMemorize` is only used in wasm targets
 unsafe impl<T> Send for UnsafeMemorize<T> {}
+// Safety: `UnsafeMemorize` is only used in wasm targets
 unsafe impl<T> Sync for UnsafeMemorize<T> {}
 
 #[derive(Debug, Clone)]

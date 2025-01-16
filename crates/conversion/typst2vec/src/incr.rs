@@ -62,7 +62,7 @@ impl IncrDocServer {
                 .map(|i| i.1 .0)
                 .min()
                 .unwrap_or(0);
-            println!(
+            eprintln!(
                 "gc[{}]: max: {}, min: {}, remove: {}",
                 self.typst2vec.lifetime,
                 self.typst2vec
@@ -78,7 +78,7 @@ impl IncrDocServer {
 
             // for (fg, (_, item)) in
             //     self.typst2vec.items.iter().filter(|(_, i)| i.0 == mi) {
-            //     println!("mi {fg:?} => {item:#?}");
+            //     eprintln!("mi {fg:?} => {item:#?}");
             // }
         }
 

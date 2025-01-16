@@ -12,7 +12,7 @@ macro_rules! console_log {
 #[allow(unused_macros)]
 macro_rules! console_log {
     ($($arg:tt)*) => {
-        println!(
+        eprintln!(
             $($arg)*
         );
     }

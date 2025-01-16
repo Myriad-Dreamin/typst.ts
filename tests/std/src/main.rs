@@ -40,7 +40,7 @@ fn main() -> anyhow::Result<()> {
             Some(src_path)
         })
         .flat_map(|src_path| -> anyhow::Result<Vec<(String, String)>> {
-            // println!("src_path={}", src_path.display());
+            // eprintln!("src_path={}", src_path.display());
 
             // read source
             let text = std::fs::read_to_string(&src_path)?;
@@ -84,7 +84,7 @@ fn main() -> anyhow::Result<()> {
             for (i, part) in parts.iter().enumerate() {
                 let file_name = rewrite_path.file_stem().unwrap().to_string_lossy();
                 let file_name = format!("{file_name}_{i:02}");
-                println!("scanned {cat:10} {file_name}...");
+                eprintln!("scanned {cat:10} {file_name}...");
 
                 let rewrite_path = rewrite_path.with_file_name(format!("{file_name}.typ"));
 

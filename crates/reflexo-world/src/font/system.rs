@@ -54,7 +54,7 @@ impl FontProfileRebuilder {
             profile_item.set_path(path.to_str().unwrap().to_owned());
             profile_item.set_mtime(file.metadata().unwrap().modified().unwrap());
 
-            // println!("searched font: {:?}", path);
+            // eprintln!("searched font: {:?}", path);
 
             // if let Ok(mmap) = unsafe { Mmap::map(&file) } {
             //     for (i, info) in FontInfo::iter(&mmap).enumerate() {
@@ -179,7 +179,7 @@ impl SystemFontSearcher {
             self.profile_rebuilder.profile.items.push(item);
         }
         // let end = std::time::Instant::now();
-        // println!("profile_rebuilder init took {:?}", end - begin);
+        // eprintln!("profile_rebuilder init took {:?}", end - begin);
     }
 
     #[cfg(feature = "lazy-fontdb")]
@@ -217,7 +217,7 @@ impl SystemFontSearcher {
                     .join("typst")
                     .join("fonts/v1")
                     .join(format!("{:x}.json", cache_state_key));
-                // println!("cache_state: {:?}", cache_state_path);
+                // eprintln!("cache_state: {:?}", cache_state_path);
                 let cache_state = std::fs::read_to_string(&cache_state_path).ok();
                 let cache_state: Option<CacheStateValue> = cache_state
                     .as_ref()
@@ -248,7 +248,7 @@ impl SystemFontSearcher {
                     }
                 };
 
-                // println!("searched font: {idx} {:?}", path);
+                // eprintln!("searched font: {idx} {:?}", path);
 
                 Some((
                     info?,
@@ -286,7 +286,7 @@ impl SystemFontSearcher {
                 .with_face_data(face.id, FontInfo::new)
                 .expect("database must contain this font");
 
-            // println!("searched font: {idx} {:?}", path);
+            // eprintln!("searched font: {idx} {:?}", path);
 
             if let Some(info) = info {
                 self.book.push(info);

@@ -124,7 +124,7 @@ impl DomPage {
     }
 
     pub fn track_data(&mut self, data: &Page) -> bool {
-        if self.layout_data.as_ref().map_or(false, |d| d == data) {
+        if self.layout_data.as_ref() == Some(data) {
             return false;
         }
 
@@ -213,16 +213,13 @@ impl DomPage {
                 .unwrap();
             let style = self.elem.style();
             style
-                .set_property("--data-page-width", &format!("{:.3}px", w))
+                .set_property("--data-page-width", &format!("{w:.3}px"))
                 .unwrap();
             style
-                .set_property("--data-page-height", &format!("{:.3}px", h))
+                .set_property("--data-page-height", &format!("{h:.3}px"))
                 .unwrap();
             self.svg
-                .set_attribute(
-                    "viewBox",
-                    &format!("0 0 {width} {height}", width = w, height = h),
-                )
+                .set_attribute("viewBox", &format!("0 0 {w} {h}"))
                 .unwrap();
 
             self.svg
@@ -525,7 +522,7 @@ impl DomPage {
 
             let mut elem = elem.lock().unwrap();
 
-            web_sys::console::log_1(&format!("canvas render: {idx} {:?}", viewport).into());
+            web_sys::console::log_1(&format!("canvas render: {idx} {viewport:?}").into());
 
             'render_canvas: {
                 let _global_guard = CanvasStateGuard::new(&canvas_ctx);
@@ -534,7 +531,7 @@ impl DomPage {
                     .lock()
                     .unwrap()
                     .as_ref()
-                    .map_or(false, |s| s.rendered == state && s.ppp == ppp)
+                    .is_some_and(|s| s.rendered == state && s.ppp == ppp)
                 {
                     break 'render_canvas;
                 }
@@ -576,7 +573,7 @@ impl DomPage {
                         .lock()
                         .unwrap()
                         .as_ref()
-                        .map_or(false, |e| e.render_entire_page);
+                        .is_some_and(|e| e.render_entire_page);
 
                     let Some(elem) = elem.as_mut() else {
                         panic!("realized is none for partial canvas render");
@@ -616,7 +613,7 @@ impl DomPage {
                 }
             }
 
-            let clip_key = format!("{:?}", clip_rect);
+            let clip_key = format!("{clip_rect:?}");
 
             // data-clip-rect-state
             const CLIP_KEY: &str = "data-clip-rect-state";
@@ -626,7 +623,7 @@ impl DomPage {
                 let _ = canvas.set_attribute(CLIP_KEY, &clip_key);
 
                 if let Some((x, y, w, h)) = clip_rect {
-                    let modify = |p, x| canvas.style().set_property(p, &format!("{:.3}%", x));
+                    let modify = |p, x| canvas.style().set_property(p, &format!("{x:.3}%"));
                     let _ = modify("--reflexo-clip-lo-x", x);
                     let _ = modify("--reflexo-clip-lo-y", y);
                     let _ = modify("--reflexo-clip-hi-x", x + w);
