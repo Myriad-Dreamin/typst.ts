@@ -239,12 +239,12 @@ undocumented_unsafe_blocks = "warn"
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
 # comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
-typst = { git = "https://github.com/ParaN3xus/typst", branch = "nightly-content-hint" }
-typst-syntax = { git = "https://github.com/ParaN3xus/typst", branch = "nightly-content-hint" }
-typst-ide = { git = "https://github.com/ParaN3xus/typst", branch = "nightly-content-hint" }
-typst-svg = { git = "https://github.com/ParaN3xus/typst", branch = "nightly-content-hint" }
-typst-pdf = { git = "https://github.com/ParaN3xus/typst", branch = "nightly-content-hint" }
-typst-eval = { git = "https://github.com/ParaN3xus/typst", branch = "nightly-content-hint" }
+typst = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
+typst-syntax = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
+typst-ide = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
+typst-svg = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
+typst-pdf = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
+typst-eval = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }
