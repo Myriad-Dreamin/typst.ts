@@ -55,3 +55,6 @@ debug_repaint_semantics = []
 debug_recalc_stage = []
 debug_attach = []
 debug_relayout = []
+
+[lints]
+workspace = true

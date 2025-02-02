@@ -1,5 +1,5 @@
-pub use reflexo_world::config as compiler;
-pub use reflexo_world::entry;
+pub use tinymist_world::config as compiler;
+pub use tinymist_world::entry;
 pub mod workspace;
 
 pub use compiler::CompileFontOpts;

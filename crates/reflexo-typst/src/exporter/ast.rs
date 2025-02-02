@@ -52,7 +52,7 @@ const MARKED: ansi_term::Color = ansi_term::Color::RGB(0x7d, 0xcf, 0xff);
 
 impl<W: io::Write> AstWriter<'_, W> {
     fn write_num_repr<T: Display>(&mut self, sk: SyntaxKind, ast: T) -> Option<()> {
-        self.painted(NUMBER, format!("Num({:?}, {})", sk, ast));
+        self.painted(NUMBER, format!("Num({sk:?}, {ast})"));
         Some(())
     }
 
@@ -65,27 +65,27 @@ impl<W: io::Write> AstWriter<'_, W> {
         if let Some(hl) = typst::syntax::highlight(ast) {
             match hl {
                 Tag::Comment => {
-                    self.painted(COMMENT, format!("Ct::{:?}", k));
+                    self.painted(COMMENT, format!("Ct::{k:?}"));
                     return;
                 }
                 Tag::Escape => {
-                    self.w.write_fmt(format_args!("Escape::{:?}", k)).unwrap();
+                    self.w.write_fmt(format_args!("Escape::{k:?}")).unwrap();
                     return;
                 }
                 Tag::Keyword => {
-                    self.painted(KEYWORD, format!("Kw::{:?}", k));
+                    self.painted(KEYWORD, format!("Kw::{k:?}"));
                     return;
                 }
                 Tag::Operator => {
-                    self.painted(OPERATOR, format!("Op::{:?}", k));
+                    self.painted(OPERATOR, format!("Op::{k:?}"));
                     return;
                 }
                 Tag::Punctuation => {
-                    self.painted(PUNC, format!("Punc::{:?}", k));
+                    self.painted(PUNC, format!("Punc::{k:?}"));
                     return;
                 }
                 Tag::Function => {
-                    self.painted(FUNCTION, format!("Fn::({:?})", ast));
+                    self.painted(FUNCTION, format!("Fn::({ast:?})"));
                     return;
                 }
                 Tag::String => {
@@ -111,7 +111,7 @@ impl<W: io::Write> AstWriter<'_, W> {
                     return;
                 }
                 Tag::Interpolated => {
-                    self.painted(VARIABLE, format!("Var::({:?})", ast));
+                    self.painted(VARIABLE, format!("Var::({ast:?})"));
                     return;
                 }
                 _ => {}
@@ -119,10 +119,10 @@ impl<W: io::Write> AstWriter<'_, W> {
         }
 
         if k == SyntaxKind::Ident {
-            self.painted(MARKED, format!("Marked::({:?})", ast));
+            self.painted(MARKED, format!("Marked::({ast:?})"));
             return;
         }
-        self.painted(MARKED, format!("Marked::{:?}", k));
+        self.painted(MARKED, format!("Marked::{k:?}"));
     }
 
     fn write_ast(&mut self, src: &Source, ast: &LinkedNode) {

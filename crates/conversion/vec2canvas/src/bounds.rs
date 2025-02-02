@@ -19,7 +19,7 @@ pub enum CanvasBBox {
 impl fmt::Debug for CanvasBBox {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CanvasBBox::Static(r) => write!(f, "Static({:?})", r),
+            CanvasBBox::Static(r) => write!(f, "Static({r:?})"),
             CanvasBBox::Dynamic(..) => write!(f, "Dynamic(..)"),
         }
     }

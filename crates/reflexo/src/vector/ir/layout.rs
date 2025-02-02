@@ -150,15 +150,15 @@ pub trait LayoutSelector {
         &self,
         kind: &str,
         layouts: &[(Scalar, LayoutRegionNode)],
-    ) -> ZResult<LayoutRegionNode>;
+    ) -> Result<LayoutRegionNode>;
 
     fn select_by_str(
         &self,
         kind: &str,
         layouts: &[(ImmutStr, LayoutRegionNode)],
-    ) -> ZResult<LayoutRegionNode>;
+    ) -> Result<LayoutRegionNode>;
 
-    fn resolve_indirect(&self, ind: usize) -> ZResult<&LayoutRegion> {
+    fn resolve_indirect(&self, ind: usize) -> Result<&LayoutRegion> {
         Err(error_once!(
             "LayoutSelector: unimplemented indirect layout selector",
             ind: ind,
@@ -215,7 +215,7 @@ impl LayoutRegion {
         }
     }
 
-    pub fn by_selector(&self, selector: &impl LayoutSelector) -> ZResult<LayoutRegionNode> {
+    pub fn by_selector(&self, selector: &impl LayoutSelector) -> Result<LayoutRegionNode> {
         let mut t = Ok(self);
         loop {
             let next = match t? {
@@ -357,7 +357,7 @@ impl LayoutSelector for LayoutSelectorExpr {
         &self,
         kind: &str,
         layouts: &[(Scalar, LayoutRegionNode)],
-    ) -> ZResult<LayoutRegionNode> {
+    ) -> Result<LayoutRegionNode> {
         let t = match self {
             LayoutSelectorExpr::Any | LayoutSelectorExpr::First => layouts.first(),
             LayoutSelectorExpr::Last => layouts.last(),
@@ -386,7 +386,7 @@ impl LayoutSelector for LayoutSelectorExpr {
         &self,
         kind: &str,
         layouts: &[(ImmutStr, LayoutRegionNode)],
-    ) -> ZResult<LayoutRegionNode> {
+    ) -> Result<LayoutRegionNode> {
         let t = match self {
             LayoutSelectorExpr::Any | LayoutSelectorExpr::First => {
                 layouts.first().map(|(_, v)| v.clone())
@@ -420,7 +420,7 @@ impl LayoutSelector for LayoutMappingSelector {
         &self,
         kind: &str,
         layouts: &[(Scalar, LayoutRegionNode)],
-    ) -> ZResult<LayoutRegionNode> {
+    ) -> Result<LayoutRegionNode> {
         self.selectors
             .get(kind)
             .unwrap_or(&LayoutSelectorExpr::Any)
@@ -431,7 +431,7 @@ impl LayoutSelector for LayoutMappingSelector {
         &self,
         kind: &str,
         layouts: &[(ImmutStr, LayoutRegionNode)],
-    ) -> ZResult<LayoutRegionNode> {
+    ) -> Result<LayoutRegionNode> {
         self.selectors
             .get(kind)
             .unwrap_or(&LayoutSelectorExpr::Any)
@@ -450,7 +450,7 @@ impl<T: LayoutSelector> LayoutSelector for LayoutNestSelector<'_, T> {
         &self,
         kind: &str,
         layouts: &[(Scalar, LayoutRegionNode)],
-    ) -> ZResult<LayoutRegionNode> {
+    ) -> Result<LayoutRegionNode> {
         self.inner.select_by_scalar(kind, layouts)
     }
 
@@ -458,11 +458,11 @@ impl<T: LayoutSelector> LayoutSelector for LayoutNestSelector<'_, T> {
         &self,
         kind: &str,
         layouts: &[(ImmutStr, LayoutRegionNode)],
-    ) -> ZResult<LayoutRegionNode> {
+    ) -> Result<LayoutRegionNode> {
         self.inner.select_by_str(kind, layouts)
     }
 
-    fn resolve_indirect(&self, ind: usize) -> ZResult<&LayoutRegion> {
+    fn resolve_indirect(&self, ind: usize) -> Result<&LayoutRegion> {
         self.layouts
             .get(ind)
             .ok_or_else(|| error_once!("LayoutNestSelector: indirect layout not found", ind: ind))

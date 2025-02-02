@@ -23,7 +23,7 @@ version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "891477e0c6a8957309ee5c45a6368af3ae14bb510732d2684ffa19af310920f9"
 dependencies = [
- "getrandom",
+ "getrandom 0.2.15",
  "once_cell",
  "version_check",
 ]
@@ -495,8 +495,10 @@ checksum = "a21f936df1771bf62b77f047b726c4625ff2e8aa607c01ec06e5a05bd8463401"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
+ "js-sys",
  "num-traits",
  "serde",
+ "wasm-bindgen",
  "windows-targets 0.52.6",
 ]
 
@@ -704,6 +706,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
 dependencies = [
  "unicode-segmentation",
+]
+
+[[package]]
+name = "core-foundation"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b55271e5c8c478ad3f38ad24ef34923091e0548492a266d19b3c0b4d82574c63"
+dependencies = [
+ "core-foundation-sys",
+ "libc",
 ]
 
 [[package]]
@@ -1143,6 +1155,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd2e7510819d6fbf51a5545c8f922716ecfb14df168a3242f7d33e0239efe6a1"
 
 [[package]]
+name = "fastrand"
+version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
+
+[[package]]
 name = "fd-lock"
 version = "4.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1360,8 +1378,20 @@ dependencies = [
  "cfg-if",
  "js-sys",
  "libc",
- "wasi",
+ "wasi 0.11.0+wasi-snapshot-preview1",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "getrandom"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43a49c392881ce6d5c3b8cb70f98717b7c07aabbdff06687b9030dbfbe2725f8"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "wasi 0.13.3+wasi-0.2.2",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -1392,7 +1422,7 @@ dependencies = [
  "futures-sink",
  "futures-util",
  "http 0.2.12",
- "indexmap 2.6.0",
+ "indexmap 2.7.1",
  "slab",
  "tokio",
  "tokio-util",
@@ -1442,7 +1472,7 @@ dependencies = [
  "biblatex",
  "ciborium",
  "citationberg",
- "indexmap 2.6.0",
+ "indexmap 2.7.1",
  "numerals",
  "paste",
  "serde",
@@ -1967,9 +1997,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.6.0"
+version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "707907fe3c25f5424cce2cb7e1cbcafee6bdbe735ca90ef77c29e84591e5b9da"
+checksum = "8c9c992b02b5b4c94ea26e32fe5bccb7aa7d9f390ab5c1221ff895bc7ea8b652"
 dependencies = [
  "equivalent",
  "hashbrown 0.15.1",
@@ -2168,6 +2198,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 
 [[package]]
+name = "lsp-types"
+version = "0.95.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "158c1911354ef73e8fe42da6b10c0484cb65c7f1007f28022e847706c1ab6984"
+dependencies = [
+ "bitflags 1.3.2",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "url",
+]
+
+[[package]]
 name = "memchr"
 version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2232,7 +2275,7 @@ checksum = "a4a650543ca06a924e8b371db273b2756685faae30f8487da1b56505a8f78b0c"
 dependencies = [
  "libc",
  "log",
- "wasi",
+ "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys 0.48.0",
 ]
 
@@ -2244,7 +2287,7 @@ checksum = "80e04d1dcff3aae0704555fe5fee3bcfaf3d1fdf8a7e521d5b9d2b42acb52cec"
 dependencies = [
  "hermit-abi",
  "libc",
- "wasi",
+ "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys 0.52.0",
 ]
 
@@ -2636,7 +2679,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42cf17e9a1800f5f396bc67d193dc9411b59012a5876445ef450d449881e1016"
 dependencies = [
  "base64 0.22.1",
- "indexmap 2.6.0",
+ "indexmap 2.7.1",
  "quick-xml 0.32.0",
  "serde",
  "time",
@@ -2797,7 +2840,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2fe5ef3495d7d2e377ff17b1a8ce2ee2ec2a18cde8b6ad6619d65d0701c135d"
 dependencies = [
  "bytes",
- "getrandom",
+ "getrandom 0.2.15",
  "rand",
  "ring",
  "rustc-hash 2.0.0",
@@ -2876,7 +2919,7 @@ version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
- "getrandom",
+ "getrandom 0.2.15",
 ]
 
 [[package]]
@@ -2923,7 +2966,7 @@ version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba009ff324d1fc1b900bd1fdb31564febe58a8ccc8a6fdbb93b543d33b13ca43"
 dependencies = [
- "getrandom",
+ "getrandom 0.2.15",
  "libredox",
  "thiserror 1.0.69",
 ]
@@ -2942,7 +2985,6 @@ dependencies = [
  "js-sys",
  "parking_lot",
  "path-clean",
- "reflexo-typst-shim",
  "rkyv",
  "rustc-hash 2.0.0",
  "serde",
@@ -2951,6 +2993,7 @@ dependencies = [
  "serde_with",
  "siphasher 1.0.1",
  "tiny-skia-path",
+ "tinymist-std",
  "wasm-bindgen",
  "web-time",
 ]
@@ -2967,7 +3010,7 @@ dependencies = [
  "fontdb",
  "futures",
  "fxhash",
- "indexmap 2.6.0",
+ "indexmap 2.7.1",
  "js-sys",
  "log",
  "nohash-hasher",
@@ -2978,26 +3021,16 @@ dependencies = [
  "reflexo",
  "reflexo-typst2vec",
  "reflexo-vec2svg",
- "reflexo-vfs",
- "reflexo-world",
  "rkyv",
  "serde",
  "serde_json",
  "tar",
+ "tinymist-world",
  "tokio",
  "typst",
  "typst-pdf",
  "walkdir",
  "web-sys",
-]
-
-[[package]]
-name = "reflexo-typst-shim"
-version = "0.5.4"
-dependencies = [
- "cfg-if",
- "typst",
- "typst-syntax",
 ]
 
 [[package]]
@@ -3102,53 +3135,6 @@ dependencies = [
  "reflexo-typst2vec",
  "reflexo-vec2canvas",
  "typst",
-]
-
-[[package]]
-name = "reflexo-vfs"
-version = "0.5.4"
-dependencies = [
- "indexmap 2.6.0",
- "js-sys",
- "log",
- "nohash-hasher",
- "parking_lot",
- "reflexo",
- "rpds",
- "typst",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
-name = "reflexo-world"
-version = "0.5.4"
-dependencies = [
- "chrono",
- "codespan-reporting",
- "comemo",
- "dirs",
- "ecow",
- "flate2",
- "fontdb",
- "hex",
- "js-sys",
- "log",
- "parking_lot",
- "reflexo",
- "reflexo-typst-shim",
- "reflexo-vfs",
- "reqwest",
- "serde",
- "serde-wasm-bindgen",
- "serde_json",
- "serde_with",
- "sha2",
- "strum",
- "tar",
- "typst",
- "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]
@@ -3273,7 +3259,7 @@ checksum = "c17fa4cb658e3583423e915b9f3acc01cceaee1860e33d59ebae66adc3a2dc0d"
 dependencies = [
  "cc",
  "cfg-if",
- "getrandom",
+ "getrandom 0.2.15",
  "libc",
  "spin",
  "untrusted",
@@ -3638,7 +3624,7 @@ dependencies = [
  "chrono",
  "hex",
  "indexmap 1.9.3",
- "indexmap 2.6.0",
+ "indexmap 2.7.1",
  "serde",
  "serde_derive",
  "serde_json",
@@ -3664,7 +3650,7 @@ version = "0.9.34+deprecated"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a8b1a1a2ebf674015cc02edccce75287f1a0130d394307b36743c2f5d504b47"
 dependencies = [
- "indexmap 2.6.0",
+ "indexmap 2.7.1",
  "itoa",
  "ryu",
  "serde",
@@ -3984,6 +3970,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "tempfile"
+version = "3.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38c246215d7d24f48ae091a2902398798e05d978b24315d6efbc00ede9a8bb91"
+dependencies = [
+ "cfg-if",
+ "fastrand",
+ "getrandom 0.3.1",
+ "once_cell",
+ "rustix",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
 name = "termcolor"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4114,6 +4114,106 @@ dependencies = [
 ]
 
 [[package]]
+name = "tinymist-analysis"
+version = "0.12.18"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=7b8739487ed959b295c4df39e5cc2ebd47b4e066#7b8739487ed959b295c4df39e5cc2ebd47b4e066"
+dependencies = [
+ "ecow",
+ "lsp-types",
+ "serde",
+ "strum",
+ "toml",
+ "typst",
+]
+
+[[package]]
+name = "tinymist-std"
+version = "0.12.18"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=7b8739487ed959b295c4df39e5cc2ebd47b4e066#7b8739487ed959b295c4df39e5cc2ebd47b4e066"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "bitvec",
+ "comemo",
+ "core-foundation",
+ "dashmap",
+ "ecow",
+ "fxhash",
+ "js-sys",
+ "libc",
+ "log",
+ "parking_lot",
+ "path-clean",
+ "rkyv",
+ "rustc-hash 2.0.0",
+ "same-file",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "serde_with",
+ "siphasher 1.0.1",
+ "tempfile",
+ "tinymist-analysis",
+ "typst",
+ "typst-shim",
+ "wasm-bindgen",
+ "web-time",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "tinymist-vfs"
+version = "0.12.18"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=7b8739487ed959b295c4df39e5cc2ebd47b4e066#7b8739487ed959b295c4df39e5cc2ebd47b4e066"
+dependencies = [
+ "comemo",
+ "indexmap 2.7.1",
+ "js-sys",
+ "log",
+ "nohash-hasher",
+ "parking_lot",
+ "rpds",
+ "tinymist-std",
+ "typst",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
+name = "tinymist-world"
+version = "0.12.18"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=7b8739487ed959b295c4df39e5cc2ebd47b4e066#7b8739487ed959b295c4df39e5cc2ebd47b4e066"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "codespan-reporting",
+ "comemo",
+ "dirs",
+ "ecow",
+ "flate2",
+ "fontdb",
+ "hex",
+ "js-sys",
+ "log",
+ "parking_lot",
+ "reqwest",
+ "serde",
+ "serde-wasm-bindgen",
+ "serde_json",
+ "serde_with",
+ "sha2",
+ "strum",
+ "tar",
+ "tinymist-std",
+ "tinymist-vfs",
+ "typst",
+ "typst-assets",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "tinystr"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4219,7 +4319,7 @@ version = "0.22.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ae48d6208a266e853d946088ed816055e556cc6028c5e8e2b84d9fa5dd7c7f5"
 dependencies = [
- "indexmap 2.6.0",
+ "indexmap 2.7.1",
  "serde",
  "serde_spanned",
  "toml_datetime",
@@ -4331,7 +4431,7 @@ dependencies = [
  "icu_segmenter",
  "if_chain",
  "image",
- "indexmap 2.6.0",
+ "indexmap 2.7.1",
  "kamadak-exif",
  "kurbo",
  "lipsum",
@@ -4421,7 +4521,7 @@ dependencies = [
  "comemo",
  "ecow",
  "image",
- "indexmap 2.6.0",
+ "indexmap 2.7.1",
  "miniz_oxide",
  "once_cell",
  "pdf-writer",
@@ -4435,6 +4535,16 @@ dependencies = [
  "typst-timing",
  "unscanny",
  "xmp-writer",
+]
+
+[[package]]
+name = "typst-shim"
+version = "0.12.18"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=7b8739487ed959b295c4df39e5cc2ebd47b4e066#7b8739487ed959b295c4df39e5cc2ebd47b4e066"
+dependencies = [
+ "cfg-if",
+ "typst",
+ "typst-syntax",
 ]
 
 [[package]]
@@ -4920,7 +5030,7 @@ version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8c5f0a0af699448548ad1a2fbf920fb4bee257eae39953ba95cb84891a0446a"
 dependencies = [
- "getrandom",
+ "getrandom 0.2.15",
 ]
 
 [[package]]
@@ -5022,6 +5132,15 @@ name = "wasi"
 version = "0.11.0+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
+
+[[package]]
+name = "wasi"
+version = "0.13.3+wasi-0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26816d2e1a4a36a2940b96c5296ce403917633dff8f3440e9b236ed6f6bacad2"
+dependencies = [
+ "wit-bindgen-rt",
+]
 
 [[package]]
 name = "wasm-bindgen"
@@ -5425,6 +5544,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "36c1fec1a2bb5866f07c25f68c26e565c4c200aebb96d7e55710c19d3e8ac49b"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "wit-bindgen-rt"
+version = "0.33.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3268f3d866458b787f390cf61f4bbb563b922d091359f9608842999eaee3943c"
+dependencies = [
+ "bitflags 2.6.0",
 ]
 
 [[package]]

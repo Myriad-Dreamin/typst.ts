@@ -1,15 +1,15 @@
 use core::fmt;
 
-use reflexo::debug_loc::CharRange;
-pub use reflexo::error::*;
-
+use ecow::eco_format;
+use reflexo::debug_loc::{LspPosition, LspRange};
 use reflexo::path::unix_slash;
-use typst::syntax::Source;
+use typst::syntax::{Source, Span};
 
-pub use typst::diag::SourceDiagnostic as TypstSourceDiagnostic;
+use crate::vfs::{WorkspaceResolution, WorkspaceResolver};
 
+pub use reflexo::error::*;
 pub use typst::diag::FileError as TypstFileError;
-use typst::syntax::Span;
+pub use typst::diag::SourceDiagnostic as TypstSourceDiagnostic;
 
 struct DiagMsgFmt<'a>(&'a TypstSourceDiagnostic);
 
@@ -30,9 +30,9 @@ struct PosFmt<'a>(&'a typst::diag::Tracepoint);
 impl fmt::Display for PosFmt<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.0 {
-            typst::diag::Tracepoint::Call(Some(name)) => write!(f, "while calling {}", name),
+            typst::diag::Tracepoint::Call(Some(name)) => write!(f, "while calling {name}"),
             typst::diag::Tracepoint::Call(None) => write!(f, "while calling closure"),
-            typst::diag::Tracepoint::Show(name) => write!(f, "while showing {}", name),
+            typst::diag::Tracepoint::Show(name) => write!(f, "while showing {name}"),
             typst::diag::Tracepoint::Import => write!(f, "import"),
         }
     }
@@ -41,16 +41,30 @@ impl fmt::Display for PosFmt<'_> {
 fn resolve_source_span(
     s: Span,
     world: Option<&dyn typst::World>,
-) -> (String, String, Option<CharRange>) {
+) -> (String, String, Option<LspRange>) {
     let mut package = String::new();
     let mut path = String::new();
     let mut range = None;
 
     if let Some(id) = s.id() {
-        if let Some(pkg) = id.package() {
-            package = pkg.to_string();
-        };
-        path = unix_slash(id.vpath().as_rooted_path());
+        match WorkspaceResolver::resolve(id) {
+            Ok(WorkspaceResolution::Package) => {
+                package = id.package().unwrap().to_string();
+                path = unix_slash(id.vpath().as_rooted_path());
+            }
+            Ok(WorkspaceResolution::Rootless | WorkspaceResolution::UntitledRooted(..)) => {
+                path = unix_slash(id.vpath().as_rooted_path());
+            }
+            Ok(WorkspaceResolution::Workspace(workspace)) => {
+                path = id
+                    .vpath()
+                    .resolve(&workspace.path())
+                    .as_deref()
+                    .map(unix_slash)
+                    .unwrap_or_default();
+            }
+            Err(..) => {}
+        }
 
         if let Some((rng, src)) = world
             .and_then(|world| world.source(id).ok())
@@ -58,9 +72,13 @@ fn resolve_source_span(
         {
             let resolve_off =
                 |src: &Source, off: usize| src.byte_to_line(off).zip(src.byte_to_column(off));
-            range = Some(CharRange {
-                start: resolve_off(&src, rng.start).into(),
-                end: resolve_off(&src, rng.end).into(),
+            range = Some(LspRange {
+                start: resolve_off(&src, rng.start)
+                    .map(|(l, c)| LspPosition::new(l as u32, c as u32))
+                    .unwrap_or_default(),
+                end: resolve_off(&src, rng.end)
+                    .map(|(l, c)| LspPosition::new(l as u32, c as u32))
+                    .unwrap_or_default(),
             });
         }
     }
@@ -76,7 +94,7 @@ pub fn diag_from_std(diag: TypstSourceDiagnostic, world: Option<&dyn typst::Worl
     DiagMessage {
         package,
         path,
-        message: DiagMsgFmt(&diag).to_string(),
+        message: eco_format!("{}", DiagMsgFmt(&diag)),
         severity: match diag.severity {
             typst::diag::Severity::Error => DiagSeverity::Error,
             typst::diag::Severity::Warning => DiagSeverity::Warning,
@@ -98,7 +116,7 @@ pub fn long_diag_from_std(
         DiagMessage {
             package,
             path,
-            message: PosFmt(&trace.v).to_string(),
+            message: eco_format!("{}", PosFmt(&trace.v)),
             severity: DiagSeverity::Hint,
             range,
         }
@@ -119,15 +137,15 @@ pub trait ErrorConverter {
         arguments.push(("path", msg.path));
         if let Some(range) = msg.range {
             arguments.push(("start_line", range.start.line.to_string()));
-            arguments.push(("start_column", range.start.column.to_string()));
+            arguments.push(("start_column", range.start.character.to_string()));
             arguments.push(("end_line", range.end.line.to_string()));
-            arguments.push(("end_column", range.end.column.to_string()));
+            arguments.push(("end_column", range.end.character.to_string()));
         }
 
         Error::new(
             "typst",
             ErrKind::Msg(msg.message),
-            arguments.into_boxed_slice(),
+            Some(arguments.into_boxed_slice()),
         )
     }
 }

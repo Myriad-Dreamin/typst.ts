@@ -26,7 +26,7 @@ impl ToCssExt for Rgba8Item {
     fn to_css(self) -> String {
         let Rgba8Item { r, g, b, a } = self;
         if a == 255 {
-            let shorter = format!("#{:02x}{:02x}{:02x}", r, g, b);
+            let shorter = format!("#{r:02x}{g:02x}{b:02x}");
             if shorter.chars().nth(1) == shorter.chars().nth(2)
                 && shorter.chars().nth(3) == shorter.chars().nth(4)
                 && shorter.chars().nth(5) == shorter.chars().nth(6)
@@ -41,7 +41,7 @@ impl ToCssExt for Rgba8Item {
             return shorter;
         }
 
-        format!("#{:02x}{:02x}{:02x}{:02x}", r, g, b, a)
+        format!("#{r:02x}{g:02x}{b:02x}{a:02x}")
     }
 }
 

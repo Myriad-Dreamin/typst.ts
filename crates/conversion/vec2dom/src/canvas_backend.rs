@@ -27,7 +27,7 @@ impl CanvasBackend {
         self.pixel_per_pt = 3.;
     }
 
-    pub fn render_page(&mut self, module: &Module, page: &Page) -> ZResult<CanvasNode> {
+    pub fn render_page(&mut self, module: &Module, page: &Page) -> Result<CanvasNode> {
         // todo: incremental
         let mut ct = self.vec2canvas.fork_canvas_render_task(module);
 

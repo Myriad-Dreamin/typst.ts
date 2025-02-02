@@ -69,14 +69,13 @@ impl BoxedCompiler {
 
                 let new_entry = universe
                     .entry_state()
-                    .select_in_workspace(*MEMORY_MAIN_ENTRY);
+                    .select_in_workspace(MEMORY_MAIN_ENTRY.vpath().as_rooted_path());
+
+                let main_id = new_entry.main().unwrap();
 
                 let content = Bytes::from(main_file_content.as_bytes());
                 // TODO: eliminate the side effect of shadow mapping safely
-                if let Err(err) = self
-                    .universe_mut()
-                    .map_shadow_by_id(*MEMORY_MAIN_ENTRY, content)
-                {
+                if let Err(err) = self.universe_mut().map_shadow_by_id(main_id, content) {
                     return Err(map_node_error(error_once!("cannot map shadow", err: err)));
                 }
 
@@ -94,7 +93,7 @@ impl BoxedCompiler {
                 })?;
                 universe
                     .entry_state()
-                    .try_select_path_in_workspace(fp, true)
+                    .try_select_path_in_workspace(fp)
                     .map_err(map_node_error)?
             } else {
                 None
@@ -133,11 +132,6 @@ impl BoxedCompiler {
 /// `CompileMiddleware`.
 impl Compiler for BoxedCompiler {
     type W = TypstSystemWorld;
-
-    #[inline]
-    fn reset(&mut self) -> SourceResult<()> {
-        self.0.reset()
-    }
 
     #[inline]
     fn pure_compile(

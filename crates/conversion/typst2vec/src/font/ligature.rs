@@ -86,7 +86,7 @@ impl LigatureResolver {
                 .into_iter()
                 .map(|g| {
                     self.rev_cmap.get(&g).unwrap_or_else(|| {
-                        println!("ligature component not found: {:?} {:?}", g, face);
+                        eprintln!("ligature component not found: {g:?} {face:?}");
                         &' '
                     })
                 })
@@ -131,6 +131,6 @@ fn get_ligature_resolver(font: &Font) -> Arc<LigatureResolver> {
 pub(super) fn resolve_ligature(font: &Font, id: GlyphId) -> Option<ImmutStr> {
     let resolver = get_ligature_resolver(font);
     // let res = resolver.resolve(font.ttf(), id);
-    // println!("resolve_ligature {:?} {:?} -> {:?}", font, id, res);
+    // eprintln!("resolve_ligature {:?} {:?} -> {:?}", font, id, res);
     resolver.resolve(font.ttf(), id)
 }

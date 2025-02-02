@@ -62,7 +62,7 @@ impl IncrDocServer {
                 .map(|i| i.1 .0)
                 .min()
                 .unwrap_or(0);
-            println!(
+            eprintln!(
                 "gc[{}]: max: {}, min: {}, remove: {}",
                 self.typst2vec.lifetime,
                 self.typst2vec
@@ -78,7 +78,7 @@ impl IncrDocServer {
 
             // for (fg, (_, item)) in
             //     self.typst2vec.items.iter().filter(|(_, i)| i.0 == mi) {
-            //     println!("mi {fg:?} => {item:#?}");
+            //     eprintln!("mi {fg:?} => {item:#?}");
             // }
         }
 
@@ -135,7 +135,7 @@ impl IncrDocServer {
     pub fn resolve_element_paths_by_span(
         &mut self,
         span_offset: SourceSpanOffset,
-    ) -> ZResult<Vec<Vec<ElementPoint>>> {
+    ) -> Result<Vec<Vec<ElementPoint>>> {
         self.typst2vec.spans.query_element_paths(span_offset)
     }
 
@@ -143,7 +143,7 @@ impl IncrDocServer {
     pub fn resolve_span_by_element_path(
         &mut self,
         path: &[ElementPoint],
-    ) -> ZResult<Option<(SourceSpanOffset, SourceSpanOffset)>> {
+    ) -> Result<Option<(SourceSpanOffset, SourceSpanOffset)>> {
         self.typst2vec.spans.query(path)
     }
 }

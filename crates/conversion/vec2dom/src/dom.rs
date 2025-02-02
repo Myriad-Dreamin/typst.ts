@@ -124,7 +124,7 @@ impl DomPage {
     }
 
     pub fn track_data(&mut self, data: &Page) -> bool {
-        if self.layout_data.as_ref().map_or(false, |d| d == data) {
+        if self.layout_data.as_ref() == Some(data) {
             return false;
         }
 
@@ -177,7 +177,7 @@ impl DomPage {
         }
     }
 
-    pub fn relayout(&mut self, ctx: &CanvasBackend) -> ZResult<()> {
+    pub fn relayout(&mut self, ctx: &CanvasBackend) -> Result<()> {
         if let Some(data) = self.dirty_layout.take() {
             self.do_relayout(ctx, data)?
         }
@@ -185,7 +185,7 @@ impl DomPage {
         Ok(())
     }
 
-    fn do_relayout(&mut self, ctx: &CanvasBackend, data: Page) -> ZResult<()> {
+    fn do_relayout(&mut self, ctx: &CanvasBackend, data: Page) -> Result<()> {
         #[cfg(feature = "debug_relayout")]
         web_sys::console::log_2(
             &format!("re-layout {idx} {data:?}", idx = self.idx).into(),
@@ -213,16 +213,13 @@ impl DomPage {
                 .unwrap();
             let style = self.elem.style();
             style
-                .set_property("--data-page-width", &format!("{:.3}px", w))
+                .set_property("--data-page-width", &format!("{w:.3}px"))
                 .unwrap();
             style
-                .set_property("--data-page-height", &format!("{:.3}px", h))
+                .set_property("--data-page-height", &format!("{h:.3}px"))
                 .unwrap();
             self.svg
-                .set_attribute(
-                    "viewBox",
-                    &format!("0 0 {width} {height}", width = w, height = h),
-                )
+                .set_attribute("viewBox", &format!("0 0 {w} {h}"))
                 .unwrap();
 
             self.svg
@@ -287,7 +284,7 @@ impl DomPage {
         should_visible
     }
 
-    pub fn repaint_svg(&mut self, ctx: &mut DomContext<'_, '_>) -> ZResult<()> {
+    pub fn repaint_svg(&mut self, ctx: &mut DomContext<'_, '_>) -> Result<()> {
         let should_visible = !self.bbox.intersect(&self.viewport).is_empty();
 
         if cfg!(feature = "debug_repaint") {
@@ -377,7 +374,7 @@ impl DomPage {
         })
     }
 
-    pub fn repaint_semantics(&mut self, ctx: &mut DomContext<'_, '_>) -> ZResult<()> {
+    pub fn repaint_semantics(&mut self, ctx: &mut DomContext<'_, '_>) -> Result<()> {
         let init_semantics = self.semantics_state.as_ref().map_or(true, |e| {
             let (data, _layout_heavy) = e;
             e.0.content != data.content
@@ -415,7 +412,7 @@ impl DomPage {
         Ok(())
     }
 
-    pub fn need_prepare_canvas(&mut self, module: &Module, b: &mut CanvasBackend) -> ZResult<bool> {
+    pub fn need_prepare_canvas(&mut self, module: &Module, b: &mut CanvasBackend) -> Result<bool> {
         // already pulled
         // self.pull_viewport(viewport);
 
@@ -451,7 +448,7 @@ impl DomPage {
     pub fn prepare_canvas(
         &mut self,
         ctx: &mut DomContext<'_, '_>,
-    ) -> ZResult<Option<Arc<CanvasElem>>> {
+    ) -> Result<Option<Arc<CanvasElem>>> {
         let need_repaint = self.need_repaint_canvas(ctx.canvas_backend);
 
         let res = if need_repaint {
@@ -492,7 +489,7 @@ impl DomPage {
         &mut self,
         viewport: Option<tiny_skia::Rect>,
         ppp: f32,
-    ) -> ZResult<impl Future<Output = ()>> {
+    ) -> Result<impl Future<Output = ()>> {
         let render_entire_page = self.realized.lock().unwrap().is_none() || !self.is_visible;
 
         if let Some(attached) = self.realized.lock().unwrap().as_mut() {
@@ -525,7 +522,7 @@ impl DomPage {
 
             let mut elem = elem.lock().unwrap();
 
-            web_sys::console::log_1(&format!("canvas render: {idx} {:?}", viewport).into());
+            web_sys::console::log_1(&format!("canvas render: {idx} {viewport:?}").into());
 
             'render_canvas: {
                 let _global_guard = CanvasStateGuard::new(&canvas_ctx);
@@ -534,7 +531,7 @@ impl DomPage {
                     .lock()
                     .unwrap()
                     .as_ref()
-                    .map_or(false, |s| s.rendered == state && s.ppp == ppp)
+                    .is_some_and(|s| s.rendered == state && s.ppp == ppp)
                 {
                     break 'render_canvas;
                 }
@@ -576,7 +573,7 @@ impl DomPage {
                         .lock()
                         .unwrap()
                         .as_ref()
-                        .map_or(false, |e| e.render_entire_page);
+                        .is_some_and(|e| e.render_entire_page);
 
                     let Some(elem) = elem.as_mut() else {
                         panic!("realized is none for partial canvas render");
@@ -616,7 +613,7 @@ impl DomPage {
                 }
             }
 
-            let clip_key = format!("{:?}", clip_rect);
+            let clip_key = format!("{clip_rect:?}");
 
             // data-clip-rect-state
             const CLIP_KEY: &str = "data-clip-rect-state";
@@ -626,7 +623,7 @@ impl DomPage {
                 let _ = canvas.set_attribute(CLIP_KEY, &clip_key);
 
                 if let Some((x, y, w, h)) = clip_rect {
-                    let modify = |p, x| canvas.style().set_property(p, &format!("{:.3}%", x));
+                    let modify = |p, x| canvas.style().set_property(p, &format!("{x:.3}%"));
                     let _ = modify("--reflexo-clip-lo-x", x);
                     let _ = modify("--reflexo-clip-lo-y", y);
                     let _ = modify("--reflexo-clip-hi-x", x + w);

@@ -20,9 +20,9 @@ impl SvgGlyphBuilder {
     }
 
     fn render_ligature_attr(ll: u8) -> String {
-        // println!("ligature len: {}", ll);
+        // eprintln!("ligature len: {}", ll);
         if ll > 0 {
-            format!(r#" data-liga-len="{}""#, ll)
+            format!(r#" data-liga-len="{ll}""#)
         } else {
             "".to_owned()
         }
@@ -51,8 +51,7 @@ impl SvgGlyphBuilder {
         let li = Self::render_ligature_attr(ig.ligature_len);
 
         let symbol_def = format!(
-            r#"<symbol overflow="visible" id="{}" class="image_glyph"{li}>{}</symbol>"#,
-            glyph_id, img
+            r#"<symbol overflow="visible" id="{glyph_id}" class="image_glyph"{li}>{img}</symbol>"#
         );
         Some(symbol_def)
     }

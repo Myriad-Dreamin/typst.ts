@@ -62,7 +62,7 @@ impl IncrDocClient {
     }
 }
 
-fn access_slice<'a, T>(v: &'a [T], idx: usize, kind: &'static str, pos: usize) -> ZResult<&'a T> {
+fn access_slice<'a, T>(v: &'a [T], idx: usize, kind: &'static str, pos: usize) -> Result<&'a T> {
     v.get(idx).ok_or_else(
         || error_once!("out of bound access", pos: pos, kind: kind, idx: idx, actual: v.len()),
     )
@@ -94,7 +94,7 @@ impl<'a> IncrDocClientKern<'a> {
     }
 
     /// Get the source location of the given path.
-    pub fn source_span(&self, path: &[u32]) -> ZResult<Option<String>> {
+    pub fn source_span(&self, path: &[u32]) -> Result<Option<String>> {
         const SOURCE_MAPPING_TYPE_TEXT: u32 = 0;
         const SOURCE_MAPPING_TYPE_GROUP: u32 = 1;
         const SOURCE_MAPPING_TYPE_IMAGE: u32 = 2;

@@ -42,7 +42,7 @@ struct FutureFolder {
 }
 
 impl FutureFolder {
-    async fn compute<'scope, OP, R: Send + 'static>(op: OP) -> ZResult<R>
+    async fn compute<'scope, OP, R: Send + 'static>(op: OP) -> Result<R>
     where
         OP: FnOnce(&Scope<'scope>) -> R + Send + 'static,
     {

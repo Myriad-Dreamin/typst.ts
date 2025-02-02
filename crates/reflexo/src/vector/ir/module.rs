@@ -143,6 +143,7 @@ pub struct ModuleView {
 impl ModuleView {
     /// See [`std::path::Path`]
     pub fn new<M: AsRef<Module> + ?Sized>(m: &M) -> &Self {
+        // SAFETY: The std::path::Path does similar conversion and is safe.
         unsafe { &*(m.as_ref() as *const Module as *const ModuleView) }
     }
 }

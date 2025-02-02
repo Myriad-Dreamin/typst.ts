@@ -48,3 +48,6 @@ incremental = ["reflexo/flat-vector"]
 report_group = []
 render_bbox = []
 rasterize_glyph = []
+
+[lints]
+workspace = true

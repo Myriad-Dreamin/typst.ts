@@ -1,4 +1,5 @@
 use std::io::IsTerminal;
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use codespan_reporting::files::Files;
@@ -21,7 +22,7 @@ use crate::features::{
     CompileFeature, FeatureSet, DIAG_FMT_FEATURE, WITH_COMPILING_STATUS_FEATURE,
 };
 use crate::CompileReport;
-use crate::{typst::prelude::*, GenericExporter, PhantomParamData, TakeAs, TypstFileId};
+use crate::{typst::prelude::*, GenericExporter, TakeAs, TypstFileId};
 
 use super::DiagnosticFormat;
 
@@ -93,14 +94,14 @@ fn label<'files, W: World + Files<'files, FileId = TypstFileId>>(
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct ConsoleDiagReporter<W>(PhantomParamData<W>);
+pub struct ConsoleDiagReporter<W>(PhantomData<fn(W)>);
 
 impl<W> Default for ConsoleDiagReporter<W>
 where
     W: for<'files> codespan_reporting::files::Files<'files, FileId = TypstFileId>,
 {
     fn default() -> Self {
-        Self(PhantomParamData::default())
+        Self(PhantomData)
     }
 }
 

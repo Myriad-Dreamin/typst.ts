@@ -1,5 +1,5 @@
 use super::preludes::*;
-use crate::StaticHash128;
+use crate::hash::StaticHash128;
 
 /// Item representing an `<image/>` element.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]

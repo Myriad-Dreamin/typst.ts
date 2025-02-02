@@ -5,8 +5,8 @@ macro_rules! layout {
         $(layout!(@one $prim);)*
     };
     (@one $prim:ty) => {{
-        println!("const _: () = assert!(core::mem::size_of::<{}>() == {});", stringify!($prim), core::mem::size_of::<$prim>());
-        println!("const _: () = assert!(core::mem::align_of::<{}>() == {});", stringify!($prim), core::mem::align_of::<$prim>());
+        eprintln!("const _: () = assert!(core::mem::size_of::<{}>() == {});", stringify!($prim), core::mem::size_of::<$prim>());
+        eprintln!("const _: () = assert!(core::mem::align_of::<{}>() == {});", stringify!($prim), core::mem::align_of::<$prim>());
     }};
 }
 

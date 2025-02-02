@@ -9,20 +9,19 @@ use std::{
     sync::{Arc, OnceLock},
 };
 
-use reflexo_vfs::notify::UpstreamUpdateEvent;
-use reflexo_world::{EntryReader, Revising, TaskInputs};
 use tokio::sync::{mpsc, oneshot};
 
-use crate::{exporter::GenericExporter, ExportSignal, TypstDocument};
+use crate::features::{FeatureSet, WITH_COMPILING_STATUS_FEATURE};
+use crate::task::CacheTask;
+use crate::vfs::notify::{FilesystemEvent, MemoryEvent, NotifyMessage, UpstreamUpdateEvent};
+use crate::vfs::FsProvider;
+use crate::world::{
+    CompilerFeat, CompilerUniverse, CompilerWorld, EntryReader, RevisingUniverse, TaskInputs,
+};
+use crate::{exporter::GenericExporter, watch::watch_deps, ExportSignal, TypstDocument};
 use crate::{
-    features::{FeatureSet, WITH_COMPILING_STATUS_FEATURE},
-    vfs::notify::{FilesystemEvent, MemoryEvent, NotifyMessage},
-    watch_deps,
-    world::{CompilerFeat, CompilerUniverse, CompilerWorld},
     CompileEnv, CompileReport, CompileSnapshot, CompiledArtifact, ConsoleDiagReporter, WorldDeps,
 };
-
-use crate::task::CacheTask;
 
 pub trait CompilationHandle<F: CompilerFeat>: Send + Sync + 'static {
     fn status(&self, revision: usize, rep: CompileReport);
@@ -441,11 +440,13 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
 
         // Notify the new file dependencies.
         let mut deps = vec![];
-        artifact
-            .world
-            .iter_dependencies(&mut |dep| deps.push(dep.clone()));
+        artifact.world.iter_dependencies(&mut |dep| {
+            if let Ok(x) = artifact.world.file_path(dep).and_then(|e| e.to_err()) {
+                deps.push(x.into())
+            }
+        });
         send(CompilerResponse::Notify(NotifyMessage::SyncDependency(
-            deps,
+            Box::new(deps),
         )));
 
         // Trigger an evict task.
@@ -459,7 +460,9 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
         match event {
             Interrupt::Compile => {
                 // Increment the revision anyway.
-                self.verse.increment_revision(|_| {});
+                self.verse.increment_revision(|verse| {
+                    verse.flush();
+                });
 
                 reason_by_entry_change()
             }
@@ -468,7 +471,7 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
                 if self
                     .watch_snap
                     .get()
-                    .is_some_and(|e| e.world.revision() < *self.verse.revision.read())
+                    .is_some_and(|e| e.world.revision() < self.verse.revision)
                 {
                     self.watch_snap = OnceLock::new();
                 }
@@ -503,7 +506,7 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
                     if self.suspended {
                         log::info!("CompileActor: removing diag");
                         self.compile_handle
-                            .status(self.verse.revision.get_mut().get(), CompileReport::Suspend);
+                            .status(self.verse.revision.get(), CompileReport::Suspend);
                     }
 
                     // Reset the watch state and document state.
@@ -572,7 +575,7 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
                         // Actual a delayed memory event.
                         reason = reason_by_mem();
                     }
-                    verse.notify_fs_event(event)
+                    verse.vfs().notify_fs_event(event)
                 });
 
                 reason
@@ -589,7 +592,7 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
 
     /// Apply delayed memory changes to underlying compiler.
     fn apply_delayed_memory_changes(
-        verse: &mut Revising<CompilerUniverse<F>>,
+        verse: &mut RevisingUniverse<F>,
         dirty_shadow_logical_tick: &mut usize,
         event: &mut FilesystemEvent,
     ) -> Option<()> {
@@ -613,25 +616,18 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
     }
 
     /// Apply memory changes to underlying compiler.
-    fn apply_memory_changes(verse: &mut Revising<CompilerUniverse<F>>, event: MemoryEvent) {
+    fn apply_memory_changes(verse: &mut RevisingUniverse<F>, event: MemoryEvent) {
+        let mut vfs = verse.vfs();
         if matches!(event, MemoryEvent::Sync(..)) {
-            verse.reset_shadow();
+            vfs.reset_shadow();
         }
         match event {
             MemoryEvent::Update(event) | MemoryEvent::Sync(event) => {
-                for removes in event.removes {
-                    let _ = verse.unmap_shadow(&removes);
+                for path in event.removes {
+                    let _ = vfs.unmap_shadow(&path);
                 }
-                for (p, t) in event.inserts {
-                    let insert_file = match t.content().cloned() {
-                        Ok(content) => content,
-                        Err(err) => {
-                            log::error!("CompileActor: read memory file at {p:?}: {err}");
-                            continue;
-                        }
-                    };
-
-                    let _ = verse.map_shadow(&p, insert_file);
+                for (path, snap) in event.inserts {
+                    let _ = vfs.map_shadow(&path, snap);
                 }
             }
         }

@@ -171,7 +171,7 @@ impl TypstRenderer {
         Self {}
     }
 
-    pub fn create_session(&self, options: Option<CreateSessionOptions>) -> ZResult<RenderSession> {
+    pub fn create_session(&self, options: Option<CreateSessionOptions>) -> Result<RenderSession> {
         match options {
             Some(options) => {
                 let format = options.format.as_deref().unwrap_or("vector");
@@ -187,7 +187,7 @@ impl TypstRenderer {
         }
     }
 
-    pub fn reset(&mut self, session: &mut RenderSession) -> ZResult<()> {
+    pub fn reset(&mut self, session: &mut RenderSession) -> Result<()> {
         session.reset();
         Ok(())
     }
@@ -197,7 +197,7 @@ impl TypstRenderer {
         session: &mut RenderSession,
         action: &str,
         data: &[u8],
-    ) -> ZResult<()> {
+    ) -> Result<()> {
         match action {
             "reset" => session.reset_current(data),
             "merge" => session.merge_delta(data),
@@ -209,7 +209,7 @@ impl TypstRenderer {
         &self,
         artifact_content: &[u8],
         decoder: &str,
-    ) -> ZResult<RenderSession> {
+    ) -> Result<RenderSession> {
         if decoder == "vector" {
             return self.session_from_vector_artifact(artifact_content);
         }
@@ -221,7 +221,7 @@ impl TypstRenderer {
         Err(error_once!("Renderer.UnsupportedDecoder", decoder: decoder))
     }
 
-    fn session_from_vector_artifact(&self, artifact_content: &[u8]) -> ZResult<RenderSession> {
+    fn session_from_vector_artifact(&self, artifact_content: &[u8]) -> Result<RenderSession> {
         let mut session = RenderSession::default();
         session.reset_current(artifact_content)?;
         Ok(session)
@@ -244,11 +244,11 @@ pub mod canvas_stub {
 
     #[wasm_bindgen]
     impl TypstRenderer {
-        pub async fn create_worker(&mut self, _w: JsValue) -> ZResult<TypstWorker> {
+        pub async fn create_worker(&mut self, _w: JsValue) -> Result<TypstWorker> {
             Err(error_once!("Renderer.WorkerFeatureNotEnabled"))
         }
 
-        pub fn create_worker_bridge(self) -> ZResult<WorkerBridge> {
+        pub fn create_worker_bridge(self) -> Result<WorkerBridge> {
             Err(error_once!("Renderer.WorkerFeatureNotEnabled"))
         }
     }
@@ -261,7 +261,7 @@ pub mod canvas_stub {
 
     #[wasm_bindgen]
     impl TypstWorker {
-        pub fn manipulate_data(&mut self, _action: &str, _data: Uint8Array) -> ZResult<Promise> {
+        pub fn manipulate_data(&mut self, _action: &str, _data: Uint8Array) -> Result<Promise> {
             Err(error_once!("Renderer.WorkerFeatureNotEnabled"))
         }
 
@@ -274,7 +274,7 @@ pub mod canvas_stub {
             _actions: Vec<u8>,
             _canvas_list: Vec<HtmlCanvasElement>,
             _data: Vec<RenderPageImageOptions>,
-        ) -> ZResult<Promise> {
+        ) -> Result<Promise> {
             Err(error_once!("Renderer.WorkerFeatureNotEnabled"))
         }
     }

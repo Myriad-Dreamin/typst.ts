@@ -18,7 +18,7 @@ pub struct TypstCompilerBuilder {
 #[wasm_bindgen]
 impl TypstCompilerBuilder {
     #[wasm_bindgen(constructor)]
-    pub fn new() -> ZResult<TypstCompilerBuilder> {
+    pub fn new() -> Result<TypstCompilerBuilder> {
         console_error_panic_hook::set_once();
         let mut res = Self {
             access_model: None,
@@ -29,7 +29,7 @@ impl TypstCompilerBuilder {
         Ok(res)
     }
 
-    pub fn set_dummy_access_model(&mut self) -> ZResult<()> {
+    pub fn set_dummy_access_model(&mut self) -> Result<()> {
         self.access_model = Some(ProxyAccessModel {
             context: wasm_bindgen::JsValue::UNDEFINED,
             mtime_fn: js_sys::Function::new_no_args("return 0"),
@@ -55,7 +55,7 @@ impl TypstCompilerBuilder {
         is_file_fn: js_sys::Function,
         real_path_fn: js_sys::Function,
         read_all_fn: js_sys::Function,
-    ) -> ZResult<()> {
+    ) -> Result<()> {
         self.access_model = Some(ProxyAccessModel {
             context,
             mtime_fn,
@@ -71,7 +71,7 @@ impl TypstCompilerBuilder {
         &mut self,
         context: JsValue,
         real_resolve_fn: js_sys::Function,
-    ) -> ZResult<()> {
+    ) -> Result<()> {
         self.package_registry = Some(ProxyRegistry {
             context: ProxyContext::new(context),
             real_resolve_fn,
@@ -81,17 +81,17 @@ impl TypstCompilerBuilder {
     }
 
     // 400 KB
-    pub async fn add_raw_font(&mut self, font_buffer: Uint8Array) -> ZResult<()> {
+    pub async fn add_raw_font(&mut self, font_buffer: Uint8Array) -> Result<()> {
         self.add_raw_font_internal(font_buffer.to_vec().into());
         Ok(())
     }
 
     // 100 KB
-    pub async fn add_web_fonts(&mut self, fonts: js_sys::Array) -> ZResult<()> {
+    pub async fn add_web_fonts(&mut self, fonts: js_sys::Array) -> Result<()> {
         self.searcher.add_web_fonts(fonts).await
     }
 
-    pub async fn add_glyph_pack(&mut self, _pack: JsValue) -> ZResult<()> {
+    pub async fn add_glyph_pack(&mut self, _pack: JsValue) -> Result<()> {
         self.searcher.add_glyph_pack().await
     }
 

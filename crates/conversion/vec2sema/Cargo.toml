@@ -24,3 +24,6 @@ web-sys.workspace = true
 [features]
 incremental = ["reflexo/flat-vector"]
 default = ["incremental"]
+
+[lints]
+workspace = true

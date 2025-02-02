@@ -18,7 +18,7 @@ impl TypstRenderer {
         ses: &RenderSession,
         canvas: JsValue,
         options: Option<RenderPageImageOptions>,
-    ) -> ZResult<JsValue> {
+    ) -> Result<JsValue> {
         let canvas = canvas.as_ref();
         let canvas = if canvas == &JsValue::NULL {
             None
@@ -54,7 +54,7 @@ impl TypstRenderer {
         ses: &RenderSession,
         canvas: Option<&dyn CanvasDevice>,
         options: Option<RenderPageImageOptions>,
-    ) -> ZResult<(Fingerprint, JsValue, Option<HashMap<String, f64>>)> {
+    ) -> Result<(Fingerprint, JsValue, Option<HashMap<String, f64>>)> {
         let opts = options.unwrap_or_default();
         let rect_lo_x: f32 = -1.;
         let rect_lo_y: f32 = -1.;

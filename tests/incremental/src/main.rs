@@ -67,7 +67,7 @@ pub fn test_compiler(
     let _ = incr_svg_client.render_in_window(&mut incr_client, window);
 
     for i in 0..20 {
-        println!("Iteration {}", i);
+        eprintln!("Iteration {}", i);
 
         // content = content.replace("@netwok2020", "@netwok2020 x");
         content += "\n\nx";
@@ -90,7 +90,7 @@ pub fn test_compiler(
         comemo::evict(10);
     }
 
-    println!("diff: {:?}", diff);
+    eprintln!("diff: {:?}", diff);
 }
 
 pub fn main() {
@@ -111,7 +111,7 @@ pub fn main() {
     // workspace_dir.join(r#"masterproef/main.typ"#);
 
     for i in 0..10 {
-        println!("Over Iteration {}", i);
+        eprintln!("Over Iteration {}", i);
         let noop_exporter = GroupExporter::new(vec![]);
         test_compiler(&workspace_dir, &entry_file_path, noop_exporter);
     }

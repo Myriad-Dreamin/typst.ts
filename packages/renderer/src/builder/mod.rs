@@ -29,12 +29,12 @@ pub struct TypstRendererBuilder {}
 #[wasm_bindgen]
 impl TypstRendererBuilder {
     #[wasm_bindgen(constructor)]
-    pub fn new() -> ZResult<TypstRendererBuilder> {
+    pub fn new() -> Result<TypstRendererBuilder> {
         console_error_panic_hook::set_once();
         Ok(Self {})
     }
 
-    pub async fn build(self) -> ZResult<TypstRenderer> {
+    pub async fn build(self) -> Result<TypstRenderer> {
         Ok(TypstRenderer::new())
     }
 }
@@ -54,7 +54,7 @@ pub mod glyph_pack_stub {
 
     #[wasm_bindgen]
     impl TypstRendererBuilder {
-        pub async fn add_glyph_pack(&mut self, _pack: JsValue) -> ZResult<()> {
+        pub async fn add_glyph_pack(&mut self, _pack: JsValue) -> Result<()> {
             WARN_ONCE1.lock().unwrap().get_or_init(|| {
                 web_sys::console::warn_1(
                     &"[typst-ts-renderer]: build_glyph_pack feature is not enabled, calling TypstRendererBuilder::add_glyph_pack".into(),
@@ -66,7 +66,7 @@ pub mod glyph_pack_stub {
 
     #[wasm_bindgen]
     impl TypstRenderer {
-        pub fn load_glyph_pack(&self, _v: JsValue) -> ZResult<()> {
+        pub fn load_glyph_pack(&self, _v: JsValue) -> Result<()> {
             WARN_ONCE2.lock().unwrap().get_or_init(|| {
                 web_sys::console::warn_1(
                     &"[typst-ts-renderer]: build_glyph_pack feature is not enabled, calling TypstRenderer::load_glyph_pack".into(),
@@ -95,7 +95,7 @@ pub mod raw_font_stub {
 
     #[wasm_bindgen]
     impl TypstRendererBuilder {
-        pub async fn add_raw_font(&mut self, _font_buffer: js_sys::Uint8Array) -> ZResult<()> {
+        pub async fn add_raw_font(&mut self, _font_buffer: js_sys::Uint8Array) -> Result<()> {
             WARN_ONCE.lock().unwrap().get_or_init(|| {
                 web_sys::console::warn_1(
                     &"[typst-ts-renderer]: build_raw_font feature is not enabled".into(),
@@ -123,7 +123,7 @@ pub mod web_font_stub {
 
     #[wasm_bindgen]
     impl TypstRendererBuilder {
-        pub async fn add_web_fonts(&mut self, _fonts: js_sys::Array) -> ZResult<()> {
+        pub async fn add_web_fonts(&mut self, _fonts: js_sys::Array) -> Result<()> {
             WARN_ONCE.lock().unwrap().get_or_init(|| {
                 web_sys::console::warn_1(
                     &"[typst-ts-renderer]: build_web_font feature is not enabled".into(),

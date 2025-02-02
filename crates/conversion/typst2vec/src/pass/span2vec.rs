@@ -309,7 +309,7 @@ impl Span2VecPass {
     pub fn query_element_paths(
         &mut self,
         span_offset: SourceSpanOffset,
-    ) -> ZResult<Vec<Vec<ElementPoint>>> {
+    ) -> Result<Vec<Vec<ElementPoint>>> {
         self.span_tree.get_or_init(|| {
             log::info!("lazy spans are initializing");
             std::mem::take(&mut self.collector).into()
@@ -510,7 +510,7 @@ impl Span2VecPass {
     pub fn query(
         &mut self,
         path: &[ElementPoint],
-    ) -> ZResult<Option<(SourceSpanOffset, SourceSpanOffset)>> {
+    ) -> Result<Option<(SourceSpanOffset, SourceSpanOffset)>> {
         self.span_tree.get_or_init(|| {
             log::info!("lazy spans are initializing");
             std::mem::take(&mut self.collector).into()

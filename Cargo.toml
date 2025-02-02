@@ -14,8 +14,6 @@ members = [
     "benches/lowering",
 
     "crates/reflexo",
-    "crates/reflexo-vfs",
-    "crates/reflexo-world",
     "crates/reflexo-typst",
     "crates/conversion/typst2vec",
     "crates/conversion/vec2canvas",
@@ -193,12 +191,15 @@ vergen = { version = "9.0.1", features = [
 ] }
 vergen-gitcl = { version = "1.0.1" }
 
+# tinymist's world implementation
+typst-shim = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "7b8739487ed959b295c4df39e5cc2ebd47b4e066" }
+tinymist-analysis = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "7b8739487ed959b295c4df39e5cc2ebd47b4e066" }
+tinymist-std = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "7b8739487ed959b295c4df39e5cc2ebd47b4e066", default-features = false }
+tinymist-world = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "7b8739487ed959b295c4df39e5cc2ebd47b4e066", default-features = false }
+
 # project core
 reflexo = { version = "0.5.4", path = "crates/reflexo", default-features = false }
-reflexo-vfs = { version = "0.5.4", path = "crates/reflexo-vfs" }
-reflexo-world = { version = "0.5.4", path = "crates/reflexo-world" }
 reflexo-typst = { version = "0.5.4", path = "crates/reflexo-typst", default-features = false }
-reflexo-typst-shim = { version = "0.5.4", path = "crates/reflexo-typst-shim" }
 
 # conversions
 reflexo-typst2vec = { version = "0.5.4", path = "crates/conversion/typst2vec" }
@@ -214,7 +215,12 @@ typst-ts-dev-server = { version = "0.5.4", path = "server/dev" }
 typst-ts-cli = { version = "0.5.4", path = "cli" }
 
 [workspace.lints.rust]
-missing_docs = "warn"
+# missing_docs = "warn"
+unexpected_cfgs = { level = "allow", check-cfg = [
+    'cfg(wasm_bindgen_unstable_test_coverage)',
+    'cfg(noop)',
+    'cfg(used_linker)',
+] }
 
 [workspace.lints.clippy]
 uninlined_format_args = "warn"
@@ -245,3 +251,9 @@ typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst", tag = "typst.ts/v
 # typst-pdf = { path = "../typst/crates/typst-pdf" }
 
 # fontdb = { path = "../fontdb" }
+
+# [patch."https://github.com/Myriad-Dreamin/tinymist.git"]
+# typst-shim = { path = "../tinymist/crates/typst-shim" }
+# tinymist-analysis = { path = "../tinymist/crates/tinymist-analysis" }
+# tinymist-std = { path = "../tinymist/crates/tinymist-std" }
+# tinymist-world = { path = "../tinymist/crates/tinymist-world" }

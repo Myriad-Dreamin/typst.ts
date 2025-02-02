@@ -33,7 +33,7 @@ serde_json.workspace = true
 serde_with.workspace = true
 rkyv = { workspace = true, optional = true }
 
-reflexo-typst-shim = { workspace = true, optional = true }
+tinymist-std.workspace = true
 
 [dev-dependencies]
 hex.workspace = true
@@ -43,14 +43,17 @@ hex.workspace = true
 default = ["full"]
 full = ["web", "flat-vector"]
 
-rkyv = ["dep:rkyv", "rkyv/alloc", "rkyv/archive_le"]
-rkyv-validation = ["dep:rkyv", "rkyv/validation"]
+rkyv = ["dep:rkyv", "tinymist-std/rkyv"]
+rkyv-validation = ["tinymist-std/rkyv-validation"]
 flat-vector = ["rkyv", "rkyv-validation"]
 
-typst = ["dep:reflexo-typst-shim"]
+typst = ["tinymist-std/typst"]
 
-__web = ["dep:wasm-bindgen", "dep:js-sys"]
+__web = ["dep:wasm-bindgen", "dep:js-sys", "tinymist-std/web"]
 web = ["__web"]
-system = []
-bi-hash = []
+system = ["tinymist-std/system"]
+bi-hash = ["tinymist-std/bi-hash"]
 item-dashmap = []
+
+[lints]
+workspace = true

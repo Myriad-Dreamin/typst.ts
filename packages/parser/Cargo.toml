@@ -40,3 +40,6 @@ web_test = ["typst-ts-test-common/web_artifacts"]
 full = ["web", "web_test"]
 web = []
 default = ["full"]
+
+[lints]
+workspace = true

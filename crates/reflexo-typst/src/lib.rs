@@ -96,11 +96,11 @@ pub use world::font;
 
 /// time things about compiler.
 pub use reflexo::time;
-/// A vfs implementation for compiler.
-pub use reflexo_vfs as vfs;
-/// A common implementation of [`::typst::World`]
-pub use reflexo_world as world;
 pub use time::Time;
+/// A common implementation of [`::typst::World`]
+pub use tinymist_world as world;
+/// A vfs implementation for compiler.
+pub use tinymist_world::vfs;
 /// package things about compiler.
 pub use world::package;
 /// Diff and parse the source code.
@@ -121,7 +121,7 @@ pub mod task;
 #[cfg(feature = "system-compile")]
 pub use diag::ConsoleDiagReporter;
 #[cfg(feature = "system-compile")]
-pub type CompileDriver<C> = CompileDriverImpl<C, reflexo_world::system::SystemCompilerFeat>;
+pub type CompileDriver<C> = CompileDriverImpl<C, tinymist_world::system::SystemCompilerFeat>;
 
 pub use self::{diag::DiagnosticFormat, features::FeatureSet};
 pub use driver::*;
@@ -140,6 +140,7 @@ use ::typst::{
     utils::Deferred,
     World,
 };
+use vfs::WorkspaceResolver;
 
 #[derive(Clone, Default)]
 pub struct CompileEnv {
@@ -221,10 +222,10 @@ impl fmt::Display for CompileReportMsg<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use CompileReport::*;
 
-        let input = self.0.compiling_id();
+        let input = WorkspaceResolver::display(self.0.compiling_id());
         match self.0 {
             Suspend => write!(f, "suspended"),
-            Stage(_, stage, ..) => write!(f, "{:?}: {} ...", input, stage),
+            Stage(_, stage, ..) => write!(f, "{input:?}: {stage} ..."),
             CompileSuccess(_, warnings, duration) => {
                 if warnings.is_empty() {
                     write!(f, "{input:?}: compilation succeeded in {duration:?}")
@@ -237,7 +238,7 @@ impl fmt::Display for CompileReportMsg<'_> {
                 }
             }
             CompileError(_, _, duration) | ExportError(_, _, duration) => {
-                write!(f, "{:?}: compilation failed after {:?}", input, duration)
+                write!(f, "{input:?}: compilation failed after {duration:?}")
             }
         }
     }
@@ -389,9 +390,6 @@ pub trait EnvWorld {
 pub trait Compiler {
     type W: World;
 
-    /// reset the compilation state
-    fn reset(&mut self) -> SourceResult<()>;
-
     fn ensure_main(&self, world: &Self::W) -> SourceResult<()>
     where
         Self::W: EntryReader,
@@ -406,8 +404,6 @@ pub trait Compiler {
         world: &Self::W,
         _env: &mut CompileEnv,
     ) -> SourceResult<Warned<Arc<Document>>> {
-        self.reset()?;
-
         let res = ::typst::compile(world);
         // compile document
         // res.output.map(Arc::new)
@@ -463,10 +459,6 @@ pub type PureCompiler<W> = std::marker::PhantomData<fn(W)>;
 
 impl<W: World> Compiler for PureCompiler<W> {
     type W = W;
-
-    fn reset(&mut self) -> SourceResult<()> {
-        Ok(())
-    }
 }
 
 pub trait CompileMiddleware {
@@ -475,11 +467,6 @@ pub trait CompileMiddleware {
     fn inner(&self) -> &Self::Compiler;
 
     fn inner_mut(&mut self) -> &mut Self::Compiler;
-
-    /// Hooked reset the compilation state
-    fn wrap_reset(&mut self) -> SourceResult<()> {
-        self.inner_mut().reset()
-    }
 
     /// Hooked compile once from scratch.
     fn wrap_compile(
@@ -507,11 +494,6 @@ pub trait CompileMiddleware {
 /// `CompileMiddleware`.
 impl<T: CompileMiddleware> Compiler for T {
     type W = <<T as CompileMiddleware>::Compiler as Compiler>::W;
-
-    #[inline]
-    fn reset(&mut self) -> SourceResult<()> {
-        self.wrap_reset()
-    }
 
     #[inline]
     fn pure_compile(

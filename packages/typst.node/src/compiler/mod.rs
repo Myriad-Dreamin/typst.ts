@@ -2,13 +2,14 @@
 pub mod boxed;
 
 pub use boxed::{BoxedCompiler, NodeCompilerTrait};
+use reflexo_typst::package::RegistryPathMapper;
 
 use std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc};
 
 use napi::{bindgen_prelude::*, Either};
 use napi_derive::napi;
 use reflexo_typst::config::{entry::EntryState, CompileFontOpts};
-use reflexo_typst::error::prelude::*;
+use reflexo_typst::error::prelude::{Result as ZResult, WithContext};
 use reflexo_typst::font::system::SystemFontSearcher;
 use reflexo_typst::package::http::HttpRegistry;
 use reflexo_typst::typst::{foundations::IntoValue, LazyHash};
@@ -121,11 +122,13 @@ pub fn create_driver(
         ..CompileFontOpts::default()
     })?;
 
+    let registry = Arc::new(HttpRegistry::default());
+    let resolver = Arc::new(RegistryPathMapper::new(registry.clone()));
     let world = TypstSystemUniverse::new_raw(
         EntryState::new_rooted(workspace_dir.into(), None),
         args.inputs.map(create_inputs),
-        Vfs::new(SystemAccessModel {}),
-        HttpRegistry::default(),
+        Vfs::new(resolver, SystemAccessModel {}),
+        registry,
         Arc::new(searcher.into()),
     );
 

@@ -113,7 +113,7 @@ impl Completer for ReplContext {
 
         // commit line changes
 
-        let entry = driver.entry_file().unwrap();
+        let entry = driver.entry_file().unwrap().to_err().unwrap();
         let content = std::fs::read_to_string(&entry).map_err(ReadlineError::Io)?;
         let static_prefix = content + "\n#show ";
         let static_prefix_len = static_prefix.len();

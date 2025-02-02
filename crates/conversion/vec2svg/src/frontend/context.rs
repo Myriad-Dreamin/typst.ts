@@ -97,7 +97,7 @@ impl<'m, Feat: ExportFeature> FontIndice<'m> for RenderContext<'m, '_, Feat> {
         self.module.fonts.get(value.idx as usize).inspect(|e| {
             // canary check
             if e.hash != value.hash {
-                panic!("Invalid font reference: {:?}", value);
+                panic!("Invalid font reference: {value:?}");
             }
         })
     }
@@ -156,7 +156,7 @@ impl<Feat: ExportFeature> NotifyPaint for RenderContext<'_, '_, Feat> {
             self.patterns.insert(id);
             (kind, id, transform)
         } else {
-            panic!("Invalid url reference: {}", url_ref);
+            panic!("Invalid url reference: {url_ref}");
         }
     }
 }
@@ -257,8 +257,7 @@ impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
                 let descender = font.descender.0 * upem.0;
 
                 group_ctx.content.push(SvgText::Plain(format!(
-                    r#"<clipPath id="{}" clipPathUnits="userSpaceOnUse">"#,
-                    clip_id
+                    r#"<clipPath id="{clip_id}" clipPathUnits="userSpaceOnUse">"#
                 )));
 
                 let mut width = 0f32;

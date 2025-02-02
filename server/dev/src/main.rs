@@ -185,14 +185,14 @@ async fn watch(watch_sub: WatchSubCommands) {
                                 continue;
                             };
 
-                            println!("{}: {}", grp, line);
+                            eprintln!("{}: {}", grp, line);
                         }
                         Ok(line) = stderr.next_line() => {
                             let Some(line) = line else {
                                 continue;
                             };
 
-                            println!("{}: {}", grp, line);
+                            eprintln!("{}: {}", grp, line);
                         }
                         else => {
                             return Ok(());
@@ -202,7 +202,7 @@ async fn watch(watch_sub: WatchSubCommands) {
             }
 
             let _ = watch_stream(child, grp).await;
-            println!("{}: exited", grp);
+            eprintln!("{}: exited", grp);
             std::process::exit(0);
         }));
     }
