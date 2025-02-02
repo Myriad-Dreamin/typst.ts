@@ -2999,34 +2999,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "reflexo"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96b13fc37349d5c5bbf5d2ad365a55f2439d59deb78acb5578575b1d88cb8e66"
-dependencies = [
- "base64 0.22.1",
- "bitvec",
- "comemo",
- "dashmap",
- "ecow",
- "fxhash",
- "js-sys",
- "parking_lot",
- "path-clean",
- "reflexo-typst-shim",
- "rkyv",
- "rustc-hash 2.0.0",
- "serde",
- "serde_json",
- "serde_repr",
- "serde_with",
- "siphasher 1.0.1",
- "tiny-skia-path",
- "wasm-bindgen",
- "web-time",
-]
-
-[[package]]
 name = "reflexo-typst"
 version = "0.5.4"
 dependencies = [
@@ -3046,8 +3018,8 @@ dependencies = [
  "parking_lot",
  "pathdiff",
  "rayon",
- "reflexo 0.5.4",
- "reflexo-typst2vec 0.5.4",
+ "reflexo",
+ "reflexo-typst2vec",
  "reflexo-vec2svg",
  "rkyv",
  "serde",
@@ -3062,48 +3034,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "reflexo-typst"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94fe8e18c1d82e428e598c4099af771e7b1b3cc56e58ae5cd450867d595f95f1"
-dependencies = [
- "codespan-reporting",
- "comemo",
- "ecow",
- "futures",
- "fxhash",
- "indexmap 2.7.1",
- "js-sys",
- "log",
- "nohash-hasher",
- "notify",
- "parking_lot",
- "pathdiff",
- "rayon",
- "reflexo 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "reflexo-typst2vec 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "reflexo-vfs",
- "reflexo-world",
- "serde",
- "serde_json",
- "tar",
- "tokio",
- "typst",
- "web-sys",
-]
-
-[[package]]
-name = "reflexo-typst-shim"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41e26fc8d9096f2ab25dabca6407544961172f1bd6b255668e5d3e91f2ded2c1"
-dependencies = [
- "cfg-if",
- "typst",
- "typst-syntax",
-]
-
-[[package]]
 name = "reflexo-typst2vec"
 version = "0.5.4"
 dependencies = [
@@ -3115,34 +3045,8 @@ dependencies = [
  "log",
  "parking_lot",
  "rayon",
- "reflexo 0.5.4",
+ "reflexo",
  "rkyv",
- "rustc-hash 2.0.0",
- "serde",
- "serde_json",
- "svgtypes",
- "tiny-skia",
- "tiny-skia-path",
- "ttf-parser",
- "typst",
- "xmlparser",
-]
-
-[[package]]
-name = "reflexo-typst2vec"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5f0f3aa5ce66a27c72a9baddeb0f46281d8e9ef6296bfd51cf7aec002c48e07"
-dependencies = [
- "bitvec",
- "comemo",
- "crossbeam-queue",
- "dashmap",
- "flate2",
- "log",
- "parking_lot",
- "rayon",
- "reflexo 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-hash 2.0.0",
  "serde",
  "serde_json",
@@ -3159,7 +3063,7 @@ name = "reflexo-vec2bbox"
 version = "0.5.4"
 dependencies = [
  "comemo",
- "reflexo 0.5.4",
+ "reflexo",
  "svgtypes",
  "tiny-skia",
  "tiny-skia-path",
@@ -3174,7 +3078,7 @@ dependencies = [
  "ecow",
  "elsa",
  "js-sys",
- "reflexo 0.5.4",
+ "reflexo",
  "reflexo-vec2bbox",
  "svgtypes",
  "tiny-skia",
@@ -3191,8 +3095,8 @@ dependencies = [
  "comemo",
  "js-sys",
  "log",
- "reflexo 0.5.4",
- "reflexo-typst2vec 0.5.4",
+ "reflexo",
+ "reflexo-typst2vec",
  "reflexo-vec2bbox",
  "reflexo-vec2canvas",
  "reflexo-vec2sema",
@@ -3212,7 +3116,7 @@ version = "0.5.4"
 dependencies = [
  "comemo",
  "js-sys",
- "reflexo 0.5.4",
+ "reflexo",
  "reflexo-vec2canvas",
  "tiny-skia",
  "unicode-width 0.2.0",
@@ -3227,61 +3131,10 @@ dependencies = [
  "base64 0.22.1",
  "comemo",
  "log",
- "reflexo 0.5.4",
- "reflexo-typst2vec 0.5.4",
+ "reflexo",
+ "reflexo-typst2vec",
  "reflexo-vec2canvas",
  "typst",
-]
-
-[[package]]
-name = "reflexo-vfs"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5513a7f75fc88d8cc4e151832f0596b0e925fa74aaf374351977df06c6ef6eb0"
-dependencies = [
- "indexmap 2.7.1",
- "js-sys",
- "log",
- "nohash-hasher",
- "parking_lot",
- "reflexo 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "rpds",
- "typst",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
-name = "reflexo-world"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c9e30d61064c8821db1ace4da82b6129f19560f203430f20159f4e42ae025c19"
-dependencies = [
- "chrono",
- "codespan-reporting",
- "comemo",
- "dirs",
- "ecow",
- "flate2",
- "fontdb",
- "hex",
- "js-sys",
- "log",
- "parking_lot",
- "reflexo 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "reflexo-typst-shim",
- "reflexo-vfs",
- "reqwest",
- "serde",
- "serde-wasm-bindgen",
- "serde_json",
- "serde_with",
- "sha2",
- "strum",
- "tar",
- "typst",
- "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]
@@ -4263,6 +4116,7 @@ dependencies = [
 [[package]]
 name = "tinymist-analysis"
 version = "0.12.18"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=0eb6837fd698fcd221c0c4441da4d456f7cb34ee#0eb6837fd698fcd221c0c4441da4d456f7cb34ee"
 dependencies = [
  "ecow",
  "lsp-types",
@@ -4275,6 +4129,7 @@ dependencies = [
 [[package]]
 name = "tinymist-std"
 version = "0.12.18"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=0eb6837fd698fcd221c0c4441da4d456f7cb34ee#0eb6837fd698fcd221c0c4441da4d456f7cb34ee"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4309,6 +4164,7 @@ dependencies = [
 [[package]]
 name = "tinymist-vfs"
 version = "0.12.18"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=0eb6837fd698fcd221c0c4441da4d456f7cb34ee#0eb6837fd698fcd221c0c4441da4d456f7cb34ee"
 dependencies = [
  "comemo",
  "indexmap 2.7.1",
@@ -4326,6 +4182,7 @@ dependencies = [
 [[package]]
 name = "tinymist-world"
 version = "0.12.18"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=0eb6837fd698fcd221c0c4441da4d456f7cb34ee#0eb6837fd698fcd221c0c4441da4d456f7cb34ee"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4340,7 +4197,6 @@ dependencies = [
  "js-sys",
  "log",
  "parking_lot",
- "reflexo-typst 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest",
  "serde",
  "serde-wasm-bindgen",
@@ -4684,6 +4540,7 @@ dependencies = [
 [[package]]
 name = "typst-shim"
 version = "0.12.18"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=0eb6837fd698fcd221c0c4441da4d456f7cb34ee#0eb6837fd698fcd221c0c4441da4d456f7cb34ee"
 dependencies = [
  "cfg-if",
  "typst",
@@ -4741,8 +4598,8 @@ version = "0.5.4"
 dependencies = [
  "comemo",
  "divan",
- "reflexo-typst 0.5.4",
- "reflexo-typst2vec 0.5.4",
+ "reflexo-typst",
+ "reflexo-typst2vec",
  "typst",
  "typst-ts-cli",
 ]
@@ -4762,7 +4619,7 @@ dependencies = [
  "flate2",
  "human-panic",
  "log",
- "reflexo-typst 0.5.4",
+ "reflexo-typst",
  "rustyline",
  "serde",
  "serde_json",
@@ -4784,7 +4641,7 @@ dependencies = [
  "clap_complete_fig",
  "env_logger",
  "log",
- "reflexo-typst 0.5.4",
+ "reflexo-typst",
  "tokio",
  "typst-dev-assets",
  "typst-ts-cli",
@@ -4798,7 +4655,7 @@ dependencies = [
  "anyhow",
  "comemo",
  "dhat",
- "reflexo-typst 0.5.4",
+ "reflexo-typst",
  "sha2",
  "tokio",
  "typst-ts-dev-server",
@@ -4814,8 +4671,8 @@ dependencies = [
  "hex",
  "rand",
  "rand_xoshiro",
- "reflexo-typst 0.5.4",
- "reflexo-typst2vec 0.5.4",
+ "reflexo-typst",
+ "reflexo-typst2vec",
  "reflexo-vec2svg",
  "sha2",
  "tokio",
@@ -4832,8 +4689,8 @@ dependencies = [
  "anyhow",
  "comemo",
  "hex",
- "reflexo-typst 0.5.4",
- "reflexo-typst2vec 0.5.4",
+ "reflexo-typst",
+ "reflexo-typst2vec",
  "reflexo-vec2svg",
  "sha2",
  "tokio",
@@ -4852,7 +4709,7 @@ dependencies = [
  "image",
  "image_hasher",
  "insta",
- "reflexo-typst 0.5.4",
+ "reflexo-typst",
  "reflexo-vec2svg",
  "serde",
  "serde_json",
@@ -4871,7 +4728,7 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
- "reflexo-typst 0.5.4",
+ "reflexo-typst",
  "reflexo-vec2svg",
  "serde",
  "serde_json",
@@ -4885,7 +4742,7 @@ version = "0.5.4"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",
- "reflexo-typst 0.5.4",
+ "reflexo-typst",
  "serde-wasm-bindgen",
  "typst",
  "typst-ts-test-common",
@@ -4905,9 +4762,9 @@ dependencies = [
  "hex",
  "js-sys",
  "pollster",
- "reflexo 0.5.4",
- "reflexo-typst 0.5.4",
- "reflexo-typst2vec 0.5.4",
+ "reflexo",
+ "reflexo-typst",
+ "reflexo-typst2vec",
  "reflexo-vec2bbox",
  "reflexo-vec2canvas",
  "reflexo-vec2dom",
@@ -4934,7 +4791,7 @@ dependencies = [
 name = "typst-ts-rkyv-assertions"
 version = "0.5.4"
 dependencies = [
- "reflexo-typst2vec 0.5.4",
+ "reflexo-typst2vec",
 ]
 
 [[package]]
@@ -4967,8 +4824,8 @@ dependencies = [
  "console_error_panic_hook",
  "hex",
  "js-sys",
- "reflexo-typst 0.5.4",
- "reflexo-typst2vec 0.5.4",
+ "reflexo-typst",
+ "reflexo-typst2vec",
  "reflexo-vec2svg",
  "serde-wasm-bindgen",
  "serde_json",
@@ -5878,3 +5735,19 @@ checksum = "16099418600b4d8f028622f73ff6e3deaabdff330fb9a2a131dea781ee8b0768"
 dependencies = [
  "zune-core",
 ]
+
+[[patch.unused]]
+name = "tinymist-analysis"
+version = "0.12.18"
+
+[[patch.unused]]
+name = "tinymist-std"
+version = "0.12.18"
+
+[[patch.unused]]
+name = "tinymist-world"
+version = "0.12.18"
+
+[[patch.unused]]
+name = "typst-shim"
+version = "0.12.18"
