@@ -4116,7 +4116,7 @@ dependencies = [
 [[package]]
 name = "tinymist-analysis"
 version = "0.12.18"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=0eb6837fd698fcd221c0c4441da4d456f7cb34ee#0eb6837fd698fcd221c0c4441da4d456f7cb34ee"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=7b8739487ed959b295c4df39e5cc2ebd47b4e066#7b8739487ed959b295c4df39e5cc2ebd47b4e066"
 dependencies = [
  "ecow",
  "lsp-types",
@@ -4129,7 +4129,7 @@ dependencies = [
 [[package]]
 name = "tinymist-std"
 version = "0.12.18"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=0eb6837fd698fcd221c0c4441da4d456f7cb34ee#0eb6837fd698fcd221c0c4441da4d456f7cb34ee"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=7b8739487ed959b295c4df39e5cc2ebd47b4e066#7b8739487ed959b295c4df39e5cc2ebd47b4e066"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4164,7 +4164,7 @@ dependencies = [
 [[package]]
 name = "tinymist-vfs"
 version = "0.12.18"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=0eb6837fd698fcd221c0c4441da4d456f7cb34ee#0eb6837fd698fcd221c0c4441da4d456f7cb34ee"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=7b8739487ed959b295c4df39e5cc2ebd47b4e066#7b8739487ed959b295c4df39e5cc2ebd47b4e066"
 dependencies = [
  "comemo",
  "indexmap 2.7.1",
@@ -4182,7 +4182,7 @@ dependencies = [
 [[package]]
 name = "tinymist-world"
 version = "0.12.18"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=0eb6837fd698fcd221c0c4441da4d456f7cb34ee#0eb6837fd698fcd221c0c4441da4d456f7cb34ee"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=7b8739487ed959b295c4df39e5cc2ebd47b4e066#7b8739487ed959b295c4df39e5cc2ebd47b4e066"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4540,7 +4540,7 @@ dependencies = [
 [[package]]
 name = "typst-shim"
 version = "0.12.18"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=0eb6837fd698fcd221c0c4441da4d456f7cb34ee#0eb6837fd698fcd221c0c4441da4d456f7cb34ee"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=7b8739487ed959b295c4df39e5cc2ebd47b4e066#7b8739487ed959b295c4df39e5cc2ebd47b4e066"
 dependencies = [
  "cfg-if",
  "typst",
