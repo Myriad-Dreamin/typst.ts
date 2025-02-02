@@ -170,6 +170,11 @@ impl Typst2VecPass {
                     self.intern(m, &t.1);
                 }
             }
+            VecItem::Labelled(t) => {
+                if !self.items.contains_key(&t.1) {
+                    self.intern(m, &t.1);
+                }
+            }
             VecItem::Group(g) => {
                 for (_, id) in g.0.iter() {
                     if !self.items.contains_key(id) {
@@ -330,6 +335,11 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         )));
                     }
 
+                    if let Some(label) = group.label.as_ref() {
+                        let label = label.as_str().into();
+                        inner = self.store(VecItem::Labelled(LabelledRef(label, inner)));
+                    }
+
                     inner
                 }
                 FrameItem::Text(text) => {
@@ -426,6 +436,11 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                 items.push((Point::default(), false, self.store(VecItem::ContentHint(c))));
             }
         }
+
+        // pub label: Option<Label>,
+        //     if let Some(label) = group.label {
+        //         self.xml.write_attribute("data-typst-label", label.as_str());
+        //     }
 
         let g = self.store(VecItem::Group(GroupRef(
             items.into_iter().map(|(x, _, y)| (x, y)).collect(),

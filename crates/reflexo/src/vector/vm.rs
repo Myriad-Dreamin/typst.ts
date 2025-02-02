@@ -36,6 +36,9 @@ pub trait GroupContext<C>: Sized {
     fn with_text(self, _ctx: &mut C, _text: &ir::TextItem, _fill_key: &Fingerprint) -> Self {
         self
     }
+    fn with_label(self, _ctx: &mut C, _label: &str) -> Self {
+        self
+    }
 
     fn with_reuse(self, _ctx: &mut C, _v: &Fingerprint) -> Self {
         self
@@ -120,6 +123,7 @@ pub trait RenderVm<'m>: Sized + FontIndice<'m> {
         match &item {
             ir::VecItem::Group(group) => self.render_group(abs_ref, group),
             ir::VecItem::Item(transformed) => self.render_transformed_item(abs_ref, transformed),
+            ir::VecItem::Labelled(labelled) => self.render_labelled_item(abs_ref, labelled),
             ir::VecItem::Text(text) => {
                 let mut g = self.start_text(abs_ref, text);
                 g = self.render_text(g, abs_ref, text);
@@ -192,6 +196,20 @@ pub trait RenderVm<'m>: Sized + FontIndice<'m> {
         ts.into()
     }
 
+    /// Render a labelled frame into underlying context.
+    fn render_labelled_item(
+        &mut self,
+        abs_ref: &Fingerprint,
+        labelled: &ir::LabelledRef,
+    ) -> Self::Resultant {
+        let mut ts = self.start_group(abs_ref).with_label(self, &labelled.0);
+
+        let item_ref = &labelled.1;
+        // let item = self.get_item(&item_ref).unwrap();
+        ts.render_item(self, item_ref);
+        ts.into()
+    }
+
     /// Render a text into the underlying context.
     fn render_text(
         &mut self,
@@ -246,6 +264,13 @@ where
                     .with_reuse(self, prev_abs_ref)
                     .transform(self, &transformed.0);
                 self.render_diff_transformed_item(&mut group_ctx, prev_item, transformed);
+                group_ctx
+            }
+            ir::VecItem::Labelled(labelled) => {
+                let mut group_ctx = group_ctx
+                    .with_reuse(self, prev_abs_ref)
+                    .with_label(self, &labelled.0);
+                self.render_diff_labelled_item(&mut group_ctx, prev_item, labelled);
                 group_ctx
             }
             ir::VecItem::Text(text) => {
@@ -343,6 +368,25 @@ where
             // if both items are transformed, we can reuse the internal item with transforming it a
             // bit.
             Some(ir::VecItem::Item(ir::TransformedRef(_item, prev_ref))) => {
+                ts.render_diff_item_at(self, Point::default(), child_ref, prev_ref);
+            }
+            _ => ts.render_item(self, child_ref),
+        }
+        // failed to reuse
+    }
+
+    /// Render a labelled frame into underlying context.
+    fn render_diff_labelled_item(
+        &mut self,
+        ts: &mut Self::Group,
+        prev_item_: Option<&ir::VecItem>,
+        labelled: &ir::LabelledRef,
+    ) {
+        let child_ref = &labelled.1;
+        match prev_item_ {
+            // if both items are labelled, we can reuse the internal item with transforming it a
+            // bit.
+            Some(ir::VecItem::Labelled(ir::LabelledRef(_item, prev_ref))) => {
                 ts.render_diff_item_at(self, Point::default(), child_ref, prev_ref);
             }
             _ => ts.render_item(self, child_ref),
