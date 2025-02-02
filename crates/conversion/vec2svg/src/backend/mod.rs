@@ -478,8 +478,7 @@ impl<
     #[inline]
     fn attach_debug_info(&mut self, ctx: &mut C, span_id: u64) {
         if ctx.should_attach_debug_info() {
-            self.attributes
-                .push(("data-span", format!("{span_id:x}")));
+            self.attributes.push(("data-span", format!("{span_id:x}")));
         }
     }
     fn render_item_at(&mut self, ctx: &mut C, pos: crate::ir::Point, item: &Fingerprint) {

@@ -5735,19 +5735,3 @@ checksum = "16099418600b4d8f028622f73ff6e3deaabdff330fb9a2a131dea781ee8b0768"
 dependencies = [
  "zune-core",
 ]
-
-[[patch.unused]]
-name = "tinymist-analysis"
-version = "0.12.18"
-
-[[patch.unused]]
-name = "tinymist-std"
-version = "0.12.18"
-
-[[patch.unused]]
-name = "tinymist-world"
-version = "0.12.18"
-
-[[patch.unused]]
-name = "typst-shim"
-version = "0.12.18"
