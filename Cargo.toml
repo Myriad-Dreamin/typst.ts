@@ -194,8 +194,8 @@ vergen-gitcl = { version = "1.0.1" }
 # tinymist's world implementation
 typst-shim = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "0eb6837fd698fcd221c0c4441da4d456f7cb34ee" }
 tinymist-analysis = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "0eb6837fd698fcd221c0c4441da4d456f7cb34ee" }
-tinymist-std = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "0eb6837fd698fcd221c0c4441da4d456f7cb34ee" }
-tinymist-world = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "0eb6837fd698fcd221c0c4441da4d456f7cb34ee" }
+tinymist-std = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "0eb6837fd698fcd221c0c4441da4d456f7cb34ee", default-features = false }
+tinymist-world = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "0eb6837fd698fcd221c0c4441da4d456f7cb34ee", default-features = false }
 
 # project core
 reflexo = { version = "0.5.4", path = "crates/reflexo", default-features = false }
