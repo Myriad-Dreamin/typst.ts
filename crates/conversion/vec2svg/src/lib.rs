@@ -3,7 +3,7 @@
 // todo: https://github.com/typst/typst/pull/2610
 // color export
 
-use typst::model::Document as TypstDocument;
+use reflexo::typst::TypstDocument;
 
 /// re-export the core types.
 pub use reflexo_typst2vec::font::{FontGlyphProvider, GlyphProvider, IGlyphProvider};

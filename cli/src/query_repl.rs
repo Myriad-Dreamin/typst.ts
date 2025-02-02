@@ -14,7 +14,7 @@ use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, KeyEvent};
 use rustyline::{Helper, Validator};
 use typst::diag::SourceDiagnostic;
 use typst::World;
-use typst_ide::autocomplete;
+use typst_ide::{autocomplete, IdeWorld};
 
 use crate::query::serialize;
 use crate::CompileOnceArgs;
@@ -133,7 +133,7 @@ impl Completer for ReplContext {
                 let main = world.source(main).unwrap();
 
                 Ok(autocomplete(
-                    &world,
+                    &IdeWrapper(&world),
                     doc.as_ref().map(|f| f.output.as_ref()),
                     &main,
                     cursor,
@@ -190,6 +190,62 @@ impl Completer for ReplContext {
         });
 
         Ok((completing_prefix_len, items.collect()))
+    }
+}
+
+struct IdeWrapper<'a>(&'a TypstSystemWorld);
+
+impl std::ops::Deref for IdeWrapper<'_> {
+    type Target = TypstSystemWorld;
+
+    fn deref(&self) -> &Self::Target {
+        self.0
+    }
+}
+
+impl World for IdeWrapper<'_> {
+    fn library(&self) -> &reflexo_typst::LazyHash<typst::Library> {
+        self.0.library()
+    }
+
+    fn book(&self) -> &reflexo_typst::LazyHash<typst::text::FontBook> {
+        self.0.book()
+    }
+
+    fn main(&self) -> reflexo_typst::TypstFileId {
+        self.0.main()
+    }
+
+    fn source(
+        &self,
+        id: reflexo_typst::TypstFileId,
+    ) -> typst::diag::FileResult<typst::syntax::Source> {
+        self.0.source(id)
+    }
+
+    fn file(
+        &self,
+        id: reflexo_typst::TypstFileId,
+    ) -> typst::diag::FileResult<typst::foundations::Bytes> {
+        self.0.file(id)
+    }
+
+    fn font(&self, index: usize) -> Option<reflexo_typst::TypstFont> {
+        self.0.font(index)
+    }
+
+    fn today(&self, offset: Option<i64>) -> Option<reflexo_typst::TypstDatetime> {
+        self.0.today(offset)
+    }
+}
+
+impl IdeWorld for IdeWrapper<'_> {
+    fn upcast(&self) -> &dyn World {
+        self.0
+    }
+
+    fn packages(&self) -> &[(reflexo_typst::package::PackageSpec, Option<EcoString>)] {
+        self.0.packages()
     }
 }
 

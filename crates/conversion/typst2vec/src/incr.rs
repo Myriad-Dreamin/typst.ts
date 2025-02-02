@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use reflexo::error::prelude::*;
-use typst::model::Document;
+use reflexo::typst::TypstDocument;
 
 use super::ir::{
     FlatModule, IncrFontPack, IncrGlyphPack, ItemPack, LayoutRegion, LayoutRegionNode,
@@ -33,7 +33,7 @@ impl IncrDocServer {
     }
 
     /// Pack the delta into a binary blob.
-    pub fn pack_delta(&mut self, output: Arc<Document>) -> Vec<u8> {
+    pub fn pack_delta(&mut self, output: Arc<TypstDocument>) -> Vec<u8> {
         self.typst2vec.spans.reset();
 
         // Increment the lifetime of all items to touch.

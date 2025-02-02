@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use reflexo::hash::Fingerprint;
+use reflexo::typst::TypstDocument;
 use reflexo::vector::{
     ir::{Module, Page, Size, VecDocument, VecItem},
     vm::RenderVm,
 };
 use reflexo_typst2vec::pass::Typst2VecPass;
-use typst::model::Document as TypstDocument;
 
 use crate::{
     backend::{generate_text, SvgText, SvgTextNode},

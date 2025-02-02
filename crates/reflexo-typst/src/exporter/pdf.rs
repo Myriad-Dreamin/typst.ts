@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use reflexo::typst::TypstDocument;
 use typst::{diag::SourceResult, World};
 use typst_pdf::{PdfOptions, PdfStandard, PdfStandards};
 
@@ -23,12 +24,8 @@ impl PdfDocExporter {
     }
 }
 
-impl Exporter<typst::model::Document, Vec<u8>> for PdfDocExporter {
-    fn export(
-        &self,
-        _world: &dyn World,
-        output: Arc<typst::model::Document>,
-    ) -> SourceResult<Vec<u8>> {
+impl Exporter<TypstDocument, Vec<u8>> for PdfDocExporter {
+    fn export(&self, _world: &dyn World, output: Arc<TypstDocument>) -> SourceResult<Vec<u8>> {
         // todo: ident option
 
         typst_pdf::pdf(

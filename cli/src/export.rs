@@ -5,10 +5,11 @@ use reflexo_typst::exporter_builtins::{FsPathExporter, GroupExporter};
 use reflexo_typst::program_meta::REPORT_BUG_MESSAGE;
 use reflexo_typst::svg::DefaultExportFeature;
 use reflexo_typst::TypstDatetime;
+use reflexo_typst::TypstDocument;
 
 use crate::{utils::current_dir, CompileArgs, ExportArgs};
 
-type GroupDocExporter = GroupExporter<typst::model::Document>;
+type GroupDocExporter = GroupExporter<TypstDocument>;
 
 /// builtin formats should be enabled by default, and non-builtin formats should
 /// be
@@ -115,7 +116,7 @@ fn prepare_exporters_impl(
     }
     return GroupExporter::new(doc);
 
-    type Doc = typst::model::Document;
+    type Doc = TypstDocument;
 
     type WithAst = reflexo_typst::AstExporter;
     type WithPdf = reflexo_typst::PdfDocExporter;
