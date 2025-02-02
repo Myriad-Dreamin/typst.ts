@@ -208,7 +208,7 @@ impl TypstPageElem {
                         .ok_or_else(|| {
                             web_sys::console::log_2(
                                 &g,
-                                &format!("Invalid item translate: {:?}", item).into(),
+                                &format!("Invalid item translate: {item:?}").into(),
                             );
                             panic!("Invalid item translate: {}", fg.as_svg_id("g"));
                         })
