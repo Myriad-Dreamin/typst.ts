@@ -66,7 +66,7 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstS
         .map(|(k, v)| (k.as_str().into(), v.as_str().into_value()))
         .collect();
 
-    let universe = TypstSystemUniverse::new(CompileOpts {
+    let verse = TypstSystemUniverse::new(CompileOpts {
         entry: EntryOpts::new_workspace(workspace_dir.clone()),
         inputs,
         font_paths: args.font.paths.clone(),
@@ -78,13 +78,13 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstS
     })
     .unwrap_or_exit();
 
-    let world = if is_stdin {
-        let mut u = universe;
+    let verse = if is_stdin {
+        let mut verse = verse;
 
-        let entry = u
+        let entry = verse
             .entry_state()
             .select_in_workspace(MEMORY_MAIN_ENTRY.vpath().as_rooted_path());
-        u.mutate_entry(entry).unwrap();
+        verse.mutate_entry(entry).unwrap();
 
         let src = read_from_stdin()
             .map_err(|err| {
@@ -96,7 +96,8 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstS
             })
             .unwrap();
 
-        u.map_shadow_by_id(*MEMORY_MAIN_ENTRY, Bytes::new(src))
+        verse
+            .map_shadow_by_id(*MEMORY_MAIN_ENTRY, Bytes::new(src))
             .map_err(|err| {
                 clap::Error::raw(
                     clap::error::ErrorKind::Io,
@@ -106,12 +107,12 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstS
             })
             .unwrap();
 
-        u
+        verse
     } else {
-        universe.with_entry_file(entry_file_path)
+        verse.with_entry_file(entry_file_path)
     };
 
-    CompileDriver::new(std::marker::PhantomData, world)
+    CompileDriver::new(std::marker::PhantomData, verse)
 }
 
 pub fn compile_export(args: CompileArgs, exporter: GroupExporter<TypstDocument>) -> ! {
