@@ -48,7 +48,7 @@ vergen-gitcl.workspace = true
 
 [features]
 
-default = ["ast", "pdf", "svg", "text", "gen-manual", "embedded-fonts"]
+default = ["ast", "pdf", "svg", "text", "html", "gen-manual", "embedded-fonts"]
 gen-manual = ["dep:clap_mangen"]
 embedded-fonts = []
 debug-repl = []
@@ -56,3 +56,4 @@ ast = ["reflexo-typst/ast"]
 pdf = ["reflexo-typst/pdf"]
 svg = ["reflexo-typst/svg", "reflexo-typst/experimental-ligature"]
 text = []
+html = ["reflexo-typst/html"]

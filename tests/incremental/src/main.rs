@@ -8,7 +8,7 @@ use reflexo_typst::vector::{
 };
 use reflexo_typst::{
     Bytes, CompileDriver, CompileExporter, PureCompiler, ShadowApiExt, TypstDocument,
-    TypstPagedDocument, TypstSystemUniverse, TypstSystemWorld,
+    TypstSystemUniverse, TypstSystemWorld,
 };
 use reflexo_typst2vec::incr::{IncrDocClient, IncrDocServer};
 use reflexo_vec2svg::IncrSvgDocClient;
@@ -16,7 +16,7 @@ use reflexo_vec2svg::IncrSvgDocClient;
 fn get_driver(
     workspace_dir: &Path,
     entry_file_path: &Path,
-    exporter: GroupExporter<TypstPagedDocument>,
+    exporter: GroupExporter<TypstDocument>,
 ) -> CompileDriver<CompileExporter<PureCompiler<TypstSystemWorld>>> {
     let project_base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let w = project_base.join("fonts");
@@ -36,7 +36,7 @@ fn get_driver(
 pub fn test_compiler(
     workspace_dir: &Path,
     entry_file_path: &Path,
-    exporter: GroupExporter<TypstPagedDocument>,
+    exporter: GroupExporter<TypstDocument>,
 ) {
     let mut driver = get_driver(workspace_dir, entry_file_path, exporter);
     let mut content = { std::fs::read_to_string(entry_file_path).expect("Could not read file") };

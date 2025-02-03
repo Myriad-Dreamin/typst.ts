@@ -77,6 +77,7 @@ typst-ide = "0.13.0"
 typst-pdf = "0.13.0"
 typst-svg = "0.13.0"
 typst-syntax = "0.13.0"
+typst-html = "0.13.0"
 
 ttf-parser = "0.24.1"
 
@@ -245,6 +246,7 @@ typst-ide = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightl
 typst-svg = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
 typst-pdf = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
 typst-eval = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
+typst-html = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }

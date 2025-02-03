@@ -54,7 +54,7 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>> + Clone> Exporter<Compil
 #[derive(Clone)]
 pub struct CompileExporter<C: Compiler> {
     pub compiler: C,
-    pub exporter: Arc<DynExporter<Document>>,
+    pub exporter: Arc<DynExporter<TypstDocument>>,
 }
 
 impl<C: Compiler + Default> Default for CompileExporter<C> {
@@ -72,13 +72,13 @@ impl<C: Compiler> CompileExporter<C> {
     }
 
     /// Wrap driver with a given exporter.
-    pub fn with_exporter(mut self, exporter: impl Into<DynExporter<Document>>) -> Self {
+    pub fn with_exporter(mut self, exporter: impl Into<DynExporter<TypstDocument>>) -> Self {
         self.set_exporter(exporter);
         self
     }
 
     /// set an exporter.
-    pub fn set_exporter(&mut self, exporter: impl Into<DynExporter<Document>>) {
+    pub fn set_exporter(&mut self, exporter: impl Into<DynExporter<TypstDocument>>) {
         self.exporter = Arc::new(exporter.into());
     }
 }
@@ -86,16 +86,8 @@ impl<C: Compiler> CompileExporter<C> {
 impl<F: CompilerFeat + 'static, C: Compiler> Exporter<CompileSnapshot<F>> for CompileExporter<C> {
     /// Export a typst document using `reflexo_typst::DocumentExporter`.
     fn export(&self, world: &dyn World, output: Arc<CompileSnapshot<F>>) -> SourceResult<()> {
-        if let Ok(doc) = output.as_ref().clone().compile().doc {
-            match doc {
-                TypstDocument::Paged(doc) => {
-                    self.exporter.export(world, doc)?;
-                }
-                TypstDocument::Html(_doc) => {
-                    todo!();
-                }
-            }
-        }
+        let doc = output.as_ref().clone().compile().doc?;
+        self.exporter.export(world, Arc::new(doc))?;
 
         Ok(())
     }
@@ -118,7 +110,8 @@ impl<C: Compiler> CompileMiddleware for CompileExporter<C> {
         env: &mut CompileEnv,
     ) -> SourceResult<Warned<Arc<Document>>> {
         let doc = self.inner_mut().compile(world, env)?;
-        self.exporter.export(world, doc.output.clone())?;
+        self.exporter
+            .export(world, Arc::new(TypstDocument::Paged(doc.output.clone())))?;
 
         Ok(doc)
     }

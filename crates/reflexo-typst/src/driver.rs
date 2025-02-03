@@ -1,5 +1,6 @@
 use std::{path::Path, sync::Arc};
 
+use reflexo::typst::TypstDocument;
 use typst::{
     diag::{eco_format, EcoString, FileResult, SourceResult, Warned},
     foundations::Content,
@@ -36,7 +37,7 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> CompileDriverImpl<C, F>
     pub fn query(
         &mut self,
         selector: String,
-        document: &TypstPagedDocument,
+        document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
         self.compiler.query(&self.snapshot(), selector, document)
     }

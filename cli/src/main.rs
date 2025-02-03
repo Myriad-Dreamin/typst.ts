@@ -10,7 +10,7 @@ use reflexo_typst::config::{entry::EntryOpts, CompileOpts};
 use reflexo_typst::exporter_builtins::GroupExporter;
 use reflexo_typst::exporter_utils::map_err;
 use reflexo_typst::path::{unix_slash, PathClean};
-use reflexo_typst::TypstPagedDocument;
+use reflexo_typst::TypstDocument;
 use reflexo_typst::TypstSystemUniverse;
 use typst::{text::FontVariant, World};
 use typst_assets::fonts;
@@ -110,13 +110,13 @@ pub fn query(args: QueryArgs) -> ! {
     use typst_ts_cli::query::format;
     let compile_args = args.compile.clone();
 
-    let mut exporter = GroupExporter::<TypstPagedDocument>::new(vec![]);
+    let mut exporter = GroupExporter::<TypstDocument>::new(vec![]);
 
     exporter.push_front(Box::new(
-        move |world: &dyn World, output: Arc<TypstPagedDocument>| {
+        move |world: &dyn World, output: Arc<TypstDocument>| {
             if args.selector == "document_title" {
                 let title = output
-                    .info
+                    .info()
                     .title
                     .as_ref()
                     .map(|e| e.as_str())
@@ -126,7 +126,7 @@ pub fn query(args: QueryArgs) -> ! {
                 return Ok(());
             }
 
-            let data = retrieve(world, &args.selector, &output).map_err(map_err)?;
+            let data = retrieve(world, &args.selector, output.as_ref()).map_err(map_err)?;
             let serialized = format(data, &args).map_err(map_err)?;
             println!("{serialized}");
             Ok(())

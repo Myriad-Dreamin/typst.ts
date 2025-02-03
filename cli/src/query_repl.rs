@@ -3,7 +3,9 @@ use std::cell::{RefCell, RefMut};
 use std::sync::Arc;
 
 use reflexo_typst::typst::prelude::*;
-use reflexo_typst::{CompileDriver, CompileReport, ConsoleDiagReporter, PureCompiler};
+use reflexo_typst::{
+    CompileDriver, CompileReport, ConsoleDiagReporter, PureCompiler, TypstDocument,
+};
 use reflexo_typst::{GenericExporter, ShadowApiExt, TypstSystemWorld};
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
@@ -317,7 +319,7 @@ impl ReplContext {
                 .ok();
             doc.and_then(|doc| {
                 driver
-                    .query(line, &doc.output)
+                    .query(line, &TypstDocument::Paged(doc.output))
                     .map_err(|err| self.process_err(&driver, err))
                     .ok()
             })

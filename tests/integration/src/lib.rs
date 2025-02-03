@@ -1,13 +1,14 @@
 pub mod wasm;
 
 use std::path::Path;
+use std::sync::Arc;
 
 use reflexo_typst::config::{entry::EntryOpts, CompileOpts};
 use reflexo_typst::exporter_builtins::{FsPathExporter, GroupExporter};
 use reflexo_typst::path::PathClean;
 use reflexo_typst::{
-    CompileDriver, CompileExporter, PdfDocExporter, PureCompiler, SvgModuleExporter,
-    TypstPagedDocument, TypstSystemUniverse, TypstSystemWorld,
+    CompileDriver, CompileExporter, Exporter, PdfDocExporter, PureCompiler, SvgModuleExporter,
+    TypstDocument, TypstPagedDocument, TypstSystemUniverse, TypstSystemWorld, TypstWorld,
 };
 
 fn get_driver(
@@ -21,6 +22,12 @@ fn get_driver(
         ..CompileOpts::default()
     })
     .unwrap();
+    let exporter = GroupExporter::new(vec![Box::new(
+        move |world: &dyn TypstWorld, doc: Arc<TypstDocument>| match doc.as_ref() {
+            TypstDocument::Paged(doc) => exporter.export(world, doc.clone()),
+            _ => unreachable!(),
+        },
+    )]);
 
     let world = world.with_entry_file(entry_file_path.to_owned());
     CompileDriver::new(CompileExporter::default().with_exporter(exporter), world)

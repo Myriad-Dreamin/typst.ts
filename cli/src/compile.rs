@@ -6,7 +6,7 @@ use std::sync::Arc;
 use reflexo_typst::config::entry::{EntryOpts, MEMORY_MAIN_ENTRY};
 use reflexo_typst::config::CompileOpts;
 use reflexo_typst::features::{FeatureSet, DIAG_FMT_FEATURE};
-use reflexo_typst::TypstPagedDocument;
+use reflexo_typst::TypstDocument;
 use reflexo_typst::{exporter_builtins::GroupExporter, path::PathClean};
 use reflexo_typst::{
     CompilationHandle, CompileActor, CompileDriver, CompileExporter, CompileServerOpts,
@@ -114,7 +114,7 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstS
     CompileDriver::new(std::marker::PhantomData, world)
 }
 
-pub fn compile_export(args: CompileArgs, exporter: GroupExporter<TypstPagedDocument>) -> ! {
+pub fn compile_export(args: CompileArgs, exporter: GroupExporter<TypstDocument>) -> ! {
     let (intr_tx, intr_rx) = mpsc::unbounded_channel();
 
     // todo: make dynamic layout exporter
@@ -139,7 +139,6 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<TypstPagedDocum
     let feature_set =
         FeatureSet::default().configure(&DIAG_FMT_FEATURE, args.diagnostic_format.into());
 
-    // CompileExporter + DynamicLayoutCompiler + WatchDriver
     let verse = driver.universe;
     // todo: when there is only dynamic export, it is not need to compile first.
 

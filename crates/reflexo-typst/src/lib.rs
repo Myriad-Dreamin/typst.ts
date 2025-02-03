@@ -43,6 +43,9 @@ pub(crate) mod exporter;
 #[cfg(feature = "ast")]
 pub use exporter::ast::{dump_ast, AstExporter};
 
+#[cfg(feature = "html")]
+pub use exporter::html::HtmlExporter;
+
 pub use exporter::json::JsonExporter;
 
 #[cfg(feature = "pdf")]
@@ -444,7 +447,7 @@ pub trait Compiler {
         &mut self,
         world: &Self::W,
         selector: String,
-        document: &TypstPagedDocument,
+        document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
         self::query::retrieve(world, &selector, document).at(Span::detached())
     }
@@ -472,7 +475,7 @@ pub trait Compiler {
         &mut self,
         world: &Self::W,
         selector: String,
-        document: &TypstPagedDocument,
+        document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
         self.pure_query(world, selector, document)
     }
@@ -506,7 +509,7 @@ pub trait CompileMiddleware {
         &mut self,
         world: &<<Self as CompileMiddleware>::Compiler as Compiler>::W,
         selector: String,
-        document: &TypstPagedDocument,
+        document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
         self.inner_mut().query(world, selector, document)
     }
@@ -532,7 +535,7 @@ impl<T: CompileMiddleware> Compiler for T {
         &mut self,
         world: &Self::W,
         selector: String,
-        document: &TypstPagedDocument,
+        document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
         self.inner_mut().pure_query(world, selector, document)
     }
@@ -551,7 +554,7 @@ impl<T: CompileMiddleware> Compiler for T {
         &mut self,
         world: &Self::W,
         selector: String,
-        document: &TypstPagedDocument,
+        document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
         self.wrap_query(world, selector, document)
     }

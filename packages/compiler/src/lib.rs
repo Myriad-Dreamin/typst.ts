@@ -371,9 +371,10 @@ impl TypstCompiler {
             .driver
             .compile(&mut Default::default())
             .map_err(|e| format!("{e:?}"))?;
+        // todo: query html?
         let elements: Vec<typst::foundations::Content> = self
             .driver
-            .query(selector, &doc.output)
+            .query(selector, &TypstDocument::Paged(doc.output))
             .map_err(|e| format!("{e:?}"))?;
 
         let mapped: Vec<_> = elements

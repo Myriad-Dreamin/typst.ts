@@ -1,15 +1,18 @@
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use reflexo_typst::exporter_builtins::{FsPathExporter, GroupExporter};
 use reflexo_typst::program_meta::REPORT_BUG_MESSAGE;
 use reflexo_typst::svg::DefaultExportFeature;
-use reflexo_typst::TypstDatetime;
-use reflexo_typst::TypstPagedDocument;
+use reflexo_typst::{
+    Exporter, TypstDatetime, TypstDocument, TypstHtmlDocument, TypstPagedDocument,
+};
+use typst::World;
 use typst_pdf::Timestamp;
 
 use crate::{utils::current_dir, CompileArgs, ExportArgs};
 
-type GroupDocExporter = GroupExporter<TypstPagedDocument>;
+type GroupDocExporter = GroupExporter<TypstDocument>;
 
 /// builtin formats should be enabled by default, and non-builtin formats should
 /// be
@@ -59,6 +62,8 @@ fn prepare_exporters_impl(
     mut formats: Vec<String>,
 ) -> GroupDocExporter {
     let mut doc: ExporterVec<Doc> = vec![];
+    let mut paged: ExporterVec<PagedDoc> = vec![];
+    let mut html: ExporterVec<HtmlDoc> = vec![];
 
     /// connect export flow from $x to $y
     #[allow(unused_macros)]
@@ -96,32 +101,58 @@ fn prepare_exporters_impl(
         #[rustfmt::skip]
         formats.iter().map(String::as_str).for_each(|f| match f {
             "nothing"     => (),
-            "ast"         => sink_path!(WithAst as _ as doc, out @@ "ast.ansi.text"),
+            "ast"         => sink_path!(WithAst as _ as paged, out @@ "ast.ansi.text"),
             #[cfg(feature = "pdf")]
             "pdf"         => sink_path!(|| {
                 WithPdf::default().with_ctime(args.creation_timestamp.and_then(convert_datetime))
-            } as _ as doc, out @@ "pdf"),
+            } as _ as paged, out @@ "pdf"),
+            #[cfg(feature = "html")]
+            "html"         => sink_path!(WithHtml as _ as html, out @@ "artifact.html"),
             #[cfg(feature = "svg")]
-            "svg"         => sink_path!(WithSvg as _ as doc, out @@ "artifact.svg"),
+            "svg"         => sink_path!(WithSvg as _ as paged, out @@ "artifact.svg"),
             #[cfg(feature = "svg")]
-            "svg_html"         => sink_path!(WithSvgHtml as _ as doc, out @@ "artifact.svg.html"),
+            "svg_html"         => sink_path!(WithSvgHtml as _ as paged, out @@ "artifact.svg.html"),
             #[cfg(feature = "svg")]
-            "sir"         => sink_path!(WithSIR as _ as doc, out @@ "artifact.sir.in"),
+            "sir"         => sink_path!(WithSIR as _ as paged, out @@ "artifact.sir.in"),
             #[cfg(feature = "svg")]
-            "vector"      => sink_path!(WithSIR as _ as doc, out @@ "artifact.sir.in"),
+            "vector"      => sink_path!(WithSIR as _ as paged, out @@ "artifact.sir.in"),
             #[cfg(feature = "text")]
-            "text"      => sink_path!(WithText as _ as doc, out @@ "txt"),
+            "text"      => sink_path!(WithText as _ as paged, out @@ "txt"),
             _             => exit_by_unknown_format(f),
         });
     }
+
+    if !paged.is_empty() {
+        let exporter = GroupExporter::new(paged);
+        doc.push(Box::new(
+            move |world: &dyn World, doc: Arc<TypstDocument>| match doc.as_ref() {
+                TypstDocument::Paged(doc) => exporter.export(world, doc.clone()),
+                _ => unreachable!(),
+            },
+        ));
+    }
+
+    if !html.is_empty() {
+        let exporter = GroupExporter::new(html);
+        doc.push(Box::new(
+            move |world: &dyn World, doc: Arc<TypstDocument>| match doc.as_ref() {
+                TypstDocument::Html(doc) => exporter.export(world, doc.clone()),
+                _ => unreachable!(),
+            },
+        ));
+    }
+
     return GroupExporter::new(doc);
 
-    type Doc = TypstPagedDocument;
+    type Doc = TypstDocument;
+    type PagedDoc = TypstPagedDocument;
+    type HtmlDoc = TypstHtmlDocument;
 
     type WithAst = reflexo_typst::AstExporter;
     type WithPdf = reflexo_typst::PdfDocExporter;
     type WithSvg = reflexo_typst::PureSvgExporter;
     type WithSvgHtml = reflexo_typst::SvgHtmlExporter<DefaultExportFeature>;
+    type WithHtml = reflexo_typst::HtmlExporter;
     type WithSIR = reflexo_typst::SvgModuleExporter;
     type WithText = reflexo_typst::TextExporter;
 

@@ -11,6 +11,7 @@ repository.workspace = true
 [dependencies]
 typst.workspace = true
 typst-pdf = { workspace = true, optional = true }
+typst-html = { workspace = true, optional = true }
 
 reflexo-typst2vec.workspace = true
 reflexo.workspace = true
@@ -74,6 +75,7 @@ web-render = ["__web_render"]
 
 ast = ["ansi_term"]
 pdf = ["typst-pdf"]
+html = ["typst-html"]
 svg = ["dep:reflexo-vec2svg"]
 
 [lints]

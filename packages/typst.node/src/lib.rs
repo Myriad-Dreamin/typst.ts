@@ -18,9 +18,12 @@ use chrono::{DateTime, Utc};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 // use reflexo_typst::error::prelude::*;
-use reflexo_typst::typst::diag::{At, SourceResult};
 use reflexo_typst::{error::WithContext, foundations::IntoValue};
 use reflexo_typst::{error_once, syntax::Span};
+use reflexo_typst::{
+    typst::diag::{At, SourceResult},
+    TypstDocument,
+};
 use reflexo_typst::{
     Bytes, Compiler, DynamicLayoutCompiler, Exporter, ShadowApi, SystemCompilerFeat, TypstAbs,
     TypstDatetime, TypstPagedDocument, TypstSystemWorld, TypstTimestamp, TypstWorld,
@@ -293,7 +296,7 @@ impl NodeCompiler {
         let compiler = self.driver.assert_mut();
         let world = compiler.snapshot();
         let elements = compiler
-            .query(&world, args.selector, &doc.0)
+            .query(&world, args.selector, &TypstDocument::Paged(doc.0))
             .map_err(map_node_error)?;
 
         let mapped: Vec<_> = elements

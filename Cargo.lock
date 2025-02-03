@@ -3012,6 +3012,7 @@ dependencies = [
  "tokio",
  "typst",
  "typst-eval",
+ "typst-html",
  "typst-pdf",
  "walkdir",
  "web-sys",

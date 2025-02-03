@@ -5,10 +5,13 @@ use std::{
     sync::Arc,
 };
 
-use reflexo_typst::error::{prelude::*, TypstSourceDiagnostic};
 use reflexo_typst::foundations::Content;
 use reflexo_typst::typst::prelude::*;
 use reflexo_typst::{config::entry::MEMORY_MAIN_ENTRY, typst::diag::Warned};
+use reflexo_typst::{
+    error::{prelude::*, TypstSourceDiagnostic},
+    TypstDocument,
+};
 use reflexo_typst::{
     error_once, Bytes, CompileDriver, CompileEnv, Compiler, EntryManager, EntryReader,
     PureCompiler, ShadowApi, TaskInputs, TypstPagedDocument, TypstSystemWorld,
@@ -147,7 +150,7 @@ impl Compiler for BoxedCompiler {
         &mut self,
         world: &TypstSystemWorld,
         selector: String,
-        document: &TypstPagedDocument,
+        document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
         self.0.compiler.pure_query(world, selector, document)
     }
@@ -166,7 +169,7 @@ impl Compiler for BoxedCompiler {
         &mut self,
         world: &TypstSystemWorld,
         selector: String,
-        document: &TypstPagedDocument,
+        document: &TypstDocument,
     ) -> SourceResult<Vec<Content>> {
         self.0.compiler.query(world, selector, document)
     }

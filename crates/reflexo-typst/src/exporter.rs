@@ -13,6 +13,9 @@ pub mod pdf;
 #[cfg(feature = "svg")]
 pub mod svg;
 
+#[cfg(feature = "html")]
+pub mod html;
+
 pub mod text;
 
 pub type DynExporter<Input, Output = ()> = Box<dyn Exporter<Input, Output> + Send + Sync>;
