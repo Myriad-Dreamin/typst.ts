@@ -45,7 +45,6 @@ pub use exporter::ast::{dump_ast, AstExporter};
 
 pub use exporter::json::JsonExporter;
 
-use ::typst::diag::Warned;
 #[cfg(feature = "pdf")]
 pub use exporter::pdf::PdfDocExporter;
 #[cfg(feature = "pdf")]
@@ -107,6 +106,9 @@ pub use world::package;
 pub use world::parser;
 pub use world::*;
 
+#[cfg(feature = "pdf")]
+pub use typst_pdf::Timestamp as TypstTimestamp;
+
 #[cfg(feature = "system-watch")]
 mod watch;
 #[cfg(feature = "system-watch")]
@@ -132,7 +134,7 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 
 use ::typst::{
-    diag::{At, SourceDiagnostic, SourceResult},
+    diag::{At, SourceDiagnostic, SourceResult, Warned},
     foundations::Content,
     syntax::Span,
     utils::Deferred,
@@ -244,7 +246,11 @@ impl fmt::Display for CompileReportMsg<'_> {
     }
 }
 
-type CompileRawResult = Deferred<(SourceResult<Warned<Arc<TypstPagedDocument>>>, CompileEnv)>;
+type CompileRawResult = Deferred<(
+    SourceResult<TypstDocument>,
+    EcoVec<SourceDiagnostic>,
+    CompileEnv,
+)>;
 type DocState = std::sync::OnceLock<CompileRawResult>;
 
 /// A signal that possibly triggers an export.
@@ -271,7 +277,7 @@ pub struct CompileSnapshot<F: CompilerFeat> {
     /// Compiling the document.
     doc_state: Arc<DocState>,
     /// The last successfully compiled document.
-    pub success_doc: Option<Arc<TypstPagedDocument>>,
+    pub success_doc: Option<TypstDocument>,
 }
 
 impl<F: CompilerFeat + 'static> CompileSnapshot<F> {
@@ -281,9 +287,12 @@ impl<F: CompilerFeat + 'static> CompileSnapshot<F> {
             let mut env = self.env.clone();
             Deferred::new(move || {
                 let w = w.as_ref();
-                let mut c = std::marker::PhantomData;
-                let res = c.compile(w, &mut env);
-                (res, env)
+                let warned = std::marker::PhantomData.compile(&w, &mut env);
+                let (doc, warnings) = match warned {
+                    Ok(doc) => (Ok(TypstDocument::Paged(doc.output)), doc.warnings),
+                    Err(err) => (Err(err), EcoVec::default()),
+                };
+                (doc, warnings, env)
             })
         })
     }
@@ -311,11 +320,7 @@ impl<F: CompilerFeat + 'static> CompileSnapshot<F> {
     }
 
     pub fn compile(&self) -> CompiledArtifact<F> {
-        let (doc, env) = self.start().wait().clone();
-        let (doc, warnings) = match doc {
-            Ok(doc) => (Ok(doc.output), doc.warnings),
-            Err(err) => (Err(err), EcoVec::default()),
-        };
+        let (doc, warnings, env) = self.start().wait().clone();
         CompiledArtifact {
             signal: self.flags,
             world: self.world.clone(),
@@ -349,9 +354,9 @@ pub struct CompiledArtifact<F: CompilerFeat> {
     /// The diagnostics of the document.
     pub warnings: EcoVec<SourceDiagnostic>,
     /// The compiled document.
-    pub doc: SourceResult<Arc<TypstPagedDocument>>,
+    pub doc: SourceResult<TypstDocument>,
     /// The last successfully compiled document.
-    success_doc: Option<Arc<TypstPagedDocument>>,
+    success_doc: Option<TypstDocument>,
 }
 
 impl<F: CompilerFeat> Clone for CompiledArtifact<F> {
@@ -368,7 +373,7 @@ impl<F: CompilerFeat> Clone for CompiledArtifact<F> {
 }
 
 impl<F: CompilerFeat> CompiledArtifact<F> {
-    pub fn success_doc(&self) -> Option<Arc<TypstPagedDocument>> {
+    pub fn success_doc(&self) -> Option<TypstDocument> {
         self.doc
             .as_ref()
             .ok()

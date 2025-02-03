@@ -14,7 +14,7 @@ use std::{
     sync::Arc,
 };
 
-use chrono::{DateTime, Datelike, Timelike, Utc};
+use chrono::{DateTime, Utc};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 // use reflexo_typst::error::prelude::*;
@@ -23,7 +23,7 @@ use reflexo_typst::{error::WithContext, foundations::IntoValue};
 use reflexo_typst::{error_once, syntax::Span};
 use reflexo_typst::{
     Bytes, Compiler, DynamicLayoutCompiler, Exporter, ShadowApi, SystemCompilerFeat, TypstAbs,
-    TypstDatetime, TypstPagedDocument, TypstSystemWorld, TypstWorld,
+    TypstDatetime, TypstPagedDocument, TypstSystemWorld, TypstTimestamp, TypstWorld,
 };
 use serde::{Deserialize, Serialize};
 
@@ -451,18 +451,19 @@ fn parse_source_date_epoch(timestamp: i64) -> Result<DateTime<Utc>, NodeError> {
         .ok_or_else(|| map_node_error(error_once!("timestamp out of range")))
 }
 
-/// Convert [`chrono::DateTime`] to [`TypstTimestamp`]
+/// Convert [`chrono::DateTime`] to [`Timestamp`]
 fn convert_datetime(date_time: chrono::DateTime<chrono::Utc>) -> Option<TypstTimestamp> {
-    let typst_datetime = TypstDatetime::from_ymd_hms(
+    use chrono::{Datelike, Timelike};
+    let datetime = TypstDatetime::from_ymd_hms(
         date_time.year(),
         date_time.month().try_into().ok()?,
         date_time.day().try_into().ok()?,
         date_time.hour().try_into().ok()?,
         date_time.minute().try_into().ok()?,
         date_time.second().try_into().ok()?,
-    )?;
+    );
 
-    Some(TypstTimestamp::new_utc(typst_datetime))
+    Some(TypstTimestamp::new_utc(datetime.unwrap()))
 }
 
 #[derive(Default)]

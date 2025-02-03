@@ -41,7 +41,7 @@ pub enum SucceededArtifact<F: CompilerFeat> {
 }
 
 impl<F: CompilerFeat> SucceededArtifact<F> {
-    pub fn success_doc(&self) -> Option<Arc<TypstPagedDocument>> {
+    pub fn success_doc(&self) -> Option<TypstDocument> {
         match self {
             SucceededArtifact::Compiled(artifact) => artifact.success_doc(),
             SucceededArtifact::Suspend(snapshot) => snapshot.success_doc.clone(),
@@ -171,9 +171,9 @@ pub struct CompileActor<F: CompilerFeat> {
     /// Estimated latest set of shadow files.
     estimated_shadow_files: HashSet<Arc<Path>>,
     /// The latest compiled document.
-    pub(crate) latest_doc: Option<Arc<TypstPagedDocument>>,
+    pub(crate) latest_doc: Option<TypstDocument>,
     /// The latest successly compiled document.
-    latest_success_doc: Option<Arc<TypstPagedDocument>>,
+    latest_success_doc: Option<TypstDocument>,
     /// feature set for compile_once mode.
     once_feature_set: Arc<FeatureSet>,
     /// Shared feature set for watch mode.

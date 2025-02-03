@@ -24,7 +24,7 @@ impl IncrServer {
         // evicted by compiler
         // comemo::evict(30);
 
-        self.inner.pack_delta(TypstDocument::Paged(doc))
+        self.inner.pack_delta(&TypstDocument::Paged(doc))
     }
 }
 

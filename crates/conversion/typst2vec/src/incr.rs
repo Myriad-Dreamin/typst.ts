@@ -33,7 +33,7 @@ impl IncrDocServer {
     }
 
     /// Pack the delta into a binary blob.
-    pub fn pack_delta(&mut self, output: TypstDocument) -> Vec<u8> {
+    pub fn pack_delta(&mut self, output: &TypstDocument) -> Vec<u8> {
         self.typst2vec.spans.reset();
 
         // Increment the lifetime of all items to touch.
@@ -44,8 +44,8 @@ impl IncrDocServer {
 
         // run typst2vec pass
         let pages = match output {
-            TypstDocument::Html(output) => self.typst2vec.html(&output.introspector, &output),
-            TypstDocument::Paged(output) => self.typst2vec.doc(&output.introspector, &output),
+            TypstDocument::Html(output) => self.typst2vec.html(&output.introspector, output),
+            TypstDocument::Paged(output) => self.typst2vec.doc(&output.introspector, output),
         };
 
         // let new_items = builder.new_items.get_mut().len();

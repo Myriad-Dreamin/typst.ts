@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use reflexo::typst::TypstDocument;
 use reflexo_typst2vec::pass::Typst2VecPass;
 use typst::{
     diag::{SourceResult, Warned},
@@ -85,8 +86,15 @@ impl<C: Compiler> CompileExporter<C> {
 impl<F: CompilerFeat + 'static, C: Compiler> Exporter<CompileSnapshot<F>> for CompileExporter<C> {
     /// Export a typst document using `reflexo_typst::DocumentExporter`.
     fn export(&self, world: &dyn World, output: Arc<CompileSnapshot<F>>) -> SourceResult<()> {
-        if let Ok(doc) = output.compile().doc {
-            self.exporter.export(world, doc)?;
+        if let Ok(doc) = output.as_ref().clone().compile().doc {
+            match doc {
+                TypstDocument::Paged(doc) => {
+                    self.exporter.export(world, doc)?;
+                }
+                TypstDocument::Html(_doc) => {
+                    todo!();
+                }
+            }
         }
 
         Ok(())
