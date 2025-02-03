@@ -194,10 +194,10 @@ vergen = { version = "9.0.1", features = [
 vergen-gitcl = { version = "1.0.1" }
 
 # tinymist's world implementation
-typst-shim = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "92a019ea6e7c682f91d10ce56f37ad33bb9aaaff" }
-tinymist-analysis = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "92a019ea6e7c682f91d10ce56f37ad33bb9aaaff" }
-tinymist-std = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "92a019ea6e7c682f91d10ce56f37ad33bb9aaaff", default-features = false }
-tinymist-world = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "92a019ea6e7c682f91d10ce56f37ad33bb9aaaff", default-features = false }
+typst-shim = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "665b27a6291d02375bd58664edcd7db0f44bfe03" }
+tinymist-analysis = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "665b27a6291d02375bd58664edcd7db0f44bfe03" }
+tinymist-std = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "665b27a6291d02375bd58664edcd7db0f44bfe03", default-features = false }
+tinymist-world = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "665b27a6291d02375bd58664edcd7db0f44bfe03", default-features = false }
 
 # project core
 reflexo = { version = "0.5.4", path = "crates/reflexo", default-features = false }
@@ -255,8 +255,8 @@ typst-eval = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-night
 
 # fontdb = { path = "../fontdb" }
 
-[patch."https://github.com/Myriad-Dreamin/tinymist.git"]
-typst-shim = { path = "../tinymist/crates/typst-shim" }
-tinymist-analysis = { path = "../tinymist/crates/tinymist-analysis" }
-tinymist-std = { path = "../tinymist/crates/tinymist-std" }
-tinymist-world = { path = "../tinymist/crates/tinymist-world" }
+# [patch."https://github.com/Myriad-Dreamin/tinymist.git"]
+# typst-shim = { path = "../tinymist/crates/typst-shim" }
+# tinymist-analysis = { path = "../tinymist/crates/tinymist-analysis" }
+# tinymist-std = { path = "../tinymist/crates/tinymist-std" }
+# tinymist-world = { path = "../tinymist/crates/tinymist-world" }

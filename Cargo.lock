@@ -4100,6 +4100,7 @@ dependencies = [
 [[package]]
 name = "tinymist-analysis"
 version = "0.12.19-rc4"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=665b27a6291d02375bd58664edcd7db0f44bfe03#665b27a6291d02375bd58664edcd7db0f44bfe03"
 dependencies = [
  "ecow",
  "lsp-types",
@@ -4112,6 +4113,7 @@ dependencies = [
 [[package]]
 name = "tinymist-std"
 version = "0.12.19-rc4"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=665b27a6291d02375bd58664edcd7db0f44bfe03#665b27a6291d02375bd58664edcd7db0f44bfe03"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4146,6 +4148,7 @@ dependencies = [
 [[package]]
 name = "tinymist-vfs"
 version = "0.12.19-rc4"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=665b27a6291d02375bd58664edcd7db0f44bfe03#665b27a6291d02375bd58664edcd7db0f44bfe03"
 dependencies = [
  "comemo",
  "indexmap 2.7.1",
@@ -4163,6 +4166,7 @@ dependencies = [
 [[package]]
 name = "tinymist-world"
 version = "0.12.19-rc4"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=665b27a6291d02375bd58664edcd7db0f44bfe03#665b27a6291d02375bd58664edcd7db0f44bfe03"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4622,6 +4626,7 @@ dependencies = [
 [[package]]
 name = "typst-shim"
 version = "0.12.19-rc4"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=665b27a6291d02375bd58664edcd7db0f44bfe03#665b27a6291d02375bd58664edcd7db0f44bfe03"
 dependencies = [
  "cfg-if",
  "comemo",
