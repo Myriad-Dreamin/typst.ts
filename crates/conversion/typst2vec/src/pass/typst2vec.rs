@@ -1274,11 +1274,9 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         //     item: g,
         // });
 
-        let g = self.store(VecItem::Html(HtmlItem {
+        self.store(VecItem::Html(HtmlItem {
             html: "<h1>Html Preview</h1><p>Hello World.</p>".into(),
-        }));
-
-        g
+        }))
     }
 }
 
