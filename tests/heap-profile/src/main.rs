@@ -1,5 +1,3 @@
-use reflexo_typst::exporter_builtins::GroupExporter;
-
 #[cfg(feature = "dhat-heap")]
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
@@ -15,12 +13,7 @@ pub fn main() {
 
     match action {
         "compile" => {
-            let noop_exporter = GroupExporter::new(vec![]);
-            typst_ts_heap_profile_test::test_compiler(
-                workspace_dir,
-                entry_file_path,
-                noop_exporter,
-            );
+            typst_ts_heap_profile_test::test_compiler(workspace_dir, entry_file_path);
         }
         _ => panic!("Unknown action: {}", action),
     }
