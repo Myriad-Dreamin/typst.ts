@@ -37,7 +37,7 @@ pub struct SvgDataSelection {
 }
 
 /// All the features that can be enabled or disabled.
-pub trait ExportFeature {
+pub trait ExportFeature: Send + Sync + 'static {
     /// Whether to enable tracing.
     const ENABLE_TRACING: bool;
 

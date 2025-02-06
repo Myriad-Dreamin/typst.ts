@@ -7,26 +7,19 @@ pub mod error;
 pub use compiler::*;
 pub use error::{map_node_error, NodeError};
 
-use std::{
-    collections::HashMap,
-    ops::Deref,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{collections::HashMap, ops::Deref, path::Path, sync::Arc};
 
-use chrono::{DateTime, Utc};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 // use reflexo_typst::error::prelude::*;
-use reflexo_typst::{error::WithContext, foundations::IntoValue};
-use reflexo_typst::{error_once, syntax::Span};
+use reflexo_typst::syntax::Span;
+use reflexo_typst::typst::diag::At;
 use reflexo_typst::{
-    typst::diag::{At, SourceResult},
-    TypstDocument,
+    error::WithContext, DocumentQuery, ExportComputation, ExportWebSvgModuleTask, WorldComputeGraph,
 };
 use reflexo_typst::{
-    Bytes, Compiler, DynamicLayoutCompiler, Exporter, ShadowApi, SystemCompilerFeat, TypstAbs,
-    TypstDatetime, TypstPagedDocument, TypstSystemWorld, TypstTimestamp, TypstWorld,
+    Bytes, DynamicLayoutCompiler, ShadowApi, SystemCompilerFeat, TypstAbs, TypstDatetime,
+    TypstPagedDocument, TypstSystemWorld,
 };
 use serde::{Deserialize, Serialize};
 
@@ -35,33 +28,38 @@ use error::NodeTypstCompileResult;
 /// A shared typst document object.
 #[napi]
 #[derive(Clone)]
-pub struct NodeTypstPagedDocument(Arc<TypstPagedDocument>);
+pub struct NodeTypstDocument {
+    /// The cache of exports.
+    pub(crate) graph: Arc<WorldComputeGraph<SystemCompilerFeat>>,
+    /// Inner document.
+    pub(crate) doc: Arc<TypstPagedDocument>,
+}
 
 #[napi]
-impl NodeTypstPagedDocument {
+impl NodeTypstDocument {
     /// Gets the number of pages in the document.
     #[napi(getter)]
     pub fn num_of_pages(&self) -> u32 {
-        self.0.pages.len() as u32
+        self.doc.pages.len() as u32
     }
 
     /// Gets the title of the document.
     #[napi(getter)]
     pub fn title(&self) -> Option<String> {
-        self.0.info.title.as_ref().map(ToString::to_string)
+        self.doc.info.title.as_ref().map(ToString::to_string)
     }
 
     /// Gets the authors of the document.
     #[napi(getter)]
     pub fn authors(&self) -> Option<Vec<String>> {
-        let authors = self.0.info.author.iter();
+        let authors = self.doc.info.author.iter();
         Some(authors.map(ToString::to_string).collect::<Vec<_>>())
     }
 
     /// Gets the keywords of the document.
     #[napi(getter)]
     pub fn keywords(&self) -> Option<Vec<String>> {
-        let keywords = self.0.info.keywords.iter();
+        let keywords = self.doc.info.keywords.iter();
         Some(keywords.map(ToString::to_string).collect::<Vec<_>>())
     }
 
@@ -71,7 +69,7 @@ impl NodeTypstPagedDocument {
     /// keep stupid and doesn't add timezone info to the date.
     #[napi(getter)]
     pub fn date(&self) -> Option<i64> {
-        self.0
+        self.doc
             .info
             .date
             .custom()
@@ -85,7 +83,7 @@ impl NodeTypstPagedDocument {
     /// explicitly.
     #[napi(getter)]
     pub fn enabled_auto_date(&self) -> bool {
-        self.0.info.date.is_auto()
+        self.doc.info.date.is_auto()
     }
 }
 
@@ -155,7 +153,7 @@ pub struct RenderPdfOpts {
 }
 
 /// Either a compiled document or compile arguments.
-type MayCompileOpts<'a> = Either<&'a NodeTypstPagedDocument, CompileDocArgs>;
+type MayCompileOpts<'a> = Either<&'a NodeTypstDocument, CompileDocArgs>;
 
 /// Node wrapper to access compiler interfaces.
 #[napi]
@@ -293,30 +291,20 @@ impl NodeCompiler {
     ) -> Result<serde_json::Value, NodeError> {
         let doc = self.may_compile(opts)?;
 
-        let compiler = self.driver.assert_mut();
-        let world = compiler.snapshot();
-        let elements = compiler
-            .query(&world, args.selector, &TypstDocument::Paged(doc.0))
-            .map_err(map_node_error)?;
+        let config = reflexo_typst::task::QueryTask {
+            export: reflexo_typst::task::ExportTask::default(),
+            format: "json".to_owned(),
+            output_extension: None,
+            selector: args.selector,
+            field: args.field,
+            one: false,
+        };
 
-        let mapped: Vec<_> = elements
-            .into_iter()
-            .filter_map(|c| match &args.field {
-                Some(field) => c.get_by_name(field).ok(),
-                _ => Some(c.into_value()),
-            })
-            .collect();
-
-        serde_json::to_value(mapped)
-            .context("failed to serialize query result to JSON")
-            .map_err(map_node_error)
+        DocumentQuery::get_as_value(&doc.graph, &doc.doc, &config).map_err(map_node_error)
     }
 
     /// Compiles the document as a specific type.
-    pub fn may_compile(
-        &mut self,
-        opts: MayCompileOpts,
-    ) -> Result<NodeTypstPagedDocument, NodeError> {
+    pub fn may_compile(&mut self, opts: MayCompileOpts) -> Result<NodeTypstDocument, NodeError> {
         Ok(match opts {
             MayCompileOpts::A(doc) => doc.clone(),
             MayCompileOpts::B(compile_by) => {
@@ -332,25 +320,38 @@ impl NodeCompiler {
     }
 
     /// Compiles the document as a specific type.
-    pub fn compile_as<T, O, RO: From<O>>(
+    pub fn compile_as<
+        T: ExportComputation<SystemCompilerFeat, reflexo_typst::TypstPagedDocument>,
+        RO: From<T::Output>,
+    >(
         &mut self,
-        e: T,
         opts: MayCompileOpts,
-    ) -> Result<RO, NodeError>
-    where
-        T: Exporter<TypstPagedDocument, O> + Default,
-    {
+        config: &T::Config,
+    ) -> Result<RO, NodeError> {
         let doc = self.may_compile(opts)?;
-        e.export(&self.spawn_world(), doc.0.clone())
+        T::run(&doc.graph, &doc.doc, config)
             .map_err(map_node_error)
             .map(From::from)
+    }
+
+    /// Compiles the document as buffer.
+    pub fn compile_as_buffer<
+        T: ExportComputation<SystemCompilerFeat, reflexo_typst::TypstPagedDocument, Output = Bytes>,
+    >(
+        &mut self,
+        opts: MayCompileOpts,
+        config: &T::Config,
+    ) -> Result<Buffer, NodeError> {
+        let res = self.compile_as::<T, Bytes>(opts, config)?;
+        Ok(Buffer::from(res.as_slice()))
     }
 
     /// Simply compiles the document as a vector IR.
     #[napi(ts_args_type = "compiledOrBy: NodeTypstPagedDocument | CompileDocArgs")]
     pub fn vector(&mut self, compiled_or_by: MayCompileOpts) -> Result<Buffer, NodeError> {
-        type Exporter = reflexo_typst::SvgModuleExporter;
-        self.compile_as(Exporter::default(), compiled_or_by)
+        use reflexo_vec2svg::DefaultExportFeature;
+        type Export = reflexo_typst::WebSvgModuleExport<DefaultExportFeature>;
+        self.compile_as_buffer::<Export>(compiled_or_by, &ExportWebSvgModuleTask::default())
     }
 
     /// Simply compiles the document as a PDF.
@@ -363,14 +364,11 @@ impl NodeCompiler {
         compiled_or_by: MayCompileOpts,
         opts: Option<RenderPdfOpts>,
     ) -> Result<Buffer, NodeError> {
-        type Exporter = reflexo_typst::PdfDocExporter;
+        type Export = reflexo_typst::PdfExport;
+        use reflexo_typst::task::ExportPdfTask;
 
         let e = if let Some(opts) = opts {
-            let creation_time = opts
-                .creation_timestamp
-                .map(parse_source_date_epoch)
-                .transpose()?
-                .and_then(convert_datetime);
+            let creation_timestamp = opts.creation_timestamp;
 
             let standard = opts
                 .pdf_standard
@@ -379,29 +377,37 @@ impl NodeCompiler {
                 .context("failed to deserialize PdfStandard for typst")
                 .map_err(map_node_error)?;
 
-            Exporter::default()
-                .with_ctime(creation_time)
-                .with_standard(standard)
+            ExportPdfTask {
+                export: Default::default(),
+                pdf_standards: standard.into_iter().collect(),
+                creation_timestamp,
+            }
         } else {
-            Exporter::default()
+            ExportPdfTask::default()
         };
-        self.compile_as(e, compiled_or_by)
+
+        self.compile_as_buffer::<Export>(compiled_or_by, &e)
     }
 
     /// Simply compiles the document as a plain SVG.
     #[napi(ts_args_type = "compiledOrBy: NodeTypstPagedDocument | CompileDocArgs")]
     #[cfg(feature = "svg")]
     pub fn plain_svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
-        type Exporter = PlainSvgExporter;
-        self.compile_as(Exporter::default(), compiled_or_by)
+        use reflexo_typst::task::ExportSvgTask;
+
+        type Export = reflexo_typst::SvgExport;
+        self.compile_as::<Export, _>(compiled_or_by, &ExportSvgTask::default())
     }
 
     /// Simply compiles the document as a rich-contented SVG (for browsers).
     #[napi(ts_args_type = "compiledOrBy: NodeTypstPagedDocument | CompileDocArgs")]
     #[cfg(feature = "svg")]
     pub fn svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
-        type Exporter = reflexo_typst::PureSvgExporter;
-        self.compile_as(Exporter::default(), compiled_or_by)
+        use reflexo_typst::ExportWebSvgTask;
+        use reflexo_vec2svg::DefaultExportFeature;
+
+        type Export = reflexo_typst::WebSvgExport<DefaultExportFeature>;
+        self.compile_as::<Export, _>(compiled_or_by, &ExportWebSvgTask::default())
     }
 }
 

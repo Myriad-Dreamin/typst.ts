@@ -1,16 +1,13 @@
 use std::sync::{Arc, Mutex};
 
 use divan::Bencher;
-use reflexo_typst::{
-    CompileDriver as CompileDriverT, Compiler, PureCompiler, ShadowApiExt, TypstPagedDocument,
-    TypstSystemWorld,
-};
+use reflexo_typst::{CompileDriver as CompileDriverT, Compiler, ShadowApiExt, TypstPagedDocument};
 use reflexo_typst2vec::pass::{IncrTypst2VecPass, Typst2VecPass};
 use std::sync::LazyLock;
 use typst::foundations::Bytes;
 use typst_ts_cli::CompileOnceArgs;
 
-type CompileDriver = LazyLock<Mutex<CompileDriverT<PureCompiler<TypstSystemWorld>>>>;
+type CompileDriver = LazyLock<Mutex<CompileDriverT>>;
 
 static TEST_COMPILER: CompileDriver = LazyLock::new(|| {
     Mutex::new(typst_ts_cli::compile::create_driver(CompileOnceArgs {
