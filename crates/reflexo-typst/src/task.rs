@@ -4,6 +4,7 @@
 
 mod cache;
 pub use cache::*;
+pub use tinymist_task::*;
 
 use std::{ops::DerefMut, pin::Pin, sync::Arc};
 

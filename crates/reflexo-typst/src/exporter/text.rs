@@ -1,32 +1,36 @@
 use core::fmt;
-use std::io::Write;
 use std::sync::Arc;
 
-use crate::exporter_utils::map_err;
-use crate::{Transformer, TypstPagedDocument};
+use reflexo::typst::TypstDocument;
+use tinymist_task::ExportTextTask;
 
-#[derive(Debug, Clone, Default)]
-pub struct TextExporter {}
+use super::prelude::*;
 
-impl<W> Transformer<(Arc<TypstPagedDocument>, W)> for TextExporter
-where
-    W: std::io::Write,
-{
-    fn export(
-        &self,
-        _world: &dyn typst::World,
-        (output, writer): (Arc<TypstPagedDocument>, W),
-    ) -> typst::diag::SourceResult<()> {
-        let mut w = std::io::BufWriter::new(writer);
+use crate::TypstPagedDocument;
 
-        write!(w, "{}", FullTextDigest(output)).map_err(map_err)?;
+pub struct TextExport;
 
-        w.flush().unwrap();
-        Ok(())
+impl TextExport {
+    pub fn run_on_doc(doc: &TypstDocument) -> Result<String> {
+        Ok(format!("{}", FullTextDigest(doc.clone())))
     }
 }
 
-struct FullTextDigest(Arc<TypstPagedDocument>);
+impl<F: CompilerFeat> ExportComputation<F, TypstPagedDocument> for TextExport {
+    type Output = String;
+    type Config = ExportTextTask;
+
+    fn run(
+        _g: &Arc<WorldComputeGraph<F>>,
+        doc: &Arc<TypstPagedDocument>,
+        _config: &ExportTextTask,
+    ) -> Result<String> {
+        Self::run_on_doc(&TypstDocument::Paged(doc.clone()))
+    }
+}
+
+/// A full text digest of a document.
+pub struct FullTextDigest(pub TypstDocument);
 
 impl FullTextDigest {
     fn export_frame(f: &mut fmt::Formatter<'_>, doc: &typst::layout::Frame) -> fmt::Result {
@@ -57,9 +61,14 @@ impl FullTextDigest {
 
 impl fmt::Display for FullTextDigest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for page in self.0.pages.iter() {
-            Self::export_frame(f, &page.frame)?;
+        match &self.0 {
+            TypstDocument::Paged(paged_doc) => {
+                for page in paged_doc.pages.iter() {
+                    Self::export_frame(f, &page.frame)?;
+                }
+                Ok(())
+            }
+            _ => Err(fmt::Error),
         }
-        Ok(())
     }
 }

@@ -1,20 +1,19 @@
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use reflexo_typst2vec::pass::{CommandExecutor, Typst2VecPass};
 use reflexo_typst2vec::IntoTypst;
-use reflexo_vec2svg::{DynamicLayoutSvgExporter, MultiVecDocument};
-use tinymist_world::TaskInputs;
-use typst::diag::Warned;
+use reflexo_vec2svg::{DynamicLayoutSvgExporter, ExportFeature, MultiVecDocument};
+use tinymist_task::ExportTask;
+use tinymist_world::{ConfigTask, TaskInputs};
+use typst::diag::SourceResult;
 use typst::foundations::IntoValue;
 use typst::utils::LazyHash;
-use typst::{diag::SourceResult, World};
 
+use super::prelude::*;
 use crate::typst::prelude::*;
 use crate::vector::ir::{LayoutRegion, LayoutRegionNode};
 use crate::world::{CompilerFeat, CompilerWorld};
-use crate::{
-    CompileEnv, CompileSnapshot, Compiler, Exporter, TypstDict, TypstPagedDocument as Document,
-};
+use crate::{TypstDict, TypstPagedDocument as Document};
 
 pub type LayoutWidths = EcoVec<typst::layout::Abs>;
 
@@ -25,13 +24,19 @@ pub type PostProcessLayoutFn = Arc<
 pub type PostProcessLayoutsFn =
     Arc<dyn Fn(&mut Typst2VecPass, Vec<LayoutRegion>) -> Vec<LayoutRegion> + Send + Sync>;
 
-// todo: derive clone may slow?
-pub struct DynamicLayoutCompiler<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> {
-    pub compiler: C,
-    // todo: abstract this
-    output: PathBuf,
-    pub extension: String,
+// todo: abstract this
+// output: PathBuf,
+// pub extension: String,
 
+// #[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+// #[serde(rename_all = "kebab-case")]
+#[derive(Clone)]
+pub struct ExportDynSvgModuleTask {
+    // #[serde(flatten)]
+    pub export: ExportTask,
+    // todo: abstract this
+    // output: PathBuf,
+    // pub extension: String,
     pub layout_widths: LayoutWidths,
 
     pub command_executor: Arc<dyn CommandExecutor + Send + Sync>,
@@ -48,29 +53,29 @@ pub struct DynamicLayoutCompiler<F: CompilerFeat, C: Compiler<W = CompilerWorld<
     pub target: String,
 }
 
-impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>> + Clone> Clone
-    for DynamicLayoutCompiler<F, C>
-{
-    fn clone(&self) -> Self {
-        Self {
-            compiler: self.compiler.clone(),
-            output: self.output.clone(),
-            extension: self.extension.clone(),
-            layout_widths: self.layout_widths.clone(),
-            command_executor: self.command_executor.clone(),
-            post_process_layout: self.post_process_layout.clone(),
-            post_process_layouts: self.post_process_layouts.clone(),
-            target: self.target.clone(),
-        }
+pub struct DynSvgModuleExport<EF>(std::marker::PhantomData<EF>);
+
+impl<EF: ExportFeature, F: CompilerFeat> WorldComputable<F> for DynSvgModuleExport<EF> {
+    type Output = Option<MultiVecDocument>;
+
+    fn compute(graph: &Arc<WorldComputeGraph<F>>) -> Result<Self::Output> {
+        type Config = ConfigTask<ExportDynSvgModuleTask>;
+
+        let Some(config) = graph.get::<Config>().transpose()? else {
+            return Ok(None);
+        };
+
+        Ok(Some(config.do_export(&graph.snap.world)?))
     }
 }
 
-impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<F, C> {
-    pub fn new(compiler: C, output: PathBuf) -> Self {
+impl ExportDynSvgModuleTask {
+    pub fn new() -> Self {
         Self {
-            compiler,
-            output,
-            extension: "multi.sir.in".to_owned(),
+            // output: PathBuf
+            export: ExportTask::default(),
+            // output,
+            // extension: "multi.sir.in".to_owned(),
             layout_widths: LayoutWidths::from_iter(
                 (0..40).map(|i| {
                     typst::layout::Abs::pt(750.0) - typst::layout::Abs::pt(i as f64 * 10.0)
@@ -83,21 +88,17 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<F
         }
     }
 
-    pub fn inner(&self) -> &C {
-        &self.compiler
-    }
+    // pub fn set_output(&mut self, output: PathBuf) {
+    //     self.output = output;
+    // }
 
-    pub fn inner_mut(&mut self) -> &mut C {
-        &mut self.compiler
-    }
+    // pub fn set_extension(&mut self, extension: String) {
+    //     self.extension = extension;
+    // }
 
-    pub fn set_output(&mut self, output: PathBuf) {
-        self.output = output;
-    }
-
-    pub fn set_extension(&mut self, extension: String) {
-        self.extension = extension;
-    }
+    // pub fn module_dest_path(&self) -> PathBuf {
+    //     self.output.with_extension(&self.extension)
+    // }
 
     pub fn set_layout_widths(&mut self, layout_widths: LayoutWidths) {
         self.layout_widths = layout_widths;
@@ -136,42 +137,39 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<F
     ) {
         self.post_process_layouts = Some(Arc::new(post_process_layouts));
     }
+}
 
-    pub fn module_dest_path(&self) -> PathBuf {
-        self.output.with_extension(&self.extension)
+impl Default for ExportDynSvgModuleTask {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
 // F: CompilerFeat, CompilerWorld<F>
-impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<F, C> {
+impl ExportDynSvgModuleTask {
     /// Export a typst document using `reflexo_typst::DocumentExporter`.
-    pub fn do_export(
-        &mut self,
+    pub fn do_export<F: CompilerFeat>(
+        &self,
         world: &CompilerWorld<F>,
-        env: &mut CompileEnv,
-    ) -> SourceResult<(Warned<Arc<Document>>, MultiVecDocument)> {
+    ) -> SourceResult<MultiVecDocument> {
         let mut svg_exporter = DynamicLayoutSvgExporter::default();
         svg_exporter.typst2vec.command_executor = self.command_executor.clone();
-        self.do_export_with(world, env, svg_exporter)
+        self.do_export_with(world, svg_exporter)
     }
 
     /// Export a typst document using `reflexo_typst::DocumentExporter`.
-    pub fn do_export_with(
-        &mut self,
+    pub fn do_export_with<F: CompilerFeat>(
+        &self,
         world: &CompilerWorld<F>,
-        env: &mut CompileEnv,
         mut svg_exporter: reflexo_vec2svg::DynamicLayoutSvgExporter,
-    ) -> SourceResult<(Warned<Arc<Document>>, MultiVecDocument)> {
+    ) -> SourceResult<MultiVecDocument> {
         // self.export(doc.clone())?;
         // checkout the entry file
-
-        let mut std_doc = None;
 
         // for each 10pt we rerender once
         let instant_begin = reflexo::time::Instant::now();
         for (i, current_width) in self.layout_widths.clone().into_iter().enumerate() {
-            let instant = reflexo::time::Instant::now();
-            // replace layout
+            let instant = reflexo::time::Instant::now(); // replace layout
 
             let world = world.task(TaskInputs {
                 inputs: Some({
@@ -191,20 +189,18 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<F
             );
 
             // compile and export document
-            let output = self.compiler.compile(&world, env)?;
-            let mut layout = svg_exporter.render(&output.output);
+            // todo: collect warnings and errors here.
+            let output = Arc::new(typst::compile::<TypstPagedDocument>(&world).output?);
+            let mut layout = svg_exporter.render(&output);
 
             if let Some(post_process_layout) = &self.post_process_layout {
-                layout =
-                    post_process_layout(&mut svg_exporter.typst2vec, output.output.clone(), layout);
+                layout = post_process_layout(&mut svg_exporter.typst2vec, output.clone(), layout);
             }
             svg_exporter
                 .layouts
                 .push((current_width.into_typst(), layout));
 
             log::trace!("rerendered {i} at {:?}", instant - instant_begin);
-
-            std_doc = Some(output);
         }
 
         // post process
@@ -223,30 +219,6 @@ impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> DynamicLayoutCompiler<F
         let instant = reflexo::time::Instant::now();
         log::trace!("multiple layouts finished at {:?}", instant - instant_begin);
 
-        Ok((std_doc.unwrap(), doc))
-    }
-}
-
-impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>> + Clone> Exporter<CompileSnapshot<F>>
-    for DynamicLayoutCompiler<F, C>
-{
-    fn export(&self, _world: &dyn World, output: Arc<CompileSnapshot<F>>) -> SourceResult<()> {
-        self.clone()
-            .compile(&output.world, &mut output.env.clone())
-            .map(|_| ())
-    }
-}
-
-impl<F: CompilerFeat, C: Compiler<W = CompilerWorld<F>>> Compiler for DynamicLayoutCompiler<F, C> {
-    type W = CompilerWorld<F>;
-
-    fn compile(
-        &mut self,
-        world: &Self::W,
-        env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<Document>>> {
-        let (res, doc) = self.do_export(world, env)?;
-        std::fs::write(self.module_dest_path(), doc.to_bytes()).unwrap();
-        Ok(res)
+        Ok(doc)
     }
 }

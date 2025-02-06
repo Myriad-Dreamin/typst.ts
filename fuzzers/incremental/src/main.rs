@@ -78,7 +78,7 @@ pub fn test_compiler(workspace_dir: &Path, entry_file_path: &Path) {
 
         let doc = driver
             .with_shadow_file_by_id(main_id, Bytes::from_string(content.clone()), |driver| {
-                driver.compile(&mut Default::default())
+                driver.compile()
             })
             .unwrap();
 
