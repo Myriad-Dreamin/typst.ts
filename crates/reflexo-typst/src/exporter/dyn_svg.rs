@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use reflexo_typst2vec::pass::{CommandExecutor, Typst2VecPass};
 use reflexo_typst2vec::IntoTypst;
-use reflexo_vec2svg::{DynamicLayoutSvgExporter, ExportFeature, MultiVecDocument};
+use reflexo_vec2svg::{DynamicLayoutSvgExporter, MultiVecDocument};
 use tinymist_task::ExportTask;
-use tinymist_world::{ConfigTask, TaskInputs};
+use tinymist_world::TaskInputs;
 use typst::diag::SourceResult;
 use typst::foundations::IntoValue;
 use typst::utils::LazyHash;
@@ -53,18 +53,13 @@ pub struct ExportDynSvgModuleTask {
     pub target: String,
 }
 
-pub struct DynSvgModuleExport<EF>(std::marker::PhantomData<EF>);
+pub struct DynSvgModuleExport;
 
-impl<EF: ExportFeature, F: CompilerFeat> WorldComputable<F> for DynSvgModuleExport<EF> {
-    type Output = Option<MultiVecDocument>;
-
-    fn compute(graph: &Arc<WorldComputeGraph<F>>) -> Result<Self::Output> {
-        type Config = ConfigTask<ExportDynSvgModuleTask>;
-
-        let Some(config) = graph.get::<Config>().transpose()? else {
-            return Ok(None);
-        };
-
+impl DynSvgModuleExport {
+    pub fn run<F: CompilerFeat>(
+        graph: &Arc<WorldComputeGraph<F>>,
+        config: &ExportDynSvgModuleTask,
+    ) -> Result<Option<MultiVecDocument>> {
         Ok(Some(config.do_export(&graph.snap.world)?))
     }
 }
@@ -74,8 +69,6 @@ impl ExportDynSvgModuleTask {
         Self {
             // output: PathBuf
             export: ExportTask::default(),
-            // output,
-            // extension: "multi.sir.in".to_owned(),
             layout_widths: LayoutWidths::from_iter(
                 (0..40).map(|i| {
                     typst::layout::Abs::pt(750.0) - typst::layout::Abs::pt(i as f64 * 10.0)

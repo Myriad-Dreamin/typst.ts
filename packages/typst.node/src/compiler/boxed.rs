@@ -1,38 +1,26 @@
 #![deny(clippy::all)]
 
-use std::{
-    ops::{Deref, DerefMut},
-    sync::Arc,
-};
+use std::ops::{Deref, DerefMut};
 
-use reflexo_typst::foundations::Content;
-use reflexo_typst::typst::prelude::*;
-use reflexo_typst::{config::entry::MEMORY_MAIN_ENTRY, typst::diag::Warned};
+use reflexo_typst::config::entry::MEMORY_MAIN_ENTRY;
 use reflexo_typst::{
-    error::{prelude::*, TypstSourceDiagnostic},
-    TypstDocument,
-};
-use reflexo_typst::{
-    error_once, Bytes, CompileDriver, CompileEnv, Compiler, EntryManager, EntryReader,
-    PureCompiler, ShadowApi, TaskInputs, TypstPagedDocument, TypstSystemWorld,
+    error_once, Bytes, CompileDriver, EntryReader, ShadowApi, TaskInputs, TypstSystemWorld,
 };
 
 use super::create_inputs;
 use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocArgs, NodeError};
 
 // <World = TypstSystemWorld>
-pub trait NodeCompilerTrait: Compiler
-where
-    Self::W: EntryManager + ShadowApi,
-{
-}
+// pub trait NodeCompilerTrait: Compiler
+// where
+//     Self::W: EntryManager + ShadowApi,
+// {
+// }
 
-// <World = TypstSystemWorld>
-pub struct BoxedCompiler(Box<CompileDriver<PureCompiler<TypstSystemWorld>>>);
+pub struct BoxedCompiler(Box<CompileDriver>);
 
-// <World = TypstSystemWorld>
 impl Deref for BoxedCompiler {
-    type Target = CompileDriver<PureCompiler<TypstSystemWorld>>;
+    type Target = CompileDriver;
 
     fn deref(&self) -> &Self::Target {
         self.0.as_ref()
@@ -45,14 +33,11 @@ impl DerefMut for BoxedCompiler {
     }
 }
 
-// <World = TypstSystemWorld>
-impl From<CompileDriver<PureCompiler<TypstSystemWorld>>> for BoxedCompiler {
-    fn from(value: CompileDriver<PureCompiler<TypstSystemWorld>>) -> Self {
+impl From<CompileDriver> for BoxedCompiler {
+    fn from(value: CompileDriver) -> Self {
         Self(Box::new(value))
     }
 }
-
-type SourceResult<T> = Result<T, EcoVec<TypstSourceDiagnostic>>;
 
 impl BoxedCompiler {
     /// Create a snapshoted world by typst.node's [`CompileDocArgs`].
@@ -122,55 +107,10 @@ impl BoxedCompiler {
             return Err(map_node_error(error_once!("entry file is not set")));
         }
 
+        let c = self.universe().computation();
         // FIXME: This is implementation detail, use a better way from
         // the compiler driver.
-        let c = &mut self.0.compiler;
-        c.ensure_main(&world).map_err(map_node_error)?;
-        Ok(c.compile(&world, &mut CompileEnv::default()).into())
-    }
-}
-
-/// A blanket implementation for all `CompileMiddleware`.
-/// If you want to wrap a compiler, you should override methods in
-/// `CompileMiddleware`.
-impl Compiler for BoxedCompiler {
-    type W = TypstSystemWorld;
-
-    #[inline]
-    fn pure_compile(
-        &mut self,
-        world: &TypstSystemWorld,
-        env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<TypstPagedDocument>>> {
-        self.0.compiler.pure_compile(world, env)
-    }
-
-    #[inline]
-    fn pure_query(
-        &mut self,
-        world: &TypstSystemWorld,
-        selector: String,
-        document: &TypstDocument,
-    ) -> SourceResult<Vec<Content>> {
-        self.0.compiler.pure_query(world, selector, document)
-    }
-
-    #[inline]
-    fn compile(
-        &mut self,
-        world: &TypstSystemWorld,
-        env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<TypstPagedDocument>>> {
-        self.0.compiler.compile(world, env)
-    }
-
-    #[inline]
-    fn query(
-        &mut self,
-        world: &TypstSystemWorld,
-        selector: String,
-        document: &TypstDocument,
-    ) -> SourceResult<Vec<Content>> {
-        self.0.compiler.query(world, selector, document)
+        c.ensure_main().map_err(map_node_error)?;
+        Ok(c.compile().into())
     }
 }

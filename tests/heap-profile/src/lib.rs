@@ -1,5 +1,4 @@
 use std::path::Path;
-use std::sync::Arc;
 
 use reflexo_typst::config::{entry::EntryOpts, CompileOpts};
 use reflexo_typst::{Bytes, CompileDriver, ShadowApiExt, TypstSystemUniverse};
@@ -13,7 +12,7 @@ fn get_driver(workspace_dir: &Path, entry_file_path: &Path) -> CompileDriver {
     .unwrap();
 
     let world = world.with_entry_file(entry_file_path.to_owned());
-    CompileDriver::new(Arc::new(|_| Ok(())), world)
+    CompileDriver::new(world)
 }
 
 pub fn test_compiler(workspace_dir: &Path, entry_file_path: &Path) {

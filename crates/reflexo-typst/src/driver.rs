@@ -7,15 +7,12 @@ use typst::{
     syntax::Span,
 };
 
+use crate::vfs::{FileId, PathResolution};
 use crate::{
     query::retrieve,
     world::{
         CompilerFeat, CompilerUniverse, CompilerWorld, EntryReader, ShadowApi, DETACHED_ENTRY,
     },
-};
-use crate::{
-    vfs::{FileId, PathResolution},
-    DynComputation,
 };
 use crate::{Bytes, TypstFileId, TypstPagedDocument};
 
@@ -35,7 +32,7 @@ impl<F: CompilerFeat> CompileDriverImpl<F> {
 
 impl<F: CompilerFeat> CompileDriverImpl<F> {
     /// Create a new driver.
-    pub fn new(_c: DynComputation<F>, universe: CompilerUniverse<F>) -> Self {
+    pub fn new(universe: CompilerUniverse<F>) -> Self {
         Self { universe }
     }
 

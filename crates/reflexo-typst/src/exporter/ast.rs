@@ -1,38 +1,37 @@
 use std::fmt::Display;
 use std::{io, io::Write, sync::Arc};
 
-use reflexo::typst::TypstPagedDocument;
+use reflexo::error::prelude::*;
+use reflexo::typst::Bytes;
+use tinymist_world::{CompilerFeat, WorldComputable, WorldComputeGraph};
+use typst::diag::FileError;
 use typst::syntax::{LinkedNode, Source, SyntaxKind, Tag};
-use typst::{
-    diag::{At, FileError},
-    syntax::Span,
-};
+use typst::World;
 
-use crate::Transformer;
+pub struct ExportAstTask;
 
-#[derive(Debug, Clone, Default)]
-pub struct AstExporter {}
+pub struct AstExport;
 
-impl<W> Transformer<(Arc<TypstPagedDocument>, W)> for AstExporter
-where
-    W: std::io::Write,
-{
-    fn export(
-        &self,
-        world: &dyn typst::World,
-        (_output, writer): (Arc<TypstPagedDocument>, W),
-    ) -> typst::diag::SourceResult<()> {
-        let mut writer = std::io::BufWriter::new(writer);
+impl<F: CompilerFeat> WorldComputable<F> for AstExport {
+    type Output = Option<Bytes>;
 
-        let src = world.source(world.main()).at(Span::detached())?;
+    fn compute(graph: &Arc<WorldComputeGraph<F>>) -> Result<Self::Output> {
+        let world = &graph.snap.world;
+        let mut writer = std::io::BufWriter::new(Vec::new());
+
+        let src = world
+            .source(world.main())
+            .context_ut("failed to get main")?;
         let path = src.id().vpath().as_rootless_path();
         dump_ast(&path.display().to_string(), &src, &mut writer)
             .map_err(|e| FileError::from_io(e, path))
-            .at(Span::detached())?;
+            .context_ut("failed to dump ast")?;
 
         writer.flush().unwrap();
 
-        Ok(())
+        let inner = writer.into_inner().context_ut("failed to write ast")?;
+
+        Ok(Some(Bytes::new(inner)))
     }
 }
 

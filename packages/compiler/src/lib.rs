@@ -4,6 +4,7 @@ mod incr;
 pub(crate) mod utils;
 
 pub use reflexo_typst::*;
+use reflexo_vec2svg::DefaultExportFeature;
 
 use core::fmt;
 use std::{fmt::Write, path::Path, sync::Arc};
@@ -15,6 +16,7 @@ use reflexo_typst::error::{long_diag_from_std, DiagMessage};
 use reflexo_typst::font::web::BrowserFontSearcher;
 use reflexo_typst::package::browser::ProxyRegistry;
 use reflexo_typst::parser::OffsetEncoding;
+use reflexo_typst::task::ExportPdfTask;
 use reflexo_typst::typst::{foundations::IntoValue, prelude::EcoVec};
 use reflexo_typst::vfs::browser::ProxyAccessModel;
 use typst::diag::SourceResult;
@@ -109,7 +111,7 @@ fn convert_diag(
 
 #[wasm_bindgen]
 pub struct TypstCompiler {
-    pub(crate) driver: CompileDriverImpl<PureCompiler<TypstBrowserWorld>, BrowserCompilerFeat>,
+    pub(crate) driver: CompileDriverImpl<BrowserCompilerFeat>,
 }
 
 impl TypstCompiler {
@@ -119,16 +121,13 @@ impl TypstCompiler {
         searcher: BrowserFontSearcher,
     ) -> Result<Self, JsValue> {
         Ok(Self {
-            driver: CompileDriverImpl::new(
-                std::marker::PhantomData,
-                TypstBrowserUniverse::new(
-                    std::path::Path::new("/").to_owned(),
-                    None,
-                    access_model,
-                    registry,
-                    searcher.into(),
-                ),
-            ),
+            driver: CompileDriverImpl::new(TypstBrowserUniverse::new(
+                std::path::Path::new("/").to_owned(),
+                None,
+                access_model,
+                registry,
+                searcher.into(),
+            )),
         })
     }
 }
@@ -304,28 +303,21 @@ impl TypstCompiler {
         fmt: String,
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
-        let vec_exporter: DynExporter<TypstPagedDocument, Vec<u8>> = match fmt.as_str() {
-            "vector" => Box::new(reflexo_typst::exporter_builtins::VecExporter::new(
-                reflexo_typst::SvgModuleExporter::default(),
-            )),
-            "pdf" => Box::<reflexo_typst::PdfDocExporter>::default(),
+        type SvgModuleExport = WebSvgModuleExport<DefaultExportFeature>;
+
+        let g = self.driver.universe().computation();
+        let world = &g.snap.world;
+
+        // todo: warning is ignored here.
+        let doc = take_diag!(diagnostics_format, &world, self.driver.compile());
+
+        let artifact_bytes = match fmt.as_str() {
+            "vector" => SvgModuleExport::run(&g, &doc.output, &ExportWebSvgModuleTask::default()),
+            "pdf" => PdfExport::run(&g, &doc.output, &ExportPdfTask::default()),
             _ => {
                 return Err(error_once!("Unsupported fmt", format: fmt).into());
             }
-        };
-
-        let world = self.driver.snapshot();
-
-        let doc = take_diag!(
-            diagnostics_format,
-            &world,
-            self.driver.compile(&mut Default::default())
-        );
-        let artifact_bytes = take_diag!(
-            diagnostics_format,
-            &world,
-            vec_exporter.export(&world, doc.output)
-        );
+        }?;
 
         let v: JsValue = Uint8Array::from(artifact_bytes.as_slice()).into();
 
@@ -367,10 +359,7 @@ impl TypstCompiler {
     ) -> Result<String, JsValue> {
         self.set_compiler_options(main_file_path, inputs)?;
 
-        let doc = self
-            .driver
-            .compile(&mut Default::default())
-            .map_err(|e| format!("{e:?}"))?;
+        let doc = self.driver.compile().map_err(|e| format!("{e:?}"))?;
         // todo: query html?
         let elements: Vec<typst::foundations::Content> = self
             .driver
@@ -412,11 +401,7 @@ impl TypstCompiler {
     ) -> Result<JsValue, JsValue> {
         self.set_compiler_options(main_file_path, inputs)?;
         let world = self.driver.snapshot();
-        let doc = take_diag!(
-            diagnostics_format,
-            &world,
-            self.driver.compile(&mut Default::default())
-        );
+        let doc = take_diag!(diagnostics_format, &world, self.driver.compile());
 
         let v = Uint8Array::from(state.update(doc.output).as_slice()).into();
         Ok(if diagnostics_format != 0 {

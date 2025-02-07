@@ -1,7 +1,6 @@
 /// Dynamic boxed compiler trait for NodeJS.
 pub mod boxed;
 
-pub use boxed::{BoxedCompiler, NodeCompilerTrait};
 use reflexo_typst::package::RegistryPathMapper;
 
 use std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc};
@@ -14,9 +13,9 @@ use reflexo_typst::font::system::SystemFontSearcher;
 use reflexo_typst::package::http::HttpRegistry;
 use reflexo_typst::typst::{foundations::IntoValue, LazyHash};
 use reflexo_typst::vfs::{system::SystemAccessModel, Vfs};
-use reflexo_typst::{
-    Bytes, CompileDriver, PureCompiler, TypstDict, TypstSystemUniverse, TypstSystemWorld,
-};
+use reflexo_typst::{Bytes, CompileDriver, TypstDict, TypstSystemUniverse};
+
+pub use boxed::BoxedCompiler;
 
 /// A nullable boxed compiler wrapping.
 ///
@@ -79,9 +78,7 @@ pub struct NodeCompileArgs {
     pub inputs: Option<HashMap<String, String>>,
 }
 
-pub fn create_driver(
-    args: Option<NodeCompileArgs>,
-) -> ZResult<CompileDriver<PureCompiler<TypstSystemWorld>>> {
+pub fn create_driver(args: Option<NodeCompileArgs>) -> ZResult<CompileDriver> {
     use reflexo_typst::path::PathClean;
     let args = args.unwrap_or_default();
     let workspace_dir = Path::new(args.workspace.unwrap_or_default().as_str()).clean();
@@ -132,7 +129,7 @@ pub fn create_driver(
         Arc::new(searcher.into()),
     );
 
-    Ok(CompileDriver::new(std::marker::PhantomData, world))
+    Ok(CompileDriver::new(world))
 }
 
 /// Convert the input pairs to a dictionary.
