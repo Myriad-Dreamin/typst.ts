@@ -17,6 +17,62 @@ pub struct DiagnosticHandler {
 
 impl DiagnosticHandler {
     // todo: check status
+    // impl<W: World, C: Compiler<W = W>> CompileMiddleware for CompileReporter<C,
+    // W> where
+    //     W: EntryReader,
+    // {
+    //     type Compiler = C;
+
+    //     fn inner(&self) -> &Self::Compiler {
+    //         &self.compiler
+    //     }
+
+    //     fn inner_mut(&mut self) -> &mut Self::Compiler {
+    //         &mut self.compiler
+    //     }
+
+    //     fn wrap_compile(
+    //         &mut self,
+    //         world: &C::W,
+    //         env: &mut CompileEnv,
+    //     ) -> SourceResult<Warned<Arc<Document>>> {
+    //         let start = reflexo::time::now();
+    //         // todo unwrap main id
+    //         let id = world.main_id().unwrap();
+    //         if WITH_COMPILING_STATUS_FEATURE.retrieve(&env.features) {
+    //             let rep = CompileReport::Stage(id, "compiling", start);
+    //             let rep = Arc::new((env.features.clone(), rep));
+    //             // we currently ignore export error here
+    //             let _ = self.reporter.export(world, rep);
+    //         }
+
+    //         let doc = self.inner_mut().compile(world, env);
+
+    //         let elapsed = start.elapsed().unwrap_or_default();
+
+    //         let rep;
+
+    //         let doc = match doc {
+    //             Ok(doc) => {
+    //                 rep = CompileReport::CompileSuccess(id, doc.warnings.clone(),
+    // elapsed);
+
+    //                 Ok(doc)
+    //             }
+    //             Err(err) => {
+    //                 rep = CompileReport::CompileError(id, err, elapsed);
+    //                 Err(eco_vec![])
+    //             }
+    //         };
+
+    //         let rep = Arc::new((env.features.clone(), rep));
+    //         // we currently ignore export error here
+    //         let _ = self.reporter.export(world, rep);
+
+    //         doc
+    //     }
+    // }
+
     pub fn status(&self, rep: CompileReport) {
         if self.print_compile_status {
             log::info!("{}", rep.message());

@@ -160,5 +160,44 @@ impl<F: CompilerFeat + 'static> CompilationHandle<F> for CompileHandler<F> {
         if let Err(err) = res {
             eprintln!("export failed: {err}");
         }
+
+        // Diagnostics
+
+        // let compiled = compiling.compile();
+
+        // for reader in curr_reads {
+        //     let _ =
+        // reader.send(SucceededArtifact::Compiled(compiled.clone())); }
+
+        // let elapsed = start.elapsed().unwrap_or_default();
+        // let rep = match &compiled.doc {
+        //     Ok(..) => CompileReport::CompileSuccess(id,
+        // compiled.warnings.clone(), elapsed),     Err(err) =>
+        // CompileReport::CompileError(id, err.clone(), elapsed), };
+
+        // let _ = ConsoleDiagReporter::default().export(
+        //     compiled.world.deref(),
+        //     Arc::new((compiled.env.features.clone(), rep.clone())),
+        // );
+
+        // // todo: we need to check revision for really concurrent compilation
+        // h.notify_compile(&compiled, rep);
+
+        // use reflexo_typst::Exporter;
+        // if let reflexo_typst::CompileReport::CompileSuccess(t, ..) = rep {
+        //     let curr = reflexo_typst::time::now();
+        //     let errs = self
+        //         .exporter
+        //         .export(compiled.world.as_ref(), Arc::new(compiled.clone()));
+        //     if let Err(errs) = errs {
+        //         let elapsed = curr.elapsed().unwrap_or_default();
+        //         let rep = reflexo_typst::CompileReport::ExportError(t, errs,
+        // elapsed);         let _ =
+        // ConsoleDiagReporter::default().export(
+        // compiled.world.as_ref(),
+        // Arc::new((compiled.env.features.clone(), rep.clone())),
+        //         );
+        //     }
+        // }
     }
 }
