@@ -267,10 +267,10 @@ typst-assets = { git = "https://github.com/typst/typst-assets", rev = "8cccef9",
 
 # fontdb = { path = "../fontdb" }
 
-[patch."https://github.com/Myriad-Dreamin/tinymist.git"]
-typst-shim = { path = "../tinymist/crates/typst-shim" }
-tinymist-analysis = { path = "../tinymist/crates/tinymist-analysis" }
-tinymist-project = { path = "../tinymist/crates/tinymist-project" }
-tinymist-std = { path = "../tinymist/crates/tinymist-std" }
-tinymist-task = { path = "../tinymist/crates/tinymist-task" }
-tinymist-world = { path = "../tinymist/crates/tinymist-world" }
+# [patch."https://github.com/Myriad-Dreamin/tinymist.git"]
+# typst-shim = { path = "../tinymist/crates/typst-shim" }
+# tinymist-analysis = { path = "../tinymist/crates/tinymist-analysis" }
+# tinymist-project = { path = "../tinymist/crates/tinymist-project" }
+# tinymist-std = { path = "../tinymist/crates/tinymist-std" }
+# tinymist-task = { path = "../tinymist/crates/tinymist-task" }
+# tinymist-world = { path = "../tinymist/crates/tinymist-world" }

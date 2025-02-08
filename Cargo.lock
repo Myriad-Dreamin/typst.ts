@@ -4102,6 +4102,7 @@ dependencies = [
 [[package]]
 name = "tinymist-analysis"
 version = "0.12.19-rc4"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1580f75d62c3279cd4d73efcded5585ba7ab2714#1580f75d62c3279cd4d73efcded5585ba7ab2714"
 dependencies = [
  "ecow",
  "lsp-types",
@@ -4114,6 +4115,7 @@ dependencies = [
 [[package]]
 name = "tinymist-derive"
 version = "0.12.19-rc4"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1580f75d62c3279cd4d73efcded5585ba7ab2714#1580f75d62c3279cd4d73efcded5585ba7ab2714"
 dependencies = [
  "quote",
  "syn 2.0.98",
@@ -4122,6 +4124,7 @@ dependencies = [
 [[package]]
 name = "tinymist-std"
 version = "0.12.19-rc4"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1580f75d62c3279cd4d73efcded5585ba7ab2714#1580f75d62c3279cd4d73efcded5585ba7ab2714"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4157,6 +4160,7 @@ dependencies = [
 [[package]]
 name = "tinymist-task"
 version = "0.12.19-rc4"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1580f75d62c3279cd4d73efcded5585ba7ab2714#1580f75d62c3279cd4d73efcded5585ba7ab2714"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4192,6 +4196,7 @@ dependencies = [
 [[package]]
 name = "tinymist-vfs"
 version = "0.12.19-rc4"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1580f75d62c3279cd4d73efcded5585ba7ab2714#1580f75d62c3279cd4d73efcded5585ba7ab2714"
 dependencies = [
  "comemo",
  "indexmap 2.7.1",
@@ -4209,6 +4214,7 @@ dependencies = [
 [[package]]
 name = "tinymist-world"
 version = "0.12.19-rc4"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1580f75d62c3279cd4d73efcded5585ba7ab2714#1580f75d62c3279cd4d73efcded5585ba7ab2714"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4700,6 +4706,7 @@ dependencies = [
 [[package]]
 name = "typst-shim"
 version = "0.12.19-rc4"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1580f75d62c3279cd4d73efcded5585ba7ab2714#1580f75d62c3279cd4d73efcded5585ba7ab2714"
 dependencies = [
  "cfg-if",
  "comemo",
@@ -5886,7 +5893,3 @@ checksum = "99a5bab8d7dedf81405c4bb1f2b83ea057643d9cb28778cea9eecddeedd2e028"
 dependencies = [
  "zune-core",
 ]
-
-[[patch.unused]]
-name = "tinymist-project"
-version = "0.12.19-rc4"
