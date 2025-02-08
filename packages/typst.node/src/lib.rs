@@ -1,3 +1,6 @@
+#![allow(missing_docs)]
+#![allow(unused)]
+
 /// Compiler trait for NodeJS.
 pub mod compiler;
 
@@ -218,7 +221,7 @@ impl NodeCompiler {
     pub fn evict_cache(&mut self, max_age: u32) {
         let max_age = usize::try_from(max_age).unwrap();
         comemo::evict(max_age);
-        let _ = self.driver.assert_mut().evict(max_age);
+        self.driver.assert_mut().evict(max_age);
     }
 
     /// Adds a source file to the compiler.

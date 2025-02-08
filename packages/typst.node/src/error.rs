@@ -1,3 +1,6 @@
+#![allow(missing_docs)]
+#![allow(unused)]
+
 use core::fmt;
 use std::{cell::OnceCell, fmt::Write, sync::Arc};
 
