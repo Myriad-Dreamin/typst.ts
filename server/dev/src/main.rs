@@ -4,13 +4,10 @@ use std::process::exit;
 
 use clap::Parser;
 use log::info;
-use reflexo_typst::features::WITH_COMPILING_STATUS_FEATURE;
 use reflexo_typst::path::PathClean;
-use reflexo_typst::{
-    CompileDriver, CompileEnv, CompileExporter, CompileReporter, ConsoleDiagReporter, FeatureSet,
-    TypstSystemWorld,
-};
+use reflexo_typst::{EntryReader, TaskInputs};
 use tokio::io::AsyncBufReadExt;
+use typst_ts_cli::export::ReflexoTaskBuilder;
 use typst_ts_dev_server::{
     http::run_http, utils::async_continue, CompileCorpusArgs, CompileSubCommands, Opts,
     RunSubCommands, Subcommands, WatchSubCommands,
@@ -70,33 +67,22 @@ fn compile_corpus(args: CompileCorpusArgs) {
         ..Default::default()
     };
 
-    let world = typst_ts_cli::compile::create_driver(compile_args.compile.clone()).universe;
+    let verse = typst_ts_cli::compile::resolve_universe(compile_args.compile.clone());
 
-    let driver = CompileExporter::new(std::marker::PhantomData);
-
-    let mut driver = CompileReporter::<_, TypstSystemWorld>::new(driver);
-    driver.set_generic_reporter(ConsoleDiagReporter::default());
-
-    let mut driver = CompileDriver::new(driver, world);
-
-    // enable compiling status
-    let feat_set = FeatureSet::default().configure(&WITH_COMPILING_STATUS_FEATURE, true);
-    let feat_set = std::sync::Arc::new(feat_set);
-
-    let mut compile = |cat: String, name: String| {
+    let compile = |cat: String, name: String| {
         let entry = corpus_path.join(cat).join(name).clean();
 
-        let exporter = typst_ts_cli::export::prepare_exporters(&compile_args, Some(&entry));
+        let mut tb = ReflexoTaskBuilder::new();
+        tb.print_compile_status(true);
+        tb.args(&compile_args, Some(&entry));
+        let exporter = tb.build();
 
-        let exporter_layer = &mut driver.compiler.compiler;
+        let graph = verse.computation_with(TaskInputs {
+            entry: Some(verse.entry_state().select_in_workspace(&entry)),
+            inputs: None,
+        });
 
-        exporter_layer.set_exporter(exporter);
-        driver
-            .universe
-            .increment_revision(|verse| verse.set_entry_file(entry.as_path().into()))
-            .unwrap();
-
-        let _ = driver.compile(&mut CompileEnv::default().configure_shared(feat_set.clone()));
+        (exporter)(&graph).unwrap();
     };
 
     // get all corpus in workspace_path

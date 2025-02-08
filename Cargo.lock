@@ -4875,6 +4875,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "tokio",
+ "typst-ts-cli",
  "typst-ts-dev-server",
  "typst-ts-test-common",
 ]

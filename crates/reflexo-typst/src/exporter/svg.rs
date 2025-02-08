@@ -51,7 +51,7 @@ impl<EF: ExportFeature, F: CompilerFeat> ExportComputation<F, TypstPagedDocument
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct ExportWebSvgHtmlTask {
     #[serde(flatten)]

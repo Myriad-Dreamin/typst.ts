@@ -30,68 +30,63 @@
 // #![warn(missing_debug_implementations)]
 // #![warn(missing_copy_implementations)]
 
-mod concepts;
-pub use concepts::*;
+use core::fmt;
+
+use ::typst::foundations::Content;
+use ::typst::{
+    diag::{At, SourceDiagnostic, SourceResult},
+    syntax::Span,
+};
+use query::retrieve;
+use vfs::WorkspaceResolver;
+
+use crate::typst::prelude::*;
 
 // Core data structures of typst-ts.
+#[cfg(feature = "system-watch")]
+mod compile;
+mod concepts;
 pub mod config;
-pub mod error;
-
-// Core mechanism of typst-ts.
-pub(crate) mod exporter;
-
-#[cfg(feature = "ast")]
-pub use exporter::ast::{dump_ast, AstExporter};
-
-#[cfg(feature = "html")]
-pub use exporter::html::HtmlExporter;
-
-pub use exporter::json::JsonExporter;
-
-#[cfg(feature = "pdf")]
-pub use exporter::pdf::PdfDocExporter;
-#[cfg(feature = "pdf")]
-pub use typst_pdf::pdf;
-#[cfg(feature = "pdf")]
-pub use typst_pdf::PdfStandard;
-
-#[cfg(feature = "svg")]
-pub use exporter::svg::*;
-#[cfg(feature = "svg")]
-pub use reflexo_vec2svg as svg;
-
-pub use exporter::text::TextExporter;
-
-pub use reflexo_typst2vec as vector;
-pub use reflexo_typst2vec::debug_loc;
-pub use reflexo_typst2vec::hash;
-
-pub use exporter::{builtins as exporter_builtins, utils as exporter_utils};
-pub use exporter::{
-    DynExporter, DynGenericExporter, DynPolymorphicExporter, Exporter, GenericExporter,
-    GenericTransformer, Transformer,
-};
-// pub use font::{FontLoader, FontResolver, FontSlot};
-pub use reflexo::typst_shim as compat;
-pub use reflexo::*;
-
-pub mod build_info {
-    /// The version of the reflexo-typst crate.
-    pub static VERSION: &str = env!("CARGO_PKG_VERSION");
-}
-
-pub mod program_meta {
-    /// inform the user that this is a bug.
-    pub const REPORT_BUG_MESSAGE: &str =
-        "This is a bug, please report to https://github.com/Myriad-Dreamin/typst.ts/issues/new";
-}
-
 pub mod diag;
 mod driver;
-mod export;
-pub mod features;
+pub mod error;
+pub(crate) mod exporter;
 pub mod query;
+#[cfg(feature = "system-watch")]
+pub mod task;
 mod utils;
+#[cfg(feature = "system-watch")]
+mod watch;
+
+pub use self::diag::DiagnosticFormat;
+pub use concepts::*;
+pub use driver::*;
+pub use exporter::DynComputation;
+pub use reflexo::typst_shim as compat;
+pub use reflexo::*;
+pub use reflexo_typst2vec as vector;
+pub use reflexo_typst2vec::{debug_loc, hash};
+#[cfg(feature = "svg")]
+pub use reflexo_vec2svg as svg;
+pub use tinymist_task::compute::*;
+
+#[cfg(feature = "ast")]
+pub use exporter::ast::{dump_ast, AstExport, ExportAstTask};
+#[cfg(feature = "svg")]
+#[cfg(feature = "dynamic-layout")]
+pub use exporter::dyn_svg::*;
+#[cfg(feature = "svg")]
+pub use exporter::svg::*;
+pub use exporter::text::TextExport;
+
+#[cfg(feature = "system-watch")]
+pub use compile::*;
+#[cfg(feature = "system-watch")]
+pub use watch::*;
+// #[cfg(feature = "system-compile")]
+// pub use diag::ConsoleDiagReporter;
+#[cfg(feature = "system-compile")]
+pub type DynSystemComputation = DynComputation<SystemCompilerFeat>;
 
 /// font things about compiler.
 pub use world::font;
@@ -109,58 +104,33 @@ pub use world::package;
 pub use world::parser;
 pub use world::*;
 
-#[cfg(feature = "pdf")]
-pub use typst_pdf::Timestamp as TypstTimestamp;
-
-#[cfg(feature = "system-watch")]
-mod watch;
-#[cfg(feature = "system-watch")]
-pub use compile::*;
-#[cfg(feature = "system-watch")]
-pub use watch::*;
-
-#[cfg(feature = "system-watch")]
-mod compile;
-#[cfg(feature = "system-watch")]
-pub mod task;
-#[cfg(feature = "system-compile")]
-pub use diag::ConsoleDiagReporter;
-#[cfg(feature = "system-compile")]
-pub type CompileDriver<C> = CompileDriverImpl<C, tinymist_world::system::SystemCompilerFeat>;
-
-pub use self::{diag::DiagnosticFormat, features::FeatureSet};
-pub use driver::*;
-pub use export::*;
-
-use core::fmt;
-use std::sync::Arc;
-use std::sync::OnceLock;
-
-use ::typst::{
-    diag::{At, SourceDiagnostic, SourceResult, Warned},
-    foundations::Content,
-    syntax::Span,
-    utils::Deferred,
-    World,
-};
-use vfs::WorkspaceResolver;
-
-use crate::typst::prelude::*;
-
-#[derive(Clone, Default)]
-pub struct CompileEnv {
-    pub features: Arc<FeatureSet>,
+pub mod build_info {
+    /// The version of the reflexo-typst crate.
+    pub static VERSION: &str = env!("CARGO_PKG_VERSION");
 }
 
-impl CompileEnv {
-    pub fn configure(mut self, feature_set: FeatureSet) -> Self {
-        self.features = Arc::new(feature_set);
-        self
+pub mod program_meta {
+    /// inform the user that this is a bug.
+    pub const REPORT_BUG_MESSAGE: &str =
+        "This is a bug, please report to https://github.com/Myriad-Dreamin/typst.ts/issues/new";
+}
+
+pub trait CompilerExt<F: CompilerFeat> {
+    fn world(&self) -> &CompilerWorld<F>;
+
+    fn must_main_id(&self) -> TypstFileId {
+        self.world().main()
     }
 
-    pub fn configure_shared(mut self, feature_set: Arc<FeatureSet>) -> Self {
-        self.features = feature_set;
-        self
+    /// With **the compilation state**, query the matches for the selector.
+    fn query(&self, selector: String, document: &TypstDocument) -> SourceResult<Vec<Content>> {
+        retrieve(&self.world(), &selector, document).at(Span::detached())
+    }
+}
+
+impl<F: CompilerFeat> CompilerExt<F> for WorldComputeGraph<F> {
+    fn world(&self) -> &CompilerWorld<F> {
+        &self.snap.world
     }
 }
 
@@ -246,325 +216,6 @@ impl fmt::Display for CompileReportMsg<'_> {
                 write!(f, "{input:?}: compilation failed after {duration:?}")
             }
         }
-    }
-}
-
-type CompileRawResult = Deferred<(
-    SourceResult<TypstDocument>,
-    EcoVec<SourceDiagnostic>,
-    CompileEnv,
-)>;
-type DocState = std::sync::OnceLock<CompileRawResult>;
-
-/// A signal that possibly triggers an export.
-///
-/// Whether to export depends on the current state of the document and the user
-/// settings.
-#[derive(Debug, Clone, Copy)]
-pub struct ExportSignal {
-    /// Whether the revision is annotated by memory events.
-    pub by_mem_events: bool,
-    /// Whether the revision is annotated by file system events.
-    pub by_fs_events: bool,
-    /// Whether the revision is annotated by entry update.
-    pub by_entry_update: bool,
-}
-
-pub struct CompileSnapshot<F: CompilerFeat> {
-    /// The export signal for the document.
-    pub flags: ExportSignal,
-    /// Using env
-    pub env: CompileEnv,
-    /// Using world
-    pub world: Arc<CompilerWorld<F>>,
-    /// Compiling the document.
-    doc_state: Arc<DocState>,
-    /// The last successfully compiled document.
-    pub success_doc: Option<TypstDocument>,
-}
-
-impl<F: CompilerFeat + 'static> CompileSnapshot<F> {
-    fn start(&self) -> &CompileRawResult {
-        self.doc_state.get_or_init(|| {
-            let w = self.world.clone();
-            let mut env = self.env.clone();
-            Deferred::new(move || {
-                let w = w.as_ref();
-                let warned = std::marker::PhantomData.compile(&w, &mut env);
-                let (doc, warnings) = match warned {
-                    Ok(doc) => (Ok(TypstDocument::Paged(doc.output)), doc.warnings),
-                    Err(err) => (Err(err), EcoVec::default()),
-                };
-                (doc, warnings, env)
-            })
-        })
-    }
-
-    pub fn task(mut self, inputs: TaskInputs) -> Self {
-        'check_changed: {
-            if let Some(entry) = &inputs.entry {
-                if *entry != self.world.entry_state() {
-                    break 'check_changed;
-                }
-            }
-            if let Some(inputs) = &inputs.inputs {
-                if inputs.clone() != self.world.inputs() {
-                    break 'check_changed;
-                }
-            }
-
-            return self;
-        };
-
-        self.world = Arc::new(self.world.task(inputs));
-        self.doc_state = Arc::new(OnceLock::new());
-
-        self
-    }
-
-    pub fn compile(&self) -> CompiledArtifact<F> {
-        let (doc, warnings, env) = self.start().wait().clone();
-        CompiledArtifact {
-            signal: self.flags,
-            world: self.world.clone(),
-            env,
-            doc,
-            warnings,
-            success_doc: self.success_doc.clone(),
-        }
-    }
-}
-
-impl<F: CompilerFeat> Clone for CompileSnapshot<F> {
-    fn clone(&self) -> Self {
-        Self {
-            flags: self.flags,
-            env: self.env.clone(),
-            world: self.world.clone(),
-            doc_state: self.doc_state.clone(),
-            success_doc: self.success_doc.clone(),
-        }
-    }
-}
-
-pub struct CompiledArtifact<F: CompilerFeat> {
-    /// All the export signal for the document.
-    pub signal: ExportSignal,
-    /// Used world
-    pub world: Arc<CompilerWorld<F>>,
-    /// Used env
-    pub env: CompileEnv,
-    /// The diagnostics of the document.
-    pub warnings: EcoVec<SourceDiagnostic>,
-    /// The compiled document.
-    pub doc: SourceResult<TypstDocument>,
-    /// The last successfully compiled document.
-    success_doc: Option<TypstDocument>,
-}
-
-impl<F: CompilerFeat> Clone for CompiledArtifact<F> {
-    fn clone(&self) -> Self {
-        Self {
-            signal: self.signal,
-            world: self.world.clone(),
-            env: self.env.clone(),
-            doc: self.doc.clone(),
-            warnings: self.warnings.clone(),
-            success_doc: self.success_doc.clone(),
-        }
-    }
-}
-
-impl<F: CompilerFeat> CompiledArtifact<F> {
-    pub fn success_doc(&self) -> Option<TypstDocument> {
-        self.doc
-            .as_ref()
-            .ok()
-            .cloned()
-            .or_else(|| self.success_doc.clone())
-    }
-}
-
-pub trait EnvWorld {
-    fn prepare_env(&mut self, _env: &mut CompileEnv) -> SourceResult<()> {
-        Ok(())
-    }
-
-    fn ensure_env(&mut self) -> SourceResult<()> {
-        Ok(())
-    }
-}
-
-pub trait Compiler {
-    type W: World;
-
-    fn ensure_main(&self, world: &Self::W) -> SourceResult<()>
-    where
-        Self::W: EntryReader,
-    {
-        let check_main = world.main_id().ok_or_else(|| eco_format!("no entry file"));
-        check_main.at(Span::detached()).map(|_| ())
-    }
-
-    /// Compile once from scratch.
-    fn pure_compile_<D: ::typst::Document>(
-        &mut self,
-        world: &Self::W,
-        _env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<D>>> {
-        let res = ::typst::compile::<D>(world);
-        // compile document
-        // res.output.map(Arc::new)
-        match res.output {
-            Ok(doc) => Ok(Warned {
-                output: Arc::new(doc),
-                warnings: res.warnings,
-            }),
-            Err(diags) => match (res.warnings.is_empty(), diags.is_empty()) {
-                (true, true) => Err(diags),
-                (true, false) => Err(diags),
-                (false, true) => Err(res.warnings),
-                (false, false) => {
-                    let mut warnings = res.warnings;
-                    warnings.extend(diags);
-                    Err(warnings)
-                }
-            },
-        }
-    }
-
-    /// Compile once from scratch.
-    fn pure_compile(
-        &mut self,
-        world: &Self::W,
-        env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<TypstPagedDocument>>> {
-        self.pure_compile_(world, env)
-    }
-
-    /// With **the compilation state**, query the matches for the selector.
-    fn pure_query(
-        &mut self,
-        world: &Self::W,
-        selector: String,
-        document: &TypstDocument,
-    ) -> SourceResult<Vec<Content>> {
-        self::query::retrieve(world, &selector, document).at(Span::detached())
-    }
-
-    /// Compile once from scratch.
-    fn compile(
-        &mut self,
-        world: &Self::W,
-        env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<TypstPagedDocument>>> {
-        self.pure_compile(world, env)
-    }
-
-    /// Compile to html once from scratch.
-    fn compile_html(
-        &mut self,
-        world: &Self::W,
-        env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<::typst::html::HtmlDocument>>> {
-        self.pure_compile_(world, env)
-    }
-
-    /// With **the compilation state**, query the matches for the selector.
-    fn query(
-        &mut self,
-        world: &Self::W,
-        selector: String,
-        document: &TypstDocument,
-    ) -> SourceResult<Vec<Content>> {
-        self.pure_query(world, selector, document)
-    }
-}
-
-pub type PureCompiler<W> = std::marker::PhantomData<fn(W)>;
-
-impl<W: World> Compiler for PureCompiler<W> {
-    type W = W;
-}
-
-pub trait CompileMiddleware {
-    type Compiler: Compiler;
-
-    fn inner(&self) -> &Self::Compiler;
-
-    fn inner_mut(&mut self) -> &mut Self::Compiler;
-
-    /// Hooked compile once from scratch.
-    fn wrap_compile(
-        &mut self,
-        world: &<<Self as CompileMiddleware>::Compiler as Compiler>::W,
-        env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<TypstPagedDocument>>> {
-        self.inner_mut().compile(world, env)
-    }
-
-    /// With **the compilation state**, hooked query the matches for the
-    /// selector.
-    fn wrap_query(
-        &mut self,
-        world: &<<Self as CompileMiddleware>::Compiler as Compiler>::W,
-        selector: String,
-        document: &TypstDocument,
-    ) -> SourceResult<Vec<Content>> {
-        self.inner_mut().query(world, selector, document)
-    }
-}
-
-/// A blanket implementation for all `CompileMiddleware`.
-/// If you want to wrap a compiler, you should override methods in
-/// `CompileMiddleware`.
-impl<T: CompileMiddleware> Compiler for T {
-    type W = <<T as CompileMiddleware>::Compiler as Compiler>::W;
-
-    #[inline]
-    fn pure_compile(
-        &mut self,
-        world: &Self::W,
-        env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<TypstPagedDocument>>> {
-        self.inner_mut().pure_compile(world, env)
-    }
-
-    #[inline]
-    fn pure_query(
-        &mut self,
-        world: &Self::W,
-        selector: String,
-        document: &TypstDocument,
-    ) -> SourceResult<Vec<Content>> {
-        self.inner_mut().pure_query(world, selector, document)
-    }
-
-    #[inline]
-    fn compile(
-        &mut self,
-        world: &Self::W,
-        env: &mut CompileEnv,
-    ) -> SourceResult<Warned<Arc<TypstPagedDocument>>> {
-        self.wrap_compile(world, env)
-    }
-
-    #[inline]
-    fn query(
-        &mut self,
-        world: &Self::W,
-        selector: String,
-        document: &TypstDocument,
-    ) -> SourceResult<Vec<Content>> {
-        self.wrap_query(world, selector, document)
-    }
-}
-
-struct AtFile(TypstFileId);
-
-impl From<AtFile> for EcoString {
-    fn from(at: AtFile) -> Self {
-        eco_format!("at file {:?}", at.0)
     }
 }
 

@@ -1,16 +1,18 @@
 use std::sync::{Arc, Mutex};
 
 use divan::Bencher;
-use reflexo_typst::{CompileDriver as CompileDriverT, Compiler, ShadowApiExt, TypstPagedDocument};
+use reflexo_typst::{
+    EntryReader, ShadowApiExt, TypstPagedDocument, TypstSystemUniverse, MEMORY_MAIN_ENTRY,
+};
 use reflexo_typst2vec::pass::{IncrTypst2VecPass, Typst2VecPass};
 use std::sync::LazyLock;
 use typst::foundations::Bytes;
 use typst_ts_cli::CompileOnceArgs;
 
-type CompileDriver = LazyLock<Mutex<CompileDriverT>>;
+type CompileDriver = LazyLock<Mutex<TypstSystemUniverse>>;
 
 static TEST_COMPILER: CompileDriver = LazyLock::new(|| {
-    Mutex::new(typst_ts_cli::compile::create_driver(CompileOnceArgs {
+    Mutex::new(typst_ts_cli::compile::resolve_universe(CompileOnceArgs {
         workspace: "/".to_owned(),
         entry: "/main.typ".to_owned(),
         ..Default::default()
@@ -24,13 +26,12 @@ static TEST_DOC: LazyLock<Arc<TypstPagedDocument>> =
 
 fn compile(driver: &CompileDriver, src: &str) -> Arc<TypstPagedDocument> {
     let mut driver = driver.lock().unwrap();
-    let e = driver.main_id();
+    let e = driver.main_id().unwrap_or_else(|| *MEMORY_MAIN_ENTRY);
     driver
         .with_shadow_file_by_id(e, Bytes::new(src.as_bytes().to_vec()), |this| {
-            std::marker::PhantomData.compile(&this.snapshot(), &mut Default::default())
+            this.computation().compile().output
         })
         .unwrap()
-        .output
 }
 
 fn main() {
@@ -116,7 +117,7 @@ static THE_THESIS_COMPILER: CompileDriver = std::sync::LazyLock::new(|| {
     use typst_ts_cli::FontArgs;
     let the_thesis_path =
         env!("CARGO_MANIFEST_DIR").to_owned() + "../../../../../typst/masterproef";
-    Mutex::new(typst_ts_cli::compile::create_driver(CompileOnceArgs {
+    Mutex::new(typst_ts_cli::compile::resolve_universe(CompileOnceArgs {
         workspace: the_thesis_path.clone(),
         entry: the_thesis_path.clone() + "/masterproef/main.typ",
         font: FontArgs {

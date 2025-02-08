@@ -15,7 +15,6 @@ use std::{
     sync::OnceLock,
 };
 
-use chrono::{DateTime, Utc};
 use clap::{builder::ValueParser, ArgAction, Args, Command, Parser, Subcommand, ValueEnum};
 use reflexo_typst::{
     build_info::VERSION, vfs::WorkspaceResolver, DiagnosticHandler, ImmutPath, TypstFileId,
@@ -271,10 +270,9 @@ pub struct ExportArgs {
     #[clap(
         long = "creation-timestamp",
         env = "SOURCE_DATE_EPOCH",
-        value_name = "UNIX_TIMESTAMP",
-        value_parser = parse_source_date_epoch,
+        value_name = "UNIX_TIMESTAMP"
     )]
-    pub creation_timestamp: Option<DateTime<Utc>>,
+    pub creation_timestamp: Option<i64>,
 }
 
 #[derive(Default, Debug, Clone, Parser)]
@@ -479,12 +477,4 @@ impl fmt::Display for DiagnosticFormat {
 pub fn get_cli(sub_command_required: bool) -> Command {
     let cli = Command::new("$").disable_version_flag(true);
     Opts::augment_args(cli).subcommand_required(sub_command_required)
-}
-
-/// Parses a UNIX timestamp according to <https://reproducible-builds.org/specs/source-date-epoch/>
-fn parse_source_date_epoch(raw: &str) -> Result<DateTime<Utc>, String> {
-    let timestamp: i64 = raw
-        .parse()
-        .map_err(|err| format!("timestamp must be decimal integer ({err})"))?;
-    DateTime::from_timestamp(timestamp, 0).ok_or_else(|| "timestamp out of range".to_string())
 }

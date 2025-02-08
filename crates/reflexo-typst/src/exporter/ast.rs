@@ -8,6 +8,7 @@ use typst::diag::FileError;
 use typst::syntax::{LinkedNode, Source, SyntaxKind, Tag};
 use typst::World;
 
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct ExportAstTask;
 
 pub struct AstExport;
