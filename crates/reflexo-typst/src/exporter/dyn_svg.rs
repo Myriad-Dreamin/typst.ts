@@ -1,5 +1,4 @@
-use std::sync::Arc;
-
+use reflexo::typst::TypstPagedDocument;
 use reflexo_typst2vec::pass::{CommandExecutor, Typst2VecPass};
 use reflexo_typst2vec::IntoTypst;
 use reflexo_vec2svg::{DynamicLayoutSvgExporter, MultiVecDocument};

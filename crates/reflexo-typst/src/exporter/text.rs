@@ -1,5 +1,4 @@
 use core::fmt;
-use std::sync::Arc;
 
 use reflexo::typst::TypstDocument;
 use tinymist_task::ExportTextTask;
