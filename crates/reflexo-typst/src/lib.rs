@@ -48,11 +48,11 @@ mod compile;
 mod concepts;
 pub mod config;
 pub mod diag;
+#[cfg(feature = "system-compile")]
 mod driver;
 pub mod error;
 pub(crate) mod exporter;
 pub mod query;
-#[cfg(feature = "system-watch")]
 pub mod task;
 mod utils;
 #[cfg(feature = "system-watch")]
@@ -60,6 +60,7 @@ mod watch;
 
 pub use self::diag::DiagnosticFormat;
 pub use concepts::*;
+#[cfg(feature = "system-compile")]
 pub use driver::*;
 pub use exporter::DynComputation;
 pub use reflexo::typst_shim as compat;
