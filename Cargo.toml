@@ -254,9 +254,7 @@ typst-render = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nig
 typst-pdf = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
 typst-eval = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
 typst-html = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
-typst-assets = { git = "https://github.com/typst/typst-assets", rev = "8cccef9", features = [
-    "fonts",
-] }
+typst-assets = { git = "https://github.com/typst/typst-assets", rev = "8cccef9" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }
