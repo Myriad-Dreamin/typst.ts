@@ -5,17 +5,16 @@ use reflexo_typst::vector::{
     ir::{Abs, Point, Rect},
     stream::BytesModuleStream,
 };
-use reflexo_typst::TypstDocument;
-use reflexo_typst::{CompileDriver, ShadowApiExt, TypstSystemUniverse};
+use reflexo_typst::{TypstDocument, TypstSystemUniverse};
 use reflexo_typst2vec::incr::{IncrDocClient, IncrDocServer};
 use reflexo_vec2svg::IncrSvgDocClient;
 use typst::foundations::Bytes;
 use typst_ts_incremental_fuzzer::mutate;
 
-fn get_driver(workspace_dir: &Path, entry_file_path: &Path) -> CompileDriver {
+fn get_driver(workspace_dir: &Path, entry_file_path: &Path) -> TypstSystemUniverse {
     let project_base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let font_path = project_base.join("assets/fonts");
-    let world = TypstSystemUniverse::new(CompileOpts {
+    let verse = TypstSystemUniverse::new(CompileOpts {
         entry: EntryOpts::new_workspace(workspace_dir.into()),
         no_system_fonts: true,
         font_paths: vec![font_path],
@@ -23,12 +22,11 @@ fn get_driver(workspace_dir: &Path, entry_file_path: &Path) -> CompileDriver {
     })
     .unwrap();
 
-    let world = world.with_entry_file(entry_file_path.to_owned());
-    CompileDriver::new(world)
+    verse.with_entry_file(entry_file_path.to_owned())
 }
 
 pub fn test_compiler(workspace_dir: &Path, entry_file_path: &Path) {
-    let mut driver = get_driver(workspace_dir, entry_file_path);
+    let driver = get_driver(workspace_dir, entry_file_path);
     let mut content = { std::fs::read_to_string(entry_file_path).expect("Could not read file") };
 
     #[cfg(feature = "generate")]
@@ -73,15 +71,13 @@ pub fn test_compiler(workspace_dir: &Path, entry_file_path: &Path) {
         let mut incr_svg_client = IncrSvgDocClient::default();
 
         // checkout the entry file
-        let main_id = driver.main_id();
-
         let doc = driver
-            .with_shadow_file_by_id(main_id, Bytes::from_string(content.clone()), |driver| {
-                driver.compile()
-            })
+            .snapshot_with_entry_content(Bytes::from_string(content.clone()), None)
+            .compile()
+            .output
             .unwrap();
 
-        let delta = incr_server.pack_delta(&TypstDocument::Paged(doc.output));
+        let delta = incr_server.pack_delta(&TypstDocument::Paged(doc));
         let delta = BytesModuleStream::from_slice(&delta).checkout_owned();
         incr_client.merge_delta(delta);
         incr_client.set_layout(incr_client.doc.layouts[0].unwrap_single());

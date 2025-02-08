@@ -18,7 +18,8 @@ use std::{
 use chrono::{DateTime, Utc};
 use clap::{builder::ValueParser, ArgAction, Args, Command, Parser, Subcommand, ValueEnum};
 use reflexo_typst::{
-    build_info::VERSION, vfs::WorkspaceResolver, ImmutPath, TypstFileId, MEMORY_MAIN_ENTRY,
+    build_info::VERSION, vfs::WorkspaceResolver, DiagnosticHandler, ImmutPath, TypstFileId,
+    MEMORY_MAIN_ENTRY,
 };
 use typst::syntax::VirtualPath;
 use utils::current_dir;
@@ -308,6 +309,15 @@ pub struct CompileArgs {
         value_parser = clap::value_parser!(DiagnosticFormat)
     )]
     pub diagnostic_format: DiagnosticFormat,
+}
+
+impl CompileArgs {
+    pub fn diagnostics_handler(&self) -> DiagnosticHandler {
+        DiagnosticHandler {
+            diagnostic_format: self.diagnostic_format.into(),
+            print_compile_status: self.watch,
+        }
+    }
 }
 
 /// Processes an input file to extract provided metadata

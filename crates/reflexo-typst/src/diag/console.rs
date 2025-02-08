@@ -31,21 +31,11 @@ fn color_stream() -> StandardStream {
 }
 
 /// Print diagnostic messages to the terminal.
-pub fn print_diagnostics<'files, W: World + Files<'files, FileId = TypstFileId>>(
+pub fn print_diagnostics<'d, 'files, W: World + Files<'files, FileId = TypstFileId>>(
     world: &'files W,
-    errors: impl Iterator<Item = SourceDiagnostic>,
+    errors: impl Iterator<Item = &'d SourceDiagnostic>,
     diagnostic_format: DiagnosticFormat,
 ) -> Result<(), codespan_reporting::files::Error> {
-    // if WITH_COMPILING_STATUS_FEATURE.retrieve(&features) {
-    //     log::info!("{}", report.message());
-    // }
-
-    // todo: log in browser compiler
-    // #[cfg(feature = "system-compile")]
-    // if _err.is_err() {
-    //     log::error!("failed to print diagnostics: {_err:?}");
-    // }
-
     let mut w = match diagnostic_format {
         DiagnosticFormat::Human => color_stream(),
         DiagnosticFormat::Short => StandardStream::stderr(ColorChoice::Never),
@@ -77,7 +67,7 @@ pub fn print_diagnostics<'files, W: World + Files<'files, FileId = TypstFileId>>
         term::emit(&mut w, &config, world, &diag)?;
 
         // Stacktrace-like helper diagnostics.
-        for point in diagnostic.trace {
+        for point in &diagnostic.trace {
             let message = point.v.to_string();
             let help = Diagnostic::help()
                 .with_message(message)

@@ -1,11 +1,10 @@
 #![deny(clippy::all)]
 
 use std::ops::{Deref, DerefMut};
+use std::sync::Arc;
 
-use reflexo_typst::config::entry::MEMORY_MAIN_ENTRY;
-use reflexo_typst::{
-    error_once, Bytes, CompileDriver, EntryReader, ShadowApi, TaskInputs, TypstSystemWorld,
-};
+use reflexo_typst::system::SystemWorldComputeGraph;
+use reflexo_typst::{error_once, Bytes, EntryReader, TaskInputs, TypstSystemUniverse};
 
 use super::create_inputs;
 use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocArgs, NodeError};
@@ -17,10 +16,10 @@ use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocArgs, NodeE
 // {
 // }
 
-pub struct BoxedCompiler(Box<CompileDriver>);
+pub struct BoxedCompiler(Box<TypstSystemUniverse>);
 
 impl Deref for BoxedCompiler {
-    type Target = CompileDriver;
+    type Target = TypstSystemUniverse;
 
     fn deref(&self) -> &Self::Target {
         self.0.as_ref()
@@ -33,8 +32,8 @@ impl DerefMut for BoxedCompiler {
     }
 }
 
-impl From<CompileDriver> for BoxedCompiler {
-    fn from(value: CompileDriver) -> Self {
+impl From<TypstSystemUniverse> for BoxedCompiler {
+    fn from(value: TypstSystemUniverse) -> Self {
         Self(Box::new(value))
     }
 }
@@ -45,72 +44,58 @@ impl BoxedCompiler {
     pub fn create_world(
         &mut self,
         compile_by: CompileDocArgs,
-    ) -> napi::Result<TypstSystemWorld, NodeError> {
-        let universe = self.universe();
-        let new_state = {
-            if let Some(main_file_content) = compile_by.main_file_content {
-                if compile_by.main_file_path.is_some() {
-                    return Err(map_node_error(error_once!(
-                        "main file content and path cannot be specified at the same time"
-                    )));
-                }
-
-                let new_entry = universe
-                    .entry_state()
-                    .select_in_workspace(MEMORY_MAIN_ENTRY.vpath().as_rooted_path());
-
-                let main_id = new_entry.main().unwrap();
-
-                let content = Bytes::from_string(main_file_content);
-                // TODO: eliminate the side effect of shadow mapping safely
-                if let Err(err) = self.universe_mut().map_shadow_by_id(main_id, content) {
-                    return Err(map_node_error(error_once!("cannot map shadow", err: err)));
-                }
-
-                Some(new_entry)
-            } else if let Some(main_file_path) = compile_by.main_file_path {
-                if compile_by.main_file_content.is_some() {
-                    return Err(map_node_error(error_once!(
-                        "main file content and path cannot be specified at the same time"
-                    )));
-                }
-
-                let abs_fp = std::path::absolute(main_file_path.as_str());
-                let fp = abs_fp.as_ref().map(std::path::Path::new).map_err(|e| {
-                    map_node_error(error_once!("cannot absolutize the main file path", err: e))
-                })?;
-                universe
-                    .entry_state()
-                    .try_select_path_in_workspace(fp)
-                    .map_err(map_node_error)?
-            } else {
-                None
-            }
-        };
-
+    ) -> napi::Result<Arc<SystemWorldComputeGraph>, NodeError> {
+        let universe = self.deref_mut();
         // Convert the input pairs to a dictionary.
         let inputs = compile_by.inputs.map(create_inputs);
+        if let Some(main_file_content) = compile_by.main_file_content {
+            if compile_by.main_file_path.is_some() {
+                return Err(map_node_error(error_once!(
+                    "main file content and path cannot be specified at the same time"
+                )));
+            }
 
-        Ok(self.universe.snapshot_with(Some(TaskInputs {
-            entry: new_state,
-            inputs,
-        })))
+            return Ok(universe.snapshot_with_entry_content(
+                Bytes::from_string(main_file_content.clone()),
+                Some(TaskInputs {
+                    entry: None,
+                    inputs,
+                }),
+            ));
+        };
+
+        let entry = if let Some(main_file_path) = compile_by.main_file_path {
+            if compile_by.main_file_content.is_some() {
+                return Err(map_node_error(error_once!(
+                    "main file content and path cannot be specified at the same time"
+                )));
+            }
+
+            let abs_fp = std::path::absolute(main_file_path.as_str());
+            let fp = abs_fp.as_ref().map(std::path::Path::new).map_err(|e| {
+                map_node_error(error_once!("cannot absolutize the main file path", err: e))
+            })?;
+            universe
+                .entry_state()
+                .try_select_path_in_workspace(fp)
+                .map_err(map_node_error)?
+        } else {
+            None
+        };
+
+        Ok(universe.computation_with(TaskInputs { entry, inputs }))
     }
 
     pub fn compile_raw(
         &mut self,
         compile_by: CompileDocArgs,
     ) -> napi::Result<NodeTypstCompileResult, NodeError> {
-        let world = self.create_world(compile_by)?;
+        let graph = self.create_world(compile_by)?;
 
-        if world.entry_state().is_inactive() {
-            return Err(map_node_error(error_once!("entry file is not set")));
-        }
-
-        let c = self.universe().computation();
         // FIXME: This is implementation detail, use a better way from
         // the compiler driver.
-        c.ensure_main().map_err(map_node_error)?;
-        Ok(c.compile().into())
+        graph.ensure_main().map_err(map_node_error)?;
+
+        Ok(graph.compile().into())
     }
 }

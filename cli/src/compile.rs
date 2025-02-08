@@ -5,14 +5,11 @@ use std::sync::Arc;
 
 use reflexo_typst::config::entry::{EntryOpts, MEMORY_MAIN_ENTRY};
 use reflexo_typst::config::CompileOpts;
-use reflexo_typst::features::{FeatureSet, DIAG_FMT_FEATURE};
-use reflexo_typst::TypstDocument;
-use reflexo_typst::{exporter_builtins::GroupExporter, path::PathClean};
+use reflexo_typst::path::PathClean;
+use reflexo_typst::DynSystemComputation;
 use reflexo_typst::{
-    CompilationHandle, CompileActor, CompileDriver, CompileExporter, CompileServerOpts,
-    CompileStarter, CompiledArtifact, CompilerFeat, ConsoleDiagReporter, DynExporter,
-    DynamicLayoutCompiler, EntryManager, EntryReader, GenericExporter, PureCompiler, ShadowApi,
-    SystemCompilerFeat, TypstSystemUniverse, TypstSystemWorld,
+    CompilationHandle, CompileActor, CompileServerOpts, CompilerFeat, DynComputation, EntryManager,
+    EntryReader, ShadowApi, TypstSystemUniverse, WorldComputeGraph,
 };
 use tokio::sync::mpsc;
 use typst::diag::{FileError, FileResult};
@@ -24,7 +21,7 @@ use crate::{
     CompileArgs, CompileOnceArgs,
 };
 
-pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstSystemWorld>> {
+pub fn resolve_universe(args: CompileOnceArgs) -> TypstSystemUniverse {
     let workspace_dir = Path::new(args.workspace.as_str()).clean();
     let entry = args.entry;
     let entry_file_path = Path::new(entry.as_str()).clean();
@@ -112,52 +109,15 @@ pub fn create_driver(args: CompileOnceArgs) -> CompileDriver<PureCompiler<TypstS
         verse.with_entry_file(entry_file_path)
     };
 
-    CompileDriver::new(std::marker::PhantomData, verse)
+    verse
 }
 
-pub fn compile_export(args: CompileArgs, exporter: GroupExporter<TypstDocument>) -> ! {
+pub fn compile_export(args: CompileArgs, exporter: DynSystemComputation) -> ! {
     let (intr_tx, intr_rx) = mpsc::unbounded_channel();
 
-    // todo: make dynamic layout exporter
-    let output_dir = {
-        let dir = args.compile.output_dir();
-        if args.compile.is_stdin() {
-            dir.join("main")
-        } else {
-            dir.join(
-                args.compile
-                    .main_id()
-                    .vpath()
-                    .as_rooted_path()
-                    .file_name()
-                    .expect("entry_file has no file name"),
-            )
-        }
-    };
+    let verse = resolve_universe(args.compile);
 
-    let driver = create_driver(args.compile);
-
-    let feature_set =
-        FeatureSet::default().configure(&DIAG_FMT_FEATURE, args.diagnostic_format.into());
-
-    let verse = driver.universe;
-    // todo: when there is only dynamic export, it is not need to compile first.
-
-    let mut exporters: Vec<DynExporter<CompiledArtifact<SystemCompilerFeat>>> = vec![];
-
-    if !exporter.is_empty() {
-        let driver = CompileExporter::new(std::marker::PhantomData).with_exporter(exporter);
-        exporters.push(Box::new(CompileStarter::new(driver)));
-    }
-
-    if args.dynamic_layout {
-        let driver = DynamicLayoutCompiler::new(std::marker::PhantomData, output_dir);
-        exporters.push(Box::new(CompileStarter::new(driver)));
-    }
-
-    let handle = Arc::new(CompileHandler {
-        exporter: GroupExporter::new(exporters),
-    });
+    let handle = Arc::new(CompileHandler { exporter });
 
     let actor = CompileActor::new_with(
         verse,
@@ -165,14 +125,13 @@ pub fn compile_export(args: CompileArgs, exporter: GroupExporter<TypstDocument>)
         intr_rx,
         CompileServerOpts {
             compile_handle: handle,
-            feature_set,
             ..Default::default()
         },
     )
     .with_watch(args.watch);
 
     utils::async_continue(async move {
-        utils::logical_exit(actor.run().await);
+        utils::logical_exit(actor.run().await.unwrap_or_exit());
     })
 }
 
@@ -190,31 +149,16 @@ fn read_from_stdin() -> FileResult<Vec<u8>> {
 }
 
 pub struct CompileHandler<F: CompilerFeat> {
-    exporter: GroupExporter<CompiledArtifact<F>>,
+    exporter: DynComputation<F>,
 }
 
 impl<F: CompilerFeat + 'static> CompilationHandle<F> for CompileHandler<F> {
     fn status(&self, _revision: usize, _rep: reflexo_typst::CompileReport) {}
 
-    fn notify_compile(
-        &self,
-        compiled: &reflexo_typst::CompiledArtifact<F>,
-        rep: reflexo_typst::CompileReport,
-    ) {
-        use reflexo_typst::Exporter;
-        if let reflexo_typst::CompileReport::CompileSuccess(t, ..) = rep {
-            let curr = reflexo_typst::time::now();
-            let errs = self
-                .exporter
-                .export(compiled.world.as_ref(), Arc::new(compiled.clone()));
-            if let Err(errs) = errs {
-                let elapsed = curr.elapsed().unwrap_or_default();
-                let rep = reflexo_typst::CompileReport::ExportError(t, errs, elapsed);
-                let _ = ConsoleDiagReporter::default().export(
-                    compiled.world.as_ref(),
-                    Arc::new((compiled.env.features.clone(), rep.clone())),
-                );
-            }
+    fn notify_compile(&self, g: &Arc<WorldComputeGraph<F>>) {
+        let res = (self.exporter)(g);
+        if let Err(err) = res {
+            eprintln!("export failed: {err}");
         }
     }
 }

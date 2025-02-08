@@ -1,12 +1,11 @@
 use std::borrow::Cow::{self, Owned};
-use std::cell::{RefCell, RefMut};
-use std::sync::Arc;
+use std::cell::RefCell;
 
 use reflexo_typst::typst::prelude::*;
 use reflexo_typst::{
-    CompileDriver, CompileReport, ConsoleDiagReporter, PureCompiler, TypstDocument,
+    CompilerExt, DiagnosticHandler, TypstDocument, TypstPagedDocument, TypstSystemUniverse,
 };
-use reflexo_typst::{GenericExporter, ShadowApiExt, TypstSystemWorld};
+use reflexo_typst::{ShadowApiExt, TypstSystemWorld};
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
 use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
@@ -14,7 +13,6 @@ use rustyline::hint::{Hinter, HistoryHinter};
 use rustyline::validate::MatchingBracketValidator;
 use rustyline::{Cmd, CompletionType, Config, EditMode, Editor, KeyEvent};
 use rustyline::{Helper, Validator};
-use typst::diag::SourceDiagnostic;
 use typst::foundations::Bytes;
 use typst::World;
 use typst_ide::{autocomplete, IdeWorld};
@@ -31,18 +29,18 @@ struct ReplContext {
     hinter: HistoryHinter,
 
     // typst world state
-    driver: RefCell<CompileDriver<PureCompiler<TypstSystemWorld>>>,
-    reporter: ConsoleDiagReporter<TypstSystemWorld>,
+    driver: RefCell<TypstSystemUniverse>,
+    diag_handler: DiagnosticHandler,
 }
 
 impl ReplContext {
-    fn new(driver: CompileDriver<PureCompiler<TypstSystemWorld>>) -> Self {
+    fn new(driver: TypstSystemUniverse, diag_handler: DiagnosticHandler) -> Self {
         ReplContext {
             highlighter: MatchingBracketHighlighter::new(),
             hinter: HistoryHinter {},
             validator: MatchingBracketValidator::new(),
             driver: RefCell::new(driver),
-            reporter: ConsoleDiagReporter::default(),
+            diag_handler,
         }
     }
 }
@@ -126,21 +124,22 @@ impl Completer for ReplContext {
         #[cfg(feature = "debug-repl")]
         println!("slen: {}, dlen: {}", static_prefix_len, dyn_content.len());
 
-        driver.universe.reset();
+        driver.reset();
 
         let typst_completions = driver
             .with_shadow_file(
                 &entry,
                 Bytes::new(dyn_content.as_bytes().to_vec()),
                 |driver| {
-                    let doc = driver.compile(&mut Default::default()).ok();
-                    let world = driver.snapshot();
-                    let main = world.main();
-                    let main = world.source(main).unwrap();
+                    let graph = driver.computation();
+                    let doc = graph.pure_compile::<TypstPagedDocument>();
+                    let world = &graph.snap.world;
+                    let doc = self.diag_handler.report_compiled(world, doc);
+                    let main = world.source(world.main()).unwrap();
 
                     Ok(autocomplete(
-                        &IdeWrapper(&world),
-                        doc.as_ref().map(|f| f.output.as_ref()),
+                        &IdeWrapper(world),
+                        doc.as_deref(),
                         &main,
                         cursor,
                         true,
@@ -265,10 +264,10 @@ pub fn start_repl_test(args: CompileOnceArgs) -> rustyline::Result<()> {
         .edit_mode(EditMode::Emacs)
         .build();
 
-    let driver = crate::compile::create_driver(args.clone());
+    let driver = crate::compile::resolve_universe(args.clone());
 
     let mut rl = Editor::with_config(config)?;
-    rl.set_helper(Some(ReplContext::new(driver)));
+    rl.set_helper(Some(ReplContext::new(driver, DiagnosticHandler::default())));
     rl.bind_sequence(KeyEvent::alt('n'), Cmd::HistorySearchForward);
     rl.bind_sequence(KeyEvent::alt('p'), Cmd::HistorySearchBackward);
     if rl.load_history("history.txt").is_err() {
@@ -300,27 +299,16 @@ pub fn start_repl_test(args: CompileOnceArgs) -> rustyline::Result<()> {
 }
 
 impl ReplContext {
-    fn process_err(
-        &self,
-        driver: &RefMut<CompileDriver<PureCompiler<TypstSystemWorld>>>,
-        err: EcoVec<SourceDiagnostic>,
-    ) -> Result<(), ()> {
-        let rep = CompileReport::CompileError(driver.main_id(), err, Default::default());
-        let _ = self.reporter.export(&driver.snapshot(), Arc::new(rep));
-        Ok(())
-    }
-
     fn repl_process_line(&mut self, line: String) {
         let compiled = {
-            let mut driver = self.driver.borrow_mut();
-            let doc = driver
-                .compile(&mut Default::default())
-                .map_err(|err| self.process_err(&driver, err))
-                .ok();
+            let graph = self.driver.borrow().computation();
+            let doc = graph.pure_compile::<TypstPagedDocument>();
+            let doc = self.diag_handler.report_compiled(graph.world(), doc);
+
             doc.and_then(|doc| {
-                driver
-                    .query(line, &TypstDocument::Paged(doc.output))
-                    .map_err(|err| self.process_err(&driver, err))
+                graph
+                    .query(line, &TypstDocument::Paged(doc))
+                    .map_err(|err| self.diag_handler.report(&graph.snap.world, err.iter()))
                     .ok()
             })
         };

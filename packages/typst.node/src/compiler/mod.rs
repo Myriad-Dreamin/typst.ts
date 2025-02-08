@@ -13,7 +13,7 @@ use reflexo_typst::font::system::SystemFontSearcher;
 use reflexo_typst::package::http::HttpRegistry;
 use reflexo_typst::typst::{foundations::IntoValue, LazyHash};
 use reflexo_typst::vfs::{system::SystemAccessModel, Vfs};
-use reflexo_typst::{Bytes, CompileDriver, TypstDict, TypstSystemUniverse};
+use reflexo_typst::{Bytes, TypstDict, TypstSystemUniverse};
 
 pub use boxed::BoxedCompiler;
 
@@ -78,7 +78,7 @@ pub struct NodeCompileArgs {
     pub inputs: Option<HashMap<String, String>>,
 }
 
-pub fn create_driver(args: Option<NodeCompileArgs>) -> ZResult<CompileDriver> {
+pub fn create_driver(args: Option<NodeCompileArgs>) -> ZResult<TypstSystemUniverse> {
     use reflexo_typst::path::PathClean;
     let args = args.unwrap_or_default();
     let workspace_dir = Path::new(args.workspace.unwrap_or_default().as_str()).clean();
@@ -121,7 +121,7 @@ pub fn create_driver(args: Option<NodeCompileArgs>) -> ZResult<CompileDriver> {
 
     let registry = Arc::new(HttpRegistry::default());
     let resolver = Arc::new(RegistryPathMapper::new(registry.clone()));
-    let world = TypstSystemUniverse::new_raw(
+    let verse = TypstSystemUniverse::new_raw(
         EntryState::new_rooted(workspace_dir.into(), None),
         args.inputs.map(create_inputs),
         Vfs::new(resolver, SystemAccessModel {}),
@@ -129,7 +129,7 @@ pub fn create_driver(args: Option<NodeCompileArgs>) -> ZResult<CompileDriver> {
         Arc::new(searcher.into()),
     );
 
-    Ok(CompileDriver::new(world))
+    Ok(verse)
 }
 
 /// Convert the input pairs to a dictionary.

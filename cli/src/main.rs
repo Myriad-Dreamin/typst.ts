@@ -6,12 +6,14 @@ use std::{
 };
 
 use clap::FromArgMatches;
-use reflexo_typst::config::{entry::EntryOpts, CompileOpts};
-use reflexo_typst::exporter_builtins::GroupExporter;
-use reflexo_typst::exporter_utils::map_err;
 use reflexo_typst::path::{unix_slash, PathClean};
 use reflexo_typst::TypstDocument;
 use reflexo_typst::TypstSystemUniverse;
+use reflexo_typst::{
+    config::{entry::EntryOpts, CompileOpts},
+    SystemCompilerFeat, WorldComputeGraph,
+};
+use reflexo_typst::{error::prelude::*, OptionDocumentTask, TypstPagedDocument};
 use typst::{text::FontVariant, World};
 use typst_assets::fonts;
 use typst_ts_cli::compile::compile_export;
@@ -110,10 +112,16 @@ pub fn query(args: QueryArgs) -> ! {
     use typst_ts_cli::query::format;
     let compile_args = args.compile.clone();
 
-    let mut exporter = GroupExporter::<TypstDocument>::new(vec![]);
+    let exporter = Arc::new(
+        move |g: &Arc<WorldComputeGraph<SystemCompilerFeat>>| -> Result<()> {
+            // todo: html query
+            let output = g
+                .compute::<OptionDocumentTask<TypstPagedDocument>>()?
+                .as_ref()
+                .clone()
+                .context("no document found")?;
+            let output = TypstDocument::Paged(output);
 
-    exporter.push_front(Box::new(
-        move |world: &dyn World, output: Arc<TypstDocument>| {
             if args.selector == "document_title" {
                 let title = output
                     .info()
@@ -121,17 +129,18 @@ pub fn query(args: QueryArgs) -> ! {
                     .as_ref()
                     .map(|e| e.as_str())
                     .unwrap_or("null");
-                let serialized = serialize(&title, "json").map_err(map_err)?;
+                let serialized = serialize(&title, "json").context("serialize query")?;
                 println!("{}", serialized);
                 return Ok(());
             }
 
-            let data = retrieve(world, &args.selector, output.as_ref()).map_err(map_err)?;
-            let serialized = format(data, &args).map_err(map_err)?;
+            let world = &g.snap.world;
+            let data = retrieve(world, &args.selector, &output).context("query")?;
+            let serialized = format(data, &args).context("serialize query")?;
             println!("{serialized}");
             Ok(())
         },
-    ));
+    );
 
     compile_export(compile_args, exporter)
 }
