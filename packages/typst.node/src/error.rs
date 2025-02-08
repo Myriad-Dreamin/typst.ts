@@ -7,7 +7,7 @@ use reflexo_typst::typst::diag::Warned;
 use reflexo_typst::typst::prelude::*;
 use reflexo_typst::{TypstPagedDocument, TypstWorld};
 
-use crate::NodeTypstPagedDocument;
+use crate::NodeTypstDocument;
 
 /// The error status of a node error.
 pub enum NodeErrorStatus {
@@ -158,7 +158,7 @@ pub fn map_node_error(e: impl Into<NodeError>) -> napi::Error<NodeError> {
 /// Result of single typst compilation.
 #[napi]
 pub struct NodeTypstCompileResult {
-    result: Option<NodeTypstPagedDocument>,
+    result: Option<NodeTypstDocument>,
     // todo: better warning structure
     warnings: Option<NodeError>,
     error: Option<NodeError>,
@@ -168,7 +168,7 @@ pub struct NodeTypstCompileResult {
 impl NodeTypstCompileResult {
     /// Gets the result of compilation.
     #[napi(getter)]
-    pub fn result(&self) -> Option<NodeTypstPagedDocument> {
+    pub fn result(&self) -> Option<NodeTypstDocument> {
         self.result.clone()
     }
 
@@ -185,26 +185,27 @@ impl NodeTypstCompileResult {
     }
 }
 
-impl<E> From<Result<Warned<Arc<TypstPagedDocument>>, E>> for NodeTypstCompileResult
+impl<E> From<Warned<Result<Arc<TypstPagedDocument>, E>>> for NodeTypstCompileResult
 where
     E: Into<NodeError>,
 {
-    fn from(res: Result<Warned<Arc<TypstPagedDocument>>, E>) -> Self {
-        match res {
-            Ok(result) => NodeTypstCompileResult {
-                result: Some(NodeTypstPagedDocument(result.output)),
-                warnings: if result.warnings.is_empty() {
-                    None
-                } else {
-                    Some(result.warnings.into())
-                },
-                error: None,
-            },
-            Err(e) => NodeTypstCompileResult {
-                result: None,
-                warnings: None,
-                error: Some(e.into()),
-            },
-        }
+    fn from(res: Warned<Result<Arc<TypstPagedDocument>, E>>) -> Self {
+        // match res {
+        //     Ok(result) => NodeTypstCompileResult {
+        //         result: Some(NodeTypstDocument(result.output)),
+        //         warnings: if result.warnings.is_empty() {
+        //             None
+        //         } else {
+        //             Some(result.warnings.into())
+        //         },
+        //         error: None,
+        //     },
+        //     Err(e) => NodeTypstCompileResult {
+        //         result: None,
+        //         warnings: None,
+        //         error: Some(e.into()),
+        //     },
+        // }
+        todo!()
     }
 }

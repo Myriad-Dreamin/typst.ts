@@ -18,8 +18,7 @@ use reflexo_typst::{
     error::WithContext, DocumentQuery, ExportComputation, ExportWebSvgModuleTask, WorldComputeGraph,
 };
 use reflexo_typst::{
-    Bytes, DynamicLayoutCompiler, ShadowApi, SystemCompilerFeat, TypstAbs, TypstDatetime,
-    TypstPagedDocument, TypstSystemWorld,
+    Bytes, ShadowApi, SystemCompilerFeat, TypstDatetime, TypstPagedDocument, TypstSystemWorld,
 };
 use serde::{Deserialize, Serialize};
 
@@ -228,7 +227,7 @@ impl NodeCompiler {
     #[napi]
     pub fn add_source(&mut self, path: String, source: String) -> Result<(), NodeError> {
         let content = Bytes::new(source.into_bytes());
-        let verse = self.driver.assert_mut().universe_mut();
+        let verse = self.driver.assert_mut();
         let res = verse.map_shadow(Path::new(&path), content);
         res.at(Span::detached()).map_err(map_node_error)
     }
@@ -239,7 +238,7 @@ impl NodeCompiler {
     #[napi]
     pub fn map_shadow(&mut self, path: String, content: Buffer) -> Result<(), NodeError> {
         let content = Bytes::new(content.as_ref().to_vec());
-        let verse = self.driver.assert_mut().universe_mut();
+        let verse = self.driver.assert_mut();
         let res = verse.map_shadow(Path::new(&path), content);
         res.at(Span::detached()).map_err(map_node_error)
     }
@@ -248,7 +247,7 @@ impl NodeCompiler {
     /// @param path - The path to the shadow file.
     #[napi]
     pub fn unmap_shadow(&mut self, path: String) -> Result<(), NodeError> {
-        let verse = self.driver.assert_mut().universe_mut();
+        let verse = self.driver.assert_mut();
         let res = verse.unmap_shadow(Path::new(&path));
         res.at(Span::detached()).map_err(map_node_error)
     }
@@ -257,7 +256,7 @@ impl NodeCompiler {
     /// Note: this function is independent to the {@link reset} function.
     #[napi]
     pub fn reset_shadow(&mut self) {
-        self.driver.assert_mut().universe_mut().reset_shadow();
+        self.driver.assert_mut().reset_shadow();
     }
 
     /// Compiles the document.
@@ -413,8 +412,8 @@ impl NodeCompiler {
 
 #[napi]
 pub struct DynLayoutCompiler {
-    /// Inner compiler.
-    driver: DynamicLayoutCompiler<SystemCompilerFeat, BoxedCompiler>,
+    // Inner compiler.
+    // driver: DynamicLayoutCompiler,
 }
 
 #[napi]
@@ -422,68 +421,40 @@ impl DynLayoutCompiler {
     /// Creates a new compiler based on the given arguments.
     #[napi]
     pub fn from_boxed(b: &mut JsBoxedCompiler) -> Self {
-        DynLayoutCompiler {
-            driver: DynamicLayoutCompiler::new(b.grab(), PathBuf::default()),
-        }
+        // DynLayoutCompiler {
+        //     driver: DynamicLayoutCompiler::new(b.grab(), PathBuf::default()),
+        // }
+        todo!()
     }
 
     /// Sets the target of the compiler.
     #[napi]
     pub fn set_target(&mut self, target: String) {
-        self.driver.set_target(target);
+        // self.driver.set_target(target);
+        todo!()
     }
 
     /// Specifies width (in pts) of the layout.
     #[napi]
     pub fn set_layout_widths(&mut self, layout_widths: Vec<f64>) {
-        self.driver
-            .set_layout_widths(layout_widths.into_iter().map(TypstAbs::pt).collect());
+        // self.driver
+        //     .set_layout_widths(layout_widths.into_iter().map(TypstAbs::pt).
+        // collect());
+        todo!()
     }
 
     /// Exports the document as a vector IR containing multiple layouts.
     #[napi]
     pub fn vector(&mut self, compile_by: CompileDocArgs) -> Result<Buffer, NodeError> {
-        let compiler = self.driver.inner_mut();
-        let world = compiler.create_world(compile_by)?;
-        let doc = self
-            .driver
-            .do_export(&world, &mut Default::default())
-            .map_err(map_node_error);
+        // let compiler = self.driver.inner_mut();
+        // let world = compiler.create_world(compile_by)?;
+        // let doc = self
+        //     .driver
+        //     .do_export(&world, &mut Default::default())
+        //     .map_err(map_node_error);
 
-        Ok(doc?.1.to_bytes().into())
-    }
-}
+        // Ok(doc?.1.to_bytes().into())
 
-/// Parses a UNIX timestamp according to <https://reproducible-builds.org/specs/source-date-epoch/>
-fn parse_source_date_epoch(timestamp: i64) -> Result<DateTime<Utc>, NodeError> {
-    DateTime::from_timestamp(timestamp, 0)
-        .ok_or_else(|| map_node_error(error_once!("timestamp out of range")))
-}
-
-/// Convert [`chrono::DateTime`] to [`Timestamp`]
-fn convert_datetime(date_time: chrono::DateTime<chrono::Utc>) -> Option<TypstTimestamp> {
-    use chrono::{Datelike, Timelike};
-    let datetime = TypstDatetime::from_ymd_hms(
-        date_time.year(),
-        date_time.month().try_into().ok()?,
-        date_time.day().try_into().ok()?,
-        date_time.hour().try_into().ok()?,
-        date_time.minute().try_into().ok()?,
-        date_time.second().try_into().ok()?,
-    );
-
-    Some(TypstTimestamp::new_utc(datetime.unwrap()))
-}
-
-#[derive(Default)]
-struct PlainSvgExporter {}
-
-impl Exporter<TypstPagedDocument, String> for PlainSvgExporter {
-    fn export(
-        &self,
-        _world: &dyn TypstWorld,
-        output: Arc<TypstPagedDocument>,
-    ) -> SourceResult<String> {
-        Ok(typst_svg::svg_merged(&output, Default::default()))
+        todo!()
     }
 }
