@@ -77,8 +77,9 @@ fn compile_corpus(args: CompileCorpusArgs) {
         tb.args(&compile_args, Some(&entry));
         let exporter = tb.build();
 
+        let entry = verse.entry_state().try_select_path_in_workspace(&entry);
         let graph = verse.computation_with(TaskInputs {
-            entry: Some(verse.entry_state().select_in_workspace(&entry)),
+            entry: entry.unwrap(),
             inputs: None,
         });
 
