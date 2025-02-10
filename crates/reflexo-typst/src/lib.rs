@@ -34,13 +34,11 @@ use core::fmt;
 
 use ::typst::foundations::Content;
 use ::typst::{
-    diag::{At, SourceDiagnostic, SourceResult},
+    diag::{At, SourceResult},
     syntax::Span,
 };
 use query::retrieve;
 use vfs::WorkspaceResolver;
-
-use crate::typst::prelude::*;
 
 // Core data structures of typst-ts.
 #[cfg(feature = "system-watch")]
@@ -139,22 +137,9 @@ impl<F: CompilerFeat> CompilerExt<F> for WorldComputeGraph<F> {
 pub enum CompileReport {
     Suspend,
     Stage(TypstFileId, &'static str, crate::Time),
-    CompileError(
-        TypstFileId,
-        EcoVec<SourceDiagnostic>,
-        reflexo::time::Duration,
-    ),
-    ExportError(
-        TypstFileId,
-        EcoVec<SourceDiagnostic>,
-        reflexo::time::Duration,
-    ),
-    CompileSuccess(
-        TypstFileId,
-        // warnings, if not empty
-        EcoVec<SourceDiagnostic>,
-        reflexo::time::Duration,
-    ),
+    CompileError(TypstFileId, usize, reflexo::time::Duration),
+    ExportError(TypstFileId, usize, reflexo::time::Duration),
+    CompileSuccess(TypstFileId, usize, reflexo::time::Duration),
 }
 
 impl CompileReport {
@@ -177,7 +162,7 @@ impl CompileReport {
         }
     }
 
-    pub fn diagnostics(self) -> Option<EcoVec<SourceDiagnostic>> {
+    pub fn diagnostics_size(self) -> Option<usize> {
         match self {
             Self::Suspend | Self::Stage(..) => None,
             Self::CompileError(_, diagnostics, ..)
@@ -203,13 +188,12 @@ impl fmt::Display for CompileReportMsg<'_> {
             Suspend => write!(f, "suspended"),
             Stage(_, stage, ..) => write!(f, "{input:?}: {stage} ..."),
             CompileSuccess(_, warnings, duration) => {
-                if warnings.is_empty() {
+                if *warnings == 0 {
                     write!(f, "{input:?}: compilation succeeded in {duration:?}")
                 } else {
                     write!(
                         f,
-                        "{input:?}: compilation succeeded with {} warnings in {duration:?}",
-                        warnings.len()
+                        "{input:?}: compilation succeeded with {warnings} warnings in {duration:?}",
                     )
                 }
             }

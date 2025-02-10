@@ -6,12 +6,14 @@ use reflexo_typst::program_meta::REPORT_BUG_MESSAGE;
 use reflexo_typst::svg::DefaultExportFeature;
 use reflexo_typst::task::{ExportHtmlTask, ExportPdfTask, ExportTextTask};
 use reflexo_typst::{
-    AstExport, Bytes, DiagnosticHandler, DynSvgModuleExport, DynSystemComputation, ExportAstTask,
-    ExportComputation, ExportDynSvgModuleTask, ExportWebSvgHtmlTask, ExportWebSvgModuleTask,
-    ExportWebSvgTask, FlagTask, HtmlCompilationTask, HtmlExport, OptionDocumentTask,
-    PagedCompilationTask, PdfExport, SystemCompilerFeat, TextExport, WebSvgExport,
-    WebSvgHtmlExport, WebSvgModuleExport, WorldComputable, WorldComputeGraph,
+    AstExport, Bytes, CompilationTask, CompileReport, ConfigTask, DiagnosticHandler,
+    DiagnosticsTask, DynSvgModuleExport, DynSystemComputation, ExportAstTask, ExportComputation,
+    ExportDynSvgModuleTask, ExportWebSvgHtmlTask, ExportWebSvgModuleTask, ExportWebSvgTask,
+    FlagTask, HtmlCompilationTask, HtmlExport, OptionDocumentTask, PagedCompilationTask, PdfExport,
+    SystemCompilerFeat, TakeAs, TextExport, WebSvgExport, WebSvgHtmlExport, WebSvgModuleExport,
+    WorldComputable, WorldComputeGraph,
 };
+use typst::World;
 
 use crate::{utils::current_dir, CompileArgs};
 
@@ -221,56 +223,61 @@ fn prepare_exporters_impl(
 ) -> DynSystemComputation {
     type EF = DefaultExportFeature;
 
-    Arc::new(move |graph: &Arc<WorldComputeGraph<SystemCompilerFeat>>| {
-        let _ = graph.provide::<FlagTask<PagedCompilationTask>>(Ok(FlagTask::flag(true)));
-        let _ = graph.provide::<FlagTask<HtmlCompilationTask>>(Ok(FlagTask::flag(true)));
-        // todo: diag handler.
-        let _ = diag_handler;
-
-        fn export_to_path(result: Result<Option<Bytes>>, output_path: PathBuf) {
-            let result = match result {
-                Ok(Some(bytes)) => bytes,
-                Ok(None) => return,
-                Err(err) => {
-                    eprintln!("export failed: {err}");
-                    return;
-                }
-            };
-
-            let err = std::fs::write(output_path, result.as_slice());
-            if let Err(err) = err {
+    fn export_to_path(result: Result<Option<Bytes>>, output_path: PathBuf) {
+        let result = match result {
+            Ok(Some(bytes)) => bytes,
+            Ok(None) => return,
+            Err(err) => {
                 eprintln!("export failed: {err}");
+                return;
             }
+        };
+
+        let err = std::fs::write(output_path, result.as_slice());
+        if let Err(err) = err {
+            eprintln!("export failed: {err}");
         }
+    }
 
-        fn export_bytes<
-            D: typst::Document + Send + Sync + 'static,
-            T: ExportComputation<SystemCompilerFeat, D, Output = Bytes>,
-        >(
-            graph: &Arc<WorldComputeGraph<SystemCompilerFeat>>,
-            config: &T::Config,
-        ) -> Result<Option<Bytes>> {
-            let doc = graph.compute::<OptionDocumentTask<D>>()?;
-            let doc = doc.as_ref();
+    fn compile_it<D: typst::Document + Send + Sync + 'static>(
+        graph: &Arc<WorldComputeGraph<SystemCompilerFeat>>,
+    ) -> Result<Option<Arc<D>>> {
+        let _ = graph.provide::<FlagTask<CompilationTask<D>>>(Ok(FlagTask::flag(true)));
+        graph.compute::<OptionDocumentTask<D>>().map(Arc::take)
+    }
 
-            let res = doc.as_ref().map(|doc| T::run(graph, doc, config));
-            res.transpose()
-        }
+    fn export_bytes<
+        D: typst::Document + Send + Sync + 'static,
+        T: ExportComputation<SystemCompilerFeat, D, Output = Bytes>,
+    >(
+        graph: &Arc<WorldComputeGraph<SystemCompilerFeat>>,
+        config: &T::Config,
+    ) -> Result<Option<Bytes>> {
+        let doc = compile_it::<D>(graph)?;
 
-        fn export_string<
-            D: typst::Document + Send + Sync + 'static,
-            T: ExportComputation<SystemCompilerFeat, D, Output = String>,
-        >(
-            graph: &Arc<WorldComputeGraph<SystemCompilerFeat>>,
-            config: &T::Config,
-        ) -> Result<Option<Bytes>> {
-            let doc = graph.compute::<OptionDocumentTask<D>>()?;
-            let doc = doc.as_ref();
+        let res = doc.as_ref().map(|doc| T::run(graph, doc, config));
+        res.transpose()
+    }
 
-            let doc = doc.as_ref();
-            let res = doc.map(|doc| T::run(graph, doc, config).map(Bytes::from_string));
-            res.transpose()
-        }
+    fn export_string<
+        D: typst::Document + Send + Sync + 'static,
+        T: ExportComputation<SystemCompilerFeat, D, Output = String>,
+    >(
+        graph: &Arc<WorldComputeGraph<SystemCompilerFeat>>,
+        config: &T::Config,
+    ) -> Result<Option<Bytes>> {
+        let doc = compile_it::<D>(graph)?;
+
+        let doc = doc.as_ref();
+        let res = doc.map(|doc| T::run(graph, doc, config).map(Bytes::from_string));
+        res.transpose()
+    }
+
+    Arc::new(move |graph: &Arc<WorldComputeGraph<SystemCompilerFeat>>| {
+        let start = reflexo_typst::time::now();
+        let main = graph.snap.world.main();
+
+        diag_handler.status(&CompileReport::Stage(main, "compiling", start));
 
         for task in tasks.iter() {
             use ReflexoTask::*;
@@ -326,6 +333,26 @@ fn prepare_exporters_impl(
                 }
             }
         }
+
+        let _ = graph.provide::<FlagTask<PagedCompilationTask>>(Ok(FlagTask::flag(false)));
+        let _ = graph.provide::<FlagTask<HtmlCompilationTask>>(Ok(FlagTask::flag(false)));
+
+        let diag = graph.compute::<DiagnosticsTask>()?;
+
+        let error_cnt = diag.error_cnt();
+        let warning_cnt = diag.warning_cnt();
+
+        let report = if error_cnt != 0 {
+            CompileReport::CompileError(main, error_cnt, start.elapsed().unwrap_or_default())
+        } else {
+            CompileReport::CompileSuccess(main, warning_cnt, start.elapsed().unwrap_or_default())
+        };
+
+        diag_handler.status(&report);
+        let _ = graph.provide::<ConfigTask<CompileReport>>(Ok(Arc::new(report)));
+
+        // todo: export diagnostics.
+        diag_handler.report(&graph.snap.world, diag.diagnostics());
 
         Ok(())
     })

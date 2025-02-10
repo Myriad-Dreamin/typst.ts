@@ -10,7 +10,7 @@ use std::{
 
 use reflexo::error::prelude::*;
 use reflexo::typst::{TypstHtmlDocument, TypstPagedDocument};
-use tinymist_world::{FlagTask, OptionDocumentTask, ProjectInsId, WorldComputeGraph};
+use tinymist_world::{ConfigTask, OptionDocumentTask, ProjectInsId, WorldComputeGraph};
 use tokio::sync::{mpsc, oneshot};
 
 use crate::task::CacheTask;
@@ -240,11 +240,13 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
     pub async fn run(mut self) -> Result<bool> {
         if !self.enable_watch {
             // todo: once flag
-            return Ok(self
-                .compile_once()
-                .await
-                .compute::<FlagTask<bool>>()?
-                .enabled);
+            let g = self.compile_once().await;
+
+            let report = g.get::<ConfigTask<CompileReport>>().transpose()?;
+            let report = report.as_deref();
+            let is_success = matches!(report, Some(CompileReport::CompileSuccess(..)));
+
+            return Ok(is_success);
         }
 
         let (dep_tx, dep_rx) = tokio::sync::mpsc::unbounded_channel();

@@ -73,7 +73,7 @@ impl DiagnosticHandler {
     //     }
     // }
 
-    pub fn status(&self, rep: CompileReport) {
+    pub fn status(&self, rep: &CompileReport) {
         if self.print_compile_status {
             log::info!("{}", rep.message());
         }
