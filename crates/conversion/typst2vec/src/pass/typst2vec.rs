@@ -16,7 +16,7 @@ use reflexo::ImmutStr;
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
     foundations::{Bytes, Smart},
-    html::HtmlElement,
+    html::{HtmlElement, HtmlNode},
     introspection::{Introspector, Tag},
     layout::{
         Abs as TypstAbs, Axes, Dir, Frame, FrameItem, FrameKind, Position, Ratio as TypstRatio,
@@ -1069,214 +1069,41 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
 
     fn html_element(
         &self,
-        _state: State,
-        _elem: &HtmlElement,
-        _parent: usize,
-        _index: usize,
+        state: State,
+        elem: &HtmlElement,
+        parent: usize,
+        index: usize,
     ) -> Fingerprint {
-        // let src_reg = self.spans.start();
+        let item = VecItem::Html(HtmlItem {
+            tag: elem.tag.resolve().as_str().into(),
+            attrs: {
+                let mut attrs = Vec::with_capacity(elem.attrs.0.len());
+                for (k, v) in &elem.attrs.0 {
+                    attrs.push((k.resolve().as_str().into(), v.as_str().into()));
+                }
+                attrs
+            },
+            children: {
+                let mut children = Vec::with_capacity(elem.children.len());
+                for child in &elem.children {
+                    children.push({
+                        match child {
+                            HtmlNode::Tag(..) => continue,
+                            HtmlNode::Frame(e) => {
+                                HtmlChildren::Item(self.frame(state, e, parent, index))
+                            }
+                            HtmlNode::Element(e) => {
+                                HtmlChildren::Item(self.html_element(state, e, parent, index))
+                            }
+                            HtmlNode::Text(t, _) => HtmlChildren::Text(t.as_str().into()),
+                        }
+                    });
+                }
+                children
+            },
+        });
 
-        // let frame_size = match frame.kind() {
-        //     FrameKind::Hard => Some(frame.size().into_typst()),
-        //     FrameKind::Soft => None,
-        // };
-        // if let Some(sz) = &frame_size {
-        //     state = state.with_transform(Transform::identity()).with_size(*sz);
-        // }
-        // let state = state;
-
-        // let fill_adjust = if fill.is_some() { 1 } else { 0 };
-        // let mut items = Vec::with_capacity(frame.items().len() + fill_adjust);
-        // if let Some(fill) = fill {
-        //     let shape = Shape {
-        //         geometry: Geometry::Rect(frame.size()),
-        //         fill: Some(fill),
-        //         fill_rule: FillRule::default(),
-        //         stroke: None,
-        //     };
-
-        //     let fg = self.shape(state, &shape);
-        //     items.push((Point::default(), false, fg));
-
-        //     self.spans.push_span(SourceRegion {
-        //         region: src_reg,
-        //         idx: 0,
-        //         kind: SourceNodeKind::Shape(Span::detached()),
-        //         item: fg,
-        //     });
-        // }
-
-        // let items_iter = frame.items().as_slice().par_iter().enumerate();
-        // let items_iter = items_iter.flat_map(|(idx, (pos, item))| {
-        //     let idx = fill_adjust + idx;
-        //     let mut is_link = false;
-        //     let state = state.pre_translate((*pos).into_typst());
-        //     let item = match item {
-        //         FrameItem::Group(group) => {
-        //             let state = state.pre_concat(group.transform.into_typst());
-
-        //             let mut inner = self.frame(state, &group.frame, src_reg, idx);
-
-        //             if let Some(p) = group.clip_path.as_ref() {
-        //                 // todo: merge
-        //                 let mut builder = SvgPath2DBuilder(String::new());
-
-        //                 // to ensure that our shape focus on the original point
-        //                 builder.move_to(0., 0.);
-        //                 for elem in &p.0 {
-        //                     match elem {
-        //                         TypstCurveItem::MoveTo(p) => {
-        //                             builder.move_to(p.x.to_f32(), p.y.to_f32());
-        //                         }
-        //                         TypstCurveItem::LineTo(p) => {
-        //                             builder.line_to(p.x.to_f32(), p.y.to_f32());
-        //                         }
-        //                         TypstCurveItem::CubicTo(p1, p2, p3) => {
-        //                             builder.curve_to(
-        //                                 p1.x.to_f32(),
-        //                                 p1.y.to_f32(),
-        //                                 p2.x.to_f32(),
-        //                                 p2.y.to_f32(),
-        //                                 p3.x.to_f32(),
-        //                                 p3.y.to_f32(),
-        //                             );
-        //                         }
-        //                         TypstCurveItem::ClosePath => {
-        //                             builder.close();
-        //                         }
-        //                     };
-        //                 }
-        //                 let d = builder.0.into();
-
-        //                 inner = self.store(VecItem::Item(TransformedRef(
-        //                     TransformItem::Clip(Arc::new(PathItem {
-        //                         d,
-        //                         size: None,
-        //                         styles: vec![],
-        //                     })),
-        //                     inner,
-        //                 )));
-        //             };
-
-        //             if group.transform != TypstTransform::identity() {
-        //                 inner = self.store(VecItem::Item(TransformedRef(
-        //
-        // TransformItem::Matrix(Arc::new(group.transform.into_typst())),
-        //                     inner,
-        //                 )));
-        //             }
-
-        //             inner
-        //         }
-        //         FrameItem::Text(text) => {
-        //             let i = self.text(state, text);
-
-        //             self.spans.push_span(SourceRegion {
-        //                 region: src_reg,
-        //                 idx: idx as u32,
-        //                 kind: if text.glyphs.len() == 1 {
-        //                     SourceNodeKind::Char(text.glyphs[0].span)
-        //                 } else {
-        //                     SourceNodeKind::Text(text.glyphs.iter().map(|g|
-        // g.span).collect())                 },
-        //                 item: i,
-        //             });
-
-        //             i
-        //         }
-        //         FrameItem::Shape(shape, s) => {
-        //             let i = self.shape(state, shape);
-
-        //             // todo: fill rule
-        //             self.spans.push_span(SourceRegion {
-        //                 region: src_reg,
-        //                 idx: idx as u32,
-        //                 kind: SourceNodeKind::Shape(*s),
-        //                 item: i,
-        //             });
-
-        //             i
-        //         }
-        //         FrameItem::Image(image, size, s) => {
-        //             let i = self.image(image, *size);
-
-        //             self.spans.push_span(SourceRegion {
-        //                 region: src_reg,
-        //                 idx: idx as u32,
-        //                 kind: SourceNodeKind::Image(*s),
-        //                 item: i,
-        //             });
-
-        //             i
-        //         }
-        //         // Meta::Link(_) => Fingerprint::from_u128(0),
-        //         FrameItem::Link(lnk, size) => {
-        //             is_link = true;
-        //             self.store(match lnk {
-        //                 Destination::Url(url) => self.link(url, *size),
-        //                 Destination::Position(dest) => self.position(*dest, *size),
-        //                 Destination::Location(loc) => {
-        //                     // todo: process location before lowering
-        //                     let dest = state.introspector.position(*loc);
-        //                     self.position(dest, *size)
-        //                 }
-        //             })
-        //         }
-        //         FrameItem::Tag(Tag::Start(elem)) => {
-        //             if !LINE_HINT_ELEMENTS.contains(elem.func().name()) {
-        //                 return None;
-        //             }
-
-        //             self.store(VecItem::ContentHint('\n'))
-        //         }
-        //         FrameItem::Tag(Tag::End(..)) => return None,
-        //         // todo: support page label
-        //     };
-
-        //     Some(((*pos).into_typst(), is_link, item))
-        // });
-        // items.par_extend(items_iter);
-
-        // // swap link items
-        // items.sort_by(|x, y| {
-        //     let x_is_link = x.1;
-        //     let y_is_link = y.1;
-        //     if x_is_link || y_is_link {
-        //         if x_is_link && y_is_link {
-        //             return std::cmp::Ordering::Equal;
-        //         } else if x_is_link {
-        //             return std::cmp::Ordering::Greater;
-        //         } else {
-        //             return std::cmp::Ordering::Less;
-        //         }
-        //     }
-
-        //     std::cmp::Ordering::Equal
-        // });
-
-        // #[cfg(not(feature = "no-content-hint"))]
-        // {
-        //     let c = frame.content_hint();
-        //     if c != '\0' {
-        //         // todo: cache content hint
-        //         items.push((Point::default(), false,
-        // self.store(VecItem::ContentHint(c))));     }
-        // }
-
-        // let g = self.store(VecItem::Group(GroupRef(
-        //     items.into_iter().map(|(x, _, y)| (x, y)).collect(),
-        // )));
-
-        // self.spans.push_span(SourceRegion {
-        //     region: parent,
-        //     idx: index as u32,
-        //     kind: SourceNodeKind::Group { region: src_reg },
-        //     item: g,
-        // });
-
-        self.store(VecItem::Html(HtmlItem {
-            html: "<h1>Html Preview</h1><p>Hello World.</p>".into(),
-        }))
+        self.store(item)
     }
 }
 

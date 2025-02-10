@@ -475,8 +475,9 @@ impl<
             .push(("data-hint", format!("{:x}", ch as u32)));
     }
 
-    fn render_html(&mut self, _ctx: &mut C, html: &ir::HtmlItem) {
-        self.content.push(SvgText::Plain(html.html.as_ref().into()))
+    // HTML cannot be rendered in SVG sensibly.
+    fn render_html(&mut self, _ctx: &mut C, _html: &ir::HtmlItem) {
+        // self.content.push(SvgText::Plain(html.html.as_ref().into()))
     }
 
     #[inline]
