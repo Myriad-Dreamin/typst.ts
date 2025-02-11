@@ -56,6 +56,23 @@ impl FullTextDigest {
             Link(..) | Tag(..) | Shape(..) | Image(..) => Ok(()),
         }
     }
+
+    fn export_element(f: &mut fmt::Formatter<'_>, elem: &typst::html::HtmlElement) -> fmt::Result {
+        for child in elem.children.iter() {
+            Self::export_html_node(f, child)?;
+        }
+        Ok(())
+    }
+
+    fn export_html_node(f: &mut fmt::Formatter<'_>, node: &typst::html::HtmlNode) -> fmt::Result {
+        use typst::html::HtmlNode::*;
+        match node {
+            Tag(_) => Ok(()),
+            Element(elem) => Self::export_element(f, elem),
+            Text(t, _) => f.write_str(t.as_str()),
+            Frame(frame) => Self::export_frame(f, frame),
+        }
+    }
 }
 
 impl fmt::Display for FullTextDigest {
@@ -67,7 +84,10 @@ impl fmt::Display for FullTextDigest {
                 }
                 Ok(())
             }
-            _ => Err(fmt::Error),
+            TypstDocument::Html(html_doc) => {
+                Self::export_element(f, &html_doc.root)?;
+                Ok(())
+            }
         }
     }
 }
