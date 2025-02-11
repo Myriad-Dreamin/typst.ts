@@ -43,10 +43,7 @@ impl IncrDocServer {
         let gc_items = self.typst2vec.gc(5 * 2);
 
         // run typst2vec pass
-        let pages = match output {
-            TypstDocument::Html(output) => self.typst2vec.html(&output.introspector, output),
-            TypstDocument::Paged(output) => self.typst2vec.doc(&output.introspector, output),
-        };
+        let pages = self.typst2vec.doc(output);
 
         // let new_items = builder.new_items.get_mut().len();
         // let new_fonts = builder.glyphs.new_fonts.get_mut().len();

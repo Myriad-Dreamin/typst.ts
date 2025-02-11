@@ -11,7 +11,7 @@ use rayon::iter::{
     ParallelIterator,
 };
 
-use reflexo::typst::{TypstHtmlDocument, TypstPagedDocument};
+use reflexo::typst::{TypstDocument, TypstHtmlDocument, TypstPagedDocument};
 use reflexo::ImmutStr;
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
@@ -183,8 +183,17 @@ impl Typst2VecPass {
                     }
                 }
             }
-            VecItem::Html(..) => {
-                todo!()
+            VecItem::Html(g) => {
+                for ch in g.children.iter() {
+                    let id = match ch {
+                        HtmlChildren::Item(id) => id,
+                        _ => continue,
+                    };
+
+                    if !self.items.contains_key(id) {
+                        self.intern(m, id);
+                    }
+                }
             }
         }
     }
@@ -202,14 +211,21 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         }
     }
 
-    pub fn html(&self, introspector: &Introspector, doc: &TypstHtmlDocument) -> Vec<Page> {
+    pub fn doc(&self, doc: &TypstDocument) -> Vec<Page> {
+        match doc {
+            TypstDocument::Html(doc) => self.html(doc),
+            TypstDocument::Paged(doc) => self.paged(doc),
+        }
+    }
+
+    pub fn html(&self, doc: &TypstHtmlDocument) -> Vec<Page> {
         let doc_reg = self.spans.start();
 
         let page_reg = self.spans.start();
 
         let idx = 0;
 
-        let state = State::new(introspector, Size::default());
+        let state = State::new(&doc.introspector, Size::default());
         let abs_ref = self.html_element(state, &doc.root, page_reg, idx);
 
         self.spans.push_span(SourceRegion {
@@ -231,7 +247,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         vec![root]
     }
 
-    pub fn doc(&self, introspector: &Introspector, doc: &TypstPagedDocument) -> Vec<Page> {
+    pub fn paged(&self, doc: &TypstPagedDocument) -> Vec<Page> {
         let doc_reg = self.spans.start();
 
         let pages = doc
@@ -241,7 +257,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
             .map(|(idx, p)| {
                 let page_reg = self.spans.start();
 
-                let state = State::new(introspector, p.frame.size().into_typst());
+                let state = State::new(&doc.introspector, p.frame.size().into_typst());
                 let abs_ref = self.frame_(state, &p.frame, page_reg, idx, p.fill_or_transparent());
 
                 self.spans.push_span(SourceRegion {

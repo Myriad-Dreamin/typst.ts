@@ -11,6 +11,8 @@ pub mod ast;
 #[cfg(feature = "dynamic-layout")]
 #[cfg(feature = "svg")]
 pub mod dyn_svg;
+#[cfg(feature = "html")]
+pub mod html;
 #[cfg(feature = "svg")]
 pub mod svg;
 

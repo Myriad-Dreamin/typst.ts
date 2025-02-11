@@ -74,6 +74,8 @@ pub use exporter::ast::{dump_ast, AstExport, ExportAstTask};
 #[cfg(feature = "svg")]
 #[cfg(feature = "dynamic-layout")]
 pub use exporter::dyn_svg::*;
+#[cfg(feature = "html")]
+pub use exporter::html::*;
 #[cfg(feature = "svg")]
 pub use exporter::svg::*;
 pub use exporter::text::TextExport;

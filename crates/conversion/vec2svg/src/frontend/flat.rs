@@ -60,7 +60,7 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
 impl<Feat: ExportFeature> SvgExporter<Feat> {
     pub fn svg_doc(output: &TypstPagedDocument) -> VecDocument {
         let typst2vec = Typst2VecPass::default();
-        let pages = typst2vec.doc(&output.introspector, output);
+        let pages = typst2vec.paged(output);
 
         let module = typst2vec.finalize();
         VecDocument { pages, module }

@@ -1,4 +1,4 @@
-use reflexo::typst::TypstPagedDocument;
+use reflexo::typst::{TypstDocument, TypstHtmlDocument, TypstPagedDocument};
 use reflexo_typst2vec::pass::{CommandExecutor, Typst2VecPass};
 use reflexo_typst2vec::IntoTypst;
 use reflexo_vec2svg::{DynamicLayoutSvgExporter, MultiVecDocument};
@@ -12,12 +12,12 @@ use super::prelude::*;
 use crate::typst::prelude::*;
 use crate::vector::ir::{LayoutRegion, LayoutRegionNode};
 use crate::world::{CompilerFeat, CompilerWorld};
-use crate::{TypstDict, TypstPagedDocument as Document};
+use crate::TypstDict;
 
 pub type LayoutWidths = EcoVec<typst::layout::Abs>;
 
 pub type PostProcessLayoutFn = Arc<
-    dyn Fn(&mut Typst2VecPass, Arc<Document>, LayoutRegionNode) -> LayoutRegionNode + Send + Sync,
+    dyn Fn(&mut Typst2VecPass, TypstDocument, LayoutRegionNode) -> LayoutRegionNode + Send + Sync,
 >;
 
 pub type PostProcessLayoutsFn =
@@ -50,6 +50,8 @@ pub struct ExportDynSvgModuleTask {
     /// Before typst allowing passing arguments to the compiler, this is
     /// (probably) the only way to control the typst code's behavior.
     pub target: String,
+
+    pub html_format: bool,
 }
 
 pub struct DynSvgModuleExport;
@@ -77,6 +79,7 @@ impl ExportDynSvgModuleTask {
             post_process_layout: None,
             post_process_layouts: None,
             target: "web".to_owned(),
+            html_format: false,
         }
     }
 
@@ -111,7 +114,7 @@ impl ExportDynSvgModuleTask {
     /// Experimental
     pub fn set_post_process_layout(
         &mut self,
-        post_process_layout: impl Fn(&mut Typst2VecPass, Arc<Document>, LayoutRegionNode) -> LayoutRegionNode
+        post_process_layout: impl Fn(&mut Typst2VecPass, TypstDocument, LayoutRegionNode) -> LayoutRegionNode
             + Send
             + Sync
             + 'static,
@@ -182,7 +185,16 @@ impl ExportDynSvgModuleTask {
 
             // compile and export document
             // todo: collect warnings and errors here.
-            let output = Arc::new(typst::compile::<TypstPagedDocument>(&world).output?);
+            let output = if self.html_format {
+                let world = world.html_task();
+                TypstDocument::Html(Arc::new(
+                    typst::compile::<TypstHtmlDocument>(world.as_ref()).output?,
+                ))
+            } else {
+                TypstDocument::Paged(Arc::new(
+                    typst::compile::<TypstPagedDocument>(&world).output?,
+                ))
+            };
             let mut layout = svg_exporter.render(&output);
 
             if let Some(post_process_layout) = &self.post_process_layout {

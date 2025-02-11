@@ -46,7 +46,7 @@ fn main() {
 
 fn lower_impl(doc: &TypstPagedDocument) {
     let pass = Typst2VecPass::default();
-    let _ = pass.doc(&doc.introspector, doc);
+    let _ = pass.paged(doc);
 }
 
 fn lower_incr_impl<'a>(docs: impl Iterator<Item = &'a Arc<TypstPagedDocument>>) {
@@ -54,7 +54,7 @@ fn lower_incr_impl<'a>(docs: impl Iterator<Item = &'a Arc<TypstPagedDocument>>) 
     for doc in docs {
         pass.increment_lifetime();
         // lower_builder.gc(5 * 2);
-        let _ = pass.doc(&doc.introspector, doc);
+        let _ = pass.paged(doc);
         // comemo::evict(30);
         pass.spans.reset();
     }
