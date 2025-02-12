@@ -191,8 +191,9 @@ impl ExportDynSvgModuleTask {
                     typst::compile::<TypstHtmlDocument>(world.as_ref()).output?,
                 ))
             } else {
+                let world = world.paged_task();
                 TypstDocument::Paged(Arc::new(
-                    typst::compile::<TypstPagedDocument>(&world).output?,
+                    typst::compile::<TypstPagedDocument>(world.as_ref()).output?,
                 ))
             };
             let mut layout = svg_exporter.render(&output);
