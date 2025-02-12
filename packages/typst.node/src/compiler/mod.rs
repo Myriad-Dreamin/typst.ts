@@ -2,6 +2,8 @@
 pub mod boxed;
 /// NodeJS bindings for the compiler.
 pub mod node;
+/// Wrapped Project compiler.
+pub mod project;
 
 use reflexo_typst::package::RegistryPathMapper;
 
@@ -19,6 +21,7 @@ use reflexo_typst::{Bytes, TypstDict, TypstSystemUniverse};
 
 pub use boxed::BoxedCompiler;
 pub use node::*;
+pub use project::*;
 
 /// A nullable boxed compiler wrapping.
 ///

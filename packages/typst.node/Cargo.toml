@@ -14,17 +14,19 @@ repository.workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
-napi = { version = "2", features = ["serde-json"] }
+napi = { version = "2", features = ["serde-json", "napi4"] }
 napi-derive = "2"
 
 typst-svg.workspace = true
 typst-ts-cli.workspace = true
 reflexo-typst = { workspace = true }
 reflexo-vec2svg = { workspace = true, optional = true }
+tinymist-project = { workspace = true, features = ["system"] }
 comemo.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 chrono.workspace = true
+tokio.workspace = true
 
 [build-dependencies]
 napi-build = "2"
