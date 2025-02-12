@@ -1,6 +1,3 @@
-#![allow(missing_docs)]
-#![allow(unused)]
-
 /// Compiler trait for NodeJS.
 pub mod compiler;
 
@@ -14,14 +11,14 @@ use std::{collections::HashMap, ops::Deref, path::Path, sync::Arc};
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-// use reflexo_typst::error::prelude::*;
 use reflexo_typst::syntax::Span;
 use reflexo_typst::typst::diag::At;
 use reflexo_typst::{
     error::WithContext, DocumentQuery, ExportComputation, ExportWebSvgModuleTask, WorldComputeGraph,
 };
 use reflexo_typst::{
-    Bytes, ShadowApi, SystemCompilerFeat, TypstDatetime, TypstPagedDocument, TypstSystemWorld,
+    Bytes, ExportDynSvgModuleTask, ShadowApi, SystemCompilerFeat, TypstAbs, TypstDatetime,
+    TypstPagedDocument, TypstSystemWorld,
 };
 use serde::{Deserialize, Serialize};
 
@@ -416,7 +413,8 @@ impl NodeCompiler {
 #[napi]
 pub struct DynLayoutCompiler {
     // Inner compiler.
-    // driver: DynamicLayoutCompiler,
+    driver: BoxedCompiler,
+    task: ExportDynSvgModuleTask,
 }
 
 #[napi]
@@ -424,40 +422,33 @@ impl DynLayoutCompiler {
     /// Creates a new compiler based on the given arguments.
     #[napi]
     pub fn from_boxed(b: &mut JsBoxedCompiler) -> Self {
-        // DynLayoutCompiler {
-        //     driver: DynamicLayoutCompiler::new(b.grab(), PathBuf::default()),
-        // }
-        todo!()
+        DynLayoutCompiler {
+            driver: b.grab(),
+            task: ExportDynSvgModuleTask::default(),
+        }
     }
 
     /// Sets the target of the compiler.
     #[napi]
     pub fn set_target(&mut self, target: String) {
-        // self.driver.set_target(target);
-        todo!()
+        self.task.set_target(target);
     }
 
     /// Specifies width (in pts) of the layout.
     #[napi]
     pub fn set_layout_widths(&mut self, layout_widths: Vec<f64>) {
-        // self.driver
-        //     .set_layout_widths(layout_widths.into_iter().map(TypstAbs::pt).
-        // collect());
-        todo!()
+        self.task
+            .set_layout_widths(layout_widths.into_iter().map(TypstAbs::pt).collect());
     }
 
     /// Exports the document as a vector IR containing multiple layouts.
     #[napi]
     pub fn vector(&mut self, compile_by: CompileDocArgs) -> Result<Buffer, NodeError> {
-        // let compiler = self.driver.inner_mut();
-        // let world = compiler.create_world(compile_by)?;
-        // let doc = self
-        //     .driver
-        //     .do_export(&world, &mut Default::default())
-        //     .map_err(map_node_error);
+        let graph = self.driver.computation(compile_by)?;
+        let world = &graph.snap.world;
 
-        // Ok(doc?.1.to_bytes().into())
+        let doc = self.task.do_export(world).map_err(map_node_error)?;
 
-        todo!()
+        Ok(doc.to_bytes().into())
     }
 }

@@ -161,10 +161,10 @@ pub fn map_node_error(e: impl Into<NodeError>) -> napi::Error<NodeError> {
 /// Result of single typst compilation.
 #[napi]
 pub struct NodeTypstCompileResult {
-    result: Option<NodeTypstDocument>,
+    pub(crate) result: Option<NodeTypstDocument>,
     // todo: better warning structure
-    warnings: Option<NodeError>,
-    error: Option<NodeError>,
+    pub(crate) warnings: Option<NodeError>,
+    pub(crate) error: Option<NodeError>,
 }
 
 #[napi]
@@ -185,30 +185,5 @@ impl NodeTypstCompileResult {
     #[napi]
     pub fn take_diagnostics(&mut self) -> Option<NodeError> {
         self.error.take()
-    }
-}
-
-impl<E> From<Warned<Result<Arc<TypstPagedDocument>, E>>> for NodeTypstCompileResult
-where
-    E: Into<NodeError>,
-{
-    fn from(res: Warned<Result<Arc<TypstPagedDocument>, E>>) -> Self {
-        // match res {
-        //     Ok(result) => NodeTypstCompileResult {
-        //         result: Some(NodeTypstDocument(result.output)),
-        //         warnings: if result.warnings.is_empty() {
-        //             None
-        //         } else {
-        //             Some(result.warnings.into())
-        //         },
-        //         error: None,
-        //     },
-        //     Err(e) => NodeTypstCompileResult {
-        //         result: None,
-        //         warnings: None,
-        //         error: Some(e.into()),
-        //     },
-        // }
-        todo!()
     }
 }

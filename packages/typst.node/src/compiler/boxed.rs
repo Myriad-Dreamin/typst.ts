@@ -7,6 +7,7 @@ use reflexo_typst::system::SystemWorldComputeGraph;
 use reflexo_typst::{error_once, Bytes, EntryReader, TaskInputs, TypstSystemUniverse};
 
 use super::create_inputs;
+use crate::NodeTypstDocument;
 use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocArgs, NodeError};
 
 // <World = TypstSystemWorld>
@@ -41,7 +42,7 @@ impl From<TypstSystemUniverse> for BoxedCompiler {
 impl BoxedCompiler {
     /// Create a snapshoted world by typst.node's [`CompileDocArgs`].
     /// Should not affect the current universe (global state).
-    pub fn create_world(
+    pub fn computation(
         &mut self,
         compile_by: CompileDocArgs,
     ) -> napi::Result<Arc<SystemWorldComputeGraph>, NodeError> {
@@ -90,12 +91,29 @@ impl BoxedCompiler {
         &mut self,
         compile_by: CompileDocArgs,
     ) -> napi::Result<NodeTypstCompileResult, NodeError> {
-        let graph = self.create_world(compile_by)?;
+        let graph = self.computation(compile_by)?;
 
         // FIXME: This is implementation detail, use a better way from
         // the compiler driver.
         graph.ensure_main().map_err(map_node_error)?;
 
-        Ok(graph.compile().into())
+        let result = graph.compile();
+
+        Ok(match result.output {
+            Ok(doc) => NodeTypstCompileResult {
+                result: Some(NodeTypstDocument { graph, doc }),
+                warnings: if result.warnings.is_empty() {
+                    None
+                } else {
+                    Some(result.warnings.into())
+                },
+                error: None,
+            },
+            Err(e) => NodeTypstCompileResult {
+                result: None,
+                warnings: None,
+                error: Some(e.into()),
+            },
+        })
     }
 }
