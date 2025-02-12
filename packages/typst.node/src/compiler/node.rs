@@ -1,155 +1,19 @@
-/// Compiler trait for NodeJS.
-pub mod compiler;
+use std::{ops::Deref, path::Path};
 
-/// Error handling for NodeJS.
-pub mod error;
-
-pub use compiler::*;
-pub use error::{map_node_error, NodeError};
-
-use std::{collections::HashMap, ops::Deref, path::Path, sync::Arc};
-
-use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use reflexo_typst::syntax::Span;
 use reflexo_typst::typst::diag::At;
+use reflexo_typst::{error::WithContext, DocumentQuery, ExportComputation, ExportWebSvgModuleTask};
 use reflexo_typst::{
-    error::WithContext, DocumentQuery, ExportComputation, ExportWebSvgModuleTask, WorldComputeGraph,
+    Bytes, ExportDynSvgModuleTask, ShadowApi, SystemCompilerFeat, TypstAbs, TypstSystemWorld,
 };
-use reflexo_typst::{
-    Bytes, ExportDynSvgModuleTask, ShadowApi, SystemCompilerFeat, TypstAbs, TypstDatetime,
-    TypstPagedDocument, TypstSystemWorld,
+
+use crate::error::NodeTypstCompileResult;
+use crate::error::{map_node_error, NodeError};
+use crate::{
+    create_universe, BoxedCompiler, Buffer, CompileDocArgs, Either, Error, JsBoxedCompiler,
+    NodeCompileArgs, NodeTypstDocument, QueryDocArgs, RenderPdfOpts, Result,
 };
-use serde::{Deserialize, Serialize};
-
-use error::NodeTypstCompileResult;
-
-/// A shared typst document object.
-#[napi]
-#[derive(Clone)]
-pub struct NodeTypstDocument {
-    /// The cache of exports.
-    pub(crate) graph: Arc<WorldComputeGraph<SystemCompilerFeat>>,
-    /// Inner document.
-    pub(crate) doc: Arc<TypstPagedDocument>,
-}
-
-#[napi]
-impl NodeTypstDocument {
-    /// Gets the number of pages in the document.
-    #[napi(getter)]
-    pub fn num_of_pages(&self) -> u32 {
-        self.doc.pages.len() as u32
-    }
-
-    /// Gets the title of the document.
-    #[napi(getter)]
-    pub fn title(&self) -> Option<String> {
-        self.doc.info.title.as_ref().map(ToString::to_string)
-    }
-
-    /// Gets the authors of the document.
-    #[napi(getter)]
-    pub fn authors(&self) -> Option<Vec<String>> {
-        let authors = self.doc.info.author.iter();
-        Some(authors.map(ToString::to_string).collect::<Vec<_>>())
-    }
-
-    /// Gets the keywords of the document.
-    #[napi(getter)]
-    pub fn keywords(&self) -> Option<Vec<String>> {
-        let keywords = self.doc.info.keywords.iter();
-        Some(keywords.map(ToString::to_string).collect::<Vec<_>>())
-    }
-
-    /// Gets the unix timestamp (in nanoseconds) of the document.
-    ///
-    /// Note: currently typst doesn't specify the timezone of the date, and we
-    /// keep stupid and doesn't add timezone info to the date.
-    #[napi(getter)]
-    pub fn date(&self) -> Option<i64> {
-        self.doc
-            .info
-            .date
-            .custom()
-            .flatten()
-            .and_then(typst_datetime_to_unix_nanoseconds)
-    }
-
-    /// Determines whether the date should be automatically generated.
-    ///
-    /// This happens when user specifies `date: auto` in the document
-    /// explicitly.
-    #[napi(getter)]
-    pub fn enabled_auto_date(&self) -> bool {
-        self.doc.info.date.is_auto()
-    }
-}
-
-/// Converts a typst datetime to unix nanoseconds.
-fn typst_datetime_to_unix_nanoseconds(datetime: TypstDatetime) -> Option<i64> {
-    let year = datetime.year().unwrap_or_default();
-    let month = datetime.month().unwrap_or_default() as u32;
-    let day = datetime.day().unwrap_or_default() as u32;
-    let hour = datetime.hour().unwrap_or_default() as u32;
-    let minute = datetime.minute().unwrap_or_default() as u32;
-    let second = datetime.second().unwrap_or_default() as u32;
-
-    let date = chrono::NaiveDate::from_ymd_opt(year, month, day)?;
-    let time = chrono::NaiveTime::from_hms_opt(hour, minute, second)?;
-
-    let datetime = chrono::NaiveDateTime::new(date, time);
-
-    datetime.and_utc().timestamp_nanos_opt()
-}
-
-/// Arguments to compile a document.
-///
-/// If no `mainFileContent` or `mainFilePath` is specified, the compiler will
-/// use the entry file specified in the constructor of `NodeCompiler`.
-#[napi(object)]
-#[derive(Serialize, Deserialize, Debug)]
-pub struct CompileDocArgs {
-    /// Directly specify the main file content.
-    /// Exclusive with `mainFilePath`.
-    #[serde(rename = "mainFileContent")]
-    pub main_file_content: Option<String>,
-
-    /// Path to the entry file.
-    /// Exclusive with `mainFileContent`.
-    #[serde(rename = "mainFilePath")]
-    pub main_file_path: Option<String>,
-
-    /// Add a string key-value pair visible through `sys.inputs`.
-    pub inputs: Option<HashMap<String, String>>,
-}
-
-/// Arguments to query the document.
-#[napi(object)]
-#[derive(Serialize, Deserialize, Debug)]
-pub struct QueryDocArgs {
-    /// The query selector.
-    pub selector: String,
-    /// An optional field to select on the element of the resultants.
-    pub field: Option<String>,
-}
-
-/// Arguments to render a PDF.
-#[napi(object)]
-#[derive(Serialize, Deserialize, Debug)]
-#[cfg(feature = "pdf")]
-pub struct RenderPdfOpts {
-    /// (Experimental) An optional PDF standard to be used to export PDF.
-    ///
-    /// Please check {@link types.PdfStandard} for a non-exhaustive list of
-    /// standards.
-    pub pdf_standard: Option<String>,
-
-    /// An optional (creation) timestamp to be used to export PDF.
-    ///
-    /// This is used when you *enable auto timestamp* in the document.
-    pub creation_timestamp: Option<i64>,
-}
 
 /// Either a compiled document or compile arguments.
 type MayCompileOpts<'a> = Either<&'a NodeTypstDocument, CompileDocArgs>;

@@ -1,5 +1,7 @@
 /// Dynamic boxed compiler trait for NodeJS.
 pub mod boxed;
+/// NodeJS bindings for the compiler.
+pub mod node;
 
 use reflexo_typst::package::RegistryPathMapper;
 
@@ -16,6 +18,7 @@ use reflexo_typst::vfs::{system::SystemAccessModel, Vfs};
 use reflexo_typst::{Bytes, TypstDict, TypstSystemUniverse};
 
 pub use boxed::BoxedCompiler;
+pub use node::*;
 
 /// A nullable boxed compiler wrapping.
 ///
@@ -78,7 +81,7 @@ pub struct NodeCompileArgs {
     pub inputs: Option<HashMap<String, String>>,
 }
 
-pub fn create_driver(args: Option<NodeCompileArgs>) -> ZResult<TypstSystemUniverse> {
+pub fn create_universe(args: Option<NodeCompileArgs>) -> ZResult<TypstSystemUniverse> {
     use reflexo_typst::path::PathClean;
     let args = args.unwrap_or_default();
     let workspace_dir = Path::new(args.workspace.unwrap_or_default().as_str()).clean();
