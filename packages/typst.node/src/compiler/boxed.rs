@@ -93,10 +93,6 @@ impl BoxedCompiler {
     ) -> napi::Result<NodeTypstCompileResult, NodeError> {
         let graph = self.computation(compile_by)?;
 
-        // FIXME: This is implementation detail, use a better way from
-        // the compiler driver.
-        graph.ensure_main().map_err(map_node_error)?;
-
         let result = graph.compile();
 
         Ok(match result.output {
