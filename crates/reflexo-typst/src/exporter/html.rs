@@ -1,14 +1,14 @@
-use ecow::EcoString;
-use tinymist_task::HtmlExport;
-
-pub type StaticHtmlExport = HtmlExport;
 use std::fmt::Write;
 
+use ecow::EcoString;
 use typst::diag::{bail, At, SourceResult, StrResult};
 use typst::foundations::Repr;
 use typst::html::{charsets, tag, HtmlDocument, HtmlElement, HtmlNode, HtmlTag};
 use typst::layout::Frame;
 use typst::syntax::Span;
+
+pub type ExportStaticHtmlTask = tinymist_task::ExportHtmlTask;
+pub type StaticHtmlExport = tinymist_task::HtmlExport;
 
 pub struct HtmlOutput {
     pub head: HtmlElement,

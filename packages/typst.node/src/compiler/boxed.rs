@@ -4,7 +4,10 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
 use reflexo_typst::system::SystemWorldComputeGraph;
-use reflexo_typst::{error_once, Bytes, EntryReader, TaskInputs, TypstSystemUniverse};
+use reflexo_typst::{
+    error_once, ArcInto, Bytes, CompilationTask, EntryReader, FlagTask, TaskInputs, TypstDocument,
+    TypstSystemUniverse,
+};
 
 use super::create_inputs;
 use crate::NodeTypstDocument;
@@ -87,17 +90,26 @@ impl BoxedCompiler {
         Ok(universe.computation_with(TaskInputs { entry, inputs }))
     }
 
-    pub fn compile_raw(
+    pub fn compile_raw<
+        D: reflexo_typst::TypstDocumentTrait + ArcInto<TypstDocument> + Send + Sync + 'static,
+    >(
         &mut self,
         compile_by: CompileDocArgs,
     ) -> napi::Result<NodeTypstCompileResult, NodeError> {
         let graph = self.computation(compile_by)?;
 
-        let result = graph.compile();
+        let _ = graph.provide::<FlagTask<CompilationTask<D>>>(Ok(FlagTask::flag(true)));
+        let result = graph
+            .compute::<CompilationTask<D>>()
+            .map_err(map_node_error)?;
+        let result = result.as_ref().clone().expect("enabled");
 
         Ok(match result.output {
             Ok(doc) => NodeTypstCompileResult {
-                result: Some(NodeTypstDocument { graph, doc }),
+                result: Some(NodeTypstDocument {
+                    graph,
+                    doc: doc.arc_into(),
+                }),
                 warnings: if result.warnings.is_empty() {
                     None
                 } else {

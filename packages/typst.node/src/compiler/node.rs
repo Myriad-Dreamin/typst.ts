@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::{ops::Deref, path::Path};
 
 use napi_derive::napi;
@@ -5,7 +6,8 @@ use reflexo_typst::syntax::Span;
 use reflexo_typst::typst::diag::At;
 use reflexo_typst::{error::WithContext, DocumentQuery, ExportComputation, ExportWebSvgModuleTask};
 use reflexo_typst::{
-    Bytes, ExportDynSvgModuleTask, ShadowApi, SystemCompilerFeat, TypstAbs, TypstSystemWorld,
+    ArcInto, Bytes, ExportDynSvgModuleTask, ShadowApi, SystemCompilerFeat, TypstAbs, TypstDocument,
+    TypstDocumentTrait, TypstPagedDocument, TypstSystemWorld,
 };
 
 use crate::error::NodeTypstCompileResult;
@@ -42,7 +44,7 @@ impl NodeCompiler {
     ///   workspace: '/path/to/workspace',
     /// });
     /// ```
-    #[napi]
+    #[napi(ts_args_type = "args?: CompileArgs")]
     pub fn create(args: Option<NodeCompileArgs>) -> Result<NodeCompiler, NodeError> {
         let driver = create_universe(args).map_err(map_node_error)?;
         Ok(NodeCompiler {
@@ -123,15 +125,27 @@ impl NodeCompiler {
         self.driver.assert_mut().reset_shadow();
     }
 
-    /// Compiles the document.
+    /// Compiles the document as paged target.
     #[napi]
     pub fn compile(&mut self, opts: CompileDocArgs) -> Result<NodeTypstCompileResult, NodeError> {
-        self.compile_raw(opts)
+        self.compile_raw::<reflexo_typst::TypstPagedDocument>(opts)
+    }
+
+    /// Compiles the document as html target.
+    #[napi]
+    pub fn compile_html(
+        &mut self,
+        opts: CompileDocArgs,
+    ) -> Result<NodeTypstCompileResult, NodeError> {
+        self.compile_raw::<reflexo_typst::TypstHtmlDocument>(opts)
     }
 
     /// Compiles the document internally.
-    fn compile_raw(&mut self, opts: CompileDocArgs) -> Result<NodeTypstCompileResult, NodeError> {
-        self.driver.assert_mut().compile_raw(opts)
+    fn compile_raw<D: TypstDocumentTrait + ArcInto<TypstDocument> + Send + Sync + 'static>(
+        &mut self,
+        opts: CompileDocArgs,
+    ) -> Result<NodeTypstCompileResult, NodeError> {
+        self.driver.assert_mut().compile_raw::<D>(opts)
     }
 
     /// Fetches the diagnostics of the document.
@@ -144,15 +158,13 @@ impl NodeCompiler {
     }
 
     /// Queries the data of the document.
-    #[napi(
-        ts_args_type = "compiledOrBy: NodeTypstPagedDocument | CompileDocArgs, args: QueryDocArgs"
-    )]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs, args: QueryDocArgs")]
     pub fn query(
         &mut self,
         opts: MayCompileOpts,
         args: QueryDocArgs,
     ) -> Result<serde_json::Value, NodeError> {
-        let doc = self.may_compile(opts)?;
+        let doc = self.may_compile::<TypstPagedDocument>(opts)?;
 
         let config = reflexo_typst::task::QueryTask {
             export: reflexo_typst::task::ExportTask::default(),
@@ -163,15 +175,21 @@ impl NodeCompiler {
             one: false,
         };
 
-        DocumentQuery::get_as_value(&doc.graph, &doc.doc, &config).map_err(map_node_error)
+        DocumentQuery::doc_get_as_value(&doc.graph, &doc.doc, &config).map_err(map_node_error)
     }
 
     /// Compiles the document as a specific type.
-    pub fn may_compile(&mut self, opts: MayCompileOpts) -> Result<NodeTypstDocument, NodeError> {
+    pub fn may_compile<D: TypstDocumentTrait + Send + Sync + 'static>(
+        &mut self,
+        opts: MayCompileOpts,
+    ) -> Result<NodeTypstDocument, NodeError>
+    where
+        Arc<D>: Into<TypstDocument>,
+    {
         Ok(match opts {
             MayCompileOpts::A(doc) => doc.clone(),
             MayCompileOpts::B(compile_by) => {
-                let mut res = self.compile_raw(compile_by)?;
+                let mut res = self.compile_raw::<D>(compile_by)?;
                 if let Some(diagnostics) = res.take_diagnostics() {
                     // todo: format diagnostics
                     return Err(Error::from_status(diagnostics));
@@ -191,8 +209,23 @@ impl NodeCompiler {
         opts: MayCompileOpts,
         config: &T::Config,
     ) -> Result<RO, NodeError> {
-        let doc = self.may_compile(opts)?;
-        T::run(&doc.graph, &doc.doc, config)
+        let doc = self.may_compile::<reflexo_typst::TypstPagedDocument>(opts)?;
+        T::cast_run(&doc.graph, &doc.doc, config)
+            .map_err(map_node_error)
+            .map(From::from)
+    }
+
+    /// Compiles the document as a specific type.
+    pub fn compile_as_html<
+        T: ExportComputation<SystemCompilerFeat, reflexo_typst::TypstHtmlDocument>,
+        RO: From<T::Output>,
+    >(
+        &mut self,
+        opts: MayCompileOpts,
+        config: &T::Config,
+    ) -> Result<RO, NodeError> {
+        let doc = self.may_compile::<reflexo_typst::TypstHtmlDocument>(opts)?;
+        T::cast_run(&doc.graph, &doc.doc, config)
             .map_err(map_node_error)
             .map(From::from)
     }
@@ -210,7 +243,7 @@ impl NodeCompiler {
     }
 
     /// Simply compiles the document as a vector IR.
-    #[napi(ts_args_type = "compiledOrBy: NodeTypstPagedDocument | CompileDocArgs")]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     pub fn vector(&mut self, compiled_or_by: MayCompileOpts) -> Result<Buffer, NodeError> {
         use reflexo_vec2svg::DefaultExportFeature;
         type Export = reflexo_typst::WebSvgModuleExport<DefaultExportFeature>;
@@ -218,9 +251,7 @@ impl NodeCompiler {
     }
 
     /// Simply compiles the document as a PDF.
-    #[napi(
-        ts_args_type = "compiledOrBy: NodeTypstPagedDocument | CompileDocArgs, opts?: RenderPdfOpts"
-    )]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs, opts?: RenderPdfOpts")]
     #[cfg(feature = "pdf")]
     pub fn pdf(
         &mut self,
@@ -253,7 +284,7 @@ impl NodeCompiler {
     }
 
     /// Simply compiles the document as a plain SVG.
-    #[napi(ts_args_type = "compiledOrBy: NodeTypstPagedDocument | CompileDocArgs")]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     #[cfg(feature = "svg")]
     pub fn plain_svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
         use reflexo_typst::task::ExportSvgTask;
@@ -263,7 +294,7 @@ impl NodeCompiler {
     }
 
     /// Simply compiles the document as a rich-contented SVG (for browsers).
-    #[napi(ts_args_type = "compiledOrBy: NodeTypstPagedDocument | CompileDocArgs")]
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     #[cfg(feature = "svg")]
     pub fn svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
         use reflexo_typst::ExportWebSvgTask;
@@ -271,6 +302,17 @@ impl NodeCompiler {
 
         type Export = reflexo_typst::WebSvgExport<DefaultExportFeature>;
         self.compile_as::<Export, _>(compiled_or_by, &ExportWebSvgTask::default())
+    }
+
+    // todo: when feature is disabled, it results a compile error
+    /// Simply compiles the document as a HTML.
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
+    #[cfg(feature = "html")]
+    pub fn html(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
+        use reflexo_typst::ExportStaticHtmlTask;
+
+        type Export = reflexo_typst::StaticHtmlExport;
+        self.compile_as_html::<Export, _>(compiled_or_by, &ExportStaticHtmlTask::default())
     }
 }
 
