@@ -10,6 +10,7 @@ use reflexo_typst::{
 };
 
 use super::create_inputs;
+use crate::error::*;
 use crate::NodeTypstDocument;
 use crate::{error::NodeTypstCompileResult, map_node_error, CompileDocArgs, NodeError};
 
@@ -48,15 +49,15 @@ impl BoxedCompiler {
     pub fn computation(
         &mut self,
         compile_by: CompileDocArgs,
-    ) -> napi::Result<Arc<SystemWorldComputeGraph>, NodeError> {
+    ) -> Result<Arc<SystemWorldComputeGraph>, NodeError> {
         let universe = self.deref_mut();
         // Convert the input pairs to a dictionary.
         let inputs = compile_by.inputs.map(create_inputs);
         if let Some(main_file_content) = compile_by.main_file_content {
             if compile_by.main_file_path.is_some() {
-                return Err(map_node_error(error_once!(
+                return Err(error_once!(
                     "main file content and path cannot be specified at the same time"
-                )));
+                ))?;
             }
 
             return Ok(universe.snapshot_with_entry_content(
@@ -70,19 +71,17 @@ impl BoxedCompiler {
 
         let entry = if let Some(main_file_path) = compile_by.main_file_path {
             if compile_by.main_file_content.is_some() {
-                return Err(map_node_error(error_once!(
+                return Err(error_once!(
                     "main file content and path cannot be specified at the same time"
-                )));
+                ))?;
             }
 
             let abs_fp = std::path::absolute(main_file_path.as_str());
-            let fp = abs_fp.as_ref().map(std::path::Path::new).map_err(|e| {
-                map_node_error(error_once!("cannot absolutize the main file path", err: e))
-            })?;
-            universe
-                .entry_state()
-                .try_select_path_in_workspace(fp)
-                .map_err(map_node_error)?
+            let fp = abs_fp
+                .as_ref()
+                .map(std::path::Path::new)
+                .map_err(|e| error_once!("cannot absolutize the main file path", err: e))?;
+            universe.entry_state().try_select_path_in_workspace(fp)?
         } else {
             None
         };
@@ -96,7 +95,7 @@ impl BoxedCompiler {
         &mut self,
         compile_by: CompileDocArgs,
     ) -> napi::Result<NodeTypstCompileResult, NodeError> {
-        let graph = self.computation(compile_by)?;
+        let graph = self.computation(compile_by).map_err(map_node_error)?;
 
         let _ = graph.provide::<FlagTask<CompilationTask<D>>>(Ok(FlagTask::flag(true)));
         let result = graph
@@ -123,5 +122,25 @@ impl BoxedCompiler {
                 error: Some(e.into()),
             },
         })
+    }
+
+    pub fn compile_raw2<
+        D: reflexo_typst::TypstDocumentTrait + ArcInto<TypstDocument> + Send + Sync + 'static,
+    >(
+        &mut self,
+        compile_by: CompileDocArgs,
+    ) -> Result<ExecResultRepr<NodeTypstDocument>, NodeError> {
+        let graph = self.computation(compile_by)?;
+
+        let _ = graph.provide::<FlagTask<CompilationTask<D>>>(Ok(FlagTask::flag(true)));
+        let result = graph.compute::<CompilationTask<D>>()?;
+        let result: ExecResultRepr<Arc<D>> = result.as_ref().clone().expect("enabled").into();
+
+        Ok(result
+            .map(|d| NodeTypstDocument {
+                graph: graph.clone(),
+                doc: d.arc_into(),
+            })
+            .with_graph(graph))
     }
 }

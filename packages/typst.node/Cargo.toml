@@ -27,6 +27,7 @@ serde.workspace = true
 serde_json.workspace = true
 chrono.workspace = true
 tokio.workspace = true
+rayon.workspace = true
 
 [build-dependencies]
 napi-build = "2"

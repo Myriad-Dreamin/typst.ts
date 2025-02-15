@@ -10,8 +10,7 @@ use reflexo_typst::{
     TypstDocumentTrait, TypstPagedDocument, TypstSystemWorld,
 };
 
-use crate::error::NodeTypstCompileResult;
-use crate::error::{map_node_error, NodeError};
+use crate::error::*;
 use crate::{
     create_universe, BoxedCompiler, Buffer, CompileDocArgs, Either, Error, JsBoxedCompiler,
     NodeCompileArgs, NodeTypstDocument, QueryDocArgs, RenderPdfOpts, Result,
@@ -148,6 +147,14 @@ impl NodeCompiler {
         self.driver.assert_mut().compile_raw::<D>(opts)
     }
 
+    /// Compiles the document internally.
+    fn compile_raw2<D: TypstDocumentTrait + ArcInto<TypstDocument> + Send + Sync + 'static>(
+        &mut self,
+        opts: CompileDocArgs,
+    ) -> std::result::Result<ExecResultRepr<NodeTypstDocument>, NodeError> {
+        self.driver.assert_mut().compile_raw2::<D>(opts)
+    }
+
     /// Fetches the diagnostics of the document.
     #[napi]
     pub fn fetch_diagnostics(
@@ -201,6 +208,20 @@ impl NodeCompiler {
     }
 
     /// Compiles the document as a specific type.
+    pub fn may_compile2<D: TypstDocumentTrait + Send + Sync + 'static>(
+        &mut self,
+        opts: MayCompileOpts,
+    ) -> std::result::Result<ExecResultRepr<NodeTypstDocument>, NodeError>
+    where
+        Arc<D>: Into<TypstDocument>,
+    {
+        Ok(match opts {
+            MayCompileOpts::A(doc) => doc.clone().into(),
+            MayCompileOpts::B(compile_by) => self.compile_raw2::<D>(compile_by)?,
+        })
+    }
+
+    /// Compiles the document as a specific type.
     pub fn compile_as<
         T: ExportComputation<SystemCompilerFeat, reflexo_typst::TypstPagedDocument>,
         RO: From<T::Output>,
@@ -223,11 +244,9 @@ impl NodeCompiler {
         &mut self,
         opts: MayCompileOpts,
         config: &T::Config,
-    ) -> Result<RO, NodeError> {
-        let doc = self.may_compile::<reflexo_typst::TypstHtmlDocument>(opts)?;
-        T::cast_run(&doc.graph, &doc.doc, config)
-            .map_err(map_node_error)
-            .map(From::from)
+    ) -> std::result::Result<ExecResultRepr<RO>, NodeError> {
+        let doc = self.may_compile2::<reflexo_typst::TypstHtmlDocument>(opts)?;
+        Ok(doc.and_then(|doc| Ok(T::cast_run(&doc.graph, &doc.doc, config)?.into())))
     }
 
     /// Compiles the document as buffer.
@@ -308,11 +327,25 @@ impl NodeCompiler {
     /// Simply compiles the document as a HTML.
     #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     #[cfg(feature = "html")]
-    pub fn html(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
+    pub fn html(&mut self, compiled_or_by: MayCompileOpts) -> Result<Option<String>, NodeError> {
         use reflexo_typst::ExportStaticHtmlTask;
 
         type Export = reflexo_typst::StaticHtmlExport;
         self.compile_as_html::<Export, _>(compiled_or_by, &ExportStaticHtmlTask::default())
+            .map_err(map_node_error)?
+            .to_napi_result()
+    }
+
+    /// Compiles the document as a HTML.
+    #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
+    #[cfg(feature = "html")]
+    pub fn may_html(&mut self, compiled_or_by: MayCompileOpts) -> NodeStringExecResult {
+        use reflexo_typst::ExportStaticHtmlTask;
+
+        type Export = reflexo_typst::StaticHtmlExport;
+        let res =
+            self.compile_as_html::<Export, _>(compiled_or_by, &ExportStaticHtmlTask::default());
+        ExecResultRepr::from_result(res).flatten().into()
     }
 }
 
@@ -349,7 +382,10 @@ impl DynLayoutCompiler {
     /// Exports the document as a vector IR containing multiple layouts.
     #[napi]
     pub fn vector(&mut self, compile_by: CompileDocArgs) -> Result<Buffer, NodeError> {
-        let graph = self.driver.computation(compile_by)?;
+        let graph = self
+            .driver
+            .computation(compile_by)
+            .map_err(map_node_error)?;
         let world = &graph.snap.world;
 
         let doc = self.task.do_export(world).map_err(map_node_error)?;

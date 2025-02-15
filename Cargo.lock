@@ -4922,6 +4922,7 @@ dependencies = [
  "napi",
  "napi-build",
  "napi-derive",
+ "rayon",
  "reflexo-typst",
  "reflexo-vec2svg",
  "serde",

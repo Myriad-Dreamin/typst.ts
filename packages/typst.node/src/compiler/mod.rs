@@ -7,12 +7,13 @@ pub mod project;
 
 use reflexo_typst::package::RegistryPathMapper;
 
+use std::path::PathBuf;
 use std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc};
 
 use napi::{bindgen_prelude::*, Either};
 use napi_derive::napi;
 use reflexo_typst::config::{entry::EntryState, CompileFontOpts};
-use reflexo_typst::error::prelude::{Result as ZResult, WithContext};
+use reflexo_typst::error::prelude::{Result, WithContext};
 use reflexo_typst::font::system::SystemFontSearcher;
 use reflexo_typst::package::http::HttpRegistry;
 use reflexo_typst::typst::{foundations::IntoValue, LazyHash};
@@ -84,19 +85,23 @@ pub struct NodeCompileArgs {
     pub inputs: Option<HashMap<String, String>>,
 }
 
-pub fn create_universe(args: Option<NodeCompileArgs>) -> ZResult<TypstSystemUniverse> {
+pub fn abs_user_path(path: &str) -> Result<PathBuf> {
     use reflexo_typst::path::PathClean;
-    let args = args.unwrap_or_default();
-    let workspace_dir = Path::new(args.workspace.unwrap_or_default().as_str()).clean();
+    let path = Path::new(path).clean();
 
-    let workspace_dir = if workspace_dir.is_absolute() {
-        workspace_dir
+    let path = if path.is_absolute() {
+        path
     } else {
         let cwd = std::env::current_dir().context("failed to get current dir")?;
-        cwd.join(workspace_dir)
+        cwd.join(path)
     };
 
-    let workspace_dir = workspace_dir.clean();
+    Ok(path.clean())
+}
+
+pub fn create_universe(args: Option<NodeCompileArgs>) -> Result<TypstSystemUniverse> {
+    let args = args.unwrap_or_default();
+    let workspace_dir = abs_user_path(args.workspace.unwrap_or_default().as_str())?;
 
     let mut searcher = SystemFontSearcher::new();
 
