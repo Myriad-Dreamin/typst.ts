@@ -796,12 +796,7 @@ impl CompileHandler<SystemCompilerFeat, ProjectInsStateExt> for ProjectHandler {
         }
     }
 
-    fn notify_compile(
-        &self,
-        _res: &tinymist_project::CompiledArtifact<SystemCompilerFeat>,
-        _rep: tinymist_project::CompileReport,
-    ) {
-    }
+    fn notify_compile(&self, _res: &tinymist_project::CompiledArtifact<SystemCompilerFeat>) {}
 
     fn status(
         &self,
