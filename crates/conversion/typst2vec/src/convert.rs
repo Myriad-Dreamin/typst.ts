@@ -1,16 +1,34 @@
+use std::sync::Arc;
+
+use image::codecs::png::PngEncoder;
+use image::ImageEncoder;
 pub use reflexo::vector::ir::*;
 
 use reflexo::hash::{item_hash128, Fingerprint};
+use reflexo::typst::Bytes;
 use typst::layout::{
     Abs as TypstAbs, Angle as TypstAngle, Axes as TypstAxes, Point as TypstPoint,
     Ratio as TypstRatio, Transform as TypstTransform,
 };
 use typst::text::Font;
 use typst::utils::Scalar as TypstScalar;
-use typst::visualize::{ImageFormat, RasterFormat, VectorFormat};
+use typst::visualize::{ExchangeFormat, ImageFormat, ImageKind, RasterFormat, VectorFormat};
 
 use crate::hash::typst_affinite_hash;
 use crate::{FromTypst, IntoTypst, TryFromTypst};
+
+pub trait ImageExt {
+    fn data(&self) -> &Bytes;
+}
+
+impl ImageExt for typst::visualize::Image {
+    fn data(&self) -> &Bytes {
+        match self.kind() {
+            typst::visualize::ImageKind::Raster(raster_image) => raster_image.data(),
+            typst::visualize::ImageKind::Svg(svg_image) => svg_image.data(),
+        }
+    }
+}
 
 impl FromTypst<Rgba8Item> for typst::visualize::Color {
     fn from_typst(v: Rgba8Item) -> Self {
@@ -154,25 +172,44 @@ impl FromTypst<Font> for FontItem {
 impl FromTypst<typst::visualize::Image> for Image {
     fn from_typst(image: typst::visualize::Image) -> Self {
         let format = match image.format() {
-            ImageFormat::Raster(e) => match e {
-                RasterFormat::Jpg => "jpeg",
-                RasterFormat::Png => "png",
-                RasterFormat::Gif => "gif",
-            },
-            ImageFormat::Vector(e) => match e {
-                VectorFormat::Svg => "svg+xml",
-            },
+            ImageFormat::Raster(RasterFormat::Exchange(ExchangeFormat::Jpg)) => "jpeg",
+            ImageFormat::Raster(RasterFormat::Exchange(ExchangeFormat::Png)) => "png",
+            ImageFormat::Raster(RasterFormat::Exchange(ExchangeFormat::Gif)) => "gif",
+            ImageFormat::Raster(RasterFormat::Pixel(..)) => "png",
+            ImageFormat::Vector(VectorFormat::Svg) => "svg+xml",
         };
 
-        // steal prehash from [`typst::image::Image`]
-        let hash = typst_affinite_hash(&image);
-
+        let (hash, data) = encode_image(&image);
         Image {
-            data: image.data().to_vec(),
+            data,
             format: format.into(),
             size: Axes::new(image.width() as u32, image.height() as u32),
             alt: image.alt().map(|s| s.into()),
-            hash: Fingerprint::from_u128(hash),
+            hash,
         }
     }
+}
+
+#[comemo::memoize]
+fn encode_image(image: &typst::visualize::Image) -> (Fingerprint, Arc<[u8]>) {
+    // steal prehash from [`typst::image::Image`]
+    let hash = Fingerprint::from_u128(typst_affinite_hash(&image));
+
+    let data = match image.kind() {
+        ImageKind::Raster(raster) => match raster.format() {
+            RasterFormat::Exchange(..) => raster.data().as_slice().into(),
+            RasterFormat::Pixel(_) => {
+                let mut buf = vec![];
+                let mut encoder = PngEncoder::new(&mut buf);
+                if let Some(icc_profile) = raster.icc() {
+                    encoder.set_icc_profile(icc_profile.to_vec()).ok();
+                }
+                raster.dynamic().write_with_encoder(encoder).unwrap();
+                buf.as_slice().into()
+            }
+        },
+        ImageKind::Svg(svg) => svg.data().as_slice().into(),
+    };
+
+    (hash, data)
 }

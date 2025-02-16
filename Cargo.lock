@@ -3013,6 +3013,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tar",
+ "tinymist-project",
  "tinymist-task",
  "tinymist-world",
  "tokio",
@@ -3034,6 +3035,7 @@ dependencies = [
  "crossbeam-queue",
  "dashmap",
  "flate2",
+ "image",
  "log",
  "parking_lot",
  "rayon",
@@ -4116,6 +4118,35 @@ version = "0.12.19"
 dependencies = [
  "quote",
  "syn 2.0.98",
+]
+
+[[package]]
+name = "tinymist-project"
+version = "0.12.19"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "comemo",
+ "dirs",
+ "ecow",
+ "log",
+ "notify",
+ "parking_lot",
+ "pathdiff",
+ "rayon",
+ "rpds",
+ "semver",
+ "serde",
+ "serde_json",
+ "tinymist-derive",
+ "tinymist-std",
+ "tinymist-task",
+ "tinymist-world",
+ "tokio",
+ "toml",
+ "typst",
+ "typst-assets 0.12.0 (git+https://github.com/typst/typst-assets?rev=8cccef9)",
 ]
 
 [[package]]

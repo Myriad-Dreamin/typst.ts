@@ -200,6 +200,7 @@ tinymist-analysis = { git = "https://github.com/Myriad-Dreamin/tinymist.git", re
 tinymist-std = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "5b15ca2ddb43b25b7f0cd35358e5e9df70b0de06", default-features = false }
 tinymist-task = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "5b15ca2ddb43b25b7f0cd35358e5e9df70b0de06", default-features = false }
 tinymist-world = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "5b15ca2ddb43b25b7f0cd35358e5e9df70b0de06", default-features = false }
+tinymist-project = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "5b15ca2ddb43b25b7f0cd35358e5e9df70b0de06", default-features = false }
 
 # project core
 reflexo = { version = "0.5.4", path = "crates/reflexo", default-features = false }
@@ -267,9 +268,10 @@ typst-assets = { git = "https://github.com/typst/typst-assets", rev = "8cccef9" 
 
 # fontdb = { path = "../fontdb" }
 
-# [patch."https://github.com/Myriad-Dreamin/tinymist.git"]
-# typst-shim = { path = "../tinymist/crates/typst-shim" }
-# tinymist-analysis = { path = "../tinymist/crates/tinymist-analysis" }
-# tinymist-std = { path = "../tinymist/crates/tinymist-std" }
-# tinymist-task = { path = "../tinymist/crates/tinymist-task" }
-# tinymist-world = { path = "../tinymist/crates/tinymist-world" }
+[patch."https://github.com/Myriad-Dreamin/tinymist.git"]
+typst-shim = { path = "../tinymist/crates/typst-shim" }
+tinymist-analysis = { path = "../tinymist/crates/tinymist-analysis" }
+tinymist-std = { path = "../tinymist/crates/tinymist-std" }
+tinymist-task = { path = "../tinymist/crates/tinymist-task" }
+tinymist-world = { path = "../tinymist/crates/tinymist-world" }
+tinymist-project = { path = "../tinymist/crates/tinymist-project" }

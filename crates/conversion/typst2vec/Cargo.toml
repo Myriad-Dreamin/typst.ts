@@ -28,6 +28,7 @@ rayon.workspace = true
 rkyv = { workspace = true, optional = true }
 tiny-skia-path.workspace = true
 svgtypes.workspace = true
+image.workspace = true
 
 [features]
 

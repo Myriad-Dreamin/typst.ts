@@ -123,6 +123,7 @@ pub fn create_driver(args: Option<NodeCompileArgs>) -> ZResult<TypstSystemUniver
     let resolver = Arc::new(RegistryPathMapper::new(registry.clone()));
     let verse = TypstSystemUniverse::new_raw(
         EntryState::new_rooted(workspace_dir.into(), None),
+        false,
         args.inputs.map(create_inputs),
         Vfs::new(resolver, SystemAccessModel {}),
         registry,

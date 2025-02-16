@@ -18,7 +18,7 @@ pub struct ImageItem {
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct Image {
     /// The encoded image data.
-    pub data: Vec<u8>,
+    pub data: Arc<[u8]>,
     /// The format of the encoded `buffer`.
     pub format: ImmutStr,
     /// The size of the image.

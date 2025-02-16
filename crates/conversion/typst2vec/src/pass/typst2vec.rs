@@ -32,6 +32,7 @@ use typst::{
 };
 
 use crate::{
+    convert::ImageExt,
     font::GlyphProvider,
     hash::{Fingerprint, FingerprintBuilder},
     ir::{self, *},

@@ -177,7 +177,7 @@ mod tests {
     fn test_image_serialization() {
         let img = ImageItem {
             image: Arc::new(Image {
-                data: vec![0, 1, 2, 3],
+                data: vec![0, 1, 2, 3].into(),
                 format: "png".into(),
                 size: Axes::new(10, 10),
                 alt: None,
