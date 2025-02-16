@@ -41,7 +41,6 @@ walkdir = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 futures = "0.3.30"
 fontdb = { workspace = true, optional = true }
-notify = { workspace = true, optional = true }
 
 parking_lot.workspace = true
 indexmap.workspace = true
@@ -68,7 +67,7 @@ glyph2vec = ["reflexo-typst2vec/glyph2vec"]
 dynamic-layout = ["dep:reflexo-vec2svg"]
 
 system-compile = ["glyph2vec", "tinymist-world/system"]
-system-watch = ["dep:notify", "dep:tokio"]
+system-watch = ["dep:tokio", "tinymist-world/system"]
 browser-compile = ["__web", "web-render", "glyph2vec", "tinymist-world/browser"]
 browser-embedded-fonts = ["__web"]
 __web = ["dep:js-sys", "dep:web-sys"]

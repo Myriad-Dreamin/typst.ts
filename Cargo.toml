@@ -126,7 +126,6 @@ rustyline = { version = "14.0.0", features = ["derive"] }
 # system
 dirs = "5"
 fontdb = "0.21"
-notify = "6"
 path-clean = "1.0.1"
 pathdiff = "0.2.2"
 walkdir = "2"
@@ -145,7 +144,7 @@ web-sys = "^0.3"
 console_error_panic_hook = { version = "0.1.7" }
 
 # image processing
-image = { version = "0.25.2", default-features = false, features = [
+image = { version = "0.25.5", default-features = false, features = [
     "png",
     "jpeg",
     "gif",
@@ -246,14 +245,14 @@ reflexo-vec2svg = { path = "crates/conversion/vec2svg/" }
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
 # comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
-typst = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
-typst-syntax = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
-typst-ide = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
-typst-render = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
-typst-svg = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
-typst-pdf = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
-typst-eval = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
-typst-html = { git = "https://github.com/ParaN3xus/typst", tag = "tinymist-nightly-v0.12.19-rc2-content-hint" }
+typst = { git = "https://github.com/ParaN3xus/typst.git", tag = "tinymist-nightly-v0.12.21-content-hint" }
+typst-syntax = { git = "https://github.com/ParaN3xus/typst.git", tag = "tinymist-nightly-v0.12.21-content-hint" }
+typst-ide = { git = "https://github.com/ParaN3xus/typst.git", tag = "tinymist-nightly-v0.12.21-content-hint" }
+typst-render = { git = "https://github.com/ParaN3xus/typst.git", tag = "tinymist-nightly-v0.12.21-content-hint" }
+typst-svg = { git = "https://github.com/ParaN3xus/typst.git", tag = "tinymist-nightly-v0.12.21-content-hint" }
+typst-pdf = { git = "https://github.com/ParaN3xus/typst.git", tag = "tinymist-nightly-v0.12.21-content-hint" }
+typst-eval = { git = "https://github.com/ParaN3xus/typst.git", tag = "tinymist-nightly-v0.12.21-content-hint" }
+typst-html = { git = "https://github.com/ParaN3xus/typst.git", tag = "tinymist-nightly-v0.12.21-content-hint" }
 typst-assets = { git = "https://github.com/typst/typst-assets", rev = "8cccef9" }
 
 # comemo = { path = "../comemo" }
