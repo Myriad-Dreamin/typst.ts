@@ -18,7 +18,7 @@
     "build": "vite build",
     "publish:dry": "npm publish --dry-run --access public",
     "publish:lib": "npm publish --access public || exit 0",
-    "prepublishOnly": "npm build"
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@myriaddreamin/typst-ts-renderer": "0.5.5-rc1",
