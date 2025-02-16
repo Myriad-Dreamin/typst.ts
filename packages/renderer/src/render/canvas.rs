@@ -246,8 +246,8 @@ mod tests {
                 artifact_content: Some(artifact.to_owned()),
             }))
             .unwrap();
-        session.set_background_color("#ffffff".to_string());
-        session.set_pixel_per_pt(3.);
+        session.set_background_color(Some("#ffffff".to_string()));
+        session.set_pixel_per_pt(Some(3.));
 
         let sizes = &session.pages_info;
         canvas.set_width((sizes.width() * 3.).ceil() as u32);
