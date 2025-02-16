@@ -4927,6 +4927,8 @@ dependencies = [
  "reflexo-vec2svg",
  "serde",
  "serde_json",
+ "tinymist-project",
+ "tokio",
  "typst-svg",
  "typst-ts-cli",
 ]
