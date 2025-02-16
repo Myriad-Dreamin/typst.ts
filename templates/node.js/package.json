@@ -11,7 +11,7 @@
     "@myriaddreamin/typst.ts": "^0.5.5-rc1"
   },
   "devDependencies": {
-    "@types/web": "^0.0.99",
+    "@types/web": "^0.0.188",
     "@types/node": "^20.6.3",
     "typescript": "=5.0.4",
     "tslib": "2.5.2"

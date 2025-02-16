@@ -60,7 +60,7 @@
   "devDependencies": {
     "@myriaddreamin/typst-ts-renderer": "*",
     "@myriaddreamin/typst-ts-web-compiler": "*",
-    "@types/web": "^0.0.99",
+    "@types/web": "^0.0.188",
     "builtin-modules": "3.3.0",
     "tslib": "2.5.2"
   }
