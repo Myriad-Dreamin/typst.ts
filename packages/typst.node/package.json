@@ -67,7 +67,6 @@
     "version": "napi version"
   },
   "devDependencies": {
-    "@napi-rs/cli": "3.0.0-alpha.70",
     "@swc/core": "^1.6.5",
     "@taplo/cli": "^0.5.2",
     "benny": "^3.7.1",

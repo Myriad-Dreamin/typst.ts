@@ -55,6 +55,7 @@
   "devDependencies": {
     "@babel/runtime": "^7.22.9",
     "@eslint-community/eslint-plugin-eslint-comments": "^3.2.1",
+    "@napi-rs/cli": "3.0.0-alpha.70",
     "@swc-node/register": "^1.10.0",
     "@types/node": "^22.13.4",
     "@typescript-eslint/eslint-plugin": "^6.9.1",
