@@ -71,14 +71,14 @@ strip = true
 [workspace.dependencies]
 
 # typesetting
-typst = "0.13.0"
-typst-eval = "0.13.0"
-typst-ide = "0.13.0"
-typst-pdf = "0.13.0"
-typst-render = "0.13.0"
-typst-svg = "0.13.0"
-typst-syntax = "0.13.0"
-typst-html = "0.13.0"
+typst = "0.13.0-rc1"
+typst-eval = "0.13.0-rc1"
+typst-ide = "0.13.0-rc1"
+typst-pdf = "0.13.0-rc1"
+typst-render = "0.13.0-rc1"
+typst-svg = "0.13.0-rc1"
+typst-syntax = "0.13.0-rc1"
+typst-html = "0.13.0-rc1"
 
 ttf-parser = "0.24.1"
 

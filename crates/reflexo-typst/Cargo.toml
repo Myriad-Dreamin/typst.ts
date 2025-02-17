@@ -63,7 +63,10 @@ flat-vector = ["reflexo/flat-vector"]
 
 lazy-fontdb = []
 experimental-ligature = ["reflexo-vec2svg/experimental-ligature"]
-no-content-hint = ["reflexo-typst2vec/no-content-hint"]
+no-content-hint = [
+    "reflexo-typst2vec/no-content-hint",
+    "tinymist-task/no-content-hint",
+]
 glyph2vec = ["reflexo-typst2vec/glyph2vec"]
 dynamic-layout = ["dep:reflexo-vec2svg"]
 
