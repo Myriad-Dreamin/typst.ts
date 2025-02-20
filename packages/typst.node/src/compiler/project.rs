@@ -11,17 +11,17 @@ use napi::threadsafe_function::{ErrorStrategy, ThreadsafeFunction, ThreadsafeFun
 use napi_derive::napi;
 use reflexo_typst::error::WithContextUntyped;
 use reflexo_typst::{
-    error_once, watch_deps, ArcInto, Bytes, CompilationTask, DocumentQuery, EntryReader,
-    EntryState, ExportComputation, ExportWebSvgModuleTask, FlagTask, ProjectInsId,
-    SystemCompilerFeat, TypstDocument, TypstDocumentTrait, TypstPagedDocument, TypstSystemUniverse,
-    TypstSystemWorld,
+    error_once, watch_deps, ArcInto, Bytes, CompilationTask, CompileSnapshot, DocumentQuery,
+    EntryReader, EntryState, ExportComputation, ExportWebSvgModuleTask, FlagTask, ProjectInsId,
+    SystemCompilerFeat, TaskInputs, TypstDocument, TypstDocumentTrait, TypstPagedDocument,
+    TypstSystemUniverse, TypstSystemWorld, MEMORY_MAIN_ENTRY,
 };
 use tinymist_project::{
     CompileHandler, CompileReasons, CompileServerOpts, CompiledArtifact, Interrupt,
     ProjectCompiler as ProjectCompilerBase,
 };
 
-use super::{abs_user_path, create_universe, NodeCompileArgs};
+use super::{abs_user_path, create_inputs, create_universe, NodeCompileArgs};
 use crate::{error::*, NodeTypstDocument};
 use crate::{CompileDocArgs, QueryDocArgs};
 
@@ -397,6 +397,7 @@ pub struct NodeTypstProject {
     graph: Arc<SystemWorldComputeGraph>,
 }
 
+// todo: merge me with NodeCompiler.
 #[napi]
 impl NodeTypstProject {
     /// Gets the inner world.
@@ -457,14 +458,87 @@ impl NodeTypstProject {
         self.compile_raw::<reflexo_typst::TypstHtmlDocument>(opts)
     }
 
-    // todo: _compile_by is ignored
+    // todo: tinymist_world implement it.
+    /// Create a snapshoted world by typst.node's [`CompileDocArgs`].
+    /// Should not affect the current universe (global state).
+    pub fn computation(
+        &mut self,
+        compile_by: CompileDocArgs,
+    ) -> reflexo_typst::Result<Arc<SystemWorldComputeGraph>, NodeError> {
+        use reflexo_typst::ShadowApi;
+        use reflexo_typst::TypstWorld;
+
+        let graph = &self.graph;
+
+        // Convert the input pairs to a dictionary.
+        let inputs = compile_by.inputs.map(create_inputs);
+        if let Some(main_file_content) = compile_by.main_file_content {
+            if compile_by.main_file_path.is_some() {
+                return Err(error_once!(
+                    "main file content and path cannot be specified at the same time"
+                ))?;
+            }
+
+            let world = graph.snap.world.clone();
+
+            let mut world = if world.main_id().is_some() {
+                world.task(TaskInputs {
+                    entry: None,
+                    inputs,
+                })
+            } else {
+                let world = world.task(TaskInputs {
+                    entry: Some(
+                        world
+                            .entry_state()
+                            .select_in_workspace(MEMORY_MAIN_ENTRY.vpath().as_rooted_path()),
+                    ),
+                    inputs,
+                });
+
+                world
+            };
+
+            world
+                .map_shadow_by_id(world.main(), Bytes::new(main_file_content))
+                .unwrap();
+            let snap = CompileSnapshot::from_world(world);
+
+            return Ok(SystemWorldComputeGraph::new(snap));
+        };
+
+        let entry = if let Some(main_file_path) = compile_by.main_file_path {
+            if compile_by.main_file_content.is_some() {
+                return Err(error_once!(
+                    "main file content and path cannot be specified at the same time"
+                ))?;
+            }
+
+            let abs_fp = std::path::absolute(main_file_path.as_str());
+            let fp = abs_fp
+                .as_ref()
+                .map(std::path::Path::new)
+                .map_err(|e| error_once!("cannot absolutize the main file path", err: e))?;
+            graph
+                .snap
+                .world
+                .entry_state()
+                .try_select_path_in_workspace(fp)?
+        } else {
+            None
+        };
+
+        let snap = graph.snap.clone().task(TaskInputs { entry, inputs });
+        Ok(SystemWorldComputeGraph::new(snap))
+    }
+
     pub fn compile_raw<
         D: reflexo_typst::TypstDocumentTrait + ArcInto<TypstDocument> + Send + Sync + 'static,
     >(
         &mut self,
-        _compile_by: CompileDocArgs,
+        compile_by: CompileDocArgs,
     ) -> napi::Result<NodeTypstCompileResult, NodeError> {
-        let graph = &self.graph;
+        let graph = self.computation(compile_by).map_err(map_node_error)?;
 
         let _ = graph.provide::<FlagTask<CompilationTask<D>>>(Ok(FlagTask::flag(true)));
         let result = graph
@@ -493,14 +567,13 @@ impl NodeTypstProject {
         })
     }
 
-    // todo: _compile_by is ignored
     pub fn compile_raw2<
         D: reflexo_typst::TypstDocumentTrait + ArcInto<TypstDocument> + Send + Sync + 'static,
     >(
         &mut self,
-        _compile_by: CompileDocArgs,
+        compile_by: CompileDocArgs,
     ) -> reflexo_typst::Result<ExecResultRepr<NodeTypstDocument>, NodeError> {
-        let graph = &self.graph;
+        let graph = self.computation(compile_by)?;
 
         let _ = graph.provide::<FlagTask<CompilationTask<D>>>(Ok(FlagTask::flag(true)));
         let result = graph.compute::<CompilationTask<D>>()?;
@@ -511,7 +584,7 @@ impl NodeTypstProject {
                 graph: graph.clone(),
                 doc: d.arc_into(),
             })
-            .with_graph(graph.clone()))
+            .with_graph(graph))
     }
 
     /// Fetches the diagnostics of the document.
