@@ -27,8 +27,8 @@
     "zone.js": "~0.15.0"
   },
   "peerDependencies": {
-    "@myriaddreamin/typst-ts-renderer": "^0.5.5-rc3",
-    "@myriaddreamin/typst.ts": "^0.5.5-rc3"
+    "@myriaddreamin/typst-ts-renderer": "^0.5.5-rc4",
+    "@myriaddreamin/typst.ts": "^0.5.5-rc4"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^19.1.7",

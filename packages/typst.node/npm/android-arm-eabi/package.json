@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst-ts-node-compiler-android-arm-eabi",
-  "version": "0.5.5-rc3",
+  "version": "0.5.5-rc4",
   "os": [
     "android"
   ],

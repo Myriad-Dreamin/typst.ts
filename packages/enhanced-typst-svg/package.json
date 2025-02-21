@@ -1,7 +1,7 @@
 {
   "name": "enhanced-typst-svg",
   "private": true,
-  "version": "0.5.5-rc3",
+  "version": "0.5.5-rc4",
   "description": "Typst svg enhancement",
   "author": "Myriad Dreamin <camiyoru@gmail.com>",
   "license": "Apache-2.0",
