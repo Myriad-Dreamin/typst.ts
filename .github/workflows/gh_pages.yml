@@ -39,7 +39,7 @@ jobs:
       - name: Install Mold
         uses: rui314/setup-mold@v1
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.84.0
       - name: Install Rust for Wasm targets
         run: rustup target add wasm32-unknown-unknown
       - name: Set Node.js 18.x

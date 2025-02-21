@@ -61,7 +61,7 @@ jobs:
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.3
       - name: rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.84.0
         with:
           targets: ${{ matrix.rust-target }}
       - name: Install AArch64 target toolchain
@@ -108,7 +108,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.84.0
         with:
           target: ${{ matrix.rust-target }}
       - name: Build cross image
