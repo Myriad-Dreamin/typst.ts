@@ -7,7 +7,7 @@
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
   "dependencies": {
-    "@myriaddreamin/typst-ts-node-compiler": "^0.5.5-rc5"
+    "@myriaddreamin/typst-ts-node-compiler": "^0.5.5-rc6"
   },
   "devDependencies": {
     "@types/node": "^20.6.3",
