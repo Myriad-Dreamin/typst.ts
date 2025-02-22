@@ -246,14 +246,14 @@ reflexo-vec2svg = { path = "crates/conversion/vec2svg/" }
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
 # comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
-typst = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc5" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc5" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc5" }
-typst-render = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc5" }
-typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc5" }
-typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc5" }
-typst-eval = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc5" }
-typst-html = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc5" }
+typst = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc6" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc6" }
+typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc6" }
+typst-render = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc6" }
+typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc6" }
+typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc6" }
+typst-eval = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc6" }
+typst-html = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.5.5-rc6" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }

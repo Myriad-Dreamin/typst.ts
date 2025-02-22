@@ -4526,7 +4526,7 @@ checksum = "1dccffe3ce07af9386bfd29e80c0ab1a8205a2fc34e4bcd40364df902cfa8f3f"
 [[package]]
 name = "typst"
 version = "0.13.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc5#b52500026e084b8594c8576310aacd3d5d54f100"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc6#93dd314f1ec3e5c966c5513015ca89727c4c2675"
 dependencies = [
  "comemo",
  "ecow",
@@ -4554,11 +4554,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1051c56bbbf74d31ea6c6b1661e62fa0ebb8104403ee53f6dcd321600426e0b6"
 
 [[package]]
-name = "typst-assets"
-version = "0.13.0"
-source = "git+https://github.com/typst/typst-assets?rev=fa0f8a4#fa0f8a438cc4bc2113cc0aa3304cd68cdc2bc020"
-
-[[package]]
 name = "typst-dev-assets"
 version = "0.13.0"
 source = "git+https://github.com/typst/typst-dev-assets?rev=61aebe9#61aebe9575a5abff889f76d73c7b01dc8e17e340"
@@ -4566,7 +4561,7 @@ source = "git+https://github.com/typst/typst-dev-assets?rev=61aebe9#61aebe9575a5
 [[package]]
 name = "typst-eval"
 version = "0.13.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc5#b52500026e084b8594c8576310aacd3d5d54f100"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc6#93dd314f1ec3e5c966c5513015ca89727c4c2675"
 dependencies = [
  "comemo",
  "ecow",
@@ -4585,7 +4580,7 @@ dependencies = [
 [[package]]
 name = "typst-html"
 version = "0.13.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc5#b52500026e084b8594c8576310aacd3d5d54f100"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc6#93dd314f1ec3e5c966c5513015ca89727c4c2675"
 dependencies = [
  "comemo",
  "ecow",
@@ -4600,7 +4595,7 @@ dependencies = [
 [[package]]
 name = "typst-ide"
 version = "0.13.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc5#b52500026e084b8594c8576310aacd3d5d54f100"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc6#93dd314f1ec3e5c966c5513015ca89727c4c2675"
 dependencies = [
  "comemo",
  "ecow",
@@ -4615,7 +4610,7 @@ dependencies = [
 [[package]]
 name = "typst-layout"
 version = "0.13.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc5#b52500026e084b8594c8576310aacd3d5d54f100"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc6#93dd314f1ec3e5c966c5513015ca89727c4c2675"
 dependencies = [
  "az",
  "bumpalo",
@@ -4631,7 +4626,7 @@ dependencies = [
  "rustybuzz",
  "smallvec",
  "ttf-parser",
- "typst-assets 0.13.0 (git+https://github.com/typst/typst-assets?rev=fa0f8a4)",
+ "typst-assets 0.13.0",
  "typst-library",
  "typst-macros",
  "typst-syntax",
@@ -4646,7 +4641,7 @@ dependencies = [
 [[package]]
 name = "typst-library"
 version = "0.13.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc5#b52500026e084b8594c8576310aacd3d5d54f100"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc6#93dd314f1ec3e5c966c5513015ca89727c4c2675"
 dependencies = [
  "az",
  "bitflags 2.8.0",
@@ -4690,7 +4685,7 @@ dependencies = [
  "ttf-parser",
  "two-face",
  "typed-arena",
- "typst-assets 0.13.0 (git+https://github.com/typst/typst-assets?rev=fa0f8a4)",
+ "typst-assets 0.13.0",
  "typst-macros",
  "typst-syntax",
  "typst-timing",
@@ -4706,7 +4701,7 @@ dependencies = [
 [[package]]
 name = "typst-macros"
 version = "0.13.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc5#b52500026e084b8594c8576310aacd3d5d54f100"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc6#93dd314f1ec3e5c966c5513015ca89727c4c2675"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -4717,7 +4712,7 @@ dependencies = [
 [[package]]
 name = "typst-pdf"
 version = "0.13.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc5#b52500026e084b8594c8576310aacd3d5d54f100"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc6#93dd314f1ec3e5c966c5513015ca89727c4c2675"
 dependencies = [
  "arrayvec",
  "base64 0.22.1",
@@ -4732,7 +4727,7 @@ dependencies = [
  "subsetter",
  "svg2pdf",
  "ttf-parser",
- "typst-assets 0.13.0 (git+https://github.com/typst/typst-assets?rev=fa0f8a4)",
+ "typst-assets 0.13.0",
  "typst-library",
  "typst-macros",
  "typst-syntax",
@@ -4744,7 +4739,7 @@ dependencies = [
 [[package]]
 name = "typst-realize"
 version = "0.13.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc5#b52500026e084b8594c8576310aacd3d5d54f100"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc6#93dd314f1ec3e5c966c5513015ca89727c4c2675"
 dependencies = [
  "arrayvec",
  "bumpalo",
@@ -4761,7 +4756,7 @@ dependencies = [
 [[package]]
 name = "typst-render"
 version = "0.13.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc5#b52500026e084b8594c8576310aacd3d5d54f100"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc6#93dd314f1ec3e5c966c5513015ca89727c4c2675"
 dependencies = [
  "bytemuck",
  "comemo",
@@ -4790,7 +4785,7 @@ dependencies = [
 [[package]]
 name = "typst-svg"
 version = "0.13.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc5#b52500026e084b8594c8576310aacd3d5d54f100"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc6#93dd314f1ec3e5c966c5513015ca89727c4c2675"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4809,7 +4804,7 @@ dependencies = [
 [[package]]
 name = "typst-syntax"
 version = "0.13.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc5#b52500026e084b8594c8576310aacd3d5d54f100"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc6#93dd314f1ec3e5c966c5513015ca89727c4c2675"
 dependencies = [
  "ecow",
  "serde",
@@ -4826,7 +4821,7 @@ dependencies = [
 [[package]]
 name = "typst-timing"
 version = "0.13.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc5#b52500026e084b8594c8576310aacd3d5d54f100"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc6#93dd314f1ec3e5c966c5513015ca89727c4c2675"
 dependencies = [
  "parking_lot",
  "serde",
@@ -4867,7 +4862,7 @@ dependencies = [
  "tokio",
  "toml",
  "typst",
- "typst-assets 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "typst-assets 0.13.0",
  "typst-ide",
  "typst-pdf",
  "vergen",
@@ -5086,7 +5081,7 @@ dependencies = [
 [[package]]
 name = "typst-utils"
 version = "0.13.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc5#b52500026e084b8594c8576310aacd3d5d54f100"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?tag=typst.ts%2Fv0.5.5-rc6#93dd314f1ec3e5c966c5513015ca89727c4c2675"
 dependencies = [
  "once_cell",
  "portable-atomic",
