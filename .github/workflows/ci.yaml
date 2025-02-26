@@ -24,7 +24,9 @@ jobs:
       - name: Install Mold
         uses: rui314/setup-mold@v1
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.84.0
+        with:
+          components: clippy, rustfmt
       # https://github.com/Renumics/spotlight/blob/main/.github/workflows/ci.yml
       # https://www.ubuntuupdates.org/package/google_chrome/stable/main/base/google-chrome-stable
       # cp ./chromedriver-linux64/chromedriver /${HOME}/.cargo/bin/

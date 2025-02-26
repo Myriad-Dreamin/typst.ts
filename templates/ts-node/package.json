@@ -8,11 +8,11 @@
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
   "dependencies": {
-    "@myriaddreamin/typst-ts-renderer": "^0.5.4",
-    "@myriaddreamin/typst.ts": "^0.5.4"
+    "@myriaddreamin/typst-ts-renderer": "^0.5.5-rc6",
+    "@myriaddreamin/typst.ts": "^0.5.5-rc6"
   },
   "devDependencies": {
-    "@types/web": "^0.0.99",
+    "@types/web": "^0.0.188",
     "@types/node": "^20.6.3",
     "typescript": "=5.0.4",
     "tslib": "2.5.2"

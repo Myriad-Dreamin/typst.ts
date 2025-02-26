@@ -1,10 +1,11 @@
 use js_sys::Uint8Array;
+use reflexo_typst::vfs::Bytes;
 use wasm_bindgen::prelude::*;
 
 use reflexo_typst::font::web::BrowserFontSearcher;
 use reflexo_typst::package::browser::{ProxyContext, ProxyRegistry};
 use reflexo_typst::vfs::browser::ProxyAccessModel;
-use reflexo_typst::{error::prelude::*, Bytes};
+use reflexo_typst::{error::prelude::*, Bytes as TypstBytes};
 
 use crate::TypstCompiler;
 
@@ -82,7 +83,7 @@ impl TypstCompilerBuilder {
 
     // 400 KB
     pub async fn add_raw_font(&mut self, font_buffer: Uint8Array) -> Result<()> {
-        self.add_raw_font_internal(font_buffer.to_vec().into());
+        self.add_raw_font_internal(TypstBytes::new(font_buffer.to_vec()));
         Ok(())
     }
 

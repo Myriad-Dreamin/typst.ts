@@ -5,14 +5,9 @@ mod console;
 pub use console::*;
 
 /// Which format to use for diagnostics.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Copy, Clone, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub enum DiagnosticFormat {
+    #[default]
     Human,
     Short,
-}
-
-impl Default for DiagnosticFormat {
-    fn default() -> Self {
-        Self::Human
-    }
 }

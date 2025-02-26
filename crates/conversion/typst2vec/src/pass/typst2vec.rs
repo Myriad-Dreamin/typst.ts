@@ -10,25 +10,29 @@ use rayon::iter::{
     IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator, ParallelExtend,
     ParallelIterator,
 };
+
+use reflexo::typst::{TypstDocument, TypstHtmlDocument, TypstPagedDocument};
 use reflexo::ImmutStr;
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
     foundations::{Bytes, Smart},
+    html::{HtmlElement, HtmlNode},
     introspection::{Introspector, Tag},
     layout::{
         Abs as TypstAbs, Axes, Dir, Frame, FrameItem, FrameKind, Position, Ratio as TypstRatio,
-        Size, Transform as TypstTransform,
+        Size as TypstSize, Transform as TypstTransform,
     },
-    model::{Destination, Document as TypstDocument},
+    model::Destination,
     syntax::Span,
     text::TextItem as TypstTextItem,
     visualize::{
-        FillRule, FixedStroke, Geometry, Gradient, Image as TypstImage, LineCap, LineJoin, Paint,
-        PathItem as TypstPathItem, Pattern, RelativeTo, Shape,
+        CurveItem as TypstCurveItem, FillRule, FixedStroke, Geometry, Gradient,
+        Image as TypstImage, LineCap, LineJoin, Paint, RelativeTo, Shape, Tiling,
     },
 };
 
 use crate::{
+    convert::ImageExt,
     font::GlyphProvider,
     hash::{Fingerprint, FingerprintBuilder},
     ir::{self, *},
@@ -38,6 +42,9 @@ use crate::{
 };
 
 use super::{SourceNodeKind, SourceRegion, Span2VecPass, TGlyph2VecPass};
+
+// todo: we need to remove this magic size
+pub const PAGELESS_SIZE: ir::Size = Size::new(Scalar(1e2 + 4.1234567), Scalar(1e3 + 4.1234567));
 
 #[derive(Clone, Copy)]
 struct State<'a> {
@@ -91,11 +98,11 @@ impl State<'_> {
 }
 
 pub trait CommandExecutor {
-    fn execute(&self, cmd: Bytes, size: Option<Size>) -> Option<VecItem>;
+    fn execute(&self, cmd: Bytes, size: Option<TypstSize>) -> Option<VecItem>;
 }
 
 impl CommandExecutor for () {
-    fn execute(&self, _: Bytes, _: Option<Size>) -> Option<VecItem> {
+    fn execute(&self, _: Bytes, _: Option<TypstSize>) -> Option<VecItem> {
         None
     }
 }
@@ -149,7 +156,7 @@ impl Typst2VecPass {
             | VecItem::Gradient(_)
             | VecItem::ContentHint(_)
             | VecItem::ColorTransform(_)
-            | VecItem::Html(..) => {}
+            | VecItem::SizedRawHtml(..) => {}
             VecItem::Text(t) => {
                 // todo: here introduces risk to font collision
                 self.glyphs.used_fonts.insert(t.shape.font);
@@ -177,6 +184,18 @@ impl Typst2VecPass {
                     }
                 }
             }
+            VecItem::Html(g) => {
+                for ch in g.children.iter() {
+                    let id = match ch {
+                        HtmlChildren::Item(id) => id,
+                        _ => continue,
+                    };
+
+                    if !self.items.contains_key(id) {
+                        self.intern(m, id);
+                    }
+                }
+            }
         }
     }
 }
@@ -193,7 +212,43 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         }
     }
 
-    pub fn doc(&self, introspector: &Introspector, doc: &TypstDocument) -> Vec<Page> {
+    pub fn doc(&self, doc: &TypstDocument) -> Vec<Page> {
+        match doc {
+            TypstDocument::Html(doc) => self.html(doc),
+            TypstDocument::Paged(doc) => self.paged(doc),
+        }
+    }
+
+    pub fn html(&self, doc: &TypstHtmlDocument) -> Vec<Page> {
+        let doc_reg = self.spans.start();
+
+        let page_reg = self.spans.start();
+
+        let idx = 0;
+
+        let state = State::new(&doc.introspector, Size::default());
+        let abs_ref = self.html_element(state, &doc.root, page_reg, idx);
+
+        self.spans.push_span(SourceRegion {
+            region: doc_reg,
+            idx: idx as u32,
+            kind: SourceNodeKind::Page { region: page_reg },
+            item: abs_ref,
+        });
+
+        let root = Page {
+            content: abs_ref,
+            size: Size::new(Scalar(1e11 + 4.), Scalar(1e11 + 4.)),
+        };
+
+        self.spans
+            .doc_region
+            .store(doc_reg, std::sync::atomic::Ordering::SeqCst);
+
+        vec![root]
+    }
+
+    pub fn paged(&self, doc: &TypstPagedDocument) -> Vec<Page> {
         let doc_reg = self.spans.start();
 
         let pages = doc
@@ -203,7 +258,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
             .map(|(idx, p)| {
                 let page_reg = self.spans.start();
 
-                let state = State::new(introspector, p.frame.size().into_typst());
+                let state = State::new(&doc.introspector, p.frame.size().into_typst());
                 let abs_ref = self.frame_(state, &p.frame, page_reg, idx, p.fill_or_transparent());
 
                 self.spans.push_span(SourceRegion {
@@ -282,7 +337,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
 
                     let mut inner = self.frame(state, &group.frame, src_reg, idx);
 
-                    if let Some(p) = group.clip_path.as_ref() {
+                    if let Some(p) = group.clip.as_ref() {
                         // todo: merge
                         let mut builder = SvgPath2DBuilder(String::new());
 
@@ -290,13 +345,13 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         builder.move_to(0., 0.);
                         for elem in &p.0 {
                             match elem {
-                                TypstPathItem::MoveTo(p) => {
+                                TypstCurveItem::Move(p) => {
                                     builder.move_to(p.x.to_f32(), p.y.to_f32());
                                 }
-                                TypstPathItem::LineTo(p) => {
+                                TypstCurveItem::Line(p) => {
                                     builder.line_to(p.x.to_f32(), p.y.to_f32());
                                 }
-                                TypstPathItem::CubicTo(p1, p2, p3) => {
+                                TypstCurveItem::Cubic(p1, p2, p3) => {
                                     builder.curve_to(
                                         p1.x.to_f32(),
                                         p1.y.to_f32(),
@@ -306,7 +361,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                                         p3.y.to_f32(),
                                     );
                                 }
-                                TypstPathItem::ClosePath => {
+                                TypstCurveItem::Close => {
                                     builder.close();
                                 }
                             };
@@ -579,7 +634,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
     /// Convert a text into vector item.
     fn text(&self, state: State, text: &TypstTextItem) -> Fingerprint {
         let stateful_fill = match text.fill {
-            Paint::Pattern(..) | Paint::Gradient(..) => {
+            Paint::Tiling(..) | Paint::Gradient(..) => {
                 Some(self.paint_text(state, text, &text.fill))
             }
             _ => None,
@@ -587,7 +642,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
 
         let stateful_stroke = match &text.stroke {
             Some(FixedStroke {
-                paint: Paint::Pattern(..) | Paint::Gradient(..),
+                paint: Paint::Tiling(..) | Paint::Gradient(..),
                 ..
             }) => Some(self.paint_text(state, text, &text.stroke.as_ref().unwrap().paint)),
             _ => None,
@@ -707,7 +762,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         }
 
         let stateful_fill = match shape.fill {
-            Some(Paint::Pattern(..) | Paint::Gradient(..)) => {
+            Some(Paint::Tiling(..) | Paint::Gradient(..)) => {
                 Some(self.paint_shape(state, shape, shape.fill.as_ref().unwrap()))
             }
             _ => None,
@@ -715,7 +770,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
 
         let stateful_stroke = match shape.stroke {
             Some(FixedStroke {
-                paint: Paint::Pattern(..) | Paint::Gradient(..),
+                paint: Paint::Tiling(..) | Paint::Gradient(..),
                 ..
             }) => Some(self.paint_shape(state, shape, &shape.stroke.as_ref().unwrap().paint)),
             _ => None,
@@ -751,16 +806,16 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                     builder.line_to(w, 0.);
                     builder.close();
                 }
-                Geometry::Path(ref path) => {
+                Geometry::Curve(ref path) => {
                     for elem in &path.0 {
                         match elem {
-                            TypstPathItem::MoveTo(p) => {
+                            TypstCurveItem::Move(p) => {
                                 builder.move_to(p.x.to_f32(), p.y.to_f32());
                             }
-                            TypstPathItem::LineTo(p) => {
+                            TypstCurveItem::Line(p) => {
                                 builder.line_to(p.x.to_f32(), p.y.to_f32());
                             }
-                            TypstPathItem::CubicTo(p1, p2, p3) => {
+                            TypstCurveItem::Cubic(p1, p2, p3) => {
                                 builder.curve_to(
                                     p1.x.to_f32(),
                                     p1.y.to_f32(),
@@ -770,7 +825,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                                     p3.y.to_f32(),
                                 );
                             }
-                            TypstPathItem::ClosePath => {
+                            TypstCurveItem::Close => {
                                 builder.close();
                             }
                         };
@@ -844,7 +899,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
     }
 
     // /// Convert a link into vector item.
-    fn link(&self, url: &str, size: Size) -> VecItem {
+    fn link(&self, url: &str, size: TypstSize) -> VecItem {
         VecItem::Link(LinkItem {
             href: url.into(),
             size: size.into_typst(),
@@ -853,7 +908,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
 
     // /// Convert a document position into vector item.
     // #[comemo::memoize]
-    fn position(&self, pos: Position, size: Size) -> VecItem {
+    fn position(&self, pos: Position, size: TypstSize) -> VecItem {
         let lnk = LinkItem {
             href: format!(
                 "@typst:handleTypstLocation(this, {}, {}, {})",
@@ -921,7 +976,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
     ) -> ImmutStr {
         match g {
             Paint::Solid(c) => c.to_css().into(),
-            Paint::Pattern(e) => {
+            Paint::Tiling(e) => {
                 let fingerprint = self.pattern(state, e, mk_transform(e.relative(), false));
                 format!("@{}", fingerprint.as_svg_id("p")).into()
             }
@@ -1014,7 +1069,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         })))
     }
 
-    fn pattern(&self, state: State, g: &Pattern, transform: ir::Transform) -> Fingerprint {
+    fn pattern(&self, state: State, g: &Tiling, transform: ir::Transform) -> Fingerprint {
         let frame = self.frame(state, g.frame(), 0, 0);
 
         let item = self.store(VecItem::Pattern(Arc::new(PatternItem {
@@ -1027,6 +1082,45 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
             transform,
             item,
         })))
+    }
+
+    fn html_element(
+        &self,
+        state: State,
+        elem: &HtmlElement,
+        parent: usize,
+        index: usize,
+    ) -> Fingerprint {
+        let item = VecItem::Html(HtmlItem {
+            tag: elem.tag.resolve().as_str().into(),
+            attrs: {
+                let mut attrs = Vec::with_capacity(elem.attrs.0.len());
+                for (k, v) in &elem.attrs.0 {
+                    attrs.push((k.resolve().as_str().into(), v.as_str().into()));
+                }
+                attrs
+            },
+            children: {
+                let mut children = Vec::with_capacity(elem.children.len());
+                for child in &elem.children {
+                    children.push({
+                        match child {
+                            HtmlNode::Tag(..) => continue,
+                            HtmlNode::Frame(e) => {
+                                HtmlChildren::Item(self.frame(state, e, parent, index))
+                            }
+                            HtmlNode::Element(e) => {
+                                HtmlChildren::Item(self.html_element(state, e, parent, index))
+                            }
+                            HtmlNode::Text(t, _) => HtmlChildren::Text(t.as_str().into()),
+                        }
+                    });
+                }
+                children
+            },
+        });
+
+        self.store(item)
     }
 }
 

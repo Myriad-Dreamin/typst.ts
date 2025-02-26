@@ -57,7 +57,7 @@ impl ToCssExt for Paint {
         let fill = match self {
             Paint::Solid(color) => color,
             // todo: pattern
-            Paint::Pattern(..) => Color::BLACK,
+            Paint::Tiling(..) => Color::BLACK,
             // todo: gradient
             Paint::Gradient(..) => Color::BLACK,
         };

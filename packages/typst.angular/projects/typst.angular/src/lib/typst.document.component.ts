@@ -8,6 +8,7 @@ let moduleInitOptions: typst.InitOptions = {
 };
 
 @Component({
+  standalone: false, // this is now required when using NgModule
   selector: 'typst-document',
   templateUrl: `./typst.document.component.html`,
   styleUrls: [`./typst.document.component.css`],

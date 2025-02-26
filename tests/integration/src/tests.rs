@@ -6,7 +6,10 @@ mod tests {
     use base64::Engine;
     use image::codecs::png::PngDecoder;
     use serde::{Deserialize, Serialize};
-    use typst_ts_dev_server::{http::run_http, RunHttpArgs};
+    use typst_ts_dev_server::{
+        http::{run_http_with, ResultBucket},
+        RunHttpArgs,
+    };
     use typst_ts_integration_test::wasm::wasm_pack_test;
     use typst_ts_test_common::{corpus_root, package_renderer_dir};
 
@@ -364,16 +367,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_wasm_renderer_functionality() -> anyhow::Result<()> {
-        tokio::spawn(run_http(RunHttpArgs {
+        let bucket = ResultBucket::default();
+        let args = RunHttpArgs {
             corpus: corpus_root(),
             http: "127.0.0.1:20810".to_owned(),
-        }));
-        tokio::spawn(test_wasm_renderer_functionality_main())
+        };
+        tokio::spawn(run_http_with(args, Some(bucket.clone())));
+        tokio::spawn(test_wasm_renderer_functionality_main(bucket))
             .await
             .unwrap()
     }
 
-    async fn test_wasm_renderer_functionality_main() -> anyhow::Result<()> {
+    async fn test_wasm_renderer_functionality_main(bucket: ResultBucket) -> anyhow::Result<()> {
         let artifact_dir = typst_ts_test_common::artifact_dir().join("integrations");
 
         let res = wasm_pack_test(
@@ -384,29 +389,14 @@ mod tests {
         )
         .await?;
 
-        let mut contents = vec![];
-        let mut rest_contents = vec![];
         let mut test_points = vec![];
 
-        let mut start_capture = false;
-        for line in res.lines() {
-            if line.contains(">>> reflexo_test_capture") {
-                start_capture = true;
-            } else if line.contains("<<< reflexo_test_capture") {
-                start_capture = false;
-
-                let test_point = serde_json::from_str::<TestPoint>(contents.join("\n").trim())?;
-                test_points.push(test_point);
-                contents.clear();
-            } else if start_capture {
-                contents.push(line);
-            } else {
-                rest_contents.push(line);
-            }
+        for pt in bucket.collect() {
+            test_points.push(serde_json::from_str::<TestPoint>(&pt)?);
         }
 
         eprintln!("::group::Output of wasm-pack test");
-        eprintln!("{}", rest_contents.join("\n"));
+        eprintln!("{res}");
         eprintln!("::endgroup::");
 
         let mut grouped_test_points = {
@@ -507,52 +497,52 @@ mod tests {
         data_content_phash: "phash-gradient:ROY="
         text_content_hash: "sha256:be0b687734c8b498a65d9a9325dc000862d870beee3bc2dd0b271bd6a1827fa9"
         "###);
-        check_canvas_render_test_point!(@r###"
+        check_canvas_render_test_point!(@r#"
         name: layout_clip_01_artifact_ir
         data_content_phash: "phash-gradient:ZmY="
-        text_content_hash: "sha256:6ab04fc428b6fe3f95d1cc0bd9790e6bf9129679e843a7f18ffa4051729fbc25"
-        "###);
-        check_canvas_render_test_point!(@r###"
+        text_content_hash: "sha256:4abe62a3abd5e0edfe3516e418be45d977de75a7c1b7b1e234d3bde175de8c36"
+        "#);
+        check_canvas_render_test_point!(@r#"
         name: layout_clip_02_artifact_ir
         data_content_phash: "phash-gradient:zMw="
-        text_content_hash: "sha256:dd951339d6e1b71c2639295f41221e9e7aa2d58cedb7f04dd32e6ec8d85e2a01"
-        "###);
+        text_content_hash: "sha256:6960a03da50d2e571c383933676cb7a2cc07c6429ad0cf3c212ff2885f34204c"
+        "#);
         check_canvas_render_test_point!(@r###"
         name: layout_clip_03_artifact_ir
         data_content_phash: "phash-gradient:qwA="
         text_content_hash: "sha256:6df1d8d52f2c5399a41916691020e6e8e6752d323ad5c44cb988ce04548d4f8c"
         "###);
-        check_canvas_render_test_point!(@r###"
+        check_canvas_render_test_point!(@r#"
         name: layout_list-marker_00_artifact_ir
         data_content_phash: "phash-gradient:MjM="
-        text_content_hash: "sha256:2da9c17ec39dbe874cbdef63e94310fc9dfccbae3e704202ee8b991e5614d21c"
-        "###);
-        check_canvas_render_test_point!(@r###"
+        text_content_hash: "sha256:e538c29aaf2d4251fe09ec4add5cd0ca504122e183e37ae252e61d2eee5a24c7"
+        "#);
+        check_canvas_render_test_point!(@r#"
         name: layout_list-marker_01_artifact_ir
         data_content_phash: "phash-gradient:I2I="
-        text_content_hash: "sha256:c57528d0eb7bce01a0bb12810d86681922bb237d5529727bcab2c4572cb38c71"
-        "###);
-        check_canvas_render_test_point!(@r###"
+        text_content_hash: "sha256:e9fc69b1fbf2728ca59e9ba070dc0f0408b9b6090c994afe063aff2463660686"
+        "#);
+        check_canvas_render_test_point!(@r#"
         name: layout_list-marker_02_artifact_ir
         data_content_phash: "phash-gradient:MzI="
-        text_content_hash: "sha256:1217b2a5f8a02873442f0b8c43e1ab625ad464cbf2e6830c9b91e1db2f677787"
-        "###);
-        check_canvas_render_test_point!(@r###"
+        text_content_hash: "sha256:5205bb096a6917434b31c1c577626af98bebb9fef5a1dd5f593ac9fcd616c5c1"
+        "#);
+        check_canvas_render_test_point!(@r#"
         name: layout_list-marker_03_artifact_ir
         data_content_phash: "phash-gradient:zM4="
-        text_content_hash: "sha256:c84f732ecf7adade6f2e0a59087d9d7616ed30bca3a1e26b3ca0a532856ec1ea"
-        "###);
+        text_content_hash: "sha256:7720cf45f5215747dca9c4b903c57ba84dbe6043fd055855160d2a574e2a3917"
+        "#);
         // ok empty page, compile error
         check_canvas_render_test_point!(@r###"
         name: layout_list-marker_04_artifact_ir
         data_content_phash: "phash-gradient:AAA="
         text_content_hash: "sha256:0b98b0a2660a801a610067cf0ad5726a8f2012d55d4f6174fec469d7c49a49eb"
         "###);
-        check_canvas_render_test_point!(@r###"
+        check_canvas_render_test_point!(@r#"
         name: layout_transform_00_artifact_ir
         data_content_phash: "phash-gradient:xGY="
-        text_content_hash: "sha256:9867944ee7ccae256db89f2177430e7b2a0ce970af5efa538c3d5328641e0d43"
-        "###);
+        text_content_hash: "sha256:a3235c2b2e0e2526ae3522533fa6c6b9501f6132fc0fbe7d0984cd6a4c07480e"
+        "#);
         check_canvas_render_test_point!(@r###"
         name: layout_transform_01_artifact_ir
         data_content_phash: "phash-gradient:xow="
@@ -568,11 +558,11 @@ mod tests {
         data_content_phash: "phash-gradient:5pg="
         text_content_hash: "sha256:4153da945c5806621872d4995668c55a583a14c571fe18d0acf243d3022a0495"
         "###);
-        check_canvas_render_test_point!(@r###"
+        check_canvas_render_test_point!(@r#"
         name: math_main_artifact_ir
         data_content_phash: "phash-gradient:LAA="
-        text_content_hash: "sha256:555e8b54c8a0323a5c723782ac49d6eb79b55314e93a44156f0723d12cd650c3"
-        "###);
+        text_content_hash: "sha256:73bea07577711fe6a15de77d52c1fc49c017b8fca052d7ad78db91b22ddbaa83"
+        "#);
         // todo: emoji change
         // check_canvas_render_test_point!(@r###"
         // name: math_undergradmath_artifact_ir
@@ -636,11 +626,11 @@ mod tests {
         text_content_hash: "sha256:0afec4355c5f0eeae37d07e442ae6eb97ef3806b369b22654edeb7bb89fc29cf"
         "###);
         // ok empty page, compile error
-        check_canvas_render_test_point!(@r###"
+        check_canvas_render_test_point!(@r#"
         name: visualize_line_01_artifact_ir
         data_content_phash: "phash-gradient:VVU="
-        text_content_hash: "sha256:bae4e26ee10c63beaa79ee9530bfbc48763e1a7aa5afd5a4931cc3a61c813561"
-        "###);
+        text_content_hash: "sha256:c6e6b92a49f9533832a9d954fa10d7f0d4e81304f0c54e90e7fd03406b81ad51"
+        "#);
         // ok empty page, compile error
         check_canvas_render_test_point!(@r###"
         name: visualize_line_02_artifact_ir
@@ -683,16 +673,16 @@ mod tests {
         data_content_phash: "phash-gradient:AAA="
         text_content_hash: "sha256:0b98b0a2660a801a610067cf0ad5726a8f2012d55d4f6174fec469d7c49a49eb"
         "###);
-        check_canvas_render_test_point!(@r###"
+        check_canvas_render_test_point!(@r#"
         name: visualize_shape-aspect_00_artifact_ir
         data_content_phash: "phash-gradient:lok="
-        text_content_hash: "sha256:58059704d06a5c8ba22e045ee77b43088550ec529ca7abfebc9bbd9b9f380a0c"
-        "###);
-        check_canvas_render_test_point!(@r###"
+        text_content_hash: "sha256:9eeffb1b0cb60a9a208e2f0d0ffc9723271258d66dd97ef2f976efe57cc19cf2"
+        "#);
+        check_canvas_render_test_point!(@r#"
         name: visualize_shape-aspect_01_artifact_ir
         data_content_phash: "phash-gradient:3uw="
-        text_content_hash: "sha256:45651cda6ce29c545e7d61f95b1d77c01992daf5bdda1d75e4907d33d9a9f04c"
-        "###);
+        text_content_hash: "sha256:a62d595cb4d1522c49a2ed4702625cd4bc8161db063519a766fa222b443b502b"
+        "#);
         check_canvas_render_test_point!(@r###"
         name: visualize_shape-aspect_02_artifact_ir
         data_content_phash: "phash-gradient:ZgA="
@@ -708,37 +698,37 @@ mod tests {
         data_content_phash: "phash-gradient:IgI="
         text_content_hash: "sha256:4705df8475d7465d68a1f7311e6ff6601e2af2c5a05d058782d9ecc9972e9301"
         "###);
-        check_canvas_render_test_point!(@r###"
+        check_canvas_render_test_point!(@r#"
         name: visualize_shape-aspect_05_artifact_ir
-        data_content_phash: "phash-gradient:VQI="
+        data_content_phash: "phash-gradient:MwM="
         text_content_hash: "sha256:0a17732cabdabc371d234a43ac60437a665ea238a0e6256c50e3a07fc1f5a75e"
-        "###);
+        "#);
         // ok empty page, compile error
         check_canvas_render_test_point!(@r###"
         name: visualize_shape-aspect_06_artifact_ir
         data_content_phash: "phash-gradient:AAA="
         text_content_hash: "sha256:0b98b0a2660a801a610067cf0ad5726a8f2012d55d4f6174fec469d7c49a49eb"
         "###);
-        check_canvas_render_test_point!(@r###"
+        check_canvas_render_test_point!(@r#"
         name: visualize_shape-circle_00_artifact_ir
         data_content_phash: "phash-gradient:zM4="
-        text_content_hash: "sha256:cbce3852da162050370a28bd525eeaabcbb0ee6ada364c7586b7987f64594b87"
-        "###);
-        check_canvas_render_test_point!(@r###"
+        text_content_hash: "sha256:3801c2a032da633615c4b1fa6ffe07214d475b168b1f7db47591ad02ef13a11d"
+        "#);
+        check_canvas_render_test_point!(@r#"
         name: visualize_shape-circle_01_artifact_ir
         data_content_phash: "phash-gradient:5uw="
-        text_content_hash: "sha256:9c46032dcafbb0a7d1e7f47a03bd0b9ad3880977f9e7a71fc4c0804a4815300a"
-        "###);
+        text_content_hash: "sha256:0c355eafbb4a36a65349ca2e49fd673b58a8665d5e26294600d3199b74e64b02"
+        "#);
         check_canvas_render_test_point!(@r###"
         name: visualize_shape-circle_02_artifact_ir
         data_content_phash: "phash-gradient:ZmY="
         text_content_hash: "sha256:7b833eb89812bf52735a5f434c3da7e2d37363a5fa9e92167e5b5f87c81ae9cf"
         "###);
-        check_canvas_render_test_point!(@r###"
+        check_canvas_render_test_point!(@r#"
         name: visualize_shape-circle_03_artifact_ir
         data_content_phash: "phash-gradient:qqo="
-        text_content_hash: "sha256:77ac09d682a7b254dbf0798b850c961f0246420abffb467cc814ab00fb0b6ac4"
-        "###);
+        text_content_hash: "sha256:1bfba1894e07875a6f4b071e5e8d0afaf896f327aa1894da59409c1484f7586b"
+        "#);
         check_canvas_render_test_point!(@r###"
         name: visualize_shape-circle_04_artifact_ir
         data_content_phash: "phash-gradient:AAA="
@@ -781,11 +771,11 @@ mod tests {
         data_content_phash: "phash-gradient:AAA="
         text_content_hash: "sha256:0b98b0a2660a801a610067cf0ad5726a8f2012d55d4f6174fec469d7c49a49eb"
         "###);
-        check_canvas_render_test_point!(@r###"
+        check_canvas_render_test_point!(@r#"
         name: visualize_stroke_07_artifact_ir
         data_content_phash: "phash-gradient:MyI="
-        text_content_hash: "sha256:fa8eaf53de38a4bbf60049950f0656a2a3c831c03e36f720091697f705b979b4"
-        "###);
+        text_content_hash: "sha256:f18b3c7a73c3415774e8097878a0322fd3aa84bb63459361d0c6ebe9172d8c6d"
+        "#);
 
         let done = test_point_iter.next();
         if done.is_some() {

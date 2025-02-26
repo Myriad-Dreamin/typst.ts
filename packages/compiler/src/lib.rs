@@ -4,6 +4,7 @@ mod incr;
 pub(crate) mod utils;
 
 pub use reflexo_typst::*;
+use reflexo_vec2svg::DefaultExportFeature;
 
 use core::fmt;
 use std::{fmt::Write, path::Path, sync::Arc};
@@ -15,6 +16,7 @@ use reflexo_typst::error::{long_diag_from_std, DiagMessage};
 use reflexo_typst::font::web::BrowserFontSearcher;
 use reflexo_typst::package::browser::ProxyRegistry;
 use reflexo_typst::parser::OffsetEncoding;
+use reflexo_typst::task::ExportPdfTask;
 use reflexo_typst::typst::{foundations::IntoValue, prelude::EcoVec};
 use reflexo_typst::vfs::browser::ProxyAccessModel;
 use typst::diag::SourceResult;
@@ -24,7 +26,7 @@ use crate::{incr::IncrServer, utils::console_log};
 
 macro_rules! take_diag {
     ($diagnostics_format:expr, $world:expr, $e:expr) => {
-        match $e {
+        match $e.output {
             Ok(v) => v,
             Err(e) => {
                 if $diagnostics_format >= 2 {
@@ -109,7 +111,7 @@ fn convert_diag(
 
 #[wasm_bindgen]
 pub struct TypstCompiler {
-    pub(crate) driver: CompileDriverImpl<PureCompiler<TypstBrowserWorld>, BrowserCompilerFeat>,
+    pub(crate) verse: TypstBrowserUniverse,
 }
 
 impl TypstCompiler {
@@ -119,15 +121,12 @@ impl TypstCompiler {
         searcher: BrowserFontSearcher,
     ) -> Result<Self, JsValue> {
         Ok(Self {
-            driver: CompileDriverImpl::new(
-                std::marker::PhantomData,
-                TypstBrowserUniverse::new(
-                    std::path::Path::new("/").to_owned(),
-                    None,
-                    access_model,
-                    registry,
-                    searcher.into(),
-                ),
+            verse: TypstBrowserUniverse::new(
+                std::path::Path::new("/").to_owned(),
+                None,
+                access_model,
+                registry,
+                searcher.into(),
             ),
         })
     }
@@ -145,7 +144,7 @@ pub fn get_font_info(buffer: Uint8Array) -> JsValue {
 impl TypstCompiler {
     pub fn reset(&mut self) -> Result<(), JsValue> {
         // reset the world caches
-        self.driver.evict(30).map_err(|e| format!("{e:?}"))?;
+        self.verse.evict(30);
 
         Ok(())
     }
@@ -157,15 +156,17 @@ impl TypstCompiler {
             .into_iter()
             .map(|(k, v)| (k.into(), v.into_value()))
             .collect();
-        self.driver
-            .universe_mut()
+        self.verse
             .increment_revision(|verse| verse.set_inputs(Arc::new(LazyHash::new(inputs))));
         Ok(())
     }
 
     pub fn add_source(&mut self, path: &str, content: &str) -> bool {
         let path = Path::new(path).to_owned();
-        match self.driver.map_shadow(&path, content.as_bytes().into()) {
+        match self
+            .verse
+            .map_shadow(&path, Bytes::from_string(content.to_owned()))
+        {
             Ok(_) => true,
             Err(e) => {
                 console_log!("Error: {:?}", e);
@@ -176,7 +177,7 @@ impl TypstCompiler {
 
     pub fn map_shadow(&mut self, path: &str, content: &[u8]) -> bool {
         let path = Path::new(path).to_owned();
-        match self.driver.map_shadow(&path, content.into()) {
+        match self.verse.map_shadow(&path, Bytes::new(content.to_owned())) {
             Ok(_) => true,
             Err(e) => {
                 console_log!("Error: {:?}", e);
@@ -187,7 +188,7 @@ impl TypstCompiler {
 
     pub fn unmap_shadow(&mut self, path: &str) -> bool {
         let path = Path::new(path).to_owned();
-        match self.driver.unmap_shadow(&path) {
+        match self.verse.unmap_shadow(&path) {
             Ok(_) => true,
             Err(e) => {
                 console_log!("Error: {:?}", e);
@@ -197,7 +198,7 @@ impl TypstCompiler {
     }
 
     pub fn reset_shadow(&mut self) {
-        self.driver.reset_shadow()
+        self.verse.reset_shadow()
     }
 
     // todo: font manipulation
@@ -205,8 +206,7 @@ impl TypstCompiler {
     // pub fn rebuild(&mut self) {}
 
     pub fn get_loaded_fonts(&mut self) -> Vec<JsString> {
-        self.driver
-            .universe_mut()
+        self.verse
             .font_resolver
             .loaded_fonts()
             .map(|s| format!("<{}, {:?}>", s.0, s.1).into())
@@ -214,11 +214,10 @@ impl TypstCompiler {
     }
 
     pub fn get_ast(&mut self, main_file_path: String) -> Result<String, JsValue> {
-        self.driver
-            .universe_mut()
+        self.verse
             .increment_revision(|verse| verse.set_entry_file(Path::new(&main_file_path).into()))
             .map_err(|e| format!("{e:?}"))?;
-        let world = self.driver.snapshot();
+        let world = self.verse.snapshot();
 
         // export ast
         let src = world.main();
@@ -243,7 +242,7 @@ impl TypstCompiler {
     }
 
     pub fn get_semantic_token_legend(&mut self) -> Result<JsValue, JsValue> {
-        let tokens = self.driver.universe_mut().get_semantic_token_legend();
+        let tokens = self.verse.get_semantic_token_legend();
         serde_wasm_bindgen::to_value(tokens.as_ref()).map_err(|e| format!("{e:?}").into())
     }
 
@@ -259,7 +258,7 @@ impl TypstCompiler {
             );
         }
 
-        let tokens = self.driver.universe_mut().get_semantic_tokens(
+        let tokens = self.verse.get_semantic_tokens(
             file_path,
             match offset_encoding.as_str() {
                "utf-16" => OffsetEncoding::Utf16,
@@ -298,28 +297,21 @@ impl TypstCompiler {
         fmt: String,
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
-        let vec_exporter: DynExporter<TypstDocument, Vec<u8>> = match fmt.as_str() {
-            "vector" => Box::new(reflexo_typst::exporter_builtins::VecExporter::new(
-                reflexo_typst::SvgModuleExporter::default(),
-            )),
-            "pdf" => Box::<reflexo_typst::PdfDocExporter>::default(),
+        type SvgModuleExport = WebSvgModuleExport<DefaultExportFeature>;
+
+        let g = self.verse.computation();
+        let world = &g.snap.world;
+
+        // todo: warning is ignored here.
+        let doc = take_diag!(diagnostics_format, &world, g.compile());
+
+        let artifact_bytes = match fmt.as_str() {
+            "vector" => SvgModuleExport::run(&g, &doc, &ExportWebSvgModuleTask::default()),
+            "pdf" => PdfExport::run(&g, &doc, &ExportPdfTask::default()),
             _ => {
                 return Err(error_once!("Unsupported fmt", format: fmt).into());
             }
-        };
-
-        let world = self.driver.snapshot();
-
-        let doc = take_diag!(
-            diagnostics_format,
-            &world,
-            self.driver.compile(&mut Default::default())
-        );
-        let artifact_bytes = take_diag!(
-            diagnostics_format,
-            &world,
-            vec_exporter.export(&world, doc.output)
-        );
+        }?;
 
         let v: JsValue = Uint8Array::from(artifact_bytes.as_slice()).into();
 
@@ -337,8 +329,7 @@ impl TypstCompiler {
         main_file_path: String,
         inputs: Option<Vec<js_sys::Array>>,
     ) -> Result<(), JsValue> {
-        self.driver
-            .universe
+        self.verse
             .increment_revision(|verse| -> SourceResult<()> {
                 verse.set_entry_file(Path::new(&main_file_path).into())?;
 
@@ -361,13 +352,13 @@ impl TypstCompiler {
     ) -> Result<String, JsValue> {
         self.set_compiler_options(main_file_path, inputs)?;
 
-        let doc = self
-            .driver
-            .compile(&mut Default::default())
-            .map_err(|e| format!("{e:?}"))?;
-        let elements: Vec<typst::foundations::Content> = self
-            .driver
-            .query(selector, &doc.output)
+        let graph = self.verse.computation();
+
+        // todo: diagnostics
+        let doc = graph.compile().output.map_err(|e| format!("{e:?}"))?;
+        // todo: query html?
+        let elements: Vec<typst::foundations::Content> = graph
+            .query(selector, &TypstDocument::Paged(doc))
             .map_err(|e| format!("{e:?}"))?;
 
         let mapped: Vec<_> = elements
@@ -404,14 +395,10 @@ impl TypstCompiler {
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
         self.set_compiler_options(main_file_path, inputs)?;
-        let world = self.driver.snapshot();
-        let doc = take_diag!(
-            diagnostics_format,
-            &world,
-            self.driver.compile(&mut Default::default())
-        );
+        let g = self.verse.computation();
+        let doc = take_diag!(diagnostics_format, &g.snap.world, g.compile());
 
-        let v = Uint8Array::from(state.update(doc.output).as_slice()).into();
+        let v = Uint8Array::from(state.update(doc).as_slice()).into();
         Ok(if diagnostics_format != 0 {
             let result = js_sys::Object::new();
             js_sys::Reflect::set(&result, &"result".into(), &v)?;

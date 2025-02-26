@@ -654,7 +654,7 @@ impl TypstPageElem {
         let stub = ctx.create_stub();
         let clip_paths = g.next_element_sibling().unwrap();
         let style_defs = clip_paths.next_element_sibling().unwrap();
-        let attached = Self::attach_svg(ctx, g.clone().dyn_into().unwrap(), data.content);
+        let attached = Self::attach_html(ctx, g.clone().dyn_into().unwrap(), data.content);
 
         Self {
             g: attached,
@@ -672,7 +672,7 @@ pub enum TypstDomExtra {
     Image(ImageElem),
     Text(TextElem),
     Path(PathElem),
-    Html(HtmlElem),
+    RawHtml(HtmlElem),
     Link(LinkElem),
     ContentHint(ContentHintElem),
 }

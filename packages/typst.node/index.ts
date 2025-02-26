@@ -13,3 +13,11 @@ export enum PdfStandard {
 }
 
 export * from './index-napi.js';
+
+export type ProjectWatchItem =
+  | string
+  | {
+      main: string;
+      workspace?: string;
+    };
+export type ProjectWatchItems = ProjectWatchItem | ProjectWatchItem[];

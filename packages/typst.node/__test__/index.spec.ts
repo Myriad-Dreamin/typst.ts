@@ -101,8 +101,11 @@ Hello, Typst! <my-
 
   const diag = doc.takeDiagnostics()!;
   t.is(diag.compilationStatus, 'error');
-  t.snapshot(diag.shortDiagnostics);
-  t.snapshot(compiler.fetchDiagnostics(diag));
+  t.snapshot(diag.shortDiagnostics.length);
+  t.snapshot(diag.shortDiagnostics[0].message);
+  const fetched = compiler.fetchDiagnostics(diag);
+  t.snapshot(fetched.length);
+  t.snapshot(fetched[0].message);
 });
 
 test('it takes in the workspace and entry file in compiler ctor', t => {

@@ -113,7 +113,7 @@ impl SvgBackend {
 }
 
 impl TypstPageElem {
-    pub fn attach_svg(
+    pub fn attach_html(
         ctx: &mut DomContext<'_, '_>,
         g: SvgGraphicsElement,
         data: Fingerprint,
@@ -154,7 +154,7 @@ impl TypstPageElem {
                     };
 
                     // skip translate g
-                    let child = Self::attach_svg(
+                    let child = Self::attach_html(
                         ctx,
                         should_ch
                             .first_element_child()
@@ -201,7 +201,7 @@ impl TypstPageElem {
                     &g,
                 );
 
-                let child = Self::attach_svg(
+                let child = Self::attach_html(
                     ctx,
                     ch.first_element_child()
                         .ok_or_else(|| {
@@ -230,12 +230,13 @@ impl TypstPageElem {
             VecItem::ContentHint(_) => TypstDomExtra::ContentHint(ContentHintElem { hint: ' ' }),
             VecItem::Link(_) => TypstDomExtra::Link(LinkElem {}),
             VecItem::Path(_) => TypstDomExtra::Path(PathElem {}),
-            VecItem::Html(_) => TypstDomExtra::Html(HtmlElem {}),
+            VecItem::SizedRawHtml(_) => TypstDomExtra::RawHtml(HtmlElem {}),
             VecItem::None
             | VecItem::ColorTransform(_)
             | VecItem::Color32(_)
             | VecItem::Gradient(_)
-            | VecItem::Pattern(_) => {
+            | VecItem::Pattern(_)
+            | VecItem::Html(_) => {
                 todo!()
             }
         };
