@@ -9,8 +9,8 @@
     "serve": "vite preview"
   },
   "devDependencies": {
-    "@myriaddreamin/typst-ts-renderer": "0.5.5-rc6",
-    "@myriaddreamin/typst.ts": "0.5.5-rc6",
+    "@myriaddreamin/typst-ts-renderer": "0.5.5-rc7",
+    "@myriaddreamin/typst.ts": "0.5.5-rc7",
     "solid-devtools": "^0.29.3",
     "typescript": "^5.6.2",
     "vite": "^5.4.8",

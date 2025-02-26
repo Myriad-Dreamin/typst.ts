@@ -478,9 +478,9 @@ checksum = "7588475145507237ded760e52bf2f1085495245502033756d28ea72ade0e498b"
 
 [[package]]
 name = "chrono"
-version = "0.4.39"
+version = "0.4.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e36cc9d416881d2e24f9a963be5fb1cd90966419ac844274161d10488b3e825"
+checksum = "1a7964611d71df112cb1730f2ee67324fcf4d0fc6606acbbe9bfe06df124637c"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
@@ -488,7 +488,7 @@ dependencies = [
  "num-traits",
  "serde",
  "wasm-bindgen",
- "windows-targets 0.52.6",
+ "windows-link",
 ]
 
 [[package]]
@@ -2961,7 +2961,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "base64 0.22.1",
  "bitvec",
@@ -2989,7 +2989,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-typst"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "ansi_term",
  "codespan-reporting",
@@ -3028,7 +3028,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-typst2vec"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "bitvec",
  "comemo",
@@ -3054,7 +3054,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2bbox"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "comemo",
  "reflexo",
@@ -3065,7 +3065,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2canvas"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "async-trait",
  "comemo",
@@ -3083,7 +3083,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2dom"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "async-recursion",
  "comemo",
@@ -3106,7 +3106,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2sema"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "comemo",
  "js-sys",
@@ -3120,7 +3120,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2svg"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4800,7 +4800,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-bench-lowering"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "comemo",
  "divan",
@@ -4812,7 +4812,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-cli"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4841,7 +4841,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-dev-server"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "bytes",
  "clap",
@@ -4858,7 +4858,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-heap-profile-test"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4872,7 +4872,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-fuzzer"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4892,7 +4892,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-test"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "anyhow",
  "comemo",
@@ -4908,7 +4908,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-integration-test"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4930,7 +4930,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-node-compiler"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "chrono",
  "comemo",
@@ -4950,7 +4950,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-parser"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",
@@ -4966,7 +4966,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-renderer"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "anyhow",
  "console_error_panic_hook",
@@ -5001,14 +5001,14 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-rkyv-assertions"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "reflexo-typst2vec",
 ]
 
 [[package]]
 name = "typst-ts-std-test"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "anyhow",
  "rayon",
@@ -5017,7 +5017,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-test-common"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -5028,7 +5028,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-web-compiler"
-version = "0.5.5-rc6"
+version = "0.5.5-rc7"
 dependencies = [
  "ansi-to-html",
  "base64 0.22.1",
@@ -5239,9 +5239,9 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "uuid"
-version = "1.14.0"
+version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93d59ca99a559661b96bf898d8fce28ed87935fd2bea9f05983c1464dd6c71b1"
+checksum = "bd8dcafa1ca14750d8d7a05aa05988c17aab20886e1f3ae33a40223c58d92ef7"
 dependencies = [
  "getrandom 0.3.1",
 ]
@@ -5578,6 +5578,12 @@ checksum = "33ab640c8d7e35bf8ba19b884ba838ceb4fba93a4e8c65a9059d08afcfc683d9"
 dependencies = [
  "windows-targets 0.52.6",
 ]
+
+[[package]]
+name = "windows-link"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6dccfd733ce2b1753b03b6d3c65edf020262ea35e20ccdf3e288043e6dd620e3"
 
 [[package]]
 name = "windows-registry"
