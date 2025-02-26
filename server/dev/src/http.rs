@@ -1,11 +1,32 @@
 use std::net::SocketAddr;
+use std::ops::DerefMut;
+use std::sync::{Arc, Mutex};
 
+use reflexo_typst::prelude::EcoVec;
 use warp::Filter;
 
 use crate::RunHttpArgs;
 
+#[derive(Clone, Debug, Default)]
+pub struct ResultBucket(Arc<Mutex<EcoVec<String>>>);
+
+impl ResultBucket {
+    fn put(&self, data: String) {
+        self.0.lock().unwrap().push(data);
+    }
+
+    pub fn collect(&self) -> EcoVec<String> {
+        std::mem::take(self.0.lock().unwrap().deref_mut())
+    }
+}
+
 /// See: <https://fasterthanli.me/articles/why-is-my-rust-build-so-slow>
 pub async fn run_http(args: RunHttpArgs) {
+    run_http_with(args, None).await
+}
+
+/// See: <https://fasterthanli.me/articles/why-is-my-rust-build-so-slow>
+pub async fn run_http_with(args: RunHttpArgs, bucket: Option<ResultBucket>) {
     use warp::http::Method;
 
     let mut http_addr = args.http.clone();
@@ -45,6 +66,24 @@ pub async fn run_http(args: RunHttpArgs) {
             .or(warp::fs::dir("github-pages"))
     });
 
+    let result_handle = move |renderer_result: bytes::Bytes| {
+        log::info!("...");
+
+        if let Some(bucket) = bucket.as_ref() {
+            bucket.put(String::from_utf8(renderer_result.to_vec()).unwrap());
+        }
+
+        warp::reply()
+    };
+
+    let result_route = warp::path("result")
+        .and({
+            warp::path("canvas-rendering")
+                .and(warp::post().and(warp::body::bytes().map(result_handle)))
+                .boxed()
+        })
+        .boxed();
+
     let cors =
         warp::cors().allow_methods(&[Method::HEAD, Method::GET, Method::POST, Method::DELETE]);
 
@@ -55,6 +94,7 @@ pub async fn run_http(args: RunHttpArgs) {
         .or(base)
         .or(gh_pages)
         .or(ets)
+        .or(result_route)
         .with(cors)
         .with(warp::compression::gzip());
 

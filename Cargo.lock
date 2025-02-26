@@ -4102,9 +4102,9 @@ dependencies = [
 
 [[package]]
 name = "tinymist-analysis"
-version = "0.13.0"
+version = "0.13.2-rc1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1434b2cacb0a83ba79e3b9968363de6ec5f1dac04032e4dca72a3c61f4b2ccf8"
+checksum = "c851e0e89d2b1172355de2375aa269ea6eb11771c2c5f575e88a1073daa2ca9b"
 dependencies = [
  "ecow",
  "lsp-types",
@@ -4116,9 +4116,9 @@ dependencies = [
 
 [[package]]
 name = "tinymist-derive"
-version = "0.13.0"
+version = "0.13.2-rc1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "133e9318793f2a240de8f001a4de25db716c35d8a7583e45e96668e226407f8c"
+checksum = "bcb24b07a81b8f370e3009ab73c886d11a3b6d48cb82d1d088bbb97520dc1923"
 dependencies = [
  "quote",
  "syn 2.0.98",
@@ -4126,9 +4126,9 @@ dependencies = [
 
 [[package]]
 name = "tinymist-project"
-version = "0.13.0"
+version = "0.13.2-rc1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4a0b721cffe0b720a45a2ed1646a914388b67dcf7710777440de307197b7e93"
+checksum = "4fa3cff0eb97f296669f90b56ece75d71065d1e48b3608d8b745011f21650594"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4157,9 +4157,9 @@ dependencies = [
 
 [[package]]
 name = "tinymist-std"
-version = "0.13.0"
+version = "0.13.2-rc1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e50d5a966dadd741627292e0428ae479cf7a3ae922c7425f1cb017cb8816d9c"
+checksum = "5331d16ea0da6bf8c454d8687f8cdcb8b0786f780ac060e8d7b5f7acca14feb5"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4194,9 +4194,9 @@ dependencies = [
 
 [[package]]
 name = "tinymist-task"
-version = "0.13.0"
+version = "0.13.2-rc1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb6caf41350c5afa797dac0c47cbd730b6d74d2630757ec1bed2f4dec547fc5b"
+checksum = "8e621f37a9b9998ca983549d7f1f9ef72226814febd27775bb83733e5de1ccf2"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4231,9 +4231,9 @@ dependencies = [
 
 [[package]]
 name = "tinymist-vfs"
-version = "0.13.0"
+version = "0.13.2-rc1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1493ab052262e274a784efdde57063f4208b705012af4ee82e955151b27fce37"
+checksum = "f47c40926fa1304828c28dd54b7090818ef8a07815979764c76dcf427476594b"
 dependencies = [
  "comemo",
  "ecow",
@@ -4251,9 +4251,9 @@ dependencies = [
 
 [[package]]
 name = "tinymist-world"
-version = "0.13.0"
+version = "0.13.2-rc1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3c077bacca01c4949878605c1bac05398a705f2033c6f4fca96a2ed965cbab6"
+checksum = "6de264068229c454c0b94fb3e2e8fe13e5d417aa9017b2183ae2c575ab8737d3"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4741,9 +4741,9 @@ dependencies = [
 
 [[package]]
 name = "typst-shim"
-version = "0.13.0"
+version = "0.13.2-rc1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4b39e523d10d87c52dc2097eaf7ee6b1cf5232000ffcde1accbef66cb438a1e"
+checksum = "b9afc3353625c494e9d025ba327bdbdae8463f4750e842e23c524f3c975dd149"
 dependencies = [
  "cfg-if",
  "comemo",
@@ -4843,6 +4843,7 @@ dependencies = [
 name = "typst-ts-dev-server"
 version = "0.5.5-rc6"
 dependencies = [
+ "bytes",
  "clap",
  "clap_complete",
  "clap_complete_fig",

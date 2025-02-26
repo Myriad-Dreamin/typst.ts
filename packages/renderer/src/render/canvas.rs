@@ -172,7 +172,7 @@ mod tests {
     use send_wrapper::SendWrapper;
     use serde::{Deserialize, Serialize};
     use sha2::Digest;
-    use typst_ts_test_common::web_artifact::get_corpus;
+    use typst_ts_test_common::web_artifact::{get_corpus, post_test_result};
     use wasm_bindgen::JsCast;
     use wasm_bindgen_test::*;
 
@@ -182,7 +182,7 @@ mod tests {
 
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-    const SHOW_RESULT: bool = true;
+    const SHOW_RESULT: bool = false;
     #[cfg(feature = "worker")]
     const IN_WORKER: bool = false;
 
@@ -405,34 +405,32 @@ renderer_wrapper.as_str()
 
             let data_content_hash = hash_bytes(&data_content);
 
-            web_sys::console::log_3(
-                &">>> reflexo_test_capture".into(),
-                &serde_json::to_string(&CanvasRenderTestPoint {
-                    kind: "canvas_render_test".into(),
-                    name: point.to_string(),
-                    meta: CanvasRenderTestPointMeta {
-                        time_used: format!("{:.3}", end - start),
-                        data_content_hash: data_content_hash.clone(),
-                        text_content_hash: hash_bytes(&text_content),
-                        artifact_hash: hash_bytes(artifact),
-                    },
-                    verbose: {
-                        let mut verbose_data = HashMap::new();
-                        if cfg!(feature = "web_verbose") {
-                            verbose_data.insert("data_content".into(), data_content);
-                            verbose_data.insert("text_content".into(), text_content);
-                            verbose_data.insert(
-                                "perf_events".into(),
-                                serde_json::to_string(&perf_events).unwrap(),
-                            );
-                        }
-                        verbose_data
-                    },
-                })
-                .unwrap()
-                .into(),
-                &"<<< reflexo_test_capture".into(),
-            );
+            let test_result = serde_json::to_string(&CanvasRenderTestPoint {
+                kind: "canvas_render_test".into(),
+                name: point.to_string(),
+                meta: CanvasRenderTestPointMeta {
+                    time_used: format!("{:.3}", end - start),
+                    data_content_hash: data_content_hash.clone(),
+                    text_content_hash: hash_bytes(&text_content),
+                    artifact_hash: hash_bytes(artifact),
+                },
+                verbose: {
+                    let mut verbose_data = HashMap::new();
+                    if cfg!(feature = "web_verbose") {
+                        verbose_data.insert("data_content".into(), data_content);
+                        verbose_data.insert("text_content".into(), text_content);
+                        verbose_data.insert(
+                            "perf_events".into(),
+                            serde_json::to_string(&perf_events).unwrap(),
+                        );
+                    }
+                    verbose_data
+                },
+            })
+            .unwrap();
+
+            push_test_result(&test_result).await;
+
             (end - start, perf_events, data_content_hash, artifact)
         };
 
@@ -456,12 +454,7 @@ renderer_wrapper.as_str()
                 .dyn_into::<web_sys::HtmlElement>()
                 .unwrap();
 
-            title.set_inner_html(&format!(
-                "{point} => {data_content_hash} {time_used:.3}ms",
-                point = point,
-                data_content_hash = data_content_hash,
-                time_used = time_used,
-            ));
+            title.set_inner_html(&format!("{point} => {data_content_hash} {time_used:.3}ms"));
 
             div.append_child(&title).unwrap();
             div.append_child(&canvas).unwrap();
@@ -484,16 +477,25 @@ renderer_wrapper.as_str()
         );
     }
 
+    async fn push_test_result(_test_result: &str) {
+        if cfg!(feature = "web_verbose") {
+            // web_sys::console::log_3(
+            //     &">>> reflexo_test_capture".into(),
+            //     &_test_result.into(),
+            //     &"<<< reflexo_test_capture".into(),
+            // );
+            post_test_result(_test_result).await.unwrap();
+        }
+    }
+
     async fn get_ir_artifact(name: &str) -> Vec<u8> {
-        let array_buffer = get_corpus(format!("{}.artifact.sir.in", name))
-            .await
-            .unwrap();
+        let array_buffer = get_corpus(format!("{name}.artifact.sir.in")).await.unwrap();
         js_sys::Uint8Array::new(&array_buffer).to_vec()
     }
 
     async fn render_test_from_corpus(path: &str) {
         let point = path.replace('/', "_");
-        let ir_point = format!("{}_artifact_ir", point);
+        let ir_point = format!("{point}_artifact_ir");
 
         let artifact = get_ir_artifact(path).await;
         render_test_template(&ir_point, &artifact, "vector").await;
