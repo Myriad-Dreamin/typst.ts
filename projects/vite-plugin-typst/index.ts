@@ -1,8 +1,9 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { globSync } from 'glob';
+import globWatch from 'glob-watcher';
 import type { ResolvedConfig, Plugin as VitePlugin } from 'vite';
-import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
+import { NodeCompiler, ProjectWatcher } from '@myriaddreamin/typst-ts-node-compiler';
 
 type TypstCompileProvider = '@myriaddreamin/typst-ts-node-compiler';
 
@@ -24,6 +25,7 @@ export interface TypstPluginOptions extends TypstDocumentOptions {
   documents?: DocumentInput | DocumentInput[];
   // uriPrefix?: string;
   compiler?: TypstCompileProvider;
+  onInputs?: (typstInputs: TypstInputs) => void;
 }
 
 interface TypstInput {
@@ -115,13 +117,159 @@ export function TypstPlugin(options: TypstPluginOptions = {}): VitePlugin {
     throw new Error(`Unsupported compiler provider: ${compilerProvider}`);
   }
 
+  const documents = normalizeDocumentInputs(options.documents || []);
+  const globs = documents.flatMap(doc => {
+    if (typeof doc.input === 'string') {
+      return [doc.input];
+    }
+    return doc.input;
+  });
+
   let viteConfig: ResolvedConfig;
-  let compiler: NodeCompiler;
+
+  const compileArgs = {
+    workspace: root || '.',
+    inputs: {
+      'x-target': 'web-light',
+      // ...(urlBase ? { 'x-url-base': urlBase } : {}),
+    },
+    fontArgs: [{ fontPaths: ['./assets/fonts', './assets/typst-fonts'] }],
+  };
+
+  /**
+   * Lazily created compiler.
+   */
+  let _compiler: NodeCompiler | undefined = undefined;
+  /**
+   * Lazily created compiler.
+   */
+  const compiler = (): NodeCompiler => (_compiler ||= NodeCompiler.create(compileArgs));
+  let _watcher: ProjectWatcher | undefined = undefined;
+  /**
+   * Lazily created watcher
+   */
+  const watcher = (): ProjectWatcher => (_watcher ||= ProjectWatcher.create(compileArgs));
+
+  /**
+   * Common getter for the compiler or watcher.
+   */
+  const compilerOrWatcher = () => _compiler || _watcher;
+
+  /**
+   * Compiles the source file to the destination file.
+   *
+   * @param {string} src The source file path
+   *
+   * @example
+   * compile("src/index.typ", "dist/index.html")(compiler());
+   */
+  const compile = (src: string) => {
+    return (compiler: import('@myriaddreamin/typst-ts-node-compiler').NodeTypstProject) => {
+      const htmlResult = compiler.tryHtml({
+        mainFilePath: src,
+        ...compileArgs,
+      });
+
+      // Only print the error once
+      if (htmlResult.hasError()) {
+        console.log(` \x1b[1;31mError\x1b[0m ${src}`);
+        htmlResult.printErrors();
+        return;
+      }
+
+      // todo: resolveRel may override file paths.
+      // todo: html is fat
+      const htmlContent = htmlResult.result!.html();
+      cache.set(resolveRel(src), htmlContent);
+
+      console.log(` \x1b[1;32mCompiled\x1b[0m ${src}`);
+
+      // Evicts the cache unused in last 30 runs
+      compilerOrWatcher()?.evictCache(30);
+    };
+  };
+
+  /**
+   * User trigger compiles the source file to the destination file or watches the source file.
+   *
+   * All the errors are caught and printed to the console.
+   *
+   * @param {string} src The source file path
+   *
+   * @example
+   * compileOrWatch("src/index.typ", "dist/index.html");
+   */
+  const compileOrWatch = (src: string) => {
+    try {
+      if (isWatch) {
+        watcher().add([src], compile(src));
+      } else {
+        compile(src)(compiler());
+      }
+    } catch (e) {
+      console.error(e);
+      return;
+    }
+  };
 
   let inputRoot: string;
   let outputDir: string;
+  let inputWatcher: fs.FSWatcher | undefined = undefined;
 
   let typstInputs: TypstInputs = {};
+  let loadedTypstInputs: string = '';
+
+  let isWatch = false;
+  let reload = () => {};
+  let firstReload = true;
+
+  const createReload = (conf: ResolvedConfig) => {
+    return () => {
+      typstInputs = resolveInputs(options, conf)!;
+      const newLoadedTypstInputs = JSON.stringify(typstInputs);
+      if (newLoadedTypstInputs === loadedTypstInputs) {
+        return;
+      }
+      loadedTypstInputs = newLoadedTypstInputs;
+      // console.log('new', newLoadedTypstInputs);
+
+      if (options.onInputs) {
+        options.onInputs(typstInputs);
+      }
+      if (isWatch) {
+        watcher().clear();
+      }
+      for (const input of Object.values(typstInputs)) {
+        compileOrWatch(input.input);
+      }
+      if (isWatch) {
+        watcher().watch();
+      }
+    };
+  };
+
+  const viteReload = (conf: ResolvedConfig) => {
+    viteConfig = conf;
+    inputRoot = path.resolve(viteConfig.root || '.');
+    outputDir = path.resolve(viteConfig.build?.outDir || 'dist');
+    // isWatch = !!(conf.server || conf.build?.watch);
+    // console.log('isWatch', isWatch, conf.mode);
+    isWatch = !!(conf.mode === 'development' || conf.build?.watch);
+    // console.log('isWatch', isWatch, conf.server, conf.build?.watch);
+    compileArgs.workspace = root || conf.root || '.';
+    if (inputWatcher && !firstReload) {
+      inputWatcher.off('add', reload);
+      inputWatcher.off('remove', reload);
+    }
+    firstReload = false;
+    reload = createReload(conf);
+    if (isWatch) {
+      // When these files change, we need to reload the documents.
+      inputWatcher = globWatch(globs);
+      inputWatcher.on('add', reload);
+      inputWatcher.on('remove', reload);
+    }
+  };
 
   const cache = new Map<string, string>();
 
@@ -134,16 +282,10 @@ export function TypstPlugin(options: TypstPluginOptions = {}): VitePlugin {
     name: 'myriad-dreamin:vite-plugin-typst',
     enforce: 'pre',
     configResolved(resolvedConfig) {
-      viteConfig = resolvedConfig;
-
-      inputRoot = path.resolve(viteConfig.root || '.');
-      outputDir = path.resolve(viteConfig.build.outDir || 'dist');
-
-      compiler = NodeCompiler.create({
-        workspace: root || inputRoot,
-      });
+      viteReload(resolvedConfig);
     },
     config(conf) {
+      viteReload(conf as unknown as ResolvedConfig);
       typstInputs = resolveInputs(options, conf as unknown as ResolvedConfig)!;
 
       let input: ViteInputs | undefined;
@@ -165,27 +307,8 @@ export function TypstPlugin(options: TypstPluginOptions = {}): VitePlugin {
       }
     },
 
-    async buildStart(options) {
-      const inputs = (
-        options.input instanceof Array ? options.input : Object.values(options.input)
-      ) as string[];
-
-      for (const input of inputs) {
-        const res = compiler.tryHtml({
-          mainFilePath: input,
-        });
-        if (res.hasError()) {
-          console.log(` \x1b[1;31mError\x1b[0m ${input}`);
-          res.printErrors();
-        } else {
-          console.log(` \x1b[1;32mCompiled\x1b[0m ${input}`);
-        }
-
-        const dst = resolveRel(input);
-        // todo: resolveRel may override file paths.
-        // todo: html is fat
-        cache.set(resolveRel(input), res.result!.html());
-      }
+    async buildStart(_options) {
+      reload();
     },
 
     load(id) {
@@ -209,7 +332,7 @@ export function TypstPlugin(options: TypstPluginOptions = {}): VitePlugin {
         const toGetWithoutPrefix = toGet.startsWith('/') ? toGet.slice(1) : toGet;
         // get cache
         const html = cache.get(toGetWithoutPrefix);
-        console.log('middleware', req.url, !!html);
+        // console.log('middleware', req.url, !!html);
         if (html) {
           res.setHeader('Content-Type', 'text/html');
           res.end(html);
