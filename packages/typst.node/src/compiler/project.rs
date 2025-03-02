@@ -771,13 +771,20 @@ impl NodeTypstProject {
     /// Compiles the document as a HTML.
     #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     #[cfg(feature = "html")]
-    pub fn may_html(&mut self, compiled_or_by: MayCompileOpts) -> NodeStringExecResult {
-        use reflexo_typst::ExportStaticHtmlTask;
+    pub fn try_html(&mut self, compiled_or_by: MayCompileOpts) -> NodeHtmlOutputExecResult {
+        use reflexo_typst::ExportHtmlTask;
 
-        type Export = reflexo_typst::StaticHtmlExport;
-        let res =
-            self.compile_as_html::<Export, _>(compiled_or_by, &ExportStaticHtmlTask::default());
-        ExecResultRepr::from_result(res).flatten().into()
+        use crate::NodeHtmlOutput;
+
+        type Export = reflexo_typst::HtmlOutputExport;
+        let res = self
+            .compile_as_html::<Export, _>(compiled_or_by, &ExportHtmlTask::default())
+            .map(|res| {
+                res.flatten().map(|inner| NodeHtmlOutput {
+                    inner: Arc::new(inner),
+                })
+            });
+        ExecResultRepr::from_result(res).into()
     }
 }
 

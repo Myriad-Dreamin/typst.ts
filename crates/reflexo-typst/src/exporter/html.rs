@@ -1,6 +1,10 @@
 use std::fmt::Write;
+use std::sync::Arc;
 
 use ecow::EcoString;
+use reflexo::error::prelude::*;
+use reflexo::typst::TypstHtmlDocument;
+use tinymist_world::{CompilerFeat, ExportComputation, WorldComputeGraph};
 use typst::diag::{bail, At, SourceResult, StrResult};
 use typst::foundations::Repr;
 use typst::html::{charsets, tag, HtmlDocument, HtmlElement, HtmlNode, HtmlTag};
@@ -9,8 +13,25 @@ use typst::syntax::Span;
 
 pub type ExportStaticHtmlTask = tinymist_task::ExportHtmlTask;
 pub type StaticHtmlExport = tinymist_task::HtmlExport;
+pub type ExportHtmlTask = tinymist_task::ExportHtmlTask;
+
+pub struct HtmlOutputExport;
+
+impl<F: CompilerFeat> ExportComputation<F, TypstHtmlDocument> for HtmlOutputExport {
+    type Output = HtmlOutput;
+    type Config = ExportHtmlTask;
+
+    fn run(
+        _graph: &Arc<WorldComputeGraph<F>>,
+        doc: &Arc<TypstHtmlDocument>,
+        _config: &ExportHtmlTask,
+    ) -> Result<HtmlOutput> {
+        Ok(static_html(doc)?)
+    }
+}
 
 pub struct HtmlOutput {
+    pretty: bool,
     pub head: HtmlElement,
     pub body: String,
 }
@@ -62,6 +83,23 @@ impl HtmlOutput {
     pub fn body(&self) -> &str {
         &self.body
     }
+
+    pub fn html(&self) -> String {
+        let mut w = Writer {
+            pretty: self.pretty,
+            ..Writer::default()
+        };
+        w.buf.push_str("<!DOCTYPE html>\n");
+        w.buf.push_str("<html>");
+        write_indent(&mut w);
+        write_element(&mut w, &self.head).unwrap();
+        if w.pretty {
+            w.buf.push('\n');
+        }
+        w.buf.push_str(&self.body);
+        w.buf.push_str("</html>");
+        w.buf
+    }
 }
 
 /// Encodes an HTML document into a string.
@@ -103,6 +141,7 @@ pub fn static_html(document: &HtmlDocument) -> SourceResult<HtmlOutput> {
         w.buf.push('\n');
     }
     Ok(HtmlOutput {
+        pretty: true,
         head,
         body: core::mem::take(&mut w.buf),
     })

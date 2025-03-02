@@ -12,7 +12,7 @@ use reflexo_typst::typst::diag::{SourceResult, Warned};
 use reflexo_typst::typst::prelude::*;
 use reflexo_typst::{DiagnosticFormat, TypstPagedDocument, TypstWorld};
 
-use crate::NodeTypstDocument;
+use crate::{NodeHtmlOutput, NodeTypstDocument};
 
 /// The error status of a node error.
 pub enum NodeErrorStatus {
@@ -424,4 +424,4 @@ macro_rules! impl_exec_result {
     };
 }
 
-impl_exec_result!(NodeStringExecResult, String);
+impl_exec_result!(NodeHtmlOutputExecResult, NodeHtmlOutput);
