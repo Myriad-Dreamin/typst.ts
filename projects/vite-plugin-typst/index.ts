@@ -1,30 +1,111 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import { globSync } from 'glob';
 import type { ResolvedConfig, Plugin as VitePlugin } from 'vite';
 import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
 
 type TypstCompileProvider = '@myriaddreamin/typst-ts-node-compiler';
 
+export interface TypstDocumentOptions {
+  root?: string;
+}
+
+export interface TypstDocumentOptionsWithInput extends TypstDocumentOptions {
+  input: string | string[];
+}
+
+type DocumentInput = string | TypstDocumentOptionsWithInput;
+
 /**
  * Vite plugin for Typst
  */
-export interface TypstPluginOptions {
-  root?: string;
+export interface TypstPluginOptions extends TypstDocumentOptions {
+  index?: DocumentInput;
+  documents?: DocumentInput | DocumentInput[];
   // uriPrefix?: string;
   compiler?: TypstCompileProvider;
 }
 
-type Inputs = Record<string, string>;
+interface TypstInput {
+  input: string;
+  root?: string;
+}
+
+type ViteInputs = Record<string, string>;
+type TypstInputs = Record<string, TypstInput>;
+
+function normalizeDocumentInput(input: DocumentInput): TypstDocumentOptionsWithInput {
+  if (typeof input === 'string') {
+    return {
+      input,
+    };
+  }
+
+  return input;
+}
+
+function normalizeDocumentInputs(
+  input: DocumentInput | DocumentInput[],
+): TypstDocumentOptionsWithInput[] {
+  if (Array.isArray(input)) {
+    return input.map(normalizeDocumentInput);
+  }
+
+  return [normalizeDocumentInput(input)];
+}
 
 // https://github.com/vbenjs/vite-plugin-html/blob/4a32df2b416b161663904de51530f462a6219fd5/packages/core/src/htmlPlugin.ts#L179
-function resolveInputs(viteConfig: ResolvedConfig): Inputs | undefined {
-  const indexTyp = path.resolve(viteConfig.root || '.', 'index.typ');
-  if (fs.existsSync(indexTyp)) {
-    const input: Record<string, string> = {
-      index: indexTyp,
-    };
-    return input;
+function resolveInputs(
+  opts: TypstPluginOptions,
+  viteConfig: ResolvedConfig,
+): TypstInputs | undefined {
+  const viteInputs: TypstInputs = {};
+  if (!opts.index) {
+    const indexTyp = path.resolve(viteConfig.root || '.', 'index.typ');
+    if (fs.existsSync(indexTyp)) {
+      viteInputs['index'] = {
+        input: indexTyp,
+        root: opts.root || viteConfig.root,
+      };
+    }
+  } else {
+    const index = normalizeDocumentInput(opts.index);
+    if (typeof index.input === 'string') {
+      viteInputs['index'] = {
+        input: index.input,
+        root: index.root || opts.root || viteConfig.root,
+      };
+    } else {
+      throw new Error('index.input should be a string');
+    }
   }
+
+  for (const doc of normalizeDocumentInputs(opts.documents || [])) {
+    const paths = typeof doc.input === 'string' ? [doc.input] : doc.input;
+    const matched = [];
+    for (const p of paths) {
+      const matchedP = globSync(p, {
+        cwd: viteConfig.root,
+      });
+      for (const mp of matchedP) {
+        if (mp.endsWith('.typ')) {
+          matched.push(mp);
+        }
+      }
+    }
+
+    for (const m of matched) {
+      viteInputs[m] = {
+        input: m,
+        root: doc.root || opts.root || viteConfig.root,
+      };
+    }
+  }
+
+  if (Object.keys(viteInputs).length === 0) {
+    return undefined;
+  }
+  return viteInputs;
 }
 
 export function TypstPlugin(options: TypstPluginOptions = {}): VitePlugin {
@@ -39,6 +120,8 @@ export function TypstPlugin(options: TypstPluginOptions = {}): VitePlugin {
 
   let inputRoot: string;
   let outputDir: string;
+
+  let typstInputs: TypstInputs = {};
 
   const cache = new Map<string, string>();
 
@@ -61,8 +144,15 @@ export function TypstPlugin(options: TypstPluginOptions = {}): VitePlugin {
       });
     },
     config(conf) {
-      const input = resolveInputs(conf as unknown as ResolvedConfig);
-      // console.log('config', input);
+      typstInputs = resolveInputs(options, conf as unknown as ResolvedConfig)!;
+
+      let input: ViteInputs | undefined;
+      if (typstInputs) {
+        input = input || {};
+        for (const [key, { input: inputPath }] of Object.entries(typstInputs)) {
+          input[key] = inputPath;
+        }
+      }
 
       if (input) {
         return {

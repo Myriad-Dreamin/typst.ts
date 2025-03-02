@@ -20,11 +20,13 @@
     "typst"
   ],
   "peerDependencies": {
-    "vite": "^4.0.0",
-    "@myriad-dreamin/typst.node": "^0.5.5-rc6"
+    "@myriad-dreamin/typst.node": "^0.5.5-rc6",
+    "vite": "^4.0.0"
   },
   "files": [
-    "dist/**/*.{mts,mjs,cjs,cts,ts,js}",
-    "LICENSE"
-  ]
+    "dist/**/*.{mts,mjs,cjs,cts,ts,js}"
+  ],
+  "dependencies": {
+    "glob": "^11.0.1"
+  }
 }

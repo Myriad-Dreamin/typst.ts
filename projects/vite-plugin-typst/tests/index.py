@@ -14,6 +14,7 @@ def main():
   for project, expected_ok in [
     ["examples/single-file", True],
     ["examples/single-file-error", False],
+    ["examples/glob-documents", True],
   ]:
     try:
       code = run_vite_on(project)
