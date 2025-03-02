@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as fs from 'fs';
 import type { ResolvedConfig, Plugin as VitePlugin } from 'vite';
 import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
 
@@ -16,12 +17,14 @@ export interface TypstPluginOptions {
 type Inputs = Record<string, string>;
 
 // https://github.com/vbenjs/vite-plugin-html/blob/4a32df2b416b161663904de51530f462a6219fd5/packages/core/src/htmlPlugin.ts#L179
-function resolveInputs(viteConfig: ResolvedConfig): Inputs {
-  const input: Record<string, string> = {
-    index: path.resolve(viteConfig.root || '.', 'index.typ'),
-  };
-
-  return input;
+function resolveInputs(viteConfig: ResolvedConfig): Inputs | undefined {
+  const indexTyp = path.resolve(viteConfig.root || '.', 'index.typ');
+  if (fs.existsSync(indexTyp)) {
+    const input: Record<string, string> = {
+      index: indexTyp,
+    };
+    return input;
+  }
 }
 
 export function TypstPlugin(options: TypstPluginOptions = {}): VitePlugin {

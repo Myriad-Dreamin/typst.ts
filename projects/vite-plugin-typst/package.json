@@ -8,6 +8,8 @@
   "type": "module",
   "scripts": {
     "build": "npx tsc",
+    "dev": "npx tsc --watch",
+    "test": "python tests/index.py",
     "publish:dry": "npm publish --dry-run",
     "publish:lib": "npm publish --access public || exit 0"
   },
