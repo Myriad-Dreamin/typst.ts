@@ -344,3 +344,5 @@ export function TypstPlugin(options: TypstPluginOptions = {}): VitePlugin {
     },
   };
 }
+
+export default TypstPlugin;
