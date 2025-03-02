@@ -5,20 +5,20 @@ A [Vite](https://vitejs.dev/) plugin for [typst](https://www.typst.app/).
 ## Installation
 
 ```bash
-yarn add -D @myriad-dreamin/vite-plugin-typst
+yarn add -D @myriaddreamin/vite-plugin-typst
 ```
 
 ### Installing Typst Support
 
 Two providers are expected to work:
 
-- (Default) `@myriad-dreamin/typst-ts-node-compiler`: A js integrated compiler for typst, which makes cache shared between typst compilations.
+- (Default) `@myriaddreamin/typst-ts-node-compiler`: A js integrated compiler for typst, which makes cache shared between typst compilations.
 - (Todo) `typst-cli`: Using the typst cli to compile `.typ` files.
 
-Install the `@myriad-dreamin/typst-ts-node-compiler` package to add support for `.typ` files:
+Install the `@myriaddreamin/typst-ts-node-compiler` package to add support for `.typ` files:
 
 ```bash
-yarn add -D @myriad-dreamin/typst-ts-node-compiler
+yarn add -D @myriaddreamin/typst-ts-node-compiler
 ```
 
 ## Usage
@@ -28,7 +28,7 @@ The default usage to compile `index.typ` is simple, just add the plugin to your 
 ```ts
 // vite.config.ts
 import { defineConfig } from 'vite';
-import typst from '@myriad-dreamin/vite-plugin-typst';
+import typst from '@myriaddreamin/vite-plugin-typst';
 
 export default defineConfig({
   plugins: [typst()],
@@ -70,7 +70,7 @@ export default defineConfig({
 
 ### Sets the typst provider
 
-(Todo) By default, the plugin uses the `@myriad-dreamin/typst-ts-node-compiler` provider. You can set a different provider:
+(Todo) By default, the plugin uses the `@myriaddreamin/typst-ts-node-compiler` provider. You can set a different provider:
 
 ```ts
 // vite.config.ts

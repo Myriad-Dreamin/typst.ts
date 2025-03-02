@@ -1,5 +1,5 @@
 {
-  "name": "@myriad-dreamin/vite-plugin-typst",
+  "name": "@myriaddreamin/vite-plugin-typst",
   "version": "0.5.5-rc6",
   "description": "Vite plugin for typst",
   "main": "dist/index.js",
@@ -20,7 +20,7 @@
     "typst"
   ],
   "peerDependencies": {
-    "@myriad-dreamin/typst.node": "^0.5.5-rc6",
+    "@myriaddreamin/typst.node": "^0.5.5-rc6",
     "vite": "^4.0.0"
   },
   "files": [
