@@ -3,8 +3,15 @@ import { NodeCompiler, ProjectWatcher, CompileArgs } from '@myriaddreamin/typst-
 import type { NodeTypstProject } from '@myriaddreamin/typst-ts-node-compiler';
 import type { TypstPluginOptions } from '.';
 
+/**
+ * The callback to be called when the document is compiled.
+ *
+ * @param source The source file path
+ * @param result The compiled project
+ * @param ctx The compile provider
+ */
 export type OnCompileCallback = (
-  src: string,
+  source: string,
   result: NodeTypstProject,
   ctx: NodeCompileProvider,
 ) => void;
@@ -39,10 +46,11 @@ class NodeCompileProvider {
   compiled = new Map<string, string>();
 
   constructor(
-    public readonly args: CompileArgs,
+    compileArgs: CompileArgs,
     public isWatch: boolean,
     onCompile: OnCompileCallback,
   ) {
+    this.compileArgs = compileArgs;
     this.onCompile = onCompile;
   }
 
@@ -54,11 +62,11 @@ class NodeCompileProvider {
   /**
    * Lazily created compiler.
    */
-  compiler = (): NodeCompiler => (this._compiler ||= NodeCompiler.create(this.args));
+  compiler = (): NodeCompiler => (this._compiler ||= NodeCompiler.create(this.compileArgs));
   /**
    * Lazily created watcher
    */
-  watcher = (): ProjectWatcher => (this._watcher ||= ProjectWatcher.create(this.args));
+  watcher = (): ProjectWatcher => (this._watcher ||= ProjectWatcher.create(this.compileArgs));
 
   /**
    * Common getter for the compiler or watcher.
@@ -69,6 +77,8 @@ class NodeCompileProvider {
   inputRoot: string = '.';
   /** @internal */
   private onCompile: OnCompileCallback;
+  /** @internal */
+  readonly compileArgs: CompileArgs;
   /** @internal */
   private _compiler: NodeCompiler | undefined = undefined;
   /** @internal */

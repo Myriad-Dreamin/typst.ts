@@ -96,38 +96,7 @@ export interface TypstDocumentOptionsWithInput extends TypstDocumentOptions {
 export function TypstPlugin(options: TypstPluginOptions = {}): Promise<VitePlugin> {
   const inputs = new InputChecker(options);
   const compiler = createCompiler(options);
-
   let reload: () => void = undefined!;
-  const viteReload = (conf: ResolvedConfig) => {
-    compiler.inputRoot = path.resolve(conf.root || '.');
-    compiler.isWatch = !!(conf.mode === 'development' || conf.build?.watch);
-    compiler.args.workspace = options.root || compiler.inputRoot;
-
-    reload = doReload;
-
-    if (compiler.isWatch) {
-      inputs.watch(reload);
-    }
-
-    function doReload() {
-      if (!inputs.mutate(options, conf)) {
-        return;
-      }
-
-      if (options.onInputs) {
-        options.onInputs(inputs.resolved);
-      }
-      if (compiler.isWatch) {
-        compiler.watcher().clear();
-      }
-      for (const input of Object.values(inputs.resolved)) {
-        compiler.compileOrWatch(input.input);
-      }
-      if (compiler.isWatch) {
-        compiler.watcher().watch();
-      }
-    }
-  };
 
   return Promise.resolve({
     name: 'myriad-dreamin:vite-plugin-typst',
@@ -194,20 +163,48 @@ export function TypstPlugin(options: TypstPluginOptions = {}): Promise<VitePlugi
       });
     },
   });
+
+  function viteReload(conf: ResolvedConfig) {
+    compiler.inputRoot = path.resolve(conf.root || '.');
+    compiler.isWatch = !!(conf.mode === 'development' || conf.build?.watch);
+    compiler.compileArgs.workspace = options.root || compiler.inputRoot;
+
+    reload = doReload;
+
+    if (compiler.isWatch) {
+      inputs.watch(reload);
+    }
+
+    function doReload() {
+      if (!inputs.mutate(options, conf)) {
+        return;
+      }
+
+      if (options.onInputs) {
+        options.onInputs(inputs.resolved);
+      }
+      if (compiler.isWatch) {
+        compiler.watcher().clear();
+      }
+      for (const input of Object.values(inputs.resolved)) {
+        compiler.compileOrWatch(input.input);
+      }
+      if (compiler.isWatch) {
+        compiler.watcher().watch();
+      }
+    }
+  }
 }
 
 export default TypstPlugin;
 
 function createCompiler(options: TypstPluginOptions) {
-  return makeProvider(options, (src, project, ctx) => {
-    const htmlResult = project.tryHtml({
-      mainFilePath: src,
-      ...ctx.args,
-    });
+  return makeProvider(options, (mainFilePath, project, ctx) => {
+    const htmlResult = project.tryHtml({ mainFilePath });
 
     // Only print the error once
     if (htmlResult.hasError()) {
-      console.log(` \x1b[1;31mError\x1b[0m ${src}`);
+      console.log(` \x1b[1;31mError\x1b[0m ${mainFilePath}`);
       htmlResult.printErrors();
       return;
     }
@@ -215,7 +212,7 @@ function createCompiler(options: TypstPluginOptions) {
     // todo: resolveRel may override file paths.
     // todo: html is fat
     const htmlContent = htmlResult.result!.html();
-    ctx.compiled.set(ctx.resolveRel(src), htmlContent);
-    console.log(` \x1b[1;32mCompiled\x1b[0m ${src}`);
+    ctx.compiled.set(ctx.resolveRel(mainFilePath), htmlContent);
+    console.log(` \x1b[1;32mCompiled\x1b[0m ${mainFilePath}`);
   });
 }
