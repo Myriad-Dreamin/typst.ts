@@ -12,7 +12,7 @@ use reflexo_typst::typst::diag::{SourceResult, Warned};
 use reflexo_typst::typst::prelude::*;
 use reflexo_typst::{DiagnosticFormat, TypstPagedDocument, TypstWorld};
 
-use crate::NodeTypstDocument;
+use crate::{NodeHtmlOutput, NodeTypstDocument};
 
 /// The error status of a node error.
 pub enum NodeErrorStatus {
@@ -167,36 +167,6 @@ pub fn map_node_error(e: impl Into<NodeError>) -> napi::Error<NodeError> {
     let e = e.into();
     let reason = e.as_ref().to_owned();
     napi::Error::new(e, reason)
-}
-
-/// Result of single typst compilation.
-#[napi]
-pub struct NodeTypstCompileResult {
-    pub(crate) result: Option<NodeTypstDocument>,
-    // todo: better warning structure
-    pub(crate) warnings: Option<NodeError>,
-    pub(crate) error: Option<NodeError>,
-}
-
-#[napi]
-impl NodeTypstCompileResult {
-    /// Gets the result of compilation.
-    #[napi(getter)]
-    pub fn result(&self) -> Option<NodeTypstDocument> {
-        self.result.clone()
-    }
-
-    /// Takes the result of compilation.
-    #[napi]
-    pub fn take_warnings(&mut self) -> Option<NodeError> {
-        self.warnings.take()
-    }
-
-    /// Takes the diagnostics of compilation.
-    #[napi]
-    pub fn take_diagnostics(&mut self) -> Option<NodeError> {
-        self.error.take()
-    }
 }
 
 /// Result of single typst execution.
@@ -424,4 +394,5 @@ macro_rules! impl_exec_result {
     };
 }
 
-impl_exec_result!(NodeStringExecResult, String);
+impl_exec_result!(NodeHtmlOutputExecResult, NodeHtmlOutput);
+impl_exec_result!(NodeTypstCompileResult, NodeTypstDocument);

@@ -532,39 +532,15 @@ impl NodeTypstProject {
         Ok(SystemWorldComputeGraph::new(snap))
     }
 
+    /// Compiles the document as paged target.
     pub fn compile_raw<
         D: reflexo_typst::TypstDocumentTrait + ArcInto<TypstDocument> + Send + Sync + 'static,
     >(
         &mut self,
-        compile_by: CompileDocArgs,
-    ) -> napi::Result<NodeTypstCompileResult, NodeError> {
-        let graph = self.computation(compile_by).map_err(map_node_error)?;
-
-        let _ = graph.provide::<FlagTask<CompilationTask<D>>>(Ok(FlagTask::flag(true)));
-        let result = graph
-            .compute::<CompilationTask<D>>()
-            .map_err(map_node_error)?;
-        let result = result.as_ref().clone().expect("enabled");
-
-        Ok(match result.output {
-            Ok(doc) => NodeTypstCompileResult {
-                result: Some(NodeTypstDocument {
-                    graph: graph.clone(),
-                    doc: doc.arc_into(),
-                }),
-                warnings: if result.warnings.is_empty() {
-                    None
-                } else {
-                    Some(result.warnings.into())
-                },
-                error: None,
-            },
-            Err(e) => NodeTypstCompileResult {
-                result: None,
-                warnings: None,
-                error: Some(e.into()),
-            },
-        })
+        opts: CompileDocArgs,
+    ) -> Result<NodeTypstCompileResult, NodeError> {
+        let result = self.compile_raw2::<D>(opts);
+        Ok(result.map_err(map_node_error)?.into())
     }
 
     pub fn compile_raw2<
@@ -771,13 +747,20 @@ impl NodeTypstProject {
     /// Compiles the document as a HTML.
     #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     #[cfg(feature = "html")]
-    pub fn may_html(&mut self, compiled_or_by: MayCompileOpts) -> NodeStringExecResult {
-        use reflexo_typst::ExportStaticHtmlTask;
+    pub fn try_html(&mut self, compiled_or_by: MayCompileOpts) -> NodeHtmlOutputExecResult {
+        use reflexo_typst::ExportHtmlTask;
 
-        type Export = reflexo_typst::StaticHtmlExport;
-        let res =
-            self.compile_as_html::<Export, _>(compiled_or_by, &ExportStaticHtmlTask::default());
-        ExecResultRepr::from_result(res).flatten().into()
+        use crate::NodeHtmlOutput;
+
+        type Export = reflexo_typst::HtmlOutputExport;
+        let res = self
+            .compile_as_html::<Export, _>(compiled_or_by, &ExportHtmlTask::default())
+            .map(|res| {
+                res.flatten().map(|inner| NodeHtmlOutput {
+                    inner: Arc::new(inner),
+                })
+            });
+        ExecResultRepr::from_result(res).into()
     }
 }
 

@@ -90,6 +90,52 @@ fn typst_datetime_to_unix_nanoseconds(datetime: TypstDatetime) -> Option<i64> {
     datetime.and_utc().timestamp_nanos_opt()
 }
 
+/// A shared HTML output object.
+#[napi]
+#[derive(Clone)]
+pub struct NodeHtmlOutput {
+    inner: Arc<reflexo_typst::HtmlOutput>,
+}
+
+#[napi]
+impl NodeHtmlOutput {
+    /// Gets the title of the document.
+    #[napi]
+    pub fn title(&self) -> Option<String> {
+        self.inner.title().map(ToString::to_string)
+    }
+
+    /// Gets the description of the document.
+    #[napi]
+    pub fn description(&self) -> Option<String> {
+        self.inner.description().map(ToString::to_string)
+    }
+
+    /// Gets the body of the document.
+    #[napi]
+    pub fn body(&self) -> String {
+        self.inner.body().to_string()
+    }
+
+    /// Gets the body of the document as bytes.
+    #[napi]
+    pub fn body_bytes(&self) -> Buffer {
+        self.inner.body().to_string().into()
+    }
+
+    /// Gets the HTML of the document.
+    #[napi]
+    pub fn html(&self) -> String {
+        self.inner.html().to_string()
+    }
+
+    /// Gets the HTML of the document as bytes.
+    #[napi]
+    pub fn html_bytes(&self) -> Buffer {
+        self.inner.html().into()
+    }
+}
+
 /// Arguments to compile a document.
 ///
 /// If no `mainFileContent` or `mainFilePath` is specified, the compiler will
