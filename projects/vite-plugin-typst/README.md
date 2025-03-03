@@ -21,9 +21,9 @@ Install the `@myriaddreamin/typst-ts-node-compiler` package to add support for `
 yarn add -D @myriaddreamin/typst-ts-node-compiler
 ```
 
-## Usage
+## On-demand JS import (examples/js-import)
 
-The default usage to compile `index.typ` is simple, just add the plugin to your Vite config:
+The default usage is simple, just add the plugin to your Vite config:
 
 ```ts
 // vite.config.ts
@@ -35,9 +35,40 @@ export default defineConfig({
 });
 ```
 
-Runs `vite build` for production and runs `vite` for development. When in development, the plugin will watch for changes to `.typ` files and recompile them on the fly.
+In your `.js` or `.ts` files, you can import `.typ` files directly:
 
-### Multiple Pages
+```ts
+import html from 'index.typ?html';
+```
+
+Or only gets the body of the document:
+
+```ts
+import { title, description, body } from 'index.typ?parts';
+```
+
+Available query parameters:
+
+- `html`: Get the full HTML content of the document.
+- `parts`: Get the parts of the document. The parts are exported as an object with keys as the part names.
+  - `body` (`string`): The body of the document.
+  - `title` (`string | null`): The title of the document.
+  - `description` (`string | null`): The description of the document.
+
+Runs `vite build` for production and runs `vite` for development. When in development, the plugin will watch to `.typ` files and recompile them on changes.
+
+## Compiling `.typ` Files into static HTML (examples/single-file)
+
+You can also use typst documents as static HTML files. For example, compile `index.typ` into `index.html`:
+
+```ts
+// vite.config.ts
+export default defineConfig({
+  plugins: [typst({ index: true })],
+});
+```
+
+### Multiple Pages (examples/glob-documents)
 
 If you have multiple pages, you can specify the entry file for each page:
 

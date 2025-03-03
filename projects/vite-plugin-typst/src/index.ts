@@ -2,6 +2,7 @@ import * as path from 'path';
 import type { ResolvedConfig, Plugin as VitePlugin } from 'vite';
 import { makeProvider, OnCompileCallback } from './compiler.js';
 import { ResolvedTypstInputs, InputChecker } from './input.js';
+import type { NodeTypstProject } from '@myriaddreamin/typst-ts-node-compiler';
 
 type TypstCompileProvider = '@myriaddreamin/typst-ts-node-compiler';
 
@@ -12,13 +13,20 @@ export interface TypstPluginOptions extends TypstDocumentOptions {
   /**
    * The index document to be compiled.
    * If not provided, the plugin will try to find `index.typ` in the root directory.
-   * If "index.typ" is not found, the plugin will not compile any document. By vite's convention, it will continuing finding a static "index.html".
+   * When `index` is set to true, if "index.typ" is not found, the plugin will not compile any document.
+   * By vite's convention, it will continuing finding a static "index.html".
+   *
+   * When `index` is set to false, the plugin will not compile any document.
+   *
+   * @default true
    */
-  index?: DocumentInput;
+  index?: DocumentInput | boolean;
   /**
    * The documents to be compiled.
    *
    * See also {@link TypstPlugin} and {@link DocumentInput}.
+   *
+   * @default []
    *
    * @example
    * ```ts
@@ -94,11 +102,32 @@ export interface TypstDocumentOptionsWithInput extends TypstDocumentOptions {
  * @returns A Vite plugin for Typst
  */
 export function TypstPlugin(options: TypstPluginOptions = {}): Promise<VitePlugin> {
+  if (options.index === undefined) {
+    options.index = true;
+  }
+
   const inputs = new InputChecker(options);
   const compiler = createCompiler(options);
   let reload: () => void = undefined!;
 
-  return Promise.resolve({
+  const extractOpts = (path: string) => {
+    const attributes: Record<string, boolean> = {};
+    if (path.endsWith('?html')) {
+      path = path.slice(0, -5);
+      attributes['html'] = true;
+    }
+    if (path.endsWith('?parts')) {
+      path = path.slice(0, -6);
+      attributes['parts'] = true;
+    }
+    return { path, attributes };
+  };
+
+  // .vite-plugin-typst.html
+  const suffixHtml = '.vite-plugin-typst.html';
+  const suffixJs = '.vite-plugin-typst.js';
+
+  return Promise.resolve<VitePlugin>({
     name: 'myriad-dreamin:vite-plugin-typst',
     enforce: 'pre',
 
@@ -111,13 +140,59 @@ export function TypstPlugin(options: TypstPluginOptions = {}): Promise<VitePlugi
     },
 
     load(id) {
-      return compiler.compiled.get(id);
+      let isJs = id.endsWith(suffixJs);
+      let isHtml = id.endsWith(suffixHtml);
+      if (!isJs && !isHtml) return null;
+
+      if (isJs) {
+        id = id.slice(0, -suffixJs.length);
+      } else {
+        id = id.slice(0, -suffixHtml.length);
+      }
+
+      const { path, attributes } = extractOpts(id);
+
+      // todo: cache js import
+      if (isJs) {
+        this.addWatchFile(path);
+        // console.log('load isWatch', path, compiler.isWatch);
+        if (compiler.isWatch) {
+          compiler.compileOrWatch(path);
+        }
+        const result = defaultCompile(path, compiler.compiler(), compiler);
+        if (!result?.result) {
+          return undefined;
+        }
+
+        const doc = result.result!;
+
+        if (attributes.parts) {
+          const parts = {
+            title: doc.title(),
+            description: doc.description(),
+            body: doc.body(),
+          };
+          return `const parts = ${JSON.stringify(parts)};
+export const title = parts.title;
+export const description = parts.description;
+export const body = parts.body;
+export default parts;`;
+        }
+
+        return `export default ${JSON.stringify(result.result!.html())}`;
+      }
+
+      const resolved = compiler.resolveRel(path);
+      return compiler.compiled.get(resolved);
     },
 
     resolveId(source) {
-      // todo: detect shebangs
-      if (!source.endsWith('.typ')) return null;
-      return compiler.resolveRel(source);
+      const { path, attributes } = extractOpts(source);
+      if (!path.endsWith('.typ')) return null;
+      if (attributes.html || attributes.parts) {
+        return source + suffixJs;
+      }
+      return source + suffixHtml;
     },
 
     config(conf) {
@@ -176,9 +251,12 @@ export function TypstPlugin(options: TypstPluginOptions = {}): Promise<VitePlugi
     }
 
     function doReload() {
+      // console.log('reload c');
       if (!inputs.mutate(options, conf)) {
         return;
       }
+
+      // console.log('reload 1');
 
       if (options.onInputs) {
         options.onInputs(inputs.resolved);
@@ -192,27 +270,39 @@ export function TypstPlugin(options: TypstPluginOptions = {}): Promise<VitePlugi
       if (compiler.isWatch) {
         compiler.watcher().watch();
       }
+
+      // console.log('reload');
     }
   }
 }
 
 export default TypstPlugin;
 
-function createCompiler(options: TypstPluginOptions) {
-  return makeProvider(options, (mainFilePath, project, ctx) => {
-    const htmlResult = project.tryHtml({ mainFilePath });
+const defaultCompile = (mainFilePath: string, project: NodeTypstProject, ctx: any) => {
+  const htmlResult = project.tryHtml({ mainFilePath });
 
-    // Only print the error once
-    if (htmlResult.hasError()) {
-      console.log(` \x1b[1;31mError\x1b[0m ${mainFilePath}`);
-      htmlResult.printErrors();
-      return;
+  // Only print the error once
+  if (htmlResult.hasError()) {
+    // console.log(` \x1b[1;31mError\x1b[0m ${mainFilePath}`);
+    htmlResult.printErrors();
+
+    // todo: how could we raise error if not in watch mode?
+    if (!ctx.isWatch) {
+      console.error(new Error(`Failed to compile ${mainFilePath}`));
+      process.exit(1);
     }
+    return;
+  }
 
-    // todo: resolveRel may override file paths.
-    // todo: html is fat
-    const htmlContent = htmlResult.result!.html();
-    ctx.compiled.set(ctx.resolveRel(mainFilePath), htmlContent);
-    console.log(` \x1b[1;32mCompiled\x1b[0m ${mainFilePath}`);
-  });
+  // todo: resolveRel may override file paths.
+  // todo: html is fat
+  const htmlContent = htmlResult.result!.html();
+  ctx.compiled.set(ctx.resolveRel(mainFilePath), htmlContent);
+  // console.log(` \x1b[1;32mCompiled\x1b[0m ${mainFilePath}`);
+
+  return htmlResult;
+};
+
+function createCompiler(options: TypstPluginOptions) {
+  return makeProvider(options, defaultCompile);
 }

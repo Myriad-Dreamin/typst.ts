@@ -147,7 +147,8 @@ function resolveInputs(
   viteConfig: ResolvedConfig,
 ): ResolvedTypstInputs | undefined {
   const viteInputs: ResolvedTypstInputs = {};
-  if (!opts.index) {
+  if (opts.index === false) {
+  } else if (opts.index === true || opts.index === undefined) {
     const indexTyp = path.resolve(viteConfig.root || '.', 'index.typ');
     if (fs.existsSync(indexTyp)) {
       viteInputs['index'] = {

@@ -76,7 +76,7 @@ class NodeCompileProvider {
   /** @internal */
   inputRoot: string = '.';
   /** @internal */
-  private onCompile: OnCompileCallback;
+  onCompile: OnCompileCallback;
   /** @internal */
   readonly compileArgs: CompileArgs;
   /** @internal */
