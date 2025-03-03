@@ -2,6 +2,7 @@ import * as path from 'path';
 import { NodeCompiler, ProjectWatcher, CompileArgs } from '@myriaddreamin/typst-ts-node-compiler';
 import type { NodeTypstProject } from '@myriaddreamin/typst-ts-node-compiler';
 import type { TypstPluginOptions } from '.';
+import { ResolvedTypstInput } from './input';
 
 /**
  * The callback to be called when the document is compiled.
@@ -11,7 +12,7 @@ import type { TypstPluginOptions } from '.';
  * @param ctx The compile provider
  */
 export type OnCompileCallback<T = void> = (
-  mainFilePath: string,
+  mainFilePath: ResolvedTypstInput,
   project: NodeTypstProject,
   ctx: NodeCompileProvider,
 ) => T;
@@ -26,12 +27,8 @@ export type CompileProvider = NodeCompileProvider;
  */
 export const makeProvider = (options: TypstPluginOptions, onCompile: OnCompileCallback) => {
   const compileArgs: CompileArgs = {
-    workspace: options.root || '.',
-    inputs: {
-      'x-target': 'web-light',
-      // ...(urlBase ? { 'x-url-base': urlBase } : {}),
-    },
-    fontArgs: [{ fontPaths: ['./assets/fonts', './assets/typst-fonts'] }],
+    workspace: path.resolve(options.root || '.'),
+    ...{ inputs: options.inputs, fontArgs: options.fontArgs },
   };
 
   const compilerProvider = options?.compiler || '@myriaddreamin/typst-ts-node-compiler';
@@ -88,13 +85,14 @@ class NodeCompileProvider {
    * Compiles the source file to the destination file.
    *
    * @param {string} src The source file path
+   * @param {ResolvedTypstInput} input The resolved input
    *
    * @example
    * compile("src/index.typ", "dist/index.html")(compiler());
    */
-  compile = (src: string) => {
+  compile = (input: ResolvedTypstInput) => {
     return (project: NodeTypstProject) => {
-      this.onCompile(src, project, this);
+      this.onCompile(input, project, this);
 
       // Evicts the cache unused in last 30 runs
       this.compilerOrWatcher()?.evictCache(30);
@@ -107,16 +105,17 @@ class NodeCompileProvider {
    * All the errors are caught and printed to the console.
    *
    * @param {string} src The source file path
+   * @param {ResolvedTypstInput} input The resolved input
    *
    * @example
    * compileOrWatch("src/index.typ", "dist/index.html");
    */
-  compileOrWatch = (src: string) => {
+  compileOrWatch = (input: ResolvedTypstInput) => {
     try {
       if (this.isWatch) {
-        this.watcher().add([src], this.compile(src));
+        this.watcher().add([input.mainFilePath], this.compile(input));
       } else {
-        this.compile(src)(this.compiler());
+        this.compile(input)(this.compiler());
       }
     } catch (e) {
       console.error(e);

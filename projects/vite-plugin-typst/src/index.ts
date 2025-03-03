@@ -2,7 +2,7 @@ import * as path from 'path';
 import type { ResolvedConfig, Plugin as VitePlugin } from 'vite';
 import { makeProvider, OnCompileCallback } from './compiler.js';
 import { ResolvedTypstInputs, InputChecker } from './input.js';
-import type { NodeHtmlOutputExecResult } from '@myriaddreamin/typst-ts-node-compiler';
+import type { CompileArgs, NodeHtmlOutputExecResult } from '@myriaddreamin/typst-ts-node-compiler';
 
 type TypstCompileProvider = '@myriaddreamin/typst-ts-node-compiler';
 
@@ -70,6 +70,11 @@ export interface TypstPluginOptions extends TypstDocumentOptions {
    * @default true
    */
   overrideRoute?: boolean;
+
+  /**
+   * Provides `sys.inputs` for the document.
+   */
+  fontArgs?: CompileArgs['fontArgs'];
 }
 
 /**
@@ -87,6 +92,11 @@ export interface TypstDocumentOptions {
    * If not provided, the plugin will use the vite's root directory.
    */
   root?: string;
+
+  /**
+   * Provides `sys.inputs` for the document.
+   */
+  inputs?: Record<string, string>;
 }
 
 /**
@@ -152,15 +162,16 @@ export function TypstPlugin(options: TypstPluginOptions = {}): Promise<VitePlugi
       id = id.slice(0, -suffixJs.length);
 
       const { path, attributes } = extractOpts(id);
+      const input = { mainFilePath: path };
 
       // todo: cache js import
       this.addWatchFile(path);
       // console.log('load isWatch', path, compiler.isWatch);
       if (compiler.isWatch) {
-        compiler.compileOrWatch(path);
+        compiler.compileOrWatch(input);
       }
       const project = compiler.compiler();
-      const result = defaultCompile(path, project, compiler);
+      const result = defaultCompile(input, project, compiler);
       if (!result?.result) {
         return undefined;
       }
@@ -168,7 +179,7 @@ export function TypstPlugin(options: TypstPluginOptions = {}): Promise<VitePlugi
       const doc = result.result!;
 
       if (attributes.parts) {
-        const userParts = options.onResolveParts?.(path, project, compiler) || {};
+        const userParts = options.onResolveParts?.(input, project, compiler) || {};
         if (typeof userParts !== 'object') {
           throw new Error('onResolveParts must return an object');
         }
@@ -269,7 +280,7 @@ export default parts;`;
         compiler.watcher().clear();
       }
       for (const input of Object.values(inputs.resolved)) {
-        compiler.compileOrWatch(input.input);
+        compiler.compileOrWatch(input);
       }
       if (compiler.isWatch) {
         compiler.watcher().watch();
@@ -283,11 +294,11 @@ export default parts;`;
 export default TypstPlugin;
 
 const defaultCompile: OnCompileCallback<NodeHtmlOutputExecResult | undefined> = (
-  mainFilePath,
+  input,
   project,
   ctx,
 ) => {
-  const htmlResult = project.tryHtml({ mainFilePath });
+  const htmlResult = project.tryHtml(input);
 
   // Only print the error once
   if (htmlResult.hasError()) {
@@ -296,7 +307,7 @@ const defaultCompile: OnCompileCallback<NodeHtmlOutputExecResult | undefined> = 
 
     // todo: how could we raise error if not in watch mode?
     if (!ctx.isWatch) {
-      console.error(new Error(`Failed to compile ${mainFilePath}`));
+      console.error(new Error(`Failed to compile ${input.mainFilePath}`));
       process.exit(1);
     }
     return;
@@ -305,7 +316,7 @@ const defaultCompile: OnCompileCallback<NodeHtmlOutputExecResult | undefined> = 
   // todo: resolveRel may override file paths.
   // todo: html is fat
   const htmlContent = htmlResult.result!.html();
-  ctx.compiled.set(ctx.resolveRel(mainFilePath), htmlContent);
+  ctx.compiled.set(ctx.resolveRel(input.mainFilePath), htmlContent);
   // console.log(` \x1b[1;32mCompiled\x1b[0m ${mainFilePath}`);
 
   return htmlResult;

@@ -15,6 +15,10 @@ def main():
     ["examples/single-file", True],
     ["examples/single-file-error", False],
     ["examples/glob-documents", True],
+    ["examples/single-file", True],
+    ["examples/query", True],
+    ["examples/js-import", True],
+    ["examples/mixin-parts", True],
   ]:
     try:
       code = run_vite_on(project)

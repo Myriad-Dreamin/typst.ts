@@ -12,11 +12,15 @@ export interface ResolvedTypstInput {
   /**
    * A single path to the input file.
    */
-  input: string;
+  mainFilePath: string;
   /**
    * The root directory of the document.
    */
   root?: string;
+  /**
+   * Provides `sys.inputs` for the document.
+   */
+  inputs?: Record<string, string>;
 }
 
 /**
@@ -65,8 +69,8 @@ export class InputChecker {
     let input: ResolvedViteInputs | undefined;
     if (this.resolved) {
       input = input || {};
-      for (const [key, { input: inputPath }] of Object.entries(this.resolved)) {
-        input[key] = inputPath;
+      for (const [key, { mainFilePath }] of Object.entries(this.resolved)) {
+        input[key] = mainFilePath;
       }
     }
 
@@ -146,21 +150,21 @@ function resolveInputs(
   opts: TypstPluginOptions,
   viteConfig: ResolvedConfig,
 ): ResolvedTypstInputs | undefined {
-  const viteInputs: ResolvedTypstInputs = {};
+  const resolved: ResolvedTypstInputs = {};
   if (opts.index === false) {
   } else if (opts.index === true || opts.index === undefined) {
     const indexTyp = path.resolve(viteConfig.root || '.', 'index.typ');
     if (fs.existsSync(indexTyp)) {
-      viteInputs['index'] = {
-        input: indexTyp,
+      resolved['index'] = {
+        mainFilePath: indexTyp,
         root: opts.root || viteConfig.root,
       };
     }
   } else {
     const index = normalizeDocumentInput(opts.index);
     if (typeof index.input === 'string') {
-      viteInputs['index'] = {
-        input: index.input,
+      resolved['index'] = {
+        mainFilePath: index.input,
         root: index.root || opts.root || viteConfig.root,
       };
     } else {
@@ -183,15 +187,16 @@ function resolveInputs(
     }
 
     for (const m of matched) {
-      viteInputs[m] = {
-        input: m,
-        root: doc.root || opts.root || viteConfig.root,
+      resolved[m] = {
+        mainFilePath: m,
+        root: doc.root,
+        inputs: doc.inputs,
       };
     }
   }
 
-  if (Object.keys(viteInputs).length === 0) {
+  if (Object.keys(resolved).length === 0) {
     return undefined;
   }
-  return viteInputs;
+  return resolved;
 }

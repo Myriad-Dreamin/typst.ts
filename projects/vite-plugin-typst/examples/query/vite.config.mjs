@@ -5,16 +5,16 @@ export default defineConfig({
   plugins: [
     TypstPlugin({
       documents: ['content/**/*.typ'],
-      onCompile: (mainFilePath, project, ctx) => {
-        const htmlResult = checkExecResult(mainFilePath, project.tryHtml({ mainFilePath }), ctx);
+      onCompile: (input, project, ctx) => {
+        const htmlResult = checkExecResult(input, project.tryHtml(input), ctx);
         if (!htmlResult) {
           return;
         }
 
-        const htmlContent = htmlResult.result.html();
-        ctx.compiled.set(ctx.resolveRel(mainFilePath), htmlContent);
+        const htmlContent = htmlResult.html();
+        ctx.compiled.set(ctx.resolveRel(input.mainFilePath), htmlContent);
 
-        const htmlDoc = project.compileHtml({ mainFilePath }).result;
+        const htmlDoc = project.compileHtml(input).result;
         if (htmlDoc) {
           console.log(project.query(htmlDoc, { selector: '<frontmatter>', field: 'value' }));
         }
