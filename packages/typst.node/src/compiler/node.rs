@@ -144,7 +144,8 @@ impl NodeCompiler {
         &mut self,
         opts: CompileDocArgs,
     ) -> Result<NodeTypstCompileResult, NodeError> {
-        self.driver.assert_mut().compile_raw::<D>(opts)
+        let result = self.driver.assert_mut().compile_raw2::<D>(opts);
+        Ok(result.map_err(map_node_error)?.into())
     }
 
     /// Compiles the document internally.
