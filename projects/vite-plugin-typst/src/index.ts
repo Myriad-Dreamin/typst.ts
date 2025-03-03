@@ -2,7 +2,7 @@ import * as path from 'path';
 import type { ResolvedConfig, Plugin as VitePlugin } from 'vite';
 import { makeProvider, OnCompileCallback } from './compiler.js';
 import { ResolvedTypstInputs, InputChecker } from './input.js';
-import type { NodeTypstProject } from '@myriaddreamin/typst-ts-node-compiler';
+import type { NodeHtmlOutputExecResult } from '@myriaddreamin/typst-ts-node-compiler';
 
 type TypstCompileProvider = '@myriaddreamin/typst-ts-node-compiler';
 
@@ -57,7 +57,11 @@ export interface TypstPluginOptions extends TypstDocumentOptions {
    */
   onInputs?: (typstInputs: ResolvedTypstInputs) => void;
   /**
-   * A callback to be called when the inputs are compiling.
+   * *Override* the callback to be called when the parts is resolving.
+   */
+  onResolveParts?: OnCompileCallback<any>;
+  /**
+   * *Override* the callback to be called when the inputs are compiling.
    */
   onCompile?: OnCompileCallback;
 
@@ -123,8 +127,6 @@ export function TypstPlugin(options: TypstPluginOptions = {}): Promise<VitePlugi
     return { path, attributes };
   };
 
-  // .vite-plugin-typst.html
-  const suffixHtml = '.vite-plugin-typst.html';
   const suffixJs = '.vite-plugin-typst.js';
 
   return Promise.resolve<VitePlugin>({
@@ -140,50 +142,52 @@ export function TypstPlugin(options: TypstPluginOptions = {}): Promise<VitePlugi
     },
 
     load(id) {
-      let isJs = id.endsWith(suffixJs);
-      let isHtml = id.endsWith(suffixHtml);
-      if (!isJs && !isHtml) return null;
-
-      if (isJs) {
-        id = id.slice(0, -suffixJs.length);
-      } else {
-        id = id.slice(0, -suffixHtml.length);
+      const memoryHtml = compiler.compiled.get(id);
+      if (memoryHtml) {
+        return memoryHtml;
       }
+
+      let isJs = id.endsWith(suffixJs);
+      if (!isJs) return null;
+      id = id.slice(0, -suffixJs.length);
 
       const { path, attributes } = extractOpts(id);
 
       // todo: cache js import
-      if (isJs) {
-        this.addWatchFile(path);
-        // console.log('load isWatch', path, compiler.isWatch);
-        if (compiler.isWatch) {
-          compiler.compileOrWatch(path);
-        }
-        const result = defaultCompile(path, compiler.compiler(), compiler);
-        if (!result?.result) {
-          return undefined;
-        }
-
-        const doc = result.result!;
-
-        if (attributes.parts) {
-          const parts = {
-            title: doc.title(),
-            description: doc.description(),
-            body: doc.body(),
-          };
-          return `const parts = ${JSON.stringify(parts)};
-export const title = parts.title;
-export const description = parts.description;
-export const body = parts.body;
-export default parts;`;
-        }
-
-        return `export default ${JSON.stringify(result.result!.html())}`;
+      this.addWatchFile(path);
+      // console.log('load isWatch', path, compiler.isWatch);
+      if (compiler.isWatch) {
+        compiler.compileOrWatch(path);
+      }
+      const project = compiler.compiler();
+      const result = defaultCompile(path, project, compiler);
+      if (!result?.result) {
+        return undefined;
       }
 
-      const resolved = compiler.resolveRel(path);
-      return compiler.compiled.get(resolved);
+      const doc = result.result!;
+
+      if (attributes.parts) {
+        const userParts = options.onResolveParts?.(path, project, compiler) || {};
+        if (typeof userParts !== 'object') {
+          throw new Error('onResolveParts must return an object');
+        }
+        const parts = {
+          title: doc.title(),
+          description: doc.description(),
+          body: doc.body(),
+          ...userParts,
+        };
+
+        const bindingsCode = Object.keys(parts)
+          .map(key => `export const ${key} = parts[${JSON.stringify(key)}];`)
+          .join('\n');
+        return `const parts = ${JSON.stringify(parts)};
+${bindingsCode}
+export default parts;`;
+      }
+
+      return `export default ${JSON.stringify(result.result!.html())}`;
     },
 
     resolveId(source) {
@@ -192,7 +196,7 @@ export default parts;`;
       if (attributes.html || attributes.parts) {
         return source + suffixJs;
       }
-      return source + suffixHtml;
+      return compiler.resolveRel(path);
     },
 
     config(conf) {
@@ -278,7 +282,11 @@ export default parts;`;
 
 export default TypstPlugin;
 
-const defaultCompile = (mainFilePath: string, project: NodeTypstProject, ctx: any) => {
+const defaultCompile: OnCompileCallback<NodeHtmlOutputExecResult | undefined> = (
+  mainFilePath,
+  project,
+  ctx,
+) => {
   const htmlResult = project.tryHtml({ mainFilePath });
 
   // Only print the error once
@@ -304,5 +312,32 @@ const defaultCompile = (mainFilePath: string, project: NodeTypstProject, ctx: an
 };
 
 function createCompiler(options: TypstPluginOptions) {
-  return makeProvider(options, defaultCompile);
+  return makeProvider(options, options.onCompile || defaultCompile);
+}
+
+interface ExecResult<T> extends Pick<NodeHtmlOutputExecResult, 'hasError' | 'printErrors'> {
+  result: T;
+}
+
+export function checkExecResult<R, T extends ExecResult<R>>(
+  mainFilePath: string,
+  result: T | undefined,
+  ctx: any,
+): R | undefined {
+  if (!result) {
+    return;
+  }
+
+  // Only print the error once
+  if (result.hasError()) {
+    result.printErrors();
+
+    // todo: how could we raise error if not in watch mode?
+    if (!ctx.isWatch) {
+      console.error(new Error(`Failed to compile ${mainFilePath}`));
+      process.exit(1);
+    }
+    return undefined;
+  }
+  return result.result;
 }

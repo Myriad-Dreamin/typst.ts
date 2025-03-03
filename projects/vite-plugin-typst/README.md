@@ -109,3 +109,34 @@ export default defineConfig({
   plugins: [typst({ compiler: 'typst-cli' })],
 });
 ```
+
+## Customized Query (examples/mixin-parts)
+
+You can inject query data into `?parts` query by providing a `onResolveParts` function:
+
+```ts
+import { checkExecResult } from '@myriaddreamin/vite-plugin-typst';
+
+export default defineConfig({
+  plugins: [
+    TypstPlugin({
+      onResolveParts: (mainFilePath, project, ctx) => {
+        const res = checkExecResult(mainFilePath, project.compileHtml({ mainFilePath }), ctx);
+        return {
+          frontmatter: res && project.query(res, { selector: '<frontmatter>', field: 'value' })[0],
+        };
+      },
+    }),
+  ],
+});
+```
+
+Then, you can import the injected data in your JavaScript files:
+
+```ts
+import { body, frontmatter } from 'main.typ?parts';
+
+console.log(frontmatter);
+
+document.body.innerHTML = body;
+```

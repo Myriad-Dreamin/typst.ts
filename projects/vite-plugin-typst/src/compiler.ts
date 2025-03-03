@@ -6,15 +6,15 @@ import type { TypstPluginOptions } from '.';
 /**
  * The callback to be called when the document is compiled.
  *
- * @param source The source file path
- * @param result The compiled project
+ * @param mainFilePath The source file path
+ * @param project The compiling project (document)
  * @param ctx The compile provider
  */
-export type OnCompileCallback = (
-  source: string,
-  result: NodeTypstProject,
+export type OnCompileCallback<T = void> = (
+  mainFilePath: string,
+  project: NodeTypstProject,
   ctx: NodeCompileProvider,
-) => void;
+) => T;
 export type CompileProvider = NodeCompileProvider;
 
 /**
