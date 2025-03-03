@@ -37,7 +37,7 @@ export default defineConfig({
 
 Runs `vite build` for production and runs `vite` for development. When in development, the plugin will watch for changes to `.typ` files and recompile them on the fly.
 
-### Multiple pages
+### Multiple Pages
 
 If you have multiple pages, you can specify the entry file for each page:
 
@@ -57,7 +57,7 @@ export default defineConfig({
 });
 ```
 
-### Sets a different root directory
+### Configuring a Different Root Directory
 
 By default, the root directory is the vite's configured root (`viteConfig.root`). You can set a different root directory:
 
@@ -68,13 +68,13 @@ export default defineConfig({
 });
 ```
 
-### Sets the typst provider
+### Configuring the Typst Compiler
 
-(Todo) By default, the plugin uses the `@myriaddreamin/typst-ts-node-compiler` provider. You can set a different provider:
+(Todo) By default, the plugin uses the `@myriaddreamin/typst-ts-node-compiler` compiler. You can set a different compiler:
 
 ```ts
 // vite.config.ts
 export default defineConfig({
-  plugins: [typst({ provider: 'typst-cli' })],
+  plugins: [typst({ compiler: 'typst-cli' })],
 });
 ```
