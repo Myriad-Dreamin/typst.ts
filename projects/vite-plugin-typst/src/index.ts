@@ -4,7 +4,7 @@ import { makeProvider, OnCompileCallback } from './compiler.js';
 import { ResolvedTypstInputs, InputChecker } from './input.js';
 import type { CompileArgs, NodeHtmlOutputExecResult } from '@myriaddreamin/typst-ts-node-compiler';
 
-type TypstCompileProvider = '@myriaddreamin/typst-ts-node-compiler';
+type TypstCompileProvider = '@myriaddreamin/typst-ts-node-compiler' | 'typst-cli';
 
 /**
  * Vite plugin for Typst
