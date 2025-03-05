@@ -19,6 +19,8 @@ def main():
     ["examples/query", True],
     ["examples/js-import", True],
     ["examples/mixin-parts", True],
+    ["examples/typst-cli", True],
+    ["examples/typst-cli-query", True],
   ]:
     try:
       code = run_vite_on(project)
