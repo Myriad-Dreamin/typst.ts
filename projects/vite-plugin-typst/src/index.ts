@@ -1,11 +1,10 @@
+import type { CompileArgs, NodeHtmlOutputExecResult } from '@myriaddreamin/typst-ts-node-compiler';
 import * as path from 'path';
 import type { ResolvedConfig, Plugin as VitePlugin } from 'vite';
 import { CompileProvider, HtmlOutputExecResult, OnCompileCallback } from './compiler.js';
-import { makeProvider } from './makeProvider.js';
-import { ResolvedTypstInputs, InputChecker } from './input.js';
-import type { CompileArgs, NodeHtmlOutputExecResult } from '@myriaddreamin/typst-ts-node-compiler';
 import { CliCompileProvider } from './compiler/cli.js';
 import { NodeCompileProvider } from './compiler/node.js';
+import { InputChecker, ResolvedTypstInputs } from './input.js';
 
 type TypstCompileProviders = '@myriaddreamin/typst-ts-node-compiler' | 'typst-cli';
 
@@ -56,7 +55,7 @@ interface TypstPluginBaseOptions extends TypstDocumentOptions {
   /**
    * *Override* the callback to be called when the inputs are compiling.
    */
-  onCompile?: OnCompileCallback<CompileProvider<any>>
+  onCompile?: OnCompileCallback<CompileProvider<any>>;
   /**
    * A callback to be called when the inputs are resolved.
    */
@@ -80,15 +79,19 @@ interface TypstPluginBaseOptions extends TypstDocumentOptions {
 /**
  * Vite plugin for Typst
  */
-export type TypstPluginOptions = TypstPluginBaseOptions & ({
-  compiler?: '@myriaddreamin/typst-ts-node-compiler';
-  onResolveParts?: OnCompileCallback<NodeCompileProvider, any>;
-  onCompile?: OnCompileCallback<NodeCompileProvider>;
-} | {
-  compiler: 'typst-cli';
-  onResolveParts?: OnCompileCallback<CliCompileProvider, any>;
-  onCompile?: OnCompileCallback<CliCompileProvider>;
-})
+export type TypstPluginOptions = TypstPluginBaseOptions &
+  (
+    | {
+        compiler?: '@myriaddreamin/typst-ts-node-compiler';
+        onResolveParts?: OnCompileCallback<NodeCompileProvider, any>;
+        onCompile?: OnCompileCallback<NodeCompileProvider>;
+      }
+    | {
+        compiler: 'typst-cli';
+        onResolveParts?: OnCompileCallback<CliCompileProvider, any>;
+        onCompile?: OnCompileCallback<CliCompileProvider>;
+      }
+  );
 
 /**
  * The input glob pattern relative to vite's root directory or the grouped input with {@link TypstDocumentOptions}.
@@ -336,7 +339,18 @@ const defaultCompile: OnCompileCallback<CompileProvider<any>, HtmlOutputExecResu
 };
 
 function createCompiler(options: TypstPluginOptions) {
-  return makeProvider(options, options.onCompile || defaultCompile);
+  const compileArgs: CompileArgs = {
+    workspace: path.resolve(options.root || '.'),
+    ...{ inputs: options.inputs, fontArgs: options.fontArgs },
+  };
+
+  const compilerProvider = options.compiler || '@myriaddreamin/typst-ts-node-compiler';
+  if (compilerProvider === '@myriaddreamin/typst-ts-node-compiler') {
+    return new NodeCompileProvider(false, compileArgs, options.onCompile || defaultCompile);
+  } else if (compilerProvider === 'typst-cli') {
+    return new CliCompileProvider(false, compileArgs, options.onCompile || defaultCompile);
+  }
+  throw new Error(`Unsupported compiler provider: ${compilerProvider}`);
 }
 
 interface ExecResult<T> extends Pick<NodeHtmlOutputExecResult, 'hasError' | 'printErrors'> {

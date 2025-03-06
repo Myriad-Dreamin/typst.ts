@@ -41,6 +41,7 @@ export interface HtmlOutputExecResult {
 }
 
 export interface TypstHTMLCompiler {
+  // Add svg here?
   query(doc: ResolvedTypstInput, args: QueryDocArgs): any;
   tryHtml(doc: ResolvedTypstInput): HtmlOutputExecResult;
 }

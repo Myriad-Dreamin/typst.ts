@@ -1,56 +1,20 @@
 import {
   CompileArgs,
   CompileDocArgs,
-  NodeError,
-  NodeTypstCompileResult,
   NodeTypstDocument,
-  NodeTypstProject,
   ProjectWatcher,
   QueryDocArgs,
-  RenderPdfOpts,
 } from '@myriaddreamin/typst-ts-node-compiler';
-import { DOMParser, XMLSerializer } from 'xmldom';
 import { spawnSync } from 'child_process';
-import { CompileProvider, HtmlOutput, OnCompileCallback, TypstHTMLCompiler } from '../compiler.js';
-import path from 'path';
+import { DOMParser, XMLSerializer } from 'xmldom';
+import {
+  CompileProvider,
+  HtmlOutput,
+  HtmlOutputExecResult,
+  OnCompileCallback,
+  TypstHTMLCompiler,
+} from '../compiler.js';
 import { ResolvedTypstInput } from '../input.js';
-
-class CliTypstDocument {
-  /** Gets the number of pages in the document. */
-  get numOfPages(): number {
-    throw new Error('Not implemented');
-  }
-  /** Gets the title of the document. */
-  get title(): string | null {
-    throw new Error('Not implemented');
-  }
-  /** Gets the authors of the document. */
-  get authors(): Array<string> | null {
-    throw new Error('Not implemented');
-  }
-  /** Gets the keywords of the document. */
-  get keywords(): Array<string> | null {
-    throw new Error('Not implemented');
-  }
-  /**
-   * Gets the unix timestamp (in nanoseconds) of the document.
-   *
-   * Note: currently typst doesn't specify the timezone of the date, and we
-   * keep stupid and doesn't add timezone info to the date.
-   */
-  get date(): number | null {
-    throw new Error('Not implemented');
-  }
-  /**
-   * Determines whether the date should be automatically generated.
-   *
-   * This happens when user specifies `date: auto` in the document
-   * explicitly.
-   */
-  get enabledAutoDate(): boolean {
-    throw new Error('Not implemented');
-  }
-}
 
 class CliHtmlOutput implements HtmlOutput {
   constructor(
@@ -90,77 +54,23 @@ class CliHtmlOutput implements HtmlOutput {
   }
 }
 
-class CliTypstCompileResult {
-  constructor(private inner: CliTypstDocument | { error: string }) {}
-  /** Gets the result of execution. */
-  get result(): CliTypstDocument | null {
-    if (this.hasError()) {
-      return null;
-    }
-    throw new Error('Not implemented');
-  }
-  /** Takes the result of execution. */
-  takeWarnings(): NodeError | null {
-    throw new Error('Not implemented');
-  }
-  /** Takes the error of execution. */
-  takeError(): NodeError | null {
-    throw new Error('Not implemented');
-  }
-  /** Takes the diagnostics of execution. */
-  takeDiagnostics(): NodeError | null {
-    throw new Error('Not implemented');
-  }
-  /** Whether the execution has error. */
-  hasError(): boolean {
-    return !(this.inner instanceof CliTypstDocument);
-  }
-  /** Prints the errors during execution. */
-  printErrors(): void {
-    'error' in this.inner && console.error(this.inner.error);
-  }
-  /** Prints the diagnostics of execution. */
-  printDiagnostics(): void {
-    throw new Error('Not implemented');
-  }
-}
-
-class CliHtmlOutputExecResult {
+class CliHtmlOutputExecResult implements HtmlOutputExecResult {
   constructor(private inner: CliHtmlOutput | { error: string }) {}
   static fromHtml(html: Document, raw: string): CliHtmlOutputExecResult {
     return new CliHtmlOutputExecResult(new CliHtmlOutput(html, raw));
   }
-  /** Gets the result of execution. */
   get result(): CliHtmlOutput | null {
     return this.inner instanceof CliHtmlOutput ? this.inner : null;
   }
-  /** Takes the result of execution. */
-  takeWarnings(): NodeError | null {
-    throw new Error('Not implemented');
-  }
-  /** Takes the error of execution. */
-  takeError(): NodeError | null {
-    throw new Error('Not implemented');
-  }
-  /** Takes the diagnostics of execution. */
-  takeDiagnostics(): NodeError | null {
-    throw new Error('Not implemented');
-  }
-  /** Whether the execution has error. */
   hasError(): boolean {
     return !(this.inner instanceof CliHtmlOutput);
   }
-  /** Prints the errors during execution. */
-  printErrors(): void {
-    'error' in this.inner && console.error(this.inner.error);
-  }
-  /** Prints the diagnostics of execution. */
   printDiagnostics(): void {
-    throw new Error('Not implemented');
+    'error' in this.inner && console.error(this.inner.error);
   }
 }
 
-class CliCompiler {
+class CliCompiler implements TypstHTMLCompiler {
   private inputs: Record<string, string> = {};
   private fontArgs: Array<string> = [];
   private rootArgs: Array<string> = [];
@@ -176,21 +86,6 @@ class CliCompiler {
   }
   static create(args?: CompileArgs): CliCompiler {
     return new CliCompiler(args);
-  }
-  /** Compiles the document as paged target. */
-  compile(opts: CompileDocArgs): NodeTypstCompileResult {
-    throw new Error('Not implemented');
-  }
-  /** Compiles the document as html target. */
-  compileHtml(opts: CompileDocArgs): CliTypstCompileResult {
-    // ??? What's the difference between compileHtml and tryHtml
-    return new CliTypstCompileResult({
-      error: '`compileHtml` not implemented, use `tryHtml` instead',
-    });
-  }
-  /** Fetches the diagnostics of the document. */
-  fetchDiagnostics(opts: NodeError): Array<any> {
-    throw new Error('Not implemented');
   }
   /** Queries the data of the document. */
   query(compiledOrBy: NodeTypstDocument | CompileDocArgs, args: QueryDocArgs): any {
@@ -219,26 +114,6 @@ class CliCompiler {
       throw new Error(result.error.message);
     }
     return JSON.parse(result.stdout.toString()).map((x: any) => (args.field ? x[args.field] : x));
-  }
-  /** Simply compiles the document as a vector IR. */
-  vector(compiledOrBy: NodeTypstDocument | CompileDocArgs): Buffer {
-    throw new Error('Not implemented');
-  }
-  /** Simply compiles the document as a PDF. */
-  pdf(compiledOrBy: NodeTypstDocument | CompileDocArgs, opts?: RenderPdfOpts): Buffer {
-    throw new Error('Not implemented');
-  }
-  /** Simply compiles the document as a plain SVG. */
-  plainSvg(compiledOrBy: NodeTypstDocument | CompileDocArgs): string {
-    throw new Error('Not implemented');
-  }
-  /** Simply compiles the document as a rich-contented SVG (for browsers). */
-  svg(compiledOrBy: NodeTypstDocument | CompileDocArgs): string {
-    throw new Error('Not implemented');
-  }
-  /** Simply compiles the document as a HTML. */
-  html(compiledOrBy: NodeTypstDocument | CompileDocArgs): string | null {
-    throw new Error('Not implemented');
   }
   /** Compiles the document as a HTML. */
   tryHtml(compiledOrBy: NodeTypstDocument | CompileDocArgs): CliHtmlOutputExecResult {
@@ -279,7 +154,6 @@ class CliCompiler {
 }
 
 export class CliCompileProvider extends CompileProvider<CliCompileProvider> {
-
   constructor(
     public isWatch: boolean,
     compileArgs: CompileArgs,

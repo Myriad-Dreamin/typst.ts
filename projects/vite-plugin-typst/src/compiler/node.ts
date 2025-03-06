@@ -3,7 +3,6 @@ import { CompileProvider, OnCompileCallback, TypstHTMLCompiler } from '../compil
 import { ResolvedTypstInput } from '../input.js';
 
 export class NodeCompileProvider extends CompileProvider<NodeCompileProvider> {
-
   constructor(
     public isWatch: boolean,
     compileArgs: CompileArgs,
@@ -31,7 +30,6 @@ export class NodeCompileProvider extends CompileProvider<NodeCompileProvider> {
   /**
    * Compiles the source file to the destination file.
    *
-   * @param {string} src The source file path
    * @param {ResolvedTypstInput} input The resolved input
    *
    * @example
@@ -55,7 +53,6 @@ export class NodeCompileProvider extends CompileProvider<NodeCompileProvider> {
    *
    * All the errors are caught and printed to the console.
    *
-   * @param {string} src The source file path
    * @param {ResolvedTypstInput} input The resolved input
    *
    * @example
