@@ -20,6 +20,7 @@ def main():
     ["examples/js-import", True],
     ["examples/mixin-parts", True],
     ["examples/typst-cli", True],
+    ["examples/typst-cli-error", False],
     ["examples/typst-cli-query", True],
   ]:
     try:

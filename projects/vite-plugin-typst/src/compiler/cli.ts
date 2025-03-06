@@ -9,7 +9,7 @@ import {
   QueryDocArgs,
   RenderPdfOpts,
 } from '@myriaddreamin/typst-ts-node-compiler';
-import { DOMParser } from 'xmldom';
+import { DOMParser, XMLSerializer } from 'xmldom';
 import { spawnSync } from 'child_process';
 import { OnCompileCallback } from '../compiler';
 import path from 'path';
@@ -53,9 +53,18 @@ class CliTypstDocument {
 }
 
 class CliHtmlOutput {
-  constructor(private inner: Document) {}
+  constructor(
+    private inner: Document,
+    private innerRaw: string,
+  ) {}
   private findMeta(name: string) {
-    return this.inner.head.querySelector(`meta[name="${name}"]`)?.getAttribute('content') ?? null;
+    for (let idx = 0; idx < this.inner.getElementsByTagName('meta').length; idx++) {
+      const e = this.inner.getElementsByTagName('meta')[idx];
+      if (e.getAttribute('name') === name) {
+        return e.getAttribute('content');
+      }
+    }
+    return null;
   }
   /** Gets the title of the document. */
   title(): string | null {
@@ -67,7 +76,7 @@ class CliHtmlOutput {
   }
   /** Gets the body of the document. */
   body(): string {
-    return this.inner.body.outerHTML;
+    return new XMLSerializer().serializeToString(this.inner.getElementsByTagName('body')[0]);
   }
   /** Gets the body of the document as bytes. */
   bodyBytes(): Buffer {
@@ -75,7 +84,7 @@ class CliHtmlOutput {
   }
   /** Gets the HTML of the document. */
   html(): string {
-    return this.inner.documentElement.outerHTML;
+    return this.innerRaw;
   }
   /** Gets the HTML of the document as bytes. */
   htmlBytes(): Buffer {
@@ -120,8 +129,8 @@ class CliTypstCompileResult {
 
 class CliHtmlOutputExecResult {
   constructor(private inner: CliHtmlOutput | { error: string }) {}
-  static fromHtml(html: string): CliHtmlOutputExecResult {
-    return new CliHtmlOutputExecResult(new CliHtmlOutput(new DOMParser().parseFromString(html)));
+  static fromHtml(html: Document, raw: string): CliHtmlOutputExecResult {
+    return new CliHtmlOutputExecResult(new CliHtmlOutput(html, raw));
   }
   /** Gets the result of execution. */
   get result(): CliHtmlOutput | null {
@@ -157,11 +166,15 @@ class CliCompiler {
   private inputs: Record<string, string> = {};
   private fontArgs: Array<string> = [];
   private rootArgs: Array<string> = [];
+  needFeature: boolean = true;
   constructor(private args: CompileArgs = {}) {
     this.inputs = { ...this.inputs, ...(args.inputs ?? {}) };
     this.rootArgs = args.workspace ? ['--root', args.workspace] : [];
     // TODO!: add this
     this.fontArgs = [];
+  }
+  get featureArgs(): Array<string> {
+    return this.needFeature ? ['--features', 'html'] : [];
   }
   static create(args?: CompileArgs): CliCompiler {
     return new CliCompiler(args);
@@ -198,6 +211,7 @@ class CliCompiler {
       'query',
       '--format',
       'json',
+      ...this.featureArgs,
       ...this.rootArgs,
       compiledOrBy.mainFilePath,
       args.selector,
@@ -243,6 +257,7 @@ class CliCompiler {
       : [];
     const result = spawnSync('typst', [
       'compile',
+      ...this.featureArgs,
       ...this.rootArgs,
       compiledOrBy.mainFilePath,
       '-',
@@ -253,7 +268,15 @@ class CliCompiler {
     if (result.error) {
       return new CliHtmlOutputExecResult({ error: result.error.message });
     }
-    return CliHtmlOutputExecResult.fromHtml(result.stdout.toString());
+
+    const rawRes = result.stdout.toString();
+    const parseResult = new DOMParser().parseFromString(rawRes, 'text/html');
+    if (!parseResult) {
+      return new CliHtmlOutputExecResult({
+        error: 'Failed to parse the result\n' + `stderr: ${result.stderr.toString()}`,
+      });
+    }
+    return CliHtmlOutputExecResult.fromHtml(parseResult, rawRes);
   }
 }
 
