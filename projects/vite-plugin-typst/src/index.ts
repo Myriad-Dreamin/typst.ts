@@ -281,9 +281,9 @@ export default parts;`;
   });
 
   function viteReload(conf: ResolvedConfig) {
-    provider.inputRoot = path.resolve(conf.root || '.');
+    provider.inputRoot = path.resolve(conf.root ?? '.');
     provider.isWatch = !!(conf.mode === 'development' || conf.build?.watch);
-    provider.compileArgs.workspace = options.root || provider.inputRoot;
+    provider.compileArgs.workspace = options.root ?? provider.inputRoot;
 
     reload = doReload;
 
@@ -350,28 +350,28 @@ const defaultCompile: OnCompileCallback<CompileProvider<any>, HtmlOutputExecResu
 
 function createCompiler(options: TypstPluginOptions) {
   const compileArgs: CompileArgs = {
-    workspace: path.resolve(options.root || '.'),
+    workspace: path.resolve(options.root ?? '.'),
     ...{ inputs: options.inputs, fontArgs: options.fontArgs },
   };
   const result =
     options.compiler === undefined || options.compiler === '@myriaddreamin/typst-ts-node-compiler'
       ? (p => {
           const partsFunc: PartialCallback = (mainFilePath, project) =>
-            options.onResolveParts?.(mainFilePath, project, p) || {};
+            options.onResolveParts?.(mainFilePath, project, p) ?? {};
           return {
             provider: p,
             partsFunc,
           };
-        })(new NodeCompileProvider(false, compileArgs, options.onCompile || defaultCompile))
+        })(new NodeCompileProvider(false, compileArgs, options.onCompile ?? defaultCompile))
       : options.compiler === 'typst-cli'
         ? (p => {
             const partsFunc: PartialCallback = (mainFilePath, project) =>
-              options.onResolveParts?.(mainFilePath, project, p) || {};
+              options.onResolveParts?.(mainFilePath, project, p) ?? {};
             return {
               provider: p,
               partsFunc,
             };
-          })(new CliCompileProvider(false, compileArgs, options.onCompile || defaultCompile))
+          })(new CliCompileProvider(false, compileArgs, options.onCompile ?? defaultCompile))
         : null;
   if (result === null) throw new Error(`Unsupported compiler provider: ${options.compiler}`);
   return result;
@@ -403,3 +403,5 @@ export function checkExecResult<R, T extends ExecResult<R>>(
   }
   return result.result;
 }
+
+const _test: TypstPluginOptions['onResolveParts'] = {} as any;
