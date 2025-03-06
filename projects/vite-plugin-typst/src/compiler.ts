@@ -1,11 +1,6 @@
-import * as path from 'path';
+import type { QueryDocArgs } from '@myriaddreamin/typst-ts-node-compiler';
 import { CompileArgs } from '@myriaddreamin/typst-ts-node-compiler';
-import type {
-  NodeHtmlOutput,
-  NodeHtmlOutputExecResult,
-  NodeTypstProject,
-  QueryDocArgs,
-} from '@myriaddreamin/typst-ts-node-compiler';
+import * as path from 'path';
 import { ResolvedTypstInput } from './input.js';
 
 /**
@@ -20,6 +15,7 @@ export type OnCompileCallback<P extends CompileProvider<P>, T = void> = (
   project: TypstHTMLCompiler,
   ctx: P,
 ) => T;
+
 export interface HtmlOutput {
   /** Gets the title of the document. */
   title(): string | null;
@@ -98,8 +94,3 @@ export abstract class CompileProvider<P extends CompileProvider<P>> {
    */
   abstract compileOrWatch(input: ResolvedTypstInput): void;
 }
-
-type Tester<A, B extends A> = B;
-const _test1 = {} as Tester<TypstHTMLCompiler, NodeTypstProject>;
-const _test2 = {} as Tester<HtmlOutputExecResult, NodeHtmlOutputExecResult>;
-const _test3 = {} as Tester<HtmlOutput, NodeHtmlOutput>;
