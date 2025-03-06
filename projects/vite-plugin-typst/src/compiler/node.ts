@@ -1,4 +1,4 @@
-import { CompileArgs, NodeCompiler, ProjectWatcher, type NodeTypstProject } from '@myriaddreamin/typst-ts-node-compiler';
+import { CompileArgs, NodeCompiler, ProjectWatcher } from '@myriaddreamin/typst-ts-node-compiler';
 import { CompileProvider, OnCompileCallback, TypstHTMLCompiler } from '../compiler.js';
 import { ResolvedTypstInput } from '../input.js';
 

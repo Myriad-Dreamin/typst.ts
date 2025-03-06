@@ -16,6 +16,11 @@ export type OnCompileCallback<P extends CompileProvider<P>, T = void> = (
   ctx: P,
 ) => T;
 
+export type PartialCallback<T = void> = (
+  mainFilePath: ResolvedTypstInput,
+  project: TypstHTMLCompiler,
+) => T;
+
 export interface HtmlOutput {
   /** Gets the title of the document. */
   title(): string | null;
