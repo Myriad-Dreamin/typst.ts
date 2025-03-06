@@ -27,12 +27,12 @@
     "dist/**/*.{mts,mjs,cjs,cts,ts,js}"
   ],
   "devDependencies": {
-    "@types/glob-watcher": "^5.0.5"
+    "@types/glob-watcher": "^5.0.5",
+    "@types/xmldom": "^0.1.34"
   },
   "dependencies": {
-    "@types/jsdom": "^21.1.7",
     "glob": "^11.0.1",
     "glob-watcher": "^6.0.0",
-    "jsdom": "^26.0.0"
+    "xmldom": "^0.6.0"
   }
 }

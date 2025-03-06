@@ -9,7 +9,7 @@ import {
   QueryDocArgs,
   RenderPdfOpts,
 } from '@myriaddreamin/typst-ts-node-compiler';
-import { JSDOM } from 'jsdom';
+import { DOMParser } from 'xmldom';
 import { spawnSync } from 'child_process';
 import { OnCompileCallback } from '../compiler';
 import path from 'path';
@@ -53,7 +53,7 @@ class CliTypstDocument {
 }
 
 class CliHtmlOutput {
-  constructor(private inner: JSDOM['window']['document']) {}
+  constructor(private inner: Document) {}
   private findMeta(name: string) {
     return this.inner.head.querySelector(`meta[name="${name}"]`)?.getAttribute('content') ?? null;
   }
@@ -121,7 +121,7 @@ class CliTypstCompileResult {
 class CliHtmlOutputExecResult {
   constructor(private inner: CliHtmlOutput | { error: string }) {}
   static fromHtml(html: string): CliHtmlOutputExecResult {
-    return new CliHtmlOutputExecResult(new CliHtmlOutput(new JSDOM(html).window.document));
+    return new CliHtmlOutputExecResult(new CliHtmlOutput(new DOMParser().parseFromString(html)));
   }
   /** Gets the result of execution. */
   get result(): CliHtmlOutput | null {
