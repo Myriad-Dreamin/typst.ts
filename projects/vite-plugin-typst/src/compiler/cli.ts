@@ -54,6 +54,7 @@ class CliHtmlOutput implements HtmlOutput {
   }
 }
 
+// TODO: error stack
 class CliHtmlOutputExecResult implements HtmlOutputExecResult {
   constructor(private inner: CliHtmlOutput | { error: string }) {}
   static fromHtml(html: Document, raw: string): CliHtmlOutputExecResult {
@@ -78,8 +79,20 @@ class CliCompiler implements TypstHTMLCompiler {
   constructor(private args: CompileArgs = {}) {
     this.inputs = { ...this.inputs, ...(args.inputs ?? {}) };
     this.rootArgs = args.workspace ? ['--root', args.workspace] : [];
-    // TODO!: add this
-    this.fontArgs = [];
+    this.fontArgs = args.fontArgs
+      ? [
+          '--fonts',
+          ...args.fontArgs
+            .map(it => {
+              if ('fontPaths' in it) {
+                return it.fontPaths;
+              } else {
+                throw new Error('Not implemented');
+              }
+            })
+            .reduce((a, b) => a.concat(b), []),
+        ]
+      : [];
   }
   get featureArgs(): Array<string> {
     return this.needFeature ? ['--features', 'html'] : [];
@@ -146,7 +159,7 @@ class CliCompiler implements TypstHTMLCompiler {
     const parseResult = new DOMParser().parseFromString(rawRes, 'text/html');
     if (!parseResult) {
       return new CliHtmlOutputExecResult({
-        error: 'Failed to parse the result\n' + `stderr: ${result.stderr.toString()}`,
+        error: 'Failed to parse the result\n[stderr]:\n' + result.stderr,
       });
     }
     return CliHtmlOutputExecResult.fromHtml(parseResult, rawRes);

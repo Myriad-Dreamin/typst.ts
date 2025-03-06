@@ -21,6 +21,8 @@ def main():
     ["examples/mixin-parts", True],
     ["examples/typst-cli", True],
     ["examples/typst-cli-error", False],
+    ["examples/typst-cli-fonts", True],
+    ["examples/typst-cli-mixin-parts", True],
     ["examples/typst-cli-query", True],
   ]:
     try:
