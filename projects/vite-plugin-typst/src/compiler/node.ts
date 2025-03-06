@@ -1,23 +1,16 @@
 import { CompileArgs, NodeCompiler, ProjectWatcher, type NodeTypstProject } from '@myriaddreamin/typst-ts-node-compiler';
-import * as path from 'path';
-import { OnCompileCallback } from '../compiler';
-import { ResolvedTypstInput } from '../input';
+import { CompileProvider, OnCompileCallback, TypstHTMLCompiler } from '../compiler.js';
+import { ResolvedTypstInput } from '../input.js';
 
-export class NodeCompileProvider {
-  compiled = new Map<string, string>();
+export class NodeCompileProvider extends CompileProvider<NodeCompileProvider> {
 
   constructor(
-    compileArgs: CompileArgs,
     public isWatch: boolean,
-    onCompile: OnCompileCallback
+    compileArgs: CompileArgs,
+    onCompile: OnCompileCallback<NodeCompileProvider>,
+    inputRoot?: string,
   ) {
-    this.compileArgs = compileArgs;
-    this.onCompile = onCompile;
-  }
-
-  resolveRel(input: string, ext = '.html') {
-    const rel = input.endsWith('.typ') ? input.slice(0, -4) : input;
-    return path.relative(this.inputRoot, rel + ext);
+    super(onCompile, compileArgs, inputRoot);
   }
 
   /**
@@ -29,17 +22,7 @@ export class NodeCompileProvider {
    */
   watcher = (): ProjectWatcher => (this._watcher ||= ProjectWatcher.create(this.compileArgs));
 
-  /**
-   * Common getter for the compiler or watcher.
-   */
-  compilerOrWatcher = () => this._compiler || this._watcher;
-
   /** @internal */
-  inputRoot: string = '.';
-  /** @internal */
-  onCompile: OnCompileCallback;
-  /** @internal */
-  readonly compileArgs: CompileArgs;
   /** @internal */
   private _compiler: NodeCompiler | undefined = undefined;
   /** @internal */
@@ -55,11 +38,15 @@ export class NodeCompileProvider {
    * compile("src/index.typ", "dist/index.html")(compiler());
    */
   compile = (input: ResolvedTypstInput) => {
-    return (project: NodeTypstProject) => {
+    return (project: TypstHTMLCompiler) => {
       this.onCompile(input, project, this);
 
       // Evicts the cache unused in last 30 runs
-      this.compilerOrWatcher()?.evictCache(30);
+      if (this.isWatch) {
+        this.watcher().evictCache(30);
+      } else {
+        this.compiler().evictCache(30);
+      }
     };
   };
 

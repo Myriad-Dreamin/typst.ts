@@ -11,9 +11,9 @@ import {
 } from '@myriaddreamin/typst-ts-node-compiler';
 import { DOMParser, XMLSerializer } from 'xmldom';
 import { spawnSync } from 'child_process';
-import { OnCompileCallback } from '../compiler';
+import { CompileProvider, HtmlOutput, OnCompileCallback, TypstHTMLCompiler } from '../compiler.js';
 import path from 'path';
-import { ResolvedTypstInput } from '../input';
+import { ResolvedTypstInput } from '../input.js';
 
 class CliTypstDocument {
   /** Gets the number of pages in the document. */
@@ -52,7 +52,7 @@ class CliTypstDocument {
   }
 }
 
-class CliHtmlOutput {
+class CliHtmlOutput implements HtmlOutput {
   constructor(
     private inner: Document,
     private innerRaw: string,
@@ -278,21 +278,15 @@ class CliCompiler {
   }
 }
 
-export class CliCompileProvider {
-  compiled = new Map<string, string>();
+export class CliCompileProvider extends CompileProvider<CliCompileProvider> {
 
   constructor(
-    compileArgs: CompileArgs,
     public isWatch: boolean,
-    onCompile: OnCompileCallback,
+    compileArgs: CompileArgs,
+    onCompile: OnCompileCallback<CliCompileProvider>,
+    inputRoot?: string,
   ) {
-    this.compileArgs = compileArgs;
-    this.onCompile = onCompile;
-  }
-
-  resolveRel(input: string, ext = '.html') {
-    const rel = input.endsWith('.typ') ? input.slice(0, -4) : input;
-    return path.relative(this.inputRoot, rel + ext);
+    super(onCompile, compileArgs, inputRoot);
   }
 
   /**
@@ -307,14 +301,8 @@ export class CliCompileProvider {
   /**
    * Common getter for the compiler or watcher.
    */
-  compilerOrWatcher = () => this._compiler || this._watcher;
+  compilerOrWatcher = () => (this._compiler || this._watcher) ?? null;
 
-  /** @internal */
-  inputRoot: string = '.';
-  /** @internal */
-  onCompile: OnCompileCallback;
-  /** @internal */
-  readonly compileArgs: CompileArgs;
   /** @internal */
   private _compiler: CliCompiler | undefined = undefined;
   /** @internal */
@@ -330,7 +318,7 @@ export class CliCompileProvider {
    * compile("src/index.typ", "dist/index.html")(compiler());
    */
   compile = (input: ResolvedTypstInput) => {
-    return (project: NodeTypstProject) => {
+    return (project: TypstHTMLCompiler) => {
       this.onCompile(input, project, this);
     };
   };

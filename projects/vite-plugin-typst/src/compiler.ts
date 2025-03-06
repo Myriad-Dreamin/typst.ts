@@ -1,10 +1,12 @@
 import * as path from 'path';
 import { CompileArgs } from '@myriaddreamin/typst-ts-node-compiler';
-import type { NodeTypstProject } from '@myriaddreamin/typst-ts-node-compiler';
-import type { TypstPluginOptions } from '.';
+import type {
+  NodeHtmlOutput,
+  NodeHtmlOutputExecResult,
+  NodeTypstProject,
+  QueryDocArgs,
+} from '@myriaddreamin/typst-ts-node-compiler';
 import { ResolvedTypstInput } from './input.js';
-import { NodeCompileProvider } from './compiler/node.js';
-import { CliCompileProvider } from './compiler/cli.js';
 
 /**
  * The callback to be called when the document is compiled.
@@ -13,31 +15,91 @@ import { CliCompileProvider } from './compiler/cli.js';
  * @param project The compiling project (document)
  * @param ctx The compile provider
  */
-export type OnCompileCallback<T = void> = (
+export type OnCompileCallback<P extends CompileProvider<P>, T = void> = (
   mainFilePath: ResolvedTypstInput,
-  project: NodeTypstProject,
-  ctx: CompileProvider,
+  project: TypstHTMLCompiler,
+  ctx: P,
 ) => T;
-export type CompileProvider = NodeCompileProvider | CliCompileProvider;
+export interface HtmlOutput {
+  /** Gets the title of the document. */
+  title(): string | null;
+  /** Gets the description of the document. */
+  description(): string | null;
+  /** Gets the body of the document. */
+  body(): string;
+  /** Gets the body of the document as bytes. */
+  bodyBytes(): Buffer;
+  /** Gets the HTML of the document. */
+  html(): string;
+  /** Gets the HTML of the document as bytes. */
+  htmlBytes(): Buffer;
+}
 
-/**
- * Creates a new provider for the plugin.
- *
- * @param options The plugin options
- * @param onCompile The callback to be called when the document is compiled
- * @returns
- */
-export const makeProvider = (options: TypstPluginOptions, onCompile: OnCompileCallback) => {
-  const compileArgs: CompileArgs = {
-    workspace: path.resolve(options.root || '.'),
-    ...{ inputs: options.inputs, fontArgs: options.fontArgs },
-  };
+export interface HtmlOutputExecResult {
+  /** Gets the result of execution. */
+  get result(): HtmlOutput | null;
+  /** Whether the execution has error. */
+  hasError(): boolean;
+  /** Prints the diagnostics of execution. */
+  printDiagnostics(): void;
+}
 
-  const compilerProvider = options?.compiler || '@myriaddreamin/typst-ts-node-compiler';
-  if (compilerProvider === '@myriaddreamin/typst-ts-node-compiler') {
-    return new NodeCompileProvider(compileArgs, false, onCompile);
-  } else if (compilerProvider === 'typst-cli') {
-    return new CliCompileProvider(compileArgs, false, onCompile);
+export interface TypstHTMLCompiler {
+  query(doc: ResolvedTypstInput, args: QueryDocArgs): any;
+  tryHtml(doc: ResolvedTypstInput): HtmlOutputExecResult;
+}
+
+export interface TypstHTMLWatcher {}
+
+export abstract class CompileProvider<P extends CompileProvider<P>> {
+  compiled = new Map<string, string>();
+
+  constructor(
+    public readonly onCompile: OnCompileCallback<P>,
+    readonly compileArgs: CompileArgs,
+    public inputRoot: string = '.',
+  ) {}
+
+  resolveRel(input: string, ext = '.html') {
+    const rel = input.endsWith('.typ') ? input.slice(0, -4) : input;
+    return path.relative(this.inputRoot, rel + ext);
   }
-  throw new Error(`Unsupported compiler provider: ${compilerProvider}`);
-};
+
+  /**
+   * Lazily created compiler.
+   */
+  abstract compiler(): TypstHTMLCompiler;
+  /**
+   * Lazily created watcher
+   */
+  abstract watcher(): TypstHTMLWatcher;
+
+  abstract isWatch: boolean;
+
+  /**
+   * Compiles the source file to the destination file.
+   *
+   * @param {ResolvedTypstInput} input The resolved input
+   *
+   * @example
+   * compile("src/index.typ", "dist/index.html")(compiler());
+   */
+  abstract compile(input: ResolvedTypstInput): (compiler: TypstHTMLCompiler) => void;
+
+  /**
+   * User trigger compiles the source file to the destination file or watches the source file.
+   *
+   * All the errors are caught and printed to the console.
+   *
+   * @param {ResolvedTypstInput} input The resolved input
+   *
+   * @example
+   * compileOrWatch("src/index.typ", "dist/index.html");
+   */
+  abstract compileOrWatch(input: ResolvedTypstInput): void;
+}
+
+type Tester<A, B extends A> = B;
+const _test1 = {} as Tester<TypstHTMLCompiler, NodeTypstProject>;
+const _test2 = {} as Tester<HtmlOutputExecResult, NodeHtmlOutputExecResult>;
+const _test3 = {} as Tester<HtmlOutput, NodeHtmlOutput>;

@@ -1,15 +1,20 @@
 import * as path from 'path';
 import type { ResolvedConfig, Plugin as VitePlugin } from 'vite';
-import { makeProvider, OnCompileCallback } from './compiler.js';
+import { CompileProvider, HtmlOutputExecResult, OnCompileCallback } from './compiler.js';
+import { makeProvider } from './makeProvider.js';
 import { ResolvedTypstInputs, InputChecker } from './input.js';
 import type { CompileArgs, NodeHtmlOutputExecResult } from '@myriaddreamin/typst-ts-node-compiler';
+import { CliCompileProvider } from './compiler/cli.js';
+import { NodeCompileProvider } from './compiler/node.js';
 
-type TypstCompileProvider = '@myriaddreamin/typst-ts-node-compiler' | 'typst-cli';
+type TypstCompileProviders = '@myriaddreamin/typst-ts-node-compiler' | 'typst-cli';
 
-/**
- * Vite plugin for Typst
- */
-export interface TypstPluginOptions extends TypstDocumentOptions {
+interface TypstPluginBaseOptions extends TypstDocumentOptions {
+  /**
+   * The compiler provider.
+   * @default '@myriaddreamin/typst-ts-node-compiler'
+   */
+  compiler?: TypstCompileProviders;
   /**
    * The index document to be compiled.
    * If not provided, the plugin will try to find `index.typ` in the root directory.
@@ -47,11 +52,11 @@ export interface TypstPluginOptions extends TypstDocumentOptions {
    * ```
    */
   documents?: DocumentInput | DocumentInput[];
+
   /**
-   * The compiler provider.
-   * @default '@myriaddreamin/typst-ts-node-compiler'
+   * *Override* the callback to be called when the inputs are compiling.
    */
-  compiler?: TypstCompileProvider;
+  onCompile?: OnCompileCallback<CompileProvider<any>>
   /**
    * A callback to be called when the inputs are resolved.
    */
@@ -59,23 +64,31 @@ export interface TypstPluginOptions extends TypstDocumentOptions {
   /**
    * *Override* the callback to be called when the parts is resolving.
    */
-  onResolveParts?: OnCompileCallback<any>;
-  /**
-   * *Override* the callback to be called when the inputs are compiling.
-   */
-  onCompile?: OnCompileCallback;
+  onResolveParts?: OnCompileCallback<CompileProvider<any>, any>;
 
   /**
    * Whether to override the route in `vite.configureServer`.
    * @default true
    */
   overrideRoute?: boolean;
-
   /**
    * Provides `sys.inputs` for the document.
    */
   fontArgs?: CompileArgs['fontArgs'];
 }
+
+/**
+ * Vite plugin for Typst
+ */
+export type TypstPluginOptions = TypstPluginBaseOptions & ({
+  compiler?: '@myriaddreamin/typst-ts-node-compiler';
+  onResolveParts?: OnCompileCallback<NodeCompileProvider, any>;
+  onCompile?: OnCompileCallback<NodeCompileProvider>;
+} | {
+  compiler: 'typst-cli';
+  onResolveParts?: OnCompileCallback<CliCompileProvider, any>;
+  onCompile?: OnCompileCallback<CliCompileProvider>;
+})
 
 /**
  * The input glob pattern relative to vite's root directory or the grouped input with {@link TypstDocumentOptions}.
@@ -293,7 +306,7 @@ export default parts;`;
 
 export default TypstPlugin;
 
-const defaultCompile: OnCompileCallback<NodeHtmlOutputExecResult | undefined> = (
+const defaultCompile: OnCompileCallback<CompileProvider<any>, HtmlOutputExecResult | undefined> = (
   input,
   project,
   ctx,
@@ -303,7 +316,7 @@ const defaultCompile: OnCompileCallback<NodeHtmlOutputExecResult | undefined> = 
   // Only print the error once
   if (htmlResult.hasError()) {
     // console.log(` \x1b[1;31mError\x1b[0m ${mainFilePath}`);
-    htmlResult.printErrors();
+    htmlResult.printDiagnostics();
 
     // todo: how could we raise error if not in watch mode?
     if (!ctx.isWatch) {
