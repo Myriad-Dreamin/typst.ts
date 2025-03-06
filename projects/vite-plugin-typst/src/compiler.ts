@@ -51,7 +51,9 @@ export interface TypstHTMLCompiler {
   tryHtml(doc: ResolvedTypstInput): HtmlOutputExecResult;
 }
 
-export interface TypstHTMLWatcher {}
+export interface TypstHTMLWatcher {
+  add(paths: string[], exec: (project: TypstHTMLCompiler) => void): void;
+}
 
 export abstract class CompileProvider<P extends CompileProvider<P>> {
   compiled = new Map<string, string>();

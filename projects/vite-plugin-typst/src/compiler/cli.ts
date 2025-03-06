@@ -13,6 +13,7 @@ import {
   HtmlOutputExecResult,
   OnCompileCallback,
   TypstHTMLCompiler,
+  TypstHTMLWatcher,
 } from '../compiler.js';
 import { ResolvedTypstInput } from '../input.js';
 
@@ -54,7 +55,6 @@ class CliHtmlOutput implements HtmlOutput {
   }
 }
 
-// TODO: error stack
 class CliHtmlOutputExecResult implements HtmlOutputExecResult {
   constructor(private inner: CliHtmlOutput | { error: string }) {}
   static fromHtml(html: Document, raw: string): CliHtmlOutputExecResult {
@@ -71,10 +71,23 @@ class CliHtmlOutputExecResult implements HtmlOutputExecResult {
   }
 }
 
+class CliWatcher implements TypstHTMLWatcher {
+  constructor(private compiler: CliCompiler) {}
+
+  static create(compileArgs: CompileArgs): CliWatcher {
+    return new CliWatcher(CliCompiler.create(compileArgs));
+  }
+
+  add(paths: string[], exec: (project: TypstHTMLCompiler) => void) {
+    exec(this.compiler);
+  }
+}
+
 class CliCompiler implements TypstHTMLCompiler {
   private inputs: Record<string, string> = {};
   private fontArgs: Array<string> = [];
   private rootArgs: Array<string> = [];
+  // TODO: version this
   needFeature: boolean = true;
   constructor(private args: CompileArgs = {}) {
     this.inputs = { ...this.inputs, ...(args.inputs ?? {}) };
@@ -183,7 +196,7 @@ export class CliCompileProvider extends CompileProvider<CliCompileProvider> {
   /**
    * Lazily created watcher
    */
-  watcher = (): ProjectWatcher => (this._watcher ||= ProjectWatcher.create(this.compileArgs));
+  watcher = (): CliWatcher => (this._watcher ||= CliWatcher.create(this.compileArgs));
 
   /**
    * Common getter for the compiler or watcher.
@@ -193,7 +206,7 @@ export class CliCompileProvider extends CompileProvider<CliCompileProvider> {
   /** @internal */
   private _compiler: CliCompiler | undefined = undefined;
   /** @internal */
-  private _watcher: ProjectWatcher | undefined = undefined;
+  private _watcher: CliWatcher | undefined = undefined;
 
   /**
    * Compiles the source file to the destination file.
