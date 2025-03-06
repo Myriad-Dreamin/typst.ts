@@ -58,13 +58,11 @@ class CliHtmlOutput {
     private innerRaw: string,
   ) {}
   private findMeta(name: string) {
-    for (let idx = 0; idx < this.inner.getElementsByTagName('meta').length; idx++) {
-      const e = this.inner.getElementsByTagName('meta')[idx];
-      if (e.getAttribute('name') === name) {
-        return e.getAttribute('content');
-      }
-    }
-    return null;
+    return (
+      Array.from(this.inner.getElementsByTagName('meta'))
+        .find(e => e.getAttribute('name') === name)
+        ?.getAttribute('content') ?? null
+    );
   }
   /** Gets the title of the document. */
   title(): string | null {
