@@ -1,15 +1,17 @@
+import type { CompileArgs, NodeHtmlOutputExecResult } from '@myriaddreamin/typst-ts-node-compiler';
 import * as path from 'path';
 import type { ResolvedConfig, Plugin as VitePlugin } from 'vite';
-import { makeProvider, OnCompileCallback } from './compiler.js';
-import { ResolvedTypstInputs, InputChecker } from './input.js';
-import type { CompileArgs, NodeHtmlOutputExecResult } from '@myriaddreamin/typst-ts-node-compiler';
+import {
+  CompileProvider,
+  HtmlOutputExecResult,
+  OnCompileCallback,
+  PartialCallback,
+} from './compiler.js';
+import { CliCompileProvider } from './compiler/cli.js';
+import { NodeCompileProvider } from './compiler/node.js';
+import { InputChecker, ResolvedTypstInputs } from './input.js';
 
-type TypstCompileProvider = '@myriaddreamin/typst-ts-node-compiler';
-
-/**
- * Vite plugin for Typst
- */
-export interface TypstPluginOptions extends TypstDocumentOptions {
+interface TypstPluginBaseOptions extends TypstDocumentOptions {
   /**
    * The index document to be compiled.
    * If not provided, the plugin will try to find `index.typ` in the root directory.
@@ -47,35 +49,59 @@ export interface TypstPluginOptions extends TypstDocumentOptions {
    * ```
    */
   documents?: DocumentInput | DocumentInput[];
-  /**
-   * The compiler provider.
-   * @default '@myriaddreamin/typst-ts-node-compiler'
-   */
-  compiler?: TypstCompileProvider;
+
   /**
    * A callback to be called when the inputs are resolved.
    */
   onInputs?: (typstInputs: ResolvedTypstInputs) => void;
-  /**
-   * *Override* the callback to be called when the parts is resolving.
-   */
-  onResolveParts?: OnCompileCallback<any>;
-  /**
-   * *Override* the callback to be called when the inputs are compiling.
-   */
-  onCompile?: OnCompileCallback;
 
   /**
    * Whether to override the route in `vite.configureServer`.
    * @default true
    */
   overrideRoute?: boolean;
-
   /**
    * Provides `sys.inputs` for the document.
    */
   fontArgs?: CompileArgs['fontArgs'];
 }
+
+/**
+ * Vite plugin for Typst
+ */
+export type TypstPluginOptions = TypstPluginBaseOptions &
+  (
+    | {
+        /**
+         * The compiler provider.
+         * @default '@myriaddreamin/typst-ts-node-compiler'
+         */
+        compiler?: '@myriaddreamin/typst-ts-node-compiler';
+        /**
+         * *Override* the callback to be called when the parts is resolving.
+         */
+        onResolveParts?: OnCompileCallback<NodeCompileProvider, any>;
+        /**
+         * *Override* the callback to be called when the inputs are compiling.
+         */
+        onCompile?: OnCompileCallback<NodeCompileProvider>;
+      }
+    | {
+        /**
+         * The compiler provider.
+         * @default '@myriaddreamin/typst-ts-node-compiler'
+         */
+        compiler: 'typst-cli';
+        /**
+         * *Override* the callback to be called when the parts is resolving.
+         */
+        onResolveParts?: OnCompileCallback<CliCompileProvider, any>;
+        /**
+         * *Override* the callback to be called when the inputs are compiling.
+         */
+        onCompile?: OnCompileCallback<CliCompileProvider>;
+      }
+  );
 
 /**
  * The input glob pattern relative to vite's root directory or the grouped input with {@link TypstDocumentOptions}.
@@ -121,7 +147,7 @@ export function TypstPlugin(options: TypstPluginOptions = {}): Promise<VitePlugi
   }
 
   const inputs = new InputChecker(options);
-  const compiler = createCompiler(options);
+  const { provider, partsFunc } = createCompiler(options);
   let reload: () => void = undefined!;
 
   const extractOpts = (path: string) => {
@@ -152,7 +178,7 @@ export function TypstPlugin(options: TypstPluginOptions = {}): Promise<VitePlugi
     },
 
     load(id) {
-      const memoryHtml = compiler.compiled.get(id);
+      const memoryHtml = provider.compiled.get(id);
       if (memoryHtml) {
         return memoryHtml;
       }
@@ -167,11 +193,11 @@ export function TypstPlugin(options: TypstPluginOptions = {}): Promise<VitePlugi
       // todo: cache js import
       this.addWatchFile(path);
       // console.log('load isWatch', path, compiler.isWatch);
-      if (compiler.isWatch) {
-        compiler.compileOrWatch(input);
+      if (provider.isWatch) {
+        provider.compileOrWatch(input);
       }
-      const project = compiler.compiler();
-      const result = defaultCompile(input, project, compiler);
+      const project = provider.compiler();
+      const result = defaultCompile(input, project, provider);
       if (!result?.result) {
         return undefined;
       }
@@ -179,7 +205,7 @@ export function TypstPlugin(options: TypstPluginOptions = {}): Promise<VitePlugi
       const doc = result.result!;
 
       if (attributes.parts) {
-        const userParts = options.onResolveParts?.(input, project, compiler) || {};
+        const userParts: any = partsFunc(input, project);
         if (typeof userParts !== 'object') {
           throw new Error('onResolveParts must return an object');
         }
@@ -207,7 +233,7 @@ export default parts;`;
       if (attributes.html || attributes.parts) {
         return source + suffixJs;
       }
-      return compiler.resolveRel(path);
+      return provider.resolveRel(path);
     },
 
     config(conf) {
@@ -228,8 +254,8 @@ export default parts;`;
 
     closeWatcher() {
       inputs.close();
-      if (compiler.isWatch) {
-        compiler.watcher().clear();
+      if (provider.isWatch) {
+        provider.watcher().clear();
       }
     },
 
@@ -241,7 +267,7 @@ export default parts;`;
         const toGet = url.endsWith('/') ? `${url}index.html` : url;
         const toGetWithoutPrefix = toGet.startsWith('/') ? toGet.slice(1) : toGet;
         // get cache
-        const html = compiler.compiled.get(toGetWithoutPrefix);
+        const html = provider.compiled.get(toGetWithoutPrefix);
         // console.log('middleware', req.url, !!html);
         if (html) {
           res.setHeader('Content-Type', 'text/html');
@@ -255,13 +281,13 @@ export default parts;`;
   });
 
   function viteReload(conf: ResolvedConfig) {
-    compiler.inputRoot = path.resolve(conf.root || '.');
-    compiler.isWatch = !!(conf.mode === 'development' || conf.build?.watch);
-    compiler.compileArgs.workspace = options.root || compiler.inputRoot;
+    provider.inputRoot = path.resolve(conf.root ?? '.');
+    provider.isWatch = !!(conf.mode === 'development' || conf.build?.watch);
+    provider.compileArgs.workspace = options.root ?? provider.inputRoot;
 
     reload = doReload;
 
-    if (compiler.isWatch) {
+    if (provider.isWatch) {
       inputs.watch(reload);
     }
 
@@ -276,14 +302,14 @@ export default parts;`;
       if (options.onInputs) {
         options.onInputs(inputs.resolved);
       }
-      if (compiler.isWatch) {
-        compiler.watcher().clear();
+      if (provider.isWatch) {
+        provider.watcher().clear();
       }
       for (const input of Object.values(inputs.resolved)) {
-        compiler.compileOrWatch(input);
+        provider.compileOrWatch(input);
       }
-      if (compiler.isWatch) {
-        compiler.watcher().watch();
+      if (provider.isWatch) {
+        provider.watcher().watch();
       }
 
       // console.log('reload');
@@ -293,7 +319,7 @@ export default parts;`;
 
 export default TypstPlugin;
 
-const defaultCompile: OnCompileCallback<NodeHtmlOutputExecResult | undefined> = (
+const defaultCompile: OnCompileCallback<CompileProvider<any>, HtmlOutputExecResult | undefined> = (
   input,
   project,
   ctx,
@@ -303,7 +329,7 @@ const defaultCompile: OnCompileCallback<NodeHtmlOutputExecResult | undefined> = 
   // Only print the error once
   if (htmlResult.hasError()) {
     // console.log(` \x1b[1;31mError\x1b[0m ${mainFilePath}`);
-    htmlResult.printErrors();
+    htmlResult.printDiagnostics();
 
     // todo: how could we raise error if not in watch mode?
     if (!ctx.isWatch) {
@@ -323,7 +349,32 @@ const defaultCompile: OnCompileCallback<NodeHtmlOutputExecResult | undefined> = 
 };
 
 function createCompiler(options: TypstPluginOptions) {
-  return makeProvider(options, options.onCompile || defaultCompile);
+  const compileArgs: CompileArgs = {
+    workspace: path.resolve(options.root ?? '.'),
+    ...{ inputs: options.inputs, fontArgs: options.fontArgs },
+  };
+  const result =
+    options.compiler === undefined || options.compiler === '@myriaddreamin/typst-ts-node-compiler'
+      ? (p => {
+          const partsFunc: PartialCallback = (mainFilePath, project) =>
+            options.onResolveParts?.(mainFilePath, project, p) ?? {};
+          return {
+            provider: p,
+            partsFunc,
+          };
+        })(new NodeCompileProvider(false, compileArgs, options.onCompile ?? defaultCompile))
+      : options.compiler === 'typst-cli'
+        ? (p => {
+            const partsFunc: PartialCallback = (mainFilePath, project) =>
+              options.onResolveParts?.(mainFilePath, project, p) ?? {};
+            return {
+              provider: p,
+              partsFunc,
+            };
+          })(new CliCompileProvider(false, compileArgs, options.onCompile ?? defaultCompile))
+        : null;
+  if (result === null) throw new Error(`Unsupported compiler provider: ${options.compiler}`);
+  return result;
 }
 
 interface ExecResult<T> extends Pick<NodeHtmlOutputExecResult, 'hasError' | 'printErrors'> {
@@ -352,3 +403,5 @@ export function checkExecResult<R, T extends ExecResult<R>>(
   }
   return result.result;
 }
+
+const _test: TypstPluginOptions['onResolveParts'] = {} as any;

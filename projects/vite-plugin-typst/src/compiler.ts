@@ -1,8 +1,7 @@
+import type { QueryDocArgs } from '@myriaddreamin/typst-ts-node-compiler';
+import { CompileArgs } from '@myriaddreamin/typst-ts-node-compiler';
 import * as path from 'path';
-import { NodeCompiler, ProjectWatcher, CompileArgs } from '@myriaddreamin/typst-ts-node-compiler';
-import type { NodeTypstProject } from '@myriaddreamin/typst-ts-node-compiler';
-import type { TypstPluginOptions } from '.';
-import { ResolvedTypstInput } from './input';
+import { ResolvedTypstInput } from './input.js';
 
 /**
  * The callback to be called when the document is compiled.
@@ -11,45 +10,59 @@ import { ResolvedTypstInput } from './input';
  * @param project The compiling project (document)
  * @param ctx The compile provider
  */
-export type OnCompileCallback<T = void> = (
+export type OnCompileCallback<P extends CompileProvider<P>, T = void> = (
   mainFilePath: ResolvedTypstInput,
-  project: NodeTypstProject,
-  ctx: NodeCompileProvider,
+  project: TypstHTMLCompiler,
+  ctx: P,
 ) => T;
-export type CompileProvider = NodeCompileProvider;
 
-/**
- * Creates a new provider for the plugin.
- *
- * @param options The plugin options
- * @param onCompile The callback to be called when the document is compiled
- * @returns
- */
-export const makeProvider = (options: TypstPluginOptions, onCompile: OnCompileCallback) => {
-  const compileArgs: CompileArgs = {
-    workspace: path.resolve(options.root || '.'),
-    ...{ inputs: options.inputs, fontArgs: options.fontArgs },
-  };
+export type PartialCallback<T = void> = (
+  mainFilePath: ResolvedTypstInput,
+  project: TypstHTMLCompiler,
+) => T;
 
-  const compilerProvider = options?.compiler || '@myriaddreamin/typst-ts-node-compiler';
-  if (compilerProvider !== '@myriaddreamin/typst-ts-node-compiler') {
-    throw new Error(`Unsupported compiler provider: ${compilerProvider}`);
-  }
+export interface HtmlOutput {
+  /** Gets the title of the document. */
+  title(): string | null;
+  /** Gets the description of the document. */
+  description(): string | null;
+  /** Gets the body of the document. */
+  body(): string;
+  /** Gets the body of the document as bytes. */
+  bodyBytes(): Buffer;
+  /** Gets the HTML of the document. */
+  html(): string;
+  /** Gets the HTML of the document as bytes. */
+  htmlBytes(): Buffer;
+}
 
-  return new NodeCompileProvider(compileArgs, false, onCompile);
-};
+export interface HtmlOutputExecResult {
+  /** Gets the result of execution. */
+  get result(): HtmlOutput | null;
+  /** Whether the execution has error. */
+  hasError(): boolean;
+  /** Prints the diagnostics of execution. */
+  printDiagnostics(): void;
+}
 
-class NodeCompileProvider {
+export interface TypstHTMLCompiler {
+  // Add svg here?
+  query(doc: ResolvedTypstInput, args: QueryDocArgs): any;
+  tryHtml(doc: ResolvedTypstInput): HtmlOutputExecResult;
+}
+
+export interface TypstHTMLWatcher {
+  add(paths: string[], exec: (project: TypstHTMLCompiler) => void): void;
+}
+
+export abstract class CompileProvider<P extends CompileProvider<P>> {
   compiled = new Map<string, string>();
 
   constructor(
-    compileArgs: CompileArgs,
-    public isWatch: boolean,
-    onCompile: OnCompileCallback,
-  ) {
-    this.compileArgs = compileArgs;
-    this.onCompile = onCompile;
-  }
+    public readonly onCompile: OnCompileCallback<P>,
+    readonly compileArgs: CompileArgs,
+    public inputRoot: string = '.',
+  ) {}
 
   resolveRel(input: string, ext = '.html') {
     const rel = input.endsWith('.typ') ? input.slice(0, -4) : input;
@@ -59,67 +72,33 @@ class NodeCompileProvider {
   /**
    * Lazily created compiler.
    */
-  compiler = (): NodeCompiler => (this._compiler ||= NodeCompiler.create(this.compileArgs));
+  abstract compiler(): TypstHTMLCompiler;
   /**
    * Lazily created watcher
    */
-  watcher = (): ProjectWatcher => (this._watcher ||= ProjectWatcher.create(this.compileArgs));
+  abstract watcher(): TypstHTMLWatcher;
 
-  /**
-   * Common getter for the compiler or watcher.
-   */
-  compilerOrWatcher = () => this._compiler || this._watcher;
-
-  /** @internal */
-  inputRoot: string = '.';
-  /** @internal */
-  onCompile: OnCompileCallback;
-  /** @internal */
-  readonly compileArgs: CompileArgs;
-  /** @internal */
-  private _compiler: NodeCompiler | undefined = undefined;
-  /** @internal */
-  private _watcher: ProjectWatcher | undefined = undefined;
+  abstract isWatch: boolean;
 
   /**
    * Compiles the source file to the destination file.
    *
-   * @param {string} src The source file path
    * @param {ResolvedTypstInput} input The resolved input
    *
    * @example
    * compile("src/index.typ", "dist/index.html")(compiler());
    */
-  compile = (input: ResolvedTypstInput) => {
-    return (project: NodeTypstProject) => {
-      this.onCompile(input, project, this);
-
-      // Evicts the cache unused in last 30 runs
-      this.compilerOrWatcher()?.evictCache(30);
-    };
-  };
+  abstract compile(input: ResolvedTypstInput): (compiler: TypstHTMLCompiler) => void;
 
   /**
    * User trigger compiles the source file to the destination file or watches the source file.
    *
    * All the errors are caught and printed to the console.
    *
-   * @param {string} src The source file path
    * @param {ResolvedTypstInput} input The resolved input
    *
    * @example
    * compileOrWatch("src/index.typ", "dist/index.html");
    */
-  compileOrWatch = (input: ResolvedTypstInput) => {
-    try {
-      if (this.isWatch) {
-        this.watcher().add([input.mainFilePath], this.compile(input));
-      } else {
-        this.compile(input)(this.compiler());
-      }
-    } catch (e) {
-      console.error(e);
-      return;
-    }
-  };
+  abstract compileOrWatch(input: ResolvedTypstInput): void;
 }

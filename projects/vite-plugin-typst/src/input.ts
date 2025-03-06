@@ -1,9 +1,9 @@
-import * as path from 'path';
 import * as fs from 'fs';
 import { globSync } from 'glob';
 import globWatch from 'glob-watcher';
-import type { DocumentInput, TypstDocumentOptionsWithInput, TypstPluginOptions } from '.';
+import * as path from 'path';
 import type { ResolvedConfig } from 'vite';
+import type { DocumentInput, TypstDocumentOptionsWithInput, TypstPluginOptions } from '.';
 
 /**
  * A resolved typst input.

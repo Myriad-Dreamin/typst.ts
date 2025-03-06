@@ -13,7 +13,7 @@ yarn add -D @myriaddreamin/vite-plugin-typst
 Two providers are expected to work:
 
 - (Default) `@myriaddreamin/typst-ts-node-compiler`: A js integrated compiler for typst, which makes cache shared between typst compilations.
-- (Todo) `typst-cli`: Using the typst cli to compile `.typ` files.
+- (Compatibility) `typst-cli`: Using the typst cli to compile `.typ` files.
 
 Install the `@myriaddreamin/typst-ts-node-compiler` package to add support for `.typ` files:
 
@@ -101,7 +101,7 @@ export default defineConfig({
 
 ### Configuring the Typst Compiler
 
-(Todo) By default, the plugin uses the `@myriaddreamin/typst-ts-node-compiler` compiler. You can set a different compiler:
+By default, the plugin uses the `@myriaddreamin/typst-ts-node-compiler` compiler. You can set a different compiler:
 
 ```ts
 // vite.config.ts
