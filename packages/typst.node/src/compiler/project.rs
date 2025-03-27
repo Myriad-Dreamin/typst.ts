@@ -816,15 +816,14 @@ impl CompileHandler<SystemCompilerFeat, ProjectInsStateExt> for ProjectHandler {
 
             let Some(may_compile) =
                 proj.may_compile2(move |graph: &Arc<SystemWorldComputeGraph>| {
-                    let watches = watches.lock().unwrap();
-                    let f = watches.get(&id);
-
                     // todo: don't do this aggressively but we do want to update deps by that
                     let res = CompiledArtifact::from_snapshot_result(
                         graph.snap.clone(),
                         graph.compile_html(),
                     );
 
+                    let watches = watches.lock().unwrap();
+                    let f = watches.get(&id);
                     if let Some(f) = f {
                         let status: Status = f.call(
                             NodeTypstProject {
