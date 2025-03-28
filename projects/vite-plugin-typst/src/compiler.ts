@@ -1,7 +1,7 @@
-import type { QueryDocArgs } from '@myriaddreamin/typst-ts-node-compiler';
-import { CompileArgs } from '@myriaddreamin/typst-ts-node-compiler';
+import type { CompileArgs, QueryDocArgs } from '@myriaddreamin/typst-ts-node-compiler';
 import * as path from 'path';
 import { ResolvedTypstInput } from './input.js';
+import { ExecResult } from './index.js';
 
 /**
  * The callback to be called when the document is compiled.
@@ -10,15 +10,15 @@ import { ResolvedTypstInput } from './input.js';
  * @param project The compiling project (document)
  * @param ctx The compile provider
  */
-export type OnCompileCallback<P extends CompileProvider<P>, T = void> = (
+export type OnCompileCallback<T = void, Ctx extends CompileProvider = CompileProvider> = (
   mainFilePath: ResolvedTypstInput,
-  project: TypstHTMLCompiler,
-  ctx: P,
+  project: Ctx['ProjectType'],
+  ctx: Ctx,
 ) => T;
 
 export type PartialCallback<T = void> = (
   mainFilePath: ResolvedTypstInput,
-  project: TypstHTMLCompiler,
+  project: TypstHTMLCompiler<any>,
 ) => T;
 
 export interface HtmlOutput {
@@ -36,33 +36,48 @@ export interface HtmlOutput {
   htmlBytes(): Buffer;
 }
 
-export interface HtmlOutputExecResult {
-  /** Gets the result of execution. */
-  get result(): HtmlOutput | null;
-  /** Whether the execution has error. */
-  hasError(): boolean;
-  /** Prints the diagnostics of execution. */
-  printDiagnostics(): void;
-}
+export type HtmlOutputExecResult = ExecResult<HtmlOutput | null>;
 
-export interface TypstHTMLCompiler {
+export interface TypstHTMLCompiler<Doc = any> {
   // Add svg here?
-  query(doc: ResolvedTypstInput, args: QueryDocArgs): any;
-  tryHtml(doc: ResolvedTypstInput): HtmlOutputExecResult;
+  query(doc: Doc | ResolvedTypstInput, args: QueryDocArgs): any;
+  tryHtml(doc: ResolvedTypstInput): ExecResult<HtmlOutput>;
 }
 
 export interface TypstHTMLWatcher {
-  add(paths: string[], exec: (project: TypstHTMLCompiler) => void): void;
+  add(paths: string[], exec: (project: TypstHTMLCompiler<any>) => void): void;
+  watch(): void;
+  clear(): void;
 }
 
-export abstract class CompileProvider<P extends CompileProvider<P>> {
+export type CompileProviderConstructor<Ctx extends CompileProvider = CompileProvider> = new (
+  isWatch: boolean,
+  compileArgs: CompileArgs,
+  onCompile: OnCompileCallback<void, Ctx>,
+  inputRoot?: string,
+) => Ctx;
+
+/**
+ * The common interface for the compile provider.
+ */
+export abstract class CompileProvider {
+  OutputType: HtmlOutput = undefined!;
+  ProjectType: TypstHTMLCompiler<unknown> = undefined!;
+
+  static kind = Symbol.for('vite-plugin-typst:CompileProvider');
+
   compiled = new Map<string, string>();
 
   constructor(
-    public readonly onCompile: OnCompileCallback<P>,
+    public isWatch: boolean,
     readonly compileArgs: CompileArgs,
+    public readonly onCompile: OnCompileCallback,
     public inputRoot: string = '.',
   ) {}
+
+  static isCons<Ctx extends CompileProvider>(cls: any): cls is CompileProviderConstructor<Ctx> {
+    return cls?.kind === CompileProvider.kind;
+  }
 
   resolveRel(input: string, ext = '.html') {
     const rel = input.endsWith('.typ') ? input.slice(0, -4) : input;
@@ -72,13 +87,11 @@ export abstract class CompileProvider<P extends CompileProvider<P>> {
   /**
    * Lazily created compiler.
    */
-  abstract compiler(): TypstHTMLCompiler;
+  abstract compiler(): TypstHTMLCompiler<any>;
   /**
    * Lazily created watcher
    */
   abstract watcher(): TypstHTMLWatcher;
-
-  abstract isWatch: boolean;
 
   /**
    * Compiles the source file to the destination file.
@@ -88,7 +101,7 @@ export abstract class CompileProvider<P extends CompileProvider<P>> {
    * @example
    * compile("src/index.typ", "dist/index.html")(compiler());
    */
-  abstract compile(input: ResolvedTypstInput): (compiler: TypstHTMLCompiler) => void;
+  abstract compile(input: ResolvedTypstInput): (compiler: TypstHTMLCompiler<any>) => void;
 
   /**
    * User trigger compiles the source file to the destination file or watches the source file.

@@ -1,16 +1,15 @@
-import { CompileArgs, NodeCompiler, ProjectWatcher } from '@myriaddreamin/typst-ts-node-compiler';
-import { CompileProvider, OnCompileCallback, TypstHTMLCompiler } from '../compiler.js';
+import {
+  NodeCompiler,
+  NodeHtmlOutput,
+  NodeTypstProject,
+  ProjectWatcher,
+} from '@myriaddreamin/typst-ts-node-compiler';
+import { CompileProvider, TypstHTMLCompiler } from '../compiler.js';
 import { ResolvedTypstInput } from '../input.js';
 
-export class NodeCompileProvider extends CompileProvider<NodeCompileProvider> {
-  constructor(
-    public isWatch: boolean,
-    compileArgs: CompileArgs,
-    onCompile: OnCompileCallback<NodeCompileProvider>,
-    inputRoot?: string,
-  ) {
-    super(onCompile, compileArgs, inputRoot);
-  }
+export class NodeCompileProvider extends CompileProvider {
+  OutputType: NodeHtmlOutput = undefined!;
+  ProjectType: NodeTypstProject = undefined!;
 
   /**
    * Lazily created compiler.

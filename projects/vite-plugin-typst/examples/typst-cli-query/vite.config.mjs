@@ -1,3 +1,5 @@
+// @ts-check
+
 import { defineConfig } from 'vite';
 import { TypstPlugin, checkExecResult } from '@myriaddreamin/vite-plugin-typst';
 
@@ -16,6 +18,11 @@ export default defineConfig({
         ctx.compiled.set(ctx.resolveRel(input.mainFilePath), htmlContent);
 
         console.log(project.query(input, { selector: '<frontmatter>', field: 'value' }));
+
+        /**
+         * @type {import('@myriaddreamin/vite-plugin-typst/dist/compiler/cli').CliCompileProvider}
+         */
+        let _ctxType = ctx;
 
         return htmlResult;
       },

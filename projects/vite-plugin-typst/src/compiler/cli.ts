@@ -1,8 +1,7 @@
-import {
+import type {
   CompileArgs,
   CompileDocArgs,
   NodeTypstDocument,
-  ProjectWatcher,
   QueryDocArgs,
 } from '@myriaddreamin/typst-ts-node-compiler';
 import { spawnSync } from 'child_process';
@@ -11,7 +10,6 @@ import {
   CompileProvider,
   HtmlOutput,
   HtmlOutputExecResult,
-  OnCompileCallback,
   TypstHTMLCompiler,
   TypstHTMLWatcher,
 } from '../compiler.js';
@@ -66,6 +64,9 @@ class CliHtmlOutputExecResult implements HtmlOutputExecResult {
   hasError(): boolean {
     return !(this.inner instanceof CliHtmlOutput);
   }
+  printErrors(): void {
+    this.printDiagnostics();
+  }
   printDiagnostics(): void {
     'error' in this.inner && console.error(this.inner.error);
   }
@@ -81,6 +82,9 @@ class CliWatcher implements TypstHTMLWatcher {
   add(paths: string[], exec: (project: TypstHTMLCompiler) => void) {
     exec(this.compiler);
   }
+
+  clear() {}
+  watch() {}
 }
 
 class CliCompiler implements TypstHTMLCompiler {
@@ -179,15 +183,9 @@ class CliCompiler implements TypstHTMLCompiler {
   }
 }
 
-export class CliCompileProvider extends CompileProvider<CliCompileProvider> {
-  constructor(
-    public isWatch: boolean,
-    compileArgs: CompileArgs,
-    onCompile: OnCompileCallback<CliCompileProvider>,
-    inputRoot?: string,
-  ) {
-    super(onCompile, compileArgs, inputRoot);
-  }
+export class CliCompileProvider extends CompileProvider {
+  OutputType: CliHtmlOutput = undefined!;
+  ProjectType: CliCompiler = undefined!;
 
   /**
    * Lazily created compiler.
