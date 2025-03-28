@@ -6,6 +6,7 @@ import { TypstPlugin, checkExecResult } from '@myriaddreamin/vite-plugin-typst';
 export default defineConfig({
   plugins: [
     TypstPlugin({
+      compiler: 'typst-cli',
       documents: ['content/**/*.typ'],
       onCompile: (input, project, ctx) => {
         const htmlResult = checkExecResult(input, project.tryHtml(input), ctx);
@@ -16,16 +17,10 @@ export default defineConfig({
         const htmlContent = htmlResult.html();
         ctx.compiled.set(ctx.resolveRel(input.mainFilePath), htmlContent);
 
-        const htmlRes = project.compileHtml(input);
-        if (htmlRes.result) {
-          console.log(project.query(htmlRes.result, { selector: '<frontmatter>', field: 'value' }));
-        } else {
-          htmlRes.printErrors();
-          process.exit(1);
-        }
+        console.log(project.query(input, { selector: '<frontmatter>', field: 'value' }));
 
         /**
-         * @type {import('@myriaddreamin/vite-plugin-typst/dist/compiler/node').NodeCompileProvider}
+         * @type {import('@myriaddreamin/vite-plugin-typst/dist/compiler/cli').CliCompileProvider}
          */
         let _ctxType = ctx;
 

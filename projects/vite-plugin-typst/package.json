@@ -19,18 +19,28 @@
     "vite-plugin",
     "typst"
   ],
-  "peerDependencies": {
-    "@myriaddreamin/typst.node": "^0.5.5-rc6",
-    "vite": "^6.2.3"
-  },
   "files": [
     "dist/**/*.{mts,mjs,cjs,cts,ts,js}"
   ],
-  "devDependencies": {
-    "@types/glob-watcher": "^5.0.5"
-  },
   "dependencies": {
     "glob": "^10.4.5",
     "glob-watcher": "^6.0.0"
+  },
+  "peerDependencies": {
+    "@myriaddreamin/typst.node": "^0.5.5-rc6",
+    "xmldom": "^0.6.0",
+    "vite": "^6.2.3"
+  },
+  "peerDependenciesMeta": {
+    "@myriaddreamin/typst.node": {
+      "optional": true
+    },
+    "xmldom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/glob-watcher": "^5.0.5",
+    "@types/xmldom": "^0.1.34"
   }
 }
