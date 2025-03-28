@@ -4,26 +4,26 @@
 //! into various artifacts.
 //! See <https://github.com/Myriad-Dreamin/typst.ts/tree/main/exporter> for
 //! more information about the available exporters.
-//!
-//! The library consists of three parts:
-//! - `model`: low-level abstraction specific to the compiler, which defines:
-//!   - [`font::FontSlot`]: the way to load a font.
-//!   - [`vfs::AccessModel`]: how the compiler accesses a storage.
-//!   - [`package::PackageRegistry`]: how the compiler obtains data about a
-//!     package.
-//!
-//! - [`world`]: The world is the core part of the library, which maintains all
-//!   the data for typst compilation.
-//!   - [`vfs::Vfs`]: retrieving [`vfs::AccessModel`], provides a virtual file
-//!     system for the [`world::CompilerWorld`]
-//!   - [`world::CompilerWorld`]: retrieving [`world::CompilerFeat`], provides a
-//!     common implementation of [`::typst::World`].
-//!
-//! - `compile`: Convenient services over [`world::CompilerWorld`], which also
-//!   shows how to use the [`world::CompilerWorld`].
-//!   - [`CompileDriver`]: A driver for the compiler. Examples:
-//!     - Single thread (Sync): <https://github.com/Myriad-Dreamin/typst.ts/blob/main/cli/src/main.rs>
-//!     - Multiple thread (Async): <https://github.com/Enter-tainer/typst-preview-vscode/blob/main/src/main.rs>
+
+// The library consists of three parts:
+// - `model`: low-level abstraction specific to the compiler, which defines:
+//   - [`font::FontSlot`]: the way to load a font.
+//   - [`vfs::AccessModel`]: how the compiler accesses a storage.
+//   - [`package::PackageRegistry`]: how the compiler obtains data about a
+//     package.
+//
+// - [`world`]: The world is the core part of the library, which maintains all
+//   the data for typst compilation.
+//   - [`vfs::Vfs`]: retrieving [`vfs::AccessModel`], provides a virtual file
+//     system for the [`world::CompilerWorld`]
+//   - [`world::CompilerWorld`]: retrieving [`world::CompilerFeat`], provides a
+//     common implementation of [`::typst::World`].
+//
+// - `compile`: Convenient services over [`world::CompilerWorld`], which also
+//   shows how to use the [`world::CompilerWorld`].
+//   - [`CompileDriver`]: A driver for the compiler. Examples:
+//     - Single thread (Sync): <https://github.com/Myriad-Dreamin/typst.ts/blob/main/cli/src/main.rs>
+//     - Multiple thread (Async): <https://github.com/Enter-tainer/typst-preview-vscode/blob/main/src/main.rs>
 
 // Core type system/concepts of typst-ts.
 // #![warn(missing_docs)]
@@ -35,28 +35,28 @@ pub mod error;
 pub mod query;
 pub mod task;
 
-#[cfg(feature = "system-watch")]
-mod compile;
-mod concepts;
-#[cfg(feature = "system-compile")]
-mod driver;
-mod exporter;
-mod utils;
-#[cfg(feature = "system-watch")]
-mod watch;
-
 pub use concepts::*;
-pub use diag::DiagnosticFormat;
-#[cfg(feature = "system-compile")]
-pub use driver::*;
+
+/// time things about compiler.
+pub use reflexo::time;
+pub use time::Time;
+/// A common implementation of [`::typst::World`]
+pub use tinymist_world as world;
+/// A vfs implementation for compiler.
+pub use tinymist_world::vfs;
+/// font things about compiler.
+pub use world::font;
+/// package things about compiler.
+pub use world::package;
+/// Diff and parse the source code.
+pub use world::parser;
+pub use world::*;
+
 pub use exporter::DynComputation;
 pub use reflexo::typst_shim as compat;
 pub use reflexo::*;
 pub use reflexo_typst2vec as vector;
 pub use reflexo_typst2vec::{debug_loc, hash};
-#[cfg(feature = "svg")]
-pub use reflexo_vec2svg as svg;
-pub use tinymist_task::compute::*;
 
 #[cfg(feature = "ast")]
 pub use exporter::ast::{dump_ast, AstExport, ExportAstTask};
@@ -68,32 +68,32 @@ pub use exporter::html::*;
 #[cfg(feature = "svg")]
 pub use exporter::svg::*;
 pub use exporter::text::TextExport;
+#[cfg(feature = "svg")]
+pub use reflexo_vec2svg as svg;
+pub use tinymist_task::compute::*;
 
 #[cfg(feature = "system-watch")]
 pub use compile::*;
+pub use diag::DiagnosticFormat;
+#[cfg(feature = "system-compile")]
+pub use driver::*;
 #[cfg(feature = "system-watch")]
 pub use watch::*;
-
-/// font things about compiler.
-pub use world::font;
-
-/// time things about compiler.
-pub use reflexo::time;
-pub use time::Time;
-/// A common implementation of [`::typst::World`]
-pub use tinymist_world as world;
-/// A vfs implementation for compiler.
-pub use tinymist_world::vfs;
-/// package things about compiler.
-pub use world::package;
-/// Diff and parse the source code.
-pub use world::parser;
-pub use world::*;
 
 pub use ::typst::{Feature, Features};
 
 #[cfg(feature = "system-compile")]
 pub type DynSystemComputation = DynComputation<SystemCompilerFeat>;
+
+#[cfg(feature = "system-watch")]
+mod compile;
+mod concepts;
+#[cfg(feature = "system-compile")]
+mod driver;
+mod exporter;
+mod utils;
+#[cfg(feature = "system-watch")]
+mod watch;
 
 use core::fmt;
 
