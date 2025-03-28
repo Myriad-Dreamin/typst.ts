@@ -36,6 +36,7 @@ pub mod query;
 pub mod task;
 
 pub use concepts::*;
+pub use error::{CompileReport, CompileReportMsg};
 
 /// time things about compiler.
 pub use reflexo::time;
@@ -95,15 +96,12 @@ mod utils;
 #[cfg(feature = "system-watch")]
 mod watch;
 
-use core::fmt;
-
 use ::typst::foundations::Content;
 use ::typst::{
     diag::{At, SourceResult},
     syntax::Span,
 };
 use query::retrieve;
-use vfs::WorkspaceResolver;
 
 pub mod build_info {
     /// The version of the reflexo-typst crate.
@@ -139,77 +137,6 @@ pub trait CompilerExt<F: CompilerFeat> {
 impl<F: CompilerFeat> CompilerExt<F> for WorldComputeGraph<F> {
     fn world(&self) -> &CompilerWorld<F> {
         &self.snap.world
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum CompileReport {
-    Suspend,
-    Stage(TypstFileId, &'static str, crate::Time),
-    CompileError(TypstFileId, usize, reflexo::time::Duration),
-    ExportError(TypstFileId, usize, reflexo::time::Duration),
-    CompileSuccess(TypstFileId, usize, reflexo::time::Duration),
-}
-
-impl CompileReport {
-    pub fn compiling_id(&self) -> Option<TypstFileId> {
-        Some(match self {
-            Self::Suspend => return None,
-            Self::Stage(id, ..)
-            | Self::CompileError(id, ..)
-            | Self::ExportError(id, ..)
-            | Self::CompileSuccess(id, ..) => *id,
-        })
-    }
-
-    pub fn duration(&self) -> Option<std::time::Duration> {
-        match self {
-            Self::Suspend | Self::Stage(..) => None,
-            Self::CompileError(_, _, dur)
-            | Self::ExportError(_, _, dur)
-            | Self::CompileSuccess(_, _, dur) => Some(*dur),
-        }
-    }
-
-    pub fn diagnostics_size(self) -> Option<usize> {
-        match self {
-            Self::Suspend | Self::Stage(..) => None,
-            Self::CompileError(_, diagnostics, ..)
-            | Self::ExportError(_, diagnostics, ..)
-            | Self::CompileSuccess(_, diagnostics, ..) => Some(diagnostics),
-        }
-    }
-
-    /// Get the status message.
-    pub fn message(&self) -> CompileReportMsg<'_> {
-        CompileReportMsg(self)
-    }
-}
-
-pub struct CompileReportMsg<'a>(&'a CompileReport);
-
-impl fmt::Display for CompileReportMsg<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use CompileReport::*;
-
-        let input = WorkspaceResolver::display(self.0.compiling_id());
-        match self.0 {
-            Suspend => write!(f, "suspended"),
-            Stage(_, stage, ..) => write!(f, "{input:?}: {stage} ..."),
-            CompileSuccess(_, warnings, duration) => {
-                if *warnings == 0 {
-                    write!(f, "{input:?}: compilation succeeded in {duration:?}")
-                } else {
-                    write!(
-                        f,
-                        "{input:?}: compilation succeeded with {warnings} warnings in {duration:?}",
-                    )
-                }
-            }
-            CompileError(_, _, duration) | ExportError(_, _, duration) => {
-                write!(f, "{input:?}: compilation failed after {duration:?}")
-            }
-        }
     }
 }
 

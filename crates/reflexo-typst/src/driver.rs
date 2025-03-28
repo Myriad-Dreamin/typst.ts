@@ -1,10 +1,9 @@
 use typst::diag::{SourceDiagnostic, SourceResult, Warned};
 
-use crate::DiagnosticFormat;
 use crate::{
     diag::print_diagnostics,
     world::{CompilerFeat, CompilerWorld},
-    CompileReport,
+    CompileReport, DiagnosticFormat,
 };
 
 #[derive(Default, Clone)]
