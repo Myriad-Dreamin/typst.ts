@@ -21,7 +21,7 @@
   ],
   "peerDependencies": {
     "@myriaddreamin/typst.node": "^0.5.5-rc6",
-    "vite": "^4.0.0"
+    "vite": "^6.2.3"
   },
   "files": [
     "dist/**/*.{mts,mjs,cjs,cts,ts,js}"
