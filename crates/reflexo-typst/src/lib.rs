@@ -31,7 +31,6 @@
 // #![warn(missing_copy_implementations)]
 
 pub mod config;
-pub mod diag;
 pub mod error;
 pub mod query;
 pub mod task;
@@ -115,6 +114,13 @@ pub mod program_meta {
     /// inform the user that this is a bug.
     pub const REPORT_BUG_MESSAGE: &str =
         "This is a bug, please report to https://github.com/Myriad-Dreamin/typst.ts/issues/new";
+}
+
+pub mod diag {
+    // todo: remove cfg feature here
+    #[cfg(feature = "system-compile")]
+    pub use tinymist_world::system::print_diagnostics;
+    pub use tinymist_world::DiagnosticFormat;
 }
 
 pub trait CompilerExt<F: CompilerFeat> {

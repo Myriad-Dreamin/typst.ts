@@ -406,44 +406,6 @@ impl NodeTypstProject {
         self.graph.snap.world.clone()
     }
 
-    // /// Adds a source file to the compiler.
-    // /// @param path - The path of the source file.
-    // /// @param source - The source code of the source file.
-    // #[napi]
-    // pub fn add_source(&mut self, path: String, source: String) -> Result<(),
-    // NodeError> {     let content = Bytes::new(source.into_bytes());
-    //     let verse = self.driver.assert_mut();
-    //     let res = verse.map_shadow(Path::new(&path), content);
-    //     res.at(Span::detached()).map_err(map_node_error)
-    // }
-
-    // /// Adds a shadow file to the compiler.
-    // /// @param path - The path to the shadow file.
-    // /// @param content - The content of the shadow file.
-    // #[napi]
-    // pub fn map_shadow(&mut self, path: String, content: Buffer) -> Result<(),
-    // NodeError> {     let content = Bytes::new(content.as_ref().to_vec());
-    //     let verse = self.driver.assert_mut();
-    //     let res = verse.map_shadow(Path::new(&path), content);
-    //     res.at(Span::detached()).map_err(map_node_error)
-    // }
-
-    // /// Removes a shadow file from the compiler.
-    // /// @param path - The path to the shadow file.
-    // #[napi]
-    // pub fn unmap_shadow(&mut self, path: String) -> Result<(), NodeError> {
-    //     let verse = self.driver.assert_mut();
-    //     let res = verse.unmap_shadow(Path::new(&path));
-    //     res.at(Span::detached()).map_err(map_node_error)
-    // }
-
-    // /// Resets the shadow files.
-    // /// Note: this function is independent to the {@link reset} function.
-    // #[napi]
-    // pub fn reset_shadow(&mut self) {
-    //     self.driver.assert_mut().reset_shadow();
-    // }
-
     /// Compiles the document as paged target.
     #[napi]
     pub fn compile(&mut self, opts: CompileDocArgs) -> Result<NodeTypstCompileResult, NodeError> {

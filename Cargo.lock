@@ -5974,8 +5974,3 @@ checksum = "99a5bab8d7dedf81405c4bb1f2b83ea057643d9cb28778cea9eecddeedd2e028"
 dependencies = [
  "zune-core",
 ]
-
-[[patch.unused]]
-name = "tinymist-analysis"
-version = "0.13.2"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=461d65b5bf62599132ca85707b62612611026a11#461d65b5bf62599132ca85707b62612611026a11"
