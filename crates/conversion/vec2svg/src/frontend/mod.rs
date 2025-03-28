@@ -338,10 +338,10 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             });
 
         let parts = parts.as_ref();
-        let with_css = parts.map_or(true, |parts| parts.css);
-        let with_defs = parts.map_or(true, |parts| parts.defs);
-        let with_body = parts.map_or(true, |parts| parts.body);
-        let with_js = parts.map_or(true, |parts| parts.js);
+        let with_css = parts.is_none_or(|parts| parts.css);
+        let with_defs = parts.is_none_or(|parts| parts.defs);
+        let with_body = parts.is_none_or(|parts| parts.body);
+        let with_js = parts.is_none_or(|parts| parts.js);
 
         let mut svg = vec![
             SvgText::Plain(Self::header(pages)),
