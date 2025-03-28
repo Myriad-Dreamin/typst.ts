@@ -285,6 +285,7 @@ impl ProjectBackgroundWorker {
             dep_tx,
             CompileServerOpts {
                 handler: handler.clone() as Arc<_>,
+                export_target: tinymist_project::ExportTarget::Html,
                 enable_watch: true,
             },
         );
@@ -313,7 +314,7 @@ impl ProjectBackgroundWorker {
                 Some(intr) = intr_rx.recv() => {
 
                     if let Interrupt::Compiled(compiled) = &intr {
-                        let proj = self.compiler.projects().find(|p| p.id == compiled.id);
+                        let proj = self.compiler.projects().find(|p| &p.id == compiled.id());
                         if let Some(proj) = proj {
                             proj.ext.is_compiling = false;
                             proj.ext.last_compilation = Some(compiled.clone());
@@ -346,7 +347,7 @@ impl ProjectBackgroundWorker {
                         let id = format!("project-{idx}");
 
                         // todo: html
-                        let id = self.compiler.restart_dedicate(&id, entry.clone(), true);
+                        let id = self.compiler.restart_dedicate(&id, entry.clone());
 
                         match id {
                             Ok(id) => {
@@ -404,44 +405,6 @@ impl NodeTypstProject {
     fn spawn_world(&self) -> TypstSystemWorld {
         self.graph.snap.world.clone()
     }
-
-    // /// Adds a source file to the compiler.
-    // /// @param path - The path of the source file.
-    // /// @param source - The source code of the source file.
-    // #[napi]
-    // pub fn add_source(&mut self, path: String, source: String) -> Result<(),
-    // NodeError> {     let content = Bytes::new(source.into_bytes());
-    //     let verse = self.driver.assert_mut();
-    //     let res = verse.map_shadow(Path::new(&path), content);
-    //     res.at(Span::detached()).map_err(map_node_error)
-    // }
-
-    // /// Adds a shadow file to the compiler.
-    // /// @param path - The path to the shadow file.
-    // /// @param content - The content of the shadow file.
-    // #[napi]
-    // pub fn map_shadow(&mut self, path: String, content: Buffer) -> Result<(),
-    // NodeError> {     let content = Bytes::new(content.as_ref().to_vec());
-    //     let verse = self.driver.assert_mut();
-    //     let res = verse.map_shadow(Path::new(&path), content);
-    //     res.at(Span::detached()).map_err(map_node_error)
-    // }
-
-    // /// Removes a shadow file from the compiler.
-    // /// @param path - The path to the shadow file.
-    // #[napi]
-    // pub fn unmap_shadow(&mut self, path: String) -> Result<(), NodeError> {
-    //     let verse = self.driver.assert_mut();
-    //     let res = verse.unmap_shadow(Path::new(&path));
-    //     res.at(Span::detached()).map_err(map_node_error)
-    // }
-
-    // /// Resets the shadow files.
-    // /// Note: this function is independent to the {@link reset} function.
-    // #[napi]
-    // pub fn reset_shadow(&mut self) {
-    //     self.driver.assert_mut().reset_shadow();
-    // }
 
     /// Compiles the document as paged target.
     #[napi]
@@ -800,7 +763,7 @@ impl CompileHandler<SystemCompilerFeat, ProjectInsStateExt> for ProjectHandler {
                         break 'vfs_is_clean false;
                     };
 
-                    let last_rev = compilation.world.vfs().revision();
+                    let last_rev = compilation.world().vfs().revision();
                     let deps = compilation.depended_files().clone();
                     proj.verse.vfs().is_clean_compile(last_rev.get(), &deps)
                 }
@@ -820,10 +783,7 @@ impl CompileHandler<SystemCompilerFeat, ProjectInsStateExt> for ProjectHandler {
                     let f = watches.get(&id);
 
                     // todo: don't do this aggressively but we do want to update deps by that
-                    let res = CompiledArtifact::from_snapshot_result(
-                        graph.snap.clone(),
-                        graph.compile_html(),
-                    );
+                    let res = CompiledArtifact::from_graph(graph.clone(), true);
 
                     if let Some(f) = f {
                         let status: Status = f.call(

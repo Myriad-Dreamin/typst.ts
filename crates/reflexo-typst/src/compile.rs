@@ -33,27 +33,6 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompilationHandle<F>
     fn notify_compile(&self, _g: &Arc<WorldComputeGraph<F>>) {}
 }
 
-// pub enum CompiledArtifact<F: CompilerFeat> {
-//     Compiled(CompiledArtifact<F>),
-//     Suspend(CompileSnapshot<F>),
-// }
-
-// impl<F: CompilerFeat> CompiledArtifact<F> {
-//     pub fn success_doc(&self) -> Option<TypstDocument> {
-//         match self {
-//             CompiledArtifact::Compiled(artifact) => artifact.success_doc(),
-//             CompiledArtifact::Suspend(snapshot) =>
-// snapshot.success_doc.clone(),         }
-//     }
-
-//     pub fn world(&self) -> &Arc<CompilerWorld<F>> {
-//         match self {
-//             CompiledArtifact::Compiled(artifact) => &artifact.world,
-//             CompiledArtifact::Suspend(snapshot) => &snapshot.world,
-//         }
-//     }
-// }
-
 pub enum Interrupt<F: CompilerFeat> {
     /// Compile anyway.
     Compile,

@@ -1,6 +1,7 @@
 pub mod escape;
 
 pub use tinymist_std::*;
+pub use tinymist_world::debug_loc;
 
 pub mod vector {
     #[cfg(feature = "rkyv")]

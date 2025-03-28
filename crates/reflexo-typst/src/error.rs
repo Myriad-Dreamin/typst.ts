@@ -1,15 +1,86 @@
+pub use reflexo::error::*;
+pub use typst::diag::FileError as TypstFileError;
+pub use typst::diag::SourceDiagnostic as TypstSourceDiagnostic;
+
 use core::fmt;
 
 use ecow::eco_format;
 use reflexo::debug_loc::{LspPosition, LspRange};
 use reflexo::path::unix_slash;
-use typst::syntax::{Source, Span};
+use typst::syntax::{FileId, Source, Span};
 
 use crate::vfs::{WorkspaceResolution, WorkspaceResolver};
 
-pub use reflexo::error::*;
-pub use typst::diag::FileError as TypstFileError;
-pub use typst::diag::SourceDiagnostic as TypstSourceDiagnostic;
+#[derive(Clone, Debug)]
+pub enum CompileReport {
+    Suspend,
+    Stage(FileId, &'static str, crate::Time),
+    CompileError(FileId, usize, reflexo::time::Duration),
+    ExportError(FileId, usize, reflexo::time::Duration),
+    CompileSuccess(FileId, usize, reflexo::time::Duration),
+}
+
+impl CompileReport {
+    pub fn compiling_id(&self) -> Option<FileId> {
+        Some(match self {
+            Self::Suspend => return None,
+            Self::Stage(id, ..)
+            | Self::CompileError(id, ..)
+            | Self::ExportError(id, ..)
+            | Self::CompileSuccess(id, ..) => *id,
+        })
+    }
+
+    pub fn duration(&self) -> Option<std::time::Duration> {
+        match self {
+            Self::Suspend | Self::Stage(..) => None,
+            Self::CompileError(_, _, dur)
+            | Self::ExportError(_, _, dur)
+            | Self::CompileSuccess(_, _, dur) => Some(*dur),
+        }
+    }
+
+    pub fn diagnostics_size(self) -> Option<usize> {
+        match self {
+            Self::Suspend | Self::Stage(..) => None,
+            Self::CompileError(_, diagnostics, ..)
+            | Self::ExportError(_, diagnostics, ..)
+            | Self::CompileSuccess(_, diagnostics, ..) => Some(diagnostics),
+        }
+    }
+
+    /// Get the status message.
+    pub fn message(&self) -> CompileReportMsg<'_> {
+        CompileReportMsg(self)
+    }
+}
+
+pub struct CompileReportMsg<'a>(&'a CompileReport);
+
+impl fmt::Display for CompileReportMsg<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use CompileReport::*;
+
+        let input = WorkspaceResolver::display(self.0.compiling_id());
+        match self.0 {
+            Suspend => write!(f, "suspended"),
+            Stage(_, stage, ..) => write!(f, "{input:?}: {stage} ..."),
+            CompileSuccess(_, warnings, duration) => {
+                if *warnings == 0 {
+                    write!(f, "{input:?}: compilation succeeded in {duration:?}")
+                } else {
+                    write!(
+                        f,
+                        "{input:?}: compilation succeeded with {warnings} warnings in {duration:?}",
+                    )
+                }
+            }
+            CompileError(_, _, duration) | ExportError(_, _, duration) => {
+                write!(f, "{input:?}: compilation failed after {duration:?}")
+            }
+        }
+    }
+}
 
 struct DiagMsgFmt<'a>(&'a TypstSourceDiagnostic);
 
