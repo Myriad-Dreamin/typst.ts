@@ -108,7 +108,7 @@ pub mod vector {
         const _: () = assert!(core::mem::align_of::<ArchivedFlatGlyphItem>() == 4);
         const _: () = assert!(core::mem::size_of::<ArchivedImageItem>() == 12);
         const _: () = assert!(core::mem::align_of::<ArchivedImageItem>() == 4);
-        const _: () = assert!(core::mem::size_of::<ArchivedImage>() == 56);
+        const _: () = assert!(core::mem::size_of::<ArchivedImage>() == 48);
         const _: () = assert!(core::mem::align_of::<ArchivedImage>() == 8);
         const _: () = assert!(core::mem::size_of::<ArchivedPathItem>() == 28);
         const _: () = assert!(core::mem::align_of::<ArchivedPathItem>() == 4);

@@ -1,8 +1,9 @@
-mod escape;
 mod glyph;
 mod text;
 
 pub use glyph::SvgGlyphBuilder;
+pub use reflexo::escape;
+use reflexo::escape::AttributeEscapes;
 
 use std::sync::Arc;
 
@@ -693,6 +694,14 @@ fn render_image_item(img: &ir::ImageItem) -> SvgText {
 pub fn render_image(image: &ir::Image, size: Size, is_image_elem: bool, style: &str) -> String {
     let image_url = embed_as_image_url(image).unwrap();
 
+    let styles = image.attrs.iter().map(|attr| match attr {
+        ir::ImageAttr::Alt(alt) => {
+            format!(r#" alt="{}""#, escape::escape_str::<AttributeEscapes>(alt))
+        }
+        ir::ImageAttr::ImageRendering(rendering) => format!(r#" image-rendering="{rendering}""#),
+    });
+    let styles = styles.collect::<Vec<_>>().join(" ");
+
     let w = size.x.0;
     let h = size.y.0;
 
@@ -702,7 +711,7 @@ pub fn render_image(image: &ir::Image, size: Size, is_image_elem: bool, style: &
         ""
     };
     format!(
-        r#"<image{cls} width="{w}" height="{h}" xlink:href="{image_url}" preserveAspectRatio="none"{style}/>"#,
+        r#"<image{cls} width="{w}" height="{h}" xlink:href="{image_url}" preserveAspectRatio="none"{style}{styles}/>"#,
     )
 }
 
