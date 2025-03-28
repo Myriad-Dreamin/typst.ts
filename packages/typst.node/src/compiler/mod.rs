@@ -18,7 +18,7 @@ use reflexo_typst::font::system::SystemFontSearcher;
 use reflexo_typst::package::http::HttpRegistry;
 use reflexo_typst::typst::{foundations::IntoValue, LazyHash};
 use reflexo_typst::vfs::{system::SystemAccessModel, Vfs};
-use reflexo_typst::{Bytes, TypstDict, TypstSystemUniverse};
+use reflexo_typst::{Bytes, Features, TypstDict, TypstSystemUniverse};
 
 pub use boxed::BoxedCompiler;
 pub use node::*;
@@ -134,7 +134,7 @@ pub fn create_universe(args: Option<NodeCompileArgs>) -> Result<TypstSystemUnive
     let resolver = Arc::new(RegistryPathMapper::new(registry.clone()));
     let verse = TypstSystemUniverse::new_raw(
         EntryState::new_rooted(workspace_dir.into(), None),
-        false,
+        Features::default(),
         args.inputs.map(create_inputs),
         Vfs::new(resolver, SystemAccessModel {}),
         registry,
