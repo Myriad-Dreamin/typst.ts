@@ -19,9 +19,10 @@ interface Providers {
   '@myriaddreamin/typst-ts-node-compiler': NodeCompileProvider;
 }
 
-// Known provider kind
+// A Compiler provider
+type Provider = ProviderKind | CompileProviderConstructor | undefined;
 type ProviderKind = keyof Providers;
-type Provider<K> = K extends undefined
+type ProviderIns<K> = K extends undefined
   ? NodeCompileProvider
   : K extends ProviderKind
     ? Providers[K]
@@ -86,8 +87,7 @@ export interface TypstPluginOptionsBase extends TypstDocumentOptions {
 }
 
 // options depending on the kind of compiler (node or CLI)
-export interface TypstPluginOptions<K extends ProviderKind | CompileProviderConstructor | undefined>
-  extends TypstPluginOptionsBase {
+export interface TypstPluginOptions<K extends Provider> extends TypstPluginOptionsBase {
   /**
    * The compiler provider, either a string for a built-in provider or a constructor for a custom provider.
    * @default '@myriaddreamin/typst-ts-node-compiler'
@@ -96,11 +96,11 @@ export interface TypstPluginOptions<K extends ProviderKind | CompileProviderCons
   /**
    * *Override* the callback to be called when the parts is resolving.
    */
-  onResolveParts?: OnCompileCallback<any, Provider<K>>;
+  onResolveParts?: OnCompileCallback<any, ProviderIns<K>>;
   /**
    * *Override* the callback to be called when the inputs are compiling.
    */
-  onCompile?: OnCompileCallback<void, Provider<K>>;
+  onCompile?: OnCompileCallback<void, ProviderIns<K>>;
 }
 
 /**
@@ -141,9 +141,9 @@ export interface TypstDocumentOptionsWithInput extends TypstDocumentOptions {
  * @param options The plugin options
  * @returns A Vite plugin for Typst
  */
-export async function TypstPlugin<
-  K extends ProviderKind | CompileProviderConstructor | undefined = undefined,
->(options: TypstPluginOptions<K> = {}): Promise<VitePlugin> {
+export async function TypstPlugin<K extends Provider = undefined>(
+  options: TypstPluginOptions<K> = {},
+): Promise<VitePlugin> {
   if (options.index === undefined) {
     options.index = true;
   }
@@ -351,18 +351,16 @@ const defaultCompile: OnCompileCallback<HtmlOutputExecResult | undefined> = (
   return htmlResult;
 };
 
-async function createCompiler<K extends ProviderKind | CompileProviderConstructor | undefined>(
-  options: TypstPluginOptions<K>,
-) {
+async function createCompiler<K extends Provider>(options: TypstPluginOptions<K>) {
   let TCompileProvider = (
     options.compiler === undefined || options.compiler === '@myriaddreamin/typst-ts-node-compiler'
       ? (await import('./compiler/node.js')).NodeCompileProvider
       : options.compiler === 'typst-cli'
         ? (await import('./compiler/cli.js')).CliCompileProvider
-        : CompileProvider.isCons<Provider<K>>(options.compiler)
+        : CompileProvider.isCons<ProviderIns<K>>(options.compiler)
           ? options.compiler
           : undefined
-  ) as CompileProviderConstructor<Provider<K>> | undefined;
+  ) as CompileProviderConstructor<ProviderIns<K>> | undefined;
   if (!TCompileProvider) throw new Error(`Unsupported compiler provider: ${options.compiler}`);
 
   const compileArgs: CompileArgs = {
