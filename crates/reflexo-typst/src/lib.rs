@@ -30,34 +30,24 @@
 // #![warn(missing_debug_implementations)]
 // #![warn(missing_copy_implementations)]
 
-use core::fmt;
+pub mod config;
+pub mod diag;
+pub mod error;
+pub mod query;
+pub mod task;
 
-use ::typst::foundations::Content;
-use ::typst::{
-    diag::{At, SourceResult},
-    syntax::Span,
-};
-use query::retrieve;
-use vfs::WorkspaceResolver;
-
-// Core data structures of typst-ts.
 #[cfg(feature = "system-watch")]
 mod compile;
 mod concepts;
-pub mod config;
-pub mod diag;
 #[cfg(feature = "system-compile")]
 mod driver;
-pub mod error;
-pub(crate) mod exporter;
-pub mod query;
-pub mod task;
+mod exporter;
 mod utils;
 #[cfg(feature = "system-watch")]
 mod watch;
 
-pub use self::diag::DiagnosticFormat;
 pub use concepts::*;
+pub use diag::DiagnosticFormat;
 #[cfg(feature = "system-compile")]
 pub use driver::*;
 pub use exporter::DynComputation;
@@ -84,10 +74,6 @@ pub use exporter::text::TextExport;
 pub use compile::*;
 #[cfg(feature = "system-watch")]
 pub use watch::*;
-// #[cfg(feature = "system-compile")]
-// pub use diag::ConsoleDiagReporter;
-#[cfg(feature = "system-compile")]
-pub type DynSystemComputation = DynComputation<SystemCompilerFeat>;
 
 /// font things about compiler.
 pub use world::font;
@@ -104,6 +90,21 @@ pub use world::package;
 /// Diff and parse the source code.
 pub use world::parser;
 pub use world::*;
+
+pub use ::typst::{Feature, Features};
+
+#[cfg(feature = "system-compile")]
+pub type DynSystemComputation = DynComputation<SystemCompilerFeat>;
+
+use core::fmt;
+
+use ::typst::foundations::Content;
+use ::typst::{
+    diag::{At, SourceResult},
+    syntax::Span,
+};
+use query::retrieve;
+use vfs::WorkspaceResolver;
 
 pub mod build_info {
     /// The version of the reflexo-typst crate.

@@ -34,6 +34,7 @@ serde_with.workspace = true
 rkyv = { workspace = true, optional = true }
 
 tinymist-std.workspace = true
+tinymist-world.workspace = true
 typst = { workspace = true, optional = true }
 
 [dev-dependencies]
