@@ -6,6 +6,7 @@ pub use reflexo::vector::ir::*;
 
 use reflexo::hash::{item_hash128, Fingerprint};
 use reflexo::typst::Bytes;
+use typst::foundations::Smart;
 use typst::layout::{
     Abs as TypstAbs, Angle as TypstAngle, Axes as TypstAxes, Point as TypstPoint,
     Ratio as TypstRatio, Transform as TypstTransform,
@@ -178,14 +179,29 @@ impl FromTypst<typst::visualize::Image> for Image {
             ImageFormat::Raster(RasterFormat::Pixel(..)) => "png",
             ImageFormat::Vector(VectorFormat::Svg) => "svg+xml",
         };
+        let attrs = {
+            let mut attrs = Vec::new();
+            if let Some(alt) = image.alt() {
+                attrs.push(ImageAttr::Alt(alt.into()));
+            }
+
+            if let Smart::Custom(rendering) = image.scaling() {
+                attrs.push(ImageAttr::ImageRendering(match rendering {
+                    typst::visualize::ImageScaling::Pixelated => "pixelated".into(),
+                    typst::visualize::ImageScaling::Smooth => "smooth".into(),
+                }));
+            }
+
+            attrs
+        };
 
         let (hash, data) = encode_image(&image);
         Image {
             data,
             format: format.into(),
             size: Axes::new(image.width() as u32, image.height() as u32),
-            alt: image.alt().map(|s| s.into()),
             hash,
+            attrs,
         }
     }
 }

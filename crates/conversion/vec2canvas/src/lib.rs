@@ -436,6 +436,7 @@ fn create_image(image: Arc<Image>) -> Option<LazyImage> {
             if is_svg {
                 let blob = blob();
                 Some(wasm_bindgen_futures::future_to_promise(async move {
+                    // todo: image-rendering is not respected
                     let img = HtmlImageElement::new().unwrap();
                     let p = exception_create_image_blob(&blob, &img);
                     p.await;

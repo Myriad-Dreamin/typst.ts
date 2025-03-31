@@ -180,8 +180,8 @@ mod tests {
                 data: vec![0, 1, 2, 3].into(),
                 format: "png".into(),
                 size: Axes::new(10, 10),
-                alt: None,
                 hash: Fingerprint::from_pair(0xdeadbeef, 0),
+                attrs: vec![],
             }),
             size: Axes::new(Scalar(10.0), Scalar(10.0)),
         };
