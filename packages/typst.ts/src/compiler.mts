@@ -1,5 +1,5 @@
 // @ts-ignore
-import type * as typst from '@myriaddreamin/typst-ts-web-compiler/pkg/wasm-pack-shim.mjs';
+import type * as typst from '@myriaddreamin/typst-ts-web-compiler';
 import { buildComponent, globalFontPromises } from './init.mjs';
 import { FsAccessModel, SemanticTokens, SemanticTokensLegend, kObject } from './internal.types.mjs';
 
@@ -288,7 +288,7 @@ export interface TypstCompiler {
 }
 
 const gCompilerModule = new LazyWasmModule(async (bin?: any) => {
-  const module = await import('@myriaddreamin/typst-ts-web-compiler/pkg/wasm-pack-shim.mjs');
+  const module = await import('@myriaddreamin/typst-ts-web-compiler');
   return await module.default(bin);
 });
 
@@ -315,7 +315,7 @@ class TypstCompilerDriver {
   constructor() {}
 
   async init(options?: Partial<InitOptions>): Promise<void> {
-    this.compilerJs = await import('@myriaddreamin/typst-ts-web-compiler/pkg/wasm-pack-shim.mjs');
+    this.compilerJs = await import('@myriaddreamin/typst-ts-web-compiler');
     const TypstCompilerBuilder = this.compilerJs.TypstCompilerBuilder;
 
     const compilerOptions = { ...(options || {}) };
