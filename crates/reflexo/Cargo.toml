@@ -13,7 +13,6 @@ repository.workspace = true
 comemo.workspace = true
 ecow.workspace = true
 parking_lot.workspace = true
-web-time.workspace = true
 wasm-bindgen = { workspace = true, optional = true }
 js-sys = { workspace = true, optional = true }
 
