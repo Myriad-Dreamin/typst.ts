@@ -129,7 +129,6 @@ fontdb = "0.21"
 path-clean = "1.0.1"
 pathdiff = "0.2.2"
 walkdir = "2"
-web-time = { version = "1.1.0" }
 
 # web
 js-sys = "^0.3"
