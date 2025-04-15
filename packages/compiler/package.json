@@ -9,12 +9,14 @@
     "Typst"
   ],
   "type": "module",
+  "module": "./pkg/wasm-pack-shim.mjs",
+  "types": "./pkg/typst_ts_web_compiler.d.ts",
   "exports": {
     ".": {
-      "module": "pkg/wasm-pack-shim.mjs",
-      "types": "pkg/typst_ts_web_compiler.d.ts"
+      "module": "./pkg/wasm-pack-shim.mjs",
+      "types": "./pkg/typst_ts_web_compiler.d.ts"
     },
-    "./wasm": "pkg/typst_ts_web_compiler_bg.wasm"
+    "./wasm": "./pkg/typst_ts_web_compiler_bg.wasm"
   },
   "files": [
     "pkg/wasm-pack-shim.mjs",

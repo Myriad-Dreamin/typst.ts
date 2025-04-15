@@ -11,7 +11,7 @@
   "devDependencies": {
     "@myriaddreamin/typst-ts-renderer": "0.5.5-rc7",
     "@myriaddreamin/typst.ts": "0.5.5-rc7",
-    "solid-devtools": "^0.29.3",
+    "solid-devtools": "^0.34.0",
     "typescript": "^5.6.2",
     "vite": "^6.2.3",
     "vite-plugin-solid": "^2.11.6"
