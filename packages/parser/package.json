@@ -9,8 +9,15 @@
     "Typst"
   ],
   "type": "module",
-  "module": "pkg/wasm-pack-shim.mjs",
-  "types": "pkg/typst_ts_parser.d.ts",
+  "module": "./pkg/wasm-pack-shim.mjs",
+  "types": "./pkg/typst_ts_parser.d.ts",
+  "exports": {
+    ".": {
+      "module": "./pkg/wasm-pack-shim.mjs",
+      "types": "./pkg/typst_ts_parser.d.ts"
+    },
+    "./wasm": "./pkg/typst_ts_parser_bg.wasm"
+  },
   "files": [
     "pkg/wasm-pack-shim.mjs",
     "pkg/typst_ts_parser_bg.wasm",
