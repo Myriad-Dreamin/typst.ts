@@ -44,8 +44,7 @@ jobs:
           chromedriver --version
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
-      - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.3
+      - uses: Swatinem/rust-cache@v2
       - name: Fmt check
         run: cargo fmt --check --all
       # todo: https://github.com/typst/typst/pull/2767
