@@ -3597,11 +3597,6 @@
   dependencies:
     "@types/node" "*"
 
-"@types/xmldom@^0.1.34":
-  version "0.1.34"
-  resolved "https://registry.npmjs.org/@types/xmldom/-/xmldom-0.1.34.tgz#a752f73bdf09cc6d78b3d3b2e7ca4dd04cc96fd2"
-  integrity sha512-7eZFfxI9XHYjJJuugddV6N5YNeXgQE1lArWOcd1eCOKWb/FGs5SIjacSYuEJuwhsGS3gy4RuZ5EUIcqYscuPDA==
-
 "@typescript-eslint/eslint-plugin@^6.9.1":
   version "6.21.0"
   resolved "https://registry.npmjs.org/@typescript-eslint/eslint-plugin/-/eslint-plugin-6.21.0.tgz#30830c1ca81fd5f3c2714e524c4303e0194f9cd3"
@@ -4034,6 +4029,11 @@
   dependencies:
     "@webassemblyjs/ast" "1.14.1"
     "@xtuc/long" "4.2.2"
+
+"@xmldom/xmldom@^0.9.8":
+  version "0.9.8"
+  resolved "https://registry.npmjs.org/@xmldom/xmldom/-/xmldom-0.9.8.tgz#1471e82bdff9e8f20ee8bbe60d4ffa8a516e78d8"
+  integrity sha512-p96FSY54r+WJ50FIOsCOjyj/wavs8921hG5+kVMmZgKcvIKxMXHTrjNJvRgWa/zuX3B6t2lijLNFaOyuxUH+2A==
 
 "@xtuc/ieee754@^1.2.0":
   version "1.2.0"

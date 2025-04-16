@@ -28,19 +28,18 @@
   },
   "peerDependencies": {
     "@myriaddreamin/typst.node": "^0.5.5-rc6",
-    "xmldom": "^0.6.0",
+    "@xmldom/xmldom": "^0.9.8",
     "vite": "^6.2.3"
   },
   "peerDependenciesMeta": {
     "@myriaddreamin/typst.node": {
       "optional": true
     },
-    "xmldom": {
+    "@xmldom/xmldom": {
       "optional": true
     }
   },
   "devDependencies": {
-    "@types/glob-watcher": "^5.0.5",
-    "@types/xmldom": "^0.1.34"
+    "@types/glob-watcher": "^5.0.5"
   }
 }

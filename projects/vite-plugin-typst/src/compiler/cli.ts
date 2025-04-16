@@ -5,7 +5,7 @@ import type {
   QueryDocArgs,
 } from '@myriaddreamin/typst-ts-node-compiler';
 import { spawnSync } from 'child_process';
-import { DOMParser, XMLSerializer } from 'xmldom';
+import { DOMParser, XMLSerializer } from '@xmldom/xmldom';
 import {
   CompileProvider,
   HtmlOutput,
