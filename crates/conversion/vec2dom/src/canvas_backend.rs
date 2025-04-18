@@ -10,7 +10,6 @@ pub struct DefaultExportFeature;
 
 impl ExportFeature for DefaultExportFeature {
     const ENABLE_TRACING: bool = false;
-    const SHOULD_RENDER_TEXT_ELEMENT: bool = false;
 }
 
 type Vec2Canvas = CanvasTask<DefaultExportFeature>;

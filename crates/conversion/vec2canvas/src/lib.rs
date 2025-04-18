@@ -44,20 +44,15 @@ use bounds::*;
 pub trait ExportFeature {
     /// Whether to enable tracing.
     const ENABLE_TRACING: bool;
-
-    /// Whether to render text element.
-    /// The text elements is selectable and searchable.
-    const SHOULD_RENDER_TEXT_ELEMENT: bool;
 }
 
-/// The default feature set which is used for exporting full-fledged svg.
+/// The default feature set which is used for exporting full-fledged canvas.
 pub struct DefaultExportFeature;
-/// The default feature set which is used for exporting svg for printing.
+/// The default feature set which is used for exporting canvas for printing.
 pub type DefaultCanvasTask = CanvasTask<DefaultExportFeature>;
 
 impl ExportFeature for DefaultExportFeature {
     const ENABLE_TRACING: bool = false;
-    const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
 }
 
 #[derive(Clone, Copy)]
@@ -145,7 +140,6 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
         CanvasRenderTask::<Feat> {
             module,
 
-            should_render_text_element: true,
             use_stable_glyph_id: true,
 
             _feat_phantom: Default::default(),
@@ -165,8 +159,6 @@ pub struct CanvasRenderTask<'m, 't, Feat: ExportFeature> {
     /// The module which stores the frame data.
     pub module: &'m Module,
 
-    /// See [`ExportFeature`].
-    pub should_render_text_element: bool,
     /// See [`ExportFeature`].
     pub use_stable_glyph_id: bool,
 
