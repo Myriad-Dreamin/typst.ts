@@ -3,9 +3,6 @@ on: [push, pull_request]
 
 env:
   RUSTFLAGS: '-Dwarnings'
-  SCCACHE_GHA_ENABLED: 'true'
-  RUSTC_WRAPPER: 'sccache'
-  CARGO_INCREMENTAL: '0'
 
 jobs:
   ci:
@@ -23,8 +20,10 @@ jobs:
           path: assets/files
       - name: Install Mold
         uses: rui314/setup-mold@v1
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@1.84.0
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.84.0
+      - uses: Swatinem/rust-cache@v2
         with:
           components: clippy, rustfmt
       # https://github.com/Renumics/spotlight/blob/main/.github/workflows/ci.yml
@@ -44,7 +43,6 @@ jobs:
           chromedriver --version
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
-      - uses: Swatinem/rust-cache@v2
       - name: Fmt check
         run: cargo fmt --check --all
       # todo: https://github.com/typst/typst/pull/2767
