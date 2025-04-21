@@ -1,17 +1,18 @@
+use std::sync::Arc;
+
+use reflexo::error::prelude::*;
 use reflexo::typst::{TypstDocument, TypstHtmlDocument, TypstPagedDocument};
 use reflexo_typst2vec::pass::{CommandExecutor, Typst2VecPass};
 use reflexo_typst2vec::IntoTypst;
 use reflexo_vec2svg::{DynamicLayoutSvgExporter, MultiVecDocument};
 use tinymist_task::ExportTask;
-use tinymist_world::TaskInputs;
 use typst::diag::SourceResult;
 use typst::foundations::IntoValue;
 use typst::utils::LazyHash;
 
-use super::prelude::*;
 use crate::typst::prelude::*;
 use crate::vector::ir::{LayoutRegion, LayoutRegionNode};
-use crate::world::{CompilerFeat, CompilerWorld};
+use crate::world::{CompilerFeat, CompilerWorld, TaskInputs, WorldComputeGraph};
 use crate::TypstDict;
 
 pub type LayoutWidths = EcoVec<typst::layout::Abs>;
