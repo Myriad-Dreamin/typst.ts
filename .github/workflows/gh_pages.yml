@@ -1,10 +1,5 @@
 name: reflexo::release::gh_pages
 
-env:
-  SCCACHE_GHA_ENABLED: 'true'
-  RUSTC_WRAPPER: 'sccache'
-  CARGO_INCREMENTAL: '0'
-
 on:
   # Runs on pushes targeting the default branch
   push:
@@ -38,10 +33,10 @@ jobs:
           submodules: recursive
       - name: Install Mold
         uses: rui314/setup-mold@v1
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@1.84.0
-      - name: Install Rust for Wasm targets
-        run: rustup target add wasm32-unknown-unknown
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.84.0
+          target: wasm32-unknown-unknown
       - name: Set Node.js 18.x
         uses: actions/setup-node@v3
         with:
@@ -51,8 +46,6 @@ jobs:
       - name: Download & install shiroa
         run: |
           curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.3.0/shiroa-installer.sh | sh
-      - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.3
       - name: Download font assets
         run: |
           mkdir -p assets/fonts

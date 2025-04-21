@@ -3053,7 +3053,6 @@ dependencies = [
  "tinymist-world",
  "typst",
  "wasm-bindgen",
- "web-time",
 ]
 
 [[package]]
