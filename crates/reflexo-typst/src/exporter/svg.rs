@@ -1,10 +1,14 @@
+use std::sync::Arc;
+
+use reflexo::error::prelude::*;
+
 use reflexo::typst::Bytes;
 use reflexo::typst::TypstPagedDocument;
 use reflexo_vec2svg::{render_svg, render_svg_html, ExportFeature, SvgExporter};
 use serde::{Deserialize, Serialize};
 use tinymist_task::{ExportSvgTask, ExportTask};
 
-use super::prelude::*;
+use crate::world::{CompilerFeat, ExportComputation, WorldComputeGraph};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
