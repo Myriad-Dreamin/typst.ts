@@ -210,7 +210,6 @@ mod tests {
 
     impl ExportFeature for CIRenderFeature {
         const ENABLE_TRACING: bool = true;
-        const SHOULD_RENDER_TEXT_ELEMENT: bool = true;
     }
 
     static RENDERER: Mutex<OnceLock<SendWrapper<Mutex<TypstRenderer>>>> =
