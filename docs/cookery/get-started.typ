@@ -5,9 +5,9 @@
 
 = Get Started
 
-In this chapter, you will learn how to #link(<installation>)[install] your typst.ts, #link(<import>)[import] it to your project, and run the #link(<run-compiler>)[compiler] or #link(<run-renderer>)[renderer] module with typst.ts.
+In this chapter, you will learn the #link(<assets>)[assets] provided by typst.ts, #link(<import>)[import] it to your project, and run the #link(<run-compiler>)[compiler] or #link(<run-renderer>)[renderer] module with typst.ts.
 
-== Installation <installation>
+== Assets <assets>
 
 To get functionality of #link("https://typst.app")[typst], typst.ts provides a core JavaScript library along with two Wasm library:
 - `typst.ts`: the core JavaScript library which wraps Wasm modules with more friendly JavaScript APIs.
