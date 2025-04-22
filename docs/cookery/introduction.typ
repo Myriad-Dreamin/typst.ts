@@ -1,20 +1,8 @@
 #import "/docs/cookery/book.typ": book-page
 #import "/github-pages/docs/graphs.typ": data-flow-graph, ir-feature-graph
+#import "mod.typ": cond-image
 
 #show: book-page.with(title: "Introduction")
-
-
-#let natural-image(img) = context {
-  let (width, height) = measure(img)
-  if width > 0pt {
-    layout(page => {
-      let width_scale = 0.8 * page.width / width
-      block(width: width_scale * width, height: width_scale * height)[
-        #scale(x: width_scale * 100%, y: width_scale * 100%, origin: center + top)[#img]
-      ]
-    })
-  }
-}
 
 = Introduction
 
@@ -23,7 +11,7 @@ Typst.ts is a project dedicated to bring the power of #link("https://github.com/
 #figure(
   {
     set text(size: 12pt)
-    natural-image(data-flow-graph())
+    cond-image(data-flow-graph())
   },
   caption: [Browser-side module needed: $dagger$: compiler; $dagger.double$: renderer. ],
   numbering: none,
@@ -39,16 +27,18 @@ Specifically, it first presents a typst document in three typical forms:
 
 The #emph("Form2: Vector Format") is developed specially for typst documents, and it has several fancy features:
 
+#let vc-graph = scale(
+  120%,
+  {
+    set text(size: 12pt)
+    v(0.5em)
+    cond-image(ir-feature-graph())
+    v(0.5em)
+  },
+)
+
 #figure(
-  scale(
-    120%,
-    {
-      set text(size: 12pt)
-      v(0.5em)
-      natural-image(ir-feature-graph())
-      v(0.5em)
-    },
-  ),
+  cond-image(vc-graph),
   caption: [Figure: Features of the #emph("Vector Format"). ],
   numbering: none,
 )

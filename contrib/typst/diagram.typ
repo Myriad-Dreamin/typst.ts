@@ -207,6 +207,9 @@
         // i know that clockwise is disgusting, but rotate rotates clockwise
         let angle = calc.atan2((end.at(0) - start.at(0)) / 1pt,
                                (end.at(1) - start.at(1)) / 1pt)
+        let arr-stroke = stroke(arr.stroke)
+        let paint = arr-stroke.paint
+        let thickness = arr-stroke.thickness
         let curve-angle = arr.curve
         let start-space = arr.start-space
         let end-space = arr.end-space
@@ -277,14 +280,14 @@
 			panic("Hooked double-stemmed arrows are not supported.")
 		}
 		*/
-              curve(stroke: (thickness: arr.stroke, cap: "round"),
+              curve(stroke: (paint: paint, thickness: thickness, cap: "round"),
                 curve.move((0em, 0.15em)),
                 curve.cubic(none, (0em, 0em), (0.15em, 0em)),
                 curve.cubic(none, (0.3em, 0em), (0.3em, 0.15em))
               )
               astart = v-add-dir(astart, angle - curve-angle, 0.15em)
             } else if "def" in arr.options {
-              place(dx: -0.2em, line(stroke: (thickness: arr.stroke, cap: "round"),
+              place(dx: -0.2em, line(stroke: (paint: paint, thickness: thickness, cap: "round"),
                                      length: 0.4em))
             }  
           )
@@ -301,9 +304,6 @@
         // start and end tips), a parabola. See https://en.wikipedia.org/wiki/Bézier_curve
         let ctrl-length = - (v-length(v-sub(astart, aend)) / 3
                              / calc.cos(curve-angle))
-        let ss = stroke(arr.stroke)
-        let paint = ss.paint
-        let thickness = ss.thickness
         let curve-stroke = (paint: paint, thickness: thickness, dash: dash, cap: "round")
         if "nat" in arr.options {
           let sep = 0.095em

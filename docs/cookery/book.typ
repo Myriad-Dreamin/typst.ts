@@ -1,5 +1,5 @@
 
-#import "@preview/shiroa:0.2.0": *
+#import "@preview/shiroa:0.2.2": *
 #import "./templates/page.typ": main-color
 
 #show: book
@@ -71,37 +71,37 @@
     //   - #chapter(none, section: "8.1")[Native Exporters]
     //   - #chapter(none, section: "8.2")[Vector Representation]
     //   - #chapter(none, section: "8.3")[Topic: SVG Exporter/Renderer]
-    = Deeper dive into typst.ts
-    - #chapter(none, section: "5")[Core Concepts]
-      - #chapter(none, section: "5.1")[Exporter Trait]
-      - #chapter(none, section: "5.2")[Compiler Trait]
-    - #chapter(none, section: "6")[Vector Represented Document]
-      - #chapter(none, section: "6.1")[Data Structure]
-      - #chapter(none, section: "6.2")[Binary Protocol]
-      - #chapter(none, section: "6.3")[Render Virtual Machine]
-      - #chapter(none, section: "6.4")[Topic: Partially Accessible Document]
-      - #chapter(none, section: "6.5")[Topic: BBox Calculation]
-      - #chapter(none, section: "6.6")[Topic: Semantic Layer Rendering]
-    - #chapter(none, section: "7")[Compiler Infrastructure]
-      - #chapter(none, section: "7.1")[Split World Models]
-      - #chapter(none, section: "7.2")[Virtual File System]
-      - #chapter(none, section: "7.3")[Font Management]
-      - #chapter(none, section: "7.4")[Typst Package Registry]
-      - #chapter(none, section: "7.5")[Compile Driver]
-      - #chapter(none, section: "7.6")[Editor Workspace]
+    // = Deeper dive into typst.ts
+    // - #chapter(none, section: "5")[Core Concepts]
+    //   - #chapter(none, section: "5.1")[Exporter Trait]
+    //   - #chapter(none, section: "5.2")[Compiler Trait]
+    // - #chapter(none, section: "6")[Vector Represented Document]
+    //   - #chapter(none, section: "6.1")[Data Structure]
+    //   - #chapter(none, section: "6.2")[Binary Protocol]
+    //   - #chapter(none, section: "6.3")[Render Virtual Machine]
+    //   - #chapter(none, section: "6.4")[Topic: Partially Accessible Document]
+    //   - #chapter(none, section: "6.5")[Topic: BBox Calculation]
+    //   - #chapter(none, section: "6.6")[Topic: Semantic Layer Rendering]
+    // - #chapter(none, section: "7")[Compiler Infrastructure]
+    //   - #chapter(none, section: "7.1")[Split World Models]
+    //   - #chapter(none, section: "7.2")[Virtual File System]
+    //   - #chapter(none, section: "7.3")[Font Management]
+    //   - #chapter(none, section: "7.4")[Typst Package Registry]
+    //   - #chapter(none, section: "7.5")[Compile Driver]
+    //   - #chapter(none, section: "7.6")[Editor Workspace]
     = Project samples
     - #chapter(none, section: "8")[shiroa]
     - #chapter(none, section: "9")[typst-preview]
     - #chapter(none, section: "10")[hexo-renderer-typst]
-    = Trouble Shooting
-    - #chapter(none, section: "11")[Targeting Browser]
-      - #chapter(none, section: "11.1")[Build Wasm Modules]
-      - #chapter(none, section: "11.2")[typst.ts]
-      - #chapter(none, section: "11.3")[tpyst.node]
-      - #chapter(none, section: "11.4")[typst-ts-renderer]
-      - #chapter(none, section: "11.5")[typst-ts-web-compiler]
-    - #chapter(none, section: "12")[Installation]
-      - #chapter(none, section: "12.1")[npm install/link]
+    // = Trouble Shooting
+    // - #chapter(none, section: "11")[Targeting Browser]
+    //   - #chapter(none, section: "11.1")[Build Wasm Modules]
+    //   - #chapter(none, section: "11.2")[typst.ts]
+    //   - #chapter(none, section: "11.3")[tpyst.node]
+    //   - #chapter(none, section: "11.4")[typst-ts-renderer]
+    //   - #chapter(none, section: "11.5")[typst-ts-web-compiler]
+    // - #chapter(none, section: "12")[Installation]
+    //   - #chapter(none, section: "12.1")[npm install/link]
     = References
     - #chapter(none, section: "13")[Routing to Renferences]
   ],
