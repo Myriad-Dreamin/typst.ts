@@ -88,6 +88,8 @@ Given the #link(<assets-and-libraries>)[Core Libraries and Assets], we can start
 
 Rust Tools:
 - #link("https://github.com/Myriad-Dreamin/shiroa")[shiroa]: It is a Rust tool using `reflexo-typst`, producing static HTML files or dynamic ones utilizing `typst.ts` + `typst-ts-renderer`.
+  - This documentation is built using shiroa, the #link("https://myriad-dreamin.github.io/typst.ts/cookery/")[HTML version (browser typesetting)] of the documentation.
+  - the #link("https://myriad-dreamin.github.io/typst.ts/cookery/paged")[Paged version (typst typsetting)] of the documentation.
 - #link("https://github.com/Myriad-Dreamin/tinymist/tree/main/crates/typst-preview")[typst-preview]: It is a Rust tool using `reflexo-typst`, incrementally rendering typst documents to provide preview editing. The data is streamed and rendered in browser using `typst.ts` + `typst-ts-renderer`.
 
 JavaScript Tools:
