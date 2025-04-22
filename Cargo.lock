@@ -4926,6 +4926,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "typst-ts-docs-test"
+version = "0.5.5-rc7"
+dependencies = [
+ "anyhow",
+ "clap",
+ "rayon",
+ "reflexo-typst",
+ "tokio",
+ "typst",
+ "walkdir",
+]
+
+[[package]]
 name = "typst-ts-heap-profile-test"
 version = "0.5.5-rc7"
 dependencies = [

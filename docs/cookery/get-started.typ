@@ -1,4 +1,4 @@
-#import "/docs/cookery/book.typ": book-page
+#import "/docs/cookery/book.typ": book-page, cross-link
 #import "/docs/cookery/term.typ" as term
 
 #show: book-page.with(title: "Get Started")
@@ -9,7 +9,7 @@ In this chapter, you will learn the #link(<assets-and-libraries>)[core libraries
 
 == Core Libraries and Assets <assets-and-libraries>
 
-The functionalities of #link("https://typst.app")[typst] is split into two parts, _compilation and rendering_ functionality, because no all applications need both functionalities running in the browsers. You will take 300kb network bandwidth if you want to use the renderer in browser, but you will take 13.6MB (6.6MB wasm and 7MB fonts) to run a compiler. Therefore, the two parts are separated into two Wasm modules, `typst-ts-renderer` and `typst-ts-web-compiler`, and they can be loaded on demand.
+The functionalities of #link("https://typst.app")[typst] is split into two parts, _compilation and rendering_ functionality, because no all applications need both functionalities running in the browsers. it will take 300kb network bandwidth if you want to use the renderer in browser, but it will take 13.6MB (6.6MB wasm and 7MB fonts) to run a compiler. Therefore, the two parts are separated into two Wasm modules, `typst-ts-renderer` and `typst-ts-web-compiler`, and they can be loaded on demand.
 
 typst.ts provides core JavaScript libraries along with two Wasm modules:
 - `typst.ts`: the core JavaScript library which wraps Wasm modules with more friendly JavaScript APIs.
@@ -56,23 +56,23 @@ To get it in browser, you can load a all-in-one bundle script from CDN and use i
 
 ```html
 <script
-type="module"
-src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one-lite.bundle.js"
-id="typst"
+  type="module"
+  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one-lite.bundle.js"
+  id="typst"
 >
-console.log($typst.svg({
-  mainContent: 'Hello, typst!',
-}));
+  console.log($typst.svg({
+    mainContent: 'Hello, typst!',
+  }));
 </script>
 ```
 
-There is also a #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/preview.html")[simple single-file typst previewer] that compiles and renders typst documents on editing.
+There is also a #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/preview.html")[simple single-file typst previewer] that compiles and renders a typst document on editing.
 
 *Warning: the all-in-one-lite.bundle.js is not practical to use since it bundles all of the resource regardless you need or not, including the wasm modules, fonts, and scripts.*
 
 === The starter example in Node.js
 
-In node.js, it is even simpler, you can use the all-in-one node library practically:
+It is even simpler in Node.js, you can use the all-in-one node library practically:
 
 ```js
 import { $typst } from '@myriaddreamin/typst-ts-node-compiler';
@@ -93,14 +93,14 @@ Rust Tools:
 - #link("https://github.com/Myriad-Dreamin/tinymist/tree/main/crates/typst-preview")[typst-preview]: It is a Rust tool using `reflexo-typst`, incrementally rendering typst documents to provide preview editing. The data is streamed and rendered in browser using `typst.ts` + `typst-ts-renderer`.
 
 JavaScript Tools:
-- The starter example, #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/preview.html")[a simple single-file typst previewer], is already good. It is a Rust tool using `typst-ts-web-compiler`, producing static HTML files or dynamic ones utilizing `typst.ts` + `typst-ts-renderer`.
+- The starter example, #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/preview.html")[a simple typst previewer], is already good. It is a single-file HTML using `typst-ts-web-compiler`, producing ```html <svg/>``` and ```html <canvas/>``` for preview utilizing `typst.ts` + `typst-ts-renderer`.
 - The #link("https://mitex-rs.github.io/mitex/tools/underleaf.html")[underleaf] is a web-based tex editor. It uses same components as the starter example, but arranges source code in a more complex way. It renders tex files by running a #link("https://github.com/mitex-rs/mitex")[simple tex converter] in typst compiler.
 - The #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/projects/rehype-typst")[rehype-typst] compiles typst equations in markdown files using `typst-ts-node-compiler`.
 - The #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/projects/hexo-renderer-typst")[hexo-renderer-typst] renders typst documents as web pages for the blog engine, Hexo, using `typst-ts-node-compiler`.
 - The #link("https://github.com/typst-doc-cn/news/tree/main/scripts")[Typst CN News] watches and translates typst documents into HTML files by Node.js scripts, using `typst-ts-node-compiler`.
 - The #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/projects/vite-plugin-typst")[vite-plugin-typst] watches and translates typst documents into HTML files for vite, using `typst-ts-node-compiler`.
 
-Wrappers of `typst.ts` + `typst-ts-renderer` to integrate into frameworks, which can load artifacts of compilers, are also good examples.
+Wrappers of `typst.ts` + `typst-ts-renderer` to integrate into frameworks, which can load artifacts of compilers, are also good examples to study.
 
 First, compiles the artifacts like the rust and javascript tools above:
 - `typst-ts-cli` to compile in terminal or bash scripts.
@@ -385,8 +385,8 @@ Then, renders the artifacts using the wrappers:
 
 == Further reading
 
-+ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/all-in-one-node.html")[All-in-one Node.js Library]
-+ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/all-in-one.html")[All-in-one (Simplified) JavaScript Library]
-+ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compilers.html")[Compilers]
-+ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/renderers.html")[Renderers]
-+ #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/trouble-shooting.html")[Trouble shooting]
++ #cross-link("/start-it.typ")[All-in-One Libraries]
++ #cross-link("/guide/compilers.typ")[Compilers]
++ #cross-link("/guide/renderers.typ")[Renderers]
++ #cross-link("/direction/main.typ")[Samples]
++ #cross-link("/guide/trouble-shooting.typ")[Trouble shooting]
