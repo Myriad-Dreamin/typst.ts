@@ -40,6 +40,7 @@
     "start:react": "yarn workspace @myriaddreamin/typst.react dev",
     "start:angular": "yarn workspace typst.angular start",
     "docs": "shiroa serve --font-path assets/fonts -w . docs/cookery",
+    "docs:html": "yarn docs --mode static-html",
     "bump-packages": "python scripts/bump_version.py",
     "prepublish-packages": "turbo run prepublish --filter=./packages/*",
     "publish:dry": "turbo run prepublish publish:dry --filter=./packages/*",
