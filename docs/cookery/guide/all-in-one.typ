@@ -1,6 +1,6 @@
 #import "/docs/cookery/book.typ": *
 
-#show: book-page.with(title: "All-in-one (Simplified) Library for Browsers")
+#show: book-page.with(title: "All-in-One Library for Browsers")
 
 #include "claim.typ"
 
