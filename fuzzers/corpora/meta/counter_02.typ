@@ -8,14 +8,14 @@
 #counter(heading).step()
 
 = Alpha
-In #counter(heading).display()
+In #context counter(heading).display()
 == Beta
 
 #set heading(numbering: none)
 = Gamma
 #heading(numbering: "I.")[Delta]
 
-At Beta, it was #locate(loc => {
-  let it = query(heading, loc).find(it => it.body == [Beta])
+At Beta, it was #context {
+  let it = query(heading).find(it => it.body == [Beta])
   numbering(it.numbering, ..counter(heading).at(it.location()))
-})
+}

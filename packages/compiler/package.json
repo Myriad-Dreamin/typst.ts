@@ -13,6 +13,7 @@
   "types": "./pkg/typst_ts_web_compiler.d.ts",
   "exports": {
     ".": {
+      "node": "./pkg/wasm-pack-shim.mjs",
       "module": "./pkg/wasm-pack-shim.mjs",
       "types": "./pkg/typst_ts_web_compiler.d.ts"
     },

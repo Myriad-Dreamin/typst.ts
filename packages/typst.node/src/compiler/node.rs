@@ -12,8 +12,8 @@ use reflexo_typst::{
 
 use crate::error::*;
 use crate::{
-    create_universe, BoxedCompiler, Buffer, CompileDocArgs, Either, Error, JsBoxedCompiler,
-    NodeCompileArgs, NodeTypstDocument, QueryDocArgs, RenderPdfOpts, Result,
+    create_universe, BoxedCompiler, Buffer, CompileArgs, CompileDocArgs, Either, Error,
+    JsBoxedCompiler, NodeTypstDocument, QueryDocArgs, RenderPdfOpts, Result,
 };
 
 /// Either a compiled document or compile arguments.
@@ -44,7 +44,7 @@ impl NodeCompiler {
     /// });
     /// ```
     #[napi(ts_args_type = "args?: CompileArgs")]
-    pub fn create(args: Option<NodeCompileArgs>) -> Result<NodeCompiler, NodeError> {
+    pub fn create(args: Option<CompileArgs>) -> Result<NodeCompiler, NodeError> {
         let driver = create_universe(args).map_err(map_node_error)?;
         Ok(NodeCompiler {
             driver: driver.into(),

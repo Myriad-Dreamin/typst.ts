@@ -74,7 +74,7 @@ pub struct NodeAddFontBlobs {
 
 #[napi(object, js_name = "CompileArgs")]
 #[derive(Default)]
-pub struct NodeCompileArgs {
+pub struct CompileArgs {
     /// Adds additional directories to search for fonts
     pub font_args: Option<Vec<Either<NodeAddFontPaths, NodeAddFontBlobs>>>,
 
@@ -99,7 +99,7 @@ pub fn abs_user_path(path: &str) -> Result<PathBuf> {
     Ok(path.clean())
 }
 
-pub fn create_universe(args: Option<NodeCompileArgs>) -> Result<TypstSystemUniverse> {
+pub fn create_universe(args: Option<CompileArgs>) -> Result<TypstSystemUniverse> {
     let args = args.unwrap_or_default();
     let workspace_dir = abs_user_path(args.workspace.unwrap_or_default().as_str())?;
 
