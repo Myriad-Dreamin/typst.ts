@@ -8,9 +8,9 @@
 
 #include "../claim.typ"
 
-The compiler services help you build a precompiler CLI or an incremental compilation server for #term.vector-format.
-- #link("https://github.com/Myriad-Dreamin/shiroa")[shiroa] precompiles (prepares) artifacts for static websites.
-- #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/tool/preview.rs")[typst-preview] compiles and streams typst document data to a web browser to provide fast preview of typst documents.
+The rust library help you build compiler services for #term.vector-format.
+- precompiler CLI: #link("https://github.com/Myriad-Dreamin/shiroa")[shiroa] precompiles (prepares) artifacts for static websites.
+- incremental compilation server: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/tool/preview.rs")[typst-preview] compiles and streams typst document data to a web browser to provide fast preview of typst documents.
 
 #let sub = heading-reference[== (Archived) The Rust Compiler Library in v0.5.0]
 *Note: the following content is for typst.ts >=v0.6.0. To use rust library in \<v0.6.0, check #cross-link("/guide/compiler/service.typ", reference: sub)[the section.]*
@@ -25,7 +25,7 @@ std::thread::spawn(move || {
 
 == Importing the Crate
 
-Adding the following to your `Cargo.toml`:
+We usually use the `reflexo-typst` crate to build native tools. Add the following dependency to your `Cargo.toml`:
 
 ```toml
 [dependencies]
@@ -34,21 +34,21 @@ reflexo-typst = { version = "0.x.y", features = ["system"] }
 
 The example of using the crate natively is the #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/typst.node")[typst-ts-node-compiler].
 
-Usually, we use the `reflexo-typst` crate to build native tools, but it can also compiled to be run in browser, by changing the features to `browser`:
+It can also compiled to be run in browsers by changing the features to `browser`:
 
 ```toml
 reflexo-typst = { version = "0.x.y", features = ["browser"] }
 ```
 
-The example of using the crate in browser is the #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/compiler")[typst-ts-web-compiler].
+The example is the #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/packages/compiler")[typst-ts-web-compiler].
 
-It can also be compiled as a #link("https://typst.app/docs/reference/foundations/plugin/")[Wasm typst plugin] and be loaded into the typst compiler itself, by changing the features to an empty list:
+It can also be compiled as a #link("https://typst.app/docs/reference/foundations/plugin/")[Wasm typst plugin] by changing the features to an empty list:
 
 ```toml
 reflexo-typst = { version = "0.x.y", features = [] }
 ```
 
-The example of using the crate as a typst plugin is the _embedded typst_, the #link("https://github.com/typst-doc-cn/tutorial/tree/main/crates/embedded-typst")[Rust part] and the #link("https://github.com/typst-doc-cn/tutorial/blob/main/typ/embedded-typst/example.typ")[typst part].
+The example is the _embedded typst_, the #link("https://github.com/typst-doc-cn/tutorial/tree/main/crates/embedded-typst")[Rust part] and the #link("https://github.com/typst-doc-cn/tutorial/blob/main/typ/embedded-typst/example.typ")[typst part].
 
 == Building a Universe
 
@@ -60,7 +60,7 @@ First, parse the system arguments:
 let args = CompileOnceArgs::parse();
 ```
 
-Then, simply resolve the universe from the system arguments:
+Then, simply resolve the universe from ```rs CompileOnceArgs```:
 
 ```rust
 let verse = args.resolve_system()?;
@@ -75,7 +75,6 @@ pub struct BenchArgs {
     /// Arguments for compiling the document once, compatible with `typst-cli compile`.
     #[clap(flatten)]
     pub compile: CompileOnceArgs,
-
     /// Path to output file for benchmarks
     #[clap(long, default_value = "target/crityp")]
     pub bench_output: String,
@@ -88,13 +87,16 @@ More topics about building:
 
 == Spawning Worlds for Tasks
 
-The universe provides a synchronous view of compiler resources. It is easy to be modified for incremental compilations, at the cost of not being ensured to be `Sync`. To start (compiler) tasks, you need to spawn a `World` instance from the universe. The `World` instance is `Send` and `Sync`, so you can use it in another thread.
+The universe provides a synchronous view of compiler resources. It can be easily modified for incremental compilations, at the cost of not being a `Sync`. To start (compiler) tasks, you need to spawn a `World` instance from the universe.
 
 ```rust
 let world = verse.snapshot();
-// in current thread
 let doc = typst::compile(&world)?;
-// the snapshot is Send + Sync
+```
+
+The `World` instance is `Send` and `Sync`, so you can use it in another thread.
+
+```rs
 std::thread::spawn(move || {
     let doc = typst::compile(&world)?;
 });
@@ -108,11 +110,11 @@ let world = verse.snapshot_with(Some(reflexo_typst::TaskInputs {
 }));
 ```
 
-You can change either the `entry` (the entry file) or `inputs` (the `sys.inputs` in typst documents).
+You can change the `entry` (the entry file) or `inputs` (the `sys.inputs` in typst documents).
 
 == Spawning a World with Another Entry
 
-The `entry` field has `EntryState` type, and you can get and mutate the entry in the current world by:
+The `entry` field has `EntryState` type, and you can get and mutate current world's entry by:
 
 ```rust
 let entry = verse
@@ -124,7 +126,7 @@ let world = verse.snapshot_with(Some(TaskInputs {
 }));
 ```
 
-There is also a fallible version of `select_in_workspace` to process paths from user input:
+There is also a fallible version of `select_in_workspace` to apply paths from user input:
 
 ```rust
 let another_entry = current_dir()?.join("main.typ");
@@ -137,9 +139,9 @@ let world = verse.snapshot_with(Some(TaskInputs {
 }));
 ```
 
-Noted that `another_entry` is required to be an absolute path, so that we can check and select the entry file without ambiguity.
+`another_entry` is required to be an absolute path, so that we can check and select the entry file without ambiguity.
 
-There are also constructors for `EntryState`, reflecting the possible state of the entry (a root, and a main file):
+There are also constructors for `EntryState`, reflecting the possible state of the entry (an optional root, and an optional entry path):
 - `EntryState::new_rooted_by_parent(entry)`. It accepts an absolute path to the entry file, and sets typst root to the parent directory. The typst document cannot access the files outside of the parent directory (the root).
 - `EntryState::new_rooted(root, main)`. It accepts a path to the root directory and a path _relative to_ the root.
 - `EntryState::new_rootless(main)`. It accepts an absolute path to the entry file, and the typst document cannot access any other files (other than package files).
@@ -162,7 +164,7 @@ let world = verse.snapshot_with(Some(TaskInputs {
 or from string pairs:
 
 ```rust
-let pairs = [("my-target", "markdown")].map(|(k, v)| (k.into(), v.into_value()));
+let pairs = [("my-target", "docx")].map(|(k, v)| (k.into(), v.into_value()));
 let inputs = Arc::new(LazyHash::new(pairs.into_iter().collect()));
 ```
 
@@ -174,7 +176,7 @@ You can use the official `typst::compile` to compile a typst document:
 let result = typst::compile::<reflexo_typst::TypstPagedDocument>(&world)?;
 ```
 
-By default, it is targeting `paged`, i.e., the `sys.target() == "paged"` is true. If you would like to compile the document targeting `html`, you could further modify the `world` for compilation:
+By default, it is targeting `paged`, i.e., the `sys.target() == "paged"` is true. To compile the document targeting `html`, you could further modify the `world` for HTML compilation:
 
 ```rs
 let world = world.html_task();
@@ -183,7 +185,7 @@ let result = typst::compile::<reflexo_typst::TypstHtmlDocument>(world.as_ref())?
 
 == Watching (Incremental) Compilation
 
-The `CompileActor` is a wrapper around the universe that provides a convenient way to run the watch compilation loop. The server watches for filesystem changes and compiles them again on demand.
+The `CompileActor` is a wrapper around a universe providing convenient way to run the watch compilation loop. The server watches for filesystem changes and compiles documents again on demand.
 
 ```rs
 let (intr_tx, intr_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -227,7 +229,7 @@ let result = start_project(verse, None, move |c, mut i, next| {
 
 == Compiling with Memory Shadows
 
-You can shadow paths to avoid filesystem accesses, using the `ShadowApi`. For example, shadowing the main (entry) file using `map_shadow_by_id`:
+You can shadow paths with content in memory to avoid filesystem accesses or patch the files temporarily, using the `ShadowApi`. For example, shadowing the main (entry) file using `map_shadow_by_id`:
 
 ```rs
 let source = Source::new(verse.main_id().unwrap(), "Hello World.".into());
@@ -241,7 +243,7 @@ The shadow has two layers:
 
 == Revising the Universe
 
-You can revise the universe, which generates new revisions about view of resources:
+You can revise the universe, which generates new revisions:
 
 ```rs
 verse.increment_revision(|verse| {
@@ -292,20 +294,29 @@ verse.evict(10);
 Also, you have to reset the universe to react filesystem changes if necessary:
 
 ```rs
+verse.increment_revision(|verse| {
+  verse.vfs().invalidate_path(changed_path);
+  verse.vfs().invalidate_file_id(changed_file_id);
+});
+```
+
+Alternatively, you can use `CompilerUniverse::reset` to reset all the caches and resources:
+
+```rs
 verse.reset();
 ```
 
-Noted that `CompilerUniverse::reset` is a heavy operation, and it will reset all the caches and resources. It is not recommended to call it frequently. Insteadly, fined-grained watch compilation like `CompileActor` is suggested.
+`CompilerUniverse::reset` is a heavy operation, so it is not recommended to call it frequently. Insteadly, fined-grained control such as using `invalidate_{path,file_id}` or `CompileActor` for watch compilation is suggested.
 
 == Rendering
 
 After compilation, you can do rendering with the artifacts, the `reflexo_typst::TypstPagedDocument` or `reflexo_typst::TypstHtmlDocument`.
 
-It is pretty easy to get such artifacts if you can access the universe directly, using the `typst::compile`. To customized the way of rendering in watch compilation, passing a compilation handler to `reflexo_typst::CompileActor::new_with(opts)`.
+It is pretty easy to get such artifacts for rendering if you can access the universe directly, using the `typst::compile`. To customized the way of rendering in watch compilation, passing a compilation handler to `reflexo_typst::CompileActor::new_with(opts)`.
 
 == Summary
 
-Gather all the information above, a minimal complete example of using the compiler library is like this:
+Gather all of above code together, a minimal complete example of using the compiler library is like this:
 
 ```rust
 let verse = CompileOnceArgs::parse().resolve_system()?;
