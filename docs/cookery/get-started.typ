@@ -66,7 +66,7 @@ To get it in browser, you can load a all-in-one bundle script from CDN and use i
 </script>
 ```
 
-There is also a #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/preview.html")[simple single-file typst previewer] that compiles and renders a typst document on editing.
+There is also a #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/preview.html")[simple and heavily-documented single-file typst previewer] that compiles and renders a typst document on editing.
 
 *Warning: the all-in-one-lite.bundle.js is not practical to use since it bundles all of the resource regardless you need or not, including the wasm modules, fonts, and scripts.*
 
