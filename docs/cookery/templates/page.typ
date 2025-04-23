@@ -11,7 +11,8 @@
   templates,
 )
 #import templates: *
-#import "@preview/zebraw:0.4.5": zebraw-init, zebraw-html
+#import "@preview/numbly:0.1.0": numbly
+#import "@preview/zebraw:0.5.2": zebraw-init, zebraw
 
 // Metadata
 #let page-width = get-page-width()
@@ -20,8 +21,10 @@
 #let is-web-target = is-web-target()
 #let sys-is-html-target = ("target" in dictionary(std))
 
+#let part-counter = counter("shiroa-part-counter")
 /// Creates an embedded block typst frame.
 #let div-frame(content, attrs: (:)) = html.elem("div", html.frame(content), attrs: attrs)
+#let span-frame(content, attrs: (:)) = html.elem("span", html.frame(content), attrs: attrs)
 
 // Theme (Colors)
 #let (
@@ -37,10 +40,9 @@
 // Fonts
 #let main-font = (
   "Charter",
-  "Source Han Serif SC",
-  // "Source Han Serif TC",
-  // shiroa's embedded font
   "Libertinus Serif",
+  "Source Han Serif SC",
+  // shiroa's embedded font
 )
 #let code-font = (
   "BlexMono Nerd Font Mono",
@@ -60,7 +62,7 @@
 /// The project function defines how your document looks.
 /// It takes your content and some metadata and formats it.
 /// Go ahead and customize it to your liking!
-#let project(title: "Typst Book", authors: (), kind: "page", body) = {
+#let project(title: "reflexo docs", authors: (), kind: "page", body) = {
   // set basic document metadata
   set document(
     author: authors,
@@ -128,14 +130,29 @@
       it,
     )
   }
+  set heading(
+    numbering: (..numbers) => context {
+      if part-counter.get().at(0) > 0 {
+        numbering("1.", ..part-counter.get(), ..numbers)
+      } else {
+        h(-0.3em)
+      }
+    },
+  ) if is-pdf-target
+  // set heading(numbering: (..numbers) => context { }) if not is-pdf-target
 
   // link setting
   show link: set text(fill: dash-color)
 
   // math setting
   show math.equation: set text(weight: 400)
-  show math.equation: it => context if shiroa-sys-target() == "html" {
-    div-frame.with(attrs: ("style": "display: flex; justify-content: center; overflow-x: auto;"), it)
+  show math.equation.where(block: true): it => context if shiroa-sys-target() == "html" {
+    div-frame(attrs: ("style": "display: flex; justify-content: center; overflow-x: auto;"), it)
+  } else {
+    it
+  }
+  show math.equation.where(block: false): it => context if shiroa-sys-target() == "html" {
+    span-frame(attrs: ("style": "overflow-x: auto;"), it)
   } else {
     it
   }
@@ -151,9 +168,10 @@
       comment-color: rgb("#394b70"),
       lang-color: rgb("#3d59a1"),
       lang: false,
+      numbering: false,
     )
   } else {
-    zebraw-init.with(lang: false)
+    zebraw-init.with(lang: false, numbering: false)
   }
 
   // code block setting
@@ -175,11 +193,64 @@
   } else {
     set text(fill: code-extra-colors.fg) if code-extra-colors.fg != none
     set par(justify: false)
-    zebraw-html(
+    zebraw(
       block-width: 100%,
-      line-width: 100%,
+      // line-width: 100%,
       wrap: false,
       it,
+    )
+  }
+
+  context if shiroa-sys-target() == "html" {
+    // <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,700;0,900;1,300;1,700&amp;display=swap">
+    html.elem(
+      "link",
+      attrs: (
+        href: "https://fonts.googleapis.com",
+        rel: "preconnect",
+      ),
+    )
+    html.elem(
+      "link",
+      attrs: (
+        href: "https://fonts.gstatic.com",
+        rel: "preconnect",
+        crossorigin: "",
+      ),
+    )
+    html.elem(
+      "link",
+      attrs: (
+        href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
+        rel: "stylesheet",
+      ),
+    )
+    html.elem(
+      "style",
+      // https://www.aya-prover.org/blog/jit-compile.html
+      ```css
+        #content {
+          --vp-font-family-base: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+          --vp-font-family-mono: ui-monospace, "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
+        }
+        #content {
+          font-family: var(--vp-font-family-base);
+        }
+        #content pre, code, kbd, samp {
+          font-family: var(--vp-font-family-mono);
+        }
+        .pseudo-image svg {
+          width: 100%
+        }
+        p {
+          text-align: justify;
+        }
+        @media screen and (max-width: 650px){
+          p {
+            text-align: left;
+          }
+        }
+      ```.text,
     )
   }
 

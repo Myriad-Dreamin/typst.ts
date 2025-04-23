@@ -30,27 +30,29 @@
   summary: [
     #prefix-chapter("introduction.typ")[Introduction]
     = Guidance
-    - #chapter("get-started.typ", section: "1")[Get started]
-      - #chapter("guide/all-in-one.typ", section: "1.1")[All-in-one (Simplified) Library for Browsers]
-      - #chapter("guide/all-in-one-node.typ", section: "1.2")[All-in-one Library for Node.js]
-    - #chapter("direction/main.typ", section: "2")[Technical Directions]
-      - #chapter("direction/responsive.typ", section: "2.1")[Static, Responsive rendering]
-      - #chapter("direction/incremental.typ", section: "2.2")[Streaming, Incremental rendering]
-      - #chapter("direction/serverless.typ", section: "2.3")[Serverless rendering]
-    - #chapter("guide/compilers.typ", section: "3")[Compilers]
-      - #chapter("guide/compiler/ts-cli.typ", section: "3.1")[Command Line Interface]
-      - #chapter("guide/compiler/service.typ", section: "3.2")[Compiler in Rust]
-      - #chapter("guide/compiler/node.typ", section: "3.3")[Compiler in Node.js]
-      - #chapter("guide/compiler/bindings.typ", section: "3.3")[Compiler in Wasm (Web)]
-    - #chapter("guide/renderers.typ", section: "4")[Renderers]
-      - #chapter("guide/renderer/ts-lib.typ", section: "4.1")[JavaScript/TypeScript Library]
-      - #chapter("guide/renderer/node.typ", section: "4.2")[Node.js Library]
-      - #chapter("guide/renderer/react.typ", section: "4.3")[React Library]
-      - #chapter("guide/renderer/solid.typ", section: "4.4")[Solid Library]
-      - #chapter("guide/renderer/angular.typ", section: "4.5")[Angular Library]
-      - #chapter("guide/renderer/vue3.typ", section: "4.6")[Vue3 Library]
-      - #chapter("guide/renderer/hexo.typ", section: "4.7")[Hexo Plugin]
-    - #chapter("guide/trouble-shooting.typ", section: "5")[Trouble Shooting]
+    - #chapter("get-started.typ")[Get started]
+    - #chapter("start-it.typ")[Bundles]
+      - #chapter("guide/all-in-one.typ")[All-in-One Library for Browsers]
+      - #chapter("guide/all-in-one-node.typ")[All-in-One Library for Node.js]
+    - #chapter("guide/compilers.typ")[Compilers]
+      - #chapter("guide/compiler/ts-cli.typ")[Command Line Interface]
+      - #chapter("guide/compiler/service.typ")[Compiler in Rust]
+      - #chapter("guide/compiler/node.typ")[Compiler in Node.js]
+      - #chapter("guide/compiler/bindings.typ")[Compiler in Wasm (Web)]
+    - #chapter("guide/renderers.typ")[Renderers]
+      - #chapter("guide/renderer/ts-lib.typ")[JavaScript/TypeScript Library]
+      - #chapter("guide/renderer/rust.typ")[Rust Library]
+      - #chapter("guide/renderer/node.typ")[Node.js Library]
+      - #chapter("guide/renderer/react.typ")[React Library]
+      - #chapter("guide/renderer/solid.typ")[Solid Library]
+      - #chapter("guide/renderer/angular.typ")[Angular Library]
+      - #chapter("guide/renderer/vue3.typ")[Vue3 Library]
+      - #chapter("guide/renderer/hexo.typ")[Hexo Plugin]
+    - #chapter("direction/main.typ")[Samples]
+      - #chapter("direction/responsive.typ")[Static, Responsive rendering]
+      - #chapter("direction/incremental.typ")[Streaming, Incremental rendering]
+      - #chapter("direction/serverless.typ")[Serverless rendering]
+    - #chapter("guide/trouble-shooting.typ")[Trouble Shooting]
     // = Advanced development
     // - #chapter("guide/env-setup.typ", section: "5")[Environment Setup]
     //   - #chapter("guide/env-setup/renderer.typ", section: "5.1")[For Renderer]
@@ -110,5 +112,6 @@
 #get-book-meta()
 
 // re-export page template
-#import "/docs/cookery/templates/page.typ": project
+#import "/docs/cookery/templates/page.typ": project, heading-reference
 #let book-page = project
+#let heading-reference = heading-reference

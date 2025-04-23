@@ -25,11 +25,11 @@ For more usage of #term.vector-format files, please refer to #link("https://myri
 
 Install latest CLI of typst.ts via cargo:
 
-```shell
+```bash
 cargo install --locked --git https://github.com/Myriad-Dreamin/typst.ts typst-ts-cli
 ```
 
-Or Download the latest release from [GitHub Releases](https://github.com/Myriad-Dreamin/typst.ts/releases).
+Or Download the latest release from #link("https://github.com/Myriad-Dreamin/typst.ts/releases")[GitHub Releases].
 
 == The compile command
 
@@ -153,25 +153,25 @@ typst-ts-cli compile \
   --dynamic-layout
 ```
 
-== Package commands
+// == Package commands
 
-=== Example: list packages in `@preview` namespace
+// === Example: list packages in `@preview` namespace
 
-```bash
-typst-ts-cli package list
-```
+// ```bash
+// typst-ts-cli package list
+// ```
 
-=== Example: link a package to `@preview` namespace
+// === Example: link a package to `@preview` namespace
 
-```bash
-typst-ts-cli package link --manifest path/to/typst.toml
-```
+// ```bash
+// typst-ts-cli package link --manifest path/to/typst.toml
+// ```
 
-=== Example: unlink a package from `@preview` namespace
+// === Example: unlink a package from `@preview` namespace
 
-```bash
-typst-ts-cli package unlink --manifest path/to/typst.toml
-```
+// ```bash
+// typst-ts-cli package unlink --manifest path/to/typst.toml
+// ```
 
 == CLI Options
 
@@ -195,23 +195,4 @@ Options:
   -V, --version  Print Version
       --VV <VV>  Print Version in format [default: none] [possible values: none, short, features, full, json, json-plain]
   -h, --help     Print help
-```
-
-Package Help:
-
-```bash
-$ typst-ts-cli package --help
-Commands about package for typst.
-
-Usage: typst-ts-cli package <COMMAND>
-
-Commands:
-  doc     Generate documentation for a package
-  help    Print this message or the help of the given subcommand(s)
-  link    Link a package to local data path
-  list    List all discovered packages in data and cache paths
-  unlink  Unlink a package from local data path
-
-Options:
-  -h, --help  Print help
 ```
