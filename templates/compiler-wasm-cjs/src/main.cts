@@ -2,11 +2,8 @@
 // import * as _1 from '@myriaddreamin/typst-ts-renderer';
 // import * as _2 from '@myriaddreamin/typst-ts-web-compiler';
 
-import {
-  createTypstCompiler,
-  createTypstRenderer,
-} from '@myriaddreamin/typst.ts/dist/cjs/index.cjs';
-import { cachedFontInitOptions } from './cached-font-middleware';
+import { createTypstCompiler, createTypstRenderer } from '@myriaddreamin/typst.ts';
+import { cachedFontInitOptions } from './cached-font-middleware.cjs';
 
 async function main() {
   const compiler = createTypstCompiler();

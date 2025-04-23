@@ -1,6 +1,5 @@
-import { $typst } from '@myriaddreamin/typst.ts/dist/cjs/contrib/snippet.cjs';
-
-import { cachedFontInitOptions } from './cached-font-middleware';
+import { $typst } from '@myriaddreamin/typst.ts/contrib/snippet';
+import { cachedFontInitOptions } from './cached-font-middleware.cjs';
 
 async function main() {
   $typst.setCompilerInitOptions(await cachedFontInitOptions());

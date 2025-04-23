@@ -1,15 +1,8 @@
-import {
-  createTypstCompiler,
-  createTypstRenderer,
-  FetchPackageRegistry,
-} from '@myriaddreamin/typst.ts/dist/cjs/index.cjs';
-import { MemoryAccessModel } from '@myriaddreamin/typst.ts/dist/cjs/fs/memory.cjs';
-import { NodeFetchPackageRegistry } from '@myriaddreamin/typst.ts/dist/cjs/fs/package.node.cjs';
-import {
-  withAccessModel,
-  withPackageRegistry,
-} from '@myriaddreamin/typst.ts/dist/cjs/options.init.cjs';
-import { cachedFontInitOptions } from './cached-font-middleware';
+import { createTypstCompiler, createTypstRenderer } from '@myriaddreamin/typst.ts';
+import { MemoryAccessModel } from '@myriaddreamin/typst.ts/fs/memory';
+import { NodeFetchPackageRegistry } from '@myriaddreamin/typst.ts/fs/package.node';
+import { withAccessModel, withPackageRegistry } from '@myriaddreamin/typst.ts/options.init';
+import { cachedFontInitOptions } from './cached-font-middleware.mjs';
 import { writeFileSync } from 'fs';
 import request, { HttpVerb, Options } from 'sync-request';
 // import request, { HttpVerb, Options } from 'sync-request-curl';

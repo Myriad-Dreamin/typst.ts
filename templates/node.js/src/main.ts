@@ -1,7 +1,7 @@
 // test import
 import * as _1 from '@myriaddreamin/typst-ts-renderer';
 
-import { createTypstCompiler, createTypstRenderer } from '@myriaddreamin/typst.ts';
+import { createTypstRenderer } from '@myriaddreamin/typst.ts';
 import { existsSync, readFileSync } from 'fs';
 import * as path from 'path';
 

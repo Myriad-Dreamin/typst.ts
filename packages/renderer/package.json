@@ -10,9 +10,11 @@
   ],
   "type": "module",
   "module": "./pkg/wasm-pack-shim.mjs",
+  "require": "./pkg/wasm-pack-shim.mjs",
   "types": "./pkg/typst_ts_renderer.d.ts",
   "exports": {
     ".": {
+      "node": "./pkg/wasm-pack-shim.mjs",
       "module": "./pkg/wasm-pack-shim.mjs",
       "types": "./pkg/typst_ts_renderer.d.ts"
     },

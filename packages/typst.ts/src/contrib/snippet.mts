@@ -590,10 +590,12 @@ export class TypstSnippet {
   static async $buildC(this: TypstSnippet) {
     // lazy import compile module
     const { createGlobalCompiler } = (await import(
-      '@myriaddreamin/typst.ts/dist/esm/contrib/global-compiler.mjs'
+      // @ts-ignore
+      '@myriaddreamin/typst.ts/contrib/global-compiler'
     )) as any as typeof import('./global-compiler.mjs');
     const { createTypstCompiler } = (await import(
-      '@myriaddreamin/typst.ts/dist/esm/compiler.mjs'
+      // @ts-ignore
+      '@myriaddreamin/typst.ts/compiler'
     )) as any as typeof import('../compiler.mjs');
 
     await this.prepareUse();
@@ -604,10 +606,12 @@ export class TypstSnippet {
   static async $buildR(this: TypstSnippet) {
     // lazy import renderer module
     const { createGlobalRenderer } = (await import(
-      '@myriaddreamin/typst.ts/dist/esm/contrib/global-renderer.mjs'
+      // @ts-ignore
+      '@myriaddreamin/typst.ts/contrib/global-renderer'
     )) as any as typeof import('./global-renderer.mjs');
     const { createTypstRenderer } = (await import(
-      '@myriaddreamin/typst.ts/dist/esm/renderer.mjs'
+      // @ts-ignore
+      '@myriaddreamin/typst.ts/renderer'
     )) as any as typeof import('../renderer.mjs');
 
     await this.prepareUse();

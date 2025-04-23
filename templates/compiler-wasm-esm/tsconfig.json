@@ -10,14 +10,15 @@
     "strictNullChecks": true,
     "stripInternal": true,
     "rootDir": "src",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "outDir": "dist/esm",
     "declaration": true,
     "declarationMap": true,
     "inlineSources": true,
     "inlineSourceMap": true,
+    "skipLibCheck": true,
     "lib": ["ES5", "ES6", "ES7", "ES2018"]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.mts", "src/cached-font-middleware.mts", "src/main.mts", "src/main.snippet.mts", "src/main.package.mts"]
 }

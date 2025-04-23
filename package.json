@@ -36,6 +36,7 @@
     "build:pkg": "turbo build --filter=./packages/*",
     "build:renderer": "turbo build --filter=!./packages/{compiler} --filter=./packages/{renderer,typst.ts}",
     "build:proj": "turbo build --filter=./projects/*",
+    "build:test": "turbo test test:e2e --filter=./packages/*",
     "watch:renderer": "cargo run --bin typst-ts-dev-server -- watch renderer",
     "start:react": "yarn workspace @myriaddreamin/typst.react dev",
     "start:angular": "yarn workspace typst.angular start",

@@ -625,8 +625,7 @@ export class TypstRendererDriver {
   constructor() {}
 
   async init(options?: Partial<InitOptions>): Promise<void> {
-    this.rendererJs = await (options?.getWrapper?.() ||
-      import('@myriaddreamin/typst-ts-renderer'));
+    this.rendererJs = await (options?.getWrapper?.() || import('@myriaddreamin/typst-ts-renderer'));
     const TypstRendererBuilder = this.rendererJs.TypstRendererBuilder;
     this.renderer = await buildComponent(
       options,

@@ -3,7 +3,7 @@
 ```shell
 yarn install
 # use snippet below to run
-npx tsc && node ./dist/esm/main.snippet.js
+npx tsc && node ./dist/cjs/main.snippet.cjs
 # full example
-npx tsc && node ./dist/esm/main.js
+npx tsc && node ./dist/cjs/main.cjs
 ```

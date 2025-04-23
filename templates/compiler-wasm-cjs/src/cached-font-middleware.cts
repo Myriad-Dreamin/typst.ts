@@ -1,7 +1,7 @@
-import { preloadFontAssets } from '@myriaddreamin/typst.ts/dist/cjs/options.init.cjs';
 import * as fs from 'fs';
 import * as path from 'path';
 import { HttpsProxyAgent } from 'https-proxy-agent';
+import { preloadFontAssets } from '@myriaddreamin/typst.ts/options.init';
 
 export async function cachedFontInitOptions() {
   const { existsSync, mkdirSync, readFileSync, writeFileSync } = fs;
@@ -18,7 +18,7 @@ export async function cachedFontInitOptions() {
     beforeBuild: [
       preloadFontAssets({
         assets: ['text', 'cjk', 'emoji'],
-        fetcher: async (url: URL | RequestInfo, init?: RequestInit | undefined) => {
+        fetcher: async (url: URL, init?: RequestInit | undefined) => {
           const cachePath = path.join(cacheDir, url.toString().replace(/[^a-zA-Z0-9]/g, '_'));
           if (existsSync(cachePath)) {
             const font_res = {
@@ -31,9 +31,8 @@ export async function cachedFontInitOptions() {
           }
 
           console.log('loading remote font:', url);
-          const proxyOption = process.env.HTTPS_PROXY
-            ? { agent: new HttpsProxyAgent(process.env.HTTPS_PROXY) }
-            : {};
+          const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy;
+          const proxyOption = proxyUrl ? { agent: new HttpsProxyAgent(proxyUrl) } : {};
 
           const font_res = await fetcher(url as any, {
             ...proxyOption,

@@ -1,11 +1,9 @@
 // test import
 import * as _1 from '@myriaddreamin/typst-ts-renderer';
 
-import { createTypstCompiler, createTypstRenderer } from '@myriaddreamin/typst.ts';
+import { createTypstRenderer } from '@myriaddreamin/typst.ts';
 import { existsSync, readFileSync } from 'fs';
-import * as process from 'process';
 import * as path from 'path';
-import { fileURLToPath } from 'url';
 
 /// Note: this is only a example, please see
 ///   https://myriad-dreamin.github.io/typst.ts/cookery/guide/precompilers.html
