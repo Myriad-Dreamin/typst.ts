@@ -1,5 +1,5 @@
 {
-  "name": "@myriaddreamin/typst-template-ts-node-next",
+  "name": "@myriaddreamin/typst-template-ts-node",
   "private": true,
   "version": "1.0.0",
   "description": "Template for Typescript+ts-node using @myriaddreamin/typst.ts",
@@ -14,7 +14,20 @@
   "devDependencies": {
     "@types/web": "^0.0.188",
     "@types/node": "^20.6.3",
-    "typescript": "=5.0.4",
+    "typescript": "=5.8.3",
     "tslib": "2.5.2"
+  },
+  "peerDependencies": {
+    "tsx": "^4.19.3"
+  },
+  "peerDependenciesMeta": {
+    "tsx": {
+      "optional": true
+    }
+  },
+  "scripts": {
+    "build": "npx tsc",
+    "test": "tsx ./src/main.ts",
+    "test:ts-node": "node --experimental-specifier-resolution=node --loader ts-node/esm ./src/main.ts"
   }
 }

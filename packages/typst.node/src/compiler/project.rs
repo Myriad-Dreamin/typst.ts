@@ -21,7 +21,7 @@ use tinymist_project::{
     ProjectCompiler as ProjectCompilerBase,
 };
 
-use super::{abs_user_path, create_inputs, create_universe, NodeCompileArgs};
+use super::{abs_user_path, create_inputs, create_universe, CompileArgs};
 use crate::{error::*, NodeTypstDocument};
 use crate::{CompileDocArgs, QueryDocArgs};
 
@@ -52,7 +52,7 @@ impl ProjectWatcher {
     /// });
     /// ```
     #[napi]
-    pub fn create(args: Option<NodeCompileArgs>) -> Result<ProjectWatcher, NodeError> {
+    pub fn create(args: Option<CompileArgs>) -> Result<ProjectWatcher, NodeError> {
         let verse = create_universe(args).map_err(map_node_error)?;
         let entry = verse.entry_state();
         let (tx, rx) = mpsc::unbounded_channel();

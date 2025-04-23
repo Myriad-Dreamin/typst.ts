@@ -1,5 +1,6 @@
 // test import
-import * as _1 from '@myriaddreamin/typst-ts-renderer';
+// todo: the types of typst-ts-renderer is not correct
+// import * as _1 from '@myriaddreamin/typst-ts-renderer';
 
 import { createTypstRenderer } from '@myriaddreamin/typst.ts';
 import { existsSync, readFileSync } from 'fs';

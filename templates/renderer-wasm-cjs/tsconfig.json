@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "types": ["node"],
+    "types": ["node", "web"],
     "baseUrl": ".",
     "target": "ES2020",
     "allowJs": true,

@@ -4,10 +4,6 @@ import * as _1 from '@myriaddreamin/typst-ts-renderer';
 import { createTypstRenderer } from '@myriaddreamin/typst.ts';
 import { existsSync, readFileSync } from 'fs';
 import * as path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /// Note: this is only a example, please see
 ///   https://myriad-dreamin.github.io/typst.ts/cookery/guide/precompilers.html
@@ -20,7 +16,7 @@ function retrieveArtifactData(): Uint8Array {
   );
 
   function findGitRoot() {
-    let p = __dirname,
+    let p = import.meta.dirname,
       lastP = '';
     while (p !== lastP) {
       if (existsSync(path.resolve(p, '.git/HEAD'))) {

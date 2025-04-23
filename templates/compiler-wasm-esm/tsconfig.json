@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "types": ["node"],
+    "types": ["node", "web"],
     "baseUrl": ".",
     "target": "ES2020",
     "allowJs": true,
@@ -17,7 +17,6 @@
     "declarationMap": true,
     "inlineSources": true,
     "inlineSourceMap": true,
-    "skipLibCheck": true,
     "lib": ["ES5", "ES6", "ES7", "ES2018"]
   },
   "include": ["src/**/*.mts", "src/cached-font-middleware.mts", "src/main.mts", "src/main.snippet.mts", "src/main.package.mts"]
