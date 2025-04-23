@@ -43,7 +43,8 @@
     },
     "prepublish": {
       "dependsOn": [
-        "prepublish:unit"
+        "prepublish:unit",
+        "prepublish:integrated"
       ]
     },
     "publish:dry": {
@@ -77,6 +78,9 @@
     // A package's `lint` script has no dependencies and
     // can be run whenever. It also has no filesystem outputs.
     "lint": {},
+    // A package's `test:e2e` script has no dependencies and
+    // can be run whenever. It also has no filesystem outputs.
+    "test:e2e": {},
     "dev": {
       "cache": false,
       "persistent": true
