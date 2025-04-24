@@ -5,6 +5,10 @@ import {
   type BeforeBuildFn,
   type InitOptions,
   preloadFontAssets,
+  disableDefaultFontAssets,
+  preloadRemoteFonts,
+  LoadRemoteAssetsOptions,
+  LoadRemoteFontsOptions,
 } from '../options.init.mjs';
 import type { TypstRenderer, RenderSession } from '../renderer.mjs';
 import type { RenderToCanvasOptions, RenderSvgOptions } from '../options.render.mjs';
@@ -190,6 +194,54 @@ export class TypstSnippet {
       throw new Error('already prepare uses for instances');
     }
     this.providers.push(...providers);
+  }
+
+  /**
+   * todo: add docs
+   */
+  static preloadFontFromUrl(fontUrl: string): TypstSnippetProvider {
+    return TypstSnippet.preloadFonts([fontUrl]);
+  }
+
+  /**
+   * todo: add docs
+   */
+  static preloadFontData(fontData: Uint8Array): TypstSnippetProvider {
+    return TypstSnippet.preloadFonts([fontData]);
+  }
+
+  /**
+   * todo: add docs
+   */
+  static preloadFonts(userFonts: (string | Uint8Array)[]): TypstSnippetProvider {
+    return {
+      key: 'access-model',
+      forRoles: ['compiler'],
+      provides: [preloadRemoteFonts(userFonts)],
+    };
+  }
+
+  /**
+   * don't load any default font assets.
+   * todo: add docs
+   */
+  static disableDefaultFontAssets(): TypstSnippetProvider {
+    return {
+      key: 'access-model',
+      forRoles: ['compiler'],
+      provides: [disableDefaultFontAssets()],
+    };
+  }
+
+  /**
+   * todo: add docs
+   */
+  static preloadFontAssets(options?: LoadRemoteAssetsOptions): TypstSnippetProvider {
+    return {
+      key: 'access-model',
+      forRoles: ['compiler'],
+      provides: [preloadFontAssets(options)],
+    };
   }
 
   /**

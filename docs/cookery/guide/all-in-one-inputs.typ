@@ -1,6 +1,6 @@
 === Compiling APIs
 
-You can get output with *a simple string*:
+You can compile a *single typst code string* to different formats:
 
 ```ts
 const mainContent = 'Hello, typst!';
@@ -14,13 +14,13 @@ await $typst.pdf({ mainContent });
 await $typst.canvas(div, { mainContent });
 ```
 
-You can add some extra *source input file* before compiling:
+You can add some extra *source input files* before compiling:
 
 ```ts
 await $typst.addSource('/template.typ', templateContent);
 ```
 
-Adding *binary input files* are also supported:
+It also supports *binary input files*:
 
 ```ts
 // add an image file
