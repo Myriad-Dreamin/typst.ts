@@ -66,20 +66,23 @@ export interface InitOptions {
 
 /** @internal */
 const _textFonts: string[] = [
-  'LinLibertine_R.ttf',
-  'LinLibertine_RB.ttf',
-  'LinLibertine_RBI.ttf',
-  'LinLibertine_RI.ttf',
+  'DejaVuSansMono-Bold.ttf',
+  'DejaVuSansMono-BoldOblique.ttf',
+  'DejaVuSansMono-Oblique.ttf',
+  'DejaVuSansMono.ttf',
+  'LibertinusSerif-Bold.otf',
+  'LibertinusSerif-BoldItalic.otf',
+  'LibertinusSerif-Italic.otf',
+  'LibertinusSerif-Regular.otf',
+  'LibertinusSerif-Semibold.otf',
+  'LibertinusSerif-SemiboldItalic.otf',
+  'NewCM10-Bold.otf',
+  'NewCM10-BoldItalic.otf',
+  'NewCM10-Italic.otf',
+  'NewCM10-Regular.otf',
+  'NewCMMath-Bold.otf',
   'NewCMMath-Book.otf',
   'NewCMMath-Regular.otf',
-  'NewCM10-Regular.otf',
-  'NewCM10-Bold.otf',
-  'NewCM10-Italic.otf',
-  'NewCM10-BoldItalic.otf',
-  'DejaVuSansMono.ttf',
-  'DejaVuSansMono-Bold.ttf',
-  'DejaVuSansMono-Oblique.ttf',
-  'DejaVuSansMono-BoldOblique.ttf',
 ];
 /** @internal */
 const _cjkFonts: string[] = [
@@ -112,9 +115,9 @@ export interface LoadRemoteAssetsOptions {
    * List of assets:
    * See {@link _textFonts}, {@link _cjkFonts}, and {@link _emojiFonts}
    *
-   * @default 'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts/''
+   * @default 'jsdelivr-url of typst-assets and typst-dev-assets'
    */
-  assetUrlPrefix?: string;
+  assetUrlPrefix?: string | Record<string, string>;
 
   /**
    * custom fetcher
@@ -140,6 +143,51 @@ export function preloadFontAssets(options?: LoadRemoteAssetsOptions): BeforeBuil
   return preloadRemoteFonts([], options);
 }
 
+export function _resolveAssets(options?: LoadRemoteFontsOptions) {
+  const fonts = [];
+  if (
+    options &&
+    options?.assets !== false &&
+    options?.assets?.length &&
+    options?.assets?.length > 0
+  ) {
+    let defaultPrefix: Record<string, string> = {
+      text: 'https://cdn.jsdelivr.net/gh/typst/typst-assets@v0.13.1/files/fonts/',
+      _: 'https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/',
+    };
+    let assetUrlPrefix = options.assetUrlPrefix ?? defaultPrefix;
+    if (typeof assetUrlPrefix === 'string') {
+      assetUrlPrefix = { _: assetUrlPrefix };
+    } else {
+      assetUrlPrefix = { ...defaultPrefix, ...assetUrlPrefix };
+    }
+    for (const key of Object.keys(assetUrlPrefix)) {
+      const u = assetUrlPrefix[key];
+      if (u[u.length - 1] !== '/') {
+        assetUrlPrefix[key] = u + '/';
+      }
+    }
+
+    const prefix = (asset: string, f: string[]) =>
+      f.map(font => (assetUrlPrefix[asset] || assetUrlPrefix['_']) + font);
+    for (const asset of options.assets) {
+      switch (asset) {
+        case 'text':
+          fonts.push(...prefix(asset, _textFonts));
+          break;
+        case 'cjk':
+          fonts.push(...prefix(asset, _cjkFonts));
+          break;
+        case 'emoji':
+          fonts.push(...prefix(asset, _emojiFonts));
+          break;
+      }
+    }
+  }
+
+  return fonts;
+}
+
 /**
  * preload remote fonts
  *
@@ -162,40 +210,12 @@ export function preloadRemoteFonts(
   userFonts: (string | Uint8Array)[],
   options?: LoadRemoteFontsOptions,
 ): BeforeBuildFn {
-  const fonts = [...userFonts];
-  if (
-    options &&
-    options?.assets !== false &&
-    options?.assets?.length &&
-    options?.assets?.length > 0
-  ) {
-    let assetUrlPrefix =
-      options.assetUrlPrefix ??
-      'https://raw.githubusercontent.com/Myriad-Dreamin/typst/assets-fonts';
-    if (assetUrlPrefix[assetUrlPrefix.length - 1] !== '/') {
-      assetUrlPrefix += '/';
-    }
-    const prefix = (f: string[]) => f.map(font => assetUrlPrefix + font);
-    for (const asset of options.assets) {
-      switch (asset) {
-        case 'text':
-          fonts.push(...prefix(_textFonts));
-          break;
-        case 'cjk':
-          fonts.push(...prefix(_cjkFonts));
-          break;
-        case 'emoji':
-          fonts.push(...prefix(_emojiFonts));
-          break;
-      }
-    }
-  }
-
+  const assetFonts = _resolveAssets(options);
   const loader = async (_: BeforeBuildMark, { ref, builder }: InitContext) => {
     if (options?.fetcher) {
       ref.setFetcher(options.fetcher);
     }
-    await ref.loadFonts(builder, fonts);
+    await ref.loadFonts(builder, [...userFonts, ...assetFonts]);
   };
   loader._preloadRemoteFontOptions = options;
   return loader;
