@@ -90,8 +90,6 @@ pub enum Subcommands {
 pub enum FontSubCommands {
     /// List all discovered fonts in system and custom font paths
     List(ListFontsArgs),
-    /// Measure fonts and generate a profile file for compiler
-    Measure(MeasureFontsArgs),
 }
 
 #[derive(Debug, Subcommand)]
