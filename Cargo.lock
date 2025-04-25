@@ -4170,7 +4170,7 @@ dependencies = [
 [[package]]
 name = "tinymist-derive"
 version = "0.13.12-rc4"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=81cedd9819d72b77de46fac7a32d936e3d9c868d#81cedd9819d72b77de46fac7a32d936e3d9c868d"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=f503298f483f128a48ce1b9436c0d6bafe00f8de#f503298f483f128a48ce1b9436c0d6bafe00f8de"
 dependencies = [
  "quote",
  "syn 2.0.100",
@@ -4179,7 +4179,7 @@ dependencies = [
 [[package]]
 name = "tinymist-l10n"
 version = "0.13.12-rc4"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=81cedd9819d72b77de46fac7a32d936e3d9c868d#81cedd9819d72b77de46fac7a32d936e3d9c868d"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=f503298f483f128a48ce1b9436c0d6bafe00f8de#f503298f483f128a48ce1b9436c0d6bafe00f8de"
 dependencies = [
  "anyhow",
  "clap",
@@ -4193,7 +4193,7 @@ dependencies = [
 [[package]]
 name = "tinymist-package"
 version = "0.13.12-rc4"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=81cedd9819d72b77de46fac7a32d936e3d9c868d#81cedd9819d72b77de46fac7a32d936e3d9c868d"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=f503298f483f128a48ce1b9436c0d6bafe00f8de#f503298f483f128a48ce1b9436c0d6bafe00f8de"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4219,7 +4219,7 @@ dependencies = [
 [[package]]
 name = "tinymist-project"
 version = "0.13.12-rc4"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=81cedd9819d72b77de46fac7a32d936e3d9c868d#81cedd9819d72b77de46fac7a32d936e3d9c868d"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=f503298f483f128a48ce1b9436c0d6bafe00f8de#f503298f483f128a48ce1b9436c0d6bafe00f8de"
 dependencies = [
  "anyhow",
  "clap",
@@ -4247,7 +4247,7 @@ dependencies = [
 [[package]]
 name = "tinymist-std"
 version = "0.13.12-rc4"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=81cedd9819d72b77de46fac7a32d936e3d9c868d#81cedd9819d72b77de46fac7a32d936e3d9c868d"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=f503298f483f128a48ce1b9436c0d6bafe00f8de#f503298f483f128a48ce1b9436c0d6bafe00f8de"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4284,7 +4284,7 @@ dependencies = [
 [[package]]
 name = "tinymist-task"
 version = "0.13.12-rc4"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=81cedd9819d72b77de46fac7a32d936e3d9c868d#81cedd9819d72b77de46fac7a32d936e3d9c868d"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=f503298f483f128a48ce1b9436c0d6bafe00f8de#f503298f483f128a48ce1b9436c0d6bafe00f8de"
 dependencies = [
  "anyhow",
  "clap",
@@ -4318,7 +4318,7 @@ dependencies = [
 [[package]]
 name = "tinymist-vfs"
 version = "0.13.12-rc4"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=81cedd9819d72b77de46fac7a32d936e3d9c868d#81cedd9819d72b77de46fac7a32d936e3d9c868d"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=f503298f483f128a48ce1b9436c0d6bafe00f8de#f503298f483f128a48ce1b9436c0d6bafe00f8de"
 dependencies = [
  "comemo",
  "ecow",
@@ -4337,7 +4337,7 @@ dependencies = [
 [[package]]
 name = "tinymist-world"
 version = "0.13.12-rc4"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=81cedd9819d72b77de46fac7a32d936e3d9c868d#81cedd9819d72b77de46fac7a32d936e3d9c868d"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=f503298f483f128a48ce1b9436c0d6bafe00f8de#f503298f483f128a48ce1b9436c0d6bafe00f8de"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4830,7 +4830,7 @@ dependencies = [
 [[package]]
 name = "typst-shim"
 version = "0.13.12-rc4"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=81cedd9819d72b77de46fac7a32d936e3d9c868d#81cedd9819d72b77de46fac7a32d936e3d9c868d"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=f503298f483f128a48ce1b9436c0d6bafe00f8de#f503298f483f128a48ce1b9436c0d6bafe00f8de"
 dependencies = [
  "cfg-if",
  "comemo",
