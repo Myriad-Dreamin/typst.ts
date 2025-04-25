@@ -63,7 +63,6 @@ fn main() {
         },
         Some(Subcommands::Font(font_sub)) => match font_sub {
             FontSubCommands::List(args) => list_fonts(args),
-            FontSubCommands::Measure(args) => measure_fonts(args),
         },
         Some(Subcommands::Package(pkg_sub)) => match pkg_sub {
             PackageSubCommands::List(args) => list_packages(args),
@@ -190,44 +189,6 @@ fn list_fonts(command: ListFontsArgs) -> ! {
             }
         }
     }
-
-    exit(0)
-}
-
-fn measure_fonts(args: MeasureFontsArgs) -> ! {
-    let mut root_path = PathBuf::new();
-    // todo: should cover default workspace path
-    root_path.push("-");
-
-    let mut font_profile_paths = vec![];
-    if args.output.exists() {
-        font_profile_paths.push(args.output.clone());
-    }
-
-    let world = TypstSystemUniverse::new(CompileOpts {
-        entry: EntryOpts::new_workspace(root_path.as_path().into()),
-        font_paths: args.font.paths,
-        font_profile_cache_path: args.output.clone(),
-        no_system_fonts: args.no_system_fonts,
-        ..CompileOpts::default()
-    })
-    .unwrap_or_exit();
-
-    // create directory for args.output
-    if let Some(output) = args.output.parent() {
-        std::fs::create_dir_all(output).unwrap();
-    }
-
-    let profile = serde_json::to_vec(world.font_resolver.profile()).unwrap();
-
-    // gzip
-    use flate2::write::GzEncoder;
-    use flate2::Compression;
-    use std::io::Write;
-
-    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-    encoder.write_all(&profile).unwrap();
-    std::fs::write(args.output, encoder.finish().unwrap()).unwrap();
 
     exit(0)
 }

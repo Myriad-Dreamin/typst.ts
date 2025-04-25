@@ -1,6 +1,3 @@
-#[cfg(feature = "build_glyph_pack")]
-pub mod glyph_pack;
-
 #[cfg(feature = "build_raw_font")]
 pub mod raw_font;
 

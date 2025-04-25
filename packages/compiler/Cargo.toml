@@ -37,7 +37,7 @@ web-sys = { workspace = true, features = [
 console_error_panic_hook.workspace = true
 
 reflexo-typst2vec.workspace = true
-reflexo-typst = { workspace = true, features = ["ast", "pdf", "svg", "web"] }
+reflexo-typst = { workspace = true, features = ["web"] }
 reflexo-vec2svg.workspace = true
 
 [dev-dependencies]
@@ -48,11 +48,18 @@ sha2.workspace = true
 web-sys = { workspace = true, features = ["console"] }
 
 [features]
+full = ["web", "web_test", "fonts", "misc"]
+misc = ["incr", "svg", "pdf", "ast", "semantic_tokens"]
+
+web = ["reflexo-typst/web"]
 web_test = ["typst-ts-test-common/web_artifacts"]
 
-full = ["web", "web_test"]
-web = ["reflexo-typst/web"]
-default = ["full"]
+fonts = ["reflexo-typst/fonts"]
+incr = []
+pdf = ["reflexo-typst/pdf"]
+svg = ["reflexo-typst/svg"]
+ast = ["reflexo-typst/ast"]
+semantic_tokens = []
 
 no-content-hint = [
     "reflexo-typst2vec/no-content-hint",

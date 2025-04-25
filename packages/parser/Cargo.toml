@@ -25,9 +25,7 @@ js-sys.workspace = true
 web-sys.workspace = true
 console_error_panic_hook.workspace = true
 
-reflexo-typst = { workspace = true, default-features = false, features = [
-    "web",
-] }
+reflexo-typst = { workspace = true, features = ["web"] }
 
 [dev-dependencies]
 wasm-bindgen-test.workspace = true

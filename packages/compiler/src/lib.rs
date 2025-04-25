@@ -1,28 +1,28 @@
 pub mod builder;
 
+#[cfg(feature = "incr")]
 mod incr;
 pub(crate) mod utils;
 
 pub use reflexo_typst::*;
-use reflexo_vec2svg::DefaultExportFeature;
 
 use core::fmt;
 use std::{fmt::Write, path::Path, sync::Arc};
 
 use error::TypstSourceDiagnostic;
 use font::cache::FontInfoCache;
-use js_sys::{Array, JsString, Uint32Array, Uint8Array};
+use js_sys::{Array, JsString, Uint8Array};
 use reflexo_typst::error::{long_diag_from_std, DiagMessage};
 use reflexo_typst::font::web::BrowserFontSearcher;
-use reflexo_typst::package::browser::ProxyRegistry;
-use reflexo_typst::parser::OffsetEncoding;
-use reflexo_typst::task::ExportPdfTask;
+use reflexo_typst::package::registry::JsRegistry;
 use reflexo_typst::typst::{foundations::IntoValue, prelude::EcoVec};
 use reflexo_typst::vfs::browser::ProxyAccessModel;
 use typst::diag::SourceResult;
 use wasm_bindgen::prelude::*;
 
-use crate::{incr::IncrServer, utils::console_log};
+use crate::utils::console_log;
+#[cfg(feature = "incr")]
+use incr::IncrServer;
 
 macro_rules! take_diag {
     ($diagnostics_format:expr, $world:expr, $e:expr) => {
@@ -117,7 +117,7 @@ pub struct TypstCompiler {
 impl TypstCompiler {
     pub async fn new(
         access_model: ProxyAccessModel,
-        registry: ProxyRegistry,
+        registry: JsRegistry,
         searcher: BrowserFontSearcher,
     ) -> Result<Self, JsValue> {
         Ok(Self {
@@ -126,7 +126,7 @@ impl TypstCompiler {
                 None,
                 access_model,
                 registry,
-                searcher.into(),
+                searcher.build(),
             ),
         })
     }
@@ -213,6 +213,7 @@ impl TypstCompiler {
             .collect()
     }
 
+    #[cfg(feature = "ast")]
     pub fn get_ast(&mut self, main_file_path: String) -> Result<String, JsValue> {
         self.verse
             .increment_revision(|verse| verse.set_entry_file(Path::new(&main_file_path).into()))
@@ -246,12 +247,15 @@ impl TypstCompiler {
         serde_wasm_bindgen::to_value(tokens.as_ref()).map_err(|e| format!("{e:?}").into())
     }
 
+    #[cfg(feature = "semantic_tokens")]
     pub fn get_semantic_tokens(
         &mut self,
         offset_encoding: String,
         file_path: Option<String>,
         result_id: Option<String>,
     ) -> Result<js_sys::Object, JsValue> {
+        use js_sys::Uint32Array;
+        use reflexo_typst::parser::OffsetEncoding;
         if let Some(result_id) = result_id {
             return Err(
                 error_once!("Not implemented", result_id: format!("{:?}", result_id)).into(),
@@ -297,7 +301,12 @@ impl TypstCompiler {
         fmt: String,
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
+        #[cfg(feature = "svg")]
+        use reflexo_vec2svg::DefaultExportFeature;
+        #[cfg(feature = "svg")]
         type SvgModuleExport = WebSvgModuleExport<DefaultExportFeature>;
+        #[cfg(feature = "pdf")]
+        use reflexo_typst::task::ExportPdfTask;
 
         let g = self.verse.computation();
         let world = &g.snap.world;
@@ -305,13 +314,17 @@ impl TypstCompiler {
         // todo: warning is ignored here.
         let doc = take_diag!(diagnostics_format, &world, g.compile());
 
-        let artifact_bytes = match fmt.as_str() {
-            "vector" => SvgModuleExport::run(&g, &doc, &ExportWebSvgModuleTask::default()),
-            "pdf" => PdfExport::run(&g, &doc, &ExportPdfTask::default()),
-            _ => {
+        let artifact_bytes: Bytes = match fmt.as_str() {
+            #[cfg(feature = "svg")]
+            "vector" => SvgModuleExport::run(&g, &doc, &ExportWebSvgModuleTask::default())?,
+            #[cfg(feature = "pdf")]
+            "pdf" => PdfExport::run(&g, &doc, &ExportPdfTask::default())?,
+            "_dummy" => Bytes::new([]),
+            fmt => {
+                let _ = doc;
                 return Err(error_once!("Unsupported fmt", format: fmt).into());
             }
-        }?;
+        };
 
         let v: JsValue = Uint8Array::from(artifact_bytes.as_slice()).into();
 
@@ -383,10 +396,12 @@ impl TypstCompiler {
         self.get_artifact(fmt, diagnostics_format)
     }
 
+    #[cfg(feature = "incr")]
     pub fn create_incr_server(&mut self) -> Result<IncrServer, JsValue> {
         Ok(IncrServer::default())
     }
 
+    #[cfg(feature = "incr")]
     pub fn incr_compile(
         &mut self,
         main_file_path: String,

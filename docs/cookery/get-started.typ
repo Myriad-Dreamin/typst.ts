@@ -9,7 +9,27 @@ In this chapter, you will learn the #link(<assets-and-libraries>)[core libraries
 
 == Core Libraries and Assets <assets-and-libraries>
 
-The functionalities of #link("https://typst.app")[typst] is split into two parts, _compilation and rendering_ functionality, because no all applications need both functionalities running in the browsers. it will take 300kb network bandwidth if you want to use the renderer in browser, but it will take 13.6MB (6.6MB wasm and 7MB fonts) to run a compiler. Therefore, the two parts are separated into two Wasm modules, `typst-ts-renderer` and `typst-ts-web-compiler`, and they can be loaded on demand.
+#let size-data = json("/assets/data/bundle-size.json");
+
+The functionalities of #link("https://typst.app")[typst] is split into two parts, _compilation and rendering_ functionality, because no all applications need both functionalities running in the browsers. It will take 350 KB network bandwidth if you want to use the renderer in browser, but it will take 12MB (7.62 MB wasm and 4.42 MB fonts) to run a compiler. Therefore, the two parts are separated into two Wasm modules, `typst-ts-renderer` and `typst-ts-web-compiler`, and they can be loaded on demand.
+
+#let human-size(d) = if (
+  d < 1024 * 1024
+) [#calc.round(d/1024, digits: 2) KB] else [#calc.round(d/1024/1024, digits: 2) MB]
+
+#align(
+  center,
+  table(
+    align: center,
+    columns: 3,
+    [Assets], [Size (gziped)], [Description],
+    `typst-ts-renderer`, [#human-size(size-data.sizes.typst-ts-renderer)], [For _rendering_],
+    `typst-ts-web-compiler`, [#human-size(size-data.sizes.typst-ts-web-compiler)], [For _compiling_],
+    `Text+Math+Raw Fonts`, [#human-size(size-data.sizes.text-math-fonts)], [To typeset text],
+    `CJK Fonts`, [#human-size(size-data.sizes.cjk-fonts)], [To typeset CJK text],
+    `Emoji Fonts`, [#human-size(size-data.sizes.emoji-fonts)], [To typeset emojis],
+  ),
+)
 
 typst.ts provides core JavaScript libraries along with two Wasm modules:
 - `typst.ts`: the core JavaScript library which wraps Wasm modules with more friendly JavaScript APIs.
@@ -48,7 +68,7 @@ npm install @myriaddreamin/typst-ts-node-compiler
 
 == A starter example <starter-example>
 
-To simplify the build up, we provide _all-in-one solutions_ for both web and node.js integration. We show the way to render typst documents into a single SVG in the browser and node.js.
+To simplify the build up, we provide _all-in-one libraries_ for both web and node.js integration. We show the way to render typst documents into a single SVG in the browser and node.js.
 
 === The starter example in Web
 
@@ -57,7 +77,7 @@ To get it in browser, you can load a all-in-one bundle script from CDN and use i
 ```html
 <script
   type="module"
-  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one-lite.bundle.js"
+  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one.bundle.js"
   id="typst"
 >
   console.log($typst.svg({
@@ -68,7 +88,7 @@ To get it in browser, you can load a all-in-one bundle script from CDN and use i
 
 There is also a #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/preview.html")[simple and heavily-documented single-file typst previewer] that compiles and renders a typst document on editing.
 
-*Warning: the all-in-one-lite.bundle.js is not practical to use since it bundles all of the resource regardless you need or not, including the wasm modules, fonts, and scripts.*
+*Warning: the all-in-one.bundle.js is not practical to use since it bundles all of the resource regardless you need or not, including the wasm modules and scripts.*
 
 === The starter example in Node.js
 

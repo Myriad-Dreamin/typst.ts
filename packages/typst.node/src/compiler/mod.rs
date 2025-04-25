@@ -15,7 +15,7 @@ use napi_derive::napi;
 use reflexo_typst::config::{entry::EntryState, CompileFontOpts};
 use reflexo_typst::error::prelude::{Result, WithContext};
 use reflexo_typst::font::system::SystemFontSearcher;
-use reflexo_typst::package::http::HttpRegistry;
+use reflexo_typst::package::registry::HttpRegistry;
 use reflexo_typst::typst::{foundations::IntoValue, LazyHash};
 use reflexo_typst::vfs::{system::SystemAccessModel, Vfs};
 use reflexo_typst::{Bytes, Features, TypstDict, TypstSystemUniverse};
@@ -138,7 +138,7 @@ pub fn create_universe(args: Option<CompileArgs>) -> Result<TypstSystemUniverse>
         args.inputs.map(create_inputs),
         Vfs::new(resolver, SystemAccessModel {}),
         registry,
-        Arc::new(searcher.into()),
+        Arc::new(searcher.build()),
     );
 
     Ok(verse)

@@ -4,36 +4,54 @@
 
 #include "claim.typ"
 
-Note: This is suitable for running in browser, but not very fit in node.js applications. This is because:
-- The compiler for browsers is in wasm module and slower than running compiler as native code.
-- You must carefully maintain the bundle size of your browser applications, there for the components are split for better tree-shaking.
-- The default fonts to load in browser are for network.
-
-In other words:
-- The node.js library runs compiler as native code, thus native performance.
-- The compiler and renderer are integrated into a same node library for simpler and cleaner APIs.
-- You can simply use system fonts lazily with the compiler for node but not that for web.
-
-If you want to run the compiler or renderer in Node.js, please see #cross-link("/guide/all-in-one-node.typ")[All-in-one Library for Node.js].
-
 #let snippet-source = "https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/src/contrib/snippet.mts"
 #let snippet-lib = link(snippet-source)[`snippet.mts`]
 
 #let sub = heading-reference[== (Archived) The All-in-One Js Library in v0.5.0]
- *Note: the following content is for typst.ts >=v0.6.0. To use rust library in \<v0.6.0, check #cross-link("/guide/all-in-one.typ", reference: sub)[the section.]*
+*Note: the following content is for typst.ts >=v0.6.0. To use rust library in \<v0.6.0, check #cross-link("/guide/all-in-one.typ", reference: sub)[the section.]*
 
-The most simple examples always work with #snippet-lib utility library, an all-in-one library with simplified API interfaces:
+The all-in-one library provides a simplified API, and you can easily compile typst docuemnts into artifacts. For example, compiling a typst code string to a SVG:
 
 ```ts
-import { $typst } from '@myriaddreamin/typst.ts/contrib/snippet';
-console.log((await $typst.svg({
-  mainContent: 'Hello, typst!' })).length);
-// :-> 7317
+await $typst.svg({mainContent: 'Hello, typst!' }))
 ```
 
-However, it is less flexible and stable than the underlying interfaces, the `TypstCompiler` and `TypstRenderer`. If you've become more familiar with typst.ts, we recommend you rewrite your library with underlying interfaces according to example usage shown by the #snippet-lib library.
+However, it is less flexible and stable than the underlying interfaces, the `TypstCompiler` and `TypstRenderer`. If you've become more familiar with typst.ts, we recommend you rewrite your library with underlying interfaces according to example usage. The best ways to use the underlying libraries can be discovered in the source code of the all-in-one library, the #snippet-lib. For example, the above example calls the underlying components:
 
-== Installation
+```ts
+$typst.svg(options) <=>
+  // Initializes lazily
+  compiler = createTypstCompiler(); // TypstCompiler
+  await compiler.init(...)
+  renderer = createTypstRenderer(); // TypstRenderer
+  await renderer.init(...)
+
+  // Adds main file content: 'Hello, typst!'
+  await this.addSource(`/tmp/${randstr()}.typ`, options.mainContent);
+  // Compiles it
+  vectorData = options.vectorData || compiler.compile(options)
+  return renderer.runWithSession(session => {
+    renderer.manipulateData({ session, action: 'reset', data: vectorData })
+    // Renders it
+    renderer.renderSvg({ ...options, session })
+  })
+```
+
+== When to use this library (Wasm v.s. napi)
+
+typst.ts runs official typst compiler and its customized renderers in *Wasm modules*. This is suitable for running in browser, but not very fit in *Node.js* applications. This is because:
+- _Slower Speed_: The compiler for browsers is in Wasm module and slower than running compiler as native code.
+- _Complex API_: You must carefully maintain the bundle size of your browser applications, Therefore, the components are split for better tree-shaking. This will increase code complexity.
+- _Network Access_: It doesn't bundle the fonts, so has to load them from network.
+
+In other words, the #cross-link("/guide/all-in-one-node.typ")[*Node.js* library] achieves:
+- _Faster Speed_: The Node.js library runs compiler as native code, thus native performance.
+- _Simple API_: The compiler and renderer are integrated into a same Node.js library for simpler and cleaner APIs.
+- _Rich Fonts_: The compiler simply use embedded or system fonts for Node.js but not that for web.
+
+If you want to run typst in Node.js using the #link("https://napi.rs/")[napi], please see #cross-link("/guide/all-in-one-node.typ")[All-in-one Library for Node.js].
+
+== Installing Bundles from CDN
 
 We provide two bundles for the all-in-one library:
 - `all-in-one.bundle.js`, it bundles all of the resources to run a typst compiler. You can download the single bundle file and run the compiler offline.
@@ -61,9 +79,33 @@ See a #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/p
   raw(block: true, lang: "html", read("/github-pages/preview.html"))
 }
 
+== Installing by Package Managers
+
+You can also install the library from registry, npm as an example:
+
+```bash
+npm install @myriaddreamin/typst.ts
+# Optional: if you want to run a typst renderer.
+npm install @myriaddreamin/typst-ts-renderer
+# Optional: if you want to run a typst compiler.
+npm install @myriaddreamin/typst-ts-web-compiler
+```
+
+Then, you can import the library in your code:
+
+```ts
+import { $typst } from '@myriaddreamin/typst.ts/contrib/snippet';
+console.log((await $typst.svg({
+  mainContent: 'Hello, typst!' })).length);
+// :-> 7317
+```
+
+#let sub = heading-reference[== Initializing using the low-level API]
+In Node.js, it reads and loads the Wasm modules from `node_modules` in the filesystem. If you aim to use the library in browsers, you may need to configure the library to load the wasm module files. Please check #cross-link("/guide/all-in-one.typ", reference: sub)[the section.]
+
 == Using a snippet instance
 
-As a shortcut, A global instance `$typst` is provided, and it will lazily initialize the compiler and renderer for you. Import the global instance like this:
+As a shortcut, a global instance `$typst` is provided, and it will lazily initialize the compiler and renderer for you. Import the global instance like this:
 
 ```ts
 import { $typst } from '@myriaddreamin/typst.ts/contrib/snippet';
@@ -116,17 +158,19 @@ await $typst.svg({ vectorData });
 await $typst.canvas(div, { vectorData });
 ```
 
+In this way, the library only requires the `typst-ts-renderer` module for rendering.
+
 == Initializing using the low-level API
 
 The extra initialization options must be at the start of the main routine, or accurately before all invocations. You can set the options by low-level or high-level APIs. The low-level APIs are direct but not easy to use:
 
 ```ts
-// Example: cache default fonts to file system
-$typst.setCompilerInitOptions(await cachedFontInitOptions());
-// specify init options to renderer
+// Specifies init options of renderer
 $typst.setRendererInitOptions(rendererInitOptions);
+// Specifies init options of compiler. For example, cache default fonts to file system
+$typst.setCompilerInitOptions(await cachedFontInitOptions());
 
-// The compiler instance is initialized in this call.
+// The compiler instance is initialized in this call. After that, setting options makes no sense.
 await $typst.svg({ mainContent });
 ```
 
@@ -147,11 +191,19 @@ Please check the low-level components to get full reference about these options:
 - #cross-link("/guide/compiler/bindings.typ")[Compiler in Wasm (Web)]
 - #cross-link("/guide/renderer/ts-lib.typ")[Renderer in Wasm (Web)]
 
-// Note: There are more documentation about initialization in the *Import typst.ts to your project* section of #link("https://myriad-dreamin.github.io/typst.ts/cookery/get-started.html")[Get started with Typst.ts].
-
 == Initializing using the high-level `use` API
 
 todo: fully document the `use` API.
+- `preloadFontFromUrl`
+- `preloadFontData`
+- `preloadFonts`
+- `disableDefaultFontAssets`
+- `preloadFontAssets`
+- `preloadRemoteFonts`
+- `withPackageRegistry`
+- `withAccessModel`
+- `fetchPackageRegistry`
+- `fetchPackageBy`
 
 Specify address to a http server for filesystem backend (shadowed by the `addSource` and `mapShadow` api):
 

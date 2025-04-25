@@ -34,9 +34,7 @@ serde-wasm-bindgen.workspace = true
 js-sys.workspace = true
 web-sys = { workspace = true, features = ["console", "Window", "Document"] }
 
-reflexo-typst = { workspace = true, default-features = false, features = [
-    "web-render",
-] }
+reflexo-typst = { workspace = true, features = ["web-render"] }
 reflexo-typst2vec = { workspace = true }
 reflexo-vec2canvas = { workspace = true, optional = true }
 reflexo-vec2sema = { workspace = true }
@@ -69,10 +67,9 @@ web_test = ["typst-ts-test-common/web_artifacts"]
 web_verbose = ["web_test"]                        # for test debug
 serde_json = ["dep:serde", "dep:serde_json"]
 
-build_glyph_pack = []
 build_raw_font = []
 build_web_font = []
-build_full = ["build_glyph_pack", "build_raw_font", "build_web_font"]
+build_full = ["build_raw_font", "build_web_font"]
 
 render_canvas = [
     "dep:reflexo-vec2canvas",
