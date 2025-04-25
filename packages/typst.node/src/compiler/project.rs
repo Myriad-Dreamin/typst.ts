@@ -465,6 +465,9 @@ impl NodeTypstProject {
             world
                 .map_shadow_by_id(world.main(), Bytes::new(main_file_content))
                 .unwrap();
+            if compile_by.reset_read.unwrap_or(true) {
+                world.reset_read();
+            }
             let snap = CompileSnapshot::from_world(world);
 
             return Ok(SystemWorldComputeGraph::new(snap));
@@ -491,7 +494,10 @@ impl NodeTypstProject {
             None
         };
 
-        let snap = graph.snap.clone().task(TaskInputs { entry, inputs });
+        let mut snap = graph.snap.clone().task(TaskInputs { entry, inputs });
+        if compile_by.reset_read.unwrap_or(true) {
+            snap.world.reset_read();
+        }
         Ok(SystemWorldComputeGraph::new(snap))
     }
 
