@@ -1,4 +1,4 @@
-#import "@preview/shiroa:0.2.2": *
+#import "@preview/shiroa:0.2.3": *
 #import "/docs/cookery/templates/page.typ": project, part-style
 
 #let _page-project = project

@@ -1,5 +1,5 @@
 
-#import "@preview/shiroa:0.2.2": *
+#import "@preview/shiroa:0.2.3": *
 #import "./templates/page.typ": main-color
 
 #show: book
@@ -35,12 +35,11 @@
       - #chapter("guide/all-in-one.typ")[All-in-One Library for Browsers]
       - #chapter("guide/all-in-one-node.typ")[All-in-One Library for Node.js]
     - #chapter("guide/compilers.typ")[Compilers]
-      - #chapter("guide/compiler/ts-cli.typ")[Compiler in CLI]
+      - #chapter("guide/compiler/ts-cli.typ")[(Pre-)Compiler in CLI]
       - #chapter("guide/compiler/service.typ")[Compiler in Rust]
       - #chapter("guide/compiler/node.typ")[Compiler in Node.js]
       - #chapter("guide/compiler/bindings.typ")[Compiler in Wasm (Web)]
     - #chapter("guide/renderers.typ")[Renderers]
-      - #chapter("guide/renderer/ts-cli.typ")[Renderer in CLI]
       - #chapter("guide/renderer/rust.typ")[Renderer in Rust]
       - #chapter("guide/renderer/node.typ")[Renderer in Node.js]
       - #chapter("guide/renderer/ts-lib.typ")[Renderer in Wasm (Web)]

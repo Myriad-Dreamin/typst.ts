@@ -4,6 +4,8 @@
 
 #include "claim.typ"
 
+*Note: the following content is for typst.ts >=v0.6.0, and some APIs may be unusble in v0.5.x*
+
 The compiler and renderer are integrated into a same node library for simpler and cleaner APIs, since there is no urgent need to tree-shake the components in node.js applications. It also has better performance, because the compiler and renderer are native code.
 
 ```ts
@@ -31,16 +33,9 @@ Creates a new compiler with default arguments:
 const $typst = NodeCompiler.create();
 ```
 
-Creates a new compiler with custom arguments:
-```ts
-const $typst = NodeCompiler.create({
-  workspace: '/path/to/workspace',
-});
-```
-
 == Configuring Root
 
-Configures a workspace to some *absolute path*:
+Configures the root of workspace to path:
 
 ```ts
 const $typst = NodeCompiler.create({
@@ -48,15 +43,13 @@ const $typst = NodeCompiler.create({
 });
 ```
 
-== Configuring `sys.inputs`
+The `NodeCompiler` will resolve the *absolute path* of the path *if it is relative at the time of creation*.
 
-Configures `sys.inputs` with string pairs:
+We suggest always pass *absolute paths* as root to ensure the compiler to work as expected.
 
 ```ts
 const $typst = NodeCompiler.create({
-  inputs: {
-    'theme': 'dark',
-  },
+  workspace: resolve('some/relative/path'),
 });
 ```
 
@@ -119,17 +112,6 @@ const docs = await $typst.compile({
 });
 ```
 
-With extra `sys.inputs`:
-
-```ts
-const docs = await $typst.compile({
-  mainFileContent: '#sys.inputs',
-  inputs: {
-    'theme': 'dark',
-  },
-});
-```
-
 == Caution: Cleaning Global Cache
 
 Please evict the *global* compilation cache periodically to avoid memory leak:
@@ -144,19 +126,51 @@ $typst.evictCache(10);
 
 If you have ideas about how to improve the cache eviction strategy, please let us know.
 
-== Export to Various Formats
+== Passing `sys.inputs`
 
-Get output in various format:
+Configures `sys.inputs` with string pairs:
+
+```ts
+const $typst = NodeCompiler.create({
+  inputs: {
+    'theme': 'dark',
+  },
+});
+```
+
+You can also pass `sys.inputs` when compiling documents:
+
+```ts
+const docs = await $typst.compile({
+  mainFileContent: '#sys.inputs',
+  inputs: {
+    'theme': 'light',
+  },
+});
+```
+
+Note that, it will not inherit the `inputs` from the `NodeCompiler` instance but replace with the new one. For example, the following code compiles with `sys.inputs = (Y: "v")` instead of `sys.inputs = (X: "u", Y: "v")`:
+
+```ts
+const $typst = NodeCompiler.create({ inputs: { 'X': 'u' } });
+await $typst.svg({ inputs: { 'Y': 'v' }, mainFileContent: '#sys.inputs' });
+```
+
+== Exporting to Various Formats
+
+Gets output in various format:
 
 ```ts
 // As a precompiled vector-format document.
 $typst.vector({ mainFileContent });
 // As PDF.
 $typst.pdf({ mainFileContent });
-// As SVG that suitable for SVG viewers.
+// As a SVG string that suitable for SVG viewers.
 $typst.plainSvg({ mainFileContent });
-// As SVG that only fits for web browsers but contains more features, like text selection.
+// As a SVG string that only fits for web browsers but contains more features, like text selection.
 $typst.svg({ mainFileContent });
+// As a HTML string using the experimental HTML export.
+$typst.html({ mainFileContent });
 ```
 
 You can also compile once and export to multiple formats later:
@@ -167,15 +181,37 @@ const doc = $typst.compile({ mainFileContent });
 
 $typst.vector(doc);
 $typst.pdf(doc);
-$typst.plainSvg(doc);
 $typst.svg(doc);
 ```
 
 todo: document options.
 
+== Using `try_html`
+
+This is an experimental API resembling `html` but exposes an object for advanced uses.
+
+```ts
+const output = $typst.tryHtml({ mainFileContent });
+
+// Prints diagnostics if any.
+if (htmlResult.hasError()) {
+  htmlResult.printDiagnostics();
+  return;
+}
+
+/// Gets the title of the document.
+const title = htmlResult.result!.title();
+/// Gets the HTML (<html>) string.
+const htmlContent = htmlResult.result!.html();
+/// Gets the <body> string.
+const body = htmlResult.result!.body();
+/// Gets the <body> bytes (to avoid creating strings for Node.js).
+const bodyBytes = htmlResult.result!.bodyBytes();
+```
+
 == Querying
 
-Query the document instance by some selector, such as a typst label:
+Queries the document instance by some selector, such as a typst label:
 
 ```ts
 $typst.query({ mainFileContent }, { selector: '<some-label>' });
@@ -183,13 +219,13 @@ $typst.query({ mainFileContent }, { selector: '<some-label>' });
 
 == Adding/Removing in-memory shadow files
 
-Add extra *binary input files*:
+Adds extra *binary input files*:
 
 ```ts
 $typst.mapShadow('/assets/tiger.png', /* Node's Buffer Type */ pngData);
 ```
 
-Add some extra *input file*:
+Adds some extra *input file*:
 
 ```ts
 await $typst.addSource('/template.typ', templateContent);
@@ -203,16 +239,26 @@ $typst.mapShadow('/template.typ', (new TextEncoder()).encode(templateContent));
 // same as above
 ```
 
-Remove a shadow source or binary file:
+Removes a shadow source or binary file:
 
 ```ts
 $typst.unmapShadow('/assets/data.json');
 ```
 
-Clean up all shadow files for underlying access model:
+Cleans up all shadow files for underlying access model:
 
 ```ts
 $typst.resetShadow();
 ```
 
 Note: this function will also clean all files added by `addSource`.
+
+== Reusing filesystem reads across compilations
+
+Note: Since v0.6.0-rc1
+
+By default, the Node compiler resets filesystem read cache per compilation. some tools would like to reuse the filesystem reads across compilations because they batchly compile documents and ignores filesystem changes during the batch compilation. This is not well modeled, but there is an internal flag to avoid re-reading the filesystem.
+
+```js
+const doc = $typst.compile({ mainFileContent, resetRead: false });
+```

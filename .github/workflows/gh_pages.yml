@@ -45,7 +45,7 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
       - name: Download & install shiroa
         run: |
-          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.3.1-rc1/shiroa-installer.sh | sh
+          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.3.1-rc2/shiroa-installer.sh | sh
       - name: Download font assets
         run: |
           mkdir -p assets/fonts
@@ -68,7 +68,7 @@ jobs:
         run: |
           shiroa build --font-path assets/fonts --path-to-root /typst.ts/cookery/paged/ -w . -d ../../github-pages/cookery/ docs/cookery
           cargo run --profile release-ci --bin typst-ts-cli -- compile --workspace . --entry ./github-pages/docs/readme.typ --input=x-target=pdf-ayu --format=pdf --format=vector
-    
+
           mv ./github-pages/cookery/ ./github-pages/dist-paged/
           mkdir -p ./github-pages/cookery/
           mv ./github-pages/dist-paged/ ./github-pages/cookery/
