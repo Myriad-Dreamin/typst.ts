@@ -6,8 +6,8 @@ async function main() {
   $typst.setCompilerInitOptions(await cachedFontInitOptions());
 
   // Note: You can also use NodeFetchPackageRegistry
-  // import { MemoryAccessModel } from '@myriaddreamin/typst.ts/dist/cjs/fs/memory.cjs';
-  // import { NodeFetchPackageRegistry } from '@myriaddreamin/typst.ts/dist/cjs/fs/package.node.cjs';
+  // import { MemoryAccessModel } from '@myriaddreamin/typst.ts/fs/memory';
+  // import { NodeFetchPackageRegistry } from '@myriaddreamin/typst.ts/fs/package.node';
   // import request from 'sync-request-curl';
   // const m = new MemoryAccessModel();
   // $typst.use(
