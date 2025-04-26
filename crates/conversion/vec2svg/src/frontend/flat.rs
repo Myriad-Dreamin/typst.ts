@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use reflexo::hash::Fingerprint;
+use reflexo::typst::TypstPagedDocument;
 use reflexo::vector::{
     ir::{Module, Page, Size, VecDocument, VecItem},
     vm::RenderVm,
 };
 use reflexo_typst2vec::pass::Typst2VecPass;
-use typst::model::Document as TypstDocument;
 
 use crate::{
     backend::{generate_text, SvgText, SvgTextNode},
@@ -58,9 +58,9 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
 }
 
 impl<Feat: ExportFeature> SvgExporter<Feat> {
-    pub fn svg_doc(output: &TypstDocument) -> VecDocument {
+    pub fn svg_doc(output: &TypstPagedDocument) -> VecDocument {
         let typst2vec = Typst2VecPass::default();
-        let pages = typst2vec.doc(&output.introspector, output);
+        let pages = typst2vec.paged(output);
 
         let module = typst2vec.finalize();
         VecDocument { pages, module }

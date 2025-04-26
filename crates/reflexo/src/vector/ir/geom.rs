@@ -155,7 +155,7 @@ pub struct Axes<T> {
 }
 
 impl<T> Axes<T> {
-    pub fn new(x: T, y: T) -> Self {
+    pub const fn new(x: T, y: T) -> Self {
         Self { x, y }
     }
 }

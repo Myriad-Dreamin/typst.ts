@@ -36,8 +36,8 @@ impl RenderSessionOptions {
     }
 
     #[wasm_bindgen(setter)]
-    pub fn set_pixel_per_pt(&mut self, pixel_per_pt: f32) {
-        self.pixel_per_pt = Some(pixel_per_pt);
+    pub fn set_pixel_per_pt(&mut self, pixel_per_pt: Option<f32>) {
+        self.pixel_per_pt = pixel_per_pt;
     }
 
     #[wasm_bindgen(getter)]
@@ -46,8 +46,8 @@ impl RenderSessionOptions {
     }
 
     #[wasm_bindgen(setter)]
-    pub fn set_background_color(&mut self, background_color: String) {
-        self.background_color = Some(background_color);
+    pub fn set_background_color(&mut self, background_color: Option<String>) {
+        self.background_color = background_color;
     }
 
     #[wasm_bindgen(getter)]
@@ -56,8 +56,8 @@ impl RenderSessionOptions {
     }
 
     #[wasm_bindgen(setter)]
-    pub fn set_format(&mut self, format: String) {
-        self.format = Some(format);
+    pub fn set_format(&mut self, format: Option<String>) {
+        self.format = format;
     }
 }
 
@@ -190,8 +190,8 @@ impl RenderSession {
     }
 
     #[wasm_bindgen(setter)]
-    pub fn set_pixel_per_pt(&mut self, pixel_per_pt: f32) {
-        self.pixel_per_pt = Some(pixel_per_pt);
+    pub fn set_pixel_per_pt(&mut self, pixel_per_pt: Option<f32>) {
+        self.pixel_per_pt = pixel_per_pt;
     }
 
     #[wasm_bindgen(getter)]
@@ -200,8 +200,8 @@ impl RenderSession {
     }
 
     #[wasm_bindgen(setter)]
-    pub fn set_background_color(&mut self, background_color: String) {
-        self.background_color = Some(background_color);
+    pub fn set_background_color(&mut self, background_color: Option<String>) {
+        self.background_color = background_color;
     }
 
     #[wasm_bindgen(getter)]

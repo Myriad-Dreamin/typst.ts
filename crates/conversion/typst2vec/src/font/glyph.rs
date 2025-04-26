@@ -1,15 +1,16 @@
-pub use ttf_parser::GlyphId;
-
 use std::fmt::Write;
 use std::hash::{Hash, Hasher};
 use std::{ops::Deref, sync::Arc};
 
 use reflexo::hash::{item_hash128, HashedTrait, StaticHash128};
 use reflexo::ImmutStr;
+use typst::foundations::{Bytes, Smart};
 use typst::text::Font;
-use typst::visualize::{Image as TypstImage, RasterFormat};
+use typst::visualize::{ExchangeFormat, Image as TypstImage, RasterImage};
 
 use super::ligature::resolve_ligature;
+
+pub use ttf_parser::GlyphId;
 
 /// IGlyphProvider extracts the font data from the font.
 /// Note (Possibly block unsafe): If a [`Font`] is dummy (lazy loaded),
@@ -109,12 +110,17 @@ impl IGlyphProvider for FontGlyphProvider {
         // convert to typst's image format
         // todo: verify result
         let glyph_image = TypstImage::new(
-            raster.data.into(),
-            RasterFormat::Png.into(),
+            RasterImage::new(
+                Bytes::new(raster.data.to_vec()),
+                ExchangeFormat::Png,
+                Smart::Auto,
+            )
+            .ok()?,
             // Axes::new(raster.width as u32, raster.height as u32),
             None,
-        )
-        .ok()?;
+            // todo: scaling
+            Smart::Auto,
+        );
 
         Some((glyph_image, raster.x, raster.y))
     }

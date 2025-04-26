@@ -1,48 +1,83 @@
 use std::sync::Arc;
 
-use reflexo_vec2svg::{
-    render_svg, render_svg_html, DefaultExportFeature, ExportFeature, SvgExporter,
-};
-use typst::model::Document as TypstDocument;
-use typst::{diag::SourceResult, World};
+use reflexo::error::prelude::*;
 
-use super::Exporter;
+use reflexo::typst::Bytes;
+use reflexo::typst::TypstPagedDocument;
+use reflexo_vec2svg::{render_svg, render_svg_html, ExportFeature, SvgExporter};
+use serde::{Deserialize, Serialize};
+use tinymist_task::{ExportSvgTask, ExportTask};
 
-pub struct SvgHtmlExporter<Feat> {
-    _marker: std::marker::PhantomData<Feat>,
+use crate::world::{CompilerFeat, ExportComputation, WorldComputeGraph};
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct ExportWebSvgModuleTask {
+    #[serde(flatten)]
+    pub export: ExportTask,
 }
 
-impl<Feat> Default for SvgHtmlExporter<Feat> {
-    fn default() -> Self {
-        Self {
-            _marker: Default::default(),
-        }
+pub struct WebSvgModuleExport<EF>(std::marker::PhantomData<EF>);
+
+impl<EF: ExportFeature, F: CompilerFeat> ExportComputation<F, TypstPagedDocument>
+    for WebSvgModuleExport<EF>
+{
+    type Output = Bytes;
+    type Config = ExportWebSvgModuleTask;
+
+    fn run(
+        _g: &Arc<WorldComputeGraph<F>>,
+        doc: &Arc<TypstPagedDocument>,
+        _config: &Self::Config,
+    ) -> Result<Bytes> {
+        Ok(Bytes::new(SvgExporter::<EF>::svg_doc(doc).to_bytes()))
     }
 }
 
-impl<Feat: ExportFeature> Exporter<TypstDocument, String> for SvgHtmlExporter<Feat> {
-    fn export(&self, _world: &dyn World, output: Arc<TypstDocument>) -> SourceResult<String> {
-        // html wrap
-        Ok(render_svg_html::<Feat>(&output))
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct ExportWebSvgTask {
+    #[serde(flatten)]
+    pub base: ExportSvgTask,
+}
+
+pub struct WebSvgExport<EF>(std::marker::PhantomData<EF>);
+
+impl<EF: ExportFeature, F: CompilerFeat> ExportComputation<F, TypstPagedDocument>
+    for WebSvgExport<EF>
+{
+    type Output = String;
+    type Config = ExportWebSvgTask;
+
+    fn run(
+        _g: &Arc<WorldComputeGraph<F>>,
+        doc: &Arc<TypstPagedDocument>,
+        _config: &Self::Config,
+    ) -> Result<String> {
+        Ok(render_svg(doc))
     }
 }
 
-#[derive(Default)]
-pub struct PureSvgExporter;
-
-impl Exporter<TypstDocument, String> for PureSvgExporter {
-    fn export(&self, _world: &dyn World, output: Arc<TypstDocument>) -> SourceResult<String> {
-        // html wrap
-        Ok(render_svg(&output))
-    }
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct ExportWebSvgHtmlTask {
+    #[serde(flatten)]
+    pub base: ExportSvgTask,
 }
 
-#[derive(Default)]
-pub struct SvgModuleExporter {}
+pub struct WebSvgHtmlExport<EF>(std::marker::PhantomData<EF>);
 
-impl Exporter<TypstDocument, Vec<u8>> for SvgModuleExporter {
-    fn export(&self, _world: &dyn World, output: Arc<TypstDocument>) -> SourceResult<Vec<u8>> {
-        type UsingExporter = SvgExporter<DefaultExportFeature>;
-        Ok(UsingExporter::svg_doc(&output).to_bytes())
+impl<EF: ExportFeature, F: CompilerFeat> ExportComputation<F, TypstPagedDocument>
+    for WebSvgHtmlExport<EF>
+{
+    type Output = String;
+    type Config = ExportWebSvgHtmlTask;
+
+    fn run(
+        _g: &Arc<WorldComputeGraph<F>>,
+        doc: &Arc<TypstPagedDocument>,
+        _config: &Self::Config,
+    ) -> Result<String> {
+        Ok(render_svg_html::<EF>(doc))
     }
 }

@@ -543,8 +543,7 @@ impl Span2VecPass {
             // Special case for char index
             if SOURCE_MAPPING_TYPE_CHAR_INDEX == *remote_kind {
                 log::info!(
-                    "pass check remote_char_index({remote_kind}, {idx}) => {:?}",
-                    in_text_indice
+                    "pass check remote_char_index({remote_kind}, {idx}) => {in_text_indice:?}"
                 );
                 let char_idx = *idx as usize;
                 if let Some(chars) = in_text_indice.as_ref() {

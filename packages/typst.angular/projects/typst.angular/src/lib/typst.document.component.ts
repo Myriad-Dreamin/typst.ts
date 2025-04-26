@@ -1,6 +1,6 @@
 import { Component, ElementRef, Input, ViewChild } from '@angular/core';
-import { withGlobalRenderer } from '@myriaddreamin/typst.ts/dist/esm/contrib/global-renderer.mjs';
-import * as typst from '@myriaddreamin/typst.ts/dist/esm/index.mjs';
+import { withGlobalRenderer } from '@myriaddreamin/typst.ts/contrib/global-renderer';
+import * as typst from '@myriaddreamin/typst.ts';
 
 let moduleInitOptions: typst.InitOptions = {
   beforeBuild: [],
@@ -8,6 +8,7 @@ let moduleInitOptions: typst.InitOptions = {
 };
 
 @Component({
+  standalone: false, // this is now required when using NgModule
   selector: 'typst-document',
   templateUrl: `./typst.document.component.html`,
   styleUrls: [`./typst.document.component.css`],

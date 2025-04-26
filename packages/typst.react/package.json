@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst.react",
-  "version": "0.5.4",
+  "version": "0.5.5-rc7",
   "description": "Typst.ts for React",
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
@@ -39,17 +39,17 @@
     "publish:lib": "npm publish --access public || exit 0"
   },
   "peerDependencies": {
-    "@myriaddreamin/typst-ts-renderer": "^0.5.4",
-    "@myriaddreamin/typst.ts": "^0.5.4",
-    "react": "^17.0.1 || ^18.x",
-    "react-dom": "^17.0.1 || ^18.x"
+    "@myriaddreamin/typst-ts-renderer": "^0.5.5-rc7",
+    "@myriaddreamin/typst.ts": "^0.5.5-rc7",
+    "react": "^17.0.1 || ^18.x || ^19.x",
+    "react-dom": "^17.0.1 || ^18.x || ^19.x"
   },
   "devDependencies": {
     "@myriaddreamin/typst-ts-renderer": "*",
     "@myriaddreamin/typst.ts": "*",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "react": "^19.x",
+    "react-dom": "^19.x"
   }
 }

@@ -10,7 +10,7 @@
 The most simple examples always work with #snippet-lib utility library, an all-in-one library with simplified API interfaces:
 
 ```ts
-import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs';
+import { $typst } from '@myriaddreamin/typst.ts';
 console.log((await $typst.svg({
   mainContent: 'Hello, typst!' })).length);
 // :-> 7317
@@ -30,18 +30,10 @@ cc.addSource(mainFilePath, 'Hello, typst!');
 await cc.compile({ mainFilePath });
 ```
 
-Note: For #link("https://developer.mozilla.org/en-US/docs/Glossary/Tree_shaking")[_tree-shaking_], you should import it with longer path:
-
-In *ES Module* path:
+For #link("https://developer.mozilla.org/en-US/docs/Glossary/Tree_shaking")[_tree-shaking_], you should import it with longer path:
 
 ```ts
-import { createTypstCompiler } from '@myriaddreamin/typst.ts/dist/esm/compiler.mjs';
-```
-
-Or in *CommonJS* path:
-
-```ts
-const { createTypstCompiler } = require('@myriaddreamin/typst.ts/dist/cjs/compiler.cjs');
+import { createTypstCompiler } from '@myriaddreamin/typst.ts/compiler';
 ```
 
 == Add or remove source/binary files

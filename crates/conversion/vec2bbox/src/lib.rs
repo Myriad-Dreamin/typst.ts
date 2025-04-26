@@ -45,7 +45,7 @@ impl Vec2BBoxPass {
             }
             VecItem::Image(ImageItem { size, .. })
             | VecItem::Link(LinkItem { size, .. })
-            | VecItem::Html(HtmlItem { size, .. }) => self.rect(*size, ts),
+            | VecItem::SizedRawHtml(SizedRawHtmlItem { size, .. }) => self.rect(*size, ts),
             // todo: I'm writing this in my leg
             VecItem::Text(t) => {
                 let width = t.width();
@@ -58,6 +58,7 @@ impl Vec2BBoxPass {
             | VecItem::Pattern(..)
             | VecItem::Gradient(..)
             | VecItem::Color32(..)
+            | VecItem::Html(..)
             | VecItem::None => None,
         }
     }

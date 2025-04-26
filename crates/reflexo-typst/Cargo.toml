@@ -11,10 +11,14 @@ repository.workspace = true
 [dependencies]
 typst.workspace = true
 typst-pdf = { workspace = true, optional = true }
+typst-html = { workspace = true, optional = true }
+typst-svg = { workspace = true, optional = true }
 
 reflexo-typst2vec.workspace = true
 reflexo.workspace = true
 tinymist-world.workspace = true
+tinymist-project.workspace = true
+tinymist-task.workspace = true
 comemo.workspace = true
 
 ecow.workspace = true
@@ -38,7 +42,6 @@ walkdir = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 futures = "0.3.30"
 fontdb = { workspace = true, optional = true }
-notify = { workspace = true, optional = true }
 
 parking_lot.workspace = true
 indexmap.workspace = true
@@ -47,32 +50,36 @@ pathdiff.workspace = true
 tar.workspace = true
 
 reflexo-vec2svg = { workspace = true, optional = true }
+typst-eval = { workspace = true }
 
 [features]
 
-default = ["full"]
-full = ["system", "web", "dynamic-layout", "glyph2vec", "flat-vector"]
+full = ["system", "web", "dynamic-layout", "fonts", "flat-vector", "glyph2vec"]
 system = ["system-compile", "system-watch"]
 web = ["web-render", "browser-compile"]
+web-render = ["__web_render"]
 
+dynamic-layout = ["dep:reflexo-vec2svg"]
+fonts = ["tinymist-world/fonts"]
 flat-vector = ["reflexo/flat-vector"]
+glyph2vec = ["reflexo-typst2vec/glyph2vec"]
 
 lazy-fontdb = []
 experimental-ligature = ["reflexo-vec2svg/experimental-ligature"]
-no-content-hint = ["reflexo-typst2vec/no-content-hint"]
-glyph2vec = ["reflexo-typst2vec/glyph2vec"]
-dynamic-layout = ["dep:reflexo-vec2svg"]
+no-content-hint = [
+    "reflexo-typst2vec/no-content-hint",
+    "tinymist-task/no-content-hint",
+]
 
 system-compile = ["glyph2vec", "tinymist-world/system"]
-system-watch = ["dep:notify", "dep:tokio"]
+system-watch = ["dep:tokio", "tinymist-project/system"]
 browser-compile = ["__web", "web-render", "glyph2vec", "tinymist-world/browser"]
-browser-embedded-fonts = ["__web"]
 __web = ["dep:js-sys", "dep:web-sys"]
 __web_render = ["__web", "tinymist-world/web"]
-web-render = ["__web_render"]
 
 ast = ["ansi_term"]
-pdf = ["typst-pdf"]
+pdf = ["tinymist-task/pdf"]
+html = ["typst-html", "typst-svg"]
 svg = ["dep:reflexo-vec2svg"]
 
 [lints]

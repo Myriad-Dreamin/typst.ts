@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst.vue3",
-  "version": "0.5.4",
+  "version": "0.5.5-rc7",
   "type": "module",
   "main": "src/Typst.vue",
   "scripts": {
@@ -9,15 +9,18 @@
     "publish:dry": "npm publish --dry-run --access public",
     "publish:lib": "npm publish --access public || exit 0"
   },
+  "dependencies": {
+    "@myriaddreamin/typst-ts-renderer": "0.5.5-rc7",
+    "@myriaddreamin/typst.ts": "0.5.5-rc7"
+  },
   "peerDependencies": {
     "vue": "^3.4.31"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^4.1.0",
+    "@vitejs/plugin-vue": "^5.2.1",
     "typescript": "^5.0.2",
-    "vite": "^4.3.2",
-    "vue": "^3.4.31",
-    "vue-tsc": "^1.4.2"
+    "vue": "^3.5.13",
+    "vue-tsc": "^2.2.2"
   },
   "license": "Apache-2.0"
 }

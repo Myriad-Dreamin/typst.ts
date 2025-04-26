@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst-ts-renderer",
-  "version": "0.5.4",
+  "version": "0.5.5-rc7",
   "description": "WASM module for rendering Typst documents in browser.",
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
@@ -9,8 +9,17 @@
     "Typst"
   ],
   "type": "module",
-  "module": "pkg/wasm-pack-shim.mjs",
-  "types": "pkg/typst_ts_renderer.d.ts",
+  "module": "./pkg/wasm-pack-shim.mjs",
+  "require": "./pkg/wasm-pack-shim.mjs",
+  "types": "./pkg/typst_ts_renderer.d.ts",
+  "exports": {
+    ".": {
+      "node": "./pkg/wasm-pack-shim.mjs",
+      "module": "./pkg/wasm-pack-shim.mjs",
+      "types": "./pkg/typst_ts_renderer.d.ts"
+    },
+    "./wasm": "./pkg/typst_ts_renderer_bg.wasm"
+  },
   "files": [
     "pkg/wasm-pack-shim.mjs",
     "pkg/typst_ts_renderer_bg.wasm",
@@ -26,7 +35,7 @@
     "prepublish": "turbo build",
     "publish:dry": "npm publish --dry-run --access public",
     "publish:lib": "npm publish --access public || exit 0",
-    "test:chrome:verbose": "wasm-pack test --chrome --headless --release --features web_verbose",
+    "test:chrome:verbose": "wasm-pack test --node --release --features web_verbose",
     "test:firefox:verbose": "wasm-pack test --firefox --headless --release --features web_verbose",
     "test:chrome": "cross-env WASM_BINDGEN_TEST_NO_ORIGIN_ISOLATION=1 wasm-pack test --chrome --headless --release",
     "test:firefox": "cross-env WASM_BINDGEN_TEST_NO_ORIGIN_ISOLATION=1 wasm-pack test --firefox --headless --release"

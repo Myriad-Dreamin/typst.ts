@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst.ts",
-  "version": "0.5.4",
+  "version": "0.5.5-rc7",
   "description": "Run Typst in JavaScriptWorld.",
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
@@ -12,19 +12,295 @@
     "url": "https://github.com/Myriad-Dreamin/typst.ts/issues"
   },
   "homepage": "https://myriad-dreamin.github.io/typst.ts/",
+  "type": "module",
   "main": "./dist/cjs/index.cjs",
   "module": "./dist/esm/index.mjs",
   "types": "./dist/esm/index.d.mts",
   "exports": {
     ".": {
-      "types": "./dist/esm/index.d.mts",
-      "require": "./dist/cjs/index.cjs",
-      "import": "./dist/esm/index.mjs"
+      "require": {
+        "types": "./dist/cjs/index.d.cts",
+        "default": "./dist/cjs/index.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.mjs"
+      }
+    },
+    "./renderer": {
+      "require": {
+        "types": "./dist/cjs/renderer.d.cts",
+        "default": "./dist/cjs/renderer.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/renderer.d.mts",
+        "default": "./dist/esm/renderer.mjs"
+      }
+    },
+    "./contrib/global-renderer": {
+      "require": {
+        "types": "./dist/cjs/contrib/global-renderer.d.cts",
+        "default": "./dist/cjs/contrib/global-renderer.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/contrib/global-renderer.d.mts",
+        "default": "./dist/esm/contrib/global-renderer.mjs"
+      }
+    },
+    "./compiler": {
+      "require": {
+        "types": "./dist/cjs/compiler.d.cts",
+        "default": "./dist/cjs/compiler.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/compiler.d.mts",
+        "default": "./dist/esm/compiler.mjs"
+      }
+    },
+    "./contrib/global-compiler": {
+      "require": {
+        "types": "./dist/cjs/contrib/global-compiler.d.cts",
+        "default": "./dist/cjs/contrib/global-compiler.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/contrib/global-compiler.d.mts",
+        "default": "./dist/esm/contrib/global-compiler.mjs"
+      }
     },
     "./*": [
       "./*",
       "./*.d.mts"
-    ]
+    ],
+    "./contrib/all-in-one-lite": {
+      "require": {
+        "types": "./dist/cjs/contrib/all-in-one-lite.d.cts",
+        "default": "./dist/cjs/contrib/all-in-one-lite.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/contrib/all-in-one-lite.d.mts",
+        "default": "./dist/esm/contrib/all-in-one-lite.mjs"
+      }
+    },
+    "./contrib/all-in-one": {
+      "require": {
+        "types": "./dist/cjs/contrib/all-in-one.d.cts",
+        "default": "./dist/cjs/contrib/all-in-one.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/contrib/all-in-one.d.mts",
+        "default": "./dist/esm/contrib/all-in-one.mjs"
+      }
+    },
+    "./contrib/dom/typst-cancel": {
+      "require": {
+        "types": "./dist/cjs/contrib/dom/typst-cancel.d.cts",
+        "default": "./dist/cjs/contrib/dom/typst-cancel.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/contrib/dom/typst-cancel.d.mts",
+        "default": "./dist/esm/contrib/dom/typst-cancel.mjs"
+      }
+    },
+    "./contrib/dom/typst-doc": {
+      "require": {
+        "types": "./dist/cjs/contrib/dom/typst-doc.d.cts",
+        "default": "./dist/cjs/contrib/dom/typst-doc.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/contrib/dom/typst-doc.d.mts",
+        "default": "./dist/esm/contrib/dom/typst-doc.mjs"
+      }
+    },
+    "./contrib/snippet": {
+      "require": {
+        "types": "./dist/cjs/contrib/snippet.d.cts",
+        "default": "./dist/cjs/contrib/snippet.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/contrib/snippet.d.mts",
+        "default": "./dist/esm/contrib/snippet.mjs"
+      }
+    },
+    "./doc": {
+      "require": {
+        "types": "./dist/cjs/doc.d.cts",
+        "default": "./dist/cjs/doc.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/doc.d.mts",
+        "default": "./dist/esm/doc.mjs"
+      }
+    },
+    "./dom": {
+      "require": {
+        "types": "./dist/cjs/dom.d.cts",
+        "default": "./dist/cjs/dom.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/dom.d.mts",
+        "default": "./dist/esm/dom.mjs"
+      }
+    },
+    "./fs/fetch": {
+      "require": {
+        "types": "./dist/cjs/fs/fetch.d.cts",
+        "default": "./dist/cjs/fs/fetch.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/fs/fetch.d.mts",
+        "default": "./dist/esm/fs/fetch.mjs"
+      }
+    },
+    "./fs/index": {
+      "require": {
+        "types": "./dist/cjs/fs/index.d.cts",
+        "default": "./dist/cjs/fs/index.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/fs/index.d.mts",
+        "default": "./dist/esm/fs/index.mjs"
+      }
+    },
+    "./fs/memory": {
+      "require": {
+        "types": "./dist/cjs/fs/memory.d.cts",
+        "default": "./dist/cjs/fs/memory.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/fs/memory.d.mts",
+        "default": "./dist/esm/fs/memory.mjs"
+      }
+    },
+    "./fs/package": {
+      "require": {
+        "types": "./dist/cjs/fs/package.d.cts",
+        "default": "./dist/cjs/fs/package.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/fs/package.d.mts",
+        "default": "./dist/esm/fs/package.mjs"
+      }
+    },
+    "./fs/package.node": {
+      "require": {
+        "types": "./dist/cjs/fs/package.node.d.cts",
+        "default": "./dist/cjs/fs/package.node.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/fs/package.node.d.mts",
+        "default": "./dist/esm/fs/package.node.mjs"
+      }
+    },
+    "./index": {
+      "require": {
+        "types": "./dist/cjs/index.d.cts",
+        "default": "./dist/cjs/index.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/index.d.mts",
+        "default": "./dist/esm/index.mjs"
+      }
+    },
+    "./init": {
+      "require": {
+        "types": "./dist/cjs/init.d.cts",
+        "default": "./dist/cjs/init.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/init.d.mts",
+        "default": "./dist/esm/init.mjs"
+      }
+    },
+    "./internal.types": {
+      "require": {
+        "types": "./dist/cjs/internal.types.d.cts",
+        "default": "./dist/cjs/internal.types.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/internal.types.d.mts",
+        "default": "./dist/esm/internal.types.mjs"
+      }
+    },
+    "./main": {
+      "require": {
+        "types": "./dist/cjs/main.d.cts",
+        "default": "./dist/cjs/main.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/main.d.mts",
+        "default": "./dist/esm/main.mjs"
+      }
+    },
+    "./options.init": {
+      "require": {
+        "types": "./dist/cjs/options.init.d.cts",
+        "default": "./dist/cjs/options.init.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/options.init.d.mts",
+        "default": "./dist/esm/options.init.mjs"
+      }
+    },
+    "./options.render": {
+      "require": {
+        "types": "./dist/cjs/options.render.d.cts",
+        "default": "./dist/cjs/options.render.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/options.render.d.mts",
+        "default": "./dist/esm/options.render.mjs"
+      }
+    },
+    "./render/canvas/view": {
+      "require": {
+        "types": "./dist/cjs/render/canvas/view.d.cts",
+        "default": "./dist/cjs/render/canvas/view.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/render/canvas/view.d.mts",
+        "default": "./dist/esm/render/canvas/view.mjs"
+      }
+    },
+    "./render/canvas/viewport": {
+      "require": {
+        "types": "./dist/cjs/render/canvas/viewport.d.cts",
+        "default": "./dist/cjs/render/canvas/viewport.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/render/canvas/viewport.d.mts",
+        "default": "./dist/esm/render/canvas/viewport.mjs"
+      }
+    },
+    "./render/svg/patch": {
+      "require": {
+        "types": "./dist/cjs/render/svg/patch.d.cts",
+        "default": "./dist/cjs/render/svg/patch.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/render/svg/patch.d.mts",
+        "default": "./dist/esm/render/svg/patch.mjs"
+      }
+    },
+    "./utils": {
+      "require": {
+        "types": "./dist/cjs/utils.d.cts",
+        "default": "./dist/cjs/utils.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/utils.d.mts",
+        "default": "./dist/esm/utils.mjs"
+      }
+    },
+    "./wasm": {
+      "require": {
+        "types": "./dist/cjs/wasm.d.cts",
+        "default": "./dist/cjs/wasm.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/wasm.d.mts",
+        "default": "./dist/esm/wasm.mjs"
+      }
+    }
   },
   "files": [
     "dist/**/*.{mts,mjs,cjs,cts,ts,js}",
@@ -34,20 +310,24 @@
     "build-template": "npx vite build -c vite.config.mjs --",
     "build:main": "yarn build-template --component=main",
     "build:bundle": "yarn build:main && yarn build-template --component=global-compiler && yarn build-template --component=global-renderer && yarn build-template --component=all-in-one && yarn build-template --component=all-in-one-lite",
-    "build": "node scripts/mkdir.mjs && tsc -p ./tsconfig.lib.json && tsc -p ./tsconfig.cjs.json && node scripts/fix-cjs.mjs && yarn build:bundle",
+    "build": "node scripts/mkdir.mjs && tsc -p ./tsconfig.lib.json && tsc -p ./tsconfig.cjs.json && node scripts/transform.mjs && yarn build:bundle",
     "build:dev": "node scripts/mkdir.mjs && tsc -p ./tsconfig.lib.json && npx vite build --watch -c vite.config.mjs -- --component=main",
     "dev:tsc": "node scripts/mkdir.mjs && tsc -w -p ./tsconfig.lib.json",
     "dev:main": "node scripts/mkdir.mjs && npx vite build --watch -c vite.config.mjs -- --component=main",
     "prepublish": "turbo build",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "test:e2e": "node scripts/test-templates.mjs",
     "publish:dry": "npm publish --dry-run --access public",
-    "publish:lib": "npm publish --access public || exit 0"
+    "publish:lib": "npm publish --access public || exit 0",
+    "test-install": "yarn playwright install-deps && yarn playwright install"
   },
   "dependencies": {
     "idb": "^7.1.1"
   },
   "peerDependencies": {
-    "@myriaddreamin/typst-ts-renderer": "^0.5.4",
-    "@myriaddreamin/typst-ts-web-compiler": "^0.5.4"
+    "@myriaddreamin/typst-ts-renderer": "^0.5.5-rc7",
+    "@myriaddreamin/typst-ts-web-compiler": "^0.5.5-rc7"
   },
   "peerDependenciesMeta": {
     "@myriaddreamin/typst-ts-renderer": {
@@ -60,7 +340,7 @@
   "devDependencies": {
     "@myriaddreamin/typst-ts-renderer": "*",
     "@myriaddreamin/typst-ts-web-compiler": "*",
-    "@types/web": "^0.0.99",
+    "@types/web": "^0.0.188",
     "builtin-modules": "3.3.0",
     "tslib": "2.5.2"
   }

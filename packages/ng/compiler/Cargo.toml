@@ -1,0 +1,73 @@
+[package]
+name = "reflexo-typst-compiler"
+description = "Compile Typst documents in Browsers."
+authors.workspace = true
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+
+ansi-to-html.workspace = true
+
+comemo.workspace = true
+base64.workspace = true
+
+serde-wasm-bindgen.workspace = true
+serde_json.workspace = true
+
+# Everything to do with wasm
+wasm-bindgen.workspace = true
+js-sys.workspace = true
+wasm-bindgen-futures.workspace = true
+web-sys = { workspace = true, features = [
+    "console",
+    "Performance",
+    "PerformanceTiming",
+    "Window",
+    "Blob",
+    "Document",
+] }
+console_error_panic_hook.workspace = true
+
+reflexo-typst2vec.workspace = true
+reflexo-typst = { workspace = true, features = ["web"] }
+reflexo-vec2svg.workspace = true
+typst.workspace = true
+
+[dev-dependencies]
+wasm-bindgen-test.workspace = true
+typst-ts-test-common.workspace = true
+hex.workspace = true
+sha2.workspace = true
+web-sys = { workspace = true, features = ["console"] }
+
+[features]
+default = ["full"]
+full = ["web", "web_test", "fonts", "misc"]
+misc = ["incr", "svg", "pdf", "ast", "html", "semantic_tokens"]
+
+web = ["reflexo-typst/web"]
+web_test = ["typst-ts-test-common/web_artifacts"]
+
+fonts = ["reflexo-typst/fonts"]
+incr = []
+pdf = ["reflexo-typst/pdf"]
+svg = ["reflexo-typst/svg"]
+ast = ["reflexo-typst/ast"]
+html = ["reflexo-typst/html"]
+semantic_tokens = []
+
+no-content-hint = [
+    "reflexo-typst2vec/no-content-hint",
+    "reflexo-typst/no-content-hint",
+    "reflexo-vec2svg/no-content-hint",
+]
+
+[lints]
+workspace = true

@@ -5,6 +5,10 @@ import {
   type BeforeBuildFn,
   type InitOptions,
   preloadFontAssets,
+  disableDefaultFontAssets,
+  preloadRemoteFonts,
+  LoadRemoteAssetsOptions,
+  LoadRemoteFontsOptions,
 } from '../options.init.mjs';
 import type { TypstRenderer, RenderSession } from '../renderer.mjs';
 import type { RenderToCanvasOptions, RenderSvgOptions } from '../options.render.mjs';
@@ -94,7 +98,7 @@ const isNode =
  * Use the *global shared* compiler instance:
  *
  * ```typescript
- * import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs';
+ * import { $typst } from '@myriaddreamin/typst.ts';
  * ```
  *
  * Note: if you want to compile multiple documents, you should create a new
@@ -145,8 +149,8 @@ export class TypstSnippet {
     compiler?: PromiseJust<TypstCompiler>;
     renderer?: PromiseJust<TypstRenderer>;
   }) {
-    this.cc = options?.compiler;
-    this.ex = options?.renderer;
+    this.cc = options?.compiler || TypstSnippet.$buildC;
+    this.ex = options?.renderer || TypstSnippet.$buildR;
     this.mainFilePath = '/main.typ';
     this.providers = [];
   }
@@ -190,6 +194,54 @@ export class TypstSnippet {
       throw new Error('already prepare uses for instances');
     }
     this.providers.push(...providers);
+  }
+
+  /**
+   * todo: add docs
+   */
+  static preloadFontFromUrl(fontUrl: string): TypstSnippetProvider {
+    return TypstSnippet.preloadFonts([fontUrl]);
+  }
+
+  /**
+   * todo: add docs
+   */
+  static preloadFontData(fontData: Uint8Array): TypstSnippetProvider {
+    return TypstSnippet.preloadFonts([fontData]);
+  }
+
+  /**
+   * todo: add docs
+   */
+  static preloadFonts(userFonts: (string | Uint8Array)[]): TypstSnippetProvider {
+    return {
+      key: 'access-model',
+      forRoles: ['compiler'],
+      provides: [preloadRemoteFonts(userFonts)],
+    };
+  }
+
+  /**
+   * don't load any default font assets.
+   * todo: add docs
+   */
+  static disableDefaultFontAssets(): TypstSnippetProvider {
+    return {
+      key: 'access-model',
+      forRoles: ['compiler'],
+      provides: [disableDefaultFontAssets()],
+    };
+  }
+
+  /**
+   * todo: add docs
+   */
+  static preloadFontAssets(options?: LoadRemoteAssetsOptions): TypstSnippetProvider {
+    return {
+      key: 'access-model',
+      forRoles: ['compiler'],
+      provides: [preloadFontAssets(options)],
+    };
   }
 
   /**
@@ -578,7 +630,7 @@ export class TypstSnippet {
   }
 
   private requireIsUninitialized<T>(role: string, c: PromiseJust<T>, e?: PromiseJust<T>) {
-    if (typeof c !== 'function') {
+    if (c && typeof c !== 'function') {
       throw new Error(`${role} has been initialized: ${c}`);
     }
     if (e && c != e) {
@@ -590,10 +642,12 @@ export class TypstSnippet {
   static async $buildC(this: TypstSnippet) {
     // lazy import compile module
     const { createGlobalCompiler } = (await import(
-      '@myriaddreamin/typst.ts/dist/esm/contrib/global-compiler.mjs'
+      // @ts-ignore
+      '@myriaddreamin/typst.ts/contrib/global-compiler'
     )) as any as typeof import('./global-compiler.mjs');
     const { createTypstCompiler } = (await import(
-      '@myriaddreamin/typst.ts/dist/esm/compiler.mjs'
+      // @ts-ignore
+      '@myriaddreamin/typst.ts/compiler'
     )) as any as typeof import('../compiler.mjs');
 
     await this.prepareUse();
@@ -604,10 +658,12 @@ export class TypstSnippet {
   static async $buildR(this: TypstSnippet) {
     // lazy import renderer module
     const { createGlobalRenderer } = (await import(
-      '@myriaddreamin/typst.ts/dist/esm/contrib/global-renderer.mjs'
+      // @ts-ignore
+      '@myriaddreamin/typst.ts/contrib/global-renderer'
     )) as any as typeof import('./global-renderer.mjs');
     const { createTypstRenderer } = (await import(
-      '@myriaddreamin/typst.ts/dist/esm/renderer.mjs'
+      // @ts-ignore
+      '@myriaddreamin/typst.ts/renderer'
     )) as any as typeof import('../renderer.mjs');
 
     await this.prepareUse();

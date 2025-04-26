@@ -13,7 +13,6 @@ repository.workspace = true
 comemo.workspace = true
 ecow.workspace = true
 parking_lot.workspace = true
-web-time.workspace = true
 wasm-bindgen = { workspace = true, optional = true }
 js-sys = { workspace = true, optional = true }
 
@@ -34,6 +33,8 @@ serde_with.workspace = true
 rkyv = { workspace = true, optional = true }
 
 tinymist-std.workspace = true
+tinymist-world.workspace = true
+typst = { workspace = true, optional = true }
 
 [dev-dependencies]
 hex.workspace = true
@@ -47,7 +48,7 @@ rkyv = ["dep:rkyv", "tinymist-std/rkyv"]
 rkyv-validation = ["tinymist-std/rkyv-validation"]
 flat-vector = ["rkyv", "rkyv-validation"]
 
-typst = ["tinymist-std/typst"]
+typst = ["tinymist-std/typst", "dep:typst"]
 
 __web = ["dep:wasm-bindgen", "dep:js-sys", "tinymist-std/web"]
 web = ["__web"]

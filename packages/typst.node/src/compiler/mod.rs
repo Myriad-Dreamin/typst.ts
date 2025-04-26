@@ -1,22 +1,28 @@
 /// Dynamic boxed compiler trait for NodeJS.
 pub mod boxed;
+/// NodeJS bindings for the compiler.
+pub mod node;
+/// Wrapped Project compiler.
+pub mod project;
 
-pub use boxed::{BoxedCompiler, NodeCompilerTrait};
 use reflexo_typst::package::RegistryPathMapper;
 
+use std::path::PathBuf;
 use std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc};
 
 use napi::{bindgen_prelude::*, Either};
 use napi_derive::napi;
 use reflexo_typst::config::{entry::EntryState, CompileFontOpts};
-use reflexo_typst::error::prelude::{Result as ZResult, WithContext};
+use reflexo_typst::error::prelude::{Result, WithContext};
 use reflexo_typst::font::system::SystemFontSearcher;
-use reflexo_typst::package::http::HttpRegistry;
+use reflexo_typst::package::registry::HttpRegistry;
 use reflexo_typst::typst::{foundations::IntoValue, LazyHash};
 use reflexo_typst::vfs::{system::SystemAccessModel, Vfs};
-use reflexo_typst::{
-    Bytes, CompileDriver, PureCompiler, TypstDict, TypstSystemUniverse, TypstSystemWorld,
-};
+use reflexo_typst::{Bytes, Features, TypstDict, TypstSystemUniverse};
+
+pub use boxed::BoxedCompiler;
+pub use node::*;
+pub use project::*;
 
 /// A nullable boxed compiler wrapping.
 ///
@@ -68,7 +74,7 @@ pub struct NodeAddFontBlobs {
 
 #[napi(object, js_name = "CompileArgs")]
 #[derive(Default)]
-pub struct NodeCompileArgs {
+pub struct CompileArgs {
     /// Adds additional directories to search for fonts
     pub font_args: Option<Vec<Either<NodeAddFontPaths, NodeAddFontBlobs>>>,
 
@@ -79,21 +85,23 @@ pub struct NodeCompileArgs {
     pub inputs: Option<HashMap<String, String>>,
 }
 
-pub fn create_driver(
-    args: Option<NodeCompileArgs>,
-) -> ZResult<CompileDriver<PureCompiler<TypstSystemWorld>>> {
+pub fn abs_user_path(path: &str) -> Result<PathBuf> {
     use reflexo_typst::path::PathClean;
-    let args = args.unwrap_or_default();
-    let workspace_dir = Path::new(args.workspace.unwrap_or_default().as_str()).clean();
+    let path = Path::new(path).clean();
 
-    let workspace_dir = if workspace_dir.is_absolute() {
-        workspace_dir
+    let path = if path.is_absolute() {
+        path
     } else {
         let cwd = std::env::current_dir().context("failed to get current dir")?;
-        cwd.join(workspace_dir)
+        cwd.join(path)
     };
 
-    let workspace_dir = workspace_dir.clean();
+    Ok(path.clean())
+}
+
+pub fn create_universe(args: Option<CompileArgs>) -> Result<TypstSystemUniverse> {
+    let args = args.unwrap_or_default();
+    let workspace_dir = abs_user_path(args.workspace.unwrap_or_default().as_str())?;
 
     let mut searcher = SystemFontSearcher::new();
 
@@ -111,7 +119,7 @@ pub fn create_driver(
             }
             Either::B(p) => {
                 for b in p.font_blobs {
-                    searcher.add_memory_font(Bytes::from(b.to_vec()));
+                    searcher.add_memory_font(Bytes::new(b.to_vec()));
                 }
             }
         }
@@ -124,15 +132,16 @@ pub fn create_driver(
 
     let registry = Arc::new(HttpRegistry::default());
     let resolver = Arc::new(RegistryPathMapper::new(registry.clone()));
-    let world = TypstSystemUniverse::new_raw(
+    let verse = TypstSystemUniverse::new_raw(
         EntryState::new_rooted(workspace_dir.into(), None),
+        Features::default(),
         args.inputs.map(create_inputs),
         Vfs::new(resolver, SystemAccessModel {}),
         registry,
-        Arc::new(searcher.into()),
+        Arc::new(searcher.build()),
     );
 
-    Ok(CompileDriver::new(std::marker::PhantomData, world))
+    Ok(verse)
 }
 
 /// Convert the input pairs to a dictionary.

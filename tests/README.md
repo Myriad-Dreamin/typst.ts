@@ -3,7 +3,7 @@
 Run integration test:
 
 ```
-cargo insta test --manifest-path ./integration/Cargo.toml --no-force-pass -- --nocapture
+cargo insta test --manifest-path ./integration/Cargo.toml --check -- --nocapture
 ```
 
 Review integration test:

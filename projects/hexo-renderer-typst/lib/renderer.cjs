@@ -8,13 +8,42 @@ const trampoline_js = fs.readFileSync(
   'utf-8',
 );
 
+/**
+ * Hexo Renderer for Typst
+ * 
+ * @class
+ * @constructor
+ * @public
+ */
 class Renderer {
   constructor(hexo, compiler) {
+    /**
+     * @type {import('hexo').Hexo}
+     */
     this.hexo = hexo;
+    /**
+     * @type {import('./compiler.cjs').Compiler}
+     */
     this.compiler = compiler;
   }
 
   async render(data, _options) {
+    if (data.path.endsWith('.html.typ')) {
+      return this.renderHtml(data, _options);
+    } else {
+      return this.renderPaged(data, _options);
+    }
+  }
+
+  async renderHtml(data, _options) {
+    console.log('[typst] rendering  Html', data.path, '...');
+    const buf = this.compiler.html(data.path);
+    console.log('[typst] render     Html', data.path, 'ok');
+
+    return buf;
+  }
+
+  async renderPaged(data, _options) {
     const base_dir = this.hexo.base_dir;
 
     const rawDataPath = path
@@ -26,11 +55,11 @@ class Renderer {
     const dataPath = path.resolve(base_dir, 'public/', relDataPath);
     const dataDir = path.dirname(dataPath);
 
-    console.log('[typst] rendering', data.path, '...');
+    console.log('[typst] rendering Paged', data.path, '...');
     const buf = this.compiler.vector(data.path);
     fs.mkdirSync(dataDir, { recursive: true });
     fs.writeFileSync(dataPath, buf);
-    console.log('[typst] render   ', data.path, 'ok');
+    console.log('[typst] render    Paged', data.path, 'ok');
 
     const compiled = `<script>${trampoline_js}</script>`
       .replace('{{renderer_module}}', renderer_module)

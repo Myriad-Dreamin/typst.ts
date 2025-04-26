@@ -14,8 +14,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 defaults:
- run:
-  working-directory: ./packages/typst.node
+  run:
+    working-directory: ./packages/typst.node
 jobs:
   build:
     strategy:
@@ -73,13 +73,12 @@ jobs:
         uses: actions/setup-node@v4
         if: ${{ !matrix.settings.docker }}
         with:
-          node-version: 20
+          node-version: 22
           cache: yarn
       - name: Install
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.85.0
         if: ${{ !matrix.settings.docker }}
         with:
-          toolchain: stable
           targets: ${{ matrix.settings.target }}
       - name: Cache cargo
         uses: actions/cache@v4

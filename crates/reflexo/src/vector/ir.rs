@@ -24,6 +24,7 @@ use std::sync::Arc;
 mod color;
 mod compose;
 pub mod geom;
+mod html;
 pub mod layout;
 mod meta;
 pub mod module;
@@ -35,6 +36,7 @@ mod visualize;
 pub use color::*;
 pub use compose::*;
 pub use geom::*;
+pub use html::*;
 pub use layout::*;
 pub use meta::*;
 pub use module::*;
@@ -67,6 +69,7 @@ pub enum VecItem {
     Pattern(Arc<PatternItem>),
     ContentHint(char),
     ColorTransform(Arc<ColorTransform>),
+    SizedRawHtml(SizedRawHtmlItem),
     Html(HtmlItem),
     Labelled(LabelledRef),
 }
@@ -175,7 +178,7 @@ mod tests {
     fn test_image_serialization() {
         let img = ImageItem {
             image: Arc::new(Image {
-                data: vec![0, 1, 2, 3],
+                data: vec![0, 1, 2, 3].into(),
                 format: "png".into(),
                 size: Axes::new(10, 10),
                 alt: None,

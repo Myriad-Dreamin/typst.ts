@@ -15,10 +15,10 @@ use std::{
     sync::OnceLock,
 };
 
-use chrono::{DateTime, Utc};
 use clap::{builder::ValueParser, ArgAction, Args, Command, Parser, Subcommand, ValueEnum};
 use reflexo_typst::{
-    build_info::VERSION, vfs::WorkspaceResolver, ImmutPath, TypstFileId, MEMORY_MAIN_ENTRY,
+    build_info::VERSION, vfs::WorkspaceResolver, DiagnosticHandler, ImmutPath, TypstFileId,
+    MEMORY_MAIN_ENTRY,
 };
 use typst::syntax::VirtualPath;
 use utils::current_dir;
@@ -90,8 +90,6 @@ pub enum Subcommands {
 pub enum FontSubCommands {
     /// List all discovered fonts in system and custom font paths
     List(ListFontsArgs),
-    /// Measure fonts and generate a profile file for compiler
-    Measure(MeasureFontsArgs),
 }
 
 #[derive(Debug, Subcommand)]
@@ -270,10 +268,9 @@ pub struct ExportArgs {
     #[clap(
         long = "creation-timestamp",
         env = "SOURCE_DATE_EPOCH",
-        value_name = "UNIX_TIMESTAMP",
-        value_parser = parse_source_date_epoch,
+        value_name = "UNIX_TIMESTAMP"
     )]
-    pub creation_timestamp: Option<DateTime<Utc>>,
+    pub creation_timestamp: Option<i64>,
 }
 
 #[derive(Default, Debug, Clone, Parser)]
@@ -308,6 +305,15 @@ pub struct CompileArgs {
         value_parser = clap::value_parser!(DiagnosticFormat)
     )]
     pub diagnostic_format: DiagnosticFormat,
+}
+
+impl CompileArgs {
+    pub fn diagnostics_handler(&self) -> DiagnosticHandler {
+        DiagnosticHandler {
+            diagnostic_format: self.diagnostic_format.into(),
+            print_compile_status: self.watch,
+        }
+    }
 }
 
 /// Processes an input file to extract provided metadata
@@ -469,12 +475,4 @@ impl fmt::Display for DiagnosticFormat {
 pub fn get_cli(sub_command_required: bool) -> Command {
     let cli = Command::new("$").disable_version_flag(true);
     Opts::augment_args(cli).subcommand_required(sub_command_required)
-}
-
-/// Parses a UNIX timestamp according to <https://reproducible-builds.org/specs/source-date-epoch/>
-fn parse_source_date_epoch(raw: &str) -> Result<DateTime<Utc>, String> {
-    let timestamp: i64 = raw
-        .parse()
-        .map_err(|err| format!("timestamp must be decimal integer ({err})"))?;
-    DateTime::from_timestamp(timestamp, 0).ok_or_else(|| "timestamp out of range".to_string())
 }

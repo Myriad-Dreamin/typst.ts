@@ -7,13 +7,13 @@
 #show outline.entry.where(level: 1): it => [
   #let loc = it.element.location()
   #let num = numbering(loc.page-numbering(), ..counter(page).at(loc))
-  #emph(link(loc, it.body))
+  #emph(link(loc, it.element))
   #text(luma(100), box(width: 1fr, repeat[#it.fill.body;·]))
   #link(loc, num)
 ]
 
 #counter(page).update(3)
-#outline(indent: auto, fill: repeat[--])
+#outline(indent: auto)
 
 #set text(8pt)
 #show heading: set block(spacing: 0.65em)

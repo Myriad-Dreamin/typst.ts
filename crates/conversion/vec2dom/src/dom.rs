@@ -368,14 +368,14 @@ impl DomPage {
     }
 
     pub fn need_repaint_semantics(&mut self) -> bool {
-        self.semantics_state.as_ref().map_or(true, |e| {
+        self.semantics_state.as_ref().is_none_or(|e| {
             let (data, layout_heavy) = e;
             e.0.content != data.content || (self.is_visible && !*layout_heavy)
         })
     }
 
     pub fn repaint_semantics(&mut self, ctx: &mut DomContext<'_, '_>) -> Result<()> {
-        let init_semantics = self.semantics_state.as_ref().map_or(true, |e| {
+        let init_semantics = self.semantics_state.as_ref().is_none_or(|e| {
             let (data, _layout_heavy) = e;
             e.0.content != data.content
         });
@@ -398,7 +398,7 @@ impl DomPage {
             return Ok(());
         }
 
-        if self.semantics_state.as_ref().map_or(true, |e| e.1) {
+        if self.semantics_state.as_ref().is_none_or(|e| e.1) {
             return Ok(());
         }
 
@@ -476,13 +476,9 @@ impl DomPage {
         }
 
         let state = self.layout_data.as_ref().unwrap();
-        self.canvas_state
-            .lock()
-            .unwrap()
-            .as_ref()
-            .map_or(true, |s| {
-                !s.render_entire_page || s.rendered != *state || s.ppp != b.pixel_per_pt
-            })
+        self.canvas_state.lock().unwrap().as_ref().is_none_or(|s| {
+            !s.render_entire_page || s.rendered != *state || s.ppp != b.pixel_per_pt
+        })
     }
 
     pub fn repaint_canvas(
@@ -654,7 +650,7 @@ impl TypstPageElem {
         let stub = ctx.create_stub();
         let clip_paths = g.next_element_sibling().unwrap();
         let style_defs = clip_paths.next_element_sibling().unwrap();
-        let attached = Self::attach_svg(ctx, g.clone().dyn_into().unwrap(), data.content);
+        let attached = Self::attach_html(ctx, g.clone().dyn_into().unwrap(), data.content);
 
         Self {
             g: attached,
@@ -673,7 +669,7 @@ pub enum TypstDomExtra {
     Image(ImageElem),
     Text(TextElem),
     Path(PathElem),
-    Html(HtmlElem),
+    RawHtml(HtmlElem),
     Link(LinkElem),
     ContentHint(ContentHintElem),
 }

@@ -6,7 +6,9 @@
       // dependencies and devDependencies
       // `build` tasks  being completed first
       // (the `^` symbol signifies `upstream`).
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       // A package's `build` script should only be rerun when
       // any source file has changed in related folders.
       "inputs": [
@@ -18,35 +20,67 @@
       ],
       // note: output globs are relative to each package's `package.json`
       // (and not the monorepo root)
-      "outputs": [".next/**", "!.next/cache/**"]
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**"
+      ]
     },
-    "prepublish": {
+    "prepublish:unit": {
       // A package's `prepublish` script depends on the `build`,
       // `test`, and `lint` scripts of the same package
       // being completed. It also has no filesystem outputs.
-      "dependsOn": ["build", "test", "lint"]
+      "dependsOn": [
+        "build",
+        "test",
+        "lint"
+      ]
+    },
+    "prepublish:integrated": {
+      "dependsOn": [
+        "prepublish:unit",
+        "test:e2e"
+      ]
+    },
+    "prepublish": {
+      "dependsOn": [
+        "prepublish:unit",
+        "prepublish:integrated"
+      ]
     },
     "publish:dry": {
       // Try to publish a package to npm, but don't actually
-      "dependsOn": ["prepublish", "^publish:dry"],
+      "dependsOn": [
+        "prepublish",
+        "^publish:dry"
+      ],
       "cache": false
     },
     "publish:lib": {
       // Publish a package to npm.
-      "dependsOn": ["prepublish", "^publish:lib"],
+      "dependsOn": [
+        "prepublish",
+        "^publish:lib"
+      ],
       "cache": false
     },
     "test": {
       // A package's `test` script depends on that package's
       // own `build` script being completed first.
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       // A package's `test` script should only be rerun when
       // any specification file has changed in related folders.
-      "inputs": ["{projects,src}/**/*.spec.{ts,tsx,js,jsx}"]
+      "inputs": [
+        "{projects,src}/**/*.spec.{ts,tsx,js,jsx}"
+      ]
     },
     // A package's `lint` script has no dependencies and
     // can be run whenever. It also has no filesystem outputs.
     "lint": {},
+    // A package's `test:e2e` script has no dependencies and
+    // can be run whenever. It also has no filesystem outputs.
+    "test:e2e": {},
     "dev": {
       "cache": false,
       "persistent": true

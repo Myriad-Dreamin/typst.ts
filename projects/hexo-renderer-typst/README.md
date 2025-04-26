@@ -47,3 +47,7 @@ The plugin will set the `sys.inputs.x-target` to `web`. You can configure your t
   it
 }
 ````
+
+### HTML export (experimental)
+
+The post with `.html.typ` extension will be rendered by the experimental html exporter. The plugin will try to convert the typst template to HTML.

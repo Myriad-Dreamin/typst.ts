@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst-ts-parser",
-  "version": "0.5.4",
+  "version": "0.5.5-rc7",
   "description": "WASM module for Parsing Typst documents in JavaScript environment.",
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
@@ -9,8 +9,15 @@
     "Typst"
   ],
   "type": "module",
-  "module": "pkg/wasm-pack-shim.mjs",
-  "types": "pkg/typst_ts_parser.d.ts",
+  "module": "./pkg/wasm-pack-shim.mjs",
+  "types": "./pkg/typst_ts_parser.d.ts",
+  "exports": {
+    ".": {
+      "module": "./pkg/wasm-pack-shim.mjs",
+      "types": "./pkg/typst_ts_parser.d.ts"
+    },
+    "./wasm": "./pkg/typst_ts_parser_bg.wasm"
+  },
   "files": [
     "pkg/wasm-pack-shim.mjs",
     "pkg/typst_ts_parser_bg.wasm",

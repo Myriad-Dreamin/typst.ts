@@ -12,24 +12,13 @@ pub struct ImageItem {
     pub size: Size,
 }
 
-/// Item representing an `<image/>` element.
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
-#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
-pub struct HtmlItem {
-    /// The sanitized source code.
-    pub html: ImmutStr,
-    /// The target size of the image.
-    pub size: Size,
-}
-
 /// Data of an `<image/>` element.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
 #[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
 pub struct Image {
     /// The encoded image data.
-    pub data: Vec<u8>,
+    pub data: Arc<[u8]>,
     /// The format of the encoded `buffer`.
     pub format: ImmutStr,
     /// The size of the image.

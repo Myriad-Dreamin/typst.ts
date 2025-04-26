@@ -1,4 +1,4 @@
-#import "@preview/shiroa:0.1.2": *
+#import "@preview/shiroa:0.2.3": *
 
 #import "/docs/cookery/templates/ebook.typ"
 

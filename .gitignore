@@ -14,5 +14,8 @@
 target/
 out/
 /assets/profile
+/assets/fonts
 dist/
 node_modules/
+
+typst.ts.code-workspace

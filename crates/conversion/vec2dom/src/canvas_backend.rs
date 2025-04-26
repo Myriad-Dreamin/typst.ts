@@ -10,7 +10,6 @@ pub struct DefaultExportFeature;
 
 impl ExportFeature for DefaultExportFeature {
     const ENABLE_TRACING: bool = false;
-    const SHOULD_RENDER_TEXT_ELEMENT: bool = false;
 }
 
 type Vec2Canvas = CanvasTask<DefaultExportFeature>;
@@ -93,7 +92,7 @@ impl TypstElem {
             Label(ch) => {
                 ch.child.attach_canvas(g);
             }
-            Html(..) | Link(..) | Image(..) | Text(..) | Path(..) | ContentHint(..) => {}
+            RawHtml(..) | Link(..) | Image(..) | Text(..) | Path(..) | ContentHint(..) => {}
         };
     }
 

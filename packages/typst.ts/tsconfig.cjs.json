@@ -3,10 +3,12 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist/cjs",
+    "moduleResolution": "node10",
     "module": "CommonJS",
     "declaration": true,
     "declarationMap": true,
     "inlineSources": true,
     "inlineSourceMap": true
-  }
+  },
+  "exclude": ["**/*.test.mts", "**/*.spec.mts", "node_modules", "dist"]
 }

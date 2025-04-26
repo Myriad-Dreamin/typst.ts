@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { AppService } from './app.service';
 
 @Component({
+  standalone: false, // this is now required when using NgModule
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.sass'],
@@ -13,7 +14,7 @@ export class AppComponent implements OnInit {
   constructor(private service: AppService) {}
 
   ngOnInit() {
-    this.service.getArtifact().subscribe(artifact => {
+    this.service.getArtifact().subscribe((artifact: Uint8Array) => {
       this.artifact = artifact;
     });
   }

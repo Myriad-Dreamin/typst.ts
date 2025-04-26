@@ -1,17 +1,22 @@
 use comemo::Track;
+use reflexo::typst::TypstDocument;
 use typst::{
     diag::{EcoString, StrResult},
-    eval::{eval_string, EvalMode},
     foundations::{Content, LocatableSelector, Scope},
-    model::Document,
     syntax::Span,
     World,
 };
+use typst_eval::{eval_string, EvalMode};
 
 // todo: query exporter
 /// Retrieve the matches for the selector.
-pub fn retrieve(world: &dyn World, selector: &str, document: &Document) -> StrResult<Vec<Content>> {
+pub fn retrieve(
+    world: &dyn World,
+    selector: &str,
+    document: &TypstDocument,
+) -> StrResult<Vec<Content>> {
     let selector = eval_string(
+        &typst::ROUTINES,
         world.track(),
         selector,
         Span::detached(),
@@ -30,7 +35,7 @@ pub fn retrieve(world: &dyn World, selector: &str, document: &Document) -> StrRe
     .map_err(|e| EcoString::from(format!("failed to cast: {}", e.message())))?;
 
     Ok(document
-        .introspector
+        .introspector()
         .query(&selector.0)
         .into_iter()
         .collect::<Vec<_>>())

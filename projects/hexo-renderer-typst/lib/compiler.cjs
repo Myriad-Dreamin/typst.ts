@@ -1,6 +1,14 @@
 const { NodeCompiler, DynLayoutCompiler } = require('@myriaddreamin/typst-ts-node-compiler');
 const path = require('path');
 
+
+/**
+ * Hexo Compiler for Typst
+ * 
+ * @class
+ * @constructor
+ * @public
+ */
 class Compiler {
   constructor(hexo) {
     this.hexo = hexo;
@@ -26,6 +34,17 @@ class Compiler {
     return this.base.compile({
       mainFilePath: path,
     }).result.title;
+  }
+
+  html(path) {
+    try {
+      return this.base.html({
+        mainFilePath: path,
+      });
+    } catch (e) {
+      console.log(e);
+      throw e;
+    }
   }
 
   vector(path) {

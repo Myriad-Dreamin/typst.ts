@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "target": "es2020",
+    "module": "ES2020",
+    "declaration": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "rootDir": "./src",
+    "strict": true,
+    "stripInternal": true,
+    "skipLibCheck": true
+  },
+  "include": ["./src"],
+  "exclude": ["./dist"]
+}
