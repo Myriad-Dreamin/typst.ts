@@ -721,6 +721,7 @@ pub struct LabelElem {
     pub label: ImmutStr,
     pub child: Box<TypstElem>,
 }
+
 #[derive(Debug)]
 pub struct GroupElem {
     pub children: Vec<(Point, TypstElem)>,

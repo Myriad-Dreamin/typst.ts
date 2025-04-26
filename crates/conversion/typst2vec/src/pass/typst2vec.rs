@@ -492,11 +492,6 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
             }
         }
 
-        // pub label: Option<Label>,
-        //     if let Some(label) = group.label {
-        //         self.xml.write_attribute("data-typst-label", label.as_str());
-        //     }
-
         let g = self.store(VecItem::Group(GroupRef(
             items.into_iter().map(|(x, _, y)| (x, y)).collect(),
         )));
