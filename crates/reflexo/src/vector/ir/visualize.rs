@@ -23,10 +23,10 @@ pub struct Image {
     pub format: ImmutStr,
     /// The size of the image.
     pub size: Axes<u32>,
-    /// A text describing the image.
-    pub alt: Option<ImmutStr>,
     /// prehashed image content.
     pub hash: Fingerprint,
+    /// Attributes that is applicable to the [`Image`].
+    pub attrs: Vec<ImageAttr>,
 }
 
 impl Image {
@@ -52,6 +52,17 @@ impl StaticHash128 for Image {
     fn get_hash(&self) -> u128 {
         self.hash.to_u128()
     }
+}
+
+/// Attributes that is applicable to the [`Image`].
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
+#[cfg_attr(feature = "rkyv-validation", archive(check_bytes))]
+pub enum ImageAttr {
+    /// A text describing the image.
+    Alt(ImmutStr),
+    /// The approach to rendering the image.
+    ImageRendering(ImmutStr),
 }
 
 /// Item representing an `<path/>` element.
