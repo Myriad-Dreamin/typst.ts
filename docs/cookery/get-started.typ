@@ -1,11 +1,19 @@
-#import "/docs/cookery/book.typ": book-page, cross-link
+#import "/docs/cookery/book.typ": book-page, cross-link, heading-reference
 #import "/docs/cookery/term.typ" as term
 
 #show: book-page.with(title: "Get Started")
 
 = Get Started
 
-In this chapter, you will learn the #link(<assets-and-libraries>)[core libraries and assets] provided by typst.ts, a #link(<starter-example>)[starter example], and #link(<practical-example>)[practical examples].
+// In this chapter, you will learn the #link(<assets-and-libraries>)[core libraries and assets] provided by typst.ts, a #link(<starter-example>)[starter example], and #link(<practical-example>)[practical examples].
+
+#let this-link = cross-link.with("/get-started.typ")
+
+#let ch-ref = heading-reference[== Core Libraries and Assets]
+#let h2 = heading-reference[== A starter example]
+#let h3 = heading-reference[== Practical Examples]
+
+In this chapter, you will learn the #this-link(reference: ch-ref)[core libraries and assets] provided by typst.ts, a #this-link(reference: h2)[starter example], and #this-link(reference: h3)[practical examples].
 
 == Core Libraries and Assets <assets-and-libraries>
 
@@ -104,7 +112,7 @@ console.log(await compiler.svg({
 
 == Practical Examples <practical-example>
 
-Given the #link(<assets-and-libraries>)[Core Libraries and Assets], we can start to build typst applications for web.
+Given the #this-link(reference: ch-ref)[Core Libraries and Assets], we can start to build typst applications for web.
 
 Rust Tools:
 - #link("https://github.com/Myriad-Dreamin/shiroa")[shiroa]: It is a Rust tool using `reflexo-typst`, producing static HTML files or dynamic ones utilizing `typst.ts` + `typst-ts-renderer`.

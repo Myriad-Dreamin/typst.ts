@@ -1,4 +1,4 @@
-#import "/docs/cookery/book.typ": book-page
+#import "/docs/cookery/book.typ": book-page, cross-link, heading-reference
 #import "/github-pages/docs/graphs.typ": data-flow-graph, ir-feature-graph
 #import "mod.typ": cond-image
 
@@ -19,11 +19,13 @@ Typst.ts is a project dedicated to bring the power of #link("https://github.com/
 
 Specifically, it first presents a typst document in three typical forms:
 
-- #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/ts-cli.html")[Form1]: Render to SVG and then embed it as a high-quality vectored image directly.
+- #cross-link("/guide/compiler/ts-cli.typ")[Form1]: Renders to SVG at server side and then embeds it as a high-quality vectored image into HTML files statically.
 
-- #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/ts-cli.html")[Form2]: Preprocessed to a Vector Format artifact.
+- #cross-link("/guide/compiler/ts-cli.typ")[Form2]: Preprocesses to a Vector Format artifact at server side and renders it at client side (in browser).
 
-- #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/serverless.html")[Form3]: Manipulate a canvas element directly.
+#let h = [=== Compiling APIs]
+#let r = heading-reference(h)
+- #cross-link("/guide/all-in-one.typ",reference: r)[Form3]: Compiles document at client side and manipulates a canvas element at client side.
 
 The #emph("Form2: Vector Format") is developed specially for typst documents, and it has several fancy features:
 
@@ -62,7 +64,7 @@ So with *Form2*, you can continue rendering the document in different ways:
 
 - #link("https://myriad-dreamin.github.io/typst.ts/")[A Website built with Typst.ts]
 
-- #link("https://github.com/Enter-tainer/typst-preview-vscode")[Instant VSCode Preview Plugin]
+- #link("https://github.com/Myriad-Dreamin/tinymist/tree/main/contrib/typst-preview/editors/vscode")[Instant VSCode Preview Plugin]
 
 - #link("https://www.npmjs.com/package/hexo-renderer-typst")[Renderer Plugin for Hexo, a Blog-aware Static Site Generator]
 

@@ -423,7 +423,7 @@ let actor = CompileActor::new(verse,
   intr_tx, intr_rx).with_watch(Some(handle.clone()));
 ```
 
-Example: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/actor/typ_client.rs")[use of `intr_tx` in actor/typ_client.rs in tinymist]
+Example: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/tool/preview.rs")[use of `intr_tx` in tool/preview.rs in tinymist]
 
 Access the service of the `CompileActor` instance.
 
