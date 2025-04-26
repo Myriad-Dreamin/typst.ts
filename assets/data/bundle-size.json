@@ -1,0 +1,10 @@
+{
+  "version": "0.5.5-rc7",
+  "sizes": {
+    "typst-ts-renderer": 359580,
+    "typst-ts-web-compiler": 7988658,
+    "text-math-fonts": 4638998,
+    "cjk-fonts": 1493493,
+    "emoji-fonts": 15453257
+  }
+}

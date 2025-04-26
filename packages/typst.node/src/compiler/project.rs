@@ -21,7 +21,7 @@ use tinymist_project::{
     ProjectCompiler as ProjectCompilerBase,
 };
 
-use super::{abs_user_path, create_inputs, create_universe, NodeCompileArgs};
+use super::{abs_user_path, create_inputs, create_universe, CompileArgs};
 use crate::{error::*, NodeTypstDocument};
 use crate::{CompileDocArgs, QueryDocArgs};
 
@@ -52,7 +52,7 @@ impl ProjectWatcher {
     /// });
     /// ```
     #[napi]
-    pub fn create(args: Option<NodeCompileArgs>) -> Result<ProjectWatcher, NodeError> {
+    pub fn create(args: Option<CompileArgs>) -> Result<ProjectWatcher, NodeError> {
         let verse = create_universe(args).map_err(map_node_error)?;
         let entry = verse.entry_state();
         let (tx, rx) = mpsc::unbounded_channel();
@@ -465,6 +465,9 @@ impl NodeTypstProject {
             world
                 .map_shadow_by_id(world.main(), Bytes::new(main_file_content))
                 .unwrap();
+            if compile_by.reset_read.unwrap_or(true) {
+                world.reset_read();
+            }
             let snap = CompileSnapshot::from_world(world);
 
             return Ok(SystemWorldComputeGraph::new(snap));
@@ -491,7 +494,10 @@ impl NodeTypstProject {
             None
         };
 
-        let snap = graph.snap.clone().task(TaskInputs { entry, inputs });
+        let mut snap = graph.snap.clone().task(TaskInputs { entry, inputs });
+        if compile_by.reset_read.unwrap_or(true) {
+            snap.world.reset_read();
+        }
         Ok(SystemWorldComputeGraph::new(snap))
     }
 
@@ -814,11 +820,5 @@ impl CompileHandler<SystemCompilerFeat, ProjectInsStateExt> for ProjectHandler {
 
     fn notify_compile(&self, _res: &tinymist_project::CompiledArtifact<SystemCompilerFeat>) {}
 
-    fn status(
-        &self,
-        _revision: usize,
-        _id: &reflexo_typst::ProjectInsId,
-        _rep: tinymist_project::CompileReport,
-    ) {
-    }
+    fn status(&self, _revision: usize, _rep: tinymist_project::CompileReport) {}
 }

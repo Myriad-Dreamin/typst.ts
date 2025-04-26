@@ -3,8 +3,6 @@ use std::sync::Arc;
 use reflexo::error::prelude::*;
 use tinymist_world::WorldComputeGraph;
 
-mod prelude;
-
 #[cfg(feature = "ast")]
 pub mod ast;
 

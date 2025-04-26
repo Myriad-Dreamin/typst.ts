@@ -1,10 +1,5 @@
 name: reflexo::release::gh_pages
 
-env:
-  SCCACHE_GHA_ENABLED: 'true'
-  RUSTC_WRAPPER: 'sccache'
-  CARGO_INCREMENTAL: '0'
-
 on:
   # Runs on pushes targeting the default branch
   push:
@@ -38,21 +33,19 @@ jobs:
           submodules: recursive
       - name: Install Mold
         uses: rui314/setup-mold@v1
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@1.84.0
-      - name: Install Rust for Wasm targets
-        run: rustup target add wasm32-unknown-unknown
-      - name: Set Node.js 18.x
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.84.0
+          target: wasm32-unknown-unknown
+      - name: Set Node.js 22.x
         uses: actions/setup-node@v3
         with:
-          node-version: 18.x
+          node-version: 22.x
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
       - name: Download & install shiroa
         run: |
-          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.2.0-rc1/shiroa-installer.sh | sh
-      - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.3
+          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.3.1-rc2/shiroa-installer.sh | sh
       - name: Download font assets
         run: |
           mkdir -p assets/fonts
@@ -70,7 +63,17 @@ jobs:
       - name: Prepare artifacts
         run: |
           shiroa build --font-path assets/fonts --path-to-root /typst.ts/cookery/ -w . -d ../../github-pages/cookery/ docs/cookery
+      - name: Prepare artifacts (Paged Target)
+        run: |
+          shiroa build --font-path assets/fonts --path-to-root /typst.ts/cookery/paged/ -w . -d ../../github-pages/cookery/ docs/cookery
           cargo run --profile release-ci --bin typst-ts-cli -- compile --workspace . --entry ./github-pages/docs/readme.typ --input=x-target=pdf-ayu --format=pdf --format=vector
+
+          mv ./github-pages/cookery/ ./github-pages/dist-paged/
+          mkdir -p ./github-pages/cookery/
+          mv ./github-pages/dist-paged/ ./github-pages/cookery/paged/
+      - name: Prepare artifacts
+        run: |
+          shiroa build --font-path assets/fonts --path-to-root /typst.ts/cookery/ -w . -d ../../github-pages/cookery/ docs/cookery --mode static-html
       - name: Copy assets
         run: |
           mkdir -p github-pages/compiler/
@@ -78,6 +81,7 @@ jobs:
           cp packages/compiler/pkg/* github-pages/compiler/
           cp packages/renderer/pkg/* github-pages/renderer/
           cp packages/typst.ts/dist/esm/main.bundle.js github-pages/typst-main.js
+          cp github-pages/cookery/index.html github-pages/index.html
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

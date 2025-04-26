@@ -1,9 +1,8 @@
 use js_sys::Uint8Array;
-use reflexo_typst::vfs::Bytes;
 use wasm_bindgen::prelude::*;
 
 use reflexo_typst::font::web::BrowserFontSearcher;
-use reflexo_typst::package::browser::{ProxyContext, ProxyRegistry};
+use reflexo_typst::package::registry::{JsRegistry, ProxyContext};
 use reflexo_typst::vfs::browser::ProxyAccessModel;
 use reflexo_typst::{error::prelude::*, Bytes as TypstBytes};
 
@@ -12,7 +11,7 @@ use crate::TypstCompiler;
 #[wasm_bindgen]
 pub struct TypstCompilerBuilder {
     access_model: Option<ProxyAccessModel>,
-    package_registry: Option<ProxyRegistry>,
+    package_registry: Option<JsRegistry>,
     searcher: BrowserFontSearcher,
 }
 
@@ -40,7 +39,7 @@ impl TypstCompilerBuilder {
                 "throw new Error('Dummy AccessModel, please initialize compiler with withAccessModel()')",
             ),
         });
-        self.package_registry = Some(ProxyRegistry {
+        self.package_registry = Some(JsRegistry {
             context: ProxyContext::new(wasm_bindgen::JsValue::UNDEFINED),
             real_resolve_fn: js_sys::Function::new_no_args(
                 "throw new Error('Dummy Registry, please initialize compiler with withPackageRegistry()')",
@@ -73,7 +72,7 @@ impl TypstCompilerBuilder {
         context: JsValue,
         real_resolve_fn: js_sys::Function,
     ) -> Result<()> {
-        self.package_registry = Some(ProxyRegistry {
+        self.package_registry = Some(JsRegistry {
             context: ProxyContext::new(context),
             real_resolve_fn,
         });
@@ -82,18 +81,14 @@ impl TypstCompilerBuilder {
     }
 
     // 400 KB
-    pub async fn add_raw_font(&mut self, font_buffer: Uint8Array) -> Result<()> {
-        self.add_raw_font_internal(TypstBytes::new(font_buffer.to_vec()));
+    pub async fn add_raw_font(&mut self, data: Uint8Array) -> Result<()> {
+        self.searcher.add_font_data(TypstBytes::new(data.to_vec()));
         Ok(())
     }
 
     // 100 KB
     pub async fn add_web_fonts(&mut self, fonts: js_sys::Array) -> Result<()> {
         self.searcher.add_web_fonts(fonts).await
-    }
-
-    pub async fn add_glyph_pack(&mut self, _pack: JsValue) -> Result<()> {
-        self.searcher.add_glyph_pack().await
     }
 
     pub async fn build(self) -> Result<TypstCompiler, JsValue> {
@@ -103,12 +98,13 @@ impl TypstCompilerBuilder {
         let registry = self.package_registry.ok_or_else(|| {
             "TypstCompilerBuilder::build: package_registry is not set".to_string()
         })?;
-        TypstCompiler::new(access_model, registry, self.searcher).await
-    }
-}
 
-impl TypstCompilerBuilder {
-    pub fn add_raw_font_internal(&mut self, font_buffer: Bytes) {
-        self.searcher.add_font_data(font_buffer);
+        let searcher = self.searcher;
+        #[cfg(feature = "fonts")]
+        let mut searcher = searcher;
+        #[cfg(feature = "fonts")]
+        searcher.add_embedded();
+
+        TypstCompiler::new(access_model, registry, searcher).await
     }
 }

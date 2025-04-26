@@ -12,7 +12,7 @@ A compressed artifact containing data for different theme and screen settings. T
 
 Example Application: #link("https://github.com/Enter-tainer/typst-preview-vscode")[typst-preview]
 
-Build a server for compilation with #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/service.html")[Compiler Service], streaming the artifact, and render it incrementally.
+Build a server for compilation with a #link("https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/service.html")[rust library], streaming the artifact, and render it incrementally.
 
 #cross-link("/direction/incremental.typ")[Read more.]
 

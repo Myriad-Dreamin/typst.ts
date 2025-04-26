@@ -1,5 +1,5 @@
 // @ts-ignore
-import type * as typst from '@myriaddreamin/typst-ts-renderer/pkg/wasm-pack-shim.mjs';
+import type * as typst from '@myriaddreamin/typst-ts-renderer';
 
 import type { InitOptions } from './options.init.mjs';
 import { PageInfo, RenderCanvasResult, TypstDefaultParams, kObject } from './internal.types.mjs';
@@ -611,7 +611,7 @@ export function createTypstSvgRenderer(): TypstSvgRenderer {
 }
 
 export async function rendererBuildInfo(): Promise<any> {
-  const renderModule = await import('@myriaddreamin/typst-ts-renderer/pkg/wasm-pack-shim.mjs');
+  const renderModule = await import('@myriaddreamin/typst-ts-renderer');
   return renderModule.renderer_build_info();
 }
 
@@ -625,8 +625,7 @@ export class TypstRendererDriver {
   constructor() {}
 
   async init(options?: Partial<InitOptions>): Promise<void> {
-    this.rendererJs = await (options?.getWrapper?.() ||
-      import('@myriaddreamin/typst-ts-renderer/pkg/wasm-pack-shim.mjs'));
+    this.rendererJs = await (options?.getWrapper?.() || import('@myriaddreamin/typst-ts-renderer'));
     const TypstRendererBuilder = this.rendererJs.TypstRendererBuilder;
     this.renderer = await buildComponent(
       options,

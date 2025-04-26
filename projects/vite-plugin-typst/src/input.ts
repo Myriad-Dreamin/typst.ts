@@ -1,9 +1,9 @@
-import * as path from 'path';
 import * as fs from 'fs';
 import { globSync } from 'glob';
 import globWatch from 'glob-watcher';
-import type { DocumentInput, TypstDocumentOptionsWithInput, TypstPluginOptions } from '.';
+import * as path from 'path';
 import type { ResolvedConfig } from 'vite';
+import type { DocumentInput, TypstDocumentOptionsWithInput, TypstPluginOptionsBase } from '.';
 
 /**
  * A resolved typst input.
@@ -50,7 +50,7 @@ export class InputChecker {
   /** @internal */
   private prevReload: (() => void) | undefined = undefined;
 
-  constructor(options: TypstPluginOptions) {
+  constructor(options: TypstPluginOptionsBase) {
     this.documents = normalizeDocumentInputs(options.documents || []);
     this.globs = this.documents.flatMap(doc => {
       if (typeof doc.input === 'string') {
@@ -85,7 +85,7 @@ export class InputChecker {
    *
    * @returns Whether the inputs have changed.
    */
-  mutate(options: TypstPluginOptions, conf: ResolvedConfig): boolean {
+  mutate(options: TypstPluginOptionsBase, conf: ResolvedConfig): boolean {
     this.resolved = resolveInputs(options, conf)!;
     const newLoadedTypstInputs = JSON.stringify(this.resolved);
     if (newLoadedTypstInputs === this.loadedTypstInputs) {
@@ -147,7 +147,7 @@ function normalizeDocumentInput(input: DocumentInput): TypstDocumentOptionsWithI
 
 // https://github.com/vbenjs/vite-plugin-html/blob/4a32df2b416b161663904de51530f462a6219fd5/packages/core/src/htmlPlugin.ts#L179
 function resolveInputs(
-  opts: TypstPluginOptions,
+  opts: TypstPluginOptionsBase,
   viteConfig: ResolvedConfig,
 ): ResolvedTypstInputs | undefined {
   const resolved: ResolvedTypstInputs = {};

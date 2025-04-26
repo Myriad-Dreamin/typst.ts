@@ -1,6 +1,6 @@
-=== Example: get output from input
+=== Compiling APIs
 
-get output with *single input file*:
+You can compile a *single typst code string* to different formats:
 
 ```ts
 const mainContent = 'Hello, typst!';
@@ -14,30 +14,24 @@ await $typst.pdf({ mainContent });
 await $typst.canvas(div, { mainContent });
 ```
 
-With some extra *input file*:
+You can add some extra *source input files* before compiling:
 
 ```ts
 await $typst.addSource('/template.typ', templateContent);
 ```
 
-With extra *binary input files*:
+It also supports *binary input files*:
 
 ```ts
-const encoder = new TextEncoder();
-// add a json file (utf8)
-compiler.mapShadow('/assets/data.json', encoder.encode(jsonData));
-// remove a json file
-compiler.unmapShadow('/assets/data.json');
-
 // add an image file
 const pngData = await fetch(...).arrayBuffer();
-compiler.mapShadow('/assets/tiger.png', new Uint8Array(pngData));
+$typst.mapShadow('/assets/tiger.png', new Uint8Array(pngData));
 ```
 
-clean up shadow files for underlying access model:
+You can clean up shadow files for underlying access model:
 
 ```ts
-compiler.resetShadow();
+$typst.resetShadow();
 ```
 
 Note: this function will also clean all files added by `addSource`.

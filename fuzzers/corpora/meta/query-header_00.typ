@@ -8,16 +8,17 @@
   header: {
     smallcaps[Typst Academy]
     h(1fr)
-    locate(it => {
-      let after = query(selector(heading).after(it), it)
-      let before = query(selector(heading).before(it), it)
+    context {
+      let loc = here();
+      let after = query(selector(heading).after(loc))
+      let before = query(selector(heading).before(loc))
       let elem = if before.len() != 0 {
         before.last()
       } else if after.len() != 0 {
         after.first()
       }
       emph(elem.body)
-    })
+    }
   }
 )
 

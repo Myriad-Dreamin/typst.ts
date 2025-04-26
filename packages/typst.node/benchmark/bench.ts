@@ -1,34 +1,36 @@
-async function bench() {
-  const b = await import('benny');
-  const { NodeCompiler } = await import('../index.js');
+// todo: benny is too old, use a more modern library
 
-  const compiler = NodeCompiler.create();
-  await b.suite(
-    'Export',
+// async function bench() {
+//   const b = await import('benny');
+//   const { NodeCompiler } = await import('../index.js');
 
-    b.add('Export to SVG', () => {
-      compiler.svg({
-        mainFileContent: 'Hello, Typst!',
-      });
-    }),
+//   const compiler = NodeCompiler.create();
+//   await b.suite(
+//     'Export',
 
-    b.add('Export to PDF', () => {
-      compiler.pdf({
-        mainFileContent: 'Hello, Typst!',
-      });
-    }),
+//     b.add('Export to SVG', () => {
+//       compiler.svg({
+//         mainFileContent: 'Hello, Typst!',
+//       });
+//     }),
 
-    b.add('Export to vector IR', () => {
-      compiler.vector({
-        mainFileContent: 'Hello, Typst!',
-      });
-    }),
+//     b.add('Export to PDF', () => {
+//       compiler.pdf({
+//         mainFileContent: 'Hello, Typst!',
+//       });
+//     }),
 
-    b.cycle(),
-    b.complete(),
-  );
-}
+//     b.add('Export to vector IR', () => {
+//       compiler.vector({
+//         mainFileContent: 'Hello, Typst!',
+//       });
+//     }),
 
-bench().catch(e => {
-  console.error(e);
-});
+//     b.cycle(),
+//     b.complete(),
+//   );
+// }
+
+// bench().catch(e => {
+//   console.error(e);
+// });

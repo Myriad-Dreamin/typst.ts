@@ -136,25 +136,28 @@ impl NodeHtmlOutput {
     }
 }
 
-/// Arguments to compile a document.
+/// The arguments to compile a document.
 ///
 /// If no `mainFileContent` or `mainFilePath` is specified, the compiler will
 /// use the entry file specified in the constructor of `NodeCompiler`.
 #[napi(object)]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CompileDocArgs {
-    /// Directly specify the main file content.
+    /// Specifies the main file content.
     /// Exclusive with `mainFilePath`.
     #[serde(rename = "mainFileContent")]
     pub main_file_content: Option<String>,
 
-    /// Path to the entry file.
+    /// Specifies path to the entry file.
     /// Exclusive with `mainFileContent`.
     #[serde(rename = "mainFilePath")]
     pub main_file_path: Option<String>,
 
-    /// Add a string key-value pair visible through `sys.inputs`.
+    /// Passes `sys.inputs` as is in format of string key-value pairs.
     pub inputs: Option<HashMap<String, String>>,
+
+    /// (Experimental) Whether to reset the cache before compilation.
+    pub reset_read: Option<bool>,
 }
 
 /// Arguments to query the document.

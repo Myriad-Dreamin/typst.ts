@@ -14,7 +14,6 @@
   #set text(size: 12pt, weight: "regular")
   #outline(
     title: "Chapter outline",
-    indent: true,
     target: heading
       .where(level: 1)
       .or(heading.where(level: 2))

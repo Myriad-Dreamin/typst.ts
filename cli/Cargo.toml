@@ -36,10 +36,7 @@ flate2.workspace = true
 
 human-panic.workspace = true
 
-reflexo-typst = { workspace = true, default-features = false, features = [
-    "system",
-    "dynamic-layout",
-] }
+reflexo-typst = { workspace = true, features = ["system", "dynamic-layout"] }
 
 [build-dependencies]
 anyhow.workspace = true

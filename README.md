@@ -1,8 +1,9 @@
 # typst.ts
 
 [Markdown](https://github.com/Myriad-Dreamin/typst.ts/blob/main/README.md) | [typst](./docs/cookery/introduction.typ) |
-[Online SVG](https://myriad-dreamin.github.io/typst.ts/cookery/) |
-[Online Canvas](https://myriad-dreamin.github.io/typst.ts/)
+[Online HTML](https://myriad-dreamin.github.io/typst.ts/) |
+[Online SVG](https://myriad-dreamin.github.io/typst.ts/paged) |
+[Online Canvas](https://myriad-dreamin.github.io/typst.ts/canvas-readme/)
 
 <p align="center">
   <a href="https://github.com/Myriad-Dreamin/typst.ts/actions/workflows/ci.yaml">
@@ -29,11 +30,11 @@ $\textcolor{#3c9123}{\textsf{server}}$ and $\textcolor{#0074d9}{\textsf{browser}
 
 Specifically, it first typically presents a typst document in three forms:
 
-- [Form1](https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/ts-cli.html): Render to SVG and then embed it as a high-quality vectored image directly.
+- [Form1](https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/ts-cli.html): Renders to SVG at server side and then embeds it as a high-quality vectored image into HTML files statically.
 
-- [Form2](https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/ts-cli.html): Preprocessed to a Vector Format artifact.
+- [Form2](https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/ts-cli.html): Preprocesses to a Vector Format artifact at server side and renders it at client side (in browser).
 
-- [Form3](https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/serverless.html): Manipulate a canvas element directly.
+- [Form3](https://myriad-dreamin.github.io/typst.ts/cookery/guide/all-in-one.html#label-Compiling%20APIs): Compiles document at client side and manipulates a canvas element at client side.
 
 The _Form2: Vector Format_ is developed specially for typst documents, and it has several fancy features:
 
@@ -48,19 +49,19 @@ So with _Form2_, you can continue rendering the document in different ways:
 
 ##### Static but <ins>responsive</ins> rendering
 
-Example Application: [single-file](https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/index.html), [typst-book](https://github.com/Myriad-Dreamin/typst-book) and [hexo-renderer-typst](https://github.com/Myriad-Dreamin/typst.ts/tree/main/projects/hexo-renderer-typst)
+Example Application: [shiroa](https://github.com/Myriad-Dreamin/shiroa) and the [docs built using it](https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/preview.html), and [hexo-renderer-typst](https://github.com/Myriad-Dreamin/typst.ts/tree/main/projects/hexo-renderer-typst)
 
 A compressed artifact containing data for different theme and screen settings. The bundle size of artifacts is optimized for typst documents.
 
 ##### <ins>Incremental</ins> server-side rendering
 
-Example Application: [typst-preview](https://github.com/Enter-tainer/typst-preview-vscode)
+Example Application: [typst-preview](https://github.com/Myriad-Dreamin/tinymist/tree/main/contrib/typst-preview/editors/vscode)
 
 Build a server for compilation with [Compiler Service](https://myriad-dreamin.github.io/typst.ts/cookery/guide/compiler/service.html), streaming the artifact, and render it incrementally.
 
 ##### <ins>Serverless</ins> client-side rendering
 
-Example Application: [single-file](https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/preview.html)
+Example Application: [single-file](https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/preview.html) and its deployed [demo](https://myriad-dreamin.github.io/typst.ts/preview.html)
 
 Run the entire typst directly in browser, like [typst.app](https://typst.app).
 
@@ -68,9 +69,9 @@ Run the entire typst directly in browser, like [typst.app](https://typst.app).
 
 - [A Website built with Typst.ts](https://myriad-dreamin.github.io/typst.ts/)
 
-- [Instant VSCode Preview Plugin](https://github.com/Enter-tainer/typst-preview-vscode)
+- [Instant VSCode Preview Plugin](https://github.com/Myriad-Dreamin/tinymist/tree/main/contrib/typst-preview/editors/vscode)
 
-- [typst-book - A simple tool for creating modern online books in pure typst.](https://github.com/Myriad-Dreamin/typst-book)
+- [shiroa - A simple tool for creating modern online books in pure typst.](https://github.com/Myriad-Dreamin/shiroa)
 
 - [Renderer Plugin for Hexo, a Blog-aware Static Site Generator](https://www.npmjs.com/package/hexo-renderer-typst)
 
@@ -115,7 +116,7 @@ Download the latest bundle file from [GitHub Releases](https://github.com/Myriad
 
 ### Documentation
 
-See [Documentation](https://myriad-dreamin.github.io/typst.ts/cookery).
+See [Documentation](https://myriad-dreamin.github.io/typst.ts).
 
 ### Templates
 
@@ -216,11 +217,11 @@ automatically identify your project. We recommend you to use [git](https://git-s
 
 ##### Example: link a project by git submodule
 
-To develop core external projects, e.g. `typst-preview`, you could initialize them
+To develop core external projects, e.g. `cetz-editor`, you could initialize them
 by command:
 
 ```shell
-git submodule update --init --checkout projects/typst-preview
+git submodule update --init --checkout projects/cetz-editor
 ```
 
 ##### Example: build and run
@@ -253,8 +254,6 @@ The project (typst-preview as an example) will cache and use the local built pac
 Note: you could build from source with/without wasm-pack.
 
 Note: see [Troubleshooting WASM Build](docs/troubleshooting-wasm-build.md) for (especially) **Arch Linux** users.
-
-Note: Since we use turborepo for `>=v0.4.0` development, if you are the earlier developer of `typst.ts`, please clean up all of your node_modules and dist folders before running the commands.
 
 ```shell
 # Install and build the renderer

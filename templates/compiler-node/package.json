@@ -12,6 +12,10 @@
   "devDependencies": {
     "@types/node": "^20.6.3",
     "tslib": "2.5.2",
-    "typescript": "=5.0.4"
+    "typescript": "=5.8.3"
+  },
+  "scripts": {
+    "build": "npx tsc",
+    "test": "node ./dist/esm/main.js"
   }
 }
