@@ -4,7 +4,7 @@
 
 <script setup lang="ts">
 import { reactive, onMounted, watch } from 'vue';
-import { $typst } from '@myriaddreamin/typst.ts';
+import { $typst } from '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs';
 
 $typst.setCompilerInitOptions({
   beforeBuild: [],
