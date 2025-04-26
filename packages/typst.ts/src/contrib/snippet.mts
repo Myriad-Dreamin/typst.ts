@@ -149,8 +149,8 @@ export class TypstSnippet {
     compiler?: PromiseJust<TypstCompiler>;
     renderer?: PromiseJust<TypstRenderer>;
   }) {
-    this.cc = options?.compiler;
-    this.ex = options?.renderer;
+    this.cc = options?.compiler || TypstSnippet.$buildC;
+    this.ex = options?.renderer || TypstSnippet.$buildR;
     this.mainFilePath = '/main.typ';
     this.providers = [];
   }
@@ -630,7 +630,7 @@ export class TypstSnippet {
   }
 
   private requireIsUninitialized<T>(role: string, c: PromiseJust<T>, e?: PromiseJust<T>) {
-    if (typeof c !== 'function') {
+    if (c && typeof c !== 'function') {
       throw new Error(`${role} has been initialized: ${c}`);
     }
     if (e && c != e) {
