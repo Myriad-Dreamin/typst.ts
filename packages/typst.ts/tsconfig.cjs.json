@@ -9,5 +9,6 @@
     "declarationMap": true,
     "inlineSources": true,
     "inlineSourceMap": true
-  }
+  },
+  "exclude": ["**/*.test.mts", "**/*.spec.mts", "node_modules", "dist"]
 }

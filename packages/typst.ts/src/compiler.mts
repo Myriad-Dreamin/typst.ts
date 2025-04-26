@@ -1,7 +1,7 @@
 // @ts-ignore
 import type * as typst from '@myriaddreamin/typst-ts-web-compiler';
-import { buildComponent, globalFontPromises } from './init.mjs';
-import { FsAccessModel, SemanticTokens, SemanticTokensLegend, kObject } from './internal.types.mjs';
+import { buildComponent } from './init.mjs';
+import { SemanticTokens, SemanticTokensLegend, kObject } from './internal.types.mjs';
 
 import { preloadRemoteFonts, type InitOptions } from './options.init.mjs';
 import { LazyWasmModule } from './wasm.mjs';
