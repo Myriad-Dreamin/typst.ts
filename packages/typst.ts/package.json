@@ -315,6 +315,8 @@
     "dev:tsc": "node scripts/mkdir.mjs && tsc -w -p ./tsconfig.lib.json",
     "dev:main": "node scripts/mkdir.mjs && npx vite build --watch -c vite.config.mjs -- --component=main",
     "prepublish": "turbo build",
+    "test": "vitest",
+    "coverage": "vitest run --coverage",
     "test:e2e": "node scripts/test-templates.mjs",
     "publish:dry": "npm publish --dry-run --access public",
     "publish:lib": "npm publish --access public || exit 0"
