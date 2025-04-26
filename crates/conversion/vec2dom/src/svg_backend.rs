@@ -202,7 +202,7 @@ impl TypstPageElem {
                     &g,
                 );
 
-                let child = Self::attach_svg(
+                let child = Self::attach_html(
                     ctx,
                     ch.first_element_child()
                         .ok_or_else(|| {

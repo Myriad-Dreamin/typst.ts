@@ -391,7 +391,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                     }
 
                     if let Some(label) = group.label.as_ref() {
-                        let label = label.as_str().into();
+                        let label = label.resolve().as_str().into();
                         inner = self.store(VecItem::Labelled(LabelledRef(label, inner)));
                     }
 
