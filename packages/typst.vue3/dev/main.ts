@@ -2,7 +2,7 @@ console.log('hello world');
 import App from './App.vue';
 import { createApp } from 'vue';
 
-import { $typst } from '@myriaddreamin/typst.ts/contrib/snippet';
+import { $typst } from '@myriaddreamin/typst.ts';
 
 $typst.setCompilerInitOptions({
   beforeBuild: [],

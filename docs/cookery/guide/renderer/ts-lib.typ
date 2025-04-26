@@ -17,7 +17,7 @@ It is also runnable in node.js, but we recommend using the #cross-link("/guide/a
 One may use simplified apis:
 
 ```typescript
-import { $typst } from '@myriaddreamin/typst.ts/contrib/snippet';
+import { $typst } from '@myriaddreamin/typst.ts';
 const mainContent = 'Hello, typst!';
 
 console.log(await $typst.svg({ mainContent }));

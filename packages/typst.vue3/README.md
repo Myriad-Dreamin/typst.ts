@@ -24,7 +24,7 @@ use the component:
 Set path to wasm files:
 
 ```ts
-import { $typst } from '@myriaddreamin/typst.ts/contrib/snippet';
+import { $typst } from '@myriaddreamin/typst.ts';
 
 $typst.setCompilerInitOptions({
   beforeBuild: [],

@@ -98,7 +98,7 @@ const isNode =
  * Use the *global shared* compiler instance:
  *
  * ```typescript
- * import { $typst } from '@myriaddreamin/typst.ts/contrib/snippet';
+ * import { $typst } from '@myriaddreamin/typst.ts';
  * ```
  *
  * Note: if you want to compile multiple documents, you should create a new

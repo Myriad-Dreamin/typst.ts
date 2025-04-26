@@ -94,7 +94,7 @@ npm install @myriaddreamin/typst-ts-web-compiler
 Then, you can import the library in your code:
 
 ```ts
-import { $typst } from '@myriaddreamin/typst.ts/contrib/snippet';
+import { $typst } from '@myriaddreamin/typst.ts';
 console.log((await $typst.svg({
   mainContent: 'Hello, typst!' })).length);
 // :-> 7317
@@ -108,7 +108,7 @@ In Node.js, it reads and loads the Wasm modules from `node_modules` in the files
 As a shortcut, a global instance `$typst` is provided, and it will lazily initialize the compiler and renderer for you. Import the global instance like this:
 
 ```ts
-import { $typst } from '@myriaddreamin/typst.ts/contrib/snippet';
+import { $typst } from '@myriaddreamin/typst.ts';
 ```
 
 A snippet instance will store some state for the sake of convenience, which makes it not suitable for concurrent usage. You can create a new instance using the class `TypstSnippet`:
