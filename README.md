@@ -1,8 +1,9 @@
 # typst.ts
 
 [Markdown](https://github.com/Myriad-Dreamin/typst.ts/blob/main/README.md) | [typst](./docs/cookery/introduction.typ) |
-[Online SVG](https://myriad-dreamin.github.io/typst.ts/cookery/) |
-[Online Canvas](https://myriad-dreamin.github.io/typst.ts/)
+[Online HTML](https://myriad-dreamin.github.io/typst.ts/) |
+[Online SVG](https://myriad-dreamin.github.io/typst.ts/paged) |
+[Online Canvas](https://myriad-dreamin.github.io/typst.ts/canvas-readme/)
 
 <p align="center">
   <a href="https://github.com/Myriad-Dreamin/typst.ts/actions/workflows/ci.yaml">

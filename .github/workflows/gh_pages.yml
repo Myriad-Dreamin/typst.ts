@@ -63,7 +63,6 @@ jobs:
       - name: Prepare artifacts
         run: |
           shiroa build --font-path assets/fonts --path-to-root /typst.ts/cookery/ -w . -d ../../github-pages/cookery/ docs/cookery
-          cargo run --profile release-ci --bin typst-ts-cli -- compile --workspace . --entry ./github-pages/docs/readme.typ --input=x-target=pdf-ayu --format=pdf --format=vector
       - name: Prepare artifacts (Paged Target)
         run: |
           shiroa build --font-path assets/fonts --path-to-root /typst.ts/cookery/paged/ -w . -d ../../github-pages/cookery/ docs/cookery
@@ -71,7 +70,7 @@ jobs:
 
           mv ./github-pages/cookery/ ./github-pages/dist-paged/
           mkdir -p ./github-pages/cookery/
-          mv ./github-pages/dist-paged/ ./github-pages/cookery/
+          mv ./github-pages/dist-paged/ ./github-pages/paged/
       - name: Prepare artifacts
         run: |
           shiroa build --font-path assets/fonts --path-to-root /typst.ts/cookery/ -w . -d ../../github-pages/cookery/ docs/cookery --mode static-html
