@@ -63,7 +63,7 @@ let actor = CompileActor::new(verse,
   intr_tx, intr_rx).with_watch(Some(handle.clone()));
 ```
 
-Example: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/actor/typ_client.rs")[use of `intr_tx` in actor/typ_client.rs in tinymist]
+Example: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/tool/preview.rs")[use of `intr_tx` in tool/preview.rs in tinymist]
 
 Access the service of the `CompileActor` instance.
 
@@ -96,18 +96,13 @@ let snapshot = rx.await
 Example #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/cli/src/compile.rs")[fn compile_export in compile.rs in typst-ts-cli]
 
 ```rs
-let mut exporters: Vec<DynExporter<CompileSnapshot<_>>> = vec![];
-
-if args.dynamic_layout {
-    let driver = DynamicLayoutCompiler::new(
-      std::marker::PhantomData, output_dir);
-    exporters.push(Box::new(CompileStarter::new(driver)));
-}
+let mut exporter: Vec<DynExporter<CompileSnapshot<_>>> = vec![];
+let handle = Arc::new(CompileHandler { exporter });
 
 let actor = CompileActor::new_with(
     verse, intr_tx, intr_rx,
     CompileServerOpts {
-        exporter: GroupExporter::new(exporters),
+        handle,
         ..Default::default()
     },
 )
