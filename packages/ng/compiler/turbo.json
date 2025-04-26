@@ -1,0 +1,18 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": [
+    "//"
+  ],
+  "pipeline": {
+    "build": {
+      // A package's `build` script should only be rerun when
+      // any source file has changed in related folders.
+      "inputs": [
+        "Cargo.toml",
+        "build.rs",
+        "{public,src,projects,webpack}/**/*",
+        "../../../crates/**/*.{rs,toml}"
+      ]
+    }
+  }
+}

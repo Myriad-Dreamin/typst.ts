@@ -31,6 +31,8 @@ members = [
     "packages/renderer",
     "packages/typst.node",
 
+    "packages/ng/compiler",
+
     "server/dev",
 
     "tools/rkyv-assertions",
