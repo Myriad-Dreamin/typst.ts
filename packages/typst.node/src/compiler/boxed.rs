@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use reflexo_typst::system::SystemWorldComputeGraph;
 use reflexo_typst::{
-    error_once, ArcInto, Bytes, CompilationTask, EntryReader, FlagTask, TaskInputs, TypstDocument,
-    TypstSystemUniverse,
+    error_once, ArcInto, Bytes, CompilationTask, CompileSnapshot, EntryReader, FlagTask,
+    TaskInputs, TypstDocument, TypstSystemUniverse, WorldComputeGraph,
 };
 
 use super::create_inputs;
@@ -86,7 +86,13 @@ impl BoxedCompiler {
             None
         };
 
-        Ok(universe.computation_with(TaskInputs { entry, inputs }))
+        let mut world = self.snapshot_with(Some(TaskInputs { entry, inputs }));
+        if compile_by.reset_read.unwrap_or(true) {
+            world.reset_read();
+        }
+
+        let snap = CompileSnapshot::from_world(world);
+        Ok(WorldComputeGraph::new(snap))
     }
 
     pub fn compile_raw2<
