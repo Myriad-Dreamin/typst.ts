@@ -10,7 +10,7 @@
 The most simple examples always work with #snippet-lib utility library, an all-in-one library with simplified API interfaces:
 
 ```ts
-import { $typst } from '@myriaddreamin/typst.ts/contrib/snippet';
+import { $typst } from '@myriaddreamin/typst.ts';
 console.log((await $typst.svg({
   mainContent: 'Hello, typst!' })).length);
 // :-> 7317
