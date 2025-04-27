@@ -84,6 +84,23 @@ Hello, Typst! <my-label>
   }
 });
 
+test("it doesn't pdf by wrong standard", t => {
+  const compiler = NodeCompiler.create();
+  const doc = compiler.compile({
+    mainFileContent: `
+Hello, Typst! <my-label>
+`,
+  }).result;
+  t.truthy(doc);
+  if (!doc) {
+    return;
+  }
+  t.throws(() => {
+    const pdf = compiler.pdf(doc, { pdfStandard: '0.0' });
+    t.falsy(pdf);
+  });
+});
+
 test('it pdf by compiled artifact and Pdf Standard 1.7', t => {
   const compiler = NodeCompiler.create();
   const doc = compiler.compile({
@@ -117,10 +134,32 @@ Hello, Typst! <my-label>
   }
   const pdf = compiler.pdf(doc, { pdfStandard: PdfStandard.A_2b });
   t.truthy(pdf);
+  require('fs').writeFileSync('test2b.pdf', pdf);
 
   // latin1 performs string encoding per byte, so we are safe.
   const latin1Pdf = pdf.toString('latin1');
   t.true(latin1Pdf.includes('<pdfaid:part>2</pdfaid:part>'));
+  t.true(latin1Pdf.includes('<pdfaid:conformance>B</pdfaid:conformance>'));
+});
+
+test('it pdf by compiled artifact and Pdf Standard A3b', t => {
+  const compiler = NodeCompiler.create();
+  const doc = compiler.compile({
+    mainFileContent: `
+Hello, Typst! <my-label>
+`,
+  }).result;
+  t.truthy(doc);
+  if (!doc) {
+    return;
+  }
+  const pdf = compiler.pdf(doc, { pdfStandard: PdfStandard.A_3b });
+  t.truthy(pdf);
+  require('fs').writeFileSync('test.pdf', pdf);
+
+  // latin1 performs string encoding per byte, so we are safe.
+  const latin1Pdf = pdf.toString('latin1');
+  t.true(latin1Pdf.includes('<pdfaid:part>3</pdfaid:part>'));
   t.true(latin1Pdf.includes('<pdfaid:conformance>B</pdfaid:conformance>'));
 });
 
