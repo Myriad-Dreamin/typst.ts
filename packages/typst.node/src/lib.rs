@@ -181,7 +181,7 @@ pub struct RenderPdfOpts {
     /// standards.
     pub pdf_standard: Option<String>,
 
-    /// An optional (creation) timestamp to be used to export PDF.
+    /// An optional (creation) timestamp to be used to export PDF, *in seconds*.
     ///
     /// This is used when you *enable auto timestamp* in the document.
     pub creation_timestamp: Option<i64>,

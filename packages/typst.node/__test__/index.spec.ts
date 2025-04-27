@@ -64,7 +64,24 @@ test('it pdf by compiled artifact and timestamp', t => {
 Hello, Typst! <my-label>
 `,
   }).result;
-  t.truthy(doc && compiler.pdf(doc, { creationTimestamp: Date.now() }));
+  t.truthy(doc);
+  if (!doc) {
+    return;
+  }
+  const date = Date.now();
+  const pdf = compiler.pdf(doc, { creationTimestamp: date / 1000 });
+  t.truthy(pdf);
+
+  // latin1 performs string encoding per byte, so we are safe.
+  const latin1Pdf = pdf.toString('latin1');
+  const createDateMatched = latin1Pdf.match(/<xmp:CreateDate>([^<]+)<\/xmp:CreateDate>/);
+  const createDateParsed = createDateMatched?.[1] as string;
+  t.truthy(createDateParsed);
+  const createDateInPdf = new Date(createDateParsed);
+  const createDate = new Date(date);
+  if (Math.abs(createDate.getTime() - createDateInPdf.getTime()) > 1000) {
+    t.fail(`create date mismatch: expected ${createDate}, got ${createDateInPdf}`);
+  }
 });
 
 test('it pdf by compiled artifact and Pdf Standard 1.7', t => {
@@ -74,7 +91,17 @@ test('it pdf by compiled artifact and Pdf Standard 1.7', t => {
 Hello, Typst! <my-label>
 `,
   }).result;
-  t.truthy(doc && compiler.pdf(doc, { pdfStandard: PdfStandard.V_1_7 }));
+  t.truthy(doc);
+  if (!doc) {
+    return;
+  }
+  const pdf = compiler.pdf(doc, { pdfStandard: PdfStandard.V_1_7 });
+  t.truthy(pdf);
+
+  // latin1 performs string encoding per byte, so we are safe.
+  const latin1Pdf = pdf.toString('latin1');
+  t.true(!latin1Pdf.includes('<pdfaid:part>2</pdfaid:part>'));
+  t.true(!latin1Pdf.includes('<pdfaid:conformance>B</pdfaid:conformance>'));
 });
 
 test('it pdf by compiled artifact and Pdf Standard A2b', t => {
@@ -84,7 +111,17 @@ test('it pdf by compiled artifact and Pdf Standard A2b', t => {
 Hello, Typst! <my-label>
 `,
   }).result;
-  t.truthy(doc && compiler.pdf(doc, { pdfStandard: PdfStandard.A_2b }));
+  t.truthy(doc);
+  if (!doc) {
+    return;
+  }
+  const pdf = compiler.pdf(doc, { pdfStandard: PdfStandard.A_2b });
+  t.truthy(pdf);
+
+  // latin1 performs string encoding per byte, so we are safe.
+  const latin1Pdf = pdf.toString('latin1');
+  t.true(latin1Pdf.includes('<pdfaid:part>2</pdfaid:part>'));
+  t.true(latin1Pdf.includes('<pdfaid:conformance>B</pdfaid:conformance>'));
 });
 
 test('it throws error`', t => {
