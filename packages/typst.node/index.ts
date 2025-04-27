@@ -10,6 +10,10 @@ export enum PdfStandard {
    * PDF/A-2b.
    */
   A_2b = 'a-2b',
+  /**
+   * PDF/A-3b.
+   */
+  A_3b = 'a-3b',
 }
 
 export * from './index-napi.js';
