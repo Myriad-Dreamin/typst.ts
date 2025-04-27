@@ -97,6 +97,11 @@ Hello, Typst! <my-label>
   }
   const pdf = compiler.pdf(doc, { pdfStandard: PdfStandard.V_1_7 });
   t.truthy(pdf);
+
+  // latin1 performs string encoding per byte, so we are safe.
+  const latin1Pdf = pdf.toString('latin1');
+  t.true(!latin1Pdf.includes('<pdfaid:part>2</pdfaid:part>'));
+  t.true(!latin1Pdf.includes('<pdfaid:conformance>B</pdfaid:conformance>'));
 });
 
 test('it pdf by compiled artifact and Pdf Standard A2b', t => {
