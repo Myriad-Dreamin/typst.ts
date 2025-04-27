@@ -177,6 +177,11 @@ impl Typst2VecPass {
                     self.intern(m, &t.1);
                 }
             }
+            VecItem::Labelled(t) => {
+                if !self.items.contains_key(&t.1) {
+                    self.intern(m, &t.1);
+                }
+            }
             VecItem::Group(g) => {
                 for (_, id) in g.0.iter() {
                     if !self.items.contains_key(id) {
@@ -383,6 +388,11 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                             TransformItem::Matrix(Arc::new(group.transform.into_typst())),
                             inner,
                         )));
+                    }
+
+                    if let Some(label) = group.label.as_ref() {
+                        let label = label.resolve().as_str().into();
+                        inner = self.store(VecItem::Labelled(LabelledRef(label, inner)));
                     }
 
                     inner

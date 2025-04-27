@@ -4,9 +4,9 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use reflexo::error::prelude::*;
 use reflexo::hash::Fingerprint;
 use reflexo::vector::ir::{self, Module, Page, Point, Scalar, Size, TextItem, TransformItem};
+use reflexo::{error::prelude::*, ImmutStr};
 use reflexo_vec2canvas::{CanvasElem, CanvasNode, CanvasOp, CanvasStateGuard};
 use web_sys::{
     js_sys::Reflect,
@@ -665,6 +665,7 @@ impl TypstPageElem {
 pub enum TypstDomExtra {
     Group(GroupElem),
     Item(TransformElem),
+    Label(LabelElem),
     Image(ImageElem),
     Text(TextElem),
     Path(PathElem),
@@ -712,6 +713,12 @@ pub struct ContentHintElem {
 #[derive(Debug)]
 pub struct TransformElem {
     pub trans: TransformItem,
+    pub child: Box<TypstElem>,
+}
+
+#[derive(Debug)]
+pub struct LabelElem {
+    pub label: ImmutStr,
     pub child: Box<TypstElem>,
 }
 

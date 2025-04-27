@@ -27,7 +27,12 @@ impl Vec2BBoxPass {
     fn bbox_of_(&mut self, module: &Module, v: Fingerprint, ts: Transform) -> Option<Rect> {
         let item = module.get_item(&v).unwrap();
         match item {
-            VecItem::Item(item) => self.bbox_of(module, item.1, item.0.clone().into()),
+            VecItem::Item(item) => {
+                let ts_group: Transform = item.0.clone().into();
+                let ts = ts.pre_concat(ts_group);
+                self.bbox_of(module, item.1, ts)
+            }
+            VecItem::Labelled(item) => self.bbox_of(module, item.1, ts),
             VecItem::Group(g) => {
                 let mut r = Rect::default();
                 for (p, f) in g.0.iter() {

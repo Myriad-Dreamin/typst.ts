@@ -6,7 +6,7 @@ use std::{
 };
 
 use reflexo::{
-    escape::{self, AttributeEscapes, PcDataEscapes},
+    escape::{self, escape_str, AttributeEscapes, PcDataEscapes},
     hash::Fingerprint,
     vector::ir::{self, Module, Point, Rect, Scalar, VecItem},
 };
@@ -320,6 +320,15 @@ impl SemaTask {
                 let trans = t.0.clone();
                 let trans: ir::Transform = trans.into();
                 let ts = ts.pre_concat(trans.into());
+                self.render_semantics_walk(ctx, ts, t.1, fallbacks, output);
+                output.push(Cow::Borrowed("</span>"));
+            }
+            Labelled(t) => {
+                output.push(Cow::Borrowed(r#""#));
+                output.push(Cow::Owned(format!(
+                    r#"<span class="typst-content-group" data-typst-label="{}" >"#,
+                    escape_str::<AttributeEscapes>(&t.0)
+                )));
                 self.render_semantics_walk(ctx, ts, t.1, fallbacks, output);
                 output.push(Cow::Borrowed("</span>"));
             }
