@@ -14,18 +14,24 @@ for (const pkgName of ['typst.ts', 'renderer', 'compiler', 'parser', 'typst.reac
 
   for (const key of validExports) {
     for (const conditions of [
+      // commonjs
       ['require'],
-      // declarations
+      // commonjs type declarations
       ['require', 'types'],
+      // commonjs node
       ['require', 'node'],
+      // commonjs browser
       ['require', 'browser'],
       // vite
       ['require', 'browser', 'production'],
 
+      // esm
       ['module', 'import'],
-      // declarations
+      // esm type declarations
       ['module', 'import', 'types'],
+      // esm node
       ['module', 'import', 'node'],
+      // esm browser
       ['module', 'import', 'browser'],
       // vite
       ['module', 'import', 'browser', 'production'],
