@@ -10,13 +10,17 @@
   ],
   "type": "module",
   "module": "./pkg/wasm-pack-shim.mjs",
+  "require": "./pkg/wasm-pack-shim.mjs",
   "types": "./pkg/typst_ts_parser.d.ts",
   "exports": {
     ".": {
-      "module": "./pkg/wasm-pack-shim.mjs",
-      "types": "./pkg/typst_ts_parser.d.ts"
+      "types": "./pkg/typst_ts_parser.d.ts",
+      "default": "./pkg/wasm-pack-shim.mjs"
     },
-    "./wasm": "./pkg/typst_ts_parser_bg.wasm"
+    "./wasm": {
+      "types": "./pkg/typst_ts_parser_bg.wasm.d.ts",
+      "default": "./pkg/typst_ts_parser_bg.wasm"
+    }
   },
   "files": [
     "pkg/wasm-pack-shim.mjs",

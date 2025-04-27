@@ -51,7 +51,7 @@ const generatedExports = {
       default: './dist/cjs/index.cjs',
     },
     import: {
-      types: './dist/esm/index.d.ts',
+      types: './dist/esm/index.d.mts',
       default: './dist/esm/index.mjs',
     },
   },
