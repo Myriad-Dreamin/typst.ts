@@ -68,8 +68,20 @@ Hello, Typst! <my-label>
   if (!doc) {
     return;
   }
-  const c = compiler.pdf(doc, { creationTimestamp: Date.now() });
+  const date = Date.now();
+  const c = compiler.pdf(doc, { creationTimestamp: date / 1000 });
   t.truthy(c);
+
+  // latin1 performs string encoding per byte, so we are safe.
+  const latin1 = c.toString('latin1');
+  const createDateMatched = latin1.match(/<xmp:CreateDate>([^<]+)<\/xmp:CreateDate>/);
+  const createDateParsed = createDateMatched?.[1] as string;
+  t.truthy(createDateParsed);
+  const createDateInPdf = new Date(createDateParsed);
+  const createDate = new Date(date);
+  if (Math.abs(createDate.getTime() - createDateInPdf.getTime()) > 1000) {
+    t.fail(`create date mismatch: expected ${createDate}, got ${createDateInPdf}`);
+  }
 });
 
 test('it pdf by compiled artifact and Pdf Standard 1.7', t => {
