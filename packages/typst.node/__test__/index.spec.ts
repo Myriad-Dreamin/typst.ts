@@ -69,12 +69,12 @@ Hello, Typst! <my-label>
     return;
   }
   const date = Date.now();
-  const c = compiler.pdf(doc, { creationTimestamp: date / 1000 });
-  t.truthy(c);
+  const pdf = compiler.pdf(doc, { creationTimestamp: date / 1000 });
+  t.truthy(pdf);
 
   // latin1 performs string encoding per byte, so we are safe.
-  const latin1 = c.toString('latin1');
-  const createDateMatched = latin1.match(/<xmp:CreateDate>([^<]+)<\/xmp:CreateDate>/);
+  const latin1Pdf = pdf.toString('latin1');
+  const createDateMatched = latin1Pdf.match(/<xmp:CreateDate>([^<]+)<\/xmp:CreateDate>/);
   const createDateParsed = createDateMatched?.[1] as string;
   t.truthy(createDateParsed);
   const createDateInPdf = new Date(createDateParsed);
@@ -95,8 +95,8 @@ Hello, Typst! <my-label>
   if (!doc) {
     return;
   }
-  const c = compiler.pdf(doc, { pdfStandard: PdfStandard.V_1_7 });
-  t.truthy(c);
+  const pdf = compiler.pdf(doc, { pdfStandard: PdfStandard.V_1_7 });
+  t.truthy(pdf);
 });
 
 test('it pdf by compiled artifact and Pdf Standard A2b', t => {
@@ -110,13 +110,13 @@ Hello, Typst! <my-label>
   if (!doc) {
     return;
   }
-  const c = compiler.pdf(doc, { pdfStandard: PdfStandard.A_2b });
-  t.truthy(c);
+  const pdf = compiler.pdf(doc, { pdfStandard: PdfStandard.A_2b });
+  t.truthy(pdf);
 
   // latin1 performs string encoding per byte, so we are safe.
-  const latin1 = c.toString('latin1');
-  t.true(latin1.includes('<pdfaid:part>2</pdfaid:part>'));
-  t.true(latin1.includes('<pdfaid:conformance>B</pdfaid:conformance>'));
+  const latin1Pdf = pdf.toString('latin1');
+  t.true(latin1Pdf.includes('<pdfaid:part>2</pdfaid:part>'));
+  t.true(latin1Pdf.includes('<pdfaid:conformance>B</pdfaid:conformance>'));
 });
 
 test('it throws error`', t => {
