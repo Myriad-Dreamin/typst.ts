@@ -13,11 +13,13 @@
   "types": "./pkg/typst_ts_web_compiler.d.ts",
   "exports": {
     ".": {
-      "node": "./pkg/wasm-pack-shim.mjs",
-      "module": "./pkg/wasm-pack-shim.mjs",
-      "types": "./pkg/typst_ts_web_compiler.d.ts"
+      "types": "./pkg/typst_ts_web_compiler.d.ts",
+      "default": "./pkg/wasm-pack-shim.mjs"
     },
-    "./wasm": "./pkg/typst_ts_web_compiler_bg.wasm"
+    "./wasm": {
+      "types": "./pkg/typst_ts_web_compiler_bg.wasm.d.ts",
+      "default": "./pkg/typst_ts_web_compiler_bg.wasm"
+    }
   },
   "files": [
     "pkg/wasm-pack-shim.mjs",

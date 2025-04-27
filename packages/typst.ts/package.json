@@ -23,7 +23,7 @@
         "default": "./dist/cjs/index.cjs"
       },
       "import": {
-        "types": "./dist/esm/index.d.ts",
+        "types": "./dist/esm/index.d.mts",
         "default": "./dist/esm/index.mjs"
       }
     },
@@ -317,7 +317,7 @@
     "prepublish": "turbo build",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
-    "test:e2e": "node scripts/test-templates.mjs",
+    "test:e2e": "node scripts/test-templates.mjs && node scripts/test-imports.mjs",
     "publish:dry": "npm publish --dry-run --access public",
     "publish:lib": "npm publish --access public || exit 0",
     "test-install": "yarn playwright install-deps && yarn playwright install"
@@ -342,6 +342,7 @@
     "@myriaddreamin/typst-ts-web-compiler": "*",
     "@types/web": "^0.0.188",
     "builtin-modules": "3.3.0",
+    "resolve.exports": "2.0.3",
     "tslib": "2.5.2"
   }
 }
