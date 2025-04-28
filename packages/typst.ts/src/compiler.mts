@@ -312,6 +312,8 @@ class TypstCompilerDriver {
   compiler: typst.TypstCompiler;
   compilerJs: typeof typst;
 
+  static defaultAssets = ['text' as const];
+
   constructor() {}
 
   async init(options?: Partial<InitOptions>): Promise<void> {
@@ -319,24 +321,27 @@ class TypstCompilerDriver {
     const TypstCompilerBuilder = this.compilerJs.TypstCompilerBuilder;
 
     const compilerOptions = { ...(options || {}) };
-    const hasPreloadRemoteFonts = compilerOptions.beforeBuild?.some(
+    const beforeBuild = (compilerOptions.beforeBuild ??= []);
+    const hasPreloadRemoteFonts = beforeBuild.some(
       (fn: any) => fn._preloadRemoteFontOptions !== undefined,
     );
-    const hasSpecifiedAssets = compilerOptions.beforeBuild?.some(
+    const hasSpecifiedAssets = beforeBuild.some(
       (fn: any) => fn._preloadRemoteFontOptions?.assets !== undefined,
     );
-    const hasDisableAssets = compilerOptions.beforeBuild?.some(
+    const hasDisableAssets = beforeBuild.some(
       (fn: any) => fn._preloadRemoteFontOptions?.assets === false,
     );
 
     if (!hasPreloadRemoteFonts || (!hasSpecifiedAssets && !hasDisableAssets)) {
-      compilerOptions.beforeBuild?.push(
-        preloadRemoteFonts([], {
-          assets: ['text'],
-        }),
-      );
+      beforeBuild.push(preloadRemoteFonts([], { assets: TypstCompilerDriver.defaultAssets }));
     }
 
+    const hasFontLoader = beforeBuild.some((fn: any) => fn._kind === 'fontLoader');
+    if (!hasFontLoader) {
+      throw new Error(
+        'TypstCompiler: no font loader found, please use font loaders, e.g. preloadRemoteFonts or preloadSystemFonts',
+      );
+    }
     this.compiler = await buildComponent(options, gCompilerModule, TypstCompilerBuilder, {});
   }
 
@@ -448,6 +453,7 @@ class TypstCompilerDriver {
     throw new Error('Please use the api TypstRenderer.renderToCanvas in v0.4.0');
   }
 }
+createTypstCompiler._impl = TypstCompilerDriver;
 
 // todo: caching inputs
 function convertInputs(inputs?: Record<string, string>): [string, string][] | undefined {
