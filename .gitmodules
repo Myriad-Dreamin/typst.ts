@@ -6,9 +6,9 @@
 	update=none
 	ignore=all
 
-[submodule "projects/cetz-editor"]
-	path = projects/cetz-editor
-	url = https://github.com/Myriad-Dreamin/cetz-editor.git
+[submodule "projects/vistyp"]
+	path = projects/vistyp
+	url = https://github.com/Myriad-Dreamin/vistyp.git
 	branch = main
 	fetchRecurseSubmodules = false
 	update=none
