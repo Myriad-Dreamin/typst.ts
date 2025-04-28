@@ -149,8 +149,8 @@ export class TypstSnippet {
     compiler?: PromiseJust<TypstCompiler>;
     renderer?: PromiseJust<TypstRenderer>;
   }) {
-    this.cc = options?.compiler || TypstSnippet.$buildC;
-    this.ex = options?.renderer || TypstSnippet.$buildR;
+    this.cc = options?.compiler || TypstSnippet.buildLocalCompiler;
+    this.ex = options?.renderer || TypstSnippet.buildLocalRenderer;
     this.mainFilePath = '/main.typ';
     this.providers = [];
   }
@@ -361,7 +361,7 @@ export class TypstSnippet {
    * See {@link InitOptions}.
    */
   setCompilerInitOptions(options: Partial<InitOptions>) {
-    this.requireIsUninitialized('compiler', this.cc, TypstSnippet.$buildC);
+    this.requireIsUninitialized('compiler', this.cc);
     this.ccOptions = options;
   }
 
@@ -372,7 +372,7 @@ export class TypstSnippet {
    * See {@link InitOptions}.
    */
   setRendererInitOptions(options: Partial<InitOptions>) {
-    this.requireIsUninitialized('renderer', this.ex, TypstSnippet.$buildR);
+    this.requireIsUninitialized('renderer', this.ex);
     this.exOptions = options;
   }
 
@@ -618,11 +618,11 @@ export class TypstSnippet {
 
     for (const provider of [...providers, ...providers2]) {
       if (provider.forRoles.includes('compiler')) {
-        this.requireIsUninitialized('compiler', this.cc, TypstSnippet.$buildC);
+        this.requireIsUninitialized('compiler', this.cc);
         ccBeforeBuild.push(...provider.provides);
       }
       if (provider.forRoles.includes('renderer')) {
-        this.requireIsUninitialized('renderer', this.ex, TypstSnippet.$buildR);
+        this.requireIsUninitialized('renderer', this.ex);
         exBeforeBuild.push(...provider.provides);
       }
     }
@@ -633,13 +633,23 @@ export class TypstSnippet {
     if (c && typeof c !== 'function') {
       throw new Error(`${role} has been initialized: ${c}`);
     }
-    if (e && c != e) {
-      throw new Error(`${role} instance is set to non default value`);
-    }
   }
 
   /** @internal */
-  static async $buildC(this: TypstSnippet) {
+  static async buildLocalCompiler(this: TypstSnippet) {
+    const { createTypstCompiler } = (await import(
+      // @ts-ignore
+      '@myriaddreamin/typst.ts/compiler'
+    )) as any as typeof import('../compiler.mjs');
+
+    await this.prepareUse();
+    const compiler = createTypstCompiler();
+    await compiler.init(this.ccOptions);
+    return compiler;
+  }
+
+  /** @internal */
+  static async buildGlobalCompiler(this: TypstSnippet) {
     // lazy import compile module
     const { createGlobalCompiler } = (await import(
       // @ts-ignore
@@ -655,7 +665,20 @@ export class TypstSnippet {
   }
 
   /** @internal */
-  static async $buildR(this: TypstSnippet) {
+  static async buildLocalRenderer(this: TypstSnippet) {
+    const { createTypstRenderer } = (await import(
+      // @ts-ignore
+      '@myriaddreamin/typst.ts/renderer'
+    )) as any as typeof import('../renderer.mjs');
+
+    await this.prepareUse();
+    const renderer = createTypstRenderer();
+    await renderer.init(this.exOptions);
+    return renderer;
+  }
+
+  /** @internal */
+  static async buildGlobalRenderer(this: TypstSnippet) {
     // lazy import renderer module
     const { createGlobalRenderer } = (await import(
       // @ts-ignore
@@ -676,6 +699,6 @@ export class TypstSnippet {
  * {@link TypstSnippet} for more details.
  */
 export const $typst = new TypstSnippet({
-  compiler: TypstSnippet.$buildC,
-  renderer: TypstSnippet.$buildR,
+  compiler: TypstSnippet.buildGlobalCompiler,
+  renderer: TypstSnippet.buildGlobalRenderer,
 });
