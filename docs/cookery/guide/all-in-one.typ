@@ -71,7 +71,7 @@ Using `all-in-one.bundle.js`:
 </script>
 ```
 
-Or `all-in-one-lite.bundle.js`:
+Or `all-in-one-lite.bundle.js` which needs configure your frontend to have access to wasm module files:
 
 ```html
 <script
@@ -101,6 +101,12 @@ See a #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/p
 #if not is-pdf-target() {
   raw(block: true, lang: "html", read("/github-pages/preview.html"))
 }
+
+// === Sample application: real-time preview document
+
+// See #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/examples/all-in-one.html")[Preview by all-in-one Library] by a single included file (`all-in-one.bundle.js`).
+
+// See #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/examples/all-in-one-lite.html")[Preview by all-in-one-lite Library] by the more practical single included file (`all-in-one-lite.bundle.js`), which needs configure your frontend to have access to wasm module files:
 
 == Installing by Package Managers
 
@@ -384,20 +390,3 @@ $typst.use(
 == Specify extra render options
 
 See #link(snippet-source)[comments on source] for more details.
-
-=== Sample application: real-time preview document
-
-See #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/examples/all-in-one.html")[Preview by all-in-one Library] by a single included file (`all-in-one.bundle.js`).
-
-See #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/examples/all-in-one-lite.html")[Preview by all-in-one-lite Library] by the more practical single included file (`all-in-one-lite.bundle.js`), which needs configure your frontend to have access to wasm module files:
-
-```js
-$typst.setCompilerInitOptions({
-  getModule: () =>
-    '/path/to/typst_ts_web_compiler_bg.wasm',
-});
-$typst.setRendererInitOptions({
-  getModule: () =>
-    '/path/to/typst_ts_renderer_bg.wasm',
-});
-```
