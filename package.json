@@ -22,6 +22,7 @@
     "packages/typst.solid/demo",
     "packages/typst.vue3",
     "packages/typst.angular",
+    "packages/typst-all-in-one.ts",
     "templates/*",
     "projects/rehype-typst",
     "projects/hexo-renderer-typst",

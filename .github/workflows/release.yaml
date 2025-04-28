@@ -146,7 +146,6 @@ jobs:
         run: apk add --no-cache git clang lld musl-dev npm
       - name: Checkout repository
         uses: actions/checkout@v3
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: Configure git
         run: |
           git config --global --add safe.directory $PWD

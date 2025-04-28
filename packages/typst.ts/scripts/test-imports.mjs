@@ -2,7 +2,7 @@ import * as resolve from 'resolve.exports';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 
-for (const pkgName of ['typst.ts', 'renderer', 'compiler', 'parser', 'typst.react', 'typst.vue3']) {
+for (const pkgName of ['typst-all-in-one.ts', 'typst.ts', 'renderer', 'compiler', 'parser', 'typst.react', 'typst.vue3']) {
   const pkgDir = join(import.meta.dirname, '../..', pkgName);
   const pkgPath = join(pkgDir, 'package.json');
   const pkg = JSON.parse(readFileSync(pkgPath));
