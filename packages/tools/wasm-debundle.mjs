@@ -71,10 +71,9 @@ export default _default;
 
 let nodeJsImportWasmModule = async function(wasm_name, url) {
   const escapeImport = new Function('m', 'return import(m)');
-  const path = await escapeImport('path');
   const { readFileSync } = await escapeImport('fs');
 
-  const wasmPath = new URL(path.join(path.dirname(url), wasm_name));
+  const wasmPath = new URL(wasm_name, url);
   return await readFileSync(wasmPath).buffer;
 };
 
