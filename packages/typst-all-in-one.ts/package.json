@@ -1,6 +1,6 @@
 {
     "name": "@myriaddreamin/typst-all-in-one.ts",
-    "version": "0.6.0-rc1",
+    "version": "0.6.0-rc2",
     "description": "Run Typst in JavaScriptWorld with a single bundled library.",
     "author": "Myriad-Dreamin",
     "license": "Apache-2.0",
