@@ -75,11 +75,9 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-      - name: Install
-        uses: dtolnay/rust-toolchain@1.85.0
+      - name: Install Rust
         if: ${{ !matrix.settings.docker }}
-        with:
-          targets: ${{ matrix.settings.target }}
+        run: rustup target add ${{ matrix.settings.target }}
       - name: Cache cargo
         uses: actions/cache@v4
         with:
