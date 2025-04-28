@@ -23,6 +23,19 @@ for (const dir of dirs) {
       cwd: `./npm/${dir}`,
     })
   } catch (error) {
-    console.error(`Publishing ${dir}`, error);
+    console.error(`Could not publish: ${dir}`, error);
+  }
+
+  if (process.env.GITHUB_REF_NAME) {
+    const GITHUB_REF_NAME = process.env.GITHUB_REF_NAME.replace('refs/tags/', '');
+    console.log(`Upload typst-ts-node-compiler.${dir}.node to release ${GITHUB_REF_NAME}`);
+    try {
+      execSync(`gh release upload ${GITHUB_REF_NAME} typst-ts-node-compiler.${dir}.node`, {
+        stdio: 'inherit',
+        cwd: `./npm/${dir}`,
+      })
+    } catch (error) {
+      console.error(`Could not upload to release: ${dir}`, error);
+    }
   }
 }
