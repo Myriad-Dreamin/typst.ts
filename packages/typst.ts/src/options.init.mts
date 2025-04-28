@@ -218,6 +218,7 @@ export function preloadRemoteFonts(
     await ref.loadFonts(builder, [...userFonts, ...assetFonts]);
   };
   loader._preloadRemoteFontOptions = options;
+  loader._kind = 'fontLoader';
   return loader;
 }
 

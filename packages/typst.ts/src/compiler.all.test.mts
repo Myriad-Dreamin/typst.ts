@@ -8,6 +8,11 @@ import lsRegular from '../../../assets/data/LibertinusSerif-Regular-subset.otf?i
 import lsBold from '../../../assets/data/LibertinusSerif-Bold-subset.otf?inline';
 import lsItalic from '../../../assets/data/LibertinusSerif-Italic-subset.otf?inline';
 import lsBoldItalic from '../../../assets/data/LibertinusSerif-BoldItalic-subset.otf?inline';
+import { createTypstCompiler } from './compiler.mjs';
+import { disableDefaultFontAssets } from './options.init.mjs';
+
+// This is to reduce test time.
+createTypstCompiler._impl.defaultAssets = [];
 
 // nodejs
 const isNode =
@@ -19,23 +24,27 @@ const fsImport = (file: string) => {
   return fs.readFileSync(path.join(import.meta.dirname, file));
 };
 
+const getModule = () => {
+  if (isNode) {
+    return {
+      compiler: () => fsImport('../../compiler/pkg/typst_ts_web_compiler_bg.wasm'),
+      renderer: () => fsImport('../../renderer/pkg/typst_ts_renderer_bg.wasm'),
+    };
+  }
+  return {
+    compiler: () => compilerUrl,
+    renderer: () => rendererUrl,
+  };
+};
+
 const createOne = (withFonts: boolean) => {
   const $typst = new TypstSnippet();
-  if (!isNode) {
-    $typst.setCompilerInitOptions({
-      getModule: () => compilerUrl,
-    });
-    $typst.setRendererInitOptions({
-      getModule: () => rendererUrl,
-    });
-  } else {
-    $typst.setCompilerInitOptions({
-      getModule: () => fsImport('../../compiler/pkg/typst_ts_web_compiler_bg.wasm'),
-    });
-    $typst.setRendererInitOptions({
-      getModule: () => fsImport('../../renderer/pkg/typst_ts_renderer_bg.wasm'),
-    });
-  }
+  $typst.setCompilerInitOptions({
+    getModule: getModule().compiler,
+  });
+  $typst.setRendererInitOptions({
+    getModule: getModule().renderer,
+  });
 
   $typst.use(TypstSnippet.disableDefaultFontAssets());
   if (withFonts) {
@@ -43,6 +52,22 @@ const createOne = (withFonts: boolean) => {
   }
   return $typst;
 };
+
+describe('compiler creations', () => {
+  it('should success with undefined options', async () => {
+    const compiler = createTypstCompiler();
+    await compiler.init({
+      getModule: getModule().compiler,
+    });
+  });
+  it('should success with no options', async () => {
+    const compiler = createTypstCompiler();
+    await compiler.init({
+      beforeBuild: [],
+      getModule: getModule().compiler,
+    });
+  });
+});
 
 describe('snippet compiler', () => {
   const $typst = createOne(false);
