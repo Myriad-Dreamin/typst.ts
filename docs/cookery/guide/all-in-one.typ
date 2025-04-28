@@ -62,7 +62,7 @@ Using `all-in-one.bundle.js`:
 ```html
 <script
   type="module"
-  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one.bundle.js"
+  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts/dist/esm/index.js"
   id="typst"
 >
   console.log($typst.svg({
