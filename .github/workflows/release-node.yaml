@@ -429,7 +429,7 @@ jobs:
       - name: Publish
         run: |
           echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
-          yarn prepublish:napi `node scripts/get-gh-release-id.mjs $GITHUB_REF_NAME`
+          yarn prepublish:napi --gh-release=false
           node scripts/publish.js
           npm publish --verbose --provenance --access public || exit 0
         env:
