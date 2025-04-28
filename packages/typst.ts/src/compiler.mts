@@ -86,7 +86,7 @@ interface TransientCompileOptions<
   format?: F;
   /**
    * Whether to include diagnostic information in the result.
-   * Note: it will be set to true by default in v0.6.0
+   * Note: it will be set to 'full' by default in v0.6.0
    * @default 'full'
    */
   diagnostics?: Diagnostics;
