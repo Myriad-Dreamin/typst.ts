@@ -67,6 +67,30 @@ describe('compiler creations', () => {
       getModule: getModule().compiler,
     });
   });
+  it('should success with good vector', async () => {
+    const compiler = createTypstCompiler();
+    await compiler.init({
+      beforeBuild: [disableDefaultFontAssets()],
+      getModule: getModule().compiler,
+    });
+    await compiler.addSource('/main.typ', 'Hello, world!');
+    const data = await compiler.compile({
+      mainFilePath: '/main.typ',
+    });
+    expect(data.result?.length).toMatchInlineSnapshot(`368`);
+  });
+  it('should success with good vector', async () => {
+    const compiler = createTypstCompiler();
+    await compiler.init({
+      beforeBuild: [disableDefaultFontAssets()],
+      getModule: getModule().compiler,
+    });
+    await compiler.addSource('/main.typ', '= A bit different!');
+    const data = await compiler.compile({
+      mainFilePath: '/main.typ',
+    });
+    expect(data.result?.length).toMatchInlineSnapshot(`376`);
+  });
 });
 
 describe('snippet compiler', () => {

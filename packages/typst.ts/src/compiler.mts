@@ -86,10 +86,10 @@ interface TransientCompileOptions<
   format?: F;
   /**
    * Whether to include diagnostic information in the result.
-   * Note: it will be set to true by default in v0.6.0
-   * @default undefined
+   * Note: it will be set to 'full' by default in v0.6.0
+   * @default 'full'
    */
-  diagnostics: Diagnostics;
+  diagnostics?: Diagnostics;
 }
 
 interface IncrementalCompileOptions<Diagnostics extends DiagnosticsFormat = DiagnosticsFormat>
@@ -107,9 +107,9 @@ interface IncrementalCompileOptions<Diagnostics extends DiagnosticsFormat = Diag
    * Whether to include diagnostic information in the result.
    * Note: Before v0.6.0, when diagnostics is not set, the result will be a Uint8Array.
    * After v0.6.0, when diagnostics is not set, the result will be a CompileResult<Uint8Array> without diagnostics.
-   * @default false
+   * @default 'full'
    */
-  diagnostics: Diagnostics;
+  diagnostics?: Diagnostics;
 }
 
 export interface QueryOptions extends CompileOptionsCommon {
@@ -467,8 +467,7 @@ function getDiagnosticsArg(diagnostics: string | undefined): number {
     case 'unix':
       return 2;
     case 'full':
-      return 3;
     default:
-      return 0;
+      return 3;
   }
 }
