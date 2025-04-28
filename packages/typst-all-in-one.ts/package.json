@@ -1,0 +1,45 @@
+{
+    "name": "@myriaddreamin/typst-all-in-one.ts",
+    "version": "0.6.0-rc1",
+    "description": "Run Typst in JavaScriptWorld with a single bundled library.",
+    "author": "Myriad-Dreamin",
+    "license": "Apache-2.0",
+    "keywords": [
+        "TypeScript",
+        "Typst"
+    ],
+    "bugs": {
+        "url": "https://github.com/Myriad-Dreamin/typst.ts/issues"
+    },
+    "homepage": "https://myriad-dreamin.github.io/typst.ts/",
+    "type": "module",
+    "main": "./dist/cjs/index.js",
+    "module": "./dist/esm/index.js",
+    "types": "./dist/esm/index.d.mts",
+    "exports": {
+        ".": {
+            "require": {
+                "types": "./dist/cjs/index.d.cts",
+                "default": "./dist/cjs/index.js"
+            },
+            "import": {
+                "types": "./dist/esm/index.d.mts",
+                "default": "./dist/esm/index.js"
+            }
+        }
+    },
+    "files": [
+        "dist/**/*.d.mts",
+        "dist/**/*.d.cts",
+        "dist/**/index.js"
+    ],
+    "scripts": {
+        "build": "cd ../typst.ts && yarn build && node scripts/cp-all-in-one.mjs",
+        "prepublish": "turbo build",
+        "publish:dry": "npm publish --dry-run --access public",
+        "publish:lib": "npm publish --access public || exit 0"
+    },
+    "devDependencies": {
+        "@myriaddreamin/typst.ts": "*"
+    }
+}
