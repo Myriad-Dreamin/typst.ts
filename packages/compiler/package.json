@@ -19,7 +19,10 @@
     "./wasm": {
       "types": "./pkg/typst_ts_web_compiler_bg.wasm.d.ts",
       "default": "./pkg/typst_ts_web_compiler_bg.wasm"
-    }
+    },
+    "./*": [
+      "./*"
+    ]
   },
   "files": [
     "pkg/wasm-pack-shim.mjs",

@@ -17,7 +17,13 @@
       "module": "./pkg/wasm-pack-shim.mjs",
       "types": "./pkg/reflexo_typst_compiler.d.ts"
     },
-    "./wasm": "./pkg/reflexo_typst_compiler_bg.wasm"
+    "./wasm": {
+      "types": "./pkg/reflexo_typst_compiler_bg.wasm.d.ts",
+      "default": "./pkg/reflexo_typst_compiler_bg.wasm"
+    },
+    "./*": [
+      "./*"
+    ]
   },
   "files": [
     "pkg/wasm-pack-shim.mjs",

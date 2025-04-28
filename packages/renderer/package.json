@@ -20,7 +20,10 @@
     "./wasm": {
       "types": "./pkg/typst_ts_renderer_bg.wasm.d.ts",
       "default": "./pkg/typst_ts_renderer_bg.wasm"
-    }
+    },
+    "./*": [
+      "./*"
+    ]
   },
   "files": [
     "pkg/wasm-pack-shim.mjs",
