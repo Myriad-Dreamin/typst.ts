@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst.vue3",
-  "version": "0.5.5-rc7",
+  "version": "0.6.0-rc1",
   "type": "module",
   "main": "src/Typst.vue",
   "scripts": {
@@ -10,8 +10,8 @@
     "publish:lib": "npm publish --access public || exit 0"
   },
   "dependencies": {
-    "@myriaddreamin/typst-ts-renderer": "0.5.5-rc7",
-    "@myriaddreamin/typst.ts": "0.5.5-rc7"
+    "@myriaddreamin/typst-ts-renderer": "0.6.0-rc1",
+    "@myriaddreamin/typst.ts": "0.6.0-rc1"
   },
   "peerDependencies": {
     "vue": "^3.4.31"

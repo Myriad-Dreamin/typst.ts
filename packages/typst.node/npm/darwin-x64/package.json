@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst-ts-node-compiler-darwin-x64",
-  "version": "0.5.5-rc7",
+  "version": "0.6.0-rc1",
   "os": [
     "darwin"
   ],
