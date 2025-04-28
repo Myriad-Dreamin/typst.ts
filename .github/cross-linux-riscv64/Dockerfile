@@ -22,7 +22,7 @@ RUN git config --global --add safe.directory /project
 # install rust tools
 RUN curl --proto "=https" --tlsv1.2 --retry 3 -sSfL https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
-RUN rustup -v toolchain install 1.70
+RUN rustup -v toolchain install 1.85
 # add docker the manual way
 COPY install_docker.sh /
 RUN chmod +x /install_docker.sh
@@ -56,7 +56,7 @@ ENV CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_GNU_LINKER="$CROSS_TOOLCHAIN_PREFIX"gcc
     RUST_TEST_THREADS=1 \
     PKG_CONFIG_PATH="/usr/lib/riscv64-linux-gnu/pkgconfig/:${PKG_CONFIG_PATH}"
 
-RUN rustup target add riscv64gc-unknown-linux-gnu --toolchain 1.70-x86_64-unknown-linux-gnu
+RUN rustup target add riscv64gc-unknown-linux-gnu --toolchain 1.85-x86_64-unknown-linux-gnu
 RUN rustup target add riscv64gc-unknown-linux-gnu
 
 #compile libssl-dev for riscv64!
