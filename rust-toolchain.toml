@@ -1,2 +1,4 @@
 [toolchain]
 channel = "1.85"
+profile = "minimal"
+components = ["rust-src"]
