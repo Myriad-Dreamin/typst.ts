@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst.solid",
-  "version": "0.6.0-rc1",
+  "version": "0.6.0-rc2",
   "description": "A SolidJS package for Typst integration.",
   "type": "module",
   "exports": {
@@ -21,8 +21,8 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
-    "@myriaddreamin/typst-ts-renderer": "0.6.0-rc1",
-    "@myriaddreamin/typst.ts": "0.6.0-rc1",
+    "@myriaddreamin/typst-ts-renderer": "0.6.0-rc2",
+    "@myriaddreamin/typst.ts": "0.6.0-rc2",
     "solid-js": "^1.8.22",
     "vite-plugin-solid": "^2.11.6"
   },
