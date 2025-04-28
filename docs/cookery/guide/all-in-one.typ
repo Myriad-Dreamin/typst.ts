@@ -10,7 +10,7 @@
 #let sub = heading-reference[== (Archived) The All-in-One Js Library in v0.5.0]
 *Note: the following content is for typst.ts >=v0.6.0. To use rust library in \<v0.6.0, check #cross-link("/guide/all-in-one.typ", reference: sub)[the section.]*
 
-The all-in-one library provides a simplified API, and you can easily compile typst docuemnts into artifacts. For example, compiling a typst code string to a SVG:
+The all-in-one library provides a simplified API, and you can easily compile typst documents into artifacts. For example, compiling a typst code string to a SVG:
 
 ```ts
 await $typst.svg({mainContent: 'Hello, typst!' }))
@@ -57,16 +57,39 @@ We provide two bundles for the all-in-one library:
 - `all-in-one.bundle.js`, it bundles all of the resources to run a typst compiler. You can download the single bundle file and run the compiler offline.
 - `all-in-one-lite.bundle.js`, the fonts and Wasm modules are excluded to reduce the bundle size. This will cause the script *load extra resources from CDN*.
 
-Both the `all-in-one.bundle.js` and `all-in-one.bundle.js` can be used without configuration:
+Using `all-in-one.bundle.js`:
 
 ```html
 <script
   type="module"
-  <!-- Loading the full bundle or the lite version from jsdelivr -->
-  <!-- src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one.bundle.js" -->
+  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one.bundle.js"
+  id="typst"
+>
+  console.log($typst.svg({
+    mainContent: 'Hello, typst!',
+  }));
+</script>
+```
+
+Or `all-in-one-lite.bundle.js`:
+
+```html
+<script
+  type="module"
   src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one-lite.bundle.js"
   id="typst"
 >
+  /// Initializes the Typst compiler and renderer. Since we use "all-in-one-lite.bundle.js" instead of
+  /// "all-in-one.bundle.js" we need to tell that the wasm module files can be loaded from CDN (jsdelivr).
+  $typst.setCompilerInitOptions({
+    getModule: () =>
+      'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm',
+  });
+  $typst.setRendererInitOptions({
+    getModule: () =>
+      'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
+  });
+
   console.log($typst.svg({
     mainContent: 'Hello, typst!',
   }));
@@ -130,7 +153,7 @@ const $typst = new TypstSnippet({
 
 #include "all-in-one-inputs.typ"
 
-=== Spliting compilation and rendering
+=== Splitting compilation and rendering
 
 The compilation result could be stored in an artifact in #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/docs/proposals/8-vector-representation-for-rendering.typ")[_Vector Format_], so that you can decouple compilation from rendering.
 
