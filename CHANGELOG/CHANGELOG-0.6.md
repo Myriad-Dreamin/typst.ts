@@ -6,6 +6,8 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## v0.6.0 - [2025-04-30]
 
+The v0.5.5 was not released because typst v0.13.0 comes before the v0.5.5 release, so we decided to skip it. The next release will be v0.6.0.
+
 - feat: upgrade typst to v0.13.0 in https://github.com/Myriad-Dreamin/typst.ts/pull/643
 - feat: update assets to v0.13.1 in https://github.com/Myriad-Dreamin/typst.ts/pull/682
 
