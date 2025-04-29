@@ -1,0 +1,51 @@
+name: reflexo::crates::publish
+on:
+  push:
+    tags:
+      - '*'
+  workflow_dispatch:
+
+env:
+  RUSTFLAGS: '-Dwarnings'
+
+jobs:
+  publish-crates:
+    name: build
+    runs-on: ubuntu-latest
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      # https://github.com/dtolnay/rust-toolchain/issues/133
+      # https://github.com/rust-lang/rustup/issues/3635
+      # Only needed if your action will run two or more rust
+      # commands concurrently, otherwise rustup will lazily
+      # install your rust-toolchain.toml when needed:
+      - name: 'Install from rust-toolchain.toml'
+        run: rustup show
+      - name: Install llvm
+        run: |
+          sudo apt-get update
+          sudo apt-get install llvm
+      - name: Publish crates
+        run: |
+          cargo publish --no-verify -p reflexo || true
+          cargo publish --no-verify -p reflexo-typst2vec || true
+          cargo publish --no-verify -p reflexo-vec2bbox || true
+          cargo publish --no-verify -p reflexo-vec2canvas || true
+          cargo publish --no-verify -p reflexo-vec2sema || true
+          cargo publish --no-verify -p reflexo-vec2svg || true
+          cargo publish --no-verify -p reflexo-vec2dom || true
+          cargo publish --no-verify -p reflexo-typst || true
+      - name: Verify crate health (Optional)
+        run: |
+          cargo publish --dry-run -p reflexo || true
+          cargo publish --dry-run -p reflexo-typst2vec --features no-content-hint || true
+          cargo publish --dry-run -p reflexo-vec2bbox || true
+          cargo publish --dry-run -p reflexo-vec2canvas || true
+          cargo publish --dry-run -p reflexo-vec2sema || true
+          cargo publish --dry-run -p reflexo-vec2svg --features no-content-hint || true
+          cargo publish --dry-run -p reflexo-vec2dom --features no-content-hint || true
+          cargo publish --dry-run -p reflexo-typst --features no-content-hint || true
