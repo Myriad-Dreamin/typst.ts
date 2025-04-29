@@ -1,6 +1,10 @@
 
 const { execSync } = require('child_process');
 
+const { readFileSync } = require('fs');
+
+const tag = `v${JSON.parse(readFileSync('./package.json', 'utf8')).version}`;
+
 const dirs = [
   'android-arm-eabi',
   'android-arm64',
@@ -26,16 +30,13 @@ for (const dir of dirs) {
     console.error(`Could not publish: ${dir}`, error);
   }
 
-  if (process.env.GITHUB_REF_NAME) {
-    const GITHUB_REF_NAME = process.env.GITHUB_REF_NAME.replace('refs/tags/', '');
-    console.log(`Upload typst-ts-node-compiler.${dir}.node to release ${GITHUB_REF_NAME}`);
+    console.log(`Upload typst-ts-node-compiler.${dir}.node to release ${tag}`);
     try {
-      execSync(`gh release upload ${GITHUB_REF_NAME} typst-ts-node-compiler.${dir}.node`, {
+      execSync(`gh release upload ${tag} typst-ts-node-compiler.${dir}.node`, {
         stdio: 'inherit',
         cwd: `./npm/${dir}`,
       })
     } catch (error) {
       console.error(`Could not upload to release: ${dir}`, error);
     }
-  }
 }
