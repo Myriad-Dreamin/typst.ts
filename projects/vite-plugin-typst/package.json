@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/vite-plugin-typst",
-  "version": "0.6.0-rc2",
+  "version": "0.6.0",
   "description": "Vite plugin for typst",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -27,7 +27,7 @@
     "glob-watcher": "^6.0.0"
   },
   "peerDependencies": {
-    "@myriaddreamin/typst.node": "^0.6.0-rc2",
+    "@myriaddreamin/typst.node": "^0.6.0",
     "@xmldom/xmldom": "^0.9.8",
     "vite": "^6.2.3"
   },
