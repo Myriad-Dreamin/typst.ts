@@ -1,13 +1,15 @@
 import { useRef, useEffect, useState } from 'react';
+
+import type * as typst from '@myriaddreamin/typst.ts';
 import { createGlobalRenderer } from '@myriaddreamin/typst.ts/dist/esm/contrib/global-renderer.mjs';
 import { createTypstRenderer } from '@myriaddreamin/typst.ts/dist/esm/renderer.mjs';
 import { withGlobalCompiler } from '@myriaddreamin/typst.ts/dist/esm/contrib/global-compiler.mjs';
 import { createTypstCompiler } from '@myriaddreamin/typst.ts/dist/esm/compiler.mjs';
 import { preloadRemoteFonts } from '@myriaddreamin/typst.ts/dist/esm/options.init.mjs';
-import type * as typst from '@myriaddreamin/typst.ts';
-import htmlLayerCss from './typst.css?inline';
 import compiler from '@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm?url';
 import renderer from '@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm?url';
+
+import htmlLayerCss from './typst.css?inline';
 
 export interface TypstDocumentProps {
   fill?: string;
@@ -43,32 +45,29 @@ export const TypstDocument = ({
   onDiagnostics,
 }: TypstDocumentProps) => {
   if (source && artifact) {
-    throw new Error('Both source and artifact are provided, please provide only one.');
+    throw new Error('Cannot provide both source and artifact, please provide only one.');
   }
+
+  /// Diag callback
   const setDiag = onDiagnostics ?? console.error;
 
-  /// --- beg: update document --- ///
   const displayDivRef = useRef<HTMLDivElement>(null);
   const getDisplayLayerDiv = () => {
     return displayDivRef?.current;
   };
 
-  interface RendererResource {
-    session: typst.RenderSession;
-    renderer: typst.TypstRenderer;
-  }
-
   const [rHandler, setRenderer] = useState<RendererResource | undefined>();
   const [finalArtifact, setArtifact] = useState<Uint8Array | undefined>(artifact);
 
+  /// Creates renderer and session
   useEffect(() => {
     let killPromiseCallback;
     const killPromise = new Promise(resolve => (killPromiseCallback = resolve));
 
     (async () => {
-      /// render after init
+      /// Creates global renderer if no renderer is provided
       const r = renderer ?? (await createGlobalRenderer(createTypstRenderer, rendererInitOpts));
-
+      /// Creates session
       return r.runWithSession(async session => {
         console.log('new session', session);
         const rHandler = { session, renderer: r };
@@ -81,6 +80,7 @@ export const TypstDocument = ({
     return killPromiseCallback!;
   }, [renderer]);
 
+  /// Creates compiler, and compiles document
   useEffect(() => {
     if (!source) {
       return;
@@ -97,11 +97,13 @@ export const TypstDocument = ({
         mainFilePath: '/main.typ',
       });
 
-      if (result.diagnostics && onDiagnostics) {
-        setDiag(result.diagnostics);
+      if (result.diagnostics) {
+        if (setDiag) {
+          setDiag(result.diagnostics);
+        }
+      } else {
+        setArtifact(result.result);
       }
-
-      setArtifact(result.result);
     };
 
     /// compile after init
@@ -112,6 +114,7 @@ export const TypstDocument = ({
     }
   }, [source, compiler]);
 
+  /// Renders document
   useEffect(() => {
     /// get display layer div
     const divContainerElem = getDisplayLayerDiv();
@@ -119,9 +122,15 @@ export const TypstDocument = ({
       return;
     }
     if (!divContainerElem.firstElementChild) {
-      divContainerElem.appendChild(document.createElement('div'));
+      const wrapper = document.createElement('div');
+      wrapper.className = 'display-layer-wrapper';
+      divContainerElem.appendChild(wrapper);
+
+      const div = document.createElement('div');
+      wrapper.appendChild(div);
     }
-    const divElem = divContainerElem.firstElementChild as HTMLDivElement;
+    const wrapElem = divContainerElem.firstElementChild! as HTMLDivElement;
+    const divElem = wrapElem.firstElementChild as HTMLDivElement;
 
     /// we allow empty artifact
     if (!finalArtifact?.length) {
@@ -135,10 +144,14 @@ export const TypstDocument = ({
         action: 'merge',
         data: finalArtifact,
       });
-    
+
       const docWidth = rHandler.session.docWidth;
       if (docWidth && docWidth > 0) {
-        divContainerElem.style.width = `calc(max(${docWidth * window.devicePixelRatio}px, 100%))`;
+        const dw = `${docWidth * window.devicePixelRatio}`;
+        if (wrapElem.dataset.width !== dw) {
+          wrapElem.dataset.width = dw;
+          wrapElem.style.width = `calc(min(${dw}px, 100%))`;
+        }
       }
 
       rHandler.renderer.renderToCanvas({
@@ -157,7 +170,12 @@ export const TypstDocument = ({
     <div>
       {/* todo: remove this embedded css */}
       <style>{htmlLayerCss}</style>
-      <div className="typst-app" style={{ height: '0' }} ref={displayDivRef}></div>
+      <div className="typst-app" ref={displayDivRef}></div>
     </div>
   );
 };
+
+interface RendererResource {
+  session: typst.RenderSession;
+  renderer: typst.TypstRenderer;
+}

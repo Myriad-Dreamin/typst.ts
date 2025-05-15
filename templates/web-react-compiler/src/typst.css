@@ -63,3 +63,14 @@
 .typst-text {
   pointer-events: none;
 }
+
+.typst-app {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.display-layer-wrapper {
+  flex: 0 0 auto;
+  border: 1px solid #fff;
+}
