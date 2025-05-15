@@ -1,5 +1,5 @@
 {
-  "name": "@myriaddreamin/web-react-compiler",
+  "name": "@myriaddreamin/web-react-compiler-template",
   "private": true,
   "version": "1.0.0",
   "description": "React Template using @myriaddreamin/typst.ts, with web compiler integrated.",
