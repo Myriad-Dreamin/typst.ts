@@ -12,13 +12,29 @@ import renderer from '@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.
 import htmlLayerCss from './typst.css?inline';
 
 export interface TypstDocumentProps {
+  /**
+   * The background color of the document.
+   */
   fill?: string;
+  /**
+   * The source code of the Typst document. Only one of `source` or `artifact` can be provided.
+   */
   source?: string;
+  /**
+   * The artifact of the Typst document. Only one of `source` or `artifact` can be provided.
+   */
   artifact?: Uint8Array;
-  // todo: add vector format
-  format?: 'json';
+  /**
+   * A compiler handler. If not provided, a global *shared* compiler will be created.
+   */
   compiler?: typst.TypstCompiler;
+  /**
+   * A renderer handler. If not provided, a global *shared* renderer will be created.
+   */
   renderer?: typst.TypstRenderer;
+  /**
+   * A callback function to handle diagnostics. If not provided, the default `console.error` will be used.
+   */
   onDiagnostics?: (diagnostics: unknown) => void;
 }
 
@@ -39,7 +55,6 @@ export const TypstDocument = ({
   fill,
   source,
   artifact,
-  format,
   compiler,
   renderer,
   onDiagnostics,
@@ -162,7 +177,7 @@ export const TypstDocument = ({
         pixelPerPt: 3,
       });
     }
-  }, [displayDivRef, fill, format, finalArtifact, rHandler]);
+  }, [displayDivRef, fill, finalArtifact, rHandler]);
 
   /// --- end: update document --- ///
 
