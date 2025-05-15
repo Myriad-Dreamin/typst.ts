@@ -1,0 +1,41 @@
+.demo-input {
+  width: calc(100% - 1em);
+  height: 30vh;
+  overflow-y: scroll;
+  font-family:
+    SFMono-Regular,
+    Consolas,
+    Liberation Mono,
+    Menlo,
+    monospace;
+  color: white;
+}
+.demo-input {
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  scrollbar-width: none; /* Firefox */
+}
+.demo-input::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+.demo-input {
+  margin: 0 0.5em;
+  padding: 10px 5px;
+  box-sizing: border-box;
+  border-radius: 6px;
+  margin-top: 8px;
+  background-color: rgb(15, 15, 16);
+}
+.demo-input::before {
+  content: '\2022 \2022 \2022';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 4px;
+  background: rgb(58, 58, 58);
+  color: #c2c3c4;
+  width: 100%;
+  font-size: 2rem;
+  line-height: 0;
+  padding: 14px 0;
+  text-indent: 4px;
+}
