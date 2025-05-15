@@ -1,4 +1,4 @@
-# Template to integrate compiler into React
+# Template to Integrate Compiler into React
 
 ## Installation
 
