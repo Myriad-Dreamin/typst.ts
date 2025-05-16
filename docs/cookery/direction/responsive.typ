@@ -6,7 +6,7 @@
 
 Example Application: #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/packages/typst.ts/index.html")[single-file], #link("https://github.com/Myriad-Dreamin/shiroa")[shiroa] and #link("https://github.com/Myriad-Dreamin/typst.ts/tree/main/projects/hexo-renderer-typst")[hexo-renderer-typst]
 
-== How does Resonspive Rendering Work?
+== How does Responsive Rendering Work?
 
 You must prepare a artifact for each document, containing compressed data for different theme and screen settings. The bundle size of artifacts is optimized for typst documents.
 
