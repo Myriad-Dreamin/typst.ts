@@ -42,7 +42,7 @@ export const TypstDocument = ({ fill, artifact, format }: TypstDocumentProps) =>
         console.log(event, status);
         setPermissionAndOk(status);
       });
-    });
+    }).catch(e => false);
   });
 
   /// --- end: manipulate permission --- ///
