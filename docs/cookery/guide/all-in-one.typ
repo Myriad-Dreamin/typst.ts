@@ -55,14 +55,14 @@ If you want to run typst in Node.js using the #link("https://napi.rs/")[napi], p
 
 We provide two bundles for the all-in-one library:
 - `all-in-one.bundle.js`, it bundles all of the resources to run a typst compiler. You can download the single bundle file and run the compiler offline.
-- `all-in-one-lite.bundle.js`, the fonts and Wasm modules are excluded to reduce the bundle size. This will cause the script *load extra resources from CDN*.
+- `all-in-one-lite.bundle.js`, the fonts and Wasm modules are excluded to reduce the bundle size. This will cause the script to *load extra resources from CDN*.
 
 Using `all-in-one.bundle.js`:
 
 ```html
 <script
   type="module"
-  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts/dist/esm/index.js"
+  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts@0.6.0/dist/esm/index.js"
   id="typst"
 >
   console.log($typst.svg({

@@ -127,8 +127,7 @@ Please check [Templates](./templates) and usage in [Get Started](https://myriad-
 Note: In default, `all-in-one.bundle.js` will download the font assets from
 GitHub in browser, so you need to connect to the Internet.
 
-Download `all-in-one.bundle.js` from [GitHub Releases](https://github.com/Myriad-Dreamin/typst.ts/releases) and start a local server with following
-content of `index.html`:
+Using `all-in-one.bundle.js` from CDN:
 
 ```html
 <!doctype html>
@@ -137,7 +136,11 @@ content of `index.html`:
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Svg Document</title>
-    <script type="module" src="http://localhost:12345/all-in-one.bundle.js" id="typst"></script>
+    <script
+      type="module"
+      src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts@0.6.0/dist/esm/index.js"
+      id="typst"
+    ></script>
   </head>
   <body>
     <textarea id="input" style="width: 100%"></textarea>
