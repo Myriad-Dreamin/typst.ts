@@ -1,0 +1,15 @@
+[package]
+name = "rustdoc-typst-demo"
+description = "This project demonstrates an approach to including KaTeX in Rust docs"
+version = "0.1.5"
+authors = ["Paul Kernfeld <paulkernfeld@gmail.com>"]
+license = "MIT/Apache-2.0"
+documentation = "https://docs.rs/rustdoc-typst-demo"
+repository = "https://github.com/Myriad-Dreamin/typst.ts"
+
+# An unnecessary dependency because we want to ensure that docs for dependencies do not include KaTeX
+[dependencies]
+bitflags = "1.0"
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--html-in-header", "typst-header.html"]

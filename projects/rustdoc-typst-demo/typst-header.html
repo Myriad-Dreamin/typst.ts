@@ -1,0 +1,114 @@
+<style>
+  .block-markup {
+    display: flex;
+    justify-content: center;
+  }
+  .block-markup > svg {
+    flex: 1;
+  }
+</style>
+<script
+  type="module"
+  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one-lite.bundle.js"
+  id="typst"
+></script>
+<script>
+  document.getElementById('typst').addEventListener('load', function () {
+    $typst.setCompilerInitOptions({
+      getModule: () =>
+        'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm',
+    });
+    $typst.setRendererInitOptions({
+      getModule: () =>
+        'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
+    });
+    // https://cdn.jsdelivr.net/npm/
+    // http://localhost:20810/base/node_modules
+    const fontSize = parseFloat(
+      window.getComputedStyle(document.body).getPropertyValue('font-size'),
+    );
+    const textColor = nameToTypstRgba(
+      window.getComputedStyle(document.body).getPropertyValue('color'),
+    );
+
+    function nameToTypstRgba(name) {
+      var canvas = document.createElement('canvas');
+      var context = canvas.getContext('2d');
+      context.fillStyle = name;
+      context.fillRect(0, 0, 1, 1);
+      const [r, g, b, a] = context.getImageData(0, 0, 1, 1).data;
+      const aRatio = Math.min(a / 255, 1);
+      return `color.rgb(${r}, ${g}, ${b}, ${aRatio} * 100%)`;
+    }
+
+    function renderMarkup(content, isBlock) {
+      const y = isBlock ? '0.5em' : '0pt';
+      let mainContent = `#set page(height: auto, width: auto, margin: (y: ${y}, rest: 0pt)); #set text(size: ${fontSize}pt, fill: ${textColor}); #show math.equation: box;\n${content}`;
+      return $typst.svg({ mainContent }).then(
+        svg => svg,
+        err => {
+          console.error(err);
+        },
+      );
+    }
+
+    function createElem(content, isBlock) {
+      const dom_parser = new DOMParser();
+      const toInsert = isBlock
+        ? `<p class="block-markup">${content}</p>`
+        : `<span class="inline-markup">${content}</span>`;
+      const svg_document = dom_parser.parseFromString(toInsert, 'text/html');
+      return svg_document.querySelector(isBlock ? 'p.block-markup' : 'span.inline-markup');
+    }
+
+    document.querySelectorAll('p').forEach(p => {
+      if (!(p.textContent.startsWith('$ ') && p.textContent.endsWith(' $'))) {
+        return;
+      }
+      renderMarkup(p.textContent, true).then(svg => {
+        p.style.display = 'none';
+        p.style.marginTop = '-40px';
+
+        p.parentNode.insertBefore(createElem(svg, true), p.nextSibling);
+      });
+    });
+    document.querySelectorAll('p code').forEach(p => {
+      if (!(p.textContent.startsWith('{') && p.textContent.endsWith('}'))) {
+        return;
+      }
+      renderMarkup(p.textContent.slice(1, -1), false).then(svg => {
+        p.style.display = 'none';
+        p.style.marginTop = '-40px';
+
+        p.parentNode.insertBefore(createElem(svg, false), p.nextSibling);
+      });
+    });
+    function skipExampleWrap(node, pre) {
+      const parent = pre.parentNode;
+      if (!parent) return;
+      if (parent.classList.contains('example-wrap')) {
+        return skipExampleWrap(node, parent);
+      }
+      parent.insertBefore(node, pre.nextSibling);
+      pre.style.display = 'none';
+    }
+    document.querySelectorAll('pre[class="language-typm-render"]').forEach(pre => {
+      const code = pre.querySelector('code');
+      if (code) {
+        const content = code.textContent;
+        renderMarkup(`$ ${content} $`, true).then(svg => {
+          skipExampleWrap(createElem(svg, true), pre);
+        });
+      }
+    });
+    document.querySelectorAll('pre[class="language-typ-render"]').forEach(pre => {
+      const code = pre.querySelector('code');
+      if (code) {
+        const content = code.textContent;
+        renderMarkup(content, true).then(svg => {
+          skipExampleWrap(createElem(svg, true), pre);
+        });
+      }
+    });
+  });
+</script>
