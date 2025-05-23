@@ -23,7 +23,7 @@ The functionalities of #link("https://typst.app")[typst] is split into two parts
 
 #let human-size(d) = if (
   d < 1024 * 1024
-) [#calc.round(d/1024, digits: 2) KB] else [#calc.round(d/1024/1024, digits: 2) MB]
+) [#calc.round(d / 1024, digits: 2) KB] else [#calc.round(d / 1024 / 1024, digits: 2) MB]
 
 #align(
   center,
@@ -85,7 +85,7 @@ To get it in browser, you can load a all-in-one bundle script from CDN and use i
 ```html
 <script
   type="module"
-  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one.bundle.js"
+  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts@0.6.0/dist/esm/index.js"
   id="typst"
 >
   console.log($typst.svg({
