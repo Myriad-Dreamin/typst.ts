@@ -39,7 +39,17 @@ export interface TypstDocumentProps {
 }
 
 let compilerInitOpts: typst.InitOptions = {
-  beforeBuild: [preloadRemoteFonts([])],
+  beforeBuild: [
+    preloadRemoteFonts(
+      [
+        // This is required for the Chinese users.
+        'https://raw.githubusercontent.com/micmro/Stylify-Me/main/.fonts/SimSun.ttf',
+      ],
+      {
+        assets: ['cjk', 'text'],
+      },
+    ),
+  ],
   getModule: () => {
     console.log('compiler', compiler);
     return compiler;
@@ -122,6 +132,7 @@ export const TypstDocument = ({
     };
 
     /// compile after init
+    console.log('compiler', compiler);
     if (compiler) {
       doCompile(compiler);
     } else {
