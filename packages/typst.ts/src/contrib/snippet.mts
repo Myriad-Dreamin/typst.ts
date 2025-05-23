@@ -568,7 +568,15 @@ export class TypstSnippet {
     });
   }
 
+  prepareUseOnce: Promise<void> | undefined = undefined;
   private async prepareUse() {
+    if (this.prepareUseOnce) {
+      return this.prepareUseOnce;
+    }
+    return (this.prepareUseOnce = this.doPrepareUse());
+  }
+
+  private async doPrepareUse() {
     if (!this.providers) {
       return;
     }

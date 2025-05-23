@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content="rustdoc" />
+    <meta
+      name="description"
+      content="This crate demonstrates an approach to including KaTeX in Rust docs. It tries to balance readable source code, attractive rendered output, and ease of use."
+    />
+    <title>rustdoc__demo - Rust</title>
+    <style>
+      .block-equation {
+        display: flex;
+        justify-content: center;
+      }
+      .block-equation > svg {
+        flex: 1;
+      }
+    </style>
+    <script
+      type="module"
+      src="http://localhost:20810/base/node_modules/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one-lite.bundle.js"
+      id="typst"
+    ></script>
+    <script>
+      document.getElementById('typst').addEventListener('load', function () {
+        $typst.setCompilerInitOptions({
+          getModule: () =>
+            'http://localhost:20810/base/node_modules/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm',
+        });
+        $typst.setRendererInitOptions({
+          getModule: () =>
+            'http://localhost:20810/base/node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
+        });
+        const fontSize = parseFloat(
+          window.getComputedStyle(document.body).getPropertyValue('font-size'),
+        );
+
+        function renderMath(content) {
+          let mainContent = `#set page(height: auto, width: auto, margin: 0pt); #set text(size: ${fontSize}pt); #show math.equation: box;\n${content}`;
+          return $typst.svg({ mainContent }).then(
+            svg => svg,
+            err => {
+              console.error(err);
+            },
+          );
+        }
+
+        function createElem(content, isBlock) {
+          const dom_parser = new DOMParser();
+          const toInsert = isBlock
+            ? `<p class="block-equation">${content}</p>`
+            : `<span class="inline-root">${content}</span>`;
+          const svg_document = dom_parser.parseFromString(toInsert, 'text/html');
+          return svg_document.querySelector(isBlock ? 'p.block-equation' : 'span.inline-root');
+        }
+
+        // todo: this is ugly but is okay for PoC
+        const markupRe = /`typ\{(.*?)\}`/g;
+        function renderInText(p, content) {
+          let rawContentLength = content.length;
+          // find `{$xxx$}`
+
+          let fragments = [];
+          let match;
+          while ((match = markupRe.exec(content)) !== null) {
+            const start = match.index;
+            const end = markupRe.lastIndex;
+            const before = content.slice(0, start);
+            const after = content.slice(end);
+            const mathContent = match[1];
+            fragments.push(Promise.resolve(before));
+            fragments.push(Promise.resolve(`<span class="inline-equation">`));
+            fragments.push(renderMath(mathContent, false));
+            fragments.push(Promise.resolve(`</span>`));
+            content = after;
+          }
+
+          if (content && content.length === rawContentLength) {
+            return undefined;
+          }
+
+          fragments.push(Promise.resolve(content));
+          return fragments;
+        }
+
+        function renderInline(p) {
+          const fragments = [];
+          for (const node of p.childNodes) {
+            if (node.nodeType === Node.TEXT_NODE) {
+              const frag = renderInText(p, node.textContent);
+              if (!frag) {
+                continue;
+              }
+              Promise.all(frag).then(frag => {
+                const elem = createElem(frag.join(''), false);
+                node.replaceWith(elem);
+              });
+            }
+          }
+        }
+
+        const paragraphs = document.querySelectorAll('p');
+        paragraphs.forEach(p => {
+          if (!(p.textContent.startsWith('$ ') && p.textContent.endsWith(' $'))) {
+            return renderInline(p);
+          }
+          renderMath(p.textContent, true).then(svg => {
+            p.style.display = 'none';
+            p.style.marginTop = '-40px';
+
+            p.parentNode.insertBefore(createElem(svg, true), p.nextSibling);
+          });
+        });
+        document.q;
+      });
+    </script>
+  </head>
+  <body class="rustdoc mod crate">
+    <!--[if lte IE 11
+      ]><div class="warning">
+        This old browser is unsupported and will most likely display funky things.
+      </div><!
+    [endif]-->
+    <nav class="mobile-topbar">
+      <button class="sidebar-menu-toggle" title="show sidebar"></button>
+    </nav>
+    <nav class="sidebar">
+      <div class="sidebar-crate">
+        <h2>
+          <a href="../rustdoc__demo/index.html">rustdoc_<wbr />katex_<wbr />demo</a
+          ><span class="version">0.1.5</span>
+        </h2>
+      </div>
+      <div class="sidebar-elems">
+        <ul class="block">
+          <li><a id="all-types" href="all.html">All Items</a></li>
+        </ul>
+        <section id="rustdoc-toc">
+          <h3><a href="#">Sections</a></h3>
+          <ul class="block top-toc">
+            <li>
+              <a href="#setup" title="Setup">Setup</a>
+              <ul>
+                <li>
+                  <a href="#rendering-locally" title="Rendering Locally">Rendering Locally</a>
+                </li>
+                <li>
+                  <a href="#rendering-on-docsrs" title="Rendering on Docs.rs"
+                    >Rendering on Docs.rs</a
+                  >
+                </li>
+              </ul>
+            </li>
+            <li><a href="#how-to-write-katex" title="How to Write KaTeX">How to Write KaTeX</a></li>
+            <li>
+              <a href="#how-to-not-write-katex" title="How to Not Write KaTeX"
+                >How to Not Write KaTeX</a
+              >
+            </li>
+            <li><a href="#more" title="More">More</a></li>
+            <li><a href="#resources" title="Resources">Resources</a></li>
+          </ul>
+        </section>
+        <div id="rustdoc-modnav"></div>
+      </div>
+    </nav>
+    <div class="sidebar-resizer"></div>
+    <main>
+      <div class="width-limiter">
+        <rustdoc-search></rustdoc-search>
+        <section id="main-content" class="content">
+          <div class="main-heading">
+            <h1>
+              Crate <span>rustdoc__demo</span
+              ><button id="copy-path" title="Copy item path to clipboard">Copy item path</button>
+            </h1>
+            <rustdoc-toolbar></rustdoc-toolbar
+            ><span class="sub-heading"
+              ><a class="src" href="../src/rustdoc__demo/lib.rs.html#1-114">Source</a>
+            </span>
+          </div>
+          <details class="toggle top-doc" open>
+            <summary class="hideme"><span>Expand description</span></summary>
+            <div class="docblock">
+              <p>
+                This crate demonstrates an approach to including Typst in Rust docs. It tries to
+                balance readable source code, attractive rendered output, and ease of use.
+              </p>
+              <p>$ integral f(x) dif x $</p>
+              <p>$ integral g(y) dif y $</p>
+              <p>A inline equation `typ{$integral f(x) dif x$}`.</p>
+            </div>
+          </details>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>
