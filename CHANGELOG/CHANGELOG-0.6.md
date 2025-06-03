@@ -4,6 +4,31 @@ All notable changes to the reflexo and "@myriaddreamin/\*typst\*" packages will 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
+## v0.6.1 - [2025-05-25]
+
+### rustdoc-typst-demo (New)
+
+- Added [`rustdoc-typst-demo`](https://github.com/Myriad-Dreamin/typst.ts/tree/main/projects/rustdoc-typst-demo) in https://github.com/Myriad-Dreamin/typst.ts/pull/725
+
+### Package: typst.ts
+
+- (Fix) Fixed race condition in snippet lib in https://github.com/Myriad-Dreamin/typst.ts/pull/725
+
+### Package: typst.react
+
+- (Fix) Not using property 'local-fonts', which is missed in Firefox by @caterpillar-1 in https://github.com/Myriad-Dreamin/typst.ts/pull/724
+
+### Package: typst-ts-node-compiler
+
+- Moving the watch lock after compilation in https://github.com/Myriad-Dreamin/typst.ts/pull/727
+
+### Misc
+
+- Fixed a typo in responsive.typ by @shigma in https://github.com/Myriad-Dreamin/typst.ts/pull/719
+- Updated docs for all-in-one bundle in https://github.com/Myriad-Dreamin/typst.ts/pull/726
+
+**Full Changelog**: https://github.com/Myriad-Dreamin/typst.ts/compare/v0.6.0...v0.6.1
+
 ## v0.6.0 - [2025-04-30]
 
 The v0.5.5 was not released because typst v0.13.0 comes before the v0.5.5 release, so we decided to skip it. The next release will be v0.6.0.
