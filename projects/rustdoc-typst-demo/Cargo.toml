@@ -1,8 +1,12 @@
 [package]
 name = "rustdoc-typst-demo"
-description = "This project demonstrates an approach to including KaTeX in Rust docs"
-version = "0.1.5"
-authors = ["Paul Kernfeld <paulkernfeld@gmail.com>"]
+description = "This project demonstrates an approach to including Typst in Rust docs"
+version = "0.6.1-rc1"
+edition = "2021"
+authors = [
+    "Paul Kernfeld <paulkernfeld@gmail.com>",
+    "The Typst Project Developers",
+]
 license = "MIT/Apache-2.0"
 documentation = "https://docs.rs/rustdoc-typst-demo"
 repository = "https://github.com/Myriad-Dreamin/typst.ts"
