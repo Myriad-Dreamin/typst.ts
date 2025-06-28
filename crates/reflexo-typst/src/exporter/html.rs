@@ -1,5 +1,5 @@
 use std::fmt::Write;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use ecow::EcoString;
 use reflexo::error::prelude::*;
@@ -7,7 +7,7 @@ use reflexo::typst::TypstHtmlDocument;
 use tinymist_world::{CompilerFeat, ExportComputation, WorldComputeGraph};
 use typst::diag::{bail, At, SourceResult, StrResult};
 use typst::foundations::Repr;
-use typst::html::{charsets, tag, HtmlDocument, HtmlElement, HtmlNode, HtmlTag};
+use typst::html::{charsets, tag, HtmlElement, HtmlNode, HtmlTag};
 use typst::layout::Frame;
 use typst::syntax::Span;
 
@@ -32,14 +32,29 @@ impl<F: CompilerFeat> ExportComputation<F, TypstHtmlDocument> for HtmlOutputExpo
 
 pub struct HtmlOutput {
     pretty: bool,
-    pub head: HtmlElement,
-    pub body: String,
+    document: Arc<TypstHtmlDocument>,
+    head_idx: Option<usize>,
+    body_idx: Option<usize>,
+
+    body: OnceLock<SourceResult<String>>,
+    html: OnceLock<SourceResult<String>>,
 }
 
 impl HtmlOutput {
+    fn root_child(&self, idx: Option<usize>) -> Option<&HtmlElement> {
+        match self.document.root.children.get(idx?)? {
+            HtmlNode::Element(e) => Some(e),
+            _ => None,
+        }
+    }
+
+    fn head(&self) -> Option<&HtmlElement> {
+        self.root_child(self.head_idx)
+    }
+
     /// Get the title of the document, if any.
     pub fn title(&self) -> Option<&EcoString> {
-        self.head
+        self.head()?
             .children
             .iter()
             .find_map(|node| match node {
@@ -54,7 +69,7 @@ impl HtmlOutput {
 
     /// Get the description of the document, if any.
     pub fn description(&self) -> Option<&EcoString> {
-        self.head.children.iter().find_map(|node| match node {
+        self.head()?.children.iter().find_map(|node| match node {
             HtmlNode::Element(e) if e.tag == tag::meta => {
                 let mut name = false;
                 let mut description = None;
@@ -80,70 +95,69 @@ impl HtmlOutput {
         })
     }
 
-    pub fn body(&self) -> &str {
-        &self.body
+    pub fn body(&self) -> SourceResult<&str> {
+        self.body
+            .get_or_init(|| {
+                let mut w = Writer {
+                    pretty: self.pretty,
+                    ..Writer::default()
+                };
+                write_indent(&mut w);
+                if let Some(body) = self.root_child(self.body_idx) {
+                    write_element_with_tag(&mut w, body, "div")?;
+                }
+
+                if w.pretty {
+                    w.buf.push('\n');
+                }
+
+                Ok(w.buf)
+            })
+            .as_ref()
+            .map(|s| s.as_str())
+            .map_err(|e| e.clone())
     }
 
-    pub fn html(&self) -> String {
-        let mut w = Writer {
-            pretty: self.pretty,
-            ..Writer::default()
-        };
-        w.buf.push_str("<!DOCTYPE html>\n");
-        w.buf.push_str("<html>");
-        write_indent(&mut w);
-        write_element(&mut w, &self.head).unwrap();
-        if w.pretty {
-            w.buf.push('\n');
-        }
-        w.buf.push_str(&self.body);
-        w.buf.push_str("</html>");
-        w.buf
+    pub fn html(&self) -> SourceResult<&str> {
+        self.html
+            .get_or_init(|| {
+                let mut w = Writer {
+                    pretty: self.pretty,
+                    ..Writer::default()
+                };
+                w.buf.push_str("<!DOCTYPE html>\n");
+                write_indent(&mut w);
+                write_element(&mut w, &self.document.root)?;
+                if w.pretty {
+                    w.buf.push('\n');
+                }
+                Ok(w.buf)
+            })
+            .as_ref()
+            .map(|s| s.as_str())
+            .map_err(|e| e.clone())
     }
 }
 
+fn find_tag_child(element: &HtmlElement, tag: HtmlTag) -> Option<usize> {
+    element.children.iter().position(|node| match node {
+        HtmlNode::Element(e) => e.tag == tag,
+        _ => false,
+    })
+}
+
 /// Encodes an HTML document into a string.
-pub fn static_html(document: &HtmlDocument) -> SourceResult<HtmlOutput> {
-    let (head, body) = {
-        if document.root.tag != tag::html {
-            Err("the root element must be <html>").at(Span::detached())?;
-        }
+pub fn static_html(document: &Arc<TypstHtmlDocument>) -> SourceResult<HtmlOutput> {
+    let head_idx = find_tag_child(&document.root, tag::head);
+    let body_idx = find_tag_child(&document.root, tag::body);
 
-        if document.root.children.len() != 2 {
-            Err("the <html> element must have exactly two children").at(Span::detached())?;
-        }
-
-        // let [head, body] = document.root.children[0..2];
-        let head = document.root.children[0].clone();
-        let body = document.root.children[1].clone();
-
-        let head = match head {
-            HtmlNode::Element(e) => e,
-            _ => Err("the first child of <html> must be an element").at(Span::detached())?,
-        };
-        let body = match body {
-            HtmlNode::Element(mut e) => {
-                e.tag = tag::div;
-                e
-            }
-            _ => Err("the second child of <html> must be an element").at(Span::detached())?,
-        };
-
-        (head, body)
-    };
-
-    let mut w = Writer {
-        pretty: true,
-        ..Writer::default()
-    };
-    write_element(&mut w, &body)?;
-    if w.pretty {
-        w.buf.push('\n');
-    }
     Ok(HtmlOutput {
         pretty: true,
-        head,
-        body: core::mem::take(&mut w.buf),
+        document: document.clone(),
+        head_idx,
+        body_idx,
+        body: OnceLock::new(),
+        html: OnceLock::new(),
     })
 }
 
@@ -192,8 +206,13 @@ fn write_text(w: &mut Writer, text: &str, span: Span) -> SourceResult<()> {
 
 /// Encode one element into the write.
 fn write_element(w: &mut Writer, element: &HtmlElement) -> SourceResult<()> {
+    write_element_with_tag(w, element, &element.tag.resolve())
+}
+
+/// Encode one element into the write.
+fn write_element_with_tag(w: &mut Writer, element: &HtmlElement, tag: &str) -> SourceResult<()> {
     w.buf.push('<');
-    w.buf.push_str(&element.tag.resolve());
+    w.buf.push_str(tag);
 
     for (attr, value) in &element.attrs.0 {
         w.buf.push(' ');
@@ -248,7 +267,7 @@ fn write_element(w: &mut Writer, element: &HtmlElement) -> SourceResult<()> {
     w.pretty = pretty;
 
     w.buf.push_str("</");
-    w.buf.push_str(&element.tag.resolve());
+    w.buf.push_str(tag);
     w.buf.push('>');
 
     Ok(())

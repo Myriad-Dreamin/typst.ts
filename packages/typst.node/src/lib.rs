@@ -114,25 +114,26 @@ impl NodeHtmlOutput {
     /// Gets the body of the document.
     #[napi]
     pub fn body(&self) -> String {
-        self.inner.body().to_string()
+        // todo: is it okay to ignore error?
+        self.inner.body().unwrap_or_default().to_owned()
     }
 
     /// Gets the body of the document as bytes.
     #[napi]
     pub fn body_bytes(&self) -> Buffer {
-        self.inner.body().to_string().into()
+        self.inner.body().unwrap_or_default().to_owned().into()
     }
 
     /// Gets the HTML of the document.
     #[napi]
     pub fn html(&self) -> String {
-        self.inner.html().to_string()
+        self.inner.html().unwrap_or_default().to_owned()
     }
 
     /// Gets the HTML of the document as bytes.
     #[napi]
     pub fn html_bytes(&self) -> Buffer {
-        self.inner.html().into()
+        self.inner.html().unwrap_or_default().to_owned().into()
     }
 }
 
