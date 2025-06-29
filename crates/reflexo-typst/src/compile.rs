@@ -294,6 +294,7 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
                 by_entry_update: reason.by_entry_update,
                 by_mem_events: reason.by_memory_events,
                 by_fs_events: reason.by_fs_events,
+                by_save_events: reason.by_fs_events,
             },
             success_doc: self.latest_success_doc.clone(),
         }

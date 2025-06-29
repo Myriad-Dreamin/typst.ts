@@ -269,13 +269,13 @@ typst-html = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst
 
 # fontdb = { path = "../fontdb" }
 
-# typst-shim = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "f503298f483f128a48ce1b9436c0d6bafe00f8de" }
-# tinymist-derive = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "f503298f483f128a48ce1b9436c0d6bafe00f8de" }
-# tinymist-std = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "f503298f483f128a48ce1b9436c0d6bafe00f8de" }
-# tinymist-task = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "f503298f483f128a48ce1b9436c0d6bafe00f8de" }
-# tinymist-package = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "f503298f483f128a48ce1b9436c0d6bafe00f8de" }
-# tinymist-world = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "f503298f483f128a48ce1b9436c0d6bafe00f8de" }
-# tinymist-project = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "f503298f483f128a48ce1b9436c0d6bafe00f8de" }
+typst-shim = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "492cc8cc2c7661f271b829e48f8b54eaf6c2b2c6" }
+tinymist-derive = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "492cc8cc2c7661f271b829e48f8b54eaf6c2b2c6" }
+tinymist-std = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "492cc8cc2c7661f271b829e48f8b54eaf6c2b2c6" }
+tinymist-task = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "492cc8cc2c7661f271b829e48f8b54eaf6c2b2c6" }
+tinymist-package = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "492cc8cc2c7661f271b829e48f8b54eaf6c2b2c6" }
+tinymist-world = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "492cc8cc2c7661f271b829e48f8b54eaf6c2b2c6" }
+tinymist-project = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "492cc8cc2c7661f271b829e48f8b54eaf6c2b2c6" }
 
 # [patch."https://github.com/Myriad-Dreamin/tinymist.git"]
 # typst-shim = { path = "../tinymist/crates/typst-shim" }

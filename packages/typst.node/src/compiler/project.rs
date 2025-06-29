@@ -755,6 +755,7 @@ impl CompileHandler<SystemCompilerFeat, ProjectInsStateExt> for ProjectHandler {
             const VFS_SUB: CompileReasons = CompileReasons {
                 by_memory_events: true,
                 by_fs_events: true,
+                by_save_events: false,
                 by_entry_update: false,
             };
 
