@@ -1,5 +1,6 @@
 #import "/docs/cookery/book.typ": book-page, cross-link, heading-reference
 #import "/docs/cookery/term.typ" as term
+#import "/docs/cookery/templates/page.typ": is-web-target
 
 #show: book-page.with(title: "Get Started")
 
@@ -21,23 +22,57 @@ In this chapter, you will learn the #this-link(reference: ch-ref)[core libraries
 
 The functionalities of #link("https://typst.app")[typst] is split into two parts, _compilation and rendering_ functionality, because no all applications need both functionalities running in the browsers. It will take 350 KB network bandwidth if you want to use the renderer in browser, but it will take 12MB (7.62 MB wasm and 4.42 MB fonts) to run a compiler. Therefore, the two parts are separated into two Wasm modules, `typst-ts-renderer` and `typst-ts-web-compiler`, and they can be loaded on demand.
 
-#let human-size(d) = if (
-  d < 1024 * 1024
-) [#calc.round(d / 1024, digits: 2) KB] else [#calc.round(d / 1024 / 1024, digits: 2) MB]
+#let size-header = table.cell(align: center)[Size (gzipped)]
 
-#align(
-  center,
-  table(
-    align: center,
-    columns: 3,
-    [Assets], [Size (gziped)], [Description],
-    `typst-ts-renderer`, [#human-size(size-data.sizes.typst-ts-renderer)], [For _rendering_],
-    `typst-ts-web-compiler`, [#human-size(size-data.sizes.typst-ts-web-compiler)], [For _compiling_],
-    `Text+Math+Raw Fonts`, [#human-size(size-data.sizes.text-math-fonts)], [To typeset text],
-    `CJK Fonts`, [#human-size(size-data.sizes.cjk-fonts)], [To typeset CJK text],
-    `Emoji Fonts`, [#human-size(size-data.sizes.emoji-fonts)], [To typeset emojis],
-  ),
-)
+#let paint-size(d) = {
+  let human = if (d < 1024 * 1024) {
+    [#calc.round(d / 1024, digits: 2) KB]
+  } else {
+    [#calc.round(d / 1024 / 1024, digits: 2) MB]
+  }
+
+  let max-size = calc.max(..size-data.sizes.values())
+  let ratio = d / max-size
+
+  // It is hard to change alignment in HTML. Therefore, we prefer different layouts for different targets.
+  if is-web-target {
+    html.elem("data", attrs: (value: str(d)), human)
+    // Here we use `<span>` instead of `<div>`, or typst will create a redundant `<p>`.
+    html.elem("span", attrs: (
+      aria-hidden: "true",
+      style: ```
+        display: block;
+        background: var(--theme-popup-border);
+        width: [[width]];
+        height: 0.2em;
+      ```
+        .text
+        .replace("[[width]]", repr(ratio * 100%)),
+    ))
+  } else {
+    context {
+      let header-width = measure(size-header).width
+
+      place(horizon + start, box(
+        fill: blue.lighten(80%),
+        width: ratio * header-width * 95%,
+        height: 0.8em,
+      ))
+    }
+    human
+  }
+}
+
+#align(center, table(
+  align: (center, end, center),
+  columns: 3,
+  [Assets], size-header, [Description],
+  `typst-ts-renderer`, paint-size(size-data.sizes.typst-ts-renderer), [For _rendering_],
+  `typst-ts-web-compiler`, paint-size(size-data.sizes.typst-ts-web-compiler), [For _compiling_],
+  `Text+Math+Raw Fonts`, paint-size(size-data.sizes.text-math-fonts), [To typeset text],
+  `CJK Fonts`, paint-size(size-data.sizes.cjk-fonts), [To typeset CJK text],
+  `Emoji Fonts`, paint-size(size-data.sizes.emoji-fonts), [To typeset emojis],
+))
 
 typst.ts provides core JavaScript libraries along with two Wasm modules:
 - `typst.ts`: the core JavaScript library which wraps Wasm modules with more friendly JavaScript APIs.
