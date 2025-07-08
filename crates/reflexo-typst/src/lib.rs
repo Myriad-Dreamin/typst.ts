@@ -35,6 +35,9 @@ pub mod error;
 pub mod query;
 pub mod task;
 
+#[cfg(feature = "hast")]
+pub use reflexo_typst2hast::hast;
+
 pub use concepts::*;
 pub use error::{CompileReport, CompileReportMsg};
 

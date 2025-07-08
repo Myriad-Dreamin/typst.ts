@@ -137,6 +137,11 @@ impl HtmlOutput {
             .map(|s| s.as_str())
             .map_err(|e| e.clone())
     }
+
+    #[cfg(feature = "hast")]
+    pub fn hast(&self) -> SourceResult<reflexo_typst2hast::hast::HastElementContent> {
+        reflexo_typst2hast::hast(&self.document)
+    }
 }
 
 fn find_tag_child(element: &HtmlElement, tag: HtmlTag) -> Option<usize> {
