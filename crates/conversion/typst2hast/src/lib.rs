@@ -3,7 +3,6 @@ use std::sync::Arc;
 use base64::Engine;
 use ecow::{eco_format, EcoString};
 use reflexo::typst::TypstHtmlDocument;
-// use tinymist_world::{CompilerFeat, ExportComputation, WorldComputeGraph};
 use typst::diag::SourceResult;
 use typst::html::{HtmlElement, HtmlNode};
 use typst::layout::Frame;
@@ -13,40 +12,8 @@ use crate::hast::{HastElement, HastElementContent, HastText};
 
 pub mod hast;
 
-// pub type ExportStaticHtmlTask = tinymist_task::ExportHtmlTask;
-// pub type StaticHtmlExport = tinymist_task::HtmlExport;
-// pub type ExportHtmlTask = tinymist_task::ExportHtmlTask;
-
-// pub struct HtmlOutputExport;
-
-// impl<F: CompilerFeat> ExportComputation<F, TypstHtmlDocument> for
-// HtmlOutputExport {     type Output = HtmlOutput;
-//     type Config = ExportHtmlTask;
-
-//     fn run(
-//         _graph: &Arc<WorldComputeGraph<F>>,
-//         doc: &Arc<TypstHtmlDocument>,
-//         _config: &ExportHtmlTask,
-//     ) -> Result<HtmlOutput> {
-//         Ok(static_html(doc)?)
-//     }
-// }
-
-// fn find_tag_child(element: &HtmlElement, tag: HtmlTag) -> Option<usize> {
-//     element.children.iter().position(|node| match node {
-//         HtmlNode::Element(e) => e.tag == tag,
-//         _ => false,
-//     })
-// }
-
 /// Encodes an HTML document into a Hast.
 pub fn hast(document: &Arc<TypstHtmlDocument>) -> SourceResult<HastElementContent> {
-    // Ok(HastElementContent::Root(HastRoot {
-    //     children: vec![HastElementContent::Text(HastText {
-    //         value: EcoString::from("Hello, Typst!"),
-    //     })],
-    // }))
-
     write_element(&document.root)
 }
 
