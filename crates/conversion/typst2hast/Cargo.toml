@@ -1,0 +1,51 @@
+[package]
+name = "reflexo-typst2hast"
+description = "The hast intermediate representation for rehype."
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+bitvec = { version = "1" }
+comemo.workspace = true
+crossbeam-queue = "0.3.10"
+dashmap.workspace = true
+ecow.workspace = true
+flate2.workspace = true
+image.workspace = true
+log.workspace = true
+napi = { workspace = true, features = ["serde-json", "napi4"], optional = true }
+napi-derive = { workspace = true, optional = true }
+parking_lot = { workspace = true }
+reflexo = { workspace = true, features = ["typst"] }
+rayon.workspace = true
+rkyv = { workspace = true, optional = true }
+rustc-hash.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+svgtypes.workspace = true
+tiny-skia-path.workspace = true
+tiny-skia.workspace = true
+ttf-parser.workspace = true
+typst.workspace = true
+typst-svg.workspace = true
+xmlparser.workspace = true
+base64.workspace = true
+
+[features]
+
+default = ["full"]
+full = ["glyph2vec", "napi"]
+napi = ["dep:napi", "napi-derive"]
+
+experimental-ligature = []
+no-content-hint = []
+glyph2vec = []
+debug-gc = []
+item-dashmap = ["reflexo/item-dashmap"]
+
+[lints]
+workspace = true
