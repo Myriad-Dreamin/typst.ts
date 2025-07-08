@@ -39,6 +39,13 @@ pub struct HastElement {
     pub children: Vec<HastElementContent>,
     // todo: content
     // todo: data
+    pub data: Option<HastElementData>,
 }
 
 pub type HastElementProperties = std::collections::BTreeMap<EcoString, EcoString>;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct HastElementData {
+    pub hash: Option<EcoString>,
+}

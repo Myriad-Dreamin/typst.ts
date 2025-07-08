@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use base64::Engine;
-use ecow::EcoString;
+use ecow::{eco_format, EcoString};
 use reflexo::typst::TypstHtmlDocument;
 // use tinymist_world::{CompilerFeat, ExportComputation, WorldComputeGraph};
 use typst::diag::SourceResult;
@@ -103,6 +103,7 @@ fn write_element_with_tag(element: &HtmlElement, tag: &str) -> SourceResult<Hast
         tag_name: EcoString::from(tag),
         properties,
         children: buf,
+        data: None,
     })))
 }
 
@@ -126,5 +127,12 @@ fn write_frame(frame: &Frame, buf: &mut Vec<HastElementContent>) {
             ),
         ]),
         children: vec![],
+        data: Some(crate::hast::HastElementData {
+            // Provides a cheap hash
+            hash: Some(eco_format!(
+                "siphash128_13:{:016x}",
+                reflexo::hash::hash128(&frame)
+            )),
+        }),
     })));
 }
