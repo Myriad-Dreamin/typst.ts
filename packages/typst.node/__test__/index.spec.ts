@@ -163,6 +163,17 @@ Hello, Typst! <my-label>
   t.true(latin1Pdf.includes('<pdfaid:conformance>B</pdfaid:conformance>'));
 });
 
+test('it hast', t => {
+  const compiler = NodeCompiler.create();
+
+  const h = compiler.tryHtml({
+    mainFileContent: `
+Hello, Typst!
+`,
+  });
+  t.snapshot(h.result?.hast());
+});
+
 test('it throws error`', t => {
   const compiler = NodeCompiler.create();
   let doc = compiler.compile({

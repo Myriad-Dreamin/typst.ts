@@ -135,6 +135,15 @@ impl NodeHtmlOutput {
     pub fn html_bytes(&self) -> Buffer {
         self.inner.html().unwrap_or_default().to_owned().into()
     }
+
+    /// Gets the [Hast] of the document.
+    ///
+    /// [hast]: https://github.com/syntax-tree/hast
+    #[napi]
+    pub fn hast(&self) -> serde_json::Value {
+        eprintln!("Get HastElementContent.");
+        serde_json::to_value(self.inner.hast().unwrap_or_default()).unwrap_or_default()
+    }
 }
 
 /// The arguments to compile a document.

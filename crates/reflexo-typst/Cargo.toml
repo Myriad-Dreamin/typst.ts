@@ -15,6 +15,7 @@ typst-html = { workspace = true, optional = true }
 typst-svg = { workspace = true, optional = true }
 
 reflexo-typst2vec.workspace = true
+reflexo-typst2hast = { workspace = true, optional = true }
 reflexo.workspace = true
 tinymist-world.workspace = true
 tinymist-project.workspace = true
@@ -81,6 +82,7 @@ ast = ["ansi_term"]
 pdf = ["tinymist-task/pdf"]
 html = ["typst-html", "typst-svg"]
 svg = ["dep:reflexo-vec2svg"]
+hast = ["html", "dep:reflexo-typst2hast"]
 
 [lints]
 workspace = true

@@ -3162,6 +3162,7 @@ dependencies = [
  "pathdiff",
  "rayon",
  "reflexo",
+ "reflexo-typst2hast",
  "reflexo-typst2vec",
  "reflexo-vec2svg",
  "rkyv",
@@ -3203,6 +3204,37 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
  "web-sys",
+]
+
+[[package]]
+name = "reflexo-typst2hast"
+version = "0.6.1-rc1"
+dependencies = [
+ "base64 0.22.1",
+ "bitvec",
+ "comemo",
+ "crossbeam-queue",
+ "dashmap",
+ "ecow",
+ "flate2",
+ "image",
+ "log",
+ "napi",
+ "napi-derive",
+ "parking_lot",
+ "rayon",
+ "reflexo",
+ "rkyv",
+ "rustc-hash 2.1.1",
+ "serde",
+ "serde_json",
+ "svgtypes",
+ "tiny-skia",
+ "tiny-skia-path",
+ "ttf-parser",
+ "typst",
+ "typst-svg",
+ "xmlparser",
 ]
 
 [[package]]
