@@ -142,7 +142,7 @@ fn resolve_source_span(
             .and_then(|src| Some((src.find(s)?.range(), src)))
         {
             let resolve_off =
-                |src: &Source, off: usize| src.byte_to_line(off).zip(src.byte_to_column(off));
+                |src: &Source, off: usize| src.lines().byte_to_line(off).zip(src.lines().byte_to_column(off));
             range = Some(LspRange {
                 start: resolve_off(&src, rng.start)
                     .map(|(l, c)| LspPosition::new(l as u32, c as u32))

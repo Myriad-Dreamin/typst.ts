@@ -175,6 +175,7 @@ impl FromTypst<typst::visualize::Image> for Image {
         let format = match image.format() {
             ImageFormat::Raster(RasterFormat::Exchange(ExchangeFormat::Jpg)) => "jpeg",
             ImageFormat::Raster(RasterFormat::Exchange(ExchangeFormat::Png)) => "png",
+            ImageFormat::Raster(RasterFormat::Exchange(ExchangeFormat::Webp)) => "webp",
             ImageFormat::Raster(RasterFormat::Exchange(ExchangeFormat::Gif)) => "gif",
             ImageFormat::Raster(RasterFormat::Pixel(..)) => "png",
             ImageFormat::Vector(VectorFormat::Svg) => "svg+xml",

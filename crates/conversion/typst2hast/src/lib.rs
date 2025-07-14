@@ -4,7 +4,7 @@ use base64::Engine;
 use ecow::{eco_format, EcoString};
 use reflexo::typst::TypstHtmlDocument;
 use typst::diag::SourceResult;
-use typst::html::{HtmlElement, HtmlNode};
+use typst_html::{HtmlElement, HtmlNode};
 use typst::layout::Frame;
 use typst::syntax::Span;
 
@@ -28,7 +28,7 @@ fn write_node(node: &HtmlNode, buf: &mut Vec<HastElementContent>) -> SourceResul
             buf.push(write_element(element)?);
         }
         HtmlNode::Frame(frame) => {
-            write_frame(frame, buf);
+            write_frame(&frame.inner, buf);
         }
     }
     Ok(())
