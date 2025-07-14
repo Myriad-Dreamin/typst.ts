@@ -622,8 +622,22 @@ fn sample_color_stops(gradient: &GradientItem, t: f32) -> Color {
 
     // Special case for handling multi-turn hue interpolation.
     if mixing_space == ColorSpace::Hsl || mixing_space == ColorSpace::Hsv {
-        let hue_0 = col_0.to_space(mixing_space).to_vec4()[0];
-        let hue_1 = col_1.to_space(mixing_space).to_vec4()[0];
+        let color_0 = col_0.to_space(mixing_space);
+        let color_1 = col_1.to_space(mixing_space);
+
+        let hue_0 = match color_0 {
+            Color::Hsl(hsl) => hsl.hue,
+            Color::Hsv(hsv) => hsv.hue,
+            _ => unreachable!(),
+        }
+        .into_positive_degrees();
+
+        let hue_1 = match color_1 {
+            Color::Hsl(hsl) => hsl.hue,
+            Color::Hsv(hsv) => hsv.hue,
+            _ => unreachable!(),
+        }
+        .into_positive_degrees();
 
         // Check if we need to interpolate over the 360° boundary.
         if (hue_0 - hue_1).abs() > 180.0 {
@@ -633,10 +647,10 @@ fn sample_color_stops(gradient: &GradientItem, t: f32) -> Color {
             let hue = hue_0 * (1.0 - t) + hue_1 * t;
 
             if mixing_space == ColorSpace::Hsl {
-                let [_, saturation, lightness, alpha] = out.to_hsl().to_vec4();
+                let (_, saturation, lightness, alpha) = out.to_hsl().into_components();
                 return Color::Hsl(Hsl::new(hue, saturation, lightness, alpha));
             } else if mixing_space == ColorSpace::Hsv {
-                let [_, saturation, value, alpha] = out.to_hsv().to_vec4();
+                let (_, saturation, value, alpha) = out.to_hsv().into_components();
                 return Color::Hsv(Hsv::new(hue, saturation, value, alpha));
             }
         }

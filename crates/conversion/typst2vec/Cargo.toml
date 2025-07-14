@@ -9,6 +9,7 @@ repository.workspace = true
 
 [dependencies]
 typst.workspace = true
+typst-html.workspace = true
 
 reflexo = { workspace = true, features = ["typst"] }
 comemo.workspace = true
