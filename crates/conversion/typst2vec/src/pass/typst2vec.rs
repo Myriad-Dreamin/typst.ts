@@ -16,7 +16,6 @@ use reflexo::ImmutStr;
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
     foundations::{Bytes, Smart},
-    html::{HtmlElement, HtmlNode},
     introspection::{Introspector, Tag},
     layout::{
         Abs as TypstAbs, Axes, Dir, Frame, FrameItem, FrameKind, Position, Ratio as TypstRatio,
@@ -30,6 +29,7 @@ use typst::{
         Image as TypstImage, LineCap, LineJoin, Paint, RelativeTo, Shape, Tiling,
     },
 };
+use typst_html::{HtmlElement, HtmlNode};
 
 use crate::{
     convert::ImageExt,
@@ -1049,7 +1049,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
     fn gradient(&self, g: &Gradient, transform: ir::Transform) -> Fingerprint {
         let mut stops = Vec::with_capacity(g.stops_ref().len());
         for (c, step) in g.stops_ref() {
-            let [r, g, b, a] = c.to_rgb().to_vec4_u8();
+            let (r, g, b, a) = c.to_rgb().into_format::<u8, u8>().into_components();
             stops.push((Rgba8Item { r, g, b, a }, (*step).into_typst()))
         }
 
@@ -1137,7 +1137,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         match child {
                             HtmlNode::Tag(..) => continue,
                             HtmlNode::Frame(e) => {
-                                HtmlChildren::Item(self.frame(state, e, parent, index))
+                                HtmlChildren::Item(self.frame(state, &e.inner, parent, index))
                             }
                             HtmlNode::Element(e) => {
                                 HtmlChildren::Item(self.html_element(state, e, parent, index))

@@ -2,11 +2,12 @@ use comemo::Track;
 use reflexo::typst::TypstDocument;
 use typst::{
     diag::{EcoString, StrResult},
+    engine::Sink,
     foundations::{Content, LocatableSelector, Scope},
-    syntax::Span,
+    syntax::{Span, SyntaxMode},
     World,
 };
-use typst_eval::{eval_string, EvalMode};
+use typst_eval::eval_string;
 
 // todo: query exporter
 /// Retrieve the matches for the selector.
@@ -18,9 +19,10 @@ pub fn retrieve(
     let selector = eval_string(
         &typst::ROUTINES,
         world.track(),
+        Sink::new().track_mut(),
         selector,
         Span::detached(),
-        EvalMode::Code,
+        SyntaxMode::Code,
         Scope::default(),
     )
     .map_err(|errors| {

@@ -136,8 +136,8 @@ impl<W: io::Write> AstWriter<'_, W> {
                     .iter()
                     .map(|s| {
                         (
-                            src.byte_to_line(*s).map(|l| l + 1).unwrap_or(0),
-                            src.byte_to_column(*s).unwrap_or(0),
+                            src.lines().byte_to_line(*s).map(|l| l + 1).unwrap_or(0),
+                            src.lines().byte_to_column(*s).unwrap_or(0),
                         )
                     })
                     .collect::<Vec<_>>();

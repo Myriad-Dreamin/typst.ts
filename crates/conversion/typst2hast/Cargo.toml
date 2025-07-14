@@ -32,6 +32,7 @@ tiny-skia.workspace = true
 ttf-parser.workspace = true
 typst.workspace = true
 typst-svg.workspace = true
+typst-html.workspace = true
 xmlparser.workspace = true
 base64.workspace = true
 
