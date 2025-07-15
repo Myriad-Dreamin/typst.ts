@@ -4316,9 +4316,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-derive"
-version = "0.13.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6218df0984df93f57502df71652d90922d79d71317ea87952219ddd9b19d4fc2"
+version = "0.13.16-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1a7f3b242269449f2201879b796c3410ae2c454c#1a7f3b242269449f2201879b796c3410ae2c454c"
 dependencies = [
  "quote",
  "syn 2.0.101",
@@ -4326,9 +4325,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-l10n"
-version = "0.13.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a7c30b8f249c3bfb507d5253c71d80feb85ec08a1c53ce12fd7cf8bf04fa79e"
+version = "0.13.16-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1a7f3b242269449f2201879b796c3410ae2c454c#1a7f3b242269449f2201879b796c3410ae2c454c"
 dependencies = [
  "anyhow",
  "clap",
@@ -4341,9 +4339,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-package"
-version = "0.13.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1c34fb57d52ba192bd0dce88cbf76b0aeb0dd9f8afa8e78217558f1a10c3d81d"
+version = "0.13.16-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1a7f3b242269449f2201879b796c3410ae2c454c#1a7f3b242269449f2201879b796c3410ae2c454c"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4368,9 +4365,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-project"
-version = "0.13.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8f53204af618f4aba1b2dd35e4950bad9d82baafe1de0874443804a6fff4b5b"
+version = "0.13.16-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1a7f3b242269449f2201879b796c3410ae2c454c#1a7f3b242269449f2201879b796c3410ae2c454c"
 dependencies = [
  "anyhow",
  "clap",
@@ -4397,9 +4393,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-std"
-version = "0.13.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6db6bfaaa28e6a1196ad874f7440b35d0d0e6ffd6a82b49d32608ebe6dcf6f34"
+version = "0.13.16-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1a7f3b242269449f2201879b796c3410ae2c454c#1a7f3b242269449f2201879b796c3410ae2c454c"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4435,9 +4430,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-task"
-version = "0.13.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a61a6556b0f8c649eee5b5ab7f67f55fa556d69f7419ad8ca3ca3b5c9706ea1"
+version = "0.13.16-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1a7f3b242269449f2201879b796c3410ae2c454c#1a7f3b242269449f2201879b796c3410ae2c454c"
 dependencies = [
  "anyhow",
  "clap",
@@ -4470,9 +4464,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-vfs"
-version = "0.13.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c2f11ca8c018eb33a656aeac4676e101e9c0a4faf76dfd455ba7875d44b87d5"
+version = "0.13.16-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1a7f3b242269449f2201879b796c3410ae2c454c#1a7f3b242269449f2201879b796c3410ae2c454c"
 dependencies = [
  "comemo",
  "ecow",
@@ -4490,9 +4483,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-world"
-version = "0.13.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16b40390b7e18f7ef689436ca28d4f724bb6e30d27643f208a04dfdee7deefc2"
+version = "0.13.16-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1a7f3b242269449f2201879b796c3410ae2c454c#1a7f3b242269449f2201879b796c3410ae2c454c"
 dependencies = [
  "anyhow",
  "chrono",
@@ -5001,9 +4993,8 @@ dependencies = [
 
 [[package]]
 name = "typst-shim"
-version = "0.13.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad3cbd4f48e17b0ea86320f042f4bd86d50cd30d1b47c30be1b567b587b70023"
+version = "0.13.16-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=1a7f3b242269449f2201879b796c3410ae2c454c#1a7f3b242269449f2201879b796c3410ae2c454c"
 dependencies = [
  "cfg-if",
  "comemo",
