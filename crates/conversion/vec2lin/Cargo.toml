@@ -1,0 +1,47 @@
+[package]
+name = "reflexo-vec2lin"
+description = "The linear vector-format intermediate representation."
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+typst.workspace = true
+
+reflexo = { workspace = true, features = ["typst"] }
+comemo.workspace = true
+ttf-parser.workspace = true
+crossbeam-queue = "0.3.10"
+rustc-hash.workspace = true
+dashmap.workspace = true
+parking_lot = { workspace = true }
+bitvec = { version = "1" }
+serde.workspace = true
+serde_json.workspace = true
+tiny-skia.workspace = true
+log.workspace = true
+flate2.workspace = true
+xmlparser.workspace = true
+rayon.workspace = true
+rkyv = { workspace = true, optional = true }
+tiny-skia-path.workspace = true
+reflexo-typst2vec = { workspace = true }
+svgtypes.workspace = true
+image.workspace = true
+
+[features]
+
+default = ["full"]
+full = ["glyph2vec", "flat-vector"]
+flat-vector = ["reflexo/flat-vector"]
+
+experimental-ligature = []
+no-content-hint = []
+glyph2vec = []
+debug-gc = []
+item-dashmap = ["reflexo/item-dashmap"]
+
+[lints]
+workspace = true
