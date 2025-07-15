@@ -286,7 +286,7 @@ impl ProjectBackgroundWorker {
             CompileServerOpts {
                 handler: handler.clone() as Arc<_>,
                 export_target: tinymist_project::ExportTarget::Html,
-                enable_watch: true,
+                ignore_first_sync: false,
             },
         );
 

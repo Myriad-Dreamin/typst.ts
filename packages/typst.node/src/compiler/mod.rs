@@ -139,6 +139,7 @@ pub fn create_universe(args: Option<CompileArgs>) -> Result<TypstSystemUniverse>
         Vfs::new(resolver, SystemAccessModel {}),
         registry,
         Arc::new(searcher.build()),
+        None,
     );
 
     Ok(verse)
