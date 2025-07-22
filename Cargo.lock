@@ -3116,7 +3116,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "base64 0.22.1",
  "bitvec",
@@ -3144,7 +3144,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-typst"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "ansi_term",
  "codespan-reporting",
@@ -3184,7 +3184,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-typst-compiler"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "ansi-to-html",
  "base64 0.22.1",
@@ -3208,7 +3208,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-typst2hast"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "base64 0.22.1",
  "bitvec",
@@ -3239,7 +3239,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-typst2vec"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "bitvec",
  "comemo",
@@ -3265,7 +3265,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2bbox"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "comemo",
  "reflexo",
@@ -3276,7 +3276,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2canvas"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "async-trait",
  "comemo",
@@ -3294,7 +3294,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2dom"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "async-recursion",
  "comemo",
@@ -3317,7 +3317,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2sema"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "comemo",
  "js-sys",
@@ -3331,7 +3331,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2svg"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -5060,7 +5060,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-bench-lowering"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "comemo",
  "divan",
@@ -5072,7 +5072,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-cli"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "anyhow",
  "chrono",
@@ -5101,7 +5101,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-dev-server"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "bytes",
  "clap",
@@ -5118,7 +5118,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-docs-test"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "anyhow",
  "clap",
@@ -5131,7 +5131,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-heap-profile-test"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "anyhow",
  "comemo",
@@ -5145,7 +5145,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-fuzzer"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "anyhow",
  "comemo",
@@ -5165,7 +5165,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-test"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "anyhow",
  "comemo",
@@ -5181,7 +5181,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-integration-test"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -5203,7 +5203,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-node-compiler"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "chrono",
  "comemo",
@@ -5223,7 +5223,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-parser"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",
@@ -5239,7 +5239,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-renderer"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "anyhow",
  "console_error_panic_hook",
@@ -5274,14 +5274,14 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-rkyv-assertions"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "reflexo-typst2vec",
 ]
 
 [[package]]
 name = "typst-ts-std-test"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "anyhow",
  "rayon",
@@ -5290,7 +5290,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-test-common"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -5301,7 +5301,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-web-compiler"
-version = "0.6.1-rc1"
+version = "0.6.1-rc2"
 dependencies = [
  "ansi-to-html",
  "base64 0.22.1",
