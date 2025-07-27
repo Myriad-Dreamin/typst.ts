@@ -4,7 +4,11 @@ All notable changes to the reflexo and "@myriaddreamin/\*typst\*" packages will 
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## v0.6.1 - [2025-05-25]
+## v0.6.1 - [2025-07-22]
+
+### Compiler
+
+- Implemented typst2hast in https://github.com/Myriad-Dreamin/typst.ts/pull/743
 
 ### rustdoc-typst-demo (New)
 
@@ -25,6 +29,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ### Misc
 
 - Fixed a typo in responsive.typ by @shigma in https://github.com/Myriad-Dreamin/typst.ts/pull/719
+- Updated serverless render example to import correct file from jsdelivr by @mosaleh-dev in https://github.com/Myriad-Dreamin/typst.ts/pull/733
 - Updated docs for all-in-one bundle in https://github.com/Myriad-Dreamin/typst.ts/pull/726
 
 **Full Changelog**: https://github.com/Myriad-Dreamin/typst.ts/compare/v0.6.0...v0.6.1

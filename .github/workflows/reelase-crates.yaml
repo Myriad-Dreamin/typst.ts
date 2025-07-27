@@ -35,6 +35,7 @@ jobs:
           cargo publish --no-verify -p reflexo-typst2vec || true
           cargo publish --no-verify -p reflexo-vec2bbox || true
           cargo publish --no-verify -p reflexo-vec2canvas || true
+          cargo publish --no-verify -p reflexo-typst2hast || true
           cargo publish --no-verify -p reflexo-vec2sema || true
           cargo publish --no-verify -p reflexo-vec2svg || true
           cargo publish --no-verify -p reflexo-vec2dom || true
