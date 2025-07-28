@@ -14,6 +14,7 @@ use typst::layout::{
 use typst::text::Font;
 use typst::utils::Scalar as TypstScalar;
 use typst::visualize::{ExchangeFormat, ImageFormat, ImageKind, RasterFormat, VectorFormat};
+use typst_svg::pdf_to_png;
 
 use crate::hash::typst_affinite_hash;
 use crate::{FromTypst, IntoTypst, TryFromTypst};
@@ -27,6 +28,7 @@ impl ImageExt for typst::visualize::Image {
         match self.kind() {
             typst::visualize::ImageKind::Raster(raster_image) => raster_image.data(),
             typst::visualize::ImageKind::Svg(svg_image) => svg_image.data(),
+            typst::visualize::ImageKind::Pdf(pdf_image) => pdf_image.document().data(),
         }
     }
 }
@@ -179,6 +181,7 @@ impl FromTypst<typst::visualize::Image> for Image {
             ImageFormat::Raster(RasterFormat::Exchange(ExchangeFormat::Gif)) => "gif",
             ImageFormat::Raster(RasterFormat::Pixel(..)) => "png",
             ImageFormat::Vector(VectorFormat::Svg) => "svg+xml",
+            ImageFormat::Vector(VectorFormat::Pdf) => "png",
         };
         let attrs = {
             let mut attrs = Vec::new();
@@ -226,6 +229,25 @@ fn encode_image(image: &typst::visualize::Image) -> (Fingerprint, Arc<[u8]>) {
             }
         },
         ImageKind::Svg(svg) => svg.data().as_slice().into(),
+        ImageKind::Pdf(pdf) => {
+            // Copied from https://github.com/typst/typst/blob/59243dadbb2e9f5fc4fd55b0dbfaca6496caf761/crates/typst-svg/src/image.rs#L73
+            // To make sure the image isn't pixelated, we always scale up so the
+            // lowest dimension has at least 1000 pixels. However, we only scale
+            // up as much so that the largest dimension doesn't exceed 3000
+            // pixels.
+            const MIN_RES: f32 = 1000.0;
+            const MAX_RES: f32 = 3000.0;
+
+            let base_width = pdf.width();
+            let w_scale = (MIN_RES / base_width).max(MAX_RES / base_width);
+            let base_height = pdf.height();
+            let h_scale = (MIN_RES / base_height).min(MAX_RES / base_height);
+            let total_scale = w_scale.min(h_scale);
+            let width = (base_width * total_scale).ceil() as u32;
+            let height = (base_height * total_scale).ceil() as u32;
+
+            pdf_to_png(pdf, width, height).as_slice().into()
+        }
     };
 
     (hash, data)
