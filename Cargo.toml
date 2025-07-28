@@ -7,6 +7,7 @@ readme = "README.md"
 license = "Apache-2.0"
 homepage = "https://myriad-dreamin.github.io/typst.ts/"
 repository = "https://github.com/Myriad-Dreamin/typst.ts"
+rust-version = "1.88"
 
 [workspace]
 resolver = "2"
@@ -272,6 +273,15 @@ tinymist-task = { git = "https://github.com/ParaN3xus/tinymist.git", branch = "n
 tinymist-package = { git = "https://github.com/ParaN3xus/tinymist.git", branch = "nightly" }
 tinymist-world = { git = "https://github.com/ParaN3xus/tinymist.git", branch = "nightly" }
 tinymist-project = { git = "https://github.com/ParaN3xus/tinymist.git", branch = "nightly" }
+
+# typst-shim = { path = "../tinymist/crates/typst-shim" }
+# tinymist-derive = { path = "../tinymist/crates/tinymist-derive" }
+# tinymist-std = { path = "../tinymist/crates/tinymist-std" }
+# tinymist-task = { path = "../tinymist/crates/tinymist-task" }
+# tinymist-package = { path = "../tinymist/crates/tinymist-package" }
+# tinymist-world = { path = "../tinymist/crates/tinymist-world" }
+# tinymist-project = { path = "../tinymist/crates/tinymist-project" }
+
 
 # [patch."https://github.com/Myriad-Dreamin/tinymist.git"]
 # typst-shim = { path = "../tinymist/crates/typst-shim" }
