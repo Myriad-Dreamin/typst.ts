@@ -3727,6 +3727,7 @@ dependencies = [
  "ttf-parser 0.25.1",
  "typst 0.14.0",
  "typst-html 0.14.0",
+ "typst-svg 0.14.0",
  "xmlparser",
 ]
 
