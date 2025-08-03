@@ -78,7 +78,7 @@ typst-html = "0.14.0"
 
 ttf-parser = "0.25.0"
 
-typst-assets = { git = "https://github.com/typst/typst-assets", rev = "edf0d64" }
+typst-assets = { git = "https://github.com/typst/typst-assets", rev = "fbf00f9" }
 typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", rev = "bfa947f" }
 
 # general
@@ -98,7 +98,7 @@ strum = { version = "0.26.3", features = ["derive"] }
 tokio = { version = "1.40.0", features = ["full"] }
 
 # data structure and algorithm
-comemo = "0.4"
+comemo = "0.5.0"
 elsa = "1.10.0"
 ecow = "0.2.2"
 indexmap = "2"
