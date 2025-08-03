@@ -3606,7 +3606,7 @@ version = "0.6.1-rc3"
 dependencies = [
  "base64 0.22.1",
  "bitvec",
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "dashmap",
  "ecow",
  "fxhash",
@@ -3634,7 +3634,7 @@ version = "0.6.1-rc3"
 dependencies = [
  "ansi_term",
  "codespan-reporting",
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "dirs",
  "ecow",
  "fontdb 0.23.0",
@@ -3674,7 +3674,7 @@ version = "0.6.1-rc3"
 dependencies = [
  "ansi-to-html",
  "base64 0.22.1",
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "console_error_panic_hook",
  "hex",
  "js-sys",
@@ -3698,7 +3698,7 @@ version = "0.6.1-rc3"
 dependencies = [
  "base64 0.22.1",
  "bitvec",
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "crossbeam-queue",
  "dashmap",
  "ecow",
@@ -3729,7 +3729,7 @@ name = "reflexo-typst2vec"
 version = "0.6.1-rc3"
 dependencies = [
  "bitvec",
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "crossbeam-queue",
  "dashmap",
  "flate2",
@@ -3756,7 +3756,7 @@ dependencies = [
 name = "reflexo-vec2bbox"
 version = "0.6.1-rc3"
 dependencies = [
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "reflexo",
  "svgtypes",
  "tiny-skia",
@@ -3768,7 +3768,7 @@ name = "reflexo-vec2canvas"
 version = "0.6.1-rc3"
 dependencies = [
  "async-trait",
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "ecow",
  "elsa",
  "js-sys",
@@ -3786,7 +3786,7 @@ name = "reflexo-vec2dom"
 version = "0.6.1-rc3"
 dependencies = [
  "async-recursion",
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "js-sys",
  "log",
  "reflexo",
@@ -3808,7 +3808,7 @@ dependencies = [
 name = "reflexo-vec2sema"
 version = "0.6.1-rc3"
 dependencies = [
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "js-sys",
  "reflexo",
  "reflexo-vec2canvas",
@@ -3823,7 +3823,7 @@ name = "reflexo-vec2svg"
 version = "0.6.1-rc3"
 dependencies = [
  "base64 0.22.1",
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "log",
  "reflexo",
  "reflexo-typst2vec",
@@ -5470,11 +5470,6 @@ checksum = "b5bf0cc3c2265502b51fcb73147cc7c951ceb694507195b93c2ab0b901abb902"
 [[package]]
 name = "typst-assets"
 version = "0.13.1"
-source = "git+https://github.com/typst/typst-assets?rev=edf0d64#edf0d648376e29738a05a933af9ea99bb81557b1"
-
-[[package]]
-name = "typst-assets"
-version = "0.13.1"
 source = "git+https://github.com/typst/typst-assets?rev=fbf00f9#fbf00f9539fdb0825bef4d39fb57d5986c51b756"
 
 [[package]]
@@ -6006,7 +6001,7 @@ dependencies = [
 name = "typst-ts-bench-lowering"
 version = "0.6.1-rc3"
 dependencies = [
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "divan",
  "reflexo-typst",
  "reflexo-typst2vec",
@@ -6024,7 +6019,7 @@ dependencies = [
  "clap_complete",
  "clap_complete_fig",
  "clap_mangen",
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "env_logger",
  "flate2",
  "human-panic",
@@ -6036,7 +6031,7 @@ dependencies = [
  "tokio",
  "toml 0.8.23",
  "typst 0.14.0",
- "typst-assets 0.13.1 (git+https://github.com/typst/typst-assets?rev=edf0d64)",
+ "typst-assets 0.13.1 (git+https://github.com/typst/typst-assets?rev=fbf00f9)",
  "typst-ide",
  "typst-pdf 0.14.0",
  "vergen",
@@ -6078,7 +6073,7 @@ name = "typst-ts-heap-profile-test"
 version = "0.6.1-rc3"
 dependencies = [
  "anyhow",
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "dhat",
  "reflexo-typst",
  "sha2",
@@ -6092,7 +6087,7 @@ name = "typst-ts-incremental-fuzzer"
 version = "0.6.1-rc3"
 dependencies = [
  "anyhow",
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "hex",
  "rand 0.8.5",
  "rand_xoshiro",
@@ -6112,7 +6107,7 @@ name = "typst-ts-incremental-test"
 version = "0.6.1-rc3"
 dependencies = [
  "anyhow",
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "hex",
  "reflexo-typst",
  "reflexo-typst2vec",
@@ -6150,7 +6145,7 @@ name = "typst-ts-node-compiler"
 version = "0.6.1-rc3"
 dependencies = [
  "chrono",
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "napi",
  "napi-build",
  "napi-derive",
@@ -6249,7 +6244,7 @@ version = "0.6.1-rc3"
 dependencies = [
  "ansi-to-html",
  "base64 0.22.1",
- "comemo 0.4.0",
+ "comemo 0.5.0",
  "console_error_panic_hook",
  "hex",
  "js-sys",
