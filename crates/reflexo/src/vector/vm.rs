@@ -78,7 +78,8 @@ pub trait GroupContext<C>: Sized {
         self.render_item_at(ctx, Point::default(), item);
     }
 
-    fn render_glyph(&mut self, _ctx: &mut C, _pos: Scalar, _font: &FontItem, _glyph_id: u32) {}
+    fn render_glyph(&mut self, _ctx: &mut C, _pos: Axes<Scalar>, _font: &FontItem, _glyph_id: u32) {
+    }
 
     fn render_text_semantics(&mut self, _ctx: &mut C, _text: &ir::TextItem, _width: Scalar) {}
 }
@@ -230,9 +231,9 @@ pub trait RenderVm<'m>: Sized + FontIndice<'m> {
 
         // Rescale the font size and put glyphs into the group.
         group_ctx = text.shape.add_transform(self, group_ctx, upem);
-        let mut _width = 0f32;
-        for (x, g) in text.render_glyphs(upem, &mut _width) {
-            group_ctx.render_glyph(self, x, font, g);
+        let mut _size = Axes { x: 0f32, y: 0f32 };
+        for (size, g) in text.render_glyphs(upem, &mut _size) {
+            group_ctx.render_glyph(self, size, font, g);
         }
 
         group_ctx

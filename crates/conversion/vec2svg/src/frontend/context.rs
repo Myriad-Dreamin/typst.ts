@@ -14,6 +14,7 @@ use reflexo::{
         vm::{GroupContext, IncrRenderVm, RenderVm},
     },
 };
+use reflexo_typst2vec::ir::Axes;
 
 use crate::{
     backend::{BuildClipPath, DynExportFeature, NotifyPaint, SvgText, SvgTextBuilder, SvgTextNode},
@@ -227,24 +228,24 @@ impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
 
         group_ctx = text.shape.add_transform(self, group_ctx, upem);
 
-        let width = match (&group_ctx.text_fill, &group_ctx.text_stroke) {
+        let size = match (&group_ctx.text_fill, &group_ctx.text_stroke) {
             (fill, Some(stroke)) => {
-                let mut width = 0f32;
+                let mut size = Axes { x: 0f32, y: 0f32 };
                 let fill = fill.clone();
                 let stroke = stroke.clone();
-                for (x, g) in text.render_glyphs(upem, &mut width) {
-                    group_ctx.render_glyph_slow(x, font, g, fill.clone(), stroke.clone());
+                for (s, g) in text.render_glyphs(upem, &mut size) {
+                    group_ctx.render_glyph_slow(s, font, g, fill.clone(), stroke.clone());
                 }
 
-                width
+                size
             }
             (None, None) => {
-                let mut width = 0f32;
-                for (x, g) in text.render_glyphs(upem, &mut width) {
-                    group_ctx.render_glyph(self, x, font, g);
+                let mut size = Axes { x: 0f32, y: 0f32 };
+                for (s, g) in text.render_glyphs(upem, &mut size) {
+                    group_ctx.render_glyph(self, s, font, g);
                 }
 
-                width
+                size
             }
             (Some(fill), None) => {
                 // clip path rect
@@ -260,9 +261,9 @@ impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
                     r#"<clipPath id="{clip_id}" clipPathUnits="userSpaceOnUse">"#
                 )));
 
-                let mut width = 0f32;
-                for (x, g) in text.render_glyphs(upem, &mut width) {
-                    group_ctx.render_glyph(self, x, font, g);
+                let mut size = Axes { x: 0f32, y: 0f32 };
+                for (s, g) in text.render_glyphs(upem, &mut size) {
+                    group_ctx.render_glyph(self, s, font, g);
                     group_ctx.content.push(SvgText::Plain("<path/>".into()));
                 }
 
@@ -271,15 +272,16 @@ impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
                     .push(SvgText::Plain(r#"</clipPath>"#.to_owned()));
 
                 // clip path rect
-                let scaled_width = width * upem.0 / text.shape.size.0;
+                let scaled_width = size.x * upem.0 / text.shape.size.0;
                 group_ctx.content.push(SvgText::Plain(format!(
                     r##"<rect fill="url(#{fill_id})" stroke="none" width="{:.1}" height="{:.1}" y="{:.1}" clip-path="url(#{})"/>"##,
                     scaled_width, upem.0, descender, clip_id
                 )));
 
                 // image glyphs
-                let mut _width = 0f32;
-                for (x, g) in text.render_glyphs(upem, &mut _width) {
+                let mut _size = Axes { x: 0f32, y: 0f32 };
+
+                for (s, g) in text.render_glyphs(upem, &mut _size) {
                     let built = font.get_glyph(g);
                     if matches!(
                         built.map(Deref::deref),
@@ -287,10 +289,10 @@ impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
                     ) {
                         continue;
                     }
-                    group_ctx.render_glyph(self, x, font, g);
+                    group_ctx.render_glyph(self, s, font, g);
                 }
 
-                width
+                size
             }
         };
 
@@ -298,7 +300,7 @@ impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
             group_ctx.render_text_semantics_inner(
                 &text.shape,
                 &text.content.content,
-                Scalar(width),
+                Scalar(size.x),
                 font.ascender,
                 upem,
             )

@@ -257,13 +257,14 @@ impl SvgTextBuilder {
 
     pub fn render_glyph_slow(
         &mut self,
-        pos: Scalar,
+        pos: Axes<Scalar>,
         font: &FontItem,
         glyph: u32,
         fill: Option<Arc<PaintObj>>,
         stroke: Arc<PaintObj>,
     ) {
-        let adjusted_offset = (pos.0 * 2.).round();
+        let adjusted_x_offset = (pos.x.0 * 2.).round();
+        let adjusted_y_offset = (pos.y.0 * 2.).round();
 
         // A stable glyph id can help incremental font transfer (IFT).
         // However, it is permitted unstable if you will not use IFT.
@@ -274,7 +275,7 @@ impl SvgTextBuilder {
         .as_svg_id("g");
         let mut do_trans = |obj: &PaintObj, pref: &'static str| -> String {
             let og = obj.id.as_svg_id(pref);
-            let ng = format!("{og}-{adjusted_offset}").replace('.', "-");
+            let ng = format!("{og}-{adjusted_x_offset}-{adjusted_y_offset}").replace('.', "-");
 
             let new_color = Self::transform_color(
                 obj.kind,
@@ -283,8 +284,8 @@ impl SvgTextBuilder {
                 obj.transform
                     .unwrap_or_else(Transform::identity)
                     .post_concat(Transform::from_translate(
-                        Scalar(-adjusted_offset / 2.),
-                        Scalar(0.),
+                        Scalar(-adjusted_x_offset / 2.),
+                        Scalar(-adjusted_y_offset / 2.),
                     )),
             );
 
@@ -302,8 +303,9 @@ impl SvgTextBuilder {
 
         self.content.push(SvgText::Plain(format!(
             // r##"<typst-glyph x="{}" href="#{}"/>"##,
-            r##"<use x="{}" href="#{}"{fill_id}{stroke_id}/>"##,
-            adjusted_offset / 2.,
+            r##"<use x="{}" y="{}" href="#{}"{fill_id}{stroke_id}/>"##,
+            adjusted_x_offset / 2.,
+            adjusted_y_offset / 2.,
             glyph_id
         )));
     }
@@ -501,8 +503,9 @@ impl<
         })));
     }
 
-    fn render_glyph(&mut self, _ctx: &mut C, pos: Scalar, font: &FontItem, glyph: u32) {
-        let adjusted_offset = (pos.0 * 2.).round() / 2.;
+    fn render_glyph(&mut self, _ctx: &mut C, pos: Axes<Scalar>, font: &FontItem, glyph: u32) {
+        let adjusted_x_offset = (pos.x.0 * 2.).round() / 2.;
+        let adjusted_y_offset = (pos.y.0 * 2.).round() / 2.;
 
         // A stable glyph id can help incremental font transfer (IFT).
         // However, it is permitted unstable if you will not use IFT.
@@ -514,7 +517,7 @@ impl<
 
         self.content.push(SvgText::Plain(format!(
             // r##"<typst-glyph x="{}" href="#{}"/>"##,
-            r##"<use x="{adjusted_offset}" href="#{glyph_id}"/>"##
+            r##"<use x="{adjusted_x_offset}" y="{adjusted_y_offset}" href="#{glyph_id}"/>"##
         )));
     }
 
