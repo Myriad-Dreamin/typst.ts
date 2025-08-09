@@ -115,19 +115,27 @@ impl TextShape {
     pub(crate) fn render_glyphs<'a, 'b: 'a>(
         &self,
         upem: Abs,
-        glyph_iter: impl Iterator<Item = &'a (Abs, Abs, u32)> + 'a,
-        width: &'b mut f32,
-    ) -> impl Iterator<Item = (Abs, u32)> + 'a {
-        *width = 0f32;
+        glyph_iter: impl Iterator<Item = &'a (Axes<Abs>, Axes<Abs>, u32)> + 'a,
+        size: &'b mut Axes<f32>,
+    ) -> impl Iterator<Item = (Axes<Scalar>, u32)> + 'a {
+        *size = Axes { x: 0f32, y: 0f32 };
 
         let inv_ppem = self.inv_ppem(upem.0).0;
         glyph_iter.into_iter().map(move |(offset, advance, glyph)| {
-            let offset = *width + offset.0;
-            let ts = offset * inv_ppem;
+            let offset = Axes {
+                x: size.x + offset.x.0,
+                y: size.y + offset.y.0,
+            };
 
-            *width += advance.0;
+            let ts = Axes {
+                x: Scalar(offset.x * inv_ppem),
+                y: Scalar(offset.y * inv_ppem),
+            };
 
-            (Scalar(ts), *glyph)
+            size.x += advance.x.0;
+            size.y += advance.y.0;
+
+            (ts, *glyph)
         })
     }
 }
@@ -150,7 +158,7 @@ impl TextItem {
             self.content
                 .glyphs
                 .iter()
-                .map(|(_, advance, _)| advance.0)
+                .map(|(_, advance, _)| advance.x.0)
                 .sum(),
         )
     }
@@ -158,10 +166,10 @@ impl TextItem {
     pub fn render_glyphs<'a, 'b: 'a>(
         &'a self,
         upem: Abs,
-        width: &'b mut f32,
-    ) -> impl Iterator<Item = (Abs, u32)> + 'a {
+        size: &'b mut Axes<f32>,
+    ) -> impl Iterator<Item = (Axes<Scalar>, u32)> + 'a {
         self.shape
-            .render_glyphs(upem, self.content.glyphs.iter(), width)
+            .render_glyphs(upem, self.content.glyphs.iter(), size)
     }
 }
 
@@ -175,5 +183,5 @@ pub struct TextItemContent {
     pub content: ImmutStr,
     /// The glyphs in the text.
     /// (offset, advance, glyph): ([`Abs`], [`Abs`], [`FlatGlyphItem`])
-    pub glyphs: Arc<[(Abs, Abs, u32)]>,
+    pub glyphs: Arc<[(Axes<Abs>, Axes<Abs>, u32)]>,
 }

@@ -4,9 +4,9 @@ use base64::Engine;
 use ecow::{eco_format, EcoString};
 use reflexo::typst::TypstHtmlDocument;
 use typst::diag::SourceResult;
-use typst_html::{HtmlElement, HtmlNode};
 use typst::layout::Frame;
 use typst::syntax::Span;
+use typst_html::{HtmlElement, HtmlNode};
 
 use crate::hast::{HastElement, HastElementContent, HastText};
 

@@ -708,8 +708,14 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                 self.glyphs
                     .build_glyph(font, GlyphItem::Raw(text.font.clone(), GlyphId(glyph.id)));
                 glyphs.push((
-                    glyph.x_offset.at(text.size).into_typst(),
-                    glyph.x_advance.at(text.size).into_typst(),
+                    Axes::<Abs> {
+                        x: glyph.x_offset.at(text.size).into_typst(),
+                        y: glyph.y_offset.at(text.size).into_typst(),
+                    },
+                    Axes::<Abs> {
+                        x: glyph.x_advance.at(text.size).into_typst(),
+                        y: glyph.y_advance.at(text.size).into_typst(),
+                    },
                     glyph.id as u32,
                 ));
             }
@@ -727,7 +733,19 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
             VecItem::Text(TextItem {
                 content: Arc::new(TextItemContent {
                     content: glyph_chars.into(),
-                    glyphs: glyphs.into(),
+                    glyphs: Arc::from_iter(glyphs.iter().map(|(offset, advance, glyph_id)| {
+                        (
+                            crate::ir::Axes {
+                                x: Scalar(offset.x.0),
+                                y: Scalar(offset.y.0),
+                            },
+                            crate::ir::Axes {
+                                x: Scalar(advance.x.0),
+                                y: Scalar(advance.y.0),
+                            },
+                            *glyph_id,
+                        )
+                    })),
                 }),
                 shape: Arc::new(TextShape {
                     font,
