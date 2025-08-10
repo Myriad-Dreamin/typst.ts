@@ -204,7 +204,7 @@ impl<C> TransformContext<C> for BBoxBuilder {
 
 /// See [`GroupContext`].
 impl<'m, C: RenderVm<'m, Resultant = BBox>> GroupContext<C> for BBoxBuilder {
-    fn render_glyph(&mut self, _ctx: &mut C, _pos: Scalar, _font: &FontItem, _glyph_id: u32) {
+    fn render_glyph(&mut self, _ctx: &mut C, _pos: Axes<Scalar>, _font: &FontItem, _glyph_id: u32) {
         unreachable!();
     }
 
