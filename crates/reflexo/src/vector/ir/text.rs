@@ -173,6 +173,8 @@ impl TextItem {
     }
 }
 
+type GlyphData = (Axes<Abs>, Axes<Abs>, u32);
+
 /// The content metadata of a [`TextItem`].
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "rkyv", derive(Archive, rDeser, rSer))]
@@ -183,5 +185,5 @@ pub struct TextItemContent {
     pub content: ImmutStr,
     /// The glyphs in the text.
     /// (offset, advance, glyph): ([`Abs`], [`Abs`], [`FlatGlyphItem`])
-    pub glyphs: Arc<[(Axes<Abs>, Axes<Abs>, u32)]>,
+    pub glyphs: Arc<[GlyphData]>,
 }
