@@ -88,9 +88,9 @@ dependencies = [
 
 [[package]]
 name = "anstream"
-version = "0.6.19"
+version = "0.6.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "301af1932e46185686725e0fad2f8f2aa7da69dd70bf6ecc44d6b703844a3933"
+checksum = "3ae563653d1938f79b1ab1b5e668c87c76a9930414574a6583a7b7e11a8e6192"
 dependencies = [
  "anstyle",
  "anstyle-parse",
@@ -118,18 +118,18 @@ dependencies = [
 
 [[package]]
 name = "anstyle-query"
-version = "1.1.3"
+version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c8bdeb6047d8983be085bab0ba1472e6dc604e7041dbf6fcd5e71523014fae9"
+checksum = "9e231f6134f61b71076a3eab506c379d4f36122f2af15a9ff04415ea4c3339e2"
 dependencies = [
  "windows-sys 0.60.2",
 ]
 
 [[package]]
 name = "anstyle-wincon"
-version = "3.0.9"
+version = "3.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "403f75924867bb1033c59fbf0797484329750cfbe3c4325cd33127941fabc882"
+checksum = "3e0633414522a32ffaac8ac6cc8f748e090c5717661fddeea04219e2344f5f2a"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
@@ -377,18 +377,18 @@ dependencies = [
 
 [[package]]
 name = "bytemuck"
-version = "1.23.1"
+version = "1.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c76a5792e44e4abe34d3abf15636779261d45a7450612059293d1d2cfc63422"
+checksum = "3995eaeebcdf32f91f980d360f78732ddc061097ab4e39991ae7a6ace9194677"
 dependencies = [
  "bytemuck_derive",
 ]
 
 [[package]]
 name = "bytemuck_derive"
-version = "1.10.0"
+version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "441473f2b4b0459a68628c744bc61d23e730fb00128b841d30fa4bb3972257e4"
+checksum = "4f154e572231cb6ba2bd1176980827e3d5dc04cc183a75dea38109fbdd672d29"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -415,9 +415,9 @@ checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
 
 [[package]]
 name = "camino"
-version = "1.1.10"
+version = "1.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0da45bc31171d8d6960122e222a67740df867c1dd53b4d51caa297084c185cab"
+checksum = "5d07aa9a93b00c76f71bc35d598bed923f6d4f3a9ca5c24b7737ae1a292841c0"
 dependencies = [
  "serde",
 ]
@@ -447,9 +447,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.31"
+version = "1.2.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3a42d84bb6b69d3a8b3eaacf0d88f179e1929695e1ad012b6cf64d9caaa5fd2"
+checksum = "2352e5597e9c544d5e6d9c95190d5d27738ade584fa8db0a16e130e5c2b5296e"
 dependencies = [
  "shlex",
 ]
@@ -544,9 +544,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.42"
+version = "4.5.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed87a9d530bb41a67537289bafcac159cb3ee28460e0a4571123d2a778a6a882"
+checksum = "50fd97c9dc2399518aa331917ac6f274280ec5eb34e555dd291899745c48ec6f"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -554,9 +554,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.42"
+version = "4.5.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64f4f3f3c77c94aff3c7e9aac9a2ca1974a5adf392a8bb751e827d6d127ab966"
+checksum = "c35b5830294e1fa0462034af85cc95225a4cb07092c088c55bda3147cfcd8f65"
 dependencies = [
  "anstream",
  "anstyle",
@@ -569,9 +569,9 @@ dependencies = [
 
 [[package]]
 name = "clap_complete"
-version = "4.5.55"
+version = "4.5.56"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5abde44486daf70c5be8b8f8f1b66c49f86236edf6fa2abadb4d961c4c6229a"
+checksum = "67e4efcbb5da11a92e8a609233aa1e8a7d91e38de0be865f016d14700d45a7fd"
 dependencies = [
  "clap",
 ]
@@ -661,38 +661,15 @@ checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
 name = "comemo"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df6916408a724339aa77b18214233355f3eb04c42eb895e5f8909215bd8a7a91"
-dependencies = [
- "comemo-macros 0.4.0",
- "once_cell",
- "parking_lot",
- "siphasher",
-]
-
-[[package]]
-name = "comemo"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "649d7b2d867b569729c03c0f6968db10bc95921182a1f2b2012b1b549492f39d"
 dependencies = [
- "comemo-macros 0.5.0",
+ "comemo-macros",
  "parking_lot",
  "rustc-hash 2.1.1",
  "siphasher",
  "slab",
-]
-
-[[package]]
-name = "comemo-macros"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8936e42f9b4f5bdfaf23700609ac1f11cb03ad4c1ec128a4ee4fd0903e228db"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.104",
 ]
 
 [[package]]
@@ -1063,12 +1040,6 @@ checksum = "75b325c5dbd37f80359721ad39aca5a29fb04c89279657cffdda8736d0c0b9d2"
 [[package]]
 name = "dyn-clone"
 version = "1.0.20"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
-
-[[package]]
-name = "ecow"
-version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
@@ -1545,9 +1516,9 @@ checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
 
 [[package]]
 name = "hashbrown"
-version = "0.15.4"
+version = "0.15.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5971ac85611da7067dbfcabef3c70ebb5606018acd9e2a3903a0da507521e0d5"
+checksum = "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
 dependencies = [
  "foldhash",
 ]
@@ -1761,7 +1732,7 @@ dependencies = [
  "os_info",
  "serde",
  "serde_derive",
- "toml 0.9.4",
+ "toml 0.9.5",
  "uuid",
 ]
 
@@ -1895,6 +1866,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "icu_collections"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "200072f5d0e3614556f94a9930d5dc3e0662a652823904c3a75dc3b0af7fee47"
+dependencies = [
+ "displaydoc",
+ "potential_utf",
+ "yoke 0.8.0",
+ "zerofrom",
+ "zerovec 0.11.4",
+]
+
+[[package]]
+name = "icu_locale_core"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0cde2700ccaed3872079a65fb1a78f6c0a36c91570f28755dda67bc8f7d9f00a"
+dependencies = [
+ "displaydoc",
+ "litemap 0.8.0",
+ "tinystr 0.8.1",
+ "writeable 0.6.1",
+ "zerovec 0.11.4",
+]
+
+[[package]]
 name = "icu_locid"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1928,6 +1925,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7515e6d781098bf9f7205ab3fc7e9709d34554ae0b21ddbcb5febfa4bc7df11d"
 
 [[package]]
+name = "icu_normalizer"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "436880e8e18df4d7bbc06d58432329d6458cc84531f7ac5f024e93deadb37979"
+dependencies = [
+ "displaydoc",
+ "icu_collections 2.0.0",
+ "icu_normalizer_data",
+ "icu_properties 2.0.1",
+ "icu_provider 2.0.0",
+ "smallvec",
+ "zerovec 0.11.4",
+]
+
+[[package]]
+name = "icu_normalizer_data"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00210d6893afc98edb752b664b8890f0ef174c8adbb8d0be9710fa66fbbf72d3"
+
+[[package]]
 name = "icu_properties"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1941,6 +1959,22 @@ dependencies = [
  "serde",
  "tinystr 0.7.6",
  "zerovec 0.10.4",
+]
+
+[[package]]
+name = "icu_properties"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "016c619c1eeb94efb86809b015c58f479963de65bdb6253345c1a1276f22e32b"
+dependencies = [
+ "displaydoc",
+ "icu_collections 2.0.0",
+ "icu_locale_core",
+ "icu_properties_data 2.0.1",
+ "icu_provider 2.0.0",
+ "potential_utf",
+ "zerotrie 0.2.2",
+ "zerovec 0.11.4",
 ]
 
 [[package]]
@@ -1966,6 +2000,23 @@ dependencies = [
  "yoke",
  "zerofrom",
  "zerovec 0.10.4",
+]
+
+[[package]]
+name = "icu_provider"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03c80da27b5f4187909049ee2d72f276f0d9f99a42c306bd0131ecfe04d8e5af"
+dependencies = [
+ "displaydoc",
+ "icu_locale_core",
+ "stable_deref_trait",
+ "tinystr 0.8.1",
+ "writeable 0.6.1",
+ "yoke 0.8.0",
+ "zerofrom",
+ "zerotrie 0.2.2",
+ "zerovec 0.11.4",
 ]
 
 [[package]]
@@ -2109,7 +2160,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe4cd85333e22411419a0bcae1297d25e58c9443848b11dc6a86fefe8c78a661"
 dependencies = [
  "equivalent",
- "hashbrown 0.15.4",
+ "hashbrown 0.15.5",
  "serde",
 ]
 
@@ -2260,7 +2311,7 @@ source = "git+https://github.com/LaurenzV/krilla?rev=abdf031#abdf031c9e5ba89d606
 dependencies = [
  "base64 0.22.1",
  "bumpalo",
- "comemo 0.5.0",
+ "comemo",
  "flate2",
  "float-cmp 0.10.0",
  "gif",
@@ -2896,7 +2947,7 @@ checksum = "3af6b589e163c5a788fab00ce0c0366f6efbb9959c2f9874b224936af7fce7e1"
 dependencies = [
  "base64 0.22.1",
  "indexmap 2.10.0",
- "quick-xml 0.38.0",
+ "quick-xml 0.38.1",
  "serde",
  "time",
 ]
@@ -2945,6 +2996,15 @@ dependencies = [
  "embedded-io 0.4.0",
  "embedded-io 0.6.1",
  "serde",
+]
+
+[[package]]
+name = "potential_utf"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5a7c30837279ca13e7c867e9e40053bc68740f988cb07f7ca6df43cc734b585"
+dependencies = [
+ "zerovec 0.11.4",
 ]
 
 [[package]]
@@ -3033,9 +3093,9 @@ dependencies = [
 
 [[package]]
 name = "quick-xml"
-version = "0.38.0"
+version = "0.38.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8927b0664f5c5a98265138b7e3f90aa19a6b21353182469ace36d4ac527b7b1b"
+checksum = "9845d9dccf565065824e69f9f235fafba1587031eda353c1f1561cd6a6be78f4"
 dependencies = [
  "memchr",
 ]
@@ -3290,7 +3350,7 @@ version = "0.6.1-rc3"
 dependencies = [
  "base64 0.22.1",
  "bitvec",
- "comemo 0.5.0",
+ "comemo",
  "dashmap",
  "ecow",
  "fxhash",
@@ -3318,7 +3378,7 @@ version = "0.6.1-rc3"
 dependencies = [
  "ansi_term",
  "codespan-reporting",
- "comemo 0.5.0",
+ "comemo",
  "dirs",
  "ecow",
  "fontdb",
@@ -3358,7 +3418,7 @@ version = "0.6.1-rc3"
 dependencies = [
  "ansi-to-html",
  "base64 0.22.1",
- "comemo 0.5.0",
+ "comemo",
  "console_error_panic_hook",
  "hex",
  "js-sys",
@@ -3382,7 +3442,7 @@ version = "0.6.1-rc3"
 dependencies = [
  "base64 0.22.1",
  "bitvec",
- "comemo 0.5.0",
+ "comemo",
  "crossbeam-queue",
  "dashmap",
  "ecow",
@@ -3413,7 +3473,7 @@ name = "reflexo-typst2vec"
 version = "0.6.1-rc3"
 dependencies = [
  "bitvec",
- "comemo 0.5.0",
+ "comemo",
  "crossbeam-queue",
  "dashmap",
  "flate2",
@@ -3440,7 +3500,7 @@ dependencies = [
 name = "reflexo-vec2bbox"
 version = "0.6.1-rc3"
 dependencies = [
- "comemo 0.5.0",
+ "comemo",
  "reflexo",
  "svgtypes",
  "tiny-skia",
@@ -3452,7 +3512,7 @@ name = "reflexo-vec2canvas"
 version = "0.6.1-rc3"
 dependencies = [
  "async-trait",
- "comemo 0.5.0",
+ "comemo",
  "ecow",
  "elsa",
  "js-sys",
@@ -3470,7 +3530,7 @@ name = "reflexo-vec2dom"
 version = "0.6.1-rc3"
 dependencies = [
  "async-recursion",
- "comemo 0.5.0",
+ "comemo",
  "js-sys",
  "log",
  "reflexo",
@@ -3492,7 +3552,7 @@ dependencies = [
 name = "reflexo-vec2sema"
 version = "0.6.1-rc3"
 dependencies = [
- "comemo 0.5.0",
+ "comemo",
  "js-sys",
  "reflexo",
  "reflexo-vec2canvas",
@@ -3507,7 +3567,7 @@ name = "reflexo-vec2svg"
 version = "0.6.1-rc3"
 dependencies = [
  "base64 0.22.1",
- "comemo 0.5.0",
+ "comemo",
  "log",
  "reflexo",
  "reflexo-typst2vec",
@@ -4139,9 +4199,9 @@ dependencies = [
 
 [[package]]
 name = "slab"
-version = "0.4.10"
+version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04dc19736151f35336d325007ac991178d504a119863a2fcb3758cdb5e52c50d"
+checksum = "7a2ae44ef20feb57a68b23d846850f861394c2e02dc425a50098ae8c90267589"
 
 [[package]]
 name = "slotmap"
@@ -4224,7 +4284,7 @@ version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a3275464d7a9f2d4cac57c89c2ef96a8524dba2864c8d6f82e3980baf136f9b"
 dependencies = [
- "hashbrown 0.15.4",
+ "hashbrown 0.15.5",
  "serde",
 ]
 
@@ -4508,7 +4568,7 @@ dependencies = [
 [[package]]
 name = "tinymist-derive"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#8f59bc3ad5e44cce7e95999bacb9d8f09903bf90"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=0752755287bf84a235681ba5570935fb58a88e34#0752755287bf84a235681ba5570935fb58a88e34"
 dependencies = [
  "quote",
  "syn 2.0.104",
@@ -4517,7 +4577,7 @@ dependencies = [
 [[package]]
 name = "tinymist-l10n"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#8f59bc3ad5e44cce7e95999bacb9d8f09903bf90"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=0752755287bf84a235681ba5570935fb58a88e34#0752755287bf84a235681ba5570935fb58a88e34"
 dependencies = [
  "anyhow",
  "clap",
@@ -4531,10 +4591,10 @@ dependencies = [
 [[package]]
 name = "tinymist-package"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#8f59bc3ad5e44cce7e95999bacb9d8f09903bf90"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=0752755287bf84a235681ba5570935fb58a88e34#0752755287bf84a235681ba5570935fb58a88e34"
 dependencies = [
  "base64 0.22.1",
- "comemo 0.4.0",
+ "comemo",
  "dirs",
  "ecow",
  "flate2",
@@ -4557,11 +4617,11 @@ dependencies = [
 [[package]]
 name = "tinymist-project"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#8f59bc3ad5e44cce7e95999bacb9d8f09903bf90"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=0752755287bf84a235681ba5570935fb58a88e34#0752755287bf84a235681ba5570935fb58a88e34"
 dependencies = [
  "anyhow",
  "clap",
- "comemo 0.4.0",
+ "comemo",
  "dirs",
  "ecow",
  "log",
@@ -4585,12 +4645,12 @@ dependencies = [
 [[package]]
 name = "tinymist-std"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#8f59bc3ad5e44cce7e95999bacb9d8f09903bf90"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=0752755287bf84a235681ba5570935fb58a88e34#0752755287bf84a235681ba5570935fb58a88e34"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
  "bitvec",
- "comemo 0.4.0",
+ "comemo",
  "core-foundation",
  "dashmap",
  "ecow",
@@ -4623,11 +4683,11 @@ dependencies = [
 [[package]]
 name = "tinymist-task"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#8f59bc3ad5e44cce7e95999bacb9d8f09903bf90"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=0752755287bf84a235681ba5570935fb58a88e34#0752755287bf84a235681ba5570935fb58a88e34"
 dependencies = [
  "anyhow",
  "clap",
- "comemo 0.4.0",
+ "comemo",
  "dirs",
  "ecow",
  "log",
@@ -4657,9 +4717,9 @@ dependencies = [
 [[package]]
 name = "tinymist-vfs"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#8f59bc3ad5e44cce7e95999bacb9d8f09903bf90"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=0752755287bf84a235681ba5570935fb58a88e34#0752755287bf84a235681ba5570935fb58a88e34"
 dependencies = [
- "comemo 0.4.0",
+ "comemo",
  "ecow",
  "indexmap 2.10.0",
  "js-sys",
@@ -4676,13 +4736,13 @@ dependencies = [
 [[package]]
 name = "tinymist-world"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#8f59bc3ad5e44cce7e95999bacb9d8f09903bf90"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=0752755287bf84a235681ba5570935fb58a88e34#0752755287bf84a235681ba5570935fb58a88e34"
 dependencies = [
  "anyhow",
  "chrono",
  "clap",
  "codespan-reporting",
- "comemo 0.4.0",
+ "comemo",
  "dirs",
  "ecow",
  "flate2",
@@ -4816,9 +4876,9 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.9.4"
+version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41ae868b5a0f67631c14589f7e250c1ea2c574ee5ba21c6c8dd4b1485705a5a1"
+checksum = "75129e1dc5000bfbaa9fee9d1b21f974f9fbad9daec557a521ee6e080825f6e8"
 dependencies = [
  "serde",
  "serde_spanned 1.0.0",
@@ -4992,9 +5052,9 @@ checksum = "1dccffe3ce07af9386bfd29e80c0ab1a8205a2fc34e4bcd40364df902cfa8f3f"
 [[package]]
 name = "typst"
 version = "0.14.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#d9549fdac4ef8452297acc23cc902ffd68a0cb4f"
+source = "git+https://github.com/ParaN3xus/typst.git?rev=f0f0d8fcdb8052ca037e25c63fdd075a062331ea#f0f0d8fcdb8052ca037e25c63fdd075a062331ea"
 dependencies = [
- "comemo 0.5.0",
+ "comemo",
  "ecow",
  "rustc-hash 2.1.1",
  "typst-eval",
@@ -5021,9 +5081,9 @@ source = "git+https://github.com/typst/typst-dev-assets?rev=bfa947f#bfa947f3433d
 [[package]]
 name = "typst-eval"
 version = "0.14.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#d9549fdac4ef8452297acc23cc902ffd68a0cb4f"
+source = "git+https://github.com/ParaN3xus/typst.git?rev=f0f0d8fcdb8052ca037e25c63fdd075a062331ea#f0f0d8fcdb8052ca037e25c63fdd075a062331ea"
 dependencies = [
- "comemo 0.5.0",
+ "comemo",
  "ecow",
  "indexmap 2.10.0",
  "rustc-hash 2.1.1",
@@ -5040,10 +5100,10 @@ dependencies = [
 [[package]]
 name = "typst-html"
 version = "0.14.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#d9549fdac4ef8452297acc23cc902ffd68a0cb4f"
+source = "git+https://github.com/ParaN3xus/typst.git?rev=f0f0d8fcdb8052ca037e25c63fdd075a062331ea#f0f0d8fcdb8052ca037e25c63fdd075a062331ea"
 dependencies = [
  "bumpalo",
- "comemo 0.5.0",
+ "comemo",
  "ecow",
  "palette",
  "rustc-hash 2.1.1",
@@ -5060,9 +5120,9 @@ dependencies = [
 [[package]]
 name = "typst-ide"
 version = "0.14.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#d9549fdac4ef8452297acc23cc902ffd68a0cb4f"
+source = "git+https://github.com/ParaN3xus/typst.git?rev=f0f0d8fcdb8052ca037e25c63fdd075a062331ea#f0f0d8fcdb8052ca037e25c63fdd075a062331ea"
 dependencies = [
- "comemo 0.5.0",
+ "comemo",
  "ecow",
  "pathdiff",
  "rustc-hash 2.1.1",
@@ -5075,12 +5135,12 @@ dependencies = [
 [[package]]
 name = "typst-layout"
 version = "0.14.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#d9549fdac4ef8452297acc23cc902ffd68a0cb4f"
+source = "git+https://github.com/ParaN3xus/typst.git?rev=f0f0d8fcdb8052ca037e25c63fdd075a062331ea#f0f0d8fcdb8052ca037e25c63fdd075a062331ea"
 dependencies = [
  "az",
  "bumpalo",
  "codex",
- "comemo 0.5.0",
+ "comemo",
  "ecow",
  "hypher",
  "icu_properties 1.5.1",
@@ -5109,7 +5169,7 @@ dependencies = [
 [[package]]
 name = "typst-library"
 version = "0.14.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#d9549fdac4ef8452297acc23cc902ffd68a0cb4f"
+source = "git+https://github.com/ParaN3xus/typst.git?rev=f0f0d8fcdb8052ca037e25c63fdd075a062331ea#f0f0d8fcdb8052ca037e25c63fdd075a062331ea"
 dependencies = [
  "az",
  "bitflags 2.9.1",
@@ -5117,7 +5177,7 @@ dependencies = [
  "chinese-number",
  "ciborium",
  "codex",
- "comemo 0.5.0",
+ "comemo",
  "csv",
  "ecow",
  "flate2",
@@ -5174,7 +5234,7 @@ dependencies = [
 [[package]]
 name = "typst-macros"
 version = "0.14.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#d9549fdac4ef8452297acc23cc902ffd68a0cb4f"
+source = "git+https://github.com/ParaN3xus/typst.git?rev=f0f0d8fcdb8052ca037e25c63fdd075a062331ea#f0f0d8fcdb8052ca037e25c63fdd075a062331ea"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -5185,10 +5245,10 @@ dependencies = [
 [[package]]
 name = "typst-pdf"
 version = "0.14.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#d9549fdac4ef8452297acc23cc902ffd68a0cb4f"
+source = "git+https://github.com/ParaN3xus/typst.git?rev=f0f0d8fcdb8052ca037e25c63fdd075a062331ea#f0f0d8fcdb8052ca037e25c63fdd075a062331ea"
 dependencies = [
  "bytemuck",
- "comemo 0.5.0",
+ "comemo",
  "ecow",
  "image",
  "infer",
@@ -5207,11 +5267,11 @@ dependencies = [
 [[package]]
 name = "typst-realize"
 version = "0.14.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#d9549fdac4ef8452297acc23cc902ffd68a0cb4f"
+source = "git+https://github.com/ParaN3xus/typst.git?rev=f0f0d8fcdb8052ca037e25c63fdd075a062331ea#f0f0d8fcdb8052ca037e25c63fdd075a062331ea"
 dependencies = [
  "arrayvec",
  "bumpalo",
- "comemo 0.5.0",
+ "comemo",
  "ecow",
  "regex",
  "typst-library",
@@ -5224,10 +5284,10 @@ dependencies = [
 [[package]]
 name = "typst-render"
 version = "0.14.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#d9549fdac4ef8452297acc23cc902ffd68a0cb4f"
+source = "git+https://github.com/ParaN3xus/typst.git?rev=f0f0d8fcdb8052ca037e25c63fdd075a062331ea#f0f0d8fcdb8052ca037e25c63fdd075a062331ea"
 dependencies = [
  "bytemuck",
- "comemo 0.5.0",
+ "comemo",
  "hayro",
  "image",
  "pixglyph",
@@ -5243,10 +5303,10 @@ dependencies = [
 [[package]]
 name = "typst-shim"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#8f59bc3ad5e44cce7e95999bacb9d8f09903bf90"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=0752755287bf84a235681ba5570935fb58a88e34#0752755287bf84a235681ba5570935fb58a88e34"
 dependencies = [
  "cfg-if",
- "comemo 0.4.0",
+ "comemo",
  "typst",
  "typst-eval",
  "typst-syntax",
@@ -5255,10 +5315,10 @@ dependencies = [
 [[package]]
 name = "typst-svg"
 version = "0.14.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#d9549fdac4ef8452297acc23cc902ffd68a0cb4f"
+source = "git+https://github.com/ParaN3xus/typst.git?rev=f0f0d8fcdb8052ca037e25c63fdd075a062331ea#f0f0d8fcdb8052ca037e25c63fdd075a062331ea"
 dependencies = [
  "base64 0.22.1",
- "comemo 0.5.0",
+ "comemo",
  "ecow",
  "flate2",
  "hayro",
@@ -5277,7 +5337,7 @@ dependencies = [
 [[package]]
 name = "typst-syntax"
 version = "0.14.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#d9549fdac4ef8452297acc23cc902ffd68a0cb4f"
+source = "git+https://github.com/ParaN3xus/typst.git?rev=f0f0d8fcdb8052ca037e25c63fdd075a062331ea#f0f0d8fcdb8052ca037e25c63fdd075a062331ea"
 dependencies = [
  "ecow",
  "rustc-hash 2.1.1",
@@ -5295,7 +5355,7 @@ dependencies = [
 [[package]]
 name = "typst-timing"
 version = "0.14.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#d9549fdac4ef8452297acc23cc902ffd68a0cb4f"
+source = "git+https://github.com/ParaN3xus/typst.git?rev=f0f0d8fcdb8052ca037e25c63fdd075a062331ea#f0f0d8fcdb8052ca037e25c63fdd075a062331ea"
 dependencies = [
  "parking_lot",
  "serde",
@@ -5306,7 +5366,7 @@ dependencies = [
 name = "typst-ts-bench-lowering"
 version = "0.6.1-rc3"
 dependencies = [
- "comemo 0.5.0",
+ "comemo",
  "divan",
  "reflexo-typst",
  "reflexo-typst2vec",
@@ -5324,7 +5384,7 @@ dependencies = [
  "clap_complete",
  "clap_complete_fig",
  "clap_mangen",
- "comemo 0.5.0",
+ "comemo",
  "env_logger",
  "flate2",
  "human-panic",
@@ -5378,7 +5438,7 @@ name = "typst-ts-heap-profile-test"
 version = "0.6.1-rc3"
 dependencies = [
  "anyhow",
- "comemo 0.5.0",
+ "comemo",
  "dhat",
  "reflexo-typst",
  "sha2",
@@ -5392,7 +5452,7 @@ name = "typst-ts-incremental-fuzzer"
 version = "0.6.1-rc3"
 dependencies = [
  "anyhow",
- "comemo 0.5.0",
+ "comemo",
  "hex",
  "rand 0.8.5",
  "rand_xoshiro",
@@ -5412,7 +5472,7 @@ name = "typst-ts-incremental-test"
 version = "0.6.1-rc3"
 dependencies = [
  "anyhow",
- "comemo 0.5.0",
+ "comemo",
  "hex",
  "reflexo-typst",
  "reflexo-typst2vec",
@@ -5450,7 +5510,7 @@ name = "typst-ts-node-compiler"
 version = "0.6.1-rc3"
 dependencies = [
  "chrono",
- "comemo 0.5.0",
+ "comemo",
  "napi",
  "napi-build",
  "napi-derive",
@@ -5549,7 +5609,7 @@ version = "0.6.1-rc3"
 dependencies = [
  "ansi-to-html",
  "base64 0.22.1",
- "comemo 0.5.0",
+ "comemo",
  "console_error_panic_hook",
  "hex",
  "js-sys",
@@ -5569,7 +5629,7 @@ dependencies = [
 [[package]]
 name = "typst-utils"
 version = "0.14.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#d9549fdac4ef8452297acc23cc902ffd68a0cb4f"
+source = "git+https://github.com/ParaN3xus/typst.git?rev=f0f0d8fcdb8052ca037e25c63fdd075a062331ea#f0f0d8fcdb8052ca037e25c63fdd075a062331ea"
 dependencies = [
  "once_cell",
  "portable-atomic",
