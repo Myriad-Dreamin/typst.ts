@@ -244,13 +244,13 @@ typst-svg = { git = "https://github.com/ParaN3xus/typst.git", rev = "f0f0d8fcdb8
 typst-pdf = { git = "https://github.com/ParaN3xus/typst.git", rev = "f0f0d8fcdb8052ca037e25c63fdd075a062331ea" }
 typst-eval = { git = "https://github.com/ParaN3xus/typst.git", rev = "f0f0d8fcdb8052ca037e25c63fdd075a062331ea" }
 typst-html = { git = "https://github.com/ParaN3xus/typst.git", rev = "f0f0d8fcdb8052ca037e25c63fdd075a062331ea" }
-typst-shim = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "0752755287bf84a235681ba5570935fb58a88e34" }
-tinymist-derive = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "0752755287bf84a235681ba5570935fb58a88e34" }
-tinymist-std = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "0752755287bf84a235681ba5570935fb58a88e34" }
-tinymist-task = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "0752755287bf84a235681ba5570935fb58a88e34" }
-tinymist-package = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "0752755287bf84a235681ba5570935fb58a88e34" }
-tinymist-world = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "0752755287bf84a235681ba5570935fb58a88e34" }
-tinymist-project = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "0752755287bf84a235681ba5570935fb58a88e34" }
+typst-shim = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "e197794a902c5339c32de06b43d6554f1de88910" }
+tinymist-derive = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "e197794a902c5339c32de06b43d6554f1de88910" }
+tinymist-std = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "e197794a902c5339c32de06b43d6554f1de88910" }
+tinymist-task = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "e197794a902c5339c32de06b43d6554f1de88910" }
+tinymist-package = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "e197794a902c5339c32de06b43d6554f1de88910" }
+tinymist-world = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "e197794a902c5339c32de06b43d6554f1de88910" }
+tinymist-project = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "e197794a902c5339c32de06b43d6554f1de88910" }
 
 # typst-shim = { path = "../tinymist/crates/typst-shim" }
 # tinymist-derive = { path = "../tinymist/crates/tinymist-derive" }
