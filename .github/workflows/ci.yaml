@@ -46,18 +46,18 @@ jobs:
       # todo: https://github.com/typst/typst/pull/2767
       #  --all-features
       - name: Clippy check
-        run: cargo clippy --profile release-ci --workspace --all-targets
+        run: cargo clippy --profile dist --workspace --all-targets
       - name: Documentation check
-        run: cargo doc --profile release-ci --workspace --no-deps
+        run: cargo doc --profile dist --workspace --no-deps
       - name: Build
         run: |
-          cargo build --profile release-ci --bin typst-ts-dev-server
+          cargo build --profile dist --bin typst-ts-dev-server
       - name: Prepare artifacts
         run: |
-          cargo run --profile release-ci --bin typst-ts-dev-server -- compile corpus --cat bugs,layout,lint,math,meta,text,visualize
+          cargo run --profile dist --bin typst-ts-dev-server -- compile corpus --cat bugs,layout,lint,math,meta,text,visualize
       - name: Test
         run: |
-          cargo test --profile release-ci --no-fail-fast \
+          cargo test --profile dist --no-fail-fast \
             -p reflexo-typst \
             -p typst-ts-cli  -p typst-ts-integration-test
       - name: Archive Test Results (WebAssembly Renderer in Chrome)

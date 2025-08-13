@@ -49,22 +49,14 @@ exclude = ["projects"]
 
 [profile.release]
 opt-level = 3
-lto = "fat"
 debug = false
 strip = true
 
-[profile.relwithdebinfo]
+# The profile that 'dist' will build with
+[profile.dist]
 inherits = "release"
-lto = "thin"
-debug = true
-strip = false
-
-[profile.release-ci]
-inherits = "release"
-opt-level = 1
 incremental = true
-debug = false
-strip = true
+lto = "thin"
 
 # todo: https://github.com/typst/typst/pull/2771
 # nightly feature

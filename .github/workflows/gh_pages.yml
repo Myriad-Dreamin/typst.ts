@@ -52,7 +52,7 @@ jobs:
           curl -L https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.1.0/charter-font-assets.tar.gz | tar -xvz -C assets/fonts
       - name: Build
         run: |
-          cargo build --profile release-ci --bin typst-ts-cli
+          cargo build --profile dist --bin typst-ts-cli
       - name: Install packages
         uses: borales/actions-yarn@v4
         with:
@@ -66,7 +66,7 @@ jobs:
       - name: Prepare artifacts (Paged Target)
         run: |
           shiroa build --font-path assets/fonts --path-to-root /typst.ts/cookery/paged/ -w . -d ../../github-pages/cookery/ docs/cookery
-          cargo run --profile release-ci --bin typst-ts-cli -- compile --workspace . --entry ./github-pages/docs/readme.typ --input=x-target=pdf-ayu --format=pdf --format=vector
+          cargo run --profile dist --bin typst-ts-cli -- compile --workspace . --entry ./github-pages/docs/readme.typ --input=x-target=pdf-ayu --format=pdf --format=vector
 
           mv ./github-pages/cookery/ ./github-pages/dist-paged/
           mkdir -p ./github-pages/cookery/
