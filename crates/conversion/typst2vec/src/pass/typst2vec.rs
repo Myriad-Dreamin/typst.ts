@@ -217,6 +217,26 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         }
     }
 
+    pub fn finalize_ref(&mut self) -> Module {
+        let (fonts, glyphs) = self.glyphs.finalize();
+        Module {
+            fonts,
+            glyphs,
+            items: {
+                let mut items = ItemMap::default();
+
+                for shard in self.items.as_mut_slice() {
+                    let shard = shard.read();
+                    for (fg, (_lifetime, item)) in shard.iter() {
+                        items.insert(*fg, item.clone());
+                    }
+                }
+
+                items
+            },
+        }
+    }
+
     pub fn doc(&self, doc: &TypstDocument) -> Vec<Page> {
         match doc {
             TypstDocument::Html(doc) => self.html(doc),

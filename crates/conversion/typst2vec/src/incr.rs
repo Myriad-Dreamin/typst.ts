@@ -1,12 +1,8 @@
-use std::sync::Arc;
-
 use reflexo::error::prelude::*;
 use reflexo::typst::TypstDocument;
+use reflexo::vector::ir::{ModuleMetadata, Page};
 
-use super::ir::{
-    FlatModule, IncrFontPack, IncrGlyphPack, ItemPack, LayoutRegion, LayoutRegionNode,
-    ModuleMetadata, VecDocument,
-};
+use super::ir::FlatModule;
 use super::pass::IncrTypst2VecPass;
 use crate::debug_loc::{ElementPoint, SourceSpanOffset};
 
@@ -16,9 +12,9 @@ pub use reflexo::vector::incr::{IncrDocClient, IncrDocClientKern};
 /// maintains the data of the incremental rendering at server side
 #[derive(Default)]
 pub struct IncrDocServer {
-    /// Expected exact state of the current Compiler.
+    /// The references of pages of the document.
     /// Initially it is None meaning no completed compilation.
-    doc_view: Option<VecDocument>,
+    pages: Option<Vec<Page>>,
 
     /// Maintaining typst -> vector status
     typst2vec: IncrTypst2VecPass,
@@ -44,6 +40,7 @@ impl IncrDocServer {
 
         // run typst2vec pass
         let pages = self.typst2vec.doc(output);
+        self.pages = Some(pages.clone());
 
         // let new_items = builder.new_items.get_mut().len();
         // let new_fonts = builder.glyphs.new_fonts.get_mut().len();
@@ -82,27 +79,11 @@ impl IncrDocServer {
             // }
         }
 
-        let fonts = IncrFontPack {
-            items: delta.fonts,
-            incremental_base: 0, // todo: correct incremental_base
-        };
-
-        let glyphs = IncrGlyphPack {
-            items: delta.glyphs,
-            incremental_base: 0, // todo: correct incremental_base
-        };
-
-        let pages = LayoutRegionNode::new_pages(pages.clone());
-        let pages = Arc::new(vec![LayoutRegion::new_single(pages)]);
-
-        let delta = FlatModule::new(vec![
-            ModuleMetadata::GarbageCollection(gc_items),
-            ModuleMetadata::Font(Arc::new(fonts)),
-            ModuleMetadata::Glyph(Arc::new(glyphs)),
-            ModuleMetadata::Item(ItemPack(delta.items.clone().into_iter().collect())),
-            ModuleMetadata::Layout(pages),
-        ])
-        .to_bytes();
+        let mut m = FlatModule::with_capacity(5);
+        m.push(ModuleMetadata::GarbageCollection(gc_items));
+        m.add_module(delta);
+        m.add_single_layout(pages);
+        let delta = m.to_bytes();
 
         // log::info!("svg render time (incremental bin): {:?}", instant.elapsed());
         [b"diff-v1,", delta.as_slice()].concat()
@@ -110,22 +91,15 @@ impl IncrDocServer {
 
     /// Pack the current entirely into a binary blob.
     pub fn pack_current(&mut self) -> Option<Vec<u8>> {
-        let doc = self.doc_view.as_ref()?;
+        let pages = self.pages.as_ref()?.clone();
+        let full = self.typst2vec.finalize_ref();
 
-        let (fonts, glyphs) = self.typst2vec.glyphs.finalize();
+        let mut m = FlatModule::with_capacity(4);
+        m.add_module(full);
+        m.add_single_layout(pages);
+        let full = m.to_bytes();
 
-        let pages = LayoutRegionNode::new_pages(doc.pages.clone());
-        let pages = Arc::new(vec![LayoutRegion::new_single(pages)]);
-
-        let delta = FlatModule::new(vec![
-            // todo: correct incremental_base
-            ModuleMetadata::Font(Arc::new(fonts.into())),
-            ModuleMetadata::Glyph(Arc::new(glyphs.into())),
-            ModuleMetadata::Item(ItemPack(doc.module.items.clone().into_iter().collect())),
-            ModuleMetadata::Layout(pages),
-        ])
-        .to_bytes();
-        Some([b"new,", delta.as_slice()].concat())
+        Some([b"new,", full.as_slice()].concat())
     }
 
     /// Gets element paths by the given span.
