@@ -8,10 +8,6 @@ edition.workspace = true
 homepage.workspace = true
 repository.workspace = true
 
-
-[lib]
-crate-type = ["cdylib"]
-
 [dependencies]
 
 ansi-to-html.workspace = true
