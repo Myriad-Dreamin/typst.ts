@@ -1,5 +1,17 @@
 name: reflexo::ci
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+      - nightly
+    tags:
+      - '*'
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - main
+      - nightly
+  workflow_dispatch:
 
 env:
   RUSTFLAGS: '-Dwarnings'
@@ -46,18 +58,18 @@ jobs:
       # todo: https://github.com/typst/typst/pull/2767
       #  --all-features
       - name: Clippy check
-        run: cargo clippy --profile release-ci --workspace --all-targets
+        run: cargo clippy --profile dist --workspace --all-targets
       - name: Documentation check
-        run: cargo doc --profile release-ci --workspace --no-deps
+        run: cargo doc --profile dist --workspace --no-deps
       - name: Build
         run: |
-          cargo build --profile release-ci --bin typst-ts-dev-server
+          cargo build --profile dist --bin typst-ts-dev-server
       - name: Prepare artifacts
         run: |
-          cargo run --profile release-ci --bin typst-ts-dev-server -- compile corpus --cat bugs,layout,lint,math,meta,text,visualize
+          cargo run --profile dist --bin typst-ts-dev-server -- compile corpus --cat bugs,layout,lint,math,meta,text,visualize
       - name: Test
         run: |
-          cargo test --profile release-ci --no-fail-fast \
+          cargo test --profile dist --no-fail-fast \
             -p reflexo-typst \
             -p typst-ts-cli  -p typst-ts-integration-test
       - name: Archive Test Results (WebAssembly Renderer in Chrome)
@@ -66,3 +78,34 @@ jobs:
         with:
           name: wasm-renderer-chrome.test_points.json.gz
           path: target/typst-artifacts/integrations/renderer/test_points.chrome.json.gz
+
+  prepare-build:
+    runs-on: 'ubuntu-latest'
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: tag # get the tag from package.json
+        run: echo "tag=v$(jq -r '.version' package.json)" >> $GITHUB_OUTPUT
+      - name: Show tag
+        run: echo "Tag is ${{ steps.tag.outputs.tag }}"
+
+  announce:
+    needs: [prepare-build]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/announce.yml
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    secrets: inherit
+    with:
+      tag: ${{ needs.prepare-build.outputs.tag }}
+
+  build:
+    needs: [prepare-build] # , announce
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    secrets: inherit
+    with:
+      tag: ${{ (startsWith(github.ref, 'refs/tags/') && needs.prepare-build.outputs.tag) || '' }}
+      targets: ${{ (!startsWith(github.ref, 'refs/tags/') && 'aarch64-apple-darwin,x86_64-pc-windows-msvc,x86_64-unknown-linux-gnu') || 'all' }}
