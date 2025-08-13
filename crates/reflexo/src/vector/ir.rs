@@ -145,14 +145,10 @@ impl MultiVecDocument {
     }
 
     pub fn to_bytes(self) -> Vec<u8> {
-        let flatten_module = FlatModule::new(vec![
-            ModuleMetadata::Item(ItemPack(self.module.items.into_iter().collect())),
-            ModuleMetadata::Font(Arc::new(self.module.fonts.into())),
-            ModuleMetadata::Glyph(Arc::new(self.module.glyphs.into())),
-            ModuleMetadata::Layout(Arc::new(self.layouts)),
-        ]);
-
-        flatten_module.to_bytes()
+        let mut m = FlatModule::with_capacity(4);
+        m.add_module(self.module);
+        m.push(ModuleMetadata::Layout(Arc::new(self.layouts)));
+        m.to_bytes()
     }
 }
 
