@@ -8,9 +8,13 @@ edition.workspace = true
 homepage.workspace = true
 repository.workspace = true
 
+
 [package.metadata.wasm-pack.profile.release.wasm-bindgen]
 debug-js-glue = true
 demangle-name-section = true
+
+[lib]
+crate-type = ["cdylib"]
 
 [dependencies]
 
