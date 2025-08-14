@@ -14,7 +14,7 @@ debug-js-glue = true
 demangle-name-section = true
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 
