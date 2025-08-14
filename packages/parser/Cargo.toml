@@ -8,6 +8,10 @@ edition.workspace = true
 homepage.workspace = true
 repository.workspace = true
 
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
 [dependencies]
 
 typst.workspace = true
