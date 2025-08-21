@@ -34,8 +34,6 @@
         with pkgs; {
           devShells.default = mkShell {
             inherit buildInputs nativeBuildInputs;
-            stdenv = pkgs.stdenvAdapters.useMoldLinker pkgs.clangStdenv;
-            RUST_SRC_PATH = "${rustPlatform.rustLibSrc}";
           };
         }
     );
