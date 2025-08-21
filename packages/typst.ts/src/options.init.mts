@@ -94,7 +94,7 @@ const _cjkFonts: string[] = [
   'NotoSerifCJKsc-Regular.otf',
 ];
 /** @internal */
-const _emojiFonts: string[] = ['TwitterColorEmoji.ttf', 'NotoColorEmoji.ttf'];
+const _emojiFonts: string[] = ['TwitterColorEmoji.ttf', 'NotoColorEmoji-Regular-COLR.subset.ttf'];
 
 type AvailableFontAsset = 'text' | 'cjk' | 'emoji';
 
