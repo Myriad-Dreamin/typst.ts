@@ -83,6 +83,16 @@ pub struct CompileArgs {
 
     /// Adds a string key-value pair visible through `sys.inputs`
     pub inputs: Option<HashMap<String, String>>,
+
+    /// The path at which local packages (`@local` packages) are stored.
+    pub package_path: Option<String>,
+
+    /// The path at which non-local packages (`@preview` packages) should be
+    /// stored when downloaded.
+    pub package_cache_path: Option<String>,
+
+    /// The path to the certificate file to use for HTTPS requests.
+    pub cert_path: Option<String>,
 }
 
 pub fn abs_user_path(path: &str) -> Result<PathBuf> {
@@ -130,7 +140,11 @@ pub fn create_universe(args: Option<CompileArgs>) -> Result<TypstSystemUniverse>
         ..CompileFontOpts::default()
     })?;
 
-    let registry = Arc::new(HttpRegistry::default());
+    let registry = Arc::new(HttpRegistry::new(
+        args.cert_path.map(|p| Path::new(&p).into()),
+        args.package_path.map(|p| Path::new(&p).into()),
+        args.package_cache_path.map(|p| Path::new(&p).into()),
+    ));
     let resolver = Arc::new(RegistryPathMapper::new(registry.clone()));
     let verse = TypstSystemUniverse::new_raw(
         EntryState::new_rooted(workspace_dir.into(), None),

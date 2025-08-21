@@ -26,21 +26,9 @@
         rustToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
         nativeBuildInputs = with pkgs; [rustToolchain pkg-config];
         buildInputs = with pkgs; [
-          openssl
-          sqlite
-          cargo-watch
-          sqlx-cli
-          stripe-cli
-          pulumi
-          pulumiPackages.pulumi-nodejs
           nodejs_24
-          #bun
-          cargo-lambda
-          awscli2
-          concurrently
-          tinymist
-          pandoc
-          pnpm 
+          yarn
+          turbo
         ];
       in
         with pkgs; {
