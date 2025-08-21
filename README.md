@@ -1,3 +1,6 @@
+# NOTE READ THIS FIRST (DO NOT DEPEND ON THIS PACKAGE )
+Personal fork of the https://github.com/Myriad-Dreamin/typst.ts repo in order to patch some behavior in the node compiler package. DO NOT USE THIS OR DEPEND ON THIS AS I WILL NOT UPDATE IT AT ALL. Use the original instead.
+---
 # typst.ts
 
 [Markdown](https://github.com/Myriad-Dreamin/typst.ts/blob/main/README.md) | [typst](./docs/cookery/introduction.typ) |
