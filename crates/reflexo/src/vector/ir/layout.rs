@@ -362,13 +362,13 @@ impl LayoutSelector for LayoutSelectorExpr {
             LayoutSelectorExpr::Any | LayoutSelectorExpr::First => layouts.first(),
             LayoutSelectorExpr::Last => layouts.last(),
             LayoutSelectorExpr::ScalarLB(v) => {
-                layouts.iter().filter(|(scalar, _)| scalar.0 < *v).last()
+                layouts.iter().filter(|(scalar, _)| scalar.0 < *v).next_back()
             }
             LayoutSelectorExpr::ScalarUB(v) => layouts
                 .iter()
                 .rev()
                 .filter(|(scalar, _)| scalar.0 > *v)
-                .last(),
+                .next_back(),
             LayoutSelectorExpr::StrEQ(..) => {
                 return Err(
                     error_once!("LayoutMappingSelector: cannot select kind by scalar type", kind: kind.to_owned()),
@@ -395,7 +395,7 @@ impl LayoutSelector for LayoutSelectorExpr {
             LayoutSelectorExpr::StrEQ(v) => layouts
                 .iter()
                 .filter(|(s, _)| s.as_ref() == v)
-                .last()
+                .next_back()
                 .map(|(_, v)| v.clone()),
             LayoutSelectorExpr::ScalarLB(..) | LayoutSelectorExpr::ScalarUB(..) => {
                 return Err(
