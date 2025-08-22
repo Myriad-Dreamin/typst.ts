@@ -24,7 +24,7 @@ reflexo-typst = { workspace = true }
 reflexo-vec2svg = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
-tinymist-project = { workspace = true, features = ["system"] }
+tinymist-project = { workspace = true, features = ["system", "lsp"] }
 tokio.workspace = true
 typst-svg.workspace = true
 typst-ts-cli.workspace = true

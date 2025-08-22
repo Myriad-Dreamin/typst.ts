@@ -137,7 +137,7 @@ async fn watch(watch_sub: WatchSubCommands) {
     let mut children = vec![];
     // todo: color
     for (grp, cmd) in groups {
-        log::info!("spawn group: {}", grp);
+        log::info!("spawn group: {grp}");
         let args = cmd.split(' ').collect::<Vec<_>>();
         let mut cmd = tokio::process::Command::new(if args[0] == "yarn" {
             yarn_cmd()
@@ -172,14 +172,14 @@ async fn watch(watch_sub: WatchSubCommands) {
                                 continue;
                             };
 
-                            eprintln!("{}: {}", grp, line);
+                            eprintln!("{grp}: {line}");
                         }
                         Ok(line) = stderr.next_line() => {
                             let Some(line) = line else {
                                 continue;
                             };
 
-                            eprintln!("{}: {}", grp, line);
+                            eprintln!("{grp}: {line}");
                         }
                         else => {
                             return Ok(());
@@ -189,7 +189,7 @@ async fn watch(watch_sub: WatchSubCommands) {
             }
 
             let _ = watch_stream(child, grp).await;
-            eprintln!("{}: exited", grp);
+            eprintln!("{grp}: exited");
             std::process::exit(0);
         }));
     }

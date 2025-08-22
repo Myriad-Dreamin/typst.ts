@@ -16,7 +16,7 @@ pub fn mutate(code: String) -> io::Result<String> {
     let syntax = typst_syntax::parse(&code);
     let errors = syntax.errors();
     if !errors.is_empty() {
-        panic!("Syntax errors: {:?}", errors);
+        panic!("Syntax errors: {errors:?}");
     }
 
     tr.mutate_syntax(&syntax)?;
@@ -119,7 +119,7 @@ impl Mutator {
 
     fn mutate_text(&mut self, text: &str) -> io::Result<()> {
         if self.rng.gen_bool(0.96) {
-            write!(self.output, "{}", text)?;
+            write!(self.output, "{text}")?;
             return Ok(());
         }
 
@@ -146,7 +146,7 @@ impl Mutator {
             char::from_u32(w)
         })
         .collect::<String>();
-        write!(self.output, "{}", mutated)?;
+        write!(self.output, "{mutated}")?;
         Ok(())
     }
 

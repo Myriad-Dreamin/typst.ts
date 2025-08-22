@@ -19,7 +19,7 @@ pub fn test_compiler(workspace_dir: &Path, entry_file_path: &Path) {
     let mut content = { std::fs::read_to_string(entry_file_path).expect("Could not read file") };
 
     for i in 0..200 {
-        eprintln!("Iteration {}", i);
+        eprintln!("Iteration {i}");
 
         content.push_str(" user edit");
 

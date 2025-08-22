@@ -53,7 +53,7 @@ pub fn test_compiler(workspace_dir: &Path, entry_file_path: &Path) {
     let _ = incr_svg_client.render_in_window(&mut incr_client, window);
 
     for i in 0..20 {
-        eprintln!("Iteration {}", i);
+        eprintln!("Iteration {i}");
 
         // content = content.replace("@netwok2020", "@netwok2020 x");
         content += "\n\nx";
@@ -76,7 +76,7 @@ pub fn test_compiler(workspace_dir: &Path, entry_file_path: &Path) {
         comemo::evict(10);
     }
 
-    eprintln!("diff: {:?}", diff);
+    eprintln!("diff: {diff:?}");
 }
 
 pub fn main() {
@@ -97,7 +97,7 @@ pub fn main() {
     // workspace_dir.join(r#"masterproef/main.typ"#);
 
     for i in 0..10 {
-        eprintln!("Over Iteration {}", i);
+        eprintln!("Over Iteration {i}");
         test_compiler(&workspace_dir, &entry_file_path);
     }
 }

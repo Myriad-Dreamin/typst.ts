@@ -265,13 +265,13 @@ typst-html = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst
 
 # fontdb = { path = "../fontdb" }
 
-typst-shim = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "c70aad10792c713558563b96513581283179243b" }
-tinymist-derive = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "c70aad10792c713558563b96513581283179243b" }
-tinymist-std = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "c70aad10792c713558563b96513581283179243b" }
-tinymist-task = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "c70aad10792c713558563b96513581283179243b" }
-tinymist-package = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "c70aad10792c713558563b96513581283179243b" }
-tinymist-world = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "c70aad10792c713558563b96513581283179243b" }
-tinymist-project = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "c70aad10792c713558563b96513581283179243b" }
+typst-shim = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "4acda87e5973d197441ebfe5f0c8c8535be5ff9c" }
+tinymist-derive = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "4acda87e5973d197441ebfe5f0c8c8535be5ff9c" }
+tinymist-std = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "4acda87e5973d197441ebfe5f0c8c8535be5ff9c" }
+tinymist-task = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "4acda87e5973d197441ebfe5f0c8c8535be5ff9c" }
+tinymist-package = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "4acda87e5973d197441ebfe5f0c8c8535be5ff9c" }
+tinymist-world = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "4acda87e5973d197441ebfe5f0c8c8535be5ff9c" }
+tinymist-project = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "4acda87e5973d197441ebfe5f0c8c8535be5ff9c" }
 
 # [patch."https://github.com/Myriad-Dreamin/tinymist.git"]
 # typst-shim = { path = "../tinymist/crates/typst-shim" }
