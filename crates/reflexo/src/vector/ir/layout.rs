@@ -361,9 +361,10 @@ impl LayoutSelector for LayoutSelectorExpr {
         let t = match self {
             LayoutSelectorExpr::Any | LayoutSelectorExpr::First => layouts.first(),
             LayoutSelectorExpr::Last => layouts.last(),
-            LayoutSelectorExpr::ScalarLB(v) => {
-                layouts.iter().filter(|(scalar, _)| scalar.0 < *v).next_back()
-            }
+            LayoutSelectorExpr::ScalarLB(v) => layouts
+                .iter()
+                .filter(|(scalar, _)| scalar.0 < *v)
+                .next_back(),
             LayoutSelectorExpr::ScalarUB(v) => layouts
                 .iter()
                 .rev()
