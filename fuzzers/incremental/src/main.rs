@@ -45,7 +45,7 @@ pub fn test_compiler(workspace_dir: &Path, entry_file_path: &Path) {
     std::fs::write("mutate_sequence.log", "").unwrap();
 
     for i in 0..200 {
-        eprintln!("Iteration {}", i);
+        eprintln!("Iteration {i}");
 
         if cfg!(feature = "generate") {
             content.push_str(" #lorem(50)");

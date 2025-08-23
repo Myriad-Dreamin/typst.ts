@@ -37,22 +37,21 @@ fn exit_by_unknown_format(f: &str) -> ! {
     match AVAILABLE_FORMATS.iter().find(|(k, _)| **k == *f) {
         // feat is a bug
         Some((_, feat @ REPORT_BUG_MESSAGE)) => {
-            panic!("feature not enabled for format {:?}: {}", f, feat)
+            panic!("feature not enabled for format {f:?}: {feat}")
         }
         // feat is a feature hint
         Some((_, feat)) => {
             clap::Error::raw(clap::error::ErrorKind::InvalidValue,
                 format!(
-                    r#"feature not enabled for format {:?}: suggested feature "{}". To figure out enabled features, use command "$program env features"
-"#,
-                    f, feat
+                    r#"feature not enabled for format {f:?}: suggested feature "{feat}". To figure out enabled features, use command "$program env features"
+"#
                 )).exit()
         }
         // f is an unknown format
         None => {
             clap::Error::raw(clap::error::ErrorKind::UnknownArgument,
                 format!(
-                    "unknown format: {}\n", f
+                    "unknown format: {f}\n"
                 )).exit()
         }
     }

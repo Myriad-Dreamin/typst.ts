@@ -15,6 +15,6 @@ pub fn main() {
         "compile" => {
             typst_ts_heap_profile_test::test_compiler(workspace_dir, entry_file_path);
         }
-        _ => panic!("Unknown action: {}", action),
+        _ => panic!("Unknown action: {action}"),
     }
 }

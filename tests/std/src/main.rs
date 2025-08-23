@@ -114,7 +114,7 @@ fn main() -> anyhow::Result<()> {
     test_files.sort();
     let test_files = test_files
         .iter()
-        .map(|s| format!("{:?}", s))
+        .map(|s| format!("{s:?}"))
         .collect::<Vec<_>>()
         .join(",\n    ");
 
@@ -125,10 +125,9 @@ fn main() -> anyhow::Result<()> {
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 pub const STD_TEST_FILES: &[(&str, &str)] = &[
-    {}
+    {test_files}
 ];
-"#,
-            test_files
+"#
         ),
     )?;
 

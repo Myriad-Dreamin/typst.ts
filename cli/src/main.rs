@@ -129,7 +129,7 @@ pub fn query(args: QueryArgs) -> ! {
                     .map(|e| e.as_str())
                     .unwrap_or("null");
                 let serialized = serialize(&title, "json").context("serialize query")?;
-                println!("{}", serialized);
+                println!("{serialized}");
                 return Ok(());
             }
 
@@ -231,15 +231,15 @@ fn list_packages(args: ListPackagesArgs) -> ! {
                     let name = get_string(pkg_info.get("name").unwrap());
                     let version = get_string(pkg_info.get("version").unwrap());
 
-                    let pkg_name = format!("@{}/{}:{}", ns_pretty, name, version);
+                    let pkg_name = format!("@{ns_pretty}/{name}:{version}");
 
-                    println!("{} in {}", pkg_name, dir_pretty);
+                    println!("{pkg_name} in {dir_pretty}");
                     if args.long {
                         for (k, v) in pkg_info {
                             if k == "name" || k == "version" {
                                 continue;
                             }
-                            println!("  {} = {:?}", k, v);
+                            println!("  {k} = {v:?}");
                         }
                     }
                 }
@@ -271,7 +271,7 @@ fn link_packages(args: LinkPackagesArgs, should_delete: bool) -> ! {
     let name = get_string(pkg_info.get("name").unwrap());
     let version = get_string(pkg_info.get("version").unwrap());
 
-    let pkg_dirname = format!("{}/{}", name, version);
+    let pkg_dirname = format!("{name}/{version}");
 
     let local_path = world.registry.local_path().unwrap();
     let pkg_link_target = make_absolute(&local_path.join("preview").join(pkg_dirname));
@@ -282,7 +282,7 @@ fn link_packages(args: LinkPackagesArgs, should_delete: bool) -> ! {
     let src_pretty = unix_slash(&pkg_link_source);
     let dst_pretty = unix_slash(&pkg_link_target);
 
-    eprintln!("{action} package: {} -> {}", src_pretty, dst_pretty);
+    eprintln!("{action} package: {src_pretty} -> {dst_pretty}");
 
     if should_delete {
         if !pkg_link_target.exists() {
