@@ -13,9 +13,9 @@
     "test-install": "yarn playwright install-deps && yarn playwright install"
   },
   "dependencies": {
-    "@myriaddreamin/typst-ts-renderer": "^0.6.1-rc2",
-    "@myriaddreamin/typst-ts-web-compiler": "^0.6.1-rc2",
-    "@myriaddreamin/typst.ts": "^0.6.1-rc2",
+    "@myriaddreamin/typst-ts-renderer": "^0.6.1-rc3",
+    "@myriaddreamin/typst-ts-web-compiler": "^0.6.1-rc3",
+    "@myriaddreamin/typst.ts": "^0.6.1-rc3",
     "react": "^19.x",
     "react-dom": "^19.x"
   },
