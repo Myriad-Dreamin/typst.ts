@@ -1,102 +1,105 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tiny Typst Previewer Example</title>
-    <!-- Loads the full bundle or the lite version from jsdelivr -->
-    <!-- src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts@0.6.1-rc2/dist/esm/index.js" -->
-    <script
-      type="module"
-      src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one-lite.bundle.js"
-      id="typst"
-    ></script>
-  </head>
-  <body>
-    <!-- Provides a button to export to PDF after finish editing -->
-    <button id="export">Export To PDF</button>
-    <!-- Accepts user input using a text area element -->
-    <textarea id="input">Hello, Typst!</textarea>
-    <div id="content"></div>
-    <script>
-      const input = document.getElementById('input');
-      const contentDiv = document.getElementById('content');
 
-      // Exports SVG and puts it into the `contentDiv`
-      const previewSvg = mainContent => {
-        $typst.svg({ mainContent }).then(svg => {
-          console.log(`rendered! SvgElement { len: ${svg.length} }`);
-          // append svg text
-          contentDiv.innerHTML = svg;
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tiny Typst Previewer Example</title>
+  <!-- Loads the full bundle or the lite version from jsdelivr -->
+  <!-- src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts@0.6.1-rc3/dist/esm/index.js" -->
+  <script type="module"
+    src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst.ts/dist/esm/contrib/all-in-one-lite.bundle.js"
+    id="typst"></script>
+</head>
 
-          const svgElem = contentDiv.firstElementChild;
-          const width = Number.parseFloat(svgElem.getAttribute('width'));
-          const height = Number.parseFloat(svgElem.getAttribute('height'));
-          const cw = document.body.clientWidth - 40;
-          svgElem.setAttribute('width', cw);
-          svgElem.setAttribute('height', (height * cw) / width);
-        });
-      };
+<body>
+  <!-- Provides a button to export to PDF after finish editing -->
+  <button id="export">Export To PDF</button>
+  <!-- Accepts user input using a text area element -->
+  <textarea id="input">Hello, Typst!</textarea>
+  <div id="content"></div>
+  <script>
+    const input = document.getElementById('input');
+    const contentDiv = document.getElementById('content');
 
-      // Exports PDF and downloads it
-      const exportPdf = mainContent =>
-        $typst.pdf({ mainContent }).then(pdfData => {
-          var pdfFile = new Blob([pdfData], { type: 'application/pdf' });
+    // Exports SVG and puts it into the `contentDiv`
+    const previewSvg = mainContent => {
+      $typst.svg({ mainContent }).then(svg => {
+        console.log(`rendered! SvgElement { len: ${svg.length} }`);
+        // append svg text
+        contentDiv.innerHTML = svg;
 
-          // Creates element with <a> tag
-          const link = document.createElement('a');
-          // Sets file content in the object URL
-          link.href = URL.createObjectURL(pdfFile);
-          // Sets file name
-          link.target = '_blank';
-          // Triggers a click event to <a> tag to save file.
-          link.click();
-          URL.revokeObjectURL(link.href);
-        });
-
-      /// Listens the 'load' event to initialize after loaded the bundle file from CDN (jsdelivr).
-      document.getElementById('typst').addEventListener('load', function () {
-        /// Initializes the Typst compiler and renderer. Since we use "all-in-one-lite.bundle.js" instead of
-        /// "all-in-one.bundle.js" we need to tell that the wasm module files can be loaded from CDN (jsdelivr).
-        $typst.setCompilerInitOptions({
-          getModule: () =>
-            'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm',
-        });
-        $typst.setRendererInitOptions({
-          getModule: () =>
-            'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
-        });
-
-        /// Binds exportPdf action to the button
-        document.getElementById('export').onclick = () => exportPdf(input.value);
-        /// Binds previewSvg action to the textarea
-        input.oninput = () => {
-          previewSvg(input.value);
-          input.style.height = '5px';
-          input.style.height = input.scrollHeight + 'px';
-        };
-        /// Triggers the first preview.
-        previewSvg(input.value);
+        const svgElem = contentDiv.firstElementChild;
+        const width = Number.parseFloat(svgElem.getAttribute('width'));
+        const height = Number.parseFloat(svgElem.getAttribute('height'));
+        const cw = document.body.clientWidth - 40;
+        svgElem.setAttribute('width', cw);
+        svgElem.setAttribute('height', (height * cw) / width);
       });
-    </script>
-    <style>
-      body {
-        margin: 0px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-      #export {
-        width: 100%;
-        height: 20px;
-      }
-      #input {
-        width: 100%;
-        margin: 0;
-        padding: 0;
-        border-width: 0;
-        height: auto;
-      }
-    </style>
-  </body>
+    };
+
+    // Exports PDF and downloads it
+    const exportPdf = mainContent =>
+      $typst.pdf({ mainContent }).then(pdfData => {
+        var pdfFile = new Blob([pdfData], { type: 'application/pdf' });
+
+        // Creates element with <a> tag
+        const link = document.createElement('a');
+        // Sets file content in the object URL
+        link.href = URL.createObjectURL(pdfFile);
+        // Sets file name
+        link.target = '_blank';
+        // Triggers a click event to <a> tag to save file.
+        link.click();
+        URL.revokeObjectURL(link.href);
+      });
+
+    /// Listens the 'load' event to initialize after loaded the bundle file from CDN (jsdelivr).
+    document.getElementById('typst').addEventListener('load', function () {
+      /// Initializes the Typst compiler and renderer. Since we use "all-in-one-lite.bundle.js" instead of
+      /// "all-in-one.bundle.js" we need to tell that the wasm module files can be loaded from CDN (jsdelivr).
+      $typst.setCompilerInitOptions({
+        getModule: () =>
+          'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm',
+      });
+      $typst.setRendererInitOptions({
+        getModule: () =>
+          'https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
+      });
+
+      /// Binds exportPdf action to the button
+      document.getElementById('export').onclick = () => exportPdf(input.value);
+      /// Binds previewSvg action to the textarea
+      input.oninput = () => {
+        previewSvg(input.value);
+        input.style.height = '5px';
+        input.style.height = input.scrollHeight + 'px';
+      };
+      /// Triggers the first preview.
+      previewSvg(input.value);
+    });
+  </script>
+  <style>
+    body {
+      margin: 0px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #export {
+      width: 100%;
+      height: 20px;
+    }
+
+    #input {
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      border-width: 0;
+      height: auto;
+    }
+  </style>
+</body>
+
 </html>

@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst-ts-parser",
-  "version": "0.6.1-rc2",
+  "version": "0.6.1-rc3",
   "description": "WASM module for Parsing Typst documents in JavaScript environment.",
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
