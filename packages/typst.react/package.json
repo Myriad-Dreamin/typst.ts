@@ -27,7 +27,7 @@
     }
   },
   "files": [
-    "dist/**/*.{mts,mjs,js,ts}"
+    "dist/**/*.{mts,mjs,js,ts,css}"
   ],
   "scripts": {
     "dev": "cd demo && vite dev -c vite.config.mjs",
