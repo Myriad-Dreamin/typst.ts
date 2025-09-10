@@ -35,7 +35,7 @@ pub fn logical_exit(is_success: bool) -> ! {
 pub fn exit_with_error<E: std::error::Error>(err: E) -> ! {
     clap::Error::raw(
         clap::error::ErrorKind::ValueValidation,
-        format!("typst.ts error: {}", err),
+        format!("typst.ts error: {err}"),
     )
     .exit()
 }

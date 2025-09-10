@@ -17,7 +17,7 @@ use reflexo_typst::{
     TypstSystemUniverse, TypstSystemWorld, MEMORY_MAIN_ENTRY,
 };
 use tinymist_project::{
-    CompileHandler, CompileReasons, CompileServerOpts, CompiledArtifact, Interrupt,
+    CompileHandler, CompileServerOpts, CompileSignal, CompiledArtifact, Interrupt,
     ProjectCompiler as ProjectCompilerBase,
 };
 
@@ -752,8 +752,8 @@ impl CompileHandler<SystemCompilerFeat, ProjectInsStateExt> for ProjectHandler {
         // let Some(watch) = self.watch.lock().unwrap().get(&state);
 
         for proj in state.projects() {
-            const VFS_SUB: CompileReasons = CompileReasons {
-                by_memory_events: true,
+            const VFS_SUB: CompileSignal = CompileSignal {
+                by_mem_events: true,
                 by_fs_events: true,
                 by_entry_update: false,
             };
@@ -775,7 +775,7 @@ impl CompileHandler<SystemCompilerFeat, ProjectInsStateExt> for ProjectHandler {
                 }
             {
                 eprintln!("Project: skip compilation for {id:?} due to harmless vfs changes");
-                proj.reason = CompileReasons::default();
+                proj.reason = CompileSignal::default();
                 continue;
             }
 

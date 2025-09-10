@@ -120,7 +120,7 @@ To get it in browser, you can load a all-in-one bundle script from CDN and use i
 ```html
 <script
   type="module"
-  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts@0.6.1-rc2/dist/esm/index.js"
+  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts@0.6.1-rc3/dist/esm/index.js"
   id="typst"
 >
   console.log($typst.svg({

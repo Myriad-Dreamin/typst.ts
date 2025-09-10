@@ -305,6 +305,42 @@ impl Default for FlatModule {
     }
 }
 
+impl FlatModule {
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            metadata: Vec::with_capacity(capacity),
+            ..Default::default()
+        }
+    }
+
+    /// Adds a metadata to the module.
+    pub fn push(&mut self, m: ModuleMetadata) {
+        self.metadata.push(m);
+    }
+
+    /// Adds single layout
+    pub fn add_single_layout(&mut self, pages: Vec<Page>) {
+        let pages = LayoutRegionNode::new_pages(pages);
+        let pages = Arc::new(vec![LayoutRegion::new_single(pages)]);
+        self.metadata.push(ModuleMetadata::Layout(pages));
+    }
+
+    /// Adds a module.
+    pub fn add_module(&mut self, m: Module) {
+        let Module {
+            glyphs,
+            items,
+            fonts,
+        } = m;
+        self.metadata
+            .push(ModuleMetadata::Font(Arc::new(fonts.into())));
+        self.metadata
+            .push(ModuleMetadata::Glyph(Arc::new(glyphs.into())));
+        self.metadata
+            .push(ModuleMetadata::Item(ItemPack(items.into_iter().collect())));
+    }
+}
+
 #[cfg(feature = "rkyv")]
 impl FlatModule {
     pub fn new(metadata: Vec<ModuleMetadata>) -> Self {

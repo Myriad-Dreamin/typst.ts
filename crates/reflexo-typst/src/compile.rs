@@ -17,7 +17,7 @@ use crate::task::CacheTask;
 use crate::vfs::notify::{FilesystemEvent, MemoryEvent, NotifyMessage, UpstreamUpdateEvent};
 use crate::vfs::FsProvider;
 use crate::world::{CompilerFeat, CompilerUniverse, EntryReader, RevisingUniverse, TaskInputs};
-use crate::{watch::watch_deps, ExportSignal, TypstDocument};
+use crate::{watch::watch_deps, CompileSignal, TypstDocument};
 use crate::{CompileReport, CompileSnapshot, WorldDeps};
 
 pub trait CompilationHandle<F: CompilerFeat>: Send + Sync + 'static {
@@ -290,7 +290,7 @@ impl<F: CompilerFeat + Send + Sync + 'static> CompileActor<F> {
         CompileSnapshot {
             id: ProjectInsId::PRIMARY,
             world,
-            signal: ExportSignal {
+            signal: CompileSignal {
                 by_entry_update: reason.by_entry_update,
                 by_mem_events: reason.by_memory_events,
                 by_fs_events: reason.by_fs_events,

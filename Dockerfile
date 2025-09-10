@@ -1,6 +1,6 @@
 
-# Minimum version of Rust compiler: 1.85.0
-ARG RUST_VERSION=1.85.0
+# Minimum version of Rust compiler: 1.88.0
+ARG RUST_VERSION=1.88.0
 
 FROM rust:${RUST_VERSION}-bullseye AS build
 ADD . /app

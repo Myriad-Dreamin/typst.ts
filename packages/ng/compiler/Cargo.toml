@@ -9,7 +9,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 
@@ -71,3 +71,20 @@ no-content-hint = [
 
 [lints]
 workspace = true
+
+# https://github.com/trunk-rs/trunk/issues/991
+[package.metadata.wasm-pack.profile.profiling]
+wasm-opt = [
+    '-O',
+    '--enable-bulk-memory',
+    '--enable-sign-ext',
+    '--enable-nontrapping-float-to-int',
+]
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = [
+    '-O',
+    '--enable-bulk-memory',
+    '--enable-sign-ext',
+    '--enable-nontrapping-float-to-int',
+]
