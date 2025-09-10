@@ -1,6 +1,6 @@
+#import "mod.typ": *
 #import "/docs/cookery/book.typ": book-page, cross-link, heading-reference
 #import "/docs/cookery/term.typ" as term
-#import "/docs/cookery/templates/page.typ": is-web-target
 
 #show: book-page.with(title: "Get Started")
 
@@ -35,7 +35,7 @@ The functionalities of #link("https://typst.app")[typst] is split into two parts
   let ratio = d / max-size
 
   // It is hard to change alignment in HTML. Therefore, we prefer different layouts for different targets.
-  if is-web-target {
+  if is-html-target {
     html.elem("data", attrs: (value: str(d)), human)
     // Here we use `<span>` instead of `<div>`, or typst will create a redundant `<p>`.
     html.elem("span", attrs: (
