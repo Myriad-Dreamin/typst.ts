@@ -1,5 +1,5 @@
 {
-  "name": "@myriaddreamin/typst.ts",
+  "name": "reflexo-workspace",
   "version": "0.6.1-rc3",
   "author": "Myriad-Dreamin",
   "description": "Run Typst in JavaScriptWorld.",
