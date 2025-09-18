@@ -34,7 +34,7 @@ onMounted(async () => {
   typst.compiled = await $typst.svg({ mainContent: props.content });
 });
 
-watch(props, async (newVal, oldVal) => {
+watch(()=>props.content, async (newVal, _) => {
   typst.compiled = await $typst.svg({ mainContent: newVal });
 });
 </script>
