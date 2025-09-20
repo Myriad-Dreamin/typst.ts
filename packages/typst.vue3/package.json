@@ -2,10 +2,20 @@
   "name": "@myriaddreamin/typst.vue3",
   "version": "0.6.1-rc3",
   "type": "module",
-  "main": "src/Typst.vue",
+  "main": "./dist/index.umd.js",
+  "module": "./dist/index.es.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.umd.js"
+    }
+  },
   "scripts": {
     "dev": "vite -c vite.config.dev.ts",
-    "build": "vite build",
+    "build:types": "vue-tsc -p tsconfig.type.json",
+    "build": "vite build && yarn build:types",
     "publish:dry": "npm publish --dry-run --access public",
     "publish:lib": "npm publish --access public || exit 0"
   },
