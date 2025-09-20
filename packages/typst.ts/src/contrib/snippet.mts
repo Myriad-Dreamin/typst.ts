@@ -170,6 +170,12 @@ export class TypstSnippet {
     return (typeof this.cc === 'function' ? (this.cc = await this.cc()) : this.cc)!;
   }
 
+  private async getCompilerReset() {
+    const compiler = await this.getCompiler();
+    await compiler.reset();
+    return compiler;
+  }
+
   /**
    * Set lazy initialized renderer instance for the utility instance.
    * @param ex the renderer instance, see {@link PromiseJust} and {@link TypstRenderer}.
@@ -437,7 +443,8 @@ export class TypstSnippet {
    */
   async vector(o?: SweetCompileOptions) {
     const opts = await this.getCompileOptions(o);
-    return (await this.getCompiler())
+    const compiler = await this.getCompilerReset();
+    return compiler
       .compile(opts)
       .then(res => res.result)
       .finally(() => this.removeTmp(opts));
@@ -450,7 +457,8 @@ export class TypstSnippet {
   async pdf(o?: SweetCompileOptions) {
     const opts = await this.getCompileOptions(o);
     opts.format = 'pdf';
-    return (await this.getCompiler())
+    const compiler = await this.getCompilerReset();
+    return compiler
       .compile(opts)
       .then(res => res.result)
       .finally(() => this.removeTmp(opts));
@@ -491,7 +499,8 @@ export class TypstSnippet {
    */
   async query<T>(o: SweetCompileOptions & { selector: string; field?: string }): Promise<T> {
     const opts = await this.getCompileOptions(o);
-    return (await this.getCompiler())
+    const compiler = await this.getCompilerReset();
+    return compiler
       .query<T>({
         ...o,
         ...opts,
@@ -503,7 +512,8 @@ export class TypstSnippet {
    * Get token legend for semantic tokens.
    */
   async getSemanticTokenLegend(): Promise<SemanticTokensLegend> {
-    return (await this.getCompiler()).getSemanticTokenLegend();
+    const compiler = await this.getCompilerReset();
+    return compiler.getSemanticTokenLegend();
   }
 
   /**
@@ -513,7 +523,8 @@ export class TypstSnippet {
    */
   async getSemanticTokens(o: SweetCompileOptions & { resultId?: string }): Promise<SemanticTokens> {
     const opts = await this.getCompileOptions(o);
-    return (await this.getCompiler())
+    const compiler = await this.getCompilerReset();
+    return compiler
       .getSemanticTokens({
         mainFilePath: opts.mainFilePath,
         resultId: o.resultId,
@@ -608,7 +619,7 @@ export class TypstSnippet {
               return undefined;
             }),
           );
-        } catch (e) {}
+        } catch (e) { }
       } else {
         $typst.use(TypstSnippet.fetchPackageRegistry());
       }
