@@ -66,8 +66,6 @@ lto = "thin"
 # uninlined_format_args = "warn"
 
 [workspace.dependencies]
-
-# typesetting
 typst = "0.14.0"
 typst-eval = "0.14.0"
 typst-ide = "0.14.0"
@@ -238,41 +236,21 @@ undocumented_unsafe_blocks = "warn"
 reflexo = { path = "crates/reflexo/" }
 reflexo-typst = { path = "crates/reflexo-typst/" }
 reflexo-vec2svg = { path = "crates/conversion/vec2svg/" }
-
-# typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }
-# typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }
-# typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst.ts-v0.10.0" }
-# typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
-
-# comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
-typst = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
-typst-syntax = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
-typst-ide = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
-typst-render = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
-typst-svg = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
-typst-pdf = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
-typst-eval = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
-typst-html = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
-
-# comemo = { path = "../comemo" }
-# typst = { path = "../typst/crates/typst" }
-# typst-syntax = { path = "../typst/crates/typst-syntax" }
-# typst-ide = { path = "../typst/crates/typst-ide" }
-# typst-render = { path = "../typst/crates/typst-render" }
-# typst-svg = { path = "../typst/crates/typst-svg" }
-# typst-pdf = { path = "../typst/crates/typst-pdf" }
-# typst-eval = { path = "../typst/crates/typst-eval" }
-# typst-html = { path = "../typst/crates/typst-html" }
-
-# fontdb = { path = "../fontdb" }
-
-typst-shim = { git = "https://github.com/ParaN3xus/tinymist.git", branch = "nightly" }
-tinymist-derive = { git = "https://github.com/ParaN3xus/tinymist.git", branch = "nightly" }
-tinymist-std = { git = "https://github.com/ParaN3xus/tinymist.git", branch = "nightly" }
-tinymist-task = { git = "https://github.com/ParaN3xus/tinymist.git", branch = "nightly" }
-tinymist-package = { git = "https://github.com/ParaN3xus/tinymist.git", branch = "nightly" }
-tinymist-world = { git = "https://github.com/ParaN3xus/tinymist.git", branch = "nightly" }
-tinymist-project = { git = "https://github.com/ParaN3xus/tinymist.git", branch = "nightly" }
+typst = { git = "https://github.com/ParaN3xus/typst.git", rev = "e19bbcb7a54c41fd44df3ddc1c0374c9b86bc1f5" }
+typst-syntax = { git = "https://github.com/ParaN3xus/typst.git", rev = "e19bbcb7a54c41fd44df3ddc1c0374c9b86bc1f5" }
+typst-ide = { git = "https://github.com/ParaN3xus/typst.git", rev = "e19bbcb7a54c41fd44df3ddc1c0374c9b86bc1f5" }
+typst-render = { git = "https://github.com/ParaN3xus/typst.git", rev = "e19bbcb7a54c41fd44df3ddc1c0374c9b86bc1f5" }
+typst-svg = { git = "https://github.com/ParaN3xus/typst.git", rev = "e19bbcb7a54c41fd44df3ddc1c0374c9b86bc1f5" }
+typst-pdf = { git = "https://github.com/ParaN3xus/typst.git", rev = "e19bbcb7a54c41fd44df3ddc1c0374c9b86bc1f5" }
+typst-eval = { git = "https://github.com/ParaN3xus/typst.git", rev = "e19bbcb7a54c41fd44df3ddc1c0374c9b86bc1f5" }
+typst-html = { git = "https://github.com/ParaN3xus/typst.git", rev = "e19bbcb7a54c41fd44df3ddc1c0374c9b86bc1f5" }
+typst-shim = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "3eadb2de7535ef21347e6bb37e8859086c2dd713" }
+tinymist-derive = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "3eadb2de7535ef21347e6bb37e8859086c2dd713" }
+tinymist-std = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "3eadb2de7535ef21347e6bb37e8859086c2dd713" }
+tinymist-task = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "3eadb2de7535ef21347e6bb37e8859086c2dd713" }
+tinymist-package = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "3eadb2de7535ef21347e6bb37e8859086c2dd713" }
+tinymist-world = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "3eadb2de7535ef21347e6bb37e8859086c2dd713" }
+tinymist-project = { git = "https://github.com/ParaN3xus/tinymist.git", rev = "3eadb2de7535ef21347e6bb37e8859086c2dd713" }
 
 # typst-shim = { path = "../tinymist/crates/typst-shim" }
 # tinymist-derive = { path = "../tinymist/crates/tinymist-derive" }
