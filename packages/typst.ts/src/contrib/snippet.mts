@@ -29,6 +29,10 @@ type PromiseJust<T> = (() => Promise<T>) | T;
 
 interface CompileOptionsCommon {
   /**
+   * The root of the main file.
+   */
+  root?: string;
+  /**
    * Adds a string key-value pair visible through `sys.inputs`
    *
    * Note: pass `{}` to clear `sys.inputs`
@@ -45,17 +49,17 @@ interface CompileOptionsCommon {
  */
 export type SweetCompileOptions = (
   | {
-      /**
-       * The path of the main file.
-       */
-      mainFilePath: string;
-    }
+    /**
+     * The path of the main file.
+     */
+    mainFilePath: string;
+  }
   | {
-      /**
-       * The source content of the main file.
-       */
-      mainContent: string;
-    }
+    /**
+     * The source content of the main file.
+     */
+    mainContent: string;
+  }
 ) &
   CompileOptionsCommon;
 
@@ -65,11 +69,11 @@ export type SweetCompileOptions = (
 export type SweetRenderOptions =
   | SweetCompileOptions
   | {
-      /**
-       * The artifact data in vector format.
-       */
-      vectorData: Uint8Array;
-    };
+    /**
+     * The artifact data in vector format.
+     */
+    vectorData: Uint8Array;
+  };
 
 type Role = 'compiler' | 'renderer';
 
