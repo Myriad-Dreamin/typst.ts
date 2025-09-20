@@ -26,7 +26,8 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'Typst',
-      fileName: 'index',
+      fileName: (format) => `index.${format}.js`,
+      formats: ['es', 'umd'],
     },
     rollupOptions,
   },
