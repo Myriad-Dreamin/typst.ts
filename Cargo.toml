@@ -244,14 +244,14 @@ reflexo-vec2svg = { path = "crates/conversion/vec2svg/" }
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
 # comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
-typst = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
-typst-syntax = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
-typst-ide = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
-typst-render = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
-typst-svg = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
-typst-pdf = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
-typst-eval = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
-typst-html = { git = "https://github.com/ParaN3xus/typst.git", branch = "nightly-content-hint" }
+typst = { git = "https://github.com/ParaN3xus/typst.git", rev = "9f86c71842af5101e41b22e812eeaae04babfa36" }
+typst-syntax = { git = "https://github.com/ParaN3xus/typst.git", rev = "9f86c71842af5101e41b22e812eeaae04babfa36" }
+typst-ide = { git = "https://github.com/ParaN3xus/typst.git", rev = "9f86c71842af5101e41b22e812eeaae04babfa36" }
+typst-render = { git = "https://github.com/ParaN3xus/typst.git", rev = "9f86c71842af5101e41b22e812eeaae04babfa36" }
+typst-svg = { git = "https://github.com/ParaN3xus/typst.git", rev = "9f86c71842af5101e41b22e812eeaae04babfa36" }
+typst-pdf = { git = "https://github.com/ParaN3xus/typst.git", rev = "9f86c71842af5101e41b22e812eeaae04babfa36" }
+typst-eval = { git = "https://github.com/ParaN3xus/typst.git", rev = "9f86c71842af5101e41b22e812eeaae04babfa36" }
+typst-html = { git = "https://github.com/ParaN3xus/typst.git", rev = "9f86c71842af5101e41b22e812eeaae04babfa36" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }
