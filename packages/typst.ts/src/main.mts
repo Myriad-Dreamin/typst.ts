@@ -9,7 +9,7 @@ export type {
 export { preloadRemoteFonts, preloadSystemFonts } from './options.init.mjs';
 import * as renderer from './renderer.mjs';
 export type { RenderSession, TypstRenderer } from './renderer.mjs';
-export { rendererBuildInfo, createTypstRenderer, createTypstSvgRenderer } from './renderer.mjs';
+export { rendererBuildInfo, createTypstRenderer } from './renderer.mjs';
 import { RenderView } from './render/canvas/view.mjs';
 import * as compiler from './compiler.mjs';
 import { FetchAccessModel, MemoryAccessModel } from './fs/index.mjs';

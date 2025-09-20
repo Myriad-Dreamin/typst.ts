@@ -8,7 +8,7 @@ export type {
 } from './options.render.mjs';
 export { preloadRemoteFonts, preloadSystemFonts } from './options.init.mjs';
 export type { RenderSession, TypstRenderer } from './renderer.mjs';
-export { rendererBuildInfo, createTypstRenderer, createTypstSvgRenderer } from './renderer.mjs';
+export { rendererBuildInfo, createTypstRenderer } from './renderer.mjs';
 export { FetchAccessModel, MemoryAccessModel } from './fs/index.mjs';
 export { FetchPackageRegistry } from './fs/package.mjs';
 export type { FetchAccessOptions } from './fs/index.mjs';
