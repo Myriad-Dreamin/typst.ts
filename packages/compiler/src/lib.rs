@@ -15,9 +15,10 @@ use js_sys::{Array, JsString, Uint8Array};
 use reflexo_typst::error::{long_diag_from_std, DiagMessage};
 use reflexo_typst::font::web::BrowserFontSearcher;
 use reflexo_typst::package::registry::JsRegistry;
-use reflexo_typst::typst::{foundations::IntoValue, prelude::EcoVec};
+use reflexo_typst::prelude::EcoVec;
+use reflexo_typst::typst::foundations::IntoValue;
 use reflexo_typst::vfs::browser::ProxyAccessModel;
-use typst::diag::SourceResult;
+use typst::diag::{SourceResult, Warned};
 use wasm_bindgen::prelude::*;
 
 use crate::utils::console_log;
@@ -25,14 +26,17 @@ use crate::utils::console_log;
 use incr::IncrServer;
 
 macro_rules! take_diag {
-    ($diagnostics_format:expr, $world:expr, $e:expr) => {
-        match $e.output {
-            Ok(v) => v,
-            Err(e) => {
+    ($diagnostics_format:expr, $g:expr, $world:expr, $e:expr, $D:ty) => {
+        match $e {
+            Some(v) => v,
+            None => {
+                let diag: Arc<TDiagnosticsTask<$D>> = $g.compute::<TDiagnosticsTask<$D>>()?;
+                let diag = diag.diagnostics();
                 if $diagnostics_format >= 2 {
-                    return Ok(convert_diag(e, Some($world), $diagnostics_format));
+                    return Ok(convert_diag(diag, Some($world), $diagnostics_format));
                 } else {
-                    return Err(format!("{e:?}").into());
+                    let diag = diag.collect::<Vec<_>>();
+                    return Err(format!("{diag:?}").into());
                 }
             }
         }
@@ -67,8 +71,8 @@ impl fmt::Display for UnixFmt {
     }
 }
 
-fn convert_diag(
-    e: EcoVec<TypstSourceDiagnostic>,
+fn convert_diag<'a>(
+    e: impl Iterator<Item = &'a TypstSourceDiagnostic>,
     world: Option<&dyn TypstWorld>,
     diagnostics_format: u8,
 ) -> JsValue {
@@ -296,6 +300,92 @@ impl TypstCompiler {
         Ok(semantic_tokens)
     }
 
+    pub fn snapshot(
+        &mut self,
+        root: Option<String>,
+        main_file_path: Option<String>,
+        inputs: Option<Vec<js_sys::Array>>,
+    ) -> Result<TypstCompileWorld, JsValue> {
+        let inputs = inputs.map(|inputs| Arc::new(LazyHash::new(convert_inputs(&inputs))));
+
+        let entry = if let Some(root) = root {
+            EntryState::new_workspace(Path::new(&root).into())
+        } else {
+            self.verse.entry_state()
+        };
+
+        let entry = if let Some(main_file_path) = main_file_path {
+            entry
+                .try_select_path_in_workspace(Path::new(&main_file_path))?
+                .ok_or_else(|| error_once!("failed to select path", path: main_file_path))?
+        } else {
+            entry.clone()
+        };
+
+        let world = self.verse.snapshot_with(Some(TaskInputs {
+            entry: Some(entry),
+            inputs,
+        }));
+
+        Ok(TypstCompileWorld {
+            graph: WorldComputeGraph::new(CompileSnapshot::from_world(world)),
+        })
+    }
+    pub fn get_artifact(
+        &mut self,
+        fmt: String,
+        diagnostics_format: u8,
+    ) -> Result<JsValue, JsValue> {
+        let mut w = self.snapshot(None, None, None)?;
+        w.get_artifact(fmt, diagnostics_format)
+    }
+
+    pub fn query(
+        &mut self,
+        main_file_path: String,
+        inputs: Option<Vec<js_sys::Array>>,
+        selector: String,
+        field: Option<String>,
+    ) -> Result<String, JsValue> {
+        let mut w = self.snapshot(None, Some(main_file_path), inputs)?;
+        w.query(selector, field)
+    }
+
+    pub fn compile(
+        &mut self,
+        main_file_path: String,
+        inputs: Option<Vec<js_sys::Array>>,
+        fmt: String,
+        diagnostics_format: u8,
+    ) -> Result<JsValue, JsValue> {
+        let mut w = self.snapshot(None, Some(main_file_path), inputs)?;
+        w.get_artifact(fmt, diagnostics_format)
+    }
+
+    #[cfg(feature = "incr")]
+    pub fn create_incr_server(&mut self) -> Result<IncrServer, JsValue> {
+        Ok(IncrServer::default())
+    }
+
+    #[cfg(feature = "incr")]
+    pub fn incr_compile(
+        &mut self,
+        main_file_path: String,
+        inputs: Option<Vec<js_sys::Array>>,
+        state: &mut IncrServer,
+        diagnostics_format: u8,
+    ) -> Result<JsValue, JsValue> {
+        let mut w = self.snapshot(None, Some(main_file_path), inputs)?;
+        w.incr_compile(state, diagnostics_format)
+    }
+}
+
+#[wasm_bindgen]
+pub struct TypstCompileWorld {
+    graph: Arc<WorldComputeGraph<BrowserCompilerFeat>>,
+}
+
+impl TypstCompileWorld {
     pub fn get_artifact(
         &mut self,
         fmt: String,
@@ -308,11 +398,20 @@ impl TypstCompiler {
         #[cfg(feature = "pdf")]
         use reflexo_typst::task::ExportPdfTask;
 
-        let g = self.verse.computation();
-        let world = &g.snap.world;
+        let g = &self.graph;
+        let world = &self.graph.snap.world;
 
+        let _ = g.provide::<FlagTask<CompilationTask<reflexo_typst::TypstPagedDocument>>>(Ok(
+            FlagTask::flag(true),
+        ));
         // todo: warning is ignored here.
-        let doc = take_diag!(diagnostics_format, &world, g.compile());
+        let doc = take_diag!(
+            diagnostics_format,
+            g,
+            &world,
+            g.shared_compile()?,
+            reflexo_typst::TypstPagedDocument
+        );
 
         let artifact_bytes: Bytes = match fmt.as_str() {
             #[cfg(feature = "svg")]
@@ -337,40 +436,13 @@ impl TypstCompiler {
         })
     }
 
-    pub fn set_compiler_options(
-        &mut self,
-        main_file_path: String,
-        inputs: Option<Vec<js_sys::Array>>,
-    ) -> Result<(), JsValue> {
-        self.verse
-            .increment_revision(|verse| -> SourceResult<()> {
-                verse.set_entry_file(Path::new(&main_file_path).into())?;
-
-                if let Some(inputs) = inputs {
-                    verse.set_inputs(Arc::new(LazyHash::new(convert_inputs(&inputs))));
-                }
-
-                Ok(())
-            })
-            .map_err(|e| format!("{e:?}"))?;
-        Ok(())
-    }
-
-    pub fn query(
-        &mut self,
-        main_file_path: String,
-        inputs: Option<Vec<js_sys::Array>>,
-        selector: String,
-        field: Option<String>,
-    ) -> Result<String, JsValue> {
-        self.set_compiler_options(main_file_path, inputs)?;
-
-        let graph = self.verse.computation();
+    pub fn query(&mut self, selector: String, field: Option<String>) -> Result<String, JsValue> {
+        let g = &self.graph;
 
         // todo: diagnostics
-        let doc = graph.compile().output.map_err(|e| format!("{e:?}"))?;
+        let doc = g.compile().output.map_err(|e| format!("{e:?}"))?;
         // todo: query html?
-        let elements: Vec<typst::foundations::Content> = graph
+        let elements: Vec<typst::foundations::Content> = g
             .query(selector, &TypstDocument::Paged(doc))
             .map_err(|e| format!("{e:?}"))?;
 
@@ -385,33 +457,23 @@ impl TypstCompiler {
         Ok(serde_json::to_string_pretty(&mapped).map_err(|e| format!("{e:?}"))?)
     }
 
-    pub fn compile(
-        &mut self,
-        main_file_path: String,
-        inputs: Option<Vec<js_sys::Array>>,
-        fmt: String,
-        diagnostics_format: u8,
-    ) -> Result<JsValue, JsValue> {
-        self.set_compiler_options(main_file_path, inputs)?;
-        self.get_artifact(fmt, diagnostics_format)
-    }
-
-    #[cfg(feature = "incr")]
-    pub fn create_incr_server(&mut self) -> Result<IncrServer, JsValue> {
-        Ok(IncrServer::default())
-    }
-
     #[cfg(feature = "incr")]
     pub fn incr_compile(
         &mut self,
-        main_file_path: String,
-        inputs: Option<Vec<js_sys::Array>>,
         state: &mut IncrServer,
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
-        self.set_compiler_options(main_file_path, inputs)?;
-        let g = self.verse.computation();
-        let doc = take_diag!(diagnostics_format, &g.snap.world, g.compile());
+        let g = &self.graph;
+        let _ = g.provide::<FlagTask<CompilationTask<reflexo_typst::TypstPagedDocument>>>(Ok(
+            FlagTask::flag(true),
+        ));
+        let doc = take_diag!(
+            diagnostics_format,
+            g,
+            &g.snap.world,
+            g.shared_compile()?,
+            TypstPagedDocument
+        );
 
         let v = Uint8Array::from(state.update(doc).as_slice()).into();
         Ok(if diagnostics_format != 0 {
@@ -421,6 +483,62 @@ impl TypstCompiler {
         } else {
             v
         })
+    }
+}
+
+struct CompilationDiagnostics {
+    errors: Option<EcoVec<typst::diag::SourceDiagnostic>>,
+    warnings: Option<EcoVec<typst::diag::SourceDiagnostic>>,
+}
+
+impl CompilationDiagnostics {
+    fn from_result<T>(result: &Option<Warned<SourceResult<T>>>) -> Self {
+        let errors = result
+            .as_ref()
+            .and_then(|r| r.output.as_ref().map_err(|e| e.clone()).err());
+        let warnings = result.as_ref().map(|r| r.warnings.clone());
+
+        Self { errors, warnings }
+    }
+}
+
+pub struct TDiagnosticsTask<D> {
+    diag: CompilationDiagnostics,
+    _phantom: std::marker::PhantomData<D>,
+}
+
+impl<F: CompilerFeat, D: typst::TypstDocumentTrait + Send + Sync + 'static> WorldComputable<F>
+    for TDiagnosticsTask<D>
+{
+    type Output = Self;
+
+    fn compute(graph: &Arc<WorldComputeGraph<F>>) -> Result<Self> {
+        // let paged = graph.compute::<PagedCompilationTask>()?.clone();
+        // let html = graph.compute::<HtmlCompilationTask>()?.clone();
+        let diag = graph.compute::<CompilationTask<D>>()?;
+
+        Ok(Self {
+            diag: CompilationDiagnostics::from_result(&diag),
+            _phantom: std::marker::PhantomData,
+        })
+    }
+}
+
+impl<D> TDiagnosticsTask<D> {
+    pub fn error_cnt(&self) -> usize {
+        self.diag.errors.as_ref().map_or(0, |e| e.len())
+    }
+
+    pub fn warning_cnt(&self) -> usize {
+        self.diag.warnings.as_ref().map_or(0, |e| e.len())
+    }
+
+    pub fn diagnostics(&self) -> impl Iterator<Item = &typst::diag::SourceDiagnostic> {
+        self.diag
+            .errors
+            .iter()
+            .chain(self.diag.warnings.iter())
+            .flatten()
     }
 }
 

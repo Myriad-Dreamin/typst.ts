@@ -44,5 +44,8 @@
   },
   "devDependencies": {
     "turbo": "^1.10.12"
+  },
+  "dependencies": {
+    "typst-ts-compiler": "link:../../../../../AppData/Local/pnpm/global/5/node_modules/@myriaddreamin/typst-ts-compiler"
   }
 }

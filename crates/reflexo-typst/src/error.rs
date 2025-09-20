@@ -157,7 +157,10 @@ fn resolve_source_span(
     (package, path, range)
 }
 
-pub fn diag_from_std(diag: TypstSourceDiagnostic, world: Option<&dyn typst::World>) -> DiagMessage {
+pub fn diag_from_std(
+    diag: &TypstSourceDiagnostic,
+    world: Option<&dyn typst::World>,
+) -> DiagMessage {
     // arguments.push(("code", diag.code.to_string()));
 
     let (package, path, range) = resolve_source_span(diag.span, world);
@@ -165,7 +168,7 @@ pub fn diag_from_std(diag: TypstSourceDiagnostic, world: Option<&dyn typst::Worl
     DiagMessage {
         package,
         path,
-        message: eco_format!("{}", DiagMsgFmt(&diag)),
+        message: eco_format!("{}", DiagMsgFmt(diag)),
         severity: match diag.severity {
             typst::diag::Severity::Error => DiagSeverity::Error,
             typst::diag::Severity::Warning => DiagSeverity::Warning,
@@ -175,14 +178,13 @@ pub fn diag_from_std(diag: TypstSourceDiagnostic, world: Option<&dyn typst::Worl
 }
 
 /// Convert typst.ts diagnostic message with trace messages
-pub fn long_diag_from_std(
-    mut diag: TypstSourceDiagnostic,
-    world: Option<&dyn typst::World>,
-) -> impl Iterator<Item = DiagMessage> + '_ {
-    let traces = std::mem::take(&mut diag.trace);
+pub fn long_diag_from_std<'a>(
+    diag: &'a TypstSourceDiagnostic,
+    world: Option<&'a dyn typst::World>,
+) -> impl Iterator<Item = DiagMessage> + 'a {
     let base = Some(diag_from_std(diag, world));
 
-    base.into_iter().chain(traces.into_iter().map(move |trace| {
+    base.into_iter().chain(diag.trace.iter().map(move |trace| {
         let (package, path, range) = resolve_source_span(trace.span, world);
         DiagMessage {
             package,
@@ -202,7 +204,7 @@ pub trait ErrorConverter {
     fn convert_typst(&self, world: &dyn typst::World, diag: TypstSourceDiagnostic) -> Error {
         let mut arguments = Vec::new();
 
-        let msg = diag_from_std(diag, Some(world));
+        let msg = diag_from_std(&diag, Some(world));
         arguments.push(("severity", msg.severity.to_string()));
         arguments.push(("package", msg.package));
         arguments.push(("path", msg.path));

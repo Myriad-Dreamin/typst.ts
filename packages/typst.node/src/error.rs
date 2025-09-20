@@ -123,7 +123,7 @@ impl NodeError {
         world: Option<&dyn TypstWorld>,
     ) -> napi::Result<Vec<serde_json::Value>, NodeError> {
         self.iter_diagnostics()
-            .flat_map(move |e| long_diag_from_std(e.clone(), world))
+            .flat_map(move |e| long_diag_from_std(e, world))
             .map(serde_json::to_value)
             .collect::<Result<_, _>>()
             .context("failed to serialize diagnostics")
