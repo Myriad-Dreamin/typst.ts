@@ -171,6 +171,61 @@ interface CompileResult<T, D extends DiagnosticsFormat> {
   diagnostics?: DiagnosticsData[D][];
 }
 
+enum TypstFontInfoCons { }
+export type TypstFontInfo = TypstFontInfoCons & object;
+
+enum TypstFontResolverCons { }
+export type TypstFontResolver = TypstFontResolverCons;
+
+export interface TypstFontBuilder {
+  /**
+   * Get the font info.
+   * 
+   * @param font_buffer - The font buffer to get the font info.
+   * @returns {TypstFontInfo} - The font info.
+   */
+  getFontInfo(font_buffer: Uint8Array): Promise<TypstFontInfo>;
+  /**
+   * Add a raw font.
+   * 
+   * @param font_buffer - The font buffer to add.
+   */
+  addRawFont(font_buffer: Uint8Array): Promise<void>;
+  /**
+   * Add a lazy font.
+   * 
+   * @param info - The font info, usually from {@link getFontInfo}.
+   * @param blob - The blob function to get the font buffer.
+   * @param context - The context.
+   */
+  addLazyFont(info: TypstFontInfo, blob: (idx: number) => Promise<Uint8Array>, context?: object): Promise<void>;
+
+  /**
+   * Build the font resolver. The font resolver will be freed after the callback
+   * is invoked and before returning the build function.
+   * 
+   * @param cb - The function to use the font resolver.
+   * @returns {Promise<T>} - The result of the function.
+   */
+  build<T>(cb: (resolver: TypstFontResolver) => Promise<T>): Promise<T>;
+}
+
+/**
+ * create a Typst font builder.
+ * @returns {TypstFontBuilder} - The Typst font builder.
+ * @example
+ * ```typescript
+ * import { createTypstFontBuilder } from 'typst';
+ * const fb = createTypstFontBuilder();
+ * await fb.init();
+ * await fb.addRawFont(new Uint8Array(await fetch('font.ttf').then(r => r.arrayBuffer())));
+ * await fb.build();
+ * ```
+ */
+export function createTypstFontBuilder(): TypstFontBuilder {
+  return new TypstFontBuilderDriver();
+}
+
 /**
  * The interface of Typst compiler.
  */
@@ -209,6 +264,13 @@ export interface TypstCompiler {
   compile<D extends DiagnosticsFormat>(
     options: CompileOptions<any, D>,
   ): Promise<CompileResult<Uint8Array, D>>;
+
+  /**
+   * Set the fonts to the compiler. Note: multiple compilers can share the same fonts.
+   * 
+   * @param {TypstFontResolver} fonts - The fonts to set.
+   */
+  setFonts(fonts: TypstFontResolver): void;
 
   /**
    * experimental
@@ -308,7 +370,37 @@ export function createTypstCompiler(): TypstCompiler {
   return new TypstCompilerDriver();
 }
 
-class TypstCompilerDriver {
+export class TypstFontBuilderDriver implements TypstFontBuilder {
+  private fontBuilderJs: typeof typst;
+  private fontBuilder: typst.TypstFontResolverBuilder;
+
+  async init(options?: Partial<InitOptions>): Promise<void> {
+    this.fontBuilderJs = await import('@myriaddreamin/typst-ts-web-compiler');
+    /// init typst wasm module
+    await gCompilerModule.init(options?.getModule?.());
+
+    this.fontBuilder = new this.fontBuilderJs.TypstFontResolverBuilder();
+  }
+
+  async getFontInfo(font_buffer: Uint8Array): Promise<TypstFontInfo> {
+    return this.fontBuilder.get_font_info(font_buffer) as TypstFontInfo;
+  }
+
+  async addRawFont(font_buffer: Uint8Array): Promise<void> {
+    this.fontBuilder.add_raw_font(font_buffer);
+  }
+  async addLazyFont(info: TypstFontInfo, blob: (idx: number) => Promise<Uint8Array>, context?: object): Promise<void> {
+    return this.fontBuilder.add_lazy_font(info, blob, context);
+  }
+  async build<T>(cb: (resolver: TypstFontResolver) => Promise<T>): Promise<T> {
+    const fonts = await this.fontBuilder.build();
+    const result = await cb((fonts as any as TypstFontResolver));
+    fonts.free();
+    return result;
+  }
+}
+
+class TypstCompilerDriver implements TypstCompiler {
   compiler: typst.TypstCompiler;
   compilerJs: typeof typst;
 
@@ -343,6 +435,10 @@ class TypstCompilerDriver {
       );
     }
     this.compiler = await buildComponent(options, gCompilerModule, TypstCompilerBuilder, {});
+  }
+
+  setFonts(fonts: TypstFontResolver): void {
+    this.compiler.set_fonts(fonts as any as typst.TypstFontResolver);
   }
 
   compile(options: CompileOptions): Promise<any> {
