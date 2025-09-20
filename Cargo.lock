@@ -7435,33 +7435,33 @@ dependencies = [
 
 [[patch.unused]]
 name = "tinymist-derive"
-version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#e7e33e2a44b55ee61c67760de6d794ce20845b27"
+version = "0.13.16"
+source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#9b8e7f5c2ef0fd9b8e15d410c5434773c06d6450"
 
 [[patch.unused]]
 name = "tinymist-package"
-version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#e7e33e2a44b55ee61c67760de6d794ce20845b27"
+version = "0.13.16"
+source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#9b8e7f5c2ef0fd9b8e15d410c5434773c06d6450"
 
 [[patch.unused]]
 name = "tinymist-project"
-version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#e7e33e2a44b55ee61c67760de6d794ce20845b27"
+version = "0.13.16"
+source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#9b8e7f5c2ef0fd9b8e15d410c5434773c06d6450"
 
 [[patch.unused]]
 name = "tinymist-std"
-version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#e7e33e2a44b55ee61c67760de6d794ce20845b27"
+version = "0.13.16"
+source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#9b8e7f5c2ef0fd9b8e15d410c5434773c06d6450"
 
 [[patch.unused]]
 name = "tinymist-task"
-version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#e7e33e2a44b55ee61c67760de6d794ce20845b27"
+version = "0.13.16"
+source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#9b8e7f5c2ef0fd9b8e15d410c5434773c06d6450"
 
 [[patch.unused]]
 name = "tinymist-world"
-version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#e7e33e2a44b55ee61c67760de6d794ce20845b27"
+version = "0.13.16"
+source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#9b8e7f5c2ef0fd9b8e15d410c5434773c06d6450"
 
 [[patch.unused]]
 name = "typst-render"
@@ -7470,5 +7470,5 @@ source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint
 
 [[patch.unused]]
 name = "typst-shim"
-version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#e7e33e2a44b55ee61c67760de6d794ce20845b27"
+version = "0.13.16"
+source = "git+https://github.com/ParaN3xus/tinymist.git?branch=nightly#9b8e7f5c2ef0fd9b8e15d410c5434773c06d6450"
