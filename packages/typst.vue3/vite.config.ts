@@ -6,13 +6,13 @@ import { resolve } from 'path';
 export const rollupOptions: RollupOptions = {
   // make sure to externalize deps that shouldn't be bundled
   // into your library
-  external: ['vue', '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs'],
+  external: ['vue', '@myriaddreamin/typst.ts'],
   output: {
     // Provide global variables to use in the UMD build
     // for externalized deps
     globals: {
       vue: 'Vue',
-      '@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs': 'TypstTs',
+      '@myriaddreamin/typst.ts': 'TypstTs',
     },
     compact: true,
     inlineDynamicImports: true,
@@ -26,7 +26,8 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'Typst',
-      fileName: 'index',
+      fileName: (format) => `index.${format}.js`,
+      formats: ['es', 'umd'],
     },
     rollupOptions,
   },
