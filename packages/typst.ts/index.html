@@ -1,225 +1,228 @@
 <html lang="en">
-  <!-- This is the example for typst.ts -->
+<!-- This is the example for typst.ts -->
 
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Typst.ts</title>
-    <script type="module" src="/core/dist/esm/main.bundle.js"></script>
-    <script type="module" src="/enhanced-typst-svg/dist/index.min.js"></script>
-    <link rel="stylesheet" href="/core/examples/typst.ts.css" />
-    <style>
-      #typst-app-container {
-        padding: 10px;
-        display: flex;
-        justify-content: center;
-      }
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Typst.ts</title>
+  <script type="module" src="/core/dist/esm/main.bundle.js"></script>
+  <script type="module" src="/enhanced-typst-svg/dist/index.min.js"></script>
+  <link rel="stylesheet" href="/core/examples/typst.ts.css" />
+  <style>
+    #typst-app-container {
+      padding: 10px;
+      display: flex;
+      justify-content: center;
+    }
 
-      #typst-app {
-        --typst-dom-scale: 1.5;
-        margin: 5px;
-      }
+    #typst-app {
+      --typst-dom-scale: 1.5;
+      margin: 5px;
+    }
 
-      .typst-dom-page {
-        width: calc(var(--data-page-width, 100%) * var(--typst-dom-scale));
-        height: calc(var(--data-page-height) * var(--typst-dom-scale));
-        --data-text-width: calc(1px * var(--typst-dom-scale));
-        --data-text-height: calc(1px * var(--typst-dom-scale));
-        margin: auto;
-      }
+    .typst-dom-page {
+      width: calc(var(--data-page-width, 100%) * var(--typst-dom-scale));
+      height: calc(var(--data-page-height) * var(--typst-dom-scale));
+      --data-text-width: calc(1px * var(--typst-dom-scale));
+      --data-text-height: calc(1px * var(--typst-dom-scale));
+      margin: auto;
+    }
 
-      .typst-back-canvas {
-        position: absolute;
-        z-index: -1;
-        width: calc(var(--data-page-width, 100%) * var(--typst-dom-scale));
-        height: calc(var(--data-page-height) * var(--typst-dom-scale));
-        pointer-events: none;
-      }
+    .typst-back-canvas {
+      position: absolute;
+      z-index: -1;
+      width: calc(var(--data-page-width, 100%) * var(--typst-dom-scale));
+      height: calc(var(--data-page-height) * var(--typst-dom-scale));
+      pointer-events: none;
+    }
 
-      .typst-svg-page {
-        position: absolute;
-        z-index: 0;
-        width: calc(var(--data-page-width, 100%) * var(--typst-dom-scale));
-        height: calc(var(--data-page-height) * var(--typst-dom-scale));
-      }
+    .typst-svg-page {
+      position: absolute;
+      z-index: 0;
+      width: calc(var(--data-page-width, 100%) * var(--typst-dom-scale));
+      height: calc(var(--data-page-height) * var(--typst-dom-scale));
+    }
 
-      .typst-html-semantics {
-        position: absolute;
-        z-index: 2;
-        width: calc(var(--data-page-width, 100%) * var(--typst-dom-scale));
-        height: calc(var(--data-page-height) * var(--typst-dom-scale));
-        color: transparent;
-        font-family: monospace;
-        white-space: pre;
-      }
+    .typst-html-semantics {
+      position: absolute;
+      z-index: 2;
+      width: calc(var(--data-page-width, 100%) * var(--typst-dom-scale));
+      height: calc(var(--data-page-height) * var(--typst-dom-scale));
+      color: transparent;
+      font-family: monospace;
+      white-space: pre;
+    }
 
-      .typst-html-semantics span {
-        color: transparent;
-        font-family: monospace;
-        transform-origin: left top;
-        position: absolute;
-        display: inline-block;
-        left: 0;
-        top: 0;
-      }
+    .typst-html-semantics span {
+      color: transparent;
+      font-family: monospace;
+      transform-origin: left top;
+      position: absolute;
+      display: inline-block;
+      left: 0;
+      top: 0;
+    }
 
-      .typst-content-hint {
-        position: absolute;
-        display: inline-block;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-      }
+    .typst-content-hint {
+      position: absolute;
+      display: inline-block;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
 
-      .typst-html-semantics a {
-        position: absolute;
-        display: inline-block;
-      }
+    .typst-html-semantics a {
+      position: absolute;
+      display: inline-block;
+    }
 
-      /* set transparent itself */
-      .typst-content-group {
-        pointer-events: visible;
-      }
+    /* set transparent itself */
+    .typst-content-group {
+      pointer-events: visible;
+    }
 
-      .typst-html-semantics span::-moz-selection {
-        color: transparent;
-        background: #7db9dea0;
-      }
+    .typst-html-semantics span::-moz-selection {
+      color: transparent;
+      background: #7db9dea0;
+    }
 
-      .typst-html-semantics span::selection {
-        color: transparent;
-        background: #7db9dea0;
-      }
+    .typst-html-semantics span::selection {
+      color: transparent;
+      background: #7db9dea0;
+    }
 
-      .typst-html-semantics *::-moz-selection {
-        color: transparent;
-        background: transparent;
-      }
+    .typst-html-semantics *::-moz-selection {
+      color: transparent;
+      background: transparent;
+    }
 
-      .typst-html-semantics *::selection {
-        color: transparent;
-        background: transparent;
-      }
+    .typst-html-semantics *::selection {
+      color: transparent;
+      background: transparent;
+    }
 
-      .typst-content-fallback {
-        color: transparent;
-        background: transparent;
-      }
+    .typst-content-fallback {
+      color: transparent;
+      background: transparent;
+    }
 
-      .pseudo-link,
-      .typst-text {
-        pointer-events: none;
-      }
+    .pseudo-link,
+    .typst-text {
+      pointer-events: none;
+    }
 
-      /* body {
+    /* body {
         background: white;
       } */
-    </style>
-    <script src="/core/examples/typst.js"></script>
-    <script>
-      window.typstBindSemantics = function () {};
-      window.typstBindSvgDom = function () {};
-      window.captureStack = function () {
-        return undefined;
-      };
+  </style>
+  <script src="/core/examples/typst.js"></script>
+  <script>
+    window.typstBindSemantics = function () { };
+    window.typstBindSvgDom = function () { };
+    window.captureStack = function () {
+      return undefined;
+    };
 
-      // elem.style.top = `calc(var(--data-text-height) * ${rrt})`;
-      // elem.style.left = `calc(var(--data-text-width) * ${rrl})`;
-      document.ready(() => {
-        let plugin = window.TypstRenderModule.createTypstRenderer();
-        plugin
-          .init({
-            getModule: () =>
-              '/base/node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
-          })
-          .then(async () => {
-            const artifactData = await fetch(
-              // '/corpus/skyzh-cv/main.white.artifact.sir.in',
-              // '/corpus/skyzh-cv/masterproef.artifact.sir.in',
-              // '/corpus/skyzh-cv/introduction.ayu.multi.sir.in',
-              // '/corpus/skyzh-cv/introduction-book.ayu.multi.sir.in',
-              // '/corpus/skyzh-cv/stlc.multi.sir.in',
-              // ice1000's lnl-model report
-              // '/corpus/skyzh-cv/report.artifact.sir.in',
-              // '/corpus/skyzh-cv/assemble.artifact.sir.in',
-              '/corpus/skyzh-cv/multimedia.ayu.multi.sir.in',
-            )
-              .then(response => response.arrayBuffer())
-              .then(buffer => new Uint8Array(buffer));
+    // elem.style.top = `calc(var(--data-text-height) * ${rrt})`;
+    // elem.style.left = `calc(var(--data-text-width) * ${rrl})`;
+    document.ready(() => {
+      let plugin = window.TypstRenderModule.createTypstRenderer();
+      plugin
+        .init({
+          getModule: () =>
+            '/base/node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm',
+        })
+        .then(async () => {
+          const artifactData = await fetch(
+            // '/corpus/skyzh-cv/main.white.artifact.sir.in',
+            // '/corpus/skyzh-cv/masterproef.artifact.sir.in',
+            // '/corpus/skyzh-cv/introduction.ayu.multi.sir.in',
+            // '/corpus/skyzh-cv/introduction-book.ayu.multi.sir.in',
+            // '/corpus/skyzh-cv/stlc.multi.sir.in',
+            // ice1000's lnl-model report
+            // '/corpus/skyzh-cv/report.artifact.sir.in',
+            // '/corpus/skyzh-cv/assemble.artifact.sir.in',
+            // '/corpus/skyzh-cv/multimedia.ayu.multi.sir.in',
+            '/corpus/skyzh-cv/debug.sir.in',
+          )
+            .then(response => response.arrayBuffer())
+            .then(buffer => new Uint8Array(buffer));
 
-            const appElem = document.getElementById('typst-app');
+          const appElem = document.getElementById('typst-app');
 
-            let renderStart = undefined;
-            const canvasRender = async ses => {
-              await plugin.renderToCanvas({
-                // renderSession: ses,
-                artifactContent: artifactData,
-                container: appElem,
-                backgroundColor: '#343541',
-                // backgroundColor: '#ffffff',
-                pixelPerPt: 4.5,
-              });
-              console.log('render time!!!!!!!!!', performance.now() - renderStart);
-            };
-            const domRender = async ses => {
-              const dom = await plugin.renderDom({
-                renderSession: ses,
-                container: appElem,
-                pixelPerPt: 4.5,
-                domScale: 1.5,
-              });
-              console.log('render time!!!!!!!!!', performance.now() - renderStart);
-              console.log(dom);
+          let renderStart = undefined;
+          const canvasRender = async ses => {
+            await plugin.renderToCanvas({
+              // renderSession: ses,
+              artifactContent: artifactData,
+              container: appElem,
+              backgroundColor: '#343541',
+              // backgroundColor: '#ffffff',
+              pixelPerPt: 4.5,
+            });
+            console.log('render time!!!!!!!!!', performance.now() - renderStart);
+          };
+          const domRender = async ses => {
+            const dom = await plugin.renderDom({
+              renderSession: ses,
+              container: appElem,
+              pixelPerPt: 4.5,
+              domScale: 1.5,
+            });
+            console.log('render time!!!!!!!!!', performance.now() - renderStart);
+            console.log(dom);
 
-              dom.addChangement(['new', artifactData]);
+            dom.addChangement(['new', artifactData]);
 
-              window.addEventListener('resize', () => dom.addViewportChange());
-              window.addEventListener('scroll', () => dom.addViewportChange());
-            };
+            window.addEventListener('resize', () => dom.addViewportChange());
+            window.addEventListener('scroll', () => dom.addViewportChange());
+          };
 
-            plugin.runWithSession(
-              ses =>
-                new Promise(async dispose => {
-                  renderStart = performance.now();
-                  // await canvasRender(ses);
-                  await domRender(ses);
+          plugin.runWithSession(
+            ses =>
+              new Promise(async dispose => {
+                renderStart = performance.now();
+                // await canvasRender(ses);
+                await domRender(ses);
 
-                  void dispose;
-                }),
-            );
+                void dispose;
+              }),
+          );
 
-            console.log('render done');
-          });
-      });
-    </script>
-  </head>
+          console.log('render done');
+        });
+    });
+  </script>
+</head>
+
+<body>
 
   <body>
-    <body>
-      <div class="navigator">
-        <ul>
-          <li style="padding: 10px 40px">
-            <a href="/core/">Embed Your Typst Document</a>
-          </li>
-          <li style="padding: 10px 40px">
-            <a href="/core/examples/cdn.html">CDN</a>
-          </li>
-          <li style="padding: 10px 40px">
-            <a href="/core/">Renderer Demo</a>
-          </li>
-          <li style="padding: 10px 40px">
-            <a href="/core/examples/compiler.html">Compiler Demo</a>
-          </li>
-          <li style="padding: 10px 40px">
-            <a href="/core/examples/canvas-rendering.html">Offscreen Canvas Rendering</a>
-          </li>
-        </ul>
-        <div class="clear"></div>
-      </div>
-      <div id="typst-app-container">
-        <div id="typst-app"></div>
-      </div>
-    </body>
+    <div class="navigator">
+      <ul>
+        <li style="padding: 10px 40px">
+          <a href="/core/">Embed Your Typst Document</a>
+        </li>
+        <li style="padding: 10px 40px">
+          <a href="/core/examples/cdn.html">CDN</a>
+        </li>
+        <li style="padding: 10px 40px">
+          <a href="/core/">Renderer Demo</a>
+        </li>
+        <li style="padding: 10px 40px">
+          <a href="/core/examples/compiler.html">Compiler Demo</a>
+        </li>
+        <li style="padding: 10px 40px">
+          <a href="/core/examples/canvas-rendering.html">Offscreen Canvas Rendering</a>
+        </li>
+      </ul>
+      <div class="clear"></div>
+    </div>
+    <div id="typst-app-container">
+      <div id="typst-app"></div>
+    </div>
   </body>
+</body>
+
 </html>

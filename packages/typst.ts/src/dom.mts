@@ -97,7 +97,7 @@ export function provideDomDoc<TBase extends GConstructor<TypstDocumentContext<In
     }
 
     async mountDom(pixelPerPt: number | undefined) {
-      console.log('mountDom', pixelPerPt);
+      // console.log('mountDom', pixelPerPt);
 
       if (this.docKernel) {
         throw new Error('already mounted');
@@ -112,7 +112,7 @@ export function provideDomDoc<TBase extends GConstructor<TypstDocumentContext<In
       this.docKernel.bind_functions({
         populateGlyphs: (data: string) => {
           let svg = this.createElement(data)!;
-          console.log('populateGlyphs', svg);
+          // console.log('populateGlyphs', svg);
           let content = svg.firstElementChild!;
           this.resourceHeader.append(content);
         },
@@ -120,7 +120,7 @@ export function provideDomDoc<TBase extends GConstructor<TypstDocumentContext<In
     }
 
     async cancelAnyway$dom() {
-      console.log('cancelAnyway$dom');
+      // console.log('cancelAnyway$dom');
       if (this.current_task) {
         const task = this.current_task;
         this.current_task = undefined;
@@ -256,7 +256,7 @@ export function provideDomDoc<TBase extends GConstructor<TypstDocumentContext<In
       const renderPages = async (inWindow: boolean) => {
         for (let idx = 0; idx < pages.length; ++idx) {
           if (ctx.isCancelRequested()) {
-            console.log('cancel page', RepaintStage.Layout, idx);
+            // console.log('cancel page', RepaintStage.Layout, idx);
             return;
           }
           if (pages[idx].inWindow === inWindow) {
@@ -272,7 +272,7 @@ export function provideDomDoc<TBase extends GConstructor<TypstDocumentContext<In
       if (ctx.isCancelRequested()) {
         return;
       }
-      console.log('finished', RepaintStage.Layout);
+      // console.log('finished', RepaintStage.Layout);
     }
   };
 }
