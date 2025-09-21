@@ -386,7 +386,8 @@ export class TypstDocumentContext<O = any> {
         /// perf event
         const d = (e: string, x: number, y: number) => `${e} ${(y - x).toFixed(2)} ms`;
         this.sampledRenderTime = t2 - t0;
-        console.log([d('parse', t0, t1), d('rerender', t1, t2), d('total', t0, t2)].join(', '));
+        // todo: log in production
+        // console.log([d('parse', t0, t1), d('rerender', t1, t2), d('total', t0, t2)].join(', '));
 
         requestAnimationFrame(doUpdate);
       } catch (e) {
