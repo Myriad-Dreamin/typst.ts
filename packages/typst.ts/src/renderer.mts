@@ -349,6 +349,10 @@ export class TypstWorker {
   }
 }
 
+/**
+ * @deprecated
+ * use {@link TypstRenderer} instead
+ */
 export interface TypstSvgRenderer {
   /**
    * Render a Typst document to svg.
