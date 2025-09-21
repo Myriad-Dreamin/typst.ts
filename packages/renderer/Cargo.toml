@@ -68,8 +68,8 @@ web_verbose = ["web_test"]                        # for test debug
 serde_json = ["dep:serde", "dep:serde_json"]
 
 build_raw_font = []
-build_web_font = []
-build_full = ["build_raw_font", "build_web_font"]
+build_lazy_font = []
+build_full = ["build_raw_font", "build_lazy_font"]
 
 render_canvas = [
     "dep:reflexo-vec2canvas",

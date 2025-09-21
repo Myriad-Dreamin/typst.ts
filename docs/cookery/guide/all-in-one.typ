@@ -227,8 +227,8 @@ todo: fully document the `use` API.
 - `preloadFontData`
 - `preloadFonts`
 - `disableDefaultFontAssets`
+- `loadFonts`
 - `preloadFontAssets`
-- `preloadRemoteFonts`
 - `withPackageRegistry`
 - `withAccessModel`
 - `fetchPackageRegistry`

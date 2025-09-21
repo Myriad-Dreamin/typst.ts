@@ -14,7 +14,6 @@ use error::TypstSourceDiagnostic;
 use font::cache::FontInfoCache;
 use js_sys::{Array, JsString, Uint8Array};
 use reflexo_typst::error::{long_diag_from_std, DiagMessage};
-use reflexo_typst::font::web::BrowserFontSearcher;
 use reflexo_typst::package::registry::JsRegistry;
 use reflexo_typst::prelude::EcoVec;
 use reflexo_typst::typst::diag::{SourceResult, Warned};
@@ -22,6 +21,7 @@ use reflexo_typst::typst::foundations::IntoValue;
 use reflexo_typst::vfs::browser::ProxyAccessModel;
 use wasm_bindgen::prelude::*;
 
+use crate::font::FontResolverImpl;
 use crate::utils::console_log;
 #[cfg(feature = "incr")]
 use incr::IncrServer;
@@ -57,6 +57,7 @@ impl fmt::Display for UnixFmt {
 fn convert_diag<'a>(
     e: impl Iterator<Item = &'a TypstSourceDiagnostic>,
     world: Option<&dyn TypstWorld>,
+    has_error: bool,
     diagnostics_format: u8,
 ) -> JsValue {
     fn convert_diag_object(e: DiagMessage) -> JsValue {
@@ -92,6 +93,7 @@ fn convert_diag<'a>(
     let diag = Array::from_iter(res).into();
 
     let res = js_sys::Object::new();
+    js_sys::Reflect::set(&res, &"hasError".into(), &has_error.into()).unwrap();
     js_sys::Reflect::set(&res, &"diagnostics".into(), &diag).unwrap();
     res.into()
 }
@@ -102,10 +104,10 @@ pub struct TypstCompiler {
 }
 
 impl TypstCompiler {
-    pub async fn new(
+    pub fn new(
         access_model: ProxyAccessModel,
         registry: JsRegistry,
-        searcher: BrowserFontSearcher,
+        fonts: FontResolverImpl,
     ) -> Result<Self, JsValue> {
         Ok(Self {
             verse: TypstBrowserUniverse::new(
@@ -113,7 +115,7 @@ impl TypstCompiler {
                 None,
                 access_model,
                 registry,
-                searcher.build(),
+                fonts,
             ),
         })
     }
@@ -137,9 +139,9 @@ impl TypstCompiler {
         Ok(())
     }
 
-    pub fn set_fonts(&mut self, fonts: TypstFontResolver) -> Result<(), JsValue> {
+    pub fn set_fonts(&mut self, fonts: &TypstFontResolver) -> Result<(), JsValue> {
         self.verse
-            .increment_revision(|verse| verse.set_fonts(fonts.fonts));
+            .increment_revision(|verse| verse.set_fonts(fonts.fonts.clone()));
         Ok(())
     }
 
@@ -421,9 +423,9 @@ impl TypstCompileWorld {
         };
         let artifact_bytes: Bytes = match fmt {
             #[cfg(feature = "svg")]
-            0 => SvgModuleExport::run(&&self.graph, &doc, &ExportWebSvgModuleTask::default())?,
+            0 => SvgModuleExport::run(&self.graph, &doc, &ExportWebSvgModuleTask::default())?,
             #[cfg(feature = "pdf")]
-            1 => PdfExport::run(&&self.graph, &doc, &ExportPdfTask::default())?,
+            1 => PdfExport::run(&self.graph, &doc, &ExportPdfTask::default())?,
             2 => Bytes::new([]),
             _ => {
                 let _ = doc;
@@ -497,6 +499,7 @@ impl TypstCompileWorld {
             Ok(convert_diag(
                 diag.diagnostics(),
                 Some(&self.graph.snap.world),
+                diag.error_cnt() > 0,
                 diagnostics_format,
             ))
         } else if diag.error_cnt() > 0 {

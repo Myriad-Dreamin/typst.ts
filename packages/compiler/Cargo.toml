@@ -40,6 +40,7 @@ reflexo-typst2vec.workspace = true
 reflexo-typst = { workspace = true, features = ["web"] }
 reflexo-vec2svg.workspace = true
 typst.workspace = true
+typst-assets = { workspace = true, optional = true }
 
 [dev-dependencies]
 wasm-bindgen-test.workspace = true
@@ -55,7 +56,7 @@ misc = ["incr", "svg", "pdf", "ast", "semantic_tokens"]
 web = ["reflexo-typst/web"]
 web_test = ["typst-ts-test-common/web_artifacts"]
 
-fonts = ["reflexo-typst/fonts"]
+fonts = ["reflexo-typst/fonts", "typst-assets/fonts"]
 incr = []
 pdf = ["reflexo-typst/pdf"]
 svg = ["reflexo-typst/svg"]
