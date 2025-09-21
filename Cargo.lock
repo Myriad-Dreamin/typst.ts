@@ -4122,9 +4122,9 @@ checksum = "930c0acf610d3fdb5e2ab6213019aaa04e227ebe9547b0649ba599b16d788bd7"
 
 [[package]]
 name = "serde"
-version = "1.0.225"
+version = "1.0.226"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd6c24dee235d0da097043389623fb913daddf92c76e9f5a1db88607a0bcbd1d"
+checksum = "0dca6411025b24b60bfa7ec1fe1f8e710ac09782dca409ee8237ba74b51295fd"
 dependencies = [
  "serde_core",
  "serde_derive",
@@ -4143,18 +4143,18 @@ dependencies = [
 
 [[package]]
 name = "serde_core"
-version = "1.0.225"
+version = "1.0.226"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "659356f9a0cb1e529b24c01e43ad2bdf520ec4ceaf83047b83ddcc2251f96383"
+checksum = "ba2ba63999edb9dac981fb34b3e5c0d111a69b0924e253ed29d83f7c99e966a4"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.225"
+version = "1.0.226"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ea936adf78b1f766949a4977b91d2f5595825bd6ec079aa9543ad2685fc4516"
+checksum = "8db53ae22f34573731bafa1db20f04027b2d25e02d8205921b569171699cdb33"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4745,7 +4745,7 @@ dependencies = [
 [[package]]
 name = "tinymist-derive"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?rev=3eadb2de7535ef21347e6bb37e8859086c2dd713#3eadb2de7535ef21347e6bb37e8859086c2dd713"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=81f5b5d5505f739eab779e342b849bd78fb43bbe#81f5b5d5505f739eab779e342b849bd78fb43bbe"
 dependencies = [
  "quote",
  "syn 2.0.106",
@@ -4754,7 +4754,7 @@ dependencies = [
 [[package]]
 name = "tinymist-l10n"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?rev=3eadb2de7535ef21347e6bb37e8859086c2dd713#3eadb2de7535ef21347e6bb37e8859086c2dd713"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=81f5b5d5505f739eab779e342b849bd78fb43bbe#81f5b5d5505f739eab779e342b849bd78fb43bbe"
 dependencies = [
  "anyhow",
  "clap",
@@ -4768,7 +4768,7 @@ dependencies = [
 [[package]]
 name = "tinymist-package"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?rev=3eadb2de7535ef21347e6bb37e8859086c2dd713#3eadb2de7535ef21347e6bb37e8859086c2dd713"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=81f5b5d5505f739eab779e342b849bd78fb43bbe#81f5b5d5505f739eab779e342b849bd78fb43bbe"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4794,7 +4794,7 @@ dependencies = [
 [[package]]
 name = "tinymist-project"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?rev=3eadb2de7535ef21347e6bb37e8859086c2dd713#3eadb2de7535ef21347e6bb37e8859086c2dd713"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=81f5b5d5505f739eab779e342b849bd78fb43bbe#81f5b5d5505f739eab779e342b849bd78fb43bbe"
 dependencies = [
  "anyhow",
  "clap",
@@ -4823,7 +4823,7 @@ dependencies = [
 [[package]]
 name = "tinymist-std"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?rev=3eadb2de7535ef21347e6bb37e8859086c2dd713#3eadb2de7535ef21347e6bb37e8859086c2dd713"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=81f5b5d5505f739eab779e342b849bd78fb43bbe#81f5b5d5505f739eab779e342b849bd78fb43bbe"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4861,7 +4861,7 @@ dependencies = [
 [[package]]
 name = "tinymist-task"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?rev=3eadb2de7535ef21347e6bb37e8859086c2dd713#3eadb2de7535ef21347e6bb37e8859086c2dd713"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=81f5b5d5505f739eab779e342b849bd78fb43bbe#81f5b5d5505f739eab779e342b849bd78fb43bbe"
 dependencies = [
  "anyhow",
  "clap",
@@ -4895,7 +4895,7 @@ dependencies = [
 [[package]]
 name = "tinymist-vfs"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?rev=3eadb2de7535ef21347e6bb37e8859086c2dd713#3eadb2de7535ef21347e6bb37e8859086c2dd713"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=81f5b5d5505f739eab779e342b849bd78fb43bbe#81f5b5d5505f739eab779e342b849bd78fb43bbe"
 dependencies = [
  "comemo",
  "ecow",
@@ -4914,7 +4914,7 @@ dependencies = [
 [[package]]
 name = "tinymist-world"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?rev=3eadb2de7535ef21347e6bb37e8859086c2dd713#3eadb2de7535ef21347e6bb37e8859086c2dd713"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=81f5b5d5505f739eab779e342b849bd78fb43bbe#81f5b5d5505f739eab779e342b849bd78fb43bbe"
 dependencies = [
  "anyhow",
  "chrono",
@@ -5481,7 +5481,7 @@ dependencies = [
 [[package]]
 name = "typst-shim"
 version = "0.13.17"
-source = "git+https://github.com/ParaN3xus/tinymist.git?rev=3eadb2de7535ef21347e6bb37e8859086c2dd713#3eadb2de7535ef21347e6bb37e8859086c2dd713"
+source = "git+https://github.com/ParaN3xus/tinymist.git?rev=81f5b5d5505f739eab779e342b849bd78fb43bbe#81f5b5d5505f739eab779e342b849bd78fb43bbe"
 dependencies = [
  "cfg-if",
  "comemo",
