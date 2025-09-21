@@ -32,6 +32,7 @@ if (typeof window !== 'undefined') {
   };
   (window as any).TypstCompileModule = {
     createTypstCompiler: compiler.createTypstCompiler,
+    createTypstFontBuilder: compiler.createTypstFontBuilder,
     preloadRemoteFonts: initOptions.preloadRemoteFonts,
     preloadSystemFonts: initOptions.preloadSystemFonts,
 

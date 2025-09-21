@@ -1,4 +1,4 @@
-import type { CompileOptions, TypstCompiler } from '../compiler.mjs';
+import type { CompileOptions, TypstCompiler, TypstFontBuilder } from '../compiler.mjs';
 import {
   withPackageRegistry,
   withAccessModel,
@@ -8,7 +8,6 @@ import {
   disableDefaultFontAssets,
   preloadRemoteFonts,
   LoadRemoteAssetsOptions,
-  LoadRemoteFontsOptions,
 } from '../options.init.mjs';
 import type { TypstRenderer, RenderSession } from '../renderer.mjs';
 import type { RenderToCanvasOptions, RenderSvgOptions } from '../options.render.mjs';
@@ -75,6 +74,17 @@ export type SweetRenderOptions =
     vectorData: Uint8Array;
   };
 
+export type SweetLazyFont = {
+  info: any;
+} & (
+    | {
+      blob: (index: number) => Uint8Array;
+    }
+    | {
+      url: string;
+    }
+  );
+
 type Role = 'compiler' | 'renderer';
 
 /**
@@ -133,6 +143,8 @@ export class TypstSnippet {
   /** @internal */
   private cc?: PromiseJust<TypstCompiler>;
   /** @internal */
+  private fr?: PromiseJust<TypstFontBuilder>;
+  /** @internal */
   private ex?: PromiseJust<TypstRenderer>;
 
   /**
@@ -151,9 +163,11 @@ export class TypstSnippet {
    */
   constructor(options?: {
     compiler?: PromiseJust<TypstCompiler>;
+    fontResolver?: PromiseJust<TypstFontBuilder>;
     renderer?: PromiseJust<TypstRenderer>;
   }) {
     this.cc = options?.compiler || TypstSnippet.buildLocalCompiler;
+    this.fr = options?.fontResolver || TypstSnippet.buildLocalFontResolver;
     this.ex = options?.renderer || TypstSnippet.buildLocalRenderer;
     this.mainFilePath = '/main.typ';
     this.providers = [];
@@ -165,6 +179,10 @@ export class TypstSnippet {
    */
   setCompiler(cc: PromiseJust<TypstCompiler>) {
     this.cc = cc;
+  }
+
+  async getFontResolver() {
+    return (typeof this.fr === 'function' ? (this.fr = await this.fr()) : this.fr)!;
   }
 
   /**
@@ -406,6 +424,48 @@ export class TypstSnippet {
     }
 
     return Promise.resolve();
+  }
+
+  /**
+   * Loads a font from a url synchronously, which is required by the compiler.
+   * @param fontUrl
+   */
+  loadFont(fontUrl: string): (index: number) => Uint8Array {
+    return () => {
+      const xhr = new XMLHttpRequest();
+      xhr.overrideMimeType('text/plain; charset=x-user-defined');
+      xhr.open('GET', fontUrl, false);
+      xhr.send(null);
+
+      if (
+        xhr.status === 200 &&
+        (xhr.response instanceof String || typeof xhr.response === 'string')
+      ) {
+        return Uint8Array.from(xhr.response, (c: string) => c.charCodeAt(0));
+      }
+      return new Uint8Array();
+    };
+  }
+
+  /**
+   * Adds a font to the compiler.
+   *
+   * @example
+   *
+   * ```typescript
+   * const fonts = await fetch('fontInfo.json').then(res => res.json());
+   * $typst.addFonts(fonts.map(font => $typst.loadFont(font.url)));
+   * ```
+   *
+   * @param fontInfos the font infos to add.
+   */
+  async setFonts(fontInfos: SweetLazyFont[]) {
+    const fb = await this.getFontResolver();
+    for (const font of fontInfos) {
+      await fb.addLazyFont(font, 'blob' in font ? font.blob : this.loadFont(font.url), font);
+    }
+    const compiler = await this.getCompiler();
+    await fb.build(async fonts => compiler.setFonts(fonts));
   }
 
   /**
@@ -669,6 +729,19 @@ export class TypstSnippet {
     const compiler = createTypstCompiler();
     await compiler.init(this.ccOptions);
     return compiler;
+  }
+
+  /** @internal */
+  static async buildLocalFontResolver(this: TypstSnippet) {
+    const { createTypstFontBuilder } = (await import(
+      // @ts-ignore
+      '@myriaddreamin/typst.ts/compiler'
+    )) as any as typeof import('../compiler.mjs');
+
+    await this.prepareUse();
+    const fonts = createTypstFontBuilder();
+    await fonts.init(this.ccOptions);
+    return fonts;
   }
 
   /** @internal */

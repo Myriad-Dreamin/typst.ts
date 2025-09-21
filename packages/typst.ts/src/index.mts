@@ -12,7 +12,7 @@ export { rendererBuildInfo, createTypstRenderer, createTypstSvgRenderer } from '
 export { FetchAccessModel, MemoryAccessModel } from './fs/index.mjs';
 export { FetchPackageRegistry } from './fs/package.mjs';
 export type { FetchAccessOptions } from './fs/index.mjs';
-export type { TypstCompiler } from './compiler.mjs';
-export { createTypstCompiler } from './compiler.mjs';
+export type { TypstCompiler, TypstFontBuilder } from './compiler.mjs';
+export { createTypstCompiler, createTypstFontBuilder } from './compiler.mjs';
 export { $typst } from './contrib/snippet.mjs';
 // export { RenderView } from './render/canvas/view.mjs';

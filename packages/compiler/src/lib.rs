@@ -57,6 +57,7 @@ impl fmt::Display for UnixFmt {
 fn convert_diag<'a>(
     e: impl Iterator<Item = &'a TypstSourceDiagnostic>,
     world: Option<&dyn TypstWorld>,
+    has_error: bool,
     diagnostics_format: u8,
 ) -> JsValue {
     fn convert_diag_object(e: DiagMessage) -> JsValue {
@@ -92,6 +93,7 @@ fn convert_diag<'a>(
     let diag = Array::from_iter(res).into();
 
     let res = js_sys::Object::new();
+    js_sys::Reflect::set(&res, &"hasError".into(), &has_error.into()).unwrap();
     js_sys::Reflect::set(&res, &"diagnostics".into(), &diag).unwrap();
     res.into()
 }
@@ -137,9 +139,9 @@ impl TypstCompiler {
         Ok(())
     }
 
-    pub fn set_fonts(&mut self, fonts: TypstFontResolver) -> Result<(), JsValue> {
+    pub fn set_fonts(&mut self, fonts: &TypstFontResolver) -> Result<(), JsValue> {
         self.verse
-            .increment_revision(|verse| verse.set_fonts(fonts.fonts));
+            .increment_revision(|verse| verse.set_fonts(fonts.fonts.clone()));
         Ok(())
     }
 
@@ -421,9 +423,9 @@ impl TypstCompileWorld {
         };
         let artifact_bytes: Bytes = match fmt {
             #[cfg(feature = "svg")]
-            0 => SvgModuleExport::run(&&self.graph, &doc, &ExportWebSvgModuleTask::default())?,
+            0 => SvgModuleExport::run(&self.graph, &doc, &ExportWebSvgModuleTask::default())?,
             #[cfg(feature = "pdf")]
-            1 => PdfExport::run(&&self.graph, &doc, &ExportPdfTask::default())?,
+            1 => PdfExport::run(&self.graph, &doc, &ExportPdfTask::default())?,
             2 => Bytes::new([]),
             _ => {
                 let _ = doc;
@@ -497,6 +499,7 @@ impl TypstCompileWorld {
             Ok(convert_diag(
                 diag.diagnostics(),
                 Some(&self.graph.snap.world),
+                diag.error_cnt() > 0,
                 diagnostics_format,
             ))
         } else if diag.error_cnt() > 0 {
