@@ -26,7 +26,7 @@ export type BeforeBuildMark = typeof BeforeBuildSymbol;
 /**
  * before build stage
  * @description possible created by:
- *   - preloadRemoteFonts
+ *   - loadFonts
  *   - preloadSystemFonts
  *   - withAccessModel
  *   - withPackageRegistry
@@ -43,7 +43,7 @@ export interface InitOptions {
    *
    * before build stage, the registered functions will be executed in order
    * possible options:
-   * - preloadRemoteFonts
+   * - loadFonts
    * - preloadSystemFonts
    * - withAccessModel
    */
@@ -63,6 +63,17 @@ export interface InitOptions {
    */
   getModule(): WebAssemblyModuleRef | Promise<WebAssemblyModuleRef>;
 }
+
+export type LazyFont = {
+  info: any;
+} & (
+    | {
+      blob: (index: number) => Uint8Array;
+    }
+    | {
+      url: string;
+    }
+  );
 
 /** @internal */
 const _textFonts: string[] = [
@@ -127,20 +138,20 @@ export interface LoadRemoteAssetsOptions {
   fetcher?: typeof fetch;
 }
 
-export interface LoadRemoteFontsOptions extends LoadRemoteAssetsOptions {}
+export interface LoadRemoteFontsOptions extends LoadRemoteAssetsOptions { }
 
 /**
  * disable default font assets
  */
 export function disableDefaultFontAssets(): BeforeBuildFn {
-  return preloadRemoteFonts([], { assets: false });
+  return loadFonts([], { assets: false });
 }
 
 /**
  * preload font assets
  */
 export function preloadFontAssets(options?: LoadRemoteAssetsOptions): BeforeBuildFn {
-  return preloadRemoteFonts([], options);
+  return loadFonts([], options);
 }
 
 export function _resolveAssets(options?: LoadRemoteFontsOptions) {
@@ -189,25 +200,51 @@ export function _resolveAssets(options?: LoadRemoteFontsOptions) {
 }
 
 /**
- * preload remote fonts
+ * @deprecated use {@link loadFonts} instead
+ */
+export function preloadRemoteFonts(
+  userFonts: (string | Uint8Array)[],
+  options?: LoadRemoteFontsOptions,
+): BeforeBuildFn {
+  return loadFonts(userFonts, options);
+}
+
+/**
+ * load fonts
  *
  * @param fonts - url path to font files
  * @returns {BeforeBuildFn}
  * @example
- * ```typescript
- * import { init, preloadRemoteFonts } from 'typst';
+ * ```ts
+ * // preLoad fonts from remote url (because finto info is not provided)
+ * import { init, loadFonts } from 'typst';
  * init({
  *   beforeBuild: [
- *     preloadRemoteFonts([
+ *     loadFonts([
  *      'https://fonts.gstatic.com/s/roboto/v27/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2', // remote url
  *      'dist/fonts/Roboto-Regular.ttf', // relative to the root of the website
  *     ]),
  *   ],
  * });
  * ```
+ * @example
+ * ```ts
+ * // lazily Load fonts from remote url. The font information is obtained by `getFontInfo`
+ * import { init, loadFonts } from 'typst';
+ * init({
+ *   beforeBuild: [
+ *     loadFonts([
+ *      {
+ *        info: [...]
+ *        url: 'https://fonts.gstatic.com/s/roboto/v27/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2';
+ *      }
+ *     ]),
+ *   ],
+ * });
+ * ```
  */
-export function preloadRemoteFonts(
-  userFonts: (string | Uint8Array)[],
+export function loadFonts(
+  userFonts: (string | Uint8Array | LazyFont)[],
   options?: LoadRemoteFontsOptions,
 ): BeforeBuildFn {
   const assetFonts = _resolveAssets(options);
@@ -334,7 +371,7 @@ type Builder = typstRenderer.TypstRendererBuilder & typstCompiler.TypstCompilerB
 interface InitContext {
   ref: {
     setFetcher(fetcher: typeof fetch): void;
-    loadFonts(builder: Builder, fonts: (string | Uint8Array)[]): Promise<void>;
+    loadFonts(builder: Builder, fonts: (string | Uint8Array | LazyFont)[]): Promise<void>;
   };
   builder: Builder;
   alreadySetAccessModel: any;

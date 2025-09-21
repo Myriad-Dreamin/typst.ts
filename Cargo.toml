@@ -78,7 +78,7 @@ typst-html = "0.13.0"
 
 ttf-parser = "0.24.1"
 
-typst-assets = "0.13.0"
+typst-assets = "0.13.1"
 typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", rev = "61aebe9" }
 
 # general

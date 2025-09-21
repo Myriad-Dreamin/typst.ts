@@ -3,7 +3,7 @@ import type * as typst from '@myriaddreamin/typst-ts-web-compiler';
 import { buildComponent } from './init.mjs';
 import { SemanticTokens, SemanticTokensLegend, kObject } from './internal.types.mjs';
 
-import { preloadRemoteFonts, type InitOptions } from './options.init.mjs';
+import { loadFonts, type InitOptions } from './options.init.mjs';
 import { LazyWasmModule } from './wasm.mjs';
 
 /**
@@ -90,7 +90,7 @@ interface TransientCompileOptions<
   F extends CompileFormat = any,
   Diagnostics extends DiagnosticsFormat = DiagnosticsFormat,
 > extends SnapshotOptions,
-    DiagOpts<Diagnostics> {
+  DiagOpts<Diagnostics> {
   /**
    * The format of the artifact.
    * - 'vector': can then load to the renderer to render the document.
@@ -102,7 +102,7 @@ interface TransientCompileOptions<
 
 interface IncrementalCompileOptions<Diagnostics extends DiagnosticsFormat = DiagnosticsFormat>
   extends SnapshotOptions,
-    DiagOpts<Diagnostics> {
+  DiagOpts<Diagnostics> {
   /**
    * The format of the incrementally exported artifact.
    * @default 'vector'
@@ -173,9 +173,9 @@ interface CompileResult<T, D extends DiagnosticsFormat> {
   diagnostics?: DiagnosticsData[D][];
 }
 
-export interface TypstFontInfo {}
+export interface TypstFontInfo { }
 
-enum TypstFontResolverCons {}
+enum TypstFontResolverCons { }
 export type TypstFontResolver = TypstFontResolverCons;
 
 export interface TypstFontBuilder {
@@ -472,12 +472,11 @@ export class TypstFontBuilderDriver implements TypstFontBuilder {
   async addFontData(font_buffer: Uint8Array): Promise<void> {
     this.fontBuilder.add_raw_font(font_buffer);
   }
-  async addLazyFont(
+  async addLazyFont<C extends TypstFontInfo>(
     info: TypstFontInfo,
-    blob: (idx: number) => Uint8Array,
-    context?: object,
+    blob: (this: C, idx: number) => Uint8Array,
   ): Promise<void> {
-    return this.fontBuilder.add_lazy_font(info, blob, context);
+    return this.fontBuilder.add_lazy_font(info, blob);
   }
   async build<T>(cb: (resolver: TypstFontResolver) => Promise<T>): Promise<T> {
     const fonts = await this.fontBuilder.build();
@@ -493,7 +492,7 @@ class TypstCompilerDriver implements TypstCompiler {
 
   static defaultAssets = ['text' as const];
 
-  constructor() {}
+  constructor() { }
 
   async init(options?: Partial<InitOptions>): Promise<void> {
     this.compilerJs = await import('@myriaddreamin/typst-ts-web-compiler');
@@ -512,13 +511,13 @@ class TypstCompilerDriver implements TypstCompiler {
     );
 
     if (!hasPreloadRemoteFonts || (!hasSpecifiedAssets && !hasDisableAssets)) {
-      beforeBuild.push(preloadRemoteFonts([], { assets: TypstCompilerDriver.defaultAssets }));
+      beforeBuild.push(loadFonts([], { assets: TypstCompilerDriver.defaultAssets }));
     }
 
     const hasFontLoader = beforeBuild.some((fn: any) => fn._kind === 'fontLoader');
     if (!hasFontLoader) {
       throw new Error(
-        'TypstCompiler: no font loader found, please use font loaders, e.g. preloadRemoteFonts or preloadSystemFonts',
+        'TypstCompiler: no font loader found, please use font loaders, e.g. loadFonts or preloadSystemFonts',
       );
     }
     this.compiler = await buildComponent(options, gCompilerModule, TypstCompilerBuilder, {});

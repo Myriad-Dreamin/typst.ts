@@ -3,7 +3,6 @@ use std::sync::Arc;
 use js_sys::Uint8Array;
 use reflexo_typst::font::cache::FontInfoCache;
 use reflexo_typst::font::memory::MemoryFontSearcher;
-use reflexo_typst::font::web::BrowserFontSearcher;
 use reflexo_typst::font::{BufferFontLoader, FontResolverImpl, FontSlot};
 use reflexo_typst::package::registry::{JsRegistry, ProxyContext};
 use reflexo_typst::vfs::browser::ProxyAccessModel;
@@ -17,7 +16,7 @@ use crate::TypstCompiler;
 pub struct TypstCompilerBuilder {
     access_model: Option<ProxyAccessModel>,
     package_registry: Option<JsRegistry>,
-    searcher: BrowserFontSearcher,
+    fb: TypstFontResolverBuilder,
 }
 
 #[wasm_bindgen]
@@ -28,7 +27,7 @@ impl TypstCompilerBuilder {
         let mut res = Self {
             access_model: None,
             package_registry: None,
-            searcher: BrowserFontSearcher::new(),
+            fb: TypstFontResolverBuilder::default(),
         };
         res.set_dummy_access_model()?;
         Ok(res)
@@ -86,14 +85,19 @@ impl TypstCompilerBuilder {
     }
 
     // 400 KB
-    pub async fn add_raw_font(&mut self, data: Uint8Array) -> Result<()> {
-        self.searcher.add_font_data(TypstBytes::new(data.to_vec()));
+    pub async fn add_raw_font(&mut self, data: Uint8Array) -> Result<(), JsValue> {
+        self.fb.add_raw_font(data)?;
         Ok(())
     }
 
     // 100 KB
-    pub async fn add_web_fonts(&mut self, fonts: js_sys::Array) -> Result<()> {
-        self.searcher.add_web_fonts(fonts).await
+    pub async fn add_lazy_font(
+        &mut self,
+        font: JsValue,
+        blob: js_sys::Function,
+    ) -> Result<(), JsValue> {
+        self.fb.add_lazy_font(font, blob)?;
+        Ok(())
     }
 
     pub async fn build(self) -> Result<TypstCompiler, JsValue> {
@@ -104,16 +108,17 @@ impl TypstCompilerBuilder {
             "TypstCompilerBuilder::build: package_registry is not set".to_string()
         })?;
 
-        let searcher = self.searcher;
+        let searcher = self.fb;
         #[cfg(feature = "fonts")]
         let mut searcher = searcher;
         #[cfg(feature = "fonts")]
         searcher.add_embedded();
 
-        TypstCompiler::new(access_model, registry, searcher).await
+        TypstCompiler::new(access_model, registry, searcher.base.build())
     }
 }
 
+#[derive(Default)]
 #[wasm_bindgen]
 pub struct TypstFontResolverBuilder {
     /// The base font searcher.
@@ -154,13 +159,8 @@ impl TypstFontResolverBuilder {
     // todo: move me to upstream
     /// Adds callback that loads font data lazily to the searcher.
     /// `get_font_info` can be used to get the font info.
-    pub fn add_lazy_font(
-        &mut self,
-        info: JsValue,
-        blob: js_sys::Function,
-        context: JsValue,
-    ) -> Result<(), JsValue> {
-        let arr: FontInfoCache = serde_wasm_bindgen::from_value(info)?;
+    pub fn add_lazy_font(&mut self, font: JsValue, blob: js_sys::Function) -> Result<(), JsValue> {
+        let arr: FontInfoCache = serde_wasm_bindgen::from_value(font.clone())?;
 
         for (index, info) in arr.info.into_iter().enumerate() {
             self.base.fonts.push((
@@ -168,13 +168,25 @@ impl TypstFontResolverBuilder {
                 info.clone(),
                 FontSlot::new(JsFontLoader::new(
                     info,
-                    context.clone(),
+                    font.clone(),
                     blob.clone(),
                     index as u32,
                 )),
             ))
         }
         Ok(())
+    }
+
+    #[cfg(feature = "fonts")]
+    fn add_embedded(&mut self) {
+        for font_data in typst_assets::fonts() {
+            let buffer = Bytes::new(font_data);
+
+            self.base.fonts.extend(
+                Font::iter(buffer)
+                    .map(|font| (font.info().clone(), FontSlot::new_loaded(Some(font)))),
+            );
+        }
     }
 
     pub async fn build(self) -> Result<TypstFontResolver, JsValue> {

@@ -1,4 +1,4 @@
-import { BeforeBuildMark, InitOptions } from './options.init.mjs';
+import { BeforeBuildMark, InitOptions, LazyFont } from './options.init.mjs';
 import { LazyWasmModule } from './wasm.mjs';
 import * as idb from 'idb';
 
@@ -8,7 +8,7 @@ export interface TypstCommonBuilder<T> {
 
   add_raw_font(font_buffer: Uint8Array): Promise<void>;
 
-  add_web_fonts(font: any[]): Promise<void>;
+  add_lazy_font<C extends LazyFont>(info: C, blob: (this: C, index: number) => Uint8Array): Promise<void>;
 
   build(): Promise<T>;
 }
@@ -26,88 +26,6 @@ interface InitContext<T> {
   hooks: ComponentBuildHooks;
 }
 
-/** @internal */
-export const globalFontPromises: Promise<{ buffer: ArrayBuffer; idx: number }>[] = [];
-
-async function addPartialFonts<T>({ builder, hooks }: InitContext<T>): Promise<void> {
-  const t = performance.now();
-
-  if ('queryLocalFonts' in window) {
-    const fonts: any[] = await (window as any).queryLocalFonts();
-    console.log('local fonts count:', fonts.length);
-
-    const db = await idb.openDB('typst-ts-store', 1, {
-      upgrade(db) {
-        db.createObjectStore('font-information', {
-          keyPath: 'postscriptName',
-        });
-      },
-    });
-
-    const information = await Promise.all(
-      fonts.map(async font => {
-        const postscriptName = font.postscriptName;
-
-        return (await db.get('font-information', postscriptName))?.info;
-      }),
-    );
-
-    const get_font_info = (builder as any).handler_for_font_info();
-
-    await builder.add_web_fonts(
-      fonts.map((font, font_idx) => {
-        let gettingBuffer = false;
-        let readyBuffer: ArrayBuffer | undefined = undefined;
-        const fullName = font.fullName;
-        const postscriptName = font.postscriptName;
-
-        const prev = information[font_idx];
-        if (prev) {
-          console.log('prev', postscriptName, prev);
-        }
-        return {
-          family: font.family,
-          style: font.style,
-          fullName: fullName,
-          postscriptName: postscriptName,
-          ref: font,
-          info: information[font_idx],
-          blob: (idx: number) => {
-            console.log(this, font, idx);
-            if (readyBuffer) {
-              return readyBuffer;
-            }
-            if (gettingBuffer) {
-              return;
-            }
-            gettingBuffer = true;
-            globalFontPromises.push(
-              (async () => {
-                const blob: Blob = await font.blob();
-                const buffer = await blob.arrayBuffer();
-                readyBuffer = buffer;
-                const realFontInfo = get_font_info(new Uint8Array(buffer));
-                console.log(realFontInfo);
-
-                db.put('font-information', {
-                  fullName,
-                  postscriptName,
-                  info: realFontInfo,
-                });
-
-                return { buffer, idx };
-              })(),
-            );
-          },
-        };
-      }),
-    );
-  }
-
-  const t2 = performance.now();
-  console.log('addPartialFonts time used:', t2 - t);
-}
-
 class ComponentBuilder<T> {
   loadedFonts = new Set<string>();
   fetcher?: typeof fetch = fetch;
@@ -116,7 +34,7 @@ class ComponentBuilder<T> {
     this.fetcher = fetcher;
   }
 
-  async loadFonts(builder: TypstCommonBuilder<T>, fonts: (string | Uint8Array)[]): Promise<void> {
+  async loadFonts(builder: TypstCommonBuilder<T>, fonts: (string | Uint8Array | LazyFont)[]): Promise<void> {
     const escapeImport = new Function('m', 'return import(m)');
     const fetcher = (this.fetcher ||= await (async function () {
       const { fetchBuilder, FileSystemCache } = await escapeImport('node-fetch-cache');
@@ -138,7 +56,7 @@ class ComponentBuilder<T> {
     })());
 
     const fontsToLoad = fonts.filter(font => {
-      if (font instanceof Uint8Array) {
+      if (font instanceof Uint8Array || (typeof font === 'object' && 'info' in font)) {
         return true;
       }
 
@@ -154,6 +72,10 @@ class ComponentBuilder<T> {
       fontsToLoad.map(async font => {
         if (font instanceof Uint8Array) {
           await builder.add_raw_font(font);
+          return;
+        }
+        if (typeof font === 'object' && 'info' in font) {
+          await builder.add_lazy_font(font, 'blob' in font ? font.blob : loadFontSync(font.url));
           return;
         }
 
@@ -201,4 +123,26 @@ export async function buildComponent<T>(
   await gModule.init(options?.getModule?.());
 
   return await new ComponentBuilder<T>().build(options, new Builder(), hooks);
+}
+
+
+/**
+ * Loads a font from a url synchronously, which is required by the compiler.
+ * @param fontUrl
+ */
+export function loadFontSync(fontUrl: string): (index: number) => Uint8Array {
+  return () => {
+    const xhr = new XMLHttpRequest();
+    xhr.overrideMimeType('text/plain; charset=x-user-defined');
+    xhr.open('GET', fontUrl, false);
+    xhr.send(null);
+
+    if (
+      xhr.status === 200 &&
+      (xhr.response instanceof String || typeof xhr.response === 'string')
+    ) {
+      return Uint8Array.from(xhr.response, (c: string) => c.charCodeAt(0));
+    }
+    return new Uint8Array();
+  };
 }

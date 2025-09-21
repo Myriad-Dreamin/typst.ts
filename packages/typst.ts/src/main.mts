@@ -6,7 +6,7 @@ export type {
   RenderCanvasOptions as RenderPageOptions,
   RenderOptions,
 } from './options.render.mjs';
-export { preloadRemoteFonts, preloadSystemFonts } from './options.init.mjs';
+export { loadFonts, preloadRemoteFonts, preloadSystemFonts } from './options.init.mjs';
 import * as renderer from './renderer.mjs';
 export type { RenderSession, TypstRenderer } from './renderer.mjs';
 export { rendererBuildInfo, createTypstRenderer, createTypstSvgRenderer } from './renderer.mjs';
@@ -27,13 +27,15 @@ if (typeof window !== 'undefined') {
 
     createTypstRenderer: renderer.createTypstRenderer,
     createTypstSvgRenderer: renderer.createTypstRenderer,
-    preloadRemoteFonts: initOptions.preloadRemoteFonts,
+    preloadRemoteFonts: initOptions.loadFonts,
+    loadFonts: initOptions.loadFonts,
     preloadSystemFonts: initOptions.preloadSystemFonts,
   };
   (window as any).TypstCompileModule = {
     createTypstCompiler: compiler.createTypstCompiler,
     createTypstFontBuilder: compiler.createTypstFontBuilder,
-    preloadRemoteFonts: initOptions.preloadRemoteFonts,
+    preloadRemoteFonts: initOptions.loadFonts,
+    loadFonts: initOptions.loadFonts,
     preloadSystemFonts: initOptions.preloadSystemFonts,
 
     FetchAccessModel,

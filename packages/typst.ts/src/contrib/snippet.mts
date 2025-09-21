@@ -6,9 +6,10 @@ import {
   type InitOptions,
   preloadFontAssets,
   disableDefaultFontAssets,
-  preloadRemoteFonts,
+  loadFonts,
   LoadRemoteAssetsOptions,
 } from '../options.init.mjs';
+import { loadFontSync } from '../init.mjs';
 import type { TypstRenderer, RenderSession } from '../renderer.mjs';
 import type { RenderToCanvasOptions, RenderSvgOptions } from '../options.render.mjs';
 import { MemoryAccessModel, type WritableAccessModel } from '../fs/index.mjs';
@@ -245,7 +246,7 @@ export class TypstSnippet {
     return {
       key: 'access-model',
       forRoles: ['compiler'],
-      provides: [preloadRemoteFonts(userFonts)],
+      provides: [loadFonts(userFonts)],
     };
   }
 
@@ -427,27 +428,6 @@ export class TypstSnippet {
   }
 
   /**
-   * Loads a font from a url synchronously, which is required by the compiler.
-   * @param fontUrl
-   */
-  loadFont(fontUrl: string): (index: number) => Uint8Array {
-    return () => {
-      const xhr = new XMLHttpRequest();
-      xhr.overrideMimeType('text/plain; charset=x-user-defined');
-      xhr.open('GET', fontUrl, false);
-      xhr.send(null);
-
-      if (
-        xhr.status === 200 &&
-        (xhr.response instanceof String || typeof xhr.response === 'string')
-      ) {
-        return Uint8Array.from(xhr.response, (c: string) => c.charCodeAt(0));
-      }
-      return new Uint8Array();
-    };
-  }
-
-  /**
    * Adds a font to the compiler.
    *
    * @example
@@ -462,7 +442,7 @@ export class TypstSnippet {
   async setFonts(fontInfos: SweetLazyFont[]) {
     const fb = await this.getFontResolver();
     for (const font of fontInfos) {
-      await fb.addLazyFont(font, 'blob' in font ? font.blob : this.loadFont(font.url), font);
+      await fb.addLazyFont(font, 'blob' in font ? font.blob : loadFontSync(font.url), font);
     }
     const compiler = await this.getCompiler();
     await fb.build(async fonts => compiler.setFonts(fonts));

@@ -14,7 +14,6 @@ use error::TypstSourceDiagnostic;
 use font::cache::FontInfoCache;
 use js_sys::{Array, JsString, Uint8Array};
 use reflexo_typst::error::{long_diag_from_std, DiagMessage};
-use reflexo_typst::font::web::BrowserFontSearcher;
 use reflexo_typst::package::registry::JsRegistry;
 use reflexo_typst::prelude::EcoVec;
 use reflexo_typst::typst::diag::{SourceResult, Warned};
@@ -22,6 +21,7 @@ use reflexo_typst::typst::foundations::IntoValue;
 use reflexo_typst::vfs::browser::ProxyAccessModel;
 use wasm_bindgen::prelude::*;
 
+use crate::font::FontResolverImpl;
 use crate::utils::console_log;
 #[cfg(feature = "incr")]
 use incr::IncrServer;
@@ -104,10 +104,10 @@ pub struct TypstCompiler {
 }
 
 impl TypstCompiler {
-    pub async fn new(
+    pub fn new(
         access_model: ProxyAccessModel,
         registry: JsRegistry,
-        searcher: BrowserFontSearcher,
+        fonts: FontResolverImpl,
     ) -> Result<Self, JsValue> {
         Ok(Self {
             verse: TypstBrowserUniverse::new(
@@ -115,7 +115,7 @@ impl TypstCompiler {
                 None,
                 access_model,
                 registry,
-                searcher.build(),
+                fonts,
             ),
         })
     }

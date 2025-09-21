@@ -1,9 +1,6 @@
 #[cfg(feature = "build_raw_font")]
 pub mod raw_font;
 
-#[cfg(feature = "build_web_font")]
-pub mod web_font;
-
 use crate::TypstRenderer;
 
 use reflexo_typst::error::prelude::*;
@@ -106,7 +103,6 @@ pub mod raw_font_stub {
 #[allow(unused_imports)]
 pub use raw_font_stub::*;
 
-#[cfg(not(feature = "build_web_font"))]
 pub mod web_font_stub {
 
     use std::sync::{Mutex, OnceLock};
@@ -120,16 +116,13 @@ pub mod web_font_stub {
 
     #[wasm_bindgen]
     impl TypstRendererBuilder {
-        pub async fn add_web_fonts(&mut self, _fonts: js_sys::Array) -> Result<()> {
+        pub async fn add_lazy_font(&mut self, _font: JsValue, _blob: JsValue) -> Result<()> {
             WARN_ONCE.lock().unwrap().get_or_init(|| {
                 web_sys::console::warn_1(
-                    &"[typst-ts-renderer]: build_web_font feature is not enabled".into(),
+                    &"[typst-ts-renderer]: add_lazy_font feature is removed".into(),
                 );
             });
             Ok(())
         }
     }
 }
-#[cfg(not(feature = "build_web_font"))]
-#[allow(unused_imports)]
-pub use web_font_stub::*;
