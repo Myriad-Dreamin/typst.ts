@@ -159,6 +159,7 @@ impl DomPage {
 
     fn change_svg_visibility(&mut self, should_visible: bool) {
         if should_visible != self.is_visible {
+            #[cfg(feature = "debug_repaint")]
             web_sys::console::log_2(
                 &format!(
                     "change_svg_visibility {idx} {should_visible}",
@@ -195,6 +196,7 @@ impl DomPage {
         let prev_size = self.layout_data.as_ref().map(|d| d.size);
 
         if prev_size.map(|s| s != data.size).unwrap_or(true) {
+            #[cfg(feature = "debug_relayout")]
             web_sys::console::log_2(
                 &format!("resize {idx} {data:?}", idx = self.idx).into(),
                 &self.elem,
@@ -483,7 +485,7 @@ impl DomPage {
 
     pub fn repaint_canvas(
         &mut self,
-        viewport: Option<tiny_skia::Rect>,
+        _viewport: Option<tiny_skia::Rect>,
         ppp: f32,
     ) -> Result<impl Future<Output = ()>> {
         let render_entire_page = self.realized.lock().unwrap().is_none() || !self.is_visible;
@@ -497,14 +499,15 @@ impl DomPage {
 
         let canvas = self.canvas.clone();
 
-        let idx = self.idx;
+        let _idx = self.idx;
         let state = self.layout_data.clone().unwrap();
         let canvas_state = self.canvas_state.clone();
         let canvas_elem = self.realized_canvas.clone().unwrap();
         let elem = self.realized.clone();
 
+        #[cfg(feature = "debug_repaint_canvas")]
         web_sys::console::log_1(
-            &format!("canvas check: {} {}", idx, elem.lock().unwrap().is_some()).into(),
+            &format!("canvas check: {} {}", _idx, elem.lock().unwrap().is_some()).into(),
         );
 
         #[allow(clippy::await_holding_lock)]
@@ -518,7 +521,8 @@ impl DomPage {
 
             let mut elem = elem.lock().unwrap();
 
-            web_sys::console::log_1(&format!("canvas render: {idx} {viewport:?}").into());
+            #[cfg(feature = "debug_repaint_canvas")]
+            web_sys::console::log_1(&format!("canvas render: {_idx} {_viewport:?}").into());
 
             'render_canvas: {
                 let _global_guard = CanvasStateGuard::new(&canvas_ctx);

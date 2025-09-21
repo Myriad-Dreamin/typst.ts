@@ -12,7 +12,7 @@ import { TypstCancellationToken } from './contrib/dom/typst-cancel.mjs';
 const animationFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
 
 class DomPage {
-  dispose() {}
+  dispose() { }
 }
 
 const enum TrackMode {
@@ -133,10 +133,10 @@ export function provideDomDoc<TBase extends GConstructor<TypstDocumentContext<In
     }
 
     // doesn't need to postRender
-    postRender$dom() {}
+    postRender$dom() { }
 
     // doesn't need to rescale
-    rescale$dom() {}
+    rescale$dom() { }
 
     getDomViewport(
       cachedWindow: Pick<Window, 'innerHeight' | 'innerWidth'>,
@@ -199,7 +199,7 @@ export function provideDomDoc<TBase extends GConstructor<TypstDocumentContext<In
       const renderPage = async (i: number) => {
         await animationFrame();
         if (ctx.isCancelRequested()) {
-          console.log('cancel stage', RepaintStage.Layout, i);
+          // console.log('cancel stage', RepaintStage.Layout, i);
           return undefined;
         }
         const page = pages[i].page;
@@ -237,7 +237,7 @@ export function provideDomDoc<TBase extends GConstructor<TypstDocumentContext<In
         await calc(RepaintStage.Svg);
         await calc(RepaintStage.Semantics);
         if (ctx.isCancelRequested()) {
-          console.log('cancel stage', RepaintStage.Semantics, i);
+          // console.log('cancel stage', RepaintStage.Semantics, i);
           return undefined;
         }
         if (needCalc(RepaintStage.PrepareCanvas)) {
@@ -282,4 +282,4 @@ export class TypstDomDocument extends provideDoc(
     TypstDocumentContext as GConstructor<TypstDocumentContext<InitDomDocArgs>>,
     provideDomDoc,
   ),
-) {}
+) { }

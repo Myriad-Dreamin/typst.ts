@@ -75,6 +75,7 @@ pub enum VecItem {
 }
 
 /// Module with page references, corresponding to a `typst::model::Document`.
+#[derive(Debug)]
 pub struct VecDocument {
     /// module containing all of the data related to this document.
     pub module: Module,
@@ -109,6 +110,7 @@ impl VecDocument {
 
 /// Module with multiple documents, corresponding to multiple
 /// `typst::model::Document` rearranged by [`LayoutRegion`].
+#[derive(Debug)]
 pub struct MultiVecDocument {
     /// module containing all of the data related to this document.
     pub module: Module,
