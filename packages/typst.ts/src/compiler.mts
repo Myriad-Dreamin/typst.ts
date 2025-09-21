@@ -190,7 +190,7 @@ export interface TypstFontBuilder {
    * 
    * @param font_buffer - The font buffer to add.
    */
-  addRawFont(font_buffer: Uint8Array): Promise<void>;
+  addFontData(font_buffer: Uint8Array): Promise<void>;
   /**
    * Add a lazy font.
    * 
@@ -218,7 +218,7 @@ export interface TypstFontBuilder {
  * import { createTypstFontBuilder } from 'typst';
  * const fb = createTypstFontBuilder();
  * await fb.init();
- * await fb.addRawFont(new Uint8Array(await fetch('font.ttf').then(r => r.arrayBuffer())));
+ * await fb.addFontData(new Uint8Array(await fetch('font.ttf').then(r => r.arrayBuffer())));
  * await fb.build();
  * ```
  */
@@ -386,7 +386,7 @@ export class TypstFontBuilderDriver implements TypstFontBuilder {
     return this.fontBuilder.get_font_info(font_buffer) as TypstFontInfo;
   }
 
-  async addRawFont(font_buffer: Uint8Array): Promise<void> {
+  async addFontData(font_buffer: Uint8Array): Promise<void> {
     this.fontBuilder.add_raw_font(font_buffer);
   }
   async addLazyFont(info: TypstFontInfo, blob: (idx: number) => Promise<Uint8Array>, context?: object): Promise<void> {
@@ -406,7 +406,7 @@ class TypstCompilerDriver implements TypstCompiler {
 
   static defaultAssets = ['text' as const];
 
-  constructor() {}
+  constructor() { }
 
   async init(options?: Partial<InitOptions>): Promise<void> {
     this.compilerJs = await import('@myriaddreamin/typst-ts-web-compiler');
