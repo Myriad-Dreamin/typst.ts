@@ -210,8 +210,8 @@ export class TypstSnippet {
   /**
    * Get an initialized renderer instance from the utility instance.
    */
-  async getRenderer() {
-    return typeof this.ex === 'function' ? (this.ex = await this.ex()) : this.ex;
+  async getRenderer(): Promise<TypstRenderer> {
+    return typeof this.ex === 'function' ? (this.ex = await this.ex()) : this.ex!;
   }
 
   private providers?: PromiseJust<TypstSnippetProvider>[];
@@ -442,7 +442,7 @@ export class TypstSnippet {
   async setFonts(fontInfos: SweetLazyFont[]) {
     const fb = await this.getFontResolver();
     for (const font of fontInfos) {
-      await fb.addLazyFont(font, 'blob' in font ? font.blob : loadFontSync(font.url), font);
+      await fb.addLazyFont(font, 'blob' in font ? font.blob : loadFontSync(font), font);
     }
     const compiler = await this.getCompiler();
     await fb.build(async fonts => compiler.setFonts(fonts));

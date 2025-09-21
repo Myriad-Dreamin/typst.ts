@@ -1,6 +1,5 @@
 import { BeforeBuildMark, InitOptions, LazyFont } from './options.init.mjs';
 import { LazyWasmModule } from './wasm.mjs';
-import * as idb from 'idb';
 
 /** @internal */
 export interface TypstCommonBuilder<T> {
@@ -8,7 +7,10 @@ export interface TypstCommonBuilder<T> {
 
   add_raw_font(font_buffer: Uint8Array): Promise<void>;
 
-  add_lazy_font<C extends LazyFont>(info: C, blob: (this: C, index: number) => Uint8Array): Promise<void>;
+  add_lazy_font<C extends LazyFont>(
+    info: C,
+    blob: (this: C, index: number) => Uint8Array,
+  ): Promise<void>;
 
   build(): Promise<T>;
 }
@@ -34,7 +36,10 @@ class ComponentBuilder<T> {
     this.fetcher = fetcher;
   }
 
-  async loadFonts(builder: TypstCommonBuilder<T>, fonts: (string | Uint8Array | LazyFont)[]): Promise<void> {
+  async loadFonts(
+    builder: TypstCommonBuilder<T>,
+    fonts: (string | Uint8Array | LazyFont)[],
+  ): Promise<void> {
     const escapeImport = new Function('m', 'return import(m)');
     const fetcher = (this.fetcher ||= await (async function () {
       const { fetchBuilder, FileSystemCache } = await escapeImport('node-fetch-cache');
@@ -75,7 +80,7 @@ class ComponentBuilder<T> {
           return;
         }
         if (typeof font === 'object' && 'info' in font) {
-          await builder.add_lazy_font(font, 'blob' in font ? font.blob : loadFontSync(font.url));
+          await builder.add_lazy_font(font, 'blob' in font ? font.blob : loadFontSync(font));
           return;
         }
 
@@ -116,7 +121,7 @@ class ComponentBuilder<T> {
 export async function buildComponent<T>(
   options: Partial<InitOptions> | undefined,
   gModule: LazyWasmModule,
-  Builder: { new(): TypstCommonBuilder<T> },
+  Builder: { new (): TypstCommonBuilder<T> },
   hooks: ComponentBuildHooks,
 ): Promise<T> {
   /// init typst wasm module
@@ -125,16 +130,15 @@ export async function buildComponent<T>(
   return await new ComponentBuilder<T>().build(options, new Builder(), hooks);
 }
 
-
 /**
- * Loads a font from a url synchronously, which is required by the compiler.
- * @param fontUrl
+ * Loads a font by a lazy font synchronously, which is required by the compiler.
+ * @param font
  */
-export function loadFontSync(fontUrl: string): (index: number) => Uint8Array {
+export function loadFontSync(font: LazyFont & { url: string }): (index: number) => Uint8Array {
   return () => {
     const xhr = new XMLHttpRequest();
     xhr.overrideMimeType('text/plain; charset=x-user-defined');
-    xhr.open('GET', fontUrl, false);
+    xhr.open('GET', font.url, false);
     xhr.send(null);
 
     if (

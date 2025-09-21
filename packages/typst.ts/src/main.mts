@@ -1,3 +1,4 @@
+import * as init from './init.mjs';
 import * as initOptions from './options.init.mjs';
 export type { InitOptions, BeforeBuildFn } from './options.init.mjs';
 export type {
@@ -36,6 +37,7 @@ if (typeof window !== 'undefined') {
     createTypstFontBuilder: compiler.createTypstFontBuilder,
     preloadRemoteFonts: initOptions.loadFonts,
     loadFonts: initOptions.loadFonts,
+    loadFontSync: init.loadFontSync,
     preloadSystemFonts: initOptions.preloadSystemFonts,
 
     FetchAccessModel,
