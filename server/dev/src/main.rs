@@ -121,7 +121,7 @@ async fn watch(watch_sub: WatchSubCommands) {
     let watch_renderer_group = ("renderer", watch_renderer_cmd);
     let watch_core_cmd = "yarn workspace @myriaddreamin/typst.ts build:dev";
     let watch_core_group = ("core", watch_core_cmd);
-    let serve_http_cmd = "yarn dev";
+    let serve_http_cmd = "yarn dev:run";
     let serve_http_group = ("http", serve_http_cmd);
 
     let mut groups = vec![];
