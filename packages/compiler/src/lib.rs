@@ -26,24 +26,6 @@ use crate::utils::console_log;
 #[cfg(feature = "incr")]
 use incr::IncrServer;
 
-macro_rules! take_diag {
-    ($diagnostics_format:expr, $g:expr, $world:expr, $e:expr, $D:ty) => {
-        match $e {
-            Some(v) => v,
-            None => {
-                let diag: Arc<TDiagnosticsTask<$D>> = $g.compute::<TDiagnosticsTask<$D>>()?;
-                let diag = diag.diagnostics();
-                if $diagnostics_format >= 2 {
-                    return Ok(convert_diag(diag, Some($world), $diagnostics_format));
-                } else {
-                    let diag = diag.collect::<Vec<_>>();
-                    return Err(format!("{diag:?}").into());
-                }
-            }
-        }
-    };
-}
-
 /// In format of
 ///
 /// ```log
@@ -339,12 +321,29 @@ impl TypstCompiler {
             graph: WorldComputeGraph::new(CompileSnapshot::from_world(world)),
         })
     }
+
     pub fn get_artifact(
         &mut self,
         fmt: String,
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
-        let mut w = self.snapshot(None, None, None)?;
+        self.compile(None, None, fmt, diagnostics_format)
+    }
+
+    pub fn compile(
+        &mut self,
+        main_file_path: Option<String>,
+        inputs: Option<Vec<js_sys::Array>>,
+        fmt: String,
+        diagnostics_format: u8,
+    ) -> Result<JsValue, JsValue> {
+        let mut w = self.snapshot(None, main_file_path, inputs)?;
+        let fmt = match fmt.as_str() {
+            "vector" => 0u8,
+            "pdf" => 1,
+            "_dummy" => 2,
+            _ => return Err(error_once!("Unsupported fmt", fmt: fmt).into()),
+        };
         w.get_artifact(fmt, diagnostics_format)
     }
 
@@ -356,18 +355,8 @@ impl TypstCompiler {
         field: Option<String>,
     ) -> Result<String, JsValue> {
         let mut w = self.snapshot(None, Some(main_file_path), inputs)?;
-        w.query(selector, field)
-    }
-
-    pub fn compile(
-        &mut self,
-        main_file_path: String,
-        inputs: Option<Vec<js_sys::Array>>,
-        fmt: String,
-        diagnostics_format: u8,
-    ) -> Result<JsValue, JsValue> {
-        let mut w = self.snapshot(None, Some(main_file_path), inputs)?;
-        w.get_artifact(fmt, diagnostics_format)
+        let _doc = w.compile(0, 0)?;
+        w.query(0, selector, field)
     }
 
     #[cfg(feature = "incr")]
@@ -388,6 +377,10 @@ impl TypstCompiler {
     }
 }
 
+type CFlag<D> = FlagTask<CompilationTask<D>>;
+type PagedCFlag = CFlag<reflexo_typst::TypstPagedDocument>;
+type HtmlCFlag = CFlag<reflexo_typst::TypstHtmlDocument>;
+
 #[wasm_bindgen]
 pub struct TypstCompileWorld {
     graph: Arc<WorldComputeGraph<BrowserCompilerFeat>>,
@@ -395,11 +388,27 @@ pub struct TypstCompileWorld {
 
 #[wasm_bindgen]
 impl TypstCompileWorld {
-    pub fn get_artifact(
-        &mut self,
-        fmt: String,
-        diagnostics_format: u8,
-    ) -> Result<JsValue, JsValue> {
+    pub fn compile(&mut self, kind: u8, diagnostics_format: u8) -> Result<JsValue, JsValue> {
+        match kind {
+            0 => {
+                self.do_compile_paged()?;
+                self.get_diag::<TypstPagedDocument>(diagnostics_format)
+            }
+            1 => {
+                self.do_compile_html()?;
+                self.get_diag::<TypstHtmlDocument>(diagnostics_format)
+            }
+            _ => Err(error_once!("invalid kind", kind: kind).into()),
+        }
+    }
+
+    pub fn title(&self, kind: u8) -> Result<Option<String>, JsValue> {
+        Ok(self
+            .get_doc(kind)?
+            .and_then(|doc| Some(doc.info().title.as_ref()?.to_string())))
+    }
+
+    pub fn get_artifact(&mut self, fmt: u8, diagnostics_format: u8) -> Result<JsValue, JsValue> {
         #[cfg(feature = "svg")]
         use reflexo_vec2svg::DefaultExportFeature;
         #[cfg(feature = "svg")]
@@ -407,28 +416,16 @@ impl TypstCompileWorld {
         #[cfg(feature = "pdf")]
         use reflexo_typst::task::ExportPdfTask;
 
-        let g = &self.graph;
-        let world = &self.graph.snap.world;
-
-        let _ = g.provide::<FlagTask<CompilationTask<reflexo_typst::TypstPagedDocument>>>(Ok(
-            FlagTask::flag(true),
-        ));
-        // todo: warning is ignored here.
-        let doc = take_diag!(
-            diagnostics_format,
-            g,
-            &world,
-            g.shared_compile()?,
-            reflexo_typst::TypstPagedDocument
-        );
-
-        let artifact_bytes: Bytes = match fmt.as_str() {
+        let Some(doc) = self.do_compile_paged()? else {
+            return self.get_diag::<TypstPagedDocument>(diagnostics_format);
+        };
+        let artifact_bytes: Bytes = match fmt {
             #[cfg(feature = "svg")]
-            "vector" => SvgModuleExport::run(&g, &doc, &ExportWebSvgModuleTask::default())?,
+            0 => SvgModuleExport::run(&&self.graph, &doc, &ExportWebSvgModuleTask::default())?,
             #[cfg(feature = "pdf")]
-            "pdf" => PdfExport::run(&g, &doc, &ExportPdfTask::default())?,
-            "_dummy" => Bytes::new([]),
-            fmt => {
+            1 => PdfExport::run(&&self.graph, &doc, &ExportPdfTask::default())?,
+            2 => Bytes::new([]),
+            _ => {
                 let _ = doc;
                 return Err(error_once!("Unsupported fmt", format: fmt).into());
             }
@@ -445,15 +442,21 @@ impl TypstCompileWorld {
         })
     }
 
-    pub fn query(&mut self, selector: String, field: Option<String>) -> Result<String, JsValue> {
-        let g = &self.graph;
-
+    pub fn query(
+        &mut self,
+        kind: u8,
+        selector: String,
+        field: Option<String>,
+    ) -> Result<String, JsValue> {
         // todo: diagnostics
-        let doc = g.compile().output.map_err(|e| format!("{e:?}"))?;
-        // todo: query html?
-        let elements: Vec<typst::foundations::Content> = g
-            .query(selector, &TypstDocument::Paged(doc))
-            .map_err(|e| format!("{e:?}"))?;
+        let doc = self
+            .get_doc(kind)?
+            .ok_or_else(|| error_once!("document is not compiled"))?;
+
+        // todo: query snapshot.query should directly return a error?
+        let elements: Vec<typst::foundations::Content> =
+            reflexo_typst::query::retrieve(&self.graph.snap.world, &selector, &doc)
+                .map_err(|e| JsValue::from(e.as_str()))?;
 
         let mapped: Vec<_> = elements
             .into_iter()
@@ -472,18 +475,9 @@ impl TypstCompileWorld {
         state: &mut IncrServer,
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
-        let g = &self.graph;
-        let _ = g.provide::<FlagTask<CompilationTask<reflexo_typst::TypstPagedDocument>>>(Ok(
-            FlagTask::flag(true),
-        ));
-        let doc = take_diag!(
-            diagnostics_format,
-            g,
-            &g.snap.world,
-            g.shared_compile()?,
-            TypstPagedDocument
-        );
-
+        let Some(doc) = self.do_compile_paged()? else {
+            return self.get_diag::<TypstPagedDocument>(diagnostics_format);
+        };
         let v = Uint8Array::from(state.update(doc).as_slice()).into();
         Ok(if diagnostics_format != 0 {
             let result = js_sys::Object::new();
@@ -492,6 +486,64 @@ impl TypstCompileWorld {
         } else {
             v
         })
+    }
+
+    fn get_diag<D: TypstDocumentTrait + Send + Sync + 'static>(
+        &self,
+        diagnostics_format: u8,
+    ) -> Result<JsValue, JsValue> {
+        let diag = self.graph.compute::<TDiagnosticsTask<D>>()?;
+        if diagnostics_format >= 2 {
+            Ok(convert_diag(
+                diag.diagnostics(),
+                Some(&self.graph.snap.world),
+                diagnostics_format,
+            ))
+        } else if diag.error_cnt() > 0 {
+            let diag = diag.diagnostics().collect::<Vec<_>>();
+            return Err(format!("{diag:?}").into());
+        } else {
+            Ok(JsValue::UNDEFINED)
+        }
+    }
+
+    fn do_compile_html(&mut self) -> Result<Option<Arc<TypstHtmlDocument>>, JsValue> {
+        let g = &self.graph;
+        let _ = g.provide::<HtmlCFlag>(Ok(FlagTask::flag(true)));
+        Ok(g.shared_compile_html()?)
+    }
+
+    fn do_compile_paged(&mut self) -> Result<Option<Arc<TypstPagedDocument>>, JsValue> {
+        let g = &self.graph;
+        let _ = g.provide::<PagedCFlag>(Ok(FlagTask::flag(true)));
+        Ok(g.shared_compile()?)
+    }
+
+    fn get_doc(&self, kind: u8) -> Result<Option<TypstDocument>, JsValue> {
+        Ok(match kind {
+            0 => self
+                .get_doc_t::<TypstPagedDocument>()?
+                .map(TypstDocument::Paged),
+            1 => self
+                .get_doc_t::<TypstHtmlDocument>()?
+                .map(TypstDocument::Html),
+            _ => return Err(error_once!("invalid kind", kind: kind).into()),
+        })
+    }
+
+    fn get_doc_t<D: TypstDocumentTrait + Send + Sync + 'static>(
+        &self,
+    ) -> Result<Option<Arc<D>>, JsValue> {
+        // todo: don't coupled me with compilation.
+        self.graph
+            .get::<CFlag<D>>()
+            .ok_or_else(|| error_once!("document is not compiled"))??;
+        Ok(self
+            .graph
+            .get::<OptionDocumentTask<D>>()
+            .ok_or_else(|| error_once!("document did not compile"))??
+            .as_ref()
+            .clone())
     }
 }
 
