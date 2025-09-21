@@ -1,10 +1,15 @@
-use js_sys::Uint8Array;
-use wasm_bindgen::prelude::*;
+use std::sync::Arc;
 
-use reflexo_typst::font::web::BrowserFontSearcher;
+use js_sys::Uint8Array;
+use reflexo_typst::font::cache::FontInfoCache;
+use reflexo_typst::font::memory::MemoryFontSearcher;
+use reflexo_typst::font::web::{BrowserFontSearcher, WebFont, WebFontLoader};
+use reflexo_typst::font::{BufferFontLoader, FontResolverImpl, FontSlot};
 use reflexo_typst::package::registry::{JsRegistry, ProxyContext};
 use reflexo_typst::vfs::browser::ProxyAccessModel;
 use reflexo_typst::{error::prelude::*, Bytes as TypstBytes};
+use typst::text::FontInfo;
+use wasm_bindgen::prelude::*;
 
 use crate::TypstCompiler;
 
@@ -107,4 +112,82 @@ impl TypstCompilerBuilder {
 
         TypstCompiler::new(access_model, registry, searcher).await
     }
+}
+
+#[wasm_bindgen]
+pub struct TypstFontResolverBuilder {
+    /// The base font searcher.
+    base: MemoryFontSearcher,
+}
+
+#[wasm_bindgen]
+#[allow(non_snake_case)]
+impl TypstFontResolverBuilder {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Result<TypstFontResolverBuilder> {
+        console_error_panic_hook::set_once();
+        Ok(Self {
+            base: MemoryFontSearcher::new(),
+        })
+    }
+
+    pub fn get_font_info(&mut self, buffer: Uint8Array) -> Result<JsValue, JsValue> {
+        Ok(crate::get_font_info(buffer))
+    }
+
+    /// Adds font data to the searcher.
+    pub fn add_raw_font(&mut self, buffer: Uint8Array) -> Result<(), JsValue> {
+        let buffer = TypstBytes::new(buffer.to_vec());
+        for (i, info) in FontInfo::iter(buffer.as_slice()).enumerate() {
+            let buffer = buffer.clone();
+            self.base.fonts.push((
+                info,
+                FontSlot::new(BufferFontLoader {
+                    buffer: Some(buffer),
+                    index: i as u32,
+                }),
+            ))
+        }
+        Ok(())
+    }
+
+    // todo: move me to upstream
+    /// Adds callback that loads font data lazily to the searcher.
+    /// `get_font_info` can be used to get the font info.
+    pub fn add_lazy_font(
+        &mut self,
+        info: JsValue,
+        blob: js_sys::Function,
+        context: JsValue,
+    ) -> Result<(), JsValue> {
+        let arr: FontInfoCache = serde_wasm_bindgen::from_value(info)?;
+
+        for (index, info) in arr.info.into_iter().enumerate() {
+            self.base.fonts.push((
+                // todo: unneeded clone
+                info.clone(),
+                FontSlot::new(WebFontLoader::new(
+                    WebFont {
+                        info,
+                        context: context.clone(),
+                        blob: blob.clone(),
+                        index: index as u32,
+                    },
+                    index as u32,
+                )),
+            ))
+        }
+        Ok(())
+    }
+
+    pub async fn build(self) -> Result<TypstFontResolver, JsValue> {
+        Ok(TypstFontResolver {
+            fonts: Arc::new(self.base.build()),
+        })
+    }
+}
+
+#[wasm_bindgen]
+pub struct TypstFontResolver {
+    pub(crate) fonts: Arc<FontResolverImpl>,
 }

@@ -186,9 +186,7 @@ class ComponentBuilder<T> {
       hooks.latelyBuild(buildCtx);
     }
 
-    const component = await builder.build();
-
-    return component;
+    return await builder.build();
   }
 }
 
@@ -196,7 +194,7 @@ class ComponentBuilder<T> {
 export async function buildComponent<T>(
   options: Partial<InitOptions> | undefined,
   gModule: LazyWasmModule,
-  Builder: { new (): TypstCommonBuilder<T> },
+  Builder: { new(): TypstCommonBuilder<T> },
   hooks: ComponentBuildHooks,
 ): Promise<T> {
   /// init typst wasm module

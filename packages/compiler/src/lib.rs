@@ -4,6 +4,7 @@ pub mod builder;
 mod incr;
 pub(crate) mod utils;
 
+pub use crate::builder::TypstFontResolver;
 pub use reflexo_typst::*;
 
 use core::fmt;
@@ -16,9 +17,9 @@ use reflexo_typst::error::{long_diag_from_std, DiagMessage};
 use reflexo_typst::font::web::BrowserFontSearcher;
 use reflexo_typst::package::registry::JsRegistry;
 use reflexo_typst::prelude::EcoVec;
+use reflexo_typst::typst::diag::{SourceResult, Warned};
 use reflexo_typst::typst::foundations::IntoValue;
 use reflexo_typst::vfs::browser::ProxyAccessModel;
-use typst::diag::{SourceResult, Warned};
 use wasm_bindgen::prelude::*;
 
 use crate::utils::console_log;
@@ -136,6 +137,7 @@ impl TypstCompiler {
     }
 }
 
+/// @deprecated use TypstFontResolverBuilder instead
 #[wasm_bindgen]
 pub fn get_font_info(buffer: Uint8Array) -> JsValue {
     serde_wasm_bindgen::to_value(&FontInfoCache::from_data(buffer.to_vec().as_slice())).unwrap()
@@ -150,6 +152,12 @@ impl TypstCompiler {
         // reset the world caches
         self.verse.evict(30);
 
+        Ok(())
+    }
+
+    pub fn set_fonts(&mut self, fonts: TypstFontResolver) -> Result<(), JsValue> {
+        self.verse
+            .increment_revision(|verse| verse.set_fonts(fonts.fonts));
         Ok(())
     }
 
