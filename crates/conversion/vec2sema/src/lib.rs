@@ -72,6 +72,9 @@ impl SemaTask {
                 let ts = ts.pre_concat(trans.into());
                 self.prepare_text_rects(ctx, ts, t.1);
             }
+            Labelled(t) => {
+                self.prepare_text_rects(ctx, ts, t.1);
+            }
             Text(t) => {
                 // main logic
                 let size = (t.shape.size) * Scalar(ts.sy);
