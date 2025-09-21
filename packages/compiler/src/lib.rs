@@ -393,6 +393,7 @@ pub struct TypstCompileWorld {
     graph: Arc<WorldComputeGraph<BrowserCompilerFeat>>,
 }
 
+#[wasm_bindgen]
 impl TypstCompileWorld {
     pub fn get_artifact(
         &mut self,

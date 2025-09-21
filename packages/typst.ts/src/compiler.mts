@@ -58,6 +58,10 @@ export type DiagnosticsData = {
 
 interface CompileOptionsCommon {
   /**
+   * The root of the main file.
+   */
+  root?: string;
+  /**
    * The path of the main file.
    */
   mainFilePath: string;
@@ -443,11 +447,10 @@ class TypstCompilerDriver implements TypstCompiler {
 
   compile(options: CompileOptions): Promise<any> {
     return new Promise(resolve => {
+      const world = this.compiler.snapshot(options.root, options.mainFilePath, convertInputs(options.inputs));
       if ('incrementalServer' in options) {
         resolve(
-          this.compiler.incr_compile(
-            options.mainFilePath,
-            convertInputs(options.inputs),
+          world.incr_compile(
             options.incrementalServer[kObject],
             getDiagnosticsArg(options.diagnostics),
           ),
@@ -455,9 +458,7 @@ class TypstCompilerDriver implements TypstCompiler {
         return;
       }
       resolve(
-        this.compiler.compile(
-          options.mainFilePath,
-          convertInputs(options.inputs),
+        world.get_artifact(
           options.format || 'vector',
           getDiagnosticsArg(options.diagnostics),
         ),
@@ -467,11 +468,10 @@ class TypstCompilerDriver implements TypstCompiler {
 
   query(options: QueryOptions): Promise<any> {
     return new Promise<any>(resolve => {
+      const world = this.compiler.snapshot(options.root, options.mainFilePath, convertInputs(options.inputs));
       resolve(
         JSON.parse(
-          this.compiler.query(
-            options.mainFilePath,
-            convertInputs(options.inputs),
+          world.query(
             options.selector,
             options.field,
           ),
