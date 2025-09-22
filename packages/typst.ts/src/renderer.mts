@@ -350,6 +350,30 @@ export class TypstWorker {
 }
 
 /**
+ * @deprecated
+ * use {@link TypstRenderer} instead
+ */
+export interface TypstSvgRenderer {
+  /**
+   * Render a Typst document to svg.
+   * @param {RenderOptions<RenderToSvgOptions>} options - The options for
+   * rendering a Typst document to specified container.
+   * @returns {void} - The result of rendering a Typst document.
+   * @example
+   * ```typescript
+   * let fetchDoc = (path) => fetch(path).then(
+   *   response => new Uint8Array(response.arrayBuffer()))
+   * renderer.renderToSvg({
+   *   container: document.getElementById('container'),
+   *   artifactContent: await fetchDoc('typst-main.sir.in'),
+   * });
+   * ```
+   */
+  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<boolean>;
+}
+
+
+/**
  * The interface of Typst renderer.
  */
 export interface TypstRenderer extends TypstSvgRenderer {
@@ -574,42 +598,6 @@ export function createTypstRenderer(): TypstRenderer {
   return new TypstRendererDriver();
 }
 
-export interface TypstSvgRenderer {
-  init(options?: Partial<InitOptions>): Promise<void>;
-
-  /**
-   * Create a svg session.
-   * @deprecated
-   * use {@link TypstRenderer['runWithSession']} instead
-   */
-  createModule(b: Uint8Array): Promise<RenderSession>;
-
-  /**
-   * Render a Typst document to svg.
-   * @param {RenderOptions<RenderToSvgOptions>} options - The options for
-   * rendering a Typst document to specified container.
-   * @returns {void} - The result of rendering a Typst document.
-   * @example
-   * ```typescript
-   * let fetchDoc = (path) => fetch(path).then(
-   *   response => new Uint8Array(response.arrayBuffer()))
-   * renderer.renderToSvg({
-   *   container: document.getElementById('container'),
-   *   artifactContent: await fetchDoc('typst-main.sir.in'),
-   * });
-   * ```
-   */
-  renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<boolean>;
-}
-
-/**
- * @deprecated
- * use {@link createTypstRenderer} instead
- */
-export function createTypstSvgRenderer(): TypstSvgRenderer {
-  return new TypstRendererDriver();
-}
-
 export async function rendererBuildInfo(): Promise<any> {
   const renderModule = await import('@myriaddreamin/typst-ts-renderer');
   return renderModule.renderer_build_info();
@@ -622,7 +610,7 @@ export class TypstRendererDriver {
   renderer: typst.TypstRenderer;
   rendererJs: typeof typst;
 
-  constructor() {}
+  constructor() { }
 
   async init(options?: Partial<InitOptions>): Promise<void> {
     this.rendererJs = await (options?.getWrapper?.() || import('@myriaddreamin/typst-ts-renderer'));
@@ -835,7 +823,7 @@ export class TypstRendererDriver {
       if (options.pixelPerPt !== undefined && options.pixelPerPt <= 0) {
         throw new Error(
           'Invalid typst.RenderOptions.pixelPerPt, should be a positive number ' +
-            options.pixelPerPt,
+          options.pixelPerPt,
         );
       }
 
@@ -875,10 +863,10 @@ export class TypstRendererDriver {
         this,
         this.renderer.create_session(
           b &&
-            this.createOptionsToRust({
-              format: 'vector',
-              artifactContent: b,
-            }),
+          this.createOptionsToRust({
+            format: 'vector',
+            artifactContent: b,
+          }),
         ),
       ),
     );
