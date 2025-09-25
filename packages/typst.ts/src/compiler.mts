@@ -270,8 +270,8 @@ export class TypstWorld {
   /**
    * Runs query on the paged document.
    */
-  async query(options: QueryOptions): Promise<string> {
-    return this[kObject].query(0, options.selector, options.field);
+  async query<T = any>(options: QueryOptions): Promise<T> {
+    return JSON.parse(this[kObject].query(0, options.selector, options.field));
   }
 
   /**
