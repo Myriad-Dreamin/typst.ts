@@ -16,6 +16,15 @@ export default defineWorkspace([
         headless: true,
         provider: 'playwright', // or 'webdriverio'
         enabled: true,
+        expect: {
+          toMatchScreenshot: {
+            comparatorName: 'pixelmatch',
+            comparatorOptions: {
+              threshold: 0.01,
+              allowedMismatchedPixelRatio: 0.001,
+            },
+          },
+        },
         // at least one instance is required
         instances: [
           {
