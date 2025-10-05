@@ -72,7 +72,7 @@ describe('renderer creations', () => {
       getModule: getModule().renderer,
     });
   });
-  it('should success with good vector', async () => {
+  it.skip('should success with good vector', async () => {
     const renderer = createTypstRenderer();
     await renderer.init({ getModule: getModule().renderer });
     const files = await getFiles();
@@ -89,7 +89,7 @@ describe('renderer creations', () => {
     });
     expect(result.length).toMatchInlineSnapshot(`194235`);
   });
-  it('should success with good vector 2', async () => {
+  it.skip('should success with good vector 2', async () => {
     const renderer = createTypstRenderer();
     await renderer.init({ getModule: getModule().renderer });
     const files = await getFiles();

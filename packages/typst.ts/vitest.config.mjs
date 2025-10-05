@@ -17,8 +17,8 @@ const saveRef = (refPath, screenshotPath, screenshotHash) => {
 }
 
 const saveFailure = (refPath, screenshotPath) => {
+  fs.mkdirSync(`${refPath}/..`, { recursive: true });
   const newName = `${refPath}.failure.png`;
-  fs.mkdirSync(`${newName}/..`, { recursive: true });
   // copy screenshot to refs/renderer
   fs.copyFileSync(screenshotPath, newName);
 }
