@@ -25,7 +25,7 @@ const saveFailure = (refPath, screenshotPath) => {
 
 const createSnapshot = async (_ctx, screenshotPath, name, extras) => {
   const refPath= `${import.meta.dirname}/refs/renderer/${name}`;
-  console.log(import.meta.dirname,screenshotPath, name, refPath);
+  // console.log(import.meta.dirname,screenshotPath, name, refPath);
   const refHashPath= `${refPath}.hash.txt`;
   // const screenshotHash =  imageHash(screenshotPath);
   const screenshotHash = await  new Promise((resolve, reject) => {

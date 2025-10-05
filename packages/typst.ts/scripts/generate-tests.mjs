@@ -2,7 +2,7 @@
 import fs from 'fs';
 
 // glob all artifact.sir.in files
-const files = fs.globSync('../../fuzzers/corpora/{skyzh-cv,layout}/*.sir.in', {
+const files = fs.globSync('../../fuzzers/corpora/{bugs,layout,lint,math,meta,text,viewers,visualize,skyzh-cv}/*.artifact.sir.in', {
   eager: true,
   query: '?url&inline',
   import: 'default',
@@ -26,3 +26,4 @@ for (const file of files) {
 }
 
 fs.writeFileSync('refs/test-points.json', JSON.stringify(points, null, 2));
+console.log(`Generated ${points.length} tests.`);
