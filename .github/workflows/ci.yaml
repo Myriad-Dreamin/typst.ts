@@ -61,9 +61,16 @@ jobs:
         run: cargo clippy --profile dist --workspace --all-targets
       - name: Documentation check
         run: cargo doc --profile dist --workspace --no-deps
+      - name: Install packages
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: install
       - name: Build
         run: |
           cargo build --profile dist --bin typst-ts-dev-server
+      - name: Build Typescript packages
+        run: |
+          yarn run build:pkg
       - name: Prepare artifacts
         run: |
           cargo run --profile dist --bin typst-ts-dev-server -- compile corpus --cat bugs,layout,lint,math,meta,text,visualize
@@ -72,12 +79,21 @@ jobs:
           cargo test --profile dist --no-fail-fast \
             -p reflexo-typst \
             -p typst-ts-cli  -p typst-ts-integration-test
+      - name: Test Browser
+        # todo: other package tests
+        run: cd packages/typst.ts && yarn test
       - name: Archive Test Results (WebAssembly Renderer in Chrome)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: wasm-renderer-chrome.test_points.json.gz
           path: target/typst-artifacts/integrations/renderer/test_points.chrome.json.gz
+      - name: Archive Test Results (Vitest)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-refs.gz
+          path: packages/typst.ts/refs
 
   prepare-build:
     runs-on: 'ubuntu-latest'
