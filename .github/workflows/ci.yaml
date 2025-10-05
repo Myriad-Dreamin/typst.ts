@@ -60,8 +60,7 @@ jobs:
         run: |
           yarn run build:pkg
       - name: Prepare artifacts
-        run: |
-          cargo run --profile dist --bin typst-ts-dev-server -- compile corpus --cat bugs,layout,lint,math,meta,text,visualize
+        run: yarn run corpus
       - name: Test
         run: |
           cargo test --profile dist --no-fail-fast \

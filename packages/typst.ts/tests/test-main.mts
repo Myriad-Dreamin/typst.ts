@@ -56,6 +56,7 @@ export const testSvg = async (data: Uint8Array) => {
     const width = Number.parseFloat((container.firstElementChild as any).dataset.width);
     const height = Number.parseFloat((container.firstElementChild as any).dataset.height);
     page.viewport(width, height);
+    document.body.style.backgroundColor = 'white';
     document.body.appendChild(container);
     return { container, width, height };
 };
@@ -80,6 +81,8 @@ export const testCanvas = async (data: Uint8Array) => {
         return { width, height };
     });
 
+    document.body.style.backgroundColor = 'white';
+    document.body.appendChild(container);
     return { container, width, height };
 };
 
