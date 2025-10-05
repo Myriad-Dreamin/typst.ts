@@ -40,7 +40,7 @@ describe('resolve assets', () => {
         "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/Roboto-Regular.ttf",
         "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/NotoSerifCJKsc-Regular.otf",
         "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/TwitterColorEmoji.ttf",
-        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/NotoColorEmoji.ttf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/NotoColorEmoji-Regular-COLR.subset.ttf",
       ]
     `);
   });

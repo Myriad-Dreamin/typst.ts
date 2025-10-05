@@ -11,6 +11,8 @@ export default defineWorkspace([
       include: ['{tests,src}/**/*.all.{test,spec}.mts', '{tests,src}/**/*.browser.{test,spec}.mts'],
       testTimeout: 120_000,
       browser: {
+        // By default this is 63315, but windows doesn't permit high ports.
+        api: 9528,
         headless: true,
         provider: 'playwright', // or 'webdriverio'
         enabled: true,
