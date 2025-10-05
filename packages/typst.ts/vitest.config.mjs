@@ -23,8 +23,9 @@ const saveFailure = (refPath, screenshotPath) => {
   fs.copyFileSync(screenshotPath, newName);
 }
 
-const createSnapshot = async (_ctx, screenshotPath, name) => {
+const createSnapshot = async (_ctx, screenshotPath, name, extras) => {
   const refPath= `${import.meta.dirname}/refs/renderer/${name}`;
+  console.log(import.meta.dirname,screenshotPath, name, refPath);
   const refHashPath= `${refPath}.hash.txt`;
   // const screenshotHash =  imageHash(screenshotPath);
   const screenshotHash = await  new Promise((resolve, reject) => {
@@ -32,7 +33,8 @@ const createSnapshot = async (_ctx, screenshotPath, name) => {
       if (err) {
         reject(err);
       }
-      resolve(`ihash16:${hash}`);
+      // resolve(`ihash16:${hash}${extras ? `?${extras}` : ''}`);
+      extras ? resolve(`ihash16:${hash}?${extras}`) : resolve(`ihash16:${hash}`);
     });
   });
   console.log(screenshotHash, refHashPath, isUpdate);
