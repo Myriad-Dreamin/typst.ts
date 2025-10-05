@@ -40,6 +40,7 @@ const getRenderer = async () => {
 };
 
 export const testSvg = async (data: Uint8Array) => {
+    document.body.innerHTML = '';
     const container = document.createElement('div');
     const renderer = await getRenderer();
     const rendered = await renderer.runWithSession(async renderSession => {
@@ -62,7 +63,10 @@ export const testSvg = async (data: Uint8Array) => {
 };
 
 export const testCanvas = async (data: Uint8Array) => {
+    document.body.innerHTML = '';
+    document.body.style.backgroundColor = 'white';
     const container = document.createElement('div');
+    document.body.appendChild(container);
     const renderer = await getRenderer();
     const { width, height } = await renderer.runWithSession(async renderSession => {
         renderer.manipulateData({
@@ -81,8 +85,6 @@ export const testCanvas = async (data: Uint8Array) => {
         return { width, height };
     });
 
-    document.body.style.backgroundColor = 'white';
-    document.body.appendChild(container);
     return { container, width, height };
 };
 
