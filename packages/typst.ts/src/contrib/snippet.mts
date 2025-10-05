@@ -21,6 +21,7 @@ import {
   SemanticTokensLegend,
 } from '../internal.types.mjs';
 import { randstr } from '../utils.mjs';
+import { CompileFormatEnum } from '../compiler.mjs';
 
 /**
  * Some function that returns a promise of value or just that value.
@@ -500,7 +501,7 @@ export class TypstSnippet {
    */
   async pdf(o?: SweetCompileOptions) {
     const opts = await this.getCompileOptions(o);
-    opts.format = 'pdf';
+    opts.format = CompileFormatEnum.pdf;
     const compiler = await this.getCompilerReset();
     return compiler
       .compile(opts)
@@ -578,7 +579,7 @@ export class TypstSnippet {
 
   private async getCompileOptions(
     opts?: SweetCompileOptions,
-  ): Promise<CompileOptions<any, 'none'>> {
+  ): Promise<CompileOptions<CompileFormatEnum, 'none'>> {
     if (opts === undefined) {
       return { mainFilePath: this.mainFilePath, diagnostics: 'none' };
     } else if (typeof opts === 'string') {

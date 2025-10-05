@@ -9,7 +9,17 @@ import { LazyWasmModule } from './wasm.mjs';
 /**
  * Available formats for compiling the document.
  */
-export type CompileFormat = 'vector' | 'pdf';
+export type CompileFormat = keyof typeof CompileFormatEnum;
+
+/**
+ * Available formats for compiling the document.
+ */
+export enum CompileFormatEnum {
+  vector = 0,
+  pdf = 1,
+  _dummy = 2,
+}
+
 
 /**
  * The diagnostic message partially following the LSP specification.
@@ -87,15 +97,18 @@ interface SnapshotOptions {
 }
 
 interface TransientCompileOptions<
-  F extends CompileFormat = any,
+  F extends CompileFormatEnum = CompileFormatEnum,
   Diagnostics extends DiagnosticsFormat = DiagnosticsFormat,
 > extends SnapshotOptions,
   DiagOpts<Diagnostics> {
   /**
    * The format of the artifact.
-   * - 'vector': can then load to the renderer to render the document.
-   * - 'pdf': for finally exporting pdf to the user.
-   * @default 'vector'
+   * - CompileFormatEnum.vector: can then load to the renderer to render the document.
+   * - CompileFormatEnum.pdf: for finally exporting pdf to the user.
+   * 
+   * Hint: you can convert the format from {@link CompileFormat} to
+   * {@link CompileFormatEnum} by `CompileFormatEnum[Format]`.
+   * @default CompileFormatEnum.vector
    */
   format?: F;
 }
@@ -129,7 +142,7 @@ export interface QueryOptions {
  * The options for compiling the document.
  */
 export type CompileOptions<
-  Format extends CompileFormat = any,
+  Format extends CompileFormatEnum = CompileFormatEnum,
   Diagnostics extends DiagnosticsFormat = DiagnosticsFormat,
 > = TransientCompileOptions<Format, Diagnostics> | IncrementalCompileOptions;
 
@@ -337,13 +350,13 @@ export interface TypstCompiler {
    * You can then load the artifact to the renderer to render the document.
    */
   compile<D extends DiagnosticsFormat>(
-    options: CompileOptions<'vector', D>,
+    options: CompileOptions<CompileFormatEnum.vector, D>,
   ): Promise<CompileResult<Uint8Array, D>>;
   compile<D extends DiagnosticsFormat>(
-    options: CompileOptions<'pdf', D>,
+    options: CompileOptions<CompileFormatEnum.pdf, D>,
   ): Promise<CompileResult<Uint8Array, D>>;
-  compile<D extends DiagnosticsFormat>(
-    options: CompileOptions<any, D>,
+  compile<F extends CompileFormatEnum, D extends DiagnosticsFormat>(
+    options: CompileOptions<F, D>,
   ): Promise<CompileResult<Uint8Array, D>>;
 
   runWithWorld<T>(options: SnapshotOptions, cb: (world: TypstWorld) => Promise<T>): Promise<T>;
@@ -544,7 +557,7 @@ class TypstCompilerDriver implements TypstCompiler {
         return;
       }
       resolve(
-        world.get_artifact(options.format || 'vector', getDiagnosticsArg(options.diagnostics)),
+        world.get_artifact(options.format || CompileFormatEnum.vector, getDiagnosticsArg(options.diagnostics)),
       );
     });
   }
