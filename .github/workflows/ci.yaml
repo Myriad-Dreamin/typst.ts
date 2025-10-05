@@ -36,6 +36,7 @@ jobs:
         with:
           toolchain: 1.88.0
           components: clippy, rustfmt
+          target: wasm32-unknown-unknown
       # https://github.com/Renumics/spotlight/blob/main/.github/workflows/ci.yml
       # https://www.ubuntuupdates.org/package/google_chrome/stable/main/base/google-chrome-stable
       # cp ./chromedriver-linux64/chromedriver /${HOME}/.cargo/bin/
