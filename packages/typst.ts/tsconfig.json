@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "types": ["web", "vite/client", "./src/global.d.mts"],
+    "types": ["web", "vite/client", "node", "./src/global.d.mts"],
     "baseUrl": ".",
     "target": "ES2022",
     "module": "NodeNext",

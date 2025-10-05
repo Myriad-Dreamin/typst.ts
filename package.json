@@ -63,11 +63,12 @@
     "@eslint-community/eslint-plugin-eslint-comments": "^3.2.1",
     "@napi-rs/cli": "3.0.0-alpha.70",
     "@swc-node/register": "^1.10.0",
-    "@types/node": "^22.13.4",
+    "@types/node": "^24.6.2",
     "@typescript-eslint/eslint-plugin": "^6.9.1",
     "@typescript-eslint/parser": "^6.9.1",
     "@vitejs/plugin-react": "^4.3.2",
     "@vitest/browser": "^3.1.2",
+    "@vitest/ui": "3.2.4",
     "@xmldom/xmldom": "^0.9.8",
     "ava": "^6.0.0",
     "cross-env": "^7.0.3",
@@ -85,6 +86,6 @@
     "typescript": "=5.8.3",
     "vite": "^6.2.3",
     "vite-plugin-banner": "^0.8.0",
-    "vitest": "^3.0.9"
+    "vitest": "4.0.0-beta.16"
   }
 }
