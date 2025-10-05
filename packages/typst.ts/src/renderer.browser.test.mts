@@ -9,7 +9,7 @@ import { page, commands } from '@vitest/browser/context';
 import { createTypstRenderer } from './renderer.mjs';
 
 const getFiles = () => {
-  const files = import.meta.glob('../../../fuzzers/corpora/skyzh-cv/*.sir.in', {
+  const files = import.meta.glob('../../../fuzzers/corpora/{skyzh-cv,layout}/*.sir.in', {
     eager: true,
     query: '?url&inline',
     import: 'default'
@@ -119,97 +119,3 @@ describe('renderer creations', () => {
   //   expect(data.result?.length).toMatchInlineSnapshot(`376`);
   // });
 });
-
-
-console.log(isNode);
-describe('snippet renderer', () => {
-
-  const getRenderer = async () => {
-    const r = createTypstRenderer();
-    await r.init({ getModule: getModule().renderer });
-    return r;
-  };
-
-  const svg = async () => {
-    const container = document.createElement('div');
-    const renderer = await getRenderer();
-    const files = await getFiles();
-    const data = await files['skyzh-cv/main.artifact.sir.in'];
-    const rendered = await renderer.runWithSession(async renderSession => {
-      renderer.manipulateData({
-        renderSession,
-        action: 'reset',
-        data,
-      });
-      return await renderer.renderSvg({
-        renderSession,
-      });
-    });
-    container.innerHTML = rendered;
-    const width = Number.parseFloat((container.firstElementChild as any).dataset.width);
-    const height = Number.parseFloat((container.firstElementChild as any).dataset.height);
-    console.log(container.firstElementChild);
-    page.viewport(width, height);
-    document.body.appendChild(container);
-    return container;
-  };
-
-  const canvas = async () => {
-    const container = document.createElement('div');
-    const renderer = await getRenderer();
-    const files = await getFiles();
-    const data = await files['skyzh-cv/main.artifact.sir.in'];
-    await renderer.runWithSession(async renderSession => {
-      renderer.manipulateData({
-        renderSession,
-        action: 'reset',
-        data,
-      });
-      const width = await renderSession.docWidth;
-      const height = await renderSession.docHeight;
-      page.viewport(width, height);
-      return await renderer.renderToCanvas({
-        renderSession,
-        container,
-      });
-    });
-
-    return container;
-  };
-  const makeSnapshot = async (s: HTMLElement, name: string) => {
-    const snapshotPath = await page.screenshot({ save: true, path: `../screenshots/renderer/${name}` });
-    const { createSnapshot } = commands as any;
-    const ret = await createSnapshot(snapshotPath, name);
-    console.log(ret);
-    // screenshotHash, refHash
-    expect(ret.screenshotHash).toEqual(ret.refHash);
-  };
-  it('should renderer svg', async () => {
-    const s = await svg();
-    await makeSnapshot(s, 'skyzh-cv/main.svg.png');
-  });
-  it('should renderer canvas', async () => {
-    const s = await canvas();
-    await makeSnapshot(s, 'skyzh-cv/main.canvas.png');
-  });
-});
-
-// it('should compile vector 2', async () => {
-//   const data = await $typst.vector({
-//     mainContent: '= A bit different!',
-//   });
-//   expect(data?.length).toMatchInlineSnapshot(`376`);
-// });
-// it('should compile pdf 2', async () => {
-//   const data = await $typst.pdf({
-//     mainContent: '= A bit different!',
-//   });
-//   expect(data?.length).toMatchInlineSnapshot(`2472`);
-// });
-// it('should compile svg 2', async () => {
-//   const data = await $typst.svg({
-//     mainContent: '= A bit different!',
-//   });
-//   expect(data?.length).toMatchInlineSnapshot(`13448`);
-// });
-// });
