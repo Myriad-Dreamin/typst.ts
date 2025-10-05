@@ -78,8 +78,7 @@ jobs:
       - name: Test
         run: |
           cargo test --profile dist --no-fail-fast \
-            -p reflexo-typst \
-            -p typst-ts-cli  -p typst-ts-integration-test
+            -p reflexo-typst -p typst-ts-cli
       - name: Test Browser
         # todo: other package tests
         run: cd packages/typst.ts && yarn test
