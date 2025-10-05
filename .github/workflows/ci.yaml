@@ -37,23 +37,14 @@ jobs:
           toolchain: 1.88.0
           components: clippy, rustfmt
           target: wasm32-unknown-unknown
-      # https://github.com/Renumics/spotlight/blob/main/.github/workflows/ci.yml
-      # https://www.ubuntuupdates.org/package/google_chrome/stable/main/base/google-chrome-stable
-      # cp ./chromedriver-linux64/chromedriver /${HOME}/.cargo/bin/
-      - name: Set up Chrome
-        run: |
-          VERSION_STRING="129.0.6668.70-1"
-          wget "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${VERSION_STRING}_amd64.deb"
-          sudo dpkg -i "google-chrome-stable_${VERSION_STRING}_amd64.deb"
-          google-chrome --version
-      - name: Set up Chrome driver
-        run: |
-          wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/129.0.6668.70/linux64/chromedriver-linux64.zip
-          unzip chromedriver-linux64.zip
-          sudo mv ./chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
-          chromedriver --version
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
+      - name: Install packages
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: install
+      - name: Install Playwright
+        run: yarn playwright install
       - name: Fmt check
         run: cargo fmt --check --all
       # todo: https://github.com/typst/typst/pull/2767
@@ -62,10 +53,6 @@ jobs:
         run: cargo clippy --profile dist --workspace --all-targets
       - name: Documentation check
         run: cargo doc --profile dist --workspace --no-deps
-      - name: Install packages
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: install
       - name: Build
         run: |
           cargo build --profile dist --bin typst-ts-dev-server
