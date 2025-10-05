@@ -1,0 +1,75 @@
+/// <reference types="@vitest/browser/context" />
+
+import { describe, expect, it } from 'vitest';
+import { TypstSnippet } from './contrib/snippet.mjs';
+// todo: why does it give errors?
+import rendererUrl from '../../renderer/pkg/typst_ts_renderer_bg.wasm?url';
+import { page, commands } from '@vitest/browser/context';
+
+import { createTypstRenderer } from './renderer.mjs';
+
+const getFiles = () => {
+  const files = import.meta.glob('../../../fuzzers/corpora/{skyzh-cv,layout}/*.sir.in', {
+    eager: true,
+    query: '?url&inline',
+    import: 'default'
+  })
+
+  const fileData = Object.entries(files).map(([key, value]) => {
+    return {
+      [key.replace(/^\.\.\/\.\.\/\.\.\/fuzzers\/corpora\//g, '')]: fetch(value as string).then(res => res.arrayBuffer()).then(buffer => new Uint8Array(buffer)),
+    }
+  })
+  return Object.assign({}, ...fileData)
+}
+
+// nodejs
+const isNode =
+  typeof process !== 'undefined' && process.versions != null && process.versions.node != null;
+
+const fsImport = (file: string) => {
+  const fs = require('fs');
+  const path = require('path');
+  return fs.readFileSync(path.join(import.meta.dirname, file));
+};
+
+const getModule = () => {
+  const compiler = () => {
+    throw new Error("shouldn't load compiler when testing renderer")
+  };
+  if (isNode) {
+    return {
+      compiler,
+      renderer: () => fsImport('../../renderer/pkg/typst_ts_renderer_bg.wasm'),
+    };
+  }
+  return {
+    compiler,
+    renderer: () => rendererUrl,
+  };
+};
+
+
+describe('renderer creations', () => {
+  it('should success with undefined options', async () => {
+    const renderer = createTypstRenderer();
+    await renderer.init({ getModule: getModule().renderer });
+  });
+  it('should success with no options', async () => {
+    const renderer = createTypstRenderer();
+    await renderer.init({
+      beforeBuild: [],
+      getModule: getModule().renderer,
+    });
+  });
+  // todo: test invalid vector?
+  // it('should success with good vector', async () => {
+  //   const renderer = createTypstRenderer();
+  //   await renderer.init({ getModule: getModule().renderer });
+  //   await renderer.addSource('/main.typ', '= A bit different!');
+  //   const data = await renderer.compile({
+  //     mainFilePath: '/main.typ',
+  //   });
+  //   expect(data.result?.length).toMatchInlineSnapshot(`376`);
+  // });
+});

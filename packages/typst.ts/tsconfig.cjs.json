@@ -10,5 +10,5 @@
     "inlineSources": true,
     "inlineSourceMap": true
   },
-  "exclude": ["**/*.test.mts", "**/*.spec.mts", "node_modules", "dist"]
+  "exclude": ["**/*.test.mts", "**/*.spec.mts", "tests/**/*.mts", "node_modules", "dist"]
 }

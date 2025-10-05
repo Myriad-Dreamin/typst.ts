@@ -36,23 +36,15 @@ jobs:
         with:
           toolchain: 1.88.0
           components: clippy, rustfmt
-      # https://github.com/Renumics/spotlight/blob/main/.github/workflows/ci.yml
-      # https://www.ubuntuupdates.org/package/google_chrome/stable/main/base/google-chrome-stable
-      # cp ./chromedriver-linux64/chromedriver /${HOME}/.cargo/bin/
-      - name: Set up Chrome
-        run: |
-          VERSION_STRING="129.0.6668.70-1"
-          wget "https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_${VERSION_STRING}_amd64.deb"
-          sudo dpkg -i "google-chrome-stable_${VERSION_STRING}_amd64.deb"
-          google-chrome --version
-      - name: Set up Chrome driver
-        run: |
-          wget https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/129.0.6668.70/linux64/chromedriver-linux64.zip
-          unzip chromedriver-linux64.zip
-          sudo mv ./chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
-          chromedriver --version
+          target: wasm32-unknown-unknown
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
+      - name: Install packages
+        uses: borales/actions-yarn@v4
+        with:
+          cmd: install
+      - name: Install Playwright
+        run: yarn playwright install
       - name: Fmt check
         run: cargo fmt --check --all
       # todo: https://github.com/typst/typst/pull/2767
@@ -64,20 +56,30 @@ jobs:
       - name: Build
         run: |
           cargo build --profile dist --bin typst-ts-dev-server
-      - name: Prepare artifacts
+      - name: Build Typescript packages
         run: |
-          cargo run --profile dist --bin typst-ts-dev-server -- compile corpus --cat bugs,layout,lint,math,meta,text,visualize
+          yarn run build:pkg
+      - name: Prepare artifacts
+        run: yarn run corpus
       - name: Test
         run: |
           cargo test --profile dist --no-fail-fast \
-            -p reflexo-typst \
-            -p typst-ts-cli  -p typst-ts-integration-test
+            -p reflexo-typst -p typst-ts-cli
+      - name: Test Browser
+        # todo: other package tests
+        run: cd packages/typst.ts && yarn test
       - name: Archive Test Results (WebAssembly Renderer in Chrome)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: wasm-renderer-chrome.test_points.json.gz
           path: target/typst-artifacts/integrations/renderer/test_points.chrome.json.gz
+      - name: Archive Test Results (Vitest)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-refs.gz
+          path: packages/typst.ts/refs
 
   prepare-build:
     runs-on: 'ubuntu-latest'

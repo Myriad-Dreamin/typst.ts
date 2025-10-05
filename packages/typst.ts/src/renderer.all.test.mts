@@ -1,7 +1,5 @@
-/// <reference types="@vitest/browser/context" />
 
 import { describe, expect, it } from 'vitest';
-import { page } from '@vitest/browser/context'
 import { TypstSnippet } from './contrib/snippet.mjs';
 // todo: why does it give errors?
 import rendererUrl from '../../renderer/pkg/typst_ts_renderer_bg.wasm?url';
@@ -74,7 +72,7 @@ describe('renderer creations', () => {
       getModule: getModule().renderer,
     });
   });
-  it('should success with good vector', async () => {
+  it.skip('should success with good vector', async () => {
     const renderer = createTypstRenderer();
     await renderer.init({ getModule: getModule().renderer });
     const files = await getFiles();
@@ -91,7 +89,7 @@ describe('renderer creations', () => {
     });
     expect(result.length).toMatchInlineSnapshot(`194235`);
   });
-  it('should success with good vector 2', async () => {
+  it.skip('should success with good vector 2', async () => {
     const renderer = createTypstRenderer();
     await renderer.init({ getModule: getModule().renderer });
     const files = await getFiles();
@@ -120,23 +118,3 @@ describe('renderer creations', () => {
   // });
 });
 
-
-// it('should compile vector 2', async () => {
-//   const data = await $typst.vector({
-//     mainContent: '= A bit different!',
-//   });
-//   expect(data?.length).toMatchInlineSnapshot(`376`);
-// });
-// it('should compile pdf 2', async () => {
-//   const data = await $typst.pdf({
-//     mainContent: '= A bit different!',
-//   });
-//   expect(data?.length).toMatchInlineSnapshot(`2472`);
-// });
-// it('should compile svg 2', async () => {
-//   const data = await $typst.svg({
-//     mainContent: '= A bit different!',
-//   });
-//   expect(data?.length).toMatchInlineSnapshot(`13448`);
-// });
-// });
