@@ -244,14 +244,14 @@ reflexo-vec2svg = { path = "crates/conversion/vec2svg/" }
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
 # comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
-typst = { git = "https://github.com/ParaN3xus/typst.git", rev = "4be0d20ec33a0b5ee9233731166044d81082d7e3" }
-typst-syntax = { git = "https://github.com/ParaN3xus/typst.git", rev = "4be0d20ec33a0b5ee9233731166044d81082d7e3" }
-typst-ide = { git = "https://github.com/ParaN3xus/typst.git", rev = "4be0d20ec33a0b5ee9233731166044d81082d7e3" }
-typst-render = { git = "https://github.com/ParaN3xus/typst.git", rev = "4be0d20ec33a0b5ee9233731166044d81082d7e3" }
-typst-svg = { git = "https://github.com/ParaN3xus/typst.git", rev = "4be0d20ec33a0b5ee9233731166044d81082d7e3" }
-typst-pdf = { git = "https://github.com/ParaN3xus/typst.git", rev = "4be0d20ec33a0b5ee9233731166044d81082d7e3" }
-typst-eval = { git = "https://github.com/ParaN3xus/typst.git", rev = "4be0d20ec33a0b5ee9233731166044d81082d7e3" }
-typst-html = { git = "https://github.com/ParaN3xus/typst.git", rev = "4be0d20ec33a0b5ee9233731166044d81082d7e3" }
+typst = { git = "https://github.com/ParaN3xus/typst.git", rev = "41a4ae9004f0d8a4b0b4319062ebaf752ee3231a" }
+typst-syntax = { git = "https://github.com/ParaN3xus/typst.git", rev = "41a4ae9004f0d8a4b0b4319062ebaf752ee3231a" }
+typst-ide = { git = "https://github.com/ParaN3xus/typst.git", rev = "41a4ae9004f0d8a4b0b4319062ebaf752ee3231a" }
+typst-render = { git = "https://github.com/ParaN3xus/typst.git", rev = "41a4ae9004f0d8a4b0b4319062ebaf752ee3231a" }
+typst-svg = { git = "https://github.com/ParaN3xus/typst.git", rev = "41a4ae9004f0d8a4b0b4319062ebaf752ee3231a" }
+typst-pdf = { git = "https://github.com/ParaN3xus/typst.git", rev = "41a4ae9004f0d8a4b0b4319062ebaf752ee3231a" }
+typst-eval = { git = "https://github.com/ParaN3xus/typst.git", rev = "41a4ae9004f0d8a4b0b4319062ebaf752ee3231a" }
+typst-html = { git = "https://github.com/ParaN3xus/typst.git", rev = "41a4ae9004f0d8a4b0b4319062ebaf752ee3231a" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }
