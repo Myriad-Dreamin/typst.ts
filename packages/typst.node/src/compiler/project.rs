@@ -671,6 +671,7 @@ impl NodeTypstProject {
                 export: Default::default(),
                 pdf_standards: standard.into_iter().collect(),
                 creation_timestamp,
+                pages: None,
             }
         } else {
             ExportPdfTask::default()
@@ -683,10 +684,15 @@ impl NodeTypstProject {
     #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     #[cfg(feature = "svg")]
     pub fn plain_svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
-        use reflexo_typst::task::ExportSvgTask;
+        use reflexo_typst::{task::ExportSvgTask, ImageOutput};
 
         type Export = reflexo_typst::SvgExport;
-        self.compile_as::<Export, _>(compiled_or_by, &ExportSvgTask::default())
+        let output = self
+            .compile_as::<Export, ImageOutput<String>>(compiled_or_by, &ExportSvgTask::default())?;
+        match output {
+            ImageOutput::Merged(s) => Ok(s),
+            ImageOutput::Paged(..) => unreachable!(),
+        }
     }
 
     /// Simply compiles the document as a rich-contented SVG (for browsers).
