@@ -47,12 +47,12 @@
 //! to use:
 //!
 //! ```
-//! @myriaddreamin/typst.ts@v0.6.1-rc3
-//! @myriaddreamin/typst-ts-web-compiler@v0.6.1-rc3
-//! @myriaddreamin/typst-ts-renderer@v0.6.1-rc3
+//! @myriaddreamin/typst.ts@v0.6.1-rc4
+//! @myriaddreamin/typst-ts-web-compiler@v0.6.1-rc4
+//! @myriaddreamin/typst-ts-renderer@v0.6.1-rc4
 //! ```
 //!
-//! The `@myriaddreamin/typst.ts@v0.6.1-rc3` should compile documents using
+//! The `@myriaddreamin/typst.ts@v0.6.1-rc4` should compile documents using
 //! typst v0.13.1.
 //!
 //! How to Write Typst

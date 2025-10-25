@@ -9,6 +9,7 @@ use reflexo_typst::{
     ArcInto, Bytes, ExportDynSvgModuleTask, ShadowApi, SystemCompilerFeat, TypstAbs, TypstDocument,
     TypstDocumentTrait, TypstPagedDocument, TypstSystemWorld,
 };
+use tinymist_project::ImageOutput;
 
 use crate::error::*;
 use crate::{
@@ -295,6 +296,7 @@ impl NodeCompiler {
                 export: Default::default(),
                 pdf_standards: standard.into_iter().collect(),
                 creation_timestamp,
+                pages: None,
             }
         } else {
             ExportPdfTask::default()
@@ -310,7 +312,12 @@ impl NodeCompiler {
         use reflexo_typst::task::ExportSvgTask;
 
         type Export = reflexo_typst::SvgExport;
-        self.compile_as::<Export, _>(compiled_or_by, &ExportSvgTask::default())
+        let output = self
+            .compile_as::<Export, ImageOutput<String>>(compiled_or_by, &ExportSvgTask::default())?;
+        match output {
+            ImageOutput::Merged(s) => Ok(s),
+            ImageOutput::Paged(..) => unreachable!(),
+        }
     }
 
     /// Simply compiles the document as a rich-contented SVG (for browsers).
