@@ -94,6 +94,7 @@ export default defineConfig({
             "layout/place-float-figure_00",
             "layout/repeat_01",
             "layout/repeat_04",
+            "layout/place_01",
             "text/emoji_00",
             "text/emphasis_00",
             "text/fallback_00",
