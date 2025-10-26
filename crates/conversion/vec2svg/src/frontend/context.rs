@@ -1,6 +1,5 @@
 use std::{
     collections::{HashMap, HashSet},
-    ops::Deref,
     sync::Arc,
 };
 
@@ -8,12 +7,13 @@ use reflexo::{
     hash::{Fingerprint, FingerprintBuilder},
     vector::{
         ir::{
-            self, FlatGlyphItem, FontIndice, FontRef, GroupRef, ImmutStr, Module, PathItem, Scalar,
-            TextItem, Transform, VecItem,
+            self, FontIndice, FontRef, GroupRef, ImmutStr, Module, PathItem, Scalar, TextItem,
+            Transform, VecItem,
         },
         vm::{GroupContext, IncrRenderVm, RenderVm},
     },
 };
+use reflexo_typst2vec::ir::GlyphRef;
 
 use crate::{
     backend::{BuildClipPath, DynExportFeature, NotifyPaint, SvgText, SvgTextBuilder, SvgTextNode},
@@ -247,47 +247,25 @@ impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
                 width
             }
             (Some(fill), None) => {
-                // clip path rect
-                let clip_id = fill.id.as_svg_id("pc");
                 let fill_id = fill.id.as_svg_id("pf");
 
-                // because the text is already scaled by the font size,
-                // we need to scale it back to the original size.
-                // todo: infinite multiplication
-                let descender = font.descender.0 * upem.0;
-
-                group_ctx.content.push(SvgText::Plain(format!(
-                    r#"<clipPath id="{clip_id}" clipPathUnits="userSpaceOnUse">"#
-                )));
-
+                // image glyphs
                 let mut width = 0f32;
                 for (x, g) in text.render_glyphs(upem, &mut width) {
-                    group_ctx.render_glyph(self, x, font, g);
-                    group_ctx.content.push(SvgText::Plain("<path/>".into()));
-                }
+                    let adjusted_offset = (x.0 * 2.).round() / 2.;
 
-                group_ctx
-                    .content
-                    .push(SvgText::Plain(r#"</clipPath>"#.to_owned()));
+                    // A stable glyph id can help incremental font transfer (IFT).
+                    // However, it is permitted unstable if you will not use IFT.
+                    let glyph_id = (GlyphRef {
+                        font_hash: font.hash,
+                        glyph_idx: g,
+                    })
+                    .as_svg_id("g");
 
-                // clip path rect
-                let scaled_width = width * upem.0 / text.shape.size.0;
-                group_ctx.content.push(SvgText::Plain(format!(
-                    r##"<rect fill="url(#{fill_id})" stroke="none" width="{:.1}" height="{:.1}" y="{:.1}" clip-path="url(#{})"/>"##,
-                    scaled_width, upem.0, descender, clip_id
-                )));
-
-                // image glyphs
-                let mut _width = 0f32;
-                for (x, g) in text.render_glyphs(upem, &mut _width) {
-                    let built = font.get_glyph(g);
-                    if matches!(
-                        built.map(Deref::deref),
-                        Some(FlatGlyphItem::Outline(..)) | None
-                    ) {
-                        continue;
-                    }
-                    group_ctx.render_glyph(self, x, font, g);
+                    group_ctx.content.push(SvgText::Plain(format!(
+                        // r##"<typst-glyph x="{}" href="#{}"/>"##,
+                        r##"<use x="{adjusted_offset}" href="#{glyph_id}" fill="url(#{fill_id})"/>"##
+                    )));
                 }
 
                 width
