@@ -5,6 +5,7 @@ import { withAccessModel, withPackageRegistry } from '@myriaddreamin/typst.ts/op
 import { cachedFontInitOptions } from './cached-font-middleware.cjs';
 import { writeFileSync } from 'fs';
 import request, { HttpVerb, Options } from 'sync-request';
+import { CompileFormatEnum } from '@myriaddreamin/typst.ts/compiler';
 // import request, { HttpVerb, Options } from 'sync-request-curl';
 
 async function main(coordinate: { x: number; y: number }) {
@@ -46,7 +47,7 @@ async function main(coordinate: { x: number; y: number }) {
     );
     let artifact = await compiler.compile({
       mainFilePath: '/main.typ',
-      format: 'vector',
+      format: CompileFormatEnum.vector,
       diagnostics: 'unix',
     });
 
@@ -61,7 +62,7 @@ async function main(coordinate: { x: number; y: number }) {
 
     let artifact2 = await compiler.compile({
       mainFilePath: '/main.typ',
-      format: 'vector',
+      format: CompileFormatEnum.vector,
       diagnostics: 'full',
     });
 
@@ -80,7 +81,7 @@ async function main(coordinate: { x: number; y: number }) {
     let artifact: Uint8Array = (
       await compiler.compile({
         mainFilePath: '/main.typ',
-        format: 'vector',
+        format: CompileFormatEnum.vector,
         diagnostics: 'unix',
       })
     ).result!;
