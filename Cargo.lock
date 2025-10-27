@@ -4598,7 +4598,7 @@ dependencies = [
 [[package]]
 name = "tinymist-derive"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
 dependencies = [
  "quote",
  "syn 2.0.108",
@@ -4607,7 +4607,7 @@ dependencies = [
 [[package]]
 name = "tinymist-l10n"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
 dependencies = [
  "anyhow",
  "clap",
@@ -4621,7 +4621,7 @@ dependencies = [
 [[package]]
 name = "tinymist-package"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4647,7 +4647,7 @@ dependencies = [
 [[package]]
 name = "tinymist-project"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
 dependencies = [
  "anyhow",
  "clap",
@@ -4670,13 +4670,13 @@ dependencies = [
  "tokio",
  "toml 0.8.23",
  "typst",
- "typst-assets 0.13.1",
+ "typst-assets",
 ]
 
 [[package]]
 name = "tinymist-std"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4714,7 +4714,7 @@ dependencies = [
 [[package]]
 name = "tinymist-task"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
 dependencies = [
  "anyhow",
  "clap",
@@ -4736,7 +4736,7 @@ dependencies = [
  "tokio",
  "toml 0.8.23",
  "typst",
- "typst-assets 0.13.1",
+ "typst-assets",
  "typst-eval",
  "typst-html",
  "typst-pdf",
@@ -4748,7 +4748,7 @@ dependencies = [
 [[package]]
 name = "tinymist-vfs"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
 dependencies = [
  "comemo",
  "ecow",
@@ -4767,7 +4767,7 @@ dependencies = [
 [[package]]
 name = "tinymist-world"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4798,7 +4798,7 @@ dependencies = [
  "tinymist-vfs",
  "ttf-parser",
  "typst",
- "typst-assets 0.13.1",
+ "typst-assets",
  "wasm-bindgen",
  "web-sys",
 ]
@@ -5088,11 +5088,6 @@ dependencies = [
 
 [[package]]
 name = "typst-assets"
-version = "0.13.1"
-source = "git+https://github.com/typst/typst-assets?rev=edf0d64#edf0d648376e29738a05a933af9ea99bb81557b1"
-
-[[package]]
-name = "typst-assets"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712f5e2c4134bcf22f292086aa515caff00a21d54c8b30c77c4fc1227442a89a"
@@ -5132,7 +5127,7 @@ dependencies = [
  "palette",
  "rustc-hash 2.1.1",
  "time",
- "typst-assets 0.14.0",
+ "typst-assets",
  "typst-library",
  "typst-macros",
  "typst-svg",
@@ -5179,7 +5174,7 @@ dependencies = [
  "rustybuzz",
  "smallvec",
  "ttf-parser",
- "typst-assets 0.14.0",
+ "typst-assets",
  "typst-library",
  "typst-macros",
  "typst-syntax",
@@ -5241,7 +5236,7 @@ dependencies = [
  "ttf-parser",
  "two-face",
  "typed-arena",
- "typst-assets 0.14.0",
+ "typst-assets",
  "typst-macros",
  "typst-syntax",
  "typst-timing",
@@ -5284,7 +5279,7 @@ dependencies = [
  "rustc-hash 2.1.1",
  "serde",
  "smallvec",
- "typst-assets 0.14.0",
+ "typst-assets",
  "typst-library",
  "typst-macros",
  "typst-syntax",
@@ -5322,7 +5317,7 @@ dependencies = [
  "resvg",
  "tiny-skia",
  "ttf-parser",
- "typst-assets 0.14.0",
+ "typst-assets",
  "typst-library",
  "typst-macros",
  "typst-timing",
@@ -5331,7 +5326,7 @@ dependencies = [
 [[package]]
 name = "typst-shim"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
 dependencies = [
  "cfg-if",
  "comemo",
@@ -5354,7 +5349,7 @@ dependencies = [
  "image",
  "rustc-hash 2.1.1",
  "ttf-parser",
- "typst-assets 0.14.0",
+ "typst-assets",
  "typst-library",
  "typst-macros",
  "typst-timing",
@@ -5425,7 +5420,7 @@ dependencies = [
  "tokio",
  "toml 0.8.23",
  "typst",
- "typst-assets 0.14.0",
+ "typst-assets",
  "typst-ide",
  "typst-pdf",
  "vergen",
@@ -5627,7 +5622,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "typst",
- "typst-assets 0.14.0",
+ "typst-assets",
  "typst-ts-test-common",
  "wasm-bindgen",
  "wasm-bindgen-futures",
