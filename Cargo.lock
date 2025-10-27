@@ -4597,8 +4597,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-derive"
-version = "0.13.17"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=8eaf8eeca3690ad16406df950ce07c354341d16f#8eaf8eeca3690ad16406df950ce07c354341d16f"
+version = "0.14.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
 dependencies = [
  "quote",
  "syn 2.0.108",
@@ -4606,8 +4606,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-l10n"
-version = "0.13.17"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=8eaf8eeca3690ad16406df950ce07c354341d16f#8eaf8eeca3690ad16406df950ce07c354341d16f"
+version = "0.14.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
 dependencies = [
  "anyhow",
  "clap",
@@ -4620,8 +4620,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-package"
-version = "0.13.17"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=8eaf8eeca3690ad16406df950ce07c354341d16f#8eaf8eeca3690ad16406df950ce07c354341d16f"
+version = "0.14.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4646,8 +4646,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-project"
-version = "0.13.17"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=8eaf8eeca3690ad16406df950ce07c354341d16f#8eaf8eeca3690ad16406df950ce07c354341d16f"
+version = "0.14.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
 dependencies = [
  "anyhow",
  "clap",
@@ -4675,8 +4675,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-std"
-version = "0.13.17"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=8eaf8eeca3690ad16406df950ce07c354341d16f#8eaf8eeca3690ad16406df950ce07c354341d16f"
+version = "0.14.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4713,8 +4713,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-task"
-version = "0.13.17"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=8eaf8eeca3690ad16406df950ce07c354341d16f#8eaf8eeca3690ad16406df950ce07c354341d16f"
+version = "0.14.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
 dependencies = [
  "anyhow",
  "clap",
@@ -4747,8 +4747,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-vfs"
-version = "0.13.17"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=8eaf8eeca3690ad16406df950ce07c354341d16f#8eaf8eeca3690ad16406df950ce07c354341d16f"
+version = "0.14.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
 dependencies = [
  "comemo",
  "ecow",
@@ -4766,8 +4766,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-world"
-version = "0.13.17"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=8eaf8eeca3690ad16406df950ce07c354341d16f#8eaf8eeca3690ad16406df950ce07c354341d16f"
+version = "0.14.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
 dependencies = [
  "anyhow",
  "chrono",
@@ -5328,8 +5328,8 @@ dependencies = [
 
 [[package]]
 name = "typst-shim"
-version = "0.13.17"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=8eaf8eeca3690ad16406df950ce07c354341d16f#8eaf8eeca3690ad16406df950ce07c354341d16f"
+version = "0.14.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=ea5b1e49f4d15b4c442645c5e393650b1cc96a62#ea5b1e49f4d15b4c442645c5e393650b1cc96a62"
 dependencies = [
  "cfg-if",
  "comemo",
