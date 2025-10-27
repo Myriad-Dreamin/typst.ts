@@ -43,7 +43,7 @@ export class FetchPackageRegistry implements PackageRegistry {
     }
 
     /// Extract package bundle to the underlying access model `this.am`
-    const previewDir = `/@memory/fetch/packages/preview/${spec.namespace}/${spec.name}/${spec.version}`;
+    const previewDir = `/@memory/fetch/packages/${spec.namespace}/${spec.name}/${spec.version}`;
     const entries: [string, Uint8Array, Date][] = [];
     context.untar(data, (path: string, data: Uint8Array, mtime: number) => {
       entries.push([previewDir + '/' + path, data, new Date(mtime)]);
