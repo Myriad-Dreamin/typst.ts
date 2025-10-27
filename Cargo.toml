@@ -78,8 +78,8 @@ typst-html = "0.14.0"
 
 ttf-parser = "0.25.0"
 
-typst-assets = { git = "https://github.com/typst/typst-assets", rev = "fbf00f9" }
-typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", rev = "bfa947f" }
+typst-assets = "0.14.0"
+typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", rev = "0b12d75772199e07294749ffe078ea030b857746" }
 
 # general
 anyhow = "1"

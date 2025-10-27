@@ -5097,9 +5097,15 @@ version = "0.13.1"
 source = "git+https://github.com/typst/typst-assets?rev=fbf00f9#fbf00f9539fdb0825bef4d39fb57d5986c51b756"
 
 [[package]]
+name = "typst-assets"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "712f5e2c4134bcf22f292086aa515caff00a21d54c8b30c77c4fc1227442a89a"
+
+[[package]]
 name = "typst-dev-assets"
-version = "0.13.1"
-source = "git+https://github.com/typst/typst-dev-assets?rev=bfa947f#bfa947f3433d7d13a995168c40ae788a2ebfe648"
+version = "0.14.0"
+source = "git+https://github.com/typst/typst-dev-assets?rev=0b12d75772199e07294749ffe078ea030b857746#0b12d75772199e07294749ffe078ea030b857746"
 
 [[package]]
 name = "typst-eval"
@@ -5423,7 +5429,7 @@ dependencies = [
  "tokio",
  "toml 0.8.23",
  "typst",
- "typst-assets 0.13.1 (git+https://github.com/typst/typst-assets?rev=fbf00f9)",
+ "typst-assets 0.14.0",
  "typst-ide",
  "typst-pdf",
  "vergen",
@@ -5625,7 +5631,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "typst",
- "typst-assets 0.13.1 (git+https://github.com/typst/typst-assets?rev=fbf00f9)",
+ "typst-assets 0.14.0",
  "typst-ts-test-common",
  "wasm-bindgen",
  "wasm-bindgen-futures",
