@@ -1864,7 +1864,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.6.1",
+ "socket2 0.5.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -3168,7 +3168,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash 2.1.1",
  "rustls",
- "socket2 0.6.1",
+ "socket2 0.5.10",
  "thiserror 2.0.17",
  "tokio",
  "tracing",
@@ -3205,7 +3205,7 @@ dependencies = [
  "cfg_aliases 0.2.1",
  "libc",
  "once_cell",
- "socket2 0.6.1",
+ "socket2 0.5.10",
  "tracing",
  "windows-sys 0.60.2",
 ]
@@ -3381,7 +3381,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "base64 0.22.1",
  "bitvec",
@@ -3409,7 +3409,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-typst"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "ansi_term",
  "codespan-reporting",
@@ -3449,7 +3449,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-typst-compiler"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "ansi-to-html",
  "base64 0.22.1",
@@ -3473,7 +3473,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-typst2hast"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "base64 0.22.1",
  "bitvec",
@@ -3505,7 +3505,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-typst2vec"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "bitvec",
  "comemo",
@@ -3533,7 +3533,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2bbox"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "comemo",
  "reflexo",
@@ -3544,7 +3544,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2canvas"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "async-trait",
  "comemo",
@@ -3562,7 +3562,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2dom"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "async-recursion",
  "comemo",
@@ -3585,7 +3585,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2sema"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "comemo",
  "js-sys",
@@ -3599,7 +3599,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2svg"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4598,7 +4598,8 @@ dependencies = [
 [[package]]
 name = "tinymist-derive"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e0a0408e8cb4fa987cf8faecfc7312a1145693f2929d8a06b63c517cb0a27e0"
 dependencies = [
  "quote",
  "syn 2.0.108",
@@ -4607,7 +4608,8 @@ dependencies = [
 [[package]]
 name = "tinymist-l10n"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03fe1fb6cbd4e3dc36223030cbdd7de37b8a95478551cb09f767f93a7ef244ca"
 dependencies = [
  "anyhow",
  "clap",
@@ -4621,7 +4623,8 @@ dependencies = [
 [[package]]
 name = "tinymist-package"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "beeff43a41d8368f2dde5e5f729f25ddcdc259043d7426f58fb41fc57c29f806"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4647,7 +4650,8 @@ dependencies = [
 [[package]]
 name = "tinymist-project"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4bd1651c5b43ef96880ebd38efbe29d8299c3f8ed3c770e755b20e9736ad16d2"
 dependencies = [
  "anyhow",
  "clap",
@@ -4676,7 +4680,8 @@ dependencies = [
 [[package]]
 name = "tinymist-std"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ae726b8f1e2e1ed1c0b98fb7805e0b2383d2add23f2f8ea7c5411f366e8c991c"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4714,7 +4719,8 @@ dependencies = [
 [[package]]
 name = "tinymist-task"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c26b14e351d4915c1108b6e972b1b5c9588130e77cb473623c124e50565845d"
 dependencies = [
  "anyhow",
  "clap",
@@ -4748,7 +4754,8 @@ dependencies = [
 [[package]]
 name = "tinymist-vfs"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "310b26ce48073259327f9e18bc7776b2db2ed73d1368c8d88062b7b7f5fd5163"
 dependencies = [
  "comemo",
  "ecow",
@@ -4767,7 +4774,8 @@ dependencies = [
 [[package]]
 name = "tinymist-world"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4905a6d21164c9c9e424e1c38deec6c88d4003ab9707f87bfaef5091157f8b92"
 dependencies = [
  "anyhow",
  "chrono",
@@ -5326,7 +5334,8 @@ dependencies = [
 [[package]]
 name = "typst-shim"
 version = "0.14.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=bc5b26f7892326e886ba4b1e28281c9303f512cd#bc5b26f7892326e886ba4b1e28281c9303f512cd"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a80c8abe518f06aa97ed077cf8876f48edd7c6270054687f0482c2a4b0ef080"
 dependencies = [
  "cfg-if",
  "comemo",
@@ -5388,7 +5397,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-bench-lowering"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "comemo",
  "divan",
@@ -5400,7 +5409,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-cli"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -5429,7 +5438,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-dev-server"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "bytes",
  "clap",
@@ -5446,7 +5455,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-docs-test"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "anyhow",
  "clap",
@@ -5459,7 +5468,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-heap-profile-test"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "anyhow",
  "comemo",
@@ -5473,7 +5482,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-fuzzer"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "anyhow",
  "comemo",
@@ -5493,7 +5502,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-test"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "anyhow",
  "comemo",
@@ -5509,7 +5518,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-node-compiler"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "chrono",
  "comemo",
@@ -5529,7 +5538,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-parser"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",
@@ -5545,7 +5554,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-renderer"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "anyhow",
  "console_error_panic_hook",
@@ -5580,14 +5589,14 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-rkyv-assertions"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "reflexo-typst2vec",
 ]
 
 [[package]]
 name = "typst-ts-std-test"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "anyhow",
  "rayon",
@@ -5596,7 +5605,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-test-common"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -5607,7 +5616,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-web-compiler"
-version = "0.6.1-rc4"
+version = "0.7.0-rc1"
 dependencies = [
  "ansi-to-html",
  "base64 0.22.1",
