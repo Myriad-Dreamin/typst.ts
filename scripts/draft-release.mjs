@@ -70,7 +70,7 @@ const main = async () => {
   fs.writeFileSync('target/announcement-dist.md', binInstallText);
 
   // parse-changelog .\editors\vscode\CHANGELOG.md
-  const changelogPlainRaw = await run('parse-changelog ./CHANGELOG/CHANGELOG-0.6.md');
+  const changelogPlainRaw = await run('parse-changelog ./CHANGELOG/CHANGELOG-0.7.md');
   // **Full Changelog**:
   // Patch the full changelog link
   const fullChangelogLine =
