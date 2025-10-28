@@ -338,9 +338,9 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode> + GlyphFactory> GroupContext<C>
         self.inner.push((pos, ctx.render_item(item)));
     }
 
-    fn render_glyph(&mut self, ctx: &mut C, pos: Scalar, font: &FontItem, glyph: u32) {
+    fn render_glyph(&mut self, ctx: &mut C, pos: Axes<Scalar>, font: &FontItem, glyph: u32) {
         if let Some(glyph) = ctx.get_glyph(font, glyph, self.fill.clone().unwrap()) {
-            self.inner.push((ir::Point::new(pos, Scalar(0.)), glyph));
+            self.inner.push((ir::Point::new(pos.x, pos.y), glyph));
         }
     }
 }

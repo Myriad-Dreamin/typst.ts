@@ -16,7 +16,6 @@ use reflexo::ImmutStr;
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
     foundations::{Bytes, Smart},
-    html::{HtmlElement, HtmlNode},
     introspection::{Introspector, Tag},
     layout::{
         Abs as TypstAbs, Axes, Dir, Frame, FrameItem, FrameKind, Position, Ratio as TypstRatio,
@@ -30,6 +29,7 @@ use typst::{
         Image as TypstImage, LineCap, LineJoin, Paint, RelativeTo, Shape, Tiling,
     },
 };
+use typst_html::{HtmlElement, HtmlNode};
 
 use crate::{
     convert::ImageExt,
@@ -471,7 +471,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         }
                     })
                 }
-                FrameItem::Tag(Tag::Start(elem)) => {
+                FrameItem::Tag(Tag::Start(elem, _)) => {
                     if !LINE_HINT_ELEMENTS.contains(elem.func().name()) {
                         return None;
                     }
@@ -708,8 +708,14 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                 self.glyphs
                     .build_glyph(font, GlyphItem::Raw(text.font.clone(), GlyphId(glyph.id)));
                 glyphs.push((
-                    glyph.x_offset.at(text.size).into_typst(),
-                    glyph.x_advance.at(text.size).into_typst(),
+                    Axes::<Abs> {
+                        x: glyph.x_offset.at(text.size).into_typst(),
+                        y: glyph.y_offset.at(text.size).into_typst(),
+                    },
+                    Axes::<Abs> {
+                        x: glyph.x_advance.at(text.size).into_typst(),
+                        y: glyph.y_advance.at(text.size).into_typst(),
+                    },
                     glyph.id as u32,
                 ));
             }
@@ -727,7 +733,19 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
             VecItem::Text(TextItem {
                 content: Arc::new(TextItemContent {
                     content: glyph_chars.into(),
-                    glyphs: glyphs.into(),
+                    glyphs: Arc::from_iter(glyphs.iter().map(|(offset, advance, glyph_id)| {
+                        (
+                            crate::ir::Axes {
+                                x: Scalar(offset.x.0),
+                                y: Scalar(offset.y.0),
+                            },
+                            crate::ir::Axes {
+                                x: Scalar(advance.x.0),
+                                y: Scalar(advance.y.0),
+                            },
+                            *glyph_id,
+                        )
+                    })),
                 }),
                 shape: Arc::new(TextShape {
                     font,
@@ -1049,7 +1067,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
     fn gradient(&self, g: &Gradient, transform: ir::Transform) -> Fingerprint {
         let mut stops = Vec::with_capacity(g.stops_ref().len());
         for (c, step) in g.stops_ref() {
-            let [r, g, b, a] = c.to_rgb().to_vec4_u8();
+            let (r, g, b, a) = c.to_rgb().into_format::<u8, u8>().into_components();
             stops.push((Rgba8Item { r, g, b, a }, (*step).into_typst()))
         }
 
@@ -1137,7 +1155,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         match child {
                             HtmlNode::Tag(..) => continue,
                             HtmlNode::Frame(e) => {
-                                HtmlChildren::Item(self.frame(state, e, parent, index))
+                                HtmlChildren::Item(self.frame(state, &e.inner, parent, index))
                             }
                             HtmlNode::Element(e) => {
                                 HtmlChildren::Item(self.html_element(state, e, parent, index))

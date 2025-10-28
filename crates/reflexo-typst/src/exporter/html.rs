@@ -7,9 +7,9 @@ use reflexo::typst::TypstHtmlDocument;
 use tinymist_world::{CompilerFeat, ExportComputation, WorldComputeGraph};
 use typst::diag::{bail, At, SourceResult, StrResult};
 use typst::foundations::Repr;
-use typst::html::{charsets, tag, HtmlElement, HtmlNode, HtmlTag};
 use typst::layout::Frame;
 use typst::syntax::Span;
+use typst_html::{charsets, tag, HtmlElement, HtmlNode, HtmlTag};
 
 pub type ExportStaticHtmlTask = tinymist_task::ExportHtmlTask;
 pub type StaticHtmlExport = tinymist_task::HtmlExport;
@@ -192,7 +192,7 @@ fn write_node(w: &mut Writer, node: &HtmlNode) -> SourceResult<()> {
         HtmlNode::Tag(_) => {}
         HtmlNode::Text(text, span) => write_text(w, text, *span)?,
         HtmlNode::Element(element) => write_element(w, element)?,
-        HtmlNode::Frame(frame) => write_frame(w, frame),
+        HtmlNode::Frame(frame) => write_frame(w, &frame.inner),
     }
     Ok(())
 }
