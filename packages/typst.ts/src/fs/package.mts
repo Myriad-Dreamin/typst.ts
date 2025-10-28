@@ -3,8 +3,13 @@ import { WritableAccessModel } from './index.mjs';
 
 export class FetchPackageRegistry implements PackageRegistry {
   cache: Map<string, () => string | undefined> = new Map();
-
-  constructor(private am: WritableAccessModel) {}
+  constructor(
+    /** 
+     * @internal 
+     * Access model for internal use only
+     */
+    protected am: WritableAccessModel
+  ) {}
 
   resolvePath(path: PackageSpec): string {
     return `https://packages.typst.org/preview/${path.name}-${path.version}.tar.gz`;
