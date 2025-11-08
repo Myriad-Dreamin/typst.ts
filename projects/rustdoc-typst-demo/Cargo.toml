@@ -1,7 +1,7 @@
 [package]
 name = "rustdoc-typst-demo"
 description = "This project demonstrates an approach to including Typst in Rust docs"
-version = "0.6.1-rc4"
+version = "0.6.1-rc5"
 edition = "2021"
 authors = [
     "Paul Kernfeld <paulkernfeld@gmail.com>",
