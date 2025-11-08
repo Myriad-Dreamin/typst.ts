@@ -292,9 +292,12 @@ impl NodeCompiler {
                 .context("failed to deserialize PdfStandard for typst")
                 .map_err(map_node_error)?;
 
+            let pdf_tags = opts.pdf_tags.unwrap_or(true);
+
             ExportPdfTask {
                 export: Default::default(),
                 pdf_standards: standard.into_iter().collect(),
+                no_pdf_tags: !pdf_tags,
                 creation_timestamp,
                 pages: None,
             }

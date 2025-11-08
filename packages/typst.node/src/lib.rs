@@ -191,6 +191,12 @@ pub struct RenderPdfOpts {
     /// standards.
     pub pdf_standard: Option<String>,
 
+    /// By default, even when not producing a `PDF/UA-1` document, a tagged PDF
+    /// document is written to provide a baseline of accessibility. In some
+    /// circumstances (for example when trying to reduce the size of a document)
+    /// it can be desirable to disable tagged PDF.
+    pub pdf_tags: Option<bool>,
+
     /// An optional (creation) timestamp to be used to export PDF, *in seconds*.
     ///
     /// This is used when you *enable auto timestamp* in the document.
