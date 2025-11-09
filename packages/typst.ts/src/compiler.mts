@@ -445,10 +445,10 @@ export interface TypstCompiler {
   withIncrementalServer<T>(f: (s: IncrementalServer) => Promise<T>): Promise<T>;
 }
 
-const gCompilerModule = new LazyWasmModule(async (bin?: any) => {
-  const module = await import('@myriaddreamin/typst-ts-web-compiler');
-  return await module.default(bin);
-});
+const gCompilerModule = (module: typeof typst) =>
+  new LazyWasmModule(async (bin?: any) => {
+    return await module.default(bin);
+  });
 
 /**
  * create a Typst compiler.
@@ -471,9 +471,9 @@ export class TypstFontBuilderDriver implements TypstFontBuilder {
   private fontBuilder: typst.TypstFontResolverBuilder;
 
   async init(options?: Partial<InitOptions>): Promise<void> {
-    this.fontBuilderJs = await import('@myriaddreamin/typst-ts-web-compiler');
+    this.fontBuilderJs = await (options?.getWrapper?.() || import('@myriaddreamin/typst-ts-web-compiler'));
     /// init typst wasm module
-    await gCompilerModule.init(options?.getModule?.());
+    await gCompilerModule(this.fontBuilderJs).init(options?.getModule?.());
 
     this.fontBuilder = new this.fontBuilderJs.TypstFontResolverBuilder();
   }
@@ -508,7 +508,7 @@ class TypstCompilerDriver implements TypstCompiler {
   constructor() { }
 
   async init(options?: Partial<InitOptions>): Promise<void> {
-    this.compilerJs = await import('@myriaddreamin/typst-ts-web-compiler');
+    this.compilerJs = await (options?.getWrapper?.() || import('@myriaddreamin/typst-ts-web-compiler'));
     const TypstCompilerBuilder = this.compilerJs.TypstCompilerBuilder;
 
     const compilerOptions = { ...(options || {}) };
@@ -533,7 +533,7 @@ class TypstCompilerDriver implements TypstCompiler {
         'TypstCompiler: no font loader found, please use font loaders, e.g. loadFonts or preloadSystemFonts',
       );
     }
-    this.compiler = await buildComponent(options, gCompilerModule, TypstCompilerBuilder, {});
+    this.compiler = await buildComponent(options, gCompilerModule(this.compilerJs), TypstCompilerBuilder, {});
   }
 
   setFonts(fonts: TypstFontResolver): void {
