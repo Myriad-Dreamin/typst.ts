@@ -7,7 +7,7 @@ use core::fmt;
 use ecow::eco_format;
 use reflexo::debug_loc::{LspPosition, LspRange};
 use reflexo::path::unix_slash;
-use typst::syntax::{FileId, Source, Span};
+use typst::syntax::{FileId, Lines, Span};
 
 use crate::vfs::{WorkspaceResolution, WorkspaceResolver};
 
@@ -110,14 +110,14 @@ impl fmt::Display for PosFmt<'_> {
 }
 
 fn resolve_source_span(
-    s: Span,
+    span: Span,
     world: Option<&dyn typst::World>,
 ) -> (String, String, Option<LspRange>) {
     let mut package = String::new();
     let mut path = String::new();
     let mut range = None;
 
-    if let Some(id) = s.id() {
+    if let Some(id) = span.id() {
         match WorkspaceResolver::resolve(id) {
             Ok(WorkspaceResolution::Package) => {
                 package = id.package().unwrap().to_string();
@@ -137,20 +137,23 @@ fn resolve_source_span(
             Err(..) => {}
         }
 
-        if let Some((rng, src)) = world
-            .and_then(|world| world.source(id).ok())
-            .and_then(|src| Some((src.find(s)?.range(), src)))
-        {
-            let resolve_off = |src: &Source, off: usize| {
-                src.lines()
-                    .byte_to_line(off)
-                    .zip(src.lines().byte_to_column(off))
-            };
+        let mut lines_range = None;
+        if let Some(src) = world.and_then(|world| world.source(id).ok()) {
+            let lines = src.lines().clone();
+            let range = span.range().or_else(|| src.range(span));
+            lines_range = Some(lines).zip(range);
+        } else if let Some(bytes) = world.and_then(|world| world.file(id).ok()){
+            let lines = Lines::try_from(&bytes).ok();
+            let range = span.range();
+            lines_range = lines.zip(range);
+        };
+
+        if let Some((lines, rng)) = lines_range {
             range = Some(LspRange {
-                start: resolve_off(&src, rng.start)
+                start: lines.byte_to_line_column(rng.start)
                     .map(|(l, c)| LspPosition::new(l as u32, c as u32))
                     .unwrap_or_default(),
-                end: resolve_off(&src, rng.end)
+                end: lines.byte_to_line_column(rng.end)
                     .map(|(l, c)| LspPosition::new(l as u32, c as u32))
                     .unwrap_or_default(),
             });
