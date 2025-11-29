@@ -17,6 +17,8 @@ pub struct TypstCompilerBuilder {
     access_model: Option<ProxyAccessModel>,
     package_registry: Option<JsRegistry>,
     fb: TypstFontResolverBuilder,
+    #[cfg(feature = "pdf")]
+    pdf_opts: Option<crate::RenderPdfOpts>,
 }
 
 #[wasm_bindgen]
@@ -28,6 +30,8 @@ impl TypstCompilerBuilder {
             access_model: None,
             package_registry: None,
             fb: TypstFontResolverBuilder::default(),
+            #[cfg(feature = "pdf")]
+            pdf_opts: None,
         };
         res.set_dummy_access_model()?;
         Ok(res)
@@ -83,6 +87,12 @@ impl TypstCompilerBuilder {
 
         Ok(())
     }
+    
+    #[cfg(feature = "pdf")]
+    pub fn set_pdf_opts(&mut self, opts: JsValue) -> Result<(), JsValue> {
+        self.pdf_opts = Some(serde_wasm_bindgen::from_value(opts).map_err(|e| format!("{e:?}"))?);
+        Ok(())
+    }
 
     // 400 KB
     pub async fn add_raw_font(&mut self, data: Uint8Array) -> Result<(), JsValue> {
@@ -114,7 +124,13 @@ impl TypstCompilerBuilder {
         #[cfg(feature = "fonts")]
         searcher.add_embedded();
 
-        TypstCompiler::new(access_model, registry, searcher.base.build())
+        TypstCompiler::new(
+            access_model,
+            registry,
+            searcher.base.build(),
+            #[cfg(feature = "pdf")]
+            self.pdf_opts,
+        )
     }
 }
 
