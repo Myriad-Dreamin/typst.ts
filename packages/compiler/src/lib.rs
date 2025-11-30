@@ -523,6 +523,12 @@ impl TypstCompileWorld {
         })
     }
 
+    #[cfg(feature = "pdf")]
+    pub fn set_pdf_opts(&mut self, opts: JsValue) -> Result<(), JsValue> {
+        self.pdf_opts = Some(serde_wasm_bindgen::from_value(opts).map_err(|e| format!("{e:?}"))?);
+        Ok(())
+    }
+
     fn get_diag<D: TypstDocumentTrait + Send + Sync + 'static>(
         &self,
         diagnostics_format: u8,
