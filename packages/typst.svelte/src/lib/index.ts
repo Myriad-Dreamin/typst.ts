@@ -1,1 +1,2 @@
-export * from "./Typst.svelte";
+import Typst from "./Typst.svelte";
+export default Typst

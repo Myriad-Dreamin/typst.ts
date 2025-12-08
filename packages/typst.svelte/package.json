@@ -1,6 +1,6 @@
 {
   "name": "typst.svelte",
-  "version": "0.0.1",
+  "version": "0.7.0-rc1",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build && npm run prepack",
@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@myriaddreamin/typst-ts-renderer": "0.7.0-rc1",
+    "@myriaddreamin/typst-ts-web-compiler": "0.7.0-rc1",
     "@myriaddreamin/typst.ts": "0.7.0-rc1"
   },
   "keywords": [
