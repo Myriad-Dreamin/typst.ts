@@ -1,5 +1,5 @@
 {
-	"name": "typst.svelte",
+	"name": "@myriaddreamin/typst.svelte",
 	"version": "0.7.0-rc1",
 	"scripts": {
 		"dev": "vite dev",
