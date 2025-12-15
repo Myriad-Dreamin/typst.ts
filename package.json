@@ -1,6 +1,6 @@
 {
   "name": "reflexo-workspace",
-  "version": "0.7.0-rc1",
+  "version": "0.7.0-rc2",
   "author": "Myriad-Dreamin",
   "description": "Run Typst in JavaScriptWorld.",
   "license": "Apache-2.0",

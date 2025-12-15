@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/typst-ts-node-compiler",
-  "version": "0.7.0-rc1",
+  "version": "0.7.0-rc2",
   "author": "Myriad-Dreamin",
   "description": "Compile or Render Typst documents in Node environment.",
   "main": "index.js",
