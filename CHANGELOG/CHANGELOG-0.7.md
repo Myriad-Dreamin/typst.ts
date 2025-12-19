@@ -6,7 +6,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## v0.7.0 - [2025-10-28]
 
-- Bumped typst to v0.14.0 in https://github.com/Myriad-Dreamin/typst.ts/pull/796
+- Bumped typst to v0.14.2 in
+  https://github.com/Myriad-Dreamin/typst.ts/pull/796,
+  https://github.com/Myriad-Dreamin/typst.ts/pull/811, and
+  https://github.com/Myriad-Dreamin/typst.ts/pull/814
 
 ### Packages
 
@@ -34,6 +37,9 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 ### Package: typst.ts
 
 - (Fix) Fixed race condition in snippet lib in https://github.com/Myriad-Dreamin/typst.ts/pull/725
+- (Fix) Respecting wrapper script passed on initialization in https://github.com/Myriad-Dreamin/typst.ts/pull/804
+- Added PDF standards supported in typst v0.14 in https://github.com/Myriad-Dreamin/typst.ts/pull/800
+- Added pdf tags options in https://github.com/Myriad-Dreamin/typst.ts/pull/803
 
 ### Package: typst.react
 
