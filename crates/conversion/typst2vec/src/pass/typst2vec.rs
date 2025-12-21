@@ -56,7 +56,7 @@ struct State<'a> {
 }
 
 impl State<'_> {
-    fn new(introspector: &Introspector, size: ir::Size) -> State {
+    fn new(introspector: &Introspector, size: ir::Size) -> State<'_> {
         State {
             introspector,
             transform: Transform::identity(),

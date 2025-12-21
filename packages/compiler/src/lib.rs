@@ -504,7 +504,7 @@ impl TypstCompileWorld {
             ))
         } else if diag.error_cnt() > 0 {
             let diag = diag.diagnostics().collect::<Vec<_>>();
-            return Err(format!("{diag:?}").into());
+            Err(format!("{diag:?}").into())
         } else {
             Ok(JsValue::UNDEFINED)
         }

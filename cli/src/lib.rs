@@ -4,7 +4,6 @@ pub mod font;
 #[cfg(feature = "gen-manual")]
 pub mod manual;
 pub mod query;
-pub mod query_repl;
 pub mod utils;
 pub mod version;
 
@@ -58,9 +57,6 @@ pub enum Subcommands {
 
     /// Processes an input file to extract provided metadata
     Query(QueryArgs),
-
-    /// Runs repl for query
-    QueryRepl(QueryReplArgs),
 
     /// Generates a shell completion script for CLI.
     Completion(CompletionArgs),

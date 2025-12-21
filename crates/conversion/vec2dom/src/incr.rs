@@ -19,12 +19,6 @@ use crate::{
 
 pub type IncrDOMDocServer = IncrDocServer;
 
-#[derive(Default)]
-enum TrackMode {
-    #[default]
-    Document,
-}
-
 #[derive(Debug, Clone)]
 pub struct HookedElement {
     pub hooked: HtmlElement,

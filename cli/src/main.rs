@@ -46,7 +46,6 @@ fn main() {
     match opts.sub {
         Some(Subcommands::Compile(args)) => compile(args),
         Some(Subcommands::Query(args)) => query(args),
-        Some(Subcommands::QueryRepl(args)) => query_repl(args),
         Some(Subcommands::Completion(args)) => generate_completion(args),
         #[cfg(feature = "gen-manual")]
         Some(Subcommands::Manual(args)) => {
@@ -142,14 +141,6 @@ pub fn query(args: QueryArgs) -> ! {
     );
 
     compile_export(compile_args, exporter)
-}
-
-fn query_repl(args: QueryReplArgs) -> ! {
-    use typst_ts_cli::query_repl::start_repl_test;
-    let compile_args = args.compile.clone();
-
-    start_repl_test(compile_args).unwrap();
-    exit(0)
 }
 
 fn generate_completion(CompletionArgs { shell }: CompletionArgs) -> ! {
