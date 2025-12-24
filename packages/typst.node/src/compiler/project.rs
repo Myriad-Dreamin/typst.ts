@@ -287,6 +287,7 @@ impl ProjectBackgroundWorker {
                 handler: handler.clone() as Arc<_>,
                 export_target: tinymist_project::ExportTarget::Html,
                 ignore_first_sync: false,
+                syntax_only: false,
             },
         );
 
@@ -422,7 +423,7 @@ impl NodeTypstProject {
     }
 
     // todo: tinymist_world implement it.
-    /// Create a snapshoted world by typst.node's [`CompileDocArgs`].
+    /// Create a snapshotted world by typst.node's [`CompileDocArgs`].
     /// Should not affect the current universe (global state).
     pub fn computation(
         &mut self,
