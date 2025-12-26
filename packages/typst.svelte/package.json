@@ -38,7 +38,7 @@
 		"@myriaddreamin/typst-ts-renderer": "*",
 		"@myriaddreamin/typst-ts-web-compiler": "*",
 		"@myriaddreamin/typst.ts": "*",
-		"playwright": "*",
+		"playwright": "^1.52.0",
 		"typescript": "*",
 		"vite": "*",
 		"@sveltejs/adapter-auto": "^7.0.0",
