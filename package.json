@@ -21,6 +21,7 @@
     "packages/typst.solid",
     "packages/typst.solid/demo",
     "packages/typst.vue3",
+    "packages/typst.svelte",
     "packages/typst.angular",
     "packages/typst-all-in-one.ts",
     "templates/*",
