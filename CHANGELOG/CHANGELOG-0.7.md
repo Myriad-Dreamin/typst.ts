@@ -6,10 +6,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ## v0.7.0 - [2025-10-28]
 
-- Bumped typst to v0.14.2 in
-  https://github.com/Myriad-Dreamin/typst.ts/pull/796,
-  https://github.com/Myriad-Dreamin/typst.ts/pull/811, and
-  https://github.com/Myriad-Dreamin/typst.ts/pull/814
+- Bumped typst to v0.14.2 in https://github.com/Myriad-Dreamin/typst.ts/pull/796, https://github.com/Myriad-Dreamin/typst.ts/pull/811, and https://github.com/Myriad-Dreamin/typst.ts/pull/814
 
 ### Packages
 
