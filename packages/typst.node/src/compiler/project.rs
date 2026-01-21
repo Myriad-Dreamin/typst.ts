@@ -688,11 +688,15 @@ impl NodeTypstProject {
     #[napi(ts_args_type = "compiledOrBy: NodeTypstDocument | CompileDocArgs")]
     #[cfg(feature = "svg")]
     pub fn plain_svg(&mut self, compiled_or_by: MayCompileOpts) -> Result<String, NodeError> {
-        use reflexo_typst::{task::ExportSvgTask, ImageOutput};
+        use reflexo_typst::{task::{ExportSvgTask, PageMerge}, ImageOutput};
 
         type Export = reflexo_typst::SvgExport;
         let output = self
-            .compile_as::<Export, ImageOutput<String>>(compiled_or_by, &ExportSvgTask::default())?;
+            .compile_as::<Export, ImageOutput<String>>(compiled_or_by, &ExportSvgTask {
+                // Enable merging by default for plain_svg
+                merge: Some(PageMerge::default()),
+                ..ExportSvgTask::default()
+            })?;
         match output {
             ImageOutput::Merged(s) => Ok(s),
             ImageOutput::Paged(..) => unreachable!(),
