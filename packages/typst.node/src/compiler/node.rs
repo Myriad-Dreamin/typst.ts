@@ -315,12 +315,14 @@ impl NodeCompiler {
         use reflexo_typst::task::{ExportSvgTask, PageMerge};
 
         type Export = reflexo_typst::SvgExport;
-        let output = self
-            .compile_as::<Export, ImageOutput<String>>(compiled_or_by, &ExportSvgTask {
+        let output = self.compile_as::<Export, ImageOutput<String>>(
+            compiled_or_by,
+            &ExportSvgTask {
                 // Enable merging by default for plain_svg
                 merge: Some(PageMerge::default()),
                 ..ExportSvgTask::default()
-            })?;
+            },
+        )?;
         match output {
             ImageOutput::Merged(s) => Ok(s),
             ImageOutput::Paged(..) => unreachable!(),
