@@ -29,7 +29,7 @@
   "peerDependencies": {
     "@myriaddreamin/typst.node": "^0.7.0-rc2",
     "@xmldom/xmldom": "^0.9.8",
-    "vite": "^6.2.3"
+    "vite": "^6.2.3 || ^7.0.0"
   },
   "peerDependenciesMeta": {
     "@myriaddreamin/typst.node": {
