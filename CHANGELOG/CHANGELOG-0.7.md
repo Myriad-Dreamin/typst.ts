@@ -35,6 +35,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 - (Fix) Fixed race condition in snippet lib in https://github.com/Myriad-Dreamin/typst.ts/pull/725
 - (Fix) Respecting wrapper script passed on initialization in https://github.com/Myriad-Dreamin/typst.ts/pull/804
+- (Fix) Set PageMerge to default to get merged content for plain SVGs by @TeddyHuang-00 in https://github.com/Myriad-Dreamin/typst.ts/pull/826
 - Added PDF standards supported in typst v0.14 in https://github.com/Myriad-Dreamin/typst.ts/pull/800
 - Added pdf tags options in https://github.com/Myriad-Dreamin/typst.ts/pull/803
 
@@ -51,16 +52,24 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - (Fix) Fixed incorrect Typst source code change listener by @bryarrow in https://github.com/Myriad-Dreamin/typst.ts/pull/767
 - Generating ESM and type declarations for publishing in https://github.com/Myriad-Dreamin/typst.ts/pull/776
 
+### Package: typst.svelte (New)
+
+- added svelte 5 package by @AquaBx in https://github.com/Myriad-Dreamin/typst.ts/pull/809
+
 ### Package: typst-ts-node-compiler
 
 - Moving the watch lock after compilation in https://github.com/Myriad-Dreamin/typst.ts/pull/727
 
+### Package: vite-plugin-typst
+
+- Updated peer dependency to support vite v7 by @Mr-Python-in-China in https://github.com/Myriad-Dreamin/typst.ts/pull/827
+
 ### Misc
 
 - Fixed a typo in responsive.typ by @shigma in https://github.com/Myriad-Dreamin/typst.ts/pull/719
+- Fixed a typo by @sjfhsjfh in https://github.com/Myriad-Dreamin/typst.ts/pull/797
 - Updated serverless render example to import correct file from jsdelivr by @mosaleh-dev in https://github.com/Myriad-Dreamin/typst.ts/pull/733
 - Updated docs for all-in-one bundle in https://github.com/Myriad-Dreamin/typst.ts/pull/726
-
-* docs: visualize asset sizes by @YDX-2147483647 in https://github.com/Myriad-Dreamin/typst.ts/pull/742
+- Visualized asset sizes by @YDX-2147483647 in https://github.com/Myriad-Dreamin/typst.ts/pull/742
 
 **Full Changelog**: https://github.com/Myriad-Dreamin/typst.ts/compare/v0.6.0...v0.7.0
