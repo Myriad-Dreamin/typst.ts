@@ -242,7 +242,6 @@ export default parts;`;
       return provider.resolveRel(abspath);
     },
 
-
     config(conf) {
       viteReload(conf as unknown as ResolvedConfig);
       inputs.mutate(options, conf as unknown as ResolvedConfig)!;
