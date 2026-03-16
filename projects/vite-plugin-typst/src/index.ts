@@ -230,13 +230,16 @@ export default parts;`;
       return `export default ${JSON.stringify(result.result!.html())}`;
     },
 
-    resolveId(source) {
-      const { path, attributes } = extractOpts(source);
-      if (!path.endsWith('.typ')) return null;
+    resolveId(source, importer) {
+      const { path: filepath, attributes } = extractOpts(source);
+      if (!filepath.endsWith(".typ")) return null;
+      const abspath = path.isAbsolute(filepath)
+        ? filepath
+        : path.resolve(path.dirname(importer), source);
       if (attributes.html || attributes.parts) {
-        return source + suffixJs;
+        return abspath + suffixJs;
       }
-      return provider.resolveRel(path);
+      return provider.resolveRel(abspath);
     },
 
     config(conf) {
