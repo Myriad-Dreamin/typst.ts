@@ -90,8 +90,11 @@ impl<W: io::Write> AstWriter<'_, W> {
                     return;
                 }
                 Tag::String => {
-                    let wrapped: typst::syntax::ast::Str = ast.cast().unwrap();
-                    self.painted(STRING, format!("Str(\"{}\")", wrapped.get()));
+                    if let Some(wrapped) = ast.cast::<typst::syntax::ast::Str>() {
+                        self.painted(STRING, format!("Str(\"{}\")", wrapped.get()));
+                    } else {
+                        self.painted(STRING, format!("Str::{k:?}"));
+                    }
                     return;
                 }
                 Tag::Number => {
