@@ -1,12 +1,18 @@
 name: reflexo::release::docker
 on:
-  release:
-    types: [created]
+  workflow_call:
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-docker-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build-and-publish:
@@ -20,7 +26,7 @@ jobs:
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -54,3 +60,12 @@ jobs:
           platforms: ${{ matrix.platforms }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Summarize Docker lane
+        run: |
+          {
+            echo "## Published Docker image lane"
+            echo
+            echo "- Image: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\`"
+            echo "- Platform: \`${{ matrix.platforms }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

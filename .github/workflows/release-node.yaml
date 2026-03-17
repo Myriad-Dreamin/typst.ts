@@ -2,7 +2,18 @@ name: reflexo::release_node
 on:
   release:
     types: [created]
+  workflow_call:
+    inputs:
+      tag:
+        description: GitHub Release tag used for typst.node assets
+        required: true
+        type: string
   workflow_dispatch:
+    inputs:
+      tag:
+        description: GitHub Release tag used for typst.node assets
+        required: true
+        type: string
 env:
   DEBUG: napi:*
   APP_NAME: typst-ts-node-compiler
@@ -69,6 +80,8 @@ jobs:
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Setup node
         uses: actions/setup-node@v4
         if: ${{ !matrix.settings.docker }}
@@ -190,6 +203,8 @@ jobs:
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Setup node
         uses: actions/setup-node@v4
         with:
@@ -221,6 +236,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Setup node
         uses: actions/setup-node@v4
         with:
@@ -252,6 +269,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Setup node
         uses: actions/setup-node@v4
         with:
@@ -285,6 +304,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -319,6 +340,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
   #     - name: Download artifacts
   #       uses: actions/download-artifact@v4
   #       with:
@@ -357,6 +380,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -395,6 +420,8 @@ jobs:
       - test-linux-arm-gnueabihf-binding
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Setup node
         uses: actions/setup-node@v4
         with:
@@ -428,10 +455,11 @@ jobs:
           path: packages/typst.node/myriaddreamin-typst-ts-node-compiler.tar.gz
       - name: Publish
         run: |
-          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
           yarn prepublish:napi --no-gh-release
-          node scripts/publish.js
+          node scripts/publish.js "${{ inputs.tag || github.event.release.tag_name || github.ref_name }}"
           npm publish --verbose --provenance --access public || exit 0
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name || github.ref_name }}
