@@ -48,7 +48,7 @@ pub const PAGELESS_SIZE: ir::Size = Size::new(Scalar(1e2 + 4.1234567), Scalar(1e
 
 #[derive(Clone, Copy)]
 struct State<'a> {
-    introspector: &'a Introspector,
+    introspector: &'a dyn Introspector,
     /// The transform of the current item.
     pub transform: Transform,
     /// The size of the first hard frame in the hierarchy.
@@ -56,7 +56,7 @@ struct State<'a> {
 }
 
 impl State<'_> {
-    fn new(introspector: &Introspector, size: ir::Size) -> State<'_> {
+    fn new(introspector: &dyn Introspector, size: ir::Size) -> State<'_> {
         State {
             introspector,
             transform: Transform::identity(),
@@ -251,8 +251,8 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
 
         let idx = 0;
 
-        let state = State::new(&doc.introspector, Size::default());
-        let abs_ref = self.html_element(state, &doc.root, page_reg, idx);
+        let state = State::new(doc.introspector().as_ref(), Size::default());
+        let abs_ref = self.html_element(state, doc.root(), page_reg, idx);
 
         self.spans.push_span(SourceRegion {
             region: doc_reg,
@@ -277,13 +277,13 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         let doc_reg = self.spans.start();
 
         let pages = doc
-            .pages
+            .pages()
             .par_iter()
             .enumerate()
             .map(|(idx, p)| {
                 let page_reg = self.spans.start();
 
-                let state = State::new(&doc.introspector, p.frame.size().into_typst());
+                let state = State::new(doc.introspector().as_ref(), p.frame.size().into_typst());
                 let abs_ref = self.frame_(state, &p.frame, page_reg, idx, p.fill_or_transparent());
 
                 self.spans.push_span(SourceRegion {
