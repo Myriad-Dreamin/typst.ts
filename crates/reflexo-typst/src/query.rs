@@ -3,7 +3,8 @@ use reflexo::typst::TypstDocument;
 use typst::{
     diag::{EcoString, StrResult},
     engine::Sink,
-    foundations::{Content, LocatableSelector, Scope},
+    foundations::{Content, Context, LocatableSelector, Scope},
+    routines::SpanMode,
     syntax::{Span, SyntaxMode},
     World,
 };
@@ -17,11 +18,13 @@ pub fn retrieve(
     document: &TypstDocument,
 ) -> StrResult<Vec<Content>> {
     let selector = eval_string(
-        &typst::ROUTINES,
         world.track(),
+        world.library(),
         Sink::new().track_mut(),
+        world.introspector(),
+        Context::none().track(),
         selector,
-        Span::detached(),
+        SpanMode::Uniform(Span::detached()),
         SyntaxMode::Code,
         Scope::default(),
     )
