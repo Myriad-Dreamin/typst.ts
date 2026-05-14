@@ -466,7 +466,10 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         Destination::Position(dest) => self.position(*dest, *size),
                         Destination::Location(loc) => {
                             // todo: process location before lowering
-                            let dest = state.introspector.position(*loc);
+                            let dest = state
+                                .introspector
+                                .position(*loc)
+                                .map_or(PagedPosition::ORIGIN, |dest| dest.as_paged_or_default());
                             self.position(dest, *size)
                         }
                     })
