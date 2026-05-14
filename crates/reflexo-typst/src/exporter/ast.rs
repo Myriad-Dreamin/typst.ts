@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::path::Path;
 use std::{io, io::Write, sync::Arc};
 
 use reflexo::error::prelude::*;
@@ -23,9 +24,10 @@ impl<F: CompilerFeat> WorldComputable<F> for AstExport {
         let src = world
             .source(world.main())
             .context_ut("failed to get main")?;
-        let path = src.id().vpath().as_rootless_path();
-        dump_ast(&path.display().to_string(), &src, &mut writer)
-            .map_err(|e| FileError::from_io(e, path))
+        let id = src.id();
+        let path = id.vpath().get_without_slash();
+        dump_ast(path, &src, &mut writer)
+            .map_err(|e| FileError::from_io(e, Path::new(path)))
             .context_ut("failed to dump ast")?;
 
         writer.flush().unwrap();
