@@ -21,7 +21,7 @@ pub fn retrieve(
         world.track(),
         world.library(),
         Sink::new().track_mut(),
-        document.introspector(),
+        document.introspector().track(),
         Context::none().track(),
         selector,
         SpanMode::Uniform(Span::detached()),
