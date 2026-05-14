@@ -80,7 +80,7 @@ pub fn resolve_universe(args: CompileOnceArgs) -> TypstSystemUniverse {
 
         let entry = verse
             .entry_state()
-            .select_in_workspace(MEMORY_MAIN_ENTRY.vpath().as_rooted_path());
+            .select_in_workspace(Path::new(MEMORY_MAIN_ENTRY.vpath().get_with_slash()));
         verse.mutate_entry(entry).unwrap();
 
         let src = read_from_stdin()

@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::{path::Path, sync::{Arc, Mutex}};
 
 use reflexo_typst::hash::FxHashMap;
 use reflexo_typst::system::SystemWorldComputeGraph;
@@ -455,7 +455,7 @@ impl NodeTypstProject {
                     entry: Some(
                         world
                             .entry_state()
-                            .select_in_workspace(MEMORY_MAIN_ENTRY.vpath().as_rooted_path()),
+                            .select_in_workspace(Path::new(MEMORY_MAIN_ENTRY.vpath().get_with_slash())),
                     ),
                     inputs,
                 });

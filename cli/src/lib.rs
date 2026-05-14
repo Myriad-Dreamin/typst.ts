@@ -194,8 +194,8 @@ impl CompileOnceArgs {
                     current_dir().join(entry)
                 };
 
-                let path = match entry.strip_prefix(root) {
-                    Ok(rel) => VirtualPath::new(rel),
+                let path = match VirtualPath::virtualize(root, &entry) {
+                    Ok(path) => path,
                     Err(_) => clap::Error::raw(
                         clap::error::ErrorKind::InvalidValue,
                         format!(
@@ -219,9 +219,7 @@ impl CompileOnceArgs {
                 if self.is_stdin() {
                     current_dir().into()
                 } else {
-                    input
-                        .vpath()
-                        .as_rooted_path()
+                    Path::new(input.vpath().get_with_slash())
                         .parent()
                         .unwrap_or_else(|| {
                             clap::Error::raw(
