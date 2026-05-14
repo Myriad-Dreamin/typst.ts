@@ -900,7 +900,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                 FillRule::EvenOdd => styles.push(PathStyle::FillRule("evenodd".into())),
             }
 
-            let mut shape_size = shape.geometry.bbox_size();
+            let mut shape_size = shape.bbox(false).size();
             // Edge cases for strokes.
             if shape_size.x.to_pt() == 0.0 {
                 shape_size.x = TypstAbs::pt(1.0);
@@ -978,7 +978,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                 state,
                 relative_to_self,
                 || {
-                    let bbox = shape.geometry.bbox_size();
+                    let bbox = shape.bbox(false).size();
 
                     // Edge cases for strokes.
                     let (mut x, mut y) = (bbox.x.to_f32(), bbox.y.to_f32());
