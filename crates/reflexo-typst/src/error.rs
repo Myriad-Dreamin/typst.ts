@@ -7,7 +7,7 @@ use core::fmt;
 use ecow::eco_format;
 use reflexo::debug_loc::{LspPosition, LspRange};
 use reflexo::path::unix_slash;
-use typst::syntax::{FileId, Source, Span};
+use typst::syntax::{FileId, Source, Span, VirtualRoot};
 
 use crate::vfs::{WorkspaceResolution, WorkspaceResolver};
 
@@ -128,21 +128,16 @@ fn resolve_source_span(
     if let Some(id) = s.id() {
         match WorkspaceResolver::resolve(id) {
             Ok(WorkspaceResolution::Package) => {
-                if let typst::typst_syntax::VirtualRoot::Package(pkg) = id.root() {
+                if let VirtualRoot::Package(pkg) = id.root() {
                     package = pkg.to_string();
                 }
-                path = unix_slash(id.vpath().get_with_slash());
+                path = id.vpath().get_with_slash().to_string();
             }
             Ok(WorkspaceResolution::Rootless | WorkspaceResolution::UntitledRooted(..)) => {
-                path = unix_slash(id.vpath().get_with_slash());
+                path = id.vpath().get_with_slash().to_string();
             }
             Ok(WorkspaceResolution::Workspace(workspace)) => {
-                path = id
-                    .vpath()
-                    .realize(&workspace.path())
-                    .as_deref()
-                    .map(unix_slash)
-                    .unwrap_or_default();
+                path = unix_slash(&id.vpath().realize(&workspace.path()));
             }
             Err(..) => {}
         }
