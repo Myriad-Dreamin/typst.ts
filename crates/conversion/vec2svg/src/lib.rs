@@ -115,7 +115,7 @@ pub fn render_svg_html<Feat: ExportFeature>(output: &TypstPagedDocument) -> Stri
     html.push(r#"<!DOCTYPE html><html><head><meta charset="utf-8" /><title>"#.into());
     html.push(SvgText::Plain(
         output
-            .info
+            .info()
             .title
             .as_ref()
             .map(|s| s.to_string())
