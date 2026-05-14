@@ -112,6 +112,7 @@ impl fmt::Display for PosFmt<'_> {
             typst::diag::Tracepoint::Call(None) => write!(f, "while calling closure"),
             typst::diag::Tracepoint::Show(name) => write!(f, "while showing {name}"),
             typst::diag::Tracepoint::Import(name) => write!(f, "while importing {name}"),
+            typst::diag::Tracepoint::Include(name) => write!(f, "while including {name}"),
         }
     }
 }
