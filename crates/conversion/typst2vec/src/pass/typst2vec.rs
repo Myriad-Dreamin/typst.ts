@@ -16,9 +16,9 @@ use reflexo::ImmutStr;
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::{
     foundations::{Bytes, Smart},
-    introspection::{Introspector, Tag},
+    introspection::{Introspector, PagedPosition, Tag},
     layout::{
-        Abs as TypstAbs, Axes, Dir, Frame, FrameItem, FrameKind, Position, Ratio as TypstRatio,
+        Abs as TypstAbs, Axes, Dir, Frame, FrameItem, FrameKind, Ratio as TypstRatio,
         Size as TypstSize, Transform as TypstTransform,
     },
     model::Destination,
@@ -956,7 +956,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
 
     // /// Convert a document position into vector item.
     // #[comemo::memoize]
-    fn position(&self, pos: Position, size: TypstSize) -> VecItem {
+    fn position(&self, pos: PagedPosition, size: TypstSize) -> VecItem {
         let lnk = LinkItem {
             href: format!(
                 "@typst:handleTypstLocation(this, {}, {}, {})",
