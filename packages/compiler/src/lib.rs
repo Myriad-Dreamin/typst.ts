@@ -221,11 +221,9 @@ impl TypstCompiler {
         let src = world.source(src).unwrap();
 
         let mut cursor = std::io::Cursor::new(Vec::new());
-        reflexo_typst::dump_ast(
-            &src.id().vpath().as_rootless_path().display().to_string(),
-            &src,
-            &mut cursor,
-        )
+        let id = src.id();
+        let path = id.vpath().get_without_slash();
+        reflexo_typst::dump_ast(path, &src, &mut cursor)
         .map_err(|e| format!("{e:?}"))?;
         let data = cursor.into_inner();
 
