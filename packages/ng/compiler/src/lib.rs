@@ -239,7 +239,7 @@ impl TypstCompiler {
         Ok(())
     }
 
-    fn run_compile<T: reflexo_typst::TypstDocumentTrait>(
+    fn run_compile<T: reflexo_typst::TypstDocumentTrait + reflexo_typst::foundations::Output>(
         cell: &mut Option<Option<Arc<T>>>,
         warnings_cell: &mut Vec<EcoVec<SourceDiagnostic>>,
         errors_cell: &mut Vec<EcoVec<SourceDiagnostic>>,

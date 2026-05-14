@@ -96,7 +96,12 @@ impl BoxedCompiler {
     }
 
     pub fn compile_raw2<
-        D: reflexo_typst::TypstDocumentTrait + ArcInto<TypstDocument> + Send + Sync + 'static,
+        D: reflexo_typst::TypstDocumentTrait
+            + reflexo_typst::foundations::Output
+            + ArcInto<TypstDocument>
+            + Send
+            + Sync
+            + 'static,
     >(
         &mut self,
         compile_by: CompileDocArgs,

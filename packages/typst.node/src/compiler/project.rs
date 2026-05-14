@@ -504,7 +504,12 @@ impl NodeTypstProject {
 
     /// Compiles the document as paged target.
     pub fn compile_raw<
-        D: reflexo_typst::TypstDocumentTrait + ArcInto<TypstDocument> + Send + Sync + 'static,
+        D: reflexo_typst::TypstDocumentTrait
+            + reflexo_typst::foundations::Output
+            + ArcInto<TypstDocument>
+            + Send
+            + Sync
+            + 'static,
     >(
         &mut self,
         opts: CompileDocArgs,
@@ -514,7 +519,12 @@ impl NodeTypstProject {
     }
 
     pub fn compile_raw2<
-        D: reflexo_typst::TypstDocumentTrait + ArcInto<TypstDocument> + Send + Sync + 'static,
+        D: reflexo_typst::TypstDocumentTrait
+            + reflexo_typst::foundations::Output
+            + ArcInto<TypstDocument>
+            + Send
+            + Sync
+            + 'static,
     >(
         &mut self,
         compile_by: CompileDocArgs,
@@ -564,7 +574,7 @@ impl NodeTypstProject {
     }
 
     /// Compiles the document as a specific type.
-    pub fn may_compile<D: TypstDocumentTrait + Send + Sync + 'static>(
+    pub fn may_compile<D: TypstDocumentTrait + reflexo_typst::foundations::Output + Send + Sync + 'static>(
         &mut self,
         opts: MayCompileOpts,
     ) -> Result<NodeTypstDocument, NodeError>
@@ -586,7 +596,7 @@ impl NodeTypstProject {
     }
 
     /// Compiles the document as a specific type.
-    pub fn may_compile2<D: TypstDocumentTrait + Send + Sync + 'static>(
+    pub fn may_compile2<D: TypstDocumentTrait + reflexo_typst::foundations::Output + Send + Sync + 'static>(
         &mut self,
         opts: MayCompileOpts,
     ) -> std::result::Result<ExecResultRepr<NodeTypstDocument>, NodeError>
