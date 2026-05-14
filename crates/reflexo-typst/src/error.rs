@@ -89,7 +89,14 @@ impl fmt::Display for DiagMsgFmt<'_> {
         f.write_str(&self.0.message)?;
         if !self.0.hints.is_empty() {
             f.write_str(", hints: ")?;
-            f.write_str(&self.0.hints.join(", "))?;
+            let hints = self
+                .0
+                .hints
+                .iter()
+                .map(|hint| hint.v.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            f.write_str(&hints)?;
         }
 
         Ok(())
