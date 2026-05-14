@@ -128,16 +128,18 @@ fn resolve_source_span(
     if let Some(id) = s.id() {
         match WorkspaceResolver::resolve(id) {
             Ok(WorkspaceResolution::Package) => {
-                package = id.package().unwrap().to_string();
-                path = unix_slash(id.vpath().as_rooted_path());
+                if let typst::typst_syntax::VirtualRoot::Package(pkg) = id.root() {
+                    package = pkg.to_string();
+                }
+                path = unix_slash(id.vpath().get_with_slash());
             }
             Ok(WorkspaceResolution::Rootless | WorkspaceResolution::UntitledRooted(..)) => {
-                path = unix_slash(id.vpath().as_rooted_path());
+                path = unix_slash(id.vpath().get_with_slash());
             }
             Ok(WorkspaceResolution::Workspace(workspace)) => {
                 path = id
                     .vpath()
-                    .resolve(&workspace.path())
+                    .realize(&workspace.path())
                     .as_deref()
                     .map(unix_slash)
                     .unwrap_or_default();
