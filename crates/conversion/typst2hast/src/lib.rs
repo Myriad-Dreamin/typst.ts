@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use comemo::Track;
 use base64::Engine;
+use comemo::Track;
 use ecow::{eco_format, EcoString};
 use reflexo::typst::TypstHtmlDocument;
 use typst::diag::SourceResult;
@@ -103,7 +103,7 @@ fn write_frame(
         &frame.anchors,
         link_resolver,
     )
-        .replace("<svg class", "<svg style=\"overflow: visible;\" class");
+    .replace("<svg class", "<svg style=\"overflow: visible;\" class");
 
     // create a img base64
     let base64_svg = base64::engine::general_purpose::STANDARD.encode(svg.as_bytes());
