@@ -13,7 +13,7 @@ use reflexo_typst::{
     SystemCompilerFeat, TakeAs, TextExport, WebSvgExport, WebSvgHtmlExport, WebSvgModuleExport,
     WorldComputable, WorldComputeGraph,
 };
-use typst::World;
+use typst::{foundations::Output, model::Document, World};
 
 use crate::{utils::current_dir, CompileArgs};
 
@@ -238,7 +238,7 @@ fn prepare_exporters_impl(
         }
     }
 
-    fn compile_it<D: typst::Document + Send + Sync + 'static>(
+    fn compile_it<D: Document + Output + Send + Sync + 'static>(
         graph: &Arc<WorldComputeGraph<SystemCompilerFeat>>,
     ) -> Result<Option<Arc<D>>> {
         let _ = graph.provide::<FlagTask<CompilationTask<D>>>(Ok(FlagTask::flag(true)));
@@ -246,7 +246,7 @@ fn prepare_exporters_impl(
     }
 
     fn export_bytes<
-        D: typst::Document + Send + Sync + 'static,
+        D: Document + Output + Send + Sync + 'static,
         T: ExportComputation<SystemCompilerFeat, D, Output = Bytes>,
     >(
         graph: &Arc<WorldComputeGraph<SystemCompilerFeat>>,
@@ -259,7 +259,7 @@ fn prepare_exporters_impl(
     }
 
     fn export_string<
-        D: typst::Document + Send + Sync + 'static,
+        D: Document + Output + Send + Sync + 'static,
         T: ExportComputation<SystemCompilerFeat, D, Output = String>,
     >(
         graph: &Arc<WorldComputeGraph<SystemCompilerFeat>>,
