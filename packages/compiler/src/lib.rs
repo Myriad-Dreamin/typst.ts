@@ -490,7 +490,7 @@ impl TypstCompileWorld {
         })
     }
 
-    fn get_diag<D: TypstDocumentTrait + Send + Sync + 'static>(
+    fn get_diag<D: TypstDocumentTrait + typst::foundations::Output + Send + Sync + 'static>(
         &self,
         diagnostics_format: u8,
     ) -> Result<JsValue, JsValue> {
