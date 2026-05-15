@@ -1,7 +1,8 @@
-use std::{path::Path, sync::{Arc, Mutex}};
+use std::sync::{Arc, Mutex};
 
 use reflexo_typst::hash::FxHashMap;
 use reflexo_typst::system::SystemWorldComputeGraph;
+use reflexo_typst::typst_shim::syntax::VirtualPathExt;
 use reflexo_typst::vfs::notify::NotifyMessage;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
@@ -451,14 +452,13 @@ impl NodeTypstProject {
                     inputs,
                 })
             } else {
-                let world = world.task(TaskInputs {
-                    entry: Some(
-                        world
-                            .entry_state()
-                            .select_in_workspace(Path::new(MEMORY_MAIN_ENTRY.vpath().get_with_slash())),
-                    ),
-                    inputs,
-                });
+                let world =
+                    world.task(TaskInputs {
+                        entry: Some(world.entry_state().select_in_workspace(
+                            MEMORY_MAIN_ENTRY.vpath().as_rooted_path_compat(),
+                        )),
+                        inputs,
+                    });
 
                 world
             };
@@ -574,7 +574,9 @@ impl NodeTypstProject {
     }
 
     /// Compiles the document as a specific type.
-    pub fn may_compile<D: TypstDocumentTrait + reflexo_typst::foundations::Output + Send + Sync + 'static>(
+    pub fn may_compile<
+        D: TypstDocumentTrait + reflexo_typst::foundations::Output + Send + Sync + 'static,
+    >(
         &mut self,
         opts: MayCompileOpts,
     ) -> Result<NodeTypstDocument, NodeError>
@@ -596,7 +598,9 @@ impl NodeTypstProject {
     }
 
     /// Compiles the document as a specific type.
-    pub fn may_compile2<D: TypstDocumentTrait + reflexo_typst::foundations::Output + Send + Sync + 'static>(
+    pub fn may_compile2<
+        D: TypstDocumentTrait + reflexo_typst::foundations::Output + Send + Sync + 'static,
+    >(
         &mut self,
         opts: MayCompileOpts,
     ) -> std::result::Result<ExecResultRepr<NodeTypstDocument>, NodeError>

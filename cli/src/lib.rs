@@ -15,6 +15,7 @@ use std::{
 };
 
 use clap::{builder::ValueParser, ArgAction, Args, Command, Parser, Subcommand, ValueEnum};
+use reflexo_typst::typst_shim::syntax::VirtualPathExt;
 use reflexo_typst::{
     build_info::VERSION, vfs::WorkspaceResolver, DiagnosticHandler, ImmutPath, TypstFileId,
     MEMORY_MAIN_ENTRY,
@@ -219,7 +220,9 @@ impl CompileOnceArgs {
                 if self.is_stdin() {
                     current_dir().into()
                 } else {
-                    Path::new(input.vpath().get_with_slash())
+                    input
+                        .vpath()
+                        .as_rooted_path_compat()
                         .parent()
                         .unwrap_or_else(|| {
                             clap::Error::raw(

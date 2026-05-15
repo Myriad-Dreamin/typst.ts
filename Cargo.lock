@@ -4645,7 +4645,7 @@ dependencies = [
 [[package]]
 name = "tinymist-derive"
 version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#c31902c29d4bf6fb5f9f571ea6116e45abd90725"
 dependencies = [
  "quote",
  "syn 2.0.111",
@@ -4654,7 +4654,7 @@ dependencies = [
 [[package]]
 name = "tinymist-l10n"
 version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#c31902c29d4bf6fb5f9f571ea6116e45abd90725"
 dependencies = [
  "anyhow",
  "clap",
@@ -4668,7 +4668,7 @@ dependencies = [
 [[package]]
 name = "tinymist-package"
 version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#c31902c29d4bf6fb5f9f571ea6116e45abd90725"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4694,7 +4694,7 @@ dependencies = [
 [[package]]
 name = "tinymist-project"
 version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#c31902c29d4bf6fb5f9f571ea6116e45abd90725"
 dependencies = [
  "anyhow",
  "clap",
@@ -4717,13 +4717,13 @@ dependencies = [
  "tokio",
  "toml 0.8.23",
  "typst",
- "typst-assets 0.14.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "typst-assets 0.14.2 (git+https://github.com/typst/typst-assets?rev=3284e80)",
 ]
 
 [[package]]
 name = "tinymist-std"
 version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#c31902c29d4bf6fb5f9f571ea6116e45abd90725"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4762,7 +4762,7 @@ dependencies = [
 [[package]]
 name = "tinymist-task"
 version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#c31902c29d4bf6fb5f9f571ea6116e45abd90725"
 dependencies = [
  "anyhow",
  "clap",
@@ -4784,7 +4784,7 @@ dependencies = [
  "tokio",
  "toml 0.8.23",
  "typst",
- "typst-assets 0.14.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "typst-assets 0.14.2 (git+https://github.com/typst/typst-assets?rev=3284e80)",
  "typst-eval",
  "typst-html",
  "typst-layout",
@@ -4797,7 +4797,7 @@ dependencies = [
 [[package]]
 name = "tinymist-vfs"
 version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#c31902c29d4bf6fb5f9f571ea6116e45abd90725"
 dependencies = [
  "comemo",
  "ecow",
@@ -4816,7 +4816,7 @@ dependencies = [
 [[package]]
 name = "tinymist-world"
 version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#c31902c29d4bf6fb5f9f571ea6116e45abd90725"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4847,7 +4847,7 @@ dependencies = [
  "tinymist-vfs",
  "ttf-parser",
  "typst",
- "typst-assets 0.14.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "typst-assets 0.14.2 (git+https://github.com/typst/typst-assets?rev=3284e80)",
  "typst-shim",
  "wasm-bindgen",
  "web-sys",
@@ -5397,7 +5397,7 @@ dependencies = [
 [[package]]
 name = "typst-shim"
 version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#c31902c29d4bf6fb5f9f571ea6116e45abd90725"
 dependencies = [
  "cfg-if",
  "comemo",
@@ -5497,6 +5497,7 @@ dependencies = [
  "typst-assets 0.14.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "typst-ide",
  "typst-pdf",
+ "typst-shim",
  "vergen",
  "vergen-gitcl",
 ]

@@ -192,7 +192,7 @@ vergen = { version = "9.0.1", features = [
 vergen-gitcl = { version = "1.0.1" }
 
 # tinymist's world implementation
-typst-shim = { version = "0.14.6-rc2" }
+typst-shim = { version = "0.14.6-rc2", features = ["nightly"] }
 tinymist-std = { version = "0.14.6-rc2", default-features = false }
 tinymist-task = { version = "0.14.6-rc2", default-features = false }
 tinymist-world = { version = "0.14.6-rc2", default-features = false }
