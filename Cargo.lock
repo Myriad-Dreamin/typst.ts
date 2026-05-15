@@ -1890,7 +1890,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.5.10",
+ "socket2 0.6.3",
  "tokio",
  "tower-service",
  "tracing",
@@ -3214,7 +3214,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash 2.1.1",
  "rustls",
- "socket2 0.5.10",
+ "socket2 0.6.3",
  "thiserror 2.0.17",
  "tokio",
  "tracing",
@@ -3251,7 +3251,7 @@ dependencies = [
  "cfg_aliases 0.2.1",
  "libc",
  "once_cell",
- "socket2 0.5.10",
+ "socket2 0.6.3",
  "tracing",
  "windows-sys 0.60.2",
 ]
@@ -4645,6 +4645,7 @@ dependencies = [
 [[package]]
 name = "tinymist-derive"
 version = "0.14.6"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
 dependencies = [
  "quote",
  "syn 2.0.111",
@@ -4653,6 +4654,7 @@ dependencies = [
 [[package]]
 name = "tinymist-l10n"
 version = "0.14.6"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
 dependencies = [
  "anyhow",
  "clap",
@@ -4666,6 +4668,7 @@ dependencies = [
 [[package]]
 name = "tinymist-package"
 version = "0.14.6"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4691,6 +4694,7 @@ dependencies = [
 [[package]]
 name = "tinymist-project"
 version = "0.14.6"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
 dependencies = [
  "anyhow",
  "clap",
@@ -4719,6 +4723,7 @@ dependencies = [
 [[package]]
 name = "tinymist-std"
 version = "0.14.6"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4757,6 +4762,7 @@ dependencies = [
 [[package]]
 name = "tinymist-task"
 version = "0.14.6"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
 dependencies = [
  "anyhow",
  "clap",
@@ -4791,6 +4797,7 @@ dependencies = [
 [[package]]
 name = "tinymist-vfs"
 version = "0.14.6"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
 dependencies = [
  "comemo",
  "ecow",
@@ -4809,6 +4816,7 @@ dependencies = [
 [[package]]
 name = "tinymist-world"
 version = "0.14.6"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
 dependencies = [
  "anyhow",
  "chrono",
@@ -5113,6 +5121,7 @@ checksum = "562d481066bde0658276a35467c4af00bdc6ee726305698a55b86e61d7ad82bb"
 [[package]]
 name = "typst"
 version = "0.15.0"
+source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#c5238ba71326323e61a0daf2a547bbfd0b66967b"
 dependencies = [
  "arrayvec",
  "comemo",
@@ -5151,6 +5160,7 @@ source = "git+https://github.com/typst/typst-dev-assets?tag=v0.14.2#fe6cad916d8b
 [[package]]
 name = "typst-eval"
 version = "0.15.0"
+source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#c5238ba71326323e61a0daf2a547bbfd0b66967b"
 dependencies = [
  "comemo",
  "ecow",
@@ -5169,6 +5179,7 @@ dependencies = [
 [[package]]
 name = "typst-html"
 version = "0.15.0"
+source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#c5238ba71326323e61a0daf2a547bbfd0b66967b"
 dependencies = [
  "az",
  "bumpalo",
@@ -5190,6 +5201,7 @@ dependencies = [
 [[package]]
 name = "typst-ide"
 version = "0.15.0"
+source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#c5238ba71326323e61a0daf2a547bbfd0b66967b"
 dependencies = [
  "comemo",
  "ecow",
@@ -5205,6 +5217,7 @@ dependencies = [
 [[package]]
 name = "typst-layout"
 version = "0.15.0"
+source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#c5238ba71326323e61a0daf2a547bbfd0b66967b"
 dependencies = [
  "az",
  "bumpalo",
@@ -5240,6 +5253,7 @@ dependencies = [
 [[package]]
 name = "typst-library"
 version = "0.15.0"
+source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#c5238ba71326323e61a0daf2a547bbfd0b66967b"
 dependencies = [
  "arrayvec",
  "az",
@@ -5306,6 +5320,7 @@ dependencies = [
 [[package]]
 name = "typst-macros"
 version = "0.15.0"
+source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#c5238ba71326323e61a0daf2a547bbfd0b66967b"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -5316,6 +5331,7 @@ dependencies = [
 [[package]]
 name = "typst-pdf"
 version = "0.15.0"
+source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#c5238ba71326323e61a0daf2a547bbfd0b66967b"
 dependencies = [
  "az",
  "bytemuck",
@@ -5342,6 +5358,7 @@ dependencies = [
 [[package]]
 name = "typst-realize"
 version = "0.15.0"
+source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#c5238ba71326323e61a0daf2a547bbfd0b66967b"
 dependencies = [
  "arrayvec",
  "bumpalo",
@@ -5359,6 +5376,7 @@ dependencies = [
 [[package]]
 name = "typst-render"
 version = "0.15.0"
+source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#c5238ba71326323e61a0daf2a547bbfd0b66967b"
 dependencies = [
  "bytemuck",
  "comemo",
@@ -5379,6 +5397,7 @@ dependencies = [
 [[package]]
 name = "typst-shim"
 version = "0.14.6"
+source = "git+https://github.com/paran3xus/tinymist.git?branch=nightly#2825c3fc15c789c6f97c83547fe48a96c5414b55"
 dependencies = [
  "cfg-if",
  "comemo",
@@ -5390,6 +5409,7 @@ dependencies = [
 [[package]]
 name = "typst-svg"
 version = "0.15.0"
+source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#c5238ba71326323e61a0daf2a547bbfd0b66967b"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -5415,6 +5435,7 @@ dependencies = [
 [[package]]
 name = "typst-syntax"
 version = "0.15.0"
+source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#c5238ba71326323e61a0daf2a547bbfd0b66967b"
 dependencies = [
  "ecow",
  "rustc-hash 2.1.1",
@@ -5432,6 +5453,7 @@ dependencies = [
 [[package]]
 name = "typst-timing"
 version = "0.15.0"
+source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#c5238ba71326323e61a0daf2a547bbfd0b66967b"
 dependencies = [
  "parking_lot",
  "serde",
@@ -5686,6 +5708,7 @@ dependencies = [
 [[package]]
 name = "typst-utils"
 version = "0.15.0"
+source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#c5238ba71326323e61a0daf2a547bbfd0b66967b"
 dependencies = [
  "libm",
  "once_cell",
