@@ -251,9 +251,13 @@ fn write_element_with_tag(w: &mut Writer, element: &HtmlElement, tag: &str) -> S
         }
     }
 
+    if tag::is_foreign_self_closing(element.tag) {
+        w.buf.push('/');
+    }
+
     w.buf.push('>');
 
-    if tag::is_void(element.tag) {
+    if tag::is_void(element.tag) || tag::is_foreign_self_closing(element.tag) {
         if !element.children.is_empty() {
             bail!(element.span, "HTML void elements must not have children");
         }
