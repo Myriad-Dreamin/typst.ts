@@ -1,14 +1,6 @@
 name: reflexo::release_node
 on:
-  release:
-    types: [created]
   workflow_call:
-    inputs:
-      tag:
-        description: GitHub Release tag used for typst.node assets
-        required: true
-        type: string
-  workflow_dispatch:
     inputs:
       tag:
         description: GitHub Release tag used for typst.node assets
@@ -410,6 +402,8 @@ jobs:
   publish:
     name: Publish
     runs-on: ubuntu-latest
+    environment:
+      name: npm-publish
     needs:
       # - build-freebsd
       - test-macOS-windows-binding
@@ -425,8 +419,13 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22.14.0
           cache: yarn
+      - name: Upgrade npm and yarn
+        run: |
+          npm install -g npm@11.5.1 yarn@1.22.22
+          npm --version
+          yarn --version
       - name: Install dependencies
         run: yarn install
       - name: Download all artifacts
@@ -456,10 +455,9 @@ jobs:
       - name: Publish
         run: |
           yarn prepublish:napi --no-gh-release
-          node scripts/publish.js "${{ inputs.tag || github.event.release.tag_name || github.ref_name }}"
+          node scripts/publish.js "${{ inputs.tag }}"
           npm publish --verbose --provenance --access public || exit 0
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name || github.ref_name }}
+          RELEASE_TAG: ${{ inputs.tag }}

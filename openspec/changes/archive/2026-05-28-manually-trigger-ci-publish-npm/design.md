@@ -9,7 +9,7 @@ The repository already exposes the package release primitives from the root work
 Those commands are useful, but the current release surface is split across:
 
 - regular CI that builds packages
-- a dedicated `packages/typst.node` release workflow that still uses `NPM_TOKEN`
+- a dedicated `packages/typst.node` release workflow with multi-platform build and publish behavior
 - a dedicated Docker image workflow that publishes to GHCR
 - a dedicated crates publish workflow that uses `CRATES_IO_TOKEN`
 - `scripts/publish-project.ps1`, which mixes npm publishes with a `cargo publish`
@@ -32,6 +32,7 @@ This change creates the proposal and implementation plan for a staged rollout in
 - Add a manual CI release lane for the generic workspace npm packages.
 - Add a separate manual CI release lane for the publishable subprojects under `projects/`, including `projects/rustdoc-typst-demo`.
 - Add a coordinated manual release lane that can include `typst.node`, Docker image publishing, workspace crates, and Rust project publishing.
+- Configure npm trusted publisher coverage for all npm packages that may be governed by this release process, including the dedicated `typst.node` package family and currently private npm package entries.
 - Keep the rollout explicit and auditable through protected environments and workflow summaries.
 
 **Non-Goals:**
@@ -219,7 +220,7 @@ Why not:
 
 The integrated release proposal will keep credentials and permissions scoped by ecosystem:
 
-- generic npm packages and `typst.node` use npm trusted publishing and GitHub OIDC where applicable
+- generic npm packages, the dedicated `typst.node` package family, and npm project packages use npm trusted publishing and GitHub OIDC where applicable
 - GHCR publishing uses `GITHUB_TOKEN` with `packages: write`
 - crates.io publishing uses `CRATES_IO_TOKEN`
 
@@ -241,10 +242,16 @@ Why not:
 
 The coordinated workflow will reuse the existing `typst.node`, Docker, and Rust release workflows through `workflow_call` instead of re-implementing their internal job logic in a new file.
 
+The `typst.node` workflow will not expose direct live publish triggers in this
+configuration; live npm publishing for that lane goes through the top-level
+orchestrator so npm trusted publishing validates the intended caller workflow.
+
 Why:
 
 - The existing workflows already encode ecosystem-specific build and publish behavior.
 - Reuse keeps the orchestration layer thin and reduces drift between standalone and coordinated release paths.
+- Restricting the `typst.node` live publish path to the orchestrator avoids a
+  second npm trusted publisher identity for the same package family.
 
 Alternative considered:
 
@@ -273,9 +280,29 @@ Why not:
 - That would skip the build/test/repackage structure the package relies on today.
 - It would hide the fact that `typst.node` publishes multiple packages and release artifacts, not a single npm package.
 
+### 12. Register private npm package entries for trusted publishing without silently enabling live publish
+
+The trusted publisher runbook will include `enhanced-typst-svg` and `@myriaddreamin/vistyp` in the npm package registration checklist, but the workflows will not remove their current `"private": true` manifests or add them to live publish batches in this change.
+
+Why:
+
+- Maintainers want the external npm setup checklist to include these package names.
+- Both entries currently use `"private": true`, so enabling real npm publish requires an explicit package policy change, not only a trusted publisher registration.
+- Separating trusted publisher registration from live publish activation avoids changing the public release surface accidentally.
+
+Alternative considered:
+
+- Remove `"private": true` and add both packages to the live publish jobs immediately.
+
+Why not:
+
+- That would convert previously private entries into publishable release artifacts without a separate package policy decision.
+- `rustdoc-typst-demo` also appears in the maintainer checklist, but it is a Cargo package, so it cannot be represented as an npm trusted publisher.
+
 ## Risks / Trade-offs
 
 - [npm trusted publisher setup per package] -> Maintain a checklist of the package names and trusted workflow filenames before enabling live publish.
+- [Private package activation] -> Register trusted publisher expectations for private npm entries, but require an explicit manifest and workflow change before publishing them.
 - [Workflow sprawl] -> Keep one workflow per lane and document the purpose of each in the workflow names and summaries.
 - [Package scope drift] -> Use explicit allowlists and workflow summaries so maintainers can see exactly what is in or out of scope.
 - [Runner version drift] -> Pin Node to a compliant version in the new workflows and verify npm version before publish.

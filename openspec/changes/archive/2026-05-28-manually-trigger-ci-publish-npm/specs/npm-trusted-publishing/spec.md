@@ -9,6 +9,11 @@ Any npm publish workflow created or migrated by this change SHALL use GitHub Act
 - **AND** the workflow does not require `NPM_TOKEN`
 - **AND** the workflow does not write a registry authentication token into `.npmrc`
 
+#### Scenario: Reusable typst.node workflow publishes npm packages
+- **WHEN** the coordinated release workflow calls the dedicated `typst.node` workflow through `workflow_call`
+- **THEN** the `typst.node` npm publish job uses GitHub OIDC trusted publishing instead of `NPM_TOKEN`
+- **AND** the npm trusted publisher registration identifies the top-level caller workflow used for the release
+
 ### Requirement: Covered publish workflows shall use trusted-publishing-compatible runtimes
 Any npm publish workflow created or migrated by this change SHALL run its live publish job with Node 22.14.0 or newer and npm 11.5.1 or newer.
 
