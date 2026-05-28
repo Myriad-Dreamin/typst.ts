@@ -1,5 +1,6 @@
 name: reflexo::crates::publish
 on:
+  workflow_call:
   push:
     tags:
       - '*'
