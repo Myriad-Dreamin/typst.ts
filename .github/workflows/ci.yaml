@@ -44,7 +44,7 @@ jobs:
         with:
           cmd: install
       - name: Install Playwright
-        run: yarn playwright install
+        run: yarn workspace @myriaddreamin/typst.ts test-install
       - name: Fmt check
         run: cargo fmt --check --all
       # todo: https://github.com/typst/typst/pull/2767

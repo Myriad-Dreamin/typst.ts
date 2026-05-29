@@ -14,6 +14,7 @@ use typst::layout::Size;
 use typst::text::Font;
 use typst::visualize::Image;
 use typst::visualize::SvgImage;
+use typst_library::text::color::colr_glyph_to_svg;
 
 use crate::font::GlyphProvider;
 use crate::ir::{self, FlatGlyphItem, FontItem, FontPack, FontRef, GlyphItem, GlyphRef};
@@ -244,10 +245,53 @@ impl ConvertInnerImpl {
     }
 
     fn raw_glyph(&self, font: &Font, id: GlyphId) -> Option<GlyphItem> {
-        self.svg_glyph(font, id)
+        self.colr_glyph(font, id)
             .map(GlyphItem::Image)
+            .or_else(|| self.svg_glyph(font, id).map(GlyphItem::Image))
             .or_else(|| self.bitmap_glyph(font, id).map(GlyphItem::Image))
             .or_else(|| self.outline_glyph(font, id).map(GlyphItem::Outline))
+    }
+
+    /// Render a glyph defined by COLR glyph descriptions.
+    fn colr_glyph(&mut self, font: &Font, id: GlyphId) -> Option<ir::ImageGlyphItem> {
+        let ttf = font.ttf();
+        let converted = colr_glyph_to_svg(font, id)?;
+        let width = ttf.global_bounding_box().width() as f64;
+        let height = ttf.global_bounding_box().height() as f64;
+        let data_url = svg_to_base64(&converted);
+
+        let x_min = ttf.global_bounding_box().x_min as f64;
+        let y_max = ttf.global_bounding_box().y_max as f64;
+
+        let glyph_image = typst::visualize::Image::new(
+            SvgImage::new(Bytes::from_string(svg_str)).ok()?,
+            None,
+            // todo: scaling
+            Smart::Auto,
+        );
+
+        let sz = Size::new(
+            typst::layout::Abs::pt(glyph_image.width()),
+            typst::layout::Abs::pt(glyph_image.height()),
+        );
+
+        let image = ir::ImageItem {
+            image: Arc::new(glyph_image.into_typst()),
+            size: sz.into_typst(),
+        };
+
+        Some(Arc::new(ir::ImageGlyphItem {
+            ts: ir::Transform {
+                sx: Scalar(1.),
+                ky: Scalar(0.),
+                kx: Scalar(0.),
+                sy: Scalar(-1.),
+                tx: Scalar(x_min),
+                ty: Scalar(-y_max),
+            },
+            image,
+            ligature_len: self.ligature_len(font, id),
+        }))
     }
 
     /// Lower an SVG glyph into svg item.

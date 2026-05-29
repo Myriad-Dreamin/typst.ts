@@ -11,6 +11,7 @@ repository.workspace = true
 typst.workspace = true
 typst-svg.workspace = true
 typst-html.workspace = true
+typst-library.workspace = true
 
 reflexo = { workspace = true, features = ["typst"] }
 comemo.workspace = true

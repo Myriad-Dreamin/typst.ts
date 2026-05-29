@@ -75,6 +75,7 @@ typst-render = "0.14.2"
 typst-svg = "0.14.2"
 typst-syntax = "0.14.2"
 typst-html = "0.14.2"
+typst-library = "0.14.2"
 
 ttf-parser = "0.25.0"
 
@@ -252,6 +253,7 @@ typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.
 typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.7.0-rc2" }
 typst-eval = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.7.0-rc2" }
 typst-html = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.7.0-rc2" }
+typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.7.0-rc2" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }
