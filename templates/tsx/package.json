@@ -27,7 +27,7 @@
   },
   "scripts": {
     "build": "npx tsc",
-    "test": "tsx ./src/main.ts",
+    "test": "node ./dist/esm/main.js",
     "test:ts-node": "node --experimental-specifier-resolution=node --loader ts-node/esm ./src/main.ts"
   }
 }
