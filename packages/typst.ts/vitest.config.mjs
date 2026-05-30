@@ -39,7 +39,7 @@ const createSnapshot = async (_ctx, screenshotPath, name, extras) => {
   });
   console.log(screenshotHash, refHashPath, isUpdate);
   if (fs.existsSync(refHashPath)) {
-    const refHash = fs.readFileSync(refHashPath, 'utf-8');
+    const refHash = fs.readFileSync(refHashPath, 'utf-8').trimEnd();
     if ((refHash!==screenshotHash) ) {
       if ( isUpdate) {
         saveRef(refPath, screenshotPath, screenshotHash);
