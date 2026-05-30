@@ -27,6 +27,13 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Checkout test assets
+        uses: actions/checkout@v4
+        with:
+          repository: Myriad-Dreamin/typst
+          ref: assets-files
+          path: assets/files
+
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -53,6 +60,9 @@ jobs:
 
       - name: Install Playwright browsers
         run: yarn workspace @myriaddreamin/typst.ts test-install
+
+      - name: Prepare corpus artifacts
+        run: yarn run corpus
 
       - name: Verify generic workspace packages
         run: |
@@ -169,6 +179,13 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Checkout test assets
+        uses: actions/checkout@v4
+        with:
+          repository: Myriad-Dreamin/typst
+          ref: assets-files
+          path: assets/files
+
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -195,6 +212,9 @@ jobs:
 
       - name: Install Playwright browsers
         run: yarn workspace @myriaddreamin/typst.ts test-install
+
+      - name: Prepare corpus artifacts
+        run: yarn run corpus
 
       - name: Publish generic workspace packages
         run: |
