@@ -51,6 +51,9 @@ jobs:
       - name: Install workspace dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Install Playwright browsers
+        run: yarn workspace @myriaddreamin/typst.ts test-install
+
       - name: Verify generic workspace packages
         run: |
           yarn build:pkg
@@ -189,6 +192,9 @@ jobs:
 
       - name: Install workspace dependencies
         run: yarn install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: yarn workspace @myriaddreamin/typst.ts test-install
 
       - name: Publish generic workspace packages
         run: |
