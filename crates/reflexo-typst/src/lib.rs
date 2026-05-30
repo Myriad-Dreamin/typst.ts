@@ -149,4 +149,26 @@ mod tests {
     pub fn test_hash128() {
         assert_eq!(typst::utils::hash128(&0u32), reflexo::hash::hash128(&0u32));
     }
+
+    #[cfg(feature = "ast")]
+    mod ast_tests {
+        use std::num::NonZeroU16;
+        use typst::syntax::Source;
+
+        #[test]
+        fn test_string_method_call_parsing() {
+            let code = r#"#"hello".len()"#;
+            let id = typst::syntax::FileId::from_raw(NonZeroU16::new(1).unwrap());
+            let src = Source::new(id, code.to_string());
+
+            let mut output = Vec::new();
+            let result = crate::dump_ast("test.typ", &src, &mut output);
+
+            assert!(result.is_ok(), "dump_ast should succeed");
+            assert!(!output.is_empty(), "AST output should not be empty");
+
+            let output_str = String::from_utf8(output).unwrap();
+            assert!(output_str.contains("Str"), "Output should contain string representation");
+        }
+    }
 }
