@@ -253,18 +253,17 @@ impl ConvertInnerImpl {
     }
 
     /// Render a glyph defined by COLR glyph descriptions.
-    fn colr_glyph(&mut self, font: &Font, id: GlyphId) -> Option<ir::ImageGlyphItem> {
+    fn colr_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ir::ImageGlyphItem>> {
+        use crate::ir::Scalar;
+
         let ttf = font.ttf();
         let converted = colr_glyph_to_svg(font, id)?;
-        let width = ttf.global_bounding_box().width() as f64;
-        let height = ttf.global_bounding_box().height() as f64;
-        let data_url = svg_to_base64(&converted);
 
-        let x_min = ttf.global_bounding_box().x_min as f64;
-        let y_max = ttf.global_bounding_box().y_max as f64;
+        let x_min = ttf.global_bounding_box().x_min as f32;
+        let y_max = ttf.global_bounding_box().y_max as f32;
 
         let glyph_image = typst::visualize::Image::new(
-            SvgImage::new(Bytes::from_string(svg_str)).ok()?,
+            SvgImage::new(Bytes::from_string(converted)).ok()?,
             None,
             // todo: scaling
             Smart::Auto,
