@@ -118,6 +118,10 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: 1.89.0
+          target: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -136,6 +140,9 @@ jobs:
 
       - name: Build typst.node for project type checks
         run: yarn --cwd packages/typst.node build --target x86_64-unknown-linux-gnu
+
+      - name: Build parser for project packages
+        run: yarn --cwd packages/parser build
 
       - name: Verify publishable projects
         run: |
@@ -269,6 +276,15 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.89.0
+          target: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -289,6 +305,9 @@ jobs:
         with:
           name: bindings-x86_64-unknown-linux-gnu
           path: packages/typst.node
+
+      - name: Build parser for project packages
+        run: yarn --cwd packages/parser build
 
       - name: Publish npm project batch
         run: |
