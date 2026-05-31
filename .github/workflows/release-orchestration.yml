@@ -134,6 +134,9 @@ jobs:
       - name: Install workspace dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Build typst.node for project type checks
+        run: yarn --cwd packages/typst.node build --target x86_64-unknown-linux-gnu
+
       - name: Verify publishable projects
         run: |
           yarn --cwd projects/vite-plugin-typst build
@@ -280,6 +283,12 @@ jobs:
 
       - name: Install workspace dependencies
         run: yarn install --frozen-lockfile
+
+      - name: Download typst.node build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: bindings-x86_64-unknown-linux-gnu
+          path: packages/typst.node
 
       - name: Publish npm project batch
         run: |
