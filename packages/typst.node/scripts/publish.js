@@ -1,60 +1,65 @@
-const { execSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 const { readFileSync } = require('fs');
+const { join } = require('path');
 
-const versionTag = `v${JSON.parse(readFileSync('./package.json', 'utf8')).version}`;
+const { dirs } = require('./publish-targets');
+
+const rootDir = join(__dirname, '..');
+const rootPackage = JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf8'));
+const versionTag = `v${rootPackage.version}`;
 const releaseTag = process.argv[2] || process.env.RELEASE_TAG || versionTag;
 const alreadyPublishedPatterns = [
   'cannot publish over the previously published versions',
   'previously published versions',
 ];
 
-const dirs = [
-  'android-arm-eabi',
-  'android-arm64',
-  'darwin-arm64',
-  'darwin-x64',
-  'linux-arm-gnueabihf',
-  'linux-arm64-gnu',
-  'linux-arm64-musl',
-  'linux-x64-gnu',
-  'linux-x64-musl',
-  'win32-arm64-msvc',
-  'win32-x64-msvc',
-];
+function uploadReleaseAsset(dir) {
+  execFileSync(
+    'gh',
+    ['release', 'upload', releaseTag, `typst-ts-node-compiler.${dir}.node`, '--clobber'],
+    {
+      stdio: 'inherit',
+      cwd: join(rootDir, 'npm', dir),
+    },
+  );
+}
 
-function run(command, cwd) {
-  execSync(command, {
-    stdio: 'inherit',
+function publishPackage(cwd, label) {
+  console.log(`Publish ${label}`);
+  const result = spawnSync('npm', ['publish', '--verbose', '--provenance', '--access', 'public'], {
     cwd,
+    encoding: 'utf8',
+    maxBuffer: 10 * 1024 * 1024,
   });
+
+  if (result.stdout) {
+    process.stdout.write(result.stdout);
+  }
+  if (result.stderr) {
+    process.stderr.write(result.stderr);
+  }
+
+  if (result.status === 0) {
+    return;
+  }
+
+  const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`.toLowerCase();
+  if (alreadyPublishedPatterns.some(pattern => output.includes(pattern))) {
+    console.warn(`Package already published for ${label}, continuing.`);
+    return;
+  }
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  throw new Error(`npm publish failed for ${label} with status ${result.status}`);
 }
 
 for (const dir of dirs) {
-  console.log(`Publish ${dir}`);
-  try {
-    const stdout = execSync('npm publish --verbose --provenance --access public', {
-      cwd: `./npm/${dir}`,
-      encoding: 'utf8',
-      stdio: 'pipe',
-    });
-    if (stdout) {
-      process.stdout.write(stdout);
-    }
-  } catch (error) {
-    if (error.stdout) {
-      process.stdout.write(error.stdout);
-    }
-    if (error.stderr) {
-      process.stderr.write(error.stderr);
-    }
-    const output = `${error.stdout ?? ''}\n${error.stderr ?? ''}`.toLowerCase();
-    if (alreadyPublishedPatterns.some(pattern => output.includes(pattern))) {
-      console.warn(`Package already published for ${dir}, continuing.`);
-    } else {
-      throw error;
-    }
-  }
-
+  publishPackage(join(rootDir, 'npm', dir), dir);
   console.log(`Upload typst-ts-node-compiler.${dir}.node to release ${releaseTag}`);
-  run(`gh release upload ${releaseTag} typst-ts-node-compiler.${dir}.node --clobber`, `./npm/${dir}`);
+  uploadReleaseAsset(dir);
 }
+
+publishPackage(rootDir, rootPackage.name);
