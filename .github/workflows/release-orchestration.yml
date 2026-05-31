@@ -27,6 +27,13 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Checkout test assets
+        uses: actions/checkout@v4
+        with:
+          repository: Myriad-Dreamin/typst
+          ref: assets-files
+          path: assets/files
+
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
@@ -50,6 +57,12 @@ jobs:
 
       - name: Install workspace dependencies
         run: yarn install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: yarn workspace @myriaddreamin/typst.ts test-install
+
+      - name: Prepare corpus artifacts
+        run: yarn run corpus
 
       - name: Verify generic workspace packages
         run: |
@@ -105,6 +118,10 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: 1.89.0
+          target: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -120,6 +137,12 @@ jobs:
 
       - name: Install workspace dependencies
         run: yarn install --frozen-lockfile
+
+      - name: Build typst.node for project type checks
+        run: yarn --cwd packages/typst.node build --target x86_64-unknown-linux-gnu
+
+      - name: Build parser for project packages
+        run: yarn --cwd packages/parser build
 
       - name: Verify publishable projects
         run: |
@@ -154,6 +177,96 @@ jobs:
     needs:
       - verify-packages
       - verify-projects
+    if: ${{ inputs.tag != 'dry-run' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    environment:
+      name: npm-publish
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Checkout test assets
+        uses: actions/checkout@v4
+        with:
+          repository: Myriad-Dreamin/typst
+          ref: assets-files
+          path: assets/files
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.89.0
+          target: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: yarn
+
+      - name: Upgrade npm and yarn
+        run: |
+          npm install -g npm@11.5.1 yarn@1.22.22
+          npm --version
+          yarn --version
+
+      - name: Install workspace dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: yarn workspace @myriaddreamin/typst.ts test-install
+
+      - name: Prepare corpus artifacts
+        run: yarn run corpus
+
+      - name: Publish generic workspace packages
+        run: |
+          yarn build:pkg
+          yarn turbo run prepublish publish:lib \
+            --filter=./packages/compiler \
+            --filter=./packages/parser \
+            --filter=./packages/renderer \
+            --filter=./packages/typst-all-in-one.ts \
+            --filter=./packages/typst.angular \
+            --filter=./packages/typst.react \
+            --filter=./packages/typst.solid \
+            --filter=./packages/typst.svelte \
+            --filter=./packages/typst.ts \
+            --filter=./packages/typst.vue3
+
+      - name: Summarize generic workspace publish lane
+        run: |
+          cat <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          ## Published generic workspace package lane
+
+          Protected environment: `npm-publish`
+          EOF
+
+  publish-typst-node:
+    needs:
+      - publish-packages
+    if: ${{ inputs.tag != 'dry-run' }}
+    permissions:
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/release-node.yaml
+    with:
+      tag: ${{ inputs.tag }}
+    secrets: inherit
+
+  publish-npm-projects:
+    name: Publish npm project batch
+    needs:
+      - publish-typst-node
+    if: ${{ inputs.tag != 'dry-run' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -190,70 +303,14 @@ jobs:
       - name: Install workspace dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Publish generic workspace packages
-        run: |
-          yarn build:pkg
-          yarn turbo run prepublish publish:lib \
-            --filter=./packages/compiler \
-            --filter=./packages/parser \
-            --filter=./packages/renderer \
-            --filter=./packages/typst-all-in-one.ts \
-            --filter=./packages/typst.angular \
-            --filter=./packages/typst.react \
-            --filter=./packages/typst.solid \
-            --filter=./packages/typst.svelte \
-            --filter=./packages/typst.ts \
-            --filter=./packages/typst.vue3
-
-      - name: Summarize generic workspace publish lane
-        run: |
-          cat <<'EOF' >> "$GITHUB_STEP_SUMMARY"
-          ## Published generic workspace package lane
-
-          Protected environment: `npm-publish`
-          EOF
-
-  publish-typst-node:
-    needs:
-      - publish-packages
-    permissions:
-      contents: write
-      id-token: write
-    uses: ./.github/workflows/release-node.yaml
-    with:
-      tag: ${{ inputs.tag }}
-    secrets: inherit
-
-  publish-npm-projects:
-    name: Publish npm project batch
-    needs:
-      - publish-typst-node
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      id-token: write
-    environment:
-      name: npm-publish
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Download typst.node build artifacts
+        uses: actions/download-artifact@v4
         with:
-          submodules: recursive
+          name: bindings-x86_64-unknown-linux-gnu
+          path: packages/typst.node
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.14.0
-          cache: yarn
-
-      - name: Upgrade npm and yarn
-        run: |
-          npm install -g npm@11.5.1 yarn@1.22.22
-          npm --version
-          yarn --version
-
-      - name: Install workspace dependencies
-        run: yarn install --frozen-lockfile
+      - name: Build parser for project packages
+        run: yarn --cwd packages/parser build
 
       - name: Publish npm project batch
         run: |
@@ -285,6 +342,7 @@ jobs:
     name: Publish Cargo project batch
     needs:
       - publish-typst-node
+    if: ${{ inputs.tag != 'dry-run' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -344,6 +402,7 @@ jobs:
     needs:
       - publish-npm-projects
       - publish-cargo-projects
+    if: ${{ inputs.tag != 'dry-run' }}
     permissions:
       contents: read
       packages: write
@@ -353,6 +412,7 @@ jobs:
   publish-crates:
     needs:
       - publish-docker
+    if: ${{ inputs.tag != 'dry-run' }}
     permissions:
       contents: read
     uses: ./.github/workflows/reelase-crates.yaml
