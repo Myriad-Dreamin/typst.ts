@@ -177,6 +177,7 @@ jobs:
     needs:
       - verify-packages
       - verify-projects
+    if: ${{ inputs.tag != 'dry-run' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -252,6 +253,7 @@ jobs:
   publish-typst-node:
     needs:
       - publish-packages
+    if: ${{ inputs.tag != 'dry-run' }}
     permissions:
       contents: write
       id-token: write
@@ -264,6 +266,7 @@ jobs:
     name: Publish npm project batch
     needs:
       - publish-typst-node
+    if: ${{ inputs.tag != 'dry-run' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -339,6 +342,7 @@ jobs:
     name: Publish Cargo project batch
     needs:
       - publish-typst-node
+    if: ${{ inputs.tag != 'dry-run' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -398,6 +402,7 @@ jobs:
     needs:
       - publish-npm-projects
       - publish-cargo-projects
+    if: ${{ inputs.tag != 'dry-run' }}
     permissions:
       contents: read
       packages: write
@@ -407,6 +412,7 @@ jobs:
   publish-crates:
     needs:
       - publish-docker
+    if: ${{ inputs.tag != 'dry-run' }}
     permissions:
       contents: read
     uses: ./.github/workflows/reelase-crates.yaml
