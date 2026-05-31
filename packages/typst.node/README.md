@@ -82,5 +82,6 @@ Use the manual workflow at [`../../.github/workflows/release-node.yaml`](../../.
 That workflow:
 
 - builds and tests the platform bindings
-- preserves the dedicated napi-rs publish flow for the `typst.node` packages
+- prepares the napi-rs package manifests before publishing the `typst.node` packages
+- skips `typst.node` npm packages whose exact version was already published
 - uploads the `.node` assets to the GitHub Release tag you supply

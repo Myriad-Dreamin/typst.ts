@@ -28,6 +28,12 @@ The integrated release workflow SHALL execute `typst.node` through its dedicated
 - **AND** publishes the `typst.node` npm packages through the dedicated release path
 - **AND** uploads the expected GitHub Release assets produced by that path
 
+#### Scenario: `typst.node` npm version was already published
+- **WHEN** the dedicated `typst.node` package lane attempts to publish an npm package version that already exists in the registry
+- **THEN** the workflow treats that package publish as already complete
+- **AND** continues the dedicated `typst.node` release path
+- **AND** still fails the lane for npm publish errors that are not caused by an already-published version
+
 ### Requirement: Integrated workflow shall support Docker image publishing
 The integrated release workflow SHALL support the existing Docker image release target and preserve multi-platform publishing to GHCR.
 
@@ -59,4 +65,3 @@ The integrated release workflow SHALL scope credentials and permissions by relea
 - **WHEN** the integrated release workflow coordinates npm, GHCR, GitHub Release upload, and crates.io publishing in one run
 - **THEN** each lane uses only the credentials and permissions required for that ecosystem
 - **AND** a failure in one lane does not cause another lane to inherit broader credentials than it needs
-
