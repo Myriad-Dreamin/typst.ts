@@ -68,9 +68,14 @@ jobs:
       - name: Prepare corpus artifacts
         run: yarn run corpus
 
-      - name: Verify generic workspace packages
+      - name: Build generic workspace packages
         run: |
           yarn build:pkg
+
+      - name: Verify generic workspace package dry-runs
+        env:
+          NPM_CONFIG_FORCE: 'true'
+        run: |
           yarn turbo run prepublish publish:dry \
             --filter=./packages/compiler \
             --filter=./packages/parser \
@@ -148,14 +153,22 @@ jobs:
       - name: Build parser for project packages
         run: yarn --cwd packages/parser build
 
-      - name: Verify publishable projects
+      - name: Build publishable npm projects
         run: |
           yarn --cwd projects/vite-plugin-typst build
           yarn --cwd projects/highlighter build
+
+      - name: Verify publishable npm project dry-runs
+        env:
+          NPM_CONFIG_FORCE: 'true'
+        run: |
           yarn --cwd projects/hexo-renderer-typst publish:dry
           yarn --cwd projects/rehype-typst publish:dry
           yarn --cwd projects/vite-plugin-typst publish:dry
           yarn --cwd projects/highlighter publish:dry
+
+      - name: Verify Cargo project dry-run
+        run: |
           cargo publish --dry-run --manifest-path projects/rustdoc-typst-demo/Cargo.toml
 
       - name: Summarize verified project batch
@@ -234,7 +247,7 @@ jobs:
       - name: Publish generic workspace packages
         run: |
           yarn build:pkg
-          yarn turbo run prepublish publish:lib \
+          yarn turbo run prepublish \
             --filter=./packages/compiler \
             --filter=./packages/parser \
             --filter=./packages/renderer \
@@ -245,11 +258,24 @@ jobs:
             --filter=./packages/typst.svelte \
             --filter=./packages/typst.ts \
             --filter=./packages/typst.vue3
+          node scripts/npm-publish-if-needed.mjs \
+            packages/compiler \
+            packages/parser \
+            packages/renderer \
+            packages/typst-all-in-one.ts \
+            packages/typst.angular/dist/typst.angular \
+            packages/typst.react \
+            packages/typst.solid \
+            packages/typst.svelte \
+            packages/typst.ts \
+            packages/typst.vue3
 
       - name: Summarize generic workspace publish lane
         run: |
           cat <<'EOF' >> "$GITHUB_STEP_SUMMARY"
           ## Published generic workspace package lane
+
+          Already-published package versions are treated as complete.
 
           Protected environment: `npm-publish`
           EOF
@@ -320,15 +346,18 @@ jobs:
         run: |
           yarn --cwd projects/vite-plugin-typst build
           yarn --cwd projects/highlighter build
-          yarn --cwd projects/hexo-renderer-typst publish:lib
-          yarn --cwd projects/rehype-typst publish:lib
-          yarn --cwd projects/vite-plugin-typst publish:lib
-          yarn --cwd projects/highlighter publish:lib
+          node scripts/npm-publish-if-needed.mjs \
+            projects/hexo-renderer-typst \
+            projects/rehype-typst \
+            projects/vite-plugin-typst \
+            projects/highlighter
 
       - name: Summarize npm project publish batch
         run: |
           cat <<'EOF' >> "$GITHUB_STEP_SUMMARY"
           ## Published npm project release batch
+
+          Already-published package versions are treated as complete.
 
           Published npm projects
           - `hexo-renderer-typst` (`projects/hexo-renderer-typst`)

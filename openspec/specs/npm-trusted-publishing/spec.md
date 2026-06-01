@@ -14,6 +14,16 @@ Any npm publish workflow created or migrated by this change SHALL use GitHub Act
 - **AND** the workflow does not require `NPM_TOKEN`
 - **AND** the workflow does not write a registry authentication token into `.npmrc`
 
+#### Scenario: Dry-run publish verifies an already-published version
+- **WHEN** a covered verification workflow runs npm publish dry-runs for a version that already exists on npm
+- **THEN** the dry-run publish step configures npm force mode for that step only
+- **AND** live npm publish steps do not inherit npm force mode
+
+#### Scenario: Live publish reruns an already-published version
+- **WHEN** a covered live npm publish workflow reaches a package version that already exists on npm
+- **THEN** the live publish wrapper treats that package version as already complete and continues
+- **AND** npm publish failures other than already-published package versions still fail the workflow
+
 #### Scenario: Reusable typst.node workflow publishes npm packages
 - **WHEN** the coordinated release workflow calls the dedicated `typst.node` workflow through `workflow_call`
 - **THEN** the `typst.node` npm publish job uses GitHub OIDC trusted publishing instead of `NPM_TOKEN`
