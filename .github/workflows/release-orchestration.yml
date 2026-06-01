@@ -68,9 +68,14 @@ jobs:
       - name: Prepare corpus artifacts
         run: yarn run corpus
 
-      - name: Verify generic workspace packages
+      - name: Build generic workspace packages
         run: |
           yarn build:pkg
+
+      - name: Verify generic workspace package dry-runs
+        env:
+          NPM_CONFIG_FORCE: 'true'
+        run: |
           yarn turbo run prepublish publish:dry \
             --filter=./packages/compiler \
             --filter=./packages/parser \
@@ -148,14 +153,22 @@ jobs:
       - name: Build parser for project packages
         run: yarn --cwd packages/parser build
 
-      - name: Verify publishable projects
+      - name: Build publishable npm projects
         run: |
           yarn --cwd projects/vite-plugin-typst build
           yarn --cwd projects/highlighter build
+
+      - name: Verify publishable npm project dry-runs
+        env:
+          NPM_CONFIG_FORCE: 'true'
+        run: |
           yarn --cwd projects/hexo-renderer-typst publish:dry
           yarn --cwd projects/rehype-typst publish:dry
           yarn --cwd projects/vite-plugin-typst publish:dry
           yarn --cwd projects/highlighter publish:dry
+
+      - name: Verify Cargo project dry-run
+        run: |
           cargo publish --dry-run --manifest-path projects/rustdoc-typst-demo/Cargo.toml
 
       - name: Summarize verified project batch
