@@ -10,6 +10,8 @@ env:
   DEBUG: napi:*
   APP_NAME: typst-ts-node-compiler
   MACOSX_DEPLOYMENT_TARGET: '10.13'
+  NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+  YARN_REGISTRY: https://registry.npmjs.org/
 permissions:
   contents: write
   id-token: write

@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+env:
+  NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+  YARN_REGISTRY: https://registry.npmjs.org/
+
 concurrency:
   group: release-orchestrate-${{ github.ref }}-${{ inputs.tag }}
   cancel-in-progress: false
