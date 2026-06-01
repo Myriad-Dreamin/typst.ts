@@ -1,7 +1,7 @@
 # npm Trusted Publishing Setup Runbook
 
 This runbook records the external npm and GitHub configuration required before
-the manual release orchestrator can publish the npm packages covered by
+the manual release workflow can publish the npm packages covered by
 `release-orchestration.yml`.
 
 This is intentionally separate from `release-workflows.md`: the workflow file is
@@ -70,10 +70,10 @@ Important details:
 
 - npm asks for the workflow filename only. Use `release-orchestration.yml`, not
   `.github/workflows/release-orchestration.yml`.
-- `release-node.yaml` is a reusable workflow when it is called by the release
-  orchestrator. npm validates the caller workflow name for reusable workflow
-  publishes, so the trusted publisher entry for `typst.node` packages also uses
-  `release-orchestration.yml`.
+- `release-node.yaml` is a reusable workflow when it is called by
+  `release-orchestration.yml`. npm validates the caller workflow name for
+  reusable workflow publishes, so the trusted publisher entry for `typst.node`
+  packages also uses `release-orchestration.yml`.
 - `release-node.yaml` intentionally has no standalone live publish trigger. Use
   `release::orchestrate` as the live publish entry point for `typst.node`.
 - The workflow file must exist in `.github/workflows/` on the branch/tag being
@@ -198,7 +198,7 @@ Before the first live publish:
 Do not immediately revoke every npm automation token after configuring the
 trusted publishers.
 
-The generic package, `typst.node`, and npm project lanes in
+The workspace package, `typst.node`, and project npm publish jobs in
 `release-orchestration.yml` should not need `NPM_TOKEN`. Revoke or disallow
 traditional npm tokens only after the release owner confirms no remaining npm
 release path still depends on them.

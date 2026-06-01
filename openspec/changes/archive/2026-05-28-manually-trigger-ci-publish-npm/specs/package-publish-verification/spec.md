@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Manual package verification workflow
-The repository SHALL provide a manually triggered GitHub Actions workflow that verifies the generic workspace package release lane by running the package build and package dry-run publish steps from the repository root for the packages in scope.
+The repository SHALL provide a manually triggered GitHub Actions workflow that verifies the generic workspace package release path by running the package build and package dry-run publish steps from the repository root for the packages in scope.
 
 #### Scenario: Maintainer verifies workspace packages before release
 - **WHEN** a maintainer dispatches the package verification workflow for a selected ref
@@ -12,7 +12,7 @@ The repository SHALL provide a manually triggered GitHub Actions workflow that v
 - **AND** fails if any in-scope package cannot build or complete the dry-run publish step
 
 ### Requirement: Verification scope shall be explicit
-The package verification workflow SHALL report which workspace packages are included in the generic package lane and which packages are skipped because they require a different release path or do not expose the generic publish commands.
+The package verification workflow SHALL report which workspace packages are included in the generic workspace package release scope and which packages are skipped because they require a different release path or do not expose the generic publish commands.
 
 #### Scenario: Workflow reaches an excluded package
 - **WHEN** the verification workflow evaluates a package such as `@myriaddreamin/typst-ts-node-compiler` or `enhanced-typst-svg`

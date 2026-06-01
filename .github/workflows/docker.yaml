@@ -61,10 +61,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Summarize Docker lane
+      - name: Summarize Docker image
         run: |
           {
-            echo "## Published Docker image lane"
+            echo "## Published Docker image"
             echo
             echo "- Image: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\`"
             echo "- Platform: \`${{ matrix.platforms }}\`"

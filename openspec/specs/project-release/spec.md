@@ -1,7 +1,8 @@
 # project-release Specification
 
 ## Purpose
-TBD - created by archiving change manually-trigger-ci-publish-npm. Update Purpose after archive.
+Defines the manual workflow behavior for publishing the versioned project batch under `projects/`.
+
 ## Requirements
 ### Requirement: Manual project release workflow
 The repository SHALL provide a manually triggered GitHub Actions workflow for publishing the versioned publishable subprojects under `projects/` as one release batch for a version.
@@ -38,4 +39,3 @@ The project release workflow MUST NOT include unpublished or private project ent
 #### Scenario: Workflow evaluates an unpublished project entry
 - **WHEN** the project release workflow considers a private project such as `@myriaddreamin/vistyp`
 - **THEN** the workflow excludes that project from the release batch
-

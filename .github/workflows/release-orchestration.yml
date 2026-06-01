@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: GitHub Release tag used by the typst.node lane
+        description: GitHub Release tag used by the typst.node release
         required: true
         type: string
 
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   verify-packages:
-    name: Verify generic workspace package lane
+    name: Verify generic workspace packages
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -88,10 +88,10 @@ jobs:
             --filter=./packages/typst.ts \
             --filter=./packages/typst.vue3
 
-      - name: Summarize generic workspace package lane
+      - name: Summarize generic workspace packages
         run: |
           cat <<'EOF' >> "$GITHUB_STEP_SUMMARY"
-          ## Verified generic workspace package lane
+          ## Verified generic workspace packages
 
           Included packages
           - `@myriaddreamin/typst-ts-web-compiler` (`packages/compiler`)
@@ -107,7 +107,7 @@ jobs:
 
           Skipped packages
           - `@myriaddreamin/typst-ts-node-compiler` (`packages/typst.node`): Published by the dedicated typst.node workflow because it has a separate multi-platform release path.
-          - `enhanced-typst-svg` (`packages/enhanced-typst-svg`): Private package outside the generic workspace npm lane.
+          - `enhanced-typst-svg` (`packages/enhanced-typst-svg`): Private package outside the generic workspace npm release scope.
           EOF
 
   verify-projects:
@@ -190,7 +190,7 @@ jobs:
           EOF
 
   publish-packages:
-    name: Publish generic workspace package lane
+    name: Publish generic workspace packages
     needs:
       - verify-packages
       - verify-projects
@@ -270,10 +270,10 @@ jobs:
             packages/typst.ts \
             packages/typst.vue3
 
-      - name: Summarize generic workspace publish lane
+      - name: Summarize generic workspace packages
         run: |
           cat <<'EOF' >> "$GITHUB_STEP_SUMMARY"
-          ## Published generic workspace package lane
+          ## Published generic workspace packages
 
           Already-published package versions are treated as complete.
 

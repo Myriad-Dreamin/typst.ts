@@ -2,7 +2,7 @@
 
 - [x] 1.1 Add a manual GitHub Actions workflow for workspace package verification on a trusted-publishing-compatible Node runner.
 - [x] 1.2 Run the existing package build and dry-run publish commands in that workflow and fail on any in-scope package error.
-- [x] 1.3 Add a workflow summary or artifact that lists the packages included in the generic lane and the packages intentionally skipped.
+- [x] 1.3 Add a workflow summary or artifact that lists the packages included in the generic workspace package release scope and the packages intentionally skipped.
 
 ## 2. Project Verification Workflow
 
@@ -14,13 +14,13 @@
 
 - [x] 3.1 Define the top-level manual workflow filenames and protected GitHub Environment used for live npm publishing.
 - [x] 3.2 Update the new or migrated publish workflows to use `id-token: write`, Node 22.14.0 or newer, and npm 11.5.1 or newer.
-- [x] 3.3 Remove `NPM_TOKEN`-based authentication from the workflows covered by this change and document the npm trusted publisher setup required per package.
+- [x] 3.3 Remove `NPM_TOKEN`-based authentication from the workflows covered by this rollout and document the npm trusted publisher setup required per package.
 
 ## 4. Workspace Package Release Workflow
 
-- [x] 4.1 Create a manual workspace package release workflow for the generic `packages/*` npm release lane.
+- [x] 4.1 Create a manual workspace package release workflow for the generic `packages/*` npm release scope.
 - [x] 4.2 Add the missing `publish:*` scripts for `packages/typst.svelte` and include it in the generic package allowlist.
-- [x] 4.3 Encode the explicit package allowlist for the generic lane and exclude `@myriaddreamin/typst-ts-node-compiler` and `enhanced-typst-svg`.
+- [x] 4.3 Encode the explicit package allowlist for the generic workspace package release scope and exclude `@myriaddreamin/typst-ts-node-compiler` and `enhanced-typst-svg`.
 - [x] 4.4 Gate live workspace publishing on the successful package verification stage and expose a clear release summary.
 
 ## 5. Project Release Workflow
@@ -36,7 +36,7 @@
 - [x] 6.1 Create a coordinated manual release workflow that runs one full release per version without partial package or project selection.
 - [x] 6.2 Enforce the fixed order of package verification, project verification, package publishing, and project publishing in that workflow.
 - [x] 6.3 Reuse the existing `typst.node`, Docker, and Rust release workflows from the coordinator through `workflow_call`.
-- [x] 6.4 Integrate the existing `typst.node` build, test, artifact, npm publish, and GitHub Release upload sequence into the package-release stage without forcing it through the generic package lane.
+- [x] 6.4 Integrate the existing `typst.node` build, test, artifact, npm publish, and GitHub Release upload sequence into the package-release stage without forcing it through the generic workspace package publish flow.
 - [x] 6.5 Integrate the Docker image publish path and Rust workspace crate publish paths into the coordinated workflow with ecosystem-specific permissions and verification.
 
 ## 7. Documentation And Follow-up Scope
