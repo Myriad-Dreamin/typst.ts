@@ -26,12 +26,12 @@ This change creates the proposal and implementation plan for a staged rollout in
 
 **Goals:**
 
-- Introduce a manual CI verification lane for publishable workspace packages.
-- Introduce a manual CI verification lane for the publishable subprojects under `projects/`.
+- Introduce a manual CI verification workflow for publishable workspace packages.
+- Introduce a manual CI verification workflow for the publishable subprojects under `projects/`.
 - Standardize new npm release workflows on GitHub OIDC trusted publishing instead of registry tokens.
-- Add a manual CI release lane for the generic workspace npm packages.
-- Add a separate manual CI release lane for the publishable subprojects under `projects/`, including `projects/rustdoc-typst-demo`.
-- Add a coordinated manual release lane that can include `typst.node`, Docker image publishing, workspace crates, and Rust project publishing.
+- Add a manual CI release workflow for the generic workspace npm packages.
+- Add a separate manual CI release workflow for the publishable subprojects under `projects/`, including `projects/rustdoc-typst-demo`.
+- Add a coordinated manual release workflow that can include `typst.node`, Docker image publishing, workspace crates, and Rust project publishing.
 - Configure npm trusted publisher coverage for all npm packages that may be governed by this release process, including the dedicated `typst.node` package family and currently private npm package entries.
 - Keep the rollout explicit and auditable through protected environments and workflow summaries.
 
@@ -61,9 +61,9 @@ Why not:
 
 - It adds ambiguity around which workflow filename npm must trust for manual dispatch and future maintenance.
 
-### 2. Split release execution into dedicated lanes, with an optional coordinated orchestrator
+### 2. Split release execution into dedicated workflows, with an optional coordinated workflow
 
-The change will use dedicated manual lanes for:
+The change will use dedicated manual workflows for:
 
 - package verification
 - project verification
@@ -104,7 +104,7 @@ Why not:
 - It adds complexity without a concrete user need.
 - It increases the chance of creating incomplete releases for a shared version.
 
-### 4. Use an explicit allowlist for the generic workspace package release lane
+### 4. Use an explicit allowlist for the generic workspace package release scope
 
 The workspace package release workflow will publish only the packages that are known to support the root `publish:dry` and `publish:lib` flow. The initial allowlist is:
 
@@ -122,8 +122,8 @@ The workspace package release workflow will publish only the packages that are k
 Why:
 
 - `packages/typst.node` has a dedicated NAPI publish flow and its root `publish:*` scripts are no-ops.
-- `packages/typst.svelte` is intended to be part of the generic package lane and its missing `publish:*` scripts are a repo miss that this change should fix.
-- `packages/enhanced-typst-svg` is private and not part of the publish lane.
+- `packages/typst.svelte` is intended to be part of the generic workspace package publish flow, and its missing `publish:*` scripts are a repo miss addressed by this rollout.
+- `packages/enhanced-typst-svg` is private and not part of the publish scope.
 
 Alternative considered:
 
@@ -135,12 +135,12 @@ Why not:
 
 ### 5. Move all trusted-publishing workflows to Node 22.14.0+ and npm 11.5.1+
 
-Any workflow created or migrated by this change will standardize on the runner requirements that npm trusted publishing currently expects.
+Any workflow created or migrated in this rollout will standardize on the runner requirements that npm trusted publishing currently expects.
 
 Why:
 
 - This removes one of the most common migration failures before maintainers start configuring trusted publishers in npm.
-- It keeps verification and release lanes aligned.
+- It keeps verification and release workflows aligned.
 
 Alternative considered:
 
@@ -152,7 +152,7 @@ Why not:
 
 ### 6. Add a dedicated project verification stage before live project publish
 
-The project release lane will verify all covered publishable subprojects under `projects/` before any live project publish job runs.
+The project release workflow will verify all covered publishable subprojects under `projects/` before any live project publish job runs.
 
 Why:
 
@@ -185,14 +185,14 @@ Why:
 
 Alternative considered:
 
-- Keep `projects/rustdoc-typst-demo` outside the project release batch as a separate Rust-only lane.
+- Keep `projects/rustdoc-typst-demo` outside the project release batch as a separate Rust-only workflow.
 
 Why not:
 
 - It creates unnecessary release fragmentation for one versioned project set.
 - The project batch can still preserve project-specific publish commands without pretending every project is npm-only.
 
-### 8. Integrate `typst.node`, Docker, and Rust releases through orchestration, not by folding them into the generic npm lanes
+### 8. Integrate `typst.node`, Docker, and Rust releases through orchestration, not by folding them into the generic npm workflow
 
 The fifth release proposal will add a coordinated manual release workflow that can include:
 
@@ -203,7 +203,7 @@ The fifth release proposal will add a coordinated manual release workflow that c
 
 Why:
 
-- These targets belong in the broader release story, but they do not fit the generic root npm publish commands.
+- These targets belong in the release process, but they do not fit the generic root npm publish commands.
 - `typst.node` has a dedicated build, test, artifact movement, publish, and GitHub Release upload sequence.
 - Docker image publishing and Cargo publishing use different authentication models from npm trusted publishing.
 
@@ -236,21 +236,21 @@ Alternative considered:
 Why not:
 
 - The registries do not support the same trust model.
-- Security boundaries are clearer when each lane uses the credential model intended for that ecosystem.
+- Security boundaries are clearer when each release job uses the credential model intended for that ecosystem.
 
 ### 10. Reuse existing `typst.node`, Docker, and Rust workflows through `workflow_call`
 
 The coordinated workflow will reuse the existing `typst.node`, Docker, and Rust release workflows through `workflow_call` instead of re-implementing their internal job logic in a new file.
 
 The `typst.node` workflow will not expose direct live publish triggers in this
-configuration; live npm publishing for that lane goes through the top-level
-orchestrator so npm trusted publishing validates the intended caller workflow.
+configuration; live npm publishing for that release path goes through the top-level
+workflow so npm trusted publishing validates the intended caller workflow.
 
 Why:
 
 - The existing workflows already encode ecosystem-specific build and publish behavior.
 - Reuse keeps the orchestration layer thin and reduces drift between standalone and coordinated release paths.
-- Restricting the `typst.node` live publish path to the orchestrator avoids a
+- Restricting the `typst.node` live publish path to `release-orchestration.yml` avoids a
   second npm trusted publisher identity for the same package family.
 
 Alternative considered:
@@ -262,9 +262,9 @@ Why not:
 - It duplicates release logic that already exists.
 - It makes future changes harder to keep consistent.
 
-### 11. Treat `typst.node` as a dedicated release lane under the integrated workflow
+### 11. Treat `typst.node` as a dedicated release path under the integrated workflow
 
-The coordinated workflow will include `typst.node` as a dedicated lane within the full release run, but it will retain its dedicated multi-platform build and test behavior instead of running through the root package publish commands.
+The coordinated workflow will include `typst.node` as a dedicated release path within the full release run, but it will retain its dedicated multi-platform build and test behavior instead of running through the root package publish commands.
 
 Why:
 
@@ -273,7 +273,7 @@ Why:
 
 Alternative considered:
 
-- Force `typst.node` through the root `yarn publish:lib` lane.
+- Force `typst.node` through the root `yarn publish:lib` flow.
 
 Why not:
 
@@ -282,7 +282,7 @@ Why not:
 
 ### 12. Register private npm package entries for trusted publishing without silently enabling live publish
 
-The trusted publisher runbook will include `enhanced-typst-svg` and `@myriaddreamin/vistyp` in the npm package registration checklist, but the workflows will not remove their current `"private": true` manifests or add them to live publish batches in this change.
+The trusted publisher runbook will include `enhanced-typst-svg` and `@myriaddreamin/vistyp` in the npm package registration checklist, but the workflows will not remove their current `"private": true` manifests or add them to live publish batches in this rollout.
 
 Why:
 
@@ -303,25 +303,25 @@ Why not:
 
 - [npm trusted publisher setup per package] -> Maintain a checklist of the package names and trusted workflow filenames before enabling live publish.
 - [Private package activation] -> Register trusted publisher expectations for private npm entries, but require an explicit manifest and workflow change before publishing them.
-- [Workflow sprawl] -> Keep one workflow per lane and document the purpose of each in the workflow names and summaries.
+- [Workflow sprawl] -> Keep one workflow per release target and document the purpose of each in the workflow names and summaries.
 - [Package scope drift] -> Use explicit allowlists and workflow summaries so maintainers can see exactly what is in or out of scope.
 - [Runner version drift] -> Pin Node to a compliant version in the new workflows and verify npm version before publish.
-- [Cross-ecosystem orchestration failures] -> Enforce the fixed release order and stop later publish jobs when prerequisite lanes fail.
-- [`typst.node` release complexity] -> Keep the NAPI build/test/publish flow isolated as its own lane even when called from the coordinated workflow.
+- [Cross-ecosystem orchestration failures] -> Enforce the fixed release order and stop later publish jobs when prerequisite workflows fail.
+- [`typst.node` release complexity] -> Keep the NAPI build/test/publish flow isolated as its own release path even when called from the coordinated workflow.
 - [Mixed credential usage] -> Scope permissions per job and keep Docker, npm, and Cargo credentials isolated.
 - [Reusable workflow contract drift] -> Keep workflow inputs and outputs explicit so the coordinator can call reusable workflows without depending on undocumented behavior.
 
 ## Migration Plan
 
-1. Add the manual package verification workflow and confirm that the current package lane is stable on a trusted-publishing-compatible Node runner.
+1. Add the manual package verification workflow and confirm that the current package workflow is stable on a trusted-publishing-compatible Node runner.
 2. Add the manual project verification workflow for the publishable subprojects under `projects/`, including `projects/rustdoc-typst-demo`.
 3. Add the environment, permissions, and documentation needed for npm trusted publishing.
-4. Add the missing `publish:*` scripts for `packages/typst.svelte` and include it in the generic workspace package release lane.
+4. Add the missing `publish:*` scripts for `packages/typst.svelte` and include it in the generic workspace package release workflow.
 5. Add the manual workspace package release workflow using the explicit allowlist and verification gate.
 6. Add the manual project release workflow, and gate it behind successful package and project verification plus successful package publishing.
 7. Add the coordinated multi-ecosystem release workflow that executes one full release run per version.
 8. Reuse the existing `typst.node`, Docker, and Rust publish workflows from that coordinator through `workflow_call`.
-9. Update maintainer documentation with the trusted publisher setup steps, workflow order, and the packages or artifacts covered by each lane.
+9. Update maintainer documentation with the trusted publisher setup steps, workflow order, and the packages or artifacts covered by each workflow.
 
 Rollback strategy:
 

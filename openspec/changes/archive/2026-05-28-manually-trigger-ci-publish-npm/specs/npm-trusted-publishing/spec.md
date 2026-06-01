@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Covered npm publish workflows shall use trusted publishing
-Any npm publish workflow created or migrated by this change SHALL use GitHub Actions trusted publishing instead of an npm registry token.
+Any npm publish workflow covered by this spec SHALL use GitHub Actions trusted publishing instead of an npm registry token.
 
 #### Scenario: Live publish job authenticates to npm
 - **WHEN** a covered live publish workflow starts its npm publish step
@@ -15,7 +15,7 @@ Any npm publish workflow created or migrated by this change SHALL use GitHub Act
 - **AND** the npm trusted publisher registration identifies the top-level caller workflow used for the release
 
 ### Requirement: Covered publish workflows shall use trusted-publishing-compatible runtimes
-Any npm publish workflow created or migrated by this change SHALL run its live publish job with Node 22.14.0 or newer and npm 11.5.1 or newer.
+Any npm publish workflow covered by this spec SHALL run its live publish job with Node 22.14.0 or newer and npm 11.5.1 or newer.
 
 #### Scenario: Maintainer runs a covered publish workflow
 - **WHEN** a maintainer dispatches a covered live publish workflow

@@ -1,7 +1,8 @@
 # project-publish-verification Specification
 
 ## Purpose
-TBD - created by archiving change manually-trigger-ci-publish-npm. Update Purpose after archive.
+Defines the manual verification workflow for publishable projects under `projects/` before release.
+
 ## Requirements
 ### Requirement: Manual project verification workflow
 The repository SHALL provide a manually triggered GitHub Actions workflow that verifies the publishable subprojects under `projects/` by running the required build and dry-run publish, pack, or Cargo verification steps for the covered project batch.
@@ -21,4 +22,3 @@ The project verification workflow SHALL verify the project batch `hexo-renderer-
 - **WHEN** a maintainer dispatches the project verification workflow
 - **THEN** the workflow verifies all covered projects for that version
 - **AND** the workflow does not expose partial project selection
-

@@ -1,10 +1,11 @@
 # npm-trusted-publishing Specification
 
 ## Purpose
-TBD - created by archiving change manually-trigger-ci-publish-npm. Update Purpose after archive.
+Defines the trusted publishing, runtime, and approval requirements for release workflows that publish npm packages.
+
 ## Requirements
 ### Requirement: Covered npm publish workflows shall use trusted publishing
-Any npm publish workflow created or migrated by this change SHALL use GitHub Actions trusted publishing instead of an npm registry token.
+Any npm publish workflow covered by this spec SHALL use GitHub Actions trusted publishing instead of an npm registry token.
 
 #### Scenario: Live publish job authenticates to npm
 - **WHEN** a covered live publish workflow starts its npm publish step
@@ -25,12 +26,12 @@ Any npm publish workflow created or migrated by this change SHALL use GitHub Act
 - **AND** npm publish failures other than already-published package versions still fail the workflow
 
 #### Scenario: Reusable typst.node workflow publishes npm packages
-- **WHEN** the coordinated release workflow calls the dedicated `typst.node` workflow through `workflow_call`
+- **WHEN** the `release-orchestration.yml` workflow calls the dedicated `typst.node` workflow through `workflow_call`
 - **THEN** the `typst.node` npm publish job uses GitHub OIDC trusted publishing instead of `NPM_TOKEN`
 - **AND** the npm trusted publisher registration identifies the top-level caller workflow used for the release
 
 ### Requirement: Covered publish workflows shall use trusted-publishing-compatible runtimes
-Any npm publish workflow created or migrated by this change SHALL run its live publish job with Node 22.14.0 or newer and npm 11.5.1 or newer.
+Any npm publish workflow covered by this spec SHALL run its live publish job with Node 22.14.0 or newer and npm 11.5.1 or newer.
 
 #### Scenario: Maintainer runs a covered publish workflow
 - **WHEN** a maintainer dispatches a covered live publish workflow
