@@ -4,6 +4,10 @@
   "description": "rehype plugin for rendering typst math equations",
   "main": "index.js",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Myriad-Dreamin/typst.ts"
+  },
   "sideEffects": false,
   "type": "module",
   "exports": "./index.js",

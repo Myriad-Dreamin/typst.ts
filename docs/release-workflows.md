@@ -9,6 +9,7 @@ This repository now uses a manual, auditable release layout centered on one top-
 - npm credentials: GitHub OIDC with `id-token: write`
 - npm registry: release workflows set npm and Yarn registry environment to `https://registry.npmjs.org/`
 - npm token handling: the generic package, `typst.node`, and project publish jobs do not use `NPM_TOKEN` or write a registry token into `.npmrc`
+- npm provenance metadata: published package manifests set `repository.url` to `https://github.com/Myriad-Dreamin/typst.ts`
 
 ## Workflow coverage
 

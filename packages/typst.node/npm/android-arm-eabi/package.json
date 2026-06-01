@@ -7,7 +7,6 @@
   "cpu": [
     "arm"
   ],
-  "repository": "https://github.com/Myriad-Dreamin/typst.ts",
   "main": "typst-ts-node-compiler.android-arm-eabi.node",
   "files": [
     "typst-ts-node-compiler.android-arm-eabi.node"
@@ -22,6 +21,10 @@
     "node-addon-api"
   ],
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Myriad-Dreamin/typst.ts"
+  },
   "engines": {
     "node": ">= 10"
   },
