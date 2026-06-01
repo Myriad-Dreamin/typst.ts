@@ -35,8 +35,8 @@
     "lint": "eslint --fix \"./src/**/*.{js,jsx,ts,tsx,json}\"",
     "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
     "test": "exit 0",
-    "publish:dry": "npm publish --dry-run --access public",
-    "publish:lib": "npm publish --access public || exit 0"
+    "publish:dry": "npm publish --dry-run --registry https://registry.npmjs.org/ --access public",
+    "publish:lib": "npm publish --registry https://registry.npmjs.org/ --access public || exit 0"
   },
   "peerDependencies": {
     "@myriaddreamin/typst-ts-renderer": "^0.7.0",

@@ -7,6 +7,7 @@ This repository now uses a manual, auditable release layout centered on one top-
 - GitHub Environment: `npm-publish`
 - Trusted publishing runtime: Node `22.14.0` or newer with npm `11.5.1` or newer
 - npm credentials: GitHub OIDC with `id-token: write`
+- npm registry: publish commands explicitly target `https://registry.npmjs.org/`
 - npm token handling: the generic package, `typst.node`, and project publish jobs do not use `NPM_TOKEN` or write a registry token into `.npmrc`
 
 ## Workflow coverage

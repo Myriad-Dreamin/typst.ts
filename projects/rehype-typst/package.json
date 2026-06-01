@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "publish:dry": "npm pack --dry-run",
-    "publish:lib": "npm publish --access public"
+    "publish:lib": "npm publish --registry https://registry.npmjs.org/ --access public"
   },
   "dependencies": {
     "@myriaddreamin/typst-ts-node-compiler": "^0.7.0",

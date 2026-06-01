@@ -26,8 +26,8 @@
   },
   "devDependencies": {},
   "scripts": {
-    "publish:dry": "npm publish --dry-run",
-    "publish:lib": "npm publish || exit 0"
+    "publish:dry": "npm publish --dry-run --registry https://registry.npmjs.org/",
+    "publish:lib": "npm publish --registry https://registry.npmjs.org/ || exit 0"
   },
   "engines": {
     "node": ">=12"

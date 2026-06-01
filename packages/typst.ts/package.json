@@ -318,8 +318,8 @@
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "test:e2e": "node scripts/test-templates.mjs && node scripts/test-imports.mjs",
-    "publish:dry": "npm publish --dry-run --access public",
-    "publish:lib": "npm publish --access public || exit 0",
+    "publish:dry": "npm publish --dry-run --registry https://registry.npmjs.org/ --access public",
+    "publish:lib": "npm publish --registry https://registry.npmjs.org/ --access public || exit 0",
     "test-install": "yarn playwright install-deps && yarn playwright install"
   },
   "dependencies": {

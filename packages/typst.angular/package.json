@@ -8,8 +8,8 @@
     "build": "ng build --project typst.angular && cd dist/typst.angular && yarn link && cd ../../../../ && yarn link @myriaddreamin/typst.angular",
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false --browsers=ChromeHeadless",
-    "publish:dry": "cd dist/typst.angular && npm publish --dry-run --access public",
-    "publish:lib": "cd dist/typst.angular && npm publish --access public || exit 0",
+    "publish:dry": "cd dist/typst.angular && npm publish --dry-run --registry https://registry.npmjs.org/ --access public",
+    "publish:lib": "cd dist/typst.angular && npm publish --registry https://registry.npmjs.org/ --access public || exit 0",
     "lint": "ng lint"
   },
   "private": true,

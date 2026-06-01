@@ -60,7 +60,7 @@
     "tsc": "tsc",
     "prepare-publish:napi": "node scripts/prepare-publish.js",
     "prepublish:napi": "node scripts/prepare-publish.js",
-    "publish-gh:dry": "yarn prepare-publish:napi && npm publish --dry-run --access public",
+    "publish-gh:dry": "yarn prepare-publish:napi && npm publish --dry-run --registry https://registry.npmjs.org/ --access public",
     "publish-gh:lib": "yarn prepare-publish:napi && node scripts/publish.js",
     "publish:dry": "exit 0",
     "publish:lib": "exit 0",

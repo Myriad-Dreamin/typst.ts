@@ -36,8 +36,8 @@
     "scripts": {
         "build": "cd ../typst.ts && yarn build && node scripts/cp-all-in-one.mjs",
         "prepublish": "turbo build",
-        "publish:dry": "npm publish --dry-run --access public",
-        "publish:lib": "npm publish --access public || exit 0"
+        "publish:dry": "npm publish --dry-run --registry https://registry.npmjs.org/ --access public",
+        "publish:lib": "npm publish --registry https://registry.npmjs.org/ --access public || exit 0"
     },
     "devDependencies": {
         "@myriaddreamin/typst.ts": "*"

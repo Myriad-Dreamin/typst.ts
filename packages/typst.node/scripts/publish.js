@@ -26,11 +26,23 @@ function uploadReleaseAsset(dir) {
 
 function publishPackage(cwd, label) {
   console.log(`Publish ${label}`);
-  const result = spawnSync('npm', ['publish', '--verbose', '--provenance', '--access', 'public'], {
-    cwd,
-    encoding: 'utf8',
-    maxBuffer: 10 * 1024 * 1024,
-  });
+  const result = spawnSync(
+    'npm',
+    [
+      'publish',
+      '--verbose',
+      '--provenance',
+      '--registry',
+      'https://registry.npmjs.org/',
+      '--access',
+      'public',
+    ],
+    {
+      cwd,
+      encoding: 'utf8',
+      maxBuffer: 10 * 1024 * 1024,
+    },
+  );
 
   if (result.stdout) {
     process.stdout.write(result.stdout);

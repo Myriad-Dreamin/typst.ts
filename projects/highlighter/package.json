@@ -41,8 +41,8 @@
     "build": "tsc && tsc -p ./tsconfig.cjs.json && vite build && node scripts/fix-cjs.mjs && node esbuild.config.mjs commonjs production && node esbuild.config.mjs production",
     "test": "vitest",
     "coverage": "vitest run --coverage",
-    "publish:dry": "npm publish --dry-run",
-    "publish:lib": "npm publish --access public || exit 0"
+    "publish:dry": "npm publish --dry-run --registry https://registry.npmjs.org/",
+    "publish:lib": "npm publish --registry https://registry.npmjs.org/ --access public || exit 0"
   },
   "engines": {
     "node": ">=12"

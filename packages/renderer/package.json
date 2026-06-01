@@ -38,7 +38,7 @@
     "build": "wasm-pack build --target web --scope myriaddreamin -- --no-default-features --features web && node ../tools/wasm-debundle.mjs",
     "watch": "cargo watch -i .gitignore -i \"pkg/*\" -s \"yarn build:dev\"",
     "prepublish": "turbo build",
-    "publish:dry": "npm publish --dry-run --access public",
-    "publish:lib": "npm publish --access public || exit 0"
+    "publish:dry": "npm publish --dry-run --registry https://registry.npmjs.org/ --access public",
+    "publish:lib": "npm publish --registry https://registry.npmjs.org/ --access public || exit 0"
   }
 }
