@@ -31,5 +31,9 @@
     "typst",
     "typescript",
     "vite"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Myriad-Dreamin/typst.ts"
+  }
 }

@@ -4,12 +4,15 @@
   "description": "Typst renderer plugin for Hexo",
   "author": "Myriad Dreamin <camiyoru@gmail.com>",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Myriad-Dreamin/typst.ts"
+  },
   "keywords": [
     "hexo",
     "typst",
     "renderer"
   ],
-  "repository": "https://github.com/Myriad-Dreamin/typst.ts",
   "main": "index.cjs",
   "files": [
     "index.cjs",

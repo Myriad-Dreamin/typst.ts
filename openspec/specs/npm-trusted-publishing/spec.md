@@ -10,6 +10,7 @@ Any npm publish workflow created or migrated by this change SHALL use GitHub Act
 - **WHEN** a covered live publish workflow starts its npm publish step
 - **THEN** the workflow requests `id-token: write`
 - **AND** the workflow configures npm and Yarn registry environment for `https://registry.npmjs.org/`
+- **AND** the package manifest declares `repository.url` matching the GitHub repository used by provenance
 - **AND** the workflow does not require `NPM_TOKEN`
 - **AND** the workflow does not write a registry authentication token into `.npmrc`
 

@@ -4,6 +4,10 @@
   "description": "WASM module for Parsing Typst documents in JavaScript environment.",
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Myriad-Dreamin/typst.ts"
+  },
   "keywords": [
     "TypeScript",
     "Typst"
