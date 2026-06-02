@@ -7,7 +7,8 @@ use core::fmt;
 use ecow::eco_format;
 use reflexo::debug_loc::{LspPosition, LspRange};
 use reflexo::path::unix_slash;
-use typst::syntax::{FileId, Source, Span, VirtualRoot};
+use typst::WorldExt;
+use typst::syntax::{DiagSpan, FileId, Source, VirtualRoot};
 
 use crate::vfs::{WorkspaceResolution, WorkspaceResolver};
 
@@ -118,9 +119,10 @@ impl fmt::Display for PosFmt<'_> {
 }
 
 fn resolve_source_span(
-    s: Span,
+    s: impl Into<DiagSpan>,
     world: Option<&dyn typst::World>,
 ) -> (String, String, Option<LspRange>) {
+    let s = s.into();
     let mut package = String::new();
     let mut path = String::new();
     let mut range = None;
@@ -142,9 +144,8 @@ fn resolve_source_span(
             Err(..) => {}
         }
 
-        if let Some((rng, src)) = world
-            .and_then(|world| world.source(id).ok())
-            .and_then(|src| Some((src.find(s)?.range(), src)))
+        if let Some((rng, src)) =
+            world.and_then(|world| world.range(s).zip(world.source(id).ok()))
         {
             let resolve_off = |src: &Source, off: usize| {
                 src.lines()
