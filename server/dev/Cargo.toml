@@ -28,3 +28,4 @@ clap = { workspace = true, features = [
 ] }
 clap_complete.workspace = true
 clap_complete_fig.workspace = true
+walkdir.workspace = true
