@@ -110,6 +110,7 @@ export default defineConfig({
             "layout/align_02",
             "layout/cjk-latin-spacing_01",
             "layout/flow/place-basic",
+            "layout/flow/place-block-spacing",
             "layout/grid/grid-footer-repeatable-unbreakable",
             "layout/grid/grid-exam",
             "layout/grid/grid-subheaders-alone-with-footer-no-orphan-prevention",
