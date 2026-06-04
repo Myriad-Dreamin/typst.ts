@@ -24,6 +24,13 @@ const saveFailure = (refPath, screenshotPath) => {
   fs.copyFileSync(screenshotPath, newName);
 }
 
+const ensureRefImage = (refPath, screenshotPath) => {
+  if (!fs.existsSync(refPath)) {
+    fs.mkdirSync(path.dirname(refPath), { recursive: true });
+    fs.copyFileSync(screenshotPath, refPath);
+  }
+}
+
 const createSnapshot = async (_ctx, screenshotPath, name, extras) => {
   const refPath= `${import.meta.dirname}/refs/renderer/${name}`;
   // console.log(import.meta.dirname,screenshotPath, name, refPath);
@@ -47,8 +54,10 @@ const createSnapshot = async (_ctx, screenshotPath, name, extras) => {
          return {  screenshotHash, refHash: screenshotHash };
       }  else {
         saveFailure(refPath, screenshotPath);
+        return {  screenshotHash, refHash };
       }
     }
+    ensureRefImage(refPath, screenshotPath);
     return {  screenshotHash, refHash };
   }
 
