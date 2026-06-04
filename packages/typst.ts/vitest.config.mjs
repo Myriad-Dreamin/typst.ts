@@ -2,11 +2,12 @@ import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import {imageHash} from 'image-hash'
 import fs from 'fs'
+import path from 'path'
 
 const isUpdate = (process.argv.includes('--update') || process.argv.includes('-u'));
 
 const saveRef = (refPath, screenshotPath, screenshotHash) => {
-  fs.mkdirSync(`${refPath}/..`, { recursive: true });
+  fs.mkdirSync(path.dirname(refPath), { recursive: true });
   fs.writeFileSync(`${refPath}.hash.txt`, screenshotHash);
   // copy screenshot to refs/renderer
   fs.copyFileSync(screenshotPath, refPath);
@@ -17,7 +18,7 @@ const saveRef = (refPath, screenshotPath, screenshotHash) => {
 }
 
 const saveFailure = (refPath, screenshotPath) => {
-  fs.mkdirSync(`${refPath}/..`, { recursive: true });
+  fs.mkdirSync(path.dirname(refPath), { recursive: true });
   const newName = `${refPath}.failure.png`;
   // copy screenshot to refs/renderer
   fs.copyFileSync(screenshotPath, newName);
