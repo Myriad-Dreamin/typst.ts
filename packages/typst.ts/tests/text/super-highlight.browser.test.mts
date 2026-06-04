@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import fileData from '../../../../fuzzers/corpora/text/super-highlight.artifact.sir.in?url&inline';
-import { testSvg, makeSnapshot, testCanvas } from '../../tests/test-main.mjs';
+import { testSvg, makeSnapshot, testCanvas } from '../test-main.mjs';
 
 const fileName = 'text/super-highlight';
 const getFile = async () => {

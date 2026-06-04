@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import fileData from '../../../../fuzzers/corpora/layout/table-cell-par.artifact.sir.in?url&inline';
-import { testSvg, makeSnapshot, testCanvas } from '../../tests/test-main.mjs';
+import { testSvg, makeSnapshot, testCanvas } from '../test-main.mjs';
 
 const fileName = 'layout/table-cell-par';
 const getFile = async () => {

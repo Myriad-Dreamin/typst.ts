@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import fileData from '../../../../fuzzers/corpora/visualize/curve-stroke-gradient.artifact.sir.in?url&inline';
-import { testSvg, makeSnapshot, testCanvas } from '../../tests/test-main.mjs';
+import { testSvg, makeSnapshot, testCanvas } from '../test-main.mjs';
 
 const fileName = 'visualize/curve-stroke-gradient';
 const getFile = async () => {

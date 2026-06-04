@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import fileData from '../../../../fuzzers/corpora/visualize/stroke-composition.artifact.sir.in?url&inline';
-import { testSvg, makeSnapshot, testCanvas } from '../../tests/test-main.mjs';
+import { testSvg, makeSnapshot, testCanvas } from '../test-main.mjs';
 
 const fileName = 'visualize/stroke-composition';
 const getFile = async () => {

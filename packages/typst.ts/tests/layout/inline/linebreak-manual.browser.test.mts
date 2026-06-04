@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
-import fileData from '../../../../fuzzers/corpora/layout/inline/linebreak-manual.artifact.sir.in?url&inline';
-import { testSvg, makeSnapshot, testCanvas } from '../../tests/test-main.mjs';
+import fileData from '../../../../../fuzzers/corpora/layout/inline/linebreak-manual.artifact.sir.in?url&inline';
+import { testSvg, makeSnapshot, testCanvas } from '../../test-main.mjs';
 
 const fileName = 'layout/inline/linebreak-manual';
 const getFile = async () => {

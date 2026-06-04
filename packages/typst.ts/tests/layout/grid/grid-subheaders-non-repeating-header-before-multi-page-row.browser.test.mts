@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
-import fileData from '../../../../fuzzers/corpora/layout/grid/grid-subheaders-non-repeating-header-before-multi-page-row.artifact.sir.in?url&inline';
-import { testSvg, makeSnapshot, testCanvas } from '../../tests/test-main.mjs';
+import fileData from '../../../../../fuzzers/corpora/layout/grid/grid-subheaders-non-repeating-header-before-multi-page-row.artifact.sir.in?url&inline';
+import { testSvg, makeSnapshot, testCanvas } from '../../test-main.mjs';
 
 const fileName = 'layout/grid/grid-subheaders-non-repeating-header-before-multi-page-row';
 const getFile = async () => {

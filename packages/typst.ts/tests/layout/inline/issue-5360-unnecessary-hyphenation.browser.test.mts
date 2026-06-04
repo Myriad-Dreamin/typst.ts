@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
-import fileData from '../../../../fuzzers/corpora/layout/inline/issue-5360-unnecessary-hyphenation.artifact.sir.in?url&inline';
-import { testSvg, makeSnapshot, testCanvas } from '../../tests/test-main.mjs';
+import fileData from '../../../../../fuzzers/corpora/layout/inline/issue-5360-unnecessary-hyphenation.artifact.sir.in?url&inline';
+import { testSvg, makeSnapshot, testCanvas } from '../../test-main.mjs';
 
 const fileName = 'layout/inline/issue-5360-unnecessary-hyphenation';
 const getFile = async () => {

@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import fileData from '../../../../fuzzers/corpora/layout/issue-5296-block-sticky-weakly-spaced-from-top-of-page.artifact.sir.in?url&inline';
-import { testSvg, makeSnapshot, testCanvas } from '../../tests/test-main.mjs';
+import { testSvg, makeSnapshot, testCanvas } from '../test-main.mjs';
 
 const fileName = 'layout/issue-5296-block-sticky-weakly-spaced-from-top-of-page';
 const getFile = async () => {

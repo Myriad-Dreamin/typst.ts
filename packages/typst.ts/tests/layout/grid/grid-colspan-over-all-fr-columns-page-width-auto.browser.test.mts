@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
-import fileData from '../../../../fuzzers/corpora/layout/grid/grid-colspan-over-all-fr-columns-page-width-auto.artifact.sir.in?url&inline';
-import { testSvg, makeSnapshot, testCanvas } from '../../tests/test-main.mjs';
+import fileData from '../../../../../fuzzers/corpora/layout/grid/grid-colspan-over-all-fr-columns-page-width-auto.artifact.sir.in?url&inline';
+import { testSvg, makeSnapshot, testCanvas } from '../../test-main.mjs';
 
 const fileName = 'layout/grid/grid-colspan-over-all-fr-columns-page-width-auto';
 const getFile = async () => {

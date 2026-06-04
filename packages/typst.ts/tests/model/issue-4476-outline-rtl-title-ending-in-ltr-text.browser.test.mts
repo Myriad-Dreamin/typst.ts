@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
 import fileData from '../../../../fuzzers/corpora/model/issue-4476-outline-rtl-title-ending-in-ltr-text.artifact.sir.in?url&inline';
-import { testSvg, makeSnapshot, testCanvas } from '../../tests/test-main.mjs';
+import { testSvg, makeSnapshot, testCanvas } from '../test-main.mjs';
 
 const fileName = 'model/issue-4476-outline-rtl-title-ending-in-ltr-text';
 const getFile = async () => {

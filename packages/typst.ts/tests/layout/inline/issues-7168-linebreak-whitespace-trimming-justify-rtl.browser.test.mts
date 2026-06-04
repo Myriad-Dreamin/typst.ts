@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
-import fileData from '../../../../fuzzers/corpora/layout/inline/issues-7168-linebreak-whitespace-trimming-justify-rtl.artifact.sir.in?url&inline';
-import { testSvg, makeSnapshot, testCanvas } from '../../tests/test-main.mjs';
+import fileData from '../../../../../fuzzers/corpora/layout/inline/issues-7168-linebreak-whitespace-trimming-justify-rtl.artifact.sir.in?url&inline';
+import { testSvg, makeSnapshot, testCanvas } from '../../test-main.mjs';
 
 const fileName = 'layout/inline/issues-7168-linebreak-whitespace-trimming-justify-rtl';
 const getFile = async () => {

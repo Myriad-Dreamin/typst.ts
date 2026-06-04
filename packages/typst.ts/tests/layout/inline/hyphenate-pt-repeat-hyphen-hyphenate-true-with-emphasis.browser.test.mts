@@ -1,6 +1,6 @@
 import { describe, it } from 'vitest';
-import fileData from '../../../../fuzzers/corpora/layout/inline/hyphenate-pt-repeat-hyphen-hyphenate-true-with-emphasis.artifact.sir.in?url&inline';
-import { testSvg, makeSnapshot, testCanvas } from '../../tests/test-main.mjs';
+import fileData from '../../../../../fuzzers/corpora/layout/inline/hyphenate-pt-repeat-hyphen-hyphenate-true-with-emphasis.artifact.sir.in?url&inline';
+import { testSvg, makeSnapshot, testCanvas } from '../../test-main.mjs';
 
 const fileName = 'layout/inline/hyphenate-pt-repeat-hyphen-hyphenate-true-with-emphasis';
 const getFile = async () => {

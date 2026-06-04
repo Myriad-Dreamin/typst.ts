@@ -35,12 +35,11 @@ const corpusRoot = path.resolve('../../fuzzers/corpora');
 
 const files = categories.flatMap(category => {
   const dir = path.join(corpusRoot, category);
-  return collectArtifactFiles(dir).map(file => path.relative('.', file).replace(/\\/g, '/'));
+  return collectArtifactFiles(dir);
 }).sort();
 
 console.log(files);
-const templateContent = fs.readFileSync('tests/test-template.mts', 'utf8')
-    .replace(/\.\/test-main.mjs/g, "../../tests/test-main.mjs");
+const templateContent = fs.readFileSync('tests/test-template.mts', 'utf8');
 
 const points = [];
 
@@ -50,13 +49,20 @@ for (const category of staleCategories) {
 
 // generate all tests for the renderer
 for (const file of files) {
-  const testName = file.replace(/\\/g, "/").replace("../../fuzzers/corpora/", "").replace(/\.artifact\.sir\.in$/g, '');
+  const testName = path.relative(corpusRoot, file).replace(/\\/g, "/").replace(/\.artifact\.sir\.in$/g, '');
+  const testPath = `tests/${testName}.browser.test.mts`;
+  const testDir = path.resolve(path.dirname(testPath));
+  const artifactImport = toImportSpecifier(path.relative(testDir, file)) + '?url&inline';
+  const testMainImport = toImportSpecifier(path.relative(testDir, path.resolve('tests/test-main.mjs')));
 
-  const testContent = templateContent.replace(/layout\/transform-layout_02/g, testName);
+  const testContent = templateContent
+    .replace('../../../../fuzzers/corpora/layout/transform-layout_02.artifact.sir.in?url&inline', artifactImport)
+    .replace('./test-main.mjs', testMainImport)
+    .replace(/layout\/transform-layout_02/g, testName);
 
-  console.log(`Generating test for tests/${testName}....`);
-  fs.mkdirSync(path.dirname(`tests/${testName}.browser.test.mts`), { recursive: true });
-  fs.writeFileSync(`tests/${testName}.browser.test.mts`, testContent);
+  console.log(`Generating test for ${testPath}....`);
+  fs.mkdirSync(path.dirname(testPath), { recursive: true });
+  fs.writeFileSync(testPath, testContent);
   points.push(testName);
 }
 
@@ -76,4 +82,9 @@ function collectArtifactFiles(dir) {
     }
     return entry.isFile() && entry.name.endsWith('.artifact.sir.in') ? [file] : [];
   });
+}
+
+function toImportSpecifier(file) {
+  const specifier = file.replace(/\\/g, '/');
+  return specifier.startsWith('.') ? specifier : `./${specifier}`;
 }
