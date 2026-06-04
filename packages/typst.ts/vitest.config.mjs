@@ -103,6 +103,7 @@ export default defineConfig({
             "layout/flow/place-basic",
             "layout/grid/grid-footer-repeatable-unbreakable",
             "layout/grid/grid-exam",
+            "layout/grid/grid-subheaders-alone-with-footer-no-orphan-prevention",
             "layout/inline/hyphenate-pt-no-repeat-hyphen",
             "layout/inline/cjk-punctuation-adjustment-3",
             "layout/inline/hyphenate-es-repeat-hyphen",
