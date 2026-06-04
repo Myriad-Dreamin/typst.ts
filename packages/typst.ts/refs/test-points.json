@@ -1504,6 +1504,7 @@
   "model/title-with-body",
   "model/title",
   "package/example",
+  "pdf/compare-pdf",
   "pdf/pdf-attach-bytes",
   "pdf/pdf-attach",
   "pdf/pdf-embed-deprecated",

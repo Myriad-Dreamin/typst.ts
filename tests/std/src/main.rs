@@ -44,6 +44,9 @@ const LOCAL_LEGACY_CORPUS_FILES: &[&str] = &[
     "math/main.artifact.sir.in",
     "math/undergradmath.typ",
     "math/undergradmath.artifact.sir.in",
+    "pdf/compare-pdf.typ",
+    "pdf/compare-pdf.artifact.sir.in",
+    "pdf/compare-pdf.artifact.svg",
 ];
 
 fn main() -> anyhow::Result<()> {
