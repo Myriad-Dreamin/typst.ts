@@ -1,1 +1,1 @@
-ihash16:fffffffffffffffff27ff27ff24ff24fffffffcfffffffffffffffffffffffff?size=120x48
+ihash16:fffffffffffff25ff25ff24ff00ff00ff24ff24ff24fffcfffffffffffffffff?size=120x48
