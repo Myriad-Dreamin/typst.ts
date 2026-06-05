@@ -55,6 +55,7 @@ const createSnapshot = async (_ctx, screenshotPath, name, extras) => {
         saveRef(refPath, screenshotPath, screenshotHash);
          return {  screenshotHash, refHash: screenshotHash };
       }  else {
+        ensureRefImage(refPath, screenshotPath);
         saveFailure(refPath, screenshotPath);
         return {  screenshotHash, refHash };
       }
