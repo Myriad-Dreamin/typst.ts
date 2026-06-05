@@ -30,6 +30,12 @@ jobs:
           repository: Myriad-Dreamin/typst
           ref: assets-files
           path: assets/files
+      - name: Checkout Typst test ground truth
+        uses: actions/checkout@v4
+        with:
+          repository: Myriad-Dreamin/typst
+          ref: v0.14.2
+          path: typst-ground-truth
       - name: Install Mold
         uses: rui314/setup-mold@v1
       - uses: actions-rust-lang/setup-rust-toolchain@v1
@@ -68,6 +74,9 @@ jobs:
       - name: Test Browser
         # todo: other package tests
         run: cd packages/typst.ts && yarn test
+      - name: Render skipped Typst ground truth refs
+        if: always()
+        run: cd packages/typst.ts && TYPST_TS_UPSTREAM_SUITE_DIR=../../typst-ground-truth/tests/suite node scripts/render-skipped-ground-truth-refs.mjs
       - name: Archive Test Results (WebAssembly Renderer in Chrome)
         if: always()
         uses: actions/upload-artifact@v4
@@ -76,7 +85,7 @@ jobs:
           path: target/typst-artifacts/integrations/renderer/test_points.chrome.json.gz
       - name: Prepare Vitest Ref Index
         if: always()
-        run: cd packages/typst.ts && node scripts/write-rendered-test-points.mjs
+        run: cd packages/typst.ts && TYPST_TS_UPSTREAM_SUITE_DIR=../../typst-ground-truth/tests/suite node scripts/write-rendered-test-points.mjs
       - name: Archive Test Results (Vitest)
         if: always()
         uses: actions/upload-artifact@v4
