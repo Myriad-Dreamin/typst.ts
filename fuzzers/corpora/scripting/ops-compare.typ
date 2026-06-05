@@ -1,0 +1,31 @@
+
+#import "/contrib/templates/std-tests/preset.typ": *
+#show: test-page
+// Test comparison operators.
+
+#test(13 * 3 < 14 * 4, true)
+#test(5 < 10, true)
+#test(5 > 5, false)
+#test(5 <= 5, true)
+#test(5 <= 4, false)
+#test(45deg < 1rad, true)
+#test(10% < 20%, true)
+#test(50% < 40% + 0pt, false)
+#test(40% + 0pt < 50% + 0pt, true)
+#test(1em < 2em, true)
+#test((0, 1, 2, 4) < (0, 1, 2, 5), true)
+#test((0, 1, 2, 4) < (0, 1, 2, 3), false)
+#test((0, 1, 2, 3.3) > (0, 1, 2, 4), false)
+#test((0, 1, 2) < (0, 1, 2, 3), true)
+#test((0, 1, "b") > (0, 1, "a", 3), true)
+#test((0, 1.1, 3) >= (0, 1.1, 3), true)
+#test((0, 1, datetime(day: 1, month: 12, year: 2023)) <= (0, 1, datetime(day: 1, month: 12, year: 2023), 3), true)
+#test(("a", 23, 40, "b") > ("a", 23, 40), true)
+#test(() <= (), true)
+#test(() >= (), true)
+#test(() <= (1,), true)
+#test((1,) <= (), false)
+#test(decimal("123.0000000000000000000000001") > decimal("123.0"), true)
+#test(decimal("123.5") < decimal("122.444"), false)
+#test(decimal("459.9999999999999999999999999") < 460, true)
+#test(decimal("128.50") > 460, false)

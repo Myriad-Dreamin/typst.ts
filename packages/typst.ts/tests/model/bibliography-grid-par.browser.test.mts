@@ -1,0 +1,18 @@
+import { describe, it } from 'vitest';
+import fileData from '../../../../fuzzers/corpora/model/bibliography-grid-par.artifact.sir.in?url&inline';
+import { testSvg, makeSnapshot, testCanvas } from '../test-main.mjs';
+
+const fileName = 'model/bibliography-grid-par';
+const getFile = async () => {
+  return fetch(fileData).then(res => res.arrayBuffer()).then(buffer => new Uint8Array(buffer))
+}
+
+describe('renderer', () => {
+  it(`should renderer svg`, async () => {
+    await makeSnapshot(await testSvg(await getFile()), `${fileName}.svg.png`);
+  });
+
+  it('should renderer canvas', async () => {
+    await makeSnapshot(await testCanvas(await getFile()), `${fileName}.canvas.png`);
+  });
+});

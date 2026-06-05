@@ -33,7 +33,7 @@
   "scripts": {
     "dev": "cargo build --bin typst-ts-dev-server && yarn dev:run",
     "dev:run": "target/debug/typst-ts-dev-server run http --corpus ./fuzzers/corpora/",
-    "corpus": "cargo run --release --bin typst-ts-dev-server -- compile corpus --cat bugs,layout,lint,math,meta,text,viewers,visualize,skyzh-cv",
+    "corpus": "cargo run --release --bin typst-ts-dev-server -- compile corpus --cat foundations,html,introspection,layout,loading,math,model,pdf,pdftags,playground,scripting,styling,symbols,syntax,text,visualize,lint,viewers,skyzh-cv",
     "install:pure": "yarn install --pure-lockfile",
     "postinstall": "node scripts/fix-hoisted-typescript-link.mjs",
     "build:core": "yarn workspace @myriaddreamin/typst.ts build",
