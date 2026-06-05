@@ -83,15 +83,18 @@ jobs:
         with:
           name: wasm-renderer-chrome.test_points.json.gz
           path: target/typst-artifacts/integrations/renderer/test_points.chrome.json.gz
-      - name: Prepare Vitest Ref Index
+      - name: Prepare Renderer Diff Protocol
         if: always()
-        run: cd packages/typst.ts && TYPST_TS_UPSTREAM_SUITE_DIR=../../typst-ground-truth/tests/suite node scripts/write-rendered-test-points.mjs
-      - name: Archive Test Results (Vitest)
+        run: |
+          cd packages/typst.ts
+          TYPST_TS_UPSTREAM_SUITE_DIR=../../typst-ground-truth/tests/suite node scripts/write-rendered-test-points.mjs
+          TYPST_TS_UPSTREAM_SUITE_DIR=../../typst-ground-truth/tests/suite TYPST_TS_UPSTREAM_REF=v0.14.2 node scripts/write-renderer-diff-protocol.mjs
+      - name: Archive Renderer Diff (Vitest)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: vitest-refs.gz
-          path: packages/typst.ts/refs
+          name: renderer-diff-vitest
+          path: target/typst-artifacts/renderer-diff-vitest
 
   prepare-build:
     runs-on: 'ubuntu-latest'
