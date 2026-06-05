@@ -74,6 +74,9 @@ jobs:
         with:
           name: wasm-renderer-chrome.test_points.json.gz
           path: target/typst-artifacts/integrations/renderer/test_points.chrome.json.gz
+      - name: Prepare Vitest Ref Index
+        if: always()
+        run: cd packages/typst.ts && node scripts/write-rendered-test-points.mjs
       - name: Archive Test Results (Vitest)
         if: always()
         uses: actions/upload-artifact@v4
