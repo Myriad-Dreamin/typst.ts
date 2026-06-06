@@ -90,11 +90,28 @@ jobs:
           TYPST_TS_UPSTREAM_SUITE_DIR=../../typst-ground-truth/tests/suite node scripts/write-rendered-test-points.mjs
           TYPST_TS_UPSTREAM_SUITE_DIR=../../typst-ground-truth/tests/suite TYPST_TS_UPSTREAM_REF=v0.14.2 node scripts/write-renderer-diff-protocol.mjs
       - name: Archive Renderer Diff (Vitest)
+        id: upload_renderer_diff
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: renderer-diff-vitest
           path: target/typst-artifacts/renderer-diff-vitest
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Show renderer diff viewer link
+        if: always()
+        run: |
+          artifact_id="${{ steps.upload_renderer_diff.outputs.artifact-id }}"
+          page_url="https://myriad-dreamin.github.io/tinymist/renderer-diff/?owner=${{ github.repository_owner }}&repo=${{ github.event.repository.name }}&run=${{ github.run_id }}"
+          if [ -n "${artifact_id}" ]; then
+            page_url="${page_url}&artifact=${artifact_id}"
+          fi
+          echo "Renderer diff viewer: ${page_url}"
+          {
+            echo "### Renderer diff viewer"
+            echo ""
+            echo "[Open renderer diff viewer](${page_url})"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   prepare-build:
     runs-on: 'ubuntu-latest'
