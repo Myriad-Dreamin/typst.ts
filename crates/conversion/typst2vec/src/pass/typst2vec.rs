@@ -1026,7 +1026,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         mk_transform: impl FnOnce(Smart<RelativeTo>, bool) -> Transform,
     ) -> ImmutStr {
         match g {
-            Paint::Solid(c) => c.to_css().into(),
+            Paint::Solid(c) => c.clone().to_css().into(),
             Paint::Tiling(e) => {
                 let fingerprint = self.pattern(state, e, mk_transform(e.relative(), false));
                 format!("@{}", fingerprint.as_svg_id("p")).into()

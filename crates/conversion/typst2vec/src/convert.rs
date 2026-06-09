@@ -41,7 +41,16 @@ impl FromTypst<Rgba8Item> for typst::visualize::Color {
 
 impl FromTypst<typst::visualize::ColorSpace> for ColorSpace {
     fn from_typst(value: typst::visualize::ColorSpace) -> Self {
-        use typst::visualize::ColorSpace::*;
+        match value {
+            typst::visualize::ColorSpace::Process(process) => process.into_typst(),
+            typst::visualize::ColorSpace::Spot(_) => Self::Oklab,
+        }
+    }
+}
+
+impl FromTypst<typst::visualize::ProcessColorSpace> for ColorSpace {
+    fn from_typst(value: typst::visualize::ProcessColorSpace) -> Self {
+        use typst::visualize::ProcessColorSpace::*;
         match value {
             Oklab => Self::Oklab,
             Oklch => Self::Oklch,
@@ -59,8 +68,8 @@ impl TryFromTypst<ColorSpace> for typst::visualize::ColorSpace {
     type Error = ();
 
     fn try_from_typst(value: ColorSpace) -> Result<Self, ()> {
-        use typst::visualize::ColorSpace::*;
-        Ok(match value {
+        use typst::visualize::ProcessColorSpace::*;
+        let process = match value {
             ColorSpace::Luma => return Err(()),
             ColorSpace::Oklab => Oklab,
             ColorSpace::Oklch => Oklch,
@@ -70,7 +79,8 @@ impl TryFromTypst<ColorSpace> for typst::visualize::ColorSpace {
             ColorSpace::Hsl => Hsl,
             ColorSpace::Hsv => Hsv,
             ColorSpace::Cmyk => Cmyk,
-        })
+        };
+        Ok(typst::visualize::ColorSpace::Process(process))
     }
 }
 
