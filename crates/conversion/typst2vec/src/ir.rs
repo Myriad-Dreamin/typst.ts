@@ -3,7 +3,7 @@ use std::sync::Arc;
 use reflexo::hash::{item_hash128, Fingerprint};
 pub use reflexo::vector::ir::*;
 use ttf_parser::GlyphId;
-use typst::text::Font;
+use typst::text::FontInstance;
 
 /// A glyph item.
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
@@ -13,7 +13,7 @@ pub enum GlyphItem {
 
     /// Raw glyph representation.
     /// The raw glyphs is generated in lowering stage.
-    Raw(Font, GlyphId),
+    Raw(FontInstance, GlyphId),
 
     /// Glyphs in SVG or Bitmap format.
     Image(Arc<ImageGlyphItem>),

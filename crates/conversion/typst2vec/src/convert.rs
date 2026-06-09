@@ -11,7 +11,7 @@ use typst::layout::{
     Abs as TypstAbs, Angle as TypstAngle, Axes as TypstAxes, Point as TypstPoint,
     Ratio as TypstRatio, Transform as TypstTransform,
 };
-use typst::text::Font;
+use typst::text::{Font, FontInstance, FontVariations};
 use typst::utils::Scalar as TypstScalar;
 use typst::visualize::{ExchangeFormat, ImageFormat, ImageKind, RasterFormat, VectorFormat};
 use typst_svg::pdf_to_svg;
@@ -164,8 +164,13 @@ impl FromTypst<Font> for FontItem {
     fn from_typst(font: Font) -> Self {
         let hash = reflexo::hash::hash32(&font);
         let fingerprint = Fingerprint::from_u128(item_hash128(&font));
+        let instance = font.clone().instantiate(
+            font.info().variant,
+            TypstAbs::pt(1.0),
+            &FontVariations::default(),
+        );
 
-        let metrics = font.metrics();
+        let metrics = instance.metrics();
         Self {
             fingerprint,
             hash,
@@ -173,11 +178,17 @@ impl FromTypst<Font> for FontItem {
             cap_height: Scalar(metrics.cap_height.get() as f32),
             ascender: Scalar(metrics.ascender.get() as f32),
             descender: Scalar(metrics.descender.get() as f32),
-            units_per_em: Scalar(font.units_per_em() as f32),
+            units_per_em: Scalar(instance.units_per_em() as f32),
             vertical: false, // todo: check vertical
             glyphs: Vec::new(),
             glyph_cov: bitvec::vec::BitVec::new(),
         }
+    }
+}
+
+impl FromTypst<FontInstance> for FontItem {
+    fn from_typst(font: FontInstance) -> Self {
+        font.font().clone().into_typst()
     }
 }
 

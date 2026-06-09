@@ -11,7 +11,7 @@ use ttf_parser::GlyphId;
 use typst::foundations::Bytes;
 use typst::foundations::Smart;
 use typst::layout::Size;
-use typst::text::Font;
+use typst::text::{Font, FontInstance};
 use typst::visualize::Image;
 use typst::visualize::SvgImage;
 
@@ -225,14 +225,14 @@ impl ConvertInnerImpl {
     }
 
     #[cfg(not(feature = "glyph2vec"))]
-    fn raw_glyph(&self, _font: &Font, _id: GlyphId) -> Option<GlyphItem> {
+    fn raw_glyph(&self, _font: &FontInstance, _id: GlyphId) -> Option<GlyphItem> {
         None
     }
 }
 
 #[cfg(feature = "glyph2vec")]
 impl ConvertInnerImpl {
-    fn ligature_len(&self, font: &Font, id: GlyphId) -> u8 {
+    fn ligature_len(&self, font: &FontInstance, id: GlyphId) -> u8 {
         if !self.lowering_ligature {
             return 0;
         }
@@ -243,7 +243,7 @@ impl ConvertInnerImpl {
             .unwrap_or_default() as u8
     }
 
-    fn raw_glyph(&self, font: &Font, id: GlyphId) -> Option<GlyphItem> {
+    fn raw_glyph(&self, font: &FontInstance, id: GlyphId) -> Option<GlyphItem> {
         self.svg_glyph(font, id)
             .map(GlyphItem::Image)
             .or_else(|| self.bitmap_glyph(font, id).map(GlyphItem::Image))
@@ -252,7 +252,7 @@ impl ConvertInnerImpl {
 
     /// Lower an SVG glyph into svg item.
     /// More information: https://learn.microsoft.com/zh-cn/typography/opentype/spec/svg
-    fn svg_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ir::ImageGlyphItem>> {
+    fn svg_glyph(&self, font: &FontInstance, id: GlyphId) -> Option<Arc<ir::ImageGlyphItem>> {
         use crate::ir::Scalar;
         use crate::utils::AbsExt;
 
@@ -280,7 +280,7 @@ impl ConvertInnerImpl {
     }
 
     /// Lower a bitmap glyph into the svg text.
-    fn bitmap_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ir::ImageGlyphItem>> {
+    fn bitmap_glyph(&self, font: &FontInstance, id: GlyphId) -> Option<Arc<ir::ImageGlyphItem>> {
         use crate::utils::AbsExt;
         /// Use types from `tiny-skia` crate.
         use tiny_skia as sk;
@@ -328,7 +328,7 @@ impl ConvertInnerImpl {
     }
 
     /// Lower an outline glyph into svg text. This is the "normal" case.
-    fn outline_glyph(&self, font: &Font, id: GlyphId) -> Option<Arc<ir::OutlineGlyphItem>> {
+    fn outline_glyph(&self, font: &FontInstance, id: GlyphId) -> Option<Arc<ir::OutlineGlyphItem>> {
         let d = self.gp.outline_glyph(font, id)?.into();
 
         Some(Arc::new(ir::OutlineGlyphItem {
@@ -338,7 +338,11 @@ impl ConvertInnerImpl {
         }))
     }
 
-    fn extract_svg_glyph(g: &GlyphProvider, font: &Font, id: GlyphId) -> Option<ir::ImageItem> {
+    fn extract_svg_glyph(
+        g: &GlyphProvider,
+        font: &FontInstance,
+        id: GlyphId,
+    ) -> Option<ir::ImageItem> {
         struct FindViewBoxResult<'a> {
             start_span: Option<xmlparser::StrSpan<'a>>,
             first_viewbox: Option<(xmlparser::StrSpan<'a>, xmlparser::StrSpan<'a>)>,
