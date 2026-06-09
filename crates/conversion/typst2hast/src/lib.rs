@@ -98,6 +98,7 @@ fn write_frame(
     let svg = typst_svg::svg_in_html(
         &frame.inner,
         frame.text_size,
+        false,
         frame.id.as_deref(),
         &eco_format!("{}", frame.css.to_inline()),
         &frame.anchors,
