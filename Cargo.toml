@@ -78,8 +78,8 @@ typst-html = "0.15.0"
 
 ttf-parser = "0.25.0"
 
-typst-assets = "0.14.2"
-typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", tag = "v0.14.2" }
+typst-assets = { git = "https://github.com/typst/typst-assets", rev = "955ae8d" }
+typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", rev = "0b12d75772199e07294749ffe078ea030b857746" }
 
 # general
 anyhow = "1"
@@ -268,6 +268,12 @@ typst-bundle = { git = "https://github.com/ParaN3xus/typst.git", branch = "night
 # typst-pdf = { path = "../typst/crates/typst-pdf" }
 # typst-eval = { path = "../typst/crates/typst-eval" }
 # typst-html = { path = "../typst/crates/typst-html" }
+# typst-layout = { path = "../typst/crates/typst-layout" }
+# typst-library = { path = "../typst/crates/typst-library" }
+# typst-macros = { path = "../typst/crates/typst-macros" }
+# typst-timing = { path = "../typst/crates/typst-timing" }
+# typst-utils = { path = "../typst/crates/typst-utils" }
+# typst-bundle = { path = "../typst/crates/typst-bundle" }
 
 # fontdb = { path = "../fontdb" }
 
