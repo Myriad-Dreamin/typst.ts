@@ -14,7 +14,7 @@ pub fn mutate(code: String) -> io::Result<String> {
     let mut tr = Mutator::build_context()?;
 
     let syntax = typst_syntax::parse(&code);
-    let errors = syntax.errors();
+    let (errors, _) = syntax.errors_and_warnings();
     if !errors.is_empty() {
         panic!("Syntax errors: {errors:?}");
     }
