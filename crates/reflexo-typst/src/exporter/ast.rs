@@ -129,8 +129,7 @@ impl<W: io::Write> AstWriter<'_, W> {
     }
 
     fn write_ast(&mut self, src: &Source, ast: &LinkedNode) {
-        let head = src
-            .range(ast.span())
+        let head = Some(ast.range())
             .map(|rng| {
                 let start = rng.start;
                 let end = rng.end;
