@@ -11,7 +11,7 @@ use ttf_parser::GlyphId;
 use typst::foundations::Bytes;
 use typst::foundations::Smart;
 use typst::layout::Size;
-use typst::text::{Font, FontInstance};
+use typst::text::FontInstance;
 use typst::visualize::Image;
 use typst::visualize::SvgImage;
 
@@ -44,9 +44,9 @@ pub struct TGlyph2VecPass<const ENABLE_REF_CNT: bool = false> {
 
     /// Intermediate representation of an incompleted font pack.
     /// All font items are stored in this map, and then sorted by the index.
-    font_mapping: reflexo::adt::CHashMap<Font, FontRef>,
+    font_mapping: reflexo::adt::CHashMap<FontInstance, FontRef>,
     /// Detect font short hash conflict
-    font_conflict_checker: reflexo::adt::CHashMap<u32, Font>,
+    font_conflict_checker: reflexo::adt::CHashMap<u32, FontInstance>,
     /// Lock to get a unique local index for each font.
     font_index: Mutex<usize>,
 
@@ -99,7 +99,7 @@ impl<const ENABLE_REF_CNT: bool> TGlyph2VecPass<ENABLE_REF_CNT> {
         (fonts, glyphs)
     }
 
-    pub fn build_font(&self, font: &Font) -> FontRef {
+    pub fn build_font(&self, font: &FontInstance) -> FontRef {
         if let Some(id) = self.font_mapping.get(font) {
             return *id;
         }

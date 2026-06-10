@@ -704,7 +704,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
         };
 
         self.store_cached(&cond, || {
-            let font = self.glyphs.build_font(text.font.font());
+            let font = self.glyphs.build_font(&text.font);
 
             let mut glyphs = Vec::with_capacity(text.glyphs.len());
             for glyph in &text.glyphs {
@@ -726,7 +726,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
             let glyph_chars: String = text.text.to_string();
             // let mut extras = ExtraSvgItems::default();
 
-            let font = self.glyphs.build_font(text.font.font());
+            let font = self.glyphs.build_font(&text.font);
 
             let mut styles = vec![PathStyle::Fill(stateful_fill())];
             if let Some(stroke) = text.stroke.as_ref() {
