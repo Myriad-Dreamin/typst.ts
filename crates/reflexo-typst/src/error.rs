@@ -7,8 +7,8 @@ use core::fmt;
 use ecow::eco_format;
 use reflexo::debug_loc::{LspPosition, LspRange};
 use reflexo::path::unix_slash;
-use typst::WorldExt;
 use typst::syntax::{DiagSpan, FileId, Source, VirtualRoot};
+use typst::WorldExt;
 
 use crate::vfs::{WorkspaceResolution, WorkspaceResolver};
 
@@ -144,8 +144,7 @@ fn resolve_source_span(
             Err(..) => {}
         }
 
-        if let Some((rng, src)) =
-            world.and_then(|world| world.range(s).zip(world.source(id).ok()))
+        if let Some((rng, src)) = world.and_then(|world| world.range(s).zip(world.source(id).ok()))
         {
             let resolve_off = |src: &Source, off: usize| {
                 src.lines()

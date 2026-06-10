@@ -171,8 +171,15 @@ fn list_fonts(command: ListFontsArgs) -> ! {
         println!("{name}");
         if command.variants {
             for index in infos {
-                let info = world.book().info(index).expect("font index should be valid");
-                let FontVariant { style, weight, stretch } = info.variant;
+                let info = world
+                    .book()
+                    .info(index)
+                    .expect("font index should be valid");
+                let FontVariant {
+                    style,
+                    weight,
+                    stretch,
+                } = info.variant;
                 println!("- Style: {style:?}, Weight: {weight:?}, Stretch: {stretch:?}");
             }
         }

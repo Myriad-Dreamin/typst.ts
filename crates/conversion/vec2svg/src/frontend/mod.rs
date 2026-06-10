@@ -657,9 +657,7 @@ fn sample_color_stops(gradient: &GradientItem, t: f32) -> Color {
                 )));
             } else if mixing_space == ColorSpace::Process(ProcessColorSpace::Hsv) {
                 let (_, saturation, value, alpha) = out.to_hsv().into_components();
-                return Color::Process(ProcessColor::Hsv(Hsv::new(
-                    hue, saturation, value, alpha,
-                )));
+                return Color::Process(ProcessColor::Hsv(Hsv::new(hue, saturation, value, alpha)));
             }
         }
     }

@@ -223,8 +223,7 @@ impl TypstCompiler {
         let mut cursor = std::io::Cursor::new(Vec::new());
         let id = src.id();
         let path = id.vpath().get_without_slash();
-        reflexo_typst::dump_ast(path, &src, &mut cursor)
-        .map_err(|e| format!("{e:?}"))?;
+        reflexo_typst::dump_ast(path, &src, &mut cursor).map_err(|e| format!("{e:?}"))?;
         let data = cursor.into_inner();
 
         let converted = ansi_to_html::convert(
@@ -569,8 +568,10 @@ pub struct TDiagnosticsTask<D> {
     _phantom: std::marker::PhantomData<D>,
 }
 
-impl<F: CompilerFeat, D: typst::TypstDocumentTrait + typst::foundations::Output + Send + Sync + 'static> WorldComputable<F>
-    for TDiagnosticsTask<D>
+impl<
+        F: CompilerFeat,
+        D: typst::TypstDocumentTrait + typst::foundations::Output + Send + Sync + 'static,
+    > WorldComputable<F> for TDiagnosticsTask<D>
 {
     type Output = Self;
 

@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::{ops::Deref, path::Path};
 
 use napi_derive::napi;
+use reflexo_typst::foundations::Output;
 use reflexo_typst::syntax::Span;
 use reflexo_typst::typst::diag::At;
 use reflexo_typst::{error::WithContext, DocumentQuery, ExportComputation, ExportWebSvgModuleTask};
@@ -9,7 +10,6 @@ use reflexo_typst::{
     ArcInto, Bytes, ExportDynSvgModuleTask, ShadowApi, SystemCompilerFeat, TypstAbs, TypstDocument,
     TypstDocumentTrait, TypstPagedDocument, TypstSystemWorld,
 };
-use reflexo_typst::foundations::Output;
 use tinymist_project::ImageOutput;
 
 use crate::error::*;
