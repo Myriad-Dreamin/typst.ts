@@ -277,13 +277,13 @@ typst-bundle = { git = "https://github.com/ParaN3xus/typst.git", rev = "daa7c37a
 
 # fontdb = { path = "../fontdb" }
 
-typst-shim = { git = "https://github.com/paran3xus/tinymist.git", rev = "c5df57821ff086276641ba34d6d5f39370fda46d" }
-tinymist-derive = { git = "https://github.com/paran3xus/tinymist.git", rev = "c5df57821ff086276641ba34d6d5f39370fda46d" }
-tinymist-std = { git = "https://github.com/paran3xus/tinymist.git", rev = "c5df57821ff086276641ba34d6d5f39370fda46d" }
-tinymist-task = { git = "https://github.com/paran3xus/tinymist.git", rev = "c5df57821ff086276641ba34d6d5f39370fda46d" }
-tinymist-package = { git = "https://github.com/paran3xus/tinymist.git", rev = "c5df57821ff086276641ba34d6d5f39370fda46d" }
-tinymist-world = { git = "https://github.com/paran3xus/tinymist.git", rev = "c5df57821ff086276641ba34d6d5f39370fda46d" }
-tinymist-project = { git = "https://github.com/paran3xus/tinymist.git", rev = "c5df57821ff086276641ba34d6d5f39370fda46d" }
+typst-shim = { git = "https://github.com/paran3xus/tinymist.git", rev = "532f5e7cff6e1e53accfb741bb9a282a5fd74d85" }
+tinymist-derive = { git = "https://github.com/paran3xus/tinymist.git", rev = "532f5e7cff6e1e53accfb741bb9a282a5fd74d85" }
+tinymist-std = { git = "https://github.com/paran3xus/tinymist.git", rev = "532f5e7cff6e1e53accfb741bb9a282a5fd74d85" }
+tinymist-task = { git = "https://github.com/paran3xus/tinymist.git", rev = "532f5e7cff6e1e53accfb741bb9a282a5fd74d85" }
+tinymist-package = { git = "https://github.com/paran3xus/tinymist.git", rev = "532f5e7cff6e1e53accfb741bb9a282a5fd74d85" }
+tinymist-world = { git = "https://github.com/paran3xus/tinymist.git", rev = "532f5e7cff6e1e53accfb741bb9a282a5fd74d85" }
+tinymist-project = { git = "https://github.com/paran3xus/tinymist.git", rev = "532f5e7cff6e1e53accfb741bb9a282a5fd74d85" }
 
 # typst-shim = { path = "../tinymist/crates/typst-shim" }
 # tinymist-derive = { path = "../tinymist/crates/tinymist-derive" }
