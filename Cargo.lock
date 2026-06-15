@@ -808,15 +808,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "crossbeam-channel"
-version = "0.5.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82b8f8f868b36967f9606790d1903570de9ceaf870a7bf9fbbd3016d636a2cb2"
-dependencies = [
- "crossbeam-utils",
-]
-
-[[package]]
 name = "crossbeam-deque"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2287,11 +2278,11 @@ checksum = "a588916bfdfd92e71cacef98a63d9b1f0d74d6599980d11894290e7ddefffcf7"
 
 [[package]]
 name = "inotify"
-version = "0.9.6"
+version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8069d3ec154eb856955c1c0fbffefbf5f3c40a104ec912d4797314c1801abff"
+checksum = "533e68a5842e734946fe159fb03fc9bbbb254f590dd0d8ad321ae5ff7beca2c1"
 dependencies = [
- "bitflags 1.3.2",
+ "bitflags 2.13.0",
  "inotify-sys",
  "libc",
 ]
@@ -2631,23 +2622,12 @@ checksum = "c505b3e17ed6b70a7ed2e67fbb2c560ee327353556120d6e72f5232b6880d536"
 
 [[package]]
 name = "mio"
-version = "0.8.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4a650543ca06a924e8b371db273b2756685faae30f8487da1b56505a8f78b0c"
-dependencies = [
- "libc",
- "log",
- "wasi",
- "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "mio"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02bd0af71c67b473010cbbc60715ee815645a4dc942899111f494b4b737d6fda"
 dependencies = [
  "libc",
+ "log",
  "wasi",
  "windows-sys 0.61.2",
 ]
@@ -2756,21 +2736,29 @@ checksum = "2bf50223579dc7cdcfb3bfcacf7069ff68243f8c363f62ffa99cf000a6b9c451"
 
 [[package]]
 name = "notify"
-version = "6.1.1"
+version = "8.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6205bd8bb1e454ad2e27422015fb5e4f2bcc7e08fa8f27058670d208324a4d2d"
+checksum = "4d3d07927151ff8575b7087f245456e549fea62edf0ec4e565a5ee50c8402bc3"
 dependencies = [
  "bitflags 2.13.0",
- "crossbeam-channel",
- "filetime",
  "fsevent-sys",
  "inotify",
  "kqueue",
  "libc",
  "log",
- "mio 0.8.11",
+ "mio",
+ "notify-types",
  "walkdir",
- "windows-sys 0.48.0",
+ "windows-sys 0.60.2",
+]
+
+[[package]]
+name = "notify-types"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42b8cfee0e339a0337359f3c88165702ac6e600dc01c0cc9579a92d62b08477a"
+dependencies = [
+ "bitflags 2.13.0",
 ]
 
 [[package]]
@@ -3522,7 +3510,7 @@ dependencies = [
  "tiny-skia-path 0.11.4",
  "tinymist-std",
  "tinymist-world",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
  "wasm-bindgen",
 ]
 
@@ -3557,11 +3545,11 @@ dependencies = [
  "tinymist-task",
  "tinymist-world",
  "tokio",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-eval 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-html 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
+ "typst-eval",
+ "typst-html",
  "typst-pdf",
- "typst-svg 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst-svg",
  "walkdir",
  "web-sys",
 ]
@@ -3582,7 +3570,7 @@ dependencies = [
  "serde-wasm-bindgen",
  "serde_json",
  "sha2",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
  "typst-ts-test-common",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -3616,9 +3604,9 @@ dependencies = [
  "tiny-skia 0.11.4",
  "tiny-skia-path 0.11.4",
  "ttf-parser",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-html 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-svg 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
+ "typst-html",
+ "typst-svg",
  "xmlparser",
 ]
 
@@ -3644,9 +3632,9 @@ dependencies = [
  "tiny-skia 0.11.4",
  "tiny-skia-path 0.11.4",
  "ttf-parser",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-html 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-svg 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
+ "typst-html",
+ "typst-svg",
  "xmlparser",
 ]
 
@@ -3696,7 +3684,7 @@ dependencies = [
  "svgtypes 0.15.3",
  "tiny-skia 0.11.4",
  "tiny-skia-path 0.11.4",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -3726,7 +3714,7 @@ dependencies = [
  "reflexo",
  "reflexo-typst2vec",
  "reflexo-vec2canvas",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
 ]
 
 [[package]]
@@ -4747,8 +4735,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-derive"
-version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?rev=532f5e7cff6e1e53accfb741bb9a282a5fd74d85#532f5e7cff6e1e53accfb741bb9a282a5fd74d85"
+version = "0.15.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
 dependencies = [
  "quote",
  "syn 2.0.117",
@@ -4756,8 +4744,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-l10n"
-version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?rev=532f5e7cff6e1e53accfb741bb9a282a5fd74d85#532f5e7cff6e1e53accfb741bb9a282a5fd74d85"
+version = "0.15.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
 dependencies = [
  "anyhow",
  "clap",
@@ -4770,8 +4758,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-package"
-version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?rev=532f5e7cff6e1e53accfb741bb9a282a5fd74d85#532f5e7cff6e1e53accfb741bb9a282a5fd74d85"
+version = "0.15.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4788,7 +4776,7 @@ dependencies = [
  "tar",
  "tinymist-std",
  "toml 0.8.23",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
  "walkdir",
  "wasm-bindgen",
  "web-sys",
@@ -4796,8 +4784,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-project"
-version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?rev=532f5e7cff6e1e53accfb741bb9a282a5fd74d85#532f5e7cff6e1e53accfb741bb9a282a5fd74d85"
+version = "0.15.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
 dependencies = [
  "anyhow",
  "clap",
@@ -4819,14 +4807,14 @@ dependencies = [
  "tinymist-world",
  "tokio",
  "toml 0.8.23",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-assets",
+ "typst",
+ "typst-assets 0.14.2 (git+https://github.com/typst/typst-assets?rev=3284e80)",
 ]
 
 [[package]]
 name = "tinymist-std"
-version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?rev=532f5e7cff6e1e53accfb741bb9a282a5fd74d85#532f5e7cff6e1e53accfb741bb9a282a5fd74d85"
+version = "0.15.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4853,9 +4841,9 @@ dependencies = [
  "siphasher",
  "tempfile",
  "time",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-html 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-layout 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
+ "typst-html",
+ "typst-layout",
  "typst-shim",
  "wasm-bindgen",
  "web-time",
@@ -4864,8 +4852,8 @@ dependencies = [
 
 [[package]]
 name = "tinymist-task"
-version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?rev=532f5e7cff6e1e53accfb741bb9a282a5fd74d85#532f5e7cff6e1e53accfb741bb9a282a5fd74d85"
+version = "0.15.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
 dependencies = [
  "anyhow",
  "clap",
@@ -4886,21 +4874,21 @@ dependencies = [
  "tinymist-world",
  "tokio",
  "toml 0.8.23",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-assets",
- "typst-eval 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-html 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-layout 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
+ "typst-assets 0.14.2 (git+https://github.com/typst/typst-assets?rev=3284e80)",
+ "typst-eval",
+ "typst-html",
+ "typst-layout",
  "typst-pdf",
  "typst-render",
  "typst-shim",
- "typst-svg 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst-svg",
 ]
 
 [[package]]
 name = "tinymist-vfs"
-version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?rev=532f5e7cff6e1e53accfb741bb9a282a5fd74d85#532f5e7cff6e1e53accfb741bb9a282a5fd74d85"
+version = "0.15.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
 dependencies = [
  "comemo",
  "ecow",
@@ -4911,15 +4899,15 @@ dependencies = [
  "parking_lot",
  "rpds",
  "tinymist-std",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
  "wasm-bindgen",
  "web-sys",
 ]
 
 [[package]]
 name = "tinymist-world"
-version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?rev=532f5e7cff6e1e53accfb741bb9a282a5fd74d85#532f5e7cff6e1e53accfb741bb9a282a5fd74d85"
+version = "0.15.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4949,8 +4937,8 @@ dependencies = [
  "tinymist-std",
  "tinymist-vfs",
  "ttf-parser",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-assets",
+ "typst",
+ "typst-assets 0.14.2 (git+https://github.com/typst/typst-assets?rev=3284e80)",
  "typst-bundle",
  "typst-shim",
  "wasm-bindgen",
@@ -4991,7 +4979,7 @@ checksum = "8fc7f01b389ac15039e4dc9531aa973a135d7a4135281b12d7c1bc79fd57fffe"
 dependencies = [
  "bytes",
  "libc",
- "mio 1.2.1",
+ "mio",
  "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
@@ -5213,42 +5201,30 @@ checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
 name = "typst"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#daa7c37a286526ad63a319840fd5971c255a9a75"
+version = "0.15.0-rc.1"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7"
 dependencies = [
  "arrayvec",
  "comemo",
  "ecow",
  "rustc-hash 2.1.2",
- "typst-eval 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-html 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-layout 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-library 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-realize 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
+ "typst-eval",
+ "typst-html",
+ "typst-layout",
+ "typst-library",
+ "typst-macros",
+ "typst-realize",
+ "typst-syntax",
+ "typst-timing",
+ "typst-utils",
 ]
 
 [[package]]
-name = "typst"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75#daa7c37a286526ad63a319840fd5971c255a9a75"
+name = "typst-assets"
+version = "0.14.2"
+source = "git+https://github.com/typst/typst-assets?rev=3284e80#3284e80cc102b402e4e3db1aa071f1eadae5e7ca"
 dependencies = [
- "arrayvec",
- "comemo",
- "ecow",
- "rustc-hash 2.1.2",
- "typst-eval 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-html 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-layout 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-library 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-realize 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "bitflags 2.13.0",
 ]
 
 [[package]]
@@ -5260,9 +5236,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "typst-bundle"
+name = "typst-assets"
 version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75#daa7c37a286526ad63a319840fd5971c255a9a75"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da9b236d339dce0ec443dc44afe4ba4c6d76b8917bd4b1ae80158d2111f6637b"
+dependencies = [
+ "bitflags 2.13.0",
+]
+
+[[package]]
+name = "typst-bundle"
+version = "0.15.0-rc.1"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7"
 dependencies = [
  "comemo",
  "ecow",
@@ -5270,16 +5255,16 @@ dependencies = [
  "indexmap 2.14.0",
  "rayon",
  "rustc-hash 2.1.2",
- "typst-html 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-layout 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-library 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst-html",
+ "typst-layout",
+ "typst-library",
+ "typst-macros",
  "typst-pdf",
  "typst-render",
- "typst-svg 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst-svg",
+ "typst-syntax",
+ "typst-timing",
+ "typst-utils",
 ]
 
 [[package]]
@@ -5289,8 +5274,8 @@ source = "git+https://github.com/typst/typst-dev-assets?rev=0b12d75772199e072947
 
 [[package]]
 name = "typst-eval"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#daa7c37a286526ad63a319840fd5971c255a9a75"
+version = "0.15.0-rc.1"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7"
 dependencies = [
  "comemo",
  "ecow",
@@ -5298,37 +5283,18 @@ dependencies = [
  "rustc-hash 2.1.2",
  "stacker",
  "toml 0.8.23",
- "typst-library 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "unicode-segmentation",
-]
-
-[[package]]
-name = "typst-eval"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75#daa7c37a286526ad63a319840fd5971c255a9a75"
-dependencies = [
- "comemo",
- "ecow",
- "indexmap 2.14.0",
- "rustc-hash 2.1.2",
- "stacker",
- "toml 0.8.23",
- "typst-library 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst-library",
+ "typst-macros",
+ "typst-syntax",
+ "typst-timing",
+ "typst-utils",
  "unicode-segmentation",
 ]
 
 [[package]]
 name = "typst-html"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#daa7c37a286526ad63a319840fd5971c255a9a75"
+version = "0.15.0-rc.1"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7"
 dependencies = [
  "az",
  "bumpalo",
@@ -5337,60 +5303,38 @@ dependencies = [
  "palette",
  "rustc-hash 2.1.2",
  "time",
- "typst-assets",
- "typst-library 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-svg 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "unicode-math-class",
-]
-
-[[package]]
-name = "typst-html"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75#daa7c37a286526ad63a319840fd5971c255a9a75"
-dependencies = [
- "az",
- "bumpalo",
- "comemo",
- "ecow",
- "palette",
- "rustc-hash 2.1.2",
- "time",
- "typst-assets",
- "typst-library 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-svg 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst-assets 0.15.0",
+ "typst-library",
+ "typst-macros",
+ "typst-svg",
+ "typst-syntax",
+ "typst-timing",
+ "typst-utils",
  "unicode-math-class",
 ]
 
 [[package]]
 name = "typst-ide"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#daa7c37a286526ad63a319840fd5971c255a9a75"
+version = "0.15.0-rc.1"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7"
 dependencies = [
  "comemo",
  "ecow",
  "indexmap 2.14.0",
  "rustc-hash 2.1.2",
  "serde",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-eval 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-html 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-layout 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
+ "typst",
+ "typst-eval",
+ "typst-html",
+ "typst-layout",
+ "typst-utils",
  "unscanny",
 ]
 
 [[package]]
 name = "typst-layout"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#daa7c37a286526ad63a319840fd5971c255a9a75"
+version = "0.15.0-rc.1"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7"
 dependencies = [
  "az",
  "bumpalo",
@@ -5410,47 +5354,12 @@ dependencies = [
  "rustybuzz",
  "smallvec",
  "ttf-parser",
- "typst-assets",
- "typst-library 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "unicode-bidi",
- "unicode-math-class",
- "unicode-script",
- "unicode-segmentation",
-]
-
-[[package]]
-name = "typst-layout"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75#daa7c37a286526ad63a319840fd5971c255a9a75"
-dependencies = [
- "az",
- "bumpalo",
- "codex",
- "comemo",
- "ecow",
- "either",
- "hypher",
- "icu_properties",
- "icu_provider",
- "icu_provider_blob",
- "icu_segmenter",
- "kurbo 0.13.1",
- "libm",
- "memchr",
- "rustc-hash 2.1.2",
- "rustybuzz",
- "smallvec",
- "ttf-parser",
- "typst-assets",
- "typst-library 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst-assets 0.15.0",
+ "typst-library",
+ "typst-macros",
+ "typst-syntax",
+ "typst-timing",
+ "typst-utils",
  "unicode-bidi",
  "unicode-math-class",
  "unicode-script",
@@ -5459,8 +5368,8 @@ dependencies = [
 
 [[package]]
 name = "typst-library"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#daa7c37a286526ad63a319840fd5971c255a9a75"
+version = "0.15.0-rc.1"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7"
 dependencies = [
  "arrayvec",
  "az",
@@ -5507,76 +5416,11 @@ dependencies = [
  "ttf-parser",
  "two-face",
  "typed-arena",
- "typst-assets",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "unicode-math-class",
- "unicode-normalization",
- "unicode-segmentation",
- "unscanny",
- "usvg",
- "utf8_iter",
- "wasmi",
- "xmlwriter",
-]
-
-[[package]]
-name = "typst-library"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75#daa7c37a286526ad63a319840fd5971c255a9a75"
-dependencies = [
- "arrayvec",
- "az",
- "bitflags 2.13.0",
- "bumpalo",
- "ciborium",
- "codex",
- "comemo",
- "csv",
- "ecow",
- "either",
- "flate2",
- "fontdb",
- "glidesort",
- "hayagriva",
- "hayro-syntax",
- "icu_properties",
- "image",
- "indexmap 2.14.0",
- "kamadak-exif",
- "kurbo 0.13.1",
- "libm",
- "lipsum",
- "memchr",
- "moxcms",
- "palette",
- "phf",
- "png 0.18.1",
- "rayon",
- "regex",
- "regex-syntax",
- "roxmltree 0.21.1",
- "rust_decimal",
- "rustc-hash 2.1.2",
- "rustybuzz",
- "serde",
- "serde_json",
- "serde_yaml",
- "siphasher",
- "smallvec",
- "syntect",
- "time",
- "toml 0.8.23",
- "ttf-parser",
- "two-face",
- "typed-arena",
- "typst-assets",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst-assets 0.15.0",
+ "typst-macros",
+ "typst-syntax",
+ "typst-timing",
+ "typst-utils",
  "unicode-math-class",
  "unicode-normalization",
  "unicode-segmentation",
@@ -5589,19 +5433,8 @@ dependencies = [
 
 [[package]]
 name = "typst-macros"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#daa7c37a286526ad63a319840fd5971c255a9a75"
-dependencies = [
- "heck",
- "proc-macro2",
- "quote",
- "syn 2.0.117",
-]
-
-[[package]]
-name = "typst-macros"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75#daa7c37a286526ad63a319840fd5971c255a9a75"
+version = "0.15.0-rc.1"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -5611,8 +5444,8 @@ dependencies = [
 
 [[package]]
 name = "typst-pdf"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75#daa7c37a286526ad63a319840fd5971c255a9a75"
+version = "0.15.0-rc.1"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7"
 dependencies = [
  "az",
  "bytemuck",
@@ -5628,55 +5461,37 @@ dependencies = [
  "rustc-hash 2.1.2",
  "serde",
  "smallvec",
- "typst-assets",
- "typst-layout 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-library 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst-assets 0.15.0",
+ "typst-layout",
+ "typst-library",
+ "typst-macros",
+ "typst-syntax",
+ "typst-timing",
+ "typst-utils",
 ]
 
 [[package]]
 name = "typst-realize"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#daa7c37a286526ad63a319840fd5971c255a9a75"
+version = "0.15.0-rc.1"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7"
 dependencies = [
  "arrayvec",
  "bumpalo",
  "comemo",
  "ecow",
  "regex",
- "typst-html 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-library 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
-]
-
-[[package]]
-name = "typst-realize"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75#daa7c37a286526ad63a319840fd5971c255a9a75"
-dependencies = [
- "arrayvec",
- "bumpalo",
- "comemo",
- "ecow",
- "regex",
- "typst-html 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-library 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst-html",
+ "typst-library",
+ "typst-macros",
+ "typst-syntax",
+ "typst-timing",
+ "typst-utils",
 ]
 
 [[package]]
 name = "typst-render"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75#daa7c37a286526ad63a319840fd5971c255a9a75"
+version = "0.15.0-rc.1"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7"
 dependencies = [
  "bytemuck",
  "comemo",
@@ -5687,30 +5502,30 @@ dependencies = [
  "resvg",
  "tiny-skia 0.12.0",
  "ttf-parser",
- "typst-assets",
- "typst-layout 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-library 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst-assets 0.15.0",
+ "typst-layout",
+ "typst-library",
+ "typst-macros",
+ "typst-timing",
+ "typst-utils",
 ]
 
 [[package]]
 name = "typst-shim"
-version = "0.14.6"
-source = "git+https://github.com/paran3xus/tinymist.git?rev=532f5e7cff6e1e53accfb741bb9a282a5fd74d85#532f5e7cff6e1e53accfb741bb9a282a5fd74d85"
+version = "0.15.0-rc1"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
 dependencies = [
  "cfg-if",
  "comemo",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-eval 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
+ "typst-eval",
+ "typst-syntax",
 ]
 
 [[package]]
 name = "typst-svg"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#daa7c37a286526ad63a319840fd5971c255a9a75"
+version = "0.15.0-rc.1"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -5724,70 +5539,26 @@ dependencies = [
  "rustc-hash 2.1.2",
  "ryu",
  "ttf-parser",
- "typst-assets",
- "typst-layout 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-library 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "xmlwriter",
-]
-
-[[package]]
-name = "typst-svg"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75#daa7c37a286526ad63a319840fd5971c255a9a75"
-dependencies = [
- "base64 0.22.1",
- "comemo",
- "ecow",
- "flate2",
- "hayro",
- "hayro-svg",
- "image",
- "indexmap 2.14.0",
- "itoa",
- "rustc-hash 2.1.2",
- "ryu",
- "ttf-parser",
- "typst-assets",
- "typst-layout 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-library 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-macros 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst-assets 0.15.0",
+ "typst-layout",
+ "typst-library",
+ "typst-macros",
+ "typst-timing",
+ "typst-utils",
  "xmlwriter",
 ]
 
 [[package]]
 name = "typst-syntax"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#daa7c37a286526ad63a319840fd5971c255a9a75"
+version = "0.15.0-rc.1"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7"
 dependencies = [
  "ecow",
  "rustc-hash 2.1.2",
  "serde",
  "toml 0.8.23",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint)",
- "unicode-ident",
- "unicode-math-class",
- "unicode-script",
- "unicode-segmentation",
- "unscanny",
-]
-
-[[package]]
-name = "typst-syntax"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75#daa7c37a286526ad63a319840fd5971c255a9a75"
-dependencies = [
- "ecow",
- "rustc-hash 2.1.2",
- "serde",
- "toml 0.8.23",
- "typst-timing 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-utils 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst-timing",
+ "typst-utils",
  "unicode-ident",
  "unicode-math-class",
  "unicode-script",
@@ -5797,18 +5568,8 @@ dependencies = [
 
 [[package]]
 name = "typst-timing"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#daa7c37a286526ad63a319840fd5971c255a9a75"
-dependencies = [
- "parking_lot",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "typst-timing"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75#daa7c37a286526ad63a319840fd5971c255a9a75"
+version = "0.15.0-rc.1"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7"
 dependencies = [
  "parking_lot",
  "serde",
@@ -5823,7 +5584,7 @@ dependencies = [
  "divan",
  "reflexo-typst",
  "reflexo-typst2vec",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
  "typst-ts-cli",
 ]
 
@@ -5848,8 +5609,8 @@ dependencies = [
  "serde_json",
  "tokio",
  "toml 0.8.23",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-assets",
+ "typst",
+ "typst-assets 0.14.2 (git+https://github.com/typst/typst-assets?rev=955ae8d)",
  "typst-ide",
  "typst-pdf",
  "typst-shim",
@@ -5884,7 +5645,7 @@ dependencies = [
  "rayon",
  "reflexo-typst",
  "tokio",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
  "walkdir",
 ]
 
@@ -5916,8 +5677,8 @@ dependencies = [
  "reflexo-vec2svg",
  "sha2",
  "tokio",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-syntax 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
+ "typst-syntax",
  "typst-ts-dev-server",
  "typst-ts-test-common",
 ]
@@ -5954,7 +5715,7 @@ dependencies = [
  "serde_json",
  "tinymist-project",
  "tokio",
- "typst-svg 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst-svg",
  "typst-ts-cli",
 ]
 
@@ -5966,7 +5727,7 @@ dependencies = [
  "js-sys",
  "reflexo-typst",
  "serde-wasm-bindgen",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
  "typst-ts-test-common",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -5999,7 +5760,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "tiny-skia 0.11.4",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
+ "typst",
  "typst-ts-test-common",
  "vergen",
  "vergen-gitcl",
@@ -6052,8 +5813,8 @@ dependencies = [
  "serde-wasm-bindgen",
  "serde_json",
  "sha2",
- "typst 0.15.0 (git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75)",
- "typst-assets",
+ "typst",
+ "typst-assets 0.14.2 (git+https://github.com/typst/typst-assets?rev=955ae8d)",
  "typst-ts-test-common",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -6063,25 +5824,8 @@ dependencies = [
 
 [[package]]
 name = "typst-utils"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?branch=nightly-content-hint#daa7c37a286526ad63a319840fd5971c255a9a75"
-dependencies = [
- "libm",
- "once_cell",
- "portable-atomic",
- "rayon",
- "rustc-hash 2.1.2",
- "semver",
- "siphasher",
- "smallvec",
- "thin-vec",
- "unicode-math-class",
-]
-
-[[package]]
-name = "typst-utils"
-version = "0.15.0"
-source = "git+https://github.com/ParaN3xus/typst.git?rev=daa7c37a286526ad63a319840fd5971c255a9a75#daa7c37a286526ad63a319840fd5971c255a9a75"
+version = "0.15.0-rc.1"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=typst.ts-v0.8.0#f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7"
 dependencies = [
  "libm",
  "once_cell",
@@ -6822,15 +6566,6 @@ dependencies = [
 
 [[package]]
 name = "windows-sys"
-version = "0.48.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "677d2418bec65e3338edb076e806bc1ec15693c5d0104683f2efe857f61056a9"
-dependencies = [
- "windows-targets 0.48.5",
-]
-
-[[package]]
-name = "windows-sys"
 version = "0.52.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "282be5f36a8ce781fad8c8ae18fa3f9beff57ec1b52cb3de0789201425d9a33d"
@@ -6863,21 +6598,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae137229bcbd6cdf0f7b80a31df61766145077ddf49416a728b02cb3921ff3fc"
 dependencies = [
  "windows-link",
-]
-
-[[package]]
-name = "windows-targets"
-version = "0.48.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a2fa6e2155d7247be68c096456083145c183cbbbc2764150dda45a87197940c"
-dependencies = [
- "windows_aarch64_gnullvm 0.48.5",
- "windows_aarch64_msvc 0.48.5",
- "windows_i686_gnu 0.48.5",
- "windows_i686_msvc 0.48.5",
- "windows_x86_64_gnu 0.48.5",
- "windows_x86_64_gnullvm 0.48.5",
- "windows_x86_64_msvc 0.48.5",
 ]
 
 [[package]]
@@ -6924,12 +6644,6 @@ dependencies = [
 
 [[package]]
 name = "windows_aarch64_gnullvm"
-version = "0.48.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b38e32f0abccf9987a4e3079dfb67dcd799fb61361e53e2882c3cbaf0d905d8"
-
-[[package]]
-name = "windows_aarch64_gnullvm"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32a4622180e7a0ec044bb555404c800bc9fd9ec262ec147edd5989ccd0c02cd3"
@@ -6942,12 +6656,6 @@ checksum = "a9d8416fa8b42f5c947f8482c43e7d89e73a173cead56d044f6a56104a6d1b53"
 
 [[package]]
 name = "windows_aarch64_msvc"
-version = "0.48.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc35310971f3b2dbbf3f0690a219f40e2d9afcf64f9ab7cc1be722937c26b4bc"
-
-[[package]]
-name = "windows_aarch64_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09ec2a7bb152e2252b53fa7803150007879548bc709c039df7627cabbd05d469"
@@ -6957,12 +6665,6 @@ name = "windows_aarch64_msvc"
 version = "0.53.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9d782e804c2f632e395708e99a94275910eb9100b2114651e04744e9b125006"
-
-[[package]]
-name = "windows_i686_gnu"
-version = "0.48.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a75915e7def60c94dcef72200b9a8e58e5091744960da64ec734a6c6e9b3743e"
 
 [[package]]
 name = "windows_i686_gnu"
@@ -6990,12 +6692,6 @@ checksum = "fa7359d10048f68ab8b09fa71c3daccfb0e9b559aed648a8f95469c27057180c"
 
 [[package]]
 name = "windows_i686_msvc"
-version = "0.48.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f55c233f70c4b27f66c523580f78f1004e8b5a8b659e05a4eb49d4166cca406"
-
-[[package]]
-name = "windows_i686_msvc"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "240948bc05c5e7c6dabba28bf89d89ffce3e303022809e73deaefe4f6ec56c66"
@@ -7005,12 +6701,6 @@ name = "windows_i686_msvc"
 version = "0.53.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e7ac75179f18232fe9c285163565a57ef8d3c89254a30685b57d83a38d326c2"
-
-[[package]]
-name = "windows_x86_64_gnu"
-version = "0.48.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53d40abd2583d23e4718fddf1ebec84dbff8381c07cae67ff7768bbf19c6718e"
 
 [[package]]
 name = "windows_x86_64_gnu"
@@ -7026,12 +6716,6 @@ checksum = "9c3842cdd74a865a8066ab39c8a7a473c0778a3f29370b5fd6b4b9aa7df4a499"
 
 [[package]]
 name = "windows_x86_64_gnullvm"
-version = "0.48.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b7b52767868a23d5bab768e390dc5f5c55825b6d30b86c844ff2dc7414044cc"
-
-[[package]]
-name = "windows_x86_64_gnullvm"
 version = "0.52.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24d5b23dc417412679681396f2b49f3de8c1473deb516bd34410872eff51ed0d"
@@ -7041,12 +6725,6 @@ name = "windows_x86_64_gnullvm"
 version = "0.53.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ffa179e2d07eee8ad8f57493436566c7cc30ac536a3379fdf008f47f6bb7ae1"
-
-[[package]]
-name = "windows_x86_64_msvc"
-version = "0.48.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed94fce61571a4006852b7389a063ab983c02eb1bb37b47f8272ce92d06d9538"
 
 [[package]]
 name = "windows_x86_64_msvc"
