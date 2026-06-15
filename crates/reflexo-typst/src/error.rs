@@ -139,12 +139,7 @@ fn resolve_source_span(
                 path = id.vpath().get_with_slash().to_string();
             }
             Ok(WorkspaceResolution::Workspace(workspace)) => {
-                path = id
-                    .vpath()
-                    .realize(&workspace.path())
-                    .as_deref()
-                    .map(unix_slash)
-                    .unwrap_or_default();
+                path = unix_slash(&id.vpath().realize(&workspace.path()));
             }
             Err(..) => {}
         }
