@@ -244,20 +244,20 @@ reflexo-vec2svg = { path = "crates/conversion/vec2svg/" }
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
 # comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
-typst = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.15.0" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.15.0" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.15.0" }
-typst-render = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.15.0" }
-typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.15.0" }
-typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.15.0" }
-typst-eval = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.15.0" }
-typst-html = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.15.0" }
-typst-layout = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.15.0" }
-typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.15.0" }
-typst-macros = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.15.0" }
-typst-timing = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.15.0" }
-typst-utils = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.15.0" }
-typst-bundle = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "tinymist-v0.15.0" }
+typst = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "bb5fbb09623b08a492ef9fb9f1641c559fa9b273" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "bb5fbb09623b08a492ef9fb9f1641c559fa9b273" }
+typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "bb5fbb09623b08a492ef9fb9f1641c559fa9b273" }
+typst-render = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "bb5fbb09623b08a492ef9fb9f1641c559fa9b273" }
+typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "bb5fbb09623b08a492ef9fb9f1641c559fa9b273" }
+typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "bb5fbb09623b08a492ef9fb9f1641c559fa9b273" }
+typst-eval = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "bb5fbb09623b08a492ef9fb9f1641c559fa9b273" }
+typst-html = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "bb5fbb09623b08a492ef9fb9f1641c559fa9b273" }
+typst-layout = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "bb5fbb09623b08a492ef9fb9f1641c559fa9b273" }
+typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "bb5fbb09623b08a492ef9fb9f1641c559fa9b273" }
+typst-macros = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "bb5fbb09623b08a492ef9fb9f1641c559fa9b273" }
+typst-timing = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "bb5fbb09623b08a492ef9fb9f1641c559fa9b273" }
+typst-utils = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "bb5fbb09623b08a492ef9fb9f1641c559fa9b273" }
+typst-bundle = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "bb5fbb09623b08a492ef9fb9f1641c559fa9b273" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }

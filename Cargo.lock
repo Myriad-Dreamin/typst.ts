@@ -45,9 +45,9 @@ checksum = "cc7bb162ec39d46ab1ca8c77bf72e890535becd1751bb45f64c597edb4c8c6b3"
 
 [[package]]
 name = "alloc-stdlib"
-version = "0.2.2"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94fb8275041c72129eb51b7d0322c29b8387a0386127718b096429201a5d6ece"
+checksum = "0e76a019e91224d279006ff972f1e984179a6e9feb050adba6ce8274aef23195"
 dependencies = [
  "alloc-no-stdlib",
 ]
@@ -330,9 +330,9 @@ dependencies = [
 
 [[package]]
 name = "brotli"
-version = "8.0.3"
+version = "8.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8119e4516436f5708bbc474a9d395bf12f1b5395e93a92a56e647ac3388c8610"
+checksum = "5cc91aac060a7a1e25823bdccbfb6af1875b88f17c6daac97894eed8207166b3"
 dependencies = [
  "alloc-no-stdlib",
  "alloc-stdlib",
@@ -341,9 +341,9 @@ dependencies = [
 
 [[package]]
 name = "brotli-decompressor"
-version = "5.0.1"
+version = "5.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5962523e1b92ce1b5e793d9169b9943eece10d39f62550bc04bb605d75b94924"
+checksum = "3a32acac15fe1967bc3986b2a6347dffc965602354ea6f450ad07e8bfd253583"
 dependencies = [
  "alloc-no-stdlib",
  "alloc-stdlib",
@@ -471,9 +471,9 @@ checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
 
 [[package]]
 name = "cc"
-version = "1.2.63"
+version = "1.2.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "556e016178bb5662a08681bbe0f00f8e17631781a4dfc8c45e466e4b185ec27f"
+checksum = "dad887fd958be91b5098c0248def011f4523ab786cd411be668777e55063501f"
 dependencies = [
  "find-msvc-tools",
  "shlex",
@@ -982,7 +982,6 @@ version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7cd812cc2bc1d69d4764bd80df88b4317eaef9e773c75226407d9bc0876b211c"
 dependencies = [
- "powerfmt",
  "serde_core",
 ]
 
@@ -2565,9 +2564,9 @@ dependencies = [
 
 [[package]]
 name = "memchr"
-version = "2.8.1"
+version = "2.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b947ae49db0d222b1dbc6b113ce7248a3fc3a6ca21b696717bfc000ba4484d8"
+checksum = "88904434abc2901f197fe8cc55f0445e7ded921dba5911dad2e2b39b48e663c4"
 
 [[package]]
 name = "memmap2"
@@ -3910,9 +3909,9 @@ dependencies = [
 
 [[package]]
 name = "rust_decimal"
-version = "1.42.0"
+version = "1.42.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c5108e3d4d903e21aac27f12ba5377b6b34f9f44b325e4894c7924169d06995"
+checksum = "be2a24f50780bc85f09cc6ac299bdf1424302742d77221106859c9d8b102126a"
 dependencies = [
  "arrayvec",
  "num-traits",
@@ -4367,9 +4366,9 @@ dependencies = [
 
 [[package]]
 name = "smallvec"
-version = "1.15.1"
+version = "1.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
+checksum = "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
 
 [[package]]
 name = "socket2"
@@ -4650,12 +4649,11 @@ checksum = "3bf63baf9f5039dadc247375c29eb13706706cfde997d0330d05aa63a77d8820"
 
 [[package]]
 name = "time"
-version = "0.3.47"
+version = "0.3.49"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "743bd48c283afc0388f9b8827b976905fb217ad9e647fae3a379a9283c4def2c"
+checksum = "711a53c2d47bbd818258c498c8dbfe186a2526c631495cfe7e078567f86b8469"
 dependencies = [
  "deranged",
- "itoa",
  "libc",
  "num-conv",
  "num_threads",
@@ -4667,15 +4665,15 @@ dependencies = [
 
 [[package]]
 name = "time-core"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7694e1cfe791f8d31026952abf09c69ca6f6fa4e1a1229e18988f06a04a12dca"
+checksum = "9e1c906769ad99c88eaa54e728060edef082f8e358ff32030cb7c7d315e81109"
 
 [[package]]
 name = "time-macros"
-version = "0.2.27"
+version = "0.2.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e70e4c5a0e0a8a4823ad65dfe1a6930e4f4d756dcd9dd7939022b5e8c501215"
+checksum = "71c652a3727a9cbb9a02f707f530b618ce00d0ccd762009c8c23bd191df3c17d"
 dependencies = [
  "num-conv",
  "time-core",
@@ -5202,7 +5200,7 @@ checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 [[package]]
 name = "typst"
 version = "0.15.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=tinymist-v0.15.0#391c2dcd698aabf2917db0336868d16f197057d9"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?rev=bb5fbb09623b08a492ef9fb9f1641c559fa9b273#bb5fbb09623b08a492ef9fb9f1641c559fa9b273"
 dependencies = [
  "arrayvec",
  "comemo",
@@ -5247,7 +5245,7 @@ dependencies = [
 [[package]]
 name = "typst-bundle"
 version = "0.15.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=tinymist-v0.15.0#391c2dcd698aabf2917db0336868d16f197057d9"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?rev=bb5fbb09623b08a492ef9fb9f1641c559fa9b273#bb5fbb09623b08a492ef9fb9f1641c559fa9b273"
 dependencies = [
  "comemo",
  "ecow",
@@ -5275,7 +5273,7 @@ source = "git+https://github.com/typst/typst-dev-assets?rev=0b12d75772199e072947
 [[package]]
 name = "typst-eval"
 version = "0.15.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=tinymist-v0.15.0#391c2dcd698aabf2917db0336868d16f197057d9"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?rev=bb5fbb09623b08a492ef9fb9f1641c559fa9b273#bb5fbb09623b08a492ef9fb9f1641c559fa9b273"
 dependencies = [
  "comemo",
  "ecow",
@@ -5294,7 +5292,7 @@ dependencies = [
 [[package]]
 name = "typst-html"
 version = "0.15.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=tinymist-v0.15.0#391c2dcd698aabf2917db0336868d16f197057d9"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?rev=bb5fbb09623b08a492ef9fb9f1641c559fa9b273#bb5fbb09623b08a492ef9fb9f1641c559fa9b273"
 dependencies = [
  "az",
  "bumpalo",
@@ -5316,7 +5314,7 @@ dependencies = [
 [[package]]
 name = "typst-ide"
 version = "0.15.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=tinymist-v0.15.0#391c2dcd698aabf2917db0336868d16f197057d9"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?rev=bb5fbb09623b08a492ef9fb9f1641c559fa9b273#bb5fbb09623b08a492ef9fb9f1641c559fa9b273"
 dependencies = [
  "comemo",
  "ecow",
@@ -5334,7 +5332,7 @@ dependencies = [
 [[package]]
 name = "typst-layout"
 version = "0.15.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=tinymist-v0.15.0#391c2dcd698aabf2917db0336868d16f197057d9"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?rev=bb5fbb09623b08a492ef9fb9f1641c559fa9b273#bb5fbb09623b08a492ef9fb9f1641c559fa9b273"
 dependencies = [
  "az",
  "bumpalo",
@@ -5369,7 +5367,7 @@ dependencies = [
 [[package]]
 name = "typst-library"
 version = "0.15.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=tinymist-v0.15.0#391c2dcd698aabf2917db0336868d16f197057d9"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?rev=bb5fbb09623b08a492ef9fb9f1641c559fa9b273#bb5fbb09623b08a492ef9fb9f1641c559fa9b273"
 dependencies = [
  "arrayvec",
  "az",
@@ -5435,7 +5433,7 @@ dependencies = [
 [[package]]
 name = "typst-macros"
 version = "0.15.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=tinymist-v0.15.0#391c2dcd698aabf2917db0336868d16f197057d9"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?rev=bb5fbb09623b08a492ef9fb9f1641c559fa9b273#bb5fbb09623b08a492ef9fb9f1641c559fa9b273"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -5446,7 +5444,7 @@ dependencies = [
 [[package]]
 name = "typst-pdf"
 version = "0.15.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=tinymist-v0.15.0#391c2dcd698aabf2917db0336868d16f197057d9"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?rev=bb5fbb09623b08a492ef9fb9f1641c559fa9b273#bb5fbb09623b08a492ef9fb9f1641c559fa9b273"
 dependencies = [
  "az",
  "bytemuck",
@@ -5474,7 +5472,7 @@ dependencies = [
 [[package]]
 name = "typst-realize"
 version = "0.15.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=tinymist-v0.15.0#391c2dcd698aabf2917db0336868d16f197057d9"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?rev=bb5fbb09623b08a492ef9fb9f1641c559fa9b273#bb5fbb09623b08a492ef9fb9f1641c559fa9b273"
 dependencies = [
  "arrayvec",
  "bumpalo",
@@ -5492,7 +5490,7 @@ dependencies = [
 [[package]]
 name = "typst-render"
 version = "0.15.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=tinymist-v0.15.0#391c2dcd698aabf2917db0336868d16f197057d9"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?rev=bb5fbb09623b08a492ef9fb9f1641c559fa9b273#bb5fbb09623b08a492ef9fb9f1641c559fa9b273"
 dependencies = [
  "bytemuck",
  "comemo",
@@ -5526,7 +5524,7 @@ dependencies = [
 [[package]]
 name = "typst-svg"
 version = "0.15.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=tinymist-v0.15.0#391c2dcd698aabf2917db0336868d16f197057d9"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?rev=bb5fbb09623b08a492ef9fb9f1641c559fa9b273#bb5fbb09623b08a492ef9fb9f1641c559fa9b273"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -5552,7 +5550,7 @@ dependencies = [
 [[package]]
 name = "typst-syntax"
 version = "0.15.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=tinymist-v0.15.0#391c2dcd698aabf2917db0336868d16f197057d9"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?rev=bb5fbb09623b08a492ef9fb9f1641c559fa9b273#bb5fbb09623b08a492ef9fb9f1641c559fa9b273"
 dependencies = [
  "ecow",
  "rustc-hash 2.1.2",
@@ -5570,7 +5568,7 @@ dependencies = [
 [[package]]
 name = "typst-timing"
 version = "0.15.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=tinymist-v0.15.0#391c2dcd698aabf2917db0336868d16f197057d9"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?rev=bb5fbb09623b08a492ef9fb9f1641c559fa9b273#bb5fbb09623b08a492ef9fb9f1641c559fa9b273"
 dependencies = [
  "parking_lot",
  "serde",
@@ -5826,7 +5824,7 @@ dependencies = [
 [[package]]
 name = "typst-utils"
 version = "0.15.0"
-source = "git+https://github.com/Myriad-Dreamin/typst.git?branch=tinymist-v0.15.0#391c2dcd698aabf2917db0336868d16f197057d9"
+source = "git+https://github.com/Myriad-Dreamin/typst.git?rev=bb5fbb09623b08a492ef9fb9f1641c559fa9b273#bb5fbb09623b08a492ef9fb9f1641c559fa9b273"
 dependencies = [
  "libm",
  "once_cell",
@@ -6208,9 +6206,9 @@ checksum = "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b"
 
 [[package]]
 name = "wasip2"
-version = "1.0.3+wasi-0.2.9"
+version = "1.0.4+wasi-0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20064672db26d7cdc89c7798c48a0fdfac8213434a1186e5ef29fd560ae223d6"
+checksum = "b67efb37e106e55ce722a510d6b5f9c17f083e5fc79afc2badeb12cc313d9487"
 dependencies = [
  "wit-bindgen 0.57.1",
 ]
@@ -6342,46 +6340,46 @@ dependencies = [
 
 [[package]]
 name = "wasmi"
-version = "1.0.9"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22bf475363d09d960b48275c4ea9403051add498a9d80c64dbc91edabab9d1d0"
+checksum = "2300d0f78cba12f14e29e8dd157ea64050c0a688179aefdb2050105805594a0c"
 dependencies = [
  "spin",
  "wasmi_collections",
  "wasmi_core",
  "wasmi_ir",
- "wasmparser 0.228.0",
+ "wasmparser 0.239.0",
 ]
 
 [[package]]
 name = "wasmi_collections"
-version = "1.0.9"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85851acbdffd675a9b699b3590406a1d37fc1e1fd073743c7c9cf47c59caacba"
+checksum = "f8a8c42a2a76148d43097b1d7cc2a5bf33d5c23bd4dd69015fc887e311767884"
 
 [[package]]
 name = "wasmi_core"
-version = "1.0.9"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef64cf60195d1f937dbaed592a5afce3e6d86868fb8070c5255bc41539d68f9d"
+checksum = "9013136083d988725953390bf668b64b7a218fabf26f8b913bbc59546b97ee27"
 dependencies = [
  "libm",
 ]
 
 [[package]]
 name = "wasmi_ir"
-version = "1.0.9"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5dcb572ce4400e06b5475819f3d6b9048513efbca785f0b9ef3a41747f944fd8"
+checksum = "ba1fa003f79156f406d62ef0e1464dc03e11ace37170e9fa7524299a75ad8f68"
 dependencies = [
  "wasmi_core",
 ]
 
 [[package]]
 name = "wasmparser"
-version = "0.228.0"
+version = "0.239.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4abf1132c1fdf747d56bbc1bb52152400c70f336870f968b85e89ea422198ae3"
+checksum = "8c9d90bb93e764f6beabf1d02028c70a2156a6583e63ac4218dd07ef733368b0"
 dependencies = [
  "bitflags 2.13.0",
 ]
@@ -6979,9 +6977,9 @@ dependencies = [
 
 [[package]]
 name = "zeroize"
-version = "1.8.2"
+version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b97154e67e32c85465826e8bcc1c59429aaaf107c1e4a9e53c8d8ccd5eff88d0"
+checksum = "e13c156562582aa81c60cb29407084cdb54c4164760106ab78e6c5b0858cf64e"
 
 [[package]]
 name = "zerotrie"
