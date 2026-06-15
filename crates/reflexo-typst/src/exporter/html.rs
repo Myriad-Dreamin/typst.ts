@@ -124,7 +124,7 @@ impl HtmlOutput {
                 let link_resolver =
                     LateLinkResolver::new(None, self.document.introspector().as_ref());
                 let mut w = Writer::new(link_resolver.track(), self.pretty);
-                w.buf.push_str("<!DOCTYPE html>\n");
+                w.buf.push_str("<!DOCTYPE html>");
                 write_indent(&mut w);
                 write_element(&mut w, self.document.root())?;
                 if w.pretty {
@@ -523,7 +523,7 @@ fn write_frame(w: &mut Writer, frame: &HtmlFrame) {
     let svg = typst_svg::svg_in_html(
         &frame.inner,
         frame.text_size,
-        false,
+        w.pretty,
         frame.id.as_deref(),
         &eco_format!("{}", frame.css.to_inline()),
         &frame.anchors,
