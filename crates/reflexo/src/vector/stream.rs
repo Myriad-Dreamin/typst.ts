@@ -26,7 +26,7 @@ impl From<AlignedVec> for RkyvStreamData<'_> {
 impl<'a> From<&'a [u8]> for RkyvStreamData<'a> {
     #[inline]
     fn from(v: &'a [u8]) -> Self {
-        if (v.as_ptr() as usize) % AlignedVec::ALIGNMENT != 0 {
+        if !(v.as_ptr() as usize).is_multiple_of(AlignedVec::ALIGNMENT) {
             let mut aligned = AlignedVec::with_capacity(v.len());
             aligned.extend_from_slice(v);
             Self::Unaligned(aligned)

@@ -327,10 +327,11 @@ impl Deref for LayoutSourceMapping {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(tag = "t", content = "v")]
 pub enum LayoutSelectorExpr {
     /// Selects any layout (smartly).
+    #[default]
     Any,
     /// Selects the first layout.
     First,
@@ -346,12 +347,6 @@ pub enum LayoutSelectorExpr {
     StrEQ(String),
 }
 
-impl Default for LayoutSelectorExpr {
-    fn default() -> Self {
-        Self::Any
-    }
-}
-
 impl LayoutSelector for LayoutSelectorExpr {
     fn select_by_scalar(
         &self,
@@ -361,15 +356,10 @@ impl LayoutSelector for LayoutSelectorExpr {
         let t = match self {
             LayoutSelectorExpr::Any | LayoutSelectorExpr::First => layouts.first(),
             LayoutSelectorExpr::Last => layouts.last(),
-            LayoutSelectorExpr::ScalarLB(v) => layouts
-                .iter()
-                .filter(|(scalar, _)| scalar.0 < *v)
-                .next_back(),
-            LayoutSelectorExpr::ScalarUB(v) => layouts
-                .iter()
-                .rev()
-                .filter(|(scalar, _)| scalar.0 > *v)
-                .next_back(),
+            LayoutSelectorExpr::ScalarLB(v) => layouts.iter().rfind(|(scalar, _)| scalar.0 < *v),
+            LayoutSelectorExpr::ScalarUB(v) => {
+                layouts.iter().rev().rfind(|(scalar, _)| scalar.0 > *v)
+            }
             LayoutSelectorExpr::StrEQ(..) => {
                 return Err(
                     error_once!("LayoutMappingSelector: cannot select kind by scalar type", kind: kind.to_owned()),
@@ -395,8 +385,7 @@ impl LayoutSelector for LayoutSelectorExpr {
             LayoutSelectorExpr::Last => layouts.last().map(|(_, v)| v.clone()),
             LayoutSelectorExpr::StrEQ(v) => layouts
                 .iter()
-                .filter(|(s, _)| s.as_ref() == v)
-                .next_back()
+                .rfind(|(s, _)| s.as_ref() == v)
                 .map(|(_, v)| v.clone()),
             LayoutSelectorExpr::ScalarLB(..) | LayoutSelectorExpr::ScalarUB(..) => {
                 return Err(

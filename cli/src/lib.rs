@@ -439,8 +439,9 @@ pub struct GenPackagesDocArgs {
 }
 
 /// Which format to use for diagnostics.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, ValueEnum)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, ValueEnum, Default)]
 pub enum DiagnosticFormat {
+    #[default]
     Human,
     Short,
 }
@@ -451,12 +452,6 @@ impl From<DiagnosticFormat> for reflexo_typst::DiagnosticFormat {
             DiagnosticFormat::Human => Self::Human,
             DiagnosticFormat::Short => Self::Short,
         }
-    }
-}
-
-impl Default for DiagnosticFormat {
-    fn default() -> Self {
-        Self::Human
     }
 }
 
