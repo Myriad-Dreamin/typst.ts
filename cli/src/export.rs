@@ -6,12 +6,12 @@ use reflexo_typst::program_meta::REPORT_BUG_MESSAGE;
 use reflexo_typst::svg::DefaultExportFeature;
 use reflexo_typst::task::{ExportHtmlTask, ExportPdfTask, ExportTextTask};
 use reflexo_typst::{
-    AstExport, Bytes, CompilationTask, CompileReport, ConfigTask, DiagnosticHandler,
-    DiagnosticsTask, DynSvgModuleExport, DynSystemComputation, ExportAstTask, ExportComputation,
-    ExportDynSvgModuleTask, ExportWebSvgHtmlTask, ExportWebSvgModuleTask, ExportWebSvgTask,
-    FlagTask, HtmlCompilationTask, HtmlExport, OptionDocumentTask, PagedCompilationTask, PdfExport,
-    SystemCompilerFeat, TakeAs, TextExport, WebSvgExport, WebSvgHtmlExport, WebSvgModuleExport,
-    WorldComputable, WorldComputeGraph,
+    AstExport, BundleCompilationTask, Bytes, CompilationTask, CompileReport, ConfigTask,
+    DiagnosticHandler, DiagnosticsTask, DynSvgModuleExport, DynSystemComputation, ExportAstTask,
+    ExportComputation, ExportDynSvgModuleTask, ExportWebSvgHtmlTask, ExportWebSvgModuleTask,
+    ExportWebSvgTask, FlagTask, HtmlCompilationTask, HtmlExport, OptionDocumentTask,
+    PagedCompilationTask, PdfExport, SystemCompilerFeat, TakeAs, TextExport, WebSvgExport,
+    WebSvgHtmlExport, WebSvgModuleExport, WorldComputable, WorldComputeGraph,
 };
 use typst::{foundations::Output, model::Document, World};
 
@@ -335,6 +335,7 @@ fn prepare_exporters_impl(
 
         let _ = graph.provide::<FlagTask<PagedCompilationTask>>(Ok(FlagTask::flag(false)));
         let _ = graph.provide::<FlagTask<HtmlCompilationTask>>(Ok(FlagTask::flag(false)));
+        let _ = graph.provide::<FlagTask<BundleCompilationTask>>(Ok(FlagTask::flag(false)));
 
         let diag = graph.compute::<DiagnosticsTask>()?;
 

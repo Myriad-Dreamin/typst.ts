@@ -6,7 +6,8 @@ use std::process::exit;
 use clap::Parser;
 use log::info;
 use reflexo_typst::path::PathClean;
-use reflexo_typst::{DiagnosticsTask, EntryReader, TaskInputs};
+use reflexo_typst::typst::syntax::VirtualPath;
+use reflexo_typst::{DiagnosticsTask, EntryReader, EntryState, TaskInputs};
 use tokio::io::AsyncBufReadExt;
 use typst_ts_cli::export::ReflexoTaskBuilder;
 use typst_ts_dev_server::{
@@ -87,9 +88,12 @@ fn compile_corpus(args: CompileCorpusArgs) {
         tb.args(&compile_args, Some(&entry));
         let exporter = tb.build();
 
-        let entry = verse.entry_state().try_select_path_in_workspace(&entry);
+        let entry = match select_entry_in_workspace(&verse.entry_state(), &entry) {
+            Ok(entry) => entry,
+            Err(err) => return Some(format!("{cat}/{name}: {err}")),
+        };
         let graph = verse.computation_with(TaskInputs {
-            entry: entry.unwrap(),
+            entry: Some(entry),
             inputs: None,
         });
 
@@ -199,6 +203,23 @@ fn expected_artifact_paths(entry: &Path, formats: &[String]) -> Vec<PathBuf> {
     paths.sort();
     paths.dedup();
     paths
+}
+
+fn select_entry_in_workspace(state: &EntryState, entry: &Path) -> Result<EntryState, String> {
+    match state.workspace_root() {
+        Some(root) => {
+            let main = VirtualPath::virtualize(&root, entry).map_err(|err| {
+                format!(
+                    "cannot select entry file out of workspace: {err}; entry: {}; root: {}",
+                    entry.display(),
+                    root.display()
+                )
+            })?;
+            Ok(EntryState::new_rooted(root, Some(main)))
+        }
+        None => EntryState::new_rooted_by_parent(entry.into())
+            .ok_or_else(|| format!("failed to determine root for {}", entry.display())),
+    }
 }
 
 const fn yarn_cmd() -> &'static str {

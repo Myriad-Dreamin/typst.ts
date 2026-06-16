@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reflexo Release"
+  short_description: "Guide Reflexo releases safely"
+  default_prompt: "Use $reflexo-release to inspect the current repository release process and produce a concise release checklist."
