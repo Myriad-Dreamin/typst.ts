@@ -1,11 +1,6 @@
-use std::{
-    ops::Deref,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{ops::Deref, path::Path, sync::Arc};
 
 use js_sys::{Object, Uint8Array};
-use reflexo_typst::EntryState;
 use reflexo_typst::{
     font::web::BrowserFontSearcher,
     foundations::IntoValue,
@@ -45,13 +40,6 @@ impl Snapshot {
             errors: Vec::new(),
         })
     }
-}
-
-fn root_relative_to_virtual(path: &Path) -> Result<PathBuf, JsValue> {
-    let path = path
-        .to_str()
-        .ok_or_else(|| format!("entry file path must be utf-8: {}", path.display()))?;
-    Ok(PathBuf::from(format!("/{}", path.trim_start_matches('/'))))
 }
 
 #[wasm_bindgen]
@@ -191,7 +179,9 @@ impl TypstCompiler {
             None => Ok(None),
             Some(args) => Ok(Some(TaskInputs {
                 entry: match args.main_file_path {
-                    Some(path) => Self::select_entry_in_workspace(ctx.entry_state(), &path)?,
+                    Some(path) => ctx
+                        .entry_state()
+                        .try_select_path_in_workspace(Path::new(&path))?,
                     None => None,
                 },
                 inputs: args
@@ -199,26 +189,6 @@ impl TypstCompiler {
                     .map(|inputs| Arc::new(LazyHash::new(convert_inputs(&inputs)))),
             })),
         }
-    }
-
-    fn select_entry_in_workspace(
-        entry: EntryState,
-        main_file_path: &str,
-    ) -> Result<Option<EntryState>, JsValue> {
-        let path = Path::new(main_file_path);
-        let Some(root) = entry.root() else {
-            return Ok(Some(entry.select_in_workspace(path)));
-        };
-
-        let path = path.strip_prefix(&root).map_err(|err| {
-            format!(
-                "entry file is not in workspace: {err}; entry: {}; root: {}",
-                path.display(),
-                root.display()
-            )
-        })?;
-        let path = root_relative_to_virtual(path)?;
-        Ok(Some(entry.select_in_workspace(&path)))
     }
 
     fn compile_doc(&mut self, input: &SnapshotArgs) -> Result<TypstDocument, JsValue> {
