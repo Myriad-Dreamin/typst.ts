@@ -1061,7 +1061,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1192,7 +1192,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1969,7 +1969,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.6.4",
+ "socket2 0.5.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -2776,7 +2776,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3269,7 +3269,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash 2.1.2",
  "rustls",
- "socket2 0.6.4",
+ "socket2 0.5.10",
  "thiserror",
  "tokio",
  "tracing",
@@ -3306,9 +3306,9 @@ dependencies = [
  "cfg_aliases 0.2.1",
  "libc",
  "once_cell",
- "socket2 0.6.4",
+ "socket2 0.5.10",
  "tracing",
- "windows-sys 0.60.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3955,7 +3955,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -4594,7 +4594,7 @@ dependencies = [
  "getrandom 0.4.2",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -4613,7 +4613,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
 dependencies = [
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -4736,7 +4736,7 @@ dependencies = [
 [[package]]
 name = "tinymist-derive"
 version = "0.15.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=4951a39a80e808bd411807e46da645e12c52c923#4951a39a80e808bd411807e46da645e12c52c923"
 dependencies = [
  "quote",
  "syn 2.0.117",
@@ -4745,7 +4745,7 @@ dependencies = [
 [[package]]
 name = "tinymist-l10n"
 version = "0.15.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=4951a39a80e808bd411807e46da645e12c52c923#4951a39a80e808bd411807e46da645e12c52c923"
 dependencies = [
  "anyhow",
  "clap",
@@ -4759,7 +4759,7 @@ dependencies = [
 [[package]]
 name = "tinymist-package"
 version = "0.15.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=4951a39a80e808bd411807e46da645e12c52c923#4951a39a80e808bd411807e46da645e12c52c923"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -4785,7 +4785,7 @@ dependencies = [
 [[package]]
 name = "tinymist-project"
 version = "0.15.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=4951a39a80e808bd411807e46da645e12c52c923#4951a39a80e808bd411807e46da645e12c52c923"
 dependencies = [
  "anyhow",
  "clap",
@@ -4814,7 +4814,7 @@ dependencies = [
 [[package]]
 name = "tinymist-std"
 version = "0.15.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=4951a39a80e808bd411807e46da645e12c52c923#4951a39a80e808bd411807e46da645e12c52c923"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -4853,7 +4853,7 @@ dependencies = [
 [[package]]
 name = "tinymist-task"
 version = "0.15.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=4951a39a80e808bd411807e46da645e12c52c923#4951a39a80e808bd411807e46da645e12c52c923"
 dependencies = [
  "anyhow",
  "clap",
@@ -4888,7 +4888,7 @@ dependencies = [
 [[package]]
 name = "tinymist-vfs"
 version = "0.15.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=4951a39a80e808bd411807e46da645e12c52c923#4951a39a80e808bd411807e46da645e12c52c923"
 dependencies = [
  "comemo",
  "ecow",
@@ -4907,7 +4907,7 @@ dependencies = [
 [[package]]
 name = "tinymist-world"
 version = "0.15.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=4951a39a80e808bd411807e46da645e12c52c923#4951a39a80e808bd411807e46da645e12c52c923"
 dependencies = [
  "anyhow",
  "chrono",
@@ -5513,7 +5513,7 @@ dependencies = [
 [[package]]
 name = "typst-shim"
 version = "0.15.0-rc1"
-source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=22b13f64af7931ca9179e6ea0e1e4316cb88f92b#22b13f64af7931ca9179e6ea0e1e4316cb88f92b"
+source = "git+https://github.com/Myriad-Dreamin/tinymist.git?rev=4951a39a80e808bd411807e46da645e12c52c923#4951a39a80e808bd411807e46da645e12c52c923"
 dependencies = [
  "cfg-if",
  "comemo",
@@ -6454,7 +6454,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
