@@ -14,7 +14,7 @@ pub fn mutate(code: String) -> io::Result<String> {
     let mut tr = Mutator::build_context()?;
 
     let syntax = typst_syntax::parse(&code);
-    let errors = syntax.errors();
+    let (errors, _) = syntax.errors_and_warnings();
     if !errors.is_empty() {
         panic!("Syntax errors: {errors:?}");
     }
@@ -48,17 +48,17 @@ impl Mutator {
 
     fn mutate_syntax(&mut self, syntax: &SyntaxNode) -> io::Result<()> {
         match syntax.kind() {
-            SyntaxKind::Text => self.mutate_text(syntax.text()),
+            SyntaxKind::Text => self.mutate_text(syntax.leaf_text()),
             SyntaxKind::LineComment => {
                 write!(self.output, "//")?;
-                let content = &syntax.text()[2..];
+                let content = &syntax.leaf_text()[2..];
                 write!(self.output, "{content}")?;
                 // self.translate_text(content)?;
                 Ok(())
             }
             SyntaxKind::BlockComment => {
                 write!(self.output, "/*")?;
-                let content = &syntax.text()[2..syntax.text().len() - 2];
+                let content = &syntax.leaf_text()[2..syntax.leaf_text().len() - 2];
                 write!(self.output, "{content}")?;
                 // self.translate_text(content)?;
                 write!(self.output, "*/")?;
@@ -66,18 +66,18 @@ impl Mutator {
             }
             SyntaxKind::Str if self.aggressive => {
                 write!(self.output, "\"")?;
-                let content = &syntax.text()[1..syntax.text().len() - 1];
+                let content = &syntax.leaf_text()[1..syntax.leaf_text().len() - 1];
                 self.mutate_text(content)?;
                 write!(self.output, "\"")?;
                 Ok(())
             }
             SyntaxKind::Raw => {
                 let raw: ast::Raw = syntax.cast().unwrap();
-                let backticks = syntax.text().split(|c| c != '`').next().unwrap();
+                let backticks = syntax.leaf_text().split(|c| c != '`').next().unwrap();
                 write!(self.output, "{backticks}")?;
 
                 let mut text = syntax
-                    .text()
+                    .leaf_text()
                     .trim_start_matches('`')
                     .strip_suffix(backticks)
                     .unwrap();
@@ -93,7 +93,7 @@ impl Mutator {
                 Ok(())
             }
             SyntaxKind::Link => {
-                let (scheme, rest) = syntax.text().split_once(':').unwrap();
+                let (scheme, rest) = syntax.leaf_text().split_once(':').unwrap();
                 write!(self.output, "{scheme}:")?;
                 self.mutate_text(rest)
             }
@@ -156,7 +156,7 @@ impl Mutator {
                 self.write_node(child)?;
             }
         } else {
-            write!(self.output, "{}", syntax.text())?;
+            write!(self.output, "{}", syntax.leaf_text())?;
         }
         Ok(())
     }

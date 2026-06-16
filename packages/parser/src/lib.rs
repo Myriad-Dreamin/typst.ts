@@ -1,11 +1,11 @@
-use std::{path::Path, sync::Arc};
+use std::sync::Arc;
 
 use js_sys::Uint32Array;
 use reflexo_typst::error::prelude::*;
 use reflexo_typst::parser::{
     get_semantic_tokens_full, get_semantic_tokens_legend, OffsetEncoding, SemanticToken,
 };
-use typst::syntax::{FileId, VirtualPath};
+use typst::syntax::{FileId, RootedPath, VirtualPath, VirtualRoot};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -34,7 +34,10 @@ impl TypstParser {
         offset_encoding: OffsetEncoding,
     ) -> Arc<Vec<SemanticToken>> {
         let src = typst::syntax::Source::new(
-            FileId::new(None, VirtualPath::new(Path::new("/main.typ"))),
+            FileId::new(RootedPath::new(
+                VirtualRoot::Project,
+                VirtualPath::new("/main.typ").unwrap(),
+            )),
             src,
         );
 

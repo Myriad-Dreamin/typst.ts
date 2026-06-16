@@ -1,15 +1,16 @@
 use std::fmt::Write;
 use std::sync::{Arc, OnceLock};
 
+use comemo::{Track, Tracked};
 use ecow::{eco_format, EcoString};
 use reflexo::error::prelude::*;
 use reflexo::typst::TypstHtmlDocument;
 use tinymist_world::{CompilerFeat, ExportComputation, WorldComputeGraph};
 use typst::diag::{bail, At, SourceResult, StrResult};
 use typst::foundations::Repr;
-use typst::introspection::Introspector;
+use typst::model::LateLinkResolver;
 use typst::syntax::Span;
-use typst_html::{charsets, tag, HtmlAttr, HtmlElement, HtmlFrame, HtmlNode, HtmlTag};
+use typst_html::{attr, charsets, property, tag, HtmlElement, HtmlFrame, HtmlNode, HtmlTag};
 
 pub type ExportStaticHtmlTask = tinymist_task::ExportHtmlTask;
 pub type StaticHtmlExport = tinymist_task::HtmlExport;
@@ -42,7 +43,7 @@ pub struct HtmlOutput {
 
 impl HtmlOutput {
     fn root_child(&self, idx: Option<usize>) -> Option<&HtmlElement> {
-        match self.document.root.children.get(idx?)? {
+        match self.document.root().children.get(idx?)? {
             HtmlNode::Element(e) => Some(e),
             _ => None,
         }
@@ -98,8 +99,9 @@ impl HtmlOutput {
     pub fn body(&self) -> SourceResult<&str> {
         self.body
             .get_or_init(|| {
-                let introspector = &self.document.introspector;
-                let mut w = Writer::new(introspector, self.pretty);
+                let link_resolver =
+                    LateLinkResolver::new(None, self.document.introspector().as_ref());
+                let mut w = Writer::new(link_resolver.track(), self.pretty);
                 write_indent(&mut w);
                 if let Some(body) = self.root_child(self.body_idx) {
                     write_element_with_tag(&mut w, body, "div")?;
@@ -119,11 +121,12 @@ impl HtmlOutput {
     pub fn html(&self) -> SourceResult<&str> {
         self.html
             .get_or_init(|| {
-                let introspector = &self.document.introspector;
-                let mut w = Writer::new(introspector, self.pretty);
-                w.buf.push_str("<!DOCTYPE html>\n");
+                let link_resolver =
+                    LateLinkResolver::new(None, self.document.introspector().as_ref());
+                let mut w = Writer::new(link_resolver.track(), self.pretty);
+                w.buf.push_str("<!DOCTYPE html>");
                 write_indent(&mut w);
-                write_element(&mut w, &self.document.root)?;
+                write_element(&mut w, self.document.root())?;
                 if w.pretty {
                     w.buf.push('\n');
                 }
@@ -140,8 +143,6 @@ impl HtmlOutput {
     }
 }
 
-const TYPE: HtmlAttr = HtmlAttr::constant("type");
-
 fn find_tag_child(element: &HtmlElement, tag: HtmlTag) -> Option<usize> {
     element.children.iter().position(|node| match node {
         HtmlNode::Element(e) => e.tag == tag,
@@ -151,8 +152,8 @@ fn find_tag_child(element: &HtmlElement, tag: HtmlTag) -> Option<usize> {
 
 /// Encodes an HTML document into a string.
 pub fn static_html(document: &Arc<TypstHtmlDocument>) -> SourceResult<HtmlOutput> {
-    let head_idx = find_tag_child(&document.root, tag::head);
-    let body_idx = find_tag_child(&document.root, tag::body);
+    let head_idx = find_tag_child(document.root(), tag::head);
+    let body_idx = find_tag_child(document.root(), tag::body);
 
     Ok(HtmlOutput {
         pretty: true,
@@ -169,19 +170,19 @@ struct Writer<'a> {
     buf: String,
     /// The current indentation level
     level: usize,
-    /// The document's introspector.
-    introspector: &'a Introspector,
+    /// Used to resolve links between the document and contained frames.
+    link_resolver: Tracked<'a, LateLinkResolver<'a>>,
     /// Whether pretty printing is enabled.
     pretty: bool,
 }
 
 impl<'a> Writer<'a> {
     /// Creates a new writer.
-    fn new(introspector: &'a Introspector, pretty: bool) -> Self {
+    fn new(link_resolver: Tracked<'a, LateLinkResolver<'a>>, pretty: bool) -> Self {
         Self {
             buf: String::new(),
             level: 0,
-            introspector,
+            link_resolver,
             pretty,
         }
     }
@@ -250,9 +251,13 @@ fn write_element_with_tag(w: &mut Writer, element: &HtmlElement, tag: &str) -> S
         }
     }
 
+    if tag::is_foreign_self_closing(element.tag) {
+        w.buf.push('/');
+    }
+
     w.buf.push('>');
 
-    if tag::is_void(element.tag) {
+    if tag::is_void(element.tag) || tag::is_foreign_self_closing(element.tag) {
         if !element.children.is_empty() {
             bail!(element.span, "HTML void elements must not have children");
         }
@@ -284,7 +289,7 @@ fn write_children(w: &mut Writer, element: &HtmlElement) -> SourceResult<()> {
     let pretty = w.pretty;
     let pretty_inside = allows_pretty_inside(element.tag)
         && element.children.iter().any(|node| match node {
-            HtmlNode::Element(child) => wants_pretty_around(child.tag),
+            HtmlNode::Element(child) => wants_pretty_around(child),
             HtmlNode::Frame(_) => true,
             _ => false,
         });
@@ -296,7 +301,7 @@ fn write_children(w: &mut Writer, element: &HtmlElement) -> SourceResult<()> {
     for c in &element.children {
         let pretty_around = match c {
             HtmlNode::Tag(_) => continue,
-            HtmlNode::Element(child) => w.pretty && wants_pretty_around(child.tag),
+            HtmlNode::Element(child) => w.pretty && wants_pretty_around(child),
             HtmlNode::Text(..) | HtmlNode::Frame(_) => false,
         };
 
@@ -334,7 +339,7 @@ fn write_raw(w: &mut Writer, element: &HtmlElement) -> SourceResult<()> {
         bail!(
             element.span,
             "HTML raw text element cannot contain its own closing tag";
-            hint: "the sequence `{closing}` appears in the raw text",
+            hint: "the sequence `{closing}` appears in the raw text";
         )
     }
 
@@ -435,7 +440,7 @@ impl RawMode {
                     .attrs
                     .0
                     .iter()
-                    .any(|(attr, value)| *attr == TYPE && value != "text/javascript") =>
+                    .any(|(attr, value)| *attr == attr::r#type && value != "text/javascript") =>
             {
                 // Template literals can be multi-line, so indent may change
                 // the semantics of the JavaScript.
@@ -460,9 +465,16 @@ impl RawMode {
 /// rules to `<p>` can make it sensitive to whitespace. For this reason, we
 /// should also respect the `style` tag in the future.
 fn allows_pretty_inside(tag: HtmlTag) -> bool {
-    (tag::is_block_by_default(tag) && tag != tag::pre)
-        || tag::is_tabular_by_default(tag)
-        || tag == tag::li
+    if tag::mathml::is_mathml(tag) && !tag::mathml::is_token(tag) {
+        return true;
+    }
+    let Some(display) = property::Display::default_for(tag) else {
+        return false;
+    };
+    (display == property::Display::Block && tag != tag::pre)
+        || display.is_tabular()
+        || display == property::Display::ListItem
+        || tag == tag::head
 }
 
 /// Whether newlines should be added before and after the element if the parent
@@ -470,8 +482,17 @@ fn allows_pretty_inside(tag: HtmlTag) -> bool {
 ///
 /// In contrast to `allows_pretty_inside`, which is purely spec-driven, this is
 /// more subjective and depends on preference.
-fn wants_pretty_around(tag: HtmlTag) -> bool {
-    allows_pretty_inside(tag) || tag::is_metadata(tag) || tag == tag::pre
+fn wants_pretty_around(element: &HtmlElement) -> bool {
+    match element.tag {
+        tag::mathml::math => element
+            .attrs
+            .get(attr::mathml::display)
+            .is_some_and(|v| v == "block"),
+        t if tag::mathml::is_mathml(t) => true,
+        tag::pre => true,
+        t if tag::is_metadata_content(t) => true,
+        t => allows_pretty_inside(t),
+    }
 }
 
 /// Escape a character.
@@ -499,12 +520,14 @@ fn unencodable(c: char) -> EcoString {
 
 /// Encode a laid out frame into the writer.
 fn write_frame(w: &mut Writer, frame: &HtmlFrame) {
-    let svg = typst_svg::svg_html_frame(
+    let svg = typst_svg::svg_in_html(
         &frame.inner,
         frame.text_size,
+        w.pretty,
         frame.id.as_deref(),
-        &frame.link_points,
-        w.introspector,
+        &eco_format!("{}", frame.css.to_inline()),
+        &frame.anchors,
+        w.link_resolver,
     );
     w.buf.push_str(&svg);
 }

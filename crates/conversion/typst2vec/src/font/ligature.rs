@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use ttf_parser::gsub::{Ligature, SubstitutionSubtable};
 use ttf_parser::GlyphId;
-use typst::text::Font;
+use typst::text::FontInstance;
 
 use reflexo::ImmutStr;
 
@@ -124,11 +124,11 @@ impl LigatureResolver {
 }
 
 #[comemo::memoize]
-fn get_ligature_resolver(font: &Font) -> Arc<LigatureResolver> {
+fn get_ligature_resolver(font: &FontInstance) -> Arc<LigatureResolver> {
     Arc::new(LigatureResolver::new(font.ttf()))
 }
 
-pub(super) fn resolve_ligature(font: &Font, id: GlyphId) -> Option<ImmutStr> {
+pub(super) fn resolve_ligature(font: &FontInstance, id: GlyphId) -> Option<ImmutStr> {
     let resolver = get_ligature_resolver(font);
     // let res = resolver.resolve(font.ttf(), id);
     // eprintln!("resolve_ligature {:?} {:?} -> {:?}", font, id, res);

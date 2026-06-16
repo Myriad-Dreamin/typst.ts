@@ -7,7 +7,7 @@ readme = "README.md"
 license = "Apache-2.0"
 homepage = "https://myriad-dreamin.github.io/typst.ts/"
 repository = "https://github.com/Myriad-Dreamin/typst.ts"
-rust-version = "1.89"
+rust-version = "1.92"
 
 [workspace]
 resolver = "2"
@@ -67,19 +67,19 @@ lto = "thin"
 [workspace.dependencies]
 
 # typesetting
-typst = "0.14.2"
-typst-eval = "0.14.2"
-typst-ide = "0.14.2"
-typst-pdf = "0.14.2"
-typst-render = "0.14.2"
-typst-svg = "0.14.2"
-typst-syntax = "0.14.2"
-typst-html = "0.14.2"
+typst = "0.15.0-rc.1"
+typst-eval = "0.15.0-rc.1"
+typst-ide = "0.15.0-rc.1"
+typst-pdf = "0.15.0-rc.1"
+typst-render = "0.15.0-rc.1"
+typst-svg = "0.15.0-rc.1"
+typst-syntax = "0.15.0-rc.1"
+typst-html = "0.15.0-rc.1"
 
 ttf-parser = "0.25.0"
 
-typst-assets = "0.14.2"
-typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", tag = "v0.14.2" }
+typst-assets = { git = "https://github.com/typst/typst-assets", rev = "955ae8d" }
+typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", rev = "0b12d75772199e07294749ffe078ea030b857746" }
 
 # general
 anyhow = "1"
@@ -130,7 +130,7 @@ walkdir = "2"
 js-sys = "^0.3"
 napi = { version = "2", features = ["serde-json", "napi4"] }
 napi-derive = "2"
-wasm-bindgen = "^0.2"
+wasm-bindgen = "=0.2.118"
 wasm-bindgen-futures = "^0.4"
 wasm-bindgen-test = "0.3.45"
 web-sys = "^0.3"
@@ -189,15 +189,15 @@ vergen = { version = "9.0.1", features = [
     # "gitcl",
     "rustc",
 ] }
-vergen-gitcl = { version = "1.0.1" }
+vergen-gitcl = { version = "9.1.0" }
 
 # tinymist's world implementation
-typst-shim = { version = "0.14.6-rc2" }
-tinymist-std = { version = "0.14.6-rc2", default-features = false }
-tinymist-task = { version = "0.14.6-rc2", default-features = false }
-tinymist-world = { version = "0.14.6-rc2", default-features = false }
-tinymist-package = { version = "0.14.6-rc2", default-features = false }
-tinymist-project = { version = "0.14.6-rc2", default-features = false }
+typst-shim = { version = "0.15.0-rc1", features = ["nightly"] }
+tinymist-std = { version = "0.15.0-rc1", default-features = false }
+tinymist-task = { version = "0.15.0-rc1", default-features = false }
+tinymist-world = { version = "0.15.0-rc1", default-features = false }
+tinymist-package = { version = "0.15.0-rc1", default-features = false }
+tinymist-project = { version = "0.15.0-rc1", default-features = false }
 
 # project core
 reflexo = { version = "0.7.0", path = "crates/reflexo", default-features = false }
@@ -244,14 +244,20 @@ reflexo-vec2svg = { path = "crates/conversion/vec2svg/" }
 # typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", branch = "typst-ts-v0.10.0" }
 
 # comemo = { git = "https://github.com/Dherse/comemo", rev = "15c8d5b" }
-typst = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.7.0-rc2" }
-typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.7.0-rc2" }
-typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.7.0-rc2" }
-typst-render = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.7.0-rc2" }
-typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.7.0-rc2" }
-typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.7.0-rc2" }
-typst-eval = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.7.0-rc2" }
-typst-html = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst.ts/v0.7.0-rc2" }
+typst = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7" }
+typst-syntax = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7" }
+typst-ide = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7" }
+typst-render = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7" }
+typst-svg = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7" }
+typst-pdf = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7" }
+typst-eval = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7" }
+typst-html = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7" }
+typst-layout = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7" }
+typst-library = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7" }
+typst-macros = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7" }
+typst-timing = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7" }
+typst-utils = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7" }
+typst-bundle = { git = "https://github.com/Myriad-Dreamin/typst.git", rev = "f057d1aa14b42ba8f3d8e671067e2e2a55c2d0e7" }
 
 # comemo = { path = "../comemo" }
 # typst = { path = "../typst/crates/typst" }
@@ -262,16 +268,22 @@ typst-html = { git = "https://github.com/Myriad-Dreamin/typst.git", tag = "typst
 # typst-pdf = { path = "../typst/crates/typst-pdf" }
 # typst-eval = { path = "../typst/crates/typst-eval" }
 # typst-html = { path = "../typst/crates/typst-html" }
+# typst-layout = { path = "../typst/crates/typst-layout" }
+# typst-library = { path = "../typst/crates/typst-library" }
+# typst-macros = { path = "../typst/crates/typst-macros" }
+# typst-timing = { path = "../typst/crates/typst-timing" }
+# typst-utils = { path = "../typst/crates/typst-utils" }
+# typst-bundle = { path = "../typst/crates/typst-bundle" }
 
 # fontdb = { path = "../fontdb" }
 
-typst-shim = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "c1c407878f0b75bf95415833a560822de587607e" }
-tinymist-derive = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "c1c407878f0b75bf95415833a560822de587607e" }
-tinymist-std = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "c1c407878f0b75bf95415833a560822de587607e" }
-tinymist-task = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "c1c407878f0b75bf95415833a560822de587607e" }
-tinymist-package = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "c1c407878f0b75bf95415833a560822de587607e" }
-tinymist-world = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "c1c407878f0b75bf95415833a560822de587607e" }
-tinymist-project = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "c1c407878f0b75bf95415833a560822de587607e" }
+typst-shim = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "22b13f64af7931ca9179e6ea0e1e4316cb88f92b" }
+tinymist-derive = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "22b13f64af7931ca9179e6ea0e1e4316cb88f92b" }
+tinymist-std = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "22b13f64af7931ca9179e6ea0e1e4316cb88f92b" }
+tinymist-task = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "22b13f64af7931ca9179e6ea0e1e4316cb88f92b" }
+tinymist-package = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "22b13f64af7931ca9179e6ea0e1e4316cb88f92b" }
+tinymist-world = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "22b13f64af7931ca9179e6ea0e1e4316cb88f92b" }
+tinymist-project = { git = "https://github.com/Myriad-Dreamin/tinymist.git", rev = "22b13f64af7931ca9179e6ea0e1e4316cb88f92b" }
 
 # typst-shim = { path = "../tinymist/crates/typst-shim" }
 # tinymist-derive = { path = "../tinymist/crates/tinymist-derive" }

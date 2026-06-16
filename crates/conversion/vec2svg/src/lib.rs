@@ -3,7 +3,7 @@
 // todo: https://github.com/typst/typst/pull/2610
 // color export
 
-use reflexo::typst::TypstPagedDocument;
+use reflexo::typst::{TypstDocumentTrait, TypstPagedDocument};
 
 /// re-export the core types.
 pub use reflexo_typst2vec::font::{FontGlyphProvider, GlyphProvider, IGlyphProvider};
@@ -115,7 +115,7 @@ pub fn render_svg_html<Feat: ExportFeature>(output: &TypstPagedDocument) -> Stri
     html.push(r#"<!DOCTYPE html><html><head><meta charset="utf-8" /><title>"#.into());
     html.push(SvgText::Plain(
         output
-            .info
+            .info()
             .title
             .as_ref()
             .map(|s| s.to_string())

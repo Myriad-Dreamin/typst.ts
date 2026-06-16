@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
 use base64::Engine;
+use comemo::Track;
 use ecow::{eco_format, EcoString};
 use reflexo::typst::TypstHtmlDocument;
 use typst::diag::SourceResult;
-use typst::layout::Frame;
+use typst::model::LateLinkResolver;
 use typst::syntax::Span;
 use typst_html::{HtmlElement, HtmlNode};
 
@@ -14,21 +15,27 @@ pub mod hast;
 
 /// Encodes an HTML document into a Hast.
 pub fn hast(document: &Arc<TypstHtmlDocument>) -> SourceResult<HastElementContent> {
-    write_element(&document.root)
+    let link_resolver = LateLinkResolver::new(None, document.introspector().as_ref());
+    let link_resolver = link_resolver.track();
+    write_element(document.root(), link_resolver)
 }
 
 /// Encode an HTML node into the writer.
-fn write_node(node: &HtmlNode, buf: &mut Vec<HastElementContent>) -> SourceResult<()> {
+fn write_node(
+    node: &HtmlNode,
+    buf: &mut Vec<HastElementContent>,
+    link_resolver: comemo::Tracked<LateLinkResolver<'_>>,
+) -> SourceResult<()> {
     match node {
         HtmlNode::Tag(_) => {}
         HtmlNode::Text(text, span) => {
             buf.push(write_text(text, *span)?);
         }
         HtmlNode::Element(element) => {
-            buf.push(write_element(element)?);
+            buf.push(write_element(element, link_resolver)?);
         }
         HtmlNode::Frame(frame) => {
-            write_frame(&frame.inner, buf);
+            write_frame(frame, buf, link_resolver);
         }
     }
     Ok(())
@@ -43,12 +50,19 @@ fn write_text(text: &EcoString, _span: Span) -> SourceResult<HastElementContent>
 }
 
 /// Encode one element into the write.
-fn write_element(element: &HtmlElement) -> SourceResult<HastElementContent> {
-    write_element_with_tag(element, &element.tag.resolve())
+fn write_element(
+    element: &HtmlElement,
+    link_resolver: comemo::Tracked<LateLinkResolver<'_>>,
+) -> SourceResult<HastElementContent> {
+    write_element_with_tag(element, &element.tag.resolve(), link_resolver)
 }
 
 /// Encode one element into the write.
-fn write_element_with_tag(element: &HtmlElement, tag: &str) -> SourceResult<HastElementContent> {
+fn write_element_with_tag(
+    element: &HtmlElement,
+    tag: &str,
+    link_resolver: comemo::Tracked<LateLinkResolver<'_>>,
+) -> SourceResult<HastElementContent> {
     let properties = element
         .attrs
         .0
@@ -62,7 +76,7 @@ fn write_element_with_tag(element: &HtmlElement, tag: &str) -> SourceResult<Hast
 
     if !element.children.is_empty() {
         for c in &element.children {
-            write_node(c, &mut buf)?;
+            write_node(c, &mut buf, link_resolver)?;
         }
     }
 
@@ -75,10 +89,22 @@ fn write_element_with_tag(element: &HtmlElement, tag: &str) -> SourceResult<Hast
 }
 
 /// Encode a laid out frame into the writer.
-fn write_frame(frame: &Frame, buf: &mut Vec<HastElementContent>) {
+fn write_frame(
+    frame: &typst_html::HtmlFrame,
+    buf: &mut Vec<HastElementContent>,
+    link_resolver: comemo::Tracked<LateLinkResolver<'_>>,
+) {
     // FIXME: This string replacement is obviously a hack.
-    let svg = typst_svg::svg_frame(frame)
-        .replace("<svg class", "<svg style=\"overflow: visible;\" class");
+    let svg = typst_svg::svg_in_html(
+        &frame.inner,
+        frame.text_size,
+        false,
+        frame.id.as_deref(),
+        &eco_format!("{}", frame.css.to_inline()),
+        &frame.anchors,
+        link_resolver,
+    )
+    .replace("<svg class", "<svg style=\"overflow: visible;\" class");
 
     // create a img base64
     let base64_svg = base64::engine::general_purpose::STANDARD.encode(svg.as_bytes());

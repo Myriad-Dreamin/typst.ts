@@ -11,7 +11,7 @@ use typst::layout::{
     Abs as TypstAbs, Angle as TypstAngle, Axes as TypstAxes, Point as TypstPoint,
     Ratio as TypstRatio, Transform as TypstTransform,
 };
-use typst::text::Font;
+use typst::text::{Font, FontInstance, FontVariations};
 use typst::utils::Scalar as TypstScalar;
 use typst::visualize::{ExchangeFormat, ImageFormat, ImageKind, RasterFormat, VectorFormat};
 use typst_svg::pdf_to_svg;
@@ -41,7 +41,16 @@ impl FromTypst<Rgba8Item> for typst::visualize::Color {
 
 impl FromTypst<typst::visualize::ColorSpace> for ColorSpace {
     fn from_typst(value: typst::visualize::ColorSpace) -> Self {
-        use typst::visualize::ColorSpace::*;
+        match value {
+            typst::visualize::ColorSpace::Process(process) => process.into_typst(),
+            typst::visualize::ColorSpace::Spot(_) => Self::Oklab,
+        }
+    }
+}
+
+impl FromTypst<typst::visualize::ProcessColorSpace> for ColorSpace {
+    fn from_typst(value: typst::visualize::ProcessColorSpace) -> Self {
+        use typst::visualize::ProcessColorSpace::*;
         match value {
             Oklab => Self::Oklab,
             Oklch => Self::Oklch,
@@ -59,8 +68,8 @@ impl TryFromTypst<ColorSpace> for typst::visualize::ColorSpace {
     type Error = ();
 
     fn try_from_typst(value: ColorSpace) -> Result<Self, ()> {
-        use typst::visualize::ColorSpace::*;
-        Ok(match value {
+        use typst::visualize::ProcessColorSpace::*;
+        let process = match value {
             ColorSpace::Luma => return Err(()),
             ColorSpace::Oklab => Oklab,
             ColorSpace::Oklch => Oklch,
@@ -70,7 +79,8 @@ impl TryFromTypst<ColorSpace> for typst::visualize::ColorSpace {
             ColorSpace::Hsl => Hsl,
             ColorSpace::Hsv => Hsv,
             ColorSpace::Cmyk => Cmyk,
-        })
+        };
+        Ok(typst::visualize::ColorSpace::Process(process))
     }
 }
 
@@ -152,9 +162,19 @@ impl FromTypst<TypstTransform> for Transform {
 
 impl FromTypst<Font> for FontItem {
     fn from_typst(font: Font) -> Self {
+        let instance = font.clone().instantiate(
+            font.info().variant,
+            TypstAbs::pt(1.0),
+            &FontVariations::default(),
+        );
+        instance.into_typst()
+    }
+}
+
+impl FromTypst<FontInstance> for FontItem {
+    fn from_typst(font: FontInstance) -> Self {
         let hash = reflexo::hash::hash32(&font);
         let fingerprint = Fingerprint::from_u128(item_hash128(&font));
-
         let metrics = font.metrics();
         Self {
             fingerprint,

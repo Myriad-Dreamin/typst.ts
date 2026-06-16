@@ -6,14 +6,14 @@ use reflexo_typst::program_meta::REPORT_BUG_MESSAGE;
 use reflexo_typst::svg::DefaultExportFeature;
 use reflexo_typst::task::{ExportHtmlTask, ExportPdfTask, ExportTextTask};
 use reflexo_typst::{
-    AstExport, Bytes, CompilationTask, CompileReport, ConfigTask, DiagnosticHandler,
-    DiagnosticsTask, DynSvgModuleExport, DynSystemComputation, ExportAstTask, ExportComputation,
-    ExportDynSvgModuleTask, ExportWebSvgHtmlTask, ExportWebSvgModuleTask, ExportWebSvgTask,
-    FlagTask, HtmlCompilationTask, HtmlExport, OptionDocumentTask, PagedCompilationTask, PdfExport,
-    SystemCompilerFeat, TakeAs, TextExport, WebSvgExport, WebSvgHtmlExport, WebSvgModuleExport,
-    WorldComputable, WorldComputeGraph,
+    AstExport, BundleCompilationTask, Bytes, CompilationTask, CompileReport, ConfigTask,
+    DiagnosticHandler, DiagnosticsTask, DynSvgModuleExport, DynSystemComputation, ExportAstTask,
+    ExportComputation, ExportDynSvgModuleTask, ExportWebSvgHtmlTask, ExportWebSvgModuleTask,
+    ExportWebSvgTask, FlagTask, HtmlCompilationTask, HtmlExport, OptionDocumentTask,
+    PagedCompilationTask, PdfExport, SystemCompilerFeat, TakeAs, TextExport, WebSvgExport,
+    WebSvgHtmlExport, WebSvgModuleExport, WorldComputable, WorldComputeGraph,
 };
-use typst::World;
+use typst::{foundations::Output, model::Document, World};
 
 use crate::{utils::current_dir, CompileArgs};
 
@@ -238,7 +238,7 @@ fn prepare_exporters_impl(
         }
     }
 
-    fn compile_it<D: typst::Document + Send + Sync + 'static>(
+    fn compile_it<D: Document + Output + Send + Sync + 'static>(
         graph: &Arc<WorldComputeGraph<SystemCompilerFeat>>,
     ) -> Result<Option<Arc<D>>> {
         let _ = graph.provide::<FlagTask<CompilationTask<D>>>(Ok(FlagTask::flag(true)));
@@ -246,7 +246,7 @@ fn prepare_exporters_impl(
     }
 
     fn export_bytes<
-        D: typst::Document + Send + Sync + 'static,
+        D: Document + Output + Send + Sync + 'static,
         T: ExportComputation<SystemCompilerFeat, D, Output = Bytes>,
     >(
         graph: &Arc<WorldComputeGraph<SystemCompilerFeat>>,
@@ -259,7 +259,7 @@ fn prepare_exporters_impl(
     }
 
     fn export_string<
-        D: typst::Document + Send + Sync + 'static,
+        D: Document + Output + Send + Sync + 'static,
         T: ExportComputation<SystemCompilerFeat, D, Output = String>,
     >(
         graph: &Arc<WorldComputeGraph<SystemCompilerFeat>>,
@@ -335,6 +335,7 @@ fn prepare_exporters_impl(
 
         let _ = graph.provide::<FlagTask<PagedCompilationTask>>(Ok(FlagTask::flag(false)));
         let _ = graph.provide::<FlagTask<HtmlCompilationTask>>(Ok(FlagTask::flag(false)));
+        let _ = graph.provide::<FlagTask<BundleCompilationTask>>(Ok(FlagTask::flag(false)));
 
         let diag = graph.compute::<DiagnosticsTask>()?;
 

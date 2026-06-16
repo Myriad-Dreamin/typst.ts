@@ -7,7 +7,8 @@ use core::fmt;
 use ecow::eco_format;
 use reflexo::debug_loc::{LspPosition, LspRange};
 use reflexo::path::unix_slash;
-use typst::syntax::{FileId, Source, Span};
+use typst::syntax::{DiagSpan, FileId, Source, VirtualRoot};
+use typst::WorldExt;
 
 use crate::vfs::{WorkspaceResolution, WorkspaceResolver};
 
@@ -89,7 +90,14 @@ impl fmt::Display for DiagMsgFmt<'_> {
         f.write_str(&self.0.message)?;
         if !self.0.hints.is_empty() {
             f.write_str(", hints: ")?;
-            f.write_str(&self.0.hints.join(", "))?;
+            let hints = self
+                .0
+                .hints
+                .iter()
+                .map(|hint| hint.v.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            f.write_str(&hints)?;
         }
 
         Ok(())
@@ -104,15 +112,17 @@ impl fmt::Display for PosFmt<'_> {
             typst::diag::Tracepoint::Call(Some(name)) => write!(f, "while calling {name}"),
             typst::diag::Tracepoint::Call(None) => write!(f, "while calling closure"),
             typst::diag::Tracepoint::Show(name) => write!(f, "while showing {name}"),
-            typst::diag::Tracepoint::Import => write!(f, "import"),
+            typst::diag::Tracepoint::Import(name) => write!(f, "while importing {name}"),
+            typst::diag::Tracepoint::Include(name) => write!(f, "while including {name}"),
         }
     }
 }
 
 fn resolve_source_span(
-    s: Span,
+    s: impl Into<DiagSpan>,
     world: Option<&dyn typst::World>,
 ) -> (String, String, Option<LspRange>) {
+    let s = s.into();
     let mut package = String::new();
     let mut path = String::new();
     let mut range = None;
@@ -120,26 +130,21 @@ fn resolve_source_span(
     if let Some(id) = s.id() {
         match WorkspaceResolver::resolve(id) {
             Ok(WorkspaceResolution::Package) => {
-                package = id.package().unwrap().to_string();
-                path = unix_slash(id.vpath().as_rooted_path());
+                if let VirtualRoot::Package(pkg) = id.root() {
+                    package = pkg.to_string();
+                }
+                path = id.vpath().get_with_slash().to_string();
             }
             Ok(WorkspaceResolution::Rootless | WorkspaceResolution::UntitledRooted(..)) => {
-                path = unix_slash(id.vpath().as_rooted_path());
+                path = id.vpath().get_with_slash().to_string();
             }
             Ok(WorkspaceResolution::Workspace(workspace)) => {
-                path = id
-                    .vpath()
-                    .resolve(&workspace.path())
-                    .as_deref()
-                    .map(unix_slash)
-                    .unwrap_or_default();
+                path = unix_slash(&id.vpath().realize(&workspace.path()));
             }
             Err(..) => {}
         }
 
-        if let Some((rng, src)) = world
-            .and_then(|world| world.source(id).ok())
-            .and_then(|src| Some((src.find(s)?.range(), src)))
+        if let Some((rng, src)) = world.and_then(|world| world.range(s).zip(world.source(id).ok()))
         {
             let resolve_off = |src: &Source, off: usize| {
                 src.lines()

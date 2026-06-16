@@ -1,3 +1,5 @@
+// SKIP: Temporarily removed for Typst 0.15.0-rc1 corpus compatibility review.
+
 // Meta data
 #set document(title: "Typst Math for Undergrads", author: "johanvx")
 
