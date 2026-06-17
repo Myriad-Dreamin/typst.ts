@@ -13,3 +13,5 @@
 - [CHANGELOG-0.6.md](./CHANGELOG-0.6.md)
 
 - [CHANGELOG-0.7.md](./CHANGELOG-0.7.md)
+
+- [CHANGELOG-0.8.md](./CHANGELOG-0.8.md)
