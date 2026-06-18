@@ -8,17 +8,21 @@ const alreadyPublishedPatterns = [
   'cannot publish over the previously published versions',
   'previously published versions',
 ];
+const npmCommand = process.platform === 'win32' ? 'cmd.exe' : 'npm';
 
 const notFoundPatterns = [
   'e404',
   '404 not found',
   'is not in this registry',
+  'no match found for version',
+  'could not be found',
 ];
 
 const args = process.argv.slice(2);
 const packageDirs = [];
 let access = 'public';
 let dryRun = false;
+let explicitTag;
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
@@ -36,6 +40,22 @@ for (let i = 0; i < args.length; i++) {
     continue;
   }
 
+  if (arg === '--tag') {
+    explicitTag = args[++i];
+    if (!explicitTag) {
+      throw new Error('--tag requires a value');
+    }
+    continue;
+  }
+
+  if (arg.startsWith('--tag=')) {
+    explicitTag = arg.slice('--tag='.length);
+    if (!explicitTag) {
+      throw new Error('--tag requires a value');
+    }
+    continue;
+  }
+
   if (arg.startsWith('--')) {
     throw new Error(`Unknown option: ${arg}`);
   }
@@ -44,16 +64,38 @@ for (let i = 0; i < args.length; i++) {
 }
 
 if (packageDirs.length === 0) {
-  throw new Error('Usage: node scripts/npm-publish-if-needed.mjs [--dry-run] <package-dir>...');
+  throw new Error(
+    'Usage: node scripts/npm-publish-if-needed.mjs [--dry-run] [--access public|restricted] [--tag tag] <package-dir>...',
+  );
 }
 
-const publishArgs = ['publish', '--access', access];
-if (dryRun) {
-  publishArgs.push('--dry-run');
+function prereleaseDistTag(version) {
+  const prerelease = version.match(/^\d+\.\d+\.\d+-(.+)$/)?.[1];
+  if (!prerelease) {
+    return undefined;
+  }
+
+  return prerelease.split('.')[0].match(/^[a-z][a-z-]*/i)?.[0].toLowerCase() ?? 'prerelease';
+}
+
+function publishArgsFor(version) {
+  const publishArgs = ['publish', '--access', access];
+  const tag = explicitTag ?? prereleaseDistTag(version);
+
+  if (tag) {
+    publishArgs.push('--tag', tag);
+  }
+
+  if (dryRun) {
+    publishArgs.push('--dry-run');
+  }
+
+  return publishArgs;
 }
 
 function runNpm(args, cwd) {
-  return spawnSync('npm', args, {
+  const commandArgs = process.platform === 'win32' ? ['/d', '/s', '/c', 'npm', ...args] : args;
+  return spawnSync(npmCommand, commandArgs, {
     cwd,
     encoding: 'utf8',
     maxBuffer: 10 * 1024 * 1024,
@@ -85,7 +127,7 @@ function packageExists(cwd, name, version) {
   }
 
   const output = outputOf(result);
-  if (hasAny(output, notFoundPatterns)) {
+  if (!output.trim() || hasAny(output, notFoundPatterns)) {
     return false;
   }
 
@@ -114,7 +156,7 @@ function publishPackage(packageDir) {
   }
 
   console.log(`Publishing ${name}@${version} from ${packageDir}`);
-  const result = runNpm(publishArgs, cwd);
+  const result = runNpm(publishArgsFor(version), cwd);
   printResult(result);
 
   if (result.status === 0) {
