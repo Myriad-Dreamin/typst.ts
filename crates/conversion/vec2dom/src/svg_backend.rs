@@ -5,7 +5,7 @@ use reflexo::vector::ir::{self, Module, Page, TransformedRef, VecItem};
 use reflexo::vector::{incr::IncrDocClient, vm::RenderVm};
 use reflexo_vec2canvas::BBoxAt;
 use reflexo_vec2svg::ir::LabelledRef;
-use reflexo_vec2svg::{SvgExporter, SvgTask, SvgText};
+use reflexo_vec2svg::{svg_gradient_def, SvgExporter, SvgTask, SvgText};
 use web_sys::{wasm_bindgen::JsCast, Element, SvgGraphicsElement};
 
 use crate::{dom::*, factory::XmlFactory, DomContext};
@@ -89,15 +89,7 @@ impl SvgBackend {
         let patterns = self.vec2svg.render_patterns(module);
 
         let gradients = std::mem::take(&mut self.vec2svg.gradients);
-        let gradients = gradients.iter().filter_map(|id| match module.get_item(id) {
-            Some(VecItem::Gradient(g)) => Some((id, g.as_ref())),
-            _ => {
-                // #[cfg(debug_assertions)]
-                panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
-                #[allow(unreachable_code)]
-                None
-            }
-        });
+        let gradients = gradients.iter().map(|id| svg_gradient_def(module, *id));
         // todo: remove Exporter usages
         Exporter::gradients(gradients, &mut g);
         Exporter::patterns(patterns.into_iter(), &mut g);

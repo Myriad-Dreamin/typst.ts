@@ -115,6 +115,7 @@ impl<Feat: ExportFeature> NotifyPaint for RenderContext<'_, '_, Feat> {
         if url_ref.starts_with("@g") {
             let id = url_ref.trim_start_matches("@g");
             let mut id = Fingerprint::try_from_str(id).unwrap();
+            let paint_id = id;
 
             let transform = match self.get_item(&id) {
                 Some(VecItem::ColorTransform(g)) => {
@@ -138,8 +139,18 @@ impl<Feat: ExportFeature> NotifyPaint for RenderContext<'_, '_, Feat> {
                 ir::GradientKind::Conic(..) => b'p',
             };
 
-            self.gradients.insert(id);
-            (kind, id, transform)
+            // Conic gradients need the concrete paint transform to compensate
+            // their segment angles for the target aspect ratio. Keep a
+            // per-paint definition id for those while still using canonical
+            // definitions for linear/radial gradients.
+            let gradient_ref = if kind == b'p' && transform.is_some() {
+                paint_id
+            } else {
+                id
+            };
+
+            self.gradients.insert(gradient_ref);
+            (kind, gradient_ref, transform)
         } else if url_ref.starts_with("@p") {
             let id = url_ref.trim_start_matches("@p");
             let mut id = Fingerprint::try_from_str(id).unwrap();

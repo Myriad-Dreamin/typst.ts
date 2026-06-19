@@ -7,7 +7,7 @@ use std::{
 use reflexo::hash::Fingerprint;
 use reflexo_typst2vec::{
     incr::{IncrDocClient, IncrDocServer},
-    ir::{LayoutRegionNode, Module, Page, Rect, VecItem},
+    ir::{LayoutRegionNode, Module, Page, Rect},
     vm::{IncrRenderVm, RenderVm},
 };
 
@@ -225,15 +225,7 @@ impl IncrSvgDocClient {
         let gradients = std::mem::take(&mut t.gradients);
         let gradients = gradients
             .iter()
-            .filter_map(|id| match module_ref.get_item(id) {
-                Some(VecItem::Gradient(g)) => Some((id, g.as_ref())),
-                _ => {
-                    // #[cfg(debug_assertions)]
-                    panic!("Invalid gradient reference: {}", id.as_svg_id("g"));
-                    #[allow(unreachable_code)]
-                    None
-                }
-            });
+            .map(|id| super::svg_gradient_def(module_ref, *id));
         IncrExporter::gradients(gradients, &mut svg);
         IncrExporter::patterns(patterns.into_iter(), &mut svg);
         svg.push("</defs>".into());
