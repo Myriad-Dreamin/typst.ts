@@ -20,7 +20,7 @@ use reflexo_typst2vec::{
 use typst::{
     foundations::Smart,
     layout::{Angle, Quadrant},
-    visualize::{Color, ColorSpace, Hsl, Hsv, ProcessColor, ProcessColorSpace, WeightedColor},
+    visualize::{Color, ColorSpace, WeightedColor},
 };
 
 use crate::{
@@ -588,81 +588,33 @@ struct SVGSubGradient {
 // todo: use native approach
 fn sample_color_stops(gradient: &GradientItem, t: f32) -> Color {
     let t = t.clamp(0.0, 1.0);
-    let mut low = 0;
-    let mut high = gradient.stops.len();
 
     let mixing_space: ColorSpace = gradient.space.try_into_typst().unwrap();
     let stops = &gradient.stops;
+    let mut j = stops.partition_point(|(_, ratio)| ratio.0 < t);
 
-    while low < high {
-        let mid = (low + high) / 2;
-        if stops[mid].1 .0 < t {
-            low = mid + 1;
-        } else {
-            high = mid;
+    if j == 0 {
+        while stops.get(j + 1).is_some_and(|(_, r)| r.0 == 0.0) {
+            j += 1;
         }
+
+        return stops[j].0.into_typst();
     }
 
-    if low == 0 {
-        low = 1;
-    }
-    let (col_0, pos_0) = &stops[low - 1];
-    let (col_1, pos_1) = &stops[low];
+    let (col_0, pos_0) = &stops[j - 1];
+    let (col_1, pos_1) = &stops[j];
     let t = (t - pos_0.0) / (pos_1.0 - pos_0.0);
     let col_0: Color = (*col_0).into_typst();
     let col_1: Color = (*col_1).into_typst();
 
-    let out = Color::mix_iter(
+    Color::mix_iter(
         [
-            WeightedColor::new(col_0.clone(), (1.0 - t) as f64),
-            WeightedColor::new(col_1.clone(), t as f64),
+            WeightedColor::new(col_0, (1.0 - t) as f64),
+            WeightedColor::new(col_1, t as f64),
         ],
-        Smart::Custom(mixing_space.clone()),
+        Smart::Custom(mixing_space),
     )
-    .unwrap();
-
-    // Special case for handling multi-turn hue interpolation.
-    if matches!(
-        mixing_space,
-        ColorSpace::Process(ProcessColorSpace::Hsl | ProcessColorSpace::Hsv)
-    ) {
-        let color_0 = col_0.to_space(&mixing_space).unwrap();
-        let color_1 = col_1.to_space(&mixing_space).unwrap();
-
-        let hue_0 = match color_0 {
-            Color::Process(ProcessColor::Hsl(hsl)) => hsl.hue,
-            Color::Process(ProcessColor::Hsv(hsv)) => hsv.hue,
-            _ => unreachable!(),
-        }
-        .into_positive_degrees();
-
-        let hue_1 = match color_1 {
-            Color::Process(ProcessColor::Hsl(hsl)) => hsl.hue,
-            Color::Process(ProcessColor::Hsv(hsv)) => hsv.hue,
-            _ => unreachable!(),
-        }
-        .into_positive_degrees();
-
-        // Check if we need to interpolate over the 360° boundary.
-        if (hue_0 - hue_1).abs() > 180.0 {
-            let hue_0 = if hue_0 < hue_1 { hue_0 + 360.0 } else { hue_0 };
-            let hue_1 = if hue_1 < hue_0 { hue_1 + 360.0 } else { hue_1 };
-
-            let hue = hue_0 * (1.0 - t) + hue_1 * t;
-
-            if mixing_space == ColorSpace::Process(ProcessColorSpace::Hsl) {
-                let (_, saturation, lightness, alpha) = out.to_hsl().into_components();
-                return Color::Process(ProcessColor::Hsl(Hsl::new(
-                    hue, saturation, lightness, alpha,
-                )));
-            } else if mixing_space == ColorSpace::Process(ProcessColorSpace::Hsv) {
-                let (_, saturation, value, alpha) = out.to_hsv().into_components();
-                return Color::Process(ProcessColor::Hsv(Hsv::new(hue, saturation, value, alpha)));
-            }
-        }
-    }
-
-    out
+    .unwrap()
 }
 
 struct RatioRepr(f32);
