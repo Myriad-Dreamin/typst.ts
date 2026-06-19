@@ -33,6 +33,10 @@ const ensureRefImage = (refPath, screenshotPath) => {
   }
 }
 
+const parseRefHashes = (refHash) => {
+  return refHash.split(/\r?\n/).map(hash => hash.trim()).filter(Boolean);
+}
+
 const createSnapshot = async (_ctx, screenshotPath, name, extras) => {
   const refPath= `${import.meta.dirname}/refs/renderer/${name}`;
   // console.log(import.meta.dirname,screenshotPath, name, refPath);
@@ -50,7 +54,8 @@ const createSnapshot = async (_ctx, screenshotPath, name, extras) => {
   console.log(screenshotHash, refHashPath, isUpdate);
   if (fs.existsSync(refHashPath)) {
     const refHash = fs.readFileSync(refHashPath, 'utf-8').trimEnd();
-    if ((refHash!==screenshotHash) ) {
+    const refHashes = parseRefHashes(refHash);
+    if (!refHashes.includes(screenshotHash)) {
       if ( isUpdate) {
         saveRef(refPath, screenshotPath, screenshotHash);
          return {  screenshotHash, refHash: screenshotHash };
@@ -61,7 +66,7 @@ const createSnapshot = async (_ctx, screenshotPath, name, extras) => {
       }
     }
     ensureRefImage(refPath, screenshotPath);
-    return {  screenshotHash, refHash };
+    return {  screenshotHash, refHash: screenshotHash };
   }
 
    saveRef(refPath, screenshotPath, screenshotHash);
