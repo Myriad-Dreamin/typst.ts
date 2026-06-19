@@ -77,6 +77,7 @@ typst-syntax = "0.15.0-rc.1"
 typst-html = "0.15.0-rc.1"
 
 ttf-parser = "0.25.0"
+skrifa = "0.42.1"
 
 typst-assets = { git = "https://github.com/typst/typst-assets", rev = "955ae8d" }
 typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", rev = "0b12d75772199e07294749ffe078ea030b857746" }
