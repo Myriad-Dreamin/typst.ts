@@ -24,6 +24,7 @@ serde.workspace = true
 serde_json.workspace = true
 tiny-skia.workspace = true
 log.workspace = true
+skrifa.workspace = true
 flate2.workspace = true
 xmlparser.workspace = true
 rayon.workspace = true

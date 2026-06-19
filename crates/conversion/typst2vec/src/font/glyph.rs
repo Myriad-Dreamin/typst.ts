@@ -4,6 +4,8 @@ use std::{ops::Deref, sync::Arc};
 
 use reflexo::hash::{item_hash128, HashedTrait, StaticHash128};
 use reflexo::ImmutStr;
+use skrifa::outline::{DrawSettings, OutlinePen};
+use skrifa::{FontRef as SkrifaFontRef, MetadataProvider};
 use typst::foundations::{Bytes, Smart};
 use typst::text::FontInstance;
 use typst::visualize::{ExchangeFormat, Image as TypstImage, RasterImage};
@@ -137,12 +139,27 @@ impl IGlyphProvider for FontGlyphProvider {
 
     /// See [`IGlyphProvider::outline_glyph`] for more information.
     fn outline_glyph(&self, font: &FontInstance, id: GlyphId) -> Option<String> {
-        let font_face = font.ttf();
+        let font_ref =
+            SkrifaFontRef::from_index(font.font().data().as_slice(), font.font().index()).ok()?;
+        let variations: Vec<_> = font
+            .variations()
+            .0
+            .iter()
+            .map(|(tag, value)| (skrifa::Tag::new(&tag.to_bytes()), value.0))
+            .collect();
+        let location = font_ref.axes().location(variations.iter().copied());
+        let glyph = font_ref
+            .outline_glyphs()
+            .get(skrifa::GlyphId::new(id.0.into()))?;
 
-        // todo: handling no such glyph
         let mut builder = SvgOutlineBuilder(String::new());
-        font_face.outline_glyph(id, &mut builder)?;
-        Some(builder.0)
+        glyph
+            .draw(
+                DrawSettings::unhinted(skrifa::instance::Size::unscaled(), &location),
+                &mut builder,
+            )
+            .ok()?;
+        (!builder.0.is_empty()).then_some(builder.0)
     }
 }
 
@@ -181,7 +198,7 @@ impl IGlyphProvider for DummyFontGlyphProvider {
 #[derive(Default)]
 struct SvgOutlineBuilder(pub String);
 
-impl ttf_parser::OutlineBuilder for SvgOutlineBuilder {
+impl OutlinePen for SvgOutlineBuilder {
     fn move_to(&mut self, x: f32, y: f32) {
         write!(&mut self.0, "M {x} {y} ").unwrap();
     }

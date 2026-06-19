@@ -1060,7 +1060,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1191,7 +1191,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1968,7 +1968,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.6.4",
+ "socket2 0.5.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -2775,7 +2775,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3268,7 +3268,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash 2.1.2",
  "rustls",
- "socket2 0.6.4",
+ "socket2 0.5.10",
  "thiserror",
  "tokio",
  "tracing",
@@ -3305,9 +3305,9 @@ dependencies = [
  "cfg_aliases 0.2.1",
  "libc",
  "once_cell",
- "socket2 0.6.4",
+ "socket2 0.5.10",
  "tracing",
- "windows-sys 0.60.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -3487,7 +3487,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "base64 0.22.1",
  "bitvec",
@@ -3515,7 +3515,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-typst"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "ansi_term",
  "codespan-reporting",
@@ -3555,7 +3555,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-typst-compiler"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "ansi-to-html",
  "base64 0.22.1",
@@ -3579,7 +3579,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-typst2hast"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "base64 0.22.1",
  "bitvec",
@@ -3611,7 +3611,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-typst2vec"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "bitvec",
  "comemo",
@@ -3627,6 +3627,7 @@ dependencies = [
  "rustc-hash 2.1.2",
  "serde",
  "serde_json",
+ "skrifa",
  "svgtypes 0.15.3",
  "tiny-skia 0.11.4",
  "tiny-skia-path 0.11.4",
@@ -3639,7 +3640,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2bbox"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "comemo",
  "reflexo",
@@ -3650,7 +3651,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2canvas"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "async-trait",
  "comemo",
@@ -3668,7 +3669,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2dom"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "async-recursion",
  "comemo",
@@ -3691,7 +3692,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2sema"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "comemo",
  "js-sys",
@@ -3705,7 +3706,7 @@ dependencies = [
 
 [[package]]
 name = "reflexo-vec2svg"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "base64 0.22.1",
  "comemo",
@@ -3954,7 +3955,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -4593,7 +4594,7 @@ dependencies = [
  "getrandom 0.4.2",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -4612,7 +4613,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
 dependencies = [
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -5577,7 +5578,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-bench-lowering"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "comemo",
  "divan",
@@ -5589,7 +5590,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-cli"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -5619,7 +5620,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-dev-server"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "bytes",
  "clap",
@@ -5637,7 +5638,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-docs-test"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "anyhow",
  "clap",
@@ -5650,7 +5651,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-heap-profile-test"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "anyhow",
  "comemo",
@@ -5664,7 +5665,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-fuzzer"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "anyhow",
  "comemo",
@@ -5684,7 +5685,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-incremental-test"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "anyhow",
  "comemo",
@@ -5700,7 +5701,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-node-compiler"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "chrono",
  "comemo",
@@ -5720,7 +5721,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-parser"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "console_error_panic_hook",
  "js-sys",
@@ -5736,7 +5737,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-renderer"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "anyhow",
  "console_error_panic_hook",
@@ -5771,14 +5772,14 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-rkyv-assertions"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "reflexo-typst2vec",
 ]
 
 [[package]]
 name = "typst-ts-std-test"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "anyhow",
  "rayon",
@@ -5787,7 +5788,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-test-common"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -5798,7 +5799,7 @@ dependencies = [
 
 [[package]]
 name = "typst-ts-web-compiler"
-version = "0.7.0"
+version = "0.8.0-rc1"
 dependencies = [
  "ansi-to-html",
  "base64 0.22.1",
@@ -6453,7 +6454,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

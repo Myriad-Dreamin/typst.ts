@@ -8,10 +8,27 @@ const rootDir = join(__dirname, '..');
 const rootPackage = JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf8'));
 const versionTag = `v${rootPackage.version}`;
 const releaseTag = process.argv[2] || process.env.RELEASE_TAG || versionTag;
+const npmCommand = process.platform === 'win32' ? 'cmd.exe' : 'npm';
 const alreadyPublishedPatterns = [
   'cannot publish over the previously published versions',
   'previously published versions',
 ];
+
+function prereleaseDistTag(version) {
+  const prerelease = version.match(/^\d+\.\d+\.\d+-(.+)$/)?.[1];
+  if (!prerelease) {
+    return undefined;
+  }
+
+  return prerelease.split('.')[0].match(/^[a-z][a-z-]*/i)?.[0].toLowerCase() ?? 'prerelease';
+}
+
+const npmPublishArgs = ['publish', '--verbose', '--provenance', '--access', 'public'];
+const npmDistTag = prereleaseDistTag(rootPackage.version);
+if (npmDistTag) {
+  npmPublishArgs.push('--tag', npmDistTag);
+  console.log(`Using npm dist-tag "${npmDistTag}" for ${rootPackage.version}.`);
+}
 
 function uploadReleaseAsset(dir) {
   execFileSync(
@@ -26,7 +43,9 @@ function uploadReleaseAsset(dir) {
 
 function publishPackage(cwd, label) {
   console.log(`Publish ${label}`);
-  const result = spawnSync('npm', ['publish', '--verbose', '--provenance', '--access', 'public'], {
+  const commandArgs =
+    process.platform === 'win32' ? ['/d', '/s', '/c', 'npm', ...npmPublishArgs] : npmPublishArgs;
+  const result = spawnSync(npmCommand, commandArgs, {
     cwd,
     encoding: 'utf8',
     maxBuffer: 10 * 1024 * 1024,
