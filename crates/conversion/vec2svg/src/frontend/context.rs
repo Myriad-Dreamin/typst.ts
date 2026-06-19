@@ -4,7 +4,7 @@ use std::{
 };
 
 use reflexo::{
-    hash::{Fingerprint, FingerprintBuilder},
+    hash::{item_hash128, Fingerprint, FingerprintBuilder},
     vector::{
         ir::{
             self, FontIndice, FontRef, GroupRef, ImmutStr, Module, PathItem, Scalar, TextItem,
@@ -15,6 +15,7 @@ use reflexo::{
 };
 use reflexo_typst2vec::ir::Axes;
 
+use super::{GradientDefMap, GradientDefRef};
 use crate::{
     backend::{BuildClipPath, DynExportFeature, NotifyPaint, SvgTextBuilder, SvgTextNode},
     ExportFeature,
@@ -49,7 +50,7 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     /// Stores the style definitions used in the document.
     pub(crate) _style_defs: &'t mut StyleDefMap,
     /// Stores the gradients used in the document.
-    pub(crate) gradients: &'t mut PaintFillMap,
+    pub(crate) gradients: &'t mut GradientDefMap,
     /// Stores the patterns used in the document.
     pub(crate) patterns: &'t mut PaintFillMap,
 
@@ -138,17 +139,21 @@ impl<Feat: ExportFeature> NotifyPaint for RenderContext<'_, '_, Feat> {
                 ir::GradientKind::Conic(..) => b'p',
             };
 
-            // Conic gradients need the concrete paint transform to compensate
-            // their segment angles for the target aspect ratio. Keep a
+            // Linear and conic gradients need the concrete paint transform to
+            // compensate their angles for the target aspect ratio. Keep a
             // per-paint definition id for those while still using canonical
-            // definitions for linear/radial gradients.
-            let gradient_ref = if kind == b'p' && transform.is_some() {
+            // definitions for radial gradients.
+            let gradient_ref = if matches!(kind, b'l' | b'p') && transform.is_some() {
                 paint_id
             } else {
                 id
             };
 
-            self.gradients.insert(gradient_ref);
+            self.gradients.insert(GradientDefRef {
+                id: gradient_ref,
+                item: gradient_ref,
+                aspect_ratio: None,
+            });
             (kind, gradient_ref, transform)
         } else if url_ref.starts_with("@p") {
             let id = url_ref.trim_start_matches("@p");
@@ -221,6 +226,17 @@ impl<'m, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, '_, Feat> {
 impl<'m, Feat: ExportFeature> IncrRenderVm<'m> for RenderContext<'m, '_, Feat> {}
 
 impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
+    fn gradient_with_aspect_ratio(&mut self, item: Fingerprint, aspect_ratio: f32) -> Fingerprint {
+        let aspect_ratio = Scalar(aspect_ratio);
+        let id = Fingerprint::from_u128(item_hash128(&(item, aspect_ratio)));
+        self.gradients.insert(GradientDefRef {
+            id,
+            item,
+            aspect_ratio: Some(aspect_ratio),
+        });
+        id
+    }
+
     /// Render a text into the underlying context.
     fn render_text_inplace(
         &mut self,
@@ -244,7 +260,14 @@ impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
                 let fill = fill.clone();
                 let stroke = stroke.clone();
                 for (s, g) in text.render_glyphs(upem, &mut size) {
-                    group_ctx.render_glyph_slow(s, font, g, fill.clone(), Some(stroke.clone()));
+                    group_ctx.render_glyph_slow(
+                        s,
+                        font,
+                        g,
+                        fill.clone(),
+                        Some(stroke.clone()),
+                        |item, aspect_ratio| self.gradient_with_aspect_ratio(item, aspect_ratio),
+                    );
                 }
 
                 size
@@ -261,7 +284,14 @@ impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
                 let mut size = Axes { x: 0f32, y: 0f32 };
                 let fill = fill.clone();
                 for (s, g) in text.render_glyphs(upem, &mut size) {
-                    group_ctx.render_glyph_slow(s, font, g, Some(fill.clone()), None);
+                    group_ctx.render_glyph_slow(
+                        s,
+                        font,
+                        g,
+                        Some(fill.clone()),
+                        None,
+                        |item, aspect_ratio| self.gradient_with_aspect_ratio(item, aspect_ratio),
+                    );
                 }
 
                 size

@@ -47,6 +47,17 @@ pub struct SVGGradientDef<'a> {
     pub aspect_ratio: Option<f32>,
 }
 
+/// A gradient definition to emit into SVG defs.
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub struct GradientDefRef {
+    pub id: Fingerprint,
+    pub item: Fingerprint,
+    pub aspect_ratio: Option<Scalar>,
+}
+
+/// Maps gradient definition id to its source paint and aspect override.
+pub type GradientDefMap = HashSet<GradientDefRef>;
+
 impl<Feat: ExportFeature> SvgExporter<Feat> {
     /// Get header by pages.
     pub(crate) fn header(output: &[Page]) -> String {
@@ -104,19 +115,8 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         {
             match &gradient.kind {
                 GradientKind::Linear(angle) => {
-                    // todo: use native angle
-                    let angle = typst::layout::Angle::rad(angle.0 as f64);
-
-                    // todo: correct aspect ratio
-                    // let angle = Gradient::correct_aspect_ratio(linear.angle, *ratio);
-                    let (sin, cos) = (angle.sin(), angle.cos());
-                    let length = sin.abs() + cos.abs();
-                    let (x1, y1, x2, y2) = match angle.quadrant() {
-                        Quadrant::First => (0.0, 0.0, cos * length, sin * length),
-                        Quadrant::Second => (1.0, 0.0, cos * length + 1.0, sin * length),
-                        Quadrant::Third => (1.0, 1.0, cos * length + 1.0, sin * length + 1.0),
-                        Quadrant::Fourth => (0.0, 1.0, cos * length, sin * length + 1.0),
-                    };
+                    let (x1, y1, x2, y2) =
+                        linear_gradient_points(angle.0, gradient_aspect_ratio(aspect_ratio));
 
                     svg.push(SvgText::Plain(
                         format!(
@@ -161,14 +161,8 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
                     ));
 
                     // The rotation angle, negated to match rotation in PNG.
-                    // todo: use native angle
-                    // let angle = Gradient::correct_aspect_ratio(angle, *ratio);
-                    // let angle = typst::geom::Angle::rad(angle.0 as f64);
-                    let angle: f32 = -(angle.0).rem_euclid(TAU);
-                    let inverse_ratio = aspect_ratio
-                        .filter(|ratio| ratio.is_finite() && *ratio != 0.0)
-                        .map(|ratio| ratio.recip())
-                        .unwrap_or(1.0);
+                    let angle = angle.0;
+                    let inverse_ratio = gradient_aspect_ratio(aspect_ratio).recip();
                     let mut center = &Axes::new(Scalar(0.5), Scalar(0.5));
                     for s in &gradient.styles {
                         if let GradientStyle::Center(c) = s {
@@ -179,9 +173,8 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
                     // We build an arg segment for each segment of a circle.
                     let dtheta = TAU / CONIC_SEGMENT as f32;
                     for i in 0..CONIC_SEGMENT {
-                        let theta1 = correct_aspect_ratio(dtheta * i as f32 + angle, inverse_ratio);
-                        let theta2 =
-                            correct_aspect_ratio(dtheta * (i + 1) as f32 + angle, inverse_ratio);
+                        let (theta1, theta2) =
+                            conic_segment_angles(angle, dtheta, i, inverse_ratio);
 
                         // Create the path for the segment.
                         let mut builder = SvgPath2DBuilder::default();
@@ -194,7 +187,7 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
                             correct_pattern_pos(2.0 * theta1.sin() + center.y.0),
                         );
                         builder.arc(
-                            (2.0, 2.0),
+                            (1.0, 1.0),
                             0.0,
                             0,
                             1,
@@ -341,7 +334,10 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
         // note in order!: pattern may use glyphs
         let glyphs = t.render_glyphs(module.glyphs_all());
 
-        let gradients = t.gradients.iter().map(|id| svg_gradient_def(module, *id));
+        let gradients = t
+            .gradients
+            .iter()
+            .map(|id| svg_gradient_def_ref(module, *id));
 
         let parts = parts.as_ref();
         let with_css = parts.is_none_or(|parts| parts.css);
@@ -392,21 +388,33 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
 }
 
 pub fn svg_gradient_def(module: &Module, id: Fingerprint) -> SVGGradientDef<'_> {
-    match module.get_item(&id) {
-        Some(VecItem::Gradient(g)) => SVGGradientDef {
+    svg_gradient_def_ref(
+        module,
+        GradientDefRef {
             id,
-            gradient: g.as_ref(),
+            item: id,
             aspect_ratio: None,
+        },
+    )
+}
+
+pub fn svg_gradient_def_ref(module: &Module, def: GradientDefRef) -> SVGGradientDef<'_> {
+    let aspect_override = def.aspect_ratio.map(|ratio| ratio.0);
+    match module.get_item(&def.item) {
+        Some(VecItem::Gradient(g)) => SVGGradientDef {
+            id: def.id,
+            gradient: g.as_ref(),
+            aspect_ratio: aspect_override,
         },
         Some(VecItem::ColorTransform(g)) => match module.get_item(&g.item) {
             Some(VecItem::Gradient(gradient)) => SVGGradientDef {
-                id,
+                id: def.id,
                 gradient: gradient.as_ref(),
-                aspect_ratio: Some(transform_aspect_ratio(g.transform)),
+                aspect_ratio: aspect_override.or_else(|| Some(transform_aspect_ratio(g.transform))),
             },
             _ => panic!("Invalid gradient reference: {}", g.item.as_svg_id("g")),
         },
-        _ => panic!("Invalid gradient reference: {}", id.as_svg_id("g")),
+        _ => panic!("Invalid gradient reference: {}", def.item.as_svg_id("g")),
     }
 }
 
@@ -421,10 +429,37 @@ fn transform_aspect_ratio(transform: ir::Transform) -> f32 {
     }
 }
 
+fn gradient_aspect_ratio(aspect_ratio: Option<f32>) -> f32 {
+    aspect_ratio
+        .filter(|ratio| ratio.is_finite() && *ratio != 0.0)
+        .unwrap_or(1.0)
+}
+
 fn correct_aspect_ratio(angle: f32, aspect_ratio: f32) -> f32 {
     (angle.sin() / aspect_ratio.abs())
         .atan2(angle.cos())
         .rem_euclid(TAU)
+}
+
+fn linear_gradient_points(angle: f32, aspect_ratio: f32) -> (f64, f64, f64, f64) {
+    let angle = Angle::rad(correct_aspect_ratio(angle, aspect_ratio) as f64);
+    let (sin, cos) = (angle.sin(), angle.cos());
+    let length = sin.abs() + cos.abs();
+    let (x1, y1) = match angle.quadrant() {
+        Quadrant::First => (0.0, 0.0),
+        Quadrant::Second => (1.0, 0.0),
+        Quadrant::Third => (1.0, 1.0),
+        Quadrant::Fourth => (0.0, 1.0),
+    };
+
+    (x1, y1, x1 + cos * length, y1 + sin * length)
+}
+
+fn conic_segment_angles(angle: f32, dtheta: f32, i: usize, inverse_ratio: f32) -> (f32, f32) {
+    (
+        -correct_aspect_ratio(angle + dtheta * i as f32, inverse_ratio),
+        -correct_aspect_ratio(angle + dtheta * (i + 1) as f32, inverse_ratio),
+    )
 }
 
 /// The task context for exporting svg.
@@ -436,7 +471,7 @@ pub struct SvgTask<'a, Feat: ExportFeature> {
     /// Stores the style definitions used in the document.
     pub style_defs: StyleDefMap,
     /// Stores the gradient used in the document.
-    pub gradients: PaintFillMap,
+    pub gradients: GradientDefMap,
     /// Stores the patterns used in the document.
     pub patterns: PaintFillMap,
 
@@ -450,7 +485,7 @@ impl<Feat: ExportFeature> Default for SvgTask<'_, Feat> {
             fingerprint_builder: FingerprintBuilder::default(),
 
             style_defs: StyleDefMap::default(),
-            gradients: PaintFillMap::default(),
+            gradients: GradientDefMap::default(),
             patterns: PaintFillMap::default(),
 
             _feat_phantom: std::marker::PhantomData,
@@ -606,7 +641,7 @@ impl SvgPath2DBuilder {
         sweep_flag: u32,
         pos: (f32, f32),
     ) {
-        let (rx, ry) = self.relative_pos(radius);
+        let (rx, ry) = radius;
         let (x, y) = self.relative_pos(pos);
         write!(
             &mut self.path,
@@ -691,6 +726,13 @@ impl std::fmt::Display for RatioRepr {
 mod tests {
     use super::*;
 
+    fn assert_close(actual: f64, expected: f64) {
+        assert!(
+            (actual - expected).abs() < 1e-6,
+            "expected {actual} to be close to {expected}",
+        );
+    }
+
     #[test]
     fn conic_path_builder_uses_relative_arc_segments() {
         let mut builder = SvgPath2DBuilder::default();
@@ -703,7 +745,7 @@ mod tests {
             correct_pattern_pos(2.0 * theta1.sin() + 0.5),
         );
         builder.arc(
-            (2.0, 2.0),
+            (1.0, 1.0),
             0.0,
             0,
             1,
@@ -714,7 +756,31 @@ mod tests {
         );
         builder.close();
 
-        assert!(builder.path.starts_with("m 0.5 0.5 h -1 a 2.5 1.5 0 0 1 "));
+        assert!(builder.path.starts_with("m 0.5 0.5 h -1 a 1 1 0 0 1 "));
         assert!(builder.path.ends_with(" Z "));
+    }
+
+    #[test]
+    fn linear_gradient_points_correct_aspect_ratio() {
+        let (x1, y1, x2, y2) = linear_gradient_points(TAU / 8.0, 10.0);
+
+        assert_close(x1, 0.0);
+        assert_close(y1, 0.0);
+        assert_close(x2 / y2, 10.0);
+        assert!(y2 < 0.2);
+    }
+
+    #[test]
+    fn conic_segment_angles_correct_before_negating() {
+        let dtheta = TAU / CONIC_SEGMENT as f32;
+        let inverse_ratio = 0.1;
+        let (theta1, theta2) = conic_segment_angles(TAU / 8.0, dtheta, 0, inverse_ratio);
+
+        assert_eq!(theta1, -correct_aspect_ratio(TAU / 8.0, inverse_ratio));
+        assert_eq!(
+            theta2,
+            -correct_aspect_ratio(TAU / 8.0 + dtheta, inverse_ratio)
+        );
+        assert!(theta2 < theta1);
     }
 }

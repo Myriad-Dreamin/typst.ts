@@ -225,7 +225,7 @@ impl IncrSvgDocClient {
         let gradients = std::mem::take(&mut t.gradients);
         let gradients = gradients
             .iter()
-            .map(|id| super::svg_gradient_def(module_ref, *id));
+            .map(|id| super::svg_gradient_def_ref(module_ref, *id));
         IncrExporter::gradients(gradients, &mut svg);
         IncrExporter::patterns(patterns.into_iter(), &mut svg);
         svg.push("</defs>".into());

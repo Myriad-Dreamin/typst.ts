@@ -20,7 +20,9 @@ pub use backend::SvgText;
 /// frontend of SVG export, which provides a bunch of approaches to rendering
 /// the document.
 pub(crate) mod frontend;
-pub use frontend::{svg_gradient_def, SVGGradientDef, SvgExporter, SvgTask};
+pub use frontend::{
+    svg_gradient_def, svg_gradient_def_ref, GradientDefRef, SVGGradientDef, SvgExporter, SvgTask,
+};
 pub use frontend::{
     DynamicLayoutSvgExporter, IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderContext,
 };

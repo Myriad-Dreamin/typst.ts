@@ -126,6 +126,7 @@ impl SvgTextNode {
 pub struct PaintObj {
     pub kind: u8,
     pub id: Fingerprint,
+    pub source_id: Fingerprint,
     pub transform: Option<Transform>,
 }
 
@@ -243,11 +244,12 @@ impl SvgTextBuilder {
         ctx: &mut C,
         color: ImmutStr,
         paint_id: &str,
-    ) -> (u8, Option<Transform>, Option<SvgText>) {
+    ) -> (u8, Fingerprint, Option<Transform>, Option<SvgText>) {
         let (kind, cano_ref, matrix) = ctx.notify_paint(color);
 
         (
             kind,
+            cano_ref,
             matrix,
             matrix.map(|matrix| {
                 Self::transform_color(kind, paint_id, &cano_ref.as_svg_id("g"), matrix)
@@ -262,9 +264,11 @@ impl SvgTextBuilder {
         glyph: u32,
         fill: Option<Arc<PaintObj>>,
         stroke: Option<Arc<PaintObj>>,
+        mut gradient_with_aspect_ratio: impl FnMut(Fingerprint, f32) -> Fingerprint,
     ) {
         let adjusted_x_offset = (pos.x.0 * 2.).round();
         let adjusted_y_offset = (pos.y.0 * 2.).round();
+        let glyph_aspect_ratio = glyph_aspect_ratio(font, glyph);
 
         // A stable glyph id can help incremental font transfer (IFT).
         // However, it is permitted unstable if you will not use IFT.
@@ -276,11 +280,18 @@ impl SvgTextBuilder {
         let mut do_trans = |obj: &PaintObj, pref: &'static str| -> String {
             let og = obj.id.as_svg_id(pref);
             let ng = format!("{og}-{adjusted_x_offset}-{adjusted_y_offset}").replace('.', "-");
+            let origin_id = if matches!(obj.kind, b'l' | b'p') {
+                glyph_aspect_ratio
+                    .map(|ratio| gradient_with_aspect_ratio(obj.source_id, ratio).as_svg_id("g"))
+                    .unwrap_or_else(|| obj.source_id.as_svg_id("g"))
+            } else {
+                og
+            };
 
             let new_color = Self::transform_color(
                 obj.kind,
                 &ng,
-                &og,
+                &origin_id,
                 obj.transform
                     .unwrap_or_else(Transform::identity)
                     .post_concat(Transform::from_translate(
@@ -399,7 +410,8 @@ impl<
             let color = color.clone();
             if color.starts_with('@') {
                 let paint_id = context_key.as_svg_id(if is_fill { "pf" } else { "ps" });
-                let (kind, mat, content) = Self::render_paint_with_obj(ctx, color, &paint_id);
+                let (kind, source_id, mat, content) =
+                    Self::render_paint_with_obj(ctx, color, &paint_id);
                 (*(if is_fill {
                     &mut self.text_fill
                 } else {
@@ -407,6 +419,7 @@ impl<
                 })) = Some(Arc::new(PaintObj {
                     kind,
                     id: *context_key,
+                    source_id,
                     transform: mat,
                 }));
                 if let Some(content) = content {
@@ -731,6 +744,58 @@ fn embed_as_image_url(image: &ir::Image) -> Option<String> {
     let mut data = base64::engine::general_purpose::STANDARD.encode(&image.data);
     data.insert_str(0, &url);
     Some(data)
+}
+
+fn glyph_aspect_ratio(font: &FontItem, glyph: u32) -> Option<f32> {
+    let (width, height) = match font.get_glyph(glyph)?.as_ref() {
+        ir::FlatGlyphItem::Outline(outline) => {
+            let mut path = convert_path(&outline.d)?;
+            if let Some(transform) = &outline.ts {
+                let transform: tiny_skia_path::Transform = (**transform).into();
+                path = path.transform(transform)?;
+            }
+
+            let bounds = path.bounds();
+            (bounds.width(), bounds.height())
+        }
+        ir::FlatGlyphItem::Image(image) => (image.image.size.x.0, image.image.size.y.0),
+        ir::FlatGlyphItem::None => return None,
+    };
+
+    if width.is_finite() && height.is_finite() && width != 0.0 && height != 0.0 {
+        Some((width / height).abs())
+    } else {
+        None
+    }
+}
+
+fn convert_path(path_data: &str) -> Option<tiny_skia_path::Path> {
+    let mut builder = tiny_skia_path::PathBuilder::new();
+
+    for segment in svgtypes::SimplifyingPathParser::from(path_data) {
+        let segment = segment.ok()?;
+
+        match segment {
+            svgtypes::SimplePathSegment::MoveTo { x, y } => builder.move_to(x as f32, y as f32),
+            svgtypes::SimplePathSegment::LineTo { x, y } => builder.line_to(x as f32, y as f32),
+            svgtypes::SimplePathSegment::Quadratic { x1, y1, x, y } => {
+                builder.quad_to(x1 as f32, y1 as f32, x as f32, y as f32)
+            }
+            svgtypes::SimplePathSegment::CurveTo {
+                x1,
+                y1,
+                x2,
+                y2,
+                x,
+                y,
+            } => builder.cubic_to(
+                x1 as f32, y1 as f32, x2 as f32, y2 as f32, x as f32, y as f32,
+            ),
+            svgtypes::SimplePathSegment::ClosePath => builder.close(),
+        }
+    }
+
+    builder.finish()
 }
 
 /// Concatenate a list of [`SvgText`] into a single string.

@@ -3714,6 +3714,8 @@ dependencies = [
  "reflexo",
  "reflexo-typst2vec",
  "reflexo-vec2canvas",
+ "svgtypes 0.15.3",
+ "tiny-skia-path 0.11.4",
  "typst",
 ]
 
