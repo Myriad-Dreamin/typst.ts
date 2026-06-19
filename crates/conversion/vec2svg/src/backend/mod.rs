@@ -128,6 +128,7 @@ pub struct PaintObj {
     pub id: Fingerprint,
     pub source_id: Fingerprint,
     pub transform: Option<Transform>,
+    pub adjust_aspect: bool,
 }
 
 /// A builder for [`SvgTextNode`].
@@ -280,7 +281,7 @@ impl SvgTextBuilder {
         let mut do_trans = |obj: &PaintObj, pref: &'static str| -> String {
             let og = obj.id.as_svg_id(pref);
             let ng = format!("{og}-{adjusted_x_offset}-{adjusted_y_offset}").replace('.', "-");
-            let origin_id = if matches!(obj.kind, b'l' | b'p') {
+            let origin_id = if obj.adjust_aspect {
                 glyph_aspect_ratio
                     .map(|ratio| gradient_with_aspect_ratio(obj.source_id, ratio).as_svg_id("g"))
                     .unwrap_or_else(|| obj.source_id.as_svg_id("g"))
@@ -409,6 +410,7 @@ impl<
         let mut render_color_attr = |color: &Arc<str>, is_fill: bool| {
             let color = color.clone();
             if color.starts_with('@') {
+                let is_gradient_paint = color.starts_with("@g");
                 let paint_id = context_key.as_svg_id(if is_fill { "pf" } else { "ps" });
                 let (kind, source_id, mat, content) =
                     Self::render_paint_with_obj(ctx, color, &paint_id);
@@ -421,6 +423,7 @@ impl<
                     id: *context_key,
                     source_id,
                     transform: mat,
+                    adjust_aspect: is_gradient_paint && matches!(kind, b'l' | b'p'),
                 }));
                 if let Some(content) = content {
                     self.content.push(content);
