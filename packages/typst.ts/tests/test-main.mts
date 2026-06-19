@@ -46,6 +46,7 @@ const setSnapshotViewport = (width: number, height: number) => {
 export const testSvg = async (data: Uint8Array) => {
     document.body.innerHTML = '';
     const container = document.createElement('div');
+    container.style.lineHeight = '0';
     const renderer = await getRenderer();
     const rendered = await renderer.runWithSession(async renderSession => {
         renderer.manipulateData({
@@ -58,6 +59,7 @@ export const testSvg = async (data: Uint8Array) => {
         });
     });
     container.innerHTML = rendered;
+    (container.firstElementChild as HTMLElement).style.display = 'block';
     const width = Number.parseFloat((container.firstElementChild as any).dataset.width);
     const height = Number.parseFloat((container.firstElementChild as any).dataset.height);
     setSnapshotViewport(width, height);
