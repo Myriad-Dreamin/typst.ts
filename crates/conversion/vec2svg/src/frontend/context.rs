@@ -1,6 +1,5 @@
 use std::{
     collections::{HashMap, HashSet},
-    ops::Deref,
     sync::Arc,
 };
 
@@ -8,8 +7,8 @@ use reflexo::{
     hash::{Fingerprint, FingerprintBuilder},
     vector::{
         ir::{
-            self, FlatGlyphItem, FontIndice, FontRef, GroupRef, ImmutStr, Module, PathItem, Scalar,
-            TextItem, Transform, VecItem,
+            self, FontIndice, FontRef, GroupRef, ImmutStr, Module, PathItem, Scalar, TextItem,
+            Transform, VecItem,
         },
         vm::{GroupContext, IncrRenderVm, RenderVm},
     },
@@ -17,7 +16,7 @@ use reflexo::{
 use reflexo_typst2vec::ir::Axes;
 
 use crate::{
-    backend::{BuildClipPath, DynExportFeature, NotifyPaint, SvgText, SvgTextBuilder, SvgTextNode},
+    backend::{BuildClipPath, DynExportFeature, NotifyPaint, SvgTextBuilder, SvgTextNode},
     ExportFeature,
 };
 
@@ -245,7 +244,7 @@ impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
                 let fill = fill.clone();
                 let stroke = stroke.clone();
                 for (s, g) in text.render_glyphs(upem, &mut size) {
-                    group_ctx.render_glyph_slow(s, font, g, fill.clone(), stroke.clone());
+                    group_ctx.render_glyph_slow(s, font, g, fill.clone(), Some(stroke.clone()));
                 }
 
                 size
@@ -259,48 +258,10 @@ impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
                 size
             }
             (Some(fill), None) => {
-                // clip path rect
-                let clip_id = fill.id.as_svg_id("pc");
-                let fill_id = fill.id.as_svg_id("pf");
-
-                // because the text is already scaled by the font size,
-                // we need to scale it back to the original size.
-                // todo: infinite multiplication
-                let descender = font.descender.0 * upem.0;
-
-                group_ctx.content.push(SvgText::Plain(format!(
-                    r#"<clipPath id="{clip_id}" clipPathUnits="userSpaceOnUse">"#
-                )));
-
                 let mut size = Axes { x: 0f32, y: 0f32 };
+                let fill = fill.clone();
                 for (s, g) in text.render_glyphs(upem, &mut size) {
-                    group_ctx.render_glyph(self, s, font, g);
-                    group_ctx.content.push(SvgText::Plain("<path/>".into()));
-                }
-
-                group_ctx
-                    .content
-                    .push(SvgText::Plain(r#"</clipPath>"#.to_owned()));
-
-                // clip path rect
-                let scaled_width = size.x * upem.0 / text.shape.size.0;
-                group_ctx.content.push(SvgText::Plain(format!(
-                    r##"<rect fill="url(#{fill_id})" stroke="none" width="{:.1}" height="{:.1}" y="{:.1}" clip-path="url(#{})"/>"##,
-                    scaled_width, upem.0, descender, clip_id
-                )));
-
-                // image glyphs
-                let mut _size = Axes { x: 0f32, y: 0f32 };
-
-                for (s, g) in text.render_glyphs(upem, &mut _size) {
-                    let built = font.get_glyph(g);
-                    if matches!(
-                        built.map(Deref::deref),
-                        Some(FlatGlyphItem::Outline(..)) | None
-                    ) {
-                        continue;
-                    }
-                    group_ctx.render_glyph(self, s, font, g);
+                    group_ctx.render_glyph_slow(s, font, g, Some(fill.clone()), None);
                 }
 
                 size

@@ -261,7 +261,7 @@ impl SvgTextBuilder {
         font: &FontItem,
         glyph: u32,
         fill: Option<Arc<PaintObj>>,
-        stroke: Arc<PaintObj>,
+        stroke: Option<Arc<PaintObj>>,
     ) {
         let adjusted_x_offset = (pos.x.0 * 2.).round();
         let adjusted_y_offset = (pos.y.0 * 2.).round();
@@ -294,12 +294,14 @@ impl SvgTextBuilder {
             ng
         };
 
-        let fill_id = if let Some(fill) = fill {
-            format!(r#" fill="url(#{})" "#, do_trans(&fill, "pf"))
-        } else {
-            String::default()
-        };
-        let stroke_id = format!(r#" stroke="url(#{})" "#, do_trans(&stroke, "ps"));
+        let fill_id = fill
+            .as_ref()
+            .map(|fill| format!(r#" fill="url(#{})""#, do_trans(fill, "pf")))
+            .unwrap_or_default();
+        let stroke_id = stroke
+            .as_ref()
+            .map(|stroke| format!(r#" stroke="url(#{})""#, do_trans(stroke, "ps")))
+            .unwrap_or_default();
 
         self.content.push(SvgText::Plain(format!(
             // r##"<typst-glyph x="{}" href="#{}"/>"##,
