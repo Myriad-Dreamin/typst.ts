@@ -106,7 +106,7 @@ describe('snippet compiler', () => {
     const data = await $typst.pdf({
       mainContent: 'Hello, world!',
     });
-    expect(data?.length).toMatchInlineSnapshot(`2152`);
+    expect(data?.length).toMatchInlineSnapshot(`2141`);
   });
   it.skip('should compile svg', async () => {
     const data = await $typst.svg({
@@ -125,7 +125,7 @@ describe('snippet compiler', () => {
     const data = await $typst.pdf({
       mainContent: '= A bit different!',
     });
-    expect(data?.length).toMatchInlineSnapshot(`2513`);
+    expect(data?.length).toMatchInlineSnapshot(`2502`);
   });
   it.skip('should compile svg 2', async () => {
     const data = await $typst.svg({
@@ -148,7 +148,7 @@ describe('snippet compiler with fonts', () => {
     const data = await $typst.pdf({
       mainContent: 'Hello, world!',
     });
-    expect(data?.length).toMatchInlineSnapshot(`5685`);
+    expect(data?.length).toMatchInlineSnapshot(`5674`);
   });
   it.skip('should compile svg', async () => {
     const data = await $typst.svg({
@@ -167,7 +167,7 @@ describe('snippet compiler with fonts', () => {
     const data = await $typst.pdf({
       mainContent: '= A bit different!',
     });
-    expect(data?.length).toMatchInlineSnapshot(`6158`);
+    expect(data?.length).toMatchInlineSnapshot(`6147`);
   });
   it.skip('should compile svg 2', async () => {
     const data = await $typst.svg({
