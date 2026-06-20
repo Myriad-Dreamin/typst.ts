@@ -123,12 +123,19 @@ impl SvgTextNode {
 }
 
 #[derive(Clone, Copy)]
+pub enum AspectCorrection {
+    None,
+    Glyph,
+    Fixed(Scalar),
+}
+
+#[derive(Clone, Copy)]
 pub struct PaintObj {
     pub kind: u8,
     pub id: Fingerprint,
     pub source_id: Fingerprint,
     pub transform: Option<Transform>,
-    pub adjust_aspect: bool,
+    pub aspect_correction: AspectCorrection,
     pub glyph_scale: Scalar,
 }
 
@@ -147,6 +154,37 @@ impl From<SvgTextBuilder> for Arc<SvgTextNode> {
             attributes: s.attributes,
             content: s.content,
         })
+    }
+}
+
+fn text_aspect_correction(
+    is_gradient_paint: bool,
+    kind: u8,
+    transform: Option<Transform>,
+) -> AspectCorrection {
+    if !is_gradient_paint || !matches!(kind, b'l' | b'p') {
+        return AspectCorrection::None;
+    }
+
+    if let Some(transform) = transform {
+        if !transform.is_identity() {
+            if let Some(ratio) = transform_aspect_ratio(transform) {
+                return AspectCorrection::Fixed(Scalar(ratio));
+            }
+        }
+    }
+
+    AspectCorrection::Glyph
+}
+
+fn transform_aspect_ratio(transform: Transform) -> Option<f32> {
+    let width = transform.sx.0.hypot(transform.ky.0);
+    let height = transform.kx.0.hypot(transform.sy.0);
+
+    if width.is_finite() && height.is_finite() && height != 0.0 {
+        Some(width / height)
+    } else {
+        None
     }
 }
 
@@ -282,13 +320,15 @@ impl SvgTextBuilder {
         let mut do_trans = |obj: &PaintObj, pref: &'static str| -> String {
             let og = obj.id.as_svg_id(pref);
             let ng = format!("{og}-{adjusted_x_offset}-{adjusted_y_offset}").replace('.', "-");
-            let origin_id = if obj.adjust_aspect {
-                glyph_aspect_ratio
-                    .map(|ratio| gradient_with_aspect_ratio(obj.source_id, ratio).as_svg_id("g"))
-                    .unwrap_or_else(|| obj.source_id.as_svg_id("g"))
-            } else {
-                og
+            let corrected_origin = match obj.aspect_correction {
+                AspectCorrection::None => None,
+                AspectCorrection::Glyph => glyph_aspect_ratio,
+                AspectCorrection::Fixed(ratio) => Some(ratio.0),
             };
+            let origin_id = corrected_origin
+                .filter(|ratio| ratio.is_finite() && *ratio != 0.0)
+                .map(|ratio| gradient_with_aspect_ratio(obj.source_id, ratio).as_svg_id("g"))
+                .unwrap_or(og);
 
             let new_color = Self::transform_color(
                 obj.kind,
@@ -436,10 +476,7 @@ impl<
                     id: *context_key,
                     source_id,
                     transform: mat,
-                    // Typst renders outline glyph paint with the glyph bbox
-                    // as the gradient size, so linear and conic text
-                    // gradients need per-glyph aspect correction.
-                    adjust_aspect: is_gradient_paint && matches!(kind, b'l' | b'p'),
+                    aspect_correction: text_aspect_correction(is_gradient_paint, kind, mat),
                     glyph_scale,
                 }));
                 if let Some(content) = content {

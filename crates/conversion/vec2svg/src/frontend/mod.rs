@@ -160,10 +160,10 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
                         )
                     ));
 
-                    // Match typst-svg 0.14.x / the official PNG sampler:
-                    // correct the conic's base angle for the paint aspect
-                    // ratio, then negate it for the screen-space rotation.
-                    let angle = -correct_aspect_ratio(angle.0, gradient_aspect_ratio(aspect_ratio));
+                    // Match typst-svg: the later pattern transform scales the
+                    // unit pattern to the paint size, so each segment boundary
+                    // is corrected with the inverse paint aspect ratio.
+                    let inverse_ratio = 1.0 / gradient_aspect_ratio(aspect_ratio);
                     let mut center = &Axes::new(Scalar(0.5), Scalar(0.5));
                     for s in &gradient.styles {
                         if let GradientStyle::Center(c) = s {
@@ -174,7 +174,8 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
                     // We build an arg segment for each segment of a circle.
                     let dtheta = TAU / CONIC_SEGMENT as f32;
                     for i in 0..CONIC_SEGMENT {
-                        let (theta1, theta2) = conic_segment_angles(angle, dtheta, i);
+                        let (theta1, theta2) =
+                            conic_segment_angles(angle.0, dtheta, inverse_ratio, i);
 
                         // Create the path for the segment.
                         let mut builder = SvgPath2DBuilder::default();
@@ -455,8 +456,11 @@ fn linear_gradient_points(angle: f32, aspect_ratio: f32) -> (f64, f64, f64, f64)
     (x1, y1, x1 + cos * length, y1 + sin * length)
 }
 
-fn conic_segment_angles(angle: f32, dtheta: f32, i: usize) -> (f32, f32) {
-    (angle + dtheta * i as f32, angle + dtheta * (i + 1) as f32)
+fn conic_segment_angles(angle: f32, dtheta: f32, inverse_ratio: f32, i: usize) -> (f32, f32) {
+    (
+        -correct_aspect_ratio(angle + dtheta * i as f32, inverse_ratio),
+        -correct_aspect_ratio(angle + dtheta * (i + 1) as f32, inverse_ratio),
+    )
 }
 
 /// The task context for exporting svg.
@@ -768,13 +772,20 @@ mod tests {
     }
 
     #[test]
-    fn conic_segment_angles_match_typst_014_direction() {
+    fn conic_segment_angles_match_typst_boundaries() {
         let dtheta = TAU / CONIC_SEGMENT as f32;
-        let angle = -correct_aspect_ratio(TAU / 8.0, 10.0);
-        let (theta1, theta2) = conic_segment_angles(angle, dtheta, 0);
+        let angle = TAU / 8.0;
+        let inverse_ratio = 0.1;
+        let (theta1, theta2) = conic_segment_angles(angle, dtheta, inverse_ratio, 0);
 
-        assert_eq!(theta1, angle);
-        assert_eq!(theta2, angle + dtheta);
-        assert!(theta2 > theta1);
+        assert_close(
+            theta1 as f64,
+            -correct_aspect_ratio(angle, inverse_ratio) as f64,
+        );
+        assert_close(
+            theta2 as f64,
+            -correct_aspect_ratio(angle + dtheta, inverse_ratio) as f64,
+        );
+        assert!(theta2 < theta1);
     }
 }
