@@ -297,6 +297,10 @@ impl SvgTextBuilder {
                 obj.transform
                     .filter(|transform| !transform.is_identity())
                     .map(|transform| {
+                        let glyph_coord_scale = Transform::from_scale(
+                            Scalar(1. / obj.glyph_scale.0),
+                            Scalar(1. / obj.glyph_scale.0),
+                        );
                         let glyph_offset = Transform::from_translate(
                             Scalar(-adjusted_x_offset / 2. * obj.glyph_scale.0),
                             Scalar(-adjusted_y_offset / 2. * obj.glyph_scale.0),
@@ -304,6 +308,7 @@ impl SvgTextBuilder {
                         transform
                             .post_concat(Transform::from_scale(Scalar(1.), Scalar(-1.)))
                             .post_concat(glyph_offset)
+                            .post_concat(glyph_coord_scale)
                     })
                     .unwrap_or_else(Transform::identity),
             );
@@ -431,6 +436,9 @@ impl<
                     id: *context_key,
                     source_id,
                     transform: mat,
+                    // Typst renders outline glyph paint with the glyph bbox
+                    // as the gradient size, so linear and conic text
+                    // gradients need per-glyph aspect correction.
                     adjust_aspect: is_gradient_paint && matches!(kind, b'l' | b'p'),
                     glyph_scale,
                 }));
