@@ -1,6 +1,7 @@
 .DS_STORE
 .idea
 .turbo
+.playwright-mcp/
 
 *.artifact.svg
 *.artifact.svg.html
