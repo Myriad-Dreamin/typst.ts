@@ -1,7 +1,7 @@
 
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
-// Test color '.components()' without conversions
+// Test color '.components()' without conversions.
 
 #let test-components(col, ref, has-alpha: true) = {
   // Perform an approximate scalar comparison.

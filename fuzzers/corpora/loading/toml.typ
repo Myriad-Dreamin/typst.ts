@@ -37,3 +37,7 @@
   minute: 38,
   second: 57,
 ))
+
+// Test reading through path type.
+#let data-from-path = toml(path("/assets/data/toml-types.toml"))
+#test(data-from-path, data)

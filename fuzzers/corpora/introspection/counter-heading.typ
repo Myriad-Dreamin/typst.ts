@@ -16,5 +16,5 @@ In #context counter(heading).display()
 
 At Beta, it was #context {
   let it = query(heading).find(it => it.body == [Beta])
-  numbering(it.numbering, ..counter(heading).at(it.location()))
+  counter(heading).display(at: it.location())
 }

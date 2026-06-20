@@ -1,9 +1,8 @@
-// SKIP: Temporarily removed for Typst 0.15.0-rc1 corpus compatibility review.
 
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
-// Warning: 7-12 `ast.small` is deprecated (CJK compatibility character), use ﹡ or `\u{fe61}` instead
-$ ast.small $
+// Warning: 6-9 `gt.tri` is deprecated, use `gt.closed` instead
+$ gt.tri $
 
-// Warning: 14-20 `bracket.double` is deprecated, use `bracket.stroked` instead
-#sym.bracket.double.r
+// Warning: 12-15 `gt.tri.eq` is deprecated, use `gt.closed.eq` instead
+#sym.gt.eq.tri.not

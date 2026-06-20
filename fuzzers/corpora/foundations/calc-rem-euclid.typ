@@ -14,5 +14,5 @@
 #test(calc.rem-euclid(decimal("2.5"), decimal("2")), decimal("0.5"))
 
 // Ensure `i64::MIN % -1` will not overflow and panic.
-#test(calc.rem-euclid(int("-9223372036854775808"), -1), 0)
-#test(calc.rem-euclid(float("-9223372036854775808"), -1.0), 0.0)
+#test(calc.rem-euclid(int.min, -1), 0)
+#test(calc.rem-euclid(float(int.min), -1.0), 0.0)

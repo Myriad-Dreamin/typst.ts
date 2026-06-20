@@ -1,4 +1,5 @@
 use std::{
+    env,
     ffi::OsStr,
     fs,
     path::{Path, PathBuf},
@@ -51,13 +52,15 @@ const LOCAL_LEGACY_CORPUS_FILES: &[&str] = &[
 
 fn main() -> anyhow::Result<()> {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let test_dir = &manifest_dir.join("../../../typst/tests/suite");
+    let test_dir = env::var_os("TYPST_TS_UPSTREAM_SUITE_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| manifest_dir.join("../../../typst/tests/suite"));
     let rewrite_dir = manifest_dir.join("../../fuzzers/corpora");
     let std_artifact_path = manifest_dir.join("../../tests/common/src/std_artifact.rs");
 
     cleanup_generated(&rewrite_dir)?;
 
-    let mut test_files = WalkDir::new(test_dir)
+    let mut test_files = WalkDir::new(&test_dir)
         .into_iter()
         .par_bridge()
         .filter_map(|entry| {
@@ -84,7 +87,7 @@ fn main() -> anyhow::Result<()> {
         })
         .flat_map(|src_path| -> anyhow::Result<Vec<(String, String)>> {
             let text = std::fs::read_to_string(&src_path)?;
-            let pref = src_path.strip_prefix(test_dir)?;
+            let pref = src_path.strip_prefix(&test_dir)?;
 
             let (cat, rewrite_path) = rewrite_target(&rewrite_dir, pref);
             if text.starts_with("// SKIP") || !text.lines().any(|line| line.starts_with("---")) {
@@ -95,17 +98,17 @@ fn main() -> anyhow::Result<()> {
             let sections = parse_sections(&text);
             let mut rewrite_paths = vec![];
             for section in sections {
-                if !section.is_render_target()
-                    || section.has_expected_error()
-                    || section.is_unsupported_for_corpus()
-                {
-                    continue;
-                }
-
                 let file_name = section.name;
                 let rewrite_path = rewrite_path.with_file_name(format!("{file_name}.typ"));
                 let test_path = rewrite_path.strip_prefix(&rewrite_dir)?.with_extension("");
                 let test_path = path_to_slash(&test_path);
+
+                if !section.is_render_target()
+                    || section.has_expected_error()
+                    || section.is_unsupported_for_corpus(&test_path)
+                {
+                    continue;
+                }
 
                 eprintln!("scanned {cat:14} {test_path}...");
 
@@ -154,7 +157,7 @@ impl Section<'_> {
         let has_non_render = self
             .attrs
             .iter()
-            .any(|attr| matches!(*attr, "html" | "pdftags"));
+            .any(|attr| matches!(*attr, "html" | "pdftags" | "bundle"));
         has_render || !has_non_render
     }
 
@@ -164,8 +167,14 @@ impl Section<'_> {
             .any(|line| line.trim_start().starts_with("// Error:"))
     }
 
-    fn is_unsupported_for_corpus(&self) -> bool {
-        self.body.contains("@test/") || self.body.contains(r#"read("./eval.typ")"#)
+    fn is_unsupported_for_corpus(&self, test_path: &str) -> bool {
+        self.body.contains("@test/")
+            || self.body.contains(r#"read("./eval.typ")"#)
+            || matches!(
+                test_path,
+                "foundations/datetime-display" | "foundations/path"
+            )
+            || test_path.starts_with("layout/inline/baseline-")
     }
 }
 

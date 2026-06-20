@@ -1,7 +1,7 @@
 
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
-// Test hue rotation
+// Test hue rotation.
 #let col = rgb(50%, 64%, 16%)
 
 // Oklch

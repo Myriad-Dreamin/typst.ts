@@ -11,7 +11,7 @@
 // Compute the sum of all timestamps in the text.
 #let timesum(text) = {
   let time = 0
-  for match in text.matches(regex("(\d+):(\d+)")) {
+  for match in text.matches(regex("(\\d+):(\\d+)")) {
     let caps = match.captures
     time += 60 * int(caps.at(0)) + int(caps.at(1))
   }

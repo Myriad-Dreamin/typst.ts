@@ -1,7 +1,10 @@
-// SKIP: Temporarily removed for Typst 0.15.0-rc1 corpus compatibility review.
 
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
 // Default square.
-#box(square())
-#box(square[hey!])
+#stack(
+  dir: ltr,
+  spacing: 0.5em,
+  square(),
+  square[hey!]
+)

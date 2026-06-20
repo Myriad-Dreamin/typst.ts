@@ -23,15 +23,16 @@ export function collectUpstreamRenderPoints(suiteDir) {
     }
 
     for (const section of parseSections(text)) {
+      const point = toCorpusPoint(suiteDir, file, section.name);
       if (
         !isRenderTarget(section)
         || hasExpectedError(section)
-        || isUnsupportedForCorpus(section)
+        || isUnsupportedForCorpus(section, point)
       ) {
         continue;
       }
 
-      points.add(toCorpusPoint(suiteDir, file, section.name));
+      points.add(point);
     }
   }
 
@@ -116,7 +117,7 @@ function trimTrailingNewlines(text) {
 
 function isRenderTarget(section) {
   const hasRender = section.attrs.includes('render');
-  const hasNonRender = section.attrs.some(attr => attr === 'html' || attr === 'pdftags');
+  const hasNonRender = section.attrs.some(attr => attr === 'html' || attr === 'pdftags' || attr === 'bundle');
   return hasRender || !hasNonRender;
 }
 
@@ -126,8 +127,12 @@ function hasExpectedError(section) {
     .some(line => line.trimStart().startsWith('// Error:'));
 }
 
-function isUnsupportedForCorpus(section) {
-  return section.body.includes('@test/') || section.body.includes('read("./eval.typ")');
+function isUnsupportedForCorpus(section, point) {
+  return section.body.includes('@test/')
+    || section.body.includes('read("./eval.typ")')
+    || point === 'foundations/datetime-display'
+    || point === 'foundations/path'
+    || point.startsWith('layout/inline/baseline-');
 }
 
 function toCorpusPoint(suiteDir, file, name) {

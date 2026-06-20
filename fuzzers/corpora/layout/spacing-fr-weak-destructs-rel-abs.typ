@@ -1,0 +1,12 @@
+
+#import "/contrib/templates/std-tests/preset.typ": *
+#show: test-page
+// Fr spacing destructs weak rel/abs spacing.
+#set page(height: 100pt)
+0
+#v(1fr, weak: true)
+#v(1em, weak: true)
+1
+#v(1fr, weak: true)
+#v(2em, weak: true)
+2

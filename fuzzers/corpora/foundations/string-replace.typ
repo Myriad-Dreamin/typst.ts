@@ -13,5 +13,5 @@
   .replace("a", "e"),
   "Welcome"
 )
-#test("123".replace(regex("\d$"), "_"), "12_")
-#test("123".replace(regex("\d{1,2}$"), "__"), "1__")
+#test("123".replace(regex("\\d$"), "_"), "12_")
+#test("123".replace(regex("\\d{1,2}$"), "__"), "1__")

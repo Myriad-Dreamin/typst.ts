@@ -13,3 +13,7 @@
 #test(data.bool, false)
 #test(data.keys().contains("true"), true)
 #test(data.at("1"), "ok")
+
+// Test reading through path type.
+#let data-from-path = yaml(path("/assets/data/yaml-types.yaml"))
+#test(data-from-path, data)
