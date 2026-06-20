@@ -129,6 +129,7 @@ pub struct PaintObj {
     pub source_id: Fingerprint,
     pub transform: Option<Transform>,
     pub adjust_aspect: bool,
+    pub glyph_scale: Scalar,
 }
 
 /// A builder for [`SvgTextNode`].
@@ -294,11 +295,17 @@ impl SvgTextBuilder {
                 &ng,
                 &origin_id,
                 obj.transform
-                    .unwrap_or_else(Transform::identity)
-                    .post_concat(Transform::from_translate(
-                        Scalar(-adjusted_x_offset / 2.),
-                        Scalar(-adjusted_y_offset / 2.),
-                    )),
+                    .filter(|transform| !transform.is_identity())
+                    .map(|transform| {
+                        let glyph_offset = Transform::from_translate(
+                            Scalar(-adjusted_x_offset / 2. * obj.glyph_scale.0),
+                            Scalar(-adjusted_y_offset / 2. * obj.glyph_scale.0),
+                        );
+                        transform
+                            .post_concat(Transform::from_scale(Scalar(1.), Scalar(-1.)))
+                            .post_concat(glyph_offset)
+                    })
+                    .unwrap_or_else(Transform::identity),
             );
 
             self.content.push(new_color);
@@ -401,6 +408,7 @@ impl<
         }
 
         let text_scale = upem.0 / shape.size.0;
+        let glyph_scale = Scalar(shape.size.0 / upem.0);
 
         let (fill_id, stroke_id) =
             attach_path_styles(&shape.styles, Some(text_scale), &mut |x, y| {
@@ -424,6 +432,7 @@ impl<
                     source_id,
                     transform: mat,
                     adjust_aspect: is_gradient_paint && matches!(kind, b'l' | b'p'),
+                    glyph_scale,
                 }));
                 if let Some(content) = content {
                     self.content.push(content);

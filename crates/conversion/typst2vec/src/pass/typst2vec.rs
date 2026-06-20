@@ -1052,18 +1052,19 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
             Smart::Custom(t) => t == RelativeTo::Self_,
         };
 
-        let transform = match (is_gradient, relative_to_self) {
-            (true, true) => return scale_ts(),
-            (false, true) if is_text => return scale_ts(),
-            (false, true) => return ir::Transform::identity(),
+        if is_text {
+            return match (is_gradient, relative_to_self) {
+                (_, true) => ir::Transform::identity(),
+                (true, false) => state.body_inv_transform(),
+                (false, false) => state.inv_transform(),
+            };
+        }
+
+        match (is_gradient, relative_to_self) {
+            (true, true) => scale_ts(),
+            (false, true) => ir::Transform::identity(),
             (true, false) => state.body_inv_transform(),
             (false, false) => state.inv_transform(),
-        };
-
-        if is_text {
-            transform.post_concat(scale_ts())
-        } else {
-            transform
         }
     }
 
