@@ -33,7 +33,7 @@ jobs:
       - name: Checkout Typst test ground truth
         uses: actions/checkout@v4
         with:
-          repository: Myriad-Dreamin/typst
+          repository: typst/typst
           ref: v0.15.0
           path: typst-ground-truth
       - name: Install Mold
