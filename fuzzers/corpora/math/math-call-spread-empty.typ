@@ -3,5 +3,6 @@
 #show: test-page
 // Test that a spread operator followed by nothing generates two dots.
 #let args(..body) = body
-#test-repr($args(..)$.body.text, "arguments(sequence([.], [.]))")
-#test-repr($args(.., ..; .. , ..)$.body.text, "arguments(\n  (sequence([.], [.]), sequence([.], [.])),\n  (sequence([.], [.]), sequence([.], [.])),\n)")
+#let check(it, r) = test-repr(it.body.text, r)
+#check($args(..)$, "arguments(sequence([.], [.]))")
+#check($args(.., ..; .. , ..)$, "arguments(\n  (sequence([.], [.]), sequence([.], [.])),\n  (sequence([.], [.]), sequence([.], [.])),\n)")

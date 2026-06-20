@@ -123,10 +123,20 @@ impl SvgTextNode {
 }
 
 #[derive(Clone, Copy)]
+pub enum AspectCorrection {
+    None,
+    Glyph,
+    Fixed(Scalar),
+}
+
+#[derive(Clone, Copy)]
 pub struct PaintObj {
     pub kind: u8,
     pub id: Fingerprint,
+    pub source_id: Fingerprint,
     pub transform: Option<Transform>,
+    pub aspect_correction: AspectCorrection,
+    pub glyph_scale: Scalar,
 }
 
 /// A builder for [`SvgTextNode`].
@@ -144,6 +154,37 @@ impl From<SvgTextBuilder> for Arc<SvgTextNode> {
             attributes: s.attributes,
             content: s.content,
         })
+    }
+}
+
+fn text_aspect_correction(
+    is_gradient_paint: bool,
+    kind: u8,
+    transform: Option<Transform>,
+) -> AspectCorrection {
+    if !is_gradient_paint || !matches!(kind, b'l' | b'p') {
+        return AspectCorrection::None;
+    }
+
+    if let Some(transform) = transform {
+        if !transform.is_identity() {
+            if let Some(ratio) = transform_aspect_ratio(transform) {
+                return AspectCorrection::Fixed(Scalar(ratio));
+            }
+        }
+    }
+
+    AspectCorrection::Glyph
+}
+
+fn transform_aspect_ratio(transform: Transform) -> Option<f32> {
+    let width = transform.sx.0.hypot(transform.ky.0);
+    let height = transform.kx.0.hypot(transform.sy.0);
+
+    if width.is_finite() && height.is_finite() && height != 0.0 {
+        Some(width / height)
+    } else {
+        None
     }
 }
 
@@ -243,11 +284,12 @@ impl SvgTextBuilder {
         ctx: &mut C,
         color: ImmutStr,
         paint_id: &str,
-    ) -> (u8, Option<Transform>, Option<SvgText>) {
+    ) -> (u8, Fingerprint, Option<Transform>, Option<SvgText>) {
         let (kind, cano_ref, matrix) = ctx.notify_paint(color);
 
         (
             kind,
+            cano_ref,
             matrix,
             matrix.map(|matrix| {
                 Self::transform_color(kind, paint_id, &cano_ref.as_svg_id("g"), matrix)
@@ -261,10 +303,12 @@ impl SvgTextBuilder {
         font: &FontItem,
         glyph: u32,
         fill: Option<Arc<PaintObj>>,
-        stroke: Arc<PaintObj>,
+        stroke: Option<Arc<PaintObj>>,
+        mut gradient_with_aspect_ratio: impl FnMut(Fingerprint, f32) -> Fingerprint,
     ) {
         let adjusted_x_offset = (pos.x.0 * 2.).round();
         let adjusted_y_offset = (pos.y.0 * 2.).round();
+        let glyph_aspect_ratio = glyph_aspect_ratio(font, glyph);
 
         // A stable glyph id can help incremental font transfer (IFT).
         // However, it is permitted unstable if you will not use IFT.
@@ -276,17 +320,37 @@ impl SvgTextBuilder {
         let mut do_trans = |obj: &PaintObj, pref: &'static str| -> String {
             let og = obj.id.as_svg_id(pref);
             let ng = format!("{og}-{adjusted_x_offset}-{adjusted_y_offset}").replace('.', "-");
+            let corrected_origin = match obj.aspect_correction {
+                AspectCorrection::None => None,
+                AspectCorrection::Glyph => glyph_aspect_ratio,
+                AspectCorrection::Fixed(ratio) => Some(ratio.0),
+            };
+            let origin_id = corrected_origin
+                .filter(|ratio| ratio.is_finite() && *ratio != 0.0)
+                .map(|ratio| gradient_with_aspect_ratio(obj.source_id, ratio).as_svg_id("g"))
+                .unwrap_or(og);
 
             let new_color = Self::transform_color(
                 obj.kind,
                 &ng,
-                &og,
+                &origin_id,
                 obj.transform
-                    .unwrap_or_else(Transform::identity)
-                    .post_concat(Transform::from_translate(
-                        Scalar(-adjusted_x_offset / 2.),
-                        Scalar(-adjusted_y_offset / 2.),
-                    )),
+                    .filter(|transform| !transform.is_identity())
+                    .map(|transform| {
+                        let glyph_coord_scale = Transform::from_scale(
+                            Scalar(1. / obj.glyph_scale.0),
+                            Scalar(1. / obj.glyph_scale.0),
+                        );
+                        let glyph_offset = Transform::from_translate(
+                            Scalar(-adjusted_x_offset / 2. * obj.glyph_scale.0),
+                            Scalar(-adjusted_y_offset / 2. * obj.glyph_scale.0),
+                        );
+                        transform
+                            .post_concat(Transform::from_scale(Scalar(1.), Scalar(-1.)))
+                            .post_concat(glyph_offset)
+                            .post_concat(glyph_coord_scale)
+                    })
+                    .unwrap_or_else(Transform::identity),
             );
 
             self.content.push(new_color);
@@ -294,12 +358,14 @@ impl SvgTextBuilder {
             ng
         };
 
-        let fill_id = if let Some(fill) = fill {
-            format!(r#" fill="url(#{})" "#, do_trans(&fill, "pf"))
-        } else {
-            String::default()
-        };
-        let stroke_id = format!(r#" stroke="url(#{})" "#, do_trans(&stroke, "ps"));
+        let fill_id = fill
+            .as_ref()
+            .map(|fill| format!(r#" fill="url(#{})""#, do_trans(fill, "pf")))
+            .unwrap_or_default();
+        let stroke_id = stroke
+            .as_ref()
+            .map(|stroke| format!(r#" stroke="url(#{})""#, do_trans(stroke, "ps")))
+            .unwrap_or_default();
 
         self.content.push(SvgText::Plain(format!(
             // r##"<typst-glyph x="{}" href="#{}"/>"##,
@@ -387,6 +453,7 @@ impl<
         }
 
         let text_scale = upem.0 / shape.size.0;
+        let glyph_scale = Scalar(shape.size.0 / upem.0);
 
         let (fill_id, stroke_id) =
             attach_path_styles(&shape.styles, Some(text_scale), &mut |x, y| {
@@ -396,8 +463,10 @@ impl<
         let mut render_color_attr = |color: &Arc<str>, is_fill: bool| {
             let color = color.clone();
             if color.starts_with('@') {
+                let is_gradient_paint = color.starts_with("@g");
                 let paint_id = context_key.as_svg_id(if is_fill { "pf" } else { "ps" });
-                let (kind, mat, content) = Self::render_paint_with_obj(ctx, color, &paint_id);
+                let (kind, source_id, mat, content) =
+                    Self::render_paint_with_obj(ctx, color, &paint_id);
                 (*(if is_fill {
                     &mut self.text_fill
                 } else {
@@ -405,7 +474,10 @@ impl<
                 })) = Some(Arc::new(PaintObj {
                     kind,
                     id: *context_key,
+                    source_id,
                     transform: mat,
+                    aspect_correction: text_aspect_correction(is_gradient_paint, kind, mat),
+                    glyph_scale,
                 }));
                 if let Some(content) = content {
                     self.content.push(content);
@@ -729,6 +801,58 @@ fn embed_as_image_url(image: &ir::Image) -> Option<String> {
     let mut data = base64::engine::general_purpose::STANDARD.encode(&image.data);
     data.insert_str(0, &url);
     Some(data)
+}
+
+fn glyph_aspect_ratio(font: &FontItem, glyph: u32) -> Option<f32> {
+    let (width, height) = match font.get_glyph(glyph)?.as_ref() {
+        ir::FlatGlyphItem::Outline(outline) => {
+            let mut path = convert_path(&outline.d)?;
+            if let Some(transform) = &outline.ts {
+                let transform: tiny_skia_path::Transform = (**transform).into();
+                path = path.transform(transform)?;
+            }
+
+            let bounds = path.bounds();
+            (bounds.width(), bounds.height())
+        }
+        ir::FlatGlyphItem::Image(image) => (image.image.size.x.0, image.image.size.y.0),
+        ir::FlatGlyphItem::None => return None,
+    };
+
+    if width.is_finite() && height.is_finite() && width != 0.0 && height != 0.0 {
+        Some((width / height).abs())
+    } else {
+        None
+    }
+}
+
+fn convert_path(path_data: &str) -> Option<tiny_skia_path::Path> {
+    let mut builder = tiny_skia_path::PathBuilder::new();
+
+    for segment in svgtypes::SimplifyingPathParser::from(path_data) {
+        let segment = segment.ok()?;
+
+        match segment {
+            svgtypes::SimplePathSegment::MoveTo { x, y } => builder.move_to(x as f32, y as f32),
+            svgtypes::SimplePathSegment::LineTo { x, y } => builder.line_to(x as f32, y as f32),
+            svgtypes::SimplePathSegment::Quadratic { x1, y1, x, y } => {
+                builder.quad_to(x1 as f32, y1 as f32, x as f32, y as f32)
+            }
+            svgtypes::SimplePathSegment::CurveTo {
+                x1,
+                y1,
+                x2,
+                y2,
+                x,
+                y,
+            } => builder.cubic_to(
+                x1 as f32, y1 as f32, x2 as f32, y2 as f32, x as f32, y as f32,
+            ),
+            svgtypes::SimplePathSegment::ClosePath => builder.close(),
+        }
+    }
+
+    builder.finish()
 }
 
 /// Concatenate a list of [`SvgText`] into a single string.

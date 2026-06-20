@@ -28,6 +28,7 @@ const testPointsPath = path.join(refsDir, 'test-points.json');
 const rendererDir = path.join(refsDir, 'renderer');
 const upstreamSuiteDir = resolveUpstreamSuiteDir(packageRoot);
 const upstreamRefDir = path.resolve(upstreamSuiteDir, '../ref');
+const upstreamRenderRefDir = path.join(upstreamRefDir, 'render');
 
 if (!fs.existsSync(upstreamRefDir)) {
   throw new Error(
@@ -159,7 +160,7 @@ function normalizePoint(point) {
 
 function officialRefPath(point) {
   const name = point.split('/').at(-1);
-  const candidate = path.join(upstreamRefDir, `${name}.png`);
+  const candidate = path.join(upstreamRenderRefDir, `${name}.png`);
   return fs.existsSync(candidate) ? candidate : undefined;
 }
 

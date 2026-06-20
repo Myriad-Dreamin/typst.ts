@@ -9,3 +9,7 @@ Examples:
 - `fix(renderer): remove svg inline baseline gap`
 - `test(typst.ts): update compiler pdf length snapshots`
 - `chore: bump version to v0.8.0-rc1`
+
+## Worktrees
+
+Do not create git worktrees under `/tmp` unless explicitly requested.

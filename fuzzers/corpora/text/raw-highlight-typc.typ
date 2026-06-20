@@ -1,8 +1,8 @@
 
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
+// Highlighting for Typst code
 #set page(width: auto)
-
 ```typ
 #set hello()
 #set hello()

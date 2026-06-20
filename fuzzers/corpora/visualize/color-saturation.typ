@@ -1,7 +1,7 @@
 
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
-// Test saturation
+// Test saturation.
 #let col = color.hsl(180deg, 0%, 50%)
 #for x in range(0, 11) {
   box(square(size: 9pt, fill: col.saturate(x * 10%)))

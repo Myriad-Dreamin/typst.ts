@@ -5,9 +5,9 @@
 // the first one.
 #context {
   let c = counter("c")
-  let u(n) = c.update(n)
   let it = context c.get().first() * h(1pt)
-  let size = measure(it)
-  table(columns: 5, u(17), it, u(1), it, u(5))
-  [#size.width] // 17pt
+  let u(n) = c.update(n)
+  grid(columns: 5, u(17), it, u(1), it, u(5))
+  metadata(measure(it).width)
 }
+#context test(query(metadata).first().value, 17pt)

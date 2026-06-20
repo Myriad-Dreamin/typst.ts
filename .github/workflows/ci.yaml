@@ -33,8 +33,8 @@ jobs:
       - name: Checkout Typst test ground truth
         uses: actions/checkout@v4
         with:
-          repository: Myriad-Dreamin/typst
-          ref: v0.14.2
+          repository: typst/typst
+          ref: v0.15.0
           path: typst-ground-truth
       - name: Install Mold
         uses: rui314/setup-mold@v1
@@ -88,7 +88,7 @@ jobs:
         run: |
           cd packages/typst.ts
           TYPST_TS_UPSTREAM_SUITE_DIR=../../typst-ground-truth/tests/suite node scripts/write-rendered-test-points.mjs
-          TYPST_TS_UPSTREAM_SUITE_DIR=../../typst-ground-truth/tests/suite TYPST_TS_UPSTREAM_REF=v0.14.2 node scripts/write-renderer-diff-protocol.mjs
+          TYPST_TS_UPSTREAM_SUITE_DIR=../../typst-ground-truth/tests/suite TYPST_TS_UPSTREAM_REF=v0.15.0 node scripts/write-renderer-diff-protocol.mjs
       - name: Archive Renderer Diff (Vitest)
         id: upload_renderer_diff
         if: always()

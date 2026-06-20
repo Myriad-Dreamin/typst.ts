@@ -17,6 +17,7 @@
   ("plasma", color.map.plasma),
   ("rocket", color.map.rocket),
   ("mako", color.map.mako),
+  ("coolwarm", color.map.coolwarm),
   ("vlag", color.map.vlag),
   ("icefire", color.map.icefire),
   ("flare", color.map.flare),

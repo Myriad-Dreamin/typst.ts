@@ -10,7 +10,7 @@
     num.step()
     box(width: 0pt, super(numbering("1", num.get().first())))
   }
-  show regex("\w+\.?"): it => it + [#metadata(none)#word-label]
+  show regex("\\w+\\.?"): it => it + [#metadata(none)#word-label]
   body
 }
 

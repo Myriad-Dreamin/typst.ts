@@ -1,23 +1,23 @@
 use std::{
     collections::{HashMap, HashSet},
-    ops::Deref,
     sync::Arc,
 };
 
 use reflexo::{
-    hash::{Fingerprint, FingerprintBuilder},
+    hash::{item_hash128, Fingerprint, FingerprintBuilder},
     vector::{
         ir::{
-            self, FlatGlyphItem, FontIndice, FontRef, GroupRef, ImmutStr, Module, PathItem, Scalar,
-            TextItem, Transform, VecItem,
+            self, FontIndice, FontRef, GroupRef, ImmutStr, Module, PathItem, Scalar, TextItem,
+            Transform, VecItem,
         },
         vm::{GroupContext, IncrRenderVm, RenderVm},
     },
 };
 use reflexo_typst2vec::ir::Axes;
 
+use super::{GradientDefMap, GradientDefRef};
 use crate::{
-    backend::{BuildClipPath, DynExportFeature, NotifyPaint, SvgText, SvgTextBuilder, SvgTextNode},
+    backend::{BuildClipPath, DynExportFeature, NotifyPaint, SvgTextBuilder, SvgTextNode},
     ExportFeature,
 };
 
@@ -50,7 +50,7 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     /// Stores the style definitions used in the document.
     pub(crate) _style_defs: &'t mut StyleDefMap,
     /// Stores the gradients used in the document.
-    pub(crate) gradients: &'t mut PaintFillMap,
+    pub(crate) gradients: &'t mut GradientDefMap,
     /// Stores the patterns used in the document.
     pub(crate) patterns: &'t mut PaintFillMap,
 
@@ -115,6 +115,7 @@ impl<Feat: ExportFeature> NotifyPaint for RenderContext<'_, '_, Feat> {
         if url_ref.starts_with("@g") {
             let id = url_ref.trim_start_matches("@g");
             let mut id = Fingerprint::try_from_str(id).unwrap();
+            let paint_id = id;
 
             let transform = match self.get_item(&id) {
                 Some(VecItem::ColorTransform(g)) => {
@@ -138,8 +139,22 @@ impl<Feat: ExportFeature> NotifyPaint for RenderContext<'_, '_, Feat> {
                 ir::GradientKind::Conic(..) => b'p',
             };
 
-            self.gradients.insert(id);
-            (kind, id, transform)
+            // Linear and conic gradients need the concrete paint transform to
+            // compensate their angles for the target aspect ratio. Keep a
+            // per-paint definition id for those while still using canonical
+            // definitions for radial gradients.
+            let gradient_ref = if matches!(kind, b'l' | b'p') && transform.is_some() {
+                paint_id
+            } else {
+                id
+            };
+
+            self.gradients.insert(GradientDefRef {
+                id: gradient_ref,
+                item: gradient_ref,
+                aspect_ratio: None,
+            });
+            (kind, gradient_ref, transform)
         } else if url_ref.starts_with("@p") {
             let id = url_ref.trim_start_matches("@p");
             let mut id = Fingerprint::try_from_str(id).unwrap();
@@ -211,6 +226,17 @@ impl<'m, Feat: ExportFeature> RenderVm<'m> for RenderContext<'m, '_, Feat> {
 impl<'m, Feat: ExportFeature> IncrRenderVm<'m> for RenderContext<'m, '_, Feat> {}
 
 impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
+    fn gradient_with_aspect_ratio(&mut self, item: Fingerprint, aspect_ratio: f32) -> Fingerprint {
+        let aspect_ratio = Scalar(aspect_ratio);
+        let id = Fingerprint::from_u128(item_hash128(&(item, aspect_ratio)));
+        self.gradients.insert(GradientDefRef {
+            id,
+            item,
+            aspect_ratio: Some(aspect_ratio),
+        });
+        id
+    }
+
     /// Render a text into the underlying context.
     fn render_text_inplace(
         &mut self,
@@ -234,7 +260,14 @@ impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
                 let fill = fill.clone();
                 let stroke = stroke.clone();
                 for (s, g) in text.render_glyphs(upem, &mut size) {
-                    group_ctx.render_glyph_slow(s, font, g, fill.clone(), stroke.clone());
+                    group_ctx.render_glyph_slow(
+                        s,
+                        font,
+                        g,
+                        fill.clone(),
+                        Some(stroke.clone()),
+                        |item, aspect_ratio| self.gradient_with_aspect_ratio(item, aspect_ratio),
+                    );
                 }
 
                 size
@@ -248,48 +281,17 @@ impl<Feat: ExportFeature> RenderContext<'_, '_, Feat> {
                 size
             }
             (Some(fill), None) => {
-                // clip path rect
-                let clip_id = fill.id.as_svg_id("pc");
-                let fill_id = fill.id.as_svg_id("pf");
-
-                // because the text is already scaled by the font size,
-                // we need to scale it back to the original size.
-                // todo: infinite multiplication
-                let descender = font.descender.0 * upem.0;
-
-                group_ctx.content.push(SvgText::Plain(format!(
-                    r#"<clipPath id="{clip_id}" clipPathUnits="userSpaceOnUse">"#
-                )));
-
                 let mut size = Axes { x: 0f32, y: 0f32 };
+                let fill = fill.clone();
                 for (s, g) in text.render_glyphs(upem, &mut size) {
-                    group_ctx.render_glyph(self, s, font, g);
-                    group_ctx.content.push(SvgText::Plain("<path/>".into()));
-                }
-
-                group_ctx
-                    .content
-                    .push(SvgText::Plain(r#"</clipPath>"#.to_owned()));
-
-                // clip path rect
-                let scaled_width = size.x * upem.0 / text.shape.size.0;
-                group_ctx.content.push(SvgText::Plain(format!(
-                    r##"<rect fill="url(#{fill_id})" stroke="none" width="{:.1}" height="{:.1}" y="{:.1}" clip-path="url(#{})"/>"##,
-                    scaled_width, upem.0, descender, clip_id
-                )));
-
-                // image glyphs
-                let mut _size = Axes { x: 0f32, y: 0f32 };
-
-                for (s, g) in text.render_glyphs(upem, &mut _size) {
-                    let built = font.get_glyph(g);
-                    if matches!(
-                        built.map(Deref::deref),
-                        Some(FlatGlyphItem::Outline(..)) | None
-                    ) {
-                        continue;
-                    }
-                    group_ctx.render_glyph(self, s, font, g);
+                    group_ctx.render_glyph_slow(
+                        s,
+                        font,
+                        g,
+                        Some(fill.clone()),
+                        None,
+                        |item, aspect_ratio| self.gradient_with_aspect_ratio(item, aspect_ratio),
+                    );
                 }
 
                 size

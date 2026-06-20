@@ -16,5 +16,5 @@
 #test(calc.rem(decimal("-7"), decimal("-3")), decimal("-1"))
 
 // Ensure `i64::MIN % -1` will not overflow and panic.
-#test(calc.rem(int("-9223372036854775808"), -1), 0)
-#test(calc.rem(float("-9223372036854775808"), -1.0), 0.0)
+#test(calc.rem(int.min, -1), 0)
+#test(calc.rem(float(int.min), -1.0), 0.0)

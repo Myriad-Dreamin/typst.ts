@@ -2,7 +2,7 @@
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
 // When passing to a function, we lose the italic styling if we wrap the content
-// in a non-math function unless it's already nested in some math element (lr,
+// in a non-math function, unless it's already nested in some math element (lr,
 // attach, etc.)
 //
 // This is not good, so this test should fail and be updated once it is fixed.

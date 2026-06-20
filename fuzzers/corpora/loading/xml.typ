@@ -1,27 +1,32 @@
-// SKIP: Temporarily removed for Typst 0.15.0-rc1 corpus compatibility review.
 
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
 // Test reading XML data.
 #let data = xml("/assets/data/hello.xml")
 #test(data, ((
+  namespace: none,
   tag: "data",
   attrs: (:),
   children: (
     "\n  ",
-    (tag: "hello", attrs: (name: "hi"), children: ("1",)),
+    (namespace: none, tag: "hello", attrs: (name: "hi"), children: ("1",)),
     "\n  ",
     (
+      namespace: none,
       tag: "data",
       attrs: (:),
       children: (
         "\n    ",
-        (tag: "hello", attrs: (:), children: ("World",)),
+        (namespace: none, tag: "hello", attrs: (:), children: ("World",)),
         "\n    ",
-        (tag: "hello", attrs: (:), children: ("World",)),
+        (namespace: none, tag: "hello", attrs: (:), children: ("World",)),
         "\n  ",
       ),
     ),
     "\n",
   ),
 ),))
+
+// Test reading through path type.
+#let data-from-path = xml(path("/assets/data/hello.xml"))
+#test(data-from-path, data)

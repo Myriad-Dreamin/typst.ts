@@ -21,9 +21,11 @@ pub use backend::SvgText;
 /// the document.
 pub(crate) mod frontend;
 pub use frontend::{
+    svg_gradient_def, svg_gradient_def_ref, GradientDefRef, SVGGradientDef, SvgExporter, SvgTask,
+};
+pub use frontend::{
     DynamicLayoutSvgExporter, IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderContext,
 };
-pub use frontend::{SvgExporter, SvgTask};
 
 /// Useful transform for SVG Items.
 pub(crate) mod transform;

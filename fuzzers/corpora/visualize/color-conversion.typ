@@ -1,8 +1,7 @@
-// SKIP: Temporarily removed for Typst 0.15.0-rc1 corpus compatibility review.
 
 #import "/contrib/templates/std-tests/preset.typ": *
 #show: test-page
-// Test color conversion method kinds
+// Test color conversion method kinds.
 #test(rgb(rgb(10, 20, 30)).space(), rgb)
 #test(color.linear-rgb(rgb(10, 20, 30)).space(), color.linear-rgb)
 #test(oklab(rgb(10, 20, 30)).space(), oklab)
@@ -78,8 +77,8 @@
 #test(rgb(1, 2, 3).to-hex(), "#010203")
 #test(rgb(1, 2, 3, 4).to-hex(), "#01020304")
 #test(luma(40).to-hex(), "#282828")
-#test-repr(cmyk(4%, 5%, 6%, 7%).to-hex(), "#e0dcda")
-#test-repr(rgb(cmyk(4%, 5%, 6%, 7%)), rgb(87.84%, 86.27%, 85.49%, 100%))
+#test-repr(cmyk(4%, 5%, 6%, 7%).to-hex(), "#e2dcda")
+#test-repr(rgb(cmyk(4%, 5%, 6%, 7%)), rgb(226, 220, 218))
 #test-repr(rgb(luma(40%)), rgb(40%, 40%, 40%))
 #test-repr(cmyk(luma(40)), cmyk(63.24%, 57.33%, 56.49%, 75.88%))
 #test-repr(cmyk(rgb(1, 2, 3)), cmyk(66.67%, 33.33%, 0%, 98.82%))
