@@ -126,6 +126,7 @@ impl SvgTextNode {
 pub enum AspectCorrection {
     None,
     Glyph,
+    Fixed(Scalar),
 }
 
 #[derive(Clone, Copy)]
@@ -156,12 +157,35 @@ impl From<SvgTextBuilder> for Arc<SvgTextNode> {
     }
 }
 
-fn text_aspect_correction(is_gradient_paint: bool, kind: u8) -> AspectCorrection {
+fn text_aspect_correction(
+    is_gradient_paint: bool,
+    kind: u8,
+    transform: Option<Transform>,
+) -> AspectCorrection {
     if !is_gradient_paint || !matches!(kind, b'l' | b'p') {
         return AspectCorrection::None;
     }
 
+    if let Some(transform) = transform {
+        if !transform.is_identity() {
+            if let Some(ratio) = transform_aspect_ratio(transform) {
+                return AspectCorrection::Fixed(Scalar(ratio));
+            }
+        }
+    }
+
     AspectCorrection::Glyph
+}
+
+fn transform_aspect_ratio(transform: Transform) -> Option<f32> {
+    let width = transform.sx.0.hypot(transform.ky.0);
+    let height = transform.kx.0.hypot(transform.sy.0);
+
+    if width.is_finite() && height.is_finite() && height != 0.0 {
+        Some(width / height)
+    } else {
+        None
+    }
 }
 
 /// Internal methods for [`SvgTextBuilder`].
@@ -299,6 +323,7 @@ impl SvgTextBuilder {
             let corrected_origin = match obj.aspect_correction {
                 AspectCorrection::None => None,
                 AspectCorrection::Glyph => glyph_aspect_ratio,
+                AspectCorrection::Fixed(ratio) => Some(ratio.0),
             };
             let origin_id = corrected_origin
                 .filter(|ratio| ratio.is_finite() && *ratio != 0.0)
@@ -451,7 +476,7 @@ impl<
                     id: *context_key,
                     source_id,
                     transform: mat,
-                    aspect_correction: text_aspect_correction(is_gradient_paint, kind),
+                    aspect_correction: text_aspect_correction(is_gradient_paint, kind, mat),
                     glyph_scale,
                 }));
                 if let Some(content) = content {
