@@ -71,7 +71,7 @@
         p.parentNode.insertBefore(createElem(svg, true), p.nextSibling);
       });
     });
-    document.querySelectorAll('p code').forEach(p => {
+    document.querySelectorAll('p code, dd code').forEach(p => {
       if (!(p.textContent.startsWith('{') && p.textContent.endsWith('}'))) {
         return;
       }
