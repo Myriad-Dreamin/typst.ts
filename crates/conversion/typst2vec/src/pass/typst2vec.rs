@@ -814,7 +814,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
 
         let stateful_fill = match shape.fill {
             Some(Paint::Tiling(..) | Paint::Gradient(..)) => {
-                Some(self.paint_shape(state, shape, shape.fill.as_ref().unwrap()))
+                Some(self.paint_shape(state, shape, shape.fill.as_ref().unwrap(), false))
             }
             _ => None,
         };
@@ -823,7 +823,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
             Some(FixedStroke {
                 paint: Paint::Tiling(..) | Paint::Gradient(..),
                 ..
-            }) => Some(self.paint_shape(state, shape, &shape.stroke.as_ref().unwrap().paint)),
+            }) => Some(self.paint_shape(state, shape, &shape.stroke.as_ref().unwrap().paint, true)),
             _ => None,
         };
 
@@ -835,7 +835,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
 
         let stateful_stroke = || {
             stateful_stroke.unwrap_or_else(|| {
-                self.paint_shape(state, shape, &shape.stroke.as_ref().unwrap().paint)
+                self.paint_shape(state, shape, &shape.stroke.as_ref().unwrap().paint, true)
             })
         };
 
@@ -889,9 +889,9 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
             let mut styles = Vec::new();
 
             if let Some(paint_fill) = &shape.fill {
-                styles.push(PathStyle::Fill(
-                    stateful_fill.unwrap_or_else(|| self.paint_shape(state, shape, paint_fill)),
-                ));
+                styles.push(PathStyle::Fill(stateful_fill.unwrap_or_else(|| {
+                    self.paint_shape(state, shape, paint_fill, false)
+                })));
             }
 
             if let Some(stroke) = &shape.stroke {
@@ -975,16 +975,36 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
     }
 
     #[inline]
-    fn paint_shape(&self, state: State, shape: &Shape, g: &Paint) -> ImmutStr {
+    fn paint_shape(
+        &self,
+        state: State,
+        shape: &Shape,
+        g: &Paint,
+        include_stroke_in_bbox: bool,
+    ) -> ImmutStr {
         self.paint(state, g, |relative_to_self, is_gradient| {
             self.paint_transform(
                 state,
                 relative_to_self,
                 || {
-                    let bbox = shape.bbox(false).size();
+                    let bbox = shape.bbox(include_stroke_in_bbox);
+                    let mut offset = bbox.min;
+                    let mut size = bbox.size();
+
+                    // Match typst-svg: negative rectangle sizes mirror gradients.
+                    if let Geometry::Rect(rect) = shape.geometry {
+                        if rect.x.signum() < 1.0 {
+                            offset.x += size.x;
+                            size.x *= -1.0;
+                        }
+                        if rect.y.signum() < 1.0 {
+                            offset.y += size.y;
+                            size.y *= -1.0;
+                        }
+                    }
 
                     // Edge cases for strokes.
-                    let (mut x, mut y) = (bbox.x.to_f32(), bbox.y.to_f32());
+                    let (mut x, mut y) = (size.x.to_f32(), size.y.to_f32());
                     if x == 0.0 {
                         x = 1.0;
                     }
@@ -992,7 +1012,9 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
                         y = 1.0;
                     }
 
-                    ir::Transform::from_scale(ir::Scalar(x), ir::Scalar(y))
+                    ir::Transform::from_scale(ir::Scalar(x), ir::Scalar(y)).post_concat(
+                        ir::Transform::from_translate(offset.x.into_typst(), offset.y.into_typst()),
+                    )
                 },
                 false,
                 is_gradient,
