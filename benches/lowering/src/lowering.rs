@@ -122,6 +122,7 @@ static THE_THESIS_COMPILER: CompileDriver = std::sync::LazyLock::new(|| {
         entry: the_thesis_path.clone() + "/masterproef/main.typ",
         font: FontArgs {
             paths: vec![Path::new(&(the_thesis_path + "/fonts")).to_owned()],
+            ignore_system_fonts: false,
         },
         ..Default::default()
     }))

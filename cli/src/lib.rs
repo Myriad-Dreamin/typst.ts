@@ -118,6 +118,11 @@ pub struct FontArgs {
         value_delimiter = ENV_PATH_SEP,
     )]
     pub paths: Vec<PathBuf>,
+
+    /// Ensures system fonts won't be searched, unless explicitly included via
+    /// `--font-path`.
+    #[clap(long = "ignore-system-fonts", env = "TYPST_IGNORE_SYSTEM_FONTS")]
+    pub ignore_system_fonts: bool,
 }
 
 #[derive(Default, Debug, Clone, Parser)]
