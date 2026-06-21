@@ -33,14 +33,15 @@ describe('resolve assets', () => {
         "https://cdn.jsdelivr.net/gh/typst/typst-assets@v0.13.1/files/fonts/NewCMMath-Bold.otf",
         "https://cdn.jsdelivr.net/gh/typst/typst-assets@v0.13.1/files/fonts/NewCMMath-Book.otf",
         "https://cdn.jsdelivr.net/gh/typst/typst-assets@v0.13.1/files/fonts/NewCMMath-Regular.otf",
-        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/InriaSerif-Bold.ttf",
-        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/InriaSerif-BoldItalic.ttf",
-        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/InriaSerif-Italic.ttf",
-        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/InriaSerif-Regular.ttf",
-        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/Roboto-Regular.ttf",
-        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/NotoSerifCJKsc-Regular.otf",
-        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/TwitterColorEmoji.ttf",
-        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/NotoColorEmoji-Regular-COLR.subset.ttf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/InriaSerif-Bold.ttf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/InriaSerif-BoldItalic.ttf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/InriaSerif-Italic.ttf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/InriaSerif-Regular.ttf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/Roboto-Regular.ttf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/NotoSerifCJKsc-Regular.otf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/TwitterColorEmoji.ttf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/NotoColorEmoji-Regular-COLR.subset.ttf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/NotoColorEmoji-Regular-CBDT.subset.ttf",
       ]
     `);
   });
@@ -93,12 +94,12 @@ describe('resolve assets', () => {
         "https://cdn.jsdelivr.net/gh/typst/typst-assets@v0.13.1/files/fonts/NewCMMath-Bold.otf",
         "https://cdn.jsdelivr.net/gh/typst/typst-assets@v0.13.1/files/fonts/NewCMMath-Book.otf",
         "https://cdn.jsdelivr.net/gh/typst/typst-assets@v0.13.1/files/fonts/NewCMMath-Regular.otf",
-        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/InriaSerif-Bold.ttf",
-        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/InriaSerif-BoldItalic.ttf",
-        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/InriaSerif-Italic.ttf",
-        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/InriaSerif-Regular.ttf",
-        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/Roboto-Regular.ttf",
-        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/NotoSerifCJKsc-Regular.otf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/InriaSerif-Bold.ttf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/InriaSerif-BoldItalic.ttf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/InriaSerif-Italic.ttf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/InriaSerif-Regular.ttf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/Roboto-Regular.ttf",
+        "https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/NotoSerifCJKsc-Regular.otf",
       ]
     `);
   });

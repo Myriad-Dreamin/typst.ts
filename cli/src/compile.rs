@@ -68,6 +68,7 @@ pub fn resolve_universe(args: CompileOnceArgs) -> TypstSystemUniverse {
         entry: EntryOpts::new_workspace(workspace_dir.clone()),
         inputs,
         font_paths: args.font.paths.clone(),
+        no_system_fonts: args.font.ignore_system_fonts,
         with_embedded_fonts: fonts()
             .map(Cow::Borrowed)
             .chain(args.extra_embedded_fonts)

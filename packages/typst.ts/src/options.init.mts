@@ -105,7 +105,11 @@ const _cjkFonts: string[] = [
   'NotoSerifCJKsc-Regular.otf',
 ];
 /** @internal */
-const _emojiFonts: string[] = ['TwitterColorEmoji.ttf', 'NotoColorEmoji-Regular-COLR.subset.ttf'];
+const _emojiFonts: string[] = [
+  'TwitterColorEmoji.ttf',
+  'NotoColorEmoji-Regular-COLR.subset.ttf',
+  'NotoColorEmoji-Regular-CBDT.subset.ttf',
+];
 
 type AvailableFontAsset = 'text' | 'cjk' | 'emoji';
 
@@ -164,7 +168,7 @@ export function _resolveAssets(options?: LoadRemoteFontsOptions) {
   ) {
     let defaultPrefix: Record<string, string> = {
       text: 'https://cdn.jsdelivr.net/gh/typst/typst-assets@v0.13.1/files/fonts/',
-      _: 'https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.13.1/files/fonts/',
+      _: 'https://cdn.jsdelivr.net/gh/typst/typst-dev-assets@v0.15.0/files/fonts/',
     };
     let assetUrlPrefix = options.assetUrlPrefix ?? defaultPrefix;
     if (typeof assetUrlPrefix === 'string') {

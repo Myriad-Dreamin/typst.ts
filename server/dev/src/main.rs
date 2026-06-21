@@ -58,7 +58,10 @@ fn compile_corpus(args: CompileCorpusArgs) {
 
     let compile_args = typst_ts_cli::CompileArgs {
         compile: typst_ts_cli::CompileOnceArgs {
-            font: typst_ts_cli::FontArgs { paths: vec![] },
+            font: typst_ts_cli::FontArgs {
+                paths: vec![],
+                ignore_system_fonts: true,
+            },
             workspace: ".".to_owned(),
             entry: "".to_owned(),
             extra_embedded_fonts: typst_dev_assets::fonts().map(Cow::Borrowed).collect(),
