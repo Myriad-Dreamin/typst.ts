@@ -167,7 +167,45 @@ jobs:
           cache-provider: ${{ matrix.cache_provider }}
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Install dist
-        run: ${{ matrix.install_dist.run }}
+        if: ${{ runner.os != 'Windows' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for attempt in 1 2 3; do
+            if ${{ matrix.install_dist.run }}; then
+              dist --version
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 3 ]; then
+              echo "dist installer failed after ${attempt} attempts" >&2
+              exit 1
+            fi
+
+            echo "dist installer failed, retrying (${attempt}/3)" >&2
+            sleep $((attempt * 10))
+          done
+      - name: Install dist
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+              ${{ matrix.install_dist.run }}
+              dist --version
+              break
+            } catch {
+              if ($attempt -eq 3) {
+                throw
+              }
+
+              Write-Warning "dist installer failed, retrying ($attempt/3): $_"
+              Start-Sleep -Seconds ($attempt * 10)
+            }
+          }
       # Get the dist-manifest
       - name: Fetch local artifacts
         uses: actions/download-artifact@v8
