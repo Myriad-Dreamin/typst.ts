@@ -3662,6 +3662,8 @@ dependencies = [
  "reflexo-vec2bbox",
  "svgtypes 0.15.3",
  "tiny-skia 0.11.4",
+ "tiny-skia-path 0.11.4",
+ "typst",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

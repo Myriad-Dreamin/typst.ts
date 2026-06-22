@@ -3,7 +3,7 @@
 use async_trait::async_trait;
 use reflexo_vec2bbox::Vec2BBoxPass;
 
-use crate::{utils::EmptyFuture, CanvasDevice};
+use crate::{utils::EmptyFuture, CanvasDevice, CanvasPaint};
 use ecow::EcoVec;
 
 use std::{
@@ -226,6 +226,8 @@ impl CanvasOp for CanvasClipElem {
 #[derive(Debug)]
 pub struct CanvasPathElem {
     pub path_data: Box<ir::PathItem>,
+    pub fill: Option<CanvasPaint>,
+    pub stroke: Option<CanvasPaint>,
     pub rect: CanvasBBox,
 }
 
@@ -247,23 +249,12 @@ impl CanvasOp for CanvasPathElem {
         }
         // map_err(map_err("CanvasRenderTask.BuildPath2d")
 
-        let mut fill_color = "none".into();
-        let mut fill = false;
         let mut fill_rule = None;
-        let mut stroke_color = "none".into();
-        let mut stroke = false;
         let mut stroke_width = 0.;
 
         for style in &self.path_data.styles {
             match style {
-                PathStyle::Fill(color) => {
-                    fill_color = color.clone();
-                    fill = true;
-                }
-                PathStyle::Stroke(color) => {
-                    stroke_color = color.clone();
-                    stroke = true;
-                }
+                PathStyle::Fill(_) | PathStyle::Stroke(_) => {}
                 PathStyle::StrokeWidth(width) => {
                     canvas.set_line_width(width.0 as f64);
                     stroke_width = width.0;
@@ -296,30 +287,30 @@ impl CanvasOp for CanvasPathElem {
             }
         }
 
-        if fill {
-            // todo: canvas gradient and pattern
-            if fill_color.starts_with('@') {
-                fill_color = "black".into()
-            }
-            canvas.set_fill_style_str(fill_color.as_ref());
-            if let Some(rule) = fill_rule {
-                canvas.fill_with_path_2d_and_winding(
-                    &Path2d::new_with_path_string(&self.path_data.d).unwrap(),
-                    rule,
-                );
+        let path = Path2d::new_with_path_string(&self.path_data.d).unwrap();
+
+        if let Some(fill) = &self.fill {
+            if fill.fill_radial_path(canvas, ts, &path) {
+                // Non-uniform radial gradients are drawn through a clipped
+                // paint transform to match SVG gradientTransform semantics.
+            } else if fill.fill_conic_path(canvas, ts, &path, true) {
+                // Conic gradients fall back to segmented drawing when native
+                // canvas conics cannot represent the paint transform.
             } else {
-                canvas.fill_with_path_2d(&Path2d::new_with_path_string(&self.path_data.d).unwrap());
+                fill.set_fill_style(canvas, ts);
+                if let Some(rule) = fill_rule {
+                    canvas.fill_with_path_2d_and_winding(&path, rule);
+                } else {
+                    canvas.fill_with_path_2d(&path);
+                }
             }
         }
 
-        if stroke && stroke_width.abs() > 1e-5 {
-            // todo: canvas gradient and pattern
-            if stroke_color.starts_with('@') {
-                stroke_color = "black".into()
+        if stroke_width.abs() > 1e-5 {
+            if let Some(stroke) = &self.stroke {
+                stroke.set_stroke_style(canvas, ts);
+                canvas.stroke_with_path(&path);
             }
-
-            canvas.set_stroke_style_str(stroke_color.as_ref());
-            canvas.stroke_with_path(&Path2d::new_with_path_string(&self.path_data.d).unwrap());
         }
 
         #[cfg(feature = "render_bbox")]
@@ -419,7 +410,7 @@ impl CanvasOp for CanvasImageElem {
 /// A glyph element.
 #[derive(Debug)]
 pub struct CanvasGlyphElem {
-    pub fill: ImmutStr,
+    pub fill: CanvasPaint,
     pub upem: Scalar,
     pub glyph_data: Arc<FlatGlyphItem>,
 }
@@ -450,20 +441,30 @@ impl CanvasOp for CanvasGlyphElem {
         match self.glyph_data.as_ref() {
             #[cfg(not(feature = "rasterize_glyph"))]
             FlatGlyphItem::Outline(path) => {
+                let path = Path2d::new_with_path_string(&path.d).unwrap();
+                if self.fill.fill_conic_path(canvas, ts, &path, false) {
+                    return;
+                }
+
                 if !set_transform(canvas, ts) {
                     return;
                 }
-                canvas.set_fill_style_str(self.fill.as_ref());
-                canvas.fill_with_path_2d(&Path2d::new_with_path_string(&path.d).unwrap());
+                self.fill.set_fill_style(canvas, ts);
+                canvas.fill_with_path_2d(&path);
             }
             #[cfg(feature = "rasterize_glyph")]
             FlatGlyphItem::Outline(path) => {
+                let path_2d = Path2d::new_with_path_string(&path.d).unwrap();
+                if self.fill.fill_conic_path(canvas, ts, &path_2d, false) {
+                    return;
+                }
+
                 if ts.sx.abs() > 100. || ts.sy.abs() > 100. || ts.kx != 0. || ts.ky != 0. {
                     if !set_transform(canvas, ts) {
                         return;
                     }
-                    canvas.set_fill_style_str(self.fill.as_ref());
-                    canvas.fill_with_path_2d(&Path2d::new_with_path_string(&path.d).unwrap());
+                    self.fill.set_fill_style(canvas, ts);
+                    canvas.fill_with_path_2d(&path_2d);
                     return;
                 }
 
@@ -482,7 +483,7 @@ impl CanvasOp for CanvasGlyphElem {
                 crate::pixglyph_canvas::blend_glyph(
                     canvas,
                     &t,
-                    self.fill.as_ref(),
+                    self.fill.as_solid_str().unwrap_or("black"),
                     floor_x,
                     floor_y,
                 );
