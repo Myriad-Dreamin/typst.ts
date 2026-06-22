@@ -61,6 +61,8 @@ install-updater = false
 install-path = ["$XDG_BIN_HOME/", "$XDG_DATA_HOME/../bin", "~/.local/bin"]
 # Whether to cache builds
 cache-builds = true
+# Allow local CI workflow customization beyond cargo-dist's generated template.
+allow-dirty = ["ci"]
 
 [dist.github-custom-runners]
 global = "ubuntu-22.04"
