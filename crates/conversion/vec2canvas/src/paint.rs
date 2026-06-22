@@ -83,6 +83,10 @@ impl CanvasPaint {
         }
     }
 
+    pub fn is_unsupported(&self) -> bool {
+        matches!(self, Self::Unsupported)
+    }
+
     pub fn for_glyph(
         &self,
         pos: ir::Axes<Scalar>,

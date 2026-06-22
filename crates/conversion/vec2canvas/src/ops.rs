@@ -441,6 +441,10 @@ impl CanvasOp for CanvasGlyphElem {
         match self.glyph_data.as_ref() {
             #[cfg(not(feature = "rasterize_glyph"))]
             FlatGlyphItem::Outline(path) => {
+                if self.fill.is_unsupported() {
+                    return;
+                }
+
                 let path = Path2d::new_with_path_string(&path.d).unwrap();
                 if self.fill.fill_conic_path(canvas, ts, &path, false) {
                     return;
@@ -454,8 +458,21 @@ impl CanvasOp for CanvasGlyphElem {
             }
             #[cfg(feature = "rasterize_glyph")]
             FlatGlyphItem::Outline(path) => {
+                if self.fill.is_unsupported() {
+                    return;
+                }
+
                 let path_2d = Path2d::new_with_path_string(&path.d).unwrap();
                 if self.fill.fill_conic_path(canvas, ts, &path_2d, false) {
+                    return;
+                }
+
+                if self.fill.as_solid_str().is_none() {
+                    if !set_transform(canvas, ts) {
+                        return;
+                    }
+                    self.fill.set_fill_style(canvas, ts);
+                    canvas.fill_with_path_2d(&path_2d);
                     return;
                 }
 
@@ -483,7 +500,7 @@ impl CanvasOp for CanvasGlyphElem {
                 crate::pixglyph_canvas::blend_glyph(
                     canvas,
                     &t,
-                    self.fill.as_solid_str().unwrap_or("black"),
+                    self.fill.as_solid_str().unwrap(),
                     floor_x,
                     floor_y,
                 );
