@@ -40,12 +40,12 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
     pub fn render_patterns(
         &mut self,
         module: &Module,
-    ) -> Vec<(Fingerprint, Size, Arc<SvgTextNode>)> {
+    ) -> Vec<(Fingerprint, Size, Size, Arc<SvgTextNode>)> {
         self.collect_patterns(|t: &mut Self, id| match module.get_item(id) {
             Some(VecItem::Pattern(g)) => {
                 let size = g.size + g.spacing;
                 let content = t.get_render_context(module).render_item(&g.frame);
-                Some((*id, size, content))
+                Some((*id, size, g.offset, content))
             }
             _ => {
                 // #[cfg(debug_assertions)]

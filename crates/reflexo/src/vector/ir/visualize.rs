@@ -132,4 +132,6 @@ pub struct PatternItem {
     pub size: Size,
     /// The pattern's tile spacing.
     pub spacing: Size,
+    /// The pattern's tile offset.
+    pub offset: Size,
 }

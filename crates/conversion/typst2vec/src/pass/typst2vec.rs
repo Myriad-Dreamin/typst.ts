@@ -1150,6 +1150,7 @@ impl<const ENABLE_REF_CNT: bool> Typst2VecPassImpl<ENABLE_REF_CNT> {
             frame,
             size: g.size().into_typst(),
             spacing: g.spacing().into_typst(),
+            offset: g.offset().into_typst(),
         })));
 
         self.store(VecItem::ColorTransform(Arc::new(ColorTransform {
