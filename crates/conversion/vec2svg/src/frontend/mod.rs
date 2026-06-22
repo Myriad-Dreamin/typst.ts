@@ -300,14 +300,15 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
     }
 
     pub fn patterns(
-        patterns: impl Iterator<Item = (Fingerprint, Size, Arc<SvgTextNode>)>,
+        patterns: impl Iterator<Item = (Fingerprint, Size, Size, Arc<SvgTextNode>)>,
         svg: &mut Vec<SvgText>,
     ) {
-        for (id, size, pattern) in patterns {
+        for (id, size, offset, pattern) in patterns {
             svg.push(SvgText::Plain(format!(
-                r##"<pattern id="{}" patternUnits="userSpaceOnUse" width="{:.3}" height="{:.3}" viewBox="0 0 {:.3} {:.3}">"##,
+                r##"<pattern id="{}" patternUnits="userSpaceOnUse" width="{:.3}" height="{:.3}" x="{:.3}" y="{:.3}" viewBox="0 0 {:.3} {:.3}">"##,
                 id.as_svg_id("g"),
                 size.x.0, size.y.0,
+                offset.x.0, offset.y.0,
                 size.x.0, size.y.0,
             )));
 
@@ -552,8 +553,8 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
 
     pub fn collect_patterns(
         &mut self,
-        render: impl Fn(&mut Self, &Fingerprint) -> Option<(Fingerprint, Size, Arc<SvgTextNode>)>,
-    ) -> Vec<(Fingerprint, Size, Arc<SvgTextNode>)> {
+        render: impl Fn(&mut Self, &Fingerprint) -> Option<(Fingerprint, Size, Size, Arc<SvgTextNode>)>,
+    ) -> Vec<(Fingerprint, Size, Size, Arc<SvgTextNode>)> {
         let mut used = std::mem::take(&mut self.patterns);
         let mut patterns = vec![];
 
