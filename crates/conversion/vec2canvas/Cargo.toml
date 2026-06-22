@@ -14,8 +14,10 @@ elsa.workspace = true
 ecow.workspace = true
 reflexo = { workspace = true, features = ["typst", "web"] }
 reflexo-vec2bbox.workspace = true
+typst.workspace = true
 
 tiny-skia.workspace = true
+tiny-skia-path.workspace = true
 async-trait.workspace = true
 wasm-bindgen-futures.workspace = true
 svgtypes.workspace = true
@@ -25,6 +27,7 @@ js-sys.workspace = true
 web-sys = { workspace = true, features = [
     "console",
     "CanvasRenderingContext2d",
+    "CanvasGradient",
     "Path2d",
     "Blob",
     "ImageBitmap",

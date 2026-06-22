@@ -1,4 +1,5 @@
-use web_sys::{CanvasWindingRule, ImageBitmap, ImageData, OffscreenCanvas, Path2d};
+use wasm_bindgen::{JsCast, JsValue};
+use web_sys::{CanvasGradient, CanvasWindingRule, ImageBitmap, ImageData, OffscreenCanvas, Path2d};
 
 pub trait CanvasDevice {
     #[doc = "The `restore()` method."]
@@ -18,6 +19,7 @@ pub trait CanvasDevice {
     #[doc = ""]
     #[doc = "[MDN Documentation](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/fillStyle)"]
     fn set_fill_style_str(&self, value: &str);
+    fn set_fill_style_canvas_gradient(&self, value: &CanvasGradient);
 
     #[doc = "The `fillRect()` method."]
     #[doc = ""]
@@ -49,6 +51,7 @@ pub trait CanvasDevice {
     #[doc = ""]
     #[doc = "[MDN Documentation](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/strokeStyle)"]
     fn set_stroke_style_str(&self, value: &str);
+    fn set_stroke_style_canvas_gradient(&self, value: &CanvasGradient);
     #[doc = "The `stroke()` method."]
     #[doc = ""]
     #[doc = "[MDN Documentation](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/stroke)"]
@@ -108,6 +111,17 @@ pub trait CanvasDevice {
     #[doc = ""]
     #[doc = "[MDN Documentation](https://developer.mozilla.org/en-US/docs/Web/API/OffscreenCanvasRenderingContext2D/fill)"]
     fn fill_with_path_2d_and_winding(&self, path: &Path2d, winding: CanvasWindingRule);
+    fn create_linear_gradient(&self, x0: f64, y0: f64, x1: f64, y1: f64) -> CanvasGradient;
+    fn create_radial_gradient(
+        &self,
+        x0: f64,
+        y0: f64,
+        r0: f64,
+        x1: f64,
+        y1: f64,
+        r1: f64,
+    ) -> Option<CanvasGradient>;
+    fn create_conic_gradient(&self, start_angle: f64, x: f64, y: f64) -> Option<CanvasGradient>;
 }
 
 impl CanvasDevice for web_sys::CanvasRenderingContext2d {
@@ -132,6 +146,10 @@ impl CanvasDevice for web_sys::CanvasRenderingContext2d {
         self.set_fill_style_str(value);
     }
 
+    fn set_fill_style_canvas_gradient(&self, value: &CanvasGradient) {
+        self.set_fill_style_canvas_gradient(value);
+    }
+
     fn fill_rect(&self, x: f64, y: f64, w: f64, h: f64) {
         self.fill_rect(x, y, w, h);
     }
@@ -147,6 +165,10 @@ impl CanvasDevice for web_sys::CanvasRenderingContext2d {
 
     fn set_stroke_style_str(&self, value: &str) {
         self.set_stroke_style_str(value);
+    }
+
+    fn set_stroke_style_canvas_gradient(&self, value: &CanvasGradient) {
+        self.set_stroke_style_canvas_gradient(value);
     }
 
     fn stroke_with_path(&self, path: &Path2d) {
@@ -215,6 +237,26 @@ impl CanvasDevice for web_sys::CanvasRenderingContext2d {
 
     fn fill_with_path_2d_and_winding(&self, path: &Path2d, winding: CanvasWindingRule) {
         self.fill_with_path_2d_and_winding(path, winding);
+    }
+
+    fn create_linear_gradient(&self, x0: f64, y0: f64, x1: f64, y1: f64) -> CanvasGradient {
+        self.create_linear_gradient(x0, y0, x1, y1)
+    }
+
+    fn create_radial_gradient(
+        &self,
+        x0: f64,
+        y0: f64,
+        r0: f64,
+        x1: f64,
+        y1: f64,
+        r1: f64,
+    ) -> Option<CanvasGradient> {
+        self.create_radial_gradient(x0, y0, r0, x1, y1, r1).ok()
+    }
+
+    fn create_conic_gradient(&self, start_angle: f64, x: f64, y: f64) -> Option<CanvasGradient> {
+        create_conic_gradient(self.as_ref(), start_angle, x, y)
     }
 }
 
@@ -239,6 +281,10 @@ impl CanvasDevice for web_sys::OffscreenCanvasRenderingContext2d {
         self.set_fill_style_str(value);
     }
 
+    fn set_fill_style_canvas_gradient(&self, value: &CanvasGradient) {
+        self.set_fill_style_canvas_gradient(value);
+    }
+
     fn fill_rect(&self, x: f64, y: f64, w: f64, h: f64) {
         self.fill_rect(x, y, w, h);
     }
@@ -254,6 +300,10 @@ impl CanvasDevice for web_sys::OffscreenCanvasRenderingContext2d {
 
     fn set_stroke_style_str(&self, value: &str) {
         self.set_stroke_style_str(value);
+    }
+
+    fn set_stroke_style_canvas_gradient(&self, value: &CanvasGradient) {
+        self.set_stroke_style_canvas_gradient(value);
     }
 
     fn stroke_with_path(&self, path: &Path2d) {
@@ -323,4 +373,39 @@ impl CanvasDevice for web_sys::OffscreenCanvasRenderingContext2d {
     fn fill_with_path_2d_and_winding(&self, path: &Path2d, winding: CanvasWindingRule) {
         self.fill_with_path_2d_and_winding(path, winding);
     }
+
+    fn create_linear_gradient(&self, x0: f64, y0: f64, x1: f64, y1: f64) -> CanvasGradient {
+        self.create_linear_gradient(x0, y0, x1, y1)
+    }
+
+    fn create_radial_gradient(
+        &self,
+        x0: f64,
+        y0: f64,
+        r0: f64,
+        x1: f64,
+        y1: f64,
+        r1: f64,
+    ) -> Option<CanvasGradient> {
+        self.create_radial_gradient(x0, y0, r0, x1, y1, r1).ok()
+    }
+
+    fn create_conic_gradient(&self, start_angle: f64, x: f64, y: f64) -> Option<CanvasGradient> {
+        create_conic_gradient(self.as_ref(), start_angle, x, y)
+    }
+}
+
+fn create_conic_gradient(
+    context: &JsValue,
+    start_angle: f64,
+    x: f64,
+    y: f64,
+) -> Option<CanvasGradient> {
+    let func = js_sys::Reflect::get(context, &JsValue::from_str("createConicGradient")).ok()?;
+    let func = func.dyn_into::<js_sys::Function>().ok()?;
+    let args = js_sys::Array::new();
+    args.push(&JsValue::from_f64(start_angle));
+    args.push(&JsValue::from_f64(x));
+    args.push(&JsValue::from_f64(y));
+    func.apply(context, &args).ok()?.dyn_into().ok()
 }

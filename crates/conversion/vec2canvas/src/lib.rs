@@ -6,6 +6,7 @@ mod device;
 #[cfg(feature = "incremental")]
 mod incr;
 mod ops;
+mod paint;
 #[cfg(feature = "rasterize_glyph")]
 mod pixglyph_canvas;
 mod utils;
@@ -16,6 +17,7 @@ pub use device::CanvasDevice;
 pub use incr::*;
 use js_sys::Promise;
 pub use ops::*;
+pub use paint::*;
 use web_sys::{Blob, HtmlImageElement, OffscreenCanvas, OffscreenCanvasRenderingContext2d};
 
 use std::{
@@ -148,7 +150,8 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
 }
 
 trait GlyphFactory {
-    fn get_glyph(&mut self, font: &FontItem, glyph: u32, fill: ImmutStr) -> Option<CanvasNode>;
+    fn get_glyph(&mut self, font: &FontItem, glyph: u32, fill: CanvasPaint) -> Option<CanvasNode>;
+    fn get_paint(&self, fill: &ImmutStr) -> CanvasPaint;
 }
 
 /// Holds the data for rendering canvas.
@@ -172,13 +175,17 @@ impl<'m, Feat: ExportFeature> FontIndice<'m> for CanvasRenderTask<'m, '_, Feat> 
 }
 
 impl<Feat: ExportFeature> GlyphFactory for CanvasRenderTask<'_, '_, Feat> {
-    fn get_glyph(&mut self, font: &FontItem, glyph: u32, fill: ImmutStr) -> Option<CanvasNode> {
+    fn get_glyph(&mut self, font: &FontItem, glyph: u32, fill: CanvasPaint) -> Option<CanvasNode> {
         let glyph_data = font.get_glyph(glyph)?;
         Some(Arc::new(CanvasElem::Glyph(CanvasGlyphElem {
             fill,
             upem: font.units_per_em,
             glyph_data: glyph_data.clone(),
         })))
+    }
+
+    fn get_paint(&self, fill: &ImmutStr) -> CanvasPaint {
+        CanvasPaint::from_ref(self.module, fill)
     }
 }
 
@@ -197,6 +204,7 @@ impl<'m, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, '_, Feat> {
             ts: sk::Transform::identity(),
             clipper: None,
             fill: None,
+            glyph_scale: None,
             inner: EcoVec::new(),
             rect: CanvasBBox::Dynamic(Box::new(OnceCell::new())),
         }
@@ -205,10 +213,10 @@ impl<'m, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, '_, Feat> {
     fn start_text(&mut self, value: &Fingerprint, text: &ir::TextItem) -> Self::Group {
         let mut g = self.start_group(value);
         g.kind = GroupKind::Text;
+        let font = self.get_font(&text.shape.font).unwrap();
+        let upem = Scalar(font.units_per_em.0);
         g.rect = {
             // upem is the unit per em defined in the font.
-            let font = self.get_font(&text.shape.font).unwrap();
-            let upem = Scalar(font.units_per_em.0);
             let accender = Scalar(font.ascender.0) * upem;
 
             // todo: glyphs like macron has zero width... why?
@@ -231,6 +239,7 @@ impl<'m, Feat: ExportFeature> RenderVm<'m> for CanvasRenderTask<'m, '_, Feat> {
                 g.fill = Some(fill.clone());
             }
         }
+        g.glyph_scale = Some(Scalar(text.shape.size.0 / upem.0));
         g
     }
 }
@@ -247,6 +256,8 @@ pub struct CanvasStack {
     pub clipper: Option<ir::PathItem>,
     /// The fill color.
     pub fill: Option<ImmutStr>,
+    /// The font-size to font-unit scale for text glyphs.
+    pub glyph_scale: Option<Scalar>,
     /// The inner elements.
     pub inner: EcoVec<(ir::Point, CanvasNode)>,
     /// The bounding box of the group.
@@ -315,11 +326,19 @@ impl<C> TransformContext<C> for CanvasStack {
 
 /// See [`GroupContext`].
 impl<'m, C: RenderVm<'m, Resultant = CanvasNode> + GlyphFactory> GroupContext<C> for CanvasStack {
-    fn render_path(&mut self, _ctx: &mut C, path: &ir::PathItem, _abs_ref: &Fingerprint) {
+    fn render_path(&mut self, ctx: &mut C, path: &ir::PathItem, _abs_ref: &Fingerprint) {
         self.inner.push((
             ir::Point::default(),
             Arc::new(CanvasElem::Path(CanvasPathElem {
                 path_data: Box::new(path.clone()),
+                fill: path.styles.iter().find_map(|style| match style {
+                    ir::PathStyle::Fill(fill) => Some(ctx.get_paint(fill)),
+                    _ => None,
+                }),
+                stroke: path.styles.iter().find_map(|style| match style {
+                    ir::PathStyle::Stroke(stroke) => Some(ctx.get_paint(stroke)),
+                    _ => None,
+                }),
                 rect: CanvasBBox::Dynamic(Box::new(OnceCell::new())),
             })),
         ))
@@ -339,7 +358,12 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode> + GlyphFactory> GroupContext<C>
     }
 
     fn render_glyph(&mut self, ctx: &mut C, pos: Axes<Scalar>, font: &FontItem, glyph: u32) {
-        if let Some(glyph) = ctx.get_glyph(font, glyph, self.fill.clone().unwrap()) {
+        let mut fill = ctx.get_paint(&self.fill.clone().unwrap());
+        if let Some(glyph_scale) = self.glyph_scale {
+            fill = fill.for_glyph(pos, glyph_scale, font, glyph);
+        }
+
+        if let Some(glyph) = ctx.get_glyph(font, glyph, fill) {
             self.inner.push((ir::Point::new(pos.x, pos.y), glyph));
         }
     }
