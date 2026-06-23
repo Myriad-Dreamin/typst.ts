@@ -424,8 +424,6 @@ struct LazyImage {
 fn create_image(image: Arc<Image>) -> Option<LazyImage> {
     let is_svg = image.format.contains("svg");
 
-    web_sys::console::log_1(&format!("image format: {:?}", image.format).into());
-
     let u = js_sys::Uint8Array::new_with_length(image.data.len() as u32);
     u.copy_from(&image.data);
 

@@ -39,6 +39,7 @@ impl TypstRenderer {
     }
 }
 
+#[derive(Clone, Copy)]
 #[repr(u8)]
 enum CanvasAction {
     Delete,
@@ -92,14 +93,31 @@ impl TypstWorker {
             return Err(error_once!("Renderer.InvalidActionDataLength"));
         }
 
-        web_sys::console::log_1(&format!("render_canvas {data:?}").into());
-
-        let mut promises = Vec::new();
+        let mut jobs = Vec::with_capacity(data.len());
+        let mut prepare_data = Vec::new();
         let inp = actions.into_iter().zip(canvas_list).zip(data);
         for ((action, canvas), data) in inp {
             let action = CanvasAction::try_from(action)
                 .map_err(|_| error_once!("Renderer.InvalidAction", action: action as u32))?;
 
+            if matches!(action, CanvasAction::New | CanvasAction::Update)
+                && data.renders_canvas_body()
+            {
+                prepare_data.push(data.clone());
+            }
+
+            jobs.push((action, canvas, data));
+        }
+
+        if !prepare_data.is_empty() {
+            let _ = self.rs.worker.clone().send(Request::PrepareCanvasResources(
+                self.rs.session_info,
+                prepare_data,
+            ));
+        }
+
+        let mut promises = Vec::new();
+        for (action, canvas, data) in jobs {
             match action {
                 CanvasAction::Delete => {
                     promises.push(wasm_bindgen_futures::future_to_promise(async move {
@@ -174,7 +192,6 @@ pub(crate) fn create_worker(js: JsWorker) -> Arc<WorkerCore> {
             };
 
             // { exception: 'loadSvg', idx, blob }
-            web_sys::console::log_1(&event);
             let data = js_sys::Reflect::get(&event, &JsValue::from_str("data")).unwrap();
             let resp = data.dyn_into::<js_sys::Array>();
 
@@ -302,7 +319,6 @@ impl WorkerCore {
         } else {
             transfers
         };
-        web_sys::console::log_2(&"send_with".into(), &transfers);
         let transfers = if transfers == JsValue::UNDEFINED {
             js_sys::Array::from_iter([buf])
         } else {
@@ -391,6 +407,7 @@ impl WorkerCore {
 enum Request {
     CreateSession(Option<CreateSessionOptions>),
     ManipulateData(i32, String),
+    PrepareCanvasResources(i32, Vec<RenderPageImageOptions>),
     RenderPageToCanvas(i32, Option<RenderPageImageOptions>),
     RemoveSession(i32),
     SetBackgroundColor(i32, String),
@@ -459,7 +476,7 @@ pub struct WorkerBridge {
     pub(crate) sessions: HashMap<i32, Arc<Mutex<RenderSession>>>,
     pub(crate) canvases: HashMap<i32, HashMap<usize, OffscreenCanvas>>,
     pub(crate) previous_promise: Option<Promise>,
-    pub(crate) sessions: i32,
+    pub(crate) session_counter: i32,
 }
 
 #[wasm_bindgen]
@@ -473,15 +490,14 @@ impl WorkerBridge {
 
             (x, y)
         });
-        web_sys::console::log_1(&format!("msg: {x:?}").into());
         let Msg { request: x, id } = x;
 
         let previous_promise = self.previous_promise.take();
         let res = match x {
             Request::CreateSession(opts) => {
                 let session = self.plugin.create_session(opts).unwrap();
-                let idx = self.sessions;
-                self.sessions += 1;
+                let idx = self.session_counter;
+                self.session_counter += 1;
                 #[allow(clippy::arc_with_non_send_sync)]
                 self.sessions.insert(idx, Arc::new(Mutex::new(session)));
                 Ok(JsValue::from_f64(idx as f64))
@@ -498,6 +514,25 @@ impl WorkerBridge {
                     };
                     if let Err(e) = res {
                         web_sys::console::log_1(&format!("manipulate error: {e}").into());
+                    }
+                    Ok(JsValue::NULL)
+                });
+                Err(p)
+            }
+            Request::PrepareCanvasResources(ses, opts) => {
+                let session = self.sessions.get(&ses).unwrap().clone();
+                let mut plugin = self.plugin.clone();
+                let p = wasm_bindgen_futures::future_to_promise(async move {
+                    let prepare = {
+                        let ses = session.lock().unwrap();
+                        plugin
+                            .prepare_canvas_resources_internal(&ses, &opts)
+                            .unwrap()
+                    };
+                    if let Some(prepare) = prepare {
+                        wasm_bindgen_futures::spawn_local(async move {
+                            prepare.await;
+                        });
                     }
                     Ok(JsValue::NULL)
                 });
@@ -526,17 +561,12 @@ impl WorkerBridge {
                     .dyn_into::<web_sys::OffscreenCanvasRenderingContext2d>()
                     .unwrap();
                 let mut plugin = self.plugin.clone();
-                let magic = js_sys::Math::random();
                 let previous_promise = previous_promise.clone();
                 let p = wasm_bindgen_futures::future_to_promise(async move {
                     if let Some(p) = previous_promise {
-                        web_sys::console::log_1(&"wait for previous promise 2".into());
                         let _ = wasm_bindgen_futures::JsFuture::from(p).await;
-                        web_sys::console::log_1(&"wait for previous promise 2 end".into());
                     }
-                    web_sys::console::log_1(&format!("render_page_to_canvas lock {magic}").into());
                     let ses = session.lock().unwrap();
-                    web_sys::console::log_1(&"render_page_to_canvas lock 2".into());
                     let (fg, content, res) = plugin
                         .render_page_to_canvas_internal::<DefaultExportFeature>(
                             &ses,
@@ -546,18 +576,12 @@ impl WorkerBridge {
                         .await
                         .unwrap();
                     drop(ses);
-                    web_sys::console::log_1(&"render_page_to_canvas lock end".into());
                     let content = if content == JsValue::UNDEFINED {
                         JsValue::NULL
                     } else {
                         content
                     };
                     let t = js_sys::JSON::stringify(&content).unwrap();
-                    web_sys::console::log_3(
-                        &"js_sys::JSON::stringify".into(),
-                        &content,
-                        &(&t).into(),
-                    );
                     let content: String = t.into();
                     let p = (fg, content, res);
                     let b = to_bytes(&p);
@@ -574,7 +598,7 @@ impl WorkerBridge {
             Request::SetBackgroundColor(ses, color) => {
                 let session = self.sessions.get(&ses).unwrap().clone();
                 let p = wasm_bindgen_futures::future_to_promise(async move {
-                    session.lock().unwrap().set_background_color(color);
+                    session.lock().unwrap().set_background_color(Some(color));
                     Ok(JsValue::NULL)
                 });
                 Err(p)
@@ -583,7 +607,7 @@ impl WorkerBridge {
             Request::SetPixelPerPt(ses, f) => {
                 let session = self.sessions.get(&ses).unwrap().clone();
                 let p = wasm_bindgen_futures::future_to_promise(async move {
-                    session.lock().unwrap().set_pixel_per_pt(f);
+                    session.lock().unwrap().set_pixel_per_pt(Some(f));
                     Ok(JsValue::NULL)
                 });
                 Err(p)
@@ -602,9 +626,7 @@ impl WorkerBridge {
 
         let p = wasm_bindgen_futures::future_to_promise(async move {
             if let Some(p) = previous_promise {
-                web_sys::console::log_1(&"wait for previous promise".into());
                 let _ = wasm_bindgen_futures::JsFuture::from(p).await;
-                web_sys::console::log_1(&"wait for previous promise end".into());
             }
 
             let res = res;
@@ -621,7 +643,6 @@ impl WorkerBridge {
                 .dyn_into::<web_sys::DedicatedWorkerGlobalScope>()
                 .unwrap();
             ws.post_message(&resp).unwrap();
-            web_sys::console::log_1(&"post_message end".into());
             Ok(JsValue::NULL)
         });
         self.previous_promise = Some(p.clone());

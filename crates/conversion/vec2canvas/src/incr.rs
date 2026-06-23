@@ -1,3 +1,5 @@
+use std::{future::Future, pin::Pin};
+
 use tiny_skia as sk;
 
 use reflexo::{
@@ -10,6 +12,10 @@ use reflexo::{
 };
 
 use crate::{set_transform, CanvasDevice, CanvasOp, CanvasPage, CanvasTask, DefaultExportFeature};
+
+/// Prepared canvas resources that can be awaited after the document locks are
+/// released.
+pub type CanvasResourcePrepareFuture = Pin<Box<dyn Future<Output = ()> + 'static>>;
 
 /// Incremental pass from vector to canvas
 pub struct IncrVec2CanvasPass {
@@ -73,6 +79,35 @@ impl IncrVec2CanvasPass {
 
         pg.elem.realize(ts, canvas).await;
     }
+
+    /// Starts preparation of external resources used by the selected pages.
+    pub fn prepare_pages(
+        &mut self,
+        indices: &[usize],
+        ts: sk::Transform,
+    ) -> Result<Option<CanvasResourcePrepareFuture>> {
+        let mut futures: Vec<CanvasResourcePrepareFuture> = Vec::new();
+
+        for &idx in indices {
+            let Some(pg) = self.pages.get(idx) else {
+                Err(error_once!("Renderer.OutofPageRange", idx: idx))?
+            };
+
+            if let Some(f) = pg.elem.prepare(ts) {
+                futures.push(Box::pin(f));
+            }
+        }
+
+        if futures.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(Box::pin(async move {
+                for future in futures {
+                    future.await;
+                }
+            })))
+        }
+    }
 }
 
 /// Maintains the state of the incremental rendering a canvas at client side
@@ -129,5 +164,18 @@ impl IncrCanvasDocClient {
         self.vec2canvas.flush_page(idx, canvas, ts).await;
 
         Ok(())
+    }
+
+    /// Prepare external resources for a set of pages before drawing them.
+    pub fn prepare_page_resources(
+        &mut self,
+        kern: &mut IncrDocClient,
+        indices: &[usize],
+    ) -> Result<Option<CanvasResourcePrepareFuture>> {
+        self.patch_delta(kern);
+
+        let s = self.vec2canvas.pixel_per_pt;
+        let ts = sk::Transform::from_scale(s, s);
+        self.vec2canvas.prepare_pages(indices, ts)
     }
 }

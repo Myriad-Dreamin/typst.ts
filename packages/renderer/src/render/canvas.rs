@@ -4,7 +4,10 @@ use std::{collections::HashMap, ops::Deref};
 use reflexo_typst::error::prelude::*;
 use reflexo_typst::hash::Fingerprint;
 use reflexo_typst::vector::ir::{Axes, LayoutRegionNode, Rect, Scalar};
-use reflexo_vec2canvas::{BrowserFontMetric, CanvasDevice, DefaultExportFeature, ExportFeature};
+use reflexo_vec2canvas::{
+    BrowserFontMetric, CanvasDevice, CanvasResourcePrepareFuture, DefaultExportFeature,
+    ExportFeature,
+};
 use reflexo_vec2sema::SemaTask;
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, OffscreenCanvasRenderingContext2d};
@@ -48,6 +51,53 @@ impl TypstRenderer {
 static FONT_METRICS: OnceLock<BrowserFontMetric> = OnceLock::new();
 
 impl TypstRenderer {
+    pub(crate) fn prepare_canvas_resources_internal(
+        &mut self,
+        ses: &RenderSession,
+        options: &[RenderPageImageOptions],
+    ) -> Result<Option<CanvasResourcePrepareFuture>> {
+        if options.is_empty() {
+            return Ok(None);
+        }
+
+        let mut kern = ses.client.lock().unwrap();
+        let mut client = ses.canvas_kern.lock().unwrap();
+
+        let pixel_per_pt = options.iter().find_map(|opts| opts.pixel_per_pt);
+        let pixel_per_pt = pixel_per_pt.or(ses.pixel_per_pt);
+        client.set_pixel_per_pt(pixel_per_pt.unwrap_or(3.));
+
+        let Some(t) = &kern.layout else {
+            return Ok(None);
+        };
+        let pages = t.pages(kern.module()).unwrap().pages();
+
+        let mut page_offsets = Vec::new();
+        for opts in options {
+            if !opts.renders_canvas_body() {
+                continue;
+            }
+
+            let page_num = opts.page_off;
+            let fingerprint = if let Some(page) = pages.get(page_num) {
+                page.content
+            } else {
+                return Err(error_once!("Renderer.MissingPage", idx: page_num));
+            };
+
+            let cached = opts
+                .cache_key
+                .as_deref()
+                .map(|cache_key| cache_key == fingerprint.as_svg_id("c"))
+                .unwrap_or(false);
+            if !cached && !page_offsets.contains(&page_num) {
+                page_offsets.push(page_num);
+            }
+        }
+
+        client.prepare_page_resources(&mut kern, &page_offsets)
+    }
+
     #[allow(clippy::await_holding_lock)]
     pub async fn render_page_to_canvas_internal<Feat: ExportFeature>(
         &mut self,
@@ -74,9 +124,8 @@ impl TypstRenderer {
         let background_color = background_color.or(ses.background_color.as_deref());
         client.set_fill(background_color.unwrap_or("ffffff").into());
 
+        let should_render_body = opts.renders_canvas_body();
         let data_selection = opts.data_selection.unwrap_or(u32::MAX);
-
-        let should_render_body = (data_selection & (1 << 0)) != 0;
         // semantics layer
         let mut tc = ((data_selection & (1 << 3)) != 0).then(Vec::new);
 

@@ -77,7 +77,7 @@ pub fn renderer_build_info() -> JsValue {
 }
 
 #[wasm_bindgen]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "rkyv", derive(Archive, Serialize, Deserialize))]
 pub struct RenderPageImageOptions {
     /// pixel per point
@@ -151,6 +151,13 @@ impl RenderPageImageOptions {
     #[wasm_bindgen(setter)]
     pub fn set_data_selection(&mut self, data_selection: Option<u32>) {
         self.data_selection = data_selection;
+    }
+}
+
+impl RenderPageImageOptions {
+    pub(crate) fn renders_canvas_body(&self) -> bool {
+        let data_selection = self.data_selection.unwrap_or(u32::MAX);
+        (data_selection & (1 << 0)) != 0
     }
 }
 
