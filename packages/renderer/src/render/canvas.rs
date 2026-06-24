@@ -51,6 +51,7 @@ impl TypstRenderer {
 static FONT_METRICS: OnceLock<BrowserFontMetric> = OnceLock::new();
 
 impl TypstRenderer {
+    #[allow(dead_code)]
     pub(crate) fn prepare_canvas_resources_internal(
         &mut self,
         ses: &RenderSession,
@@ -106,15 +107,6 @@ impl TypstRenderer {
         options: Option<RenderPageImageOptions>,
     ) -> Result<(Fingerprint, JsValue, Option<HashMap<String, f64>>)> {
         let opts = options.unwrap_or_default();
-        let rect_lo_x: f32 = -1.;
-        let rect_lo_y: f32 = -1.;
-        let rect_hi_x: f32 = 1e30;
-        let rect_hi_y: f32 = 1e30;
-        let rect = Rect {
-            lo: Axes::new(Scalar(rect_lo_x), Scalar(rect_lo_y)),
-            hi: Axes::new(Scalar(rect_hi_x), Scalar(rect_hi_y)),
-        };
-
         let mut kern = ses.client.lock().unwrap();
         let mut client = ses.canvas_kern.lock().unwrap();
 
@@ -145,6 +137,10 @@ impl TypstRenderer {
         let pages = t.pages(kern.module()).unwrap().pages();
 
         let page_num = opts.page_off;
+        let rect = opts.window_rect().unwrap_or(Rect {
+            lo: Axes::new(Scalar(-1.), Scalar(-1.)),
+            hi: Axes::new(Scalar(1e30), Scalar(1e30)),
+        });
         let page = if let Some(page) = pages.get(page_num) {
             page.clone()
         } else {

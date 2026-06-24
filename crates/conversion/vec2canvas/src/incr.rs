@@ -12,7 +12,10 @@ use reflexo::{
     },
 };
 
-use crate::{set_transform, CanvasDevice, CanvasOp, CanvasPage, CanvasTask, DefaultExportFeature};
+use crate::{
+    set_transform, CanvasDevice, CanvasOp, CanvasPage, CanvasRenderWindowGuard, CanvasTask,
+    DefaultExportFeature,
+};
 
 /// Prepared canvas resources that can be awaited after the document locks are
 /// released.
@@ -70,6 +73,17 @@ impl IncrVec2CanvasPass {
 
     /// Flushes a page to the canvas with the given transform.
     pub async fn flush_page(&mut self, idx: usize, canvas: &dyn CanvasDevice, ts: sk::Transform) {
+        self.flush_page_in_window(idx, canvas, ts, None).await
+    }
+
+    /// Flushes a page to the canvas with an optional page-local render window.
+    pub async fn flush_page_in_window(
+        &mut self,
+        idx: usize,
+        canvas: &dyn CanvasDevice,
+        ts: sk::Transform,
+        rect: Option<Rect>,
+    ) {
         let pg = &self.pages[idx];
 
         if !set_transform(canvas, ts) {
@@ -78,6 +92,8 @@ impl IncrVec2CanvasPass {
         canvas.set_fill_style_str(self.fill.as_ref());
         canvas.fill_rect(0., 0., pg.size.x.0 as f64, pg.size.y.0 as f64);
 
+        let window = rect.and_then(|rect| transform_rect(rect, ts));
+        let _window_guard = CanvasRenderWindowGuard::new(window);
         pg.elem.realize(ts, canvas).await;
     }
 
@@ -228,7 +244,7 @@ impl IncrCanvasDocClient {
         kern: &mut IncrDocClient,
         canvas: &dyn CanvasDevice,
         idx: usize,
-        _rect: Rect,
+        rect: Rect,
     ) -> Result<()> {
         self.patch_delta(kern);
         self.prefetch_page_resources();
@@ -239,7 +255,10 @@ impl IncrCanvasDocClient {
 
         let s = self.vec2canvas.pixel_per_pt;
         let ts = sk::Transform::from_scale(s, s);
-        self.vec2canvas.flush_page(idx, canvas, ts).await;
+        let rect = (!is_full_render_rect(rect)).then_some(rect);
+        self.vec2canvas
+            .flush_page_in_window(idx, canvas, ts, rect)
+            .await;
 
         Ok(())
     }
@@ -256,4 +275,14 @@ impl IncrCanvasDocClient {
         let ts = sk::Transform::from_scale(s, s);
         self.vec2canvas.prepare_pages(indices, ts)
     }
+}
+
+fn is_full_render_rect(rect: Rect) -> bool {
+    rect.lo.x.0 <= -1.0 && rect.lo.y.0 <= -1.0 && rect.hi.x.0 >= 1e20 && rect.hi.y.0 >= 1e20
+}
+
+fn transform_rect(rect: Rect, ts: sk::Transform) -> Option<Rect> {
+    sk::Rect::from_ltrb(rect.left().0, rect.top().0, rect.right().0, rect.bottom().0)
+        .and_then(|rect| rect.transform(ts))
+        .map(From::from)
 }

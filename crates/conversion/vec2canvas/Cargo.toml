@@ -51,6 +51,9 @@ incremental = ["reflexo/flat-vector"]
 report_group = []
 render_bbox = []
 rasterize_glyph = []
+bitmap_cache_word = []
+bitmap_cache_line = []
+bitmap_cache_paragraph = []
 
 [lints]
 workspace = true
