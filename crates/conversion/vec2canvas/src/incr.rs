@@ -4,6 +4,7 @@ use tiny_skia as sk;
 
 use reflexo::{
     error::prelude::*,
+    hash::Fingerprint,
     vector::{
         incr::IncrDocClient,
         ir::{ImmutStr, Module, Page, Rect},
@@ -119,14 +120,38 @@ pub struct IncrCanvasDocClient {
     /// Expected exact state of the current DOM.
     /// Initially it is None meaning no any page is rendered.
     pub doc_view: Option<Vec<Page>>,
+
+    /// Whether the vector document has received new data since the last canvas
+    /// interpretation.
+    doc_dirty: bool,
+
+    /// Page fingerprints for the last internal resource prefetch task.
+    prefetched_page_fingerprints: Vec<Fingerprint>,
+    prefetched_pixel_per_pt: f32,
+    resources_dirty: bool,
 }
 
 impl IncrCanvasDocClient {
     /// Reset the state of the incremental rendering.
-    pub fn reset(&mut self) {}
+    pub fn reset(&mut self) {
+        self.doc_view = None;
+        self.doc_dirty = true;
+        self.prefetched_page_fingerprints.clear();
+        self.prefetched_pixel_per_pt = 0.;
+        self.resources_dirty = true;
+    }
+
+    /// Marks the vector document as changed by a remote delta.
+    pub fn mark_delta_dirty(&mut self) {
+        self.doc_dirty = true;
+        self.resources_dirty = true;
+    }
 
     /// Set canvas's pixel per point
     pub fn set_pixel_per_pt(&mut self, pixel_per_pt: f32) {
+        if (self.vec2canvas.pixel_per_pt - pixel_per_pt).abs() >= f32::EPSILON {
+            self.resources_dirty = true;
+        }
         self.vec2canvas.pixel_per_pt = pixel_per_pt;
     }
 
@@ -136,13 +161,65 @@ impl IncrCanvasDocClient {
     }
 
     fn patch_delta(&mut self, kern: &IncrDocClient) {
+        if !self.doc_dirty {
+            return;
+        }
+
         if let Some(layout) = &kern.layout {
             let pages = layout.pages(&kern.doc.module);
             if let Some(pages) = pages {
-                self.vec2canvas
-                    .interpret_changes(pages.module(), pages.pages());
+                let next_doc_view = pages.pages();
+                if self.doc_view.as_deref() != Some(next_doc_view) {
+                    self.vec2canvas
+                        .interpret_changes(pages.module(), next_doc_view);
+                    self.doc_view = Some(next_doc_view.to_vec());
+                }
+
+                self.doc_dirty = false;
             }
         }
+    }
+
+    fn prefetch_page_resources(&mut self) {
+        let pixel_per_pt = self.vec2canvas.pixel_per_pt;
+        let pixel_changed = (self.prefetched_pixel_per_pt - pixel_per_pt).abs() >= f32::EPSILON;
+        if !self.resources_dirty && !pixel_changed {
+            return;
+        }
+
+        let page_count = self.vec2canvas.pages.len();
+        if page_count == 0 {
+            self.prefetched_page_fingerprints.clear();
+            self.prefetched_pixel_per_pt = pixel_per_pt;
+            self.resources_dirty = false;
+            return;
+        }
+
+        let mut page_fingerprints = Vec::with_capacity(page_count);
+        let mut indices = Vec::new();
+        for (idx, page) in self.vec2canvas.pages.iter().enumerate() {
+            page_fingerprints.push(page.content);
+            if pixel_changed || self.prefetched_page_fingerprints.get(idx) != Some(&page.content) {
+                indices.push(idx);
+            }
+        }
+
+        self.prefetched_page_fingerprints = page_fingerprints;
+        self.prefetched_pixel_per_pt = pixel_per_pt;
+        self.resources_dirty = false;
+
+        if indices.is_empty() {
+            return;
+        }
+
+        let ts = sk::Transform::from_scale(pixel_per_pt, pixel_per_pt);
+        let Ok(Some(prepare)) = self.vec2canvas.prepare_pages(&indices, ts) else {
+            return;
+        };
+
+        wasm_bindgen_futures::spawn_local(async move {
+            prepare.await;
+        });
     }
 
     /// Render a specific page of the document in the given window.
@@ -154,6 +231,7 @@ impl IncrCanvasDocClient {
         _rect: Rect,
     ) -> Result<()> {
         self.patch_delta(kern);
+        self.prefetch_page_resources();
 
         if idx >= self.vec2canvas.pages.len() {
             Err(error_once!("Renderer.OutofPageRange", idx: idx))?;
