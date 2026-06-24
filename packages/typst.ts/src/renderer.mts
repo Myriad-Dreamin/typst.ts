@@ -372,7 +372,6 @@ export interface TypstSvgRenderer {
   renderToSvg(options: RenderOptions<RenderToSvgOptions>): Promise<boolean>;
 }
 
-
 /**
  * The interface of Typst renderer.
  */
@@ -610,7 +609,7 @@ export class TypstRendererDriver {
   renderer: typst.TypstRenderer;
   rendererJs: typeof typst;
 
-  constructor() { }
+  constructor() {}
 
   async init(options?: Partial<InitOptions>): Promise<void> {
     this.rendererJs = await (options?.getWrapper?.() || import('@myriaddreamin/typst-ts-renderer'));
@@ -651,6 +650,12 @@ export class TypstRendererDriver {
     }
     if (options.cacheKey !== undefined) {
       rustOptions.cache_key = options.cacheKey;
+    }
+    if (options.window !== undefined) {
+      rustOptions.window_lo_x = options.window.lo.x;
+      rustOptions.window_lo_y = options.window.lo.y;
+      rustOptions.window_hi_x = options.window.hi.x;
+      rustOptions.window_hi_y = options.window.hi.y;
     }
     if (options.backgroundColor !== undefined) {
       rustOptions.background_color = options.backgroundColor;
@@ -823,7 +828,7 @@ export class TypstRendererDriver {
       if (options.pixelPerPt !== undefined && options.pixelPerPt <= 0) {
         throw new Error(
           'Invalid typst.RenderOptions.pixelPerPt, should be a positive number ' +
-          options.pixelPerPt,
+            options.pixelPerPt,
         );
       }
 
@@ -863,10 +868,10 @@ export class TypstRendererDriver {
         this,
         this.renderer.create_session(
           b &&
-          this.createOptionsToRust({
-            format: 'vector',
-            artifactContent: b,
-          }),
+            this.createOptionsToRust({
+              format: 'vector',
+              artifactContent: b,
+            }),
         ),
       ),
     );

@@ -304,6 +304,8 @@ impl From<CanvasStack> for CanvasNode {
             inner: s.inner,
             kind: s.kind,
             rect: s.rect,
+            #[cfg(feature = "bitmap_cache_word")]
+            bitmap_cache: Default::default(),
         }));
         if let Some(clipper) = s.clipper {
             Arc::new(CanvasElem::Clip(CanvasClipElem {

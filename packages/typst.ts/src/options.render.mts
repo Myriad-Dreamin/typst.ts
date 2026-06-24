@@ -133,6 +133,12 @@ export class RenderCanvasOptions {
    * The page offset to render.
    */
   pageOffset: number;
+
+  /**
+   * Render only the page-local rectangle. Coordinates are in Typst points.
+   */
+  window?: Rect;
+
   /**
    * The previous render state.
    */

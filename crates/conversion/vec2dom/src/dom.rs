@@ -7,7 +7,7 @@ use std::{
 use reflexo::hash::Fingerprint;
 use reflexo::vector::ir::{self, Module, Page, Point, Scalar, Size, TextItem, TransformItem};
 use reflexo::{error::prelude::*, ImmutStr};
-use reflexo_vec2canvas::{CanvasElem, CanvasNode, CanvasOp, CanvasStateGuard};
+use reflexo_vec2canvas::{CanvasElem, CanvasNode, CanvasOp, CanvasRenderContext, CanvasStateGuard};
 use web_sys::{
     js_sys::Reflect,
     wasm_bindgen::{JsCast, JsValue},
@@ -560,7 +560,9 @@ impl DomPage {
                 });
 
                 let ts = tiny_skia::Transform::from_scale(ppp, ppp);
-                canvas_elem.realize(ts, &canvas_ctx).await;
+                canvas_elem
+                    .realize(ts, &canvas_ctx, CanvasRenderContext::default())
+                    .await;
             }
 
             let mut clip_rect = None;
