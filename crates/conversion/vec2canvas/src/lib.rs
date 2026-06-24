@@ -22,6 +22,7 @@ use web_sys::{Blob, HtmlImageElement, OffscreenCanvas, OffscreenCanvasRenderingC
 
 use std::{
     cell::OnceCell,
+    collections::HashMap,
     fmt::Debug,
     sync::{Arc, Mutex},
 };
@@ -143,6 +144,7 @@ impl<Feat: ExportFeature> CanvasTask<Feat> {
             module,
 
             use_stable_glyph_id: true,
+            glyph_cache: HashMap::new(),
 
             _feat_phantom: Default::default(),
         }
@@ -165,7 +167,16 @@ pub struct CanvasRenderTask<'m, 't, Feat: ExportFeature> {
     /// See [`ExportFeature`].
     pub use_stable_glyph_id: bool,
 
+    glyph_cache: HashMap<CanvasGlyphCacheKey, CanvasNode>,
+
     _feat_phantom: std::marker::PhantomData<&'t Feat>,
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+struct CanvasGlyphCacheKey {
+    font: Fingerprint,
+    glyph: u32,
+    fill: ImmutStr,
 }
 
 impl<'m, Feat: ExportFeature> FontIndice<'m> for CanvasRenderTask<'m, '_, Feat> {
@@ -176,11 +187,33 @@ impl<'m, Feat: ExportFeature> FontIndice<'m> for CanvasRenderTask<'m, '_, Feat> 
 
 impl<Feat: ExportFeature> GlyphFactory for CanvasRenderTask<'_, '_, Feat> {
     fn get_glyph(&mut self, font: &FontItem, glyph: u32, fill: CanvasPaint) -> Option<CanvasNode> {
+        if let CanvasPaint::Solid(fill_color) = fill {
+            let key = CanvasGlyphCacheKey {
+                font: font.fingerprint,
+                glyph,
+                fill: fill_color.clone(),
+            };
+            if let Some(cached) = self.glyph_cache.get(&key) {
+                return Some(cached.clone());
+            }
+
+            let glyph_data = font.get_glyph(glyph)?;
+            let node = Arc::new(CanvasElem::Glyph(CanvasGlyphElem {
+                fill: CanvasPaint::Solid(fill_color),
+                upem: font.units_per_em,
+                glyph_data: glyph_data.clone(),
+                path: Default::default(),
+            }));
+            self.glyph_cache.insert(key, node.clone());
+            return Some(node);
+        }
+
         let glyph_data = font.get_glyph(glyph)?;
         Some(Arc::new(CanvasElem::Glyph(CanvasGlyphElem {
             fill,
             upem: font.units_per_em,
             glyph_data: glyph_data.clone(),
+            path: Default::default(),
         })))
     }
 
@@ -277,6 +310,7 @@ impl From<CanvasStack> for CanvasNode {
                 d: clipper.d,
                 inner,
                 clip_bbox: CanvasBBox::Dynamic(Box::new(OnceCell::new())),
+                path: Default::default(),
             }))
         } else {
             inner
@@ -340,6 +374,7 @@ impl<'m, C: RenderVm<'m, Resultant = CanvasNode> + GlyphFactory> GroupContext<C>
                     _ => None,
                 }),
                 rect: CanvasBBox::Dynamic(Box::new(OnceCell::new())),
+                path: Default::default(),
             })),
         ))
     }
