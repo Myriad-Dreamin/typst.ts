@@ -22,7 +22,7 @@ impl TypstRenderer {
         options: Option<RenderPageImageOptions>,
     ) -> Result<JsValue> {
         let canvas = canvas.as_ref();
-        let canvas = if canvas == &JsValue::NULL {
+        let canvas = if canvas == &JsValue::NULL || canvas == &JsValue::UNDEFINED {
             None
         } else {
             Some(match canvas.dyn_ref::<CanvasRenderingContext2d>() {
