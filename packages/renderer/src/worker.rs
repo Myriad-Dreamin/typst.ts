@@ -459,7 +459,7 @@ pub struct WorkerBridge {
     pub(crate) sessions: HashMap<i32, Arc<Mutex<RenderSession>>>,
     pub(crate) canvases: HashMap<i32, HashMap<usize, OffscreenCanvas>>,
     pub(crate) previous_promise: Option<Promise>,
-    pub(crate) sessions: i32,
+    pub(crate) session_counter: i32,
 }
 
 #[wasm_bindgen]
@@ -480,8 +480,8 @@ impl WorkerBridge {
         let res = match x {
             Request::CreateSession(opts) => {
                 let session = self.plugin.create_session(opts).unwrap();
-                let idx = self.sessions;
-                self.sessions += 1;
+                let idx = self.session_counter;
+                self.session_counter += 1;
                 #[allow(clippy::arc_with_non_send_sync)]
                 self.sessions.insert(idx, Arc::new(Mutex::new(session)));
                 Ok(JsValue::from_f64(idx as f64))
@@ -574,7 +574,7 @@ impl WorkerBridge {
             Request::SetBackgroundColor(ses, color) => {
                 let session = self.sessions.get(&ses).unwrap().clone();
                 let p = wasm_bindgen_futures::future_to_promise(async move {
-                    session.lock().unwrap().set_background_color(color);
+                    session.lock().unwrap().set_background_color(Some(color));
                     Ok(JsValue::NULL)
                 });
                 Err(p)
@@ -583,7 +583,7 @@ impl WorkerBridge {
             Request::SetPixelPerPt(ses, f) => {
                 let session = self.sessions.get(&ses).unwrap().clone();
                 let p = wasm_bindgen_futures::future_to_promise(async move {
-                    session.lock().unwrap().set_pixel_per_pt(f);
+                    session.lock().unwrap().set_pixel_per_pt(Some(f));
                     Ok(JsValue::NULL)
                 });
                 Err(p)
