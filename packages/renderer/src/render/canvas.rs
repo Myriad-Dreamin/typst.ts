@@ -4,7 +4,9 @@ use std::sync::OnceLock;
 use reflexo_typst::error::prelude::*;
 use reflexo_typst::hash::Fingerprint;
 use reflexo_typst::vector::ir::{Axes, Rect, Scalar};
-use reflexo_vec2canvas::{BrowserFontMetric, CanvasDevice, DefaultExportFeature, ExportFeature};
+use reflexo_vec2canvas::{
+    BrowserFontMetric, CanvasBound, CanvasDevice, DefaultExportFeature, ExportFeature,
+};
 use reflexo_vec2sema::SemaTask;
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, OffscreenCanvasRenderingContext2d};
@@ -43,9 +45,52 @@ impl TypstRenderer {
         err.map_err(map_into_err::<JsValue, _>("Renderer.SetHtmlSemantics"))?;
         Ok(res.into())
     }
+
+    pub fn hit_canvas_page_bound(
+        &mut self,
+        ses: &RenderSession,
+        page_off: usize,
+        x: f32,
+        y: f32,
+    ) -> Result<JsValue> {
+        let mut kern = ses.client.lock().unwrap();
+        let mut client = ses.canvas_kern.lock().unwrap();
+
+        let Some(bound) = client.hit_page_bound(&mut kern, page_off, x, y)? else {
+            return Ok(JsValue::NULL);
+        };
+
+        canvas_bound_to_js(bound)
+    }
 }
 
 static FONT_METRICS: OnceLock<BrowserFontMetric> = OnceLock::new();
+
+fn canvas_bound_to_js(bound: CanvasBound) -> Result<JsValue> {
+    let rect = js_sys::Object::new();
+    set_js_number(&rect, "x", bound.rect.left().0 as f64)?;
+    set_js_number(&rect, "y", bound.rect.top().0 as f64)?;
+    set_js_number(&rect, "width", bound.rect.width().0 as f64)?;
+    set_js_number(&rect, "height", bound.rect.height().0 as f64)?;
+
+    let res = js_sys::Object::new();
+    set_js_string(&res, "kind", bound.kind)?;
+    js_sys::Reflect::set(&res, &"rect".into(), &rect)
+        .map_err(map_into_err::<JsValue, _>("Renderer.SetCanvasBoundRect"))?;
+    Ok(res.into())
+}
+
+fn set_js_number(obj: &js_sys::Object, key: &str, value: f64) -> Result<()> {
+    js_sys::Reflect::set(obj, &key.into(), &value.into())
+        .map_err(map_into_err::<JsValue, _>("Renderer.SetCanvasBoundNumber"))?;
+    Ok(())
+}
+
+fn set_js_string(obj: &js_sys::Object, key: &str, value: &str) -> Result<()> {
+    js_sys::Reflect::set(obj, &key.into(), &value.into())
+        .map_err(map_into_err::<JsValue, _>("Renderer.SetCanvasBoundString"))?;
+    Ok(())
+}
 
 impl TypstRenderer {
     #[allow(clippy::await_holding_lock)]

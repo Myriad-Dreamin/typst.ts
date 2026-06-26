@@ -2,7 +2,13 @@
 import type * as typst from '@myriaddreamin/typst-ts-renderer';
 
 import type { InitOptions } from './options.init.mjs';
-import { PageInfo, RenderCanvasResult, TypstDefaultParams, kObject } from './internal.types.mjs';
+import {
+  CanvasPageBound,
+  PageInfo,
+  RenderCanvasResult,
+  TypstDefaultParams,
+  kObject,
+} from './internal.types.mjs';
 import {
   CreateSessionOptions,
   RenderToCanvasOptions,
@@ -14,6 +20,7 @@ import {
   RenderInSessionOptions,
   MountDomOptions,
   OffscreenRenderCanvasOptions,
+  HitCanvasPageBoundOptions,
 } from './options.render.mjs';
 import { RenderView } from './render/canvas/view.mjs';
 import { LazyWasmModule } from './wasm.mjs';
@@ -188,6 +195,16 @@ export class RenderSession {
    */
   renderCanvas(options: ContextedRenderOptions<RenderCanvasOptions>): Promise<RenderCanvasResult> {
     return this.plugin.renderCanvas({
+      renderSession: this,
+      ...options,
+    });
+  }
+
+  /**
+   * See {@link TypstRenderer#hitCanvasPageBound} for more details.
+   */
+  hitCanvasPageBound(options: HitCanvasPageBoundOptions): CanvasPageBound | undefined {
+    return this.plugin.hitCanvasPageBound({
       renderSession: this,
       ...options,
     });
@@ -404,6 +421,13 @@ export interface TypstRenderer extends TypstSvgRenderer {
    * Render a Typst document to canvas.
    */
   renderCanvas(options: RenderOptions<RenderCanvasOptions>): Promise<RenderCanvasResult>;
+
+  /**
+   * Hit test a non-text visual bound on a rendered canvas page.
+   */
+  hitCanvasPageBound(
+    options: RenderInSessionOptions<HitCanvasPageBoundOptions>,
+  ): CanvasPageBound | undefined;
 
   /**
    * Render a Typst document to canvas.
@@ -697,6 +721,18 @@ export class TypstRendererDriver {
         this.canvasOptionsToRust(options),
       );
     });
+  }
+
+  hitCanvasPageBound(
+    options: RenderInSessionOptions<HitCanvasPageBoundOptions>,
+  ): CanvasPageBound | undefined {
+    const result = (this.renderer as any).hit_canvas_page_bound(
+      options.renderSession[kObject],
+      options.pageOffset,
+      options.x,
+      options.y,
+    );
+    return result === null || result === undefined ? undefined : (result as CanvasPageBound);
   }
 
   // async renderPdf(artifactContent: string): Promise<Uint8Array> {

@@ -30,6 +30,16 @@ pub mod canvas_stub {
         ) -> Result<JsValue> {
             Err(error_once!("Renderer.CanvasFeatureNotEnabled"))
         }
+
+        pub fn hit_canvas_page_bound(
+            &mut self,
+            _ses: &RenderSession,
+            _page_off: usize,
+            _x: f32,
+            _y: f32,
+        ) -> Result<JsValue> {
+            Err(error_once!("Renderer.CanvasFeatureNotEnabled"))
+        }
     }
 }
 #[cfg(not(feature = "render_canvas"))]

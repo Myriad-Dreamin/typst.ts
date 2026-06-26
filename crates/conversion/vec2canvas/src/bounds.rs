@@ -11,6 +11,88 @@ pub trait BBoxAt {
     fn bbox_at(&self, ts: sk::Transform) -> Option<Rect>;
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct CanvasBound {
+    pub kind: &'static str,
+    pub rect: Rect,
+}
+
+pub fn hit_canvas_bound_at(
+    node: &CanvasNode,
+    ts: sk::Transform,
+    point: ir::Point,
+) -> Option<CanvasBound> {
+    hit_elem_bound_at(node, ts, point)
+}
+
+fn hit_elem_bound_at(
+    node: &CanvasNode,
+    ts: sk::Transform,
+    point: ir::Point,
+) -> Option<CanvasBound> {
+    match node.as_ref() {
+        CanvasElem::Group(group) => hit_group_bound_at(group, ts, point),
+        CanvasElem::Clip(clip) => hit_clip_bound_at(clip, ts, point),
+        CanvasElem::Path(path) => {
+            if path.fill.is_none() && path.stroke.is_none() {
+                return None;
+            }
+
+            let rect = path.bbox_at(ts)?;
+            rect_contains(rect, point).then_some(CanvasBound { kind: "path", rect })
+        }
+        CanvasElem::Image(image) => {
+            let rect = image.bbox_at(ts)?;
+            rect_contains(rect, point).then_some(CanvasBound {
+                kind: "image",
+                rect,
+            })
+        }
+        CanvasElem::Glyph(..) => None,
+    }
+}
+
+fn hit_group_bound_at(
+    group: &CanvasGroupElem,
+    ts: sk::Transform,
+    point: ir::Point,
+) -> Option<CanvasBound> {
+    if matches!(group.kind, GroupKind::Text) {
+        return None;
+    }
+
+    let ts = ts.pre_concat(*group.ts.as_ref());
+    for (pos, elem) in group.inner.iter().rev() {
+        let ts = ts.pre_translate(pos.x.0, pos.y.0);
+        if let Some(bound) = hit_elem_bound_at(elem, ts, point) {
+            return Some(bound);
+        }
+    }
+
+    None
+}
+
+fn hit_clip_bound_at(
+    clip: &CanvasClipElem,
+    ts: sk::Transform,
+    point: ir::Point,
+) -> Option<CanvasBound> {
+    if let Some(clip_rect) = clip.clip_bbox_at(ts) {
+        if !rect_contains(clip_rect, point) {
+            return None;
+        }
+    }
+
+    hit_elem_bound_at(&clip.inner, ts, point)
+}
+
+fn rect_contains(rect: Rect, point: ir::Point) -> bool {
+    point.x >= rect.left()
+        && point.x <= rect.right()
+        && point.y >= rect.top()
+        && point.y <= rect.bottom()
+}
+
 pub enum CanvasBBox {
     Static(Box<Rect>),
     Dynamic(Box<OnceCell<elsa::FrozenMap<ir::Transform, Box<Option<Rect>>>>>),

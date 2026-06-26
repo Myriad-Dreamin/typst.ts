@@ -43,6 +43,18 @@ export interface Rect {
   hi: Point;
 }
 
+export interface PageRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface CanvasPageBound {
+  kind: string;
+  rect: PageRect;
+}
+
 export type TransformMatrix = [number, number, number, number, number, number];
 
 //#region Semantic tokens: https://github.com/microsoft/vscode/issues/86415

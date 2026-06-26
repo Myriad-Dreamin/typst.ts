@@ -13,8 +13,8 @@ use reflexo::{
 };
 
 use crate::{
-    set_transform, CanvasDevice, CanvasOp, CanvasPage, CanvasRenderContext, CanvasTask,
-    DefaultExportFeature,
+    hit_canvas_bound_at, set_transform, CanvasBound, CanvasDevice, CanvasOp, CanvasPage,
+    CanvasRenderContext, CanvasTask, DefaultExportFeature,
 };
 
 /// Prepared canvas resources that can be awaited after the document locks are
@@ -283,6 +283,27 @@ impl IncrCanvasDocClient {
         let s = self.vec2canvas.pixel_per_pt;
         let ts = sk::Transform::from_scale(s, s);
         self.vec2canvas.prepare_pages(indices, ts)
+    }
+
+    /// Hit tests non-text visual bounds on a page in page-space points.
+    pub fn hit_page_bound(
+        &mut self,
+        kern: &mut IncrDocClient,
+        idx: usize,
+        x: f32,
+        y: f32,
+    ) -> Result<Option<CanvasBound>> {
+        self.patch_delta(kern);
+
+        let Some(page) = self.vec2canvas.pages.get(idx) else {
+            Err(error_once!("Renderer.OutofPageRange", idx: idx))?
+        };
+
+        Ok(hit_canvas_bound_at(
+            &page.elem,
+            sk::Transform::identity(),
+            Point::new(Scalar(x), Scalar(y)),
+        ))
     }
 }
 
