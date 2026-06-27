@@ -11,7 +11,7 @@ mod paint;
 mod pixglyph_canvas;
 mod utils;
 
-pub use bounds::BBoxAt;
+pub use bounds::{hit_canvas_bound_at, BBoxAt, CanvasBound};
 pub use device::CanvasDevice;
 #[cfg(feature = "incremental")]
 pub use incr::*;

@@ -49,6 +49,26 @@ export interface RenderToCanvasOptions
 }
 
 /**
+ * The options for hit testing a non-text visual bound on a canvas page.
+ */
+export interface HitCanvasPageBoundOptions {
+  /**
+   * The page offset to hit test.
+   */
+  pageOffset: number;
+
+  /**
+   * The page-space x coordinate in Typst points.
+   */
+  x: number;
+
+  /**
+   * The page-space y coordinate in Typst points.
+   */
+  y: number;
+}
+
+/**
  * The options for mounting Typst document to specified container.
  * @property {HTMLElement} [container] - The container to render the Typst document.
  * @property {number} [pixelPerPt] - The pixel per point scale up the image, which is 2.5 by default and recommended.

@@ -93,7 +93,7 @@ worker = [
     "web-sys/WorkerType",
 ]
 
-web = ["render_canvas", "render_svg", "render_dom"]
+web = ["render_canvas", "render_svg", "render_dom", "worker"]
 
 debug_delta_update = []
 test_render_document = []
