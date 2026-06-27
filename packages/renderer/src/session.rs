@@ -258,8 +258,20 @@ impl RenderSession {
     }
 
     pub(crate) fn merge_delta(&mut self, delta: &[u8]) -> Result<()> {
-        let mut client = self.client.lock().unwrap();
-        Self::merge_delta_inner(&mut self.pages_info, &mut client, delta)
+        let res = {
+            let mut client = self.client.lock().unwrap();
+            Self::merge_delta_inner(&mut self.pages_info, &mut client, delta)
+        };
+
+        if res.is_ok() {
+            #[cfg(feature = "render_canvas")]
+            {
+                let mut canvas_kern = self.canvas_kern.lock().unwrap();
+                canvas_kern.mark_delta_dirty();
+            }
+        }
+
+        res
     }
 
     pub(crate) fn merge_delta_inner(

@@ -1,9 +1,9 @@
+use std::collections::HashMap;
 use std::sync::OnceLock;
-use std::{collections::HashMap, ops::Deref};
 
 use reflexo_typst::error::prelude::*;
 use reflexo_typst::hash::Fingerprint;
-use reflexo_typst::vector::ir::{Axes, LayoutRegionNode, Rect, Scalar};
+use reflexo_typst::vector::ir::{Axes, Rect, Scalar};
 use reflexo_vec2canvas::{BrowserFontMetric, CanvasDevice, DefaultExportFeature, ExportFeature};
 use reflexo_vec2sema::SemaTask;
 use wasm_bindgen::prelude::*;
@@ -95,11 +95,12 @@ impl TypstRenderer {
         let pages = t.pages(kern.module()).unwrap().pages();
 
         let page_num = opts.page_off;
-        let fingerprint = if let Some(page) = pages.get(page_num) {
-            page.content
+        let page = if let Some(page) = pages.get(page_num) {
+            page.clone()
         } else {
             return Err(error_once!("Renderer.MissingPage", idx: page_num));
         };
+        let fingerprint = page.content;
 
         if should_render_body {
             let cached = opts
@@ -132,30 +133,14 @@ impl TypstRenderer {
             }
         }
 
-        // todo: leaking abstraction
-        // todo: reuse
-        if let Some(t) = &kern.layout {
-            let pages = match t {
-                LayoutRegionNode::Pages(a) => {
-                    let (_, pages) = a.deref();
-                    pages
-                }
-                _ => todo!(),
-            };
-            for (idx, page) in pages.iter().enumerate() {
-                if page_num != idx {
-                    continue;
-                }
-                if let Some(worker) = tc.as_mut() {
-                    let metric = FONT_METRICS.get_or_init(BrowserFontMetric::from_env);
+        if let Some(worker) = tc.as_mut() {
+            let metric = FONT_METRICS.get_or_init(BrowserFontMetric::from_env);
 
-                    let mut output = vec![];
-                    let mut t = SemaTask::new(true, *metric, page.size.x.0, page.size.y.0);
-                    let ts = tiny_skia::Transform::identity();
-                    t.render_semantics(&kern.doc.module, ts, page.content, &mut output);
-                    worker.push(output.concat());
-                }
-            }
+            let mut output = vec![];
+            let mut t = SemaTask::new(true, *metric, page.size.x.0, page.size.y.0);
+            let ts = tiny_skia::Transform::identity();
+            t.render_semantics(&kern.doc.module, ts, page.content, &mut output);
+            worker.push(output.concat());
         }
 
         Ok((
