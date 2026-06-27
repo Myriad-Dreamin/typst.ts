@@ -7,7 +7,7 @@ use reflexo::{
     hash::Fingerprint,
     vector::{
         incr::IncrDocClient,
-        ir::{ImmutStr, Module, Page, Rect},
+        ir::{ImmutStr, Module, Page, Point, Rect, Scalar},
         vm::RenderVm,
     },
 };
@@ -90,7 +90,15 @@ impl IncrVec2CanvasPass {
             return;
         }
         canvas.set_fill_style_str(self.fill.as_ref());
-        canvas.fill_rect(0., 0., pg.size.x.0 as f64, pg.size.y.0 as f64);
+        let fill_rect = rect
+            .and_then(|rect| intersect_rect(rect, page_rect(pg.size)))
+            .unwrap_or_else(|| page_rect(pg.size));
+        canvas.fill_rect(
+            fill_rect.left().0 as f64,
+            fill_rect.top().0 as f64,
+            fill_rect.width().0 as f64,
+            fill_rect.height().0 as f64,
+        );
 
         let window = rect.and_then(|rect| transform_rect(rect, ts));
         pg.elem
@@ -280,6 +288,29 @@ impl IncrCanvasDocClient {
 
 fn is_full_render_rect(rect: Rect) -> bool {
     rect.lo.x.0 <= -1.0 && rect.lo.y.0 <= -1.0 && rect.hi.x.0 >= 1e20 && rect.hi.y.0 >= 1e20
+}
+
+fn page_rect(size: Point) -> Rect {
+    Rect {
+        lo: Point::new(Scalar(0.), Scalar(0.)),
+        hi: size,
+    }
+}
+
+fn intersect_rect(a: Rect, b: Rect) -> Option<Rect> {
+    let lo_x = a.left().0.max(b.left().0);
+    let lo_y = a.top().0.max(b.top().0);
+    let hi_x = a.right().0.min(b.right().0);
+    let hi_y = a.bottom().0.min(b.bottom().0);
+
+    if hi_x <= lo_x || hi_y <= lo_y {
+        return None;
+    }
+
+    Some(Rect {
+        lo: Point::new(Scalar(lo_x), Scalar(lo_y)),
+        hi: Point::new(Scalar(hi_x), Scalar(hi_y)),
+    })
 }
 
 fn transform_rect(rect: Rect, ts: sk::Transform) -> Option<Rect> {

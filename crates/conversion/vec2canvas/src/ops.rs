@@ -1031,6 +1031,7 @@ pub struct CanvasGlyphElem {
     pub upem: Scalar,
     pub glyph_data: Arc<FlatGlyphItem>,
     pub path: CachedPath2d,
+    pub bbox: OnceCell<Option<Rect>>,
 }
 
 #[async_trait(?Send)]
