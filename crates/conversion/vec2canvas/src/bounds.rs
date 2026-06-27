@@ -2,7 +2,7 @@ use core::fmt;
 use std::cell::OnceCell;
 
 use elsa::FrozenMap;
-use reflexo::vector::ir::{self, Rect, Scalar};
+use reflexo::vector::ir::{self, FlatGlyphItem, Rect, Scalar};
 use tiny_skia as sk;
 
 use crate::ops::*;
@@ -123,7 +123,64 @@ impl BBoxAt for CanvasImageElem {
 }
 
 impl BBoxAt for CanvasGlyphElem {
-    fn bbox_at(&self, _ts: sk::Transform) -> Option<Rect> {
-        None
+    fn bbox_at(&self, ts: sk::Transform) -> Option<Rect> {
+        let rect = self
+            .bbox
+            .get_or_init(|| glyph_local_bbox(self.glyph_data.as_ref()));
+        transform_rect((*rect)?, ts)
     }
+}
+
+fn glyph_local_bbox(glyph: &FlatGlyphItem) -> Option<Rect> {
+    match glyph {
+        FlatGlyphItem::None => None,
+        FlatGlyphItem::Image(image) => {
+            let rect = sk::Rect::from_xywh(0., 0., image.image.size.x.0, image.image.size.y.0)?;
+            rect.transform(image.ts.into()).map(From::from)
+        }
+        FlatGlyphItem::Outline(outline) => {
+            let mut path = convert_path(&outline.d)?;
+            if let Some(transform) = &outline.ts {
+                let transform: tiny_skia_path::Transform = (**transform).into();
+                path = path.transform(transform)?;
+            }
+
+            Some(path.bounds().into())
+        }
+    }
+}
+
+fn transform_rect(rect: Rect, ts: sk::Transform) -> Option<Rect> {
+    sk::Rect::from_xywh(rect.lo.x.0, rect.lo.y.0, rect.width().0, rect.height().0)
+        .and_then(|rect| rect.transform(ts))
+        .map(From::from)
+}
+
+fn convert_path(path_data: &str) -> Option<tiny_skia_path::Path> {
+    let mut builder = tiny_skia_path::PathBuilder::new();
+
+    for segment in svgtypes::SimplifyingPathParser::from(path_data) {
+        let segment = segment.ok()?;
+
+        match segment {
+            svgtypes::SimplePathSegment::MoveTo { x, y } => builder.move_to(x as f32, y as f32),
+            svgtypes::SimplePathSegment::LineTo { x, y } => builder.line_to(x as f32, y as f32),
+            svgtypes::SimplePathSegment::Quadratic { x1, y1, x, y } => {
+                builder.quad_to(x1 as f32, y1 as f32, x as f32, y as f32)
+            }
+            svgtypes::SimplePathSegment::CurveTo {
+                x1,
+                y1,
+                x2,
+                y2,
+                x,
+                y,
+            } => builder.cubic_to(
+                x1 as f32, y1 as f32, x2 as f32, y2 as f32, x as f32, y as f32,
+            ),
+            svgtypes::SimplePathSegment::ClosePath => builder.close(),
+        }
+    }
+
+    builder.finish()
 }

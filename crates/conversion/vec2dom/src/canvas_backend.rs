@@ -1,7 +1,9 @@
 use reflexo::error::prelude::*;
 use reflexo::vector::ir::{self, Module, Page, Point, Scalar};
 use reflexo::vector::vm::RenderVm;
-use reflexo_vec2canvas::{BBoxAt, CanvasElem, CanvasNode, CanvasOp, CanvasTask, ExportFeature};
+use reflexo_vec2canvas::{
+    BBoxAt, CanvasElem, CanvasNode, CanvasOp, CanvasRenderContext, CanvasTask, ExportFeature,
+};
 
 use crate::dom::*;
 
@@ -266,7 +268,11 @@ impl TypstElem {
                         self.is_canvas_painted = false;
                     }
                     (false, false) => {
-                        self.canvas.as_ref().unwrap().realize(ts, panel).await;
+                        self.canvas
+                            .as_ref()
+                            .unwrap()
+                            .realize(ts, panel, CanvasRenderContext::default())
+                            .await;
                         self.is_canvas_painted = true;
                         return;
                     }

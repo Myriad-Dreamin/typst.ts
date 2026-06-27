@@ -77,6 +77,9 @@ render_canvas = [
     "web-sys/HtmlImageElement",
     "web-sys/CanvasRenderingContext2d",
 ]
+bitmap_cache_word = ["reflexo-vec2canvas/bitmap_cache_word"]
+bitmap_cache_line = ["reflexo-vec2canvas/bitmap_cache_line"]
+bitmap_cache_paragraph = ["reflexo-vec2canvas/bitmap_cache_paragraph"]
 render_dom = ["dep:reflexo-vec2dom", "render_svg"]
 render_pdf = []
 render_svg = ["reflexo-typst/svg", "web-sys/HtmlDivElement"]

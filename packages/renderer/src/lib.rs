@@ -13,6 +13,7 @@ use reflexo_typst::error::prelude::*;
 use rkyv::{Archive, Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
+use reflexo_typst::vector::ir::{Axes, Rect, Scalar};
 use session::CreateSessionOptions;
 
 pub mod build_info {
@@ -88,6 +89,10 @@ pub struct RenderPageImageOptions {
     pub(crate) page_off: usize,
     pub(crate) cache_key: Option<String>,
     pub(crate) data_selection: Option<u32>,
+    pub(crate) window_lo_x: Option<f32>,
+    pub(crate) window_lo_y: Option<f32>,
+    pub(crate) window_hi_x: Option<f32>,
+    pub(crate) window_hi_y: Option<f32>,
 }
 
 #[wasm_bindgen]
@@ -100,6 +105,10 @@ impl RenderPageImageOptions {
             page_off: 0,
             cache_key: None,
             data_selection: None,
+            window_lo_x: None,
+            window_lo_y: None,
+            window_hi_x: None,
+            window_hi_y: None,
         }
     }
 
@@ -152,12 +161,59 @@ impl RenderPageImageOptions {
     pub fn set_data_selection(&mut self, data_selection: Option<u32>) {
         self.data_selection = data_selection;
     }
+
+    #[wasm_bindgen(getter)]
+    pub fn window_lo_x(&self) -> Option<f32> {
+        self.window_lo_x
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_window_lo_x(&mut self, window_lo_x: Option<f32>) {
+        self.window_lo_x = window_lo_x;
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn window_lo_y(&self) -> Option<f32> {
+        self.window_lo_y
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_window_lo_y(&mut self, window_lo_y: Option<f32>) {
+        self.window_lo_y = window_lo_y;
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn window_hi_x(&self) -> Option<f32> {
+        self.window_hi_x
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_window_hi_x(&mut self, window_hi_x: Option<f32>) {
+        self.window_hi_x = window_hi_x;
+    }
+
+    #[wasm_bindgen(getter)]
+    pub fn window_hi_y(&self) -> Option<f32> {
+        self.window_hi_y
+    }
+
+    #[wasm_bindgen(setter)]
+    pub fn set_window_hi_y(&mut self, window_hi_y: Option<f32>) {
+        self.window_hi_y = window_hi_y;
+    }
 }
 
 impl RenderPageImageOptions {
     pub(crate) fn renders_canvas_body(&self) -> bool {
         let data_selection = self.data_selection.unwrap_or(u32::MAX);
         (data_selection & (1 << 0)) != 0
+    }
+
+    pub(crate) fn window_rect(&self) -> Option<Rect> {
+        Some(Rect {
+            lo: Axes::new(Scalar(self.window_lo_x?), Scalar(self.window_lo_y?)),
+            hi: Axes::new(Scalar(self.window_hi_x?), Scalar(self.window_hi_y?)),
+        })
     }
 }
 
@@ -239,7 +295,6 @@ impl TypstRenderer {
 pub(crate) mod worker;
 #[cfg(not(feature = "worker"))]
 pub mod canvas_stub {
-    #![allow(dead_code)]
     #![allow(unused_imports)]
 
     use js_sys::{Promise, Uint8Array};

@@ -203,6 +203,7 @@ impl<Feat: ExportFeature> GlyphFactory for CanvasRenderTask<'_, '_, Feat> {
                 upem: font.units_per_em,
                 glyph_data: glyph_data.clone(),
                 path: Default::default(),
+                bbox: Default::default(),
             }));
             self.glyph_cache.insert(key, node.clone());
             return Some(node);
@@ -214,6 +215,7 @@ impl<Feat: ExportFeature> GlyphFactory for CanvasRenderTask<'_, '_, Feat> {
             upem: font.units_per_em,
             glyph_data: glyph_data.clone(),
             path: Default::default(),
+            bbox: Default::default(),
         })))
     }
 
@@ -304,6 +306,8 @@ impl From<CanvasStack> for CanvasNode {
             inner: s.inner,
             kind: s.kind,
             rect: s.rect,
+            #[cfg(feature = "bitmap_cache_word")]
+            bitmap_cache: Default::default(),
         }));
         if let Some(clipper) = s.clipper {
             Arc::new(CanvasElem::Clip(CanvasClipElem {
