@@ -165,11 +165,80 @@ impl CanvasOp for CanvasGroupElem {
     async fn realize(&self, rts: sk::Transform, canvas: &dyn CanvasDevice) {
         let ts = rts.pre_concat(*self.ts.as_ref());
 
+        #[cfg(not(feature = "rasterize_glyph"))]
+        if matches!(self.kind, GroupKind::Text) && self.realize_solid_text_run(ts, canvas) {
+            self.realize_debug(rts, ts, canvas);
+            return;
+        }
+
+        self.realize_inner(ts, canvas).await;
+        self.realize_debug(rts, ts, canvas);
+    }
+}
+
+impl CanvasGroupElem {
+    #[cfg(not(feature = "rasterize_glyph"))]
+    fn realize_solid_text_run(&self, ts: sk::Transform, canvas: &dyn CanvasDevice) -> bool {
+        let Some(fill) = self.solid_text_run_fill() else {
+            return false;
+        };
+
+        let _guard = CanvasStateGuard::new(canvas);
+        canvas.set_fill_style_str(fill);
+        for (pos, sub_elem) in &self.inner {
+            let sub_ts = ts.pre_translate(pos.x.0, pos.y.0);
+
+            let CanvasElem::Glyph(glyph) = sub_elem.as_ref() else {
+                return false;
+            };
+            let FlatGlyphItem::Outline(path) = glyph.glyph_data.as_ref() else {
+                continue;
+            };
+            if !set_transform(canvas, sub_ts) {
+                continue;
+            }
+
+            let path = glyph.path.get_or_init(&path.d);
+            canvas.fill_with_path_2d(path);
+        }
+
+        true
+    }
+
+    #[cfg(not(feature = "rasterize_glyph"))]
+    fn solid_text_run_fill(&self) -> Option<&str> {
+        let mut fill: Option<&str> = None;
+        for (_, sub_elem) in &self.inner {
+            let CanvasElem::Glyph(glyph) = sub_elem.as_ref() else {
+                return None;
+            };
+
+            match glyph.glyph_data.as_ref() {
+                FlatGlyphItem::Outline(_) | FlatGlyphItem::None => {}
+                FlatGlyphItem::Image(_) => return None,
+            }
+
+            let glyph_fill = glyph.fill.as_solid_str()?;
+            if let Some(fill) = fill {
+                if fill != glyph_fill {
+                    return None;
+                }
+            } else {
+                fill = Some(glyph_fill);
+            }
+        }
+
+        fill
+    }
+
+    async fn realize_inner(&self, ts: sk::Transform, canvas: &dyn CanvasDevice) {
         for (pos, sub_elem) in &self.inner {
             let ts = ts.pre_translate(pos.x.0, pos.y.0);
             sub_elem.realize(ts, canvas).await;
         }
+    }
 
+    fn realize_debug(&self, rts: sk::Transform, ts: sk::Transform, canvas: &dyn CanvasDevice) {
         let _ = self.rect;
         let _ = Self::bbox_at;
         #[cfg(feature = "report_group")]
