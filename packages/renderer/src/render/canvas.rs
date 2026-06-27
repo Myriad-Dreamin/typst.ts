@@ -74,9 +74,8 @@ impl TypstRenderer {
         let background_color = background_color.or(ses.background_color.as_deref());
         client.set_fill(background_color.unwrap_or("ffffff").into());
 
+        let should_render_body = opts.renders_canvas_body();
         let data_selection = opts.data_selection.unwrap_or(u32::MAX);
-
-        let should_render_body = (data_selection & (1 << 0)) != 0;
         // semantics layer
         let mut tc = ((data_selection & (1 << 3)) != 0).then(Vec::new);
 
@@ -105,12 +104,28 @@ impl TypstRenderer {
         if should_render_body {
             let cached = opts
                 .cache_key
+                .as_deref()
                 .map(|c| c == fingerprint.as_svg_id("c"))
                 .unwrap_or(false);
 
             let canvas = canvas.ok_or_else(|| error_once!("Renderer.MissingCanvasForBody"))?;
 
             if !cached {
+                let prepare = client.prepare_page_resources(&mut kern, &[page_num])?;
+                drop(client);
+                drop(kern);
+                if let Some(prepare) = prepare {
+                    prepare.await;
+                }
+
+                kern = ses.client.lock().unwrap();
+                client = ses.canvas_kern.lock().unwrap();
+                let pixel_per_pt = opts.pixel_per_pt.or(ses.pixel_per_pt);
+                client.set_pixel_per_pt(pixel_per_pt.unwrap_or(3.));
+                let background_color = opts.background_color.as_deref();
+                let background_color = background_color.or(ses.background_color.as_deref());
+                client.set_fill(background_color.unwrap_or("ffffff").into());
+
                 client
                     .render_page_in_window(&mut kern, canvas, page_num, rect)
                     .await?;

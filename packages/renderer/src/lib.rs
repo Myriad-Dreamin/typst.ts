@@ -154,6 +154,13 @@ impl RenderPageImageOptions {
     }
 }
 
+impl RenderPageImageOptions {
+    pub(crate) fn renders_canvas_body(&self) -> bool {
+        let data_selection = self.data_selection.unwrap_or(u32::MAX);
+        (data_selection & (1 << 0)) != 0
+    }
+}
+
 #[wasm_bindgen]
 #[derive(Clone)]
 pub struct TypstRenderer {}
