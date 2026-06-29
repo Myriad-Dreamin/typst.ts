@@ -1,6 +1,6 @@
 {
 	"name": "@myriaddreamin/typst.svelte",
-	"version": "0.8.0-rc2",
+	"version": "0.8.0-rc3",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build && npm run prepack",
@@ -32,14 +32,14 @@
 	},
 	"peerDependencies": {
 		"svelte": "^5.0.0",
-		"@myriaddreamin/typst-ts-renderer": "0.8.0-rc2",
-		"@myriaddreamin/typst-ts-web-compiler": "0.8.0-rc2",
-		"@myriaddreamin/typst.ts": "0.8.0-rc2"
+		"@myriaddreamin/typst-ts-renderer": "0.8.0-rc3",
+		"@myriaddreamin/typst-ts-web-compiler": "0.8.0-rc3",
+		"@myriaddreamin/typst.ts": "0.8.0-rc3"
 	},
 	"devDependencies": {
-		"@myriaddreamin/typst-ts-renderer": "0.8.0-rc2",
-		"@myriaddreamin/typst-ts-web-compiler": "0.8.0-rc2",
-		"@myriaddreamin/typst.ts": "0.8.0-rc2",
+		"@myriaddreamin/typst-ts-renderer": "0.8.0-rc3",
+		"@myriaddreamin/typst-ts-web-compiler": "0.8.0-rc3",
+		"@myriaddreamin/typst.ts": "0.8.0-rc3",
 		"playwright": "^1.52.0",
 		"typescript": "*",
 		"vite": "*",

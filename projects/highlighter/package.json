@@ -1,6 +1,6 @@
 {
   "name": "@myriaddreamin/highlighter-typst",
-  "version": "0.8.0-rc2",
+  "version": "0.8.0-rc3",
   "description": "typst code highlighting support in web",
   "author": "Myriad Dreamin <camiyoru@gmail.com>",
   "license": "Apache-2.0",
@@ -30,12 +30,12 @@
     "dist/**/*.{mts,mjs,cjs,cts,ts,js}"
   ],
   "peerDependencies": {
-    "@myriaddreamin/typst.ts": "^0.8.0-rc2",
-    "@myriaddreamin/typst-ts-parser": "^0.8.0-rc2"
+    "@myriaddreamin/typst.ts": "^0.8.0-rc3",
+    "@myriaddreamin/typst-ts-parser": "^0.8.0-rc3"
   },
   "devDependencies": {
-    "@myriaddreamin/typst.ts": "0.8.0-rc2",
-    "@myriaddreamin/typst-ts-parser": "0.8.0-rc2",
+    "@myriaddreamin/typst.ts": "0.8.0-rc3",
+    "@myriaddreamin/typst-ts-parser": "0.8.0-rc3",
     "vite": "^6.2.3",
     "vitest": "^3.0.9"
   },
