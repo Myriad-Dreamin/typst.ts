@@ -17,7 +17,12 @@ export interface WasmBackendOptions {
 }
 
 export interface CliBackendOptions {
+  /** Official Typst CLI command. Used for pdf/svg/html exports. */
   command?: string;
+  /** typst.ts CLI command. Used for vector artifacts. */
+  vectorCommand?: string;
+  /** Deprecated alias for vectorCommand. */
+  typstTsCommand?: string;
   cwd?: string;
   env?: Record<string, string | undefined>;
 }

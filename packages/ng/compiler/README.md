@@ -74,7 +74,8 @@ import { createCliCompiler } from '@myriaddreamin/reflexo-typst-compiler/cli';
 
 const compiler = await createCliCompiler({
   cli: {
-    command: 'typst-ts-cli',
+    command: 'typst',
+    vectorCommand: 'typst-ts-cli',
   },
 });
 
@@ -84,4 +85,5 @@ const artifact = await compiler.vector({
 });
 ```
 
-Use this backend for build-tool integration or fallback flows where spawning `typst-ts-cli` is acceptable.
+Use this backend for build-tool integration or fallback flows where spawning CLI processes is acceptable.
+The CLI backend uses the official `typst` command for `pdf`, `svg`, and `html` exports. It uses `typst-ts-cli` only for `vector`, because vector artifacts are specific to typst.ts.
