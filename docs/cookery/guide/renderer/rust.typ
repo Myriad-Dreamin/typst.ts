@@ -5,9 +5,9 @@
 #let compile-middleware = ```rs trait CompileMiddleware```
 #let compiler-trait = ```rs trait Compiler```
 
-The Rust renderer/exporter APIs are intended for tools that need to compile Typst and immediately produce artifacts for another runtime. Typical users are CLIs, preview servers, and static-site generators. If your application is written in Node.js, prefer #cross-link("/guide/all-in-one-node.typ")[the Node.js library]; if your frontend only renders precompiled artifacts, prefer #cross-link("/guide/renderer/ts-lib.typ")[the browser renderer].
+... todo: rewrite me.
 
-The older `CompileExporter`, `DynamicLayoutCompiler`, and `CompileActor` examples below are still useful for understanding the service shape, but treat the linked source files as the authoritative reference for current names and options.
+*Note: the following content is for typst.ts \<v0.6.0*
 
 === Creating and Using a `CompileExporter` Instance
 
@@ -76,7 +76,7 @@ self.intr_tx.send(Interrupt::SnapshotRead(tx))?;
 let snapshot = rx.await
 ```
 
-// Reporter options are not covered on this overview page.
+// todo: reporter option
 // === Example: use a lambda (closure) exporter
 
 // Example: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/tool/preview.rs")[fn create_driver in compile.rs]

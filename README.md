@@ -21,17 +21,6 @@ and render your Typst document typically inside _Browser Environment_. In the sc
 collaborated by
 $\textcolor{#3c9123}{\textsf{server}}$ and $\textcolor{#0074d9}{\textsf{browser}}$, there would be a data flow like this:
 
-## Choose a package
-
-| Goal | Runtime | Start with |
-| --- | --- | --- |
-| Compile Typst to SVG/PDF in Node.js | Node.js | [`@myriaddreamin/typst-ts-node-compiler`](https://www.npmjs.com/package/@myriaddreamin/typst-ts-node-compiler) |
-| Compile Typst directly in the browser | Browser | [`@myriaddreamin/typst.ts`](https://www.npmjs.com/package/@myriaddreamin/typst.ts) + [`@myriaddreamin/typst-ts-web-compiler`](https://www.npmjs.com/package/@myriaddreamin/typst-ts-web-compiler) |
-| Render precompiled artifacts in the browser | Browser | [`@myriaddreamin/typst.ts`](https://www.npmjs.com/package/@myriaddreamin/typst.ts) + [`@myriaddreamin/typst-ts-renderer`](https://www.npmjs.com/package/@myriaddreamin/typst-ts-renderer) |
-| Embed Typst output in a UI framework | Browser framework | [`@myriaddreamin/typst.react`](https://www.npmjs.com/package/@myriaddreamin/typst.react), [`@myriaddreamin/typst.solid`](https://www.npmjs.com/package/@myriaddreamin/typst.solid), [`@myriaddreamin/typst.vue3`](./packages/typst.vue3/README.md), or [`@myriaddreamin/typst.angular`](https://www.npmjs.com/package/@myriaddreamin/typst.angular) |
-
-For a guided setup, see [Get Started](https://myriad-dreamin.github.io/typst.ts/cookery/get-started.html).
-
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Myriad-Dreamin/typst.ts/blob/main/github-pages/docs/data-flow-standalone.dark.artifact.svg">
@@ -135,19 +124,6 @@ Please check [Templates](./templates) and usage in [Get Started](https://myriad-
 
 ### Minimal Example
 
-In Node.js, prefer the native compiler package:
-
-```js
-import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
-
-const compiler = NodeCompiler.create();
-const svg = await compiler.svg({
-  mainFileContent: 'Hello, Typst!',
-});
-
-console.log(svg.length);
-```
-
 Note: In default, `all-in-one.bundle.js` will download the font assets from
 GitHub in browser, so you need to connect to the Internet.
 
@@ -162,7 +138,7 @@ Using `all-in-one.bundle.js` from CDN:
     <title>Svg Document</title>
     <script
       type="module"
-      src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts/dist/esm/index.js"
+      src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts@0.6.0/dist/esm/index.js"
       id="typst"
     ></script>
   </head>

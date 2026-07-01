@@ -16,20 +16,6 @@
 
 In this chapter, you will learn the #this-link(reference: ch-ref)[core libraries and assets] provided by typst.ts, a #this-link(reference: h2)[starter example], and #this-link(reference: h3)[practical examples].
 
-== Choose a path <choose-a-path>
-
-typst.ts can compile Typst source, render precompiled artifacts, or do both. Start with the path that matches your application:
-
-#align(center, table(
-  align: (left, left, left, left),
-  columns: 4,
-  [Goal], [Runtime], [Install], [Next step],
-  [Compile Typst to SVG/PDF in Node.js], [Node.js], [`@myriaddreamin/typst-ts-node-compiler`], [Use the #cross-link("/guide/all-in-one-node.typ")[Node.js library].],
-  [Compile Typst directly in the browser], [Browser], [`@myriaddreamin/typst.ts` + `@myriaddreamin/typst-ts-web-compiler`], [Use #cross-link("/guide/all-in-one.typ")[All-in-One for Browsers] first, then split compiler and renderer when bundle size matters.],
-  [Render precompiled artifacts in the browser], [Browser], [`@myriaddreamin/typst.ts` + `@myriaddreamin/typst-ts-renderer`], [Precompile with #cross-link("/guide/compiler/ts-cli.typ")[the CLI] or Node.js, then render with #cross-link("/guide/renderer/ts-lib.typ")[the renderer].],
-  [Embed Typst output in a framework], [React, Solid, Angular, Vue], [`@myriaddreamin/typst.react`, `@myriaddreamin/typst.solid`, `@myriaddreamin/typst.angular`, or `@myriaddreamin/typst.vue3`], [Compile or fetch an artifact, then pass it to the framework component.],
-))
-
 == Core Libraries and Assets <assets-and-libraries>
 
 #let size-data = json("/assets/data/bundle-size.json");
@@ -99,7 +85,7 @@ The server-side rendering is also supported by following packages:
 - `reflexo-typst`: A Rust library providing _compilation_ functionality.
 - `typst.ts` + `typst-ts-renderer`: The JavaScript library mentioned above providing _rendering_ functionality.
 
-There is also a Vite integration providing both _compilation and rendering_ functionality. Treat it as experimental until its public API is documented for your use case.
+There is also a vite integration providing both _compilation and rendering_ functionality. It is experimental and has not been finished, but I put it here to let you know.
 
 - `vite-plugin-typst`: A vite plugin providing both _compilation and rendering_ functionality.
 
@@ -134,10 +120,10 @@ To get it in browser, you can load a all-in-one bundle script from CDN and use i
 ```html
 <script
   type="module"
-  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts/dist/esm/index.js"
+  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts@0.7.0/dist/esm/index.js"
   id="typst"
 >
-  console.log(await $typst.svg({
+  console.log($typst.svg({
     mainContent: 'Hello, typst!',
   }));
 </script>
@@ -152,8 +138,7 @@ There is also a #link("https://github.com/Myriad-Dreamin/typst.ts/blob/main/gith
 It is even simpler in Node.js, you can use the all-in-one node library practically:
 
 ```js
-import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
-
+import { $typst } from '@myriaddreamin/typst-ts-node-compiler';
 const compiler = NodeCompiler.create();
 console.log(await compiler.svg({
   mainFileContent: 'Hello, typst!',

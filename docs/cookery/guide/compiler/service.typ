@@ -436,7 +436,7 @@ self.intr_tx.send(Interrupt::SnapshotRead(tx))?;
 let snapshot = rx.await
 ```
 
-// Reporter options are not covered on this overview page.
+// todo: reporter option
 // === Example: use a lambda (closure) exporter
 
 // Example: #link("https://github.com/Myriad-Dreamin/tinymist/blob/main/crates/tinymist/src/tool/preview.rs")[fn create_driver in compile.rs]
