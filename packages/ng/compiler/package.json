@@ -32,14 +32,6 @@
       "types": "./src/index.d.ts",
       "default": "./src/cli.mjs"
     },
-    "./raw": {
-      "types": "./pkg/reflexo_typst_compiler.d.ts",
-      "default": "./pkg/wasm-pack-shim.mjs"
-    },
-    "./raw-wasm": {
-      "types": "./pkg/reflexo_typst_compiler_bg.wasm.d.ts",
-      "default": "./pkg/reflexo_typst_compiler_bg.wasm"
-    },
     "./*": [
       "./*"
     ]
