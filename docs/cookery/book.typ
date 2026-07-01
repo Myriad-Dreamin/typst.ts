@@ -1,5 +1,5 @@
 
-#import "@preview/shiroa:0.2.3": *
+#import "@preview/shiroa:0.3.1": *
 #import "./templates/page.typ": main-color
 
 #show: book
@@ -26,7 +26,7 @@
 }
 
 #book-meta(
-  title: "reflexo-typst Documentation",
+  title: "typst.ts Documentation",
   summary: [
     #prefix-chapter("introduction.typ")[Introduction]
     = Guidance
@@ -91,10 +91,8 @@
     //   - #chapter(none, section: "7.4")[Typst Package Registry]
     //   - #chapter(none, section: "7.5")[Compile Driver]
     //   - #chapter(none, section: "7.6")[Editor Workspace]
-    = Project samples
-    - #chapter(none, section: "8")[shiroa]
-    - #chapter(none, section: "9")[typst-preview]
-    - #chapter(none, section: "10")[hexo-renderer-typst]
+    // Project samples are introduced from the Samples chapter. Add concrete
+    // chapter files here once they are ready for user-facing documentation.
     // = Trouble Shooting
     // - #chapter(none, section: "11")[Targeting Browser]
     //   - #chapter(none, section: "11.1")[Build Wasm Modules]
@@ -104,8 +102,8 @@
     //   - #chapter(none, section: "11.5")[typst-ts-web-compiler]
     // - #chapter(none, section: "12")[Installation]
     //   - #chapter(none, section: "12.1")[npm install/link]
-    = References
-    - #chapter(none, section: "13")[Routing to Renferences]
+    // = References
+    // - #chapter(none, section: "13")[Routing to References]
   ],
 )
 

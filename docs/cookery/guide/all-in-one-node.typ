@@ -4,13 +4,16 @@
 
 #include "claim.typ"
 
-*Note: the following content is for typst.ts >=v0.6.0, and some APIs may be unusble in v0.5.x*
+*Note: this page documents the current Node.js library API. Some APIs are unavailable in v0.5.x.*
 
 The compiler and renderer are integrated into a same node library for simpler and cleaner APIs, since there is no urgent need to tree-shake the components in node.js applications. It also has better performance, because the compiler and renderer are native code.
 
 ```ts
+import { NodeCompiler } from '@myriaddreamin/typst-ts-node-compiler';
+
 await NodeCompiler.create().svg({
-  mainContent: 'Hello, typst!' }))
+  mainFileContent: 'Hello, typst!',
+});
 ```
 
 The library simplifies the APIs comparing with the #cross-link("/guide/compiler/service.typ")[Rust library APIs]. For example, the above example calls the underlying components:
@@ -184,7 +187,7 @@ $typst.pdf(doc);
 $typst.svg(doc);
 ```
 
-todo: document options.
+All export methods accept either a compiled document or compile options such as `mainFileContent`, `mainFilePath`, `inputs`, and `resetRead`. Use `mainFileContent` for generated in-memory source, and `mainFilePath` when the compiler should resolve files relative to a workspace.
 
 == Using `try_html`
 

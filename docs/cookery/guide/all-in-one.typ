@@ -8,12 +8,12 @@
 #let snippet-lib = link(snippet-source)[`snippet.mts`]
 
 #let sub = heading-reference[== (Archived) The All-in-One Js Library in v0.5.0]
-*Note: the following content is for typst.ts >=v0.6.0. To use rust library in \<v0.6.0, check #cross-link("/guide/all-in-one.typ", reference: sub)[the section.]*
+*Note: this page documents the current all-in-one browser API. Historical v0.5.x usage is kept in #cross-link("/guide/all-in-one.typ", reference: sub)[the archived section].*
 
 The all-in-one library provides a simplified API, and you can easily compile typst documents into artifacts. For example, compiling a typst code string to a SVG:
 
 ```ts
-await $typst.svg({mainContent: 'Hello, typst!' }))
+await $typst.svg({ mainContent: 'Hello, typst!' });
 ```
 
 However, it is less flexible and stable than the underlying interfaces, the `TypstCompiler` and `TypstRenderer`. If you've become more familiar with typst.ts, we recommend you rewrite your library with underlying interfaces according to example usage. The best ways to use the underlying libraries can be discovered in the source code of the all-in-one library, the #snippet-lib. For example, the above example calls the underlying components:
@@ -62,10 +62,10 @@ Using `all-in-one.bundle.js`:
 ```html
 <script
   type="module"
-  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts@0.7.0/dist/esm/index.js"
+  src="https://cdn.jsdelivr.net/npm/@myriaddreamin/typst-all-in-one.ts/dist/esm/index.js"
   id="typst"
 >
-  console.log($typst.svg({
+  console.log(await $typst.svg({
     mainContent: 'Hello, typst!',
   }));
 </script>
@@ -222,17 +222,21 @@ Please check the low-level components to get full reference about these options:
 
 == Initializing using the high-level `use` API
 
-todo: fully document the `use` API.
-- `preloadFontFromUrl`
-- `preloadFontData`
-- `preloadFonts`
-- `disableDefaultFontAssets`
-- `loadFonts`
-- `preloadFontAssets`
-- `withPackageRegistry`
-- `withAccessModel`
-- `fetchPackageRegistry`
-- `fetchPackageBy`
+The `use` API applies reusable setup steps to a `TypstSnippet` instance. Use it when you want configuration to live next to application startup instead of every `svg`, `vector`, or `canvas` call.
+
+Common helpers:
+- `preloadFontFromUrl`: fetches one font file and registers it before compilation.
+- `preloadFontData`: registers an already loaded font blob.
+- `preloadFonts`: registers a list of font blobs.
+- `disableDefaultFontAssets`: prevents loading bundled/default web font assets.
+- `loadFonts`: combines font loading steps for a compiler instance.
+- `preloadFontAssets`: preloads the default font assets eagerly.
+- `withPackageRegistry`: configures a Typst package registry implementation.
+- `withAccessModel`: configures how Typst source files and assets are read.
+- `fetchPackageRegistry`: fetches package metadata through an access model.
+- `fetchPackageBy`: customizes how individual packages are fetched.
+
+Call `use` before the first compilation, because the underlying compiler is initialized lazily and later option changes may not affect an already initialized instance.
 
 Specify address to a http server for filesystem backend (shadowed by the `addSource` and `mapShadow` api):
 
