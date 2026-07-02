@@ -436,19 +436,18 @@ impl TypstCompileWorld {
             #[cfg(feature = "pdf")]
             1 => {
                 let task = if let Some(ref opts) = self.pdf_opts {
-                    let pdf_standards = if let Some(ref standard_str) = opts.pdf_standard {
-                        serde_json::from_str(&format!(
-                            "[{}]",
-                            standard_str.trim_matches(|c| c == '[' || c == ']')
-                        ))
-                        .map_err(|e| format!("failed to parse PDF standards: {}", e))?
-                    } else {
-                        vec![]
-                    };
+                    let pdf_standard = opts
+                        .pdf_standard
+                        .as_ref()
+                        .map(|standard| {
+                            serde_json::from_value(serde_json::Value::String(standard.clone()))
+                        })
+                        .transpose()
+                        .map_err(|e| format!("failed to parse PDF standard: {e}"))?;
 
                     ExportPdfTask {
                         export: Default::default(),
-                        pdf_standards,
+                        pdf_standards: pdf_standard.into_iter().collect(),
                         no_pdf_tags: opts.pdf_tags.map(|v| !v).unwrap_or(false),
                         creation_timestamp: opts.creation_timestamp,
                         pages: None,
