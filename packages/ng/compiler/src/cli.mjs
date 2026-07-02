@@ -5,10 +5,10 @@ import { spawn } from 'node:child_process';
 import { normalizeInput, unsupported } from './shared.mjs';
 
 export async function createCliCompiler(options = {}) {
-  return new CliCompilerFacade(options.cli || options);
+  return new CliCompiler(options.cli || options);
 }
 
-export class CliCompilerFacade {
+export class CliCompiler {
   backend = 'cli';
 
   constructor(options = {}) {

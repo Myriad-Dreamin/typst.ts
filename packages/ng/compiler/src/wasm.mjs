@@ -8,16 +8,16 @@ export async function createWasmCompiler(options = {}) {
     throw peerError('wasm', '@myriaddreamin/typst.ts', error);
   }
 
-  return WasmCompilerFacade.create(mod, options);
+  return WasmCompiler.create(mod, options);
 }
 
-export class WasmCompilerFacade {
+export class WasmCompiler {
   backend = 'wasm';
 
   static async create(mod, options = {}) {
-    const facade = new WasmCompilerFacade(mod, options);
-    await facade.rebuild();
-    return facade;
+    const compiler = new WasmCompiler(mod, options);
+    await compiler.rebuild();
+    return compiler;
   }
 
   constructor(mod, options = {}) {

@@ -87,7 +87,7 @@ export type FontProvider =
     options?: unknown;
   };
 
-export interface TypstCompilerFacade<CompiledDocument = unknown> {
+export interface TypstCompiler<CompiledDocument = unknown> {
   readonly backend: Exclude<CompilerBackend, 'auto'>;
   compile(input: CompileInput): Promise<CompiledDocument | Uint8Array>;
   vector(input: CompileInput | CompiledDocument): Promise<Uint8Array>;
@@ -109,8 +109,8 @@ export interface TypstCompilerFacade<CompiledDocument = unknown> {
   terminate?(): void | Promise<void>;
 }
 
-export function createCompiler(options?: CreateCompilerOptions): Promise<TypstCompilerFacade>;
-export function createNodeCompiler(options?: CreateCompilerOptions): Promise<TypstCompilerFacade>;
-export function createWasmCompiler(options?: CreateCompilerOptions): Promise<TypstCompilerFacade>;
-export function createWasmWorkerCompiler(options?: CreateCompilerOptions): Promise<TypstCompilerFacade>;
-export function createCliCompiler(options?: CreateCompilerOptions): Promise<TypstCompilerFacade>;
+export function createCompiler(options?: CreateCompilerOptions): Promise<TypstCompiler>;
+export function createNodeCompiler(options?: CreateCompilerOptions): Promise<TypstCompiler>;
+export function createWasmCompiler(options?: CreateCompilerOptions): Promise<TypstCompiler>;
+export function createWasmWorkerCompiler(options?: CreateCompilerOptions): Promise<TypstCompiler>;
+export function createCliCompiler(options?: CreateCompilerOptions): Promise<TypstCompiler>;

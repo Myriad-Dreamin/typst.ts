@@ -5,21 +5,21 @@ const defaultWorkerUrl = new URL('./wasm-worker-entry.mjs', import.meta.url);
 export async function createWasmWorkerCompiler(options = {}) {
   const workerOptions = options.wasmWorker || options;
   const worker = await createWorker(workerOptions);
-  const facade = new WasmWorkerCompilerFacade(worker);
+  const compiler = new WasmWorkerCompiler(worker);
 
   try {
-    await facade.init({
+    await compiler.init({
       wasmOptions: await prepareWasmOptionsForWorker(options),
     });
   } catch (error) {
-    await facade.terminate();
+    await compiler.terminate();
     throw error;
   }
 
-  return facade;
+  return compiler;
 }
 
-export class WasmWorkerCompilerFacade {
+export class WasmWorkerCompiler {
   backend = 'wasm-worker';
 
   constructor(worker) {

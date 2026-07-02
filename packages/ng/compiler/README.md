@@ -1,6 +1,6 @@
 # @myriaddreamin/reflexo-typst-compiler
 
-Unified compiler facade for Typst documents.
+Unified compiler package for Typst documents.
 
 The package does not bundle every backend into the entry point. Pick a backend explicitly in production, or use `auto` while prototyping:
 
@@ -66,7 +66,7 @@ const artifact = await compiler.vector({
 
 The Wasm backend currently exposes compiler artifacts and PDF export through `@myriaddreamin/typst.ts/compiler`. SVG/HTML rendering should be layered through a renderer package.
 
-The Wasm facade can rebuild the underlying compiler when providers change:
+The Wasm compiler can rebuild the underlying compiler when providers change:
 
 ```ts
 await compiler.setFontProvider({

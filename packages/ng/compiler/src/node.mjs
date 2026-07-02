@@ -8,10 +8,10 @@ export async function createNodeCompiler(options = {}) {
     throw peerError('node', '@myriaddreamin/typst-ts-node-compiler', error);
   }
 
-  return new NodeCompilerFacade(mod.NodeCompiler.create(options.node || options));
+  return new NodeCompiler(mod.NodeCompiler.create(options.node || options));
 }
 
-export class NodeCompilerFacade {
+export class NodeCompiler {
   backend = 'node';
 
   constructor(inner) {

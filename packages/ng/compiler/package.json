@@ -1,7 +1,7 @@
 {
   "name": "@myriaddreamin/reflexo-typst-compiler",
   "version": "0.7.0",
-  "description": "Unified Typst compiler facade for wasm, Node.js, and CLI backends.",
+  "description": "Unified Typst compiler package for wasm, Node.js, and CLI backends.",
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
   "repository": {
