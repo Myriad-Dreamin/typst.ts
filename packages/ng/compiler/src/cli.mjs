@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { spawn } from 'node:child_process';
-import { normalizeInput } from './shared.mjs';
+import { normalizeInput, unsupported } from './shared.mjs';
 
 export async function createCliCompiler(options = {}) {
   return new CliCompilerFacade(options.cli || options);
@@ -40,6 +40,22 @@ export class CliCompilerFacade {
 
   html(input) {
     return this.runFormat('html', input, 'html', false);
+  }
+
+  setFontProvider() {
+    unsupported('cli', 'setFontProvider');
+  }
+
+  setAccessModel() {
+    unsupported('cli', 'setAccessModel');
+  }
+
+  setPackageProvider() {
+    unsupported('cli', 'setPackageProvider');
+  }
+
+  setPackageRegistry() {
+    unsupported('cli', 'setPackageRegistry');
   }
 
   async runFormat(format, input, extension, binary) {

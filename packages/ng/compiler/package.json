@@ -28,6 +28,13 @@
       "types": "./src/index.d.ts",
       "default": "./src/wasm.mjs"
     },
+    "./wasm-worker": {
+      "types": "./src/index.d.ts",
+      "default": "./src/wasm-worker.mjs"
+    },
+    "./wasm-worker-entry": {
+      "default": "./src/wasm-worker-entry.mjs"
+    },
     "./cli": {
       "types": "./src/index.d.ts",
       "default": "./src/cli.mjs"

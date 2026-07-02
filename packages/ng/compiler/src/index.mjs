@@ -13,6 +13,10 @@ export async function createCompiler(options = {}) {
       const { createWasmCompiler } = await import('./wasm.mjs');
       return createWasmCompiler(options);
     }
+    case BACKENDS.wasmWorker: {
+      const { createWasmWorkerCompiler } = await import('./wasm-worker.mjs');
+      return createWasmWorkerCompiler(options);
+    }
     case BACKENDS.cli: {
       const { createCliCompiler } = await import('./cli.mjs');
       return createCliCompiler(options);
@@ -24,4 +28,5 @@ export async function createCompiler(options = {}) {
 
 export { createNodeCompiler } from './node.mjs';
 export { createWasmCompiler } from './wasm.mjs';
+export { createWasmWorkerCompiler } from './wasm-worker.mjs';
 export { createCliCompiler } from './cli.mjs';

@@ -1,4 +1,4 @@
-import { normalizeInput, peerError } from './shared.mjs';
+import { normalizeInput, peerError, unsupported } from './shared.mjs';
 
 export async function createNodeCompiler(options = {}) {
   let mod;
@@ -68,6 +68,22 @@ export class NodeCompilerFacade {
 
   evictCache(maxAge = 10) {
     return this.inner.evictCache(maxAge);
+  }
+
+  setFontProvider() {
+    unsupported('node', 'setFontProvider');
+  }
+
+  setAccessModel() {
+    unsupported('node', 'setAccessModel');
+  }
+
+  setPackageProvider() {
+    unsupported('node', 'setPackageProvider');
+  }
+
+  setPackageRegistry() {
+    unsupported('node', 'setPackageRegistry');
   }
 }
 

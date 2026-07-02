@@ -1,6 +1,7 @@
 export const BACKENDS = Object.freeze({
   auto: 'auto',
   wasm: 'wasm',
+  wasmWorker: 'wasm-worker',
   node: 'node',
   cli: 'cli',
 });

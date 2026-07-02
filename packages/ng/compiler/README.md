@@ -19,6 +19,7 @@ const artifact = await compiler.vector({
 - `wasm` outside Node.js
 
 It never selects `cli` automatically.
+It also never selects `wasm-worker`; worker isolation is an explicit opt-in.
 
 ## Backends
 
@@ -64,6 +65,40 @@ const artifact = await compiler.vector({
 ```
 
 The Wasm backend currently exposes compiler artifacts and PDF export through `@myriaddreamin/typst.ts/compiler`. SVG/HTML rendering should be layered through a renderer package.
+
+The Wasm facade can rebuild the underlying compiler when providers change:
+
+```ts
+await compiler.setFontProvider({
+  fonts: [fontBytes],
+  loadOptions: { assets: false },
+});
+await compiler.setAccessModel(accessModel);
+await compiler.setPackageProvider(packageRegistry);
+```
+
+### Wasm Worker
+
+Use the worker backend when browser compilation should run off the main thread:
+
+```ts
+import { createWasmWorkerCompiler } from '@myriaddreamin/reflexo-typst-compiler/wasm-worker';
+
+const compiler = await createWasmWorkerCompiler({
+  wasm: {
+    initOptions: {
+      getModule: () => wasmBytes,
+    },
+  },
+});
+
+const artifact = await compiler.vector({
+  mainFileContent: 'Hello, typst!',
+});
+await compiler.terminate();
+```
+
+`wasm-worker` accepts structured-cloneable font providers. Access models and package registries must be created inside a custom worker for now, because their methods cannot cross `postMessage`.
 
 ### CLI
 
