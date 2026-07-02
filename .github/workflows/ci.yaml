@@ -74,6 +74,8 @@ jobs:
       - name: Test Browser
         # todo: other package tests
         run: cd packages/typst.ts && yarn test
+      - name: Test Compiler Facade
+        run: cd packages/ng/compiler && yarn test
       - name: Render skipped Typst ground truth refs
         if: always()
         run: cd packages/typst.ts && TYPST_TS_UPSTREAM_SUITE_DIR=../../typst-ground-truth/tests/suite node scripts/render-skipped-ground-truth-refs.mjs

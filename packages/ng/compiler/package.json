@@ -1,7 +1,7 @@
 {
   "name": "@myriaddreamin/reflexo-typst-compiler",
   "version": "0.7.0",
-  "description": "Compile Typst documents in Browsers.",
+  "description": "Unified Typst compiler package for wasm, Node.js, and CLI backends.",
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
   "repository": {
@@ -13,23 +13,39 @@
     "Typst"
   ],
   "type": "module",
-  "module": "./pkg/wasm-pack-shim.mjs",
-  "types": "./pkg/reflexo_typst_compiler.d.ts",
+  "module": "./src/index.mjs",
+  "types": "./src/index.d.ts",
   "exports": {
     ".": {
-      "node": "./pkg/wasm-pack-shim.mjs",
-      "module": "./pkg/wasm-pack-shim.mjs",
-      "types": "./pkg/reflexo_typst_compiler.d.ts"
+      "types": "./src/index.d.ts",
+      "default": "./src/index.mjs"
+    },
+    "./node": {
+      "types": "./src/index.d.ts",
+      "default": "./src/node.mjs"
     },
     "./wasm": {
-      "types": "./pkg/reflexo_typst_compiler_bg.wasm.d.ts",
-      "default": "./pkg/reflexo_typst_compiler_bg.wasm"
+      "types": "./src/index.d.ts",
+      "default": "./src/wasm.mjs"
+    },
+    "./wasm-worker": {
+      "types": "./src/index.d.ts",
+      "default": "./src/wasm-worker.mjs"
+    },
+    "./wasm-worker-entry": {
+      "default": "./src/wasm-worker-entry.mjs"
+    },
+    "./cli": {
+      "types": "./src/index.d.ts",
+      "default": "./src/cli.mjs"
     },
     "./*": [
       "./*"
     ]
   },
   "files": [
+    "src/*.mjs",
+    "src/*.d.ts",
     "pkg/wasm-pack-shim.mjs",
     "pkg/reflexo_typst_compiler_bg.wasm",
     "pkg/reflexo_typst_compiler_bg.wasm.d.ts",
@@ -42,10 +58,23 @@
     "build": "wasm-pack build --target web --scope myriaddreamin -- --no-default-features --features web,misc && node ../../tools/wasm-debundle.mjs",
     "build:with-fonts": "wasm-pack build --target web --scope myriaddreamin -- --no-default-features --features web,fonts,misc && node ../../tools/wasm-debundle.mjs",
     "prepublish": "turbo build",
+    "test": "node --test src/*.spec.js",
     "publish:dry": "npm publish --dry-run --access public",
     "publish:lib": "npm publish --access public || exit 0",
     "test:chrome": "wasm-pack test --chrome --headless --release",
     "test:firefox": "wasm-pack test --firefox --headless --release"
+  },
+  "peerDependencies": {
+    "@myriaddreamin/typst.ts": "^0.8.0-rc3",
+    "@myriaddreamin/typst-ts-node-compiler": "^0.8.0-rc3"
+  },
+  "peerDependenciesMeta": {
+    "@myriaddreamin/typst.ts": {
+      "optional": true
+    },
+    "@myriaddreamin/typst-ts-node-compiler": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "turbo": "^1.10.12"
