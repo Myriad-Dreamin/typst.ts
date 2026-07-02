@@ -113,8 +113,7 @@ impl TypstCompiler {
         access_model: ProxyAccessModel,
         registry: JsRegistry,
         fonts: FontResolverImpl,
-        #[cfg(feature = "pdf")]
-        pdf_opts: Option<RenderPdfOpts>,
+        #[cfg(feature = "pdf")] pdf_opts: Option<RenderPdfOpts>,
     ) -> Result<Self, JsValue> {
         Ok(Self {
             verse: TypstBrowserUniverse::new(
@@ -438,12 +437,15 @@ impl TypstCompileWorld {
             1 => {
                 let task = if let Some(ref opts) = self.pdf_opts {
                     let pdf_standards = if let Some(ref standard_str) = opts.pdf_standard {
-                        serde_json::from_str(&format!("[{}]", standard_str.trim_matches(|c| c == '[' || c == ']')))
-                            .map_err(|e| format!("failed to parse PDF standards: {}", e))?
+                        serde_json::from_str(&format!(
+                            "[{}]",
+                            standard_str.trim_matches(|c| c == '[' || c == ']')
+                        ))
+                        .map_err(|e| format!("failed to parse PDF standards: {}", e))?
                     } else {
                         vec![]
                     };
-                    
+
                     ExportPdfTask {
                         export: Default::default(),
                         pdf_standards,
@@ -455,7 +457,7 @@ impl TypstCompileWorld {
                     ExportPdfTask::default()
                 };
                 PdfExport::run(&self.graph, &doc, &task)?
-            },
+            }
             2 => Bytes::new([]),
             _ => {
                 let _ = doc;
@@ -518,6 +520,12 @@ impl TypstCompileWorld {
         } else {
             v
         })
+    }
+
+    #[cfg(feature = "pdf")]
+    pub fn set_pdf_opts(&mut self, opts: JsValue) -> Result<(), JsValue> {
+        self.pdf_opts = Some(serde_wasm_bindgen::from_value(opts).map_err(|e| format!("{e:?}"))?);
+        Ok(())
     }
 
     fn get_diag<D: TypstDocumentTrait + typst::foundations::Output + Send + Sync + 'static>(
