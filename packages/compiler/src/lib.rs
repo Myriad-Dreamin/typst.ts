@@ -22,7 +22,7 @@ use reflexo_typst::vfs::browser::ProxyAccessModel;
 use wasm_bindgen::prelude::*;
 
 #[cfg(feature = "pdf")]
-use serde::{Deserialize, Serialize};
+use serde::{de::IntoDeserializer, Deserialize, Serialize};
 
 use crate::font::FontResolverImpl;
 use crate::utils::console_log;
@@ -438,9 +438,9 @@ impl TypstCompileWorld {
                 let task = if let Some(ref opts) = self.pdf_opts {
                     let pdf_standard = opts
                         .pdf_standard
-                        .as_ref()
-                        .map(|standard| {
-                            serde_json::from_value(serde_json::Value::String(standard.clone()))
+                        .as_deref()
+                        .map(|standard| -> Result<_, serde::de::value::Error> {
+                            Deserialize::deserialize(standard.into_deserializer())
                         })
                         .transpose()
                         .map_err(|e| format!("failed to parse PDF standard: {e}"))?;
