@@ -2,6 +2,8 @@ pub mod builder;
 
 #[cfg(feature = "incr")]
 mod incr;
+#[cfg(feature = "incr")]
+mod sync;
 pub(crate) mod utils;
 
 pub use crate::builder::TypstFontResolver;
@@ -511,7 +513,7 @@ impl TypstCompileWorld {
         let Some(doc) = self.do_compile_paged()? else {
             return self.get_diag::<TypstPagedDocument>(diagnostics_format);
         };
-        let v = Uint8Array::from(state.update(doc).as_slice()).into();
+        let v = Uint8Array::from(state.update(doc, self.graph.clone()).as_slice()).into();
         Ok(if diagnostics_format != 0 {
             let result = js_sys::Object::new();
             js_sys::Reflect::set(&result, &"result".into(), &v)?;
@@ -677,8 +679,7 @@ fn convert_inputs(inputs: &[js_sys::Array]) -> typst::foundations::Dict {
         .collect()
 }
 
-#[cfg(test)]
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(test, target_arch = "wasm32", feature = "web_test"))]
 mod tests {
     #![allow(clippy::await_holding_lock)]
 
@@ -822,4 +823,56 @@ mod tests {
 
     make_test_point!(test_render_math_main, "math/main");
     make_test_point!(test_render_math_undergradmath, "math/undergradmath");
+}
+
+#[cfg(all(test, target_arch = "wasm32", feature = "incr"))]
+mod sync_tests {
+    use wasm_bindgen_test::*;
+
+    use crate::builder::TypstCompilerBuilder;
+    use crate::incr::IncrServer;
+    use crate::sync::{DocumentPosition, SourceLocation};
+
+    wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
+    #[wasm_bindgen_test]
+    async fn source_document_mapping_round_trips_text() {
+        let path = "/sync-navigation.typ";
+        let source = "= Hello synchronization";
+        let mut compiler = TypstCompilerBuilder::new().unwrap();
+        compiler.set_dummy_access_model().unwrap();
+        let mut compiler = compiler.build().await.unwrap();
+        assert!(compiler.add_source(path, source));
+
+        let mut world = compiler
+            .snapshot(None, Some(path.to_string()), None)
+            .unwrap();
+        let mut server = IncrServer::default();
+        let _ = world.incr_compile(&mut server, 0).unwrap();
+        assert_eq!(server.mapping_revision(), 1);
+
+        let source_offset = source.find("Hello").unwrap() + 1;
+        let positions: Vec<DocumentPosition> = serde_wasm_bindgen::from_value(
+            server
+                .source_to_document(path.to_string(), source_offset as u32)
+                .unwrap(),
+        )
+        .unwrap();
+        let position = positions.first().expect("source position should render");
+        let resolved: Option<SourceLocation> = serde_wasm_bindgen::from_value(
+            server
+                .document_to_source(
+                    position.page_offset as u32,
+                    position.x + 0.1,
+                    position.y - 0.1,
+                )
+                .unwrap(),
+        )
+        .unwrap();
+        let resolved = resolved.expect("document position should resolve to source");
+        assert_eq!(resolved.path, path);
+        assert_eq!(resolved.package, None);
+        assert!(resolved.byte_offset <= source_offset);
+        assert!(resolved.byte_offset >= source.find("Hello").unwrap());
+    }
 }
