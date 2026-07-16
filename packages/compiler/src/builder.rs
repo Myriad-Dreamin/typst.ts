@@ -9,6 +9,7 @@ use reflexo_typst::vfs::browser::ProxyAccessModel;
 use reflexo_typst::{error::prelude::*, Bytes as TypstBytes};
 use typst::text::FontInfo;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 
 use crate::TypstCompiler;
 
@@ -38,20 +39,30 @@ impl TypstCompilerBuilder {
     }
 
     pub fn set_dummy_access_model(&mut self) -> Result<()> {
+        let mtime_fn = Closure::wrap(Box::new(|| 0.0) as Box<dyn FnMut() -> f64>);
+        let is_file_fn = Closure::wrap(Box::new(|| true) as Box<dyn FnMut() -> bool>);
+        let real_path_fn =
+            Closure::wrap(Box::new(|path: JsValue| path) as Box<dyn FnMut(JsValue) -> JsValue>);
+        let read_all_fn = Closure::wrap(Box::new(|| -> JsValue {
+            wasm_bindgen::throw_str(
+                "Dummy AccessModel, please initialize compiler with withAccessModel()",
+            )
+        }) as Box<dyn FnMut() -> JsValue>);
+        let real_resolve_fn = Closure::wrap(Box::new(|| -> JsValue {
+            wasm_bindgen::throw_str(
+                "Dummy Registry, please initialize compiler with withPackageRegistry()",
+            )
+        }) as Box<dyn FnMut() -> JsValue>);
         self.access_model = Some(ProxyAccessModel {
             context: wasm_bindgen::JsValue::UNDEFINED,
-            mtime_fn: js_sys::Function::new_no_args("return 0"),
-            is_file_fn: js_sys::Function::new_no_args("return true"),
-            real_path_fn: js_sys::Function::new_with_args("path", "return path"),
-            read_all_fn: js_sys::Function::new_no_args(
-                "throw new Error('Dummy AccessModel, please initialize compiler with withAccessModel()')",
-            ),
+            mtime_fn: mtime_fn.into_js_value().unchecked_into(),
+            is_file_fn: is_file_fn.into_js_value().unchecked_into(),
+            real_path_fn: real_path_fn.into_js_value().unchecked_into(),
+            read_all_fn: read_all_fn.into_js_value().unchecked_into(),
         });
         self.package_registry = Some(JsRegistry {
             context: ProxyContext::new(wasm_bindgen::JsValue::UNDEFINED),
-            real_resolve_fn: js_sys::Function::new_no_args(
-                "throw new Error('Dummy Registry, please initialize compiler with withPackageRegistry()')",
-            ),
+            real_resolve_fn: real_resolve_fn.into_js_value().unchecked_into(),
         });
         Ok(())
     }
