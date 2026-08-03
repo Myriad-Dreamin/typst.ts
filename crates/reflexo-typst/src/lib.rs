@@ -32,6 +32,8 @@
 
 pub mod config;
 pub mod error;
+#[cfg(feature = "woff2")]
+pub mod font_data;
 pub mod query;
 pub mod task;
 

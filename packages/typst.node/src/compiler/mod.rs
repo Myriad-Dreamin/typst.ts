@@ -8,13 +8,15 @@ pub mod project;
 use reflexo_typst::package::RegistryPathMapper;
 
 use std::path::PathBuf;
-use std::{borrow::Cow, collections::HashMap, path::Path, sync::Arc};
+use std::{borrow::Cow, collections::HashMap, fs, path::Path, sync::Arc};
 
 use napi::{bindgen_prelude::*, Either};
 use napi_derive::napi;
+use rayon::prelude::*;
 use reflexo_typst::config::{entry::EntryState, CompileFontOpts};
 use reflexo_typst::error::prelude::{Result, WithContext};
 use reflexo_typst::font::system::SystemFontSearcher;
+use reflexo_typst::font_data::decode_font_data;
 use reflexo_typst::package::registry::HttpRegistry;
 use reflexo_typst::typst::{foundations::IntoValue, LazyHash};
 use reflexo_typst::vfs::{system::SystemAccessModel, Vfs};
@@ -85,6 +87,33 @@ pub struct CompileArgs {
     pub inputs: Option<HashMap<String, String>>,
 }
 
+fn is_woff2_path(path: &Path) -> bool {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("woff2"))
+}
+
+fn load_woff2_file(path: &Path) -> Result<Bytes> {
+    let data = fs::read(path)
+        .map_err(|err| anyhow::anyhow!("failed to read WOFF2 font {}: {err}", path.display()))?;
+    Ok(Bytes::new(
+        decode_font_data(data).map_err(anyhow::Error::msg)?,
+    ))
+}
+
+fn load_woff2_dir(path: &Path) -> Result<Vec<Bytes>> {
+    walkdir::WalkDir::new(path)
+        .into_iter()
+        .filter_map(|entry| match entry {
+            Ok(entry) if entry.file_type().is_file() && is_woff2_path(entry.path()) => {
+                Some(load_woff2_file(entry.path()))
+            }
+            Ok(_) => None,
+            Err(err) => Some(Err(anyhow::Error::new(err).into())),
+        })
+        .collect()
+}
+
 pub fn abs_user_path(path: &str) -> Result<PathBuf> {
     use reflexo_typst::path::PathClean;
     let path = Path::new(path).clean();
@@ -104,6 +133,7 @@ pub fn create_universe(args: Option<CompileArgs>) -> Result<TypstSystemUniverse>
     let workspace_dir = abs_user_path(args.workspace.unwrap_or_default().as_str())?;
 
     let mut searcher = SystemFontSearcher::new();
+    let mut memory_fonts = Vec::new();
 
     for arg in args.font_args.into_iter().flatten() {
         match arg {
@@ -112,6 +142,10 @@ pub fn create_universe(args: Option<CompileArgs>) -> Result<TypstSystemUniverse>
                     let path = Path::new(&i);
                     if path.is_dir() {
                         searcher.search_dir(path);
+                        memory_fonts.extend(load_woff2_dir(path)?);
+                    } else if is_woff2_path(path) {
+                        searcher.font_paths.push(abs_user_path(&i)?);
+                        memory_fonts.push(load_woff2_file(path)?);
                     } else {
                         let _ = searcher.search_file(path);
                     }
@@ -119,11 +153,16 @@ pub fn create_universe(args: Option<CompileArgs>) -> Result<TypstSystemUniverse>
             }
             Either::B(p) => {
                 for b in p.font_blobs {
-                    searcher.add_memory_font(Bytes::new(b.to_vec()));
+                    memory_fonts.push(Bytes::new(
+                        decode_font_data(b.to_vec()).map_err(anyhow::Error::msg)?,
+                    ));
                 }
             }
         }
     }
+
+    searcher.flush();
+    searcher.add_memory_fonts(memory_fonts.into_par_iter());
 
     searcher.resolve_opts(CompileFontOpts {
         with_embedded_fonts: typst_ts_cli::font::fonts().map(Cow::Borrowed).collect(),
@@ -153,4 +192,26 @@ fn create_inputs(inputs: HashMap<String, String>) -> Arc<LazyHash<TypstDict>> {
             .map(|(k, v)| (k.as_str().into(), v.as_str().into_value()))
             .collect(),
     ))
+}
+
+#[cfg(test)]
+mod font_data_tests {
+    use reflexo_typst::font::cache::FontInfoCache;
+    use reflexo_typst::font_data::decode_font_data;
+
+    #[test]
+    fn decodes_woff2_font_data() {
+        let compressed = include_bytes!("../../../compiler/tests/fixtures/roboto.woff2");
+        let decoded = decode_font_data(compressed.to_vec()).unwrap();
+
+        assert_eq!(&decoded[..4], b"\0\x01\0\0");
+        assert_eq!(FontInfoCache::from_data(&decoded).info.len(), 1);
+    }
+
+    #[test]
+    fn rejects_invalid_woff2_font_data() {
+        let error = decode_font_data(b"wOF2 invalid".to_vec()).unwrap_err();
+
+        assert!(error.to_string().contains("failed to decode WOFF2 font:"));
+    }
 }

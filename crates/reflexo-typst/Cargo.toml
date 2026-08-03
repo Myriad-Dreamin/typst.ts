@@ -13,6 +13,7 @@ typst.workspace = true
 typst-pdf = { workspace = true, optional = true }
 typst-html = { workspace = true, optional = true }
 typst-svg = { workspace = true, optional = true }
+wuff = { workspace = true, optional = true }
 
 reflexo-typst2vec.workspace = true
 reflexo-typst2hast = { workspace = true, optional = true }
@@ -62,6 +63,7 @@ web-render = ["__web_render"]
 
 dynamic-layout = ["dep:reflexo-vec2svg"]
 fonts = ["tinymist-world/fonts"]
+woff2 = ["dep:wuff"]
 flat-vector = ["reflexo/flat-vector"]
 glyph2vec = ["reflexo-typst2vec/glyph2vec"]
 

@@ -15,12 +15,13 @@ crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 
+anyhow.workspace = true
 chrono.workspace = true
 comemo.workspace = true
 napi.workspace = true
 napi-derive.workspace = true
 rayon.workspace = true
-reflexo-typst = { workspace = true }
+reflexo-typst = { workspace = true, features = ["woff2"] }
 reflexo-vec2svg = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
@@ -28,6 +29,7 @@ tinymist-project = { workspace = true, features = ["system", "lsp"] }
 tokio.workspace = true
 typst-svg.workspace = true
 typst-ts-cli.workspace = true
+walkdir.workspace = true
 
 [build-dependencies]
 napi-build = "2"

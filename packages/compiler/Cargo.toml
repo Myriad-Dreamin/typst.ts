@@ -38,7 +38,7 @@ web-sys = { workspace = true, features = [
 console_error_panic_hook.workspace = true
 
 reflexo-typst2vec.workspace = true
-reflexo-typst = { workspace = true, features = ["web"] }
+reflexo-typst = { workspace = true, features = ["web", "woff2"] }
 reflexo-vec2svg.workspace = true
 typst.workspace = true
 typst-assets = { workspace = true, optional = true }

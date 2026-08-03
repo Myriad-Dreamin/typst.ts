@@ -4,6 +4,7 @@ use js_sys::Uint8Array;
 use reflexo_typst::font::cache::FontInfoCache;
 use reflexo_typst::font::memory::MemoryFontSearcher;
 use reflexo_typst::font::{BufferFontLoader, FontResolverImpl, FontSlot};
+use reflexo_typst::font_data::decode_font_data;
 use reflexo_typst::package::registry::{JsRegistry, ProxyContext};
 use reflexo_typst::vfs::browser::ProxyAccessModel;
 use reflexo_typst::{error::prelude::*, Bytes as TypstBytes};
@@ -153,12 +154,14 @@ impl TypstFontResolverBuilder {
     }
 
     pub fn get_font_info(&mut self, buffer: Uint8Array) -> Result<JsValue, JsValue> {
-        Ok(crate::get_font_info(buffer))
+        crate::get_font_info(buffer)
     }
 
     /// Adds font data to the searcher.
     pub fn add_raw_font(&mut self, buffer: Uint8Array) -> Result<(), JsValue> {
-        let buffer = TypstBytes::new(buffer.to_vec());
+        let buffer = decode_font_data(buffer.to_vec())
+            .map(TypstBytes::new)
+            .map_err(|err| JsValue::from_str(&err))?;
         for (i, info) in FontInfo::iter(buffer.as_slice()).enumerate() {
             let buffer = buffer.clone();
             self.base.fonts.push((

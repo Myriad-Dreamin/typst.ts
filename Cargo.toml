@@ -78,6 +78,7 @@ typst-html = "0.15.0"
 
 ttf-parser = "0.25.0"
 skrifa = "0.42.1"
+wuff = { version = "0.2.8", default-features = false, features = ["brotli"] }
 
 typst-assets = "0.15.0"
 typst-dev-assets = { git = "https://github.com/typst/typst-dev-assets", tag = "v0.15.0" }

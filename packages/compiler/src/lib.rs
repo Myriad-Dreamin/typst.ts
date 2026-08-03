@@ -14,6 +14,7 @@ use error::TypstSourceDiagnostic;
 use font::cache::FontInfoCache;
 use js_sys::{Array, JsString, Uint8Array};
 use reflexo_typst::error::{long_diag_from_std, DiagMessage};
+use reflexo_typst::font_data::decode_font_data;
 use reflexo_typst::package::registry::JsRegistry;
 use reflexo_typst::prelude::EcoVec;
 use reflexo_typst::typst::diag::{SourceResult, Warned};
@@ -129,10 +130,33 @@ impl TypstCompiler {
     }
 }
 
+#[cfg(test)]
+mod font_data_tests {
+    use reflexo_typst::font_data::decode_font_data;
+
+    #[test]
+    fn decodes_woff2_font_data() {
+        let compressed = include_bytes!("../tests/fixtures/roboto.woff2");
+        let decoded = decode_font_data(compressed.to_vec()).unwrap();
+
+        assert_eq!(&decoded[..4], b"\0\x01\0\0");
+        assert_eq!(typst::text::FontInfo::iter(&decoded).count(), 1);
+    }
+
+    #[test]
+    fn rejects_invalid_woff2_font_data() {
+        let error = decode_font_data(b"wOF2 invalid".to_vec()).unwrap_err();
+
+        assert!(error.starts_with("failed to decode WOFF2 font:"));
+    }
+}
+
 /// @deprecated use TypstFontResolverBuilder instead
 #[wasm_bindgen]
-pub fn get_font_info(buffer: Uint8Array) -> JsValue {
-    serde_wasm_bindgen::to_value(&FontInfoCache::from_data(buffer.to_vec().as_slice())).unwrap()
+pub fn get_font_info(buffer: Uint8Array) -> Result<JsValue, JsValue> {
+    let buffer = decode_font_data(buffer.to_vec()).map_err(|err| JsValue::from_str(&err))?;
+    serde_wasm_bindgen::to_value(&FontInfoCache::from_data(buffer.as_slice()))
+        .map_err(|err| JsValue::from_str(&err.to_string()))
 }
 
 // todo: design error handling
