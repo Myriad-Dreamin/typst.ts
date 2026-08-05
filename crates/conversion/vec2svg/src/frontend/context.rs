@@ -4,7 +4,7 @@ use std::{
 };
 
 use reflexo::{
-    hash::{item_hash128, Fingerprint, FingerprintBuilder},
+    hash::{hash128, item_hash128, Fingerprint, FingerprintBuilder},
     vector::{
         ir::{
             self, FontIndice, FontRef, GroupRef, ImmutStr, Module, PathItem, Scalar, TextItem,
@@ -15,9 +15,11 @@ use reflexo::{
 };
 use reflexo_typst2vec::ir::Axes;
 
-use super::{GradientDefMap, GradientDefRef};
+use super::{GradientDefMap, GradientDefRef, ImageDefMap};
 use crate::{
-    backend::{BuildClipPath, DynExportFeature, NotifyPaint, SvgTextBuilder, SvgTextNode},
+    backend::{
+        BuildClipPath, DynExportFeature, NotifyImage, NotifyPaint, SvgTextBuilder, SvgTextNode,
+    },
     ExportFeature,
 };
 
@@ -53,6 +55,7 @@ pub struct RenderContext<'m, 't, Feat: ExportFeature> {
     pub(crate) gradients: &'t mut GradientDefMap,
     /// Stores the patterns used in the document.
     pub(crate) patterns: &'t mut PaintFillMap,
+    pub(crate) images: &'t mut ImageDefMap,
 
     /// See [`ExportFeature`].
     pub should_render_text_element: bool,
@@ -174,6 +177,14 @@ impl<Feat: ExportFeature> NotifyPaint for RenderContext<'_, '_, Feat> {
         } else {
             panic!("Invalid url reference: {url_ref}");
         }
+    }
+}
+
+impl<Feat: ExportFeature> NotifyImage for RenderContext<'_, '_, Feat> {
+    fn notify_image(&mut self, image: &Arc<ir::Image>) -> Fingerprint {
+        let id = Fingerprint::from_u128(hash128(&(image.format.as_ref(), image.data.as_ref())));
+        self.images.entry(id).or_insert_with(|| image.clone());
+        id
     }
 }
 
