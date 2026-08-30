@@ -150,9 +150,9 @@ image = { version = "0.25.5", default-features = false, features = [
 resvg = { version = "0.43", default-features = false, features = [
     "raster-images",
 ] }
-svgtypes = "0.15.2"
-tiny-skia = "0.11.4"
-tiny-skia-path = "0.11.4"
+svgtypes = "0.16"
+tiny-skia = "0.12"
+tiny-skia-path = "0.12"
 
 # cryptography and processing
 ansi-to-html = "0.2.1"

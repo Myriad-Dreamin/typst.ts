@@ -1548,7 +1548,7 @@ dependencies = [
  "hashbrown 0.17.1",
  "log",
  "peniko",
- "png 0.18.1",
+ "png",
  "skrifa",
  "smallvec",
  "vello_common 0.0.9",
@@ -1658,7 +1658,7 @@ dependencies = [
  "bytemuck",
  "hayro-interpret",
  "image",
- "kurbo 0.13.1",
+ "kurbo",
  "pic-scale",
  "vello_cpu",
 ]
@@ -1687,7 +1687,7 @@ dependencies = [
  "bitflags 2.13.0",
  "hayro-cmap",
  "hayro-syntax",
- "kurbo 0.13.1",
+ "kurbo",
  "moxcms",
  "phf",
  "rustc-hash 2.1.2",
@@ -1731,7 +1731,7 @@ dependencies = [
  "base64 0.22.1",
  "hayro-interpret",
  "image",
- "kurbo 0.13.1",
+ "kurbo",
  "siphasher",
  "xmlwriter",
 ]
@@ -2224,7 +2224,7 @@ dependencies = [
  "image-webp",
  "moxcms",
  "num-traits",
- "png 0.18.1",
+ "png",
  "zune-core",
  "zune-jpeg",
 ]
@@ -2395,7 +2395,7 @@ dependencies = [
  "imagesize",
  "indexmap 2.14.0",
  "pdf-writer",
- "png 0.18.1",
+ "png",
  "rayon",
  "rustc-hash 2.1.2",
  "rustybuzz",
@@ -2403,7 +2403,7 @@ dependencies = [
  "skrifa",
  "smallvec",
  "subsetter",
- "tiny-skia-path 0.12.0",
+ "tiny-skia-path",
  "xmp-writer",
  "yoke",
  "zune-jpeg",
@@ -2421,19 +2421,8 @@ dependencies = [
  "resvg",
  "skrifa",
  "smallvec",
- "tiny-skia 0.12.0",
+ "tiny-skia",
  "usvg",
-]
-
-[[package]]
-name = "kurbo"
-version = "0.11.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c62026ae44756f8a599ba21140f350303d4f08dcdcc71b5ad9c9bb8128c13c62"
-dependencies = [
- "arrayvec",
- "euclid",
- "smallvec",
 ]
 
 [[package]]
@@ -2959,7 +2948,7 @@ checksum = "839c8299360d2e998bdb106dc0a6cd71dcc5f4df51df1b620361bf50e283cca6"
 dependencies = [
  "bytemuck",
  "color",
- "kurbo 0.13.1",
+ "kurbo",
  "linebender_resource_handle",
  "smallvec",
 ]
@@ -3075,19 +3064,6 @@ dependencies = [
  "quick-xml 0.39.4",
  "serde",
  "time",
-]
-
-[[package]]
-name = "png"
-version = "0.17.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82151a2fc869e011c153adc57cf2789ccb8d9906ce52c0b39a6b5697749d7526"
-dependencies = [
- "bitflags 1.3.2",
- "crc32fast",
- "fdeflate",
- "flate2",
- "miniz_oxide",
 ]
 
 [[package]]
@@ -3506,7 +3482,7 @@ dependencies = [
  "serde_repr",
  "serde_with",
  "siphasher",
- "tiny-skia-path 0.11.4",
+ "tiny-skia-path",
  "tinymist-std",
  "tinymist-world",
  "typst",
@@ -3599,9 +3575,9 @@ dependencies = [
  "rustc-hash 2.1.2",
  "serde",
  "serde_json",
- "svgtypes 0.15.3",
- "tiny-skia 0.11.4",
- "tiny-skia-path 0.11.4",
+ "svgtypes",
+ "tiny-skia",
+ "tiny-skia-path",
  "ttf-parser",
  "typst",
  "typst-html",
@@ -3628,9 +3604,9 @@ dependencies = [
  "serde",
  "serde_json",
  "skrifa",
- "svgtypes 0.15.3",
- "tiny-skia 0.11.4",
- "tiny-skia-path 0.11.4",
+ "svgtypes",
+ "tiny-skia",
+ "tiny-skia-path",
  "ttf-parser",
  "typst",
  "typst-html",
@@ -3644,9 +3620,9 @@ version = "0.8.0-rc3"
 dependencies = [
  "comemo",
  "reflexo",
- "svgtypes 0.15.3",
- "tiny-skia 0.11.4",
- "tiny-skia-path 0.11.4",
+ "svgtypes",
+ "tiny-skia",
+ "tiny-skia-path",
 ]
 
 [[package]]
@@ -3660,9 +3636,9 @@ dependencies = [
  "js-sys",
  "reflexo",
  "reflexo-vec2bbox",
- "svgtypes 0.15.3",
- "tiny-skia 0.11.4",
- "tiny-skia-path 0.11.4",
+ "svgtypes",
+ "tiny-skia",
+ "tiny-skia-path",
  "typst",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -3683,9 +3659,9 @@ dependencies = [
  "reflexo-vec2canvas",
  "reflexo-vec2sema",
  "reflexo-vec2svg",
- "svgtypes 0.15.3",
- "tiny-skia 0.11.4",
- "tiny-skia-path 0.11.4",
+ "svgtypes",
+ "tiny-skia",
+ "tiny-skia-path",
  "typst",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -3700,7 +3676,7 @@ dependencies = [
  "js-sys",
  "reflexo",
  "reflexo-vec2canvas",
- "tiny-skia 0.11.4",
+ "tiny-skia",
  "unicode-width 0.2.2",
  "wasm-bindgen",
  "web-sys",
@@ -3716,8 +3692,8 @@ dependencies = [
  "reflexo",
  "reflexo-typst2vec",
  "reflexo-vec2canvas",
- "svgtypes 0.15.3",
- "tiny-skia-path 0.11.4",
+ "svgtypes",
+ "tiny-skia-path",
  "typst",
 ]
 
@@ -3817,8 +3793,8 @@ dependencies = [
  "log",
  "pico-args",
  "rgb",
- "svgtypes 0.16.1",
- "tiny-skia 0.12.0",
+ "svgtypes",
+ "tiny-skia",
  "usvg",
  "zune-jpeg",
 ]
@@ -4462,7 +4438,7 @@ version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "38803281d1c23166c5ebcb455439a5d2afe711cc909cf88af72448c297756ad6"
 dependencies = [
- "kurbo 0.13.1",
+ "kurbo",
  "rustc-hash 2.1.2",
  "skrifa",
  "write-fonts",
@@ -4476,21 +4452,11 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "svgtypes"
-version = "0.15.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68c7541fff44b35860c1a7a47a7cadf3e4a304c457b58f9870d9706ece028afc"
-dependencies = [
- "kurbo 0.11.3",
- "siphasher",
-]
-
-[[package]]
-name = "svgtypes"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "695b5790b3131dafa99b3bbfd25a216edb3d216dad9ca208d4657bfb8f2abc3d"
 dependencies = [
- "kurbo 0.13.1",
+ "kurbo",
  "siphasher",
 ]
 
@@ -4686,21 +4652,6 @@ dependencies = [
 
 [[package]]
 name = "tiny-skia"
-version = "0.11.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83d13394d44dae3207b52a326c0c85a8bf87f1541f23b0d143811088497b09ab"
-dependencies = [
- "arrayref",
- "arrayvec",
- "bytemuck",
- "cfg-if",
- "log",
- "png 0.17.16",
- "tiny-skia-path 0.11.4",
-]
-
-[[package]]
-name = "tiny-skia"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47ffee5eaaf5527f630fb0e356b90ebdec84d5d18d937c5e440350f88c5a91ea"
@@ -4710,19 +4661,8 @@ dependencies = [
  "bytemuck",
  "cfg-if",
  "log",
- "png 0.18.1",
- "tiny-skia-path 0.12.0",
-]
-
-[[package]]
-name = "tiny-skia-path"
-version = "0.11.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c9e7fc0c2e86a30b117d0462aa261b72b7a99b7ebd7deb3a14ceda95c5bdc93"
-dependencies = [
- "arrayref",
- "bytemuck",
- "strict-num",
+ "png",
+ "tiny-skia-path",
 ]
 
 [[package]]
@@ -5342,7 +5282,7 @@ dependencies = [
  "icu_provider",
  "icu_provider_blob",
  "icu_segmenter",
- "kurbo 0.13.1",
+ "kurbo",
  "libm",
  "memchr",
  "rustc-hash 2.1.2",
@@ -5385,7 +5325,7 @@ dependencies = [
  "image",
  "indexmap 2.14.0",
  "kamadak-exif",
- "kurbo 0.13.1",
+ "kurbo",
  "libm",
  "lipsum",
  "memchr",
@@ -5393,7 +5333,7 @@ dependencies = [
  "palette",
  "percent-encoding",
  "phf",
- "png 0.18.1",
+ "png",
  "rayon",
  "regex",
  "regex-syntax",
@@ -5496,7 +5436,7 @@ dependencies = [
  "libm",
  "pixglyph",
  "resvg",
- "tiny-skia 0.12.0",
+ "tiny-skia",
  "ttf-parser",
  "typst-assets",
  "typst-layout",
@@ -5756,7 +5696,7 @@ dependencies = [
  "serde-wasm-bindgen",
  "serde_json",
  "sha2",
- "tiny-skia 0.11.4",
+ "tiny-skia",
  "typst",
  "typst-ts-test-common",
  "vergen",
@@ -6010,7 +5950,7 @@ dependencies = [
  "flate2",
  "fontdb",
  "imagesize",
- "kurbo 0.13.1",
+ "kurbo",
  "log",
  "pico-args",
  "roxmltree 0.21.1",
@@ -6018,8 +5958,8 @@ dependencies = [
  "simplecss",
  "siphasher",
  "strict-num",
- "svgtypes 0.16.1",
- "tiny-skia-path 0.12.0",
+ "svgtypes",
+ "tiny-skia-path",
  "ttf-parser",
  "unicode-bidi",
  "unicode-script",
@@ -6068,7 +6008,7 @@ dependencies = [
  "hashbrown 0.17.1",
  "log",
  "peniko",
- "png 0.18.1",
+ "png",
  "smallvec",
  "thiserror",
 ]
@@ -6085,7 +6025,7 @@ dependencies = [
  "hashbrown 0.17.1",
  "log",
  "peniko",
- "png 0.18.1",
+ "png",
  "smallvec",
  "thiserror",
 ]
@@ -6099,7 +6039,7 @@ dependencies = [
  "bytemuck",
  "glifo",
  "hashbrown 0.17.1",
- "png 0.18.1",
+ "png",
  "vello_common 0.0.8",
 ]
 
@@ -6838,7 +6778,7 @@ checksum = "cb731d4c4d93eacc69a1ad2f270f905788a98e4a3438267bcafbe08d3431c8d8"
 dependencies = [
  "font-types",
  "indexmap 2.14.0",
- "kurbo 0.13.1",
+ "kurbo",
  "log",
  "read-fonts",
 ]
