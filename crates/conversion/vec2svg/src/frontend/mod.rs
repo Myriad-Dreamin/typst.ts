@@ -6,7 +6,12 @@ pub(crate) mod incremental;
 pub use dynamic_layout::DynamicLayoutSvgExporter;
 pub use incremental::{IncrSvgDocClient, IncrSvgDocServer, IncrementalRenderContext};
 
-use std::{collections::HashSet, f32::consts::TAU, fmt::Write, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    f32::consts::TAU,
+    fmt::Write,
+    sync::Arc,
+};
 
 use reflexo::hash::{item_hash128, Fingerprint, FingerprintBuilder};
 use reflexo_typst2vec::{
@@ -24,7 +29,7 @@ use typst::{
 };
 
 use crate::{
-    backend::{SvgGlyphBuilder, SvgText, SvgTextNode},
+    backend::{render_image_def, SvgGlyphBuilder, SvgText, SvgTextNode},
     ExportFeature, SvgDataSelection,
 };
 use context::{PaintFillMap, RenderContext, StyleDefMap};
@@ -57,6 +62,7 @@ pub struct GradientDefRef {
 
 /// Maps gradient definition id to its source paint and aspect override.
 pub type GradientDefMap = HashSet<GradientDefRef>;
+pub type ImageDefMap = HashMap<Fingerprint, Arc<ir::Image>>;
 
 impl<Feat: ExportFeature> SvgExporter<Feat> {
     /// Get header by pages.
@@ -367,6 +373,17 @@ impl<Feat: ExportFeature> SvgExporter<Feat> {
             Self::gradients(gradients, &mut svg);
             Self::patterns(patterns.into_iter(), &mut svg);
             svg.push("</defs>".into());
+            if !t.images.is_empty() {
+                svg.push(r#"<defs class="image">"#.into());
+                let mut images = t.images.into_iter().collect::<Vec<_>>();
+                images.sort_by_key(|(id, _)| *id);
+                svg.extend(
+                    images
+                        .into_iter()
+                        .map(|(id, image)| render_image_def(id, &image)),
+                );
+                svg.push("</defs>".into());
+            }
             Self::style_defs(t.style_defs, &mut svg);
         }
 
@@ -476,6 +493,8 @@ pub struct SvgTask<'a, Feat: ExportFeature> {
     pub gradients: GradientDefMap,
     /// Stores the patterns used in the document.
     pub patterns: PaintFillMap,
+    /// Stores raster images used in the document, keyed independently of placement.
+    pub images: ImageDefMap,
 
     _feat_phantom: std::marker::PhantomData<&'a Feat>,
 }
@@ -489,6 +508,7 @@ impl<Feat: ExportFeature> Default for SvgTask<'_, Feat> {
             style_defs: StyleDefMap::default(),
             gradients: GradientDefMap::default(),
             patterns: PaintFillMap::default(),
+            images: ImageDefMap::default(),
 
             _feat_phantom: std::marker::PhantomData,
         }
@@ -521,6 +541,7 @@ impl<Feat: ExportFeature> SvgTask<'_, Feat> {
             _style_defs: &mut self.style_defs,
             gradients: &mut self.gradients,
             patterns: &mut self.patterns,
+            images: &mut self.images,
 
             should_attach_debug_info: Feat::SHOULD_ATTACH_DEBUG_INFO,
             should_render_text_element: true,
@@ -728,6 +749,53 @@ impl std::fmt::Display for RatioRepr {
 mod tests {
     use super::*;
 
+    fn image(hash: u128, data: &'static [u8], attrs: Vec<ir::ImageAttr>) -> Arc<ir::Image> {
+        image_with_format(hash, data, "png", attrs)
+    }
+
+    fn image_with_format(
+        hash: u128,
+        data: &'static [u8],
+        format: &'static str,
+        attrs: Vec<ir::ImageAttr>,
+    ) -> Arc<ir::Image> {
+        Arc::new(ir::Image {
+            data: Arc::from(data),
+            format: format.into(),
+            size: Axes::new(1, 1),
+            hash: Fingerprint::from_u128(hash),
+            attrs,
+        })
+    }
+
+    fn render_images(images: Vec<(Arc<ir::Image>, Size, ir::Point)>) -> String {
+        let mut module = Module::default();
+        let mut children = Vec::new();
+        for (index, (image, size, pos)) in images.into_iter().enumerate() {
+            let id = Fingerprint::from_u128(100 + index as u128);
+            module
+                .items
+                .insert(id, VecItem::Image(ir::ImageItem { image, size }));
+            children.push((pos, id));
+        }
+        let page_id = Fingerprint::from_u128(1);
+        module
+            .items
+            .insert(page_id, VecItem::Group(ir::GroupRef(children.into())));
+        let pages = [Page {
+            content: page_id,
+            size: Size::new(Scalar(100.0), Scalar(100.0)),
+        }];
+
+        SvgText::join(SvgExporter::<crate::SvgExportFeature>::render(
+            &module, &pages, None,
+        ))
+    }
+
+    fn occurrences(text: &str, needle: &str) -> usize {
+        text.match_indices(needle).count()
+    }
+
     fn assert_close(actual: f64, expected: f64) {
         assert!(
             (actual - expected).abs() < 1e-6,
@@ -788,5 +856,191 @@ mod tests {
             -correct_aspect_ratio(angle + dtheta, inverse_ratio) as f64,
         );
         assert!(theta2 < theta1);
+    }
+
+    #[test]
+    fn repeated_image_emits_one_payload_and_multiple_uses() {
+        let shared = image(10, b"shared png bytes", Vec::new());
+        let svg = render_images(vec![
+            (
+                shared.clone(),
+                Size::new(Scalar(10.0), Scalar(20.0)),
+                ir::Point::default(),
+            ),
+            (
+                shared,
+                Size::new(Scalar(30.0), Scalar(40.0)),
+                ir::Point::new(Scalar(5.0), Scalar(7.0)),
+            ),
+        ]);
+
+        assert_eq!(occurrences(&svg, "data:image/png;base64,"), 1);
+        assert_eq!(occurrences(&svg, r#"<image id="i"#), 1);
+        assert_eq!(occurrences(&svg, r#"<use class="typst-image"#), 2);
+        assert!(svg.contains(r#"transform="scale(10 20)""#));
+        assert!(svg.contains(r#"transform="scale(30 40)""#));
+        assert!(svg.contains(r#"transform="translate(5.000,7.000)""#));
+        assert!(svg.find(r#"<defs class="image">"#).unwrap() < svg.find("<use class=").unwrap());
+    }
+
+    #[test]
+    fn different_images_emit_different_definitions() {
+        let svg = render_images(vec![
+            (
+                image(10, b"first png", Vec::new()),
+                Size::new(Scalar(10.0), Scalar(10.0)),
+                ir::Point::default(),
+            ),
+            (
+                image(11, b"second png", Vec::new()),
+                Size::new(Scalar(10.0), Scalar(10.0)),
+                ir::Point::default(),
+            ),
+        ]);
+
+        assert_eq!(occurrences(&svg, "data:image/png;base64,"), 2);
+        assert_eq!(occurrences(&svg, r#"<image id="i"#), 2);
+        assert_eq!(occurrences(&svg, r#"<use class="typst-image"#), 2);
+    }
+
+    #[test]
+    fn supported_raster_formats_deduplicate_valid_image_data() {
+        let fixtures: [(&str, &[u8]); 4] = [
+            (
+                "png",
+                include_bytes!("../../../../../assets/images/small.png"),
+            ),
+            (
+                "jpeg",
+                include_bytes!("../../../../../assets/images/small.jpg"),
+            ),
+            (
+                "gif",
+                include_bytes!("../../../../../assets/images/small.gif"),
+            ),
+            (
+                "webp",
+                include_bytes!("../../../../../assets/images/small.webp"),
+            ),
+        ];
+        let mut placements = Vec::new();
+
+        for (index, (format, data)) in fixtures.into_iter().enumerate() {
+            let shared = image_with_format(20 + index as u128, data, format, Vec::new());
+            placements.push((
+                shared.clone(),
+                Size::new(Scalar(10.0), Scalar(10.0)),
+                ir::Point::default(),
+            ));
+            placements.push((
+                shared,
+                Size::new(Scalar(20.0), Scalar(20.0)),
+                ir::Point::default(),
+            ));
+        }
+
+        let svg = render_images(placements);
+
+        for format in ["png", "jpeg", "gif", "webp"] {
+            assert_eq!(
+                occurrences(&svg, &format!("data:image/{format};base64,")),
+                1
+            );
+        }
+        assert_eq!(occurrences(&svg, r#"<image id="i"#), 4);
+        assert_eq!(occurrences(&svg, r#"<use class="typst-image"#), 8);
+    }
+
+    #[test]
+    fn image_rendering_and_alt_remain_on_each_placement() {
+        let attrs = vec![
+            ir::ImageAttr::Alt("transparent overlay".into()),
+            ir::ImageAttr::ImageRendering("pixelated".into()),
+        ];
+        let first = image(30, b"transparent png", attrs.clone());
+        let second = image(31, b"transparent png", attrs);
+        let svg = render_images(vec![
+            (
+                first,
+                Size::new(Scalar(10.0), Scalar(10.0)),
+                ir::Point::default(),
+            ),
+            (
+                second,
+                Size::new(Scalar(20.0), Scalar(20.0)),
+                ir::Point::default(),
+            ),
+        ]);
+
+        assert_eq!(occurrences(&svg, "data:image/png;base64,"), 1);
+        assert_eq!(
+            occurrences(&svg, r#"image-rendering="pixelated""#),
+            2,
+            "{svg}"
+        );
+        assert_eq!(
+            occurrences(&svg, r#"alt="transparent overlay""#),
+            2,
+            "{svg}"
+        );
+    }
+
+    #[test]
+    fn document_without_images_emits_no_image_definitions() {
+        let svg = render_images(Vec::new());
+
+        assert!(!svg.contains(r#"<defs class="image">"#));
+        assert!(!svg.contains("data:image/"));
+    }
+
+    #[test]
+    fn vector_images_keep_the_inline_rendering_path() {
+        let mut vector = image(41, b"<svg/>", Vec::new());
+        Arc::make_mut(&mut vector).format = "svg+xml".into();
+        let svg = render_images(vec![
+            (
+                vector.clone(),
+                Size::new(Scalar(10.0), Scalar(10.0)),
+                ir::Point::default(),
+            ),
+            (
+                vector,
+                Size::new(Scalar(20.0), Scalar(20.0)),
+                ir::Point::default(),
+            ),
+        ]);
+
+        assert_eq!(occurrences(&svg, "data:image/svg+xml;base64,"), 2);
+        assert_eq!(occurrences(&svg, r#"<image class="typst-image""#), 2);
+        assert!(!svg.contains(r#"<defs class="image">"#));
+        assert!(!svg.contains(r#"<use class="typst-image""#));
+    }
+
+    #[test]
+    fn hundred_repeated_images_embed_payload_once() {
+        let shared = image(40, &[42; 1024], Vec::new());
+        let placement_size = Size::new(Scalar(10.0), Scalar(10.0));
+        let svg = render_images(
+            (0..100)
+                .map(|index| {
+                    (
+                        shared.clone(),
+                        placement_size,
+                        ir::Point::new(Scalar(index as f32), Scalar(0.0)),
+                    )
+                })
+                .collect(),
+        );
+        let legacy_image_markup = crate::backend::render_image(&shared, placement_size, true, "");
+        let legacy_placement_bytes = legacy_image_markup.len() * 100;
+
+        assert_eq!(occurrences(&svg, "data:image/png;base64,"), 1);
+        assert_eq!(occurrences(&svg, r#"<image id="i"#), 1);
+        assert_eq!(occurrences(&svg, r#"<use class="typst-image"#), 100);
+        assert!(svg.len() < legacy_placement_bytes);
+        eprintln!(
+            "legacy image markup: {legacy_placement_bytes} bytes; deduplicated standalone SVG: {} bytes",
+            svg.len(),
+        );
     }
 }

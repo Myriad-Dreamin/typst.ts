@@ -328,41 +328,50 @@ export function patchRoot(prev: SVGElement, next: SVGElement) {
   return;
 
   function patchSvgHeader(prev: SVGElement, next: SVGElement) {
-    for (let i = 0; i < 3; i++) {
-      const prevChild = prev.children[i];
-      const nextChild = next.children[i];
-      // console.log("prev", prevChild);
-      // console.log("next", nextChild);
-      if (prevChild.tagName === 'defs') {
-        if (prevChild.getAttribute('class') === 'glyph') {
-          // console.log("append glyphs:", nextChild.children, "to", prevChild);
-          prevChild.append(...nextChild.children);
-        } else if (prevChild.getAttribute('class') === 'clip-path') {
-          // console.log("clip path: replace");
-          // todo: gc
-          prevChild.append(...nextChild.children);
-        }
-      } else if (prevChild.tagName === 'style' && nextChild.getAttribute('data-reuse') !== '1') {
-        // console.log("replace extra style", prevChild, nextChild);
+    const findChild = (root: SVGElement, tagName: string, className?: string) =>
+      Array.from(root.children).find(
+        child => child.tagName === tagName && (!className || child.getAttribute('class') === className),
+      );
 
-        // todo: gc
-        if (nextChild.textContent) {
-          // todo: looks slow
-          // https://stackoverflow.com/questions/3326494/parsing-css-in-javascript-jquery
-          var doc = document.implementation.createHTMLDocument(''),
-            styleElement = document.createElement('style');
+    for (const className of ['glyph', 'clip-path', 'image']) {
+      const nextDefs = findChild(next, 'defs', className);
+      if (!nextDefs) {
+        continue;
+      }
 
-          styleElement.textContent = nextChild.textContent;
-          // the style will only be parsed once it is added to a document
-          doc.body.appendChild(styleElement);
+      const prevDefs = findChild(prev, 'defs', className);
+      if (!prevDefs) {
+        const before = findChild(prev, 'style') ?? findChild(prev, 'g');
+        prev.insertBefore(nextDefs.cloneNode(true), before ?? null);
+        continue;
+      }
 
-          const currentSvgSheet = (prevChild as HTMLStyleElement).sheet!;
-          const rulesToInsert = styleElement.sheet?.cssRules || [];
+      const installedIds = new Set(Array.from(prevDefs.children, child => child.id));
+      prevDefs.append(...Array.from(nextDefs.children).filter(child => !installedIds.has(child.id)));
+    }
 
-          // console.log("rules to insert", currentSvgSheet, rulesToInsert);
-          for (const rule of rulesToInsert) {
-            currentSvgSheet.insertRule(rule.cssText);
-          }
+    const prevStyle = findChild(prev, 'style');
+    const nextStyle = findChild(next, 'style');
+    if (prevStyle && nextStyle && nextStyle.getAttribute('data-reuse') !== '1') {
+      // console.log("replace extra style", prevStyle, nextStyle);
+
+      // todo: gc
+      if (nextStyle.textContent) {
+        // todo: looks slow
+        // https://stackoverflow.com/questions/3326494/parsing-css-in-javascript-jquery
+        var doc = document.implementation.createHTMLDocument(''),
+          styleElement = document.createElement('style');
+
+        styleElement.textContent = nextStyle.textContent;
+        // the style will only be parsed once it is added to a document
+        doc.body.appendChild(styleElement);
+
+        const currentSvgSheet = (prevStyle as HTMLStyleElement).sheet!;
+        const rulesToInsert = styleElement.sheet?.cssRules || [];
+
+        // console.log("rules to insert", currentSvgSheet, rulesToInsert);
+        for (const rule of rulesToInsert) {
+          currentSvgSheet.insertRule(rule.cssText);
         }
       }
     }

@@ -12,7 +12,7 @@ use reflexo_typst2vec::{
 };
 
 use crate::{
-    backend::{SvgText, SvgTextNode},
+    backend::{render_image_def, SvgText, SvgTextNode},
     ExportFeature, SvgExporter, SvgTask,
 };
 
@@ -229,6 +229,20 @@ impl IncrSvgDocClient {
         IncrExporter::gradients(gradients, &mut svg);
         IncrExporter::patterns(patterns.into_iter(), &mut svg);
         svg.push("</defs>".into());
+
+        if !t.images.is_empty() {
+            svg.push(r#"<defs class="image">"#.into());
+            let mut images = std::mem::take(&mut t.images)
+                .into_iter()
+                .collect::<Vec<_>>();
+            images.sort_by_key(|(id, _)| *id);
+            svg.extend(
+                images
+                    .into_iter()
+                    .map(|(id, image)| render_image_def(id, &image)),
+            );
+            svg.push("</defs>".into());
+        }
 
         IncrExporter::style_defs(t.style_defs, &mut svg);
 
