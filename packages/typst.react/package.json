@@ -20,8 +20,8 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "require": "./dist/index.js",
-      "import": "./dist/index.js"
+      "require": "./dist/typst.react.js",
+      "import": "./dist/typst.react.mjs"
     },
     "./*": {
       "types": "./dist/*.d.ts",
@@ -34,7 +34,7 @@
   ],
   "scripts": {
     "dev": "cd demo && vite dev -c vite.config.mjs",
-    "build": "tsc --outDir dist && vite build",
+    "build": "tsc --outDir dist && vite build && node -e \"require('node:fs').copyFileSync('src/lib/typst.css','dist/typst.css')\"",
     "lint": "eslint --fix \"./src/**/*.{js,jsx,ts,tsx,json}\"",
     "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
     "test": "exit 0",
