@@ -10,3 +10,4 @@ See:
 + #cross-link("/guide/compiler/service.typ")[Compiler in Rust]
 + #cross-link("/guide/compiler/node.typ")[Compiler in Node.js]
 + #cross-link("/guide/compiler/bindings.typ")[Compiler in Wasm (Web)]
++ #cross-link("/guide/compiler/fonts.typ")[Fonts]

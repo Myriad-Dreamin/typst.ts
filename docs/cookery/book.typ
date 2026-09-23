@@ -39,6 +39,7 @@
       - #chapter("guide/compiler/service.typ")[Compiler in Rust]
       - #chapter("guide/compiler/node.typ")[Compiler in Node.js]
       - #chapter("guide/compiler/bindings.typ")[Compiler in Wasm (Web)]
+      - #chapter("guide/compiler/fonts.typ")[Fonts]
     - #chapter("guide/renderers.typ")[Renderers]
       - #chapter("guide/renderer/rust.typ")[Renderer in Rust]
       - #chapter("guide/renderer/node.typ")[Renderer in Node.js]

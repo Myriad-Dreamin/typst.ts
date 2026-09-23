@@ -234,6 +234,8 @@ todo: fully document the `use` API.
 - `fetchPackageRegistry`
 - `fetchPackageBy`
 
+The font related ones (`preloadFontFromUrl`, `preloadFontData`, `preloadFonts`, `disableDefaultFontAssets`, `preloadFontAssets`) are documented in #cross-link("/guide/compiler/fonts.typ")[Fonts].
+
 Specify address to a http server for filesystem backend (shadowed by the `addSource` and `mapShadow` api):
 
 ```js
