@@ -37,7 +37,7 @@
     "build": "tsc --outDir dist && vite build && node -e \"require('node:fs').copyFileSync('src/lib/typst.css','dist/typst.css')\"",
     "lint": "eslint --fix \"./src/**/*.{js,jsx,ts,tsx,json}\"",
     "format": "prettier --write \"./src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
-    "test": "exit 0",
+    "test": "pnpm build && node --test test/packaging.test.mjs test/consumer-repro.test.mjs test/types.test.mjs",
     "publish:dry": "npm publish --dry-run --access public",
     "publish:lib": "npm publish --access public || exit 0"
   },
@@ -53,6 +53,8 @@
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "react": "^19.x",
-    "react-dom": "^19.x"
+    "react-dom": "^19.x",
+    "webpack": "^5.111.1",
+    "webpack-cli": "^7.2.3"
   }
 }
