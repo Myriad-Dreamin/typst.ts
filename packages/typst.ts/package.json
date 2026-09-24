@@ -295,6 +295,16 @@
         "default": "./dist/esm/utils.mjs"
       }
     },
+    "./woff": {
+      "require": {
+        "types": "./dist/cjs/woff.d.cts",
+        "default": "./dist/cjs/woff.cjs"
+      },
+      "import": {
+        "types": "./dist/esm/woff.d.mts",
+        "default": "./dist/esm/woff.mjs"
+      }
+    },
     "./wasm": {
       "require": {
         "types": "./dist/cjs/wasm.d.cts",
