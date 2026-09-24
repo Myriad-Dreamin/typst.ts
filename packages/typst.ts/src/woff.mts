@@ -4,7 +4,8 @@
  * The compiler consumes SFNT font data (`ttf` / `otf`). WOFF and WOFF2 are
  * distribution containers, not a font format the compiler core should learn:
  * decode them here, then hand the resulting bytes to the usual font entries
- * (`addRawFont`, `loadFontSync`, the font loader, the font options, ...).
+ * (`loadFonts`, `loadFontSync`, the font options, the compiler builder's
+ * `add_raw_font`, ...).
  *
  * WOFF (version 1) is zlib-compressed tables, so it needs nothing but the
  * platform `DecompressionStream`. WOFF2 is brotli plus a table transform, which
