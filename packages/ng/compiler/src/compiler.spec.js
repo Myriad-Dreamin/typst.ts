@@ -86,6 +86,25 @@ test('wasm backend can mutate access model', async () => {
   assert.ok(vector.byteLength > 0);
 });
 
+test('wasm backend evicts memoization cache between compilations', async () => {
+  await access(compilerWasmPath, constants.R_OK);
+  await access(fontPath, constants.R_OK);
+
+  const compiler = await createWasmCompiler(await wasmTestOptions());
+
+  // every new document version would otherwise stay memoized in WASM memory
+  for (let i = 0; i < 3; i++) {
+    const vector = await compiler.vector({
+      mainFileContent: `${fixture.mainFileContent} ${i}`,
+    });
+    assert.ok(vector.byteLength > 0);
+    await compiler.evictCache(1);
+  }
+  await compiler.evictCache(0);
+  const vector = await compiler.vector(fixture);
+  assert.ok(vector.byteLength > 0);
+});
+
 test('wasm-worker backend compiles vector artifact', async () => {
   await access(compilerWasmPath, constants.R_OK);
   await access(fontPath, constants.R_OK);
@@ -97,6 +116,7 @@ test('wasm-worker backend compiles vector artifact', async () => {
     const vector = await compiler.vector(fixture);
     assert.ok(vector instanceof Uint8Array);
     assert.ok(vector.byteLength > 0);
+    await compiler.evictCache(1);
   } finally {
     await compiler.terminate();
   }

@@ -147,6 +147,26 @@ impl TypstCompiler {
         Ok(())
     }
 
+    /// Evict the **global** cache.
+    ///
+    /// This removes all memoized results from the cache whose age is larger
+    /// than or equal to `max_age`. The age of a result grows by one during
+    /// each eviction and is reset to zero when the result produces a cache
+    /// hit. Set `max_age` to zero to completely clear the cache.
+    ///
+    /// Without calling this function, memoized results of every compiled
+    /// document version stay in memory, so a long-running page that compiles
+    /// many versions eventually runs out of WASM memory. Call it after each
+    /// compilation, as the Typst CLI and `typst.node` do.
+    ///
+    /// A suggested `max_age` value for regular non-watch tools is `10`.
+    /// A suggested `max_age` value for regular watch tools is `30`.
+    pub fn evict_cache(&mut self, max_age: u32) {
+        let max_age = usize::try_from(max_age).unwrap();
+        comemo::evict(max_age);
+        self.verse.evict(max_age);
+    }
+
     pub fn set_fonts(&mut self, fonts: &TypstFontResolver) -> Result<(), JsValue> {
         self.verse
             .increment_revision(|verse| verse.set_fonts(fonts.fonts.clone()));

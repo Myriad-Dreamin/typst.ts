@@ -150,6 +150,10 @@ export class WasmCompiler {
     return this.inner.reset();
   }
 
+  evictCache(maxAge = 10) {
+    return this.inner.evictCache(maxAge);
+  }
+
   async setFontProvider(provider) {
     this.fontProvider = provider;
     await this.rebuild();
