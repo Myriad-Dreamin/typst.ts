@@ -448,5 +448,5 @@ jobs:
     if: ${{ inputs.tag != 'dry-run' }}
     permissions:
       contents: read
-    uses: ./.github/workflows/reelase-crates.yaml
+    uses: ./.github/workflows/release-crates.yaml
     secrets: inherit

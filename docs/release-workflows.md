@@ -27,7 +27,7 @@ The fixed release order is:
 4. call `.github/workflows/release-node.yaml`
 5. publish the npm and Cargo project batch
 6. call `.github/workflows/docker.yaml`
-7. call `.github/workflows/reelase-crates.yaml`
+7. call `.github/workflows/release-crates.yaml`
 
 The npm package scope is intentionally not duplicated in this document. The
 authoritative release scope is encoded by the filters, publish commands, and
@@ -54,7 +54,7 @@ Manual and reusable Docker publish workflow for the repository image on GHCR. It
 
 Authentication uses `GITHUB_TOKEN` with `packages: write`.
 
-### `.github/workflows/reelase-crates.yaml`
+### `.github/workflows/release-crates.yaml`
 
 Manual and reusable Rust workspace crate workflow. It verifies and publishes the
 crate set encoded by the workflow.
