@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Typst native HTML and MathML</title>
+  </head>
+  <body>
+    <h1>Native MathML from Typst</h1>
+    <p>Experimental HTML export, compiled entirely in your browser.</p>
+    <label for="source">Typst source</label><br />
+    <textarea id="source" rows="6" cols="60">$ (a + b) / c $</textarea><br />
+    <button id="compile" type="button">Compile HTML and extract MathML</button>
+    <p id="status" role="status"></p>
+    <div id="equations"></div>
+    <pre id="mathml"></pre>
+    <details>
+      <summary>Complete native HTML</summary>
+      <pre id="html"></pre>
+    </details>
+    <script type="module">
+      import { $typst, TypstSnippet } from '@myriaddreamin/typst.ts/contrib/snippet';
+      import compilerUrl from '../../compiler/pkg/typst_ts_web_compiler_bg.wasm?url';
+      import textFont from '../../../assets/data/LibertinusSerif-Regular-subset.otf?inline';
+
+      // Build packages/compiler with build:html before running this example.
+      $typst.setCompilerInitOptions({ getModule: () => compilerUrl });
+      $typst.use(TypstSnippet.disableDefaultFontAssets(), TypstSnippet.preloadFonts([textFont]));
+
+      const button = document.getElementById('compile');
+      const status = document.getElementById('status');
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        status.textContent = 'Compiling…';
+        document.getElementById('equations').replaceChildren();
+        document.getElementById('mathml').textContent = '';
+        document.getElementById('html').textContent = '';
+        try {
+          const html = await $typst.html({
+            mainContent: document.getElementById('source').value,
+          });
+          if (html === undefined) throw new Error('No HTML output');
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          const equations = [
+            ...doc.getElementsByTagNameNS('http://www.w3.org/1998/Math/MathML', 'math'),
+          ];
+          // XMLSerializer includes xmlns, making each fragment standalone MathML.
+          const serializer = new XMLSerializer();
+          document.getElementById('mathml').textContent = equations
+            .map(math => serializer.serializeToString(math))
+            .join('\n\n');
+          document
+            .getElementById('equations')
+            .replaceChildren(...equations.map(math => document.importNode(math, true)));
+          document.getElementById('html').textContent = html;
+          status.textContent = `Extracted ${equations.length} equation(s).`;
+        } catch (error) {
+          status.textContent = String(error);
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

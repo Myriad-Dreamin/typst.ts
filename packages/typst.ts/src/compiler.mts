@@ -18,8 +18,14 @@ export enum CompileFormatEnum {
   vector = 0,
   pdf = 1,
   _dummy = 2,
+  /** Experimental native HTML export; requires the compiler's `html` Cargo feature. */
+  html = 3,
 }
 
+/** The artifact returned for each compilation format. */
+export type CompileOutput<F extends CompileFormatEnum> = F extends CompileFormatEnum.html
+  ? string
+  : Uint8Array;
 
 /**
  * The diagnostic message partially following the LSP specification.
@@ -105,6 +111,7 @@ interface TransientCompileOptions<
    * The format of the artifact.
    * - CompileFormatEnum.vector: can then load to the renderer to render the document.
    * - CompileFormatEnum.pdf: for finally exporting pdf to the user.
+   * - CompileFormatEnum.html: experimental native HTML, including MathML equations.
    * 
    * Hint: you can convert the format from {@link CompileFormat} to
    * {@link CompileFormatEnum} by `CompileFormatEnum[Format]`.
@@ -144,7 +151,9 @@ export interface QueryOptions {
 export type CompileOptions<
   Format extends CompileFormatEnum = CompileFormatEnum,
   Diagnostics extends DiagnosticsFormat = DiagnosticsFormat,
-> = TransientCompileOptions<Format, Diagnostics> | IncrementalCompileOptions;
+> = Format extends CompileFormatEnum.html
+  ? TransientCompileOptions<Format, Diagnostics> & { format: Format }
+  : TransientCompileOptions<Format, Diagnostics> | IncrementalCompileOptions<Diagnostics>;
 
 export class IncrementalServer {
   /**
@@ -181,9 +190,10 @@ export class IncrementalServer {
   }
 }
 
-interface CompileResult<T, D extends DiagnosticsFormat> {
+export interface CompileResult<T, D extends DiagnosticsFormat> {
   result?: T;
   diagnostics?: DiagnosticsData[D][];
+  hasError?: boolean;
 }
 
 export interface TypstFontInfo { }
@@ -269,10 +279,8 @@ export class TypstWorld {
   }
 
   /**
-   * Compile the paged document.
-   *
-   * @param {DiagnosticsFormat} format - The format of the diagnostics.
-   * @returns {Promise<{ diagnostics?: DiagnosticsData[DiagnosticsFormat][] }>} - The result of the compilation.
+   * Compile the experimental HTML document without serializing it.
+   * Use {@link html} to export the resulting HTML string.
    */
   compileHtml<D extends DiagnosticsFormat = 'full'>(
     opts?: DiagOpts<D>,
@@ -318,6 +326,18 @@ export class TypstWorld {
   ): Promise<CompileResult<Uint8Array, D>> {
     return this[kObject].get_artifact(1, getDiagnosticsArg(opts?.diagnostics)) || {};
   }
+
+  /**
+   * Export the HTML document as a string, including native MathML equations.
+   * Experimental; requires a WASM compiler built with the `html` Cargo feature.
+   */
+  async html<D extends DiagnosticsFormat = 'full'>(
+    opts?: DiagOpts<D>,
+  ): Promise<CompileResult<string, D>> {
+    return (
+      this[kObject].get_artifact(CompileFormatEnum.html, getDiagnosticsArg(opts?.diagnostics)) || {}
+    );
+  }
 }
 
 /**
@@ -346,8 +366,8 @@ export interface TypstCompiler {
   /**
    * Compile an document with the maintained state.
    * @param {CompileOptions} options - The options for compiling the document.
-   * @returns {Promise<Uint8Array>} - artifact in vector format.
-   * You can then load the artifact to the renderer to render the document.
+   * Returns an HTML string for the HTML format, or bytes for PDF/vector.
+   * Vector is the default and can be loaded by the renderer.
    */
   compile<D extends DiagnosticsFormat>(
     options: CompileOptions<CompileFormatEnum.vector, D>,
@@ -355,9 +375,12 @@ export interface TypstCompiler {
   compile<D extends DiagnosticsFormat>(
     options: CompileOptions<CompileFormatEnum.pdf, D>,
   ): Promise<CompileResult<Uint8Array, D>>;
+  compile<D extends DiagnosticsFormat>(
+    options: CompileOptions<CompileFormatEnum.html, D>,
+  ): Promise<CompileResult<string, D>>;
   compile<F extends CompileFormatEnum, D extends DiagnosticsFormat>(
     options: CompileOptions<F, D>,
-  ): Promise<CompileResult<Uint8Array, D>>;
+  ): Promise<CompileResult<CompileOutput<F>, D>>;
 
   runWithWorld<T>(options: SnapshotOptions, cb: (world: TypstWorld) => Promise<T>): Promise<T>;
 
@@ -540,26 +563,26 @@ class TypstCompilerDriver implements TypstCompiler {
     this.compiler.set_fonts(fonts as any as typst.TypstFontResolver);
   }
 
-  compile(options: CompileOptions): Promise<any> {
-    return new Promise(resolve => {
-      const world = this.compiler.snapshot(
-        options.root,
-        options.mainFilePath,
-        convertInputs(options.inputs),
-      );
+  async compile(options: CompileOptions): Promise<any> {
+    const world = this.compiler.snapshot(
+      options.root,
+      options.mainFilePath,
+      convertInputs(options.inputs),
+    );
+    try {
       if ('incrementalServer' in options) {
-        resolve(
-          world.incr_compile(
-            options.incrementalServer[kObject],
-            getDiagnosticsArg(options.diagnostics),
-          ),
+        return world.incr_compile(
+          options.incrementalServer[kObject],
+          getDiagnosticsArg(options.diagnostics),
         );
-        return;
       }
-      resolve(
-        world.get_artifact(options.format || CompileFormatEnum.vector, getDiagnosticsArg(options.diagnostics)),
+      return world.get_artifact(
+        options.format ?? CompileFormatEnum.vector,
+        getDiagnosticsArg(options.diagnostics),
       );
-    });
+    } finally {
+      world.free();
+    }
   }
 
   async runWithWorld<T>(
@@ -571,9 +594,11 @@ class TypstCompilerDriver implements TypstCompiler {
       options.mainFilePath,
       convertInputs(options.inputs),
     );
-    let result = await cb(new TypstWorld(world));
-    world.free();
-    return result;
+    try {
+      return await cb(new TypstWorld(world));
+    } finally {
+      world.free();
+    }
   }
 
   query(options: QueryOptions & SnapshotOptions): Promise<any> {

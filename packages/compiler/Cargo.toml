@@ -41,6 +41,7 @@ reflexo-typst2vec.workspace = true
 reflexo-typst = { workspace = true, features = ["web"] }
 reflexo-vec2svg.workspace = true
 typst.workspace = true
+typst-html = { workspace = true, optional = true }
 typst-assets = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -51,7 +52,7 @@ sha2.workspace = true
 web-sys = { workspace = true, features = ["console"] }
 
 [features]
-full = ["web", "web_test", "fonts", "misc"]
+full = ["web", "web_test", "fonts", "misc", "html"]
 misc = ["incr", "svg", "pdf", "ast", "semantic_tokens"]
 
 web = ["reflexo-typst/web"]
@@ -60,6 +61,7 @@ web_test = ["typst-ts-test-common/web_artifacts"]
 fonts = ["reflexo-typst/fonts", "typst-assets/fonts"]
 incr = []
 pdf = ["reflexo-typst/pdf"]
+html = ["reflexo-typst/html", "dep:typst-html"]
 svg = ["reflexo-typst/svg"]
 ast = ["reflexo-typst/ast"]
 semantic_tokens = []

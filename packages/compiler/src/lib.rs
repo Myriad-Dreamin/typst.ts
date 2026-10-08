@@ -351,6 +351,7 @@ impl TypstCompiler {
             "vector" => 0u8,
             "pdf" => 1,
             "_dummy" => 2,
+            "html" => 3,
             _ => return Err(error_once!("Unsupported fmt", fmt: fmt).into()),
         };
         w.get_artifact(fmt, diagnostics_format)
@@ -420,6 +421,10 @@ impl TypstCompileWorld {
     }
 
     pub fn get_artifact(&mut self, fmt: u8, diagnostics_format: u8) -> Result<JsValue, JsValue> {
+        if fmt == 3 {
+            return self.export_html(diagnostics_format);
+        }
+
         #[cfg(feature = "svg")]
         use reflexo_vec2svg::DefaultExportFeature;
         #[cfg(feature = "svg")]
@@ -550,7 +555,51 @@ impl TypstCompileWorld {
     fn do_compile_html(&mut self) -> Result<Option<Arc<TypstHtmlDocument>>, JsValue> {
         let g = &self.graph;
         let _ = g.provide::<HtmlCFlag>(Ok(FlagTask::flag(true)));
+        // The HTML task enables Typst's experimental HTML feature on its own
+        // world, leaving the paged task and subsequent snapshots unchanged.
         Ok(g.shared_compile_html()?)
+    }
+
+    #[cfg(feature = "html")]
+    fn export_html(&mut self, diagnostics_format: u8) -> Result<JsValue, JsValue> {
+        let Some(doc) = self.do_compile_html()? else {
+            return self.get_diag::<TypstHtmlDocument>(diagnostics_format);
+        };
+
+        let html = match typst_html::html(&doc, &typst_html::HtmlOptions::default()) {
+            Ok(html) => html,
+            Err(errors) => {
+                if diagnostics_format < 2 {
+                    return Err(format!("{errors:?}").into());
+                }
+                let diag = self
+                    .graph
+                    .compute::<TDiagnosticsTask<TypstHtmlDocument>>()?;
+                return Ok(convert_diag(
+                    errors.iter().chain(diag.diagnostics()),
+                    Some(&self.graph.snap.world),
+                    true,
+                    diagnostics_format,
+                ));
+            }
+        };
+        if diagnostics_format == 0 {
+            return Ok(html.into());
+        }
+
+        // Keep warnings from successful HTML compilation as well as errors.
+        let result = if diagnostics_format >= 2 {
+            self.get_diag::<TypstHtmlDocument>(diagnostics_format)?
+        } else {
+            js_sys::Object::new().into()
+        };
+        js_sys::Reflect::set(&result, &"result".into(), &html.into())?;
+        Ok(result)
+    }
+
+    #[cfg(not(feature = "html"))]
+    fn export_html(&mut self, _diagnostics_format: u8) -> Result<JsValue, JsValue> {
+        Err("HTML export is not enabled; rebuild typst-ts-web-compiler with the `html` Cargo feature".into())
     }
 
     fn do_compile_paged(&mut self) -> Result<Option<Arc<TypstPagedDocument>>, JsValue> {

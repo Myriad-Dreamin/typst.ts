@@ -490,7 +490,7 @@ export class TypstSnippet {
     const opts = await this.getCompileOptions(o);
     const compiler = await this.getCompilerReset();
     return compiler
-      .compile(opts)
+      .compile({ ...opts, format: CompileFormatEnum.vector })
       .then(res => res.result)
       .finally(() => this.removeTmp(opts));
   }
@@ -501,12 +501,27 @@ export class TypstSnippet {
    */
   async pdf(o?: SweetCompileOptions) {
     const opts = await this.getCompileOptions(o);
-    opts.format = CompileFormatEnum.pdf;
     const compiler = await this.getCompilerReset();
     return compiler
-      .compile(opts)
+      .compile({ ...opts, format: CompileFormatEnum.pdf })
       .then(res => res.result)
       .finally(() => this.removeTmp(opts));
+  }
+
+  /**
+   * Compile to a native HTML string, including MathML equations.
+   * Experimental; requires a WASM compiler built with the `html` Cargo feature.
+   * See {@link SweetCompileOptions}.
+   */
+  async html(o?: SweetCompileOptions): Promise<string | undefined> {
+    const opts = await this.getCompileOptions(o);
+    try {
+      const compiler = await this.getCompilerReset();
+      const res = await compiler.compile({ ...opts, format: CompileFormatEnum.html });
+      return res.result;
+    } finally {
+      await this.removeTmp(opts);
+    }
   }
 
   /**
@@ -600,7 +615,7 @@ export class TypstSnippet {
 
     const opts = await this.getCompileOptions(o);
     return (await this.getCompiler())
-      .compile(opts)
+      .compile({ ...opts, format: CompileFormatEnum.vector })
       .then(res => res.result!)
       .finally(() => this.removeTmp(opts));
   }
