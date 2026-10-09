@@ -344,6 +344,26 @@ export interface TypstCompiler {
   reset(): Promise<void>;
 
   /**
+   * Evict the **global** memoization cache.
+   *
+   * This removes all memoized results from the cache whose age is larger
+   * than or equal to `maxAge`. The age of a result grows by one during
+   * each eviction and is reset to zero when the result produces a cache
+   * hit. Set `maxAge` to zero to completely clear the cache.
+   *
+   * Without calling this function, memoized results of every compiled
+   * document version stay in memory, so a long-running page that compiles
+   * many versions eventually runs out of WASM memory. Call it after each
+   * compilation, as the Typst CLI and `typst.node` do.
+   *
+   * A suggested `maxAge` value for regular non-watch tools is `10`.
+   * A suggested `maxAge` value for regular watch tools is `30`.
+   *
+   * @param {number} maxAge - The maximum age of results to keep.
+   */
+  evictCache(maxAge: number): Promise<void>;
+
+  /**
    * Compile an document with the maintained state.
    * @param {CompileOptions} options - The options for compiling the document.
    * @returns {Promise<Uint8Array>} - artifact in vector format.
@@ -623,6 +643,10 @@ class TypstCompilerDriver implements TypstCompiler {
       this.compiler.reset();
       resolve(undefined);
     });
+  }
+
+  async evictCache(maxAge: number): Promise<void> {
+    this.compiler.evict_cache(maxAge);
   }
 
   addSource(path: string, source: string): void {

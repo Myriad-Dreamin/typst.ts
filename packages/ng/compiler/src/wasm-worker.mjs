@@ -85,6 +85,10 @@ export class WasmWorkerCompiler {
     return this.call('reset', []);
   }
 
+  evictCache(maxAge = 10) {
+    return this.call('evictCache', [maxAge]);
+  }
+
   setFontProvider(provider) {
     assertStructuredCloneable('font provider', provider);
     return this.call('setFontProvider', [provider]);
