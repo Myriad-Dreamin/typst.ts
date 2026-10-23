@@ -223,7 +223,9 @@ impl NodeCompiler {
         Arc<D>: Into<TypstDocument>,
     {
         Ok(match opts {
-            MayCompileOpts::A(doc) => doc.clone().into(),
+            MayCompileOpts::A(doc) => {
+                ExecResultRepr::from(doc.clone()).with_graph(doc.graph.clone())
+            }
             MayCompileOpts::B(compile_by) => self.compile_raw2::<D>(compile_by)?,
         })
     }
