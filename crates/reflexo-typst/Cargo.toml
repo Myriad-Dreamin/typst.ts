@@ -86,3 +86,10 @@ hast = ["html", "dep:reflexo-typst2hast"]
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+# A self dev-dependency enables the system compile harness for the
+# integration tests without enabling the feature for downstream users.
+reflexo-typst = { path = ".", features = ["system"] }
+typst.workspace = true
+typst-assets = { workspace = true, features = ["fonts"] }

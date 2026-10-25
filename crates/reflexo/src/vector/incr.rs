@@ -108,10 +108,16 @@ impl<'a> IncrDocClientKern<'a> {
         let mut index_item: Option<&SourceMappingNode> = None;
 
         let source_mapping = self.0.source_mapping_data.as_slice();
-        let page_sources = self.0.page_source_mapping[0]
-            .source_mapping(&self.0.doc.module)
-            .unwrap();
+        // The layout does not carry page source mappings, e.g., when the
+        // artifact was packed without debug info attached.
+        let Some(page_sources) = self.0.page_source_mapping[0].source_mapping(&self.0.doc.module)
+        else {
+            return Ok(None);
+        };
         let page_sources = page_sources.source_mapping();
+        if page_sources.is_empty() {
+            return Ok(None);
+        }
 
         for (chunk_idx, v) in path.chunks_exact(2).enumerate() {
             let (ty, idx) = (v[0], v[1] as usize);

@@ -12,6 +12,7 @@ use std::sync::OnceLock;
 use crate::debug_loc::{
     ElementPoint, FileLocation, FlatSourceLocation, SourceSpan, SourceSpanOffset,
 };
+use crate::ir::{LayoutSourceMapping, SourceMappingNode};
 
 /// Represents a node in the source mapping tree.
 pub struct Node {
@@ -297,6 +298,127 @@ impl Span2VecPass {
 
     pub fn push_span(&self, region: SourceRegion) {
         self.collector.push(region);
+    }
+
+    /// Finalize the collected span regions into flat source mapping data
+    /// that can be serialized into an artifact, so that a client without
+    /// the typst document can resolve element paths back to source spans.
+    ///
+    /// The returned data follows the layout expected by
+    /// `IncrDocClientKern::source_span`: a flat list of source mapping
+    /// nodes where every `Group` node stores the indices of its child
+    /// nodes, and a page source mapping that points to the root node of
+    /// every page.
+    ///
+    /// Returns `None` if `should_attach_debug_info` is disabled or no
+    /// document has been collected yet, so that no source mapping metadata
+    /// is attached to artifacts by default.
+    pub fn finalize_source_mapping(
+        &mut self,
+    ) -> Option<(Vec<SourceMappingNode>, LayoutSourceMapping)> {
+        if !self.should_attach_debug_info {
+            return None;
+        }
+
+        self.span_tree.get_or_init(|| {
+            log::info!("lazy spans are initializing");
+            std::mem::take(&mut self.collector).into()
+        });
+
+        let span_info = self.span_tree.get_mut()?;
+
+        let doc_region = *self.doc_region.get_mut();
+        if doc_region == 0 {
+            return None;
+        }
+
+        // The document region only has page children, which are recorded in
+        // page order. See `Typst2VecPassImpl::paged` and
+        // `Typst2VecPassImpl::html`.
+        let doc_children: Vec<SourceNodeKind> = {
+            let d = span_info.get_mut(&doc_region)?;
+            d.ensure_sorted();
+            d.val.iter().map(|(_, kind, _)| kind.clone()).collect()
+        };
+
+        let mut source_mapping: Vec<SourceMappingNode> = Vec::new();
+        let mut page_sources = Vec::with_capacity(doc_children.len());
+        for kind in doc_children {
+            let SourceNodeKind::Page { region } = kind else {
+                continue;
+            };
+
+            let root = Self::flatten_source_region(span_info, region, &mut source_mapping);
+            page_sources.push(SourceMappingNode::Page(root));
+        }
+
+        Some((
+            source_mapping,
+            LayoutSourceMapping::new_single(page_sources),
+        ))
+    }
+
+    /// Flattens a span region into `source_mapping` in post-order and
+    /// returns the index of the region's group node.
+    ///
+    /// Children are flattened in the order of their element indices, which
+    /// matches how element paths address a group's children, see
+    /// [`Span2VecPass::query_element_paths`].
+    fn flatten_source_region(
+        span_info: &mut LazySpanInfo,
+        region: usize,
+        source_mapping: &mut Vec<SourceMappingNode>,
+    ) -> u64 {
+        // A region without recorded children is an empty group.
+        let children: Vec<SourceNodeKind> = span_info
+            .get_mut(&region)
+            .map(|c| {
+                c.ensure_sorted();
+                c.val.iter().map(|(_, kind, _)| kind.clone()).collect()
+            })
+            .unwrap_or_default();
+
+        let mut child_indices = Vec::with_capacity(children.len());
+        for kind in children {
+            match kind {
+                SourceNodeKind::Group { region } => {
+                    let idx = Self::flatten_source_region(span_info, region, source_mapping);
+                    child_indices.push(idx);
+                }
+                SourceNodeKind::Char((span, _)) => {
+                    child_indices.push(source_mapping.len() as u64);
+                    source_mapping.push(SourceMappingNode::Text(span.into_raw().get()));
+                }
+                SourceNodeKind::Text(chars) => {
+                    // A flattened text node can only carry a single span, so
+                    // we record the span of its first attached glyph, matching
+                    // how [`Span2VecPass::query`] resolves the start of a
+                    // text run.
+                    let span = chars
+                        .iter()
+                        .find(|(span, _)| !span.is_detached())
+                        .map(|(span, _)| *span)
+                        .unwrap_or_else(SourceSpan::detached);
+                    child_indices.push(source_mapping.len() as u64);
+                    source_mapping.push(SourceMappingNode::Text(span.into_raw().get()));
+                }
+                SourceNodeKind::Image(span) => {
+                    child_indices.push(source_mapping.len() as u64);
+                    source_mapping.push(SourceMappingNode::Image(span.into_raw().get()));
+                }
+                SourceNodeKind::Shape(span) => {
+                    child_indices.push(source_mapping.len() as u64);
+                    source_mapping.push(SourceMappingNode::Shape(span.into_raw().get()));
+                }
+                // Page and Doc nodes are only ever recorded as children of
+                // the document region, which is handled above.
+                SourceNodeKind::Page { .. } | SourceNodeKind::Doc => {}
+            }
+        }
+
+        let idx = source_mapping.len() as u64;
+        source_mapping.push(SourceMappingNode::Group(child_indices.into()));
+        idx
     }
 
     /// Queries the element paths from the given span offset.
@@ -637,5 +759,115 @@ impl SourceInfoCollector {
     }
     pub fn intern(_i: &Node) {
         todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::Ordering;
+
+    use typst::syntax::Span;
+
+    use crate::ir::Module;
+
+    use super::*;
+
+    fn span_of(raw: u64) -> SourceSpan {
+        Span::from_raw(std::num::NonZeroU64::new(raw).unwrap())
+    }
+
+    /// Builds a document with a single page containing a frame with a text
+    /// and a shape child.
+    fn build_document(pass: &mut Span2VecPass) -> usize {
+        pass.reset();
+
+        let doc_region = pass.start();
+        let page_region = pass.start();
+        let frame_region = pass.start();
+
+        pass.push_span(SourceRegion {
+            region: frame_region,
+            idx: 0,
+            kind: SourceNodeKind::Char((span_of(0x1234), 0)),
+            item: Fingerprint::from_u128(1),
+        });
+        pass.push_span(SourceRegion {
+            region: frame_region,
+            idx: 1,
+            kind: SourceNodeKind::Shape(span_of(0x5678)),
+            item: Fingerprint::from_u128(2),
+        });
+        pass.push_span(SourceRegion {
+            region: page_region,
+            idx: 0,
+            kind: SourceNodeKind::Group {
+                region: frame_region,
+            },
+            item: Fingerprint::from_u128(3),
+        });
+        pass.push_span(SourceRegion {
+            region: doc_region,
+            idx: 0,
+            kind: SourceNodeKind::Page {
+                region: page_region,
+            },
+            item: Fingerprint::from_u128(4),
+        });
+
+        pass.doc_region.store(doc_region, Ordering::SeqCst);
+        doc_region
+    }
+
+    #[test]
+    fn test_finalize_source_mapping_disabled() {
+        let mut pass = Span2VecPass::default();
+        pass.set_should_attach_debug_info(false);
+        build_document(&mut pass);
+        assert!(pass.finalize_source_mapping().is_none());
+    }
+
+    #[test]
+    fn test_finalize_source_mapping_no_document() {
+        let mut pass = Span2VecPass::default();
+        pass.set_should_attach_debug_info(true);
+        pass.reset();
+        assert!(pass.finalize_source_mapping().is_none());
+    }
+
+    #[test]
+    fn test_finalize_source_mapping_flattens_document() {
+        let mut pass = Span2VecPass::default();
+        pass.set_should_attach_debug_info(true);
+        build_document(&mut pass);
+
+        let Some((source_mapping, page_source_mapping)) = pass.finalize_source_mapping() else {
+            panic!("source mapping must be finalized");
+        };
+
+        // The tree is flattened in post-order: the text and shape nodes
+        // precede the frame group, which precedes the page root group.
+        assert_eq!(source_mapping.len(), 4);
+        assert!(matches!(source_mapping[0], SourceMappingNode::Text(s) if s == 0x1234));
+        assert!(matches!(source_mapping[1], SourceMappingNode::Shape(s) if s == 0x5678));
+        assert!(
+            matches!(&source_mapping[2], SourceMappingNode::Group(children) if children.as_ref() == [0, 1])
+        );
+        assert!(
+            matches!(&source_mapping[3], SourceMappingNode::Group(children) if children.as_ref() == [2])
+        );
+
+        // The page source mapping points to the page root group.
+        let page_sources = page_source_mapping
+            .unwrap_single()
+            .source_mapping(&Module::default())
+            .unwrap()
+            .source_mapping()
+            .to_vec();
+        assert_eq!(page_sources, vec![SourceMappingNode::Page(3)]);
+
+        // Finalizing again yields the same data, so `pack_delta` and a
+        // following `pack_current` emit consistent mappings.
+        let again = pass.finalize_source_mapping();
+        assert_eq!(again.map(|(d, _)| d), Some(source_mapping));
     }
 }
