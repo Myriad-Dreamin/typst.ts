@@ -138,6 +138,30 @@ export interface QueryOptions {
   field?: string;
 }
 
+/** A UTF-8 byte position in a Typst source file. */
+export interface TypstSourcePosition {
+  /** Virtual compiler path, for example `/main.typ`. */
+  path: string;
+  /** UTF-8 byte offset in the source file. */
+  byteOffset: number;
+}
+
+/** A physical position in paged Typst output. */
+export interface TypstDocumentPosition {
+  /** Zero-based page offset. */
+  pageOffset: number;
+  /** Horizontal page coordinate in Typst points. */
+  x: number;
+  /** Vertical page coordinate in Typst points. */
+  y: number;
+}
+
+/** A source location resolved from paged Typst output. */
+export interface TypstSourceLocation extends TypstSourcePosition {
+  /** Package specification when the source belongs to a package. */
+  package?: string;
+}
+
 /**
  * The options for compiling the document.
  */
@@ -171,6 +195,44 @@ export class IncrementalServer {
    */
   current(): Uint8Array | undefined {
     return this[kObject].current();
+  }
+
+  /**
+   * Revision of the source/document mapping from the latest successful
+   * incremental compilation. It resets to zero with {@link reset}.
+   *
+   * Consumers can retain this value with a rendered artifact and discard
+   * navigation results if the revision no longer matches.
+   */
+  get mappingRevision(): number {
+    return this[kObject].mapping_revision;
+  }
+
+  /**
+   * Resolve a source byte offset to one or more positions in the latest
+   * successfully compiled paged document.
+   */
+  sourceToDocument(position: TypstSourcePosition): TypstDocumentPosition[] {
+    const result = this[kObject].source_to_document(
+      position.path,
+      position.byteOffset,
+    );
+    return Array.isArray(result) ? (result as TypstDocumentPosition[]) : [];
+  }
+
+  /**
+   * Resolve a page-space point to a source byte offset in the latest
+   * successfully compiled paged document.
+   */
+  documentToSource(position: TypstDocumentPosition): TypstSourceLocation | undefined {
+    const result = this[kObject].document_to_source(
+      position.pageOffset,
+      position.x,
+      position.y,
+    );
+    return result === null || result === undefined
+      ? undefined
+      : (result as TypstSourceLocation);
   }
 
   /**

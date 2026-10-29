@@ -84,6 +84,7 @@ export default defineConfig({
       {
         extends: false,
         test: {
+          name: 'node',
           include: ['{tests,src}/**/*.all.{test,spec}.mts', '{tests,src}/**/*.node.{test,spec}.mts'],
           environment: 'node',
         },
