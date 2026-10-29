@@ -1,9 +1,58 @@
 import test from 'ava';
+import { resolve } from 'path';
 
 import { NodeCompiler, PdfStandard } from '../index';
 
 // Switch to the current directory for the tests interacting with FS
 process.chdir(__dirname);
+
+for (const target of ['compile', 'compileHtml', 'tryHtml'] as const) {
+  test(`${target} reports source and data dependencies`, t => {
+    const compiler = NodeCompiler.create({ workspace: '.' });
+    const main = resolve('dependencies-main.typ');
+    const part = resolve('dependencies-part.typ');
+    const nested = resolve('dependencies-nested.typ');
+    const data = resolve('dependencies-data.csv');
+    compiler.addSource(main, '#include "dependencies-part.typ"\n#include "dependencies-part.typ"');
+    compiler.addSource(part, '#include "dependencies-nested.typ"\n#read("dependencies-data.csv")');
+    compiler.addSource(nested, 'Nested content');
+    compiler.mapShadow(data, Buffer.from('data'));
+
+    const result = compiler[target]({ mainFilePath: main });
+    t.false(result.hasError());
+    const expected = [main, part, nested, data].sort();
+    t.deepEqual(result.dependencies(), expected);
+    t.deepEqual(result.dependencies(), expected);
+
+    if (target === 'compileHtml') {
+      const compiled = compiler.compileHtml({ mainFilePath: main });
+      t.truthy(compiled.result);
+      const exported = compiler.tryHtml(compiled.result!);
+      t.false(exported.hasError());
+      t.deepEqual(exported.dependencies(), expected);
+    }
+
+    // A later compilation must not change the dependencies of this result.
+    compiler.addSource(main, 'No imports');
+    const next = compiler[target]({ mainFilePath: main });
+    t.false(next.hasError());
+    t.deepEqual(next.dependencies(), [main]);
+    t.deepEqual(result.dependencies(), expected);
+  });
+
+  test(`${target} reports dependencies after a compilation error`, t => {
+    const compiler = NodeCompiler.create({ workspace: '.' });
+    const main = resolve('dependencies-error.typ');
+    const part = resolve('dependencies-invalid.typ');
+    compiler.addSource(main, '#include "dependencies-invalid.typ"');
+    compiler.addSource(part, '#panic("dependency error")');
+
+    const result = compiler[target]({ mainFilePath: main });
+    t.true(result.hasError());
+    result.takeDiagnostics();
+    t.deepEqual(result.dependencies(), [main, part].sort());
+  });
+}
 
 test('it creates compiler', t => {
   const compiler = NodeCompiler.create();
