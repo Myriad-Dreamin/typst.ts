@@ -3,7 +3,7 @@ import type * as typst from '@myriaddreamin/typst-ts-web-compiler';
 import { buildComponent } from './init.mjs';
 import { SemanticTokens, SemanticTokensLegend, kObject } from './internal.types.mjs';
 
-import { loadFonts, type InitOptions } from './options.init.mjs';
+import { loadFonts, _pdfOptsToWasm, type InitOptions, type PdfOptions } from './options.init.mjs';
 import { LazyWasmModule } from './wasm.mjs';
 
 /**
@@ -306,6 +306,16 @@ export class TypstWorld {
     opts?: DiagOpts<D>,
   ): Promise<CompileResult<Uint8Array, D>> {
     return this[kObject].get_artifact(0, getDiagnosticsArg(opts?.diagnostics)) || {};
+  }
+
+  /**
+   * Set the PDF export options (e.g. a PDF standard) for this world,
+   * replacing (not merging with) any options set at initialization time via
+   * the `withPdfOptions` before-build hook. Affects subsequent {@link pdf}
+   * calls.
+   */
+  setPdfOptions(options: PdfOptions): void {
+    this[kObject].set_pdf_opts(_pdfOptsToWasm(options));
   }
 
   /**

@@ -30,6 +30,7 @@ export type BeforeBuildMark = typeof BeforeBuildSymbol;
  *   - preloadSystemFonts
  *   - withAccessModel
  *   - withPackageRegistry
+ *   - withPdfOptions
  */
 export type BeforeBuildFn = StagedOptFn<BeforeBuildMark>;
 
@@ -46,6 +47,7 @@ export interface InitOptions {
    * - loadFonts
    * - preloadSystemFonts
    * - withAccessModel
+   * - withPdfOptions
    */
   beforeBuild: BeforeBuildFn[];
 
@@ -361,6 +363,91 @@ export function withAccessModel(accessModel: FsAccessModel): BeforeBuildFn {
       );
       resolve();
     });
+  };
+}
+
+/**
+ * The PDF standards that the compiler can enforce when exporting PDF.
+ *
+ * This is a non-exhaustive list; the underlying compiler decides which
+ * standards it accepts.
+ */
+export type PdfStandard =
+  | '1.4'
+  | '1.5'
+  | '1.6'
+  | '1.7'
+  | '2.0'
+  | 'a-1b'
+  | 'a-1a'
+  | 'a-2b'
+  | 'a-2u'
+  | 'a-2a'
+  | 'a-3b'
+  | 'a-3u'
+  | 'a-3a'
+  | 'a-4'
+  | 'a-4f'
+  | 'a-4e'
+  | 'ua-1'
+  | (string & {});
+
+/**
+ * The options applied when the compiler exports a document to PDF.
+ */
+export interface PdfOptions {
+  /**
+   * (Experimental) An optional PDF standard to be used to export PDF.
+   *
+   * See {@link PdfStandard} for a non-exhaustive list of standards.
+   */
+  pdfStandard?: PdfStandard;
+
+  /**
+   * By default, even when not producing a `PDF/UA-1` document, a tagged PDF
+   * document is written to provide a baseline of accessibility. In some
+   * circumstances (for example when trying to reduce the size of a document)
+   * it can be desirable to disable tagged PDF.
+   */
+  pdfTags?: boolean;
+
+  /**
+   * An optional (creation) timestamp to be used to export PDF, *in seconds*.
+   *
+   * This is used when you *enable auto timestamp* in the document.
+   */
+  creationTimestamp?: number;
+}
+
+/**
+ * (compile only) set PDF export options
+ *
+ * @param options: the options applied when the compiler exports a document
+ * to PDF, e.g. a PDF standard to enforce
+ * @returns {BeforeBuildFn}
+ * @example
+ * ```typescript
+ * import { createTypstCompiler, withPdfOptions } from 'typst';
+ * const compiler = createTypstCompiler();
+ * await compiler.init({
+ *   beforeBuild: [withPdfOptions({ pdfStandard: 'ua-1' })],
+ * });
+ * ```
+ */
+export function withPdfOptions(options: PdfOptions): BeforeBuildFn {
+  return async (_, { builder }: InitContext) => {
+    builder.set_pdf_opts(_pdfOptsToWasm(options));
+  };
+}
+
+/**
+ * @internal maps the options onto the wasm module's field names
+ */
+export function _pdfOptsToWasm(options: PdfOptions) {
+  return {
+    pdf_standard: options.pdfStandard,
+    pdf_tags: options.pdfTags,
+    creation_timestamp: options.creationTimestamp,
   };
 }
 

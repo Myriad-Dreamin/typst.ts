@@ -1,13 +1,18 @@
 import * as init from './init.mjs';
 import * as initOptions from './options.init.mjs';
-export type { InitOptions, BeforeBuildFn } from './options.init.mjs';
+export type { InitOptions, BeforeBuildFn, PdfOptions, PdfStandard } from './options.init.mjs';
 export type {
   RenderByContentOptions,
   RenderInSessionOptions,
   RenderCanvasOptions as RenderPageOptions,
   RenderOptions,
 } from './options.render.mjs';
-export { loadFonts, preloadRemoteFonts, preloadSystemFonts } from './options.init.mjs';
+export {
+  loadFonts,
+  preloadRemoteFonts,
+  preloadSystemFonts,
+  withPdfOptions,
+} from './options.init.mjs';
 import * as renderer from './renderer.mjs';
 export type { RenderSession, TypstRenderer } from './renderer.mjs';
 export { rendererBuildInfo, createTypstRenderer } from './renderer.mjs';
