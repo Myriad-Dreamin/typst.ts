@@ -39,6 +39,7 @@
     "build:dev": "wasm-pack build --target web --scope myriaddreamin --dev -- --no-default-features --features web,misc",
     "build:node": "wasm-pack build --target nodejs --scope myriaddreamin -- --no-default-features --features web,misc",
     "build": "wasm-pack build --target web --scope myriaddreamin -- --no-default-features --features web,misc && node ../tools/wasm-debundle.mjs",
+    "build:html": "wasm-pack build --target web --scope myriaddreamin -- --locked --no-default-features --features web,misc,html && node ../tools/wasm-debundle.mjs",
     "build:with-fonts": "wasm-pack build --target web --scope myriaddreamin -- --no-default-features --features web,fonts,misc && node ../tools/wasm-debundle.mjs",
     "prepublish": "turbo build",
     "publish:dry": "npm publish --dry-run --access public",

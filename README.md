@@ -99,6 +99,7 @@ The JavaScript packages are published on [npm](https://www.npmjs.com/).
 
 - (Internal) Web compiler WASM module:
   [@myriaddreamin/typst-ts-web-compiler](https://www.npmjs.com/package/@myriaddreamin/typst-ts-web-compiler)
+  ([experimental native HTML and MathML export](./docs/native-html-export.md))
 
 - (Internal) Renderer WASM module:
   [@myriaddreamin/typst-ts-renderer](https://www.npmjs.com/package/@myriaddreamin/typst-ts-renderer)

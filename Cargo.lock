@@ -5753,6 +5753,7 @@ dependencies = [
  "sha2",
  "typst",
  "typst-assets",
+ "typst-html",
  "typst-ts-test-common",
  "wasm-bindgen",
  "wasm-bindgen-futures",
