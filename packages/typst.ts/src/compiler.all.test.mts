@@ -9,7 +9,7 @@ import lsBold from '../../../assets/data/LibertinusSerif-Bold-subset.otf?inline'
 import lsItalic from '../../../assets/data/LibertinusSerif-Italic-subset.otf?inline';
 import lsBoldItalic from '../../../assets/data/LibertinusSerif-BoldItalic-subset.otf?inline';
 import { createTypstCompiler } from './compiler.mjs';
-import { disableDefaultFontAssets } from './options.init.mjs';
+import { disableDefaultFontAssets, loadFonts } from './options.init.mjs';
 
 // This is to reduce test time.
 createTypstCompiler._impl.defaultAssets = [];
@@ -90,6 +90,55 @@ describe('compiler creations', () => {
       mainFilePath: '/main.typ',
     });
     expect(data.result?.length).toMatchInlineSnapshot(`376`);
+  });
+});
+
+describe('source and preview synchronization', () => {
+  it('maps source text to the document and back', async () => {
+    const path = '/sync-navigation.typ';
+    const source = '= Hello synchronization';
+    const compiler = createTypstCompiler();
+    await compiler.init({
+      beforeBuild: [disableDefaultFontAssets(), loadFonts([lsRegular])],
+      getModule: getModule().compiler,
+    });
+    compiler.addSource(path, source);
+
+    await compiler.withIncrementalServer(async server => {
+      await compiler.compile({
+        mainFilePath: path,
+        incrementalServer: server,
+      });
+
+      expect(server.mappingRevision).toBe(1);
+      const sourceOffset = source.indexOf('Hello') + 1;
+      const positions = server.sourceToDocument({
+        path,
+        byteOffset: sourceOffset,
+      });
+      expect(positions.length).toBeGreaterThan(0);
+
+      const position = positions[0];
+      const resolved = server.documentToSource({
+        ...position,
+        x: position.x + 0.1,
+        y: position.y - 0.1,
+      });
+      expect(resolved?.path).toBe(path);
+      expect(resolved?.byteOffset).toBeGreaterThanOrEqual(source.indexOf('Hello'));
+      expect(resolved?.byteOffset).toBeLessThanOrEqual(sourceOffset);
+
+      compiler.addSource(path, '= Updated synchronization');
+      await compiler.compile({
+        mainFilePath: path,
+        incrementalServer: server,
+      });
+      expect(server.mappingRevision).toBe(2);
+
+      server.reset();
+      expect(server.mappingRevision).toBe(0);
+      expect(server.sourceToDocument({ path, byteOffset: 2 })).toEqual([]);
+    });
   });
 });
 
