@@ -2054,6 +2054,95 @@
   resolved "https://registry.npmjs.org/@msgpackr-extract/msgpackr-extract-win32-x64/-/msgpackr-extract-win32-x64-3.0.3.tgz#0aa5502d547b57abfc4ac492de68e2006e417242"
   integrity sha512-x0fWaQtYp4E6sktbsdAqnehxDgEc/VwM7uLsRCYWaiGu0ykYdZPiS8zCWdnjHwyiumousxfBm4SO31eXqwEZhQ==
 
+"@myriaddreamin/typst-ts-node-compiler-android-arm-eabi@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/@myriaddreamin/typst-ts-node-compiler-android-arm-eabi/-/typst-ts-node-compiler-android-arm-eabi-0.7.0.tgz#2f56b8f2860fa24631416364b6465afc3f3d96a2"
+  integrity sha512-25gKyErQai/u/EWBOSSZvV0rFfSL4tqHgYEyd4rZPXSHMpkvvgPmfA/Ees8InB1nnPV9Jlu9r0sftV6oiccprg==
+
+"@myriaddreamin/typst-ts-node-compiler-android-arm64@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/@myriaddreamin/typst-ts-node-compiler-android-arm64/-/typst-ts-node-compiler-android-arm64-0.7.0.tgz#a804cf62a614f29c82f98a1733ee43a1ecb3624c"
+  integrity sha512-CT3Ukt3E0FugdnjfEpmmxudre6kmJzbURVFGTYGEvFQbTMsIwnxGx6Z/9gVPe6V8oLO+5pa8aSkhOQaGdEQw1g==
+
+"@myriaddreamin/typst-ts-node-compiler-darwin-arm64@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/@myriaddreamin/typst-ts-node-compiler-darwin-arm64/-/typst-ts-node-compiler-darwin-arm64-0.7.0.tgz#a1af7b0c5b1d0cc929ae9dc4a6301ac67a2f567b"
+  integrity sha512-UAbhhUtUaJn7t6KyOgomUKUQWbjh8ycleJX6nPTqhKHvKqA9Py0c3Tvd1CLBrAj6lPl3TOz3pcjNMO0xy8/rjg==
+
+"@myriaddreamin/typst-ts-node-compiler-darwin-x64@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/@myriaddreamin/typst-ts-node-compiler-darwin-x64/-/typst-ts-node-compiler-darwin-x64-0.7.0.tgz#963aa240b973371f44d4d9166c506a9bd60bd2d8"
+  integrity sha512-oIGYODTlQdEZoJLvH44F906hLLZhICfxkFnkMU0hCYUAmmNlTK6SCP1SYb/kmwMgUSXz/aO9iT50w/DKDG/cww==
+
+"@myriaddreamin/typst-ts-node-compiler-linux-arm-gnueabihf@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/@myriaddreamin/typst-ts-node-compiler-linux-arm-gnueabihf/-/typst-ts-node-compiler-linux-arm-gnueabihf-0.7.0.tgz#8fc4558cc4bed42f0ba06375c4cf6cc4a76541a5"
+  integrity sha512-/RF/4F1BSpMRyIVFiyEgLRGygprjrptRRhB7ocbtOG+qEJphMpaqtETlDiQ4AJVGiFFWiQv8ahJsfYftMJeZAQ==
+
+"@myriaddreamin/typst-ts-node-compiler-linux-arm64-gnu@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/@myriaddreamin/typst-ts-node-compiler-linux-arm64-gnu/-/typst-ts-node-compiler-linux-arm64-gnu-0.7.0.tgz#efd976c1b6eca46b12bf141787ca27c81c7d480b"
+  integrity sha512-wYC/lfxWW14sbWmtT1u2maLjV7ifF7BuPbRFZYFb6fuxJJP12Xm212PTSz/ZHAcpX9H2bWIOFKVPJkeHHDZeSg==
+
+"@myriaddreamin/typst-ts-node-compiler-linux-arm64-musl@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/@myriaddreamin/typst-ts-node-compiler-linux-arm64-musl/-/typst-ts-node-compiler-linux-arm64-musl-0.7.0.tgz#e2ef559e56f1f868c2ef319535f95d4f0d0af0b7"
+  integrity sha512-pIfvHLJCf9Kr1RM0F6gXv6ceHuRXfr1TlgGpAM2yUcq6YLF6YAW+bybzKqzl4pR/Vv7n6tHRxFs5qGaiO/h6Qw==
+
+"@myriaddreamin/typst-ts-node-compiler-linux-x64-gnu@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/@myriaddreamin/typst-ts-node-compiler-linux-x64-gnu/-/typst-ts-node-compiler-linux-x64-gnu-0.7.0.tgz#0f79b99433109519190d890a6a661281d6e7c635"
+  integrity sha512-Q+ywVMYaxrS7u+PBuCwi9p+lSBpQ3YNkoXKDiS2mMdRka8ddurt5tJvuR0I1ku0bsXTR1/u4IsLwyyHWpKqUuw==
+
+"@myriaddreamin/typst-ts-node-compiler-linux-x64-musl@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/@myriaddreamin/typst-ts-node-compiler-linux-x64-musl/-/typst-ts-node-compiler-linux-x64-musl-0.7.0.tgz#3936d58b3814cee919e79ad90a56df98e09b73e1"
+  integrity sha512-TTU41wdtp/AnKWAcTPx5tZlMCX0iwyT++pcmxRUkOBr3zaFK0tyD2YG/LbpWEoJIGpX/3Y6DyH+dtDTAp8RKYQ==
+
+"@myriaddreamin/typst-ts-node-compiler-win32-arm64-msvc@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/@myriaddreamin/typst-ts-node-compiler-win32-arm64-msvc/-/typst-ts-node-compiler-win32-arm64-msvc-0.7.0.tgz#17e3527e6b8464a202795871b68c370f2d845799"
+  integrity sha512-/bgoB2Z2LmmgcXeF6tEoHkNluGqeh9qKM8xOYajpsd8aEb9Z+05YlPTZhsdLHFVp+SBHvM8Dh3Dtg5fwpkPbfw==
+
+"@myriaddreamin/typst-ts-node-compiler-win32-x64-msvc@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/@myriaddreamin/typst-ts-node-compiler-win32-x64-msvc/-/typst-ts-node-compiler-win32-x64-msvc-0.7.0.tgz#7f9a7528abe589d168840c64ad389b212cd3a2e9"
+  integrity sha512-6dteoOBTeOwrHPDU69W25nTZM4V3+hjdT6JnjOrcdtUWqDBwrEMtNwoxZOMUz5VRvtlguvLjjdfbTc2TgBdqBg==
+
+"@myriaddreamin/typst-ts-node-compiler@^0.7.0":
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/@myriaddreamin/typst-ts-node-compiler/-/typst-ts-node-compiler-0.7.0.tgz#37bed483b33b8cce1e359acd7cde49e6b5ca5f1f"
+  integrity sha512-snM2byzDcqqQbT6FiGeCgkbviJkxsuaUS/x2RiLoMngFC3UEiciM4LcUKDcIygsH70TroRLPzPIevF0LNGBJNA==
+  optionalDependencies:
+    "@myriaddreamin/typst-ts-node-compiler-android-arm-eabi" "0.7.0"
+    "@myriaddreamin/typst-ts-node-compiler-android-arm64" "0.7.0"
+    "@myriaddreamin/typst-ts-node-compiler-darwin-arm64" "0.7.0"
+    "@myriaddreamin/typst-ts-node-compiler-darwin-x64" "0.7.0"
+    "@myriaddreamin/typst-ts-node-compiler-linux-arm-gnueabihf" "0.7.0"
+    "@myriaddreamin/typst-ts-node-compiler-linux-arm64-gnu" "0.7.0"
+    "@myriaddreamin/typst-ts-node-compiler-linux-arm64-musl" "0.7.0"
+    "@myriaddreamin/typst-ts-node-compiler-linux-x64-gnu" "0.7.0"
+    "@myriaddreamin/typst-ts-node-compiler-linux-x64-musl" "0.7.0"
+    "@myriaddreamin/typst-ts-node-compiler-win32-arm64-msvc" "0.7.0"
+    "@myriaddreamin/typst-ts-node-compiler-win32-x64-msvc" "0.7.0"
+
+"@myriaddreamin/typst-ts-renderer@^0.7.0":
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/@myriaddreamin/typst-ts-renderer/-/typst-ts-renderer-0.7.0.tgz#0d4a2de70ba2ff8fce6165c8e9447254f281c78c"
+  integrity sha512-3sXIGxZn9MufPrPn6251DeuLf2FIEILYNzY5lX0XOJmaIYqgvQ3qpfqkCjgQD+splBvt5R1N3BuuNFrZKsHhMw==
+
+"@myriaddreamin/typst-ts-web-compiler@^0.7.0":
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/@myriaddreamin/typst-ts-web-compiler/-/typst-ts-web-compiler-0.7.0.tgz#f6d9e8ebe419e8948df0f30446fb75ac5f3a57be"
+  integrity sha512-nMwMcfOBy5pABPDuVM7/u8425SxhPUM+OJe6daqqgVOT3+neCTz4JKwx2L8XasfEHTNvd0cUI07LR9q5ADo7Gw==
+
+"@myriaddreamin/typst.ts@^0.7.0":
+  version "0.7.0"
+  resolved "https://registry.npmjs.org/@myriaddreamin/typst.ts/-/typst.ts-0.7.0.tgz#456c3830654329aba8a8bfe7c2ad878db4cc9991"
+  integrity sha512-JtO5Td/1QesH1IBKAZtbayFNK8u2sl3iz18Y67uYqBEdcXiu3z+wpZcDDKlmVJvAcCgSjHTnuk6ZLfkYclrGGQ==
+  dependencies:
+    idb "^7.1.1"
+
 "@napi-rs/cli@3.0.0-alpha.70":
   version "3.0.0-alpha.70"
   resolved "https://registry.npmjs.org/@napi-rs/cli/-/cli-3.0.0-alpha.70.tgz#028b56d1152c2a9e3beb926f43c1992312466efa"
@@ -7051,11 +7140,6 @@ fs.realpath@^1.0.0:
   resolved "https://registry.npmjs.org/fs.realpath/-/fs.realpath-1.0.0.tgz#1504ad2523158caa40db4a2787cb01411994ea4f"
   integrity sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==
 
-fsevents@2.3.2:
-  version "2.3.2"
-  resolved "https://registry.npmjs.org/fsevents/-/fsevents-2.3.2.tgz#8a526f78b8fdf4623b709e0b975c52c24c02fd1a"
-  integrity sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==
-
 fsevents@~2.3.2, fsevents@~2.3.3:
   version "2.3.3"
   resolved "https://registry.npmjs.org/fsevents/-/fsevents-2.3.3.tgz#cac6407785d03675a2a5e1a5305c697b347d90d6"
@@ -10022,19 +10106,17 @@ pkg-dir@^7.0.0:
   dependencies:
     find-up "^6.3.0"
 
-playwright-core@1.54.1:
-  version "1.54.1"
-  resolved "https://registry.npmjs.org/playwright-core/-/playwright-core-1.54.1.tgz#d32edcce048c9d83ceac31e294a7b60ef586960b"
-  integrity sha512-Nbjs2zjj0htNhzgiy5wu+3w09YetDx5pkrpI/kZotDlDUaYk0HVA5xrBVPdow4SAUIlhgKcJeJg4GRKW6xHusA==
+playwright-core@1.65.0:
+  version "1.65.0"
+  resolved "https://registry.npmjs.org/playwright-core/-/playwright-core-1.65.0.tgz#2b4671949db79c6ea47facf09f4aeffb90bc5c7f"
+  integrity sha512-vNSKgH6YqtN7cdT/L334zo0a+YwkrpicyrHJlWWPIm/Q+Nn2SWInil01oT0mbu96U4GgoRtCYQD9CzJQgju+lA==
 
 playwright@^1.52.0:
-  version "1.54.1"
-  resolved "https://registry.npmjs.org/playwright/-/playwright-1.54.1.tgz#128d66a8d5182b5330e6440be3a72ca313362788"
-  integrity sha512-peWpSwIBmSLi6aW2auvrUtf2DqY16YYcCMO8rTVx486jKmDTJg7UAhyrraP98GB8BoPURZP8+nxO7TSd4cPr5g==
+  version "1.65.0"
+  resolved "https://registry.npmjs.org/playwright/-/playwright-1.65.0.tgz#d890f700bf7a04b42cbdc4baab8d0e16b1d73f41"
+  integrity sha512-F3AMWcR44qMBt4kq+6Kb6mX7bjGXshktKFOPULd7reED6ZJWevjbNRqysP7q+AATE9kdPEZBibex1BYsvpVoeA==
   dependencies:
-    playwright-core "1.54.1"
-  optionalDependencies:
-    fsevents "2.3.2"
+    playwright-core "1.65.0"
 
 plur@^5.1.0:
   version "5.1.0"
@@ -11288,7 +11370,16 @@ string-argv@^0.3.2:
   resolved "https://registry.npmjs.org/string-argv/-/string-argv-0.3.2.tgz#2b6d0ef24b656274d957d54e0a4bbf6153dc02b6"
   integrity sha512-aqD2Q0144Z+/RqG52NeHEkZauTAUWJO8c6yTftGJKO3Tja5tUgIfmIl6kExvhtxSDP7fXB6DvzkfMpCd/F3G+Q==
 
-"string-width-cjs@npm:string-width@^4.2.0", string-width@^4.1.0, string-width@^4.2.0, string-width@^4.2.3:
+"string-width-cjs@npm:string-width@^4.2.0":
+  version "4.2.3"
+  resolved "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz#269c7117d27b05ad2e536830a8ec895ef9c6d010"
+  integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
+  dependencies:
+    emoji-regex "^8.0.0"
+    is-fullwidth-code-point "^3.0.0"
+    strip-ansi "^6.0.1"
+
+string-width@^4.1.0, string-width@^4.2.0, string-width@^4.2.3:
   version "4.2.3"
   resolved "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz#269c7117d27b05ad2e536830a8ec895ef9c6d010"
   integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
@@ -11405,7 +11496,14 @@ stringify-entities@^4.0.0:
     character-entities-html4 "^2.0.0"
     character-entities-legacy "^3.0.0"
 
-"strip-ansi-cjs@npm:strip-ansi@^6.0.1", strip-ansi@^6.0.0, strip-ansi@^6.0.1:
+"strip-ansi-cjs@npm:strip-ansi@^6.0.1":
+  version "6.0.1"
+  resolved "https://registry.npmjs.org/strip-ansi/-/strip-ansi-6.0.1.tgz#9e26c63d30f53443e9489495b2105d37b67a85d9"
+  integrity sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==
+  dependencies:
+    ansi-regex "^5.0.1"
+
+strip-ansi@^6.0.0, strip-ansi@^6.0.1:
   version "6.0.1"
   resolved "https://registry.npmjs.org/strip-ansi/-/strip-ansi-6.0.1.tgz#9e26c63d30f53443e9489495b2105d37b67a85d9"
   integrity sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==
@@ -12655,7 +12753,7 @@ word-wrap@^1.2.5:
   resolved "https://registry.npmjs.org/word-wrap/-/word-wrap-1.2.5.tgz#d2c45c6dd4fbce621a66f136cbe328afd0410b34"
   integrity sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==
 
-"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0", wrap-ansi@^7.0.0:
+"wrap-ansi-cjs@npm:wrap-ansi@^7.0.0":
   version "7.0.0"
   resolved "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-7.0.0.tgz#67e145cff510a6a6984bdf1152911d69d2eb9e43"
   integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
@@ -12668,6 +12766,15 @@ wrap-ansi@^6.2.0:
   version "6.2.0"
   resolved "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-6.2.0.tgz#e9393ba07102e6c91a3b221478f0257cd2856e53"
   integrity sha512-r6lPcBGxZXlIcymEu7InxDMhdW0KDxpLgoFLcguasxCaJ/SOIZwINatK9KY/tf+ZrlywOKU0UDj3ATXUBfxJXA==
+  dependencies:
+    ansi-styles "^4.0.0"
+    string-width "^4.1.0"
+    strip-ansi "^6.0.0"
+
+wrap-ansi@^7.0.0:
+  version "7.0.0"
+  resolved "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-7.0.0.tgz#67e145cff510a6a6984bdf1152911d69d2eb9e43"
+  integrity sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==
   dependencies:
     ansi-styles "^4.0.0"
     string-width "^4.1.0"
