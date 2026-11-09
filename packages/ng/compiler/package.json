@@ -65,8 +65,8 @@
     "test:firefox": "wasm-pack test --firefox --headless --release"
   },
   "peerDependencies": {
-    "@myriaddreamin/typst.ts": "^0.8.0-rc3",
-    "@myriaddreamin/typst-ts-node-compiler": "^0.8.0-rc3"
+    "@myriaddreamin/typst.ts": "^0.8.0-rc4",
+    "@myriaddreamin/typst-ts-node-compiler": "^0.8.0-rc4"
   },
   "peerDependenciesMeta": {
     "@myriaddreamin/typst.ts": {
