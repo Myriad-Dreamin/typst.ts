@@ -112,6 +112,47 @@ const docs = await $typst.compile({
 });
 ```
 
+=== Retrieving Dependencies
+
+Call `dependencies()` on the result of `compile()`, `compileHtml()`, or `tryHtml()`
+to get the file dependencies recorded during compilation. This returns a sorted
+array of unique absolute paths, including the main file, imported sources, and
+files read as data. Dependencies without a resolvable filesystem path are omitted.
+
+```ts
+const compiled = $typst.compile({
+  mainFilePath: '/path/to/main-file.typ',
+});
+
+// Dependencies are available even when compilation fails.
+const dependencies = compiled.dependencies();
+
+if (compiled.hasError()) {
+  compiled.printDiagnostics();
+} else {
+  // Reuse the compiled document for exports.
+  const pdf = $typst.pdf(compiled.result!);
+  const svg = $typst.svg(compiled.result!);
+}
+```
+
+Each result retains its compilation snapshot, so later compilations do not change
+its dependencies. Calling `dependencies()` repeatedly returns the same paths.
+
+For HTML output, dependencies are also available directly on the `tryHtml()` result:
+
+```ts
+const htmlResult = $typst.tryHtml({
+  mainFilePath: '/path/to/main-file.typ',
+});
+const dependencies = htmlResult.dependencies();
+```
+
+The convenience methods `html()`, `svg()`, `plainSvg()`, `pdf()`, and `vector()`
+return output strings or buffers. To retrieve dependencies when using these
+formats, retain the result from `compile()` (or `compileHtml()` for HTML) and pass
+its `result` document to the export method, as shown above.
+
 == Caution: Cleaning Global Cache
 
 Please evict the *global* compilation cache periodically to avoid memory leak:

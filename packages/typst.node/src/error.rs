@@ -10,7 +10,8 @@ use reflexo_typst::error::{long_diag_from_std, prelude::WithContext, TypstSource
 use reflexo_typst::system::SystemWorldComputeGraph;
 use reflexo_typst::typst::diag::{SourceResult, Warned};
 use reflexo_typst::typst::prelude::*;
-use reflexo_typst::{DiagnosticFormat, TypstPagedDocument, TypstWorld};
+use reflexo_typst::vfs::FsProvider;
+use reflexo_typst::{DiagnosticFormat, TypstPagedDocument, TypstWorld, WorldDeps};
 
 use crate::{NodeHtmlOutput, NodeTypstDocument};
 
@@ -303,7 +304,10 @@ impl<T> ExecResultRepr<T> {
 impl<T> ExecResultRepr<ExecResultRepr<T>> {
     pub fn flatten(self) -> ExecResultRepr<T> {
         match self.result {
-            Some(result) => result,
+            Some(mut result) => {
+                result.graph = result.graph.or(self.graph);
+                result
+            }
             None => ExecResultRepr {
                 result: None,
                 graph: self.graph,
@@ -352,6 +356,15 @@ macro_rules! impl_exec_result {
                 self.0.result.clone()
             }
 
+            /// Gets the sorted, unique absolute paths of file dependencies recorded
+            /// during compilation, including the main file, sources, and data files.
+            /// Available even when compilation fails. Dependencies without a
+            /// resolvable filesystem path are omitted.
+            #[napi]
+            pub fn dependencies(&self) -> Vec<String> {
+                self.0.dependencies()
+            }
+
             /// Takes the result of execution.
             #[napi]
             pub fn take_warnings(&mut self) -> Option<NodeError> {
@@ -396,3 +409,20 @@ macro_rules! impl_exec_result {
 
 impl_exec_result!(NodeHtmlOutputExecResult, NodeHtmlOutput);
 impl_exec_result!(NodeTypstCompileResult, NodeTypstDocument);
+
+impl<T> ExecResultRepr<T> {
+    fn dependencies(&self) -> Vec<String> {
+        let mut dependencies = Vec::new();
+        if let Some(graph) = &self.graph {
+            let world = &graph.snap.world;
+            world.iter_dependencies(&mut |id| {
+                if let Ok(path) = world.file_path(id).and_then(|path| path.to_err()) {
+                    dependencies.push(path.to_string_lossy().into_owned());
+                }
+            });
+        }
+        dependencies.sort_unstable();
+        dependencies.dedup();
+        dependencies
+    }
+}
