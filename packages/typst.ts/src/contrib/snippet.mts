@@ -2,8 +2,10 @@ import type { CompileOptions, TypstCompiler, TypstFontBuilder } from '../compile
 import {
   withPackageRegistry,
   withAccessModel,
+  withPdfOptions,
   type BeforeBuildFn,
   type InitOptions,
+  type PdfOptions,
   preloadFontAssets,
   disableDefaultFontAssets,
   loadFonts,
@@ -309,6 +311,24 @@ export class TypstSnippet {
       key: 'package-registry',
       forRoles: ['compiler'],
       provides: [withPackageRegistry(registry)],
+    };
+  }
+
+  /**
+   * Set PDF export options for the compiler instance
+   * @example
+   *
+   * export PDF/UA-1 documents
+   *
+   * ```typescript
+   * $typst.use(TypstSnippet.withPdfOptions({ pdfStandard: 'ua-1' }));
+   * ```
+   */
+  static withPdfOptions(options: PdfOptions): TypstSnippetProvider {
+    return {
+      key: 'pdf-options',
+      forRoles: ['compiler'],
+      provides: [withPdfOptions(options)],
     };
   }
 
