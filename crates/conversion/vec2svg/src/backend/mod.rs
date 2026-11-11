@@ -27,6 +27,10 @@ pub trait NotifyPaint {
     fn notify_paint(&mut self, url_ref: ImmutStr) -> (u8, Fingerprint, Option<Transform>);
 }
 
+pub trait NotifyImage {
+    fn notify_image(&mut self, image: &Arc<ir::Image>) -> Fingerprint;
+}
+
 pub trait DynExportFeature {
     fn should_render_text_element(&self) -> bool;
 
@@ -434,6 +438,7 @@ impl<C: BuildClipPath> TransformContext<C> for SvgTextBuilder {
 impl<
         'm,
         C: NotifyPaint
+            + NotifyImage
             + RenderVm<'m, Resultant = Arc<SvgTextNode>>
             + FontIndice<'m>
             + DynExportFeature,
@@ -539,8 +544,21 @@ impl<
         self.content.push(content);
     }
 
-    fn render_image(&mut self, _ctx: &mut C, image_item: &ir::ImageItem) {
-        self.content.push(render_image_item(image_item))
+    fn render_image(&mut self, ctx: &mut C, image_item: &ir::ImageItem) {
+        if matches!(
+            image_item.image.format.as_ref(),
+            "png" | "jpeg" | "gif" | "webp"
+        ) {
+            let image_id = ctx.notify_image(&image_item.image);
+            self.content.push(render_image_item(image_item, image_id));
+        } else {
+            self.content.push(SvgText::Plain(render_image(
+                &image_item.image,
+                image_item.size,
+                true,
+                "",
+            )));
+        }
     }
 
     fn render_content_hint(&mut self, _ctx: &mut C, ch: char) {
@@ -762,8 +780,30 @@ fn render_path(
 
 /// Render a [`ir::ImageItem`] into svg text.
 #[comemo::memoize]
-fn render_image_item(img: &ir::ImageItem) -> SvgText {
-    SvgText::Plain(render_image(&img.image, img.size, true, ""))
+fn render_image_item(img: &ir::ImageItem, image_id: Fingerprint) -> SvgText {
+    let styles = image_attrs(&img.image);
+    let w = img.size.x.0;
+    let h = img.size.y.0;
+    let id = image_id.as_svg_id("i");
+    SvgText::Plain(format!(
+        r##"<use class="typst-image" href="#{id}" xlink:href="#{id}" transform="scale({w} {h})"{styles}/>"##,
+    ))
+}
+
+fn image_attrs(image: &ir::Image) -> String {
+    image
+        .attrs
+        .iter()
+        .map(|attr| match attr {
+            ir::ImageAttr::Alt(alt) => {
+                format!(r#" alt="{}""#, escape::escape_str::<AttributeEscapes>(alt))
+            }
+            ir::ImageAttr::ImageRendering(rendering) => {
+                format!(r#" image-rendering="{rendering}""#)
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// Render a raster or SVG image into svg text.
@@ -774,13 +814,7 @@ fn render_image_item(img: &ir::ImageItem) -> SvgText {
 pub fn render_image(image: &ir::Image, size: Size, is_image_elem: bool, style: &str) -> String {
     let image_url = embed_as_image_url(image).unwrap();
 
-    let styles = image.attrs.iter().map(|attr| match attr {
-        ir::ImageAttr::Alt(alt) => {
-            format!(r#" alt="{}""#, escape::escape_str::<AttributeEscapes>(alt))
-        }
-        ir::ImageAttr::ImageRendering(rendering) => format!(r#" image-rendering="{rendering}""#),
-    });
-    let styles = styles.collect::<Vec<_>>().join(" ");
+    let styles = image_attrs(image);
 
     let w = size.x.0;
     let h = size.y.0;
@@ -801,6 +835,14 @@ fn embed_as_image_url(image: &ir::Image) -> Option<String> {
     let mut data = base64::engine::general_purpose::STANDARD.encode(&image.data);
     data.insert_str(0, &url);
     Some(data)
+}
+
+pub(crate) fn render_image_def(id: Fingerprint, image: &ir::Image) -> SvgText {
+    let image_url = embed_as_image_url(image).unwrap();
+    SvgText::Plain(format!(
+        r#"<image id="{}" width="1" height="1" xlink:href="{image_url}" preserveAspectRatio="none"/>"#,
+        id.as_svg_id("i"),
+    ))
 }
 
 fn glyph_aspect_ratio(font: &FontItem, glyph: u32) -> Option<f32> {
