@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use reflexo::error::prelude::*;
 use reflexo::typst::TypstDocument;
 use reflexo::vector::ir::{ModuleMetadata, Page};
@@ -83,6 +85,17 @@ impl IncrDocServer {
         m.push(ModuleMetadata::GarbageCollection(gc_items));
         m.add_module(delta);
         m.add_single_layout(pages);
+        // Attach the source mapping data if debug info is enabled, so that
+        // clients can resolve element paths to source spans, e.g., for
+        // click-to-source interactions.
+        if let Some((source_mapping, page_source_mapping)) =
+            self.typst2vec.spans.finalize_source_mapping()
+        {
+            m.push(ModuleMetadata::SourceMappingData(source_mapping));
+            m.push(ModuleMetadata::PageSourceMapping(Arc::new(
+                page_source_mapping,
+            )));
+        }
         let delta = m.to_bytes();
 
         // log::info!("svg render time (incremental bin): {:?}", instant.elapsed());
@@ -97,6 +110,16 @@ impl IncrDocServer {
         let mut m = FlatModule::with_capacity(4);
         m.add_module(full);
         m.add_single_layout(pages);
+        // The span data was collected by the latest `pack_delta` call, so the
+        // packed current document carries the same source mapping.
+        if let Some((source_mapping, page_source_mapping)) =
+            self.typst2vec.spans.finalize_source_mapping()
+        {
+            m.push(ModuleMetadata::SourceMappingData(source_mapping));
+            m.push(ModuleMetadata::PageSourceMapping(Arc::new(
+                page_source_mapping,
+            )));
+        }
         let full = m.to_bytes();
 
         Some([b"new,", full.as_slice()].concat())
