@@ -165,6 +165,8 @@ impl TypstCompiler {
         let max_age = usize::try_from(max_age).unwrap();
         comemo::evict(max_age);
         self.verse.evict(max_age);
+        let vfs = self.verse.vfs();
+        vfs.clone_source_cache().evict(vfs.revision(), max_age);
     }
 
     pub fn set_fonts(&mut self, fonts: &TypstFontResolver) -> Result<(), JsValue> {
