@@ -9,6 +9,7 @@
 *.pdf
 *.rmp
 *.txt
+!scripts/ci/requirements-cross.txt
 *.tsbuildinfo
 /out.json
 
@@ -18,5 +19,6 @@ out/
 /assets/fonts
 dist/
 node_modules/
+__pycache__/
 
 typst.ts.code-workspace

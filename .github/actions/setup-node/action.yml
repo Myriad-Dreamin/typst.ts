@@ -1,0 +1,23 @@
+name: Set up locked Node.js tools
+description: Install an exact Node.js release and lockfile-verified npm and Yarn.
+inputs:
+  node-version:
+    description: Exact Node.js version
+    default: '22.14.0'
+  architecture:
+    description: Node.js architecture
+    default: ''
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        architecture: ${{ inputs.architecture }}
+    - name: Install locked package managers
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      # Only a runner-provided workspace path is added, never event or tool output.
+      run: | # zizmor: ignore[github-env]
+        npm ci --ignore-scripts --prefix scripts/ci
+        echo "$GITHUB_WORKSPACE/scripts/ci/node_modules/.bin" >> "$GITHUB_PATH"

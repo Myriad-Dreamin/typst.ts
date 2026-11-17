@@ -14,7 +14,7 @@ sha2.workspace = true
 anyhow.workspace = true
 tokio.workspace = true
 
-dhat = "0.3.2"
+dhat = "=0.3.3"
 typst-ts-dev-server.workspace = true
 typst-ts-test-common.workspace = true
 reflexo-typst.workspace = true
