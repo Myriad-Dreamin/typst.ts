@@ -40,7 +40,8 @@ class ComponentBuilder<T> {
     builder: TypstCommonBuilder<T>,
     fonts: (string | Uint8Array | LazyFont)[],
   ): Promise<void> {
-    const escapeImport = new Function('m', 'return import(m)');
+    // Built lazily: `new Function` needs CSP 'unsafe-eval', and only Node gets here.
+    const escapeImport = (m: string) => new Function('m', 'return import(m)')(m);
     const fetcher = (this.fetcher ||= await (async function () {
       const { fetchBuilder, FileSystemCache } = await escapeImport('node-fetch-cache');
       const cache = new FileSystemCache({
