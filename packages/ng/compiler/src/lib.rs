@@ -58,17 +58,17 @@ impl TypstCompiler {
     pub fn new() -> Self {
         let am = ProxyAccessModel {
             context: wasm_bindgen::JsValue::UNDEFINED,
-            mtime_fn: js_sys::Function::new_no_args("return 0"),
-            is_file_fn: js_sys::Function::new_no_args("return true"),
-            real_path_fn: js_sys::Function::new_with_args("path", "return path"),
-            read_all_fn: js_sys::Function::new_no_args(
-                "throw new Error('Dummy AccessModel, please initialize compiler with withAccessModel()')",
+            mtime_fn: dummy_fn::mtime(),
+            is_file_fn: dummy_fn::is_file(),
+            real_path_fn: dummy_fn::real_path(),
+            read_all_fn: dummy_fn::throws(
+                "Dummy AccessModel, please initialize compiler with withAccessModel()",
             ),
         };
         let registry = JsRegistry {
             context: ProxyContext::new(wasm_bindgen::JsValue::UNDEFINED),
-            real_resolve_fn: js_sys::Function::new_no_args(
-                "throw new Error('Dummy Registry, please initialize compiler with withPackageRegistry()')",
+            real_resolve_fn: dummy_fn::throws(
+                "Dummy Registry, please initialize compiler with withPackageRegistry()",
             ),
         };
         let fonts = BrowserFontSearcher::default().build();
@@ -477,5 +477,38 @@ impl<T: Clone + 'static> JsTransmute for T {
     {
         // Safety: JsValue is a wrapper around the underlying ABI type
         unsafe { Self::ref_from_abi(abi.into_abi()) }
+    }
+}
+
+/// Placeholder functions for the dummy access model and package registry.
+///
+/// They are built from Rust closures instead of `js_sys::Function::new_*`,
+/// because the latter compiles to `new Function(source)`, which a Content
+/// Security Policy without `'unsafe-eval'` blocks.
+mod dummy_fn {
+    use wasm_bindgen::prelude::*;
+
+    fn into_function<F: ?Sized + wasm_bindgen::closure::WasmClosure>(
+        closure: Closure<F>,
+    ) -> js_sys::Function {
+        closure.into_js_value().unchecked_into()
+    }
+
+    pub fn mtime() -> js_sys::Function {
+        into_function(Closure::<dyn Fn() -> f64>::new(|| 0.0))
+    }
+
+    pub fn is_file() -> js_sys::Function {
+        into_function(Closure::<dyn Fn() -> bool>::new(|| true))
+    }
+
+    pub fn real_path() -> js_sys::Function {
+        into_function(Closure::<dyn Fn(JsValue) -> JsValue>::new(|path| path))
+    }
+
+    pub fn throws(message: &'static str) -> js_sys::Function {
+        into_function(Closure::<dyn Fn() -> Result<JsValue, JsError>>::new(
+            move || Err(JsError::new(message)),
+        ))
     }
 }
