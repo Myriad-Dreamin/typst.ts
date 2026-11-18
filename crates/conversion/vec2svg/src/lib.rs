@@ -3,7 +3,10 @@
 // todo: https://github.com/typst/typst/pull/2610
 // color export
 
-use reflexo::typst::{TypstDocumentTrait, TypstPagedDocument};
+use reflexo::{
+    escape::{escape_str, PcDataEscapes},
+    typst::{TypstDocumentTrait, TypstPagedDocument},
+};
 
 /// re-export the core types.
 pub use reflexo_typst2vec::font::{FontGlyphProvider, GlyphProvider, IGlyphProvider};
@@ -120,7 +123,7 @@ pub fn render_svg_html<Feat: ExportFeature>(output: &TypstPagedDocument) -> Stri
             .info()
             .title
             .as_ref()
-            .map(|s| s.to_string())
+            .map(|s| escape_str::<PcDataEscapes>(s).into_owned())
             .unwrap_or_else(|| "Typst TypstPagedDocument".into()),
     ));
     html.push(r#"</title></head><body>"#.into());
@@ -145,6 +148,21 @@ mod tests {
         hash::Fingerprint,
         vector::ir::{Axes, LinkItem, Module, Page, Scalar, VecItem},
     };
+
+    #[test]
+    fn html_title_is_escaped_as_text() {
+        let mut info = typst::model::DocumentInfo::default();
+        info.title = Some("</title><script>alert(1)</script>&".into());
+        let output = TypstPagedDocument::new(Default::default(), info);
+
+        let html = render_svg_html::<SvgExportFeature>(&output);
+
+        assert!(
+            html.contains("<title>&lt;/title>&lt;script>alert(1)&lt;/script>&amp;</title>"),
+            "{html}"
+        );
+        assert!(!html.contains("<script>alert(1)</script>"), "{html}");
+    }
 
     #[test]
     fn authored_typst_href_is_not_rendered_as_svg_code() {
