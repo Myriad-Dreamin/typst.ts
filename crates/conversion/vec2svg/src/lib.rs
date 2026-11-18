@@ -137,3 +137,59 @@ pub fn render_svg(output: &TypstPagedDocument) -> String {
     let svg_text = UsingExporter::render(&doc.module, &doc.pages, None);
     generate_text(transform::minify(svg_text))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use reflexo::{
+        hash::Fingerprint,
+        vector::ir::{Axes, LinkItem, Module, Page, Scalar, VecItem},
+    };
+
+    #[test]
+    fn authored_typst_href_is_not_rendered_as_svg_code() {
+        let link_id = Fingerprint::from_pair(1, 2);
+        let size = Axes::new(Scalar(10.0), Scalar(10.0));
+        let link = LinkItem {
+            href: "@typst:custom&route".into(),
+            size,
+        };
+        let mut module = Module::default();
+        module.items.insert(link_id, VecItem::Link(link));
+        let page = Page {
+            content: link_id,
+            size,
+        };
+
+        let svg = SvgExporter::<SvgExportFeature>::render_flat_svg(&module, &[page], None);
+
+        assert!(!svg.contains("onclick="), "{svg}");
+        assert!(
+            svg.contains("xlink:href=\"@typst:custom&amp;route\""),
+            "{svg}"
+        );
+    }
+
+    #[test]
+    fn generated_typst_location_keeps_svg_navigation() {
+        let link_id = Fingerprint::from_pair(1, 2);
+        let size = Axes::new(Scalar(10.0), Scalar(10.0));
+        let link = LinkItem {
+            href: "@typst:handleTypstLocation(this, 2, 3.5, 4.25)".into(),
+            size,
+        };
+        let mut module = Module::default();
+        module.items.insert(link_id, VecItem::Link(link));
+        let page = Page {
+            content: link_id,
+            size,
+        };
+
+        let svg = SvgExporter::<SvgExportFeature>::render_flat_svg(&module, &[page], None);
+
+        assert!(
+            svg.contains("onclick=\"handleTypstLocation(this, 2, 3.5, 4.25); return false\""),
+            "{svg}"
+        );
+    }
+}
