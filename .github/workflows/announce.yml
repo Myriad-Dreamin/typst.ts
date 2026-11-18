@@ -21,9 +21,14 @@ env:
 jobs:
   build:
     runs-on: 'ubuntu-22.04'
+    permissions:
+      'contents': 'read'
+    outputs:
+      release_tag: ${{ steps.announce.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
           submodules: recursive
       - name: Install dist
         # we specify bash to get pipefail; it guards against the `curl` command
@@ -31,7 +36,7 @@ jobs:
         shell: bash
         run: "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Myriad-Dreamin/cargo-dist/releases/download/v0.32.0-tinymist.5/cargo-dist-installer.sh | sh"
       - name: Install parse changelog
-        uses: taiki-e/install-action@parse-changelog
+        uses: taiki-e/install-action@4e79f9caa511ac9527cf5ccb82921377911a6960 # parse-changelog
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
@@ -61,10 +66,21 @@ jobs:
         with:
           name: announcement.gen.md
           path: target/announcement.gen.md
+  release:
+    needs: build
+    runs-on: 'ubuntu-22.04'
+    permissions:
+      'contents': 'write'
+    steps:
+      - name: Download announcement
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: announcement.gen.md
+          path: target
       - name: Create GitHub Release
         env:
           PRERELEASE_FLAG: "${{ (fromJson(env.isNightly) && '--prerelease') || '' }}"
-          RELEASE_TAG: '${{ steps.announce.outputs.tag }}'
+          RELEASE_TAG: '${{ needs.build.outputs.release_tag }}'
           RELEASE_COMMIT: '${{ github.sha }}'
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
