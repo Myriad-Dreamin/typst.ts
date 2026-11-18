@@ -9,7 +9,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-divan = "0.1.3"
+divan = "=0.1.21"
 typst.workspace = true
 reflexo-typst2vec.workspace = true
 reflexo-typst = { workspace = true, features = [

@@ -13,7 +13,7 @@ repository = "https://github.com/Myriad-Dreamin/typst.ts"
 
 # An unnecessary dependency because we want to ensure that docs for dependencies do not include Typst
 [dependencies]
-bitflags = "2"
+bitflags = "=2.13.0"
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--html-in-header", "typst-header.html"]

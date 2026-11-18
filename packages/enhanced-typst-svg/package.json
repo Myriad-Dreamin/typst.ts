@@ -16,9 +16,9 @@
   ],
   "peerDependencies": {},
   "scripts": {
-    "build": "npx tsc && yarn build:max --minify",
+    "build": "tsc && yarn build:max --minify",
     "watch": "yarn build:max --watch",
-    "build:max": "npx vite build"
+    "build:max": "vite build"
   },
   "engines": {
     "node": ">=12"

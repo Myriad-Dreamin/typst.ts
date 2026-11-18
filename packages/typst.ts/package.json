@@ -311,13 +311,13 @@
     "!dist/**/all-in-one.bundle.js"
   ],
   "scripts": {
-    "build-template": "npx vite build -c vite.config.mjs --",
+    "build-template": "vite build -c vite.config.mjs --",
     "build:main": "yarn build-template --component=main",
     "build:bundle": "yarn build:main && yarn build-template --component=global-compiler && yarn build-template --component=global-renderer && yarn build-template --component=all-in-one && yarn build-template --component=all-in-one-lite",
     "build": "node scripts/mkdir.mjs && tsc -p ./tsconfig.lib.json && tsc -p ./tsconfig.cjs.json && node scripts/transform.mjs && yarn build:bundle",
-    "build:dev": "node scripts/mkdir.mjs && tsc -p ./tsconfig.lib.json && npx vite build --watch -c vite.config.mjs -- --component=main",
+    "build:dev": "node scripts/mkdir.mjs && tsc -p ./tsconfig.lib.json && vite build --watch -c vite.config.mjs -- --component=main",
     "dev:tsc": "node scripts/mkdir.mjs && tsc -w -p ./tsconfig.lib.json",
-    "dev:main": "node scripts/mkdir.mjs && npx vite build --watch -c vite.config.mjs -- --component=main",
+    "dev:main": "node scripts/mkdir.mjs && vite build --watch -c vite.config.mjs -- --component=main",
     "prepublish": "turbo build",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
@@ -327,11 +327,11 @@
     "test-install": "yarn playwright install-deps && yarn playwright install"
   },
   "dependencies": {
-    "idb": "^7.1.1"
+    "idb": "7.1.1"
   },
   "peerDependencies": {
-    "@myriaddreamin/typst-ts-renderer": "^0.8.0-rc4",
-    "@myriaddreamin/typst-ts-web-compiler": "^0.8.0-rc4"
+    "@myriaddreamin/typst-ts-renderer": "0.8.0-rc4",
+    "@myriaddreamin/typst-ts-web-compiler": "0.8.0-rc4"
   },
   "peerDependenciesMeta": {
     "@myriaddreamin/typst-ts-renderer": {
@@ -344,7 +344,7 @@
   "devDependencies": {
     "@myriaddreamin/typst-ts-renderer": "0.8.0-rc4",
     "@myriaddreamin/typst-ts-web-compiler": "0.8.0-rc4",
-    "@types/web": "^0.0.188",
+    "@types/web": "0.0.188",
     "builtin-modules": "3.3.0",
     "resolve.exports": "2.0.3",
     "tslib": "2.5.2"

@@ -15,11 +15,11 @@ typst-html.workspace = true
 reflexo = { workspace = true, features = ["typst"] }
 comemo.workspace = true
 ttf-parser.workspace = true
-crossbeam-queue = "0.3.10"
+crossbeam-queue = "=0.3.12"
 rustc-hash.workspace = true
 dashmap.workspace = true
 parking_lot = { workspace = true }
-bitvec = { version = "1" }
+bitvec = { version = "=1.0.1" }
 serde.workspace = true
 serde_json.workspace = true
 tiny-skia.workspace = true
