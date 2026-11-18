@@ -97,13 +97,19 @@ jobs:
       # (PRs run on the *source* but secrets are usually on the *target* -- that's *good*
       # but also really annoying to build CI around when it needs secrets to work right.)
       - id: plan
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          DIST_TARGETS: ${{ inputs.targets }}
         run: |
-          dist ${{ (inputs.tag && inputs.tag != 'dry-run' && format('host --steps=create --tag={0}', inputs.tag)) || 'plan' }} --output-format=json > plan-dist-manifest.json
+          if [[ -n "$RELEASE_TAG" && "$RELEASE_TAG" != dry-run ]]; then
+            dist host --steps=create "--tag=$RELEASE_TAG" --output-format=json > plan-dist-manifest.json
+          else
+            dist plan --output-format=json > plan-dist-manifest.json
+          fi
           echo "dist ran successfully"
           cat plan-dist-manifest.json
           echo "manifest=$(jq -c "." plan-dist-manifest.json)" >> "$GITHUB_OUTPUT"
-          dist_targets="${{ inputs.targets }}"
-          jq -c --arg targets "$dist_targets" '
+          jq -c --arg targets "$DIST_TARGETS" '
             .ci.github.artifacts_matrix
             | if $targets == "" or $targets == "all" then .
               else
@@ -217,9 +223,16 @@ jobs:
         run: |
           ${{ matrix.packages_install }}
       - name: Build artifacts
+        shell: bash
+        env:
+          DIST_TAG_FLAG: ${{ needs.plan.outputs.tag-flag }}
         run: |
+          args=()
+          if [[ -n "$DIST_TAG_FLAG" ]]; then
+            args+=("$DIST_TAG_FLAG")
+          fi
           # Actually do builds and make zips and whatnot
-          dist build ${{ needs.plan.outputs.tag-flag }} --print=linkage --output-format=json ${{ matrix.dist_args }} > dist-manifest.json
+          dist build "${args[@]}" --print=linkage --output-format=json ${{ matrix.dist_args }} > dist-manifest.json
           echo "dist ran successfully"
       - id: cargo-dist
         name: Post-build
@@ -271,8 +284,14 @@ jobs:
           merge-multiple: true
       - id: cargo-dist
         shell: bash
+        env:
+          DIST_TAG_FLAG: ${{ needs.plan.outputs.tag-flag }}
         run: |
-          dist build ${{ needs.plan.outputs.tag-flag }} --output-format=json "--artifacts=global" > dist-manifest.json
+          args=()
+          if [[ -n "$DIST_TAG_FLAG" ]]; then
+            args+=("$DIST_TAG_FLAG")
+          fi
+          dist build "${args[@]}" --output-format=json "--artifacts=global" > dist-manifest.json
           echo "dist ran successfully"
 
           # Parse out what we just built and upload it to scratch storage
@@ -321,8 +340,14 @@ jobs:
           merge-multiple: true
       - id: host
         shell: bash
+        env:
+          DIST_TAG_FLAG: ${{ needs.plan.outputs.tag-flag }}
         run: |
-          dist host ${{ needs.plan.outputs.tag-flag }} --steps=upload --steps=release --output-format=json > dist-manifest.json
+          args=()
+          if [[ -n "$DIST_TAG_FLAG" ]]; then
+            args+=("$DIST_TAG_FLAG")
+          fi
+          dist host "${args[@]}" --steps=upload --steps=release --output-format=json > dist-manifest.json
           echo "artifacts uploaded and released successfully"
           cat dist-manifest.json
           echo "manifest=$(jq -c "." dist-manifest.json)" >> "$GITHUB_OUTPUT"
@@ -347,11 +372,12 @@ jobs:
         env:
           PRERELEASE_FLAG: "${{ fromJson(steps.host.outputs.manifest).announcement_is_prerelease && '--prerelease' || '' }}"
           RELEASE_COMMIT: "${{ github.sha }}"
+          RELEASE_TAG: ${{ needs.plan.outputs.tag }}
         run: |
           # If we're editing a release in place, we need to upload things ahead of time
-          gh release upload "${{ needs.plan.outputs.tag }}" artifacts/*
+          gh release upload -- "$RELEASE_TAG" artifacts/*
 
-          gh release edit "${{ needs.plan.outputs.tag }}" --target "$RELEASE_COMMIT" $PRERELEASE_FLAG --draft=false
+          gh release edit --target "$RELEASE_COMMIT" ${PRERELEASE_FLAG:+--prerelease} --draft=false -- "$RELEASE_TAG"
 
   announce:
     needs:
