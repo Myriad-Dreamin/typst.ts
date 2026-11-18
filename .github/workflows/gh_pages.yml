@@ -8,10 +8,7 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
-  pages: write
-  id-token: write
   contents: read
 
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
@@ -22,41 +19,47 @@ concurrency:
 
 jobs:
   build-gh-pages:
+    name: Build and deploy GitHub Pages
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write # Deploy the documentation site to GitHub Pages.
+      id-token: write # Authenticate the Pages deployment with OIDC.
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3
         with:
+          persist-credentials: false
           submodules: recursive
       - name: Install Mold
-        uses: rui314/setup-mold@v1
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        run: |
+          python3 scripts/ci/install-tool.py mold
+          sudo ln -sf "$HOME/.local/bin/mold" "$(realpath /usr/bin/ld)"
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
         with:
+          cache: false
           toolchain: 1.92.0
           target: wasm32-unknown-unknown
       - name: Set Node.js 22.x
-        uses: actions/setup-node@v3
+        uses: ./.github/actions/setup-node
         with:
-          node-version: 22.x
+          node-version: '22.14.0'
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
+        run: python3 scripts/ci/install-tool.py wasm-pack
       - name: Download & install shiroa
         run: |
-          curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.3.1-rc2/shiroa-installer.sh | sh
+          python3 scripts/ci/install-tool.py shiroa
       - name: Download font assets
-        run: |
-          mkdir -p assets/fonts
-          curl -L https://github.com/Myriad-Dreamin/shiroa/releases/download/v0.1.0/charter-font-assets.tar.gz | tar -xvz -C assets/fonts
+        run: python3 scripts/ci/install-tool.py fonts
       - name: Build
         run: |
-          cargo build --profile dist --bin typst-ts-cli
+          cargo build --locked --profile dist --bin typst-ts-cli
       - name: Install packages
-        uses: borales/actions-yarn@v4
-        with:
-          cmd: install
+        run: |
+          yarn install --frozen-lockfile
       - name: Build Typescript packages
         run: |
           yarn run build:pkg
@@ -66,7 +69,7 @@ jobs:
       - name: Prepare artifacts (Paged Target)
         run: |
           shiroa build --font-path assets/fonts --path-to-root /typst.ts/cookery/paged/ -w . -d ../../github-pages/cookery/ docs/cookery
-          cargo run --profile dist --bin typst-ts-cli -- compile --workspace . --entry ./github-pages/docs/readme.typ --input=x-target=pdf-ayu --format=pdf --format=vector
+          cargo run --locked --profile dist --bin typst-ts-cli -- compile --workspace . --entry ./github-pages/docs/readme.typ --input=x-target=pdf-ayu --format=pdf --format=vector
 
           mv ./github-pages/cookery/ ./github-pages/dist-paged/
           mkdir -p ./github-pages/cookery/
@@ -83,12 +86,12 @@ jobs:
           cp packages/typst.ts/dist/esm/main.bundle.js github-pages/typst-main.js
           cp github-pages/cookery/index.html github-pages/index.html
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           # Upload `/github-pages` sub directory
           path: './github-pages'
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

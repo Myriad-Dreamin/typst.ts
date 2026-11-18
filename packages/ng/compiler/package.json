@@ -53,20 +53,20 @@
     "pkg/reflexo_typst_compiler.d.ts"
   ],
   "scripts": {
-    "build:dev": "wasm-pack build --target web --scope myriaddreamin --dev -- --no-default-features --features web,misc",
-    "build:node": "wasm-pack build --target nodejs --scope myriaddreamin -- --no-default-features --features web,misc",
-    "build": "wasm-pack build --target web --scope myriaddreamin -- --no-default-features --features web,misc && node ../../tools/wasm-debundle.mjs",
-    "build:with-fonts": "wasm-pack build --target web --scope myriaddreamin -- --no-default-features --features web,fonts,misc && node ../../tools/wasm-debundle.mjs",
+    "build:dev": "wasm-pack build --target web --scope myriaddreamin --dev -- --locked --no-default-features --features web,misc",
+    "build:node": "wasm-pack build --target nodejs --scope myriaddreamin -- --locked --no-default-features --features web,misc",
+    "build": "wasm-pack build --target web --scope myriaddreamin -- --locked --no-default-features --features web,misc && node ../../tools/wasm-debundle.mjs",
+    "build:with-fonts": "wasm-pack build --target web --scope myriaddreamin -- --locked --no-default-features --features web,fonts,misc && node ../../tools/wasm-debundle.mjs",
     "prepublish": "turbo build",
     "test": "node --test src/*.spec.js",
     "publish:dry": "npm publish --dry-run --access public",
     "publish:lib": "npm publish --access public || exit 0",
-    "test:chrome": "wasm-pack test --chrome --headless --release",
-    "test:firefox": "wasm-pack test --firefox --headless --release"
+    "test:chrome": "wasm-pack test --chrome --headless --release -- --locked",
+    "test:firefox": "wasm-pack test --firefox --headless --release -- --locked"
   },
   "peerDependencies": {
-    "@myriaddreamin/typst.ts": "^0.8.0-rc4",
-    "@myriaddreamin/typst-ts-node-compiler": "^0.8.0-rc4"
+    "@myriaddreamin/typst.ts": "0.8.0-rc4",
+    "@myriaddreamin/typst-ts-node-compiler": "0.8.0-rc4"
   },
   "peerDependenciesMeta": {
     "@myriaddreamin/typst.ts": {
@@ -77,6 +77,6 @@
     }
   },
   "devDependencies": {
-    "turbo": "^1.10.12"
+    "turbo": "1.13.4"
   }
 }
