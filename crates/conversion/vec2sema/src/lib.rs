@@ -442,21 +442,20 @@ impl SemaTask {
                 output.push(Cow::Borrowed("</span>"));
             }
             Link(t) => {
-                let href_handler = if t.href.starts_with("@typst:") {
-                    let href = t.href.trim_start_matches("@typst:");
-                    format!(r##" onclick="{href}; return false""##)
-                } else {
-                    String::new()
-                };
+                let href_handler = t.typst_location().map(|(page, x, y)| {
+                    format!(
+                        r##" onclick="handleTypstLocation(this, {page}, {x}, {y}); return false""##
+                    )
+                });
                 output.push(Cow::Owned(format!(
                     r#"<a class="typst-content-link" href="{}""#,
-                    if href_handler.is_empty() {
+                    if href_handler.is_none() {
                         escape::escape_str::<AttributeEscapes>(&t.href)
                     } else {
                         Cow::Borrowed("#")
                     },
                 )));
-                if !href_handler.is_empty() {
+                if let Some(href_handler) = href_handler {
                     output.push(Cow::Owned(href_handler));
                 }
                 let is_regular_scale = ts.sx == 1.0 && ts.sy == 1.0;
@@ -498,5 +497,66 @@ impl SemaTask {
             Image(..) | Path(..) => {}
             None | ColorTransform(..) | Gradient(..) | Color32(..) | Pattern(..) | Html(..) => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use reflexo::{
+        hash::Fingerprint,
+        vector::ir::{Axes, LinkItem, Module, Scalar, VecItem},
+    };
+
+    #[test]
+    fn authored_typst_href_is_not_rendered_as_semantic_html_code() {
+        let link_id = Fingerprint::from_pair(1, 2);
+        let size = Axes::new(Scalar(10.0), Scalar(10.0));
+        let link = LinkItem {
+            href: "@typst:custom&route".into(),
+            size,
+        };
+        let mut module = Module::default();
+        module.items.insert(link_id, VecItem::Link(link));
+        let mut output = Vec::new();
+        let mut task = SemaTask::new(false, BrowserFontMetric::new_test(), 10.0, 10.0);
+
+        task.render_semantics(
+            &module,
+            tiny_skia::Transform::identity(),
+            link_id,
+            &mut output,
+        );
+        let html = output.concat();
+
+        assert!(!html.contains("onclick="), "{html}");
+        assert!(html.contains("href=\"@typst:custom&amp;route\""), "{html}");
+    }
+
+    #[test]
+    fn generated_typst_location_keeps_semantic_html_navigation() {
+        let link_id = Fingerprint::from_pair(1, 2);
+        let size = Axes::new(Scalar(10.0), Scalar(10.0));
+        let link = LinkItem {
+            href: "@typst:handleTypstLocation(this, 2, 3.5, 4.25)".into(),
+            size,
+        };
+        let mut module = Module::default();
+        module.items.insert(link_id, VecItem::Link(link));
+        let mut output = Vec::new();
+        let mut task = SemaTask::new(false, BrowserFontMetric::new_test(), 10.0, 10.0);
+
+        task.render_semantics(
+            &module,
+            tiny_skia::Transform::identity(),
+            link_id,
+            &mut output,
+        );
+        let html = output.concat();
+
+        assert!(
+            html.contains("onclick=\"handleTypstLocation(this, 2, 3.5, 4.25); return false\""),
+            "{html}"
+        );
     }
 }
