@@ -168,7 +168,10 @@ mod tests {
             assert!(!output.is_empty(), "AST output should not be empty");
 
             let output_str = String::from_utf8(output).unwrap();
-            assert!(output_str.contains("Str"), "Output should contain string representation");
+            assert!(
+                output_str.contains("Str"),
+                "Output should contain string representation"
+            );
         }
     }
 }
