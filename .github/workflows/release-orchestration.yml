@@ -27,35 +27,35 @@ jobs:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
 
       - name: Checkout test assets
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           repository: Myriad-Dreamin/typst
-          ref: assets-files
+          ref: dcddda130191e5a93af426f5eb8f2fa482790edd # assets-files
           path: assets/files
 
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
         with:
           toolchain: 1.92.0
           target: wasm32-unknown-unknown
 
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
+        run: python3 scripts/ci/install-tool.py wasm-pack
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: ./.github/actions/setup-node
         with:
           node-version: 22.14.0
-          cache: yarn
 
-      - name: Upgrade npm and yarn
+      - name: Show locked package manager versions
         run: |
-          npm install -g npm@11.5.1 yarn@1.22.22
           npm --version
           yarn --version
 
@@ -119,28 +119,27 @@ jobs:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
 
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
         with:
           toolchain: 1.92.0
           target: wasm32-unknown-unknown
 
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
+        run: python3 scripts/ci/install-tool.py wasm-pack
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: ./.github/actions/setup-node
         with:
           node-version: 22.14.0
-          cache: yarn
 
-      - name: Upgrade npm and yarn
+      - name: Show locked package manager versions
         run: |
-          npm install -g npm@11.5.1 yarn@1.22.22
           npm --version
           yarn --version
 
@@ -169,7 +168,7 @@ jobs:
 
       - name: Verify Cargo project dry-run
         run: |
-          cargo publish --dry-run --manifest-path projects/rustdoc-typst-demo/Cargo.toml
+          cargo publish --locked --dry-run --manifest-path projects/rustdoc-typst-demo/Cargo.toml
 
       - name: Summarize verified project batch
         run: |
@@ -183,7 +182,7 @@ jobs:
           - `@myriaddreamin/highlighter-typst` (`projects/highlighter`) after its build step
 
           Verified Cargo projects
-          - `rustdoc-typst-demo` (`projects/rustdoc-typst-demo`) with `cargo publish --dry-run`
+          - `rustdoc-typst-demo` (`projects/rustdoc-typst-demo`) with `cargo publish --locked --dry-run`
 
           Skipped project entries
           - `@myriaddreamin/vistyp` (`projects/vistyp`): Private project outside the versioned release batch.
@@ -198,40 +197,41 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      id-token: write
+      id-token: write # Authenticate workspace publishes to npm via trusted publishing.
     environment:
       name: npm-publish
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
 
       - name: Checkout test assets
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           repository: Myriad-Dreamin/typst
-          ref: assets-files
+          ref: dcddda130191e5a93af426f5eb8f2fa482790edd # assets-files
           path: assets/files
 
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
         with:
+          cache: false
           toolchain: 1.92.0
           target: wasm32-unknown-unknown
 
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
+        run: python3 scripts/ci/install-tool.py wasm-pack
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: ./.github/actions/setup-node
         with:
           node-version: 22.14.0
-          cache: yarn
 
-      - name: Upgrade npm and yarn
+      - name: Show locked package manager versions
         run: |
-          npm install -g npm@11.5.1 yarn@1.22.22
           npm --version
           yarn --version
 
@@ -285,12 +285,11 @@ jobs:
       - publish-packages
     if: ${{ inputs.tag != 'dry-run' }}
     permissions:
-      contents: write
-      id-token: write
+      contents: write # The reusable workflow uploads native GitHub Release assets.
+      id-token: write # The reusable workflow authenticates to npm via trusted publishing.
     uses: ./.github/workflows/release-node.yaml
     with:
       tag: ${{ inputs.tag }}
-    secrets: inherit
 
   publish-npm-projects:
     name: Publish npm project batch
@@ -300,33 +299,33 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      id-token: write
+      id-token: write # Authenticate project publishes to npm via trusted publishing.
     environment:
       name: npm-publish
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
 
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
         with:
+          cache: false
           toolchain: 1.92.0
           target: wasm32-unknown-unknown
 
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
+        run: python3 scripts/ci/install-tool.py wasm-pack
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: ./.github/actions/setup-node
         with:
           node-version: 22.14.0
-          cache: yarn
 
-      - name: Upgrade npm and yarn
+      - name: Show locked package manager versions
         run: |
-          npm install -g npm@11.5.1 yarn@1.22.22
           npm --version
           yarn --version
 
@@ -334,7 +333,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Download typst.node build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: bindings-x86_64-unknown-linux-gnu
           path: packages/typst.node
@@ -379,27 +378,33 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-    env:
-      CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+      id-token: write # Exchange GitHub's identity for a short-lived crates.io token.
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
 
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
         with:
+          cache: false
           toolchain: 1.92.0
 
+      - name: Authenticate to crates.io
+        id: crates-auth
+        uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1
       - name: Publish Cargo project batch
         shell: bash
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
         run: |
           publish_project() {
             local manifest="$1"
 
             set +e
-            output=$(cargo publish --manifest-path "$manifest" 2>&1)
+            output=$(cargo publish --locked --manifest-path "$manifest" 2>&1)
             status=$?
             set -e
 
@@ -438,9 +443,8 @@ jobs:
     if: ${{ inputs.tag != 'dry-run' }}
     permissions:
       contents: read
-      packages: write
+      packages: write # The reusable workflow pushes the Docker image to GHCR.
     uses: ./.github/workflows/docker.yaml
-    secrets: inherit
 
   publish-crates:
     needs:
@@ -448,5 +452,5 @@ jobs:
     if: ${{ inputs.tag != 'dry-run' }}
     permissions:
       contents: read
+      id-token: write # The reusable workflow authenticates to crates.io using OIDC.
     uses: ./.github/workflows/release-crates.yaml
-    secrets: inherit

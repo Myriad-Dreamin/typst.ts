@@ -13,19 +13,19 @@
     "test-install": "yarn playwright install-deps && yarn playwright install"
   },
   "dependencies": {
-    "@myriaddreamin/typst-ts-renderer": "^0.7.0",
-    "@myriaddreamin/typst-ts-web-compiler": "^0.7.0",
-    "@myriaddreamin/typst.ts": "^0.7.0",
-    "react": "^19.x",
-    "react-dom": "^19.x"
+    "@myriaddreamin/typst-ts-renderer": "0.7.0",
+    "@myriaddreamin/typst-ts-web-compiler": "0.7.0",
+    "@myriaddreamin/typst.ts": "0.7.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
-    "@types/react": "^19.1.2",
-    "@types/react-dom": "^19.1.2",
-    "@types/web": "^0.0.188",
-    "typescript": "=5.8.3",
-    "playwright": "^1.52.0",
-    "vite": "^6.2.3",
-    "vitest": "^3.0.9"
+    "@types/react": "19.1.8",
+    "@types/react-dom": "19.1.6",
+    "@types/web": "0.0.188",
+    "typescript": "5.8.3",
+    "playwright": "1.54.1",
+    "vite": "6.3.5",
+    "vitest": "3.2.4"
   }
 }

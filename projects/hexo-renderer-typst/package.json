@@ -22,10 +22,10 @@
     "lib": "./lib"
   },
   "peerDependencies": {
-    "hexo": "^6",
-    "@myriaddreamin/typst.ts": "^0.8.0-rc4",
-    "@myriaddreamin/typst-ts-renderer": "^0.8.0-rc4",
-    "@myriaddreamin/typst-ts-node-compiler": "^0.8.0-rc4"
+    "hexo": "6.3.0",
+    "@myriaddreamin/typst.ts": "0.8.0-rc4",
+    "@myriaddreamin/typst-ts-renderer": "0.8.0-rc4",
+    "@myriaddreamin/typst-ts-node-compiler": "0.8.0-rc4"
   },
   "devDependencies": {},
   "scripts": {

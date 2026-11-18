@@ -4,7 +4,7 @@ import subprocess
 def run_vite_on(project_path):
   print(f"Running vite on {project_path}")
   return subprocess.check_call(
-    "npx vite build",
+    "yarn vite build",
     cwd=project_path,
     shell=True,
   )

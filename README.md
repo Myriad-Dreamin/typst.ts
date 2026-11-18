@@ -235,7 +235,7 @@ source](#build-from-source-and-check), you can build and run the project by
 
 ```shell
 # install dependencies for project
-yarn install --pure-lockfile
+yarn install --frozen-lockfile
 # build typst-preview and its dependencies
 turbo build --filter=typst-preview
 @myriaddreamin/typst-ts-renderer:build: cache hit, replaying logs bc0a0b151bd8eb6d
@@ -258,9 +258,28 @@ Note: you could build from source with/without wasm-pack.
 
 Note: see [Troubleshooting WASM Build](docs/troubleshooting-wasm-build.md) for (especially) **Arch Linux** users.
 
+Use Node.js 22.14.0 and the integrity-pinned Yarn 1.22.22 release in
+`packageManager`. Install with `yarn install --frozen-lockfile`; `.yarnrc` also
+enables frozen installs by default. Rust build commands use `--locked`.
+Dependency updates must update exact manifest versions and their lockfiles together
+(use `yarn install --no-default-rc` only when intentionally updating the lockfile).
+
+CI actions use commit SHAs, containers use image digests, and downloaded tools
+are verified against the SHA-256 values in `scripts/ci/install-tool.py`.
+When updating a tool, review its release and update its version and checksum
+together. `dist-workspace.toml` permits these workflow customizations; preserve
+the pins when regenerating release workflows.
+Run `python3 scripts/ci/install-tool.py zizmor` followed by
+`~/.local/bin/zizmor --offline --pedantic .github` to reproduce the CI security audit.
+
+Crates.io publishing uses short-lived OIDC tokens. Before publishing, register
+this repository and `release-crates.yaml` as a trusted publisher for each workspace
+crate, and `release-orchestration.yml` for `rustdoc-typst-demo`, in crates.io.
+No long-lived `CRATES_IO_TOKEN` secret is used.
+
 ```shell
 # Install and build the renderer
-$ yarn install && yarn build:pkg
+$ yarn install --frozen-lockfile && yarn build:pkg
 # Build the example artifacts
 $ yarn corpus
 # Run development server
