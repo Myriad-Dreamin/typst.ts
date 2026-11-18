@@ -36,15 +36,15 @@
     "pkg/typst_ts_web_compiler.d.ts"
   ],
   "scripts": {
-    "build:dev": "wasm-pack build --target web --scope myriaddreamin --dev -- --no-default-features --features web,misc",
-    "build:node": "wasm-pack build --target nodejs --scope myriaddreamin -- --no-default-features --features web,misc",
-    "build": "wasm-pack build --target web --scope myriaddreamin -- --no-default-features --features web,misc && node ../tools/wasm-debundle.mjs",
-    "build:with-fonts": "wasm-pack build --target web --scope myriaddreamin -- --no-default-features --features web,fonts,misc && node ../tools/wasm-debundle.mjs",
+    "build:dev": "wasm-pack build --target web --scope myriaddreamin --dev -- --locked --no-default-features --features web,misc",
+    "build:node": "wasm-pack build --target nodejs --scope myriaddreamin -- --locked --no-default-features --features web,misc",
+    "build": "wasm-pack build --target web --scope myriaddreamin -- --locked --no-default-features --features web,misc && node ../tools/wasm-debundle.mjs",
+    "build:with-fonts": "wasm-pack build --target web --scope myriaddreamin -- --locked --no-default-features --features web,fonts,misc && node ../tools/wasm-debundle.mjs",
     "prepublish": "turbo build",
     "publish:dry": "npm publish --dry-run --access public",
     "publish:lib": "npm publish --access public || exit 0"
   },
   "devDependencies": {
-    "turbo": "^1.10.12"
+    "turbo": "1.13.4"
   }
 }

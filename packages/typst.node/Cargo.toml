@@ -30,7 +30,7 @@ typst-svg.workspace = true
 typst-ts-cli.workspace = true
 
 [build-dependencies]
-napi-build = "2"
+napi-build = "=2.3.2"
 
 [features]
 
