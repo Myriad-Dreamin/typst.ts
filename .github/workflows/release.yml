@@ -319,7 +319,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DIST_TAG_FLAG: ${{ needs.plan.outputs.tag-flag }}
         run: |
-          dist host "$DIST_TAG_FLAG" --steps=upload --steps=release --output-format=json > dist-manifest.json
+          args=()
+          if [[ -n "$DIST_TAG_FLAG" ]]; then
+            args+=("$DIST_TAG_FLAG")
+          fi
+          dist host "${args[@]}" --steps=upload --steps=release --output-format=json > dist-manifest.json
           echo "artifacts uploaded and released successfully"
           cat dist-manifest.json
           echo "manifest=$(jq -c "." dist-manifest.json)" >> "$GITHUB_OUTPUT"
@@ -344,7 +348,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PRERELEASE_FLAG: "${{ fromJson(steps.host.outputs.manifest).announcement_is_prerelease && '--prerelease' || '' }}"
-          RELEASE_COMMIT: '${{ github.sha }}'
+          RELEASE_COMMIT: "${{ github.sha }}"
           RELEASE_TAG: ${{ needs.plan.outputs.tag }}
         run: |
           # If we're editing a release in place, we need to upload things ahead of time
