@@ -3,7 +3,10 @@
 // todo: https://github.com/typst/typst/pull/2610
 // color export
 
-use reflexo::typst::{TypstDocumentTrait, TypstPagedDocument};
+use reflexo::{
+    escape::{escape_str, PcDataEscapes},
+    typst::{TypstDocumentTrait, TypstPagedDocument},
+};
 
 /// re-export the core types.
 pub use reflexo_typst2vec::font::{FontGlyphProvider, GlyphProvider, IGlyphProvider};
@@ -120,7 +123,7 @@ pub fn render_svg_html<Feat: ExportFeature>(output: &TypstPagedDocument) -> Stri
             .info()
             .title
             .as_ref()
-            .map(|s| s.to_string())
+            .map(|s| escape_str::<PcDataEscapes>(s).into_owned())
             .unwrap_or_else(|| "Typst TypstPagedDocument".into()),
     ));
     html.push(r#"</title></head><body>"#.into());
@@ -136,4 +139,75 @@ pub fn render_svg(output: &TypstPagedDocument) -> String {
     doc.module.prepare_glyphs();
     let svg_text = UsingExporter::render(&doc.module, &doc.pages, None);
     generate_text(transform::minify(svg_text))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use reflexo::{
+        hash::Fingerprint,
+        vector::ir::{Axes, LinkItem, Module, Page, Scalar, VecItem},
+    };
+
+    #[test]
+    fn html_title_is_escaped_as_text() {
+        let mut info = typst::model::DocumentInfo::default();
+        info.title = Some("</title><script>alert(1)</script>&".into());
+        let output = TypstPagedDocument::new(Default::default(), info);
+
+        let html = render_svg_html::<SvgExportFeature>(&output);
+
+        assert!(
+            html.contains("<title>&lt;/title>&lt;script>alert(1)&lt;/script>&amp;</title>"),
+            "{html}"
+        );
+        assert!(!html.contains("<script>alert(1)</script>"), "{html}");
+    }
+
+    #[test]
+    fn authored_typst_href_is_not_rendered_as_svg_code() {
+        let link_id = Fingerprint::from_pair(1, 2);
+        let size = Axes::new(Scalar(10.0), Scalar(10.0));
+        let link = LinkItem {
+            href: "@typst:custom&route".into(),
+            size,
+        };
+        let mut module = Module::default();
+        module.items.insert(link_id, VecItem::Link(link));
+        let page = Page {
+            content: link_id,
+            size,
+        };
+
+        let svg = SvgExporter::<SvgExportFeature>::render_flat_svg(&module, &[page], None);
+
+        assert!(!svg.contains("onclick="), "{svg}");
+        assert!(
+            svg.contains("xlink:href=\"@typst:custom&amp;route\""),
+            "{svg}"
+        );
+    }
+
+    #[test]
+    fn generated_typst_location_keeps_svg_navigation() {
+        let link_id = Fingerprint::from_pair(1, 2);
+        let size = Axes::new(Scalar(10.0), Scalar(10.0));
+        let link = LinkItem {
+            href: "@typst:handleTypstLocation(this, 2, 3.5, 4.25)".into(),
+            size,
+        };
+        let mut module = Module::default();
+        module.items.insert(link_id, VecItem::Link(link));
+        let page = Page {
+            content: link_id,
+            size,
+        };
+
+        let svg = SvgExporter::<SvgExportFeature>::render_flat_svg(&module, &[page], None);
+
+        assert!(
+            svg.contains("onclick=\"handleTypstLocation(this, 2, 3.5, 4.25); return false\""),
+            "{svg}"
+        );
+    }
 }
