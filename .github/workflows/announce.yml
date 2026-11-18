@@ -41,8 +41,10 @@ jobs:
         run: yarn install
       - id: announce
         name: 'Generate announcement'
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
         run: |
-          yarn draft-release ${{ inputs.tag }}
+          yarn draft-release "$RELEASE_TAG"
           echo "draft-release ran successfully"
       - name: 'Upload announcement changelog'
         uses: actions/upload-artifact@v4
@@ -62,9 +64,9 @@ jobs:
       - name: Create GitHub Release
         env:
           PRERELEASE_FLAG: "${{ (fromJson(env.isNightly) && '--prerelease') || '' }}"
-          ANNOUNCEMENT_TITLE: '${{ steps.announce.outputs.tag }}'
+          RELEASE_TAG: '${{ steps.announce.outputs.tag }}'
           RELEASE_COMMIT: '${{ github.sha }}'
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Creating release for ${{ steps.announce.outputs.tag }} with PRERELEASE_FLAG=$PRERELEASE_FLAG (isNightly=$isNightly)"
-          gh release create "${{ steps.announce.outputs.tag }}" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE" --notes-file target/announcement.gen.md --draft=true
+          echo "Creating release for $RELEASE_TAG with PRERELEASE_FLAG=$PRERELEASE_FLAG (isNightly=$isNightly)"
+          gh release create "$RELEASE_TAG" $PRERELEASE_FLAG --title "$RELEASE_TAG" --notes-file target/announcement.gen.md --draft=true
