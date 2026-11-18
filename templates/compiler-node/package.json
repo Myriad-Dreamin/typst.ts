@@ -7,15 +7,15 @@
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
   "dependencies": {
-    "@myriaddreamin/typst-ts-node-compiler": "^0.7.0"
+    "@myriaddreamin/typst-ts-node-compiler": "0.7.0"
   },
   "devDependencies": {
-    "@types/node": "^20.6.3",
+    "@types/node": "20.19.9",
     "tslib": "2.5.2",
-    "typescript": "=5.8.3"
+    "typescript": "5.8.3"
   },
   "scripts": {
-    "build": "npx tsc",
+    "build": "tsc",
     "test": "node ./dist/esm/main.js"
   }
 }

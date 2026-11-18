@@ -42,17 +42,17 @@
     "publish:lib": "npm publish --access public || exit 0"
   },
   "peerDependencies": {
-    "@myriaddreamin/typst-ts-renderer": "^0.8.0-rc4",
-    "@myriaddreamin/typst.ts": "^0.8.0-rc4",
-    "react": "^17.0.1 || ^18.x || ^19.x",
-    "react-dom": "^17.0.1 || ^18.x || ^19.x"
+    "@myriaddreamin/typst-ts-renderer": "0.8.0-rc4",
+    "@myriaddreamin/typst.ts": "0.8.0-rc4",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
     "@myriaddreamin/typst-ts-renderer": "0.8.0-rc4",
     "@myriaddreamin/typst.ts": "0.8.0-rc4",
-    "@types/react": "^19.1.2",
-    "@types/react-dom": "^19.1.2",
-    "react": "^19.x",
-    "react-dom": "^19.x"
+    "@types/react": "19.1.8",
+    "@types/react-dom": "19.1.6",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
   }
 }

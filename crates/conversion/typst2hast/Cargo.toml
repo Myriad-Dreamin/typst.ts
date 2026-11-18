@@ -9,9 +9,9 @@ repository.workspace = true
 
 [dependencies]
 
-bitvec = { version = "1" }
+bitvec = { version = "=1.0.1" }
 comemo.workspace = true
-crossbeam-queue = "0.3.10"
+crossbeam-queue = "=0.3.12"
 dashmap.workspace = true
 ecow.workspace = true
 flate2.workspace = true

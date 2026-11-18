@@ -497,9 +497,10 @@ impl<
     }
 
     fn render_link(&mut self, _ctx: &mut C, link: &ir::LinkItem) {
-        let href_handler = if link.href.starts_with("@typst:") {
-            let href = link.href.trim_start_matches("@typst:");
-            format!(r##"xlink:href="#" onclick="{href}; return false""##)
+        let href_handler = if let Some((page, x, y)) = link.typst_location() {
+            format!(
+                r##"xlink:href="#" onclick="handleTypstLocation(this, {page}, {x}, {y}); return false""##
+            )
         } else {
             format!(
                 r##"target="_blank" xlink:href="{}""##,

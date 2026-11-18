@@ -7,17 +7,17 @@
   "author": "Myriad-Dreamin",
   "license": "Apache-2.0",
   "dependencies": {
-    "@myriaddreamin/typst-ts-renderer": "^0.7.0",
-    "@myriaddreamin/typst.ts": "^0.7.0"
+    "@myriaddreamin/typst-ts-renderer": "0.7.0",
+    "@myriaddreamin/typst.ts": "0.7.0"
   },
   "devDependencies": {
-    "@types/web": "^0.0.188",
-    "@types/node": "^20.6.3",
-    "typescript": "=5.8.3",
+    "@types/web": "0.0.188",
+    "@types/node": "20.19.9",
+    "typescript": "5.8.3",
     "tslib": "2.5.2"
   },
   "scripts": {
-    "build": "npx tsc",
+    "build": "tsc",
     "test": "node ./dist/esm/main.js"
   }
 }

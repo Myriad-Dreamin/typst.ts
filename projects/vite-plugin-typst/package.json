@@ -11,8 +11,8 @@
   },
   "type": "module",
   "scripts": {
-    "build": "npx tsc",
-    "dev": "npx tsc --watch",
+    "build": "tsc",
+    "dev": "tsc --watch",
     "test": "python tests/index.py",
     "publish:dry": "npm publish --dry-run",
     "publish:lib": "npm publish --access public || exit 0"
@@ -26,16 +26,16 @@
     "dist/**/*.{mts,mjs,cjs,cts,ts,js}"
   ],
   "dependencies": {
-    "glob": "^10.4.5",
-    "glob-watcher": "^6.0.0"
+    "glob": "10.4.5",
+    "glob-watcher": "6.0.0"
   },
   "peerDependencies": {
-    "@myriaddreamin/typst.node": "^0.8.0-rc4",
-    "@xmldom/xmldom": "^0.9.8",
-    "vite": "^6.2.3 || ^7.0.0"
+    "@myriaddreamin/typst-ts-node-compiler": "0.8.0-rc4",
+    "@xmldom/xmldom": "0.9.8",
+    "vite": "6.3.5"
   },
   "peerDependenciesMeta": {
-    "@myriaddreamin/typst.node": {
+    "@myriaddreamin/typst-ts-node-compiler": {
       "optional": true
     },
     "@xmldom/xmldom": {
@@ -43,6 +43,6 @@
     }
   },
   "devDependencies": {
-    "@types/glob-watcher": "^5.0.5"
+    "@types/glob-watcher": "5.0.5"
   }
 }
