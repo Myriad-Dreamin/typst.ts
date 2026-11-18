@@ -6,18 +6,27 @@ on:
       - '*'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: release-crates-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   RUSTFLAGS: '-Dwarnings'
 
 jobs:
   publish-crates:
-    name: build
-    runs-on: ubuntu-latest
-    env:
-      CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+    name: Publish workspace crates
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write # Exchange GitHub's identity for a short-lived crates.io token.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
       # https://github.com/dtolnay/rust-toolchain/issues/133
       # https://github.com/rust-lang/rustup/issues/3635
@@ -29,25 +38,30 @@ jobs:
       - name: Install llvm
         run: |
           sudo apt-get update
-          sudo apt-get install llvm
+          sudo apt-get install llvm=1:18.0-59~exp2
+      - name: Authenticate to crates.io
+        id: crates-auth
+        uses: rust-lang/crates-io-auth-action@3268eb413133e2960fa4ae0e963ca76380c54cd9 # v1
       - name: Publish crates
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.crates-auth.outputs.token }}
         run: |
-          cargo publish --no-verify -p reflexo || true
-          cargo publish --no-verify -p reflexo-typst2vec || true
-          cargo publish --no-verify -p reflexo-vec2bbox || true
-          cargo publish --no-verify -p reflexo-vec2canvas || true
-          cargo publish --no-verify -p reflexo-typst2hast || true
-          cargo publish --no-verify -p reflexo-vec2sema || true
-          cargo publish --no-verify -p reflexo-vec2svg || true
-          cargo publish --no-verify -p reflexo-vec2dom || true
-          cargo publish --no-verify -p reflexo-typst || true
+          cargo publish --locked --no-verify -p reflexo || true
+          cargo publish --locked --no-verify -p reflexo-typst2vec || true
+          cargo publish --locked --no-verify -p reflexo-vec2bbox || true
+          cargo publish --locked --no-verify -p reflexo-vec2canvas || true
+          cargo publish --locked --no-verify -p reflexo-typst2hast || true
+          cargo publish --locked --no-verify -p reflexo-vec2sema || true
+          cargo publish --locked --no-verify -p reflexo-vec2svg || true
+          cargo publish --locked --no-verify -p reflexo-vec2dom || true
+          cargo publish --locked --no-verify -p reflexo-typst || true
       - name: Verify crate health (Optional)
         run: |
-          cargo publish --dry-run -p reflexo || true
-          cargo publish --dry-run -p reflexo-typst2vec --features no-content-hint || true
-          cargo publish --dry-run -p reflexo-vec2bbox || true
-          cargo publish --dry-run -p reflexo-vec2canvas || true
-          cargo publish --dry-run -p reflexo-vec2sema || true
-          cargo publish --dry-run -p reflexo-vec2svg --features no-content-hint || true
-          cargo publish --dry-run -p reflexo-vec2dom --features no-content-hint || true
-          cargo publish --dry-run -p reflexo-typst --features no-content-hint || true
+          cargo publish --locked --dry-run -p reflexo || true
+          cargo publish --locked --dry-run -p reflexo-typst2vec --features no-content-hint || true
+          cargo publish --locked --dry-run -p reflexo-vec2bbox || true
+          cargo publish --locked --dry-run -p reflexo-vec2canvas || true
+          cargo publish --locked --dry-run -p reflexo-vec2sema || true
+          cargo publish --locked --dry-run -p reflexo-vec2svg --features no-content-hint || true
+          cargo publish --locked --dry-run -p reflexo-vec2dom --features no-content-hint || true
+          cargo publish --locked --dry-run -p reflexo-typst --features no-content-hint || true

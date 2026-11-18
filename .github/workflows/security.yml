@@ -1,0 +1,27 @@
+name: Workflow security
+on:
+  pull_request:
+  push:
+    branches: [main, nightly]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: workflow-security-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  zizmor:
+    name: Audit GitHub Actions
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Install checksum-verified zizmor
+        run: python3 scripts/ci/install-tool.py zizmor
+      - name: Audit GitHub Actions
+        run: zizmor --offline --pedantic .github
+      - name: Check dependency pins and installer integrity handling
+        run: |
+          python3 scripts/ci/check-pins.py
+          python3 -m unittest discover -s scripts/ci -p 'test_*.py'
