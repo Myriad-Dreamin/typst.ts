@@ -41,7 +41,7 @@ codespan-reporting.workspace = true
 dirs = { workspace = true, optional = true }
 walkdir = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
-futures = "0.3.30"
+futures = "=0.3.32"
 fontdb = { workspace = true, optional = true }
 
 parking_lot.workspace = true

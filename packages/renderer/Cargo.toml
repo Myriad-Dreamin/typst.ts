@@ -51,7 +51,7 @@ typst-ts-test-common.workspace = true
 web-sys = { workspace = true, features = ["Performance", "PerformanceTiming"] }
 hex.workspace = true
 sha2.workspace = true
-send_wrapper = "0.5.0"
+send_wrapper = "=0.5.0"
 
 [build-dependencies]
 anyhow.workspace = true

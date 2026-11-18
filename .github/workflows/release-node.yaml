@@ -13,8 +13,7 @@ env:
   NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
   YARN_REGISTRY: https://registry.npmjs.org/
 permissions:
-  contents: write
-  id-token: write
+  contents: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -29,95 +28,86 @@ jobs:
         settings:
           - host: macos-latest
             target: x86_64-apple-darwin
-            build: yarn build --target x86_64-apple-darwin
           - host: windows-latest
-            build: yarn build --target x86_64-pc-windows-msvc
             target: x86_64-pc-windows-msvc
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian
-            build: yarn build --target x86_64-unknown-linux-gnu
-          - host: ubuntu-latest
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian@sha256:6f910fc8a723a1eeab2483d2302e8c1fabe36e54c51eb0da27fafd5c3083e08c
+          - host: ubuntu-24.04
             target: x86_64-unknown-linux-musl
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
-            build: yarn build --target x86_64-unknown-linux-musl
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine@sha256:caac2d1b9194eada0c69e669e72763869701351d8957ab805cc45a43999d8be2
           - host: macos-latest
             target: aarch64-apple-darwin
-            build: yarn build --target aarch64-apple-darwin
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: aarch64-unknown-linux-gnu
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
-            build: rustup target add aarch64-unknown-linux-gnu && yarn build --target aarch64-unknown-linux-gnu
-          - host: ubuntu-latest
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64@sha256:54509bac10132e6a4148fd5ef59c0057c37bb332221fb7448d907bd575936114
+          - host: ubuntu-24.04
             target: armv7-unknown-linux-gnueabihf
-            setup: |
-              sudo apt-get update
-              sudo apt-get install gcc-arm-linux-gnueabihf -y
-            build: |
-              yarn build --target armv7-unknown-linux-gnueabihf --use-napi-cross
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: aarch64-linux-android
-            build: yarn build --target aarch64-linux-android
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: armv7-linux-androideabi
-            build: yarn build --target armv7-linux-androideabi
-          - host: ubuntu-latest
+          - host: ubuntu-24.04
             target: aarch64-unknown-linux-musl
-            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
-            build: |-
-              rustup target add aarch64-unknown-linux-musl &&
-              yarn build --target aarch64-unknown-linux-musl
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine@sha256:caac2d1b9194eada0c69e669e72763869701351d8957ab805cc45a43999d8be2
           - host: windows-latest
             target: aarch64-pc-windows-msvc
-            build: yarn build --target aarch64-pc-windows-msvc
     name: stable - ${{ matrix.settings.target }} - node@22
     runs-on: ${{ matrix.settings.host }}
+    env:
+      BUILD_TARGET: ${{ matrix.settings.target }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
       - name: Setup node
-        uses: actions/setup-node@v4
-        if: ${{ !matrix.settings.docker }}
+        uses: ./.github/actions/setup-node
         with:
-          node-version: 22
-          cache: yarn
+          node-version: '22.14.0'
       - name: Install Rust
         if: ${{ !matrix.settings.docker }}
-        run: rustup target add ${{ matrix.settings.target }}
-      - name: Cache cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            .cargo-cache
-            target/
-          key: ${{ matrix.settings.target }}-cargo-${{ matrix.settings.host }}
-      - uses: goto-bus-stop/setup-zig@v2
+        shell: bash
+        run: rustup target add "$BUILD_TARGET"
+      - uses: goto-bus-stop/setup-zig@abea47f85e598557f500fa1fd2ab7464fcb39406 # v2
         if: ${{ matrix.settings.target == 'armv7-unknown-linux-gnueabihf' }}
         with:
           version: 0.12.0
       - name: Setup toolchain
-        run: ${{ matrix.settings.setup }}
-        if: ${{ matrix.settings.setup }}
+        if: ${{ matrix.settings.target == 'armv7-unknown-linux-gnueabihf' }}
         shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install gcc-arm-linux-gnueabihf=4:13.2.0-7ubuntu1 -y
       - name: Install dependencies
-        run: yarn install
+        run: yarn install --frozen-lockfile
       - name: Build in docker
-        uses: addnab/docker-run-action@v3
         if: ${{ matrix.settings.docker }}
-        with:
-          image: ${{ matrix.settings.docker }}
-          options: '--user 0:0 -v ${{ github.workspace }}/.cargo-cache/git/db:/usr/local/cargo/git/db -v ${{ github.workspace }}/.cargo/registry/cache:/usr/local/cargo/registry/cache -v ${{ github.workspace }}/.cargo/registry/index:/usr/local/cargo/registry/index -v ${{ github.workspace }}:/build -w /build/packages/typst.node'
-          run: ${{ matrix.settings.build }}
+        env:
+          BUILD_IMAGE: ${{ matrix.settings.docker }}
+        run: |
+          docker run --rm --user 0:0 --env BUILD_TARGET \
+            -v "$GITHUB_WORKSPACE/.cargo-cache/git/db:/usr/local/cargo/git/db" \
+            -v "$GITHUB_WORKSPACE/.cargo/registry/cache:/usr/local/cargo/registry/cache" \
+            -v "$GITHUB_WORKSPACE/.cargo/registry/index:/usr/local/cargo/registry/index" \
+            -v "$GITHUB_WORKSPACE:/build" -w /build/packages/typst.node \
+            --entrypoint /bin/sh "$BUILD_IMAGE" -ec '
+              case "$BUILD_TARGET" in
+                aarch64-unknown-linux-gnu|aarch64-unknown-linux-musl) rustup target add "$BUILD_TARGET" ;;
+              esac
+              yarn build --target "$BUILD_TARGET"
+            '
       - name: Build
-        run: ${{ matrix.settings.build }}
         if: ${{ !matrix.settings.docker }}
         shell: bash
+        run: |
+          args=(--target "$BUILD_TARGET")
+          if [[ "$BUILD_TARGET" == armv7-unknown-linux-gnueabihf ]]; then
+            args+=(--use-napi-cross)
+          fi
+          yarn build "${args[@]}"
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: bindings-${{ matrix.settings.target }}
           path: |
@@ -131,10 +121,10 @@ jobs:
   #   runs-on: macos-13
   #   name: Build FreeBSD
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
   #     - name: Build
   #       id: build
-  #       uses: cross-platform-actions/action@v0.24.0
+  #       uses: cross-platform-actions/action@b2e15da1e667187766fff4945d20b98ac7055576 # v0.24.0
   #       env:
   #         DEBUG: napi:*
   #         RUSTUP_IO_THREADS: 1
@@ -163,13 +153,13 @@ jobs:
   #           whoami
   #           env
   #           freebsd-version
-  #           yarn install
+  #           yarn install --frozen-lockfile
   #           yarn build
   #           rm -rf node_modules
   #           rm -rf target
   #           rm -rf .yarn/cache
   #     - name: Upload artifact
-  #       uses: actions/upload-artifact@v4
+  #       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
   #       with:
   #         name: bindings-freebsd
   #         path: packages/typst.node/${{ env.APP_NAME }}.*.node
@@ -192,23 +182,23 @@ jobs:
             target: x86_64-apple-darwin
             architecture: x64
         node:
-          - '20'
-          - '22'
+          - '20.19.0'
+          - '22.14.0'
     runs-on: ${{ matrix.settings.host }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: ./.github/actions/setup-node
         with:
           node-version: ${{ matrix.node }}
-          cache: yarn
           architecture: ${{ matrix.settings.architecture }}
       - name: Install dependencies
-        run: yarn install
+        run: yarn install --frozen-lockfile
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: bindings-${{ matrix.settings.target }}
           path: packages/typst.node
@@ -225,22 +215,22 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - '20'
-          - '22'
-    runs-on: ubuntu-latest
+          - '20.19.0'
+          - '22.14.0'
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: ./.github/actions/setup-node
         with:
           node-version: ${{ matrix.node }}
-          cache: yarn
       - name: Install dependencies
-        run: yarn install
+        run: yarn install --frozen-lockfile
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: bindings-x86_64-unknown-linux-gnu
           path: packages/typst.node
@@ -248,7 +238,9 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: docker run --rm -v ${{ github.workspace }}:/build -w /build/packages/typst.node node:${{ matrix.node }}-slim yarn test
+        env:
+          TEST_IMAGE: ${{ matrix.node == '20.19.0' && 'node:20.19.0-slim@sha256:5cfa999422613d3b34f766cbb814d964cbfcb76aaf3607e805da21cccb352bac' || 'node:22.14.0-slim@sha256:1c18d9ab3af4585870b92e4dbc5cac5a0dc77dd13df1a5905cea89fc720eb05b' }}
+        run: docker run --rm -v "$GITHUB_WORKSPACE:/build" -w /build/packages/typst.node "$TEST_IMAGE" yarn test
         working-directory: .
   test-linux-x64-musl-binding:
     name: Test bindings on x86_64-unknown-linux-musl - node@${{ matrix.node }}
@@ -258,24 +250,24 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - '20'
-          - '22'
-    runs-on: ubuntu-latest
+          - '20.19.0'
+          - '22.14.0'
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: ./.github/actions/setup-node
         with:
           node-version: ${{ matrix.node }}
-          cache: yarn
       - name: Install dependencies
         run: |
           yarn config set supportedArchitectures.libc "musl"
-          yarn install
+          yarn install --frozen-lockfile
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: bindings-x86_64-unknown-linux-musl
           path: packages/typst.node
@@ -283,7 +275,9 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: docker run --rm -v ${{ github.workspace }}:/build -w /build/packages/typst.node node:${{ matrix.node }}-alpine yarn test
+        env:
+          TEST_IMAGE: node:${{ matrix.node }}-alpine
+        run: docker run --rm -v "$GITHUB_WORKSPACE:/build" -w /build/packages/typst.node "$TEST_IMAGE" yarn test
         working-directory: .
   test-linux-aarch64-gnu-binding:
     name: Test bindings on aarch64-unknown-linux-gnu - node@${{ matrix.node }}
@@ -293,51 +287,55 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - '20'
-          - '22'
-    runs-on: ubuntu-latest
+          - '20.19.0'
+          - '22.14.0'
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: bindings-aarch64-unknown-linux-gnu
           path: packages/typst.node
       - name: List packages
         run: ls -R .
         shell: bash
+      - name: Set up locked Node.js tools
+        uses: ./.github/actions/setup-node
       - name: Install dependencies
         run: |
           yarn config set supportedArchitectures.cpu "arm64"
           yarn config set supportedArchitectures.libc "glibc"
-          yarn install
+          yarn install --frozen-lockfile
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
         with:
+          image: tonistiigi/binfmt:latest@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0
+          cache-image: false
           platforms: arm64
-      - run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
       - name: Setup and run tests
-        uses: addnab/docker-run-action@v3
-        with:
-          image: node:${{ matrix.node }}-slim
-          options: '--platform linux/arm64 -v ${{ github.workspace }}:/build -w /build/packages/typst.node'
-          run: |
-            yarn test
-            ls -la
+        env:
+          TEST_IMAGE: ${{ matrix.node == '20.19.0' && 'node:20.19.0-slim@sha256:5cfa999422613d3b34f766cbb814d964cbfcb76aaf3607e805da21cccb352bac' || 'node:22.14.0-slim@sha256:1c18d9ab3af4585870b92e4dbc5cac5a0dc77dd13df1a5905cea89fc720eb05b' }}
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v "$GITHUB_WORKSPACE:/build" -w /build/packages/typst.node \
+            --entrypoint /bin/sh "$TEST_IMAGE" -ec 'yarn test; ls -la'
   # todo: all arm tests are failing
   test-linux-aarch64-musl-binding:
     name: Test bindings on aarch64-unknown-linux-musl - node@lts
     needs:
       - build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
   #     - name: Download artifacts
-  #       uses: actions/download-artifact@v4
+  #       uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
   #       with:
   #         name: bindings-aarch64-unknown-linux-musl
   #         path: packages/typst.node
@@ -348,14 +346,13 @@ jobs:
   #       run: |
   #         yarn config set supportedArchitectures.cpu "arm64"
   #         yarn config set supportedArchitectures.libc "musl"
-  #         yarn install
+  #         yarn install --frozen-lockfile
   #     - name: Set up QEMU
-  #       uses: docker/setup-qemu-action@v3
+  #       uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
   #       with:
   #         platforms: arm64
-  #     - run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
   #     - name: Setup and run tests
-  #       uses: addnab/docker-run-action@v3
+  #       uses: addnab/docker-run-action@4f65fabd2431ebc8d299f8e5a018d79a769ae185 # v3
   #       with:
   #         image: node:lts-alpine
   #         options: '--platform linux/arm64 -v ${{ github.workspace }}:/build/ -w /build/packages/typst.node'
@@ -369,41 +366,47 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - '20'
-          - '22'
-    runs-on: ubuntu-latest
+          - '20.19.0'
+          - '22.14.0'
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: bindings-armv7-unknown-linux-gnueabihf
           path: packages/typst.node
       - name: List packages
         run: ls -R .
         shell: bash
+      - name: Set up locked Node.js tools
+        uses: ./.github/actions/setup-node
       - name: Install dependencies
         run: |
           yarn config set supportedArchitectures.cpu "arm"
-          yarn install
+          yarn install --frozen-lockfile
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
         with:
+          image: tonistiigi/binfmt:latest@sha256:400a4873b838d1b89194d982c45e5fb3cda4593fbfd7e08a02e76b03b21166f0
+          cache-image: false
           platforms: arm
-      - run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
       - name: Setup and run tests
-        uses: addnab/docker-run-action@v3
-        with:
-          image: node:${{ matrix.node }}-bullseye-slim
-          options: '--platform linux/arm/v7 -v ${{ github.workspace }}:/build -w /build/packages/typst.node'
-          run: |
-            yarn test
-            ls -la
+        env:
+          TEST_IMAGE: ${{ matrix.node == '20.19.0' && 'node:20.19.0-bullseye-slim@sha256:c9063968e5c359c7430892bd48448f8368aa0a76527b816e03bce59fe08bfd93' || 'node:22.14.0-bullseye-slim@sha256:73a9dfbb6c761aebdf4666cce2627635a30d1d4c20f67ff642d01b8f09e709a3' }}
+        run: |
+          docker run --rm --platform linux/arm/v7 \
+            -v "$GITHUB_WORKSPACE:/build" -w /build/packages/typst.node \
+            --entrypoint /bin/sh "$TEST_IMAGE" -ec 'yarn test; ls -la'
   publish:
     name: Publish
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # Upload native bindings to the GitHub Release.
+      id-token: write # Authenticate to npm via trusted publishing.
     environment:
       name: npm-publish
     needs:
@@ -415,23 +418,22 @@ jobs:
       - test-linux-aarch64-musl-binding
       - test-linux-arm-gnueabihf-binding
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: ./.github/actions/setup-node
         with:
           node-version: 22.14.0
-          cache: yarn
       - name: Upgrade npm and yarn
         run: |
-          npm install -g npm@11.5.1 yarn@1.22.22
           npm --version
           yarn --version
       - name: Install dependencies
-        run: yarn install
+        run: yarn install --frozen-lockfile
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: packages/typst.node/artifacts
       - name: Move artifacts
@@ -452,13 +454,17 @@ jobs:
           npm pack > package-name
           mv `cat package-name` myriaddreamin-typst-ts-node-compiler.tar.gz
       - name: Upload packed package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: myriaddreamin-typst-ts-node-compiler
           path: packages/typst.node/myriaddreamin-typst-ts-node-compiler.tar.gz
       - name: Publish
         run: |
-          node scripts/publish.js "${{ inputs.tag }}"
+          if [[ -z "$RELEASE_TAG" || "$RELEASE_TAG" == -* ]]; then
+            echo "Invalid GitHub release tag" >&2
+            exit 1
+          fi
+          node scripts/publish.js "$RELEASE_TAG"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,5 @@
+[target.loongarch64-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/loongarch64-unknown-linux-gnu:main@sha256:97ebb54b84334a5e9598fcde47a5f78eb3e788b32a0bb2554c4762dae4f332ec"
+
+[target.loongarch64-unknown-linux-musl]
+image = "ghcr.io/cross-rs/loongarch64-unknown-linux-musl:main@sha256:a7082228470efa3fa7f0b0f61b79486f9ddd73a5e459fc8763f331b72602f763"

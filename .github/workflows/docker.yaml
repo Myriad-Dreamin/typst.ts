@@ -16,27 +16,33 @@ concurrency:
 
 jobs:
   build-and-publish:
+    name: Build and publish Docker image (${{ matrix.platforms }})
     runs-on: ${{ startsWith(matrix.platforms, 'linux/arm64') && 'ubuntu-22.04-arm' || 'ubuntu-22.04' }}
     permissions:
       contents: read
-      packages: write
+      packages: write # Push the image to GitHub Container Registry.
     strategy:
       matrix:
         platforms: [linux/amd64, linux/arm64]
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           submodules: recursive
 
       - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v2.5.0
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
         with:
+          cache-binary: false
+          version: v0.39.0
+          driver-opts: image=moby/buildkit:v0.28.1@sha256:a82d1ab899cda51aade6fe818d71e4b58c4079e047a0cf29dbb93b2b0465ea69
+          buildkitd-flags: ''
           platforms: ${{ matrix.platforms }}
 
       - name: Log into registry ${{ env.REGISTRY }}
-        uses: docker/login-action@v2.1.0
+        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.1.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -44,28 +50,28 @@ jobs:
 
       - name: Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@v4.3.0
+        uses: docker/metadata-action@507c2f2dc502c992ad446e3d7a5dfbe311567a96 # v4.3.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
       # https://stackoverflow.com/questions/71157844/how-can-i-copy-git-directory-to-the-container-with-github-actions
       - name: Build and push Docker image
         id: build-and-push
-        uses: docker/build-push-action@v4.0.0
+        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671 # v4.0.0
         with:
           push: true
           context: .
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           platforms: ${{ matrix.platforms }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Summarize Docker image
+        env:
+          PLATFORM: ${{ matrix.platforms }}
         run: |
           {
             echo "## Published Docker image"
             echo
-            echo "- Image: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\`"
-            echo "- Platform: \`${{ matrix.platforms }}\`"
+            printf -- '- Image: `%s/%s`\n' "$REGISTRY" "$IMAGE_NAME"
+            printf -- '- Platform: `%s`\n' "$PLATFORM"
           } >> "$GITHUB_STEP_SUMMARY"
