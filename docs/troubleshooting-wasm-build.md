@@ -1,18 +1,16 @@
 ### Download and install `wasm-pack`
 
-To download and install `wasm-pack`, use the following command:
+On x86-64 Linux, download and install the checksum-pinned `wasm-pack` release
+used by CI from the repository root:
 
 ```shell
-curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
+python3 scripts/ci/install-tool.py wasm-pack
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-If you meet following error when running `curl ... | sh`:
-
-```
-sh: 139: [: x86_64: unexpected operator
-```
-
-It is because the `sh` command is incompatible with the script. To resolve this issue, please use the installation command (bash) specified in this section.
+On other platforms, install `wasm-pack` 0.13.1 from its platform-specific release
+archive after independently verifying its checksum. Do not pipe remote
+installer scripts directly into a shell.
 
 ### `wasm-pack` crashes with `SIGSEGV`
 

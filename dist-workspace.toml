@@ -67,6 +67,15 @@ allow-dirty = ["ci"]
 [dist.github-custom-runners]
 global = "ubuntu-22.04"
 aarch64-pc-windows-msvc = "windows-latest"
+aarch64-unknown-linux-musl = "ubuntu-24.04"
+arm-unknown-linux-gnueabihf = "ubuntu-24.04"
+arm-unknown-linux-musleabihf = "ubuntu-24.04"
+armv7-unknown-linux-gnueabihf = "ubuntu-24.04"
+armv7-unknown-linux-musleabihf = "ubuntu-24.04"
+loongarch64-unknown-linux-gnu = "ubuntu-24.04"
+loongarch64-unknown-linux-musl = "ubuntu-24.04"
+riscv64gc-unknown-linux-musl = "ubuntu-24.04"
+x86_64-unknown-linux-musl = "ubuntu-24.04"
 
 # Begin: https://github.com/posit-dev/air/blob/d48bad11a28942ad11c19ca97c99d5b6d1c29218/dist-workspace.toml
 [dist.github-custom-runners.x86_64-apple-darwin]
@@ -87,12 +96,12 @@ runner = "macos-15"
 # Runs on ubuntu-latest, dist defaults to oldest possible runner, but container usage means we can use latest
 # and not have to worry about it being EOL-ed.
 runner = "ubuntu-latest"
-container = { image = "quay.io/pypa/manylinux_2_28_x86_64", host = "x86_64-unknown-linux-musl" }
+container = { image = "quay.io/pypa/manylinux_2_28_x86_64:latest@sha256:d086f64cddcace250ef0f0073583c51b8298159303290a730c9f59bd91edfd2c", host = "x86_64-unknown-linux-musl" }
 
 [dist.github-custom-runners.aarch64-unknown-linux-gnu]
 # See `x86_64-unknown-linux-gnu` comments
 # For ARM Linux, dist actually uses an x86_64 host and uses cargo-zigbuild to cross compile,
 # since GitHub doesn't offer a reliable free ARM Linux host yet.
 runner = "ubuntu-latest"
-container = { image = "quay.io/pypa/manylinux_2_28_x86_64", host = "x86_64-unknown-linux-musl" }
+container = { image = "quay.io/pypa/manylinux_2_28_x86_64:latest@sha256:d086f64cddcace250ef0f0073583c51b8298159303290a730c9f59bd91edfd2c", host = "x86_64-unknown-linux-musl" }
 # End: https://github.com/posit-dev/air/blob/d48bad11a28942ad11c19ca97c99d5b6d1c29218/dist-workspace.toml

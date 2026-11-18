@@ -13,42 +13,59 @@ on:
       - nightly
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   RUSTFLAGS: '-Dwarnings'
 
 jobs:
   ci:
+    name: Build and test workspace
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3
         with:
+          persist-credentials: false
           submodules: recursive
       - name: Checkout test assets
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           repository: Myriad-Dreamin/typst
-          ref: assets-files
+          ref: dcddda130191e5a93af426f5eb8f2fa482790edd # assets-files
           path: assets/files
       - name: Checkout Typst test ground truth
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           repository: typst/typst
-          ref: v0.15.0
+          ref: 3ae52774b48987fc78a72ff483068cacc28e46c2 # v0.15.0
           path: typst-ground-truth
       - name: Install Mold
-        uses: rui314/setup-mold@v1
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        run: |
+          python3 scripts/ci/install-tool.py mold
+          sudo ln -sf "$HOME/.local/bin/mold" "$(realpath /usr/bin/ld)"
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
         with:
+          cache: false
           toolchain: 1.92.0
           components: clippy, rustfmt
           target: wasm32-unknown-unknown
       - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | bash
-      - name: Install packages
-        uses: borales/actions-yarn@v4
+        run: python3 scripts/ci/install-tool.py wasm-pack
+      - name: Install Node.js
+        uses: ./.github/actions/setup-node
         with:
-          cmd: install
+          node-version: '22.14.0'
+      - name: Install packages
+        run: |
+          yarn install --frozen-lockfile
       - name: Install Playwright
         run: yarn playwright install
       - name: Fmt check
@@ -56,12 +73,12 @@ jobs:
       # todo: https://github.com/typst/typst/pull/2767
       #  --all-features
       - name: Clippy check
-        run: cargo clippy --profile dist --workspace --all-targets
+        run: cargo clippy --locked --profile dist --workspace --all-targets
       - name: Documentation check
-        run: cargo doc --profile dist --workspace --no-deps
+        run: cargo doc --locked --profile dist --workspace --no-deps
       - name: Build
         run: |
-          cargo build --profile dist --bin typst-ts-dev-server
+          cargo build --locked --profile dist --bin typst-ts-dev-server
       - name: Build Typescript packages
         run: |
           yarn run build:pkg
@@ -69,7 +86,7 @@ jobs:
         run: yarn run corpus
       - name: Test
         run: |
-          cargo test --profile dist --no-fail-fast \
+          cargo test --locked --profile dist --no-fail-fast \
             -p reflexo-typst -p typst-ts-cli
       - name: Test Browser
         # todo: other package tests
@@ -81,7 +98,7 @@ jobs:
         run: cd packages/typst.ts && TYPST_TS_UPSTREAM_SUITE_DIR=../../typst-ground-truth/tests/suite node scripts/render-skipped-ground-truth-refs.mjs
       - name: Archive Test Results (WebAssembly Renderer in Chrome)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: wasm-renderer-chrome.test_points.json.gz
           path: target/typst-artifacts/integrations/renderer/test_points.chrome.json.gz
@@ -94,7 +111,7 @@ jobs:
       - name: Archive Renderer Diff (Vitest)
         id: upload_renderer_diff
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: renderer-diff-vitest
           path: target/typst-artifacts/renderer-diff-vitest
@@ -102,11 +119,13 @@ jobs:
           retention-days: 14
       - name: Show renderer diff viewer link
         if: always()
+        env:
+          ARTIFACT_ID: ${{ steps.upload_renderer_diff.outputs.artifact-id }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          artifact_id="${{ steps.upload_renderer_diff.outputs.artifact-id }}"
-          page_url="https://myriad-dreamin.github.io/tinymist/renderer-diff/?owner=${{ github.repository_owner }}&repo=${{ github.event.repository.name }}&run=${{ github.run_id }}"
-          if [ -n "${artifact_id}" ]; then
-            page_url="${page_url}&artifact=${artifact_id}"
+          page_url="https://myriad-dreamin.github.io/tinymist/renderer-diff/?owner=${REPOSITORY%/*}&repo=${REPOSITORY#*/}&run=${GITHUB_RUN_ID}"
+          if [ -n "$ARTIFACT_ID" ]; then
+            page_url="${page_url}&artifact=${ARTIFACT_ID}"
           fi
           echo "Renderer diff viewer: ${page_url}"
           {
@@ -116,32 +135,37 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   prepare-build:
+    name: Read package version
     runs-on: 'ubuntu-latest'
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - id: tag # get the tag from package.json
-        run: echo "tag=v$(jq -r '.version' package.json)" >> $GITHUB_OUTPUT
+        run: |
+          version=$(jq -er '.version | strings | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+([-+][0-9A-Za-z.+-]+)?$")) | select(test("[\\r\\n]") | not)' package.json)
+          printf 'tag=v%s\n' "$version" >> "$GITHUB_OUTPUT"
       - name: Show tag
-        run: echo "Tag is ${{ steps.tag.outputs.tag }}"
+        env:
+          RELEASE_TAG: ${{ steps.tag.outputs.tag }}
+        run: echo "Tag is $RELEASE_TAG"
 
   announce:
     needs: [prepare-build]
     permissions:
-      contents: write
+      contents: write # The reusable workflow creates a draft GitHub Release for tags.
     uses: ./.github/workflows/announce.yml
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
-    secrets: inherit
     with:
       tag: ${{ needs.prepare-build.outputs.tag }}
 
   build:
     needs: [prepare-build] # , announce
     permissions:
-      contents: write
+      contents: write # The reusable workflow can upload and publish GitHub Release artifacts.
     uses: ./.github/workflows/release.yml
-    secrets: inherit
     with:
       tag: ${{ (startsWith(github.ref, 'refs/tags/') && needs.prepare-build.outputs.tag) || '' }}
       targets: ${{ (!startsWith(github.ref, 'refs/tags/') && 'aarch64-apple-darwin,x86_64-pc-windows-msvc,x86_64-unknown-linux-gnu') || 'all' }}

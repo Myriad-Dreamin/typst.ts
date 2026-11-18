@@ -23,8 +23,8 @@
   "devDependencies": {
     "@myriaddreamin/typst-ts-renderer": "0.8.0-rc4",
     "@myriaddreamin/typst.ts": "0.8.0-rc4",
-    "solid-js": "^1.8.22",
-    "vite-plugin-solid": "^2.11.6"
+    "solid-js": "1.9.7",
+    "vite-plugin-solid": "2.11.7"
   },
   "keywords": [
     "solidjs",
